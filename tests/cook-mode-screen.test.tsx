@@ -23,6 +23,9 @@ const isCookingApiError = vi.fn(
     "code" in (error as Record<string, unknown>),
 );
 const mockRouterPush = vi.fn();
+const navigationMocks = vi.hoisted(() => ({
+  searchParams: vi.fn(() => new URLSearchParams()),
+}));
 
 function installMatchMedia(matchesAppView: boolean) {
   Object.defineProperty(window, "matchMedia", {
@@ -54,6 +57,7 @@ vi.mock("@/lib/api/cooking", () => ({
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockRouterPush }),
+  useSearchParams: () => navigationMocks.searchParams(),
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
@@ -157,6 +161,8 @@ describe("CookModeScreen", () => {
     cancelCookingSession.mockReset();
     isCookingApiError.mockClear();
     mockRouterPush.mockReset();
+    navigationMocks.searchParams.mockReset();
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     installMatchMedia(false);
   });
 
@@ -404,6 +410,44 @@ describe("CookModeScreen", () => {
 
     await waitFor(() => {
       expect(mockRouterPush).toHaveBeenCalledWith("/cooking/ready");
+    });
+  });
+
+  it("returns to the originating meal screen after direct meal cooking completion", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    navigationMocks.searchParams.mockReturnValue(
+      new URLSearchParams({
+        returnTo: "/planner/2026-04-18/column-1?slot=%EC%95%84%EC%B9%A8",
+      }),
+    );
+    fetchCookMode.mockResolvedValue(buildCookModeData());
+    completeCookingSession.mockResolvedValue({
+      session_id: "session-1",
+      status: "completed",
+      meals_updated: 1,
+      leftover_dish_id: "session-1",
+      pantry_removed: 0,
+      cook_count: 1,
+    });
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("complete-button")).toBeTruthy();
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("complete-button"));
+    await waitFor(() => {
+      expect(screen.getByTestId("consumed-skip-button")).toBeTruthy();
+    });
+    await user.click(screen.getByTestId("consumed-skip-button"));
+
+    await waitFor(() => {
+      expect(mockRouterPush).toHaveBeenCalledWith(
+        "/planner/2026-04-18/column-1?slot=%EC%95%84%EC%B9%A8",
+      );
     });
   });
 

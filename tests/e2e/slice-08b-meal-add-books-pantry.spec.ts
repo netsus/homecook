@@ -537,6 +537,9 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
       await expect(visibleText(page, "매칭 80%")).toBeVisible();
       await expect(visibleText(page, "매칭 60%")).toBeVisible();
       await expect(visibleText(page, "부족 ·")).toBeVisible();
+      await expect(
+        page.getByTestId("pantry-missing-ingredients-row-r1").filter({ visible: true }),
+      ).toHaveClass(/items-center/);
     } else {
       await expect(visibleText(page, "80% 일치")).toBeVisible();
       await expect(visibleText(page, "60% 일치")).toBeVisible();

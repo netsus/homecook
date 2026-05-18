@@ -12,6 +12,7 @@ import {
   useIsMobileViewport,
 } from "@/components/cooking/cook-mode-mobile-ui";
 import { ContentState } from "@/components/shared/content-state";
+import { useAppReturn } from "@/components/shared/use-app-return";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
@@ -31,6 +32,7 @@ export function CookModeScreen({
   initialAuthenticated = false,
 }: CookModeScreenProps) {
   const router = useRouter();
+  const appReturn = useAppReturn({ fallback: "/cooking/ready" });
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
@@ -104,9 +106,9 @@ export function CookModeScreen({
       storeSessionId === sessionId &&
       (screenState === "completed" || screenState === "cancelled")
     ) {
-      router.push("/cooking/ready");
+      router.push(appReturn.href);
     }
-  }, [screenState, router, sessionId, storeSessionId]);
+  }, [appReturn.href, screenState, router, sessionId, storeSessionId]);
 
   const handleCompleteClick = useCallback(() => {
     if (authState !== "authenticated") return;

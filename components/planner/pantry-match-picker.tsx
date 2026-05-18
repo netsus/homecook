@@ -106,7 +106,10 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
             </span>
           </span>
           {recipe.missing_ingredients.length > 0 ? (
-            <span className="mt-2 flex flex-wrap gap-1">
+            <span
+              className="mt-2 flex flex-wrap items-center gap-1"
+              data-testid={`pantry-missing-ingredients-row-${recipe.id}`}
+            >
               <span className="mr-0.5 text-[11px] font-semibold text-[#495057]">
                 부족 ·
               </span>

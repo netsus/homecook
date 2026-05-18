@@ -82,6 +82,36 @@ async function installMealsDeleteRoute(page: Page, mealId: string) {
   });
 }
 
+async function installCookingSessionCreateRoute(page: Page) {
+  let requestBody: unknown = null;
+
+  await page.route("**/api/v1/cooking/sessions", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+
+    requestBody = route.request().postDataJSON();
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          session_id: "session-e2e",
+          recipe_id: "recipe-1",
+          status: "in_progress",
+          cooking_servings: 2,
+          meals: [{ meal_id: "meal-1", is_cooked: false }],
+        },
+        error: null,
+      },
+    });
+  });
+
+  return {
+    getRequestBody: () => requestBody,
+  };
+}
+
 function buildMeal(overrides: Partial<MealItem> = {}): MealItem {
   return {
     id: "meal-1",
@@ -266,6 +296,28 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
 
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect.poll(() => patchRequests.length).toBe(1);
+  });
+
+  test("shopping_done meal starts direct cook mode with a meal-screen return path", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    const meal = buildMeal({ id: "meal-1", planned_servings: 2, status: "shopping_done" });
+    const cookingSession = await installCookingSessionCreateRoute(page);
+    await installMealsListRoute(page, [meal]);
+
+    await page.goto(MEAL_SCREEN_URL);
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
+
+    await page.getByRole("button", { name: /요리하기/ }).filter({ visible: true }).first().click();
+
+    await expect.poll(() => cookingSession.getRequestBody()).toEqual({
+      recipe_id: "recipe-1",
+      meal_ids: ["meal-1"],
+      cooking_servings: 2,
+    });
+    await expect(page).toHaveURL(/\/cooking\/sessions\/session-e2e\/cook-mode/);
+
+    const currentUrl = new URL(page.url());
+    expect(currentUrl.searchParams.get("returnTo")).toBe(MEAL_SCREEN_URL);
   });
 
   test("serving-change cancel dismisses modal without PATCH", async ({ page }) => {

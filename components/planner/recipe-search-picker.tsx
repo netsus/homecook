@@ -456,7 +456,8 @@ export function RecipeSearchPicker({
             >
               <svg
                 aria-hidden="true"
-                className="h-5 w-5"
+                className="h-6 w-6 rotate-[-12deg]"
+                data-testid="recipe-search-submit-icon"
                 fill="none"
                 stroke="currentColor"
                 strokeLinecap="round"

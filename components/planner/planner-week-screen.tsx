@@ -1360,7 +1360,7 @@ export function PlannerWeekScreen({
                 <article
                   aria-label={`${formatDateLabel(dateKey)} 식단 카드`}
                   className={[
-                    "overflow-hidden rounded-[12px] bg-white",
+                    "scroll-mt-[164px] overflow-hidden rounded-[12px] bg-white",
                     isSelected
                       ? "border-2 border-[#2AC1BC] shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
                       : "border border-[#DEE2E6]",
@@ -1471,14 +1471,11 @@ export function PlannerWeekScreen({
                           ) : (
                             <button
                               aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
-                              className="flex h-[38px] flex-1 items-center justify-center gap-1.5 rounded-[8px] border border-dashed border-[#DEE2E6] bg-[#F8F9FA] text-[12px] font-medium text-[#868E96]"
+                              className="flex h-[38px] flex-1 items-center justify-center rounded-[8px] border border-dashed border-[#DEE2E6] bg-[#F8F9FA] text-[20px] font-semibold leading-none text-[#4DABF7]"
                               onClick={() => openMealAddSheet(dateKey, column)}
                               type="button"
                             >
-                              <span className="text-[16px] leading-none text-[#4DABF7]" aria-hidden="true">
-                                +
-                              </span>
-                              <span>추가</span>
+                              +
                             </button>
                           )}
                         </div>

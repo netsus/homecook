@@ -190,6 +190,7 @@ test.describe("Slice 05 planner week core", () => {
       await expect(shoppingLink).toHaveClass(/fixed/);
       await expect(page.getByRole("navigation", { name: "플래너 하단 탭" })).toBeVisible();
       await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
+      await expect(plannerGrid.getByRole("button", { name: /저녁 식사 추가/ })).toHaveText("+");
     } else {
       await expect(page.getByRole("link", { name: "요리 준비" })).toHaveAttribute("href", "/cooking/ready");
       await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);

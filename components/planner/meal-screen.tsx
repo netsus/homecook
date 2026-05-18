@@ -25,6 +25,7 @@ import {
   WebSkeleton,
   WebTopNav,
 } from "@/components/web";
+import { createCookingSession, isCookingApiError } from "@/lib/api/cooking";
 import { deleteMeal, fetchMeals, isMealApiError, updateMealServings } from "@/lib/api/meal";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { buildReturnHref } from "@/lib/navigation/return-context";
@@ -230,6 +231,7 @@ function MealCard({
   onStartCook,
 }: MealCardProps) {
   const isMin = meal.planned_servings <= 1;
+  const canStartCook = meal.status === "shopping_done";
   const visual = getMealVisualMeta(meal);
   const { hiddenCount, visible } = getVisibleMealChips(visual.chips);
 
@@ -343,7 +345,7 @@ function MealCard({
           ) : null}
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className={canStartCook ? "grid grid-cols-2 gap-2" : "grid grid-cols-1 gap-2"}>
           <button
             className="min-h-[38px] rounded-[8px] border border-[#DEE2E6] bg-white text-[14px] font-bold text-[#212529]"
             onClick={onCreateShopping}
@@ -351,13 +353,17 @@ function MealCard({
           >
             장보기
           </button>
-          <button
-            className="min-h-[38px] rounded-[8px] border border-[#2AC1BC] bg-[#2AC1BC] text-[14px] font-bold text-white"
-            onClick={onStartCook}
-            type="button"
-          >
-            요리하기
-          </button>
+          {canStartCook ? (
+            <button
+              aria-label={`${meal.recipe_title} 요리하기`}
+              className="min-h-[38px] rounded-[8px] border border-[#2AC1BC] bg-[#2AC1BC] text-[14px] font-bold text-white"
+              disabled={isPending}
+              onClick={onStartCook}
+              type="button"
+            >
+              요리하기
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -441,7 +447,7 @@ function MealWebView({
   onDelete: (meal: MealListItemData) => void;
   onRecipeClick: (meal: MealListItemData) => void;
   onRetry: () => void;
-  onStartCook: () => void;
+  onStartCook: (meal: MealListItemData) => void;
   onStepDown: (meal: MealListItemData) => void;
   onStepUp: (meal: MealListItemData) => void;
   pendingMealIds: Set<string>;
@@ -664,10 +670,12 @@ function MealWebView({
                 </div>
 
                 <div className="web-meal-rail-actions">
-                  <WebButton fullWidth onClick={onStartCook}>
-                    <CookIcon />
-                    요리하기
-                  </WebButton>
+                  {primaryMeal.status === "shopping_done" ? (
+                    <WebButton fullWidth onClick={() => onStartCook(primaryMeal)}>
+                      <CookIcon />
+                      요리하기
+                    </WebButton>
+                  ) : null}
                   <WebButton fullWidth onClick={onCreateShopping} variant="secondary">
                     <ShoppingIcon />
                     장보기
@@ -1028,6 +1036,13 @@ export function MealScreen({
     }));
   }
 
+  function setMealActionError(mealId: string, message: string) {
+    setConflictErrors((prev) => ({
+      ...prev,
+      [mealId]: message,
+    }));
+  }
+
   function addPending(mealId: string) {
     setPendingMealIds((prev) => new Set([...prev, mealId]));
   }
@@ -1078,6 +1093,42 @@ export function MealScreen({
       setConflictError(mealId);
     } finally {
       removePending(mealId);
+    }
+  }
+
+  async function startMealCooking(meal: MealListItemData) {
+    if (meal.status !== "shopping_done") {
+      return;
+    }
+
+    addPending(meal.id);
+    clearConflictError(meal.id);
+
+    try {
+      const session = await createCookingSession({
+        recipe_id: meal.recipe_id,
+        meal_ids: [meal.id],
+        cooking_servings: meal.planned_servings,
+      });
+      router.push(
+        buildReturnHref(`/cooking/sessions/${session.session_id}/cook-mode`, {
+          returnTo: buildNextPath(planDate, columnId, slotName),
+        }),
+      );
+    } catch (error) {
+      if (isCookingApiError(error) && error.status === 401) {
+        setAuthState("unauthorized");
+        return;
+      }
+
+      setMealActionError(
+        meal.id,
+        isCookingApiError(error) && error.status === 409
+          ? "이미 다른 상태로 변경된 식사가 있어요. 새로고침 후 다시 시도해 주세요."
+          : "요리 세션을 만들지 못했어요. 다시 시도해 주세요.",
+      );
+    } finally {
+      removePending(meal.id);
     }
   }
 
@@ -1201,7 +1252,7 @@ export function MealScreen({
             onDelete={(meal) => handleDeleteTap(meal.id)}
             onRecipeClick={(meal) => router.push(`/recipe/${meal.recipe_id}`)}
             onRetry={() => void loadMeals()}
-            onStartCook={() => router.push("/cooking/ready")}
+            onStartCook={(meal) => void startMealCooking(meal)}
             onStepDown={(meal) => handleStepperTap(meal, -1)}
             onStepUp={(meal) => handleStepperTap(meal, 1)}
             pendingMealIds={pendingMealIds}
@@ -1306,7 +1357,7 @@ export function MealScreen({
                       onCreateShopping={() => router.push("/shopping/flow")}
                       onDelete={() => handleDeleteTap(meal.id)}
                       onRecipeClick={() => router.push(`/recipe/${meal.recipe_id}`)}
-                      onStartCook={() => router.push("/cooking/ready")}
+                      onStartCook={() => void startMealCooking(meal)}
                       onStepDown={() => handleStepperTap(meal, -1)}
                       onStepUp={() => handleStepperTap(meal, 1)}
                     />
