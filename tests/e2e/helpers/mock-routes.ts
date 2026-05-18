@@ -38,11 +38,123 @@ export const SHOPPING_DETAIL_VISUAL_LIST_ID = "shopping-visual-active";
 export const SHOPPING_DETAIL_COMPLETED_VISUAL_LIST_ID = "shopping-visual-completed";
 export const SHOPPING_DETAIL_VISUAL_PATH = `/shopping/lists/${SHOPPING_DETAIL_VISUAL_LIST_ID}`;
 export const SHOPPING_DETAIL_COMPLETED_VISUAL_PATH = `/shopping/lists/${SHOPPING_DETAIL_COMPLETED_VISUAL_LIST_ID}`;
+export const MYPAGE_VISUAL_PATH = "/mypage";
+export const SETTINGS_VISUAL_PATH = "/settings";
+export const LOGIN_VISUAL_PATH = "/login";
+export const RECIPEBOOK_DETAIL_VISUAL_BOOK_ID = "book-custom";
+export const RECIPEBOOK_DETAIL_VISUAL_PATH =
+  `/mypage/recipe-books/${RECIPEBOOK_DETAIL_VISUAL_BOOK_ID}?type=custom&name=${encodeURIComponent("주말 파티")}`;
 
 const PLANNER_COLUMNS = [
   { id: "col-breakfast", name: "아침", sort_order: 0 },
   { id: "col-lunch", name: "점심", sort_order: 1 },
   { id: MEAL_VISUAL_COLUMN_ID, name: "저녁", sort_order: 2 },
+] as const;
+
+const ACCOUNT_VISUAL_PROFILE = {
+  email: "user@example.com",
+  id: "user-1",
+  nickname: "집밥러",
+  profile_image_url: null,
+  settings: { screen_wake_lock: false },
+  social_provider: "kakao",
+} as const;
+
+const ACCOUNT_VISUAL_BOOKS = [
+  {
+    book_type: "my_added",
+    id: "book-my",
+    name: "내가 추가한 레시피",
+    recipe_count: 3,
+    sort_order: 0,
+  },
+  {
+    book_type: "saved",
+    id: "book-saved",
+    name: "저장한 레시피",
+    recipe_count: 5,
+    sort_order: 1,
+  },
+  {
+    book_type: "liked",
+    id: "book-liked",
+    name: "좋아요한 레시피",
+    recipe_count: 10,
+    sort_order: 2,
+  },
+  {
+    book_type: "custom",
+    id: RECIPEBOOK_DETAIL_VISUAL_BOOK_ID,
+    name: "주말 파티",
+    recipe_count: 4,
+    sort_order: 3,
+  },
+] as const;
+
+const ACCOUNT_VISUAL_SHOPPING_HISTORY = [
+  {
+    completed_at: "2026-05-01T09:30:00.000Z",
+    created_at: "2026-04-30T00:00:00.000Z",
+    date_range_end: "2026-05-06",
+    date_range_start: "2026-04-30",
+    id: "list-account-1",
+    is_completed: true,
+    item_count: 12,
+    title: "4/30 장보기",
+  },
+  {
+    completed_at: null,
+    created_at: "2026-04-23T00:00:00.000Z",
+    date_range_end: "2026-04-29",
+    date_range_start: "2026-04-23",
+    id: "list-account-2",
+    is_completed: false,
+    item_count: 8,
+    title: "4/23 장보기",
+  },
+] as const;
+
+const ACCOUNT_VISUAL_RECIPEBOOK_ITEMS = [
+  {
+    added_at: "2026-04-30T09:00:00.000Z",
+    base_servings: 2,
+    recipe_id: "recipe-doenjang",
+    tags: ["한식", "찌개"],
+    thumbnail_url: createQaFoodThumbDataUri("🍲", "#FFE2CF"),
+    title: "된장찌개",
+    total_duration_text: "35분",
+    view_count: 128,
+  },
+  {
+    added_at: "2026-04-29T09:00:00.000Z",
+    base_servings: 1,
+    recipe_id: "recipe-kimchi-rice",
+    tags: ["한식"],
+    thumbnail_url: createQaFoodThumbDataUri("🍚", "#FFD7C2"),
+    title: "김치볶음밥",
+    total_duration_text: "20분",
+    view_count: 87,
+  },
+  {
+    added_at: "2026-04-28T09:00:00.000Z",
+    base_servings: 2,
+    recipe_id: "recipe-jeyuk",
+    tags: ["한식", "볶음"],
+    thumbnail_url: createQaFoodThumbDataUri("🥩", "#FFAC87"),
+    title: "제육볶음",
+    total_duration_text: "25분",
+    view_count: 96,
+  },
+  {
+    added_at: "2026-04-27T09:00:00.000Z",
+    base_servings: 2,
+    recipe_id: "recipe-salmon-steak",
+    tags: ["양식", "구이"],
+    thumbnail_url: createQaFoodThumbDataUri("🐟", "#FFC19F"),
+    title: "연어 스테이크",
+    total_duration_text: "22분",
+    view_count: 74,
+  },
 ] as const;
 
 const FOOD_IMAGES = {
@@ -1342,6 +1454,174 @@ export async function installPantryShoppingVisualRoutes(page: Page) {
           completed: listId === SHOPPING_DETAIL_COMPLETED_VISUAL_LIST_ID,
           id: listId,
         }),
+        error: null,
+      },
+    });
+  });
+}
+
+export async function installAccountLibraryVisualRoutes(page: Page) {
+  await page.route("**/api/v1/users/me/settings", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { settings: ACCOUNT_VISUAL_PROFILE.settings },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/users/me", async (route) => {
+    const method = route.request().method();
+
+    if (method === "PATCH") {
+      const body = route.request().postDataJSON() as { nickname?: string };
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            ...ACCOUNT_VISUAL_PROFILE,
+            nickname: body.nickname ?? ACCOUNT_VISUAL_PROFILE.nickname,
+          },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    if (method === "DELETE") {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: { deleted: true },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: ACCOUNT_VISUAL_PROFILE,
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/auth/logout", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { logged_out: true },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/planner/columns", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { columns: PLANNER_COLUMNS },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/recipe-books/*/recipes**", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          has_next: false,
+          items: ACCOUNT_VISUAL_RECIPEBOOK_ITEMS,
+          next_cursor: null,
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/recipe-books/*", async (route) => {
+    const method = route.request().method();
+
+    if (method === "PATCH") {
+      const body = route.request().postDataJSON() as { name?: string };
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            book_type: "custom",
+            id: RECIPEBOOK_DETAIL_VISUAL_BOOK_ID,
+            name: body.name ?? "주말 파티",
+            recipe_count: 4,
+            sort_order: 3,
+          },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    if (method === "DELETE") {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: { deleted: true },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: ACCOUNT_VISUAL_BOOKS.at(-1),
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/recipe-books", async (route) => {
+    if (route.request().method() === "POST") {
+      const body = route.request().postDataJSON() as { name?: string };
+      await route.fulfill({
+        status: 201,
+        json: {
+          success: true,
+          data: {
+            book_type: "custom",
+            id: "book-new",
+            name: body.name ?? "주말 브런치",
+            recipe_count: 0,
+            sort_order: ACCOUNT_VISUAL_BOOKS.length,
+          },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { books: ACCOUNT_VISUAL_BOOKS },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/shopping/lists**", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          has_next: false,
+          items: ACCOUNT_VISUAL_SHOPPING_HISTORY,
+          next_cursor: null,
+        },
         error: null,
       },
     });

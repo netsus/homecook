@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -363,7 +363,7 @@ describe("SettingsScreen", () => {
     await user.click(screen.getByTestId("nickname-row"));
 
     await waitFor(() => {
-      expect(screen.getByText("닉네임 변경")).toBeTruthy();
+      expect(screen.getByRole("dialog", { name: "닉네임 변경" })).toBeTruthy();
     });
 
     const input = screen.getByRole("textbox");
@@ -387,13 +387,13 @@ describe("SettingsScreen", () => {
     await user.click(screen.getByLabelText("닉네임 변경, 현재 닉네임: 집밥러"));
 
     await waitFor(() => {
-      expect(screen.getByText("닉네임 변경")).toBeTruthy();
+      expect(screen.getByRole("dialog", { name: "닉네임 변경" })).toBeTruthy();
     });
 
     await user.click(screen.getByTestId("nickname-sheet-backdrop"));
 
     await waitFor(() => {
-      expect(screen.queryByText("닉네임 변경")).toBeNull();
+      expect(screen.queryByRole("dialog", { name: "닉네임 변경" })).toBeNull();
     });
   });
 
@@ -452,7 +452,7 @@ describe("SettingsScreen", () => {
     });
 
     // Sheet should still be open
-    expect(screen.getByText("닉네임 변경")).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "닉네임 변경" })).toBeTruthy();
   });
 
   // --- Delete account ---
@@ -469,13 +469,13 @@ describe("SettingsScreen", () => {
     await user.click(screen.getByText("회원탈퇴"));
 
     await waitFor(() => {
-      expect(screen.getByText("정말 탈퇴하시겠어요?")).toBeTruthy();
+      expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
     });
 
     await user.click(screen.getByText("취소"));
 
     await waitFor(() => {
-      expect(screen.queryByText("정말 탈퇴하시겠어요?")).toBeNull();
+      expect(screen.queryByText("정말 계정을 삭제할까요?")).toBeNull();
     });
   });
 
@@ -494,10 +494,10 @@ describe("SettingsScreen", () => {
     await user.click(screen.getByText("회원탈퇴"));
 
     await waitFor(() => {
-      expect(screen.getByText("정말 탈퇴하시겠어요?")).toBeTruthy();
+      expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
     });
 
-    await user.click(screen.getByText("탈퇴하기"));
+    await user.click(within(screen.getByRole("alertdialog")).getByText("계정 삭제"));
 
     await waitFor(() => {
       expect(mockDeleteAccount).toHaveBeenCalledTimes(1);
@@ -522,10 +522,10 @@ describe("SettingsScreen", () => {
     await user.click(screen.getByText("회원탈퇴"));
 
     await waitFor(() => {
-      expect(screen.getByText("정말 탈퇴하시겠어요?")).toBeTruthy();
+      expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
     });
 
-    await user.click(screen.getByText("탈퇴하기"));
+    await user.click(within(screen.getByRole("alertdialog")).getByText("계정 삭제"));
 
     await waitFor(() => {
       expect(screen.getByTestId("dialog-error")).toBeTruthy();
@@ -533,7 +533,7 @@ describe("SettingsScreen", () => {
     });
 
     // Dialog should still be open
-    expect(screen.getByText("정말 탈퇴하시겠어요?")).toBeTruthy();
+    expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
     expect(mockRouterReplace).not.toHaveBeenCalled();
   });
 
@@ -554,10 +554,10 @@ describe("SettingsScreen", () => {
     await user.click(screen.getByText("회원탈퇴"));
 
     await waitFor(() => {
-      expect(screen.getByText("정말 탈퇴하시겠어요?")).toBeTruthy();
+      expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
     });
 
-    await user.click(screen.getByText("탈퇴하기"));
+    await user.click(within(screen.getByRole("alertdialog")).getByText("계정 삭제"));
 
     await waitFor(() => {
       expect(screen.getByTestId("dialog-error")).toBeTruthy();
@@ -567,7 +567,7 @@ describe("SettingsScreen", () => {
     });
 
     // Dialog should still be open, no navigation
-    expect(screen.getByText("정말 탈퇴하시겠어요?")).toBeTruthy();
+    expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
     expect(mockRouterReplace).not.toHaveBeenCalled();
   });
 
@@ -586,10 +586,10 @@ describe("SettingsScreen", () => {
     await user.click(screen.getByText("로그아웃"));
 
     await waitFor(() => {
-      expect(screen.getByText("로그아웃할까요?")).toBeTruthy();
+      expect(screen.getByText("로그아웃 할까요?")).toBeTruthy();
     });
 
-    await user.click(screen.getByText("로그아웃하기"));
+    await user.click(within(screen.getByRole("alertdialog")).getByText("로그아웃"));
 
     await waitFor(() => {
       expect(mockLogout).toHaveBeenCalledTimes(1);
@@ -613,10 +613,10 @@ describe("SettingsScreen", () => {
     await user.click(screen.getByText("로그아웃"));
 
     await waitFor(() => {
-      expect(screen.getByText("로그아웃할까요?")).toBeTruthy();
+      expect(screen.getByText("로그아웃 할까요?")).toBeTruthy();
     });
 
-    await user.click(screen.getByText("로그아웃하기"));
+    await user.click(within(screen.getByRole("alertdialog")).getByText("로그아웃"));
 
     await waitFor(() => {
       expect(screen.getByTestId("dialog-error")).toBeTruthy();
@@ -624,7 +624,7 @@ describe("SettingsScreen", () => {
     });
 
     // Dialog should still be open
-    expect(screen.getByText("로그아웃할까요?")).toBeTruthy();
+    expect(screen.getByText("로그아웃 할까요?")).toBeTruthy();
     expect(mockRouterReplace).not.toHaveBeenCalled();
   });
 

@@ -122,6 +122,18 @@ const MOCK_SHOPPING_HISTORY = {
   has_next: false,
 };
 
+async function openRecipebookSurface(user = userEvent.setup()) {
+  await screen.findByText("집밥러");
+  await user.click(screen.getByRole("button", { name: /레시피북 관리/ }));
+  return user;
+}
+
+async function openShoppingSurface(user = userEvent.setup()) {
+  await screen.findByText("집밥러");
+  await user.click(screen.getByRole("button", { name: /장보기 내역/ }));
+  return user;
+}
+
 describe("MypageScreen", () => {
   afterEach(() => {
     cleanup();
@@ -160,9 +172,16 @@ describe("MypageScreen", () => {
     expect(screen.getByText("카카오 로그인")).toBeTruthy();
     expect(screen.getByTestId("mypage-profile")).toBeTruthy();
 
-    expect(screen.getByText("내가 추가한 레시피")).toBeTruthy();
-    expect(screen.getByText("저장한 레시피")).toBeTruthy();
-    expect(screen.getByText("좋아요한 레시피")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /레시피북 관리/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /장보기 내역/ })).toBeTruthy();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /레시피북 관리/ }));
+
+    expect(screen.getByTestId("system-book-my_added").textContent).toContain("내가 추가한 레시피");
+    expect(screen.getByTestId("system-book-saved").textContent).toContain("저장한 레시피");
+    expect(screen.getByTestId("system-book-liked").textContent).toContain("좋아요한 레시피");
     expect(screen.getByText("주말 파티")).toBeTruthy();
   });
 
@@ -173,7 +192,10 @@ describe("MypageScreen", () => {
 
     expect(screen.queryByLabelText("설정")).toBeNull();
 
-    const settingsLink = screen.getByText("설정으로 이동").closest("a");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: "계정 관리" }));
+
+    const settingsLink = screen.getByTestId("mypage-settings-link");
     expect(settingsLink?.getAttribute("href")).toBe("/settings");
     expect(screen.getByTestId("mypage-profile").textContent).not.toContain(
       "회원탈퇴",
@@ -183,7 +205,7 @@ describe("MypageScreen", () => {
   it("displays system books with correct recipe counts", async () => {
     render(<MypageScreen initialAuthenticated />);
 
-    await screen.findByText("집밥러");
+    await openRecipebookSurface();
 
     const myAddedCard = screen.getByTestId("system-book-my_added");
     expect(myAddedCard.textContent).toContain("3개");
@@ -230,14 +252,14 @@ describe("MypageScreen", () => {
 
     render(<MypageScreen initialAuthenticated />);
 
-    await screen.findByText("집밥러");
+    await openRecipebookSurface();
     expect(screen.getByText("아직 만든 레시피북이 없어요")).toBeTruthy();
   });
 
   it("system books do not show a context menu button", async () => {
     render(<MypageScreen initialAuthenticated />);
 
-    await screen.findByText("집밥러");
+    await openRecipebookSurface();
 
     const systemBookCard = screen.getByTestId("system-book-my_added");
     expect(systemBookCard.querySelector("[aria-haspopup='menu']")).toBeNull();
@@ -246,7 +268,7 @@ describe("MypageScreen", () => {
   it("custom books show a context menu with rename and delete", async () => {
     render(<MypageScreen initialAuthenticated />);
 
-    await screen.findByText("주말 파티");
+    await openRecipebookSurface();
 
     const user = userEvent.setup();
     const menuButton = screen.getByLabelText("주말 파티 옵션 메뉴");
@@ -274,7 +296,7 @@ describe("MypageScreen", () => {
 
     render(<MypageScreen initialAuthenticated />);
 
-    await screen.findByText("주말 파티");
+    await openRecipebookSurface();
 
     const user = userEvent.setup();
     await user.click(screen.getByLabelText("주말 파티 옵션 메뉴"));
@@ -302,7 +324,7 @@ describe("MypageScreen", () => {
 
     render(<MypageScreen initialAuthenticated />);
 
-    await screen.findByText("주말 파티");
+    await openRecipebookSurface();
 
     const user = userEvent.setup();
     await user.click(screen.getByLabelText("주말 파티 옵션 메뉴"));
@@ -326,7 +348,7 @@ describe("MypageScreen", () => {
   it("cancels delete dialog without deleting", async () => {
     render(<MypageScreen initialAuthenticated />);
 
-    await screen.findByText("주말 파티");
+    await openRecipebookSurface();
 
     const user = userEvent.setup();
     await user.click(screen.getByLabelText("주말 파티 옵션 메뉴"));
@@ -359,7 +381,7 @@ describe("MypageScreen", () => {
 
     render(<MypageScreen initialAuthenticated />);
 
-    await screen.findByText("집밥러");
+    await openRecipebookSurface();
 
     const user = userEvent.setup();
     await user.click(screen.getByLabelText("새 레시피북 만들기"));
@@ -380,10 +402,8 @@ describe("MypageScreen", () => {
   it("switches to shopping history tab and shows history cards", async () => {
     render(<MypageScreen initialAuthenticated />);
 
-    await screen.findByText("집밥러");
-
     const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: "장보기 기록" }));
+    await openShoppingSurface(user);
 
     expect(await screen.findByText("4/30 장보기")).toBeTruthy();
     expect(screen.getByText("4/23 장보기")).toBeTruthy();
@@ -402,10 +422,8 @@ describe("MypageScreen", () => {
 
     render(<MypageScreen initialAuthenticated />);
 
-    await screen.findByText("집밥러");
-
     const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: "장보기 기록" }));
+    await openShoppingSurface(user);
 
     expect(await screen.findByText("저장된 장보기 기록이 없어요")).toBeTruthy();
     expect(screen.getByText("플래너로 이동")).toBeTruthy();
@@ -417,11 +435,11 @@ describe("MypageScreen", () => {
     await screen.findByText("집밥러");
 
     expect(screen.getByRole("tablist")).toBeTruthy();
-    const recipebookTab = screen.getByRole("tab", { name: "레시피북" });
-    const shoppingTab = screen.getByRole("tab", { name: "장보기 기록" });
+    const savedTab = screen.getByRole("tab", { name: "저장한 레시피" });
+    const accountTab = screen.getByRole("tab", { name: "계정 관리" });
 
-    expect(recipebookTab.getAttribute("aria-selected")).toBe("true");
-    expect(shoppingTab.getAttribute("aria-selected")).toBe("false");
+    expect(savedTab.getAttribute("aria-selected")).toBe("true");
+    expect(accountTab.getAttribute("aria-selected")).toBe("false");
   });
 
   it("renders profile image with fallback initial when no image URL", async () => {
@@ -434,7 +452,7 @@ describe("MypageScreen", () => {
 
     await screen.findByText("집밥러");
 
-    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.queryByRole("img", { name: "집밥러 프로필" })).toBeNull();
     const avatar = screen.getByTestId("profile-fallback-avatar");
     expect(avatar.textContent).toBe("집");
   });
@@ -442,7 +460,7 @@ describe("MypageScreen", () => {
   it("links system book cards to recipe-books detail page", async () => {
     render(<MypageScreen initialAuthenticated />);
 
-    await screen.findByText("집밥러");
+    await openRecipebookSurface();
 
     const myAddedCard = screen.getByTestId("system-book-my_added");
     const href = myAddedCard.getAttribute("href") ?? "";
@@ -453,10 +471,8 @@ describe("MypageScreen", () => {
   it("links shopping history cards to shopping detail page", async () => {
     render(<MypageScreen initialAuthenticated />);
 
-    await screen.findByText("집밥러");
-
     const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: "장보기 기록" }));
+    await openShoppingSurface(user);
 
     const card = await screen.findByTestId("shopping-card-list-1");
     const href = card.getAttribute("href") ?? "";
@@ -474,7 +490,7 @@ describe("MypageScreen", () => {
     expect(await screen.findByText("4/30 장보기")).toBeTruthy();
     expect(
       screen
-        .getByRole("tab", { name: "장보기 기록" })
+        .getByRole("tab", { name: "저장한 레시피" })
         .getAttribute("aria-selected"),
     ).toBe("true");
   });

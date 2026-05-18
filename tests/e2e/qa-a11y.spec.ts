@@ -2,19 +2,24 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 import {
+  installAccountLibraryVisualRoutes,
   installDiscoveryRoutes,
   installMenuAddVisualRoutes,
   installMealDetailRoutes,
   installPantryShoppingVisualRoutes,
   installPlannerWeekRoutes,
   installRecipeDetailRoutes,
+  LOGIN_VISUAL_PATH,
   installYoutubeImportVisualRoutes,
   MANUAL_CREATE_VISUAL_PATH,
   MEAL_VISUAL_PATH,
   MENU_ADD_VISUAL_PATH,
+  MYPAGE_VISUAL_PATH,
   PANTRY_VISUAL_PATH,
   RECIPE_PATH,
+  RECIPEBOOK_DETAIL_VISUAL_PATH,
   setE2EAuthOverride,
+  SETTINGS_VISUAL_PATH,
   SHOPPING_DETAIL_COMPLETED_VISUAL_PATH,
   SHOPPING_DETAIL_VISUAL_PATH,
   SHOPPING_FLOW_VISUAL_PATH,
@@ -422,6 +427,63 @@ test.describe("QA accessibility smoke", () => {
     await expect(
       page.getByRole("heading", { name: "지난 주 장보기" }),
     ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+  });
+
+  test("login, mypage, recipebooks, and settings desktop slice screens are axe-clean", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only account/library parity smoke");
+
+    await page.goto(LOGIN_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "집밥 루틴을 이어가려면 로그인하세요" }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await setE2EAuthOverride(page);
+    await installAccountLibraryVisualRoutes(page);
+
+    await page.goto(MYPAGE_VISUAL_PATH);
+    await expect(page.getByRole("heading", { name: "저장한 레시피" })).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+    await expectReadableTouchTarget(
+      page.getByRole("button", { name: /레시피북 관리/ }),
+    );
+
+    await page.getByRole("button", { name: /레시피북 관리/ }).click();
+    await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.goto(RECIPEBOOK_DETAIL_VISUAL_PATH);
+    await expect(page.getByRole("heading", { name: "주말 파티" })).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.goto(MYPAGE_VISUAL_PATH);
+    await page.getByRole("button", { name: /장보기 내역/ }).click();
+    await expect(page.getByRole("heading", { name: "장보기 내역" })).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.goto(SETTINGS_VISUAL_PATH);
+    await expect(page.getByRole("heading", { name: "설정" })).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.getByTestId("nickname-row").click();
+    await expect(page.getByRole("dialog", { name: "닉네임 변경" })).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });
