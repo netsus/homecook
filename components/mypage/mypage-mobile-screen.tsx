@@ -51,9 +51,6 @@ interface MypageMobileScreenProps {
   onSurfaceChange: (surface: MypageMobileSurface) => void;
 }
 
-const mobileFontFamily =
-  '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
-
 export function MypageMobileScreen({
   books,
   createInputRef,
@@ -100,10 +97,7 @@ export function MypageMobileScreen({
         : "마이페이지";
 
   return (
-    <div
-      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
-      style={{ fontFamily: mobileFontFamily }}
-    >
+    <div className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden">
       <MobileAppBar
         onBack={surface === "home" ? undefined : () => onSurfaceChange("home")}
         title={title}
@@ -276,7 +270,7 @@ function MobileHomeSurface({
           ) : (
             <div
               aria-label="프로필 이니셜"
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2AC1BC] to-[#12B886] text-[24px] font-extrabold text-white [font-family:var(--font-jua),-apple-system,sans-serif]"
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2AC1BC] to-[#12B886] text-[24px] font-extrabold text-white"
               data-testid="profile-fallback-avatar"
             >
               {fallbackInitial}
@@ -378,7 +372,7 @@ function MobileStatCard({
   return (
     <div className="rounded-[10px] bg-[#F8F9FA] px-2 py-3 text-center">
       <div
-        className="text-[22px] font-extrabold leading-none [font-family:var(--font-jua),-apple-system,sans-serif]"
+        className="text-[22px] font-extrabold leading-none"
         style={{ color }}
       >
         {value}
@@ -810,7 +804,7 @@ function MobileDeleteConfirmDialog({
         <div className="flex justify-center pb-2">
           <div className="h-1 w-9 rounded-full bg-[#DEE2E6]" />
         </div>
-        <h2 className="text-[18px] font-extrabold leading-[1.35] text-[#212529] [font-family:var(--font-jua),-apple-system,sans-serif]">
+        <h2 className="text-[18px] font-extrabold leading-[1.35] text-[#212529]">
           레시피북을 삭제할까요?
         </h2>
         <p className="mt-2 text-[13px] font-medium leading-5 text-[#495057]">

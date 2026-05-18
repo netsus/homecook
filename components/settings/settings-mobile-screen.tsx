@@ -127,13 +127,7 @@ export function SettingsMobileScreen({
   const appReturn = useAppReturn({ fallback: "/mypage" });
 
   return (
-    <div
-      className="min-h-dvh bg-[#F8F9FA] pb-[calc(24px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
-      style={{
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif',
-      }}
-    >
+    <div className="min-h-dvh bg-[#F8F9FA] pb-[calc(24px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden">
       <MobileAppBar
         onBack={appReturn.goBack}
         title={title}

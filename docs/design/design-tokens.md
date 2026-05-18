@@ -34,8 +34,8 @@ This table is a short operational summary. The complete authoritative Wave1 mobi
 | Surface | `#FFFFFF` |
 | Surface fill | `#F8F9FA` |
 | Surface subtle | `#F1F3F5` |
-| UI font | `-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif` |
-| Brand font | `"Jua", -apple-system, sans-serif` |
+| UI font | `"Avenir Next", "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif` |
+| Brand font | Same as UI font for product UI consistency |
 
 ### Runtime Token Rule
 

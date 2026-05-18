@@ -20,7 +20,7 @@ export function AppHeader({
   const brandLink = (
     <Link
       aria-label="Homecook"
-      className="inline-flex text-[22px] font-bold leading-none transition-opacity hover:opacity-80 [font-family:var(--wave1-font-brand)]"
+      className="inline-flex text-[22px] font-bold leading-none transition-opacity hover:opacity-80"
       href="/"
     >
       <span className="text-[var(--wave1-mint-contrast)]">homecook</span>

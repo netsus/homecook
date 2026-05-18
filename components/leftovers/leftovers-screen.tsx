@@ -677,10 +677,6 @@ function LeftoversMobileView({
     <div
       className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
       data-testid="leftovers-screen"
-      style={{
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif',
-      }}
     >
       <MobileAppBar
         actionHref={eatenListHref}

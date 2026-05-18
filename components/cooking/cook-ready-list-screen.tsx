@@ -601,7 +601,7 @@ function MobileCookReadyListScreen({
           <p className="text-[13px] font-medium leading-[1.35] text-[#868E96]">
             {formatMobileCookDate(dateRange?.start)}
           </p>
-          <h2 className="mt-1 text-[20px] font-extrabold leading-[1.3] text-[#212529] [font-family:var(--font-jua),-apple-system,sans-serif]">
+          <h2 className="mt-1 text-[20px] font-extrabold leading-[1.3] text-[#212529]">
             어떤 요리부터 시작할까요?
           </h2>
         </section>

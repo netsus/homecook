@@ -93,10 +93,6 @@ export function MobileCookModeView({
     <div
       className="relative min-h-dvh overflow-hidden bg-[#212529] text-white"
       data-testid={screenTestId}
-      style={{
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif',
-      }}
     >
       <div className="flex min-h-dvh flex-col pb-[118px]">
         <header className="flex items-center justify-between px-4 pb-[14px] pt-[52px]">
@@ -113,13 +109,13 @@ export function MobileCookModeView({
               {eyebrow}
             </p>
             <h1
-              className="truncate text-[17px] font-bold leading-[1.12] text-white/95 [font-family:var(--font-jua),-apple-system,sans-serif]"
+              className="truncate text-[17px] font-bold leading-[1.12] text-white/95"
               data-testid={titleTestId}
             >
               {recipe.title}
             </h1>
             <p
-              className="text-[13px] font-medium leading-[1.2] text-white [font-family:var(--font-jua),-apple-system,sans-serif]"
+              className="text-[13px] font-medium leading-[1.2] text-white"
               data-testid={servingsTestId}
             >
               {recipe.steps.length}단계
@@ -149,7 +145,7 @@ export function MobileCookModeView({
             나가기
           </button>
           <button
-            className="flex h-14 min-w-0 flex-1 items-center justify-center rounded-xl border-0 bg-[#2AC1BC] px-4 text-[16px] font-bold leading-none text-white disabled:opacity-60 [font-family:var(--font-jua),-apple-system,sans-serif]"
+            className="flex h-14 min-w-0 flex-1 items-center justify-center rounded-xl border-0 bg-[#2AC1BC] px-4 text-[16px] font-bold leading-none text-white disabled:opacity-60"
             data-testid={completeButtonTestId}
             disabled={controlsDisabled}
             onClick={onComplete}
@@ -209,7 +205,7 @@ function MobileStepList({
                 {method.label}
               </span>
             </div>
-            <h2 className="mb-2 text-[18px] font-bold leading-[1.3] [font-family:var(--font-jua),-apple-system,sans-serif]">
+            <h2 className="mb-2 text-[18px] font-bold leading-[1.3]">
               {title}
             </h2>
             <p className="text-[15px] font-medium leading-[1.6] text-[#1A1A2E]">
