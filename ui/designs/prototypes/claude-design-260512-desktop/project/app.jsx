@@ -1,5 +1,5 @@
 /* global React, ReactDOM */
-const { useState: useStateA, useCallback: useCallbackA, useMemo: useMemoA } = React;
+const { useState: useStateA, useCallback: useCallbackA, useMemo: useMemoA, useEffect: useEffectA } = React;
 const HC_ = window.HC;
 const DA = window.HC_DATA;
 const { LoginScreen, HomeScreen, RecipeDetailScreen } = window.HC_S1;
@@ -75,6 +75,135 @@ function shoppingIngredientAmount(ingredient, factor) {
     ? (amount >= 10 ? Math.round(amount * 10) / 10 : amount.toFixed(2).replace(/\.?0+$/, ""))
     : amount;
   return `${value || ""}${ingredient.unit ? ` ${ingredient.unit}` : ""}`.trim();
+}
+
+const DEFAULT_ROUTE = { screen: "HOME" };
+const ROUTE_PARAM_KEYS = {
+  RECIPE: ["recipeId"],
+  MEAL: ["mealId"],
+  MENU_ADD: ["date", "col"],
+  RECIPE_SEARCH_PICKER: ["date", "col"],
+  RECIPEBOOK_SELECTOR: ["date", "col"],
+  RECIPEBOOK_DETAIL_PICKER: ["bookId", "date", "col"],
+  PANTRY_MATCH_PICKER: ["date", "col"],
+  MANUAL_RECIPE_CREATE: ["date", "col"],
+  YT_IMPORT: ["date", "col"],
+  RECIPEBOOK_DETAIL: ["bookId"],
+  SHOPPING_DETAIL: ["listId"],
+  COOK_MODE_PLANNER: ["mealId"],
+  COOK_MODE_STANDALONE: ["recipeId"],
+};
+const TOP_ROUTE_SCREENS = new Set(["HOME", "PANTRY", "PLANNER_WEEK", "MYPAGE", "LOGIN"]);
+const PLANNER_ROUTE_SCREENS = new Set([
+  "MEAL",
+  "MENU_ADD",
+  "RECIPE_SEARCH_PICKER",
+  "RECIPEBOOK_SELECTOR",
+  "RECIPEBOOK_DETAIL_PICKER",
+  "PANTRY_MATCH_PICKER",
+  "MANUAL_RECIPE_CREATE",
+  "YT_IMPORT",
+  "COOK_READY_LIST",
+  "COOK_MODE_PLANNER",
+]);
+const MYPAGE_ROUTE_SCREENS = new Set([
+  "RECIPEBOOKS",
+  "RECIPEBOOK_DETAIL",
+  "SHOPPING_FLOW",
+  "SHOPPING_LISTS",
+  "SHOPPING_DETAIL",
+  "LEFTOVERS",
+  "ATE_LIST",
+  "SETTINGS",
+]);
+const KNOWN_ROUTE_SCREENS = new Set([
+  ...TOP_ROUTE_SCREENS,
+  ...PLANNER_ROUTE_SCREENS,
+  ...MYPAGE_ROUTE_SCREENS,
+  "RECIPE",
+  "COOK_MODE_STANDALONE",
+]);
+
+function routeParamsFor(screen) {
+  return ROUTE_PARAM_KEYS[screen] || [];
+}
+
+function normalizeRouteEntry(entry) {
+  const screen = KNOWN_ROUTE_SCREENS.has(entry?.screen) ? entry.screen : DEFAULT_ROUTE.screen;
+  const normalized = { screen };
+  routeParamsFor(screen).forEach((key) => {
+    if (entry?.[key] !== undefined && entry[key] !== null && entry[key] !== "") {
+      normalized[key] = String(entry[key]);
+    }
+  });
+  return normalized;
+}
+
+function parseHashRoute(hash) {
+  const raw = String(hash || (typeof window !== "undefined" ? window.location.hash : "")).replace(/^#/, "");
+  if (!raw) return DEFAULT_ROUTE;
+
+  const params = new URLSearchParams(raw);
+  return normalizeRouteEntry({
+    screen: params.get("screen") || DEFAULT_ROUTE.screen,
+    ...Object.fromEntries(params.entries()),
+  });
+}
+
+function routeEntryToHash(entry) {
+  const normalized = normalizeRouteEntry(entry);
+  const params = new URLSearchParams();
+  params.set("screen", normalized.screen);
+  routeParamsFor(normalized.screen).forEach((key) => {
+    if (normalized[key]) params.set(key, normalized[key]);
+  });
+  return `#${params.toString()}`;
+}
+
+function writeRouteHash(entry, mode = "push") {
+  if (typeof window === "undefined") return;
+
+  const hash = routeEntryToHash(entry);
+  if (window.location.hash === hash) return;
+
+  const url = `${window.location.pathname}${window.location.search}${hash}`;
+  if (mode === "replace") {
+    window.history.replaceState(null, "", url);
+  } else {
+    window.history.pushState(null, "", url);
+  }
+}
+
+function stackFromRouteEntry(entry) {
+  const route = normalizeRouteEntry(entry);
+  if (TOP_ROUTE_SCREENS.has(route.screen)) return [route];
+  if (route.screen === "RECIPE") return [{ screen: "HOME" }, route];
+  if (route.screen === "COOK_MODE_STANDALONE") {
+    return route.recipeId
+      ? [{ screen: "HOME" }, { screen: "RECIPE", recipeId: route.recipeId }, route]
+      : [{ screen: "HOME" }, route];
+  }
+  if (PLANNER_ROUTE_SCREENS.has(route.screen)) {
+    const stack = [{ screen: "PLANNER_WEEK" }];
+    const hasSlot = route.date || route.col;
+
+    if (["RECIPE_SEARCH_PICKER", "RECIPEBOOK_SELECTOR", "PANTRY_MATCH_PICKER", "MANUAL_RECIPE_CREATE", "YT_IMPORT"].includes(route.screen) && hasSlot) {
+      stack.push({ screen: "MENU_ADD", date: route.date, col: route.col });
+    }
+    if (route.screen === "RECIPEBOOK_DETAIL_PICKER") {
+      if (hasSlot) stack.push({ screen: "MENU_ADD", date: route.date, col: route.col });
+      stack.push({ screen: "RECIPEBOOK_SELECTOR", date: route.date, col: route.col });
+    }
+
+    return [...stack, route];
+  }
+  if (MYPAGE_ROUTE_SCREENS.has(route.screen)) {
+    const stack = [{ screen: "MYPAGE" }];
+    if (route.screen === "RECIPEBOOK_DETAIL") stack.push({ screen: "RECIPEBOOKS" });
+    if (route.screen === "SHOPPING_DETAIL") stack.push({ screen: "SHOPPING_LISTS" });
+    return [...stack, route];
+  }
+  return [DEFAULT_ROUTE];
 }
 
 function createShoppingListFromMeals(targetMeals, pantryHeld) {
@@ -160,8 +289,8 @@ function cloneShoppingListForReadd(list) {
 }
 
 function App() {
-  // Routing — stack-based
-  const [stack, setStack] = useStateA([{ screen: "HOME" }]);
+  // Routing — hash-backed stack. Modals intentionally stay out of browser history.
+  const [stack, setStack] = useStateA(() => stackFromRouteEntry(parseHashRoute()));
   const cur = stack[stack.length - 1];
 
   // Persisted state
@@ -220,11 +349,49 @@ function App() {
     resume: null,
   });
 
+  useEffectA(() => {
+    if (!window.location.hash) writeRouteHash(DEFAULT_ROUTE, "replace");
+
+    const syncStackFromHash = () => {
+      setStack(stackFromRouteEntry(parseHashRoute()));
+      window.scrollTo({ top: 0, behavior: "instant" });
+    };
+
+    window.addEventListener("popstate", syncStackFromHash);
+    window.addEventListener("hashchange", syncStackFromHash);
+    return () => {
+      window.removeEventListener("popstate", syncStackFromHash);
+      window.removeEventListener("hashchange", syncStackFromHash);
+    };
+  }, []);
+
   // Nav
-  const push = (entry) => { setStack(s => [...s, entry]); window.scrollTo({ top: 0, behavior: "instant" }); };
-  const replace = (entry) => { setStack(s => [...s.slice(0, -1), entry]); window.scrollTo({ top: 0, behavior: "instant" }); };
-  const pop = () => { setStack(s => s.length > 1 ? s.slice(0, -1) : s); window.scrollTo({ top: 0, behavior: "instant" }); };
-  const goTab = (tab) => { setStack([{ screen: tab }]); window.scrollTo({ top: 0, behavior: "instant" }); };
+  const push = (entry) => {
+    const route = normalizeRouteEntry(entry);
+    setStack(s => [...s, route]);
+    writeRouteHash(route);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
+  const replace = (entry) => {
+    const route = normalizeRouteEntry(entry);
+    setStack(s => [...s.slice(0, -1), route]);
+    writeRouteHash(route, "replace");
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
+  const pop = () => {
+    if (stack.length <= 1) return;
+
+    const nextStack = stack.slice(0, -1);
+    setStack(nextStack);
+    writeRouteHash(nextStack[nextStack.length - 1], "replace");
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
+  const goTab = (tab) => {
+    const route = normalizeRouteEntry({ screen: tab });
+    setStack([route]);
+    writeRouteHash(route);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
 
   const openAccountDeleteConfirm = () => openConfirm({
     title: "정말 계정을 삭제할까요?",
