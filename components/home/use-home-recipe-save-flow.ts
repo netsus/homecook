@@ -5,19 +5,19 @@ import { useCallback, useMemo, useState } from "react";
 import {
   createCustomRecipeBook,
   fetchSaveableRecipeBooks,
+  removeRecipeFromBook,
   saveRecipeToBooks,
 } from "@/lib/api/recipe-save";
 import type {
   RecipeBookSummary,
   RecipeCardItem,
-  RecipeSaveData,
 } from "@/types/recipe";
 
 type SaveModalState = "idle" | "loading" | "ready" | "error";
 
 interface UseHomeRecipeSaveFlowArgs {
   isAuthenticated: boolean;
-  onRecipeSaved: (recipeId: string, result: RecipeSaveData) => void;
+  onRecipeSaved: (recipeId: string, saveCount: number) => void;
   requestLogin: (recipeId: string) => void;
 }
 
@@ -199,8 +199,11 @@ export function useHomeRecipeSaveFlow({
     const newBookIds = selectedSaveBookIds.filter(
       (bookId) => !alreadySavedBookIds.includes(bookId),
     );
+    const removedBookIds = alreadySavedBookIds.filter(
+      (bookId) => !selectedSaveBookIds.includes(bookId),
+    );
 
-    if (newBookIds.length === 0) {
+    if (newBookIds.length === 0 && removedBookIds.length === 0) {
       return;
     }
 
@@ -208,29 +211,35 @@ export function useHomeRecipeSaveFlow({
     setSaveSubmitError(null);
 
     try {
-      const result = await saveRecipeToBooks(saveTargetRecipe.id, newBookIds);
       const recipeId = saveTargetRecipe.id;
+      const saveResult = newBookIds.length > 0
+        ? await saveRecipeToBooks(recipeId, newBookIds)
+        : null;
+
+      await Promise.all(
+        removedBookIds.map((bookId) => removeRecipeFromBook(bookId, recipeId)),
+      );
+
+      const baseSaveCount = saveResult?.save_count ?? saveTargetRecipe.save_count;
+      const nextSaveCount = Math.max(0, baseSaveCount - removedBookIds.length);
+      const nextSavedBookIds = selectedSaveBookIds;
 
       setSavedRecipeIds((currentRecipeIds) => {
         const nextRecipeIds = new Set(currentRecipeIds);
-        nextRecipeIds.add(recipeId);
+        if (nextSavedBookIds.length > 0) {
+          nextRecipeIds.add(recipeId);
+        } else {
+          nextRecipeIds.delete(recipeId);
+        }
         return nextRecipeIds;
       });
       setSavedBookIdsByRecipeId((currentByRecipeId) => {
-        const currentBookIds = currentByRecipeId[recipeId] ?? [];
-        const nextBookIds = [
-          ...currentBookIds,
-          ...result.book_ids.filter(
-            (bookId) => !currentBookIds.includes(bookId),
-          ),
-        ];
-
         return {
           ...currentByRecipeId,
-          [recipeId]: nextBookIds,
+          [recipeId]: nextSavedBookIds,
         };
       });
-      onRecipeSaved(recipeId, result);
+      onRecipeSaved(recipeId, nextSaveCount);
       setIsSaveModalOpen(false);
       setSaveTargetRecipe(null);
       setSaveModalState("idle");
@@ -250,20 +259,13 @@ export function useHomeRecipeSaveFlow({
     selectedSaveBookIds,
   ]);
 
-  const selectSaveBook = useCallback(
-    (bookId: string) => {
-      if (alreadySavedBookIds.includes(bookId)) {
-        return;
-      }
-
-      setSelectedSaveBookIds((currentBookIds) =>
-        currentBookIds.includes(bookId)
-          ? currentBookIds.filter((currentBookId) => currentBookId !== bookId)
-          : [...currentBookIds, bookId],
-      );
-    },
-    [alreadySavedBookIds],
-  );
+  const selectSaveBook = useCallback((bookId: string) => {
+    setSelectedSaveBookIds((currentBookIds) =>
+      currentBookIds.includes(bookId)
+        ? currentBookIds.filter((currentBookId) => currentBookId !== bookId)
+        : [...currentBookIds, bookId],
+    );
+  }, []);
 
   return {
     alreadySavedBookIds,

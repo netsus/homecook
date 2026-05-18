@@ -209,7 +209,7 @@ describe("recipe detail screen", () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(screen.queryByText("조회")).toBeNull();
-    expect(screen.getByText("요리완료")).toBeTruthy();
+    expect(screen.queryByText("요리완료")).toBeNull();
   });
 
   it("keeps the overview metrics row compact so hero actions stay closer to the first fold", async () => {
@@ -264,10 +264,10 @@ describe("recipe detail screen", () => {
     ).toBeTruthy();
 
     expect((await screen.findByRole("button", { name: "좋아요 203" })).className).toContain(
-      "min-h-[58px]",
+      "bg-transparent",
     );
     expect((await screen.findByRole("button", { name: "저장" })).className).toContain(
-      "min-h-[58px]",
+      "text-white",
     );
     expect(
       (await screen.findByRole("button", { name: "플래너에 추가" })).className,
@@ -561,7 +561,7 @@ describe("recipe detail screen", () => {
     expect(recipeBookRequests).toBe(2);
   });
 
-  it("shows already-saved books as locked and counts only new save targets", async () => {
+  it("lets already-saved books be unchecked and applies removal on final save", async () => {
     const detail = buildRecipeDetail({
       user_status: {
         is_liked: false,
@@ -569,6 +569,7 @@ describe("recipe detail screen", () => {
         saved_book_ids: ["book-saved"],
       },
     });
+    const deleteRequests: string[] = [];
 
     getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
     fetchJson.mockImplementation((input: string, init?: RequestInit) => {
@@ -578,6 +579,14 @@ describe("recipe detail screen", () => {
 
       if (!init?.method && input === "/api/v1/recipe-books") {
         return Promise.resolve(buildSaveableBooks());
+      }
+
+      if (
+        init?.method === "DELETE" &&
+        input === `/api/v1/recipe-books/book-saved/recipes/${MOCK_RECIPE_DETAIL.id}`
+      ) {
+        deleteRequests.push(input);
+        return Promise.resolve({ deleted: true });
       }
 
       return Promise.reject(new Error(`Unexpected request: ${input}`));
@@ -593,15 +602,42 @@ describe("recipe detail screen", () => {
     await waitFor(() => {
       expect(modalScope.getAllByText("이미 저장됨").length).toBeGreaterThan(0);
     });
-    expect(saveButton.disabled).toBe(true);
-    expect(saveButton.textContent).toBe("이미 저장됨");
 
-    await userEvent.click(modalScope.getByRole("button", { name: /주말 파티/ }));
+    await userEvent.click(modalScope.getByRole("button", { name: /저장한 레시피/ }));
 
     await waitFor(() => {
-      expect(saveButton.textContent).toBe("1개 레시피북에 추가 저장");
+      expect(saveButton.textContent).toContain("1개 저장 해제");
     });
     expect(saveButton.disabled).toBe(false);
+
+    expect(deleteRequests).toEqual([]);
+
+    await userEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    expect(deleteRequests).toEqual([
+      `/api/v1/recipe-books/book-saved/recipes/${MOCK_RECIPE_DETAIL.id}`,
+    ]);
+    expect(await screen.findByText("레시피북 저장을 변경했어요.")).toBeTruthy();
+    expect((await findSaveActionButton()).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("uses the recipe thumbnail for the mobile hero and shows icon-count hero actions", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    const hero = await screen.findByTestId("recipe-detail-hero");
+    expect(hero.getAttribute("style")).toContain(MOCK_RECIPE_DETAIL.thumbnail_url);
+
+    const likeButton = await screen.findByRole("button", { name: "좋아요 203" });
+    const saveButton = await screen.findByRole("button", { name: "저장" });
+    const cookStatus = screen.getByRole("status", { name: "요리완료 34" });
+
+    expect(likeButton.textContent).toBe("203");
+    expect(saveButton.textContent).toBe("89");
+    expect(cookStatus.textContent).toBe("34");
   });
 
   it("creates a custom recipe book and saves the recipe", async () => {
@@ -853,7 +889,8 @@ describe("recipe detail screen", () => {
   it("displays hero action metrics with prototype like/save/cook stack", async () => {
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
-    expect(await screen.findByText("요리완료")).toBeTruthy();
+    await screen.findByTestId("recipe-detail-hero");
+    expect(screen.queryByText("요리완료")).toBeNull();
     expect(
       screen.getByRole("status", { name: /요리완료/ }),
     ).toBeTruthy();
@@ -871,7 +908,7 @@ describe("recipe detail screen", () => {
     const ctaBar = plannerButton.closest(".wave1-recipe-cta-bar");
     expect(ctaBar).not.toBeNull();
     expect(ctaBar?.contains(cookButton)).toBe(true);
-    expect(ctaBar?.className).toContain("bottom-[96px]");
+    expect(ctaBar?.className).toContain("bottom-[calc(72px+env(safe-area-inset-bottom))]");
   });
 
   it("renders cooking step instructions with text-base font size", async () => {
