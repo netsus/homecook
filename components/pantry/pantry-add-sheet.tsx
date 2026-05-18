@@ -11,9 +11,19 @@ import {
   AppBottomSheet,
   AppModalFooterActions,
 } from "@/components/shared/app-overlay";
-import { ModalHeader } from "@/components/shared/modal-header";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  WebButton,
+  WebDialog,
+  WebDialogBody,
+  WebDialogFooter,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebModal,
+  WebTabButton,
+  WebTabs,
+} from "@/components/web";
 import { addPantryItems, fetchIngredients } from "@/lib/api/pantry";
 import type { IngredientItem } from "@/types/recipe";
 
@@ -284,92 +294,89 @@ export function PantryAddSheet({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6"
-      onClick={onClose}
-    >
-      <div
-        aria-label="재료 추가"
-        aria-modal="true"
-        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-[var(--radius-xl)] bg-[var(--panel)] shadow-[var(--shadow-3)]"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
+    <WebModal onBackdropClick={onClose}>
+      <WebDialog
+        aria-labelledby="pantry-add-sheet-title-a11y"
+        className="web-pantry-add-dialog"
+        size="wide"
       >
-        {/* Header */}
-        <div className="px-5 pt-3">
-          <ModalHeader
-            closeButtonRef={closeButtonRef}
-            description="팬트리에 추가할 재료를 검색하세요"
-            onClose={onClose}
-            title="재료 추가"
-            titleId="pantry-add-sheet-title"
-          />
-        </div>
+        <span className="sr-only" id="pantry-add-sheet-title-a11y">
+          재료 추가
+        </span>
+        <WebDialogHeader>
+          <div>
+            <WebDialogTitle>팬트리에 재료 추가</WebDialogTitle>
+            <p className="web-modal-copy">
+              팬트리에 추가할 재료를 검색하세요
+            </p>
+          </div>
+          <button
+            aria-label="닫기"
+            className="web-modal-close"
+            onClick={onClose}
+            ref={closeButtonRef}
+            type="button"
+          >
+            ×
+          </button>
+        </WebDialogHeader>
 
-        {/* Search */}
-        <div className="px-5 pt-3">
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]">
-              🔍
-            </span>
+        <WebDialogBody>
+          <label className="web-picker-search">
+            <span aria-hidden="true">⌕</span>
             <input
               aria-label="재료명 검색"
-              className="w-full rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--surface)] py-2.5 pl-9 pr-3 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="재료명 입력"
+              onChange={(event) => handleSearch(event.target.value)}
+              placeholder="재료 검색"
               type="text"
               value={searchQuery}
             />
-          </div>
-        </div>
+          </label>
 
-        {/* Category rail */}
-        <div className="scrollbar-hide flex gap-2 overflow-x-auto px-5 pt-3">
-          {categories.map((category) => (
-            <button
-              aria-selected={activeCategory === category}
-              className={`shrink-0 rounded-full px-3 py-1 text-xs transition ${
-                activeCategory === category
-                  ? "bg-[color-mix(in_srgb,var(--olive)_12%,transparent)] font-semibold text-[var(--olive)]"
-                  : "bg-[var(--surface-fill)] text-[var(--text-2)]"
-              }`}
-              key={category}
-              onClick={() => handleCategoryChange(activeCategory === category ? null : category)}
-              role="tab"
-              type="button"
+          <WebTabs className="web-pantry-modal-tabs" role="tablist">
+            <WebTabButton
+              active={!activeCategory}
+              onClick={() => handleCategoryChange(null)}
             >
-              {category}
-            </button>
-          ))}
-        </div>
+              전체
+            </WebTabButton>
+            {categories.map((category) => (
+              <WebTabButton
+                active={activeCategory === category}
+                key={category}
+                onClick={() =>
+                  handleCategoryChange(
+                    activeCategory === category ? null : category,
+                  )
+                }
+              >
+                {category}
+              </WebTabButton>
+            ))}
+          </WebTabs>
 
-        {/* Ingredient list */}
-        <div className="flex-1 overflow-y-auto px-5 py-3" style={{ overscrollBehavior: "contain" }}>
           {sheetState === "loading" ? (
-            <div className="space-y-2">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton className="w-full" height={44} key={i} rounded="md" />
+            <div className="web-ingredient-grid">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item) => (
+                <Skeleton className="w-full" height={70} key={item} rounded="md" />
               ))}
             </div>
           ) : sheetState === "error" ? (
-            <div className="flex flex-col items-center py-8 text-center">
-              <p className="text-sm font-semibold text-[var(--foreground)]">
-                재료 목록을 불러오지 못했어요
-              </p>
-              <button
-                className="mt-4 flex min-h-[44px] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-5 text-sm font-semibold text-[var(--surface)]"
+            <div className="web-modal-panel web-modal-panel-error">
+              <p className="web-modal-copy">재료 목록을 불러오지 못했어요</p>
+              <WebButton
                 onClick={() => void loadIngredients(searchQuery, activeCategory)}
-                type="button"
+                size="sm"
               >
                 다시 시도
-              </button>
+              </WebButton>
             </div>
           ) : sheetState === "empty" ? (
-            <p className="py-8 text-center text-sm text-[var(--muted)]">
-              검색 결과가 없어요
-            </p>
+            <div className="web-modal-panel">
+              <p className="web-modal-copy">검색 결과가 없어요</p>
+            </div>
           ) : (
-            <div className="space-y-0.5">
+            <div className="web-ingredient-grid">
               {ingredients.map((ingredient) => {
                 const isExisting = existingSet.current.has(ingredient.id);
                 const isChecked = selectedIds.has(ingredient.id);
@@ -382,70 +389,59 @@ export function PantryAddSheet({
                         ? `${ingredient.standard_name} 보유중`
                         : ingredient.standard_name
                     }
-                    className="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition hover:bg-[var(--surface-fill)] disabled:opacity-100"
+                    className={[
+                      "web-ingredient-cell",
+                      isChecked ? "web-ingredient-cell-selected" : "",
+                      isExisting ? "web-pantry-ingredient-existing" : "",
+                    ].join(" ")}
                     disabled={isExisting}
                     key={ingredient.id}
                     onClick={() => handleToggle(ingredient.id)}
                     role="checkbox"
                     type="button"
                   >
-                    <span
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
-                        isExisting
-                          ? "border-[var(--line)] bg-[var(--surface-fill)] text-[var(--text-4)]"
-                          : isChecked
-                            ? "border-[var(--olive)] bg-[var(--olive)] text-white"
-                            : "border-[var(--line)] bg-[var(--surface)]"
-                      }`}
-                    >
-                      {(isChecked || isExisting) && "✓"}
+                    <span aria-hidden="true">
+                      {getPantryEmoji(
+                        ingredient.standard_name,
+                        ingredient.category,
+                      )}
                     </span>
-                    <span
-                      className={`flex-1 truncate text-sm ${
-                        isExisting ? "text-[var(--text-3)]" : "text-[var(--foreground)]"
-                      }`}
-                    >
-                      {ingredient.standard_name}
-                    </span>
-                    {isExisting && (
-                      <span className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5 text-xs font-semibold text-[var(--text-2)]">
-                        보유중
-                      </span>
-                    )}
+                    <strong>{ingredient.standard_name}</strong>
+                    <small>{isExisting ? "보유중" : ingredient.category}</small>
                   </button>
                 );
               })}
             </div>
           )}
-        </div>
+        </WebDialogBody>
 
-        {/* CTA */}
-        <div className="border-t border-[var(--line)] px-5 py-3">
-          {errorMessage && (
-            <p className="mb-2 text-sm font-medium text-[var(--brand-deep)]" role="alert">
+        <WebDialogFooter>
+          {errorMessage ? (
+            <p className="web-modal-footer-note" role="alert">
               {errorMessage}
             </p>
-          )}
-          <button
-            aria-disabled={selectedIds.size === 0 || isAdding}
-            className={`flex min-h-[48px] w-full items-center justify-center rounded-[var(--radius-md)] text-base font-semibold transition ${
-              selectedIds.size > 0 && !isAdding
-                ? "bg-[var(--brand)] text-[var(--surface)]"
-                : "pointer-events-none bg-[var(--surface-fill)] text-[var(--text-4)]"
-            }`}
+          ) : null}
+          <WebButton onClick={onClose} variant="tertiary">
+            취소
+          </WebButton>
+          <WebButton
+            aria-label={
+              selectedIds.size > 0
+                ? `팬트리에 추가 (${selectedIds.size})`
+                : undefined
+            }
             disabled={selectedIds.size === 0 || isAdding}
             onClick={() => void handleAdd()}
-            type="button"
           >
             {isAdding
               ? "추가 중..."
               : selectedIds.size > 0
-                ? `팬트리에 추가 (${selectedIds.size})`
-                : "추가할 재료를 선택해 주세요"}
-          </button>
-        </div>
-      </div>
-    </div>
+                ? `+ ${selectedIds.size}개 추가`
+                : "재료 선택"}
+          </WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
   );
 }
 

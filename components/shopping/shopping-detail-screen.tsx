@@ -9,6 +9,13 @@ import { useAppReturn } from "@/components/shared/use-app-return";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
 import {
+  WebButton,
+  WebCard,
+  WebIconButton,
+  WebShell,
+  WebTopNav,
+} from "@/components/web";
+import {
   completeShoppingList,
   fetchShoppingListDetail,
   fetchShoppingShareText,
@@ -29,6 +36,13 @@ interface UpdateState {
   itemId: string;
   type: "check" | "exclude";
 }
+
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "홈" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이" },
+] as const;
 
 export function ShoppingDetailScreen({
   listId,
@@ -565,228 +579,213 @@ export function ShoppingDetailScreen({
     : 100;
 
   return (
-    <div className="min-h-screen bg-[var(--wave1-surface-fill)]">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-[var(--line)] bg-[var(--panel)] px-6 py-3 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
+    <WebShell className="web-shopping-shell" wide>
+      <WebTopNav activeId="mypage" items={WEB_NAV_ITEMS} />
+      <main className="web-screen web-shopping-detail-screen">
+        <nav aria-label="장보기 상세 경로" className="web-breadcrumb">
           <button
+            aria-label="이전 화면으로 돌아가기"
+            className="web-breadcrumb-link"
             onClick={appReturn.goBack}
-            className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-black/5"
             type="button"
-            aria-label="뒤로 가기"
           >
-            <span className="text-lg">←</span>
+            장보기
           </button>
-          <h1 className="text-base font-bold tracking-[-0.3px]">장보기 상세</h1>
-          <button
-            onClick={handleShare}
-            disabled={isSharing}
-            className="flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold text-[var(--olive)] hover:bg-black/5 disabled:opacity-50"
-            type="button"
-            aria-label="공유(텍스트)"
-          >
-            {isSharing ? "공유 중..." : "공유"}
-          </button>
-        </div>
-      </header>
+          <span className="web-breadcrumb-sep">/</span>
+          <span className="web-breadcrumb-current">상세</span>
+        </nav>
 
-      {shareToast && (
-        <div
-          className={`mx-auto mt-4 max-w-6xl rounded-xl px-4 py-3 text-sm font-semibold ${
-            shareToast.type === "error"
-              ? "bg-red-50 text-red-700"
-              : shareToast.type === "empty"
-                ? "bg-yellow-50 text-yellow-700"
-                : "bg-green-50 text-green-700"
-          }`}
-          role="status"
-          aria-live="polite"
-        >
-          {shareToast.message}
-        </div>
-      )}
-
-      {/* Title and date range */}
-      <section className="mx-auto max-w-6xl px-6 py-8">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <header className="web-shopping-detail-head">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
+            <p className="web-menu-add-eyebrow">
               {isReadOnly ? "Completed Shopping" : "Shopping List"}
             </p>
-            <h2 className="mt-2 text-3xl font-bold tracking-[-0.4px] text-[var(--foreground)]">
-              {listDetail.title}
-            </h2>
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              <span>생성 {formatDate(listDetail.created_at)}</span>
-              <span className="mx-2">·</span>
+            <h1>{listDetail.title}</h1>
+            <p>
+              생성 {formatDate(listDetail.created_at)} ·{" "}
+              {formatDateRange(
+                listDetail.date_range_start,
+                listDetail.date_range_end,
+              )}
+            </p>
+            <span className="sr-only">생성 {formatDate(listDetail.created_at)}</span>
+            <span className="sr-only">
+              {formatDateRange(
+                listDetail.date_range_start,
+                listDetail.date_range_end,
+              )}
+            </span>
+          </div>
+          <div className="web-shopping-detail-actions">
+            <WebIconButton
+              aria-label="뒤로 가기"
+              onClick={appReturn.goBack}
+            >
+              ←
+            </WebIconButton>
+            <WebButton
+              aria-label="공유(텍스트)"
+              disabled={isSharing}
+              onClick={handleShare}
+              variant="secondary"
+            >
+              {isSharing ? "공유 중..." : "공유"}
+            </WebButton>
+          </div>
+        </header>
+
+        {shareToast ? (
+          <StatusToast
+            message={shareToast.message}
+            tone={shareToast.type === "error" ? "error" : "success"}
+          />
+        ) : null}
+        {reorderError ? (
+          <StatusToast message={reorderError} tone="error" />
+        ) : null}
+        {completeToast ? (
+          <StatusToast message={completeToast.message} tone={completeToast.type} />
+        ) : null}
+
+        {isReadOnly ? (
+          <WebCard className="web-shopping-lock">
+            <strong>완료된 장보기 기록은 수정할 수 없어요</strong>
+            {listDetail.completed_at ? (
               <span>
-                {formatDateRange(listDetail.date_range_start, listDetail.date_range_end)}
+                완료 {formatDate(listDetail.completed_at)}
+                <span className="sr-only">
+                  {" "}
+                  ✓ 완료됨 ({formatDate(listDetail.completed_at)})
+                </span>
               </span>
-            </p>
-            {isReadOnly && listDetail.completed_at && (
-              <p className="mt-2 text-sm font-semibold text-[var(--olive)]">
-                ✓ 완료됨 ({formatDate(listDetail.completed_at)})
-              </p>
-            )}
-          </div>
-
-          {!isReadOnly ? (
-            <div className="min-w-[260px] rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]">
-              <div className="flex items-center justify-between text-sm font-semibold text-[var(--muted)]">
-                <span>진행률</span>
-                <span className="tabular-nums text-[var(--foreground)]">
-                  {completedCount} / {purchaseItems.length} 항목 ({progressPercent}%)
-                </span>
-              </div>
-              <div className="mt-3 h-2 rounded-full bg-[var(--surface-fill)]">
-                <div
-                  className="h-full rounded-full bg-[var(--brand)]"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
+            ) : null}
+          </WebCard>
+        ) : (
+          <WebCard className="web-shopping-progress">
+            <div>
+              <span>진행률</span>
+              <strong>
+                {completedCount} / {purchaseItems.length} 항목 ({progressPercent}%)
+              </strong>
             </div>
-          ) : null}
-        </div>
-      </section>
-
-      {/* Main content */}
-      <main className="mx-auto grid max-w-6xl gap-8 px-6 pb-28 lg:grid-cols-[minmax(0,1fr)_360px]">
-        {/* Empty state */}
-        {isEmpty && (
-          <div className="mb-6 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-8 text-center">
-            <p className="mt-3 text-base font-semibold text-[var(--foreground)]">
-              팬트리에 이미 있어서
-            </p>
-            <p className="text-base font-semibold text-[var(--foreground)]">
-              장볼 재료가 없어요
-            </p>
-          </div>
+            <span className="web-shopping-progress-track">
+              <span style={{ width: `${progressPercent}%` }} />
+            </span>
+          </WebCard>
         )}
 
-        {/* Reorder error toast */}
-        {reorderError && (
-          <div
-            className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
-            role="alert"
-            aria-live="polite"
+        <div className="web-shopping-detail-layout">
+          <section
+            className="web-shopping-purchase-section"
+            aria-labelledby="shopping-purchase-title"
           >
-            {reorderError}
-          </div>
-        )}
-
-        {/* Complete toast */}
-        {completeToast && (
-          <div
-            className={`mb-4 rounded-xl px-4 py-3 text-sm font-semibold ${
-              completeToast.type === "error"
-                ? "bg-red-50 text-red-700"
-                : "bg-green-50 text-green-700"
-            }`}
-            role="status"
-            aria-live="polite"
-          >
-            {completeToast.message}
-          </div>
-        )}
-
-        <div className="min-w-0">
-          {!isEmpty && (
-            <section className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-bold text-[var(--foreground)]">
-                  {isReadOnly ? "구매한 재료" : "구매할 재료"} ({purchaseItems.length}개)
-                </h3>
-                <span className="text-xs font-semibold text-[var(--muted)]">
-                  체크 · 제외 · 순서 변경
-                </span>
+            <div className="web-shopping-section-head">
+              <div>
+                <h2 id="shopping-purchase-title">
+                  {isReadOnly ? "구매한 재료" : "구매할 재료"}
+                  <span className="sr-only">
+                    {` ${isReadOnly ? "구매한 재료" : "구매할 재료"} (${purchaseItems.length}개)`}
+                  </span>
+                </h2>
+                <p>{purchaseItems.length}개 항목</p>
               </div>
-              <div className="grid gap-3 xl:grid-cols-2">
-                {purchaseItems.map((item, index) => (
-                  <ShoppingItemCard
-                    key={item.id}
-                    item={item}
-                    isReadOnly={isReadOnly}
-                    isUpdating={updatingItem?.itemId === item.id}
-                    isReordering={isReordering}
-                    onToggleCheck={handleToggleCheck}
-                    onToggleExclude={handleToggleExclude}
-                    onMoveUp={index > 0 ? () => handleMoveItem(item.id, "up") : undefined}
-                    onMoveDown={index < purchaseItems.length - 1 ? () => handleMoveItem(item.id, "down") : undefined}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-
-        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-          {isReadOnly ? (
-            <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[color:rgba(46,166,122,0.08)] p-4">
-              <p className="text-sm font-semibold text-[var(--foreground)]">
-                완료된 장보기 기록은 수정할 수 없어요
-              </p>
-              <button
-                className="mt-4 inline-flex min-h-10 items-center justify-center rounded-full border border-[var(--olive)] bg-white px-4 py-2 text-sm font-bold text-[var(--olive)]"
-                onClick={() => router.push("/planner")}
-                type="button"
-              >
-                플래너로 돌아가기
-              </button>
+              {!isReadOnly ? <span>체크 · 제외 · 순서 변경</span> : null}
             </div>
-          ) : (
-            <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
-              <p className="text-sm font-bold text-[var(--foreground)]">
-                장보기를 마쳤나요?
-              </p>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                완료하면 체크한 재료를 팬트리에 반영할 수 있어요.
-              </p>
-              <button
-                onClick={handleCompleteClick}
-                disabled={isCompleting}
-                className="mt-5 w-full rounded-full bg-[var(--brand)] py-4 text-base font-bold text-white hover:brightness-95 disabled:opacity-50"
-                type="button"
-              >
-                {isCompleting ? "완료 처리 중..." : "장보기 완료"}
-              </button>
-            </div>
-          )}
 
-          <section className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
-            <h3 className="mb-3 text-sm font-bold text-[var(--foreground)]">
-              팬트리 제외 항목 ({excludedItems.length}개)
-            </h3>
-            {excludedItems.length > 0 ? (
-              <div className="space-y-3">
-                {excludedItems.map((item) => (
-                  <ShoppingItemCard
-                    key={item.id}
-                    item={item}
-                    isReadOnly={isReadOnly}
-                    isUpdating={updatingItem?.itemId === item.id}
-                    onToggleCheck={handleToggleCheck}
-                    onToggleExclude={handleToggleExclude}
-                  />
-                ))}
+            {isEmpty ? (
+              <div className="web-modal-panel">
+                <p className="web-modal-copy">
+                  팬트리에 이미 있어서 장볼 재료가 없어요.
+                </p>
               </div>
             ) : (
-              <p className="text-sm leading-6 text-[var(--muted)]">
-                팬트리에서 제외된 재료가 없어요.
-              </p>
+              <div className="web-shopping-item-grid">
+                {purchaseItems.map((item, index) => (
+                  <ShoppingItemCard
+                    isReadOnly={isReadOnly}
+                    isReordering={isReordering}
+                    isUpdating={updatingItem?.itemId === item.id}
+                    item={item}
+                    key={item.id}
+                    onMoveDown={
+                      index < purchaseItems.length - 1
+                        ? () => handleMoveItem(item.id, "down")
+                        : undefined
+                    }
+                    onMoveUp={
+                      index > 0 ? () => handleMoveItem(item.id, "up") : undefined
+                    }
+                    onToggleCheck={handleToggleCheck}
+                    onToggleExclude={handleToggleExclude}
+                  />
+                ))}
+              </div>
             )}
           </section>
-        </aside>
-      </main>
 
-      {/* Pantry reflection popup */}
-      {showPantryPopup && listDetail && (
-        <PantryReflectionPopup
-          items={listDetail.items}
-          onConfirm={handlePantryConfirm}
-          onCancel={handlePantryCancel}
-        />
-      )}
-    </div>
+          <aside className="web-shopping-detail-rail">
+            {isReadOnly ? (
+              <WebCard className="web-shopping-rail-card">
+                <h2>읽기 전용</h2>
+                <p>완료된 장보기 기록은 체크와 제외 상태를 바꿀 수 없어요.</p>
+                <WebButton
+                  onClick={() => router.push("/planner")}
+                  variant="secondary"
+                >
+                  플래너로 돌아가기
+                </WebButton>
+              </WebCard>
+            ) : (
+              <WebCard className="web-shopping-rail-card">
+                <h2>장보기를 마쳤나요?</h2>
+                <p>완료하면 체크한 재료를 팬트리에 반영할 수 있어요.</p>
+                <WebButton
+                  disabled={isCompleting}
+                  fullWidth
+                  onClick={handleCompleteClick}
+                >
+                  {isCompleting ? "완료 처리 중..." : "장보기 완료"}
+                </WebButton>
+              </WebCard>
+            )}
+
+            <WebCard className="web-shopping-rail-card">
+              <h2>
+                팬트리 제외 항목
+                <span className="sr-only">
+                  {` 팬트리 제외 항목 (${excludedItems.length}개)`}
+                </span>
+              </h2>
+              <p>{excludedItems.length}개 항목</p>
+              {excludedItems.length > 0 ? (
+                <div className="web-shopping-excluded-list">
+                  {excludedItems.map((item) => (
+                    <ShoppingItemCard
+                      isReadOnly={isReadOnly}
+                      isUpdating={updatingItem?.itemId === item.id}
+                      item={item}
+                      key={item.id}
+                      onToggleCheck={handleToggleCheck}
+                      onToggleExclude={handleToggleExclude}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="web-modal-copy">팬트리에서 제외된 재료가 없어요.</p>
+              )}
+            </WebCard>
+          </aside>
+        </div>
+
+        {showPantryPopup && listDetail ? (
+          <PantryReflectionPopup
+            items={listDetail.items}
+            onCancel={handlePantryCancel}
+            onConfirm={handlePantryConfirm}
+          />
+        ) : null}
+      </main>
+    </WebShell>
   );
 }
 
@@ -1280,6 +1279,27 @@ interface ShoppingItemCardProps {
   onMoveDown?: () => void;
 }
 
+function StatusToast({
+  message,
+  tone,
+}: {
+  message: string;
+  tone: "success" | "error" | "empty";
+}) {
+  return (
+    <div
+      aria-live="polite"
+      className={[
+        "web-shopping-toast",
+        tone === "error" ? "web-shopping-toast-error" : "",
+      ].join(" ")}
+      role={tone === "error" ? "alert" : "status"}
+    >
+      {message}
+    </div>
+  );
+}
+
 function ShoppingItemCard({
   item,
   isReadOnly,
@@ -1299,100 +1319,79 @@ function ShoppingItemCard({
   const toggleLabel = item.is_pantry_excluded ? "되살리기" : "이미있음";
 
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-[var(--surface)] px-4 py-3 shadow-sm">
-      {showReorderButtons && (
-        <div className="flex shrink-0 flex-col gap-0.5">
+    <article
+      className={[
+        "web-shopping-item-card",
+        item.is_checked ? "web-shopping-item-card-checked" : "",
+        item.is_pantry_excluded ? "web-shopping-item-card-excluded" : "",
+      ].join(" ")}
+    >
+      {showReorderButtons ? (
+        <div className="web-shopping-reorder">
           <button
-            onClick={onMoveUp}
-            disabled={!onMoveUp || isReordering}
-            className="flex h-11 w-11 items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-30"
-            type="button"
             aria-label={`${item.display_text} 위로 이동`}
+            disabled={!onMoveUp || isReordering}
+            onClick={onMoveUp}
+            type="button"
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 5L5 10H15L10 5Z" fill="currentColor" />
-            </svg>
+            ↑
           </button>
           <button
-            onClick={onMoveDown}
-            disabled={!onMoveDown || isReordering}
-            className="flex h-11 w-11 items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-30"
-            type="button"
             aria-label={`${item.display_text} 아래로 이동`}
+            disabled={!onMoveDown || isReordering}
+            onClick={onMoveDown}
+            type="button"
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 15L15 10H5L10 15Z" fill="currentColor" />
-            </svg>
+            ↓
           </button>
         </div>
-      )}
+      ) : null}
 
       {showCheckButton ? (
         <button
-          onClick={() => onToggleCheck(item.id, item.is_checked)}
-          disabled={isUpdating}
-          className="flex h-11 w-11 shrink-0 items-center justify-center disabled:opacity-50"
-          type="button"
-          aria-label={`${item.display_text} 구매 완료 표시`}
           aria-checked={item.is_checked}
+          aria-label={`${item.display_text} 구매 완료 표시`}
+          className="web-shopping-check"
+          disabled={isUpdating}
+          onClick={() => onToggleCheck(item.id, item.is_checked)}
           role="checkbox"
+          type="button"
         >
-          <div
-            className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${
-              item.is_checked
-                ? "border-[var(--olive)] bg-[var(--olive)]"
-                : "border-[var(--line)] bg-white"
-            }`}
-          >
-            {item.is_checked && <span className="text-xs text-white">✓</span>}
-          </div>
+          {item.is_checked ? "✓" : ""}
         </button>
       ) : (
         <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center"
           aria-hidden="true"
+          className="web-shopping-check web-shopping-check-static rounded-[6px]"
+          data-testid={`shopping-readonly-status-${item.id}`}
         >
-          <div
-            className={[
-              "flex h-6 w-6 items-center justify-center rounded-[6px] border text-xs",
-              item.is_checked || item.is_pantry_excluded
-                ? "border-[var(--brand)] bg-[color:rgba(42,193,188,0.10)] text-[var(--brand)]"
-                : "border-[var(--line)] bg-[var(--surface-fill)] text-transparent",
-            ].join(" ")}
-            data-testid={`shopping-readonly-status-${item.id}`}
-          >
-            ✓
-          </div>
+          {item.is_checked || item.is_pantry_excluded ? "✓" : ""}
         </div>
       )}
 
-      <div className="flex-1">
-        <p className={`text-base font-semibold ${item.is_checked ? "line-through opacity-60" : ""}`}>
-          {item.display_text.replace(/\s+\d+.*$/, "")}
-        </p>
-        <p className="text-sm text-[var(--muted)]">{amountText}</p>
+      <div className="web-shopping-item-copy">
+        <strong>{item.display_text.replace(/\s+\d+.*$/, "")}</strong>
+        <small>{amountText}</small>
       </div>
 
-      {!isReadOnly && (
+      {!isReadOnly ? (
         <button
+          aria-label={`${item.display_text} ${toggleLabel}`}
+          className="web-shopping-exclude"
+          disabled={isUpdating}
           onClick={() =>
             onToggleExclude(item.id, item.is_pantry_excluded, item.is_checked)
           }
-          disabled={isUpdating}
-          className="flex min-h-11 shrink-0 items-center justify-center rounded-full border border-[var(--olive)] px-4 text-xs font-semibold text-[var(--olive)] hover:bg-[var(--olive)] hover:text-white disabled:opacity-50"
           type="button"
-          aria-label={`${item.display_text} ${toggleLabel}`}
         >
           {toggleLabel}
         </button>
-      )}
+      ) : null}
 
-      {isReadOnly && item.added_to_pantry && (
-        <span className="shrink-0 text-xs text-[var(--muted)]">
-          팬트리 반영 완료
-        </span>
-      )}
-    </div>
+      {isReadOnly && item.added_to_pantry ? (
+        <span className="web-shopping-added">팬트리 반영 완료</span>
+      ) : null}
+    </article>
   );
 }
 

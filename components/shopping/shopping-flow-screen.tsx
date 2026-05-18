@@ -10,6 +10,12 @@ import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
 import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
 import {
+  WebButton,
+  WebCard,
+  WebShell,
+  WebTopNav,
+} from "@/components/web";
+import {
   completeShoppingList,
   createShoppingList,
   fetchShoppingListDetail,
@@ -241,6 +247,13 @@ const recipeVisualMeta: Record<string, { bg: string; emoji: string; meal: string
   된장찌개: { bg: "#FFE7E2", emoji: "🍲", meal: "저녁" },
   제육볶음: { bg: "#FFB69D", emoji: "🥩", meal: "저녁" },
 };
+
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "홈" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이" },
+] as const;
 
 function getRecipeVisual(config: MealConfig) {
   return (
@@ -713,63 +726,108 @@ export function ShoppingFlowScreen({
   }
 
   return (
-    <div className="min-h-screen bg-[var(--wave1-surface-fill)]">
-      <AppBar onBack={handleBack} />
-
+    <WebShell className="web-shopping-shell" wide>
+      <WebTopNav activeId="mypage" items={WEB_NAV_ITEMS} />
       <main
-        className="mx-auto grid w-full max-w-6xl gap-8 px-6 pb-16 pt-8 lg:grid-cols-[minmax(0,1fr)_340px]"
+        className="web-screen web-shopping-flow-screen max-w-none"
         data-testid="shopping-flow-shell"
       >
-        <div className="min-w-0">
-          <section className="mb-6 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
-              Shopping Preview
-            </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-[-0.4px] text-[var(--foreground)]">
-              장보기 준비
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+        <nav aria-label="장보기 경로" className="web-breadcrumb">
+          <button
+            aria-label="뒤로 가기"
+            className="web-breadcrumb-link"
+            onClick={handleBack}
+            type="button"
+          >
+            Planner
+          </button>
+          <span className="web-breadcrumb-sep">/</span>
+          <span className="web-breadcrumb-current">장보기</span>
+        </nav>
+
+        <header className="web-shopping-flow-head">
+          <div>
+            <p className="web-menu-add-eyebrow">Shopping</p>
+            <h1>장보기 준비</h1>
+            <p>
               식사 등록 완료이면서 아직 장보기 리스트에 없는 식사입니다.
-              같은 레시피는 합산 계획 인분으로 묶이고, 장보기 완료·요리 완료·이미 연결된 식사는 자동으로 제외돼요.
+              같은 레시피는 합산 계획 인분으로 묶어요.
+              <span className="sr-only">
+                {" "}
+                같은 레시피는 합산 계획 인분으로 묶이고 장보기 기준 인분만
+                조정할 수 있어요.
+              </span>
             </p>
+          </div>
+          <WebButton
+            disabled={isCreateDisabled}
+            onClick={handleCreateList}
+          >
+            목록 만들기
+          </WebButton>
+        </header>
+
+        <section className="web-shopping-mode-grid" aria-label="장보기 메뉴">
+          <WebCard className="web-shopping-mode-card web-shopping-mode-card-active">
+            <strong>진행할 장보기</strong>
+            <span>{selectedCount}개 레시피 선택</span>
+            <button onClick={handleCreateList} type="button">
+              바로 시작 &gt;
+            </button>
+          </WebCard>
+          <WebCard className="web-shopping-mode-card">
+            <strong>지난 장보기</strong>
+            <span>완료된 목록을 다시 확인</span>
+            <button onClick={() => push("/mypage?restore=shopping-history-tab")} type="button">
+              기록 보기 &gt;
+            </button>
+          </WebCard>
+          <WebCard className="web-shopping-mode-card">
+            <strong>직접 추가</strong>
+            <span>필요한 재료를 직접 담기</span>
+            <button onClick={() => push("/pantry")} type="button">
+              팬트리 보기 &gt;
+            </button>
+          </WebCard>
+        </section>
+
+        <div className="web-shopping-flow-layout">
+          <section className="web-shopping-flow-main" aria-labelledby="shopping-flow-meals-title">
+            <div className="web-shopping-section-head">
+              <div>
+                <h2 id="shopping-flow-meals-title">장볼 끼니</h2>
+                <p>대상 식사를 확인하고 장보기 기준 인분을 조정하세요.</p>
+              </div>
+              <span>{mealConfigs.length}개 묶음</span>
+            </div>
+            <div className="web-shopping-recipe-list">
+              {mealConfigs.map((config) => (
+                <RecipeCard
+                  config={config}
+                  key={config.recipe_id}
+                  onServingsChange={handleServingsChange}
+                  onToggle={handleToggleSelection}
+                />
+              ))}
+            </div>
           </section>
 
-          <div className="grid gap-4 xl:grid-cols-2">
-            {mealConfigs.map((config) => (
-              <RecipeCard
-                key={config.recipe_id}
-                config={config}
-                onToggle={handleToggleSelection}
-                onServingsChange={handleServingsChange}
-              />
-            ))}
-          </div>
-        </div>
-
-        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
-            <p className="text-sm font-bold text-[var(--foreground)]">
-              선택한 레시피
-            </p>
-            <p className="mt-1 text-3xl font-bold text-[var(--foreground)]">
-              {selectedCount}
-            </p>
-            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-              장보기 기준 인분을 확인한 뒤 목록을 생성하세요.
-            </p>
-            <button
-              className="mt-5 w-full rounded-full bg-[var(--brand)] px-5 py-4 text-base font-semibold text-white disabled:bg-[var(--surface-fill)] disabled:text-[var(--text-4)]"
+          <aside className="web-shopping-summary" aria-label="장보기 요약">
+            <h2>선택한 레시피</h2>
+            <strong>{selectedCount}</strong>
+            <p>장보기 기준 인분을 확인한 뒤 목록을 생성하세요.</p>
+            <WebButton
               data-testid="shopping-create-button"
               disabled={isCreateDisabled}
+              fullWidth
               onClick={handleCreateList}
-              type="button"
             >
               장보기 목록 만들기
-            </button>
-          </div>
-        </aside>
+            </WebButton>
+          </aside>
+        </div>
       </main>
-    </div>
+    </WebShell>
   );
 }
 
@@ -1185,91 +1243,68 @@ interface RecipeCardProps {
 }
 
 function RecipeCard({ config, onToggle, onServingsChange }: RecipeCardProps) {
-  const cardOpacity = config.isSelected ? "opacity-100" : "opacity-60";
   const selectedMealIds = selectMealIdsForShoppingServings(
     config.meals,
     config.meal_ids,
     config.shopping_servings,
   );
+  const visual = getRecipeVisual(config);
 
   return (
-    <div
-      className={`rounded-[14px] border border-[var(--line)] bg-[var(--surface)] p-4 transition-opacity ${cardOpacity}`}
+    <article
+      className={[
+        "web-shopping-recipe-card",
+        config.isSelected ? "web-shopping-recipe-card-selected" : "",
+      ].join(" ")}
     >
-      <div className="flex items-start gap-3">
-        <button
-          aria-label={
-            config.isSelected
-              ? `${config.recipe_name} 선택 해제`
-              : `${config.recipe_name} 선택`
-          }
-          className="flex h-11 w-11 shrink-0 items-center justify-center"
-          onClick={() => onToggle(config.recipe_id)}
-          type="button"
-        >
-          <div
-            className={`flex h-6 w-6 items-center justify-center rounded-md border-2 ${
-              config.isSelected
-                ? "border-[var(--olive)] bg-[var(--olive)]"
-                : "border-[var(--line)] bg-white"
-            }`}
-          >
-            {config.isSelected ? (
-              <svg
-                fill="none"
-                height="12"
-                viewBox="0 0 12 12"
-                width="12"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M2 6L5 9L10 3"
-                  stroke="white"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                />
-              </svg>
-            ) : null}
-          </div>
-        </button>
+      <button
+        aria-label={
+          config.isSelected
+            ? `${config.recipe_name} 선택 해제`
+            : `${config.recipe_name} 선택`
+        }
+        className="web-shopping-recipe-toggle"
+        onClick={() => onToggle(config.recipe_id)}
+        type="button"
+      >
+        {config.isSelected ? "✓" : ""}
+      </button>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <h3 className="text-base font-semibold text-[var(--foreground)]">
-              {config.recipe_name}
-            </h3>
-            <span className="shrink-0 rounded-full bg-[color:rgba(46,166,122,0.12)] px-2.5 py-1 text-xs font-semibold text-[var(--olive)]">
-              식사 등록 완료
-            </span>
-          </div>
+      <span
+        aria-hidden="true"
+        className="web-shopping-recipe-thumb"
+        data-emoji={config.recipe_thumbnail ? undefined : visual.emoji}
+        style={{ backgroundColor: visual.bg }}
+      >
+        {config.recipe_thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img alt="" src={config.recipe_thumbnail} />
+        ) : null}
+      </span>
 
-          <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium text-[var(--muted)]">
-            <span className="rounded-full border border-[var(--line)] bg-white/70 px-2.5 py-1">
-              장보기 미연결
-            </span>
-            <span className="rounded-full border border-[var(--line)] bg-white/70 px-2.5 py-1">
-              대상 식사 {selectedMealIds.length}개
-            </span>
-            <span className="rounded-full border border-[var(--line)] bg-white/70 px-2.5 py-1">
-              합산 계획 {config.planned_servings_total}인분
-            </span>
-          </div>
+      <div className="web-shopping-recipe-copy">
+        <div className="web-shopping-recipe-title-row">
+          <h3>{config.recipe_name}</h3>
+          <span>식사 등록 완료</span>
+        </div>
 
-          <div className="mt-4">
-            <p className="mb-2 text-sm font-semibold text-[var(--foreground)]">
-              장보기 기준 인분
-            </p>
-            <NumericStepperCompact
-              value={config.shopping_servings}
-              min={1}
-              onChange={(value) => onServingsChange(config.recipe_id, value)}
-              disabled={!config.isSelected}
-              unit="인분"
-            />
-          </div>
+        <div className="web-shopping-recipe-meta">
+          <span>장보기 미연결</span>
+          <span>대상 식사 {selectedMealIds.length}개</span>
+          <span>합산 계획 {config.planned_servings_total}인분</span>
+        </div>
+
+        <div className="web-shopping-servings">
+          <p>장보기 기준 인분</p>
+          <NumericStepperCompact
+            disabled={!config.isSelected}
+            min={1}
+            onChange={(value) => onServingsChange(config.recipe_id, value)}
+            unit="인분"
+            value={config.shopping_servings}
+          />
         </div>
       </div>
-    </div>
+    </article>
   );
 }
