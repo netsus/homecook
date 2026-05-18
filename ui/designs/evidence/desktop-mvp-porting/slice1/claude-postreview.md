@@ -29,6 +29,8 @@ None.
 
 - Corrected the ledger breakdown from `21 screens + 16 surfaces + 16 modals/gates` to `21 screens + 17 surfaces + 15 modals/gates`.
 - Corrected Slice 4 `component_owner` entries for menu-add, manual create, YouTube import, and picker surfaces to point to the current MVP component paths.
+- Added an accessibility-safe text CTA brand fill (`#0072bd`) for `WebButton` primary text contrast while preserving the canonical `#00A1FF` brand token.
+- Removed opacity-based web modal entrance animation so automated contrast checks evaluate the final modal colors.
 
 ## Verification Evidence Reported To Claude
 

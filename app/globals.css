@@ -194,6 +194,7 @@ button {
   :root {
     --web-brand: #00A1FF;
     --web-brand-deep: #0085db;
+    --web-brand-accessible: #0072bd;
     --web-brand-light: #5bb8ff;
     --web-brand-wash: rgba(0, 161, 255, 0.06);
     --web-bg: #ffffff;
@@ -417,12 +418,12 @@ button {
   }
 
   .web-button-primary {
-    background: var(--web-brand);
+    background: var(--web-brand-accessible);
     color: var(--web-text-inverse);
   }
 
   .web-button-primary:hover:not(:disabled) {
-    background: var(--web-brand-deep);
+    background: #0066a8;
   }
 
   .web-button-secondary {
@@ -645,17 +646,11 @@ button {
     padding: 40px 24px;
     background: rgba(0, 0, 0, 0.42);
     backdrop-filter: blur(1px);
-    animation: web-fade-in 0.15s ease-out;
-  }
-
-  @keyframes web-fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
   }
 
   @keyframes web-slide-up {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { transform: translateY(8px); }
+    to { transform: translateY(0); }
   }
 
   .web-dialog {

@@ -12,6 +12,7 @@ These primitives lock the desktop `1024px+` visual system for the MVP port. Late
 
 - Brand: `#00A1FF`
 - Brand deep: `#0085db`
+- Text CTA brand: `#0072bd` (accessibility-safe brand fill for white text)
 - Brand wash: `rgba(0, 161, 255, 0.06)`
 - Text 1: `#2f3438`
 - Text 2: `#424242`
@@ -81,7 +82,8 @@ These primitives lock the desktop `1024px+` visual system for the MVP port. Late
 - Gap: `6px`
 - Radius: `8px`
 - Active transform: `scale(0.98)`
-- Primary: `#00A1FF`, hover `#0085db`, white text
+- Primary: `#0072bd`, hover `#0066a8`, white text
+- Accessibility note: text-bearing primary buttons use the darker brand fill because white text on `#00A1FF` does not meet WCAG AA contrast at the locked button font size.
 - Secondary: `1px solid #00A1FF`, hover `rgba(0, 161, 255, 0.06)`
 - Tertiary: `#f7f9fa`, hover `#eef0f2`, text `#424242`
 - Ghost: transparent, hover `#f7f9fa`
