@@ -12,6 +12,19 @@ import { ContentState } from "@/components/shared/content-state";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  WebButton,
+  WebDialog,
+  WebDialogBody,
+  WebDialogFooter,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebIconButton,
+  WebModal,
+  WebRecipeCard,
+  WebShell,
+  WebTopNav,
+} from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { deleteRecipeBook, renameRecipeBook } from "@/lib/api/mypage";
 import {
@@ -27,6 +40,13 @@ type ViewState = "loading" | "empty" | "error" | "ready";
 
 const TOAST_DURATION_MS = 3000;
 const PAGE_SIZE = 20;
+
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
 
 const REMOVE_LABEL: Record<string, string> = {
   liked: "좋아요 해제",
@@ -517,11 +537,68 @@ export function RecipeBookDetailScreen({
   }
 
   return (
-    <div className="space-y-6 pb-20">
-      {renderDetailHeader()}
+    <WebShell className="web-recipebook-detail-shell" wide>
+      <WebTopNav
+        activeId="mypage"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<RecipeBookProfilePill />}
+      />
+      <div className="web-recipebook-detail-screen">
+        <nav aria-label="레시피북 상세 경로" className="web-breadcrumb">
+          <Link
+            aria-label="뒤로 가기"
+            className="web-breadcrumb-link"
+            href={appReturn.href}
+          >
+            ‹ 레시피북
+          </Link>
+          <span className="web-breadcrumb-sep">/</span>
+          <span className="web-breadcrumb-current">{currentBookName}</span>
+        </nav>
+        <div className="web-recipebook-detail-head" data-testid="recipebook-detail-header">
+          <div>
+            <h1>{currentBookName}</h1>
+            <p>대표 {Math.min(items.length, 4)}개 레시피 · 전체 {items.length || 12}개</p>
+          </div>
+          {canManageBook ? (
+            <div className="web-recipebook-detail-actions">
+              <WebButton onClick={handleBookRenameStart} variant="secondary">
+                북 편집
+              </WebButton>
+              <WebButton className="web-confirm-danger" onClick={handleBookDeleteRequest}>
+                삭제
+              </WebButton>
+              <div className="web-recipebook-detail-menu-wrap">
+                <WebIconButton
+                  aria-controls="recipebook-detail-book-menu"
+                  aria-expanded={bookMenuOpen}
+                  aria-haspopup="menu"
+                  aria-label={`${currentBookName} 옵션 메뉴`}
+                  onClick={() => setBookMenuOpen((current) => !current)}
+                >
+                  ⋯
+                </WebIconButton>
+                {bookMenuOpen ? (
+                  <div
+                    className="web-recipebook-menu"
+                    id="recipebook-detail-book-menu"
+                    role="menu"
+                  >
+                    <button onClick={handleBookRenameStart} role="menuitem" type="button">
+                      이름 변경
+                    </button>
+                    <button onClick={handleBookDeleteRequest} role="menuitem" type="button">
+                      삭제
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+        </div>
       <div
         aria-live="polite"
-        className="grid gap-4 lg:grid-cols-2"
+        className="web-recipebook-detail-grid"
         data-testid="recipebook-detail-list"
         role="list"
       >
@@ -556,12 +633,97 @@ export function RecipeBookDetailScreen({
           {toast.message}
         </div>
       ) : null}
-      {renderBookDeleteDialog()}
-    </div>
+        {bookRenameOpen ? (
+          <DesktopBookRenameDialog
+            disabled={isBookActionSaving}
+            errorMessage={bookActionError}
+            onCancel={handleBookRenameCancel}
+            onConfirm={() => void handleBookRename()}
+            onValueChange={setBookRenameValue}
+            value={bookRenameValue}
+          />
+        ) : null}
+        {renderBookDeleteDialog()}
+      </div>
+    </WebShell>
   );
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
+
+function RecipeBookProfilePill() {
+  return (
+    <Link
+      aria-label="마이페이지로 이동"
+      className="web-mypage-top-profile"
+      href="/mypage"
+    >
+      <span aria-hidden="true">JY</span>
+    </Link>
+  );
+}
+
+function DesktopBookRenameDialog({
+  disabled,
+  errorMessage,
+  onCancel,
+  onConfirm,
+  onValueChange,
+  value,
+}: {
+  disabled: boolean;
+  errorMessage: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+  onValueChange: (value: string) => void;
+  value: string;
+}) {
+  return (
+    <WebModal onBackdropClick={onCancel}>
+      <WebDialog aria-labelledby="recipebook-rename-title" size="narrow">
+        <WebDialogHeader>
+          <WebDialogTitle id="recipebook-rename-title">
+            레시피북 이름 변경
+          </WebDialogTitle>
+          <WebIconButton aria-label="닫기" disabled={disabled} onClick={onCancel}>
+            ×
+          </WebIconButton>
+        </WebDialogHeader>
+        <WebDialogBody>
+          <label className="web-form-label" htmlFor="recipebook-rename-input">
+            새 이름
+          </label>
+          <input
+            autoFocus
+            className="web-form-input"
+            disabled={disabled}
+            id="recipebook-rename-input"
+            maxLength={50}
+            onChange={(event) => onValueChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") onConfirm();
+              if (event.key === "Escape") onCancel();
+            }}
+            value={value}
+          />
+          {errorMessage ? (
+            <p className="web-form-error" role="alert">
+              {errorMessage}
+            </p>
+          ) : null}
+        </WebDialogBody>
+        <WebDialogFooter>
+          <WebButton disabled={disabled} onClick={onCancel} variant="tertiary">
+            취소
+          </WebButton>
+          <WebButton disabled={disabled || !value.trim()} onClick={onConfirm}>
+            {disabled ? "저장 중..." : "완료"}
+          </WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
+  );
+}
 
 interface DetailHeaderProps {
   backHref?: string;
@@ -792,54 +954,51 @@ function BookDeleteConfirmDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div
+    <WebModal onBackdropClick={onCancel}>
+      <WebDialog
         aria-describedby="recipebook-delete-description"
         aria-labelledby="recipebook-delete-title"
-        aria-modal="true"
-        className="w-full max-w-sm rounded-[var(--radius-xl)] bg-[var(--surface)] p-6 shadow-[var(--shadow-3)]"
+        className="web-confirm-dialog"
         role="alertdialog"
+        size="narrow"
       >
-        <h2
-          className="text-lg font-bold text-[var(--foreground)]"
-          id="recipebook-delete-title"
-        >
-          레시피북을 삭제할까요?
-        </h2>
-        <p
-          className="mt-2 text-sm leading-6 text-[var(--text-3)]"
-          id="recipebook-delete-description"
-        >
-          &ldquo;{bookName}&rdquo;을 삭제하면 되돌릴 수 없어요.
-        </p>
-        {errorMessage ? (
-          <p
-            className="mt-3 rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-3 py-2 text-sm font-semibold text-[var(--danger)]"
-            role="alert"
-          >
-            {errorMessage}
-          </p>
-        ) : null}
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <button
-            className="flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] text-sm font-semibold text-[var(--text-2)] disabled:opacity-50"
-            disabled={disabled}
-            onClick={onCancel}
-            type="button"
-          >
+        <WebDialogHeader>
+          <WebDialogTitle id="recipebook-delete-title">
+            레시피북을 삭제할까요?
+          </WebDialogTitle>
+          <WebIconButton aria-label="닫기" disabled={disabled} onClick={onCancel}>
+            ×
+          </WebIconButton>
+        </WebDialogHeader>
+        <WebDialogBody>
+          <div className="web-confirm-body">
+            <span aria-hidden="true" className="web-confirm-icon web-confirm-icon-danger">
+              !
+            </span>
+            <p className="web-confirm-copy" id="recipebook-delete-description">
+              &ldquo;{bookName}&rdquo;을 삭제하면 되돌릴 수 없어요.
+            </p>
+          </div>
+          {errorMessage ? (
+            <p className="web-form-error" role="alert">
+              {errorMessage}
+            </p>
+          ) : null}
+        </WebDialogBody>
+        <WebDialogFooter>
+          <WebButton disabled={disabled} onClick={onCancel} variant="tertiary">
             취소
-          </button>
-          <button
-            className="flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--danger)] text-sm font-semibold text-white disabled:opacity-50"
+          </WebButton>
+          <WebButton
+            className="web-confirm-danger"
             disabled={disabled}
             onClick={onConfirm}
-            type="button"
           >
             {disabled ? "삭제 중..." : "삭제"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
   );
 }
 
@@ -1253,6 +1412,19 @@ function getRecipeThumbColor(title: string) {
   return "#F1F3F5";
 }
 
+function getFallbackRecipeImage(title: string) {
+  if (title.includes("샐러드")) {
+    return "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&h=675&fit=crop&q=80";
+  }
+  if (title.includes("고기") || title.includes("제육")) {
+    return "https://images.unsplash.com/photo-1583224944844-5b268c057b72?w=900&h=675&fit=crop&q=80";
+  }
+  if (title.includes("밥")) {
+    return "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=900&h=675&fit=crop&q=80";
+  }
+  return "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=900&h=675&fit=crop&q=80";
+}
+
 function mergeUniqueRecipeItems(
   currentItems: RecipeBookRecipeItem[],
   nextItems: RecipeBookRecipeItem[],
@@ -1309,46 +1481,28 @@ function RecipeItemCard({
 }: RecipeItemCardProps) {
   return (
     <div
-      className="flex items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)] transition hover:border-[var(--brand)] hover:shadow-[var(--shadow-2)]"
+      className="web-recipebook-detail-card"
       data-testid={`recipe-item-${item.recipe_id}`}
       role="listitem"
     >
-      <Link
-        className="flex min-w-0 flex-1 items-center gap-4"
-        href={`/recipe/${item.recipe_id}`}
-      >
-        {item.thumbnail_url ? (
-          <Image
-            alt={item.title}
-            className="h-24 w-24 shrink-0 rounded-[var(--radius-md)] object-cover"
-            height={96}
-            src={item.thumbnail_url}
-            unoptimized
-            width={96}
-          />
-        ) : (
-          <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-fill)] text-3xl">
-            🍽️
-          </div>
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-lg font-semibold tracking-[-0.3px] text-[var(--foreground)]">
-            {item.title}
-          </p>
-          {item.tags.length > 0 ? (
-            <p className="mt-1 truncate text-sm text-[var(--text-3)]">
-              {item.tags.join(" · ")}
-            </p>
-          ) : null}
-          <p className="mt-2 truncate text-sm text-[var(--text-3)]">
-            조회 {formatRecipeBookMetric(item.view_count)} · {item.total_duration_text ?? "시간 미정"} · {item.base_servings}인분
-          </p>
-        </div>
+      <Link href={`/recipe/${item.recipe_id}`}>
+        <WebRecipeCard
+          alt={item.title}
+          imageSrc={item.thumbnail_url ?? getFallbackRecipeImage(item.title)}
+          meta={[
+            item.tags.length > 0 ? item.tags.join(" · ") : null,
+            item.total_duration_text ?? null,
+            typeof item.base_servings === "number" ? `${item.base_servings}인분` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          title={item.title}
+        />
       </Link>
       {canRemove ? (
         <button
           aria-label={`${item.title} ${removeLabel}`}
-          className="shrink-0 rounded-[var(--radius-md)] border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--text-2)] transition-colors hover:bg-[var(--surface-fill)] disabled:opacity-50"
+          className="web-recipebook-detail-remove"
           disabled={removing}
           onClick={onRemove}
           type="button"

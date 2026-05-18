@@ -207,8 +207,9 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await page.getByLabel("주말 파티 옵션 메뉴").click();
     await page.getByRole("menuitem", { name: "삭제" }).click();
 
-    await expect(page.getByRole("alertdialog")).toBeVisible();
-    await page.getByRole("button", { name: "삭제" }).click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "삭제" }).click();
 
     await page.waitForURL("/mypage");
   });

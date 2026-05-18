@@ -448,6 +448,7 @@ function SettingsSurface({
             </div>
 
             <p className="mt-2 text-[12px] font-medium text-[#868E96]">
+              최소 2개, 최대 5개의 끼니를 등록할 수 있어요. 현재{" "}
               {plannerColumns.length}/5개
             </p>
           </>

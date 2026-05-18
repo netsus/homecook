@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -206,7 +206,7 @@ describe("RecipeBookDetailScreen", () => {
     expect(screen.getByText("김치볶음밥")).toBeTruthy();
     expect(screen.getByText("한식 · 찌개")).toBeTruthy();
     expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
-    expect(screen.getByText("저장한 레시피")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
   });
 
   it("shows no book-level rename/delete menu for system books", async () => {
@@ -253,7 +253,7 @@ describe("RecipeBookDetailScreen", () => {
     });
 
     expect(await screen.findByText("레시피북 이름을 변경했어요")).toBeTruthy();
-    expect(screen.getByText("주말 모임")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "주말 모임" })).toBeTruthy();
   });
 
   it("deletes a custom book from the book-level menu and returns to mypage", async () => {
@@ -273,7 +273,9 @@ describe("RecipeBookDetailScreen", () => {
     await user.click(screen.getByRole("menuitem", { name: "삭제" }));
 
     expect(screen.getByRole("alertdialog")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "삭제" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "삭제" }),
+    );
 
     await waitFor(() => {
       expect(mockDeleteRecipeBook).toHaveBeenCalledWith("book-custom");
@@ -448,7 +450,9 @@ describe("RecipeBookDetailScreen", () => {
     );
 
     expect(await screen.findByText("된장찌개")).toBeTruthy();
-    expect(triggerIntersection).toBeTruthy();
+    await waitFor(() => {
+      expect(triggerIntersection).toBeTruthy();
+    });
 
     triggerIntersection?.();
 

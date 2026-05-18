@@ -110,7 +110,7 @@ describe("login screen", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "소셜 로그인으로 이어서 진행하세요",
+        name: "집밥 루틴을 이어가려면 로그인하세요",
       }),
     ).toBeTruthy();
     expect(screen.getByText("social-buttons:/planner")).toBeTruthy();

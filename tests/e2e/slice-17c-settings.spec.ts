@@ -255,6 +255,28 @@ async function installSettingsRoutes(
   });
 }
 
+function accountDeleteTrigger(page: Page) {
+  return isMobileViewport(page)
+    ? page.getByText("회원탈퇴")
+    : page.getByRole("button", { name: "계정 삭제하기" });
+}
+
+async function openAccountDeleteDialog(page: Page) {
+  await expect(accountDeleteTrigger(page)).toBeVisible();
+  await accountDeleteTrigger(page).click();
+  await expect(
+    page.getByText(
+      isMobileViewport(page) ? "정말 탈퇴하시겠어요?" : "정말 계정을 삭제할까요?",
+    ),
+  ).toBeVisible();
+}
+
+function accountDeleteConfirmButton(page: Page) {
+  return page.getByRole("alertdialog").getByRole("button", {
+    name: isMobileViewport(page) ? "탈퇴하기" : "계정 삭제",
+  });
+}
+
 test.describe("SETTINGS screen", () => {
   test("shows settings items when authenticated", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
@@ -263,18 +285,19 @@ test.describe("SETTINGS screen", () => {
     await page.goto("/settings");
 
     await expect(page.getByRole("heading", { name: "설정" })).toBeVisible();
-    await expect(page.getByLabel("뒤로가기")).toBeVisible();
     if (isMobileViewport(page)) {
+      await expect(page.getByLabel("뒤로가기")).toBeVisible();
       await expect(page.getByText("화면 켜둠")).toBeVisible();
       await expect(page.getByText("음성 안내")).toBeVisible();
       await expect(page.getByText("타이머 끝나면 다음 단계 자동")).toBeVisible();
       await expect(page.getByText("플래너 끼니 컬럼")).toBeVisible();
     } else {
+      await expect(page.getByRole("link", { name: /마이페이지/ }).first()).toBeVisible();
       await expect(page.getByText("요리모드 화면 꺼짐 방지")).toBeVisible();
-      await expect(page.getByText("닉네임")).toBeVisible();
+      await expect(page.getByTestId("nickname-row")).toBeVisible();
       await expect(page.getByText("집밥러")).toBeVisible();
       await expect(page.getByText("로그아웃")).toBeVisible();
-      await expect(page.getByText("회원탈퇴")).toBeVisible();
+      await expect(page.getByRole("button", { name: "계정 삭제하기" })).toBeVisible();
     }
   });
 
@@ -355,9 +378,9 @@ test.describe("SETTINGS screen", () => {
     await expect(page.getByText("로그아웃")).toBeVisible();
     await page.getByRole("button", { name: "로그아웃" }).click();
 
-    await expect(page.getByText(isMobileViewport(page) ? "로그아웃 할까요?" : "로그아웃할까요?")).toBeVisible();
+    await expect(page.getByText("로그아웃 할까요?")).toBeVisible();
     await page.getByRole("alertdialog").getByRole("button", {
-      name: isMobileViewport(page) ? "로그아웃" : "로그아웃하기",
+      name: "로그아웃",
     }).click();
 
     await page.waitForURL("/");
@@ -372,14 +395,14 @@ test.describe("SETTINGS screen", () => {
     await expect(page.getByText("로그아웃")).toBeVisible();
     await page.getByRole("button", { name: "로그아웃" }).click();
 
-    await expect(page.getByText(isMobileViewport(page) ? "로그아웃 할까요?" : "로그아웃할까요?")).toBeVisible();
+    await expect(page.getByText("로그아웃 할까요?")).toBeVisible();
     await page.getByRole("alertdialog").getByRole("button", {
-      name: isMobileViewport(page) ? "로그아웃" : "로그아웃하기",
+      name: "로그아웃",
     }).click();
 
     await expect(page.getByTestId("dialog-error")).toBeVisible();
     await expect(page.getByText("로그아웃에 실패했어요.")).toBeVisible();
-    await expect(page.getByText(isMobileViewport(page) ? "로그아웃 할까요?" : "로그아웃할까요?")).toBeVisible();
+    await expect(page.getByText("로그아웃 할까요?")).toBeVisible();
     await expect(page).toHaveURL(/\/settings(?:\?view=account)?$/);
   });
 
@@ -389,11 +412,8 @@ test.describe("SETTINGS screen", () => {
     await installColumnRoutes(page);
     await page.goto(isMobileViewport(page) ? "/settings?view=account" : "/settings");
 
-    await expect(page.getByText("회원탈퇴")).toBeVisible();
-    await page.getByText("회원탈퇴").click();
-
-    await expect(page.getByText("정말 탈퇴하시겠어요?")).toBeVisible();
-    await page.getByText("탈퇴하기").click();
+    await openAccountDeleteDialog(page);
+    await accountDeleteConfirmButton(page).click();
 
     await page.waitForURL("/");
   });
@@ -404,15 +424,16 @@ test.describe("SETTINGS screen", () => {
     await installColumnRoutes(page);
     await page.goto(isMobileViewport(page) ? "/settings?view=account" : "/settings");
 
-    await expect(page.getByText("회원탈퇴")).toBeVisible();
-    await page.getByText("회원탈퇴").click();
-
-    await expect(page.getByText("정말 탈퇴하시겠어요?")).toBeVisible();
-    await page.getByText("탈퇴하기").click();
+    await openAccountDeleteDialog(page);
+    await accountDeleteConfirmButton(page).click();
 
     await expect(page.getByTestId("dialog-error")).toBeVisible();
     await expect(page.getByText("탈퇴에 실패했어요.")).toBeVisible();
-    await expect(page.getByText("정말 탈퇴하시겠어요?")).toBeVisible();
+    await expect(
+      page.getByText(
+        isMobileViewport(page) ? "정말 탈퇴하시겠어요?" : "정말 계정을 삭제할까요?",
+      ),
+    ).toBeVisible();
     await expect(page).toHaveURL(/\/settings(?:\?view=account)?$/);
   });
 
@@ -422,13 +443,14 @@ test.describe("SETTINGS screen", () => {
     await installColumnRoutes(page);
     await page.goto(isMobileViewport(page) ? "/settings?view=account" : "/settings");
 
-    await expect(page.getByText("회원탈퇴")).toBeVisible();
-    await page.getByText("회원탈퇴").click();
-
-    await expect(page.getByText("정말 탈퇴하시겠어요?")).toBeVisible();
+    await openAccountDeleteDialog(page);
     await page.getByText("취소").click();
 
-    await expect(page.getByText("정말 탈퇴하시겠어요?")).not.toBeVisible();
+    await expect(
+      page.getByText(
+        isMobileViewport(page) ? "정말 탈퇴하시겠어요?" : "정말 계정을 삭제할까요?",
+      ),
+    ).not.toBeVisible();
   });
 
   test("delete succeeds but logout cleanup fails shows error and stays", async ({ page }) => {
@@ -437,17 +459,18 @@ test.describe("SETTINGS screen", () => {
     await installColumnRoutes(page);
     await page.goto(isMobileViewport(page) ? "/settings?view=account" : "/settings");
 
-    await expect(page.getByText("회원탈퇴")).toBeVisible();
-    await page.getByText("회원탈퇴").click();
-
-    await expect(page.getByText("정말 탈퇴하시겠어요?")).toBeVisible();
-    await page.getByText("탈퇴하기").click();
+    await openAccountDeleteDialog(page);
+    await accountDeleteConfirmButton(page).click();
 
     await expect(page.getByTestId("dialog-error")).toBeVisible();
     await expect(page.getByText("탈퇴는 완료되었으나 로그아웃에 실패했어요. 브라우저를 닫아주세요.")).toBeVisible();
 
     // Dialog should still be open, not navigated
-    await expect(page.getByText("정말 탈퇴하시겠어요?")).toBeVisible();
+    await expect(
+      page.getByText(
+        isMobileViewport(page) ? "정말 탈퇴하시겠어요?" : "정말 계정을 삭제할까요?",
+      ),
+    ).toBeVisible();
   });
 
   test("back button navigates to /mypage", async ({ page }) => {
@@ -467,8 +490,12 @@ test.describe("SETTINGS screen", () => {
     });
 
     await page.goto("/settings");
-    await expect(page.getByLabel("뒤로가기")).toBeVisible();
-    await page.getByLabel("뒤로가기").click();
+    if (isMobileViewport(page)) {
+      await expect(page.getByLabel("뒤로가기")).toBeVisible();
+      await page.getByLabel("뒤로가기").click();
+    } else {
+      await page.getByRole("link", { name: /마이페이지/ }).first().click();
+    }
 
     await page.waitForURL("/mypage");
   });
@@ -491,7 +518,10 @@ test.describe("SETTINGS screen", () => {
     });
 
     await page.goto("/mypage");
-    await expect(page.getByLabel("설정")).toHaveCount(0);
+    await expect(page.getByLabel("설정", { exact: true })).toHaveCount(0);
+    if (!isMobileViewport(page)) {
+      await page.getByRole("tab", { name: "계정 관리" }).click();
+    }
     await page.getByTestId("mypage-settings-link").click();
 
     await page.waitForURL("/settings");
@@ -508,7 +538,7 @@ test.describe("SETTINGS planner column management", () => {
 
     await expect(page.getByTestId("column-management-section")).toBeVisible();
     await expect(
-      page.getByText(isMobileViewport(page) ? "플래너 끼니 컬럼" : "끼니 컬럼 관리"),
+      page.getByText(isMobileViewport(page) ? "플래너 끼니 컬럼" : "끼니 관리"),
     ).toBeVisible();
 
     const list = page.getByTestId("column-list");
@@ -569,7 +599,7 @@ test.describe("SETTINGS planner column management", () => {
 
     await expect(page.getByText("끼니 컬럼 삭제")).toBeVisible();
     await expect(page.getByText('"저녁" 컬럼을 삭제할까요?')).toBeVisible();
-    await page.getByText("삭제하기").click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "삭제하기" }).click();
 
     await expect(page.getByText("끼니 컬럼 삭제")).not.toBeVisible();
     await expect(page.getByTestId("column-list").getByText("저녁")).not.toBeVisible();
@@ -592,7 +622,7 @@ test.describe("SETTINGS planner column management", () => {
     await expect(page.getByTestId("column-list")).toBeVisible();
     const addButton = page.getByTestId("add-column-button");
     await expect(addButton).toBeDisabled();
-    await expect(addButton).toContainText("최대 5개");
+    await expect(page.getByText(/최소 2개, 최대 5개/)).toBeVisible();
   });
 
   test("disables delete button when only 1 column exists", async ({ page }) => {
@@ -657,7 +687,7 @@ test.describe("SETTINGS planner column management", () => {
     await page.getByTestId("delete-column-col-3").click();
 
     await expect(page.getByText("끼니 컬럼 삭제")).toBeVisible();
-    await page.getByText("삭제하기").click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "삭제하기" }).click();
 
     await expect(page.getByTestId("dialog-error")).toContainText("식사가 등록된 컬럼은 삭제할 수 없어요");
   });

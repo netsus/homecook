@@ -169,9 +169,16 @@ function isMobileViewport(page: Page) {
 }
 
 async function openRecipebookSurface(page: Page) {
-  if (!isMobileViewport(page)) return;
+  if (isMobileViewport(page)) {
+    await page.getByRole("button", { name: /레시피북/ }).click();
+    await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
+    return;
+  }
 
-  await page.getByRole("button", { name: /레시피북/ }).click();
+  if (await page.getByRole("button", { name: /레시피북 관리/ }).count() === 0) {
+    await page.getByRole("tab", { name: "저장한 레시피" }).click();
+  }
+  await page.getByRole("button", { name: /레시피북 관리/ }).click();
   await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
 }
 
@@ -182,7 +189,13 @@ async function openShoppingSurface(page: Page) {
     return;
   }
 
-  await page.getByRole("tab", { name: "장보기 기록" }).click();
+  if (await page.getByRole("button", { name: /장보기 내역/ }).count() === 0) {
+    await page.getByRole("tab", { name: "저장한 레시피" }).click();
+  }
+  await page.getByRole("button", { name: /장보기 내역/ }).click();
+  await expect(
+    page.locator('[data-testid="shopping-tab"], [data-testid="shopping-empty"]'),
+  ).toBeVisible();
 }
 
 test.describe("MYPAGE screen", () => {
@@ -198,7 +211,11 @@ test.describe("MYPAGE screen", () => {
     } else {
       await expect(page.getByText("카카오 로그인")).toBeVisible();
     }
-    await expect(page.getByLabel("설정")).toHaveCount(0);
+    await expect(page.getByLabel("설정", { exact: true })).toHaveCount(0);
+
+    if (!isMobileViewport(page)) {
+      await page.getByRole("tab", { name: "계정 관리" }).click();
+    }
     await expect(page.getByTestId("mypage-settings-link")).toHaveAttribute(
       "href",
       "/settings",
@@ -206,7 +223,7 @@ test.describe("MYPAGE screen", () => {
 
     await openRecipebookSurface(page);
     await expect(page.getByText("내가 추가한 레시피")).toBeVisible();
-    await expect(page.getByText("저장한 레시피")).toBeVisible();
+    await expect(page.getByTestId("system-book-saved").getByText("저장한 레시피")).toBeVisible();
     await expect(page.getByText("좋아요한 레시피")).toBeVisible();
     await expect(page.getByText("주말 파티")).toBeVisible();
   });
@@ -231,7 +248,7 @@ test.describe("MYPAGE screen", () => {
     await expect(page.getByText("4/23 장보기")).toBeVisible();
     await expect(page.getByText("다시열기")).toBeVisible();
     await expect(page.getByText("4/30 완료")).toBeVisible();
-    await expect(page.getByText("진행 중")).toBeVisible();
+    await expect(page.getByTestId("shopping-card-list-2").getByText("진행 중")).toBeVisible();
   });
 
   test("navigates to shopping detail when clicking a shopping history item", async ({ page }) => {
@@ -341,8 +358,8 @@ test.describe("MYPAGE screen", () => {
       await expect(page.getByRole("button", { name: /장보기 기록/ })).toBeVisible();
     } else {
       await expect(page.getByRole("tablist")).toBeVisible();
-      await expect(page.getByRole("tab", { name: "레시피북" })).toHaveAttribute("aria-selected", "true");
-      await expect(page.getByRole("tab", { name: "장보기 기록" })).toHaveAttribute("aria-selected", "false");
+      await expect(page.getByRole("tab", { name: "저장한 레시피" })).toHaveAttribute("aria-selected", "true");
+      await expect(page.getByRole("tab", { name: "계정 관리" })).toHaveAttribute("aria-selected", "false");
     }
   });
 

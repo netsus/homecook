@@ -4,19 +4,24 @@ import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 import {
+  installAccountLibraryVisualRoutes,
   installDiscoveryRoutes,
   installMenuAddVisualRoutes,
   installMealDetailRoutes,
   installPantryShoppingVisualRoutes,
   installPlannerWeekRoutes,
   installRecipeDetailRoutes,
+  LOGIN_VISUAL_PATH,
   installYoutubeImportVisualRoutes,
   MANUAL_CREATE_VISUAL_PATH,
   MEAL_VISUAL_PATH,
   MENU_ADD_VISUAL_PATH,
+  MYPAGE_VISUAL_PATH,
   PANTRY_VISUAL_PATH,
   RECIPE_PATH,
+  RECIPEBOOK_DETAIL_VISUAL_PATH,
   setE2EAuthOverride,
+  SETTINGS_VISUAL_PATH,
   SHOPPING_DETAIL_COMPLETED_VISUAL_PATH,
   SHOPPING_DETAIL_VISUAL_PATH,
   SHOPPING_FLOW_VISUAL_PATH,
@@ -55,6 +60,7 @@ const PLANNER_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
 const MEAL_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
 const MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2200;
 const PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2400;
+const ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
 
 function isMobileViewport(page: Page) {
   return (page.viewportSize()?.width ?? 1280) < 1024;
@@ -503,5 +509,111 @@ test.describe("QA visual regression", () => {
       fullPage: true,
       maxDiffPixels: PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
     });
+  });
+
+  test("login, mypage, recipebooks, settings desktop screens match the visual baseline", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only account/library parity baseline");
+
+    await page.goto(LOGIN_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "집밥 루틴을 이어가려면 로그인하세요" }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Google로 시작하기" })).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-login-desktop.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await setE2EAuthOverride(page);
+    await installAccountLibraryVisualRoutes(page);
+
+    await page.goto(MYPAGE_VISUAL_PATH);
+    await expect(page.getByRole("heading", { name: "저장한 레시피" })).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-mypage-saved.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.getByRole("button", { name: /레시피북 관리/ }).click();
+    await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-recipebooks.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.getByLabel("주말 파티 옵션 메뉴").click();
+    await page.getByRole("menuitem", { name: "삭제" }).click();
+    const recipebookDeleteDialog = page.getByRole("alertdialog");
+    await expect(recipebookDeleteDialog).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(recipebookDeleteDialog).toHaveScreenshot(
+      "qa-recipebook-delete-modal.png",
+      { animations: "disabled" },
+    );
+
+    await page.goto(RECIPEBOOK_DETAIL_VISUAL_PATH);
+    await expect(page.getByRole("heading", { name: "주말 파티" })).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-recipebook-detail.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.goto(MYPAGE_VISUAL_PATH);
+    await page.getByRole("button", { name: /장보기 내역/ }).click();
+    await expect(page.getByRole("heading", { name: "장보기 내역" })).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-mypage-shopping-history.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.goto(SETTINGS_VISUAL_PATH);
+    await expect(page.getByRole("heading", { name: "설정" })).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-settings.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.getByTestId("nickname-row").click();
+    const nicknameDialog = page.getByRole("dialog", { name: "닉네임 변경" });
+    await expect(nicknameDialog).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(nicknameDialog).toHaveScreenshot("qa-settings-nickname-modal.png", {
+      animations: "disabled",
+    });
+
+    await nicknameDialog.getByRole("button", { name: "닫기" }).click();
+    await page.getByRole("button", { name: "로그아웃" }).click();
+    const logoutDialog = page.getByRole("alertdialog", { name: "로그아웃 할까요?" });
+    await expect(logoutDialog).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(logoutDialog).toHaveScreenshot("qa-settings-logout-modal.png", {
+      animations: "disabled",
+    });
+
+    await logoutDialog.getByRole("button", { name: "취소" }).click();
+    await page.getByRole("button", { name: "계정 삭제하기" }).click();
+    const accountDeleteDialog = page.getByRole("alertdialog", {
+      name: "정말 계정을 삭제할까요?",
+    });
+    await expect(accountDeleteDialog).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(accountDeleteDialog).toHaveScreenshot(
+      "qa-settings-account-delete-modal.png",
+      { animations: "disabled" },
+    );
   });
 });

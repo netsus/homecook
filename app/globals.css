@@ -3231,7 +3231,11 @@ button {
   }
 
   .web-pantry-shell,
-  .web-shopping-shell {
+  .web-shopping-shell,
+  .web-mypage-shell,
+  .web-settings-shell,
+  .web-login-shell,
+  .web-recipebook-detail-shell {
     --background: var(--web-bg);
     --foreground: var(--web-text-1);
     --surface: var(--web-surface);
@@ -3262,6 +3266,923 @@ button {
   .web-shopping-flow-screen,
   .web-shopping-detail-screen {
     padding-top: 40px;
+  }
+
+  .web-login-shell .web-page {
+    min-height: 100vh;
+    background: var(--web-bg-alt);
+  }
+
+  .web-login-screen {
+    display: flex;
+    min-height: calc(100vh - var(--web-nav-h));
+    align-items: center;
+    justify-content: center;
+    padding: 96px 0 120px;
+  }
+
+  .web-login-card {
+    width: min(440px, 100%);
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-md);
+    background: var(--web-surface);
+    padding: 32px;
+    box-shadow: rgba(63, 71, 77, 0.18) 0 14px 36px;
+  }
+
+  .web-login-brand {
+    margin: 0;
+    color: var(--web-text-1);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+
+  .web-login-brand-offset {
+    margin-top: 18px;
+  }
+
+  .web-login-title {
+    margin: 24px 0 0;
+    color: var(--web-text-1);
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.3;
+  }
+
+  .web-login-description {
+    margin: 12px 0 0;
+    color: var(--web-text-3);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .web-login-alert {
+    border: 1px solid rgba(255, 59, 48, 0.16);
+    border-radius: var(--web-r-sm);
+    background: rgba(255, 59, 48, 0.06);
+    color: var(--web-error);
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .web-login-provider-list {
+    margin-top: 24px;
+  }
+
+  .web-login-provider-list > div {
+    display: grid;
+    gap: 8px;
+  }
+
+  .web-login-provider-list button {
+    position: relative;
+    min-height: 44px;
+    justify-content: flex-start;
+    border: 1px solid var(--web-line-strong) !important;
+    border-radius: var(--web-r-sm) !important;
+    background: var(--web-surface) !important;
+    color: var(--web-text-1) !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    padding: 0 48px 0 16px !important;
+  }
+
+  .web-login-provider-list button::after {
+    position: absolute;
+    right: 18px;
+    content: "›";
+    color: var(--web-text-3);
+    font-size: 20px;
+    font-weight: 400;
+  }
+
+  .web-login-provider-list button span {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: var(--web-r-pill);
+    background: var(--web-bg-alt);
+    color: var(--web-brand);
+  }
+
+  .web-login-divider {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+    margin: 30px 0 26px;
+    color: var(--web-text-3);
+    font-size: 12px;
+  }
+
+  .web-login-divider::before,
+  .web-login-divider::after {
+    height: 1px;
+    background: var(--web-divider);
+    content: "";
+  }
+
+  .web-login-browse {
+    display: block;
+    color: var(--web-text-2);
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .web-mypage-screen {
+    padding: 32px 0 80px;
+  }
+
+  .web-mypage-profile {
+    display: flex;
+    min-height: 140px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 36px 28px;
+  }
+
+  .web-mypage-profile-main,
+  .web-mypage-account-profile,
+  .web-settings-account-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .web-mypage-avatar {
+    display: flex;
+    width: 64px;
+    height: 64px;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: var(--web-r-pill);
+    object-fit: cover;
+  }
+
+  .web-mypage-avatar-fallback,
+  .web-mypage-top-profile,
+  .web-mypage-account-avatar {
+    background: linear-gradient(135deg, #8fd4ff 0%, #43b9ff 100%);
+    color: var(--web-text-inverse);
+    font-weight: 800;
+  }
+
+  .web-mypage-profile-copy h1 {
+    margin: 0;
+    color: var(--web-text-1);
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .web-mypage-profile-copy p {
+    margin: 4px 0 0;
+    color: var(--web-text-3);
+    font-size: 13px;
+  }
+
+  .web-mypage-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(88px, 1fr));
+    align-items: center;
+    text-align: center;
+  }
+
+  .web-mypage-stats div {
+    padding: 0 28px;
+  }
+
+  .web-mypage-stats div + div {
+    border-left: 1px solid var(--web-divider);
+  }
+
+  .web-mypage-stats strong {
+    display: block;
+    color: var(--web-text-1);
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .web-mypage-stats span {
+    display: block;
+    margin-top: 4px;
+    color: var(--web-text-3);
+    font-size: 12px;
+  }
+
+  .web-mypage-top-profile {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--web-r-pill);
+    font-size: 12px;
+  }
+
+  .web-mypage-tabs {
+    margin: 72px -32px 0;
+    padding: 0 48px;
+  }
+
+  .web-mypage-tabs .web-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 20px;
+  }
+
+  .web-mypage-panel {
+    padding-top: 72px;
+  }
+
+  .web-mypage-section-head h2,
+  .web-recipebooks-header h2,
+  .web-recipebook-detail-head h1,
+  .web-settings-header h1 {
+    margin: 0;
+    color: var(--web-text-1);
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.3;
+  }
+
+  .web-mypage-section-head p,
+  .web-recipebooks-header p,
+  .web-recipebook-detail-head p,
+  .web-settings-header p {
+    margin: 8px 0 0;
+    color: var(--web-text-3);
+    font-size: 14px;
+  }
+
+  .web-mypage-recipe-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 32px 24px;
+    margin-top: 56px;
+  }
+
+  .web-mypage-save-badge {
+    position: absolute;
+    right: 12px;
+    top: -182px;
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--web-r-pill);
+    background: var(--web-surface);
+    color: var(--web-brand);
+    box-shadow: var(--web-shadow-card);
+  }
+
+  .web-mypage-recipe-title {
+    position: relative;
+    display: block;
+  }
+
+  .web-mypage-link-list {
+    display: grid;
+    gap: 28px;
+    margin-top: 40px;
+  }
+
+  .web-mypage-action-row,
+  .web-mypage-settings-row,
+  .web-mypage-shopping-card {
+    width: 100%;
+    text-align: left;
+  }
+
+  .web-mypage-action-row {
+    min-height: 74px;
+    padding: 18px 24px;
+    color: var(--web-text-1);
+  }
+
+  .web-mypage-row-icon,
+  .web-settings-account-icon {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: var(--web-r-sm);
+    background: var(--web-bg-alt);
+    color: var(--web-text-2);
+  }
+
+  .web-mypage-row-copy {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .web-mypage-row-copy strong,
+  .web-settings-row-card strong,
+  .web-settings-account-row strong {
+    color: var(--web-text-1);
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  .web-mypage-row-copy span,
+  .web-settings-row-card span,
+  .web-settings-account-row em {
+    color: var(--web-text-3);
+    font-size: 13px;
+    font-style: normal;
+  }
+
+  .web-mypage-subsurface {
+    display: grid;
+    gap: 20px;
+    max-width: 900px;
+  }
+
+  .web-mypage-account-card,
+  .web-mypage-toggle-card,
+  .web-mypage-faq-card,
+  .web-mypage-contact-card {
+    padding: 20px;
+  }
+
+  .web-mypage-account-profile {
+    justify-content: space-between;
+  }
+
+  .web-mypage-account-avatar {
+    display: inline-flex;
+    width: 56px;
+    height: 56px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--web-r-pill);
+  }
+
+  .web-mypage-account-profile span:nth-child(2),
+  .web-mypage-toggle-row > span,
+  .web-mypage-faq-row > div {
+    display: grid;
+    gap: 3px;
+    flex: 1;
+  }
+
+  .web-mypage-account-profile em,
+  .web-mypage-toggle-row em {
+    color: var(--web-text-3);
+    font-size: 13px;
+    font-style: normal;
+  }
+
+  .web-mypage-settings-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 0;
+  }
+
+  .web-mypage-settings-row + .web-mypage-settings-row,
+  .web-mypage-toggle-row + .web-mypage-toggle-row,
+  .web-mypage-faq-row + .web-mypage-faq-row {
+    border-top: 1px solid var(--web-divider);
+  }
+
+  .web-mypage-danger-card,
+  .web-settings-danger-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    border-color: rgba(255, 59, 48, 0.72);
+    background: rgba(255, 59, 48, 0.035);
+    padding: 24px;
+  }
+
+  .web-mypage-danger-card h3,
+  .web-settings-danger-card strong {
+    margin: 0;
+    color: var(--web-error);
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .web-mypage-danger-card p,
+  .web-settings-danger-card span {
+    margin: 8px 0 0;
+    color: var(--web-text-2);
+    font-size: 13px;
+  }
+
+  .web-mypage-danger-button,
+  .web-settings-danger-button {
+    display: inline-flex;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--web-r-sm);
+    background: var(--web-error);
+    color: var(--web-text-inverse);
+    padding: 0 18px;
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .web-mypage-toggle-row,
+  .web-mypage-faq-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 18px 0;
+  }
+
+  .web-mypage-toggle-row:first-child,
+  .web-mypage-faq-row:first-child {
+    padding-top: 0;
+  }
+
+  .web-mypage-toggle-row:last-child,
+  .web-mypage-faq-row:last-child {
+    padding-bottom: 0;
+  }
+
+  .web-switch {
+    position: relative;
+    display: inline-flex;
+    width: 42px;
+    height: 24px;
+    flex: 0 0 auto;
+    align-items: center;
+    border-radius: var(--web-r-pill);
+    background: var(--web-divider);
+    padding: 2px;
+    transition: background 0.15s ease;
+  }
+
+  .web-switch span {
+    display: block;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--web-r-pill);
+    background: var(--web-surface);
+    box-shadow: var(--web-shadow-card);
+    transition: transform 0.15s ease;
+  }
+
+  .web-switch-on {
+    background: var(--web-brand);
+  }
+
+  .web-switch-on span {
+    transform: translateX(18px);
+  }
+
+  .web-mypage-faq-row p {
+    margin: 8px 0 0;
+    color: var(--web-text-2);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .web-mypage-contact-card strong {
+    color: var(--web-text-1);
+    font-size: 16px;
+  }
+
+  .web-mypage-contact-card p {
+    margin: 8px 0 0;
+    color: var(--web-text-3);
+    font-size: 14px;
+  }
+
+  .web-recipebooks-screen,
+  .web-recipebook-detail-screen {
+    padding-top: 10px;
+  }
+
+  .web-recipebooks-header,
+  .web-recipebook-detail-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-top: 64px;
+  }
+
+  .web-recipebooks-section-head {
+    margin-top: 86px;
+  }
+
+  .web-recipebooks-section-head-spaced {
+    margin-top: 64px;
+  }
+
+  .web-recipebooks-section-head h3,
+  .web-settings-section h2 {
+    margin: 0 0 24px;
+    color: var(--web-text-1);
+    font-size: 22px;
+    font-weight: 800;
+  }
+
+  .web-recipebooks-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .web-recipebook-book-card {
+    display: flex;
+    min-height: 106px;
+    align-items: center;
+    gap: 18px;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-md);
+    background: var(--web-surface);
+    padding: 16px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .web-recipebook-book-card:hover {
+    border-color: rgba(0, 0, 0, 0.12);
+    box-shadow: var(--web-shadow-card);
+  }
+
+  .web-recipebook-book-card-static:hover {
+    box-shadow: none;
+  }
+
+  .web-recipebook-collage {
+    display: grid;
+    width: 80px;
+    height: 80px;
+    flex: 0 0 auto;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2px;
+    overflow: hidden;
+    border-radius: var(--web-r-sm);
+    background: var(--web-image-placeholder);
+  }
+
+  .web-recipebook-collage-cell {
+    background-position: center;
+    background-size: cover;
+  }
+
+  .web-recipebook-book-copy {
+    display: grid;
+    min-width: 0;
+    flex: 1;
+    gap: 4px;
+  }
+
+  .web-recipebook-book-copy strong {
+    color: var(--web-text-1);
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .web-recipebook-book-copy span {
+    color: var(--web-text-3);
+    font-size: 13px;
+  }
+
+  .web-recipebook-book-copy em {
+    width: fit-content;
+    border-radius: var(--web-r-xs);
+    background: var(--web-brand-wash);
+    color: var(--web-brand);
+    padding: 2px 6px;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 800;
+  }
+
+  .web-recipebook-book-count {
+    color: var(--web-text-4);
+    font-size: 24px;
+  }
+
+  .web-recipebook-menu-button,
+  .web-settings-icon-button {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--web-r-pill);
+    color: var(--web-text-3);
+  }
+
+  .web-recipebook-menu-button:hover,
+  .web-settings-icon-button:hover {
+    background: var(--web-bg-alt);
+    color: var(--web-brand);
+  }
+
+  .web-recipebook-menu {
+    position: absolute;
+    right: 16px;
+    top: 100%;
+    z-index: 20;
+    width: 160px;
+    overflow: hidden;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-sm);
+    background: var(--web-surface);
+    box-shadow: var(--web-shadow-float);
+  }
+
+  .web-recipebooks-create {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    border: 1px solid var(--web-brand);
+    border-radius: var(--web-r-md);
+    background: var(--web-surface);
+    padding: 12px;
+  }
+
+  .web-recipebooks-create input {
+    min-width: 0;
+    flex: 1;
+    border: 0;
+    outline: 0;
+    color: var(--web-text-1);
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .web-recipebooks-add {
+    width: 100%;
+    min-height: 54px;
+    margin-top: 12px;
+    border: 1px dashed var(--web-line-strong);
+    border-radius: var(--web-r-md);
+    background: var(--web-surface);
+    color: var(--web-brand);
+    font-weight: 800;
+  }
+
+  .web-mypage-shopping-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .web-mypage-shopping-card {
+    display: block;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-md);
+    background: var(--web-surface);
+    padding: 18px 20px;
+  }
+
+  .web-recipebook-detail-screen {
+    padding: 32px 0 80px;
+  }
+
+  .web-recipebook-detail-head {
+    margin-top: 64px;
+    margin-bottom: 72px;
+  }
+
+  .web-recipebook-detail-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .web-recipebook-detail-menu-wrap {
+    position: relative;
+  }
+
+  .web-recipebook-detail-menu-wrap .web-recipebook-menu {
+    right: 0;
+  }
+
+  .web-recipebook-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 32px 24px;
+  }
+
+  .web-recipebook-detail-card {
+    position: relative;
+  }
+
+  .web-recipebook-detail-remove {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    border-radius: var(--web-r-pill);
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--web-text-2);
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 800;
+    box-shadow: var(--web-shadow-card);
+  }
+
+  .web-settings-screen {
+    max-width: 896px;
+    margin: 0 auto;
+    padding: 40px 0 96px;
+  }
+
+  .web-settings-header {
+    margin-top: 64px;
+    margin-bottom: 74px;
+  }
+
+  .web-settings-toast {
+    margin-bottom: 24px;
+    border-radius: var(--web-r-sm);
+    background: rgba(255, 59, 48, 0.08);
+    color: var(--web-error);
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .web-settings-section {
+    margin-top: 80px;
+  }
+
+  .web-settings-section:first-of-type {
+    margin-top: 0;
+  }
+
+  .web-settings-section-title h2 {
+    margin-bottom: 8px;
+  }
+
+  .web-settings-section-title p,
+  .web-settings-help {
+    color: var(--web-text-3);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  .web-settings-column-card,
+  .web-settings-row-card,
+  .web-settings-account-card {
+    overflow: hidden;
+  }
+
+  .web-settings-column-list {
+    display: grid;
+  }
+
+  .web-settings-column-row,
+  .web-settings-row-card {
+    display: flex;
+    min-height: 56px;
+    align-items: center;
+    gap: 14px;
+    padding: 0 20px;
+  }
+
+  .web-settings-column-row + .web-settings-column-row,
+  .web-settings-account-row + .web-settings-account-row {
+    border-top: 1px solid var(--web-divider);
+  }
+
+  .web-settings-drag {
+    color: var(--web-divider);
+    font-size: 13px;
+  }
+
+  .web-settings-column-row strong {
+    flex: 1;
+    color: var(--web-text-1);
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  .web-settings-default-badge {
+    border-radius: var(--web-r-pill);
+    background: var(--web-bg-alt);
+    color: var(--web-text-3);
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .web-settings-column-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .web-settings-row-card {
+    justify-content: space-between;
+    min-height: 78px;
+  }
+
+  .web-settings-row-card > div:first-child {
+    display: grid;
+    gap: 4px;
+  }
+
+  .web-settings-segmented {
+    display: inline-flex;
+    gap: 2px;
+    border-radius: var(--web-r-pill);
+    background: var(--web-bg-alt);
+    padding: 4px;
+  }
+
+  .web-settings-segmented button {
+    min-width: 76px;
+    height: 34px;
+    border-radius: var(--web-r-pill);
+    color: var(--web-text-3);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .web-settings-segmented button.active {
+    background: var(--web-surface);
+    color: var(--web-brand);
+    box-shadow: var(--web-shadow-card);
+  }
+
+  .web-settings-segmented-3 button {
+    min-width: 64px;
+  }
+
+  .web-settings-account-card {
+    display: grid;
+  }
+
+  .web-settings-account-row {
+    min-height: 80px;
+    padding: 0 20px;
+    text-align: left;
+  }
+
+  .web-settings-account-action {
+    width: 100%;
+  }
+
+  .web-settings-account-row span:nth-child(2) {
+    display: grid;
+    flex: 1;
+    gap: 4px;
+  }
+
+  .web-settings-icon-danger {
+    color: var(--web-error);
+  }
+
+  .web-form-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--web-text-1);
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .web-form-input {
+    width: 100%;
+    height: 46px;
+    border: 1px solid var(--web-line-strong);
+    border-radius: var(--web-r-sm);
+    background: var(--web-bg-alt);
+    color: var(--web-text-1);
+    padding: 0 14px;
+    outline: none;
+  }
+
+  .web-form-input:focus {
+    border-color: var(--web-brand);
+    background: var(--web-surface);
+  }
+
+  .web-form-help,
+  .web-form-error {
+    margin: 8px 0 0;
+    font-size: 12px;
+  }
+
+  .web-form-help {
+    color: var(--web-text-3);
+  }
+
+  .web-form-error {
+    color: var(--web-error);
+    font-weight: 700;
   }
 
   .web-pantry-head,

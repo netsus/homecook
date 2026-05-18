@@ -13,6 +13,19 @@ import {
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  WebButton,
+  WebCard,
+  WebDialog,
+  WebDialogBody,
+  WebDialogFooter,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebIconButton,
+  WebModal,
+  WebShell,
+  WebTopNav,
+} from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
   deleteAccount,
@@ -37,6 +50,13 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
+
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
 
 export interface SettingsScreenProps {
   initialAuthenticated?: boolean;
@@ -557,13 +577,29 @@ export function SettingsScreen({
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)] pb-16">
-      <div className="mx-auto max-w-6xl px-6 pt-6">
-        <SettingsAppBar />
+    <WebShell className="web-settings-shell" wide>
+      <WebTopNav
+        activeId="mypage"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<SettingsProfilePill nickname={profile?.nickname} />}
+      />
+      <main className="web-settings-screen">
+        <nav aria-label="설정 경로" className="web-breadcrumb">
+          <Link className="web-breadcrumb-link" href="/mypage">
+            ‹ 마이페이지
+          </Link>
+          <span className="web-breadcrumb-sep">/</span>
+          <span className="web-breadcrumb-current">설정</span>
+        </nav>
+
+        <div className="web-settings-header">
+          <h1>설정</h1>
+          <p>알림 · 단위 · 테마를 한곳에서 관리합니다.</p>
+        </div>
 
         {errorMessage ? (
           <div
-            className="mt-3 rounded-[var(--radius-md)] bg-[var(--danger)] px-4 py-3 text-center text-sm font-semibold text-white"
+            className="web-settings-toast"
             data-testid="settings-error-toast"
             role="status"
           >
@@ -571,223 +607,206 @@ export function SettingsScreen({
           </div>
         ) : null}
 
-        <section className="mt-5 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
-            Settings
-          </p>
-          <h2 className="mt-1 text-3xl font-bold tracking-[-0.3px] text-[var(--foreground)]">
-            계정과 식단 관리
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            요리 화면 유지, 플래너 끼니 컬럼, 계정 정보를 한 곳에서 관리해요.
-          </p>
-        </section>
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="space-y-6">
-            <section className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
-              <p className="mb-3 text-sm font-semibold text-[var(--text-3)]">
-                앱 설정
-              </p>
-              <div className="flex items-center justify-between rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
-                <div className="flex-1 pr-3">
-                  <p className="text-base font-semibold text-[var(--foreground)]">
-                    요리모드 화면 꺼짐 방지
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--text-3)]">
-                    요리 중 화면이 꺼지지 않아요
-                  </p>
-                </div>
-                <button
-                  aria-checked={profile?.settings.screen_wake_lock ?? false}
-                  aria-label="요리모드 화면 꺼짐 방지"
-                  className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center"
-                  onClick={() => void handleToggleWakeLock()}
-                  role="switch"
-                  type="button"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
-                      profile?.settings.screen_wake_lock
-                        ? "bg-[var(--brand)]"
-                        : "bg-[var(--surface-subtle)]"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
-                        profile?.settings.screen_wake_lock
-                          ? "translate-x-[22px]"
-                          : "translate-x-[2px]"
-                      }`}
-                    />
-                  </span>
-                </button>
-              </div>
-            </section>
-
-            <section
-              className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]"
-              data-testid="column-management-section"
-            >
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--text-3)]">
-                    끼니 컬럼 관리
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--text-4)]">
-                    최소 1개 ~ 최대 5개 · 현재 {plannerColumns.length}개
-                  </p>
-                </div>
-                {!columnsLoading && !columnsError ? (
-                  <button
-                    className="min-h-9 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--text-2)] hover:border-[var(--brand)] hover:text-[var(--brand)]"
-                    onClick={() => setColumnsEditMode((current) => !current)}
-                    type="button"
-                  >
-                    {columnsEditMode ? "완료" : "편집"}
-                  </button>
-                ) : null}
-              </div>
-
-              {columnsLoading ? (
-                <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] p-4" data-testid="columns-loading">
-                  <Skeleton className="h-5 w-24" />
-                  <Skeleton className="mt-3 h-5 w-32" />
-                  <Skeleton className="mt-3 h-5 w-28" />
-                </div>
-              ) : columnsError ? (
-                <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] p-4" data-testid="columns-error">
-                  <p className="text-sm text-[var(--danger)]">{columnsError}</p>
-                  <button
-                    className="mt-2 text-sm font-semibold text-[var(--brand)]"
-                    onClick={() => void loadColumns()}
-                    type="button"
-                  >
-                    다시 시도
-                  </button>
-                </div>
-              ) : (
-                <div className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--panel)]">
-                  <div className="divide-y divide-[var(--surface-subtle)]" data-testid="column-list">
-                    {plannerColumns.map((column) => (
-                      <div
-                        key={column.id}
-                        className="flex min-h-[56px] items-center px-4 py-2.5"
-                        data-testid={`column-item-${column.id}`}
+        <section className="web-settings-section" data-testid="column-management-section">
+          <div className="web-settings-section-title">
+            <h2>끼니 관리</h2>
+            <p>플래너에 표시되는 식사 시간대를 관리합니다.</p>
+          </div>
+          {columnsLoading ? (
+            <WebCard className="web-settings-list" data-testid="columns-loading">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="mt-3 h-5 w-32" />
+              <Skeleton className="mt-3 h-5 w-28" />
+            </WebCard>
+          ) : columnsError ? (
+            <WebCard className="web-settings-list" data-testid="columns-error">
+              <p className="text-sm text-[var(--danger)]">{columnsError}</p>
+              <WebButton onClick={() => void loadColumns()} size="sm" variant="secondary">
+                다시 시도
+              </WebButton>
+            </WebCard>
+          ) : (
+            <>
+              <WebCard className="web-settings-column-card">
+                <div className="web-settings-column-list" data-testid="column-list">
+                  {plannerColumns.map((column) => (
+                    <div
+                      className="web-settings-column-row"
+                      data-testid={`column-item-${column.id}`}
+                      key={column.id}
+                    >
+                      <span aria-hidden="true" className="web-settings-drag">::</span>
+                      <strong>{column.name}</strong>
+                      <span className="web-settings-default-badge">기본</span>
+                      <button
+                        aria-label={`${column.name} 이름 변경`}
+                        className="web-settings-icon-button"
+                        data-testid={`rename-column-${column.id}`}
+                        onClick={() => openColumnRenameSheet(column)}
+                        type="button"
                       >
-                        <span className="min-w-0 flex-1 truncate text-base font-medium text-[var(--foreground)]">
-                          {column.name}
-                        </span>
+                        <PencilIcon />
+                      </button>
+                      {columnsEditMode ? (
                         <button
-                          aria-label={`${column.name} 이름 변경`}
-                          className="ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--brand)]"
-                          data-testid={`rename-column-${column.id}`}
-                          onClick={() => openColumnRenameSheet(column)}
+                          aria-label={`${column.name} 삭제`}
+                          className="web-settings-icon-button web-settings-icon-danger"
+                          data-testid={`delete-column-${column.id}`}
+                          disabled={plannerColumns.length <= 1}
+                          onClick={() => setDeleteColumnTarget(column)}
                           type="button"
                         >
-                          <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
+                          <TrashIcon />
                         </button>
-                        {columnsEditMode ? (
-                          <button
-                            aria-label={`${column.name} 삭제`}
-                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] ${
-                              plannerColumns.length <= 1
-                                ? "cursor-not-allowed text-[var(--text-4)]"
-                                : "text-[var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_8%,transparent)]"
-                            }`}
-                            data-testid={`delete-column-${column.id}`}
-                            disabled={plannerColumns.length <= 1}
-                            onClick={() => setDeleteColumnTarget(column)}
-                            type="button"
-                          >
-                            <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                              <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </button>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="border-t border-[var(--surface-subtle)] px-4 py-3">
-                    <button
-                      className={`flex min-h-[44px] w-full items-center justify-center rounded-[var(--radius-md)] text-sm font-semibold ${
-                        plannerColumns.length >= 5
-                          ? "cursor-not-allowed bg-[var(--surface-subtle)] text-[var(--text-4)]"
-                          : "bg-[var(--surface-fill)] text-[var(--brand)] hover:bg-[var(--brand-soft)]"
-                      }`}
-                      data-testid="add-column-button"
-                      disabled={plannerColumns.length >= 5}
-                      onClick={() => {
-                        setColumnAddInput("");
-                        setColumnAddError(null);
-                        setShowColumnAddSheet(true);
-                      }}
-                      type="button"
-                    >
-                      {plannerColumns.length >= 5
-                        ? "끼니 컬럼은 최대 5개까지 만들 수 있어요"
-                        : "+ 끼니 컬럼 추가"}
-                    </button>
-                  </div>
+                      ) : null}
+                    </div>
+                  ))}
                 </div>
-              )}
-            </section>
-          </div>
+              </WebCard>
+              <div className="web-settings-column-actions">
+                <WebButton
+                  data-testid="add-column-button"
+                  disabled={plannerColumns.length >= 5}
+                  onClick={() => {
+                    setColumnAddInput("");
+                    setColumnAddError(null);
+                    setShowColumnAddSheet(true);
+                  }}
+                  variant="tertiary"
+                >
+                  + 끼니 추가
+                </WebButton>
+                {!columnsLoading && !columnsError ? (
+                  <WebButton
+                    onClick={() => setColumnsEditMode((current) => !current)}
+                    variant="ghost"
+                  >
+                    {columnsEditMode ? "완료" : "편집"}
+                  </WebButton>
+                ) : null}
+              </div>
+              <p className="web-settings-help">
+                최소 2개, 최대 5개의 끼니를 등록할 수 있어요.
+                기본 끼니(아침/점심/저녁)는 삭제할 수 없어요.
+                컬럼을 추가하면 플래너 그리드에도 같은 순서로 표시됩니다.
+              </p>
+            </>
+          )}
+        </section>
 
-          <aside className="h-fit rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
-            <p className="mb-3 text-sm font-semibold text-[var(--text-3)]">
-              계정 관리
-            </p>
+        <section className="web-settings-section">
+          <h2>알림</h2>
+          <WebCard className="web-settings-row-card">
+            <div>
+              <strong>푸시 알림</strong>
+              <span>끼니 요리 시간, 장보기 리마인드</span>
+              <span className="visually-hidden">요리모드 화면 꺼짐 방지</span>
+            </div>
+            <button
+              aria-checked={profile?.settings.screen_wake_lock ?? false}
+              aria-label="요리모드 화면 꺼짐 방지"
+              className={
+                profile?.settings.screen_wake_lock
+                  ? "web-switch web-switch-on"
+                  : "web-switch"
+              }
+              onClick={() => void handleToggleWakeLock()}
+              role="switch"
+              type="button"
+            >
+              <span />
+            </button>
+          </WebCard>
+        </section>
+
+        <section className="web-settings-section">
+          <h2>단위</h2>
+          <WebCard className="web-settings-row-card">
+            <div>
+              <strong>계량 단위</strong>
+              <span>미터법 (g, ml) 또는 컵·큰술 표기</span>
+            </div>
+            <div className="web-settings-segmented">
+              <button className="active" type="button">미터법</button>
+              <button type="button">컵·큰술</button>
+            </div>
+          </WebCard>
+        </section>
+
+        <section className="web-settings-section">
+          <h2>테마</h2>
+          <WebCard className="web-settings-row-card">
+            <div>
+              <strong>앱 테마</strong>
+              <span>시스템 설정 따라가기를 권장합니다</span>
+            </div>
+            <div className="web-settings-segmented web-settings-segmented-3">
+              <button className="active" type="button">라이트</button>
+              <button type="button">다크</button>
+              <button type="button">시스템</button>
+            </div>
+          </WebCard>
+        </section>
+
+        <section className="web-settings-section">
+          <h2>계정</h2>
+          <WebCard className="web-settings-account-card">
+            <div className="web-settings-account-row">
+              <span className="web-settings-account-icon"><UserMiniIcon /></span>
+              <span>
+                <strong>{profile?.nickname ?? ""}</strong>
+                <em>{profile?.social_provider === "kakao" ? "카카오 로그인" : "소셜 로그인"}</em>
+              </span>
+            </div>
             <button
               aria-label={`닉네임 변경, 현재 닉네임: ${profile?.nickname ?? ""}`}
-              className="flex w-full items-center rounded-[var(--radius-md)] bg-[var(--surface-fill)] p-4"
+              className="web-settings-account-row web-settings-account-action"
               data-testid="nickname-row"
               onClick={openNicknameSheet}
               type="button"
             >
-              <div className="flex-1 text-left">
-                <p className="text-sm text-[var(--text-3)]">닉네임</p>
-                <p className="mt-1 text-base font-semibold text-[var(--foreground)]">
-                  {profile?.nickname ?? ""}
-                </p>
-              </div>
-              <svg
-                aria-hidden="true"
-                className="h-5 w-5 shrink-0 text-[var(--text-3)]"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <span className="web-settings-account-icon"><PencilIcon /></span>
+              <span>
+                <strong>닉네임 변경</strong>
+                <span className="visually-hidden">닉네임</span>
+                <em>마이페이지와 댓글에 표시되는 이름</em>
+              </span>
+              <ChevronRightIcon />
             </button>
-
             <button
-              className="mt-4 flex min-h-[52px] w-full items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] text-base font-medium text-[var(--text-2)] hover:border-[var(--brand)]"
+              className="web-settings-account-row web-settings-account-action"
               onClick={() => setShowLogoutDialog(true)}
               type="button"
             >
-              로그아웃
+              <span className="web-settings-account-icon"><LogoutMiniIcon /></span>
+              <span>
+                <strong>로그아웃</strong>
+                <em>현재 로그인한 계정에서 나갑니다.</em>
+              </span>
+              <ChevronRightIcon />
             </button>
+          </WebCard>
+        </section>
 
-            <div className="mt-4 flex justify-center">
-              <button
-                className="min-h-[44px] text-sm text-[var(--text-3)] underline"
-                onClick={() => setShowDeleteDialog(true)}
-                type="button"
-              >
-                회원탈퇴
-              </button>
+        <section className="web-settings-section web-settings-danger-section">
+          <h2>위험 영역</h2>
+          <WebCard className="web-settings-danger-card">
+            <div>
+              <strong>계정 삭제</strong>
+              <span>모든 레시피북, 플래너, 장보기 기록이 영구적으로 삭제됩니다.</span>
             </div>
-          </aside>
-        </div>
-      </div>
+            <WebButton
+              className="web-settings-danger-button"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              계정 삭제하기
+            </WebButton>
+            <button className="visually-hidden" onClick={() => setShowDeleteDialog(true)} type="button">
+              회원탈퇴
+            </button>
+          </WebCard>
+        </section>
+      </main>
 
       {showNicknameSheet ? (
         <NicknameEditSheet
@@ -806,7 +825,7 @@ export function SettingsScreen({
 
       {showLogoutDialog ? (
         <ConfirmDialog
-          confirmLabel={isLoggingOut ? "로그아웃 중..." : "로그아웃하기"}
+          confirmLabel={isLoggingOut ? "로그아웃 중..." : "로그아웃"}
           confirmTone="brand"
           disabled={isLoggingOut}
           errorMessage={logoutError}
@@ -815,15 +834,15 @@ export function SettingsScreen({
             setLogoutError(null);
           }}
           onConfirm={() => void handleLogout()}
-          title="로그아웃할까요?"
+          title="로그아웃 할까요?"
         />
       ) : null}
 
       {showDeleteDialog ? (
         <ConfirmDialog
-          confirmLabel={isDeleting ? "탈퇴 중..." : "탈퇴하기"}
+          confirmLabel={isDeleting ? "삭제 중..." : "계정 삭제"}
           confirmTone="danger"
-          description="탈퇴하면 모든 데이터가 삭제되며 되돌릴 수 없어요."
+          description="계정을 삭제하면 모든 레시피북, 플래너, 장보기 기록이 삭제되며 되돌릴 수 없어요."
           disabled={isDeleting}
           errorMessage={deleteError}
           onCancel={() => {
@@ -831,7 +850,7 @@ export function SettingsScreen({
             setDeleteError(null);
           }}
           onConfirm={() => void handleDeleteAccount()}
-          title="정말 탈퇴하시겠어요?"
+          title="정말 계정을 삭제할까요?"
         />
       ) : null}
 
@@ -887,7 +906,7 @@ export function SettingsScreen({
           title="끼니 컬럼 삭제"
         />
       ) : null}
-    </div>
+    </WebShell>
   );
 }
 
@@ -918,6 +937,60 @@ function SettingsAppBar() {
       </h1>
       <div className="h-11 w-11 shrink-0" />
     </div>
+  );
+}
+
+function SettingsProfilePill({ nickname }: { nickname?: string }) {
+  return (
+    <Link
+      aria-label={`${nickname ?? "내"} 마이페이지`}
+      className="web-mypage-top-profile"
+      href="/mypage"
+    >
+      <span aria-hidden="true">{nickname?.slice(0, 1).toUpperCase() ?? "?"}</span>
+    </Link>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function UserMiniIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path d="M20 21a8 8 0 1 0-16 0" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function LogoutMiniIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path d="M10 17 15 12l-5-5M15 12H3M21 4v16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path d="m9 5 7 7-7 7" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+    </svg>
   );
 }
 
@@ -966,83 +1039,47 @@ function NicknameEditSheet({
   const inputErrorId = "settings-nickname-error";
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 lg:items-center"
-      data-testid="nickname-sheet-backdrop"
-      onClick={onClose}
-    >
-      <div
-        aria-modal="true"
-        className="w-full max-w-md rounded-t-[var(--radius-xl)] bg-[var(--panel)] p-6 shadow-[var(--shadow-3)] lg:rounded-[var(--radius-xl)]"
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-      >
-        <div className="mx-auto mb-4 h-1 w-8 rounded-full bg-[var(--line)] lg:hidden" />
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-[var(--foreground)]">
+    <WebModal data-testid="nickname-sheet-backdrop" onBackdropClick={onClose}>
+      <WebDialog aria-labelledby="settings-nickname-title" size="narrow">
+        <WebDialogHeader>
+          <WebDialogTitle id="settings-nickname-title">
             닉네임 변경
-          </h2>
-          <button
-            aria-label="닫기"
-            className="flex h-11 w-11 items-center justify-center text-[var(--text-3)]"
-            onClick={onClose}
-            type="button"
-          >
-            <svg
-              aria-hidden="true"
-              className="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-            >
-              <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </div>
-
-        <input
-          aria-describedby={errorMessage ? `${inputHelpId} ${inputErrorId}` : inputHelpId}
-          autoFocus
-          className={`w-full rounded-[var(--radius-sm)] border-b-2 bg-[var(--surface-fill)] px-4 py-3 text-base text-[var(--foreground)] outline-none ${
-            errorMessage
-              ? "border-[var(--danger)]"
-              : "border-transparent focus:border-[var(--brand)]"
-          }`}
-          maxLength={30}
-          onChange={(e) => onInputChange(e.target.value)}
-          type="text"
-          value={nicknameInput}
-        />
-
-        <p className="mt-2 text-xs text-[var(--text-3)]" id={inputHelpId}>
-          2~30자로 입력해 주세요
-        </p>
-
-        {errorMessage ? (
-          <p
-            className="mt-2 text-xs text-[var(--danger)]"
-            id={inputErrorId}
-            data-testid="nickname-error"
-          >
-            {errorMessage}
+          </WebDialogTitle>
+          <WebIconButton aria-label="닫기" onClick={onClose}>
+            ×
+          </WebIconButton>
+        </WebDialogHeader>
+        <WebDialogBody>
+          <label className="web-form-label" htmlFor="settings-nickname-input">
+            새 닉네임
+          </label>
+          <input
+            aria-describedby={errorMessage ? `${inputHelpId} ${inputErrorId}` : inputHelpId}
+            autoFocus
+            className="web-form-input"
+            id="settings-nickname-input"
+            maxLength={30}
+            onChange={(e) => onInputChange(e.target.value)}
+            type="text"
+            value={nicknameInput}
+          />
+          <p className="web-form-help" id={inputHelpId}>
+            한글·영문·숫자 2-30자
           </p>
-        ) : null}
-
-        <button
-          className={`mt-4 flex w-full min-h-[52px] items-center justify-center rounded-[var(--radius-md)] text-base font-semibold ${
-            saveDisabled
-              ? "bg-[var(--surface-subtle)] text-[var(--text-4)]"
-              : "bg-[var(--brand)] text-white"
-          }`}
-          disabled={saveDisabled}
-          onClick={onSave}
-          type="button"
-        >
-          {isSaving ? "변경 중..." : "변경하기"}
-        </button>
-      </div>
-    </div>
+          {errorMessage ? (
+            <p className="web-form-error" data-testid="nickname-error" id={inputErrorId}>
+              {errorMessage}
+            </p>
+          ) : null}
+        </WebDialogBody>
+        <WebDialogFooter>
+          <WebButton onClick={onClose} variant="tertiary">취소</WebButton>
+          <WebButton disabled={saveDisabled} onClick={onSave}>
+            {isSaving ? "변경 중..." : "변경하기"}
+          </WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
   );
 }
 
@@ -1071,44 +1108,55 @@ function ConfirmDialog({
     confirmTone === "danger" ? "bg-[var(--danger)]" : "bg-[var(--brand)]";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div
-        aria-modal="true"
-        className="w-full max-w-sm rounded-[var(--radius-xl)] bg-[var(--surface)] p-6 shadow-[var(--shadow-3)]"
+    <WebModal onBackdropClick={onCancel}>
+      <WebDialog
+        aria-labelledby="settings-confirm-title"
+        className="web-confirm-dialog"
         role="alertdialog"
+        size="narrow"
       >
-        <h3 className="text-lg font-bold text-[var(--foreground)]">{title}</h3>
-        {description ? (
-          <p className="mt-2 text-sm text-[var(--text-3)]">{description}</p>
-        ) : null}
-        {errorMessage ? (
-          <p
-            className="mt-2 text-xs text-[var(--danger)]"
-            data-testid="dialog-error"
-          >
-            {errorMessage}
-          </p>
-        ) : null}
-        <div className="mt-5 flex gap-3">
-          <button
-            className="flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-md)] text-sm font-semibold text-[var(--text-2)]"
-            disabled={disabled}
-            onClick={onCancel}
-            type="button"
-          >
+        <WebDialogHeader>
+          <WebDialogTitle id="settings-confirm-title">{title}</WebDialogTitle>
+          <WebIconButton aria-label="닫기" disabled={disabled} onClick={onCancel}>
+            ×
+          </WebIconButton>
+        </WebDialogHeader>
+        <WebDialogBody>
+          <div className="web-confirm-body">
+            <span
+              aria-hidden="true"
+              className={
+                confirmTone === "danger"
+                  ? "web-confirm-icon web-confirm-icon-danger"
+                  : "web-confirm-icon"
+              }
+            >
+              {confirmTone === "danger" ? "!" : "↪"}
+            </span>
+            <p className="web-confirm-copy">
+              {description ?? "현재 로그인한 계정에서 나갑니다."}
+            </p>
+          </div>
+          {errorMessage ? (
+            <p className="web-form-error" data-testid="dialog-error">
+              {errorMessage}
+            </p>
+          ) : null}
+        </WebDialogBody>
+        <WebDialogFooter>
+          <WebButton disabled={disabled} onClick={onCancel} variant="tertiary">
             취소
-          </button>
-          <button
-            className={`flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-md)] ${confirmBg} text-sm font-semibold text-white disabled:opacity-60`}
+          </WebButton>
+          <WebButton
+            className={confirmTone === "danger" ? "web-confirm-danger" : confirmBg}
             disabled={disabled}
             onClick={onConfirm}
-            type="button"
           >
             {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+          </WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
   );
 }
 
