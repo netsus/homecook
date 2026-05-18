@@ -35,14 +35,29 @@ function LoginScreen({ onLogin, onGuest }) {
 /* ============================================
    HOME (§1)
    ============================================ */
+const THEME_RECIPE_IDS = {
+  t1: ["r2", "r3", "r4", "r6"],
+  t2: ["r3", "r6", "r7", "r8"],
+  t3: ["r5", "r6", "r8"],
+  t4: ["r2", "r3", "r6", "r7"],
+  t5: ["r2", "r3", "r7"],
+  t6: ["r1", "r4", "r8"],
+};
+
 function HomeScreen({ savedSet, onSaveToggle, onOpenRecipe, onOpenFilter, savedFilters, stateOverride, onStateOverride, toast }) {
   const [sort, setSort] = useS1("views");
   const [query, setQuery] = useS1("");
   const [searchFocused, setSearchFocused] = useS1(false);
+  const [themeId, setThemeId] = useS1(null);
+  const selectedTheme = D1.THEMES.find(t => t.id === themeId);
 
   // Apply ingredient filters
   const filteredRecipes = useMemo1(() => {
     let list = D1.RECIPES;
+    if (themeId && THEME_RECIPE_IDS[themeId]) {
+      const ids = new Set(THEME_RECIPE_IDS[themeId]);
+      list = list.filter(r => ids.has(r.id));
+    }
     if (savedFilters && savedFilters.size > 0) {
       list = list.filter(r => {
         const ids = new Set(r.ingredients.map(i => i.id).filter(Boolean));
@@ -59,7 +74,7 @@ function HomeScreen({ savedSet, onSaveToggle, onOpenRecipe, onOpenFilter, savedF
     if (sort === "saves") sorted.sort((a,b) => b.saves - a.saves);
     if (sort === "newest") sorted.sort((a,b) => b.id.localeCompare(a.id));
     return sorted;
-  }, [sort, savedFilters, query]);
+  }, [sort, savedFilters, query, themeId]);
 
   /* loading / empty / error state demo toggle */
   const state = stateOverride || (filteredRecipes.length === 0 ? "empty" : "ok");
@@ -132,25 +147,38 @@ function HomeScreen({ savedSet, onSaveToggle, onOpenRecipe, onOpenFilter, savedF
       </section>
 
       {/* Theme carousel — spec §1: compact horizontal carousel strip, 1.5장 peek */}
-      <ThemeCarousel onPickTheme={() => toast("테마는 데모용입니다")} />
+      <ThemeCarousel
+        selectedThemeId={themeId}
+        onPickTheme={(id) => {
+          setThemeId(current => current === id ? null : id);
+          onStateOverride?.(null);
+        }}
+      />
 
       {/* 모든 레시피 */}
       <section className="all-recipes">
         <div className="all-recipes-head">
           <div>
-            <h2 className="h2">모든 레시피</h2>
-            <div className="text-meta">{filteredRecipes.length}개</div>
+            <h2 className="h2">{selectedTheme ? selectedTheme.title : "모든 레시피"}</h2>
+            <div className="text-meta">{filteredRecipes.length}개{selectedTheme ? " · 테마 결과" : ""}</div>
           </div>
-          <SortDropdown
-            value={sort}
-            onChange={setSort}
-            options={[
-              { value: "views",  label: "조회순" },
-              { value: "likes",  label: "좋아요순" },
-              { value: "saves",  label: "저장순" },
-              { value: "newest", label: "최신순" },
-            ]}
-          />
+          <div className="all-recipes-actions">
+            {selectedTheme && (
+              <button className="theme-filter-reset" type="button" onClick={() => setThemeId(null)}>
+                <Icon name="x" size={13} /> 테마 해제
+              </button>
+            )}
+            <SortDropdown
+              value={sort}
+              onChange={setSort}
+              options={[
+                { value: "views",  label: "조회순" },
+                { value: "likes",  label: "좋아요순" },
+                { value: "saves",  label: "저장순" },
+                { value: "newest", label: "최신순" },
+              ]}
+            />
+          </div>
         </div>
 
         {state === "loading" && <HomeSkeletonGrid rows={2} />}
@@ -187,7 +215,7 @@ function HomeScreen({ savedSet, onSaveToggle, onOpenRecipe, onOpenFilter, savedF
   );
 }
 
-function ThemeCarousel({ onPickTheme }) {
+function ThemeCarousel({ selectedThemeId, onPickTheme }) {
   const rail = useRef1(null);
   const scroll = (dir) => {
     if (!rail.current) return;
@@ -198,9 +226,6 @@ function ThemeCarousel({ onPickTheme }) {
       <div className="theme-strip-head">
         <h2 className="h2">이번 주 인기 테마</h2>
         <div className="theme-strip-controls">
-          <Button variant="ghost" size="sm" rightIcon="chevR" onClick={onPickTheme}>
-            더보기
-          </Button>
           <button className="rail-nav" onClick={() => scroll(-1)} aria-label="이전">
             <Icon name="chevL" size={16} />
           </button>
@@ -211,7 +236,12 @@ function ThemeCarousel({ onPickTheme }) {
       </div>
       <div className="theme-rail" ref={rail}>
         {D1.THEMES.map(t => (
-          <button key={t.id} className="theme-card" onClick={onPickTheme}>
+          <button
+            key={t.id}
+            className={`theme-card ${selectedThemeId === t.id ? "active" : ""}`}
+            aria-pressed={selectedThemeId === t.id}
+            onClick={() => onPickTheme(t.id)}
+          >
             <div className="theme-card-thumb">
               <img src={t.thumb} alt={t.title}
                 onError={(e) => { e.currentTarget.style.display = "none"; }} />

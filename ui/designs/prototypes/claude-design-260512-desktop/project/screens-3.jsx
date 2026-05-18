@@ -742,9 +742,193 @@ function YtImportScreen({ dateISO, col, onBack, onCreateRecipe }) {
 }
 
 /* ============================================
+   WEB_IMPORT
+   ============================================ */
+function WebImportScreen({ dateISO, col, onBack, onCreateRecipe }) {
+  const demo = {
+    sourceTitle: "블로그 레시피 · 매콤 감자조림",
+    site: "home blog",
+    thumbnail: D3.FOOD.jjigae,
+    recipe: {
+      title: "매콤 감자조림",
+      cookTime: 25,
+      baseServings: 2,
+      ingredients: [
+        { id: "ing-potato", amount: 3, unit: "개" },
+        { id: "ing-soy", amount: 2, unit: "큰술" },
+        { id: "ing-gochu", amount: 1, unit: "큰술" },
+        { id: "ing-garlic", amount: 1, unit: "작은술" },
+        { id: "ing-greenon", amount: 0.5, unit: "대" },
+      ],
+      memo: "웹페이지에서 가져온 재료와 조리 메모입니다. 감자를 먼저 익힌 뒤 양념을 넣고 윤기 나게 졸여 주세요.",
+    },
+  };
+  const [url, setUrl] = useS3("");
+  const [loading, setLoading] = useS3(false);
+  const [review, setReview] = useS3(false);
+  const [title, setTitle] = useS3(demo.recipe.title);
+  const [cookTime, setCookTime] = useS3(demo.recipe.cookTime);
+  const [baseServings, setBaseServings] = useS3(demo.recipe.baseServings);
+  const [ingredients, setIngredients] = useS3(demo.recipe.ingredients);
+  const [memo, setMemo] = useS3(demo.recipe.memo);
+  const [pickerOpen, setPickerOpen] = useS3(false);
+  const urlRef = useRef3(null);
+  const titleRef = useRef3(null);
+
+  useEffect3(() => { window.setTimeout(() => urlRef.current?.focus(), 0); }, []);
+  useEffect3(() => { if (review) window.setTimeout(() => titleRef.current?.focus(), 0); }, [review]);
+
+  const startImport = () => {
+    if (!url.trim() || loading) return;
+    setLoading(true);
+    window.setTimeout(() => {
+      setTitle(demo.recipe.title);
+      setCookTime(demo.recipe.cookTime);
+      setBaseServings(demo.recipe.baseServings);
+      setIngredients(demo.recipe.ingredients);
+      setMemo(demo.recipe.memo);
+      setReview(true);
+      setLoading(false);
+    }, 650);
+  };
+
+  const updateIngredient = (idx, patch) => setIngredients(list => list.map((ing, i) => i === idx ? { ...ing, ...patch } : ing));
+  const removeIngredient = (idx) => setIngredients(list => list.filter((_, i) => i !== idx));
+  const addIngredients = (items) => {
+    setIngredients(list => [
+      ...list,
+      ...items
+        .filter(i => !list.some(existing => existing.id === i.id))
+        .map(i => ({ id: i.id, amount: 1, unit: i.cat === "양념" ? "큰술" : "개" })),
+    ]);
+    setPickerOpen(false);
+  };
+
+  const submit = () => {
+    if (!title.trim()) return;
+    onCreateRecipe(createTempRecipe({
+      prefix: "web",
+      title,
+      cookTime,
+      baseServings,
+      ingredients,
+      memo,
+      source: "웹페이지",
+      photo: demo.thumbnail,
+    }));
+  };
+
+  const IngredientPicker = window.HC_MODALS?.IngredientPickerModal_ManualCreate;
+
+  return (
+    <main className="screen create-screen">
+      <div className="breadcrumb">
+        <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 끼니 추가</button>
+        <span className="breadcrumb-sep">/</span>
+        <span className="breadcrumb-cur">웹페이지 가져오기</span>
+      </div>
+
+      <div className="create-form-shell">
+        <ScreenHeader
+          eyebrow={plannerSlotLabel(dateISO, col)}
+          title="웹페이지 레시피 가져오기"
+          lead="블로그나 레시피 페이지 링크를 붙여넣고 가져온 정보를 확인한 뒤 끼니로 등록하세요."
+        />
+
+        {!review ? (
+          <div className="create-form">
+            <section className="create-section yt-url-section">
+              <h2 className="create-section-title">웹페이지 링크</h2>
+              <div className="yt-url-row">
+                <div className="search-bar yt-url-input">
+                  <Icon name="link" size={15} color="var(--text-3)" />
+                  <input
+                    ref={urlRef}
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") startImport(); }}
+                    placeholder="https://blog.example.com/recipe"
+                  />
+                </div>
+                <Button variant="primary" leftIcon="link" disabled={!url.trim() || loading} onClick={startImport}>
+                  {loading ? "분석 중" : "가져오기"}
+                </Button>
+              </div>
+              <div className="yt-info-grid">
+                <div className="yt-info-box"><Icon name="info" size={15} /> 제목, 재료, 메모를 읽어 끼니 등록용 초안을 만듭니다.</div>
+                <div className="yt-info-box"><Icon name="globe" size={15} /> 현재는 정적 프로토타입이라 샘플 결과를 보여줍니다.</div>
+              </div>
+              {loading && <div className="yt-loading">웹페이지 내용을 읽고 레시피 정보를 정리하고 있어요.</div>}
+            </section>
+          </div>
+        ) : (
+          <>
+            <div className="yt-review-banner"><Icon name="check" size={15} /> 웹페이지에서 레시피 정보를 가져왔어요. 수정 후 등록하세요.</div>
+            <div className="yt-preview-card">
+              <div className="yt-preview-thumb">
+                <img src={demo.thumbnail} alt={demo.sourceTitle} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+              </div>
+              <div>
+                <div className="yt-preview-title">{demo.sourceTitle}</div>
+                <div className="yt-preview-meta">출처: {demo.site}</div>
+              </div>
+            </div>
+            <div className="create-form">
+              <section className="create-section">
+                <h2 className="create-section-title">가져온 기본 정보</h2>
+                <div className="form-row">
+                  <label className="form-label">레시피 이름</label>
+                  <input ref={titleRef} className="text-input" value={title} onChange={(e) => setTitle(e.target.value)} />
+                </div>
+                <div className="create-inline-rows">
+                  <div className="form-row form-row-inline">
+                    <label className="form-label">조리 시간</label>
+                    <Stepper value={cookTime} onChange={setCookTime} min={5} max={180} unit="분" />
+                  </div>
+                  <div className="form-row form-row-inline">
+                    <label className="form-label">기본 인분</label>
+                    <Stepper value={baseServings} onChange={setBaseServings} min={1} max={10} unit="인분" />
+                  </div>
+                </div>
+              </section>
+              <section className="create-section">
+                <h2 className="create-section-title">재료</h2>
+                <IngredientEditor
+                  ingredients={ingredients}
+                  onChange={updateIngredient}
+                  onRemove={removeIngredient}
+                  onOpenPicker={() => setPickerOpen(true)}
+                />
+              </section>
+              <section className="create-section">
+                <h2 className="create-section-title">메모</h2>
+                <textarea className="create-memo" value={memo} onChange={(e) => setMemo(e.target.value)} />
+              </section>
+            </div>
+            <div className="create-footer">
+              <Button variant="ghost" onClick={onBack}>취소</Button>
+              <Button variant="primary" leftIcon="cal" disabled={!title.trim()} onClick={submit}>등록하기</Button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {IngredientPicker && (
+        <IngredientPicker
+          open={pickerOpen}
+          existingIds={ingredients.map(i => i.id).filter(Boolean)}
+          onClose={() => setPickerOpen(false)}
+          onConfirm={addIngredients}
+        />
+      )}
+    </main>
+  );
+}
+
+/* ============================================
    SHOPPING_DETAIL (§12) — current week
    ============================================ */
-function ShoppingDetailScreen({ list, pantryHeld, onBack, onOpenReAdd, onCompleteShopping, readOnly, toast }) {
+function ShoppingDetailScreen({ list, pantryHeld, onBack, onOpenReAdd, onCompleteShopping, onIncludeExcludedItem, readOnly, toast }) {
   const [checked, setChecked] = useS3(new Set());
 
   if (!list) return null;
@@ -850,7 +1034,9 @@ function ShoppingDetailScreen({ list, pantryHeld, onBack, onOpenReAdd, onComplet
                     <span className="pantry-include-name">{e.name}</span>
                     {e.amount && <span className="pantry-include-amount tabular"> · {e.amount}</span>}
                   </span>
-                  <button className="pantry-include-btn" onClick={() => toast(`${e.name}을(를) 장보기에 추가했어요`)}>장보기 추가</button>
+                  {!readOnly && (
+                    <button className="pantry-include-btn" onClick={() => onIncludeExcludedItem?.(list.id, e.id)}>장보기 추가</button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -1555,9 +1741,29 @@ function SwitchToggle({ on, onChange }) {
 
 function MealColumnsEditor({ toast }) {
   const defaultIds = new Set(["col-b", "col-l", "col-d"]);
-  const cols = D3.MEAL_COLUMNS;
+  const customTemplates = [
+    { id: "col-snack", name: "간식" },
+    { id: "col-night", name: "야식" },
+  ];
+  const [cols, setCols] = useS3(() => D3.MEAL_COLUMNS.map(col => ({ ...col })));
   const canAdd = cols.length < 5;
   const canDelete = (col) => !defaultIds.has(col.id) && cols.length > 2;
+
+  const addColumn = () => {
+    if (!canAdd) return;
+    const next = customTemplates.find(col => !cols.some(existing => existing.id === col.id)) || {
+      id: `col-custom-${Date.now()}`,
+      name: `추가 끼니 ${cols.length - D3.MEAL_COLUMNS.length + 1}`,
+    };
+    setCols(list => [...list, next]);
+    toast?.(`${next.name}을(를) 추가했어요`);
+  };
+
+  const deleteColumn = (col) => {
+    if (!canDelete(col)) return;
+    setCols(list => list.filter(item => item.id !== col.id));
+    toast?.(`${col.name}을(를) 삭제했어요`);
+  };
 
   return (
     <div className="meal-columns-editor">
@@ -1567,12 +1773,13 @@ function MealColumnsEditor({ toast }) {
             <Icon name="drag" size={14} color="var(--text-4)" />
             <span className="meal-col-name">{col.name}</span>
             {defaultIds.has(col.id) && <span className="meal-col-badge">기본</span>}
+            {!defaultIds.has(col.id) && <span className="meal-col-badge custom">사용자</span>}
             <button
               className="meal-col-delete"
               type="button"
               disabled={!canDelete(col)}
               aria-label={`${col.name} 삭제`}
-              onClick={() => toast?.(`${col.name} 삭제 (데모)`)}
+              onClick={() => deleteColumn(col)}
             >
               <Icon name="trash" size={14} />
             </button>
@@ -1584,7 +1791,7 @@ function MealColumnsEditor({ toast }) {
           variant="tertiary"
           leftIcon="plus"
           disabled={!canAdd}
-          onClick={() => toast?.("끼니 추가 (데모)")}
+          onClick={addColumn}
         >
           끼니 추가
         </Button>
@@ -1631,7 +1838,7 @@ function CookNoticeDialog({ open, onClose, onGoToCookList }) {
 window.HC_S3 = {
   MealScreen, MenuAddScreen, ShoppingDetailScreen, ShoppingFlowScreen, ShoppingListsScreen,
   RecipeSearchPickerScreen, RecipeBookSelectorScreen, RecipeBookDetailPickerScreen, PantryMatchPickerScreen,
-  ManualRecipeCreateScreen, YtImportScreen,
+  ManualRecipeCreateScreen, YtImportScreen, WebImportScreen,
   LeftoversScreen, AteListScreen, CookReadyListScreen, CookModePlannerScreen, CookModeStandaloneScreen,
   RecipebookDetailScreen, SettingsScreen, CookNoticeDialog,
 };

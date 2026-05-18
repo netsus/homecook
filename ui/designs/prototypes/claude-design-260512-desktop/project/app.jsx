@@ -7,7 +7,7 @@ const { PlannerWeekScreen, PantryScreen, MyPageScreen, RecipebooksScreen } = win
 const {
   MealScreen, MenuAddScreen, ShoppingDetailScreen, ShoppingFlowScreen, ShoppingListsScreen,
   RecipeSearchPickerScreen, RecipeBookSelectorScreen, RecipeBookDetailPickerScreen, PantryMatchPickerScreen,
-  ManualRecipeCreateScreen, YtImportScreen,
+  ManualRecipeCreateScreen, YtImportScreen, WebImportScreen,
   LeftoversScreen, AteListScreen, CookReadyListScreen, CookModePlannerScreen, CookModeStandaloneScreen,
   RecipebookDetailScreen, SettingsScreen, CookNoticeDialog,
 } = window.HC_S3;
@@ -88,6 +88,7 @@ const ROUTE_PARAM_KEYS = {
   PANTRY_MATCH_PICKER: ["date", "col"],
   MANUAL_RECIPE_CREATE: ["date", "col"],
   YT_IMPORT: ["date", "col"],
+  WEB_IMPORT: ["date", "col"],
   RECIPEBOOK_DETAIL: ["bookId"],
   SHOPPING_DETAIL: ["listId"],
   COOK_MODE_PLANNER: ["mealId"],
@@ -103,6 +104,7 @@ const PLANNER_ROUTE_SCREENS = new Set([
   "PANTRY_MATCH_PICKER",
   "MANUAL_RECIPE_CREATE",
   "YT_IMPORT",
+  "WEB_IMPORT",
   "COOK_READY_LIST",
   "COOK_MODE_PLANNER",
 ]);
@@ -187,7 +189,7 @@ function stackFromRouteEntry(entry) {
     const stack = [{ screen: "PLANNER_WEEK" }];
     const hasSlot = route.date || route.col;
 
-    if (["RECIPE_SEARCH_PICKER", "RECIPEBOOK_SELECTOR", "PANTRY_MATCH_PICKER", "MANUAL_RECIPE_CREATE", "YT_IMPORT"].includes(route.screen) && hasSlot) {
+    if (["RECIPE_SEARCH_PICKER", "RECIPEBOOK_SELECTOR", "PANTRY_MATCH_PICKER", "MANUAL_RECIPE_CREATE", "YT_IMPORT", "WEB_IMPORT"].includes(route.screen) && hasSlot) {
       stack.push({ screen: "MENU_ADD", date: route.date, col: route.col });
     }
     if (route.screen === "RECIPEBOOK_DETAIL_PICKER") {
@@ -508,6 +510,7 @@ function App() {
     }]);
     toast("플래너에 추가했어요");
     setStack([{ screen: "PLANNER_WEEK" }]);
+    writeRouteHash({ screen: "PLANNER_WEEK" }, "replace");
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [toast]);
 
@@ -596,6 +599,27 @@ function App() {
     setActiveShoppingListId(list.id);
     push({ screen: "SHOPPING_DETAIL", listId: list.id });
     toast("다시 장보기로 담았어요");
+  }, [shoppingLists, toast]);
+
+  const includeExcludedShoppingItem = useCallbackA((listId, itemId) => {
+    const source = shoppingLists.find(list => list.id === listId);
+    const item = source?.excluded?.find(row => row.id === itemId);
+    if (!source || source.completed || !item) return;
+
+    const moved = {
+      ...item,
+      id: `included-${Date.now()}-${item.id}`,
+      checked: false,
+    };
+    setShoppingLists(prev => prev.map(list => {
+      if (list.id !== listId) return list;
+      return {
+        ...list,
+        items: [...list.items, moved],
+        excluded: list.excluded.filter(row => row.id !== itemId),
+      };
+    }));
+    toast(`${item.name}을(를) 장보기 목록에 추가했어요`);
   }, [shoppingLists, toast]);
 
   const openCreateRecipebook = useCallbackA(() => {
@@ -774,7 +798,7 @@ function App() {
     if (s === "PLANNER_WEEK" || s === "MEAL" || s === "MENU_ADD" ||
         s === "RECIPE_SEARCH_PICKER" || s === "RECIPEBOOK_SELECTOR" ||
         s === "RECIPEBOOK_DETAIL_PICKER" || s === "PANTRY_MATCH_PICKER" ||
-        s === "MANUAL_RECIPE_CREATE" || s === "YT_IMPORT" ||
+        s === "MANUAL_RECIPE_CREATE" || s === "YT_IMPORT" || s === "WEB_IMPORT" ||
         s === "COOK_READY_LIST" || s === "COOK_MODE_PLANNER") return "PLANNER_WEEK";
     if (s === "COOK_MODE_STANDALONE") return "";
     if (s === "PANTRY") return "PANTRY";
@@ -877,7 +901,7 @@ function App() {
       onPickByPantry={() => push({ screen: "PANTRY_MATCH_PICKER", date: cur.date, col: cur.col })}
       onManualCreate={() => push({ screen: "MANUAL_RECIPE_CREATE", date: cur.date, col: cur.col })}
       onYTImport={() => push({ screen: "YT_IMPORT", date: cur.date, col: cur.col })}
-      onSearchUrl={() => { toast("웹페이지 가져오기 (데모)"); pop(); }}
+      onSearchUrl={() => push({ screen: "WEB_IMPORT", date: cur.date, col: cur.col })}
     />;
   } else if (s === "RECIPE_SEARCH_PICKER") {
     body = <RecipeSearchPickerScreen
@@ -920,6 +944,13 @@ function App() {
     />;
   } else if (s === "YT_IMPORT") {
     body = <YtImportScreen
+      dateISO={cur.date}
+      col={cur.col}
+      onBack={pop}
+      onCreateRecipe={(recipe) => addCreatedRecipeFromMenuAdd(recipe, cur.date, cur.col)}
+    />;
+  } else if (s === "WEB_IMPORT") {
+    body = <WebImportScreen
       dateISO={cur.date}
       col={cur.col}
       onBack={pop}
@@ -1003,6 +1034,7 @@ function App() {
       onBack={pop}
       onOpenReAdd={readdShoppingList}
       onCompleteShopping={requestShoppingCompletion}
+      onIncludeExcludedItem={includeExcludedShoppingItem}
       readOnly={list?.completed}
       toast={toast}
     />;
