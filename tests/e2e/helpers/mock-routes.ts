@@ -32,6 +32,12 @@ export const MENU_ADD_VISUAL_SLOT_NAME = "점심";
 export const MENU_ADD_VISUAL_PATH = `/menu-add?date=${MENU_ADD_VISUAL_PLAN_DATE}&columnId=${MENU_ADD_VISUAL_COLUMN_ID}&slot=${encodeURIComponent(MENU_ADD_VISUAL_SLOT_NAME)}`;
 export const MANUAL_CREATE_VISUAL_PATH = `/menu/add/manual?date=${MENU_ADD_VISUAL_PLAN_DATE}&columnId=${MENU_ADD_VISUAL_COLUMN_ID}&slot=${encodeURIComponent(MENU_ADD_VISUAL_SLOT_NAME)}`;
 export const YOUTUBE_IMPORT_VISUAL_PATH = `/menu/add/youtube?date=${MENU_ADD_VISUAL_PLAN_DATE}&columnId=${MENU_ADD_VISUAL_COLUMN_ID}&slot=${encodeURIComponent(MENU_ADD_VISUAL_SLOT_NAME)}`;
+export const PANTRY_VISUAL_PATH = "/pantry";
+export const SHOPPING_FLOW_VISUAL_PATH = "/shopping/flow";
+export const SHOPPING_DETAIL_VISUAL_LIST_ID = "shopping-visual-active";
+export const SHOPPING_DETAIL_COMPLETED_VISUAL_LIST_ID = "shopping-visual-completed";
+export const SHOPPING_DETAIL_VISUAL_PATH = `/shopping/lists/${SHOPPING_DETAIL_VISUAL_LIST_ID}`;
+export const SHOPPING_DETAIL_COMPLETED_VISUAL_PATH = `/shopping/lists/${SHOPPING_DETAIL_COMPLETED_VISUAL_LIST_ID}`;
 
 const PLANNER_COLUMNS = [
   { id: "col-breakfast", name: "아침", sort_order: 0 },
@@ -153,6 +159,214 @@ const MEAL_VISUAL_ITEMS = [
     is_leftover: false,
   },
 ] as const;
+
+const PANTRY_VISUAL_ITEMS = [
+  {
+    category: "채소",
+    created_at: "2026-05-10T09:00:00.000Z",
+    id: "pantry-visual-1",
+    ingredient_id: "ingredient-kimchi",
+    standard_name: "김치",
+  },
+  {
+    category: "채소",
+    created_at: "2026-05-10T09:01:00.000Z",
+    id: "pantry-visual-2",
+    ingredient_id: "ingredient-onion",
+    standard_name: "양파",
+  },
+  {
+    category: "채소",
+    created_at: "2026-05-10T09:02:00.000Z",
+    id: "pantry-visual-3",
+    ingredient_id: "ingredient-green-onion",
+    standard_name: "대파",
+  },
+  {
+    category: "육류",
+    created_at: "2026-05-10T09:03:00.000Z",
+    id: "pantry-visual-4",
+    ingredient_id: "ingredient-pork",
+    standard_name: "돼지고기",
+  },
+  {
+    category: "해산물",
+    created_at: "2026-05-10T09:04:00.000Z",
+    id: "pantry-visual-5",
+    ingredient_id: "ingredient-anchovy",
+    standard_name: "멸치",
+  },
+  {
+    category: "양념",
+    created_at: "2026-05-10T09:05:00.000Z",
+    id: "pantry-visual-6",
+    ingredient_id: "ingredient-garlic",
+    standard_name: "다진 마늘",
+  },
+  {
+    category: "양념",
+    created_at: "2026-05-10T09:06:00.000Z",
+    id: "pantry-visual-7",
+    ingredient_id: "ingredient-gochujang",
+    standard_name: "고추장",
+  },
+  {
+    category: "곡류",
+    created_at: "2026-05-10T09:07:00.000Z",
+    id: "pantry-visual-8",
+    ingredient_id: "ingredient-rice",
+    standard_name: "쌀",
+  },
+  {
+    category: "유제품",
+    created_at: "2026-05-10T09:08:00.000Z",
+    id: "pantry-visual-9",
+    ingredient_id: "ingredient-butter",
+    standard_name: "버터",
+  },
+  {
+    category: "기타",
+    created_at: "2026-05-10T09:09:00.000Z",
+    id: "pantry-visual-10",
+    ingredient_id: "ingredient-tofu",
+    standard_name: "두부",
+  },
+] as const;
+
+const PANTRY_VISUAL_INGREDIENTS = [
+  ...PANTRY_VISUAL_ITEMS.map((item) => ({
+    category: item.category,
+    default_unit: item.category === "양념" ? "큰술" : "g",
+    id: item.ingredient_id,
+    standard_name: item.standard_name,
+  })),
+  {
+    category: "채소",
+    default_unit: "개",
+    id: "ingredient-potato",
+    standard_name: "감자",
+  },
+  {
+    category: "양념",
+    default_unit: "큰술",
+    id: "ingredient-soy-sauce",
+    standard_name: "간장",
+  },
+  {
+    category: "기타",
+    default_unit: "개",
+    id: "ingredient-egg",
+    standard_name: "달걀",
+  },
+] as const;
+
+const PANTRY_VISUAL_BUNDLES = [
+  {
+    display_order: 1,
+    id: "bundle-soup",
+    name: "국물 요리 세트",
+    ingredients: [
+      { ingredient_id: "ingredient-kimchi", is_in_pantry: true, standard_name: "김치" },
+      { ingredient_id: "ingredient-tofu", is_in_pantry: true, standard_name: "두부" },
+      { ingredient_id: "ingredient-anchovy", is_in_pantry: true, standard_name: "멸치" },
+      { ingredient_id: "ingredient-soy-sauce", is_in_pantry: false, standard_name: "간장" },
+    ],
+  },
+  {
+    display_order: 2,
+    id: "bundle-stir-fry",
+    name: "볶음 요리 세트",
+    ingredients: [
+      { ingredient_id: "ingredient-pork", is_in_pantry: true, standard_name: "돼지고기" },
+      { ingredient_id: "ingredient-green-onion", is_in_pantry: true, standard_name: "대파" },
+      { ingredient_id: "ingredient-onion", is_in_pantry: true, standard_name: "양파" },
+      { ingredient_id: "ingredient-egg", is_in_pantry: false, standard_name: "달걀" },
+    ],
+  },
+] as const;
+
+const SHOPPING_VISUAL_ITEMS = [
+  {
+    added_to_pantry: false,
+    amounts_json: [{ amount: 300, unit: "g" }],
+    display_text: "돼지고기 300g",
+    id: "shopping-item-pork",
+    ingredient_id: "ingredient-pork",
+    is_checked: false,
+    is_pantry_excluded: false,
+    sort_order: 10,
+  },
+  {
+    added_to_pantry: false,
+    amounts_json: [{ amount: 1, unit: "개" }],
+    display_text: "감자 1개",
+    id: "shopping-item-potato",
+    ingredient_id: "ingredient-potato",
+    is_checked: true,
+    is_pantry_excluded: false,
+    sort_order: 20,
+  },
+  {
+    added_to_pantry: false,
+    amounts_json: [{ amount: 2, unit: "큰술" }],
+    display_text: "간장 2큰술",
+    id: "shopping-item-soy",
+    ingredient_id: "ingredient-soy-sauce",
+    is_checked: false,
+    is_pantry_excluded: false,
+    sort_order: 30,
+  },
+  {
+    added_to_pantry: false,
+    amounts_json: [{ amount: 1, unit: "대" }],
+    display_text: "대파 1대",
+    id: "shopping-item-green-onion",
+    ingredient_id: "ingredient-green-onion",
+    is_checked: false,
+    is_pantry_excluded: true,
+    sort_order: 40,
+  },
+] as const;
+
+function buildShoppingVisualDetail({
+  completed = false,
+  id = SHOPPING_DETAIL_VISUAL_LIST_ID,
+}: {
+  completed?: boolean;
+  id?: string;
+} = {}) {
+  return {
+    completed_at: completed ? "2026-05-18T10:30:00.000Z" : null,
+    created_at: "2026-05-18T09:30:00.000Z",
+    date_range_end: "2026-05-24",
+    date_range_start: "2026-05-18",
+    id,
+    is_completed: completed,
+    items: SHOPPING_VISUAL_ITEMS.map((item) => ({
+      ...item,
+      added_to_pantry: completed && item.is_checked && !item.is_pantry_excluded,
+      is_checked: completed && !item.is_pantry_excluded ? true : item.is_checked,
+    })),
+    recipes: [
+      {
+        planned_servings_total: 2,
+        recipe_id: "recipe-jeyuk",
+        recipe_name: "제육볶음",
+        recipe_thumbnail: createQaFoodThumbDataUri("🥩", "#FFAC87"),
+        shopping_servings: 2,
+      },
+      {
+        planned_servings_total: 2,
+        recipe_id: "recipe-sujebi",
+        recipe_name: "감자 수제비",
+        recipe_thumbnail: createQaFoodThumbDataUri("🥟", "#E7D9B7"),
+        shopping_servings: 2,
+      },
+    ],
+    title: completed ? "지난 주 장보기" : "이번 주 장보기",
+    updated_at: "2026-05-18T09:30:00.000Z",
+  };
+}
 
 export async function setE2EAuthOverride(
   page: Page,
@@ -856,6 +1070,278 @@ export async function installYoutubeImportVisualRoutes(page: Page) {
           recipe_id: "recipe-yt-001",
           title: "백종원 김치찌개",
         },
+        error: null,
+      },
+    });
+  });
+}
+
+export async function installPantryShoppingVisualRoutes(page: Page) {
+  await page.route("**/api/v1/pantry/bundles", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { bundles: PANTRY_VISUAL_BUNDLES },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/pantry**", async (route) => {
+    const requestUrl = new URL(route.request().url());
+    const method = route.request().method();
+
+    if (requestUrl.pathname === "/api/v1/pantry/bundles") {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: { bundles: PANTRY_VISUAL_BUNDLES },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    if (method === "POST") {
+      await route.fulfill({
+        status: 201,
+        json: {
+          success: true,
+          data: {
+            added: 2,
+            items: PANTRY_VISUAL_ITEMS.slice(0, 2),
+          },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    if (method === "DELETE") {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: { removed: 1 },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    const query = requestUrl.searchParams.get("q")?.trim() ?? "";
+    const category = requestUrl.searchParams.get("category")?.trim() ?? "";
+    const items = PANTRY_VISUAL_ITEMS.filter((item) => {
+      const matchesQuery = query === "" || item.standard_name.includes(query);
+      const matchesCategory = category === "" || item.category === category;
+      return matchesQuery && matchesCategory;
+    });
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { items },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/ingredients**", async (route) => {
+    const requestUrl = new URL(route.request().url());
+    const query = requestUrl.searchParams.get("q")?.trim() ?? "";
+    const category = requestUrl.searchParams.get("category")?.trim() ?? "";
+    const items = PANTRY_VISUAL_INGREDIENTS.filter((item) => {
+      const matchesQuery = query === "" || item.standard_name.includes(query);
+      const matchesCategory = category === "" || item.category === category;
+      return matchesQuery && matchesCategory;
+    });
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { items },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/shopping/preview", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          eligible_meals: [
+            {
+              created_at: "2026-05-18T08:30:00.000Z",
+              id: "meal-shopping-visual-1",
+              planned_servings: 2,
+              recipe_id: "recipe-jeyuk",
+              recipe_name: "제육볶음",
+              recipe_thumbnail: createQaFoodThumbDataUri("🥩", "#FFAC87"),
+            },
+            {
+              created_at: "2026-05-19T08:30:00.000Z",
+              id: "meal-shopping-visual-2",
+              planned_servings: 2,
+              recipe_id: "recipe-sujebi",
+              recipe_name: "감자 수제비",
+              recipe_thumbnail: createQaFoodThumbDataUri("🥟", "#E7D9B7"),
+            },
+            {
+              created_at: "2026-05-20T08:30:00.000Z",
+              id: "meal-shopping-visual-3",
+              planned_servings: 1,
+              recipe_id: "recipe-salad",
+              recipe_name: "닭가슴살 샐러드",
+              recipe_thumbnail: createQaFoodThumbDataUri("🥗", "#DDF4CF"),
+            },
+          ],
+          recipes: [
+            {
+              is_selected: true,
+              meal_ids: ["meal-shopping-visual-1"],
+              planned_servings_total: 2,
+              recipe_id: "recipe-jeyuk",
+              recipe_name: "제육볶음",
+              recipe_thumbnail: createQaFoodThumbDataUri("🥩", "#FFAC87"),
+              shopping_servings: 2,
+            },
+            {
+              is_selected: true,
+              meal_ids: ["meal-shopping-visual-2"],
+              planned_servings_total: 2,
+              recipe_id: "recipe-sujebi",
+              recipe_name: "감자 수제비",
+              recipe_thumbnail: createQaFoodThumbDataUri("🥟", "#E7D9B7"),
+              shopping_servings: 2,
+            },
+            {
+              is_selected: true,
+              meal_ids: ["meal-shopping-visual-3"],
+              planned_servings_total: 1,
+              recipe_id: "recipe-salad",
+              recipe_name: "닭가슴살 샐러드",
+              recipe_thumbnail: createQaFoodThumbDataUri("🥗", "#DDF4CF"),
+              shopping_servings: 1,
+            },
+          ],
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/shopping/lists**", async (route) => {
+    const requestUrl = new URL(route.request().url());
+    const path = requestUrl.pathname;
+    const method = route.request().method();
+
+    if (method === "POST" && path === "/api/v1/shopping/lists") {
+      await route.fulfill({
+        status: 201,
+        json: {
+          success: true,
+          data: {
+            created_at: "2026-05-18T09:30:00.000Z",
+            date_range_end: "2026-05-24",
+            date_range_start: "2026-05-18",
+            id: SHOPPING_DETAIL_VISUAL_LIST_ID,
+            is_completed: false,
+            item_count: SHOPPING_VISUAL_ITEMS.length,
+            title: "이번 주 장보기",
+          },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    if (method === "GET" && path === "/api/v1/shopping/lists") {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            has_next: false,
+            items: [
+              {
+                completed_at: null,
+                created_at: "2026-05-18T09:30:00.000Z",
+                date_range_end: "2026-05-24",
+                date_range_start: "2026-05-18",
+                id: SHOPPING_DETAIL_VISUAL_LIST_ID,
+                is_completed: false,
+                item_count: SHOPPING_VISUAL_ITEMS.length,
+                title: "이번 주 장보기",
+              },
+              {
+                completed_at: "2026-05-11T10:30:00.000Z",
+                created_at: "2026-05-11T09:30:00.000Z",
+                date_range_end: "2026-05-17",
+                date_range_start: "2026-05-11",
+                id: SHOPPING_DETAIL_COMPLETED_VISUAL_LIST_ID,
+                is_completed: true,
+                item_count: SHOPPING_VISUAL_ITEMS.length,
+                title: "지난 주 장보기",
+              },
+            ],
+            next_cursor: null,
+          },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    if (path.endsWith("/share-text")) {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: { text: "이번 주 장보기\n- 돼지고기 300g\n- 감자 1개" },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    if (path.endsWith("/complete")) {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            completed: true,
+            meals_updated: 2,
+            pantry_added: 1,
+            pantry_added_item_ids: ["shopping-item-potato"],
+          },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    if (path.includes("/items/")) {
+      const itemId = path.split("/items/")[1]?.split("/")[0] ?? "";
+      const item =
+        SHOPPING_VISUAL_ITEMS.find((candidate) => candidate.id === itemId) ??
+        SHOPPING_VISUAL_ITEMS[0];
+
+      await route.fulfill({
+        json: {
+          success: true,
+          data: item,
+          error: null,
+        },
+      });
+      return;
+    }
+
+    const listId = path.split("/").at(-1) ?? SHOPPING_DETAIL_VISUAL_LIST_ID;
+    await route.fulfill({
+      json: {
+        success: true,
+        data: buildShoppingVisualDetail({
+          completed: listId === SHOPPING_DETAIL_COMPLETED_VISUAL_LIST_ID,
+          id: listId,
+        }),
         error: null,
       },
     });

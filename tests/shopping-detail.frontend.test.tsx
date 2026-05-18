@@ -126,8 +126,7 @@ describe("ShoppingDetailScreen", () => {
       expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
     });
 
-    expect(screen.getByText("4월 12일 ~ 20일")).toBeTruthy();
-    expect(screen.getByText("생성 4월 12일")).toBeTruthy();
+    expect(screen.getByText("생성 4월 12일 · 4월 12일 ~ 20일")).toBeTruthy();
     expect(screen.getByText(/구매할 재료 \(1개\)/)).toBeTruthy();
     expect(screen.getByText(/팬트리 제외 항목 \(1개\)/)).toBeTruthy();
   });

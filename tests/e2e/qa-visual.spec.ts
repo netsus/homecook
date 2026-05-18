@@ -7,14 +7,19 @@ import {
   installDiscoveryRoutes,
   installMenuAddVisualRoutes,
   installMealDetailRoutes,
+  installPantryShoppingVisualRoutes,
   installPlannerWeekRoutes,
   installRecipeDetailRoutes,
   installYoutubeImportVisualRoutes,
   MANUAL_CREATE_VISUAL_PATH,
   MEAL_VISUAL_PATH,
   MENU_ADD_VISUAL_PATH,
+  PANTRY_VISUAL_PATH,
   RECIPE_PATH,
   setE2EAuthOverride,
+  SHOPPING_DETAIL_COMPLETED_VISUAL_PATH,
+  SHOPPING_DETAIL_VISUAL_PATH,
+  SHOPPING_FLOW_VISUAL_PATH,
   YOUTUBE_IMPORT_VISUAL_PATH,
 } from "./helpers/mock-routes";
 
@@ -49,6 +54,7 @@ const RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS = 400;
 const PLANNER_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
 const MEAL_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
 const MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2200;
+const PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2400;
 
 function isMobileViewport(page: Page) {
   return (page.viewportSize()?.width ?? 1280) < 1024;
@@ -400,6 +406,102 @@ test.describe("QA visual regression", () => {
       animations: "disabled",
       fullPage: true,
       maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+  });
+
+  test("pantry desktop screen and modals match the visual baseline", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only pantry parity baseline");
+    await setE2EAuthOverride(page);
+    await installPantryShoppingVisualRoutes(page);
+
+    await page.goto(PANTRY_VISUAL_PATH);
+    await expect(page.getByRole("heading", { name: "나의 팬트리" })).toBeVisible();
+
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-pantry.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await visibleTextButton(page, "+ 재료 추가").click();
+    const addDialog = page.getByRole("dialog", {
+      name: "재료 추가",
+    });
+    await expect(addDialog).toBeVisible();
+    await expect(addDialog.getByText("팬트리에 재료 추가")).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(addDialog).toHaveScreenshot("qa-pantry-add-modal.png", {
+      animations: "disabled",
+    });
+    await addDialog.getByRole("button", { name: "닫기" }).click();
+
+    await visibleTextButton(page, "번들로 추가").click();
+    const bundleDialog = page.getByRole("dialog", {
+      name: "묶음으로 재료 추가",
+    });
+    await expect(bundleDialog).toBeVisible();
+    await expect(bundleDialog.getByText("번들로 한꺼번에 추가")).toBeVisible();
+    await bundleDialog.getByRole("button", { name: /국물 요리 세트/ }).click();
+    await stabilizeVisualSnapshot(page);
+    await expect(bundleDialog).toHaveScreenshot("qa-pantry-bundle-modal.png", {
+      animations: "disabled",
+    });
+  });
+
+  test("shopping desktop flow and detail states match the visual baseline", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only shopping parity baseline");
+    await setE2EAuthOverride(page);
+    await installPantryShoppingVisualRoutes(page);
+
+    await page.goto(SHOPPING_FLOW_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "장보기 준비" }),
+    ).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-shopping-flow.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.goto(SHOPPING_DETAIL_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "이번 주 장보기" }),
+    ).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-shopping-detail-active.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.getByRole("button", { name: "장보기 완료" }).click();
+    const reflectDialog = page.getByRole("dialog", {
+      name: /팬트리에 반영할까요/,
+    });
+    await expect(reflectDialog).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(reflectDialog).toHaveScreenshot(
+      "qa-shopping-reflect-modal.png",
+      {
+        animations: "disabled",
+      },
+    );
+
+    await page.goto(SHOPPING_DETAIL_COMPLETED_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "지난 주 장보기" }),
+    ).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-shopping-detail-complete.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
     });
   });
 });
