@@ -1,17 +1,31 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.6.6.md`
-- `docs/화면정의서-v1.5.3.md`
-- `docs/유저flow맵-v1.3.3.md`
+- `docs/요구사항기준선-v1.6.7.md`
+- `docs/화면정의서-v1.5.4.md`
+- `docs/유저flow맵-v1.3.4.md`
 - `docs/db설계-v1.3.3.md`
-- `docs/api문서-v1.2.4.md`
+- `docs/api문서-v1.2.5.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## v1.6.6 / v1.5.3 / v1.3.3 / API v1.2.4 → v1.6.7 / v1.5.4 / v1.3.4 / API v1.2.5 변경 이력 (2026-05-18)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.6.7 | PL-03: `MEAL_SCREEN`에서 `shopping_done` 상태 개별 식사에 `[요리하기]` 단축 경로 추가. `registered` 상태는 대상 제외(장보기 우회 불가). 독립 요리 시맨틱 변경 없음 |
+| 화면정의서 v1.5.4 | `MEAL_SCREEN` §6에 개별 식사 `[요리하기]` 버튼 정의 추가. `COOK_MODE` §14에 MEAL_SCREEN 복귀 경로 추가 |
+| 유저플로우 v1.3.4 | ③ 식단 계획 여정에 `MEAL_SCREEN → COOK_MODE → MEAL_SCREEN` 경로 추가. ⑤ 요리하기 여정에 ⑤-b 개별 식사 단축 경로 추가 |
+| DB v1.3.3 (유지) | 변경 없음 — 기존 `cooking_sessions`, `cooking_session_meals`, `meals` 테이블 구조 그대로 사용 |
+| API v1.2.5 | 9-2 `POST /cooking/sessions`의 허용 호출자에 `MEAL_SCREEN` 추가. 단일 `meal_id`로 호출하는 사용 패턴 공식화. 신규 엔드포인트 없음, 서버 검증 변경 없음 |
+
+> 이 변경은 사용자 승인(2026-05-18)을 기반으로 한 PL-03 MEAL_SCREEN 개별 식사 요리하기 단축 경로 contract-evolution이다.
+> 기존 `POST /cooking/sessions` 계약을 `MEAL_SCREEN`에서 단일 meal_id로 호출하는 planner 세션 단축 경로를 공식화한다.
+> `registered` → `cook_done` 전이는 금지되며, `shopping_done`을 거친 식사만 대상이다.
 
 ## v1.6.5 / v1.5.2 / v1.3.2 / DB v1.3.2 / API v1.2.3 → v1.6.6 / v1.5.3 / v1.3.3 / DB v1.3.3 / API v1.2.4 변경 이력 (2026-05-12)
 
