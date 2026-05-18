@@ -3,12 +3,17 @@ import { expect, test, type Page } from "@playwright/test";
 
 import {
   installDiscoveryRoutes,
+  installMenuAddVisualRoutes,
   installMealDetailRoutes,
   installPlannerWeekRoutes,
   installRecipeDetailRoutes,
+  installYoutubeImportVisualRoutes,
+  MANUAL_CREATE_VISUAL_PATH,
   MEAL_VISUAL_PATH,
+  MENU_ADD_VISUAL_PATH,
   RECIPE_PATH,
   setE2EAuthOverride,
+  YOUTUBE_IMPORT_VISUAL_PATH,
 } from "./helpers/mock-routes";
 
 async function expectNoAxeViolations(
@@ -277,6 +282,75 @@ test.describe("QA accessibility smoke", () => {
       .click();
     await expect(
       page.getByRole("dialog", { name: "인분 변경" }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+  });
+
+  test("menu add desktop slice screens are axe-clean", async ({ page }) => {
+    test.skip(isMobileViewport(page), "desktop-only menu add parity smoke");
+    await setE2EAuthOverride(page);
+    await installMenuAddVisualRoutes(page);
+
+    await page.goto(MENU_ADD_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "어떤 방식으로 메뉴를 추가할까요?" }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.locator('[data-testid="menu-add-option-recipebook"]:visible').click();
+    await expect(
+      page.getByRole("button", { name: /평일 저녁 빠른요리/ }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.goto(`${MENU_ADD_VISUAL_PATH}&source=pantry`);
+    await expect(page.getByRole("heading", { name: "팬트리 추천" })).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.goto(MANUAL_CREATE_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "새 레시피를 직접 입력해요" }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.getByRole("button", { name: /재료 추가/ }).click();
+    await expect(
+      page.getByRole("dialog", { name: "재료 추가" }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+  });
+
+  test("youtube import desktop flow is axe-clean", async ({ page }) => {
+    test.skip(isMobileViewport(page), "desktop-only youtube import parity smoke");
+    await setE2EAuthOverride(page);
+    await installYoutubeImportVisualRoutes(page);
+
+    await page.goto(YOUTUBE_IMPORT_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "영상 링크에서 레시피를 추출해요" }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page
+      .locator('input[type="url"]')
+      .fill("https://www.youtube.com/watch?v=recipe12345");
+    await page.getByRole("button", { name: "가져오기" }).click();
+    await expect(
+      page.getByRole("heading", { name: "추출 결과를 확인해주세요" }),
     ).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,

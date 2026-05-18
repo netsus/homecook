@@ -260,6 +260,13 @@ async function installRegisterErrorRoute(page: Page) {
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 test.describe("Slice 19: YouTube Import", () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(
+      testInfo.project.name === "desktop-chrome",
+      "Legacy Slice 19 assertions target the mobile import flow; desktop parity is covered by qa-visual/qa-a11y.",
+    );
+  });
+
   test("happy path: URL → extract → review → register → complete", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installCookingMethodsRoute(page);

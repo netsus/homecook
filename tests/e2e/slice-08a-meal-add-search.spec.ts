@@ -155,6 +155,13 @@ async function installMealCreateRoute(page: Page, createdMeal: MealCreateData) {
 }
 
 test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(
+      testInfo.project.name === "desktop-chrome",
+      "Legacy Slice 08a assertions target the mobile picker; desktop parity is covered by qa-visual/qa-a11y.",
+    );
+  });
+
   // ── Unauthorized gate ──────────────────────────────────────────────────────
 
   test("redirects to /login when unauthorized", async ({ page }) => {

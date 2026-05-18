@@ -5,12 +5,17 @@ import { expect, test, type Page } from "@playwright/test";
 
 import {
   installDiscoveryRoutes,
+  installMenuAddVisualRoutes,
   installMealDetailRoutes,
   installPlannerWeekRoutes,
   installRecipeDetailRoutes,
+  installYoutubeImportVisualRoutes,
+  MANUAL_CREATE_VISUAL_PATH,
   MEAL_VISUAL_PATH,
+  MENU_ADD_VISUAL_PATH,
   RECIPE_PATH,
   setE2EAuthOverride,
+  YOUTUBE_IMPORT_VISUAL_PATH,
 } from "./helpers/mock-routes";
 
 const qaSnapshotFonts = [
@@ -43,6 +48,7 @@ const HOME_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 1600;
 const RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS = 400;
 const PLANNER_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
 const MEAL_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
+const MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2200;
 
 function isMobileViewport(page: Page) {
   return (page.viewportSize()?.width ?? 1280) < 1024;
@@ -267,5 +273,133 @@ test.describe("QA visual regression", () => {
         animations: "disabled",
       },
     );
+  });
+
+  test("menu add desktop pickers match the visual baseline", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only menu add parity baseline");
+    await setE2EAuthOverride(page);
+    await installMenuAddVisualRoutes(page);
+
+    await page.goto(MENU_ADD_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "어떤 방식으로 메뉴를 추가할까요?" }),
+    ).toBeVisible();
+    await expect(page.getByText("김치볶음밥")).toBeVisible();
+
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-menu-add-search.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.getByRole("button", { name: /김치볶음밥/ }).click();
+    const servingsDialog = page.getByRole("dialog", {
+      name: "계획 인분 입력",
+    });
+    await expect(servingsDialog).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(servingsDialog).toHaveScreenshot(
+      "qa-menu-add-servings-modal.png",
+      {
+        animations: "disabled",
+      },
+    );
+    await servingsDialog.getByRole("button", { name: "취소" }).click();
+
+    await page.locator('[data-testid="menu-add-option-recipebook"]:visible').click();
+    await expect(
+      page.getByRole("button", { name: /평일 저녁 빠른요리/ }),
+    ).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-menu-add-recipebook.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.getByRole("button", { name: /평일 저녁 빠른요리/ }).click();
+    await expect(page.getByRole("button", { name: /감자 수제비/ })).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-menu-add-recipebook-detail.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.goto(`${MENU_ADD_VISUAL_PATH}&source=pantry`);
+    await expect(page.getByRole("heading", { name: "팬트리 추천" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /연어 스테이크/ })).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-menu-add-pantry.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+  });
+
+  test("manual recipe desktop screen and ingredient modal match the visual baseline", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only manual recipe parity baseline");
+    await setE2EAuthOverride(page);
+    await installMenuAddVisualRoutes(page);
+
+    await page.goto(MANUAL_CREATE_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "새 레시피를 직접 입력해요" }),
+    ).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-manual-recipe-create.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.getByRole("button", { name: /재료 추가/ }).click();
+    const ingredientDialog = page.getByRole("dialog", { name: "재료 추가" });
+    await expect(ingredientDialog).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(ingredientDialog).toHaveScreenshot(
+      "qa-manual-ingredient-modal.png",
+      {
+        animations: "disabled",
+      },
+    );
+  });
+
+  test("youtube import desktop flow matches the visual baseline", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only youtube import parity baseline");
+    await setE2EAuthOverride(page);
+    await installYoutubeImportVisualRoutes(page);
+
+    await page.goto(YOUTUBE_IMPORT_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "영상 링크에서 레시피를 추출해요" }),
+    ).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-youtube-import-url.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page
+      .locator('input[type="url"]')
+      .fill("https://www.youtube.com/watch?v=recipe12345");
+    await page.getByRole("button", { name: "가져오기" }).click();
+    await expect(
+      page.getByRole("heading", { name: "추출 결과를 확인해주세요" }),
+    ).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-youtube-import-review.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
   });
 });
