@@ -161,7 +161,12 @@ describe("recipe detail screen", () => {
       await screen.findByRole("button", { name: "플래너에 추가" }),
     );
 
-    expect(await screen.findByRole("dialog")).toBeTruthy();
+    const loginDialog = await screen.findByRole("dialog", {
+      name: "로그인이 필요한 작업이에요",
+    });
+    expect(loginDialog.getAttribute("data-app-overlay-shell")).toBe(
+      "bottom-sheet",
+    );
     expect(screen.getByText("로그인이 필요한 작업이에요")).toBeTruthy();
     expect(screen.queryByText("보호된 작업")).toBeNull();
 
@@ -471,7 +476,8 @@ describe("recipe detail screen", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "저장" }));
 
-    const modal = await screen.findByRole("dialog");
+    const modal = await screen.findByRole("dialog", { name: "레시피 저장" });
+    expect(modal.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
     const modalScope = within(modal);
 
     expect(

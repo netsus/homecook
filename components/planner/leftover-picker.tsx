@@ -3,7 +3,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 
-import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
+import {
+  AppBottomSheet,
+  AppCenterDialog,
+  AppModalFooterActions,
+  AppStepper,
+} from "@/components/shared/app-overlay";
 import { fetchLeftovers } from "@/lib/api/leftovers";
 import type { LeftoverListItemData } from "@/types/leftover";
 
@@ -93,55 +98,31 @@ function ServingsModal({
   }, [onConfirm, servings]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end bg-black/42 p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
-      onClick={onCancel}
+    <AppCenterDialog
+      ariaLabelledBy="leftover-servings-title"
+      closeDisabled={isCreating}
+      description={`${leftover.recipe_title} 남은요리`}
+      footer={
+        <AppModalFooterActions
+          cancelDisabled={isCreating}
+          confirmDisabled={isCreating || servings < 1}
+          confirmLabel={isCreating ? "추가 중..." : "추가"}
+          onCancel={onCancel}
+          onConfirm={handleConfirm}
+        />
+      }
+      onClose={onCancel}
+      title="계획 인분 입력"
     >
-      <div
-        aria-labelledby="leftover-servings-title"
-        aria-modal="true"
-        className="glass-panel w-full max-w-md rounded-[24px] px-5 py-6 md:px-6"
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-      >
-        <h2
-          className="text-lg font-bold text-[var(--foreground)]"
-          id="leftover-servings-title"
-        >
-          계획 인분 입력
-        </h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          {leftover.recipe_title} 남은요리
-        </p>
-        <div className="mt-4 flex items-center justify-center gap-4">
-          <NumericStepperCompact
-            disabled={isCreating}
-            min={1}
-            onChange={setServings}
-            unit="인분"
-            value={servings}
-          />
-        </div>
-        <div className="mt-6 flex gap-3">
-          <button
-            className="h-11 flex-1 rounded-[12px] border border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--foreground)] hover:bg-[var(--line)]"
-            disabled={isCreating}
-            onClick={onCancel}
-            type="button"
-          >
-            취소
-          </button>
-          <button
-            className="h-11 flex-1 rounded-[12px] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)] disabled:opacity-50"
-            disabled={isCreating || servings < 1}
-            onClick={handleConfirm}
-            type="button"
-          >
-            {isCreating ? "추가 중..." : "추가"}
-          </button>
-        </div>
-      </div>
-    </div>
+      <AppStepper
+        disabled={isCreating}
+        label="계획 인분"
+        min={1}
+        onChange={setServings}
+        unit="인분"
+        value={servings}
+      />
+    </AppCenterDialog>
   );
 }
 
@@ -180,82 +161,59 @@ export function LeftoverPicker({
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-40 flex items-end bg-black/42 p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
-        onClick={onClose}
+      <AppBottomSheet
+        ariaLabelledBy="leftover-picker-title"
+        bodyClassName="pb-5"
+        description="플래너에 다시 올릴 남은요리를 골라주세요"
+        onClose={onClose}
+        panelClassName="max-w-md"
+        title="남은요리 선택"
       >
-        <div
-          aria-labelledby="leftover-picker-title"
-          aria-modal="true"
-          className="glass-panel max-h-[80vh] w-full max-w-md overflow-hidden rounded-[24px] px-5 py-6 md:px-6"
-          onClick={(event) => event.stopPropagation()}
-          role="dialog"
-        >
-          <div className="flex items-center gap-2">
-            <h2
-              className="flex-1 text-xl font-bold text-[var(--foreground)]"
-              id="leftover-picker-title"
-            >
-              남은요리 선택
-            </h2>
+        {loadState === "loading" ? (
+          <div className="py-8 text-center text-sm text-[var(--muted)]" aria-busy="true">
+            남은요리를 불러오는 중...
+          </div>
+        ) : null}
+
+        {loadState === "empty" ? (
+          <div className="py-8 text-center">
+            <p className="text-base font-semibold text-[var(--foreground)]">
+              남은요리가 없어요
+            </p>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              요리를 완료하면 남은요리로 추가할 수 있어요.
+            </p>
+          </div>
+        ) : null}
+
+        {loadState === "error" ? (
+          <div
+            className="rounded-[12px] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
+            role="alert"
+          >
+            <p>{errorMessage}</p>
             <button
-              aria-label="닫기"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-[var(--line)]"
-              onClick={onClose}
+              className="mt-3 rounded-[10px] border border-red-300 bg-white px-3 py-2 font-semibold"
+              onClick={loadLeftovers}
               type="button"
             >
-              ×
+              다시 시도
             </button>
           </div>
+        ) : null}
 
-          <div className="mt-4 max-h-[60vh] overflow-y-auto">
-            {loadState === "loading" ? (
-              <div className="py-8 text-center text-sm text-[var(--muted)]" aria-busy="true">
-                남은요리를 불러오는 중...
-              </div>
-            ) : null}
-
-            {loadState === "empty" ? (
-              <div className="py-8 text-center">
-                <p className="text-base font-semibold text-[var(--foreground)]">
-                  남은요리가 없어요
-                </p>
-                <p className="mt-1 text-sm text-[var(--muted)]">
-                  요리를 완료하면 남은요리로 추가할 수 있어요.
-                </p>
-              </div>
-            ) : null}
-
-            {loadState === "error" ? (
-              <div
-                className="rounded-[12px] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
-                role="alert"
-              >
-                <p>{errorMessage}</p>
-                <button
-                  className="mt-3 rounded-[10px] border border-red-300 bg-white px-3 py-2 font-semibold"
-                  onClick={loadLeftovers}
-                  type="button"
-                >
-                  다시 시도
-                </button>
-              </div>
-            ) : null}
-
-            {loadState === "ready" ? (
-              <div className="space-y-3">
-                {items.map((item) => (
-                  <LeftoverCard
-                    key={item.id}
-                    leftover={item}
-                    onSelect={onLeftoverSelect}
-                  />
-                ))}
-              </div>
-            ) : null}
+        {loadState === "ready" ? (
+          <div className="space-y-3">
+            {items.map((item) => (
+              <LeftoverCard
+                key={item.id}
+                leftover={item}
+                onSelect={onLeftoverSelect}
+              />
+            ))}
           </div>
-        </div>
-      </div>
+        ) : null}
+      </AppBottomSheet>
 
       {selectedLeftover ? (
         <ServingsModal

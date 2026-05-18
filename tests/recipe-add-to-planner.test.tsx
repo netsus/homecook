@@ -146,7 +146,10 @@ describe("planner add flow", () => {
       await screen.findByRole("button", { name: "플래너에 추가" }),
     );
 
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", {
+      name: "로그인이 필요한 작업이에요",
+    });
+    expect(dialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
     expect(within(dialog).getByText(/로그인이 필요한 작업이에요/)).toBeTruthy();
     expect(useAuthGateStore.getState().action?.type).toBe("planner");
   });
@@ -197,7 +200,18 @@ describe("planner add flow", () => {
 
     // Sheet should open with columns
     const dialog = await screen.findByRole("dialog", { name: "플래너에 추가" });
+    expect(dialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
     expect(within(dialog).getByRole("button", { name: "아침" })).toBeTruthy();
+    expect(
+      within(dialog)
+        .getByRole("button", { name: "인분 줄이기" })
+        .getAttribute("data-app-stepper-control"),
+    ).toBe("decrement");
+    expect(
+      within(dialog)
+        .getByRole("button", { name: "인분 늘리기" })
+        .getAttribute("data-app-stepper-control"),
+    ).toBe("increment");
 
     // Submit
     await userEvent.click(

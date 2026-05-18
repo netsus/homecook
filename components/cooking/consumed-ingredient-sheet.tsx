@@ -3,6 +3,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { useIsMobileViewport } from "@/components/cooking/cook-mode-mobile-ui";
+import {
+  AppBottomSheet,
+  AppModalFooterActions,
+} from "@/components/shared/app-overlay";
 import type { CookingModeIngredient } from "@/types/cooking";
 
 interface ConsumedIngredientSheetProps {
@@ -60,92 +64,68 @@ export function ConsumedIngredientSheet({
 
   if (isMobileViewport) {
     return (
-      <div
-        className="fixed inset-0 z-50 bg-[rgba(0,0,0,0.42)]"
-        data-testid="consumed-ingredient-sheet"
-        onClick={onClose}
+      <AppBottomSheet
+        ariaLabelledBy="consumed-sheet-title"
+        closeButtonRef={closeButtonRef}
+        description={
+          recipeTitle
+            ? `체크된 재료는 팬트리에서 자동으로 빠져요. 요리: ${recipeTitle}`
+            : "체크된 재료는 팬트리에서 자동으로 빠져요."
+        }
+        descriptionClassName="mt-1 text-[13px] font-normal leading-[1.5] text-[var(--wave1-text-2)]"
+        footer={
+          <AppModalFooterActions
+            cancelLabel="건너뛰기"
+            cancelTestId="consumed-skip-button"
+            confirmLabel={`요리 완료 (${checked.size}개 차감)`}
+            confirmTestId="consumed-confirm-button"
+            onCancel={onSkip}
+            onConfirm={handleConfirm}
+          />
+        }
+        onClose={onClose}
+        testId="consumed-ingredient-sheet"
+        title="소진된 재료를 확인해주세요"
       >
-        <div
-          aria-labelledby="consumed-sheet-title"
-          aria-modal="true"
-          className="absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col rounded-t-[20px] bg-white text-[#212529]"
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-        >
-          <div className="border-b border-[#DEE2E6] px-5 pb-3 pt-[18px]">
-            <h3
-              className="text-[18px] font-bold leading-[1.3]"
-              id="consumed-sheet-title"
-            >
-              소진된 재료를 확인해주세요
-            </h3>
-            <p className="mt-1 text-[13px] font-normal leading-[1.5] text-[#868E96]">
-              체크된 재료는 팬트리에서 자동으로 빠져요.
-              {recipeTitle ? ` (요리: ${recipeTitle})` : null}
-            </p>
-          </div>
+        <div data-testid="consumed-ingredient-list">
+          {ingredients.map((ingredient) => {
+            const isChecked = checked.has(ingredient.ingredient_id);
 
-          <div
-            className="min-h-0 flex-1 overflow-y-auto p-4"
-            data-testid="consumed-ingredient-list"
-          >
-            {ingredients.map((ingredient) => {
-              const isChecked = checked.has(ingredient.ingredient_id);
-
-              return (
-                <button
-                  className="mb-1.5 flex w-full cursor-pointer items-center gap-3 rounded-[10px] border border-[#DEE2E6] bg-white px-3.5 py-3 text-left last:mb-0"
-                  data-testid={`consumed-check-${ingredient.ingredient_id}`}
-                  key={ingredient.ingredient_id}
-                  onClick={() => toggleIngredient(ingredient.ingredient_id)}
-                  type="button"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[4px] border-[1.5px]"
-                    style={{
-                      background: isChecked ? "#2AC1BC" : "#FFFFFF",
-                      borderColor: isChecked ? "#2AC1BC" : "#DEE2E6",
-                    }}
-                  >
-                    {isChecked ? <CheckIcon /> : null}
-                  </span>
-                  <span
-                    className="min-w-0 flex-1"
-                    data-testid="consumed-ingredient-item"
-                  >
-                    <span className="block text-[14px] font-semibold leading-[1.35] text-[#212529]">
-                      {ingredient.standard_name}
-                    </span>
-                    <span className="block text-[12px] font-normal leading-[1.35] text-[#868E96]">
-                      {formatIngredientAmount(ingredient)}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex gap-2 border-t border-[#DEE2E6] p-4 pb-[max(env(safe-area-inset-bottom),16px)]">
+            return (
             <button
-              className="flex h-12 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-[#F8F9FA] px-6 text-[16px] font-bold text-[#212529]"
-              data-testid="consumed-skip-button"
-              onClick={onSkip}
+              className="mb-1.5 flex w-full cursor-pointer items-center gap-3 rounded-[10px] border border-[var(--wave1-border)] bg-white px-3.5 py-3 text-left last:mb-0"
+              data-testid={`consumed-check-${ingredient.ingredient_id}`}
+              key={ingredient.ingredient_id}
+              onClick={() => toggleIngredient(ingredient.ingredient_id)}
               type="button"
             >
-              건너뛰기
+              <span
+                aria-hidden="true"
+                className={[
+                  "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[4px] border-[1.5px]",
+                  isChecked
+                    ? "border-[var(--wave1-mint-contrast)] bg-[var(--wave1-mint-contrast)]"
+                    : "border-[var(--wave1-border)] bg-white",
+                ].join(" ")}
+              >
+                {isChecked ? <CheckIcon /> : null}
+              </span>
+              <span
+                className="min-w-0 flex-1"
+                data-testid="consumed-ingredient-item"
+              >
+                <span className="block text-[14px] font-semibold leading-[1.35] text-[var(--wave1-ink)]">
+                  {ingredient.standard_name}
+                </span>
+                <span className="block text-[12px] font-normal leading-[1.35] text-[var(--wave1-text-2)]">
+                  {formatIngredientAmount(ingredient)}
+                </span>
+              </span>
             </button>
-            <button
-              className="flex h-12 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-[#2AC1BC] px-4 text-[16px] font-bold text-white"
-              data-testid="consumed-confirm-button"
-              onClick={handleConfirm}
-              type="button"
-            >
-              요리 완료 ({checked.size}개 차감)
-            </button>
-          </div>
+            );
+          })}
         </div>
-      </div>
+      </AppBottomSheet>
     );
   }
 

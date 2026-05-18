@@ -2,6 +2,10 @@
 
 import React from "react";
 
+import {
+  AppBottomSheet,
+  AppModalFooterActions,
+} from "@/components/shared/app-overlay";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import {
   WebButton,
@@ -86,46 +90,40 @@ export function SaveModal({
   return (
     <>
     {shouldRenderAppView ? (
-    <div
-      className="fixed inset-0 z-40 flex items-end bg-black/40 lg:hidden"
-      onClick={onClose}
-    >
-      <div
-        aria-labelledby="save-modal-title-mobile"
-        aria-modal="true"
-        className="max-h-[85vh] w-full overflow-y-auto rounded-t-[20px] bg-white pb-6 shadow-[0_-10px_30px_rgba(0,0,0,0.18)] lg:max-w-lg lg:rounded-[20px]"
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
+    <div className="lg:hidden">
+      <AppBottomSheet
+        ariaLabelledBy="save-modal-title-mobile"
+        closeDisabled={isSavingRecipe || isCreatingBook}
+        description="저장할 레시피북을 선택하세요"
+        footer={
+          viewState === "ready" ? (
+            <AppModalFooterActions
+              cancelDisabled={isSavingRecipe || isCreatingBook}
+              confirmAriaLabel={isSavingRecipe ? "저장 중..." : "저장"}
+              confirmDisabled={disableSave}
+              confirmLabel={
+                isSavingRecipe
+                  ? "저장 중..."
+                  : newSelectedBookCount > 0
+                    ? `${newSelectedBookCount}개 레시피북에 추가 저장`
+                    : "이미 저장됨"
+              }
+              onCancel={onClose}
+              onConfirm={onSaveRecipe}
+            />
+          ) : null
+        }
+        onClose={onClose}
+        title="레시피 저장"
       >
-        <div className="flex justify-center pt-2">
-          <div className="h-1 w-9 rounded-sm bg-[#DEE2E6]" />
-        </div>
-        <div className="flex items-center px-5 pb-2 pt-3">
-          <h2
-            className="flex-1 text-[18px] font-bold leading-tight text-[#212529]"
-            id="save-modal-title-mobile"
-          >
-            레시피 저장
-          </h2>
-          <button
-            aria-label="닫기"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F8F9FA] text-[#495057] disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isSavingRecipe || isCreatingBook}
-            onClick={onClose}
-            type="button"
-          >
-            <CloseIcon />
-          </button>
-        </div>
-
         {viewState === "loading" ? (
-          <div className="mx-5 mt-4 rounded-[12px] border border-[#DEE2E6] bg-[#F8F9FA] px-4 py-5 text-[14px] text-[#5F6470]">
+          <div className="rounded-[12px] border border-[#DEE2E6] bg-[#F8F9FA] px-4 py-5 text-[14px] text-[#5F6470]">
             저장 가능한 레시피북을 불러오는 중이에요...
           </div>
         ) : null}
 
         {viewState === "error" ? (
-          <div className="mx-5 mt-4 rounded-[12px] border border-[#F4C7C3] bg-[#FFF1F0] px-4 py-5">
+          <div className="rounded-[12px] border border-[#F4C7C3] bg-[#FFF1F0] px-4 py-5">
             <p className="text-[14px] font-semibold text-[#C84C48]">
               {loadErrorMessage ?? "레시피북 목록을 불러오지 못했어요."}
             </p>
@@ -140,8 +138,7 @@ export function SaveModal({
         ) : null}
 
         {viewState === "ready" ? (
-          <>
-            <div className="space-y-4 px-5 pb-4 pt-2">
+            <div className="space-y-4">
               <p className="text-[13px] font-semibold text-[#495057]">
                 레시피북 다중 선택
               </p>
@@ -241,33 +238,8 @@ export function SaveModal({
                 </p>
               ) : null}
             </div>
-
-            <div className="flex gap-2 border-t border-[#DEE2E6] bg-white px-5 pb-2 pt-3">
-              <button
-                className="min-h-11 basis-[88px] rounded-[12px] border border-[#DEE2E6] bg-[#F8F9FA] px-4 text-[15px] font-bold text-[#495057] disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSavingRecipe || isCreatingBook}
-                onClick={onClose}
-                type="button"
-              >
-                취소
-              </button>
-              <button
-                aria-label={isSavingRecipe ? "저장 중..." : "저장"}
-                className="min-h-11 flex-1 rounded-[12px] bg-[#007A76] px-4 text-[15px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#ADB5BD]"
-                disabled={disableSave}
-                onClick={onSaveRecipe}
-                type="button"
-              >
-                {isSavingRecipe
-                  ? "저장 중..."
-                  : newSelectedBookCount > 0
-                    ? `${newSelectedBookCount}개 레시피북에 추가 저장`
-                    : "이미 저장됨"}
-              </button>
-            </div>
-          </>
         ) : null}
-      </div>
+      </AppBottomSheet>
     </div>
     ) : null}
     {shouldRenderWebView ? (
