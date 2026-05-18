@@ -8,7 +8,7 @@
   margin: 0 -32px;
   padding: 0 32px;
   border-bottom: 1px solid var(--line);
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .pantry-cat-tab {

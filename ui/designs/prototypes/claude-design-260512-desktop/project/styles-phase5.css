@@ -19,7 +19,7 @@
   margin: 0 -32px;
   padding: 0 32px;
   border-bottom: 1px solid var(--line);
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .mypage-tab {
@@ -428,6 +428,11 @@ main.screen.settings-screen {
   color: var(--text-3);
   font-size: 11px;
   font-weight: 700;
+}
+
+.meal-col-badge.custom {
+  background: var(--brand-wash);
+  color: var(--brand-deep);
 }
 
 .meal-col-delete {

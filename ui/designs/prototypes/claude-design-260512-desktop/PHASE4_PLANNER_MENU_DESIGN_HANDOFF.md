@@ -22,7 +22,7 @@ Phase 4 closes these 10 ledger rows:
 
 ## Implementation Summary
 
-- Replaced `MENU_ADD` toast-only entries with real static prototype routes for recipe search, recipebook selection, pantry matching, manual recipe creation, and YouTube import.
+- Replaced `MENU_ADD` toast-only entries with real static prototype routes for recipe search, recipebook selection, pantry matching, manual recipe creation, YouTube import, and webpage import.
 - Added a shared `PlannedServingsConfirmModal` so every picker flow confirms date, meal column, and servings before creating a meal.
 - Added a manual-create-specific ingredient picker that is visually and behaviorally distinct from the HOME ingredient filter.
 - Added temporary local recipe creation for manual and YouTube flows without changing production API, DB, or official contracts.
