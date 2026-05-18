@@ -7,7 +7,7 @@ export default function Home() {
       bottomTabsMode="hidden"
       className="wave1-home-shell"
       currentTab="home"
-      headerMode="desktop-only"
+      headerMode="hidden"
     >
       <HomeScreen />
     </AppShell>

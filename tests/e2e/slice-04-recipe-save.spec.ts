@@ -11,6 +11,20 @@ function isDesktopProject(testInfo: TestInfo) {
   return testInfo.project.name.includes("desktop");
 }
 
+function recipeDetailSaveCount(page: Page, testInfo: TestInfo, count: string) {
+  if (isDesktopProject(testInfo)) {
+    return page
+      .locator(".web-recipe-rail-stat:visible")
+      .filter({ hasText: "저장" })
+      .filter({ hasText: count })
+      .first();
+  }
+
+  return page
+    .locator('button[aria-label="저장"][aria-pressed]:visible')
+    .getByText(count);
+}
+
 interface SaveBook {
   id: string;
   name: string;
@@ -225,7 +239,10 @@ test.describe("Slice 04 recipe save flow", () => {
     await expect(modal).not.toBeVisible();
     await expect(saveActionButton).toHaveAttribute("aria-pressed", "true");
     await expect(
-      page.locator("article:visible").filter({ hasText: "90저장" }).first(),
+      page
+        .locator("article:visible")
+        .filter({ hasText: isDesktopProject(testInfo) ? /저장\s*90/ : "90저장" })
+        .first(),
     ).toBeVisible();
 
     await saveActionButton.click();
@@ -248,7 +265,7 @@ test.describe("Slice 04 recipe save flow", () => {
     const saveActionButton = page.locator(
       'button[aria-label="저장"][aria-pressed]:visible',
     );
-    await expect(saveActionButton.getByText("89")).toBeVisible();
+    await expect(recipeDetailSaveCount(page, testInfo, "89")).toBeVisible();
 
     await page.getByRole("button", { name: "저장" }).click();
 
@@ -268,7 +285,7 @@ test.describe("Slice 04 recipe save flow", () => {
     await expect(modal).not.toBeVisible();
     await expect(saveActionButton).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByText("레시피를 저장했어요.")).toBeVisible();
-    await expect(saveActionButton.getByText("90")).toBeVisible();
+    await expect(recipeDetailSaveCount(page, testInfo, "90")).toBeVisible();
   });
 
   test("logged-in user can quick-create a custom book and save", async (
@@ -282,7 +299,7 @@ test.describe("Slice 04 recipe save flow", () => {
     const saveActionButton = page.locator(
       'button[aria-label="저장"][aria-pressed]:visible',
     );
-    await expect(saveActionButton.getByText("89")).toBeVisible();
+    await expect(recipeDetailSaveCount(page, testInfo, "89")).toBeVisible();
 
     await page.getByRole("button", { name: "저장" }).click();
 
@@ -307,7 +324,7 @@ test.describe("Slice 04 recipe save flow", () => {
 
     await expect(modal).not.toBeVisible();
     await expect(saveActionButton).toHaveAttribute("aria-pressed", "true");
-    await expect(saveActionButton.getByText("91")).toBeVisible();
+    await expect(recipeDetailSaveCount(page, testInfo, "91")).toBeVisible();
   });
 
   test("guest user sees login gate and save modal reopens after return-to-action", async ({

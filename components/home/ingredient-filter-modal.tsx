@@ -11,6 +11,18 @@ import React, {
 import { ContentState } from "@/components/shared/content-state";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { SelectionChipRail } from "@/components/shared/selection-chip-rail";
+import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
+import {
+  WebButton,
+  WebChip,
+  WebDialog,
+  WebDialogBody,
+  WebDialogFooter,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebIconButton,
+  WebModal,
+} from "@/components/web";
 import { fetchJson } from "@/lib/api/fetch-json";
 import {
   ALL_INGREDIENT_CATEGORY,
@@ -50,6 +62,42 @@ function getFocusableElements(container: HTMLElement) {
   );
 }
 
+function CloseIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="16"
+    >
+      <path d="m5 12 4 4L19 6" />
+    </svg>
+  );
+}
+
 export function IngredientFilterModal({
   isOpen,
   appliedIngredientIds,
@@ -68,6 +116,7 @@ export function IngredientFilterModal({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const requestIdRef = useRef(0);
+  const isDesktopViewport = useDesktopViewport();
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -215,9 +264,145 @@ export function IngredientFilterModal({
     return null;
   }
 
+  if (isDesktopViewport) {
+    return (
+      <WebModal onBackdropClick={handleClose}>
+        <WebDialog
+          aria-labelledby="ingredient-filter-title"
+          ref={dialogRef}
+          size="wide"
+        >
+          <WebDialogHeader>
+            <div>
+              <WebDialogTitle id="ingredient-filter-title">
+                재료로 검색
+              </WebDialogTitle>
+              <p className="web-modal-copy">원하는 재료를 골라 레시피를 좁혀요</p>
+            </div>
+            <WebIconButton
+              aria-label="닫기"
+              onClick={handleClose}
+              ref={closeButtonRef}
+            >
+              <CloseIcon />
+            </WebIconButton>
+          </WebDialogHeader>
+
+          <WebDialogBody>
+            <label className="web-modal-search">
+              <span className="visually-hidden">재료명으로 검색</span>
+              <input
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="재료명으로 검색"
+                value={query}
+              />
+            </label>
+
+            <div className="web-modal-chip-grid mt-4">
+              {INGREDIENT_CATEGORY_OPTIONS.map((category) => (
+                <WebChip
+                  active={activeCategory === category}
+                  key={category}
+                  onClick={() => setActiveCategory(category)}
+                >
+                  {category}
+                </WebChip>
+              ))}
+            </div>
+
+            <div className="mt-5">
+              {screenState === "loading" ? (
+                <div
+                  aria-label="재료 목록 불러오는 중"
+                  className="web-ingredient-modal-grid"
+                >
+                  {Array.from({ length: 8 }).map((_, index) => (
+                    <div className="web-skeleton h-11 rounded-full" key={index} />
+                  ))}
+                </div>
+              ) : null}
+
+              {screenState === "error" ? (
+                <div className="web-modal-panel web-modal-panel-error">
+                  <p className="web-modal-copy">
+                    재료 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+                  </p>
+                  <WebButton
+                    className="mt-3"
+                    onClick={() => setReloadKey((current) => current + 1)}
+                    size="sm"
+                  >
+                    다시 시도
+                  </WebButton>
+                </div>
+              ) : null}
+
+              {screenState === "empty" ? (
+                <div className="web-modal-panel">
+                  <h2 className="web-state-title">검색 결과가 없어요</h2>
+                  <p className="web-modal-copy mt-2">
+                    다른 재료명으로 검색하거나 카테고리를 바꿔보세요.
+                  </p>
+                </div>
+              ) : null}
+
+              {screenState === "ready" ? (
+                <ul className="web-ingredient-modal-grid">
+                  {ingredients.map((ingredient) => {
+                    const isChecked = draftIngredientIds.includes(ingredient.id);
+
+                    return (
+                      <li key={ingredient.id}>
+                        <label
+                          className={[
+                            "web-ingredient-option",
+                            isChecked ? "web-ingredient-option-active" : "",
+                          ].join(" ")}
+                        >
+                          <input
+                            checked={isChecked}
+                            className="visually-hidden"
+                            onChange={() => toggleIngredient(ingredient.id)}
+                            type="checkbox"
+                          />
+                          <span>{ingredient.standard_name}</span>
+                          {isChecked ? <CheckIcon /> : null}
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+            </div>
+          </WebDialogBody>
+
+          <WebDialogFooter>
+            <div className="web-modal-footer-note">
+              <strong>{selectionMessage}</strong>
+              <span className="ml-2">선택 재료가 모두 포함된 레시피만 보여줘요.</span>
+            </div>
+            <WebButton
+              disabled={draftIngredientIds.length === 0}
+              onClick={() => setDraftIngredientIds([])}
+              variant="tertiary"
+            >
+              초기화
+            </WebButton>
+            <WebButton
+              disabled={isApplyDisabled}
+              onClick={() => onApply(draftIngredientIds)}
+            >
+              {applyButtonLabel}
+            </WebButton>
+          </WebDialogFooter>
+        </WebDialog>
+      </WebModal>
+    );
+  }
+
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-0 backdrop-blur-[1px] lg:items-center lg:justify-center lg:p-4"
+      className="fixed inset-0 z-40 flex items-end bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-0 backdrop-blur-[1px]"
       onClick={handleClose}
     >
       <div

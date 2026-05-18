@@ -9,11 +9,15 @@ export interface WebDialogProps extends React.HTMLAttributes<HTMLDivElement> {
   size?: WebDialogSize;
 }
 
-export function WebDialog({
-  className,
-  size = "default",
-  ...props
-}: WebDialogProps) {
+export const WebDialog = React.forwardRef<HTMLDivElement, WebDialogProps>(
+function WebDialog(
+  {
+    className,
+    size = "default",
+    ...props
+  },
+  ref,
+) {
   return (
     <div
       aria-modal="true"
@@ -22,11 +26,12 @@ export function WebDialog({
         size !== "default" && `web-dialog-${size}`,
         className,
       )}
+      ref={ref}
       role="dialog"
       {...props}
     />
   );
-}
+});
 
 export function WebDialogHeader({
   className,

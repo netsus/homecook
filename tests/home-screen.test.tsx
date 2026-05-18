@@ -125,13 +125,13 @@ describe("home screen", () => {
     expect(
       await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" }),
     ).toBeTruthy();
-    expect(screen.getByText("레시피 탐색")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /HOMECOOK/ })).toBeTruthy();
     expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "플래너 열기" })).toBeTruthy();
     expect(
       screen.getAllByRole("button", { name: /재료로 검색/ }),
-    ).toHaveLength(2);
-    expect(screen.getByRole("button", { name: "국물요리" })).toBeTruthy();
+    ).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "플래너" }).getAttribute("href")).toBe("/planner");
+    expect(screen.queryByRole("button", { name: "국물요리" })).toBeNull();
     expect(screen.queryByRole("button", { name: "양파" })).toBeNull();
     expect(
       screen.queryByRole("navigation", { name: "HOME 하단 탭" }),

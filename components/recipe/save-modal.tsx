@@ -2,8 +2,17 @@
 
 import React from "react";
 
-import { ModalHeader } from "@/components/shared/modal-header";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
+import {
+  WebButton,
+  WebDialog,
+  WebDialogBody,
+  WebDialogFooter,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebIconButton,
+  WebModal,
+} from "@/components/web";
 import type { RecipeBookSummary } from "@/types/recipe";
 
 type SaveModalViewState = "loading" | "ready" | "error";
@@ -262,94 +271,100 @@ export function SaveModal({
     </div>
     ) : null}
     {shouldRenderWebView ? (
-    <div
-      className="fixed inset-0 z-40 hidden items-center justify-center bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-4 lg:flex"
-      onClick={onClose}
-    >
-      <div
-        aria-labelledby="save-modal-title-desktop"
-        aria-modal="true"
-        className="w-full max-w-lg rounded-[var(--radius-xl)] border border-[var(--line)] border-t-2 border-t-[var(--brand)] bg-[var(--panel)] pb-6 shadow-[var(--shadow-3)]"
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-      >
-        <div className="px-6 pt-5">
-          <ModalHeader
-            description="저장할 레시피북을 선택하세요"
-            onClose={onClose}
-            title="레시피 저장"
-            titleId="save-modal-title-desktop"
-          />
-        </div>
+    <div className="hidden lg:block">
+      <WebModal onBackdropClick={onClose}>
+        <WebDialog
+          aria-labelledby="save-modal-title-desktop"
+          size="default"
+        >
+          <WebDialogHeader>
+            <div>
+              <WebDialogTitle id="save-modal-title-desktop">
+                레시피 저장
+              </WebDialogTitle>
+              <p className="web-modal-copy">저장할 레시피북을 선택하세요</p>
+            </div>
+            <WebIconButton
+              aria-label="닫기"
+              disabled={isSavingRecipe || isCreatingBook}
+              onClick={onClose}
+            >
+              <CloseIcon />
+            </WebIconButton>
+          </WebDialogHeader>
 
         {viewState === "loading" ? (
-          <div className="mx-6 mt-4 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-5 text-sm text-[var(--muted)]">
-            저장 가능한 레시피북을 불러오는 중이에요...
-          </div>
+          <WebDialogBody>
+            <div className="web-modal-panel">
+              저장 가능한 레시피북을 불러오는 중이에요...
+            </div>
+          </WebDialogBody>
         ) : null}
 
         {viewState === "error" ? (
-          <div className="mx-6 mt-4 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--brand)_20%,transparent)] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-4 py-5">
-            <p className="text-sm font-semibold text-[var(--brand-deep)]">
-              {loadErrorMessage ?? "레시피북 목록을 불러오지 못했어요."}
-            </p>
-            <button
-              className="mt-3 rounded-[var(--radius-md)] bg-[var(--olive)] px-4 py-2 text-sm font-semibold text-[var(--surface)]"
-              onClick={onRetry}
-              type="button"
-            >
-              다시 시도
-            </button>
-          </div>
+          <WebDialogBody>
+            <div className="web-modal-panel web-modal-panel-error">
+              <p className="web-modal-copy">
+                {loadErrorMessage ?? "레시피북 목록을 불러오지 못했어요."}
+              </p>
+              <WebButton className="mt-3" onClick={onRetry} size="sm">
+                다시 시도
+              </WebButton>
+            </div>
+          </WebDialogBody>
         ) : null}
 
         {viewState === "ready" ? (
-          <div className="space-y-4 px-6 pt-2">
-            <p className="text-[13px] font-semibold text-[var(--text-2)]">
-              폴더 선택
-            </p>
+          <>
+          <WebDialogBody>
+            <p className="web-modal-section-label">폴더 선택</p>
 
             {books.length === 0 ? (
-              <div className="rounded-[10px] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-5 text-sm text-[var(--muted)]">
+              <div className="web-modal-panel">
                 저장 가능한 레시피북이 아직 없어요. 아래에서 새 레시피북을 만들어 저장할 수 있어요.
               </div>
             ) : (
-              <div className="overflow-hidden rounded-[10px] border border-[var(--line)] bg-white">
-                {books.map((book, index) => {
+              <div className="web-modal-list">
+                {books.map((book) => {
                   const isSelected = selectedBookIds.includes(book.id);
                   const isAlreadySaved = alreadySavedBookIdSet.has(book.id);
+                  const isSavedBook = book.book_type === "saved";
 
                   return (
                     <button
                       aria-pressed={isSelected}
-                      className={`flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm text-[var(--foreground)] ${
-                        index < books.length - 1
-                          ? "border-b border-[var(--surface-subtle)]"
-                          : ""
-                      }`}
+                      className="web-modal-option"
                       disabled={isSavingRecipe || isCreatingBook || isAlreadySaved}
                       key={book.id}
                       onClick={() => onSelectBook(book.id)}
                       type="button"
                     >
                       <span
-                        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 ${
-                          isSelected
-                            ? "border-[var(--olive)] bg-[var(--olive)]"
-                            : "border-[var(--line)] bg-white"
-                        }`}
+                        aria-hidden="true"
+                        className={[
+                          "web-check-dot",
+                          isSelected ? "web-check-dot-active" : "",
+                        ].join(" ")}
                       >
-                        {isSelected ? (
-                          <span className="block h-1.5 w-1.5 rounded-full bg-white" />
-                        ) : null}
+                        {isSelected ? <CheckIcon /> : null}
                       </span>
-                      <span className="flex-1 text-sm text-[var(--foreground)]">
-                        {book.name}
-                        {isAlreadySaved ? (
-                          <span className="ml-2 text-xs font-semibold text-[var(--olive)]">
-                            이미 저장됨
-                          </span>
-                        ) : null}
+                      <span className="web-modal-option-main">
+                        <span className="web-modal-option-title">{book.name}</span>
+                        <span className="web-modal-option-meta">
+                          {isAlreadySaved
+                            ? "이미 저장됨"
+                            : isSelected
+                              ? "저장 대상"
+                              : "선택하면 이 책에 추가"}
+                        </span>
+                      </span>
+                      <span
+                        className={[
+                          "web-modal-badge",
+                          isSavedBook || isAlreadySaved ? "web-modal-badge-brand" : "",
+                        ].join(" ")}
+                      >
+                        {isAlreadySaved ? "완료" : isSavedBook ? "저장" : "내 책"}
                       </span>
                     </button>
                   );
@@ -357,52 +372,52 @@ export function SaveModal({
               </div>
             )}
 
-            <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4">
-              <p className="text-sm font-semibold text-[var(--foreground)]">
-                새 레시피북 만들기
-              </p>
-              <div className="mt-3 flex gap-2">
+            <div className="web-modal-panel web-modal-create">
+              <p className="web-modal-section-label">새 레시피북 만들기</p>
+              <div className="web-modal-create-row">
                 <input
-                  className="min-h-11 flex-1 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)]"
+                  className="web-modal-input"
                   maxLength={50}
                   onChange={(event) => onNewBookNameChange(event.target.value)}
                   placeholder="예: 주말 파티"
                   value={newBookName}
                 />
-                <button
-                  className="min-h-11 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-60"
+                <WebButton
                   disabled={disableCreate}
                   onClick={onCreateBook}
-                  type="button"
+                  variant="tertiary"
                 >
                   {isCreatingBook ? "생성 중..." : "생성"}
-                </button>
+                </WebButton>
               </div>
             </div>
 
             {saveErrorMessage ? (
-              <p className="rounded-[var(--radius-md)] border border-[color-mix(in_srgb,var(--brand)_20%,transparent)] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-4 py-3 text-sm text-[var(--brand-deep)]">
+              <p className="web-modal-panel web-modal-panel-error mt-4">
                 {saveErrorMessage}
               </p>
             ) : null}
-
-            <div className="border-t border-[var(--line)] pt-3">
-              <button
-                className="min-h-11 w-full rounded-[var(--radius-md)] bg-[var(--olive)] px-4 py-3 text-sm font-semibold text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={disableSave}
-                onClick={onSaveRecipe}
-                type="button"
+          </WebDialogBody>
+          <WebDialogFooter>
+              <WebButton
+                disabled={isSavingRecipe || isCreatingBook}
+                onClick={onClose}
+                variant="tertiary"
               >
+                취소
+              </WebButton>
+              <WebButton disabled={disableSave} onClick={onSaveRecipe}>
                 {isSavingRecipe
                   ? "저장 중..."
                   : newSelectedBookCount > 0
                     ? `${newSelectedBookCount}개 레시피북에 추가 저장`
                     : "이미 저장됨"}
-              </button>
-            </div>
-          </div>
+              </WebButton>
+          </WebDialogFooter>
+          </>
         ) : null}
-      </div>
+        </WebDialog>
+      </WebModal>
     </div>
     ) : null}
     </>

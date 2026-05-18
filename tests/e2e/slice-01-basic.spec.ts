@@ -105,19 +105,43 @@ test.describe("Slice 01 basic flow", () => {
     await expect(
       page.locator("li:visible").filter({ hasText: /^돼지고기/ }).first(),
     ).toBeVisible();
-    await expect(
-      page.locator("div:visible").filter({ hasText: /^몇 인분\?$/ }).first(),
-    ).toBeVisible();
+    if (isMobileViewport(page)) {
+      await expect(
+        page.locator("div:visible").filter({ hasText: /^몇 인분\?$/ }).first(),
+      ).toBeVisible();
+    } else {
+      await expect(
+        page.getByRole("heading", { name: "인분 조절" }),
+      ).toBeVisible();
+    }
     await expect(page.getByRole("button", { name: "플래너에 추가" })).toBeVisible();
     await expect(page.getByRole("button", { name: "공유하기" })).toHaveCount(1);
     await expect(page.getByRole("button", { name: "좋아요 203" })).toBeVisible();
 
     const likeChipPrecedesFirstIngredient = await page.evaluate(() => {
-      const likeButton = document.querySelector(
-        'button[aria-label="좋아요 203"]',
-      );
+      const likeButton = Array.from(
+        document.querySelectorAll('button[aria-label="좋아요 203"]'),
+      ).find((element) => {
+        if (!(element instanceof HTMLElement)) {
+          return false;
+        }
+
+        const style = window.getComputedStyle(element);
+        return style.display !== "none" && element.getClientRects().length > 0;
+      });
       const firstIngredient = Array.from(document.querySelectorAll("li, span")).find(
-        (element) => element.textContent?.trim() === "김치",
+        (element) => {
+          if (!(element instanceof HTMLElement)) {
+            return false;
+          }
+
+          const style = window.getComputedStyle(element);
+          return (
+            element.textContent?.trim() === "김치" &&
+            style.display !== "none" &&
+            element.getClientRects().length > 0
+          );
+        },
       );
 
       if (!(likeButton instanceof HTMLElement) || !(firstIngredient instanceof HTMLElement)) {

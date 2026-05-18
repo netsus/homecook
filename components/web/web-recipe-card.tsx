@@ -1,4 +1,3 @@
-import Image from "next/image";
 import * as React from "react";
 
 import { cn } from "@/components/web/utils";
@@ -23,7 +22,12 @@ export function WebRecipeCard({
     <div className={cn("web-recipe-card", className)} {...props}>
       <div className="web-recipe-card-thumb">
         {imageSrc ? (
-          <Image alt={alt} fill sizes="(min-width: 1024px) 25vw, 100vw" src={imageSrc} />
+          <span
+            aria-label={alt}
+            className="web-recipe-card-image"
+            role="img"
+            style={{ backgroundImage: `url(${imageSrc})` }}
+          />
         ) : null}
       </div>
       <div className="web-recipe-card-body">

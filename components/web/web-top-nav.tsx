@@ -14,14 +14,14 @@ export interface WebTopNavProps {
   brandHref?: string;
   brandLabel?: string;
   className?: string;
-  items: WebTopNavItem[];
+  items: readonly WebTopNavItem[];
   rightSlot?: React.ReactNode;
 }
 
 export function WebTopNav({
   activeId,
   brandHref = "/",
-  brandLabel = "homecook",
+  brandLabel = "HOMECOOK",
   className,
   items,
   rightSlot,
@@ -30,8 +30,8 @@ export function WebTopNav({
     <header className={cn("web-topnav", className)}>
       <div className="web-topnav-inner">
         <Link className="web-topnav-brand" href={brandHref}>
-          <span>{brandLabel}</span>
           <span className="web-topnav-brand-dot" />
+          <span>{brandLabel}</span>
         </Link>
         <nav aria-label="데스크탑 주요 메뉴" className="web-topnav-tabs">
           {items.map((item) => {
