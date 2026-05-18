@@ -3,6 +3,10 @@
 import React from "react";
 import { useEffect, useMemo, useRef } from "react";
 
+import {
+  AppBottomSheet,
+  AppModalFooterActions,
+} from "@/components/shared/app-overlay";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import {
   WebButton,
@@ -99,62 +103,24 @@ export function LoginGateModal() {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-end bg-black/40 md:items-center md:justify-center md:p-4"
-      onClick={close}
+    <AppBottomSheet
+      ariaLabelledBy="login-gate-title"
+      closeButtonRef={closeButtonRef}
+      footer={
+        <AppModalFooterActions
+          confirmLabel="로그인"
+          onCancel={close}
+          onConfirm={handleLogin}
+        />
+      }
+      onClose={close}
+      panelClassName="max-w-md"
+      title="로그인이 필요한 작업이에요"
     >
-      <div
-        aria-labelledby="login-gate-title"
-        aria-modal="true"
-        className="w-full max-w-md overflow-hidden rounded-t-[20px] bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.18)] md:rounded-[20px]"
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-      >
-        <div className="flex justify-center pt-2">
-          <div className="h-1 w-9 rounded-sm bg-[#DEE2E6]" />
-        </div>
-        <div className="flex items-center px-5 pb-2 pt-3">
-          <h2
-            className="flex-1 text-[18px] font-bold leading-tight text-[var(--wave1-ink)]"
-            id="login-gate-title"
-          >
-            로그인이 필요한 작업이에요
-          </h2>
-          <button
-            aria-label="닫기"
-            className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--wave1-text-2)] transition-colors hover:bg-[var(--wave1-surface-fill)]"
-            onClick={close}
-            ref={closeButtonRef}
-            type="button"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--wave1-surface-fill)]">
-              <CloseIcon />
-            </span>
-          </button>
-        </div>
-        <div className="px-5 pb-7 pt-3">
-          <p className="text-[14px] font-medium leading-6 text-[var(--wave1-text-2)]">
-            {description}
-          </p>
-        </div>
-        <div className="flex gap-2 border-t border-[#DEE2E6] bg-white px-5 pb-[calc(28px+env(safe-area-inset-bottom))] pt-3">
-          <button
-            className="min-h-[48px] flex-1 rounded-[8px] bg-[var(--wave1-surface-fill)] px-4 text-[15px] font-bold text-[var(--wave1-ink)]"
-            onClick={close}
-            type="button"
-          >
-            취소
-          </button>
-          <button
-            className="min-h-[48px] flex-[1.45] rounded-[8px] bg-[var(--wave1-mint-contrast)] px-4 text-[15px] font-bold text-white"
-            onClick={handleLogin}
-            type="button"
-          >
-            로그인
-          </button>
-        </div>
-      </div>
-    </div>
+      <p className="text-[14px] font-medium leading-6 text-[var(--wave1-text-2)]">
+        {description}
+      </p>
+    </AppBottomSheet>
   );
 }
 

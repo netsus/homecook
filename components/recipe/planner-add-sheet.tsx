@@ -2,6 +2,11 @@
 
 import React from "react";
 
+import {
+  AppBottomSheet,
+  AppModalFooterActions,
+  AppStepper,
+} from "@/components/shared/app-overlay";
 import { ModalFooterActions } from "@/components/shared/modal-footer-actions";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
@@ -114,45 +119,36 @@ export function PlannerAddSheet({
     return (
       <>
       {!isDesktopViewport ? (
-        <div
-          aria-labelledby="planner-add-sheet-title-mobile"
-          aria-modal="true"
-          className="fixed inset-0 z-40 flex items-end justify-center bg-black/40"
-          onClick={onClose}
-          role="dialog"
+        <AppBottomSheet
+          ariaLabelledBy="planner-add-sheet-title-mobile"
+          closeDisabled={isSubmitting}
+          description="날짜와 끼니를 선택해 주세요"
+          footer={
+            !isError && !isLoading ? (
+              <AppModalFooterActions
+                cancelDisabled={isSubmitting}
+                confirmAriaLabel={isSubmitting ? "추가 중…" : "플래너에 추가"}
+                confirmDisabled={!canSubmit || isSubmitting}
+                confirmLabel={
+                  isSubmitting
+                    ? "추가 중…"
+                    : `${selectedDateShort} ${selectedColumnName}에 추가`
+                }
+                onCancel={onClose}
+                onConfirm={onSubmit}
+              />
+            ) : null
+          }
+          onClose={onClose}
+          title="플래너에 추가"
         >
-        <div
-          className="max-h-[85vh] w-full overflow-y-auto rounded-t-[20px] bg-white pb-6 shadow-[0_-10px_30px_rgba(0,0,0,0.18)] lg:max-w-lg lg:rounded-[20px]"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className="flex justify-center pt-2">
-            <div className="h-1 w-9 rounded-sm bg-[#DEE2E6]" />
-          </div>
-          <div className="flex items-center px-5 pb-2 pt-3">
-            <h2
-              className="flex-1 text-[18px] font-bold leading-tight text-[#212529]"
-              id="planner-add-sheet-title-mobile"
-            >
-              플래너에 추가
-            </h2>
-            <button
-              aria-label="닫기"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F8F9FA] text-[#495057] disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={isSubmitting}
-              onClick={onClose}
-              type="button"
-            >
-              <CloseIcon />
-            </button>
-          </div>
-
           {isError ? (
-            <div className="flex flex-col items-center gap-4 px-5 py-8 text-center">
-              <p className="text-[14px] leading-5 text-[#5F6470]">
+            <div className="flex flex-col items-center gap-4 py-8 text-center">
+              <p className="text-[14px] leading-5 text-[var(--wave1-text-2)]">
                 {errorMessage ?? "플래너 정보를 불러오지 못했어요."}
               </p>
               <button
-                className="min-h-11 rounded-[10px] bg-[#007A76] px-5 text-[14px] font-bold text-white"
+                className="min-h-11 rounded-[10px] bg-[var(--wave1-mint-contrast)] px-5 text-[14px] font-bold text-white"
                 onClick={onRetryLoad}
                 type="button"
               >
@@ -162,42 +158,42 @@ export function PlannerAddSheet({
           ) : isLoading ? (
             <div
               aria-label="플래너 정보 불러오는 중"
-              className="flex flex-col gap-4 px-5 py-8"
+              className="flex flex-col gap-4 py-8"
             >
               {[1, 2, 3].map((i) => (
                 <div
-                  className="h-10 animate-pulse rounded-[10px] bg-[#F8F9FA]"
+                  className="h-10 animate-pulse rounded-[10px] bg-[var(--wave1-surface-fill)]"
                   key={i}
                 />
               ))}
             </div>
           ) : (
-            <>
-              <div className="px-5 pb-4 pt-2">
-                {recipePreview ? (
-                  <div className="mb-4 flex items-center gap-3 rounded-[12px] border border-[#DEE2E6] bg-[#F8F9FA] p-3">
-                    <div
-                      aria-hidden="true"
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] text-[26px]"
-                      style={{ background: recipePreview.background }}
-                    >
-                      {recipePreview.emoji}
+            <div className="space-y-4">
+              {recipePreview ? (
+                <div className="flex items-center gap-3 rounded-[12px] border border-[var(--wave1-border)] bg-[var(--wave1-surface-fill)] p-3">
+                  <div
+                    aria-hidden="true"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] text-[26px]"
+                    style={{ background: recipePreview.background }}
+                  >
+                    {recipePreview.emoji}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate text-[15px] font-bold text-[var(--wave1-ink)]">
+                      {recipePreview.title}
                     </div>
-                    <div className="min-w-0">
-                      <div className="truncate text-[15px] font-bold text-[#212529]">
-                        {recipePreview.title}
-                      </div>
-                      <div className="mt-0.5 text-[12px] text-[#5F6470]">
-                        {recipePreview.meta}
-                      </div>
+                    <div className="mt-0.5 text-[12px] text-[var(--wave1-text-2)]">
+                      {recipePreview.meta}
                     </div>
                   </div>
-                ) : null}
+                </div>
+              ) : null}
 
-                <div className="mb-2 text-[13px] font-semibold text-[#495057]">
+              <div>
+                <div className="mb-2 text-[13px] font-semibold text-[var(--wave1-text-2)]">
                   날짜
                 </div>
-                <div className="scrollbar-hide mb-4 flex gap-1.5 overflow-x-auto pb-1">
+                <div className="scrollbar-hide flex gap-1.5 overflow-x-auto pb-1">
                   {selectableDates.map((dateKey) => {
                     const isSelected = dateKey === selectedDate;
 
@@ -207,8 +203,8 @@ export function PlannerAddSheet({
                         className={[
                           "shrink-0 rounded-full border px-3 py-2 text-[13px] transition-colors",
                           isSelected
-                            ? "border-[#212529] bg-[#212529] font-bold text-white"
-                            : "border-[#DEE2E6] bg-white font-medium text-[#495057]",
+                            ? "border-[var(--wave1-ink)] bg-[var(--wave1-ink)] font-bold text-white"
+                            : "border-[var(--wave1-border)] bg-white font-medium text-[var(--wave1-text-2)]",
                           isSubmitting ? "opacity-60" : "",
                         ]
                           .filter(Boolean)
@@ -223,8 +219,10 @@ export function PlannerAddSheet({
                     );
                   })}
                 </div>
+              </div>
 
-                <div className="mb-2 text-[13px] font-semibold text-[#495057]">
+              <div>
+                <div className="mb-2 text-[13px] font-semibold text-[var(--wave1-text-2)]">
                   끼니
                 </div>
                 <div aria-label="끼니 선택" className={mealColumnGroupClass} role="group">
@@ -238,8 +236,8 @@ export function PlannerAddSheet({
                           "min-h-11 rounded-[8px] border px-2 text-[14px] transition-colors",
                           shouldScrollMealColumns ? "min-w-[76px] shrink-0" : "min-w-0",
                           isSelected
-                            ? "border-[#2AC1BC] bg-[#E8F8F7] font-semibold text-[#007A76]"
-                            : "border-[#DEE2E6] bg-white font-medium text-[#495057]",
+                            ? "border-[var(--wave1-mint-contrast)] bg-[var(--wave1-mint-soft)] font-semibold text-[var(--wave1-mint-contrast)]"
+                            : "border-[var(--wave1-border)] bg-white font-medium text-[var(--wave1-text-2)]",
                           isSubmitting ? "opacity-60" : "",
                         ]
                           .filter(Boolean)
@@ -254,71 +252,30 @@ export function PlannerAddSheet({
                     );
                   })}
                 </div>
+              </div>
 
-                <div className="mb-2 text-[13px] font-semibold text-[#495057]">
+              <div>
+                <div className="mb-2 text-[13px] font-semibold text-[var(--wave1-text-2)]">
                   인분
                 </div>
-                <div className="flex items-center justify-between rounded-[10px] border border-[#DEE2E6] bg-[#F8F9FA] p-2.5">
-                  <div className="text-[14px] text-[#495057]">
-                    몇 인분 계획할까요?
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <button
-                      aria-label="인분 줄이기"
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-[#DEE2E6] bg-white text-[20px] font-medium leading-none text-[#212529] disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={isSubmitting || servings <= 1}
-                      onClick={() => onChangeServings(Math.max(1, servings - 1))}
-                      type="button"
-                    >
-                      -
-                    </button>
-                    <div className="min-w-6 text-center text-[20px] font-medium text-[#212529]">
-                      {servings}
-                    </div>
-                    <button
-                      aria-label="인분 늘리기"
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-[#212529] text-[20px] font-medium leading-none text-white disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={isSubmitting}
-                      onClick={() => onChangeServings(servings + 1)}
-                      type="button"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {errorMessage && sheetState === "ready" ? (
-                  <p className="mt-3 text-[13px] font-semibold text-[#C84C48]">
-                    {errorMessage}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="flex gap-2 border-t border-[#DEE2E6] bg-white px-5 pb-2 pt-3">
-                <button
-                  className="min-h-[48px] basis-[88px] rounded-[8px] border border-[#DEE2E6] bg-[#F8F9FA] px-4 text-[15px] font-bold text-[#495057] disabled:cursor-not-allowed disabled:opacity-60"
+                <AppStepper
                   disabled={isSubmitting}
-                  onClick={onClose}
-                  type="button"
-                >
-                  취소
-                </button>
-                <button
-                  aria-label={isSubmitting ? "추가 중…" : "플래너에 추가"}
-                  className="min-h-[48px] flex-1 rounded-[8px] bg-[#007A76] px-4 text-[15px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#ADB5BD]"
-                  disabled={!canSubmit || isSubmitting}
-                  onClick={onSubmit}
-                  type="button"
-                >
-                  {isSubmitting
-                    ? "추가 중…"
-                    : `${selectedDateShort} ${selectedColumnName}에 추가`}
-                </button>
+                  label="몇 인분 계획할까요?"
+                  min={1}
+                  onChange={onChangeServings}
+                  unit="인분"
+                  value={servings}
+                />
               </div>
-            </>
+
+              {errorMessage && sheetState === "ready" ? (
+                <p className="text-[13px] font-semibold text-[#C84C48]">
+                  {errorMessage}
+                </p>
+              ) : null}
+            </div>
           )}
-        </div>
-        </div>
+        </AppBottomSheet>
       ) : null}
       {isDesktopViewport ? (
         <WebModal onBackdropClick={onClose}>

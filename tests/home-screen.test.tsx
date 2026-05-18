@@ -164,7 +164,9 @@ describe("home screen", () => {
     render(<HomeScreen />);
 
     await user.click(await screen.findByRole("button", { name: /재료로 검색/ }));
-    await screen.findByRole("dialog", { name: "재료로 검색" });
+    const dialog = await screen.findByRole("dialog", { name: "재료로 검색" });
+
+    expect(dialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
 
     expect(await screen.findByRole("checkbox", { name: "양파" })).toBeTruthy();
 

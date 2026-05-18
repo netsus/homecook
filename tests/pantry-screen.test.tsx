@@ -238,6 +238,7 @@ describe("PantryScreen", () => {
   });
 
   it("adds only newly selected ingredients from the add sheet", async () => {
+    installMatchMedia(true);
     mockFetchIngredients.mockResolvedValue({
       items: [
         { id: "i1", standard_name: "양파", category: "채소" },
@@ -251,7 +252,10 @@ describe("PantryScreen", () => {
     await screen.findByText("양파", { exact: false });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /재료 추가하기/ }));
+    await user.click(screen.getByRole("button", { name: /재료 추가/ }));
+    const addDialog = await screen.findByRole("dialog", { name: "재료 추가" });
+
+    expect(addDialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
 
     const ownedIngredient = await screen.findByRole("checkbox", { name: /양파/ });
     expect((ownedIngredient as HTMLButtonElement).disabled).toBe(true);
@@ -266,6 +270,7 @@ describe("PantryScreen", () => {
   });
 
   it("adds only selected missing bundle ingredients", async () => {
+    installMatchMedia(true);
     mockFetchPantryBundles.mockResolvedValue({
       bundles: [
         {
@@ -300,7 +305,13 @@ describe("PantryScreen", () => {
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "묶음으로 추가" }));
-    await screen.findByRole("dialog", { name: "묶음으로 재료 추가" });
+    const bundleDialog = await screen.findByRole("dialog", {
+      name: "묶음으로 재료 추가",
+    });
+
+    expect(bundleDialog.getAttribute("data-app-overlay-shell")).toBe(
+      "bottom-sheet",
+    );
 
     await user.click(screen.getByRole("button", { name: /기본 야채/ }));
     await user.click(screen.getByRole("button", { name: "2개 팬트리에 추가" }));

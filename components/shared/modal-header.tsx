@@ -7,6 +7,7 @@ interface ModalHeaderProps {
   titleId?: string;
   /** Helper copy rendered below the title in muted text-sm */
   description?: string;
+  descriptionClassName?: string;
   /** Optional badge node rendered inline after the title */
   badge?: React.ReactNode;
   onClose: () => void;
@@ -20,6 +21,7 @@ export function ModalHeader({
   title,
   titleId,
   description,
+  descriptionClassName,
   badge,
   onClose,
   closeDisabled,
@@ -38,7 +40,9 @@ export function ModalHeader({
           {badge}
         </div>
         {description ? (
-          <p className="mt-1 text-sm text-[var(--wave1-text-2)]">{description}</p>
+          <p className={descriptionClassName ?? "mt-1 text-sm text-[var(--wave1-text-2)]"}>
+            {description}
+          </p>
         ) : null}
       </div>
       <button

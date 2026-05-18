@@ -4,6 +4,10 @@ import React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getBundleEmoji } from "@/components/pantry/pantry-mobile-visuals";
+import {
+  AppBottomSheet,
+  AppModalFooterActions,
+} from "@/components/shared/app-overlay";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -142,198 +146,164 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
 
   if (isMobileViewport) {
     return (
-      <div
-        className="fixed inset-0 z-50 flex items-end bg-black/40"
-        onClick={onClose}
-      >
-        <div
-          aria-label="묶음으로 재료 추가"
-          aria-modal="true"
-          className="flex min-h-[372px] max-h-[85vh] w-full flex-col rounded-t-[20px] bg-white text-[#212529] shadow-[0_-8px_24px_rgba(0,0,0,0.16)]"
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-        >
-          <div className="border-b border-[#DEE2E6] px-5 py-[14px]">
-            <div className="flex items-center gap-2">
-              {expandedBundle ? (
-                <button
-                  aria-label="묶음 목록으로 돌아가기"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#868E96]"
-                  onClick={() => {
-                    setExpandedBundleId(null);
-                    setSelectedIds(new Set());
-                  }}
-                  type="button"
-                >
-                  ‹
-                </button>
-              ) : null}
-              <div className="min-w-0 flex-1">
-                <h2 className="text-[18px] font-extrabold leading-[1.25]">
-                  {expandedBundle ? expandedBundle.name : "재료 묶음 선택"}
-                </h2>
-                <p className="mt-1 text-[11px] font-medium leading-[1.35] text-[#868E96]">
-                  {expandedBundle
-                    ? "추가할 항목을 골라주세요"
-                    : "자주 함께 쓰는 재료를 한 번에 추가해요"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="min-h-0 flex-1 overflow-y-auto px-4 py-4"
-            ref={scrollContainerRef}
-            style={{ overscrollBehavior: "contain" }}
-          >
-            {sheetState === "loading" ? (
-              <div className="space-y-2">
-                {[1, 2, 3, 4].map((item) => (
-                  <Skeleton className="w-full" height={58} key={item} rounded="lg" />
-                ))}
-              </div>
-            ) : sheetState === "error" ? (
-              <div className="flex flex-col items-center py-10 text-center">
-                <p className="text-sm font-semibold text-[#212529]">
-                  묶음 목록을 불러오지 못했어요
-                </p>
-                <button
-                  className="mt-4 h-10 rounded-[10px] bg-[#2AC1BC] px-5 text-[13px] font-extrabold text-white"
-                  onClick={() => void loadBundles()}
-                  type="button"
-                >
-                  다시 시도
-                </button>
-              </div>
-            ) : sheetState === "empty" ? (
-              <div className="py-10 text-center">
-                <p className="text-[15px] font-bold text-[#212529]">
-                  등록된 묶음이 없어요
-                </p>
-                <p className="mt-2 text-[13px] text-[#868E96]">
-                  묶음이 준비되면 여기서 한 번에 추가할 수 있어요
-                </p>
-              </div>
-            ) : expandedBundle ? (
-              <div className="space-y-1.5">
-                {expandedBundle.ingredients.map((ingredient) => {
-                  const isChecked = selectedIds.has(ingredient.ingredient_id);
-                  const isInPantry = ingredient.is_in_pantry;
-
-                  return (
-                    <button
-                      aria-checked={isChecked}
-                      aria-label={
-                        isInPantry
-                          ? `${ingredient.standard_name} 보유중`
-                          : ingredient.standard_name
-                      }
-                      className={[
-                        "flex min-h-[48px] w-full items-center gap-3 rounded-[10px] border border-[#DEE2E6] px-3 text-left disabled:opacity-100",
-                        isInPantry ? "bg-[#F8F9FA]" : "bg-white",
-                      ].join(" ")}
-                      disabled={isInPantry}
-                      key={ingredient.ingredient_id}
-                      onClick={() => handleToggleIngredient(ingredient.ingredient_id)}
-                      role="checkbox"
-                      type="button"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className={[
-                          "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md border text-[13px] font-bold",
-                          isChecked
-                            ? "border-[#2AC1BC] bg-[#2AC1BC] text-white"
-                            : "border-[#DEE2E6] bg-white text-transparent",
-                        ].join(" ")}
-                      >
-                        ✓
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-[#212529]">
-                        {ingredient.standard_name}
-                      </span>
-                      {isInPantry ? (
-                        <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-[#495057]">
-                          보유중
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {bundles.map((bundle) => {
-                  const missingCount = getMissingIds(bundle).length;
-                  const ownedCount = getOwnedCount(bundle);
-
-                  return (
-                    <button
-                      className="flex min-h-[64px] w-full items-center gap-3 rounded-xl border border-[#DEE2E6] bg-white px-3.5 py-2.5 text-left"
-                      key={bundle.id}
-                      onClick={() => handleToggleBundleExpand(bundle.id)}
-                      type="button"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F8F9FA] text-[20px]"
-                      >
-                        {getBundleEmoji(bundle.name)}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[14px] font-extrabold text-[#212529]">
-                          {bundle.name}
-                        </span>
-                        <span className="mt-0.5 block truncate text-[11px] font-bold text-[#495057]">
-                          {missingCount > 0
-                            ? `추가 가능 ${missingCount}개`
-                            : "추가할 새 재료 없음"}
-                          {ownedCount > 0 ? ` · 보유중 ${ownedCount}개` : ""}
-                        </span>
-                        <span className="mt-0.5 block truncate text-[11px] font-medium text-[#868E96]">
-                          {bundle.ingredients
-                            .map((ingredient) => ingredient.standard_name)
-                            .join(", ")}
-                        </span>
-                      </span>
-                      <ChevronRightIcon />
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {sheetState === "ready" && expandedBundle ? (
-            <div className="border-t border-[#DEE2E6] bg-white px-4 py-3">
-              {addErrorMessage && (
-                <p className="mb-2 text-[13px] font-bold text-[#C92A2A]" role="alert">
+      <AppBottomSheet
+        ariaLabelledBy="bundle-picker-title-mobile"
+        bodyClassName="px-4 py-4"
+        closeButtonRef={closeButtonRef}
+        description={
+          expandedBundle
+            ? `${expandedBundle.name}에서 추가할 항목을 골라주세요`
+            : "자주 함께 쓰는 재료를 한 번에 추가해요"
+        }
+        footer={
+          sheetState === "ready" && expandedBundle ? (
+            <div className="space-y-2">
+              {addErrorMessage ? (
+                <p className="text-[13px] font-bold text-[#C92A2A]" role="alert">
                   {addErrorMessage}
                 </p>
-              )}
-              <button
-                aria-busy={isAdding}
-                aria-disabled={selectedCount === 0 || isAdding}
-                className={[
-                  "h-12 w-full rounded-[8px] text-[14px] font-extrabold",
-                  selectedCount > 0 && !isAdding
-                    ? "bg-[#2AC1BC] text-white"
-                    : "pointer-events-none bg-[#DEE2E6] text-[#ADB5BD]",
-                ].join(" ")}
-                disabled={selectedCount === 0 || isAdding}
-                onClick={() => void handleAdd()}
-                type="button"
-              >
-                {isAdding
-                  ? "추가 중..."
-                  : selectedCount > 0
-                    ? `${selectedCount}개 팬트리에 추가`
-                    : "추가할 재료를 선택해 주세요"}
-              </button>
+              ) : null}
+              <AppModalFooterActions
+                cancelLabel="목록"
+                confirmDisabled={selectedCount === 0 || isAdding}
+                confirmLabel={
+                  isAdding
+                    ? "추가 중..."
+                    : selectedCount > 0
+                      ? `${selectedCount}개 팬트리에 추가`
+                      : "추가할 재료를 선택해 주세요"
+                }
+                onCancel={() => {
+                  setExpandedBundleId(null);
+                  setSelectedIds(new Set());
+                }}
+                onConfirm={() => void handleAdd()}
+              />
             </div>
-          ) : null}
-        </div>
-      </div>
+          ) : null
+        }
+        onClose={onClose}
+        panelClassName="min-h-[372px]"
+        panelRef={scrollContainerRef}
+        title="묶음으로 재료 추가"
+      >
+        {sheetState === "loading" ? (
+          <div className="space-y-2">
+            {[1, 2, 3, 4].map((item) => (
+              <Skeleton className="w-full" height={58} key={item} rounded="lg" />
+            ))}
+          </div>
+        ) : sheetState === "error" ? (
+          <div className="flex flex-col items-center py-10 text-center">
+            <p className="text-sm font-semibold text-[#212529]">
+              묶음 목록을 불러오지 못했어요
+            </p>
+            <button
+              className="mt-4 h-10 rounded-[10px] bg-[#2AC1BC] px-5 text-[13px] font-extrabold text-white"
+              onClick={() => void loadBundles()}
+              type="button"
+            >
+              다시 시도
+            </button>
+          </div>
+        ) : sheetState === "empty" ? (
+          <div className="py-10 text-center">
+            <p className="text-[15px] font-bold text-[#212529]">
+              등록된 묶음이 없어요
+            </p>
+            <p className="mt-2 text-[13px] text-[#868E96]">
+              묶음이 준비되면 여기서 한 번에 추가할 수 있어요
+            </p>
+          </div>
+        ) : expandedBundle ? (
+          <div className="space-y-1.5">
+            {expandedBundle.ingredients.map((ingredient) => {
+              const isChecked = selectedIds.has(ingredient.ingredient_id);
+              const isInPantry = ingredient.is_in_pantry;
+
+              return (
+                <button
+                  aria-checked={isChecked}
+                  aria-label={
+                    isInPantry
+                      ? `${ingredient.standard_name} 보유중`
+                      : ingredient.standard_name
+                  }
+                  className={[
+                    "flex min-h-[48px] w-full items-center gap-3 rounded-[10px] border border-[#DEE2E6] px-3 text-left disabled:opacity-100",
+                    isInPantry ? "bg-[#F8F9FA]" : "bg-white",
+                  ].join(" ")}
+                  disabled={isInPantry}
+                  key={ingredient.ingredient_id}
+                  onClick={() => handleToggleIngredient(ingredient.ingredient_id)}
+                  role="checkbox"
+                  type="button"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={[
+                      "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md border text-[13px] font-bold",
+                      isChecked
+                        ? "border-[#2AC1BC] bg-[#2AC1BC] text-white"
+                        : "border-[#DEE2E6] bg-white text-transparent",
+                    ].join(" ")}
+                  >
+                    ✓
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-[#212529]">
+                    {ingredient.standard_name}
+                  </span>
+                  {isInPantry ? (
+                    <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-[#495057]">
+                      보유중
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {bundles.map((bundle) => {
+              const missingCount = getMissingIds(bundle).length;
+              const ownedCount = getOwnedCount(bundle);
+
+              return (
+                <button
+                  className="flex min-h-[64px] w-full items-center gap-3 rounded-xl border border-[#DEE2E6] bg-white px-3.5 py-2.5 text-left"
+                  key={bundle.id}
+                  onClick={() => handleToggleBundleExpand(bundle.id)}
+                  type="button"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F8F9FA] text-[20px]"
+                  >
+                    {getBundleEmoji(bundle.name)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-extrabold text-[#212529]">
+                      {bundle.name}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[11px] font-bold text-[#495057]">
+                      {missingCount > 0
+                        ? `추가 가능 ${missingCount}개`
+                        : "추가할 새 재료 없음"}
+                      {ownedCount > 0 ? ` · 보유중 ${ownedCount}개` : ""}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[11px] font-medium text-[#868E96]">
+                      {bundle.ingredients
+                        .map((ingredient) => ingredient.standard_name)
+                        .join(", ")}
+                    </span>
+                  </span>
+                  <ChevronRightIcon />
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </AppBottomSheet>
     );
   }
 

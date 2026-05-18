@@ -126,7 +126,9 @@ describe("MenuAddScreen", () => {
 
     render(<MenuAddScreen {...DEFAULT_PROPS} initialSource="leftover" />);
 
-    expect(await screen.findByRole("dialog", { name: "남은요리 선택" })).toBeTruthy();
+    const dialog = await screen.findByRole("dialog", { name: "남은요리 선택" });
+
+    expect(dialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
     expect(leftoversApi.fetchLeftovers).toHaveBeenCalledWith("leftover");
   });
 
