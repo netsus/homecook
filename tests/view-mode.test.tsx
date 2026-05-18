@@ -73,6 +73,9 @@ describe("view mode contract", () => {
 
     render(<ViewportProbe />);
 
+    expect(screen.getByTestId("desktop").textContent).toBe("false");
+    expect(screen.getByTestId("mobile").textContent).toBe("true");
+
     await waitFor(() => {
       expect(screen.getByTestId("desktop").textContent).toBe("false");
       expect(screen.getByTestId("mobile").textContent).toBe("true");
@@ -84,9 +87,21 @@ describe("view mode contract", () => {
 
     render(<ViewportProbe />);
 
+    expect(screen.getByTestId("desktop").textContent).toBe("true");
+    expect(screen.getByTestId("mobile").textContent).toBe("false");
+
     await waitFor(() => {
       expect(screen.getByTestId("desktop").textContent).toBe("true");
       expect(screen.getByTestId("mobile").textContent).toBe("false");
     });
+  });
+
+  it("falls back to app view before matchMedia is available", () => {
+    Reflect.deleteProperty(window, "matchMedia");
+
+    render(<ViewportProbe />);
+
+    expect(screen.getByTestId("desktop").textContent).toBe("false");
+    expect(screen.getByTestId("mobile").textContent).toBe("true");
   });
 });

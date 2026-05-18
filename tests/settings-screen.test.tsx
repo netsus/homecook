@@ -58,12 +58,17 @@ vi.mock("next/link", () => ({
   default: ({
     children,
     href,
+    prefetch: _prefetch,
     ...rest
-  }: React.PropsWithChildren<{ href: string }>) => (
-    <a href={href} {...rest}>
-      {children}
-    </a>
-  ),
+  }: React.PropsWithChildren<{ href: string; prefetch?: boolean }>) => {
+    void _prefetch;
+
+    return (
+      <a href={href} {...rest}>
+        {children}
+      </a>
+    );
+  },
 }));
 
 vi.mock("@/components/shared/content-state", () => ({
@@ -159,8 +164,25 @@ const SETTINGS_MOBILE_BASE_PROPS = {
   onNicknameInputChange: vi.fn(),
 };
 
+function installMatchMedia(matchesAppView: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(max-width: 1023px)" ? matchesAppView : !matchesAppView,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe("SettingsScreen", () => {
   beforeEach(() => {
+    installMatchMedia(false);
     mockFetchUserProfile.mockReset();
     mockUpdateSettings.mockReset();
     mockUpdateNickname.mockReset();
@@ -172,6 +194,7 @@ describe("SettingsScreen", () => {
 
   afterEach(() => {
     cleanup();
+    Reflect.deleteProperty(window, "matchMedia");
   });
 
   // --- AppBar ---

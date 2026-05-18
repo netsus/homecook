@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
-import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
+import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
 import {
   completeShoppingList,
@@ -45,23 +45,8 @@ export function ShoppingDetailScreen({
   const [isCompleting, setIsCompleting] = useState(false);
   const [completeToast, setCompleteToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [showPantryPopup, setShowPantryPopup] = useState(false);
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const isMobileViewport = useIsMobileViewport();
   const shareToastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      typeof window.matchMedia !== "function"
-    ) {
-      return;
-    }
-
-    const query = window.matchMedia(APP_VIEW_MEDIA_QUERY);
-    const syncViewport = () => setIsMobileViewport(query.matches);
-    syncViewport();
-    query.addEventListener("change", syncViewport);
-    return () => query.removeEventListener("change", syncViewport);
-  }, []);
 
   const clearShareToastTimer = useCallback(() => {
     if (shareToastTimeoutRef.current) {

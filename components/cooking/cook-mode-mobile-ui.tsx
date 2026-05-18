@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 
-import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
 import type {
   CookingModeIngredient,
   CookingModeRecipe,
   CookingModeStep,
 } from "@/types/cooking";
+
+export { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 
 type MobileCookModeVariant = "planner" | "standalone";
 
@@ -72,27 +73,6 @@ const METHOD_ALIASES: Record<string, keyof typeof METHOD_VISUALS> = {
   unassigned: "prep",
   yellow: "fry",
 };
-
-export function useIsMobileViewport() {
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
-
-  useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      typeof window.matchMedia !== "function"
-    ) {
-      return;
-    }
-
-    const query = window.matchMedia(APP_VIEW_MEDIA_QUERY);
-    const syncViewport = () => setIsMobileViewport(query.matches);
-    syncViewport();
-    query.addEventListener("change", syncViewport);
-    return () => query.removeEventListener("change", syncViewport);
-  }, []);
-
-  return isMobileViewport;
-}
 
 export function MobileCookModeView({
   recipe,

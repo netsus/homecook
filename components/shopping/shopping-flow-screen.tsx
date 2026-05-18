@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
+import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
 import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
 import {
@@ -265,24 +266,9 @@ export function ShoppingFlowScreen({
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const isMobileViewport = useIsMobileViewport();
   const [showPantryPopup, setShowPantryPopup] = useState(false);
   const [reviewToast, setReviewToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      typeof window.matchMedia !== "function"
-    ) {
-      return;
-    }
-
-    const query = window.matchMedia(APP_VIEW_MEDIA_QUERY);
-    const syncViewport = () => setIsMobileViewport(query.matches);
-    syncViewport();
-    query.addEventListener("change", syncViewport);
-    return () => query.removeEventListener("change", syncViewport);
-  }, []);
 
   const loadPreview = useCallback(async () => {
     setViewState("loading");

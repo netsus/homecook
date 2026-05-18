@@ -157,6 +157,7 @@ describe("CookModeScreen", () => {
     cancelCookingSession.mockReset();
     isCookingApiError.mockClear();
     mockRouterPush.mockReset();
+    installMatchMedia(false);
   });
 
   afterEach(async () => {
