@@ -113,6 +113,19 @@ describe("MenuAddScreen", () => {
     expect(document.activeElement).toBe(screen.getByLabelText("레시피 검색"));
   });
 
+  it("uses a larger left-tilted magnifier in the mobile recipe search field", async () => {
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-search"));
+
+    const icon = screen.getByTestId("recipe-search-submit-icon");
+    const iconClass = icon.getAttribute("class") ?? "";
+    expect(iconClass).toContain("h-6");
+    expect(iconClass).toContain("w-6");
+    expect(iconClass).toContain("rotate-[-12deg]");
+  });
+
   it("shows the mobile target context instead of the legacy secondary heading (Wave1)", () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 

@@ -13,7 +13,14 @@ const readE2EAuthOverride = vi.fn();
 const fetchMeals = vi.fn();
 const updateMealServings = vi.fn();
 const deleteMeal = vi.fn();
+const createCookingSession = vi.fn();
 const isMealApiError = vi.fn(
+  (error: unknown): error is Error & { status: number; code: string } =>
+    Boolean(error) &&
+    typeof error === "object" &&
+    "status" in (error as Record<string, unknown>),
+);
+const isCookingApiError = vi.fn(
   (error: unknown): error is Error & { status: number; code: string } =>
     Boolean(error) &&
     typeof error === "object" &&
@@ -35,6 +42,11 @@ vi.mock("@/lib/api/meal", () => ({
   updateMealServings: (...args: unknown[]) => updateMealServings(...args),
   deleteMeal: (...args: unknown[]) => deleteMeal(...args),
   isMealApiError: (error: unknown) => isMealApiError(error),
+}));
+
+vi.mock("@/lib/api/cooking", () => ({
+  createCookingSession: (...args: unknown[]) => createCookingSession(...args),
+  isCookingApiError: (error: unknown) => isCookingApiError(error),
 }));
 
 vi.mock("@/lib/supabase/env", () => ({
@@ -112,12 +124,19 @@ describe("MealScreen", () => {
     fetchMeals.mockReset();
     updateMealServings.mockReset();
     deleteMeal.mockReset();
+    createCookingSession.mockReset();
     mockRouterBack.mockReset();
     mockRouterPush.mockReset();
     mockRouterReplace.mockReset();
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     isMealApiError.mockImplementation(
+      (error: unknown): error is Error & { status: number; code: string } =>
+        Boolean(error) &&
+        typeof error === "object" &&
+        "status" in (error as Record<string, unknown>),
+    );
+    isCookingApiError.mockImplementation(
       (error: unknown): error is Error & { status: number; code: string } =>
         Boolean(error) &&
         typeof error === "object" &&
@@ -268,6 +287,60 @@ describe("MealScreen", () => {
     await user.click(screen.getByRole("button", { name: "뒤로 가기" }));
     expect(mockRouterReplace).toHaveBeenCalledWith("/planner");
     expect(mockRouterBack).not.toHaveBeenCalled();
+  });
+
+  it("starts a planner cooking session for a shopping_done meal and returns to the meal screen", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({
+      items: [buildMeal({ id: "meal-1", planned_servings: 2, status: "shopping_done" })],
+    });
+    createCookingSession.mockResolvedValue({
+      session_id: "session-abc",
+      recipe_id: "recipe-1",
+      status: "in_progress",
+      cooking_servings: 2,
+      meals: [{ meal_id: "meal-1", is_cooked: false }],
+    });
+
+    const user = userEvent.setup();
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("김치찌개")).toBeTruthy();
+    });
+
+    await user.click(screen.getByRole("button", { name: "김치찌개 요리하기" }));
+
+    await waitFor(() => {
+      expect(createCookingSession).toHaveBeenCalledWith({
+        recipe_id: "recipe-1",
+        meal_ids: ["meal-1"],
+        cooking_servings: 2,
+      });
+    });
+
+    const pushedHref = mockRouterPush.mock.calls.at(-1)?.[0] as string;
+    const pushedUrl = new URL(pushedHref, "http://homecook.local");
+    expect(pushedUrl.pathname).toBe("/cooking/sessions/session-abc/cook-mode");
+    expect(pushedUrl.searchParams.get("returnTo")).toBe(
+      `/planner/${DEFAULT_PROPS.planDate}/${DEFAULT_PROPS.columnId}?slot=${encodeURIComponent(DEFAULT_PROPS.slotName)}`,
+    );
+  });
+
+  it("does not show direct cook action for registered meals", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({
+      items: [buildMeal({ status: "registered" })],
+    });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("김치찌개")).toBeTruthy();
+    });
+
+    expect(screen.queryByRole("button", { name: "김치찌개 요리하기" })).toBeNull();
+    expect(createCookingSession).not.toHaveBeenCalled();
   });
 
   // ── Stepper — registered (no modal) ────────────────────────────────────

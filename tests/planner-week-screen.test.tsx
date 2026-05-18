@@ -362,7 +362,7 @@ describe("planner week screen", () => {
     expect(within(breakfastRow as HTMLElement).getByText("2인분")).toBeTruthy();
     // Wave1: status badge removed — no "등록" text
     expect(within(breakfastRow as HTMLElement).queryByText("등록")).toBeNull();
-    expect(dinnerButton.textContent?.replace(/\s+/g, " ").trim()).toBe("+추가");
+    expect(dinnerButton.textContent?.replace(/\s+/g, " ").trim()).toBe("+");
   });
 
   it("marks leftover meals with an explicit leftover chip", async () => {
@@ -609,7 +609,8 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
-    expect(screen.getAllByText("추가").length).toBeGreaterThanOrEqual(1);
+    const firstEmptySlot = screen.getByRole("button", { name: "3/24 아침 식사 추가" });
+    expect(firstEmptySlot.textContent?.trim()).toBe("+");
     expect(screen.queryByPlaceholderText("새 끼니 컬럼 이름")).toBeNull();
   });
 
@@ -632,6 +633,9 @@ describe("planner week screen", () => {
     });
     expect(screen.getByTestId("planner-day-card-2026-03-26").className).toContain(
       "border-2",
+    );
+    expect(screen.getByTestId("planner-day-card-2026-03-26").className).toContain(
+      "scroll-mt",
     );
   });
 
