@@ -13,6 +13,7 @@ import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import { createManualRecipe } from "@/lib/api/manual-recipe";
 import { createMealSafe } from "@/lib/api/meal";
+import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 import {
   WebButton,
   WebCard,
@@ -63,6 +64,31 @@ function formatTargetLabel(planDate: string, slotName: string) {
 // Temporary ingredient type for UI state (before save)
 interface TempIngredient extends ManualRecipeIngredientInput {
   tempId: string;
+}
+
+function formatIngredientDisplayText(ingredient: ManualRecipeIngredientInput) {
+  if (ingredient.ingredient_type !== "QUANT") {
+    return `${ingredient.standard_name} 약간`;
+  }
+
+  const amount = ingredient.amount ?? 0;
+  const unit = ingredient.unit ?? "g";
+  return `${ingredient.standard_name} ${amount}${unit}`;
+}
+
+function normalizeIngredient(ingredient: TempIngredient): TempIngredient {
+  return {
+    ...ingredient,
+    ingredient_type: "QUANT",
+    amount: ingredient.amount ?? 0,
+    unit: ingredient.unit ?? "g",
+    display_text: formatIngredientDisplayText({
+      ...ingredient,
+      ingredient_type: "QUANT",
+      amount: ingredient.amount ?? 0,
+      unit: ingredient.unit ?? "g",
+    }),
+  };
 }
 
 // Temporary step type for UI state (before save)
@@ -154,10 +180,14 @@ function AppBar({ onBack, onSave, canSave, isSaving }: AppBarProps) {
 
 interface IngredientListProps {
   ingredients: TempIngredient[];
+  onChange: (
+    tempId: string,
+    patch: Pick<ManualRecipeIngredientInput, "amount" | "unit">,
+  ) => void;
   onRemove: (tempId: string) => void;
 }
 
-function IngredientList({ ingredients, onRemove }: IngredientListProps) {
+function IngredientList({ ingredients, onChange, onRemove }: IngredientListProps) {
   if (ingredients.length === 0) {
     return (
       <div className="mb-3 rounded-[10px] bg-[#F8F9FA] px-4 py-3 text-[14px] font-medium leading-[1.5] text-[#868E96]">
@@ -171,26 +201,68 @@ function IngredientList({ ingredients, onRemove }: IngredientListProps) {
       {ingredients.map((ing) => (
         <div
           key={ing.tempId}
-          className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3"
+          className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3"
         >
-          <div className="min-w-0 flex-1">
-            <div className="text-base text-[var(--foreground)]">
-              {ing.standard_name}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="text-base font-semibold text-[var(--foreground)]">
+                {ing.standard_name}
+              </div>
+              <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                <input
+                  aria-label={`${ing.standard_name} 수량`}
+                  className="h-10 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 text-right text-base font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
+                  inputMode="decimal"
+                  min={0}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    onChange(ing.tempId, {
+                      amount: value === "" ? 0 : Number(value),
+                      unit: ing.unit ?? "g",
+                    });
+                  }}
+                  type="number"
+                  value={ing.amount ?? 0}
+                />
+                <div
+                  aria-label={`${ing.standard_name} 단위`}
+                  className="flex shrink-0 gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-1"
+                  role="group"
+                >
+                  {COOKING_UNIT_OPTIONS.map((option) => (
+                    <button
+                      aria-label={`${ing.standard_name} ${option}`}
+                      aria-pressed={(ing.unit ?? "g") === option}
+                      className={[
+                        "h-9 min-w-10 rounded-[var(--radius-sm)] px-2 text-sm font-semibold transition",
+                        (ing.unit ?? "g") === option
+                          ? "bg-[var(--brand)] text-white"
+                          : "text-[var(--text-2)] hover:bg-[var(--surface)]",
+                      ].join(" ")}
+                      key={option}
+                      onClick={() =>
+                        onChange(ing.tempId, {
+                          amount: ing.amount ?? 0,
+                          unit: option,
+                        })
+                      }
+                      type="button"
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div className="text-sm text-[var(--text-2)]">
-              {ing.ingredient_type === "QUANT"
-                ? `${ing.amount}${ing.unit}`
-                : "약간"}
-            </div>
+            <button
+              aria-label={`${ing.standard_name} 삭제`}
+              className="flex h-11 w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
+              onClick={() => onRemove(ing.tempId)}
+              type="button"
+            >
+              ×
+            </button>
           </div>
-          <button
-            aria-label={`${ing.standard_name} 삭제`}
-            className="flex h-11 w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
-            onClick={() => onRemove(ing.tempId)}
-            type="button"
-          >
-            ×
-          </button>
         </div>
       ))}
     </div>
@@ -207,24 +279,8 @@ interface StepListProps {
 function StepList({ steps, onRemove }: StepListProps) {
   if (steps.length === 0) {
     return (
-      <div className="rounded-[10px] border-l-4 border-[#ADB5BD] bg-[#F8F9FA] px-4 py-3">
-        <div className="mb-2 flex items-center gap-3">
-          <span className="text-[12px] font-semibold leading-[1.3] text-[#868E96]">
-            STEP 1
-          </span>
-          <div
-            aria-hidden="true"
-            className="rounded-[6px] border border-[#ADB5BD] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#495057]"
-          >
-            준비
-          </div>
-        </div>
-        <div
-          aria-hidden="true"
-          className="min-h-[56px] rounded-[8px] border border-[#DEE2E6] bg-white px-3 py-3 text-[14px] font-normal text-[#868E96]"
-        >
-          이 단계에서 무엇을 하나요?
-        </div>
+      <div className="rounded-[10px] bg-[#F8F9FA] px-4 py-3 text-[14px] font-medium leading-[1.5] text-[#868E96]">
+        조리 과정을 추가해주세요.
       </div>
     );
   }
@@ -562,13 +618,35 @@ export function ManualRecipeCreateScreen({
   }, [appReturn]);
 
   const handleAddIngredient = useCallback(
-    (ingredient: Omit<TempIngredient, "tempId">) => {
+    (newIngredients: ManualRecipeIngredientInput[]) => {
       setIngredients((prev) => [
         ...prev,
-        { ...ingredient, tempId: `temp-ing-${Date.now()}` },
+        ...newIngredients.map((ingredient, index) =>
+          normalizeIngredient({
+            ...ingredient,
+            sort_order: prev.length + index + 1,
+            tempId: `temp-ing-${Date.now()}-${index}`,
+          }),
+        ),
       ]);
     },
     []
+  );
+
+  const handleUpdateIngredient = useCallback(
+    (
+      tempId: string,
+      patch: Pick<ManualRecipeIngredientInput, "amount" | "unit">,
+    ) => {
+      setIngredients((prev) =>
+        prev.map((ingredient) =>
+          ingredient.tempId === tempId
+            ? normalizeIngredient({ ...ingredient, ...patch })
+            : ingredient,
+        ),
+      );
+    },
+    [],
   );
 
   const handleRemoveIngredient = useCallback((tempId: string) => {
@@ -767,6 +845,7 @@ export function ManualRecipeCreateScreen({
               </div>
               <IngredientList
                 ingredients={ingredients}
+                onChange={handleUpdateIngredient}
                 onRemove={handleRemoveIngredient}
               />
               <WebButton
@@ -902,6 +981,7 @@ export function ManualRecipeCreateScreen({
             </div>
             <IngredientList
               ingredients={ingredients}
+              onChange={handleUpdateIngredient}
               onRemove={handleRemoveIngredient}
             />
             <button

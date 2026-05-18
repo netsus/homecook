@@ -23,6 +23,7 @@ import {
   registerYoutubeRecipe,
 } from "@/lib/api/youtube-import";
 import { createMealSafe } from "@/lib/api/meal";
+import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 import type {
   CookingMethodItem,
   ManualRecipeIngredientInput,
@@ -56,6 +57,31 @@ type ModalMode =
 interface TempIngredient extends ManualRecipeIngredientInput {
   tempId: string;
   confidence: number;
+}
+
+function formatIngredientDisplayText(ingredient: ManualRecipeIngredientInput) {
+  if (ingredient.ingredient_type !== "QUANT") {
+    return `${ingredient.standard_name} 약간`;
+  }
+
+  const amount = ingredient.amount ?? 0;
+  const unit = ingredient.unit ?? "g";
+  return `${ingredient.standard_name} ${amount}${unit}`;
+}
+
+function normalizeIngredient(ingredient: TempIngredient): TempIngredient {
+  return {
+    ...ingredient,
+    ingredient_type: "QUANT",
+    amount: ingredient.amount ?? 0,
+    unit: ingredient.unit ?? "g",
+    display_text: formatIngredientDisplayText({
+      ...ingredient,
+      ingredient_type: "QUANT",
+      amount: ingredient.amount ?? 0,
+      unit: ingredient.unit ?? "g",
+    }),
+  };
 }
 
 interface TempStep extends Omit<ManualRecipeStepInput, "cooking_method_id"> {
@@ -440,6 +466,10 @@ interface ReviewStepProps {
   extractionMethods: string[];
   ingredients: TempIngredient[];
   steps: TempStep[];
+  onUpdateIngredient: (
+    tempId: string,
+    patch: Pick<ManualRecipeIngredientInput, "amount" | "unit">,
+  ) => void;
   onRemoveIngredient: (tempId: string) => void;
   onRemoveStep: (tempId: string) => void;
   onAddIngredient: () => void;
@@ -454,6 +484,7 @@ function ReviewStep({
   extractionMethods,
   ingredients,
   steps,
+  onUpdateIngredient,
   onRemoveIngredient,
   onRemoveStep,
   onAddIngredient,
@@ -546,27 +577,70 @@ function ReviewStep({
               <div
                 key={ing.tempId}
                 className={[
-                  "flex items-center px-4 py-3",
+                  "px-4 py-3",
                   idx > 0 ? "border-t border-[var(--line)]" : "",
                 ].join(" ")}
               >
-                <div className="min-w-0 flex-1">
-                  <span className="text-base text-[var(--foreground)]">{ing.standard_name}</span>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-base font-semibold text-[var(--foreground)]">
+                      {ing.standard_name}
+                    </span>
+                    <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                      <input
+                        aria-label={`${ing.standard_name} 수량`}
+                        className="h-10 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 text-right text-base font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
+                        inputMode="decimal"
+                        min={0}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          onUpdateIngredient(ing.tempId, {
+                            amount: value === "" ? 0 : Number(value),
+                            unit: ing.unit ?? "g",
+                          });
+                        }}
+                        type="number"
+                        value={ing.amount ?? 0}
+                      />
+                      <div
+                        aria-label={`${ing.standard_name} 단위`}
+                        className="flex shrink-0 gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-1"
+                        role="group"
+                      >
+                        {COOKING_UNIT_OPTIONS.map((option) => (
+                          <button
+                            aria-label={`${ing.standard_name} ${option}`}
+                            aria-pressed={(ing.unit ?? "g") === option}
+                            className={[
+                              "h-9 min-w-10 rounded-[var(--radius-sm)] px-2 text-sm font-semibold transition",
+                              (ing.unit ?? "g") === option
+                                ? "bg-[var(--brand)] text-white"
+                                : "text-[var(--text-2)] hover:bg-[var(--surface)]",
+                            ].join(" ")}
+                            key={option}
+                            onClick={() =>
+                              onUpdateIngredient(ing.tempId, {
+                                amount: ing.amount ?? 0,
+                                unit: option,
+                              })
+                            }
+                            type="button"
+                          >
+                            {option}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    aria-label={`${ing.standard_name} 삭제`}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
+                    onClick={() => onRemoveIngredient(ing.tempId)}
+                    type="button"
+                  >
+                    ×
+                  </button>
                 </div>
-                <span className={[
-                  "shrink-0 text-sm",
-                  ing.ingredient_type === "TO_TASTE" ? "text-[var(--text-3)]" : "text-[var(--text-2)]",
-                ].join(" ")}>
-                  {ing.ingredient_type === "QUANT" ? `${ing.amount}${ing.unit}` : "약간"}
-                </span>
-                <button
-                  aria-label={`${ing.standard_name} 삭제`}
-                  className="ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
-                  onClick={() => onRemoveIngredient(ing.tempId)}
-                  type="button"
-                >
-                  ×
-                </button>
               </div>
             ))}
           </div>
@@ -1098,12 +1172,35 @@ export function YoutubeImportScreen({
 
   // ─── Step 3 handlers ───────────────────────────────────────────────
 
-  const handleAddIngredient = useCallback((ingredient: Omit<TempIngredient, "tempId">) => {
+  const handleAddIngredient = useCallback((newIngredients: ManualRecipeIngredientInput[]) => {
     setIngredients((prev) => [
       ...prev,
-      { ...ingredient, tempId: `temp-ing-${Date.now()}` },
+      ...newIngredients.map((ingredient, index) =>
+        normalizeIngredient({
+          ...ingredient,
+          confidence: 1,
+          sort_order: prev.length + index + 1,
+          tempId: `temp-ing-${Date.now()}-${index}`,
+        }),
+      ),
     ]);
   }, []);
+
+  const handleUpdateIngredient = useCallback(
+    (
+      tempId: string,
+      patch: Pick<ManualRecipeIngredientInput, "amount" | "unit">,
+    ) => {
+      setIngredients((prev) =>
+        prev.map((ingredient) =>
+          ingredient.tempId === tempId
+            ? normalizeIngredient({ ...ingredient, ...patch })
+            : ingredient,
+        ),
+      );
+    },
+    [],
+  );
 
   const handleRemoveIngredient = useCallback((tempId: string) => {
     setIngredients((prev) => prev.filter((ing) => ing.tempId !== tempId));
@@ -1437,6 +1534,7 @@ export function YoutubeImportScreen({
                   extractionMethods={extractionMethods}
                   ingredients={ingredients}
                   steps={steps}
+                  onUpdateIngredient={handleUpdateIngredient}
                   onRemoveIngredient={handleRemoveIngredient}
                   onRemoveStep={handleRemoveStep}
                   onAddIngredient={() => setModalMode("ingredient-add")}
@@ -1471,9 +1569,7 @@ export function YoutubeImportScreen({
         {modalMode === "ingredient-add" && (
           <RecipeIngredientAddModal
             onClose={() => setModalMode("none")}
-            onAdd={(ingredient) =>
-              handleAddIngredient({ ...ingredient, confidence: 1 })
-            }
+            onAdd={handleAddIngredient}
           />
         )}
         {modalMode === "step-add" && (
@@ -1571,6 +1667,7 @@ export function YoutubeImportScreen({
             extractionMethods={extractionMethods}
             ingredients={ingredients}
             steps={steps}
+            onUpdateIngredient={handleUpdateIngredient}
             onRemoveIngredient={handleRemoveIngredient}
             onRemoveStep={handleRemoveStep}
             onAddIngredient={() => setModalMode("ingredient-add")}
@@ -1593,9 +1690,7 @@ export function YoutubeImportScreen({
       {modalMode === "ingredient-add" && (
         <RecipeIngredientAddModal
           onClose={() => setModalMode("none")}
-          onAdd={(ingredient) =>
-            handleAddIngredient({ ...ingredient, confidence: 1 })
-          }
+          onAdd={handleAddIngredient}
         />
       )}
       {modalMode === "step-add" && (

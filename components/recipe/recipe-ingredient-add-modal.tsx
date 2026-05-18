@@ -24,7 +24,6 @@ import {
   ALL_INGREDIENT_CATEGORY,
   INGREDIENT_CATEGORY_OPTIONS,
 } from "@/lib/ingredient-categories";
-import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 import type {
   IngredientItem,
   ManualRecipeIngredientInput,
@@ -34,24 +33,39 @@ type IngredientListState = "loading" | "ready" | "empty" | "error";
 
 interface RecipeIngredientAddModalProps {
   onClose: () => void;
-  onAdd: (ingredient: ManualRecipeIngredientInput) => void;
+  onAdd: (ingredients: ManualRecipeIngredientInput[]) => void;
+}
+
+const DEFAULT_INGREDIENT_AMOUNT = 100;
+const DEFAULT_INGREDIENT_UNIT = "g";
+
+function buildIngredientInput(
+  ingredient: IngredientItem,
+  sortOrder: number,
+): ManualRecipeIngredientInput {
+  return {
+    ingredient_id: ingredient.id,
+    standard_name: ingredient.standard_name,
+    ingredient_type: "QUANT",
+    amount: DEFAULT_INGREDIENT_AMOUNT,
+    unit: DEFAULT_INGREDIENT_UNIT,
+    scalable: true,
+    display_text: `${ingredient.standard_name} ${DEFAULT_INGREDIENT_AMOUNT}${DEFAULT_INGREDIENT_UNIT}`,
+    sort_order: sortOrder,
+  };
 }
 
 export function RecipeIngredientAddModal({
   onClose,
   onAdd,
 }: RecipeIngredientAddModalProps) {
-  const [selectedIngredient, setSelectedIngredient] =
-    useState<IngredientItem | null>(null);
-  const [amount, setAmount] = useState("100");
-  const [unit, setUnit] = useState("g");
+  const [selectedIngredients, setSelectedIngredients] = useState<
+    IngredientItem[]
+  >([]);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>(
     ALL_INGREDIENT_CATEGORY,
-  );
-  const [addedIngredientLabels, setAddedIngredientLabels] = useState<string[]>(
-    [],
   );
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
   const [listState, setListState] = useState<IngredientListState>("loading");
@@ -106,49 +120,35 @@ export function RecipeIngredientAddModal({
     };
   }, [activeCategory, debouncedQuery]);
 
-  const parsedAmount = Number.parseFloat(amount);
-  const trimmedUnit = unit.trim();
-  const isAmountValid = !Number.isNaN(parsedAmount) && parsedAmount > 0;
-  const isUnitValid = (COOKING_UNIT_OPTIONS as readonly string[]).includes(
-    trimmedUnit,
-  );
-  const canAddIngredient =
-    Boolean(selectedIngredient) && isAmountValid && isUnitValid;
+  const canAddIngredient = selectedIngredients.length > 0;
 
   const helperMessage = useMemo(() => {
-    if (!selectedIngredient) {
-      if (addedIngredientLabels.length > 0) {
-        return `${addedIngredientLabels.length}개 추가됨. 다음 재료를 선택하거나 완료를 눌러주세요.`;
+    if (selectedIngredients.length === 0) {
+      return "재료만 먼저 선택해주세요. 수량과 단위는 다음 화면에서 입력해요.";
+    }
+
+    return `${selectedIngredients.length}개 선택됨. 완료하면 본문 재료 목록에 추가돼요.`;
+  }, [selectedIngredients.length]);
+
+  const toggleIngredient = (ingredient: IngredientItem) => {
+    setSelectedIngredients((current) => {
+      if (current.some((item) => item.id === ingredient.id)) {
+        return current.filter((item) => item.id !== ingredient.id);
       }
 
-      return "재료를 선택한 뒤 수량과 단위를 확인해주세요.";
-    }
-
-    if (!isAmountValid) {
-      return "0보다 큰 수량이 필요해요.";
-    }
-
-    return "";
-  }, [addedIngredientLabels.length, isAmountValid, selectedIngredient]);
+      return [...current, ingredient];
+    });
+  };
 
   const handleAdd = () => {
-    if (!selectedIngredient || !canAddIngredient) return;
-    const displayText = `${selectedIngredient.standard_name} ${amount.trim()}${trimmedUnit}`;
+    if (!canAddIngredient) return;
 
-    onAdd({
-      ingredient_id: selectedIngredient.id,
-      standard_name: selectedIngredient.standard_name,
-      ingredient_type: "QUANT",
-      amount: parsedAmount,
-      unit: trimmedUnit,
-      scalable: true,
-      display_text: displayText,
-      sort_order: 0,
-    });
-    setAddedIngredientLabels((current) => [...current, displayText]);
-    setSelectedIngredient(null);
-    setAmount("100");
-    setUnit("g");
+    onAdd(
+      selectedIngredients.map((ingredient, index) =>
+        buildIngredientInput(ingredient, index + 1),
+      ),
+    );
+    onClose();
   };
 
   if (isDesktopViewport) {
@@ -162,7 +162,7 @@ export function RecipeIngredientAddModal({
           <WebDialogHeader>
             <div>
               <WebDialogTitle id="ingredient-picker-title">재료 추가</WebDialogTitle>
-              <p className="web-modal-copy">재료를 선택하고 수량과 단위를 정해요</p>
+              <p className="web-modal-copy">재료를 고르고 수량은 본문에서 입력해요</p>
             </div>
             <button
               aria-label="닫기"
@@ -223,20 +223,21 @@ export function RecipeIngredientAddModal({
             {listState === "ready" ? (
               <ul className="web-ingredient-grid">
                 {ingredients.map((ingredient) => {
-                  const isSelected = selectedIngredient?.id === ingredient.id;
+                  const isSelected = selectedIngredients.some(
+                    (item) => item.id === ingredient.id,
+                  );
 
                   return (
                     <li key={ingredient.id}>
                       <button
                         aria-pressed={isSelected}
                         className={[
-                          "web-ingredient-cell",
+                          "web-ingredient-cell inline-flex",
                           isSelected ? "web-ingredient-cell-selected" : "",
                         ].join(" ")}
-                        onClick={() => setSelectedIngredient(ingredient)}
+                        onClick={() => toggleIngredient(ingredient)}
                         type="button"
                       >
-                        <span aria-hidden="true">🥬</span>
                         <span>{ingredient.standard_name}</span>
                       </button>
                     </li>
@@ -246,62 +247,24 @@ export function RecipeIngredientAddModal({
             ) : null}
 
             <div className="web-ingredient-editor" data-testid="ingredient-editor">
-              {addedIngredientLabels.length > 0 ? (
+              {selectedIngredients.length > 0 ? (
                 <div className="web-ingredient-added" data-testid="added-ingredient-chips">
-                  {addedIngredientLabels.map((label, index) => (
-                    <span key={`${label}-${index}`}>{label}</span>
+                  {selectedIngredients.map((ingredient) => (
+                    <span key={ingredient.id}>{ingredient.standard_name}</span>
                   ))}
                 </div>
               ) : null}
 
-              {selectedIngredient ? (
-                <div className="web-ingredient-selected">
-                  <span>{selectedIngredient.standard_name}</span>
-                  <input
-                    aria-invalid={!isAmountValid}
-                    aria-label="수량"
-                    inputMode="decimal"
-                    onChange={(event) => setAmount(event.target.value)}
-                    placeholder="수량"
-                    type="number"
-                    value={amount}
-                  />
-                  <div aria-label="단위" className="web-ingredient-units" role="group">
-                    {COOKING_UNIT_OPTIONS.map((option) => (
-                      <button
-                        aria-pressed={unit === option}
-                        className={unit === option ? "active" : ""}
-                        key={option}
-                        onClick={() => setUnit(option)}
-                        type="button"
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                  <WebButton
-                    disabled={!canAddIngredient}
-                    onClick={handleAdd}
-                    size="sm"
-                  >
-                    선택 재료 추가
-                  </WebButton>
-                </div>
-              ) : null}
-
-              <p
-                className="web-modal-footer-note"
-                role={selectedIngredient && !canAddIngredient ? "alert" : undefined}
-              >
-                {helperMessage}
-              </p>
+              <p className="web-modal-footer-note">{helperMessage}</p>
             </div>
           </WebDialogBody>
           <WebDialogFooter>
             <span className="web-modal-footer-note">
-              {addedIngredientLabels.length}개 추가됨
+              {selectedIngredients.length}개 선택됨
             </span>
-            <WebButton onClick={onClose}>완료</WebButton>
+            <WebButton disabled={!canAddIngredient} onClick={handleAdd}>
+              선택한 재료 {selectedIngredients.length}개 추가
+            </WebButton>
           </WebDialogFooter>
         </WebDialog>
       </WebModal>
@@ -317,10 +280,15 @@ export function RecipeIngredientAddModal({
         aria-modal="true"
         className="flex h-[90dvh] max-h-[44rem] w-full max-w-2xl flex-col rounded-t-[20px] bg-[var(--surface)] shadow-[var(--shadow-3)] sm:rounded-[20px]"
         onClick={(event) => event.stopPropagation()}
+        aria-labelledby="mobile-ingredient-picker-title"
         role="dialog"
       >
         <div className="border-b border-[var(--line)] px-5 pb-3 pt-4">
-          <ModalHeader title="재료 추가" onClose={onClose} />
+          <ModalHeader
+            title="재료 추가"
+            titleId="mobile-ingredient-picker-title"
+            onClose={onClose}
+          />
           <label className="mt-4 flex min-h-11 items-center rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-4">
             <span className="visually-hidden">재료명으로 검색</span>
             <input
@@ -370,28 +338,27 @@ export function RecipeIngredientAddModal({
           ) : null}
 
           {listState === "ready" ? (
-            <ul className="grid gap-2 sm:grid-cols-2">
+            <ul className="flex flex-wrap gap-2">
               {ingredients.map((ingredient) => {
-                const isSelected = selectedIngredient?.id === ingredient.id;
+                const isSelected = selectedIngredients.some(
+                  (item) => item.id === ingredient.id,
+                );
 
                 return (
-                  <li key={ingredient.id}>
-                    <label
+                  <li className="contents" key={ingredient.id}>
+                    <button
+                      aria-pressed={isSelected}
                       className={[
-                        "flex min-h-11 cursor-pointer items-center rounded-[var(--radius-full)] border px-4 py-2 text-sm font-semibold transition",
+                        "inline-flex min-h-10 max-w-[12rem] items-center rounded-[var(--radius-full)] border px-4 py-2 text-sm font-semibold transition",
                         isSelected
                           ? "border-[var(--brand)] bg-[var(--brand)] text-white"
                           : "border-[var(--line)] bg-[var(--surface-fill)] text-[var(--foreground)] hover:bg-[var(--surface)]",
                       ].join(" ")}
+                      onClick={() => toggleIngredient(ingredient)}
+                      type="button"
                     >
-                      <input
-                        checked={isSelected}
-                        className="visually-hidden"
-                        onChange={() => setSelectedIngredient(ingredient)}
-                        type="radio"
-                      />
                       <span>{ingredient.standard_name}</span>
-                    </label>
+                    </button>
                   </li>
                 );
               })}
@@ -401,91 +368,36 @@ export function RecipeIngredientAddModal({
 
         <div className="border-t border-[var(--line)] px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="space-y-3" data-testid="ingredient-editor">
-            {addedIngredientLabels.length > 0 ? (
+            {selectedIngredients.length > 0 ? (
               <div
                 className="max-h-20 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] p-2"
                 data-testid="added-ingredient-chips"
               >
                 <div className="flex flex-wrap gap-2">
-                  {addedIngredientLabels.map((label, index) => (
+                  {selectedIngredients.map((ingredient) => (
                     <span
                       className="rounded-[var(--radius-sm)] bg-[var(--olive)] px-3 py-1.5 text-sm font-semibold text-white shadow-[var(--shadow-1)]"
-                      key={`${label}-${index}`}
+                      key={ingredient.id}
                     >
-                      {label}
+                      {ingredient.standard_name}
                     </span>
                   ))}
                 </div>
               </div>
             ) : null}
 
-            {selectedIngredient ? (
-              <div className="rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-3">
-                <div>
-                  <p className="mb-1.5 text-xs font-medium text-[var(--text-2)]">
-                    선택 재료
-                  </p>
-                  <span className="block min-h-10 w-full truncate rounded-[var(--radius-sm)] bg-[var(--surface)] px-3 py-2 text-sm font-semibold text-[var(--foreground)]">
-                    {selectedIngredient.standard_name}
-                  </span>
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                  <input
-                    aria-invalid={!isAmountValid}
-                    aria-label="수량"
-                    className="h-11 w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface)] px-3 text-center text-base font-semibold"
-                    inputMode="decimal"
-                    onChange={(event) => setAmount(event.target.value)}
-                    placeholder="수량"
-                    type="number"
-                    value={amount}
-                  />
-                  <div
-                    aria-label="단위"
-                    className="flex shrink-0 flex-wrap gap-1 rounded-[var(--radius-sm)] bg-[var(--surface)] p-1"
-                    role="group"
-                  >
-                    {COOKING_UNIT_OPTIONS.map((option) => (
-                      <button
-                        aria-pressed={unit === option}
-                        className={[
-                          "h-9 min-w-10 shrink-0 rounded-[var(--radius-sm)] border px-2 text-base font-semibold transition",
-                          unit === option
-                            ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                            : "border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)]",
-                        ].join(" ")}
-                        key={option}
-                        onClick={() => setUnit(option)}
-                        type="button"
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  aria-label="선택한 재료 추가"
-                  className="mt-3 flex h-11 w-full shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--olive)] text-base font-semibold leading-none text-white shadow-[var(--shadow-1)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-[var(--line)] disabled:text-[var(--muted)] disabled:shadow-none"
-                  disabled={!canAddIngredient}
-                  onClick={handleAdd}
-                  type="button"
-                >
-                  추가
-                </button>
-              </div>
-            ) : null}
-
-            <p
-              className="min-h-5 text-sm text-[var(--muted)]"
-              role={selectedIngredient && !canAddIngredient ? "alert" : undefined}
-            >
-              {helperMessage}
-            </p>
+            <p className="min-h-5 text-sm text-[var(--muted)]">{helperMessage}</p>
           </div>
 
           <div className="mt-4">
-            <Button fullWidth size="sm" variant="neutral" onClick={onClose}>
-              완료
+            <Button
+              disabled={!canAddIngredient}
+              fullWidth
+              size="sm"
+              variant="neutral"
+              onClick={handleAdd}
+            >
+              선택한 재료 {selectedIngredients.length}개 추가
             </Button>
           </div>
         </div>
