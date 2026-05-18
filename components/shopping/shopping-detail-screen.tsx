@@ -374,7 +374,6 @@ export function ShoppingDetailScreen({
 
         if (isShoppingApiError(error)) {
           if (error.status === 409) {
-            setReorderError("완료된 장보기 기록은 수정할 수 없어요");
             markListReadOnly("완료된 장보기 기록은 수정할 수 없어요");
           } else if (error.status === 401) {
             router.push(`/login?next=/shopping/lists/${listId}`);
@@ -608,13 +607,6 @@ export function ShoppingDetailScreen({
                 listDetail.date_range_end,
               )}
             </p>
-            <span className="sr-only">생성 {formatDate(listDetail.created_at)}</span>
-            <span className="sr-only">
-              {formatDateRange(
-                listDetail.date_range_start,
-                listDetail.date_range_end,
-              )}
-            </span>
           </div>
           <div className="web-shopping-detail-actions">
             <WebIconButton
