@@ -450,7 +450,9 @@ describe("RecipeBookDetailScreen", () => {
     );
 
     expect(await screen.findByText("된장찌개")).toBeTruthy();
-    expect(triggerIntersection).toBeTruthy();
+    await waitFor(() => {
+      expect(triggerIntersection).toBeTruthy();
+    });
 
     triggerIntersection?.();
 
