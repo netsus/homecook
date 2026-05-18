@@ -6,6 +6,18 @@ import { ModalFooterActions } from "@/components/shared/modal-footer-actions";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { SelectionChipRail } from "@/components/shared/selection-chip-rail";
+import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
+import {
+  WebButton,
+  WebChip,
+  WebDialog,
+  WebDialogBody,
+  WebDialogFooter,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebIconButton,
+  WebModal,
+} from "@/components/web";
 import type { PlannerColumnData } from "@/types/planner";
 
 export type PlannerAddSheetState = "loading-columns" | "ready" | "submitting" | "error";
@@ -66,6 +78,8 @@ export function PlannerAddSheet({
   recipePreview,
   variant = "default",
 }: PlannerAddSheetProps) {
+  const isDesktopViewport = useDesktopViewport();
+
   if (!isOpen) {
     return null;
   }
@@ -98,13 +112,15 @@ export function PlannerAddSheet({
 
   if (variant === "recipe-detail") {
     return (
-      <div
-        aria-labelledby="planner-add-sheet-title-mobile"
-        aria-modal="true"
-        className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 lg:items-center lg:p-4"
-        onClick={onClose}
-        role="dialog"
-      >
+      <>
+      {!isDesktopViewport ? (
+        <div
+          aria-labelledby="planner-add-sheet-title-mobile"
+          aria-modal="true"
+          className="fixed inset-0 z-40 flex items-end justify-center bg-black/40"
+          onClick={onClose}
+          role="dialog"
+        >
         <div
           className="max-h-[85vh] w-full overflow-y-auto rounded-t-[20px] bg-white pb-6 shadow-[0_-10px_30px_rgba(0,0,0,0.18)] lg:max-w-lg lg:rounded-[20px]"
           onClick={(event) => event.stopPropagation()}
@@ -302,7 +318,169 @@ export function PlannerAddSheet({
             </>
           )}
         </div>
-      </div>
+        </div>
+      ) : null}
+      {isDesktopViewport ? (
+        <WebModal onBackdropClick={onClose}>
+          <WebDialog
+            aria-labelledby="planner-add-sheet-title-desktop"
+            size="default"
+          >
+            <WebDialogHeader>
+              <div>
+                <WebDialogTitle id="planner-add-sheet-title-desktop">
+                  플래너에 추가
+                </WebDialogTitle>
+                <p className="web-modal-copy">날짜와 끼니를 선택해 주세요</p>
+              </div>
+              <WebIconButton
+                aria-label="닫기"
+                disabled={isSubmitting}
+                onClick={onClose}
+              >
+                <CloseIcon />
+              </WebIconButton>
+            </WebDialogHeader>
+
+            {isError ? (
+              <WebDialogBody>
+                <div className="web-modal-panel web-modal-panel-error">
+                  <p className="web-modal-copy">
+                    {errorMessage ?? "플래너 정보를 불러오지 못했어요."}
+                  </p>
+                  <WebButton className="mt-3" onClick={onRetryLoad} size="sm">
+                    다시 시도
+                  </WebButton>
+                </div>
+              </WebDialogBody>
+            ) : isLoading ? (
+              <WebDialogBody>
+                <div
+                  aria-label="플래너 정보 불러오는 중"
+                  className="flex flex-col gap-3"
+                >
+                  {[1, 2, 3].map((i) => (
+                    <div className="web-skeleton h-10" key={i} />
+                  ))}
+                </div>
+              </WebDialogBody>
+            ) : (
+              <>
+                <WebDialogBody>
+                  {recipePreview ? (
+                    <div className="web-modal-preview">
+                      <div
+                        aria-hidden="true"
+                        className="web-modal-preview-thumb"
+                        style={{ background: recipePreview.background }}
+                      >
+                        {recipePreview.emoji}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="web-modal-preview-title">
+                          {recipePreview.title}
+                        </div>
+                        <div className="web-modal-preview-meta">
+                          {recipePreview.meta}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <p className="web-modal-section-label">날짜</p>
+                  <div className="web-modal-chip-grid mb-5">
+                    {selectableDates.map((dateKey) => {
+                      const isSelected = dateKey === selectedDate;
+
+                      return (
+                        <WebChip
+                          active={isSelected}
+                          disabled={isSubmitting}
+                          key={dateKey}
+                          onClick={() => onSelectDate(dateKey)}
+                        >
+                          {formatWeekdayLabel(dateKey)} {formatDateLabel(dateKey)}
+                        </WebChip>
+                      );
+                    })}
+                  </div>
+
+                  <p className="web-modal-section-label">끼니</p>
+                  <div
+                    aria-label="끼니 선택"
+                    className="web-modal-chip-grid mb-5"
+                    role="group"
+                  >
+                    {columns.map((column) => {
+                      const isSelected = column.id === selectedColumnId;
+
+                      return (
+                        <WebChip
+                          active={isSelected}
+                          disabled={isSubmitting}
+                          key={column.id}
+                          onClick={() => onSelectColumn(column.id)}
+                        >
+                          {column.name}
+                        </WebChip>
+                      );
+                    })}
+                  </div>
+
+                  <p className="web-modal-section-label">인분</p>
+                  <div className="web-modal-stepper-row">
+                    <span className="web-modal-copy">몇 인분 계획할까요?</span>
+                    <div className="web-stepper">
+                      <button
+                        aria-label="인분 줄이기"
+                        disabled={isSubmitting || servings <= 1}
+                        onClick={() => onChangeServings(Math.max(1, servings - 1))}
+                        type="button"
+                      >
+                        -
+                      </button>
+                      <span>{servings}인분</span>
+                      <button
+                        aria-label="인분 늘리기"
+                        disabled={isSubmitting}
+                        onClick={() => onChangeServings(servings + 1)}
+                        type="button"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {errorMessage && sheetState === "ready" ? (
+                    <p className="web-modal-panel web-modal-panel-error mt-4">
+                      {errorMessage}
+                    </p>
+                  ) : null}
+                </WebDialogBody>
+                <WebDialogFooter>
+                  <span className="web-modal-footer-note">
+                    {selectedDateShort} {selectedColumnName}
+                  </span>
+                  <WebButton
+                    disabled={isSubmitting}
+                    onClick={onClose}
+                    variant="tertiary"
+                  >
+                    취소
+                  </WebButton>
+                  <WebButton
+                    disabled={!canSubmit || isSubmitting}
+                    onClick={onSubmit}
+                  >
+                    {isSubmitting ? "추가 중..." : "플래너에 추가"}
+                  </WebButton>
+                </WebDialogFooter>
+              </>
+            )}
+          </WebDialog>
+        </WebModal>
+      ) : null}
+      </>
     );
   }
 

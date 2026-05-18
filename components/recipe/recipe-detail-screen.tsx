@@ -14,6 +14,15 @@ import { SaveModal } from "@/components/recipe/save-modal";
 import { ContentState } from "@/components/shared/content-state";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  WebButton,
+  WebCard,
+  WebCardBody,
+  WebChip,
+  WebCTA,
+  WebShell,
+  WebTopNav,
+} from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
   clearPendingAction,
@@ -27,13 +36,18 @@ import {
 import { createMeal, isMealApiError } from "@/lib/api/meal";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { fetchPlanner } from "@/lib/api/planner";
-import { formatCount, formatScaledIngredient } from "@/lib/recipe";
+import {
+  formatCount,
+  formatRecipeSourceLabel,
+  formatScaledIngredient,
+} from "@/lib/recipe";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useAuthGateStore } from "@/stores/ui-store";
 import type {
   RecipeBookSummary,
   RecipeDetail,
+  RecipeIngredient,
   RecipeLikeData,
   RecipeSaveData,
   RecipeUserStatus,
@@ -72,6 +86,20 @@ const COOKING_METHOD_TINTS: Record<string, string> = {
   green: "color-mix(in srgb, var(--cook-mix) 16%, transparent)",
 };
 
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
+
+const WEB_RECIPE_FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1553163147-622ab57be1c7?w=900&h=675&fit=crop&q=80",
+] as const;
+
 export function RecipeDetailScreen({
   recipeId,
   authError,
@@ -101,6 +129,7 @@ export function RecipeDetailScreen({
   const [plannerColumns, setPlannerColumns] = useState<PlannerColumnData[]>([]);
   const [plannerAddError, setPlannerAddError] = useState<string | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const [selectedPlanDate, setSelectedPlanDate] = useState("");
   const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
   const [plannerServings, setPlannerServings] = useState(1);
@@ -739,10 +768,37 @@ export function RecipeDetailScreen({
     process.env.NODE_ENV !== "test" || isDesktopViewport;
   const shouldRenderAppView =
     process.env.NODE_ENV !== "test" || !isDesktopViewport;
+  const shouldRenderLegacyWebView = false;
 
   return (
     <>
       {shouldRenderWebView ? (
+        <div className="hidden lg:block">
+          <RecipeDetailWebView
+            cookCountLabel={desktopCookCountLabel}
+            isLikePending={likeRequestState === "pending"}
+            likeCountLabel={desktopLikeCountLabel}
+            onCook={() =>
+              router.push(
+                `/cooking/recipes/${recipeId}/cook-mode?servings=${selectedServings}`,
+              )
+            }
+            onOpenLightbox={(index) => {
+              setLightboxIndex(index);
+              setIsLightboxOpen(true);
+            }}
+            onProtectedAction={handleProtectedAction}
+            onSelectedServingsChange={setSelectedServings}
+            onShare={handleShare}
+            plannerCountLabel={desktopPlannerCountLabel}
+            recipe={recipe}
+            saveCountLabel={desktopSaveCountLabel}
+            scaledIngredients={scaledIngredients}
+            selectedServings={selectedServings}
+          />
+        </div>
+      ) : null}
+      {shouldRenderLegacyWebView ? (
       <div className="hidden bg-[var(--surface-fill)] lg:block">
         <button
           aria-label={recipe.thumbnail_url ? "레시피 사진 크게 보기" : "레시피 대표 이미지"}
@@ -1421,15 +1477,374 @@ export function RecipeDetailScreen({
         }}
       />
       <RecipePhotoLightbox
-        imageUrl={recipe.thumbnail_url}
+        currentIndex={lightboxIndex}
         isOpen={isLightboxOpen}
         onClose={() => setIsLightboxOpen(false)}
+        onNavigate={(nextIndex) => setLightboxIndex(nextIndex)}
+        photos={getRecipePhotoSet(recipe)}
         title={recipe.title}
       />
       {feedback ? <FeedbackToast message={feedback.message} tone={feedback.tone} /> : null}
       <LoginGateModal />
     </>
   );
+}
+
+function RecipeDetailWebView({
+  cookCountLabel,
+  isLikePending,
+  likeCountLabel,
+  onCook,
+  onOpenLightbox,
+  onProtectedAction,
+  onSelectedServingsChange,
+  onShare,
+  plannerCountLabel,
+  recipe,
+  saveCountLabel,
+  scaledIngredients,
+  selectedServings,
+}: {
+  cookCountLabel: string;
+  isLikePending: boolean;
+  likeCountLabel: string;
+  onCook: () => void;
+  onOpenLightbox: (index: number) => void;
+  onProtectedAction: (type: "like" | "save" | "planner") => void;
+  onSelectedServingsChange: (value: number | ((current: number) => number)) => void;
+  onShare: () => void;
+  plannerCountLabel: string;
+  recipe: RecipeDetail;
+  saveCountLabel: string;
+  scaledIngredients: Array<RecipeIngredient & { scaledText: string }>;
+  selectedServings: number;
+}) {
+  const photos = getRecipePhotoSet(recipe);
+  const sourceLabel = formatRecipeSourceLabel(recipe.source_type);
+  const minutesLabel = getRecipeMinutesLabel(recipe);
+
+  return (
+    <WebShell className="web-recipe-detail" wide>
+      <WebTopNav
+        activeId="home"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<RecipeWebProfileButton />}
+      />
+      <div className="web-screen">
+        <nav aria-label="레시피 경로" className="web-breadcrumb">
+          <Link className="web-breadcrumb-link" href="/" prefetch={false}>
+            <ChevronLeftIcon />
+            탐색
+          </Link>
+          <span className="web-breadcrumb-sep">/</span>
+          <span className="web-breadcrumb-current">{recipe.title}</span>
+        </nav>
+
+        <div className="web-recipe-layout">
+          <div className="web-recipe-main">
+            <div className="web-recipe-photos">
+              <button
+                aria-label="레시피 사진 크게 보기"
+                className="web-recipe-photo-main"
+                onClick={() => onOpenLightbox(0)}
+                type="button"
+              >
+                <span style={{ backgroundImage: `url(${photos[0]})` }} />
+              </button>
+              <div className="web-recipe-photo-side">
+                {photos.slice(1, 4).map((photo, index) => (
+                  <button
+                    aria-label={`레시피 사진 ${index + 2} 보기`}
+                    className="web-recipe-photo-thumb"
+                    key={photo}
+                    onClick={() => onOpenLightbox(index + 1)}
+                    type="button"
+                  >
+                    <span style={{ backgroundImage: `url(${photo})` }} />
+                    {index === 2 ? (
+                      <span className="web-recipe-photo-more">
+                        <GridIcon />
+                        사진 전체
+                      </span>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <section className="web-recipe-titleblock">
+              <h1 className="web-recipe-title">{recipe.title}</h1>
+              <div className="web-recipe-tags">
+                {recipe.tags.map((tag) => (
+                  <WebChip className="web-tag" key={tag}>
+                    {tag}
+                  </WebChip>
+                ))}
+                <WebChip active className="web-tag">
+                  {sourceLabel}
+                </WebChip>
+              </div>
+            </section>
+
+            <section aria-label="레시피 요약" className="web-recipe-meta-row">
+              <RecipeMetric label="기본" value={`${recipe.base_servings}인분`} />
+              <RecipeMetric label="재료" value={String(recipe.ingredients.length)} />
+              <RecipeMetric label="조리 단계" value={String(recipe.steps.length)} />
+              <RecipeMetric label="소요" value={minutesLabel} />
+            </section>
+
+            <section className="web-recipe-secondary">
+              <div className="web-recipe-secondary-meta">
+                <CalendarIcon />
+                <span>플래너 등록 </span>
+                <strong>{plannerCountLabel}</strong>
+              </div>
+              <div className="web-recipe-secondary-actions">
+                <button
+                  aria-label="공유하기"
+                  className="web-icon-action"
+                  onClick={onShare}
+                  type="button"
+                >
+                  <ShareIcon />
+                  <span>공유</span>
+                </button>
+                <button
+                  aria-label={
+                    isLikePending ? "좋아요 처리 중..." : `좋아요 ${likeCountLabel}`
+                  }
+                  aria-pressed={recipe.user_status?.is_liked ?? false}
+                  className="web-icon-action"
+                  disabled={isLikePending}
+                  onClick={() => onProtectedAction("like")}
+                  type="button"
+                >
+                  <HeartIcon filled={recipe.user_status?.is_liked ?? false} />
+                  <span>{isLikePending ? "처리 중" : likeCountLabel}</span>
+                </button>
+                <button
+                  aria-label="저장"
+                  aria-pressed={recipe.user_status?.is_saved ?? false}
+                  className="web-icon-action web-icon-action-brand"
+                  onClick={() => onProtectedAction("save")}
+                  type="button"
+                >
+                  <BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />
+                  <span className="visually-hidden">{saveCountLabel}</span>
+                  <span>{recipe.user_status?.is_saved ? "저장됨" : "저장"}</span>
+                </button>
+              </div>
+            </section>
+
+            <p className="web-recipe-description">
+              {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
+            </p>
+
+            <section className="web-reading-section">
+              <div className="web-reading-head">
+                <div>
+                  <h2>인분 조절</h2>
+                  <p>아래 재료량이 즉시 바뀝니다</p>
+                </div>
+                <WebStepper
+                  onChange={onSelectedServingsChange}
+                  value={selectedServings}
+                />
+              </div>
+            </section>
+
+            <section className="web-reading-section">
+              <h2 className="web-reading-title">재료</h2>
+              <ul className="web-ingredient-list">
+                {scaledIngredients.map((ingredient) => {
+                  const quantityText = ingredient.scaledText.startsWith(
+                    `${ingredient.standard_name} `,
+                  )
+                    ? ingredient.scaledText.slice(ingredient.standard_name.length + 1)
+                    : ingredient.scaledText;
+
+                  return (
+                    <li className="web-ingredient-row" key={ingredient.id}>
+                      <span className="web-ingredient-name">
+                        {ingredient.standard_name}
+                        {ingredient.ingredient_type === "TO_TASTE" ? (
+                          <span className="web-ingredient-badge">취향껏</span>
+                        ) : null}
+                      </span>
+                      <span className="web-ingredient-amount">{quantityText}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="web-pantry-note">
+                <CheckIcon />
+                팬트리에 있는 재료는 조리 전에 다시 확인해 주세요
+              </div>
+            </section>
+
+            <section className="web-reading-section">
+              <h2 className="web-reading-title">조리 순서</h2>
+              <ol className="web-step-list">
+                {recipe.steps.map((step) => (
+                  <li className="web-step-row" key={step.id}>
+                    <span
+                      className="web-step-num"
+                      style={{
+                        backgroundColor: resolveCookingMethodTint(
+                          step.cooking_method?.color_key,
+                        ),
+                        color: resolveCookingMethodDark(
+                          step.cooking_method?.color_key,
+                        ),
+                      }}
+                    >
+                      {step.step_number}
+                    </span>
+                    <div className="web-step-body">
+                      <div className="web-step-meta">
+                        <span
+                          className="web-step-method"
+                          style={{
+                            backgroundColor: resolveCookingMethodTint(
+                              step.cooking_method?.color_key,
+                            ),
+                            color: resolveCookingMethodDark(
+                              step.cooking_method?.color_key,
+                            ),
+                          }}
+                        >
+                          {step.cooking_method?.label ?? "조리"}
+                        </span>
+                        {step.duration_text ? (
+                          <span className="web-step-duration">
+                            {step.duration_text}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p>{step.instruction}</p>
+                      {step.heat_level ? (
+                        <span className="web-step-heat">불 세기 {step.heat_level}</span>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          </div>
+
+          <aside className="web-recipe-rail">
+            <WebCard>
+              <WebCardBody className="web-recipe-rail-body">
+                <div className="web-recipe-rail-head">
+                  <h2>{selectedServings}인분 기준</h2>
+                  <p>재료 {recipe.ingredients.length}개 · 단계 {recipe.steps.length}개</p>
+                </div>
+                <div className="web-recipe-rail-actions">
+                  <WebButton fullWidth onClick={() => onProtectedAction("planner")}>
+                    <CalendarIcon />
+                    플래너에 추가
+                  </WebButton>
+                  <WebButton fullWidth onClick={onCook} variant="secondary">
+                    <CookIcon />
+                    요리하기
+                  </WebButton>
+                </div>
+                <div className="web-recipe-rail-stats">
+                  <RecipeRailStat label="좋아요" value={likeCountLabel} />
+                  <RecipeRailStat label="저장" value={saveCountLabel} />
+                  <RecipeRailStat label="플래너 등록" value={plannerCountLabel} />
+                  <RecipeRailStat label="요리완료" value={cookCountLabel} />
+                </div>
+                <p className="web-recipe-rail-note">
+                  <InfoIcon />
+                  요리모드 진입 후에는 인분을 바꿀 수 없어요.
+                </p>
+              </WebCardBody>
+            </WebCard>
+          </aside>
+        </div>
+      </div>
+
+      <WebCTA className="web-recipe-bottom-cta">
+        <WebButton onClick={() => onProtectedAction("planner")} variant="secondary">
+          플래너에 추가
+        </WebButton>
+        <WebButton onClick={onCook}>요리하기</WebButton>
+      </WebCTA>
+    </WebShell>
+  );
+}
+
+function RecipeMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="web-recipe-metric">
+      <div className="web-recipe-metric-value">{value}</div>
+      <div className="web-recipe-metric-label">{label}</div>
+    </div>
+  );
+}
+
+function RecipeRailStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      aria-label={`${label} ${value}`}
+      className="web-recipe-rail-stat"
+      role="status"
+    >
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function WebStepper({
+  onChange,
+  value,
+}: {
+  onChange: (value: number | ((current: number) => number)) => void;
+  value: number;
+}) {
+  return (
+    <div className="web-stepper">
+      <button
+        aria-label="인분 줄이기"
+        disabled={value <= 1}
+        onClick={() => onChange((current) => Math.max(1, current - 1))}
+        type="button"
+      >
+        -
+      </button>
+      <span>{value}인분</span>
+      <button
+        aria-label="인분 늘리기"
+        onClick={() => onChange((current) => current + 1)}
+        type="button"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+function RecipeWebProfileButton() {
+  return (
+    <Link
+      aria-label="마이페이지"
+      className="web-profile-button"
+      href="/mypage"
+      prefetch={false}
+    >
+      <UserIcon />
+    </Link>
+  );
+}
+
+function getRecipePhotoSet(recipe: RecipeDetail) {
+  const first = recipe.thumbnail_url ?? WEB_RECIPE_FALLBACK_IMAGES[0];
+  return [
+    first,
+    ...WEB_RECIPE_FALLBACK_IMAGES.filter((photo) => photo !== first),
+  ].slice(0, 4);
 }
 
 function RecipeDetailLoadingSkeleton() {
@@ -1520,16 +1935,34 @@ function RecipeDetailLoadingSkeleton() {
 }
 
 function RecipePhotoLightbox({
-  imageUrl,
+  currentIndex,
   isOpen,
   onClose,
+  onNavigate,
+  photos,
   title,
 }: {
-  imageUrl: string | null;
+  currentIndex: number;
   isOpen: boolean;
   onClose: () => void;
+  onNavigate: (nextIndex: number) => void;
+  photos: string[];
   title: string;
 }) {
+  const safeIndex = photos.length > 0
+    ? ((currentIndex % photos.length) + photos.length) % photos.length
+    : 0;
+  const navigate = useCallback(
+    (direction: -1 | 1) => {
+      if (photos.length === 0) {
+        return;
+      }
+
+      onNavigate((safeIndex + direction + photos.length) % photos.length);
+    },
+    [onNavigate, photos.length, safeIndex],
+  );
+
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -1539,6 +1972,12 @@ function RecipePhotoLightbox({
       if (event.key === "Escape") {
         onClose();
       }
+      if (event.key === "ArrowLeft") {
+        navigate(-1);
+      }
+      if (event.key === "ArrowRight") {
+        navigate(1);
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -1546,46 +1985,64 @@ function RecipePhotoLightbox({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, navigate, onClose]);
 
-  if (!isOpen || !imageUrl) {
+  if (!isOpen || photos.length === 0) {
     return null;
   }
 
   return (
     <div
-      aria-label="사진 갤러리"
+      aria-label="사진 보기"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/82 p-8"
+      className="web-lightbox"
       onClick={onClose}
       role="dialog"
     >
       <button
         aria-label="닫기"
-        className="absolute right-8 top-8 grid h-11 w-11 place-items-center rounded-full bg-white/12 text-white backdrop-blur transition hover:bg-white/20"
+        className="web-lightbox-close"
         onClick={(event) => {
           event.stopPropagation();
           onClose();
         }}
         type="button"
       >
-        ×
+        <CloseIcon />
+      </button>
+      <button
+        aria-label="이전"
+        className="web-lightbox-nav web-lightbox-prev"
+        onClick={(event) => {
+          event.stopPropagation();
+          navigate(-1);
+        }}
+        type="button"
+      >
+        <ChevronLeftIcon />
       </button>
       <div
-        className="relative aspect-[4/3] max-h-[78vh] w-full max-w-5xl overflow-hidden rounded-[24px] bg-[#EAEDEF] shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
+        className="web-lightbox-frame"
         onClick={(event) => event.stopPropagation()}
         style={{
-          backgroundImage: `url(${imageUrl})`,
-          backgroundPosition: "center",
-          backgroundSize: "cover",
+          backgroundImage: `url(${photos[safeIndex]})`,
         }}
+        aria-label={title}
+        role="img"
+      />
+      <button
+        aria-label="다음"
+        className="web-lightbox-nav web-lightbox-next"
+        onClick={(event) => {
+          event.stopPropagation();
+          navigate(1);
+        }}
+        type="button"
       >
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-6 text-white">
-          <p className="text-sm font-semibold opacity-85">1 / 1</p>
-          <h2 className="mt-1 text-2xl font-black tracking-[-0.02em]">
-            {title}
-          </h2>
-        </div>
+        <ChevronRightIcon />
+      </button>
+      <div className="web-lightbox-counter">
+        {safeIndex + 1} / {photos.length}
       </div>
     </div>
   );
@@ -1899,6 +2356,42 @@ function ChevronLeftIcon() {
   );
 }
 
+function ChevronRightIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="20"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="20"
+    >
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="20"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="20"
+    >
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
+}
+
 function ClockIcon() {
   return (
     <svg
@@ -1914,6 +2407,84 @@ function ClockIcon() {
     >
       <circle cx="12" cy="12" r="8.5" />
       <path d="M12 7.5V12l3 2" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return <PlannerIcon />;
+}
+
+function GridIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="16"
+    >
+      <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="16"
+    >
+      <path d="m5 12 4 4L19 6" />
+    </svg>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="16"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 10.5v5M12 7.5h.01" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M20 21a8 8 0 0 0-16 0" />
+      <circle cx="12" cy="7" r="4" />
     </svg>
   );
 }

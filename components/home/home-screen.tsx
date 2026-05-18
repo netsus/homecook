@@ -19,9 +19,21 @@ import { SaveModal } from "@/components/recipe/save-modal";
 import { ContentState } from "@/components/shared/content-state";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  WebButton,
+  WebChip,
+  WebEmptyState,
+  WebErrorState,
+  WebIconButton,
+  WebRecipeCard,
+  WebShell,
+  WebSkeleton,
+  WebTopNav,
+} from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { fetchJson } from "@/lib/api/fetch-json";
+import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
@@ -62,6 +74,22 @@ const RECIPE_CATEGORY_FILTERS = [
 ] as const;
 
 type RecipeCategoryLabel = (typeof RECIPE_CATEGORY_FILTERS)[number]["label"];
+
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
+
+const WEB_FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1583224944844-5b268c057b72?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1553163147-622ab57be1c7?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?w=900&h=675&fit=crop&q=80",
+] as const;
 
 export function HomeScreen() {
   const [query, setQuery] = useState("");
@@ -581,109 +609,110 @@ function HomeWebScreen({
   const showEmptyState =
     (screenState === "ready" || screenState === "empty") &&
     displayedRecipes.length === 0;
+  const themeRailRef = useRef<HTMLDivElement | null>(null);
+  const scrollThemeRail = (direction: -1 | 1) => {
+    themeRailRef.current?.scrollBy({ left: direction * 360, behavior: "smooth" });
+  };
 
   return (
-    <div className="min-h-screen bg-[var(--surface-fill)] text-[var(--foreground)]">
-      <div className="mx-auto max-w-[1200px] px-8 pb-16 pt-8">
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="rounded-[24px] border border-[var(--line)] bg-[var(--panel)] p-8 shadow-[var(--shadow-1)]">
-            <div className="max-w-2xl">
-              <p className="text-xs font-bold tracking-[-0.3px] text-[var(--foreground)]">
-                레시피 탐색
-              </p>
-              <h1 className="mt-3 text-[42px] font-black leading-[1.08] tracking-[-0.02em] text-[var(--foreground)]">
-                오늘 뭐 먹지?
-              </h1>
-              <p className="mt-3 text-base leading-7 text-[var(--text-2)]">
-                레시피 제목으로 찾고, 재료 필터로 지금 만들 수 있는 메뉴를 좁혀보세요.
-              </p>
-            </div>
+    <WebShell className="web-home" wide>
+      <WebTopNav
+        activeId="home"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<WebProfileButton />}
+      />
+      <div className="web-screen">
+        <section className="web-discovery">
+          <h1 className="web-discovery-title">오늘 뭐 먹지?</h1>
+          <p className="web-discovery-sub">
+            레시피 제목으로 검색하거나, 재료로 좁혀 보세요.
+          </p>
 
-            <div className="mt-7 flex gap-3">
-              <label className="flex min-h-14 flex-1 items-center gap-3 rounded-[18px] border border-[var(--line)] bg-[var(--surface)] px-5 shadow-[var(--shadow-1)] focus-within:border-[var(--brand)]">
-                <SearchIcon />
-                <span className="visually-hidden">레시피 제목 검색</span>
-                <input
-                  className="w-full bg-transparent text-[15px] font-medium outline-none placeholder:text-[var(--muted)]"
-                  onChange={(event) => {
-                    setQuery(event.target.value);
-                    setActiveThemeId(null);
-                  }}
-                  placeholder="레시피 제목 검색"
-                  value={query}
-                />
-              </label>
-              <button
-                className="inline-flex min-h-14 items-center gap-2 rounded-[18px] bg-[var(--foreground)] px-5 text-sm font-bold text-white shadow-[var(--shadow-1)] transition hover:bg-[var(--brand-deep)]"
-                onClick={onOpenIngredientModal}
-                type="button"
-              >
-                <SearchSmallIcon color="currentColor" />
-                재료로 검색
-              </button>
-            </div>
-
-            <div className="mt-5">
-              <DiscoveryFilterRail
-                activeRecipeCategory={activeRecipeCategory}
-                appliedIngredientIds={appliedIngredientIds}
-                onClear={clearIngredientFilters}
-                onOpenModal={onOpenIngredientModal}
-                onSelectRecipeCategory={onSelectRecipeCategory}
+          <div className="web-discovery-search-row">
+            <label className="web-search-bar">
+              <SearchIcon />
+              <span className="visually-hidden">레시피 제목 검색</span>
+              <input
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setActiveThemeId(null);
+                }}
+                placeholder="레시피 제목 검색"
+                value={query}
               />
-            </div>
+            </label>
+            <WebButton
+              className="web-discovery-filter-button"
+              onClick={onOpenIngredientModal}
+              variant="secondary"
+            >
+              <SearchSmallIcon color="currentColor" />
+              재료로 검색
+            </WebButton>
           </div>
 
-          <div className="rounded-[24px] border border-[var(--line)] bg-[var(--panel)] p-6 shadow-[var(--shadow-1)]">
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--muted)]">
-              이번 주 식단
-            </p>
-            <h2 className="mt-3 text-2xl font-black tracking-[-0.02em]">
-              플래너로 이어가기
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-2)]">
-              마음에 드는 레시피를 저장하고 바로 끼니에 연결할 수 있어요.
-            </p>
-            <Link
-              className="mt-6 inline-flex w-full items-center justify-center rounded-[16px] bg-[var(--foreground)] px-4 py-3 text-sm font-bold text-white transition hover:bg-[var(--brand-deep)]"
-              href="/planner"
-              prefetch={false}
-            >
-              플래너 열기
-            </Link>
-          </div>
+          {appliedIngredientIds.length > 0 || activeRecipeCategory !== "전체" ? (
+            <div className="web-filter-chip-row">
+              {appliedIngredientIds.length > 0 ? (
+                <WebChip active onClick={onOpenIngredientModal}>
+                  <SearchSmallIcon color="currentColor" />
+                  재료 {appliedIngredientIds.length}개
+                </WebChip>
+              ) : null}
+              {activeRecipeCategory !== "전체" ? (
+                <WebChip active>{activeRecipeCategory}</WebChip>
+              ) : null}
+              <WebButton
+                onClick={() => {
+                  clearIngredientFilters();
+                  onSelectRecipeCategory("전체");
+                }}
+                size="sm"
+                variant="ghost"
+              >
+                초기화
+              </WebButton>
+            </div>
+          ) : null}
         </section>
 
         {themes.length > 0 ? (
-          <section className="mt-10">
-            <div className="mb-4 flex items-end justify-between">
+          <section className="web-theme-strip">
+            <div className="web-theme-strip-head">
               <div>
-                <h2 className="text-2xl font-black tracking-[-0.02em]">
-                  이번 주 인기 테마
-                </h2>
-                <p className="mt-1 text-sm text-[var(--muted)]">
-                  사진 중심 카드로 빠르게 둘러보세요.
-                </p>
+                <h2 className="web-section-title">이번 주 인기 테마</h2>
               </div>
-              {selectedTheme ? (
-                <button
-                  className="rounded-[var(--radius-full)] border border-[var(--line)] bg-[var(--panel)] px-4 py-2 text-sm font-bold text-[var(--text-2)]"
-                  onClick={() => setActiveThemeId(null)}
-                  type="button"
+              <div className="web-theme-strip-controls">
+                {selectedTheme ? (
+                  <WebButton
+                    onClick={() => setActiveThemeId(null)}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    전체 보기
+                  </WebButton>
+                ) : null}
+                <WebIconButton
+                  aria-label="이전"
+                  onClick={() => scrollThemeRail(-1)}
                 >
-                  전체 보기
-                </button>
-              ) : null}
+                  <ChevronLeftIcon />
+                </WebIconButton>
+                <WebIconButton
+                  aria-label="다음"
+                  onClick={() => scrollThemeRail(1)}
+                >
+                  <ChevronRightIcon />
+                </WebIconButton>
+              </div>
             </div>
-            <div className="grid gap-4 lg:grid-cols-4">
-              {themes.slice(0, 4).map((theme, index) => (
+            <div className="web-theme-rail" ref={themeRailRef}>
+              {themes.map((theme, index) => (
                 <button
                   aria-pressed={selectedTheme?.id === theme.id}
                   className={[
-                    "group overflow-hidden rounded-[18px] border bg-[var(--panel)] text-left shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgba(0,0,0,0.10)]",
-                    selectedTheme?.id === theme.id
-                      ? "border-[var(--brand)]"
-                      : "border-[var(--line)]",
+                    "web-theme-card",
+                    selectedTheme?.id === theme.id ? "web-theme-card-active" : "",
                   ].join(" ")}
                   key={theme.id}
                   onClick={() =>
@@ -691,56 +720,36 @@ function HomeWebScreen({
                   }
                   type="button"
                 >
-                  <div
-                    className="relative aspect-[4/3] overflow-hidden bg-[#EAEDEF]"
-                    style={
-                      theme.recipes[0]?.thumbnail_url
-                        ? {
-                            backgroundImage: `url(${theme.recipes[0].thumbnail_url})`,
-                            backgroundPosition: "center",
-                            backgroundSize: "cover",
-                          }
-                        : undefined
-                    }
+                  <span
+                    className="web-theme-card-thumb"
+                    style={{
+                      backgroundImage: `url(${theme.recipes[0]?.thumbnail_url ?? WEB_FALLBACK_IMAGES[index % WEB_FALLBACK_IMAGES.length]})`,
+                    }}
                   >
-                    {theme.recipes[0]?.thumbnail_url ? (
-                      <span
-                        aria-hidden="true"
-                        className="absolute inset-0 bg-cover bg-center transition duration-300 group-hover:scale-105"
-                        style={{
-                          backgroundImage: `url(${theme.recipes[0].thumbnail_url})`,
-                        }}
-                      />
-                    ) : (
-                      <span className="grid h-full place-items-center text-5xl">
-                        {["🍳", "🥘", "🥗", "🍚"][index % 4]}
-                      </span>
-                    )}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent p-4 text-white">
-                      <div className="text-lg font-black">{theme.title}</div>
-                      <div className="mt-1 text-xs font-semibold opacity-85">
+                    <span className="web-theme-card-overlay">
+                      <span className="web-theme-card-title">{theme.title}</span>
+                      <span className="web-theme-card-count">
                         {theme.recipes.length}개 레시피
-                      </div>
-                    </div>
-                  </div>
+                      </span>
+                    </span>
+                  </span>
                 </button>
               ))}
             </div>
           </section>
         ) : null}
 
-        <section className="mt-10">
-          <div className="mb-4 flex items-end justify-between gap-4">
+        <section className="web-all-recipes">
+          <div className="web-section-head">
             <div>
-              <h2 className="text-2xl font-black tracking-[-0.02em]">
-                {listTitle}
-              </h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                {displayedRecipes.length}개 표시
-                {totalRecipeCount ? ` · 전체 ${totalRecipeCount}개` : ""}
+              <h2 className="web-section-title">{listTitle}</h2>
+              <p className="web-section-meta">
+                {displayedRecipes.length}개
+                {selectedTheme ? " · 테마 결과" : totalRecipeCount ? ` · 전체 ${totalRecipeCount}개` : ""}
               </p>
             </div>
             <SortDropdown
+              className="web-sort-dropdown"
               label="정렬 기준"
               onChange={onSelectSort}
               options={SORT_OPTIONS}
@@ -748,72 +757,138 @@ function HomeWebScreen({
             />
           </div>
 
-          {screenState === "loading" ? (
-            <RecipeGridSkeleton />
-          ) : null}
+          {screenState === "loading" ? <RecipeGridSkeleton /> : null}
 
           {screenState === "error" ? (
-            <ContentState
-              actionLabel="다시 시도"
+            <WebErrorState
+              action={
+                <WebButton onClick={onRetry} variant="primary">
+                  다시 시도
+                </WebButton>
+              }
               description="네트워크 연결이나 API 설정을 확인한 뒤 다시 불러올 수 있어요."
-              eyebrow="목록 동기화 오류"
-              onAction={onRetry}
-              tone="error"
               title="레시피를 불러오지 못했어요"
             />
           ) : null}
 
           {screenState === "ready" && displayedRecipes.length ? (
-            <div className="grid gap-5 lg:grid-cols-4">
-              {displayedRecipes.map((recipe) => (
-                <RecipeCard
+            <div className="web-home-grid">
+              {displayedRecipes.map((recipe, index) => (
+                <HomeWebRecipeCard
                   isSaved={savedRecipeIds.has(recipe.id)}
                   key={recipe.id}
                   onSave={onRecipeSave}
                   recipe={recipe}
+                  variantIndex={index}
                 />
               ))}
             </div>
           ) : null}
 
           {showEmptyState ? (
-            <ContentState
-              actionLabel={emptyStateActionLabel}
+            <WebEmptyState
+              action={
+                <WebButton
+                  onClick={() => {
+                    clearIngredientFilters();
+                    clearSearch();
+                    onSelectRecipeCategory("전체");
+                    setActiveThemeId(null);
+                  }}
+                  variant="secondary"
+                >
+                  {emptyStateActionLabel}
+                </WebButton>
+              }
               description="다른 키워드나 재료 조합으로 다시 찾아보세요."
-              eyebrow="다른 조합"
-              onAction={() => {
-                clearIngredientFilters();
-                clearSearch();
-                onSelectRecipeCategory("전체");
-                setActiveThemeId(null);
-              }}
-              tone="empty"
               title="조건에 맞는 레시피가 없어요"
             />
           ) : null}
         </section>
       </div>
-    </div>
+    </WebShell>
   );
 }
 
 function RecipeGridSkeleton() {
   return (
-    <div className="grid gap-5 lg:grid-cols-4">
+    <div className="web-home-grid">
       {Array.from({ length: 8 }).map((_, index) => (
         <div
-          className="overflow-hidden rounded-[18px] border border-[var(--line)] bg-[var(--panel)]"
+          className="web-recipe-card"
           key={`web-recipe-skeleton-${index}`}
         >
-          <Skeleton className="aspect-[4/3] w-full rounded-none" />
-          <div className="space-y-3 p-4">
-            <Skeleton className="h-5 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
-            <Skeleton className="h-7 w-full rounded-full" />
+          <WebSkeleton className="web-recipe-card-thumb" />
+          <div className="web-recipe-card-body">
+            <WebSkeleton className="h-5 w-3/4" />
+            <WebSkeleton className="mt-3 h-4 w-1/2" />
           </div>
         </div>
       ))}
     </div>
+  );
+}
+
+function HomeWebRecipeCard({
+  isSaved,
+  onSave,
+  recipe,
+  variantIndex,
+}: {
+  isSaved: boolean;
+  onSave: (recipe: RecipeCardItem) => void;
+  recipe: RecipeCardItem;
+  variantIndex: number;
+}) {
+  const imageSrc =
+    recipe.thumbnail_url ?? WEB_FALLBACK_IMAGES[variantIndex % WEB_FALLBACK_IMAGES.length];
+  const sourceLabel = formatRecipeSourceLabel(recipe.source_type);
+
+  return (
+    <article className="web-home-recipe-card">
+      <Link href={`/recipe/${recipe.id}`} prefetch={false}>
+        <WebRecipeCard
+          alt={recipe.title}
+          imageSrc={imageSrc}
+          meta={
+            <>
+              <span>{sourceLabel}</span>
+              <span className="web-meta-separator">·</span>
+              <span>조회 {formatCount(recipe.view_count)}</span>
+              <span className="web-meta-separator">·</span>
+              <span>저장 {formatCount(recipe.save_count)}</span>
+            </>
+          }
+          title={recipe.title}
+        />
+      </Link>
+      <button
+        aria-label={`${recipe.title} 저장`}
+        aria-pressed={isSaved}
+        className={[
+          "web-photo-card-save",
+          isSaved ? "web-photo-card-save-active" : "",
+        ].join(" ")}
+        data-testid="recipe-card-bookmark"
+        onClick={() => onSave(recipe)}
+        type="button"
+      >
+        <WebBookmarkIcon filled={isSaved} />
+      </button>
+    </article>
+  );
+}
+
+function WebProfileButton() {
+  return (
+    <Link
+      aria-label="마이페이지"
+      className="web-profile-button"
+      href="/mypage"
+      prefetch={false}
+    >
+      <UserIcon />
+    </Link>
   );
 }
 
@@ -838,14 +913,43 @@ function DiscoveryFilterRail({
   onClear,
   onOpenModal,
   onSelectRecipeCategory,
+  variant = "mobile",
 }: {
   activeRecipeCategory: RecipeCategoryLabel;
   appliedIngredientIds: string[];
   onClear: () => void;
   onOpenModal: () => void;
   onSelectRecipeCategory: (category: RecipeCategoryLabel) => void;
+  variant?: "mobile" | "web";
 }) {
   const hasFilters = appliedIngredientIds.length > 0;
+
+  if (variant === "web") {
+    return (
+      <div className="web-filter-chip-row">
+        <WebChip active={hasFilters} onClick={onOpenModal}>
+          <SearchSmallIcon color="currentColor" />
+          {hasFilters ? `재료 ${appliedIngredientIds.length}개` : "재료로 검색"}
+        </WebChip>
+
+        {RECIPE_CATEGORY_FILTERS.map((filter) => (
+          <WebChip
+            active={activeRecipeCategory === filter.label}
+            key={filter.label}
+            onClick={() => onSelectRecipeCategory(filter.label)}
+          >
+            {filter.label}
+          </WebChip>
+        ))}
+
+        {hasFilters ? (
+          <WebButton onClick={onClear} size="sm" variant="ghost">
+            초기화
+          </WebButton>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="scrollbar-hide flex gap-2 overflow-x-auto px-4 pb-1">
@@ -1054,6 +1158,78 @@ function SearchSmallIcon({ color }: { color: string }) {
     >
       <circle cx="9" cy="9" r="6" />
       <path d="m14 14 3 3" />
+    </svg>
+  );
+}
+
+function ChevronLeftIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="16"
+    >
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="16"
+    >
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M20 21a8 8 0 0 0-16 0" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function WebBookmarkIcon({ filled = false }: { filled?: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      fill={filled ? "currentColor" : "none"}
+      height="18"
+      stroke="currentColor"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M6 3h12v18l-6-4-6 4V3z" />
     </svg>
   );
 }

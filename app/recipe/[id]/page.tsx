@@ -25,6 +25,7 @@ export default async function RecipePage({
       bottomTabsMode="hidden"
       className="wave1-recipe-shell"
       currentTab="home"
+      headerMode="hidden"
     >
       <RecipeDetailScreen
         authError={resolvedSearchParams.authError ?? null}

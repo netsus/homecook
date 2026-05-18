@@ -72,7 +72,7 @@ test.describe("wave1 port discovery detail", () => {
     await expect(sortButton).toContainText("저장순");
   });
 
-  test("HOME recipe category chips replace ingredient quick chips under the recipe list heading", async ({
+  test("HOME filter controls match app and desktop layouts", async ({
     page,
   }) => {
     await page.goto("/");
@@ -101,15 +101,7 @@ test.describe("wave1 port discovery detail", () => {
       await expect(
         page.locator("button:visible").filter({ hasText: "재료로 검색" }).first(),
       ).toBeVisible();
-      await expect(
-        page.locator("button:visible").filter({ hasText: /^전체$/ }).first(),
-      ).toBeVisible();
-      await expect(
-        page.locator("button:visible").filter({ hasText: "다이어트" }).first(),
-      ).toBeVisible();
-      await expect(
-        page.locator("button:visible").filter({ hasText: "양파" }),
-      ).toHaveCount(0);
+      await expect(page.locator(".web-filter-chip-row:visible")).toHaveCount(0);
     }
   });
 
@@ -120,7 +112,7 @@ test.describe("wave1 port discovery detail", () => {
     if (isMobileViewport(page)) {
       await expect(page.getByLabel("homecook_")).toBeVisible();
     } else {
-      await expect(page.getByRole("link", { name: "Homecook" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "HOMECOOK" })).toBeVisible();
       await expect(
         page.getByRole("navigation", { name: "데스크탑 주요 메뉴" }),
       ).toBeVisible();
