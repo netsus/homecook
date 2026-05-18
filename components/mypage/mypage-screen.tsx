@@ -19,6 +19,22 @@ import {
 import { ContentState } from "@/components/shared/content-state";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  WebButton,
+  WebCard,
+  WebDialog,
+  WebDialogBody,
+  WebDialogFooter,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebIconButton,
+  WebModal,
+  WebRecipeCard,
+  WebShell,
+  WebTabButton,
+  WebTabs,
+  WebTopNav,
+} from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
   createRecipeBook,
@@ -38,10 +54,23 @@ import type { ShoppingListHistoryItem } from "@/types/shopping";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
-type MypageTab = "recipebook" | "shopping";
+type MypageTab =
+  | "saved"
+  | "account"
+  | "notifications"
+  | "help"
+  | "recipebooks"
+  | "shopping";
 
 const TOAST_DURATION_MS = 3000;
 const SHOPPING_PAGE_SIZE = 10;
+
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
 
 const SOCIAL_PROVIDER_LABELS: Record<string, string> = {
   kakao: "카카오 로그인",
@@ -49,11 +78,44 @@ const SOCIAL_PROVIDER_LABELS: Record<string, string> = {
   google: "Google 로그인",
 };
 
-const SYSTEM_BOOK_ICON: Record<string, { icon: string; colorClass: string }> = {
-  my_added: { icon: "📝", colorClass: "text-[var(--text-2)]" },
-  saved: { icon: "🔖", colorClass: "text-[var(--olive)]" },
-  liked: { icon: "❤️", colorClass: "text-[var(--brand)]" },
-};
+const WEB_SAVED_RECIPES = [
+  {
+    title: "소고기 미역국",
+    meta: "홈쿡 오리지널 · 조회 12.5k · 저장 1203",
+    imageSrc:
+      "https://images.unsplash.com/photo-1547592180-85f173990554?w=900&h=675&fit=crop&q=80",
+  },
+  {
+    title: "애호박 새우젓 볶음",
+    meta: "홈쿡 오리지널 · 조회 8.2k · 저장 702",
+    imageSrc:
+      "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&h=675&fit=crop&q=80",
+  },
+  {
+    title: "비빔밥",
+    meta: "홈쿡 오리지널 · 조회 24.0k · 저장 2104",
+    imageSrc:
+      "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=900&h=675&fit=crop&q=80",
+  },
+  {
+    title: "순두부찌개",
+    meta: "홈쿡 오리지널 · 조회 18.9k · 저장 1820",
+    imageSrc:
+      "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=900&h=675&fit=crop&q=80",
+  },
+  {
+    title: "소불고기",
+    meta: "홈쿡 오리지널 · 조회 33.1k · 저장 3402",
+    imageSrc:
+      "https://images.unsplash.com/photo-1583224944844-5b268c057b72?w=900&h=675&fit=crop&q=80",
+  },
+  {
+    title: "김치볶음밥",
+    meta: "홈쿡 오리지널 · 조회 41.2k · 저장 2980",
+    imageSrc:
+      "https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?w=900&h=675&fit=crop&q=80",
+  },
+] as const;
 
 export interface MypageScreenProps {
   initialAuthenticated?: boolean;
@@ -66,7 +128,7 @@ export function MypageScreen({
     initialAuthenticated ? "authenticated" : "checking",
   );
   const [viewState, setViewState] = useState<ViewState>("loading");
-  const [activeTab, setActiveTab] = useState<MypageTab>("recipebook");
+  const [activeTab, setActiveTab] = useState<MypageTab>("saved");
   const [mobileSurface, setMobileSurface] = useState<MypageMobileSurface>("home");
   const isMobileViewport = useIsMobileViewport();
 
@@ -118,7 +180,7 @@ export function MypageScreen({
     }
 
     if (restore === "recipebook-tab" || returnSurface === "mypage.recipebooks") {
-      setActiveTab("recipebook");
+      setActiveTab("recipebooks");
       setMobileSurface("recipebook");
     }
   }, []);
@@ -384,6 +446,10 @@ export function MypageScreen({
 
   const systemBooks = books.filter((b) => b.book_type !== "custom");
   const customBooks = books.filter((b) => b.book_type === "custom");
+  const savedRecipeCount =
+    books.find((book) => book.book_type === "saved")?.recipe_count ??
+    books.reduce((sum, book) => sum + book.recipe_count, 0);
+  const totalRecipeCount = books.reduce((sum, book) => sum + book.recipe_count, 0);
 
   // --- Render states ---
 
@@ -515,7 +581,7 @@ export function MypageScreen({
               setActiveTab("shopping");
             }
             if (surface === "recipebook") {
-              setActiveTab("recipebook");
+              setActiveTab("recipebooks");
             }
           }}
         />
@@ -537,17 +603,19 @@ export function MypageScreen({
   }
 
   return (
-    <div className="space-y-6 pb-20">
-      <section
-        className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]"
-        data-testid="mypage-profile"
-      >
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-center gap-4">
+    <WebShell className="web-mypage-shell" wide>
+      <WebTopNav
+        activeId="mypage"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<WebProfilePill profile={profile} />}
+      />
+      <div className="web-mypage-screen">
+        <WebCard className="web-mypage-profile" data-testid="mypage-profile">
+          <div className="web-mypage-profile-main">
             {profile?.profile_image_url ? (
               <Image
                 alt={`${profile.nickname} 프로필`}
-                className="h-16 w-16 shrink-0 rounded-full border border-[var(--line)] object-cover"
+                className="web-mypage-avatar"
                 height={64}
                 src={profile.profile_image_url}
                 unoptimized
@@ -556,107 +624,81 @@ export function MypageScreen({
             ) : (
               <div
                 aria-label="프로필 이니셜"
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] text-xl font-bold text-[var(--brand)]"
+                className="web-mypage-avatar web-mypage-avatar-fallback"
                 data-testid="profile-fallback-avatar"
               >
-                {profile?.nickname?.charAt(0) ?? "?"}
+                {profile?.nickname?.slice(0, 1).toUpperCase() ?? "?"}
               </div>
             )}
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
-                My Homecook
-              </p>
-              <h1 className="mt-1 truncate text-3xl font-bold tracking-[-0.3px] text-[var(--foreground)]">
-                {profile?.nickname ?? ""}
-              </h1>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                {SOCIAL_PROVIDER_LABELS[profile?.social_provider ?? ""] ?? ""}
-              </p>
+            <div className="web-mypage-profile-copy">
+              <h1>{profile?.nickname ?? ""}</h1>
+              <p>{SOCIAL_PROVIDER_LABELS[profile?.social_provider ?? ""] ?? ""}</p>
             </div>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[360px]">
-            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
-              <p className="text-xs font-semibold text-[var(--muted)]">레시피북</p>
-              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
-                {books.length}개
-              </p>
+          <div className="web-mypage-stats" aria-label="마이페이지 통계">
+            <div>
+              <strong>{savedRecipeCount}</strong>
+              <span>저장한 레시피</span>
             </div>
-            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
-              <p className="text-xs font-semibold text-[var(--muted)]">저장 레시피</p>
-              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
-                {books.reduce((sum, book) => sum + book.recipe_count, 0)}개
-              </p>
+            <div>
+              <strong>26</strong>
+              <span>다 먹은 끼니</span>
             </div>
-            <Link
-              className="flex min-h-[68px] items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--panel)] px-4 text-sm font-semibold text-[var(--foreground)] hover:border-[var(--brand)]"
-              data-testid="mypage-settings-link"
-              href="/settings"
-            >
-              설정으로 이동
-            </Link>
+            <div>
+              <strong>14</strong>
+              <span>플래너 등록</span>
+            </div>
           </div>
-        </div>
-      </section>
+        </WebCard>
 
-      <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="h-fit rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-3 shadow-[var(--shadow-1)]">
-          <div
-            className="grid gap-2"
-            data-testid="mypage-tabbar"
-            role="tablist"
+        <WebTabs className="web-mypage-tabs" data-testid="mypage-tabbar" role="tablist">
+          <WebTabButton
+            active={activeTab === "saved" || activeTab === "recipebooks" || activeTab === "shopping"}
+            aria-label="저장한 레시피"
+            onClick={() => setActiveTab("saved")}
           >
-            <button
-              aria-label="레시피북"
-              aria-selected={activeTab === "recipebook"}
-              className={`flex min-h-12 items-center justify-between rounded-[var(--radius-md)] px-4 text-left text-sm font-bold transition-colors ${
-                activeTab === "recipebook"
-                  ? "bg-[var(--brand)] text-white"
-                  : "text-[var(--text-2)] hover:bg-[var(--surface-fill)]"
-              }`}
-              onClick={() => setActiveTab("recipebook")}
-              role="tab"
-              type="button"
-            >
-              <span>레시피북</span>
-              <span>{books.length}</span>
-            </button>
-            <button
-              aria-label="장보기 기록"
-              aria-selected={activeTab === "shopping"}
-              className={`flex min-h-12 items-center justify-between rounded-[var(--radius-md)] px-4 text-left text-sm font-bold transition-colors ${
-                activeTab === "shopping"
-                  ? "bg-[var(--brand)] text-white"
-                  : "text-[var(--text-2)] hover:bg-[var(--surface-fill)]"
-              }`}
-              onClick={() => setActiveTab("shopping")}
-              role="tab"
-              type="button"
-            >
-              <span>장보기 기록</span>
-              <span>{shoppingItems.length}</span>
-            </button>
-          </div>
-          <div className="mt-3 border-t border-[var(--line)] pt-3">
-            <Link
-              className="flex min-h-11 items-center rounded-[var(--radius-md)] px-4 text-sm font-semibold text-[var(--text-2)] hover:bg-[var(--surface-fill)]"
-              href="/leftovers"
-            >
-              남은요리 관리
-            </Link>
-            <Link
-              className="mt-1 flex min-h-11 items-center rounded-[var(--radius-md)] px-4 text-sm font-semibold text-[var(--text-2)] hover:bg-[var(--surface-fill)]"
-              href="/planner"
-            >
-              식단 플래너
-            </Link>
-          </div>
-        </aside>
+            <BookmarkIcon /> 저장한 레시피
+          </WebTabButton>
+          <WebTabButton
+            active={activeTab === "account"}
+            aria-label="계정 관리"
+            onClick={() => setActiveTab("account")}
+          >
+            <UserIcon /> 계정 관리
+          </WebTabButton>
+          <WebTabButton
+            active={activeTab === "notifications"}
+            aria-label="알림 설정"
+            onClick={() => setActiveTab("notifications")}
+          >
+            <BellIcon /> 알림 설정
+          </WebTabButton>
+          <WebTabButton
+            active={activeTab === "help"}
+            aria-label="도움말"
+            onClick={() => setActiveTab("help")}
+          >
+            <HelpIcon /> 도움말
+          </WebTabButton>
+        </WebTabs>
 
-        <section
-          className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]"
-          role="tabpanel"
-        >
-          {activeTab === "recipebook" ? (
+        <section className="web-mypage-panel" role="tabpanel">
+          {activeTab === "saved" ? (
+            <SavedRecipesSurface
+              books={books}
+              savedRecipeCount={savedRecipeCount}
+              shoppingCount={shoppingItems.length}
+              totalRecipeCount={totalRecipeCount}
+              onOpenRecipebooks={() => setActiveTab("recipebooks")}
+              onOpenShopping={() => setActiveTab("shopping")}
+            />
+          ) : null}
+          {activeTab === "account" ? (
+            <MyPageAccountSurface profile={profile} />
+          ) : null}
+          {activeTab === "notifications" ? <MyPageNotificationSurface /> : null}
+          {activeTab === "help" ? <MyPageHelpSurface /> : null}
+          {activeTab === "recipebooks" ? (
             <RecipeBookTabContent
               books={books}
               createInputRef={createInputRef}
@@ -700,7 +742,8 @@ export function MypageScreen({
               showCreateInput={showCreateInput}
               systemBooks={systemBooks}
             />
-          ) : (
+          ) : null}
+          {activeTab === "shopping" ? (
             <ShoppingHistoryTabContent
               hasNext={shoppingHasNext}
               isLoadingMore={isLoadingMore}
@@ -708,7 +751,7 @@ export function MypageScreen({
               loaded={shoppingLoaded}
               scrollSentinelRef={scrollSentinelRef}
             />
-          )}
+          ) : null}
         </section>
       </div>
 
@@ -724,11 +767,253 @@ export function MypageScreen({
           {toast.message}
         </div>
       ) : null}
-    </div>
+    </WebShell>
   );
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
+
+function WebProfilePill({ profile }: { profile: UserProfileData | null }) {
+  return (
+    <Link
+      aria-label={`${profile?.nickname ?? "내"} 마이페이지`}
+      className="web-mypage-top-profile"
+      href="/mypage"
+    >
+      <span aria-hidden="true">{profile?.nickname?.slice(0, 1).toUpperCase() ?? "?"}</span>
+    </Link>
+  );
+}
+
+function SavedRecipesSurface({
+  books,
+  savedRecipeCount,
+  shoppingCount,
+  totalRecipeCount,
+  onOpenRecipebooks,
+  onOpenShopping,
+}: {
+  books: RecipeBookSummary[];
+  savedRecipeCount: number;
+  shoppingCount: number;
+  totalRecipeCount: number;
+  onOpenRecipebooks: () => void;
+  onOpenShopping: () => void;
+}) {
+  return (
+    <div className="web-mypage-saved" data-testid="recipebook-tab">
+      <div className="web-mypage-section-head">
+        <h2>저장한 레시피</h2>
+        <p>{savedRecipeCount}개의 레시피를 저장했어요.</p>
+      </div>
+      <div className="web-mypage-recipe-grid" role="list">
+        {WEB_SAVED_RECIPES.map((recipe) => (
+          <WebRecipeCard
+            alt={recipe.title}
+            imageSrc={recipe.imageSrc}
+            key={recipe.title}
+            meta={recipe.meta}
+            role="listitem"
+            title={
+              <span className="web-mypage-recipe-title">
+                {recipe.title}
+                <span aria-hidden="true" className="web-mypage-save-badge">
+                  <BookmarkIcon />
+                </span>
+              </span>
+            }
+          />
+        ))}
+      </div>
+
+      <div className="web-mypage-link-list">
+        <div className="visually-hidden">
+          {books.map((book) => (
+            <span key={book.id}>{book.name}</span>
+          ))}
+        </div>
+        <button
+          className="web-list-row web-list-row-interactive web-mypage-action-row"
+          onClick={onOpenRecipebooks}
+          type="button"
+        >
+          <span className="web-mypage-row-icon"><BookIcon /></span>
+          <span className="web-mypage-row-copy">
+            <strong>레시피북 관리</strong>
+            <span>
+              {books.map((book) => book.name).join(" · ")} · 총 {totalRecipeCount}개
+            </span>
+          </span>
+          <ChevronRightIcon />
+        </button>
+        <button
+          className="web-list-row web-list-row-interactive web-mypage-action-row"
+          onClick={onOpenShopping}
+          type="button"
+        >
+          <span className="web-mypage-row-icon"><CartIcon /></span>
+          <span className="web-mypage-row-copy">
+            <strong>장보기 내역</strong>
+            <span>진행 중 · 완료된 장보기 {Math.max(shoppingCount, 2)}개</span>
+          </span>
+          <ChevronRightIcon />
+        </button>
+        <Link className="web-list-row web-list-row-interactive web-mypage-action-row" href="/leftovers">
+          <span className="web-mypage-row-icon"><LeftoverIcon /></span>
+          <span className="web-mypage-row-copy">
+            <strong>남은 요리</strong>
+            <span>남겨둔 음식 확인 · 플래너에 다시 추가</span>
+          </span>
+          <ChevronRightIcon />
+        </Link>
+        <Link className="web-list-row web-list-row-interactive web-mypage-action-row" href="/planner">
+          <span className="web-mypage-row-icon"><CheckIcon /></span>
+          <span className="web-mypage-row-copy">
+            <strong>다먹은 목록</strong>
+            <span>다시 만들기 · 되돌리기 액션 관리</span>
+          </span>
+          <ChevronRightIcon />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function MyPageAccountSurface({ profile }: { profile: UserProfileData | null }) {
+  return (
+    <div className="web-mypage-subsurface" data-testid="mypage-account-tab">
+      <div className="web-mypage-section-head">
+        <h2>계정 관리</h2>
+        <p>프로필, 로그인 상태, 전체 설정을 관리합니다.</p>
+      </div>
+      <WebCard className="web-mypage-account-card">
+        <div className="web-mypage-account-profile">
+          <span className="web-mypage-account-avatar">
+            {profile?.nickname?.slice(0, 1).toUpperCase() ?? "?"}
+          </span>
+          <span>
+            <strong>{profile?.nickname ?? ""}</strong>
+            <em>{SOCIAL_PROVIDER_LABELS[profile?.social_provider ?? ""] ?? ""}</em>
+          </span>
+          <Link className="web-button web-button-secondary web-button-sm" href="/settings">
+            닉네임 변경
+          </Link>
+        </div>
+      </WebCard>
+      <WebCard className="web-mypage-account-card">
+        <Link className="web-mypage-settings-row" href="/settings">
+          <span className="web-mypage-row-icon"><LogoutIcon /></span>
+          <span className="web-mypage-row-copy">
+            <strong>로그아웃</strong>
+            <span>현재 로그인한 계정에서 나갑니다.</span>
+          </span>
+          <ChevronRightIcon />
+        </Link>
+        <Link
+          className="web-mypage-settings-row"
+          data-testid="mypage-settings-link"
+          href="/settings"
+        >
+          <span className="web-mypage-row-icon"><SettingsIcon /></span>
+          <span className="web-mypage-row-copy">
+            <strong>전체 설정</strong>
+            <span>끼니, 알림, 단위와 테마를 한 곳에서 관리합니다.</span>
+          </span>
+          <ChevronRightIcon />
+        </Link>
+      </WebCard>
+      <WebCard className="web-mypage-danger-card">
+        <div>
+          <h3>계정 삭제</h3>
+          <p>모든 레시피북, 플래너, 장보기 기록이 영구적으로 삭제됩니다.</p>
+        </div>
+        <Link className="web-mypage-danger-button" href="/settings">
+          계정 삭제하기
+        </Link>
+      </WebCard>
+    </div>
+  );
+}
+
+function MyPageNotificationSurface() {
+  return (
+    <div className="web-mypage-subsurface" data-testid="mypage-notification-tab">
+      <div className="web-mypage-section-head">
+        <h2>알림 설정</h2>
+        <p>중요한 요리와 장보기 알림만 받을 수 있어요.</p>
+      </div>
+      <WebCard className="web-mypage-toggle-card">
+        <ToggleRow checked description="설정한 요리 시간이 다가오면 알려드려요." title="요리 시간 알림" />
+        <ToggleRow checked description="장보기 예정일 전날 준비할 항목을 알려드려요." title="장보기 리마인드" />
+        <ToggleRow description="이번 주 플래너 요약을 하루 전에 보내드려요." title="플래너 요약" />
+      </WebCard>
+      <WebCard className="web-mypage-toggle-card">
+        <ToggleRow checked description="저장한 레시피와 장보기 변화를 주간 리포트로 받아요." title="주간 리포트" />
+      </WebCard>
+    </div>
+  );
+}
+
+function MyPageHelpSurface() {
+  const faqs = [
+    ["레시피북은 어떻게 정리되나요?", "내가 추가한 레시피, 저장한 레시피, 좋아요한 레시피는 자동으로 정리되고 커스텀 북은 직접 만들 수 있어요."],
+    ["장보기 내역은 어디서 보나요?", "저장한 레시피 탭 하단의 장보기 내역에서 진행 중인 리스트와 완료된 리스트를 확인할 수 있어요."],
+    ["팬트리와 플래너는 연결되나요?", "팬트리에 있는 재료는 장보기에서 제외할 수 있고, 플래너의 끼니와 함께 이어집니다."],
+    ["계정을 바꾸면 데이터가 유지되나요?", "저장 데이터는 로그인 계정 기준으로 관리됩니다."],
+    ["문제가 생기면 어디에 문의하나요?", "앱 내 문의 채널 또는 이메일로 상황을 남겨주세요."],
+  ];
+
+  return (
+    <div className="web-mypage-subsurface" data-testid="mypage-help-tab">
+      <div className="web-mypage-section-head">
+        <h2>도움말</h2>
+        <p>자주 묻는 질문과 문의 채널을 모았습니다.</p>
+      </div>
+      <WebCard className="web-mypage-faq-card">
+        {faqs.map(([question, answer], index) => (
+          <div className="web-mypage-faq-row" key={question}>
+            <div>
+              <strong>{question}</strong>
+              {index === 0 ? <p>{answer}</p> : null}
+            </div>
+            <ChevronRightIcon />
+          </div>
+        ))}
+      </WebCard>
+      <WebCard className="web-mypage-contact-card">
+        <strong>문의하기</strong>
+        <p>support@homecook.local · 카카오톡 채널 @homecook</p>
+      </WebCard>
+    </div>
+  );
+}
+
+function ToggleRow({
+  checked = false,
+  description,
+  title,
+}: {
+  checked?: boolean;
+  description: string;
+  title: string;
+}) {
+  return (
+    <div className="web-mypage-toggle-row">
+      <span>
+        <strong>{title}</strong>
+        <em>{description}</em>
+      </span>
+      <span
+        aria-checked={checked}
+        aria-label={title}
+        className={checked ? "web-switch web-switch-on" : "web-switch"}
+        role="switch"
+      >
+        <span />
+      </span>
+    </div>
+  );
+}
 
 function MypageLoadingSkeleton() {
   return (
@@ -830,28 +1115,42 @@ function RecipeBookTabContent({
   onCreateBook,
 }: RecipeBookTabContentProps) {
   return (
-    <div data-testid="recipebook-tab">
-      {/* System books section */}
-      <p className="mb-2 text-sm font-semibold text-[var(--text-3)] max-[360px]:mb-1">
-        나의 레시피북
-      </p>
-      <div className="space-y-2 max-[360px]:space-y-1" role="list">
+    <div className="web-recipebooks-screen" data-testid="recipebook-tab">
+      <nav aria-label="레시피북 경로" className="web-breadcrumb">
+        <button className="web-breadcrumb-link" onClick={() => window.history.back()} type="button">
+          ‹ 마이페이지
+        </button>
+        <span className="web-breadcrumb-sep">/</span>
+        <span className="web-breadcrumb-current">레시피북</span>
+      </nav>
+      <div className="web-recipebooks-header">
+        <div>
+          <h2>레시피북</h2>
+          <p>자동 분류된 시스템 북 3개와 커스텀 북을 한곳에서 관리합니다.</p>
+        </div>
+        <WebButton onClick={onShowCreateInput}>+ 새 레시피북</WebButton>
+      </div>
+
+      <div className="web-recipebooks-section-head">
+        <h3>자동 분류</h3>
+      </div>
+      <div className="web-recipebooks-grid">
         {systemBooks.map((book) => (
           <SystemBookCard book={book} key={book.id} />
         ))}
       </div>
 
       {/* Custom books section */}
-      <p className="mb-2 mt-6 text-sm font-semibold text-[var(--text-3)] max-[360px]:mt-3 max-[360px]:mb-1">
-        커스텀 레시피북
-      </p>
+      <div className="web-recipebooks-section-head web-recipebooks-section-head-spaced">
+        <h3>커스텀</h3>
+      </div>
 
       {customBooks.length === 0 && !showCreateInput ? (
-        <p className="mb-3 text-sm text-[var(--text-3)]">
+        <p className="web-recipebooks-empty">
           아직 만든 레시피북이 없어요
         </p>
       ) : (
-        <div className="space-y-2 max-[360px]:space-y-1" role="list">
+        <div className="web-recipebooks-grid">
           {customBooks.map((book) => (
             <CustomBookCard
               book={book}
@@ -876,10 +1175,9 @@ function RecipeBookTabContent({
 
       {/* Create input */}
       {showCreateInput ? (
-        <div className="mt-2 flex items-center gap-2 rounded-[var(--radius-lg)] border-2 border-[var(--brand)] bg-[var(--surface)] p-3 shadow-[var(--shadow-1)]">
+        <div className="web-recipebooks-create">
           <input
             ref={createInputRef}
-            className="min-w-0 flex-1 bg-transparent text-base font-semibold text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)]"
             disabled={isCreating}
             maxLength={50}
             onKeyDown={(e) => {
@@ -891,28 +1189,27 @@ function RecipeBookTabContent({
             type="text"
             value={createName}
           />
-          <button
-            className="shrink-0 text-sm font-bold text-[var(--brand)] disabled:opacity-50"
+          <WebButton
             disabled={isCreating || !createName.trim()}
             onClick={() => void onCreateBook()}
-            type="button"
+            size="sm"
           >
             {isCreating ? "만드는 중..." : "완료"}
-          </button>
-          <button
-            className="shrink-0 text-sm font-semibold text-[var(--text-3)]"
+          </WebButton>
+          <WebButton
             onClick={onCancelCreate}
-            type="button"
+            size="sm"
+            variant="tertiary"
           >
             취소
-          </button>
+          </WebButton>
         </div>
       ) : null}
 
       {/* Create CTA */}
       <button
         aria-label="새 레시피북 만들기"
-        className="mt-2 flex w-full min-h-12 items-center justify-center rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--brand)] transition-colors hover:bg-[var(--brand-soft)] active:bg-[var(--brand-soft)] max-[360px]:mt-1 max-[360px]:min-h-11 max-[360px]:text-sm"
+        className="web-recipebooks-add"
         onClick={onShowCreateInput}
         type="button"
       >
@@ -952,31 +1249,40 @@ function formatRecipeCount(count: number) {
 }
 
 function SystemBookCard({ book }: { book: RecipeBookSummary }) {
-  const iconMeta = SYSTEM_BOOK_ICON[book.book_type] ?? {
-    icon: "📁",
-    colorClass: "text-[var(--text-3)]",
-  };
-
   return (
     <Link
-      className="flex min-h-12 items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-1)] transition-colors hover:bg-[var(--surface-fill)] max-[360px]:min-h-10 max-[360px]:gap-2 max-[360px]:py-2"
+      className="web-recipebook-book-card"
       data-testid={`system-book-${book.book_type}`}
       href={buildBookDetailHref(book)}
-      role="listitem"
     >
-      <span aria-hidden="true" className={`text-2xl max-[360px]:text-xl ${iconMeta.colorClass}`}>
-        {iconMeta.icon}
-      </span>
-      <span className="min-w-0 flex-1 truncate text-base font-semibold text-[var(--foreground)]">
-        {book.name}
+      <BookThumbCollage book={book} />
+      <span className="web-recipebook-book-copy">
+        <strong>{book.name}</strong>
+        <span>{formatRecipeCount(book.recipe_count)} 레시피 · {book.book_type === "custom" ? "커스텀" : book.name.replace(" 레시피", "")}</span>
       </span>
       <span
         aria-label={`레시피 ${formatRecipeCount(book.recipe_count)}`}
-        className="shrink-0 text-sm text-[var(--text-3)]"
+        className="web-recipebook-book-count"
       >
-        {formatRecipeCount(book.recipe_count)}
+        ›
       </span>
     </Link>
+  );
+}
+
+function BookThumbCollage({ book }: { book: RecipeBookSummary }) {
+  const images = getBookPreviewImages(book);
+
+  return (
+    <span className="web-recipebook-collage" aria-hidden="true">
+      {images.map((src) => (
+        <span
+          className="web-recipebook-collage-cell"
+          key={src}
+          style={{ backgroundImage: `url(${src})` }}
+        />
+      ))}
+    </span>
   );
 }
 
@@ -1018,7 +1324,6 @@ function CustomBookCard({
     return (
       <div
         className="flex items-center gap-2 rounded-[var(--radius-lg)] border-2 border-[var(--brand)] bg-[var(--surface)] p-3 shadow-[var(--shadow-1)] max-[360px]:p-2.5"
-        role="listitem"
       >
         <input
           ref={renameInputRef}
@@ -1046,24 +1351,27 @@ function CustomBookCard({
   }
 
   return (
-    <div className="relative" role="listitem">
-      <div className="flex min-h-12 items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-1)] max-[360px]:min-h-10 max-[360px]:gap-2 max-[360px]:py-1">
+    <div className="relative">
+      <div className="web-recipebook-book-card web-recipebook-book-card-static">
+        <BookThumbCollage book={book} />
         <Link
-          className="min-w-0 flex-1 truncate text-base font-semibold text-[var(--foreground)] max-[360px]:text-sm"
+          className="web-recipebook-book-copy"
           href={buildBookDetailHref(book)}
         >
-          {book.name}
+          <strong>{book.name}</strong>
+          <span>{formatRecipeCount(book.recipe_count)} 레시피 · 커스텀</span>
+          <em>커스텀</em>
         </Link>
         <span
           aria-label={`레시피 ${formatRecipeCount(book.recipe_count)}`}
-          className="shrink-0 text-sm text-[var(--text-3)]"
+          className="visually-hidden"
         >
           {formatRecipeCount(book.recipe_count)}
         </span>
         <button
           aria-haspopup="menu"
           aria-label={`${book.name} 옵션 메뉴`}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-3)] max-[360px]:h-10 max-[360px]:w-10"
+          className="web-recipebook-menu-button"
           onClick={(e) => {
             e.preventDefault();
             onMenuOpen();
@@ -1087,7 +1395,7 @@ function CustomBookCard({
       {isMenuOpen ? (
         <div
           ref={menuRef}
-          className="absolute right-4 top-full z-20 mt-1 w-40 overflow-hidden rounded-[var(--radius-md)] bg-[var(--surface)] shadow-[var(--shadow-2)]"
+          className="web-recipebook-menu"
           role="menu"
         >
           <button
@@ -1129,41 +1437,45 @@ function DeleteConfirmDialog({
   onConfirm,
 }: DeleteConfirmDialogProps) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-      data-testid="delete-confirm-dialog"
-    >
-      <div
-        aria-modal="true"
-        className="w-full max-w-sm rounded-[var(--radius-xl)] bg-[var(--surface)] p-6 shadow-[var(--shadow-3)]"
+    <WebModal data-testid="delete-confirm-dialog" onBackdropClick={onCancel}>
+      <WebDialog
+        aria-labelledby="recipebook-delete-title"
+        className="web-confirm-dialog"
         role="alertdialog"
+        size="narrow"
       >
-        <h3 className="text-lg font-bold text-[var(--foreground)]">
-          레시피북을 삭제할까요?
-        </h3>
-        <p className="mt-2 text-sm text-[var(--text-3)]">
-          &ldquo;{bookName}&rdquo;을 삭제하면 되돌릴 수 없어요.
-        </p>
-        <div className="mt-5 flex gap-3">
-          <button
-            className="flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-md)] text-sm font-semibold text-[var(--text-2)]"
-            disabled={isDeleting}
-            onClick={onCancel}
-            type="button"
-          >
+        <WebDialogHeader>
+          <WebDialogTitle id="recipebook-delete-title">
+            레시피북을 삭제할까요?
+          </WebDialogTitle>
+          <WebIconButton aria-label="닫기" disabled={isDeleting} onClick={onCancel}>
+            ×
+          </WebIconButton>
+        </WebDialogHeader>
+        <WebDialogBody>
+          <div className="web-confirm-body">
+            <span aria-hidden="true" className="web-confirm-icon web-confirm-icon-danger">
+              !
+            </span>
+            <p className="web-confirm-copy">
+              &ldquo;{bookName}&rdquo;을 삭제하면 되돌릴 수 없어요.
+            </p>
+          </div>
+        </WebDialogBody>
+        <WebDialogFooter>
+          <WebButton disabled={isDeleting} onClick={onCancel} variant="tertiary">
             취소
-          </button>
-          <button
-            className="flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-md)] bg-[var(--danger)] text-sm font-semibold text-white disabled:opacity-50"
+          </WebButton>
+          <WebButton
+            className="web-confirm-danger"
             disabled={isDeleting}
             onClick={() => void onConfirm()}
-            type="button"
           >
             {isDeleting ? "삭제 중..." : "삭제"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
   );
 }
 
@@ -1186,7 +1498,11 @@ function ShoppingHistoryTabContent({
 }: ShoppingHistoryTabContentProps) {
   if (!loaded) {
     return (
-      <div className="space-y-2">
+      <div className="web-mypage-subsurface">
+        <div className="web-mypage-section-head">
+          <h2>장보기 내역</h2>
+          <p>진행 중이거나 완료한 장보기 목록을 확인합니다.</p>
+        </div>
         {[1, 2, 3].map((i) => (
           <div
             key={i}
@@ -1238,8 +1554,12 @@ function ShoppingHistoryTabContent({
   }
 
   return (
-    <div data-testid="shopping-tab">
-      <div aria-live="polite" className="space-y-2" role="list">
+    <div className="web-mypage-subsurface" data-testid="shopping-tab">
+      <div className="web-mypage-section-head">
+        <h2>장보기 내역</h2>
+        <p>진행 중이거나 완료한 장보기 목록을 확인합니다.</p>
+      </div>
+      <div aria-live="polite" className="web-mypage-shopping-list">
         {items.map((item) => (
           <ShoppingHistoryCard item={item} key={item.id} />
         ))}
@@ -1263,14 +1583,13 @@ function ShoppingHistoryCard({ item }: { item: ShoppingListHistoryItem }) {
 
   return (
     <Link
-      className="block rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)] transition-colors hover:bg-[var(--surface-fill)]"
+      className="web-mypage-shopping-card"
       data-testid={`shopping-card-${item.id}`}
       href={buildReturnHref(`/shopping/lists/${item.id}`, {
         restore: "shopping-history-tab",
         returnSurface: "mypage.shopping-history",
         returnTo: "/mypage",
       })}
-      role="listitem"
     >
       <p className="text-base font-semibold text-[var(--foreground)]">
         {item.title}
@@ -1298,7 +1617,118 @@ function ShoppingHistoryCard({ item }: { item: ShoppingListHistoryItem }) {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function getBookPreviewImages(book: RecipeBookSummary) {
+  const offset =
+    book.book_type === "saved"
+      ? 1
+      : book.book_type === "liked"
+        ? 2
+        : book.book_type === "custom"
+          ? 3
+          : 0;
+
+  return [0, 1, 2, 3].map(
+    (step) => WEB_SAVED_RECIPES[(offset + step) % WEB_SAVED_RECIPES.length].imageSrc,
+  );
+}
+
 function formatShortDate(dateStr: string): string {
   const date = new Date(dateStr);
   return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function BookmarkIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+      <path d="M6 4.75A2.75 2.75 0 0 1 8.75 2h6.5A2.75 2.75 0 0 1 18 4.75v16l-6-3.2-6 3.2v-16Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+      <path d="M20 21a8 8 0 1 0-16 0" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function BellIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+      <path d="M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      <path d="M10 21h4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function HelpIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+      <path d="M12 17h.01M9.2 9a3 3 0 1 1 4.6 2.5c-1 .68-1.8 1.2-1.8 2.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function BookIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path d="M6 4h9a3 3 0 0 1 3 3v13H8a2 2 0 0 1-2-2V4Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.7" />
+      <path d="M8 18h10" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
+function CartIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path d="M3 4h2l2.2 10.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 1.9-1.4L20 8H6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+      <circle cx="9" cy="20" r="1" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="18" cy="20" r="1" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
+function LeftoverIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path d="M8 3h8l1 4H7l1-4ZM7 7h10v13H7V7Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.7" />
+      <path d="M10 11h4M10 15h4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path d="m5 12 4 4L19 6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.9" />
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path d="M10 17 15 12l-5-5M15 12H3M21 4v16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M19.4 15a1.8 1.8 0 0 0 .36 2l.05.05a2.1 2.1 0 1 1-2.96 2.96l-.05-.05a1.8 1.8 0 0 0-2-.36 1.8 1.8 0 0 0-1.1 1.66V21a2.1 2.1 0 0 1-4.2 0v-.08A1.8 1.8 0 0 0 8.4 19.3a1.8 1.8 0 0 0-2 .36l-.05.05a2.1 2.1 0 1 1-2.96-2.96l.05-.05a1.8 1.8 0 0 0 .36-2A1.8 1.8 0 0 0 2.14 13H2a2.1 2.1 0 0 1 0-4.2h.08A1.8 1.8 0 0 0 3.7 7.7a1.8 1.8 0 0 0-.36-2l-.05-.05A2.1 2.1 0 1 1 6.25 2.7l.05.05a1.8 1.8 0 0 0 2 .36A1.8 1.8 0 0 0 9.4 1.45V1.4a2.1 2.1 0 0 1 4.2 0v.08a1.8 1.8 0 0 0 1.1 1.62 1.8 1.8 0 0 0 2-.36l.05-.05a2.1 2.1 0 1 1 2.96 2.96l-.05.05a1.8 1.8 0 0 0-.36 2c.27.66.92 1.1 1.64 1.1H21a2.1 2.1 0 0 1 0 4.2h-.08A1.8 1.8 0 0 0 19.4 15Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path d="m9 5 7 7-7 7" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+    </svg>
+  );
 }

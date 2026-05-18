@@ -10,6 +10,7 @@ export default async function MypagePage() {
       bottomTabsMode="hidden"
       className="wave1-mypage-shell"
       currentTab="mypage"
+      headerMode="hidden"
     >
       <MypageScreen initialAuthenticated={Boolean(user)} />
     </AppShell>
