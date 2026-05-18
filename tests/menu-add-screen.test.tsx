@@ -12,12 +12,16 @@ import * as recipeApi from "@/lib/api/recipe";
 
 const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
+const navigationMocks = vi.hoisted(() => ({
+  searchParams: vi.fn(() => new URLSearchParams()),
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockRouterPush,
     replace: mockRouterReplace,
   }),
+  useSearchParams: () => navigationMocks.searchParams(),
 }));
 
 vi.mock("@/lib/api/leftovers", () => ({
@@ -43,6 +47,8 @@ describe("MenuAddScreen", () => {
   beforeEach(() => {
     mockRouterPush.mockReset();
     mockRouterReplace.mockReset();
+    navigationMocks.searchParams.mockReset();
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     vi.mocked(leftoversApi.fetchLeftovers).mockReset();
     vi.mocked(mealApi.createMealSafe).mockReset();
     vi.mocked(recipeApi.fetchRecipes).mockReset();
@@ -71,9 +77,12 @@ describe("MenuAddScreen", () => {
 
     await user.click(youtubeButton);
 
-    expect(mockRouterPush).toHaveBeenCalledWith(
-      `/menu/add/youtube?date=${DEFAULT_PROPS.planDate}&columnId=${DEFAULT_PROPS.columnId}&slot=${encodeURIComponent(DEFAULT_PROPS.slotName)}`,
-    );
+    const pushedHref = mockRouterPush.mock.calls.at(-1)?.[0] as string;
+    expect(pushedHref).toContain("/menu/add/youtube?");
+    expect(pushedHref).toContain(`date=${DEFAULT_PROPS.planDate}`);
+    expect(pushedHref).toContain(`columnId=${DEFAULT_PROPS.columnId}`);
+    expect(pushedHref).toContain(`slot=${encodeURIComponent(DEFAULT_PROPS.slotName)}`);
+    expect(pushedHref).toContain("returnTo=");
   });
 
   // ─── Wave1 acceptance tests ─────────────────────────────────────────────────
@@ -119,6 +128,28 @@ describe("MenuAddScreen", () => {
 
     expect(await screen.findByRole("dialog", { name: "남은요리 선택" })).toBeTruthy();
     expect(leftoversApi.fetchLeftovers).toHaveBeenCalledWith("leftover");
+  });
+
+  it("returns from a source picker to the planner meal-add modal context", async () => {
+    navigationMocks.searchParams.mockReturnValue(
+      new URLSearchParams({
+        restore: "meal-add-modal",
+        returnSurface: "planner.meal-add-modal",
+        returnTo: `/planner?date=${DEFAULT_PROPS.planDate}&columnId=${DEFAULT_PROPS.columnId}&slot=${DEFAULT_PROPS.slotName}`,
+      }),
+    );
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} initialSource="search" />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("뒤로"));
+
+    const replacedHref = mockRouterReplace.mock.calls.at(-1)?.[0] as string;
+    expect(replacedHref).toContain("/planner?");
+    expect(replacedHref).toContain(`date=${DEFAULT_PROPS.planDate}`);
+    expect(replacedHref).toContain(`columnId=${DEFAULT_PROPS.columnId}`);
+    expect(replacedHref).toContain("returnSurface=planner.meal-add-modal");
+    expect(replacedHref).toContain("restore=meal-add-modal");
   });
 
   it("renders each option with emoji, label, and subtitle (Wave1)", () => {

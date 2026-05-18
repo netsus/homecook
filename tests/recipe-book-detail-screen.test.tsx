@@ -12,6 +12,9 @@ const mockRemoveRecipeBookRecipe = vi.fn();
 const mockRenameRecipeBook = vi.fn();
 const mockDeleteRecipeBook = vi.fn();
 const mockRouterReplace = vi.fn();
+const navigationMocks = vi.hoisted(() => ({
+  searchParams: vi.fn(() => new URLSearchParams()),
+}));
 
 vi.mock("@/lib/api/recipe", () => ({
   fetchRecipeBookRecipes: (...args: unknown[]) =>
@@ -29,6 +32,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({
     replace: mockRouterReplace,
   }),
+  useSearchParams: () => navigationMocks.searchParams(),
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
@@ -138,6 +142,8 @@ describe("RecipeBookDetailScreen", () => {
     mockRenameRecipeBook.mockReset();
     mockDeleteRecipeBook.mockReset();
     mockRouterReplace.mockReset();
+    navigationMocks.searchParams.mockReset();
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     mockFetchRecipeBookRecipes.mockResolvedValue(MOCK_ITEMS);
     mockRenameRecipeBook.mockResolvedValue({
       id: "book-custom",
@@ -666,5 +672,31 @@ describe("RecipeBookDetailScreen", () => {
 
     const backLink = screen.getByLabelText("뒤로 가기");
     expect(backLink.getAttribute("href")).toBe("/mypage");
+  });
+
+  it("preserves mypage tab context in the back link", async () => {
+    navigationMocks.searchParams.mockReturnValue(
+      new URLSearchParams({
+        restore: "recipebook-tab",
+        returnSurface: "mypage.recipebooks",
+        returnTo: "/mypage",
+      }),
+    );
+
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-1"
+        bookName="저장한 레시피"
+        bookType="saved"
+        initialAuthenticated
+      />,
+    );
+
+    await screen.findByText("된장찌개");
+
+    const backLink = screen.getByLabelText("뒤로 가기");
+    expect(backLink.getAttribute("href")).toBe(
+      "/mypage?returnSurface=mypage.recipebooks&restore=recipebook-tab",
+    );
   });
 });

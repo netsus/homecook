@@ -6,6 +6,7 @@ import React from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import type { UserProfileData } from "@/lib/api/mypage";
+import { buildReturnHref } from "@/lib/navigation/return-context";
 import type { RecipeBookSummary } from "@/types/recipe";
 import type { ShoppingListHistoryItem } from "@/types/shopping";
 
@@ -227,13 +228,21 @@ function MobileHomeSurface({
     {
       detail: "관리",
       icon: "box",
-      href: "/leftovers",
+      href: buildReturnHref("/leftovers", {
+        restore: "mypage-home",
+        returnSurface: "mypage.leftovers",
+        returnTo: "/mypage",
+      }),
       label: "남은요리",
     },
     {
       detail: "히스토리",
       icon: "check",
-      href: "/leftovers/ate",
+      href: buildReturnHref("/leftovers/ate", {
+        restore: "mypage-home",
+        returnSurface: "mypage.eaten-list",
+        returnTo: "/mypage",
+      }),
       label: "다먹은 요리",
     },
     {
@@ -899,7 +908,11 @@ function MobileShoppingCard({ item }: { item: ShoppingListHistoryItem }) {
     <Link
       className="flex min-h-[68px] items-center gap-3 rounded-xl border border-[#DEE2E6] bg-white px-4 py-[14px]"
       data-testid={`shopping-card-${item.id}`}
-      href={`/shopping/lists/${item.id}`}
+      href={buildReturnHref(`/shopping/lists/${item.id}`, {
+        restore: "shopping-history-tab",
+        returnSurface: "mypage.shopping-history",
+        returnTo: "/mypage",
+      })}
       role="listitem"
     >
       <span
@@ -949,7 +962,11 @@ function buildBookDetailHref(book: RecipeBookSummary) {
     name: book.name,
   });
 
-  return `/mypage/recipe-books/${book.id}?${params.toString()}`;
+  return buildReturnHref(`/mypage/recipe-books/${book.id}?${params.toString()}`, {
+    restore: "recipebook-tab",
+    returnSurface: "mypage.recipebooks",
+    returnTo: "/mypage",
+  });
 }
 
 function formatRecipeCount(count: number) {

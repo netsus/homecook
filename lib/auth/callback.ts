@@ -1,7 +1,5 @@
-export function resolveNextPath(raw: string | null) {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
-    return "/";
-  }
+import { sanitizeInternalPath } from "@/lib/navigation/return-context";
 
-  return raw;
+export function resolveNextPath(raw: string | null) {
+  return sanitizeInternalPath(raw, "/");
 }

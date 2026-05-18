@@ -317,7 +317,7 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
 
     await page.getByRole("button", { name: /뒤로 가기|플래너로 돌아가기/ }).click();
 
-    await expect(page).toHaveURL(/\/planner$/);
+    await expect(page).toHaveURL(`${E2E_APP_ORIGIN}${mealScreenUrl}`);
 
     await page.goBack();
 

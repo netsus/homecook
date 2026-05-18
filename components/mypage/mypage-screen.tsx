@@ -30,6 +30,7 @@ import {
   renameRecipeBook,
   type UserProfileData,
 } from "@/lib/api/mypage";
+import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { RecipeBookSummary } from "@/types/recipe";
@@ -101,6 +102,26 @@ export function MypageScreen({
   const renameInputRef = useRef<HTMLInputElement | null>(null);
   const createInputRef = useRef<HTMLInputElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const restore = params.get("restore");
+    const returnSurface = params.get("returnSurface");
+
+    if (
+      restore === "shopping-history-tab" ||
+      returnSurface === "mypage.shopping-history"
+    ) {
+      setActiveTab("shopping");
+      setMobileSurface("shopping");
+      return;
+    }
+
+    if (restore === "recipebook-tab" || returnSurface === "mypage.recipebooks") {
+      setActiveTab("recipebook");
+      setMobileSurface("recipebook");
+    }
+  }, []);
 
   const showToast = useCallback((message: string, tone: "success" | "error") => {
     setToast({ message, tone });
@@ -919,7 +940,11 @@ function buildBookDetailHref(book: RecipeBookSummary) {
     name: book.name,
   });
 
-  return `/mypage/recipe-books/${book.id}?${params.toString()}`;
+  return buildReturnHref(`/mypage/recipe-books/${book.id}?${params.toString()}`, {
+    restore: "recipebook-tab",
+    returnSurface: "mypage.recipebooks",
+    returnTo: "/mypage",
+  });
 }
 
 function formatRecipeCount(count: number) {
@@ -1240,7 +1265,11 @@ function ShoppingHistoryCard({ item }: { item: ShoppingListHistoryItem }) {
     <Link
       className="block rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)] transition-colors hover:bg-[var(--surface-fill)]"
       data-testid={`shopping-card-${item.id}`}
-      href={`/shopping/lists/${item.id}`}
+      href={buildReturnHref(`/shopping/lists/${item.id}`, {
+        restore: "shopping-history-tab",
+        returnSurface: "mypage.shopping-history",
+        returnTo: "/mypage",
+      })}
       role="listitem"
     >
       <p className="text-base font-semibold text-[var(--foreground)]">

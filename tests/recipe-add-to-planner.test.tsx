@@ -19,6 +19,10 @@ const getSession = vi.fn();
 const onAuthStateChange = vi.fn();
 const hasSupabasePublicEnv = vi.fn();
 const mockRouterPush = vi.fn();
+const mockRouterReplace = vi.fn();
+const navigationMocks = vi.hoisted(() => ({
+  searchParams: vi.fn(() => new URLSearchParams()),
+}));
 
 vi.mock("@/lib/api/fetch-json", () => ({
   fetchJson: (...args: unknown[]) => fetchJson(...args),
@@ -55,7 +59,8 @@ vi.mock("@/lib/supabase/env", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockRouterPush }),
+  useRouter: () => ({ push: mockRouterPush, replace: mockRouterReplace }),
+  useSearchParams: () => navigationMocks.searchParams(),
 }));
 
 vi.mock("@/components/auth/social-login-buttons-deferred", () => ({
@@ -119,6 +124,9 @@ describe("planner add flow", () => {
     onAuthStateChange.mockReset();
     hasSupabasePublicEnv.mockReset();
     mockRouterPush.mockReset();
+    mockRouterReplace.mockReset();
+    navigationMocks.searchParams.mockReset();
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     useAuthGateStore.setState({ isOpen: false, action: null });
     window.localStorage.clear();
 

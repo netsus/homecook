@@ -9,6 +9,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
+import { useAppReturn } from "@/components/shared/use-app-return";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
@@ -72,6 +73,7 @@ export function RecipeBookDetailScreen({
 }: RecipeBookDetailScreenProps) {
   const router = useRouter();
   const isMobileViewport = useIsMobileViewport();
+  const appReturn = useAppReturn({ fallback: "/mypage" });
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
@@ -255,7 +257,7 @@ export function RecipeBookDetailScreen({
 
     try {
       await deleteRecipeBook(bookId);
-      router.replace("/mypage");
+      router.replace(appReturn.href);
     } catch (error) {
       setBookActionError(
         error instanceof Error ? error.message : "레시피북 삭제에 실패했어요.",
@@ -263,10 +265,11 @@ export function RecipeBookDetailScreen({
     } finally {
       setIsBookActionSaving(false);
     }
-  }, [bookId, canManageBook, isBookActionSaving, router]);
+  }, [appReturn.href, bookId, canManageBook, isBookActionSaving, router]);
 
   const renderDetailHeader = () => (
     <DetailHeader
+      backHref={appReturn.href}
       bookName={currentBookName}
       canManageBook={canManageBook}
       errorMessage={bookRenameOpen ? bookActionError : null}
@@ -421,7 +424,7 @@ export function RecipeBookDetailScreen({
           />
           <Link
             className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
-            href="/mypage"
+            href={appReturn.href}
           >
             마이페이지로 돌아가기
           </Link>
@@ -484,6 +487,7 @@ export function RecipeBookDetailScreen({
   if (isMobileViewport) {
     return (
       <MobileRecipeBookDetailView
+        backHref={appReturn.href}
         bookMenuOpen={bookMenuOpen}
         bookName={currentBookName}
         bookRenameOpen={bookRenameOpen}
@@ -560,6 +564,7 @@ export function RecipeBookDetailScreen({
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 interface DetailHeaderProps {
+  backHref?: string;
   bookName: string;
   canManageBook?: boolean;
   isMenuOpen?: boolean;
@@ -576,6 +581,7 @@ interface DetailHeaderProps {
 }
 
 function DetailHeader({
+  backHref = "/mypage",
   bookName,
   canManageBook = false,
   isMenuOpen = false,
@@ -598,7 +604,7 @@ function DetailHeader({
       <Link
         aria-label="뒤로 가기"
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
-        href="/mypage"
+        href={backHref}
       >
         <svg
           aria-hidden="true"
@@ -838,6 +844,7 @@ function BookDeleteConfirmDialog({
 }
 
 function MobileRecipeBookDetailView({
+  backHref,
   bookMenuOpen,
   bookName,
   bookRenameOpen,
@@ -863,6 +870,7 @@ function MobileRecipeBookDetailView({
   scrollSentinelRef,
   toast,
 }: {
+  backHref: string;
   bookMenuOpen: boolean;
   bookName: string;
   bookRenameOpen: boolean;
@@ -898,6 +906,7 @@ function MobileRecipeBookDetailView({
       }}
     >
       <MobileRecipeBookAppBar
+        backHref={backHref}
         bookName={bookName}
         canManageBook={canManageBook}
         isMenuOpen={bookMenuOpen}
@@ -967,6 +976,7 @@ function MobileRecipeBookDetailView({
 }
 
 function MobileRecipeBookAppBar({
+  backHref,
   bookName,
   canManageBook,
   isMenuOpen,
@@ -974,6 +984,7 @@ function MobileRecipeBookAppBar({
   onMenuToggle,
   onRenameStart,
 }: {
+  backHref: string;
   bookName: string;
   canManageBook: boolean;
   isMenuOpen: boolean;
@@ -989,7 +1000,7 @@ function MobileRecipeBookAppBar({
       <Link
         aria-label="뒤로 가기"
         className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start text-[#212529]"
-        href="/mypage"
+        href={backHref}
       >
         <svg
           aria-hidden="true"

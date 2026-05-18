@@ -9,12 +9,16 @@ import { MealScreen } from "@/components/planner/meal-screen";
 
 const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
+const navigationMocks = vi.hoisted(() => ({
+  searchParams: vi.fn(() => new URLSearchParams()),
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockRouterPush,
     replace: mockRouterReplace,
   }),
+  useSearchParams: () => navigationMocks.searchParams(),
 }));
 
 const readE2EAuthOverride = vi.fn();
@@ -85,6 +89,8 @@ describe("MealScreen", () => {
   beforeEach(() => {
     mockRouterPush.mockReset();
     mockRouterReplace.mockReset();
+    navigationMocks.searchParams.mockReset();
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     readE2EAuthOverride.mockReset();
     fetchMeals.mockReset();
     deleteMeal.mockReset();

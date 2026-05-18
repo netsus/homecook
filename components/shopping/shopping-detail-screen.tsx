@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
+import { useAppReturn } from "@/components/shared/use-app-return";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
 import {
@@ -46,6 +47,7 @@ export function ShoppingDetailScreen({
   const [completeToast, setCompleteToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [showPantryPopup, setShowPantryPopup] = useState(false);
   const isMobileViewport = useIsMobileViewport();
+  const appReturn = useAppReturn({ fallback: "/planner" });
   const shareToastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearShareToastTimer = useCallback(() => {
@@ -540,13 +542,7 @@ export function ShoppingDetailScreen({
         isReadOnly={isReadOnly}
         isReordering={isReordering}
         isSharing={isSharing}
-        onBack={() => {
-          if (window.history.length > 1) {
-            router.back();
-          } else {
-            router.push("/planner");
-          }
-        }}
+        onBack={appReturn.goBack}
         onComplete={handleCompleteClick}
         onMoveItem={handleMoveItem}
         onShare={handleShare}
@@ -574,13 +570,7 @@ export function ShoppingDetailScreen({
       <header className="sticky top-0 z-10 border-b border-[var(--line)] bg-[var(--panel)] px-6 py-3 backdrop-blur-lg">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <button
-            onClick={() => {
-              if (window.history.length > 1) {
-                router.back();
-              } else {
-                router.push("/planner");
-              }
-            }}
+            onClick={appReturn.goBack}
             className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-black/5"
             type="button"
             aria-label="뒤로 가기"

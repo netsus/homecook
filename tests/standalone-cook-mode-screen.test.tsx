@@ -21,6 +21,10 @@ const isCookingApiError = vi.fn(
     "code" in (error as Record<string, unknown>),
 );
 const mockRouterPush = vi.fn();
+const mockRouterReplace = vi.fn();
+const navigationMocks = vi.hoisted(() => ({
+  searchParams: vi.fn(() => new URLSearchParams()),
+}));
 
 function installMatchMedia(matchesAppView: boolean) {
   Object.defineProperty(window, "matchMedia", {
@@ -50,7 +54,8 @@ vi.mock("@/lib/api/cooking", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockRouterPush }),
+  useRouter: () => ({ push: mockRouterPush, replace: mockRouterReplace }),
+  useSearchParams: () => navigationMocks.searchParams(),
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
@@ -137,6 +142,9 @@ describe("StandaloneCookModeScreen", () => {
     fetchStandaloneCookMode.mockReset();
     completeStandaloneCooking.mockReset();
     mockRouterPush.mockReset();
+    mockRouterReplace.mockReset();
+    navigationMocks.searchParams.mockReset();
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     installMatchMedia(false);
   });
 
@@ -299,7 +307,7 @@ describe("StandaloneCookModeScreen", () => {
     fireEvent.click(screen.getByTestId("consumed-skip-button"));
 
     await waitFor(() => {
-      expect(mockRouterPush).toHaveBeenCalledWith("/recipe/recipe-1");
+      expect(mockRouterReplace).toHaveBeenCalledWith("/recipe/recipe-1");
     });
   });
 
@@ -351,7 +359,7 @@ describe("StandaloneCookModeScreen", () => {
 
     fireEvent.click(screen.getByTestId("standalone-cancel-button"));
 
-    expect(mockRouterPush).toHaveBeenCalledWith("/recipe/recipe-1");
+    expect(mockRouterReplace).toHaveBeenCalledWith("/recipe/recipe-1");
   });
 
   it("shows error state when API fails", async () => {

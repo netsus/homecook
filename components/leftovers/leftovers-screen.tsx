@@ -11,6 +11,7 @@ import { ContentState } from "@/components/shared/content-state";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
+import { useAppReturn } from "@/components/shared/use-app-return";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   eatLeftover,
@@ -20,6 +21,7 @@ import {
 import { createMeal, isMealApiError } from "@/lib/api/meal";
 import { fetchPlanner } from "@/lib/api/planner";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { LeftoverListItemData } from "@/types/leftover";
@@ -153,6 +155,7 @@ export function LeftoversScreen({
   initialAuthenticated = false,
 }: LeftoversScreenProps) {
   const isMobileViewport = useIsMobileViewport();
+  const appReturn = useAppReturn({ fallback: "/planner" });
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
@@ -453,6 +456,14 @@ export function LeftoversScreen({
       sheetState={plannerAddSheetState}
     />
   );
+  const leftoversSelfHref = buildReturnHref("/leftovers", {
+    returnSurface: "leftovers.list",
+    returnTo: appReturn.href,
+  });
+  const eatenListHref = buildReturnHref("/leftovers/ate", {
+    returnSurface: "leftovers.list",
+    returnTo: leftoversSelfHref,
+  });
 
   // Auth checking state
   if (authState === "checking") {
@@ -477,12 +488,12 @@ export function LeftoversScreen({
         title="이 화면은 로그인이 필요해요"
       >
         <div className="space-y-3">
-          <SocialLoginButtons nextPath="/leftovers" />
+          <SocialLoginButtons nextPath={leftoversSelfHref} />
           <Link
             className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
-            href="/planner"
+            href={appReturn.href}
           >
-            플래너로 돌아가기
+            이전 화면으로 돌아가기
           </Link>
         </div>
       </ContentState>
@@ -492,6 +503,8 @@ export function LeftoversScreen({
   if (isMobileViewport) {
     return (
       <LeftoversMobileView
+        appReturnHref={appReturn.href}
+        eatenListHref={eatenListHref}
         eatingId={eatingId}
         errorMessage={errorMessage}
         feedback={feedback}
@@ -518,10 +531,10 @@ export function LeftoversScreen({
             <Link
               aria-label="뒤로가기"
               className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface-fill)] px-4 text-sm font-semibold text-[var(--text-2)] hover:text-[var(--brand)]"
-              href="/planner"
+              href={appReturn.href}
             >
               <span aria-hidden="true">&lt;</span>
-              플래너 보기
+              이전 화면
             </Link>
             <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
               Leftovers
@@ -549,7 +562,7 @@ export function LeftoversScreen({
             </div>
             <Link
               className="flex min-h-[76px] items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand)] bg-[var(--brand-soft)] px-4 text-sm font-bold text-[var(--brand-deep)]"
-              href="/leftovers/ate"
+              href={eatenListHref}
             >
               다먹은 목록
             </Link>
@@ -605,7 +618,7 @@ export function LeftoversScreen({
           actionLabel="플래너로 돌아가기"
           description="요리를 완료하면 여기에 저장돼요"
           onAction={() => {
-            window.location.href = "/planner";
+            window.location.href = appReturn.href;
           }}
           title="남은 요리가 없어요"
           tone="empty"
@@ -636,6 +649,8 @@ export function LeftoversScreen({
 }
 
 function LeftoversMobileView({
+  appReturnHref,
+  eatenListHref,
   eatingId,
   errorMessage,
   feedback,
@@ -646,6 +661,8 @@ function LeftoversMobileView({
   plannerAddSheet,
   screenState,
 }: {
+  appReturnHref: string;
+  eatenListHref: string;
   eatingId: string | null;
   errorMessage: string | null;
   feedback: { message: string; tone: FeedbackTone } | null;
@@ -666,9 +683,9 @@ function LeftoversMobileView({
       }}
     >
       <MobileAppBar
-        actionHref="/leftovers/ate"
+        actionHref={eatenListHref}
         actionLabel="다먹은 요리"
-        backHref="/planner"
+        backHref={appReturnHref}
         title="남은요리"
       />
 
@@ -711,10 +728,10 @@ function LeftoversMobileView({
       {screenState === "empty" ? (
         <div className="p-4">
           <ContentState
-            actionLabel="플래너로 돌아가기"
+            actionLabel="이전 화면으로 돌아가기"
             description="요리를 완료하면 여기에 저장돼요"
             onAction={() => {
-              window.location.href = "/planner";
+              window.location.href = appReturnHref;
             }}
             title="남은 요리가 없어요"
             tone="empty"

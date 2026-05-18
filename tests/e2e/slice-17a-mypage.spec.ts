@@ -244,7 +244,11 @@ test.describe("MYPAGE screen", () => {
 
     const card = page.getByTestId("shopping-card-list-1");
     await expect(card).toBeVisible();
-    await expect(card).toHaveAttribute("href", "/shopping/lists/list-1");
+    const href = await card.getAttribute("href");
+    expect(href).toContain("/shopping/lists/list-1");
+    expect(href).toContain("returnTo=");
+    expect(href).toContain("returnSurface=mypage.shopping-history");
+    expect(href).toContain("restore=shopping-history-tab");
   });
 
   test("shows empty shopping history state with planner link", async ({ page }) => {

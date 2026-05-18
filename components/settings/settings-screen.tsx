@@ -10,6 +10,7 @@ import {
   SettingsMobileScreen,
   type SettingsMobileSurface,
 } from "@/components/settings/settings-mobile-screen";
+import { useAppReturn } from "@/components/shared/use-app-return";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
@@ -891,14 +892,14 @@ export function SettingsScreen({
 }
 
 function SettingsAppBar() {
-  const router = useRouter();
+  const appReturn = useAppReturn({ fallback: "/mypage" });
 
   return (
     <div className="flex h-14 items-center border-b border-[var(--line)] bg-[var(--background)] px-2">
       <button
         aria-label="뒤로가기"
         className="flex h-11 w-11 shrink-0 items-center justify-center"
-        onClick={() => router.push("/mypage")}
+        onClick={appReturn.goBack}
         type="button"
       >
         <svg

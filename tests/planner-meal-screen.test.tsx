@@ -22,6 +22,9 @@ const isMealApiError = vi.fn(
 const mockRouterBack = vi.fn();
 const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
+const navigationMocks = vi.hoisted(() => ({
+  searchParams: vi.fn(() => new URLSearchParams()),
+}));
 
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => readE2EAuthOverride(),
@@ -55,6 +58,7 @@ vi.mock("next/navigation", () => ({
     push: mockRouterPush,
     replace: mockRouterReplace,
   }),
+  useSearchParams: () => navigationMocks.searchParams(),
 }));
 
 vi.mock("@/components/auth/social-login-buttons", () => ({
@@ -111,6 +115,8 @@ describe("MealScreen", () => {
     mockRouterBack.mockReset();
     mockRouterPush.mockReset();
     mockRouterReplace.mockReset();
+    navigationMocks.searchParams.mockReset();
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     isMealApiError.mockImplementation(
       (error: unknown): error is Error & { status: number; code: string } =>
         Boolean(error) &&

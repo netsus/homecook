@@ -8,6 +8,7 @@ import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-
 import { Button } from "@/components/ui/button";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { ModalHeader } from "@/components/shared/modal-header";
+import { useAppReturn } from "@/components/shared/use-app-return";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import {
   validateYoutubeUrl,
@@ -838,6 +839,12 @@ export function YoutubeImportScreen({
   slotName,
 }: YoutubeImportScreenProps) {
   const router = useRouter();
+  const appReturn = useAppReturn({
+    fallback:
+      planDate && columnId
+        ? `/planner/${planDate}/${columnId}${slotName ? `?slot=${encodeURIComponent(slotName)}` : ""}`
+        : "/planner",
+  });
   const internalHistoryDepthRef = useRef(0);
   const bypassPopGuardRef = useRef(false);
 
@@ -933,21 +940,9 @@ export function YoutubeImportScreen({
   }, []);
 
   const exitImportFlow = useCallback(() => {
-    const backSteps = internalHistoryDepthRef.current + 1;
     bypassPopGuardRef.current = true;
-
-    if (backSteps > 0 && window.history.length > 1) {
-      window.history.go(-backSteps);
-      window.setTimeout(() => {
-        if (window.location.pathname === "/menu/add/youtube") {
-          router.replace("/");
-        }
-      }, 300);
-      return;
-    }
-
-    router.replace("/");
-  }, [router]);
+    appReturn.goBack();
+  }, [appReturn]);
 
   // ─── Step 1 handlers ───────────────────────────────────────────────
 
@@ -1192,9 +1187,9 @@ export function YoutubeImportScreen({
     } else if (currentStep === "extracting" && extractionError) {
       setCurrentStep("url-input");
     } else {
-      router.back();
+      appReturn.goBack();
     }
-  }, [currentStep, extractionError, router]);
+  }, [appReturn, currentStep, extractionError]);
 
   const handleConfirmBack = useCallback(() => {
     setModalMode("none");

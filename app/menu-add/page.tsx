@@ -8,11 +8,20 @@ import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getServerAuthUser } from "@/lib/supabase/server";
 
 interface MenuAddPageProps {
-  searchParams: Promise<{ date?: string; columnId?: string; slot?: string; source?: string }>;
+  searchParams: Promise<{
+    columnId?: string;
+    date?: string;
+    restore?: string;
+    returnSurface?: string;
+    returnTo?: string;
+    slot?: string;
+    source?: string;
+  }>;
 }
 
 export default async function MenuAddPage({ searchParams }: MenuAddPageProps) {
-  const { date, columnId, slot, source } = await searchParams;
+  const { date, columnId, restore, returnSurface, returnTo, slot, source } =
+    await searchParams;
   const cookieStore = await cookies();
   const authOverride = readE2EAuthOverrideCookie(cookieStore);
   const user =
@@ -32,6 +41,11 @@ export default async function MenuAddPage({ searchParams }: MenuAddPageProps) {
     if (columnId) queryParts.push(`columnId=${encodeURIComponent(columnId)}`);
     if (slot) queryParts.push(`slot=${encodeURIComponent(slot)}`);
     if (source) queryParts.push(`source=${encodeURIComponent(source)}`);
+    if (returnTo) queryParts.push(`returnTo=${encodeURIComponent(returnTo)}`);
+    if (returnSurface) {
+      queryParts.push(`returnSurface=${encodeURIComponent(returnSurface)}`);
+    }
+    if (restore) queryParts.push(`restore=${encodeURIComponent(restore)}`);
     const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
     const returnPath = resolveNextPath(`/menu-add${queryString}`);
     redirect(`/login?next=${encodeURIComponent(returnPath)}`);

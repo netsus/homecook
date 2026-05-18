@@ -8,6 +8,7 @@ import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-
 import { Button } from "@/components/ui/button";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { ModalHeader } from "@/components/shared/modal-header";
+import { useAppReturn } from "@/components/shared/use-app-return";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import { createManualRecipe } from "@/lib/api/manual-recipe";
 import { createMealSafe } from "@/lib/api/meal";
@@ -481,6 +482,12 @@ export function ManualRecipeCreateScreen({
   slotName,
 }: ManualRecipeCreateScreenProps) {
   const router = useRouter();
+  const appReturn = useAppReturn({
+    fallback:
+      planDate && columnId
+        ? `/planner/${planDate}/${columnId}${slotName ? `?slot=${encodeURIComponent(slotName)}` : ""}`
+        : "/planner",
+  });
   const [title, setTitle] = useState("");
   const [baseServings, setBaseServings] = useState(2);
   const [ingredients, setIngredients] = useState<TempIngredient[]>([]);
@@ -522,8 +529,8 @@ export function ManualRecipeCreateScreen({
   const canSave = saveRequirements.length === 0;
 
   const handleBack = useCallback(() => {
-    router.back();
-  }, [router]);
+    appReturn.goBack();
+  }, [appReturn]);
 
   const handleAddIngredient = useCallback(
     (ingredient: Omit<TempIngredient, "tempId">) => {
@@ -645,8 +652,8 @@ export function ManualRecipeCreateScreen({
   }, [createdRecipeId, router]);
 
   const handleSuccessClose = useCallback(() => {
-    router.back();
-  }, [router]);
+    appReturn.goBack();
+  }, [appReturn]);
 
   return (
     <div className="flex h-screen flex-col bg-[#F8F9FA] md:bg-[var(--background)]">
