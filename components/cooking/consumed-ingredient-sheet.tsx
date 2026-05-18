@@ -74,7 +74,7 @@ export function ConsumedIngredientSheet({
         >
           <div className="border-b border-[#DEE2E6] px-5 pb-3 pt-[18px]">
             <h3
-              className="text-[18px] font-bold leading-[1.3] [font-family:var(--font-jua),-apple-system,sans-serif]"
+              className="text-[18px] font-bold leading-[1.3]"
               id="consumed-sheet-title"
             >
               소진된 재료를 확인해주세요

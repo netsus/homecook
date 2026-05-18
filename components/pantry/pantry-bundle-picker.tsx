@@ -169,7 +169,7 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
                 </button>
               ) : null}
               <div className="min-w-0 flex-1">
-                <h2 className="text-[18px] font-extrabold leading-[1.25] [font-family:var(--font-jua),-apple-system,sans-serif]">
+                <h2 className="text-[18px] font-extrabold leading-[1.25]">
                   {expandedBundle ? expandedBundle.name : "재료 묶음 선택"}
                 </h2>
                 <p className="mt-1 text-[11px] font-medium leading-[1.35] text-[#868E96]">

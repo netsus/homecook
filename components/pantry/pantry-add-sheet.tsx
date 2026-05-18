@@ -157,7 +157,7 @@ export function PantryAddSheet({
         >
           <div className="border-b border-[#DEE2E6] px-5 pb-2 pt-[18px]">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[18px] font-extrabold leading-none [font-family:var(--font-jua),-apple-system,sans-serif]">
+              <h2 className="text-[18px] font-extrabold leading-none">
                 재료 추가
               </h2>
               <button

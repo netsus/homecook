@@ -403,7 +403,7 @@ export function HomeScreen() {
             {/* Hero greeting */}
             <div className="bg-white px-4 pb-3 pt-5">
               <div className="mb-0.5 text-[14px] text-[#495057]">목요일 저녁,</div>
-              <h1 className="text-[22px] font-bold leading-[1.2] text-[#212529]" style={{ fontFamily: "var(--font-jua), -apple-system, sans-serif" }}>
+              <h1 className="text-[22px] font-bold leading-[1.2] text-[#212529]">
                 오늘은 뭐 해먹지?
               </h1>
             </div>
@@ -421,7 +421,6 @@ export function HomeScreen() {
                   }}
                   placeholder="김치볶음밥, 된장찌개…"
                   value={query}
-                  style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif' }}
                 />
               </label>
             </div>
@@ -898,7 +897,6 @@ function HomeAppBar() {
       <div
         aria-label="homecook_"
         className="text-[22px] font-bold tracking-[0.5px]"
-        style={{ fontFamily: "var(--font-jua), -apple-system, sans-serif" }}
       >
         <span className="text-[#008F8A]">homecook</span>
         <span className="text-[#212529]">_</span>
@@ -1094,7 +1092,7 @@ function ThemeCarouselCard({
       <span className="text-[30px] leading-none" aria-hidden="true">
         {emoji}
       </span>
-      <span className="line-clamp-2 text-[14px] font-bold leading-[1.15] text-[#212529]" style={{ fontFamily: "var(--font-jua), -apple-system, sans-serif" }}>
+      <span className="line-clamp-2 text-[14px] font-bold leading-[1.15] text-[#212529]">
         {theme.title}
       </span>
     </button>
@@ -1115,7 +1113,7 @@ function PromoStrip() {
           <span className="block text-[12px] font-normal" style={{ opacity: 0.9 }}>
             이번 주 식단 플래너
           </span>
-          <span className="mt-0.5 block text-[16px] font-bold" style={{ fontFamily: "var(--font-jua), -apple-system, sans-serif" }}>
+          <span className="mt-0.5 block text-[16px] font-bold">
             오늘 저녁까지 2끼 남았어요
           </span>
         </span>

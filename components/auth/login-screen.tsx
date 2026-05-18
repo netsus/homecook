@@ -154,13 +154,13 @@ export function LoginScreen({
         <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[18px] bg-[var(--wave1-mint)] text-white shadow-[0_10px_22px_rgba(42,193,188,0.24)]">
           <span
             aria-hidden="true"
-            className="text-[30px] leading-none [font-family:var(--wave1-font-brand)]"
+            className="text-[30px] leading-none"
           >
             홈
           </span>
         </div>
 
-        <h1 className="mt-5 text-[26px] font-bold leading-[1.35] text-[var(--wave1-ink)] [font-family:var(--wave1-font-brand)]">
+        <h1 className="mt-5 text-[26px] font-bold leading-[1.35] text-[var(--wave1-ink)]">
           홈쿡과 함께
           <br />
           오늘 뭐 먹지 정해봐요

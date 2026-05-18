@@ -52,15 +52,9 @@ export function PantryMobileScreen({
   const categoryRail = getCategoryRail(items);
 
   return (
-    <div
-      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
-      style={{
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif',
-      }}
-    >
+    <div className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden">
       <div className="relative flex h-[52px] items-center justify-center border-b border-[#DEE2E6] bg-white px-4">
-        <h1 className="text-[18px] font-extrabold leading-none [font-family:var(--font-jua),-apple-system,sans-serif]">
+        <h1 className="text-[18px] font-extrabold leading-none">
           팬트리
         </h1>
         <button
@@ -83,7 +77,7 @@ export function PantryMobileScreen({
           냉장고에 있는 재료
         </p>
         <div className="mb-5 flex items-baseline gap-1.5">
-          <span className="text-[32px] font-extrabold leading-none [font-family:var(--font-jua),-apple-system,sans-serif]">
+          <span className="text-[32px] font-extrabold leading-none">
             {items.length}
           </span>
           <span className="text-[16px] font-bold leading-none text-[#868E96]">
@@ -116,7 +110,7 @@ export function PantryMobileScreen({
 
         <div className="grid grid-cols-2 gap-2">
           <button
-            className="h-10 rounded-[10px] border-0 bg-[#2AC1BC] text-[13px] font-extrabold text-white [font-family:var(--font-jua),-apple-system,sans-serif]"
+            className="h-10 rounded-[10px] border-0 bg-[#2AC1BC] text-[13px] font-extrabold text-white"
             onClick={onOpenAddSheet}
             type="button"
           >
@@ -124,7 +118,7 @@ export function PantryMobileScreen({
           </button>
           <button
             aria-label="묶음으로 추가"
-            className="h-10 rounded-[10px] border border-[#DEE2E6] bg-white text-[13px] font-extrabold text-[#495057] [font-family:var(--font-jua),-apple-system,sans-serif]"
+            className="h-10 rounded-[10px] border border-[#DEE2E6] bg-white text-[13px] font-extrabold text-[#495057]"
             onClick={onOpenBundlePicker}
             type="button"
           >

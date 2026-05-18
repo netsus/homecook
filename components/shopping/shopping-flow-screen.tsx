@@ -878,7 +878,7 @@ function MobileSelectScreen({
           <p className="text-[12px] font-extrabold leading-[1.3] text-[#20A8A4]">
             STEP 1 / 2
           </p>
-          <h2 className="mt-1 text-[20px] font-extrabold leading-[1.3] text-[#212529] [font-family:var(--font-jua),-apple-system,sans-serif]">
+          <h2 className="mt-1 text-[20px] font-extrabold leading-[1.3] text-[#212529]">
             어떤 끼니의 재료를 살까요?
           </h2>
           <p className="mt-3 text-[13px] font-medium leading-[1.5] text-[#868E96]">
@@ -1033,7 +1033,7 @@ function MobileReviewScreen({
               <p className="text-[12px] font-extrabold leading-[1.3] text-[#20A8A4]">
                 STEP 2 / 2
               </p>
-              <h2 className="mt-1 truncate text-[20px] font-extrabold leading-[1.3] text-[#212529] [font-family:var(--font-jua),-apple-system,sans-serif]">
+              <h2 className="mt-1 truncate text-[20px] font-extrabold leading-[1.3] text-[#212529]">
                 {formatDateDot(detail.created_at)} · 장보기 목록
               </h2>
               <p className="mt-2 text-[12px] font-medium leading-[1.4] text-[#868E96]">

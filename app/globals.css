@@ -60,10 +60,8 @@
   --wave1-shadow-deep: 0px 2px 8px rgba(0, 0, 0, 0.08);
   --wave1-shadow-sharp: 0px 4px 12px rgba(0, 0, 0, 0.10);
   --wave1-shadow-crisp: 0px 8px 24px rgba(0, 0, 0, 0.16);
-  --wave1-font-ui:
-    -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo",
-    "Malgun Gothic", "Noto Sans KR", sans-serif;
-  --wave1-font-brand: "Jua", -apple-system, sans-serif;
+  --wave1-font-ui: var(--font-body);
+  --wave1-font-brand: var(--font-body);
 
   /* ── 요리모드 조리방법 색상 ── */
   --cook-stir:   #FF8C42;
@@ -125,7 +123,8 @@ a {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 

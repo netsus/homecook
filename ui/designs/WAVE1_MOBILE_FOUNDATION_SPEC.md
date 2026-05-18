@@ -228,42 +228,27 @@ Note: Status bar color is a native webview/PWA concern. In Playwright capture it
 "Malgun Gothic", "Noto Sans KR", sans-serif
 ```
 
-This is the Wave1 prototype UI font. It replaces the legacy MVP font stack (`"Avenir Next", "Pretendard", ...`) for mobile Wave1 surfaces.
+This was the Wave1 prototype UI font. The Stage 3 mobile UX system decision supersedes it for production: mobile Wave1 surfaces now inherit the service UI font from `--font-body`.
 
-**Implementation**: Mobile Wave1 surfaces should apply this via `var(--wave1-font-ui)` or direct `font-family` style. The legacy `--font-body` in `globals.css` is NOT changed.
+**Implementation**: Mobile Wave1 surfaces should not apply direct `font-family` styles. `--wave1-font-ui` and `--wave1-font-brand` both resolve to `--font-body`.
 
 ### 5.2 Brand Font Stack
 
 ```
-"Jua", -apple-system, sans-serif
+var(--font-body)
 ```
 
 ### 5.3 Jua Font Availability Decision
 
-**Status: AVAILABLE**
+**Status: NOT USED IN PRODUCTION UI**
 
-`app/layout.tsx` imports Jua via `next/font/google`:
-
-```tsx
-const jua = Jua({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-jua",
-  weight: "400",
-});
-```
-
-The CSS custom property `--font-jua` is set on `<body>`. Jua is self-hosted by Next.js Google Fonts integration and available in production.
-
-**Constraint**: Jua only has weight `400`. The prototype uses brand font at weight `700` for Display role, but since Jua only ships `400`, the visual rendering will use Jua at its single available weight. This is acceptable because browser faux-bold at `font-weight: 700` on Jua produces a recognizably similar result, and refreeze of the prototype is not required for this.
-
-**Usage scope**: Brand font applies to the `Display / brand` typography role only (see Section 5.4). All other text roles use the UI font stack.
+`app/layout.tsx` does not import Jua. Product UI text, screen titles, modal titles, buttons, chips, tab labels, and brand marks inherit the same service UI font stack. Historical prototype references to Jua remain reference-only and must not be copied into runtime code.
 
 ### 5.4 Type Scale
 
 | Role | Size | Weight | Line-height | Font | Usage examples |
 |---|---|---|---|---|---|
-| Display / brand | `22px` | `700` | `1.2` | Brand (`Jua`) | HOME brand title `homecook_`, theme headings |
+| Display / brand | `22px` | `700` | `1.2` | UI | HOME brand title `homecook_`, theme headings |
 | H1 / screen title | `22px` | `700` | `1.3` | UI | `오늘은 뭐 해먹지?`, screen names |
 | H2 / section title | `18px` | `700` | `1.3` | UI | `테마별 레시피`, `모든 레시피`, section headers |
 | Body | `14px` | `500` | `1.5` | UI | Descriptions, list item text, recipe metadata |
@@ -275,7 +260,7 @@ The CSS custom property `--font-jua` is set on `<body>`. Jua is self-hosted by N
 
 | Weight | Usage |
 |---|---|
-| `400` | Jua brand font (only available weight). Also acceptable for very light body text if prototype shows it. |
+| `400` | Default text only when a lighter role is explicitly needed. |
 | `500` | Default body, caption, meta, inactive labels |
 | `700` | Titles, emphasis, active tab labels, CTAs |
 
