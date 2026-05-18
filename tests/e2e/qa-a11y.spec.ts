@@ -5,14 +5,19 @@ import {
   installDiscoveryRoutes,
   installMenuAddVisualRoutes,
   installMealDetailRoutes,
+  installPantryShoppingVisualRoutes,
   installPlannerWeekRoutes,
   installRecipeDetailRoutes,
   installYoutubeImportVisualRoutes,
   MANUAL_CREATE_VISUAL_PATH,
   MEAL_VISUAL_PATH,
   MENU_ADD_VISUAL_PATH,
+  PANTRY_VISUAL_PATH,
   RECIPE_PATH,
   setE2EAuthOverride,
+  SHOPPING_DETAIL_COMPLETED_VISUAL_PATH,
+  SHOPPING_DETAIL_VISUAL_PATH,
+  SHOPPING_FLOW_VISUAL_PATH,
   YOUTUBE_IMPORT_VISUAL_PATH,
 } from "./helpers/mock-routes";
 
@@ -351,6 +356,71 @@ test.describe("QA accessibility smoke", () => {
     await page.getByRole("button", { name: "가져오기" }).click();
     await expect(
       page.getByRole("heading", { name: "추출 결과를 확인해주세요" }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+  });
+
+  test("pantry and shopping desktop slice screens are axe-clean", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only pantry/shopping parity smoke");
+    await setE2EAuthOverride(page);
+    await installPantryShoppingVisualRoutes(page);
+
+    await page.goto(PANTRY_VISUAL_PATH);
+    await expect(page.getByRole("heading", { name: "나의 팬트리" })).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await visibleTextButton(page, "+ 재료 추가").click();
+    const addDialog = page.getByRole("dialog", {
+      name: "재료 추가",
+    });
+    await expect(addDialog).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+    await addDialog.getByRole("button", { name: "닫기" }).click();
+
+    await visibleTextButton(page, "번들로 추가").click();
+    const bundleDialog = page.getByRole("dialog", {
+      name: "묶음으로 재료 추가",
+    });
+    await expect(bundleDialog).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.goto(SHOPPING_FLOW_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "장보기 준비" }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.goto(SHOPPING_DETAIL_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "이번 주 장보기" }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.getByRole("button", { name: "장보기 완료" }).click();
+    await expect(
+      page.getByRole("dialog", { name: /팬트리에 반영할까요/ }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.goto(SHOPPING_DETAIL_COMPLETED_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "지난 주 장보기" }),
     ).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
