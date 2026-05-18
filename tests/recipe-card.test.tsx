@@ -102,4 +102,22 @@ describe("recipe card", () => {
     expect(cardScope.getByText("직접 등록")).toBeTruthy();
     expect(cardScope.queryByText(/^manual$/i)).toBeNull();
   });
+
+  it("centers source badge text inside the badge container", () => {
+    render(
+      <RecipeCard
+        recipe={{
+          ...MOCK_RECIPE_CARD,
+          source_type: "manual",
+          save_count: 50,
+        }}
+      />,
+    );
+
+    const badge = screen.getByText("직접 등록");
+
+    expect(badge.className).toContain("inline-flex");
+    expect(badge.className).toContain("items-center");
+    expect(badge.className).toContain("justify-center");
+  });
 });

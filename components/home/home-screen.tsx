@@ -41,7 +41,6 @@ import { useAuthGateStore } from "@/stores/ui-store";
 import type {
   RecipeCardItem,
   RecipeListData,
-  RecipeSaveData,
   RecipeSortKey,
   RecipeTheme,
   RecipeThemesData,
@@ -299,7 +298,7 @@ export function HomeScreen() {
     setActiveRecipeCategory(category);
   }, []);
 
-  const updateRecipeSaveState = useCallback((recipeId: string, result: RecipeSaveData) => {
+  const updateRecipeSaveState = useCallback((recipeId: string, saveCount: number) => {
     setRecipes((currentRecipes) => {
       if (!currentRecipes) {
         return currentRecipes;
@@ -309,7 +308,7 @@ export function HomeScreen() {
         ...currentRecipes,
         items: currentRecipes.items.map((recipe) =>
           recipe.id === recipeId
-            ? { ...recipe, save_count: result.save_count }
+            ? { ...recipe, save_count: saveCount }
             : recipe,
         ),
       };
@@ -325,7 +324,7 @@ export function HomeScreen() {
           ...theme,
           recipes: theme.recipes.map((recipe) =>
             recipe.id === recipeId
-              ? { ...recipe, save_count: result.save_count }
+              ? { ...recipe, save_count: saveCount }
               : recipe,
           ),
         })),

@@ -86,4 +86,21 @@ describe("SaveModal", () => {
 
     expect(props.onSelectBook).toHaveBeenCalledWith("book-custom");
   });
+
+  it("allows already-saved books to be toggled off before final confirmation", async () => {
+    const { appDialog, props } = renderSaveModal({
+      alreadySavedBookIds: ["book-saved"],
+      selectedBookIds: ["book-saved"],
+    });
+
+    const savedBookButton = within(appDialog).getByRole("button", {
+      name: /저장한 레시피/,
+    }) as HTMLButtonElement;
+
+    expect(savedBookButton.disabled).toBe(false);
+
+    await userEvent.click(savedBookButton);
+
+    expect(props.onSelectBook).toHaveBeenCalledWith("book-saved");
+  });
 });

@@ -67,6 +67,10 @@ export function SaveModal({
   const newSelectedBookCount = selectedBookIds.filter(
     (bookId) => !alreadySavedBookIdSet.has(bookId),
   ).length;
+  const removedBookCount = alreadySavedBookIds.filter(
+    (bookId) => !selectedBookIds.includes(bookId),
+  ).length;
+  const changedBookCount = newSelectedBookCount + removedBookCount;
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -81,7 +85,7 @@ export function SaveModal({
   const disableCreate =
     isCreatingBook || isSavingRecipe || newBookName.trim().length === 0;
   const disableSave =
-    isSavingRecipe || isCreatingBook || newSelectedBookCount === 0;
+    isSavingRecipe || isCreatingBook || changedBookCount === 0;
   const shouldRenderWebView =
     process.env.NODE_ENV !== "test" || isDesktopViewport;
   const shouldRenderAppView =
@@ -104,9 +108,7 @@ export function SaveModal({
               confirmLabel={
                 isSavingRecipe
                   ? "저장 중..."
-                  : newSelectedBookCount > 0
-                    ? `${newSelectedBookCount}개 레시피북에 추가 저장`
-                    : "이미 저장됨"
+                  : formatSaveConfirmLabel(newSelectedBookCount, removedBookCount)
               }
               onCancel={onClose}
               onConfirm={onSaveRecipe}
@@ -157,8 +159,8 @@ export function SaveModal({
                     return (
                       <button
                         aria-pressed={isSelected}
-                        className="flex w-full items-center gap-2.5 border-b border-[#F1F3F5] px-4 py-3 text-left last:border-b-0 disabled:cursor-default"
-                        disabled={isSavingRecipe || isCreatingBook || isAlreadySaved}
+                        className="flex w-full items-center gap-2.5 border-b border-[#F1F3F5] px-4 py-3 text-left last:border-b-0 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={isSavingRecipe || isCreatingBook}
                         key={book.id}
                         onClick={() => onSelectBook(book.id)}
                         type="button"
@@ -179,11 +181,7 @@ export function SaveModal({
                             {book.name}
                           </span>
                           <span className="mt-0.5 block text-[11px] text-[#5F6470]">
-                            {isAlreadySaved
-                              ? "이미 저장됨"
-                              : isSelected
-                                ? "저장 대상"
-                                : "선택하면 이 책에 추가"}
+                            {getBookSelectionMeta({ isAlreadySaved, isSelected })}
                           </span>
                         </span>
                         <span
@@ -194,7 +192,11 @@ export function SaveModal({
                               : "bg-[#F8F9FA] text-[#5F6470]",
                           ].join(" ")}
                         >
-                          {isAlreadySaved ? "완료" : isSavedBook ? "저장" : "내 책"}
+                          {getBookSelectionBadge({
+                            isAlreadySaved,
+                            isSavedBook,
+                            isSelected,
+                          })}
                         </span>
                       </button>
                     );
@@ -306,7 +308,7 @@ export function SaveModal({
                     <button
                       aria-pressed={isSelected}
                       className="web-modal-option"
-                      disabled={isSavingRecipe || isCreatingBook || isAlreadySaved}
+                      disabled={isSavingRecipe || isCreatingBook}
                       key={book.id}
                       onClick={() => onSelectBook(book.id)}
                       type="button"
@@ -323,11 +325,7 @@ export function SaveModal({
                       <span className="web-modal-option-main">
                         <span className="web-modal-option-title">{book.name}</span>
                         <span className="web-modal-option-meta">
-                          {isAlreadySaved
-                            ? "이미 저장됨"
-                            : isSelected
-                              ? "저장 대상"
-                              : "선택하면 이 책에 추가"}
+                          {getBookSelectionMeta({ isAlreadySaved, isSelected })}
                         </span>
                       </span>
                       <span
@@ -336,7 +334,11 @@ export function SaveModal({
                           isSavedBook || isAlreadySaved ? "web-modal-badge-brand" : "",
                         ].join(" ")}
                       >
-                        {isAlreadySaved ? "완료" : isSavedBook ? "저장" : "내 책"}
+                        {getBookSelectionBadge({
+                          isAlreadySaved,
+                          isSavedBook,
+                          isSelected,
+                        })}
                       </span>
                     </button>
                   );
@@ -381,9 +383,7 @@ export function SaveModal({
               <WebButton disabled={disableSave} onClick={onSaveRecipe}>
                 {isSavingRecipe
                   ? "저장 중..."
-                  : newSelectedBookCount > 0
-                    ? `${newSelectedBookCount}개 레시피북에 추가 저장`
-                    : "이미 저장됨"}
+                  : formatSaveConfirmLabel(newSelectedBookCount, removedBookCount)}
               </WebButton>
           </WebDialogFooter>
           </>
@@ -394,6 +394,56 @@ export function SaveModal({
     ) : null}
     </>
   );
+}
+
+function formatSaveConfirmLabel(addCount: number, removeCount: number) {
+  if (addCount > 0 && removeCount > 0) {
+    return `${addCount}개 추가 · ${removeCount}개 저장 해제`;
+  }
+
+  if (addCount > 0) {
+    return `${addCount}개 레시피북에 추가 저장`;
+  }
+
+  if (removeCount > 0) {
+    return `${removeCount}개 저장 해제`;
+  }
+
+  return "변경 없음";
+}
+
+function getBookSelectionMeta({
+  isAlreadySaved,
+  isSelected,
+}: {
+  isAlreadySaved: boolean;
+  isSelected: boolean;
+}) {
+  if (isAlreadySaved) {
+    return isSelected ? "이미 저장됨" : "저장 해제 예정";
+  }
+
+  return isSelected ? "저장 대상" : "선택하면 이 책에 추가";
+}
+
+function getBookSelectionBadge({
+  isAlreadySaved,
+  isSavedBook,
+  isSelected,
+}: {
+  isAlreadySaved: boolean;
+  isSavedBook: boolean;
+  isSelected: boolean;
+}) {
+  if (isAlreadySaved && !isSelected) {
+    return "해제";
+  }
+
+  if (isAlreadySaved) {
+    return "저장됨";
+  }
+
+  return isSavedBook ? "저장" : "내 책";
 }
 
 function CloseIcon() {

@@ -1,6 +1,7 @@
 import { fetchJson } from "@/lib/api/fetch-json";
 import type {
   RecipeBookCreateData,
+  RecipeBookDeleteData,
   RecipeBookListData,
   RecipeBookSummary,
   RecipeSaveData,
@@ -52,4 +53,11 @@ export async function saveRecipeToBooks(recipeId: string, bookIds: string[]) {
       book_ids: bookIds,
     }),
   });
+}
+
+export async function removeRecipeFromBook(bookId: string, recipeId: string) {
+  return fetchJson<RecipeBookDeleteData>(
+    `/api/v1/recipe-books/${bookId}/recipes/${recipeId}`,
+    { method: "DELETE" },
+  );
 }

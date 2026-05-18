@@ -47,7 +47,7 @@ export function RecipeCard({ isSaved = false, onSave, recipe }: RecipeCardProps)
               {presentation.emoji}
             </span>
           ) : null}
-          <span className="absolute left-3 top-3 rounded-[6px] bg-white/92 px-2 py-1 text-[11px] font-bold text-[#007A76] shadow-[0_1px_4px_rgba(0,0,0,0.10)]">
+          <span className="absolute left-3 top-3 inline-flex min-h-6 items-center justify-center rounded-[6px] bg-white/92 px-2 text-center text-[11px] font-bold leading-none text-[#007A76] shadow-[0_1px_4px_rgba(0,0,0,0.10)]">
             {badgeLabel}
           </span>
         </div>

@@ -194,6 +194,29 @@ async function mockRecipeSaveRoutes(page: Page) {
     });
   });
 
+  await page.route(`**/api/v1/recipe-books/*/recipes/${RECIPE_ID}`, async (route) => {
+    if (route.request().method() !== "DELETE") {
+      await route.continue();
+      return;
+    }
+
+    const match = route.request().url().match(/\/recipe-books\/([^/]+)\/recipes\//);
+    const bookId = match?.[1] ?? "";
+
+    if (savedBookIds.includes(bookId)) {
+      savedBookIds = savedBookIds.filter((savedBookId) => savedBookId !== bookId);
+      saveCount = Math.max(0, saveCount - 1);
+    }
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { deleted: true },
+        error: null,
+      },
+    });
+  });
+
   await page.route(`**/api/v1/recipes/${RECIPE_ID}`, async (route) => {
     await route.fulfill({
       json: {
@@ -248,10 +271,31 @@ test.describe("Slice 04 recipe save flow", () => {
     await saveActionButton.click();
     await expect(modal.getByText("이미 저장됨").first()).toBeVisible();
 
-    const saveButtonName = isDesktopProject(testInfo) ? "이미 저장됨" : "저장";
+    const savedBookOption = modal
+      .getByRole("button", { name: /저장한 레시피/ })
+      .last();
+    await expect(savedBookOption).toBeEnabled();
+
+    await savedBookOption.click();
+
+    const removeConfirmName = isDesktopProject(testInfo)
+      ? "1개 저장 해제"
+      : "저장";
+    const removeConfirmButton = modal
+      .getByRole("button", { name: removeConfirmName })
+      .last();
+    await expect(removeConfirmButton).toBeEnabled();
+
+    await removeConfirmButton.click();
+
+    await expect(modal).not.toBeVisible();
+    await expect(saveActionButton).toHaveAttribute("aria-pressed", "false");
     await expect(
-      modal.getByRole("button", { name: saveButtonName }).last(),
-    ).toBeDisabled();
+      page
+        .locator("article:visible")
+        .filter({ hasText: isDesktopProject(testInfo) ? /저장\s*89/ : "89저장" })
+        .first(),
+    ).toBeVisible();
   });
 
   test("logged-in user can save to an existing recipe book", async (

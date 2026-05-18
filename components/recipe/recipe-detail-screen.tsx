@@ -32,6 +32,7 @@ import {
 import {
   createCustomRecipeBook,
   fetchSaveableRecipeBooks,
+  removeRecipeFromBook,
   saveRecipeToBooks,
 } from "@/lib/api/recipe-save";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
@@ -51,7 +52,6 @@ import type {
   RecipeDetail,
   RecipeIngredient,
   RecipeLikeData,
-  RecipeSaveData,
   RecipeUserStatus,
 } from "@/types/recipe";
 import type { PlannerColumnData } from "@/types/planner";
@@ -281,32 +281,34 @@ export function RecipeDetailScreen({
     });
   }, []);
 
-  const updateRecipeSaveState = useCallback((result: RecipeSaveData) => {
-    setRecipe((current) => {
-      if (!current) {
-        return current;
-      }
+  const replaceRecipeSaveState = useCallback(
+    ({
+      nextSavedBookIds,
+      nextSaveCount,
+    }: {
+      nextSavedBookIds: string[];
+      nextSaveCount: number;
+    }) => {
+      setRecipe((current) => {
+        if (!current) {
+          return current;
+        }
 
-      const previousUserStatus = current.user_status;
-      const previousSavedBookIds = previousUserStatus?.saved_book_ids ?? [];
-      const nextSavedBookIds = [
-        ...previousSavedBookIds,
-        ...result.book_ids.filter((bookId) => !previousSavedBookIds.includes(bookId)),
-      ];
+        const nextUserStatus: RecipeUserStatus = {
+          is_liked: current.user_status?.is_liked ?? false,
+          is_saved: nextSavedBookIds.length > 0,
+          saved_book_ids: nextSavedBookIds,
+        };
 
-      const nextUserStatus: RecipeUserStatus = {
-        is_liked: previousUserStatus?.is_liked ?? false,
-        is_saved: true,
-        saved_book_ids: nextSavedBookIds,
-      };
-
-      return {
-        ...current,
-        save_count: result.save_count,
-        user_status: nextUserStatus,
-      };
-    });
-  }, []);
+        return {
+          ...current,
+          save_count: Math.max(0, nextSaveCount),
+          user_status: nextUserStatus,
+        };
+      });
+    },
+    [],
+  );
 
   const closeSaveModal = useCallback(() => {
     if (isSavingRecipe) {
@@ -579,8 +581,15 @@ export function RecipeDetailScreen({
     const newBookIds = selectedSaveBookIds.filter(
       (bookId) => !alreadySavedBookIds.includes(bookId),
     );
+    const removedBookIds = alreadySavedBookIds.filter(
+      (bookId) => !selectedSaveBookIds.includes(bookId),
+    );
 
-    if (!recipe || newBookIds.length === 0 || isSavingRecipe) {
+    if (
+      !recipe ||
+      (newBookIds.length === 0 && removedBookIds.length === 0) ||
+      isSavingRecipe
+    ) {
       return;
     }
 
@@ -588,12 +597,26 @@ export function RecipeDetailScreen({
     setSaveSubmitError(null);
 
     try {
-      const result = await saveRecipeToBooks(recipe.id, newBookIds);
-      updateRecipeSaveState(result);
+      const saveResult = newBookIds.length > 0
+        ? await saveRecipeToBooks(recipe.id, newBookIds)
+        : null;
+
+      await Promise.all(
+        removedBookIds.map((bookId) => removeRecipeFromBook(bookId, recipe.id)),
+      );
+
+      const baseSaveCount = saveResult?.save_count ?? recipe.save_count;
+      replaceRecipeSaveState({
+        nextSavedBookIds: selectedSaveBookIds,
+        nextSaveCount: baseSaveCount - removedBookIds.length,
+      });
       setIsSaveModalOpen(false);
       setSaveModalState("idle");
       setFeedback({
-        message: "레시피를 저장했어요.",
+        message:
+          removedBookIds.length > 0
+            ? "레시피북 저장을 변경했어요."
+            : "레시피를 저장했어요.",
         tone: "status",
       });
     } catch (error) {
@@ -603,7 +626,7 @@ export function RecipeDetailScreen({
     } finally {
       setIsSavingRecipe(false);
     }
-  }, [isSavingRecipe, recipe, selectedSaveBookIds, updateRecipeSaveState]);
+  }, [isSavingRecipe, recipe, replaceRecipeSaveState, selectedSaveBookIds]);
 
   const handleLikeToggle = useCallback(
     async ({ source }: { source: "manual" | "return-to-action" }) => {
@@ -765,6 +788,13 @@ export function RecipeDetailScreen({
   const cookCountLabel = formatRecipeHeroCount(recipe.cook_count);
   const heroEmoji = getRecipeHeroEmoji(recipe);
   const heroBackground = getRecipeHeroBackground(recipe);
+  const mobileHeroStyle = recipe.thumbnail_url
+    ? {
+        backgroundImage: `linear-gradient(rgba(33,37,41,0.04),rgba(33,37,41,0.32)),url(${recipe.thumbnail_url})`,
+        backgroundPosition: "center",
+        backgroundSize: "cover",
+      }
+    : { background: heroBackground };
   const minutesLabel = getRecipeMinutesLabel(recipe);
   const displayTags = recipe.tags.slice(0, 3);
   const recipeDetailReturnHref = buildReturnHref(`/recipe/${recipeId}`, {
@@ -1138,14 +1168,17 @@ export function RecipeDetailScreen({
       <div className="min-h-screen bg-white pb-[190px] text-[#212529] lg:hidden">
         <section
           className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden text-[132px] max-[360px]:text-[108px] md:max-h-[460px]"
-          style={{ background: heroBackground }}
+          data-testid="recipe-detail-hero"
+          style={mobileHeroStyle}
         >
-          <span aria-hidden="true" className="select-none leading-none">
-            {heroEmoji}
-          </span>
+          {recipe.thumbnail_url ? null : (
+            <span aria-hidden="true" className="select-none leading-none">
+              {heroEmoji}
+            </span>
+          )}
           <button
             aria-label="뒤로가기"
-            className="absolute left-4 top-[52px] flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#212529] shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
+            className="absolute left-4 top-[calc(12px+env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-full bg-white/92 text-[#212529] shadow-[0_2px_8px_rgba(0,0,0,0.16)]"
             onClick={appReturn.goBack}
             type="button"
           >
@@ -1170,7 +1203,6 @@ export function RecipeDetailScreen({
               count={likeCountLabel}
               disabled={likeRequestState === "pending"}
               icon={<HeartIcon filled={recipe.user_status?.is_liked ?? false} />}
-              label={likeRequestState === "pending" ? "처리 중" : "좋아요"}
               onClick={() => handleProtectedAction("like")}
             />
             <Wave1HeroMetricButton
@@ -1178,14 +1210,12 @@ export function RecipeDetailScreen({
               ariaPressed={recipe.user_status?.is_saved ?? false}
               count={saveCountLabel}
               icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
-              label="저장"
               onClick={() => handleProtectedAction("save")}
             />
             <Wave1HeroMetricStatus
               ariaLabel={`요리완료 ${cookCountLabel}`}
               count={cookCountLabel}
               icon={<CookIcon />}
-              label="요리완료"
             />
           </div>
         </section>
@@ -1393,7 +1423,7 @@ export function RecipeDetailScreen({
       </div>
       ) : null}
       {shouldRenderAppView ? (
-      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-[96px] z-20 flex gap-2 border-t border-[#DEE2E6] bg-white px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 lg:hidden">
+      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 flex gap-2 border-t border-[#DEE2E6] bg-white px-4 pb-3 pt-3 lg:hidden">
         <button
           className="min-h-11 flex-1 rounded-[12px] border border-[#2AC1BC] bg-[#E8F8F7] px-3 text-[15px] font-bold text-[#007A76]"
           onClick={() => handleProtectedAction("planner")}
@@ -1435,10 +1465,6 @@ export function RecipeDetailScreen({
           void handleSaveRecipe();
         }}
         onSelectBook={(bookId) => {
-          if (recipe.user_status?.saved_book_ids.includes(bookId)) {
-            return;
-          }
-
           setSelectedSaveBookIds((currentBookIds) =>
             currentBookIds.includes(bookId)
               ? currentBookIds.filter((currentBookId) => currentBookId !== bookId)
@@ -2075,7 +2101,6 @@ function Wave1HeroMetricButton({
   count,
   disabled = false,
   icon,
-  label,
   onClick,
 }: {
   ariaLabel: string;
@@ -2083,14 +2108,16 @@ function Wave1HeroMetricButton({
   count: string;
   disabled?: boolean;
   icon: React.ReactNode;
-  label: string;
   onClick: () => void;
 }) {
   return (
     <button
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
-      className="flex min-h-[58px] min-w-[52px] flex-col items-center justify-center gap-[3px] rounded-[14px] border border-white/70 bg-white/92 px-1.5 py-1 text-[11px] font-bold leading-none text-[#212529] shadow-[0_2px_10px_rgba(0,0,0,0.18)] backdrop-blur disabled:cursor-not-allowed disabled:opacity-70"
+      className={[
+        "flex min-h-[48px] min-w-11 flex-col items-center justify-center gap-1 rounded-full bg-transparent px-1 py-0 text-[12px] font-extrabold leading-none text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.75)] transition-transform duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70",
+        ariaPressed ? "scale-110" : "",
+      ].join(" ")}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -2100,12 +2127,9 @@ function Wave1HeroMetricButton({
       </span>
       <span
         aria-hidden={ariaLabel !== `좋아요 ${count}`}
-        className="text-[11px] font-bold leading-none"
+        className="text-[12px] font-extrabold leading-none"
       >
         {count}
-      </span>
-      <span className="text-[10px] font-semibold leading-none text-[#495057]">
-        {label}
       </span>
     </button>
   );
@@ -2115,27 +2139,22 @@ function Wave1HeroMetricStatus({
   ariaLabel,
   count,
   icon,
-  label,
 }: {
   ariaLabel: string;
   count: string;
   icon: React.ReactNode;
-  label: string;
 }) {
   return (
     <div
       aria-label={ariaLabel}
-      className="flex min-h-[58px] min-w-[52px] flex-col items-center justify-center gap-[3px] rounded-[14px] border border-white/70 bg-white/92 px-1.5 py-1 text-[11px] font-bold leading-none text-[#212529] shadow-[0_2px_10px_rgba(0,0,0,0.18)] backdrop-blur"
+      className="flex min-h-[48px] min-w-11 flex-col items-center justify-center gap-1 rounded-full bg-transparent px-1 py-0 text-[12px] font-extrabold leading-none text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.75)]"
       role="status"
     >
       <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center">
         {icon}
       </span>
-      <span className="text-[11px] font-bold leading-none">
+      <span className="text-[12px] font-extrabold leading-none">
         {count}
-      </span>
-      <span className="text-[10px] font-semibold leading-none text-[#495057]">
-        {label}
       </span>
     </div>
   );
@@ -2494,17 +2513,18 @@ function ServingsIcon() {
     <svg
       aria-hidden="true"
       fill="none"
-      height="16"
+      height="18"
       stroke="currentColor"
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth="1.8"
       viewBox="0 0 24 24"
-      width="16"
+      width="18"
     >
-      <path d="M4.5 11.5h15a6.5 6.5 0 0 1-6.5 6.5h-2a6.5 6.5 0 0 1-6.5-6.5Z" />
-      <path d="M7 8.5c.6-.7.6-1.4 0-2.1M12 8.5c.6-.7.6-1.4 0-2.1M17 8.5c.6-.7.6-1.4 0-2.1" />
-      <path d="M8 20h8" />
+      <circle cx="8" cy="8" r="3" />
+      <circle cx="16" cy="8" r="3" />
+      <path d="M3.5 20a5 5 0 0 1 9 0" />
+      <path d="M11.5 20a5 5 0 0 1 9 0" />
     </svg>
   );
 }
