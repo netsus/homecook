@@ -5,6 +5,18 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
+import {
+  WebButton,
+  WebDialog,
+  WebDialogBody,
+  WebDialogFooter,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebEmptyState,
+  WebListRow,
+  WebModal,
+  WebSkeleton,
+} from "@/components/web";
 import { fetchPantryMatchRecipes } from "@/lib/api/recipe";
 import type { PantryMatchRecipeItem } from "@/types/recipe";
 
@@ -16,7 +28,7 @@ export interface PantryMatchPickerProps {
   onServingsCancel: () => void;
   onClose: () => void;
   onBack?: () => void;
-  presentation?: "dialog" | "screen";
+  presentation?: "dialog" | "screen" | "web";
   slotLabel?: string;
 }
 
@@ -49,7 +61,7 @@ function MatchScoreBadge({ score }: MatchScoreBadgeProps) {
 interface PantryRecipeCardProps {
   recipe: PantryMatchRecipeItem;
   onSelect: (recipe: PantryMatchRecipeItem) => void;
-  presentation?: "dialog" | "screen";
+  presentation?: "dialog" | "screen" | "web";
 }
 
 function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryRecipeCardProps) {
@@ -121,6 +133,59 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
     );
   }
 
+  if (presentation === "web") {
+    const percentage = Math.round(recipe.match_score * 100);
+    const scoreTone =
+      percentage >= 80 ? "success" : percentage >= 50 ? "warning" : "danger";
+
+    return (
+      <button
+        aria-label={`${recipe.title} 선택`}
+        className="web-picker-pantry-button"
+        onClick={() => onSelect(recipe)}
+        type="button"
+      >
+        <WebListRow interactive className="web-picker-pantry-row">
+          <span className="web-picker-pantry-thumb" aria-hidden="true">
+            {recipe.thumbnail_url ? (
+              <Image
+                alt=""
+                className="h-full w-full object-cover"
+                height={56}
+                src={recipe.thumbnail_url}
+                unoptimized
+                width={56}
+              />
+            ) : (
+              "🍳"
+            )}
+          </span>
+          <span className="web-picker-pantry-copy">
+            <span>{recipe.title}</span>
+            <small>
+              {recipe.matched_ingredients}/{recipe.total_ingredients}개 보유
+              {recipe.missing_ingredients.length > 0
+                ? ` · 부족 ${recipe.missing_ingredients
+                    .slice(0, 3)
+                    .map((ingredient) => ingredient.standard_name)
+                    .join(", ")}`
+                : ""}
+            </small>
+            <span className="web-picker-progress">
+              <span
+                className={`web-picker-progress-fill web-picker-progress-${scoreTone}`}
+                style={{ width: `${Math.max(4, Math.min(100, percentage))}%` }}
+              />
+            </span>
+          </span>
+          <span className={`web-picker-score web-picker-score-${scoreTone}`}>
+            {percentage}%
+          </span>
+        </WebListRow>
+      </button>
+    );
+  }
+
   return (
     <div className="rounded-[16px] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
       <div className="flex items-start justify-between gap-2">
@@ -172,7 +237,7 @@ interface ServingsModalProps {
   isCreating: boolean;
   onConfirm: (servings: number) => void;
   onCancel: () => void;
-  presentation?: "dialog" | "screen";
+  presentation?: "dialog" | "screen" | "web";
   slotLabel?: string;
 }
 
@@ -258,6 +323,66 @@ function ServingsModal({
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (presentation === "web") {
+    return (
+      <WebModal onBackdropClick={onCancel}>
+        <WebDialog aria-labelledby="pantry-servings-title" size="narrow">
+          <WebDialogHeader>
+            <WebDialogTitle id="pantry-servings-title">
+              계획 인분 입력
+            </WebDialogTitle>
+            <button
+              aria-label="닫기"
+              className="web-modal-close"
+              onClick={onCancel}
+              type="button"
+            >
+              ×
+            </button>
+          </WebDialogHeader>
+          <WebDialogBody>
+            <p className="web-modal-copy">{recipe.title}</p>
+            {slotLabel ? (
+              <p className="web-modal-footer-note">대상 · {slotLabel}</p>
+            ) : null}
+            <div className="web-servings-stepper">
+              <div className="web-stepper" aria-label="계획 인분" role="group">
+                <button
+                  aria-label="인분 줄이기"
+                  disabled={isCreating || servings <= 1}
+                  onClick={() => setServings((value) => Math.max(1, value - 1))}
+                  type="button"
+                >
+                  −
+                </button>
+                <span>{servings}인분</span>
+                <button
+                  aria-label="인분 늘리기"
+                  disabled={isCreating}
+                  onClick={() => setServings((value) => value + 1)}
+                  type="button"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </WebDialogBody>
+          <WebDialogFooter>
+            <WebButton disabled={isCreating} onClick={onCancel} variant="secondary">
+              취소
+            </WebButton>
+            <WebButton
+              disabled={isCreating || servings < 1}
+              onClick={handleConfirm}
+            >
+              {isCreating ? "추가 중..." : "추가"}
+            </WebButton>
+          </WebDialogFooter>
+        </WebDialog>
+      </WebModal>
     );
   }
 
@@ -358,20 +483,34 @@ export function PantryMatchPicker({
   const content = (
     <>
       {loadState === "loading" && (
-        <div className="py-8 text-center text-sm text-[var(--muted)]" aria-busy="true">
-          추천 레시피 불러오는 중...
+        <div className={presentation === "web" ? "space-y-2" : "py-8 text-center text-sm text-[var(--muted)]"} aria-busy="true">
+          {presentation === "web" ? (
+            Array.from({ length: 5 }).map((_, index) => (
+              <WebSkeleton className="h-[92px]" key={index} />
+            ))
+          ) : (
+            "추천 레시피 불러오는 중..."
+          )}
         </div>
       )}
 
       {loadState === "empty" && (
-        <div className="py-8 text-center">
-          <p className="text-base font-semibold text-[var(--foreground)]">
-            추천 레시피가 없어요
-          </p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            팬트리에 재료를 추가하면 추천 레시피를 볼 수 있어요.
-          </p>
-        </div>
+        presentation === "web" ? (
+          <WebEmptyState
+            description="팬트리에 재료를 추가하면 추천 레시피를 볼 수 있어요."
+            icon="🧊"
+            title="추천 레시피가 없어요"
+          />
+        ) : (
+          <div className="py-8 text-center">
+            <p className="text-base font-semibold text-[var(--foreground)]">
+              추천 레시피가 없어요
+            </p>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              팬트리에 재료를 추가하면 추천 레시피를 볼 수 있어요.
+            </p>
+          </div>
+        )
       )}
 
       {loadState === "error" && (
@@ -384,7 +523,7 @@ export function PantryMatchPicker({
       )}
 
       {loadState === "ready" && recipes.length > 0 && (
-        <div className={presentation === "screen" ? "" : "space-y-3"}>
+        <div className={presentation === "screen" ? "" : presentation === "web" ? "space-y-2" : "space-y-3"}>
           {recipes.map((recipe) => (
             <PantryRecipeCard
               key={recipe.id}
@@ -433,6 +572,28 @@ export function PantryMatchPicker({
         )}
         <Wave1MobileBottomTab ariaLabel="팬트리 추천 하단 탭" currentTab="planner" />
       </div>
+    );
+  }
+
+  if (presentation === "web") {
+    return (
+      <section className="web-picker-section" aria-label="팬트리 추천">
+        <p className="web-picker-subtle">
+          보유 재료가 많은 순서로 보여드려요. 부족한 재료만 확인하세요.
+          {slotLabel ? ` · ${slotLabel}` : ""}
+        </p>
+        {content}
+        {selectedRecipe && (
+          <ServingsModal
+            isCreating={isCreating}
+            onCancel={onServingsCancel}
+            onConfirm={onServingsConfirm}
+            presentation="web"
+            recipe={selectedRecipe}
+            slotLabel={slotLabel}
+          />
+        )}
+      </section>
     );
   }
 

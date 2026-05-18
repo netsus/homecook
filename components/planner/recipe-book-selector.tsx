@@ -3,6 +3,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import {
+  WebEmptyState,
+  WebListRow,
+  WebSkeleton,
+} from "@/components/web";
 import { fetchRecipeBooks } from "@/lib/api/recipe";
 import type { RecipeBookSummary } from "@/types/recipe";
 
@@ -10,7 +15,7 @@ export interface RecipeBookSelectorProps {
   onBookSelect: (book: RecipeBookSummary) => void;
   onClose: () => void;
   onBack?: () => void;
-  presentation?: "dialog" | "screen";
+  presentation?: "dialog" | "screen" | "web";
   slotLabel?: string;
 }
 
@@ -21,7 +26,7 @@ type LoadState = "idle" | "loading" | "ready" | "empty" | "error";
 interface BookCardProps {
   book: RecipeBookSummary;
   onSelect: (book: RecipeBookSummary) => void;
-  presentation?: "dialog" | "screen";
+  presentation?: "dialog" | "screen" | "web";
 }
 
 function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
@@ -77,6 +82,29 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
     );
   }
 
+  if (presentation === "web") {
+    return (
+      <button
+        className="web-picker-book-button"
+        onClick={() => onSelect(book)}
+        type="button"
+      >
+        <WebListRow interactive className="web-picker-book-row">
+          <span className="web-picker-book-thumb" aria-hidden="true">
+            {screenIcon}
+          </span>
+          <span className="web-picker-book-copy">
+            <span>{book.name}</span>
+            <small>{screenSubtitle}</small>
+          </span>
+          <span className="web-picker-count-badge">
+            {hasRecipes ? `${book.recipe_count}개` : "비어 있음"}
+          </span>
+        </WebListRow>
+      </button>
+    );
+  }
+
   return (
     <div className="rounded-[16px] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
       <h3 className="text-xl font-bold tracking-[-0.02em] text-[var(--foreground)]">
@@ -105,6 +133,7 @@ export function RecipeBookSelector({
   onClose,
   onBack,
   presentation = "dialog",
+  slotLabel,
 }: RecipeBookSelectorProps) {
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [books, setBooks] = useState<RecipeBookSummary[]>([]);
@@ -139,20 +168,34 @@ export function RecipeBookSelector({
   const content = (
     <>
       {loadState === "loading" && (
-        <div className="py-8 text-center text-sm text-[var(--muted)]" aria-busy="true">
-          레시피북 불러오는 중...
+        <div className={presentation === "web" ? "space-y-2" : "py-8 text-center text-sm text-[var(--muted)]"} aria-busy="true">
+          {presentation === "web" ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <WebSkeleton className="h-[78px]" key={index} />
+            ))
+          ) : (
+            "레시피북 불러오는 중..."
+          )}
         </div>
       )}
 
       {loadState === "empty" && (
-        <div className="py-8 text-center">
-          <p className="text-base font-semibold text-[var(--foreground)]">
-            레시피북이 없어요
-          </p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            레시피를 저장하면 레시피북이 생성돼요.
-          </p>
-        </div>
+        presentation === "web" ? (
+          <WebEmptyState
+            description="레시피를 저장하면 레시피북이 생성돼요."
+            icon="📖"
+            title="레시피북이 없어요"
+          />
+        ) : (
+          <div className="py-8 text-center">
+            <p className="text-base font-semibold text-[var(--foreground)]">
+              레시피북이 없어요
+            </p>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              레시피를 저장하면 레시피북이 생성돼요.
+            </p>
+          </div>
+        )
       )}
 
       {loadState === "error" && (
@@ -165,7 +208,7 @@ export function RecipeBookSelector({
       )}
 
       {loadState === "ready" && books.length > 0 && (
-        <div className={presentation === "screen" ? "" : "space-y-3"}>
+        <div className={presentation === "screen" ? "" : presentation === "web" ? "space-y-2" : "space-y-3"}>
           {books.map((book) => (
             <BookCard
               key={book.id}
@@ -178,6 +221,15 @@ export function RecipeBookSelector({
       )}
     </>
   );
+
+  if (presentation === "web") {
+    return (
+      <section className="web-picker-section" aria-label="레시피북 선택">
+        {slotLabel ? <p className="web-picker-subtle">대상 · {slotLabel}</p> : null}
+        {content}
+      </section>
+    );
+  }
 
   if (presentation === "screen") {
     return (

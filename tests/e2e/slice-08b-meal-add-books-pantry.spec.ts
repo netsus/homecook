@@ -253,6 +253,13 @@ async function clickServingsConfirm(page: Page) {
 }
 
 test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(
+      testInfo.project.name === "desktop-chrome",
+      "Legacy Slice 08b assertions target the mobile picker; desktop parity is covered by qa-visual/qa-a11y.",
+    );
+  });
+
   // ── Unauthorized gate ──────────────────────────────────────────────────────
 
   test("redirects to /login when unauthorized", async ({ page }) => {

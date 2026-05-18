@@ -54,11 +54,13 @@ export default async function ManualRecipeCreatePage({ searchParams }: ManualRec
   }
 
   return (
-    <ManualRecipeCreateScreen
-      initialAuthenticated={initialAuthenticated}
-      planDate={date ?? ""}
-      columnId={columnId ?? ""}
-      slotName={slot ?? ""}
-    />
+    <main>
+      <ManualRecipeCreateScreen
+        initialAuthenticated={initialAuthenticated}
+        planDate={date ?? ""}
+        columnId={columnId ?? ""}
+        slotName={slot ?? ""}
+      />
+    </main>
   );
 }

@@ -9,6 +9,13 @@ import { Button } from "@/components/ui/button";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { useAppReturn } from "@/components/shared/use-app-return";
+import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
+import {
+  WebButton,
+  WebCard,
+  WebShell,
+  WebTopNav,
+} from "@/components/web";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import {
   validateYoutubeUrl,
@@ -75,6 +82,42 @@ function getYoutubeRegisterRequirements({
   if (steps.length === 0) requirements.push("조리 과정");
 
   return requirements;
+}
+
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
+
+const YOUTUBE_STEP_LABELS = [
+  { id: "url-input", label: "링크 입력" },
+  { id: "extracting", label: "분석" },
+  { id: "review", label: "검토" },
+  { id: "complete", label: "완료" },
+] as const;
+
+function formatTargetLabel(planDate: string, slotName: string) {
+  if (!planDate && !slotName) return "플래너";
+
+  const dateLabel = planDate
+    ? new Intl.DateTimeFormat("ko-KR", {
+        month: "long",
+        day: "numeric",
+        weekday: "short",
+      }).format(new Date(`${planDate}T00:00:00`))
+    : "날짜 미지정";
+
+  return slotName ? `${dateLabel} · ${slotName}` : dateLabel;
+}
+
+function getYoutubeStepIndex(step: Step) {
+  if (step === "non-recipe-warning") return 1;
+  if (step === "extracting") return 1;
+  if (step === "review") return 2;
+  if (step === "complete") return 3;
+  return 0;
 }
 
 // Cooking method color mapping
@@ -467,6 +510,7 @@ function ReviewStep({
       <div className="mt-6">
         <label className="text-sm font-medium text-[var(--text-2)]">레시피명</label>
         <input
+          aria-label="레시피명"
           type="text"
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
@@ -845,6 +889,7 @@ export function YoutubeImportScreen({
         ? `/planner/${planDate}/${columnId}${slotName ? `?slot=${encodeURIComponent(slotName)}` : ""}`
         : "/planner",
   });
+  const isDesktopViewport = useDesktopViewport();
   const internalHistoryDepthRef = useRef(0);
   const bypassPopGuardRef = useRef(false);
 
@@ -1211,6 +1256,262 @@ export function YoutubeImportScreen({
   }, [triggerExtraction]);
 
   // ─── Render ────────────────────────────────────────────────────────
+
+  const targetLabel = formatTargetLabel(planDate, slotName);
+  const desktopStepIndex = getYoutubeStepIndex(currentStep);
+  const desktopRegisterRequirements = getYoutubeRegisterRequirements({
+    title,
+    baseServings,
+    ingredients,
+    steps,
+  });
+
+  if (isDesktopViewport) {
+    return (
+      <div className="web-menu-add-shell">
+        <WebShell>
+          <WebTopNav activeId="planner" items={WEB_NAV_ITEMS} />
+          <nav aria-label="유튜브 가져오기 경로" className="web-breadcrumb">
+            <button
+              className="web-breadcrumb-link"
+              onClick={handleBack}
+              type="button"
+            >
+              Planner
+            </button>
+            <span className="web-breadcrumb-sep">/</span>
+            <span className="web-breadcrumb-link">{targetLabel}</span>
+            <span className="web-breadcrumb-sep">/</span>
+            <span className="web-breadcrumb-current">유튜브 가져오기</span>
+          </nav>
+
+          <div className="web-yt-head">
+            <div>
+              <p className="web-menu-add-eyebrow">유튜브 가져오기</p>
+              <h1>영상 링크에서 레시피를 추출해요</h1>
+              <p>링크 입력부터 결과 검토까지 한 화면 흐름으로 이어집니다.</p>
+            </div>
+            <div className="web-manual-actions">
+              {currentStep !== "complete" ? (
+                <WebButton onClick={handleBack} variant="secondary">
+                  뒤로
+                </WebButton>
+              ) : null}
+              {currentStep === "review" ? (
+                <WebButton
+                  disabled={!canRegister || isRegistering}
+                  onClick={handleRegister}
+                >
+                  {isRegistering ? "등록 중..." : "등록"}
+                </WebButton>
+              ) : null}
+            </div>
+          </div>
+
+          <WebCard className="web-yt-card">
+            <div className="web-yt-stepper" aria-label="유튜브 가져오기 단계">
+              {YOUTUBE_STEP_LABELS.map((step, index) => (
+                <span
+                  className={[
+                    "web-yt-step",
+                    index < desktopStepIndex ? "web-yt-step-done" : "",
+                    index === desktopStepIndex ? "web-yt-step-active" : "",
+                  ].join(" ")}
+                  key={step.id}
+                >
+                  <span>{index + 1}</span>
+                  {step.label}
+                </span>
+              ))}
+            </div>
+
+            {currentStep === "url-input" ? (
+              <section className="web-yt-content web-yt-url">
+                <div>
+                  <h2>유튜브 링크를 붙여넣어 주세요</h2>
+                  <p>영상 설명, 자막, 화면 텍스트에서 재료와 조리법을 찾아요.</p>
+                </div>
+                <label className="web-manual-field web-manual-field-wide">
+                  <span>유튜브 URL</span>
+                  <input
+                    disabled={isValidating}
+                    inputMode="url"
+                    onChange={(event) => {
+                      setYoutubeUrl(event.target.value);
+                      setUrlError(null);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && youtubeUrl.trim()) {
+                        handleValidate();
+                      }
+                    }}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    type="url"
+                    value={youtubeUrl}
+                  />
+                </label>
+                {urlError ? (
+                  <div className="web-menu-add-error" role="alert">
+                    {urlError}
+                  </div>
+                ) : null}
+                <div className="web-yt-actions">
+                  <WebButton
+                    disabled={!youtubeUrl.trim() || isValidating}
+                    onClick={handleValidate}
+                  >
+                    {isValidating ? "확인 중..." : "가져오기"}
+                  </WebButton>
+                </div>
+              </section>
+            ) : null}
+
+            {currentStep === "non-recipe-warning" && videoInfo ? (
+              <section className="web-yt-content web-yt-warning">
+                <div className="web-yt-video">
+                  <div className="web-yt-thumb">
+                    <Image
+                      alt={videoInfo.title}
+                      fill
+                      src={videoInfo.thumbnail_url}
+                      unoptimized
+                    />
+                  </div>
+                  <div>
+                    <p className="web-picker-subtle">{videoInfo.channel}</p>
+                    <h2>{videoInfo.title}</h2>
+                    <p>요리 레시피 영상이 아닌 것 같아요. 맞다면 계속 분석할 수 있어요.</p>
+                  </div>
+                </div>
+                <div className="web-yt-actions">
+                  <WebButton onClick={triggerExtraction}>그래도 진행</WebButton>
+                  <WebButton onClick={handleReenter} variant="secondary">
+                    다시 입력
+                  </WebButton>
+                </div>
+              </section>
+            ) : null}
+
+            {currentStep === "extracting" && !extractionError ? (
+              <section className="web-yt-content">
+                <ExtractionProgressStep
+                  videoTitle={videoInfo?.title ?? ""}
+                  elapsedMs={extractionElapsedMs}
+                />
+              </section>
+            ) : null}
+
+            {currentStep === "extracting" && extractionError ? (
+              <section className="web-yt-content web-yt-error">
+                <h2>레시피 추출에 실패했어요</h2>
+                <p>{extractionError}</p>
+                <div className="web-yt-actions">
+                  <WebButton onClick={handleRetryExtraction}>다시 시도</WebButton>
+                  <WebButton onClick={handleReenter} variant="secondary">
+                    다른 영상 입력
+                  </WebButton>
+                </div>
+              </section>
+            ) : null}
+
+            {currentStep === "review" ? (
+              <section className="web-yt-content web-yt-review">
+                <div>
+                  <h2>추출 결과를 확인해주세요</h2>
+                  <p>영상에서 찾은 재료와 조리 과정을 등록 전에 확인해요.</p>
+                </div>
+                {desktopRegisterRequirements.length > 0 ? (
+                  <div
+                    className="web-menu-add-error"
+                    data-testid="youtube-register-requirements"
+                    role="status"
+                  >
+                    등록 전 확인 필요: {desktopRegisterRequirements.join(", ")}
+                  </div>
+                ) : null}
+                <ReviewStep
+                  title={title}
+                  onTitleChange={setTitle}
+                  baseServings={baseServings}
+                  onServingsChange={setBaseServings}
+                  extractionMethods={extractionMethods}
+                  ingredients={ingredients}
+                  steps={steps}
+                  onRemoveIngredient={handleRemoveIngredient}
+                  onRemoveStep={handleRemoveStep}
+                  onAddIngredient={() => setModalMode("ingredient-add")}
+                  onAddStep={() => setModalMode("step-add")}
+                />
+              </section>
+            ) : null}
+
+            {currentStep === "complete" && registeredRecipeId ? (
+              <section className="web-yt-content web-yt-complete">
+                <h2>레시피가 등록됐어요</h2>
+                <p>&lsquo;{registeredRecipeTitle}&rsquo;가 레시피북에 저장됐어요.</p>
+                <div className="web-yt-actions">
+                  {hasPlanContext ? (
+                    <WebButton onClick={handleMealAdd}>이 끼니에 추가</WebButton>
+                  ) : null}
+                  <WebButton
+                    onClick={handleViewDetail}
+                    variant={hasPlanContext ? "secondary" : "primary"}
+                  >
+                    레시피 상세 보기
+                  </WebButton>
+                  <WebButton onClick={handleClose} variant="ghost">
+                    닫기
+                  </WebButton>
+                </div>
+              </section>
+            ) : null}
+          </WebCard>
+        </WebShell>
+
+        {modalMode === "ingredient-add" && (
+          <RecipeIngredientAddModal
+            onClose={() => setModalMode("none")}
+            onAdd={(ingredient) =>
+              handleAddIngredient({ ...ingredient, confidence: 1 })
+            }
+          />
+        )}
+        {modalMode === "step-add" && (
+          <StepAddModal
+            onClose={() => setModalMode("none")}
+            onAdd={handleAddStep}
+            cookingMethods={cookingMethods}
+            nextStepNumber={steps.length + 1}
+          />
+        )}
+        {modalMode === "register-error" && registerError && (
+          <RegisterErrorModal
+            errorMessage={registerError}
+            onRetry={() => {
+              setModalMode("none");
+              handleRegister();
+            }}
+            onClose={() => setModalMode("none")}
+          />
+        )}
+        {modalMode === "confirm-back" && (
+          <ConfirmBackModal
+            onConfirm={handleConfirmBack}
+            onCancel={() => setModalMode("none")}
+          />
+        )}
+        {modalMode === "servings-input" && (
+          <ServingsInputModal
+            onConfirm={handleServingsConfirm}
+            onCancel={() => setModalMode("none")}
+            defaultServings={baseServings}
+            isCreating={isCreatingMeal}
+            error={mealAddError}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen flex-col bg-white">

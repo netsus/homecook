@@ -9,9 +9,16 @@ import { Button } from "@/components/ui/button";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { useAppReturn } from "@/components/shared/use-app-return";
+import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import { createManualRecipe } from "@/lib/api/manual-recipe";
 import { createMealSafe } from "@/lib/api/meal";
+import {
+  WebButton,
+  WebCard,
+  WebShell,
+  WebTopNav,
+} from "@/components/web";
 import type {
   CookingMethodItem,
   ManualRecipeIngredientInput,
@@ -31,6 +38,27 @@ type ModalMode =
   | "step-add"
   | "success"
   | "servings-input";
+
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
+
+function formatTargetLabel(planDate: string, slotName: string) {
+  if (!planDate && !slotName) return "플래너";
+
+  const dateLabel = planDate
+    ? new Intl.DateTimeFormat("ko-KR", {
+        month: "long",
+        day: "numeric",
+        weekday: "short",
+      }).format(new Date(`${planDate}T00:00:00`))
+    : "날짜 미지정";
+
+  return slotName ? `${dateLabel} · ${slotName}` : dateLabel;
+}
 
 // Temporary ingredient type for UI state (before save)
 interface TempIngredient extends ManualRecipeIngredientInput {
@@ -488,6 +516,7 @@ export function ManualRecipeCreateScreen({
         ? `/planner/${planDate}/${columnId}${slotName ? `?slot=${encodeURIComponent(slotName)}` : ""}`
         : "/planner",
   });
+  const isDesktopViewport = useDesktopViewport();
   const [title, setTitle] = useState("");
   const [baseServings, setBaseServings] = useState(2);
   const [ingredients, setIngredients] = useState<TempIngredient[]>([]);
@@ -654,6 +683,167 @@ export function ManualRecipeCreateScreen({
   const handleSuccessClose = useCallback(() => {
     appReturn.goBack();
   }, [appReturn]);
+
+  const targetLabel = formatTargetLabel(planDate, slotName);
+
+  if (isDesktopViewport) {
+    return (
+      <div className="web-menu-add-shell">
+        <WebShell>
+          <WebTopNav activeId="planner" items={WEB_NAV_ITEMS} />
+          <nav aria-label="직접 등록 경로" className="web-breadcrumb">
+            <button
+              className="web-breadcrumb-link"
+              onClick={handleBack}
+              type="button"
+            >
+              Planner
+            </button>
+            <span className="web-breadcrumb-sep">/</span>
+            <span className="web-breadcrumb-link">{targetLabel}</span>
+            <span className="web-breadcrumb-sep">/</span>
+            <span className="web-breadcrumb-current">직접 입력</span>
+          </nav>
+          <div className="web-manual-head">
+            <div>
+              <p className="web-menu-add-eyebrow">직접 등록</p>
+              <h1>새 레시피를 직접 입력해요</h1>
+              <p>기본 정보, 재료, 조리법을 입력한 뒤 플래너에 바로 추가할 수 있어요.</p>
+            </div>
+            <div className="web-manual-actions">
+              <WebButton onClick={handleBack} variant="secondary">
+                취소
+              </WebButton>
+              <WebButton disabled={!canSave || isSaving} onClick={handleSave}>
+                {isSaving ? "저장 중..." : "저장"}
+              </WebButton>
+            </div>
+          </div>
+
+          <WebCard className="web-manual-card">
+            <section className="web-manual-section">
+              <div className="web-manual-section-head">
+                <h2>기본 정보</h2>
+                <span>{targetLabel}</span>
+              </div>
+              <div className="web-manual-fields">
+                <label className="web-manual-field web-manual-field-wide">
+                  <span>요리 이름</span>
+                  <input
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="예: 김치찌개"
+                    type="text"
+                    value={title}
+                  />
+                </label>
+                <label className="web-manual-field">
+                  <span>기준 인분</span>
+                  <div className="web-stepper" aria-label="기준 인분" role="group">
+                    <button
+                      aria-label="인분 줄이기"
+                      disabled={baseServings <= 1}
+                      onClick={() => setBaseServings((value) => Math.max(1, value - 1))}
+                      type="button"
+                    >
+                      −
+                    </button>
+                    <span>{baseServings}인분</span>
+                    <button
+                      aria-label="인분 늘리기"
+                      onClick={() => setBaseServings((value) => value + 1)}
+                      type="button"
+                    >
+                      +
+                    </button>
+                  </div>
+                </label>
+              </div>
+            </section>
+
+            <section className="web-manual-section">
+              <div className="web-manual-section-head">
+                <h2>재료</h2>
+                <span>{ingredients.length}개 선택됨</span>
+              </div>
+              <IngredientList
+                ingredients={ingredients}
+                onRemove={handleRemoveIngredient}
+              />
+              <WebButton
+                className="web-manual-add-button"
+                onClick={() => setModalMode("ingredient-add")}
+                variant="secondary"
+              >
+                + 재료 추가하기
+              </WebButton>
+            </section>
+
+            <section className="web-manual-section">
+              <div className="web-manual-section-head">
+                <h2>조리법</h2>
+                <span>{steps.length}단계</span>
+              </div>
+              {isLoadingMethods ? (
+                <p className="web-picker-subtle">조리방법 불러오는 중...</p>
+              ) : (
+                <>
+                  <StepList steps={steps} onRemove={handleRemoveStep} />
+                  <WebButton
+                    className="web-manual-add-button"
+                    onClick={() => setModalMode("step-add")}
+                    variant="secondary"
+                  >
+                    + 조리 과정 추가
+                  </WebButton>
+                </>
+              )}
+            </section>
+
+            {saveError ? (
+              <div className="web-menu-add-error" role="alert">
+                {saveError}
+              </div>
+            ) : null}
+
+            <SaveRequirementsNotice requirements={saveRequirements} />
+          </WebCard>
+        </WebShell>
+
+        {modalMode === "ingredient-add" && (
+          <RecipeIngredientAddModal
+            onClose={() => setModalMode("none")}
+            onAdd={handleAddIngredient}
+          />
+        )}
+        {modalMode === "step-add" && (
+          <StepAddModal
+            onClose={() => setModalMode("none")}
+            onAdd={handleAddStep}
+            cookingMethods={cookingMethods}
+            nextStepNumber={steps.length + 1}
+          />
+        )}
+        {modalMode === "success" && createdRecipeId && (
+          <SuccessModal
+            recipeTitle={createdRecipeTitle}
+            mealAddError={mealAddError}
+            onMealAdd={handleMealAdd}
+            onViewDetail={handleViewDetail}
+            onClose={handleSuccessClose}
+          />
+        )}
+        {modalMode === "servings-input" && (
+          <ServingsInputModal
+            onConfirm={handleServingsConfirm}
+            onCancel={() => setModalMode("success")}
+            defaultServings={baseServings}
+            isCreating={isCreatingMeal}
+            error={mealAddError}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen flex-col bg-[#F8F9FA] md:bg-[var(--background)]">

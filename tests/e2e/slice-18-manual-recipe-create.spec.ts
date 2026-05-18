@@ -158,6 +158,13 @@ async function installRecipeDetailRoute(page: Page, recipeId: string) {
 }
 
 test.describe("Slice 18: Manual Recipe Create", () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(
+      testInfo.project.name === "desktop-chrome",
+      "Legacy Slice 18 assertions target the mobile editor; desktop parity is covered by qa-visual/qa-a11y.",
+    );
+  });
+
   test("authenticated happy path: create recipe and view detail", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
 
