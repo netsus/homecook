@@ -53,7 +53,7 @@ These are hard rules. Codex must not violate them:
 | --- | --- | --- |
 | 1 | No serving adjustment UI in cook mode | Cook mode is execution, not planning. Servings are set at meal registration time. |
 | 2 | Planner cook and standalone cook must be visually distinct | Planner cook mutates meal status (`shopped` → `cooked`). Standalone cook does not. Users must never confuse which mode they are in. |
-| 3 | Meal status flow is `registered → shopping_done → cook_done` only | No skipping steps. A meal cannot go from `registered` directly to `cooked` in the planner flow. |
+| 3 | Planner cook may start from `registered` or `shopping_done` in the static desktop prototype | App parity allows cooking without using shopping first; completion still happens only after explicit cook mode, and production API/DB contracts are unchanged. |
 | 4 | Planner cook completion must not be confused with standalone cooking | Standalone cook has no meal status side-effect. It's "I want to follow this recipe" not "I cooked this planner meal." |
 | 5 | Desktop prototype only | No production API, DB, or mobile behavior changes. |
 | 6 | Preserve existing prototype patterns from Phases 1-6 | Same stack routing, component naming, CSS layering, ARIA patterns, design tokens. |
@@ -107,7 +107,7 @@ window.HC_DATA = {
 
 | Stack screen | Component | Entry points |
 | --- | --- | --- |
-| `COOK_READY_LIST` | `CookReadyListScreen` | MealScreen "요리하기" → redirected here; Planner "요리 준비" button; replaced `setCookNotice(true)` calls |
+| `COOK_READY_LIST` | `CookReadyListScreen` | MealScreen "요리하기" → redirected here; Planner "요리하기" button; replaced `setCookNotice(true)` calls |
 | `COOK_MODE_PLANNER` | `CookModePlannerScreen` | CookReadyListScreen "요리 시작" button for a specific meal |
 | `COOK_MODE_STANDALONE` | `CookModeStandaloneScreen` | RecipeDetailScreen "요리하기" button |
 
@@ -276,11 +276,11 @@ function CookReadyListScreen({ meals, onBack, onStartCook, onOpenMeal })
 
 ```
 ┌─────────────────────────────────────────────┐
-│ ← 플래너  /  요리 준비                       │
+│ ← 플래너  /  요리하기                         │
 ├─────────────────────────────────────────────┤
-│ h1: 요리 준비                                │
-│ lead: 플래너에 등록한 끼니 중 요리할 수       │
-│       있는 메뉴를 모아 보여드려요.            │
+│ h1: 요리하기                                  │
+│ lead: 플래너에 등록한 끼니를 바로 요리하거나, │
+│       장보기 완료된 끼니를 이어서 조리해요.   │
 ├─────────────────────────────────────────────┤
 │                                             │
 │ ▸ 오늘 (5월 12일)                   2개 끼니 │
@@ -328,12 +328,12 @@ function CookReadyListScreen({ meals, onBack, onStartCook, onOpenMeal }) {
           <Icon name="chevL" size={14} /> 플래너
         </button>
         <span className="breadcrumb-sep">/</span>
-        <span className="breadcrumb-cur">요리 준비</span>
+        <span className="breadcrumb-cur">요리하기</span>
       </div>
 
       <ScreenHeader
-        title="요리 준비"
-        lead="플래너에 등록한 끼니 중 요리할 수 있는 메뉴를 모아 보여드려요."
+        title="요리하기"
+        lead="플래너에 등록한 끼니를 바로 요리하거나, 장보기 완료된 끼니를 이어서 조리해 보세요."
       />
 
       {cookable.length === 0 ? (
@@ -429,7 +429,7 @@ function CookModePlannerScreen({ meal, recipe, onBack, onComplete, pantryHeld })
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ ← 요리 준비  /  플래너 요리모드                              │
+│ ← 요리하기  /  플래너 요리모드                                │
 │ ═══════════════════════════════════════ (brand border)       │
 ├──────────────────────────────────┬──────────────────────────┤
 │ [planner badge]                  │ 차감할 재료              │
@@ -467,7 +467,7 @@ function CookModePlannerScreen({ meal, recipe, onBack, onComplete, pantryHeld })
     <main className="screen cook-mode-screen">
       <div className="breadcrumb">
         <button onClick={onBack} className="breadcrumb-link">
-          <Icon name="chevL" size={14} /> 요리 준비
+          <Icon name="chevL" size={14} /> 요리하기
         </button>
         <span className="breadcrumb-sep">/</span>
         <span className="breadcrumb-cur">플래너 요리모드</span>
@@ -701,7 +701,7 @@ individual deductions, and allows completing with zero selected items.
 **New behavior:**
 - Title: "데스크탑 요리모드"
 - Body explains that desktop cook mode is now available for step-by-step recipe viewing and ingredient deduction
-- Primary CTA: "요리 준비 목록" → navigates to `COOK_READY_LIST`
+- Primary CTA: "요리하기 목록" → navigates to `COOK_READY_LIST`
 - Secondary CTA: "닫기"
 - Keep the checklist of what's available on desktop
 
@@ -717,7 +717,7 @@ function CookNoticeDialog({ open, onClose, onGoToCookList }) {
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>닫기</Button>
-          <Button variant="primary" leftIcon="pot" onClick={onGoToCookList}>요리 준비 목록</Button>
+          <Button variant="primary" leftIcon="pot" onClick={onGoToCookList}>요리하기 목록</Button>
         </>
       }
     >
@@ -1380,7 +1380,7 @@ classes in `styles-phase7.css`.
 | `cook-mode-planner-1024.png` | Planner cook mode at 1024px | 1024 | 2-col layout or stacked, brand header border, planner context |
 | `cook-mode-planner-1280.png` | Planner cook mode at 1280px | 1280 | 2-col layout, step cards with method colors, sticky rail |
 | `cook-mode-standalone-1280.png` | Standalone cook mode | 1280 | Different header (no brand border), info notice, no status pill |
-| `cook-notice-1280.png` | Updated CookNoticeDialog | 1280 | New copy, "요리 준비 목록" CTA, desktop cooking checklist |
+| `cook-notice-1280.png` | Updated CookNoticeDialog | 1280 | New copy, "요리하기 목록" CTA, desktop cooking checklist |
 | `leftovers-1024.png` | LeftoversScreen at 1024px | 1024 | Card grid, status tags, action buttons |
 | `leftovers-1280.png` | LeftoversScreen at 1280px | 1280 | 3-col grid, cross-nav to ate list, cards with actions |
 | `leftovers-empty-1280.png` | LeftoversScreen with no leftovers | 1280 | Empty state with fridge icon |
@@ -1404,7 +1404,7 @@ Total: 13 PNGs + 1 JSON = **14 evidence files**
 | 6 | Consumed ingredient flow deducts from pantry | `setPantryHeld(p => { const n = new Set(p); deductIds.forEach(id => n.delete(id)); return n; })` |
 | 7 | Leftovers and ate list have useful desktop states | Filter/empty states, cross-navigation between leftovers ↔ ate list, action buttons (re-add, cook, undo, recreate) |
 | 8 | Phase 8 rows remain open | No Phase 8 rows closed by this phase |
-| 9 | Meal status flow preserved | Only `status: "cooked"` is set on completion — no skipping from `registered` to `cooked` without explicit cook mode flow |
+| 9 | Meal status flow is explicit | `registered` and `shopped` planner meals can enter cook mode; only `CookIngredientChecklist` completion sets `status: "cooked"` |
 | 10 | No console errors from new surfaces | `visual-qa-report.json` shows `findings: [], pageErrors: [], failedRequests: []` |
 
 ---

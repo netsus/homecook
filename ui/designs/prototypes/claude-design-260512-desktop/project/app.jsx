@@ -1065,8 +1065,8 @@ function App() {
       onBack={pop}
       onStartCook={(mealId) => {
         const meal = meals.find(m => m.id === mealId);
-        if (meal?.status !== "shopped") {
-          toast("장보기 완료 후 요리할 수 있어요");
+        if (!meal || meal.status === "cooked") {
+          toast("이미 요리 완료된 끼니예요");
           return;
         }
         push({ screen: "COOK_MODE_PLANNER", mealId });
