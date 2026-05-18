@@ -7,9 +7,11 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ModalHeader } from "@/components/shared/modal-header";
+import { useAppReturn } from "@/components/shared/use-app-return";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { deleteMeal, fetchMeals, isMealApiError, updateMealServings } from "@/lib/api/meal";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { MealListItemData } from "@/types/meal";
@@ -556,6 +558,7 @@ export function MealScreen({
   initialAuthenticated,
 }: MealScreenProps) {
   const router = useRouter();
+  const appReturn = useAppReturn({ fallback: "/planner" });
   const isDesktopViewport = useDesktopViewport();
 
   const [authState, setAuthState] = useState<AuthState>(
@@ -787,14 +790,26 @@ export function MealScreen({
     0,
   );
   const nextPath = buildNextPath(planDate, columnId, slotName);
-  const addMealHref = `/menu-add?date=${encodeURIComponent(planDate)}&columnId=${encodeURIComponent(columnId)}${slotName ? `&slot=${encodeURIComponent(slotName)}` : ""}`;
+  const mealAddParams = new URLSearchParams({
+    columnId,
+    date: planDate,
+  });
+  if (slotName) {
+    mealAddParams.set("slot", slotName);
+  }
+  const mealAddQuery = mealAddParams.toString();
+  const addMealHref = buildReturnHref(`/menu-add?${mealAddQuery}`, {
+    restore: "meal-add-modal",
+    returnSurface: "planner.meal-add-modal",
+    returnTo: `/planner?${mealAddQuery}`,
+  });
   const shouldRenderWebView =
     process.env.NODE_ENV !== "test" || isDesktopViewport;
   const shouldRenderAppView =
     process.env.NODE_ENV !== "test" || !isDesktopViewport;
   const navigateToPlanner = useCallback(() => {
-    router.replace("/planner");
-  }, [router]);
+    appReturn.goBack();
+  }, [appReturn]);
 
   // ── Unauthorized gate ─────────────────────────────────────────────────────
   if (authState === "unauthorized") {

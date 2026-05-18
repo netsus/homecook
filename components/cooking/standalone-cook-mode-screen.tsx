@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
@@ -12,9 +11,11 @@ import {
   useIsMobileViewport,
 } from "@/components/cooking/cook-mode-mobile-ui";
 import { ContentState } from "@/components/shared/content-state";
+import { useAppReturn } from "@/components/shared/use-app-return";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useStandaloneCookModeStore } from "@/stores/standalone-cook-mode-store";
@@ -30,7 +31,9 @@ export function StandaloneCookModeScreen({
   recipeId,
   servings,
 }: StandaloneCookModeScreenProps) {
-  const router = useRouter();
+  const { goBack: goAppBack, href: appReturnHref } = useAppReturn({
+    fallback: `/recipe/${recipeId}`,
+  });
   const [authState, setAuthState] = useState<AuthState>("checking");
   const [showConsumedSheet, setShowConsumedSheet] = useState(false);
   const [showLoginGate, setShowLoginGate] = useState(false);
@@ -94,9 +97,9 @@ export function StandaloneCookModeScreen({
   // Navigate on completed
   useEffect(() => {
     if (screenState === "completed") {
-      router.push(`/recipe/${recipeId}`);
+      goAppBack();
     }
-  }, [screenState, router, recipeId]);
+  }, [goAppBack, screenState]);
 
   const handleCompleteClick = useCallback(() => {
     if (authState !== "authenticated") {
@@ -144,14 +147,20 @@ export function StandaloneCookModeScreen({
   }, [complete]);
 
   const handleCancelClick = useCallback(() => {
-    router.push(`/recipe/${recipeId}`);
-  }, [router, recipeId]);
+    goAppBack();
+  }, [goAppBack]);
 
   const handleRetry = useCallback(() => {
     void loadStandaloneCookMode(recipeId, servings);
   }, [loadStandaloneCookMode, recipeId, servings]);
 
-  const returnPath = `/cooking/recipes/${recipeId}/cook-mode?servings=${servings}`;
+  const returnPath = buildReturnHref(
+    `/cooking/recipes/${recipeId}/cook-mode?servings=${servings}`,
+    {
+      returnSurface: "recipe.detail",
+      returnTo: appReturnHref,
+    },
+  );
 
   // --- Auth checking ---
   if (authState === "checking") {
@@ -236,7 +245,7 @@ export function StandaloneCookModeScreen({
           <ContentState
             actionLabel="레시피로 돌아가기"
             description="레시피를 찾을 수 없어요."
-            onAction={() => router.push(`/recipe/${recipeId}`)}
+            onAction={goAppBack}
             title="레시피를 찾을 수 없어요"
             tone="error"
           />
@@ -258,7 +267,7 @@ export function StandaloneCookModeScreen({
             description={errorMessage ?? "잠시 후 다시 시도해주세요."}
             onAction={handleRetry}
             secondaryActionLabel="레시피로 돌아가기"
-            onSecondaryAction={() => router.push(`/recipe/${recipeId}`)}
+            onSecondaryAction={goAppBack}
             title="문제가 생겼어요"
             tone="error"
           />

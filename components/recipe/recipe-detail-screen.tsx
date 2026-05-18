@@ -12,6 +12,7 @@ import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { SaveModal } from "@/components/recipe/save-modal";
 import { ContentState } from "@/components/shared/content-state";
+import { useAppReturn } from "@/components/shared/use-app-return";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -41,6 +42,7 @@ import {
   formatRecipeSourceLabel,
   formatScaledIngredient,
 } from "@/lib/recipe";
+import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useAuthGateStore } from "@/stores/ui-store";
@@ -136,6 +138,7 @@ export function RecipeDetailScreen({
   const router = useRouter();
   const openAuthGate = useAuthGateStore((state) => state.open);
   const isDesktopViewport = useDesktopViewport();
+  const appReturn = useAppReturn({ fallback: "/" });
 
   const loadRecipe = useCallback(async () => {
     try {
@@ -764,6 +767,17 @@ export function RecipeDetailScreen({
   const heroBackground = getRecipeHeroBackground(recipe);
   const minutesLabel = getRecipeMinutesLabel(recipe);
   const displayTags = recipe.tags.slice(0, 3);
+  const recipeDetailReturnHref = buildReturnHref(`/recipe/${recipeId}`, {
+    returnSurface: "recipe.detail",
+    returnTo: appReturn.href,
+  });
+  const cookModeHref = buildReturnHref(
+    `/cooking/recipes/${recipeId}/cook-mode?servings=${selectedServings}`,
+    {
+      returnSurface: "recipe.detail",
+      returnTo: recipeDetailReturnHref,
+    },
+  );
   const shouldRenderWebView =
     process.env.NODE_ENV !== "test" || isDesktopViewport;
   const shouldRenderAppView =
@@ -779,9 +793,7 @@ export function RecipeDetailScreen({
             isLikePending={likeRequestState === "pending"}
             likeCountLabel={desktopLikeCountLabel}
             onCook={() =>
-              router.push(
-                `/cooking/recipes/${recipeId}/cook-mode?servings=${selectedServings}`,
-              )
+              router.push(cookModeHref)
             }
             onOpenLightbox={(index) => {
               setLightboxIndex(index);
@@ -1088,11 +1100,7 @@ export function RecipeDetailScreen({
                 />
                 <ActionButton
                   label="요리하기"
-                  onClick={() =>
-                    router.push(
-                      `/cooking/recipes/${recipeId}/cook-mode?servings=${selectedServings}`,
-                    )
-                  }
+                  onClick={() => router.push(cookModeHref)}
                   tone="brand"
                 />
               </div>
@@ -1138,7 +1146,7 @@ export function RecipeDetailScreen({
           <button
             aria-label="뒤로가기"
             className="absolute left-4 top-[52px] flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#212529] shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
-            onClick={() => router.back()}
+            onClick={appReturn.goBack}
             type="button"
           >
             <ChevronLeftIcon />
@@ -1378,11 +1386,7 @@ export function RecipeDetailScreen({
           />
           <ActionButton
             label="요리하기"
-            onClick={() =>
-              router.push(
-                `/cooking/recipes/${recipeId}/cook-mode?servings=${selectedServings}`,
-              )
-            }
+            onClick={() => router.push(cookModeHref)}
             tone="brand"
           />
         </div>
@@ -1399,11 +1403,7 @@ export function RecipeDetailScreen({
         </button>
         <button
           className="min-h-11 flex-1 rounded-[12px] bg-[#007A76] px-3 text-[15px] font-bold text-white"
-          onClick={() =>
-            router.push(
-              `/cooking/recipes/${recipeId}/cook-mode?servings=${selectedServings}`,
-            )
-          }
+          onClick={() => router.push(cookModeHref)}
           type="button"
         >
           요리하기

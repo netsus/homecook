@@ -12,6 +12,10 @@ import * as mealApi from "@/lib/api/meal";
 import * as plannerApi from "@/lib/api/planner";
 import type { LeftoverListItemData } from "@/types/leftover";
 
+const navigationMocks = vi.hoisted(() => ({
+  searchParams: vi.fn(() => new URLSearchParams()),
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn(() => ({
     push: vi.fn(),
@@ -21,6 +25,7 @@ vi.mock("next/navigation", () => ({
     forward: vi.fn(),
     refresh: vi.fn(),
   })),
+  useSearchParams: () => navigationMocks.searchParams(),
 }));
 
 vi.mock("next/link", () => ({
@@ -133,6 +138,8 @@ const EATEN_ITEMS: LeftoverListItemData[] = [
 describe("LeftoversScreen", () => {
   beforeEach(() => {
     installMatchMedia(false);
+    navigationMocks.searchParams.mockReset();
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     vi.spyOn(leftoversApi, "isLeftoverApiError").mockReturnValue(false);
   });
 
@@ -397,9 +404,10 @@ describe("LeftoversScreen", () => {
     });
 
     const ateListLink = screen.getByText("다먹은 목록");
-    expect(ateListLink.closest("a")?.getAttribute("href")).toBe(
-      "/leftovers/ate",
-    );
+    const href = ateListLink.closest("a")?.getAttribute("href") ?? "";
+    expect(href).toContain("/leftovers/ate");
+    expect(href).toContain("returnTo=");
+    expect(href).toContain("returnSurface=leftovers.list");
   });
 
   it("retries loading on error action", async () => {
@@ -430,6 +438,8 @@ describe("LeftoversScreen", () => {
 describe("AteListScreen", () => {
   beforeEach(() => {
     installMatchMedia(false);
+    navigationMocks.searchParams.mockReset();
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     vi.spyOn(leftoversApi, "isLeftoverApiError").mockReturnValue(false);
   });
 

@@ -429,7 +429,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await expect(page.locator("text=수정 내용이 사라져요")).toBeVisible();
 
     await page.click('button:has-text("나가기")');
-    await expect(page).toHaveURL(`${E2E_APP_ORIGIN}/`);
+    await expect(page).toHaveURL(`${E2E_APP_ORIGIN}/planner`);
   });
 
   test("complete close: exits youtube import", async ({ page }) => {
@@ -450,7 +450,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await expect(page.locator("text=레시피가 등록됐어요")).toBeVisible({ timeout: 5000 });
     await page.click('button:has-text("닫기")');
 
-    await expect(page).toHaveURL(`${E2E_APP_ORIGIN}/`);
+    await expect(page).toHaveURL(`${E2E_APP_ORIGIN}/planner`);
   });
 
   test("guest: redirects to login with return-to-action", async ({ page }) => {

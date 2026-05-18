@@ -10,11 +10,18 @@ import { ShoppingDetailScreen } from "@/components/shopping/shopping-detail-scre
 import * as shoppingApi from "@/lib/api/shopping";
 import type { ShoppingListDetail } from "@/types/shopping";
 
+const navigationMocks = vi.hoisted(() => ({
+  searchParams: vi.fn(() => new URLSearchParams()),
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn(),
+  useSearchParams: () => navigationMocks.searchParams(),
 }));
 
 const mockPush = vi.fn();
+const mockReplace = vi.fn();
+const mockSearchParams = navigationMocks.searchParams;
 
 function setMatchMedia(matches: boolean) {
   Object.defineProperty(window, "matchMedia", {
@@ -37,7 +44,7 @@ describe("ShoppingDetailScreen", () => {
     setMatchMedia(false);
     (useRouter as ReturnType<typeof vi.fn>).mockReturnValue({
       push: mockPush,
-      replace: vi.fn(),
+      replace: mockReplace,
       prefetch: vi.fn(),
       back: vi.fn(),
       forward: vi.fn(),
@@ -49,6 +56,9 @@ describe("ShoppingDetailScreen", () => {
     cleanup();
     vi.restoreAllMocks();
     mockPush.mockClear();
+    mockReplace.mockClear();
+    mockSearchParams.mockReset();
+    mockSearchParams.mockReturnValue(new URLSearchParams());
     Reflect.deleteProperty(window, "matchMedia");
   });
 

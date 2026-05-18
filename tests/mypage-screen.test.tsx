@@ -126,9 +126,11 @@ describe("MypageScreen", () => {
   afterEach(() => {
     cleanup();
     Reflect.deleteProperty(window, "matchMedia");
+    window.history.pushState({}, "", "/");
   });
 
   beforeEach(() => {
+    window.history.pushState({}, "", "/mypage");
     installMatchMedia(false);
     mockFetchUserProfile.mockReset();
     mockFetchRecipeBooks.mockReset();
@@ -457,6 +459,23 @@ describe("MypageScreen", () => {
     await user.click(screen.getByRole("tab", { name: "장보기 기록" }));
 
     const card = await screen.findByTestId("shopping-card-list-1");
-    expect(card.getAttribute("href")).toBe("/shopping/lists/list-1");
+    const href = card.getAttribute("href") ?? "";
+    expect(href).toContain("/shopping/lists/list-1");
+    expect(href).toContain("returnTo=%2Fmypage");
+    expect(href).toContain("returnSurface=mypage.shopping-history");
+    expect(href).toContain("restore=shopping-history-tab");
+  });
+
+  it("restores the shopping-history tab from return context", async () => {
+    window.history.pushState({}, "", "/mypage?restore=shopping-history-tab");
+
+    render(<MypageScreen initialAuthenticated />);
+
+    expect(await screen.findByText("4/30 장보기")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("tab", { name: "장보기 기록" })
+        .getAttribute("aria-selected"),
+    ).toBe("true");
   });
 });

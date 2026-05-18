@@ -9,6 +9,7 @@ import { ContentState } from "@/components/shared/content-state";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
+import { useAppReturn } from "@/components/shared/use-app-return";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   fetchLeftovers,
@@ -16,6 +17,7 @@ import {
   uneatLeftover,
 } from "@/lib/api/leftovers";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { LeftoverListItemData } from "@/types/leftover";
@@ -137,6 +139,7 @@ export function AteListScreen({
   initialAuthenticated = false,
 }: AteListScreenProps) {
   const isMobileViewport = useIsMobileViewport();
+  const appReturn = useAppReturn({ fallback: "/leftovers" });
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
@@ -289,6 +292,16 @@ export function AteListScreen({
     },
     [uneatingId],
   );
+  const ateListSelfHref = buildReturnHref("/leftovers/ate", {
+    returnSurface: "mypage.eaten-list",
+    returnTo: appReturn.href,
+  });
+  const leftoversListHref = appReturn.href.startsWith("/leftovers")
+    ? appReturn.href
+    : buildReturnHref("/leftovers", {
+        returnSurface: "leftovers.list",
+        returnTo: appReturn.href,
+      });
 
   // Auth checking state
   if (authState === "checking") {
@@ -313,12 +326,12 @@ export function AteListScreen({
         title="이 화면은 로그인이 필요해요"
       >
         <div className="space-y-3">
-          <SocialLoginButtons nextPath="/leftovers/ate" />
+          <SocialLoginButtons nextPath={ateListSelfHref} />
           <Link
             className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
-            href="/leftovers"
+            href={appReturn.href}
           >
-            남은요리로 돌아가기
+            이전 화면으로 돌아가기
           </Link>
         </div>
       </ContentState>
@@ -328,9 +341,11 @@ export function AteListScreen({
   if (isMobileViewport) {
     return (
       <AteListMobileView
+        appReturnHref={appReturn.href}
         errorMessage={errorMessage}
         feedback={feedback}
         items={items}
+        leftoversListHref={leftoversListHref}
         onRetry={loadAteList}
         onUneat={handleUneat}
         screenState={screenState}
@@ -347,10 +362,10 @@ export function AteListScreen({
             <Link
               aria-label="뒤로가기"
               className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface-fill)] px-4 text-sm font-semibold text-[var(--text-2)] hover:text-[var(--brand)]"
-              href="/leftovers"
+              href={appReturn.href}
             >
               <span aria-hidden="true">&lt;</span>
-              남은요리 보기
+              이전 화면
             </Link>
             <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
               Ate List
@@ -372,7 +387,7 @@ export function AteListScreen({
             </div>
             <Link
               className="flex min-h-[76px] items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand)] bg-[var(--brand-soft)] px-4 text-sm font-bold text-[var(--brand-deep)]"
-              href="/leftovers"
+              href={leftoversListHref}
             >
               남은요리
             </Link>
@@ -425,7 +440,7 @@ export function AteListScreen({
           actionLabel="남은요리로 돌아가기"
           description="먹은 기록이 여기에 모여요"
           onAction={() => {
-            window.location.href = "/leftovers";
+            window.location.href = leftoversListHref;
           }}
           title="다먹은 기록이 없어요"
           tone="empty"
@@ -453,17 +468,21 @@ export function AteListScreen({
 }
 
 function AteListMobileView({
+  appReturnHref,
   errorMessage,
   feedback,
   items,
+  leftoversListHref,
   onRetry,
   onUneat,
   screenState,
   uneatingId,
 }: {
+  appReturnHref: string;
   errorMessage: string | null;
   feedback: { message: string; tone: FeedbackTone } | null;
   items: LeftoverListItemData[];
+  leftoversListHref: string;
   onRetry: () => void;
   onUneat: (id: string) => void;
   screenState: ScreenState;
@@ -479,9 +498,9 @@ function AteListMobileView({
       }}
     >
       <MobileAppBar
-        actionHref="/leftovers"
+        actionHref={leftoversListHref}
         actionLabel="남은 요리"
-        backHref="/leftovers"
+        backHref={appReturnHref}
         title="다먹은 요리"
       />
 
@@ -518,7 +537,7 @@ function AteListMobileView({
             actionLabel="남은요리로 돌아가기"
             description="먹은 기록이 여기에 모여요"
             onAction={() => {
-              window.location.href = "/leftovers";
+              window.location.href = leftoversListHref;
             }}
             title="다먹은 기록이 없어요"
             tone="empty"

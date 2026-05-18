@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import React from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -19,6 +20,7 @@ import {
 } from "@/lib/api/planner";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
+import { buildReturnHref } from "@/lib/navigation/return-context";
 import { usePlannerStore } from "@/stores/planner-store";
 import type { PlannerMealData } from "@/types/planner";
 
@@ -118,6 +120,7 @@ export function PlannerWeekScreen({
   initialAuthenticated = false,
 }: PlannerWeekScreenProps) {
   const isDesktopViewport = useDesktopViewport();
+  const searchParams = useSearchParams();
   const rangeStartDate = usePlannerStore((state) => state.rangeStartDate);
   const rangeEndDate = usePlannerStore((state) => state.rangeEndDate);
   const columns = usePlannerStore((state) => state.columns);
@@ -473,6 +476,26 @@ export function PlannerWeekScreen({
     }
   }, [dateKeys, selectedDateKey, todayKey]);
 
+  useEffect(() => {
+    if (
+      searchParams.get("restore") !== "meal-add-modal" &&
+      searchParams.get("returnSurface") !== "planner.meal-add-modal"
+    ) {
+      return;
+    }
+
+    const dateKey = searchParams.get("date");
+    const columnId = searchParams.get("columnId");
+    if (!dateKey || !columnId) return;
+
+    setSelectedDateKey(dateKey);
+    setMealAddSheet({
+      columnId,
+      dateKey,
+      slotName: searchParams.get("slot") ?? "",
+    });
+  }, [searchParams]);
+
   const plannerBodyMotionStyle = {
     opacity: isRefreshing ? 0.97 : 1,
     transform: "translateX(0px)",
@@ -497,6 +520,21 @@ export function PlannerWeekScreen({
     return params.toString();
   }
 
+  function buildMealAddReturnPath(state: NonNullable<MealAddSheetState>) {
+    return `/planner?${buildMenuAddQuery(state)}`;
+  }
+
+  function buildMealAddTargetHref(
+    targetPath: string,
+    state: NonNullable<MealAddSheetState>,
+  ) {
+    return buildReturnHref(targetPath, {
+      restore: "meal-add-modal",
+      returnSurface: "planner.meal-add-modal",
+      returnTo: buildMealAddReturnPath(state),
+    });
+  }
+
   function openMealAddSheet(dateKey: string, column: { id: string; name: string }) {
     setMealAddSheet({
       columnId: column.id,
@@ -517,26 +555,34 @@ export function PlannerWeekScreen({
     const baseQuery = buildMenuAddQuery(mealAddSheet);
 
     if (target === "manual") {
-      return `/menu/add/manual?${baseQuery}`;
+      return buildMealAddTargetHref(`/menu/add/manual?${baseQuery}`, mealAddSheet);
     }
 
     if (target === "youtube") {
-      return `/menu/add/youtube?${baseQuery}`;
+      return buildMealAddTargetHref(`/menu/add/youtube?${baseQuery}`, mealAddSheet);
     }
 
     if (target === "search" || target === "recipebook" || target === "pantry" || target === "leftover") {
-      return `/menu-add?${baseQuery}&source=${target}`;
+      return buildMealAddTargetHref(
+        `/menu-add?${baseQuery}&source=${target}`,
+        mealAddSheet,
+      );
     }
 
-    return `/menu-add?${baseQuery}`;
+    return buildMealAddTargetHref(`/menu-add?${baseQuery}`, mealAddSheet);
   }
 
   function getMealAddHrefForSlot(dateKey: string, column: { id: string; name: string }) {
-    return `/menu-add?${buildMenuAddQuery({
+    const state = {
       columnId: column.id,
       dateKey,
       slotName: column.name,
-    })}`;
+    };
+
+    return buildMealAddTargetHref(
+      `/menu-add?${buildMenuAddQuery(state)}`,
+      state,
+    );
   }
 
   if (authState === "checking") {

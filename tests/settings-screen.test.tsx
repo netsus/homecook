@@ -45,6 +45,9 @@ vi.mock("@/lib/auth/e2e-auth-override", () => ({
 
 const mockRouterReplace = vi.fn();
 const mockRouterPush = vi.fn();
+const navigationMocks = vi.hoisted(() => ({
+  searchParams: vi.fn(() => new URLSearchParams()),
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -52,6 +55,7 @@ vi.mock("next/navigation", () => ({
     replace: mockRouterReplace,
     back: vi.fn(),
   }),
+  useSearchParams: () => navigationMocks.searchParams(),
 }));
 
 vi.mock("next/link", () => ({
@@ -190,6 +194,8 @@ describe("SettingsScreen", () => {
     mockLogout.mockReset();
     mockRouterReplace.mockReset();
     mockRouterPush.mockReset();
+    navigationMocks.searchParams.mockReset();
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
   });
 
   afterEach(() => {
@@ -231,7 +237,8 @@ describe("SettingsScreen", () => {
     expect(backButton).toBeTruthy();
 
     await user.click(backButton);
-    expect(mockRouterPush).toHaveBeenCalledWith("/mypage");
+    expect(mockRouterReplace).toHaveBeenCalledWith("/mypage");
+    expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
   // --- Loading ---

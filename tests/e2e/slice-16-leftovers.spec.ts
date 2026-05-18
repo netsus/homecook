@@ -251,7 +251,7 @@ test.describe("LEFTOVERS screen", () => {
     await page.goto("/leftovers");
 
     await expect(page.getByText("이 화면은 로그인이 필요해요")).toBeVisible();
-    await expect(page.getByText("플래너로 돌아가기")).toBeVisible();
+    await expect(page.getByText("이전 화면으로 돌아가기")).toBeVisible();
   });
 
   test("has navigation link to ate-list", async ({ page }) => {
@@ -264,7 +264,10 @@ test.describe("LEFTOVERS screen", () => {
       isMobileViewport(page) ? "다먹은 요리" : "다먹은 목록",
     );
     await expect(ateLink).toBeVisible();
-    await expect(ateLink).toHaveAttribute("href", "/leftovers/ate");
+    const ateHref = await ateLink.getAttribute("href");
+    expect(ateHref).toContain("/leftovers/ate");
+    expect(ateHref).toContain("returnTo=");
+    expect(ateHref).toContain("returnSurface=leftovers.list");
   });
 });
 
@@ -300,7 +303,7 @@ test.describe("ATE_LIST screen", () => {
     await page.goto("/leftovers/ate");
 
     await expect(page.getByText("이 화면은 로그인이 필요해요")).toBeVisible();
-    await expect(page.getByText("남은요리로 돌아가기")).toBeVisible();
+    await expect(page.getByText("이전 화면으로 돌아가기")).toBeVisible();
   });
 
   test("shows empty state when no eaten items", async ({ page }) => {

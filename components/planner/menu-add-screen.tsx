@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useRef, useState } from "react";
 
 import { LeftoverPicker } from "@/components/planner/leftover-picker";
@@ -10,7 +10,9 @@ import { RecipeBookSelector } from "@/components/planner/recipe-book-selector";
 import { RecipeSearchPicker } from "@/components/planner/recipe-search-picker";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
+import { useAppReturn } from "@/components/shared/use-app-return";
 import { createMealSafe } from "@/lib/api/meal";
+import { buildReturnHref } from "@/lib/navigation/return-context";
 import type { LeftoverListItemData } from "@/types/leftover";
 import type {
   PantryMatchRecipeItem,
@@ -155,6 +157,13 @@ export function MenuAddScreen({
   slotName,
 }: MenuAddScreenProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const appReturn = useAppReturn({
+    fallback:
+      planDate && columnId
+        ? `/planner/${planDate}/${columnId}${slotName ? `?slot=${encodeURIComponent(slotName)}` : ""}`
+        : "/planner",
+  });
   const isDesktopViewport = useDesktopViewport();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeCardItem | null>(null);
@@ -178,6 +187,16 @@ export function MenuAddScreen({
   );
   const [selectedLeftover, setSelectedLeftover] = useState<LeftoverListItemData | null>(null);
 
+  const isMealAddModalOrigin =
+    searchParams.get("restore") === "meal-add-modal" ||
+    searchParams.get("returnSurface") === "planner.meal-add-modal";
+
+  const mealAddParams = new URLSearchParams();
+  if (planDate) mealAddParams.set("date", planDate);
+  if (columnId) mealAddParams.set("columnId", columnId);
+  if (slotName) mealAddParams.set("slot", slotName);
+  const mealAddQuery = mealAddParams.toString();
+
   const navigateToMealScreen = useCallback((mode: "push" | "replace" = "push") => {
     if (!planDate || !columnId) {
       router[mode]("/planner");
@@ -189,18 +208,19 @@ export function MenuAddScreen({
   }, [router, planDate, columnId, slotName]);
 
   const replaceMenuAddSource = useCallback(() => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("source");
     if (planDate) params.set("date", planDate);
     if (columnId) params.set("columnId", columnId);
     if (slotName) params.set("slot", slotName);
     const query = params.toString();
 
     router.replace(query ? `/menu-add?${query}` : "/menu-add");
-  }, [columnId, planDate, router, slotName]);
+  }, [columnId, planDate, router, searchParams, slotName]);
 
   const handleBack = useCallback(() => {
-    router.replace("/planner");
-  }, [router]);
+    appReturn.goBack();
+  }, [appReturn]);
 
   const handleRecipeSelect = useCallback((recipe: RecipeCardItem) => {
     setSelectedRecipe(recipe);
@@ -217,6 +237,11 @@ export function MenuAddScreen({
   }, [isDesktopViewport]);
 
   const handlePickerBackToMenu = useCallback(() => {
+    if (initialSource && isMealAddModalOrigin) {
+      appReturn.goBack();
+      return;
+    }
+
     setPickerMode("none");
     setSelectedRecipe(null);
     setSelectedBook(null);
@@ -225,7 +250,7 @@ export function MenuAddScreen({
     setSelectedLeftover(null);
     setCreationError(null);
     replaceMenuAddSource();
-  }, [replaceMenuAddSource]);
+  }, [appReturn, initialSource, isMealAddModalOrigin, replaceMenuAddSource]);
 
   const handleServingsConfirm = useCallback(
     async (servings: number) => {
@@ -314,10 +339,15 @@ export function MenuAddScreen({
   }, [pickerMode]);
 
   const handleRecipeBookClose = useCallback(() => {
+    if (initialSource && isMealAddModalOrigin) {
+      appReturn.goBack();
+      return;
+    }
+
     setPickerMode("none");
     setSelectedBook(null);
     setSelectedBookRecipe(null);
-  }, []);
+  }, [appReturn, initialSource, isMealAddModalOrigin]);
 
   // Pantry match handlers
   const handlePantryClick = useCallback(() => {
@@ -360,9 +390,14 @@ export function MenuAddScreen({
   }, []);
 
   const handlePantryClose = useCallback(() => {
+    if (initialSource && isMealAddModalOrigin) {
+      appReturn.goBack();
+      return;
+    }
+
     setPickerMode("none");
     setSelectedPantryRecipe(null);
-  }, []);
+  }, [appReturn, initialSource, isMealAddModalOrigin]);
 
   const handleLeftoverClick = useCallback(() => {
     setPickerMode("leftover");
@@ -404,27 +439,48 @@ export function MenuAddScreen({
   }, []);
 
   const handleLeftoverClose = useCallback(() => {
+    if (initialSource && isMealAddModalOrigin) {
+      appReturn.goBack();
+      return;
+    }
+
     setPickerMode("none");
     setSelectedLeftover(null);
-  }, []);
+  }, [appReturn, initialSource, isMealAddModalOrigin]);
 
   const handleManualRecipeClick = useCallback(() => {
-    const queryParts: string[] = [];
-    if (planDate) queryParts.push(`date=${encodeURIComponent(planDate)}`);
-    if (columnId) queryParts.push(`columnId=${encodeURIComponent(columnId)}`);
-    if (slotName) queryParts.push(`slot=${encodeURIComponent(slotName)}`);
-    const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
-    router.push(`/menu/add/manual${queryString}`);
-  }, [router, planDate, columnId, slotName]);
+    const targetPath = mealAddQuery
+      ? `/menu/add/manual?${mealAddQuery}`
+      : "/menu/add/manual";
+    const context = isMealAddModalOrigin
+      ? {
+          restore: "meal-add-modal" as const,
+          returnSurface: "planner.meal-add-modal" as const,
+          returnTo: appReturn.href,
+        }
+      : { returnTo: appReturn.href };
+
+    router.push(
+      buildReturnHref(targetPath, context),
+    );
+  }, [appReturn.href, isMealAddModalOrigin, mealAddQuery, router]);
 
   const handleYoutubeRecipeClick = useCallback(() => {
-    const queryParts: string[] = [];
-    if (planDate) queryParts.push(`date=${encodeURIComponent(planDate)}`);
-    if (columnId) queryParts.push(`columnId=${encodeURIComponent(columnId)}`);
-    if (slotName) queryParts.push(`slot=${encodeURIComponent(slotName)}`);
-    const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
-    router.push(`/menu/add/youtube${queryString}`);
-  }, [router, planDate, columnId, slotName]);
+    const targetPath = mealAddQuery
+      ? `/menu/add/youtube?${mealAddQuery}`
+      : "/menu/add/youtube";
+    const context = isMealAddModalOrigin
+      ? {
+          restore: "meal-add-modal" as const,
+          returnSurface: "planner.meal-add-modal" as const,
+          returnTo: appReturn.href,
+        }
+      : { returnTo: appReturn.href };
+
+    router.push(
+      buildReturnHref(targetPath, context),
+    );
+  }, [appReturn.href, isMealAddModalOrigin, mealAddQuery, router]);
 
   const targetLabel = formatTargetLabel(planDate, slotName);
 

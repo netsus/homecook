@@ -148,9 +148,11 @@ test.describe("15b standalone cook mode", () => {
 
     await page.goto(RECIPE_PATH);
     await page.getByRole("button", { name: "요리하기" }).click();
-    await expect(page).toHaveURL(
-      new RegExp(`/cooking/recipes/${RECIPE_ID}/cook-mode\\?servings=2$`),
-    );
+    await expect(page).toHaveURL(new RegExp(`/cooking/recipes/${RECIPE_ID}/cook-mode\\?`));
+    const cookUrl = new URL(page.url());
+    expect(cookUrl.searchParams.get("servings")).toBe("2");
+    expect(cookUrl.searchParams.get("returnSurface")).toBe("recipe.detail");
+    expect(cookUrl.searchParams.get("returnTo")).toContain(`/recipe/${RECIPE_ID}`);
     await page.waitForSelector('[data-testid="standalone-cook-mode-title"]');
 
     // Verify recipe title and servings displayed
@@ -181,7 +183,7 @@ test.describe("15b standalone cook mode", () => {
     await page.getByTestId("consumed-confirm-button").click();
 
     // Navigates to recipe detail
-    await page.waitForURL(`**${RECIPE_PATH}`);
+    await page.waitForURL(new RegExp(`${RECIPE_PATH}(\\?.*)?$`));
   });
 
   test("cancel returns to recipe detail without API call", async ({ page }) => {
@@ -195,7 +197,7 @@ test.describe("15b standalone cook mode", () => {
     await page.getByTestId("standalone-cancel-button").click();
 
     // Navigates to recipe detail (no confirm dialog for standalone)
-    await page.waitForURL(`**${RECIPE_PATH}`);
+    await page.waitForURL(new RegExp(`${RECIPE_PATH}(\\?.*)?$`));
   });
 
   test("unauthenticated user sees login gate on complete attempt", async ({
@@ -253,6 +255,6 @@ test.describe("15b standalone cook mode", () => {
     // Skip without checking anything
     await page.getByTestId("consumed-skip-button").click();
 
-    await page.waitForURL(`**${RECIPE_PATH}`);
+    await page.waitForURL(new RegExp(`${RECIPE_PATH}(\\?.*)?$`));
   });
 });

@@ -10,6 +10,13 @@ import { resetPlannerStore } from "@/stores/planner-store";
 
 const readE2EAuthOverride = vi.fn();
 const fetchPlanner = vi.fn();
+const navigationMocks = vi.hoisted(() => ({
+  searchParams: vi.fn(() => new URLSearchParams()),
+}));
+
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => navigationMocks.searchParams(),
+}));
 
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => readE2EAuthOverride(),
@@ -146,6 +153,8 @@ describe("planner week screen", () => {
   beforeEach(() => {
     readE2EAuthOverride.mockReset();
     fetchPlanner.mockReset();
+    navigationMocks.searchParams.mockReset();
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     resetPlannerStore();
     setDesktopViewport(false);
   });

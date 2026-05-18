@@ -6,6 +6,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtonsDeferred } from "@/components/auth/social-login-buttons-deferred";
 import { useViewMode } from "@/components/shared/use-view-mode";
+import { sanitizeInternalPath } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 
@@ -19,6 +20,7 @@ export function LoginScreen({
   nextPath = "/",
 }: LoginScreenProps) {
   const showAuthError = authError === "oauth_failed";
+  const safeNextPath = sanitizeInternalPath(nextPath, "/");
   const viewMode = useViewMode();
 
   useEffect(() => {
@@ -36,7 +38,7 @@ export function LoginScreen({
           return;
         }
 
-        window.location.replace(nextPath);
+        window.location.replace(safeNextPath);
       });
 
     const {
@@ -44,7 +46,7 @@ export function LoginScreen({
     } = supabase.auth.onAuthStateChange(
       (_event: AuthChangeEvent, session: Session | null) => {
         if (session) {
-          window.location.replace(nextPath);
+          window.location.replace(safeNextPath);
         }
       },
     );
@@ -53,7 +55,7 @@ export function LoginScreen({
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [nextPath]);
+  }, [safeNextPath]);
 
   if (viewMode === "web") {
     return (
@@ -107,14 +109,14 @@ export function LoginScreen({
             </p>
 
             <div className="mt-7">
-              <SocialLoginButtonsDeferred nextPath={nextPath} />
+              <SocialLoginButtonsDeferred nextPath={safeNextPath} />
             </div>
 
             <div className="mt-8 grid gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] p-4 text-sm text-[var(--muted)]">
               <div className="flex items-center justify-between gap-3">
                 <span>복귀 경로</span>
                 <strong className="font-semibold text-[var(--foreground)]">
-                  {nextPath === "/" ? "HOME 또는 원래 레시피" : nextPath}
+                  {safeNextPath === "/" ? "HOME 또는 원래 레시피" : safeNextPath}
                 </strong>
               </div>
               <div className="flex items-center justify-between gap-3">
@@ -142,12 +144,7 @@ export function LoginScreen({
           aria-label="이전 화면으로"
           className="mb-7 flex h-9 w-9 items-center justify-center rounded-full text-[var(--wave1-ink)] transition-colors hover:bg-[var(--wave1-surface-fill)]"
           onClick={() => {
-            if (window.history.length > 1) {
-              window.history.back();
-              return;
-            }
-
-            window.location.assign(nextPath);
+            window.location.assign(safeNextPath);
           }}
           type="button"
         >
@@ -179,7 +176,7 @@ export function LoginScreen({
         ) : null}
 
         <div className={showAuthError ? "mt-4" : "mt-8"}>
-          <SocialLoginButtonsDeferred nextPath={nextPath} />
+          <SocialLoginButtonsDeferred nextPath={safeNextPath} />
         </div>
 
         <p className="mt-4 text-center text-[11px] font-medium leading-5 text-[var(--wave1-text-3)]">

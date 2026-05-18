@@ -23,6 +23,10 @@ const hasSupabasePublicEnv = vi.fn();
 const fetchPlanner = vi.fn();
 const createMeal = vi.fn();
 const mockRouterPush = vi.fn();
+const mockRouterReplace = vi.fn();
+const navigationMocks = vi.hoisted(() => ({
+  searchParams: vi.fn(() => new URLSearchParams()),
+}));
 
 vi.mock("@/lib/api/fetch-json", () => ({
   fetchJson: (...args: unknown[]) => fetchJson(...args),
@@ -51,7 +55,8 @@ vi.mock("@/lib/supabase/env", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockRouterPush }),
+  useRouter: () => ({ push: mockRouterPush, replace: mockRouterReplace }),
+  useSearchParams: () => navigationMocks.searchParams(),
 }));
 
 vi.mock("@/components/auth/social-login-buttons-deferred", () => ({
@@ -135,6 +140,9 @@ describe("recipe detail screen", () => {
     fetchPlanner.mockReset();
     createMeal.mockReset();
     mockRouterPush.mockReset();
+    mockRouterReplace.mockReset();
+    navigationMocks.searchParams.mockReset();
+    navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     useAuthGateStore.setState({ isOpen: false, action: null });
     window.localStorage.clear();
 
@@ -232,9 +240,12 @@ describe("recipe detail screen", () => {
       await screen.findByRole("button", { name: "요리하기" }),
     );
 
-    expect(mockRouterPush).toHaveBeenCalledWith(
+    const pushedHref = mockRouterPush.mock.calls.at(-1)?.[0] as string;
+    expect(pushedHref).toContain(
       `/cooking/recipes/${MOCK_RECIPE_DETAIL.id}/cook-mode?servings=${MOCK_RECIPE_DETAIL.base_servings}`,
     );
+    expect(pushedHref).toContain("returnSurface=recipe.detail");
+    expect(pushedHref).toContain("returnTo=");
   });
 
   it("uses level-one page headings and 44px touch targets for the hero actions", async () => {

@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import React from "react";
 
+import { useAppReturn } from "@/components/shared/use-app-return";
 import type { UserProfileData } from "@/lib/api/mypage";
 import type { PlannerColumnData } from "@/types/planner";
 
@@ -124,7 +124,7 @@ export function SettingsMobileScreen({
   onNicknameInputChange,
 }: SettingsMobileScreenProps) {
   const title = surface === "account" ? "계정 정보" : "설정";
-  const router = useRouter();
+  const appReturn = useAppReturn({ fallback: "/mypage" });
 
   return (
     <div
@@ -135,7 +135,7 @@ export function SettingsMobileScreen({
       }}
     >
       <MobileAppBar
-        onBack={() => router.push("/mypage")}
+        onBack={appReturn.goBack}
         title={title}
       />
 
