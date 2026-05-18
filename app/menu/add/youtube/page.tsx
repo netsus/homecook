@@ -61,11 +61,13 @@ export default async function YoutubeImportPage({ searchParams }: YoutubeImportP
   }
 
   return (
-    <YoutubeImportScreen
-      initialAuthenticated={initialAuthenticated}
-      planDate={date ?? ""}
-      columnId={columnId ?? ""}
-      slotName={slot ?? ""}
-    />
+    <main>
+      <YoutubeImportScreen
+        initialAuthenticated={initialAuthenticated}
+        planDate={date ?? ""}
+        columnId={columnId ?? ""}
+        slotName={slot ?? ""}
+      />
+    </main>
   );
 }

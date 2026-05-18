@@ -14,11 +14,11 @@ export function WebShell({
 }: WebShellProps) {
   return (
     <div className={cn("web-shell", className)} {...props}>
-      <main className="web-page">
+      <div className="web-page">
         <div className={wide ? "web-container-wide" : "web-container"}>
           {children}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

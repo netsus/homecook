@@ -52,7 +52,7 @@ export default async function MenuAddPage({ searchParams }: MenuAddPageProps) {
   }
 
   return (
-    <div className="relative min-h-screen">
+    <main className="relative min-h-screen">
       <div
         aria-hidden="true"
         className="fixed inset-0 -z-10 bg-[var(--background)]"
@@ -64,6 +64,6 @@ export default async function MenuAddPage({ searchParams }: MenuAddPageProps) {
         planDate={date ?? ""}
         slotName={slot ?? ""}
       />
-    </div>
+    </main>
   );
 }
