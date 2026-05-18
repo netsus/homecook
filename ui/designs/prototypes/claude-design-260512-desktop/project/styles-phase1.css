@@ -330,6 +330,7 @@ main.screen {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-weight: 700;
 }
 
 .planner-legend-dot {

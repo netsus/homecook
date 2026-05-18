@@ -79,6 +79,7 @@ function shoppingIngredientAmount(ingredient, factor) {
 
 const DEFAULT_ROUTE = { screen: "HOME" };
 const ROUTE_PARAM_KEYS = {
+  MYPAGE: ["tab"],
   RECIPE: ["recipeId"],
   MEAL: ["mealId"],
   MENU_ADD: ["date", "col"],
@@ -200,7 +201,8 @@ function stackFromRouteEntry(entry) {
     return [...stack, route];
   }
   if (MYPAGE_ROUTE_SCREENS.has(route.screen)) {
-    const stack = [{ screen: "MYPAGE" }];
+    const mypageRoot = route.screen === "SETTINGS" ? { screen: "MYPAGE", tab: "account" } : { screen: "MYPAGE" };
+    const stack = [mypageRoot];
     if (route.screen === "RECIPEBOOK_DETAIL") stack.push({ screen: "RECIPEBOOKS" });
     if (route.screen === "SHOPPING_DETAIL") stack.push({ screen: "SHOPPING_LISTS" });
     return [...stack, route];
@@ -393,6 +395,19 @@ function App() {
     setStack([route]);
     writeRouteHash(route);
     window.scrollTo({ top: 0, behavior: "instant" });
+  };
+  const goMyPage = (tab = "saved") => {
+    const route = normalizeRouteEntry({ screen: "MYPAGE", tab });
+    setStack([route]);
+    writeRouteHash(route);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
+  const handleTopTab = (tab) => {
+    if (tab === "MYPAGE" && cur.screen === "SETTINGS") {
+      goMyPage("account");
+      return;
+    }
+    goTab(tab);
   };
 
   const openAccountDeleteConfirm = () => openConfirm({
@@ -863,7 +878,6 @@ function App() {
       }}
       onOpenMeal={(mid) => push({ screen: "MEAL", mealId: mid })}
       onOpenShopping={() => push({ screen: "SHOPPING_FLOW" })}
-      onOpenCookReady={() => push({ screen: "COOK_READY_LIST" })}
       stateOverride={plannerState}
       onStateOverride={setPlannerState}
     />;
@@ -974,6 +988,7 @@ function App() {
   } else if (s === "MYPAGE") {
     body = <MyPageScreen
       account={account}
+      initialTab={cur.tab}
       savedSet={savedSet}
       shoppingLists={shoppingLists}
       recipebooks={recipebooks}
@@ -1041,7 +1056,7 @@ function App() {
   } else if (s === "LEFTOVERS") {
     body = <LeftoversScreen
       leftovers={leftovers}
-      onBack={pop}
+      onBack={() => goMyPage("saved")}
       onCook={(lfId) => {
         const lf = leftovers.find(l => l.id === lfId);
         if (lf) push({ screen: "COOK_MODE_STANDALONE", recipeId: lf.recipeId });
@@ -1053,7 +1068,7 @@ function App() {
   } else if (s === "ATE_LIST") {
     body = <AteListScreen
       ateItems={ateItems}
-      onBack={pop}
+      onBack={() => goMyPage("saved")}
       onOpenRecipe={(rid) => push({ screen: "RECIPE", recipeId: rid })}
       onUndoAte={undoAteToLeftover}
       onRecreate={(rid) => push({ screen: "COOK_MODE_STANDALONE", recipeId: rid })}
@@ -1094,7 +1109,7 @@ function App() {
     />;
   } else if (s === "SETTINGS") {
     body = <SettingsScreen
-      onBack={pop}
+      onBack={() => goMyPage("account")}
       account={account}
       onOpenNickname={() => setNickname(true)}
       onOpenLogout={() => setLogout(true)}
@@ -1107,7 +1122,7 @@ function App() {
     <>
       <HC_.TopNav
         tab={topTab}
-        onTab={goTab}
+        onTab={handleTopTab}
         account={account}
         isAuthenticated={isAuthenticated}
         onAvatarClick={() => {
