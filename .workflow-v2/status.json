@@ -1039,6 +1039,25 @@
         "git diff --check"
       ],
       "notes": "Stage 1 docs created by Claude on docs/design-polish-slice4-planner-meal-add. Stage 4/final authority Claude resume attempts hit provider limit, so Codex proceeded per user fallback instruction. FE-only anchor-extension slice completed: PLANNER_WEEK/MEAL_SCREEN meal-add full-page→modal/sheet conversion, LeftoverPicker card button relocation/resize/text + metadata format, RecipeSearchPicker icon update. Authority report blocker/major/minor 0; mobile default+narrow evidence captured. Web tokens unchanged. Global app token values unchanged. 직접등록 and YouTube remain route-based for slice5. pnpm verify:frontend passed locally. closeout_phase=completed closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/authority/DESIGN_POLISH_SLICE4_PLANNER_MEAL_ADD-authority.md,ui/designs/evidence/design-polish-slice4-planner-meal-add/PLANNER_WEEK-meal-add-modal-mobile.png,ui/designs/evidence/design-polish-slice4-planner-meal-add/PLANNER_WEEK-meal-add-modal-mobile-narrow.png,ui/designs/evidence/design-polish-slice4-planner-meal-add/MEAL_SCREEN-meal-add-modal-mobile.png,ui/designs/evidence/design-polish-slice4-planner-meal-add/MEAL_SCREEN-meal-add-modal-mobile-narrow.png,ui/designs/evidence/design-polish-slice4-planner-meal-add/RECIPE_SEARCH-icon-mobile.png,ui/designs/evidence/design-polish-slice4-planner-meal-add/RECIPE_SEARCH-icon-mobile-narrow.png,ui/designs/evidence/design-polish-slice4-planner-meal-add/LEFTOVER_PICKER-card-mobile.png,ui/designs/evidence/design-polish-slice4-planner-meal-add/LEFTOVER_PICKER-card-mobile-narrow.png last_recovery_at=2026-05-20T00:00:00+09:00"
+    },
+    {
+      "id": "design-polish-slice5-manual-youtube",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/design-polish-slice5-manual-youtube",
+      "pr_path": "pending",
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm verify:frontend",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice design-polish-slice5-manual-youtube",
+        "pnpm validate:authority-evidence-presence",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs branch. Claude resume session b475ec3a-c10b-42ae-9c38-1df94982e645 requested with model=opus, effort=high, permission_mode=bypassPermissions but provider limit blocked editing; Codex fallback created workpack docs per user instruction. FE-only high-risk MANUAL_RECIPE_CREATE/YT_IMPORT form polish. API/DB/web token/global brand token changes out of scope."
     }
   ]
 }

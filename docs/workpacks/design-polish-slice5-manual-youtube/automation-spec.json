@@ -1,0 +1,81 @@
+{
+  "slice_id": "design-polish-slice5-manual-youtube",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "anchor_extension": false,
+  "anchor_screens": [],
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "branch": "feature/fe-design-polish-slice5-manual-youtube",
+    "stage": 4,
+    "required_routes": [
+      "/menu/add/manual",
+      "/menu/add/youtube"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only:preserved",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "screenshot",
+      "authority-report"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "MANUAL_RECIPE_CREATE",
+        "YT_IMPORT"
+      ],
+      "generator_required": false,
+      "generator_artifact": "ui/designs/MANUAL_RECIPE_CREATE.md",
+      "critic_required": false,
+      "critic_artifact": "ui/designs/critiques/MANUAL_RECIPE_CREATE-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/DESIGN_POLISH_SLICE5_MANUAL_YOUTUBE-authority.md"
+      ],
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/design-polish-slice5-manual-youtube/MANUAL_RECIPE_CREATE-ingredients-mobile.png",
+        "ui/designs/evidence/design-polish-slice5-manual-youtube/MANUAL_RECIPE_CREATE-steps-mobile.png",
+        "ui/designs/evidence/design-polish-slice5-manual-youtube/MANUAL_RECIPE_CREATE-narrow.png",
+        "ui/designs/evidence/design-polish-slice5-manual-youtube/YT_IMPORT-review-mobile.png",
+        "ui/designs/evidence/design-polish-slice5-manual-youtube/YT_IMPORT-review-narrow.png"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "cooking-methods-seed-missing",
+    "mobile-narrow-layout-overlap",
+    "manual-step-payload-contract-drift"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}

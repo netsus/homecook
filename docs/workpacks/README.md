@@ -99,6 +99,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `design-polish-slice2-app-shell-home` | merged | 앱 셸 하단 탭 지속성·플래너 아이콘 밀도·헤더 정렬 확인, HOME 재료 필터 모달 2열 그리드·팬트리 시트 패밀리 정합·버튼 색상 토큰 정리 |
 | `design-polish-slice3-recipe-detail` | merged | RECIPE_DETAIL 인분 stepper −/+ 버튼 크기 축소·균형, 히어로 메트릭 숫자 font-weight 경량화, 인분 아이콘·메트릭 컨트롤·stepper 색상 wave1 prototype 정합 |
 | `design-polish-slice4-planner-meal-add` | merged | PLANNER_WEEK/MEAL_SCREEN 식사추가 full-page→modal/sheet 전환, LeftoverPicker 카드 버튼 우측 배치·텍스트·메타데이터 형식 개선, RecipeSearchPicker 검색 아이콘 교체·확대. anchor-extension, Codex fallback authority pass |
+| `design-polish-slice5-manual-youtube` | docs | MANUAL_RECIPE_CREATE / YT_IMPORT 재료 행 밀도·조리법 입력 UX·조리방법 색상·재료 validation 문구 polish. API/DB 변경 없음 |
 
 ## Design Decision Gates
 
