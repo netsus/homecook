@@ -10,7 +10,15 @@ import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { useAppReturn } from "@/components/shared/use-app-return";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  WebButton,
+  WebEmptyState,
+  WebErrorState,
+  WebPageHeader,
+  WebShell,
+  WebSkeleton,
+  WebTopNav,
+} from "@/components/web";
 import {
   fetchLeftovers,
   isLeftoverApiError,
@@ -27,6 +35,12 @@ type ScreenState = "loading" | "ready" | "empty" | "error";
 type FeedbackTone = "error" | "status";
 
 const FEEDBACK_AUTO_DISMISS_MS = 4000;
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
 
 export interface AteListScreenProps {
   initialAuthenticated?: boolean;
@@ -73,64 +87,73 @@ function AteListCard({
 }) {
   return (
     <article
-      className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)] transition hover:bg-[var(--surface-fill)]"
+      className="web-ate-row"
       data-testid="ate-list-card"
     >
-      <div className="flex items-center gap-4">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          {item.recipe_thumbnail_url ? (
-            <Image
-              alt=""
-              className="h-16 w-16 shrink-0 rounded-[var(--radius-md)] object-cover"
-              height={64}
-              src={item.recipe_thumbnail_url}
-              unoptimized
-              width={64}
-            />
-          ) : (
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-fill)] text-[var(--muted)]">
-              <svg
-                aria-hidden="true"
-                className="h-6 w-6"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.8"
-                viewBox="0 0 24 24"
-              >
-                <path d="M5 12h14" />
-                <path d="M12 5v14" />
-                <path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
-              </svg>
-            </div>
-          )}
-
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-bold tracking-[-0.3px] text-[var(--foreground)]">
-              {item.recipe_title}
-            </p>
-            {item.eaten_at ? (
-              <p className="text-sm text-[var(--text-3)]">
-                {formatEatenAt(item.eaten_at)}
-              </p>
-            ) : null}
-            <p className="text-sm text-[var(--text-3)]">
-              {formatLeftoverMeta(item)}
-            </p>
+      <div className="web-ate-thumb">
+        {item.recipe_thumbnail_url ? (
+          <Image
+            alt=""
+            height={54}
+            src={item.recipe_thumbnail_url}
+            unoptimized
+            width={72}
+          />
+        ) : (
+          <div className="web-ate-thumb-placeholder">
+            <svg
+              aria-hidden="true"
+              className="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.8"
+              viewBox="0 0 24 24"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+              <path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
+            </svg>
           </div>
-        </div>
+        )}
+      </div>
 
-        <button
-          className="flex min-h-[44px] w-auto min-w-[132px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand)] bg-white px-4 py-2.5 text-center text-sm font-semibold leading-5 text-[var(--brand)] active:bg-[var(--brand-soft)] disabled:opacity-60"
+      <div className="web-ate-body">
+        <p className="web-ate-title">{item.recipe_title}</p>
+        <p className="web-ate-meta">
+          {item.eaten_at ? `${formatEatenAt(item.eaten_at)} · ` : null}
+          {formatLeftoverMeta(item)}
+        </p>
+      </div>
+
+      <div className="web-ate-actions">
+        <WebButton
           data-testid="uneat-button"
           disabled={anyMutating}
           onClick={() => onUneat(item.id)}
-          type="button"
+          size="sm"
+          variant="ghost"
         >
-          {isUneating ? "처리 중..." : "남은요리로 복귀"}
-        </button>
+          {isUneating ? "처리 중..." : "되돌리기"}
+        </WebButton>
+        <Link
+          className="web-button web-button-tertiary web-button-sm"
+          href={`/recipe/${item.recipe_id}`}
+          prefetch={false}
+        >
+          다시 만들기
+        </Link>
       </div>
+
+      <Link
+        aria-label={`${item.recipe_title} 레시피 보기`}
+        className="web-ate-link"
+        href={`/recipe/${item.recipe_id}`}
+        prefetch={false}
+      >
+        <span aria-hidden="true">&gt;</span>
+      </Link>
     </article>
   );
 }
@@ -303,42 +326,40 @@ export function AteListScreen({
         returnTo: appReturn.href,
       });
 
-  // Auth checking state
-  if (authState === "checking") {
-    return (
-      <ContentState
-        description="다먹은 목록에 접근하기 위해 로그인 상태를 확인하고 있어요."
-        eyebrow="세션 확인"
-        tone="loading"
-        title="로그인 상태를 확인하고 있어요"
-      />
-    );
-  }
-
-  // Unauthorized state
-  if (authState === "unauthorized") {
-    return (
-      <ContentState
-        description="다먹은 목록을 확인하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
-        eyebrow="로그인 필요"
-        safeBottomPadding
-        tone="gate"
-        title="이 화면은 로그인이 필요해요"
-      >
-        <div className="space-y-3">
-          <SocialLoginButtons nextPath={ateListSelfHref} />
-          <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
-            href={appReturn.href}
-          >
-            이전 화면으로 돌아가기
-          </Link>
-        </div>
-      </ContentState>
-    );
-  }
-
   if (isMobileViewport) {
+    if (authState === "checking") {
+      return (
+        <ContentState
+          description="다먹은 목록에 접근하기 위해 로그인 상태를 확인하고 있어요."
+          eyebrow="세션 확인"
+          tone="loading"
+          title="로그인 상태를 확인하고 있어요"
+        />
+      );
+    }
+
+    if (authState === "unauthorized") {
+      return (
+        <ContentState
+          description="다먹은 목록을 확인하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
+          eyebrow="로그인 필요"
+          safeBottomPadding
+          tone="gate"
+          title="이 화면은 로그인이 필요해요"
+        >
+          <div className="space-y-3">
+            <SocialLoginButtons nextPath={ateListSelfHref} />
+            <Link
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
+              href={appReturn.href}
+            >
+              이전 화면으로 돌아가기
+            </Link>
+          </div>
+        </ContentState>
+      );
+    }
+
     return (
       <AteListMobileView
         appReturnHref={appReturn.href}
@@ -355,53 +376,62 @@ export function AteListScreen({
   }
 
   return (
-    <div className="space-y-6 pb-12" data-testid="ate-list-screen">
-      <section className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[var(--shadow-1)]">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <Link
-              aria-label="뒤로가기"
-              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface-fill)] px-4 text-sm font-semibold text-[var(--text-2)] hover:text-[var(--brand)]"
-              href={appReturn.href}
-            >
-              <span aria-hidden="true">&lt;</span>
-              이전 화면
-            </Link>
-            <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
-              Ate List
-            </p>
-            <h1 className="mt-1 text-3xl font-bold tracking-[-0.3px] text-[var(--foreground)]">
-              다먹은 목록
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-              먹은 기록은 최근 30일 동안 확인할 수 있고, 필요하면 남은요리로 되돌릴 수 있어요.
-            </p>
-          </div>
+    <WebShell className="web-leftovers-shell" wide>
+      <WebTopNav
+        activeId="mypage"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<div className="web-profile-button">JY</div>}
+      />
+      <div className="web-leftovers-screen" data-testid="ate-list-screen">
+        <nav aria-label="다먹은 목록 경로" className="web-breadcrumb">
+          <Link className="web-breadcrumb-link" href="/mypage">
+            &lt; 마이페이지
+          </Link>
+          <span className="web-breadcrumb-sep">/</span>
+          <span className="web-breadcrumb-current">다먹은 목록</span>
+        </nav>
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[300px]">
-            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
-              <p className="text-xs font-semibold text-[var(--muted)]">먹은 기록</p>
-              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
-                {items.length}개
-              </p>
+        <WebPageHeader
+          actions={
+            <Link className="web-button web-button-tertiary" href={leftoversListHref}>
+              남은 요리
+            </Link>
+          }
+          description="요리모드를 완료했거나 '다 먹었어요'를 누른 끼니가 기록됩니다."
+          title="다먹은 목록"
+        />
+
+      {authState === "checking" ? (
+        <WebEmptyState
+          description="다먹은 목록에 접근하기 위해 로그인 상태를 확인하고 있어요."
+          icon={<span aria-hidden="true">...</span>}
+          title="로그인 상태를 확인하고 있어요"
+        />
+      ) : null}
+
+      {authState === "unauthorized" ? (
+        <WebEmptyState
+          action={
+            <div className="web-leftover-login-actions">
+              <SocialLoginButtons nextPath={ateListSelfHref} />
+              <Link className="web-button web-button-tertiary" href={appReturn.href}>
+                이전 화면으로 돌아가기
+              </Link>
             </div>
-            <Link
-              className="flex min-h-[76px] items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand)] bg-[var(--brand-soft)] px-4 text-sm font-bold text-[var(--brand-deep)]"
-              href={leftoversListHref}
-            >
-              남은요리
-            </Link>
-          </div>
-        </div>
-      </section>
+          }
+          description="다먹은 목록을 확인하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
+          icon={<span aria-hidden="true">!</span>}
+          title="이 화면은 로그인이 필요해요"
+        />
+      ) : null}
 
-      {feedback ? (
+      {authState === "authenticated" && feedback ? (
         <div
           className={[
-            "rounded-[var(--radius-md)] border px-4 py-3 text-sm",
+            "web-leftover-feedback",
             feedback.tone === "error"
-              ? "border-[var(--danger)] bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] text-[color-mix(in_srgb,var(--danger)_70%,black)]"
-              : "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-deep)]",
+              ? "web-leftover-feedback-error"
+              : "web-leftover-feedback-status",
           ].join(" ")}
           data-testid="feedback-toast"
           role="alert"
@@ -410,46 +440,51 @@ export function AteListScreen({
         </div>
       ) : null}
 
-      {screenState === "loading" ? (
-        <div className="space-y-3" data-testid="ate-list-loading">
+      {authState === "authenticated" && screenState === "loading" ? (
+        <div className="web-ate-list" data-testid="ate-list-loading">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton
+            <WebSkeleton
               key={i}
-              className="border border-[var(--line)]"
               height={88}
-              rounded="lg"
             />
           ))}
         </div>
       ) : null}
 
-      {screenState === "error" ? (
-        <ContentState
-          actionLabel="다시 시도"
+      {authState === "authenticated" && screenState === "error" ? (
+        <WebErrorState
+          action={
+            <WebButton
+              onClick={() => {
+                void loadAteList();
+              }}
+              variant="secondary"
+            >
+              다시 시도
+            </WebButton>
+          }
           description={errorMessage ?? "잠시 후 다시 시도해주세요."}
-          onAction={() => {
-            void loadAteList();
-          }}
+          icon={<span aria-hidden="true">!</span>}
           title="다먹은 목록을 불러오지 못했어요"
-          tone="error"
         />
       ) : null}
 
-      {screenState === "empty" ? (
-        <ContentState
-          actionLabel="남은요리로 돌아가기"
-          description="먹은 기록이 여기에 모여요"
-          onAction={() => {
-            window.location.href = leftoversListHref;
-          }}
-          title="다먹은 기록이 없어요"
-          tone="empty"
+      {authState === "authenticated" && screenState === "empty" ? (
+        <WebEmptyState
+          action={
+            <Link className="web-button web-button-tertiary" href={leftoversListHref}>
+              남은요리로 돌아가기
+            </Link>
+          }
+          description="요리를 완료하거나 남은 요리에서 '다 먹었어요'를 누르면 여기에 기록됩니다."
+          icon={<span aria-hidden="true">✓</span>}
+          title="아직 다먹은 요리가 없어요"
         />
       ) : null}
 
-      {screenState === "ready" ? (
+      {authState === "authenticated" && screenState === "ready" ? (
         <div
-          className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-3 shadow-[var(--shadow-1)]"
+          className="web-ate-list"
           data-testid="ate-item-list"
         >
           {items.map((item) => (
@@ -463,7 +498,8 @@ export function AteListScreen({
           ))}
         </div>
       ) : null}
-    </div>
+      </div>
+    </WebShell>
   );
 }
 

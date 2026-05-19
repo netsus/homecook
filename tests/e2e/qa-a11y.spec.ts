@@ -4,15 +4,18 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   COOK_MODE_VISUAL_PATH,
   COOK_READY_VISUAL_PATH,
+  ATE_LIST_VISUAL_PATH,
   installAccountLibraryVisualRoutes,
   installCookingVisualRoutes,
   installDiscoveryRoutes,
+  installLeftoversVisualRoutes,
   installMenuAddVisualRoutes,
   installMealDetailRoutes,
   installPantryShoppingVisualRoutes,
   installPlannerWeekRoutes,
   installRecipeDetailRoutes,
   LOGIN_VISUAL_PATH,
+  LEFTOVERS_VISUAL_PATH,
   installYoutubeImportVisualRoutes,
   MANUAL_CREATE_VISUAL_PATH,
   MEAL_VISUAL_PATH,
@@ -522,6 +525,41 @@ test.describe("QA accessibility smoke", () => {
 
     await page.goto(STANDALONE_COOK_MODE_VISUAL_PATH);
     await expect(page.getByTestId("standalone-cook-mode-title")).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+  });
+
+  test("leftovers desktop ready and empty states are axe-clean", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only leftovers parity smoke");
+    await setE2EAuthOverride(page);
+    await installLeftoversVisualRoutes(page);
+
+    await page.goto(LEFTOVERS_VISUAL_PATH);
+    await expect(page.getByRole("heading", { name: "남은 요리" })).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.goto(ATE_LIST_VISUAL_PATH);
+    await expect(page.getByRole("heading", { name: "다먹은 목록" })).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.unroute("**/api/v1/leftovers?*");
+    await installLeftoversVisualRoutes(page, { ateItems: [], leftoverItems: [] });
+
+    await page.goto(LEFTOVERS_VISUAL_PATH);
+    await expect(page.getByText("남은 요리가 없어요")).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.goto(ATE_LIST_VISUAL_PATH);
+    await expect(page.getByText("아직 다먹은 요리가 없어요")).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });

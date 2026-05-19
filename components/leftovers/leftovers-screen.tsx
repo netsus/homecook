@@ -12,7 +12,16 @@ import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { useAppReturn } from "@/components/shared/use-app-return";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  WebButton,
+  WebCard,
+  WebEmptyState,
+  WebErrorState,
+  WebPageHeader,
+  WebShell,
+  WebSkeleton,
+  WebTopNav,
+} from "@/components/web";
 import {
   eatLeftover,
   fetchLeftovers,
@@ -32,6 +41,12 @@ type ScreenState = "loading" | "ready" | "empty" | "error";
 type FeedbackTone = "error" | "status";
 
 const FEEDBACK_AUTO_DISMISS_MS = 4000;
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
 
 export interface LeftoversScreenProps {
   initialAuthenticated?: boolean;
@@ -78,22 +93,23 @@ function LeftoverCard({
   onPlannerAdd: (item: LeftoverListItemData) => void;
 }) {
   return (
-    <article
-      className="group overflow-hidden rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"
+    <WebCard
+      className="web-leftover-card"
       data-testid="leftover-card"
+      interactive
     >
-      <div className="relative aspect-[16/10] overflow-hidden bg-[var(--surface-fill)]">
+      <div className="web-leftover-thumb">
         {item.recipe_thumbnail_url ? (
           <Image
             alt=""
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            className="h-full w-full object-cover"
             fill
             sizes="(min-width: 1024px) 320px, 56px"
             src={item.recipe_thumbnail_url}
             unoptimized
           />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-[var(--muted)]">
+          <div className="web-leftover-thumb-placeholder">
             <svg
               aria-hidden="true"
               className="h-7 w-7"
@@ -113,41 +129,46 @@ function LeftoverCard({
         )}
       </div>
 
-      <div className="p-4">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-lg font-bold tracking-[-0.3px] text-[var(--foreground)]">
+      <div className="web-leftover-body">
+        <div className="web-leftover-head">
+          <p className="web-leftover-title">
             {item.recipe_title}
           </p>
-          <p className="mt-1 text-sm text-[var(--text-3)]">
-            {formatCookedAt(item.cooked_at)} 요리
-          </p>
-          <p className="text-sm text-[var(--text-3)]">
-            {formatLeftoverMeta(item)}
-          </p>
+          <span className="web-leftover-tag">남은 요리</span>
         </div>
+        <p className="web-leftover-meta">
+          {formatCookedAt(item.cooked_at)} · {formatLeftoverMeta(item)}
+        </p>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <button
-            className="flex min-h-[44px] min-w-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] px-3 text-center text-sm font-semibold leading-5 text-[var(--text-2)] active:border-[var(--text-2)] active:bg-[var(--surface-subtle)] disabled:opacity-60"
-            data-testid="eat-button"
-            disabled={anyMutating}
-            onClick={() => onEat(item.id)}
-            type="button"
-          >
-            {isEating ? "처리 중..." : "다 먹었어요"}
-          </button>
-          <button
-            className="flex min-h-[44px] min-w-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-3 text-center text-sm font-bold leading-5 text-white active:bg-[var(--brand-deep)] disabled:opacity-60"
+        <div className="web-leftover-actions">
+          <WebButton
             data-testid="planner-add-button"
             disabled={anyMutating}
             onClick={() => onPlannerAdd(item)}
-            type="button"
+            size="sm"
+            variant="secondary"
           >
-            식단에 추가
-          </button>
+            플래너에 추가
+          </WebButton>
+          <Link
+            className="web-button web-button-tertiary web-button-sm"
+            href={`/recipe/${item.recipe_id}`}
+            prefetch={false}
+          >
+            요리하기
+          </Link>
+          <WebButton
+            data-testid="eat-button"
+            disabled={anyMutating}
+            onClick={() => onEat(item.id)}
+            size="sm"
+            variant="ghost"
+          >
+            {isEating ? "처리 중..." : "다 먹었어요"}
+          </WebButton>
         </div>
       </div>
-    </article>
+    </WebCard>
   );
 }
 
@@ -465,42 +486,40 @@ export function LeftoversScreen({
     returnTo: leftoversSelfHref,
   });
 
-  // Auth checking state
-  if (authState === "checking") {
-    return (
-      <ContentState
-        description="남은요리 화면에 접근하기 위해 로그인 상태를 확인하고 있어요."
-        eyebrow="세션 확인"
-        tone="loading"
-        title="로그인 상태를 확인하고 있어요"
-      />
-    );
-  }
-
-  // Unauthorized state
-  if (authState === "unauthorized") {
-    return (
-      <ContentState
-        description="남은요리를 관리하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
-        eyebrow="로그인 필요"
-        safeBottomPadding
-        tone="gate"
-        title="이 화면은 로그인이 필요해요"
-      >
-        <div className="space-y-3">
-          <SocialLoginButtons nextPath={leftoversSelfHref} />
-          <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
-            href={appReturn.href}
-          >
-            이전 화면으로 돌아가기
-          </Link>
-        </div>
-      </ContentState>
-    );
-  }
-
   if (isMobileViewport) {
+    if (authState === "checking") {
+      return (
+        <ContentState
+          description="남은요리 화면에 접근하기 위해 로그인 상태를 확인하고 있어요."
+          eyebrow="세션 확인"
+          tone="loading"
+          title="로그인 상태를 확인하고 있어요"
+        />
+      );
+    }
+
+    if (authState === "unauthorized") {
+      return (
+        <ContentState
+          description="남은요리를 관리하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
+          eyebrow="로그인 필요"
+          safeBottomPadding
+          tone="gate"
+          title="이 화면은 로그인이 필요해요"
+        >
+          <div className="space-y-3">
+            <SocialLoginButtons nextPath={leftoversSelfHref} />
+            <Link
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
+              href={appReturn.href}
+            >
+              이전 화면으로 돌아가기
+            </Link>
+          </div>
+        </ContentState>
+      );
+    }
+
     return (
       <LeftoversMobileView
         appReturnHref={appReturn.href}
@@ -518,65 +537,63 @@ export function LeftoversScreen({
     );
   }
 
-  const totalServings = items.reduce(
-    (sum, item) => sum + item.cooking_servings,
-    0,
-  );
-
   return (
-    <div className="space-y-6 pb-12" data-testid="leftovers-screen">
-      <section className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[var(--shadow-1)]">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <Link
-              aria-label="뒤로가기"
-              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface-fill)] px-4 text-sm font-semibold text-[var(--text-2)] hover:text-[var(--brand)]"
-              href={appReturn.href}
-            >
-              <span aria-hidden="true">&lt;</span>
-              이전 화면
-            </Link>
-            <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
-              Leftovers
-            </p>
-            <h1 className="mt-1 text-3xl font-bold tracking-[-0.3px] text-[var(--foreground)]">
-              남은요리
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-              요리 완료 후 남은 음식을 다시 식단에 올리거나 먹은 기록으로 정리해요.
-            </p>
-          </div>
+    <WebShell className="web-leftovers-shell" wide>
+      <WebTopNav
+        activeId="mypage"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<div className="web-profile-button">JY</div>}
+      />
+      <div className="web-leftovers-screen" data-testid="leftovers-screen">
+        <nav aria-label="남은 요리 경로" className="web-breadcrumb">
+          <Link className="web-breadcrumb-link" href="/mypage">
+            &lt; 마이페이지
+          </Link>
+          <span className="web-breadcrumb-sep">/</span>
+          <span className="web-breadcrumb-current">남은 요리</span>
+        </nav>
 
-          <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
-            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
-              <p className="text-xs font-semibold text-[var(--muted)]">남은요리</p>
-              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
-                {items.length}개
-              </p>
-            </div>
-            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
-              <p className="text-xs font-semibold text-[var(--muted)]">총 인분</p>
-              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
-                {totalServings}인분
-              </p>
-            </div>
-            <Link
-              className="flex min-h-[76px] items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand)] bg-[var(--brand-soft)] px-4 text-sm font-bold text-[var(--brand-deep)]"
-              href={eatenListHref}
-            >
+        <WebPageHeader
+          actions={
+            <Link className="web-button web-button-tertiary" href={eatenListHref}>
               다먹은 목록
             </Link>
-          </div>
-        </div>
-      </section>
+          }
+          description="요리한 뒤 남은 음식을 메모해 두면 다음 끼니로 빠르게 옮길 수 있어요."
+          title="남은 요리"
+        />
 
-      {feedback ? (
+        {authState === "checking" ? (
+          <WebEmptyState
+            description="남은요리 화면에 접근하기 위해 로그인 상태를 확인하고 있어요."
+            icon={<span aria-hidden="true">...</span>}
+            title="로그인 상태를 확인하고 있어요"
+          />
+        ) : null}
+
+        {authState === "unauthorized" ? (
+          <WebEmptyState
+            action={
+              <div className="web-leftover-login-actions">
+                <SocialLoginButtons nextPath={leftoversSelfHref} />
+                <Link className="web-button web-button-tertiary" href={appReturn.href}>
+                  이전 화면으로 돌아가기
+                </Link>
+              </div>
+            }
+            description="남은요리를 관리하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
+            icon={<span aria-hidden="true">!</span>}
+            title="이 화면은 로그인이 필요해요"
+          />
+        ) : null}
+
+      {authState === "authenticated" && feedback ? (
         <div
           className={[
-            "rounded-[var(--radius-md)] border px-4 py-3 text-sm",
+            "web-leftover-feedback",
             feedback.tone === "error"
-              ? "border-[var(--danger)] bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] text-[color-mix(in_srgb,var(--danger)_70%,black)]"
-              : "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-deep)]",
+              ? "web-leftover-feedback-error"
+              : "web-leftover-feedback-status",
           ].join(" ")}
           data-testid="feedback-toast"
           role="alert"
@@ -585,49 +602,54 @@ export function LeftoversScreen({
         </div>
       ) : null}
 
-      {screenState === "loading" ? (
+      {authState === "authenticated" && screenState === "loading" ? (
         <div
-          className="grid gap-4 lg:grid-cols-3"
+          className="web-leftover-grid"
           data-testid="leftovers-loading"
         >
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton
+            <WebSkeleton
               key={i}
-              className="border border-[var(--line)]"
-              height={280}
-              rounded="lg"
+              height={276}
             />
           ))}
         </div>
       ) : null}
 
-      {screenState === "error" ? (
-        <ContentState
-          actionLabel="다시 시도"
+      {authState === "authenticated" && screenState === "error" ? (
+        <WebErrorState
+          action={
+            <WebButton
+              onClick={() => {
+                void loadLeftovers();
+              }}
+              variant="secondary"
+            >
+              다시 시도
+            </WebButton>
+          }
           description={errorMessage ?? "잠시 후 다시 시도해주세요."}
-          onAction={() => {
-            void loadLeftovers();
-          }}
+          icon={<span aria-hidden="true">!</span>}
           title="남은요리를 불러오지 못했어요"
-          tone="error"
         />
       ) : null}
 
-      {screenState === "empty" ? (
-        <ContentState
-          actionLabel="플래너로 돌아가기"
-          description="요리를 완료하면 여기에 저장돼요"
-          onAction={() => {
-            window.location.href = appReturn.href;
-          }}
+      {authState === "authenticated" && screenState === "empty" ? (
+        <WebEmptyState
+          action={
+            <Link className="web-button web-button-tertiary" href={appReturn.href}>
+              플래너로 돌아가기
+            </Link>
+          }
+          description="요리모드 완료 후 남은 음식이 여기에 기록됩니다."
+          icon={<span aria-hidden="true">□</span>}
           title="남은 요리가 없어요"
-          tone="empty"
         />
       ) : null}
 
-      {screenState === "ready" ? (
+      {authState === "authenticated" && screenState === "ready" ? (
         <div
-          className="grid gap-4 lg:grid-cols-3"
+          className="web-leftover-grid"
           data-testid="leftover-list"
         >
           {items.map((item) => (
@@ -644,7 +666,8 @@ export function LeftoversScreen({
       ) : null}
 
       {plannerAddSheet}
-    </div>
+      </div>
+    </WebShell>
   );
 }
 

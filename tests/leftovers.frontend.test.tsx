@@ -188,12 +188,17 @@ describe("LeftoversScreen", () => {
     expect(screen.getAllByTestId("leftover-card")).toHaveLength(2);
     expect(screen.getAllByTestId("eat-button")).toHaveLength(2);
     expect(screen.getAllByTestId("planner-add-button")).toHaveLength(2);
+    expect(screen.getByText("< 마이페이지")).toBeTruthy();
+    expect(screen.getByTestId("leftover-list").className).toContain(
+      "web-leftover-grid",
+    );
     expect(screen.getAllByRole("button", { name: "다 먹었어요" })).toHaveLength(
       2,
     );
-    expect(screen.getAllByRole("button", { name: "식단에 추가" })).toHaveLength(
+    expect(screen.getAllByRole("button", { name: "플래너에 추가" })).toHaveLength(
       2,
     );
+    expect(screen.getAllByRole("link", { name: "요리하기" })).toHaveLength(2);
   });
 
   it("renders empty state when no leftovers", async () => {
@@ -208,7 +213,7 @@ describe("LeftoversScreen", () => {
     });
 
     expect(
-      screen.getByText("요리를 완료하면 여기에 저장돼요"),
+      screen.getByText("요리모드 완료 후 남은 음식이 여기에 기록됩니다."),
     ).toBeTruthy();
   });
 
@@ -485,9 +490,20 @@ describe("AteListScreen", () => {
     });
 
     expect(screen.getAllByTestId("ate-list-card")).toHaveLength(1);
+    expect(screen.getByText("< 마이페이지")).toBeTruthy();
+    expect(screen.getByTestId("ate-item-list").className).toContain(
+      "web-ate-list",
+    );
+    expect(screen.getByTestId("ate-list-card").className).toContain(
+      "web-ate-row",
+    );
     expect(screen.getByTestId("uneat-button")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "남은요리로 복귀" })).toBeTruthy();
-    expect(screen.getByText("4월 22일")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "되돌리기" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "다시 만들기" })).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "김치찌개 레시피 보기" }),
+    ).toBeTruthy();
+    expect(screen.getByText(/4월 22일/)).toBeTruthy();
     expect(screen.queryByText(/다먹음/)).toBeNull();
   });
 
@@ -499,11 +515,13 @@ describe("AteListScreen", () => {
     render(<AteListScreen initialAuthenticated={true} />);
 
     await waitFor(() => {
-      expect(screen.getByText("다먹은 기록이 없어요")).toBeTruthy();
+      expect(screen.getByText("아직 다먹은 요리가 없어요")).toBeTruthy();
     });
 
     expect(
-      screen.getByText("먹은 기록이 여기에 모여요"),
+      screen.getByText(
+        "요리를 완료하거나 남은 요리에서 '다 먹었어요'를 누르면 여기에 기록됩니다.",
+      ),
     ).toBeTruthy();
   });
 
@@ -618,11 +636,11 @@ describe("AteListScreen", () => {
     await user.click(screen.getByTestId("uneat-button"));
 
     await waitFor(() => {
-      expect(screen.getByText("다먹은 기록이 없어요")).toBeTruthy();
+      expect(screen.getByText("아직 다먹은 요리가 없어요")).toBeTruthy();
     });
   });
 
-  it("has back link to leftovers page", async () => {
+  it("has link to leftovers page", async () => {
     vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
       items: EATEN_ITEMS,
     });
@@ -633,7 +651,7 @@ describe("AteListScreen", () => {
       expect(screen.getByText("김치찌개")).toBeTruthy();
     });
 
-    const backLink = screen.getByLabelText("뒤로가기");
-    expect(backLink.getAttribute("href")).toBe("/leftovers");
+    const leftoversLink = screen.getByRole("link", { name: "남은 요리" });
+    expect(leftoversLink.getAttribute("href")).toBe("/leftovers");
   });
 });
