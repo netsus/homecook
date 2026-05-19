@@ -23,6 +23,7 @@ import {
   registerYoutubeRecipe,
 } from "@/lib/api/youtube-import";
 import { createMealSafe } from "@/lib/api/meal";
+import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 import type {
   CookingMethodItem,
@@ -144,23 +145,6 @@ function getYoutubeStepIndex(step: Step) {
   if (step === "review") return 2;
   if (step === "complete") return 3;
   return 0;
-}
-
-// Cooking method color mapping
-const COOK_COLOR_MAP: Record<string, string> = {
-  boil: "var(--cook-red, #E53E3E)",
-  fry: "var(--cook-orange, #DD6B20)",
-  stir_fry: "var(--cook-orange, #DD6B20)",
-  grill: "var(--cook-brown, #8B4513)",
-  steam: "var(--cook-blue, #3182CE)",
-  bake: "var(--cook-yellow, #D69E2E)",
-  raw: "var(--cook-green, #38A169)",
-  prep: "var(--cook-gray, #718096)",
-  unassigned: "var(--cook-gray, #718096)",
-};
-
-function getCookColor(colorKey: string): string {
-  return COOK_COLOR_MAP[colorKey] ?? COOK_COLOR_MAP.unassigned;
 }
 
 // ─── AppBar ───────────────────────────────────────────────────────────────────
@@ -577,64 +561,62 @@ function ReviewStep({
               <div
                 key={ing.tempId}
                 className={[
-                  "px-4 py-3",
+                  "px-3 py-2.5",
                   idx > 0 ? "border-t border-[var(--line)]" : "",
                 ].join(" ")}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <span className="text-base font-semibold text-[var(--foreground)]">
+                <div className="grid grid-cols-[minmax(3.5rem,1fr)_4.25rem_auto_2.5rem] items-center gap-1.5">
+                  <div className="min-w-0">
+                    <span className="block truncate text-[14px] font-semibold text-[var(--foreground)]">
                       {ing.standard_name}
                     </span>
-                    <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                      <input
-                        aria-label={`${ing.standard_name} 수량`}
-                        className="h-10 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 text-right text-base font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
-                        inputMode="decimal"
-                        min={0}
-                        onChange={(event) => {
-                          const value = event.target.value;
+                  </div>
+                  <input
+                    aria-label={`${ing.standard_name} 수량`}
+                    className="h-9 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-right text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
+                    inputMode="decimal"
+                    min={0}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      onUpdateIngredient(ing.tempId, {
+                        amount: value === "" ? 0 : Number(value),
+                        unit: ing.unit ?? "g",
+                      });
+                    }}
+                    type="number"
+                    value={ing.amount ?? 0}
+                  />
+                  <div
+                    aria-label={`${ing.standard_name} 단위`}
+                    className="flex shrink-0 gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-0.5"
+                    role="group"
+                  >
+                    {COOKING_UNIT_OPTIONS.map((option) => (
+                      <button
+                        aria-label={`${ing.standard_name} ${option}`}
+                        aria-pressed={(ing.unit ?? "g") === option}
+                        className={[
+                          "h-9 min-w-9 rounded-[var(--radius-sm)] px-1.5 text-[14px] font-semibold transition",
+                          (ing.unit ?? "g") === option
+                            ? "bg-[var(--brand)] text-white"
+                            : "text-[var(--text-2)] hover:bg-[var(--surface)]",
+                        ].join(" ")}
+                        key={option}
+                        onClick={() =>
                           onUpdateIngredient(ing.tempId, {
-                            amount: value === "" ? 0 : Number(value),
-                            unit: ing.unit ?? "g",
-                          });
-                        }}
-                        type="number"
-                        value={ing.amount ?? 0}
-                      />
-                      <div
-                        aria-label={`${ing.standard_name} 단위`}
-                        className="flex shrink-0 gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-1"
-                        role="group"
+                            amount: ing.amount ?? 0,
+                            unit: option,
+                          })
+                        }
+                        type="button"
                       >
-                        {COOKING_UNIT_OPTIONS.map((option) => (
-                          <button
-                            aria-label={`${ing.standard_name} ${option}`}
-                            aria-pressed={(ing.unit ?? "g") === option}
-                            className={[
-                              "h-9 min-w-10 rounded-[var(--radius-sm)] px-2 text-sm font-semibold transition",
-                              (ing.unit ?? "g") === option
-                                ? "bg-[var(--brand)] text-white"
-                                : "text-[var(--text-2)] hover:bg-[var(--surface)]",
-                            ].join(" ")}
-                            key={option}
-                            onClick={() =>
-                              onUpdateIngredient(ing.tempId, {
-                                amount: ing.amount ?? 0,
-                                unit: option,
-                              })
-                            }
-                            type="button"
-                          >
-                            {option}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                        {option}
+                      </button>
+                    ))}
                   </div>
                   <button
                     aria-label={`${ing.standard_name} 삭제`}
-                    className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[18px] leading-none text-[var(--text-3)] hover:bg-[var(--surface-fill)] hover:text-[var(--foreground)]"
                     onClick={() => onRemoveIngredient(ing.tempId)}
                     type="button"
                   >
@@ -682,7 +664,11 @@ function ReviewStep({
                       {step.cooking_method && (
                         <span
                           className="rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
-                          style={{ backgroundColor: getCookColor(step.cooking_method.color_key) }}
+                          style={{
+                            backgroundColor: getCookingMethodColor(
+                              step.cooking_method.color_key,
+                            ),
+                          }}
                         >
                           {step.cooking_method.label}
                         </span>
@@ -820,21 +806,28 @@ function StepAddModal({ onClose, onAdd, cookingMethods, nextStepNumber }: StepAd
           <div>
             <div className="mb-2 text-sm font-semibold text-[var(--text-2)]">조리방법 선택</div>
             <div className="grid grid-cols-2 gap-2">
-              {cookingMethods.map((method) => (
-                <button
-                  key={method.id}
-                  className={[
-                    "rounded-[var(--radius-sm)] border px-3 py-2 text-sm font-semibold",
-                    selectedMethod?.id === method.id
-                      ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                      : "border-[var(--line)] bg-[var(--surface-fill)] text-[var(--foreground)]",
-                  ].join(" ")}
-                  onClick={() => setSelectedMethod(method)}
-                  type="button"
-                >
-                  {method.label}
-                </button>
-              ))}
+              {cookingMethods.map((method) => {
+                const color = getCookingMethodColor(method.color_key);
+                const isSelected = selectedMethod?.id === method.id;
+
+                return (
+                  <button
+                    key={method.id}
+                    className="rounded-[var(--radius-sm)] border px-3 py-2 text-sm font-semibold"
+                    onClick={() => setSelectedMethod(method)}
+                    style={{
+                      backgroundColor: isSelected
+                        ? color
+                        : `color-mix(in srgb, ${color} 12%, transparent)`,
+                      borderColor: color,
+                      color: isSelected ? "#fff" : "var(--foreground)",
+                    }}
+                    type="button"
+                  >
+                    {method.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div>

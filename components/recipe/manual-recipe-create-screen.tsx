@@ -13,6 +13,7 @@ import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import { createManualRecipe } from "@/lib/api/manual-recipe";
 import { createMealSafe } from "@/lib/api/meal";
+import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 import {
   WebButton,
@@ -36,7 +37,6 @@ interface ManualRecipeCreateScreenProps {
 type ModalMode =
   | "none"
   | "ingredient-add"
-  | "step-add"
   | "success"
   | "servings-input";
 
@@ -159,7 +159,7 @@ function AppBar({ onBack, onSave, canSave, isSaving }: AppBarProps) {
         </h1>
         <button
           className={[
-            "hidden h-[var(--control-height-md)] rounded-[var(--radius-control)] px-4 text-base font-semibold lg:block",
+            "h-[var(--control-height-md)] shrink-0 rounded-[var(--radius-control)] px-3 text-sm font-semibold lg:px-4 lg:text-base",
             canSave && !isSaving
               ? "text-[var(--brand)] hover:bg-[var(--brand-soft)]"
               : "cursor-not-allowed text-[#ADB5BD]",
@@ -170,7 +170,6 @@ function AppBar({ onBack, onSave, canSave, isSaving }: AppBarProps) {
         >
           {isSaving ? "저장 중..." : "저장"}
         </button>
-        <div aria-hidden="true" className="h-8 w-8 shrink-0 lg:hidden" />
       </div>
     </div>
   );
@@ -190,9 +189,9 @@ interface IngredientListProps {
 function IngredientList({ ingredients, onChange, onRemove }: IngredientListProps) {
   if (ingredients.length === 0) {
     return (
-      <div className="mb-3 rounded-[var(--radius-control)] bg-[#F8F9FA] px-4 py-3 text-[14px] font-medium leading-[1.5] text-[#868E96]">
+      <p className="mb-2 text-[12px] font-medium leading-[1.4] text-[#868E96]">
         재료를 1개 이상 추가해주세요.
-      </div>
+      </p>
     );
   }
 
@@ -201,62 +200,60 @@ function IngredientList({ ingredients, onChange, onRemove }: IngredientListProps
       {ingredients.map((ing) => (
         <div
           key={ing.tempId}
-          className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3"
+          className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5"
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="text-base font-semibold text-[var(--foreground)]">
+          <div className="grid grid-cols-[minmax(3.5rem,1fr)_4.25rem_auto_2.5rem] items-center gap-1.5">
+            <div className="min-w-0">
+              <div className="truncate text-[14px] font-semibold text-[var(--foreground)]">
                 {ing.standard_name}
               </div>
-              <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                <input
-                  aria-label={`${ing.standard_name} 수량`}
-                  className="h-10 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 text-right text-base font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
-                  inputMode="decimal"
-                  min={0}
-                  onChange={(event) => {
-                    const value = event.target.value;
+            </div>
+            <input
+              aria-label={`${ing.standard_name} 수량`}
+              className="h-9 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-right text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
+              inputMode="decimal"
+              min={0}
+              onChange={(event) => {
+                const value = event.target.value;
+                onChange(ing.tempId, {
+                  amount: value === "" ? 0 : Number(value),
+                  unit: ing.unit ?? "g",
+                });
+              }}
+              type="number"
+              value={ing.amount ?? 0}
+            />
+            <div
+              aria-label={`${ing.standard_name} 단위`}
+              className="flex shrink-0 gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-0.5"
+              role="group"
+            >
+              {COOKING_UNIT_OPTIONS.map((option) => (
+                <button
+                  aria-label={`${ing.standard_name} ${option}`}
+                  aria-pressed={(ing.unit ?? "g") === option}
+                  className={[
+                    "h-9 min-w-9 rounded-[var(--radius-sm)] px-1.5 text-[14px] font-semibold transition",
+                    (ing.unit ?? "g") === option
+                      ? "bg-[var(--brand)] text-white"
+                      : "text-[var(--text-2)] hover:bg-[var(--surface)]",
+                  ].join(" ")}
+                  key={option}
+                  onClick={() =>
                     onChange(ing.tempId, {
-                      amount: value === "" ? 0 : Number(value),
-                      unit: ing.unit ?? "g",
-                    });
-                  }}
-                  type="number"
-                  value={ing.amount ?? 0}
-                />
-                <div
-                  aria-label={`${ing.standard_name} 단위`}
-                  className="flex shrink-0 gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-1"
-                  role="group"
+                      amount: ing.amount ?? 0,
+                      unit: option,
+                    })
+                  }
+                  type="button"
                 >
-                  {COOKING_UNIT_OPTIONS.map((option) => (
-                    <button
-                      aria-label={`${ing.standard_name} ${option}`}
-                      aria-pressed={(ing.unit ?? "g") === option}
-                      className={[
-                        "h-9 min-w-10 rounded-[var(--radius-sm)] px-2 text-sm font-semibold transition",
-                        (ing.unit ?? "g") === option
-                          ? "bg-[var(--brand)] text-white"
-                          : "text-[var(--text-2)] hover:bg-[var(--surface)]",
-                      ].join(" ")}
-                      key={option}
-                      onClick={() =>
-                        onChange(ing.tempId, {
-                          amount: ing.amount ?? 0,
-                          unit: option,
-                        })
-                      }
-                      type="button"
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                  {option}
+                </button>
+              ))}
             </div>
             <button
               aria-label={`${ing.standard_name} 삭제`}
-              className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[18px] leading-none text-[var(--text-3)] hover:bg-[var(--surface-fill)] hover:text-[var(--foreground)]"
               onClick={() => onRemove(ing.tempId)}
               type="button"
             >
@@ -291,6 +288,9 @@ function StepList({ steps, onRemove }: StepListProps) {
         <div
           key={step.tempId}
           className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] p-4"
+          style={{
+            borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method?.color_key)}`,
+          }}
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
@@ -299,7 +299,12 @@ function StepList({ steps, onRemove }: StepListProps) {
                   {step.step_number}.
                 </span>
                 {step.cooking_method && (
-                  <span className="rounded-full bg-[var(--brand)] px-2.5 py-0.5 text-xs font-semibold text-white">
+                  <span
+                    className="rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
+                    style={{
+                      backgroundColor: getCookingMethodColor(step.cooking_method.color_key),
+                    }}
+                  >
                     {step.cooking_method.label}
                   </span>
                 )}
@@ -351,24 +356,30 @@ function SaveRequirementsNotice({ requirements }: { requirements: string[] }) {
   );
 }
 
-// ─── Step Add Modal ──────────────────────────────────────────────────────────
+// ─── Inline Step Composer ────────────────────────────────────────────────────
 
-interface StepAddModalProps {
-  onClose: () => void;
+interface StepInlineComposerProps {
   onAdd: (step: Omit<TempStep, "tempId" | "step_number">) => void;
   cookingMethods: CookingMethodItem[];
   nextStepNumber: number;
 }
 
-function StepAddModal({
-  onClose,
+function StepInlineComposer({
   onAdd,
   cookingMethods,
   nextStepNumber,
-}: StepAddModalProps) {
-  const [selectedMethod, setSelectedMethod] =
-    useState<CookingMethodItem | null>(null);
+}: StepInlineComposerProps) {
+  const [selectedMethodId, setSelectedMethodId] = useState("");
   const [instruction, setInstruction] = useState("");
+
+  useEffect(() => {
+    if (!selectedMethodId && cookingMethods[0]) {
+      setSelectedMethodId(cookingMethods[0].id);
+    }
+  }, [cookingMethods, selectedMethodId]);
+
+  const selectedMethod =
+    cookingMethods.find((method) => method.id === selectedMethodId) ?? null;
 
   const handleAdd = () => {
     if (!selectedMethod || !instruction.trim()) return;
@@ -381,72 +392,77 @@ function StepAddModal({
       duration_seconds: null,
       duration_text: null,
     });
-    onClose();
+    setInstruction("");
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
-      onClick={onClose}
+      className="mb-28 mt-3 scroll-mb-[160px] rounded-[var(--radius-md)] border border-dashed border-[var(--line)] bg-[var(--surface)] p-3 md:mb-0"
+      data-testid="manual-step-composer"
     >
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="text-[13px] font-semibold text-[var(--foreground)]">
+          {nextStepNumber}단계 입력
+        </span>
+        <span className="text-[12px] font-medium text-[#868E96]">
+          조리방법을 먼저 골라주세요
+        </span>
+      </div>
       <div
-        aria-modal="true"
-        className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]"
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
+        aria-label="조리방법 선택"
+        className="-mx-1 overflow-x-auto px-1 pb-1"
+        role="group"
       >
-        <ModalHeader title="조리 과정 추가" onClose={onClose} />
-        <div className="mt-6 space-y-4">
-          <div>
-            <div className="text-sm font-semibold text-[var(--text-2)]">
-              스텝 번호: {nextStepNumber}
-            </div>
-          </div>
-          <div>
-            <div className="mb-2 text-sm font-semibold text-[var(--text-2)]">
-              조리방법 선택
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {cookingMethods.map((method) => (
-                <button
-                  key={method.id}
-                  className={[
-                    "rounded-[var(--radius-sm)] border px-3 py-2 text-sm font-semibold",
-                    selectedMethod?.id === method.id
-                      ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                      : "border-[var(--line)] bg-[var(--surface-fill)] text-[var(--foreground)]",
-                  ].join(" ")}
-                  onClick={() => setSelectedMethod(method)}
-                  type="button"
-                >
-                  {method.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className="mb-2 text-sm font-semibold text-[var(--text-2)]">
-              조리 설명
-            </div>
-            <textarea
-              placeholder="조리 설명을 입력하세요"
-              value={instruction}
-              onChange={(e) => setInstruction(e.target.value)}
-              rows={4}
-              className="w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3 text-base"
-            />
-          </div>
-        </div>
-        <div className="mt-6">
-          <Button
-            fullWidth
-            onClick={handleAdd}
-            disabled={!selectedMethod || !instruction.trim()}
-          >
-            추가
-          </Button>
+        <div className="flex w-max gap-2">
+          {cookingMethods.map((method) => {
+            const color = getCookingMethodColor(method.color_key);
+            const isSelected = selectedMethod?.id === method.id;
+
+            return (
+              <button
+                key={method.id}
+                aria-pressed={isSelected}
+                className="h-9 shrink-0 rounded-full border px-3 text-[13px] font-semibold transition"
+                onClick={() => setSelectedMethodId(method.id)}
+                style={{
+                  backgroundColor: isSelected
+                    ? color
+                    : `color-mix(in srgb, ${color} 14%, transparent)`,
+                  borderColor: color,
+                  color: isSelected ? "#fff" : "var(--foreground)",
+                }}
+                type="button"
+              >
+                {method.label}
+              </button>
+            );
+          })}
         </div>
       </div>
+      <label className="mt-2 block">
+        <span className="sr-only">조리 설명</span>
+        <textarea
+          aria-label={`조리 과정 ${nextStepNumber} 설명`}
+          className="min-h-[92px] w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 py-2.5 text-[14px] leading-[1.55] text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
+          onChange={(event) => setInstruction(event.target.value)}
+          placeholder="조리 설명을 입력하세요"
+          rows={3}
+          value={instruction}
+        />
+      </label>
+      <button
+        className={[
+          "mt-2 flex h-10 w-full items-center justify-center rounded-[var(--radius-control)] text-[13px] font-semibold",
+          selectedMethod && instruction.trim()
+            ? "bg-[var(--brand)] text-white"
+            : "bg-[#DEE2E6] text-[#ADB5BD]",
+        ].join(" ")}
+        disabled={!selectedMethod || !instruction.trim()}
+        onClick={handleAdd}
+        type="button"
+      >
+        + 조리 과정 추가
+      </button>
     </div>
   );
 }
@@ -867,13 +883,11 @@ export function ManualRecipeCreateScreen({
               ) : (
                 <>
                   <StepList steps={steps} onRemove={handleRemoveStep} />
-                  <WebButton
-                    className="web-manual-add-button"
-                    onClick={() => setModalMode("step-add")}
-                    variant="secondary"
-                  >
-                    + 조리 과정 추가
-                  </WebButton>
+                  <StepInlineComposer
+                    cookingMethods={cookingMethods}
+                    nextStepNumber={steps.length + 1}
+                    onAdd={handleAddStep}
+                  />
                 </>
               )}
             </section>
@@ -892,14 +906,6 @@ export function ManualRecipeCreateScreen({
           <RecipeIngredientAddModal
             onClose={() => setModalMode("none")}
             onAdd={handleAddIngredient}
-          />
-        )}
-        {modalMode === "step-add" && (
-          <StepAddModal
-            onClose={() => setModalMode("none")}
-            onAdd={handleAddStep}
-            cookingMethods={cookingMethods}
-            nextStepNumber={steps.length + 1}
           />
         )}
         {modalMode === "success" && createdRecipeId && (
@@ -932,7 +938,7 @@ export function ManualRecipeCreateScreen({
         canSave={canSave}
         isSaving={isSaving}
       />
-      <div className="min-h-0 flex-1 overflow-y-auto pb-[84px] md:px-4 md:pb-6">
+      <div className="mb-[96px] min-h-0 flex-1 scroll-pb-[120px] overflow-y-auto pb-[120px] md:mb-0 md:px-4 md:pb-6 md:scroll-pb-6">
         <div className="mx-auto max-w-2xl space-y-2 md:space-y-6 md:py-4">
           {/* Basic Info */}
           <section className="bg-white px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
@@ -999,14 +1005,9 @@ export function ManualRecipeCreateScreen({
               <h2 className="text-[16px] font-semibold leading-[1.3] text-[#212529]">
                 조리법
               </h2>
-              <button
-                className="text-[13px] font-semibold text-[var(--brand)] disabled:opacity-40"
-                disabled={isLoadingMethods}
-                onClick={() => setModalMode("step-add")}
-                type="button"
-              >
-                + 단계
-              </button>
+              <span className="text-[12px] font-medium text-[#868E96]">
+                {steps.length}단계
+              </span>
             </div>
             {isLoadingMethods ? (
               <p className="py-4 text-sm text-[#868E96]">
@@ -1015,13 +1016,11 @@ export function ManualRecipeCreateScreen({
             ) : (
               <>
                 <StepList steps={steps} onRemove={handleRemoveStep} />
-                <button
-                  className="mt-3 hidden min-h-[var(--control-height-md)] w-full items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-white py-3 text-[13px] font-semibold text-[var(--brand)] hover:bg-[var(--brand-soft)] lg:flex"
-                  onClick={() => setModalMode("step-add")}
-                  type="button"
-                >
-                  + 조리 과정 추가
-                </button>
+                <StepInlineComposer
+                  cookingMethods={cookingMethods}
+                  nextStepNumber={steps.length + 1}
+                  onAdd={handleAddStep}
+                />
               </>
             )}
           </section>
@@ -1038,21 +1037,6 @@ export function ManualRecipeCreateScreen({
           <SaveRequirementsNotice requirements={saveRequirements} />
         </div>
 
-        <div className="border-t border-[#DEE2E6] bg-white px-4 py-4 lg:hidden">
-          <button
-            className={[
-              "flex min-h-[48px] w-full items-center justify-center rounded-[var(--radius-control)] text-[16px] font-bold",
-              canSave && !isSaving
-                ? "bg-[var(--brand)] text-white"
-                : "bg-[#DEE2E6] text-[#ADB5BD]",
-            ].join(" ")}
-            disabled={!canSave || isSaving}
-            onClick={handleSave}
-            type="button"
-          >
-            {isSaving ? "저장 중..." : "완료"}
-          </button>
-        </div>
       </div>
       <Wave1MobileBottomTab
         ariaLabel="직접 등록 화면 하단 탐색"
@@ -1064,14 +1048,6 @@ export function ManualRecipeCreateScreen({
         <RecipeIngredientAddModal
           onClose={() => setModalMode("none")}
           onAdd={handleAddIngredient}
-        />
-      )}
-      {modalMode === "step-add" && (
-        <StepAddModal
-          onClose={() => setModalMode("none")}
-          onAdd={handleAddStep}
-          cookingMethods={cookingMethods}
-          nextStepNumber={steps.length + 1}
         />
       )}
       {modalMode === "success" && createdRecipeId && (

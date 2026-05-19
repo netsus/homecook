@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ManualRecipeCreateScreen } from "@/components/recipe/manual-recipe-create-screen";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import { fetchIngredients } from "@/lib/api/ingredients";
+import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 
 const mockRouterReplace = vi.fn();
 const navigationMocks = vi.hoisted(() => ({
@@ -127,7 +128,51 @@ describe("ManualRecipeCreateScreen", () => {
     });
 
     expect(screen.queryByText("STEP 1")).toBeNull();
-    expect(screen.queryByText("준비")).toBeNull();
     expect(screen.getByText("조리 과정을 추가해주세요.")).toBeTruthy();
+    expect(screen.getByTestId("manual-step-composer")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "준비" })).toBeTruthy();
+  });
+
+  it("adds cooking steps inline with the selected cooking method color", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchCookingMethods).mockResolvedValue({
+      success: true,
+      data: {
+        methods: [
+          {
+            id: "method-stir",
+            code: "stir_fry",
+            label: "볶기",
+            color_key: "orange",
+            is_system: true,
+          },
+          {
+            id: "method-boil",
+            code: "boil",
+            label: "끓이기",
+            color_key: "red",
+            is_system: true,
+          },
+        ],
+      },
+      error: null,
+    });
+
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    const composer = await screen.findByTestId("manual-step-composer");
+    await user.click(screen.getByRole("button", { name: "볶기" }));
+    await user.type(
+      screen.getByLabelText("조리 과정 1 설명"),
+      "양파를 투명해질 때까지 볶아요",
+    );
+    await user.click(screen.getByRole("button", { name: "+ 조리 과정 추가" }));
+
+    expect(composer).toBeTruthy();
+    expect(screen.getByText("양파를 투명해질 때까지 볶아요")).toBeTruthy();
+    expect(screen.getAllByText("볶기")[1].getAttribute("style")).toContain(
+      getCookingMethodColor("orange"),
+    );
+    expect(screen.getByLabelText("조리 과정 2 설명")).toBeTruthy();
   });
 });
