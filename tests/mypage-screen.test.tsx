@@ -174,6 +174,20 @@ describe("MypageScreen", () => {
     expect(screen.getByText(/마이페이지로 바로 복귀/)).toBeTruthy();
   });
 
+  it("keeps the mobile bottom tab visible on the unauthorized gate", () => {
+    installMatchMedia(true);
+
+    render(<MypageScreen initialAuthenticated={false} />);
+
+    expect(
+      screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "마이페이지 하단 탭" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "마이" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
+  });
+
   it("shows profile and recipe books when authenticated", async () => {
     render(<MypageScreen initialAuthenticated />);
 

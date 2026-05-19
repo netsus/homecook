@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { PantryAddSheet } from "@/components/pantry/pantry-add-sheet";
 import { PantryBundlePicker } from "@/components/pantry/pantry-bundle-picker";
 import { PantryMobileScreen } from "@/components/pantry/pantry-mobile-screen";
@@ -290,43 +291,51 @@ export function PantryScreen({
     }
 
     return (
-      <ContentState
-        className="md:px-7"
-        description="로그인 상태를 확인하고 있어요."
-        tone="loading"
-        title="잠시만 기다려주세요"
-      />
+      <>
+        <ContentState
+          className="md:px-7"
+          description="로그인 상태를 확인하고 있어요."
+          tone="loading"
+          title="잠시만 기다려주세요"
+        />
+        <Wave1MobileBottomTab ariaLabel="팬트리 하단 탭" currentTab="pantry" />
+      </>
     );
   }
 
   if (authState === "unauthorized") {
     return (
-      <ContentState
-        className="-mt-5 md:mt-0"
-        description="집에 있는 재료를 등록하면 장보기 때 자동으로 빼줘요."
-        eyebrow="팬트리 접근"
-        safeBottomPadding
-        title="이 화면은 로그인이 필요해요"
-        tone="gate"
-      >
-        <div className="space-y-3">
-          <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4">
-            <p className="text-sm font-semibold text-[var(--foreground)]">
-              로그인하면 팬트리 화면으로 바로 복귀해요.
-            </p>
-            <p className="mt-1.5 text-xs leading-5 text-[var(--muted)]">
-              보유 재료를 등록하면 장보기 목록에서 자동 제외됩니다.
-            </p>
+      <>
+        <ContentState
+          className="-mt-5 md:mt-0"
+          description="집에 있는 재료를 등록하면 장보기 때 자동으로 빼줘요."
+          eyebrow="팬트리 접근"
+          safeBottomPadding
+          title="이 화면은 로그인이 필요해요"
+          tone="gate"
+        >
+          <div className="space-y-3">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4">
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                로그인하면 팬트리 화면으로 바로 복귀해요.
+              </p>
+              <p className="mt-1.5 text-xs leading-5 text-[var(--muted)]">
+                보유 재료를 등록하면 장보기 목록에서 자동 제외됩니다.
+              </p>
+            </div>
+            <SocialLoginButtons nextPath="/pantry" />
+            <Link
+              className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
+              href="/"
+            >
+              홈으로 돌아가기
+            </Link>
           </div>
-          <SocialLoginButtons nextPath="/pantry" />
-          <Link
-            className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
-            href="/"
-          >
-            홈으로 돌아가기
-          </Link>
-        </div>
-      </ContentState>
+        </ContentState>
+        {isMobileViewport ? (
+          <Wave1MobileBottomTab ariaLabel="팬트리 하단 탭" currentTab="pantry" />
+        ) : null}
+      </>
     );
   }
 
@@ -335,26 +344,36 @@ export function PantryScreen({
       return <PantryDesktopLoadingShell />;
     }
 
-    return <PantryLoadingSkeleton />;
+    return (
+      <>
+        <PantryLoadingSkeleton />
+        <Wave1MobileBottomTab ariaLabel="팬트리 하단 탭" currentTab="pantry" />
+      </>
+    );
   }
 
   if (viewState === "error") {
     return (
-      <div className="flex flex-col items-center justify-center px-4 py-16">
-        <h2 className="text-lg font-bold text-[var(--foreground)]">
-          팬트리를 불러올 수 없어요
-        </h2>
-        <button
-          className="mt-4 flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-[var(--surface)]"
-          onClick={() => {
-            setViewState("loading");
-            void loadItems(debouncedQueryRef.current, activeCategory);
-          }}
-          type="button"
-        >
-          다시 시도
-        </button>
-      </div>
+      <>
+        <div className="flex flex-col items-center justify-center px-4 py-16">
+          <h2 className="text-lg font-bold text-[var(--foreground)]">
+            팬트리를 불러올 수 없어요
+          </h2>
+          <button
+            className="mt-4 flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-[var(--surface)]"
+            onClick={() => {
+              setViewState("loading");
+              void loadItems(debouncedQueryRef.current, activeCategory);
+            }}
+            type="button"
+          >
+            다시 시도
+          </button>
+        </div>
+        {isMobileViewport ? (
+          <Wave1MobileBottomTab ariaLabel="팬트리 하단 탭" currentTab="pantry" />
+        ) : null}
+      </>
     );
   }
 

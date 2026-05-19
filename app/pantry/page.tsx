@@ -10,6 +10,7 @@ export default async function PantryPage() {
       bottomTabsMode="hidden"
       className="wave1-pantry-shell"
       currentTab="pantry"
+      headerMode="hidden"
     >
       <PantryScreen initialAuthenticated={Boolean(user)} />
     </AppShell>

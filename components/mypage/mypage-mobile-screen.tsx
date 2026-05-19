@@ -168,7 +168,10 @@ function MobileAppBar({
 }) {
   return (
     <div
-      className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+      className={[
+        "sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-4",
+        onBack ? "justify-center" : "",
+      ].join(" ")}
       style={{ borderBottomWidth: "0.5px" }}
     >
       {onBack ? (
@@ -181,7 +184,12 @@ function MobileAppBar({
           <BackIcon />
         </button>
       ) : null}
-      <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[#212529]">
+      <h1
+        className={[
+          "truncate text-[18px] font-bold leading-none text-[#212529]",
+          onBack ? "text-center" : "",
+        ].join(" ")}
+      >
         {title}
       </h1>
     </div>

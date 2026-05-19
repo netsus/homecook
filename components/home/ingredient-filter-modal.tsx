@@ -465,10 +465,10 @@ export function IngredientFilterModal({
       title="재료로 검색"
     >
       {screenState === "loading" ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {Array.from({ length: 6 }).map((_, index) => (
+        <div className="grid grid-cols-2 gap-2">
+          {Array.from({ length: 8 }).map((_, index) => (
             <div
-              className="min-h-[var(--control-height-md)] animate-pulse rounded-[var(--radius-full)] border border-[var(--line)] bg-[var(--surface-fill)]"
+              className="min-h-[54px] animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface-fill)]"
               key={index}
             />
           ))}
@@ -500,17 +500,17 @@ export function IngredientFilterModal({
       ) : null}
 
       {screenState === "ready" ? (
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul className="grid grid-cols-2 gap-2">
           {ingredients.map((ingredient) => {
             const isChecked = draftIngredientIds.includes(ingredient.id);
 
             return (
               <li key={ingredient.id}>
                 <label
-                  className={`flex min-h-[var(--control-height-md)] cursor-pointer items-center rounded-[var(--radius-full)] border px-4 py-2 text-sm font-semibold transition ${
+                  className={`flex min-h-[54px] cursor-pointer items-center rounded-[var(--radius-card)] border px-3 py-2 text-[13px] font-semibold transition ${
                     isChecked
-                      ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--surface)]"
-                      : "border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)]"
+                      ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--foreground)]"
+                      : "border-[#DEE2E6] bg-white text-[var(--foreground)]"
                   }`}
                 >
                   <input
@@ -519,7 +519,15 @@ export function IngredientFilterModal({
                     onChange={() => toggleIngredient(ingredient.id)}
                     type="checkbox"
                   />
-                  <span>{ingredient.standard_name}</span>
+                  <span className="min-w-0 flex-1 truncate">{ingredient.standard_name}</span>
+                  {isChecked ? (
+                    <span
+                      aria-hidden="true"
+                      className="ml-1 shrink-0 text-[15px] font-bold text-[var(--brand)]"
+                    >
+                      ✓
+                    </span>
+                  ) : null}
                 </label>
               </li>
             );

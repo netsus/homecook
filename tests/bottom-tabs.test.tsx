@@ -17,9 +17,11 @@ describe("BottomTabs", () => {
     const nav = container.querySelector("nav");
     expect(nav?.className).toContain("bottom-[calc(8px+env(safe-area-inset-bottom))]");
     expect(nav?.className).toContain("px-4");
-    expect(nav?.querySelector("[data-slot='bottom-tab-container']")?.className).toContain(
-      "rounded-full",
-    );
+    const tabContainer = nav?.querySelector("[data-slot='bottom-tab-container']");
+
+    expect(tabContainer?.className).toContain("rounded-full");
+    expect(tabContainer?.className).toContain("bg-[var(--wave1-surface)]");
+    expect(tabContainer?.className).not.toContain("backdrop");
     expect(container.querySelector(".glass-panel")).toBeNull();
 
     expect(screen.getByRole("link", { name: "홈" }).getAttribute("href")).toBe("/");

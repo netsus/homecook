@@ -178,6 +178,10 @@ describe("planner week screen", () => {
     expect(
       screen.getByRole("button", { name: /Google로 시작하기|로컬 테스트 계정으로 시작/ }),
     ).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "플래너 하단 탭" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "플래너" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
   });
 
   it("reserves bottom-tab safe area for guest actions on small screens", async () => {

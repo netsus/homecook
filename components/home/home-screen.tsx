@@ -892,14 +892,8 @@ function WebProfileButton() {
 
 function HomeAppBar() {
   return (
-    <header className="sticky top-0 z-20 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4" style={{ borderBottomWidth: '0.5px' }}>
-      <div
-        aria-label="homecook_"
-        className="text-[22px] font-bold tracking-[0.5px]"
-      >
-        <span className="text-[var(--brand)]">homecook</span>
-        <span className="text-[#212529]">_</span>
-      </div>
+    <header className="sticky top-0 z-20 flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-4" style={{ borderBottomWidth: "0.5px" }}>
+      <h1 className="text-[18px] font-bold leading-none text-[#212529]">홈</h1>
     </header>
   );
 }

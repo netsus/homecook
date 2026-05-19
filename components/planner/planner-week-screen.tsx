@@ -1069,44 +1069,54 @@ export function PlannerWeekScreen({
 
   if (authState === "checking") {
     return (
-      <ContentState
-        className="md:px-7"
-        description="플래너 접근 권한과 현재 세션을 확인하고 있어요."
-        eyebrow="세션 확인"
-        tone="loading"
-        title="로그인 상태를 확인하고 있어요"
-      />
+      <>
+        <ContentState
+          className="md:px-7"
+          description="플래너 접근 권한과 현재 세션을 확인하고 있어요."
+          eyebrow="세션 확인"
+          tone="loading"
+          title="로그인 상태를 확인하고 있어요"
+        />
+        {!isDesktopViewport ? (
+          <Wave1MobileBottomTab ariaLabel="플래너 하단 탭" currentTab="planner" />
+        ) : null}
+      </>
     );
   }
 
   if (authState === "unauthorized") {
     return (
-      <ContentState
-        className="-mt-5 md:mt-0"
-        description="플래너를 사용하려면 로그인해주세요. 로그인 후에는 다시 플래너 화면으로 돌아옵니다."
-        eyebrow="플래너 접근"
-        safeBottomPadding
-        tone="gate"
-        title="이 화면은 로그인이 필요해요"
-      >
-        <div className="space-y-3">
-          <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4">
-            <p className="text-sm font-semibold text-[var(--foreground)]">
-              로그인하면 원래 보던 주간 범위로 바로 복귀해요.
-            </p>
-            <p className="mt-1.5 text-xs leading-5 text-[var(--muted)]">
-              데스크톱과 모바일 모두 같은 헤더와 상태 셸 톤으로 접근을 안내합니다.
-            </p>
+      <>
+        <ContentState
+          className="-mt-5 md:mt-0"
+          description="플래너를 사용하려면 로그인해주세요. 로그인 후에는 다시 플래너 화면으로 돌아옵니다."
+          eyebrow="플래너 접근"
+          safeBottomPadding
+          tone="gate"
+          title="이 화면은 로그인이 필요해요"
+        >
+          <div className="space-y-3">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4">
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                로그인하면 원래 보던 주간 범위로 바로 복귀해요.
+              </p>
+              <p className="mt-1.5 text-xs leading-5 text-[var(--muted)]">
+                데스크톱과 모바일 모두 같은 헤더와 상태 셸 톤으로 접근을 안내합니다.
+              </p>
+            </div>
+            <SocialLoginButtons nextPath="/planner" />
+            <Link
+              className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
+              href="/"
+            >
+              홈으로 돌아가기
+            </Link>
           </div>
-          <SocialLoginButtons nextPath="/planner" />
-          <Link
-            className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
-            href="/"
-          >
-            홈으로 돌아가기
-          </Link>
-        </div>
-      </ContentState>
+        </ContentState>
+        {!isDesktopViewport ? (
+          <Wave1MobileBottomTab ariaLabel="플래너 하단 탭" currentTab="planner" />
+        ) : null}
+      </>
     );
   }
 
@@ -1119,12 +1129,13 @@ export function PlannerWeekScreen({
     <>
       {shouldRenderAppView ? (
         <div className="min-h-screen bg-[#F8F9FA] pb-[128px] text-[#212529] lg:hidden">
-        <div className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-4">
-          <div className="min-w-8 flex-1" aria-hidden="true" />
-          <h1 className="flex-1 text-center text-[18px] font-bold leading-none text-[#212529]">
+        <div
+          className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-4"
+          style={{ borderBottomWidth: "0.5px" }}
+        >
+          <h1 className="text-[18px] font-bold leading-none text-[#212529]">
             플래너
           </h1>
-          <div className="min-w-8 flex-1" aria-hidden="true" />
         </div>
 
         <section className="border-b border-[#F1F3F5] bg-white px-5 py-4">
