@@ -259,6 +259,8 @@ describe("PantryScreen", () => {
 
     const ownedIngredient = await screen.findByRole("checkbox", { name: /양파/ });
     expect((ownedIngredient as HTMLButtonElement).disabled).toBe(true);
+    expect(ownedIngredient.getAttribute("data-owned")).toBe("true");
+    expect(ownedIngredient.className).toContain("opacity-60");
     expect(ownedIngredient.textContent).toContain("보유중");
 
     await user.click(screen.getByRole("checkbox", { name: "대파" }));
@@ -379,6 +381,8 @@ describe("PantryScreen", () => {
       name: /마늘 보유중/,
     });
     expect((ownedBundleIngredient as HTMLButtonElement).disabled).toBe(true);
+    expect(ownedBundleIngredient.getAttribute("data-owned")).toBe("true");
+    expect(ownedBundleIngredient.className).toContain("opacity-60");
 
     await user.click(screen.getByRole("button", { name: "2개 팬트리에 추가" }));
 

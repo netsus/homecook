@@ -238,9 +238,12 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
                       : ingredient.standard_name
                   }
                   className={[
-                    "flex min-h-[48px] w-full items-center gap-3 rounded-[10px] border border-[#DEE2E6] px-3 text-left disabled:opacity-100",
-                    isInPantry ? "bg-[#F8F9FA]" : "bg-white",
+                    "flex min-h-[48px] w-full items-center gap-3 rounded-[10px] border border-[#DEE2E6] px-3 text-left disabled:opacity-60",
+                    isInPantry
+                      ? "bg-[#F8F9FA] opacity-60 grayscale"
+                      : "bg-white",
                   ].join(" ")}
+                  data-owned={isInPantry ? "true" : undefined}
                   disabled={isInPantry}
                   key={ingredient.ingredient_id}
                   onClick={() => handleToggleIngredient(ingredient.ingredient_id)}
@@ -258,7 +261,12 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
                   >
                     ✓
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-[#212529]">
+                  <span
+                    className={[
+                      "min-w-0 flex-1 truncate text-[14px] font-bold",
+                      isInPantry ? "text-[#868E96]" : "text-[#212529]",
+                    ].join(" ")}
+                  >
                     {ingredient.standard_name}
                   </span>
                   {isInPantry ? (
@@ -419,7 +427,9 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
                               className={[
                                 "web-bundle-ingredient",
                                 isChecked ? "web-bundle-ingredient-selected" : "",
+                                isInPantry ? "opacity-60 grayscale" : "",
                               ].join(" ")}
+                              data-owned={isInPantry ? "true" : undefined}
                               disabled={isInPantry}
                               key={ingredient.ingredient_id}
                               onClick={() =>
