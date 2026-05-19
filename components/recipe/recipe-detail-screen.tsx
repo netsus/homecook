@@ -975,7 +975,7 @@ export function RecipeDetailScreen({
                   }
                   type="button"
                 >
-                  -
+                  −
                 </button>
                 <span className="min-w-6 text-center font-bold text-[var(--foreground)]">
                   {selectedServings}
@@ -1295,21 +1295,21 @@ export function RecipeDetailScreen({
               <div className="flex items-center gap-2">
                 <button
                   aria-label="인분 줄이기"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-[#DEE2E6] bg-white text-[18px] text-[#212529] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-[#DEE2E6] bg-white text-base font-medium text-[#212529] disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={selectedServings <= 1}
                   onClick={() =>
                     setSelectedServings((value) => Math.max(1, value - 1))
                   }
                   type="button"
                 >
-                  -
+                  −
                 </button>
                 <span className="min-w-6 text-center font-bold text-[#212529]">
                   {selectedServings}
                 </span>
                 <button
                   aria-label="인분 늘리기"
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand)] text-[18px] font-bold text-white"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand)] text-base font-bold text-white"
                   onClick={() => setSelectedServings((value) => value + 1)}
                   type="button"
                 >
@@ -2115,7 +2115,7 @@ function Wave1HeroMetricButton({
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
       className={[
-        "flex min-h-[48px] min-w-11 flex-col items-center justify-center gap-1 rounded-full bg-transparent px-1 py-0 text-[12px] font-extrabold leading-none text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.75)] transition-transform duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70",
+        "flex min-h-[48px] min-w-11 flex-col items-center justify-center gap-1 rounded-full bg-transparent px-1 py-0 text-[12px] font-bold leading-none text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.75)] transition-transform duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70",
         ariaPressed ? "scale-110" : "",
       ].join(" ")}
       disabled={disabled}
@@ -2127,7 +2127,7 @@ function Wave1HeroMetricButton({
       </span>
       <span
         aria-hidden={ariaLabel !== `좋아요 ${count}`}
-        className="text-[12px] font-extrabold leading-none"
+        className="text-[12px] font-bold leading-none"
       >
         {count}
       </span>
@@ -2147,13 +2147,13 @@ function Wave1HeroMetricStatus({
   return (
     <div
       aria-label={ariaLabel}
-      className="flex min-h-[48px] min-w-11 flex-col items-center justify-center gap-1 rounded-full bg-transparent px-1 py-0 text-[12px] font-extrabold leading-none text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.75)]"
+      className="flex min-h-[48px] min-w-11 flex-col items-center justify-center gap-1 rounded-full bg-transparent px-1 py-0 text-[12px] font-bold leading-none text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.75)]"
       role="status"
     >
       <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center">
         {icon}
       </span>
-      <span className="text-[12px] font-extrabold leading-none">
+      <span className="text-[12px] font-bold leading-none">
         {count}
       </span>
     </div>

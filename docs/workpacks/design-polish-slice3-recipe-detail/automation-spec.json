@@ -51,9 +51,7 @@
       "authority_report_paths": []
     }
   },
-  "external_smokes": [
-    "pnpm dev:demo"
-  ],
+  "external_smokes": [],
   "blocked_conditions": [],
   "max_fix_rounds": {
     "backend": 0,

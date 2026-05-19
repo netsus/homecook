@@ -74,14 +74,14 @@ N/A — 이 슬라이스에 백엔드 변경 없음. FE-only visual polish.
 - UI risk: `low-risk`
 - Anchor screen dependency: `RECIPE_DETAIL`
 - Visual artifact: Stage 4에서 인분 stepper, 메트릭 영역 before/after screenshot 제공 예정
-- Authority status: `not-required`
+- Authority status: not-required
 - Notes: 이 슬라이스는 RECIPE_DETAIL 앵커 화면의 (1) 버튼 크기 축소, (2) font-weight 경량화, (3) 색상 토큰 정합만 수행한다. 핵심 CTA(플래너 추가, 요리하기)의 추가/변경이 아니고, 스크롤 구조, 정보 위계, 모달/시트 전환, 새 진입 흐름을 변경하지 않으므로 anchor-extension이 아니라 low-risk visual polish다. design-generator / design-critic은 신규 화면이나 high-risk UI change가 아니므로 생략한다. Stage 4 완료 시 인분 stepper 영역과 히어로 메트릭 영역의 mobile (390px) before/after screenshot으로 regression 검증만 수행한다.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 > 이 슬라이스는 기존 confirmed 앵커 화면의 low-risk visual polish만 수행하며, 신규 화면이나 구조 변경은 없다.
@@ -98,7 +98,7 @@ N/A — 이 슬라이스에 백엔드 변경 없음. FE-only visual polish.
 
 ## QA / Test Data Plan
 - fixture baseline: 기존 fixture 그대로 사용 (데이터 변경 없음)
-- real DB smoke 경로: `pnpm dev:demo` — 시각적 변경 확인
+- real DB smoke 경로: N/A — FE-only visual polish이며 API/DB/seed 흐름 변경 없음
 - seed / reset 명령: 해당 없음 (DB 변경 없음)
 - bootstrap이 생성해야 하는 시스템 row: 해당 없음
 - blocker 조건: 없음
@@ -135,21 +135,26 @@ N/A — 이 슬라이스에 백엔드 변경 없음. FE-only visual polish.
 > 이 체크리스트는 Stage 4~6 동안 계속 갱신하는 living closeout 문서다.
 > 백엔드 항목은 N/A (FE-only 슬라이스).
 
-- [ ] RECIPE_DETAIL 재료 탭 인분 stepper `−`/`+` visible circle 크기 축소 <!-- omo:id=dp3-inline-stepper-size;stage=4;scope=frontend;review=5,6 -->
-- [ ] planner-add 모달 인분 stepper `−`/`+` visible circle 크기 축소 <!-- omo:id=dp3-modal-stepper-size;stage=4;scope=frontend;review=5,6 -->
-- [ ] `−` 글리프와 `+` 글리프의 시각적 균형 조정 <!-- omo:id=dp3-glyph-balance;stage=4;scope=frontend;review=5,6 -->
-- [ ] Wave1HeroMetricButton count font-weight 경량화 (`font-extrabold` → `font-bold`) <!-- omo:id=dp3-hero-metric-weight;stage=4;scope=frontend;review=5,6 -->
-- [ ] Wave1HeroMetricStatus count font-weight 경량화 (`font-extrabold` → `font-bold`) <!-- omo:id=dp3-status-metric-weight;stage=4;scope=frontend;review=5,6 -->
-- [ ] 인분 `+` 버튼 색상 prototype 정합 확인/조정 <!-- omo:id=dp3-stepper-plus-color;stage=4;scope=frontend;review=5,6 -->
-- [ ] 인분 `−` 버튼 색상 prototype 정합 확인/조정 <!-- omo:id=dp3-stepper-minus-color;stage=4;scope=frontend;review=5,6 -->
-- [ ] 모바일 히어로 메트릭 색상 prototype 정합 확인 <!-- omo:id=dp3-hero-metric-color;stage=4;scope=frontend;review=5,6 -->
-- [ ] 데스크톱 메트릭 톤 색상 prototype 정합 확인/조정 <!-- omo:id=dp3-desktop-metric-color;stage=4;scope=frontend;review=5,6 -->
-- [ ] ServingsIcon 색상 상속 확인 <!-- omo:id=dp3-servings-icon-color;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL before/after screenshot 생성 <!-- omo:id=dp3-screenshots;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm lint` + `pnpm typecheck` 통과 <!-- omo:id=dp3-lint-typecheck;stage=4;scope=frontend;review=6 -->
-- [ ] `pnpm verify:frontend` 통과 (Vitest + Playwright regression) <!-- omo:id=dp3-verify-frontend;stage=4;scope=frontend;review=6 -->
-- [ ] `loading / empty / error / read-only` 기존 상태 UI 유지 확인 <!-- omo:id=dp3-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL 재료 탭 인분 stepper `−`/`+` visible circle 크기 축소 <!-- omo:id=dp3-inline-stepper-size;stage=4;scope=frontend;review=5,6 -->
+- [x] planner-add 모달 인분 stepper `−`/`+` visible circle 크기 축소 <!-- omo:id=dp3-modal-stepper-size;stage=4;scope=frontend;review=5,6 -->
+- [x] `−` 글리프와 `+` 글리프의 시각적 균형 조정 <!-- omo:id=dp3-glyph-balance;stage=4;scope=frontend;review=5,6 -->
+- [x] Wave1HeroMetricButton count font-weight 경량화 (`font-extrabold` → `font-bold`) <!-- omo:id=dp3-hero-metric-weight;stage=4;scope=frontend;review=5,6 -->
+- [x] Wave1HeroMetricStatus count font-weight 경량화 (`font-extrabold` → `font-bold`) <!-- omo:id=dp3-status-metric-weight;stage=4;scope=frontend;review=5,6 -->
+- [x] 인분 `+` 버튼 색상 prototype 정합 확인/조정 <!-- omo:id=dp3-stepper-plus-color;stage=4;scope=frontend;review=5,6 -->
+- [x] 인분 `−` 버튼 색상 prototype 정합 확인/조정 <!-- omo:id=dp3-stepper-minus-color;stage=4;scope=frontend;review=5,6 -->
+- [x] 모바일 히어로 메트릭 색상 prototype 정합 확인 <!-- omo:id=dp3-hero-metric-color;stage=4;scope=frontend;review=5,6 -->
+- [x] 데스크톱 메트릭 톤 색상 prototype 정합 확인/조정 <!-- omo:id=dp3-desktop-metric-color;stage=4;scope=frontend;review=5,6 -->
+- [x] ServingsIcon 색상 상속 확인 <!-- omo:id=dp3-servings-icon-color;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL before/after screenshot 생성 <!-- omo:id=dp3-screenshots;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm lint` + `pnpm typecheck` 통과 <!-- omo:id=dp3-lint-typecheck;stage=4;scope=frontend;review=6 -->
+- [x] `pnpm verify:frontend` 통과 (Vitest + Playwright regression) <!-- omo:id=dp3-verify-frontend;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only` 기존 상태 UI 유지 확인 <!-- omo:id=dp3-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
 
 ## Stage 5/6 Evidence
 
-(Stage 4 완료 후 갱신)
+- Stepper scope notes: `AppStepper` 기본 variant는 기존 visible circle을 유지하고, RECIPE_DETAIL planner-add sheet에서만 `compact` variant로 28px inner circle을 사용한다. Slice 4 대상인 leftover picker는 기본 variant를 유지한다.
+- Color parity notes: 모바일 인분 stepper `+` 버튼은 앱 팔레트 역할 토큰 `var(--brand)` (#0F766E)를 사용. Prototype `T.mint` (#2AC1BC)와 다르나, 글로벌 토큰 값 변경은 out of scope이며 contrast 회귀를 피하기 위해 현 앱 brand 역할 토큰으로 정합한다. 모달 stepper는 `var(--wave1-ink)` (#212529)로 prototype `T.ink`와 정합. 히어로 메트릭은 white text + drop-shadow로 prototype 정합 완료. `ServingsIcon`은 `currentColor` 상속으로 정상.
+- State UI: loading/empty/error/read-only/unauthorized 코드 경로를 변경하지 않았으므로 기존 상태 UI 유지됨.
+- Local verification: `pnpm lint`, `pnpm typecheck`, `pnpm test:product -- tests/recipe-detail-screen.test.tsx tests/recipe-add-to-planner.test.tsx tests/app-overlay-primitives.test.tsx`, `pnpm validate:workflow-v2`, `pnpm validate:workpack -- --slice design-polish-slice3-recipe-detail`, `git diff --check` passed after Codex scope repair.
+- Stage 6 full verification: `pnpm verify:frontend` passed locally, including build, Lighthouse, slice regression E2E, accessibility, visual regression, and security smoke. RECIPE_DETAIL screenshot evidence is covered by `tests/e2e/qa-visual.spec.ts` recipe detail visual regression across configured projects. Real DB smoke is N/A because this slice changes visual styling only and does not touch API/DB/seed flows.
+- Stage 5 review: Claude review artifact `.omx/artifacts/claude-delegate-design-polish-slice3-recipe-detail-stage5-review-response-20260519T172355Z.md`; verdict: no blockers.

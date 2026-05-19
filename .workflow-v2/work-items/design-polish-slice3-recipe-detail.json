@@ -34,9 +34,7 @@
   "workflow": {
     "plan_loop": "skipped",
     "review_loop": "required",
-    "external_smokes": [
-      "pnpm dev:demo"
-    ],
+    "external_smokes": [],
     "execution_mode": "autonomous",
     "evaluator_profile": "vertical-slice-strict",
     "merge_policy": "conditional-auto",
@@ -72,7 +70,56 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "closeout": null,
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "pnpm verify:frontend",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice design-polish-slice3-recipe-detail",
+        "node scripts/validate-closeout-sync.mjs",
+        "Claude Stage 5 review artifact"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending_github_current_head_after_closeout_fix",
+      "approval_state": "dual_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-05-19T17:48:38Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": null,
+      "evidence_sources": []
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-19T17:48:38Z",
+      "status_synced_at": "2026-05-19T17:48:38Z",
+      "pr_body_synced_at": "2026-05-19T17:48:38Z"
+    }
+  },
   "notes": "Stage 1 docs created by Claude on docs/design-polish-slice3-recipe-detail. FE-only visual polish slice. Scope: RECIPE_DETAIL inline stepper + planner-add modal stepper visible circle size reduction and glyph balance, Wave1HeroMetricButton/Status font-weight reduction (extrabold→bold), serving icon + metric controls + stepper button color prototype parity. Web tokens unchanged. Global app token values unchanged. No anchor-extension.",
   "out_of_scope": [
     "HOME screen changes",

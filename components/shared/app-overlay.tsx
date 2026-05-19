@@ -41,6 +41,7 @@ interface AppStepperProps {
   label: string;
   min?: number;
   onChange: (value: number) => void;
+  variant?: "default" | "compact";
   unit?: string;
   value: number;
 }
@@ -213,9 +214,12 @@ export function AppStepper({
   label,
   min = 1,
   onChange,
+  variant = "default",
   unit,
   value,
 }: AppStepperProps) {
+  const isCompact = variant === "compact";
+
   return (
     <div className="flex w-full items-center justify-between rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-[var(--wave1-surface-fill)] px-3 py-2.5">
       <span className="text-sm font-medium text-[var(--wave1-text-2)]">
@@ -224,13 +228,24 @@ export function AppStepper({
       <div className="flex items-center gap-1.5">
         <button
           aria-label={`${unit ?? label} 줄이기`}
-          className="flex h-[var(--control-height-md)] w-11 items-center justify-center rounded-full border border-[var(--wave1-border)] bg-[var(--wave1-surface)] text-lg font-bold leading-none text-[var(--wave1-ink)] disabled:opacity-40"
+          className={[
+            "flex h-[var(--control-height-md)] w-11 items-center justify-center disabled:opacity-40",
+            isCompact
+              ? ""
+              : "rounded-full border border-[var(--wave1-border)] bg-[var(--wave1-surface)] text-lg font-bold leading-none text-[var(--wave1-ink)]",
+          ].join(" ")}
           data-app-stepper-control="decrement"
           disabled={disabled || value <= min}
           onClick={() => onChange(Math.max(min, value - 1))}
           type="button"
         >
-          -
+          {isCompact ? (
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--wave1-border)] bg-[var(--wave1-surface)] text-sm font-medium leading-none text-[var(--wave1-ink)]">
+              −
+            </span>
+          ) : (
+            "-"
+          )}
         </button>
         <span
           aria-label={unit ? `${value}${unit}` : String(value)}
@@ -241,13 +256,24 @@ export function AppStepper({
         </span>
         <button
           aria-label={`${unit ?? label} 늘리기`}
-          className="flex h-[var(--control-height-md)] w-11 items-center justify-center rounded-full bg-[var(--wave1-ink)] text-lg font-bold leading-none text-[var(--wave1-surface)] disabled:opacity-40"
+          className={[
+            "flex h-[var(--control-height-md)] w-11 items-center justify-center disabled:opacity-40",
+            isCompact
+              ? ""
+              : "rounded-full bg-[var(--wave1-ink)] text-lg font-bold leading-none text-[var(--wave1-surface)]",
+          ].join(" ")}
           data-app-stepper-control="increment"
           disabled={disabled}
           onClick={() => onChange(value + 1)}
           type="button"
         >
-          +
+          {isCompact ? (
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--wave1-ink)] text-sm font-bold leading-none text-[var(--wave1-surface)]">
+              +
+            </span>
+          ) : (
+            "+"
+          )}
         </button>
       </div>
     </div>
