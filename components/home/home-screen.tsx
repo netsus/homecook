@@ -388,7 +388,7 @@ export function HomeScreen() {
         style={
           {
             "--home-mint": "#2AC1BC",
-            "--home-mint-deep": "#007A76",
+            "--home-mint-deep": "#0B7773",
             "--home-mint-soft": "#E6F8F7",
             "--home-bg": "#FFFFFF",
             "--home-ink": "#212529",
@@ -897,7 +897,7 @@ function HomeAppBar() {
         aria-label="homecook_"
         className="text-[22px] font-bold tracking-[0.5px]"
       >
-        <span className="text-[#008F8A]">homecook</span>
+        <span className="text-[#0B7773]">homecook</span>
         <span className="text-[#212529]">_</span>
       </div>
     </header>
@@ -953,13 +953,13 @@ function DiscoveryFilterRail({
       <button
         className={`flex h-11 shrink-0 items-center gap-1.5 rounded-[10px] border px-3 text-[13px] font-semibold ${
           hasFilters
-            ? "border-[#007A76] bg-[#007A76] text-white"
-            : "border-[#007A76] bg-white text-[#007A76]"
+            ? "border-[#0B7773] bg-[#0B7773] text-white"
+            : "border-[#2AC1BC] bg-white text-[#0B7773]"
         }`}
         onClick={onOpenModal}
         type="button"
       >
-        <SearchSmallIcon color={hasFilters ? "#fff" : "#007A76"} />
+        <SearchSmallIcon color={hasFilters ? "#fff" : "#0B7773"} />
         {hasFilters ? `재료 ${appliedIngredientIds.length}개` : "재료로 검색"}
       </button>
 
@@ -1037,7 +1037,7 @@ function ThemeCarousel({
         <h2 className="text-[18px] font-bold text-[#212529]">테마별 레시피</h2>
         {activeThemeId ? (
           <button
-            className="text-[12px] font-semibold text-[#007A76]"
+            className="text-[12px] font-semibold text-[#0B7773]"
             onClick={() => onSelectTheme(activeThemeId)}
             type="button"
           >

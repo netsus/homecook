@@ -137,7 +137,7 @@ export function LoginScreen({
         </p>
 
         {showAuthError ? (
-          <div className="mt-7 rounded-[12px] border border-[#FFB8B4] bg-[#FFF1F0] px-4 py-3 text-[13px] font-semibold text-[#C84C48]">
+          <div className="mt-7 rounded-[12px] border border-[#FFC9C9] bg-[#FFEBEB] px-4 py-3 text-[13px] font-semibold text-[#E03131]">
             로그인에 실패했어요. 다시 시도해주세요.
           </div>
         ) : null}

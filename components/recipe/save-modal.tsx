@@ -125,12 +125,12 @@ export function SaveModal({
         ) : null}
 
         {viewState === "error" ? (
-          <div className="rounded-[12px] border border-[#F4C7C3] bg-[#FFF1F0] px-4 py-5">
-            <p className="text-[14px] font-semibold text-[#C84C48]">
+          <div className="rounded-[12px] border border-[#FFC9C9] bg-[#FFEBEB] px-4 py-5">
+            <p className="text-[14px] font-semibold text-[#E03131]">
               {loadErrorMessage ?? "레시피북 목록을 불러오지 못했어요."}
             </p>
             <button
-              className="mt-3 min-h-11 rounded-[10px] bg-[#007A76] px-4 text-[14px] font-bold text-white"
+              className="mt-3 min-h-11 rounded-[10px] bg-[#0B7773] px-4 text-[14px] font-bold text-white"
               onClick={onRetry}
               type="button"
             >
@@ -170,7 +170,7 @@ export function SaveModal({
                           className={[
                             "flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border-2",
                             isSelected
-                              ? "border-[#2AC1BC] bg-[#2AC1BC] text-white"
+                              ? "border-[#0B7773] bg-[#0B7773] text-white"
                               : "border-[#DEE2E6] bg-white",
                           ].join(" ")}
                         >
@@ -188,7 +188,7 @@ export function SaveModal({
                           className={[
                             "rounded-full px-2 py-[3px] text-[11px] font-extrabold",
                             isSavedBook
-                              ? "bg-[#E8F8F7] text-[#007A76]"
+                              ? "bg-[#E8F8F7] text-[#0B7773]"
                               : "bg-[#F8F9FA] text-[#5F6470]",
                           ].join(" ")}
                         >
@@ -205,7 +205,7 @@ export function SaveModal({
 
                 {!isCreateExpanded ? (
                   <button
-                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-[14px] font-semibold text-[#007A76]"
+                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-[14px] font-semibold text-[#0B7773]"
                     onClick={() => setIsCreateExpanded(true)}
                     type="button"
                   >
@@ -223,7 +223,7 @@ export function SaveModal({
                       value={newBookName}
                     />
                     <button
-                      className="min-h-10 rounded-[8px] bg-[#007A76] px-3 text-[13px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      className="min-h-10 rounded-[8px] bg-[#0B7773] px-3 text-[13px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
                       disabled={disableCreate}
                       onClick={onCreateBook}
                       type="button"
@@ -235,7 +235,7 @@ export function SaveModal({
               </div>
 
               {saveErrorMessage ? (
-                <p className="rounded-[10px] border border-[#F4C7C3] bg-[#FFF1F0] px-4 py-3 text-[13px] font-semibold text-[#C84C48]">
+                <p className="rounded-[10px] border border-[#FFC9C9] bg-[#FFEBEB] px-4 py-3 text-[13px] font-semibold text-[#E03131]">
                   {saveErrorMessage}
                 </p>
               ) : null}

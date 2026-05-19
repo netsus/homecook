@@ -1211,10 +1211,10 @@ export function PlannerWeekScreen({
             <div className="mt-3 flex flex-wrap gap-2">
               {shoppingListLinks.map((shoppingList) => (
                 <Link
-                  className="inline-flex min-h-9 items-center justify-center rounded-full border border-[#2AC1BC] bg-[#E6F8F7] px-3 text-[12px] font-bold text-[#007A76]"
+                  className="inline-flex min-h-9 items-center justify-center rounded-full border border-[#2AC1BC] bg-[#E6F8F7] px-3 text-[12px] font-bold text-[#0B7773]"
                   href={`/shopping/lists/${shoppingList.id}`}
                   key={shoppingList.id}
-                  style={{ color: "#007A76" }}
+                  style={{ color: "#0B7773" }}
                 >
                   {shoppingList.title} 보기
                 </Link>
@@ -1288,7 +1288,7 @@ export function PlannerWeekScreen({
                             className={[
                               "relative flex h-[54px] w-full min-w-0 flex-col items-center justify-center gap-px rounded-[11px] text-center transition-colors",
                               isSelected
-                                ? "border-2 border-[#2AC1BC] bg-[#E6F8F7] text-[#007A76] shadow-[0_2px_8px_rgba(42,193,188,0.18)]"
+                                ? "border-2 border-[#2AC1BC] bg-[#E6F8F7] text-[#0B7773] shadow-[0_2px_8px_rgba(42,193,188,0.18)]"
                                 : "border border-[#DEE2E6] bg-white text-[#495057]",
                             ].join(" ")}
                             onClick={() => handleDateChipClick(page.key, dateKey)}
@@ -1375,7 +1375,7 @@ export function PlannerWeekScreen({
                     <span
                       className={[
                         "mr-2.5 flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold",
-                        isToday ? "bg-[#2AC1BC] text-white" : "bg-[#F8F9FA] text-[#212529]",
+                        isToday ? "bg-[#0B7773] text-white" : "bg-[#F8F9FA] text-[#212529]",
                       ].join(" ")}
                     >
                       {formatWeekdayLabel(dateKey)}
@@ -1432,7 +1432,7 @@ export function PlannerWeekScreen({
                                         width={34}
                                       />
                                     ) : (
-                                      <span className="flex h-[46px] w-[34px] shrink-0 items-center justify-center bg-[#E6F8F7] text-[14px] font-bold text-[#007A76]">
+                                      <span className="flex h-[46px] w-[34px] shrink-0 items-center justify-center bg-[#E6F8F7] text-[14px] font-bold text-[#0B7773]">
                                         {column.name.charAt(0)}
                                       </span>
                                     )}

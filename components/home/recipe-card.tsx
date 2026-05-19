@@ -47,7 +47,7 @@ export function RecipeCard({ isSaved = false, onSave, recipe }: RecipeCardProps)
               {presentation.emoji}
             </span>
           ) : null}
-          <span className="absolute left-3 top-3 inline-flex min-h-6 items-center justify-center rounded-[6px] bg-white/92 px-2 text-center text-[11px] font-bold leading-none text-[#007A76] shadow-[0_1px_4px_rgba(0,0,0,0.10)]">
+          <span className="absolute left-3 top-3 inline-flex min-h-6 items-center justify-center rounded-[6px] bg-white/92 px-2 text-center text-[11px] font-bold leading-none text-[#0B7773] shadow-[0_1px_4px_rgba(0,0,0,0.10)]">
             {badgeLabel}
           </span>
         </div>
@@ -57,7 +57,7 @@ export function RecipeCard({ isSaved = false, onSave, recipe }: RecipeCardProps)
         aria-pressed={isSaved}
         className={[
           "absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/94 shadow-[0_1px_5px_rgba(0,0,0,0.14)]",
-          isSaved ? "text-[#007A76]" : "text-[#495057]",
+          isSaved ? "text-[#0B7773]" : "text-[#495057]",
         ].join(" ")}
         data-testid="recipe-card-bookmark"
         onClick={() => onSave?.(recipe)}
