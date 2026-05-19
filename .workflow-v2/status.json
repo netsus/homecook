@@ -1043,11 +1043,11 @@
     {
       "id": "design-polish-slice5-manual-youtube",
       "preset": "vertical-slice-strict",
-      "branch": "docs/design-polish-slice5-manual-youtube",
+      "branch": "feature/fe-design-polish-slice5-manual-youtube",
       "pr_path": "pending",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm lint",
         "pnpm typecheck",
@@ -1057,7 +1057,7 @@
         "pnpm validate:authority-evidence-presence",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs branch. Claude resume session b475ec3a-c10b-42ae-9c38-1df94982e645 requested with model=opus, effort=high, permission_mode=bypassPermissions but provider limit blocked editing; Codex fallback created workpack docs per user instruction. FE-only high-risk MANUAL_RECIPE_CREATE/YT_IMPORT form polish. API/DB/web token/global brand token changes out of scope."
+      "notes": "Stage 1 and Stage 4/final authority were requested through Claude resume session b475ec3a-c10b-42ae-9c38-1df94982e645 with model=opus, effort=high, permission_mode=bypassPermissions; provider limit blocked execution, so Codex completed fallback per user instruction. FE-only high-risk MANUAL_RECIPE_CREATE/YT_IMPORT form polish completed: compact one-line ingredient rows, inline step composer, cooking-method color_key restoration, compact ingredient validation, YT_IMPORT review regression cleanup, and mobile save/top appbar collision fix. Authority report blocker/major/minor 0; mobile default+narrow evidence captured. Web tokens unchanged. Global app token values unchanged. pnpm verify:frontend passed locally. closeout_phase=completed closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/authority/DESIGN_POLISH_SLICE5_MANUAL_YOUTUBE-authority.md,ui/designs/evidence/design-polish-slice5-manual-youtube/MANUAL_RECIPE_CREATE-ingredients-mobile.png,ui/designs/evidence/design-polish-slice5-manual-youtube/MANUAL_RECIPE_CREATE-steps-mobile.png,ui/designs/evidence/design-polish-slice5-manual-youtube/MANUAL_RECIPE_CREATE-narrow.png,ui/designs/evidence/design-polish-slice5-manual-youtube/YT_IMPORT-review-mobile.png,ui/designs/evidence/design-polish-slice5-manual-youtube/YT_IMPORT-review-narrow.png last_recovery_at=2026-05-20T00:00:00+09:00"
     }
   ]
 }

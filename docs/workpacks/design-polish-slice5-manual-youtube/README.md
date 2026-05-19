@@ -117,16 +117,16 @@ MANUAL_RECIPE_CREATE / YT_IMPORT의 모바일 입력 폼을 더 좁은 화면에
   - `ui/designs/evidence/design-polish-slice5-manual-youtube/MANUAL_RECIPE_CREATE-narrow.png`
   - `ui/designs/evidence/design-polish-slice5-manual-youtube/YT_IMPORT-review-mobile.png`
   - `ui/designs/evidence/design-polish-slice5-manual-youtube/YT_IMPORT-review-narrow.png`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Authority report path:
   - `ui/designs/authority/DESIGN_POLISH_SLICE5_MANUAL_YOUTUBE-authority.md`
-- Notes: 기존 확정 화면의 입력 UX를 바꾸는 polish이므로 generator/critic은 기존 산출물을 재사용하고, 실제 구현 후 screenshot 기반으로 authority review를 수행한다.
+- Notes: 기존 확정 화면의 입력 UX를 바꾸는 polish이므로 generator/critic은 기존 산출물을 재사용했다. Claude final authority는 provider limit으로 수행하지 못했고, 사용자 지시에 따라 Codex fallback authority를 수행했다. blocker/major/minor 0.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) -- Stage 1 문서 잠금 상태. Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) -- Stage 1 문서 잠금 상태. Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) -- Stage 4 완료 후, screenshot evidence 준비 상태
-- [ ] 확정 (confirmed) -- Stage 5 review + authority blocker 0개 확인 후
+- [x] 확정 (confirmed) -- Stage 5 review + authority blocker 0개 확인 후
 - [ ] N/A -- BE-only 슬라이스 아님
 
 ## Source Links
@@ -187,15 +187,29 @@ MANUAL_RECIPE_CREATE / YT_IMPORT의 모바일 입력 폼을 더 좁은 화면에
 
 ## Delivery Checklist
 
-- [ ] MANUAL_RECIPE_CREATE 재료 행을 재료명/input/unit/delete 한 줄 구조로 정리 <!-- omo:id=dp5-manual-ingredient-row;stage=4;scope=frontend;review=5,6 -->
-- [ ] MANUAL_RECIPE_CREATE 조리법 입력을 모달이 아닌 화면 본문 직접 입력으로 전환 <!-- omo:id=dp5-manual-inline-steps;stage=4;scope=frontend;review=5,6 -->
-- [ ] 조리방법 선택을 가로 스크롤 칩으로 제공 <!-- omo:id=dp5-method-chip-rail;stage=4;scope=frontend;review=5,6 -->
-- [ ] 조리방법 `color_key` 기반 색상 구분을 chip과 step row에 복구 <!-- omo:id=dp5-method-colors;stage=4;scope=frontend;review=5,6 -->
-- [ ] `재료를 1개 이상 추가해주세요` 안내의 배경 제거, 폰트/여백 축소 <!-- omo:id=dp5-ingredient-validation-density;stage=4;scope=frontend;review=5,6 -->
-- [ ] YT_IMPORT 검수/수정 단계에서도 재료 행과 조리방법 색상 회귀 없음 확인 <!-- omo:id=dp5-youtube-review-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 manual/youtube API payload 구조 유지 <!-- omo:id=dp5-payload-contract-preserved;stage=4;scope=shared;review=5,6 -->
-- [ ] `loading / empty / error / read-only / unauthorized` 상태 회귀 없음 확인 <!-- omo:id=dp5-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] mobile default/narrow screenshot evidence 생성 <!-- omo:id=dp5-authority-screenshots;stage=4;scope=frontend;review=5,6 -->
-- [ ] authority report 작성 및 blocker 0 확인 <!-- omo:id=dp5-authority-report;stage=5;scope=frontend;review=6 -->
-- [ ] targeted Vitest / Playwright manual-youtube 회귀 테스트 통과 <!-- omo:id=dp5-targeted-tests;stage=4;scope=frontend;review=6 -->
-- [ ] `pnpm lint`, `pnpm typecheck`, `pnpm verify:frontend` 통과 <!-- omo:id=dp5-frontend-verification;stage=4;scope=frontend;review=6 -->
+- [x] MANUAL_RECIPE_CREATE 재료 행을 재료명/input/unit/delete 한 줄 구조로 정리 <!-- omo:id=dp5-manual-ingredient-row;stage=4;scope=frontend;review=5,6 -->
+- [x] MANUAL_RECIPE_CREATE 조리법 입력을 모달이 아닌 화면 본문 직접 입력으로 전환 <!-- omo:id=dp5-manual-inline-steps;stage=4;scope=frontend;review=5,6 -->
+- [x] 조리방법 선택을 가로 스크롤 칩으로 제공 <!-- omo:id=dp5-method-chip-rail;stage=4;scope=frontend;review=5,6 -->
+- [x] 조리방법 `color_key` 기반 색상 구분을 chip과 step row에 복구 <!-- omo:id=dp5-method-colors;stage=4;scope=frontend;review=5,6 -->
+- [x] `재료를 1개 이상 추가해주세요` 안내의 배경 제거, 폰트/여백 축소 <!-- omo:id=dp5-ingredient-validation-density;stage=4;scope=frontend;review=5,6 -->
+- [x] YT_IMPORT 검수/수정 단계에서도 재료 행과 조리방법 색상 회귀 없음 확인 <!-- omo:id=dp5-youtube-review-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 manual/youtube API payload 구조 유지 <!-- omo:id=dp5-payload-contract-preserved;stage=4;scope=shared;review=6 -->
+- [x] `loading / empty / error / read-only / unauthorized` 상태 회귀 없음 확인 <!-- omo:id=dp5-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] mobile default/narrow screenshot evidence 생성 <!-- omo:id=dp5-authority-screenshots;stage=4;scope=frontend;review=5,6 -->
+- [x] authority report 작성 및 blocker 0 확인 <!-- omo:id=dp5-authority-report;stage=4;scope=frontend;review=6 -->
+- [x] targeted Vitest / Playwright manual-youtube 회귀 테스트 통과 <!-- omo:id=dp5-targeted-tests;stage=4;scope=frontend;review=6 -->
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm verify:frontend` 통과 <!-- omo:id=dp5-frontend-verification;stage=4;scope=frontend;review=6 -->
+
+## Stage 5/6 Closeout Evidence
+
+- Authority report: `ui/designs/authority/DESIGN_POLISH_SLICE5_MANUAL_YOUTUBE-authority.md`
+- Screenshot evidence:
+  - `ui/designs/evidence/design-polish-slice5-manual-youtube/MANUAL_RECIPE_CREATE-ingredients-mobile.png`
+  - `ui/designs/evidence/design-polish-slice5-manual-youtube/MANUAL_RECIPE_CREATE-steps-mobile.png`
+  - `ui/designs/evidence/design-polish-slice5-manual-youtube/MANUAL_RECIPE_CREATE-narrow.png`
+  - `ui/designs/evidence/design-polish-slice5-manual-youtube/YT_IMPORT-review-mobile.png`
+  - `ui/designs/evidence/design-polish-slice5-manual-youtube/YT_IMPORT-review-narrow.png`
+- QA reports:
+  - `ui/designs/evidence/design-polish-slice5-manual-youtube/exploratory-report.json`
+  - `ui/designs/evidence/design-polish-slice5-manual-youtube/eval-result.json`
+- Claude status: Stage 1 and Stage 4/final authority were requested through resume session `b475ec3a-c10b-42ae-9c38-1df94982e645`; provider limit blocked execution, so Codex completed fallback per user instruction.

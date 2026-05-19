@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "design-polish-slice5-manual-youtube",
+  "generatedAt": "2026-05-20T05:35:00+09:00",
+  "devices": [
+    "mobile-chrome",
+    "mobile-narrow",
+    "desktop-chrome"
+  ],
+  "summary": "Exploratory QA covered MANUAL_RECIPE_CREATE ingredient row density, inline step composer behavior, cooking-method color visibility, narrow mobile layout, and YT_IMPORT review-row regression. No unresolved blocker or major issue remained. Claude final authority could not run because the resume session hit provider limits, so Codex completed fallback authority per user instruction.",
+  "findings": [],
+  "remainingRisks": [
+    "Claude final authority review could not run because the provided resume session hit provider limits; Codex completed fallback authority review per user instruction.",
+    "Real DB smoke was not run because this is a FE-only presentation and interaction change with unchanged API/DB/state transition contracts.",
+    "Actual mobile keyboard overlap remains manual-only because Playwright screenshots do not emulate device keyboard occlusion."
+  ],
+  "evidence": [
+    "ui/designs/authority/DESIGN_POLISH_SLICE5_MANUAL_YOUTUBE-authority.md",
+    "ui/designs/evidence/design-polish-slice5-manual-youtube/MANUAL_RECIPE_CREATE-ingredients-mobile.png",
+    "ui/designs/evidence/design-polish-slice5-manual-youtube/MANUAL_RECIPE_CREATE-steps-mobile.png",
+    "ui/designs/evidence/design-polish-slice5-manual-youtube/MANUAL_RECIPE_CREATE-narrow.png",
+    "ui/designs/evidence/design-polish-slice5-manual-youtube/YT_IMPORT-review-mobile.png",
+    "ui/designs/evidence/design-polish-slice5-manual-youtube/YT_IMPORT-review-narrow.png"
+  ],
+  "checks": [
+    "pnpm vitest run tests/manual-recipe-create-screen.test.tsx tests/cooking-method-colors.test.ts",
+    "pnpm exec playwright test tests/e2e/tmp-design-polish-slice5-final-evidence.spec.ts --project=mobile-chrome",
+    "pnpm exec playwright test tests/e2e/slice-18-manual-recipe-create.spec.ts --project=mobile-chrome --grep \"authenticated happy path|create failure shows error and allows retry|validation: cannot save without required fields\"",
+    "pnpm exec playwright test tests/e2e/slice-19-youtube-import.spec.ts --project=mobile-chrome --grep \"happy path: URL|review: can add and remove ingredients|review: can remove steps\"",
+    "pnpm verify:frontend",
+    "pnpm validate:workflow-v2",
+    "pnpm validate:workpack -- --slice design-polish-slice5-manual-youtube",
+    "PR_IS_DRAFT=false pnpm validate:authority-evidence-presence",
+    "BRANCH_NAME=feature/fe-design-polish-slice5-manual-youtube BASE_REF=master PR_IS_DRAFT=false node scripts/validate-closeout-sync.mjs",
+    "git diff --check"
+  ]
+}
