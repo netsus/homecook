@@ -53,7 +53,7 @@ describe("Button", () => {
   it("sm size meets 44px minimum touch target", () => {
     render(<Button size="sm">Small</Button>);
     const btn = screen.getByRole("button", { name: "Small" });
-    expect(btn.className).toContain("min-h-[44px]");
+    expect(btn.className).toContain("min-h-[var(--control-height-sm)]");
   });
 
   it("shows loading spinner and hides content", () => {
@@ -102,7 +102,7 @@ describe("Chip", () => {
   it("applies 44px minimum touch target", () => {
     render(<Chip label="Touch" />);
     const btn = screen.getByRole("button", { name: "Touch" });
-    expect(btn.className).toContain("min-h-[44px]");
+    expect(btn.className).toContain("min-h-[var(--chip-height-lg)]");
   });
 
   it("renders disabled state", () => {
@@ -161,10 +161,10 @@ describe("Badge", () => {
     expect(el.className).toContain("bg-[var(--wave1-surface-fill)]");
   });
 
-  it("uses pill shape radius", () => {
+  it("uses the shared badge radius", () => {
     render(<Badge>Pill</Badge>);
     const el = screen.getByText("Pill");
-    expect(el.className).toContain("rounded-[var(--radius-full)]");
+    expect(el.className).toContain("rounded-[var(--radius-badge)]");
   });
 });
 

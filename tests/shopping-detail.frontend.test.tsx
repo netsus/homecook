@@ -208,7 +208,7 @@ describe("ShoppingDetailScreen", () => {
     expect(screen.getByText(/✓ 완료됨 \(4월 13일\)/)).toBeTruthy();
     expect(screen.getByText(/구매한 재료 \(1개\)/)).toBeTruthy();
     expect(screen.getByTestId("shopping-readonly-status-item-1").className).toContain(
-      "rounded-[6px]",
+      "rounded-[var(--radius-badge)]",
     );
   });
 

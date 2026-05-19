@@ -92,9 +92,9 @@ describe("app overlay primitives", () => {
 
     expect(minus.getAttribute("data-app-stepper-control")).toBe("decrement");
     expect(plus.getAttribute("data-app-stepper-control")).toBe("increment");
-    expect(minus.className).toContain("h-11");
+    expect(minus.className).toContain("h-[var(--control-height-md)]");
     expect(minus.className).toContain("w-11");
-    expect(plus.className).toContain("h-11");
+    expect(plus.className).toContain("h-[var(--control-height-md)]");
     expect(plus.className).toContain("w-11");
 
     await user.click(minus);

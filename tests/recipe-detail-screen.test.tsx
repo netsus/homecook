@@ -171,7 +171,7 @@ describe("recipe detail screen", () => {
     expect(screen.queryByText("보호된 작업")).toBeNull();
 
     const closeButton = screen.getByRole("button", { name: "닫기" });
-    expect(closeButton.classList.contains("h-11")).toBe(true);
+    expect(closeButton.className).toContain("h-[var(--control-height-md)]");
     expect(closeButton.classList.contains("w-11")).toBe(true);
     expect(closeButton.textContent).toBe("");
   });
@@ -271,7 +271,7 @@ describe("recipe detail screen", () => {
     );
     expect(
       (await screen.findByRole("button", { name: "플래너에 추가" })).className,
-    ).toContain("min-h-11");
+    ).toContain("min-h-[var(--control-height-md)]");
   });
 
   it("marks TO_TASTE ingredients with a readable helper badge", async () => {

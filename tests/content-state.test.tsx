@@ -32,7 +32,9 @@ describe("prototype-derived state UI primitives", () => {
     expect(shell).not.toBeNull();
     expect(shell?.getAttribute("data-state-tone")).toBe("error");
     expect(shell?.className).not.toContain("glass-panel");
-    expect(screen.getByRole("button", { name: "다시 시도" }).className).toContain("min-h-11");
+    expect(screen.getByRole("button", { name: "다시 시도" }).className).toContain(
+      "min-h-[var(--control-height-md)]",
+    );
   });
 
   it("marks Skeleton blocks as Wave1-derived placeholders", () => {
