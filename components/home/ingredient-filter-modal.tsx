@@ -408,7 +408,7 @@ export function IngredientFilterModal({
       ariaLabelledBy="ingredient-filter-title"
       badge={
         draftIngredientIds.length > 0 ? (
-          <span className="rounded-[var(--radius-full)] border border-[color-mix(in_srgb,var(--olive)_16%,transparent)] bg-[color-mix(in_srgb,var(--olive)_10%,transparent)] px-2.5 py-1 text-[11px] font-semibold text-[var(--olive)]">
+          <span className="rounded-[var(--radius-full)] border border-[color-mix(in_srgb,var(--brand)_16%,transparent)] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] px-2.5 py-1 text-[11px] font-semibold text-[var(--brand)]">
             {draftIngredientIds.length}개 선택
           </span>
         ) : undefined
@@ -509,7 +509,7 @@ export function IngredientFilterModal({
                 <label
                   className={`flex min-h-[var(--control-height-md)] cursor-pointer items-center rounded-[var(--radius-full)] border px-4 py-2 text-sm font-semibold transition ${
                     isChecked
-                      ? "border-[var(--olive)] bg-[var(--olive)] text-[var(--surface)]"
+                      ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--surface)]"
                       : "border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)]"
                   }`}
                 >

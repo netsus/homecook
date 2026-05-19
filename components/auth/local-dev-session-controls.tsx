@@ -25,7 +25,7 @@ export function LocalDevSessionControls() {
   return (
     <div className="hidden justify-end px-5 pb-4 sm:flex md:px-7 md:pb-5">
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <div className="rounded-full border border-[color:rgba(46,166,122,0.18)] bg-[color:rgba(46,166,122,0.08)] px-3 py-1 text-xs font-medium text-[var(--olive)]">
+        <div className="rounded-full border border-[color-mix(in_srgb,var(--brand)_18%,transparent)] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-3 py-1 text-xs font-medium text-[var(--brand)]">
           {authOverride === true
             ? "fixture auth: authenticated"
             : authOverride === false

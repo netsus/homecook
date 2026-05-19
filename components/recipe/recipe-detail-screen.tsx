@@ -844,7 +844,7 @@ export function RecipeDetailScreen({
       <div className="hidden bg-[var(--surface-fill)] lg:block">
         <button
           aria-label={recipe.thumbnail_url ? "레시피 사진 크게 보기" : "레시피 대표 이미지"}
-          className="block aspect-[4/3] w-full max-[360px]:aspect-[16/9] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--brand)_22%,transparent),color-mix(in_srgb,var(--background)_85%,transparent),color-mix(in_srgb,var(--olive)_18%,transparent))] text-left disabled:cursor-default"
+          className="block aspect-[4/3] w-full max-[360px]:aspect-[16/9] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--brand)_22%,transparent),color-mix(in_srgb,var(--background)_85%,transparent),color-mix(in_srgb,var(--brand)_18%,transparent))] text-left disabled:cursor-default"
           disabled={!recipe.thumbnail_url}
           onClick={() => setIsLightboxOpen(true)}
           type="button"
@@ -862,7 +862,7 @@ export function RecipeDetailScreen({
         <div className="mx-auto grid max-w-[1200px] gap-6 px-8 py-8 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0 space-y-6">
         <div className="recipe-overview-compact flex flex-col rounded-[var(--radius-sheet)] border border-[var(--line)] bg-[var(--panel)] px-6 py-6 shadow-[var(--shadow-1)]">
-          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--brand)]">
             <Link href="/">Home</Link>
             <span>/</span>
             <span>Recipe detail</span>
@@ -873,7 +873,7 @@ export function RecipeDetailScreen({
               {recipe.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-[var(--radius-full)] bg-[color-mix(in_srgb,var(--olive)_10%,transparent)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--olive)]"
+                  className="rounded-[var(--radius-full)] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--brand)]"
                 >
                   #{tag}
                 </span>
@@ -955,7 +955,7 @@ export function RecipeDetailScreen({
         </div>
 
         <div className="rounded-[var(--radius-sheet)] border border-[var(--line)] bg-[var(--panel)] px-6 py-6 shadow-[var(--shadow-1)]">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--brand)]">
             재료
           </p>
 
@@ -981,7 +981,7 @@ export function RecipeDetailScreen({
                   {selectedServings}
                 </span>
                 <button
-                  className="flex h-[var(--control-height-md)] w-11 items-center justify-center rounded-full bg-[var(--olive)] text-lg font-bold text-white"
+                  className="flex h-[var(--control-height-md)] w-11 items-center justify-center rounded-full bg-[var(--brand)] text-lg font-bold text-white"
                   onClick={() => setSelectedServings((value) => value + 1)}
                   type="button"
                 >
@@ -1047,7 +1047,7 @@ export function RecipeDetailScreen({
         </div>
 
         <div className="rounded-[var(--radius-sheet)] border border-[var(--line)] bg-[var(--surface)] px-6 py-6">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--brand)]">
             조리 단계
           </p>
           <ol className="space-y-3">
@@ -1114,7 +1114,7 @@ export function RecipeDetailScreen({
                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--foreground)]">
                   Action
                 </p>
-                <h2 className="mt-2 text-xl font-black tracking-[-0.02em] text-[var(--foreground)]">
+                <h2 className="mt-2 text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
                   {selectedServings}인분 기준
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-[var(--text-2)]">
@@ -2178,7 +2178,7 @@ function ActionButton({
       aria-pressed={ariaPressed}
       className={`min-h-[var(--control-height-md)] w-full whitespace-nowrap rounded-[var(--radius-md)] border px-3 py-2 text-[12px] font-semibold shadow-[var(--shadow-1)] disabled:cursor-not-allowed disabled:opacity-60 max-[360px]:px-2 md:px-4 md:py-2.5 md:text-sm ${
         tone === "olive"
-          ? "border-[color-mix(in_srgb,var(--olive)_22%,transparent)] bg-[var(--olive)] text-[var(--surface)]"
+          ? "border-[color-mix(in_srgb,var(--brand)_22%,transparent)] bg-[var(--brand)] text-[var(--surface)]"
           : getRecipeActionToneClass(tone)
       }`}
       disabled={disabled}
@@ -2297,7 +2297,7 @@ function getRecipeActionToneClass(
   }
 
   if (tone === "olive") {
-    return "border-[color-mix(in_srgb,var(--olive)_20%,transparent)] bg-[color-mix(in_srgb,var(--olive)_12%,transparent)] text-[var(--olive)]";
+    return "border-[color-mix(in_srgb,var(--brand)_20%,transparent)] bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand)]";
   }
 
   if (tone === "signal") {
@@ -2646,7 +2646,7 @@ function FeedbackToast({
         className={`max-w-sm rounded-[var(--radius-lg)] border px-4 py-3 text-sm font-medium shadow-[var(--shadow-3)] ${
           isError
             ? "border-[color-mix(in_srgb,var(--brand)_18%,transparent)] bg-[color-mix(in_srgb,var(--brand)_96%,var(--surface))] text-[var(--surface)]"
-            : "border-[color-mix(in_srgb,var(--olive)_18%,transparent)] bg-[color-mix(in_srgb,var(--surface)_96%,var(--olive))] text-[var(--foreground)]"
+            : "border-[color-mix(in_srgb,var(--brand)_18%,transparent)] bg-[color-mix(in_srgb,var(--surface)_96%,var(--brand))] text-[var(--foreground)]"
         }`}
         role={isError ? "alert" : "status"}
       >

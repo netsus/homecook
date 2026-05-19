@@ -971,11 +971,11 @@
     {
       "id": "design-polish-slice1-typography-tokens",
       "preset": "vertical-slice-strict",
-      "branch": "docs/design-polish-slice1-typography-tokens",
-      "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-design-polish-slice1-typography-tokens",
+      "pr_path": "https://github.com/netsus/homecook/pull/497",
+      "lifecycle": "merged",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm lint",
         "pnpm typecheck",
@@ -984,7 +984,7 @@
         "pnpm validate:workpack -- --slice design-polish-slice1-typography-tokens",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs created by Claude. FE-only visual/token cleanup — app-wide font-weight reduction, --olive direct usage removal, hardcoded hex to role token migration. No backend, no API, no DB. Low-risk with anchor screen visual verification. Design Status: temporary (low-risk existing confirmed surfaces, lightweight Stage 5 design check)."
+      "notes": "Internal Stage 6 closeout projection after Codex review for PR #497. Stage 1 docs PR #496 merged. Stage 2/3 N/A (FE-only visual/token cleanup). Stage 4 frontend implemented by Claude through resume session b475ec3a-c10b-42ae-9c38-1df94982e645, then Codex addressed Claude approve-with-nits review, CI quality harness env isolation, and Linux visual snapshot resync from GitHub artifact 7083802369. Scope: app-wide Tailwind font-weight token reduction, component direct --olive removal, legacy brand/olive hex to role-token cleanup. Web tokens and Jua font intentionally unchanged. Local pnpm verify:frontend passed before nits; after nits, pnpm lint, pnpm typecheck, targeted Vitest 57 tests, workflow/workpack validators, token scans, targeted GITHUB_HEAD_REF Vitest, pnpm dev:demo route HEAD smoke, and CI Linux visual snapshot resync passed. Design Status confirmed; authority-required=false. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:1 closeout_repair=codex:4|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,pnpm test:e2e:visual:update,pnpm dev:demo,Claude review artifact,Playwright snapshots,GitHub PR #497,GITHUB_HEAD_REF targeted Vitest,GitHub visual artifact 7083802369 last_recovery_at=2026-05-19T21:58:00+09:00"
     }
   ]
 }

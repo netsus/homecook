@@ -160,7 +160,7 @@ describe("Wave1 prototype lock validator", () => {
       )}\n`,
     );
 
-    const results = validateLock({ rootDir });
+    const results = validateLock({ rootDir, env: {} });
 
     expect(results[0]?.errors[0]?.message).toContain("reference screenshot is missing");
   });
@@ -190,7 +190,7 @@ describe("Wave1 prototype lock validator", () => {
       )}\n`,
     );
 
-    const results = validateLock({ rootDir });
+    const results = validateLock({ rootDir, env: {} });
     const messages =
       results[0]?.errors.map((error: { message: string }) => error.message).join("\n") ?? "";
 

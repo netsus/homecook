@@ -109,7 +109,7 @@ export function SocialLoginButtons({
           >
             <span
               aria-hidden="true"
-              className="mr-3 inline-flex h-5 w-5 items-center justify-center text-[15px] font-black uppercase"
+              className="mr-3 inline-flex h-5 w-5 items-center justify-center text-[15px] font-extrabold uppercase"
             >
               {providerId.slice(0, 1)}
             </span>

@@ -769,7 +769,7 @@ export function MypageScreen({
         <div
           className={`fixed inset-x-4 bottom-8 z-50 mx-auto max-w-md rounded-[var(--radius-lg)] px-4 py-3 text-center text-sm font-semibold shadow-lg ${
             toast.tone === "success"
-              ? "bg-[var(--olive)] text-white"
+              ? "bg-[var(--brand)] text-white"
               : "bg-[var(--danger)] text-white"
           }`}
           role="status"
@@ -1681,11 +1681,7 @@ function ShoppingHistoryCard({ item }: { item: ShoppingListHistoryItem }) {
         </p>
       ) : null}
       <span
-        className={`mt-2 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-          item.is_completed
-            ? "bg-[var(--brand-soft)] text-[var(--olive)]"
-            : "bg-[var(--brand-soft)] text-[var(--brand)]"
-        }`}
+        className="mt-2 inline-flex rounded-full bg-[var(--brand-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--brand)]"
       >
         {item.is_completed ? "다시열기" : "진행 중"}
       </span>

@@ -641,7 +641,7 @@ export function RecipeBookDetailScreen({
         <div
           className={`fixed inset-x-4 bottom-20 z-50 mx-auto max-w-md rounded-[var(--radius-lg)] px-4 py-3 text-center text-sm font-semibold shadow-lg ${
             toast.tone === "success"
-              ? "bg-[var(--olive)] text-white"
+              ? "bg-[var(--brand)] text-white"
               : "bg-[var(--danger)] text-white"
           }`}
           role="status"

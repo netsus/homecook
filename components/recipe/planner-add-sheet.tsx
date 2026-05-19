@@ -475,7 +475,7 @@ export function PlannerAddSheet({
               {errorMessage ?? "플래너 정보를 불러오지 못했어요."}
             </p>
             <button
-              className="rounded-[var(--radius-md)] bg-[var(--olive)] px-5 py-2.5 text-sm font-semibold text-[var(--surface)]"
+              className="rounded-[var(--radius-md)] bg-[var(--brand)] px-5 py-2.5 text-sm font-semibold text-[var(--surface)]"
               onClick={onRetryLoad}
               type="button"
             >

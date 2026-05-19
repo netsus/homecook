@@ -65,8 +65,8 @@
   --app-text-small: 13px;
   --app-text-body: 14px;
   --app-text-title: 20px;
-  --app-font-action: 700;
-  --app-font-strong: 800;
+  --app-font-action: 600;
+  --app-font-strong: 700;
 
   /* Legacy radius aliases: keep old names, lower the app roundness in one place. */
   --radius-sm:   var(--radius-control);
@@ -132,9 +132,14 @@
   --color-surface:    var(--surface);
   --color-brand:      var(--brand);
   --color-brand-deep: var(--brand-deep);
-  --color-olive:      var(--olive);
   --color-muted:      var(--muted);
   --font-sans: var(--font-body);
+
+  /* App typography weight reduction: one step lighter for readability */
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 700;
+  --font-weight-black: 800;
+  --font-weight-semibold: 500;
 }
 
 * {
