@@ -1,0 +1,89 @@
+{
+  "id": "design-polish-slice1-typography-tokens",
+  "title": "Design Polish Slice 1 — app-wide typography weight reduction and token centralization",
+  "summary": "앱 전역 font-weight 경량화, --olive 직접 사용 제거, 하드코딩 hex 색상의 역할 토큰 교체. globals.css 토큰 기본값 재조정과 컴포넌트 Tailwind 클래스 전수 교체. 웹 토큰 변경 없음, Jua 미복원, 신규 화면 없음.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "앱 전역의 과도한 font-weight를 경량화하여 가독성을 개선하고, 레거시 --olive 직접 참조와 하드코딩 hex 색상을 현재 역할 토큰으로 일원화하여 글로벌 앱 토큰 한 곳에서 디자인을 조절할 수 있게 한다.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "wave1-derived-state-ui-prep"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/design/design-tokens.md",
+      "ui/designs/WAVE1_MOBILE_APP_BASELINE.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/design-polish-slice1-typography-tokens/README.md",
+      "docs/workpacks/design-polish-slice1-typography-tokens/acceptance.md",
+      "docs/workpacks/design-polish-slice1-typography-tokens/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "pnpm dev:demo"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice design-polish-slice1-typography-tokens",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "screenshot"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Stage 1 docs created by Claude. FE-only visual/token cleanup slice — no backend, no API, no DB changes. Low-risk app-wide font-weight reduction and --olive removal with anchor screen visual verification.",
+  "out_of_scope": [
+    "HOME modal layout/color fixes",
+    "App shell bottom tab/header behavior",
+    "RECIPE_DETAIL controls/metric colors (beyond token swap)",
+    "Planner/menu picker modal behavior",
+    "Manual/youtube recipe create UX",
+    "Cooking mode layout/serving logic",
+    "Mypage/settings/account navigation bugs",
+    "API, DB, auth, state transition contract changes",
+    "Web color redesign (--web-* tokens)",
+    "Jua brand font restoration"
+  ],
+  "open_questions": []
+}
