@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-19T02:30:00Z",
+  "updated_at": "2026-05-19T17:06:09Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -989,7 +989,25 @@
     {
       "id": "design-polish-slice2-app-shell-home",
       "preset": "vertical-slice-strict",
-      "branch": "docs/design-polish-slice2-app-shell-home",
+      "branch": "feature/fe-design-polish-slice2-app-shell-home",
+      "pr_path": "https://github.com/netsus/homecook/pull/501",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm verify:frontend",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice design-polish-slice2-app-shell-home",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs created by Claude on docs/design-polish-slice2-app-shell-home. FE-only visual/behavior polish. Stage 4 frontend implemented by Claude, Stage 5 Claude review approved with no blockers. Scope: GLOBAL::APP_SHELL bottom tab persistence + planner active icon + header alignment + HOME ingredient filter modal family alignment with pantry-add-sheet (2-col grid, chip style, button color token). Web tokens unchanged, no new tokens, no anchor-extension. Depends on design-polish-slice1-typography-tokens (merged). Status drift fix: in-progress → merged."
+    },
+    {
+      "id": "design-polish-slice3-recipe-detail",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/design-polish-slice3-recipe-detail",
       "pr_path": null,
       "lifecycle": "planned",
       "approval_state": "not_started",
@@ -999,10 +1017,10 @@
         "pnpm typecheck",
         "pnpm verify:frontend",
         "pnpm validate:workflow-v2",
-        "pnpm validate:workpack -- --slice design-polish-slice2-app-shell-home",
+        "pnpm validate:workpack -- --slice design-polish-slice3-recipe-detail",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs created by Claude on docs/design-polish-slice2-app-shell-home. FE-only visual/behavior polish. Scope: GLOBAL::APP_SHELL bottom tab persistence + planner active icon + header alignment + HOME ingredient filter modal family alignment with pantry-add-sheet (2-col grid, chip style, button color token). Web tokens unchanged, no new tokens, no anchor-extension. Depends on design-polish-slice1-typography-tokens (merged)."
+      "notes": "Stage 1 docs created by Claude on docs/design-polish-slice3-recipe-detail. FE-only visual polish. Scope: RECIPE_DETAIL inline stepper + planner-add modal stepper visible circle size reduction and glyph balance, Wave1HeroMetricButton/Status font-weight reduction (extrabold→bold), serving icon + metric controls + stepper button color prototype parity. Web tokens unchanged. Global app token values unchanged. No anchor-extension. Depends on design-polish-slice1-typography-tokens (merged) and design-polish-slice2-app-shell-home (merged)."
     }
   ]
 }
