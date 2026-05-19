@@ -49,6 +49,10 @@ import {
   type UserProfileData,
 } from "@/lib/api/mypage";
 import { buildReturnHref } from "@/lib/navigation/return-context";
+import {
+  resolveMypageRestoreState,
+  type MypageRestoreTab,
+} from "@/lib/navigation/mypage-return-state";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { RecipeBookSummary } from "@/types/recipe";
@@ -57,12 +61,10 @@ import type { ShoppingListHistoryItem } from "@/types/shopping";
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
 type MypageTab =
-  | "saved"
+  | MypageRestoreTab
   | "account"
   | "notifications"
-  | "help"
-  | "recipebooks"
-  | "shopping";
+  | "help";
 
 const TOAST_DURATION_MS = 3000;
 const SHOPPING_PAGE_SIZE = 10;
@@ -121,17 +123,22 @@ const WEB_SAVED_RECIPES = [
 
 export interface MypageScreenProps {
   initialAuthenticated?: boolean;
+  initialActiveTab?: MypageRestoreTab;
+  initialMobileSurface?: MypageMobileSurface;
 }
 
 export function MypageScreen({
+  initialActiveTab = "saved",
   initialAuthenticated = false,
+  initialMobileSurface = "home",
 }: MypageScreenProps) {
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
   const [viewState, setViewState] = useState<ViewState>("loading");
-  const [activeTab, setActiveTab] = useState<MypageTab>("saved");
-  const [mobileSurface, setMobileSurface] = useState<MypageMobileSurface>("home");
+  const [activeTab, setActiveTab] = useState<MypageTab>(initialActiveTab);
+  const [mobileSurface, setMobileSurface] =
+    useState<MypageMobileSurface>(initialMobileSurface);
   const isMobileViewport = useIsMobileViewport();
 
   // Profile
@@ -169,22 +176,13 @@ export function MypageScreen({
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const restore = params.get("restore");
-    const returnSurface = params.get("returnSurface");
-
-    if (
-      restore === "shopping-history-tab" ||
-      returnSurface === "mypage.shopping-history"
-    ) {
-      setActiveTab("shopping");
-      setMobileSurface("shopping");
+    if (!params.has("restore") && !params.has("returnSurface")) {
       return;
     }
 
-    if (restore === "recipebook-tab" || returnSurface === "mypage.recipebooks") {
-      setActiveTab("recipebooks");
-      setMobileSurface("recipebook");
-    }
+    const restored = resolveMypageRestoreState(params);
+    setActiveTab(restored.activeTab);
+    setMobileSurface(restored.mobileSurface);
   }, []);
 
   const showToast = useCallback((message: string, tone: "success" | "error") => {

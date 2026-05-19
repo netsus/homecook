@@ -1,8 +1,18 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
+const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
+const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
+  await page.context().addCookies([
+    {
+      name: E2E_AUTH_OVERRIDE_COOKIE,
+      value,
+      url: E2E_APP_ORIGIN,
+      sameSite: "Lax",
+    },
+  ]);
   await page.addInitScript(
     ({ key, state }) => {
       window.localStorage.setItem(key, state);
@@ -56,17 +66,74 @@ function makeMockShoppingHistory() {
   ];
 }
 
+function makeMockRecipeItems() {
+  return [
+    {
+      recipe_id: "recipe-1",
+      title: "된장찌개",
+      thumbnail_url: "https://example.com/img1.jpg",
+      tags: ["한식", "찌개"],
+      added_at: "2026-04-30T09:00:00.000Z",
+    },
+    {
+      recipe_id: "recipe-2",
+      title: "김치볶음밥",
+      thumbnail_url: null,
+      tags: ["한식"],
+      added_at: "2026-04-29T09:00:00.000Z",
+    },
+  ];
+}
+
+function makeMockShoppingDetail() {
+  return {
+    id: "list-1",
+    title: "4/30 장보기",
+    date_range_start: "2026-04-30",
+    date_range_end: "2026-05-06",
+    is_completed: true,
+    completed_at: "2026-04-30T10:00:00.000Z",
+    created_at: "2026-04-30T00:00:00.000Z",
+    updated_at: "2026-04-30T10:00:00.000Z",
+    recipes: [
+      {
+        recipe_id: "recipe-1",
+        recipe_name: "된장찌개",
+        recipe_thumbnail: null,
+        shopping_servings: 2,
+        planned_servings_total: 2,
+      },
+    ],
+    items: [
+      {
+        id: "item-1",
+        ingredient_id: "ing-1",
+        display_text: "두부 1모",
+        amounts_json: [{ amount: 1, unit: "모" }],
+        is_checked: true,
+        is_pantry_excluded: false,
+        added_to_pantry: false,
+        sort_order: 0,
+      },
+    ],
+  };
+}
+
 async function installMypageRoutes(
   page: Page,
   options?: {
     books?: ReturnType<typeof makeMockBooks>;
     shoppingHistory?: ReturnType<typeof makeMockShoppingHistory>;
     profile?: ReturnType<typeof makeMockProfile>;
+    recipeItems?: ReturnType<typeof makeMockRecipeItems>;
+    shoppingDetail?: ReturnType<typeof makeMockShoppingDetail>;
   },
 ) {
   const books = options?.books ?? makeMockBooks();
   const shoppingHistory = options?.shoppingHistory ?? makeMockShoppingHistory();
   const profile = options?.profile ?? makeMockProfile();
+  const recipeItems = options?.recipeItems ?? makeMockRecipeItems();
+  const shoppingDetail = options?.shoppingDetail ?? makeMockShoppingDetail();
 
   await page.route("**/api/v1/users/me", async (route) => {
     await route.fulfill({
@@ -112,6 +179,20 @@ async function installMypageRoutes(
     }
   });
 
+  await page.route("**/api/v1/recipe-books/*/recipes**", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          items: [...recipeItems],
+          next_cursor: null,
+          has_next: false,
+        },
+        error: null,
+      },
+    });
+  });
+
   await page.route("**/api/v1/recipe-books/*", async (route) => {
     const urlParts = route.request().url().split("/");
     const bookId = urlParts[urlParts.length - 1];
@@ -150,6 +231,18 @@ async function installMypageRoutes(
   });
 
   await page.route("**/api/v1/shopping/lists**", async (route) => {
+    const url = new URL(route.request().url());
+    if (/\/api\/v1\/shopping\/lists\/[^/]+$/.test(url.pathname)) {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: shoppingDetail,
+          error: null,
+        },
+      });
+      return;
+    }
+
     await route.fulfill({
       json: {
         success: true,
@@ -266,6 +359,49 @@ test.describe("MYPAGE screen", () => {
     expect(href).toContain("returnTo=");
     expect(href).toContain("returnSurface=mypage.shopping-history");
     expect(href).toContain("restore=shopping-history-tab");
+  });
+
+  test("returns directly from recipebook detail to the recipebook list context", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installMypageRoutes(page);
+    await page.goto("/mypage");
+
+    await openRecipebookSurface(page);
+    await page.getByTestId("system-book-saved").click();
+    await page.waitForURL(/\/mypage\/recipe-books\/book-saved/);
+    await expect(page.getByTestId("recipebook-detail-header")).toBeVisible();
+
+    await page.getByLabel("뒤로 가기").first().click();
+    await page.waitForURL(/\/mypage\?.*restore=recipebook-tab/);
+
+    await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
+    await expect(page.getByTestId("system-book-saved").getByText("저장한 레시피")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "저장한 레시피" })).toHaveCount(0);
+  });
+
+  test("returns directly from shopping detail to the shopping history context", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installMypageRoutes(page);
+    await page.goto("/mypage");
+
+    await openShoppingSurface(page);
+    await page.getByTestId("shopping-card-list-1").click();
+    await page.waitForURL(/\/shopping\/lists\/list-1/);
+    await expect(
+      page.getByText("완료된 장보기 기록은 수정할 수 없어요"),
+    ).toBeVisible();
+
+    await page
+      .getByLabel(/뒤로 가기|이전 화면으로 돌아가기/)
+      .first()
+      .click();
+    await page.waitForURL(/\/mypage\?.*restore=shopping-history-tab/);
+
+    await expect(
+      page.getByRole("heading", { name: isMobileViewport(page) ? "장보기 기록" : "장보기 내역" }),
+    ).toBeVisible();
+    await expect(page.getByText("4/30 장보기")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "저장한 레시피" })).toHaveCount(0);
   });
 
   test("shows empty shopping history state with planner link", async ({ page }) => {

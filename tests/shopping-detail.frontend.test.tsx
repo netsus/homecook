@@ -212,6 +212,35 @@ describe("ShoppingDetailScreen", () => {
     );
   });
 
+  it("returns directly to the mypage shopping history context from the back button", async () => {
+    mockSearchParams.mockReturnValue(
+      new URLSearchParams({
+        restore: "shopping-history-tab",
+        returnSurface: "mypage.shopping-history",
+        returnTo: "/mypage",
+      }),
+    );
+    vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue({
+      ...mockListDetail,
+      is_completed: true,
+      completed_at: "2026-04-13T00:00:00.000Z",
+    });
+
+    const user = userEvent.setup();
+
+    render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+    });
+
+    await user.click(screen.getByRole("button", { name: "이전 화면으로 돌아가기" }));
+
+    expect(mockReplace).toHaveBeenCalledWith(
+      "/mypage?returnSurface=mypage.shopping-history&restore=shopping-history-tab",
+    );
+  });
+
   it("toggles item check status", async () => {
     vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
     vi.spyOn(shoppingApi, "updateShoppingListItem").mockResolvedValue({

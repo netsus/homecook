@@ -5,6 +5,7 @@ import {
   resolveReturnHref,
   sanitizeInternalPath,
 } from "@/lib/navigation/return-context";
+import { resolveMypageRestoreState } from "@/lib/navigation/mypage-return-state";
 
 describe("return context navigation helpers", () => {
   it("accepts only app-internal return paths", () => {
@@ -54,5 +55,38 @@ describe("return context navigation helpers", () => {
         "/planner",
       ),
     ).toBe("/planner");
+  });
+
+  it("maps mypage return context to the initial recipebook surface", () => {
+    expect(
+      resolveMypageRestoreState(
+        new URLSearchParams({
+          restore: "recipebook-tab",
+          returnSurface: "mypage.recipebooks",
+        }),
+      ),
+    ).toEqual({ activeTab: "recipebooks", mobileSurface: "recipebook" });
+  });
+
+  it("maps mypage return context to the initial shopping history surface", () => {
+    expect(
+      resolveMypageRestoreState(
+        new URLSearchParams({
+          restore: "shopping-history-tab",
+          returnSurface: "mypage.shopping-history",
+        }),
+      ),
+    ).toEqual({ activeTab: "shopping", mobileSurface: "shopping" });
+  });
+
+  it("falls back to the mypage home surface for unrelated return context", () => {
+    expect(
+      resolveMypageRestoreState(
+        new URLSearchParams({
+          restore: "mypage-home",
+          returnSurface: "mypage.leftovers",
+        }),
+      ),
+    ).toEqual({ activeTab: "saved", mobileSurface: "home" });
   });
 });
