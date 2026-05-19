@@ -265,6 +265,7 @@ export function PlannerAddSheet({
                   onChange={onChangeServings}
                   unit="인분"
                   value={servings}
+                  variant="compact"
                 />
               </div>
 
