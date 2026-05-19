@@ -168,7 +168,7 @@ test.describe("Slice 06 recipe-to-planner", () => {
   // accept-playwright-flow + accept-screen-contract:
   // Authenticated user opens planner add sheet, selects date/column/servings,
   // submits, sees success toast, navigates to PLANNER_WEEK, sees the meal.
-  test("authenticated user can add recipe to planner and see it in PLANNER_WEEK", async ({ page }) => {
+  test("authenticated user can add recipe to planner and see it in PLANNER_WEEK @smoke-core", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installRecipeDetailRoute(page);
 

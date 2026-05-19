@@ -199,7 +199,7 @@ async function openShoppingSurface(page: Page) {
 }
 
 test.describe("MYPAGE screen", () => {
-  test("shows profile and recipe books when authenticated", async ({ page }) => {
+  test("shows profile and recipe books when authenticated @smoke-core", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page);
     await page.goto("/mypage");

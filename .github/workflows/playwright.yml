@@ -1,58 +1,21 @@
 name: QA
 
 on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 18 * * *"
   pull_request:
-    paths:
-      - "app/globals.css"
-      - "app/layout.tsx"
-      - "app/login/**"
-      - "app/page.tsx"
-      - "app/planner/**"
-      - "app/recipe/**"
-      - "components/**"
-      - "lib/**"
-      - "lib/auth/**"
-      - "lib/mock/**"
-      - "qa/fixtures/**"
-      - "stores/**"
-      - "tests/e2e/helpers/**"
-      - "tests/e2e/assets/**"
-      - "tests/e2e/slice-*.spec.ts"
-      - "tests/e2e/qa-a11y.spec.ts"
-      - "tests/e2e/qa-visual.spec.ts"
-      - "playwright.config.ts"
-      - "lighthouserc.js"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/playwright.yml"
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
   push:
     branches:
       - main
       - master
       - develop
-    paths:
-      - "app/globals.css"
-      - "app/layout.tsx"
-      - "app/login/**"
-      - "app/page.tsx"
-      - "app/planner/**"
-      - "app/recipe/**"
-      - "components/**"
-      - "lib/**"
-      - "lib/auth/**"
-      - "lib/mock/**"
-      - "qa/fixtures/**"
-      - "stores/**"
-      - "tests/e2e/helpers/**"
-      - "tests/e2e/assets/**"
-      - "tests/e2e/slice-*.spec.ts"
-      - "tests/e2e/qa-a11y.spec.ts"
-      - "tests/e2e/qa-visual.spec.ts"
-      - "playwright.config.ts"
-      - "lighthouserc.js"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/playwright.yml"
 
 permissions:
   contents: read
@@ -63,7 +26,27 @@ env:
   NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      smoke: ${{ steps.filter.outputs.smoke }}
+      accessibility: ${{ steps.filter.outputs.accessibility }}
+      visual: ${{ steps.filter.outputs.visual }}
+      lighthouse: ${{ steps.filter.outputs.lighthouse }}
+      full_regression: ${{ steps.filter.outputs.full_regression }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve QA path filters
+        id: filter
+        run: node scripts/ci-path-filter.mjs
+
   smoke:
+    needs: changes
+    if: needs.changes.outputs.smoke == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -86,7 +69,7 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run smoke Playwright suite
+      - name: Run core Playwright smoke suite
         run: pnpm test:e2e:smoke
 
       - name: Upload Playwright report
@@ -99,6 +82,8 @@ jobs:
             test-results
 
   accessibility:
+    needs: changes
+    if: needs.changes.outputs.accessibility == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -121,7 +106,12 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run accessibility smoke suite
+      - name: Run accessibility core suite
+        if: needs.changes.outputs.full_regression != 'true'
+        run: pnpm test:e2e:a11y:core
+
+      - name: Run accessibility full suite
+        if: needs.changes.outputs.full_regression == 'true'
         run: pnpm test:e2e:a11y
 
       - name: Upload accessibility report
@@ -135,6 +125,8 @@ jobs:
             test-results
 
   visual:
+    needs: changes
+    if: needs.changes.outputs.visual == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -157,7 +149,16 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run visual regression suite
+      - name: Run visual web core suite
+        if: needs.changes.outputs.full_regression != 'true'
+        run: pnpm test:e2e:visual:web-core
+
+      - name: Run visual app core suite
+        if: needs.changes.outputs.full_regression != 'true'
+        run: pnpm test:e2e:visual:app-core
+
+      - name: Run visual full suite
+        if: needs.changes.outputs.full_regression == 'true'
         run: pnpm test:e2e:visual
 
       - name: Upload visual report
@@ -171,6 +172,8 @@ jobs:
             test-results
 
   lighthouse:
+    needs: changes
+    if: needs.changes.outputs.lighthouse == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -194,7 +197,7 @@ jobs:
         run: pnpm build
 
       - name: Run Lighthouse budget checks
-        run: pnpm exec lhci autorun --config=./lighthouserc.js
+        run: pnpm test:lighthouse:run
 
       - name: Upload Lighthouse report
         if: failure()
@@ -204,3 +207,40 @@ jobs:
           name: lighthouse-report
           path: .lighthouseci
           include-hidden-files: true
+
+  full-regression:
+    needs: changes
+    if: needs.changes.outputs.full_regression == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.32.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run full Playwright slice regression
+        run: pnpm test:e2e:regression
+
+      - name: Upload full regression report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-full-regression-report
+          path: |
+            playwright-report
+            test-results

@@ -153,7 +153,7 @@ async function stabilizeVisualSnapshot(page: Page) {
 }
 
 test.describe("QA visual regression", () => {
-  test("home default shell matches the visual baseline", async ({ page }) => {
+  test("home default shell matches the visual baseline @visual-core", async ({ page }) => {
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
@@ -167,7 +167,7 @@ test.describe("QA visual regression", () => {
     });
   });
 
-  test("home sort menu open matches the visual baseline", async ({ page }) => {
+  test("home sort menu open matches the visual baseline @visual-core", async ({ page }) => {
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
@@ -185,7 +185,7 @@ test.describe("QA visual regression", () => {
     });
   });
 
-  test("ingredient filter modal matches the visual baseline", async ({
+  test("ingredient filter modal matches the visual baseline @visual-core", async ({
     page,
   }) => {
     await installDiscoveryRoutes(page);
@@ -201,7 +201,7 @@ test.describe("QA visual regression", () => {
     });
   });
 
-  test("recipe detail and login gate match the visual baseline", async ({
+  test("recipe detail and login gate match the visual baseline @visual-core", async ({
     page,
   }) => {
     await installRecipeDetailRoutes(page);

@@ -185,7 +185,7 @@ async function expectCompactToolbarControl(
 }
 
 test.describe("QA accessibility smoke", () => {
-  test("home and recipe detail are axe-clean", async ({ page }) => {
+  test("home and recipe detail are axe-clean @a11y-core", async ({ page }) => {
     await installDiscoveryRoutes(page);
     await installRecipeDetailRoutes(page);
 
@@ -198,10 +198,6 @@ test.describe("QA accessibility smoke", () => {
     const sortButton = visibleSortButton(page);
 
     await expectReadableTouchTarget(ingredientSearchButton);
-    if (isMobileViewport(page)) {
-      await expectMatchingControlTypography(ingredientSearchButton, sortButton);
-    }
-    await expectCompactToolbarControl(sortButton);
     await expectReadableTouchTarget(sortButton);
     await sortButton.click();
     const plannerOption = page
@@ -232,7 +228,7 @@ test.describe("QA accessibility smoke", () => {
     );
   });
 
-  test("ingredient filter and login gate dialogs are axe-clean", async ({
+  test("ingredient filter and login gate dialogs are axe-clean @a11y-core", async ({
     page,
   }) => {
     await installDiscoveryRoutes(page);
@@ -249,12 +245,6 @@ test.describe("QA accessibility smoke", () => {
     await expectReadableTouchTarget(
       page.getByRole("button", { name: /적용/ }),
     );
-    await expectSingleLineControlLabel(
-      page.getByRole("button", { name: "초기화" }),
-    );
-    await expectSingleLineControlLabel(
-      page.getByRole("button", { name: /적용/ }),
-    );
     await expectReadableTouchTarget(
       page.getByRole("button", { name: "닫기" }),
       { minimumHeight: isMobileViewport(page) ? 44 : 40 },
@@ -269,6 +259,33 @@ test.describe("QA accessibility smoke", () => {
       allowPrototypeDesktopColorContrast: true,
     });
     await expectReadableTouchTarget(getLoginActionButton(page));
+  });
+
+  test("home toolbar and ingredient dialog controls keep design lock metrics", async ({
+    page,
+  }) => {
+    await installDiscoveryRoutes(page);
+
+    await page.goto("/");
+    await expect(visibleSearchInput(page)).toBeVisible();
+    const ingredientSearchButton = visibleTextButton(page, "재료로 검색");
+    const sortButton = visibleSortButton(page);
+
+    if (isMobileViewport(page)) {
+      await expectMatchingControlTypography(ingredientSearchButton, sortButton);
+    }
+    await expectCompactToolbarControl(sortButton);
+
+    await ingredientSearchButton.click();
+    await expect(
+      page.getByRole("dialog", { name: "재료로 검색" }),
+    ).toBeVisible();
+    await expectSingleLineControlLabel(
+      page.getByRole("button", { name: "초기화" }),
+    );
+    await expectSingleLineControlLabel(
+      page.getByRole("button", { name: /적용/ }),
+    );
   });
 
   test("planner and meal desktop screens are axe-clean", async ({ page }) => {
