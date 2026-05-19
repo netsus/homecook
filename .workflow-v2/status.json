@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-12T13:57:11Z",
+  "updated_at": "2026-05-19T02:30:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -967,6 +967,24 @@
         "git diff --check"
       ],
       "notes": "Closed as Codex fallback at explicit user request. Phase4 Slice A re-audit/repair may start after this PR merges. Scope: classify fixed-reference-missing state UI as prototype-derived design, update common state UI components, and apply representative HOME/RECIPE_DETAIL/PLANNER_WEEK states without API/DB/auth/status changes. closeout_phase=completed closeout_recovery=manual_patch:1 closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Vitest,pnpm verify:frontend,workflow-v2 validator,workpack validator last_recovery_at=2026-05-12T13:43:18Z"
+    },
+    {
+      "id": "design-polish-slice1-typography-tokens",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/design-polish-slice1-typography-tokens",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm verify:frontend",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice design-polish-slice1-typography-tokens",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs created by Claude. FE-only visual/token cleanup — app-wide font-weight reduction, --olive direct usage removal, hardcoded hex to role token migration. No backend, no API, no DB. Low-risk with anchor screen visual verification. Design Status: temporary (low-risk existing confirmed surfaces, lightweight Stage 5 design check)."
     }
   ]
 }
