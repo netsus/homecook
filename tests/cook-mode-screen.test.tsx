@@ -268,12 +268,46 @@ describe("CookModeScreen", () => {
     const CookModeScreen = await importCookModeScreen();
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
-    const ingredientArchive = await screen.findByTestId(
-      "mobile-ingredient-archive",
+    const ingredientSummary = await screen.findByTestId(
+      "mobile-ingredient-summary",
     );
 
-    expect(ingredientArchive.className).toContain("mt-5");
-    expect(ingredientArchive.className).not.toContain("mt-[520px]");
+    expect(ingredientSummary.className).not.toContain("mt-[520px]");
+    expect(screen.getByTestId("cook-mode-servings").textContent).toBe("2인분");
+    expect(screen.getByTestId("cook-mode-content").firstElementChild).toBe(
+      ingredientSummary,
+    );
+  });
+
+  it("places a compact ingredient summary directly before mobile steps", async () => {
+    installMatchMedia(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(buildCookModeData());
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const ingredientSummary = await screen.findByTestId(
+      "mobile-ingredient-summary",
+    );
+    const stepList = screen.getByTestId("step-list");
+    const orderedSections = Array.from(
+      screen
+        .getByTestId("cook-mode-content")
+        .querySelectorAll(
+          '[data-testid="mobile-ingredient-summary"], [data-testid="step-list"]',
+        ),
+    ).map((element) => element.getAttribute("data-testid"));
+
+    expect(orderedSections).toEqual([
+      "mobile-ingredient-summary",
+      "step-list",
+    ]);
+    expect(ingredientSummary.compareDocumentPosition(stepList)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(screen.getByText("김치 200g")).toBeTruthy();
+    expect(screen.getByText("적당량")).toBeTruthy();
   });
 
   it("uses cooking method color keys from recipe data on step cards", async () => {

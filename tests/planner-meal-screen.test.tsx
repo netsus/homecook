@@ -354,6 +354,51 @@ describe("MealScreen", () => {
     );
   });
 
+  it("uses only the selected shopping_done meal servings when the same recipe appears more than once", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({
+      items: [
+        buildMeal({
+          id: "meal-1",
+          planned_servings: 2,
+          status: "shopping_done",
+        }),
+        buildMeal({
+          id: "meal-2",
+          planned_servings: 3,
+          status: "shopping_done",
+        }),
+      ],
+    });
+    createCookingSession.mockResolvedValue({
+      session_id: "session-selected",
+      recipe_id: "recipe-1",
+      status: "in_progress",
+      cooking_servings: 3,
+      meals: [{ meal_id: "meal-2", is_cooked: false }],
+    });
+
+    const user = userEvent.setup();
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("김치찌개")).toHaveLength(2);
+    });
+
+    const cookButtons = screen.getAllByRole("button", {
+      name: "김치찌개 요리하기",
+    });
+    await user.click(cookButtons[1]);
+
+    await waitFor(() => {
+      expect(createCookingSession).toHaveBeenCalledWith({
+        recipe_id: "recipe-1",
+        meal_ids: ["meal-2"],
+        cooking_servings: 3,
+      });
+    });
+  });
+
   it("does not show direct cook action for registered meals", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({

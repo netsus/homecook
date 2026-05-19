@@ -118,7 +118,7 @@ export function MobileCookModeView({
               className="text-[13px] font-medium leading-[1.2] text-white"
               data-testid={servingsTestId}
             >
-              {recipe.steps.length}단계
+              {recipe.cooking_servings}인분
             </p>
           </div>
           <div aria-hidden="true" className="h-9 w-9" />
@@ -128,11 +128,8 @@ export function MobileCookModeView({
           className="min-h-0 flex-1 overflow-y-auto px-4 pb-4"
           data-testid={contentTestId}
         >
+          <MobileIngredientSummary ingredients={recipe.ingredients} />
           <MobileStepList recipeTitle={recipe.title} steps={recipe.steps} />
-          <MobileIngredientArchive
-            ingredients={recipe.ingredients}
-            stepCount={recipe.steps.length}
-          />
         </main>
       </div>
 
@@ -158,7 +155,6 @@ export function MobileCookModeView({
           </button>
         </div>
       </div>
-
     </div>
   );
 }
@@ -221,46 +217,52 @@ function MobileStepList({
   );
 }
 
-function MobileIngredientArchive({
+function MobileIngredientSummary({
   ingredients,
-  stepCount,
 }: {
   ingredients: CookingModeIngredient[];
-  stepCount: number;
 }) {
   if (ingredients.length === 0) {
     return null;
   }
 
-  const spacingClass = stepCount <= 1 ? "mt-5" : "mt-[520px]";
-
   return (
     <section
       aria-labelledby="mobile-ingredients-heading"
-      className={`${spacingClass} pb-10`}
-      data-testid="mobile-ingredient-archive"
+      className="mb-3 rounded-[var(--radius-card)] bg-white/[0.07] px-3 py-3"
+      data-testid="mobile-ingredient-summary"
     >
       <h2
-        className="mb-3 text-sm font-bold text-white/70"
+        className="mb-2 text-[12px] font-semibold leading-[1.2] text-white/68"
         id="mobile-ingredients-heading"
       >
         재료
       </h2>
-      <ul className="flex flex-col gap-2" data-testid="ingredient-list">
-        {ingredients.map((ingredient) => (
-          <li
-            className="flex items-center justify-between rounded-[var(--radius-card)] bg-white px-4 py-3 text-[#212529]"
-            data-testid="ingredient-item"
-            key={ingredient.ingredient_id}
-          >
-            <span className="text-sm font-semibold">
-              {ingredient.standard_name}
-            </span>
-            <span className="text-sm font-medium text-[#495057]">
-              {formatIngredientAmount(ingredient)}
-            </span>
-          </li>
-        ))}
+      <ul
+        className="flex flex-wrap gap-x-2 gap-y-1.5"
+        data-testid="ingredient-list"
+      >
+        {ingredients.map((ingredient) => {
+          const amountLabel = formatIngredientAmount(ingredient);
+          const usesDisplayText =
+            typeof ingredient.display_text === "string" &&
+            ingredient.display_text.includes(ingredient.standard_name);
+
+          return (
+            <li
+              className="inline-flex min-h-7 items-center gap-1.5 rounded-full bg-white/[0.11] px-2.5 py-1 text-[13px] font-medium leading-[1.25] text-white/88"
+              data-testid="ingredient-item"
+              key={ingredient.ingredient_id}
+            >
+              <span>
+                {usesDisplayText ? ingredient.display_text : ingredient.standard_name}
+              </span>
+              {!usesDisplayText && amountLabel ? (
+                <span className="text-white/70">{amountLabel}</span>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
