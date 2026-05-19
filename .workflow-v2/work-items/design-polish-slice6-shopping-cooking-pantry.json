@@ -1,0 +1,140 @@
+{
+  "id": "design-polish-slice6-shopping-cooking-pantry",
+  "title": "Design Polish Slice 6 - MEAL_SCREEN cook servings and COOK_MODE ingredient proximity",
+  "summary": "MEAL_SCREEN 개별 요리 진입 시 선택된 meal 1건의 planned_servings만 cooking_servings로 사용하고, COOK_MODE 재료를 조리 단계 바로 위 compact list로 배치한다. FE-only, API/DB 변경 없음.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "개별 끼니 요리 인분과 요리모드 정보 위계를 안정화해 사용자가 등록한 식사 인분 그대로 조리하고 재료를 조리법 옆 맥락에서 확인하게 한다.",
+  "owners": {
+    "claude": "stage1/stage4 requested but provider-limited; final authority when available",
+    "codex": "stage1 fallback, stage4 fallback if needed, stage5, stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "design-polish-slice1-typography-tokens",
+    "design-polish-slice2-app-shell-home",
+    "design-polish-slice3-recipe-detail",
+    "design-polish-slice4-planner-meal-add",
+    "design-polish-slice5-manual-youtube",
+    "07-meal-manage",
+    "14-cook-session-start",
+    "15a-cook-planner-complete",
+    "15b-cook-standalone-complete"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.6.7.md",
+      "docs/화면정의서-v1.5.4.md",
+      "docs/유저flow맵-v1.3.4.md",
+      "docs/api문서-v1.2.5.md",
+      "docs/db설계-v1.3.3.md",
+      "docs/design/mobile-ux-rules.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/design-polish-slice6-shopping-cooking-pantry/README.md",
+      "docs/workpacks/design-polish-slice6-shopping-cooking-pantry/acceptance.md",
+      "docs/workpacks/design-polish-slice6-shopping-cooking-pantry/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/product-design-authority.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice design-polish-slice6-shopping-cooking-pantry",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "screenshot",
+      "authority-report",
+      "exploratory-report",
+      "eval-result"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "collecting",
+    "docs_projection": {
+      "roadmap_lifecycle": "planned",
+      "design_status": "temporary",
+      "delivery_checklist": "pending",
+      "design_authority": "pending",
+      "acceptance": "pending",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "pending",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "Stage 1 docs validation pending"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": null,
+      "approval_state": "not_started",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-05-20T05:30:00+09:00"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "claude_provider_limit_codex_stage1_fallback",
+      "evidence_sources": []
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-20T05:30:00+09:00",
+      "status_synced_at": "2026-05-20T05:30:00+09:00",
+      "pr_body_synced_at": null
+    }
+  },
+  "notes": "Stage 1 was requested through Claude resume session b475ec3a-c10b-42ae-9c38-1df94982e645 with model=opus, effort=high, permission_mode=bypassPermissions; provider limit blocked execution, so Codex completed fallback per user instruction. FE-only high-risk MEAL_SCREEN/COOK_MODE polish planned. API/DB/web token/global brand token changes out of scope.",
+  "out_of_scope": [
+    "API, DB, auth, state transition contract changes",
+    "Registered meal direct cooking",
+    "Standalone cook semantics changes",
+    "Shopping preview/list generation changes",
+    "Pantry consumption policy changes",
+    "Web color tokens or global brand token value changes"
+  ],
+  "open_questions": []
+}

@@ -1,0 +1,83 @@
+{
+  "slice_id": "design-polish-slice6-shopping-cooking-pantry",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "anchor_extension": false,
+  "anchor_screens": [],
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "branch": "feature/fe-design-polish-slice6-shopping-cooking-pantry",
+    "stage": 4,
+    "required_routes": [
+      "/planner/[date]/[columnId]",
+      "/cooking/sessions/[session_id]/cook-mode"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only:preserved",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "screenshot",
+      "authority-report",
+      "exploratory-report",
+      "eval-result"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "MEAL_SCREEN",
+        "COOK_MODE"
+      ],
+      "generator_required": false,
+      "generator_artifact": "ui/designs/MEAL_SCREEN.md",
+      "critic_required": false,
+      "critic_artifact": "ui/designs/critiques/MEAL_SCREEN-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/DESIGN_POLISH_SLICE6_SHOPPING_COOKING_PANTRY-authority.md"
+      ],
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/MEAL_SCREEN-cook-shortcut-mobile.png",
+        "ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/MEAL_SCREEN-cook-shortcut-narrow.png",
+        "ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/COOK_MODE-ingredients-steps-mobile.png",
+        "ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/COOK_MODE-ingredients-steps-narrow.png"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "selected-meal-serving-contract-drift",
+    "registered-meal-cook-shortcut-visible",
+    "cook-mode-ingredient-step-overlap",
+    "mobile-narrow-layout-overlap"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}
