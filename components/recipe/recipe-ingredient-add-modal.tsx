@@ -232,12 +232,15 @@ export function RecipeIngredientAddModal({
                       <button
                         aria-pressed={isSelected}
                         className={[
-                          "web-ingredient-cell inline-flex",
+                          "web-ingredient-cell",
                           isSelected ? "web-ingredient-cell-selected" : "",
                         ].join(" ")}
                         onClick={() => toggleIngredient(ingredient)}
                         type="button"
                       >
+                        <span className="web-ingredient-cell-mark" aria-hidden="true">
+                          {isSelected ? "✓" : "+"}
+                        </span>
                         <span>{ingredient.standard_name}</span>
                       </button>
                     </li>

@@ -848,7 +848,8 @@ button {
   .app-shell.wave1-recipe-shell,
   .app-shell.wave1-planner-web-shell,
   .app-shell.wave1-leftovers-web-shell,
-  .app-shell.wave1-meal-shell {
+  .app-shell.wave1-meal-shell,
+  .app-shell.wave1-mypage-shell {
     background: var(--web-bg);
     padding: 0;
   }
@@ -857,7 +858,8 @@ button {
   .app-shell.wave1-recipe-shell > div,
   .app-shell.wave1-planner-web-shell > div,
   .app-shell.wave1-leftovers-web-shell > div,
-  .app-shell.wave1-meal-shell > div {
+  .app-shell.wave1-meal-shell > div,
+  .app-shell.wave1-mypage-shell > div {
     max-width: none;
     gap: 0;
   }
@@ -866,7 +868,8 @@ button {
   .app-shell.wave1-recipe-shell main,
   .app-shell.wave1-planner-web-shell main,
   .app-shell.wave1-leftovers-web-shell main,
-  .app-shell.wave1-meal-shell main {
+  .app-shell.wave1-meal-shell main,
+  .app-shell.wave1-mypage-shell main {
     width: 100%;
   }
 
@@ -874,7 +877,8 @@ button {
   .app-shell.wave1-recipe-shell > nav,
   .app-shell.wave1-planner-web-shell > nav,
   .app-shell.wave1-leftovers-web-shell > nav,
-  .app-shell.wave1-meal-shell > nav {
+  .app-shell.wave1-meal-shell > nav,
+  .app-shell.wave1-mypage-shell > nav {
     display: none;
   }
 
@@ -3102,22 +3106,46 @@ button {
   }
 
   .web-ingredient-cell {
+    position: relative;
     display: grid;
-    min-height: 58px;
-    align-content: center;
-    gap: 2px;
+    width: 100%;
+    min-height: 78px;
+    place-items: center;
+    gap: 6px;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-sm);
-    background: var(--web-surface);
+    background: var(--web-bg-alt);
     color: var(--web-text-1);
-    padding: 10px 12px;
-    text-align: left;
-    transition: border-color 0.15s ease, background 0.15s ease;
+    padding: 14px 34px 14px 14px;
+    text-align: center;
+    font-weight: 800;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      box-shadow 0.15s ease;
   }
 
   .web-ingredient-cell-selected {
     border-color: var(--web-brand);
     background: var(--web-brand-wash);
+    box-shadow: inset 0 0 0 1px var(--web-brand);
+  }
+
+  .web-ingredient-cell-mark {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: inline-flex;
+    width: 22px;
+    height: 22px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--web-r-pill);
+    background: var(--web-surface);
+    color: var(--web-brand-accessible);
+    font-size: 13px;
+    font-weight: 900;
+    box-shadow: var(--web-shadow-card);
   }
 
   .web-ingredient-editor {

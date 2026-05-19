@@ -13,6 +13,7 @@ const mockCreateRecipeBook = vi.fn();
 const mockRenameRecipeBook = vi.fn();
 const mockDeleteRecipeBook = vi.fn();
 const mockFetchShoppingHistory = vi.fn();
+const originalScrollTo = window.scrollTo;
 
 vi.mock("@/lib/api/mypage", () => ({
   fetchUserProfile: (...args: unknown[]) => mockFetchUserProfile(...args),
@@ -138,11 +139,19 @@ describe("MypageScreen", () => {
   afterEach(() => {
     cleanup();
     Reflect.deleteProperty(window, "matchMedia");
+    Object.defineProperty(window, "scrollTo", {
+      configurable: true,
+      value: originalScrollTo,
+    });
     window.history.pushState({}, "", "/");
   });
 
   beforeEach(() => {
     window.history.pushState({}, "", "/mypage");
+    Object.defineProperty(window, "scrollTo", {
+      configurable: true,
+      value: vi.fn(),
+    });
     installMatchMedia(false);
     mockFetchUserProfile.mockReset();
     mockFetchRecipeBooks.mockReset();
@@ -183,6 +192,16 @@ describe("MypageScreen", () => {
     expect(screen.getByTestId("system-book-saved").textContent).toContain("저장한 레시피");
     expect(screen.getByTestId("system-book-liked").textContent).toContain("좋아요한 레시피");
     expect(screen.getByText("주말 파티")).toBeTruthy();
+  });
+
+  it("resets desktop scroll position when opening the recipebook surface", async () => {
+    render(<MypageScreen initialAuthenticated />);
+
+    const user = userEvent.setup();
+    await screen.findByText("집밥러");
+    await user.click(screen.getByRole("button", { name: /레시피북 관리/ }));
+
+    expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
   });
 
   it("uses a visible settings row instead of an icon-only profile gear", async () => {

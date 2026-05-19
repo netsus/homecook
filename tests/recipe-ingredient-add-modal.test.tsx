@@ -87,4 +87,26 @@ describe("RecipeIngredientAddModal", () => {
       ]);
     });
   });
+
+  it("renders desktop ingredient options as full grid cards and keeps multi-selection", async () => {
+    installMatchMedia(true);
+    const user = userEvent.setup();
+
+    render(<RecipeIngredientAddModal onAdd={vi.fn()} onClose={vi.fn()} />);
+
+    const onionCard = await screen.findByRole("button", { name: "양파" });
+    const tofuCard = screen.getByRole("button", { name: "두부" });
+
+    expect(onionCard.className).toContain("web-ingredient-cell");
+    expect(onionCard.className).not.toContain("inline-flex");
+
+    await user.click(onionCard);
+    await user.click(tofuCard);
+
+    expect(onionCard.getAttribute("aria-pressed")).toBe("true");
+    expect(tofuCard.getAttribute("aria-pressed")).toBe("true");
+    expect(
+      screen.getByRole("button", { name: "선택한 재료 2개 추가" }),
+    ).toBeTruthy();
+  });
 });

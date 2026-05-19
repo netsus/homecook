@@ -191,6 +191,11 @@ export function MypageScreen({
     setTimeout(() => setToast(null), TOAST_DURATION_MS);
   }, []);
 
+  const switchDesktopTab = useCallback((tab: MypageTab) => {
+    setActiveTab(tab);
+    window.scrollTo(0, 0);
+  }, []);
+
   // --- Data loading ---
 
   const loadRecipeBooks = useCallback(async () => {
@@ -660,28 +665,28 @@ export function MypageScreen({
           <WebTabButton
             active={activeTab === "saved" || activeTab === "recipebooks" || activeTab === "shopping"}
             aria-label="저장한 레시피"
-            onClick={() => setActiveTab("saved")}
+            onClick={() => switchDesktopTab("saved")}
           >
             <BookmarkIcon /> 저장한 레시피
           </WebTabButton>
           <WebTabButton
             active={activeTab === "account"}
             aria-label="계정 관리"
-            onClick={() => setActiveTab("account")}
+            onClick={() => switchDesktopTab("account")}
           >
             <UserIcon /> 계정 관리
           </WebTabButton>
           <WebTabButton
             active={activeTab === "notifications"}
             aria-label="알림 설정"
-            onClick={() => setActiveTab("notifications")}
+            onClick={() => switchDesktopTab("notifications")}
           >
             <BellIcon /> 알림 설정
           </WebTabButton>
           <WebTabButton
             active={activeTab === "help"}
             aria-label="도움말"
-            onClick={() => setActiveTab("help")}
+            onClick={() => switchDesktopTab("help")}
           >
             <HelpIcon /> 도움말
           </WebTabButton>
@@ -694,8 +699,8 @@ export function MypageScreen({
               savedRecipeCount={savedRecipeCount}
               shoppingCount={shoppingItems.length}
               totalRecipeCount={totalRecipeCount}
-              onOpenRecipebooks={() => setActiveTab("recipebooks")}
-              onOpenShopping={() => setActiveTab("shopping")}
+              onOpenRecipebooks={() => switchDesktopTab("recipebooks")}
+              onOpenShopping={() => switchDesktopTab("shopping")}
             />
           ) : null}
           {activeTab === "account" ? (
