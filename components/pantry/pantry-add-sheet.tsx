@@ -188,7 +188,7 @@ export function PantryAddSheet({
           <>
             <input
               aria-label="재료명 검색"
-              className="h-[38px] w-full rounded-md border border-[#DEE2E6] bg-white px-3 text-[14px] font-medium text-[#212529] placeholder:text-[#868E96] focus:outline-none focus:ring-2 focus:ring-[#2AC1BC]"
+              className="h-[38px] w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-[14px] font-medium text-[#212529] placeholder:text-[#868E96] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="재료 검색"
               type="text"
@@ -227,7 +227,7 @@ export function PantryAddSheet({
               재료 목록을 불러오지 못했어요
             </p>
             <button
-              className="mt-4 h-10 rounded-[10px] bg-[#2AC1BC] px-5 text-[13px] font-extrabold text-white"
+              className="mt-4 h-10 rounded-[var(--radius-control)] bg-[var(--brand)] px-5 text-[13px] font-extrabold text-white"
               onClick={() => void loadIngredients(searchQuery, activeCategory)}
               type="button"
             >
@@ -253,11 +253,11 @@ export function PantryAddSheet({
                       : ingredient.standard_name
                   }
                   className={[
-                    "flex min-h-[54px] items-center gap-2 rounded-xl border px-3 text-left disabled:opacity-60",
+                    "flex min-h-[54px] items-center gap-2 rounded-[var(--radius-card)] border px-3 text-left disabled:opacity-60",
                     isExisting
                       ? "border-[#DEE2E6] bg-[#F8F9FA] opacity-60 grayscale"
                       : isChecked
-                        ? "border-[#2AC1BC] bg-[#E8FAF8]"
+                        ? "border-[var(--brand)] bg-[var(--brand-soft)]"
                         : "border-[#DEE2E6] bg-white",
                   ].join(" ")}
                   data-owned={isExisting ? "true" : undefined}
@@ -270,7 +270,7 @@ export function PantryAddSheet({
                   <span
                     aria-hidden="true"
                     className={[
-                      "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[10px] bg-[#F8F9FA] text-[18px]",
+                      "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[#F8F9FA] text-[18px]",
                       isExisting ? "opacity-70" : "",
                     ].join(" ")}
                   >
@@ -289,7 +289,7 @@ export function PantryAddSheet({
                       보유중
                     </span>
                   ) : isChecked ? (
-                    <span className="shrink-0 text-[15px] font-extrabold text-[#2AC1BC]">
+                    <span className="shrink-0 text-[15px] font-extrabold text-[var(--brand)]">
                       ✓
                     </span>
                   ) : null}
@@ -472,7 +472,7 @@ function MobileCategoryChip({
       className={[
         "h-[31px] shrink-0 rounded-full border px-3 text-[12px] font-extrabold leading-none",
         active
-          ? "border-[#2AC1BC] bg-white text-[#2AC1BC]"
+          ? "border-[var(--brand)] bg-white text-[var(--brand)]"
           : "border-[#DEE2E6] bg-white text-[#495057]",
       ].join(" ")}
       onClick={onClick}

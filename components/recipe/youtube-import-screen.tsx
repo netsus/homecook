@@ -180,7 +180,7 @@ function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBar
         {step !== "complete" && (
           <button
             aria-label="뒤로 가기"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-white/60"
+            className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-white/60"
             onClick={onBack}
             type="button"
             disabled={isRegistering}
@@ -196,7 +196,7 @@ function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBar
         {step === "review" && (
           <button
             className={[
-              "h-11 rounded-[var(--radius-sm)] px-4 text-base font-semibold",
+              "h-[var(--control-height-md)] rounded-[var(--radius-sm)] px-4 text-base font-semibold",
               canRegister && !isRegistering
                 ? "bg-[var(--wave1-mint-contrast)] text-white shadow-[var(--wave1-shadow-soft)] hover:bg-[var(--wave1-mint-contrast-deep)]"
                 : "cursor-not-allowed bg-[#DEE2E6] text-[#ADB5BD]",
@@ -517,7 +517,7 @@ function ReviewStep({
 
       {registerRequirements.length > 0 ? (
         <div
-          className="mt-4 rounded-[12px] bg-[#F8F9FA] px-4 py-3"
+          className="mt-4 rounded-[var(--radius-card)] bg-[#F8F9FA] px-4 py-3"
           data-testid="youtube-register-requirements"
           role="status"
         >
@@ -527,7 +527,7 @@ function ReviewStep({
           <div className="mt-2 flex flex-wrap gap-2">
             {registerRequirements.map((requirement) => (
               <span
-                className="rounded-[8px] bg-white px-2.5 py-1 text-[12px] font-medium text-[#495057]"
+                className="rounded-[var(--radius-control)] bg-white px-2.5 py-1 text-[12px] font-medium text-[#495057]"
                 key={requirement}
               >
                 {requirement}
@@ -634,7 +634,7 @@ function ReviewStep({
                   </div>
                   <button
                     aria-label={`${ing.standard_name} 삭제`}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
+                    className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
                     onClick={() => onRemoveIngredient(ing.tempId)}
                     type="button"
                   >
@@ -702,7 +702,7 @@ function ReviewStep({
                   </div>
                   <button
                     aria-label={`스텝 ${step.step_number} 삭제`}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
+                    className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
                     onClick={() => onRemoveStep(step.tempId)}
                     type="button"
                   >
@@ -740,8 +740,8 @@ function CompleteStep({ recipeTitle, hasPlanContext, onMealAdd, onViewDetail, on
     <div className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-[var(--radius-lg)] bg-[var(--surface)] p-6 shadow-[var(--shadow-2)]">
         <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center">
-            <svg className="h-12 w-12 text-[var(--olive)]" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <div className="mx-auto flex h-[var(--control-height-lg)] w-12 items-center justify-center">
+            <svg className="h-[var(--control-height-lg)] w-12 text-[var(--olive)]" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
               <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="3" fill="none" />
               <path d="M14 24l7 7 13-13" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
             </svg>
@@ -810,7 +810,7 @@ function StepAddModal({ onClose, onAdd, cookingMethods, nextStepNumber }: StepAd
     >
       <div
         aria-modal="true"
-        className="w-full max-w-md rounded-t-[20px] bg-[var(--surface)] p-6 sm:rounded-[20px]"
+        className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
@@ -869,7 +869,7 @@ interface RegisterErrorModalProps {
 function RegisterErrorModal({ errorMessage, onRetry, onClose }: RegisterErrorModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="w-full max-w-md rounded-t-[20px] bg-[var(--surface)] p-6 sm:rounded-[20px]">
+      <div className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]">
         <ModalHeader title="레시피 등록 실패" onClose={onClose} />
         <p className="mt-4 text-base text-[var(--text-2)]">
           {errorMessage}
@@ -899,7 +899,7 @@ interface ConfirmBackModalProps {
 function ConfirmBackModal({ onConfirm, onCancel }: ConfirmBackModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="w-full max-w-md rounded-t-[20px] bg-[var(--surface)] p-6 sm:rounded-[20px]">
+      <div className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]">
         <ModalHeader title="수정 내용이 사라져요" onClose={onCancel} description="뒤로 가면 수정한 내용이 모두 사라져요." />
         <div className="mt-6 space-y-3">
           <Button fullWidth variant="destructive" onClick={onConfirm}>
@@ -929,13 +929,13 @@ function ServingsInputModal({ onConfirm, onCancel, defaultServings, isCreating, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="w-full max-w-md rounded-t-[20px] bg-[var(--surface)] p-6 sm:rounded-[20px]">
+      <div className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]">
         <ModalHeader title="이 끼니에 추가" description="계획 인분을 정해주세요" onClose={onCancel} />
         <div className="mt-6">
           <NumericStepperCompact value={servings} min={1} onChange={setServings} unit="인분" disabled={isCreating} />
         </div>
         {error && (
-          <div className="mt-4 rounded-[12px] border border-red-300 bg-red-50 p-3 text-sm text-red-700" role="alert">
+          <div className="mt-4 rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-3 text-sm text-red-700" role="alert">
             {error}
           </div>
         )}

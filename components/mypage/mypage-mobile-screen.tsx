@@ -168,7 +168,7 @@ function MobileAppBar({
 }) {
   return (
     <div
-      className="sticky top-0 z-30 flex min-h-[52px] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+      className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
       style={{ borderBottomWidth: "0.5px" }}
     >
       {onBack ? (
@@ -270,7 +270,7 @@ function MobileHomeSurface({
           ) : (
             <div
               aria-label="프로필 이니셜"
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2AC1BC] to-[#12B886] text-[24px] font-extrabold text-white"
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--brand)] to-[var(--brand-deep)] text-[24px] font-extrabold text-white"
               data-testid="profile-fallback-avatar"
             >
               {fallbackInitial}
@@ -285,7 +285,7 @@ function MobileHomeSurface({
             </p>
           </div>
           <Link
-            className="flex h-8 shrink-0 items-center justify-center rounded-lg bg-[#F8F9FA] px-3 text-[12px] font-bold text-[#495057]"
+            className="flex h-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[#F8F9FA] px-3 text-[12px] font-bold text-[#495057]"
             data-testid="mypage-settings-link"
             href="/settings"
           >
@@ -294,7 +294,7 @@ function MobileHomeSurface({
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <MobileStatCard color="#2AC1BC" label="요리 완료" value="24" />
+          <MobileStatCard color="var(--brand)" label="요리 완료" value="24" />
           <MobileStatCard
             color="#FFB347"
             label="레시피북"
@@ -306,7 +306,7 @@ function MobileHomeSurface({
 
       <section className="p-4">
         <div
-          className="overflow-hidden rounded-xl border border-[#DEE2E6] bg-white"
+          className="overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white"
           data-testid="mypage-menu-card"
         >
           {menuRows.map((row, index) => {
@@ -319,7 +319,7 @@ function MobileHomeSurface({
               <>
                 <span
                   aria-hidden="true"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F8F9FA] text-[#495057]"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[#F8F9FA] text-[#495057]"
                 >
                   <MenuLineIcon name={row.icon} />
                 </span>
@@ -370,7 +370,7 @@ function MobileStatCard({
   value: string;
 }) {
   return (
-    <div className="rounded-[10px] bg-[#F8F9FA] px-2 py-3 text-center">
+    <div className="rounded-[var(--radius-control)] bg-[#F8F9FA] px-2 py-3 text-center">
       <div
         className="text-[22px] font-extrabold leading-none"
         style={{ color }}
@@ -546,7 +546,7 @@ function MobileRecipebookSurface({
       </div>
 
       {showCreateInput ? (
-        <div className="mt-2 flex min-h-[58px] items-center gap-2 rounded-xl border-2 border-[#2AC1BC] bg-white px-4 py-3">
+        <div className="mt-2 flex min-h-[58px] items-center gap-2 rounded-[var(--radius-card)] border-2 border-[var(--brand)] bg-white px-4 py-3">
           <input
             ref={createInputRef}
             className="min-w-0 flex-1 bg-transparent text-[14px] font-bold text-[#212529] outline-none placeholder:text-[#868E96]"
@@ -562,7 +562,7 @@ function MobileRecipebookSurface({
             value={createName}
           />
           <button
-            className="shrink-0 text-[13px] font-extrabold text-[#20A8A4] disabled:opacity-50"
+            className="shrink-0 text-[13px] font-extrabold text-[var(--brand)] disabled:opacity-50"
             disabled={isCreating || !createName.trim()}
             onClick={() => void onCreateBook()}
             type="button"
@@ -581,7 +581,7 @@ function MobileRecipebookSurface({
 
       <button
         aria-label="새 레시피북 만들기"
-        className="mt-3 flex h-12 w-full items-center justify-center rounded-xl border border-dashed border-[#DEE2E6] bg-transparent text-[13px] font-extrabold text-[#868E96]"
+        className="mt-3 flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-card)] border border-dashed border-[#DEE2E6] bg-transparent text-[13px] font-extrabold text-[#868E96]"
         onClick={onShowCreateInput}
         type="button"
       >
@@ -605,7 +605,7 @@ function MobileSystemBookCard({ book }: { book: RecipeBookSummary }) {
 
   return (
     <Link
-      className="flex min-h-[72px] items-center gap-3 rounded-xl border border-[#DEE2E6] bg-white px-4 py-[14px]"
+      className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white px-4 py-[14px]"
       data-testid={`system-book-${book.book_type}`}
       href={buildBookDetailHref(book)}
       role="listitem"
@@ -663,7 +663,7 @@ function MobileCustomBookCard({
   if (isRenaming) {
     return (
       <div
-        className="flex min-h-[72px] items-center gap-2 rounded-xl border-2 border-[#2AC1BC] bg-white px-4 py-3"
+        className="flex min-h-[72px] items-center gap-2 rounded-[var(--radius-card)] border-2 border-[var(--brand)] bg-white px-4 py-3"
         role="listitem"
       >
         <input
@@ -680,7 +680,7 @@ function MobileCustomBookCard({
           value={renameValue}
         />
         <button
-          className="shrink-0 text-[13px] font-extrabold text-[#20A8A4] disabled:opacity-50"
+          className="shrink-0 text-[13px] font-extrabold text-[var(--brand)] disabled:opacity-50"
           disabled={isRenamingLoading || !renameValue.trim()}
           onClick={() => void onConfirmRename()}
           type="button"
@@ -700,7 +700,7 @@ function MobileCustomBookCard({
 
   return (
     <div className="relative" role="listitem">
-      <div className="flex min-h-[72px] items-center gap-3 rounded-xl border border-[#DEE2E6] bg-white px-4 py-[14px]">
+      <div className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white px-4 py-[14px]">
         <BookIconBox emoji={visual.emoji} />
         <Link
           className="min-w-0 flex-1"
@@ -733,7 +733,7 @@ function MobileCustomBookCard({
       {isMenuOpen ? (
         <div
           ref={menuRef}
-          className="absolute right-3 top-11 z-20 min-w-[120px] overflow-hidden rounded-[10px] border border-[#DEE2E6] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+          className="absolute right-3 top-11 z-20 min-w-[120px] overflow-hidden rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
           role="menu"
         >
           <button
@@ -762,7 +762,7 @@ function BookIconBox({ emoji }: { emoji: string }) {
   return (
     <span
       aria-hidden="true"
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-[#E6F8F7] text-[20px]"
+      className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand-soft)] text-[20px]"
     >
       {emoji}
     </span>
@@ -773,7 +773,7 @@ function RecipeCountBadge({ count }: { count: number }) {
   return (
     <span
       aria-label={`레시피 ${formatRecipeCount(count)}`}
-      className="shrink-0 rounded bg-[#E6F8F7] px-1.5 py-0.5 text-[10px] font-extrabold leading-[1.25] text-[#20A8A4]"
+      className="shrink-0 rounded bg-[var(--brand-soft)] px-1.5 py-0.5 text-[10px] font-extrabold leading-[1.25] text-[var(--brand)]"
     >
       {formatRecipeCount(count)} 레시피
     </span>
@@ -798,7 +798,7 @@ function MobileDeleteConfirmDialog({
     >
       <div
         aria-modal="true"
-        className="w-full rounded-t-[20px] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)]"
+        className="w-full rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)]"
         role="alertdialog"
       >
         <div className="flex justify-center pb-2">
@@ -812,7 +812,7 @@ function MobileDeleteConfirmDialog({
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
-            className="h-12 rounded-[10px] border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057]"
+            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057]"
             disabled={isDeleting}
             onClick={onCancel}
             type="button"
@@ -820,7 +820,7 @@ function MobileDeleteConfirmDialog({
             취소
           </button>
           <button
-            className="h-12 rounded-[10px] bg-[#FF6B6B] text-[14px] font-extrabold text-white disabled:opacity-50"
+            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[#FF6B6B] text-[14px] font-extrabold text-white disabled:opacity-50"
             disabled={isDeleting}
             onClick={() => void onConfirm()}
             type="button"
@@ -851,7 +851,7 @@ function MobileShoppingSurface({
       <main className="space-y-2 px-4 py-4">
         {[1, 2].map((index) => (
           <div
-            className="h-[68px] rounded-xl border border-[#DEE2E6] bg-white"
+            className="h-[68px] rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white"
             key={index}
           />
         ))}
@@ -862,13 +862,13 @@ function MobileShoppingSurface({
   if (items.length === 0) {
     return (
       <main className="px-4 py-4" data-testid="shopping-empty">
-        <div className="rounded-xl bg-white px-10 py-10 text-center">
+        <div className="rounded-[var(--radius-card)] bg-white px-10 py-10 text-center">
           <div className="mb-2 text-[36px] leading-none">🛒</div>
           <p className="text-[13px] font-medium text-[#868E96]">
             아직 장보기 기록이 없어요
           </p>
           <Link
-            className="mt-5 inline-flex h-10 items-center justify-center rounded-[10px] border border-[#2AC1BC] px-5 text-[13px] font-extrabold text-[#20A8A4]"
+            className="mt-5 inline-flex h-10 items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] px-5 text-[13px] font-extrabold text-[var(--brand)]"
             href="/planner"
           >
             플래너로 이동
@@ -900,7 +900,7 @@ function MobileShoppingCard({ item }: { item: ShoppingListHistoryItem }) {
 
   return (
     <Link
-      className="flex min-h-[68px] items-center gap-3 rounded-xl border border-[#DEE2E6] bg-white px-4 py-[14px]"
+      className="flex min-h-[68px] items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white px-4 py-[14px]"
       data-testid={`shopping-card-${item.id}`}
       href={buildReturnHref(`/shopping/lists/${item.id}`, {
         restore: "shopping-history-tab",
@@ -912,9 +912,9 @@ function MobileShoppingCard({ item }: { item: ShoppingListHistoryItem }) {
       <span
         aria-hidden="true"
         className={[
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[18px]",
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[18px]",
           completed
-            ? "bg-[#E6F8F7] text-[#20A8A4]"
+            ? "bg-[var(--brand-soft)] text-[var(--brand)]"
             : "bg-[#F8F9FA] text-[#495057]",
         ].join(" ")}
       >

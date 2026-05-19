@@ -102,7 +102,7 @@ export function SocialLoginButtons({
         return (
           <button
             key={providerId}
-            className={`flex min-h-[48px] w-full items-center justify-center rounded-[8px] px-4 py-3.5 text-[15px] font-bold transition hover:brightness-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${getProviderButtonClass(providerId, provider.className)}`}
+            className={`flex min-h-[48px] w-full items-center justify-center rounded-[var(--radius-control)] px-4 py-3.5 text-[15px] font-bold transition hover:brightness-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${getProviderButtonClass(providerId, provider.className)}`}
             disabled={isPending}
             onClick={() => handleSignIn(providerId)}
             type="button"
@@ -148,7 +148,7 @@ export function SocialLoginButtons({
         </p>
       ) : null}
       {errorMessage ? (
-        <p className="rounded-[12px] border border-[color:rgba(255,107,107,0.2)] bg-[color:rgba(255,107,107,0.08)] px-4 py-3 text-sm text-[var(--danger)]">
+        <p className="rounded-[var(--radius-card)] border border-[color:rgba(255,107,107,0.2)] bg-[color:rgba(255,107,107,0.08)] px-4 py-3 text-sm text-[var(--danger)]">
           {errorMessage}
         </p>
       ) : null}

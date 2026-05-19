@@ -102,7 +102,7 @@ export function SortDropdown({
         aria-haspopup="listbox"
         aria-label={`${label}: ${selectedOption?.label ?? ""}`}
         className={[
-          "inline-flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-none border-0 bg-transparent px-0 py-1 text-[13px] font-semibold text-[#495057] transition-colors",
+          "inline-flex min-h-[var(--control-height-md)] items-center gap-1 whitespace-nowrap rounded-none border-0 bg-transparent px-0 py-1 text-[13px] font-semibold text-[#495057] transition-colors",
           open ? "text-[#212529]" : "hover:text-[#212529]",
           disabled ? "cursor-not-allowed opacity-60" : "",
         ]
@@ -135,7 +135,7 @@ export function SortDropdown({
         <ul
           aria-label={`${label} 옵션`}
           className={[
-            "absolute right-0 z-40 min-w-[140px] overflow-hidden rounded-[10px] border border-[#DEE2E6] bg-white shadow-[0px_4px_12px_rgba(0,0,0,0.10)]",
+            "absolute right-0 z-40 min-w-[140px] overflow-hidden rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white shadow-[0px_4px_12px_rgba(0,0,0,0.10)]",
             placement === "top" ? "bottom-full mb-1" : "top-full mt-1",
           ].join(" ")}
           ref={listRef}
@@ -147,7 +147,7 @@ export function SortDropdown({
               <li
                 aria-selected={isSelected}
                 className={[
-                  "flex min-h-[44px] w-full cursor-pointer items-center whitespace-nowrap px-4 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--wave1-mint-contrast)] focus:ring-inset",
+                  "flex min-h-[var(--control-height-md)] w-full cursor-pointer items-center whitespace-nowrap px-4 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--wave1-mint-contrast)] focus:ring-inset",
                   isSelected
                     ? "bg-[#F1F3F5] font-bold text-[#212529]"
                     : "bg-white font-medium text-[#212529] hover:bg-[#F8F9FA]",

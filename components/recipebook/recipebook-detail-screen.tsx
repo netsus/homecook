@@ -453,7 +453,7 @@ export function RecipeBookDetailScreen({
             })}
           />
           <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
+            className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
             href={appReturn.href}
           >
             마이페이지로 돌아가기
@@ -482,7 +482,7 @@ export function RecipeBookDetailScreen({
             {errorMessage}
           </h2>
           <button
-            className="mt-4 flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-white"
+            className="mt-4 flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-white"
             onClick={() => void loadRecipes()}
             type="button"
           >
@@ -506,7 +506,7 @@ export function RecipeBookDetailScreen({
           variant="subtle"
         >
           <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--brand)] px-5 py-3 text-sm font-semibold text-[var(--brand)]"
+            className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--brand)] px-5 py-3 text-sm font-semibold text-[var(--brand)]"
             href="/"
           >
             레시피 둘러보기
@@ -781,7 +781,7 @@ function DetailHeader({
       >
       <Link
         aria-label="뒤로 가기"
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+        className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full"
         href={backHref}
       >
         <svg
@@ -804,7 +804,7 @@ function DetailHeader({
           <div className="flex min-w-0 items-center gap-2">
             <input
               aria-label="레시피북 이름"
-              className="min-h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-[var(--brand)] bg-[var(--surface-fill)] px-3 text-base font-semibold text-[var(--foreground)] outline-none"
+              className="min-h-[var(--control-height-md)] min-w-0 flex-1 rounded-[var(--radius-md)] border border-[var(--brand)] bg-[var(--surface-fill)] px-3 text-base font-semibold text-[var(--foreground)] outline-none"
               disabled={isSaving}
               maxLength={50}
               onChange={(event) => onRenameValueChange?.(event.target.value)}
@@ -815,7 +815,7 @@ function DetailHeader({
               value={renameValue}
             />
             <button
-              className="flex min-h-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-3 text-sm font-bold text-white disabled:opacity-50"
+              className="flex min-h-[var(--control-height-md)] shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-3 text-sm font-bold text-white disabled:opacity-50"
               disabled={isSaving || !renameValue.trim()}
               onClick={onRenameConfirm}
               type="button"
@@ -823,7 +823,7 @@ function DetailHeader({
               {isSaving ? "저장 중..." : "완료"}
             </button>
             <button
-              className="flex min-h-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] px-3 text-sm font-semibold text-[var(--text-2)] disabled:opacity-50"
+              className="flex min-h-[var(--control-height-md)] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] px-3 text-sm font-semibold text-[var(--text-2)] disabled:opacity-50"
               disabled={isSaving}
               onClick={onRenameCancel}
               type="button"
@@ -849,7 +849,7 @@ function DetailHeader({
                 aria-expanded={isMenuOpen}
                 aria-haspopup="menu"
                 aria-label={`${bookName} 옵션 메뉴`}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-3)]"
+                className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-3)]"
                 onClick={onMenuToggle}
                 type="button"
               >
@@ -919,7 +919,7 @@ function BookDeleteConfirmDialog({
           aria-describedby="recipebook-delete-description"
           aria-labelledby="recipebook-delete-title"
           aria-modal="true"
-          className="w-full rounded-t-[20px] bg-white px-5 pb-[calc(14px+env(safe-area-inset-bottom))] pt-5 shadow-[0_-8px_28px_rgba(0,0,0,0.18)]"
+          className="w-full rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(14px+env(safe-area-inset-bottom))] pt-5 shadow-[0_-8px_28px_rgba(0,0,0,0.18)]"
           role="alertdialog"
         >
           <div
@@ -940,7 +940,7 @@ function BookDeleteConfirmDialog({
           </p>
           {errorMessage ? (
             <p
-              className="mt-3 rounded-lg bg-[#FFF5F5] px-3 py-2 text-[13px] font-bold text-[#FF6B6B]"
+              className="mt-3 rounded-[var(--radius-control)] bg-[#FFF5F5] px-3 py-2 text-[13px] font-bold text-[#FF6B6B]"
               role="alert"
             >
               {errorMessage}
@@ -948,7 +948,7 @@ function BookDeleteConfirmDialog({
           ) : null}
           <div className="mt-5 grid grid-cols-2 gap-2">
             <button
-              className="flex h-11 items-center justify-center rounded-lg border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057] disabled:opacity-50"
+              className="flex h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057] disabled:opacity-50"
               disabled={disabled}
               onClick={onCancel}
               type="button"
@@ -956,7 +956,7 @@ function BookDeleteConfirmDialog({
               취소
             </button>
             <button
-              className="flex h-11 items-center justify-center rounded-lg bg-[#FF6B6B] text-[14px] font-extrabold text-white disabled:opacity-50"
+              className="flex h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] bg-[#FF6B6B] text-[14px] font-extrabold text-white disabled:opacity-50"
               disabled={disabled}
               onClick={onConfirm}
               type="button"
@@ -1117,7 +1117,7 @@ function MobileRecipeBookDetailView({
       {toast ? (
         <div
           className={[
-            "fixed inset-x-4 bottom-[calc(86px+env(safe-area-inset-bottom))] z-40 mx-auto max-w-md rounded-lg px-4 py-3 text-center text-[13px] font-extrabold shadow-lg",
+            "fixed inset-x-4 bottom-[calc(86px+env(safe-area-inset-bottom))] z-40 mx-auto max-w-md rounded-[var(--radius-control)] px-4 py-3 text-center text-[13px] font-extrabold shadow-lg",
             toast.tone === "success"
               ? "bg-[#E6FCF5] text-[#099268]"
               : "bg-[#FFF5F5] text-[#FF6B6B]",
@@ -1165,7 +1165,7 @@ function MobileRecipeBookAppBar({
 }) {
   return (
     <div
-      className="sticky top-0 z-30 flex min-h-[52px] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+      className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
       style={{ borderBottomWidth: "0.5px" }}
     >
       <Link
@@ -1204,7 +1204,7 @@ function MobileRecipeBookAppBar({
           </button>
           {isMenuOpen ? (
             <div
-              className="absolute right-0 top-full z-40 mt-2 w-36 overflow-hidden rounded-lg border border-[#DEE2E6] bg-white shadow-[0_8px_22px_rgba(0,0,0,0.14)]"
+              className="absolute right-0 top-full z-40 mt-2 w-36 overflow-hidden rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white shadow-[0_8px_22px_rgba(0,0,0,0.14)]"
               id="recipebook-detail-book-menu"
               role="menu"
             >
@@ -1248,7 +1248,7 @@ function MobileRecipeBookSummary({
       data-testid="recipebook-detail-header"
     >
       <div className="flex items-center gap-[14px]">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[14px] bg-[#E6FCF5] text-[26px]">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-card)] bg-[#E6FCF5] text-[26px]">
           <span aria-hidden="true">{getBookEmoji(bookType, bookName)}</span>
         </div>
         <div className="min-w-0 flex-1">
@@ -1278,7 +1278,7 @@ function MobileRecipeBookRecipeCard({
 }: RecipeItemCardProps) {
   return (
     <article
-      className="flex min-h-[82px] items-center gap-3 rounded-xl border border-[#DEE2E6] bg-white p-3"
+      className="flex min-h-[82px] items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-3"
       data-testid={`recipe-item-${item.recipe_id}`}
       role="listitem"
     >
@@ -1304,7 +1304,7 @@ function MobileRecipeBookRecipeCard({
       {canRemove ? (
         <button
           aria-label={`${item.title} ${removeLabel}`}
-          className="h-9 shrink-0 rounded-lg border border-[#DEE2E6] bg-white px-3 text-[11px] font-extrabold text-[#495057] disabled:opacity-50"
+          className="h-9 shrink-0 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-[11px] font-extrabold text-[#495057] disabled:opacity-50"
           disabled={removing}
           onClick={onRemove}
           type="button"
@@ -1321,7 +1321,7 @@ function MobileRecipeThumb({ item }: { item: RecipeBookRecipeItem }) {
     return (
       <Image
         alt={item.title}
-        className="h-14 w-14 shrink-0 rounded-[10px] object-cover"
+        className="h-14 w-14 shrink-0 rounded-[var(--radius-control)] object-cover"
         height={56}
         src={item.thumbnail_url}
         unoptimized
@@ -1332,7 +1332,7 @@ function MobileRecipeThumb({ item }: { item: RecipeBookRecipeItem }) {
 
   return (
     <div
-      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px] text-[24px]"
+      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[24px]"
       style={{ backgroundColor: getRecipeThumbColor(item.title) }}
     >
       <span aria-hidden="true">{getRecipeEmoji(item.title)}</span>
@@ -1359,7 +1359,7 @@ function MobileRecipeBookRenameSheet({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
       <div
         aria-modal="true"
-        className="w-full rounded-t-[20px] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-5 shadow-[0_-8px_28px_rgba(0,0,0,0.18)]"
+        className="w-full rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-5 shadow-[0_-8px_28px_rgba(0,0,0,0.18)]"
         role="dialog"
       >
         <h2 className="text-[18px] font-extrabold text-[#212529]">
@@ -1367,7 +1367,7 @@ function MobileRecipeBookRenameSheet({
         </h2>
         <input
           aria-label="레시피북 이름"
-          className="mt-4 h-12 w-full rounded-lg border border-[#DEE2E6] bg-[#F8F9FA] px-3 text-[15px] font-bold text-[#212529] outline-none focus:border-[#2AC1BC]"
+          className="mt-4 h-[var(--control-height-lg)] w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-[#F8F9FA] px-3 text-[15px] font-bold text-[#212529] outline-none focus:border-[var(--brand)]"
           disabled={disabled}
           maxLength={50}
           onChange={(event) => onValueChange(event.target.value)}
@@ -1384,7 +1384,7 @@ function MobileRecipeBookRenameSheet({
         ) : null}
         <div className="mt-5 grid grid-cols-2 gap-2">
           <button
-            className="h-11 rounded-lg border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057] disabled:opacity-50"
+            className="h-[var(--control-height-md)] rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057] disabled:opacity-50"
             disabled={disabled}
             onClick={onCancel}
             type="button"
@@ -1392,7 +1392,7 @@ function MobileRecipeBookRenameSheet({
             취소
           </button>
           <button
-            className="h-11 rounded-lg bg-[#2AC1BC] text-[14px] font-extrabold text-white disabled:opacity-50"
+            className="h-[var(--control-height-md)] rounded-[var(--radius-control)] bg-[var(--brand)] text-[14px] font-extrabold text-white disabled:opacity-50"
             disabled={disabled || !value.trim()}
             onClick={onConfirm}
             type="button"
@@ -1484,7 +1484,7 @@ function RecipeBookDetailSkeleton({
         />
         <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
           <div className="flex items-center gap-[14px]">
-            <Skeleton className="h-14 w-14 shrink-0 rounded-[14px]" />
+            <Skeleton className="h-14 w-14 shrink-0 rounded-[var(--radius-card)]" />
             <div className="min-w-0 flex-1 space-y-2">
               <Skeleton className="h-5 w-36" />
               <Skeleton className="h-4 w-20" />
@@ -1494,10 +1494,10 @@ function RecipeBookDetailSkeleton({
         <div className="space-y-[10px] p-4">
           {[1, 2, 3, 4].map((i) => (
             <div
-              className="flex min-h-[82px] items-center gap-3 rounded-xl border border-[#DEE2E6] bg-white p-3"
+              className="flex min-h-[82px] items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-3"
               key={i}
             >
-              <Skeleton className="h-14 w-14 shrink-0 rounded-[10px]" />
+              <Skeleton className="h-14 w-14 shrink-0 rounded-[var(--radius-control)]" />
               <div className="min-w-0 flex-1 space-y-2">
                 <Skeleton className="h-4 w-32" />
                 <Skeleton className="h-3 w-28" />

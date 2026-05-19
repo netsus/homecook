@@ -310,7 +310,7 @@ function MobilePantryReflectionSheet({
       role="dialog"
     >
       <div
-        className="max-h-[78dvh] w-full max-w-[430px] overflow-hidden rounded-t-[20px] bg-white shadow-[0_-8px_24px_rgba(0,0,0,0.12)]"
+        className="max-h-[78dvh] w-full max-w-[430px] overflow-hidden rounded-t-[var(--radius-sheet)] bg-white shadow-[0_-8px_24px_rgba(0,0,0,0.12)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="border-b border-[#DEE2E6] px-5 pb-[17px] pt-[18px]">
@@ -348,7 +348,7 @@ function MobilePantryReflectionSheet({
                       className={[
                         "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[5px] border text-[13px] font-extrabold",
                         isSelected
-                          ? "border-[#2AC1BC] bg-[#2AC1BC] text-white"
+                          ? "border-[var(--brand)] bg-[var(--brand)] text-white"
                           : "border-[#DEE2E6] bg-white text-transparent",
                       ].join(" ")}
                     >
@@ -371,14 +371,14 @@ function MobilePantryReflectionSheet({
 
         <div className="flex gap-2 border-t border-[#DEE2E6] px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-4">
           <button
-            className="flex h-[48px] w-[82px] shrink-0 items-center justify-center rounded-[8px] border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057]"
+            className="flex h-[48px] w-[82px] shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057]"
             onClick={onConfirmNone}
             type="button"
           >
             반영 안 함
           </button>
           <button
-            className="flex h-[48px] min-w-0 flex-1 items-center justify-center rounded-[8px] bg-[#2AC1BC] px-3 text-[16px] font-extrabold text-white disabled:bg-[#DEE2E6]"
+            className="flex h-[48px] min-w-0 flex-1 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-3 text-[16px] font-extrabold text-white disabled:bg-[#DEE2E6]"
             disabled={!hasSelectedItems}
             onClick={onConfirmSelected}
             type="button"

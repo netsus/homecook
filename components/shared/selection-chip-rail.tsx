@@ -4,7 +4,7 @@ import React from "react";
 
 interface SelectionChip {
   value: string;
-  /** Single-line pill mode (e.g. category names). Renders rounded-full pill. */
+  /** Single-line chip mode (e.g. category names). */
   label?: string;
   /** Two-line chip mode — small label on top (e.g. weekday). Requires bottomLabel. */
   topLabel?: string;
@@ -24,8 +24,8 @@ interface SelectionChipRailProps {
  * Horizontal scrollable chip rail with scrollbar-hide.
  * Uses Wave1 fixed prototype tint/fill states when selected.
  * Two render modes:
- *  - pill (label only): rounded-full, single line — for category filters
- *  - two-line (topLabel + bottomLabel): rounded-[14px] — for date chips (D4)
+ *  - chip (label only): rounded-[var(--radius-chip)], single line — for category filters
+ *  - two-line (topLabel + bottomLabel): rounded-[var(--radius-card)] — for date chips (D4)
  */
 export function SelectionChipRail({
   chips,
@@ -49,7 +49,7 @@ export function SelectionChipRail({
             <button
               aria-pressed={isSelected}
               className={[
-                "min-h-11 shrink-0 rounded-[var(--radius-full)] border px-4 py-2 text-sm font-semibold transition-colors",
+                "min-h-[var(--control-height-md)] shrink-0 rounded-[var(--radius-chip)] border px-4 py-2 text-sm font-semibold transition-colors",
                 isSelected
                   ? "border-[var(--wave1-mint)] bg-[var(--wave1-mint-soft)] text-[var(--wave1-mint-contrast)]"
                   : "border-[var(--wave1-border)] bg-[var(--wave1-surface)] text-[var(--wave1-text-2)] hover:border-[var(--wave1-mint-contrast)] hover:text-[var(--wave1-mint-contrast)]",
@@ -71,7 +71,7 @@ export function SelectionChipRail({
           <button
             aria-pressed={isSelected}
             className={[
-              "min-h-11 shrink-0 rounded-[var(--radius-full)] border px-3 py-2 text-[13px] transition-colors",
+              "min-h-[var(--control-height-md)] shrink-0 rounded-[var(--radius-card)] border px-3 py-2 text-[13px] transition-colors",
               isSelected
                 ? "border-[var(--wave1-ink)] bg-[var(--wave1-ink)] font-bold text-white"
                 : "border-[var(--wave1-border)] bg-white font-medium text-[var(--wave1-text-2)]",

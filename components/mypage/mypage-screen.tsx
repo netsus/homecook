@@ -490,7 +490,7 @@ export function MypageScreen({
           </div>
           <SocialLoginButtons nextPath="/mypage" />
           <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
+            className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
             href="/"
           >
             홈으로 돌아가기
@@ -511,7 +511,7 @@ export function MypageScreen({
           데이터를 불러오지 못했어요
         </h2>
         <button
-          className="mt-4 flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-white"
+          className="mt-4 flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-white"
           onClick={() => {
             if (activeTab === "shopping") {
               setShoppingLoaded(false);
@@ -593,9 +593,9 @@ export function MypageScreen({
 
         {toast ? (
           <div
-            className={`fixed inset-x-4 bottom-24 z-50 mx-auto max-w-md rounded-xl px-4 py-3 text-center text-sm font-bold shadow-lg ${
+            className={`fixed inset-x-4 bottom-24 z-50 mx-auto max-w-md rounded-[var(--radius-card)] px-4 py-3 text-center text-sm font-bold shadow-lg ${
               toast.tone === "success"
-                ? "bg-[#0B7773] text-white"
+                ? "bg-[var(--brand)] text-white"
                 : "bg-[#FF6B6B] text-white"
             }`}
             role="status"
@@ -1042,7 +1042,7 @@ function MypageLoadingSkeleton({ mobile = false }: { mobile?: boolean }) {
         data-testid="mypage-mobile-loading"
       >
         <div
-          className="sticky top-0 z-30 flex min-h-[52px] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+          className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
           style={{ borderBottomWidth: "0.5px" }}
         >
           <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[#212529]">
@@ -1056,11 +1056,11 @@ function MypageLoadingSkeleton({ mobile = false }: { mobile?: boolean }) {
               <Skeleton className="h-5 w-24" />
               <Skeleton className="h-4 w-32" />
             </div>
-            <Skeleton className="h-8 w-14 rounded-lg" />
+            <Skeleton className="h-8 w-14 rounded-[var(--radius-control)]" />
           </div>
           <div className="grid grid-cols-3 gap-2">
             {[1, 2, 3].map((index) => (
-              <div className="rounded-[10px] bg-[#F8F9FA] px-2 py-3" key={index}>
+              <div className="rounded-[var(--radius-control)] bg-[#F8F9FA] px-2 py-3" key={index}>
                 <Skeleton className="mx-auto h-6 w-8" />
                 <Skeleton className="mx-auto mt-2 h-3 w-12" />
               </div>
@@ -1068,7 +1068,7 @@ function MypageLoadingSkeleton({ mobile = false }: { mobile?: boolean }) {
           </div>
         </section>
         <section className="p-4">
-          <div className="overflow-hidden rounded-xl border border-[#DEE2E6] bg-white">
+          <div className="overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white">
             {[1, 2, 3, 4].map((index) => (
               <div
                 className={[
@@ -1077,7 +1077,7 @@ function MypageLoadingSkeleton({ mobile = false }: { mobile?: boolean }) {
                 ].join(" ")}
                 key={index}
               >
-                <Skeleton className="h-7 w-7 shrink-0 rounded-lg" />
+                <Skeleton className="h-7 w-7 shrink-0 rounded-[var(--radius-control)]" />
                 <Skeleton className="h-4 flex-1" />
                 <Skeleton className="h-3 w-10" />
               </div>
@@ -1093,7 +1093,7 @@ function MypageLoadingSkeleton({ mobile = false }: { mobile?: boolean }) {
     <div className="pb-32" data-testid="mypage-skeleton">
       {/* Profile skeleton */}
       <div className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-4 max-[360px]:gap-2 max-[360px]:py-2.5">
-        <Skeleton className="h-12 w-12 rounded-full max-[360px]:h-10 max-[360px]:w-10" />
+        <Skeleton className="h-[var(--control-height-lg)] w-12 rounded-full max-[360px]:h-10 max-[360px]:w-10" />
         <div className="flex-1 space-y-2">
           <Skeleton className="h-5 w-24" />
           <Skeleton className="h-4 w-20" />
@@ -1598,7 +1598,7 @@ function ShoppingHistoryTabContent({
       >
         <svg
           aria-hidden="true"
-          className="h-12 w-12 text-[var(--text-3)]"
+          className="h-[var(--control-height-lg)] w-12 text-[var(--text-3)]"
           fill="none"
           stroke="currentColor"
           strokeWidth={1.5}
@@ -1617,7 +1617,7 @@ function ShoppingHistoryTabContent({
           플래너에서 장보기를 만들면 여기에 저장돼요
         </p>
         <Link
-          className="mt-5 flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand)] px-6 py-3 text-sm font-semibold text-[var(--brand)]"
+          className="mt-5 flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand)] px-6 py-3 text-sm font-semibold text-[var(--brand)]"
           href="/planner"
         >
           플래너로 이동
@@ -1678,7 +1678,7 @@ function ShoppingHistoryCard({ item }: { item: ShoppingListHistoryItem }) {
       <span
         className={`mt-2 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
           item.is_completed
-            ? "bg-[rgba(18,184,134,0.1)] text-[var(--olive)]"
+            ? "bg-[var(--brand-soft)] text-[var(--olive)]"
             : "bg-[var(--brand-soft)] text-[var(--brand)]"
         }`}
       >

@@ -207,7 +207,7 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
               묶음 목록을 불러오지 못했어요
             </p>
             <button
-              className="mt-4 h-10 rounded-[10px] bg-[#2AC1BC] px-5 text-[13px] font-extrabold text-white"
+              className="mt-4 h-10 rounded-[var(--radius-control)] bg-[var(--brand)] px-5 text-[13px] font-extrabold text-white"
               onClick={() => void loadBundles()}
               type="button"
             >
@@ -238,7 +238,7 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
                       : ingredient.standard_name
                   }
                   className={[
-                    "flex min-h-[48px] w-full items-center gap-3 rounded-[10px] border border-[#DEE2E6] px-3 text-left disabled:opacity-60",
+                    "flex min-h-[48px] w-full items-center gap-3 rounded-[var(--radius-control)] border border-[#DEE2E6] px-3 text-left disabled:opacity-60",
                     isInPantry
                       ? "bg-[#F8F9FA] opacity-60 grayscale"
                       : "bg-white",
@@ -253,9 +253,9 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
                   <span
                     aria-hidden="true"
                     className={[
-                      "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md border text-[13px] font-bold",
+                      "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[var(--radius-control)] border text-[13px] font-bold",
                       isChecked
-                        ? "border-[#2AC1BC] bg-[#2AC1BC] text-white"
+                        ? "border-[var(--brand)] bg-[var(--brand)] text-white"
                         : "border-[#DEE2E6] bg-white text-transparent",
                     ].join(" ")}
                   >
@@ -286,7 +286,7 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
 
               return (
                 <button
-                  className="flex min-h-[64px] w-full items-center gap-3 rounded-xl border border-[#DEE2E6] bg-white px-3.5 py-2.5 text-left"
+                  className="flex min-h-[64px] w-full items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white px-3.5 py-2.5 text-left"
                   key={bundle.id}
                   onClick={() => handleToggleBundleExpand(bundle.id)}
                   type="button"

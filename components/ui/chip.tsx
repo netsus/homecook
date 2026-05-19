@@ -24,7 +24,9 @@ export function Chip({
   const isFilter = variant === "filter";
 
   const sizeClass =
-    size === "compact" ? "px-2.5 py-1.5 text-xs" : "px-3.5 py-2 text-[13px]";
+    size === "compact"
+      ? "min-h-[var(--chip-height)] px-2.5 text-xs"
+      : "min-h-[var(--chip-height-lg)] px-3.5 text-[var(--app-text-small)]";
 
   let stateClass: string;
   if (disabled) {
@@ -44,7 +46,7 @@ export function Chip({
     <button
       aria-pressed={active}
       className={[
-        "inline-flex min-h-[44px] shrink-0 items-center rounded-[var(--radius-full)] transition-colors",
+        "inline-flex shrink-0 items-center rounded-[var(--radius-chip)] transition-colors",
         sizeClass,
         stateClass,
         className,

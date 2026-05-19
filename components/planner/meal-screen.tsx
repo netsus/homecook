@@ -118,7 +118,7 @@ const mealVisualMeta: Record<
 function getMealVisualMeta(meal: MealListItemData) {
   return (
     mealVisualMeta[meal.recipe_title] ?? {
-      bg: "#E6F8F7",
+      bg: "var(--brand-soft)",
       chips: ["집밥", "간단", "플래너"],
       emoji: "🍽️",
       minutes: 20,
@@ -145,7 +145,7 @@ interface AppBarProps {
 function AppBar({ titleFull, titleShort, onBack }: AppBarProps) {
   return (
     <div className="shrink-0 border-b border-[#DEE2E6] bg-white">
-      <div className="flex min-h-[52px] items-center gap-2 px-4 py-2.5">
+      <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
         <button
           aria-label="뒤로 가기"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529] hover:bg-[#F8F9FA]"
@@ -188,14 +188,14 @@ function LoadingSkeleton() {
       {[0, 1].map((i) => (
         <div
           key={i}
-          className="animate-pulse rounded-[14px] border border-[#DEE2E6] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+          className="animate-pulse rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
         >
           <div className="h-4 w-44 rounded-full bg-[#DEE2E6]" />
           <div className="mt-2 h-3 w-20 rounded-full bg-[#DEE2E6]" />
           <div className="mt-4 flex items-center gap-2">
-            <div className="h-11 w-11 rounded-[12px] bg-[#DEE2E6]" />
+            <div className="h-[var(--control-height-md)] w-11 rounded-[var(--radius-card)] bg-[#DEE2E6]" />
             <div className="h-4 w-6 rounded-full bg-[#DEE2E6]" />
-            <div className="h-11 w-11 rounded-[12px] bg-[#DEE2E6]" />
+            <div className="h-[var(--control-height-md)] w-11 rounded-[var(--radius-card)] bg-[#DEE2E6]" />
           </div>
         </div>
       ))}
@@ -242,7 +242,7 @@ function MealCard({
   return (
     <article
       aria-label={`${meal.recipe_title} 식사 카드`}
-      className={`relative overflow-hidden rounded-[14px] border border-[#DEE2E6] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-opacity ${isPending ? "opacity-60" : ""}`}
+      className={`relative overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-opacity ${isPending ? "opacity-60" : ""}`}
     >
       {/* Delete trash icon — top-right */}
       <button
@@ -260,7 +260,7 @@ function MealCard({
 
       <div className="flex gap-3 p-3.5">
         <div
-          className="flex h-[76px] w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-[12px] text-[40px]"
+          className="flex h-[76px] w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-card)] text-[40px]"
           style={{ backgroundColor: visual.bg }}
         >
           {meal.recipe_thumbnail_url ? (
@@ -276,7 +276,7 @@ function MealCard({
         </div>
         <div className="min-w-0 flex-1 pr-7">
           <button
-            className="block w-full truncate text-left text-[16px] font-semibold leading-[1.3] text-[#212529] hover:text-[#2AC1BC]"
+            className="block w-full truncate text-left text-[16px] font-semibold leading-[1.3] text-[#212529] hover:text-[var(--brand)]"
             data-testid={`meal-recipe-link-${meal.id}`}
             onClick={onRecipeClick}
             type="button"
@@ -291,7 +291,7 @@ function MealCard({
 
       <div className="px-3.5 pb-3.5">
         <div
-          className="mb-2.5 flex items-center justify-between rounded-[10px] bg-[#F8F9FA] p-2.5"
+          className="mb-2.5 flex items-center justify-between rounded-[var(--radius-control)] bg-[#F8F9FA] p-2.5"
           onClick={stopProp}
           role="group"
           aria-label="인분 조절"
@@ -319,7 +319,7 @@ function MealCard({
           </span>
           <button
             aria-label="인분 증가"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2AC1BC] text-white disabled:opacity-40"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand)] text-white disabled:opacity-40"
             disabled={isPending}
             onClick={onStepUp}
             type="button"
@@ -347,7 +347,7 @@ function MealCard({
 
         <div className={canStartCook ? "grid grid-cols-2 gap-2" : "grid grid-cols-1 gap-2"}>
           <button
-            className="min-h-[38px] rounded-[8px] border border-[#DEE2E6] bg-white text-[14px] font-bold text-[#212529]"
+            className="min-h-[38px] rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[14px] font-bold text-[#212529]"
             onClick={onCreateShopping}
             type="button"
           >
@@ -356,7 +356,7 @@ function MealCard({
           {canStartCook ? (
             <button
               aria-label={`${meal.recipe_title} 요리하기`}
-              className="min-h-[38px] rounded-[8px] border border-[#2AC1BC] bg-[#2AC1BC] text-[14px] font-bold text-white"
+              className="min-h-[38px] rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand)] text-[14px] font-bold text-white"
               disabled={isPending}
               onClick={onStartCook}
               type="button"
@@ -890,7 +890,7 @@ function CenterModal({ children, onClose, labelledBy }: CenterModalProps) {
       {/* content */}
       <div
         ref={contentRef}
-        className="relative w-full max-w-sm rounded-t-[20px] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)] lg:rounded-[20px] lg:p-5"
+        className="relative w-full max-w-sm rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)] lg:rounded-[var(--radius-sheet)] lg:p-5"
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
@@ -1221,7 +1221,7 @@ export function MealScreen({
           onBack={navigateToPlanner}
         />
         <div className="flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6 text-center">
-          <div className="rounded-[14px] border border-[#DEE2E6] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <div className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <p className="text-base font-semibold text-[#212529]">
               식사 목록을 보려면 로그인이 필요해요.
             </p>
@@ -1280,7 +1280,7 @@ export function MealScreen({
           <div className="flex-1 overflow-y-auto overflow-x-hidden">
             {screenState === "ready" ? (
               <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
-                <div className="mb-1 text-[13px] font-semibold leading-[1.3] text-[#20A8A4]">
+                <div className="mb-1 text-[13px] font-semibold leading-[1.3] text-[var(--brand)]">
                   {formatDateShort(planDate)}{slotName ? ` · ${slotName}` : ""}
                 </div>
                 <h2 className="text-[24px] font-semibold leading-[1.25] text-[#212529]">
@@ -1316,7 +1316,7 @@ export function MealScreen({
                     <p className="mt-1 text-sm text-[#868E96]">{errorMessage}</p>
                   ) : null}
                   <button
-                    className="mt-4 min-h-11 rounded-[8px] border border-[#2AC1BC] px-5 py-2.5 text-sm font-semibold text-[#20A8A4]"
+                    className="mt-4 min-h-[var(--control-height-md)] rounded-[var(--radius-control)] border border-[var(--brand)] px-5 py-2.5 text-sm font-semibold text-[var(--brand)]"
                     onClick={() => void loadMeals()}
                     type="button"
                   >
@@ -1336,7 +1336,7 @@ export function MealScreen({
                   </p>
                   {/* Inline prominent CTA for empty state */}
                   <button
-                    className="mt-6 flex h-[52px] w-full max-w-xs items-center justify-center rounded-[8px] bg-[#2AC1BC] px-4 text-base font-semibold text-white hover:bg-[#20A8A4]"
+                    className="mt-6 flex h-[var(--control-height-xl)] w-full max-w-xs items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-base font-semibold text-white hover:bg-[var(--brand)]"
                     data-testid="meal-screen-add-cta"
                     onClick={() => router.push(addMealHref)}
                     type="button"
@@ -1366,7 +1366,7 @@ export function MealScreen({
 
               {screenState === "ready" ? (
                 <button
-                  className="mt-2 flex h-[52px] w-full items-center justify-center rounded-[8px] border border-[#2AC1BC] bg-white px-4 text-base font-semibold text-[#20A8A4]"
+                  className="mt-2 flex h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-white px-4 text-base font-semibold text-[var(--brand)]"
                   data-testid="meal-screen-add-cta"
                   onClick={() => router.push(addMealHref)}
                   type="button"
@@ -1411,14 +1411,14 @@ export function MealScreen({
             </p>
             <div className="mt-5 flex gap-2.5">
               <button
-                className="flex-1 rounded-[14px] border border-[var(--line)] bg-white/60 py-3.5 text-sm font-semibold text-[var(--foreground)]"
+                className="flex-1 rounded-[var(--radius-card)] border border-[var(--line)] bg-white/60 py-3.5 text-sm font-semibold text-[var(--foreground)]"
                 onClick={handleModalCancel}
                 type="button"
               >
                 취소
               </button>
               <button
-                className="flex-[2] rounded-[14px] bg-[var(--brand)] py-3.5 text-sm font-bold text-white"
+                className="flex-[2] rounded-[var(--radius-card)] bg-[var(--brand)] py-3.5 text-sm font-bold text-white"
                 data-testid="serving-change-confirm"
                 onClick={handleServingChangeConfirm}
                 type="button"
@@ -1455,14 +1455,14 @@ export function MealScreen({
             </p>
             <div className="mt-5 flex gap-2.5">
               <button
-                className="flex-1 rounded-[14px] border border-[var(--line)] bg-white/60 py-3.5 text-sm font-semibold text-[var(--foreground)]"
+                className="flex-1 rounded-[var(--radius-card)] border border-[var(--line)] bg-white/60 py-3.5 text-sm font-semibold text-[var(--foreground)]"
                 onClick={handleModalCancel}
                 type="button"
               >
                 취소
               </button>
               <button
-                className="flex-[2] rounded-[14px] bg-[var(--brand-deep)] py-3.5 text-sm font-bold text-white"
+                className="flex-[2] rounded-[var(--radius-card)] bg-[var(--brand-deep)] py-3.5 text-sm font-bold text-white"
                 data-testid="delete-confirm"
                 onClick={handleDeleteConfirm}
                 type="button"

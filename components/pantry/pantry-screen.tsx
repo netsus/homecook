@@ -315,7 +315,7 @@ export function PantryScreen({
           </div>
           <SocialLoginButtons nextPath="/pantry" />
           <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
+            className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
             href="/"
           >
             홈으로 돌아가기
@@ -336,7 +336,7 @@ export function PantryScreen({
           팬트리를 불러올 수 없어요
         </h2>
         <button
-          className="mt-4 flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-[var(--surface)]"
+          className="mt-4 flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-[var(--surface)]"
           onClick={() => {
             setViewState("loading");
             void loadItems(debouncedQueryRef.current, activeCategory);
@@ -364,7 +364,7 @@ export function PantryScreen({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-center pt-1 lg:hidden">
-              <div className="h-1 w-9 rounded-sm bg-[var(--line)]" />
+              <div className="h-1 w-9 rounded-[var(--radius-badge)] bg-[var(--line)]" />
             </div>
             <div className="flex items-start justify-between gap-3 pt-3">
               <h3 className="text-lg font-bold text-[var(--foreground)]">
@@ -372,7 +372,7 @@ export function PantryScreen({
               </h3>
               <button
                 aria-label="닫기"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-3)]"
+                className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-3)]"
                 onClick={() => setShowDeleteConfirm(false)}
                 type="button"
               >
@@ -384,14 +384,14 @@ export function PantryScreen({
             </p>
             <div className="mt-5 flex gap-3">
               <button
-                className="flex min-h-[44px] flex-1 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface)] text-sm font-semibold text-[var(--foreground)]"
+                className="flex min-h-[var(--control-height-md)] flex-1 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface)] text-sm font-semibold text-[var(--foreground)]"
                 onClick={() => setShowDeleteConfirm(false)}
                 type="button"
               >
                 취소
               </button>
               <button
-                className="flex min-h-[44px] flex-1 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-deep)] text-sm font-semibold text-[var(--surface)] disabled:opacity-50"
+                className="flex min-h-[var(--control-height-md)] flex-1 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-deep)] text-sm font-semibold text-[var(--surface)] disabled:opacity-50"
                 disabled={isDeleting}
                 onClick={() => void handleDeleteConfirm()}
                 type="button"

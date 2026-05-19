@@ -17,7 +17,7 @@ export function RecipeCard({ isSaved = false, onSave, recipe }: RecipeCardProps)
     recipe.save_count > 100 ? "인기" : formatRecipeSourceLabel(recipe.source_type);
 
   return (
-    <article className="group relative flex min-h-full flex-col overflow-hidden rounded-[12px] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0px_4px_12px_rgba(0,0,0,0.10)]">
+    <article className="group relative flex min-h-full flex-col overflow-hidden rounded-[var(--radius-card)] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0px_4px_12px_rgba(0,0,0,0.10)]">
       <Link
         className="relative block overflow-hidden"
         href={`/recipe/${recipe.id}`}
@@ -47,7 +47,7 @@ export function RecipeCard({ isSaved = false, onSave, recipe }: RecipeCardProps)
               {presentation.emoji}
             </span>
           ) : null}
-          <span className="absolute left-3 top-3 inline-flex min-h-6 items-center justify-center rounded-[6px] bg-white/92 px-2 text-center text-[11px] font-bold leading-none text-[#0B7773] shadow-[0_1px_4px_rgba(0,0,0,0.10)]">
+          <span className="absolute left-3 top-3 inline-flex min-h-6 items-center justify-center rounded-[var(--radius-badge)] bg-white/92 px-2 text-center text-[11px] font-bold leading-none text-[var(--brand)] shadow-[0_1px_4px_rgba(0,0,0,0.10)]">
             {badgeLabel}
           </span>
         </div>
@@ -57,7 +57,7 @@ export function RecipeCard({ isSaved = false, onSave, recipe }: RecipeCardProps)
         aria-pressed={isSaved}
         className={[
           "absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/94 shadow-[0_1px_5px_rgba(0,0,0,0.14)]",
-          isSaved ? "text-[#0B7773]" : "text-[#495057]",
+          isSaved ? "text-[var(--brand)]" : "text-[#495057]",
         ].join(" ")}
         data-testid="recipe-card-bookmark"
         onClick={() => onSave?.(recipe)}
@@ -149,8 +149,8 @@ function getRecipePresentation(recipe: RecipeCardItem) {
   const emoji = matched?.emoji ?? fallbackEmojis[index % fallbackEmojis.length]!;
   const gradients = [
     "linear-gradient(135deg,#FFE8E0 0%,#FFD0BC 100%)",
-    "linear-gradient(135deg,#E6F8F7,#FFF4D6)",
-    "linear-gradient(135deg,#F1F8E9,#E6F8F7)",
+    "linear-gradient(135deg,var(--brand-soft),#FFF4D6)",
+    "linear-gradient(135deg,#F1F8E9,var(--brand-soft))",
     "linear-gradient(135deg,#E8F0FF,#FFF4D6)",
   ];
   const gradient = /밥|김치/.test(sourceText)

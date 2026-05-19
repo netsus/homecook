@@ -71,11 +71,11 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
     return (
       <button
         aria-label={`${recipe.title} 선택`}
-        className="mb-2 flex w-full gap-3 rounded-[12px] border border-[#DEE2E6] bg-white p-3 text-left active:border-[#2AC1BC] active:bg-[#E6F8F7]"
+        className="mb-2 flex w-full gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-3 text-left active:border-[var(--brand)] active:bg-[var(--brand-soft)]"
         onClick={() => onSelect(recipe)}
         type="button"
       >
-        <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-[#E6F8F7] text-[28px]">
+        <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--brand-soft)] text-[28px]">
           {recipe.thumbnail_url ? (
             <Image
               alt=""
@@ -95,12 +95,12 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
           </span>
           <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-[#F1F3F5]">
             <span
-              className="block h-full rounded-full bg-[#2AC1BC]"
+              className="block h-full rounded-full bg-[var(--brand)]"
               style={{ width: `${Math.max(4, Math.min(100, percentage))}%` }}
             />
           </span>
           <span className="mt-1 flex items-center justify-between gap-2 text-[11px] font-bold text-[#868E96]">
-            <span className="text-[#0B7773]">매칭 {percentage}%</span>
+            <span className="text-[var(--brand)]">매칭 {percentage}%</span>
             <span>
               {recipe.matched_ingredients}/{recipe.total_ingredients}개 보유
             </span>
@@ -115,20 +115,20 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
               </span>
               {recipe.missing_ingredients.slice(0, 3).map((ingredient) => (
                 <span
-                  className="rounded-[6px] bg-[#FFF3BF] px-1.5 py-0.5 text-[11px] font-semibold text-[#8A5A00]"
+                  className="rounded-[var(--radius-badge)] bg-[#FFF3BF] px-1.5 py-0.5 text-[11px] font-semibold text-[#8A5A00]"
                   key={ingredient.id}
                 >
                   {ingredient.standard_name}
                 </span>
               ))}
               {recipe.missing_ingredients.length > 3 ? (
-                <span className="rounded-[6px] bg-[#F1F3F5] px-1.5 py-0.5 text-[11px] font-semibold text-[#868E96]">
+                <span className="rounded-[var(--radius-badge)] bg-[#F1F3F5] px-1.5 py-0.5 text-[11px] font-semibold text-[#868E96]">
                   +{recipe.missing_ingredients.length - 3}
                 </span>
               ) : null}
             </span>
           ) : null}
-          <span className="mt-2 inline-flex rounded-[7px] bg-[#E6F8F7] px-2.5 py-1.5 text-[12px] font-semibold text-[#0B7773]">
+          <span className="mt-2 inline-flex rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-2.5 py-1.5 text-[12px] font-semibold text-[var(--brand)]">
             선택
           </span>
         </span>
@@ -190,7 +190,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
   }
 
   return (
-    <div className="rounded-[16px] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
+    <div className="rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
       <div className="flex items-start justify-between gap-2">
         <h3 className="flex-1 line-clamp-2 text-2xl font-bold tracking-[-0.02em] text-[var(--foreground)]">
           {recipe.title}
@@ -223,7 +223,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
         </div>
       )}
       <button
-        className="mt-3 h-11 w-full rounded-[12px] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
+        className="mt-3 h-[var(--control-height-md)] w-full rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
         onClick={() => onSelect(recipe)}
         type="button"
       >
@@ -265,7 +265,7 @@ function ServingsModal({
         <div
           aria-labelledby="servings-modal-title"
           aria-modal="true"
-          className="w-full rounded-t-[20px] bg-white px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)]"
+          className="w-full rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)]"
           onClick={(e) => e.stopPropagation()}
           role="dialog"
         >
@@ -278,8 +278,8 @@ function ServingsModal({
           <p className="mt-1 text-[13px] text-[#868E96]">
             {slotLabel ? `${slotLabel}에 추가할 인분을 선택해주세요.` : "추가할 인분을 선택해주세요."}
           </p>
-          <div className="mt-4 flex items-center gap-3 rounded-[12px] border border-[#DEE2E6] bg-[#F8F9FA] p-2.5">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-[#E6F8F7] text-[22px]">
+          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-[#F8F9FA] p-2.5">
+            <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand-soft)] text-[22px]">
               🍳
             </span>
             <span className="min-w-0 flex-1">
@@ -292,7 +292,7 @@ function ServingsModal({
             </span>
           </div>
           {slotLabel ? (
-            <div className="mt-3 rounded-[12px] border border-[#DEE2E6] bg-[#F8F9FA] px-3.5 py-3 text-[14px] font-bold text-[#495057]">
+            <div className="mt-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-[#F8F9FA] px-3.5 py-3 text-[14px] font-bold text-[#495057]">
               {slotLabel}
             </div>
           ) : null}
@@ -308,7 +308,7 @@ function ServingsModal({
           </div>
           <div className="mt-6 flex gap-3">
             <button
-              className="h-11 flex-1 rounded-[10px] border border-[#DEE2E6] bg-white text-[14px] font-bold text-[#495057]"
+              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[14px] font-bold text-[#495057]"
               disabled={isCreating}
               onClick={onCancel}
               type="button"
@@ -316,7 +316,7 @@ function ServingsModal({
               취소
             </button>
             <button
-              className="h-11 flex-1 rounded-[10px] bg-[#0B7773] text-[14px] font-bold text-white disabled:opacity-50"
+              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] bg-[var(--brand)] text-[14px] font-bold text-white disabled:opacity-50"
               disabled={isCreating || servings < 1}
               onClick={handleConfirm}
               type="button"
@@ -397,7 +397,7 @@ function ServingsModal({
       <div
         aria-labelledby="servings-modal-title"
         aria-modal="true"
-        className="glass-panel w-full max-w-md rounded-[24px] px-5 py-6 md:px-6"
+        className="glass-panel w-full max-w-md rounded-[var(--radius-sheet)] px-5 py-6 md:px-6"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
       >
@@ -419,7 +419,7 @@ function ServingsModal({
         </div>
         <div className="mt-6 flex gap-3">
           <button
-            className="h-11 flex-1 rounded-[12px] border border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--foreground)] hover:bg-[var(--line)]"
+            className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--foreground)] hover:bg-[var(--line)]"
             disabled={isCreating}
             onClick={onCancel}
             type="button"
@@ -427,7 +427,7 @@ function ServingsModal({
             취소
           </button>
           <button
-            className="h-11 flex-1 rounded-[12px] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)] disabled:opacity-50"
+            className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)] disabled:opacity-50"
             disabled={isCreating || servings < 1}
             onClick={handleConfirm}
             type="button"
@@ -518,7 +518,7 @@ export function PantryMatchPicker({
 
       {loadState === "error" && (
         <div
-          className="rounded-[12px] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
+          className="rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
           role="alert"
         >
           {errorMessage}
@@ -543,10 +543,10 @@ export function PantryMatchPicker({
   if (presentation === "screen") {
     return (
       <div className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]">
-        <div className="flex min-h-[52px] items-center border-b border-[#DEE2E6] bg-white px-2">
+        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-2">
           <button
             aria-label="뒤로"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529]"
+            className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529]"
             onClick={onBack ?? onClose}
             type="button"
           >
@@ -555,7 +555,7 @@ export function PantryMatchPicker({
           <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
             팬트리 기반 추천
           </h1>
-          <div className="h-11 w-11 shrink-0" aria-hidden="true" />
+          <div className="h-[var(--control-height-md)] w-11 shrink-0" aria-hidden="true" />
         </div>
         <div className="border-b border-[#DEE2E6] bg-white px-4 py-3.5">
           <p className="text-[12px] font-medium leading-[1.5] text-[#495057]">
@@ -608,7 +608,7 @@ export function PantryMatchPicker({
       <div
         aria-labelledby="pantry-match-title"
         aria-modal="true"
-        className="glass-panel max-h-[80vh] w-full max-w-md overflow-hidden rounded-[24px] px-5 py-6 md:px-6"
+        className="glass-panel max-h-[80vh] w-full max-w-md overflow-hidden rounded-[var(--radius-sheet)] px-5 py-6 md:px-6"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
       >

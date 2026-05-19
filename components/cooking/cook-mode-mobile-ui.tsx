@@ -139,7 +139,7 @@ export function MobileCookModeView({
       <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.50))] px-4 pb-[calc(18px+env(safe-area-inset-bottom))] pt-3">
         <div className="flex items-center gap-2">
           <button
-            className="flex h-14 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-[rgba(255,255,255,0.08)] px-4 text-[14px] font-medium text-white/82 disabled:opacity-60"
+            className="flex h-14 shrink-0 items-center justify-center rounded-[var(--radius-card)] border border-white/10 bg-[rgba(255,255,255,0.08)] px-4 text-[14px] font-medium text-white/82 disabled:opacity-60"
             data-testid={cancelButtonTestId}
             disabled={controlsDisabled}
             onClick={onCancel}
@@ -148,7 +148,7 @@ export function MobileCookModeView({
             나가기
           </button>
           <button
-            className="flex h-14 min-w-0 flex-1 items-center justify-center rounded-xl border-0 bg-[#2AC1BC] px-4 text-[16px] font-bold leading-none text-white disabled:opacity-60"
+            className="flex h-14 min-w-0 flex-1 items-center justify-center rounded-[var(--radius-card)] border-0 bg-[var(--brand)] px-4 text-[16px] font-bold leading-none text-white disabled:opacity-60"
             data-testid={completeButtonTestId}
             disabled={controlsDisabled}
             onClick={onComplete}
@@ -186,7 +186,7 @@ function MobileStepList({
 
         return (
           <li
-            className="rounded-2xl p-5 text-[#1A1A2E]"
+            className="rounded-[var(--radius-panel)] p-5 text-[#1A1A2E]"
             data-testid="step-item"
             key={step.step_number}
             style={{
@@ -249,7 +249,7 @@ function MobileIngredientArchive({
       <ul className="flex flex-col gap-2" data-testid="ingredient-list">
         {ingredients.map((ingredient) => (
           <li
-            className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-[#212529]"
+            className="flex items-center justify-between rounded-[var(--radius-card)] bg-white px-4 py-3 text-[#212529]"
             data-testid="ingredient-item"
             key={ingredient.ingredient_id}
           >

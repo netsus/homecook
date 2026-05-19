@@ -2,20 +2,38 @@
 
 :root {
   /*
-   * Runtime tokens now default to the Wave1 mobile prototype palette.
+   * App runtime tokens are anchored to a compact, app-only brand palette.
+   * Change the few --brand-* values below to test the mobile app mood.
+   * Desktop web colors remain owned by the --web-* tokens in the 1024px media block.
    * Keep typography separate: Jua brand font is intentionally not restored.
    */
-  /* ── 색상 토큰 (Wave1 fixed prototype) ── */
+  /* ── 앱 브랜드 조절 토큰 ── */
+  --brand-primary: #0F766E;
+  --brand-primary-hover: #0B5F59;
+  --brand-primary-soft: #E7F4F2;
+  --brand-primary-border: #CFE5E1;
+  --brand-primary-rgb: 15, 118, 110;
+  --brand-primary-shadow-color: rgba(var(--brand-primary-rgb), 0.18);
+  --brand-primary-shadow-color-strong: rgba(var(--brand-primary-rgb), 0.22);
+  --brand-primary-shadow: 0 2px 8px rgba(var(--brand-primary-rgb), 0.18);
+  --brand-primary-shadow-lg: 0 10px 22px rgba(var(--brand-primary-rgb), 0.22);
+
+  /* ── 색상 토큰 (mobile app runtime) ── */
   --background: #FFFFFF;
   --foreground: #212529;
   --surface:    #ffffff;
   --panel:      #FFFFFF;
   --line:       #DEE2E6;
-  --brand:      #2AC1BC;
-  --brand-deep: #0B7773;
-  --brand-soft: #E6F8F7;
-  --danger:     #FF6B6B;
-  --olive:      #12B886;
+  --brand:      var(--brand-primary);
+  --brand-deep: var(--brand-primary-hover);
+  --brand-soft: var(--brand-primary-soft);
+  --brand-border: var(--brand-primary-border);
+  --brand-shadow-color: var(--brand-primary-shadow-color);
+  --brand-shadow-color-strong: var(--brand-primary-shadow-color-strong);
+  --brand-shadow: var(--brand-primary-shadow);
+  --brand-shadow-lg: var(--brand-primary-shadow-lg);
+  --danger:     #D83A3A;
+  --olive:      var(--brand-primary);
   --muted:      #495057;
   --text-2:     #495057;
   --text-3:     #868E96;
@@ -26,24 +44,48 @@
   --shadow-1:   0 1px 3px rgba(0, 0, 0, 0.04);
   --shadow-2:   0 2px 8px rgba(0, 0, 0, 0.08);
   --shadow-3:   0 8px 24px rgba(0, 0, 0, 0.16);
-  --radius-sm:   8px;
-  --radius-md:   12px;
-  --radius-lg:   16px;
-  --radius-xl:   20px;
-  --radius-full: 9999px;
 
-  /* ── Wave1 fixed prototype token aliases (additive, do not replace legacy runtime tokens) ── */
-  --wave1-mint: #2AC1BC;
-  --wave1-mint-deep: #20A8A4;
-  --wave1-mint-contrast: #0B7773;
-  --wave1-mint-contrast-deep: #0A6B67;
-  --wave1-mint-soft: #E6F8F7;
-  --wave1-teal: #12B886;
-  --wave1-teal-contrast: #12B886;
+  /* ── 앱 UI 형태/크기 조절 토큰 ── */
+  --radius-control: 8px;
+  --radius-chip: 10px;
+  --radius-badge: 6px;
+  --radius-card: 10px;
+  --radius-panel: 14px;
+  --radius-sheet: 18px;
+  --radius-full: 9999px;
+  --control-height-sm: 44px;
+  --control-height-md: 44px;
+  --control-height-lg: 48px;
+  --control-height-xl: 52px;
+  --chip-height: 36px;
+  --chip-height-lg: 44px;
+  --input-height: 44px;
+  --app-text-caption: 11px;
+  --app-text-meta: 12px;
+  --app-text-small: 13px;
+  --app-text-body: 14px;
+  --app-text-title: 20px;
+  --app-font-action: 700;
+  --app-font-strong: 800;
+
+  /* Legacy radius aliases: keep old names, lower the app roundness in one place. */
+  --radius-sm:   var(--radius-control);
+  --radius-md:   var(--radius-card);
+  --radius-lg:   var(--radius-panel);
+  --radius-xl:   var(--radius-sheet);
+
+  /* ── Wave1 compatibility aliases: keep old names, route app color through brand tokens ── */
+  --wave1-mint: var(--brand);
+  --wave1-mint-deep: var(--brand-deep);
+  --wave1-mint-contrast: var(--brand);
+  --wave1-mint-contrast-deep: var(--brand-deep);
+  --wave1-mint-soft: var(--brand-soft);
+  --wave1-teal: var(--brand);
+  --wave1-teal-contrast: var(--brand);
   --wave1-red: #FF6B6B;
   --wave1-red-deep: #E03131;
-  --wave1-red-contrast: #FF6B6B;
-  --wave1-red-contrast-deep: #E03131;
+  --wave1-red-contrast: var(--danger);
+  --wave1-red-contrast-deep: #B42323;
   --wave1-ink: #212529;
   --wave1-text-2: #495057;
   --wave1-text-3: #868E96;

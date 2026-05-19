@@ -136,7 +136,7 @@ export function QaFixtureToolbar() {
   }
 
   return (
-    <aside className="fixed right-4 bottom-4 z-[60] w-[min(22rem,calc(100vw-2rem))] rounded-[20px] border border-[var(--line)] bg-[rgba(255,250,244,0.96)] p-4 shadow-[0_18px_50px_rgba(60,43,24,0.16)] backdrop-blur">
+    <aside className="fixed right-4 bottom-4 z-[60] w-[min(22rem,calc(100vw-2rem))] rounded-[var(--radius-sheet)] border border-[var(--line)] bg-[rgba(255,250,244,0.96)] p-4 shadow-[0_18px_50px_rgba(60,43,24,0.16)] backdrop-blur">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
@@ -162,7 +162,7 @@ export function QaFixtureToolbar() {
           </span>
           <select
             aria-label="QA 로그인 상태"
-            className="mt-1 min-h-11 w-full rounded-[12px] border border-[var(--line)] bg-white px-3 text-sm text-[var(--foreground)]"
+            className="mt-1 min-h-[var(--control-height-md)] w-full rounded-[var(--radius-card)] border border-[var(--line)] bg-white px-3 text-sm text-[var(--foreground)]"
             onChange={(event) => {
               const nextValue = event.target.value as E2EAuthOverrideState;
               persistE2EAuthOverrideState(nextValue);
@@ -181,7 +181,7 @@ export function QaFixtureToolbar() {
           </span>
           <select
             aria-label="QA fault"
-            className="mt-1 min-h-11 w-full rounded-[12px] border border-[var(--line)] bg-white px-3 text-sm text-[var(--foreground)]"
+            className="mt-1 min-h-[var(--control-height-md)] w-full rounded-[var(--radius-card)] border border-[var(--line)] bg-white px-3 text-sm text-[var(--foreground)]"
             onChange={(event) => {
               const nextValue = event.target.value;
               writeFaultSelection(nextValue);
@@ -203,7 +203,7 @@ export function QaFixtureToolbar() {
       </p>
 
       <button
-        className="mt-3 min-h-11 w-full rounded-[12px] border border-[var(--line)] bg-white px-4 text-sm font-semibold text-[var(--foreground)]"
+        className="mt-3 min-h-[var(--control-height-md)] w-full rounded-[var(--radius-card)] border border-[var(--line)] bg-white px-4 text-sm font-semibold text-[var(--foreground)]"
         onClick={() => {
           persistE2EAuthOverrideState(null);
           window.localStorage.removeItem(QA_FIXTURE_FAULTS_KEY);

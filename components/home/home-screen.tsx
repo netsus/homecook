@@ -387,9 +387,9 @@ export function HomeScreen() {
         className="min-h-screen bg-white text-[#212529] lg:hidden"
         style={
           {
-            "--home-mint": "#2AC1BC",
-            "--home-mint-deep": "#0B7773",
-            "--home-mint-soft": "#E6F8F7",
+            "--home-mint": "var(--brand)",
+            "--home-mint-deep": "var(--brand-deep)",
+            "--home-mint-soft": "var(--brand-soft)",
             "--home-bg": "#FFFFFF",
             "--home-ink": "#212529",
           } as React.CSSProperties
@@ -409,7 +409,7 @@ export function HomeScreen() {
 
             {/* Search */}
             <div className="px-4 pb-3 pt-1">
-              <label className="flex h-[44px] items-center gap-2 rounded-[20px] bg-[#F8F9FA] px-4">
+              <label className="flex h-[44px] items-center gap-2 rounded-[var(--radius-sheet)] bg-[#F8F9FA] px-4">
                 <SearchIcon />
                 <span className="visually-hidden">레시피 제목 검색</span>
                 <input
@@ -892,12 +892,12 @@ function WebProfileButton() {
 
 function HomeAppBar() {
   return (
-    <header className="sticky top-0 z-20 flex min-h-[52px] items-center justify-center border-b border-[#DEE2E6] bg-white px-4" style={{ borderBottomWidth: '0.5px' }}>
+    <header className="sticky top-0 z-20 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4" style={{ borderBottomWidth: '0.5px' }}>
       <div
         aria-label="homecook_"
         className="text-[22px] font-bold tracking-[0.5px]"
       >
-        <span className="text-[#0B7773]">homecook</span>
+        <span className="text-[var(--brand)]">homecook</span>
         <span className="text-[#212529]">_</span>
       </div>
     </header>
@@ -951,15 +951,15 @@ function DiscoveryFilterRail({
   return (
     <div className="scrollbar-hide flex gap-2 overflow-x-auto px-4 pb-1">
       <button
-        className={`flex h-11 shrink-0 items-center gap-1.5 rounded-[10px] border px-3 text-[13px] font-semibold ${
+        className={`flex h-[var(--control-height-md)] shrink-0 items-center gap-1.5 rounded-[var(--radius-control)] border px-3 text-[13px] font-semibold ${
           hasFilters
-            ? "border-[#0B7773] bg-[#0B7773] text-white"
-            : "border-[#2AC1BC] bg-white text-[#0B7773]"
+            ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+            : "border-[var(--brand)] bg-white text-[var(--brand)]"
         }`}
         onClick={onOpenModal}
         type="button"
       >
-        <SearchSmallIcon color={hasFilters ? "#fff" : "#0B7773"} />
+        <SearchSmallIcon color={hasFilters ? "#fff" : "var(--brand)"} />
         {hasFilters ? `재료 ${appliedIngredientIds.length}개` : "재료로 검색"}
       </button>
 
@@ -970,7 +970,7 @@ function DiscoveryFilterRail({
           <button
             aria-pressed={isActive}
             className={[
-              "flex h-11 shrink-0 items-center rounded-[10px] border px-3 text-[13px] transition-colors",
+              "flex h-[var(--control-height-md)] shrink-0 items-center rounded-[var(--radius-control)] border px-3 text-[13px] transition-colors",
               isActive
                 ? "border-[#212529] bg-[#212529] font-bold text-white"
                 : "border-[#DEE2E6] bg-[#F8F9FA] font-medium text-[#495057]",
@@ -986,7 +986,7 @@ function DiscoveryFilterRail({
 
       {hasFilters ? (
         <button
-          className="flex h-11 shrink-0 items-center rounded-[10px] border border-[#DEE2E6] bg-white px-3 text-[13px] font-medium text-[#495057]"
+          className="flex h-[var(--control-height-md)] shrink-0 items-center rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-[13px] font-medium text-[#495057]"
           onClick={onClear}
           type="button"
         >
@@ -1037,7 +1037,7 @@ function ThemeCarousel({
         <h2 className="text-[18px] font-bold text-[#212529]">테마별 레시피</h2>
         {activeThemeId ? (
           <button
-            className="text-[12px] font-semibold text-[#0B7773]"
+            className="text-[12px] font-semibold text-[var(--brand)]"
             onClick={() => onSelectTheme(activeThemeId)}
             type="button"
           >
@@ -1077,14 +1077,14 @@ function ThemeCarouselCard({
   return (
     <button
       aria-pressed={isActive}
-      className={`relative flex h-[96px] w-[148px] shrink-0 flex-col justify-between overflow-hidden rounded-[12px] p-3 text-left ${
-        isActive ? "ring-2 ring-[#2AC1BC]" : ""
+      className={`relative flex h-[96px] w-[148px] shrink-0 flex-col justify-between overflow-hidden rounded-[var(--radius-card)] p-3 text-left ${
+        isActive ? "ring-2 ring-[var(--brand)]" : ""
       }`}
       onClick={onClick}
       style={{
         background: THEME_BGS[variantIndex % THEME_BGS.length],
         boxShadow: "0px 1px 3px rgba(0,0,0,0.04)",
-        border: isActive ? "2px solid #2AC1BC" : "2px solid transparent",
+        border: isActive ? "2px solid var(--brand)" : "2px solid transparent",
       }}
       type="button"
     >
@@ -1102,10 +1102,10 @@ function PromoStrip() {
   return (
     <div className="px-4 pb-3">
       <Link
-        className="flex items-center justify-between rounded-[12px] px-4 py-3 text-white"
+        className="flex items-center justify-between rounded-[var(--radius-card)] px-4 py-3 text-white"
         href="/planner"
         style={{
-          background: "linear-gradient(135deg, #2AC1BC 0%, #12B886 100%)",
+          background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%)",
         }}
       >
         <span>
@@ -1239,7 +1239,7 @@ function ThemeCarouselSkeleton() {
         {Array.from({ length: 3 }).map((_, index) => (
           <Skeleton
             key={index}
-            className="h-[132px] w-[148px] shrink-0 rounded-[12px]"
+            className="h-[132px] w-[148px] shrink-0 rounded-[var(--radius-card)]"
           />
         ))}
       </div>
@@ -1255,7 +1255,7 @@ function RecipeListSkeleton() {
         {Array.from({ length: 4 }).map((_, index) => (
           <Skeleton
             key={index}
-            className="min-h-72 rounded-[12px]"
+            className="min-h-72 rounded-[var(--radius-card)]"
           />
         ))}
       </div>

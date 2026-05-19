@@ -430,13 +430,13 @@ export function SettingsScreen({
             <div className="space-y-3">
               <SocialLoginButtons nextPath="/settings" />
               <Link
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--foreground)]"
+                className="inline-flex min-h-[var(--control-height-md)] w-full items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--foreground)]"
                 href="/login?next=/settings"
               >
                 로그인 화면으로 이동
               </Link>
               <Link
-                className="inline-flex min-h-11 items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-[var(--muted)]"
+                className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-[var(--muted)]"
                 href="/"
               >
                 홈으로 돌아가기
@@ -472,7 +472,7 @@ export function SettingsScreen({
             {errorMessage ?? "데이터를 불러오지 못했어요"}
           </h2>
           <button
-            className="mt-4 flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-white"
+            className="mt-4 flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-white"
             onClick={() => void loadProfile()}
             type="button"
           >
@@ -925,7 +925,7 @@ function SettingsAppBar() {
     <div className="flex h-14 items-center border-b border-[var(--line)] bg-[var(--background)] px-2">
       <button
         aria-label="뒤로가기"
-        className="flex h-11 w-11 shrink-0 items-center justify-center"
+        className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center"
         onClick={appReturn.goBack}
         type="button"
       >
@@ -943,7 +943,7 @@ function SettingsAppBar() {
       <h1 className="flex-1 text-center text-xl font-extrabold text-[var(--foreground)]">
         설정
       </h1>
-      <div className="h-11 w-11 shrink-0" />
+      <div className="h-[var(--control-height-md)] w-11 shrink-0" />
     </div>
   );
 }
@@ -962,7 +962,7 @@ function SettingsMobileLoadingShell({
       data-testid="settings-mobile-loading"
     >
       <div
-        className="sticky top-0 z-30 flex min-h-[52px] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+        className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
         style={{ borderBottomWidth: "0.5px" }}
       >
         <button
@@ -989,7 +989,7 @@ function SettingsMobileLoadingShell({
         </h1>
       </div>
       <div className="space-y-4 p-4" data-testid="settings-loading">
-        <section className="rounded-xl border border-[#DEE2E6] bg-white p-4">
+        <section className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-2">
               <Skeleton className="h-5 w-40" />
@@ -998,13 +998,13 @@ function SettingsMobileLoadingShell({
             <Skeleton className="h-7 w-12 rounded-full" />
           </div>
         </section>
-        <section className="rounded-xl border border-[#DEE2E6] bg-white p-4">
+        <section className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-4">
           <div className="space-y-2">
             <Skeleton className="h-4 w-14" />
             <Skeleton className="h-5 w-28" />
           </div>
         </section>
-        <section className="rounded-xl border border-[#DEE2E6] bg-white p-4">
+        <section className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-4">
           <div className="space-y-2">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-5 w-36" />
@@ -1282,7 +1282,7 @@ function ColumnNameSheet({
           </h2>
           <button
             aria-label="닫기"
-            className="flex h-11 w-11 items-center justify-center text-[var(--text-3)]"
+            className="flex h-[var(--control-height-md)] w-11 items-center justify-center text-[var(--text-3)]"
             onClick={onClose}
             type="button"
           >
@@ -1330,7 +1330,7 @@ function ColumnNameSheet({
         ) : null}
 
         <button
-          className={`mt-4 flex w-full min-h-[52px] items-center justify-center rounded-[var(--radius-md)] text-base font-semibold ${
+          className={`mt-4 flex w-full min-h-[var(--control-height-xl)] items-center justify-center rounded-[var(--radius-md)] text-base font-semibold ${
             saveDisabled
               ? "bg-[var(--surface-subtle)] text-[var(--text-4)]"
               : "bg-[var(--brand)] text-white"

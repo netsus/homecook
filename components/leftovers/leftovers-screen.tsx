@@ -499,7 +499,7 @@ export function LeftoversScreen({
           <div className="space-y-3 p-4" data-testid="leftovers-loading">
             {[1, 2].map((index) => (
               <div
-                className="h-[136px] rounded-xl border border-[#DEE2E6] bg-white"
+                className="h-[136px] rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white"
                 key={index}
               />
             ))}
@@ -528,7 +528,7 @@ export function LeftoversScreen({
               <div className="space-y-3">
                 <SocialLoginButtons nextPath={leftoversSelfHref} />
                 <Link
-                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#DEE2E6] bg-white px-5 py-3 text-sm font-semibold text-[#495057]"
+                  className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[#DEE2E6] bg-white px-5 py-3 text-sm font-semibold text-[#495057]"
                   href={appReturn.href}
                 >
                   이전 화면으로 돌아가기
@@ -743,7 +743,7 @@ function LeftoversMobileView({
         <div className="space-y-3 p-4" data-testid="leftovers-loading">
           {[1, 2].map((index) => (
             <div
-              className="h-[136px] rounded-xl border border-[#DEE2E6] bg-white"
+              className="h-[136px] rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white"
               key={index}
             />
           ))}
@@ -846,7 +846,7 @@ function MobileLeftoverCard({
 }) {
   return (
     <article
-      className="rounded-xl border border-[#DEE2E6] bg-white p-3"
+      className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-3"
       data-testid="leftover-card"
     >
       <div className="flex items-center gap-3">
@@ -866,7 +866,7 @@ function MobileLeftoverCard({
 
       <div className="mt-3 grid grid-cols-[106px_minmax(0,1fr)] gap-2">
         <button
-          className="flex h-10 min-w-0 items-center justify-center gap-1 rounded-lg border border-[#DEE2E6] bg-white px-2 text-center text-[12px] font-extrabold leading-none text-[#495057] disabled:opacity-60"
+          className="flex h-10 min-w-0 items-center justify-center gap-1 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-2 text-center text-[12px] font-extrabold leading-none text-[#495057] disabled:opacity-60"
           data-testid="planner-add-button"
           disabled={anyMutating}
           onClick={() => onPlannerAdd(item)}
@@ -875,7 +875,7 @@ function MobileLeftoverCard({
           <span className="whitespace-nowrap">플래너에 추가</span>
         </button>
         <button
-          className="flex h-10 min-w-0 items-center justify-center rounded-lg bg-[#2AC1BC] px-2 text-center text-[13px] font-extrabold leading-none text-white disabled:opacity-60"
+          className="flex h-10 min-w-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-2 text-center text-[13px] font-extrabold leading-none text-white disabled:opacity-60"
           data-testid="eat-button"
           disabled={anyMutating}
           onClick={() => onEat(item.id)}
@@ -899,7 +899,7 @@ function MobileDishThumb({
     return (
       <Image
         alt=""
-        className="h-14 w-14 shrink-0 rounded-lg object-cover"
+        className="h-14 w-14 shrink-0 rounded-[var(--radius-control)] object-cover"
         height={56}
         src={src}
         unoptimized
@@ -909,7 +909,7 @@ function MobileDishThumb({
   }
 
   return (
-    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[#FFE3E3] text-[24px]">
+    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[#FFE3E3] text-[24px]">
       <span aria-hidden="true">{emoji}</span>
     </div>
   );
@@ -923,7 +923,7 @@ function MobileFeedback({
   return (
     <div
       className={[
-        "mx-4 mt-2 rounded-lg px-4 py-3 text-center text-[13px] font-extrabold",
+        "mx-4 mt-2 rounded-[var(--radius-control)] px-4 py-3 text-center text-[13px] font-extrabold",
         feedback.tone === "error"
           ? "bg-[#FFF5F5] text-[#FF6B6B]"
           : "bg-[#E6FCF5] text-[#099268]",
@@ -949,7 +949,7 @@ function MobileAppBar({
 }) {
   return (
     <div
-      className="sticky top-0 z-30 flex min-h-[52px] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+      className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
       style={{ borderBottomWidth: "0.5px" }}
     >
       <Link
@@ -974,7 +974,7 @@ function MobileAppBar({
         {title}
       </h1>
       <Link
-        className="absolute right-4 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center rounded-full border border-[#DEE2E6] bg-white px-3 text-[12px] font-extrabold text-[#2AC1BC]"
+        className="absolute right-4 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center rounded-full border border-[#DEE2E6] bg-white px-3 text-[12px] font-extrabold text-[var(--brand)]"
         href={actionHref}
       >
         {actionLabel}

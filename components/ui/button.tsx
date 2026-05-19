@@ -40,9 +40,9 @@ const variantStyles: Record<ButtonVariant, { base: string; hover: string; active
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "min-h-[44px] px-3 text-[13px]",
-  md: "h-12 px-5 text-base",
-  lg: "h-14 px-6 text-[17px]",
+  sm: "min-h-[var(--control-height-sm)] px-3 text-[var(--app-text-small)]",
+  md: "h-[var(--control-height-lg)] px-5 text-base",
+  lg: "h-[var(--control-height-xl)] px-6 text-[17px]",
 };
 
 export function Button({
@@ -61,7 +61,7 @@ export function Button({
   return (
     <button
       className={[
-        "relative inline-flex items-center justify-center rounded-[var(--radius-sm)] font-bold transition-colors",
+        "relative inline-flex items-center justify-center rounded-[var(--radius-control)] font-bold transition-colors",
         sizeStyles[size],
         fullWidth ? "w-full" : "",
         isDisabled ? v.disabled : [v.base, v.hover, v.active].join(" "),

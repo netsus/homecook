@@ -33,7 +33,7 @@ export function AppHeader({
       className="sticky top-0 z-20 border-b border-[var(--wave1-border)] bg-[var(--wave1-surface)]"
       style={{ borderBottomWidth: "0.5px" }}
     >
-      <div className="flex min-h-[52px] items-center justify-center px-4 md:min-h-[56px] md:px-6">
+      <div className="flex min-h-[var(--control-height-xl)] items-center justify-center px-4 md:min-h-[56px] md:px-6">
         {brandAsPageTitle ? <h1>{brandLink}</h1> : brandLink}
         <nav aria-label="데스크탑 주요 메뉴" className="hidden items-center gap-1 lg:flex">
           {navItems.map((item) => {

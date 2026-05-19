@@ -12,7 +12,7 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 const variantStyles: Record<BadgeVariant, string> = {
   brand: "bg-[var(--wave1-mint-soft)] text-[var(--wave1-mint-contrast)]",
   danger: "bg-[#FFEBEB] text-[var(--wave1-red-contrast)]",
-  olive: "bg-[#E8F8E0] text-[var(--wave1-teal-contrast)]",
+  olive: "bg-[var(--brand-soft)] text-[var(--wave1-teal-contrast)]",
   muted: "bg-[var(--wave1-surface-fill)] text-[var(--wave1-text-2)]",
 };
 
@@ -25,7 +25,7 @@ export function Badge({
   return (
     <span
       className={[
-        "inline-flex items-center rounded-[var(--radius-full)] px-2 py-0.5 text-[11px] font-semibold leading-tight",
+        "inline-flex items-center rounded-[var(--radius-badge)] px-2 py-0.5 text-[var(--app-text-caption)] font-semibold leading-tight",
         variantStyles[variant],
         className,
       ]

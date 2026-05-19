@@ -118,7 +118,7 @@ export function LoginScreen({
           <ChevronLeftIcon />
         </button>
 
-        <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[18px] bg-[var(--wave1-mint)] text-white shadow-[0_10px_22px_rgba(42,193,188,0.24)]">
+        <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[var(--radius-panel)] bg-[var(--wave1-mint)] text-white shadow-[0_10px_22px_var(--brand-shadow-color-strong)]">
           <span
             aria-hidden="true"
             className="text-[30px] leading-none"
@@ -137,7 +137,7 @@ export function LoginScreen({
         </p>
 
         {showAuthError ? (
-          <div className="mt-7 rounded-[12px] border border-[#FFC9C9] bg-[#FFEBEB] px-4 py-3 text-[13px] font-semibold text-[#E03131]">
+          <div className="mt-7 rounded-[var(--radius-card)] border border-[#FFC9C9] bg-[#FFEBEB] px-4 py-3 text-[13px] font-semibold text-[#E03131]">
             로그인에 실패했어요. 다시 시도해주세요.
           </div>
         ) : null}

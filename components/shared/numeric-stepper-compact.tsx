@@ -20,14 +20,14 @@ export function NumericStepperCompact({
   unit,
 }: NumericStepperCompactProps) {
   return (
-    <div className="flex items-center justify-between rounded-[10px] border border-[var(--wave1-border)] bg-white px-3 py-2.5">
+    <div className="flex items-center justify-between rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-white px-3 py-2.5">
       <span className="text-sm text-[var(--wave1-text-2)]">
         {unit ? `몇 ${unit} 계획할까요?` : ""}
       </span>
       <div className="flex items-center gap-0.5">
         <button
           aria-label={`${unit ?? "값"} 줄이기`}
-          className="flex h-11 w-11 items-center justify-center disabled:opacity-40"
+          className="flex h-[var(--control-height-md)] w-11 items-center justify-center disabled:opacity-40"
           disabled={disabled || value <= min}
           onClick={() => onChange(Math.max(min, value - 1))}
           type="button"
@@ -45,7 +45,7 @@ export function NumericStepperCompact({
         </span>
         <button
           aria-label={`${unit ?? "값"} 늘리기`}
-          className="flex h-11 w-11 items-center justify-center disabled:opacity-40"
+          className="flex h-[var(--control-height-md)] w-11 items-center justify-center disabled:opacity-40"
           disabled={disabled}
           onClick={() => onChange(value + 1)}
           type="button"

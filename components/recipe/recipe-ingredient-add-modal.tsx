@@ -278,7 +278,7 @@ export function RecipeIngredientAddModal({
     >
       <div
         aria-modal="true"
-        className="flex h-[90dvh] max-h-[44rem] w-full max-w-2xl flex-col rounded-t-[20px] bg-[var(--surface)] shadow-[var(--shadow-3)] sm:rounded-[20px]"
+        className="flex h-[90dvh] max-h-[44rem] w-full max-w-2xl flex-col rounded-t-[var(--radius-sheet)] bg-[var(--surface)] shadow-[var(--shadow-3)] sm:rounded-[var(--radius-sheet)]"
         onClick={(event) => event.stopPropagation()}
         aria-labelledby="mobile-ingredient-picker-title"
         role="dialog"
@@ -289,7 +289,7 @@ export function RecipeIngredientAddModal({
             titleId="mobile-ingredient-picker-title"
             onClose={onClose}
           />
-          <label className="mt-4 flex min-h-11 items-center rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-4">
+          <label className="mt-4 flex min-h-[var(--control-height-md)] items-center rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-4">
             <span className="visually-hidden">재료명으로 검색</span>
             <input
               autoFocus
@@ -318,7 +318,7 @@ export function RecipeIngredientAddModal({
             <div className="grid gap-2 sm:grid-cols-2">
               {Array.from({ length: 6 }).map((_, index) => (
                 <div
-                  className="min-h-11 animate-pulse rounded-[var(--radius-full)] border border-[var(--line)] bg-[var(--surface-fill)]"
+                  className="min-h-[var(--control-height-md)] animate-pulse rounded-[var(--radius-full)] border border-[var(--line)] bg-[var(--surface-fill)]"
                   key={index}
                 />
               ))}
