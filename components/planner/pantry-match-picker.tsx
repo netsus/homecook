@@ -100,7 +100,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
             />
           </span>
           <span className="mt-1 flex items-center justify-between gap-2 text-[11px] font-bold text-[#868E96]">
-            <span className="text-[#20A8A4]">매칭 {percentage}%</span>
+            <span className="text-[#0B7773]">매칭 {percentage}%</span>
             <span>
               {recipe.matched_ingredients}/{recipe.total_ingredients}개 보유
             </span>
@@ -128,7 +128,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
               ) : null}
             </span>
           ) : null}
-          <span className="mt-2 inline-flex rounded-[7px] bg-[#E6F8F7] px-2.5 py-1.5 text-[12px] font-semibold text-[#007A76]">
+          <span className="mt-2 inline-flex rounded-[7px] bg-[#E6F8F7] px-2.5 py-1.5 text-[12px] font-semibold text-[#0B7773]">
             선택
           </span>
         </span>
@@ -316,7 +316,7 @@ function ServingsModal({
               취소
             </button>
             <button
-              className="h-11 flex-1 rounded-[10px] bg-[#2AC1BC] text-[14px] font-bold text-white disabled:opacity-50"
+              className="h-11 flex-1 rounded-[10px] bg-[#0B7773] text-[14px] font-bold text-white disabled:opacity-50"
               disabled={isCreating || servings < 1}
               onClick={handleConfirm}
               type="button"

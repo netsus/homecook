@@ -1227,7 +1227,7 @@ export function RecipeDetailScreen({
                 className={[
                   "rounded-full px-[9px] py-1 text-[12px] font-extrabold",
                   index === 0
-                    ? "bg-[#E8F8F7] text-[#007A76]"
+                    ? "bg-[#E8F8F7] text-[#0B7773]"
                     : "bg-[#F8F9FA] text-[#495057]",
                 ].join(" ")}
                 key={`${tag}-${index}`}
@@ -1309,7 +1309,7 @@ export function RecipeDetailScreen({
                 </span>
                 <button
                   aria-label="인분 늘리기"
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#007A76] text-[18px] font-bold text-white"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0B7773] text-[18px] font-bold text-white"
                   onClick={() => setSelectedServings((value) => value + 1)}
                   type="button"
                 >
@@ -1334,7 +1334,7 @@ export function RecipeDetailScreen({
                     <span className="flex min-w-0 items-center gap-2 font-medium text-[#212529]">
                       <span>{ingredient.standard_name}</span>
                       {ingredient.ingredient_type === "TO_TASTE" ? (
-                        <span className="rounded-full border border-[#BEEAE7] bg-[#E8F8F7] px-2 py-0.5 text-[10px] font-semibold text-[#007A76]">
+                        <span className="rounded-full border border-[#BEEAE7] bg-[#E8F8F7] px-2 py-0.5 text-[10px] font-semibold text-[#0B7773]">
                           취향껏
                         </span>
                       ) : null}
@@ -1425,14 +1425,14 @@ export function RecipeDetailScreen({
       {shouldRenderAppView ? (
       <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 flex gap-2 border-t border-[#DEE2E6] bg-white px-4 pb-3 pt-3 lg:hidden">
         <button
-          className="min-h-11 flex-1 rounded-[12px] border border-[#2AC1BC] bg-[#E8F8F7] px-3 text-[15px] font-bold text-[#007A76]"
+          className="min-h-11 flex-1 rounded-[12px] border border-[#2AC1BC] bg-[#E8F8F7] px-3 text-[15px] font-bold text-[#0B7773]"
           onClick={() => handleProtectedAction("planner")}
           type="button"
         >
           플래너에 추가
         </button>
         <button
-          className="min-h-11 flex-1 rounded-[12px] bg-[#007A76] px-3 text-[15px] font-bold text-white"
+          className="min-h-11 flex-1 rounded-[12px] bg-[#0B7773] px-3 text-[15px] font-bold text-white"
           onClick={() => router.push(cookModeHref)}
           type="button"
         >

@@ -46,7 +46,7 @@ export function ContentState({
     },
     empty: {
       eyebrow: eyebrow ?? "비어 있어요",
-      eyebrowClassName: "border-[#E6F8F7] bg-[#E6F8F7] text-[#007A76]",
+      eyebrowClassName: "border-[#E6F8F7] bg-[#E6F8F7] text-[#0B7773]",
       titleClassName: "text-[#212529]",
     },
     gate: {
@@ -91,7 +91,7 @@ export function ContentState({
         {actionLabel && onAction ? (
           <div className="mt-5 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
             <button
-              className="flex min-h-11 items-center justify-center rounded-[8px] bg-[#2AC1BC] px-5 py-3 text-[14px] font-bold text-white"
+              className="flex min-h-11 items-center justify-center rounded-[8px] bg-[#0B7773] px-5 py-3 text-[14px] font-bold text-white"
               onClick={onAction}
               type="button"
             >

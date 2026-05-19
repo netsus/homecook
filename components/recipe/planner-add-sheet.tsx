@@ -269,7 +269,7 @@ export function PlannerAddSheet({
               </div>
 
               {errorMessage && sheetState === "ready" ? (
-                <p className="text-[13px] font-semibold text-[#C84C48]">
+                <p className="text-[13px] font-semibold text-[#E03131]">
                   {errorMessage}
                 </p>
               ) : null}

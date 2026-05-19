@@ -68,7 +68,7 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-1.5">
             <span className="truncate text-[15px] font-bold text-[#212529]">{book.name}</span>
-            <span className="shrink-0 rounded-[6px] bg-[#E6F8F7] px-1.5 py-0.5 text-[11px] font-semibold text-[#007A76]">
+            <span className="shrink-0 rounded-[6px] bg-[#E6F8F7] px-1.5 py-0.5 text-[11px] font-semibold text-[#0B7773]">
               {hasRecipes ? `${book.recipe_count}개` : "비어 있음"}
             </span>
           </span>

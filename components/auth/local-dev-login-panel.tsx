@@ -132,7 +132,7 @@ export function LocalDevLoginPanel({
         첫 로그인에서는 계정을 만들고, 이후에는 같은 계정과 같은 local DB를 계속 사용합니다.
       </p>
       {errorMessage ? (
-        <p className="mt-3 rounded-[12px] border border-[color:rgba(255,108,60,0.2)] bg-[color:rgba(255,108,60,0.08)] px-4 py-3 text-sm text-[var(--brand-deep)]">
+        <p className="mt-3 rounded-[12px] border border-[color:rgba(255,107,107,0.2)] bg-[color:rgba(255,107,107,0.08)] px-4 py-3 text-sm text-[var(--danger)]">
           {errorMessage}
         </p>
       ) : null}

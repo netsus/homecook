@@ -108,7 +108,7 @@ function RecipeThumb({ recipe }: { recipe: RecipeCardItem }) {
     );
   }
 
-  return <span className="text-[18px] font-bold text-[#20A8A4]">{recipe.title.charAt(0)}</span>;
+  return <span className="text-[18px] font-bold text-[#0B7773]">{recipe.title.charAt(0)}</span>;
 }
 
 function formatMetricCount(value: number) {
@@ -140,7 +140,7 @@ function ResultCard({ recipe, onSelect, presentation = "inline" }: ResultCardPro
             {recipe.tags.length > 0 ? ` · ${recipe.tags.slice(0, 4).join(" · ")}` : ""}
           </span>
         </span>
-        <span className="rounded-[7px] bg-[#E6F8F7] px-3 py-2 text-[13px] font-semibold text-[#007A76]">
+        <span className="rounded-[7px] bg-[#E6F8F7] px-3 py-2 text-[13px] font-semibold text-[#0B7773]">
           선택
         </span>
       </button>
@@ -197,7 +197,7 @@ function ScreenServingsStepper({
         </span>
         <button
           aria-label="인분 늘리기"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2AC1BC] text-[18px] font-bold text-white disabled:opacity-40"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0B7773] text-[18px] font-bold text-white disabled:opacity-40"
           disabled={disabled}
           onClick={() => onChange(servings + 1)}
           type="button"
@@ -294,7 +294,7 @@ function ServingsModal({
               취소
             </button>
             <button
-              className="h-11 flex-1 rounded-[10px] bg-[#2AC1BC] text-[14px] font-bold text-white disabled:opacity-50"
+              className="h-11 flex-1 rounded-[10px] bg-[#0B7773] text-[14px] font-bold text-white disabled:opacity-50"
               disabled={isCreating || servings < 1}
               onClick={handleConfirm}
               type="button"

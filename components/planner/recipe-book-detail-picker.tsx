@@ -78,7 +78,7 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
           <p className="mt-0.5 truncate text-[11px] text-[#868E96]">
             {recipe.tags.slice(0, 2).join(" · ") || "저장한 레시피"}
           </p>
-          <span className="mt-2 inline-flex rounded-[7px] bg-[#E6F8F7] px-2.5 py-1.5 text-[12px] font-semibold text-[#007A76]">
+          <span className="mt-2 inline-flex rounded-[7px] bg-[#E6F8F7] px-2.5 py-1.5 text-[12px] font-semibold text-[#0B7773]">
             선택
           </span>
         </div>
@@ -216,7 +216,7 @@ function ServingsModal({
               취소
             </button>
             <button
-              className="h-11 flex-1 rounded-[10px] bg-[#2AC1BC] text-[14px] font-bold text-white disabled:opacity-50"
+              className="h-11 flex-1 rounded-[10px] bg-[#0B7773] text-[14px] font-bold text-white disabled:opacity-50"
               disabled={isCreating || servings < 1}
               onClick={handleConfirm}
               type="button"

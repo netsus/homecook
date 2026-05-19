@@ -595,7 +595,7 @@ export function MypageScreen({
           <div
             className={`fixed inset-x-4 bottom-24 z-50 mx-auto max-w-md rounded-xl px-4 py-3 text-center text-sm font-bold shadow-lg ${
               toast.tone === "success"
-                ? "bg-[#20A8A4] text-white"
+                ? "bg-[#0B7773] text-white"
                 : "bg-[#FF6B6B] text-white"
             }`}
             role="status"
@@ -1678,7 +1678,7 @@ function ShoppingHistoryCard({ item }: { item: ShoppingListHistoryItem }) {
       <span
         className={`mt-2 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
           item.is_completed
-            ? "bg-[rgba(31,107,82,0.1)] text-[var(--olive)]"
+            ? "bg-[rgba(18,184,134,0.1)] text-[var(--olive)]"
             : "bg-[var(--brand-soft)] text-[var(--brand)]"
         }`}
       >
