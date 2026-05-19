@@ -63,16 +63,16 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "merged",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs created by Claude. FE-only visual/token cleanup slice — no backend, no API, no DB changes. Low-risk app-wide font-weight reduction and --olive removal with anchor screen visual verification.",
+  "notes": "Internal Stage 6 closeout projection after Codex review. Stage 1 docs PR #496 merged. Stage 2/3 N/A. Stage 4 frontend implemented by Claude through resume session b475ec3a-c10b-42ae-9c38-1df94982e645, then Codex addressed Claude approve-with-nits review. Scope: app-wide Tailwind font-weight token reduction, direct --olive removal, and legacy brand/olive hex to role-token cleanup. Web tokens and Jua font intentionally unchanged. Verification passed: pnpm verify:frontend before nits; after nits, pnpm lint, pnpm typecheck, targeted Vitest 57 tests, workflow/workpack validators, token scans, and pnpm dev:demo route HEAD smoke. Design Status confirmed; authority-required=false.",
   "out_of_scope": [
     "HOME modal layout/color fixes",
     "App shell bottom tab/header behavior",

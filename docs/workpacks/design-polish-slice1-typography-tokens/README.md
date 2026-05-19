@@ -75,13 +75,13 @@ N/A — 이 슬라이스에 백엔드 변경 없음. FE-only visual/token cleanu
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 > 이 슬라이스는 기존 confirmed 앵커 화면의 low-risk token/weight 교체만 수행하며, 신규 화면이나 구조 변경은 없다.
-> `temporary`에서 시작하고, Stage 4 완료 후 Stage 5에서 lightweight design check로 token 사용, spacing drift, 기존 상태 UI 회귀 여부만 점검한다.
+> `temporary`에서 시작했고, Stage 4 완료 후 Stage 5 lightweight design check와 Claude approve-with-nits 리뷰를 거쳐 Codex가 합리적 지적을 반영했다.
 
 ## Source Links
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
@@ -129,13 +129,22 @@ N/A — 이 슬라이스에 백엔드 변경 없음. FE-only visual/token cleanu
 > 이 체크리스트는 Stage 4~6 동안 계속 갱신하는 living closeout 문서다.
 > 백엔드 항목은 N/A (FE-only 슬라이스).
 
-- [ ] 앱 전역 font-weight 토큰 재조정 (globals.css) <!-- omo:id=dp1-font-weight-tokens;stage=4;scope=frontend;review=5,6 -->
-- [ ] Tailwind font-weight 클래스 전수 교체 (컴포넌트) <!-- omo:id=dp1-font-weight-classes;stage=4;scope=frontend;review=5,6 -->
-- [ ] `--olive` 직접 참조 제거 (컴포넌트 코드) <!-- omo:id=dp1-olive-removal;stage=4;scope=frontend;review=5,6 -->
-- [ ] `@theme inline` olive 등록 정리 평가 <!-- omo:id=dp1-theme-olive-cleanup;stage=4;scope=frontend;review=5,6 -->
-- [ ] 하드코딩 hex 색상 → 역할 토큰 교체 <!-- omo:id=dp1-hex-to-token;stage=4;scope=frontend;review=5,6 -->
-- [ ] 앵커 화면 before/after screenshot 생성 <!-- omo:id=dp1-anchor-screenshots;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm lint` + `pnpm typecheck` 통과 <!-- omo:id=dp1-lint-typecheck;stage=4;scope=frontend;review=6 -->
-- [ ] `pnpm verify:frontend` 통과 (Vitest + Playwright regression) <!-- omo:id=dp1-verify-frontend;stage=4;scope=frontend;review=6 -->
-- [ ] `loading / empty / error / read-only` 기존 상태 UI 유지 확인 <!-- omo:id=dp1-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] 수동 시각적 가독성 확인 (mobile default + narrow) <!-- omo:id=dp1-manual-readability;stage=4;scope=frontend;review=5,6 -->
+- [x] 앱 전역 font-weight 토큰 재조정 (globals.css) <!-- omo:id=dp1-font-weight-tokens;stage=4;scope=frontend;review=5,6 -->
+- [x] Tailwind font-weight theme token 적용 (컴포넌트 클래스 대량 변경 없이 한 단계 경량화) <!-- omo:id=dp1-font-weight-classes;stage=4;scope=frontend;review=5,6 -->
+- [x] `--olive` 직접 참조 제거 (컴포넌트 코드) <!-- omo:id=dp1-olive-removal;stage=4;scope=frontend;review=5,6 -->
+- [x] `@theme inline` olive 등록 정리 평가 <!-- omo:id=dp1-theme-olive-cleanup;stage=4;scope=frontend;review=5,6 -->
+- [x] 레거시 브랜드/olive 하드코딩 hex 색상 → 역할 토큰 교체 <!-- omo:id=dp1-hex-to-token;stage=4;scope=frontend;review=5,6 -->
+- [x] 앵커 화면 screenshot 생성 및 visual snapshot 갱신 <!-- omo:id=dp1-anchor-screenshots;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm lint` + `pnpm typecheck` 통과 <!-- omo:id=dp1-lint-typecheck;stage=4;scope=frontend;review=6 -->
+- [x] `pnpm verify:frontend` 통과 (Vitest + Playwright regression) <!-- omo:id=dp1-verify-frontend;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only` 기존 상태 UI 유지 확인 <!-- omo:id=dp1-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] Codex 수동 시각적 가독성 확인 (mobile default + narrow snapshot) <!-- omo:id=dp1-manual-readability;stage=4;scope=frontend;review=5,6 -->
+
+## Stage 5/6 Evidence
+
+- Claude review: `.omx/artifacts/claude-delegate-design-polish-slice1-typography-tokens-stage5-review-response-2026-05-19T12-24-31Z.md` (`approve-with-nits`, nits 반영)
+- Visual snapshots: `pnpm test:e2e:visual:update` 통과, HOME / ingredient filter modal / login gate mobile snapshots 갱신
+- Manual visual check: `view_image`로 HOME, ingredient filter modal, RECIPE_DETAIL, PLANNER_WEEK snapshot 확인
+- Real smoke: `pnpm dev:demo -- -p 3021` 실행 후 `/`, `/recipe/mock-kimchi-jjigae`, `/planner` HEAD 200 확인
+- Regression: `pnpm verify:frontend` 통과 후 Claude nits 반영, 이후 `pnpm lint`, `pnpm typecheck`, targeted Vitest 57 tests 통과
+- Token scan: `var(--olive)`, `text-olive`, `bg-olive`, `font-black`, legacy brand hex 직접 참조 0건

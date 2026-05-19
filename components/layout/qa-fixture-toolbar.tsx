@@ -139,7 +139,7 @@ export function QaFixtureToolbar() {
     <aside className="fixed right-4 bottom-4 z-[60] w-[min(22rem,calc(100vw-2rem))] rounded-[var(--radius-sheet)] border border-[var(--line)] bg-[rgba(255,250,244,0.96)] p-4 shadow-[0_18px_50px_rgba(60,43,24,0.16)] backdrop-blur">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--brand)]">
             QA Fixture Mode
           </p>
           <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">

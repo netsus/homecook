@@ -100,8 +100,8 @@ export function LocalDevLoginPanel({
   };
 
   return (
-    <div className="rounded-[var(--radius-panel)] border border-[color:rgba(46,166,122,0.18)] bg-[color:rgba(46,166,122,0.08)] p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+    <div className="rounded-[var(--radius-panel)] border border-[color-mix(in_srgb,var(--brand)_18%,transparent)] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--brand)]">
         Local Supabase
       </p>
       <p className="mt-2 hidden text-sm leading-6 text-[var(--foreground)] sm:block">
@@ -113,8 +113,8 @@ export function LocalDevLoginPanel({
             <button
               className={
                 index === 0
-                  ? "flex min-h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-card)] bg-[var(--olive)] px-4 py-4 text-base font-semibold text-white transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
-                  : "flex min-h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-card)] border border-[color:rgba(46,166,122,0.24)] bg-white px-4 py-4 text-base font-semibold text-[var(--olive)] transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
+                  ? "flex min-h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-card)] bg-[var(--brand)] px-4 py-4 text-base font-semibold text-white transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
+                  : "flex min-h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--brand)_24%,transparent)] bg-white px-4 py-4 text-base font-semibold text-[var(--brand)] transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
               }
               disabled={isPending}
               onClick={() => handleLocalLogin(account.id)}

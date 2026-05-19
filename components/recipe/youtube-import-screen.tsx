@@ -251,7 +251,7 @@ function UrlInputStep({ url, onUrlChange, onSubmit, isValidating, urlError }: Ur
             "w-full rounded-[var(--radius-sm)] bg-[var(--surface-fill)] px-4 py-3 text-base text-[var(--foreground)] placeholder:text-[var(--text-3)] outline-none transition-colors",
             urlError
               ? "border-2 border-[var(--brand-deep)]"
-              : "border border-transparent focus:border-2 focus:border-[var(--olive)]",
+              : "border border-transparent focus:border-2 focus:border-[var(--brand)]",
           ].join(" ")}
           onKeyDown={(e) => {
             if (e.key === "Enter" && url.trim()) onSubmit();
@@ -377,7 +377,7 @@ function ExtractionProgressStep({ videoTitle, elapsedMs }: ExtractionProgressSte
               <div className="flex items-center gap-3">
                 <div className="flex h-6 w-6 shrink-0 items-center justify-center">
                   {status === "done" && (
-                    <svg className="h-5 w-5 text-[var(--olive)]" fill="none" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <svg className="h-5 w-5 text-[var(--brand)]" fill="none" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                       <path d="M5 10l3 3 7-7" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
                     </svg>
                   )}
@@ -400,7 +400,7 @@ function ExtractionProgressStep({ videoTitle, elapsedMs }: ExtractionProgressSte
                   </p>
                   <p className={[
                     "text-sm",
-                    status === "done" ? "text-[var(--olive)]" : status === "active" ? "text-[var(--brand)]" : "text-[var(--text-4)]",
+                    status === "done" ? "text-[var(--brand)]" : status === "active" ? "text-[var(--brand)]" : "text-[var(--text-4)]",
                   ].join(" ")}>
                     {status === "done" ? "완료" : status === "active" ? "분석 중..." : "대기 중"}
                   </p>
@@ -507,7 +507,7 @@ function ReviewStep({
           {extractionMethods.map((method) => (
             <span
               key={method}
-              className="rounded-full bg-[var(--olive)] px-2.5 py-0.5 text-xs font-semibold text-white"
+              className="rounded-full bg-[var(--brand)] px-2.5 py-0.5 text-xs font-semibold text-white"
             >
               {method}
             </span>
@@ -545,7 +545,7 @@ function ReviewStep({
           type="text"
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
-          className="mt-1 w-full rounded-[var(--radius-sm)] bg-[var(--surface-fill)] px-4 py-3 text-base text-[var(--foreground)] outline-none transition-colors focus:border-2 focus:border-[var(--olive)]"
+          className="mt-1 w-full rounded-[var(--radius-sm)] bg-[var(--surface-fill)] px-4 py-3 text-base text-[var(--foreground)] outline-none transition-colors focus:border-2 focus:border-[var(--brand)]"
         />
       </div>
 
@@ -646,7 +646,7 @@ function ReviewStep({
           </div>
         )}
         <button
-          className="mt-3 w-full rounded-[var(--radius-sm)] border border-[var(--olive)] bg-transparent py-3 text-base font-semibold text-[var(--olive)] hover:bg-[var(--olive)]/10"
+          className="mt-3 w-full rounded-[var(--radius-sm)] border border-[var(--brand)] bg-transparent py-3 text-base font-semibold text-[var(--brand)] hover:bg-[var(--brand)]/10"
           onClick={onAddIngredient}
           type="button"
         >
@@ -714,7 +714,7 @@ function ReviewStep({
           </div>
         )}
         <button
-          className="mt-3 w-full rounded-[var(--radius-sm)] border border-[var(--olive)] bg-transparent py-3 text-base font-semibold text-[var(--olive)] hover:bg-[var(--olive)]/10"
+          className="mt-3 w-full rounded-[var(--radius-sm)] border border-[var(--brand)] bg-transparent py-3 text-base font-semibold text-[var(--brand)] hover:bg-[var(--brand)]/10"
           onClick={onAddStep}
           type="button"
         >
@@ -741,7 +741,7 @@ function CompleteStep({ recipeTitle, hasPlanContext, onMealAdd, onViewDetail, on
       <div className="w-full max-w-sm rounded-[var(--radius-lg)] bg-[var(--surface)] p-6 shadow-[var(--shadow-2)]">
         <div className="text-center">
           <div className="mx-auto flex h-[var(--control-height-lg)] w-12 items-center justify-center">
-            <svg className="h-[var(--control-height-lg)] w-12 text-[var(--olive)]" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <svg className="h-[var(--control-height-lg)] w-12 text-[var(--brand)]" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
               <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="3" fill="none" />
               <path d="M14 24l7 7 13-13" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
             </svg>

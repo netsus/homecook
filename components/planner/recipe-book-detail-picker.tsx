@@ -115,7 +115,7 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
           {recipe.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="inline-flex rounded-full bg-[var(--olive)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--olive)]"
+              className="inline-flex rounded-full bg-[var(--brand)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--brand)]"
             >
               {tag}
             </span>

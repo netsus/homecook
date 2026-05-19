@@ -95,7 +95,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `wave1-port-account-library-leftovers` | merged | MYPAGE/SETTINGS polish, LEFTOVERS/ATE_LIST 버튼·문구 정리, RECIPEBOOK_DETAIL custom book menu |
 | `wave1-prototype-repair` | merged | service 재포팅 전 `claude-design-260505-wave1` prototype의 navigation, modal/interaction, visual, functional-logic 문제를 repair하고 fixed prototype을 freeze |
 | `wave1-derived-state-ui-prep` | merged | Phase4 재진행 전 prototype에 직접 없는 loading/skeleton/empty/error/unauthorized/not-found/submitting 상태 UI를 `prototype-derived design`으로 분류하고, 공통 규칙 + 공통 컴포넌트 + HOME/RECIPE_DETAIL/PLANNER_WEEK 대표 적용을 잠갔다 |
-| `design-polish-slice1-typography-tokens` | docs | 앱 전역 font-weight 경량화, `--olive` 직접 사용 제거, 하드코딩 hex→역할 토큰 교체. 웹 토큰 변경 없음, Jua 미복원 |
+| `design-polish-slice1-typography-tokens` | merged | 앱 전역 font-weight 경량화, `--olive` 직접 사용 제거, 레거시 브랜드/olive hex→역할 토큰 교체. 웹 토큰 변경 없음, Jua 미복원 |
 
 ## Design Decision Gates
 

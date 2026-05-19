@@ -379,7 +379,7 @@ export function RecipeIngredientAddModal({
                 <div className="flex flex-wrap gap-2">
                   {selectedIngredients.map((ingredient) => (
                     <span
-                      className="rounded-[var(--radius-sm)] bg-[var(--olive)] px-3 py-1.5 text-sm font-semibold text-white shadow-[var(--shadow-1)]"
+                      className="rounded-[var(--radius-sm)] bg-[var(--brand)] px-3 py-1.5 text-sm font-semibold text-white shadow-[var(--shadow-1)]"
                       key={ingredient.id}
                     >
                       {ingredient.standard_name}

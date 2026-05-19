@@ -408,7 +408,7 @@ export function PantryScreen({
         <div
           className={`fixed left-1/2 top-16 z-50 -translate-x-1/2 rounded-[var(--radius-md)] px-4 py-2.5 text-sm font-medium shadow-lg transition-opacity ${
             toast.tone === "success"
-              ? "bg-[var(--olive)] text-[var(--surface)]"
+              ? "bg-[var(--brand)] text-[var(--surface)]"
               : "bg-[var(--brand-deep)] text-[var(--surface)]"
           }`}
         >
