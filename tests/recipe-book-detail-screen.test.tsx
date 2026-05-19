@@ -190,6 +190,32 @@ describe("RecipeBookDetailScreen", () => {
     expect(screen.getByTestId("recipebook-detail-skeleton")).toBeTruthy();
   });
 
+  it("uses the mobile loading shell and preserves mypage tab return context", () => {
+    installMatchMedia(true);
+    navigationMocks.searchParams.mockReturnValue(
+      new URLSearchParams({
+        restore: "recipebook-tab",
+        returnSurface: "mypage.recipebooks",
+        returnTo: "/mypage",
+      }),
+    );
+    mockFetchRecipeBookRecipes.mockReturnValue(new Promise(() => {}));
+
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-1"
+        bookName="저장한 레시피"
+        bookType="saved"
+        initialAuthenticated
+      />,
+    );
+
+    expect(screen.getByTestId("recipebook-detail-mobile-loading")).toBeTruthy();
+    expect(screen.getByLabelText("뒤로 가기").getAttribute("href")).toBe(
+      "/mypage?returnSurface=mypage.recipebooks&restore=recipebook-tab",
+    );
+  });
+
   // ─── Ready with items ───────────────────────────────────────────────────────
 
   it("displays recipe items when loaded", async () => {

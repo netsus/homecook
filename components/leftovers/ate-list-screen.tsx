@@ -329,34 +329,50 @@ export function AteListScreen({
   if (isMobileViewport) {
     if (authState === "checking") {
       return (
-        <ContentState
-          description="다먹은 목록에 접근하기 위해 로그인 상태를 확인하고 있어요."
-          eyebrow="세션 확인"
-          tone="loading"
-          title="로그인 상태를 확인하고 있어요"
-        />
+        <AteListMobileStateShell
+          appReturnHref={appReturn.href}
+          leftoversListHref={leftoversListHref}
+          testId="ate-list-mobile-auth-loading"
+        >
+          <div className="space-y-3 p-4" data-testid="ate-list-loading">
+            {[1, 2].map((index) => (
+              <div
+                className="h-[76px] rounded-xl border border-[#DEE2E6] bg-white"
+                key={index}
+              />
+            ))}
+          </div>
+        </AteListMobileStateShell>
       );
     }
 
     if (authState === "unauthorized") {
       return (
-        <ContentState
-          description="다먹은 목록을 확인하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
-          eyebrow="로그인 필요"
-          safeBottomPadding
-          tone="gate"
-          title="이 화면은 로그인이 필요해요"
+        <AteListMobileStateShell
+          appReturnHref={appReturn.href}
+          leftoversListHref={leftoversListHref}
+          testId="ate-list-mobile-auth-gate"
         >
-          <div className="space-y-3">
-            <SocialLoginButtons nextPath={ateListSelfHref} />
-            <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
-              href={appReturn.href}
+          <div className="p-4">
+            <ContentState
+              description="다먹은 목록을 확인하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
+              eyebrow="로그인 필요"
+              safeBottomPadding
+              tone="gate"
+              title="이 화면은 로그인이 필요해요"
             >
-              이전 화면으로 돌아가기
-            </Link>
+              <div className="space-y-3">
+                <SocialLoginButtons nextPath={ateListSelfHref} />
+                <Link
+                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#DEE2E6] bg-white px-5 py-3 text-sm font-semibold text-[#495057]"
+                  href={appReturn.href}
+                >
+                  이전 화면으로 돌아가기
+                </Link>
+              </div>
+            </ContentState>
           </div>
-        </ContentState>
+        </AteListMobileStateShell>
       );
     }
 
@@ -591,6 +607,34 @@ function AteListMobileView({
         </div>
       ) : null}
 
+      <Wave1MobileBottomTab ariaLabel="다먹은 요리 하단 탭" currentTab="mypage" />
+    </div>
+  );
+}
+
+function AteListMobileStateShell({
+  appReturnHref,
+  children,
+  leftoversListHref,
+  testId,
+}: {
+  appReturnHref: string;
+  children: React.ReactNode;
+  leftoversListHref: string;
+  testId: string;
+}) {
+  return (
+    <div
+      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
+      data-testid={testId}
+    >
+      <MobileAppBar
+        actionHref={leftoversListHref}
+        actionLabel="남은 요리"
+        backHref={appReturnHref}
+        title="다먹은 요리"
+      />
+      {children}
       <Wave1MobileBottomTab ariaLabel="다먹은 요리 하단 탭" currentTab="mypage" />
     </div>
   );

@@ -401,6 +401,10 @@ export function SettingsScreen({
   const nicknameSaveDisabled = !nicknameValid || isSavingNickname;
 
   if (authState === "checking") {
+    if (isMobileViewport) {
+      return <SettingsMobileLoadingShell surface={mobileSurface} />;
+    }
+
     return (
       <div>
         <SettingsAppBar />
@@ -445,6 +449,10 @@ export function SettingsScreen({
   }
 
   if (viewState === "loading") {
+    if (isMobileViewport) {
+      return <SettingsMobileLoadingShell surface={mobileSurface} />;
+    }
+
     return (
       <div>
         <SettingsAppBar />
@@ -936,6 +944,73 @@ function SettingsAppBar() {
         설정
       </h1>
       <div className="h-11 w-11 shrink-0" />
+    </div>
+  );
+}
+
+function SettingsMobileLoadingShell({
+  surface,
+}: {
+  surface: SettingsMobileSurface;
+}) {
+  const appReturn = useAppReturn({ fallback: "/mypage" });
+  const title = surface === "account" ? "계정 정보" : "설정";
+
+  return (
+    <div
+      className="min-h-dvh bg-[#F8F9FA] pb-[calc(24px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
+      data-testid="settings-mobile-loading"
+    >
+      <div
+        className="sticky top-0 z-30 flex min-h-[52px] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+        style={{ borderBottomWidth: "0.5px" }}
+      >
+        <button
+          aria-label="뒤로가기"
+          className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start border-0 bg-transparent p-0 text-[#212529]"
+          onClick={appReturn.goBack}
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            className="h-6 w-6"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2.3"
+            viewBox="0 0 24 24"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </button>
+        <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[#212529]">
+          {title}
+        </h1>
+      </div>
+      <div className="space-y-4 p-4" data-testid="settings-loading">
+        <section className="rounded-xl border border-[#DEE2E6] bg-white p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <Skeleton className="h-7 w-12 rounded-full" />
+          </div>
+        </section>
+        <section className="rounded-xl border border-[#DEE2E6] bg-white p-4">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-14" />
+            <Skeleton className="h-5 w-28" />
+          </div>
+        </section>
+        <section className="rounded-xl border border-[#DEE2E6] bg-white p-4">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-5 w-36" />
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

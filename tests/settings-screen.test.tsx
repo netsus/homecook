@@ -250,6 +250,16 @@ describe("SettingsScreen", () => {
     expect(screen.getByTestId("settings-loading")).toBeTruthy();
   });
 
+  it("uses the mobile loading shell for settings/account routes", () => {
+    installMatchMedia(true);
+    mockFetchUserProfile.mockReturnValue(new Promise(() => {}));
+
+    render(<SettingsScreen initialAuthenticated={true} />);
+
+    expect(screen.getByTestId("settings-mobile-loading")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "설정" })).toBeTruthy();
+  });
+
   // --- Login gate ---
 
   it("shows login gate with SocialLoginButtons and login link for unauthenticated users", () => {
