@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0",
+  "mode": "coverage-sensitive",
+  "generatedAt": "2026-05-20T04:05:00+09:00",
+  "slice": "design-polish-slice4-planner-meal-add",
+  "reportPath": "ui/designs/evidence/design-polish-slice4-planner-meal-add/exploratory-report.json",
+  "validationErrors": [],
+  "score": {
+    "total": 100,
+    "breakdown": {
+      "coverageRate": 1,
+      "blockedRate": 0,
+      "deviceCoverage": 1,
+      "findingQualityRate": 1,
+      "severityRate": 1,
+      "summaryRate": 1
+    },
+    "pass": true,
+    "thresholds": {
+      "minTotal": 85
+    }
+  }
+}

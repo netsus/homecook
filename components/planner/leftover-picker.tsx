@@ -23,14 +23,22 @@ export interface LeftoverPickerProps {
 
 type LoadState = "loading" | "ready" | "empty" | "error";
 
-function formatCookedAt(dateStr: string) {
+function formatCompactDate(dateStr: string) {
   const date = new Date(dateStr);
+  const m = date.getUTCMonth() + 1;
+  const d = date.getUTCDate();
+  return `${m}/${d}`;
+}
 
-  return new Intl.DateTimeFormat("ko-KR", {
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+function formatLeftoverMeta(leftover: LeftoverListItemData) {
+  const datePart = formatCompactDate(leftover.cooked_at);
+  const mealLabel = leftover.source_meal_label?.trim() || "끼니 미상";
+  const servings =
+    leftover.source_planned_servings ?? leftover.cooking_servings;
+  const servingsPart =
+    typeof servings === "number" && servings > 0 ? `${servings}인분` : "인분 미상";
+
+  return `${datePart} ${mealLabel} ${servingsPart}`;
 }
 
 function LeftoverCard({
@@ -41,39 +49,39 @@ function LeftoverCard({
   onSelect: (leftover: LeftoverListItemData) => void;
 }) {
   return (
-    <article className="rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
-      <div className="flex items-center gap-3">
-        {leftover.recipe_thumbnail_url ? (
-          <Image
-            alt=""
-            className="h-14 w-14 shrink-0 rounded-[var(--radius-card)] object-cover"
-            height={56}
-            src={leftover.recipe_thumbnail_url}
-            unoptimized
-            width={56}
-          />
-        ) : (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-card)] bg-[var(--surface-fill)]">
-            <span className="text-xl" aria-hidden="true">
-              🍲
-            </span>
-          </div>
-        )}
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-lg font-bold text-[var(--foreground)]">
-            {leftover.recipe_title}
-          </h3>
-          <p className="text-sm text-[var(--muted)]">
-            {formatCookedAt(leftover.cooked_at)} 요리
-          </p>
+    <article className="flex items-center gap-3 rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-3 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
+      {leftover.recipe_thumbnail_url ? (
+        <Image
+          alt=""
+          className="h-12 w-12 shrink-0 rounded-[var(--radius-card)] object-cover"
+          height={48}
+          src={leftover.recipe_thumbnail_url}
+          unoptimized
+          width={48}
+        />
+      ) : (
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-card)] bg-[var(--surface-fill)]">
+          <span className="text-lg" aria-hidden="true">
+            🍲
+          </span>
         </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <h3 className="truncate text-[15px] font-bold text-[var(--foreground)]">
+          {leftover.recipe_title}
+        </h3>
+        <p className="text-[12px] text-[var(--muted)]">
+          {formatLeftoverMeta(leftover)}
+        </p>
       </div>
       <button
-        className="mt-3 h-[var(--control-height-md)] w-full rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
+        className="flex min-h-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] px-1 text-[13px] font-semibold text-white"
         onClick={() => onSelect(leftover)}
         type="button"
       >
-        선택
+        <span className="flex h-8 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-3 hover:bg-[var(--brand-deep)]">
+          추가
+        </span>
       </button>
     </article>
   );
@@ -167,7 +175,7 @@ export function LeftoverPicker({
         description="플래너에 다시 올릴 남은요리를 골라주세요"
         onClose={onClose}
         panelClassName="max-w-md"
-        title="남은요리 선택"
+        title="남은 요리에서 추가"
       >
         {loadState === "loading" ? (
           <div className="py-8 text-center text-sm text-[var(--muted)]" aria-busy="true">

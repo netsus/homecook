@@ -1,7 +1,7 @@
 {
   "slice_id": "design-polish-slice4-planner-meal-add",
   "execution_mode": "autonomous",
-  "risk_class": "anchor-extension",
+  "risk_class": "medium",
   "anchor_extension": true,
   "anchor_screens": [
     "PLANNER_WEEK"
@@ -55,11 +55,21 @@
       "critic_artifact": null,
       "authority_required": true,
       "stage4_evidence_requirements": [
-        "mobile-default-before-after",
-        "mobile-narrow-before-after"
+        "mobile-default",
+        "mobile-narrow"
       ],
       "authority_report_paths": [
         "ui/designs/authority/DESIGN_POLISH_SLICE4_PLANNER_MEAL_ADD-authority.md"
+      ],
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/PLANNER_WEEK-meal-add-modal-mobile.png",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/PLANNER_WEEK-meal-add-modal-mobile-narrow.png",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/MEAL_SCREEN-meal-add-modal-mobile.png",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/MEAL_SCREEN-meal-add-modal-mobile-narrow.png",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/RECIPE_SEARCH-icon-mobile.png",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/RECIPE_SEARCH-icon-mobile-narrow.png",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/LEFTOVER_PICKER-card-mobile.png",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/LEFTOVER_PICKER-card-mobile-narrow.png"
       ]
     }
   },

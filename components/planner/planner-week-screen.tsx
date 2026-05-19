@@ -9,6 +9,9 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import { MealAddOptionsSheet } from "@/components/planner/meal-add-options-sheet";
+import type { MealAddPickerMode } from "@/components/planner/meal-add-options-sheet";
+import { MealAddPickerFlow } from "@/components/planner/meal-add-picker-flow";
 import { ContentState } from "@/components/shared/content-state";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -619,6 +622,8 @@ export function PlannerWeekScreen({
     initialAuthenticated ? "authenticated" : "checking",
   );
   const [mealAddSheet, setMealAddSheet] = useState<MealAddSheetState>(null);
+  const [mealAddPickerMode, setMealAddPickerMode] =
+    useState<MealAddPickerMode | null>(null);
   const [selectedDateKey, setSelectedDateKey] = useState<string>(() => todayKey);
   const mobileDayCardRefs = useRef<Record<string, HTMLElement | null>>({});
   const webDayCardRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -1023,10 +1028,33 @@ export function PlannerWeekScreen({
       dateKey,
       slotName: column.name,
     });
+    setMealAddPickerMode(null);
   }
 
   function closeMealAddSheet() {
+    setMealAddPickerMode(null);
     setMealAddSheet(null);
+  }
+
+  function openMealAddPicker(mode: MealAddPickerMode) {
+    setMealAddPickerMode(mode);
+  }
+
+  function closeMealAddPicker() {
+    setMealAddPickerMode(null);
+  }
+
+  async function handleMealAddComplete() {
+    setMealAddPickerMode(null);
+    setMealAddSheet(null);
+
+    try {
+      await loadPlanner();
+    } catch (error) {
+      if (isPlannerApiError(error) && error.status === 401) {
+        setAuthState("unauthorized");
+      }
+    }
   }
 
   function getMealAddHref(target: "search" | "recipebook" | "pantry" | "leftover" | "manual" | "youtube") {
@@ -1451,72 +1479,26 @@ export function PlannerWeekScreen({
           장보기
         </Link>
 
-        {mealAddSheet ? (
-          <div
-            className="fixed inset-0 z-40 flex items-end justify-center bg-black/42"
-            onClick={closeMealAddSheet}
-          >
-            <div
-              aria-labelledby="planner-meal-add-title"
-              aria-modal="true"
-              className="min-h-[364px] w-full max-w-[480px] rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)] max-[360px]:min-h-[375px]"
-              data-testid="planner-meal-add-sheet"
-              onClick={(event) => event.stopPropagation()}
-              role="dialog"
-            >
-              <div className="flex justify-center pb-4">
-                <div className="h-1 w-9 rounded-full bg-[#DEE2E6]" />
-              </div>
-              <div className="mb-4 flex items-center gap-3">
-                <h2
-                  className="min-w-0 flex-1 text-[20px] font-bold text-[#212529]"
-                  id="planner-meal-add-title"
-                >
-                  {formatCompactDateLabel(mealAddSheet.dateKey)} {mealAddSheet.slotName} · 식사 추가
-                </h2>
-                <button
-                  aria-label="닫기"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F8F9FA] text-[24px] leading-none text-[#495057]"
-                  onClick={closeMealAddSheet}
-                  type="button"
-                >
-                  ×
-                </button>
-              </div>
-              <Link
-                className="mb-4 flex h-10 w-full items-center gap-2 rounded-[var(--radius-control)] bg-[#F8F9FA] px-3 text-left text-[14px] text-[#868E96]"
-                href={getMealAddHref("search")}
-                onClick={closeMealAddSheet}
-                style={{ color: "#868E96" }}
-              >
-                <span className="text-[18px]" aria-hidden="true">⌕</span>
-                <span>레시피 검색</span>
-              </Link>
-              <div className="grid grid-cols-2 gap-2.5">
-                {[
-                  ["recipebook", "📖", "레시피북에서 추가"],
-                  ["pantry", "🧊", "팬트리 기반 추천"],
-                  ["leftover", "🍱", "남은요리에서 추가"],
-                  ["youtube", "🎬", "유튜브에서 가져오기"],
-                  ["manual", "✏️", "직접 등록"],
-                ].map(([target, icon, label]) => (
-                  <Link
-                    className="flex min-h-[58px] items-center gap-2.5 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-left text-[13px] font-semibold text-[#212529]"
-                    href={getMealAddHref(
-                      target as "search" | "recipebook" | "pantry" | "leftover" | "manual" | "youtube",
-                    )}
-                    key={target}
-                    onClick={closeMealAddSheet}
-                  >
-                    <span className="text-[20px]" aria-hidden="true">
-                      {icon}
-                    </span>
-                    <span>{label}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
+        {mealAddSheet && !mealAddPickerMode ? (
+          <MealAddOptionsSheet
+            onClose={closeMealAddSheet}
+            onPickerSelect={openMealAddPicker}
+            routeHrefFor={(mode) => getMealAddHref(mode)}
+            testId="planner-meal-add-sheet"
+            title={`${formatCompactDateLabel(mealAddSheet.dateKey)} ${mealAddSheet.slotName} · 식사 추가`}
+          />
+        ) : null}
+
+        {mealAddSheet && mealAddPickerMode ? (
+          <MealAddPickerFlow
+            columnId={mealAddSheet.columnId}
+            entryMode={mealAddPickerMode}
+            key={`${mealAddSheet.dateKey}-${mealAddSheet.columnId}-${mealAddPickerMode}`}
+            onClose={closeMealAddPicker}
+            onComplete={handleMealAddComplete}
+            planDate={mealAddSheet.dateKey}
+            slotName={mealAddSheet.slotName}
+          />
         ) : null}
 
           <Wave1MobileBottomTab ariaLabel="플래너 하단 탭" currentTab="planner" />

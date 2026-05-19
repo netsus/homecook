@@ -98,7 +98,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `design-polish-slice1-typography-tokens` | merged | 앱 전역 font-weight 경량화, `--olive` 직접 사용 제거, 레거시 브랜드/olive hex→역할 토큰 교체. 웹 토큰 변경 없음, Jua 미복원 |
 | `design-polish-slice2-app-shell-home` | merged | 앱 셸 하단 탭 지속성·플래너 아이콘 밀도·헤더 정렬 확인, HOME 재료 필터 모달 2열 그리드·팬트리 시트 패밀리 정합·버튼 색상 토큰 정리 |
 | `design-polish-slice3-recipe-detail` | merged | RECIPE_DETAIL 인분 stepper −/+ 버튼 크기 축소·균형, 히어로 메트릭 숫자 font-weight 경량화, 인분 아이콘·메트릭 컨트롤·stepper 색상 wave1 prototype 정합 |
-| `design-polish-slice4-planner-meal-add` | docs | PLANNER_WEEK/MEAL_SCREEN 식사추가 full-page→modal/sheet 전환, LeftoverPicker 카드 버튼 우측 배치·텍스트·메타데이터 형식 개선, RecipeSearchPicker 검색 아이콘 교체·확대. anchor-extension, authority required |
+| `design-polish-slice4-planner-meal-add` | merged | PLANNER_WEEK/MEAL_SCREEN 식사추가 full-page→modal/sheet 전환, LeftoverPicker 카드 버튼 우측 배치·텍스트·메타데이터 형식 개선, RecipeSearchPicker 검색 아이콘 교체·확대. anchor-extension, Codex fallback authority pass |
 
 ## Design Decision Gates
 

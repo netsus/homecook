@@ -9,8 +9,8 @@
   "preset": "vertical-slice-strict",
   "goal": "PLANNER_WEEK/MEAL_SCREEN의 식사추가 진입 경로를 modal/sheet 기반으로 전환하여 컨텍스트를 유지하면서 식사를 추가할 수 있게 한다. LeftoverPicker 카드의 선택 버튼 위치/크기/텍스트와 메타데이터 표기를 개선하고, RecipeSearchPicker의 검색 아이콘을 교체한다.",
   "owners": {
-    "claude": "stage1,stage4",
-    "codex": "stage5,stage6",
+    "claude": "stage1,stage4 requested; final authority requested but provider-limited",
+    "codex": "stage4 fallback implementation, stage5 fallback authority, stage6",
     "workers": []
   },
   "dependencies": [
@@ -65,27 +65,53 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "lifecycle": "merged",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": "Codex fallback authority pass; blockers=0 majors=0 minors=0",
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
   "closeout": {
-    "phase": "collecting",
-    "docs_projection": null,
-    "verification_projection": null,
-    "merge_gate_projection": null,
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/authority/DESIGN_POLISH_SLICE4_PLANNER_MEAL_ADD-authority.md"
+      ],
+      "actual_verification_refs": [
+        "pnpm vitest run tests/menu-add-screen.test.tsx tests/planner-week-screen.test.tsx tests/planner-meal-screen.test.tsx",
+        "pnpm exec playwright test tests/e2e/tmp-design-polish-slice4-evidence.spec.ts --project=mobile-chrome",
+        "pnpm exec playwright test tests/e2e/tmp-design-polish-slice4-narrow-evidence.spec.ts --project=mobile-chrome",
+        "pnpm typecheck",
+        "pnpm lint",
+        "git diff --check",
+        "pnpm verify:frontend"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
     "recovery_summary": {
       "manual_patch_count": 0,
       "manual_handoff": false,
       "stale_lock_count": 0,
       "ci_resync_count": 0,
       "artifact_missing": false,
-      "last_recovery_at": null
+      "last_recovery_at": "2026-05-20T00:00:00+09:00"
     },
     "repair_summary": {
       "codex_repairable_count": 0,
@@ -93,12 +119,26 @@
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": null,
-      "evidence_sources": []
+      "latest_reason_code": "claude_provider_limit_codex_fallback",
+      "evidence_sources": [
+        "ui/designs/authority/DESIGN_POLISH_SLICE4_PLANNER_MEAL_ADD-authority.md",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/PLANNER_WEEK-meal-add-modal-mobile.png",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/PLANNER_WEEK-meal-add-modal-mobile-narrow.png",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/MEAL_SCREEN-meal-add-modal-mobile.png",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/MEAL_SCREEN-meal-add-modal-mobile-narrow.png",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/RECIPE_SEARCH-icon-mobile.png",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/RECIPE_SEARCH-icon-mobile-narrow.png",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/LEFTOVER_PICKER-card-mobile.png",
+        "ui/designs/evidence/design-polish-slice4-planner-meal-add/LEFTOVER_PICKER-card-mobile-narrow.png"
+      ]
     },
-    "projection_state": null
+    "projection_state": {
+      "docs_synced_at": "2026-05-20T00:00:00+09:00",
+      "status_synced_at": "2026-05-20T00:00:00+09:00",
+      "pr_body_synced_at": null
+    }
   },
-  "notes": "Stage 1 docs created by Claude on docs/design-polish-slice4-planner-meal-add. FE-only anchor-extension slice. Scope: PLANNER_WEEK/MEAL_SCREEN meal-add full-page→modal/sheet conversion, LeftoverPicker card button relocation/resize/text change + metadata format change, RecipeSearchPicker icon update. Authority review required (anchor-extension on PLANNER_WEEK). Web tokens unchanged. Global app token values unchanged. 직접등록 remains route-based for slice5.",
+  "notes": "Stage 1 docs created by Claude on docs/design-polish-slice4-planner-meal-add. Stage 4/final authority Claude resume attempts hit provider limit, so Codex proceeded per user fallback instruction. FE-only anchor-extension slice. Scope completed: PLANNER_WEEK/MEAL_SCREEN meal-add full-page→modal/sheet conversion, LeftoverPicker card button relocation/resize/text change + metadata format change, RecipeSearchPicker icon update. Authority report blocker/major/minor 0. Web tokens unchanged. Global app token values unchanged. 직접등록 and YouTube remain route-based for slice5. closeout_phase=completed",
   "out_of_scope": [
     "MANUAL_RECIPE_CREATE modal conversion (slice5)",
     "YOUTUBE_IMPORT full UX redesign (slice5)",
@@ -108,7 +148,5 @@
     "Web color tokens (--web-*) changes",
     "Global app token value changes (--brand-primary etc.)"
   ],
-  "open_questions": [
-    "유튜브 옵션: 경량 모달 진입점 vs 기존 라우트 fallback — Stage 4 구현 시 난이도에 따라 결정"
-  ]
+  "open_questions": []
 }

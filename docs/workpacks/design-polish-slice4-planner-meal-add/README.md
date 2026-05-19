@@ -125,22 +125,26 @@ PLANNER_WEEK / MEAL_SCREEN / MENU_ADD / PICKERS 화면의 식사추가 흐름을
 - UI risk: `anchor-extension`
 - Anchor screen dependency: `PLANNER_WEEK`
 - Visual artifact: Stage 4에서 PLANNER_WEEK 식사추가 모달, MEAL_SCREEN 식사추가 모달, LeftoverPicker 카드 레이아웃, RecipeSearchPicker 아이콘의 before/after screenshot 제공 예정
-- Authority status: **required**
+- Authority status: reviewed
 - Evidence paths:
   - `ui/designs/evidence/design-polish-slice4-planner-meal-add/PLANNER_WEEK-meal-add-modal-mobile.png`
+  - `ui/designs/evidence/design-polish-slice4-planner-meal-add/PLANNER_WEEK-meal-add-modal-mobile-narrow.png`
   - `ui/designs/evidence/design-polish-slice4-planner-meal-add/MEAL_SCREEN-meal-add-modal-mobile.png`
+  - `ui/designs/evidence/design-polish-slice4-planner-meal-add/MEAL_SCREEN-meal-add-modal-mobile-narrow.png`
   - `ui/designs/evidence/design-polish-slice4-planner-meal-add/LEFTOVER_PICKER-card-mobile.png`
+  - `ui/designs/evidence/design-polish-slice4-planner-meal-add/LEFTOVER_PICKER-card-mobile-narrow.png`
   - `ui/designs/evidence/design-polish-slice4-planner-meal-add/RECIPE_SEARCH-icon-mobile.png`
-- Notes: anchor-extension이므로 Stage 4 완료 후 screenshot evidence 기반 authority review가 필요하다. `docs/engineering/product-design-authority.md`의 "anchor screen 확장" 조건에 해당한다. Codex가 `authority_precheck`를 수행하고, Claude가 `final_authority_gate`에서 blocker 0개를 확인한 뒤에만 `Design Status: confirmed`를 부여한다.
+  - `ui/designs/evidence/design-polish-slice4-planner-meal-add/RECIPE_SEARCH-icon-mobile-narrow.png`
+- Notes: anchor-extension이므로 Stage 4 완료 후 screenshot evidence 기반 authority review가 필요하다. `docs/engineering/product-design-authority.md`의 "anchor screen 확장" 조건에 해당한다. Claude final authority gate는 provider limit으로 완료되지 못했으며, 사용자 지시에 따라 Codex fallback authority review를 수행했다. Authority report blocker/major/minor 0개, `confirmed_allowed: true`.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) -- 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) -- 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) -- Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) -- Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 확정 (confirmed) -- Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A -- BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
-> 이 슬라이스는 PLANNER_WEEK 앵커 화면의 식사추가 진입 방식을 modal/sheet로 전환하는 anchor-extension이다. authority review가 필수이므로 Stage 4 완료 후 pending-review 상태에서 시작한다.
+> 이 슬라이스는 PLANNER_WEEK 앵커 화면의 식사추가 진입 방식을 modal/sheet로 전환하는 anchor-extension이다. Claude final gate는 provider limit으로 실행되지 못했지만, 사용자 fallback 지시에 따라 Codex authority review를 완료했고 blocker 0개로 확정 가능 판정을 남겼다.
 
 ## Source Links
 
@@ -178,23 +182,23 @@ PLANNER_WEEK / MEAL_SCREEN / MENU_ADD / PICKERS 화면의 식사추가 흐름을
 
 ## Delivery Checklist
 
-- [ ] PLANNER_WEEK 식사추가 옵션 시트 내 picker가 모달/시트로 열리도록 전환 <!-- omo:id=dp4-planner-picker-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] MEAL_SCREEN "식사 추가" 버튼이 모달/시트 옵션을 열도록 전환 <!-- omo:id=dp4-meal-screen-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] `직접등록` 옵션이 기존 `router.push` 방식 유지 확인 <!-- omo:id=dp4-manual-route-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] 유튜브 옵션 처리 (경량 모달 또는 기존 라우트 fallback) <!-- omo:id=dp4-youtube-option;stage=4;scope=frontend;review=5,6 -->
-- [ ] RecipeSearchPicker 검색 아이콘 교체 및 확대 <!-- omo:id=dp4-search-icon;stage=4;scope=frontend;review=5,6 -->
-- [ ] LeftoverPicker 선택 버튼 카드 우측 배치 + 크기 축소 <!-- omo:id=dp4-leftover-button-position;stage=4;scope=frontend;review=5,6 -->
-- [ ] LeftoverPicker 버튼 텍스트 `선택` → `추가` <!-- omo:id=dp4-leftover-button-text;stage=4;scope=frontend;review=5,6 -->
-- [ ] LeftoverPicker 메타데이터 `"X월 X일 요리"` → `"M/D 끼니명 N인분"` <!-- omo:id=dp4-leftover-metadata;stage=4;scope=frontend;review=5,6 -->
-- [ ] LeftoverPicker 시트 제목 `"남은요리 선택"` → `"남은 요리에서 추가"` <!-- omo:id=dp4-leftover-title;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 `/menu-add` URL 라우트 직접 접근 fallback 유지 <!-- omo:id=dp4-menu-add-route-fallback;stage=4;scope=frontend;review=5,6 -->
-- [ ] Modal-origin return behavior (PLANNER_WEEK/MEAL_SCREEN 컨텍스트 복귀) <!-- omo:id=dp4-modal-return-context;stage=4;scope=frontend;review=5,6 -->
-- [ ] `source_meal_label` / `cooking_servings` null fallback 처리 <!-- omo:id=dp4-leftover-null-fallback;stage=4;scope=frontend;review=5,6 -->
-- [ ] `loading / empty / error / read-only` 기존 상태 UI 유지 확인 <!-- omo:id=dp4-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] 데스크톱 MENU_ADD 사이드 패널 regression 없음 확인 <!-- omo:id=dp4-desktop-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] Authority evidence screenshot 생성 <!-- omo:id=dp4-authority-screenshots;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm lint` + `pnpm typecheck` 통과 <!-- omo:id=dp4-lint-typecheck;stage=4;scope=frontend;review=6 -->
-- [ ] `pnpm verify:frontend` 통과 (Vitest + Playwright regression) <!-- omo:id=dp4-verify-frontend;stage=4;scope=frontend;review=6 -->
+- [x] PLANNER_WEEK 식사추가 옵션 시트 내 picker가 모달/시트로 열리도록 전환 <!-- omo:id=dp4-planner-picker-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] MEAL_SCREEN "식사 추가" 버튼이 모달/시트 옵션을 열도록 전환 <!-- omo:id=dp4-meal-screen-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] `직접등록` 옵션이 기존 `router.push` 방식 유지 확인 <!-- omo:id=dp4-manual-route-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] 유튜브 옵션 처리 (경량 모달 또는 기존 라우트 fallback) <!-- omo:id=dp4-youtube-option;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeSearchPicker 검색 아이콘 교체 및 확대 <!-- omo:id=dp4-search-icon;stage=4;scope=frontend;review=5,6 -->
+- [x] LeftoverPicker 선택 버튼 카드 우측 배치 + 크기 축소 <!-- omo:id=dp4-leftover-button-position;stage=4;scope=frontend;review=5,6 -->
+- [x] LeftoverPicker 버튼 텍스트 `선택` → `추가` <!-- omo:id=dp4-leftover-button-text;stage=4;scope=frontend;review=5,6 -->
+- [x] LeftoverPicker 메타데이터 `"X월 X일 요리"` → `"M/D 끼니명 N인분"` <!-- omo:id=dp4-leftover-metadata;stage=4;scope=frontend;review=5,6 -->
+- [x] LeftoverPicker 시트 제목 `"남은요리 선택"` → `"남은 요리에서 추가"` <!-- omo:id=dp4-leftover-title;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 `/menu-add` URL 라우트 직접 접근 fallback 유지 <!-- omo:id=dp4-menu-add-route-fallback;stage=4;scope=frontend;review=5,6 -->
+- [x] Modal-origin return behavior (PLANNER_WEEK/MEAL_SCREEN 컨텍스트 복귀) <!-- omo:id=dp4-modal-return-context;stage=4;scope=frontend;review=5,6 -->
+- [x] `source_meal_label` / `cooking_servings` null fallback 처리 <!-- omo:id=dp4-leftover-null-fallback;stage=4;scope=frontend;review=5,6 -->
+- [x] `loading / empty / error / read-only` 기존 상태 UI 유지 확인 <!-- omo:id=dp4-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] 데스크톱 MENU_ADD 사이드 패널 regression 없음 확인 <!-- omo:id=dp4-desktop-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] Authority evidence screenshot 생성 <!-- omo:id=dp4-authority-screenshots;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm lint` + `pnpm typecheck` 통과 <!-- omo:id=dp4-lint-typecheck;stage=4;scope=frontend;review=6 -->
+- [x] `pnpm verify:frontend` 통과 (Vitest + Playwright regression) <!-- omo:id=dp4-verify-frontend;stage=4;scope=frontend;review=6 -->
 
 ## Contract Evolution Candidates
 
@@ -205,7 +209,28 @@ PLANNER_WEEK / MEAL_SCREEN / MENU_ADD / PICKERS 화면의 식사추가 흐름을
 
 ## Stage 5/6 Evidence
 
-(Stage 4 완료 후 기록)
+- Implementation: PLANNER_WEEK/MEAL_SCREEN 모바일 식사추가 옵션은 `MealAddOptionsSheet`와 `MealAddPickerFlow`로 공유한다. 검색/레시피북/팬트리/남은요리는 현재 화면 위의 sheet/overlay picker로 열리고, `직접등록`과 YouTube는 기존 route fallback을 유지한다.
+- LeftoverPicker: 카드 오른쪽 compact `추가` 버튼, `M/D 끼니명 N인분` 메타데이터, null fallback(`끼니 미상`, `인분 미상`)을 적용했다.
+- RecipeSearchPicker: 검색 버튼 아이콘을 더 명확한 magnifier glyph로 교체하고 모바일 아이콘 크기를 키웠다.
+- Authority report: `ui/designs/authority/DESIGN_POLISH_SLICE4_PLANNER_MEAL_ADD-authority.md`
+- Claude final gate: `b475ec3a-c10b-42ae-9c38-1df94982e645` resume 세션에 요청했으나 provider limit으로 종료됨. 사용자 지시에 따라 Codex fallback authority review 완료.
+- Screenshot evidence:
+  - `ui/designs/evidence/design-polish-slice4-planner-meal-add/PLANNER_WEEK-meal-add-modal-mobile.png`
+  - `ui/designs/evidence/design-polish-slice4-planner-meal-add/PLANNER_WEEK-meal-add-modal-mobile-narrow.png`
+  - `ui/designs/evidence/design-polish-slice4-planner-meal-add/MEAL_SCREEN-meal-add-modal-mobile.png`
+  - `ui/designs/evidence/design-polish-slice4-planner-meal-add/MEAL_SCREEN-meal-add-modal-mobile-narrow.png`
+  - `ui/designs/evidence/design-polish-slice4-planner-meal-add/LEFTOVER_PICKER-card-mobile.png`
+  - `ui/designs/evidence/design-polish-slice4-planner-meal-add/LEFTOVER_PICKER-card-mobile-narrow.png`
+  - `ui/designs/evidence/design-polish-slice4-planner-meal-add/RECIPE_SEARCH-icon-mobile.png`
+  - `ui/designs/evidence/design-polish-slice4-planner-meal-add/RECIPE_SEARCH-icon-mobile-narrow.png`
+- Verification:
+  - `pnpm vitest run tests/menu-add-screen.test.tsx tests/planner-week-screen.test.tsx tests/planner-meal-screen.test.tsx` passed.
+  - `pnpm exec playwright test tests/e2e/tmp-design-polish-slice4-evidence.spec.ts --project=mobile-chrome` passed before temporary spec removal.
+  - `pnpm exec playwright test tests/e2e/tmp-design-polish-slice4-narrow-evidence.spec.ts --project=mobile-chrome` passed before temporary spec removal.
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `git diff --check` passed.
+  - `pnpm verify:frontend` passed.
 
 ## Out of Scope
 
@@ -219,4 +244,4 @@ PLANNER_WEEK / MEAL_SCREEN / MENU_ADD / PICKERS 화면의 식사추가 흐름을
 
 ## Open Questions
 
-- 유튜브 옵션을 이 슬라이스에서 경량 모달로 구현할지 vs 기존 라우트 fallback으로 두고 slice5에서 모달 전환할지는 Stage 4 구현 시 난이도에 따라 결정한다. 어느 쪽이든 이 슬라이스의 scope 내다.
+- Resolved: YouTube 옵션은 기존 route fallback으로 유지한다. 전체 YouTube import UX는 slice5에서 다룬다.

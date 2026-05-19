@@ -10,6 +10,9 @@ import { resetPlannerStore } from "@/stores/planner-store";
 
 const readE2EAuthOverride = vi.fn();
 const fetchPlanner = vi.fn();
+const fetchRecipes = vi.fn();
+const createMealSafe = vi.fn();
+const fetchLeftovers = vi.fn();
 const navigationMocks = vi.hoisted(() => ({
   searchParams: vi.fn(() => new URLSearchParams()),
 }));
@@ -44,6 +47,21 @@ vi.mock("@/lib/api/planner", () => ({
   fetchPlanner: (...args: unknown[]) => fetchPlanner(...args),
   isPlannerApiError: (error: unknown) =>
     Boolean(error) && typeof error === "object" && "status" in (error as Record<string, unknown>),
+}));
+
+vi.mock("@/lib/api/meal", () => ({
+  createMealSafe: (...args: unknown[]) => createMealSafe(...args),
+}));
+
+vi.mock("@/lib/api/leftovers", () => ({
+  fetchLeftovers: (...args: unknown[]) => fetchLeftovers(...args),
+}));
+
+vi.mock("@/lib/api/recipe", () => ({
+  fetchPantryMatchRecipes: vi.fn(),
+  fetchRecipeBookRecipes: vi.fn(),
+  fetchRecipeBooks: vi.fn(),
+  fetchRecipes: (...args: unknown[]) => fetchRecipes(...args),
 }));
 
 vi.mock("@/lib/supabase/env", () => ({
@@ -153,6 +171,18 @@ describe("planner week screen", () => {
   beforeEach(() => {
     readE2EAuthOverride.mockReset();
     fetchPlanner.mockReset();
+    fetchRecipes.mockReset();
+    createMealSafe.mockReset();
+    fetchLeftovers.mockReset();
+    fetchRecipes.mockResolvedValue({
+      success: true,
+      data: {
+        has_next: false,
+        items: [],
+        next_cursor: null,
+      },
+      error: null,
+    });
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     resetPlannerStore();
@@ -310,7 +340,7 @@ describe("planner week screen", () => {
     ).toBeNull();
   });
 
-  it("opens the Wave1 meal-add sheet and preserves the selected option in links", async () => {
+  it("opens the Wave1 meal-add sheet and opens picker options without leaving the planner", async () => {
     const user = userEvent.setup();
 
     readE2EAuthOverride.mockReturnValue(true);
@@ -324,20 +354,26 @@ describe("planner week screen", () => {
     const sheet = screen.getByTestId("planner-meal-add-sheet");
     expect(within(sheet).getByRole("heading", { name: "3/24 아침 · 식사 추가" })).toBeTruthy();
 
-    const searchLink = within(sheet).getByRole("link", { name: /레시피 검색/ });
-    const recipeBookLink = within(sheet).getByRole("link", { name: /레시피북에서 추가/ });
-    const pantryLink = within(sheet).getByRole("link", { name: /팬트리 기반 추천/ });
-    const leftoverLink = within(sheet).getByRole("link", { name: /남은요리에서 추가/ });
+    const searchButton = within(sheet).getByRole("button", { name: /레시피 검색/ });
+    const recipeBookButton = within(sheet).getByTestId("meal-add-option-recipebook");
+    const pantryButton = within(sheet).getByTestId("meal-add-option-pantry");
+    const leftoverButton = within(sheet).getByTestId("meal-add-option-leftover");
     const youtubeLink = within(sheet).getByRole("link", { name: /유튜브에서 가져오기/ });
     const manualLink = within(sheet).getByRole("link", { name: /직접 등록/ });
 
-    expect(searchLink.getAttribute("href")).toContain("/menu-add?");
-    expect(searchLink.getAttribute("href")).toContain("date=2026-03-24");
-    expect(recipeBookLink.getAttribute("href")).toContain("source=recipebook");
-    expect(pantryLink.getAttribute("href")).toContain("source=pantry");
-    expect(leftoverLink.getAttribute("href")).toContain("source=leftover");
+    expect(searchButton).toBeTruthy();
+    expect(recipeBookButton.tagName).toBe("BUTTON");
+    expect(pantryButton.tagName).toBe("BUTTON");
+    expect(leftoverButton.tagName).toBe("BUTTON");
     expect(youtubeLink.getAttribute("href")).toContain("/menu/add/youtube?");
     expect(manualLink.getAttribute("href")).toContain("/menu/add/manual?");
+
+    await user.click(searchButton);
+    expect(await screen.findByRole("heading", { name: "검색으로 추가" })).toBeTruthy();
+    expect(screen.queryByTestId("planner-meal-add-sheet")).toBeNull();
+
+    await user.click(screen.getByLabelText("뒤로"));
+    expect(screen.getByTestId("planner-meal-add-sheet")).toBeTruthy();
   });
 
   it("shows a direct link back to an existing shopping list", async () => {

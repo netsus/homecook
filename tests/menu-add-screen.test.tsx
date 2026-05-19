@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -113,7 +113,7 @@ describe("MenuAddScreen", () => {
     expect(document.activeElement).toBe(screen.getByLabelText("레시피 검색"));
   });
 
-  it("uses a larger left-tilted magnifier in the mobile recipe search field", async () => {
+  it("uses a larger clear magnifier in the mobile recipe search field", async () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 
     const user = userEvent.setup();
@@ -121,9 +121,9 @@ describe("MenuAddScreen", () => {
 
     const icon = screen.getByTestId("recipe-search-submit-icon");
     const iconClass = icon.getAttribute("class") ?? "";
-    expect(iconClass).toContain("h-6");
-    expect(iconClass).toContain("w-6");
-    expect(iconClass).toContain("rotate-[-12deg]");
+    expect(iconClass).toContain("h-7");
+    expect(iconClass).toContain("w-7");
+    expect(iconClass).not.toContain("rotate-[-12deg]");
   });
 
   it("shows the mobile target context instead of the legacy secondary heading (Wave1)", () => {
@@ -139,7 +139,7 @@ describe("MenuAddScreen", () => {
 
     render(<MenuAddScreen {...DEFAULT_PROPS} initialSource="leftover" />);
 
-    const dialog = await screen.findByRole("dialog", { name: "남은요리 선택" });
+    const dialog = await screen.findByRole("dialog", { name: "남은 요리에서 추가" });
 
     expect(dialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
     expect(leftoversApi.fetchLeftovers).toHaveBeenCalledWith("leftover");
@@ -223,12 +223,18 @@ describe("MenuAddScreen", () => {
     await waitFor(() => {
       expect(screen.getByText("김치찌개")).toBeTruthy();
     });
+    expect(screen.getByText("4/17 저녁 2인분")).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "선택" }));
+    await user.click(screen.getByRole("button", { name: "추가" }));
     await waitFor(() => {
       expect(screen.getByText("계획 인분 입력")).toBeTruthy();
     });
-    await user.click(screen.getByRole("button", { name: "추가" }));
+    await user.click(
+      within(screen.getByRole("dialog", { name: "계획 인분 입력" })).getByRole(
+        "button",
+        { name: "추가" },
+      ),
+    );
 
     await waitFor(() => {
       expect(mealApi.createMealSafe).toHaveBeenCalledWith({
@@ -242,5 +248,29 @@ describe("MenuAddScreen", () => {
     expect(mockRouterReplace).toHaveBeenCalledWith(
       `/planner/${DEFAULT_PROPS.planDate}/${DEFAULT_PROPS.columnId}?slot=${encodeURIComponent(DEFAULT_PROPS.slotName)}`,
     );
+  });
+
+  it("shows fallback metadata for leftover dishes without source meal data", async () => {
+    vi.mocked(leftoversApi.fetchLeftovers).mockResolvedValue({
+      items: [
+        {
+          id: "leftover-1",
+          recipe_id: "recipe-1",
+          recipe_title: "된장찌개",
+          recipe_thumbnail_url: null,
+          status: "leftover",
+          cooked_at: "2026-04-17T00:00:00.000Z",
+          eaten_at: null,
+          cooking_servings: 0,
+          source_meal_label: null,
+          source_planned_servings: null,
+        },
+      ],
+    });
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} initialSource="leftover" />);
+
+    expect(await screen.findByText("된장찌개")).toBeTruthy();
+    expect(screen.getByText("4/17 끼니 미상 인분 미상")).toBeTruthy();
   });
 });
