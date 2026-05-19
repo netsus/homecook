@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-19T17:06:09Z",
+  "updated_at": "2026-05-19T17:37:34Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1007,11 +1007,11 @@
     {
       "id": "design-polish-slice3-recipe-detail",
       "preset": "vertical-slice-strict",
-      "branch": "docs/design-polish-slice3-recipe-detail",
-      "pr_path": null,
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-design-polish-slice3-recipe-detail",
+      "pr_path": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm lint",
         "pnpm typecheck",
@@ -1020,7 +1020,7 @@
         "pnpm validate:workpack -- --slice design-polish-slice3-recipe-detail",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs created by Claude on docs/design-polish-slice3-recipe-detail. FE-only visual polish. Scope: RECIPE_DETAIL inline stepper + planner-add modal stepper visible circle size reduction and glyph balance, Wave1HeroMetricButton/Status font-weight reduction (extrabold→bold), serving icon + metric controls + stepper button color prototype parity. Web tokens unchanged. Global app token values unchanged. No anchor-extension. Depends on design-polish-slice1-typography-tokens (merged) and design-polish-slice2-app-shell-home (merged)."
+      "notes": "Stage 1 docs created by Claude on docs/design-polish-slice3-recipe-detail. Stage 4 frontend implemented by Claude and scope-repaired by Codex. Stage 5 Claude review found no blockers. FE-only visual polish. Scope: RECIPE_DETAIL mobile inline stepper glyph/weight balance, planner-add modal compact stepper visible circle size reduction, Wave1HeroMetricButton/Status font-weight reduction (extrabold→bold), serving icon + metric controls + stepper color role parity. Web tokens unchanged. Global app token values unchanged. No anchor-extension. Full pnpm verify:frontend passed locally."
     }
   ]
 }

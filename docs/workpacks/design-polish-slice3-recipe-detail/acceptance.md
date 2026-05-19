@@ -6,30 +6,30 @@
 > `Manual Only`에 남는 항목은 자동화할 수 없는 것만 허용한다.
 
 ## Happy Path
-- [ ] RECIPE_DETAIL 재료 탭 인분 stepper의 `−`/`+` visible circle이 prototype 비례(28~32px)로 축소되어 있다 <!-- omo:id=accept-stepper-size;stage=4;scope=frontend;review=5,6 -->
-- [ ] planner-add 모달 인분 stepper의 `−`/`+` visible circle이 prototype 비례(28px)로 축소되어 있다 <!-- omo:id=accept-modal-stepper-size;stage=4;scope=frontend;review=5,6 -->
-- [ ] `−` 글리프와 `+` 글리프가 시각적으로 균형 잡혀 있다 (크기, 두께 유사) <!-- omo:id=accept-glyph-balance;stage=4;scope=frontend;review=5,6 -->
-- [ ] 모바일 히어로 좋아요/저장/요리완료 메트릭 숫자의 font-weight가 경량화되었다 (extrabold → bold) <!-- omo:id=accept-metric-weight;stage=4;scope=frontend;review=5,6 -->
-- [ ] 인분 `+` 버튼, 인분 아이콘, 메트릭 컨트롤의 색상이 wave1 prototype reference와 정합되어 있다 <!-- omo:id=accept-color-parity;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL 화면이 정상 렌더링되고 시각적 위계가 자연스럽다 <!-- omo:id=accept-rendering;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL 재료 탭 인분 stepper의 `−`/`+` visible circle이 prototype 비례(28~32px)로 축소되어 있다 <!-- omo:id=accept-stepper-size;stage=4;scope=frontend;review=5,6 -->
+- [x] planner-add 모달 인분 stepper의 `−`/`+` visible circle이 prototype 비례(28px)로 축소되어 있다 <!-- omo:id=accept-modal-stepper-size;stage=4;scope=frontend;review=5,6 -->
+- [x] `−` 글리프와 `+` 글리프가 시각적으로 균형 잡혀 있다 (크기, 두께 유사) <!-- omo:id=accept-glyph-balance;stage=4;scope=frontend;review=5,6 -->
+- [x] 모바일 히어로 좋아요/저장/요리완료 메트릭 숫자의 font-weight가 경량화되었다 (extrabold → bold) <!-- omo:id=accept-metric-weight;stage=4;scope=frontend;review=5,6 -->
+- [x] 인분 `+` 버튼, 인분 아이콘, 메트릭 컨트롤의 색상이 wave1 prototype 역할과 정합되어 있다. 단, exact mint `#2AC1BC`는 contrast 회귀 방지를 위해 전역 토큰 변경 없이 앱 brand 역할 토큰으로 유지한다 <!-- omo:id=accept-color-parity;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL 화면이 정상 렌더링되고 시각적 위계가 자연스럽다 <!-- omo:id=accept-rendering;stage=4;scope=frontend;review=5,6 -->
 
 ## State / Policy
-- [ ] 웹 `--web-*` 토큰과 1024px 미디어 블록 내 스타일이 변경되지 않는다 <!-- omo:id=accept-web-tokens-unchanged;stage=4;scope=frontend;review=5,6 -->
-- [ ] Jua 브랜드 폰트가 복원되지 않는다 <!-- omo:id=accept-jua-absent;stage=4;scope=frontend;review=6 -->
-- [ ] 글로벌 `--brand-primary` 등 앱 전역 토큰 값이 변경되지 않는다 <!-- omo:id=accept-global-tokens-unchanged;stage=4;scope=frontend;review=5,6 -->
-- [ ] 터치 타겟이 최소 44×44px를 유지한다 <!-- omo:id=accept-touch-target;stage=4;scope=frontend;review=5,6 -->
+- [x] 웹 `--web-*` 토큰과 1024px 미디어 블록 내 스타일이 변경되지 않는다 <!-- omo:id=accept-web-tokens-unchanged;stage=4;scope=frontend;review=5,6 -->
+- [x] Jua 브랜드 폰트가 복원되지 않는다 <!-- omo:id=accept-jua-absent;stage=4;scope=frontend;review=6 -->
+- [x] 글로벌 `--brand-primary` 등 앱 전역 토큰 값이 변경되지 않는다 <!-- omo:id=accept-global-tokens-unchanged;stage=4;scope=frontend;review=5,6 -->
+- [x] 터치 타겟이 최소 44×44px를 유지한다 <!-- omo:id=accept-touch-target;stage=4;scope=frontend;review=5,6 -->
 
 ## Error / Permission
-- [ ] 기존 loading 상태 UI가 유지된다 <!-- omo:id=accept-loading-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 empty 상태 UI가 유지된다 <!-- omo:id=accept-empty-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 error 상태 UI가 유지된다 <!-- omo:id=accept-error-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 unauthorized 처리 흐름이 유지된다 <!-- omo:id=accept-unauthorized-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 loading 상태 UI가 유지된다 <!-- omo:id=accept-loading-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 empty 상태 UI가 유지된다 <!-- omo:id=accept-empty-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 error 상태 UI가 유지된다 <!-- omo:id=accept-error-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 unauthorized 처리 흐름이 유지된다 <!-- omo:id=accept-unauthorized-preserved;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 - 백엔드 항목 N/A (FE-only 슬라이스, API/DB 변경 없음)
 
 ## Data Setup / Preconditions
-- [ ] 기존 fixture / mock 데이터로 RECIPE_DETAIL 화면이 정상 렌더링된다 (신규 데이터 불필요) <!-- omo:id=accept-fixture-renders;stage=4;scope=frontend;review=6 -->
+- [x] 기존 fixture / mock 데이터로 RECIPE_DETAIL 화면이 정상 렌더링된다 (신규 데이터 불필요) <!-- omo:id=accept-fixture-renders;stage=4;scope=frontend;review=6 -->
 
 ## Manual QA
 - verifier: 사용자 (수동 시각적 확인)
@@ -45,10 +45,10 @@
 ## Automation Split
 
 ### Vitest
-- [ ] 기존 컴포넌트/유틸 테스트가 전부 통과한다 (regression gate) <!-- omo:id=accept-vitest-regression;stage=4;scope=frontend;review=6 -->
+- [x] 기존 컴포넌트/유틸 테스트가 전부 통과한다 (regression gate) <!-- omo:id=accept-vitest-regression;stage=4;scope=frontend;review=6 -->
 
 ### Playwright
-- [ ] 기존 E2E 테스트가 전부 통과한다 (regression gate) <!-- omo:id=accept-playwright-regression;stage=4;scope=frontend;review=6 -->
+- [x] 기존 E2E 테스트가 전부 통과한다 (regression gate) <!-- omo:id=accept-playwright-regression;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only
 - [ ] RECIPE_DETAIL 인분 stepper 영역 + 히어로 메트릭 영역 mobile (390px) before/after screenshot 비교
