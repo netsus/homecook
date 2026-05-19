@@ -1,0 +1,29 @@
+{
+  "slice": "design-polish-slice6-shopping-cooking-pantry",
+  "date": "2026-05-20",
+  "result": "pass",
+  "summary": "MEAL_SCREEN individual cook shortcut and COOK_MODE mobile ingredient proximity were verified with unit tests, targeted Playwright, generated screenshot evidence, and full frontend verification.",
+  "blockers": [],
+  "majors": [],
+  "minors": [
+    {
+      "id": "existing-meal-screen-bottom-nav-cta-edge",
+      "status": "accepted",
+      "note": "MEAL_SCREEN evidence shows the existing bottom tab can cover the lower add-meal CTA edge near the bottom of the list. This predates slice6 and does not block the per-meal cook shortcut."
+    }
+  ],
+  "evidence": [
+    "ui/designs/authority/DESIGN_POLISH_SLICE6_SHOPPING_COOKING_PANTRY-authority.md",
+    "ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/MEAL_SCREEN-cook-shortcut-mobile.png",
+    "ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/MEAL_SCREEN-cook-shortcut-narrow.png",
+    "ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/COOK_MODE-ingredients-steps-mobile.png",
+    "ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/COOK_MODE-ingredients-steps-narrow.png"
+  ],
+  "verification": [
+    "pnpm vitest run tests/planner-meal-screen.test.tsx tests/cook-mode-screen.test.tsx",
+    "pnpm vitest run tests/standalone-cook-mode-screen.test.tsx",
+    "pnpm exec playwright test tests/e2e/slice-15a-cook-planner-complete.spec.ts --project=mobile-chrome",
+    "pnpm exec playwright test tests/e2e/qa-design-polish-slice6-evidence.spec.ts --project=mobile-chrome",
+    "pnpm verify:frontend"
+  ]
+}
