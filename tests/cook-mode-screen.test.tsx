@@ -248,6 +248,34 @@ describe("CookModeScreen", () => {
     expect(screen.queryByTestId("cook-mode-tabs")).not.toBeTruthy();
   });
 
+  it("keeps ingredients close to a single step on mobile", async () => {
+    installMatchMedia(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(
+      buildCookModeData({
+        recipe: {
+          ...buildCookModeData().recipe,
+          steps: [
+            buildStep({
+              step_number: 1,
+              instruction: "양념장을 섞어주세요.",
+            }),
+          ],
+        },
+      }),
+    );
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const ingredientArchive = await screen.findByTestId(
+      "mobile-ingredient-archive",
+    );
+
+    expect(ingredientArchive.className).toContain("mt-5");
+    expect(ingredientArchive.className).not.toContain("mt-[520px]");
+  });
+
   it("uses cooking method color keys from recipe data on step cards", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(

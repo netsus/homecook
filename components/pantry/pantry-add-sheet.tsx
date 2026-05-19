@@ -253,13 +253,14 @@ export function PantryAddSheet({
                       : ingredient.standard_name
                   }
                   className={[
-                    "flex min-h-[54px] items-center gap-2 rounded-xl border px-3 text-left disabled:opacity-100",
+                    "flex min-h-[54px] items-center gap-2 rounded-xl border px-3 text-left disabled:opacity-60",
                     isExisting
-                      ? "border-[#DEE2E6] bg-[#F8F9FA]"
+                      ? "border-[#DEE2E6] bg-[#F8F9FA] opacity-60 grayscale"
                       : isChecked
                         ? "border-[#2AC1BC] bg-[#E8FAF8]"
                         : "border-[#DEE2E6] bg-white",
                   ].join(" ")}
+                  data-owned={isExisting ? "true" : undefined}
                   disabled={isExisting}
                   key={ingredient.id}
                   onClick={() => handleToggle(ingredient.id)}
@@ -268,11 +269,19 @@ export function PantryAddSheet({
                 >
                   <span
                     aria-hidden="true"
-                    className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[10px] bg-[#F8F9FA] text-[18px]"
+                    className={[
+                      "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[10px] bg-[#F8F9FA] text-[18px]",
+                      isExisting ? "opacity-70" : "",
+                    ].join(" ")}
                   >
                     {getPantryEmoji(ingredient.standard_name, ingredient.category)}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-extrabold text-[#212529]">
+                  <span
+                    className={[
+                      "min-w-0 flex-1 truncate text-[13px] font-extrabold",
+                      isExisting ? "text-[#868E96]" : "text-[#212529]",
+                    ].join(" ")}
+                  >
                     {ingredient.standard_name}
                   </span>
                   {isExisting ? (
@@ -392,8 +401,11 @@ export function PantryAddSheet({
                     className={[
                       "web-ingredient-cell",
                       isChecked ? "web-ingredient-cell-selected" : "",
-                      isExisting ? "web-pantry-ingredient-existing" : "",
+                      isExisting
+                        ? "web-pantry-ingredient-existing opacity-60 grayscale"
+                        : "",
                     ].join(" ")}
+                    data-owned={isExisting ? "true" : undefined}
                     disabled={isExisting}
                     key={ingredient.id}
                     onClick={() => handleToggle(ingredient.id)}

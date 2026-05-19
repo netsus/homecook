@@ -129,7 +129,10 @@ export function MobileCookModeView({
           data-testid={contentTestId}
         >
           <MobileStepList recipeTitle={recipe.title} steps={recipe.steps} />
-          <MobileIngredientArchive ingredients={recipe.ingredients} />
+          <MobileIngredientArchive
+            ingredients={recipe.ingredients}
+            stepCount={recipe.steps.length}
+          />
         </main>
       </div>
 
@@ -220,17 +223,22 @@ function MobileStepList({
 
 function MobileIngredientArchive({
   ingredients,
+  stepCount,
 }: {
   ingredients: CookingModeIngredient[];
+  stepCount: number;
 }) {
   if (ingredients.length === 0) {
     return null;
   }
 
+  const spacingClass = stepCount <= 1 ? "mt-5" : "mt-[520px]";
+
   return (
     <section
-      className="mt-[520px] pb-10"
       aria-labelledby="mobile-ingredients-heading"
+      className={`${spacingClass} pb-10`}
+      data-testid="mobile-ingredient-archive"
     >
       <h2
         className="mb-3 text-sm font-bold text-white/70"
