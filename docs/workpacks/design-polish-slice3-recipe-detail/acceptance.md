@@ -33,7 +33,7 @@
 
 ## Manual QA
 - verifier: 사용자 (수동 시각적 확인)
-- environment: mobile default (390px), `pnpm dev:demo`
+- environment: mobile default (390px); real DB smoke N/A because API/DB/seed flows are unchanged
 - scenarios:
   - RECIPE_DETAIL 재료 탭에서 인분 `−`/`+` 버튼 크기가 적절한지 확인
   - `−`와 `+` 글리프의 시각적 균형이 맞는지 확인

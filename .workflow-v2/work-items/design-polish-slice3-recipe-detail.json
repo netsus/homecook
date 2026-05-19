@@ -34,9 +34,7 @@
   "workflow": {
     "plan_loop": "skipped",
     "review_loop": "required",
-    "external_smokes": [
-      "pnpm dev:demo"
-    ],
+    "external_smokes": [],
     "execution_mode": "autonomous",
     "evaluator_profile": "vertical-slice-strict",
     "merge_policy": "conditional-auto",

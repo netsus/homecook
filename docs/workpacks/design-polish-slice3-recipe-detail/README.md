@@ -98,7 +98,7 @@ N/A — 이 슬라이스에 백엔드 변경 없음. FE-only visual polish.
 
 ## QA / Test Data Plan
 - fixture baseline: 기존 fixture 그대로 사용 (데이터 변경 없음)
-- real DB smoke 경로: `pnpm dev:demo` — 시각적 변경 확인
+- real DB smoke 경로: N/A — FE-only visual polish이며 API/DB/seed 흐름 변경 없음
 - seed / reset 명령: 해당 없음 (DB 변경 없음)
 - bootstrap이 생성해야 하는 시스템 row: 해당 없음
 - blocker 조건: 없음
@@ -156,5 +156,5 @@ N/A — 이 슬라이스에 백엔드 변경 없음. FE-only visual polish.
 - Color parity notes: 모바일 인분 stepper `+` 버튼은 앱 팔레트 역할 토큰 `var(--brand)` (#0F766E)를 사용. Prototype `T.mint` (#2AC1BC)와 다르나, 글로벌 토큰 값 변경은 out of scope이며 contrast 회귀를 피하기 위해 현 앱 brand 역할 토큰으로 정합한다. 모달 stepper는 `var(--wave1-ink)` (#212529)로 prototype `T.ink`와 정합. 히어로 메트릭은 white text + drop-shadow로 prototype 정합 완료. `ServingsIcon`은 `currentColor` 상속으로 정상.
 - State UI: loading/empty/error/read-only/unauthorized 코드 경로를 변경하지 않았으므로 기존 상태 UI 유지됨.
 - Local verification: `pnpm lint`, `pnpm typecheck`, `pnpm test:product -- tests/recipe-detail-screen.test.tsx tests/recipe-add-to-planner.test.tsx tests/app-overlay-primitives.test.tsx`, `pnpm validate:workflow-v2`, `pnpm validate:workpack -- --slice design-polish-slice3-recipe-detail`, `git diff --check` passed after Codex scope repair.
-- Stage 6 full verification: `pnpm verify:frontend` passed locally, including build, Lighthouse, slice regression E2E, accessibility, visual regression, and security smoke. RECIPE_DETAIL screenshot evidence is covered by `tests/e2e/qa-visual.spec.ts` recipe detail visual regression across configured projects.
+- Stage 6 full verification: `pnpm verify:frontend` passed locally, including build, Lighthouse, slice regression E2E, accessibility, visual regression, and security smoke. RECIPE_DETAIL screenshot evidence is covered by `tests/e2e/qa-visual.spec.ts` recipe detail visual regression across configured projects. Real DB smoke is N/A because this slice changes visual styling only and does not touch API/DB/seed flows.
 - Stage 5 review: Claude review artifact `.omx/artifacts/claude-delegate-design-polish-slice3-recipe-detail-stage5-review-response-20260519T172355Z.md`; verdict: no blockers.
