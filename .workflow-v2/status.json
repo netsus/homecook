@@ -1062,17 +1062,21 @@
     {
       "id": "design-polish-slice6-shopping-cooking-pantry",
       "preset": "vertical-slice-strict",
-      "branch": "docs/design-polish-slice6-shopping-cooking-pantry",
+      "branch": "feature/fe-design-polish-slice6-shopping-cooking-pantry",
       "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm verify:frontend",
         "pnpm validate:workflow-v2",
         "pnpm validate:workpack -- --slice design-polish-slice6-shopping-cooking-pantry",
+        "pnpm validate:authority-evidence-presence",
         "git diff --check"
       ],
-      "notes": "Stage 1 requested through Claude resume session b475ec3a-c10b-42ae-9c38-1df94982e645 with model=opus, effort=high, permission_mode=bypassPermissions; provider limit blocked execution, so Codex completed fallback per user instruction. FE-only high-risk MEAL_SCREEN/COOK_MODE polish planned: selected meal planned_servings preservation for individual cook shortcut and compact COOK_MODE ingredients near steps. API/DB/web token/global brand token changes out of scope. roadmap row status=docs while workflow-v2 lifecycle remains planned until implementation starts. closeout_phase=collecting last_recovery_at=2026-05-20T05:30:00+09:00"
+      "notes": "Stage 1 and final authority were requested through Claude resume session b475ec3a-c10b-42ae-9c38-1df94982e645 with model=opus, effort=high, permission_mode=bypassPermissions; provider limit blocked execution, so Codex completed fallback per user instruction. FE-only high-risk MEAL_SCREEN/COOK_MODE polish completed: selected meal planned_servings preservation for individual cook shortcut, mobile cook-mode serving label fix, and compact COOK_MODE ingredients directly above steps. Authority report blocker=0 major=0 minor=1 verdict=pass; mobile default+narrow evidence captured. API/DB/web token/global brand token changes out of scope. pnpm verify:frontend passed locally. closeout_phase=completed closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/authority/DESIGN_POLISH_SLICE6_SHOPPING_COOKING_PANTRY-authority.md,ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/MEAL_SCREEN-cook-shortcut-mobile.png,ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/MEAL_SCREEN-cook-shortcut-narrow.png,ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/COOK_MODE-ingredients-steps-mobile.png,ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/COOK_MODE-ingredients-steps-narrow.png last_recovery_at=2026-05-20T05:40:00+09:00"
     }
   ]
 }

@@ -110,21 +110,21 @@ MEAL_SCREEN에서 개별 식사의 `[요리하기]`를 눌렀을 때, 해당 식
 
 - UI risk: `high-risk`
 - Anchor screen dependency: 없음
-- Visual artifact: Stage 4에서 아래 screenshot evidence 제공 예정
+- Visual artifact: Stage 4 screenshot evidence 생성 완료
   - `ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/MEAL_SCREEN-cook-shortcut-mobile.png`
   - `ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/MEAL_SCREEN-cook-shortcut-narrow.png`
   - `ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/COOK_MODE-ingredients-steps-mobile.png`
   - `ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/COOK_MODE-ingredients-steps-narrow.png`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Authority report path:
   - `ui/designs/authority/DESIGN_POLISH_SLICE6_SHOPPING_COOKING_PANTRY-authority.md`
-- Notes: 기존 확정 화면의 동작 기준과 정보 위계를 다듬는 polish이다. generator/critic은 기존 산출물을 재사용하고, Stage 5에서 screenshot evidence 기준 blocker/major/minor를 판정한다.
+- Notes: 기존 확정 화면의 동작 기준과 정보 위계를 다듬는 polish이다. generator/critic은 기존 산출물을 재사용했다. Claude final authority는 provider limit으로 실행되지 못했고, Codex가 screenshot evidence 기준으로 blocker 0 / major 0 / minor 1, verdict `pass`를 기록했다.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) -- Stage 1 문서 잠금 상태. Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) -- Stage 1 문서 잠금 상태. Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) -- Stage 4 완료 후, screenshot evidence 준비 상태
-- [ ] 확정 (confirmed) -- Stage 5 review + authority blocker 0개 확인 후
+- [x] 확정 (confirmed) -- Stage 5 review + authority blocker 0개 확인 후
 - [ ] N/A -- BE-only 슬라이스 아님
 
 ## Source Links
@@ -193,13 +193,32 @@ MEAL_SCREEN에서 개별 식사의 `[요리하기]`를 눌렀을 때, 해당 식
 
 ## Delivery Checklist
 
-- [ ] MEAL_SCREEN 개별 요리 session create payload가 선택 meal 1건과 planned_servings를 사용 <!-- omo:id=dp6-meal-shortcut-serving-payload;stage=4;scope=frontend;review=5,6 -->
-- [ ] `registered` / `cook_done` 식사에 개별 `[요리하기]` CTA 미노출 유지 <!-- omo:id=dp6-meal-shortcut-status-gate;stage=4;scope=frontend;review=5,6 -->
-- [ ] COOK_MODE session cooking_servings와 표시 인분/재료 스케일 불일치 없음 확인 <!-- omo:id=dp6-cook-serving-contract-preserved;stage=4;scope=shared;review=6 -->
-- [ ] COOK_MODE 재료 목록을 조리 단계 바로 위 compact horizontal/wrapping list로 배치 <!-- omo:id=dp6-cook-ingredients-near-steps;stage=4;scope=frontend;review=5,6 -->
-- [ ] COOK_MODE 재료/조리법 간 과도한 vertical gap 제거 <!-- omo:id=dp6-cook-gap-reduction;stage=4;scope=frontend;review=5,6 -->
-- [ ] `loading / empty / error / read-only / unauthorized` 상태 회귀 없음 확인 <!-- omo:id=dp6-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] mobile default/narrow screenshot evidence 생성 <!-- omo:id=dp6-authority-screenshots;stage=4;scope=frontend;review=5,6 -->
-- [ ] authority report 작성 및 blocker 0 확인 <!-- omo:id=dp6-authority-report;stage=4;scope=frontend;review=6 -->
-- [ ] targeted Vitest / Playwright meal-cooking 회귀 테스트 통과 <!-- omo:id=dp6-targeted-tests;stage=4;scope=frontend;review=6 -->
-- [ ] `pnpm lint`, `pnpm typecheck`, `pnpm verify:frontend` 통과 <!-- omo:id=dp6-frontend-verification;stage=4;scope=frontend;review=6 -->
+- [x] MEAL_SCREEN 개별 요리 session create payload가 선택 meal 1건과 planned_servings를 사용 <!-- omo:id=dp6-meal-shortcut-serving-payload;stage=4;scope=frontend;review=5,6 -->
+- [x] `registered` / `cook_done` 식사에 개별 `[요리하기]` CTA 미노출 유지 <!-- omo:id=dp6-meal-shortcut-status-gate;stage=4;scope=frontend;review=5,6 -->
+- [x] COOK_MODE session cooking_servings와 표시 인분/재료 스케일 불일치 없음 확인 <!-- omo:id=dp6-cook-serving-contract-preserved;stage=4;scope=shared;review=6 -->
+- [x] COOK_MODE 재료 목록을 조리 단계 바로 위 compact horizontal/wrapping list로 배치 <!-- omo:id=dp6-cook-ingredients-near-steps;stage=4;scope=frontend;review=5,6 -->
+- [x] COOK_MODE 재료/조리법 간 과도한 vertical gap 제거 <!-- omo:id=dp6-cook-gap-reduction;stage=4;scope=frontend;review=5,6 -->
+- [x] `loading / empty / error / read-only / unauthorized` 상태 회귀 없음 확인 <!-- omo:id=dp6-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] mobile default/narrow screenshot evidence 생성 <!-- omo:id=dp6-authority-screenshots;stage=4;scope=frontend;review=5,6 -->
+- [x] authority report 작성 및 blocker 0 확인 <!-- omo:id=dp6-authority-report;stage=4;scope=frontend;review=6 -->
+- [x] targeted Vitest / Playwright meal-cooking 회귀 테스트 통과 <!-- omo:id=dp6-targeted-tests;stage=4;scope=frontend;review=6 -->
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm verify:frontend` 통과 <!-- omo:id=dp6-frontend-verification;stage=4;scope=frontend;review=6 -->
+
+## Stage 5/6 Closeout Evidence
+
+- Authority report: `ui/designs/authority/DESIGN_POLISH_SLICE6_SHOPPING_COOKING_PANTRY-authority.md`
+- Screenshot evidence:
+  - `ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/MEAL_SCREEN-cook-shortcut-mobile.png`
+  - `ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/MEAL_SCREEN-cook-shortcut-narrow.png`
+  - `ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/COOK_MODE-ingredients-steps-mobile.png`
+  - `ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/COOK_MODE-ingredients-steps-narrow.png`
+- QA reports:
+  - `ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/exploratory-report.json`
+  - `ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/eval-result.json`
+- Verification:
+  - `pnpm vitest run tests/planner-meal-screen.test.tsx tests/cook-mode-screen.test.tsx`
+  - `pnpm vitest run tests/standalone-cook-mode-screen.test.tsx`
+  - `pnpm exec playwright test tests/e2e/slice-15a-cook-planner-complete.spec.ts --project=mobile-chrome`
+  - `pnpm exec playwright test tests/e2e/qa-design-polish-slice6-evidence.spec.ts --project=mobile-chrome`
+  - `pnpm verify:frontend`
+- Claude status: Stage 1 and final authority were requested through resume session `b475ec3a-c10b-42ae-9c38-1df94982e645`; provider limit blocked execution, so Codex completed fallback per user instruction.

@@ -191,6 +191,34 @@ test.describe("Slice 15a cook planner complete", () => {
     await expect(page.getByText("양파를 썰어주세요.")).toBeVisible();
     await expect(page.getByText("김치를 넣고 끓여주세요.")).toBeVisible();
     await expect(page.getByTestId("tab-steps")).toHaveCount(0);
+
+    if (!isDesktopViewport(page)) {
+      await expect(page.getByTestId("mobile-ingredient-summary")).toBeVisible();
+      await expect(page.getByTestId("cook-mode-servings")).toHaveText("2인분");
+
+      const sectionOrder = await page
+        .locator('[data-testid="mobile-ingredient-summary"], [data-testid="step-list"]')
+        .evaluateAll((elements) =>
+          elements.map((element) => element.getAttribute("data-testid")),
+        );
+      expect(sectionOrder).toEqual(["mobile-ingredient-summary", "step-list"]);
+
+      const gap = await page.evaluate(() => {
+        const ingredients = document
+          .querySelector('[data-testid="mobile-ingredient-summary"]')
+          ?.getBoundingClientRect();
+        const steps = document
+          .querySelector('[data-testid="step-list"]')
+          ?.getBoundingClientRect();
+
+        if (!ingredients || !steps) {
+          return Number.POSITIVE_INFINITY;
+        }
+
+        return steps.top - ingredients.bottom;
+      });
+      expect(gap).toBeLessThanOrEqual(16);
+    }
   });
 
   test("complete flow: selects consumed ingredients and navigates to ready", async ({

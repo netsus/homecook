@@ -1,0 +1,20 @@
+{
+  "slice": "design-polish-slice6-shopping-cooking-pantry",
+  "date": "2026-05-20",
+  "result": "pass",
+  "score": 0.96,
+  "authority_verdict": "pass",
+  "blocker_count": 0,
+  "major_count": 0,
+  "minor_count": 1,
+  "checks": {
+    "selected_meal_payload": "pass",
+    "cook_mode_serving_display": "pass",
+    "ingredient_step_proximity": "pass",
+    "mobile_narrow_overlap": "pass",
+    "full_frontend_verification": "pass"
+  },
+  "not_run": [
+    "actual device scroll inertia"
+  ]
+}
