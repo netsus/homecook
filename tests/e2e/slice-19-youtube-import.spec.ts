@@ -298,7 +298,11 @@ test.describe("Slice 19: YouTube Import", () => {
     await expect(page.locator('input[value="백종원 김치찌개"]')).toBeVisible();
     await expect(page.getByText("김치", { exact: true })).toBeVisible();
     await expect(page.getByText("돼지고기", { exact: true })).toBeVisible();
-    await expect(page.locator("text=200g")).toBeVisible();
+    await expect(page.getByLabel("김치 수량")).toHaveValue("200");
+    await expect(page.getByRole("button", { name: "김치 g" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await expect(page.locator("text=재료 (2개)")).toBeVisible();
     await expect(page.locator("text=조리 과정 (3단계)")).toBeVisible();
 
@@ -595,11 +599,10 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.fill('input[placeholder="재료 검색"]', "두부");
     await page.waitForTimeout(400);
     await page.click("text=두부");
-    await page.fill('input[placeholder="수량"]', "1");
 
     const ingredientModal = page.locator("div.fixed.inset-0.z-50").last();
-    await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
-    await ingredientModal.locator('button:has-text("완료")').click();
+    await ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
+    await page.getByLabel("두부 수량").fill("1");
 
     await expect(page.locator("text=재료 (2개)")).toBeVisible();
     await expect(page.locator("text=두부")).toBeVisible();
