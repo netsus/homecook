@@ -1,0 +1,93 @@
+{
+  "id": "design-polish-slice5-manual-youtube",
+  "title": "Design Polish Slice 5 - MANUAL_RECIPE_CREATE/YT_IMPORT form density and cooking-method input polish",
+  "summary": "MANUAL_RECIPE_CREATE / YT_IMPORT 재료 행 한 줄 정렬, 조리법 화면 내 직접 입력, 조리방법 가로 chip 선택 및 color_key 색상 복구, 재료 validation 문구 밀도 조정. FE-only, API/DB 변경 없음.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "모바일 직접등록/유튜브 검수 폼에서 재료와 조리법 입력 밀도를 높이고 조리방법 색상 구분을 복구해 작성 흐름을 안정화한다.",
+  "owners": {
+    "claude": "stage1/stage4 requested but provider-limited; final authority when available",
+    "codex": "stage1 fallback, stage4 fallback if needed, stage5, stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "design-polish-slice1-typography-tokens",
+    "design-polish-slice2-app-shell-home",
+    "design-polish-slice3-recipe-detail",
+    "design-polish-slice4-planner-meal-add",
+    "18-manual-recipe-create",
+    "19-youtube-import"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/화면정의서-v1.5.4.md",
+      "docs/유저flow맵-v1.3.4.md",
+      "docs/api문서-v1.2.5.md",
+      "docs/db설계-v1.3.3.md",
+      "docs/design/design-tokens.md",
+      "docs/design/mobile-ux-rules.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/design-polish-slice5-manual-youtube/README.md",
+      "docs/workpacks/design-polish-slice5-manual-youtube/acceptance.md",
+      "docs/workpacks/design-polish-slice5-manual-youtube/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/product-design-authority.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice design-polish-slice5-manual-youtube",
+      "pnpm validate:authority-evidence-presence",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "screenshot",
+      "authority-report"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 docs attempted through Claude resume session b475ec3a-c10b-42ae-9c38-1df94982e645 with model=opus, effort=high, permission_mode=bypassPermissions; provider limit blocked editing, so Codex completed fallback per user instruction. FE-only high-risk form interaction polish. Web tokens and global app brand token values unchanged.",
+  "out_of_scope": [
+    "API, DB, auth, state transition contract changes",
+    "Live YouTube Data API/OCR/ASR/estimation",
+    "Recipe edit/delete/image upload",
+    "MENU_ADD option structure changes",
+    "Web color tokens or global brand token value changes"
+  ],
+  "open_questions": []
+}
