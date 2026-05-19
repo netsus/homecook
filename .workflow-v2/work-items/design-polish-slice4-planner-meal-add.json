@@ -1,0 +1,114 @@
+{
+  "id": "design-polish-slice4-planner-meal-add",
+  "title": "Design Polish Slice 4 — PLANNER_WEEK/MEAL_SCREEN meal-add modal conversion, LeftoverPicker card redesign, search icon update",
+  "summary": "PLANNER_WEEK/MEAL_SCREEN 식사추가 옵션을 full-page에서 modal/sheet로 전환, LeftoverPicker 카드 버튼 우측 배치·텍스트·메타데이터 형식 개선, RecipeSearchPicker 검색 아이콘 교체·확대. 직접등록은 기존 라우트 유지 (slice5). FE-only, API/DB 변경 없음.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "PLANNER_WEEK/MEAL_SCREEN의 식사추가 진입 경로를 modal/sheet 기반으로 전환하여 컨텍스트를 유지하면서 식사를 추가할 수 있게 한다. LeftoverPicker 카드의 선택 버튼 위치/크기/텍스트와 메타데이터 표기를 개선하고, RecipeSearchPicker의 검색 아이콘을 교체한다.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "design-polish-slice1-typography-tokens",
+    "design-polish-slice2-app-shell-home",
+    "design-polish-slice3-recipe-detail"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/design/design-tokens.md",
+      "docs/design/anchor-screens.md",
+      "docs/design/mobile-ux-rules.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/design-polish-slice4-planner-meal-add/README.md",
+      "docs/workpacks/design-polish-slice4-planner-meal-add/acceptance.md",
+      "docs/workpacks/design-polish-slice4-planner-meal-add/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/product-design-authority.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice design-polish-slice4-planner-meal-add",
+      "pnpm validate:authority-evidence-presence",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "screenshot",
+      "authority-report"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "collecting",
+    "docs_projection": null,
+    "verification_projection": null,
+    "merge_gate_projection": null,
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": null
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": null,
+      "evidence_sources": []
+    },
+    "projection_state": null
+  },
+  "notes": "Stage 1 docs created by Claude on docs/design-polish-slice4-planner-meal-add. FE-only anchor-extension slice. Scope: PLANNER_WEEK/MEAL_SCREEN meal-add full-page→modal/sheet conversion, LeftoverPicker card button relocation/resize/text change + metadata format change, RecipeSearchPicker icon update. Authority review required (anchor-extension on PLANNER_WEEK). Web tokens unchanged. Global app token values unchanged. 직접등록 remains route-based for slice5.",
+  "out_of_scope": [
+    "MANUAL_RECIPE_CREATE modal conversion (slice5)",
+    "YOUTUBE_IMPORT full UX redesign (slice5)",
+    "PLANNER_WEEK layout/scroll structure changes",
+    "Top CTA changes (장보기/요리하기/남은요리)",
+    "API, DB, auth, state transition contract changes",
+    "Web color tokens (--web-*) changes",
+    "Global app token value changes (--brand-primary etc.)"
+  ],
+  "open_questions": [
+    "유튜브 옵션: 경량 모달 진입점 vs 기존 라우트 fallback — Stage 4 구현 시 난이도에 따라 결정"
+  ]
+}

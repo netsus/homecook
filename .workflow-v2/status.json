@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-19T17:37:34Z",
+  "updated_at": "2026-05-19T18:08:42Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1021,6 +1021,24 @@
         "git diff --check"
       ],
       "notes": "Stage 1 docs created by Claude on docs/design-polish-slice3-recipe-detail. Stage 4 frontend implemented by Claude and scope-repaired by Codex. Stage 5 Claude review found no blockers. FE-only visual polish. Scope: RECIPE_DETAIL mobile inline stepper glyph/weight balance, planner-add modal compact stepper visible circle size reduction, Wave1HeroMetricButton/Status font-weight reduction (extrabold→bold), serving icon + metric controls + stepper color role parity. Web tokens unchanged. Global app token values unchanged. No anchor-extension. Full pnpm verify:frontend passed locally. closeout_phase=completed last_recovery_at=2026-05-19T17:48:38Z"
+    },
+    {
+      "id": "design-polish-slice4-planner-meal-add",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/design-polish-slice4-planner-meal-add",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm verify:frontend",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice design-polish-slice4-planner-meal-add",
+        "pnpm validate:authority-evidence-presence",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs created by Claude on docs/design-polish-slice4-planner-meal-add. FE-only anchor-extension slice. Scope: PLANNER_WEEK/MEAL_SCREEN meal-add full-page→modal/sheet conversion, LeftoverPicker card button relocation/resize/text + metadata format, RecipeSearchPicker icon update. Authority review required. Web tokens unchanged. Global app token values unchanged. 직접등록 remains route-based for slice5. closeout_phase=collecting"
     }
   ]
 }
