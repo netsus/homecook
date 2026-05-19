@@ -105,8 +105,8 @@ N/A — 이 슬라이스에 백엔드 변경 없음. FE-only visual/behavior pol
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
 - [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
@@ -156,15 +156,15 @@ N/A — 이 슬라이스에 백엔드 변경 없음. FE-only visual/behavior pol
 > 이 체크리스트는 Stage 4~6 동안 계속 갱신하는 living closeout 문서다.
 > 백엔드 항목은 N/A (FE-only 슬라이스).
 
-- [ ] 플래너 탭 활성 아이콘 시각 밀도 검증/수정 <!-- omo:id=dp2-planner-icon-density;stage=4;scope=frontend;review=5,6 -->
-- [ ] 하단 탭 지속성 확인 (4화면 탭 전환 시 flash 없음) <!-- omo:id=dp2-bottom-tab-persistence;stage=4;scope=frontend;review=5,6 -->
-- [ ] 하단 탭 배경 불투명도 확인 <!-- omo:id=dp2-bottom-tab-opacity;stage=4;scope=frontend;review=5,6 -->
-- [ ] 헤더 타이틀 정렬/언어 확인 <!-- omo:id=dp2-header-alignment;stage=4;scope=frontend;review=5,6 -->
-- [ ] 재료 필터 모달 → 팬트리 추가 시트 패밀리 정합 <!-- omo:id=dp2-ingredient-modal-family;stage=4;scope=frontend;review=5,6 -->
-- [ ] 재료로 검색 버튼 색상 토큰 정리 <!-- omo:id=dp2-ingredient-button-color;stage=4;scope=frontend;review=5,6 -->
-- [ ] 재료 선택 상태 `var(--olive)` 잔재 재확인 <!-- omo:id=dp2-olive-residue-check;stage=4;scope=frontend;review=5,6 -->
-- [ ] 재료 버튼 너비 — 모바일 2열 배치 <!-- omo:id=dp2-ingredient-grid-2col;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm lint` + `pnpm typecheck` 통과 <!-- omo:id=dp2-lint-typecheck;stage=4;scope=frontend;review=6 -->
-- [ ] `pnpm verify:frontend` 통과 (Vitest + Playwright regression) <!-- omo:id=dp2-verify-frontend;stage=4;scope=frontend;review=6 -->
-- [ ] `loading / empty / error / read-only` 기존 상태 UI 유지 확인 <!-- omo:id=dp2-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME 모바일 before/after screenshot + 하단 탭 4화면 screenshot <!-- omo:id=dp2-screenshots;stage=4;scope=frontend;review=5,6 -->
+- [x] 플래너 탭 활성 아이콘 시각 밀도 검증/수정 <!-- omo:id=dp2-planner-icon-density;stage=4;scope=frontend;review=5,6 -->
+- [x] 하단 탭 지속성 확인 (4화면 탭 전환 시 flash 없음) <!-- omo:id=dp2-bottom-tab-persistence;stage=4;scope=frontend;review=5,6 -->
+- [x] 하단 탭 배경 불투명도 확인 <!-- omo:id=dp2-bottom-tab-opacity;stage=4;scope=frontend;review=5,6 -->
+- [x] 헤더 타이틀 정렬/언어 확인 <!-- omo:id=dp2-header-alignment;stage=4;scope=frontend;review=5,6 -->
+- [x] 재료 필터 모달 → 팬트리 추가 시트 패밀리 정합 <!-- omo:id=dp2-ingredient-modal-family;stage=4;scope=frontend;review=5,6 -->
+- [x] 재료로 검색 버튼 색상 토큰 정리 <!-- omo:id=dp2-ingredient-button-color;stage=4;scope=frontend;review=5,6 -->
+- [x] 재료 선택 상태 `var(--olive)` 잔재 재확인 <!-- omo:id=dp2-olive-residue-check;stage=4;scope=frontend;review=5,6 -->
+- [x] 재료 버튼 너비 — 모바일 2열 배치 <!-- omo:id=dp2-ingredient-grid-2col;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm lint` + `pnpm typecheck` 통과 <!-- omo:id=dp2-lint-typecheck;stage=4;scope=frontend;review=6 -->
+- [x] `pnpm verify:frontend` 통과 (Vitest + Playwright regression) <!-- omo:id=dp2-verify-frontend;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only` 기존 상태 UI 유지 확인 <!-- omo:id=dp2-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME 모바일 before/after screenshot + 하단 탭 4화면 screenshot <!-- omo:id=dp2-screenshots;stage=4;scope=frontend;review=5,6 -->
