@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import React from "react";
 
 import type { CookingModeRecipe, CookingModeStep } from "@/types/cooking";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
+import { WebButton, WebShell, WebTopNav } from "@/components/web";
 
 interface CookModeDesktopViewProps {
   recipe: CookingModeRecipe;
@@ -16,8 +18,15 @@ interface CookModeDesktopViewProps {
   completeButtonTestId: string;
   controlsDisabled: boolean;
   onCancel: () => void;
-  onComplete: () => void;
+  onComplete: (consumedIds: string[]) => void;
 }
+
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
 
 export function CookModeDesktopView({
   recipe,
@@ -32,147 +41,142 @@ export function CookModeDesktopView({
   onCancel,
   onComplete,
 }: CookModeDesktopViewProps) {
-  const eyebrow =
-    variant === "planner" ? "플래너 요리 모드" : "독립 요리 모드";
-  const cancelLabel = variant === "planner" ? "요리 취소" : "레시피로 돌아가기";
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(
+    () => new Set(recipe.ingredients.map((ingredient) => ingredient.ingredient_id)),
+  );
+  const ingredientIds = React.useMemo(
+    () => recipe.ingredients.map((ingredient) => ingredient.ingredient_id),
+    [recipe.ingredients],
+  );
+  const selectedCount = ingredientIds.filter((id) => selectedIds.has(id)).length;
+  const cancelLabel = "취소";
+  const breadcrumb =
+    variant === "planner"
+      ? { current: "플래너 요리모드", href: "/cooking/ready", parent: "요리 준비" }
+      : { current: "독립 요리모드", href: `/recipe/${recipe.id}`, parent: "레시피" };
+  const heroClassName =
+    variant === "planner"
+      ? "web-cook-mode-hero web-cook-mode-hero-planner"
+      : "web-cook-mode-hero web-cook-mode-hero-standalone";
+
+  React.useEffect(() => {
+    setSelectedIds(new Set(ingredientIds));
+  }, [ingredientIds]);
+
+  const handleToggleIngredient = React.useCallback((ingredientId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(ingredientId)) {
+        next.delete(ingredientId);
+      } else {
+        next.add(ingredientId);
+      }
+
+      return next;
+    });
+  }, []);
+
+  const handleComplete = React.useCallback(() => {
+    onComplete(ingredientIds.filter((id) => selectedIds.has(id)));
+  }, [ingredientIds, onComplete, selectedIds]);
 
   return (
-    <div
-      className="min-h-dvh bg-[var(--background)]"
-      data-testid={screenTestId}
-    >
-      <div className="mx-auto grid max-w-6xl gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <main
-          className="min-w-0 space-y-6"
-          data-testid={contentTestId}
-        >
-          <section className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[var(--shadow-1)]">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
-              {eyebrow}
-            </p>
-            <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div className="min-w-0">
-                <h1
-                  className="truncate text-3xl font-bold tracking-[-0.3px] text-[var(--foreground)]"
-                  data-testid={titleTestId}
-                >
-                  {recipe.title}
-                </h1>
-                <p className="mt-2 text-sm text-[var(--muted)]">
-                  재료와 조리 순서를 한 화면에서 확인하고, 완료 시 소진한 재료만 팬트리에 반영해요.
-                </p>
-              </div>
-              <div className="flex shrink-0 gap-2">
-                <span
-                  className="rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-sm font-bold text-[var(--brand-deep)]"
-                  data-testid={servingsTestId}
-                >
-                  {recipe.cooking_servings}인분
-                </span>
-                <span className="rounded-full bg-[var(--surface-fill)] px-3 py-1.5 text-sm font-semibold text-[var(--text-2)]">
-                  {recipe.steps.length}단계
-                </span>
-              </div>
-            </div>
-          </section>
+    <WebShell className="web-cooking-shell" wide>
+      <WebTopNav
+        activeId={variant === "planner" ? "planner" : undefined}
+        items={WEB_NAV_ITEMS}
+        rightSlot={
+          <div className="web-profile-button">
+            {variant === "planner" ? "JY" : "◎"}
+          </div>
+        }
+      />
 
+      <main className="web-cook-mode-screen" data-testid={screenTestId}>
+        <nav aria-label="현재 위치" className="web-cook-breadcrumb">
+          <Link href={breadcrumb.href}>{breadcrumb.parent}</Link>
+          <span aria-hidden="true">/</span>
+          <strong>{breadcrumb.current}</strong>
+        </nav>
+
+        <section className={heroClassName}>
+          <div className="web-cook-mode-hero-meta">
+            {variant === "planner" ? (
+              <span className="web-cook-status-pill web-cook-status-done">
+                장보기 완료
+              </span>
+            ) : null}
+            <span>
+              {variant === "planner" ? "플래너 끼니" : "독립 요리"} ·{" "}
+              <span data-testid={servingsTestId}>{recipe.cooking_servings}인분</span>
+            </span>
+          </div>
+          <h1 data-testid={titleTestId}>{recipe.title}</h1>
+          <p className="web-cook-mode-summary">
+            조리 단계 {recipe.steps.length}개 · 차감할 재료 {recipe.ingredients.length}개
+          </p>
+          {variant === "standalone" ? (
+            <p className="web-cook-standalone-notice">
+              이 요리는 플래너 끼니와 연결되지 않아요. 팬트리 재료 차감만 진행합니다.
+            </p>
+          ) : null}
+        </section>
+
+        <div className="web-cook-mode-layout" data-testid={contentTestId}>
           <section
             aria-labelledby={`${screenTestId}-steps-heading`}
-            className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]"
+            className="web-cook-step-panel"
           >
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold text-[var(--brand)]">
-                  Cooking Steps
-                </p>
-                <h2
-                  className="mt-1 text-xl font-bold tracking-[-0.3px] text-[var(--foreground)]"
-                  id={`${screenTestId}-steps-heading`}
-                >
-                  조리 과정
-                </h2>
-              </div>
-              <span className="text-sm font-semibold text-[var(--muted)]">
-                순서대로 진행
-              </span>
-            </div>
+            <h2 id={`${screenTestId}-steps-heading`}>조리 단계</h2>
             <StepList steps={recipe.steps} />
           </section>
 
-          <section
-            aria-labelledby={`${screenTestId}-ingredients-heading`}
-            className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]"
-          >
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold text-[var(--brand)]">
-                  Ingredients
-                </p>
-                <h2
-                  className="mt-1 text-xl font-bold tracking-[-0.3px] text-[var(--foreground)]"
-                  id={`${screenTestId}-ingredients-heading`}
-                >
-                  재료
-                </h2>
-              </div>
-              <span className="text-sm font-semibold text-[var(--muted)]">
-                {recipe.ingredients.length}개
-              </span>
-            </div>
-            <IngredientList recipe={recipe} />
-          </section>
-        </main>
-
-        <aside className="lg:sticky lg:top-6 lg:self-start" data-testid="cook-mode-action-rail">
-          <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
-            <p className="text-sm font-bold text-[var(--foreground)]">
-              요리 진행
+          <aside className="web-cook-checklist-panel" data-testid="cook-mode-action-rail">
+            <h2 id={`${screenTestId}-ingredients-heading`}>차감할 재료</h2>
+            <IngredientChecklist
+              controlsDisabled={controlsDisabled}
+              onToggle={handleToggleIngredient}
+              recipe={recipe}
+              selectedIds={selectedIds}
+            />
+            <p className="web-cook-checklist-summary">
+              {recipe.ingredients.length}개 중 {selectedCount}개 선택
             </p>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-3 py-3">
-                <p className="text-xs font-semibold text-[var(--muted)]">재료</p>
-                <p className="mt-1 text-lg font-bold text-[var(--foreground)]">
-                  {recipe.ingredients.length}개
-                </p>
-              </div>
-              <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-3 py-3">
-                <p className="text-xs font-semibold text-[var(--muted)]">단계</p>
-                <p className="mt-1 text-lg font-bold text-[var(--foreground)]">
-                  {recipe.steps.length}단계
-                </p>
-              </div>
-            </div>
-            <p className="mt-4 text-xs leading-5 text-[var(--muted)]">
-              요리 모드에서는 인분을 조절하지 않습니다. 인분 변경은 플래너나 레시피 진입 전 단계에서 처리해요.
-            </p>
-            <div className="mt-5 space-y-2">
-              <button
-                className="flex min-h-12 w-full items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-4 text-sm font-bold text-white disabled:opacity-60"
-                data-testid={completeButtonTestId}
-                disabled={controlsDisabled}
-                onClick={onComplete}
-                type="button"
-              >
-                요리 완료
-              </button>
-              <button
-                className="flex min-h-12 w-full items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] bg-transparent px-4 text-sm font-semibold text-[var(--foreground)] disabled:opacity-60"
-                data-testid={cancelButtonTestId}
-                disabled={controlsDisabled}
-                onClick={onCancel}
-                type="button"
-              >
-                {cancelLabel}
-              </button>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </div>
+            <WebButton
+              data-testid={completeButtonTestId}
+              disabled={controlsDisabled}
+              fullWidth
+              onClick={handleComplete}
+            >
+              ✓ 요리 완료 ({selectedCount}개 차감)
+            </WebButton>
+            <WebButton
+              data-testid={cancelButtonTestId}
+              disabled={controlsDisabled}
+              fullWidth
+              onClick={onCancel}
+              variant="ghost"
+            >
+              {cancelLabel}
+            </WebButton>
+          </aside>
+        </div>
+      </main>
+    </WebShell>
   );
 }
 
-function IngredientList({ recipe }: { recipe: CookingModeRecipe }) {
+function IngredientChecklist({
+  controlsDisabled,
+  onToggle,
+  recipe,
+  selectedIds,
+}: {
+  controlsDisabled: boolean;
+  onToggle: (ingredientId: string) => void;
+  recipe: CookingModeRecipe;
+  selectedIds: Set<string>;
+}) {
   if (recipe.ingredients.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-[var(--muted)]">
@@ -183,23 +187,40 @@ function IngredientList({ recipe }: { recipe: CookingModeRecipe }) {
 
   return (
     <ul
-      className="grid gap-2 lg:grid-cols-2"
+      className="web-cook-checklist"
       data-testid="ingredient-list"
     >
-      {recipe.ingredients.map((ingredient) => (
-        <li
-          className="flex min-h-[64px] items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3"
-          data-testid="ingredient-item"
-          key={ingredient.ingredient_id}
-        >
-          <span className="min-w-0 break-keep text-sm font-semibold text-[var(--foreground)]">
-            {ingredient.standard_name}
-          </span>
-          <span className="shrink-0 text-right text-sm text-[var(--muted)]">
-            {formatIngredientAmount(ingredient)}
-          </span>
-        </li>
-      ))}
+      {recipe.ingredients.map((ingredient) => {
+        const selected = selectedIds.has(ingredient.ingredient_id);
+
+        return (
+          <li data-testid="ingredient-item" key={ingredient.ingredient_id}>
+            <button
+              aria-pressed={selected}
+              className={
+                selected
+                  ? "web-cook-checklist-item web-cook-checklist-item-selected"
+                  : "web-cook-checklist-item"
+              }
+              data-testid={`consumed-check-${ingredient.ingredient_id}`}
+              disabled={controlsDisabled}
+              onClick={() => onToggle(ingredient.ingredient_id)}
+              type="button"
+            >
+              <span className="web-cook-checkmark" aria-hidden="true">
+                {selected ? "✓" : ""}
+              </span>
+              <span className="web-cook-check-name">
+                {ingredient.standard_name}
+              </span>
+              <span className="web-cook-check-amount">
+                {formatIngredientAmount(ingredient)}
+              </span>
+              <span className="web-cook-check-owned">보유</span>
+            </button>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -214,41 +235,39 @@ function StepList({ steps }: { steps: CookingModeStep[] }) {
   }
 
   return (
-    <ol className="space-y-3" data-testid="step-list">
+    <ol className="web-cook-step-list" data-testid="step-list">
       {steps.map((step) => {
         const methodColor = getCookingMethodColor(step.cooking_method.color_key);
         const heat = formatHeatLevel(step.heat_level);
 
         return (
           <li
-            className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)]"
+            className="web-cook-step-item"
             data-testid="step-item"
             key={step.step_number}
             style={{ borderLeft: `4px solid ${methodColor}` }}
           >
-            <div className="px-4 py-4">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span className="text-xs font-bold text-[var(--muted)]">
-                  {step.step_number}단계
-                </span>
+            <div className="web-cook-step-copy">
+              <div className="web-cook-step-meta">
                 {step.cooking_method.label ? (
                   <span
-                    className="rounded-full px-2.5 py-1 text-[11px] font-semibold text-white"
+                    className="web-cook-method-pill"
                     style={{ backgroundColor: methodColor }}
                   >
                     {step.cooking_method.label}
                   </span>
                 ) : null}
                 {heat ? (
-                  <span className="rounded-full bg-[var(--surface)] px-2.5 py-1 text-[11px] font-semibold text-[var(--muted)]">
+                  <span className="web-cook-heat-pill">
                     {heat}
                   </span>
                 ) : null}
               </div>
-              <p className="text-base leading-7 text-[var(--foreground)]">
+              <p>
                 {step.instruction}
               </p>
             </div>
+            <span className="web-cook-step-number">단계 {step.step_number}</span>
           </li>
         );
       })}

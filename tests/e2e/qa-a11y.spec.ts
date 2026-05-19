@@ -2,7 +2,10 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 import {
+  COOK_MODE_VISUAL_PATH,
+  COOK_READY_VISUAL_PATH,
   installAccountLibraryVisualRoutes,
+  installCookingVisualRoutes,
   installDiscoveryRoutes,
   installMenuAddVisualRoutes,
   installMealDetailRoutes,
@@ -23,6 +26,7 @@ import {
   SHOPPING_DETAIL_COMPLETED_VISUAL_PATH,
   SHOPPING_DETAIL_VISUAL_PATH,
   SHOPPING_FLOW_VISUAL_PATH,
+  STANDALONE_COOK_MODE_VISUAL_PATH,
   YOUTUBE_IMPORT_VISUAL_PATH,
 } from "./helpers/mock-routes";
 
@@ -484,6 +488,40 @@ test.describe("QA accessibility smoke", () => {
 
     await page.getByTestId("nickname-row").click();
     await expect(page.getByRole("dialog", { name: "닉네임 변경" })).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+  });
+
+  test("cooking desktop ready, notice, and cook modes are axe-clean", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only cooking parity smoke");
+    await setE2EAuthOverride(page);
+    await installCookingVisualRoutes(page);
+
+    await page.goto(COOK_READY_VISUAL_PATH);
+    await expect(page.getByRole("heading", { name: "요리 준비" })).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.getByRole("button", { name: "요리모드 안내" }).click();
+    await expect(
+      page.getByRole("dialog", { name: "데스크탑 요리모드" }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.goto(COOK_MODE_VISUAL_PATH);
+    await expect(page.getByTestId("cook-mode-title")).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.goto(STANDALONE_COOK_MODE_VISUAL_PATH);
+    await expect(page.getByTestId("standalone-cook-mode-title")).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });

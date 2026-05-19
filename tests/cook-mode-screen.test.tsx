@@ -281,7 +281,7 @@ describe("CookModeScreen", () => {
     expect(methodBadgeStyle).toContain("var(--cook-stir)");
   });
 
-  it("opens consumed ingredient sheet on complete button click", async () => {
+  it("renders a desktop inline consumed ingredient checklist", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
 
@@ -289,24 +289,15 @@ describe("CookModeScreen", () => {
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("complete-button")).toBeTruthy();
+      expect(screen.getByTestId("ingredient-list")).toBeTruthy();
     });
 
-    const user = userEvent.setup();
-    await user.click(screen.getByTestId("complete-button"));
-
-    await waitFor(() => {
-      expect(
-        screen.getByTestId("consumed-ingredient-sheet"),
-      ).toBeTruthy();
-    });
-
-    expect(
-      screen.getByText("소진한 재료를 체크해주세요"),
-    ).toBeTruthy();
+    expect(screen.getByTestId("consumed-check-ing-1")).toBeTruthy();
+    expect(screen.queryByTestId("consumed-ingredient-sheet")).toBeNull();
+    expect(screen.getByText("3개 중 3개 선택")).toBeTruthy();
   });
 
-  it("sends consumed ingredient ids on confirm", async () => {
+  it("sends checked desktop consumed ingredient ids on complete", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
     completeCookingSession.mockResolvedValue({
@@ -326,17 +317,9 @@ describe("CookModeScreen", () => {
     });
 
     const user = userEvent.setup();
+    await user.click(screen.getByTestId("consumed-check-ing-2"));
+    await user.click(screen.getByTestId("consumed-check-ing-3"));
     await user.click(screen.getByTestId("complete-button"));
-
-    await waitFor(() => {
-      expect(
-        screen.getByTestId("consumed-ingredient-sheet"),
-      ).toBeTruthy();
-    });
-
-    // Check one ingredient
-    await user.click(screen.getByTestId("consumed-check-ing-1"));
-    await user.click(screen.getByTestId("consumed-confirm-button"));
 
     await waitFor(() => {
       expect(completeCookingSession).toHaveBeenCalledWith("session-1", {
@@ -345,7 +328,7 @@ describe("CookModeScreen", () => {
     });
   });
 
-  it("sends empty array on skip", async () => {
+  it("sends empty array when all desktop ingredients are unchecked", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
     completeCookingSession.mockResolvedValue({
@@ -365,13 +348,10 @@ describe("CookModeScreen", () => {
     });
 
     const user = userEvent.setup();
+    await user.click(screen.getByTestId("consumed-check-ing-1"));
+    await user.click(screen.getByTestId("consumed-check-ing-2"));
+    await user.click(screen.getByTestId("consumed-check-ing-3"));
     await user.click(screen.getByTestId("complete-button"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("consumed-skip-button")).toBeTruthy();
-    });
-
-    await user.click(screen.getByTestId("consumed-skip-button"));
 
     await waitFor(() => {
       expect(completeCookingSession).toHaveBeenCalledWith("session-1", {
@@ -401,12 +381,6 @@ describe("CookModeScreen", () => {
 
     const user = userEvent.setup();
     await user.click(screen.getByTestId("complete-button"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("consumed-skip-button")).toBeTruthy();
-    });
-
-    await user.click(screen.getByTestId("consumed-skip-button"));
 
     await waitFor(() => {
       expect(mockRouterPush).toHaveBeenCalledWith("/cooking/ready");
@@ -439,10 +413,6 @@ describe("CookModeScreen", () => {
 
     const user = userEvent.setup();
     await user.click(screen.getByTestId("complete-button"));
-    await waitFor(() => {
-      expect(screen.getByTestId("consumed-skip-button")).toBeTruthy();
-    });
-    await user.click(screen.getByTestId("consumed-skip-button"));
 
     await waitFor(() => {
       expect(mockRouterPush).toHaveBeenCalledWith(
@@ -565,12 +535,6 @@ describe("CookModeScreen", () => {
     const user = userEvent.setup();
     await user.click(screen.getByTestId("complete-button"));
 
-    await waitFor(() => {
-      expect(screen.getByTestId("consumed-skip-button")).toBeTruthy();
-    });
-
-    await user.click(screen.getByTestId("consumed-skip-button"));
-
     // Should transition to error state with conflict message
     await waitFor(() => {
       expect(screen.getByText("다시 시도")).toBeTruthy();
@@ -617,7 +581,7 @@ describe("CookModeScreen", () => {
 
     expect(actionRail.contains(cancelButton)).toBe(true);
     expect(actionRail.contains(completeButton)).toBe(true);
-    expect(actionRail.className).toContain("sticky");
+    expect(actionRail.className).toContain("web-cook-checklist-panel");
   });
 
   it("keeps cancel and complete buttons in the mobile fixed bottom bar", async () => {

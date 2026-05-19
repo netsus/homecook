@@ -4,7 +4,10 @@ import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 import {
+  COOK_MODE_VISUAL_PATH,
+  COOK_READY_VISUAL_PATH,
   installAccountLibraryVisualRoutes,
+  installCookingVisualRoutes,
   installDiscoveryRoutes,
   installMenuAddVisualRoutes,
   installMealDetailRoutes,
@@ -25,6 +28,7 @@ import {
   SHOPPING_DETAIL_COMPLETED_VISUAL_PATH,
   SHOPPING_DETAIL_VISUAL_PATH,
   SHOPPING_FLOW_VISUAL_PATH,
+  STANDALONE_COOK_MODE_VISUAL_PATH,
   YOUTUBE_IMPORT_VISUAL_PATH,
 } from "./helpers/mock-routes";
 
@@ -61,6 +65,7 @@ const MEAL_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
 const MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2200;
 const PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2400;
 const ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
+const COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 3200;
 
 function isMobileViewport(page: Page) {
   return (page.viewportSize()?.width ?? 1280) < 1024;
@@ -615,5 +620,53 @@ test.describe("QA visual regression", () => {
       "qa-settings-account-delete-modal.png",
       { animations: "disabled" },
     );
+  });
+
+  test("cooking desktop ready and cook modes match the visual baseline", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only cooking parity baseline");
+    await setE2EAuthOverride(page);
+    await installCookingVisualRoutes(page);
+
+    await page.goto(COOK_READY_VISUAL_PATH);
+    await expect(page.getByRole("heading", { name: "요리 준비" })).toBeVisible();
+    await expect(page.getByTestId("cook-ready-recipe-list")).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-cook-ready-list.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.getByRole("button", { name: "요리모드 안내" }).click();
+    const noticeDialog = page.getByRole("dialog", { name: "데스크탑 요리모드" });
+    await expect(noticeDialog).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(noticeDialog).toHaveScreenshot("qa-cook-notice-modal.png", {
+      animations: "disabled",
+    });
+
+    await page.goto(COOK_MODE_VISUAL_PATH);
+    await expect(page.getByTestId("cook-mode-title")).toHaveText("김치볶음밥");
+    await expect(page.getByTestId("ingredient-list")).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-cook-mode-planner.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.goto(STANDALONE_COOK_MODE_VISUAL_PATH);
+    await expect(page.getByTestId("standalone-cook-mode-title")).toHaveText(
+      "김치볶음밥",
+    );
+    await expect(page.getByText(/플래너 끼니와 연결되지 않아요/)).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-cook-mode-standalone.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
   });
 });

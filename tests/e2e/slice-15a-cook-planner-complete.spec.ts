@@ -2,6 +2,10 @@ import { expect, test, type Page } from "@playwright/test";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 
+function isDesktopViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1280) >= 1024;
+}
+
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   await page.addInitScript(
     ({ key, state }) => {
@@ -189,7 +193,7 @@ test.describe("Slice 15a cook planner complete", () => {
     await expect(page.getByTestId("tab-steps")).toHaveCount(0);
   });
 
-  test("complete flow: opens consumed sheet, checks ingredient, confirms, navigates to ready", async ({
+  test("complete flow: selects consumed ingredients and navigates to ready", async ({
     page,
   }) => {
     await setAuthOverride(page, "authenticated");
@@ -200,23 +204,29 @@ test.describe("Slice 15a cook planner complete", () => {
     await page.goto("/cooking/sessions/session-abc/cook-mode");
 
     await expect(page.getByTestId("complete-button")).toBeVisible();
-    await page.getByTestId("complete-button").click();
 
-    await expect(
-      page.getByTestId("consumed-ingredient-sheet"),
-    ).toBeVisible();
-    await expect(
-      page.getByText(/소진(한 재료를 체크해주세요|된 재료를 확인해주세요)/),
-    ).toBeVisible();
+    if (isDesktopViewport(page)) {
+      await expect(page.getByTestId("consumed-check-ing-1")).toBeVisible();
+      await page.getByTestId("consumed-check-ing-2").click();
+      await page.getByTestId("complete-button").click();
+    } else {
+      await page.getByTestId("complete-button").click();
 
-    // Check an ingredient
-    await page.getByTestId("consumed-check-ing-1").click();
-    await page.getByTestId("consumed-confirm-button").click();
+      await expect(
+        page.getByTestId("consumed-ingredient-sheet"),
+      ).toBeVisible();
+      await expect(
+        page.getByText(/소진(한 재료를 체크해주세요|된 재료를 확인해주세요)/),
+      ).toBeVisible();
+
+      await page.getByTestId("consumed-check-ing-1").click();
+      await page.getByTestId("consumed-confirm-button").click();
+    }
 
     await expect(page).toHaveURL(/\/cooking\/ready/);
   });
 
-  test("skip consumed ingredients sends empty array and navigates to ready", async ({
+  test("empty consumed ingredients navigates to ready", async ({
     page,
   }) => {
     await setAuthOverride(page, "authenticated");
@@ -226,12 +236,18 @@ test.describe("Slice 15a cook planner complete", () => {
 
     await page.goto("/cooking/sessions/session-abc/cook-mode");
 
-    await page.getByTestId("complete-button").click();
+    if (isDesktopViewport(page)) {
+      await page.getByTestId("consumed-check-ing-1").click();
+      await page.getByTestId("consumed-check-ing-2").click();
+      await page.getByTestId("complete-button").click();
+    } else {
+      await page.getByTestId("complete-button").click();
 
-    await expect(
-      page.getByTestId("consumed-ingredient-sheet"),
-    ).toBeVisible();
-    await page.getByTestId("consumed-skip-button").click();
+      await expect(
+        page.getByTestId("consumed-ingredient-sheet"),
+      ).toBeVisible();
+      await page.getByTestId("consumed-skip-button").click();
+    }
 
     await expect(page).toHaveURL(/\/cooking\/ready/);
   });

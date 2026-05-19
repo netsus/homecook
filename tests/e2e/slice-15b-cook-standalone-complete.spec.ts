@@ -8,6 +8,10 @@ import {
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 
+function isDesktopViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1280) >= 1024;
+}
+
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   await page.addInitScript(
     ({ key, state }) => {
@@ -168,19 +172,19 @@ test.describe("15b standalone cook mode", () => {
     const ingredients = page.getByTestId("ingredient-item");
     await expect(ingredients).toHaveCount(2);
 
-    // Click complete button
-    await page.getByTestId("standalone-complete-button").click();
+    if (isDesktopViewport(page)) {
+      await page.getByTestId("consumed-check-ing-2").click();
+      await page.getByTestId("standalone-complete-button").click();
+    } else {
+      await page.getByTestId("standalone-complete-button").click();
 
-    // Consumed ingredient sheet appears
-    await expect(
-      page.getByTestId("consumed-ingredient-sheet"),
-    ).toBeVisible();
+      await expect(
+        page.getByTestId("consumed-ingredient-sheet"),
+      ).toBeVisible();
 
-    // Check first ingredient
-    await page.getByTestId("consumed-check-ing-1").click();
-
-    // Click confirm
-    await page.getByTestId("consumed-confirm-button").click();
+      await page.getByTestId("consumed-check-ing-1").click();
+      await page.getByTestId("consumed-confirm-button").click();
+    }
 
     // Navigates to recipe detail
     await page.waitForURL(new RegExp(`${RECIPE_PATH}(\\?.*)?$`));
@@ -237,7 +241,7 @@ test.describe("15b standalone cook mode", () => {
     await expect(page.getByText(/타이머|메모|일시정지|이전|다음/)).toHaveCount(0);
   });
 
-  test("complete with skip (empty consumed_ingredient_ids)", async ({
+  test("complete with empty consumed_ingredient_ids", async ({
     page,
   }) => {
     await setAuthOverride(page, "authenticated");
@@ -247,13 +251,18 @@ test.describe("15b standalone cook mode", () => {
     await page.goto(`/cooking/recipes/${RECIPE_ID}/cook-mode?servings=2`);
     await page.waitForSelector('[data-testid="standalone-complete-button"]');
 
-    await page.getByTestId("standalone-complete-button").click();
-    await expect(
-      page.getByTestId("consumed-ingredient-sheet"),
-    ).toBeVisible();
+    if (isDesktopViewport(page)) {
+      await page.getByTestId("consumed-check-ing-1").click();
+      await page.getByTestId("consumed-check-ing-2").click();
+      await page.getByTestId("standalone-complete-button").click();
+    } else {
+      await page.getByTestId("standalone-complete-button").click();
+      await expect(
+        page.getByTestId("consumed-ingredient-sheet"),
+      ).toBeVisible();
 
-    // Skip without checking anything
-    await page.getByTestId("consumed-skip-button").click();
+      await page.getByTestId("consumed-skip-button").click();
+    }
 
     await page.waitForURL(new RegExp(`${RECIPE_PATH}(\\?.*)?$`));
   });

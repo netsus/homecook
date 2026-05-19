@@ -204,7 +204,7 @@ describe("StandaloneCookModeScreen", () => {
     expect(screen.getByText("로그인이 필요해요")).toBeTruthy();
   });
 
-  it("shows consumed ingredient sheet when authenticated user clicks complete", async () => {
+  it("renders a desktop inline consumed ingredient checklist for authenticated users", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchStandaloneCookMode.mockResolvedValue(buildStandaloneCookModeData());
 
@@ -212,12 +212,12 @@ describe("StandaloneCookModeScreen", () => {
     render(<Screen recipeId="recipe-1" servings={2} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("standalone-complete-button")).toBeTruthy();
+      expect(screen.getByTestId("ingredient-list")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByTestId("standalone-complete-button"));
-
-    expect(screen.getByTestId("consumed-ingredient-sheet")).toBeTruthy();
+    expect(screen.getByTestId("consumed-check-ing-1")).toBeTruthy();
+    expect(screen.queryByTestId("consumed-ingredient-sheet")).toBeNull();
+    expect(screen.getByText("2개 중 2개 선택")).toBeTruthy();
   });
 
   it("uses cooking method color keys from recipe data on step cards", async () => {
@@ -269,14 +269,8 @@ describe("StandaloneCookModeScreen", () => {
       expect(screen.getByTestId("standalone-complete-button")).toBeTruthy();
     });
 
+    fireEvent.click(screen.getByTestId("consumed-check-ing-2"));
     fireEvent.click(screen.getByTestId("standalone-complete-button"));
-
-    // Check an ingredient
-    const checkbox = screen.getByTestId("consumed-check-ing-1");
-    fireEvent.click(checkbox);
-
-    // Click confirm
-    fireEvent.click(screen.getByTestId("consumed-confirm-button"));
 
     await waitFor(() => {
       expect(completeStandaloneCooking).toHaveBeenCalledWith({
@@ -304,7 +298,6 @@ describe("StandaloneCookModeScreen", () => {
     });
 
     fireEvent.click(screen.getByTestId("standalone-complete-button"));
-    fireEvent.click(screen.getByTestId("consumed-skip-button"));
 
     await waitFor(() => {
       expect(mockRouterReplace).toHaveBeenCalledWith("/recipe/recipe-1");
@@ -330,8 +323,9 @@ describe("StandaloneCookModeScreen", () => {
       expect(screen.getByTestId("standalone-complete-button")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByTestId("standalone-complete-button"));
-    fireEvent.click(screen.getByTestId("consumed-skip-button"));
+    const completeButton = screen.getByTestId("standalone-complete-button");
+    fireEvent.click(completeButton);
+    fireEvent.click(completeButton);
 
     // Only one call should have been made
     await waitFor(() => {

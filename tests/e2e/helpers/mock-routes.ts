@@ -44,6 +44,12 @@ export const LOGIN_VISUAL_PATH = "/login";
 export const RECIPEBOOK_DETAIL_VISUAL_BOOK_ID = "book-custom";
 export const RECIPEBOOK_DETAIL_VISUAL_PATH =
   `/mypage/recipe-books/${RECIPEBOOK_DETAIL_VISUAL_BOOK_ID}?type=custom&name=${encodeURIComponent("주말 파티")}`;
+export const COOK_READY_VISUAL_PATH = "/cooking/ready";
+export const COOK_MODE_VISUAL_SESSION_ID = "session-visual";
+export const COOK_MODE_VISUAL_PATH =
+  `/cooking/sessions/${COOK_MODE_VISUAL_SESSION_ID}/cook-mode`;
+export const STANDALONE_COOK_MODE_VISUAL_PATH =
+  `/cooking/recipes/${RECIPE_ID}/cook-mode?servings=2`;
 
 const PLANNER_COLUMNS = [
   { id: "col-breakfast", name: "아침", sort_order: 0 },
@@ -1181,6 +1187,243 @@ export async function installYoutubeImportVisualRoutes(page: Page) {
         data: {
           recipe_id: "recipe-yt-001",
           title: "백종원 김치찌개",
+        },
+        error: null,
+      },
+    });
+  });
+}
+
+function cookingVisualRecipe(title = "김치볶음밥") {
+  return {
+    id: "recipe-cooking-visual",
+    title,
+    cooking_servings: 2,
+    ingredients: [
+      {
+        amount: 1,
+        display_text: "1 공기",
+        ingredient_id: "cook-ing-rice",
+        ingredient_type: "QUANT",
+        scalable: true,
+        standard_name: "쌀",
+        unit: "공기",
+      },
+      {
+        amount: 100,
+        display_text: "100 g",
+        ingredient_id: "cook-ing-kimchi",
+        ingredient_type: "QUANT",
+        scalable: true,
+        standard_name: "배추김치",
+        unit: "g",
+      },
+      {
+        amount: 1,
+        display_text: "1 개",
+        ingredient_id: "cook-ing-egg",
+        ingredient_type: "QUANT",
+        scalable: true,
+        standard_name: "계란",
+        unit: "개",
+      },
+      {
+        amount: 0.5,
+        display_text: "0.5 대",
+        ingredient_id: "cook-ing-scallion",
+        ingredient_type: "QUANT",
+        scalable: true,
+        standard_name: "대파",
+        unit: "대",
+      },
+      {
+        amount: 1,
+        display_text: "1 작은술",
+        ingredient_id: "cook-ing-oil",
+        ingredient_type: "QUANT",
+        scalable: true,
+        standard_name: "참기름",
+        unit: "작은술",
+      },
+      {
+        amount: 1,
+        display_text: "1 작은술",
+        ingredient_id: "cook-ing-soy",
+        ingredient_type: "QUANT",
+        scalable: true,
+        standard_name: "간장",
+        unit: "작은술",
+      },
+    ],
+    steps: [
+      {
+        cooking_method: { code: "stir_fry", label: "볶기", color_key: "stir_fry" },
+        duration_seconds: null,
+        duration_text: null,
+        heat_level: null,
+        ingredients_used: [],
+        instruction: "팬에 김치를 잘게 썰어 강불에 충분히 볶습니다.",
+        step_number: 1,
+      },
+      {
+        cooking_method: { code: "stir_fry", label: "볶기", color_key: "stir_fry" },
+        duration_seconds: null,
+        duration_text: null,
+        heat_level: null,
+        ingredients_used: [],
+        instruction: "밥을 넣고 김치와 잘 섞어가며 2분 더 볶습니다.",
+        step_number: 2,
+      },
+      {
+        cooking_method: { code: "boil", label: "굽기", color_key: "boil" },
+        duration_seconds: null,
+        duration_text: null,
+        heat_level: null,
+        ingredients_used: [],
+        instruction: "옆에 계란 후라이를 부쳐 올립니다.",
+        step_number: 3,
+      },
+      {
+        cooking_method: { code: "mix", label: "무치기", color_key: "mix" },
+        duration_seconds: null,
+        duration_text: null,
+        heat_level: null,
+        ingredients_used: [],
+        instruction: "참기름과 다진 파로 마무리합니다.",
+        step_number: 4,
+      },
+    ],
+  };
+}
+
+export async function installCookingVisualRoutes(page: Page) {
+  await page.route("**/api/v1/cooking/ready", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          date_range: { start: "2026-05-12", end: "2026-05-16" },
+          recipes: [
+            {
+              meal_ids: ["meal-cook-1"],
+              recipe_id: "recipe-kimchi-rice",
+              recipe_thumbnail_url: null,
+              recipe_title: "김치볶음밥",
+              total_servings: 1,
+            },
+            {
+              meal_ids: ["meal-cook-2", "meal-cook-3"],
+              recipe_id: "recipe-soondubu",
+              recipe_thumbnail_url: null,
+              recipe_title: "순두부찌개",
+              total_servings: 2,
+            },
+            {
+              meal_ids: ["meal-cook-4"],
+              recipe_id: "recipe-bibimbap",
+              recipe_thumbnail_url: null,
+              recipe_title: "비빔밥",
+              total_servings: 2,
+            },
+            {
+              meal_ids: ["meal-cook-5"],
+              recipe_id: "recipe-seafood",
+              recipe_thumbnail_url: null,
+              recipe_title: "애호박 새우젓 볶음",
+              total_servings: 2,
+            },
+          ],
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/cooking/sessions", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+
+    await route.fulfill({
+      status: 201,
+      json: {
+        success: true,
+        data: {
+          cooking_servings: 2,
+          meals: [{ is_cooked: false, meal_id: "meal-cook-1" }],
+          recipe_id: "recipe-kimchi-rice",
+          session_id: COOK_MODE_VISUAL_SESSION_ID,
+          status: "in_progress",
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/cooking/sessions/*/cook-mode", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          recipe: cookingVisualRecipe(),
+          session_id: COOK_MODE_VISUAL_SESSION_ID,
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/cooking/sessions/*/complete", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          cook_count: 12,
+          leftover_dish_id: "leftover-cook-visual",
+          meals_updated: 1,
+          pantry_removed: 2,
+          session_id: COOK_MODE_VISUAL_SESSION_ID,
+          status: "completed",
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/cooking/sessions/*/cancel", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { session_id: COOK_MODE_VISUAL_SESSION_ID, status: "cancelled" },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/recipes/*/cook-mode*", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { recipe: cookingVisualRecipe("김치볶음밥") },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/cooking/standalone-complete", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          cook_count: 13,
+          leftover_dish_id: "leftover-standalone-visual",
+          pantry_removed: 2,
         },
         error: null,
       },

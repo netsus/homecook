@@ -14,6 +14,15 @@ import {
 import { ContentState } from "@/components/shared/content-state";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  WebButton,
+  WebDialog,
+  WebDialogBody,
+  WebDialogFooter,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebModal,
+} from "@/components/web";
 import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -398,7 +407,7 @@ export function CookModeScreen({
         contentTestId="cook-mode-content"
         controlsDisabled={screenState !== "ready"}
         onCancel={handleCancelClick}
-        onComplete={handleCompleteClick}
+        onComplete={handleConsumedConfirm}
         recipe={recipe}
         screenTestId="cook-mode-screen"
         servingsTestId="cook-mode-servings"
@@ -406,59 +415,45 @@ export function CookModeScreen({
         variant="planner"
       />
 
-      {showConsumedSheet ? (
-        <ConsumedIngredientSheet
-          ingredients={recipe.ingredients}
-          onClose={() => setShowConsumedSheet(false)}
-          onConfirm={handleConsumedConfirm}
-          onSkip={handleConsumedSkip}
-          recipeTitle={recipe.title}
+      {cancelConfirm ? (
+        <PlannerCookCancelDialog
+          onCancel={() => setCancelConfirm(false)}
+          onConfirm={handleCancelConfirm}
         />
       ) : null}
-
-      {cancelConfirm ? (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-4 backdrop-blur-[1px]"
-          data-testid="cancel-confirm-overlay"
-          onClick={() => setCancelConfirm(false)}
-        >
-          <div
-            aria-labelledby="cancel-confirm-title"
-            aria-modal="true"
-            className="w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-3)]"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-          >
-            <h3
-              className="text-base font-bold text-[var(--foreground)]"
-              id="cancel-confirm-title"
-            >
-              요리를 취소할까요?
-            </h3>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              취소하면 요리 준비 리스트로 돌아갑니다.
-            </p>
-            <div className="mt-4 flex gap-3">
-              <button
-                className="flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--line)] bg-transparent text-sm font-semibold text-[var(--foreground)]"
-                data-testid="cancel-confirm-no"
-                onClick={() => setCancelConfirm(false)}
-                type="button"
-              >
-                아니요
-              </button>
-              <button
-                className="flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-deep)] text-sm font-bold text-white"
-                data-testid="cancel-confirm-yes"
-                onClick={handleCancelConfirm}
-                type="button"
-              >
-                취소하기
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </>
+  );
+}
+
+function PlannerCookCancelDialog({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <WebModal data-testid="cancel-confirm-overlay" onBackdropClick={onCancel}>
+      <WebDialog aria-labelledby="cancel-confirm-title" size="narrow">
+        <WebDialogHeader>
+          <WebDialogTitle id="cancel-confirm-title">
+            요리를 취소할까요?
+          </WebDialogTitle>
+        </WebDialogHeader>
+        <WebDialogBody>
+          <p className="text-sm text-[var(--muted)]">
+            취소하면 요리 준비 리스트로 돌아갑니다.
+          </p>
+        </WebDialogBody>
+        <WebDialogFooter>
+          <WebButton data-testid="cancel-confirm-no" onClick={onCancel} variant="tertiary">
+            아니요
+          </WebButton>
+          <WebButton data-testid="cancel-confirm-yes" onClick={onConfirm}>
+            취소하기
+          </WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
   );
 }
