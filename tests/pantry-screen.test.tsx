@@ -137,6 +137,16 @@ describe("PantryScreen", () => {
     expect(screen.queryByText("3개 재료 보유 중")).toBeNull();
   });
 
+  it("shows the desktop loading skeleton inside the web pantry shell", () => {
+    mockFetchPantryList.mockReturnValue(new Promise(() => {}));
+
+    render(<PantryScreen initialAuthenticated />);
+
+    expect(screen.getByTestId("pantry-skeleton")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "마이페이지" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "마이" })).toBeNull();
+  });
+
   it("shows the empty state when pantry has no items", async () => {
     mockFetchPantryList.mockResolvedValue({ items: [] });
 
@@ -523,13 +533,14 @@ describe("PantryScreen", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /재료 추가하기/ }));
     const dialog = await screen.findByRole("dialog", { name: "재료 추가" });
+    expect(within(dialog).getByRole("checkbox", { name: "대파" })).toBeTruthy();
+    expect(within(dialog).getByRole("checkbox", { name: "간장" })).toBeTruthy();
+
     await user.click(within(dialog).getByRole("tab", { name: "채소" }));
 
-    await waitFor(() => {
-      expect(mockFetchIngredients).toHaveBeenCalledWith(
-        expect.objectContaining({ category: "채소" }),
-      );
-    });
+    expect(within(dialog).getByRole("checkbox", { name: "대파" })).toBeTruthy();
+    expect(within(dialog).queryByRole("checkbox", { name: "간장" })).toBeNull();
+    expect(mockFetchIngredients).toHaveBeenCalledTimes(1);
   });
 
   it("shows add sheet load error state and retries", async () => {

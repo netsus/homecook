@@ -108,5 +108,30 @@ describe("RecipeIngredientAddModal", () => {
     expect(
       screen.getByRole("button", { name: "선택한 재료 2개 추가" }),
     ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "양파 선택 해제" }));
+
+    expect(onionCard.getAttribute("aria-pressed")).toBe("false");
+    expect(tofuCard.getAttribute("aria-pressed")).toBe("true");
+    expect(
+      screen.getByRole("button", { name: "선택한 재료 1개 추가" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("1개 선택됨")).toBeNull();
+  });
+
+  it("filters desktop ingredient categories locally without showing a new loading pass", async () => {
+    installMatchMedia(true);
+    const user = userEvent.setup();
+
+    render(<RecipeIngredientAddModal onAdd={vi.fn()} onClose={vi.fn()} />);
+
+    expect(await screen.findByRole("button", { name: "양파" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "두부" })).toBeTruthy();
+
+    await user.click(screen.getByRole("tab", { name: "채소" }));
+
+    expect(screen.getByRole("button", { name: "양파" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "두부" })).toBeNull();
+    expect(vi.mocked(fetchIngredients)).toHaveBeenCalledTimes(1);
   });
 });

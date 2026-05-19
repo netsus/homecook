@@ -262,6 +262,8 @@ describe("MypageScreen", () => {
     render(<MypageScreen initialAuthenticated />);
 
     expect(screen.getByTestId("mypage-skeleton")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "마이페이지" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "팬트리" })).toBeTruthy();
   });
 
   it("uses the mobile app loading shell instead of the legacy skeleton", () => {

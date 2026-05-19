@@ -342,7 +342,7 @@ test.describe("QA accessibility smoke", () => {
 
     await page.getByRole("button", { name: /재료 추가/ }).click();
     await expect(
-      page.getByRole("dialog", { name: "재료 추가" }),
+      page.getByRole("dialog", { name: "재료 선택" }),
     ).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
