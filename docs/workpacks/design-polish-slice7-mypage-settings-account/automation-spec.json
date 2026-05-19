@@ -1,0 +1,77 @@
+{
+  "slice_id": "design-polish-slice7-mypage-settings-account",
+  "execution_mode": "autonomous",
+  "risk_class": "low",
+  "anchor_extension": false,
+  "anchor_screens": [],
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "branch": "feature/fe-design-polish-slice7-mypage-settings-account",
+    "stage": 4,
+    "required_routes": [
+      "/mypage",
+      "/mypage/recipe-books/[book_id]",
+      "/shopping/lists/[list_id]"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only:preserved",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "low-risk-skip-rationale",
+      "browser-flow-regression"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk-ui-change",
+      "anchor_screens": [],
+      "required_screens": [
+        "MYPAGE",
+        "RECIPEBOOK_DETAIL",
+        "SHOPPING_DETAIL"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [
+        "browser-flow-regression"
+      ],
+      "authority_report_paths": [],
+      "evidence_artifact_refs": []
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "recipebook-detail-back-shows-mypage-root",
+    "shopping-detail-back-shows-mypage-root",
+    "return-context-breaks-direct-entry-fallback",
+    "shopping-history-readonly-regression",
+    "unauthorized-return-loop"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}
+
