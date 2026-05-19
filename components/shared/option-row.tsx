@@ -14,7 +14,7 @@ export function OptionRow({ label, isSelected, onClick, disabled }: OptionRowPro
   return (
     <button
       aria-selected={isSelected}
-      className={`flex min-h-14 w-full items-center rounded-[16px] px-4 py-3.5 text-left transition-colors ${
+      className={`flex min-h-14 w-full items-center rounded-[var(--radius-panel)] px-4 py-3.5 text-left transition-colors ${
         isSelected
           ? "bg-[var(--wave1-surface)] text-[var(--wave1-ink)] font-bold"
           : "bg-[var(--wave1-surface)] text-[var(--wave1-ink)] font-medium"

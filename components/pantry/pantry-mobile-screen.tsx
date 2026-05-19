@@ -53,7 +53,7 @@ export function PantryMobileScreen({
 
   return (
     <div className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden">
-      <div className="relative flex h-[52px] items-center justify-center border-b border-[#DEE2E6] bg-white px-4">
+      <div className="relative flex h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4">
         <h1 className="text-[18px] font-extrabold leading-none">
           팬트리
         </h1>
@@ -89,7 +89,7 @@ export function PantryMobileScreen({
           <SearchIcon className="absolute left-[17px] top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#868E96]" />
           <input
             aria-label="팬트리 재료 검색"
-            className="h-11 w-full rounded-[20px] border-0 bg-[#F8F9FA] pl-[46px] pr-10 text-[14px] font-medium text-[#212529] placeholder:text-[#868E96] focus:outline-none focus:ring-2 focus:ring-[#2AC1BC]"
+            className="h-[var(--control-height-md)] w-full rounded-[var(--radius-sheet)] border-0 bg-[#F8F9FA] pl-[46px] pr-10 text-[14px] font-medium text-[#212529] placeholder:text-[#868E96] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="재료 검색"
             role="searchbox"
@@ -110,7 +110,7 @@ export function PantryMobileScreen({
 
         <div className="grid grid-cols-2 gap-2">
           <button
-            className="h-10 rounded-[10px] border-0 bg-[#2AC1BC] text-[13px] font-extrabold text-white"
+            className="h-10 rounded-[var(--radius-control)] border-0 bg-[var(--brand)] text-[13px] font-extrabold text-white"
             onClick={onOpenAddSheet}
             type="button"
           >
@@ -118,7 +118,7 @@ export function PantryMobileScreen({
           </button>
           <button
             aria-label="묶음으로 추가"
-            className="h-10 rounded-[10px] border border-[#DEE2E6] bg-white text-[13px] font-extrabold text-[#495057]"
+            className="h-10 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[13px] font-extrabold text-[#495057]"
             onClick={onOpenBundlePicker}
             type="button"
           >
@@ -164,7 +164,7 @@ export function PantryMobileScreen({
                 <h2 className="px-1 pb-[10px] text-[13px] font-extrabold leading-[1.3] text-[#495057]">
                   {group.category}
                 </h2>
-                <div className="overflow-hidden rounded-xl border border-[#DEE2E6] bg-white">
+                <div className="overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white">
                   {group.items.map((item, index) => {
                     const selected = selectedIds.has(item.ingredient_id);
 
@@ -194,7 +194,7 @@ export function PantryMobileScreen({
                             className={[
                               "mr-2 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border text-[13px] font-bold",
                               selected
-                                ? "border-[#2AC1BC] bg-[#2AC1BC] text-white"
+                                ? "border-[var(--brand)] bg-[var(--brand)] text-white"
                                 : "border-[#DEE2E6] bg-white text-transparent",
                             ].join(" ")}
                           >
@@ -203,7 +203,7 @@ export function PantryMobileScreen({
                         )}
                         <span
                           aria-hidden="true"
-                          className="mr-3 flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-xl bg-[#F8F9FA] text-[20px]"
+                          className="mr-3 flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[var(--radius-card)] bg-[#F8F9FA] text-[20px]"
                         >
                           {getPantryEmoji(item.standard_name, item.category)}
                         </span>
@@ -258,7 +258,7 @@ function CategoryChip({
       className={[
         "h-[31px] shrink-0 rounded-full border px-3 text-[12px] font-extrabold leading-none",
         active
-          ? "border-[#2AC1BC] bg-white text-[#2AC1BC]"
+          ? "border-[var(--brand)] bg-white text-[var(--brand)]"
           : "border-[#DEE2E6] bg-white text-[#495057]",
       ].join(" ")}
       onClick={onClick}
@@ -278,7 +278,7 @@ function MobileEmptyState({
   onOpenBundlePicker: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-[#DEE2E6] bg-white px-6 py-10 text-center">
+    <div className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white px-6 py-10 text-center">
       <p className="text-[16px] font-extrabold text-[#212529]">
         아직 등록한 재료가 없어요
       </p>
@@ -287,7 +287,7 @@ function MobileEmptyState({
       </p>
       <div className="mt-5 grid grid-cols-2 gap-2">
         <button
-          className="h-10 rounded-[10px] bg-[#2AC1BC] text-[13px] font-extrabold text-white"
+          className="h-10 rounded-[var(--radius-control)] bg-[var(--brand)] text-[13px] font-extrabold text-white"
           onClick={onOpenAddSheet}
           type="button"
         >
@@ -295,7 +295,7 @@ function MobileEmptyState({
         </button>
         <button
           aria-label="묶음으로 추가"
-          className="h-10 rounded-[10px] border border-[#DEE2E6] bg-white text-[13px] font-extrabold text-[#495057]"
+          className="h-10 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[13px] font-extrabold text-[#495057]"
           onClick={onOpenBundlePicker}
           type="button"
         >
@@ -316,7 +316,7 @@ function MobileSearchEmptyState({
   searchQuery: string;
 }) {
   return (
-    <div className="rounded-xl border border-[#DEE2E6] bg-white px-6 py-10 text-center">
+    <div className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white px-6 py-10 text-center">
       <p className="text-[15px] font-bold text-[#868E96]">
         {searchQuery
           ? `"${searchQuery}"에 해당하는 재료가 없어요`
@@ -324,7 +324,7 @@ function MobileSearchEmptyState({
       </p>
       {searchQuery && (
         <button
-          className="mt-4 h-10 rounded-[10px] border border-[#DEE2E6] bg-white px-5 text-[13px] font-extrabold text-[#495057]"
+          className="mt-4 h-10 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-5 text-[13px] font-extrabold text-[#495057]"
           onClick={onClearSearch}
           type="button"
         >

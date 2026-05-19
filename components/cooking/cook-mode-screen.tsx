@@ -376,7 +376,7 @@ export function CookModeScreen({
               </p>
               <div className="mt-4 flex gap-3">
                 <button
-                  className="flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--line)] bg-transparent text-sm font-semibold text-[var(--foreground)]"
+                  className="flex min-h-[var(--control-height-md)] flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--line)] bg-transparent text-sm font-semibold text-[var(--foreground)]"
                   data-testid="cancel-confirm-no"
                   onClick={() => setCancelConfirm(false)}
                   type="button"
@@ -384,7 +384,7 @@ export function CookModeScreen({
                   아니요
                 </button>
                 <button
-                  className="flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-deep)] text-sm font-bold text-white"
+                  className="flex min-h-[var(--control-height-md)] flex-1 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-deep)] text-sm font-bold text-white"
                   data-testid="cancel-confirm-yes"
                   onClick={handleCancelConfirm}
                   type="button"

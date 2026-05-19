@@ -135,7 +135,7 @@ export function SettingsMobileScreen({
 
       {errorMessage ? (
         <div
-          className="mx-4 mt-2 rounded-lg bg-[#FF6B6B] px-4 py-3 text-center text-[13px] font-extrabold text-white"
+          className="mx-4 mt-2 rounded-[var(--radius-control)] bg-[#FF6B6B] px-4 py-3 text-center text-[13px] font-extrabold text-white"
           data-testid="settings-error-toast"
           role="status"
         >
@@ -260,7 +260,7 @@ function MobileAppBar({
 }) {
   return (
     <div
-      className="sticky top-0 z-30 flex min-h-[52px] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+      className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
       style={{ borderBottomWidth: "0.5px" }}
     >
       <button
@@ -346,7 +346,7 @@ function SettingsSurface({
           </h2>
           {!columnsLoading && !columnsError ? (
             <button
-              className="h-8 rounded-lg border border-[#DEE2E6] bg-white px-3 text-[12px] font-bold text-[#495057]"
+              className="h-8 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-[12px] font-bold text-[#495057]"
               onClick={() => onColumnsEditModeChange(!columnsEditMode)}
               type="button"
             >
@@ -362,21 +362,21 @@ function SettingsSurface({
           >
             {[1, 2, 3].map((index) => (
               <div
-                className="h-[38px] rounded-lg border border-[#DEE2E6] bg-white"
+                className="h-[38px] rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white"
                 key={index}
               />
             ))}
           </div>
         ) : columnsError ? (
           <div
-            className="rounded-xl border border-[#DEE2E6] bg-white p-4"
+            className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-4"
             data-testid="columns-error"
           >
             <p className="text-[13px] font-bold text-[#FF6B6B]">
               {columnsError}
             </p>
             <button
-              className="mt-3 h-10 rounded-lg bg-[#2AC1BC] px-4 text-[13px] font-extrabold text-white"
+              className="mt-3 h-10 rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-[13px] font-extrabold text-white"
               onClick={onRetryColumns}
               type="button"
             >
@@ -397,7 +397,7 @@ function SettingsSurface({
                   key={column.id}
                 >
                   <button
-                    className="h-[38px] truncate rounded-lg border border-[#DEE2E6] bg-white px-3 text-left text-[14px] font-medium text-[#212529]"
+                    className="h-[38px] truncate rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-left text-[14px] font-medium text-[#212529]"
                     data-testid={`rename-column-${column.id}`}
                     onClick={() => onRenameColumnTarget(column)}
                     type="button"
@@ -407,7 +407,7 @@ function SettingsSurface({
                   {columnsEditMode ? (
                     <button
                       aria-label={`${column.name} 삭제`}
-                      className="flex h-[38px] items-center justify-center rounded-lg border border-[#FFD8D8] bg-white text-[16px] font-bold text-[#FF6B6B] disabled:border-[#DEE2E6] disabled:text-[#ADB5BD]"
+                      className="flex h-[38px] items-center justify-center rounded-[var(--radius-control)] border border-[#FFD8D8] bg-white text-[16px] font-bold text-[#FF6B6B] disabled:border-[#DEE2E6] disabled:text-[#ADB5BD]"
                       data-testid={`delete-column-${column.id}`}
                       disabled={plannerColumns.length <= 1}
                       onClick={() => onDeleteColumnTarget(column)}
@@ -423,7 +423,7 @@ function SettingsSurface({
             <div className="mt-3 grid grid-cols-1 gap-2 min-[390px]:grid-cols-[minmax(0,1fr)_132px]">
               <input
                 aria-label="새 끼니 이름"
-                className="h-[38px] min-w-0 rounded-lg border border-[#DEE2E6] bg-white px-3 text-[14px] font-medium text-[#212529] outline-none placeholder:text-[#868E96] focus:ring-2 focus:ring-[#2AC1BC]"
+                className="h-[38px] min-w-0 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-[14px] font-medium text-[#212529] outline-none placeholder:text-[#868E96] focus:ring-2 focus:ring-[var(--brand)]"
                 maxLength={30}
                 onChange={(event) => onColumnAddInputChange(event.target.value)}
                 placeholder="새 끼니 이름"
@@ -431,7 +431,7 @@ function SettingsSurface({
                 value={columnAddInput}
               />
               <button
-                className="h-[38px] whitespace-nowrap rounded-lg bg-[#2AC1BC] px-3 text-[12px] font-bold text-white disabled:bg-[#DEE2E6]"
+                className="h-[38px] whitespace-nowrap rounded-[var(--radius-control)] bg-[var(--brand)] px-3 text-[12px] font-bold text-white disabled:bg-[#DEE2E6]"
                 data-testid="add-column-button"
                 disabled={plannerColumns.length >= 5}
                 onClick={() => {
@@ -457,14 +457,14 @@ function SettingsSurface({
 
       <div className="mt-2 grid grid-cols-[78px_minmax(0,1fr)] gap-2 border-t border-[#DEE2E6] bg-white px-4 py-3">
         <button
-          className="h-12 rounded-lg bg-[#DEE2E6] text-[16px] font-extrabold text-[#ADB5BD]"
+          className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[#DEE2E6] text-[16px] font-extrabold text-[#ADB5BD]"
           disabled
           type="button"
         >
           취소
         </button>
         <button
-          className="h-12 rounded-lg bg-[#DEE2E6] text-[16px] font-extrabold text-[#ADB5BD]"
+          className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[#DEE2E6] text-[16px] font-extrabold text-[#ADB5BD]"
           disabled
           type="button"
         >
@@ -505,7 +505,7 @@ function SettingToggleRow({
         aria-label={label}
         className={[
           "relative h-7 w-11 shrink-0 rounded-full transition-colors",
-          checked ? "bg-[#2AC1BC]" : "bg-[#DEE2E6]",
+          checked ? "bg-[var(--brand)]" : "bg-[#DEE2E6]",
         ].join(" ")}
         disabled={disabled}
         onClick={onClick}
@@ -549,11 +549,11 @@ function AccountSurface({
 
   return (
     <main className="px-4 py-4">
-      <div className="overflow-hidden rounded-xl border border-[#DEE2E6] bg-white">
+      <div className="overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white">
         {fields.map(([label, value], index) => (
           <div
             className={[
-              "flex min-h-[49px] w-full items-center px-4 text-left",
+              "flex min-h-[var(--control-height-lg)] w-full items-center px-4 text-left",
               index < fields.length - 1 ? "border-b border-[#F1F3F5]" : "",
             ].join(" ")}
             key={label}
@@ -576,7 +576,7 @@ function AccountSurface({
 
       <div className="mt-3 space-y-3">
         <button
-          className="h-12 w-full rounded-lg bg-[#2AC1BC] text-[15px] font-bold text-white"
+          className="h-[var(--control-height-lg)] w-full rounded-[var(--radius-control)] bg-[var(--brand)] text-[15px] font-bold text-white"
           data-testid="nickname-row"
           onClick={onOpenNicknameSheet}
           type="button"
@@ -584,14 +584,14 @@ function AccountSurface({
           닉네임 변경
         </button>
         <button
-          className="h-12 w-full rounded-lg border border-[#DEE2E6] bg-white text-[15px] font-bold text-[#212529]"
+          className="h-[var(--control-height-lg)] w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[15px] font-bold text-[#212529]"
           onClick={onOpenLogoutDialog}
           type="button"
         >
           로그아웃
         </button>
         <button
-          className="h-12 w-full rounded-lg bg-transparent text-[14px] font-bold text-[#FF6B6B]"
+          className="h-[var(--control-height-lg)] w-full rounded-[var(--radius-control)] bg-transparent text-[14px] font-bold text-[#FF6B6B]"
           onClick={onOpenDeleteDialog}
           type="button"
         >
@@ -627,7 +627,7 @@ function MobileNicknameSheet({
     >
       <div
         aria-modal="true"
-        className="w-full rounded-t-[20px] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-4"
+        className="w-full rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-4"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
@@ -635,7 +635,7 @@ function MobileNicknameSheet({
           닉네임 변경
         </h2>
         <input
-          className="mt-4 h-[38px] w-full rounded-md border border-[#DEE2E6] bg-white px-3 text-[14px] font-medium text-[#212529] outline-none focus:ring-2 focus:ring-[#2AC1BC]"
+          className="mt-4 h-[38px] w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-[14px] font-medium text-[#212529] outline-none focus:ring-2 focus:ring-[var(--brand)]"
           maxLength={12}
           onChange={(event) => onInputChange(event.target.value)}
           type="text"
@@ -651,14 +651,14 @@ function MobileNicknameSheet({
         ) : null}
         <div className="mt-4 grid grid-cols-[78px_minmax(0,1fr)] gap-2">
           <button
-            className="h-12 rounded-lg bg-[#F8F9FA] text-[16px] font-extrabold text-[#212529]"
+            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[#F8F9FA] text-[16px] font-extrabold text-[#212529]"
             onClick={onClose}
             type="button"
           >
             취소
           </button>
           <button
-            className="h-12 rounded-lg bg-[#2AC1BC] text-[16px] font-extrabold text-white disabled:bg-[#DEE2E6]"
+            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-extrabold text-white disabled:bg-[#DEE2E6]"
             disabled={saveDisabled}
             onClick={onSave}
             type="button"
@@ -700,7 +700,7 @@ function MobileColumnNameSheet({
     >
       <div
         aria-modal="true"
-        className="w-full rounded-t-[20px] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-4"
+        className="w-full rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-4"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
@@ -710,7 +710,7 @@ function MobileColumnNameSheet({
         <input
           aria-label={title}
           autoFocus
-          className="mt-4 h-[38px] w-full rounded-md border border-[#DEE2E6] bg-white px-3 text-[14px] font-medium text-[#212529] outline-none focus:ring-2 focus:ring-[#2AC1BC]"
+          className="mt-4 h-[38px] w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-[14px] font-medium text-[#212529] outline-none focus:ring-2 focus:ring-[var(--brand)]"
           data-testid={`${testIdPrefix}-input`}
           maxLength={30}
           onChange={(event) => onInputChange(event.target.value)}
@@ -727,14 +727,14 @@ function MobileColumnNameSheet({
         ) : null}
         <div className="mt-4 grid grid-cols-[78px_minmax(0,1fr)] gap-2">
           <button
-            className="h-12 rounded-lg bg-[#F8F9FA] text-[16px] font-extrabold text-[#212529]"
+            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[#F8F9FA] text-[16px] font-extrabold text-[#212529]"
             onClick={onClose}
             type="button"
           >
             취소
           </button>
           <button
-            className="h-12 rounded-lg bg-[#2AC1BC] text-[16px] font-extrabold text-white disabled:bg-[#DEE2E6]"
+            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-extrabold text-white disabled:bg-[#DEE2E6]"
             data-testid={`${testIdPrefix}-save`}
             disabled={saveDisabled}
             onClick={onSave}
@@ -773,7 +773,7 @@ function MobileConfirmSheet({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
       <div
         aria-modal="true"
-        className="w-full rounded-t-[20px] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2"
+        className="w-full rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2"
         role="alertdialog"
       >
         <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-[#DEE2E6]" />
@@ -786,7 +786,7 @@ function MobileConfirmSheet({
           </p>
         ) : null}
         {extraWarning ? (
-          <p className="mt-4 rounded-lg bg-[#FFF5F5] px-3 py-2 text-[11px] font-bold leading-5 text-[#FF6B6B]">
+          <p className="mt-4 rounded-[var(--radius-control)] bg-[#FFF5F5] px-3 py-2 text-[11px] font-bold leading-5 text-[#FF6B6B]">
             {extraWarning}
           </p>
         ) : null}
@@ -797,7 +797,7 @@ function MobileConfirmSheet({
         ) : null}
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
-            className="h-11 rounded-lg border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057]"
+            className="h-[var(--control-height-md)] rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057]"
             disabled={disabled}
             onClick={onCancel}
             type="button"
@@ -806,8 +806,8 @@ function MobileConfirmSheet({
           </button>
           <button
             className={[
-              "h-11 rounded-lg text-[14px] font-extrabold text-white disabled:opacity-60",
-              destructive ? "bg-[#FF6B6B]" : "bg-[#2AC1BC]",
+              "h-[var(--control-height-md)] rounded-[var(--radius-control)] text-[14px] font-extrabold text-white disabled:opacity-60",
+              destructive ? "bg-[#FF6B6B]" : "bg-[var(--brand)]",
             ].join(" ")}
             disabled={disabled}
             onClick={onConfirm}

@@ -320,7 +320,7 @@ export function IngredientFilterModal({
                   className="web-ingredient-modal-grid"
                 >
                   {Array.from({ length: 8 }).map((_, index) => (
-                    <div className="web-skeleton h-11 rounded-full" key={index} />
+                    <div className="web-skeleton h-[var(--control-height-md)] rounded-full" key={index} />
                   ))}
                 </div>
               ) : null}
@@ -437,7 +437,7 @@ export function IngredientFilterModal({
       }
       headerSlot={
         <>
-          <label className="mt-3 flex min-h-11 items-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow-1)] md:mt-4">
+          <label className="mt-3 flex min-h-[var(--control-height-md)] items-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow-1)] md:mt-4">
             <span className="visually-hidden">재료명으로 검색</span>
             <input
               className="w-full bg-transparent py-3 outline-none placeholder:text-[var(--muted)]"
@@ -468,7 +468,7 @@ export function IngredientFilterModal({
         <div className="grid gap-3 sm:grid-cols-2">
           {Array.from({ length: 6 }).map((_, index) => (
             <div
-              className="min-h-11 animate-pulse rounded-[var(--radius-full)] border border-[var(--line)] bg-[var(--surface-fill)]"
+              className="min-h-[var(--control-height-md)] animate-pulse rounded-[var(--radius-full)] border border-[var(--line)] bg-[var(--surface-fill)]"
               key={index}
             />
           ))}
@@ -507,7 +507,7 @@ export function IngredientFilterModal({
             return (
               <li key={ingredient.id}>
                 <label
-                  className={`flex min-h-11 cursor-pointer items-center rounded-[var(--radius-full)] border px-4 py-2 text-sm font-semibold transition ${
+                  className={`flex min-h-[var(--control-height-md)] cursor-pointer items-center rounded-[var(--radius-full)] border px-4 py-2 text-sm font-semibold transition ${
                     isChecked
                       ? "border-[var(--olive)] bg-[var(--olive)] text-[var(--surface)]"
                       : "border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)]"

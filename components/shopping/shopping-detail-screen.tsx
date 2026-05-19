@@ -509,7 +509,7 @@ export function ShoppingDetailScreen({
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-20 animate-pulse rounded-2xl bg-white/60"
+                className="h-20 animate-pulse rounded-[var(--radius-panel)] bg-white/60"
               />
             ))}
           </div>
@@ -859,7 +859,7 @@ function MobileShoppingDetailScreen({
               </h2>
             </div>
             {!isReadOnly ? (
-              <p className="shrink-0 text-[32px] font-extrabold leading-none text-[#2AC1BC]">
+              <p className="shrink-0 text-[32px] font-extrabold leading-none text-[var(--brand)]">
                 {progress}%
               </p>
             ) : null}
@@ -867,7 +867,7 @@ function MobileShoppingDetailScreen({
           {!isReadOnly ? (
             <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-[#E9ECEF]">
               <div
-                className="h-full rounded-full bg-[#2AC1BC]"
+                className="h-full rounded-full bg-[var(--brand)]"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -882,7 +882,7 @@ function MobileShoppingDetailScreen({
           <MobileToast message={completeToast.message} type={completeToast.type} />
         ) : null}
         {isReadOnly ? (
-          <p className="mx-4 mt-3 rounded-[10px] bg-[#E6F8F7] px-4 py-3 text-[13px] font-bold text-[#20A8A4]">
+          <p className="mx-4 mt-3 rounded-[var(--radius-control)] bg-[var(--brand-soft)] px-4 py-3 text-[13px] font-bold text-[var(--brand)]">
             완료된 장보기 기록은 수정할 수 없어요
           </p>
         ) : null}
@@ -959,7 +959,7 @@ function MobileShoppingDetailScreen({
       {!isReadOnly ? (
         <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[#DEE2E6] bg-white px-4 py-4">
           <button
-            className="flex h-[49px] w-full items-center justify-center rounded-[8px] bg-[#2AC1BC] text-[16px] font-bold text-white disabled:bg-[#DEE2E6]"
+            className="flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-white disabled:bg-[#DEE2E6]"
             disabled={isCompleting}
             onClick={onComplete}
             type="button"
@@ -998,7 +998,7 @@ function MobileShoppingAppBar({
 }) {
   return (
     <header className="shrink-0 border-b border-[#DEE2E6] bg-white">
-      <div className="flex min-h-[52px] items-center gap-2 px-4 py-2.5">
+      <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
         <button
           aria-label="뒤로 가기"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529]"
@@ -1077,7 +1077,7 @@ function MobileShoppingSection({
       <h3 className="mb-2 text-[12px] font-extrabold leading-[1.3] text-[#868E96]">
         {label} · {count}
       </h3>
-      <div className="overflow-hidden rounded-[10px] border border-[#DEE2E6] bg-white">
+      <div className="overflow-hidden rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white">
         {items.map((item) => {
           const purchaseIndex = purchaseItems.findIndex(
             (purchaseItem) => purchaseItem.id === item.id,
@@ -1175,7 +1175,7 @@ function MobileShoppingItemRow({
             className={[
               "flex h-[22px] w-[22px] items-center justify-center rounded-full border text-[12px] text-white",
               item.is_checked
-                ? "border-[#2AC1BC] bg-[#2AC1BC]"
+                ? "border-[var(--brand)] bg-[var(--brand)]"
                 : "border-[#DEE2E6] bg-white",
             ].join(" ")}
           >
@@ -1187,9 +1187,9 @@ function MobileShoppingItemRow({
           aria-hidden="true"
           data-testid={`shopping-readonly-status-${item.id}`}
           className={[
-            "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[6px] border text-[12px]",
+            "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[var(--radius-badge)] border text-[12px]",
             item.is_checked || item.is_pantry_excluded
-              ? "border-[#2AC1BC] bg-[#E6F8F7] text-[#2AC1BC]"
+              ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand)]"
               : "border-[#DEE2E6] text-transparent",
           ].join(" ")}
         >
@@ -1212,9 +1212,9 @@ function MobileShoppingItemRow({
             item.is_pantry_excluded ? "되살리기" : "이미있음"
           }`}
           className={[
-            "flex h-[30px] w-[64px] shrink-0 items-center justify-center rounded-[8px] border bg-white px-0 text-[11px] font-extrabold disabled:opacity-50",
+            "flex h-[30px] w-[64px] shrink-0 items-center justify-center rounded-[var(--radius-control)] border bg-white px-0 text-[11px] font-extrabold disabled:opacity-50",
             item.is_pantry_excluded
-              ? "border-[#2AC1BC] text-[#20A8A4]"
+              ? "border-[var(--brand)] text-[var(--brand)]"
               : "border-[#DEE2E6] text-[#495057]",
           ].join(" ")}
           disabled={isUpdating}
@@ -1246,8 +1246,8 @@ function MobileToast({
   return (
     <div
       className={[
-        "mx-4 mt-3 rounded-[10px] px-4 py-3 text-[13px] font-bold",
-        isError ? "bg-red-50 text-red-700" : "bg-[#E6F8F7] text-[#20A8A4]",
+        "mx-4 mt-3 rounded-[var(--radius-control)] px-4 py-3 text-[13px] font-bold",
+        isError ? "bg-red-50 text-red-700" : "bg-[var(--brand-soft)] text-[var(--brand)]",
       ].join(" ")}
       role={isError ? "alert" : "status"}
     >
@@ -1354,7 +1354,7 @@ function ShoppingItemCard({
       ) : (
         <div
           aria-hidden="true"
-          className="web-shopping-check web-shopping-check-static rounded-[6px]"
+          className="web-shopping-check web-shopping-check-static rounded-[var(--radius-badge)]"
           data-testid={`shopping-readonly-status-${item.id}`}
         >
           {item.is_checked || item.is_pantry_excluded ? "✓" : ""}

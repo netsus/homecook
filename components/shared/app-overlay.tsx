@@ -92,7 +92,7 @@ export function AppBottomSheet({
         aria-labelledby={ariaLabelledBy}
         aria-modal="true"
         className={[
-          "flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-[20px] bg-[var(--wave1-surface)] text-[var(--wave1-ink)] shadow-[0_-10px_30px_rgba(0,0,0,0.18)]",
+          "flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-[var(--radius-sheet)] bg-[var(--wave1-surface)] text-[var(--wave1-ink)] shadow-[0_-10px_30px_rgba(0,0,0,0.18)]",
           panelClassName,
         ]
           .filter(Boolean)
@@ -164,7 +164,7 @@ export function AppCenterDialog({
       <div
         aria-labelledby={ariaLabelledBy}
         aria-modal="true"
-        className="w-full max-w-md rounded-[20px] bg-[var(--wave1-surface)] p-5 text-[var(--wave1-ink)] shadow-[var(--wave1-shadow-crisp)]"
+        className="w-full max-w-md rounded-[var(--radius-sheet)] bg-[var(--wave1-surface)] p-5 text-[var(--wave1-ink)] shadow-[var(--wave1-shadow-crisp)]"
         data-app-overlay-shell="center-dialog"
         data-testid={testId}
         onClick={(event) => event.stopPropagation()}
@@ -217,14 +217,14 @@ export function AppStepper({
   value,
 }: AppStepperProps) {
   return (
-    <div className="flex w-full items-center justify-between rounded-[10px] border border-[var(--wave1-border)] bg-[var(--wave1-surface-fill)] px-3 py-2.5">
+    <div className="flex w-full items-center justify-between rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-[var(--wave1-surface-fill)] px-3 py-2.5">
       <span className="text-sm font-medium text-[var(--wave1-text-2)]">
         {label}
       </span>
       <div className="flex items-center gap-1.5">
         <button
           aria-label={`${unit ?? label} 줄이기`}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--wave1-border)] bg-[var(--wave1-surface)] text-lg font-bold leading-none text-[var(--wave1-ink)] disabled:opacity-40"
+          className="flex h-[var(--control-height-md)] w-11 items-center justify-center rounded-full border border-[var(--wave1-border)] bg-[var(--wave1-surface)] text-lg font-bold leading-none text-[var(--wave1-ink)] disabled:opacity-40"
           data-app-stepper-control="decrement"
           disabled={disabled || value <= min}
           onClick={() => onChange(Math.max(min, value - 1))}
@@ -241,7 +241,7 @@ export function AppStepper({
         </span>
         <button
           aria-label={`${unit ?? label} 늘리기`}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--wave1-ink)] text-lg font-bold leading-none text-[var(--wave1-surface)] disabled:opacity-40"
+          className="flex h-[var(--control-height-md)] w-11 items-center justify-center rounded-full bg-[var(--wave1-ink)] text-lg font-bold leading-none text-[var(--wave1-surface)] disabled:opacity-40"
           data-app-stepper-control="increment"
           disabled={disabled}
           onClick={() => onChange(value + 1)}

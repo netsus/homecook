@@ -447,7 +447,7 @@ export function CookReadyListScreen({
         <div className="space-y-3">
           <SocialLoginButtons nextPath="/cooking/ready" />
           <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
+            className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
             href="/planner"
           >
             플래너로 돌아가기
@@ -607,7 +607,7 @@ function MobileCookReadyListScreen({
       data-testid="cook-ready-list-screen"
     >
       <div className="shrink-0 border-b border-[#DEE2E6] bg-white">
-        <div className="flex min-h-[52px] items-center gap-2 px-4 py-2.5">
+        <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
           <Link
             aria-label="뒤로가기"
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529]"
@@ -649,7 +649,7 @@ function MobileCookReadyListScreen({
         <div className="px-4 py-4">
           {sessionError ? (
             <div
-              className="mb-3 rounded-[8px] border border-[#2AC1BC] bg-[#E6F8F7] px-4 py-3 text-[13px] font-semibold text-[#20A8A4]"
+              className="mb-3 rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand-soft)] px-4 py-3 text-[13px] font-semibold text-[var(--brand)]"
               data-testid="session-error-toast"
               role="alert"
             >
@@ -750,7 +750,7 @@ function MobileCookReadyCard({
 
   return (
     <article
-      className="overflow-hidden rounded-[12px] border border-l-[4px] bg-white"
+      className="overflow-hidden rounded-[var(--radius-card)] border border-l-[4px] bg-white"
       data-testid="recipe-ready-card"
       style={{
         borderColor: "#DEE2E6",
@@ -759,13 +759,13 @@ function MobileCookReadyCard({
     >
       <div className="flex items-center gap-3 p-[14px]">
         <div
-          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[10px] text-[36px]"
+          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[36px]"
           style={{ background: visual.bg }}
         >
           {recipe.recipe_thumbnail_url ? (
             <Image
               alt=""
-              className="h-16 w-16 rounded-[10px] object-cover"
+              className="h-16 w-16 rounded-[var(--radius-control)] object-cover"
               height={64}
               src={recipe.recipe_thumbnail_url}
               unoptimized
@@ -807,7 +807,7 @@ function MobileCookReadyCard({
       </div>
       <div className="px-[14px] pb-[14px]">
         <button
-          className="flex h-12 w-full items-center justify-center rounded-[8px] bg-[#2AC1BC] text-[16px] font-bold leading-none text-white disabled:bg-[#DEE2E6] disabled:text-[#ADB5BD]"
+          className="flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold leading-none text-white disabled:bg-[#DEE2E6] disabled:text-[#ADB5BD]"
           data-testid="start-session-button"
           disabled={anyCreating}
           onClick={() => onStartSession(recipe)}

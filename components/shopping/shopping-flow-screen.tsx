@@ -260,7 +260,7 @@ function getRecipeVisual(config: MealConfig) {
     recipeVisualMeta[config.recipe_name] ??
     Object.entries(recipeVisualMeta).find(([key]) =>
       config.recipe_name.includes(key),
-    )?.[1] ?? { bg: "#E6F8F7", emoji: "🍽️", meal: "식사" }
+    )?.[1] ?? { bg: "var(--brand-soft)", emoji: "🍽️", meal: "식사" }
   );
 }
 
@@ -843,7 +843,7 @@ function AppBar({ onBack }: AppBarProps) {
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-6">
         <button
           aria-label="뒤로 가기"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-white/60"
+          className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-white/60"
           onClick={onBack}
           type="button"
         >
@@ -867,7 +867,7 @@ function AppBar({ onBack }: AppBarProps) {
           장보기 준비
         </h1>
         {/* Right spacer matching back button width */}
-        <div aria-hidden="true" className="h-11 w-11 shrink-0" />
+        <div aria-hidden="true" className="h-[var(--control-height-md)] w-11 shrink-0" />
       </div>
     </div>
   );
@@ -882,7 +882,7 @@ function MobileAppBar({
 }) {
   return (
     <div className="shrink-0 border-b border-[#DEE2E6] bg-white">
-      <div className="flex min-h-[52px] items-center gap-2 px-4 py-2.5">
+      <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
         <button
           aria-label="뒤로 가기"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529] hover:bg-[#F8F9FA]"
@@ -933,7 +933,7 @@ function MobileSelectScreen({
 
       <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
         <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
-          <p className="text-[12px] font-extrabold leading-[1.3] text-[#20A8A4]">
+          <p className="text-[12px] font-extrabold leading-[1.3] text-[var(--brand)]">
             STEP 1 / 2
           </p>
           <h2 className="mt-1 text-[20px] font-extrabold leading-[1.3] text-[#212529]">
@@ -947,7 +947,7 @@ function MobileSelectScreen({
         <div className="space-y-3 p-4">
           {groupConfigsByDate(configs).map(([dateLabel, items]) => (
             <section
-              className="overflow-hidden rounded-[12px] border border-[#DEE2E6] bg-white"
+              className="overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white"
               key={dateLabel}
             >
               <h3 className="border-b border-[#F1F3F5] bg-[#F8F9FA] px-4 py-2.5 text-[14px] font-extrabold leading-[1.3] text-[#212529]">
@@ -969,7 +969,7 @@ function MobileSelectScreen({
 
       <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[#DEE2E6] bg-white px-4 py-4">
         <button
-          className="flex h-[49px] w-full items-center justify-center rounded-[8px] bg-[#2AC1BC] text-[16px] font-bold text-white disabled:bg-[#DEE2E6] disabled:text-[#ADB5BD]"
+          className="flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-white disabled:bg-[#DEE2E6] disabled:text-[#ADB5BD]"
           data-testid="shopping-create-button"
           disabled={isCreateDisabled}
           onClick={onCreate}
@@ -1010,9 +1010,9 @@ function MobileSelectRow({
         <span
           aria-hidden="true"
           className={[
-            "flex h-[22px] w-[22px] items-center justify-center rounded-[6px] border text-white",
+            "flex h-[22px] w-[22px] items-center justify-center rounded-[var(--radius-badge)] border text-white",
             config.isSelected
-              ? "border-[#2AC1BC] bg-[#2AC1BC]"
+              ? "border-[var(--brand)] bg-[var(--brand)]"
               : "border-[#DEE2E6] bg-white",
           ].join(" ")}
         >
@@ -1020,7 +1020,7 @@ function MobileSelectRow({
         </span>
       </button>
       <div
-        className="flex h-[34px] w-[34px] shrink-0 items-center justify-center overflow-hidden rounded-[7px] text-[18px]"
+        className="flex h-[34px] w-[34px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-badge)] text-[18px]"
         style={{ backgroundColor: visual.bg }}
       >
         {config.recipe_thumbnail ? (
@@ -1088,7 +1088,7 @@ function MobileReviewScreen({
         <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[12px] font-extrabold leading-[1.3] text-[#20A8A4]">
+              <p className="text-[12px] font-extrabold leading-[1.3] text-[var(--brand)]">
                 STEP 2 / 2
               </p>
               <h2 className="mt-1 truncate text-[20px] font-extrabold leading-[1.3] text-[#212529]">
@@ -1098,13 +1098,13 @@ function MobileReviewScreen({
                 {purchaseItems.length}개 구매 예정 · {excludedItems.length}개 팬트리 제외
               </p>
             </div>
-            <div className="shrink-0 text-[32px] font-extrabold leading-none text-[#2AC1BC]">
+            <div className="shrink-0 text-[32px] font-extrabold leading-none text-[var(--brand)]">
               {progress}%
             </div>
           </div>
           <div className="mt-3 h-1 rounded-full bg-[#F1F3F5]">
             <div
-              className="h-full rounded-full bg-[#2AC1BC]"
+              className="h-full rounded-full bg-[var(--brand)]"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -1112,7 +1112,7 @@ function MobileReviewScreen({
 
         {toast ? (
           <div
-            className="mx-4 mt-3 rounded-[10px] bg-[#E6F8F7] px-4 py-3 text-[13px] font-bold text-[#20A8A4]"
+            className="mx-4 mt-3 rounded-[var(--radius-control)] bg-[var(--brand-soft)] px-4 py-3 text-[13px] font-bold text-[var(--brand)]"
             role="status"
           >
             {toast}
@@ -1127,7 +1127,7 @@ function MobileReviewScreen({
             메인 · {purchaseItems.length}
           </p>
 
-          <div className="mt-3 overflow-hidden rounded-[10px] border border-[#DEE2E6] bg-white">
+          <div className="mt-3 overflow-hidden rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white">
             {purchaseItems.map((item) => (
               <MobileReviewItem
                 isUpdating={updatingItemId === item.id}
@@ -1144,7 +1144,7 @@ function MobileReviewScreen({
       <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[#DEE2E6] bg-white px-4 py-4">
         <div className="grid grid-cols-[1fr_86px] gap-2">
           <button
-            className="flex h-[49px] items-center justify-center rounded-[8px] bg-[#2AC1BC] text-[16px] font-bold text-white disabled:bg-[#DEE2E6]"
+            className="flex h-[var(--control-height-lg)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-white disabled:bg-[#DEE2E6]"
             disabled={isCompleting || detail.is_completed}
             onClick={onComplete}
             type="button"
@@ -1152,7 +1152,7 @@ function MobileReviewScreen({
             {detail.is_completed ? "완료됨" : isCompleting ? "완료 중..." : "장보기 완료"}
           </button>
           <button
-            className="flex h-[49px] items-center justify-center rounded-[8px] bg-[#F8F9FA] text-[15px] font-bold text-[#212529] disabled:opacity-50"
+            className="flex h-[var(--control-height-lg)] items-center justify-center rounded-[var(--radius-control)] bg-[#F8F9FA] text-[15px] font-bold text-[#212529] disabled:opacity-50"
             disabled={isSharing}
             onClick={onShare}
             type="button"
@@ -1202,7 +1202,7 @@ function MobileReviewItem({
           className={[
             "flex h-[22px] w-[22px] items-center justify-center rounded-full border text-[12px] text-white",
             item.is_checked
-              ? "border-[#2AC1BC] bg-[#2AC1BC]"
+              ? "border-[var(--brand)] bg-[var(--brand)]"
               : "border-[#DEE2E6] bg-white",
           ].join(" ")}
         >

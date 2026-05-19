@@ -25,7 +25,7 @@ describe("SortDropdown", () => {
   it("trigger meets 44px minimum touch target", () => {
     render(<SortDropdown onChange={() => {}} options={options} value="latest" />);
     const trigger = screen.getByRole("button", { expanded: false });
-    expect(trigger.className).toContain("min-h-[44px]");
+    expect(trigger.className).toContain("min-h-[var(--control-height-md)]");
   });
 
   it("opens dropdown on trigger click", () => {
@@ -86,7 +86,7 @@ describe("SortDropdown", () => {
     fireEvent.click(screen.getByRole("button", { expanded: false }));
 
     screen.getAllByRole("option").forEach((option) => {
-      expect(option.className).toContain("min-h-[44px]");
+      expect(option.className).toContain("min-h-[var(--control-height-md)]");
     });
   });
 

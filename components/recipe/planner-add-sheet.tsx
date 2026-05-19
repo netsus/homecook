@@ -148,7 +148,7 @@ export function PlannerAddSheet({
                 {errorMessage ?? "플래너 정보를 불러오지 못했어요."}
               </p>
               <button
-                className="min-h-11 rounded-[10px] bg-[var(--wave1-mint-contrast)] px-5 text-[14px] font-bold text-white"
+                className="min-h-[var(--control-height-md)] rounded-[var(--radius-control)] bg-[var(--wave1-mint-contrast)] px-5 text-[14px] font-bold text-white"
                 onClick={onRetryLoad}
                 type="button"
               >
@@ -162,7 +162,7 @@ export function PlannerAddSheet({
             >
               {[1, 2, 3].map((i) => (
                 <div
-                  className="h-10 animate-pulse rounded-[10px] bg-[var(--wave1-surface-fill)]"
+                  className="h-10 animate-pulse rounded-[var(--radius-control)] bg-[var(--wave1-surface-fill)]"
                   key={i}
                 />
               ))}
@@ -170,10 +170,10 @@ export function PlannerAddSheet({
           ) : (
             <div className="space-y-4">
               {recipePreview ? (
-                <div className="flex items-center gap-3 rounded-[12px] border border-[var(--wave1-border)] bg-[var(--wave1-surface-fill)] p-3">
+                <div className="flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--wave1-border)] bg-[var(--wave1-surface-fill)] p-3">
                   <div
                     aria-hidden="true"
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] text-[26px]"
+                    className="flex h-[var(--control-height-lg)] w-12 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[26px]"
                     style={{ background: recipePreview.background }}
                   >
                     {recipePreview.emoji}
@@ -201,7 +201,7 @@ export function PlannerAddSheet({
                       <button
                         aria-pressed={isSelected}
                         className={[
-                          "shrink-0 rounded-full border px-3 py-2 text-[13px] transition-colors",
+                          "shrink-0 rounded-[var(--radius-chip)] border px-3 py-2 text-[13px] transition-colors",
                           isSelected
                             ? "border-[var(--wave1-ink)] bg-[var(--wave1-ink)] font-bold text-white"
                             : "border-[var(--wave1-border)] bg-white font-medium text-[var(--wave1-text-2)]",
@@ -233,7 +233,7 @@ export function PlannerAddSheet({
                       <button
                         aria-pressed={isSelected}
                         className={[
-                          "min-h-11 rounded-[8px] border px-2 text-[14px] transition-colors",
+                          "min-h-[var(--control-height-md)] rounded-[var(--radius-control)] border px-2 text-[14px] transition-colors",
                           shouldScrollMealColumns ? "min-w-[76px] shrink-0" : "min-w-0",
                           isSelected
                             ? "border-[var(--wave1-mint-contrast)] bg-[var(--wave1-mint-soft)] font-semibold text-[var(--wave1-mint-contrast)]"
@@ -455,7 +455,7 @@ export function PlannerAddSheet({
       >
         {/* Grabber */}
         <div className="flex justify-center pt-2 lg:hidden">
-          <div className="h-1 w-9 rounded-sm bg-[var(--line)]" />
+          <div className="h-1 w-9 rounded-[var(--radius-badge)] bg-[var(--line)]" />
         </div>
         {/* Header — D2: no eyebrow · D3: icon-only close */}
         <div className="mb-4 px-5 pt-3 md:px-6 md:pt-5">
@@ -519,7 +519,7 @@ export function PlannerAddSheet({
                     <button
                       aria-pressed={isSelected}
                       className={[
-                        "rounded-[10px] border px-2 py-2.5 text-sm transition-colors",
+                        "rounded-[var(--radius-control)] border px-2 py-2.5 text-sm transition-colors",
                         isSelected
                           ? "border-[var(--brand)] bg-[var(--brand-soft)] font-bold text-[var(--brand-deep)]"
                           : "border-[var(--line)] bg-white font-medium text-[var(--text-2)]",

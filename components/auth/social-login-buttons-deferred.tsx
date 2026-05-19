@@ -8,7 +8,7 @@ import type { SocialLoginButtonsProps } from "@/components/auth/social-login-but
 function SocialLoginButtonsFallback() {
   return (
     <div aria-live="polite" className="space-y-3" role="status">
-      <div className="min-h-[52px] animate-pulse rounded-[12px] border border-[var(--line)] bg-white/70" />
+      <div className="min-h-[var(--control-height-xl)] animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-white/70" />
       <p className="text-xs leading-5 text-[var(--muted)]">
         로그인 옵션을 불러오는 중...
       </p>

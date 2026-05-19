@@ -54,21 +54,21 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
     return (
       <button
         className={[
-          "mb-2 flex min-h-[74px] w-full items-center gap-3 rounded-[12px] border px-4 py-3.5 text-left",
+          "mb-2 flex min-h-[74px] w-full items-center gap-3 rounded-[var(--radius-card)] border px-4 py-3.5 text-left",
           hasRecipes
-            ? "border-[#DEE2E6] bg-white active:border-[#2AC1BC] active:bg-[#E6F8F7]"
+            ? "border-[#DEE2E6] bg-white active:border-[var(--brand)] active:bg-[var(--brand-soft)]"
             : "border-[#F1F3F5] bg-[#F8F9FA]",
         ].join(" ")}
         onClick={() => onSelect(book)}
         type="button"
       >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-white text-[20px] shadow-[inset_0_0_0_1px_#DEE2E6]">
+        <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-white text-[20px] shadow-[inset_0_0_0_1px_#DEE2E6]">
           {screenIcon}
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-1.5">
             <span className="truncate text-[15px] font-bold text-[#212529]">{book.name}</span>
-            <span className="shrink-0 rounded-[6px] bg-[#E6F8F7] px-1.5 py-0.5 text-[11px] font-semibold text-[#0B7773]">
+            <span className="shrink-0 rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--brand)]">
               {hasRecipes ? `${book.recipe_count}개` : "비어 있음"}
             </span>
           </span>
@@ -106,7 +106,7 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
   }
 
   return (
-    <div className="rounded-[16px] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
+    <div className="rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
       <h3 className="text-xl font-bold tracking-[-0.02em] text-[var(--foreground)]">
         {book.name}
       </h3>
@@ -116,7 +116,7 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
         <span>레시피 {book.recipe_count}개</span>
       </div>
       <button
-        className="mt-3 h-11 w-full rounded-[12px] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
+        className="mt-3 h-[var(--control-height-md)] w-full rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
         onClick={() => onSelect(book)}
         type="button"
       >
@@ -200,7 +200,7 @@ export function RecipeBookSelector({
 
       {loadState === "error" && (
         <div
-          className="rounded-[12px] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
+          className="rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
           role="alert"
         >
           {errorMessage}
@@ -234,10 +234,10 @@ export function RecipeBookSelector({
   if (presentation === "screen") {
     return (
       <div className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]">
-        <div className="flex min-h-[52px] items-center border-b border-[#DEE2E6] bg-white px-2">
+        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-2">
           <button
             aria-label="뒤로"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529]"
+            className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529]"
             onClick={onBack ?? onClose}
             type="button"
           >
@@ -246,7 +246,7 @@ export function RecipeBookSelector({
           <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
             레시피북에서 추가
           </h1>
-          <div className="h-11 w-11 shrink-0" aria-hidden="true" />
+          <div className="h-[var(--control-height-md)] w-11 shrink-0" aria-hidden="true" />
         </div>
         <div className="p-4 pb-[112px]">{content}</div>
         <Wave1MobileBottomTab ariaLabel="레시피북 선택 하단 탭" currentTab="planner" />
@@ -262,7 +262,7 @@ export function RecipeBookSelector({
       <div
         aria-labelledby="recipebook-selector-title"
         aria-modal="true"
-        className="glass-panel max-h-[80vh] w-full max-w-md overflow-hidden rounded-[24px] px-5 py-6 md:px-6"
+        className="glass-panel max-h-[80vh] w-full max-w-md overflow-hidden rounded-[var(--radius-sheet)] px-5 py-6 md:px-6"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
       >

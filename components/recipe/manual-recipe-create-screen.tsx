@@ -130,7 +130,7 @@ interface AppBarProps {
 function AppBar({ onBack, onSave, canSave, isSaving }: AppBarProps) {
   return (
     <div className="shrink-0 border-b border-[#DEE2E6] bg-white">
-      <div className="flex min-h-[52px] items-center gap-2 px-4 py-2.5">
+      <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
         <button
           aria-label="뒤로 가기"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529] hover:bg-[#F8F9FA]"
@@ -159,9 +159,9 @@ function AppBar({ onBack, onSave, canSave, isSaving }: AppBarProps) {
         </h1>
         <button
           className={[
-            "hidden h-11 rounded-[8px] px-4 text-base font-semibold lg:block",
+            "hidden h-[var(--control-height-md)] rounded-[var(--radius-control)] px-4 text-base font-semibold lg:block",
             canSave && !isSaving
-              ? "text-[#20A8A4] hover:bg-[#E6F8F7]"
+              ? "text-[var(--brand)] hover:bg-[var(--brand-soft)]"
               : "cursor-not-allowed text-[#ADB5BD]",
           ].join(" ")}
           onClick={onSave}
@@ -190,7 +190,7 @@ interface IngredientListProps {
 function IngredientList({ ingredients, onChange, onRemove }: IngredientListProps) {
   if (ingredients.length === 0) {
     return (
-      <div className="mb-3 rounded-[10px] bg-[#F8F9FA] px-4 py-3 text-[14px] font-medium leading-[1.5] text-[#868E96]">
+      <div className="mb-3 rounded-[var(--radius-control)] bg-[#F8F9FA] px-4 py-3 text-[14px] font-medium leading-[1.5] text-[#868E96]">
         재료를 1개 이상 추가해주세요.
       </div>
     );
@@ -256,7 +256,7 @@ function IngredientList({ ingredients, onChange, onRemove }: IngredientListProps
             </div>
             <button
               aria-label={`${ing.standard_name} 삭제`}
-              className="flex h-11 w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
+              className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
               onClick={() => onRemove(ing.tempId)}
               type="button"
             >
@@ -279,7 +279,7 @@ interface StepListProps {
 function StepList({ steps, onRemove }: StepListProps) {
   if (steps.length === 0) {
     return (
-      <div className="rounded-[10px] bg-[#F8F9FA] px-4 py-3 text-[14px] font-medium leading-[1.5] text-[#868E96]">
+      <div className="rounded-[var(--radius-control)] bg-[#F8F9FA] px-4 py-3 text-[14px] font-medium leading-[1.5] text-[#868E96]">
         조리 과정을 추가해주세요.
       </div>
     );
@@ -310,7 +310,7 @@ function StepList({ steps, onRemove }: StepListProps) {
             </div>
             <button
               aria-label={`스텝 ${step.step_number} 삭제`}
-              className="flex h-11 w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
+              className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
               onClick={() => onRemove(step.tempId)}
               type="button"
             >
@@ -330,7 +330,7 @@ function SaveRequirementsNotice({ requirements }: { requirements: string[] }) {
 
   return (
     <div
-      className="mx-4 rounded-[12px] bg-white px-4 py-3 text-[#495057] md:mx-0 md:border md:border-[#EDF0F2]"
+      className="mx-4 rounded-[var(--radius-card)] bg-white px-4 py-3 text-[#495057] md:mx-0 md:border md:border-[#EDF0F2]"
       data-testid="manual-save-requirements"
       role="status"
     >
@@ -340,7 +340,7 @@ function SaveRequirementsNotice({ requirements }: { requirements: string[] }) {
       <div className="mt-2 flex flex-wrap gap-2">
         {requirements.map((requirement) => (
           <span
-            className="rounded-[8px] bg-[#F1F3F5] px-2.5 py-1 text-[12px] font-medium text-[#495057]"
+            className="rounded-[var(--radius-control)] bg-[#F1F3F5] px-2.5 py-1 text-[12px] font-medium text-[#495057]"
             key={requirement}
           >
             {requirement}
@@ -391,7 +391,7 @@ function StepAddModal({
     >
       <div
         aria-modal="true"
-        className="w-full max-w-md rounded-t-[20px] bg-[var(--surface)] p-6 sm:rounded-[20px]"
+        className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
@@ -470,7 +470,7 @@ function SuccessModal({
 }: SuccessModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="w-full max-w-md rounded-t-[20px] bg-[var(--surface)] p-6 sm:rounded-[20px]">
+      <div className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]">
         <div className="mb-6 text-center">
           <h2 className="text-lg font-bold text-[var(--foreground)]">
             레시피 등록 완료
@@ -481,7 +481,7 @@ function SuccessModal({
         </div>
         {mealAddError && (
           <div
-            className="mb-4 rounded-[12px] border border-red-300 bg-red-50 p-3 text-sm text-red-700"
+            className="mb-4 rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-3 text-sm text-red-700"
             role="alert"
           >
             {mealAddError}
@@ -524,7 +524,7 @@ function ServingsInputModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="w-full max-w-md rounded-t-[20px] bg-[var(--surface)] p-6 sm:rounded-[20px]">
+      <div className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]">
         <ModalHeader title="끼니에 추가" onClose={onCancel} />
         <div className="mt-6">
           <NumericStepperCompact
@@ -537,7 +537,7 @@ function ServingsInputModal({
         </div>
         {error && (
           <div
-            className="mt-4 rounded-[12px] border border-red-300 bg-red-50 p-3 text-sm text-red-700"
+            className="mt-4 rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-3 text-sm text-red-700"
             role="alert"
           >
             {error}
@@ -935,7 +935,7 @@ export function ManualRecipeCreateScreen({
       <div className="min-h-0 flex-1 overflow-y-auto pb-[84px] md:px-4 md:pb-6">
         <div className="mx-auto max-w-2xl space-y-2 md:space-y-6 md:py-4">
           {/* Basic Info */}
-          <section className="bg-white px-4 pb-4 pt-5 md:rounded-[16px] md:border md:border-[var(--line)]">
+          <section className="bg-white px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
             <h2 className="mb-3 text-[16px] font-semibold leading-[1.3] text-[#212529]">
               기본 정보
             </h2>
@@ -949,7 +949,7 @@ export function ManualRecipeCreateScreen({
                   placeholder="예: 김치찌개"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="h-[38px] w-full rounded-[8px] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-normal text-[#212529] placeholder:text-[#868E96] focus:border-[#2AC1BC] focus:outline-none"
+                  className="h-[38px] w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-normal text-[#212529] placeholder:text-[#868E96] focus:border-[var(--brand)] focus:outline-none"
                 />
               </label>
               <label className="block max-w-[13rem]">
@@ -963,14 +963,14 @@ export function ManualRecipeCreateScreen({
                   onChange={(e) =>
                     setBaseServings(Math.max(1, Number(e.target.value) || 1))
                   }
-                  className="h-[38px] w-full rounded-[8px] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-normal text-[#212529] focus:border-[#2AC1BC] focus:outline-none"
+                  className="h-[38px] w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-normal text-[#212529] focus:border-[var(--brand)] focus:outline-none"
                 />
               </label>
             </div>
           </section>
 
           {/* Ingredients */}
-          <section className="bg-white px-4 pb-4 pt-5 md:rounded-[16px] md:border md:border-[var(--line)]">
+          <section className="bg-white px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
             <div className="mb-1 flex items-center justify-between">
               <h2 className="text-[16px] font-semibold leading-[1.3] text-[#212529]">
                 재료
@@ -985,7 +985,7 @@ export function ManualRecipeCreateScreen({
               onRemove={handleRemoveIngredient}
             />
             <button
-              className="flex h-[42px] w-full items-center justify-center rounded-[8px] border border-dashed border-[#2AC1BC] bg-[#E6F8F7] text-[13px] font-semibold text-[#20A8A4] hover:bg-[#E6F8F7]"
+              className="flex h-[42px] w-full items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[var(--brand)] bg-[var(--brand-soft)] text-[13px] font-semibold text-[var(--brand)] hover:bg-[var(--brand-soft)]"
               onClick={() => setModalMode("ingredient-add")}
               type="button"
             >
@@ -994,13 +994,13 @@ export function ManualRecipeCreateScreen({
           </section>
 
           {/* Steps */}
-          <section className="bg-white px-4 py-5 md:rounded-[16px] md:border md:border-[var(--line)]">
+          <section className="bg-white px-4 py-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
             <div className="mb-1 flex items-center justify-between">
               <h2 className="text-[16px] font-semibold leading-[1.3] text-[#212529]">
                 조리법
               </h2>
               <button
-                className="text-[13px] font-semibold text-[#20A8A4] disabled:opacity-40"
+                className="text-[13px] font-semibold text-[var(--brand)] disabled:opacity-40"
                 disabled={isLoadingMethods}
                 onClick={() => setModalMode("step-add")}
                 type="button"
@@ -1016,7 +1016,7 @@ export function ManualRecipeCreateScreen({
               <>
                 <StepList steps={steps} onRemove={handleRemoveStep} />
                 <button
-                  className="mt-3 hidden min-h-[44px] w-full items-center justify-center rounded-[8px] border border-[#2AC1BC] bg-white py-3 text-[13px] font-semibold text-[#20A8A4] hover:bg-[#E6F8F7] lg:flex"
+                  className="mt-3 hidden min-h-[var(--control-height-md)] w-full items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-white py-3 text-[13px] font-semibold text-[var(--brand)] hover:bg-[var(--brand-soft)] lg:flex"
                   onClick={() => setModalMode("step-add")}
                   type="button"
                 >
@@ -1028,7 +1028,7 @@ export function ManualRecipeCreateScreen({
 
           {saveError && (
             <div
-              className="mx-4 rounded-[12px] border border-red-300 bg-red-50 p-3 text-sm text-red-700 md:mx-0"
+              className="mx-4 rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-3 text-sm text-red-700 md:mx-0"
               role="alert"
             >
               {saveError}
@@ -1041,9 +1041,9 @@ export function ManualRecipeCreateScreen({
         <div className="border-t border-[#DEE2E6] bg-white px-4 py-4 lg:hidden">
           <button
             className={[
-              "flex min-h-[48px] w-full items-center justify-center rounded-[8px] text-[16px] font-bold",
+              "flex min-h-[48px] w-full items-center justify-center rounded-[var(--radius-control)] text-[16px] font-bold",
               canSave && !isSaving
-                ? "bg-[#2AC1BC] text-white"
+                ? "bg-[var(--brand)] text-white"
                 : "bg-[#DEE2E6] text-[#ADB5BD]",
             ].join(" ")}
             disabled={!canSave || isSaving}

@@ -64,7 +64,7 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
     return (
       <button
         aria-label={`${recipe.title} 선택`}
-        className="overflow-hidden rounded-[12px] border border-[#DEE2E6] bg-white text-left active:border-[#2AC1BC] active:bg-[#E6F8F7]"
+        className="overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white text-left active:border-[var(--brand)] active:bg-[var(--brand-soft)]"
         onClick={() => onSelect(recipe)}
         type="button"
       >
@@ -78,7 +78,7 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
           <p className="mt-0.5 truncate text-[11px] text-[#868E96]">
             {recipe.tags.slice(0, 2).join(" · ") || "저장한 레시피"}
           </p>
-          <span className="mt-2 inline-flex rounded-[7px] bg-[#E6F8F7] px-2.5 py-1.5 text-[12px] font-semibold text-[#0B7773]">
+          <span className="mt-2 inline-flex rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-2.5 py-1.5 text-[12px] font-semibold text-[var(--brand)]">
             선택
           </span>
         </div>
@@ -106,7 +106,7 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
   }
 
   return (
-    <div className="rounded-[16px] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
+    <div className="rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
       <h3 className="line-clamp-2 text-2xl font-bold tracking-[-0.02em] text-[var(--foreground)]">
         {recipe.title}
       </h3>
@@ -123,7 +123,7 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
         </div>
       )}
       <button
-        className="mt-3 h-11 w-full rounded-[12px] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
+        className="mt-3 h-[var(--control-height-md)] w-full rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
         onClick={() => onSelect(recipe)}
         type="button"
       >
@@ -165,7 +165,7 @@ function ServingsModal({
         <div
           aria-labelledby="servings-modal-title"
           aria-modal="true"
-          className="w-full rounded-t-[20px] bg-white px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)]"
+          className="w-full rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)]"
           onClick={(e) => e.stopPropagation()}
           role="dialog"
         >
@@ -178,8 +178,8 @@ function ServingsModal({
           <p className="mt-1 text-[13px] text-[#868E96]">
             {slotLabel ? `${slotLabel}에 추가할 인분을 선택해주세요.` : "추가할 인분을 선택해주세요."}
           </p>
-          <div className="mt-4 flex items-center gap-3 rounded-[12px] border border-[#DEE2E6] bg-[#F8F9FA] p-2.5">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-[#E6F8F7]">
+          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-[#F8F9FA] p-2.5">
+            <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--brand-soft)]">
               <RecipeThumb recipe={recipe} />
             </span>
             <span className="min-w-0 flex-1">
@@ -192,7 +192,7 @@ function ServingsModal({
             </span>
           </div>
           {slotLabel ? (
-            <div className="mt-3 rounded-[12px] border border-[#DEE2E6] bg-[#F8F9FA] px-3.5 py-3 text-[14px] font-bold text-[#495057]">
+            <div className="mt-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-[#F8F9FA] px-3.5 py-3 text-[14px] font-bold text-[#495057]">
               {slotLabel}
             </div>
           ) : null}
@@ -208,7 +208,7 @@ function ServingsModal({
           </div>
           <div className="mt-6 flex gap-3">
             <button
-              className="h-11 flex-1 rounded-[10px] border border-[#DEE2E6] bg-white text-[14px] font-bold text-[#495057]"
+              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[14px] font-bold text-[#495057]"
               disabled={isCreating}
               onClick={onCancel}
               type="button"
@@ -216,7 +216,7 @@ function ServingsModal({
               취소
             </button>
             <button
-              className="h-11 flex-1 rounded-[10px] bg-[#0B7773] text-[14px] font-bold text-white disabled:opacity-50"
+              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] bg-[var(--brand)] text-[14px] font-bold text-white disabled:opacity-50"
               disabled={isCreating || servings < 1}
               onClick={handleConfirm}
               type="button"
@@ -297,7 +297,7 @@ function ServingsModal({
       <div
         aria-labelledby="servings-modal-title"
         aria-modal="true"
-        className="glass-panel w-full max-w-md rounded-[24px] px-5 py-6 md:px-6"
+        className="glass-panel w-full max-w-md rounded-[var(--radius-sheet)] px-5 py-6 md:px-6"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
       >
@@ -319,7 +319,7 @@ function ServingsModal({
         </div>
         <div className="mt-6 flex gap-3">
           <button
-            className="h-11 flex-1 rounded-[12px] border border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--foreground)] hover:bg-[var(--line)]"
+            className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--foreground)] hover:bg-[var(--line)]"
             disabled={isCreating}
             onClick={onCancel}
             type="button"
@@ -327,7 +327,7 @@ function ServingsModal({
             취소
           </button>
           <button
-            className="h-11 flex-1 rounded-[12px] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)] disabled:opacity-50"
+            className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)] disabled:opacity-50"
             disabled={isCreating || servings < 1}
             onClick={handleConfirm}
             type="button"
@@ -418,7 +418,7 @@ export function RecipeBookDetailPicker({
 
       {loadState === "error" && (
         <div
-          className="rounded-[12px] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
+          className="rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
           role="alert"
         >
           {errorMessage}
@@ -443,10 +443,10 @@ export function RecipeBookDetailPicker({
   if (presentation === "screen") {
     return (
       <div className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]">
-        <div className="flex min-h-[52px] items-center border-b border-[#DEE2E6] bg-white px-2">
+        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-2">
           <button
             aria-label="뒤로"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529]"
+            className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529]"
             onClick={onBack}
             type="button"
           >
@@ -455,7 +455,7 @@ export function RecipeBookDetailPicker({
           <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
             {book.name}
           </h1>
-          <div className="h-11 w-11 shrink-0" aria-hidden="true" />
+          <div className="h-[var(--control-height-md)] w-11 shrink-0" aria-hidden="true" />
         </div>
         <div className="p-3 pb-[112px]">{content}</div>
         {selectedRecipe && (
@@ -510,7 +510,7 @@ export function RecipeBookDetailPicker({
       <div
         aria-labelledby="recipebook-detail-title"
         aria-modal="true"
-        className="glass-panel max-h-[80vh] w-full max-w-md overflow-hidden rounded-[24px] px-5 py-6 md:px-6"
+        className="glass-panel max-h-[80vh] w-full max-w-md overflow-hidden rounded-[var(--radius-sheet)] px-5 py-6 md:px-6"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
       >

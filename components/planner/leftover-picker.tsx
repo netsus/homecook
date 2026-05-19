@@ -41,19 +41,19 @@ function LeftoverCard({
   onSelect: (leftover: LeftoverListItemData) => void;
 }) {
   return (
-    <article className="rounded-[16px] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
+    <article className="rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
       <div className="flex items-center gap-3">
         {leftover.recipe_thumbnail_url ? (
           <Image
             alt=""
-            className="h-14 w-14 shrink-0 rounded-[12px] object-cover"
+            className="h-14 w-14 shrink-0 rounded-[var(--radius-card)] object-cover"
             height={56}
             src={leftover.recipe_thumbnail_url}
             unoptimized
             width={56}
           />
         ) : (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[12px] bg-[var(--surface-fill)]">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-card)] bg-[var(--surface-fill)]">
             <span className="text-xl" aria-hidden="true">
               🍲
             </span>
@@ -69,7 +69,7 @@ function LeftoverCard({
         </div>
       </div>
       <button
-        className="mt-3 h-11 w-full rounded-[12px] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
+        className="mt-3 h-[var(--control-height-md)] w-full rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
         onClick={() => onSelect(leftover)}
         type="button"
       >
@@ -188,12 +188,12 @@ export function LeftoverPicker({
 
         {loadState === "error" ? (
           <div
-            className="rounded-[12px] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
+            className="rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
             role="alert"
           >
             <p>{errorMessage}</p>
             <button
-              className="mt-3 rounded-[10px] border border-red-300 bg-white px-3 py-2 font-semibold"
+              className="mt-3 rounded-[var(--radius-control)] border border-red-300 bg-white px-3 py-2 font-semibold"
               onClick={loadLeftovers}
               type="button"
             >

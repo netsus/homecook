@@ -503,10 +503,10 @@ export function MenuAddScreen({
 
     return (
       <div className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]">
-        <div className="flex min-h-[52px] items-center border-b border-[#DEE2E6] bg-white px-2">
+        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-2">
           <button
             aria-label="뒤로 가기"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529]"
+            className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529]"
             onClick={handleBack}
             type="button"
           >
@@ -515,24 +515,24 @@ export function MenuAddScreen({
           <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
             식사 추가
           </h1>
-          <div className="h-11 w-11 shrink-0" aria-hidden="true" />
+          <div className="h-[var(--control-height-md)] w-11 shrink-0" aria-hidden="true" />
         </div>
 
         <section className="px-5 py-3">
-          <p className="text-[11px] font-bold text-[#20A8A4]">대상</p>
+          <p className="text-[11px] font-bold text-[var(--brand)]">대상</p>
           <p className="mt-0.5 text-[16px] font-bold text-[#212529]">{targetLabel}</p>
         </section>
 
         <section className="flex flex-col gap-2.5 px-4 pb-8" data-testid="menu-add-option-grid">
           {MENU_ADD_OPTIONS.map((option) => (
             <button
-              className="flex min-h-[76px] w-full items-center gap-3.5 rounded-[12px] border border-[#DEE2E6] bg-white p-4 text-left"
+              className="flex min-h-[76px] w-full items-center gap-3.5 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-4 text-left"
               data-testid={`menu-add-option-${option.id}`}
               key={option.id}
               onClick={actionMapForMobile(option.id)}
               type="button"
             >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-[#E6F8F7] text-[22px]">
+              <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-[var(--radius-card)] bg-[var(--brand-soft)] text-[22px]">
                 {option.emoji}
               </span>
               <span className="min-w-0 flex-1">

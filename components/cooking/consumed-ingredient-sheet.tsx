@@ -93,7 +93,7 @@ export function ConsumedIngredientSheet({
 
             return (
             <button
-              className="mb-1.5 flex w-full cursor-pointer items-center gap-3 rounded-[10px] border border-[var(--wave1-border)] bg-white px-3.5 py-3 text-left last:mb-0"
+              className="mb-1.5 flex w-full cursor-pointer items-center gap-3 rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-white px-3.5 py-3 text-left last:mb-0"
               data-testid={`consumed-check-${ingredient.ingredient_id}`}
               key={ingredient.ingredient_id}
               onClick={() => toggleIngredient(ingredient.ingredient_id)}
@@ -208,7 +208,7 @@ export function ConsumedIngredientSheet({
 
         <div className="flex gap-3 border-t border-[var(--line)] bg-[var(--surface)] px-6 py-4">
           <button
-            className="flex min-h-11 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] border border-[var(--line)] bg-transparent px-3 text-sm font-semibold text-[var(--muted)]"
+            className="flex min-h-[var(--control-height-md)] min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] border border-[var(--line)] bg-transparent px-3 text-sm font-semibold text-[var(--muted)]"
             data-testid="consumed-skip-button"
             onClick={onSkip}
             type="button"
@@ -216,7 +216,7 @@ export function ConsumedIngredientSheet({
             건너뛰기
           </button>
           <button
-            className="flex min-h-11 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] bg-[var(--brand)] px-3 text-sm font-bold text-white"
+            className="flex min-h-[var(--control-height-md)] min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] bg-[var(--brand)] px-3 text-sm font-bold text-white"
             data-testid="consumed-confirm-button"
             onClick={handleConfirm}
             type="button"

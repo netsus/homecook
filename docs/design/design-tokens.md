@@ -5,6 +5,7 @@
 > 적용 범위: Slice 02 Stage 4부터 모든 슬라이스
 > 2026-05-11 Wave1 mobile update: Wave1 모바일 100% prototype parity surface의 목표값은 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`가 우선한다.
 > 2026-05-12 Phase 2 update: app/web 책임 분리는 `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`를 따르고, 기본 구현 경로는 mobile-scoped Wave1 token layer다.
+> 2026-05-19 App palette/shape update: 앱 화면은 `app/globals.css`의 `--brand-primary`, `--radius-*`, `--control-height-*` 계열을 단일 조절 지점으로 사용한다. 웹 `--web-*` 토큰은 변경하지 않는다.
 
 ---
 
@@ -22,11 +23,12 @@ This table is a short operational summary. The complete authoritative Wave1 mobi
 |------|--------|
 | App background | `#FFFFFF` |
 | Foreground / ink | `#212529` |
-| Brand | `#2AC1BC` |
-| Brand deep | `#20A8A4` |
-| Brand soft | `#E6F8F7` |
-| Accent teal | `#12B886` |
-| Danger / like | `#FF6B6B` |
+| Brand | `#0F766E` |
+| Brand deep | `#0B5F59` |
+| Brand soft | `#E7F4F2` |
+| Brand border | `#CFE5E1` |
+| Accent teal | `var(--brand)` |
+| Danger / like | `#D83A3A` |
 | Text 2 | `#495057` |
 | Text 3 | `#868E96` |
 | Text 4 | `#ADB5BD` |
@@ -62,7 +64,34 @@ Phase 2 chose the default implementation path below before Phase 4/5 code work:
 | per-component exact values from shared prototype tokens | allowed only for isolated surfaces or sheets, and must stay traceable to `WAVE1_MOBILE_APP_BASELINE.md` | can duplicate values if not centralized after porting |
 | global token replacement | deferred until the web redesign branch owns the change or a later matrix update proves no web impact | high risk of accidental web redesign |
 
-Therefore `app/globals.css` values remain legacy runtime defaults, not Wave1 mobile target values, unless a later approved web/no-impact gate changes that decision.
+Therefore `app/globals.css` mobile runtime values may use the app-only brand palette when web ownership is preserved. Desktop web colors remain isolated in the `--web-*` tokens under the 1024px media block.
+
+### 2026-05-19 App Runtime Brand Palette
+
+앱 화면의 브랜드 느낌은 아래 토큰만 우선 조절한다. 화면 내부에서는 직접 hex 색상을 추가하지 않고 역할 토큰을 사용한다.
+
+| 변수명 | 값 | 용도 |
+|--------|---|------|
+| `--brand-primary` | `#0F766E` | 앱 기본 브랜드색, CTA, 선택 상태 |
+| `--brand-primary-hover` | `#0B5F59` | pressed / hover / 진한 강조 |
+| `--brand-primary-soft` | `#E7F4F2` | 활성 칩, 안내 배경, 연한 브랜드 면 |
+| `--brand-primary-border` | `#CFE5E1` | 브랜드 계열 연한 테두리 |
+| `--brand-primary-shadow-color` | `rgba(15, 118, 110, 0.18)` | 브랜드 그림자 색 |
+
+### 2026-05-19 App Runtime Shape Tokens
+
+앱 화면의 둥글기와 주요 컨트롤 크기는 아래 토큰에서 우선 조절한다. 웹 `--web-*` 형태 토큰은 별도 유지한다.
+
+| 변수명 | 값 | 용도 |
+|--------|---|------|
+| `--radius-control` | `8px` | 버튼, 입력창, 작은 액션 |
+| `--radius-chip` | `10px` | 필터 칩, 작은 pill형 라벨 |
+| `--radius-card` | `10px` | 카드, 리스트 아이템 |
+| `--radius-panel` | `14px` | 큰 패널, 프로필 아이콘 박스 |
+| `--radius-sheet` | `18px` | 바텀시트, 모달 표면 |
+| `--control-height-md` | `44px` | 기본 터치 컨트롤 |
+| `--control-height-lg` | `48px` | 주요 CTA |
+| `--control-height-xl` | `52px` | 큰 CTA, 앱 헤더 높이 |
 
 ---
 
@@ -97,12 +126,12 @@ Therefore `app/globals.css` values remain legacy runtime defaults, not Wave1 mob
 
 > 기준: `baemin-style-tokens-additive` Stage 2 + `baemin-style-token-values` Stage 4.
 > 이 섹션은 후속 배민 스타일 전환 슬라이스에서 사용할 추가 토큰을 기록한다.
-> `--brand-soft`는 `baemin-style-token-values`에서 사용자 승인 값(`#FDEBEA`)으로 변경되었다.
+> `--brand-soft`는 2026-05-19 앱 팔레트 정리로 `--brand-primary-soft`를 따른다. 이전 C2/additive 값은 `#FDEBEA`였다.
 > 나머지 additive 토큰(`--surface-fill/subtle`, `--text-2/3/4`, `--shadow-1/2/3`, `--radius-*`)은 현재 값을 유지한다 (사용자 승인 "keep current").
 
 | 변수명 | 값 | 역할 |
 |--------|---|------|
-| `--brand-soft` | `#FDEBEA` | 활성 칩 배경, 상태 pill 배경 같은 브랜드 tint (2026-04-27 사용자 승인, 이전 `#E6F8F7`) |
+| `--brand-soft` | `#E7F4F2` | 활성 칩 배경, 상태 pill 배경 같은 브랜드 tint. 실제 값은 `--brand-primary-soft`에서 조절한다. |
 | `--surface-fill` | `#F8F9FA` | 입력 필드, 비활성 칩 배경 |
 | `--surface-subtle` | `#F1F3F5` | 섹션 배경, chip hover 배경 |
 | `--text-2` | `#495057` | 부제, 설명 텍스트 |

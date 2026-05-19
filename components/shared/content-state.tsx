@@ -46,7 +46,7 @@ export function ContentState({
     },
     empty: {
       eyebrow: eyebrow ?? "비어 있어요",
-      eyebrowClassName: "border-[#E6F8F7] bg-[#E6F8F7] text-[#0B7773]",
+      eyebrowClassName: "border-[var(--brand-soft)] bg-[var(--brand-soft)] text-[var(--brand)]",
       titleClassName: "text-[#212529]",
     },
     gate: {
@@ -62,8 +62,8 @@ export function ContentState({
   }[tone];
   const variantClassName =
     variant === "panel"
-      ? "rounded-[16px] border border-[#DEE2E6] bg-white px-5 py-7 shadow-[0px_1px_3px_rgba(0,0,0,0.04)] md:px-8 md:py-8"
-      : "rounded-[12px] border border-[#DEE2E6] bg-[#F8F9FA] px-5 py-6";
+      ? "rounded-[var(--radius-panel)] border border-[#DEE2E6] bg-white px-5 py-7 shadow-[0px_1px_3px_rgba(0,0,0,0.04)] md:px-8 md:py-8"
+      : "rounded-[var(--radius-card)] border border-[#DEE2E6] bg-[#F8F9FA] px-5 py-6";
 
   return (
     <div
@@ -73,7 +73,7 @@ export function ContentState({
     >
       <div className="mx-auto max-w-[28rem]">
         <div
-          className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${toneMeta.eyebrowClassName}`.trim()}
+          className={`inline-flex rounded-[var(--radius-chip)] border px-3 py-1 text-[var(--app-text-caption)] font-semibold ${toneMeta.eyebrowClassName}`.trim()}
         >
           <span>{toneMeta.eyebrow}</span>
         </div>
@@ -91,7 +91,7 @@ export function ContentState({
         {actionLabel && onAction ? (
           <div className="mt-5 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
             <button
-              className="flex min-h-11 items-center justify-center rounded-[8px] bg-[#0B7773] px-5 py-3 text-[14px] font-bold text-white"
+              className="flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-5 py-3 text-[14px] font-bold text-white"
               onClick={onAction}
               type="button"
             >
@@ -99,7 +99,7 @@ export function ContentState({
             </button>
             {secondaryActionLabel && onSecondaryAction ? (
               <button
-                className="flex min-h-11 items-center justify-center rounded-[8px] border border-[#DEE2E6] bg-white px-5 py-3 text-[14px] font-bold text-[#495057]"
+                className="flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-5 py-3 text-[14px] font-bold text-[#495057]"
                 onClick={onSecondaryAction}
                 type="button"
               >
