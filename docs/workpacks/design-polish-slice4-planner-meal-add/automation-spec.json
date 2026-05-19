@@ -1,0 +1,72 @@
+{
+  "slice_id": "design-polish-slice4-planner-meal-add",
+  "execution_mode": "autonomous",
+  "risk_class": "anchor-extension",
+  "anchor_extension": true,
+  "anchor_screens": [
+    "PLANNER_WEEK"
+  ],
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "branch": "feature/fe-design-polish-slice4-planner-meal-add",
+    "stage": 4,
+    "required_routes": [
+      "/menu-add"
+    ],
+    "required_states": [
+      "loading:preserved",
+      "empty:preserved",
+      "error:preserved",
+      "read-only:preserved",
+      "unauthorized:preserved"
+    ],
+    "verify_commands": [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "screenshot",
+      "authority-report"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": [
+        "PLANNER_WEEK"
+      ],
+      "required_screens": [
+        "PLANNER_WEEK",
+        "MEAL_SCREEN"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default-before-after",
+        "mobile-narrow-before-after"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/DESIGN_POLISH_SLICE4_PLANNER_MEAL_ADD-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}
