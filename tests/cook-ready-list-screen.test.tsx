@@ -183,8 +183,8 @@ describe("CookReadyListScreen", () => {
 
     expect(screen.getByText("김치찌개")).toBeTruthy();
     expect(screen.getByText("된장찌개")).toBeTruthy();
-    expect(screen.getByText("4인분")).toBeTruthy();
-    expect(screen.getByText("2인분")).toBeTruthy();
+    expect(screen.getByText(/4인분/)).toBeTruthy();
+    expect(screen.getByText(/2인분/)).toBeTruthy();
   });
 
   it("shows date range text in ready state", async () => {
@@ -194,10 +194,23 @@ describe("CookReadyListScreen", () => {
     render(<CookReadyListScreen initialAuthenticated />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText("장보기 완료된 레시피예요"),
-      ).toBeTruthy();
+      expect(screen.getAllByText(/4월 27일/).length).toBeGreaterThanOrEqual(1);
     });
+  });
+
+  it("opens the desktop cook mode notice dialog", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookingReady.mockResolvedValue(buildReadyData());
+
+    render(<CookReadyListScreen initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByText("요리모드 안내")).toBeTruthy();
+    });
+
+    await userEvent.click(screen.getByText("요리모드 안내"));
+
+    expect(screen.getByRole("dialog", { name: "데스크탑 요리모드" })).toBeTruthy();
   });
 
   // ── Empty state ───────────────────────────────────────────────────────────
@@ -360,9 +373,9 @@ describe("CookReadyListScreen", () => {
       }
     });
 
-    // The clicked button shows "준비 중...", the other still shows "요리하기"
+    // The clicked button shows "준비 중...", the other still shows "요리 시작"
     expect(startButtons[0].textContent).toBe("준비 중...");
-    expect(startButtons[1].textContent).toBe("요리하기");
+    expect(startButtons[1].textContent).toBe("요리 시작");
 
     // Only one createCookingSession call should have been made
     expect(createCookingSession).toHaveBeenCalledTimes(1);
@@ -477,7 +490,7 @@ describe("CookReadyListScreen", () => {
 
   // ── Thumbnail rendering ───────────────────────────────────────────────────
 
-  it("renders thumbnail image when URL is provided", async () => {
+  it("does not render thumbnail images in the desktop ready list", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookingReady.mockResolvedValue(buildReadyData());
 
@@ -487,8 +500,6 @@ describe("CookReadyListScreen", () => {
       expect(screen.getByTestId("cook-ready-recipe-list")).toBeTruthy();
     });
 
-    // alt="" gives role="presentation", not "img"
-    const images = screen.getAllByRole("presentation");
-    expect(images.length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryAllByRole("presentation")).toHaveLength(0);
   });
 });

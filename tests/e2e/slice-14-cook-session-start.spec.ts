@@ -146,7 +146,9 @@ test.describe("Slice 14 cook session start", () => {
     await page.goto("/cooking/ready");
 
     await expect(
-      page.getByRole("heading", { name: "요리하기" }),
+      page.getByRole("heading", {
+        name: isMobileViewport(page) ? "요리하기" : "요리 준비",
+      }),
     ).toBeVisible();
     await expect(page.getByText("김치찌개").first()).toBeVisible();
     await expect(page.getByText("된장찌개")).toBeVisible();
@@ -214,7 +216,9 @@ test.describe("Slice 14 cook session start", () => {
     await page.goto("/cooking/ready");
 
     await expect(
-      page.getByRole("heading", { name: "요리하기" }),
+      page.getByRole("heading", {
+        name: isMobileViewport(page) ? "요리하기" : "요리 준비",
+      }),
     ).toBeVisible();
 
     await page.getByLabel("뒤로가기").click();
