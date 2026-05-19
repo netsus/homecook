@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "design-polish-slice4-planner-meal-add",
+  "generatedAt": "2026-05-20T04:05:00+09:00",
+  "devices": [
+    "mobile-chrome",
+    "mobile-narrow",
+    "desktop-chrome"
+  ],
+  "summary": "Exploratory QA covered the PLANNER_WEEK and MEAL_SCREEN meal-add entry points, RecipeSearchPicker icon affordance, and LeftoverPicker compact card layout using mobile default/narrow screenshot evidence plus full frontend regression. No unresolved blocker or major issue remained. YouTube and manual creation intentionally remain route-based for slice5 ownership.",
+  "findings": [],
+  "remainingRisks": [
+    "Claude final authority review could not run because the provided resume session hit provider limits; Codex completed the fallback authority review per user instruction.",
+    "Real DB smoke was not run because this is a FE-only presentation change with unchanged API/DB/state transition contracts."
+  ],
+  "evidence": [
+    "ui/designs/authority/DESIGN_POLISH_SLICE4_PLANNER_MEAL_ADD-authority.md",
+    "ui/designs/evidence/design-polish-slice4-planner-meal-add/PLANNER_WEEK-meal-add-modal-mobile.png",
+    "ui/designs/evidence/design-polish-slice4-planner-meal-add/PLANNER_WEEK-meal-add-modal-mobile-narrow.png",
+    "ui/designs/evidence/design-polish-slice4-planner-meal-add/MEAL_SCREEN-meal-add-modal-mobile.png",
+    "ui/designs/evidence/design-polish-slice4-planner-meal-add/MEAL_SCREEN-meal-add-modal-mobile-narrow.png",
+    "ui/designs/evidence/design-polish-slice4-planner-meal-add/RECIPE_SEARCH-icon-mobile.png",
+    "ui/designs/evidence/design-polish-slice4-planner-meal-add/RECIPE_SEARCH-icon-mobile-narrow.png",
+    "ui/designs/evidence/design-polish-slice4-planner-meal-add/LEFTOVER_PICKER-card-mobile.png",
+    "ui/designs/evidence/design-polish-slice4-planner-meal-add/LEFTOVER_PICKER-card-mobile-narrow.png"
+  ],
+  "checks": [
+    "pnpm vitest run tests/menu-add-screen.test.tsx tests/planner-week-screen.test.tsx tests/planner-meal-screen.test.tsx",
+    "pnpm exec playwright test tests/e2e/tmp-design-polish-slice4-evidence.spec.ts --project=mobile-chrome",
+    "pnpm exec playwright test tests/e2e/tmp-design-polish-slice4-narrow-evidence.spec.ts --project=mobile-chrome",
+    "pnpm verify:frontend",
+    "pnpm validate:workflow-v2",
+    "pnpm validate:workpack -- --slice design-polish-slice4-planner-meal-add",
+    "PR_IS_DRAFT=false pnpm validate:authority-evidence-presence",
+    "BRANCH_NAME=feature/fe-design-polish-slice4-planner-meal-add BASE_REF=master PR_IS_DRAFT=false node scripts/validate-closeout-sync.mjs",
+    "git diff --check"
+  ]
+}

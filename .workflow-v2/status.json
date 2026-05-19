@@ -1025,10 +1025,10 @@
     {
       "id": "design-polish-slice4-planner-meal-add",
       "preset": "vertical-slice-strict",
-      "branch": "docs/design-polish-slice4-planner-meal-add",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-design-polish-slice4-planner-meal-add",
+      "lifecycle": "merged",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm lint",
         "pnpm typecheck",
@@ -1038,7 +1038,7 @@
         "pnpm validate:authority-evidence-presence",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs created by Claude on docs/design-polish-slice4-planner-meal-add. FE-only anchor-extension slice. Scope: PLANNER_WEEK/MEAL_SCREEN meal-add full-page→modal/sheet conversion, LeftoverPicker card button relocation/resize/text + metadata format, RecipeSearchPicker icon update. Authority review required. Web tokens unchanged. Global app token values unchanged. 직접등록 remains route-based for slice5. closeout_phase=collecting"
+      "notes": "Stage 1 docs created by Claude on docs/design-polish-slice4-planner-meal-add. Stage 4/final authority Claude resume attempts hit provider limit, so Codex proceeded per user fallback instruction. FE-only anchor-extension slice completed: PLANNER_WEEK/MEAL_SCREEN meal-add full-page→modal/sheet conversion, LeftoverPicker card button relocation/resize/text + metadata format, RecipeSearchPicker icon update. Authority report blocker/major/minor 0; mobile default+narrow evidence captured. Web tokens unchanged. Global app token values unchanged. 직접등록 and YouTube remain route-based for slice5. pnpm verify:frontend passed locally. closeout_phase=completed closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/authority/DESIGN_POLISH_SLICE4_PLANNER_MEAL_ADD-authority.md,ui/designs/evidence/design-polish-slice4-planner-meal-add/PLANNER_WEEK-meal-add-modal-mobile.png,ui/designs/evidence/design-polish-slice4-planner-meal-add/PLANNER_WEEK-meal-add-modal-mobile-narrow.png,ui/designs/evidence/design-polish-slice4-planner-meal-add/MEAL_SCREEN-meal-add-modal-mobile.png,ui/designs/evidence/design-polish-slice4-planner-meal-add/MEAL_SCREEN-meal-add-modal-mobile-narrow.png,ui/designs/evidence/design-polish-slice4-planner-meal-add/RECIPE_SEARCH-icon-mobile.png,ui/designs/evidence/design-polish-slice4-planner-meal-add/RECIPE_SEARCH-icon-mobile-narrow.png,ui/designs/evidence/design-polish-slice4-planner-meal-add/LEFTOVER_PICKER-card-mobile.png,ui/designs/evidence/design-polish-slice4-planner-meal-add/LEFTOVER_PICKER-card-mobile-narrow.png last_recovery_at=2026-05-20T00:00:00+09:00"
     }
   ]
 }
