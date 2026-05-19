@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>집밥 MVP 디자인 CI 차단 지도</title>
+    <style>
+      :root {
+        --bg: #f6f8fb;
+        --surface: #ffffff;
+        --ink: #172026;
+        --muted: #5d6a73;
+        --line: #dbe4e8;
+        --app: #0f766e;
+        --app-soft: #e6f3f1;
+        --web: #0072bd;
+        --web-soft: #e8f4fb;
+        --ci: #6f48c9;
+        --ci-soft: #f0ecfb;
+        --warn: #a15c00;
+        --warn-soft: #fff4df;
+        --danger: #b42323;
+        --danger-soft: #fff0f0;
+        --ok: #1f7a3f;
+        --ok-soft: #e8f6ec;
+        font-family:
+          "Avenir Next", "Pretendard", "Apple SD Gothic Neo", "Segoe UI",
+          system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.09), transparent 30rem),
+          linear-gradient(180deg, #ffffff 0, var(--bg) 25rem);
+        color: var(--ink);
+        line-height: 1.65;
+      }
+
+      code {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #f8fbfc;
+        padding: 0.08rem 0.34rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      pre {
+        overflow-x: auto;
+        border-radius: 12px;
+        background: #111923;
+        color: #e8eef2;
+        padding: 1rem;
+      }
+
+      pre code {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        color: inherit;
+      }
+
+      .page {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 34px 0 58px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 20px;
+        padding-bottom: 18px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        max-width: 900px;
+        margin-bottom: 0;
+        font-size: clamp(2.15rem, 6vw, 4.1rem);
+        line-height: 1.06;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin-bottom: 10px;
+        font-size: clamp(1.55rem, 3vw, 2.2rem);
+        line-height: 1.16;
+      }
+
+      h3 {
+        margin-bottom: 8px;
+        font-size: 1.04rem;
+      }
+
+      p,
+      li {
+        color: var(--muted);
+      }
+
+      section {
+        margin-top: 34px;
+      }
+
+      .eyebrow {
+        margin: 0;
+        color: var(--app);
+        font-size: 0.86rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .lead {
+        max-width: 860px;
+        margin: 0;
+        font-size: 1.06rem;
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .card,
+      .table-wrap,
+      .callout {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 0 18px 50px rgba(29, 47, 58, 0.08);
+      }
+
+      .card,
+      .callout {
+        padding: 18px;
+      }
+
+      .lens {
+        border-left: 5px solid var(--line);
+      }
+
+      .app {
+        border-left-color: var(--app);
+      }
+
+      .web {
+        border-left-color: var(--web);
+      }
+
+      .ci {
+        border-left-color: var(--ci);
+      }
+
+      .warn {
+        border-left-color: var(--warn);
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        border-radius: 999px;
+        padding: 0.22rem 0.72rem;
+        font-size: 0.82rem;
+        font-weight: 800;
+      }
+
+      .pill-app {
+        background: var(--app-soft);
+        color: var(--app);
+      }
+
+      .pill-web {
+        background: var(--web-soft);
+        color: var(--web);
+      }
+
+      .pill-ci {
+        background: var(--ci-soft);
+        color: var(--ci);
+      }
+
+      .pill-warn {
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+
+      .quick-nav {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 6px;
+      }
+
+      .quick-nav a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+        color: #26323a;
+        font-weight: 800;
+        text-align: center;
+        text-decoration: none;
+      }
+
+      .table-wrap {
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--surface);
+      }
+
+      th,
+      td {
+        vertical-align: top;
+        border-bottom: 1px solid var(--line);
+        padding: 14px;
+        text-align: left;
+      }
+
+      th {
+        background: #eef4f6;
+        color: #24313a;
+        font-size: 0.86rem;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .status {
+        display: inline-flex;
+        min-height: 28px;
+        align-items: center;
+        border-radius: 999px;
+        padding: 0.12rem 0.58rem;
+        font-size: 0.78rem;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .high {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .mid {
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+
+      .low {
+        background: var(--ok-soft);
+        color: var(--ok);
+      }
+
+      .callout {
+        border-color: #f1d6a8;
+        background: #fffaf1;
+      }
+
+      .source-list {
+        columns: 2;
+        padding-left: 1.2rem;
+      }
+
+      @media (max-width: 920px) {
+        .grid-2,
+        .grid-3,
+        .grid-4,
+        .quick-nav {
+          grid-template-columns: 1fr;
+        }
+
+        .source-list {
+          columns: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <p class="eyebrow">Homecook MVP Design CI Map</p>
+        <h1>디자인을 바꿀 때 CI가 어디서 막는지 보는 지도</h1>
+        <p class="lead">
+          집밥 MVP에서 앱/웹 디자인을 수정할 때 어떤 CI가 실행되고, 어떤 디자인
+          테스트가 blocker가 되는지 초보 개발자도 한눈에 볼 수 있게 정리했다.
+          기준은 현재 저장소의 GitHub Actions, Playwright, Vitest, Lighthouse 설정이다.
+        </p>
+
+        <div class="grid grid-4">
+          <article class="card lens app">
+            <span class="pill pill-app">앱</span>
+            <h3>모바일 화면</h3>
+            <p><code>1024px</code> 미만. Wave1 모바일 기준, 작은 화면, 바텀탭, 터치 크기가 중요하다.</p>
+          </article>
+          <article class="card lens web">
+            <span class="pill pill-web">웹</span>
+            <h3>데스크탑 화면</h3>
+            <p><code>1024px</code> 이상. <code>--web-*</code> 토큰과 <code>components/web</code> primitive가 기준이다.</p>
+          </article>
+          <article class="card lens ci">
+            <span class="pill pill-ci">CI</span>
+            <h3>자동 검사</h3>
+            <p>PR에서 lint, typecheck, unit test, build, Playwright, Lighthouse, 정책 검사가 돈다.</p>
+          </article>
+          <article class="card lens warn">
+            <span class="pill pill-warn">Blocker</span>
+            <h3>주요 차단점</h3>
+            <p>스크린샷 차이, 접근성, 작은 화면 가림, 성능 예산, PR evidence 누락이 자주 막는다.</p>
+          </article>
+        </div>
+      </header>
+
+      <nav class="quick-nav" aria-label="문서 바로가기">
+        <a href="#split">앱/웹 기준</a>
+        <a href="#ci">CI 구성</a>
+        <a href="#design-tests">디자인 테스트</a>
+        <a href="#blockers">차단 요소</a>
+        <a href="#commands">명령어</a>
+        <a href="#sources">근거 파일</a>
+      </nav>
+
+      <section id="split">
+        <h2>1. 앱과 웹의 책임 분리</h2>
+        <div class="grid grid-2">
+          <article class="card lens app">
+            <h3>앱 디자인 트랙</h3>
+            <ul>
+              <li>기준 화면: <code>mobile-chrome</code>, <code>mobile-ios-small</code></li>
+              <li>주요 토큰: <code>--brand-primary</code>, <code>--radius-*</code>, <code>--control-height-*</code></li>
+              <li>주요 기준: Wave1 mobile fixed prototype, 390px/320px reference</li>
+              <li>흔한 실패: 터치 타깃 44px 미만, CTA 가림, 스냅샷 diff 초과</li>
+            </ul>
+          </article>
+          <article class="card lens web">
+            <h3>웹 디자인 트랙</h3>
+            <ul>
+              <li>기준 화면: <code>desktop-chrome</code></li>
+              <li>주요 토큰: <code>--web-brand</code>, <code>--web-r-*</code>, <code>--web-s-*</code></li>
+              <li>주요 기준: <code>components/web/REFERENCE_LOCK.md</code></li>
+              <li>흔한 실패: desktop visual baseline, web primitive class/test drift</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="ci">
+        <h2>2. CI 구성</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>워크플로우</th>
+                <th>언제 실행되나</th>
+                <th>검사 내용</th>
+                <th>디자인 blocker 가능성</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Policy</strong><br /><code>.github/workflows/policy.yml</code></td>
+                <td>PR 열림, synchronize, ready for review, protected branch push</td>
+                <td>브랜치/커밋/workpack/source-of-truth/QA evidence/authority evidence</td>
+                <td><span class="status high">높음</span> PR evidence가 빠지면 코드가 맞아도 막힌다.</td>
+              </tr>
+              <tr>
+                <td><strong>PR Governance</strong><br /><code>.github/workflows/pr-governance.yml</code></td>
+                <td>PR 열림, 수정, 동기화</td>
+                <td>라벨 자동 부착, PR 본문 섹션 검증</td>
+                <td><span class="status mid">중간</span> PR 템플릿 미작성 시 막힌다.</td>
+              </tr>
+              <tr>
+                <td><strong>CI</strong><br /><code>.github/workflows/ci.yml</code></td>
+                <td><code>app/**</code>, <code>components/**</code>, <code>lib/**</code>, <code>tests/**</code>, package/config 변경</td>
+                <td><code>pnpm lint</code>, <code>pnpm typecheck</code>, <code>pnpm test</code>, <code>pnpm build</code></td>
+                <td><span class="status high">높음</span> 타입, aria label, class, build 오류가 잡힌다.</td>
+              </tr>
+              <tr>
+                <td><strong>QA</strong><br /><code>.github/workflows/playwright.yml</code></td>
+                <td><code>app/globals.css</code>, 주요 route, <code>components/**</code>, Playwright 설정 변경</td>
+                <td>smoke E2E, accessibility, visual regression, Lighthouse</td>
+                <td><span class="status high">매우 높음</span> 디자인 변경을 직접 막는 핵심 CI다.</td>
+              </tr>
+              <tr>
+                <td><strong>Security Smoke</strong><br /><code>.github/workflows/security-smoke.yml</code></td>
+                <td>auth, API, login, 주요 화면, components 변경</td>
+                <td><code>pnpm test:e2e:security</code></td>
+                <td><span class="status mid">중간</span> 로그인 게이트와 return-to-action 주변에서 걸릴 수 있다.</td>
+              </tr>
+              <tr>
+                <td><strong>QA Eval</strong><br /><code>.github/workflows/qa-eval.yml</code></td>
+                <td>QA 시스템 문서/스크립트/fixture/workflow 변경</td>
+                <td><code>pnpm qa:eval:suite</code></td>
+                <td><span class="status low">낮음</span> 일반 화면 디자인보다 QA 시스템 변경 때 중요하다.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="design-tests">
+        <h2>3. 디자인 요소를 직접 보는 테스트</h2>
+        <div class="grid grid-3">
+          <article class="card lens ci">
+            <span class="pill pill-ci">Visual</span>
+            <h3>스크린샷 비교</h3>
+            <p><code>tests/e2e/qa-visual.spec.ts</code>가 실제 화면을 캡처하고 기준 PNG와 비교한다.</p>
+            <p>홈, 정렬 메뉴, 재료 모달, 레시피 상세, 로그인 게이트, 데스크탑 planner/shopping/account/cooking 등이 포함된다.</p>
+          </article>
+          <article class="card lens ci">
+            <span class="pill pill-ci">A11y</span>
+            <h3>접근성 + 터치 기본선</h3>
+            <p><code>tests/e2e/qa-a11y.spec.ts</code>가 axe 위반, 버튼 높이, 글자 크기, 줄바꿈 정책을 본다.</p>
+            <p>핵심 버튼은 보통 최소 <code>44px</code>, 컨트롤 글자는 기본 <code>14px</code> 이상이다.</p>
+          </article>
+          <article class="card lens ci">
+            <span class="pill pill-ci">Lighthouse</span>
+            <h3>성능 예산</h3>
+            <p><code>lighthouserc.js</code>가 <code>/</code>와 <code>/recipe/mock-kimchi-jjigae</code>를 측정한다.</p>
+            <p>Performance 0.7 이상, LCP 4500ms 이하, CLS 0.1 이하, TBT 900ms 이하가 기준이다.</p>
+          </article>
+          <article class="card lens app">
+            <span class="pill pill-app">App Unit</span>
+            <h3>앱 primitive</h3>
+            <p><code>tests/ui-primitives.test.tsx</code>가 버튼, 칩, 카드, 모달의 class와 최소 터치 크기를 고정한다.</p>
+          </article>
+          <article class="card lens web">
+            <span class="pill pill-web">Web Unit</span>
+            <h3>웹 primitive</h3>
+            <p><code>tests/web-primitives.test.tsx</code>가 <code>WebButton</code>, <code>WebDialog</code>, modal backdrop, porting ledger를 확인한다.</p>
+          </article>
+          <article class="card lens app">
+            <span class="pill pill-app">Typography</span>
+            <h3>폰트 정책</h3>
+            <p><code>tests/mobile-typography-policy.test.ts</code>는 <code>Jua</code>, <code>next/font/google</code>, 임의 <code>fontFamily</code> 추가를 막는다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="blockers">
+        <h2>4. 디자인 수정 때 막을 만한 요소</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>변경 내용</th>
+                <th>막는 검사</th>
+                <th>이유</th>
+                <th>먼저 볼 명령</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>앱 색상, radius, 버튼 높이</td>
+                <td>visual, a11y, primitive, Lighthouse</td>
+                <td>스크린샷 diff, 44px 터치 기준, CLS 문제가 생길 수 있다.</td>
+                <td><code>pnpm test:e2e:a11y</code><br /><code>pnpm test:e2e:visual</code></td>
+              </tr>
+              <tr>
+                <td>웹 <code>--web-*</code> 토큰 또는 <code>components/web</code></td>
+                <td>desktop visual, web primitive unit</td>
+                <td>데스크탑 reference lock과 snapshot이 흔들린다.</td>
+                <td><code>pnpm test -- tests/web-primitives.test.tsx</code></td>
+              </tr>
+              <tr>
+                <td>버튼/링크 텍스트 또는 aria-label</td>
+                <td>unit, smoke E2E, a11y</td>
+                <td>테스트가 <code>getByRole</code>, 버튼 이름, dialog 이름으로 요소를 찾는다.</td>
+                <td><code>pnpm test</code><br /><code>pnpm test:e2e:smoke</code></td>
+              </tr>
+              <tr>
+                <td>modal, sheet, sticky CTA</td>
+                <td>visual, a11y, smoke, authority evidence</td>
+                <td>작은 화면에서 CTA가 가려지거나 dialog role/name이 깨질 수 있다.</td>
+                <td><code>pnpm verify:frontend</code></td>
+              </tr>
+              <tr>
+                <td>폰트, 이미지, 큰 배경, 애니메이션</td>
+                <td>Lighthouse, visual, typography policy</td>
+                <td>리소스 예산, LCP, 스냅샷 안정성, 금지 폰트 정책에 걸릴 수 있다.</td>
+                <td><code>pnpm test:lighthouse</code></td>
+              </tr>
+              <tr>
+                <td>PR 본문, QA evidence 누락</td>
+                <td>Policy, PR Governance</td>
+                <td>코드가 통과해도 PR 증거 조건을 만족해야 한다.</td>
+                <td><code>pnpm validate:pr</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="commands">
+        <h2>5. 수정 전 추천 명령어</h2>
+        <div class="grid grid-2">
+          <article class="callout">
+            <h3>앱 디자인만 바꿀 때</h3>
+            <pre><code>pnpm test -- tests/ui-primitives.test.tsx
+pnpm test:e2e:a11y
+pnpm test:e2e:visual</code></pre>
+          </article>
+          <article class="callout">
+            <h3>웹 디자인만 바꿀 때</h3>
+            <pre><code>pnpm test -- tests/web-primitives.test.tsx
+pnpm test:e2e:visual
+pnpm test:lighthouse</code></pre>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>6. 실패 메시지 빠른 해석</h2>
+        <div class="grid grid-4">
+          <article class="card"><h3><code>toHaveScreenshot</code></h3><p>기준 이미지와 다르다. 의도한 변경이면 snapshot/evidence를 갱신한다.</p></article>
+          <article class="card"><h3><code>axe violations</code></h3><p>접근성 위반이다. 색 대비, role/name, label, focus 구조를 본다.</p></article>
+          <article class="card"><h3><code>height 44</code></h3><p>모바일에서 누르기 어려운 컨트롤이다. 버튼/칩 최소 높이를 본다.</p></article>
+          <article class="card"><h3><code>getByRole</code></h3><p>테스트가 버튼, 제목, dialog를 못 찾는다. 텍스트나 aria-label을 확인한다.</p></article>
+          <article class="card"><h3><code>CLS</code></h3><p>로딩 중 화면이 밀렸다. 이미지 크기와 skeleton 높이를 확인한다.</p></article>
+          <article class="card"><h3><code>forbidOnly</code></h3><p><code>test.only</code>가 남아 있을 수 있다.</p></article>
+          <article class="card"><h3><code>authority evidence</code></h3><p>디자인 PR에 필요한 screenshot/report reference가 빠졌다.</p></article>
+          <article class="card"><h3><code>frozen-lockfile</code></h3><p><code>package.json</code>과 lockfile이 맞지 않는다.</p></article>
+        </div>
+      </section>
+
+      <section id="sources">
+        <h2>근거 파일</h2>
+        <ul class="source-list">
+          <li><code>package.json</code></li>
+          <li><code>.github/workflows/ci.yml</code></li>
+          <li><code>.github/workflows/playwright.yml</code></li>
+          <li><code>.github/workflows/policy.yml</code></li>
+          <li><code>.github/workflows/pr-governance.yml</code></li>
+          <li><code>.github/workflows/security-smoke.yml</code></li>
+          <li><code>playwright.config.ts</code></li>
+          <li><code>lighthouserc.js</code></li>
+          <li><code>qa/lighthouse-budget.json</code></li>
+          <li><code>tests/e2e/qa-visual.spec.ts</code></li>
+          <li><code>tests/e2e/qa-a11y.spec.ts</code></li>
+          <li><code>tests/ui-primitives.test.tsx</code></li>
+          <li><code>tests/web-primitives.test.tsx</code></li>
+          <li><code>tests/mobile-typography-policy.test.ts</code></li>
+          <li><code>docs/engineering/qa-system.md</code></li>
+          <li><code>docs/engineering/agent-workflow-overview.md</code></li>
+          <li><code>docs/design/design-tokens.md</code></li>
+          <li><code>ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md</code></li>
+          <li><code>components/web/REFERENCE_LOCK.md</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
