@@ -1,0 +1,98 @@
+{
+  "id": "design-polish-slice7-mypage-settings-account",
+  "title": "Design Polish Slice 7 - MyPage detail back navigation",
+  "summary": "MYPAGE 레시피북 목록/장보기 기록에서 상세 화면으로 들어간 뒤 앱 헤더 뒤로가기를 누르면 원래 목록 맥락으로 직접 복귀하도록 라우팅/return context를 고정한다. FE-only, API/DB 변경 없음.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "마이페이지 상세 진입 후 뒤로가기에서 기본 화면이 잠깐 노출되는 현상을 제거해 레시피북 목록과 장보기 기록 탐색 흐름을 안정화한다.",
+  "owners": {
+    "claude": "stage1/stage4 requested but provider-limited; optional navigation review when available",
+    "codex": "stage1 fallback, stage4 fallback if needed, stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "17a-mypage-overview-history",
+    "17b-recipebook-detail-remove",
+    "17c-settings-account",
+    "10a-shopping-detail-interact",
+    "12a-shopping-complete",
+    "design-polish-slice1-typography-tokens",
+    "design-polish-slice2-app-shell-home",
+    "design-polish-slice3-recipe-detail",
+    "design-polish-slice4-planner-meal-add",
+    "design-polish-slice5-manual-youtube",
+    "design-polish-slice6-shopping-cooking-pantry"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.6.7.md",
+      "docs/화면정의서-v1.5.4.md",
+      "docs/유저flow맵-v1.3.4.md",
+      "docs/api문서-v1.2.5.md",
+      "docs/db설계-v1.3.3.md",
+      "docs/design/mobile-ux-rules.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/design-polish-slice7-mypage-settings-account/README.md",
+      "docs/workpacks/design-polish-slice7-mypage-settings-account/acceptance.md",
+      "docs/workpacks/design-polish-slice7-mypage-settings-account/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/qa-system.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice design-polish-slice7-mypage-settings-account",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "low-risk-skip-rationale",
+      "browser-flow-regression"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 requested through Claude resume session b475ec3a-c10b-42ae-9c38-1df94982e645 with model=opus, effort=high, permission_mode=bypassPermissions; provider limit blocked execution, so Codex completed Stage 1 fallback per user instruction. FE-only low-risk navigation polish: MYPAGE recipebook/shopping detail back navigation direct return. API/DB/design token changes out of scope.",
+  "out_of_scope": [
+    "API, DB, auth, mutation, state transition contract changes",
+    "MYPAGE visual redesign or tab information architecture changes",
+    "Recipebook create/update/delete policy changes",
+    "Shopping detail read-only/complete/reorder policy changes",
+    "Settings/account actions changes",
+    "Web color tokens or global brand token value changes"
+  ],
+  "open_questions": []
+}

@@ -1077,6 +1077,24 @@
         "git diff --check"
       ],
       "notes": "Stage 1 and final authority were requested through Claude resume session b475ec3a-c10b-42ae-9c38-1df94982e645 with model=opus, effort=high, permission_mode=bypassPermissions; provider limit blocked execution, so Codex completed fallback per user instruction. FE-only high-risk MEAL_SCREEN/COOK_MODE polish completed: selected meal planned_servings preservation for individual cook shortcut, mobile cook-mode serving label fix, and compact COOK_MODE ingredients directly above steps. Authority report blocker=0 major=0 minor=1 verdict=pass; mobile default+narrow evidence captured. API/DB/web token/global brand token changes out of scope. pnpm verify:frontend passed locally. closeout_phase=completed closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/authority/DESIGN_POLISH_SLICE6_SHOPPING_COOKING_PANTRY-authority.md,ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/MEAL_SCREEN-cook-shortcut-mobile.png,ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/MEAL_SCREEN-cook-shortcut-narrow.png,ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/COOK_MODE-ingredients-steps-mobile.png,ui/designs/evidence/design-polish-slice6-shopping-cooking-pantry/COOK_MODE-ingredients-steps-narrow.png last_recovery_at=2026-05-20T05:40:00+09:00"
+    },
+    {
+      "id": "design-polish-slice7-mypage-settings-account",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/design-polish-slice7-mypage-settings-account",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm verify:frontend",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice design-polish-slice7-mypage-settings-account",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 requested through Claude resume session b475ec3a-c10b-42ae-9c38-1df94982e645 with model=opus, effort=high, permission_mode=bypassPermissions; provider limit blocked execution, so Codex completed Stage 1 fallback per user instruction. FE-only low-risk navigation polish: MYPAGE recipebook/shopping detail back navigation direct return to prior list context. API/DB/design token changes out of scope."
     }
   ]
 }
