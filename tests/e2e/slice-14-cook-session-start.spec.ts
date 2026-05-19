@@ -246,7 +246,7 @@ test.describe("Slice 14 cook session start", () => {
       await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
     } else {
       await expect(page.getByRole("link", { name: "장보기 미리보기" })).toBeVisible();
-      await expect(page.getByRole("link", { name: "요리 준비" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "요리 준비" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
     }
   });

@@ -192,7 +192,12 @@ test.describe("Slice 05 planner week core", () => {
       await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
       await expect(plannerGrid.getByRole("button", { name: /저녁 식사 추가/ })).toHaveText("+");
     } else {
-      await expect(page.getByRole("link", { name: "요리 준비" })).toHaveAttribute("href", "/cooking/ready");
+      const actions = page.getByRole("group", { name: "플래너 작업" });
+
+      await expect(actions.getByRole("button", { name: "이전 주" })).toHaveText("< 이전주");
+      await expect(actions.getByRole("button", { name: "다음 주" })).toHaveText("다음 주 >");
+      await expect(actions.getByRole("link", { name: "장보기 미리보기" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "요리 준비" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
     }
     await expect(page.getByRole("button", { name: "컬럼 추가" })).toHaveCount(0);
@@ -210,26 +215,17 @@ test.describe("Slice 05 planner week core", () => {
 
     await page.goto("/planner");
     await centerWeekStrip(page);
-    const isMobile = isMobileViewport(page);
 
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(0);
-    const initialRange = tracker.requestedRanges[0];
 
     // Wave1: nav buttons always visible; use button click instead of conditional swipe
     await page.getByRole("button", { name: "다음 주" }).click();
 
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(1);
-    if (isMobile) {
-      await expect(page.getByRole("button", { name: "이번주로" })).toHaveCount(0);
-    } else {
-      // Wave1 desktop preserve: renamed from "이번주로 가기" to "이번주로"
-      await expect(page.getByRole("button", { name: "이번주로" })).toBeVisible();
-      await page.getByRole("button", { name: "이번주로" }).click();
-      await expect.poll(() => tracker.requestedRanges.at(-1)).toBe(initialRange);
-    }
+    await expect(page.getByRole("button", { name: "이번주로" })).toHaveCount(0);
   });
 
-  test("planner CTA actions match the Wave1 mobile shell and preserve desktop links", async ({ page }) => {
+  test("planner CTA actions match the Wave1 mobile shell and desktop prototype header", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockPlannerRoutes(page);
 
@@ -245,7 +241,12 @@ test.describe("Slice 05 planner week core", () => {
       await expect(page.getByRole("navigation", { name: "플래너 하단 탭" })).toBeVisible();
       await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
     } else {
-      await expect(page.getByRole("link", { name: "요리 준비" })).toHaveAttribute("href", "/cooking/ready");
+      const actions = page.getByRole("group", { name: "플래너 작업" });
+
+      await expect(actions.getByRole("button", { name: "이전 주" })).toHaveText("< 이전주");
+      await expect(actions.getByRole("button", { name: "다음 주" })).toHaveText("다음 주 >");
+      await expect(actions.getByRole("link", { name: "장보기 미리보기" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "요리 준비" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
     }
   });
