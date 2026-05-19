@@ -101,7 +101,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `design-polish-slice4-planner-meal-add` | merged | PLANNER_WEEK/MEAL_SCREEN 식사추가 full-page→modal/sheet 전환, LeftoverPicker 카드 버튼 우측 배치·텍스트·메타데이터 형식 개선, RecipeSearchPicker 검색 아이콘 교체·확대. anchor-extension, Codex fallback authority pass |
 | `design-polish-slice5-manual-youtube` | merged | MANUAL_RECIPE_CREATE / YT_IMPORT 재료 행 밀도·조리법 입력 UX·조리방법 색상·재료 validation 문구 polish. API/DB 변경 없음 |
 | `design-polish-slice6-shopping-cooking-pantry` | merged | MEAL_SCREEN 개별 요리 진입 시 선택 meal planned_servings 보존, COOK_MODE 재료 compact list를 조리 단계 바로 위로 이동. API/DB 변경 없음 |
-| `design-polish-slice7-mypage-settings-account` | docs | MYPAGE 레시피북 목록/장보기 기록에서 상세 진입 후 뒤로가기를 누를 때 원래 목록 맥락으로 직접 복귀. API/DB 변경 없음 |
+| `design-polish-slice7-mypage-settings-account` | merged | MYPAGE 레시피북 목록/장보기 기록에서 상세 진입 후 뒤로가기를 누를 때 원래 목록 맥락으로 직접 복귀. API/DB 변경 없음 |
 
 ## Design Decision Gates
 

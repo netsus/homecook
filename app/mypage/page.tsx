@@ -1,9 +1,15 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { MypageScreen } from "@/components/mypage/mypage-screen";
+import { resolveMypageRestoreState } from "@/lib/navigation/mypage-return-state";
 import { getServerAuthUser } from "@/lib/supabase/server";
 
-export default async function MypagePage() {
+interface MypagePageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function MypagePage({ searchParams }: MypagePageProps) {
   const user = await getServerAuthUser();
+  const initialView = resolveMypageRestoreState(await searchParams);
 
   return (
     <AppShell
@@ -12,7 +18,11 @@ export default async function MypagePage() {
       currentTab="mypage"
       headerMode="hidden"
     >
-      <MypageScreen initialAuthenticated={Boolean(user)} />
+      <MypageScreen
+        initialActiveTab={initialView.activeTab}
+        initialAuthenticated={Boolean(user)}
+        initialMobileSurface={initialView.mobileSurface}
+      />
     </AppShell>
   );
 }

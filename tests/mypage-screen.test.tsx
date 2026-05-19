@@ -512,6 +512,36 @@ describe("MypageScreen", () => {
     const href = myAddedCard.getAttribute("href") ?? "";
     expect(href).toContain("/mypage/recipe-books/book-my");
     expect(href).toContain("type=my_added");
+    expect(href).toContain("returnTo=%2Fmypage");
+    expect(href).toContain("returnSurface=mypage.recipebooks");
+    expect(href).toContain("restore=recipebook-tab");
+  });
+
+  it("can render directly into the recipebook return surface", async () => {
+    render(
+      <MypageScreen
+        initialActiveTab="recipebooks"
+        initialAuthenticated
+        initialMobileSurface="recipebook"
+      />,
+    );
+
+    expect(await screen.findByTestId("recipebook-tab")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "저장한 레시피" })).toBeNull();
+  });
+
+  it("can render directly into the shopping return surface", async () => {
+    render(
+      <MypageScreen
+        initialActiveTab="shopping"
+        initialAuthenticated
+        initialMobileSurface="shopping"
+      />,
+    );
+
+    expect(await screen.findByTestId("shopping-tab")).toBeTruthy();
+    expect(await screen.findByText("4/30 장보기")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "저장한 레시피" })).toBeNull();
   });
 
   it("links shopping history cards to shopping detail page", async () => {
