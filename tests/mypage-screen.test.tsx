@@ -245,6 +245,17 @@ describe("MypageScreen", () => {
     expect(screen.getByTestId("mypage-skeleton")).toBeTruthy();
   });
 
+  it("uses the mobile app loading shell instead of the legacy skeleton", () => {
+    installMatchMedia(true);
+    mockFetchUserProfile.mockReturnValue(new Promise(() => {}));
+    mockFetchRecipeBooks.mockReturnValue(new Promise(() => {}));
+
+    render(<MypageScreen initialAuthenticated />);
+
+    expect(screen.getByTestId("mypage-mobile-loading")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "마이페이지" })).toBeTruthy();
+  });
+
   it("shows empty state message when no custom books exist", async () => {
     mockFetchRecipeBooks.mockResolvedValue({
       books: MOCK_BOOKS.books.filter((b) => b.book_type !== "custom"),
@@ -480,6 +491,32 @@ describe("MypageScreen", () => {
     expect(href).toContain("returnTo=%2Fmypage");
     expect(href).toContain("returnSurface=mypage.shopping-history");
     expect(href).toContain("restore=shopping-history-tab");
+  });
+
+  it("links leftovers and eaten-list rows with mypage return context", async () => {
+    render(<MypageScreen initialAuthenticated />);
+
+    await screen.findByText("집밥러");
+
+    const leftoversHref =
+      screen.getByRole("link", { name: /남은 요리/ }).getAttribute("href") ?? "";
+    expect(leftoversHref).toContain("/leftovers");
+    expect(leftoversHref).toContain("returnTo=%2Fmypage");
+    expect(leftoversHref).toContain("returnSurface=mypage.leftovers");
+
+    const eatenHref =
+      screen.getByRole("link", { name: /다먹은 목록/ }).getAttribute("href") ?? "";
+    expect(eatenHref).toContain("/leftovers/ate");
+    expect(eatenHref).toContain("returnTo=%2Fmypage");
+    expect(eatenHref).toContain("returnSurface=mypage.eaten-list");
+  });
+
+  it("keeps mobile menu icons visually separated from labels", async () => {
+    installMatchMedia(true);
+    render(<MypageScreen initialAuthenticated />);
+
+    const recipeBookRow = await screen.findByRole("button", { name: /레시피북/ });
+    expect(recipeBookRow.className).toContain("gap-3");
   });
 
   it("restores the shopping-history tab from return context", async () => {

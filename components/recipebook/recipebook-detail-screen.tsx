@@ -406,6 +406,16 @@ export function RecipeBookDetailScreen({
   // --- Render states ---
 
   if (authState === "checking") {
+    if (isMobileViewport) {
+      return (
+        <RecipeBookDetailSkeleton
+          backHref={appReturn.href}
+          bookName={currentBookName}
+          mobile
+        />
+      );
+    }
+
     return (
       <ContentState
         className="md:px-7"
@@ -454,7 +464,13 @@ export function RecipeBookDetailScreen({
   }
 
   if (viewState === "loading") {
-    return <RecipeBookDetailSkeleton bookName={currentBookName} />;
+    return (
+      <RecipeBookDetailSkeleton
+        backHref={appReturn.href}
+        bookName={currentBookName}
+        mobile={isMobileViewport}
+      />
+    );
   }
 
   if (viewState === "error") {
@@ -1442,7 +1458,62 @@ function mergeUniqueRecipeItems(
   return [...currentItems, ...uniqueNextItems];
 }
 
-function RecipeBookDetailSkeleton({ bookName }: { bookName: string }) {
+function RecipeBookDetailSkeleton({
+  backHref = "/mypage",
+  bookName,
+  mobile = false,
+}: {
+  backHref?: string;
+  bookName: string;
+  mobile?: boolean;
+}) {
+  if (mobile) {
+    return (
+      <div
+        className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
+        data-testid="recipebook-detail-mobile-loading"
+      >
+        <MobileRecipeBookAppBar
+          backHref={backHref}
+          bookName={bookName}
+          canManageBook={false}
+          isMenuOpen={false}
+          onDeleteRequest={() => {}}
+          onMenuToggle={() => {}}
+          onRenameStart={() => {}}
+        />
+        <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
+          <div className="flex items-center gap-[14px]">
+            <Skeleton className="h-14 w-14 shrink-0 rounded-[14px]" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          </div>
+        </section>
+        <div className="space-y-[10px] p-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              className="flex min-h-[82px] items-center gap-3 rounded-xl border border-[#DEE2E6] bg-white p-3"
+              key={i}
+            >
+              <Skeleton className="h-14 w-14 shrink-0 rounded-[10px]" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-3 w-36" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <Wave1MobileBottomTab
+          ariaLabel="레시피북 상세 하단 탭"
+          currentTab="mypage"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="pb-32" data-testid="recipebook-detail-skeleton">
       <DetailHeader bookName={bookName} />

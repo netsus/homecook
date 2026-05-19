@@ -311,7 +311,7 @@ function MobileHomeSurface({
         >
           {menuRows.map((row, index) => {
             const className = [
-              "flex min-h-[57px] w-full items-center px-4 text-left",
+              "flex min-h-[57px] w-full items-center gap-3 px-4 text-left",
               index < menuRows.length - 1 ? "border-b border-[#F1F3F5]" : "",
             ].join(" ");
 

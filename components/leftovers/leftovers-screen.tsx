@@ -489,34 +489,54 @@ export function LeftoversScreen({
   if (isMobileViewport) {
     if (authState === "checking") {
       return (
-        <ContentState
-          description="남은요리 화면에 접근하기 위해 로그인 상태를 확인하고 있어요."
-          eyebrow="세션 확인"
-          tone="loading"
-          title="로그인 상태를 확인하고 있어요"
-        />
+        <LeftoversMobileStateShell
+          actionHref={eatenListHref}
+          actionLabel="다먹은 요리"
+          appReturnHref={appReturn.href}
+          testId="leftovers-mobile-auth-loading"
+          title="남은요리"
+        >
+          <div className="space-y-3 p-4" data-testid="leftovers-loading">
+            {[1, 2].map((index) => (
+              <div
+                className="h-[136px] rounded-xl border border-[#DEE2E6] bg-white"
+                key={index}
+              />
+            ))}
+          </div>
+        </LeftoversMobileStateShell>
       );
     }
 
     if (authState === "unauthorized") {
       return (
-        <ContentState
-          description="남은요리를 관리하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
-          eyebrow="로그인 필요"
-          safeBottomPadding
-          tone="gate"
-          title="이 화면은 로그인이 필요해요"
+        <LeftoversMobileStateShell
+          actionHref={eatenListHref}
+          actionLabel="다먹은 요리"
+          appReturnHref={appReturn.href}
+          testId="leftovers-mobile-auth-gate"
+          title="남은요리"
         >
-          <div className="space-y-3">
-            <SocialLoginButtons nextPath={leftoversSelfHref} />
-            <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
-              href={appReturn.href}
+          <div className="p-4">
+            <ContentState
+              description="남은요리를 관리하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
+              eyebrow="로그인 필요"
+              safeBottomPadding
+              tone="gate"
+              title="이 화면은 로그인이 필요해요"
             >
-              이전 화면으로 돌아가기
-            </Link>
+              <div className="space-y-3">
+                <SocialLoginButtons nextPath={leftoversSelfHref} />
+                <Link
+                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#DEE2E6] bg-white px-5 py-3 text-sm font-semibold text-[#495057]"
+                  href={appReturn.href}
+                >
+                  이전 화면으로 돌아가기
+                </Link>
+              </div>
+            </ContentState>
           </div>
-        </ContentState>
+        </LeftoversMobileStateShell>
       );
     }
 
@@ -779,6 +799,38 @@ function LeftoversMobileView({
   );
 }
 
+function LeftoversMobileStateShell({
+  actionHref,
+  actionLabel,
+  appReturnHref,
+  children,
+  testId,
+  title,
+}: {
+  actionHref: string;
+  actionLabel: string;
+  appReturnHref: string;
+  children: React.ReactNode;
+  testId: string;
+  title: string;
+}) {
+  return (
+    <div
+      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
+      data-testid={testId}
+    >
+      <MobileAppBar
+        actionHref={actionHref}
+        actionLabel={actionLabel}
+        backHref={appReturnHref}
+        title={title}
+      />
+      {children}
+      <Wave1MobileBottomTab ariaLabel={`${title} 하단 탭`} currentTab="mypage" />
+    </div>
+  );
+}
+
 function MobileLeftoverCard({
   anyMutating,
   isEating,
@@ -820,12 +872,6 @@ function MobileLeftoverCard({
           onClick={() => onPlannerAdd(item)}
           type="button"
         >
-          <span
-            aria-hidden="true"
-            className="flex h-[14px] w-[14px] items-center justify-center rounded-[4px] bg-[#E7F5FF] text-[9px] text-[#4DABF7]"
-          >
-            ↗
-          </span>
           <span className="whitespace-nowrap">플래너에 추가</span>
         </button>
         <button

@@ -173,6 +173,18 @@ describe("LeftoversScreen", () => {
     expect(screen.getByTestId("leftovers-loading")).toBeTruthy();
   });
 
+  it("uses the mobile auth gate shell instead of the legacy state panel", async () => {
+    installMatchMedia(true);
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockImplementation(
+      () => new Promise(() => {}),
+    );
+
+    render(<LeftoversScreen initialAuthenticated={false} />);
+
+    expect(await screen.findByTestId("leftovers-mobile-auth-gate")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "남은요리" })).toBeTruthy();
+  });
+
   it("renders leftover list after loading", async () => {
     vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
       items: LEFTOVER_ITEMS,
@@ -397,6 +409,18 @@ describe("LeftoversScreen", () => {
     });
   });
 
+  it("renders the mobile planner-add action without a broken leading icon", async () => {
+    installMatchMedia(true);
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
+      items: LEFTOVER_ITEMS,
+    });
+
+    render(<LeftoversScreen initialAuthenticated={true} />);
+
+    const plannerAddButton = (await screen.findAllByTestId("planner-add-button"))[0];
+    expect(plannerAddButton.textContent?.trim()).toBe("플래너에 추가");
+  });
+
   it("has link to ate-list page", async () => {
     vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
       items: LEFTOVER_ITEMS,
@@ -476,6 +500,18 @@ describe("AteListScreen", () => {
     render(<AteListScreen initialAuthenticated={true} />);
 
     expect(screen.getByTestId("ate-list-loading")).toBeTruthy();
+  });
+
+  it("uses the mobile auth gate shell instead of the legacy state panel", async () => {
+    installMatchMedia(true);
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockImplementation(
+      () => new Promise(() => {}),
+    );
+
+    render(<AteListScreen initialAuthenticated={false} />);
+
+    expect(await screen.findByTestId("ate-list-mobile-auth-gate")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "다먹은 요리" })).toBeTruthy();
   });
 
   it("renders eaten items after loading", async () => {

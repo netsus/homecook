@@ -12,6 +12,7 @@ import {
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import {
   MypageMobileScreen,
   type MypageMobileSurface,
@@ -454,6 +455,10 @@ export function MypageScreen({
   // --- Render states ---
 
   if (authState === "checking") {
+    if (isMobileViewport) {
+      return <MypageLoadingSkeleton mobile />;
+    }
+
     return (
       <ContentState
         className="md:px-7"
@@ -496,7 +501,7 @@ export function MypageScreen({
   }
 
   if (viewState === "loading") {
-    return <MypageLoadingSkeleton />;
+    return <MypageLoadingSkeleton mobile={isMobileViewport} />;
   }
 
   if (viewState === "error") {
@@ -858,7 +863,14 @@ function SavedRecipesSurface({
           </span>
           <ChevronRightIcon />
         </button>
-        <Link className="web-list-row web-list-row-interactive web-mypage-action-row" href="/leftovers">
+        <Link
+          className="web-list-row web-list-row-interactive web-mypage-action-row"
+          href={buildReturnHref("/leftovers", {
+            restore: "mypage-home",
+            returnSurface: "mypage.leftovers",
+            returnTo: "/mypage",
+          })}
+        >
           <span className="web-mypage-row-icon"><LeftoverIcon /></span>
           <span className="web-mypage-row-copy">
             <strong>남은 요리</strong>
@@ -866,7 +878,14 @@ function SavedRecipesSurface({
           </span>
           <ChevronRightIcon />
         </Link>
-        <Link className="web-list-row web-list-row-interactive web-mypage-action-row" href="/planner">
+        <Link
+          className="web-list-row web-list-row-interactive web-mypage-action-row"
+          href={buildReturnHref("/leftovers/ate", {
+            restore: "mypage-home",
+            returnSurface: "mypage.eaten-list",
+            returnTo: "/mypage",
+          })}
+        >
           <span className="web-mypage-row-icon"><CheckIcon /></span>
           <span className="web-mypage-row-copy">
             <strong>다먹은 목록</strong>
@@ -1015,7 +1034,61 @@ function ToggleRow({
   );
 }
 
-function MypageLoadingSkeleton() {
+function MypageLoadingSkeleton({ mobile = false }: { mobile?: boolean }) {
+  if (mobile) {
+    return (
+      <div
+        className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
+        data-testid="mypage-mobile-loading"
+      >
+        <div
+          className="sticky top-0 z-30 flex min-h-[52px] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+          style={{ borderBottomWidth: "0.5px" }}
+        >
+          <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[#212529]">
+            마이페이지
+          </h1>
+        </div>
+        <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
+          <div className="mb-[18px] flex items-center gap-[14px]">
+            <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+            <Skeleton className="h-8 w-14 rounded-lg" />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[1, 2, 3].map((index) => (
+              <div className="rounded-[10px] bg-[#F8F9FA] px-2 py-3" key={index}>
+                <Skeleton className="mx-auto h-6 w-8" />
+                <Skeleton className="mx-auto mt-2 h-3 w-12" />
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="p-4">
+          <div className="overflow-hidden rounded-xl border border-[#DEE2E6] bg-white">
+            {[1, 2, 3, 4].map((index) => (
+              <div
+                className={[
+                  "flex min-h-[57px] w-full items-center gap-3 px-4",
+                  index < 4 ? "border-b border-[#F1F3F5]" : "",
+                ].join(" ")}
+                key={index}
+              >
+                <Skeleton className="h-7 w-7 shrink-0 rounded-lg" />
+                <Skeleton className="h-4 flex-1" />
+                <Skeleton className="h-3 w-10" />
+              </div>
+            ))}
+          </div>
+        </section>
+        <Wave1MobileBottomTab ariaLabel="마이페이지 하단 탭" currentTab="mypage" />
+      </div>
+    );
+  }
+
   return (
     <div className="pb-32" data-testid="mypage-skeleton">
       {/* Profile skeleton */}
