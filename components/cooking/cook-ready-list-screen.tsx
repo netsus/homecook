@@ -11,6 +11,17 @@ import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-ta
 import { ContentState } from "@/components/shared/content-state";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  WebButton,
+  WebDialog,
+  WebDialogBody,
+  WebDialogFooter,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebModal,
+  WebShell,
+  WebTopNav,
+} from "@/components/web";
 import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -37,6 +48,13 @@ const mobileMethodColors = {
   prep: { bg: "#F1F3F5", border: "#ADB5BD", label: "준비", text: "#495057" },
   stirfry: { bg: "#FFF4E8", border: "#FFB347", label: "볶기", text: "#D97706" },
 } as const;
+
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
 
 export interface CookReadyListScreenProps {
   initialAuthenticated?: boolean;
@@ -76,6 +94,33 @@ function formatMobileMealDate(start: string | undefined) {
   const date = new Date(`${start}T00:00:00.000Z`);
 
   return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
+}
+
+function formatDesktopCookDate(start: string | undefined) {
+  if (!start) return "오늘";
+
+  const date = new Date(`${start}T00:00:00.000Z`);
+  const weekday = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "UTC",
+    weekday: "long",
+  }).format(date);
+  const monthDay = new Intl.DateTimeFormat("ko-KR", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  }).format(date);
+
+  return `${weekday} (${monthDay})`;
+}
+
+function formatDesktopRecipeMeta(
+  recipe: CookingReadyRecipe,
+  start: string | undefined,
+) {
+  const dateLabel = start ? formatMobileMealDate(start) : "오늘";
+  const mealCountLabel = `${recipe.meal_ids.length}개 끼니`;
+
+  return `${dateLabel} · ${mealCountLabel} · ${recipe.total_servings}인분`;
 }
 
 function getMobileReadyVisual(recipe: CookingReadyRecipe, index: number) {
@@ -124,76 +169,97 @@ function getMobileReadyVisual(recipe: CookingReadyRecipe, index: number) {
   };
 }
 
-function RecipeReadyCard({
+function DesktopRecipeReadyRow({
   recipe,
   isCreating,
   anyCreating,
+  dateRangeStart,
   onStartSession,
 }: {
   recipe: CookingReadyRecipe;
   isCreating: boolean;
   anyCreating: boolean;
+  dateRangeStart: string | undefined;
   onStartSession: (recipe: CookingReadyRecipe) => void;
 }) {
   return (
     <article
-      className="group flex min-h-[160px] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"
+      className="web-cook-ready-row"
       data-testid="recipe-ready-card"
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-[var(--surface-fill)]">
-        {recipe.recipe_thumbnail_url ? (
-          <Image
-            alt=""
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-            fill
-            sizes="(min-width: 1024px) 280px, 64px"
-            src={recipe.recipe_thumbnail_url}
-            unoptimized
-          />
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-[var(--muted)]">
-            <svg
-              aria-hidden="true"
-              className="h-7 w-7"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.8"
-              viewBox="0 0 24 24"
-            >
-              <path d="M5 12h14" />
-              <path d="M12 5v14" />
-              <path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
-            </svg>
-            <span className="text-xs font-semibold">사진 없음</span>
-          </div>
-        )}
+      <div className="web-cook-ready-row-main">
+        <div className="web-cook-ready-status-line">
+          <span className="web-cook-status-pill web-cook-status-done">
+            장보기 완료
+          </span>
+          <span className="web-cook-ready-minutes">15분</span>
+        </div>
+        <h3 className="web-cook-ready-title">{recipe.recipe_title}</h3>
+        <p className="web-cook-ready-meta">
+          {formatDesktopRecipeMeta(recipe, dateRangeStart)}
+        </p>
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-lg font-bold tracking-[-0.3px] text-[var(--foreground)]">
-            {recipe.recipe_title}
-          </p>
-          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-[var(--text-3)]">
-            <span>{recipe.total_servings}인분</span>
-            <span aria-hidden="true">·</span>
-            <span>{recipe.meal_ids.length}개 식사</span>
-          </p>
-        </div>
-
-        <button
-          className="mt-4 flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-4 text-sm font-bold text-white active:bg-[var(--brand-deep)] disabled:opacity-60"
+      <div className="web-cook-ready-actions">
+        <Link className="web-button web-button-tertiary" href={`/recipe/${recipe.recipe_id}`}>
+          상세 보기
+        </Link>
+        <WebButton
           data-testid="start-session-button"
           disabled={anyCreating}
           onClick={() => onStartSession(recipe)}
-          type="button"
         >
-          {isCreating ? "준비 중..." : "요리하기"}
-        </button>
+          {isCreating ? "준비 중..." : "요리 시작"}
+        </WebButton>
       </div>
     </article>
+  );
+}
+
+function CookNoticeDialog({
+  onClose,
+}: {
+  onClose: () => void;
+}) {
+  return (
+    <WebModal data-testid="cook-notice-dialog" onBackdropClick={onClose}>
+      <WebDialog aria-labelledby="cook-notice-title" size="narrow">
+        <WebDialogHeader>
+          <WebDialogTitle id="cook-notice-title">
+            데스크탑 요리모드
+          </WebDialogTitle>
+          <button
+            aria-label="닫기"
+            className="web-cook-dialog-close"
+            onClick={onClose}
+            type="button"
+          >
+            ×
+          </button>
+        </WebDialogHeader>
+        <WebDialogBody>
+          <div className="web-cook-notice-icon" aria-hidden="true">
+            ▱
+          </div>
+          <p className="web-cook-notice-copy">
+            데스크탑에서 레시피 단계를 보면서 요리하고, 사용한 재료를 팬트리에서 차감할 수 있어요.
+          </p>
+          <ul className="web-cook-notice-list">
+            <li>조리 단계 확인</li>
+            <li>사용 재료 차감</li>
+            <li>플래너 끼니 완료 처리</li>
+          </ul>
+        </WebDialogBody>
+        <WebDialogFooter>
+          <WebButton onClick={onClose} variant="tertiary">
+            닫기
+          </WebButton>
+          <WebButton onClick={onClose}>
+            요리 준비 목록
+          </WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
   );
 }
 
@@ -228,6 +294,7 @@ export function CookReadyListScreen({
     initialAuthenticated ? "authenticated" : "checking",
   );
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [showNoticeDialog, setShowNoticeDialog] = useState(false);
   const [sessionPendingRecipeId, setSessionPendingRecipeId] = useState<
     string | null
   >(null);
@@ -406,137 +473,110 @@ export function CookReadyListScreen({
     );
   }
 
-  const totalReadyServings = recipes.reduce(
-    (sum, recipe) => sum + recipe.total_servings,
-    0,
-  );
-  const totalReadyMeals = recipes.reduce(
-    (sum, recipe) => sum + recipe.meal_ids.length,
-    0,
-  );
-
   return (
-    <div className="space-y-6 pb-12" data-testid="cook-ready-list-screen">
-      <section className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[var(--shadow-1)]">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <Link
-              aria-label="뒤로가기"
-              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface-fill)] px-4 text-sm font-semibold text-[var(--text-2)] hover:text-[var(--brand)]"
-              href="/planner"
-            >
-              <span aria-hidden="true">&lt;</span>
-              플래너 보기
-            </Link>
-            <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
-              Cook Ready
-            </p>
-            <h1 className="mt-1 text-3xl font-bold tracking-[-0.3px] text-[var(--foreground)]">
-              요리하기
-            </h1>
-            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-              장보기까지 끝난 식사를 모아 바로 요리 세션을 시작해요.
+    <WebShell className="web-cooking-shell" wide>
+      <WebTopNav
+        activeId="planner"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<div className="web-profile-button">JY</div>}
+      />
+      <div className="web-cook-ready-screen" data-testid="cook-ready-list-screen">
+        <nav aria-label="현재 위치" className="web-cook-breadcrumb">
+          <Link aria-label="뒤로가기" href="/planner">
+            플래너
+          </Link>
+          <span aria-hidden="true">/</span>
+          <strong>요리 준비</strong>
+        </nav>
+
+        <section className="web-cook-ready-head">
+          <div>
+            <h1>요리 준비</h1>
+            <p>
+              플래너에 등록한 끼니 중 요리할 수 있는 메뉴를 모아 보여드려요.
               {dateRange ? ` ${formatDateRange(dateRange.start, dateRange.end)}` : null}
             </p>
-            {screenState === "ready" && dateRange ? (
-              <p className="mt-3 text-base font-semibold text-[var(--text-2)]">
-                장보기 완료된 레시피예요
-              </p>
-            ) : null}
           </div>
+          <WebButton
+            className="web-cook-notice-trigger"
+            onClick={() => setShowNoticeDialog(true)}
+            variant="tertiary"
+          >
+            요리모드 안내
+          </WebButton>
+        </section>
 
-          <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
-            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
-              <p className="text-xs font-semibold text-[var(--muted)]">레시피</p>
-              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
-                {recipes.length}개
-              </p>
-            </div>
-            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
-              <p className="text-xs font-semibold text-[var(--muted)]">식사</p>
-              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
-                {totalReadyMeals}개
-              </p>
-            </div>
-            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
-              <p className="text-xs font-semibold text-[var(--muted)]">인분</p>
-              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
-                {totalReadyServings}인분
-              </p>
-            </div>
+        {sessionError ? (
+          <div
+            className="web-cook-alert"
+            data-testid="session-error-toast"
+            role="alert"
+          >
+            {sessionError}
           </div>
-        </div>
-      </section>
+        ) : null}
 
-      {sessionError ? (
-        <div
-          className="rounded-[var(--radius-md)] border border-[var(--brand)] bg-[var(--brand-soft)] px-4 py-3 text-sm text-[var(--brand-deep)]"
-          data-testid="session-error-toast"
-          role="alert"
-        >
-          {sessionError}
-        </div>
-      ) : null}
+        {screenState === "loading" ? (
+          <div className="web-cook-ready-list" data-testid="cook-ready-loading">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton
+                className="border border-[var(--line)]"
+                height={96}
+                key={i}
+                rounded="lg"
+              />
+            ))}
+          </div>
+        ) : null}
 
-      {/* Loading */}
-      {screenState === "loading" ? (
-        <div
-          className="grid gap-4 lg:grid-cols-3"
-          data-testid="cook-ready-loading"
-        >
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton
-              key={i}
-              className="border border-[var(--line)]"
-              height={248}
-              rounded="lg"
-            />
-          ))}
-        </div>
-      ) : null}
+        {screenState === "error" ? (
+          <ContentState
+            actionLabel="다시 시도"
+            description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+            onAction={() => {
+              void loadReady().catch(() => {});
+            }}
+            title="레시피를 불러오지 못했어요"
+            tone="error"
+          />
+        ) : null}
 
-      {/* Error */}
-      {screenState === "error" ? (
-        <ContentState
-          actionLabel="다시 시도"
-          description={errorMessage ?? "잠시 후 다시 시도해주세요."}
-          onAction={() => {
-            void loadReady().catch(() => {});
-          }}
-          title="레시피를 불러오지 못했어요"
-          tone="error"
-        />
-      ) : null}
+        {screenState === "empty" ? (
+          <ContentState
+            actionLabel="플래너로 돌아가기"
+            description="플래너에서 장보기를 먼저 완료해 주세요"
+            onAction={() => router.push("/planner")}
+            title="장보기 완료된 레시피가 없어요"
+            tone="empty"
+          />
+        ) : null}
 
-      {/* Empty */}
-      {screenState === "empty" ? (
-        <ContentState
-          actionLabel="플래너로 돌아가기"
-          description="플래너에서 장보기를 먼저 완료해 주세요"
-          onAction={() => router.push("/planner")}
-          title="장보기 완료된 레시피가 없어요"
-          tone="empty"
-        />
-      ) : null}
+        {screenState === "ready" ? (
+          <section className="web-cook-ready-group">
+            <div className="web-cook-ready-group-head">
+              <h2>{formatDesktopCookDate(dateRange?.start)}</h2>
+              <span>{recipes.length}개 끼니</span>
+            </div>
+            <div className="web-cook-ready-list" data-testid="cook-ready-recipe-list">
+              {recipes.map((recipe) => (
+                <DesktopRecipeReadyRow
+                  anyCreating={activeCreatingRecipeId !== null}
+                  dateRangeStart={dateRange?.start}
+                  isCreating={activeCreatingRecipeId === recipe.recipe_id}
+                  key={recipe.recipe_id}
+                  onStartSession={handleStartSession}
+                  recipe={recipe}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+      </div>
 
-      {/* Ready: recipe list */}
-      {screenState === "ready" ? (
-        <div
-          className="grid gap-4 lg:grid-cols-3"
-          data-testid="cook-ready-recipe-list"
-        >
-          {recipes.map((recipe) => (
-            <RecipeReadyCard
-              key={recipe.recipe_id}
-              anyCreating={activeCreatingRecipeId !== null}
-              isCreating={activeCreatingRecipeId === recipe.recipe_id}
-              onStartSession={handleStartSession}
-              recipe={recipe}
-            />
-          ))}
-        </div>
+      {showNoticeDialog ? (
+        <CookNoticeDialog onClose={() => setShowNoticeDialog(false)} />
       ) : null}
-    </div>
+    </WebShell>
   );
 }
 

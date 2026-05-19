@@ -7,7 +7,7 @@ export default async function CookingReadyPage() {
 
   return (
     <AppShell
-      className="wave1-planner-shell"
+      className="wave1-planner-shell wave1-planner-web-shell"
       currentTab="planner"
       headerMode="hidden"
     >
