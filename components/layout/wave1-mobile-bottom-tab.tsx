@@ -98,35 +98,30 @@ function CalendarIcon({ active }: { active: boolean }) {
       aria-hidden="true"
       className={active ? "bottom-tab-active-icon h-6 w-6" : "h-6 w-6"}
       data-testid="bottom-tab-icon-planner"
-      fill="none"
+      fill={active ? "currentColor" : "none"}
       stroke="currentColor"
       strokeLinecap="round"
       strokeLinejoin="round"
-      strokeWidth="1.8"
+      strokeWidth="2"
       viewBox="0 0 24 24"
     >
+      <path d="M7 3v3M17 3v3" fill="none" />
+      <rect height="15" rx="1" width="14" x="5" y="5" />
       {active ? (
-        <rect
-          fill="currentColor"
-          height="6.5"
-          rx="2"
-          stroke="none"
-          width="10.5"
-          x="6.75"
-          y="11"
-        />
-      ) : null}
-      <path d="M7 3v3M17 3v3M4 8h16M5 5h14v15H5z" fill="none" />
-      {active ? (
-        <circle
-          cx="12"
-          cy="14.25"
-          data-testid="bottom-tab-planner-center-dot"
-          fill="var(--wave1-surface)"
-          r="2.1"
-          stroke="none"
-        />
-      ) : null}
+        <>
+          <line stroke="var(--wave1-surface)" strokeWidth="2" x1="5" x2="19" y1="9" y2="9" />
+          <circle
+            cx="12"
+            cy="14.5"
+            data-testid="bottom-tab-planner-center-dot"
+            fill="var(--wave1-surface)"
+            r="2"
+            stroke="none"
+          />
+        </>
+      ) : (
+        <line x1="4" x2="20" y1="8" y2="8" />
+      )}
     </svg>
   );
 }

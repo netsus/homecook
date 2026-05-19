@@ -470,32 +470,37 @@ export function MypageScreen({
 
   if (authState === "unauthorized") {
     return (
-      <ContentState
-        className="-mt-5 md:mt-0"
-        description="마이페이지를 보려면 로그인이 필요해요."
-        eyebrow="마이페이지 접근"
-        safeBottomPadding
-        title="이 화면은 로그인이 필요해요"
-        tone="gate"
-      >
-        <div className="space-y-3">
-          <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4">
-            <p className="text-sm font-semibold text-[var(--foreground)]">
-              로그인하면 마이페이지로 바로 복귀해요.
-            </p>
-            <p className="mt-1.5 text-xs leading-5 text-[var(--muted)]">
-              레시피북, 장보기 기록 등 나만의 데이터를 확인할 수 있어요.
-            </p>
+      <>
+        <ContentState
+          className="-mt-5 md:mt-0"
+          description="마이페이지를 보려면 로그인이 필요해요."
+          eyebrow="마이페이지 접근"
+          safeBottomPadding
+          title="이 화면은 로그인이 필요해요"
+          tone="gate"
+        >
+          <div className="space-y-3">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4">
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                로그인하면 마이페이지로 바로 복귀해요.
+              </p>
+              <p className="mt-1.5 text-xs leading-5 text-[var(--muted)]">
+                레시피북, 장보기 기록 등 나만의 데이터를 확인할 수 있어요.
+              </p>
+            </div>
+            <SocialLoginButtons nextPath="/mypage" />
+            <Link
+              className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
+              href="/"
+            >
+              홈으로 돌아가기
+            </Link>
           </div>
-          <SocialLoginButtons nextPath="/mypage" />
-          <Link
-            className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
-            href="/"
-          >
-            홈으로 돌아가기
-          </Link>
-        </div>
-      </ContentState>
+        </ContentState>
+        {isMobileViewport ? (
+          <Wave1MobileBottomTab ariaLabel="마이페이지 하단 탭" currentTab="mypage" />
+        ) : null}
+      </>
     );
   }
 

@@ -127,6 +127,20 @@ describe("PantryScreen", () => {
     expect(screen.getByText(/팬트리 화면으로 바로 복귀/)).toBeTruthy();
   });
 
+  it("keeps the mobile bottom tab visible on the unauthorized gate", async () => {
+    installMatchMedia(true);
+
+    render(<PantryScreen initialAuthenticated={false} />);
+
+    expect(
+      await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "팬트리 하단 탭" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "팬트리" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
+  });
+
   it("shows the pantry item list when authenticated", async () => {
     render(<PantryScreen initialAuthenticated />);
 
@@ -145,6 +159,18 @@ describe("PantryScreen", () => {
     expect(screen.getByTestId("pantry-skeleton")).toBeTruthy();
     expect(screen.getByRole("link", { name: "마이페이지" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: "마이" })).toBeNull();
+  });
+
+  it("keeps the mobile bottom tab visible while pantry items load", () => {
+    installMatchMedia(true);
+    mockFetchPantryList.mockReturnValue(new Promise(() => {}));
+
+    render(<PantryScreen initialAuthenticated />);
+
+    expect(screen.getByRole("navigation", { name: "팬트리 하단 탭" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "팬트리" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
   });
 
   it("shows the empty state when pantry has no items", async () => {

@@ -101,7 +101,7 @@ describe("home screen", () => {
       await screen.findByRole("heading", { level: 1, name: "오늘은 뭐 해먹지?" }),
     ).toBeTruthy();
     expect(screen.getByText("목요일 저녁,")).toBeTruthy();
-    expect(screen.getByLabelText("homecook_")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "홈" })).toBeTruthy();
     expect(screen.getByPlaceholderText("김치볶음밥, 된장찌개…")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /재료로 검색/ })).toHaveLength(1);
     expect(screen.getByRole("button", { name: "전체" })).toBeTruthy();
@@ -168,7 +168,13 @@ describe("home screen", () => {
 
     expect(dialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
 
-    expect(await screen.findByRole("checkbox", { name: "양파" })).toBeTruthy();
+    const onionCheckbox = await screen.findByRole("checkbox", { name: "양파" });
+    const ingredientGrid = onionCheckbox.closest("ul");
+    const onionOption = onionCheckbox.closest("label");
+
+    expect(onionCheckbox).toBeTruthy();
+    expect(ingredientGrid?.className).toContain("grid-cols-2");
+    expect(onionOption?.className).toContain("rounded-[var(--radius-card)]");
 
     await user.click(screen.getByRole("button", { name: "채소" }));
     await user.type(screen.getByPlaceholderText("재료명으로 검색"), "파");
@@ -191,6 +197,10 @@ describe("home screen", () => {
     });
 
     await user.click(screen.getByRole("checkbox", { name: "양파" }));
+    const selectedOnionOption = screen
+      .getByRole("checkbox", { name: "양파" })
+      .closest("label");
+    expect(selectedOnionOption?.className).toContain("bg-[var(--brand-soft)]");
     expect(screen.getByText("1개 선택")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /적용/ }));
 
@@ -531,7 +541,7 @@ describe("home screen", () => {
   it("does not render header profile or cart icons", async () => {
     render(<HomeScreen />);
 
-    await screen.findByLabelText("homecook_");
+    await screen.findByRole("heading", { name: "홈" });
 
     expect(screen.queryByRole("button", { name: "장보기" })).toBeNull();
     expect(screen.queryByText("채")).toBeNull();
