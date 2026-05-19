@@ -75,17 +75,73 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "lifecycle": "merged",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": "Codex low-risk navigation verification; targeted Vitest/Playwright and full verify:frontend passed",
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
-  "closeout": null,
-  "notes": "Stage 1 requested through Claude resume session b475ec3a-c10b-42ae-9c38-1df94982e645 with model=opus, effort=high, permission_mode=bypassPermissions; provider limit blocked execution, so Codex completed Stage 1 fallback per user instruction. FE-only low-risk navigation polish: MYPAGE recipebook/shopping detail back navigation direct return. API/DB/design token changes out of scope.",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "pnpm vitest run tests/return-context.test.ts tests/mypage-screen.test.tsx tests/shopping-detail.frontend.test.tsx",
+        "pnpm exec playwright test tests/e2e/slice-17a-mypage.spec.ts --project=mobile-chrome",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm verify:frontend",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice design-polish-slice7-mypage-settings-account"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-05-20T06:30:00+09:00"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "claude_provider_limit_codex_fallback",
+      "evidence_sources": [
+        "tests/return-context.test.ts",
+        "tests/mypage-screen.test.tsx",
+        "tests/shopping-detail.frontend.test.tsx",
+        "tests/e2e/slice-17a-mypage.spec.ts"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-20T06:30:00+09:00",
+      "status_synced_at": "2026-05-20T06:30:00+09:00",
+      "pr_body_synced_at": null
+    }
+  },
+  "notes": "Stage 1 requested through Claude resume session b475ec3a-c10b-42ae-9c38-1df94982e645 with model=opus, effort=high, permission_mode=bypassPermissions; provider limit blocked execution, so Codex completed Stage 1 fallback per user instruction. FE-only low-risk navigation polish completed: MYPAGE recipebook/shopping detail back navigation now resolves the target list context before first render and preserves existing fallback behavior. API/DB/design token changes out of scope. closeout_phase=completed",
   "out_of_scope": [
     "API, DB, auth, mutation, state transition contract changes",
     "MYPAGE visual redesign or tab information architecture changes",

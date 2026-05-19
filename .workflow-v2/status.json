@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-19T18:08:42Z",
+  "updated_at": "2026-05-19T21:30:06Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1081,11 +1081,11 @@
     {
       "id": "design-polish-slice7-mypage-settings-account",
       "preset": "vertical-slice-strict",
-      "branch": "docs/design-polish-slice7-mypage-settings-account",
+      "branch": "feature/fe-design-polish-slice7-mypage-settings-account",
       "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm lint",
         "pnpm typecheck",
@@ -1094,7 +1094,7 @@
         "pnpm validate:workpack -- --slice design-polish-slice7-mypage-settings-account",
         "git diff --check"
       ],
-      "notes": "Stage 1 requested through Claude resume session b475ec3a-c10b-42ae-9c38-1df94982e645 with model=opus, effort=high, permission_mode=bypassPermissions; provider limit blocked execution, so Codex completed Stage 1 fallback per user instruction. FE-only low-risk navigation polish: MYPAGE recipebook/shopping detail back navigation direct return to prior list context. API/DB/design token changes out of scope."
+      "notes": "Stage 1 requested through Claude resume session b475ec3a-c10b-42ae-9c38-1df94982e645 with model=opus, effort=high, permission_mode=bypassPermissions; provider limit blocked execution, so Codex completed Stage 1 fallback per user instruction. FE-only low-risk navigation polish completed: MYPAGE recipebook/shopping detail back navigation now resolves the target list context before first render, with direct recipebook/shopping return flows covered by targeted Vitest/Playwright and pnpm verify:frontend. API/DB/design token changes out of scope. exploratory QA: N/A (low-risk UI change; targeted Playwright verification recorded in slice E2E evidence). qa eval: N/A (exploratory QA skipped with same rationale). artifact/report paths: N/A (low-risk navigation fix; no exploratory-report.json or eval-result.json required). closeout_phase=completed closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:tests/return-context.test.ts,tests/mypage-screen.test.tsx,tests/shopping-detail.frontend.test.tsx,tests/e2e/slice-17a-mypage.spec.ts last_recovery_at=2026-05-20T06:30:00+09:00"
     }
   ]
 }

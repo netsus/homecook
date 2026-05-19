@@ -97,7 +97,7 @@
 - Anchor screen dependency: 없음
 - Visual artifact: not-required
 - Authority status: `not-required`
-- Notes: 화면 구조, 시각 위계, 컴포넌트 형태를 바꾸지 않는 back navigation behavior fix다. Stage 5는 생략하고 Stage 6에서 lightweight design/navigation check로 흡수한다.
+- Notes: 화면 구조, 시각 위계, 컴포넌트 형태를 바꾸지 않는 back navigation behavior fix다. Stage 5는 생략하고 Stage 6에서 lightweight design/navigation check와 browser-flow regression evidence로 흡수했다.
 
 ## Design Status
 
@@ -173,13 +173,27 @@
 
 ## Delivery Checklist
 
-- [ ] MYPAGE 레시피북 목록에서 RECIPEBOOK_DETAIL 진입 시 return context 보존 <!-- omo:id=dp7-recipebook-return-context;stage=4;scope=frontend;review=6 -->
-- [ ] RECIPEBOOK_DETAIL 뒤로가기 시 레시피북 목록 맥락으로 직접 복귀 <!-- omo:id=dp7-recipebook-direct-back;stage=4;scope=frontend;review=6 -->
-- [ ] MYPAGE 장보기 기록에서 SHOPPING_DETAIL 진입 시 return context 보존 <!-- omo:id=dp7-shopping-return-context;stage=4;scope=frontend;review=6 -->
-- [ ] SHOPPING_DETAIL 뒤로가기 시 장보기 기록 목록 맥락으로 직접 복귀 <!-- omo:id=dp7-shopping-direct-back;stage=4;scope=frontend;review=6 -->
-- [ ] 마이페이지 root/default 중간 렌더링 또는 탭 깜빡임 회귀 없음 확인 <!-- omo:id=dp7-no-intermediate-root-flash;stage=4;scope=frontend;review=6 -->
-- [ ] 직접 진입 또는 다른 화면 진입의 기존 뒤로가기 fallback 유지 <!-- omo:id=dp7-back-fallback-preserved;stage=4;scope=frontend;review=6 -->
-- [ ] `loading / empty / error / read-only / unauthorized` 상태 회귀 없음 확인 <!-- omo:id=dp7-state-ui-preserved;stage=4;scope=frontend;review=6 -->
-- [ ] targeted Vitest / Playwright 라우팅 회귀 테스트 통과 <!-- omo:id=dp7-targeted-tests;stage=4;scope=frontend;review=6 -->
-- [ ] `pnpm lint`, `pnpm typecheck`, `pnpm verify:frontend` 통과 <!-- omo:id=dp7-frontend-verification;stage=4;scope=frontend;review=6 -->
+- [x] MYPAGE 레시피북 목록에서 RECIPEBOOK_DETAIL 진입 시 return context 보존 <!-- omo:id=dp7-recipebook-return-context;stage=4;scope=frontend;review=6 -->
+- [x] RECIPEBOOK_DETAIL 뒤로가기 시 레시피북 목록 맥락으로 직접 복귀 <!-- omo:id=dp7-recipebook-direct-back;stage=4;scope=frontend;review=6 -->
+- [x] MYPAGE 장보기 기록에서 SHOPPING_DETAIL 진입 시 return context 보존 <!-- omo:id=dp7-shopping-return-context;stage=4;scope=frontend;review=6 -->
+- [x] SHOPPING_DETAIL 뒤로가기 시 장보기 기록 목록 맥락으로 직접 복귀 <!-- omo:id=dp7-shopping-direct-back;stage=4;scope=frontend;review=6 -->
+- [x] 마이페이지 root/default 중간 렌더링 또는 탭 깜빡임 회귀 없음 확인 <!-- omo:id=dp7-no-intermediate-root-flash;stage=4;scope=frontend;review=6 -->
+- [x] 직접 진입 또는 다른 화면 진입의 기존 뒤로가기 fallback 유지 <!-- omo:id=dp7-back-fallback-preserved;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only / unauthorized` 상태 회귀 없음 확인 <!-- omo:id=dp7-state-ui-preserved;stage=4;scope=frontend;review=6 -->
+- [x] targeted Vitest / Playwright 라우팅 회귀 테스트 통과 <!-- omo:id=dp7-targeted-tests;stage=4;scope=frontend;review=6 -->
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm verify:frontend` 통과 <!-- omo:id=dp7-frontend-verification;stage=4;scope=frontend;review=6 -->
 
+## Stage 5/6 Closeout Evidence
+
+- Authority report: N/A (low-risk navigation behavior fix; no visual hierarchy/layout/component shape change)
+- Screenshot evidence: N/A (browser-flow regression covers the direct-return behavior)
+- QA reports: N/A (low-risk UI change; targeted Playwright verification recorded in slice E2E evidence)
+- Verification:
+  - `pnpm vitest run tests/return-context.test.ts tests/mypage-screen.test.tsx tests/shopping-detail.frontend.test.tsx`
+  - `pnpm exec playwright test tests/e2e/slice-17a-mypage.spec.ts --project=mobile-chrome`
+  - `pnpm lint`
+  - `pnpm typecheck`
+  - `pnpm verify:frontend`
+  - `pnpm validate:workflow-v2`
+  - `pnpm validate:workpack -- --slice design-polish-slice7-mypage-settings-account`
+- Claude status: Stage 1 was requested through resume session `b475ec3a-c10b-42ae-9c38-1df94982e645` with `model=opus`, `effort=high`, `permission_mode=bypassPermissions`; provider limit blocked execution, so Codex completed fallback per user instruction.

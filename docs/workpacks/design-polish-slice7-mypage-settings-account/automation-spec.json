@@ -41,7 +41,7 @@
       "browser-flow-regression"
     ],
     "design_authority": {
-      "ui_risk": "low-risk-ui-change",
+      "ui_risk": "low-risk",
       "anchor_screens": [],
       "required_screens": [
         "MYPAGE",
@@ -74,4 +74,3 @@
     "frontend": 4
   }
 }
-
