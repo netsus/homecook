@@ -266,6 +266,46 @@ describe("planner week screen", () => {
     expect(screen.queryByRole("group", { name: "플래너 보조 작업" })).toBeNull();
   });
 
+  it("renders the desktop planner header with the prototype's three week actions", async () => {
+    const user = userEvent.setup();
+
+    setDesktopViewport(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen />);
+
+    expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
+
+    const actions = screen.getByRole("group", { name: "플래너 작업" });
+    const previousWeekButton = within(actions).getByRole("button", { name: "이전 주" });
+    const nextWeekButton = within(actions).getByRole("button", { name: "다음 주" });
+    const shoppingPreviewLink = within(actions).getByRole("link", {
+      name: "장보기 미리보기",
+    }) as HTMLAnchorElement;
+
+    expect(within(actions).getAllByRole("button")).toHaveLength(2);
+    expect(within(actions).getAllByRole("link")).toHaveLength(1);
+    expect(previousWeekButton.textContent?.trim()).toBe("< 이전주");
+    expect(nextWeekButton.textContent?.trim()).toBe("다음 주 >");
+    expect(shoppingPreviewLink.getAttribute("href")).toBe("/shopping/flow");
+    expect(within(actions).queryByRole("link", { name: "요리 준비" })).toBeNull();
+    expect(within(actions).queryByRole("button", { name: "이번주로" })).toBeNull();
+
+    await user.click(nextWeekButton);
+
+    await waitFor(() => {
+      expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
+    });
+    expect(
+      within(screen.getByRole("group", { name: "플래너 작업" })).queryByRole("button", {
+        name: "이번주로",
+      }),
+    ).toBeNull();
+  });
+
   it("opens the Wave1 meal-add sheet and preserves the selected option in links", async () => {
     const user = userEvent.setup();
 

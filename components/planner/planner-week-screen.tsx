@@ -16,7 +16,6 @@ import {
   WebButton,
   WebEmptyState,
   WebErrorState,
-  WebIconButton,
   WebShell,
   WebSkeleton,
   WebTopNav,
@@ -185,48 +184,6 @@ function WebProfileButton() {
   );
 }
 
-function ChevronLeftIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="18"
-      viewBox="0 0 18 18"
-      width="18"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M11 4.5L6.5 9l4.5 4.5"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-      />
-    </svg>
-  );
-}
-
-function ChevronRightIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="18"
-      viewBox="0 0 18 18"
-      width="18"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M7 4.5L11.5 9 7 13.5"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-      />
-    </svg>
-  );
-}
-
 function PlusIcon() {
   return (
     <svg
@@ -294,7 +251,6 @@ function PlannerWeekWebView({
   dateKeys,
   errorMessage,
   getMealAddHrefForSlot,
-  isCurrentRange,
   isRefreshing,
   loadPlanner,
   mealStats,
@@ -304,7 +260,6 @@ function PlannerWeekWebView({
   rangeContextLabel,
   rangeEndDate,
   rangeStartDate,
-  resetRange,
   runPlannerAction,
   screenState,
   shiftRange,
@@ -315,7 +270,6 @@ function PlannerWeekWebView({
   dateKeys: string[];
   errorMessage: string | null;
   getMealAddHrefForSlot: (dateKey: string, column: PlannerColumnData) => string;
-  isCurrentRange: boolean;
   isRefreshing: boolean;
   loadPlanner: () => Promise<void>;
   mealStats: {
@@ -330,7 +284,6 @@ function PlannerWeekWebView({
   rangeContextLabel: string;
   rangeEndDate: string;
   rangeStartDate: string;
-  resetRange: () => Promise<void>;
   runPlannerAction: (action: Promise<void>) => void;
   screenState: "loading" | "ready" | "empty" | "error" | "read-only";
   shiftRange: (dayDelta: number) => Promise<void>;
@@ -362,30 +315,21 @@ function PlannerWeekWebView({
               {formatRangeLabel(rangeStartDate, rangeEndDate)}
             </p>
           </div>
-          <div className="web-planner-actions" aria-label="플래너 작업">
-            <WebIconButton
+          <div className="web-planner-actions" aria-label="플래너 작업" role="group">
+            <WebButton
               aria-label="이전 주"
               onClick={() => runPlannerAction(shiftRange(-RANGE_SHIFT_DAYS))}
+              variant="secondary"
             >
-              <ChevronLeftIcon />
-            </WebIconButton>
-            {!isCurrentRange ? (
-              <WebButton
-                onClick={() => runPlannerAction(resetRange())}
-                variant="tertiary"
-              >
-                이번주로
-              </WebButton>
-            ) : null}
-            <WebIconButton
+              {"< 이전주"}
+            </WebButton>
+            <WebButton
               aria-label="다음 주"
               onClick={() => runPlannerAction(shiftRange(RANGE_SHIFT_DAYS))}
+              variant="secondary"
             >
-              <ChevronRightIcon />
-            </WebIconButton>
-            <Link className="web-button web-button-secondary" href="/cooking/ready">
-              요리 준비
-            </Link>
+              {"다음 주 >"}
+            </WebButton>
             <Link className="web-button web-button-primary" href="/shopping/flow">
               장보기 미리보기
             </Link>
@@ -1575,7 +1519,6 @@ export function PlannerWeekScreen({
             dateKeys={dateKeys}
             errorMessage={errorMessage}
             getMealAddHrefForSlot={getMealAddHrefForSlot}
-            isCurrentRange={isCurrentRange}
             isRefreshing={isRefreshing}
             loadPlanner={loadPlanner}
             mealStats={mealStats}
@@ -1585,7 +1528,6 @@ export function PlannerWeekScreen({
             rangeContextLabel={rangeContextLabel}
             rangeEndDate={rangeEndDate}
             rangeStartDate={rangeStartDate}
-            resetRange={resetRange}
             runPlannerAction={runPlannerAction}
             screenState={screenState}
             shiftRange={shiftRange}
