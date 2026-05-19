@@ -1,0 +1,89 @@
+{
+  "id": "design-polish-slice2-app-shell-home",
+  "title": "Design Polish Slice 2 — app shell bottom tab persistence and HOME ingredient modal family alignment",
+  "summary": "앱 셸 하단 탭 지속성 확인, 플래너 활성 아이콘 밀도 검증, 헤더 정렬 확인. HOME 재료 필터 모달을 팬트리 추가 시트 패밀리와 시각 정합(2열 그리드, 칩 스타일). 재료 버튼 색상 토큰 정리, olive 잔재 재확인. 웹 토큰 변경 없음, 신규 토큰 없음.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "앱 셸(하단 탭, 헤더)과 HOME 화면의 시각적 불일치·동작 결함을 수정하여 일관된 내비게이션과 깔끔한 필터 경험을 제공한다. 재료 필터 모달을 팬트리 추가 모달과 동일 패밀리로 정합한다.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "design-polish-slice1-typography-tokens"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/design/design-tokens.md",
+      "docs/design/anchor-screens.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/design-polish-slice2-app-shell-home/README.md",
+      "docs/workpacks/design-polish-slice2-app-shell-home/acceptance.md",
+      "docs/workpacks/design-polish-slice2-app-shell-home/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/design/mobile-ux-rules.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "pnpm dev:demo"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice design-polish-slice2-app-shell-home",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "screenshot"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 docs created by Claude on docs/design-polish-slice2-app-shell-home. FE-only visual/behavior polish slice. Scope: GLOBAL::APP_SHELL (bottom tab persistence, planner active icon density, header alignment, tab background opacity) + HOME (ingredient filter modal 2-col grid, modal family alignment with pantry-add-sheet, button color token cleanup, olive residue recheck). Web tokens unchanged. No new tokens. No anchor-extension.",
+  "out_of_scope": [
+    "RECIPE_DETAIL screen changes",
+    "PLANNER_WEEK screen changes",
+    "Cooking mode / meal screen changes",
+    "Pantry internal layout changes",
+    "Mypage/settings/account internal changes",
+    "API, DB, auth, state transition contract changes",
+    "Web color redesign (--web-* tokens)",
+    "New CSS token introduction",
+    "AppShell bottomTabsMode prop structure change",
+    "Bottom tab icon full redesign"
+  ],
+  "open_questions": []
+}
