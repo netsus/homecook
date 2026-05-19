@@ -227,7 +227,7 @@ test.describe("slice 10a: shopping detail interact", () => {
   });
 
   test.describe("happy path", () => {
-    test("should render list detail with purchase and excluded sections", async ({ page }) => {
+    test("should render list detail with purchase and excluded sections @smoke-core", async ({ page }) => {
       await setAuthOverride(page, "authenticated");
 
       const listDetail = buildShoppingListDetail();

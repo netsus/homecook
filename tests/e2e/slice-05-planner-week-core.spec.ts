@@ -148,7 +148,7 @@ async function expectPlannerWeekDays(page: Page) {
 }
 
 test.describe("Slice 05 planner week core", () => {
-  test("authenticated user sees dynamic column day cards (Wave1 mobile shell, no emoji, no status badges)", async ({ page }) => {
+  test("authenticated user sees dynamic column day cards (Wave1 mobile shell, no emoji, no status badges) @smoke-core", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockPlannerRoutes(page);
 
@@ -251,7 +251,7 @@ test.describe("Slice 05 planner week core", () => {
     }
   });
 
-  test("guest user sees unauthorized state on planner route", async ({ page }) => {
+  test("guest user sees unauthorized state on planner route @smoke-core", async ({ page }) => {
     await setAuthOverride(page, "guest");
 
     await page.goto("/planner");

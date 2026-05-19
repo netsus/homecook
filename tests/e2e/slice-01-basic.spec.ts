@@ -18,7 +18,7 @@ test.describe("Slice 01 basic flow", () => {
     await installRecipeDetailRoutes(page);
   });
 
-  test("HOME shows list, supports search, and updates sort state", async ({
+  test("HOME shows list, supports search, and updates sort state @smoke-core", async ({
     page,
   }) => {
     await page.goto("/");
@@ -90,7 +90,7 @@ test.describe("Slice 01 basic flow", () => {
     await expect(sortButton).toContainText("최신순");
   });
 
-  test("Recipe detail route shows key sections", async ({
+  test("Recipe detail route shows key sections @smoke-core", async ({
     page,
   }) => {
     await page.goto(RECIPE_PATH);
@@ -181,7 +181,7 @@ test.describe("Slice 01 basic flow", () => {
     }
   });
 
-  test("Protected action opens login gate and modal can close with button, ESC, and backdrop", async ({
+  test("Protected action opens login gate and modal can close with button, ESC, and backdrop @smoke-core", async ({
     page,
   }) => {
     await page.goto(RECIPE_PATH);

@@ -177,7 +177,7 @@ test.describe("Slice 14 cook session start", () => {
     ).toBeVisible();
   });
 
-  test("clicking 요리하기 creates session and navigates to cook-mode", async ({
+  test("clicking 요리하기 creates session and navigates to cook-mode @smoke-core", async ({
     page,
   }) => {
     await setAuthOverride(page, "authenticated");
