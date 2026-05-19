@@ -7,6 +7,12 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import { MealAddOptionsSheet } from "@/components/planner/meal-add-options-sheet";
+import type {
+  MealAddPickerMode,
+  MealAddRouteMode,
+} from "@/components/planner/meal-add-options-sheet";
+import { MealAddPickerFlow } from "@/components/planner/meal-add-picker-flow";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
@@ -26,7 +32,12 @@ import {
   WebTopNav,
 } from "@/components/web";
 import { createCookingSession, isCookingApiError } from "@/lib/api/cooking";
-import { deleteMeal, fetchMeals, isMealApiError, updateMealServings } from "@/lib/api/meal";
+import {
+  deleteMeal,
+  fetchMeals,
+  isMealApiError,
+  updateMealServings,
+} from "@/lib/api/meal";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -924,6 +935,9 @@ export function MealScreen({
   const [conflictErrors, setConflictErrors] = useState<Record<string, string>>({});
   const [modal, setModal] = useState<ModalState | null>(null);
   const [pendingMealIds, setPendingMealIds] = useState<Set<string>>(new Set());
+  const [mealAddSheetOpen, setMealAddSheetOpen] = useState(false);
+  const [mealAddPickerMode, setMealAddPickerMode] =
+    useState<MealAddPickerMode | null>(null);
 
   // ── Auth setup (identical pattern to PlannerWeekScreen) ──────────────────
   useEffect(() => {
@@ -1171,6 +1185,30 @@ export function MealScreen({
     void applyDelete(mealId);
   }
 
+  function openMealAddSheet() {
+    setMealAddSheetOpen(true);
+    setMealAddPickerMode(null);
+  }
+
+  function closeMealAddSheet() {
+    setMealAddPickerMode(null);
+    setMealAddSheetOpen(false);
+  }
+
+  function openMealAddPicker(mode: MealAddPickerMode) {
+    setMealAddPickerMode(mode);
+  }
+
+  function closeMealAddPicker() {
+    setMealAddPickerMode(null);
+  }
+
+  async function handleMealAddComplete() {
+    setMealAddPickerMode(null);
+    setMealAddSheetOpen(false);
+    await loadMeals();
+  }
+
   // ── Computed values ───────────────────────────────────────────────────────
   const titleFull = slotName
     ? `${slotName} 음식${meals.length > 0 ? ` ${meals.length}개` : ""}`
@@ -1200,6 +1238,14 @@ export function MealScreen({
     returnSurface: "planner.meal-add-modal",
     returnTo: `/planner?${mealAddQuery}`,
   });
+  const mealAddSheetTitle = `${formatDateShort(planDate)}${slotName ? ` ${slotName}` : ""} · 식사 추가`;
+  function getMealAddRouteHref(mode: MealAddRouteMode) {
+    const targetPath = `/menu/add/${mode}?${mealAddQuery}`;
+
+    return buildReturnHref(targetPath, {
+      returnTo: buildNextPath(planDate, columnId, slotName),
+    });
+  }
   const shouldRenderWebView =
     process.env.NODE_ENV !== "test" || isDesktopViewport;
   const shouldRenderAppView =
@@ -1338,7 +1384,7 @@ export function MealScreen({
                   <button
                     className="mt-6 flex h-[var(--control-height-xl)] w-full max-w-xs items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-base font-semibold text-white hover:bg-[var(--brand)]"
                     data-testid="meal-screen-add-cta"
-                    onClick={() => router.push(addMealHref)}
+                    onClick={openMealAddSheet}
                     type="button"
                   >
                     + 식사 추가
@@ -1368,7 +1414,7 @@ export function MealScreen({
                 <button
                   className="mt-2 flex h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-white px-4 text-base font-semibold text-[var(--brand)]"
                   data-testid="meal-screen-add-cta"
-                  onClick={() => router.push(addMealHref)}
+                  onClick={openMealAddSheet}
                   type="button"
                 >
                   + 식사 추가
@@ -1384,6 +1430,28 @@ export function MealScreen({
         <Wave1MobileBottomTab
           ariaLabel="식사 화면 하단 탐색"
           currentTab="planner"
+        />
+      ) : null}
+
+      {shouldRenderAppView && mealAddSheetOpen && !mealAddPickerMode ? (
+        <MealAddOptionsSheet
+          onClose={closeMealAddSheet}
+          onPickerSelect={openMealAddPicker}
+          routeHrefFor={getMealAddRouteHref}
+          testId="meal-screen-meal-add-sheet"
+          title={mealAddSheetTitle}
+        />
+      ) : null}
+
+      {shouldRenderAppView && mealAddSheetOpen && mealAddPickerMode ? (
+        <MealAddPickerFlow
+          columnId={columnId}
+          entryMode={mealAddPickerMode}
+          key={`${planDate}-${columnId}-${mealAddPickerMode}`}
+          onClose={closeMealAddPicker}
+          onComplete={handleMealAddComplete}
+          planDate={planDate}
+          slotName={slotName}
         />
       ) : null}
 

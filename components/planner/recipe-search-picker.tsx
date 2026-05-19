@@ -36,6 +36,31 @@ type SearchState = "idle" | "loading" | "ready" | "empty" | "error";
 
 // ─── Search Input ────────────────────────────────────────────────────────────
 
+function SearchGlyph({
+  className,
+  testId,
+}: {
+  className?: string;
+  testId?: string;
+}) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      data-testid={testId}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.3"
+      viewBox="0 0 24 24"
+    >
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m16.5 16.5 4 4" />
+    </svg>
+  );
+}
+
 interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
@@ -62,7 +87,9 @@ function SearchInput({
 
   return (
     <div className="web-picker-search">
-      <span aria-hidden="true">⌕</span>
+      <span aria-hidden="true">
+        <SearchGlyph className="h-5 w-5" />
+      </span>
       <input
         aria-label="레시피 검색"
         disabled={disabled}
@@ -449,25 +476,15 @@ export function RecipeSearchPicker({
           <div className="flex items-center gap-2 rounded-[var(--radius-control)] bg-[#F8F9FA] px-3.5 py-2.5">
             <button
               aria-label="검색"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[#495057]"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[#495057]"
               disabled={searchState === "loading"}
               onClick={() => void handleSearch()}
               type="button"
             >
-              <svg
-                aria-hidden="true"
-                className="h-6 w-6 rotate-[-12deg]"
-                data-testid="recipe-search-submit-icon"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path d="m20 20-3.5-3.5" />
-              </svg>
+              <SearchGlyph
+                className="h-7 w-7"
+                testId="recipe-search-submit-icon"
+              />
             </button>
             <input
               aria-label="레시피 검색"

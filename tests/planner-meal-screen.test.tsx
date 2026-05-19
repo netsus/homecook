@@ -13,7 +13,10 @@ const readE2EAuthOverride = vi.fn();
 const fetchMeals = vi.fn();
 const updateMealServings = vi.fn();
 const deleteMeal = vi.fn();
+const createMealSafe = vi.fn();
 const createCookingSession = vi.fn();
+const fetchRecipes = vi.fn();
+const fetchLeftovers = vi.fn();
 const isMealApiError = vi.fn(
   (error: unknown): error is Error & { status: number; code: string } =>
     Boolean(error) &&
@@ -38,10 +41,22 @@ vi.mock("@/lib/auth/e2e-auth-override", () => ({
 }));
 
 vi.mock("@/lib/api/meal", () => ({
+  createMealSafe: (...args: unknown[]) => createMealSafe(...args),
   fetchMeals: (...args: unknown[]) => fetchMeals(...args),
   updateMealServings: (...args: unknown[]) => updateMealServings(...args),
   deleteMeal: (...args: unknown[]) => deleteMeal(...args),
   isMealApiError: (error: unknown) => isMealApiError(error),
+}));
+
+vi.mock("@/lib/api/leftovers", () => ({
+  fetchLeftovers: (...args: unknown[]) => fetchLeftovers(...args),
+}));
+
+vi.mock("@/lib/api/recipe", () => ({
+  fetchPantryMatchRecipes: vi.fn(),
+  fetchRecipeBookRecipes: vi.fn(),
+  fetchRecipeBooks: vi.fn(),
+  fetchRecipes: (...args: unknown[]) => fetchRecipes(...args),
 }));
 
 vi.mock("@/lib/api/cooking", () => ({
@@ -124,7 +139,19 @@ describe("MealScreen", () => {
     fetchMeals.mockReset();
     updateMealServings.mockReset();
     deleteMeal.mockReset();
+    createMealSafe.mockReset();
     createCookingSession.mockReset();
+    fetchRecipes.mockReset();
+    fetchLeftovers.mockReset();
+    fetchRecipes.mockResolvedValue({
+      success: true,
+      data: {
+        has_next: false,
+        items: [],
+        next_cursor: null,
+      },
+      error: null,
+    });
     mockRouterBack.mockReset();
     mockRouterPush.mockReset();
     mockRouterReplace.mockReset();
@@ -626,5 +653,24 @@ describe("MealScreen", () => {
     await waitFor(() => {
       expect(screen.getByTestId("meal-screen-add-cta")).toBeTruthy();
     });
+  });
+
+  it("opens the meal-add option sheet from the app CTA instead of navigating to menu-add", async () => {
+    const user = userEvent.setup();
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({ items: [buildMeal()] });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    await user.click(await screen.findByTestId("meal-screen-add-cta"));
+
+    expect(mockRouterPush).not.toHaveBeenCalledWith(expect.stringContaining("/menu-add"));
+    expect(screen.getByTestId("meal-screen-meal-add-sheet")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "4/18 아침 · 식사 추가" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: /레시피 검색/ }));
+
+    expect(await screen.findByRole("heading", { name: "검색으로 추가" })).toBeTruthy();
+    expect(screen.queryByTestId("meal-screen-meal-add-sheet")).toBeNull();
   });
 });

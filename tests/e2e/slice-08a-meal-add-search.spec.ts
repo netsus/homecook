@@ -189,8 +189,8 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     if (isMobileViewport(page)) {
       await visibleByTestId(page, "menu-add-option-search").click();
       await expect(visibleSearchInput(page)).toBeVisible();
-      await expect(page.getByTestId("recipe-search-submit-icon").filter({ visible: true })).toHaveClass(/h-6/);
-      await expect(page.getByTestId("recipe-search-submit-icon").filter({ visible: true })).toHaveClass(/rotate-\[-12deg\]/);
+      await expect(page.getByTestId("recipe-search-submit-icon").filter({ visible: true })).toHaveClass(/h-7/);
+      await expect(page.getByTestId("recipe-search-submit-icon").filter({ visible: true })).not.toHaveClass(/rotate-\[-12deg\]/);
     } else {
       await expect(visibleSearchInput(page)).toBeVisible();
     }
