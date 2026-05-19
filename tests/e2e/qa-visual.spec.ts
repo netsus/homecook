@@ -380,7 +380,7 @@ test.describe("QA visual regression", () => {
     });
 
     await page.getByRole("button", { name: /재료 추가/ }).click();
-    const ingredientDialog = page.getByRole("dialog", { name: "재료 추가" });
+    const ingredientDialog = page.getByRole("dialog", { name: "재료 선택" });
     await expect(ingredientDialog).toBeVisible();
     await stabilizeVisualSnapshot(page);
     await expect(ingredientDialog).toHaveScreenshot(

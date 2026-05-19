@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   getPantryEmoji,
@@ -44,6 +44,7 @@ export function PantryAddSheet({
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
   const [sheetState, setSheetState] = useState<SheetState>("loading");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isAdding, setIsAdding] = useState(false);
@@ -54,29 +55,44 @@ export function PantryAddSheet({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const isMobileViewport = useIsMobileViewport();
 
-  const categories = React.useMemo(() => {
+  const categories = useMemo(() => {
     const categorySet = new Set<string>();
     ingredients.forEach((item) => categorySet.add(item.category));
     return Array.from(categorySet).sort();
   }, [ingredients]);
 
-  const loadIngredients = useCallback(
-    async (query?: string, category?: string | null) => {
-      setSheetState("loading");
-      try {
-        const result = await fetchIngredients({
-          q: query || undefined,
-          category: category || undefined,
-        });
-        setIngredients(result.items);
-        setSheetState(result.items.length === 0 ? "empty" : "ready");
-      } catch {
-        setIngredients([]);
-        setSheetState("error");
-      }
-    },
-    [],
+  const visibleIngredients = useMemo(() => {
+    return ingredients.filter((ingredient) => {
+      const matchesCategory =
+        !activeCategory || ingredient.category === activeCategory;
+
+      return matchesCategory;
+    });
+  }, [activeCategory, ingredients]);
+
+  const visibleSheetState =
+    sheetState === "ready" && visibleIngredients.length === 0
+      ? "empty"
+      : sheetState;
+
+  const selectedIngredients = useMemo(
+    () => ingredients.filter((ingredient) => selectedIds.has(ingredient.id)),
+    [ingredients, selectedIds],
   );
+
+  const loadIngredients = useCallback(async (query?: string) => {
+    setSheetState("loading");
+    try {
+      const result = await fetchIngredients({
+        q: query?.trim() || undefined,
+      });
+      setIngredients(result.items);
+      setSheetState(result.items.length === 0 ? "empty" : "ready");
+    } catch {
+      setIngredients([]);
+      setSheetState("error");
+    }
+  }, []);
 
   const handleSearch = useCallback(
     (value: string) => {
@@ -87,18 +103,17 @@ export function PantryAddSheet({
       }
 
       searchTimerRef.current = setTimeout(() => {
-        void loadIngredients(value, activeCategory);
+        setDebouncedQuery(value);
       }, SEARCH_DEBOUNCE_MS);
     },
-    [activeCategory, loadIngredients],
+    [],
   );
 
   const handleCategoryChange = useCallback(
     (category: string | null) => {
       setActiveCategory(category);
-      void loadIngredients(searchQuery, category);
     },
-    [loadIngredients, searchQuery],
+    [],
   );
 
   const handleToggle = useCallback((ingredientId: string) => {
@@ -110,6 +125,14 @@ export function PantryAddSheet({
       } else {
         next.add(ingredientId);
       }
+      return next;
+    });
+  }, []);
+
+  const removeSelectedIngredient = useCallback((ingredientId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(ingredientId);
       return next;
     });
   }, []);
@@ -130,9 +153,20 @@ export function PantryAddSheet({
   }, [selectedIds, onAdd, onClose]);
 
   useEffect(() => {
-    void loadIngredients();
     closeButtonRef.current?.focus();
-  }, [loadIngredients]);
+  }, []);
+
+  useEffect(() => {
+    void loadIngredients(debouncedQuery);
+  }, [debouncedQuery, loadIngredients]);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -147,14 +181,6 @@ export function PantryAddSheet({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [onClose]);
-
-  useEffect(() => {
-    return () => {
-      if (searchTimerRef.current) {
-        clearTimeout(searchTimerRef.current);
-      }
-    };
-  }, []);
 
   if (isMobileViewport) {
     return (
@@ -215,32 +241,32 @@ export function PantryAddSheet({
         onClose={onClose}
         title="재료 추가"
       >
-        {sheetState === "loading" ? (
+        {visibleSheetState === "loading" ? (
           <div className="grid grid-cols-2 gap-2">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
               <Skeleton className="w-full" height={54} key={item} rounded="lg" />
             ))}
           </div>
-        ) : sheetState === "error" ? (
+        ) : visibleSheetState === "error" ? (
           <div className="flex flex-col items-center py-8 text-center">
             <p className="text-sm font-semibold text-[#212529]">
               재료 목록을 불러오지 못했어요
             </p>
             <button
               className="mt-4 h-10 rounded-[var(--radius-control)] bg-[var(--brand)] px-5 text-[13px] font-extrabold text-white"
-              onClick={() => void loadIngredients(searchQuery, activeCategory)}
+              onClick={() => void loadIngredients(debouncedQuery)}
               type="button"
             >
               다시 시도
             </button>
           </div>
-        ) : sheetState === "empty" ? (
+        ) : visibleSheetState === "empty" ? (
           <p className="py-8 text-center text-[13px] font-medium text-[#868E96]">
             검색 결과가 없어요
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-2">
-            {ingredients.map((ingredient) => {
+            {visibleIngredients.map((ingredient) => {
               const isExisting = existingSet.current.has(ingredient.id);
               const isChecked = selectedIds.has(ingredient.id);
 
@@ -364,29 +390,52 @@ export function PantryAddSheet({
             ))}
           </WebTabs>
 
-          {sheetState === "loading" ? (
+          <div className="web-ingredient-editor" data-testid="pantry-add-selected-ingredients">
+            <div className="web-ingredient-added" aria-live="polite">
+              {selectedIngredients.length > 0 ? (
+                selectedIngredients.map((ingredient) => (
+                  <button
+                    aria-label={`${ingredient.standard_name} 선택 해제`}
+                    className="web-ingredient-pill"
+                    key={ingredient.id}
+                    onClick={() => removeSelectedIngredient(ingredient.id)}
+                    type="button"
+                  >
+                    <span>{ingredient.standard_name}</span>
+                    <span aria-hidden="true" className="web-ingredient-pill-remove">
+                      ×
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <span className="web-ingredient-empty">선택한 재료가 없어요</span>
+              )}
+            </div>
+          </div>
+
+          {visibleSheetState === "loading" ? (
             <div className="web-ingredient-grid">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item) => (
                 <Skeleton className="w-full" height={70} key={item} rounded="md" />
               ))}
             </div>
-          ) : sheetState === "error" ? (
+          ) : visibleSheetState === "error" ? (
             <div className="web-modal-panel web-modal-panel-error">
               <p className="web-modal-copy">재료 목록을 불러오지 못했어요</p>
               <WebButton
-                onClick={() => void loadIngredients(searchQuery, activeCategory)}
+                onClick={() => void loadIngredients(debouncedQuery)}
                 size="sm"
               >
                 다시 시도
               </WebButton>
             </div>
-          ) : sheetState === "empty" ? (
+          ) : visibleSheetState === "empty" ? (
             <div className="web-modal-panel">
               <p className="web-modal-copy">검색 결과가 없어요</p>
             </div>
           ) : (
             <div className="web-ingredient-grid">
-              {ingredients.map((ingredient) => {
+              {visibleIngredients.map((ingredient) => {
                 const isExisting = existingSet.current.has(ingredient.id);
                 const isChecked = selectedIds.has(ingredient.id);
 

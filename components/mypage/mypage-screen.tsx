@@ -32,6 +32,7 @@ import {
   WebModal,
   WebRecipeCard,
   WebShell,
+  WebSkeleton,
   WebTabButton,
   WebTabs,
   WebTopNav,
@@ -464,14 +465,7 @@ export function MypageScreen({
       return <MypageLoadingSkeleton mobile />;
     }
 
-    return (
-      <ContentState
-        className="md:px-7"
-        description="로그인 상태를 확인하고 있어요."
-        tone="loading"
-        title="잠시만 기다려주세요"
-      />
-    );
+    return <MypageDesktopLoadingShell />;
   }
 
   if (authState === "unauthorized") {
@@ -506,6 +500,10 @@ export function MypageScreen({
   }
 
   if (viewState === "loading") {
+    if (!isMobileViewport) {
+      return <MypageDesktopLoadingShell />;
+    }
+
     return <MypageLoadingSkeleton mobile={isMobileViewport} />;
   }
 
@@ -1127,6 +1125,59 @@ function MypageLoadingSkeleton({ mobile = false }: { mobile?: boolean }) {
         ))}
       </div>
     </div>
+  );
+}
+
+function MypageDesktopLoadingShell() {
+  return (
+    <WebShell className="web-mypage-shell" wide>
+      <WebTopNav
+        activeId="mypage"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<WebSkeleton className="web-mypage-top-profile" />}
+      />
+      <div className="web-mypage-screen" data-testid="mypage-skeleton">
+        <WebCard className="web-mypage-profile">
+          <div className="web-mypage-profile-main">
+            <WebSkeleton height={64} width={64} style={{ borderRadius: "50%" }} />
+            <div className="web-mypage-profile-copy">
+              <WebSkeleton height={28} width={128} />
+              <WebSkeleton height={18} width={220} />
+            </div>
+          </div>
+          <div className="web-mypage-stats" aria-hidden="true">
+            {[1, 2, 3].map((item) => (
+              <div className="web-mypage-stat" key={item}>
+                <WebSkeleton height={28} width={48} />
+                <WebSkeleton height={14} width={72} />
+              </div>
+            ))}
+          </div>
+        </WebCard>
+
+        <div className="web-mypage-loading-tabs">
+          {[120, 100, 100, 84].map((width, index) => (
+            <WebSkeleton height={48} key={index} width={width} />
+          ))}
+        </div>
+
+        <WebCard className="web-mypage-panel">
+          <div className="web-mypage-section-head">
+            <div>
+              <WebSkeleton height={26} width={156} />
+              <div className="mt-2">
+                <WebSkeleton height={16} width={260} />
+              </div>
+            </div>
+          </div>
+          <div className="web-mypage-loading-grid">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <WebSkeleton height={220} key={index} />
+            ))}
+          </div>
+        </WebCard>
+      </div>
+    </WebShell>
   );
 }
 

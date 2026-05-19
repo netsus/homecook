@@ -69,7 +69,6 @@ export function RecipeIngredientAddModal({
   );
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
   const [listState, setListState] = useState<IngredientListState>("loading");
-  const requestIdRef = useRef(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const isDesktopViewport = useDesktopViewport();
 
@@ -84,8 +83,6 @@ export function RecipeIngredientAddModal({
   }, [query]);
 
   useEffect(() => {
-    const currentRequestId = requestIdRef.current + 1;
-    requestIdRef.current = currentRequestId;
     let isStale = false;
 
     async function loadIngredients() {
@@ -93,13 +90,9 @@ export function RecipeIngredientAddModal({
 
       const response = await fetchIngredients({
         q: debouncedQuery.trim() || undefined,
-        category:
-          activeCategory === ALL_INGREDIENT_CATEGORY
-            ? undefined
-            : activeCategory,
       });
 
-      if (isStale || currentRequestId !== requestIdRef.current) {
+      if (isStale) {
         return;
       }
 
@@ -118,17 +111,29 @@ export function RecipeIngredientAddModal({
     return () => {
       isStale = true;
     };
-  }, [activeCategory, debouncedQuery]);
+  }, [debouncedQuery]);
 
   const canAddIngredient = selectedIngredients.length > 0;
 
-  const helperMessage = useMemo(() => {
-    if (selectedIngredients.length === 0) {
-      return "재료만 먼저 선택해주세요. 수량과 단위는 다음 화면에서 입력해요.";
-    }
+  const selectedIngredientIds = useMemo(
+    () => new Set(selectedIngredients.map((ingredient) => ingredient.id)),
+    [selectedIngredients],
+  );
 
-    return `${selectedIngredients.length}개 선택됨. 완료하면 본문 재료 목록에 추가돼요.`;
-  }, [selectedIngredients.length]);
+  const visibleIngredients = useMemo(() => {
+    return ingredients.filter((ingredient) => {
+      const matchesCategory =
+        activeCategory === ALL_INGREDIENT_CATEGORY ||
+        ingredient.category === activeCategory;
+
+      return matchesCategory;
+    });
+  }, [activeCategory, ingredients]);
+
+  const visibleListState =
+    listState === "ready" && visibleIngredients.length === 0
+      ? "empty"
+      : listState;
 
   const toggleIngredient = (ingredient: IngredientItem) => {
     setSelectedIngredients((current) => {
@@ -138,6 +143,12 @@ export function RecipeIngredientAddModal({
 
       return [...current, ingredient];
     });
+  };
+
+  const removeIngredient = (ingredientId: string) => {
+    setSelectedIngredients((current) =>
+      current.filter((ingredient) => ingredient.id !== ingredientId),
+    );
   };
 
   const handleAdd = () => {
@@ -161,8 +172,8 @@ export function RecipeIngredientAddModal({
         >
           <WebDialogHeader>
             <div>
-              <WebDialogTitle id="ingredient-picker-title">재료 추가</WebDialogTitle>
-              <p className="web-modal-copy">재료를 고르고 수량은 본문에서 입력해요</p>
+              <WebDialogTitle id="ingredient-picker-title">재료 선택</WebDialogTitle>
+              <p className="web-modal-copy">직접 만든 레시피에 넣을 재료를 고르세요</p>
             </div>
             <button
               aria-label="닫기"
@@ -196,7 +207,34 @@ export function RecipeIngredientAddModal({
               ))}
             </WebTabs>
 
-            {listState === "loading" ? (
+            <div className="web-ingredient-editor" data-testid="ingredient-editor">
+              <div
+                aria-live="polite"
+                className="web-ingredient-added"
+                data-testid="added-ingredient-chips"
+              >
+                {selectedIngredients.length > 0 ? (
+                  selectedIngredients.map((ingredient) => (
+                    <button
+                      aria-label={`${ingredient.standard_name} 선택 해제`}
+                      className="web-ingredient-pill"
+                      key={ingredient.id}
+                      onClick={() => removeIngredient(ingredient.id)}
+                      type="button"
+                    >
+                      <span>{ingredient.standard_name}</span>
+                      <span aria-hidden="true" className="web-ingredient-pill-remove">
+                        ×
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <span className="web-ingredient-empty">선택한 재료가 없어요</span>
+                )}
+              </div>
+            </div>
+
+            {visibleListState === "loading" ? (
               <div className="web-ingredient-grid" aria-busy="true">
                 {Array.from({ length: 15 }).map((_, index) => (
                   <WebSkeleton className="h-16" key={index} />
@@ -204,7 +242,7 @@ export function RecipeIngredientAddModal({
               </div>
             ) : null}
 
-            {listState === "error" ? (
+            {visibleListState === "error" ? (
               <WebEmptyState
                 description="잠시 후 다시 열어주세요."
                 icon="!"
@@ -212,7 +250,7 @@ export function RecipeIngredientAddModal({
               />
             ) : null}
 
-            {listState === "empty" ? (
+            {visibleListState === "empty" ? (
               <WebEmptyState
                 description="검색어를 바꾸거나 다른 카테고리를 선택해보세요."
                 icon="⌕"
@@ -220,12 +258,10 @@ export function RecipeIngredientAddModal({
               />
             ) : null}
 
-            {listState === "ready" ? (
+            {visibleListState === "ready" ? (
               <ul className="web-ingredient-grid">
-                {ingredients.map((ingredient) => {
-                  const isSelected = selectedIngredients.some(
-                    (item) => item.id === ingredient.id,
-                  );
+                {visibleIngredients.map((ingredient) => {
+                  const isSelected = selectedIngredientIds.has(ingredient.id);
 
                   return (
                     <li key={ingredient.id}>
@@ -241,30 +277,28 @@ export function RecipeIngredientAddModal({
                         <span className="web-ingredient-cell-mark" aria-hidden="true">
                           {isSelected ? "✓" : "+"}
                         </span>
-                        <span>{ingredient.standard_name}</span>
+                        <span aria-hidden="true">
+                          {ingredient.category === "육류"
+                            ? "🥩"
+                            : ingredient.category === "해산물"
+                              ? "🐟"
+                              : ingredient.category === "양념"
+                                ? "🧄"
+                                : ingredient.category === "곡류"
+                                  ? "🌾"
+                                  : ingredient.category === "유제품"
+                                    ? "🧈"
+                                    : "🥬"}
+                        </span>
+                        <strong>{ingredient.standard_name}</strong>
                       </button>
                     </li>
                   );
                 })}
               </ul>
             ) : null}
-
-            <div className="web-ingredient-editor" data-testid="ingredient-editor">
-              {selectedIngredients.length > 0 ? (
-                <div className="web-ingredient-added" data-testid="added-ingredient-chips">
-                  {selectedIngredients.map((ingredient) => (
-                    <span key={ingredient.id}>{ingredient.standard_name}</span>
-                  ))}
-                </div>
-              ) : null}
-
-              <p className="web-modal-footer-note">{helperMessage}</p>
-            </div>
           </WebDialogBody>
           <WebDialogFooter>
-            <span className="web-modal-footer-note">
-              {selectedIngredients.length}개 선택됨
-            </span>
             <WebButton disabled={!canAddIngredient} onClick={handleAdd}>
               선택한 재료 {selectedIngredients.length}개 추가
             </WebButton>
@@ -317,7 +351,7 @@ export function RecipeIngredientAddModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          {listState === "loading" ? (
+          {visibleListState === "loading" ? (
             <div className="grid gap-2 sm:grid-cols-2">
               {Array.from({ length: 6 }).map((_, index) => (
                 <div
@@ -328,24 +362,22 @@ export function RecipeIngredientAddModal({
             </div>
           ) : null}
 
-          {listState === "error" ? (
+          {visibleListState === "error" ? (
             <p className="py-8 text-center text-sm text-[var(--muted)]">
               재료 목록을 불러오지 못했어요.
             </p>
           ) : null}
 
-          {listState === "empty" ? (
+          {visibleListState === "empty" ? (
             <p className="py-8 text-center text-sm text-[var(--muted)]">
               검색 결과가 없어요
             </p>
           ) : null}
 
-          {listState === "ready" ? (
+          {visibleListState === "ready" ? (
             <ul className="flex flex-wrap gap-2">
-              {ingredients.map((ingredient) => {
-                const isSelected = selectedIngredients.some(
-                  (item) => item.id === ingredient.id,
-                );
+              {visibleIngredients.map((ingredient) => {
+                const isSelected = selectedIngredientIds.has(ingredient.id);
 
                 return (
                   <li className="contents" key={ingredient.id}>
@@ -389,7 +421,11 @@ export function RecipeIngredientAddModal({
               </div>
             ) : null}
 
-            <p className="min-h-5 text-sm text-[var(--muted)]">{helperMessage}</p>
+            <p className="min-h-5 text-sm text-[var(--muted)]">
+              {selectedIngredients.length === 0
+                ? "재료만 먼저 선택해주세요. 수량과 단위는 다음 화면에서 입력해요."
+                : "선택한 재료는 완료 후 본문 재료 목록에 추가돼요."}
+            </p>
           </div>
 
           <div className="mt-4">

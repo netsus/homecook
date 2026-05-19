@@ -16,6 +16,7 @@ import {
   WebButton,
   WebCard,
   WebShell,
+  WebSkeleton,
   WebTabButton,
   WebTabs,
   WebToolbar,
@@ -52,7 +53,7 @@ const WEB_NAV_ITEMS = [
   { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
 ] as const;
 
 export interface PantryScreenProps {
@@ -284,6 +285,10 @@ export function PantryScreen({
   // --- Render states ---
 
   if (authState === "checking") {
+    if (!isMobileViewport) {
+      return <PantryDesktopLoadingShell />;
+    }
+
     return (
       <ContentState
         className="md:px-7"
@@ -326,6 +331,10 @@ export function PantryScreen({
   }
 
   if (viewState === "loading") {
+    if (!isMobileViewport) {
+      return <PantryDesktopLoadingShell />;
+    }
+
     return <PantryLoadingSkeleton />;
   }
 
@@ -676,5 +685,50 @@ function PantryLoadingSkeleton() {
         ))}
       </div>
     </div>
+  );
+}
+
+function PantryDesktopLoadingShell() {
+  return (
+    <WebShell className="web-pantry-shell">
+      <WebTopNav activeId="pantry" items={WEB_NAV_ITEMS} />
+      <div className="web-screen web-pantry-screen" data-testid="pantry-skeleton">
+        <header className="web-pantry-head">
+          <div>
+            <WebSkeleton height={14} width={72} />
+            <div className="mt-3">
+              <WebSkeleton height={40} width={180} />
+            </div>
+            <div className="mt-3">
+              <WebSkeleton height={18} width={360} />
+            </div>
+          </div>
+          <div className="web-pantry-actions">
+            <WebSkeleton height={40} width={104} />
+            <WebSkeleton height={40} width={112} />
+          </div>
+        </header>
+
+        <WebCard className="web-pantry-board">
+          <div className="web-pantry-loading-tabs">
+            {[80, 88, 88, 88].map((width, index) => (
+              <WebSkeleton height={44} key={index} width={width} />
+            ))}
+          </div>
+          <WebToolbar className="web-pantry-toolbar">
+            <WebSkeleton height={44} width="min(440px, 100%)" />
+            <div className="web-pantry-toolbar-actions">
+              <WebSkeleton height={36} width={128} />
+              <WebSkeleton height={36} width={72} />
+            </div>
+          </WebToolbar>
+          <div className="web-pantry-grid">
+            {Array.from({ length: 10 }).map((_, index) => (
+              <WebSkeleton height={166} key={index} />
+            ))}
+          </div>
+        </WebCard>
+      </div>
+    </WebShell>
   );
 }

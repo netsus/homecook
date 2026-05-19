@@ -3154,14 +3154,59 @@ button {
     padding-top: 16px;
   }
 
+  .web-ingredient-dialog .web-ingredient-editor,
+  .web-pantry-add-dialog .web-ingredient-editor {
+    margin-top: 14px;
+    border-top: 0;
+    padding-top: 0;
+  }
+
   .web-ingredient-added {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    min-height: 38px;
+    align-items: center;
     margin-bottom: 14px;
   }
 
-  .web-ingredient-added span,
+  .web-ingredient-empty {
+    color: var(--web-text-3);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .web-ingredient-pill {
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid var(--web-brand);
+    border-radius: var(--web-r-pill);
+    background: var(--web-brand-wash);
+    color: var(--web-brand-accessible);
+    padding: 0 10px 0 12px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .web-ingredient-pill:hover {
+    background: rgba(0, 161, 255, 0.16);
+  }
+
+  .web-ingredient-pill-remove {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--web-r-pill);
+    background: var(--web-surface);
+    color: var(--web-brand-accessible);
+    font-size: 13px;
+    line-height: 1;
+  }
+
   .web-ingredient-selected span {
     display: inline-flex;
     min-height: 28px;
@@ -4769,6 +4814,28 @@ button {
     padding: 0 20px;
   }
 
+  .web-pantry-loading-tabs,
+  .web-mypage-loading-tabs {
+    display: flex;
+    gap: 12px;
+    border-bottom: 1px solid var(--web-divider);
+    padding: 14px 20px;
+  }
+
+  .web-mypage-loading-tabs {
+    margin-top: 16px;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-md);
+    background: var(--web-surface);
+  }
+
+  .web-mypage-loading-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+  }
+
   .web-pantry-board .web-tab span {
     margin-left: 6px;
     color: inherit;
@@ -4974,6 +5041,11 @@ button {
     color: var(--web-text-3);
     font-size: 12px;
     font-weight: 700;
+  }
+
+  .web-ingredient-cell > span:not(.web-ingredient-cell-mark) {
+    font-size: 20px;
+    line-height: 1;
   }
 
   .web-bundle-dialog {
