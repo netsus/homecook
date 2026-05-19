@@ -71,6 +71,10 @@ export function RecipeIngredientAddModal({
   const [listState, setListState] = useState<IngredientListState>("loading");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const isDesktopViewport = useDesktopViewport();
+  const requestCategory =
+    !isDesktopViewport && activeCategory !== ALL_INGREDIENT_CATEGORY
+      ? activeCategory
+      : undefined;
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -90,6 +94,7 @@ export function RecipeIngredientAddModal({
 
       const response = await fetchIngredients({
         q: debouncedQuery.trim() || undefined,
+        category: requestCategory,
       });
 
       if (isStale) {
@@ -111,9 +116,16 @@ export function RecipeIngredientAddModal({
     return () => {
       isStale = true;
     };
-  }, [debouncedQuery]);
+  }, [debouncedQuery, requestCategory]);
 
   const canAddIngredient = selectedIngredients.length > 0;
+  const mobileHelperMessage = useMemo(() => {
+    if (selectedIngredients.length === 0) {
+      return "재료만 먼저 선택해주세요. 수량과 단위는 다음 화면에서 입력해요.";
+    }
+
+    return `${selectedIngredients.length}개 선택됨. 완료하면 본문 재료 목록에 추가돼요.`;
+  }, [selectedIngredients.length]);
 
   const selectedIngredientIds = useMemo(
     () => new Set(selectedIngredients.map((ingredient) => ingredient.id)),
@@ -422,9 +434,7 @@ export function RecipeIngredientAddModal({
             ) : null}
 
             <p className="min-h-5 text-sm text-[var(--muted)]">
-              {selectedIngredients.length === 0
-                ? "재료만 먼저 선택해주세요. 수량과 단위는 다음 화면에서 입력해요."
-                : "선택한 재료는 완료 후 본문 재료 목록에 추가돼요."}
+              {mobileHelperMessage}
             </p>
           </div>
 
