@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import type { LeftoverListItemData } from "@/types/leftover";
 import type { RecipeCardItem, RecipeDetail } from "@/types/recipe";
 
 import {
@@ -50,6 +51,8 @@ export const COOK_MODE_VISUAL_PATH =
   `/cooking/sessions/${COOK_MODE_VISUAL_SESSION_ID}/cook-mode`;
 export const STANDALONE_COOK_MODE_VISUAL_PATH =
   `/cooking/recipes/${RECIPE_ID}/cook-mode?servings=2`;
+export const LEFTOVERS_VISUAL_PATH = "/leftovers";
+export const ATE_LIST_VISUAL_PATH = "/leftovers/ate";
 
 const PLANNER_COLUMNS = [
   { id: "col-breakfast", name: "아침", sort_order: 0 },
@@ -96,6 +99,72 @@ const ACCOUNT_VISUAL_BOOKS = [
     sort_order: 3,
   },
 ] as const;
+
+const LEFTOVERS_VISUAL_ITEMS = [
+  {
+    cooking_servings: 2,
+    cooked_at: "2026-05-13T09:00:00.000Z",
+    eaten_at: null,
+    id: "leftover-visual-1",
+    recipe_id: RECIPE_ID,
+    recipe_thumbnail_url: createQaFoodThumbDataUri("🍚", "#FFE2CF"),
+    recipe_title: "김치볶음밥",
+    source_meal_label: "저녁",
+    source_planned_servings: 2,
+    status: "leftover",
+  },
+  {
+    cooking_servings: 1,
+    cooked_at: "2026-05-12T09:00:00.000Z",
+    eaten_at: null,
+    id: "leftover-visual-2",
+    recipe_id: "recipe-soondubu",
+    recipe_thumbnail_url: createQaFoodThumbDataUri("🍲", "#FFC6CA"),
+    recipe_title: "순두부찌개",
+    source_meal_label: "점심",
+    source_planned_servings: 1,
+    status: "leftover",
+  },
+  {
+    cooking_servings: 2,
+    cooked_at: "2026-05-11T09:00:00.000Z",
+    eaten_at: null,
+    id: "leftover-visual-3",
+    recipe_id: "recipe-bibimbap",
+    recipe_thumbnail_url: createQaFoodThumbDataUri("🥗", "#DDF4CF"),
+    recipe_title: "비빔밥",
+    source_meal_label: "직접 기록",
+    source_planned_servings: 2,
+    status: "leftover",
+  },
+] as const satisfies ReadonlyArray<LeftoverListItemData>;
+
+const ATE_LIST_VISUAL_ITEMS = [
+  {
+    cooking_servings: 2,
+    cooked_at: "2026-05-10T09:00:00.000Z",
+    eaten_at: "2026-05-14T12:00:00.000Z",
+    id: "ate-visual-1",
+    recipe_id: RECIPE_ID,
+    recipe_thumbnail_url: createQaFoodThumbDataUri("🍚", "#FFE2CF"),
+    recipe_title: "김치볶음밥",
+    source_meal_label: "저녁",
+    source_planned_servings: 2,
+    status: "eaten",
+  },
+  {
+    cooking_servings: 1,
+    cooked_at: "2026-05-09T09:00:00.000Z",
+    eaten_at: "2026-05-13T12:00:00.000Z",
+    id: "ate-visual-2",
+    recipe_id: "recipe-soondubu",
+    recipe_thumbnail_url: createQaFoodThumbDataUri("🍲", "#FFC6CA"),
+    recipe_title: "순두부찌개",
+    source_meal_label: "점심",
+    source_planned_servings: 1,
+    status: "eaten",
+  },
+] as const satisfies ReadonlyArray<LeftoverListItemData>;
 
 const ACCOUNT_VISUAL_SHOPPING_HISTORY = [
   {
@@ -1294,6 +1363,110 @@ function cookingVisualRecipe(title = "김치볶음밥") {
       },
     ],
   };
+}
+
+export async function installLeftoversVisualRoutes(
+  page: Page,
+  options: {
+    ateItems?: ReadonlyArray<LeftoverListItemData>;
+    leftoverItems?: ReadonlyArray<LeftoverListItemData>;
+  } = {},
+) {
+  const leftoverItems = [...(options.leftoverItems ?? LEFTOVERS_VISUAL_ITEMS)];
+  const ateItems = [...(options.ateItems ?? ATE_LIST_VISUAL_ITEMS)];
+
+  await page.route("**/api/v1/leftovers?*", async (route) => {
+    const requestUrl = new URL(route.request().url());
+    const status = requestUrl.searchParams.get("status") ?? "leftover";
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          items: status === "eaten" ? ateItems : leftoverItems,
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/leftovers/*/eat", async (route) => {
+    const id = route.request().url().split("/leftovers/")[1]?.split("/")[0];
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          auto_hide_at: "2026-06-14T00:00:00.000Z",
+          eaten_at: "2026-05-14T12:00:00.000Z",
+          id,
+          status: "eaten",
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/leftovers/*/uneat", async (route) => {
+    const id = route.request().url().split("/leftovers/")[1]?.split("/")[0];
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          auto_hide_at: null,
+          eaten_at: null,
+          id,
+          status: "leftover",
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/planner?*", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          columns: PLANNER_COLUMNS,
+          meals: [],
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/meals", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+
+    const body = route.request().postDataJSON() as {
+      column_id: string;
+      leftover_dish_id?: string;
+      plan_date: string;
+      planned_servings?: number;
+      recipe_id: string;
+    };
+
+    await route.fulfill({
+      status: 201,
+      json: {
+        success: true,
+        data: {
+          column_id: body.column_id,
+          id: "meal-leftover-visual",
+          is_leftover: true,
+          leftover_dish_id: body.leftover_dish_id,
+          plan_date: body.plan_date,
+          planned_servings: body.planned_servings ?? 1,
+          recipe_id: body.recipe_id,
+          status: "registered",
+        },
+        error: null,
+      },
+    });
+  });
 }
 
 export async function installCookingVisualRoutes(page: Page) {

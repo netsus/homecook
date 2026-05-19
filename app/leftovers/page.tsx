@@ -7,8 +7,8 @@ export default async function LeftoversPage() {
 
   return (
     <AppShell
-      className="wave1-leftovers-shell"
-      currentTab="planner"
+      className="wave1-leftovers-shell wave1-leftovers-web-shell"
+      currentTab="mypage"
       headerMode="hidden"
     >
       <LeftoversScreen initialAuthenticated={Boolean(user)} />

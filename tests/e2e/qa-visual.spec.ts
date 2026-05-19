@@ -6,15 +6,18 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   COOK_MODE_VISUAL_PATH,
   COOK_READY_VISUAL_PATH,
+  ATE_LIST_VISUAL_PATH,
   installAccountLibraryVisualRoutes,
   installCookingVisualRoutes,
   installDiscoveryRoutes,
+  installLeftoversVisualRoutes,
   installMenuAddVisualRoutes,
   installMealDetailRoutes,
   installPantryShoppingVisualRoutes,
   installPlannerWeekRoutes,
   installRecipeDetailRoutes,
   LOGIN_VISUAL_PATH,
+  LEFTOVERS_VISUAL_PATH,
   installYoutubeImportVisualRoutes,
   MANUAL_CREATE_VISUAL_PATH,
   MEAL_VISUAL_PATH,
@@ -66,6 +69,7 @@ const MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2200;
 const PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2400;
 const ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
 const COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 3200;
+const LEFTOVERS_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
 
 function isMobileViewport(page: Page) {
   return (page.viewportSize()?.width ?? 1280) < 1024;
@@ -667,6 +671,60 @@ test.describe("QA visual regression", () => {
       animations: "disabled",
       fullPage: true,
       maxDiffPixels: COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+  });
+
+  test("leftovers desktop ready states match the visual baseline", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only leftovers parity baseline");
+    await setE2EAuthOverride(page);
+    await installLeftoversVisualRoutes(page);
+
+    await page.goto(LEFTOVERS_VISUAL_PATH);
+    await expect(page.getByRole("heading", { name: "남은 요리" })).toBeVisible();
+    await expect(page.getByTestId("leftover-list")).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-leftovers-ready.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: LEFTOVERS_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.goto(ATE_LIST_VISUAL_PATH);
+    await expect(page.getByRole("heading", { name: "다먹은 목록" })).toBeVisible();
+    await expect(page.getByTestId("ate-item-list")).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-ate-list-ready.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: LEFTOVERS_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+  });
+
+  test("leftovers desktop empty states match the visual baseline", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only leftovers parity baseline");
+    await setE2EAuthOverride(page);
+    await installLeftoversVisualRoutes(page, { ateItems: [], leftoverItems: [] });
+
+    await page.goto(LEFTOVERS_VISUAL_PATH);
+    await expect(page.getByText("남은 요리가 없어요")).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-leftovers-empty.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: LEFTOVERS_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page.goto(ATE_LIST_VISUAL_PATH);
+    await expect(page.getByText("아직 다먹은 요리가 없어요")).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-ate-list-empty.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: LEFTOVERS_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
     });
   });
 });
