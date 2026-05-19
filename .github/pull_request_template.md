@@ -80,6 +80,7 @@
 - UI 또는 fetch 변경 여부:
 - Lighthouse 또는 수동 점검 근거:
 - `N/A` 또는 영향 없음 근거:
+  - 예: `N/A: 성능 관련 경로(app/page.tsx, app/recipe/**, components/home/**, components/layout/**, components/recipe/**, app/globals.css, next.config.*, lighthouserc.js, qa/lighthouse-budget.json, package.json, pnpm-lock.yaml) 변경 없음`
 
 ## Design / Accessibility
 

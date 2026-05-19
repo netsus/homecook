@@ -12,15 +12,26 @@
 
 ### Layer 1 — Deterministic Must-Pass Gates
 
-자동 실행 대상:
+Layer 1은 두 단계로 나눈다.
+
+- PR 빠른 게이트: 일반 디자인/프론트 PR에서 빠르게 돌리는 기본 blocker다.
+- 전체 게이트: Ready for Review, `full-ci` label, nightly/manual, protected branch push에서 돌리는 release safety net이다.
+
+PR 빠른 게이트 자동 실행 대상:
 
 - `lint`
 - `typecheck`
 - `vitest`
 - `build`
-- Playwright smoke
-- Playwright accessibility smoke
-- Playwright visual regression
+- Playwright core smoke (`@smoke-core`)
+- Playwright core accessibility (`@a11y-core`)
+- Playwright core visual regression (`@visual-core`)
+
+전체 게이트 실행 대상:
+
+- 전체 Playwright slice regression
+- 전체 Playwright accessibility smoke
+- 전체 Playwright visual regression
 - Playwright auth/session security smoke
 - Lighthouse budget
 
@@ -34,13 +45,17 @@
 
 - 작은 viewport는 한국 서비스에서도 여전히 유효한 회귀 감지 센서로 본다.
 - 하단 CTA 가림, 정보 과적층, 작은 control 글자, modal footer 잘림 같은 문제를 조기에 드러내기 위한 sentinel device다.
-- visual regression은 위 device matrix 전체에서 실행한다.
-- accessibility smoke는 axe scan 외에도 핵심 control의 최소 가독성/터치 타깃 바닥선을 함께 확인한다.
+- core visual regression은 앱(`mobile-chrome`, `mobile-ios-small`)과 웹(`desktop-chrome`)을 분리 실행해 실패 위치를 빠르게 보여준다.
+- 전체 visual regression은 위 device matrix 전체에서 실행한다.
+- core accessibility는 axe scan, 터치 타깃, 읽기 가능성 중심으로 본다.
+- `nowrap`, toolbar height, typography equality 같은 디자인 잠금 검사는 전체 accessibility/visual 검증에서 다루며 PR 빠른 게이트의 blocker로 쓰지 않는다.
+- Lighthouse는 성능 관련 경로가 바뀐 비초안 PR, `full-ci` label, nightly/manual에서만 blocker로 둔다.
 
 로컬 실행:
 
 - 백엔드 구현 PR 전: `pnpm verify:backend`
-- 프론트엔드 구현 PR 전: `pnpm verify:frontend`
+- 프론트엔드 PR 빠른 게이트: `pnpm verify:frontend:pr`
+- 프론트엔드 전체 게이트: `pnpm verify:frontend`
 - 전체 수동 점검 한 번에: `pnpm verify`
 - one-command local demo 실행: `pnpm dev:demo`
 - clean local demo reset + 실행: `pnpm dev:demo:reset`
@@ -57,6 +72,7 @@ CI 실행:
 
 - PR / protected branch push 시 `Policy`, `.github/workflows/ci.yml`, `.github/workflows/playwright.yml`, `.github/workflows/security-smoke.yml`이 변경 범위에 맞게 자동 실행된다.
 - branch/commit/workpack 같은 governance 검증은 항상 유지하고, quality/build/QA는 관련 파일 변경이 있을 때만 뜬다.
+- `.github/workflows/playwright.yml`은 `scripts/ci-path-filter.mjs`로 job-level path filter를 계산한다. 그래서 workflow 자체는 떠도 무거운 Playwright/Lighthouse job은 관련 변경이 있을 때만 실행된다.
 - dependency audit은 `.github/workflows/security-review.yml`에서 protected branch push, schedule, manual dispatch 기준으로 실행한다.
 
 ### Layer 2 — Agentic Exploratory QA
@@ -162,7 +178,7 @@ CI 실행:
 
 - Stage 1: workpack README와 acceptance에 `QA / Test Data Plan`, `Data Setup / Preconditions`를 적어 fixture 경로, real DB smoke 경로, seed/reset 명령, bootstrap/system row 기대치를 먼저 잠근다.
 - Stage 2: 백엔드 구현은 Layer 1 deterministic gate를 통과하고, 스키마/테이블/bootstrap 의존 슬라이스라면 real DB smoke 또는 동등한 검증을 추가로 남긴다.
-- Stage 4: 프론트 구현은 Layer 1 deterministic gate를 먼저 green으로 만든 뒤 Layer 2 exploratory QA를 실행한다. exploratory QA를 실행했다면 바로 Layer 3 단건 `qa:eval`로 report 품질도 남긴다.
+- Stage 4: 프론트 구현은 PR 빠른 게이트(`pnpm verify:frontend:pr`)를 먼저 green으로 만든 뒤 Layer 2 exploratory QA를 실행한다. Ready for Review 또는 merge 전에는 전체 게이트(`pnpm verify:frontend`)를 한 번 통과시킨다. exploratory QA를 실행했다면 바로 Layer 3 단건 `qa:eval`로 report 품질도 남긴다.
 - Stage 5~6: 디자인 리뷰와 PR 리뷰는 Layer 1 결과, exploratory report, qa eval 결과를 함께 읽고 finding 처리 여부를 판단한다.
 - QA 시스템 자체를 바꾸는 docs/tooling 작업은 product slice와 별도로 Layer 3 suite(`pnpm qa:eval:suite`)를 실행한다.
 

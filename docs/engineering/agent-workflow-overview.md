@@ -21,7 +21,7 @@
 | `change_type` | 대상 예시 | `required_checks` | `optional_reviews` | `N/A allowed fields` | 기본 PR 경로 |
 |---------------|-----------|-------------------|--------------------|----------------------|-------------|
 | `product-backend` | Route Handler, 상태 전이, 권한, schema | `pnpm install --frozen-lockfile && pnpm verify:backend`, 브랜치/커밋 규칙, 실제 동작 확인 | security reviewer 추가 점검 | Design / Accessibility (UI 변경 없음 근거 필요) | Draft → required checks green → Ready for Review → 전체 PR checks green 후 merge |
-| `product-frontend` | 화면 구현, 상태 UI, 로그인 게이트, UX 흐름 | `pnpm install --frozen-lockfile && pnpm verify:frontend`, 실제 동작 확인 | Stage 5 디자인 리뷰, `product-design-authority`(new-screen / high-risk / anchor extension), performance reviewer, high-risk UI의 exploratory QA | Security / Performance / Design 항목 중 무영향 영역은 근거와 함께 `N/A` 가능 | Draft → required checks green → Ready for Review → 전체 PR checks green 후 merge |
+| `product-frontend` | 화면 구현, 상태 UI, 로그인 게이트, UX 흐름 | PR 빠른 게이트: `pnpm install --frozen-lockfile && pnpm verify:frontend:pr`, Ready/merge 전 전체 게이트: `pnpm verify:frontend`, 실제 동작 확인 | Stage 5 디자인 리뷰, `product-design-authority`(new-screen / high-risk / anchor extension), performance reviewer, high-risk UI의 exploratory QA | Security / Performance / Design 항목 중 무영향 영역은 근거와 함께 `N/A` 가능 | Draft → 빠른 required checks green → Ready for Review → 전체 PR checks green 후 merge |
 | `docs-governance` | `AGENTS.md`, `CLAUDE.md`, `docs/engineering/*.md`, PR 템플릿 | 문서 정합성 검토, 관련 unit test 또는 validation script, 필요한 경우만 targeted test | `agent-plan-loop`, `agent-review-loop`, human governance review | Test/E2E, Security, Performance, Design은 `N/A` + 근거 허용 | 필요 시 Draft 생략 가능, 단 merge 전 리뷰 기록 필요 |
 | `contract-evolution` | 사용자 승인 기반 공식 요구사항/화면/API/DB/Flow 계약 변경, `CURRENT_SOURCE_OF_TRUTH` 갱신, 관련 workpack 재잠금 | 명시적 사용자 승인 기록, 공식 문서·버전 경로 동기화, `CURRENT_SOURCE_OF_TRUTH` sync, 영향 범위 정리, 관련 workpack/acceptance sync, 필요한 최소 validation | `agent-plan-loop`, `agent-review-loop`, human governance review | docs-only PR이면 Test/E2E, Security, Performance, Design은 `N/A` + 근거 허용 | 별도 docs PR merge → 이후 product slice 재개 |
 | `low-risk docs/config` | 오탈자 수정, 주석/설명 보강, 위험도 낮은 config 정리 | 변경 파일 확인, 필요한 최소 validation | 추가 리뷰 선택 | 영향 없는 항목은 `N/A` + 근거 허용 | 작은 PR 허용, 단 PR 본문 근거 기록 |
@@ -39,6 +39,8 @@
 - `required_checks`는 이 문서가 단일 소스다. 다른 문서는 change type을 가정하지 않고 이 문서를 참조한다.
 - `required_checks`는 로컬/PR 준비 단계의 최소 검증 세트다. merge gate는 별도로 현재 PR head SHA에 대해 시작된 check 전체가 완료/green인지 확인한다.
 - GitHub Actions는 변경 범위에 따라 무거운 job만 자동 실행한다. policy/PR governance는 기본 유지하고, code CI·frontend QA·security smoke·qa eval은 관련 파일 변경이 있을 때만 뜨는 것을 기본값으로 본다.
+- Frontend QA는 `scripts/ci-path-filter.mjs`의 job-level path filter를 따른다. 일반 디자인 PR은 core smoke/a11y/visual만 blocker로 두고, 전체 slice regression과 전체 visual/a11y는 Ready for Review, `full-ci` label, nightly/manual, protected branch push에서 실행한다.
+- Lighthouse는 성능 관련 경로가 바뀐 비초안 PR에서만 blocker다. 성능 관련 경로 변경이 없으면 PR 본문 Performance 섹션에 `N/A: 성능 관련 경로 변경 없음`처럼 근거를 남긴다.
 
 ### PR Template Guidance
 
