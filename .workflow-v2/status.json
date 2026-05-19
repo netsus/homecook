@@ -1020,7 +1020,7 @@
         "pnpm validate:workpack -- --slice design-polish-slice3-recipe-detail",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs created by Claude on docs/design-polish-slice3-recipe-detail. Stage 4 frontend implemented by Claude and scope-repaired by Codex. Stage 5 Claude review found no blockers. FE-only visual polish. Scope: RECIPE_DETAIL mobile inline stepper glyph/weight balance, planner-add modal compact stepper visible circle size reduction, Wave1HeroMetricButton/Status font-weight reduction (extrabold→bold), serving icon + metric controls + stepper color role parity. Web tokens unchanged. Global app token values unchanged. No anchor-extension. Full pnpm verify:frontend passed locally."
+      "notes": "Stage 1 docs created by Claude on docs/design-polish-slice3-recipe-detail. Stage 4 frontend implemented by Claude and scope-repaired by Codex. Stage 5 Claude review found no blockers. FE-only visual polish. Scope: RECIPE_DETAIL mobile inline stepper glyph/weight balance, planner-add modal compact stepper visible circle size reduction, Wave1HeroMetricButton/Status font-weight reduction (extrabold→bold), serving icon + metric controls + stepper color role parity. Web tokens unchanged. Global app token values unchanged. No anchor-extension. Full pnpm verify:frontend passed locally. closeout_phase=completed last_recovery_at=2026-05-19T17:48:38Z"
     }
   ]
 }

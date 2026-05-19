@@ -74,7 +74,7 @@ N/A — 이 슬라이스에 백엔드 변경 없음. FE-only visual polish.
 - UI risk: `low-risk`
 - Anchor screen dependency: `RECIPE_DETAIL`
 - Visual artifact: Stage 4에서 인분 stepper, 메트릭 영역 before/after screenshot 제공 예정
-- Authority status: `not-required`
+- Authority status: not-required
 - Notes: 이 슬라이스는 RECIPE_DETAIL 앵커 화면의 (1) 버튼 크기 축소, (2) font-weight 경량화, (3) 색상 토큰 정합만 수행한다. 핵심 CTA(플래너 추가, 요리하기)의 추가/변경이 아니고, 스크롤 구조, 정보 위계, 모달/시트 전환, 새 진입 흐름을 변경하지 않으므로 anchor-extension이 아니라 low-risk visual polish다. design-generator / design-critic은 신규 화면이나 high-risk UI change가 아니므로 생략한다. Stage 4 완료 시 인분 stepper 영역과 히어로 메트릭 영역의 mobile (390px) before/after screenshot으로 regression 검증만 수행한다.
 
 ## Design Status
