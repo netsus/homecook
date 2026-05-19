@@ -22,9 +22,13 @@ Captured MVP evidence:
 Visual baselines:
 
 - `tests/e2e/qa-visual.spec.ts-snapshots/qa-leftovers-ready-desktop-chrome-darwin.png`
+- `tests/e2e/qa-visual.spec.ts-snapshots/qa-leftovers-ready-desktop-chrome-linux.png`
 - `tests/e2e/qa-visual.spec.ts-snapshots/qa-leftovers-empty-desktop-chrome-darwin.png`
+- `tests/e2e/qa-visual.spec.ts-snapshots/qa-leftovers-empty-desktop-chrome-linux.png`
 - `tests/e2e/qa-visual.spec.ts-snapshots/qa-ate-list-ready-desktop-chrome-darwin.png`
+- `tests/e2e/qa-visual.spec.ts-snapshots/qa-ate-list-ready-desktop-chrome-linux.png`
 - `tests/e2e/qa-visual.spec.ts-snapshots/qa-ate-list-empty-desktop-chrome-darwin.png`
+- `tests/e2e/qa-visual.spec.ts-snapshots/qa-ate-list-empty-desktop-chrome-linux.png`
 
 Local verification:
 
