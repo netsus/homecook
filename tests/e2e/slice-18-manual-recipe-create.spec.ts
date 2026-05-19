@@ -66,7 +66,11 @@ async function setBaseServings(page: Page, servings: number) {
 }
 
 async function openStepAdd(page: Page) {
-  await page.getByRole("button", { name: "+ 단계" }).click();
+  await expect(page.getByTestId("manual-step-composer")).toBeVisible();
+}
+
+async function submitInlineStep(page: Page) {
+  await page.getByRole("button", { name: "+ 조리 과정 추가" }).click();
 }
 
 async function installCookingMethodsRoute(page: Page, methods: CookingMethodItem[]) {
@@ -223,13 +227,12 @@ test.describe("Slice 18: Manual Recipe Create", () => {
       "양파를 한입 크기로 썰어 중불에서 볶아주세요"
     );
 
-    // Click the "추가" button within the step modal footer
-    const stepModal = page.locator('div.fixed.inset-0.z-50').last();
-    await stepModal.locator('button:has-text("추가")').click();
+    // Click the inline step composer add button
+    await submitInlineStep(page);
 
     // Verify step added
     await expect(page.locator("text=1.")).toBeVisible();
-    await expect(page.locator("text=볶기")).toBeVisible();
+    await expect(page.locator("span", { hasText: /^볶기$/ }).first()).toBeVisible();
 
     // Save recipe
     await getSaveButton(page).click();
@@ -317,11 +320,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
       'textarea[placeholder="조리 설명을 입력하세요"]',
       "양파를 볶아주세요"
     );
-    await page
-      .locator('div.fixed.inset-0.z-50')
-      .last()
-      .locator('button:has-text("추가")')
-      .click();
+    await submitInlineStep(page);
 
     const saveButton = getSaveButton(page);
     await expect(saveButton).toBeEnabled();
@@ -385,8 +384,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await page.click('button:has-text("섞기/준비")');
     await page.fill('textarea[placeholder="조리 설명을 입력하세요"]', "소금을 약간 넣어주세요");
 
-    const stepModal = page.locator('div.fixed.inset-0.z-50').last();
-    await stepModal.locator('button:has-text("추가")').click();
+    await submitInlineStep(page);
 
     // Now save button should be enabled
     await expect(saveButton).toBeEnabled();
@@ -495,8 +493,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await openStepAdd(page);
     await page.click('button:has-text("섞기/준비")');
     await page.fill('textarea[placeholder="조리 설명을 입력하세요"]', "소금을 약간 넣어주세요");
-    const stepModal = page.locator('div.fixed.inset-0.z-50').last();
-    await stepModal.locator('button:has-text("추가")').click();
+    await submitInlineStep(page);
 
     await getSaveButton(page).click();
     await expect(page.locator("text=레시피 등록 완료")).toBeVisible({ timeout: 5000 });
@@ -588,8 +585,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await openStepAdd(page);
     await page.click('button:has-text("섞기/준비")');
     await page.fill('textarea[placeholder="조리 설명을 입력하세요"]', "재료를 잘 섞어주세요");
-    const stepModal = page.locator('div.fixed.inset-0.z-50').last();
-    await stepModal.locator('button:has-text("추가")').click();
+    await submitInlineStep(page);
 
     await getSaveButton(page).click();
     await expect(page.locator("text=레시피 등록 완료")).toBeVisible({ timeout: 5000 });
@@ -641,8 +637,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await openStepAdd(page);
     await page.click('button:has-text("섞기/준비")');
     await page.fill('textarea[placeholder="조리 설명을 입력하세요"]', "재료를 잘 섞어주세요");
-    const stepModal = page.locator('div.fixed.inset-0.z-50').last();
-    await stepModal.locator('button:has-text("추가")').click();
+    await submitInlineStep(page);
 
     await getSaveButton(page).click();
     await expect(page.locator("text=레시피 등록 완료")).toBeVisible({ timeout: 5000 });
@@ -1004,10 +999,8 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await page.goto(MANUAL_RECIPE_CREATE_URL);
     await openStepAdd(page);
 
-    const stepModal = page.locator('div.fixed.inset-0.z-50').last();
-    await expect(stepModal.getByText("조리 과정 추가")).toBeVisible();
-
-    await page.mouse.click(12, 12);
+    await expect(page.getByTestId("manual-step-composer")).toBeVisible();
+    await expect(page.getByRole("button", { name: "+ 조리 과정 추가" })).toBeDisabled();
     await expect(page.locator('div.fixed.inset-0.z-50')).toHaveCount(0);
   });
 });
