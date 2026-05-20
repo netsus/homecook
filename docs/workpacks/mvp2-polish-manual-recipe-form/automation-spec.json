@@ -13,7 +13,7 @@
   },
   "frontend": {
     "branch": "feature/fe-mvp2-polish-manual-recipe-form",
-    "stage": 4,
+    "stage": 6,
     "required_routes": [
       "/menu/add/manual"
     ],
@@ -65,9 +65,10 @@
         "ui/designs/authority/MVP2_POLISH_MANUAL_RECIPE_FORM-authority.md"
       ],
       "evidence_artifact_refs": [
-        "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-validation-mobile.png",
-        "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-stepper-mobile.png",
-        "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-ingredient-modal-mobile.png",
+        "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-base-servings-stepper-mobile.png",
+        "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-method-required-validation-mobile.png",
+        "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-field-validation-on-save-mobile.png",
+        "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-ingredient-modal-selection-mobile.png",
         "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-narrow.png"
       ]
     }

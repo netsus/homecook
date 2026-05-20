@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0",
+  "mode": "coverage-sensitive",
+  "generatedAt": "2026-05-20T22:49:10+09:00",
+  "slice": "mvp2-polish-manual-recipe-form",
+  "reportPath": "ui/designs/evidence/mvp2-polish-manual-recipe-form/exploratory-report.json",
+  "validationErrors": [],
+  "score": {
+    "total": 100,
+    "breakdown": {
+      "coverageRate": 1,
+      "blockedRate": 0,
+      "deviceCoverage": 1,
+      "findingQualityRate": 1,
+      "severityRate": 1,
+      "summaryRate": 1
+    },
+    "pass": true,
+    "thresholds": {
+      "minTotal": 85
+    }
+  }
+}

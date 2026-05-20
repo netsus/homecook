@@ -62,7 +62,7 @@ async function fillRecipeTitle(page: Page, title: string) {
 }
 
 async function setBaseServings(page: Page, servings: number) {
-  await page.getByLabel("기준 인분").fill(String(servings));
+  await page.getByRole("spinbutton", { name: "기준 인분", exact: true }).fill(String(servings));
 }
 
 async function openStepAdd(page: Page) {
@@ -203,7 +203,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
 
     // Increase servings to 3
     await setBaseServings(page, 3);
-    await expect(page.getByLabel("기준 인분")).toHaveValue("3");
+    await expect(page.getByRole("spinbutton", { name: "기준 인분", exact: true })).toHaveValue("3");
 
     // Add ingredient
     await page.click("text=+ 재료 추가");
@@ -351,20 +351,22 @@ test.describe("Slice 18: Manual Recipe Create", () => {
 
     await page.goto(MANUAL_RECIPE_CREATE_URL);
 
-    // Save button should be disabled initially
+    // Save button stays clickable so invalid submit can show field-level guidance.
     const saveButton = getSaveButton(page);
-    await expect(saveButton).toBeDisabled();
-    const requirements = page.getByTestId("manual-save-requirements");
-    await expect(requirements).toContainText("요리 이름");
-    await expect(requirements).toContainText("재료");
-    await expect(requirements).toContainText("조리법");
+    await expect(saveButton).toBeEnabled();
+    await expect(page.getByTestId("manual-save-requirements")).toHaveCount(0);
+
+    await saveButton.click();
+    await expect(page.getByText("요리 이름을 입력해주세요.")).toBeVisible();
+    await expect(page.getByText("재료를 1개 이상 추가해주세요.")).toBeVisible();
+    await expect(page.getByText("조리 과정을 추가해주세요.")).toBeVisible();
 
     // Add title only
     await fillRecipeTitle(page, "테스트 레시피");
-    await expect(saveButton).toBeDisabled(); // Still disabled (no ingredients/steps)
-    await expect(requirements).not.toContainText("요리 이름");
-    await expect(requirements).toContainText("재료");
-    await expect(requirements).toContainText("조리법");
+    await expect(saveButton).toBeEnabled();
+    await expect(page.getByText("요리 이름을 입력해주세요.")).toHaveCount(0);
+    await expect(page.getByText("재료를 1개 이상 추가해주세요.")).toBeVisible();
+    await expect(page.getByText("조리 과정을 추가해주세요.")).toBeVisible();
 
     // Add ingredient
     await page.click("text=+ 재료 추가");
@@ -375,9 +377,9 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
     await ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
 
-    await expect(saveButton).toBeDisabled(); // Still disabled (no steps)
-    await expect(requirements).not.toContainText("재료");
-    await expect(requirements).toContainText("조리법");
+    await expect(saveButton).toBeEnabled();
+    await expect(page.getByText("재료를 1개 이상 추가해주세요.")).toHaveCount(0);
+    await expect(page.getByText("조리 과정을 추가해주세요.")).toBeVisible();
 
     // Add step
     await openStepAdd(page);
@@ -389,6 +391,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     // Now save button should be enabled
     await expect(saveButton).toBeEnabled();
     await expect(page.getByTestId("manual-save-requirements")).toHaveCount(0);
+    await expect(page.getByText("조리 과정을 추가해주세요.")).toHaveCount(0);
   });
 
   test("guest: redirects to login with return-to-action", async ({ page }) => {
@@ -824,7 +827,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
       ingredientModal.locator("ul").getByText("양파", { exact: true }),
     ).toBeVisible();
     await expect(ingredientModal.getByText("돼지고기", { exact: true })).toBeVisible();
-    await expect(ingredientModal.getByText("1개 선택됨")).toBeVisible();
+    await expect(ingredientModal.getByRole("button", { name: "양파 선택 해제" })).toBeVisible();
     await expect(ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" })).toBeVisible();
     await expect(ingredientModal.getByText("선택된 재료")).toHaveCount(0);
   });
@@ -845,8 +848,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
     await ingredientModal.getByText("대파", { exact: true }).click();
 
-    const editor = ingredientModal.getByTestId("ingredient-editor");
-    await expect(editor.getByText("대파", { exact: true })).toBeVisible();
+    await expect(ingredientModal.getByRole("button", { name: "대파 선택 해제" })).toBeVisible();
     await expect(ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" })).toBeVisible();
     await ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
     await expect(page.getByLabel("대파 수량")).toHaveValue("100");
@@ -900,10 +902,10 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await ingredientModal.getByText("양파", { exact: true }).click();
 
     await expect(ingredientModal.getByText(/재료 (추가|선택)/)).toBeVisible();
-    await expect(ingredientModal.getByText("1개 선택됨")).toBeVisible();
+    await expect(ingredientModal.getByRole("button", { name: "양파 선택 해제" })).toBeVisible();
 
     await ingredientModal.getByText("돼지고기", { exact: true }).click();
-    await expect(ingredientModal.getByText("2개 선택됨")).toBeVisible();
+    await expect(ingredientModal.getByRole("button", { name: "돼지고기 선택 해제" })).toBeVisible();
 
     await ingredientModal.getByRole("button", { name: "선택한 재료 2개 추가" }).click();
     await expect(page.locator('div.fixed.inset-0.z-50')).toHaveCount(0);

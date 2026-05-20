@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "mvp2-polish-manual-recipe-form",
+  "generatedAt": "2026-05-20T22:49:10+09:00",
+  "devices": [
+    "mobile-chrome",
+    "mobile-narrow",
+    "desktop-chrome"
+  ],
+  "summary": "Exploratory QA covered MANUAL_RECIPE_CREATE base servings controls, invalid-save field validation, cooking-method selection requirements, selected ingredient summary placement/deselection, and active add button treatment. No unresolved blocker, major, or minor issue remained. Claude delegation stalled with a zero-byte response, so Codex completed fallback authority per user instruction.",
+  "findings": [],
+  "remainingRisks": [
+    "Claude implementation/authority could not complete because the provided resume session stalled with a zero-byte response; Codex completed fallback implementation and review per user instruction.",
+    "Real DB smoke was not run because this is a FE-only presentation and interaction change with unchanged API/DB/state transition contracts.",
+    "Actual mobile keyboard overlap remains manual-only because Playwright screenshots do not emulate device keyboard occlusion."
+  ],
+  "evidence": [
+    "ui/designs/authority/MVP2_POLISH_MANUAL_RECIPE_FORM-authority.md",
+    "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-base-servings-stepper-mobile.png",
+    "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-method-required-validation-mobile.png",
+    "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-field-validation-on-save-mobile.png",
+    "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-ingredient-modal-selection-mobile.png",
+    "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-narrow.png"
+  ],
+  "checks": [
+    "pnpm vitest run tests/manual-recipe-create-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx",
+    "pnpm typecheck",
+    "pnpm lint",
+    "pnpm playwright test tests/e2e/slice-18-manual-recipe-create.spec.ts --project=mobile-chrome",
+    "pnpm playwright test tests/e2e/tmp-mvp2-manual-recipe-form-evidence.spec.ts --project=mobile-chrome",
+    "pnpm playwright test tests/e2e/tmp-mvp2-manual-method-evidence.spec.ts --project=mobile-chrome",
+    "pnpm verify:frontend"
+  ]
+}
