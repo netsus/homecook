@@ -123,11 +123,10 @@ function getManualSaveRequirements({
 interface AppBarProps {
   onBack: () => void;
   onSave: () => void;
-  canSave: boolean;
   isSaving: boolean;
 }
 
-function AppBar({ onBack, onSave, canSave, isSaving }: AppBarProps) {
+function AppBar({ onBack, onSave, isSaving }: AppBarProps) {
   return (
     <div className="shrink-0 border-b border-[#DEE2E6] bg-white">
       <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
@@ -160,12 +159,12 @@ function AppBar({ onBack, onSave, canSave, isSaving }: AppBarProps) {
         <button
           className={[
             "h-[var(--control-height-md)] shrink-0 rounded-[var(--radius-control)] px-3 text-sm font-semibold lg:px-4 lg:text-base",
-            canSave && !isSaving
+            !isSaving
               ? "text-[var(--brand)] hover:bg-[var(--brand-soft)]"
               : "cursor-not-allowed text-[#ADB5BD]",
           ].join(" ")}
           onClick={onSave}
-          disabled={!canSave || isSaving}
+          disabled={isSaving}
           type="button"
         >
           {isSaving ? "저장 중..." : "저장"}
@@ -175,10 +174,57 @@ function AppBar({ onBack, onSave, canSave, isSaving }: AppBarProps) {
   );
 }
 
+interface BaseServingsStepperProps {
+  value: number;
+  onChange: (value: number) => void;
+}
+
+function BaseServingsStepper({ value, onChange }: BaseServingsStepperProps) {
+  const updateValue = (nextValue: number) => {
+    onChange(Math.max(1, nextValue));
+  };
+
+  return (
+    <div
+      aria-label="기준 인분 조절"
+      className="grid h-[38px] grid-cols-[2.5rem_minmax(3.5rem,1fr)_2.5rem] overflow-hidden rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white"
+      role="group"
+    >
+      <button
+        aria-label="기준 인분 줄이기"
+        className="flex items-center justify-center border-r border-[#DEE2E6] text-[18px] font-semibold text-[#212529] disabled:text-[#ADB5BD]"
+        disabled={value <= 1}
+        onClick={() => updateValue(value - 1)}
+        type="button"
+      >
+        -
+      </button>
+      <input
+        aria-label="기준 인분"
+        className="min-w-0 bg-white px-2 text-center text-[14px] font-semibold text-[#212529] outline-none focus:bg-[var(--brand-soft)]"
+        inputMode="numeric"
+        min={1}
+        onChange={(event) => updateValue(Number(event.target.value) || 1)}
+        type="number"
+        value={value}
+      />
+      <button
+        aria-label="기준 인분 늘리기"
+        className="flex items-center justify-center border-l border-[#DEE2E6] text-[18px] font-semibold text-[#212529]"
+        onClick={() => updateValue(value + 1)}
+        type="button"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
 // ─── Ingredient List ─────────────────────────────────────────────────────────
 
 interface IngredientListProps {
   ingredients: TempIngredient[];
+  showValidationError: boolean;
   onChange: (
     tempId: string,
     patch: Pick<ManualRecipeIngredientInput, "amount" | "unit">,
@@ -186,10 +232,20 @@ interface IngredientListProps {
   onRemove: (tempId: string) => void;
 }
 
-function IngredientList({ ingredients, onChange, onRemove }: IngredientListProps) {
+function IngredientList({
+  ingredients,
+  showValidationError,
+  onChange,
+  onRemove,
+}: IngredientListProps) {
   if (ingredients.length === 0) {
     return (
-      <p className="mb-2 text-[12px] font-medium leading-[1.4] text-[#868E96]">
+      <p
+        className={[
+          "mb-2 text-[12px] font-medium leading-[1.4]",
+          showValidationError ? "text-[var(--danger)]" : "text-[#868E96]",
+        ].join(" ")}
+      >
         재료를 1개 이상 추가해주세요.
       </p>
     );
@@ -270,15 +326,21 @@ function IngredientList({ ingredients, onChange, onRemove }: IngredientListProps
 
 interface StepListProps {
   steps: TempStep[];
+  showValidationError: boolean;
   onRemove: (tempId: string) => void;
 }
 
-function StepList({ steps, onRemove }: StepListProps) {
+function StepList({ steps, showValidationError, onRemove }: StepListProps) {
   if (steps.length === 0) {
     return (
-      <div className="rounded-[var(--radius-control)] bg-[#F8F9FA] px-4 py-3 text-[14px] font-medium leading-[1.5] text-[#868E96]">
+      <p
+        className={[
+          "mb-2 text-[12px] font-medium leading-[1.4]",
+          showValidationError ? "text-[var(--danger)]" : "text-[#868E96]",
+        ].join(" ")}
+      >
         조리 과정을 추가해주세요.
-      </div>
+      </p>
     );
   }
 
@@ -328,34 +390,6 @@ function StepList({ steps, onRemove }: StepListProps) {
   );
 }
 
-function SaveRequirementsNotice({ requirements }: { requirements: string[] }) {
-  if (requirements.length === 0) {
-    return null;
-  }
-
-  return (
-    <div
-      className="mx-4 rounded-[var(--radius-card)] bg-white px-4 py-3 text-[#495057] md:mx-0 md:border md:border-[#EDF0F2]"
-      data-testid="manual-save-requirements"
-      role="status"
-    >
-      <p className="text-[13px] font-semibold leading-[1.45] text-[#495057]">
-        저장하려면 아래 항목을 채워주세요.
-      </p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {requirements.map((requirement) => (
-          <span
-            className="rounded-[var(--radius-control)] bg-[#F1F3F5] px-2.5 py-1 text-[12px] font-medium text-[#495057]"
-            key={requirement}
-          >
-            {requirement}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── Inline Step Composer ────────────────────────────────────────────────────
 
 interface StepInlineComposerProps {
@@ -371,18 +405,17 @@ function StepInlineComposer({
 }: StepInlineComposerProps) {
   const [selectedMethodId, setSelectedMethodId] = useState("");
   const [instruction, setInstruction] = useState("");
-
-  useEffect(() => {
-    if (!selectedMethodId && cookingMethods[0]) {
-      setSelectedMethodId(cookingMethods[0].id);
-    }
-  }, [cookingMethods, selectedMethodId]);
+  const [methodError, setMethodError] = useState<string | null>(null);
 
   const selectedMethod =
     cookingMethods.find((method) => method.id === selectedMethodId) ?? null;
 
   const handleAdd = () => {
-    if (!selectedMethod || !instruction.trim()) return;
+    if (!instruction.trim()) return;
+    if (!selectedMethod) {
+      setMethodError("조리방법을 선택해주세요.");
+      return;
+    }
 
     onAdd({
       instruction: instruction.trim(),
@@ -393,6 +426,7 @@ function StepInlineComposer({
       duration_text: null,
     });
     setInstruction("");
+    setMethodError(null);
   };
 
   return (
@@ -423,7 +457,10 @@ function StepInlineComposer({
                 key={method.id}
                 aria-pressed={isSelected}
                 className="h-9 shrink-0 rounded-full border px-3 text-[13px] font-semibold transition"
-                onClick={() => setSelectedMethodId(method.id)}
+                onClick={() => {
+                  setSelectedMethodId(method.id);
+                  setMethodError(null);
+                }}
                 style={{
                   backgroundColor: isSelected
                     ? color
@@ -450,6 +487,11 @@ function StepInlineComposer({
           value={instruction}
         />
       </label>
+      {methodError ? (
+        <p className="mt-2 text-[12px] font-semibold text-[var(--danger)]">
+          {methodError}
+        </p>
+      ) : null}
       <button
         className={[
           "mt-2 flex h-10 w-full items-center justify-center rounded-[var(--radius-control)] text-[13px] font-semibold",
@@ -457,7 +499,7 @@ function StepInlineComposer({
             ? "bg-[var(--brand)] text-white"
             : "bg-[#DEE2E6] text-[#ADB5BD]",
         ].join(" ")}
-        disabled={!selectedMethod || !instruction.trim()}
+        disabled={!instruction.trim()}
         onClick={handleAdd}
         type="button"
       >
@@ -596,6 +638,7 @@ export function ManualRecipeCreateScreen({
   const [modalMode, setModalMode] = useState<ModalMode>("none");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [createdRecipeId, setCreatedRecipeId] = useState<string | null>(null);
   const [createdRecipeTitle, setCreatedRecipeTitle] = useState<string>("");
 
@@ -691,8 +734,13 @@ export function ManualRecipeCreateScreen({
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!canSave) return;
+    if (!canSave) {
+      setShowValidationErrors(true);
+      setSaveError(null);
+      return;
+    }
 
+    setShowValidationErrors(false);
     setIsSaving(true);
     setSaveError(null);
 
@@ -808,7 +856,7 @@ export function ManualRecipeCreateScreen({
               <WebButton onClick={handleBack} variant="secondary">
                 취소
               </WebButton>
-              <WebButton disabled={!canSave || isSaving} onClick={handleSave}>
+              <WebButton disabled={isSaving} onClick={handleSave}>
                 {isSaving ? "저장 중..." : "저장"}
               </WebButton>
             </div>
@@ -829,28 +877,19 @@ export function ManualRecipeCreateScreen({
                     type="text"
                     value={title}
                   />
+                  {showValidationErrors && title.trim().length === 0 ? (
+                    <span className="text-[12px] font-semibold text-[var(--danger)]">
+                      요리 이름을 입력해주세요.
+                    </span>
+                  ) : null}
                 </label>
-                <label className="web-manual-field">
+                <div className="web-manual-field">
                   <span>기준 인분</span>
-                  <div className="web-stepper" aria-label="기준 인분" role="group">
-                    <button
-                      aria-label="인분 줄이기"
-                      disabled={baseServings <= 1}
-                      onClick={() => setBaseServings((value) => Math.max(1, value - 1))}
-                      type="button"
-                    >
-                      −
-                    </button>
-                    <span>{baseServings}인분</span>
-                    <button
-                      aria-label="인분 늘리기"
-                      onClick={() => setBaseServings((value) => value + 1)}
-                      type="button"
-                    >
-                      +
-                    </button>
-                  </div>
-                </label>
+                  <BaseServingsStepper
+                    value={baseServings}
+                    onChange={setBaseServings}
+                  />
+                </div>
               </div>
             </section>
 
@@ -861,6 +900,7 @@ export function ManualRecipeCreateScreen({
               </div>
               <IngredientList
                 ingredients={ingredients}
+                showValidationError={showValidationErrors}
                 onChange={handleUpdateIngredient}
                 onRemove={handleRemoveIngredient}
               />
@@ -882,7 +922,11 @@ export function ManualRecipeCreateScreen({
                 <p className="web-picker-subtle">조리방법 불러오는 중...</p>
               ) : (
                 <>
-                  <StepList steps={steps} onRemove={handleRemoveStep} />
+                  <StepList
+                    steps={steps}
+                    showValidationError={showValidationErrors}
+                    onRemove={handleRemoveStep}
+                  />
                   <StepInlineComposer
                     cookingMethods={cookingMethods}
                     nextStepNumber={steps.length + 1}
@@ -897,8 +941,6 @@ export function ManualRecipeCreateScreen({
                 {saveError}
               </div>
             ) : null}
-
-            <SaveRequirementsNotice requirements={saveRequirements} />
           </WebCard>
         </WebShell>
 
@@ -935,7 +977,6 @@ export function ManualRecipeCreateScreen({
       <AppBar
         onBack={handleBack}
         onSave={handleSave}
-        canSave={canSave}
         isSaving={isSaving}
       />
       <div className="mb-[96px] min-h-0 flex-1 scroll-pb-[120px] overflow-y-auto pb-[120px] md:mb-0 md:px-4 md:pb-6 md:scroll-pb-6">
@@ -957,21 +998,21 @@ export function ManualRecipeCreateScreen({
                   onChange={(e) => setTitle(e.target.value)}
                   className="h-[38px] w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-normal text-[#212529] placeholder:text-[#868E96] focus:border-[var(--brand)] focus:outline-none"
                 />
+                {showValidationErrors && title.trim().length === 0 ? (
+                  <span className="mt-1.5 block text-[12px] font-semibold leading-[1.4] text-[var(--danger)]">
+                    요리 이름을 입력해주세요.
+                  </span>
+                ) : null}
               </label>
-              <label className="block max-w-[13rem]">
+              <div className="block max-w-[13rem]">
                 <span className="mb-1.5 block text-[12px] font-medium leading-[1.4] text-[#868E96]">
                   기준 인분
                 </span>
-                <input
-                  type="number"
-                  min={1}
+                <BaseServingsStepper
                   value={baseServings}
-                  onChange={(e) =>
-                    setBaseServings(Math.max(1, Number(e.target.value) || 1))
-                  }
-                  className="h-[38px] w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-normal text-[#212529] focus:border-[var(--brand)] focus:outline-none"
+                  onChange={setBaseServings}
                 />
-              </label>
+              </div>
             </div>
           </section>
 
@@ -987,6 +1028,7 @@ export function ManualRecipeCreateScreen({
             </div>
             <IngredientList
               ingredients={ingredients}
+              showValidationError={showValidationErrors}
               onChange={handleUpdateIngredient}
               onRemove={handleRemoveIngredient}
             />
@@ -1015,7 +1057,11 @@ export function ManualRecipeCreateScreen({
               </p>
             ) : (
               <>
-                <StepList steps={steps} onRemove={handleRemoveStep} />
+                <StepList
+                  steps={steps}
+                  showValidationError={showValidationErrors}
+                  onRemove={handleRemoveStep}
+                />
                 <StepInlineComposer
                   cookingMethods={cookingMethods}
                   nextStepNumber={steps.length + 1}
@@ -1033,8 +1079,6 @@ export function ManualRecipeCreateScreen({
               {saveError}
             </div>
           )}
-
-          <SaveRequirementsNotice requirements={saveRequirements} />
         </div>
 
       </div>

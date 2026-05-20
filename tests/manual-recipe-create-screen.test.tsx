@@ -133,6 +133,62 @@ describe("ManualRecipeCreateScreen", () => {
     expect(screen.getByRole("button", { name: "준비" })).toBeTruthy();
   });
 
+  it("shows inline validation instead of the bottom save requirements box after invalid save", async () => {
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    expect(screen.queryByTestId("manual-save-requirements")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(screen.getByText("요리 이름을 입력해주세요.")).toBeTruthy();
+    expect(screen.getByText("재료를 1개 이상 추가해주세요.")).toBeTruthy();
+    expect(screen.getByText("조리 과정을 추가해주세요.")).toBeTruthy();
+  });
+
+  it("uses plus and minus controls around base servings without going below one", async () => {
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.click(screen.getByRole("button", { name: "기준 인분 늘리기" }));
+
+    expect(screen.getByLabelText("기준 인분").getAttribute("value")).toBe("3");
+
+    await user.click(screen.getByRole("button", { name: "기준 인분 줄이기" }));
+    await user.click(screen.getByRole("button", { name: "기준 인분 줄이기" }));
+    await user.click(screen.getByRole("button", { name: "기준 인분 줄이기" }));
+
+    expect(screen.getByLabelText("기준 인분").getAttribute("value")).toBe("1");
+  });
+
+  it("requires choosing a cooking method before adding an inline cooking step", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchCookingMethods).mockResolvedValue({
+      success: true,
+      data: {
+        methods: [
+          {
+            id: "method-stir",
+            code: "stir_fry",
+            label: "볶기",
+            color_key: "orange",
+            is_system: true,
+          },
+        ],
+      },
+      error: null,
+    });
+
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await screen.findByRole("button", { name: "볶기" });
+    await user.type(screen.getByLabelText("조리 과정 1 설명"), "양파를 볶아요");
+    await user.click(screen.getByRole("button", { name: "+ 조리 과정 추가" }));
+
+    expect(screen.getByText("조리방법을 선택해주세요.")).toBeTruthy();
+    expect(screen.queryByText("1.")).toBeNull();
+  });
+
   it("adds cooking steps inline with the selected cooking method color", async () => {
     const user = userEvent.setup();
     vi.mocked(fetchCookingMethods).mockResolvedValue({
@@ -174,5 +230,27 @@ describe("ManualRecipeCreateScreen", () => {
       getCookingMethodColor("orange"),
     );
     expect(screen.getByLabelText("조리 과정 2 설명")).toBeTruthy();
+  });
+
+  it("lets selected ingredient chips deselect from the summary under categories", async () => {
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
+    await user.click(await screen.findByRole("button", { name: "양파" }));
+
+    const addButton = screen.getByRole("button", {
+      name: "선택한 재료 1개 추가",
+    });
+    expect(addButton.className).toContain("bg-[var(--wave1-mint-contrast)]");
+
+    await user.click(screen.getByRole("button", { name: "양파 선택 해제" }));
+
+    expect(screen.queryByRole("button", { name: "양파 선택 해제" })).toBeNull();
+    expect(
+      (screen.getByRole("button", {
+        name: "선택한 재료 0개 추가",
+      }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 });

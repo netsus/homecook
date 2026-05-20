@@ -119,13 +119,6 @@ export function RecipeIngredientAddModal({
   }, [debouncedQuery, requestCategory]);
 
   const canAddIngredient = selectedIngredients.length > 0;
-  const mobileHelperMessage = useMemo(() => {
-    if (selectedIngredients.length === 0) {
-      return "재료만 먼저 선택해주세요. 수량과 단위는 다음 화면에서 입력해요.";
-    }
-
-    return `${selectedIngredients.length}개 선택됨. 완료하면 본문 재료 목록에 추가돼요.`;
-  }, [selectedIngredients.length]);
 
   const selectedIngredientIds = useMemo(
     () => new Set(selectedIngredients.map((ingredient) => ingredient.id)),
@@ -360,6 +353,27 @@ export function RecipeIngredientAddModal({
               selectedValue={activeCategory}
             />
           </div>
+          {selectedIngredients.length > 0 ? (
+            <div
+              aria-live="polite"
+              className="mt-3 max-h-20 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] p-2"
+              data-testid="added-ingredient-chips"
+            >
+              <div className="flex flex-wrap gap-2">
+                {selectedIngredients.map((ingredient) => (
+                  <button
+                    aria-label={`${ingredient.standard_name} 선택 해제`}
+                    className="rounded-[var(--radius-sm)] bg-[var(--brand)] px-3 py-1.5 text-sm font-semibold text-white shadow-[var(--shadow-1)]"
+                    key={ingredient.id}
+                    onClick={() => removeIngredient(ingredient.id)}
+                    type="button"
+                  >
+                    {ingredient.standard_name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
@@ -415,27 +429,11 @@ export function RecipeIngredientAddModal({
 
         <div className="border-t border-[var(--line)] px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="space-y-3" data-testid="ingredient-editor">
-            {selectedIngredients.length > 0 ? (
-              <div
-                className="max-h-20 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] p-2"
-                data-testid="added-ingredient-chips"
-              >
-                <div className="flex flex-wrap gap-2">
-                  {selectedIngredients.map((ingredient) => (
-                    <span
-                      className="rounded-[var(--radius-sm)] bg-[var(--brand)] px-3 py-1.5 text-sm font-semibold text-white shadow-[var(--shadow-1)]"
-                      key={ingredient.id}
-                    >
-                      {ingredient.standard_name}
-                    </span>
-                  ))}
-                </div>
-              </div>
+            {selectedIngredients.length === 0 ? (
+              <p className="min-h-5 text-sm text-[var(--muted)]">
+                재료만 먼저 선택해주세요. 수량과 단위는 다음 화면에서 입력해요.
+              </p>
             ) : null}
-
-            <p className="min-h-5 text-sm text-[var(--muted)]">
-              {mobileHelperMessage}
-            </p>
           </div>
 
           <div className="mt-4">
@@ -443,7 +441,7 @@ export function RecipeIngredientAddModal({
               disabled={!canAddIngredient}
               fullWidth
               size="sm"
-              variant="neutral"
+              variant={canAddIngredient ? "primary" : "neutral"}
               onClick={handleAdd}
             >
               선택한 재료 {selectedIngredients.length}개 추가
