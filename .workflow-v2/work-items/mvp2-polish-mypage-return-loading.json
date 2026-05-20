@@ -1,0 +1,95 @@
+{
+  "id": "mvp2-polish-mypage-return-loading",
+  "title": "MVP2 Polish - MyPage navigation/loading regressions",
+  "summary": "마이페이지 loading 헤더 정렬 안정화, 레시피북/장보기 상세 뒤로가기 시 MyPage 홈 flash 제거, 장보기 상세 loading skeleton 도입. FE-only, API/DB 변경 없음.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "마이페이지 하위 화면의 loading 상태 레이아웃 불안정과 상세 복귀 시 중간 화면 flash를 제거하고, 장보기 상세 loading에 skeleton UI를 도입해 navigation/loading 품질을 안정화한다.",
+  "owners": {
+    "claude": "stage1/stage4",
+    "codex": "stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "17a-mypage-overview-history",
+    "17b-recipebook-detail-remove",
+    "17c-settings-account",
+    "10a-shopping-detail-interact",
+    "12a-shopping-complete",
+    "design-polish-slice7-mypage-settings-account"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.6.7.md",
+      "docs/화면정의서-v1.5.4.md",
+      "docs/유저flow맵-v1.3.4.md",
+      "docs/api문서-v1.2.5.md",
+      "docs/db설계-v1.3.3.md",
+      "docs/design/mobile-ux-rules.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/mvp2-polish-mypage-return-loading/README.md",
+      "docs/workpacks/mvp2-polish-mypage-return-loading/acceptance.md",
+      "docs/workpacks/mvp2-polish-mypage-return-loading/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/qa-system.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice mvp2-polish-mypage-return-loading",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "low-risk-skip-rationale",
+      "browser-flow-regression",
+      "skeleton-rendering"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 docs created by Claude. FE-only low-risk navigation/loading polish: MyPage loading header alignment stabilization, recipebook/shopping detail back navigation direct return (extends design-polish-slice7 work), and shopping detail loading skeleton introduction. API/DB/design token changes out of scope.",
+  "out_of_scope": [
+    "API, DB, auth, mutation, state transition contract changes",
+    "MYPAGE visual redesign or tab information architecture changes",
+    "Recipebook create/update/delete policy changes",
+    "Shopping detail read-only/complete/reorder policy changes",
+    "Settings/account actions changes",
+    "Desktop-only layout changes (unless same issue applies)",
+    "Web color tokens or global brand token value changes"
+  ],
+  "open_questions": []
+}
