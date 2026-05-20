@@ -1113,6 +1113,25 @@
         "git diff --check"
       ],
       "notes": "Stage 1 docs created through Claude delegation; Claude CLI did not return a final response, so Codex completed FE fallback per user instruction. FE-only low-risk navigation/loading polish completed: MyPage mobile loading now uses the restored surface title/body and stable left-aligned header, existing recipebook/shopping return context remains direct, and ShoppingDetail loading now renders a structure skeleton. API/DB/design token changes out of scope. Tested: pnpm vitest run tests/mypage-screen.test.tsx; pnpm vitest run tests/shopping-detail.frontend.test.tsx; pnpm playwright test tests/e2e/slice-17a-mypage.spec.ts --project=mobile-chrome --grep \"returns directly|navigates to shopping detail\". closeout_phase=completed closeout_recovery=manual_patch:1 closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:PR #515 policy run 26160728582,pnpm verify:frontend,tests/mypage-screen.test.tsx,tests/shopping-detail.frontend.test.tsx,tests/e2e/slice-17a-mypage.spec.ts,tests/e2e/slice-10a-shopping-detail-interact.spec.ts last_recovery_at=2026-05-20T20:53:30+09:00"
+    },
+    {
+      "id": "mvp2-polish-planner-meal-add-modal",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/mvp2-polish-planner-meal-add-modal",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm verify:frontend",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice mvp2-polish-planner-meal-add-modal",
+        "pnpm validate:authority-evidence-presence",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs branch for MVP2 Planner meal-add modal follow-up. Claude resume session b48a95b1-d4bf-490f-bd7e-915f2f4521bf was invoked with session_attach_mode=resume, model=opus, effort=high, permission_mode=bypassPermissions, but produced no response artifact and Codex completed Stage 1 fallback per user instruction. FE-only anchor-extension follow-up over design-polish-slice4-planner-meal-add: YouTube option modal entry, shared picker back button shape, leftover modal back button, and option typography normalization. API/DB/auth/state transition changes out of scope."
     }
   ]
 }

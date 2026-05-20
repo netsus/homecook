@@ -1,0 +1,98 @@
+{
+  "slice_id": "mvp2-polish-planner-meal-add-modal",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "anchor_extension": true,
+  "anchor_screens": [
+    "PLANNER_WEEK"
+  ],
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "branch": "feature/fe-mvp2-polish-planner-meal-add-modal",
+    "stage": 4,
+    "required_routes": [
+      "/planner",
+      "/planner/meals/[date]",
+      "/menu-add",
+      "/menu/add/youtube",
+      "/menu/add/manual"
+    ],
+    "required_states": [
+      "loading:preserved",
+      "empty:preserved",
+      "error:preserved",
+      "read-only:preserved",
+      "unauthorized:preserved"
+    ],
+    "verify_commands": [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "screenshot",
+      "authority-report",
+      "shared-back-button-regression",
+      "youtube-modal-entry",
+      "option-font-normalization"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": [
+        "PLANNER_WEEK"
+      ],
+      "required_screens": [
+        "PLANNER_WEEK",
+        "MEAL_SCREEN",
+        "MENU_ADD",
+        "YT_IMPORT"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow",
+        "back-button-shape",
+        "youtube-modal-entry",
+        "option-font-normalization"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/MVP2_POLISH_PLANNER_MEAL_ADD_MODAL-authority.md"
+      ],
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/PLANNER_WEEK-youtube-modal-mobile.png",
+        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/PLANNER_WEEK-youtube-modal-mobile-narrow.png",
+        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_SCREEN-youtube-modal-mobile.png",
+        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_ADD-back-button-mobile.png",
+        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_ADD-options-font-mobile.png"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "youtube-option-route-only-from-planner",
+    "picker-back-button-shape-drift",
+    "leftover-picker-no-back-button",
+    "manual-option-route-regression",
+    "option-font-size-mismatch",
+    "state-ui-regression"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}
