@@ -71,17 +71,17 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "merged",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
   "closeout": null,
-  "notes": "Stage 1 docs created by Claude. FE-only low-risk navigation/loading polish: MyPage loading header alignment stabilization, recipebook/shopping detail back navigation direct return (extends design-polish-slice7 work), and shopping detail loading skeleton introduction. API/DB/design token changes out of scope.",
+  "notes": "Stage 1 docs created through Claude delegation; Claude CLI did not return a final response, so Codex completed FE fallback per user instruction. FE-only low-risk navigation/loading polish completed: MyPage mobile loading now uses the restored surface title/body and stable left-aligned header, existing recipebook/shopping return context remains direct, and ShoppingDetail loading now renders a structure skeleton. API/DB/design token changes out of scope.",
   "out_of_scope": [
     "API, DB, auth, mutation, state transition contract changes",
     "MYPAGE visual redesign or tab information architecture changes",

@@ -494,27 +494,10 @@ export function ShoppingDetailScreen({
 
   if (viewState === "loading") {
     return (
-      <div
-        className="flex min-h-screen flex-col bg-[var(--wave1-surface)]"
-        data-testid="shopping-detail-state-shell"
-      >
-        <div className="flex-1 px-4 py-6">
-          <ContentState
-            tone="loading"
-            title="장보기 리스트를 불러오고 있어요..."
-            description="잠시만 기다려주세요"
-            variant="subtle"
-          />
-          <div className="mt-4 space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-20 animate-pulse rounded-[var(--radius-panel)] bg-white/60"
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+      <ShoppingDetailSkeleton
+        mobile={isMobileViewport}
+        onBack={appReturn.goBack}
+      />
     );
   }
 
@@ -778,6 +761,110 @@ export function ShoppingDetailScreen({
         ) : null}
       </main>
     </WebShell>
+  );
+}
+
+function ShoppingDetailSkeleton({
+  mobile,
+  onBack,
+}: {
+  mobile: boolean;
+  onBack: () => void;
+}) {
+  if (mobile) {
+    return (
+      <div
+        aria-busy="true"
+        aria-label="장보기 상세를 불러오는 중"
+        className="flex min-h-dvh flex-col bg-[#F8F9FA] text-[#212529]"
+        data-testid="shopping-detail-skeleton"
+      >
+        <header className="shrink-0 border-b border-[#DEE2E6] bg-white">
+          <div className="grid min-h-[var(--control-height-xl)] grid-cols-[36px_1fr_36px] items-center gap-2 px-4 py-2.5">
+            <button
+              aria-label="뒤로 가기"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529]"
+              onClick={onBack}
+              type="button"
+            >
+              <span aria-hidden="true" className="text-[26px] leading-none">
+                ‹
+              </span>
+            </button>
+            <h1 className="min-w-0 truncate text-center text-[18px] font-extrabold leading-[1.3]">
+              장보기 상세
+            </h1>
+            <div aria-hidden="true" />
+          </div>
+        </header>
+        <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
+          <section className="border-b border-[#DEE2E6] bg-white px-5 pb-5 pt-[18px]">
+            <div className="space-y-3">
+              <div className="h-3 w-32 animate-pulse rounded-full bg-[#F1F3F5]" />
+              <div className="h-7 w-44 animate-pulse rounded-[var(--radius-control)] bg-[#F1F3F5]" />
+              <div className="h-4 w-56 animate-pulse rounded-full bg-[#F1F3F5]" />
+            </div>
+          </section>
+          <section className="space-y-3 px-4 py-4">
+            {[1, 2, 3, 4].map((index) => (
+              <div
+                className="flex min-h-[74px] items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-3"
+                key={index}
+              >
+                <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-[#F1F3F5]" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="h-4 w-36 animate-pulse rounded-full bg-[#F1F3F5]" />
+                  <div className="h-3 w-24 animate-pulse rounded-full bg-[#F1F3F5]" />
+                </div>
+                <div className="h-8 w-16 animate-pulse rounded-full bg-[#F1F3F5]" />
+              </div>
+            ))}
+          </section>
+        </main>
+        <Wave1MobileBottomTab
+          ariaLabel="장보기 상세 화면 하단 탐색"
+          currentTab="planner"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      aria-busy="true"
+      aria-label="장보기 상세를 불러오는 중"
+      className="min-h-screen bg-[var(--wave1-surface)]"
+      data-testid="shopping-detail-skeleton"
+    >
+      <WebShell>
+        <WebTopNav activeId="planner" items={WEB_NAV_ITEMS} />
+        <main className="mx-auto max-w-5xl px-5 py-8">
+          <div className="mb-6 rounded-[var(--radius-card)] border border-[var(--line)] bg-white p-5">
+            <div className="h-4 w-40 animate-pulse rounded-full bg-[#F1F3F5]" />
+            <div className="mt-4 h-8 w-64 animate-pulse rounded-[var(--radius-control)] bg-[#F1F3F5]" />
+            <div className="mt-3 h-4 w-80 animate-pulse rounded-full bg-[#F1F3F5]" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((index) => (
+                <div
+                  className="h-20 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-white"
+                  key={index}
+                />
+              ))}
+            </div>
+            <aside className="space-y-3">
+              {[1, 2].map((index) => (
+                <div
+                  className="h-28 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-white"
+                  key={index}
+                />
+              ))}
+            </aside>
+          </div>
+        </main>
+      </WebShell>
+    </div>
   );
 }
 

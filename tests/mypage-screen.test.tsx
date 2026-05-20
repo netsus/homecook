@@ -291,6 +291,44 @@ describe("MypageScreen", () => {
     expect(screen.getByRole("heading", { name: "마이페이지" })).toBeTruthy();
   });
 
+  it("uses the restored recipebook surface title during mobile loading", () => {
+    installMatchMedia(true);
+    mockFetchUserProfile.mockReturnValue(new Promise(() => {}));
+    mockFetchRecipeBooks.mockReturnValue(new Promise(() => {}));
+
+    render(
+      <MypageScreen
+        initialActiveTab="recipebooks"
+        initialAuthenticated
+        initialMobileSurface="recipebook"
+      />,
+    );
+
+    expect(screen.getByTestId("mypage-mobile-loading")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "레시피북" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "뒤로" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "마이페이지" })).toBeNull();
+  });
+
+  it("uses the restored shopping surface title during mobile loading", () => {
+    installMatchMedia(true);
+    mockFetchUserProfile.mockReturnValue(new Promise(() => {}));
+    mockFetchRecipeBooks.mockReturnValue(new Promise(() => {}));
+
+    render(
+      <MypageScreen
+        initialActiveTab="shopping"
+        initialAuthenticated
+        initialMobileSurface="shopping"
+      />,
+    );
+
+    expect(screen.getByTestId("mypage-mobile-loading")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "장보기 기록" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "뒤로" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "마이페이지" })).toBeNull();
+  });
+
   it("shows empty state message when no custom books exist", async () => {
     mockFetchRecipeBooks.mockResolvedValue({
       books: MOCK_BOOKS.books.filter((b) => b.book_type !== "custom"),
