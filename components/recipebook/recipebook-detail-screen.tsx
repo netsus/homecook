@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
@@ -61,6 +61,21 @@ const BOOK_BADGE_LABEL: Record<RecipeBookType, string> = {
   saved: "저장",
 };
 
+const INTERNAL_URL_BASE = "http://homecook.local";
+
+function resolveMypageBreadcrumbHref(href: string) {
+  try {
+    const url = new URL(href, INTERNAL_URL_BASE);
+    if (url.origin === INTERNAL_URL_BASE && url.pathname === "/mypage") {
+      return `${url.pathname}${url.search}${url.hash}`;
+    }
+  } catch {
+    return "/mypage";
+  }
+
+  return "/mypage";
+}
+
 function buildRecipeBookDetailHref({
   bookId,
   bookName,
@@ -94,6 +109,10 @@ export function RecipeBookDetailScreen({
   const router = useRouter();
   const isMobileViewport = useIsMobileViewport();
   const appReturn = useAppReturn({ fallback: "/mypage" });
+  const mypageBreadcrumbHref = useMemo(
+    () => resolveMypageBreadcrumbHref(appReturn.href),
+    [appReturn.href],
+  );
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
@@ -564,7 +583,7 @@ export function RecipeBookDetailScreen({
           <Link
             aria-label="뒤로 가기"
             className="web-breadcrumb-link"
-            href="/mypage"
+            href={mypageBreadcrumbHref}
           >
             ‹ 마이페이지
           </Link>
