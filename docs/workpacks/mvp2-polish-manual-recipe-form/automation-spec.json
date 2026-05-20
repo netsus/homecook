@@ -1,0 +1,88 @@
+{
+  "slice_id": "mvp2-polish-manual-recipe-form",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "anchor_extension": false,
+  "anchor_screens": [],
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "branch": "feature/fe-mvp2-polish-manual-recipe-form",
+    "stage": 4,
+    "required_routes": [
+      "/menu/add/manual"
+    ],
+    "required_states": [
+      "loading:preserved",
+      "empty:preserved",
+      "error:preserved",
+      "unauthorized:preserved"
+    ],
+    "verify_commands": [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "screenshot",
+      "authority-report",
+      "base-servings-stepper",
+      "method-required-validation",
+      "field-validation-on-save",
+      "ingredient-modal-selection"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "MANUAL_RECIPE_CREATE",
+        "RECIPE_INGREDIENT_ADD_MODAL"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow",
+        "base-servings-stepper",
+        "method-required-validation",
+        "field-validation-on-save",
+        "ingredient-modal-selection"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/MVP2_POLISH_MANUAL_RECIPE_FORM-authority.md"
+      ],
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-validation-mobile.png",
+        "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-stepper-mobile.png",
+        "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-ingredient-modal-mobile.png",
+        "ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-narrow.png"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "base-servings-no-stepper",
+    "cooking-step-defaults-to-stir-fry",
+    "save-validation-only-bottom-box",
+    "selected-ingredients-summary-in-footer-only",
+    "selected-chip-cannot-deselect",
+    "add-selected-button-looks-disabled"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}
