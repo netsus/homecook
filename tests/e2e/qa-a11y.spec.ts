@@ -77,6 +77,15 @@ function visibleSortButton(page: Page) {
   );
 }
 
+async function expectDesktopMypageNavLabel(page: Page) {
+  const nav = page.getByRole("navigation", { name: "데스크탑 주요 메뉴" });
+
+  await expect(nav.getByRole("link", { name: "마이페이지" })).toBeVisible();
+  await expect(
+    nav.getByRole("link", { exact: true, name: "마이" }),
+  ).toHaveCount(0);
+}
+
 function getLoginActionButton(
   page: import("@playwright/test").Page,
 ) {
@@ -427,6 +436,7 @@ test.describe("QA accessibility smoke", () => {
     await expect(
       page.getByRole("heading", { name: "장보기 준비" }),
     ).toBeVisible();
+    await expectDesktopMypageNavLabel(page);
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });
@@ -435,6 +445,7 @@ test.describe("QA accessibility smoke", () => {
     await expect(
       page.getByRole("heading", { name: "이번 주 장보기" }),
     ).toBeVisible();
+    await expectDesktopMypageNavLabel(page);
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });
@@ -451,6 +462,7 @@ test.describe("QA accessibility smoke", () => {
     await expect(
       page.getByRole("heading", { name: "지난 주 장보기" }),
     ).toBeVisible();
+    await expectDesktopMypageNavLabel(page);
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });
