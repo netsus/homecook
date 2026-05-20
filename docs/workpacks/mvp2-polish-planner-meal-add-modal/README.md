@@ -73,22 +73,22 @@
 - UI risk: `anchor-extension`
 - Anchor screen dependency: `PLANNER_WEEK`
 - Visual artifact:
-  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/PLANNER_WEEK-youtube-modal-mobile.png`
-  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/PLANNER_WEEK-youtube-modal-mobile-narrow.png`
-  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_SCREEN-youtube-modal-mobile.png`
-  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_ADD-back-button-mobile.png`
-  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_ADD-options-font-mobile.png`
-- Authority status: `required`
+  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/PLANNER_WEEK-youtube-modal-entry-mobile.png`
+  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/PLANNER_WEEK-youtube-modal-entry-mobile-narrow.png`
+  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_SCREEN-youtube-modal-entry-mobile.png`
+  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_ADD-back-button-shape-mobile.png`
+  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_ADD-option-font-normalization-mobile.png`
+- Authority status: `reviewed`
 - Notes:
   - 신규 화면은 만들지 않으므로 design-generator/design-critic은 생략한다.
   - 다만 PLANNER_WEEK의 핵심 식사추가 옵션에서 `유튜브에서 가져오기`의 route transition을 modal/sheet entry로 바꾸므로 anchor-extension으로 분류한다.
-  - Stage 4 후 screenshot evidence 기반 Product Design Authority review를 수행한다.
+  - Stage 4 후 screenshot evidence 기반 Product Design Authority review를 수행했다.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 ## Source Links
@@ -142,19 +142,40 @@
 > 이 체크리스트는 Stage 4~6 동안 계속 갱신하는 living closeout 문서다.
 > Stage 6 merge 시점에는 Manual Only를 제외한 In Scope 항목이 모두 닫혀 있어야 한다.
 
-- [ ] `검색으로 추가`가 PLANNER_WEEK/MEAL_SCREEN에서 modal/sheet로 열린다 <!-- omo:id=mppma-search-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] `레시피북에서 추가`가 PLANNER_WEEK/MEAL_SCREEN에서 modal/sheet로 열린다 <!-- omo:id=mppma-recipebook-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] `팬트리 기반 추천`이 PLANNER_WEEK/MEAL_SCREEN에서 modal/sheet로 열린다 <!-- omo:id=mppma-pantry-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] `유튜브에서 가져오기`가 route-only 이동이 아니라 modal/sheet entry로 열린다 <!-- omo:id=mppma-youtube-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] `/menu/add/youtube` deep link/fallback route가 유지된다 <!-- omo:id=mppma-youtube-route-fallback;stage=4;scope=frontend;review=5,6 -->
-- [ ] `직접등록`은 기존 `/menu/add/manual` route 이동을 유지한다 <!-- omo:id=mppma-manual-route-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] picker header 뒤로가기 버튼 크기/형태가 shared primitive로 통일된다 <!-- omo:id=mppma-shared-back-button;stage=4;scope=frontend;review=5,6 -->
-- [ ] `남은 요리에서 추가` 모달에 뒤로가기 버튼이 추가된다 <!-- omo:id=mppma-leftover-back-button;stage=4;scope=frontend;review=5,6 -->
-- [ ] `유튜브에서 가져오기`와 `직접등록` option button typography가 다른 옵션과 일치한다 <!-- omo:id=mppma-option-font-normalized;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 loading/empty/error/unauthorized 상태 UI가 보존된다 <!-- omo:id=mppma-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] 모바일 default/narrow screenshot evidence와 authority report가 생성된다 <!-- omo:id=mppma-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] `Vitest` / `Playwright` 자동화 범위가 업데이트된다 <!-- omo:id=mppma-test-coverage;stage=4;scope=frontend;review=6 -->
-- [ ] `pnpm lint`, `pnpm typecheck`, `pnpm verify:frontend`가 통과한다 <!-- omo:id=mppma-frontend-verification;stage=4;scope=frontend;review=6 -->
+- [x] `검색으로 추가`가 PLANNER_WEEK/MEAL_SCREEN에서 modal/sheet로 열린다 <!-- omo:id=mppma-search-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] `레시피북에서 추가`가 PLANNER_WEEK/MEAL_SCREEN에서 modal/sheet로 열린다 <!-- omo:id=mppma-recipebook-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] `팬트리 기반 추천`이 PLANNER_WEEK/MEAL_SCREEN에서 modal/sheet로 열린다 <!-- omo:id=mppma-pantry-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] `유튜브에서 가져오기`가 route-only 이동이 아니라 modal/sheet entry로 열린다 <!-- omo:id=mppma-youtube-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] `/menu/add/youtube` deep link/fallback route가 유지된다 <!-- omo:id=mppma-youtube-route-fallback;stage=4;scope=frontend;review=5,6 -->
+- [x] `직접등록`은 기존 `/menu/add/manual` route 이동을 유지한다 <!-- omo:id=mppma-manual-route-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] picker header 뒤로가기 버튼 크기/형태가 shared primitive로 통일된다 <!-- omo:id=mppma-shared-back-button;stage=4;scope=frontend;review=5,6 -->
+- [x] `남은 요리에서 추가` 모달에 뒤로가기 버튼이 추가된다 <!-- omo:id=mppma-leftover-back-button;stage=4;scope=frontend;review=5,6 -->
+- [x] `유튜브에서 가져오기`와 `직접등록` option button typography가 다른 옵션과 일치한다 <!-- omo:id=mppma-option-font-normalized;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 loading/empty/error/unauthorized 상태 UI가 보존된다 <!-- omo:id=mppma-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] 모바일 default/narrow screenshot evidence와 authority report가 생성된다 <!-- omo:id=mppma-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] `Vitest` / `Playwright` 자동화 범위가 업데이트된다 <!-- omo:id=mppma-test-coverage;stage=4;scope=frontend;review=6 -->
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm verify:frontend`가 통과한다 <!-- omo:id=mppma-frontend-verification;stage=4;scope=frontend;review=6 -->
+
+## Stage 5/6 Closeout Evidence
+
+- Authority report: `ui/designs/authority/MVP2_POLISH_PLANNER_MEAL_ADD_MODAL-authority.md`
+- Screenshot evidence:
+  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/PLANNER_WEEK-youtube-modal-entry-mobile.png`
+  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/PLANNER_WEEK-youtube-modal-entry-mobile-narrow.png`
+  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_SCREEN-youtube-modal-entry-mobile.png`
+  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_ADD-back-button-shape-mobile.png`
+  - `ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_ADD-option-font-normalization-mobile.png`
+- Local verification:
+  - `pnpm vitest run tests/menu-add-screen.test.tsx tests/planner-week-screen.test.tsx tests/planner-meal-screen.test.tsx`
+  - `pnpm typecheck`
+  - `pnpm lint`
+  - `pnpm playwright test tests/e2e/tmp-mvp2-planner-meal-add-modal-evidence.spec.ts --project=mobile-chrome` (temporary evidence spec removed after capture)
+  - `pnpm verify:frontend`
+  - `PR_IS_DRAFT=false pnpm validate:authority-evidence-presence`
+  - `pnpm validate:workpack -- --slice mvp2-polish-planner-meal-add-modal`
+  - `pnpm validate:workflow-v2`
+  - `git diff --check`
+- Claude delegation note: Stage 1/4 was requested through resume session `b48a95b1-d4bf-490f-bd7e-915f2f4521bf` with `session_attach_mode=resume`, `model=opus`, `effort=high`, `permission_mode=bypassPermissions`; the CLI produced no response artifact and stalled, so Codex completed fallback implementation and review per user instruction.
 
 ## Contract Evolution Candidates
 

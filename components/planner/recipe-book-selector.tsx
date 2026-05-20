@@ -4,6 +4,10 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import {
+  AppBackButton,
+  AppBackButtonSpacer,
+} from "@/components/shared/app-back-button";
+import {
   WebEmptyState,
   WebListRow,
   WebSkeleton,
@@ -235,18 +239,11 @@ export function RecipeBookSelector({
     return (
       <div className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]">
         <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-2">
-          <button
-            aria-label="뒤로"
-            className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529]"
-            onClick={onBack ?? onClose}
-            type="button"
-          >
-            ‹
-          </button>
+          <AppBackButton onClick={onBack ?? onClose} />
           <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
             레시피북에서 추가
           </h1>
-          <div className="h-[var(--control-height-md)] w-11 shrink-0" aria-hidden="true" />
+          <AppBackButtonSpacer />
         </div>
         <div className="p-4 pb-[112px]">{content}</div>
         <Wave1MobileBottomTab ariaLabel="레시피북 선택 하단 탭" currentTab="planner" />

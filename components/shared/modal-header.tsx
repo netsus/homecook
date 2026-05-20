@@ -10,6 +10,7 @@ interface ModalHeaderProps {
   descriptionClassName?: string;
   /** Optional badge node rendered inline after the title */
   badge?: React.ReactNode;
+  leadingAction?: React.ReactNode;
   onClose: () => void;
   closeDisabled?: boolean;
   /** Ref forwarded to the close button — used by modals that need focus management */
@@ -23,13 +24,15 @@ export function ModalHeader({
   description,
   descriptionClassName,
   badge,
+  leadingAction,
   onClose,
   closeDisabled,
   closeButtonRef,
 }: ModalHeaderProps) {
   return (
     <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
+      {leadingAction ? <div className="shrink-0">{leadingAction}</div> : null}
+      <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h2
             className="text-lg font-bold text-[var(--wave1-ink)]"

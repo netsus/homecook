@@ -16,6 +16,7 @@ interface AppOverlayBaseProps {
   descriptionClassName?: string;
   footer?: React.ReactNode;
   headerSlot?: React.ReactNode;
+  leadingAction?: React.ReactNode;
   onClose: () => void;
   panelClassName?: string;
   panelRef?: React.Ref<HTMLDivElement>;
@@ -81,6 +82,7 @@ export function AppBottomSheet({
   descriptionClassName,
   footer,
   headerSlot,
+  leadingAction,
   onClose,
   panelClassName,
   panelRef,
@@ -117,6 +119,7 @@ export function AppBottomSheet({
             badge={badge}
             description={description}
             descriptionClassName={descriptionClassName}
+            leadingAction={leadingAction}
             onClose={onClose}
             title={title}
             titleId={ariaLabelledBy}
@@ -155,6 +158,7 @@ export function AppCenterDialog({
   description,
   descriptionClassName,
   footer,
+  leadingAction,
   onClose,
   panelRef,
   testId,
@@ -178,6 +182,7 @@ export function AppCenterDialog({
           badge={badge}
           description={description}
           descriptionClassName={descriptionClassName}
+          leadingAction={leadingAction}
           onClose={onClose}
           title={title}
           titleId={ariaLabelledBy}

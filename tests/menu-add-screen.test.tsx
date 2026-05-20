@@ -67,7 +67,7 @@ describe("MenuAddScreen", () => {
     cleanup();
   });
 
-  it("opens the YouTube import screen from the current planner slot context", async () => {
+  it("opens a YouTube entry sheet before continuing to the import route", async () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 
     const user = userEvent.setup();
@@ -77,11 +77,26 @@ describe("MenuAddScreen", () => {
 
     await user.click(youtubeButton);
 
-    const pushedHref = mockRouterPush.mock.calls.at(-1)?.[0] as string;
+    const dialog = screen.getByRole("dialog", { name: "유튜브에서 가져오기" });
+    expect(dialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
+    expect(mockRouterPush).not.toHaveBeenCalled();
+
+    await user.type(
+      within(dialog).getByLabelText("유튜브 링크"),
+      "https://www.youtube.com/watch?v=recipe12345",
+    );
+    const continueLink = within(dialog).getByRole("link", {
+      name: "가져오기 화면 열기",
+    }) as HTMLAnchorElement;
+    const pushedHref = continueLink.getAttribute("href") ?? "";
+
     expect(pushedHref).toContain("/menu/add/youtube?");
     expect(pushedHref).toContain(`date=${DEFAULT_PROPS.planDate}`);
     expect(pushedHref).toContain(`columnId=${DEFAULT_PROPS.columnId}`);
     expect(pushedHref).toContain(`slot=${encodeURIComponent(DEFAULT_PROPS.slotName)}`);
+    expect(pushedHref).toContain(
+      `youtubeUrl=${encodeURIComponent("https://www.youtube.com/watch?v=recipe12345")}`,
+    );
     expect(pushedHref).toContain("returnTo=");
   });
 
@@ -143,6 +158,32 @@ describe("MenuAddScreen", () => {
 
     expect(dialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
     expect(leftoversApi.fetchLeftovers).toHaveBeenCalledWith("leftover");
+  });
+
+  it("returns from the leftover picker back button to the option list", async () => {
+    vi.mocked(leftoversApi.fetchLeftovers).mockResolvedValue({ items: [] });
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-leftover"));
+
+    const dialog = await screen.findByRole("dialog", { name: "남은 요리에서 추가" });
+    await user.click(within(dialog).getByTestId("leftover-picker-back"));
+
+    expect(screen.getByTestId("menu-add-option-grid")).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "남은 요리에서 추가" })).toBeNull();
+  });
+
+  it("uses matching typography for YouTube and manual option tiles", () => {
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const recipeBookButton = screen.getByTestId("menu-add-option-recipebook");
+    const youtubeButton = screen.getByTestId("menu-add-option-youtube");
+    const manualButton = screen.getByTestId("menu-add-option-manual");
+
+    expect(youtubeButton.className).toBe(recipeBookButton.className);
+    expect(manualButton.className).toBe(recipeBookButton.className);
   });
 
   it("returns from a source picker to the planner meal-add modal context", async () => {

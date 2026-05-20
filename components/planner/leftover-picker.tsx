@@ -9,6 +9,7 @@ import {
   AppModalFooterActions,
   AppStepper,
 } from "@/components/shared/app-overlay";
+import { AppBackButton } from "@/components/shared/app-back-button";
 import { fetchLeftovers } from "@/lib/api/leftovers";
 import type { LeftoverListItemData } from "@/types/leftover";
 
@@ -18,6 +19,7 @@ export interface LeftoverPickerProps {
   onLeftoverSelect: (leftover: LeftoverListItemData) => void;
   onServingsConfirm: (servings: number) => void;
   onServingsCancel: () => void;
+  onBack?: () => void;
   onClose: () => void;
 }
 
@@ -140,6 +142,7 @@ export function LeftoverPicker({
   onLeftoverSelect,
   onServingsConfirm,
   onServingsCancel,
+  onBack,
   onClose,
 }: LeftoverPickerProps) {
   const [loadState, setLoadState] = useState<LoadState>("loading");
@@ -173,6 +176,11 @@ export function LeftoverPicker({
         ariaLabelledBy="leftover-picker-title"
         bodyClassName="pb-5"
         description="플래너에 다시 올릴 남은요리를 골라주세요"
+        leadingAction={
+          onBack ? (
+            <AppBackButton onClick={onBack} testId="leftover-picker-back" />
+          ) : undefined
+        }
         onClose={onClose}
         panelClassName="max-w-md"
         title="남은 요리에서 추가"

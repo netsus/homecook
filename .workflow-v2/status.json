@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-19T21:30:06Z",
+  "updated_at": "2026-05-20T12:35:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1117,11 +1117,11 @@
     {
       "id": "mvp2-polish-planner-meal-add-modal",
       "preset": "vertical-slice-strict",
-      "branch": "docs/mvp2-polish-planner-meal-add-modal",
+      "branch": "feature/fe-mvp2-polish-planner-meal-add-modal",
       "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm lint",
         "pnpm typecheck",
@@ -1131,7 +1131,7 @@
         "pnpm validate:authority-evidence-presence",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs branch for MVP2 Planner meal-add modal follow-up. Claude resume session b48a95b1-d4bf-490f-bd7e-915f2f4521bf was invoked with session_attach_mode=resume, model=opus, effort=high, permission_mode=bypassPermissions, but produced no response artifact and Codex completed Stage 1 fallback per user instruction. FE-only anchor-extension follow-up over design-polish-slice4-planner-meal-add: YouTube option modal entry, shared picker back button shape, leftover modal back button, and option typography normalization. API/DB/auth/state transition changes out of scope."
+      "notes": "Stage 1/4 attempted through Claude resume session b48a95b1-d4bf-490f-bd7e-915f2f4521bf with session_attach_mode=resume, model=opus, effort=high, permission_mode=bypassPermissions. Claude CLI produced no response artifact and Codex completed fallback implementation/review per user instruction. FE-only anchor-extension follow-up completed: YouTube option now opens a context-preserving entry sheet, picker back button shape is shared, leftover modal has a back button, and YouTube/manual option typography is normalized. API/DB/auth/state transition changes out of scope. Tested: pnpm vitest run tests/menu-add-screen.test.tsx tests/planner-week-screen.test.tsx tests/planner-meal-screen.test.tsx; pnpm lint; pnpm typecheck; pnpm verify:frontend; PR_IS_DRAFT=false pnpm validate:authority-evidence-presence. closeout_phase=completed closeout_recovery=manual_patch:1|artifact_missing closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,tests/menu-add-screen.test.tsx,tests/planner-week-screen.test.tsx,tests/planner-meal-screen.test.tsx,ui/designs/authority/MVP2_POLISH_PLANNER_MEAL_ADD_MODAL-authority.md,ui/designs/evidence/mvp2-polish-planner-meal-add-modal last_recovery_at=2026-05-20T21:35:00+09:00"
     }
   ]
 }

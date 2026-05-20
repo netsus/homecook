@@ -5,7 +5,12 @@ import React from "react";
 
 import { AppBottomSheet } from "@/components/shared/app-overlay";
 
-export type MealAddPickerMode = "search" | "recipebook" | "pantry" | "leftover";
+export type MealAddPickerMode =
+  | "search"
+  | "recipebook"
+  | "pantry"
+  | "leftover"
+  | "youtube";
 export type MealAddRouteMode = "youtube" | "manual";
 
 interface MealAddOptionsSheetProps {
@@ -25,6 +30,9 @@ const PICKER_OPTIONS: Array<{
   { id: "pantry", icon: "🧊", label: "팬트리 기반 추천" },
   { id: "leftover", icon: "🍱", label: "남은요리에서 추가" },
 ];
+
+const OPTION_TILE_CLASS =
+  "flex min-h-[58px] items-center gap-2.5 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-left text-[13px] font-semibold leading-[1.25] text-[#212529]";
 
 function SearchIcon({ className }: { className?: string }) {
   return (
@@ -57,7 +65,7 @@ function OptionButton({
 }) {
   return (
     <button
-      className="flex min-h-[58px] items-center gap-2.5 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-left text-[13px] font-semibold text-[#212529]"
+      className={OPTION_TILE_CLASS}
       data-testid={testId}
       onClick={onClick}
       type="button"
@@ -65,7 +73,7 @@ function OptionButton({
       <span className="text-[20px]" aria-hidden="true">
         {icon}
       </span>
-      <span>{label}</span>
+      <span className="leading-[1.25]">{label}</span>
     </button>
   );
 }
@@ -112,20 +120,20 @@ export function MealAddOptionsSheet({
           />
         ))}
 
-        <Link
-          className="flex min-h-[58px] items-center gap-2.5 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-left text-[13px] font-semibold text-[#212529]"
+        <button
+          className={OPTION_TILE_CLASS}
           data-testid="meal-add-option-youtube"
-          href={routeHrefFor("youtube")}
-          onClick={onClose}
+          onClick={() => onPickerSelect("youtube")}
+          type="button"
         >
           <span className="text-[20px]" aria-hidden="true">
             🎬
           </span>
-          <span>유튜브에서 가져오기</span>
-        </Link>
+          <span className="leading-[1.25]">유튜브에서 가져오기</span>
+        </button>
 
         <Link
-          className="flex min-h-[58px] items-center gap-2.5 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-left text-[13px] font-semibold text-[#212529]"
+          className={OPTION_TILE_CLASS}
           data-testid="meal-add-option-manual"
           href={routeHrefFor("manual")}
           onClick={onClose}
@@ -133,7 +141,7 @@ export function MealAddOptionsSheet({
           <span className="text-[20px]" aria-hidden="true">
             ✏️
           </span>
-          <span>직접 등록</span>
+          <span className="leading-[1.25]">직접 등록</span>
         </Link>
       </div>
     </AppBottomSheet>

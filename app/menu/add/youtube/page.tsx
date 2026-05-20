@@ -22,6 +22,7 @@ interface YoutubeImportPageProps {
     returnSurface?: string;
     returnTo?: string;
     slot?: string;
+    youtubeUrl?: string;
   }>;
 }
 
@@ -30,7 +31,7 @@ export default async function YoutubeImportPage({ searchParams }: YoutubeImportP
     notFound();
   }
 
-  const { date, columnId, restore, returnSurface, returnTo, slot } =
+  const { date, columnId, restore, returnSurface, returnTo, slot, youtubeUrl } =
     await searchParams;
   const cookieStore = await cookies();
   const authOverride = readE2EAuthOverrideCookie(cookieStore);
@@ -50,6 +51,7 @@ export default async function YoutubeImportPage({ searchParams }: YoutubeImportP
     if (date) queryParts.push(`date=${encodeURIComponent(date)}`);
     if (columnId) queryParts.push(`columnId=${encodeURIComponent(columnId)}`);
     if (slot) queryParts.push(`slot=${encodeURIComponent(slot)}`);
+    if (youtubeUrl) queryParts.push(`youtubeUrl=${encodeURIComponent(youtubeUrl)}`);
     if (returnTo) queryParts.push(`returnTo=${encodeURIComponent(returnTo)}`);
     if (returnSurface) {
       queryParts.push(`returnSurface=${encodeURIComponent(returnSurface)}`);
@@ -64,6 +66,7 @@ export default async function YoutubeImportPage({ searchParams }: YoutubeImportP
     <main>
       <YoutubeImportScreen
         initialAuthenticated={initialAuthenticated}
+        initialYoutubeUrl={youtubeUrl ?? ""}
         planDate={date ?? ""}
         columnId={columnId ?? ""}
         slotName={slot ?? ""}

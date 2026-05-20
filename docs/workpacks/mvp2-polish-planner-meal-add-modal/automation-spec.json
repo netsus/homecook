@@ -15,7 +15,7 @@
   },
   "frontend": {
     "branch": "feature/fe-mvp2-polish-planner-meal-add-modal",
-    "stage": 4,
+    "stage": 6,
     "required_routes": [
       "/planner",
       "/planner/meals/[date]",
@@ -74,11 +74,11 @@
         "ui/designs/authority/MVP2_POLISH_PLANNER_MEAL_ADD_MODAL-authority.md"
       ],
       "evidence_artifact_refs": [
-        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/PLANNER_WEEK-youtube-modal-mobile.png",
-        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/PLANNER_WEEK-youtube-modal-mobile-narrow.png",
-        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_SCREEN-youtube-modal-mobile.png",
-        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_ADD-back-button-mobile.png",
-        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_ADD-options-font-mobile.png"
+        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/PLANNER_WEEK-youtube-modal-entry-mobile.png",
+        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/PLANNER_WEEK-youtube-modal-entry-mobile-narrow.png",
+        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_SCREEN-youtube-modal-entry-mobile.png",
+        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_ADD-back-button-shape-mobile.png",
+        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal/MEAL_ADD-option-font-normalization-mobile.png"
       ]
     }
   },
