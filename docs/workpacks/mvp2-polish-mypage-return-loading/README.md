@@ -186,14 +186,14 @@
 
 ## Delivery Checklist
 
-- [ ] MYPAGE loading 헤더 title alignment이 ready 상태와 일치 <!-- omo:id=mvp2-mypage-header-alignment;stage=4;scope=frontend;review=6 -->
-- [ ] MYPAGE 레시피북 목록에서 RECIPEBOOK_DETAIL 진입 시 return context 보존 <!-- omo:id=mvp2-recipebook-return-context;stage=4;scope=frontend;review=6 -->
-- [ ] RECIPEBOOK_DETAIL 뒤로가기 시 레시피북 목록 맥락으로 직접 복귀 <!-- omo:id=mvp2-recipebook-direct-back;stage=4;scope=frontend;review=6 -->
-- [ ] MYPAGE 장보기 기록에서 SHOPPING_DETAIL 진입 시 return context 보존 <!-- omo:id=mvp2-shopping-return-context;stage=4;scope=frontend;review=6 -->
-- [ ] SHOPPING_DETAIL 뒤로가기 시 장보기 기록 목록 맥락으로 직접 복귀 <!-- omo:id=mvp2-shopping-direct-back;stage=4;scope=frontend;review=6 -->
-- [ ] 마이페이지 root/default 중간 렌더링 또는 탭 깜빡임 회귀 없음 확인 <!-- omo:id=mvp2-no-intermediate-root-flash;stage=4;scope=frontend;review=6 -->
-- [ ] SHOPPING_DETAIL loading 상태가 skeleton UI를 사용 <!-- omo:id=mvp2-shopping-detail-skeleton;stage=4;scope=frontend;review=6 -->
-- [ ] 직접 진입 또는 다른 화면 진입의 기존 뒤로가기 fallback 유지 <!-- omo:id=mvp2-back-fallback-preserved;stage=4;scope=frontend;review=6 -->
-- [ ] `loading / empty / error / read-only / unauthorized` 상태 회귀 없음 확인 <!-- omo:id=mvp2-state-ui-preserved;stage=4;scope=frontend;review=6 -->
-- [ ] targeted Vitest / Playwright 라우팅/skeleton 회귀 테스트 통과 <!-- omo:id=mvp2-targeted-tests;stage=4;scope=frontend;review=6 -->
-- [ ] `pnpm lint`, `pnpm typecheck`, `pnpm verify:frontend` 통과 <!-- omo:id=mvp2-frontend-verification;stage=4;scope=frontend;review=6 -->
+- [x] MYPAGE loading 헤더 title alignment이 ready 상태와 일치 <!-- omo:id=mvp2-mypage-header-alignment;stage=4;scope=frontend;review=6 -->
+- [x] MYPAGE 레시피북 목록에서 RECIPEBOOK_DETAIL 진입 시 return context 보존 <!-- omo:id=mvp2-recipebook-return-context;stage=4;scope=frontend;review=6 -->
+- [x] RECIPEBOOK_DETAIL 뒤로가기 시 레시피북 목록 맥락으로 직접 복귀 <!-- omo:id=mvp2-recipebook-direct-back;stage=4;scope=frontend;review=6 -->
+- [x] MYPAGE 장보기 기록에서 SHOPPING_DETAIL 진입 시 return context 보존 <!-- omo:id=mvp2-shopping-return-context;stage=4;scope=frontend;review=6 -->
+- [x] SHOPPING_DETAIL 뒤로가기 시 장보기 기록 목록 맥락으로 직접 복귀 <!-- omo:id=mvp2-shopping-direct-back;stage=4;scope=frontend;review=6 -->
+- [x] 마이페이지 root/default 중간 렌더링 또는 탭 깜빡임 회귀 없음 확인 <!-- omo:id=mvp2-no-intermediate-root-flash;stage=4;scope=frontend;review=6 -->
+- [x] SHOPPING_DETAIL loading 상태가 skeleton UI를 사용 <!-- omo:id=mvp2-shopping-detail-skeleton;stage=4;scope=frontend;review=6 -->
+- [x] 직접 진입 또는 다른 화면 진입의 기존 뒤로가기 fallback 유지 <!-- omo:id=mvp2-back-fallback-preserved;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only / unauthorized` 상태 회귀 없음 확인 <!-- omo:id=mvp2-state-ui-preserved;stage=4;scope=frontend;review=6 -->
+- [x] targeted Vitest / Playwright 라우팅/skeleton 회귀 테스트 통과 <!-- omo:id=mvp2-targeted-tests;stage=4;scope=frontend;review=6 -->
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm verify:frontend` 통과 <!-- omo:id=mvp2-frontend-verification;stage=4;scope=frontend;review=6 -->

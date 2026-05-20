@@ -104,15 +104,16 @@ describe("ShoppingDetailScreen", () => {
     ],
   };
 
-  it("renders loading state initially", () => {
+  it("renders a skeleton loading state initially", () => {
     vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockImplementation(
       () => new Promise(() => {})
     );
 
     render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
 
-    expect(screen.getByText(/장보기 리스트를 불러오고 있어요/)).toBeTruthy();
-    expect(screen.getByTestId("shopping-detail-state-shell").className).toContain(
+    expect(screen.getByTestId("shopping-detail-skeleton")).toBeTruthy();
+    expect(screen.queryByText(/장보기 리스트를 불러오고 있어요/)).toBeNull();
+    expect(screen.getByTestId("shopping-detail-skeleton").className).toContain(
       "bg-[var(--wave1-surface)]",
     );
   });

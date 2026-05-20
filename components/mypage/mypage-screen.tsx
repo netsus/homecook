@@ -460,7 +460,13 @@ export function MypageScreen({
 
   if (authState === "checking") {
     if (isMobileViewport) {
-      return <MypageLoadingSkeleton mobile />;
+      return (
+        <MypageLoadingSkeleton
+          mobile
+          onBack={() => setMobileSurface("home")}
+          surface={mobileSurface}
+        />
+      );
     }
 
     return <MypageDesktopLoadingShell />;
@@ -507,7 +513,13 @@ export function MypageScreen({
       return <MypageDesktopLoadingShell />;
     }
 
-    return <MypageLoadingSkeleton mobile={isMobileViewport} />;
+    return (
+      <MypageLoadingSkeleton
+        mobile={isMobileViewport}
+        onBack={() => setMobileSurface("home")}
+        surface={mobileSurface}
+      />
+    );
   }
 
   if (viewState === "error") {
@@ -1040,56 +1052,63 @@ function ToggleRow({
   );
 }
 
-function MypageLoadingSkeleton({ mobile = false }: { mobile?: boolean }) {
+function getMypageMobileSurfaceTitle(surface: MypageMobileSurface) {
+  if (surface === "recipebook") {
+    return "레시피북";
+  }
+  if (surface === "shopping") {
+    return "장보기 기록";
+  }
+  return "마이페이지";
+}
+
+function MypageLoadingSkeleton({
+  mobile = false,
+  onBack,
+  surface = "home",
+}: {
+  mobile?: boolean;
+  onBack?: () => void;
+  surface?: MypageMobileSurface;
+}) {
   if (mobile) {
+    const title = getMypageMobileSurfaceTitle(surface);
+    const showBack = surface !== "home" && Boolean(onBack);
+
     return (
       <div
         className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
         data-testid="mypage-mobile-loading"
       >
         <div
-          className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+          className={[
+            "sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-4",
+            showBack ? "justify-center" : "",
+          ].join(" ")}
           style={{ borderBottomWidth: "0.5px" }}
         >
-          <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[#212529]">
-            마이페이지
+          {showBack ? (
+            <button
+              aria-label="뒤로"
+              className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start border-0 bg-transparent p-0 text-[#212529]"
+              onClick={onBack}
+              type="button"
+            >
+              <MypageSkeletonBackIcon />
+            </button>
+          ) : null}
+          <h1
+            className={[
+              "truncate text-[18px] font-bold leading-none text-[#212529]",
+              showBack ? "text-center" : "",
+            ].join(" ")}
+          >
+            {title}
           </h1>
         </div>
-        <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
-          <div className="mb-[18px] flex items-center gap-[14px]">
-            <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Skeleton className="h-5 w-24" />
-              <Skeleton className="h-4 w-32" />
-            </div>
-            <Skeleton className="h-8 w-14 rounded-[var(--radius-control)]" />
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {[1, 2, 3].map((index) => (
-              <div className="rounded-[var(--radius-control)] bg-[#F8F9FA] px-2 py-3" key={index}>
-                <Skeleton className="mx-auto h-6 w-8" />
-                <Skeleton className="mx-auto mt-2 h-3 w-12" />
-              </div>
-            ))}
-          </div>
-        </section>
-        <section className="p-4">
-          <div className="overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white">
-            {[1, 2, 3, 4].map((index) => (
-              <div
-                className={[
-                  "flex min-h-[57px] w-full items-center gap-3 px-4",
-                  index < 4 ? "border-b border-[#F1F3F5]" : "",
-                ].join(" ")}
-                key={index}
-              >
-                <Skeleton className="h-7 w-7 shrink-0 rounded-[var(--radius-control)]" />
-                <Skeleton className="h-4 flex-1" />
-                <Skeleton className="h-3 w-10" />
-              </div>
-            ))}
-          </div>
-        </section>
+        {surface === "home" ? <MypageHomeLoadingBody /> : null}
+        {surface === "recipebook" ? <MypageListLoadingBody kind="recipebook" /> : null}
+        {surface === "shopping" ? <MypageListLoadingBody kind="shopping" /> : null}
         <Wave1MobileBottomTab ariaLabel="마이페이지 하단 탭" currentTab="mypage" />
       </div>
     );
@@ -1128,6 +1147,93 @@ function MypageLoadingSkeleton({ mobile = false }: { mobile?: boolean }) {
         ))}
       </div>
     </div>
+  );
+}
+
+function MypageSkeletonBackIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-6 w-6"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.3"
+      viewBox="0 0 24 24"
+    >
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+function MypageHomeLoadingBody() {
+  return (
+    <>
+      <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
+        <div className="mb-[18px] flex items-center gap-[14px]">
+          <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <Skeleton className="h-8 w-14 rounded-[var(--radius-control)]" />
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {[1, 2, 3].map((index) => (
+            <div
+              className="rounded-[var(--radius-control)] bg-[#F8F9FA] px-2 py-3"
+              key={index}
+            >
+              <Skeleton className="mx-auto h-6 w-8" />
+              <Skeleton className="mx-auto mt-2 h-3 w-12" />
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="p-4">
+        <div className="overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white">
+          {[1, 2, 3, 4].map((index) => (
+            <div
+              className={[
+                "flex min-h-[57px] w-full items-center gap-3 px-4",
+                index < 4 ? "border-b border-[#F1F3F5]" : "",
+              ].join(" ")}
+              key={index}
+            >
+              <Skeleton className="h-7 w-7 shrink-0 rounded-[var(--radius-control)]" />
+              <Skeleton className="h-4 flex-1" />
+              <Skeleton className="h-3 w-10" />
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function MypageListLoadingBody({ kind }: { kind: "recipebook" | "shopping" }) {
+  const rowCount = kind === "shopping" ? 4 : 5;
+
+  return (
+    <section className="p-4">
+      <div className="space-y-[10px]">
+        {Array.from({ length: rowCount }, (_, index) => (
+          <div
+            className="flex min-h-[82px] items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-3"
+            key={index}
+          >
+            <Skeleton className="h-14 w-14 shrink-0 rounded-[var(--radius-control)]" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-24" />
+              {kind === "shopping" ? <Skeleton className="h-3 w-36" /> : null}
+            </div>
+            <Skeleton className="h-7 w-14 rounded-full" />
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

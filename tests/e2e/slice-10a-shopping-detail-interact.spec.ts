@@ -140,9 +140,7 @@ test.describe("slice 10a: shopping detail interact", () => {
 
       await page.goto(SHOPPING_DETAIL_URL);
 
-      await expect(
-        page.getByText("장보기 리스트를 불러오고 있어요...")
-      ).toBeVisible();
+      await expect(page.getByTestId("shopping-detail-skeleton")).toBeVisible();
     });
   });
 

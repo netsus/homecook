@@ -71,17 +71,77 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "merged",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
-  "closeout": null,
-  "notes": "Stage 1 docs created by Claude. FE-only low-risk navigation/loading polish: MyPage loading header alignment stabilization, recipebook/shopping detail back navigation direct return (extends design-polish-slice7 work), and shopping detail loading skeleton introduction. API/DB/design token changes out of scope.",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "pnpm vitest run tests/mypage-screen.test.tsx",
+        "pnpm vitest run tests/shopping-detail.frontend.test.tsx",
+        "pnpm playwright test tests/e2e/slice-10a-shopping-detail-interact.spec.ts --project=desktop-chrome --grep \"loading state\"",
+        "pnpm playwright test tests/e2e/slice-10a-shopping-detail-interact.spec.ts --project=mobile-chrome --grep \"loading state\"",
+        "pnpm playwright test tests/e2e/slice-17a-mypage.spec.ts --project=mobile-chrome --grep \"returns directly|navigates to shopping detail\"",
+        "pnpm validate:workpack -- --slice mvp2-polish-mypage-return-loading",
+        "pnpm validate:workflow-v2",
+        "git diff --check",
+        "pnpm verify:frontend"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-fix",
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-05-20T20:53:30+09:00"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 1,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "closeout_snapshot_added_after_policy_fail",
+      "evidence_sources": [
+        "PR #515 policy run 26160728582",
+        "pnpm verify:frontend",
+        "tests/mypage-screen.test.tsx",
+        "tests/shopping-detail.frontend.test.tsx",
+        "tests/e2e/slice-17a-mypage.spec.ts",
+        "tests/e2e/slice-10a-shopping-detail-interact.spec.ts"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-20T20:53:30+09:00",
+      "status_synced_at": "2026-05-20T20:53:30+09:00",
+      "pr_body_synced_at": "2026-05-20T20:52:00+09:00"
+    }
+  },
+  "notes": "Stage 1 docs created through Claude delegation; Claude CLI did not return a final response, so Codex completed FE fallback per user instruction. FE-only low-risk navigation/loading polish completed: MyPage mobile loading now uses the restored surface title/body and stable left-aligned header, existing recipebook/shopping return context remains direct, and ShoppingDetail loading now renders a structure skeleton. API/DB/design token changes out of scope. closeout_phase=completed closeout_recovery=manual_patch:1 closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:PR #515 policy run 26160728582,pnpm verify:frontend,tests/mypage-screen.test.tsx,tests/shopping-detail.frontend.test.tsx,tests/e2e/slice-17a-mypage.spec.ts,tests/e2e/slice-10a-shopping-detail-interact.spec.ts last_recovery_at=2026-05-20T20:53:30+09:00",
   "out_of_scope": [
     "API, DB, auth, mutation, state transition contract changes",
     "MYPAGE visual redesign or tab information architecture changes",
