@@ -1,0 +1,100 @@
+{
+  "id": "mvp2-polish-planner-meal-add-modal",
+  "title": "MVP2 Polish - Planner meal-add modal and back button consistency",
+  "summary": "플래너 식사추가 follow-up: 검색/레시피북/팬트리/유튜브 옵션을 modal/sheet entry로 정리하고, picker 뒤로가기 버튼 크기/형태를 공용화하며, 남은요리 모달 뒤로가기와 유튜브/직접등록 option typography 불일치를 수정한다. FE-only, API/DB 변경 없음.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "PLANNER_WEEK/MEAL_SCREEN의 식사추가 옵션에서 context-preserving modal/sheet 흐름과 일관된 header/back affordance를 제공한다.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6 and fallback execution if Claude is provider-limited",
+    "workers": []
+  },
+  "dependencies": [
+    "05-planner-week-core",
+    "08a-meal-add-search-core",
+    "08b-meal-add-books-pantry",
+    "16-leftovers",
+    "18-manual-recipe-create",
+    "19-youtube-import",
+    "design-polish-slice4-planner-meal-add",
+    "mvp2-polish-mypage-return-loading"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.6.7.md",
+      "docs/화면정의서-v1.5.4.md",
+      "docs/유저flow맵-v1.3.4.md",
+      "docs/api문서-v1.2.5.md",
+      "docs/db설계-v1.3.3.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/mvp2-polish-planner-meal-add-modal/README.md",
+      "docs/workpacks/mvp2-polish-planner-meal-add-modal/acceptance.md",
+      "docs/workpacks/mvp2-polish-planner-meal-add-modal/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/product-design-authority.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice mvp2-polish-planner-meal-add-modal",
+      "pnpm validate:authority-evidence-presence",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "screenshot",
+      "authority-report",
+      "shared-back-button-regression",
+      "youtube-modal-entry",
+      "option-font-normalization"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 attempted through Claude resume session b48a95b1-d4bf-490f-bd7e-915f2f4521bf with session_attach_mode=resume, model=opus, effort=high, permission_mode=bypassPermissions. Claude CLI produced no response artifact and was terminated by Codex after stalling; Codex completed Stage 1 fallback per user instruction. FE-only anchor-extension follow-up over design-polish-slice4-planner-meal-add. API/DB/auth/state transition changes out of scope.",
+  "out_of_scope": [
+    "MANUAL_RECIPE_CREATE modal conversion",
+    "YouTube import API or extraction/register flow redesign",
+    "Deleting /menu/add/youtube or /menu/add/manual fallback routes",
+    "PLANNER_WEEK layout or scroll structure changes",
+    "API, DB, auth, RLS, seed, bootstrap, state transition contract changes",
+    "Global app or web token value changes"
+  ],
+  "open_questions": []
+}
