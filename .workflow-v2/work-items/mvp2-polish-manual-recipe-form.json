@@ -73,36 +73,50 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
+    "lifecycle": "merged",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
     "evaluation_round": 0,
     "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
   "closeout": {
-    "phase": "collecting",
+    "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "in_progress",
-      "design_status": "temporary",
-      "delivery_checklist": "pending",
-      "design_authority": "pending",
-      "acceptance": "pending",
-      "automation_spec_metadata": "pending"
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
     },
     "verification_projection": {
-      "required_checks": "pending",
+      "required_checks": "passed",
       "external_smokes": "skipped",
       "authority_reports": [
         "ui/designs/authority/MVP2_POLISH_MANUAL_RECIPE_FORM-authority.md"
       ],
-      "actual_verification_refs": []
+      "actual_verification_refs": [
+        "pnpm vitest run tests/manual-recipe-create-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm playwright test tests/e2e/slice-18-manual-recipe-create.spec.ts --project=mobile-chrome",
+        "pnpm playwright test tests/e2e/tmp-mvp2-manual-recipe-form-evidence.spec.ts --project=mobile-chrome",
+        "pnpm playwright test tests/e2e/tmp-mvp2-manual-method-evidence.spec.ts --project=mobile-chrome",
+        "pnpm playwright test tests/e2e/qa-visual.spec.ts -g \"manual recipe desktop screen\" --project=desktop-chrome --update-snapshots",
+        "pnpm playwright test tests/e2e/qa-visual.spec.ts -g \"manual recipe desktop screen\" --project=desktop-chrome",
+        "pnpm verify:frontend",
+        "PR_IS_DRAFT=false pnpm validate:authority-evidence-presence",
+        "pnpm validate:workpack -- --slice mvp2-polish-manual-recipe-form",
+        "pnpm validate:workflow-v2",
+        "git diff --check"
+      ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending-implementation-pr-head",
-      "approval_state": "not_started",
+      "current_head_sha": "pending-pr-head-after-closeout-fix",
+      "approval_state": "codex_approved",
       "all_checks_green": false
     },
     "recovery_summary": {
@@ -111,7 +125,7 @@
       "stale_lock_count": 0,
       "ci_resync_count": 0,
       "artifact_missing": true,
-      "last_recovery_at": "2026-05-20T22:31:23+09:00"
+      "last_recovery_at": "2026-05-20T23:01:08+09:00"
     },
     "repair_summary": {
       "codex_repairable_count": 1,
@@ -121,16 +135,21 @@
       "post_merge_stale_count": 0,
       "latest_reason_code": "claude_resume_stalled_zero_byte_response",
       "evidence_sources": [
-        ".omx/artifacts/claude-delegate-mvp2-polish-manual-recipe-form-stage1-docs-response-2026-05-20T22-22-00+09-00.md"
+        "pnpm verify:frontend",
+        "tests/manual-recipe-create-screen.test.tsx",
+        "tests/recipe-ingredient-add-modal.test.tsx",
+        "tests/e2e/slice-18-manual-recipe-create.spec.ts",
+        "ui/designs/authority/MVP2_POLISH_MANUAL_RECIPE_FORM-authority.md",
+        "ui/designs/evidence/mvp2-polish-manual-recipe-form"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-05-20T22:31:23+09:00",
-      "status_synced_at": "2026-05-20T22:31:23+09:00",
-      "pr_body_synced_at": "pending"
+      "docs_synced_at": "2026-05-20T23:01:08+09:00",
+      "status_synced_at": "2026-05-20T23:01:08+09:00",
+      "pr_body_synced_at": "2026-05-20T23:01:08+09:00"
     }
   },
-  "notes": "Stage 1 attempted through Claude resume session b48a95b1-d4bf-490f-bd7e-915f2f4521bf with session_attach_mode=resume, model=opus, effort=high, permission_mode=bypassPermissions. Claude CLI produced a zero-byte response artifact and was terminated by Codex after stalling; Codex completed Stage 1 fallback per user instruction. FE-only high-risk MANUAL_RECIPE_CREATE polish planned. API/DB/auth/state transition changes out of scope. closeout_phase=collecting closeout_recovery=manual_patch:1|artifact_missing closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts/claude-delegate-mvp2-polish-manual-recipe-form-stage1-docs-response-2026-05-20T22-22-00+09-00.md last_recovery_at=2026-05-20T22:31:23+09:00",
+  "notes": "Stage 1/4 attempted through Claude resume session b48a95b1-d4bf-490f-bd7e-915f2f4521bf with session_attach_mode=resume, model=opus, effort=high, permission_mode=bypassPermissions. Claude CLI produced a zero-byte response artifact and Codex completed fallback implementation/review per user instruction. FE-only high-risk MANUAL_RECIPE_CREATE polish completed: base servings stepper, method-required step validation, field-level save validation, and ingredient modal selected-chip feedback. API/DB/auth/state transition changes out of scope. Tested: pnpm vitest run tests/manual-recipe-create-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx; pnpm lint; pnpm typecheck; pnpm playwright test tests/e2e/slice-18-manual-recipe-create.spec.ts --project=mobile-chrome; pnpm verify:frontend; PR_IS_DRAFT=false pnpm validate:authority-evidence-presence. closeout_phase=completed closeout_recovery=manual_patch:1|artifact_missing closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,tests/manual-recipe-create-screen.test.tsx,tests/recipe-ingredient-add-modal.test.tsx,tests/e2e/slice-18-manual-recipe-create.spec.ts,ui/designs/authority/MVP2_POLISH_MANUAL_RECIPE_FORM-authority.md,ui/designs/evidence/mvp2-polish-manual-recipe-form last_recovery_at=2026-05-20T23:01:08+09:00",
   "out_of_scope": [
     "Manual recipe API contract changes",
     "YouTube import UI or API changes",

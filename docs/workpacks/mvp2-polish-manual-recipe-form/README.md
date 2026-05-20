@@ -63,11 +63,12 @@
 - UI risk: `high-risk`
 - Anchor screen dependency: 없음
 - Visual artifact:
-  - `ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-validation-mobile.png`
-  - `ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-stepper-mobile.png`
-  - `ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-ingredient-modal-mobile.png`
+  - `ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-base-servings-stepper-mobile.png`
+  - `ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-method-required-validation-mobile.png`
+  - `ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-field-validation-on-save-mobile.png`
+  - `ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-ingredient-modal-selection-mobile.png`
   - `ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-narrow.png`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Notes:
   - `MANUAL_RECIPE_CREATE`는 h8 future-screen matrix의 직접 등록 화면이며, 이미 구현된 화면의 핵심 입력/저장 UX를 바꾸므로 high-risk로 분류한다.
   - 신규 화면은 만들지 않으므로 design-generator/design-critic은 생략한다.
@@ -75,9 +76,9 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 ## Source Links
@@ -137,18 +138,43 @@
 > 이 체크리스트는 Stage 4~6 동안 계속 갱신하는 living closeout 문서다.
 > Stage 6 merge 시점에는 Manual Only를 제외한 In Scope 항목이 모두 닫혀 있어야 한다.
 
-- [ ] 기준인분 입력 좌우에 `- / +` 버튼이 있고 최소 1을 지킨다 <!-- omo:id=mprf-base-servings-stepper;stage=4;scope=frontend;review=5,6 -->
-- [ ] `조리 과정을 추가해주세요.` helper가 배경 없는 compact inline 문구로 표시된다 <!-- omo:id=mprf-step-empty-helper-compact;stage=4;scope=frontend;review=5,6 -->
-- [ ] 조리방법 미선택 상태에서 조리과정 추가가 막히고 선택 안내가 표시된다 <!-- omo:id=mprf-method-required-before-step;stage=4;scope=frontend;review=5,6 -->
-- [ ] 하단 저장 요구사항 박스가 제거되고 저장 클릭 시 필드별 validation 문구가 표시된다 <!-- omo:id=mprf-field-validation-on-save;stage=4;scope=frontend;review=5,6 -->
-- [ ] 재료 추가 모달의 선택 요약이 카테고리 컨트롤 아래로 이동한다 <!-- omo:id=mprf-selected-ingredients-below-category;stage=4;scope=frontend;review=5,6 -->
-- [ ] 선택 요약의 `n개 선택됨...` 설명 문구가 제거된다 <!-- omo:id=mprf-selected-count-copy-removed;stage=4;scope=frontend;review=5,6 -->
-- [ ] 선택 요약 재료 칩을 누르면 선택이 취소된다 <!-- omo:id=mprf-selected-chip-deselects;stage=4;scope=frontend;review=5,6 -->
-- [ ] 재료가 1개 이상 선택되면 `선택한 재료 추가` 버튼이 active 색상으로 보인다 <!-- omo:id=mprf-add-selected-button-active;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 loading/empty/error/unauthorized 상태 UI가 보존된다 <!-- omo:id=mprf-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] mobile default/narrow screenshot evidence와 authority report가 생성된다 <!-- omo:id=mprf-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] `Vitest` / `Playwright` 자동화 범위가 업데이트된다 <!-- omo:id=mprf-test-coverage;stage=4;scope=frontend;review=6 -->
-- [ ] `pnpm lint`, `pnpm typecheck`, `pnpm verify:frontend`가 통과한다 <!-- omo:id=mprf-frontend-verification;stage=4;scope=frontend;review=6 -->
+- [x] 기준인분 입력 좌우에 `- / +` 버튼이 있고 최소 1을 지킨다 <!-- omo:id=mprf-base-servings-stepper;stage=4;scope=frontend;review=5,6 -->
+- [x] `조리 과정을 추가해주세요.` helper가 배경 없는 compact inline 문구로 표시된다 <!-- omo:id=mprf-step-empty-helper-compact;stage=4;scope=frontend;review=5,6 -->
+- [x] 조리방법 미선택 상태에서 조리과정 추가가 막히고 선택 안내가 표시된다 <!-- omo:id=mprf-method-required-before-step;stage=4;scope=frontend;review=5,6 -->
+- [x] 하단 저장 요구사항 박스가 제거되고 저장 클릭 시 필드별 validation 문구가 표시된다 <!-- omo:id=mprf-field-validation-on-save;stage=4;scope=frontend;review=5,6 -->
+- [x] 재료 추가 모달의 선택 요약이 카테고리 컨트롤 아래로 이동한다 <!-- omo:id=mprf-selected-ingredients-below-category;stage=4;scope=frontend;review=5,6 -->
+- [x] 선택 요약의 `n개 선택됨...` 설명 문구가 제거된다 <!-- omo:id=mprf-selected-count-copy-removed;stage=4;scope=frontend;review=5,6 -->
+- [x] 선택 요약 재료 칩을 누르면 선택이 취소된다 <!-- omo:id=mprf-selected-chip-deselects;stage=4;scope=frontend;review=5,6 -->
+- [x] 재료가 1개 이상 선택되면 `선택한 재료 추가` 버튼이 active 색상으로 보인다 <!-- omo:id=mprf-add-selected-button-active;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 loading/empty/error/unauthorized 상태 UI가 보존된다 <!-- omo:id=mprf-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] mobile default/narrow screenshot evidence와 authority report가 생성된다 <!-- omo:id=mprf-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] `Vitest` / `Playwright` 자동화 범위가 업데이트된다 <!-- omo:id=mprf-test-coverage;stage=4;scope=frontend;review=6 -->
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm verify:frontend`가 통과한다 <!-- omo:id=mprf-frontend-verification;stage=4;scope=frontend;review=6 -->
+
+## Stage 5/6 Closeout Evidence
+
+- Authority report: `ui/designs/authority/MVP2_POLISH_MANUAL_RECIPE_FORM-authority.md`
+- Screenshot evidence:
+  - `ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-base-servings-stepper-mobile.png`
+  - `ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-method-required-validation-mobile.png`
+  - `ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-field-validation-on-save-mobile.png`
+  - `ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-ingredient-modal-selection-mobile.png`
+  - `ui/designs/evidence/mvp2-polish-manual-recipe-form/MANUAL_RECIPE_CREATE-narrow.png`
+- Local verification:
+  - `pnpm vitest run tests/manual-recipe-create-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx`
+  - `pnpm typecheck`
+  - `pnpm lint`
+  - `pnpm playwright test tests/e2e/slice-18-manual-recipe-create.spec.ts --project=mobile-chrome`
+  - `pnpm playwright test tests/e2e/tmp-mvp2-manual-recipe-form-evidence.spec.ts --project=mobile-chrome` (temporary evidence spec removed after capture)
+  - `pnpm playwright test tests/e2e/tmp-mvp2-manual-method-evidence.spec.ts --project=mobile-chrome` (temporary evidence spec removed after capture)
+  - `pnpm playwright test tests/e2e/qa-visual.spec.ts -g "manual recipe desktop screen" --project=desktop-chrome --update-snapshots`
+  - `pnpm playwright test tests/e2e/qa-visual.spec.ts -g "manual recipe desktop screen" --project=desktop-chrome`
+  - `pnpm verify:frontend`
+  - `PR_IS_DRAFT=false pnpm validate:authority-evidence-presence`
+  - `pnpm validate:workpack -- --slice mvp2-polish-manual-recipe-form`
+  - `pnpm validate:workflow-v2`
+  - `git diff --check`
+- Claude delegation note: Stage 1/4 was requested through resume session `b48a95b1-d4bf-490f-bd7e-915f2f4521bf` with `session_attach_mode=resume`, `model=opus`, `effort=high`, `permission_mode=bypassPermissions`; the CLI produced a zero-byte response artifact and stalled, so Codex completed fallback implementation and review per user instruction.
 
 ## Claude Delegation Note
 
