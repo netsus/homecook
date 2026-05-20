@@ -524,7 +524,7 @@ test.describe("SETTINGS screen", () => {
     }
     await page.getByTestId("mypage-settings-link").click();
 
-    await page.waitForURL("/settings");
+    await page.waitForURL("**/settings**");
     await expect(page.getByText("설정")).toBeVisible();
   });
 });

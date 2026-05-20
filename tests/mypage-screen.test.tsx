@@ -13,6 +13,7 @@ const mockCreateRecipeBook = vi.fn();
 const mockRenameRecipeBook = vi.fn();
 const mockDeleteRecipeBook = vi.fn();
 const mockFetchShoppingHistory = vi.fn();
+const mockFetchRecipeBookRecipes = vi.fn();
 const originalScrollTo = window.scrollTo;
 
 vi.mock("@/lib/api/mypage", () => ({
@@ -23,6 +24,11 @@ vi.mock("@/lib/api/mypage", () => ({
   deleteRecipeBook: (...args: unknown[]) => mockDeleteRecipeBook(...args),
   fetchShoppingHistory: (...args: unknown[]) => mockFetchShoppingHistory(...args),
   isMypageApiError: (error: unknown) => error instanceof Error && "status" in error,
+}));
+
+vi.mock("@/lib/api/recipe", () => ({
+  fetchRecipeBookRecipes: (...args: unknown[]) =>
+    mockFetchRecipeBookRecipes(...args),
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
@@ -123,6 +129,39 @@ const MOCK_SHOPPING_HISTORY = {
   has_next: false,
 };
 
+const MOCK_SAVED_RECIPES = {
+  success: true,
+  data: {
+    items: [
+      {
+        recipe_id: "recipe-saved-1",
+        title: "저장된 된장찌개",
+        thumbnail_url: "https://example.com/saved-1.jpg",
+        tags: ["한식", "찌개"],
+        view_count: 10,
+        total_duration_seconds: 1800,
+        total_duration_text: "30분",
+        base_servings: 2,
+        added_at: "2026-05-01T09:00:00.000Z",
+      },
+      {
+        recipe_id: "recipe-saved-2",
+        title: "저장된 김치볶음밥",
+        thumbnail_url: null,
+        tags: ["한식"],
+        view_count: 8,
+        total_duration_seconds: null,
+        total_duration_text: null,
+        base_servings: 1,
+        added_at: "2026-05-02T09:00:00.000Z",
+      },
+    ],
+    next_cursor: null,
+    has_next: false,
+  },
+  error: null,
+};
+
 async function openRecipebookSurface(user = userEvent.setup()) {
   await screen.findByText("집밥러");
   await user.click(screen.getByRole("button", { name: /레시피북 관리/ }));
@@ -159,10 +198,12 @@ describe("MypageScreen", () => {
     mockRenameRecipeBook.mockReset();
     mockDeleteRecipeBook.mockReset();
     mockFetchShoppingHistory.mockReset();
+    mockFetchRecipeBookRecipes.mockReset();
 
     mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
     mockFetchRecipeBooks.mockResolvedValue(MOCK_BOOKS);
     mockFetchShoppingHistory.mockResolvedValue(MOCK_SHOPPING_HISTORY);
+    mockFetchRecipeBookRecipes.mockResolvedValue(MOCK_SAVED_RECIPES);
   });
 
   it("shows the unauthorized gate when not authenticated", () => {
@@ -229,10 +270,51 @@ describe("MypageScreen", () => {
     await user.click(screen.getByRole("tab", { name: "계정 관리" }));
 
     const settingsLink = screen.getByTestId("mypage-settings-link");
-    expect(settingsLink?.getAttribute("href")).toBe("/settings");
+    expect(settingsLink?.getAttribute("href")).toContain("/settings");
+    expect(settingsLink?.getAttribute("href")).toContain(
+      "returnTo=%2Fmypage%3Ftab%3Daccount",
+    );
     expect(screen.getByTestId("mypage-profile").textContent).not.toContain(
       "회원탈퇴",
     );
+  });
+
+  it("shows real saved recipe links instead of prototype-only saved cards", async () => {
+    render(<MypageScreen initialAuthenticated />);
+
+    expect(await screen.findByText("저장된 된장찌개")).toBeTruthy();
+    expect(mockFetchRecipeBookRecipes).toHaveBeenCalledWith("book-saved", {
+      limit: 12,
+    });
+
+    const savedRecipeLink = screen.getByRole("link", { name: /저장된 된장찌개/ });
+    expect(savedRecipeLink.getAttribute("href")).toBe("/recipe/recipe-saved-1");
+    expect(screen.queryByText("소고기 미역국")).toBeNull();
+  });
+
+  it("opens the account tab from the tab query parameter", async () => {
+    window.history.pushState({}, "", "/mypage?tab=account");
+
+    render(<MypageScreen initialAuthenticated />);
+
+    expect(await screen.findByTestId("mypage-account-tab")).toBeTruthy();
+    expect(screen.queryByText("저장된 된장찌개")).toBeNull();
+  });
+
+  it("toggles notification switches locally", async () => {
+    render(<MypageScreen initialAuthenticated />);
+    const user = userEvent.setup();
+
+    await screen.findByText("집밥러");
+    await user.click(screen.getByRole("tab", { name: "알림 설정" }));
+
+    const switches = screen.getAllByRole("switch");
+    expect(switches).toHaveLength(4);
+    expect(switches[0].getAttribute("aria-checked")).toBe("true");
+
+    await user.click(switches[0]);
+
+    expect(switches[0].getAttribute("aria-checked")).toBe("false");
   });
 
   it("displays system books with correct recipe counts", async () => {
@@ -566,6 +648,23 @@ describe("MypageScreen", () => {
 
     expect(await screen.findByTestId("recipebook-tab")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "저장한 레시피" })).toBeNull();
+  });
+
+  it("returns from the recipebook surface to the mypage home tab without using browser history", async () => {
+    render(
+      <MypageScreen
+        initialActiveTab="recipebooks"
+        initialAuthenticated
+        initialMobileSurface="recipebook"
+      />,
+    );
+    const user = userEvent.setup();
+
+    await screen.findByTestId("recipebook-tab");
+    await user.click(screen.getByRole("button", { name: /마이페이지/ }));
+
+    expect(await screen.findByText("저장된 된장찌개")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "레시피북" })).toBeNull();
   });
 
   it("can render directly into the shopping return surface", async () => {

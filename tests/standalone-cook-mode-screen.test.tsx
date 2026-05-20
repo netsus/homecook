@@ -474,7 +474,21 @@ describe("StandaloneCookModeScreen", () => {
     ).toBeNull();
   });
 
-  it("uses the Wave1 white surface for standalone cook loading states", async () => {
+  it("uses a desktop web shell for standalone cook loading states", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchStandaloneCookMode.mockReturnValue(new Promise(() => {}));
+
+    const Screen = await importScreen();
+    render(<Screen recipeId="recipe-1" servings={2} />);
+
+    const screenRoot = await screen.findByTestId("standalone-cook-mode-screen");
+    expect(screenRoot.className).toContain("web-cook-mode-screen");
+    expect(screenRoot.className).not.toContain("min-h-dvh");
+    expect(screen.getByRole("link", { name: "탐색" })).toBeTruthy();
+  });
+
+  it("keeps the Wave1 white surface for mobile standalone cook loading states", async () => {
+    installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchStandaloneCookMode.mockReturnValue(new Promise(() => {}));
 
