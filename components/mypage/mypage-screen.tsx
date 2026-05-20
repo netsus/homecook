@@ -71,6 +71,10 @@ type MypageTab =
 const TOAST_DURATION_MS = 3000;
 const SHOPPING_PAGE_SIZE = 10;
 const SAVED_RECIPES_PAGE_SIZE = 12;
+const MYPAGE_ACCOUNT_HREF = "/mypage?tab=account";
+const SETTINGS_FROM_ACCOUNT_HREF = buildReturnHref("/settings", {
+  returnTo: MYPAGE_ACCOUNT_HREF,
+});
 
 const WEB_NAV_ITEMS = [
   { id: "home", href: "/", label: "탐색" },
@@ -1054,7 +1058,7 @@ function MyPageAccountSurface({ profile }: { profile: UserProfileData | null }) 
           </span>
           <Link
             className="web-button web-button-secondary web-button-sm"
-            href="/settings"
+            href={SETTINGS_FROM_ACCOUNT_HREF}
           >
             닉네임 변경
           </Link>
@@ -1063,7 +1067,7 @@ function MyPageAccountSurface({ profile }: { profile: UserProfileData | null }) 
       <WebCard className="web-mypage-account-card">
         <Link
           className="web-mypage-settings-row"
-          href="/settings"
+          href={SETTINGS_FROM_ACCOUNT_HREF}
         >
           <span className="web-mypage-row-icon"><LogoutIcon /></span>
           <span className="web-mypage-row-copy">
@@ -1075,7 +1079,7 @@ function MyPageAccountSurface({ profile }: { profile: UserProfileData | null }) 
         <Link
           className="web-mypage-settings-row"
           data-testid="mypage-settings-link"
-          href="/settings"
+          href={SETTINGS_FROM_ACCOUNT_HREF}
         >
           <span className="web-mypage-row-icon"><SettingsIcon /></span>
           <span className="web-mypage-row-copy">
@@ -1090,7 +1094,7 @@ function MyPageAccountSurface({ profile }: { profile: UserProfileData | null }) 
           <h3>계정 삭제</h3>
           <p>모든 레시피북, 플래너, 장보기 기록이 영구적으로 삭제됩니다.</p>
         </div>
-        <Link className="web-mypage-danger-button" href="/settings">
+        <Link className="web-mypage-danger-button" href={SETTINGS_FROM_ACCOUNT_HREF}>
           계정 삭제하기
         </Link>
       </WebCard>

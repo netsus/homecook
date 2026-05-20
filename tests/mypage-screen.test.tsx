@@ -270,7 +270,10 @@ describe("MypageScreen", () => {
     await user.click(screen.getByRole("tab", { name: "계정 관리" }));
 
     const settingsLink = screen.getByTestId("mypage-settings-link");
-    expect(settingsLink?.getAttribute("href")).toBe("/settings");
+    expect(settingsLink?.getAttribute("href")).toContain("/settings");
+    expect(settingsLink?.getAttribute("href")).toContain(
+      "returnTo=%2Fmypage%3Ftab%3Daccount",
+    );
     expect(screen.getByTestId("mypage-profile").textContent).not.toContain(
       "회원탈퇴",
     );
