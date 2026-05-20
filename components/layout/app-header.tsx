@@ -10,7 +10,7 @@ const navItems = [
   { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
 ] as const;
 
 export function AppHeader({
