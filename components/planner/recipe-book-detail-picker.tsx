@@ -4,6 +4,10 @@ import Image from "next/image";
 import React, { useCallback, useEffect, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import {
+  AppBackButton,
+  AppBackButtonSpacer,
+} from "@/components/shared/app-back-button";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import {
   WebButton,
@@ -444,18 +448,11 @@ export function RecipeBookDetailPicker({
     return (
       <div className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]">
         <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-2">
-          <button
-            aria-label="뒤로"
-            className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529]"
-            onClick={onBack}
-            type="button"
-          >
-            ‹
-          </button>
+          <AppBackButton onClick={onBack} />
           <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
             {book.name}
           </h1>
-          <div className="h-[var(--control-height-md)] w-11 shrink-0" aria-hidden="true" />
+          <AppBackButtonSpacer />
         </div>
         <div className="p-3 pb-[112px]">{content}</div>
         {selectedRecipe && (
@@ -515,28 +512,7 @@ export function RecipeBookDetailPicker({
         role="dialog"
       >
         <div className="flex items-center gap-2">
-          <button
-            aria-label="뒤로"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-[var(--line)]"
-            onClick={onBack}
-            type="button"
-          >
-            <svg
-              fill="none"
-              height="20"
-              viewBox="0 0 20 20"
-              width="20"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 5L7 10L12 15"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-              />
-            </svg>
-          </button>
+          <AppBackButton onClick={onBack} />
           <h2
             className="flex-1 text-xl font-bold text-[var(--foreground)]"
             id="recipebook-detail-title"

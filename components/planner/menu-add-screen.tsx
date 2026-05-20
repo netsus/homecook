@@ -8,7 +8,14 @@ import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
 import { RecipeBookDetailPicker } from "@/components/planner/recipe-book-detail-picker";
 import { RecipeBookSelector } from "@/components/planner/recipe-book-selector";
 import { RecipeSearchPicker } from "@/components/planner/recipe-search-picker";
+import {
+  YoutubeImportEntrySheet,
+} from "@/components/planner/youtube-import-entry-sheet";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import {
+  AppBackButton,
+  AppBackButtonSpacer,
+} from "@/components/shared/app-back-button";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import {
@@ -35,7 +42,14 @@ export interface MenuAddScreenProps {
   initialSource?: string;
 }
 
-type PickerMode = "none" | "search" | "recipebook-selector" | "recipebook-detail" | "pantry" | "leftover";
+type PickerMode =
+  | "none"
+  | "search"
+  | "recipebook-selector"
+  | "recipebook-detail"
+  | "pantry"
+  | "leftover"
+  | "youtube";
 
 const WEB_NAV_ITEMS = [
   { id: "home", href: "/", label: "탐색" },
@@ -91,6 +105,7 @@ export function MenuAddScreen({
     if (initialSource === "recipebook") return "recipebook-selector";
     if (initialSource === "pantry") return "pantry";
     if (initialSource === "leftover") return "leftover";
+    if (initialSource === "youtube") return "youtube";
     return "none";
   });
   const [selectedBook, setSelectedBook] = useState<RecipeBookSummary | null>(null);
@@ -380,7 +395,7 @@ export function MenuAddScreen({
     );
   }, [appReturn.href, isMealAddModalOrigin, mealAddQuery, router]);
 
-  const handleYoutubeRecipeClick = useCallback(() => {
+  const getYoutubeTargetHref = useCallback(() => {
     const targetPath = mealAddQuery
       ? `/menu/add/youtube?${mealAddQuery}`
       : "/menu/add/youtube";
@@ -392,10 +407,17 @@ export function MenuAddScreen({
         }
       : { returnTo: appReturn.href };
 
-    router.push(
-      buildReturnHref(targetPath, context),
-    );
-  }, [appReturn.href, isMealAddModalOrigin, mealAddQuery, router]);
+    return buildReturnHref(targetPath, context);
+  }, [appReturn.href, isMealAddModalOrigin, mealAddQuery]);
+
+  const handleYoutubeRecipeClick = useCallback(() => {
+    if (!isDesktopViewport) {
+      setPickerMode("youtube");
+      return;
+    }
+
+    router.push(getYoutubeTargetHref());
+  }, [getYoutubeTargetHref, isDesktopViewport, router]);
 
   const targetLabel = formatTargetLabel(planDate, slotName);
 
@@ -406,6 +428,8 @@ export function MenuAddScreen({
         ? selectedBook?.name ?? "레시피북"
         : pickerMode === "pantry"
           ? "팬트리 추천"
+          : pickerMode === "youtube"
+            ? "유튜브에서 가져오기"
           : "레시피 검색";
 
   const actionMapForMobile = (id: (typeof MENU_ADD_OPTIONS)[number]["id"]) => {
@@ -490,10 +514,11 @@ export function MenuAddScreen({
 
     if (pickerMode === "leftover") {
       return (
-        <LeftoverPicker
-          isCreating={isCreating}
-          onClose={handleLeftoverClose}
-          onLeftoverSelect={handleLeftoverSelect}
+          <LeftoverPicker
+            isCreating={isCreating}
+            onBack={handleLeftoverClose}
+            onClose={handleLeftoverClose}
+            onLeftoverSelect={handleLeftoverSelect}
           onServingsCancel={handleLeftoverServingsCancel}
           onServingsConfirm={handleLeftoverServingsConfirm}
           selectedLeftover={selectedLeftover}
@@ -501,21 +526,25 @@ export function MenuAddScreen({
       );
     }
 
+    if (pickerMode === "youtube") {
+      return (
+        <YoutubeImportEntrySheet
+          onBack={handlePickerBackToMenu}
+          onClose={handlePickerBackToMenu}
+          targetLabel={targetLabel}
+          youtubeHref={getYoutubeTargetHref()}
+        />
+      );
+    }
+
     return (
       <div className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]">
         <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-2">
-          <button
-            aria-label="뒤로 가기"
-            className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529]"
-            onClick={handleBack}
-            type="button"
-          >
-            ‹
-          </button>
+          <AppBackButton ariaLabel="뒤로 가기" onClick={handleBack} />
           <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
             식사 추가
           </h1>
-          <div className="h-[var(--control-height-md)] w-11 shrink-0" aria-hidden="true" />
+          <AppBackButtonSpacer />
         </div>
 
         <section className="px-5 py-3">
@@ -604,7 +633,8 @@ export function MenuAddScreen({
                       (option.id === "recipebook" &&
                         (pickerMode === "recipebook-selector" ||
                           pickerMode === "recipebook-detail")) ||
-                      (option.id === "pantry" && pickerMode === "pantry");
+                      (option.id === "pantry" && pickerMode === "pantry") ||
+                      (option.id === "youtube" && pickerMode === "youtube");
 
                     return (
                       <button
@@ -706,11 +736,21 @@ export function MenuAddScreen({
                 {pickerMode === "leftover" && (
                   <LeftoverPicker
                     isCreating={isCreating}
+                    onBack={handleLeftoverClose}
                     onClose={handleLeftoverClose}
                     onLeftoverSelect={handleLeftoverSelect}
                     onServingsCancel={handleLeftoverServingsCancel}
                     onServingsConfirm={handleLeftoverServingsConfirm}
                     selectedLeftover={selectedLeftover}
+                  />
+                )}
+
+                {pickerMode === "youtube" && (
+                  <YoutubeImportEntrySheet
+                    onBack={handlePickerBackToMenu}
+                    onClose={handlePickerBackToMenu}
+                    targetLabel={targetLabel}
+                    youtubeHref={getYoutubeTargetHref()}
                   />
                 )}
               </WebCard>

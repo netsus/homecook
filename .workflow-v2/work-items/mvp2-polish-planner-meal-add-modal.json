@@ -77,17 +77,79 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
+    "lifecycle": "merged",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
     "evaluation_round": 0,
     "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
-  "closeout": null,
-  "notes": "Stage 1 attempted through Claude resume session b48a95b1-d4bf-490f-bd7e-915f2f4521bf with session_attach_mode=resume, model=opus, effort=high, permission_mode=bypassPermissions. Claude CLI produced no response artifact and was terminated by Codex after stalling; Codex completed Stage 1 fallback per user instruction. FE-only anchor-extension follow-up over design-polish-slice4-planner-meal-add. API/DB/auth/state transition changes out of scope.",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/authority/MVP2_POLISH_PLANNER_MEAL_ADD_MODAL-authority.md"
+      ],
+      "actual_verification_refs": [
+        "pnpm vitest run tests/menu-add-screen.test.tsx tests/planner-week-screen.test.tsx tests/planner-meal-screen.test.tsx",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm playwright test tests/e2e/tmp-mvp2-planner-meal-add-modal-evidence.spec.ts --project=mobile-chrome",
+        "pnpm verify:frontend",
+        "PR_IS_DRAFT=false pnpm validate:authority-evidence-presence",
+        "pnpm validate:workpack -- --slice mvp2-polish-planner-meal-add-modal",
+        "pnpm validate:workflow-v2",
+        "git diff --check"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-fix",
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": true,
+      "last_recovery_at": "2026-05-20T21:35:00+09:00"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 1,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "claude_resume_stalled_zero_byte_response",
+      "evidence_sources": [
+        "pnpm verify:frontend",
+        "tests/menu-add-screen.test.tsx",
+        "tests/planner-week-screen.test.tsx",
+        "tests/planner-meal-screen.test.tsx",
+        "ui/designs/authority/MVP2_POLISH_PLANNER_MEAL_ADD_MODAL-authority.md",
+        "ui/designs/evidence/mvp2-polish-planner-meal-add-modal"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-20T21:35:00+09:00",
+      "status_synced_at": "2026-05-20T21:35:00+09:00",
+      "pr_body_synced_at": "2026-05-20T21:35:00+09:00"
+    }
+  },
+  "notes": "Stage 1/4 attempted through Claude resume session b48a95b1-d4bf-490f-bd7e-915f2f4521bf with session_attach_mode=resume, model=opus, effort=high, permission_mode=bypassPermissions. Claude CLI produced no response artifact and was terminated by Codex after stalling; Codex completed fallback implementation and authority review per user instruction. FE-only anchor-extension follow-up completed: YouTube option now opens a context-preserving entry sheet, picker back button shape is shared, leftover modal has a back button, and YouTube/manual option typography is normalized. API/DB/auth/state transition changes out of scope. closeout_phase=completed closeout_recovery=manual_patch:1|artifact_missing closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,tests/menu-add-screen.test.tsx,tests/planner-week-screen.test.tsx,tests/planner-meal-screen.test.tsx,ui/designs/authority/MVP2_POLISH_PLANNER_MEAL_ADD_MODAL-authority.md last_recovery_at=2026-05-20T21:35:00+09:00",
   "out_of_scope": [
     "MANUAL_RECIPE_CREATE modal conversion",
     "YouTube import API or extraction/register flow redesign",

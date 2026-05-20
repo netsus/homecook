@@ -358,14 +358,14 @@ describe("planner week screen", () => {
     const recipeBookButton = within(sheet).getByTestId("meal-add-option-recipebook");
     const pantryButton = within(sheet).getByTestId("meal-add-option-pantry");
     const leftoverButton = within(sheet).getByTestId("meal-add-option-leftover");
-    const youtubeLink = within(sheet).getByRole("link", { name: /유튜브에서 가져오기/ });
+    const youtubeButton = within(sheet).getByRole("button", { name: /유튜브에서 가져오기/ });
     const manualLink = within(sheet).getByRole("link", { name: /직접 등록/ });
 
     expect(searchButton).toBeTruthy();
     expect(recipeBookButton.tagName).toBe("BUTTON");
     expect(pantryButton.tagName).toBe("BUTTON");
     expect(leftoverButton.tagName).toBe("BUTTON");
-    expect(youtubeLink.getAttribute("href")).toContain("/menu/add/youtube?");
+    expect(youtubeButton).toBeTruthy();
     expect(manualLink.getAttribute("href")).toContain("/menu/add/manual?");
 
     await user.click(searchButton);
@@ -373,6 +373,14 @@ describe("planner week screen", () => {
     expect(screen.queryByTestId("planner-meal-add-sheet")).toBeNull();
 
     await user.click(screen.getByLabelText("뒤로"));
+    expect(screen.getByTestId("planner-meal-add-sheet")).toBeTruthy();
+
+    await user.click(within(screen.getByTestId("planner-meal-add-sheet")).getByRole("button", { name: /유튜브에서 가져오기/ }));
+    const youtubeDialog = await screen.findByRole("dialog", { name: "유튜브에서 가져오기" });
+    expect(youtubeDialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
+    expect(screen.queryByTestId("planner-meal-add-sheet")).toBeNull();
+
+    await user.click(within(youtubeDialog).getByTestId("youtube-import-entry-back"));
     expect(screen.getByTestId("planner-meal-add-sheet")).toBeTruthy();
   });
 

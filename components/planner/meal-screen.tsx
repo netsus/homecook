@@ -1452,6 +1452,7 @@ export function MealScreen({
           onComplete={handleMealAddComplete}
           planDate={planDate}
           slotName={slotName}
+          youtubeHref={getMealAddRouteHref("youtube")}
         />
       ) : null}
 

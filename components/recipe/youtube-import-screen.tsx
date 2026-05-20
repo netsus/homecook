@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
 import { Button } from "@/components/ui/button";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
+import { AppBackButton } from "@/components/shared/app-back-button";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
@@ -38,6 +39,7 @@ import type {
 
 interface YoutubeImportScreenProps {
   initialAuthenticated?: boolean;
+  initialYoutubeUrl?: string;
   planDate: string;
   columnId: string;
   slotName: string;
@@ -162,17 +164,11 @@ function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBar
     <div className="shrink-0 border-b border-[var(--line)] bg-white">
       <div className="flex h-14 items-center gap-2 px-2">
         {step !== "complete" && (
-          <button
-            aria-label="뒤로 가기"
-            className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-white/60"
-            onClick={onBack}
-            type="button"
+          <AppBackButton
+            ariaLabel="뒤로 가기"
             disabled={isRegistering}
-          >
-            <svg fill="none" height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 5L7 10L12 15" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-            </svg>
-          </button>
+            onClick={onBack}
+          />
         )}
         <h1 className="min-w-0 flex-1 truncate text-lg font-semibold text-[var(--foreground)]">
           {step === "review" ? "추출 결과 확인" : "유튜브에서 가져오기"}
@@ -945,6 +941,7 @@ function ServingsInputModal({ onConfirm, onCancel, defaultServings, isCreating, 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export function YoutubeImportScreen({
+  initialYoutubeUrl = "",
   planDate,
   columnId,
   slotName,
@@ -965,7 +962,7 @@ export function YoutubeImportScreen({
   const [modalMode, setModalMode] = useState<ModalMode>("none");
 
   // Step 1 state
-  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState(initialYoutubeUrl);
   const [isValidating, setIsValidating] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
 
