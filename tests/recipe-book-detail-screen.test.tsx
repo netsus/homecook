@@ -704,12 +704,12 @@ describe("RecipeBookDetailScreen", () => {
     expect(backLink.getAttribute("href")).toBe("/mypage");
   });
 
-  it("preserves mypage tab context in the back link", async () => {
+  it("ignores stale return context in the desktop mypage breadcrumb", async () => {
     navigationMocks.searchParams.mockReturnValue(
       new URLSearchParams({
         restore: "recipebook-tab",
         returnSurface: "mypage.recipebooks",
-        returnTo: "/mypage",
+        returnTo: "/mypage/recipe-books/older-book?type=liked&name=좋아요한 레시피",
       }),
     );
 
@@ -725,8 +725,6 @@ describe("RecipeBookDetailScreen", () => {
     await screen.findByText("된장찌개");
 
     const backLink = screen.getByLabelText("뒤로 가기");
-    expect(backLink.getAttribute("href")).toBe(
-      "/mypage?returnSurface=mypage.recipebooks&restore=recipebook-tab",
-    );
+    expect(backLink.getAttribute("href")).toBe("/mypage");
   });
 });

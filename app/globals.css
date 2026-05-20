@@ -3755,6 +3755,51 @@ button {
     margin-top: 40px;
   }
 
+  .web-cook-mode-state-card {
+    margin-top: 64px;
+    padding: 28px 32px;
+  }
+
+  .web-cook-mode-state-card .web-state-panel {
+    border: 0;
+    background: transparent;
+    padding: 48px 24px;
+  }
+
+  .web-cook-mode-state-actions,
+  .web-cook-mode-state-card .web-state-action {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .web-cook-mode-loading-head {
+    display: grid;
+    gap: 14px;
+  }
+
+  .web-cook-mode-loading-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 28px;
+    margin-top: 36px;
+  }
+
+  .web-cook-mode-loading-list,
+  .web-cook-mode-loading-rail {
+    display: grid;
+    gap: 12px;
+  }
+
+  .web-cook-mode-loading-rail {
+    align-self: start;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-md);
+    background: var(--web-surface);
+    padding: 20px;
+  }
+
   .web-cook-step-panel h2,
   .web-cook-checklist-panel h2 {
     margin: 0 0 16px;
@@ -4142,6 +4187,30 @@ button {
     margin-top: 40px;
   }
 
+  .web-mypage-saved-state {
+    display: flex;
+    min-height: 132px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-top: 48px;
+    padding: 22px 24px;
+  }
+
+  .web-mypage-saved-state h3 {
+    margin: 0;
+    color: var(--web-text-1);
+    font-size: 17px;
+    font-weight: 800;
+  }
+
+  .web-mypage-saved-state p {
+    margin: 6px 0 0;
+    color: var(--web-text-3);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
   .web-mypage-action-row,
   .web-mypage-settings-row,
   .web-mypage-shopping-card {
@@ -4197,6 +4266,10 @@ button {
     max-width: 900px;
   }
 
+  .web-mypage-notification-surface {
+    max-width: 640px;
+  }
+
   .web-mypage-account-card,
   .web-mypage-toggle-card,
   .web-mypage-faq-card,
@@ -4218,7 +4291,7 @@ button {
   }
 
   .web-mypage-account-profile span:nth-child(2),
-  .web-mypage-toggle-row > span,
+  .web-mypage-toggle-copy,
   .web-mypage-faq-row > div {
     display: grid;
     gap: 3px;
@@ -4292,6 +4365,21 @@ button {
     justify-content: space-between;
     gap: 24px;
     padding: 18px 0;
+  }
+
+  .web-mypage-toggle-row {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .web-mypage-toggle-row:focus-visible {
+    border-radius: var(--web-r-sm);
+    outline: 2px solid var(--web-brand);
+    outline-offset: 4px;
   }
 
   .web-mypage-toggle-row:first-child,

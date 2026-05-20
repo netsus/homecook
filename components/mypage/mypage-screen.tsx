@@ -48,6 +48,7 @@ import {
   renameRecipeBook,
   type UserProfileData,
 } from "@/lib/api/mypage";
+import { fetchRecipeBookRecipes } from "@/lib/api/recipe";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import {
   resolveMypageRestoreState,
@@ -55,11 +56,12 @@ import {
 } from "@/lib/navigation/mypage-return-state";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
-import type { RecipeBookSummary } from "@/types/recipe";
+import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
 import type { ShoppingListHistoryItem } from "@/types/shopping";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
+type SavedRecipesState = "idle" | "loading" | "ready" | "empty" | "error";
 type MypageTab =
   | MypageRestoreTab
   | "account"
@@ -68,6 +70,7 @@ type MypageTab =
 
 const TOAST_DURATION_MS = 3000;
 const SHOPPING_PAGE_SIZE = 10;
+const SAVED_RECIPES_PAGE_SIZE = 12;
 
 const WEB_NAV_ITEMS = [
   { id: "home", href: "/", label: "탐색" },
@@ -82,43 +85,13 @@ const SOCIAL_PROVIDER_LABELS: Record<string, string> = {
   google: "Google 로그인",
 };
 
-const WEB_SAVED_RECIPES = [
-  {
-    title: "소고기 미역국",
-    meta: "홈쿡 오리지널 · 조회 12.5k · 저장 1203",
-    imageSrc:
-      "https://images.unsplash.com/photo-1547592180-85f173990554?w=900&h=675&fit=crop&q=80",
-  },
-  {
-    title: "애호박 새우젓 볶음",
-    meta: "홈쿡 오리지널 · 조회 8.2k · 저장 702",
-    imageSrc:
-      "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&h=675&fit=crop&q=80",
-  },
-  {
-    title: "비빔밥",
-    meta: "홈쿡 오리지널 · 조회 24.0k · 저장 2104",
-    imageSrc:
-      "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=900&h=675&fit=crop&q=80",
-  },
-  {
-    title: "순두부찌개",
-    meta: "홈쿡 오리지널 · 조회 18.9k · 저장 1820",
-    imageSrc:
-      "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=900&h=675&fit=crop&q=80",
-  },
-  {
-    title: "소불고기",
-    meta: "홈쿡 오리지널 · 조회 33.1k · 저장 3402",
-    imageSrc:
-      "https://images.unsplash.com/photo-1583224944844-5b268c057b72?w=900&h=675&fit=crop&q=80",
-  },
-  {
-    title: "김치볶음밥",
-    meta: "홈쿡 오리지널 · 조회 41.2k · 저장 2980",
-    imageSrc:
-      "https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?w=900&h=675&fit=crop&q=80",
-  },
+const WEB_RECIPE_FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1547592180-85f173990554?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1583224944844-5b268c057b72?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?w=900&h=675&fit=crop&q=80",
 ] as const;
 
 export interface MypageScreenProps {
@@ -146,6 +119,10 @@ export function MypageScreen({
 
   // Recipe books
   const [books, setBooks] = useState<RecipeBookSummary[]>([]);
+  const [savedRecipes, setSavedRecipes] = useState<RecipeBookRecipeItem[]>([]);
+  const [savedRecipesState, setSavedRecipesState] =
+    useState<SavedRecipesState>("idle");
+  const [savedRecipesBookId, setSavedRecipesBookId] = useState<string | null>(null);
 
   // Shopping history
   const [shoppingItems, setShoppingItems] = useState<ShoppingListHistoryItem[]>([]);
@@ -176,6 +153,13 @@ export function MypageScreen({
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const tab = getMypageTabFromQuery(params.get("tab"));
+    if (tab) {
+      setActiveTab(tab);
+      setMobileSurface(getMobileSurfaceForTab(tab));
+      return;
+    }
+
     if (!params.has("restore") && !params.has("returnSurface")) {
       return;
     }
@@ -260,6 +244,24 @@ export function MypageScreen({
         setViewState("error");
       }
     }
+  }, []);
+
+  const loadSavedRecipes = useCallback(async (bookId: string) => {
+    setSavedRecipesState("loading");
+    const result = await fetchRecipeBookRecipes(bookId, {
+      limit: SAVED_RECIPES_PAGE_SIZE,
+    });
+
+    if (!result.success || !result.data) {
+      setSavedRecipes([]);
+      setSavedRecipesBookId(bookId);
+      setSavedRecipesState("error");
+      return;
+    }
+
+    setSavedRecipes(result.data.items);
+    setSavedRecipesBookId(bookId);
+    setSavedRecipesState(result.data.items.length === 0 ? "empty" : "ready");
   }, []);
 
   const loadMoreShopping = useCallback(async () => {
@@ -398,6 +400,44 @@ export function MypageScreen({
     void loadShoppingHistory();
   }, [authState, activeTab, shoppingLoaded, loadShoppingHistory]);
 
+  const savedBook = books.find((book) => book.book_type === "saved") ?? null;
+  const savedRecipeCount =
+    savedBook?.recipe_count ??
+    books.reduce((sum, book) => sum + book.recipe_count, 0);
+  const totalRecipeCount = books.reduce((sum, book) => sum + book.recipe_count, 0);
+
+  // Load actual saved recipes for the desktop saved tab.
+  useEffect(() => {
+    if (authState !== "authenticated" || activeTab !== "saved") return;
+
+    if (!savedBook || savedRecipeCount === 0) {
+      setSavedRecipes([]);
+      setSavedRecipesBookId(savedBook?.id ?? null);
+      setSavedRecipesState("empty");
+      return;
+    }
+
+    if (
+      savedRecipesState === "loading" ||
+      (savedRecipesBookId === savedBook.id &&
+        (savedRecipesState === "ready" ||
+          savedRecipesState === "empty" ||
+          savedRecipesState === "error"))
+    ) {
+      return;
+    }
+
+    void loadSavedRecipes(savedBook.id);
+  }, [
+    activeTab,
+    authState,
+    loadSavedRecipes,
+    savedBook,
+    savedRecipeCount,
+    savedRecipesBookId,
+    savedRecipesState,
+  ]);
+
   // Infinite scroll observer for shopping tab
   useEffect(() => {
     if (activeTab !== "shopping" || !shoppingHasNext) return;
@@ -451,10 +491,6 @@ export function MypageScreen({
 
   const systemBooks = books.filter((b) => b.book_type !== "custom");
   const customBooks = books.filter((b) => b.book_type === "custom");
-  const savedRecipeCount =
-    books.find((book) => book.book_type === "saved")?.recipe_count ??
-    books.reduce((sum, book) => sum + book.recipe_count, 0);
-  const totalRecipeCount = books.reduce((sum, book) => sum + book.recipe_count, 0);
 
   // --- Render states ---
 
@@ -709,11 +745,18 @@ export function MypageScreen({
           {activeTab === "saved" ? (
             <SavedRecipesSurface
               books={books}
+              savedRecipes={savedRecipes}
               savedRecipeCount={savedRecipeCount}
+              savedRecipesState={savedRecipesState}
               shoppingCount={shoppingItems.length}
               totalRecipeCount={totalRecipeCount}
               onOpenRecipebooks={() => switchDesktopTab("recipebooks")}
               onOpenShopping={() => switchDesktopTab("shopping")}
+              onRetrySavedRecipes={() => {
+                if (savedBook) {
+                  void loadSavedRecipes(savedBook.id);
+                }
+              }}
             />
           ) : null}
           {activeTab === "account" ? (
@@ -758,6 +801,7 @@ export function MypageScreen({
                 setMenuOpenBookId(null);
               }}
               onRenameValueChange={setRenameValue}
+              onReturnToMypage={() => switchDesktopTab("saved")}
               onShowCreateInput={() => setShowCreateInput(true)}
               renameInputRef={renameInputRef}
               renameValue={renameValue}
@@ -810,18 +854,24 @@ function WebProfilePill({ profile }: { profile: UserProfileData | null }) {
 
 function SavedRecipesSurface({
   books,
+  savedRecipes,
   savedRecipeCount,
+  savedRecipesState,
   shoppingCount,
   totalRecipeCount,
   onOpenRecipebooks,
   onOpenShopping,
+  onRetrySavedRecipes,
 }: {
   books: RecipeBookSummary[];
+  savedRecipes: RecipeBookRecipeItem[];
   savedRecipeCount: number;
+  savedRecipesState: SavedRecipesState;
   shoppingCount: number;
   totalRecipeCount: number;
   onOpenRecipebooks: () => void;
   onOpenShopping: () => void;
+  onRetrySavedRecipes: () => void;
 }) {
   return (
     <div className="web-mypage-saved" data-testid="recipebook-tab">
@@ -829,25 +879,11 @@ function SavedRecipesSurface({
         <h2>저장한 레시피</h2>
         <p>{savedRecipeCount}개의 레시피를 저장했어요.</p>
       </div>
-      <div className="web-mypage-recipe-grid" role="list">
-        {WEB_SAVED_RECIPES.map((recipe) => (
-          <WebRecipeCard
-            alt={recipe.title}
-            imageSrc={recipe.imageSrc}
-            key={recipe.title}
-            meta={recipe.meta}
-            role="listitem"
-            title={
-              <span className="web-mypage-recipe-title">
-                {recipe.title}
-                <span aria-hidden="true" className="web-mypage-save-badge">
-                  <BookmarkIcon />
-                </span>
-              </span>
-            }
-          />
-        ))}
-      </div>
+      <SavedRecipeGrid
+        recipes={savedRecipes}
+        savedRecipesState={savedRecipesState}
+        onRetry={onRetrySavedRecipes}
+      />
 
       <div className="web-mypage-link-list">
         <div className="visually-hidden">
@@ -916,6 +952,90 @@ function SavedRecipesSurface({
   );
 }
 
+function SavedRecipeGrid({
+  recipes,
+  savedRecipesState,
+  onRetry,
+}: {
+  recipes: RecipeBookRecipeItem[];
+  savedRecipesState: SavedRecipesState;
+  onRetry: () => void;
+}) {
+  if (savedRecipesState === "idle" || savedRecipesState === "loading") {
+    return (
+      <div className="web-mypage-recipe-grid" data-testid="saved-recipes-loading">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div className="web-recipe-card" key={index}>
+            <WebSkeleton className="web-recipe-card-thumb" />
+            <div className="web-recipe-card-body">
+              <WebSkeleton height={18} width="72%" />
+              <div className="mt-2">
+                <WebSkeleton height={14} width="48%" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (savedRecipesState === "error") {
+    return (
+      <WebCard className="web-mypage-saved-state">
+        <div>
+          <h3>저장한 레시피를 불러오지 못했어요</h3>
+          <p>잠시 후 다시 시도해 주세요.</p>
+        </div>
+        <WebButton onClick={onRetry} size="sm" variant="secondary">
+          다시 시도
+        </WebButton>
+      </WebCard>
+    );
+  }
+
+  if (savedRecipesState === "empty" || recipes.length === 0) {
+    return (
+      <WebCard className="web-mypage-saved-state" data-testid="saved-recipes-empty">
+        <div>
+          <h3>아직 저장한 레시피가 없어요</h3>
+          <p>마음에 드는 레시피를 저장하면 여기에 모아 보여드려요.</p>
+        </div>
+        <Link className="web-button web-button-secondary web-button-sm" href="/">
+          레시피 둘러보기
+        </Link>
+      </WebCard>
+    );
+  }
+
+  return (
+    <div className="web-mypage-recipe-grid" role="list">
+      {recipes.map((recipe) => (
+        <div
+          data-testid={`saved-recipe-${recipe.recipe_id}`}
+          key={recipe.recipe_id}
+          role="listitem"
+        >
+          <Link href={`/recipe/${recipe.recipe_id}`}>
+            <WebRecipeCard
+              alt={recipe.title}
+              imageSrc={recipe.thumbnail_url ?? getFallbackRecipeImage(recipe.title)}
+              meta={formatSavedRecipeMeta(recipe)}
+              title={
+                <span className="web-mypage-recipe-title">
+                  {recipe.title}
+                  <span aria-hidden="true" className="web-mypage-save-badge">
+                    <BookmarkIcon />
+                  </span>
+                </span>
+              }
+            />
+          </Link>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function MyPageAccountSurface({ profile }: { profile: UserProfileData | null }) {
   return (
     <div className="web-mypage-subsurface" data-testid="mypage-account-tab">
@@ -932,13 +1052,19 @@ function MyPageAccountSurface({ profile }: { profile: UserProfileData | null }) 
             <strong>{profile?.nickname ?? ""}</strong>
             <em>{SOCIAL_PROVIDER_LABELS[profile?.social_provider ?? ""] ?? ""}</em>
           </span>
-          <Link className="web-button web-button-secondary web-button-sm" href="/settings">
+          <Link
+            className="web-button web-button-secondary web-button-sm"
+            href="/settings"
+          >
             닉네임 변경
           </Link>
         </div>
       </WebCard>
       <WebCard className="web-mypage-account-card">
-        <Link className="web-mypage-settings-row" href="/settings">
+        <Link
+          className="web-mypage-settings-row"
+          href="/settings"
+        >
           <span className="web-mypage-row-icon"><LogoutIcon /></span>
           <span className="web-mypage-row-copy">
             <strong>로그아웃</strong>
@@ -973,19 +1099,52 @@ function MyPageAccountSurface({ profile }: { profile: UserProfileData | null }) 
 }
 
 function MyPageNotificationSurface() {
+  const [settings, setSettings] = useState({
+    cookTime: true,
+    shoppingReminder: true,
+    plannerSummary: false,
+    weeklyReport: true,
+  });
+  const toggle = (key: keyof typeof settings) => {
+    setSettings((current) => ({ ...current, [key]: !current[key] }));
+  };
+
   return (
-    <div className="web-mypage-subsurface" data-testid="mypage-notification-tab">
+    <div
+      className="web-mypage-subsurface web-mypage-notification-surface"
+      data-testid="mypage-notification-tab"
+    >
       <div className="web-mypage-section-head">
         <h2>알림 설정</h2>
         <p>중요한 요리와 장보기 알림만 받을 수 있어요.</p>
       </div>
       <WebCard className="web-mypage-toggle-card">
-        <ToggleRow checked description="설정한 요리 시간이 다가오면 알려드려요." title="요리 시간 알림" />
-        <ToggleRow checked description="장보기 예정일 전날 준비할 항목을 알려드려요." title="장보기 리마인드" />
-        <ToggleRow description="이번 주 플래너 요약을 하루 전에 보내드려요." title="플래너 요약" />
+        <ToggleRow
+          checked={settings.cookTime}
+          description="설정한 요리 시간이 다가오면 알려드려요."
+          onToggle={() => toggle("cookTime")}
+          title="요리 시간 알림"
+        />
+        <ToggleRow
+          checked={settings.shoppingReminder}
+          description="장보기 예정일 전날 준비할 항목을 알려드려요."
+          onToggle={() => toggle("shoppingReminder")}
+          title="장보기 리마인드"
+        />
+        <ToggleRow
+          checked={settings.plannerSummary}
+          description="이번 주 플래너 요약을 하루 전에 보내드려요."
+          onToggle={() => toggle("plannerSummary")}
+          title="플래너 요약"
+        />
       </WebCard>
       <WebCard className="web-mypage-toggle-card">
-        <ToggleRow checked description="저장한 레시피와 장보기 변화를 주간 리포트로 받아요." title="주간 리포트" />
+        <ToggleRow
+          checked={settings.weeklyReport}
+          description="저장한 레시피와 장보기 변화를 주간 리포트로 받아요."
+          onToggle={() => toggle("weeklyReport")}
+          title="주간 리포트"
+        />
       </WebCard>
     </div>
   );
@@ -1028,27 +1187,34 @@ function MyPageHelpSurface() {
 function ToggleRow({
   checked = false,
   description,
+  onToggle,
   title,
 }: {
   checked?: boolean;
   description: string;
+  onToggle: () => void;
   title: string;
 }) {
   return (
-    <div className="web-mypage-toggle-row">
-      <span>
+    <button
+      aria-checked={checked}
+      aria-label={title}
+      className="web-mypage-toggle-row"
+      onClick={onToggle}
+      role="switch"
+      type="button"
+    >
+      <span className="web-mypage-toggle-copy">
         <strong>{title}</strong>
         <em>{description}</em>
       </span>
       <span
-        aria-checked={checked}
-        aria-label={title}
+        aria-hidden="true"
         className={checked ? "web-switch web-switch-on" : "web-switch"}
-        role="switch"
       >
         <span />
       </span>
-    </div>
+    </button>
   );
 }
 
@@ -1317,6 +1483,7 @@ interface RecipeBookTabContentProps {
   onRequestDelete: (book: RecipeBookSummary) => void;
   onCloseDeleteDialog: () => void;
   onConfirmDelete: () => void;
+  onReturnToMypage: () => void;
   onShowCreateInput: () => void;
   onCancelCreate: () => void;
   onCreateNameChange: (value: string) => void;
@@ -1347,6 +1514,7 @@ function RecipeBookTabContent({
   onRequestDelete,
   onCloseDeleteDialog,
   onConfirmDelete,
+  onReturnToMypage,
   onShowCreateInput,
   onCancelCreate,
   onCreateNameChange,
@@ -1355,7 +1523,7 @@ function RecipeBookTabContent({
   return (
     <div className="web-recipebooks-screen" data-testid="recipebook-tab">
       <nav aria-label="레시피북 경로" className="web-breadcrumb">
-        <button className="web-breadcrumb-link" onClick={() => window.history.back()} type="button">
+        <button className="web-breadcrumb-link" onClick={onReturnToMypage} type="button">
           ‹ 마이페이지
         </button>
         <span className="web-breadcrumb-sep">/</span>
@@ -1851,6 +2019,48 @@ function ShoppingHistoryCard({ item }: { item: ShoppingListHistoryItem }) {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function getMypageTabFromQuery(value: string | null): MypageTab | null {
+  if (
+    value === "saved" ||
+    value === "recipebooks" ||
+    value === "shopping" ||
+    value === "account" ||
+    value === "notifications" ||
+    value === "help"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function getMobileSurfaceForTab(tab: MypageTab): MypageMobileSurface {
+  if (tab === "recipebooks") return "recipebook";
+  if (tab === "shopping") return "shopping";
+  return "home";
+}
+
+function formatSavedRecipeMeta(recipe: RecipeBookRecipeItem) {
+  const tags = recipe.tags ?? [];
+
+  return [
+    tags.length > 0 ? tags.join(" · ") : null,
+    recipe.total_duration_text ?? null,
+    typeof recipe.base_servings === "number" ? `${recipe.base_servings}인분` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function getFallbackRecipeImage(title: string) {
+  const seed = Array.from(title).reduce(
+    (sum, char) => sum + char.charCodeAt(0),
+    0,
+  );
+
+  return WEB_RECIPE_FALLBACK_IMAGES[seed % WEB_RECIPE_FALLBACK_IMAGES.length];
+}
+
 function getBookPreviewImages(book: RecipeBookSummary) {
   const offset =
     book.book_type === "saved"
@@ -1862,7 +2072,10 @@ function getBookPreviewImages(book: RecipeBookSummary) {
           : 0;
 
   return [0, 1, 2, 3].map(
-    (step) => WEB_SAVED_RECIPES[(offset + step) % WEB_SAVED_RECIPES.length].imageSrc,
+    (step) =>
+      WEB_RECIPE_FALLBACK_IMAGES[
+        (offset + step) % WEB_RECIPE_FALLBACK_IMAGES.length
+      ],
   );
 }
 

@@ -564,9 +564,9 @@ export function RecipeBookDetailScreen({
           <Link
             aria-label="뒤로 가기"
             className="web-breadcrumb-link"
-            href={appReturn.href}
+            href="/mypage"
           >
-            ‹ 레시피북
+            ‹ 마이페이지
           </Link>
           <span className="web-breadcrumb-sep">/</span>
           <span className="web-breadcrumb-current">{currentBookName}</span>

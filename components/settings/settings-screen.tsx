@@ -58,6 +58,8 @@ const WEB_NAV_ITEMS = [
   { id: "mypage", href: "/mypage", label: "마이페이지" },
 ] as const;
 
+const MYPAGE_ACCOUNT_HREF = "/mypage?tab=account";
+
 export interface SettingsScreenProps {
   initialAuthenticated?: boolean;
 }
@@ -593,7 +595,7 @@ export function SettingsScreen({
       />
       <main className="web-settings-screen">
         <nav aria-label="설정 경로" className="web-breadcrumb">
-          <Link className="web-breadcrumb-link" href="/mypage">
+          <Link className="web-breadcrumb-link" href={MYPAGE_ACCOUNT_HREF}>
             ‹ 마이페이지
           </Link>
           <span className="web-breadcrumb-sep">/</span>
@@ -1020,7 +1022,7 @@ function SettingsProfilePill({ nickname }: { nickname?: string }) {
     <Link
       aria-label={`${nickname ?? "내"} 마이페이지`}
       className="web-mypage-top-profile"
-      href="/mypage"
+      href={MYPAGE_ACCOUNT_HREF}
     >
       <span aria-hidden="true">{nickname?.slice(0, 1).toUpperCase() ?? "?"}</span>
     </Link>

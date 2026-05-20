@@ -13,6 +13,15 @@ import {
 import { ContentState } from "@/components/shared/content-state";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  WebButton,
+  WebCard,
+  WebEmptyState,
+  WebErrorState,
+  WebShell,
+  WebSkeleton,
+  WebTopNav,
+} from "@/components/web";
 import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { buildReturnHref } from "@/lib/navigation/return-context";
@@ -21,6 +30,13 @@ import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useStandaloneCookModeStore } from "@/stores/standalone-cook-mode-store";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
+
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
 
 export interface StandaloneCookModeScreenProps {
   recipeId: string;
@@ -176,6 +192,16 @@ export function StandaloneCookModeScreen({
 
   // --- Auth checking ---
   if (authState === "checking") {
+    if (!isMobileViewport) {
+      return (
+        <StandaloneCookModeDesktopLoading
+          description="요리모드 준비 중이에요."
+          recipeId={recipeId}
+          title="요리모드를 불러오고 있어요"
+        />
+      );
+    }
+
     return (
       <div
         className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
@@ -195,6 +221,31 @@ export function StandaloneCookModeScreen({
 
   // --- Login gate (shown when unauthenticated user tries to complete) ---
   if (showLoginGate) {
+    if (!isMobileViewport) {
+      return (
+        <StandaloneCookModeDesktopState recipeId={recipeId}>
+          <WebCard className="web-cook-mode-state-card">
+            <WebEmptyState
+              action={
+                <>
+                  <SocialLoginButtons nextPath={returnPath} />
+                  <WebButton
+                    data-testid="login-gate-back"
+                    onClick={() => setShowLoginGate(false)}
+                    variant="ghost"
+                  >
+                    돌아가기
+                  </WebButton>
+                </>
+              }
+              description="요리 완료를 위해 로그인이 필요해요. 로그인하면 현재 화면으로 돌아옵니다."
+              title="로그인이 필요해요"
+            />
+          </WebCard>
+        </StandaloneCookModeDesktopState>
+      );
+    }
+
     return (
       <div
         className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
@@ -223,6 +274,16 @@ export function StandaloneCookModeScreen({
 
   // --- Loading ---
   if (screenState === "loading") {
+    if (!isMobileViewport) {
+      return (
+        <StandaloneCookModeDesktopLoading
+          description="레시피와 조리 단계를 준비하고 있어요."
+          recipeId={recipeId}
+          title="요리모드를 불러오고 있어요"
+        />
+      );
+    }
+
     return (
       <div
         className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
@@ -248,6 +309,24 @@ export function StandaloneCookModeScreen({
 
   // --- Not found ---
   if (screenState === "not_found") {
+    if (!isMobileViewport) {
+      return (
+        <StandaloneCookModeDesktopState recipeId={recipeId}>
+          <WebCard className="web-cook-mode-state-card">
+            <WebErrorState
+              action={
+                <WebButton onClick={goAppBack} variant="secondary">
+                  레시피로 돌아가기
+                </WebButton>
+              }
+              description="레시피를 찾을 수 없어요."
+              title="레시피를 찾을 수 없어요"
+            />
+          </WebCard>
+        </StandaloneCookModeDesktopState>
+      );
+    }
+
     return (
       <div
         className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
@@ -268,6 +347,27 @@ export function StandaloneCookModeScreen({
 
   // --- Error ---
   if (screenState === "error") {
+    if (!isMobileViewport) {
+      return (
+        <StandaloneCookModeDesktopState recipeId={recipeId}>
+          <WebCard className="web-cook-mode-state-card">
+            <WebErrorState
+              action={
+                <div className="web-cook-mode-state-actions">
+                  <WebButton onClick={handleRetry}>다시 시도</WebButton>
+                  <WebButton onClick={goAppBack} variant="ghost">
+                    레시피로 돌아가기
+                  </WebButton>
+                </div>
+              }
+              description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+              title="문제가 생겼어요"
+            />
+          </WebCard>
+        </StandaloneCookModeDesktopState>
+      );
+    }
+
     return (
       <div
         className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
@@ -290,6 +390,19 @@ export function StandaloneCookModeScreen({
 
   // --- Completing ---
   if (screenState === "completing") {
+    if (!isMobileViewport) {
+      return (
+        <StandaloneCookModeDesktopState recipeId={recipeId}>
+          <WebCard className="web-cook-mode-state-card">
+            <WebEmptyState
+              description="요리를 완료하고 있어요..."
+              title="요리 완료 처리 중"
+            />
+          </WebCard>
+        </StandaloneCookModeDesktopState>
+      );
+    }
+
     return (
       <div
         className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
@@ -358,5 +471,76 @@ export function StandaloneCookModeScreen({
       />
 
     </>
+  );
+}
+
+function StandaloneCookModeDesktopState({
+  children,
+  recipeId,
+}: {
+  children: React.ReactNode;
+  recipeId: string;
+}) {
+  return (
+    <WebShell className="web-cooking-shell" wide>
+      <WebTopNav
+        items={WEB_NAV_ITEMS}
+        rightSlot={<div className="web-profile-button">◎</div>}
+      />
+      <main
+        className="web-cook-mode-screen"
+        data-testid="standalone-cook-mode-screen"
+      >
+        <nav aria-label="현재 위치" className="web-cook-breadcrumb">
+          <a href={`/recipe/${recipeId}`}>레시피</a>
+          <span aria-hidden="true">/</span>
+          <strong>독립 요리모드</strong>
+        </nav>
+        {children}
+      </main>
+    </WebShell>
+  );
+}
+
+function StandaloneCookModeDesktopLoading({
+  description,
+  recipeId,
+  title,
+}: {
+  description: string;
+  recipeId: string;
+  title: string;
+}) {
+  return (
+    <StandaloneCookModeDesktopState recipeId={recipeId}>
+      <WebCard
+        className="web-cook-mode-state-card"
+        data-testid="standalone-cook-mode-loading"
+      >
+        <div className="web-cook-mode-loading-head">
+          <WebSkeleton height={18} width={120} />
+          <WebSkeleton height={34} width="42%" />
+          <WebSkeleton height={16} width="34%" />
+          <span className="visually-hidden">
+            {title}. {description}
+          </span>
+        </div>
+        <div className="web-cook-mode-loading-layout">
+          <div className="web-cook-mode-loading-list">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <WebSkeleton height={96} key={index} />
+            ))}
+          </div>
+          <div className="web-cook-mode-loading-rail">
+            <WebSkeleton height={22} width={140} />
+            {Array.from({ length: 5 }).map((_, index) => (
+              <WebSkeleton height={48} key={index} />
+            ))}
+            <WebSkeleton height={44} />
+            <WebSkeleton height={44} />
+          </div>
+        </div>
+      </WebCard>
+    </StandaloneCookModeDesktopState>
   );
 }
