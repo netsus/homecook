@@ -477,13 +477,25 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [x] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed)
 - [ ] N/A
 
 > Design Status 전이: `temporary` (Stage 1 기본값)
 >   → `pending-review` (Stage 4 UI 연결 완료)
->   → 기존 confirmed 화면의 low-risk change이므로 Stage 6에서 lightweight design check로 흡수 가능
+>   → `confirmed` (Stage 6 lightweight design check, 2026-05-21)
+>
+> 기존 confirmed `YT_IMPORT` 화면의 low-risk 기능 연결이므로 Stage 5는 별도 public authority 없이 Stage 6에서 흡수했다. Claude objective review는 blocker 0 / `APPROVE`였고, Stage 4 PR #541의 a11y/visual/core frontend gates가 통과했다.
+
+## Stage 6 Closeout Evidence
+
+- Stage 1 docs: PR #538 merged (`7668c2a`).
+- Stage 2 backend: PR #539 merged (`536a9e3`).
+- Stage 4 frontend: PR #541 merged (`1fff5199`).
+- Claude objective review: `.omx/artifacts/claude-delegate-20-youtube-real-import-stage4-objective-review-retry-response-20260521T123125Z.md` returned `APPROVE`, blocking findings none.
+- Stage 5 design review: low-risk existing-screen change, no new layout/anchor dependency, absorbed in Stage 6 lightweight check.
+- Stage 6 verification: `pnpm verify:frontend:pr`, targeted YouTube Playwright 21/21, local Supabase smoke, demo smoke, workpack/closeout validators all passed before #541 merge.
+- Manual Only remains limited to credential/quota/live-provider checks: real YouTube Data API key validate/extract/register, actual quota exhaustion, broad live URL/classification spot checks, and future LLM/caption/ASR regression.
 
 ## Source Links
 
