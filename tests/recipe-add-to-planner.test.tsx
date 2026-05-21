@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RecipeDetailScreen } from "@/components/recipe/recipe-detail-screen";
+import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import { MOCK_RECIPE_DETAIL, MOCK_RECIPE_ID } from "@/lib/mock/recipes";
 import { PENDING_ACTION_KEY } from "@/lib/auth/pending-action";
 import { useAuthGateStore } from "@/stores/ui-store";
@@ -110,13 +111,31 @@ function buildSelectedDateLabel(date: Date) {
   return `${weekday} ${date.getMonth() + 1}월 ${date.getDate()}일`;
 }
 
+function installMatchMedia(matchesDesktop: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(min-width: 1024px)" ? matchesDesktop : !matchesDesktop,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe("planner add flow", () => {
   afterEach(() => {
     vi.useRealTimers();
     cleanup();
+    Reflect.deleteProperty(window, "matchMedia");
   });
 
   beforeEach(() => {
+    installMatchMedia(false);
     fetchJson.mockReset();
     fetchPlanner.mockReset();
     createMeal.mockReset();
@@ -266,6 +285,61 @@ describe("planner add flow", () => {
     expect(
       within(dialog).getByRole("button", { name: "플래너에 추가" }),
     ).toBeTruthy();
+  });
+
+  it("renders desktop recipe-detail planner dates as a fixed 7-column grid", () => {
+    installMatchMedia(true);
+    const selectableDates = [
+      "2026-05-21",
+      "2026-05-22",
+      "2026-05-23",
+      "2026-05-24",
+      "2026-05-25",
+      "2026-05-26",
+      "2026-05-27",
+      "2026-05-28",
+      "2026-05-29",
+      "2026-05-30",
+      "2026-05-31",
+      "2026-06-01",
+      "2026-06-02",
+      "2026-06-03",
+    ];
+
+    render(
+      <PlannerAddSheet
+        columns={buildPlannerData().columns}
+        errorMessage={null}
+        isOpen
+        onChangeServings={vi.fn()}
+        onClose={vi.fn()}
+        onRetryLoad={vi.fn()}
+        onSelectColumn={vi.fn()}
+        onSelectDate={vi.fn()}
+        onSubmit={vi.fn()}
+        selectableDates={selectableDates}
+        selectedColumnId="col-dinner"
+        selectedDate="2026-05-21"
+        servings={2}
+        sheetState="ready"
+        variant="recipe-detail"
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "플래너에 추가" });
+    const dateGroup = within(dialog).getByRole("group", { name: "날짜 선택" });
+    const dateButtons = within(dateGroup).getAllByRole("button");
+
+    expect(dateGroup.className).toContain("web-planner-date-grid");
+    expect(dateGroup.className).not.toContain("web-modal-chip-grid");
+    expect(dateButtons).toHaveLength(14);
+    expect(dateButtons[0].className).toContain("web-planner-date-cell");
+    expect(dateButtons[0].className).toContain("web-chip-active");
+    expect(dateButtons[0].querySelector(".web-planner-date-weekday")?.textContent).toBe("목");
+    expect(dateButtons[0].querySelector(".web-planner-date-day")?.textContent).toBe("5/21");
+    expect(dateButtons[0].querySelector(".web-planner-date-today")?.textContent).toBe("오늘");
+    expect(dateButtons[1].querySelector(".web-planner-date-today")).toBeNull();
+    expect(dateButtons[7].querySelector(".web-planner-date-day")?.textContent).toBe("5/28");
   });
 
   it("keeps four meal columns in one row and scrolls when there are five or more", async () => {

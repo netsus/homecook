@@ -282,7 +282,7 @@ export function PlannerAddSheet({
         <WebModal onBackdropClick={onClose}>
           <WebDialog
             aria-labelledby="planner-add-sheet-title-desktop"
-            size="default"
+            size="wide"
           >
             <WebDialogHeader>
               <div>
@@ -346,18 +346,32 @@ export function PlannerAddSheet({
                   ) : null}
 
                   <p className="web-modal-section-label">날짜</p>
-                  <div className="web-modal-chip-grid mb-5">
-                    {selectableDates.map((dateKey) => {
+                  <div
+                    aria-label="날짜 선택"
+                    className="web-planner-date-grid mb-5"
+                    role="group"
+                  >
+                    {selectableDates.map((dateKey, index) => {
                       const isSelected = dateKey === selectedDate;
+                      const isToday = index === 0;
 
                       return (
                         <WebChip
                           active={isSelected}
+                          className="web-planner-date-cell"
                           disabled={isSubmitting}
                           key={dateKey}
                           onClick={() => onSelectDate(dateKey)}
                         >
-                          {formatWeekdayLabel(dateKey)} {formatDateLabel(dateKey)}
+                          {isToday ? (
+                            <span className="web-planner-date-today">오늘</span>
+                          ) : null}
+                          <span className="web-planner-date-weekday">
+                            {formatWeekdayLabel(dateKey)}
+                          </span>
+                          <span className="web-planner-date-day">
+                            {formatDateLabel(dateKey)}
+                          </span>
                         </WebChip>
                       );
                     })}
