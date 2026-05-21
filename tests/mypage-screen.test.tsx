@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -204,13 +204,13 @@ const MOCK_EATEN_LEFTOVERS = {
 
 async function openRecipebookSurface(user = userEvent.setup()) {
   await screen.findByText("집밥러");
-  await user.click(screen.getByRole("button", { name: /레시피북 관리/ }));
+  await user.click(screen.getByRole("tab", { name: "레시피북 관리" }));
   return user;
 }
 
 async function openShoppingSurface(user = userEvent.setup()) {
   await screen.findByText("집밥러");
-  await user.click(screen.getByRole("button", { name: /장보기 내역/ }));
+  await user.click(screen.getByRole("tab", { name: "장보기 내역" }));
   return user;
 }
 
@@ -281,11 +281,11 @@ describe("MypageScreen", () => {
     expect(screen.getByTestId("mypage-profile")).toBeTruthy();
 
     expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /레시피북 관리/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /장보기 내역/ })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "레시피북 관리" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "장보기 내역" })).toBeTruthy();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /레시피북 관리/ }));
+    await user.click(screen.getByRole("tab", { name: "레시피북 관리" }));
 
     expect(screen.getByTestId("system-book-my_added").textContent).toContain("내가 추가한 레시피");
     expect(screen.getByTestId("system-book-saved").textContent).toContain("저장한 레시피");
@@ -298,7 +298,7 @@ describe("MypageScreen", () => {
 
     const user = userEvent.setup();
     await screen.findByText("집밥러");
-    await user.click(screen.getByRole("button", { name: /레시피북 관리/ }));
+    await user.click(screen.getByRole("tab", { name: "레시피북 관리" }));
 
     expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
   });
@@ -660,6 +660,20 @@ describe("MypageScreen", () => {
     expect(accountTab.getAttribute("aria-selected")).toBe("false");
   });
 
+  it("does not duplicate library navigation rows under saved recipes on desktop", async () => {
+    render(<MypageScreen initialAuthenticated />);
+
+    await screen.findByText("집밥러");
+
+    const savedPanel = screen.getByRole("tabpanel");
+
+    expect(within(savedPanel).getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
+    expect(within(savedPanel).queryByRole("button", { name: /레시피북 관리/ })).toBeNull();
+    expect(within(savedPanel).queryByRole("button", { name: /장보기 내역/ })).toBeNull();
+    expect(within(savedPanel).queryByRole("button", { name: /남은 요리/ })).toBeNull();
+    expect(within(savedPanel).queryByRole("button", { name: /다먹은 목록/ })).toBeNull();
+  });
+
   it("renders profile image with fallback initial when no image URL", async () => {
     mockFetchUserProfile.mockResolvedValue({
       ...MOCK_PROFILE,
@@ -702,7 +716,7 @@ describe("MypageScreen", () => {
     expect(screen.queryByRole("heading", { name: "저장한 레시피" })).toBeNull();
   });
 
-  it("returns from the recipebook surface to the mypage home tab without using browser history", async () => {
+  it("keeps recipebook management inside the tab system without a breadcrumb back button", async () => {
     render(
       <MypageScreen
         initialActiveTab="recipebooks"
@@ -713,8 +727,9 @@ describe("MypageScreen", () => {
     const user = userEvent.setup();
 
     await screen.findByTestId("recipebook-tab");
-    await user.click(screen.getByRole("button", { name: /마이페이지/ }));
+    expect(screen.queryByRole("navigation", { name: "레시피북 경로" })).toBeNull();
 
+    await user.click(screen.getByRole("tab", { name: "저장한 레시피" }));
     expect(await screen.findByText("저장된 된장찌개")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "레시피북" })).toBeNull();
   });
@@ -753,7 +768,7 @@ describe("MypageScreen", () => {
     await screen.findByText("집밥러");
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /남은 요리/ }));
+    await user.click(screen.getByRole("tab", { name: "남은 요리" }));
 
     expect(await screen.findByText("남은 김치찌개")).toBeTruthy();
     expect(mockFetchLeftovers).toHaveBeenCalledWith("leftover");

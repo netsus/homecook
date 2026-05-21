@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { LeftoverPicker } from "@/components/planner/leftover-picker";
 import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
@@ -96,7 +96,6 @@ function YoutubeImportEntryPanel({
   return (
     <div className="web-menu-add-inline-entry" data-testid="youtube-import-embedded">
       <div>
-        <p className="web-menu-add-eyebrow">유튜브 가져오기</p>
         <h3>영상 링크에서 레시피를 추출해요</h3>
         <p>
           {targetLabel}에 추가할 레시피 영상을 붙여넣고, 기존 가져오기 화면에서
@@ -209,14 +208,17 @@ export function MenuAddScreen({
   }, []);
 
   const handleSearchOptionClick = useCallback(() => {
-    if (!isDesktopViewport) {
-      setPickerMode("search");
+    setPickerMode("search");
+  }, []);
+
+  useEffect(() => {
+    if (!isDesktopViewport || pickerMode !== "search") {
       return;
     }
 
     searchInputRef.current?.focus();
     searchInputRef.current?.scrollIntoView?.({ behavior: "smooth", block: "center" });
-  }, [isDesktopViewport]);
+  }, [isDesktopViewport, pickerMode]);
 
   const handlePickerBackToMenu = useCallback(() => {
     if (initialSource && isMealAddModalOrigin) {
@@ -723,7 +725,6 @@ export function MenuAddScreen({
               <WebCard className="web-menu-add-picker-panel">
                 <div className="web-menu-add-picker-head">
                   <div>
-                    <p className="web-menu-add-eyebrow">현재 선택</p>
                     <h2>{desktopPickerTitle}</h2>
                   </div>
                   {pickerMode !== "none" ? (

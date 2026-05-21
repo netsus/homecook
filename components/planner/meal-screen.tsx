@@ -130,7 +130,7 @@ function getMealVisualMeta(meal: MealListItemData) {
   return (
     mealVisualMeta[meal.recipe_title] ?? {
       bg: "var(--brand-soft)",
-      chips: ["집밥", "간단", "플래너"],
+      chips: [],
       emoji: "🍽️",
       minutes: 20,
     }
@@ -425,6 +425,134 @@ function MealWebProfileButton() {
   );
 }
 
+function MealWebListCard({
+  conflictError,
+  isPending,
+  meal,
+  onCreateShopping,
+  onDelete,
+  onStartCook,
+  onStepDown,
+  onStepUp,
+}: {
+  conflictError: string | null;
+  isPending: boolean;
+  meal: MealListItemData;
+  onCreateShopping: () => void;
+  onDelete: () => void;
+  onStartCook: () => void;
+  onStepDown: () => void;
+  onStepUp: () => void;
+}) {
+  const isMin = meal.planned_servings <= 1;
+  const canStartCook = meal.status === "shopping_done";
+  const visual = getMealVisualMeta(meal);
+  const { hiddenCount, visible } = getVisibleMealChips(visual.chips, 4);
+
+  return (
+    <article className="web-meal-list-card" aria-label={`${meal.recipe_title} 끼니 음식`}>
+      <div
+        className="web-meal-list-thumb"
+        style={{ backgroundColor: visual.bg }}
+        aria-hidden="true"
+      >
+        {meal.recipe_thumbnail_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img alt="" src={meal.recipe_thumbnail_url} />
+        ) : (
+          <span>{visual.emoji}</span>
+        )}
+      </div>
+
+      <div className="web-meal-list-copy">
+        <div className="web-meal-title-meta">
+          <span
+            className={`web-meal-status web-meal-status-${getMealStatusClass(meal.status)}`}
+          >
+            {getMealStatusLabel(meal.status)}
+          </span>
+          {meal.is_leftover ? (
+            <span className="web-meal-leftover">남은요리</span>
+          ) : null}
+        </div>
+        <h2>{meal.recipe_title}</h2>
+        <div className="web-meal-meta-row">
+          <span>{meal.planned_servings}인분</span>
+          <span>{visual.minutes}분</span>
+        </div>
+        {visible.length > 0 || hiddenCount > 0 ? (
+          <div className="web-meal-list-chips">
+            {visible.map((chip) => (
+              <span key={chip}>{chip}</span>
+            ))}
+            {hiddenCount > 0 ? <span>+{hiddenCount}</span> : null}
+          </div>
+        ) : null}
+        {conflictError ? (
+          <p className="web-meal-conflict" role="alert">
+            {conflictError}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="web-meal-list-actions">
+        {canStartCook ? (
+          <button
+            aria-label={`${meal.recipe_title} 요리하기`}
+            className="web-meal-action-primary"
+            disabled={isPending}
+            onClick={onStartCook}
+            type="button"
+          >
+            <CookIcon />
+            요리하기
+          </button>
+        ) : null}
+        <button
+          className="web-meal-action-secondary"
+          onClick={onCreateShopping}
+          type="button"
+        >
+          <ShoppingIcon />
+          장보기
+        </button>
+        <div className="web-meal-inline-stepper" aria-label="인분 조절" role="group">
+          <button
+            aria-label="인분 감소"
+            disabled={isMin || isPending}
+            onClick={onStepDown}
+            type="button"
+          >
+            -
+          </button>
+          <span aria-label={`${meal.planned_servings}인분`} aria-live="polite">
+            {meal.planned_servings}인분
+          </span>
+          <button
+            aria-label="인분 증가"
+            disabled={isPending}
+            onClick={onStepUp}
+            type="button"
+          >
+            +
+          </button>
+        </div>
+        <button
+          aria-label={`${meal.recipe_title} 삭제`}
+          className="web-meal-delete-button"
+          data-testid={`meal-delete-${meal.id}`}
+          disabled={isPending}
+          onClick={onDelete}
+          type="button"
+        >
+          <TrashIcon />
+          식사 삭제
+        </button>
+      </div>
+    </article>
+  );
+}
+
 function MealWebView({
   addMealHref,
   authState,
@@ -435,7 +563,6 @@ function MealWebView({
   onBack,
   onCreateShopping,
   onDelete,
-  onRecipeClick,
   onRetry,
   onStartCook,
   onStepDown,
@@ -456,7 +583,6 @@ function MealWebView({
   onBack: () => void;
   onCreateShopping: () => void;
   onDelete: (meal: MealListItemData) => void;
-  onRecipeClick: (meal: MealListItemData) => void;
   onRetry: () => void;
   onStartCook: (meal: MealListItemData) => void;
   onStepDown: (meal: MealListItemData) => void;
@@ -469,12 +595,6 @@ function MealWebView({
   totalServings: number;
 }) {
   const isLoading = authState === "checking" || screenState === "loading";
-  const primaryMeal = meals[0] ?? null;
-  const secondaryMeals = primaryMeal ? meals.slice(1) : [];
-  const primaryVisual = primaryMeal ? getMealVisualMeta(primaryMeal) : null;
-  const primaryIngredients = primaryVisual
-    ? getVisibleMealChips(primaryVisual.chips, 6).visible
-    : [];
 
   return (
     <WebShell className="web-meal" wide>
@@ -501,12 +621,15 @@ function MealWebView({
         {isLoading ? (
           <div className="web-meal-layout">
             <div className="web-meal-main">
-              <WebSkeleton className="web-meal-hero" />
-              <WebSkeleton height={44} width="60%" />
-              <WebSkeleton height={180} />
+              <WebSkeleton height={74} width="68%" />
+              <div className="web-meal-list">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <WebSkeleton height={138} key={index} />
+                ))}
+              </div>
             </div>
             <aside className="web-meal-rail">
-              <WebSkeleton height={300} />
+              <WebSkeleton height={252} />
             </aside>
           </div>
         ) : null}
@@ -533,138 +656,39 @@ function MealWebView({
           />
         ) : null}
 
-        {screenState === "ready" && primaryMeal && primaryVisual ? (
-          <div className="web-meal-layout">
-            <section aria-label="식사 상세" className="web-meal-main">
-              <button
-                aria-label={`${primaryMeal.recipe_title} 레시피 보기`}
-                className="web-meal-hero"
-                onClick={() => onRecipeClick(primaryMeal)}
-                type="button"
-              >
-                {primaryMeal.recipe_thumbnail_url ? (
-                  <span
-                    aria-hidden="true"
-                    className="web-meal-hero-image"
-                    style={{ backgroundImage: `url(${primaryMeal.recipe_thumbnail_url})` }}
+        {screenState === "ready" && meals.length > 0 ? (
+          <div className="web-meal-layout web-meal-list-layout">
+            <section aria-labelledby="web-meal-list-title" className="web-meal-main">
+              <div className="web-meal-list-head">
+                <div>
+                  <p className="web-meal-kicker">
+                    {formatDateLong(planDate)}
+                    {slotName ? ` · ${slotName}` : ""}
+                  </p>
+                  <h1 id="web-meal-list-title">끼니 음식 {meals.length}개</h1>
+                  <p>이 끼니에 등록된 음식을 한 번에 관리해요.</p>
+                </div>
+              </div>
+
+              <div className="web-meal-list" data-testid="web-meal-list">
+                {meals.map((meal) => (
+                  <MealWebListCard
+                    conflictError={conflictErrors[meal.id] ?? null}
+                    isPending={pendingMealIds.has(meal.id)}
+                    key={meal.id}
+                    meal={meal}
+                    onCreateShopping={onCreateShopping}
+                    onDelete={() => onDelete(meal)}
+                    onStartCook={() => onStartCook(meal)}
+                    onStepDown={() => onStepDown(meal)}
+                    onStepUp={() => onStepUp(meal)}
                   />
-                ) : (
-                  <span className="web-meal-hero-fallback" aria-hidden="true">
-                    {primaryVisual.emoji}
-                  </span>
-                )}
-              </button>
-
-              <section className="web-meal-titleblock">
-                <div className="web-meal-title-meta">
-                  <span
-                    className={`web-meal-status web-meal-status-${getMealStatusClass(primaryMeal.status)}`}
-                  >
-                    {getMealStatusLabel(primaryMeal.status)}
-                  </span>
-                  {primaryMeal.is_leftover ? (
-                    <span className="web-meal-leftover">남은요리</span>
-                  ) : null}
-                </div>
-                <h1 className="web-meal-title">
-                  <button
-                    data-testid={`meal-recipe-link-${primaryMeal.id}`}
-                    onClick={() => onRecipeClick(primaryMeal)}
-                    type="button"
-                  >
-                    {primaryMeal.recipe_title}
-                  </button>
-                </h1>
-                <div className="web-meal-meta-row">
-                  <span>{formatDateLong(planDate)}</span>
-                  {slotName ? <span>{slotName}</span> : null}
-                  <span>{primaryMeal.planned_servings}인분</span>
-                  <span>{primaryVisual.minutes}분</span>
-                </div>
-              </section>
-
-              <section className="web-meal-section">
-                <div className="web-meal-section-head">
-                  <h2>재료</h2>
-                  <p>{primaryMeal.planned_servings}인분 기준</p>
-                </div>
-                <ul className="web-meal-ingredient-list">
-                  {primaryIngredients.map((ingredient) => (
-                    <li className="web-ingredient-row" key={ingredient}>
-                      <span className="web-ingredient-name">{ingredient}</span>
-                      <span className="web-ingredient-amount">준비</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              {secondaryMeals.length > 0 ? (
-                <section className="web-meal-section">
-                  <div className="web-meal-section-head">
-                    <h2>같은 끼니 음식</h2>
-                    <p>{secondaryMeals.length}개 더 있어요</p>
-                  </div>
-                  <div className="web-meal-secondary-list">
-                    {secondaryMeals.map((meal) => {
-                      const isPending = pendingMealIds.has(meal.id);
-                      const isMin = meal.planned_servings <= 1;
-
-                      return (
-                        <article className="web-meal-secondary" key={meal.id}>
-                          <button
-                            className="web-meal-secondary-title"
-                            data-testid={`meal-recipe-link-${meal.id}`}
-                            onClick={() => onRecipeClick(meal)}
-                            type="button"
-                          >
-                            {meal.recipe_title}
-                          </button>
-                          <div className="web-meal-inline-stepper" aria-label="인분 조절" role="group">
-                            <button
-                              aria-label="인분 감소"
-                              disabled={isMin || isPending}
-                              onClick={() => onStepDown(meal)}
-                              type="button"
-                            >
-                              -
-                            </button>
-                            <span aria-label={`${meal.planned_servings}인분`} aria-live="polite">
-                              {meal.planned_servings}인분
-                            </span>
-                            <button
-                              aria-label="인분 증가"
-                              disabled={isPending}
-                              onClick={() => onStepUp(meal)}
-                              type="button"
-                            >
-                              +
-                            </button>
-                          </div>
-                          <button
-                            aria-label={`${meal.recipe_title} 삭제`}
-                            className="web-meal-delete-icon"
-                            data-testid={`meal-delete-${meal.id}`}
-                            disabled={isPending}
-                            onClick={() => onDelete(meal)}
-                            type="button"
-                          >
-                            <TrashIcon />
-                          </button>
-                          {conflictErrors[meal.id] ? (
-                            <p className="web-meal-conflict" role="alert">
-                              {conflictErrors[meal.id]}
-                            </p>
-                          ) : null}
-                        </article>
-                      );
-                    })}
-                  </div>
-                </section>
-              ) : null}
+                ))}
+              </div>
             </section>
 
             <aside className="web-meal-rail">
-              <div className="web-meal-rail-card">
+              <div className="web-meal-rail-card" data-testid="web-meal-summary">
                 <div className="web-meal-rail-head">
                   <p>끼니 요약</p>
                   <h2>{slotName || formatDateLong(planDate)}</h2>
@@ -679,65 +703,6 @@ function MealWebView({
                     <strong>{totalServings}인분</strong>
                   </div>
                 </div>
-
-                <div className="web-meal-rail-actions">
-                  {primaryMeal.status === "shopping_done" ? (
-                    <WebButton fullWidth onClick={() => onStartCook(primaryMeal)}>
-                      <CookIcon />
-                      요리하기
-                    </WebButton>
-                  ) : null}
-                  <WebButton fullWidth onClick={onCreateShopping} variant="secondary">
-                    <ShoppingIcon />
-                    장보기
-                  </WebButton>
-                  <WebButton fullWidth onClick={() => onRecipeClick(primaryMeal)} variant="tertiary">
-                    레시피 보기
-                  </WebButton>
-                </div>
-
-                <div className="web-meal-rail-section">
-                  <span className="web-meal-rail-label">계획 인분</span>
-                  <div className="web-stepper" aria-label="인분 조절" role="group">
-                    <button
-                      aria-label="인분 감소"
-                      disabled={primaryMeal.planned_servings <= 1 || pendingMealIds.has(primaryMeal.id)}
-                      onClick={() => onStepDown(primaryMeal)}
-                      type="button"
-                    >
-                      -
-                    </button>
-                    <span aria-label={`${primaryMeal.planned_servings}인분`} aria-live="polite">
-                      {primaryMeal.planned_servings}인분
-                    </span>
-                    <button
-                      aria-label="인분 증가"
-                      disabled={pendingMealIds.has(primaryMeal.id)}
-                      onClick={() => onStepUp(primaryMeal)}
-                      type="button"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {conflictErrors[primaryMeal.id] ? (
-                  <p className="web-meal-conflict" role="alert">
-                    {conflictErrors[primaryMeal.id]}
-                  </p>
-                ) : null}
-
-                <button
-                  aria-label={`${primaryMeal.recipe_title} 삭제`}
-                  className="web-meal-delete-button"
-                  data-testid={`meal-delete-${primaryMeal.id}`}
-                  disabled={pendingMealIds.has(primaryMeal.id)}
-                  onClick={() => onDelete(primaryMeal)}
-                  type="button"
-                >
-                  <TrashIcon />
-                  식사 삭제
-                </button>
 
                 <Link className="web-meal-add-link" data-testid="meal-screen-add-cta" href={addMealHref}>
                   <PlusIcon />
@@ -1296,7 +1261,6 @@ export function MealScreen({
             onBack={navigateToPlanner}
             onCreateShopping={() => router.push("/shopping/flow")}
             onDelete={(meal) => handleDeleteTap(meal.id)}
-            onRecipeClick={(meal) => router.push(`/recipe/${meal.recipe_id}`)}
             onRetry={() => void loadMeals()}
             onStartCook={(meal) => void startMealCooking(meal)}
             onStepDown={(meal) => handleStepperTap(meal, -1)}

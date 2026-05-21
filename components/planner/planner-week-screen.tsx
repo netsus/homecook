@@ -293,7 +293,6 @@ function PlannerWeekWebView({
   shoppingListLinks: Array<{ id: string; title: string }>;
   todayKey: string;
 }) {
-  const [isFirstMealChooserOpen, setIsFirstMealChooserOpen] = useState(false);
   const primaryColumn = getPlannerPrimaryColumn(columns);
   const lunchColumn = findPlannerColumn(columns, "점심");
   const quickDateKey = dateKeys.includes(todayKey) ? todayKey : dateKeys[0];
@@ -302,7 +301,6 @@ function PlannerWeekWebView({
     .sort((a, b) => `${b.plan_date}:${b.id}`.localeCompare(`${a.plan_date}:${a.id}`))
     .slice(0, 4);
   const canShowGrid = screenState === "ready" || screenState === "empty";
-  const canChooseFirstMeal = dateKeys.length > 0 && columns.length > 0;
 
   return (
     <WebShell className="web-planner" wide>
@@ -336,7 +334,7 @@ function PlannerWeekWebView({
               {"다음 주 >"}
             </WebButton>
             <Link className="web-button web-button-primary" href="/shopping/flow">
-              장보기 미리보기
+              장보기
             </Link>
           </div>
         </header>
@@ -481,52 +479,8 @@ function PlannerWeekWebView({
               >
                 {screenState === "empty" ? (
                   <WebEmptyState
-                    action={
-                      canChooseFirstMeal ? (
-                        <div className="web-planner-empty-actions">
-                          <WebButton
-                            aria-controls="planner-first-meal-chooser"
-                            aria-expanded={isFirstMealChooserOpen}
-                            onClick={() =>
-                              setIsFirstMealChooserOpen((current) => !current)
-                            }
-                            variant="secondary"
-                          >
-                            날짜와 끼니 선택
-                          </WebButton>
-                          {isFirstMealChooserOpen ? (
-                            <div
-                              aria-label="첫 식사 날짜와 끼니 선택"
-                              className="web-planner-empty-picker"
-                              data-testid="planner-first-meal-chooser"
-                              id="planner-first-meal-chooser"
-                              role="group"
-                            >
-                              {dateKeys.map((dateKey) => (
-                                <div className="web-planner-empty-picker-row" key={dateKey}>
-                                  <span>
-                                    {formatWeekdayLabel(dateKey)} {formatCompactDateLabel(dateKey)}
-                                  </span>
-                                  <div>
-                                    {columns.map((column) => (
-                                      <Link
-                                        className="web-planner-empty-picker-option"
-                                        href={getMealAddHrefForSlot(dateKey, column)}
-                                        key={`${dateKey}-${column.id}`}
-                                      >
-                                        {column.name}
-                                      </Link>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null
-                    }
                     className="web-planner-empty-callout"
-                    description="날짜와 끼니를 먼저 고른 뒤 식사를 추가해 주세요."
+                    description="요일 칸의 식사 추가 버튼으로 원하는 날짜와 끼니에 메뉴를 넣을 수 있어요."
                     title="아직 등록된 식사가 없어요"
                   />
                 ) : null}

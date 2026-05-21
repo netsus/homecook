@@ -348,7 +348,7 @@ describe("planner week screen", () => {
     const previousWeekButton = within(actions).getByRole("button", { name: "이전 주" });
     const nextWeekButton = within(actions).getByRole("button", { name: "다음 주" });
     const shoppingPreviewLink = within(actions).getByRole("link", {
-      name: "장보기 미리보기",
+      name: "장보기",
     }) as HTMLAnchorElement;
 
     expect(within(actions).getAllByRole("button")).toHaveLength(2);
@@ -371,9 +371,7 @@ describe("planner week screen", () => {
     ).toBeNull();
   });
 
-  it("lets desktop users choose the first meal date and slot instead of auto-picking one", async () => {
-    const user = userEvent.setup();
-
+  it("keeps the desktop empty-week state simple without a first-meal chooser", async () => {
     setDesktopViewport(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
@@ -381,22 +379,9 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
-
-    const chooserButton = screen.getByRole("button", { name: "날짜와 끼니 선택" });
-    expect(chooserButton.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.getByText("아직 등록된 식사가 없어요")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "날짜와 끼니 선택" })).toBeNull();
     expect(screen.queryByTestId("planner-first-meal-chooser")).toBeNull();
-
-    await user.click(chooserButton);
-
-    const chooser = screen.getByTestId("planner-first-meal-chooser");
-    const firstDayDinner = within(chooser).getAllByRole("link", { name: "저녁" })[0] as HTMLAnchorElement;
-    const saturdayLunch = within(chooser).getAllByRole("link", { name: "점심" })[4] as HTMLAnchorElement;
-
-    expect(chooserButton.getAttribute("aria-expanded")).toBe("true");
-    expect(firstDayDinner.getAttribute("href")).toContain("date=2026-03-24");
-    expect(firstDayDinner.getAttribute("href")).toContain("columnId=column-dinner");
-    expect(saturdayLunch.getAttribute("href")).toContain("date=2026-03-28");
-    expect(saturdayLunch.getAttribute("href")).toContain("columnId=column-lunch");
   });
 
   it("opens the Wave1 meal-add sheet and opens picker options as modal sheets without leaving the planner", async () => {

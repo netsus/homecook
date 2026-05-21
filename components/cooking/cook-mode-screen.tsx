@@ -16,12 +16,16 @@ import { useAppReturn } from "@/components/shared/use-app-return";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   WebButton,
+  WebCard,
   WebDialog,
   WebDialogBody,
   WebDialogFooter,
   WebDialogHeader,
   WebDialogTitle,
   WebModal,
+  WebShell,
+  WebSkeleton,
+  WebTopNav,
 } from "@/components/web";
 import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
@@ -30,6 +34,13 @@ import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useCookModeStore } from "@/stores/cook-mode-store";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
+
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
 
 export interface CookModeScreenProps {
   sessionId: string;
@@ -226,6 +237,10 @@ export function CookModeScreen({
 
   // --- Loading ---
   if (visibleScreenState === "loading") {
+    if (!isMobileViewport) {
+      return <PlannerCookModeDesktopLoading />;
+    }
+
     return (
       <div
         className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
@@ -422,6 +437,65 @@ export function CookModeScreen({
         />
       ) : null}
     </>
+  );
+}
+
+function PlannerCookModeDesktopState({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <WebShell className="web-cooking-shell" wide>
+      <WebTopNav
+        activeId="planner"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<div className="web-profile-button">JY</div>}
+      />
+      <main className="web-cook-mode-screen" data-testid="cook-mode-screen">
+        <nav aria-label="현재 위치" className="web-cook-breadcrumb">
+          <a href="/cooking/ready">요리 준비</a>
+          <span aria-hidden="true">/</span>
+          <strong>플래너 요리모드</strong>
+        </nav>
+        {children}
+      </main>
+    </WebShell>
+  );
+}
+
+function PlannerCookModeDesktopLoading() {
+  return (
+    <PlannerCookModeDesktopState>
+      <WebCard
+        className="web-cook-mode-state-card"
+        data-testid="cook-mode-loading"
+      >
+        <div className="web-cook-mode-loading-head">
+          <WebSkeleton height={18} width={120} />
+          <WebSkeleton height={34} width="42%" />
+          <WebSkeleton height={16} width="34%" />
+          <span className="visually-hidden">
+            플래너 요리모드를 불러오는 중이에요.
+          </span>
+        </div>
+        <div className="web-cook-mode-loading-layout">
+          <div className="web-cook-mode-loading-list">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <WebSkeleton height={96} key={index} />
+            ))}
+          </div>
+          <div className="web-cook-mode-loading-rail">
+            <WebSkeleton height={22} width={140} />
+            {Array.from({ length: 5 }).map((_, index) => (
+              <WebSkeleton height={48} key={index} />
+            ))}
+            <WebSkeleton height={44} />
+            <WebSkeleton height={44} />
+          </div>
+        </div>
+      </WebCard>
+    </PlannerCookModeDesktopState>
   );
 }
 

@@ -618,6 +618,7 @@ export function ShoppingFlowScreen({
         <AppBar onBack={handleBack} />
         <div className="flex flex-1 items-center justify-center p-4">
           <ContentState
+            className="shopping-flow-blue-state"
             tone="empty"
             title="장보기 대상이 없어요"
             description="플래너에 식사를 먼저 등록해 주세요. 등록 완료 전이거나 이미 장보기·요리 흐름에 들어간 식사는 제외돼요."
@@ -713,7 +714,7 @@ export function ShoppingFlowScreen({
 
   return (
     <WebShell className="web-shopping-shell" wide>
-      <WebTopNav activeId="mypage" items={WEB_NAV_ITEMS} />
+      <WebTopNav activeId="planner" items={WEB_NAV_ITEMS} />
       <main
         className="web-screen web-shopping-flow-screen max-w-none"
         data-testid="shopping-flow-shell"
@@ -1265,6 +1266,9 @@ function RecipeCard({ config, onToggle }: RecipeCardProps) {
             <span>합산 계획 {config.planned_servings_total}인분</span>
           </div>
         ) : null}
+        <p className="web-shopping-recipe-servings">
+          계획 {config.planned_servings_total}인분
+        </p>
       </div>
     </article>
   );

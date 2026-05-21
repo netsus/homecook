@@ -183,7 +183,7 @@ test.describe("Slice 05 planner week core", () => {
     // Wave1 mobile uses a floating shopping CTA; desktop uses the prototype top action label.
     const shoppingLink = isMobile
       ? page.getByRole("link", { name: "장보기", exact: true })
-      : page.getByRole("link", { name: "장보기 미리보기" });
+      : page.getByRole("link", { name: "장보기", exact: true });
     await expect(shoppingLink).toHaveAttribute("href", "/shopping/flow");
     await expect(page.getByRole("link", { name: "요리하기" })).toHaveCount(0);
     if (isMobile) {
@@ -196,7 +196,7 @@ test.describe("Slice 05 planner week core", () => {
 
       await expect(actions.getByRole("button", { name: "이전 주" })).toHaveText("< 이전주");
       await expect(actions.getByRole("button", { name: "다음 주" })).toHaveText("다음 주 >");
-      await expect(actions.getByRole("link", { name: "장보기 미리보기" })).toBeVisible();
+      await expect(actions.getByRole("link", { name: "장보기", exact: true })).toBeVisible();
       await expect(page.getByRole("link", { name: "요리 준비" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
     }
@@ -233,7 +233,7 @@ test.describe("Slice 05 planner week core", () => {
 
     const shoppingLink = isMobileViewport(page)
       ? page.getByRole("link", { name: "장보기", exact: true })
-      : page.getByRole("link", { name: "장보기 미리보기" });
+      : page.getByRole("link", { name: "장보기", exact: true });
     await expect(shoppingLink).toHaveAttribute("href", "/shopping/flow");
     await expect(page.getByRole("link", { name: "요리하기" })).toHaveCount(0);
     if (isMobileViewport(page)) {
@@ -245,7 +245,7 @@ test.describe("Slice 05 planner week core", () => {
 
       await expect(actions.getByRole("button", { name: "이전 주" })).toHaveText("< 이전주");
       await expect(actions.getByRole("button", { name: "다음 주" })).toHaveText("다음 주 >");
-      await expect(actions.getByRole("link", { name: "장보기 미리보기" })).toBeVisible();
+      await expect(actions.getByRole("link", { name: "장보기", exact: true })).toBeVisible();
       await expect(page.getByRole("link", { name: "요리 준비" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
     }
