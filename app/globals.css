@@ -2547,6 +2547,94 @@ button {
     gap: 8px;
   }
 
+  .web-planner-date-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .web-planner-date-cell.web-chip {
+    display: flex;
+    min-width: 0;
+    height: 64px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border-color: var(--web-line);
+    border-radius: var(--web-r-sm);
+    background: var(--web-surface);
+    padding: 4px 6px 6px;
+    text-align: center;
+  }
+
+  .web-planner-date-cell.web-chip:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--web-brand) 36%, var(--web-line));
+    background: var(--web-brand-wash);
+  }
+
+  .web-planner-date-cell.web-chip-active {
+    border-color: var(--web-brand);
+    background: var(--web-brand);
+    color: var(--web-text-inverse);
+  }
+
+  .web-planner-date-cell.web-chip-active:hover:not(:disabled) {
+    border-color: var(--web-brand);
+    background: color-mix(in srgb, var(--web-brand) 88%, black);
+    color: var(--web-text-inverse);
+  }
+
+  .web-planner-date-today {
+    display: inline-flex;
+    height: 15px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--web-r-pill);
+    color: var(--web-brand);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .web-planner-date-cell.web-chip-active .web-planner-date-today {
+    color: color-mix(in srgb, var(--web-text-inverse) 86%, transparent);
+  }
+
+  .web-planner-date-cell.web-chip-active:hover:not(:disabled) .web-planner-date-today {
+    color: color-mix(in srgb, var(--web-text-inverse) 86%, transparent);
+  }
+
+  .web-planner-date-weekday {
+    color: var(--web-text-3);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .web-planner-date-cell.web-chip-active .web-planner-date-weekday {
+    color: color-mix(in srgb, var(--web-text-inverse) 84%, transparent);
+  }
+
+  .web-planner-date-cell.web-chip-active:hover:not(:disabled) .web-planner-date-weekday {
+    color: color-mix(in srgb, var(--web-text-inverse) 84%, transparent);
+  }
+
+  .web-planner-date-day {
+    color: var(--web-text-1);
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .web-planner-date-cell.web-chip-active .web-planner-date-day {
+    color: var(--web-text-inverse);
+  }
+
+  .web-planner-date-cell.web-chip-active:hover:not(:disabled) .web-planner-date-day {
+    color: var(--web-text-inverse);
+  }
+
   .web-modal-preview {
     display: flex;
     align-items: center;
