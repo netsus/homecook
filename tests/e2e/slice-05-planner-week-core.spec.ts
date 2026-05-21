@@ -194,7 +194,8 @@ test.describe("Slice 05 planner week core", () => {
     } else {
       const actions = page.getByRole("group", { name: "플래너 작업" });
 
-      await expect(actions.getByRole("button", { name: "이전 주" })).toHaveText("< 이전주");
+      await expect(actions.getByRole("button", { name: "이전 주" })).toHaveText("< 이전 주");
+      await expect(actions.getByRole("button", { name: "이번 주" })).toBeVisible();
       await expect(actions.getByRole("button", { name: "다음 주" })).toHaveText("다음 주 >");
       await expect(actions.getByRole("link", { name: "장보기", exact: true })).toBeVisible();
       await expect(page.getByRole("link", { name: "요리 준비" })).toHaveCount(0);
@@ -243,7 +244,8 @@ test.describe("Slice 05 planner week core", () => {
     } else {
       const actions = page.getByRole("group", { name: "플래너 작업" });
 
-      await expect(actions.getByRole("button", { name: "이전 주" })).toHaveText("< 이전주");
+      await expect(actions.getByRole("button", { name: "이전 주" })).toHaveText("< 이전 주");
+      await expect(actions.getByRole("button", { name: "이번 주" })).toBeVisible();
       await expect(actions.getByRole("button", { name: "다음 주" })).toHaveText("다음 주 >");
       await expect(actions.getByRole("link", { name: "장보기", exact: true })).toBeVisible();
       await expect(page.getByRole("link", { name: "요리 준비" })).toHaveCount(0);

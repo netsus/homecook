@@ -338,6 +338,7 @@ describe("planner week screen", () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner
       .mockResolvedValueOnce(createPlannerData({ meals: [] }))
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
       .mockResolvedValueOnce(createPlannerData({ meals: [] }));
 
     render(<PlannerWeekScreen />);
@@ -346,29 +347,31 @@ describe("planner week screen", () => {
 
     const actions = screen.getByRole("group", { name: "플래너 작업" });
     const previousWeekButton = within(actions).getByRole("button", { name: "이전 주" });
+    const currentWeekButton = within(actions).getByRole("button", { name: "이번 주" });
     const nextWeekButton = within(actions).getByRole("button", { name: "다음 주" });
     const shoppingPreviewLink = within(actions).getByRole("link", {
       name: "장보기",
     }) as HTMLAnchorElement;
 
-    expect(within(actions).getAllByRole("button")).toHaveLength(2);
+    expect(within(actions).getAllByRole("button")).toHaveLength(3);
     expect(within(actions).getAllByRole("link")).toHaveLength(1);
-    expect(previousWeekButton.textContent?.trim()).toBe("< 이전주");
+    expect(previousWeekButton.textContent?.trim()).toBe("< 이전 주");
+    expect(currentWeekButton.textContent?.trim()).toBe("이번 주");
     expect(nextWeekButton.textContent?.trim()).toBe("다음 주 >");
     expect(shoppingPreviewLink.getAttribute("href")).toBe("/shopping/flow");
     expect(within(actions).queryByRole("link", { name: "요리 준비" })).toBeNull();
-    expect(within(actions).queryByRole("button", { name: "이번주로" })).toBeNull();
 
     await user.click(nextWeekButton);
 
     await waitFor(() => {
       expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
     });
-    expect(
-      within(screen.getByRole("group", { name: "플래너 작업" })).queryByRole("button", {
-        name: "이번주로",
-      }),
-    ).toBeNull();
+
+    await user.click(within(actions).getByRole("button", { name: "이번 주" }));
+
+    await waitFor(() => {
+      expect(fetchPlanner).toHaveBeenNthCalledWith(3, "2026-03-24", "2026-03-30");
+    });
   });
 
   it("keeps the desktop empty-week state simple without a first-meal chooser", async () => {
@@ -379,7 +382,8 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
-    expect(screen.getByText("아직 등록된 식사가 없어요")).toBeTruthy();
+    expect(screen.queryByText("아직 등록된 식사가 없어요")).toBeNull();
+    expect(screen.getByTestId("planner-week-body")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "날짜와 끼니 선택" })).toBeNull();
     expect(screen.queryByTestId("planner-first-meal-chooser")).toBeNull();
   });

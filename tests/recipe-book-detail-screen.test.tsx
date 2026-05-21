@@ -369,7 +369,7 @@ describe("RecipeBookDetailScreen", () => {
 
     expect(await screen.findByText("아직 이 레시피북에 레시피가 없어요")).toBeTruthy();
     expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "북 편집" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "이름 변경" })).toBeTruthy();
     expect(
       screen
         .getByRole("heading", { name: "새 레시피북" })

@@ -13,8 +13,13 @@ const mockCreateRecipeBook = vi.fn();
 const mockRenameRecipeBook = vi.fn();
 const mockDeleteRecipeBook = vi.fn();
 const mockFetchShoppingHistory = vi.fn();
+const mockFetchShoppingListDetail = vi.fn();
 const mockFetchRecipeBookRecipes = vi.fn();
 const mockFetchLeftovers = vi.fn();
+const mockEatLeftover = vi.fn();
+const mockUneatLeftover = vi.fn();
+const mockCreateMeal = vi.fn();
+const mockFetchPlanner = vi.fn();
 const originalScrollTo = window.scrollTo;
 
 vi.mock("@/lib/api/mypage", () => ({
@@ -34,7 +39,24 @@ vi.mock("@/lib/api/recipe", () => ({
 
 vi.mock("@/lib/api/leftovers", () => ({
   fetchLeftovers: (...args: unknown[]) => mockFetchLeftovers(...args),
+  eatLeftover: (...args: unknown[]) => mockEatLeftover(...args),
+  uneatLeftover: (...args: unknown[]) => mockUneatLeftover(...args),
   isLeftoverApiError: (error: unknown) => error instanceof Error && "status" in error,
+}));
+
+vi.mock("@/lib/api/meal", () => ({
+  createMeal: (...args: unknown[]) => mockCreateMeal(...args),
+  isMealApiError: (error: unknown) => error instanceof Error && "status" in error,
+}));
+
+vi.mock("@/lib/api/planner", () => ({
+  fetchPlanner: (...args: unknown[]) => mockFetchPlanner(...args),
+}));
+
+vi.mock("@/lib/api/shopping", () => ({
+  fetchShoppingListDetail: (...args: unknown[]) =>
+    mockFetchShoppingListDetail(...args),
+  isShoppingApiError: (error: unknown) => error instanceof Error && "status" in error,
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
@@ -133,6 +155,38 @@ const MOCK_SHOPPING_HISTORY = {
   ],
   next_cursor: null,
   has_next: false,
+};
+
+const MOCK_SHOPPING_DETAIL = {
+  id: "list-1",
+  title: "4/30 장보기",
+  date_range_start: "2026-04-30",
+  date_range_end: "2026-05-06",
+  is_completed: true,
+  completed_at: "2026-05-01T09:30:00Z",
+  created_at: "2026-04-30T00:00:00Z",
+  updated_at: "2026-05-01T09:30:00Z",
+  recipes: [
+    {
+      recipe_id: "recipe-1",
+      recipe_name: "김치찌개",
+      recipe_thumbnail: null,
+      shopping_servings: 2,
+      planned_servings_total: 2,
+    },
+  ],
+  items: [
+    {
+      id: "shopping-item-1",
+      ingredient_id: "ingredient-1",
+      display_text: "양파 2개",
+      amounts_json: [{ amount: 2, unit: "개" }],
+      is_checked: true,
+      is_pantry_excluded: false,
+      added_to_pantry: false,
+      sort_order: 0,
+    },
+  ],
 };
 
 const MOCK_SAVED_RECIPES = {
@@ -238,16 +292,31 @@ describe("MypageScreen", () => {
     mockRenameRecipeBook.mockReset();
     mockDeleteRecipeBook.mockReset();
     mockFetchShoppingHistory.mockReset();
+    mockFetchShoppingListDetail.mockReset();
     mockFetchRecipeBookRecipes.mockReset();
     mockFetchLeftovers.mockReset();
+    mockEatLeftover.mockReset();
+    mockUneatLeftover.mockReset();
+    mockCreateMeal.mockReset();
+    mockFetchPlanner.mockReset();
 
     mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
     mockFetchRecipeBooks.mockResolvedValue(MOCK_BOOKS);
     mockFetchShoppingHistory.mockResolvedValue(MOCK_SHOPPING_HISTORY);
+    mockFetchShoppingListDetail.mockResolvedValue(MOCK_SHOPPING_DETAIL);
     mockFetchRecipeBookRecipes.mockResolvedValue(MOCK_SAVED_RECIPES);
     mockFetchLeftovers.mockImplementation((status: string) =>
       Promise.resolve(status === "eaten" ? MOCK_EATEN_LEFTOVERS : MOCK_LEFTOVERS),
     );
+    mockEatLeftover.mockResolvedValue({ id: "leftover-1", status: "eaten" });
+    mockUneatLeftover.mockResolvedValue({ id: "eaten-1", status: "leftover" });
+    mockCreateMeal.mockResolvedValue({ id: "meal-1" });
+    mockFetchPlanner.mockResolvedValue({
+      columns: [
+        { id: "column-dinner", name: "저녁", sort_order: 0 },
+      ],
+      meals: [],
+    });
   });
 
   it("shows the unauthorized gate when not authenticated", () => {
@@ -689,18 +758,24 @@ describe("MypageScreen", () => {
     expect(avatar.textContent).toBe("집");
   });
 
-  it("links system book cards to recipe-books detail page", async () => {
+  it("opens system book cards inline below the mypage tabs", async () => {
     render(<MypageScreen initialAuthenticated />);
 
-    await openRecipebookSurface();
+    const user = await openRecipebookSurface();
 
     const myAddedCard = screen.getByTestId("system-book-my_added");
-    const href = myAddedCard.getAttribute("href") ?? "";
-    expect(href).toContain("/mypage/recipe-books/book-my");
-    expect(href).toContain("type=my_added");
-    expect(href).toContain("returnTo=%2Fmypage");
-    expect(href).toContain("returnSurface=mypage.recipebooks");
-    expect(href).toContain("restore=recipebook-tab");
+    expect(myAddedCard.tagName.toLowerCase()).toBe("button");
+
+    await user.click(myAddedCard);
+
+    await waitFor(() => {
+      expect(mockFetchRecipeBookRecipes).toHaveBeenCalledWith("book-my", {
+        limit: 12,
+      });
+    });
+    expect(await screen.findByRole("heading", { name: "내가 추가한 레시피" })).toBeTruthy();
+    expect(screen.getByText("저장된 된장찌개")).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "레시피북 경로" })).toBeNull();
   });
 
   it("can render directly into the recipebook return surface", async () => {
@@ -748,18 +823,22 @@ describe("MypageScreen", () => {
     expect(screen.queryByRole("heading", { name: "저장한 레시피" })).toBeNull();
   });
 
-  it("links shopping history cards to shopping detail page", async () => {
+  it("opens shopping history detail inline below the mypage tabs", async () => {
     render(<MypageScreen initialAuthenticated />);
 
     const user = userEvent.setup();
     await openShoppingSurface(user);
 
     const card = await screen.findByTestId("shopping-card-list-1");
-    const href = card.getAttribute("href") ?? "";
-    expect(href).toContain("/shopping/lists/list-1");
-    expect(href).toContain("returnTo=%2Fmypage");
-    expect(href).toContain("returnSurface=mypage.shopping-history");
-    expect(href).toContain("restore=shopping-history-tab");
+    expect(card.tagName.toLowerCase()).toBe("button");
+
+    await user.click(card);
+
+    await waitFor(() => {
+      expect(mockFetchShoppingListDetail).toHaveBeenCalledWith("list-1");
+    });
+    expect(screen.getByRole("heading", { name: "4/30 장보기" })).toBeTruthy();
+    expect(screen.getByText("양파 2개")).toBeTruthy();
   });
 
   it("opens leftovers and eaten-list rows as mypage tab panels", async () => {
@@ -776,6 +855,8 @@ describe("MypageScreen", () => {
       screen.getByRole("tab", { name: "남은 요리" }).getAttribute("aria-selected"),
     ).toBe("true");
     expect(screen.getByTestId("leftover-card-leftover-1")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "플래너에 추가" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "다먹음" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: "남은 요리 전체 관리" })).toBeNull();
 
     await user.click(screen.getByRole("tab", { name: "다먹은 목록" }));
@@ -786,6 +867,7 @@ describe("MypageScreen", () => {
       screen.getByRole("tab", { name: "다먹은 목록" }).getAttribute("aria-selected"),
     ).toBe("true");
     expect(screen.getByTestId("leftover-card-eaten-1")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "남은 요리로" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: "다먹은 목록 전체 관리" })).toBeNull();
   });
 

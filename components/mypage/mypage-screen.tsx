@@ -6,6 +6,7 @@ import React from "react";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -17,6 +18,10 @@ import {
   MypageMobileScreen,
   type MypageMobileSurface,
 } from "@/components/mypage/mypage-mobile-screen";
+import {
+  PlannerAddSheet,
+  type PlannerAddSheetState,
+} from "@/components/recipe/planner-add-sheet";
 import { ContentState } from "@/components/shared/content-state";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,10 +54,15 @@ import {
   type UserProfileData,
 } from "@/lib/api/mypage";
 import {
+  eatLeftover,
   fetchLeftovers,
   isLeftoverApiError,
+  uneatLeftover,
 } from "@/lib/api/leftovers";
+import { createMeal, isMealApiError } from "@/lib/api/meal";
+import { fetchPlanner } from "@/lib/api/planner";
 import { fetchRecipeBookRecipes } from "@/lib/api/recipe";
+import { fetchShoppingListDetail, isShoppingApiError } from "@/lib/api/shopping";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import {
   resolveMypageRestoreState,
@@ -65,12 +75,18 @@ import type {
   LeftoverDishStatus,
   LeftoverListItemData,
 } from "@/types/leftover";
-import type { ShoppingListHistoryItem } from "@/types/shopping";
+import type { PlannerColumnData } from "@/types/planner";
+import type {
+  ShoppingListDetail,
+  ShoppingListHistoryItem,
+} from "@/types/shopping";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
 type SavedRecipesState = "idle" | "loading" | "ready" | "empty" | "error";
 type LeftoverTabState = "idle" | "loading" | "ready" | "empty" | "error";
+type RecipeBookDetailState = "idle" | "loading" | "ready" | "empty" | "error";
+type ShoppingDetailState = "idle" | "loading" | "ready" | "error";
 type MypageTab =
   | MypageRestoreTab
   | "account"
@@ -136,6 +152,13 @@ export function MypageScreen({
   const [savedRecipesState, setSavedRecipesState] =
     useState<SavedRecipesState>("idle");
   const [savedRecipesBookId, setSavedRecipesBookId] = useState<string | null>(null);
+  const [selectedRecipeBook, setSelectedRecipeBook] =
+    useState<RecipeBookSummary | null>(null);
+  const [recipeBookDetailRecipes, setRecipeBookDetailRecipes] = useState<
+    RecipeBookRecipeItem[]
+  >([]);
+  const [recipeBookDetailState, setRecipeBookDetailState] =
+    useState<RecipeBookDetailState>("idle");
 
   // Shopping history
   const [shoppingItems, setShoppingItems] = useState<ShoppingListHistoryItem[]>([]);
@@ -143,6 +166,12 @@ export function MypageScreen({
   const [shoppingHasNext, setShoppingHasNext] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [shoppingLoaded, setShoppingLoaded] = useState(false);
+  const [selectedShoppingItem, setSelectedShoppingItem] =
+    useState<ShoppingListHistoryItem | null>(null);
+  const [shoppingDetail, setShoppingDetail] =
+    useState<ShoppingListDetail | null>(null);
+  const [shoppingDetailState, setShoppingDetailState] =
+    useState<ShoppingDetailState>("idle");
 
   // Leftovers
   const [leftoverItems, setLeftoverItems] = useState<LeftoverListItemData[]>([]);
@@ -150,6 +179,17 @@ export function MypageScreen({
     useState<LeftoverTabState>("idle");
   const [eatenItems, setEatenItems] = useState<LeftoverListItemData[]>([]);
   const [eatenState, setEatenState] = useState<LeftoverTabState>("idle");
+  const [leftoverMutatingId, setLeftoverMutatingId] = useState<string | null>(null);
+  const [plannerAddTarget, setPlannerAddTarget] =
+    useState<LeftoverListItemData | null>(null);
+  const [isPlannerAddSheetOpen, setIsPlannerAddSheetOpen] = useState(false);
+  const [plannerAddSheetState, setPlannerAddSheetState] =
+    useState<PlannerAddSheetState>("loading-columns");
+  const [plannerColumns, setPlannerColumns] = useState<PlannerColumnData[]>([]);
+  const [selectedPlanDate, setSelectedPlanDate] = useState("");
+  const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
+  const [plannerServings, setPlannerServings] = useState(1);
+  const [plannerAddError, setPlannerAddError] = useState<string | null>(null);
 
   // CRUD states
   const [menuOpenBookId, setMenuOpenBookId] = useState<string | null>(null);
@@ -171,6 +211,22 @@ export function MypageScreen({
   const createInputRef = useRef<HTMLInputElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const selectablePlannerDates = useMemo(() => {
+    const dates: string[] = [];
+    const today = new Date();
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      dates.push(`${year}-${month}-${day}`);
+    }
+
+    return dates;
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -211,6 +267,16 @@ export function MypageScreen({
 
   const switchDesktopTab = useCallback((tab: MypageTab) => {
     setActiveTab(tab);
+    if (tab !== "recipebooks") {
+      setSelectedRecipeBook(null);
+      setRecipeBookDetailRecipes([]);
+      setRecipeBookDetailState("idle");
+    }
+    if (tab !== "shopping") {
+      setSelectedShoppingItem(null);
+      setShoppingDetail(null);
+      setShoppingDetailState("idle");
+    }
     window.scrollTo(0, 0);
   }, []);
 
@@ -319,6 +385,42 @@ export function MypageScreen({
     setSavedRecipesState(result.data.items.length === 0 ? "empty" : "ready");
   }, []);
 
+  const openRecipeBookDetail = useCallback(async (book: RecipeBookSummary) => {
+    setSelectedRecipeBook(book);
+    setRecipeBookDetailRecipes([]);
+    setRecipeBookDetailState("loading");
+
+    const result = await fetchRecipeBookRecipes(book.id, {
+      limit: SAVED_RECIPES_PAGE_SIZE,
+    });
+
+    if (!result.success || !result.data) {
+      setRecipeBookDetailState("error");
+      return;
+    }
+
+    setRecipeBookDetailRecipes(result.data.items);
+    setRecipeBookDetailState(result.data.items.length > 0 ? "ready" : "empty");
+  }, []);
+
+  const openShoppingDetail = useCallback(async (item: ShoppingListHistoryItem) => {
+    setSelectedShoppingItem(item);
+    setShoppingDetail(null);
+    setShoppingDetailState("loading");
+
+    try {
+      const detail = await fetchShoppingListDetail(item.id);
+      setShoppingDetail(detail);
+      setShoppingDetailState("ready");
+    } catch (error) {
+      if (isShoppingApiError(error) && error.status === 401) {
+        setAuthState("unauthorized");
+        return;
+      }
+      setShoppingDetailState("error");
+    }
+  }, []);
+
   const loadMoreShopping = useCallback(async () => {
     if (!shoppingCursor || isLoadingMore) return;
     setIsLoadingMore(true);
@@ -384,6 +486,141 @@ export function MypageScreen({
       setIsDeleting(false);
     }
   }, [deleteTarget, loadRecipeBooks, showToast]);
+
+  const loadPlannerColumns = useCallback(async () => {
+    setPlannerAddSheetState("loading-columns");
+    setPlannerAddError(null);
+
+    try {
+      const today = selectablePlannerDates[0] ?? "";
+      const data = await fetchPlanner(today, today);
+      setPlannerColumns(data.columns);
+      setSelectedPlanColumnId((current) => {
+        if (current && data.columns.some((column) => column.id === current)) {
+          return current;
+        }
+
+        return data.columns[0]?.id ?? "";
+      });
+      setPlannerAddSheetState("ready");
+    } catch {
+      setPlannerAddSheetState("error");
+      setPlannerAddError("플래너 슬롯을 불러오지 못했어요.");
+    }
+  }, [selectablePlannerDates]);
+
+  const openPlannerAddSheet = useCallback(
+    async (item: LeftoverListItemData) => {
+      if (authState !== "authenticated") return;
+
+      setPlannerAddTarget(item);
+      setIsPlannerAddSheetOpen(true);
+      setPlannerAddError(null);
+      setSelectedPlanDate(selectablePlannerDates[0] ?? "");
+      setPlannerServings(
+        item.source_planned_servings ?? item.cooking_servings ?? 1,
+      );
+
+      await loadPlannerColumns();
+    },
+    [authState, loadPlannerColumns, selectablePlannerDates],
+  );
+
+  const closePlannerAddSheet = useCallback(() => {
+    if (plannerAddSheetState === "submitting") return;
+    setIsPlannerAddSheetOpen(false);
+    setPlannerAddError(null);
+    setPlannerAddTarget(null);
+  }, [plannerAddSheetState]);
+
+  const handlePlannerAddSubmit = useCallback(async () => {
+    if (
+      !plannerAddTarget ||
+      !selectedPlanColumnId ||
+      !selectedPlanDate ||
+      plannerAddSheetState !== "ready"
+    ) {
+      return;
+    }
+
+    setPlannerAddSheetState("submitting");
+    setPlannerAddError(null);
+
+    try {
+      await createMeal({
+        recipe_id: plannerAddTarget.recipe_id,
+        plan_date: selectedPlanDate,
+        column_id: selectedPlanColumnId,
+        planned_servings: plannerServings,
+        leftover_dish_id: plannerAddTarget.id,
+      });
+
+      setIsPlannerAddSheetOpen(false);
+      setPlannerAddTarget(null);
+      showToast("플래너에 추가했어요", "success");
+    } catch (error) {
+      const message =
+        isMealApiError(error) && error.status === 403
+          ? "내 플래너 슬롯에만 추가할 수 있어요."
+          : error instanceof Error
+            ? error.message
+            : "플래너 추가에 실패했어요.";
+
+      setPlannerAddError(message);
+      setPlannerAddSheetState("ready");
+    }
+  }, [
+    plannerAddTarget,
+    plannerAddSheetState,
+    plannerServings,
+    selectedPlanColumnId,
+    selectedPlanDate,
+    showToast,
+  ]);
+
+  const handleEatLeftover = useCallback(
+    async (item: LeftoverListItemData) => {
+      if (leftoverMutatingId) return;
+
+      setLeftoverMutatingId(item.id);
+      try {
+        await eatLeftover(item.id);
+        await Promise.all([loadLeftoverTab("leftover"), loadLeftoverTab("eaten")]);
+        showToast("다먹은 목록으로 옮겼어요", "success");
+      } catch (error) {
+        if (isLeftoverApiError(error) && error.status === 401) {
+          setAuthState("unauthorized");
+          return;
+        }
+        showToast("다먹음 처리에 실패했어요", "error");
+      } finally {
+        setLeftoverMutatingId(null);
+      }
+    },
+    [leftoverMutatingId, loadLeftoverTab, showToast],
+  );
+
+  const handleUneatLeftover = useCallback(
+    async (item: LeftoverListItemData) => {
+      if (leftoverMutatingId) return;
+
+      setLeftoverMutatingId(item.id);
+      try {
+        await uneatLeftover(item.id);
+        await Promise.all([loadLeftoverTab("leftover"), loadLeftoverTab("eaten")]);
+        showToast("남은 요리로 옮겼어요", "success");
+      } catch (error) {
+        if (isLeftoverApiError(error) && error.status === 401) {
+          setAuthState("unauthorized");
+          return;
+        }
+        showToast("남은 요리 전환에 실패했어요", "error");
+      } finally {
+        setLeftoverMutatingId(null);
+      }
+    },
+    [leftoverMutatingId, loadLeftoverTab, showToast],
+  );
 
   // --- Effects ---
 
@@ -557,6 +794,25 @@ export function MypageScreen({
 
   const systemBooks = books.filter((b) => b.book_type !== "custom");
   const customBooks = books.filter((b) => b.book_type === "custom");
+  const plannerAddSheet = (
+    <PlannerAddSheet
+      columns={plannerColumns}
+      errorMessage={plannerAddError}
+      isOpen={isPlannerAddSheetOpen}
+      onChangeServings={setPlannerServings}
+      onClose={closePlannerAddSheet}
+      onRetryLoad={loadPlannerColumns}
+      onSelectColumn={setSelectedPlanColumnId}
+      onSelectDate={setSelectedPlanDate}
+      onSubmit={handlePlannerAddSubmit}
+      selectableDates={selectablePlannerDates}
+      selectedColumnId={selectedPlanColumnId}
+      selectedDate={selectedPlanDate}
+      servings={plannerServings}
+      sheetState={plannerAddSheetState}
+      variant="recipe-detail"
+    />
+  );
 
   // --- Render states ---
 
@@ -855,11 +1111,12 @@ export function MypageScreen({
           {activeTab === "help" ? <MyPageHelpSurface /> : null}
           {activeTab === "recipebooks" ? (
             <RecipeBookTabContent
-              books={books}
               createInputRef={createInputRef}
               createName={createName}
               customBooks={customBooks}
               deleteTarget={deleteTarget}
+              detailRecipes={recipeBookDetailRecipes}
+              detailState={recipeBookDetailState}
               isCreating={isCreating}
               isDeleting={isDeleting}
               isRenaming={isRenaming}
@@ -878,7 +1135,17 @@ export function MypageScreen({
               onConfirmRename={handleRenameBook}
               onCreateBook={handleCreateBook}
               onCreateNameChange={setCreateName}
-              onMenuClose={() => setMenuOpenBookId(null)}
+              onOpenBookDetail={(book) => void openRecipeBookDetail(book)}
+              onCloseBookDetail={() => {
+                setSelectedRecipeBook(null);
+                setRecipeBookDetailRecipes([]);
+                setRecipeBookDetailState("idle");
+              }}
+              onRetryBookDetail={() => {
+                if (selectedRecipeBook) {
+                  void openRecipeBookDetail(selectedRecipeBook);
+                }
+              }}
               onMenuOpen={(id) => setMenuOpenBookId(id)}
               onRenameStart={(book) => {
                 setRenamingBookId(book.id);
@@ -894,6 +1161,7 @@ export function MypageScreen({
               renameInputRef={renameInputRef}
               renameValue={renameValue}
               renamingBookId={renamingBookId}
+              selectedBook={selectedRecipeBook}
               showCreateInput={showCreateInput}
               systemBooks={systemBooks}
             />
@@ -904,7 +1172,21 @@ export function MypageScreen({
               isLoadingMore={isLoadingMore}
               items={shoppingItems}
               loaded={shoppingLoaded}
+              onCloseDetail={() => {
+                setSelectedShoppingItem(null);
+                setShoppingDetail(null);
+                setShoppingDetailState("idle");
+              }}
+              onOpenDetail={(item) => void openShoppingDetail(item)}
+              onRetryDetail={() => {
+                if (selectedShoppingItem) {
+                  void openShoppingDetail(selectedShoppingItem);
+                }
+              }}
               scrollSentinelRef={scrollSentinelRef}
+              selectedDetail={shoppingDetail}
+              selectedItem={selectedShoppingItem}
+              selectedState={shoppingDetailState}
             />
           ) : null}
           {activeTab === "leftovers" ? (
@@ -913,8 +1195,12 @@ export function MypageScreen({
               emptyDescription="요리를 완료하면 남은 요리로 관리할 수 있어요."
               emptyTitle="남은 요리가 없어요"
               items={leftoverItems}
+              mutatingId={leftoverMutatingId}
+              onEat={handleEatLeftover}
+              onPlannerAdd={(item) => void openPlannerAddSheet(item)}
               onRetry={() => void loadLeftoverTab("leftover")}
               state={leftoverState}
+              tabKind="leftover"
               title="남은 요리"
             />
           ) : null}
@@ -924,13 +1210,18 @@ export function MypageScreen({
               emptyDescription="남은 요리를 다 먹음 처리하면 여기에 모여요."
               emptyTitle="다 먹은 기록이 없어요"
               items={eatenItems}
+              mutatingId={leftoverMutatingId}
               onRetry={() => void loadLeftoverTab("eaten")}
+              onUneat={handleUneatLeftover}
               state={eatenState}
+              tabKind="eaten"
               title="다먹은 목록"
             />
           ) : null}
         </section>
       </div>
+
+      {plannerAddSheet}
 
       {toast ? (
         <div
@@ -1497,7 +1788,8 @@ function MypageDesktopLoadingShell() {
 interface RecipeBookTabContentProps {
   systemBooks: RecipeBookSummary[];
   customBooks: RecipeBookSummary[];
-  books: RecipeBookSummary[];
+  detailRecipes: RecipeBookRecipeItem[];
+  detailState: RecipeBookDetailState;
   menuOpenBookId: string | null;
   renamingBookId: string | null;
   renameValue: string;
@@ -1510,8 +1802,11 @@ interface RecipeBookTabContentProps {
   menuRef: React.RefObject<HTMLDivElement | null>;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
   createInputRef: React.RefObject<HTMLInputElement | null>;
+  selectedBook: RecipeBookSummary | null;
+  onCloseBookDetail: () => void;
+  onOpenBookDetail: (book: RecipeBookSummary) => void;
+  onRetryBookDetail: () => void;
   onMenuOpen: (id: string) => void;
-  onMenuClose: () => void;
   onRenameStart: (book: RecipeBookSummary) => void;
   onCancelRename: () => void;
   onConfirmRename: () => void;
@@ -1528,6 +1823,8 @@ interface RecipeBookTabContentProps {
 function RecipeBookTabContent({
   systemBooks,
   customBooks,
+  detailRecipes,
+  detailState,
   menuOpenBookId,
   renamingBookId,
   renameValue,
@@ -1540,8 +1837,11 @@ function RecipeBookTabContent({
   menuRef,
   renameInputRef,
   createInputRef,
+  selectedBook,
+  onCloseBookDetail,
+  onOpenBookDetail,
+  onRetryBookDetail,
   onMenuOpen,
-  onMenuClose,
   onRenameStart,
   onCancelRename,
   onConfirmRename,
@@ -1554,6 +1854,18 @@ function RecipeBookTabContent({
   onCreateNameChange,
   onCreateBook,
 }: RecipeBookTabContentProps) {
+  if (selectedBook) {
+    return (
+      <RecipeBookInlineDetail
+        book={selectedBook}
+        recipes={detailRecipes}
+        state={detailState}
+        onBack={onCloseBookDetail}
+        onRetry={onRetryBookDetail}
+      />
+    );
+  }
+
   return (
     <div className="web-recipebooks-screen" data-testid="recipebook-tab">
       <div className="web-recipebooks-header">
@@ -1569,7 +1881,11 @@ function RecipeBookTabContent({
       </div>
       <div className="web-recipebooks-grid">
         {systemBooks.map((book) => (
-          <SystemBookCard book={book} key={book.id} />
+          <SystemBookCard
+            book={book}
+            key={book.id}
+            onOpen={() => onOpenBookDetail(book)}
+          />
         ))}
       </div>
 
@@ -1594,8 +1910,8 @@ function RecipeBookTabContent({
               menuRef={menuRef}
               onCancelRename={onCancelRename}
               onConfirmRename={onConfirmRename}
+              onOpen={() => onOpenBookDetail(book)}
               onMenuOpen={() => onMenuOpen(book.id)}
-              onMenuClose={onMenuClose}
               onRenameStart={() => onRenameStart(book)}
               onRenameValueChange={onRenameValueChange}
               onRequestDelete={() => onRequestDelete(book)}
@@ -1664,29 +1980,23 @@ function RecipeBookTabContent({
 
 // ─── System Book Card ────────────────────────────────────────────────────────
 
-function buildBookDetailHref(book: RecipeBookSummary) {
-  const params = new URLSearchParams({
-    type: book.book_type,
-    name: book.name,
-  });
-
-  return buildReturnHref(`/mypage/recipe-books/${book.id}?${params.toString()}`, {
-    restore: "recipebook-tab",
-    returnSurface: "mypage.recipebooks",
-    returnTo: "/mypage",
-  });
-}
-
 function formatRecipeCount(count: number) {
   return `${Number.isFinite(count) ? count : 0}개`;
 }
 
-function SystemBookCard({ book }: { book: RecipeBookSummary }) {
+function SystemBookCard({
+  book,
+  onOpen,
+}: {
+  book: RecipeBookSummary;
+  onOpen: () => void;
+}) {
   return (
-    <Link
+    <button
       className="web-recipebook-book-card"
       data-testid={`system-book-${book.book_type}`}
-      href={buildBookDetailHref(book)}
+      onClick={onOpen}
+      type="button"
     >
       <BookThumbCollage book={book} />
       <span className="web-recipebook-book-copy">
@@ -1699,7 +2009,7 @@ function SystemBookCard({ book }: { book: RecipeBookSummary }) {
       >
         ›
       </span>
-    </Link>
+    </button>
   );
 }
 
@@ -1719,6 +2029,91 @@ function BookThumbCollage({ book }: { book: RecipeBookSummary }) {
   );
 }
 
+function RecipeBookInlineDetail({
+  book,
+  recipes,
+  state,
+  onBack,
+  onRetry,
+}: {
+  book: RecipeBookSummary;
+  recipes: RecipeBookRecipeItem[];
+  state: RecipeBookDetailState;
+  onBack: () => void;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="web-mypage-subsurface web-mypage-inline-detail">
+      <div className="web-mypage-inline-head">
+        <div>
+          <WebButton onClick={onBack} size="sm" variant="tertiary">
+            목록으로
+          </WebButton>
+          <h2>{book.name}</h2>
+          <p>{formatRecipeCount(book.recipe_count)} 레시피를 확인합니다.</p>
+        </div>
+        {book.book_type === "custom" ? (
+          <span className="web-mypage-inline-badge">커스텀</span>
+        ) : null}
+      </div>
+
+      {state === "loading" || state === "idle" ? (
+        <div className="web-mypage-recipe-grid" data-testid="recipebook-detail-loading">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div className="web-recipe-card" key={index}>
+              <WebSkeleton className="web-recipe-card-thumb" />
+              <div className="web-recipe-card-body">
+                <WebSkeleton height={18} width="72%" />
+                <div className="mt-2">
+                  <WebSkeleton height={14} width="48%" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {state === "error" ? (
+        <WebCard className="web-mypage-saved-state">
+          <div>
+            <h3>레시피북을 불러오지 못했어요</h3>
+            <p>잠시 후 다시 시도해 주세요.</p>
+          </div>
+          <WebButton onClick={onRetry} size="sm" variant="secondary">
+            다시 시도
+          </WebButton>
+        </WebCard>
+      ) : null}
+
+      {state === "empty" ? (
+        <WebCard className="web-mypage-saved-state">
+          <div>
+            <h3>아직 담긴 레시피가 없어요</h3>
+            <p>레시피를 저장하면 이곳에 모아 보여드려요.</p>
+          </div>
+        </WebCard>
+      ) : null}
+
+      {state === "ready" ? (
+        <div className="web-mypage-recipe-grid" role="list">
+          {recipes.map((recipe) => (
+            <div key={recipe.recipe_id} role="listitem">
+              <Link href={`/recipe/${recipe.recipe_id}`}>
+                <WebRecipeCard
+                  alt={recipe.title}
+                  imageSrc={recipe.thumbnail_url ?? getFallbackRecipeImage(recipe.title)}
+                  meta={formatSavedRecipeMeta(recipe)}
+                  title={recipe.title}
+                />
+              </Link>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 // ─── Custom Book Card ────────────────────────────────────────────────────────
 
 interface CustomBookCardProps {
@@ -1730,7 +2125,7 @@ interface CustomBookCardProps {
   menuRef: React.RefObject<HTMLDivElement | null>;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
   onMenuOpen: () => void;
-  onMenuClose: () => void;
+  onOpen: () => void;
   onRenameStart: () => void;
   onCancelRename: () => void;
   onConfirmRename: () => void;
@@ -1747,6 +2142,7 @@ function CustomBookCard({
   menuRef,
   renameInputRef,
   onMenuOpen,
+  onOpen,
   onRenameStart,
   onCancelRename,
   onConfirmRename,
@@ -1787,14 +2183,15 @@ function CustomBookCard({
     <div className="relative">
       <div className="web-recipebook-book-card web-recipebook-book-card-static">
         <BookThumbCollage book={book} />
-        <Link
+        <button
           className="web-recipebook-book-copy"
-          href={buildBookDetailHref(book)}
+          onClick={onOpen}
+          type="button"
         >
           <strong>{book.name}</strong>
           <span>{formatRecipeCount(book.recipe_count)} 레시피 · 커스텀</span>
           <em>커스텀</em>
-        </Link>
+        </button>
         <span
           aria-label={`레시피 ${formatRecipeCount(book.recipe_count)}`}
           className="visually-hidden"
@@ -1919,7 +2316,13 @@ interface ShoppingHistoryTabContentProps {
   loaded: boolean;
   hasNext: boolean;
   isLoadingMore: boolean;
+  selectedDetail: ShoppingListDetail | null;
+  selectedItem: ShoppingListHistoryItem | null;
+  selectedState: ShoppingDetailState;
   scrollSentinelRef: React.RefObject<HTMLDivElement | null>;
+  onCloseDetail: () => void;
+  onOpenDetail: (item: ShoppingListHistoryItem) => void;
+  onRetryDetail: () => void;
 }
 
 function ShoppingHistoryTabContent({
@@ -1927,8 +2330,26 @@ function ShoppingHistoryTabContent({
   loaded,
   hasNext,
   isLoadingMore,
+  selectedDetail,
+  selectedItem,
+  selectedState,
   scrollSentinelRef,
+  onCloseDetail,
+  onOpenDetail,
+  onRetryDetail,
 }: ShoppingHistoryTabContentProps) {
+  if (selectedItem) {
+    return (
+      <ShoppingHistoryInlineDetail
+        detail={selectedDetail}
+        item={selectedItem}
+        state={selectedState}
+        onBack={onCloseDetail}
+        onRetry={onRetryDetail}
+      />
+    );
+  }
+
   if (!loaded) {
     return (
       <div className="web-mypage-subsurface">
@@ -1994,7 +2415,11 @@ function ShoppingHistoryTabContent({
       </div>
       <div aria-live="polite" className="web-mypage-shopping-list">
         {items.map((item) => (
-          <ShoppingHistoryCard item={item} key={item.id} />
+          <ShoppingHistoryCard
+            item={item}
+            key={item.id}
+            onOpen={() => onOpenDetail(item)}
+          />
         ))}
       </div>
       {isLoadingMore ? (
@@ -2011,18 +2436,21 @@ function ShoppingHistoryTabContent({
 
 // ─── Shopping History Card ───────────────────────────────────────────────────
 
-function ShoppingHistoryCard({ item }: { item: ShoppingListHistoryItem }) {
+function ShoppingHistoryCard({
+  item,
+  onOpen,
+}: {
+  item: ShoppingListHistoryItem;
+  onOpen: () => void;
+}) {
   const dateRange = `${formatShortDate(item.date_range_start)} ~ ${formatShortDate(item.date_range_end)}`;
 
   return (
-    <Link
+    <button
       className="web-mypage-shopping-card"
       data-testid={`shopping-card-${item.id}`}
-      href={buildReturnHref(`/shopping/lists/${item.id}`, {
-        restore: "shopping-history-tab",
-        returnSurface: "mypage.shopping-history",
-        returnTo: "/mypage",
-      })}
+      onClick={onOpen}
+      type="button"
     >
       <p className="text-base font-semibold text-[var(--foreground)]">
         {item.title}
@@ -2040,7 +2468,97 @@ function ShoppingHistoryCard({ item }: { item: ShoppingListHistoryItem }) {
       >
         {item.is_completed ? "다시열기" : "진행 중"}
       </span>
-    </Link>
+    </button>
+  );
+}
+
+function ShoppingHistoryInlineDetail({
+  detail,
+  item,
+  state,
+  onBack,
+  onRetry,
+}: {
+  detail: ShoppingListDetail | null;
+  item: ShoppingListHistoryItem;
+  state: ShoppingDetailState;
+  onBack: () => void;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="web-mypage-subsurface web-mypage-inline-detail">
+      <div className="web-mypage-inline-head">
+        <div>
+          <WebButton onClick={onBack} size="sm" variant="tertiary">
+            목록으로
+          </WebButton>
+          <h2>{item.title}</h2>
+          <p>
+            {formatShortDate(item.date_range_start)} ~{" "}
+            {formatShortDate(item.date_range_end)}
+          </p>
+        </div>
+        <span className="web-mypage-inline-badge">
+          {item.is_completed ? "완료" : "진행 중"}
+        </span>
+      </div>
+
+      {state === "loading" || state === "idle" ? (
+        <div className="web-mypage-shopping-detail-list">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <WebCard className="web-mypage-shopping-detail-row" key={index}>
+              <WebSkeleton height={18} width="42%" />
+              <WebSkeleton height={14} width="24%" />
+            </WebCard>
+          ))}
+        </div>
+      ) : null}
+
+      {state === "error" ? (
+        <WebCard className="web-mypage-saved-state">
+          <div>
+            <h3>장보기 목록을 불러오지 못했어요</h3>
+            <p>잠시 후 다시 시도해 주세요.</p>
+          </div>
+          <WebButton onClick={onRetry} size="sm" variant="secondary">
+            다시 시도
+          </WebButton>
+        </WebCard>
+      ) : null}
+
+      {state === "ready" && detail ? (
+        <>
+          <div className="web-mypage-shopping-detail-summary">
+            <WebCard>
+              <strong>{detail.recipes.length}개 레시피</strong>
+              <span>장보기 기준 레시피</span>
+            </WebCard>
+            <WebCard>
+              <strong>{detail.items.length}개 항목</strong>
+              <span>전체 재료</span>
+            </WebCard>
+          </div>
+          <div className="web-mypage-shopping-detail-list">
+            {detail.items.map((shoppingItem) => (
+              <WebCard
+                className="web-mypage-shopping-detail-row"
+                key={shoppingItem.id}
+              >
+                <span>
+                  <strong>{shoppingItem.display_text}</strong>
+                  {shoppingItem.is_pantry_excluded ? (
+                    <em>팬트리 제외</em>
+                  ) : shoppingItem.is_checked ? (
+                    <em>구매 완료</em>
+                  ) : null}
+                </span>
+                <small>{formatShoppingAmountText(shoppingItem.amounts_json)}</small>
+              </WebCard>
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
   );
 }
 
@@ -2051,8 +2569,13 @@ interface LeftoverTabContentProps {
   emptyDescription: string;
   emptyTitle: string;
   items: LeftoverListItemData[];
+  mutatingId: string | null;
+  onEat?: (item: LeftoverListItemData) => void;
+  onPlannerAdd?: (item: LeftoverListItemData) => void;
   onRetry: () => void;
+  onUneat?: (item: LeftoverListItemData) => void;
   state: LeftoverTabState;
+  tabKind: LeftoverDishStatus;
   title: string;
 }
 
@@ -2061,8 +2584,13 @@ function LeftoverTabContent({
   emptyDescription,
   emptyTitle,
   items,
+  mutatingId,
+  onEat,
+  onPlannerAdd,
   onRetry,
+  onUneat,
   state,
+  tabKind,
   title,
 }: LeftoverTabContentProps) {
   if (state === "idle" || state === "loading") {
@@ -2128,14 +2656,36 @@ function LeftoverTabContent({
       </div>
       <div className="web-mypage-leftover-grid">
         {items.map((item) => (
-          <LeftoverTabCard item={item} key={item.id} />
+          <LeftoverTabCard
+            isMutating={mutatingId === item.id}
+            item={item}
+            key={item.id}
+            onEat={onEat}
+            onPlannerAdd={onPlannerAdd}
+            onUneat={onUneat}
+            tabKind={tabKind}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function LeftoverTabCard({ item }: { item: LeftoverListItemData }) {
+function LeftoverTabCard({
+  isMutating,
+  item,
+  onEat,
+  onPlannerAdd,
+  onUneat,
+  tabKind,
+}: {
+  isMutating: boolean;
+  item: LeftoverListItemData;
+  onEat?: (item: LeftoverListItemData) => void;
+  onPlannerAdd?: (item: LeftoverListItemData) => void;
+  onUneat?: (item: LeftoverListItemData) => void;
+  tabKind: LeftoverDishStatus;
+}) {
   return (
     <WebCard className="web-mypage-leftover-card" data-testid={`leftover-card-${item.id}`}>
       {item.recipe_thumbnail_url ? (
@@ -2156,12 +2706,43 @@ function LeftoverTabCard({ item }: { item: LeftoverListItemData }) {
         <strong>{item.recipe_title}</strong>
         <span>{formatLeftoverTabMeta(item)}</span>
       </span>
-      <Link
-        className="web-button web-button-tertiary web-button-sm"
-        href={`/recipe/${item.recipe_id}`}
-      >
-        레시피 보기
-      </Link>
+      <span className="web-mypage-leftover-actions">
+        {tabKind === "leftover" ? (
+          <>
+            <WebButton
+              disabled={isMutating}
+              onClick={() => onPlannerAdd?.(item)}
+              size="sm"
+              variant="secondary"
+            >
+              플래너에 추가
+            </WebButton>
+            <WebButton
+              disabled={isMutating}
+              onClick={() => onEat?.(item)}
+              size="sm"
+              variant="tertiary"
+            >
+              {isMutating ? "처리 중..." : "다먹음"}
+            </WebButton>
+          </>
+        ) : (
+          <WebButton
+            disabled={isMutating}
+            onClick={() => onUneat?.(item)}
+            size="sm"
+            variant="secondary"
+          >
+            {isMutating ? "처리 중..." : "남은 요리로"}
+          </WebButton>
+        )}
+        <Link
+          className="web-button web-button-tertiary web-button-sm"
+          href={`/recipe/${item.recipe_id}`}
+        >
+          레시피 보기
+        </Link>
+      </span>
     </WebCard>
   );
 }
@@ -2212,6 +2793,16 @@ function formatSavedRecipeMeta(recipe: RecipeBookRecipeItem) {
   ]
     .filter(Boolean)
     .join(" · ");
+}
+
+function formatShoppingAmountText(
+  amounts: ShoppingListDetail["items"][number]["amounts_json"],
+) {
+  if (!amounts.length) {
+    return "수량 확인";
+  }
+
+  return amounts.map((amount) => `${amount.amount}${amount.unit}`).join(" + ");
 }
 
 function getFallbackRecipeImage(title: string) {

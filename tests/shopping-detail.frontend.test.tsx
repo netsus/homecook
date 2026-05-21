@@ -368,6 +368,29 @@ describe("ShoppingDetailScreen", () => {
     expect(activeLink?.textContent).toContain("플래너");
   });
 
+  it("keeps mypage active when shopping detail is opened from mypage history", async () => {
+    setMatchMedia(false);
+    vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+
+    render(
+      <ShoppingDetailScreen
+        listId="list-1"
+        initialAuthenticated={true}
+        navActiveId="mypage"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+    });
+
+    const activeLink = screen
+      .getByRole("navigation", { name: "데스크탑 주요 메뉴" })
+      .querySelector('a[aria-current="page"]');
+
+    expect(activeLink?.textContent).toContain("마이페이지");
+  });
+
   it("switches to read-only mode when update returns 409 conflict", async () => {
     vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
 
