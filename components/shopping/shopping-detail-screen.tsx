@@ -28,6 +28,7 @@ import type { ShoppingListDetail, ShoppingListItemSummary } from "@/types/shoppi
 export interface ShoppingDetailScreenProps {
   listId: string;
   initialAuthenticated: boolean;
+  navActiveId?: "planner" | "mypage";
 }
 
 type ViewState = "loading" | "error" | "ready";
@@ -47,6 +48,7 @@ const WEB_NAV_ITEMS = [
 export function ShoppingDetailScreen({
   listId,
   initialAuthenticated,
+  navActiveId = "planner",
 }: ShoppingDetailScreenProps) {
   const router = useRouter();
   const [viewState, setViewState] = useState<ViewState>("loading");
@@ -496,6 +498,7 @@ export function ShoppingDetailScreen({
     return (
       <ShoppingDetailSkeleton
         mobile={isMobileViewport}
+        navActiveId={navActiveId}
         onBack={appReturn.goBack}
       />
     );
@@ -538,6 +541,7 @@ export function ShoppingDetailScreen({
         isReadOnly={isReadOnly}
         isReordering={isReordering}
         isSharing={isSharing}
+        navActiveId={navActiveId}
         onBack={appReturn.goBack}
         onComplete={handleCompleteClick}
         onMoveItem={handleMoveItem}
@@ -562,7 +566,7 @@ export function ShoppingDetailScreen({
 
   return (
     <WebShell className="web-shopping-shell" wide>
-      <WebTopNav activeId="planner" items={WEB_NAV_ITEMS} />
+      <WebTopNav activeId={navActiveId} items={WEB_NAV_ITEMS} />
       <main className="web-screen web-shopping-detail-screen">
         <nav aria-label="장보기 상세 경로" className="web-breadcrumb">
           <button
@@ -766,9 +770,11 @@ export function ShoppingDetailScreen({
 
 function ShoppingDetailSkeleton({
   mobile,
+  navActiveId,
   onBack,
 }: {
   mobile: boolean;
+  navActiveId: "planner" | "mypage";
   onBack: () => void;
 }) {
   if (mobile) {
@@ -821,10 +827,10 @@ function ShoppingDetailSkeleton({
             ))}
           </section>
         </main>
-        <Wave1MobileBottomTab
-          ariaLabel="장보기 상세 화면 하단 탐색"
-          currentTab="planner"
-        />
+      <Wave1MobileBottomTab
+        ariaLabel="장보기 상세 화면 하단 탐색"
+        currentTab={navActiveId}
+      />
       </div>
     );
   }
@@ -837,7 +843,7 @@ function ShoppingDetailSkeleton({
       data-testid="shopping-detail-skeleton"
     >
       <WebShell>
-        <WebTopNav activeId="planner" items={WEB_NAV_ITEMS} />
+        <WebTopNav activeId={navActiveId} items={WEB_NAV_ITEMS} />
         <main className="mx-auto max-w-5xl px-5 py-8">
           <div className="mb-6 rounded-[var(--radius-card)] border border-[var(--line)] bg-white p-5">
             <div className="h-4 w-40 animate-pulse rounded-full bg-[#F1F3F5]" />
@@ -876,6 +882,7 @@ function MobileShoppingDetailScreen({
   isReadOnly,
   isReordering,
   isSharing,
+  navActiveId,
   onBack,
   onComplete,
   onMoveItem,
@@ -897,6 +904,7 @@ function MobileShoppingDetailScreen({
   isReadOnly: boolean;
   isReordering: boolean;
   isSharing: boolean;
+  navActiveId: "planner" | "mypage";
   onBack: () => void;
   onComplete: () => void;
   onMoveItem: (itemId: string, direction: "up" | "down") => void;
@@ -1056,10 +1064,10 @@ function MobileShoppingDetailScreen({
         </div>
       ) : null}
 
-      <Wave1MobileBottomTab
-        ariaLabel="장보기 상세 화면 하단 탐색"
-        currentTab="planner"
-      />
+        <Wave1MobileBottomTab
+          ariaLabel="장보기 상세 화면 하단 탐색"
+          currentTab={navActiveId}
+        />
 
       {showPantryPopup ? (
         <PantryReflectionPopup

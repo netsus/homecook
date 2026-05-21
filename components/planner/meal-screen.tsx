@@ -451,17 +451,43 @@ function MealWebListCard({
 
   return (
     <article className="web-meal-list-card" aria-label={`${meal.recipe_title} 끼니 음식`}>
-      <div
-        className="web-meal-list-thumb"
-        style={{ backgroundColor: visual.bg }}
-        aria-hidden="true"
-      >
-        {meal.recipe_thumbnail_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img alt="" src={meal.recipe_thumbnail_url} />
-        ) : (
-          <span>{visual.emoji}</span>
-        )}
+      <div className="web-meal-list-visual">
+        <div
+          className="web-meal-list-thumb"
+          style={{ backgroundColor: visual.bg }}
+          aria-hidden="true"
+        >
+          {meal.recipe_thumbnail_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img alt="" src={meal.recipe_thumbnail_url} />
+          ) : (
+            <span>{visual.emoji}</span>
+          )}
+        </div>
+
+        <div className="web-meal-list-serving">
+          <div className="web-meal-inline-stepper" aria-label="인분 조절" role="group">
+            <button
+              aria-label="인분 감소"
+              disabled={isMin || isPending}
+              onClick={onStepDown}
+              type="button"
+            >
+              -
+            </button>
+            <span aria-label={`${meal.planned_servings}인분`} aria-live="polite">
+              {meal.planned_servings}인분
+            </span>
+            <button
+              aria-label="인분 증가"
+              disabled={isPending}
+              onClick={onStepUp}
+              type="button"
+            >
+              +
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="web-meal-list-copy">
@@ -493,30 +519,6 @@ function MealWebListCard({
             {conflictError}
           </p>
         ) : null}
-      </div>
-
-      <div className="web-meal-list-serving">
-        <div className="web-meal-inline-stepper" aria-label="인분 조절" role="group">
-          <button
-            aria-label="인분 감소"
-            disabled={isMin || isPending}
-            onClick={onStepDown}
-            type="button"
-          >
-            -
-          </button>
-          <span aria-label={`${meal.planned_servings}인분`} aria-live="polite">
-            {meal.planned_servings}인분
-          </span>
-          <button
-            aria-label="인분 증가"
-            disabled={isPending}
-            onClick={onStepUp}
-            type="button"
-          >
-            +
-          </button>
-        </div>
       </div>
 
       <div
@@ -581,7 +583,6 @@ function MealWebView({
   planDate,
   screenState,
   slotName,
-  titleFull,
   totalServings,
 }: {
   addMealHref: string;
@@ -601,10 +602,12 @@ function MealWebView({
   planDate: string;
   screenState: ScreenState;
   slotName: string;
-  titleFull: string;
   totalServings: number;
 }) {
   const isLoading = authState === "checking" || screenState === "loading";
+  const breadcrumbCurrent = slotName
+    ? `${formatDateLong(planDate)} · ${slotName}`
+    : formatDateLong(planDate);
 
   return (
     <WebShell className="web-meal" wide>
@@ -625,7 +628,7 @@ function MealWebView({
             플래너
           </button>
           <span className="web-breadcrumb-sep">/</span>
-          <span className="web-breadcrumb-current">{titleFull}</span>
+          <span className="web-breadcrumb-current">{breadcrumbCurrent}</span>
         </nav>
 
         {isLoading ? (
@@ -671,10 +674,6 @@ function MealWebView({
             <section aria-labelledby="web-meal-list-title" className="web-meal-main">
               <div className="web-meal-list-head">
                 <div>
-                  <p className="web-meal-kicker">
-                    {formatDateLong(planDate)}
-                    {slotName ? ` · ${slotName}` : ""}
-                  </p>
                   <h1 id="web-meal-list-title">끼니 음식 {meals.length}개</h1>
                   <p>이 끼니에 등록된 음식을 한 번에 관리해요.</p>
                 </div>
@@ -1279,7 +1278,6 @@ export function MealScreen({
             planDate={planDate}
             screenState={screenState}
             slotName={slotName}
-            titleFull={titleFull}
             totalServings={totalServings}
           />
         </div>

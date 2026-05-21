@@ -437,7 +437,7 @@ export function RecipeBookDetailScreen({
     canManageBook ? (
       <div className="web-recipebook-detail-actions">
         <WebButton onClick={handleBookRenameStart} variant="secondary">
-          북 편집
+          이름 변경
         </WebButton>
         <WebButton className="web-confirm-danger" onClick={handleBookDeleteRequest}>
           삭제

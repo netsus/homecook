@@ -462,6 +462,7 @@ describe("MealScreen", () => {
 
     expect(within(summary).getByText("음식")).toBeTruthy();
     expect(within(summary).getByText("2개")).toBeTruthy();
+    expect(screen.getByText("4월 18일 · 아침")).toBeTruthy();
     expect(within(list).getByText("김치찌개")).toBeTruthy();
     expect(within(list).getByText("파스타")).toBeTruthy();
     expect(screen.queryByLabelText("김치찌개 레시피 보기")).toBeNull();

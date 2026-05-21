@@ -9,10 +9,20 @@ import { getServerAuthUser } from "@/lib/supabase/server";
 
 export default async function ShoppingDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ list_id: string }>;
+  searchParams?: Promise<{
+    returnSurface?: string | string[];
+  }>;
 }) {
   const { list_id } = await params;
+  const query = searchParams ? await searchParams : {};
+  const returnSurface = Array.isArray(query.returnSurface)
+    ? query.returnSurface[0]
+    : query.returnSurface;
+  const navActiveId: "planner" | "mypage" =
+    returnSurface?.startsWith("mypage.") ? "mypage" : "planner";
 
   const cookieStore = await cookies();
   const authOverride = readE2EAuthOverrideCookie(cookieStore);
@@ -41,6 +51,7 @@ export default async function ShoppingDetailPage({
       <ShoppingDetailScreen
         listId={list_id}
         initialAuthenticated={initialAuthenticated}
+        navActiveId={navActiveId}
       />
     </div>
   );

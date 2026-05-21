@@ -17,7 +17,6 @@ import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   WebButton,
-  WebEmptyState,
   WebErrorState,
   WebShell,
   WebSkeleton,
@@ -254,6 +253,7 @@ function PlannerWeekWebView({
   dateKeys,
   errorMessage,
   getMealAddHrefForSlot,
+  isCurrentRange,
   isRefreshing,
   loadPlanner,
   mealStats,
@@ -263,6 +263,7 @@ function PlannerWeekWebView({
   rangeContextLabel,
   rangeEndDate,
   rangeStartDate,
+  resetRange,
   runPlannerAction,
   screenState,
   shiftRange,
@@ -273,6 +274,7 @@ function PlannerWeekWebView({
   dateKeys: string[];
   errorMessage: string | null;
   getMealAddHrefForSlot: (dateKey: string, column: PlannerColumnData) => string;
+  isCurrentRange: boolean;
   isRefreshing: boolean;
   loadPlanner: () => Promise<void>;
   mealStats: {
@@ -287,6 +289,7 @@ function PlannerWeekWebView({
   rangeContextLabel: string;
   rangeEndDate: string;
   rangeStartDate: string;
+  resetRange: () => Promise<void>;
   runPlannerAction: (action: Promise<void>) => void;
   screenState: "loading" | "ready" | "empty" | "error" | "read-only";
   shiftRange: (dayDelta: number) => Promise<void>;
@@ -324,7 +327,15 @@ function PlannerWeekWebView({
               onClick={() => runPlannerAction(shiftRange(-RANGE_SHIFT_DAYS))}
               variant="secondary"
             >
-              {"< 이전주"}
+              {"< 이전 주"}
+            </WebButton>
+            <WebButton
+              aria-label="이번 주"
+              disabled={isCurrentRange}
+              onClick={() => runPlannerAction(resetRange())}
+              variant="secondary"
+            >
+              이번 주
             </WebButton>
             <WebButton
               aria-label="다음 주"
@@ -477,13 +488,6 @@ function PlannerWeekWebView({
                 data-testid="planner-week-body"
                 style={plannerBodyMotionStyle}
               >
-                {screenState === "empty" ? (
-                  <WebEmptyState
-                    className="web-planner-empty-callout"
-                    description="요일 칸의 식사 추가 버튼으로 원하는 날짜와 끼니에 메뉴를 넣을 수 있어요."
-                    title="아직 등록된 식사가 없어요"
-                  />
-                ) : null}
                 <div className="web-planner-grid">
                   <div className="web-planner-corner" aria-hidden="true" />
                   {dateKeys.map((dateKey) => {
@@ -1522,6 +1526,7 @@ export function PlannerWeekScreen({
             dateKeys={dateKeys}
             errorMessage={errorMessage}
             getMealAddHrefForSlot={getMealAddHrefForSlot}
+            isCurrentRange={isCurrentRange}
             isRefreshing={isRefreshing}
             loadPlanner={loadPlanner}
             mealStats={mealStats}
@@ -1531,6 +1536,7 @@ export function PlannerWeekScreen({
             rangeContextLabel={rangeContextLabel}
             rangeEndDate={rangeEndDate}
             rangeStartDate={rangeStartDate}
+            resetRange={resetRange}
             runPlannerAction={runPlannerAction}
             screenState={screenState}
             shiftRange={shiftRange}
