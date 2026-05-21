@@ -40,10 +40,11 @@ import type {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface YoutubeImportScreenProps {
-  initialAuthenticated?: boolean;
   initialYoutubeUrl?: string;
+  onRequestClose?: () => void;
   planDate: string;
   columnId: string;
+  presentation?: "screen" | "embedded";
   slotName: string;
 }
 
@@ -1230,8 +1231,10 @@ function ServingsInputModal({ onConfirm, onCancel, defaultServings, isCreating, 
 
 export function YoutubeImportScreen({
   initialYoutubeUrl = "",
+  onRequestClose,
   planDate,
   columnId,
+  presentation = "screen",
   slotName,
 }: YoutubeImportScreenProps) {
   const router = useRouter();
@@ -1242,6 +1245,7 @@ export function YoutubeImportScreen({
         : "/planner",
   });
   const isDesktopViewport = useDesktopViewport();
+  const isEmbedded = presentation === "embedded";
   const internalHistoryDepthRef = useRef(0);
   const bypassPopGuardRef = useRef(false);
 
@@ -1312,6 +1316,8 @@ export function YoutubeImportScreen({
 
   // History state management for browser back
   useEffect(() => {
+    if (isEmbedded) return;
+
     function handlePopState() {
       if (bypassPopGuardRef.current) {
         return;
@@ -1334,19 +1340,26 @@ export function YoutubeImportScreen({
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  }, [isEmbedded]);
 
   // Push history state on step change
   const pushStep = useCallback((step: Step) => {
     setCurrentStep(step);
+    if (isEmbedded) return;
+
     window.history.pushState({ step }, "");
     internalHistoryDepthRef.current += 1;
-  }, []);
+  }, [isEmbedded]);
 
   const exitImportFlow = useCallback(() => {
     bypassPopGuardRef.current = true;
+    if (onRequestClose) {
+      onRequestClose();
+      return;
+    }
+
     appReturn.goBack();
-  }, [appReturn]);
+  }, [appReturn, onRequestClose]);
 
   // ─── Step 1 handlers ───────────────────────────────────────────────
 
@@ -1708,9 +1721,9 @@ export function YoutubeImportScreen({
     } else if (currentStep === "extracting" && extractionError) {
       setCurrentStep("url-input");
     } else {
-      appReturn.goBack();
+      exitImportFlow();
     }
-  }, [appReturn, currentStep, extractionError]);
+  }, [currentStep, exitImportFlow, extractionError]);
 
   const handleConfirmBack = useCallback(() => {
     setModalMode("none");
@@ -1751,7 +1764,254 @@ export function YoutubeImportScreen({
     steps,
   });
 
+  const DesktopImportFrame: React.ElementType<{
+    children: React.ReactNode;
+    className?: string;
+  }> = isEmbedded ? "div" : WebCard;
+
+  const desktopImportCard = (
+    <DesktopImportFrame
+      className={["web-yt-card", isEmbedded && "web-yt-card-embedded"]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <div className="web-yt-stepper" aria-label="유튜브 가져오기 단계">
+        {YOUTUBE_STEP_LABELS.map((step, index) => (
+          <span
+            className={[
+              "web-yt-step",
+              index < desktopStepIndex ? "web-yt-step-done" : "",
+              index === desktopStepIndex ? "web-yt-step-active" : "",
+            ].join(" ")}
+            key={step.id}
+          >
+            <span>{index + 1}</span>
+            {step.label}
+          </span>
+        ))}
+      </div>
+
+      {currentStep === "url-input" ? (
+        <section className="web-yt-content web-yt-url">
+          <div>
+            <h2>유튜브 링크를 붙여넣어 주세요</h2>
+            <p>영상 설명, 자막, 화면 텍스트에서 재료와 조리법을 찾아요.</p>
+          </div>
+          <label className="web-manual-field web-manual-field-wide">
+            <span>유튜브 URL</span>
+            <input
+              disabled={isValidating}
+              inputMode="url"
+              onChange={(event) => {
+                setYoutubeUrl(event.target.value);
+                setUrlError(null);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && youtubeUrl.trim()) {
+                  handleValidate();
+                }
+              }}
+              placeholder="https://www.youtube.com/watch?v=..."
+              type="url"
+              value={youtubeUrl}
+            />
+          </label>
+          {urlError ? (
+            <div className="web-menu-add-error" role="alert">
+              {urlError}
+            </div>
+          ) : null}
+          <div className="web-yt-actions">
+            <WebButton
+              disabled={!youtubeUrl.trim() || isValidating}
+              onClick={handleValidate}
+            >
+              {isValidating ? "확인 중..." : "가져오기"}
+            </WebButton>
+          </div>
+        </section>
+      ) : null}
+
+      {currentStep === "non-recipe-warning" && videoInfo ? (
+        <section className="web-yt-content web-yt-warning">
+          <div className="web-yt-video">
+            <div className="web-yt-thumb">
+              <Image
+                alt={videoInfo.title}
+                fill
+                src={videoInfo.thumbnail_url}
+                unoptimized
+              />
+            </div>
+            <div>
+              <p className="web-picker-subtle">{videoInfo.channel}</p>
+              <h2>{videoInfo.title}</h2>
+              <p>요리 레시피로 보기 어려워요. 다른 링크를 입력해주세요.</p>
+              {classificationReasons.length > 0 ? (
+                <ul>
+                  {classificationReasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          </div>
+          <div className="web-yt-actions">
+            <WebButton onClick={handleReenter} variant="secondary">
+              다시 입력
+            </WebButton>
+          </div>
+        </section>
+      ) : null}
+
+      {currentStep === "extracting" && !extractionError ? (
+        <section className="web-yt-content">
+          <ExtractionProgressStep
+            videoTitle={videoInfo?.title ?? ""}
+            elapsedMs={extractionElapsedMs}
+          />
+        </section>
+      ) : null}
+
+      {currentStep === "extracting" && extractionError ? (
+        <section className="web-yt-content web-yt-error">
+          <h2>레시피 추출에 실패했어요</h2>
+          <p>{extractionError}</p>
+          <div className="web-yt-actions">
+            <WebButton onClick={handleRetryExtraction}>다시 시도</WebButton>
+            <WebButton onClick={handleReenter} variant="secondary">
+              다른 영상 입력
+            </WebButton>
+          </div>
+        </section>
+      ) : null}
+
+      {currentStep === "review" ? (
+        <section className="web-yt-content web-yt-review">
+          <div>
+            <h2>추출 결과를 확인해주세요</h2>
+            <p>영상에서 찾은 재료와 조리 과정을 등록 전에 확인해요.</p>
+          </div>
+          {desktopRegisterRequirements.length > 0 ? (
+            <div
+              className="web-menu-add-error"
+              data-testid="youtube-register-requirements"
+              role="status"
+            >
+              등록 전 확인 필요: {desktopRegisterRequirements.join(", ")}
+            </div>
+          ) : null}
+          <ReviewStep
+            title={title}
+            onTitleChange={setTitle}
+            baseServings={baseServings}
+            onServingsChange={setBaseServings}
+            extractionMethods={extractionMethods}
+            classificationStatus={classificationStatus}
+            classificationReasons={classificationReasons}
+            draftWarnings={draftWarnings}
+            blockingIssues={blockingIssues}
+            ingredients={ingredients}
+            steps={steps}
+            onUpdateIngredient={handleUpdateIngredient}
+            onResolveIngredientCandidate={handleResolveIngredientCandidate}
+            onReplaceIngredient={handleReplaceIngredient}
+            onRemoveIngredient={handleRemoveIngredient}
+            onRemoveStep={handleRemoveStep}
+            onAddIngredient={() => setModalMode("ingredient-add")}
+            onAddStep={() => setModalMode("step-add")}
+            onEditStep={(tempId) => {
+              setEditingStepId(tempId);
+              setModalMode("step-edit");
+            }}
+          />
+        </section>
+      ) : null}
+
+      {currentStep === "complete" && registeredRecipeId ? (
+        <section className="web-yt-content web-yt-complete">
+          <h2>레시피가 등록됐어요</h2>
+          <p>&lsquo;{registeredRecipeTitle}&rsquo;가 레시피북에 저장됐어요.</p>
+          <div className="web-yt-actions">
+            {hasPlanContext ? (
+              <WebButton onClick={handleMealAdd}>이 끼니에 추가</WebButton>
+            ) : null}
+            <WebButton
+              onClick={handleViewDetail}
+              variant={hasPlanContext ? "secondary" : "primary"}
+            >
+              레시피 상세 보기
+            </WebButton>
+            <WebButton onClick={handleClose} variant="ghost">
+              닫기
+            </WebButton>
+          </div>
+        </section>
+      ) : null}
+    </DesktopImportFrame>
+  );
+
+  const desktopModals = (
+    <>
+      {modalMode === "ingredient-add" && (
+        <RecipeIngredientAddModal
+          onClose={() => {
+            setReplacingIngredientId(null);
+            setModalMode("none");
+          }}
+          onAdd={handleAddIngredient}
+        />
+      )}
+      {(modalMode === "step-add" || modalMode === "step-edit") && (
+        <StepAddModal
+          onClose={() => {
+            setEditingStepId(null);
+            setModalMode("none");
+          }}
+          onAdd={handleAddStep}
+          cookingMethods={cookingMethods}
+          nextStepNumber={editingStep?.step_number ?? steps.length + 1}
+          initialStep={editingStep}
+        />
+      )}
+      {modalMode === "register-error" && registerError && (
+        <RegisterErrorModal
+          errorMessage={registerError}
+          onRetry={() => {
+            setModalMode("none");
+            handleRegister();
+          }}
+          onClose={() => setModalMode("none")}
+        />
+      )}
+      {modalMode === "confirm-back" && (
+        <ConfirmBackModal
+          onConfirm={handleConfirmBack}
+          onCancel={() => setModalMode("none")}
+        />
+      )}
+      {modalMode === "servings-input" && (
+        <ServingsInputModal
+          onConfirm={handleServingsConfirm}
+          onCancel={() => setModalMode("none")}
+          defaultServings={baseServings}
+          isCreating={isCreatingMeal}
+          error={mealAddError}
+        />
+      )}
+    </>
+  );
+
   if (isDesktopViewport) {
+    if (isEmbedded) {
+      return (
+        <div className="web-yt-embedded" data-testid="youtube-import-embedded">
+          {desktopImportCard}
+          {desktopModals}
+        </div>
+      );
+    }
+
     return (
       <div className="web-menu-add-shell">
         <WebShell>
@@ -1793,229 +2053,9 @@ export function YoutubeImportScreen({
             </div>
           </div>
 
-          <WebCard className="web-yt-card">
-            <div className="web-yt-stepper" aria-label="유튜브 가져오기 단계">
-              {YOUTUBE_STEP_LABELS.map((step, index) => (
-                <span
-                  className={[
-                    "web-yt-step",
-                    index < desktopStepIndex ? "web-yt-step-done" : "",
-                    index === desktopStepIndex ? "web-yt-step-active" : "",
-                  ].join(" ")}
-                  key={step.id}
-                >
-                  <span>{index + 1}</span>
-                  {step.label}
-                </span>
-              ))}
-            </div>
-
-            {currentStep === "url-input" ? (
-              <section className="web-yt-content web-yt-url">
-                <div>
-                  <h2>유튜브 링크를 붙여넣어 주세요</h2>
-                  <p>영상 설명, 자막, 화면 텍스트에서 재료와 조리법을 찾아요.</p>
-                </div>
-                <label className="web-manual-field web-manual-field-wide">
-                  <span>유튜브 URL</span>
-                  <input
-                    disabled={isValidating}
-                    inputMode="url"
-                    onChange={(event) => {
-                      setYoutubeUrl(event.target.value);
-                      setUrlError(null);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" && youtubeUrl.trim()) {
-                        handleValidate();
-                      }
-                    }}
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    type="url"
-                    value={youtubeUrl}
-                  />
-                </label>
-                {urlError ? (
-                  <div className="web-menu-add-error" role="alert">
-                    {urlError}
-                  </div>
-                ) : null}
-                <div className="web-yt-actions">
-                  <WebButton
-                    disabled={!youtubeUrl.trim() || isValidating}
-                    onClick={handleValidate}
-                  >
-                    {isValidating ? "확인 중..." : "가져오기"}
-                  </WebButton>
-                </div>
-              </section>
-            ) : null}
-
-            {currentStep === "non-recipe-warning" && videoInfo ? (
-              <section className="web-yt-content web-yt-warning">
-                <div className="web-yt-video">
-                  <div className="web-yt-thumb">
-                    <Image
-                      alt={videoInfo.title}
-                      fill
-                      src={videoInfo.thumbnail_url}
-                      unoptimized
-                    />
-                  </div>
-                  <div>
-                    <p className="web-picker-subtle">{videoInfo.channel}</p>
-                    <h2>{videoInfo.title}</h2>
-                    <p>요리 레시피로 보기 어려워요. 다른 링크를 입력해주세요.</p>
-                    {classificationReasons.length > 0 ? (
-                      <ul>
-                        {classificationReasons.map((reason) => (
-                          <li key={reason}>{reason}</li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="web-yt-actions">
-                  <WebButton onClick={handleReenter} variant="secondary">
-                    다시 입력
-                  </WebButton>
-                </div>
-              </section>
-            ) : null}
-
-            {currentStep === "extracting" && !extractionError ? (
-              <section className="web-yt-content">
-                <ExtractionProgressStep
-                  videoTitle={videoInfo?.title ?? ""}
-                  elapsedMs={extractionElapsedMs}
-                />
-              </section>
-            ) : null}
-
-            {currentStep === "extracting" && extractionError ? (
-              <section className="web-yt-content web-yt-error">
-                <h2>레시피 추출에 실패했어요</h2>
-                <p>{extractionError}</p>
-                <div className="web-yt-actions">
-                  <WebButton onClick={handleRetryExtraction}>다시 시도</WebButton>
-                  <WebButton onClick={handleReenter} variant="secondary">
-                    다른 영상 입력
-                  </WebButton>
-                </div>
-              </section>
-            ) : null}
-
-            {currentStep === "review" ? (
-              <section className="web-yt-content web-yt-review">
-                <div>
-                  <h2>추출 결과를 확인해주세요</h2>
-                  <p>영상에서 찾은 재료와 조리 과정을 등록 전에 확인해요.</p>
-                </div>
-                {desktopRegisterRequirements.length > 0 ? (
-                  <div
-                    className="web-menu-add-error"
-                    data-testid="youtube-register-requirements"
-                    role="status"
-                  >
-                    등록 전 확인 필요: {desktopRegisterRequirements.join(", ")}
-                  </div>
-                ) : null}
-                <ReviewStep
-                  title={title}
-                  onTitleChange={setTitle}
-                  baseServings={baseServings}
-                  onServingsChange={setBaseServings}
-                  extractionMethods={extractionMethods}
-                  classificationStatus={classificationStatus}
-                  classificationReasons={classificationReasons}
-                  draftWarnings={draftWarnings}
-                  blockingIssues={blockingIssues}
-                  ingredients={ingredients}
-                  steps={steps}
-                  onUpdateIngredient={handleUpdateIngredient}
-                  onResolveIngredientCandidate={handleResolveIngredientCandidate}
-                  onReplaceIngredient={handleReplaceIngredient}
-                  onRemoveIngredient={handleRemoveIngredient}
-                  onRemoveStep={handleRemoveStep}
-                  onAddIngredient={() => setModalMode("ingredient-add")}
-                  onAddStep={() => setModalMode("step-add")}
-                  onEditStep={(tempId) => {
-                    setEditingStepId(tempId);
-                    setModalMode("step-edit");
-                  }}
-                />
-              </section>
-            ) : null}
-
-            {currentStep === "complete" && registeredRecipeId ? (
-              <section className="web-yt-content web-yt-complete">
-                <h2>레시피가 등록됐어요</h2>
-                <p>&lsquo;{registeredRecipeTitle}&rsquo;가 레시피북에 저장됐어요.</p>
-                <div className="web-yt-actions">
-                  {hasPlanContext ? (
-                    <WebButton onClick={handleMealAdd}>이 끼니에 추가</WebButton>
-                  ) : null}
-                  <WebButton
-                    onClick={handleViewDetail}
-                    variant={hasPlanContext ? "secondary" : "primary"}
-                  >
-                    레시피 상세 보기
-                  </WebButton>
-                  <WebButton onClick={handleClose} variant="ghost">
-                    닫기
-                  </WebButton>
-                </div>
-              </section>
-            ) : null}
-          </WebCard>
+          {desktopImportCard}
         </WebShell>
-
-        {modalMode === "ingredient-add" && (
-          <RecipeIngredientAddModal
-            onClose={() => {
-              setReplacingIngredientId(null);
-              setModalMode("none");
-            }}
-            onAdd={handleAddIngredient}
-          />
-        )}
-        {(modalMode === "step-add" || modalMode === "step-edit") && (
-          <StepAddModal
-            onClose={() => {
-              setEditingStepId(null);
-              setModalMode("none");
-            }}
-            onAdd={handleAddStep}
-            cookingMethods={cookingMethods}
-            nextStepNumber={editingStep?.step_number ?? steps.length + 1}
-            initialStep={editingStep}
-          />
-        )}
-        {modalMode === "register-error" && registerError && (
-          <RegisterErrorModal
-            errorMessage={registerError}
-            onRetry={() => {
-              setModalMode("none");
-              handleRegister();
-            }}
-            onClose={() => setModalMode("none")}
-          />
-        )}
-        {modalMode === "confirm-back" && (
-          <ConfirmBackModal
-            onConfirm={handleConfirmBack}
-            onCancel={() => setModalMode("none")}
-          />
-        )}
-        {modalMode === "servings-input" && (
-          <ServingsInputModal
-            onConfirm={handleServingsConfirm}
-            onCancel={() => setModalMode("none")}
-            defaultServings={baseServings}
-            isCreating={isCreatingMeal}
-            error={mealAddError}
-          />
-        )}
+        {desktopModals}
       </div>
     );
   }

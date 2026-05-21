@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
@@ -9,11 +8,9 @@ import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
 import { RecipeBookDetailPicker } from "@/components/planner/recipe-book-detail-picker";
 import { RecipeBookSelector } from "@/components/planner/recipe-book-selector";
 import { RecipeSearchPicker } from "@/components/planner/recipe-search-picker";
-import {
-  buildYoutubeImportHref,
-  YoutubeImportEntrySheet,
-} from "@/components/planner/youtube-import-entry-sheet";
+import { YoutubeImportEntrySheet } from "@/components/planner/youtube-import-entry-sheet";
 import { ManualRecipeCreateScreen } from "@/components/recipe/manual-recipe-create-screen";
+import { YoutubeImportScreen } from "@/components/recipe/youtube-import-screen";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import {
   AppBackButton,
@@ -79,52 +76,6 @@ function formatTargetLabel(planDate: string, slotName: string) {
 
   if (dateLabel && slotName) return `${dateLabel} ${slotName}`;
   return slotName || dateLabel || "플래너";
-}
-
-function YoutubeImportEntryPanel({
-  onBack,
-  targetLabel,
-  youtubeHref,
-}: {
-  onBack: () => void;
-  targetLabel: string;
-  youtubeHref: string;
-}) {
-  const [youtubeUrl, setYoutubeUrl] = useState("");
-  const importHref = buildYoutubeImportHref(youtubeHref, youtubeUrl);
-
-  return (
-    <div className="web-menu-add-inline-entry" data-testid="youtube-import-embedded">
-      <div>
-        <h3>영상 링크에서 레시피를 추출해요</h3>
-        <p>
-          {targetLabel}에 추가할 레시피 영상을 붙여넣고, 기존 가져오기 화면에서
-          추출 결과를 검토해요.
-        </p>
-      </div>
-
-      <label className="web-manual-field web-manual-field-wide">
-        <span>유튜브 URL</span>
-        <input
-          aria-label="유튜브 URL"
-          inputMode="url"
-          onChange={(event) => setYoutubeUrl(event.target.value)}
-          placeholder="https://www.youtube.com/watch?v=..."
-          type="url"
-          value={youtubeUrl}
-        />
-      </label>
-
-      <div className="web-yt-actions">
-        <WebButton onClick={onBack} variant="secondary">
-          다른 방법
-        </WebButton>
-        <Link className="web-button web-button-primary" href={importHref}>
-          가져오기 화면 열기
-        </Link>
-      </div>
-    </div>
-  );
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -819,22 +770,23 @@ export function MenuAddScreen({
                   />
                 )}
 
-                {pickerMode === "youtube" && (
-                  isDesktopViewport ? (
-                    <YoutubeImportEntryPanel
+                {pickerMode === "youtube" &&
+                  (isDesktopViewport ? (
+                    <YoutubeImportScreen
+                      onRequestClose={handlePickerBackToMenu}
+                      planDate={planDate}
+                      columnId={columnId}
+                      presentation="embedded"
+                      slotName={slotName}
+                    />
+                  ) : (
+                    <YoutubeImportEntrySheet
                       onBack={handlePickerBackToMenu}
+                      onClose={handlePickerBackToMenu}
                       targetLabel={targetLabel}
                       youtubeHref={getYoutubeTargetHref()}
                     />
-                  ) : (
-                  <YoutubeImportEntrySheet
-                    onBack={handlePickerBackToMenu}
-                    onClose={handlePickerBackToMenu}
-                    targetLabel={targetLabel}
-                    youtubeHref={getYoutubeTargetHref()}
-                  />
-                  )
-                )}
+                  ))}
               </WebCard>
             </div>
           </WebShell>

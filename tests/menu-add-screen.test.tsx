@@ -9,6 +9,7 @@ import { MenuAddScreen } from "@/components/planner/menu-add-screen";
 import * as leftoversApi from "@/lib/api/leftovers";
 import * as mealApi from "@/lib/api/meal";
 import * as recipeApi from "@/lib/api/recipe";
+import * as youtubeApi from "@/lib/api/youtube-import";
 
 const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
@@ -92,6 +93,79 @@ describe("MenuAddScreen", () => {
         has_next: false,
         items: [],
         next_cursor: null,
+      },
+      error: null,
+    });
+    vi.mocked(youtubeApi.validateYoutubeUrl).mockReset();
+    vi.mocked(youtubeApi.extractYoutubeRecipe).mockReset();
+    vi.mocked(youtubeApi.registerYoutubeRecipe).mockReset();
+    vi.mocked(youtubeApi.validateYoutubeUrl).mockResolvedValue({
+      success: true,
+      data: {
+        is_valid_url: true,
+        is_recipe_video: true,
+        classification_status: "recipe",
+        classification_reasons: [],
+        video_info: {
+          video_id: "recipe12345",
+          title: "백종원 김치찌개",
+          channel: "백종원의 요리비책",
+          thumbnail_url: "https://i.ytimg.com/vi/recipe12345/hqdefault.jpg",
+        },
+      },
+      error: null,
+    });
+    vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValue({
+      success: true,
+      data: {
+        extraction_id: "ext-1",
+        title: "백종원 김치찌개",
+        base_servings: 2,
+        extraction_methods: ["description"],
+        draft_warnings: [],
+        blocking_issues: [],
+        ingredients: [
+          {
+            ingredient_id: "ing-1",
+            standard_name: "김치",
+            amount: 200,
+            unit: "g",
+            ingredient_type: "QUANT",
+            display_text: "김치 200g",
+            sort_order: 1,
+            scalable: true,
+            confidence: 0.9,
+            resolution_status: "resolved",
+            candidates: [],
+            raw_text: "김치 200g",
+          },
+        ],
+        steps: [
+          {
+            step_number: 1,
+            instruction: "김치를 끓인다",
+            cooking_method: {
+              id: "method-1",
+              code: "boil",
+              label: "끓이기",
+              color_key: "red",
+              is_new: false,
+            },
+            duration_text: "10분",
+            is_incomplete: false,
+            missing_fields: [],
+            raw_text: "김치를 끓인다",
+          },
+        ],
+        new_cooking_methods: [],
+      },
+      error: null,
+    });
+    vi.mocked(youtubeApi.registerYoutubeRecipe).mockResolvedValue({
+      success: true,
+      data: {
+        recipe_id: "recipe-yt-1",
+        title: "백종원 김치찌개",
       },
       error: null,
     });
@@ -290,7 +364,39 @@ describe("MenuAddScreen", () => {
     expect(screen.getByTestId("menu-add-option-grid")).toBeTruthy();
     expect(screen.getByTestId("youtube-import-embedded")).toBeTruthy();
     expect(screen.getByLabelText("유튜브 URL")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "가져오기" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "가져오기 화면 열기" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "다른 방법" })).toBeNull();
     expect(screen.queryByRole("dialog", { name: "유튜브에서 가져오기" })).toBeNull();
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it("keeps the desktop YouTube import review step inside the right panel", async () => {
+    installMatchMedia(true);
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+    await user.type(
+      screen.getByLabelText("유튜브 URL"),
+      "https://www.youtube.com/watch?v=recipe12345",
+    );
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    await waitFor(() => {
+      expect(youtubeApi.validateYoutubeUrl).toHaveBeenCalledWith({
+        youtube_url: "https://www.youtube.com/watch?v=recipe12345",
+      });
+      expect(youtubeApi.extractYoutubeRecipe).toHaveBeenCalledWith({
+        youtube_url: "https://www.youtube.com/watch?v=recipe12345",
+      });
+    });
+
+    expect(await screen.findByRole("heading", { name: "추출 결과를 확인해주세요" })).toBeTruthy();
+    expect(screen.getByTestId("youtube-import-embedded")).toBeTruthy();
+    expect(screen.getByTestId("menu-add-option-grid")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "가져오기 화면 열기" })).toBeNull();
     expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
