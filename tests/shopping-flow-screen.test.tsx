@@ -270,12 +270,11 @@ describe("shopping flow screen", () => {
       });
 
       expect(screen.getByText("된장찌개")).toBeTruthy();
-      expect(screen.getByText("합산 계획 2인분")).toBeTruthy();
-      expect(screen.getByText("합산 계획 4인분")).toBeTruthy();
-      expect(screen.getByLabelText("2인분")).toBeTruthy();
-      expect(screen.getByLabelText("4인분")).toBeTruthy();
-      expect(screen.getByText("장보기 목록 만들기")).toBeTruthy();
-      expect(screen.getByText("장보기 목록 만들기")).not.toBe(true);
+      expect(screen.queryByText("합산 계획 2인분")).toBeNull();
+      expect(screen.queryByText("합산 계획 4인분")).toBeNull();
+      expect(screen.queryByLabelText("2인분")).toBeNull();
+      expect(screen.queryByLabelText("4인분")).toBeNull();
+      expect(screen.getAllByText("장보기 목록 만들기")).toHaveLength(1);
       expect(screen.queryByText(/^#\d+$/)).not.toBeTruthy();
       expect(screen.queryByText(/[🍳🍚🥘🍽️]/u)).not.toBeTruthy();
       expect(screen.getByTestId("shopping-create-button").textContent).toBe(
@@ -308,12 +307,13 @@ describe("shopping flow screen", () => {
       });
 
       expect(screen.getAllByText("김치찌개")).toHaveLength(1);
-      expect(screen.getByText("식사 등록 완료")).toBeTruthy();
+      expect(screen.queryByText("식사 등록 완료")).toBeNull();
       expect(screen.getByText("대상 식사 2개")).toBeTruthy();
       expect(screen.getByText("합산 계획 6인분")).toBeTruthy();
-      expect(screen.getByText("장보기 기준 인분")).toBeTruthy();
+      expect(screen.queryByText("장보기 기준 인분")).toBeNull();
+      expect(screen.queryByLabelText("인분 늘리기")).toBeNull();
       expect(
-        screen.getByText(/같은 레시피는 합산 계획 인분으로 묶이고/)
+        screen.getByText(/같은 레시피는 합산 계획 인분으로 묶어요/)
       ).toBeTruthy();
     });
 
@@ -363,7 +363,7 @@ describe("shopping flow screen", () => {
       expect((screen.getByText("장보기 목록 만들기") as HTMLButtonElement).disabled).toBe(true);
     });
 
-    it("should adjust shopping servings when clicking stepper buttons", async () => {
+    it("should keep shopping servings fixed to the planned total without showing edit controls", async () => {
       fetchShoppingPreview.mockResolvedValue(
         createPreviewData([
           {
@@ -381,41 +381,9 @@ describe("shopping flow screen", () => {
         expect(screen.getByText("김치찌개")).toBeTruthy();
       });
 
-      const plusButton = screen.getByLabelText("인분 늘리기");
-      await userEvent.click(plusButton);
-
-      await waitFor(() => {
-        expect(screen.getByText("3")).toBeTruthy();
-      });
-
-      const minusButton = screen.getByLabelText("인분 줄이기");
-      await userEvent.click(minusButton);
-
-      await waitFor(() => {
-        expect(screen.getByText("2")).toBeTruthy();
-      });
-    });
-
-    it("should not allow servings below 1", async () => {
-      fetchShoppingPreview.mockResolvedValue(
-        createPreviewData([
-          {
-            id: "meal-1",
-            recipe_id: "recipe-1",
-            recipe_name: "김치찌개",
-            planned_servings: 1,
-          },
-        ])
-      );
-
-      render(<ShoppingFlowScreen initialAuthenticated={true} />);
-
-      await waitFor(() => {
-        expect(screen.getByText("김치찌개")).toBeTruthy();
-      });
-
-      const minusButton = screen.getByLabelText("인분 줄이기") as HTMLButtonElement;
-      expect(minusButton.disabled).toBe(true);
+      expect(screen.queryByLabelText("인분 늘리기")).toBeNull();
+      expect(screen.queryByLabelText("인분 줄이기")).toBeNull();
+      expect(screen.queryByText("장보기 기준 인분")).toBeNull();
     });
 
     it("should disable create button when no meals selected", async () => {
@@ -612,57 +580,7 @@ describe("shopping flow screen", () => {
       });
     });
 
-    it("should submit adjusted servings", async () => {
-      fetchShoppingPreview.mockResolvedValue(
-        createPreviewData([
-          {
-            id: "meal-1",
-            recipe_id: "recipe-1",
-            recipe_name: "김치찌개",
-            planned_servings: 2,
-          },
-        ])
-      );
-
-      createShoppingList.mockResolvedValue({
-        id: "list-1",
-        title: "장보기 목록",
-        is_completed: false,
-        created_at: "2026-04-26T00:00:00.000Z",
-      });
-
-      render(<ShoppingFlowScreen initialAuthenticated={true} />);
-
-      await waitFor(() => {
-        expect(screen.getByText("김치찌개")).toBeTruthy();
-      });
-
-      // Increase servings to 4
-      const plusButton = screen.getByLabelText("인분 늘리기");
-      await userEvent.click(plusButton);
-      await userEvent.click(plusButton);
-
-      await waitFor(() => {
-        expect(screen.getByText("4")).toBeTruthy();
-      });
-
-      const createButton = screen.getByText("장보기 목록 만들기");
-      await userEvent.click(createButton);
-
-      await waitFor(() => {
-        expect(createShoppingList).toHaveBeenCalledWith({
-          recipes: [
-            {
-              recipe_id: "recipe-1",
-              meal_ids: ["meal-1"],
-              shopping_servings: 4,
-            },
-          ],
-        });
-      });
-    });
-
-    it("should only bind whole meals that match reduced shopping servings for duplicate recipes", async () => {
+    it("should submit all grouped meals when servings are fixed to the planned total", async () => {
       fetchShoppingPreview.mockResolvedValue(
         createPreviewData([
           {
@@ -693,14 +611,7 @@ describe("shopping flow screen", () => {
         expect(screen.getByText("합산 계획 13인분")).toBeTruthy();
       });
 
-      const minusButton = screen.getByLabelText("인분 줄이기");
-      for (let i = 0; i < 8; i += 1) {
-        await userEvent.click(minusButton);
-      }
-
-      await waitFor(() => {
-        expect(screen.getByText("5")).toBeTruthy();
-      });
+      expect(screen.queryByLabelText("인분 줄이기")).toBeNull();
 
       await userEvent.click(screen.getByText("장보기 목록 만들기"));
 
@@ -709,8 +620,8 @@ describe("shopping flow screen", () => {
           recipes: [
             {
               recipe_id: "recipe-1",
-              meal_ids: ["meal-1"],
-              shopping_servings: 5,
+              meal_ids: ["meal-1", "meal-2"],
+              shopping_servings: 13,
             },
           ],
         });
