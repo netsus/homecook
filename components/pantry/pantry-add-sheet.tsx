@@ -413,67 +413,69 @@ export function PantryAddSheet({
             </div>
           </div>
 
-          {visibleSheetState === "loading" ? (
-            <div className="web-ingredient-grid">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item) => (
-                <Skeleton className="w-full" height={70} key={item} rounded="md" />
-              ))}
-            </div>
-          ) : visibleSheetState === "error" ? (
-            <div className="web-modal-panel web-modal-panel-error">
-              <p className="web-modal-copy">재료 목록을 불러오지 못했어요</p>
-              <WebButton
-                onClick={() => void loadIngredients(debouncedQuery)}
-                size="sm"
-              >
-                다시 시도
-              </WebButton>
-            </div>
-          ) : visibleSheetState === "empty" ? (
-            <div className="web-modal-panel">
-              <p className="web-modal-copy">검색 결과가 없어요</p>
-            </div>
-          ) : (
-            <div className="web-ingredient-grid">
-              {visibleIngredients.map((ingredient) => {
-                const isExisting = existingSet.current.has(ingredient.id);
-                const isChecked = selectedIds.has(ingredient.id);
+          <div className="web-ingredient-list-region" data-testid="pantry-add-list-region">
+            {visibleSheetState === "loading" ? (
+              <div className="web-ingredient-grid">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item) => (
+                  <Skeleton className="w-full" height={70} key={item} rounded="md" />
+                ))}
+              </div>
+            ) : visibleSheetState === "error" ? (
+              <div className="web-modal-panel web-modal-panel-error">
+                <p className="web-modal-copy">재료 목록을 불러오지 못했어요</p>
+                <WebButton
+                  onClick={() => void loadIngredients(debouncedQuery)}
+                  size="sm"
+                >
+                  다시 시도
+                </WebButton>
+              </div>
+            ) : visibleSheetState === "empty" ? (
+              <div className="web-modal-panel">
+                <p className="web-modal-copy">검색 결과가 없어요</p>
+              </div>
+            ) : (
+              <div className="web-ingredient-grid">
+                {visibleIngredients.map((ingredient) => {
+                  const isExisting = existingSet.current.has(ingredient.id);
+                  const isChecked = selectedIds.has(ingredient.id);
 
-                return (
-                  <button
-                    aria-checked={isChecked}
-                    aria-label={
-                      isExisting
-                        ? `${ingredient.standard_name} 보유중`
-                        : ingredient.standard_name
-                    }
-                    className={[
-                      "web-ingredient-cell",
-                      isChecked ? "web-ingredient-cell-selected" : "",
-                      isExisting
-                        ? "web-pantry-ingredient-existing opacity-60 grayscale"
-                        : "",
-                    ].join(" ")}
-                    data-owned={isExisting ? "true" : undefined}
-                    disabled={isExisting}
-                    key={ingredient.id}
-                    onClick={() => handleToggle(ingredient.id)}
-                    role="checkbox"
-                    type="button"
-                  >
-                    <span aria-hidden="true">
-                      {getPantryEmoji(
-                        ingredient.standard_name,
-                        ingredient.category,
-                      )}
-                    </span>
-                    <strong>{ingredient.standard_name}</strong>
-                    <small>{isExisting ? "보유중" : ingredient.category}</small>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                  return (
+                    <button
+                      aria-checked={isChecked}
+                      aria-label={
+                        isExisting
+                          ? `${ingredient.standard_name} 보유중`
+                          : ingredient.standard_name
+                      }
+                      className={[
+                        "web-ingredient-cell",
+                        isChecked ? "web-ingredient-cell-selected" : "",
+                        isExisting
+                          ? "web-pantry-ingredient-existing opacity-60 grayscale"
+                          : "",
+                      ].join(" ")}
+                      data-owned={isExisting ? "true" : undefined}
+                      disabled={isExisting}
+                      key={ingredient.id}
+                      onClick={() => handleToggle(ingredient.id)}
+                      role="checkbox"
+                      type="button"
+                    >
+                      <span aria-hidden="true">
+                        {getPantryEmoji(
+                          ingredient.standard_name,
+                          ingredient.category,
+                        )}
+                      </span>
+                      <strong>{ingredient.standard_name}</strong>
+                      <small>{isExisting ? "보유중" : ingredient.category}</small>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </WebDialogBody>
 
         <WebDialogFooter>

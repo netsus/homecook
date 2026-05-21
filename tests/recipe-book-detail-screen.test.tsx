@@ -187,7 +187,10 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    expect(screen.getByTestId("recipebook-detail-skeleton")).toBeTruthy();
+    const skeleton = screen.getByTestId("recipebook-detail-skeleton");
+    expect(skeleton.closest(".web-recipebook-detail-shell")).toBeTruthy();
+    expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
+    expect(screen.getByText("레시피를 불러오는 중")).toBeTruthy();
   });
 
   it("uses the mobile loading shell and preserves mypage tab return context", () => {
@@ -343,6 +346,35 @@ describe("RecipeBookDetailScreen", () => {
     expect(
       await screen.findByText("아직 이 레시피북에 레시피가 없어요"),
     ).toBeTruthy();
+    expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
+    expect(screen.getByText("대표 0개 레시피 · 전체 0개")).toBeTruthy();
+    expect(
+      screen
+        .getByText("아직 이 레시피북에 레시피가 없어요")
+        .closest(".web-recipebook-detail-shell"),
+    ).toBeTruthy();
+  });
+
+  it("keeps newly created custom empty books on the desktop detail frame", async () => {
+    mockFetchRecipeBookRecipes.mockResolvedValue(MOCK_EMPTY);
+
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-custom"
+        bookName="새 레시피북"
+        bookType="custom"
+        initialAuthenticated
+      />,
+    );
+
+    expect(await screen.findByText("아직 이 레시피북에 레시피가 없어요")).toBeTruthy();
+    expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "북 편집" })).toBeTruthy();
+    expect(
+      screen
+        .getByRole("heading", { name: "새 레시피북" })
+        .closest(".web-recipebook-detail-shell"),
+    ).toBeTruthy();
   });
 
   // ─── Error ──────────────────────────────────────────────────────────────────
@@ -392,7 +424,10 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    expect(await screen.findByText("레시피북을 찾을 수 없어요.")).toBeTruthy();
+    const errorHeading = await screen.findByText("레시피북을 찾을 수 없어요.");
+    expect(errorHeading).toBeTruthy();
+    expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
+    expect(errorHeading.closest(".web-recipebook-detail-shell")).toBeTruthy();
     expect(screen.queryByText("아직 이 레시피북에 레시피가 없어요")).toBeNull();
   });
 

@@ -623,11 +623,13 @@ describe("PantryScreen", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /재료 추가하기/ }));
     const dialog = await screen.findByRole("dialog", { name: "재료 추가" });
+    expect(within(dialog).getByTestId("pantry-add-list-region")).toBeTruthy();
     expect(within(dialog).getByRole("checkbox", { name: "대파" })).toBeTruthy();
     expect(within(dialog).getByRole("checkbox", { name: "간장" })).toBeTruthy();
 
     await user.click(within(dialog).getByRole("tab", { name: "채소" }));
 
+    expect(within(dialog).getByTestId("pantry-add-list-region")).toBeTruthy();
     expect(within(dialog).getByRole("checkbox", { name: "대파" })).toBeTruthy();
     expect(within(dialog).queryByRole("checkbox", { name: "간장" })).toBeNull();
     expect(mockFetchIngredients).toHaveBeenCalledTimes(1);

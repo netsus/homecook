@@ -495,27 +495,7 @@ function MealWebListCard({
         ) : null}
       </div>
 
-      <div className="web-meal-list-actions">
-        {canStartCook ? (
-          <button
-            aria-label={`${meal.recipe_title} 요리하기`}
-            className="web-meal-action-primary"
-            disabled={isPending}
-            onClick={onStartCook}
-            type="button"
-          >
-            <CookIcon />
-            요리하기
-          </button>
-        ) : null}
-        <button
-          className="web-meal-action-secondary"
-          onClick={onCreateShopping}
-          type="button"
-        >
-          <ShoppingIcon />
-          장보기
-        </button>
+      <div className="web-meal-list-serving">
         <div className="web-meal-inline-stepper" aria-label="인분 조절" role="group">
           <button
             aria-label="인분 감소"
@@ -537,6 +517,37 @@ function MealWebListCard({
             +
           </button>
         </div>
+      </div>
+
+      <div
+        className={[
+          "web-meal-list-actions",
+          canStartCook ? "" : "web-meal-list-actions-single",
+        ].join(" ")}
+      >
+        {canStartCook ? (
+          <button
+            aria-label={`${meal.recipe_title} 요리하기`}
+            className="web-meal-action-primary"
+            disabled={isPending}
+            onClick={onStartCook}
+            type="button"
+          >
+            <CookIcon />
+            요리하기
+          </button>
+        ) : null}
+        <button
+          className="web-meal-action-secondary"
+          onClick={onCreateShopping}
+          type="button"
+        >
+          <ShoppingIcon />
+          장보기
+        </button>
+      </div>
+
+      <div className="web-meal-list-delete">
         <button
           aria-label={`${meal.recipe_title} 삭제`}
           className="web-meal-delete-button"
@@ -546,7 +557,6 @@ function MealWebListCard({
           type="button"
         >
           <TrashIcon />
-          식사 삭제
         </button>
       </div>
     </article>

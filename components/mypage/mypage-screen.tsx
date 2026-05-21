@@ -912,12 +912,6 @@ export function MypageScreen({
               description="남겨둔 음식을 확인하고 플래너에 다시 올릴 항목을 고릅니다."
               emptyDescription="요리를 완료하면 남은 요리로 관리할 수 있어요."
               emptyTitle="남은 요리가 없어요"
-              fullPageHref={buildReturnHref("/leftovers", {
-                restore: "leftovers-tab",
-                returnSurface: "mypage.leftovers",
-                returnTo: "/mypage",
-              })}
-              fullPageLabel="남은 요리 전체 관리"
               items={leftoverItems}
               onRetry={() => void loadLeftoverTab("leftover")}
               state={leftoverState}
@@ -929,12 +923,6 @@ export function MypageScreen({
               description="다 먹은 목록을 확인하고 필요할 때 다시 만들 레시피로 이동합니다."
               emptyDescription="남은 요리를 다 먹음 처리하면 여기에 모여요."
               emptyTitle="다 먹은 기록이 없어요"
-              fullPageHref={buildReturnHref("/leftovers/ate", {
-                restore: "eaten-list-tab",
-                returnSurface: "mypage.eaten-list",
-                returnTo: "/mypage",
-              })}
-              fullPageLabel="다먹은 목록 전체 관리"
               items={eatenItems}
               onRetry={() => void loadLeftoverTab("eaten")}
               state={eatenState}
@@ -2062,8 +2050,6 @@ interface LeftoverTabContentProps {
   description: string;
   emptyDescription: string;
   emptyTitle: string;
-  fullPageHref: string;
-  fullPageLabel: string;
   items: LeftoverListItemData[];
   onRetry: () => void;
   state: LeftoverTabState;
@@ -2074,8 +2060,6 @@ function LeftoverTabContent({
   description,
   emptyDescription,
   emptyTitle,
-  fullPageHref,
-  fullPageLabel,
   items,
   onRetry,
   state,
@@ -2131,9 +2115,6 @@ function LeftoverTabContent({
         <WebCard className="web-mypage-saved-state">
           <strong>{emptyTitle}</strong>
           <span>{emptyDescription}</span>
-          <Link className="web-button web-button-secondary" href={fullPageHref}>
-            {fullPageLabel}
-          </Link>
         </WebCard>
       </div>
     );
@@ -2149,11 +2130,6 @@ function LeftoverTabContent({
         {items.map((item) => (
           <LeftoverTabCard item={item} key={item.id} />
         ))}
-      </div>
-      <div className="web-mypage-sub-actions">
-        <Link className="web-button web-button-secondary" href={fullPageHref}>
-          {fullPageLabel}
-        </Link>
       </div>
     </div>
   );

@@ -763,7 +763,11 @@ export function RecipeDetailScreen({
   };
 
   if (detailState === "loading") {
-    return <RecipeDetailLoadingSkeleton />;
+    return isDesktopViewport ? (
+      <RecipeDetailWebLoadingSkeleton />
+    ) : (
+      <RecipeDetailLoadingSkeleton />
+    );
   }
 
   if (detailState === "error" || !recipe) {
@@ -1957,6 +1961,70 @@ function RecipeDetailLoadingSkeleton() {
         </div>
       </div>
     </div>
+  );
+}
+
+function RecipeDetailWebLoadingSkeleton() {
+  return (
+    <WebShell className="web-recipe-detail" wide>
+      <WebTopNav
+        activeId="home"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<RecipeWebProfileButton />}
+      />
+      <div className="web-screen" data-testid="recipe-detail-web-loading">
+        <nav aria-label="레시피 경로" className="web-breadcrumb">
+          <Link className="web-breadcrumb-link" href="/" prefetch={false}>
+            <ChevronLeftIcon />
+            탐색
+          </Link>
+          <span className="web-breadcrumb-sep">/</span>
+          <span className="web-breadcrumb-current">레시피 불러오는 중</span>
+        </nav>
+
+        <div className="web-recipe-layout">
+          <div className="web-recipe-main">
+            <div className="web-recipe-photos">
+              <Skeleton className="h-full w-full" />
+              <div className="web-recipe-photo-side">
+                {[1, 2, 3].map((item) => (
+                  <Skeleton className="h-full w-full" key={item} />
+                ))}
+              </div>
+            </div>
+
+            <section className="web-recipe-titleblock">
+              <Skeleton className="h-10 w-2/3" />
+              <div className="mt-4 flex gap-2">
+                {[1, 2, 3].map((item) => (
+                  <Skeleton className="h-7 w-20" key={item} rounded="full" />
+                ))}
+              </div>
+            </section>
+
+            <section className="web-recipe-meta-row">
+              {[1, 2, 3, 4].map((item) => (
+                <Skeleton className="h-20 w-full" key={item} rounded="md" />
+              ))}
+            </section>
+          </div>
+
+          <aside className="web-recipe-rail" aria-hidden="true">
+            <WebCard>
+              <WebCardBody className="web-recipe-rail-body">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="mt-3 h-4 w-48" />
+                <div className="web-recipe-rail-actions">
+                  <Skeleton className="h-11 w-full" rounded="md" />
+                  <Skeleton className="h-11 w-full" rounded="md" />
+                  <Skeleton className="h-11 w-full" rounded="md" />
+                </div>
+              </WebCardBody>
+            </WebCard>
+          </aside>
+        </div>
+      </div>
+    </WebShell>
   );
 }
 

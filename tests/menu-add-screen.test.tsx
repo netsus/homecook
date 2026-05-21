@@ -230,7 +230,10 @@ describe("MenuAddScreen", () => {
     await user.click(screen.getByTestId("menu-add-option-manual"));
 
     expect(screen.getByTestId("menu-add-option-grid")).toBeTruthy();
-    expect(screen.getByTestId("manual-recipe-embedded")).toBeTruthy();
+    const embeddedManual = screen.getByTestId("manual-recipe-embedded");
+    expect(embeddedManual).toBeTruthy();
+    expect(embeddedManual.className).toContain("web-menu-add-embedded-manual");
+    expect(embeddedManual.closest(".web-menu-add-picker-panel")).toBeTruthy();
     expect(screen.getByLabelText("요리 이름")).toBeTruthy();
     expect(mockRouterPush).not.toHaveBeenCalled();
   });

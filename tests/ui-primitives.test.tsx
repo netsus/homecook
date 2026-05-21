@@ -274,6 +274,10 @@ describe("NumericStepperCompact", () => {
     expect(increase.querySelector("span")?.className).toContain(
       "bg-[var(--wave1-ink)]",
     );
+    expect(screen.getByLabelText("2인분").className).toContain(
+      "tabular-nums",
+    );
+    expect(screen.getByLabelText("2인분").className).toContain("w-9");
 
     fireEvent.click(decrease);
     fireEvent.click(increase);

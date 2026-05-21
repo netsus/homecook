@@ -471,6 +471,9 @@ describe("MealScreen", () => {
     expect(within(list).getByRole("button", { name: "김치찌개 요리하기" })).toBeTruthy();
     expect(within(list).getAllByRole("button", { name: "장보기" })).toHaveLength(2);
     expect(within(list).getAllByRole("button", { name: "인분 증가" })).toHaveLength(2);
+    expect(list.querySelectorAll(".web-meal-list-serving")).toHaveLength(2);
+    expect(list.querySelectorAll(".web-meal-list-actions-single")).toHaveLength(1);
+    expect(list.querySelectorAll(".web-meal-list-delete .web-meal-delete-button")).toHaveLength(2);
     expect(screen.getAllByTestId("meal-screen-add-cta")).toHaveLength(1);
   });
 
