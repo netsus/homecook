@@ -13,51 +13,51 @@ function ruleBody(selector: string) {
 }
 
 describe("planner desktop colors", () => {
-  it("uses calmer planner-specific status and add tokens", () => {
-    expect(globalsCss).toContain("--planner-status-registered: #6f7f8d;");
-    expect(globalsCss).toContain("--planner-status-shopping: #c47a2c;");
-    expect(globalsCss).toContain("--planner-status-cooked: #4f8f62;");
-    expect(globalsCss).toContain("--planner-add: #1e8ccf;");
-    expect(globalsCss).toContain("--planner-add-border: rgba(30, 140, 207, 0.34);");
-    expect(globalsCss).toContain("--planner-add-wash: rgba(30, 140, 207, 0.08);");
-  });
-
-  it("maps planner status cards, legend dots, and add CTA to that palette", () => {
+  it("keeps the web planner on the existing web-owned palette", () => {
+    expect(ruleBody(".web-planner-stat-success strong")).toContain(
+      "color: var(--web-success);",
+    );
+    expect(ruleBody(".web-planner-stat-warning strong")).toContain(
+      "color: var(--web-warning);",
+    );
+    expect(ruleBody(".web-planner-meal")).toContain(
+      "border-left: 3px solid var(--web-brand);",
+    );
     expect(ruleBody(".web-planner-meal-registered")).toContain(
-      "border-left-color: var(--planner-status-registered);",
+      "border-left-color: var(--web-brand);",
     );
     expect(ruleBody(".web-planner-meal-shopped")).toContain(
-      "border-left-color: var(--planner-status-shopping);",
+      "border-left-color: var(--web-warning);",
     );
     expect(ruleBody(".web-planner-meal-cooked")).toContain(
-      "border-left-color: var(--planner-status-cooked);",
+      "border-left-color: var(--web-success);",
     );
     expect(ruleBody(".web-planner-dot-registered")).toContain(
-      "background: var(--planner-status-registered);",
+      "background: var(--web-brand);",
     );
     expect(ruleBody(".web-planner-dot-shopped")).toContain(
-      "background: var(--planner-status-shopping);",
+      "background: var(--web-warning);",
     );
     expect(ruleBody(".web-planner-dot-cooked")).toContain(
-      "background: var(--planner-status-cooked);",
+      "background: var(--web-success);",
     );
     expect(ruleBody(".web-planner-add")).toContain(
-      "border: 1px dashed var(--planner-add-border);",
+      "border: 1px dashed var(--web-line-strong);",
     );
     expect(ruleBody(".web-planner-add")).toContain(
-      "background: var(--planner-add-wash);",
+      "background: transparent;",
     );
     expect(ruleBody(".web-planner-add")).toContain(
-      "color: var(--planner-add);",
+      "color: var(--web-text-3);",
     );
     expect(ruleBody(".web-planner-add:hover")).toContain(
-      "border-color: var(--planner-add);",
+      "border-color: var(--web-brand);",
     );
     expect(ruleBody(".web-planner-add:hover")).toContain(
-      "background: var(--planner-add-wash);",
+      "background: var(--web-brand-wash);",
     );
     expect(ruleBody(".web-planner-add:hover")).toContain(
-      "color: var(--planner-add);",
+      "color: var(--web-brand-accessible);",
     );
   });
 });

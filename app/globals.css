@@ -65,13 +65,8 @@
   --app-back-button-radius: var(--radius-full);
   --app-back-button-color: #212529;
   --app-back-button-hover-bg: #F8F9FA;
-  --planner-status-registered: #6f7f8d;
-  --planner-status-shopping: #c47a2c;
-  --planner-status-cooked: #4f8f62;
   --planner-add: #1e8ccf;
-  --planner-add-border: rgba(30, 140, 207, 0.34);
   --planner-add-soft: #e8f3fb;
-  --planner-add-wash: rgba(30, 140, 207, 0.08);
   --app-text-caption: 11px;
   --app-text-meta: 12px;
   --app-text-small: 13px;
@@ -1028,11 +1023,11 @@ button {
   }
 
   .web-planner-stat-success strong {
-    color: var(--planner-status-cooked);
+    color: var(--web-success);
   }
 
   .web-planner-stat-warning strong {
-    color: var(--planner-status-shopping);
+    color: var(--web-warning);
   }
 
   .web-planner-quick-list,
@@ -1200,7 +1195,7 @@ button {
     align-items: stretch;
     flex-direction: column;
     gap: 2px;
-    border-left: 3px solid var(--planner-status-registered);
+    border-left: 3px solid var(--web-brand);
     border-radius: var(--web-r-sm);
     background: var(--web-bg-alt);
     padding: 6px;
@@ -1212,15 +1207,15 @@ button {
   }
 
   .web-planner-meal-registered {
-    border-left-color: var(--planner-status-registered);
+    border-left-color: var(--web-brand);
   }
 
   .web-planner-meal-shopped {
-    border-left-color: var(--planner-status-shopping);
+    border-left-color: var(--web-warning);
   }
 
   .web-planner-meal-cooked {
-    border-left-color: var(--planner-status-cooked);
+    border-left-color: var(--web-success);
   }
 
   .web-planner-meal-thumb {
@@ -1262,18 +1257,18 @@ button {
     justify-content: center;
     gap: 6px;
     margin-top: auto;
-    border: 1px dashed var(--planner-add-border);
+    border: 1px dashed var(--web-line-strong);
     border-radius: var(--web-r-sm);
-    background: var(--planner-add-wash);
-    color: var(--planner-add);
+    background: transparent;
+    color: var(--web-text-3);
     font-size: 13px;
     font-weight: 700;
   }
 
   .web-planner-add:hover {
-    border-color: var(--planner-add);
-    background: var(--planner-add-wash);
-    color: var(--planner-add);
+    border-color: var(--web-brand);
+    background: var(--web-brand-wash);
+    color: var(--web-brand-accessible);
   }
 
   .web-planner-add-compact {
@@ -1304,15 +1299,15 @@ button {
   }
 
   .web-planner-dot-registered {
-    background: var(--planner-status-registered);
+    background: var(--web-brand);
   }
 
   .web-planner-dot-shopped {
-    background: var(--planner-status-shopping);
+    background: var(--web-warning);
   }
 
   .web-planner-dot-cooked {
-    background: var(--planner-status-cooked);
+    background: var(--web-success);
   }
 
   .web-breadcrumb {
