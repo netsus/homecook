@@ -24,6 +24,7 @@ import {
   WebIconButton,
   WebModal,
   WebShell,
+  WebSkeleton,
   WebTopNav,
 } from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
@@ -407,14 +408,7 @@ export function SettingsScreen({
       return <SettingsMobileLoadingShell surface={mobileSurface} />;
     }
 
-    return (
-      <div>
-        <SettingsAppBar />
-        <div data-testid="settings-loading">
-          <SettingsLoadingSkeleton />
-        </div>
-      </div>
-    );
+    return <SettingsDesktopLoadingShell />;
   }
 
   if (authState === "unauthorized") {
@@ -455,14 +449,7 @@ export function SettingsScreen({
       return <SettingsMobileLoadingShell surface={mobileSurface} />;
     }
 
-    return (
-      <div>
-        <SettingsAppBar />
-        <div data-testid="settings-loading">
-          <SettingsLoadingSkeleton />
-        </div>
-      </div>
-    );
+    return <SettingsDesktopLoadingShell />;
   }
 
   if (viewState === "error") {
@@ -1017,6 +1004,95 @@ function SettingsMobileLoadingShell({
   );
 }
 
+function SettingsDesktopLoadingShell() {
+  return (
+    <WebShell className="web-settings-shell" wide>
+      <WebTopNav
+        activeId="mypage"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<WebSkeleton className="web-mypage-top-profile" />}
+      />
+      <main
+        aria-busy="true"
+        className="web-settings-screen"
+        data-testid="settings-loading"
+      >
+        <nav aria-label="설정 경로" className="web-breadcrumb">
+          <Link className="web-breadcrumb-link" href={MYPAGE_ACCOUNT_HREF}>
+            ‹ 마이페이지
+          </Link>
+          <span className="web-breadcrumb-sep">/</span>
+          <span className="web-breadcrumb-current">설정</span>
+        </nav>
+
+        <div className="web-settings-header">
+          <h1>설정</h1>
+          <p>알림 · 단위 · 테마를 한곳에서 관리합니다.</p>
+        </div>
+
+        <section className="web-settings-section" aria-label="끼니 관리 로딩">
+          <div className="web-settings-section-title">
+            <h2>끼니 관리</h2>
+            <p>플래너에 표시되는 식사 시간대를 관리합니다.</p>
+          </div>
+          <WebCard className="web-settings-column-card">
+            <div className="web-settings-column-list">
+              {[112, 96, 104].map((width, index) => (
+                <div className="web-settings-column-row" key={index}>
+                  <WebSkeleton height={12} width={16} />
+                  <WebSkeleton height={18} width={width} />
+                  <WebSkeleton height={24} width={54} />
+                  <WebSkeleton height={34} width={34} />
+                </div>
+              ))}
+            </div>
+          </WebCard>
+        </section>
+
+        {["알림", "단위", "테마", "계정"].map((title, index) => (
+          <section
+            aria-label={`${title} 로딩`}
+            className="web-settings-section"
+            key={title}
+          >
+            <h2>{title}</h2>
+            <WebCard
+              className={
+                index === 3
+                  ? "web-settings-account-card"
+                  : "web-settings-row-card"
+              }
+            >
+              {index === 3 ? (
+                <>
+                  {[0, 1, 2].map((row) => (
+                    <div className="web-settings-account-row" key={row}>
+                      <WebSkeleton height={40} width={40} />
+                      <span>
+                        <WebSkeleton height={18} width={132} />
+                        <WebSkeleton height={14} width={184} />
+                      </span>
+                      <WebSkeleton height={18} width={18} />
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <div>
+                    <WebSkeleton height={18} width={150} />
+                    <WebSkeleton height={14} width={220} />
+                  </div>
+                  <WebSkeleton height={34} width={index === 0 ? 52 : 176} />
+                </>
+              )}
+            </WebCard>
+          </section>
+        ))}
+      </main>
+    </WebShell>
+  );
+}
+
 function SettingsProfilePill({ nickname }: { nickname?: string }) {
   return (
     <Link
@@ -1068,28 +1144,6 @@ function ChevronRightIcon() {
     <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
       <path d="m9 5 7 7-7 7" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
     </svg>
-  );
-}
-
-function SettingsLoadingSkeleton() {
-  return (
-    <div className="px-4 pt-4">
-      <Skeleton className="mb-2 h-4 w-12" />
-      <div className="rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="mt-2 h-4 w-52" />
-          </div>
-          <Skeleton className="h-6 w-11 rounded-full" />
-        </div>
-      </div>
-      <Skeleton className="mb-2 mt-6 h-4 w-16" />
-      <div className="rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]">
-        <Skeleton className="h-4 w-10" />
-        <Skeleton className="mt-2 h-5 w-20" />
-      </div>
-    </div>
   );
 }
 
