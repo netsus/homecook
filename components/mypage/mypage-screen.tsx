@@ -170,6 +170,7 @@ export function MypageScreen({
   const renameInputRef = useRef<HTMLInputElement | null>(null);
   const createInputRef = useRef<HTMLInputElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -190,8 +191,22 @@ export function MypageScreen({
   }, []);
 
   const showToast = useCallback((message: string, tone: "success" | "error") => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
     setToast({ message, tone });
-    setTimeout(() => setToast(null), TOAST_DURATION_MS);
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, TOAST_DURATION_MS);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
   }, []);
 
   const switchDesktopTab = useCallback((tab: MypageTab) => {
