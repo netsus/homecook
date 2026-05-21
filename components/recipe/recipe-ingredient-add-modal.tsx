@@ -239,69 +239,71 @@ export function RecipeIngredientAddModal({
               </div>
             </div>
 
-            {visibleListState === "loading" ? (
-              <div className="web-ingredient-grid" aria-busy="true">
-                {Array.from({ length: 15 }).map((_, index) => (
-                  <WebSkeleton className="h-16" key={index} />
-                ))}
-              </div>
-            ) : null}
+            <div className="web-ingredient-list-region" data-testid="ingredient-list-region">
+              {visibleListState === "loading" ? (
+                <div className="web-ingredient-grid" aria-busy="true">
+                  {Array.from({ length: 15 }).map((_, index) => (
+                    <WebSkeleton className="h-16" key={index} />
+                  ))}
+                </div>
+              ) : null}
 
-            {visibleListState === "error" ? (
-              <WebEmptyState
-                description="잠시 후 다시 열어주세요."
-                icon="!"
-                title="재료 목록을 불러오지 못했어요"
-              />
-            ) : null}
+              {visibleListState === "error" ? (
+                <WebEmptyState
+                  description="잠시 후 다시 열어주세요."
+                  icon="!"
+                  title="재료 목록을 불러오지 못했어요"
+                />
+              ) : null}
 
-            {visibleListState === "empty" ? (
-              <WebEmptyState
-                description="검색어를 바꾸거나 다른 카테고리를 선택해보세요."
-                icon="⌕"
-                title="검색 결과가 없어요"
-              />
-            ) : null}
+              {visibleListState === "empty" ? (
+                <WebEmptyState
+                  description="검색어를 바꾸거나 다른 카테고리를 선택해보세요."
+                  icon="⌕"
+                  title="검색 결과가 없어요"
+                />
+              ) : null}
 
-            {visibleListState === "ready" ? (
-              <ul className="web-ingredient-grid">
-                {visibleIngredients.map((ingredient) => {
-                  const isSelected = selectedIngredientIds.has(ingredient.id);
+              {visibleListState === "ready" ? (
+                <ul className="web-ingredient-grid">
+                  {visibleIngredients.map((ingredient) => {
+                    const isSelected = selectedIngredientIds.has(ingredient.id);
 
-                  return (
-                    <li key={ingredient.id}>
-                      <button
-                        aria-pressed={isSelected}
-                        className={[
-                          "web-ingredient-cell",
-                          isSelected ? "web-ingredient-cell-selected" : "",
-                        ].join(" ")}
-                        onClick={() => toggleIngredient(ingredient)}
-                        type="button"
-                      >
-                        <span className="web-ingredient-cell-mark" aria-hidden="true">
-                          {isSelected ? "✓" : "+"}
-                        </span>
-                        <span aria-hidden="true">
-                          {ingredient.category === "육류"
-                            ? "🥩"
-                            : ingredient.category === "해산물"
-                              ? "🐟"
-                              : ingredient.category === "양념"
-                                ? "🧄"
-                                : ingredient.category === "곡류"
-                                  ? "🌾"
-                                  : ingredient.category === "유제품"
-                                    ? "🧈"
-                                    : "🥬"}
-                        </span>
-                        <strong>{ingredient.standard_name}</strong>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
+                    return (
+                      <li key={ingredient.id}>
+                        <button
+                          aria-pressed={isSelected}
+                          className={[
+                            "web-ingredient-cell",
+                            isSelected ? "web-ingredient-cell-selected" : "",
+                          ].join(" ")}
+                          onClick={() => toggleIngredient(ingredient)}
+                          type="button"
+                        >
+                          <span className="web-ingredient-cell-mark" aria-hidden="true">
+                            {isSelected ? "✓" : "+"}
+                          </span>
+                          <span aria-hidden="true">
+                            {ingredient.category === "육류"
+                              ? "🥩"
+                              : ingredient.category === "해산물"
+                                ? "🐟"
+                                : ingredient.category === "양념"
+                                  ? "🧄"
+                                  : ingredient.category === "곡류"
+                                    ? "🌾"
+                                    : ingredient.category === "유제품"
+                                      ? "🧈"
+                                      : "🥬"}
+                          </span>
+                          <strong>{ingredient.standard_name}</strong>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+            </div>
           </WebDialogBody>
           <WebDialogFooter>
             <WebButton disabled={!canAddIngredient} onClick={handleAdd}>

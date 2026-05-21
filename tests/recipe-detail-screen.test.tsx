@@ -93,6 +93,23 @@ function createDeferred<T>() {
   };
 }
 
+function installMatchMedia(matchesDesktop: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(min-width: 1024px)" ? matchesDesktop : !matchesDesktop,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 function buildSaveableBooks(): RecipeBookListData {
   return {
     books: [
@@ -130,6 +147,7 @@ async function findSaveActionButton() {
 describe("recipe detail screen", () => {
   afterEach(() => {
     cleanup();
+    Reflect.deleteProperty(window, "matchMedia");
   });
 
   beforeEach(() => {
@@ -174,6 +192,17 @@ describe("recipe detail screen", () => {
     expect(closeButton.className).toContain("h-[var(--control-height-md)]");
     expect(closeButton.classList.contains("w-11")).toBe(true);
     expect(closeButton.textContent).toBe("");
+  });
+
+  it("keeps recipe detail loading inside the desktop shell", () => {
+    installMatchMedia(true);
+    fetchJson.mockReturnValue(new Promise(() => {}));
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    const skeleton = screen.getByTestId("recipe-detail-web-loading");
+    expect(skeleton.closest(".web-recipe-detail")).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "데스크탑 주요 메뉴" })).toBeTruthy();
   });
 
   it("shows recipe detail load errors on the prototype-derived state shell", async () => {

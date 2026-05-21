@@ -422,6 +422,111 @@ export function RecipeBookDetailScreen({
     return () => observer.disconnect();
   }, [hasNext, loadMore]);
 
+  const canRemove = bookType !== "my_added";
+  const removeLabel = REMOVE_LABEL[bookType] ?? "제거";
+
+  const getDesktopRecipeCountLabel = (count: number | null) => {
+    if (count === null) {
+      return "레시피를 불러오는 중";
+    }
+
+    return `대표 ${Math.min(count, 4)}개 레시피 · 전체 ${count}개`;
+  };
+
+  const renderDesktopBookActions = () =>
+    canManageBook ? (
+      <div className="web-recipebook-detail-actions">
+        <WebButton onClick={handleBookRenameStart} variant="secondary">
+          북 편집
+        </WebButton>
+        <WebButton className="web-confirm-danger" onClick={handleBookDeleteRequest}>
+          삭제
+        </WebButton>
+        <div className="web-recipebook-detail-menu-wrap">
+          <WebIconButton
+            aria-controls="recipebook-detail-book-menu"
+            aria-expanded={bookMenuOpen}
+            aria-haspopup="menu"
+            aria-label={`${currentBookName} 옵션 메뉴`}
+            onClick={() => setBookMenuOpen((current) => !current)}
+          >
+            ⋯
+          </WebIconButton>
+          {bookMenuOpen ? (
+            <div
+              className="web-recipebook-menu"
+              id="recipebook-detail-book-menu"
+              role="menu"
+            >
+              <button onClick={handleBookRenameStart} role="menuitem" type="button">
+                이름 변경
+              </button>
+              <button onClick={handleBookDeleteRequest} role="menuitem" type="button">
+                삭제
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    ) : null;
+
+  const renderDesktopFrame = (
+    children: React.ReactNode,
+    recipeCount: number | null = items.length,
+  ) => (
+    <WebShell className="web-recipebook-detail-shell" wide>
+      <WebTopNav
+        activeId="mypage"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<RecipeBookProfilePill />}
+      />
+      <div className="web-recipebook-detail-screen">
+        <nav aria-label="레시피북 상세 경로" className="web-breadcrumb">
+          <Link
+            aria-label="뒤로 가기"
+            className="web-breadcrumb-link"
+            href={mypageBreadcrumbHref}
+          >
+            ‹ 마이페이지
+          </Link>
+          <span className="web-breadcrumb-sep">/</span>
+          <span className="web-breadcrumb-current">{currentBookName}</span>
+        </nav>
+        <div className="web-recipebook-detail-head" data-testid="recipebook-detail-header">
+          <div>
+            <h1>{currentBookName}</h1>
+            <p>{getDesktopRecipeCountLabel(recipeCount)}</p>
+          </div>
+          {renderDesktopBookActions()}
+        </div>
+        {children}
+        {toast ? (
+          <div
+            className={`fixed inset-x-4 bottom-20 z-50 mx-auto max-w-md rounded-[var(--radius-lg)] px-4 py-3 text-center text-sm font-semibold shadow-lg ${
+              toast.tone === "success"
+                ? "bg-[var(--brand)] text-white"
+                : "bg-[var(--danger)] text-white"
+            }`}
+            role="status"
+          >
+            {toast.message}
+          </div>
+        ) : null}
+        {bookRenameOpen ? (
+          <DesktopBookRenameDialog
+            disabled={isBookActionSaving}
+            errorMessage={bookActionError}
+            onCancel={handleBookRenameCancel}
+            onConfirm={() => void handleBookRename()}
+            onValueChange={setBookRenameValue}
+            value={bookRenameValue}
+          />
+        ) : null}
+        {renderBookDeleteDialog()}
+      </div>
+    </WebShell>
+  );
+
   // --- Render states ---
 
   if (authState === "checking") {
@@ -435,13 +540,20 @@ export function RecipeBookDetailScreen({
       );
     }
 
-    return (
-      <ContentState
-        className="md:px-7"
-        description="로그인 상태를 확인하고 있어요."
-        tone="loading"
-        title="잠시만 기다려주세요"
-      />
+    return renderDesktopFrame(
+      <div
+        className="web-recipebook-detail-grid web-recipebook-detail-grid-loading"
+        data-testid="recipebook-detail-skeleton"
+      >
+        {[1, 2, 3, 4].map((i) => (
+          <div className="web-recipebook-detail-skeleton-card" key={i}>
+            <Skeleton className="h-48 w-full rounded-[var(--web-r-md)]" />
+            <Skeleton className="mt-4 h-5 w-32" />
+            <Skeleton className="mt-2 h-4 w-24" />
+          </div>
+        ))}
+      </div>,
+      null,
     );
   }
 
@@ -483,6 +595,24 @@ export function RecipeBookDetailScreen({
   }
 
   if (viewState === "loading") {
+    if (!isMobileViewport) {
+      return renderDesktopFrame(
+        <div
+          className="web-recipebook-detail-grid web-recipebook-detail-grid-loading"
+          data-testid="recipebook-detail-skeleton"
+        >
+          {[1, 2, 3, 4].map((i) => (
+            <div className="web-recipebook-detail-skeleton-card" key={i}>
+              <Skeleton className="h-48 w-full rounded-[var(--web-r-md)]" />
+              <Skeleton className="mt-4 h-5 w-32" />
+              <Skeleton className="mt-2 h-4 w-24" />
+            </div>
+          ))}
+        </div>,
+        null,
+      );
+    }
+
     return (
       <RecipeBookDetailSkeleton
         backHref={appReturn.href}
@@ -493,6 +623,19 @@ export function RecipeBookDetailScreen({
   }
 
   if (viewState === "error") {
+    if (!isMobileViewport) {
+      return renderDesktopFrame(
+        <div className="web-recipebook-detail-state" role="alert">
+          <h2>{errorMessage}</h2>
+          <p>잠시 후 다시 시도해 주세요.</p>
+          <WebButton onClick={() => void loadRecipes()} variant="secondary">
+            다시 시도
+          </WebButton>
+        </div>,
+        0,
+      );
+    }
+
     return (
       <div className="pb-32">
         {renderDetailHeader()}
@@ -514,6 +657,19 @@ export function RecipeBookDetailScreen({
   }
 
   if (viewState === "empty") {
+    if (!isMobileViewport) {
+      return renderDesktopFrame(
+        <div className="web-recipebook-detail-state">
+          <h2>아직 이 레시피북에 레시피가 없어요</h2>
+          <p>레시피를 추가하면 여기에 표시돼요.</p>
+          <Link className="web-button web-button-secondary" href="/">
+            레시피 둘러보기
+          </Link>
+        </div>,
+        0,
+      );
+    }
+
     return (
       <div className="pb-32">
         {renderDetailHeader()}
@@ -535,9 +691,6 @@ export function RecipeBookDetailScreen({
       </div>
     );
   }
-
-  const canRemove = bookType !== "my_added";
-  const removeLabel = REMOVE_LABEL[bookType] ?? "제거";
 
   if (isMobileViewport) {
     return (
@@ -571,66 +724,8 @@ export function RecipeBookDetailScreen({
     );
   }
 
-  return (
-    <WebShell className="web-recipebook-detail-shell" wide>
-      <WebTopNav
-        activeId="mypage"
-        items={WEB_NAV_ITEMS}
-        rightSlot={<RecipeBookProfilePill />}
-      />
-      <div className="web-recipebook-detail-screen">
-        <nav aria-label="레시피북 상세 경로" className="web-breadcrumb">
-          <Link
-            aria-label="뒤로 가기"
-            className="web-breadcrumb-link"
-            href={mypageBreadcrumbHref}
-          >
-            ‹ 마이페이지
-          </Link>
-          <span className="web-breadcrumb-sep">/</span>
-          <span className="web-breadcrumb-current">{currentBookName}</span>
-        </nav>
-        <div className="web-recipebook-detail-head" data-testid="recipebook-detail-header">
-          <div>
-            <h1>{currentBookName}</h1>
-            <p>대표 {Math.min(items.length, 4)}개 레시피 · 전체 {items.length || 12}개</p>
-          </div>
-          {canManageBook ? (
-            <div className="web-recipebook-detail-actions">
-              <WebButton onClick={handleBookRenameStart} variant="secondary">
-                북 편집
-              </WebButton>
-              <WebButton className="web-confirm-danger" onClick={handleBookDeleteRequest}>
-                삭제
-              </WebButton>
-              <div className="web-recipebook-detail-menu-wrap">
-                <WebIconButton
-                  aria-controls="recipebook-detail-book-menu"
-                  aria-expanded={bookMenuOpen}
-                  aria-haspopup="menu"
-                  aria-label={`${currentBookName} 옵션 메뉴`}
-                  onClick={() => setBookMenuOpen((current) => !current)}
-                >
-                  ⋯
-                </WebIconButton>
-                {bookMenuOpen ? (
-                  <div
-                    className="web-recipebook-menu"
-                    id="recipebook-detail-book-menu"
-                    role="menu"
-                  >
-                    <button onClick={handleBookRenameStart} role="menuitem" type="button">
-                      이름 변경
-                    </button>
-                    <button onClick={handleBookDeleteRequest} role="menuitem" type="button">
-                      삭제
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-        </div>
+  return renderDesktopFrame(
+    <>
       <div
         aria-live="polite"
         className="web-recipebook-detail-grid"
@@ -654,33 +749,8 @@ export function RecipeBookDetailScreen({
         </div>
       ) : null}
       {hasNext ? <div ref={scrollSentinelRef} className="h-4" /> : null}
-
-      {/* Toast */}
-      {toast ? (
-        <div
-          className={`fixed inset-x-4 bottom-20 z-50 mx-auto max-w-md rounded-[var(--radius-lg)] px-4 py-3 text-center text-sm font-semibold shadow-lg ${
-            toast.tone === "success"
-              ? "bg-[var(--brand)] text-white"
-              : "bg-[var(--danger)] text-white"
-          }`}
-          role="status"
-        >
-          {toast.message}
-        </div>
-      ) : null}
-        {bookRenameOpen ? (
-          <DesktopBookRenameDialog
-            disabled={isBookActionSaving}
-            errorMessage={bookActionError}
-            onCancel={handleBookRenameCancel}
-            onConfirm={() => void handleBookRename()}
-            onValueChange={setBookRenameValue}
-            value={bookRenameValue}
-          />
-        ) : null}
-        {renderBookDeleteDialog()}
-      </div>
-    </WebShell>
+    </>,
+    items.length,
   );
 }
 

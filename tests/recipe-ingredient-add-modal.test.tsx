@@ -99,6 +99,7 @@ describe("RecipeIngredientAddModal", () => {
 
     expect(onionCard.className).toContain("web-ingredient-cell");
     expect(onionCard.className).not.toContain("inline-flex");
+    expect(screen.getByTestId("ingredient-list-region")).toBeTruthy();
 
     await user.click(onionCard);
     await user.click(tofuCard);
@@ -130,6 +131,7 @@ describe("RecipeIngredientAddModal", () => {
 
     await user.click(screen.getByRole("tab", { name: "채소" }));
 
+    expect(screen.getByTestId("ingredient-list-region")).toBeTruthy();
     expect(screen.getByRole("button", { name: "양파" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "두부" })).toBeNull();
     expect(vi.mocked(fetchIngredients)).toHaveBeenCalledTimes(1);

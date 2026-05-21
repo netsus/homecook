@@ -39,7 +39,7 @@ export function NumericStepperCompact({
         <span
           aria-label={unit ? `${value}${unit}` : String(value)}
           aria-live="polite"
-          className="min-w-5 text-center font-bold text-[var(--wave1-ink)]"
+          className="w-9 text-center font-bold tabular-nums text-[var(--wave1-ink)]"
         >
           {value}
         </span>

@@ -1767,7 +1767,7 @@ button {
 
   .web-meal-list-card {
     display: grid;
-    grid-template-columns: 88px minmax(0, 1fr) minmax(224px, auto);
+    grid-template-columns: 88px minmax(0, 1fr) minmax(146px, auto) minmax(168px, 190px) 44px;
     align-items: center;
     gap: 18px;
     border: 1px solid var(--web-line);
@@ -1832,11 +1832,11 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: center;
     gap: 8px;
+    min-width: 168px;
   }
 
   .web-meal-action-primary,
-  .web-meal-action-secondary,
-  .web-meal-list-actions .web-meal-delete-button {
+  .web-meal-action-secondary {
     display: inline-flex;
     min-height: 40px;
     align-items: center;
@@ -1847,6 +1847,10 @@ button {
     padding: 0 12px;
     font-size: 14px;
     font-weight: 800;
+  }
+
+  .web-meal-list-actions-single {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .web-meal-action-primary {
@@ -1861,17 +1865,32 @@ button {
     color: var(--web-text-2);
   }
 
-  .web-meal-list-actions .web-meal-inline-stepper {
-    justify-self: stretch;
+  .web-meal-list-serving {
+    display: flex;
+    justify-content: center;
   }
 
-  .web-meal-list-actions .web-meal-inline-stepper span {
+  .web-meal-list-serving .web-meal-inline-stepper {
+    min-width: 146px;
+  }
+
+  .web-meal-list-serving .web-meal-inline-stepper span {
     min-width: 60px;
   }
 
-  .web-meal-list-actions .web-meal-delete-button {
-    width: auto;
-    height: auto;
+  .web-meal-list-delete {
+    justify-self: end;
+  }
+
+  .web-meal-list-delete .web-meal-delete-button {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0;
+    border-radius: var(--web-r-sm);
+    padding: 0;
   }
 
   .web-confirm-body {
@@ -3142,6 +3161,7 @@ button {
   .web-menu-add-embedded {
     display: grid;
     gap: 16px;
+    width: 100%;
   }
 
   .web-menu-add-embedded-actions {
@@ -3172,6 +3192,7 @@ button {
   .web-menu-add-embedded-form,
   .web-menu-add-embedded-flow {
     min-width: 0;
+    width: 100%;
   }
 
   .web-menu-add-picker-head,
@@ -3512,6 +3533,14 @@ button {
 
   .web-ingredient-dialog {
     width: min(820px, calc(100vw - 64px));
+    height: min(720px, calc(100vh - 80px));
+  }
+
+  .web-ingredient-dialog .web-dialog-body,
+  .web-pantry-add-dialog .web-dialog-body {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
   }
 
   .web-ingredient-grid {
@@ -3519,6 +3548,11 @@ button {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 10px;
     margin-top: 16px;
+  }
+
+  .web-ingredient-list-region {
+    min-height: 342px;
+    overflow-y: auto;
   }
 
   .web-ingredient-cell {
@@ -4679,13 +4713,13 @@ button {
 
   .web-mypage-subsurface {
     display: grid;
+    width: min(1080px, 100%);
     gap: 20px;
-    max-width: 900px;
     margin: 0 auto;
   }
 
   .web-mypage-notification-surface {
-    max-width: 640px;
+    max-width: 1080px;
   }
 
   .web-mypage-account-card,
@@ -5135,6 +5169,40 @@ button {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 32px 24px;
+  }
+
+  .web-recipebook-detail-grid-loading {
+    align-items: start;
+  }
+
+  .web-recipebook-detail-skeleton-card {
+    min-width: 0;
+  }
+
+  .web-recipebook-detail-state {
+    display: grid;
+    min-height: 260px;
+    place-items: center;
+    gap: 10px;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-md);
+    background: var(--web-surface);
+    padding: 40px;
+    text-align: center;
+    box-shadow: var(--web-shadow-card);
+  }
+
+  .web-recipebook-detail-state h2 {
+    margin: 0;
+    color: var(--web-text-1);
+    font-size: 22px;
+    font-weight: 800;
+  }
+
+  .web-recipebook-detail-state p {
+    margin: 0;
+    color: var(--web-text-3);
+    font-size: 14px;
   }
 
   .web-recipebook-detail-card {
@@ -5611,6 +5679,10 @@ button {
 
   .web-pantry-add-dialog .web-dialog-body {
     min-height: 420px;
+  }
+
+  .web-pantry-add-dialog {
+    height: min(720px, calc(100vh - 80px));
   }
 
   .web-pantry-modal-tabs {

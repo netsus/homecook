@@ -776,6 +776,7 @@ describe("MypageScreen", () => {
       screen.getByRole("tab", { name: "남은 요리" }).getAttribute("aria-selected"),
     ).toBe("true");
     expect(screen.getByTestId("leftover-card-leftover-1")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "남은 요리 전체 관리" })).toBeNull();
 
     await user.click(screen.getByRole("tab", { name: "다먹은 목록" }));
 
@@ -785,6 +786,7 @@ describe("MypageScreen", () => {
       screen.getByRole("tab", { name: "다먹은 목록" }).getAttribute("aria-selected"),
     ).toBe("true");
     expect(screen.getByTestId("leftover-card-eaten-1")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "다먹은 목록 전체 관리" })).toBeNull();
   });
 
   it("keeps mobile menu icons visually separated from labels", async () => {
