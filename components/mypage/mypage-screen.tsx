@@ -48,6 +48,10 @@ import {
   renameRecipeBook,
   type UserProfileData,
 } from "@/lib/api/mypage";
+import {
+  fetchLeftovers,
+  isLeftoverApiError,
+} from "@/lib/api/leftovers";
 import { fetchRecipeBookRecipes } from "@/lib/api/recipe";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import {
@@ -57,11 +61,16 @@ import {
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
+import type {
+  LeftoverDishStatus,
+  LeftoverListItemData,
+} from "@/types/leftover";
 import type { ShoppingListHistoryItem } from "@/types/shopping";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
 type SavedRecipesState = "idle" | "loading" | "ready" | "empty" | "error";
+type LeftoverTabState = "idle" | "loading" | "ready" | "empty" | "error";
 type MypageTab =
   | MypageRestoreTab
   | "account"
@@ -134,6 +143,13 @@ export function MypageScreen({
   const [shoppingHasNext, setShoppingHasNext] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [shoppingLoaded, setShoppingLoaded] = useState(false);
+
+  // Leftovers
+  const [leftoverItems, setLeftoverItems] = useState<LeftoverListItemData[]>([]);
+  const [leftoverState, setLeftoverState] =
+    useState<LeftoverTabState>("idle");
+  const [eatenItems, setEatenItems] = useState<LeftoverListItemData[]>([]);
+  const [eatenState, setEatenState] = useState<LeftoverTabState>("idle");
 
   // CRUD states
   const [menuOpenBookId, setMenuOpenBookId] = useState<string | null>(null);
@@ -247,6 +263,26 @@ export function MypageScreen({
       if (!cursor) {
         setViewState("error");
       }
+    }
+  }, []);
+
+  const loadLeftoverTab = useCallback(async (status: LeftoverDishStatus) => {
+    const setItems = status === "leftover" ? setLeftoverItems : setEatenItems;
+    const setState = status === "leftover" ? setLeftoverState : setEatenState;
+
+    setState("loading");
+
+    try {
+      const result = await fetchLeftovers(status);
+      setItems(result.items);
+      setState(result.items.length > 0 ? "ready" : "empty");
+    } catch (error) {
+      setItems([]);
+      if (isLeftoverApiError(error) && error.status === 401) {
+        setAuthState("unauthorized");
+        return;
+      }
+      setState("error");
     }
   }, []);
 
@@ -403,6 +439,18 @@ export function MypageScreen({
     if (authState !== "authenticated" || activeTab !== "shopping" || shoppingLoaded) return;
     void loadShoppingHistory();
   }, [authState, activeTab, shoppingLoaded, loadShoppingHistory]);
+
+  useEffect(() => {
+    if (authState !== "authenticated") return;
+
+    if (activeTab === "leftovers" && leftoverState === "idle") {
+      void loadLeftoverTab("leftover");
+    }
+
+    if (activeTab === "eaten" && eatenState === "idle") {
+      void loadLeftoverTab("eaten");
+    }
+  }, [activeTab, authState, eatenState, leftoverState, loadLeftoverTab]);
 
   const savedBook = books.find((book) => book.book_type === "saved") ?? null;
   const savedRecipeCount =
@@ -716,11 +764,39 @@ export function MypageScreen({
 
         <WebTabs className="web-mypage-tabs" data-testid="mypage-tabbar" role="tablist">
           <WebTabButton
-            active={activeTab === "saved" || activeTab === "recipebooks" || activeTab === "shopping"}
+            active={activeTab === "saved"}
             aria-label="저장한 레시피"
             onClick={() => switchDesktopTab("saved")}
           >
             <BookmarkIcon /> 저장한 레시피
+          </WebTabButton>
+          <WebTabButton
+            active={activeTab === "recipebooks"}
+            aria-label="레시피북 관리"
+            onClick={() => switchDesktopTab("recipebooks")}
+          >
+            <BookIcon /> 레시피북 관리
+          </WebTabButton>
+          <WebTabButton
+            active={activeTab === "shopping"}
+            aria-label="장보기 내역"
+            onClick={() => switchDesktopTab("shopping")}
+          >
+            <CartIcon /> 장보기 내역
+          </WebTabButton>
+          <WebTabButton
+            active={activeTab === "leftovers"}
+            aria-label="남은 요리"
+            onClick={() => switchDesktopTab("leftovers")}
+          >
+            <LeftoverIcon /> 남은 요리
+          </WebTabButton>
+          <WebTabButton
+            active={activeTab === "eaten"}
+            aria-label="다먹은 목록"
+            onClick={() => switchDesktopTab("eaten")}
+          >
+            <CheckIcon /> 다먹은 목록
           </WebTabButton>
           <WebTabButton
             active={activeTab === "account"}
@@ -754,6 +830,8 @@ export function MypageScreen({
               savedRecipesState={savedRecipesState}
               shoppingCount={shoppingItems.length}
               totalRecipeCount={totalRecipeCount}
+              onOpenEaten={() => switchDesktopTab("eaten")}
+              onOpenLeftovers={() => switchDesktopTab("leftovers")}
               onOpenRecipebooks={() => switchDesktopTab("recipebooks")}
               onOpenShopping={() => switchDesktopTab("shopping")}
               onRetrySavedRecipes={() => {
@@ -823,6 +901,40 @@ export function MypageScreen({
               scrollSentinelRef={scrollSentinelRef}
             />
           ) : null}
+          {activeTab === "leftovers" ? (
+            <LeftoverTabContent
+              description="남겨둔 음식을 확인하고 플래너에 다시 올릴 항목을 고릅니다."
+              emptyDescription="요리를 완료하면 남은 요리로 관리할 수 있어요."
+              emptyTitle="남은 요리가 없어요"
+              fullPageHref={buildReturnHref("/leftovers", {
+                restore: "leftovers-tab",
+                returnSurface: "mypage.leftovers",
+                returnTo: "/mypage",
+              })}
+              fullPageLabel="남은 요리 전체 관리"
+              items={leftoverItems}
+              onRetry={() => void loadLeftoverTab("leftover")}
+              state={leftoverState}
+              title="남은 요리"
+            />
+          ) : null}
+          {activeTab === "eaten" ? (
+            <LeftoverTabContent
+              description="다 먹은 목록을 확인하고 필요할 때 다시 만들 레시피로 이동합니다."
+              emptyDescription="남은 요리를 다 먹음 처리하면 여기에 모여요."
+              emptyTitle="다 먹은 기록이 없어요"
+              fullPageHref={buildReturnHref("/leftovers/ate", {
+                restore: "eaten-list-tab",
+                returnSurface: "mypage.eaten-list",
+                returnTo: "/mypage",
+              })}
+              fullPageLabel="다먹은 목록 전체 관리"
+              items={eatenItems}
+              onRetry={() => void loadLeftoverTab("eaten")}
+              state={eatenState}
+              title="다먹은 목록"
+            />
+          ) : null}
         </section>
       </div>
 
@@ -863,6 +975,8 @@ function SavedRecipesSurface({
   savedRecipesState,
   shoppingCount,
   totalRecipeCount,
+  onOpenEaten,
+  onOpenLeftovers,
   onOpenRecipebooks,
   onOpenShopping,
   onRetrySavedRecipes,
@@ -873,6 +987,8 @@ function SavedRecipesSurface({
   savedRecipesState: SavedRecipesState;
   shoppingCount: number;
   totalRecipeCount: number;
+  onOpenEaten: () => void;
+  onOpenLeftovers: () => void;
   onOpenRecipebooks: () => void;
   onOpenShopping: () => void;
   onRetrySavedRecipes: () => void;
@@ -921,13 +1037,10 @@ function SavedRecipesSurface({
           </span>
           <ChevronRightIcon />
         </button>
-        <Link
+        <button
           className="web-list-row web-list-row-interactive web-mypage-action-row"
-          href={buildReturnHref("/leftovers", {
-            restore: "mypage-home",
-            returnSurface: "mypage.leftovers",
-            returnTo: "/mypage",
-          })}
+          onClick={onOpenLeftovers}
+          type="button"
         >
           <span className="web-mypage-row-icon"><LeftoverIcon /></span>
           <span className="web-mypage-row-copy">
@@ -935,14 +1048,11 @@ function SavedRecipesSurface({
             <span>남겨둔 음식 확인 · 플래너에 다시 추가</span>
           </span>
           <ChevronRightIcon />
-        </Link>
-        <Link
+        </button>
+        <button
           className="web-list-row web-list-row-interactive web-mypage-action-row"
-          href={buildReturnHref("/leftovers/ate", {
-            restore: "mypage-home",
-            returnSurface: "mypage.eaten-list",
-            returnTo: "/mypage",
-          })}
+          onClick={onOpenEaten}
+          type="button"
         >
           <span className="web-mypage-row-icon"><CheckIcon /></span>
           <span className="web-mypage-row-copy">
@@ -950,7 +1060,7 @@ function SavedRecipesSurface({
             <span>다시 만들기 · 되돌리기 액션 관리</span>
           </span>
           <ChevronRightIcon />
-        </Link>
+        </button>
       </div>
     </div>
   );
@@ -2021,6 +2131,140 @@ function ShoppingHistoryCard({ item }: { item: ShoppingListHistoryItem }) {
   );
 }
 
+// ─── Leftovers Tab ───────────────────────────────────────────────────────────
+
+interface LeftoverTabContentProps {
+  description: string;
+  emptyDescription: string;
+  emptyTitle: string;
+  fullPageHref: string;
+  fullPageLabel: string;
+  items: LeftoverListItemData[];
+  onRetry: () => void;
+  state: LeftoverTabState;
+  title: string;
+}
+
+function LeftoverTabContent({
+  description,
+  emptyDescription,
+  emptyTitle,
+  fullPageHref,
+  fullPageLabel,
+  items,
+  onRetry,
+  state,
+  title,
+}: LeftoverTabContentProps) {
+  if (state === "idle" || state === "loading") {
+    return (
+      <div className="web-mypage-subsurface" data-testid="leftover-tab-loading">
+        <div className="web-mypage-section-head">
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+        <div className="web-mypage-leftover-grid">
+          {[1, 2, 3].map((item) => (
+            <WebCard className="web-mypage-leftover-card" key={item}>
+              <Skeleton className="h-12 w-12 rounded-[var(--web-r-sm)]" />
+              <div>
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="mt-2 h-4 w-40" />
+              </div>
+            </WebCard>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (state === "error") {
+    return (
+      <div className="web-mypage-subsurface" data-testid="leftover-tab-error">
+        <div className="web-mypage-section-head">
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+        <WebCard className="web-mypage-saved-state">
+          <strong>목록을 불러오지 못했어요</strong>
+          <span>잠시 후 다시 시도해 주세요.</span>
+          <WebButton onClick={onRetry} variant="secondary">
+            다시 시도
+          </WebButton>
+        </WebCard>
+      </div>
+    );
+  }
+
+  if (state === "empty" || items.length === 0) {
+    return (
+      <div className="web-mypage-subsurface" data-testid="leftover-tab-empty">
+        <div className="web-mypage-section-head">
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+        <WebCard className="web-mypage-saved-state">
+          <strong>{emptyTitle}</strong>
+          <span>{emptyDescription}</span>
+          <Link className="web-button web-button-secondary" href={fullPageHref}>
+            {fullPageLabel}
+          </Link>
+        </WebCard>
+      </div>
+    );
+  }
+
+  return (
+    <div className="web-mypage-subsurface" data-testid="leftover-tab">
+      <div className="web-mypage-section-head">
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
+      <div className="web-mypage-leftover-grid">
+        {items.map((item) => (
+          <LeftoverTabCard item={item} key={item.id} />
+        ))}
+      </div>
+      <div className="web-mypage-sub-actions">
+        <Link className="web-button web-button-secondary" href={fullPageHref}>
+          {fullPageLabel}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function LeftoverTabCard({ item }: { item: LeftoverListItemData }) {
+  return (
+    <WebCard className="web-mypage-leftover-card" data-testid={`leftover-card-${item.id}`}>
+      {item.recipe_thumbnail_url ? (
+        <Image
+          alt=""
+          className="web-mypage-leftover-thumb"
+          height={56}
+          src={item.recipe_thumbnail_url}
+          unoptimized
+          width={56}
+        />
+      ) : (
+        <span className="web-mypage-leftover-thumb web-mypage-leftover-thumb-fallback">
+          <LeftoverIcon />
+        </span>
+      )}
+      <span className="web-mypage-leftover-copy">
+        <strong>{item.recipe_title}</strong>
+        <span>{formatLeftoverTabMeta(item)}</span>
+      </span>
+      <Link
+        className="web-button web-button-tertiary web-button-sm"
+        href={`/recipe/${item.recipe_id}`}
+      >
+        레시피 보기
+      </Link>
+    </WebCard>
+  );
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getMypageTabFromQuery(value: string | null): MypageTab | null {
@@ -2028,6 +2272,8 @@ function getMypageTabFromQuery(value: string | null): MypageTab | null {
     value === "saved" ||
     value === "recipebooks" ||
     value === "shopping" ||
+    value === "leftovers" ||
+    value === "eaten" ||
     value === "account" ||
     value === "notifications" ||
     value === "help"
@@ -2042,6 +2288,17 @@ function getMobileSurfaceForTab(tab: MypageTab): MypageMobileSurface {
   if (tab === "recipebooks") return "recipebook";
   if (tab === "shopping") return "shopping";
   return "home";
+}
+
+function formatLeftoverTabMeta(item: LeftoverListItemData) {
+  const mealLabel = item.source_meal_label?.trim() || "끼니 미상";
+  const servings =
+    item.source_planned_servings ?? item.cooking_servings;
+  const servingsLabel =
+    typeof servings === "number" && servings > 0 ? `${servings}인분` : "인분 미상";
+  const eatenLabel = item.eaten_at ? ` · ${formatShortDate(item.eaten_at)} 다먹음` : "";
+
+  return `${formatShortDate(item.cooked_at)} ${mealLabel} · ${servingsLabel}${eatenLabel}`;
 }
 
 function formatSavedRecipeMeta(recipe: RecipeBookRecipeItem) {

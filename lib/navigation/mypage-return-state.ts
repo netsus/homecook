@@ -1,4 +1,9 @@
-export type MypageRestoreTab = "saved" | "recipebooks" | "shopping";
+export type MypageRestoreTab =
+  | "saved"
+  | "recipebooks"
+  | "shopping"
+  | "leftovers"
+  | "eaten";
 export type MypageRestoreMobileSurface = "home" | "recipebook" | "shopping";
 
 export interface MypageRestoreState {
@@ -59,6 +64,20 @@ export function resolveMypageRestoreState(
     return {
       activeTab: "recipebooks",
       mobileSurface: "recipebook",
+    };
+  }
+
+  if (restore === "leftovers-tab" || returnSurface === "mypage.leftovers") {
+    return {
+      activeTab: "leftovers",
+      mobileSurface: "home",
+    };
+  }
+
+  if (restore === "eaten-list-tab" || returnSurface === "mypage.eaten-list") {
+    return {
+      activeTab: "eaten",
+      mobileSurface: "home",
     };
   }
 

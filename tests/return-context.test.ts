@@ -79,7 +79,7 @@ describe("return context navigation helpers", () => {
     ).toEqual({ activeTab: "shopping", mobileSurface: "shopping" });
   });
 
-  it("falls back to the mypage home surface for unrelated return context", () => {
+  it("maps leftovers return context to the initial leftovers tab", () => {
     expect(
       resolveMypageRestoreState(
         new URLSearchParams({
@@ -87,6 +87,17 @@ describe("return context navigation helpers", () => {
           returnSurface: "mypage.leftovers",
         }),
       ),
-    ).toEqual({ activeTab: "saved", mobileSurface: "home" });
+    ).toEqual({ activeTab: "leftovers", mobileSurface: "home" });
+  });
+
+  it("maps eaten-list return context to the initial eaten tab", () => {
+    expect(
+      resolveMypageRestoreState(
+        new URLSearchParams({
+          restore: "eaten-list-tab",
+          returnSurface: "mypage.eaten-list",
+        }),
+      ),
+    ).toEqual({ activeTab: "eaten", mobileSurface: "home" });
   });
 });
