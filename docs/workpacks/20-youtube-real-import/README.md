@@ -476,12 +476,13 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [ ] 리뷰 대기 (pending-review)
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [x] 리뷰 대기 (pending-review)
 - [ ] 확정 (confirmed)
 - [ ] N/A
 
 > Design Status 전이: `temporary` (Stage 1 기본값)
+>   → `pending-review` (Stage 4 UI 연결 완료)
 >   → 기존 confirmed 화면의 low-risk change이므로 Stage 6에서 lightweight design check로 흡수 가능
 
 ## Source Links
@@ -635,19 +636,19 @@
 - [x] Feature flag / auth guard 구현 (404 FEATURE_DISABLED, 401) <!-- omo:id=20-feature-flag-auth;stage=2;scope=backend;review=3,6 -->
 - [x] Provider error handling (502 PROVIDER_ERROR, 429 QUOTA_EXCEEDED) <!-- omo:id=20-provider-error;stage=2;scope=backend;review=3,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=20-state-policy-tests;stage=2;scope=backend;review=3,6 -->
-- [ ] UI 연결 (classification 3-way, draft warnings, resolution status, incomplete steps) <!-- omo:id=20-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] Classification 3-way UI (recipe/uncertain 경고/non_recipe 차단) <!-- omo:id=20-classification-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] Extract indeterminate loading UI <!-- omo:id=20-extract-loading-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] Draft warnings / blocking issues UI <!-- omo:id=20-draft-warnings-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] Ingredient resolution status UI (resolved/needs_review/unresolved) <!-- omo:id=20-ingredient-resolution-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] Step incomplete / missing fields UI <!-- omo:id=20-step-incomplete-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] Save unlock condition UI (register button gating) <!-- omo:id=20-save-unlock-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] Provider error / quota error UI <!-- omo:id=20-provider-error-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] Session expired / consumed error UI <!-- omo:id=20-session-error-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=20-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 로그인 게이트 + return-to-action 유지 확인 <!-- omo:id=20-login-gate;stage=4;scope=frontend;review=5,6 -->
-- [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=20-test-split;stage=4;scope=frontend;review=6 -->
+- [x] UI 연결 (classification 3-way, draft warnings, resolution status, incomplete steps) <!-- omo:id=20-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] Classification 3-way UI (recipe/uncertain 경고/non_recipe 차단) <!-- omo:id=20-classification-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] Extract indeterminate loading UI <!-- omo:id=20-extract-loading-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] Draft warnings / blocking issues UI <!-- omo:id=20-draft-warnings-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] Ingredient resolution status UI (resolved/needs_review/unresolved) <!-- omo:id=20-ingredient-resolution-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] Step incomplete / missing fields UI <!-- omo:id=20-step-incomplete-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] Save unlock condition UI (register button gating) <!-- omo:id=20-save-unlock-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] Provider error / quota error UI <!-- omo:id=20-provider-error-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] Session expired / consumed error UI <!-- omo:id=20-session-error-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=20-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 로그인 게이트 + return-to-action 유지 확인 <!-- omo:id=20-login-gate;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=20-test-split;stage=4;scope=frontend;review=6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=20-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=20-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [x] Deterministic test fixture 유지 (기존 stub + 새 YouTube API mock) <!-- omo:id=20-deterministic-fixtures;stage=2;scope=shared;review=3,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=20-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=20-manual-qa-handoff;stage=4;scope=frontend;review=6 -->

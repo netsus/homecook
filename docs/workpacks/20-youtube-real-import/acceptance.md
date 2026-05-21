@@ -15,18 +15,18 @@
 
 ## Happy Path
 
-- [ ] URL 입력 → validate(recipe 판정) → extract → 검수/수정 → register → 레시피 생성 성공 <!-- omo:id=20-accept-happy-import-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] URL 입력 → validate(recipe 판정) → extract → 검수/수정 → register → 레시피 생성 성공 <!-- omo:id=20-accept-happy-import-flow;stage=4;scope=frontend;review=5,6 -->
 - [x] validate 응답에 `classification_status`, `classification_reasons` 포함 <!-- omo:id=20-accept-validate-classification;stage=2;scope=backend;review=3,6 -->
 - [x] extract 응답에 `extraction_id`(=session id), `draft_warnings`, `blocking_issues`, ingredient `resolution_status`, step `is_incomplete` 포함 <!-- omo:id=20-accept-extract-session-fields;stage=2;scope=backend;review=3,6 -->
 - [x] register 응답이 `{ success: true, data: { recipe_id, title }, error: null }` 형식 <!-- omo:id=20-accept-register-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 타입과 프론트 타입 일치 (request/response/error) <!-- omo:id=20-accept-types-match;stage=4;scope=shared;review=6 -->
-- [ ] 등록 완료 후 my_added 가상 책 반영 확인 <!-- omo:id=20-accept-my-added-reflection;stage=4;scope=frontend;review=6 -->
+- [x] 백엔드 타입과 프론트 타입 일치 (request/response/error) <!-- omo:id=20-accept-types-match;stage=4;scope=shared;review=6 -->
+- [x] 등록 완료 후 my_added 가상 책 반영 확인 <!-- omo:id=20-accept-my-added-reflection;stage=4;scope=frontend;review=6 -->
 
 ## Validate Classification Gates
 
 - [x] `recipe` classification → `is_recipe_video: true`, extract 진행 가능, 경고 없음 <!-- omo:id=20-accept-classify-recipe;stage=2;scope=backend;review=3,6 -->
-- [ ] `uncertain` classification → `is_recipe_video: true`, extract 진행 가능, UI careful-review 경고 표시 <!-- omo:id=20-accept-classify-uncertain;stage=4;scope=frontend;review=5,6 -->
-- [ ] `non_recipe` classification → `is_recipe_video: false`, UI extract 차단, 다른 URL 요청 <!-- omo:id=20-accept-classify-non-recipe-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] `uncertain` classification → `is_recipe_video: true`, extract 진행 가능, UI careful-review 경고 표시 <!-- omo:id=20-accept-classify-uncertain;stage=4;scope=frontend;review=5,6 -->
+- [x] `non_recipe` classification → `is_recipe_video: false`, UI extract 차단, 다른 URL 요청 <!-- omo:id=20-accept-classify-non-recipe-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] `non_recipe` URL에 대한 직접 `POST /extract` → `422 NOT_RECIPE_VIDEO` <!-- omo:id=20-accept-classify-non-recipe-server;stage=2;scope=backend;review=3,6 -->
 - [x] Classifier 보수적: 약한/혼합 증거 → `uncertain`, 강한 비요리 증거만 → `non_recipe` <!-- omo:id=20-accept-classifier-conservative;stage=2;scope=backend;review=3,6 -->
 
@@ -41,7 +41,7 @@
 - [x] YouTube API에서 영상을 찾지 못함 → `404 VIDEO_NOT_FOUND` <!-- omo:id=20-accept-video-not-found;stage=2;scope=backend;review=3,6 -->
 - [x] YouTube API 오류 → `502 PROVIDER_ERROR` <!-- omo:id=20-accept-provider-error;stage=2;scope=backend;review=3,6 -->
 - [x] YouTube API 할당량 초과 → `429 QUOTA_EXCEEDED` <!-- omo:id=20-accept-quota-exceeded;stage=2;scope=backend;review=3,6 -->
-- [ ] Provider error 시 UI에서 적절한 에러 표시 <!-- omo:id=20-accept-provider-error-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] Provider error 시 UI에서 적절한 에러 표시 <!-- omo:id=20-accept-provider-error-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] `YOUTUBE_API_KEY` 서버 전용, 클라이언트에 노출되지 않음 <!-- omo:id=20-accept-api-key-server-only;stage=2;scope=backend;review=3,6 -->
 
 ## Extract Session Creation and 24h Expiry
@@ -55,15 +55,15 @@
 ## Unresolved / Needs_review Ingredient UX and Server Enforcement
 
 - [x] `resolved` 재료: 정상 표시, register 통과 <!-- omo:id=20-accept-ingredient-resolved;stage=2;scope=backend;review=3,6 -->
-- [ ] `needs_review` 재료: candidates 존재, 사용자 선택/교체 전까지 save 불가 <!-- omo:id=20-accept-ingredient-needs-review;stage=4;scope=frontend;review=5,6 -->
-- [ ] `unresolved` 재료: picker/search로 교체 필수, `raw_text` 표시만 <!-- omo:id=20-accept-ingredient-unresolved;stage=4;scope=frontend;review=5,6 -->
+- [x] `needs_review` 재료: candidates 존재, 사용자 선택/교체 전까지 save 불가 <!-- omo:id=20-accept-ingredient-needs-review;stage=4;scope=frontend;review=5,6 -->
+- [x] `unresolved` 재료: picker/search로 교체 필수, `raw_text` 표시만 <!-- omo:id=20-accept-ingredient-unresolved;stage=4;scope=frontend;review=5,6 -->
 - [x] Unresolved ingredients 포함 상태로 register 시도 → `422 VALIDATION_ERROR` with field paths <!-- omo:id=20-accept-unresolved-register-block;stage=2;scope=backend;review=3,6 -->
 
 ## Incomplete Step Warnings / Blockers
 
 - [x] `instruction` 또는 `cooking_method` 누락 → blocking (register 불가) <!-- omo:id=20-accept-step-blocking-fields;stage=2;scope=backend;review=3,6 -->
 - [x] `duration` 또는 `ingredients_used` 누락 → warning (register 가능) <!-- omo:id=20-accept-step-warning-fields;stage=2;scope=backend;review=3,6 -->
-- [ ] Step incomplete UI 표시 (blocking vs warning 구분) <!-- omo:id=20-accept-step-incomplete-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] Step incomplete UI 표시 (blocking vs warning 구분) <!-- omo:id=20-accept-step-incomplete-ui;stage=4;scope=frontend;review=5,6 -->
 
 ## Register Session Ownership / Cross-user / Expired / Consumed / Mismatch
 
@@ -102,14 +102,14 @@
 - [x] `my_added` 가상 책 반영 유지 (`recipe_book_items` INSERT 없음) <!-- omo:id=20-accept-my-added-virtual-book;stage=2;scope=backend;review=3,6 -->
 - [x] `ingredient_type='QUANT'` → amount > 0, unit 필수 <!-- omo:id=20-accept-quant-validation;stage=2;scope=backend;review=3,6 -->
 - [x] `ingredient_type='TO_TASTE'` → amount=null, unit=null <!-- omo:id=20-accept-to-taste-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] 검수 단계에서만 수동 편집 허용 <!-- omo:id=20-accept-manual-edit-review-only;stage=4;scope=frontend;review=5,6 -->
+- [x] 검수 단계에서만 수동 편집 허용 <!-- omo:id=20-accept-manual-edit-review-only;stage=4;scope=frontend;review=5,6 -->
 
 ## Error / Permission
 
-- [ ] UI `loading` 상태 (validate/extract/register) <!-- omo:id=20-accept-loading-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] UI `error` 상태 (provider error, quota, validation failure, session errors) <!-- omo:id=20-accept-error-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 비로그인 시 로그인 게이트 → 로그인 후 import 폼 자동 복귀 (return-to-action) <!-- omo:id=20-accept-login-gate-return;stage=4;scope=frontend;review=5,6 -->
-- [ ] Session expired/consumed 에러 시 적절한 UI 안내 <!-- omo:id=20-accept-session-error-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] UI `loading` 상태 (validate/extract/register) <!-- omo:id=20-accept-loading-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] UI `error` 상태 (provider error, quota, validation failure, session errors) <!-- omo:id=20-accept-error-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 비로그인 시 로그인 게이트 → 로그인 후 import 폼 자동 복귀 (return-to-action) <!-- omo:id=20-accept-login-gate-return;stage=4;scope=frontend;review=5,6 -->
+- [x] Session expired/consumed 에러 시 적절한 UI 안내 <!-- omo:id=20-accept-session-error-ui;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
@@ -158,13 +158,13 @@
 
 ### Playwright
 
-- [ ] YouTube real import happy path (URL → validate → extract → review → register) <!-- omo:id=20-playwright-happy-import;stage=4;scope=frontend;review=5,6 -->
-- [ ] Classification 3-way UI (recipe 진행, uncertain 경고, non_recipe 차단) <!-- omo:id=20-playwright-classification;stage=4;scope=frontend;review=5,6 -->
-- [ ] Ingredient resolution UI (needs_review → 선택, unresolved → 교체) <!-- omo:id=20-playwright-ingredient-resolution;stage=4;scope=frontend;review=5,6 -->
-- [ ] Step incomplete UI (blocking → fill required, warning 표시) <!-- omo:id=20-playwright-step-incomplete;stage=4;scope=frontend;review=5,6 -->
-- [ ] Save unlock condition (register button gating) <!-- omo:id=20-playwright-save-unlock;stage=4;scope=frontend;review=5,6 -->
-- [ ] Provider error UI (502, 429 표시) <!-- omo:id=20-playwright-provider-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] 로그인 게이트 + return-to-action <!-- omo:id=20-playwright-login-gate;stage=4;scope=frontend;review=5,6 -->
+- [x] YouTube real import happy path (URL → validate → extract → review → register) <!-- omo:id=20-playwright-happy-import;stage=4;scope=frontend;review=5,6 -->
+- [x] Classification 3-way UI (recipe 진행, uncertain 경고, non_recipe 차단) <!-- omo:id=20-playwright-classification;stage=4;scope=frontend;review=5,6 -->
+- [x] Ingredient resolution UI (needs_review → 선택, unresolved → 교체) <!-- omo:id=20-playwright-ingredient-resolution;stage=4;scope=frontend;review=5,6 -->
+- [x] Step incomplete UI (blocking → fill required, warning 표시) <!-- omo:id=20-playwright-step-incomplete;stage=4;scope=frontend;review=5,6 -->
+- [x] Save unlock condition (register button gating) <!-- omo:id=20-playwright-save-unlock;stage=4;scope=frontend;review=5,6 -->
+- [x] Provider error UI (502, 429 표시) <!-- omo:id=20-playwright-provider-error;stage=4;scope=frontend;review=5,6 -->
+- [x] 로그인 게이트 + return-to-action <!-- omo:id=20-playwright-login-gate;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 
