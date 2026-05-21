@@ -155,6 +155,88 @@ const uncertainUrl = "https://www.youtube.com/watch?v=uncertain123";
 const incompleteUrl = "https://www.youtube.com/watch?v=incomplete123";
 const needsReviewUrl = "https://www.youtube.com/watch?v=needsreview123";
 const missingVideoUrl = "https://www.youtube.com/watch?v=missing123";
+const cucumberSandwichUrl = "https://www.youtube.com/watch?v=cucumber123";
+const cucumberSandwichDescription = [
+  "제가 사용한 제품 정보는 영상 왼쪽 아래 '제품'을 누르시면 됩니다❤",
+  "",
+  "정남이cook 레시피📒",
+  "",
+  "[오이 그릭 샌드위치]",
+  "",
+  "✅재료",
+  "청오이 1개(120g)",
+  "두유 그릭 요거트",
+  "호밀빵 2장",
+  "소금 1t",
+  "올리브 오일 1T",
+  "후추",
+  "알룰로스",
+  "",
+  "✅순서",
+  "-깨끗이 씻은 오이는 양끝을 잘라내고 끄트머리 쪽에 포크를 꽂아 필러를 이용해 얇게 포를 떠준다",
+  "-그리고 소금에 버무려 10분간 절여준다",
+  "-절여진 오이는 키친타올에 넓게 펼쳐 물기를 닦아준다",
+  "-물기가 제거된 오이는 올리브오일과 후추를 갈아 넣어 버무려준다",
+  "-빵은 바삭하게 구워주고 두유 그릭 요거트를 듬뿍 발라 오이 샐러드를 올려주고 취향에 따라 알룰로스를 살짝 뿌려주면 완성",
+  "",
+  "#오이샌드위치 #오이요리 #샌드위치 #그릭요거트 #다이어트 #토스트 #두유그릭요거트",
+  "#정남이cook #정남이쿡 #레시피 #자취요리 #요리 #간단요리",
+  "#fyp #shorts #viral #shortsvideo #reels #cooking",
+  "",
+  "크림치즈가 대신 '두유 그릭 요거트'를 사용해서",
+  "만들었는데 정말 치즈보다 훨씬다 담백하고 고소해서",
+  "더 맛있더라고요!",
+].join("\n");
+const eggRiceUrl = "https://www.youtube.com/watch?v=eggrice123";
+const eggRiceDescription = [
+  "오늘은 냉장고 재료로 빠르게 만드는 볶음밥이에요.",
+  "제품 정보와 팬은 아래 링크를 참고해주세요.",
+  "",
+  "🧂 재료 (2인분)",
+  "- 달걀2개",
+  "- 양파 1/2개",
+  "- 대파: 1대",
+  "- 진간장 1.5T",
+  "- 후추 약간",
+  "",
+  "🍳 만드는 방법",
+  "00:05 1) 달걀은 잘 풀어주세요.",
+  "00:11 2) 팬에 기름을 두르고 대파를 볶아요.",
+  "00:23 3) 밥을 넣고 간장으로 간을 맞춰요.",
+  "",
+  "BGM 출처는 영상 설명을 확인해주세요.",
+  "#볶음밥 #간단요리 #shorts",
+].join("\n");
+const bakingComponentUrl = "https://www.youtube.com/watch?v=baking1234";
+const bakingComponentDescription = [
+  "딸기 치즈 타르트 레시피",
+  "",
+  "재료",
+  "[타르트 반죽]",
+  "박력분120g",
+  "아몬드가루 20g",
+  "버터 60g",
+  "설탕 35g",
+  "바닐라 페이스트 1t",
+  "노른자 1개",
+  "",
+  "[치즈 필링]",
+  "크림치즈 200g",
+  "생크림 100g",
+  "설탕 30~40g",
+  "레몬즙 1t",
+  "",
+  "만드는 법",
+  "반죽",
+  "1) 버터를 부드럽게 풀고 설탕을 섞어요.",
+  "2) 노른자와 바닐라 페이스트를 넣고 섞어요.",
+  "필링",
+  "9) 크림치즈에 설탕을 넣고 풀어요.",
+  "10) 식힌 타르트지에 필링을 채워요.",
+  "",
+  "제품 정보와 BGM은 더보기 링크를 확인해주세요.",
+  "#베이킹 #타르트",
+].join("\n");
 const ORIGINAL_YOUTUBE_IMPORT_FLAG = process.env.HOMECOOK_ENABLE_YOUTUBE_IMPORT;
 const ORIGINAL_PUBLIC_YOUTUBE_IMPORT_FLAG = process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT;
 
@@ -434,7 +516,54 @@ describe("20 youtube real import backend", () => {
     });
   });
 
-  it("POST /api/v1/recipes/youtube/validate distinguishes recipe and non-recipe videos", async () => {
+  it("POST /api/v1/recipes/youtube/validate uses oEmbed preview without spending YouTube Data API quota", async () => {
+    mockAuth();
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("HOMECOOK_ENABLE_YOUTUBE_IMPORT", "1");
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({
+        title: "미리보기 김치찌개",
+        author_name: "집밥 채널",
+        thumbnail_url: "https://i.ytimg.com/vi/recipe12345/hqdefault.jpg",
+      })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { POST } = await importValidateRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/validate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: recipeUrl }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        is_valid_url: true,
+        is_recipe_video: true,
+        classification_status: "uncertain",
+        classification_reasons: ["미리보기 단계에서는 요리 여부를 확정하지 않아요. 추출 단계에서 설명란으로 확인해요."],
+        video_info: {
+          video_id: "recipe12345",
+          title: "미리보기 김치찌개",
+          channel: "집밥 채널",
+          thumbnail_url: "https://i.ytimg.com/vi/recipe12345/hqdefault.jpg",
+        },
+      },
+      error: null,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("https://www.youtube.com/oembed?"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Drecipe12345"));
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining("youtube.googleapis.com"));
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining("key=test-key"));
+  });
+
+  it("POST /api/v1/recipes/youtube/validate defers recipe classification until extraction", async () => {
     mockAuth();
 
     const { POST } = await importValidateRoute();
@@ -459,8 +588,8 @@ describe("20 youtube real import backend", () => {
       data: {
         is_valid_url: true,
         is_recipe_video: true,
-        classification_status: "recipe",
-        classification_reasons: expect.arrayContaining([expect.any(String)]),
+        classification_status: "uncertain",
+        classification_reasons: ["미리보기 단계에서는 요리 여부를 확정하지 않아요. 추출 단계에서 설명란으로 확인해요."],
         video_info: {
           video_id: "recipe12345",
           title: "백종원 김치찌개",
@@ -475,7 +604,7 @@ describe("20 youtube real import backend", () => {
         is_valid_url: true,
         is_recipe_video: true,
         classification_status: "uncertain",
-        classification_reasons: expect.arrayContaining([expect.any(String)]),
+        classification_reasons: ["미리보기 단계에서는 요리 여부를 확정하지 않아요. 추출 단계에서 설명란으로 확인해요."],
       },
       error: null,
     });
@@ -483,10 +612,9 @@ describe("20 youtube real import backend", () => {
       success: true,
       data: {
         is_valid_url: true,
-        is_recipe_video: false,
-        classification_status: "non_recipe",
-        classification_reasons: expect.arrayContaining([expect.any(String)]),
-        message: "이 영상은 요리 레시피가 아닌 것 같아요",
+        is_recipe_video: true,
+        classification_status: "uncertain",
+        classification_reasons: ["미리보기 단계에서는 요리 여부를 확정하지 않아요. 추출 단계에서 설명란으로 확인해요."],
       },
       error: null,
     });
@@ -511,7 +639,44 @@ describe("20 youtube real import backend", () => {
     });
   });
 
-  it("POST /api/v1/recipes/youtube/validate maps provider failures and quota errors", async () => {
+  it("POST /api/v1/recipes/youtube/validate maps oEmbed provider failures", async () => {
+    mockAuth();
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("HOMECOOK_ENABLE_YOUTUBE_IMPORT", "1");
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: "temporary" }), { status: 500 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: "missing" }), { status: 404 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { POST } = await importValidateRoute();
+    const providerResponse = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/validate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: recipeUrl }),
+    }));
+    const notFoundResponse = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/validate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: recipeUrl }),
+    }));
+
+    await expect(providerResponse.json()).resolves.toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "PROVIDER_ERROR", fields: [] },
+    });
+    await expect(notFoundResponse.json()).resolves.toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "VIDEO_NOT_FOUND", fields: [] },
+    });
+    expect(providerResponse.status).toBe(502);
+    expect(notFoundResponse.status).toBe(404);
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("https://www.youtube.com/oembed?"));
+  });
+
+  it("POST /api/v1/recipes/youtube/extract maps YouTube Data API provider failures and quota errors", async () => {
     mockAuth();
     vi.stubEnv("YOUTUBE_API_KEY", "test-key");
 
@@ -528,13 +693,13 @@ describe("20 youtube real import backend", () => {
       }), { status: 403 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const { POST } = await importValidateRoute();
-    const providerResponse = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/validate", {
+    const { POST } = await importExtractRoute();
+    const providerResponse = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ youtube_url: recipeUrl }),
     }));
-    const quotaResponse = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/validate", {
+    const quotaResponse = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ youtube_url: recipeUrl }),
@@ -706,6 +871,427 @@ describe("20 youtube real import backend", () => {
       status: "draft",
       draft_json: expect.objectContaining({
         extraction_id: body.data.extraction_id,
+      }),
+    }));
+  });
+
+  it("POST /api/v1/recipes/youtube/extract parses structured Korean description without fixed fallback ingredients", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({
+        items: [
+          {
+            snippet: {
+              title: "살찔 걱정 절대 없는 초간단 오이 샌드위치",
+              channelTitle: "정남이cook",
+              description: cucumberSandwichDescription,
+              tags: ["오이샌드위치", "레시피"],
+              categoryId: "26",
+              thumbnails: {
+                high: { url: "https://i.ytimg.com/vi/cucumber123/hqdefault.jpg" },
+              },
+            },
+            contentDetails: {
+              duration: "PT58S",
+              caption: "false",
+            },
+          },
+        ],
+      })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ingredientsTable = createLookupTable({
+      data: [
+        { id: "ing-cucumber", standard_name: "청오이" },
+        { id: "ing-yogurt", standard_name: "두유 그릭 요거트" },
+        { id: "ing-bread", standard_name: "호밀빵" },
+        { id: "ing-salt", standard_name: "소금" },
+        { id: "ing-oil", standard_name: "올리브 오일" },
+        { id: "ing-pepper", standard_name: "후추" },
+        { id: "ing-allulose", standard_name: "알룰로스" },
+      ],
+      error: null,
+    });
+    const cookingMethodsTable = createCookingMethodsTable({
+      existingResult: {
+        data: {
+          id: newMethodId,
+          code: "auto_salt",
+          label: "절이기",
+          color_key: "unassigned",
+          is_system: false,
+        },
+        error: null,
+      },
+      insertResult: { data: null, error: { message: "should not insert" } },
+    });
+    const sessionsTable = createYoutubeSessionsTable({});
+    const dbClient = {
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsTable;
+        if (table === "cooking_methods") return cookingMethodsTable;
+        if (table === "youtube_extraction_sessions") return sessionsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importExtractRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: cucumberSandwichUrl }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        title: "살찔 걱정 절대 없는 초간단 오이 샌드위치",
+        blocking_issues: [],
+      },
+      error: null,
+    });
+    expect(body.data.ingredients.slice(0, 3)).toMatchObject([
+      {
+        standard_name: "청오이",
+        amount: 1,
+        unit: "개",
+        ingredient_id: "ing-cucumber",
+        resolution_status: "resolved",
+        raw_text: "청오이 1개(120g)",
+      },
+      {
+        standard_name: "두유 그릭 요거트",
+        amount: null,
+        unit: null,
+        ingredient_type: "TO_TASTE",
+        ingredient_id: "ing-yogurt",
+        resolution_status: "resolved",
+      },
+      {
+        standard_name: "호밀빵",
+        amount: 2,
+        unit: "장",
+        ingredient_id: "ing-bread",
+        resolution_status: "resolved",
+      },
+    ]);
+    expect(body.data.ingredients.map((ingredient: { standard_name: string }) => ingredient.standard_name))
+      .not.toContain("김치");
+    expect(body.data.ingredients).toHaveLength(7);
+    expect(body.data.steps).toHaveLength(5);
+    expect(body.data.steps.slice(0, 2)).toMatchObject([
+      {
+        step_number: 1,
+        instruction: "깨끗이 씻은 오이는 양끝을 잘라내고 끄트머리 쪽에 포크를 꽂아 필러를 이용해 얇게 포를 떠준다",
+        is_incomplete: false,
+        missing_fields: [],
+      },
+      {
+        step_number: 2,
+        instruction: "그리고 소금에 버무려 10분간 절여준다",
+      },
+    ]);
+    expect(ingredientsTable.__query.in).toHaveBeenCalledWith("standard_name", [
+      "청오이",
+      "두유 그릭 요거트",
+      "호밀빵",
+      "소금",
+      "올리브 오일",
+      "후추",
+      "알룰로스",
+    ]);
+    expect(sessionsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      raw_source_text: cucumberSandwichDescription,
+      draft_json: expect.objectContaining({
+        ingredients: expect.arrayContaining([
+          expect.objectContaining({ standard_name: "청오이" }),
+        ]),
+      }),
+    }));
+  });
+
+  it("POST /api/v1/recipes/youtube/extract parses varied headings, compact amounts, and timestamped steps", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({
+        items: [
+          {
+            snippet: {
+              title: "초간단 계란 볶음밥",
+              channelTitle: "집밥 채널",
+              description: eggRiceDescription,
+              tags: ["볶음밥", "레시피"],
+              categoryId: "26",
+              thumbnails: {
+                high: { url: "https://i.ytimg.com/vi/eggrice123/hqdefault.jpg" },
+              },
+            },
+            contentDetails: {
+              duration: "PT45S",
+              caption: "false",
+            },
+          },
+        ],
+      })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ingredientsTable = createLookupTable({
+      data: [
+        { id: "ing-egg", standard_name: "달걀" },
+        { id: "ing-onion", standard_name: "양파" },
+        { id: "ing-green-onion", standard_name: "대파" },
+        { id: "ing-soy-sauce", standard_name: "진간장" },
+        { id: "ing-pepper", standard_name: "후추" },
+      ],
+      error: null,
+    });
+    const cookingMethodsTable = createCookingMethodsTable({
+      existingResult: {
+        data: {
+          id: newMethodId,
+          code: "auto_salt",
+          label: "절이기",
+          color_key: "unassigned",
+          is_system: false,
+        },
+        error: null,
+      },
+      insertResult: { data: null, error: { message: "should not insert" } },
+    });
+    const sessionsTable = createYoutubeSessionsTable({});
+    const dbClient = {
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsTable;
+        if (table === "cooking_methods") return cookingMethodsTable;
+        if (table === "youtube_extraction_sessions") return sessionsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importExtractRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: eggRiceUrl }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        title: "초간단 계란 볶음밥",
+        blocking_issues: [],
+        ingredients: [
+          {
+            standard_name: "달걀",
+            amount: 2,
+            unit: "개",
+            resolution_status: "resolved",
+          },
+          {
+            standard_name: "양파",
+            amount: 0.5,
+            unit: "개",
+            resolution_status: "resolved",
+          },
+          {
+            standard_name: "대파",
+            amount: 1,
+            unit: "대",
+            resolution_status: "resolved",
+          },
+          {
+            standard_name: "진간장",
+            amount: 1.5,
+            unit: "T",
+            resolution_status: "resolved",
+          },
+          {
+            standard_name: "후추",
+            amount: null,
+            unit: null,
+            ingredient_type: "TO_TASTE",
+            resolution_status: "resolved",
+          },
+        ],
+        steps: [
+          {
+            step_number: 1,
+            instruction: "달걀은 잘 풀어주세요.",
+          },
+          {
+            step_number: 2,
+            instruction: "팬에 기름을 두르고 대파를 볶아요.",
+          },
+          {
+            step_number: 3,
+            instruction: "밥을 넣고 간장으로 간을 맞춰요.",
+          },
+        ],
+      },
+      error: null,
+    });
+    expect(ingredientsTable.__query.in).toHaveBeenCalledWith("standard_name", [
+      "달걀",
+      "양파",
+      "대파",
+      "진간장",
+      "후추",
+    ]);
+  });
+
+  it("POST /api/v1/recipes/youtube/extract parses multi-component baking descriptions with v2 parser diagnostics", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({
+        items: [
+          {
+            snippet: {
+              title: "딸기 치즈 타르트",
+              channelTitle: "베이킹 채널",
+              description: bakingComponentDescription,
+              tags: ["베이킹", "레시피"],
+              categoryId: "26",
+              thumbnails: {
+                high: { url: "https://i.ytimg.com/vi/baking1234/hqdefault.jpg" },
+              },
+            },
+            contentDetails: {
+              duration: "PT12M",
+              caption: "false",
+            },
+          },
+        ],
+      })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ingredientsTable = createLookupTable({
+      data: [
+        { id: "ing-flour", standard_name: "박력분" },
+        { id: "ing-almond-powder", standard_name: "아몬드가루" },
+        { id: "ing-butter", standard_name: "버터" },
+        { id: "ing-sugar", standard_name: "설탕" },
+        { id: "ing-vanilla-paste", standard_name: "바닐라 페이스트" },
+        { id: "ing-yolk", standard_name: "노른자" },
+        { id: "ing-cream-cheese", standard_name: "크림치즈" },
+        { id: "ing-cream", standard_name: "생크림" },
+        { id: "ing-lemon-juice", standard_name: "레몬즙" },
+      ],
+      error: null,
+    });
+    const cookingMethodsTable = createCookingMethodsTable({
+      existingResult: {
+        data: {
+          id: newMethodId,
+          code: "auto_salt",
+          label: "절이기",
+          color_key: "unassigned",
+          is_system: false,
+        },
+        error: null,
+      },
+      insertResult: { data: null, error: { message: "should not insert" } },
+    });
+    const sessionsTable = createYoutubeSessionsTable({});
+    const dbClient = {
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsTable;
+        if (table === "cooking_methods") return cookingMethodsTable;
+        if (table === "youtube_extraction_sessions") return sessionsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importExtractRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: bakingComponentUrl }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        title: "딸기 치즈 타르트",
+        blocking_issues: [],
+        draft_warnings: expect.arrayContaining([
+          "원본 조리 순서 번호가 1, 2, 9, 10처럼 비연속이라 중간 단계 누락 가능성이 있어요.",
+          "같은 재료를 컴포넌트별로 합산했어요. 인분을 바꾸면 괄호 안 원본 수량은 자동으로 바뀌지 않아요.",
+        ]),
+      },
+      error: null,
+    });
+    expect(body.data.ingredients.map((ingredient: { standard_name: string }) => ingredient.standard_name)).toEqual([
+      "박력분",
+      "아몬드가루",
+      "버터",
+      "설탕",
+      "바닐라 페이스트",
+      "노른자",
+      "크림치즈",
+      "생크림",
+      "레몬즙",
+    ]);
+    expect(body.data.ingredients.find((ingredient: { standard_name: string }) => ingredient.standard_name === "바닐라 페이스트"))
+      .toMatchObject({
+        amount: 1,
+        unit: "t",
+        display_text: "[타르트 반죽] 바닐라 페이스트 1t",
+        resolution_status: "resolved",
+      });
+    expect(body.data.ingredients.find((ingredient: { standard_name: string }) => ingredient.standard_name === "노른자"))
+      .toMatchObject({
+        amount: 1,
+        unit: "개",
+        resolution_status: "resolved",
+      });
+    expect(body.data.ingredients.find((ingredient: { standard_name: string }) => ingredient.standard_name === "설탕"))
+      .toMatchObject({
+        amount: 65,
+        unit: "g",
+        display_text: "[타르트 반죽+치즈 필링] 설탕 65g (타르트 반죽 35g + 치즈 필링 30g)",
+      });
+    expect(body.data.steps.map((step: { instruction: string }) => step.instruction)).toEqual([
+      "[타르트 반죽] 버터를 부드럽게 풀고 설탕을 섞어요.",
+      "[타르트 반죽] 노른자와 바닐라 페이스트를 넣고 섞어요.",
+      "[치즈 필링] 크림치즈에 설탕을 넣고 풀어요.",
+      "[치즈 필링] 식힌 타르트지에 필링을 채워요.",
+    ]);
+    expect(ingredientsTable.__query.in).toHaveBeenCalledWith("standard_name", [
+      "박력분",
+      "아몬드가루",
+      "버터",
+      "설탕",
+      "바닐라 페이스트",
+      "노른자",
+      "크림치즈",
+      "생크림",
+      "레몬즙",
+    ]);
+    expect(sessionsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      extraction_meta_json: expect.objectContaining({
+        description_parser_version: "v2",
+        description_parser_selection_outcome: "selected_single_recipe",
       }),
     }));
   });

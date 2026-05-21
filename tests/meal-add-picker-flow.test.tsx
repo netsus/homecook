@@ -35,7 +35,6 @@ describe("MealAddPickerFlow leftover picker presentation", () => {
         onComplete={vi.fn()}
         planDate="2026-04-18"
         slotName="아침"
-        youtubeHref="/menu/add/youtube"
       />,
     );
 

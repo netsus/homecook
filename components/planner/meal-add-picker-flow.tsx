@@ -7,7 +7,6 @@ import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
 import { RecipeBookDetailPicker } from "@/components/planner/recipe-book-detail-picker";
 import { RecipeBookSelector } from "@/components/planner/recipe-book-selector";
 import { RecipeSearchPicker } from "@/components/planner/recipe-search-picker";
-import { YoutubeImportEntrySheet } from "@/components/planner/youtube-import-entry-sheet";
 import type { MealAddPickerMode } from "@/components/planner/meal-add-options-sheet";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { AppBottomSheet } from "@/components/shared/app-overlay";
@@ -27,7 +26,6 @@ interface MealAddPickerFlowProps {
   onComplete: () => void | Promise<void>;
   planDate: string;
   slotName: string;
-  youtubeHref: string;
 }
 
 type InternalPickerMode = MealAddPickerMode | "recipebook-detail";
@@ -85,7 +83,6 @@ export function MealAddPickerFlow({
   onComplete,
   planDate,
   slotName,
-  youtubeHref,
 }: MealAddPickerFlowProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [pickerMode, setPickerMode] = useState<InternalPickerMode>(() =>
@@ -288,17 +285,6 @@ export function MealAddPickerFlow({
           />
         </PickerSheet>
       </>
-    );
-  }
-
-  if (pickerMode === "youtube") {
-    return (
-      <YoutubeImportEntrySheet
-        onBack={handlePickerBackToOptions}
-        onClose={handlePickerBackToOptions}
-        targetLabel={targetLabel}
-        youtubeHref={youtubeHref}
-      />
     );
   }
 

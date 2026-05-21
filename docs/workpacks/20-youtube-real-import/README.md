@@ -2,7 +2,7 @@
 
 ## Goal
 
-슬라이스 19의 deterministic stub 추출을 실제 YouTube Data API 기반 description-first 추출로 교체한다. 사용자가 유튜브 URL을 입력하면 YouTube `videos.list` API로 실제 영상 메타데이터와 설명란을 가져와 레시피를 추출하고, 추출 결과를 검수/수정한 뒤 레시피로 등록할 수 있다. 등록 세션은 서버에서 관리되며 24시간 만료, 소유권 검증, 원자적 등록을 보장한다. 후속 LLM/caption/ASR 확장을 위한 세션 기반 인프라를 이 슬라이스에서 잠근다.
+슬라이스 19의 deterministic stub 추출을 실제 YouTube Data API 기반 description-first 추출로 교체한다. 사용자가 유튜브 URL을 입력하면 validate 단계에서는 oEmbed로 제목/채널/썸네일 미리보기만 확인하고, extract 단계에서 YouTube `videos.list` API로 실제 영상 메타데이터와 설명란을 가져와 레시피를 추출한다. 추출 결과를 검수/수정한 뒤 레시피로 등록할 수 있다. 등록 세션은 서버에서 관리되며 24시간 만료, 소유권 검증, 원자적 등록을 보장한다. 후속 LLM/caption/ASR 확장을 위한 세션 기반 인프라를 이 슬라이스에서 잠근다.
 
 ## Supersession from Slice 19
 
@@ -37,7 +37,7 @@
 
 - 화면: `YT_IMPORT` (기존 화면 행동 변경, 신규 화면 아님)
 - API:
-  - `POST /recipes/youtube/validate` — 계약 확장 (classification 3-way 추가)
+  - `POST /recipes/youtube/validate` — oEmbed 미리보기 기반 URL 확인 (`classification_status='uncertain'`)
   - `POST /recipes/youtube/extract` — 실제 YouTube API 기반 추출 + 서버 세션 생성
   - `POST /recipes/youtube/register` — 세션 기반 원자적 등록 (Postgres RPC)
 - 상태 전이:
@@ -100,7 +100,7 @@
 
 ### POST /recipes/youtube/validate
 
-유튜브 URL 검증 + 3-way classification.
+유튜브 URL 검증 + oEmbed 미리보기.
 
 - **권한**: 로그인 필수 (401)
 - **Request**:
@@ -110,15 +110,15 @@
 }
 ```
 
-- **Response 200 — recipe 판정**:
+- **Response 200 — 미리보기 확인**:
 ```json
 {
   "success": true,
   "data": {
     "is_valid_url": true,
     "is_recipe_video": true,
-    "classification_status": "recipe",
-    "classification_reasons": ["description contains ingredient list and cooking steps"],
+    "classification_status": "uncertain",
+    "classification_reasons": ["미리보기 단계에서는 요리 여부를 확정하지 않아요. 추출 단계에서 설명란으로 확인해요."],
     "video_info": {
       "video_id": "abc123",
       "title": "...",
@@ -130,57 +130,23 @@
 }
 ```
 
-- **Response 200 — uncertain 판정**:
-```json
-{
-  "success": true,
-  "data": {
-    "is_valid_url": true,
-    "is_recipe_video": true,
-    "classification_status": "uncertain",
-    "classification_reasons": ["description mentions food but lacks structured recipe"],
-    "video_info": { "..." : "..." }
-  },
-  "error": null
-}
-```
-> `uncertain`: `is_recipe_video: true`. UI에서 careful-review 경고 표시, extract/continue 허용.
-
-- **Response 200 — non_recipe 판정**:
-```json
-{
-  "success": true,
-  "data": {
-    "is_valid_url": true,
-    "is_recipe_video": false,
-    "classification_status": "non_recipe",
-    "classification_reasons": ["video is a music video with no cooking content"],
-    "video_info": { "..." : "..." }
-  },
-  "error": null
-}
-```
-> `non_recipe`: `is_recipe_video: false`. UI에서 extract 차단, 다른 URL 요청. `/extract` 직접 호출 시 `422 NOT_RECIPE_VIDEO`.
-
-- **Classification 규칙**:
-  - `recipe`: 설명란에 재료/조리 단계가 명확히 존재 → continue/extract 가능, 경고 없음
-  - `uncertain`: 음식 관련이지만 구조화된 레시피가 불분명 → continue/extract 가능, careful-review 경고
-  - `non_recipe`: 요리와 무관한 강한 증거 (음악, 게임, 뉴스 등) → extract 차단
-  - Classifier는 보수적: 약한/혼합 증거는 `uncertain`, 강한 비요리 증거만 `non_recipe`
+> validate는 YouTube Data API quota를 쓰지 않는다. 요리 영상 여부와 설명란 레시피 존재 여부는 `/extract`에서 `videos.list` 응답을 받은 뒤 판정한다.
 
 - **Validation**: 슬라이스 19와 동일 (youtube_url 필수, 유효 URL 형식)
 - **Error**:
   - `401 UNAUTHORIZED` — 비로그인
   - `404 FEATURE_DISABLED` — feature flag off
-  - `404 VIDEO_NOT_FOUND` — YouTube API에서 영상 조회 불가
+  - `404 VIDEO_NOT_FOUND` — oEmbed에서 영상 조회 불가
   - `422 INVALID_URL` — 유효하지 않은 URL 형식
-  - `502 PROVIDER_ERROR` — YouTube API 오류
-  - `429 QUOTA_EXCEEDED` — YouTube API 할당량 초과
+  - `502 PROVIDER_ERROR` — oEmbed 오류
 - **멱등성**: 같은 URL 반복 validate해도 side effect 없음 (조회 성격)
 
 ### POST /recipes/youtube/extract
 
 실제 YouTube API 기반 추출 + 서버 세션 생성.
+
+- **처리**: `videos.list`로 description/tags/category를 조회하고 3-way classification을 수행한다. `recipe`/`uncertain`은 추출을 계속하고, `non_recipe`는 `422 NOT_RECIPE_VIDEO`로 차단한다.
+- **설명란 파서**: deterministic parser v2가 normalize → line scoring/classification → component segmentation → ingredient/step parsing → flat draft adaptation 순서로 동작한다. `재료`/`준비물`/`ingredients`, `순서`/`조리 과정`/`만드는 법`/`steps` 섹션뿐 아니라 `반죽`/`필링`/`크림`/`토핑` 같은 컴포넌트 구조를 내부적으로 보존한 뒤 현재 flat contract에 맞춰 `display_text`와 instruction prefix로 라벨을 남긴다. `청오이 1개(120g)`, `박력분120g`, `바닐라 페이스트 1t`, `노른자 1개`, `설탕 30~40g` 같은 수량 재료는 `QUANT`로, `후추`, `알룰로스`, `소금 약간` 같은 수량 없는 재료는 `TO_TASTE`로 둔다. 고정 더미 재료 fallback은 사용하지 않으며, 조리과정을 찾지 못하면 검수 단계에서 수동 보완하게 한다. `HOMECOOK_YOUTUBE_DESCRIPTION_PARSER=legacy|v2|shadow`로 롤백/섀도 모드를 선택할 수 있다.
 
 - **권한**: 로그인 필수 (401)
 - **Request**:
@@ -532,7 +498,7 @@
 - **Real DB smoke 경로**:
   - `pnpm dev:local-supabase` — 로컬 Supabase + migration 확인
   - `pnpm dev:demo` — fixture 기반 데모
-  - 수동 smoke (credential-gated): 실제 YouTube API key로 URL validate → extract → register 전체 흐름
+  - 수동 smoke (credential-gated): 실제 YouTube API key로 URL validate(oEmbed) → extract(videos.list) → register 전체 흐름
 - **Seed / reset 명령**: `pnpm local:reset:demo`
 - **Bootstrap 선행 조건**:
   - 슬라이스 19 모든 선행 조건 유지
@@ -544,21 +510,23 @@
   - `youtube_extraction_sessions` migration 실패 → 세션 관리 불가
   - `recipe_sources` FK 추가 migration 실패 → 세션-소스 연결 불가
   - RPC 생성 실패 → atomic register 불가 (Stage 2 blocks)
-  - `YOUTUBE_API_KEY` 미설정 → YouTube API 호출 불가 (stub fallback은 테스트에서만)
+  - `YOUTUBE_API_KEY` 미설정 → extract 단계 YouTube API 호출 불가 (validate oEmbed는 가능, stub fallback은 테스트에서만)
 
 ## Key Rules
 
 - **YouTube API 사용 제약 (grounded facts)**:
-  - `videos.list` with `part=snippet,contentDetails`: title, description, tags, category, thumbnails, duration, caption flag. 1 quota unit.
+  - validate 단계는 oEmbed로 title/channel/thumbnail 미리보기만 조회하며 YouTube Data API quota를 쓰지 않는다.
+  - extract 단계는 `videos.list` with `part=snippet,contentDetails`로 title, description, tags, category, thumbnails, duration, caption flag를 조회한다. 1 quota unit.
   - `captions.list`: caption tracks only (not body), 50 units, OAuth 필수 — Out of Scope
   - `captions.download`: 200 units, 영상 편집 권한 필요 — Out of Scope
   - oEmbed: preview/embed metadata only, 레시피 추출 소스 아님
   - 공개 자막/오디오/비디오 스크래핑 금지 (MVP)
 
 - **Classification 3-way 규칙**:
-  - `recipe`: extract 진행, 경고 없음
-  - `uncertain`: `is_recipe_video: true`, extract 진행 가능, careful-review 경고
-  - `non_recipe`: `is_recipe_video: false`, extract 차단 (422 NOT_RECIPE_VIDEO), 다른 URL 요청
+  - validate 단계는 `uncertain`으로만 반환하고 extract를 진행한다.
+  - extract 단계에서 `recipe`: 추출 진행, 경고 없음
+  - extract 단계에서 `uncertain`: 추출 진행 가능, careful-review 경고
+  - extract 단계에서 `non_recipe`: 추출 차단 (422 NOT_RECIPE_VIDEO), 다른 URL 요청
   - Classifier 보수적: 강한 비요리 증거만 `non_recipe`, 약한/혼합 증거는 `uncertain`
 
 - **세션 소유권/lifecycle**:
@@ -615,12 +583,12 @@
 ## Primary User Path
 
 1. 사용자가 `MENU_ADD`에서 "유튜브 링크로 추가" 선택 → `YT_IMPORT` 진입
-2. 유튜브 URL 붙여넣기 + [가져오기] → `POST /recipes/youtube/validate` (YouTube `videos.list` API 호출)
-3. Classification 분기:
-   - `recipe`: 바로 extract 진행
-   - `uncertain`: careful-review 경고 표시, 사용자 계속 가능
-   - `non_recipe`: extract 차단, 다른 URL 입력 요청
-4. 자동 추출 진행 → `POST /recipes/youtube/extract` (indeterminate loading) → 서버 세션 생성 + 설명란 기반 추출
+2. 유튜브 URL 붙여넣기 + [가져오기] → `POST /recipes/youtube/validate` (oEmbed 미리보기, quota 미사용)
+3. 자동 추출 진행 → `POST /recipes/youtube/extract` (YouTube `videos.list` API 호출, indeterminate loading)
+4. Extract 단계 classification 분기:
+   - `recipe`: 서버 세션 생성 + 설명란 기반 추출
+   - `uncertain`: careful-review 경고 포함, 서버 세션 생성 + 설명란 기반 추출
+   - `non_recipe`: `422 NOT_RECIPE_VIDEO`, 다른 URL 입력 요청
 5. 추출 결과 검수/수정:
    - `draft_warnings` / `blocking_issues` 확인
    - unresolved/needs_review 재료 해결 (picker/search)
@@ -633,8 +601,8 @@
 
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 
-- [x] 백엔드 계약 고정 (validate 3-way, extract session, register RPC) <!-- omo:id=20-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [x] API 또는 adapter 연결 (YouTube Data API `videos.list` adapter) <!-- omo:id=20-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 백엔드 계약 고정 (validate oEmbed preview, extract 3-way/session, register RPC) <!-- omo:id=20-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 (validate oEmbed, extract YouTube Data API `videos.list` adapter) <!-- omo:id=20-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 (request/response/error 타입, session types) <!-- omo:id=20-types;stage=2;scope=shared;review=3,6 -->
 - [x] DB migration 적용 (`youtube_extraction_sessions`, `recipe_sources` FK, RPC) <!-- omo:id=20-db-migration;stage=2;scope=backend;review=3,6 -->
 - [x] YouTube API adapter 구현 (`videos.list`, quota/error handling) <!-- omo:id=20-youtube-api-adapter;stage=2;scope=backend;review=3,6 -->
