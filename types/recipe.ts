@@ -154,17 +154,34 @@ export interface YoutubeVideoInfo {
   title: string;
   channel: string;
   thumbnail_url: string;
+  duration?: string | null;
+  category_id?: string | null;
 }
+
+export type YoutubeRecipeClassificationStatus = "recipe" | "non_recipe" | "uncertain";
 
 export interface YoutubeRecipeValidateData {
   is_valid_url: true;
   is_recipe_video: boolean;
+  classification_status: YoutubeRecipeClassificationStatus;
+  classification_reasons: string[];
   video_info: YoutubeVideoInfo;
   message?: string;
 }
 
-export interface YoutubeExtractedIngredient extends ManualRecipeIngredientInput {
+export type YoutubeIngredientResolutionStatus = "resolved" | "needs_review" | "unresolved";
+
+export interface YoutubeIngredientCandidate {
+  ingredient_id: string;
+  standard_name: string;
   confidence: number;
+}
+
+export interface YoutubeExtractedIngredient extends ManualRecipeIngredientInput {
+  confidence: number | null;
+  resolution_status: YoutubeIngredientResolutionStatus;
+  candidates?: YoutubeIngredientCandidate[];
+  raw_text?: string;
 }
 
 export interface YoutubeExtractedCookingMethod {
@@ -180,6 +197,9 @@ export interface YoutubeExtractedStep {
   instruction: string;
   cooking_method: YoutubeExtractedCookingMethod;
   duration_text: string | null;
+  is_incomplete?: boolean;
+  missing_fields?: Array<"instruction" | "cooking_method" | "duration" | "ingredients_used">;
+  raw_text?: string;
 }
 
 export interface YoutubeRecipeExtractData {
@@ -187,6 +207,8 @@ export interface YoutubeRecipeExtractData {
   title: string;
   base_servings: number;
   extraction_methods: string[];
+  draft_warnings: string[];
+  blocking_issues: string[];
   ingredients: YoutubeExtractedIngredient[];
   steps: YoutubeExtractedStep[];
   new_cooking_methods: YoutubeExtractedCookingMethod[];

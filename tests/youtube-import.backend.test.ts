@@ -74,35 +74,6 @@ function createMaybeSingleQuery<T>(results: Array<QueryResult<T | null>>) {
   return query;
 }
 
-function createInsertTable<TInsert, TResult>({
-  insertResult,
-}: {
-  insertResult: QueryResult<TResult | null>;
-}) {
-  const insertQuery = createMaybeSingleQuery<TResult>([insertResult]);
-
-  return {
-    __insertQuery: insertQuery,
-    insert: vi.fn((values: TInsert | TInsert[]) => {
-      void values;
-      return insertQuery;
-    }),
-  };
-}
-
-function createBulkInsertTable<TInsert>({
-  insertResult,
-}: {
-  insertResult: QueryResult<null>;
-}) {
-  return {
-    insert: vi.fn((values: TInsert | TInsert[]) => {
-      void values;
-      return createAwaitableQuery(insertResult);
-    }),
-  };
-}
-
 function createCookingMethodsTable({
   existingResult,
   insertResult,
@@ -136,6 +107,41 @@ function createCookingMethodsTable({
   };
 }
 
+function createYoutubeSessionsTable({
+  selectResult,
+  insertResult = { data: null, error: null },
+}: {
+  selectResult?: QueryResult<YoutubeSessionRow | null>;
+  insertResult?: QueryResult<null>;
+}) {
+  const selectQuery = createMaybeSingleQuery<YoutubeSessionRow>([
+    selectResult ?? { data: null, error: { message: "session lookup not configured" } },
+  ]);
+
+  return {
+    __selectQuery: selectQuery,
+    insert: vi.fn((values: unknown) => {
+      void values;
+      return createAwaitableQuery(insertResult);
+    }),
+    select: vi.fn(() => selectQuery),
+  };
+}
+
+interface YoutubeSessionRow {
+  id: string;
+  user_id: string;
+  youtube_url: string;
+  youtube_video_id: string;
+  provider_version: string | null;
+  extraction_methods: string[];
+  raw_source_text: string | null;
+  extraction_meta_json: Record<string, unknown>;
+  draft_json: Record<string, unknown>;
+  status: "draft" | "consumed" | "expired";
+  expires_at: string;
+}
+
 const userId = "550e8400-e29b-41d4-a716-446655440030";
 const recipeId = "550e8400-e29b-41d4-a716-446655441001";
 const kimchiIngredientId = "550e8400-e29b-41d4-a716-446655440013";
@@ -145,6 +151,10 @@ const newMethodId = "550e8400-e29b-41d4-a716-446655441101";
 const extractionId = "550e8400-e29b-41d4-a716-446655441201";
 const recipeUrl = "https://www.youtube.com/watch?v=recipe12345";
 const nonRecipeUrl = "https://youtu.be/nonrecipe123";
+const uncertainUrl = "https://www.youtube.com/watch?v=uncertain123";
+const incompleteUrl = "https://www.youtube.com/watch?v=incomplete123";
+const needsReviewUrl = "https://www.youtube.com/watch?v=needsreview123";
+const missingVideoUrl = "https://www.youtube.com/watch?v=missing123";
 const ORIGINAL_YOUTUBE_IMPORT_FLAG = process.env.HOMECOOK_ENABLE_YOUTUBE_IMPORT;
 const ORIGINAL_PUBLIC_YOUTUBE_IMPORT_FLAG = process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT;
 
@@ -162,6 +172,47 @@ function restoreYoutubeImportEnv() {
   } else {
     process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT = ORIGINAL_PUBLIC_YOUTUBE_IMPORT_FLAG;
   }
+}
+
+function createRegisterDbClient({
+  sessionResult = { data: buildYoutubeSession(), error: null },
+  ingredientRows = [{ id: kimchiIngredientId }, { id: saltIngredientId }],
+  cookingMethodRows = [{ id: prepMethodId }],
+  rpcResult = { data: { recipe_id: recipeId, title: "백종원 김치찌개" }, error: null },
+}: {
+  sessionResult?: QueryResult<YoutubeSessionRow | null>;
+  ingredientRows?: Array<{ id: string }>;
+  cookingMethodRows?: Array<{ id: string }>;
+  rpcResult?: QueryResult<{ recipe_id: string; title: string } | { error_code: string; message?: string } | null>;
+} = {}) {
+  const ingredientsTable = createLookupTable({
+    data: ingredientRows,
+    error: null,
+  });
+  const cookingMethodsTable = createLookupTable({
+    data: cookingMethodRows,
+    error: null,
+  });
+  const sessionsTable = createYoutubeSessionsTable({
+    selectResult: sessionResult,
+  });
+  const rpc = vi.fn(async () => rpcResult);
+  const from = vi.fn((table: string) => {
+    if (table === "youtube_extraction_sessions") return sessionsTable;
+    if (table === "ingredients") return ingredientsTable;
+    if (table === "cooking_methods") return cookingMethodsTable;
+    throw new Error(`unexpected table: ${table}`);
+  });
+  const dbClient = { from, rpc };
+
+  return {
+    cookingMethodsTable,
+    dbClient,
+    from,
+    ingredientsTable,
+    rpc,
+    sessionsTable,
+  };
 }
 
 function buildRegisterBody() {
@@ -206,6 +257,26 @@ function buildRegisterBody() {
   };
 }
 
+function buildYoutubeSession(overrides: Partial<YoutubeSessionRow> = {}): YoutubeSessionRow {
+  return {
+    id: extractionId,
+    user_id: userId,
+    youtube_url: recipeUrl,
+    youtube_video_id: "recipe12345",
+    provider_version: "youtube-videos-list-description-v1",
+    extraction_methods: ["description"],
+    raw_source_text: "김치찌개 레시피\n재료\n김치 200g",
+    extraction_meta_json: {
+      provider_version: "youtube-videos-list-description-v1",
+      classification_status: "recipe",
+    },
+    draft_json: {},
+    status: "draft",
+    expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    ...overrides,
+  };
+}
+
 function mockAuth(user: { id: string } | null = { id: userId }) {
   const routeClient = {
     auth: {
@@ -231,9 +302,10 @@ async function importRegisterRoute() {
   return import("@/app/api/v1/recipes/youtube/register/route");
 }
 
-describe("19 youtube import backend", () => {
+describe("20 youtube real import backend", () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.unstubAllGlobals();
     restoreYoutubeImportEnv();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
@@ -251,30 +323,51 @@ describe("19 youtube import backend", () => {
     delete process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT;
     mockAuth();
 
-    const { POST } = await importValidateRoute();
-    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/validate", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ youtube_url: recipeUrl }),
-    }));
-    const body = await response.json();
-
-    expect(response.status).toBe(404);
-    expect(body).toEqual({
-      success: false,
-      data: null,
-      error: {
-        code: "FEATURE_DISABLED",
-        message: "유튜브 가져오기는 베타에서 준비 중이에요.",
-        fields: [],
+    const routes = [
+      {
+        importRoute: importValidateRoute,
+        path: "validate",
+        body: { youtube_url: recipeUrl },
       },
-    });
+      {
+        importRoute: importExtractRoute,
+        path: "extract",
+        body: { youtube_url: recipeUrl },
+      },
+      {
+        importRoute: importRegisterRoute,
+        path: "register",
+        body: buildRegisterBody(),
+      },
+    ];
+
+    for (const route of routes) {
+      const { POST } = await route.importRoute();
+      const response = await POST(new Request(`http://localhost:3000/api/v1/recipes/youtube/${route.path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(route.body),
+      }));
+      const body = await response.json();
+
+      expect(response.status).toBe(404);
+      expect(body).toEqual({
+        success: false,
+        data: null,
+        error: {
+          code: "FEATURE_DISABLED",
+          message: "유튜브 가져오기는 베타에서 준비 중이에요.",
+          fields: [],
+        },
+      });
+    }
     expect(createRouteHandlerClient).not.toHaveBeenCalled();
   });
 
   it("fixture and schema baselines include YouTube import prerequisites", () => {
     const methodCodes = fixtureData.cookingMethods.map((method) => method.code);
     const schema = readFileSync("supabase/migrations/20260301000000_core_schema_bootstrap.sql", "utf8");
+    const realImportSchema = readFileSync("supabase/migrations/20260521103000_20_youtube_real_import.sql", "utf8");
 
     expect(methodCodes).toEqual(expect.arrayContaining([
       "stir_fry",
@@ -290,6 +383,13 @@ describe("19 youtube import backend", () => {
     expect(schema).toContain("create table if not exists public.recipe_sources");
     expect(schema).toContain("youtube_video_id varchar(20)");
     expect(schema).toContain("extraction_methods text[]");
+    expect(realImportSchema).toContain("create table if not exists public.youtube_extraction_sessions");
+    expect(realImportSchema).toContain("alter table public.youtube_extraction_sessions enable row level security");
+    expect(realImportSchema).toContain("create policy youtube_extraction_sessions_select_own");
+    expect(realImportSchema).not.toContain("youtube_extraction_sessions_insert");
+    expect(realImportSchema).toContain("youtube_extraction_session_id");
+    expect(realImportSchema).toContain("register_youtube_recipe_from_session");
+    expect(realImportSchema).toContain("v_session.youtube_url <> p_youtube_url");
   });
 
   it("POST /api/v1/recipes/youtube/validate returns 401 before validating an invalid body", async () => {
@@ -348,12 +448,19 @@ describe("19 youtube import backend", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ youtube_url: nonRecipeUrl }),
     }));
+    const uncertainResponse = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/validate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: uncertainUrl }),
+    }));
 
     await expect(recipeResponse.json()).resolves.toMatchObject({
       success: true,
       data: {
         is_valid_url: true,
         is_recipe_video: true,
+        classification_status: "recipe",
+        classification_reasons: expect.arrayContaining([expect.any(String)]),
         video_info: {
           video_id: "recipe12345",
           title: "백종원 김치찌개",
@@ -362,15 +469,91 @@ describe("19 youtube import backend", () => {
       },
       error: null,
     });
+    await expect(uncertainResponse.json()).resolves.toMatchObject({
+      success: true,
+      data: {
+        is_valid_url: true,
+        is_recipe_video: true,
+        classification_status: "uncertain",
+        classification_reasons: expect.arrayContaining([expect.any(String)]),
+      },
+      error: null,
+    });
     await expect(nonRecipeResponse.json()).resolves.toMatchObject({
       success: true,
       data: {
         is_valid_url: true,
         is_recipe_video: false,
+        classification_status: "non_recipe",
+        classification_reasons: expect.arrayContaining([expect.any(String)]),
         message: "이 영상은 요리 레시피가 아닌 것 같아요",
       },
       error: null,
     });
+  });
+
+  it("POST /api/v1/recipes/youtube/validate returns 404 when the provider cannot find a video", async () => {
+    mockAuth();
+
+    const { POST } = await importValidateRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/validate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: missingVideoUrl }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "VIDEO_NOT_FOUND", fields: [] },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/validate maps provider failures and quota errors", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        error: {
+          errors: [{ reason: "backendError" }],
+        },
+      }), { status: 500 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        error: {
+          errors: [{ reason: "quotaExceeded" }],
+        },
+      }), { status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { POST } = await importValidateRoute();
+    const providerResponse = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/validate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: recipeUrl }),
+    }));
+    const quotaResponse = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/validate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: recipeUrl }),
+    }));
+
+    await expect(providerResponse.json()).resolves.toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "PROVIDER_ERROR", fields: [] },
+    });
+    await expect(quotaResponse.json()).resolves.toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "QUOTA_EXCEEDED", fields: [] },
+    });
+    expect(providerResponse.status).toBe(502);
+    expect(quotaResponse.status).toBe(429);
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("part=snippet%2CcontentDetails"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("key=test-key"));
   });
 
   it("POST /api/v1/recipes/youtube/validate accepts common pasted YouTube URL shapes", async () => {
@@ -430,10 +613,12 @@ describe("19 youtube import backend", () => {
         error: null,
       },
     });
+    const sessionsTable = createYoutubeSessionsTable({});
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
+        if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
     };
@@ -454,7 +639,9 @@ describe("19 youtube import backend", () => {
       data: {
         title: "백종원 김치찌개",
         base_servings: 2,
-        extraction_methods: ["description", "manual"],
+        extraction_methods: ["description"],
+        draft_warnings: [],
+        blocking_issues: [],
         ingredients: [
           {
             standard_name: "김치",
@@ -463,6 +650,7 @@ describe("19 youtube import backend", () => {
             ingredient_type: "QUANT",
             ingredient_id: kimchiIngredientId,
             confidence: 0.95,
+            resolution_status: "resolved",
           },
           {
             standard_name: "소금",
@@ -471,6 +659,7 @@ describe("19 youtube import backend", () => {
             ingredient_type: "TO_TASTE",
             ingredient_id: saltIngredientId,
             confidence: 0.8,
+            resolution_status: "resolved",
           },
         ],
         steps: [
@@ -507,6 +696,218 @@ describe("19 youtube import backend", () => {
       color_key: "unassigned",
       is_system: false,
       display_order: 999,
+    });
+    expect(sessionsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      user_id: userId,
+      youtube_url: recipeUrl,
+      youtube_video_id: "recipe12345",
+      classification_status: "recipe",
+      extraction_methods: ["description"],
+      status: "draft",
+      draft_json: expect.objectContaining({
+        extraction_id: body.data.extraction_id,
+      }),
+    }));
+  });
+
+  it("POST /api/v1/recipes/youtube/extract keeps uncertain videos extractable with a review warning", async () => {
+    mockAuth();
+
+    const ingredientsTable = createLookupTable({
+      data: [
+        { id: kimchiIngredientId, standard_name: "김치" },
+        { id: saltIngredientId, standard_name: "소금" },
+      ],
+      error: null,
+    });
+    const cookingMethodsTable = createCookingMethodsTable({
+      existingResult: {
+        data: {
+          id: newMethodId,
+          code: "auto_salt",
+          label: "절이기",
+          color_key: "unassigned",
+          is_system: false,
+        },
+        error: null,
+      },
+      insertResult: { data: null, error: { message: "should not insert" } },
+    });
+    const sessionsTable = createYoutubeSessionsTable({});
+    const dbClient = {
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsTable;
+        if (table === "cooking_methods") return cookingMethodsTable;
+        if (table === "youtube_extraction_sessions") return sessionsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importExtractRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: uncertainUrl }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        draft_warnings: ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해주세요."],
+        blocking_issues: [],
+      },
+      error: null,
+    });
+    expect(sessionsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      classification_status: "uncertain",
+      extraction_meta_json: expect.objectContaining({
+        draft_warnings: ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해주세요."],
+      }),
+    }));
+  });
+
+  it("POST /api/v1/recipes/youtube/extract reports unresolved ingredients and blocking step fields", async () => {
+    mockAuth();
+
+    const ingredientsTable = createLookupTable({
+      data: [{ id: kimchiIngredientId, standard_name: "김치" }],
+      error: null,
+    });
+    const cookingMethodsTable = createCookingMethodsTable({
+      existingResult: {
+        data: {
+          id: newMethodId,
+          code: "auto_salt",
+          label: "절이기",
+          color_key: "unassigned",
+          is_system: false,
+        },
+        error: null,
+      },
+      insertResult: { data: null, error: { message: "should not insert" } },
+    });
+    const sessionsTable = createYoutubeSessionsTable({});
+    const dbClient = {
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsTable;
+        if (table === "cooking_methods") return cookingMethodsTable;
+        if (table === "youtube_extraction_sessions") return sessionsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importExtractRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: incompleteUrl }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        blocking_issues: ["ingredients[1].ingredient_id", "steps[0].instruction"],
+        ingredients: [
+          { standard_name: "김치", resolution_status: "resolved" },
+          {
+            standard_name: "소금",
+            ingredient_id: "",
+            confidence: null,
+            resolution_status: "unresolved",
+            candidates: [],
+          },
+        ],
+        steps: [
+          {
+            instruction: "",
+            is_incomplete: true,
+            missing_fields: ["instruction"],
+          },
+        ],
+      },
+      error: null,
+    });
+    expect(sessionsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      draft_json: expect.objectContaining({
+        blocking_issues: ["ingredients[1].ingredient_id", "steps[0].instruction"],
+      }),
+    }));
+  });
+
+  it("POST /api/v1/recipes/youtube/extract can return needs_review candidates before registration", async () => {
+    mockAuth();
+
+    const ingredientsTable = createLookupTable({
+      data: [
+        { id: kimchiIngredientId, standard_name: "김치" },
+        { id: saltIngredientId, standard_name: "소금" },
+      ],
+      error: null,
+    });
+    const cookingMethodsTable = createCookingMethodsTable({
+      existingResult: {
+        data: {
+          id: newMethodId,
+          code: "auto_salt",
+          label: "절이기",
+          color_key: "unassigned",
+          is_system: false,
+        },
+        error: null,
+      },
+      insertResult: { data: null, error: { message: "should not insert" } },
+    });
+    const sessionsTable = createYoutubeSessionsTable({});
+    const dbClient = {
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsTable;
+        if (table === "cooking_methods") return cookingMethodsTable;
+        if (table === "youtube_extraction_sessions") return sessionsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importExtractRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: needsReviewUrl }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        blocking_issues: ["ingredients[1].ingredient_id"],
+        ingredients: [
+          { standard_name: "김치", resolution_status: "resolved" },
+          {
+            standard_name: "소금",
+            ingredient_id: "",
+            confidence: 0.8,
+            resolution_status: "needs_review",
+            candidates: [
+              {
+                ingredient_id: saltIngredientId,
+                standard_name: "소금",
+                confidence: 0.8,
+              },
+            ],
+          },
+        ],
+      },
+      error: null,
     });
   });
 
@@ -549,6 +950,26 @@ describe("19 youtube import backend", () => {
     expect(createServiceRoleClient).not.toHaveBeenCalled();
   });
 
+  it("POST /api/v1/recipes/youtube/extract blocks direct extraction for non-recipe videos", async () => {
+    mockAuth();
+
+    const { POST } = await importExtractRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: nonRecipeUrl }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "NOT_RECIPE_VIDEO", fields: [] },
+    });
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+  });
+
   it("POST /api/v1/recipes/youtube/extract does not duplicate an existing generated cooking method", async () => {
     mockAuth();
 
@@ -575,10 +996,12 @@ describe("19 youtube import backend", () => {
         error: { message: "should not insert" },
       },
     });
+    const sessionsTable = createYoutubeSessionsTable({});
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
+        if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
     };
@@ -601,6 +1024,7 @@ describe("19 youtube import backend", () => {
     });
     expect(body.data.new_cooking_methods).toEqual([]);
     expect(cookingMethodsTable.insert).not.toHaveBeenCalled();
+    expect(sessionsTable.insert).toHaveBeenCalled();
   });
 
   it("POST /api/v1/recipes/youtube/register returns 401 before validating the body", async () => {
@@ -728,6 +1152,159 @@ describe("19 youtube import backend", () => {
     expect(createServiceRoleClient).not.toHaveBeenCalled();
   });
 
+  it("POST /api/v1/recipes/youtube/register rejects unresolved and needs_review ingredient drafts before database writes", async () => {
+    const { POST } = await importRegisterRoute();
+
+    for (const resolutionStatus of ["unresolved", "needs_review"]) {
+      mockAuth();
+
+      const body = structuredClone(buildRegisterBody()) as ReturnType<typeof buildRegisterBody> & {
+        ingredients: Array<ReturnType<typeof buildRegisterBody>["ingredients"][number] & {
+          resolution_status?: string;
+        }>;
+      };
+      body.ingredients[0] = {
+        ...body.ingredients[0],
+        resolution_status: resolutionStatus,
+      };
+
+      const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }));
+      const responseBody = await response.json();
+
+      expect(response.status).toBe(422);
+      expect(responseBody).toMatchObject({
+        success: false,
+        data: null,
+        error: {
+          code: "VALIDATION_ERROR",
+          fields: [{ field: "ingredients[0].ingredient_id", reason: "unresolved" }],
+        },
+      });
+      expect(createServiceRoleClient).not.toHaveBeenCalled();
+
+      createRouteHandlerClient.mockReset();
+      createServiceRoleClient.mockReset();
+      createServiceRoleClient.mockReturnValue(null);
+    }
+  });
+
+  it("POST /api/v1/recipes/youtube/register returns 404 when the extraction session is missing", async () => {
+    mockAuth();
+
+    const { dbClient, rpc } = createRegisterDbClient({
+      sessionResult: { data: null, error: null },
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importRegisterRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(buildRegisterBody()),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "EXTRACTION_NOT_FOUND", fields: [] },
+    });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/recipes/youtube/register hides cross-user extraction sessions", async () => {
+    mockAuth();
+
+    const { dbClient, rpc } = createRegisterDbClient({
+      sessionResult: {
+        data: buildYoutubeSession({ user_id: "550e8400-e29b-41d4-a716-446655449999" }),
+        error: null,
+      },
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importRegisterRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(buildRegisterBody()),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "EXTRACTION_NOT_FOUND", fields: [] },
+    });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/recipes/youtube/register rejects expired, consumed, and mismatched extraction sessions", async () => {
+    const cases = [
+      {
+        session: buildYoutubeSession({
+          expires_at: new Date(Date.now() - 60 * 1000).toISOString(),
+        }),
+        body: buildRegisterBody(),
+        status: 410,
+        code: "EXTRACTION_EXPIRED",
+      },
+      {
+        session: buildYoutubeSession({ status: "consumed" }),
+        body: buildRegisterBody(),
+        status: 409,
+        code: "EXTRACTION_ALREADY_REGISTERED",
+      },
+      {
+        session: buildYoutubeSession(),
+        body: {
+          ...buildRegisterBody(),
+          youtube_url: nonRecipeUrl,
+        },
+        status: 409,
+        code: "EXTRACTION_MISMATCH",
+      },
+    ];
+
+    const { POST } = await importRegisterRoute();
+
+    for (const currentCase of cases) {
+      mockAuth();
+      const { dbClient, rpc } = createRegisterDbClient({
+        sessionResult: { data: currentCase.session, error: null },
+      });
+      createServiceRoleClient.mockReturnValue(dbClient);
+
+      const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(currentCase.body),
+      }));
+      const body = await response.json();
+
+      expect(response.status).toBe(currentCase.status);
+      expect(body).toMatchObject({
+        success: false,
+        data: null,
+        error: { code: currentCase.code, fields: [] },
+      });
+      expect(rpc).not.toHaveBeenCalled();
+
+      createRouteHandlerClient.mockReset();
+      createServiceRoleClient.mockReset();
+      ensurePublicUserRow.mockReset();
+      ensureUserBootstrapState.mockReset();
+      ensurePublicUserRow.mockResolvedValue({});
+      ensureUserBootstrapState.mockResolvedValue(undefined);
+    }
+  });
+
   it("POST /api/v1/recipes/youtube/register returns 422 when a cooking method id does not exist", async () => {
     mockAuth();
 
@@ -739,7 +1316,11 @@ describe("19 youtube import backend", () => {
       data: [],
       error: null,
     });
+    const sessionsTable = createYoutubeSessionsTable({
+      selectResult: { data: buildYoutubeSession(), error: null },
+    });
     const from = vi.fn((table: string) => {
+      if (table === "youtube_extraction_sessions") return sessionsTable;
       if (table === "ingredients") return ingredientsTable;
       if (table === "cooking_methods") return cookingMethodsTable;
       throw new Error(`unexpected table: ${table}`);
@@ -766,7 +1347,7 @@ describe("19 youtube import backend", () => {
     });
   });
 
-  it("POST /api/v1/recipes/youtube/register creates a youtube recipe source without recipe_book_items membership", async () => {
+  it("POST /api/v1/recipes/youtube/register delegates durable writes to the session RPC", async () => {
     mockAuth();
 
     const ingredientsTable = createLookupTable({
@@ -777,38 +1358,21 @@ describe("19 youtube import backend", () => {
       data: [{ id: prepMethodId }],
       error: null,
     });
-    const recipesTable = createInsertTable({
-      insertResult: {
-        data: {
-          id: recipeId,
-          title: "백종원 김치찌개",
-          source_type: "youtube",
-          created_by: userId,
-          base_servings: 2,
-        },
-        error: null,
-      },
+    const sessionsTable = createYoutubeSessionsTable({
+      selectResult: { data: buildYoutubeSession(), error: null },
     });
-    const recipeSourcesTable = createBulkInsertTable({
-      insertResult: { data: null, error: null },
-    });
-    const recipeIngredientsTable = createBulkInsertTable({
-      insertResult: { data: null, error: null },
-    });
-    const recipeStepsTable = createBulkInsertTable({
-      insertResult: { data: null, error: null },
-    });
+    const rpc = vi.fn(async () => ({
+      data: { recipe_id: recipeId, title: "백종원 김치찌개" },
+      error: null,
+    }));
     const from = vi.fn((table: string) => {
+      if (table === "youtube_extraction_sessions") return sessionsTable;
       if (table === "ingredients") return ingredientsTable;
       if (table === "cooking_methods") return cookingMethodsTable;
-      if (table === "recipes") return recipesTable;
-      if (table === "recipe_sources") return recipeSourcesTable;
-      if (table === "recipe_ingredients") return recipeIngredientsTable;
-      if (table === "recipe_steps") return recipeStepsTable;
       throw new Error(`unexpected table: ${table}`);
     });
 
-    createServiceRoleClient.mockReturnValue({ from });
+    createServiceRoleClient.mockReturnValue({ from, rpc });
 
     const { POST } = await importRegisterRoute();
     const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
@@ -829,57 +1393,17 @@ describe("19 youtube import backend", () => {
     });
     expect(ensurePublicUserRow).toHaveBeenCalled();
     expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), userId);
-    expect(recipesTable.insert).toHaveBeenCalledWith({
-      title: "백종원 김치찌개",
-      base_servings: 2,
-      source_type: "youtube",
-      created_by: userId,
+    expect(sessionsTable.__selectQuery.eq).toHaveBeenCalledWith("id", extractionId);
+    expect(rpc).toHaveBeenCalledWith("register_youtube_recipe_from_session", {
+      p_extraction_id: extractionId,
+      p_user_id: userId,
+      p_title: "백종원 김치찌개",
+      p_base_servings: 2,
+      p_youtube_url: recipeUrl,
+      p_youtube_video_id: "recipe12345",
+      p_ingredients: buildRegisterBody().ingredients,
+      p_steps: buildRegisterBody().steps,
     });
-    expect(recipeSourcesTable.insert).toHaveBeenCalledWith({
-      recipe_id: recipeId,
-      youtube_url: recipeUrl,
-      youtube_video_id: "recipe12345",
-      extraction_methods: ["description", "manual"],
-      extraction_meta_json: {
-        extraction_id: extractionId,
-        provider: "mvp_stub",
-      },
-      raw_extracted_text: expect.stringContaining("백종원 김치찌개"),
-    });
-    expect(recipeIngredientsTable.insert).toHaveBeenCalledWith([
-      {
-        recipe_id: recipeId,
-        ingredient_id: kimchiIngredientId,
-        amount: 200,
-        unit: "g",
-        ingredient_type: "QUANT",
-        display_text: "김치 200g",
-        scalable: true,
-        sort_order: 1,
-      },
-      {
-        recipe_id: recipeId,
-        ingredient_id: saltIngredientId,
-        amount: null,
-        unit: null,
-        ingredient_type: "TO_TASTE",
-        display_text: "소금 약간",
-        scalable: false,
-        sort_order: 2,
-      },
-    ]);
-    expect(recipeStepsTable.insert).toHaveBeenCalledWith([
-      {
-        recipe_id: recipeId,
-        step_number: 1,
-        instruction: "김치를 한입 크기로 썬다.",
-        cooking_method_id: prepMethodId,
-        ingredients_used: [],
-        heat_level: null,
-        duration_seconds: null,
-        duration_text: null,
-      },
-    ]);
     expect(from).not.toHaveBeenCalledWith("recipe_book_items");
   });
 });

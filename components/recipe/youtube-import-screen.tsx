@@ -59,7 +59,10 @@ type ModalMode =
 
 interface TempIngredient extends ManualRecipeIngredientInput {
   tempId: string;
-  confidence: number;
+  confidence: number | null;
+  resolution_status?: YoutubeExtractedIngredient["resolution_status"];
+  candidates?: YoutubeExtractedIngredient["candidates"];
+  raw_text?: string;
 }
 
 function formatIngredientDisplayText(ingredient: ManualRecipeIngredientInput) {
