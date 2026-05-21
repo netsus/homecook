@@ -65,8 +65,15 @@
   --app-back-button-radius: var(--radius-full);
   --app-back-button-color: #212529;
   --app-back-button-hover-bg: #F8F9FA;
-  --planner-add: #1e8ccf;
-  --planner-add-soft: #e8f3fb;
+  --planner-add: var(--brand);
+  --planner-add-soft: var(--brand-soft);
+  --planner-status-cooked: #2F8F5B;
+  --planner-status-cooked-soft: #EAF7EE;
+  --planner-status-shopping: #B7791F;
+  --planner-status-shopping-soft: #FFF3D6;
+  --planner-status-registered: #6B7280;
+  --planner-status-registered-strong: #374151;
+  --planner-status-registered-soft: #F3F5F7;
   --app-text-caption: 11px;
   --app-text-meta: 12px;
   --app-text-small: 13px;
