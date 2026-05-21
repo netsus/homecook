@@ -1444,7 +1444,7 @@ export function PlannerWeekScreen({
                               </Link>
                               <button
                                 aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
-                                className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[#4DABF7] bg-[#E8F5FF] text-[20px] font-semibold leading-none text-[#4DABF7]"
+                                className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[var(--planner-add)] bg-[var(--planner-add-soft)] text-[20px] font-semibold leading-none text-[var(--planner-add)]"
                                 onClick={() => openMealAddSheet(dateKey, column)}
                                 type="button"
                               >
@@ -1454,7 +1454,7 @@ export function PlannerWeekScreen({
                           ) : (
                             <button
                               aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
-                              className="flex h-[38px] flex-1 items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[#DEE2E6] bg-[#F8F9FA] text-[20px] font-semibold leading-none text-[#4DABF7]"
+                              className="flex h-[38px] flex-1 items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[var(--planner-add)] bg-[var(--planner-add-soft)] text-[20px] font-semibold leading-none text-[var(--planner-add)]"
                               onClick={() => openMealAddSheet(dateKey, column)}
                               type="button"
                             >
