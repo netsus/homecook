@@ -14,6 +14,10 @@ const mockRenameRecipeBook = vi.fn();
 const mockDeleteRecipeBook = vi.fn();
 const mockFetchShoppingHistory = vi.fn();
 const mockFetchShoppingListDetail = vi.fn();
+const mockUpdateShoppingListItem = vi.fn();
+const mockCompleteShoppingList = vi.fn();
+const mockFetchShoppingShareText = vi.fn();
+const mockReorderShoppingListItems = vi.fn();
 const mockFetchRecipeBookRecipes = vi.fn();
 const mockFetchLeftovers = vi.fn();
 const mockEatLeftover = vi.fn();
@@ -54,8 +58,16 @@ vi.mock("@/lib/api/planner", () => ({
 }));
 
 vi.mock("@/lib/api/shopping", () => ({
+  completeShoppingList: (...args: unknown[]) =>
+    mockCompleteShoppingList(...args),
   fetchShoppingListDetail: (...args: unknown[]) =>
     mockFetchShoppingListDetail(...args),
+  fetchShoppingShareText: (...args: unknown[]) =>
+    mockFetchShoppingShareText(...args),
+  reorderShoppingListItems: (...args: unknown[]) =>
+    mockReorderShoppingListItems(...args),
+  updateShoppingListItem: (...args: unknown[]) =>
+    mockUpdateShoppingListItem(...args),
   isShoppingApiError: (error: unknown) => error instanceof Error && "status" in error,
 }));
 
@@ -77,6 +89,13 @@ vi.mock("@/lib/supabase/env", () => ({
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => null,
   withE2EAuthOverrideHeaders: (init?: RequestInit) => init ?? {},
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 vi.mock("next/link", () => ({
@@ -189,6 +208,38 @@ const MOCK_SHOPPING_DETAIL = {
   ],
 };
 
+const MOCK_ACTIVE_SHOPPING_DETAIL = {
+  ...MOCK_SHOPPING_DETAIL,
+  id: "list-2",
+  title: "4/23 장보기",
+  date_range_start: "2026-04-23",
+  date_range_end: "2026-04-29",
+  is_completed: false,
+  completed_at: null,
+  items: [
+    {
+      id: "shopping-item-2",
+      ingredient_id: "ingredient-2",
+      display_text: "감자 2개",
+      amounts_json: [{ amount: 2, unit: "개" }],
+      is_checked: false,
+      is_pantry_excluded: false,
+      added_to_pantry: false,
+      sort_order: 0,
+    },
+    {
+      id: "shopping-item-3",
+      ingredient_id: "ingredient-3",
+      display_text: "양파 1개",
+      amounts_json: [{ amount: 1, unit: "개" }],
+      is_checked: false,
+      is_pantry_excluded: true,
+      added_to_pantry: false,
+      sort_order: 10,
+    },
+  ],
+};
+
 const MOCK_SAVED_RECIPES = {
   success: true,
   data: {
@@ -293,6 +344,10 @@ describe("MypageScreen", () => {
     mockDeleteRecipeBook.mockReset();
     mockFetchShoppingHistory.mockReset();
     mockFetchShoppingListDetail.mockReset();
+    mockUpdateShoppingListItem.mockReset();
+    mockCompleteShoppingList.mockReset();
+    mockFetchShoppingShareText.mockReset();
+    mockReorderShoppingListItems.mockReset();
     mockFetchRecipeBookRecipes.mockReset();
     mockFetchLeftovers.mockReset();
     mockEatLeftover.mockReset();
@@ -303,7 +358,12 @@ describe("MypageScreen", () => {
     mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
     mockFetchRecipeBooks.mockResolvedValue(MOCK_BOOKS);
     mockFetchShoppingHistory.mockResolvedValue(MOCK_SHOPPING_HISTORY);
-    mockFetchShoppingListDetail.mockResolvedValue(MOCK_SHOPPING_DETAIL);
+    mockFetchShoppingListDetail.mockImplementation((listId: string) =>
+      Promise.resolve(
+        listId === "list-2" ? MOCK_ACTIVE_SHOPPING_DETAIL : MOCK_SHOPPING_DETAIL,
+      ),
+    );
+    mockFetchShoppingShareText.mockResolvedValue({ text: "장보기 공유 텍스트" });
     mockFetchRecipeBookRecipes.mockResolvedValue(MOCK_SAVED_RECIPES);
     mockFetchLeftovers.mockImplementation((status: string) =>
       Promise.resolve(status === "eaten" ? MOCK_EATEN_LEFTOVERS : MOCK_LEFTOVERS),
@@ -686,7 +746,8 @@ describe("MypageScreen", () => {
 
     expect(await screen.findByText("4/30 장보기")).toBeTruthy();
     expect(screen.getByText("4/23 장보기")).toBeTruthy();
-    expect(screen.getByText("다시열기")).toBeTruthy();
+    expect(screen.getByText("✓ 완료")).toBeTruthy();
+    expect(screen.queryByText("다시열기")).toBeNull();
     expect(screen.getByText("5/1 완료")).toBeTruthy();
     expect(screen.getByText("진행 중")).toBeTruthy();
     expect(screen.getByText(/12개 항목/)).toBeTruthy();
@@ -829,16 +890,44 @@ describe("MypageScreen", () => {
     const user = userEvent.setup();
     await openShoppingSurface(user);
 
-    const card = await screen.findByTestId("shopping-card-list-1");
+    const card = await screen.findByTestId("shopping-card-list-2");
     expect(card.tagName.toLowerCase()).toBe("button");
 
     await user.click(card);
 
     await waitFor(() => {
+      expect(mockFetchShoppingListDetail).toHaveBeenCalledWith("list-2");
+    });
+    expect(screen.getByTestId("shopping-detail-embedded")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "4/23 장보기" })).toBeTruthy();
+    expect(screen.getByText("진행률")).toBeTruthy();
+    expect(screen.getByText("0 / 1 항목 (0%)")).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "감자 2개 구매 완료 표시" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "양파 1개 되살리기" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "장보기 완료" })).toBeTruthy();
+
+    await user.click(screen.getByRole("tab", { name: "장보기 내역" }));
+
+    expect(screen.queryByTestId("shopping-detail-embedded")).toBeNull();
+    expect(await screen.findByTestId("shopping-tab")).toBeTruthy();
+    expect(screen.getByTestId("shopping-card-list-2")).toBeTruthy();
+  });
+
+  it("keeps completed shopping history detail inside mypage with list return actions", async () => {
+    render(<MypageScreen initialAuthenticated />);
+
+    const user = userEvent.setup();
+    await openShoppingSurface(user);
+
+    await user.click(await screen.findByTestId("shopping-card-list-1"));
+
+    await waitFor(() => {
       expect(mockFetchShoppingListDetail).toHaveBeenCalledWith("list-1");
     });
-    expect(screen.getByRole("heading", { name: "4/30 장보기" })).toBeTruthy();
-    expect(screen.getByText("양파 2개")).toBeTruthy();
+    expect(screen.getByTestId("shopping-detail-embedded")).toBeTruthy();
+    expect(screen.getByText("완료된 장보기 기록은 수정할 수 없어요")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "플래너로 돌아가기" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: "목록으로" }).length).toBeGreaterThan(0);
   });
 
   it("opens leftovers and eaten-list rows as mypage tab panels", async () => {
