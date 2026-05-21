@@ -5,7 +5,6 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
-import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
 import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
@@ -326,19 +325,6 @@ export function ShoppingFlowScreen({
       )
     );
   }, []);
-
-  const handleServingsChange = useCallback(
-    (recipeId: string, newServings: number) => {
-      setMealConfigs((prev) =>
-        prev.map((config) =>
-          config.recipe_id === recipeId
-            ? { ...config, shopping_servings: newServings }
-            : config
-        )
-      );
-    },
-    []
-  );
 
   const handleCreateList = useCallback(async () => {
     const selectedConfigs = mealConfigs.filter((config) => config.isSelected);
@@ -752,28 +738,14 @@ export function ShoppingFlowScreen({
             <p>
               식사 등록 완료이면서 아직 장보기 리스트에 없는 식사입니다.
               같은 레시피는 합산 계획 인분으로 묶어요.
-              <span className="sr-only">
-                {" "}
-                같은 레시피는 합산 계획 인분으로 묶이고 장보기 기준 인분만
-                조정할 수 있어요.
-              </span>
             </p>
           </div>
-          <WebButton
-            disabled={isCreateDisabled}
-            onClick={handleCreateList}
-          >
-            목록 만들기
-          </WebButton>
         </header>
 
         <section className="web-shopping-mode-grid" aria-label="장보기 메뉴">
           <WebCard className="web-shopping-mode-card web-shopping-mode-card-active">
             <strong>진행할 장보기</strong>
             <span>{selectedCount}개 레시피 선택</span>
-            <button onClick={handleCreateList} type="button">
-              바로 시작 &gt;
-            </button>
           </WebCard>
           <WebCard className="web-shopping-mode-card">
             <strong>지난 장보기</strong>
@@ -796,7 +768,7 @@ export function ShoppingFlowScreen({
             <div className="web-shopping-section-head">
               <div>
                 <h2 id="shopping-flow-meals-title">장볼 끼니</h2>
-                <p>대상 식사를 확인하고 장보기 기준 인분을 조정하세요.</p>
+                <p>대상 식사와 합산 인분을 확인하세요.</p>
               </div>
               <span>{mealConfigs.length}개 묶음</span>
             </div>
@@ -805,7 +777,6 @@ export function ShoppingFlowScreen({
                 <RecipeCard
                   config={config}
                   key={config.recipe_id}
-                  onServingsChange={handleServingsChange}
                   onToggle={handleToggleSelection}
                 />
               ))}
@@ -815,7 +786,7 @@ export function ShoppingFlowScreen({
           <aside className="web-shopping-summary" aria-label="장보기 요약">
             <h2>선택한 레시피</h2>
             <strong>{selectedCount}</strong>
-            <p>장보기 기준 인분을 확인한 뒤 목록을 생성하세요.</p>
+            <p>선택한 레시피로 장보기 목록을 생성하세요.</p>
             <WebButton
               data-testid="shopping-create-button"
               disabled={isCreateDisabled}
@@ -1239,16 +1210,17 @@ function MobileReviewItem({
 interface RecipeCardProps {
   config: MealConfig;
   onToggle: (recipeId: string) => void;
-  onServingsChange: (recipeId: string, servings: number) => void;
 }
 
-function RecipeCard({ config, onToggle, onServingsChange }: RecipeCardProps) {
+function RecipeCard({ config, onToggle }: RecipeCardProps) {
   const selectedMealIds = selectMealIdsForShoppingServings(
     config.meals,
     config.meal_ids,
     config.shopping_servings,
   );
   const visual = getRecipeVisual(config);
+  const shouldShowAggregationMeta =
+    selectedMealIds.length > 1 || config.meal_count > 1;
 
   return (
     <article
@@ -1285,25 +1257,14 @@ function RecipeCard({ config, onToggle, onServingsChange }: RecipeCardProps) {
       <div className="web-shopping-recipe-copy">
         <div className="web-shopping-recipe-title-row">
           <h3>{config.recipe_name}</h3>
-          <span>식사 등록 완료</span>
         </div>
 
-        <div className="web-shopping-recipe-meta">
-          <span>장보기 미연결</span>
-          <span>대상 식사 {selectedMealIds.length}개</span>
-          <span>합산 계획 {config.planned_servings_total}인분</span>
-        </div>
-
-        <div className="web-shopping-servings">
-          <p>장보기 기준 인분</p>
-          <NumericStepperCompact
-            disabled={!config.isSelected}
-            min={1}
-            onChange={(value) => onServingsChange(config.recipe_id, value)}
-            unit="인분"
-            value={config.shopping_servings}
-          />
-        </div>
+        {shouldShowAggregationMeta ? (
+          <div className="web-shopping-recipe-meta">
+            <span>대상 식사 {selectedMealIds.length}개</span>
+            <span>합산 계획 {config.planned_servings_total}인분</span>
+          </div>
+        ) : null}
       </div>
     </article>
   );

@@ -5177,21 +5177,21 @@ button {
 
   .web-pantry-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 14px;
-    padding: 20px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    padding: 14px;
   }
 
   .web-pantry-card {
     position: relative;
     display: grid;
-    min-height: 166px;
+    min-height: 118px;
     align-content: start;
-    gap: 6px;
+    gap: 5px;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-md);
     background: var(--web-surface);
-    padding: 14px;
+    padding: 10px;
     color: var(--web-text-1);
     text-align: left;
     transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
@@ -5253,19 +5253,19 @@ button {
 
   .web-pantry-emoji {
     display: flex;
-    aspect-ratio: 1;
-    width: 100%;
+    width: 48px;
+    height: 48px;
     align-items: center;
     justify-content: center;
     border-radius: var(--web-r-sm);
     background: var(--web-image-placeholder);
-    font-size: 34px;
+    font-size: 24px;
   }
 
   .web-pantry-card strong {
     overflow: hidden;
     color: var(--web-text-1);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 800;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -5280,13 +5280,13 @@ button {
   .web-pantry-badge {
     display: inline-flex;
     width: fit-content;
-    height: 24px;
+    height: 22px;
     align-items: center;
     border-radius: var(--web-r-pill);
     background: rgba(26, 174, 57, 0.1);
     color: var(--web-success);
-    padding: 0 9px;
-    font-size: 12px;
+    padding: 0 8px;
+    font-size: 11px;
     font-weight: 800;
   }
 
