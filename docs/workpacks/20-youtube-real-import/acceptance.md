@@ -24,9 +24,10 @@
 
 ## Validate Classification Gates
 
-- [x] `recipe` classification → `is_recipe_video: true`, extract 진행 가능, 경고 없음 <!-- omo:id=20-accept-classify-recipe;stage=2;scope=backend;review=3,6 -->
-- [x] `uncertain` classification → `is_recipe_video: true`, extract 진행 가능, UI careful-review 경고 표시 <!-- omo:id=20-accept-classify-uncertain;stage=4;scope=frontend;review=5,6 -->
-- [x] `non_recipe` classification → `is_recipe_video: false`, UI extract 차단, 다른 URL 요청 <!-- omo:id=20-accept-classify-non-recipe-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] validate는 oEmbed 미리보기만 수행하고 `classification_status='uncertain'`, `is_recipe_video=true`로 extract를 진행 <!-- omo:id=20-accept-validate-oembed-preview;stage=2;scope=backend;review=3,6 -->
+- [x] extract 단계 `recipe` classification → 추출 진행, 경고 없음 <!-- omo:id=20-accept-classify-recipe;stage=2;scope=backend;review=3,6 -->
+- [x] extract 단계 `uncertain` classification → 추출 진행, UI careful-review 경고 표시 <!-- omo:id=20-accept-classify-uncertain;stage=4;scope=frontend;review=5,6 -->
+- [x] extract 단계 `non_recipe` classification → 추출 차단, 다른 URL 요청 <!-- omo:id=20-accept-classify-non-recipe-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] `non_recipe` URL에 대한 직접 `POST /extract` → `422 NOT_RECIPE_VIDEO` <!-- omo:id=20-accept-classify-non-recipe-server;stage=2;scope=backend;review=3,6 -->
 - [x] Classifier 보수적: 약한/혼합 증거 → `uncertain`, 강한 비요리 증거만 → `non_recipe` <!-- omo:id=20-accept-classifier-conservative;stage=2;scope=backend;review=3,6 -->
 
@@ -34,11 +35,14 @@
 
 - [x] YouTube `videos.list` (part=snippet,contentDetails)로 title, description, tags, category, thumbnails, duration, caption flag 조회 <!-- omo:id=20-accept-videos-list-metadata;stage=2;scope=backend;review=3,6 -->
 - [x] description 기반 재료/스텝 파싱이 실제 YouTube 영상 설명란에서 동작 <!-- omo:id=20-accept-description-parsing;stage=2;scope=backend;review=3,6 -->
+- [x] 고정 더미 재료 fallback 없이 설명란의 구조화된 `재료`/`순서` 섹션에서 재료 7개와 조리과정 5개를 추출 <!-- omo:id=20-accept-description-parser-no-dummy-fallback;stage=2;scope=backend;review=3,6 -->
+- [x] 설명란 파서 v2가 베이킹형 `반죽`/`필링` 컴포넌트, compact amount, 중복 재료 합산, 비연속 원본 step 번호 warning을 처리 <!-- omo:id=20-accept-description-parser-v2-components;stage=2;scope=backend;review=3,6 -->
+- [x] 설명란 파서 버전은 `HOMECOOK_YOUTUBE_DESCRIPTION_PARSER=legacy|v2|shadow`로 선택 가능 <!-- omo:id=20-accept-description-parser-version-flag;stage=2;scope=backend;review=3,6 -->
 - [x] `extraction_methods` 배열에 실제 사용된 방식만 포함 (MVP: `["description"]` 또는 `["description", "manual"]`) <!-- omo:id=20-accept-extraction-methods-accurate;stage=2;scope=backend;review=3,6 -->
 
 ## Provider Error / Quota Handling
 
-- [x] YouTube API에서 영상을 찾지 못함 → `404 VIDEO_NOT_FOUND` <!-- omo:id=20-accept-video-not-found;stage=2;scope=backend;review=3,6 -->
+- [x] validate oEmbed 또는 extract YouTube API에서 영상을 찾지 못함 → `404 VIDEO_NOT_FOUND` <!-- omo:id=20-accept-video-not-found;stage=2;scope=backend;review=3,6 -->
 - [x] YouTube API 오류 → `502 PROVIDER_ERROR` <!-- omo:id=20-accept-provider-error;stage=2;scope=backend;review=3,6 -->
 - [x] YouTube API 할당량 초과 → `429 QUOTA_EXCEEDED` <!-- omo:id=20-accept-quota-exceeded;stage=2;scope=backend;review=3,6 -->
 - [x] Provider error 시 UI에서 적절한 에러 표시 <!-- omo:id=20-accept-provider-error-ui;stage=4;scope=frontend;review=5,6 -->
@@ -168,8 +172,8 @@
 
 ### Manual Only
 
-- [ ] 실제 YouTube Data API key를 사용한 live 영상 validate/extract/register (credential-gated, deterministic 불가)
+- [ ] 실제 YouTube Data API key를 사용한 live 영상 validate(oEmbed)/extract(videos.list)/register (credential-gated, deterministic 불가)
 - [ ] YouTube API 할당량 초과 시나리오 (실제 할당량 소진 필요)
 - [ ] 다양한 유튜브 URL 형식 호환성 (youtu.be, shorts, 플레이리스트 내 영상 등 — 실제 YouTube URL 파서 동작 의존)
-- [ ] 실제 YouTube 영상의 classification 정확도 수동 확인
+- [ ] 실제 YouTube 영상의 extract 단계 classification 정확도 수동 확인
 - [ ] Future LLM/caption/ASR 통합 시 regression 확인 (이 슬라이스 범위 밖)

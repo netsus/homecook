@@ -3,12 +3,20 @@ import type { User } from "@supabase/supabase-js";
 import { fail, ok } from "@/lib/api/response";
 import { isYoutubeImportEnabled } from "@/lib/feature-flags";
 import {
+  adaptCandidateToFlatDraft,
+  parseYoutubeRecipeDescription,
+  selectPrimaryRecipeCandidate,
+  type FlatDraftAdaptation,
+  type FlatDraftIngredient,
+} from "@/lib/server/youtube-description-parser";
+import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import type {
   ManualRecipeIngredientInput,
   ManualRecipeStepInput,
@@ -192,12 +200,49 @@ const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,20}$/;
 const DEFAULT_EXTRACTION_METHODS = ["description"] as const;
 const YOUTUBE_PROVIDER_VERSION = "youtube-videos-list-description-v1";
 const SESSION_TTL_HOURS = 24;
+const OEMBED_PREVIEW_CLASSIFICATION_REASONS = [YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON];
 const NEW_COOKING_METHOD = {
   code: "auto_salt",
   label: "절이기",
   color_key: "unassigned",
 } as const;
-const EXTRACTED_INGREDIENT_NAMES = ["김치", "소금"] as const;
+
+type DescriptionSection = "ingredients" | "steps";
+type YoutubeDescriptionParserVersion = "legacy" | "v2" | "shadow";
+
+interface ParsedDescriptionIngredient {
+  name: string;
+  amount: number | null;
+  unit: string | null;
+  ingredientType: "QUANT" | "TO_TASTE";
+  displayText: string;
+  rawText: string;
+  scalable: boolean;
+  confidence: number;
+}
+
+interface ParsedRecipeDescription {
+  ingredients: ParsedDescriptionIngredient[];
+  steps: string[];
+}
+
+interface ParsedRecipeDescriptionForImport {
+  recipe: ParsedRecipeDescription;
+  parserVersion: YoutubeDescriptionParserVersion;
+  selectionOutcome: string;
+  draftWarnings: string[];
+  blockingIssues: string[];
+  includeIncompleteStepFallback: boolean;
+  shadowResult?: {
+    selectionOutcome: string;
+    ingredientCount: number;
+    stepCount: number;
+    ingredientNames: string[];
+    stepInstructions: string[];
+    draftWarnings: string[];
+    blockingIssues: string[];
+  };
+}
 
 interface YoutubeProviderVideo {
   videoId: string;
@@ -209,6 +254,13 @@ interface YoutubeProviderVideo {
   categoryId: string | null;
   duration: string | null;
   captionFlag: string | null;
+}
+
+interface YoutubePreviewVideo {
+  videoId: string;
+  title: string;
+  channel: string;
+  thumbnailUrl: string | null;
 }
 
 interface YoutubeClassification {
@@ -224,6 +276,10 @@ interface YoutubeProviderError {
 
 type YoutubeProviderResult =
   | { video: YoutubeProviderVideo }
+  | { providerError: YoutubeProviderError };
+
+type YoutubePreviewResult =
+  | { video: YoutubePreviewVideo }
   | { providerError: YoutubeProviderError };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -455,6 +511,23 @@ function getFixtureVideo(videoId: string): YoutubeProviderResult {
   };
 }
 
+function getFixturePreview(videoId: string): YoutubePreviewResult {
+  const fixture = getFixtureVideo(videoId);
+
+  if ("providerError" in fixture) {
+    return fixture;
+  }
+
+  return {
+    video: {
+      videoId,
+      title: fixture.video.title,
+      channel: fixture.video.channel,
+      thumbnailUrl: fixture.video.thumbnailUrl,
+    },
+  };
+}
+
 function shouldUseYoutubeFixtureProvider() {
   return process.env.NODE_ENV === "test" || process.env.HOMECOOK_YOUTUBE_FIXTURE_PROVIDER === "1";
 }
@@ -534,6 +607,78 @@ function parseYoutubeVideoPayload(videoId: string, payload: unknown): YoutubePro
       captionFlag: typeof contentDetails.caption === "string" ? contentDetails.caption : null,
     },
   };
+}
+
+function parseYoutubeOEmbedPayload(videoId: string, payload: unknown): YoutubePreviewResult {
+  if (!isRecord(payload)) {
+    return {
+      providerError: {
+        code: "PROVIDER_ERROR",
+        message: "YouTube 영상 미리보기를 해석하지 못했어요.",
+        status: 502,
+      },
+    };
+  }
+
+  return {
+    video: {
+      videoId,
+      title: typeof payload.title === "string" ? payload.title : "유튜브 영상",
+      channel: typeof payload.author_name === "string" ? payload.author_name : "YouTube",
+      thumbnailUrl: typeof payload.thumbnail_url === "string"
+        ? payload.thumbnail_url
+        : `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+    },
+  };
+}
+
+async function fetchYoutubePreview(
+  videoId: string,
+  youtubeUrl: string,
+): Promise<YoutubePreviewResult> {
+  if (shouldUseYoutubeFixtureProvider()) {
+    return getFixturePreview(videoId);
+  }
+
+  const params = new URLSearchParams({
+    url: youtubeUrl,
+    format: "json",
+  });
+
+  let response: Response;
+
+  try {
+    response = await fetch(`https://www.youtube.com/oembed?${params.toString()}`);
+  } catch {
+    return {
+      providerError: {
+        code: "PROVIDER_ERROR",
+        message: "YouTube 영상 미리보기에 연결하지 못했어요.",
+        status: 502,
+      },
+    };
+  }
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    return {
+      providerError: {
+        code: response.status === 404 ? "VIDEO_NOT_FOUND" : "PROVIDER_ERROR",
+        message: response.status === 404
+          ? "유튜브 영상을 찾지 못했어요."
+          : "YouTube 영상 미리보기를 가져오지 못했어요.",
+        status: response.status === 404 ? 404 : 502,
+      },
+    };
+  }
+
+  return parseYoutubeOEmbedPayload(videoId, payload);
 }
 
 async function fetchYoutubeVideo(videoId: string): Promise<YoutubeProviderResult> {
@@ -631,6 +776,368 @@ function failForProviderError(error: YoutubeProviderError) {
   return fail(error.code, error.message, error.status);
 }
 
+function getRecipeDescriptionSection(line: string): DescriptionSection | null {
+  const normalized = line
+    .trim()
+    .replace(/^[^\p{L}\p{N}#]+/u, "")
+    .replace(/^[\[(【{]+|[\])】}]+$/gu, "")
+    .replace(/\([^)]*\)/gu, "")
+    .replace(/[：:]+$/u, "")
+    .replace(/\s+/gu, " ")
+    .trim()
+    .toLowerCase();
+
+  if (!normalized || normalized.length > 40) {
+    return null;
+  }
+
+  if (/^(기본\s*)?(재료|준비\s*재료|재료\s*준비|준비물|ingredients?)(\s|$)/u.test(normalized)) {
+    return "ingredients";
+  }
+
+  if (/^(순서|조리\s*(과정|순서|방법|법)|만드는\s*(법|방법|순서)|만들기|요리\s*(법|과정)|레시피\s*순서|steps?|directions?|method)(\s|$)/u.test(normalized)) {
+    return "steps";
+  }
+
+  return null;
+}
+
+function shouldStopDescriptionSection(line: string) {
+  const normalized = line.trim().toLowerCase();
+
+  return (
+    normalized.startsWith("#")
+    || normalized.startsWith("http://")
+    || normalized.startsWith("https://")
+    || normalized.includes("bgm")
+    || normalized.includes("instagram")
+    || normalized.includes("제품 정보")
+    || normalized.includes("구매 링크")
+    || normalized.includes("출처")
+    || normalized.includes("인스타")
+    || normalized.includes("블로그")
+    || normalized.includes("구독")
+    || normalized.includes("좋아요")
+    || normalized.includes("알림설정")
+  );
+}
+
+function cleanDescriptionItemText(line: string) {
+  return line
+    .trim()
+    .replace(/^(?:\d{1,2}:)?\d{1,2}:\d{2}\s*/u, "")
+    .replace(/^[\s>]*(?:[^\p{L}\p{N}#]+)\s*/u, "")
+    .replace(/^[\s>]*[-–—•·*]+\s*/u, "")
+    .replace(/^[\s>]*\d+[.)]\s*/u, "")
+    .replace(/^[\s>]*[①②③④⑤⑥⑦⑧⑨⑩]\s*/u, "")
+    .trim();
+}
+
+function parseRecipeAmount(value: string) {
+  const normalizedValue = value.trim();
+
+  if (/[~-]/u.test(normalizedValue)) {
+    const [firstValue] = normalizedValue.split(/[~-]/u);
+    return parseRecipeAmount(firstValue);
+  }
+
+  if (normalizedValue.includes("/")) {
+    const [numerator, denominator] = normalizedValue.split("/").map(Number);
+
+    if (Number.isFinite(numerator) && Number.isFinite(denominator) && denominator !== 0) {
+      return numerator / denominator;
+    }
+  }
+
+  const parsed = Number(normalizedValue.replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeParsedIngredientName(value: string) {
+  return value.replace(/[：:]+$/u, "").trim();
+}
+
+function parseDescriptionIngredientLine(
+  line: string,
+  {
+    allowAmountless,
+  }: {
+    allowAmountless: boolean;
+  },
+): ParsedDescriptionIngredient | null {
+  const rawText = line.trim();
+  if (shouldStopDescriptionSection(rawText)) {
+    return null;
+  }
+
+  const cleanText = cleanDescriptionItemText(rawText);
+
+  if (!cleanText || cleanText.length > 80 || getRecipeDescriptionSection(cleanText) || shouldStopDescriptionSection(cleanText)) {
+    return null;
+  }
+
+  const numericMatch = cleanText.match(/^(.+?)(?:\s*[：:]\s*|\s+)?([0-9]+\/[0-9]+|[0-9]+(?:[.,][0-9]+)?(?:\s*[~-]\s*[0-9]+(?:[.,][0-9]+)?)?)\s*([^\s\d()]+)?(?:\([^)]*\))?\s*$/u);
+  if (numericMatch) {
+    const amount = parseRecipeAmount(numericMatch[2]);
+    const name = normalizeParsedIngredientName(numericMatch[1]);
+
+    if (!name || amount === null) {
+      return null;
+    }
+
+    return {
+      name,
+      amount,
+      unit: numericMatch[3]?.trim() || null,
+      ingredientType: "QUANT",
+      displayText: cleanText,
+      rawText,
+      scalable: true,
+      confidence: 0.95,
+    };
+  }
+
+  const toTasteMatch = cleanText.match(/^(.+?)\s*(?:약간|조금|적당량|취향껏|취향에\s*따라|원하는\s*만큼)$/u);
+  if (toTasteMatch) {
+    const name = toTasteMatch[1].trim();
+
+    if (!name) {
+      return null;
+    }
+
+    return {
+      name,
+      amount: null,
+      unit: null,
+      ingredientType: "TO_TASTE",
+      displayText: cleanText,
+      rawText,
+      scalable: false,
+      confidence: 0.8,
+    };
+  }
+
+  if (!allowAmountless || /[.!?。]|(습니다|주세요|합니다|됩니다|완성|넣어|버무려|자른|썬다|구워)/u.test(cleanText)) {
+    return null;
+  }
+
+  return {
+    name: cleanText,
+    amount: null,
+    unit: null,
+    ingredientType: "TO_TASTE",
+    displayText: cleanText,
+    rawText,
+    scalable: false,
+    confidence: 0.8,
+  };
+}
+
+function hasCookingAction(text: string) {
+  return /(씻|자르|잘라|썰|썬다|볶아|볶고|볶아요|볶는다|끓|삶|굽|구워|버무|섞|넣|절여|절이|올려|발라|뿌려|익혀|튀겨|찐|쪄|데쳐|풀어|두르|맞춰|완성)/u.test(text);
+}
+
+function parseDescriptionStepLine(
+  line: string,
+  {
+    requireCookingAction,
+  }: {
+    requireCookingAction: boolean;
+  },
+) {
+  if (shouldStopDescriptionSection(line)) {
+    return null;
+  }
+
+  const cleanText = cleanDescriptionItemText(line);
+
+  if (!cleanText || cleanText.length < 5 || getRecipeDescriptionSection(cleanText) || shouldStopDescriptionSection(cleanText)) {
+    return null;
+  }
+
+  if (requireCookingAction && !hasCookingAction(cleanText)) {
+    return null;
+  }
+
+  return cleanText;
+}
+
+function uniqueParsedIngredients(ingredients: ParsedDescriptionIngredient[]) {
+  const seen = new Set<string>();
+  const uniqueIngredients: ParsedDescriptionIngredient[] = [];
+
+  for (const ingredient of ingredients) {
+    if (seen.has(ingredient.name)) {
+      continue;
+    }
+
+    seen.add(ingredient.name);
+    uniqueIngredients.push(ingredient);
+  }
+
+  return uniqueIngredients;
+}
+
+function parseRecipeDescription(description: string): ParsedRecipeDescription {
+  const lines = description.split(/\r?\n/u);
+  const ingredients: ParsedDescriptionIngredient[] = [];
+  const steps: string[] = [];
+  let section: DescriptionSection | null = null;
+
+  for (const line of lines) {
+    if (!line.trim()) {
+      continue;
+    }
+
+    const nextSection = getRecipeDescriptionSection(line);
+    if (nextSection) {
+      section = nextSection;
+      continue;
+    }
+
+    if (shouldStopDescriptionSection(line)) {
+      section = null;
+      continue;
+    }
+
+    if (section === "ingredients") {
+      const ingredient = parseDescriptionIngredientLine(line, { allowAmountless: true });
+      if (ingredient) {
+        ingredients.push(ingredient);
+      }
+      continue;
+    }
+
+    if (section === "steps") {
+      const step = parseDescriptionStepLine(line, { requireCookingAction: false });
+      if (step) {
+        steps.push(step);
+      }
+    }
+  }
+
+  if (ingredients.length === 0) {
+    for (const line of lines) {
+      const ingredient = parseDescriptionIngredientLine(line, { allowAmountless: false });
+      if (ingredient) {
+        ingredients.push(ingredient);
+      }
+    }
+  }
+
+  if (steps.length === 0) {
+    for (const line of lines) {
+      const step = parseDescriptionStepLine(line, { requireCookingAction: true });
+      if (step) {
+        steps.push(step);
+      }
+    }
+  }
+
+  return {
+    ingredients: uniqueParsedIngredients(ingredients),
+    steps,
+  };
+}
+
+function getYoutubeDescriptionParserVersion(): YoutubeDescriptionParserVersion {
+  const rawValue = (
+    process.env.HOMECOOK_YOUTUBE_DESCRIPTION_PARSER
+    ?? process.env.HOMECOOK_YOUTUBE_PARSER_VERSION
+    ?? "v2"
+  ).trim();
+
+  if (rawValue === "legacy" || rawValue === "v2" || rawValue === "shadow") {
+    return rawValue;
+  }
+
+  return "v2";
+}
+
+function adaptFlatDraftIngredient(ingredient: FlatDraftIngredient): ParsedDescriptionIngredient {
+  return {
+    name: ingredient.name,
+    amount: ingredient.amount,
+    unit: ingredient.unit,
+    ingredientType: ingredient.ingredientType,
+    displayText: ingredient.displayText,
+    rawText: ingredient.rawText,
+    scalable: ingredient.scalable,
+    confidence: ingredient.confidence,
+  };
+}
+
+function adaptFlatDraftRecipe(draft: FlatDraftAdaptation): ParsedRecipeDescription {
+  return {
+    ingredients: draft.ingredients.map(adaptFlatDraftIngredient),
+    steps: draft.steps,
+  };
+}
+
+function parseRecipeDescriptionV2(video: YoutubeProviderVideo) {
+  const document = parseYoutubeRecipeDescription({
+    title: video.title,
+    description: video.description,
+  });
+  const selection = selectPrimaryRecipeCandidate(document);
+  const draft = adaptCandidateToFlatDraft(selection);
+
+  return {
+    recipe: adaptFlatDraftRecipe(draft),
+    selectionOutcome: selection.outcome,
+    draftWarnings: draft.draftWarnings,
+    blockingIssues: draft.blockingIssues,
+    includeIncompleteStepFallback: draft.includeIncompleteStepFallback,
+  };
+}
+
+function parseRecipeDescriptionForImport(video: YoutubeProviderVideo): ParsedRecipeDescriptionForImport {
+  const parserVersion = getYoutubeDescriptionParserVersion();
+  const legacyRecipe = parseRecipeDescription(video.description);
+
+  if (parserVersion === "legacy") {
+    return {
+      recipe: legacyRecipe,
+      parserVersion,
+      selectionOutcome: "legacy",
+      draftWarnings: [],
+      blockingIssues: [],
+      includeIncompleteStepFallback: true,
+    };
+  }
+
+  const v2Result = parseRecipeDescriptionV2(video);
+
+  if (parserVersion === "shadow") {
+    return {
+      recipe: legacyRecipe,
+      parserVersion,
+      selectionOutcome: "legacy_shadow_primary",
+      draftWarnings: [],
+      blockingIssues: [],
+      includeIncompleteStepFallback: true,
+      shadowResult: {
+        selectionOutcome: v2Result.selectionOutcome,
+        ingredientCount: v2Result.recipe.ingredients.length,
+        stepCount: v2Result.recipe.steps.length,
+        ingredientNames: v2Result.recipe.ingredients.map((ingredient) => ingredient.name),
+        stepInstructions: v2Result.recipe.steps,
+        draftWarnings: v2Result.draftWarnings,
+        blockingIssues: v2Result.blockingIssues,
+      },
+    };
+  }
+
+  return {
+    recipe: v2Result.recipe,
+    parserVersion,
+    selectionOutcome: v2Result.selectionOutcome,
+    draftWarnings: v2Result.draftWarnings,
+    blockingIssues: v2Result.blockingIssues,
+    includeIncompleteStepFallback: v2Result.includeIncompleteStepFallback,
+  };
+}
+
 export async function handleYoutubeValidate(request: Request) {
   if (!isYoutubeImportEnabled()) {
     return buildFeatureDisabledResponse();
@@ -647,38 +1154,41 @@ export async function handleYoutubeValidate(request: Request) {
     return buildInvalidUrlResponse();
   }
 
-  const videoResult = await fetchYoutubeVideo(parsedUrl.videoId);
-  if ("providerError" in videoResult) {
-    return failForProviderError(videoResult.providerError);
+  const previewResult = await fetchYoutubePreview(parsedUrl.videoId, parsedUrl.youtubeUrl);
+  if ("providerError" in previewResult) {
+    return failForProviderError(previewResult.providerError);
   }
 
-  const { video } = videoResult;
-  const classification = classifyYoutubeVideo(video);
+  const { video } = previewResult;
   const data: YoutubeRecipeValidateData = {
     is_valid_url: true,
-    is_recipe_video: classification.status !== "non_recipe",
-    classification_status: classification.status,
-    classification_reasons: classification.reasons,
+    is_recipe_video: true,
+    classification_status: "uncertain",
+    classification_reasons: OEMBED_PREVIEW_CLASSIFICATION_REASONS,
     video_info: {
       video_id: parsedUrl.videoId,
       title: video.title,
       channel: video.channel,
       thumbnail_url: video.thumbnailUrl ?? `https://img.youtube.com/vi/${parsedUrl.videoId}/hqdefault.jpg`,
-      duration: video.duration,
-      category_id: video.categoryId,
     },
-    ...(classification.status !== "non_recipe"
-      ? {}
-      : { message: "이 영상은 요리 레시피가 아닌 것 같아요" }),
   };
 
   return ok(data);
 }
 
-async function findIngredientIds(dbClient: DbClient) {
+async function findIngredientIds(dbClient: DbClient, ingredientNames: string[]) {
+  const uniqueIngredientNames = [...new Set(ingredientNames)];
+
+  if (uniqueIngredientNames.length === 0) {
+    return {
+      error: null,
+      idsByName: new Map<string, string>(),
+    };
+  }
+
   const result = await table<ArrayLookupTable<IngredientLookupRow>>(dbClient, "ingredients")
     .select("id, standard_name")
-    .in("standard_name", [...EXTRACTED_INGREDIENT_NAMES]);
+    .in("standard_name", uniqueIngredientNames);
 
   if (result.error || !result.data) {
     return {
@@ -798,39 +1308,28 @@ function buildExtractedIngredient({
 
 function buildExtractedIngredients(
   idsByName: Map<string, string>,
+  parsedIngredients: ParsedDescriptionIngredient[],
   {
     saltNeedsReview = false,
   }: {
     saltNeedsReview?: boolean;
   } = {},
 ): YoutubeExtractedIngredient[] {
-  return [
+  return parsedIngredients.map((ingredient, index) =>
     buildExtractedIngredient({
       idsByName,
-      name: "김치",
-      amount: 200,
-      unit: "g",
-      ingredientType: "QUANT",
-      displayText: "김치 200g",
-      sortOrder: 1,
-      scalable: true,
-      confidence: 0.95,
-      rawText: "김치 200g",
+      name: ingredient.name,
+      amount: ingredient.amount,
+      unit: ingredient.unit,
+      ingredientType: ingredient.ingredientType,
+      displayText: ingredient.displayText,
+      sortOrder: index + 1,
+      scalable: ingredient.scalable,
+      confidence: ingredient.confidence,
+      rawText: ingredient.rawText,
+      forceNeedsReview: saltNeedsReview && ingredient.name === "소금",
     }),
-    buildExtractedIngredient({
-      idsByName,
-      name: "소금",
-      amount: null,
-      unit: null,
-      ingredientType: "TO_TASTE",
-      displayText: "소금 약간",
-      sortOrder: 2,
-      scalable: false,
-      confidence: 0.8,
-      rawText: "소금 약간",
-      forceNeedsReview: saltNeedsReview,
-    }),
-  ];
+  );
 }
 
 function buildBlockingIssues(ingredients: YoutubeExtractedIngredient[]) {
@@ -843,16 +1342,42 @@ function buildBlockingIssues(ingredients: YoutubeExtractedIngredient[]) {
     .filter((issue): issue is string => issue !== null);
 }
 
-function buildStepMissingFields(
-  video: YoutubeProviderVideo,
-): NonNullable<YoutubeRecipeExtractData["steps"][number]["missing_fields"]> {
-  const missingFields: NonNullable<YoutubeRecipeExtractData["steps"][number]["missing_fields"]> = [];
+function buildExtractedSteps(
+  parsedSteps: string[],
+  cookingMethod: YoutubeExtractedCookingMethod,
+  {
+    includeIncompleteFallback = true,
+  }: {
+    includeIncompleteFallback?: boolean;
+  } = {},
+): YoutubeRecipeExtractData["steps"] {
+  if (parsedSteps.length === 0) {
+    if (!includeIncompleteFallback) {
+      return [];
+    }
 
-  if (!video.description.includes("김치를 한입 크기로 썬다.")) {
-    missingFields.push("instruction");
+    return [
+      {
+        step_number: 1,
+        instruction: "",
+        cooking_method: cookingMethod,
+        duration_text: null,
+        is_incomplete: true,
+        missing_fields: ["instruction"],
+        raw_text: "",
+      },
+    ];
   }
 
-  return missingFields;
+  return parsedSteps.map((instruction, index) => ({
+    step_number: index + 1,
+    instruction,
+    cooking_method: cookingMethod,
+    duration_text: null,
+    is_incomplete: false,
+    missing_fields: [],
+    raw_text: instruction,
+  }));
 }
 
 function buildSessionExpiresAt() {
@@ -902,7 +1427,12 @@ export async function handleYoutubeExtract(request: Request) {
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as DbClient;
-  const ingredientLookup = await findIngredientIds(dbClient);
+  const descriptionParse = parseRecipeDescriptionForImport(video);
+  const parsedRecipe = descriptionParse.recipe;
+  const ingredientLookup = await findIngredientIds(
+    dbClient,
+    parsedRecipe.ingredients.map((ingredient) => ingredient.name),
+  );
   if (ingredientLookup.error) {
     return fail("INTERNAL_ERROR", "재료 정보를 확인하지 못했어요.", 500);
   }
@@ -912,17 +1442,25 @@ export async function handleYoutubeExtract(request: Request) {
     return fail("INTERNAL_ERROR", "조리방법을 준비하지 못했어요.", 500);
   }
 
-  const ingredients = buildExtractedIngredients(ingredientLookup.idsByName, {
+  const ingredients = buildExtractedIngredients(ingredientLookup.idsByName, parsedRecipe.ingredients, {
     saltNeedsReview: parsedUrl.videoId.startsWith("needsreview"),
   });
-  const stepMissingFields = buildStepMissingFields(video);
+  const steps = buildExtractedSteps(parsedRecipe.steps, cookingMethodResult.method, {
+    includeIncompleteFallback: descriptionParse.includeIncompleteStepFallback,
+  });
   const blockingIssues = [
+    ...descriptionParse.blockingIssues,
     ...buildBlockingIssues(ingredients),
-    ...stepMissingFields.map((field) => `steps[0].${field}`),
-  ];
-  const draftWarnings = classification.status === "uncertain"
-    ? ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해주세요."]
-    : [];
+    ...steps.flatMap((step, index) =>
+      (step.missing_fields ?? []).map((field) => `steps[${index}].${field}`),
+    ),
+  ].filter((issue, index, issues) => issues.indexOf(issue) === index);
+  const draftWarnings = [
+    ...(classification.status === "uncertain"
+      ? ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해주세요."]
+      : []),
+    ...descriptionParse.draftWarnings,
+  ].filter((warning, index, warnings) => warnings.indexOf(warning) === index);
   const extractionId = crypto.randomUUID();
   const data: YoutubeRecipeExtractData = {
     extraction_id: extractionId,
@@ -932,17 +1470,7 @@ export async function handleYoutubeExtract(request: Request) {
     draft_warnings: draftWarnings,
     blocking_issues: blockingIssues,
     ingredients,
-    steps: [
-      {
-        step_number: 1,
-        instruction: stepMissingFields.includes("instruction") ? "" : "김치를 한입 크기로 썬다.",
-        cooking_method: cookingMethodResult.method,
-        duration_text: null,
-        is_incomplete: stepMissingFields.length > 0,
-        missing_fields: stepMissingFields,
-        raw_text: stepMissingFields.includes("instruction") ? "" : "김치를 한입 크기로 썬다.",
-      },
-    ],
+    steps,
     new_cooking_methods: cookingMethodResult.method.is_new ? [cookingMethodResult.method] : [],
   };
 
@@ -964,6 +1492,9 @@ export async function handleYoutubeExtract(request: Request) {
       source_providers: ["youtube_videos_list", "description_parser"],
       classification_status: classification.status,
       classification_reasons: classification.reasons,
+      description_parser_version: descriptionParse.parserVersion,
+      description_parser_selection_outcome: descriptionParse.selectionOutcome,
+      description_parser_shadow: descriptionParse.shadowResult,
       draft_warnings: draftWarnings,
       caption_capability: "unknown",
     },

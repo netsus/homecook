@@ -9,8 +9,7 @@ export type MealAddPickerMode =
   | "search"
   | "recipebook"
   | "pantry"
-  | "leftover"
-  | "youtube";
+  | "leftover";
 export type MealAddRouteMode = "youtube" | "manual";
 
 interface MealAddOptionsSheetProps {
@@ -121,17 +120,17 @@ export function MealAddOptionsSheet({
           />
         ))}
 
-        <button
+        <Link
           className={OPTION_TILE_CLASS}
           data-testid="meal-add-option-youtube"
-          onClick={() => onPickerSelect("youtube")}
-          type="button"
+          href={routeHrefFor("youtube")}
+          onClick={onClose}
         >
           <span className="text-[20px]" aria-hidden="true">
             🎬
           </span>
           <span className={OPTION_LABEL_CLASS}>유튜브에서 가져오기</span>
-        </button>
+        </Link>
 
         <Link
           className={OPTION_TILE_CLASS}

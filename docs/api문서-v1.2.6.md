@@ -779,16 +779,16 @@ GET /recipes/pantry-match
 ## 6. 유튜브 레시피 등록 (YT_IMPORT) `v1.2.6 contract-evolution`
 
 > 화면: `YT_IMPORT` / Flow: ⑨ 유튜브 등록 여정
-> 슬라이스 20: YouTube Data API `videos.list` 기반 실제 추출. 3-way classification, 서버 세션, ingredient resolution, step incomplete, 원자적 RPC 등록.
+> 슬라이스 20: URL 미리보기는 YouTube oEmbed로 quota 없이 확인하고, 실제 추출 단계에서 YouTube Data API `videos.list` 기반 3-way classification과 description-first 추출을 수행한다. 서버 세션, ingredient resolution, step incomplete, 원자적 RPC 등록을 포함한다.
 
 ### 공통 정책
 
 - **Feature flag**: `youtube_import` off → 모든 §6 엔드포인트 404 `FEATURE_DISABLED`
 - **인증**: 모든 엔드포인트 🔒 로그인 필수 (미인증 → 401)
-- **Provider 에러**: YouTube API 장애 → 502 `PROVIDER_ERROR`, quota 초과 → 429 `QUOTA_EXCEEDED`
+- **Provider 에러**: oEmbed/YouTube API 장애 → 502 `PROVIDER_ERROR`, YouTube API quota 초과 → 429 `QUOTA_EXCEEDED`
 - **YouTube API key**: 서버 환경변수 `YOUTUBE_API_KEY`, 클라이언트 노출 금지
 
-### 6-1. 유튜브 URL 검증 + 3-way Classification (Step 1 + Step 1.5)
+### 6-1. 유튜브 URL 검증 + oEmbed 미리보기 (Step 1)
 
 ```
 POST /api/v1/recipes/youtube/validate
@@ -800,7 +800,7 @@ POST /api/v1/recipes/youtube/validate
 | ---- | ----------- | ------ | ---------- |
 | Body | youtube_url | string | 유튜브 URL |
 
-**처리**: URL에서 video_id 파싱 → YouTube `videos.list` API 호출 (snippet, contentDetails, statistics) → 3-way classification 판정
+**처리**: URL에서 video_id 파싱 → YouTube oEmbed 호출(제목/채널/썸네일 미리보기) → `classification_status='uncertain'`으로 반환. 설명란/태그/카테고리 기반 3-way classification은 quota 절약을 위해 §6-2 extract 단계에서만 수행한다.
 
 **응답 (200)**
 
@@ -808,34 +808,31 @@ POST /api/v1/recipes/youtube/validate
 {
   "is_valid_url": true,
   "is_recipe_video": true,
-  "classification_status": "recipe",
-  "classification_reasons": ["categoryId=26(Howto)", "title contains '레시피'"],
+  "classification_status": "uncertain",
+  "classification_reasons": ["미리보기 단계에서는 요리 여부를 확정하지 않아요. 추출 단계에서 설명란으로 확인해요."],
   "video_info": {
     "video_id": "abc123",
     "title": "백종원 김치찌개",
     "channel": "백종원의 요리비책",
-    "thumbnail_url": "https://...",
-    "duration": "PT15M30S",
-    "category_id": "26"
+    "thumbnail_url": "https://..."
   }
 }
 ```
 
 | classification_status | 의미 | 프론트 행동 |
 | --- | --- | --- |
-| `recipe` | 레시피 영상 확인 | extract 진행 |
-| `uncertain` | 불확실 | 경고 + reasons + [다시 입력] [그래도 진행] |
-| `non_recipe` | 레시피 아님 | extract 차단, [다시 입력]만 노출 |
+| `uncertain` | oEmbed 미리보기만 완료, 요리 여부 미확정 | extract 진행 |
+
+> `recipe`/`non_recipe` 판정은 §6-2 extract 단계에서 `videos.list` 설명란/태그/카테고리를 확인한 뒤 수행한다. `non_recipe`는 extract에서 422 `NOT_RECIPE_VIDEO`로 차단한다.
 
 **에러 응답**
 
 | HTTP | code | 조건 |
 | --- | --- | --- |
 | 422 | INVALID_URL | 유튜브 URL 형식 아님 또는 video_id 파싱 실패 |
-| 404 | VIDEO_NOT_FOUND | YouTube API에서 영상 조회 불가 |
+| 404 | VIDEO_NOT_FOUND | oEmbed에서 영상 미리보기 조회 불가 |
 | 404 | FEATURE_DISABLED | feature flag off |
-| 429 | QUOTA_EXCEEDED | YouTube API quota 소진 |
-| 502 | PROVIDER_ERROR | YouTube API 호출 실패 |
+| 502 | PROVIDER_ERROR | oEmbed 호출 실패 |
 
 ### 6-2. 유튜브 레시피 추출 + 세션 생성 (Step 2)
 
@@ -849,7 +846,7 @@ POST /api/v1/recipes/youtube/extract
 | ---- | ----------- | ------ | ---------- |
 | Body | youtube_url | string | 유튜브 URL |
 
-**처리**: video_id 파싱 → YouTube `videos.list` 재호출 → description 파싱으로 재료/스텝 추출 → `youtube_extraction_sessions` INSERT (status=`draft`, expires_at=now+24h, user_id=서버 설정) → 추출 결과 반환
+**처리**: video_id 파싱 → YouTube `videos.list` 호출 → description/tags/category 기반 3-way classification → description 파싱으로 재료/스텝 추출 → `youtube_extraction_sessions` INSERT (status=`draft`, expires_at=now+24h, user_id=서버 설정) → 추출 결과 반환
 
 **응답 (200)**
 

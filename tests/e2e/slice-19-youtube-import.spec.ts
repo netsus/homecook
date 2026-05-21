@@ -135,11 +135,14 @@ async function installValidateErrorRoute(page: Page) {
 }
 
 async function installExtractRoute(page: Page, delayMs = 1500) {
+  let callCount = 0;
+
   await page.route("**/api/v1/recipes/youtube/extract", async (route) => {
     if (route.request().method() !== "POST") {
       await route.continue();
       return;
     }
+    callCount += 1;
     // Add delay so the extraction progress UI is visible before results arrive
     if (delayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -212,6 +215,10 @@ async function installExtractRoute(page: Page, delayMs = 1500) {
       },
     });
   });
+
+  return {
+    getCallCount: () => callCount,
+  };
 }
 
 async function installExtractErrorRoute(page: Page) {
@@ -337,6 +344,31 @@ test.describe("Slice 19: YouTube Import", () => {
     // Step 4: Complete
     await expect(page.locator("text=레시피가 등록됐어요")).toBeVisible({ timeout: 5000 });
     await expect(page.locator("text=백종원 김치찌개")).toBeVisible();
+  });
+
+  test("oEmbed preview waits for explicit extraction before spending YouTube quota", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installCookingMethodsRoute(page);
+    await installIngredientsRoute(page);
+    await installValidateRoute(page, {
+      is_recipe_video: true,
+      classification_status: "uncertain",
+      classification_reasons: [
+        "미리보기 단계에서는 요리 여부를 확정하지 않아요. 추출 단계에서 설명란으로 확인해요.",
+      ],
+    });
+    const extractRoute = await installExtractRoute(page, 0);
+
+    await page.goto(YOUTUBE_IMPORT_URL);
+    await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=recipe12345");
+    await page.click('button:has-text("가져오기")');
+
+    await expect(page.getByRole("heading", { name: "이 영상에서 추출할까요?" })).toBeVisible();
+    expect(extractRoute.getCallCount()).toBe(0);
+
+    await page.click('button:has-text("레시피 추출하기")');
+    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    expect(extractRoute.getCallCount()).toBe(1);
   });
 
   test("non-recipe gate: blocks extraction and asks for another URL", async ({ page }) => {

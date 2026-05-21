@@ -26,6 +26,7 @@ import {
 import { createMealSafe } from "@/lib/api/meal";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
+import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import type {
   CookingMethodItem,
   ManualRecipeIngredientInput,
@@ -48,7 +49,7 @@ interface YoutubeImportScreenProps {
   slotName: string;
 }
 
-type Step = "url-input" | "non-recipe-warning" | "extracting" | "review" | "complete";
+type Step = "url-input" | "preview" | "non-recipe-warning" | "extracting" | "review" | "complete";
 
 type ModalMode =
   | "none"
@@ -76,6 +77,15 @@ function formatIngredientDisplayText(ingredient: ManualRecipeIngredientInput) {
   const amount = ingredient.amount ?? 0;
   const unit = ingredient.unit ?? "g";
   return `${ingredient.standard_name} ${amount}${unit}`;
+}
+
+function getIngredientUnitOptions(unit: string | null) {
+  const currentUnit = unit?.trim();
+  const baseOptions = [...COOKING_UNIT_OPTIONS];
+
+  return currentUnit && !baseOptions.includes(currentUnit as (typeof COOKING_UNIT_OPTIONS)[number])
+    ? [...baseOptions, currentUnit]
+    : baseOptions;
 }
 
 function normalizeIngredient(ingredient: TempIngredient): TempIngredient {
@@ -208,6 +218,28 @@ function formatStepFieldList(fields: NonNullable<YoutubeExtractedStep["missing_f
   return fields.map((field) => STEP_FIELD_LABELS[field]).join(", ");
 }
 
+function formatYoutubeBlockingIssue(issue: string) {
+  if (issue === "ingredients") {
+    return "재료를 하나 이상 추가해주세요.";
+  }
+
+  if (issue === "steps") {
+    return "조리 과정을 하나 이상 추가해주세요.";
+  }
+
+  const ingredientMatch = issue.match(/^ingredients\[(\d+)\]\.ingredient_id$/u);
+  if (ingredientMatch) {
+    return `${Number(ingredientMatch[1]) + 1}번째 재료를 검색해서 확정해주세요.`;
+  }
+
+  const stepInstructionMatch = issue.match(/^steps\[(\d+)\]\.instruction$/u);
+  if (stepInstructionMatch) {
+    return `${Number(stepInstructionMatch[1]) + 1}번째 조리 설명을 입력해주세요.`;
+  }
+
+  return issue;
+}
+
 function getApiErrorMessage(defaultMessage: string, message?: string | null) {
   return message?.trim() || defaultMessage;
 }
@@ -221,6 +253,7 @@ const WEB_NAV_ITEMS = [
 
 const YOUTUBE_STEP_LABELS = [
   { id: "url-input", label: "링크 입력" },
+  { id: "preview", label: "미리보기" },
   { id: "extracting", label: "분석" },
   { id: "review", label: "검토" },
   { id: "complete", label: "완료" },
@@ -241,10 +274,11 @@ function formatTargetLabel(planDate: string, slotName: string) {
 }
 
 function getYoutubeStepIndex(step: Step) {
-  if (step === "non-recipe-warning") return 1;
-  if (step === "extracting") return 1;
-  if (step === "review") return 2;
-  if (step === "complete") return 3;
+  if (step === "preview") return 1;
+  if (step === "non-recipe-warning") return 2;
+  if (step === "extracting") return 2;
+  if (step === "review") return 3;
+  if (step === "complete") return 4;
   return 0;
 }
 
@@ -348,6 +382,61 @@ function UrlInputStep({ url, onUrlChange, onSubmit, isValidating, urlError }: Ur
           loading={isValidating}
         >
           {isValidating ? "확인 중..." : "가져오기"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Step 1.5: Preview ───────────────────────────────────────────────────────
+
+interface PreviewStepProps {
+  videoInfo: YoutubeVideoInfo;
+  onExtract: () => void;
+  onReenter: () => void;
+}
+
+function PreviewStep({ videoInfo, onExtract, onReenter }: PreviewStepProps) {
+  const [thumbError, setThumbError] = useState(false);
+
+  return (
+    <div className="px-4 pt-6">
+      <h2 className="text-xl font-semibold text-[var(--foreground)]">
+        이 영상에서 추출할까요?
+      </h2>
+      <p className="mt-3 text-base text-[var(--text-2)]">
+        미리보기는 quota를 쓰지 않아요.
+        <br />
+        다음 단계에서 설명란을 확인해요.
+      </p>
+      <div className="mt-6 overflow-hidden rounded-[var(--radius-md)] bg-[var(--surface)] shadow-[var(--shadow-1)]">
+        <div className="relative aspect-video w-full bg-[var(--surface-fill)]">
+          {!thumbError ? (
+            <Image
+              src={videoInfo.thumbnail_url}
+              alt={videoInfo.title}
+              fill
+              className="object-cover"
+              unoptimized
+              onError={() => setThumbError(true)}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-sm text-[var(--text-3)]">
+              썸네일을 불러올 수 없어요
+            </div>
+          )}
+        </div>
+        <div className="p-4">
+          <p className="text-sm text-[var(--text-3)]">{videoInfo.channel}</p>
+          <p className="mt-1 text-lg font-bold text-[var(--foreground)]">{videoInfo.title}</p>
+        </div>
+      </div>
+      <div className="mt-5 space-y-3">
+        <Button fullWidth onClick={onExtract}>
+          레시피 추출하기
+        </Button>
+        <Button fullWidth variant="neutral" onClick={onReenter}>
+          다른 영상 입력
         </Button>
       </div>
     </div>
@@ -566,6 +655,7 @@ function ReviewIngredientRow({
   const ingredientName = getIngredientName(ingredient);
   const resolutionLabel = getIngredientResolutionLabel(ingredient);
   const needsResolution = !isIngredientReadyForRegister(ingredient);
+  const unitOptions = getIngredientUnitOptions(ingredient.unit);
 
   return (
     <div
@@ -605,7 +695,7 @@ function ReviewIngredientRow({
           className="flex shrink-0 gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-0.5"
           role="group"
         >
-          {COOKING_UNIT_OPTIONS.map((option) => (
+          {unitOptions.map((option) => (
             <button
               aria-label={`${ingredientName} ${option}`}
               aria-pressed={(ingredient.unit ?? "g") === option}
@@ -855,7 +945,7 @@ function ReviewStep({
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-[12px] text-[var(--danger)]">
             {blockingIssues.map((issue) => (
-              <li key={issue}>{issue}</li>
+              <li key={issue}>{formatYoutubeBlockingIssue(issue)}</li>
             ))}
           </ul>
         </div>
@@ -915,7 +1005,7 @@ function ReviewStep({
         </h3>
         {ingredients.length === 0 ? (
           <p className="py-4 text-sm text-[var(--muted)]">
-            추출된 재료가 없어요. 직접 추가해주세요
+            설명란에서 재료를 찾지 못했어요. 아래 버튼으로 직접 추가할 수 있어요
           </p>
         ) : (
           <div className="mt-2 overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]">
@@ -948,7 +1038,7 @@ function ReviewStep({
         </h3>
         {steps.length === 0 ? (
           <p className="py-4 text-sm text-[var(--muted)]">
-            추출된 조리 과정이 없어요. 직접 추가해주세요
+            설명란에서 조리 과정을 찾지 못했어요. 아래 버튼으로 직접 추가할 수 있어요
           </p>
         ) : (
           <div className="mt-2 overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]">
@@ -1331,6 +1421,7 @@ export function YoutubeImportScreen({
           internalHistoryDepthRef.current += 1;
           return prev;
         }
+        if (prev === "preview") return "url-input";
         if (prev === "non-recipe-warning") return "url-input";
         if (prev === "extracting") return "url-input";
         if (prev === "complete") return "complete"; // No back from complete
@@ -1386,13 +1477,19 @@ export function YoutubeImportScreen({
     const nextClassificationStatus =
       result.data.classification_status ??
       (result.data.is_recipe_video ? "recipe" : "non_recipe");
+    const nextClassificationReasons = result.data.classification_reasons ?? [];
+    const isPreviewOnlyValidation =
+      nextClassificationStatus === "uncertain" &&
+      nextClassificationReasons.includes(YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON);
 
     setVideoInfo(result.data.video_info);
     setClassificationStatus(nextClassificationStatus);
-    setClassificationReasons(result.data.classification_reasons ?? []);
+    setClassificationReasons(nextClassificationReasons);
     setIsValidating(false);
 
-    if (nextClassificationStatus !== "non_recipe" && result.data.is_recipe_video) {
+    if (isPreviewOnlyValidation) {
+      pushStep("preview");
+    } else if (nextClassificationStatus !== "non_recipe" && result.data.is_recipe_video) {
       // Transition to extracting step; the effect below will fire the API call
       extractionFiredRef.current = false;
       setExtractionError(null);
@@ -1403,6 +1500,17 @@ export function YoutubeImportScreen({
       pushStep("non-recipe-warning");
     }
   }, [youtubeUrl, pushStep]);
+
+  // Auto-validate once on mount when a URL was supplied (e.g. planner 유튜브 가져오기 모달).
+  // The modal already collected the URL and clicked "가져오기 화면 열기" — we should not
+  // require the user to click "가져오기" again on this screen.
+  const autoValidatedRef = useRef(false);
+  useEffect(() => {
+    if (autoValidatedRef.current) return;
+    if (!initialYoutubeUrl.trim()) return;
+    autoValidatedRef.current = true;
+    handleValidate();
+  }, [initialYoutubeUrl, handleValidate]);
 
   // ─── Extraction (triggered by entering "extracting" step) ──────────
 
@@ -1421,6 +1529,14 @@ export function YoutubeImportScreen({
       if (cancelled) return;
 
       if (!result.success || !result.data) {
+        if (result.error?.code === "NOT_RECIPE_VIDEO") {
+          setClassificationStatus("non_recipe");
+          setClassificationReasons([result.error.message]);
+          setExtractionError(null);
+          pushStep("non-recipe-warning");
+          return;
+        }
+
         setExtractionError(
           getApiErrorMessage("레시피를 추출하지 못했어요.", result.error?.message),
         );
@@ -1716,7 +1832,7 @@ export function YoutubeImportScreen({
   const handleBack = useCallback(() => {
     if (currentStep === "review") {
       setModalMode("confirm-back");
-    } else if (currentStep === "non-recipe-warning") {
+    } else if (currentStep === "preview" || currentStep === "non-recipe-warning") {
       setCurrentStep("url-input");
     } else if (currentStep === "extracting" && extractionError) {
       setCurrentStep("url-input");
@@ -1827,6 +1943,32 @@ export function YoutubeImportScreen({
               onClick={handleValidate}
             >
               {isValidating ? "확인 중..." : "가져오기"}
+            </WebButton>
+          </div>
+        </section>
+      ) : null}
+
+      {currentStep === "preview" && videoInfo ? (
+        <section className="web-yt-content web-yt-warning">
+          <div className="web-yt-video">
+            <div className="web-yt-thumb">
+              <Image
+                alt={videoInfo.title}
+                fill
+                src={videoInfo.thumbnail_url}
+                unoptimized
+              />
+            </div>
+            <div>
+              <p className="web-picker-subtle">{videoInfo.channel}</p>
+              <h2>{videoInfo.title}</h2>
+              <p>미리보기는 quota를 쓰지 않아요. 레시피 추출을 시작하면 설명란을 확인해요.</p>
+            </div>
+          </div>
+          <div className="web-yt-actions">
+            <WebButton onClick={triggerExtraction}>레시피 추출하기</WebButton>
+            <WebButton onClick={handleReenter} variant="secondary">
+              다른 영상 입력
             </WebButton>
           </div>
         </section>
@@ -2083,6 +2225,14 @@ export function YoutubeImportScreen({
             onSubmit={handleValidate}
             isValidating={isValidating}
             urlError={urlError}
+          />
+        )}
+
+        {currentStep === "preview" && videoInfo && (
+          <PreviewStep
+            videoInfo={videoInfo}
+            onExtract={triggerExtraction}
+            onReenter={handleReenter}
           />
         )}
 

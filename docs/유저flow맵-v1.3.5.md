@@ -828,19 +828,16 @@ YT_IMPORT Step 1) URL 입력
   ▼
 Step 1.5) 3-way Classification 결과
   │ ┌──────────────────────────────────────────────────┐
-  │ │ YouTube videos.list API → snippet/category 분석     │
-  │ │ classification_status + classification_reasons[]   │
-  │ │                                                    │
-  │ │ (A) recipe     → Step 2로 즉시 진행                │
-  │ │ (B) uncertain  → 경고 + reasons 표시               │
-  │ │     → [다시 입력] [그래도 진행]                     │
-  │ │ (C) non_recipe → 차단 + reasons 표시               │
-  │ │     → [다시 입력]만 노출 (override 불가)            │
+  │ │ YouTube oEmbed → title/channel/thumbnail 미리보기   │
+  │ │ classification_status=uncertain                     │
+  │ │ → Step 2로 진행                                    │
   │ └──────────────────────────────────────────────────┘
   │
   ▼
 Step 2) description-first 추출
   │ → POST /recipes/youtube/extract
+  │ YouTube videos.list API → description/tags/category 분석
+  │ recipe/uncertain/non_recipe 판정 (non_recipe → 422 차단)
   │ 서버: youtube_extraction_sessions 생성 (status=draft, 24h TTL)
   │ 설명란 파싱 → 재료/스텝 추출
   │ extraction_methods: ["description"] (MVP)

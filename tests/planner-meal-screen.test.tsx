@@ -783,7 +783,7 @@ describe("MealScreen", () => {
     expect(screen.queryByTestId("meal-screen-meal-add-sheet")).toBeNull();
   });
 
-  it("opens the YouTube option as a modal entry from the app CTA", async () => {
+  it("links the YouTube option directly to the full-screen import route from the app CTA", async () => {
     const user = userEvent.setup();
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [buildMeal()] });
@@ -791,15 +791,11 @@ describe("MealScreen", () => {
     render(<MealScreen {...DEFAULT_PROPS} />);
 
     await user.click(await screen.findByTestId("meal-screen-add-cta"));
-    await user.click(screen.getByRole("button", { name: /유튜브에서 가져오기/ }));
 
-    const youtubeDialog = await screen.findByRole("dialog", {
-      name: "유튜브에서 가져오기",
-    });
-    expect(youtubeDialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
-    expect(mockRouterPush).not.toHaveBeenCalledWith(expect.stringContaining("/menu/add/youtube"));
-
-    await user.click(within(youtubeDialog).getByTestId("youtube-import-entry-back"));
-    expect(screen.getByTestId("meal-screen-meal-add-sheet")).toBeTruthy();
+    const youtubeLink = screen.getByRole("link", { name: /유튜브에서 가져오기/ });
+    expect(youtubeLink.getAttribute("href")).toContain("/menu/add/youtube?");
+    expect(
+      screen.queryByRole("dialog", { name: "유튜브에서 가져오기" }),
+    ).toBeNull();
   });
 });

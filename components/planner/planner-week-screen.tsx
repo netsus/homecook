@@ -1550,7 +1550,6 @@ export function PlannerWeekScreen({
             onComplete={handleMealAddComplete}
             planDate={mealAddSheet.dateKey}
             slotName={mealAddSheet.slotName}
-            youtubeHref={getMealAddHref("youtube")}
           />
         ) : null}
 

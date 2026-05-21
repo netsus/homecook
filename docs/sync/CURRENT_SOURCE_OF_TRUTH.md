@@ -17,14 +17,14 @@
 
 | 문서 | 변경 내용 |
 |------|----------|
-| 요구사항 기준선 v1.6.8 | §2-4 유튜브 레시피 등록: 3-way classification(recipe/uncertain/non_recipe), YouTube Data API videos.list 기반 실제 추출, 서버 세션 관리(24h TTL), ingredient resolution_status, step incomplete detection, 원자적 RPC 등록, provenance session FK |
-| 화면정의서 v1.5.5 | §10 YT_IMPORT: 3-way classification UI(uncertain 경고/non_recipe 차단), indeterminate progress, ingredient resolution_status 배지, step incomplete_fields blocking/warning, 저장 활성화 조건, 세션 기반 원자적 등록 |
-| 유저플로우 v1.3.5 | ⑨ 유튜브 등록 여정: 3-way classification 분기, description-first 추출 + 세션 생성, resolution/incomplete 검수, RPC 등록 + 소유권 검증, 데이터 변화 테이블에 youtube_extraction_sessions 추가 |
+| 요구사항 기준선 v1.6.8 | §2-4 유튜브 레시피 등록: oEmbed 미리보기 후 extract 단계에서 3-way classification(recipe/uncertain/non_recipe), YouTube Data API videos.list 기반 실제 추출, 서버 세션 관리(24h TTL), ingredient resolution_status, step incomplete detection, 원자적 RPC 등록, provenance session FK |
+| 화면정의서 v1.5.5 | §10 YT_IMPORT: oEmbed 미리보기, extract 단계 3-way classification UI(uncertain 경고/non_recipe 차단), indeterminate progress, ingredient resolution_status 배지, step incomplete_fields blocking/warning, 저장 활성화 조건, 세션 기반 원자적 등록 |
+| 유저플로우 v1.3.5 | ⑨ 유튜브 등록 여정: oEmbed 미리보기, extract 단계 classification 분기, description-first 추출 + 세션 생성, resolution/incomplete 검수, RPC 등록 + 소유권 검증, 데이터 변화 테이블에 youtube_extraction_sessions 추가 |
 | DB v1.3.4 | §4-2 youtube_extraction_sessions 신규 테이블 추가(classification, extracted_data, status, 24h TTL). §4-3 recipe_sources에 youtube_extraction_session_id FK 추가 |
-| API v1.2.6 | §6 전면 개정: validate에 classification_status/reasons, extract에 session_id/resolution_status/incomplete_fields/draft_warnings, register에 session_id 기반 소유권/만료/소비 검증 + 에러 코드(404/409/410/422), provider 에러(502/429), feature flag(404 FEATURE_DISABLED) |
+| API v1.2.6 | §6 전면 개정: validate는 oEmbed 미리보기 + uncertain 반환, extract는 videos.list 기반 classification/session_id/resolution_status/incomplete_fields/draft_warnings, register는 session_id 기반 소유권/만료/소비 검증 + 에러 코드(404/409/410/422), provider 에러(502/429), feature flag(404 FEATURE_DISABLED) |
 
 > 이 변경은 슬라이스 20 YouTube 실제 API description-first 추출 contract-evolution이다.
-> 슬라이스 19의 deterministic stub 추출을 실제 YouTube Data API videos.list 기반으로 교체하고, 서버 세션 관리·ingredient resolution·step incomplete·원자적 RPC 등록·provenance session FK를 도입한다.
+> 슬라이스 19의 deterministic stub 추출을 실제 YouTube Data API videos.list 기반으로 교체하고, validate 단계는 quota를 쓰지 않는 oEmbed 미리보기로 제한하며, 서버 세션 관리·ingredient resolution·step incomplete·원자적 RPC 등록·provenance session FK를 도입한다.
 > Caption/ASR/LLM/OCR/추정 레이어는 scope 밖이며, extraction_methods 배열에 `description`만 기록한다.
 
 ## v1.6.6 / v1.5.3 / v1.3.3 / API v1.2.4 → v1.6.7 / v1.5.4 / v1.3.4 / API v1.2.5 변경 이력 (2026-05-18)
