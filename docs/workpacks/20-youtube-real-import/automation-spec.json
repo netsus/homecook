@@ -1,0 +1,112 @@
+{
+  "slice_id": "20-youtube-real-import",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/recipes/youtube/validate",
+      "POST /api/v1/recipes/youtube/extract",
+      "POST /api/v1/recipes/youtube/register"
+    ],
+    "invariants": [
+      "api-envelope-format",
+      "authenticated-only",
+      "feature-flag-guard-404",
+      "classification-3way-recipe-uncertain-non-recipe",
+      "youtube-videos-list-api-call",
+      "extraction-session-create-draft",
+      "session-user-id-server-only",
+      "session-24h-expiry",
+      "ingredient-resolution-status",
+      "step-incomplete-detection",
+      "register-session-ownership-check",
+      "register-cross-user-404-hiding",
+      "register-expired-410",
+      "register-consumed-409",
+      "register-mismatch-immutable-only",
+      "register-rpc-atomic-transaction",
+      "register-rpc-no-partial-rows",
+      "provenance-from-session-not-client",
+      "recipe-sources-session-fk",
+      "source-type-youtube-auto-set",
+      "created-by-current-user",
+      "my-added-virtual-book-reflection",
+      "ingredient-type-quant-validation",
+      "ingredient-type-to-taste-validation",
+      "cooking-method-id-exists",
+      "step-number-unique",
+      "base-servings-min-1",
+      "new-cooking-method-insert-is-system-false",
+      "youtube-video-id-parse",
+      "extraction-methods-array",
+      "provider-error-502",
+      "provider-video-not-found-404",
+      "quota-exceeded-429",
+      "youtube-api-key-server-only"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/youtube-real-import.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/menu/add/youtube"
+    ],
+    "required_states": [
+      "loading",
+      "error",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "YT_IMPORT"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase",
+    "pnpm dev:demo"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "youtube-extraction-sessions-migration-missing",
+    "recipe-sources-fk-migration-missing",
+    "register-rpc-missing",
+    "youtube-api-key-missing",
+    "recipe-sources-table-missing",
+    "cooking-methods-seed-missing",
+    "my-added-recipebook-missing",
+    "meal-plan-columns-missing",
+    "ingredients-table-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

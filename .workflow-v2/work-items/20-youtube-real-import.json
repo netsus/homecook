@@ -1,0 +1,97 @@
+{
+  "id": "20-youtube-real-import",
+  "title": "Real YouTube description-first import with videos.list API, extraction sessions, 3-way classification, ingredient resolution, atomic RPC register",
+  "summary": "슬라이스 19의 deterministic stub을 YouTube Data API videos.list 기반 실제 추출로 교체. 3-way classification (recipe/uncertain/non_recipe), 서버 세션 기반 추출 관리 (24h 만료, 소유권 검증), ingredient resolution_status (resolved/needs_review/unresolved), step incomplete detection, Postgres RPC 원자적 등록, recipe_sources provenance with youtube_extraction_session_id FK. 후속 LLM/caption/ASR 확장 기반.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "슬라이스 19의 deterministic stub 추출을 실제 YouTube Data API 기반 description-first 추출로 교체한다. 사용자가 유튜브 URL을 입력하면 YouTube videos.list API로 실제 영상 메타데이터와 설명란을 가져와 레시피를 추출하고, 추출 결과를 검수/수정한 뒤 레시피로 등록할 수 있다. 등록 세션은 서버에서 관리되며 24시간 만료, 소유권 검증, 원자적 등록을 보장한다.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "19-youtube-import"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/요구사항기준선-v1.6.8.md",
+      "docs/화면정의서-v1.5.5.md",
+      "docs/api문서-v1.2.6.md",
+      "docs/db설계-v1.3.4.md",
+      "docs/유저flow맵-v1.3.5.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/20-youtube-real-import/README.md",
+      "docs/workpacks/20-youtube-real-import/acceptance.md",
+      "docs/workpacks/20-youtube-real-import/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/playwright-e2e.md",
+      "docs/workpacks/19-youtube-import/README.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "pnpm dev:local-supabase",
+      "pnpm dev:demo"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Stage 1 docs PR created after $ralplan consensus planning. contract-evolution: 3-way classification, extraction sessions, ingredient resolution, step incomplete, RPC atomic register, recipe_sources session FK. Supersedes slice 19 stub behavior with real YouTube API integration.",
+  "out_of_scope": [
+    "Caption/subtitle download (captions.list 50 units OAuth, captions.download 200 units edit permission)",
+    "ASR (automatic speech recognition) integration",
+    "LLM-based JSON extraction (future flag, off by default)",
+    "OCR (video frame ingredient table)",
+    "Estimation layer (common amounts, similar recipes, quantity prediction)",
+    "Polling/SSE real-time progress (future endpoint)",
+    "Recipe edit/delete",
+    "Recipe image upload",
+    "Public caption/audio/video scraping (MVP forbidden)",
+    "oEmbed-based extraction (preview/embed only)",
+    "YouTube quota increase request (operational dependency)",
+    "Same-URL session reuse (MVP always new session)",
+    "non_recipe override (MVP blocks extract)"
+  ],
+  "open_questions": []
+}

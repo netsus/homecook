@@ -1,17 +1,31 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.6.7.md`
-- `docs/화면정의서-v1.5.4.md`
-- `docs/유저flow맵-v1.3.4.md`
-- `docs/db설계-v1.3.3.md`
-- `docs/api문서-v1.2.5.md`
+- `docs/요구사항기준선-v1.6.8.md`
+- `docs/화면정의서-v1.5.5.md`
+- `docs/유저flow맵-v1.3.5.md`
+- `docs/db설계-v1.3.4.md`
+- `docs/api문서-v1.2.6.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## v1.6.7 / v1.5.4 / v1.3.4 / DB v1.3.3 / API v1.2.5 → v1.6.8 / v1.5.5 / v1.3.5 / DB v1.3.4 / API v1.2.6 변경 이력 (2026-05-21)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.6.8 | §2-4 유튜브 레시피 등록: 3-way classification(recipe/uncertain/non_recipe), YouTube Data API videos.list 기반 실제 추출, 서버 세션 관리(24h TTL), ingredient resolution_status, step incomplete detection, 원자적 RPC 등록, provenance session FK |
+| 화면정의서 v1.5.5 | §10 YT_IMPORT: 3-way classification UI(uncertain 경고/non_recipe 차단), indeterminate progress, ingredient resolution_status 배지, step incomplete_fields blocking/warning, 저장 활성화 조건, 세션 기반 원자적 등록 |
+| 유저플로우 v1.3.5 | ⑨ 유튜브 등록 여정: 3-way classification 분기, description-first 추출 + 세션 생성, resolution/incomplete 검수, RPC 등록 + 소유권 검증, 데이터 변화 테이블에 youtube_extraction_sessions 추가 |
+| DB v1.3.4 | §4-2 youtube_extraction_sessions 신규 테이블 추가(classification, extracted_data, status, 24h TTL). §4-3 recipe_sources에 youtube_extraction_session_id FK 추가 |
+| API v1.2.6 | §6 전면 개정: validate에 classification_status/reasons, extract에 session_id/resolution_status/incomplete_fields/draft_warnings, register에 session_id 기반 소유권/만료/소비 검증 + 에러 코드(404/409/410/422), provider 에러(502/429), feature flag(404 FEATURE_DISABLED) |
+
+> 이 변경은 슬라이스 20 YouTube 실제 API description-first 추출 contract-evolution이다.
+> 슬라이스 19의 deterministic stub 추출을 실제 YouTube Data API videos.list 기반으로 교체하고, 서버 세션 관리·ingredient resolution·step incomplete·원자적 RPC 등록·provenance session FK를 도입한다.
+> Caption/ASR/LLM/OCR/추정 레이어는 scope 밖이며, extraction_methods 배열에 `description`만 기록한다.
 
 ## v1.6.6 / v1.5.3 / v1.3.3 / API v1.2.4 → v1.6.7 / v1.5.4 / v1.3.4 / API v1.2.5 변경 이력 (2026-05-18)
 
