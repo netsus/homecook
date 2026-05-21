@@ -24,6 +24,8 @@ import {
 import { fetchPantryMatchRecipes } from "@/lib/api/recipe";
 import type { PantryMatchRecipeItem } from "@/types/recipe";
 
+type PantryMatchPresentation = "dialog" | "screen" | "web" | "sheet";
+
 export interface PantryMatchPickerProps {
   selectedRecipe: PantryMatchRecipeItem | null;
   isCreating: boolean;
@@ -32,7 +34,7 @@ export interface PantryMatchPickerProps {
   onServingsCancel: () => void;
   onClose: () => void;
   onBack?: () => void;
-  presentation?: "dialog" | "screen" | "web";
+  presentation?: PantryMatchPresentation;
   slotLabel?: string;
 }
 
@@ -65,11 +67,11 @@ function MatchScoreBadge({ score }: MatchScoreBadgeProps) {
 interface PantryRecipeCardProps {
   recipe: PantryMatchRecipeItem;
   onSelect: (recipe: PantryMatchRecipeItem) => void;
-  presentation?: "dialog" | "screen" | "web";
+  presentation?: PantryMatchPresentation;
 }
 
 function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryRecipeCardProps) {
-  if (presentation === "screen") {
+  if (presentation === "screen" || presentation === "sheet") {
     const percentage = Math.round(recipe.match_score * 100);
 
     return (
@@ -244,7 +246,7 @@ interface ServingsModalProps {
   isCreating: boolean;
   onConfirm: (servings: number) => void;
   onCancel: () => void;
-  presentation?: "dialog" | "screen" | "web";
+  presentation?: PantryMatchPresentation;
   slotLabel?: string;
 }
 
@@ -263,7 +265,7 @@ function ServingsModal({
     onConfirm(servings);
   }, [servings, onConfirm]);
 
-  if (presentation === "screen") {
+  if (presentation === "screen" || presentation === "sheet") {
     return (
       <div className="fixed inset-0 z-50 flex items-end bg-black/42" onClick={onCancel}>
         <div
@@ -530,7 +532,7 @@ export function PantryMatchPicker({
       )}
 
       {loadState === "ready" && recipes.length > 0 && (
-        <div className={presentation === "screen" ? "" : presentation === "web" ? "space-y-2" : "space-y-3"}>
+        <div className={presentation === "screen" || presentation === "sheet" ? "" : presentation === "web" ? "space-y-2" : "space-y-3"}>
           {recipes.map((recipe) => (
             <PantryRecipeCard
               key={recipe.id}
@@ -572,6 +574,27 @@ export function PantryMatchPicker({
         )}
         <Wave1MobileBottomTab ariaLabel="팬트리 추천 하단 탭" currentTab="planner" />
       </div>
+    );
+  }
+
+  if (presentation === "sheet") {
+    return (
+      <>
+        <p className="mb-3 text-[12px] font-medium leading-[1.5] text-[#495057]">
+          보유 재료가 많은 순서로 보여드려요. 부족한 재료만 확인하세요.
+        </p>
+        {content}
+        {selectedRecipe && (
+          <ServingsModal
+            isCreating={isCreating}
+            onCancel={onServingsCancel}
+            onConfirm={onServingsConfirm}
+            presentation="sheet"
+            recipe={selectedRecipe}
+            slotLabel={slotLabel}
+          />
+        )}
+      </>
     );
   }
 
