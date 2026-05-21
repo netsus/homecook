@@ -145,7 +145,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
   if (presentation === "web") {
     const percentage = Math.round(recipe.match_score * 100);
     const scoreTone =
-      percentage >= 80 ? "success" : percentage >= 50 ? "warning" : "danger";
+      percentage >= 80 ? "brand" : percentage >= 50 ? "warning" : "danger";
 
     return (
       <button

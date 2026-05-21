@@ -61,4 +61,46 @@ describe("PantryMatchPicker", () => {
     expect(row.textContent).toContain("간장");
     expect(row.textContent).toContain("고춧가루");
   });
+
+  it("uses brand tone instead of success green for high desktop web matches", async () => {
+    vi.mocked(fetchPantryMatchRecipes).mockResolvedValueOnce({
+      success: true,
+      data: {
+        items: [
+          {
+            id: "recipe-brand",
+            title: "닭갈비",
+            thumbnail_url: null,
+            matched_ingredients: 9,
+            total_ingredients: 10,
+            match_score: 0.9,
+            missing_ingredients: [],
+          },
+        ],
+      },
+      error: null,
+    });
+
+    render(
+      <PantryMatchPicker
+        isCreating={false}
+        onClose={vi.fn()}
+        onRecipeSelect={vi.fn()}
+        onServingsCancel={vi.fn()}
+        onServingsConfirm={vi.fn()}
+        presentation="web"
+        selectedRecipe={null}
+      />,
+    );
+
+    await screen.findByText("닭갈비");
+
+    const score = screen.getByText("90%");
+    const progressFill = document.querySelector(".web-picker-progress-fill");
+
+    expect(score.className).toContain("web-picker-score-brand");
+    expect(score.className).not.toContain("web-picker-score-success");
+    expect(progressFill?.className).toContain("web-picker-progress-brand");
+    expect(progressFill?.className).not.toContain("web-picker-progress-success");
+  });
 });
