@@ -3697,6 +3697,18 @@ button {
     margin: 0 auto;
   }
 
+  .web-yt-embedded {
+    display: grid;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .web-yt-card-embedded {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
   .web-yt-stepper {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -4478,13 +4490,28 @@ button {
   }
 
   .web-mypage-screen {
+    display: flex;
+    height: calc(100vh - var(--web-nav-h));
+    min-height: 0;
+    flex-direction: column;
     max-width: 1180px;
     margin: 0 auto;
-    padding: 32px 0 80px;
+    padding: 32px 0 0;
+  }
+
+  .web-mypage-shell .web-page {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .web-mypage-shell .web-container-wide {
+    height: calc(100vh - var(--web-nav-h));
+    overflow: hidden;
   }
 
   .web-mypage-profile {
     display: flex;
+    flex: 0 0 auto;
     min-height: 140px;
     align-items: center;
     justify-content: space-between;
@@ -4573,6 +4600,7 @@ button {
   }
 
   .web-mypage-tabs {
+    flex: 0 0 auto;
     margin: 40px 0 0;
     overflow-x: auto;
     padding: 0;
@@ -4593,9 +4621,14 @@ button {
   }
 
   .web-mypage-panel {
-    padding-top: 34px;
-    width: min(1080px, 100%);
+    flex: 1 1 auto;
+    min-height: 0;
+    width: min(1120px, 100%);
     margin: 0 auto;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    padding: 34px 20px 80px;
+    scrollbar-gutter: stable both-edges;
   }
 
   .web-mypage-section-head h2,

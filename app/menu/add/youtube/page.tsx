@@ -65,7 +65,6 @@ export default async function YoutubeImportPage({ searchParams }: YoutubeImportP
   return (
     <main>
       <YoutubeImportScreen
-        initialAuthenticated={initialAuthenticated}
         initialYoutubeUrl={youtubeUrl ?? ""}
         planDate={date ?? ""}
         columnId={columnId ?? ""}
