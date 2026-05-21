@@ -268,10 +268,7 @@ async function openRecipebookSurface(page: Page) {
     return;
   }
 
-  if (await page.getByRole("button", { name: /레시피북 관리/ }).count() === 0) {
-    await page.getByRole("tab", { name: "저장한 레시피" }).click();
-  }
-  await page.getByRole("button", { name: /레시피북 관리/ }).click();
+  await page.getByRole("tab", { name: "레시피북 관리" }).click();
   await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
 }
 
@@ -282,10 +279,7 @@ async function openShoppingSurface(page: Page) {
     return;
   }
 
-  if (await page.getByRole("button", { name: /장보기 내역/ }).count() === 0) {
-    await page.getByRole("tab", { name: "저장한 레시피" }).click();
-  }
-  await page.getByRole("button", { name: /장보기 내역/ }).click();
+  await page.getByRole("tab", { name: "장보기 내역" }).click();
   await expect(
     page.locator('[data-testid="shopping-tab"], [data-testid="shopping-empty"]'),
   ).toBeVisible();
