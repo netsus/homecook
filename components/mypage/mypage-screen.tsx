@@ -22,6 +22,7 @@ import {
   PlannerAddSheet,
   type PlannerAddSheetState,
 } from "@/components/recipe/planner-add-sheet";
+import { ShoppingDetailScreen } from "@/components/shopping/shopping-detail-screen";
 import { ContentState } from "@/components/shared/content-state";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,7 +63,6 @@ import {
 import { createMeal, isMealApiError } from "@/lib/api/meal";
 import { fetchPlanner } from "@/lib/api/planner";
 import { fetchRecipeBookRecipes } from "@/lib/api/recipe";
-import { fetchShoppingListDetail, isShoppingApiError } from "@/lib/api/shopping";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import {
   resolveMypageRestoreState,
@@ -76,17 +76,13 @@ import type {
   LeftoverListItemData,
 } from "@/types/leftover";
 import type { PlannerColumnData } from "@/types/planner";
-import type {
-  ShoppingListDetail,
-  ShoppingListHistoryItem,
-} from "@/types/shopping";
+import type { ShoppingListHistoryItem } from "@/types/shopping";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
 type SavedRecipesState = "idle" | "loading" | "ready" | "empty" | "error";
 type LeftoverTabState = "idle" | "loading" | "ready" | "empty" | "error";
 type RecipeBookDetailState = "idle" | "loading" | "ready" | "empty" | "error";
-type ShoppingDetailState = "idle" | "loading" | "ready" | "error";
 type MypageTab =
   | MypageRestoreTab
   | "account"
@@ -168,10 +164,6 @@ export function MypageScreen({
   const [shoppingLoaded, setShoppingLoaded] = useState(false);
   const [selectedShoppingItem, setSelectedShoppingItem] =
     useState<ShoppingListHistoryItem | null>(null);
-  const [shoppingDetail, setShoppingDetail] =
-    useState<ShoppingListDetail | null>(null);
-  const [shoppingDetailState, setShoppingDetailState] =
-    useState<ShoppingDetailState>("idle");
 
   // Leftovers
   const [leftoverItems, setLeftoverItems] = useState<LeftoverListItemData[]>([]);
@@ -266,6 +258,12 @@ export function MypageScreen({
   }, []);
 
   const switchDesktopTab = useCallback((tab: MypageTab) => {
+    if (tab === "shopping" && activeTab === "shopping" && selectedShoppingItem) {
+      setSelectedShoppingItem(null);
+      window.scrollTo(0, 0);
+      return;
+    }
+
     setActiveTab(tab);
     if (tab !== "recipebooks") {
       setSelectedRecipeBook(null);
@@ -274,11 +272,9 @@ export function MypageScreen({
     }
     if (tab !== "shopping") {
       setSelectedShoppingItem(null);
-      setShoppingDetail(null);
-      setShoppingDetailState("idle");
     }
     window.scrollTo(0, 0);
-  }, []);
+  }, [activeTab, selectedShoppingItem]);
 
   // --- Data loading ---
 
@@ -403,22 +399,8 @@ export function MypageScreen({
     setRecipeBookDetailState(result.data.items.length > 0 ? "ready" : "empty");
   }, []);
 
-  const openShoppingDetail = useCallback(async (item: ShoppingListHistoryItem) => {
+  const openShoppingDetail = useCallback((item: ShoppingListHistoryItem) => {
     setSelectedShoppingItem(item);
-    setShoppingDetail(null);
-    setShoppingDetailState("loading");
-
-    try {
-      const detail = await fetchShoppingListDetail(item.id);
-      setShoppingDetail(detail);
-      setShoppingDetailState("ready");
-    } catch (error) {
-      if (isShoppingApiError(error) && error.status === 401) {
-        setAuthState("unauthorized");
-        return;
-      }
-      setShoppingDetailState("error");
-    }
   }, []);
 
   const loadMoreShopping = useCallback(async () => {
@@ -1174,19 +1156,11 @@ export function MypageScreen({
               loaded={shoppingLoaded}
               onCloseDetail={() => {
                 setSelectedShoppingItem(null);
-                setShoppingDetail(null);
-                setShoppingDetailState("idle");
               }}
-              onOpenDetail={(item) => void openShoppingDetail(item)}
-              onRetryDetail={() => {
-                if (selectedShoppingItem) {
-                  void openShoppingDetail(selectedShoppingItem);
-                }
-              }}
+              onHistoryRefresh={() => void loadShoppingHistory()}
+              onOpenDetail={(item) => openShoppingDetail(item)}
               scrollSentinelRef={scrollSentinelRef}
-              selectedDetail={shoppingDetail}
               selectedItem={selectedShoppingItem}
-              selectedState={shoppingDetailState}
             />
           ) : null}
           {activeTab === "leftovers" ? (
@@ -2316,13 +2290,11 @@ interface ShoppingHistoryTabContentProps {
   loaded: boolean;
   hasNext: boolean;
   isLoadingMore: boolean;
-  selectedDetail: ShoppingListDetail | null;
   selectedItem: ShoppingListHistoryItem | null;
-  selectedState: ShoppingDetailState;
   scrollSentinelRef: React.RefObject<HTMLDivElement | null>;
   onCloseDetail: () => void;
+  onHistoryRefresh: () => void;
   onOpenDetail: (item: ShoppingListHistoryItem) => void;
-  onRetryDetail: () => void;
 }
 
 function ShoppingHistoryTabContent({
@@ -2330,22 +2302,18 @@ function ShoppingHistoryTabContent({
   loaded,
   hasNext,
   isLoadingMore,
-  selectedDetail,
   selectedItem,
-  selectedState,
   scrollSentinelRef,
   onCloseDetail,
+  onHistoryRefresh,
   onOpenDetail,
-  onRetryDetail,
 }: ShoppingHistoryTabContentProps) {
   if (selectedItem) {
     return (
       <ShoppingHistoryInlineDetail
-        detail={selectedDetail}
         item={selectedItem}
-        state={selectedState}
         onBack={onCloseDetail}
-        onRetry={onRetryDetail}
+        onCompleted={onHistoryRefresh}
       />
     );
   }
@@ -2464,100 +2432,38 @@ function ShoppingHistoryCard({
         </p>
       ) : null}
       <span
-        className="mt-2 inline-flex rounded-full bg-[var(--brand-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--brand)]"
+        className={[
+          "web-mypage-shopping-status",
+          item.is_completed
+            ? "web-mypage-shopping-status-complete"
+            : "web-mypage-shopping-status-active",
+        ].join(" ")}
       >
-        {item.is_completed ? "다시열기" : "진행 중"}
+        {item.is_completed ? "✓ 완료" : "진행 중"}
       </span>
     </button>
   );
 }
 
 function ShoppingHistoryInlineDetail({
-  detail,
   item,
-  state,
   onBack,
-  onRetry,
+  onCompleted,
 }: {
-  detail: ShoppingListDetail | null;
   item: ShoppingListHistoryItem;
-  state: ShoppingDetailState;
   onBack: () => void;
-  onRetry: () => void;
+  onCompleted: () => void;
 }) {
   return (
     <div className="web-mypage-subsurface web-mypage-inline-detail">
-      <div className="web-mypage-inline-head">
-        <div>
-          <WebButton onClick={onBack} size="sm" variant="tertiary">
-            목록으로
-          </WebButton>
-          <h2>{item.title}</h2>
-          <p>
-            {formatShortDate(item.date_range_start)} ~{" "}
-            {formatShortDate(item.date_range_end)}
-          </p>
-        </div>
-        <span className="web-mypage-inline-badge">
-          {item.is_completed ? "완료" : "진행 중"}
-        </span>
-      </div>
-
-      {state === "loading" || state === "idle" ? (
-        <div className="web-mypage-shopping-detail-list">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <WebCard className="web-mypage-shopping-detail-row" key={index}>
-              <WebSkeleton height={18} width="42%" />
-              <WebSkeleton height={14} width="24%" />
-            </WebCard>
-          ))}
-        </div>
-      ) : null}
-
-      {state === "error" ? (
-        <WebCard className="web-mypage-saved-state">
-          <div>
-            <h3>장보기 목록을 불러오지 못했어요</h3>
-            <p>잠시 후 다시 시도해 주세요.</p>
-          </div>
-          <WebButton onClick={onRetry} size="sm" variant="secondary">
-            다시 시도
-          </WebButton>
-        </WebCard>
-      ) : null}
-
-      {state === "ready" && detail ? (
-        <>
-          <div className="web-mypage-shopping-detail-summary">
-            <WebCard>
-              <strong>{detail.recipes.length}개 레시피</strong>
-              <span>장보기 기준 레시피</span>
-            </WebCard>
-            <WebCard>
-              <strong>{detail.items.length}개 항목</strong>
-              <span>전체 재료</span>
-            </WebCard>
-          </div>
-          <div className="web-mypage-shopping-detail-list">
-            {detail.items.map((shoppingItem) => (
-              <WebCard
-                className="web-mypage-shopping-detail-row"
-                key={shoppingItem.id}
-              >
-                <span>
-                  <strong>{shoppingItem.display_text}</strong>
-                  {shoppingItem.is_pantry_excluded ? (
-                    <em>팬트리 제외</em>
-                  ) : shoppingItem.is_checked ? (
-                    <em>구매 완료</em>
-                  ) : null}
-                </span>
-                <small>{formatShoppingAmountText(shoppingItem.amounts_json)}</small>
-              </WebCard>
-            ))}
-          </div>
-        </>
-      ) : null}
+      <ShoppingDetailScreen
+        initialAuthenticated
+        listId={item.id}
+        navActiveId="mypage"
+        onCompleted={onCompleted}
+        onRequestClose={onBack}
+        presentation="embedded"
+      />
     </div>
   );
 }
@@ -2793,16 +2699,6 @@ function formatSavedRecipeMeta(recipe: RecipeBookRecipeItem) {
   ]
     .filter(Boolean)
     .join(" · ");
-}
-
-function formatShoppingAmountText(
-  amounts: ShoppingListDetail["items"][number]["amounts_json"],
-) {
-  if (!amounts.length) {
-    return "수량 확인";
-  }
-
-  return amounts.map((amount) => `${amount.amount}${amount.unit}`).join(" + ");
 }
 
 function getFallbackRecipeImage(title: string) {

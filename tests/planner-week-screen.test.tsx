@@ -525,6 +525,7 @@ describe("planner week screen", () => {
 
   it("shows a direct link back to an existing shopping list", async () => {
     readE2EAuthOverride.mockReturnValue(true);
+    setDesktopViewport(true);
     fetchPlanner.mockResolvedValue(
       createPlannerData({
         meals: [
@@ -541,6 +542,19 @@ describe("planner week screen", () => {
             shopping_list_id: "shopping-list-1",
             shopping_list_title: "4/28 장보기",
           },
+          {
+            id: "meal-2",
+            recipe_id: "recipe-2",
+            recipe_title: "된장찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-04-29",
+            column_id: "column-dinner",
+            planned_servings: 2,
+            status: "shopping_done",
+            is_leftover: false,
+            shopping_list_id: "shopping-list-2",
+            shopping_list_title: "4/29 장보기",
+          },
         ],
       }),
     );
@@ -552,6 +566,12 @@ describe("planner week screen", () => {
     });
 
     expect(shoppingListLink.getAttribute("href")).toBe("/shopping/lists/shopping-list-1");
+    expect(screen.getByText("진행 중").className).toContain(
+      "web-planner-shopping-status-active",
+    );
+    expect(screen.getByText("✓ 완료").className).toContain(
+      "web-planner-shopping-status-complete",
+    );
   });
 
   it("compresses meal slot metadata while keeping empty slots with a quieter add CTA (Wave1)", async () => {

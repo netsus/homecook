@@ -293,7 +293,11 @@ function PlannerWeekWebView({
   runPlannerAction: (action: Promise<void>) => void;
   screenState: "loading" | "ready" | "empty" | "error" | "read-only";
   shiftRange: (dayDelta: number) => Promise<void>;
-  shoppingListLinks: Array<{ id: string; title: string }>;
+  shoppingListLinks: Array<{
+    id: string;
+    status: "in_progress" | "completed";
+    title: string;
+  }>;
   todayKey: string;
 }) {
   const primaryColumn = getPlannerPrimaryColumn(columns);
@@ -443,11 +447,25 @@ function PlannerWeekWebView({
                 <div className="web-planner-shopping-list">
                   {shoppingListLinks.map((shoppingList) => (
                     <Link
+                      aria-label={`${shoppingList.title} 보기`}
                       className="web-planner-shopping-link"
                       href={`/shopping/lists/${shoppingList.id}`}
                       key={shoppingList.id}
                     >
-                      {shoppingList.title}
+                      <span className="web-planner-shopping-title">
+                        {shoppingList.title}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className={[
+                          "web-planner-shopping-status",
+                          shoppingList.status === "completed"
+                            ? "web-planner-shopping-status-complete"
+                            : "web-planner-shopping-status-active",
+                        ].join(" ")}
+                      >
+                        {shoppingList.status === "completed" ? "✓ 완료" : "진행 중"}
+                      </span>
                     </Link>
                   ))}
                 </div>
@@ -648,6 +666,7 @@ export function PlannerWeekScreen({
         id: string;
         title: string;
         dates: string[];
+        statuses: PlannerMealData["status"][];
       }
     >();
 
@@ -660,11 +679,13 @@ export function PlannerWeekScreen({
         id: meal.shopping_list_id,
         title: meal.shopping_list_title?.trim() || "",
         dates: [],
+        statuses: [],
       };
 
       if (!existing.dates.includes(meal.plan_date)) {
         existing.dates.push(meal.plan_date);
       }
+      existing.statuses.push(meal.status);
 
       if (!existing.title && meal.shopping_list_title?.trim()) {
         existing.title = meal.shopping_list_title.trim();
@@ -686,6 +707,12 @@ export function PlannerWeekScreen({
 
       return {
         id: entry.id,
+        status: (
+          entry.statuses.length > 0 &&
+          entry.statuses.every((status) => status !== "registered")
+            ? "completed"
+            : "in_progress"
+        ) as "completed" | "in_progress",
         title: entry.title || fallbackTitle,
       };
     });
@@ -1207,12 +1234,24 @@ export function PlannerWeekScreen({
             <div className="mt-3 flex flex-wrap gap-2">
               {shoppingListLinks.map((shoppingList) => (
                 <Link
+                  aria-label={`${shoppingList.title} 보기`}
                   className="inline-flex min-h-9 items-center justify-center rounded-full border border-[var(--brand)] bg-[var(--brand-soft)] px-3 text-[12px] font-bold text-[var(--brand)]"
                   href={`/shopping/lists/${shoppingList.id}`}
                   key={shoppingList.id}
                   style={{ color: "var(--brand)" }}
                 >
                   {shoppingList.title} 보기
+                  <span
+                    aria-hidden="true"
+                    className={[
+                      "ml-2 rounded-full px-2 py-0.5 text-[10px]",
+                      shoppingList.status === "completed"
+                        ? "bg-[rgba(26,174,57,0.12)] text-[var(--web-success)]"
+                        : "bg-white text-[var(--brand)]",
+                    ].join(" ")}
+                  >
+                    {shoppingList.status === "completed" ? "✓ 완료" : "진행 중"}
+                  </span>
                 </Link>
               ))}
             </div>
