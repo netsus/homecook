@@ -23,6 +23,8 @@ import {
 import { fetchRecipes } from "@/lib/api/recipe";
 import type { RecipeCardItem } from "@/types/recipe";
 
+type RecipeSearchPresentation = "inline" | "screen" | "sheet";
+
 export interface RecipeSearchPickerProps {
   selectedRecipe: RecipeCardItem | null;
   isCreating: boolean;
@@ -30,7 +32,7 @@ export interface RecipeSearchPickerProps {
   onServingsConfirm: (servings: number) => void;
   onServingsCancel: () => void;
   searchInputRef?: React.Ref<HTMLInputElement>;
-  presentation?: "inline" | "screen";
+  presentation?: RecipeSearchPresentation;
   title?: string;
   slotLabel?: string;
   onBack?: () => void;
@@ -122,7 +124,7 @@ function SearchInput({
 interface ResultCardProps {
   recipe: RecipeCardItem;
   onSelect: (recipe: RecipeCardItem) => void;
-  presentation?: "inline" | "screen";
+  presentation?: RecipeSearchPresentation;
 }
 
 function RecipeThumb({ recipe }: { recipe: RecipeCardItem }) {
@@ -151,7 +153,7 @@ function formatMetricCount(value: number) {
 }
 
 function ResultCard({ recipe, onSelect, presentation = "inline" }: ResultCardProps) {
-  if (presentation === "screen") {
+  if (presentation === "screen" || presentation === "sheet") {
     return (
       <button
         aria-label={`${recipe.title} 선택`}
@@ -247,7 +249,7 @@ interface ServingsModalProps {
   isCreating: boolean;
   onConfirm: (servings: number) => void;
   onCancel: () => void;
-  presentation?: "inline" | "screen";
+  presentation?: RecipeSearchPresentation;
   slotLabel?: string;
 }
 
@@ -266,7 +268,7 @@ function ServingsModal({
     onConfirm(servings);
   }, [servings, onConfirm]);
 
-  if (presentation === "screen") {
+  if (presentation === "screen" || presentation === "sheet") {
     return (
       <div
         className="fixed inset-0 z-50 flex items-end bg-black/42"
@@ -450,7 +452,11 @@ export function RecipeSearchPicker({
 
   useEffect(() => {
     if (!searchQuery.trim()) {
-      if (presentation === "screen" || presentation === "inline") {
+      if (
+        presentation === "screen" ||
+        presentation === "inline" ||
+        presentation === "sheet"
+      ) {
         void runSearch("");
       } else {
         setSearchState("idle");
@@ -560,6 +566,8 @@ export function RecipeSearchPicker({
     );
   }
 
+  const isSheet = presentation === "sheet";
+
   return (
     <>
       <div className="space-y-4">
@@ -570,8 +578,7 @@ export function RecipeSearchPicker({
           onSearch={handleSearch}
           value={searchQuery}
         />
-
-        {searchState === "loading" && (
+        {searchState === "loading" && !isSheet && (
           <div className="web-picker-grid" aria-busy="true">
             {Array.from({ length: 6 }).map((_, index) => (
               <WebSkeleton className="h-[220px]" key={index} />
@@ -579,13 +586,30 @@ export function RecipeSearchPicker({
           </div>
         )}
 
-        {searchState === "empty" && (
+        {searchState === "loading" && isSheet ? (
+          <div className="py-8 text-center text-[13px] text-[#868E96]" aria-busy="true">
+            검색 중...
+          </div>
+        ) : null}
+
+        {searchState === "empty" && !isSheet && (
           <WebEmptyState
             description="다른 키워드로 다시 검색해보세요."
             icon="⌕"
             title="검색 결과가 없어요"
           />
         )}
+
+        {searchState === "empty" && isSheet ? (
+          <div className="py-8 text-center">
+            <p className="text-base font-semibold text-[var(--foreground)]">
+              검색 결과가 없어요
+            </p>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              다른 키워드로 다시 검색해보세요.
+            </p>
+          </div>
+        ) : null}
 
         {searchState === "error" && (
           <div
@@ -597,9 +621,14 @@ export function RecipeSearchPicker({
         )}
 
         {searchState === "ready" && results.length > 0 && (
-          <div className="web-picker-grid">
+          <div className={isSheet ? "space-y-2" : "web-picker-grid"}>
             {results.map((recipe) => (
-              <ResultCard key={recipe.id} onSelect={onRecipeSelect} recipe={recipe} />
+              <ResultCard
+                key={recipe.id}
+                onSelect={onRecipeSelect}
+                presentation={isSheet ? "sheet" : "inline"}
+                recipe={recipe}
+              />
             ))}
           </div>
         )}
@@ -612,6 +641,7 @@ export function RecipeSearchPicker({
           onConfirm={onServingsConfirm}
           presentation={presentation}
           recipe={selectedRecipe}
+          slotLabel={slotLabel}
         />
       )}
     </>

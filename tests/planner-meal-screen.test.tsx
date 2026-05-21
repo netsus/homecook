@@ -715,7 +715,8 @@ describe("MealScreen", () => {
 
     await user.click(screen.getByRole("button", { name: /레시피 검색/ }));
 
-    expect(await screen.findByRole("heading", { name: "검색으로 추가" })).toBeTruthy();
+    const searchDialog = await screen.findByRole("dialog", { name: "검색으로 추가" });
+    expect(searchDialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
     expect(screen.queryByTestId("meal-screen-meal-add-sheet")).toBeNull();
   });
 

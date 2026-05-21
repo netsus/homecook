@@ -24,6 +24,8 @@ import {
 import { fetchRecipeBookRecipes } from "@/lib/api/recipe";
 import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
 
+type RecipeBookDetailPresentation = "dialog" | "screen" | "web" | "sheet";
+
 export interface RecipeBookDetailPickerProps {
   book: RecipeBookSummary;
   selectedRecipe: RecipeBookRecipeItem | null;
@@ -32,7 +34,7 @@ export interface RecipeBookDetailPickerProps {
   onServingsConfirm: (servings: number) => void;
   onServingsCancel: () => void;
   onBack: () => void;
-  presentation?: "dialog" | "screen" | "web";
+  presentation?: RecipeBookDetailPresentation;
   slotLabel?: string;
 }
 
@@ -43,7 +45,7 @@ type LoadState = "idle" | "loading" | "ready" | "empty" | "error";
 interface RecipeCardProps {
   recipe: RecipeBookRecipeItem;
   onSelect: (recipe: RecipeBookRecipeItem) => void;
-  presentation?: "dialog" | "screen" | "web";
+  presentation?: RecipeBookDetailPresentation;
 }
 
 function RecipeThumb({ recipe }: { recipe: RecipeBookRecipeItem }) {
@@ -64,7 +66,7 @@ function RecipeThumb({ recipe }: { recipe: RecipeBookRecipeItem }) {
 }
 
 function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardProps) {
-  if (presentation === "screen") {
+  if (presentation === "screen" || presentation === "sheet") {
     return (
       <button
         aria-label={`${recipe.title} 선택`}
@@ -144,7 +146,7 @@ interface ServingsModalProps {
   isCreating: boolean;
   onConfirm: (servings: number) => void;
   onCancel: () => void;
-  presentation?: "dialog" | "screen" | "web";
+  presentation?: RecipeBookDetailPresentation;
   slotLabel?: string;
 }
 
@@ -163,7 +165,7 @@ function ServingsModal({
     onConfirm(servings);
   }, [servings, onConfirm]);
 
-  if (presentation === "screen") {
+  if (presentation === "screen" || presentation === "sheet") {
     return (
       <div className="fixed inset-0 z-50 flex items-end bg-black/42" onClick={onCancel}>
         <div
@@ -430,7 +432,7 @@ export function RecipeBookDetailPicker({
       )}
 
       {loadState === "ready" && recipes.length > 0 && (
-        <div className={presentation === "screen" ? "grid grid-cols-2 gap-2.5" : presentation === "web" ? "web-picker-grid web-picker-grid-four" : "space-y-3"}>
+        <div className={presentation === "screen" || presentation === "sheet" ? "grid grid-cols-2 gap-2.5" : presentation === "web" ? "web-picker-grid web-picker-grid-four" : "space-y-3"}>
           {recipes.map((recipe) => (
             <RecipeCard
               key={recipe.recipe_id}
@@ -467,6 +469,24 @@ export function RecipeBookDetailPicker({
         )}
         <Wave1MobileBottomTab ariaLabel="레시피북 상세 하단 탭" currentTab="planner" />
       </div>
+    );
+  }
+
+  if (presentation === "sheet") {
+    return (
+      <>
+        {content}
+        {selectedRecipe && (
+          <ServingsModal
+            isCreating={isCreating}
+            onCancel={onServingsCancel}
+            onConfirm={onServingsConfirm}
+            presentation="sheet"
+            recipe={selectedRecipe}
+            slotLabel={slotLabel}
+          />
+        )}
+      </>
     );
   }
 

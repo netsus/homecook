@@ -9,6 +9,8 @@ import { RecipeBookSelector } from "@/components/planner/recipe-book-selector";
 import { RecipeSearchPicker } from "@/components/planner/recipe-search-picker";
 import { YoutubeImportEntrySheet } from "@/components/planner/youtube-import-entry-sheet";
 import type { MealAddPickerMode } from "@/components/planner/meal-add-options-sheet";
+import { AppBackButton } from "@/components/shared/app-back-button";
+import { AppBottomSheet } from "@/components/shared/app-overlay";
 import { createMealSafe } from "@/lib/api/meal";
 import type { LeftoverListItemData } from "@/types/leftover";
 import type {
@@ -29,6 +31,38 @@ interface MealAddPickerFlowProps {
 }
 
 type InternalPickerMode = MealAddPickerMode | "recipebook-detail";
+
+interface PickerSheetProps {
+  ariaLabelledBy: string;
+  children: React.ReactNode;
+  description?: string;
+  onBack: () => void;
+  onClose: () => void;
+  title: string;
+}
+
+function PickerSheet({
+  ariaLabelledBy,
+  children,
+  description,
+  onBack,
+  onClose,
+  title,
+}: PickerSheetProps) {
+  return (
+    <AppBottomSheet
+      ariaLabelledBy={ariaLabelledBy}
+      bodyClassName="pb-5"
+      description={description}
+      leadingAction={<AppBackButton onClick={onBack} />}
+      onClose={onClose}
+      panelClassName="max-w-[480px]"
+      title={title}
+    >
+      {children}
+    </AppBottomSheet>
+  );
+}
 
 function formatTargetLabel(planDate: string, slotName: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(planDate);
@@ -130,98 +164,130 @@ export function MealAddPickerFlow({
 
   if (pickerMode === "search") {
     return (
-      <div className="fixed inset-0 z-40 lg:hidden">
+      <>
         {errorBanner}
-        <RecipeSearchPicker
-          isCreating={isCreating}
+        <PickerSheet
+          ariaLabelledBy="meal-add-search-picker-title"
+          description={`대상 · ${targetLabel}`}
           onBack={handlePickerBackToOptions}
-          onRecipeSelect={setSelectedRecipe}
-          onServingsCancel={() => {
-            setSelectedRecipe(null);
-            setCreationError(null);
-          }}
-          onServingsConfirm={(servings) =>
-            selectedRecipe
-              ? handleCreateRecipeMeal(selectedRecipe.id, servings)
-              : undefined
-          }
-          presentation="screen"
-          searchInputRef={searchInputRef}
-          selectedRecipe={selectedRecipe}
-          slotLabel={targetLabel}
+          onClose={handlePickerBackToOptions}
           title="검색으로 추가"
-        />
-      </div>
+        >
+          <RecipeSearchPicker
+            isCreating={isCreating}
+            onBack={handlePickerBackToOptions}
+            onRecipeSelect={setSelectedRecipe}
+            onServingsCancel={() => {
+              setSelectedRecipe(null);
+              setCreationError(null);
+            }}
+            onServingsConfirm={(servings) =>
+              selectedRecipe
+                ? handleCreateRecipeMeal(selectedRecipe.id, servings)
+                : undefined
+            }
+            presentation="sheet"
+            searchInputRef={searchInputRef}
+            selectedRecipe={selectedRecipe}
+            slotLabel={targetLabel}
+            title="검색으로 추가"
+          />
+        </PickerSheet>
+      </>
     );
   }
 
   if (pickerMode === "recipebook") {
     return (
-      <div className="fixed inset-0 z-40 lg:hidden">
+      <>
         {errorBanner}
-        <RecipeBookSelector
+        <PickerSheet
+          ariaLabelledBy="meal-add-recipebook-picker-title"
+          description={`대상 · ${targetLabel}`}
           onBack={handlePickerBackToOptions}
-          onBookSelect={(book) => {
-            setSelectedBook(book);
-            setPickerMode("recipebook-detail");
-          }}
           onClose={handlePickerBackToOptions}
-          presentation="screen"
-          slotLabel={targetLabel}
-        />
-      </div>
+          title="레시피북에서 추가"
+        >
+          <RecipeBookSelector
+            onBack={handlePickerBackToOptions}
+            onBookSelect={(book) => {
+              setSelectedBook(book);
+              setPickerMode("recipebook-detail");
+            }}
+            onClose={handlePickerBackToOptions}
+            presentation="sheet"
+            slotLabel={targetLabel}
+          />
+        </PickerSheet>
+      </>
     );
   }
 
   if (pickerMode === "recipebook-detail" && selectedBook) {
     return (
-      <div className="fixed inset-0 z-40 lg:hidden">
+      <>
         {errorBanner}
-        <RecipeBookDetailPicker
-          book={selectedBook}
-          isCreating={isCreating}
+        <PickerSheet
+          ariaLabelledBy="meal-add-recipebook-detail-picker-title"
+          description={`대상 · ${targetLabel}`}
           onBack={handleRecipeBookBack}
-          onRecipeSelect={setSelectedBookRecipe}
-          onServingsCancel={() => {
-            setSelectedBookRecipe(null);
-            setCreationError(null);
-          }}
-          onServingsConfirm={(servings) =>
-            selectedBookRecipe
-              ? handleCreateRecipeMeal(selectedBookRecipe.recipe_id, servings)
-              : undefined
-          }
-          presentation="screen"
-          selectedRecipe={selectedBookRecipe}
-          slotLabel={targetLabel}
-        />
-      </div>
+          onClose={handlePickerBackToOptions}
+          title={selectedBook.name}
+        >
+          <RecipeBookDetailPicker
+            book={selectedBook}
+            isCreating={isCreating}
+            onBack={handleRecipeBookBack}
+            onRecipeSelect={setSelectedBookRecipe}
+            onServingsCancel={() => {
+              setSelectedBookRecipe(null);
+              setCreationError(null);
+            }}
+            onServingsConfirm={(servings) =>
+              selectedBookRecipe
+                ? handleCreateRecipeMeal(selectedBookRecipe.recipe_id, servings)
+                : undefined
+            }
+            presentation="sheet"
+            selectedRecipe={selectedBookRecipe}
+            slotLabel={targetLabel}
+          />
+        </PickerSheet>
+      </>
     );
   }
 
   if (pickerMode === "pantry") {
     return (
-      <div className="fixed inset-0 z-40 lg:hidden">
+      <>
         {errorBanner}
-        <PantryMatchPicker
-          isCreating={isCreating}
+        <PickerSheet
+          ariaLabelledBy="meal-add-pantry-picker-title"
+          description={`대상 · ${targetLabel}`}
           onBack={handlePickerBackToOptions}
           onClose={handlePickerBackToOptions}
-          onRecipeSelect={setSelectedPantryRecipe}
-          onServingsCancel={() => {
-            setSelectedPantryRecipe(null);
-            setCreationError(null);
-          }}
-          onServingsConfirm={(servings) =>
-            selectedPantryRecipe
-              ? handleCreateRecipeMeal(selectedPantryRecipe.id, servings)
-              : undefined
-          }
-          presentation="screen"
-          selectedRecipe={selectedPantryRecipe}
-          slotLabel={targetLabel}
-        />
-      </div>
+          title="팬트리 기반 추천"
+        >
+          <PantryMatchPicker
+            isCreating={isCreating}
+            onBack={handlePickerBackToOptions}
+            onClose={handlePickerBackToOptions}
+            onRecipeSelect={setSelectedPantryRecipe}
+            onServingsCancel={() => {
+              setSelectedPantryRecipe(null);
+              setCreationError(null);
+            }}
+            onServingsConfirm={(servings) =>
+              selectedPantryRecipe
+                ? handleCreateRecipeMeal(selectedPantryRecipe.id, servings)
+                : undefined
+            }
+            presentation="sheet"
+            selectedRecipe={selectedPantryRecipe}
+            slotLabel={targetLabel}
+          />
+        </PickerSheet>
+      </>
     );
   }
 

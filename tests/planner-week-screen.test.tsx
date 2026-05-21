@@ -11,6 +11,9 @@ import { resetPlannerStore } from "@/stores/planner-store";
 const readE2EAuthOverride = vi.fn();
 const fetchPlanner = vi.fn();
 const fetchRecipes = vi.fn();
+const fetchRecipeBooks = vi.fn();
+const fetchRecipeBookRecipes = vi.fn();
+const fetchPantryMatchRecipes = vi.fn();
 const createMealSafe = vi.fn();
 const fetchLeftovers = vi.fn();
 const navigationMocks = vi.hoisted(() => ({
@@ -58,9 +61,11 @@ vi.mock("@/lib/api/leftovers", () => ({
 }));
 
 vi.mock("@/lib/api/recipe", () => ({
-  fetchPantryMatchRecipes: vi.fn(),
-  fetchRecipeBookRecipes: vi.fn(),
-  fetchRecipeBooks: vi.fn(),
+  fetchPantryMatchRecipes: (...args: unknown[]) =>
+    fetchPantryMatchRecipes(...args),
+  fetchRecipeBookRecipes: (...args: unknown[]) =>
+    fetchRecipeBookRecipes(...args),
+  fetchRecipeBooks: (...args: unknown[]) => fetchRecipeBooks(...args),
   fetchRecipes: (...args: unknown[]) => fetchRecipes(...args),
 }));
 
@@ -172,6 +177,9 @@ describe("planner week screen", () => {
     readE2EAuthOverride.mockReset();
     fetchPlanner.mockReset();
     fetchRecipes.mockReset();
+    fetchRecipeBooks.mockReset();
+    fetchRecipeBookRecipes.mockReset();
+    fetchPantryMatchRecipes.mockReset();
     createMealSafe.mockReset();
     fetchLeftovers.mockReset();
     fetchRecipes.mockResolvedValue({
@@ -181,6 +189,21 @@ describe("planner week screen", () => {
         items: [],
         next_cursor: null,
       },
+      error: null,
+    });
+    fetchRecipeBooks.mockResolvedValue({
+      success: true,
+      data: { books: [] },
+      error: null,
+    });
+    fetchRecipeBookRecipes.mockResolvedValue({
+      success: true,
+      data: { has_next: false, items: [], next_cursor: null },
+      error: null,
+    });
+    fetchPantryMatchRecipes.mockResolvedValue({
+      success: true,
+      data: { has_next: false, items: [], next_cursor: null },
       error: null,
     });
     navigationMocks.searchParams.mockReset();
@@ -340,7 +363,7 @@ describe("planner week screen", () => {
     ).toBeNull();
   });
 
-  it("opens the Wave1 meal-add sheet and opens picker options without leaving the planner", async () => {
+  it("opens the Wave1 meal-add sheet and opens picker options as modal sheets without leaving the planner", async () => {
     const user = userEvent.setup();
 
     readE2EAuthOverride.mockReturnValue(true);
@@ -367,12 +390,32 @@ describe("planner week screen", () => {
     expect(leftoverButton.tagName).toBe("BUTTON");
     expect(youtubeButton).toBeTruthy();
     expect(manualLink.getAttribute("href")).toContain("/menu/add/manual?");
+    expect(within(recipeBookButton).getByText("레시피북에서 추가").className).toContain("text-[14px]");
+    expect(within(pantryButton).getByText("팬트리 기반 추천").className).toContain("text-[14px]");
+    expect(within(leftoverButton).getByText("남은요리에서 추가").className).toContain("text-[14px]");
+    expect(within(youtubeButton).getByText("유튜브에서 가져오기").className).toContain("text-[14px]");
+    expect(within(manualLink).getByText("직접 등록").className).toContain("text-[14px]");
 
     await user.click(searchButton);
-    expect(await screen.findByRole("heading", { name: "검색으로 추가" })).toBeTruthy();
+    const searchDialog = await screen.findByRole("dialog", { name: "검색으로 추가" });
+    expect(searchDialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
     expect(screen.queryByTestId("planner-meal-add-sheet")).toBeNull();
 
-    await user.click(screen.getByLabelText("뒤로"));
+    await user.click(within(searchDialog).getByLabelText("뒤로"));
+    expect(screen.getByTestId("planner-meal-add-sheet")).toBeTruthy();
+
+    await user.click(within(screen.getByTestId("planner-meal-add-sheet")).getByTestId("meal-add-option-recipebook"));
+    const recipeBookDialog = await screen.findByRole("dialog", { name: "레시피북에서 추가" });
+    expect(recipeBookDialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
+
+    await user.click(within(recipeBookDialog).getByLabelText("뒤로"));
+    expect(screen.getByTestId("planner-meal-add-sheet")).toBeTruthy();
+
+    await user.click(within(screen.getByTestId("planner-meal-add-sheet")).getByTestId("meal-add-option-pantry"));
+    const pantryDialog = await screen.findByRole("dialog", { name: "팬트리 기반 추천" });
+    expect(pantryDialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
+
+    await user.click(within(pantryDialog).getByLabelText("뒤로"));
     expect(screen.getByTestId("planner-meal-add-sheet")).toBeTruthy();
 
     await user.click(within(screen.getByTestId("planner-meal-add-sheet")).getByRole("button", { name: /유튜브에서 가져오기/ }));

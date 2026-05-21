@@ -32,7 +32,8 @@ const PICKER_OPTIONS: Array<{
 ];
 
 const OPTION_TILE_CLASS =
-  "flex min-h-[58px] items-center gap-2.5 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-left text-[13px] font-semibold leading-[1.25] text-[#212529]";
+  "flex min-h-[58px] items-center gap-2.5 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-left text-[14px] font-semibold leading-[1.25] text-[#212529]";
+const OPTION_LABEL_CLASS = "text-[14px] leading-[1.25]";
 
 function SearchIcon({ className }: { className?: string }) {
   return (
@@ -73,7 +74,7 @@ function OptionButton({
       <span className="text-[20px]" aria-hidden="true">
         {icon}
       </span>
-      <span className="leading-[1.25]">{label}</span>
+      <span className={OPTION_LABEL_CLASS}>{label}</span>
     </button>
   );
 }
@@ -129,7 +130,7 @@ export function MealAddOptionsSheet({
           <span className="text-[20px]" aria-hidden="true">
             🎬
           </span>
-          <span className="leading-[1.25]">유튜브에서 가져오기</span>
+          <span className={OPTION_LABEL_CLASS}>유튜브에서 가져오기</span>
         </button>
 
         <Link
@@ -141,7 +142,7 @@ export function MealAddOptionsSheet({
           <span className="text-[20px]" aria-hidden="true">
             ✏️
           </span>
-          <span className="leading-[1.25]">직접 등록</span>
+          <span className={OPTION_LABEL_CLASS}>직접 등록</span>
         </Link>
       </div>
     </AppBottomSheet>

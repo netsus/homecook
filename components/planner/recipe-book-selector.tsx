@@ -15,11 +15,13 @@ import {
 import { fetchRecipeBooks } from "@/lib/api/recipe";
 import type { RecipeBookSummary } from "@/types/recipe";
 
+type RecipeBookPresentation = "dialog" | "screen" | "web" | "sheet";
+
 export interface RecipeBookSelectorProps {
   onBookSelect: (book: RecipeBookSummary) => void;
   onClose: () => void;
   onBack?: () => void;
-  presentation?: "dialog" | "screen" | "web";
+  presentation?: RecipeBookPresentation;
   slotLabel?: string;
 }
 
@@ -30,7 +32,7 @@ type LoadState = "idle" | "loading" | "ready" | "empty" | "error";
 interface BookCardProps {
   book: RecipeBookSummary;
   onSelect: (book: RecipeBookSummary) => void;
-  presentation?: "dialog" | "screen" | "web";
+  presentation?: RecipeBookPresentation;
 }
 
 function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
@@ -54,7 +56,7 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
       "주말 한 상 차림": "🍽️",
     }[book.name] ?? (book.book_type === "liked" ? "💚" : book.book_type === "custom" ? "🍳" : "🔖");
 
-  if (presentation === "screen") {
+  if (presentation === "screen" || presentation === "sheet") {
     return (
       <button
         className={[
@@ -212,7 +214,7 @@ export function RecipeBookSelector({
       )}
 
       {loadState === "ready" && books.length > 0 && (
-        <div className={presentation === "screen" ? "" : presentation === "web" ? "space-y-2" : "space-y-3"}>
+        <div className={presentation === "screen" || presentation === "sheet" ? "" : presentation === "web" ? "space-y-2" : "space-y-3"}>
           {books.map((book) => (
             <BookCard
               key={book.id}
@@ -233,6 +235,10 @@ export function RecipeBookSelector({
         {content}
       </section>
     );
+  }
+
+  if (presentation === "sheet") {
+    return <>{content}</>;
   }
 
   if (presentation === "screen") {
