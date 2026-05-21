@@ -228,7 +228,8 @@ describe("SettingsScreen", () => {
     ).toBeNull();
   });
 
-  it("back button navigates to /mypage", async () => {
+  it("mobile loading back button navigates to /mypage", async () => {
+    installMatchMedia(true);
     mockFetchUserProfile.mockReturnValue(new Promise(() => {}));
     render(<SettingsScreen initialAuthenticated={true} />);
     const user = userEvent.setup();
@@ -246,8 +247,20 @@ describe("SettingsScreen", () => {
   it("shows loading skeleton initially", () => {
     mockFetchUserProfile.mockReturnValue(new Promise(() => {}));
     render(<SettingsScreen initialAuthenticated={true} />);
-    expect(screen.getByText("설정")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "설정" })).toBeTruthy();
     expect(screen.getByTestId("settings-loading")).toBeTruthy();
+  });
+
+  it("keeps the desktop loading skeleton inside the web settings shell", () => {
+    mockFetchUserProfile.mockReturnValue(new Promise(() => {}));
+
+    render(<SettingsScreen initialAuthenticated={true} />);
+
+    const loading = screen.getByTestId("settings-loading");
+    expect(loading.closest(".web-settings-shell")).toBeTruthy();
+    expect(
+      screen.getByRole("navigation", { name: "데스크탑 주요 메뉴" }),
+    ).toBeTruthy();
   });
 
   it("uses the mobile loading shell for settings/account routes", () => {
