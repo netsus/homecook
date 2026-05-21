@@ -10,6 +10,8 @@ export type ReturnSurface =
   | "recipe.detail";
 
 export type RestoreTarget =
+  | "eaten-list-tab"
+  | "leftovers-tab"
   | "meal-add-modal"
   | "mypage-home"
   | "recipebook-tab"

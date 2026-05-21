@@ -14,6 +14,7 @@ const mockRenameRecipeBook = vi.fn();
 const mockDeleteRecipeBook = vi.fn();
 const mockFetchShoppingHistory = vi.fn();
 const mockFetchRecipeBookRecipes = vi.fn();
+const mockFetchLeftovers = vi.fn();
 const originalScrollTo = window.scrollTo;
 
 vi.mock("@/lib/api/mypage", () => ({
@@ -29,6 +30,11 @@ vi.mock("@/lib/api/mypage", () => ({
 vi.mock("@/lib/api/recipe", () => ({
   fetchRecipeBookRecipes: (...args: unknown[]) =>
     mockFetchRecipeBookRecipes(...args),
+}));
+
+vi.mock("@/lib/api/leftovers", () => ({
+  fetchLeftovers: (...args: unknown[]) => mockFetchLeftovers(...args),
+  isLeftoverApiError: (error: unknown) => error instanceof Error && "status" in error,
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
@@ -162,6 +168,40 @@ const MOCK_SAVED_RECIPES = {
   error: null,
 };
 
+const MOCK_LEFTOVERS = {
+  items: [
+    {
+      id: "leftover-1",
+      recipe_id: "recipe-leftover-1",
+      recipe_title: "남은 김치찌개",
+      recipe_thumbnail_url: null,
+      status: "leftover" as const,
+      cooked_at: "2026-05-01T09:00:00.000Z",
+      eaten_at: null,
+      cooking_servings: 2,
+      source_meal_label: "저녁",
+      source_planned_servings: 2,
+    },
+  ],
+};
+
+const MOCK_EATEN_LEFTOVERS = {
+  items: [
+    {
+      id: "eaten-1",
+      recipe_id: "recipe-eaten-1",
+      recipe_title: "다 먹은 된장찌개",
+      recipe_thumbnail_url: null,
+      status: "eaten" as const,
+      cooked_at: "2026-04-28T09:00:00.000Z",
+      eaten_at: "2026-05-02T09:00:00.000Z",
+      cooking_servings: 1,
+      source_meal_label: "점심",
+      source_planned_servings: 1,
+    },
+  ],
+};
+
 async function openRecipebookSurface(user = userEvent.setup()) {
   await screen.findByText("집밥러");
   await user.click(screen.getByRole("button", { name: /레시피북 관리/ }));
@@ -199,11 +239,15 @@ describe("MypageScreen", () => {
     mockDeleteRecipeBook.mockReset();
     mockFetchShoppingHistory.mockReset();
     mockFetchRecipeBookRecipes.mockReset();
+    mockFetchLeftovers.mockReset();
 
     mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
     mockFetchRecipeBooks.mockResolvedValue(MOCK_BOOKS);
     mockFetchShoppingHistory.mockResolvedValue(MOCK_SHOPPING_HISTORY);
     mockFetchRecipeBookRecipes.mockResolvedValue(MOCK_SAVED_RECIPES);
+    mockFetchLeftovers.mockImplementation((status: string) =>
+      Promise.resolve(status === "eaten" ? MOCK_EATEN_LEFTOVERS : MOCK_LEFTOVERS),
+    );
   });
 
   it("shows the unauthorized gate when not authenticated", () => {
@@ -602,9 +646,17 @@ describe("MypageScreen", () => {
 
     expect(screen.getByRole("tablist")).toBeTruthy();
     const savedTab = screen.getByRole("tab", { name: "저장한 레시피" });
+    const recipebooksTab = screen.getByRole("tab", { name: "레시피북 관리" });
+    const shoppingTab = screen.getByRole("tab", { name: "장보기 내역" });
+    const leftoversTab = screen.getByRole("tab", { name: "남은 요리" });
+    const eatenTab = screen.getByRole("tab", { name: "다먹은 목록" });
     const accountTab = screen.getByRole("tab", { name: "계정 관리" });
 
     expect(savedTab.getAttribute("aria-selected")).toBe("true");
+    expect(recipebooksTab.getAttribute("aria-selected")).toBe("false");
+    expect(shoppingTab.getAttribute("aria-selected")).toBe("false");
+    expect(leftoversTab.getAttribute("aria-selected")).toBe("false");
+    expect(eatenTab.getAttribute("aria-selected")).toBe("false");
     expect(accountTab.getAttribute("aria-selected")).toBe("false");
   });
 
@@ -695,22 +747,29 @@ describe("MypageScreen", () => {
     expect(href).toContain("restore=shopping-history-tab");
   });
 
-  it("links leftovers and eaten-list rows with mypage return context", async () => {
+  it("opens leftovers and eaten-list rows as mypage tab panels", async () => {
     render(<MypageScreen initialAuthenticated />);
 
     await screen.findByText("집밥러");
 
-    const leftoversHref =
-      screen.getByRole("link", { name: /남은 요리/ }).getAttribute("href") ?? "";
-    expect(leftoversHref).toContain("/leftovers");
-    expect(leftoversHref).toContain("returnTo=%2Fmypage");
-    expect(leftoversHref).toContain("returnSurface=mypage.leftovers");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /남은 요리/ }));
 
-    const eatenHref =
-      screen.getByRole("link", { name: /다먹은 목록/ }).getAttribute("href") ?? "";
-    expect(eatenHref).toContain("/leftovers/ate");
-    expect(eatenHref).toContain("returnTo=%2Fmypage");
-    expect(eatenHref).toContain("returnSurface=mypage.eaten-list");
+    expect(await screen.findByText("남은 김치찌개")).toBeTruthy();
+    expect(mockFetchLeftovers).toHaveBeenCalledWith("leftover");
+    expect(
+      screen.getByRole("tab", { name: "남은 요리" }).getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(screen.getByTestId("leftover-card-leftover-1")).toBeTruthy();
+
+    await user.click(screen.getByRole("tab", { name: "다먹은 목록" }));
+
+    expect(await screen.findByText("다 먹은 된장찌개")).toBeTruthy();
+    expect(mockFetchLeftovers).toHaveBeenCalledWith("eaten");
+    expect(
+      screen.getByRole("tab", { name: "다먹은 목록" }).getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(screen.getByTestId("leftover-card-eaten-1")).toBeTruthy();
   });
 
   it("keeps mobile menu icons visually separated from labels", async () => {
@@ -729,7 +788,7 @@ describe("MypageScreen", () => {
     expect(await screen.findByText("4/30 장보기")).toBeTruthy();
     expect(
       screen
-        .getByRole("tab", { name: "저장한 레시피" })
+        .getByRole("tab", { name: "장보기 내역" })
         .getAttribute("aria-selected"),
     ).toBe("true");
   });

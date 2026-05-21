@@ -4374,14 +4374,22 @@ button {
 
   .web-mypage-tabs {
     margin: 72px -32px 0;
+    overflow-x: auto;
     padding: 0 48px;
+    scrollbar-width: none;
+    white-space: nowrap;
+  }
+
+  .web-mypage-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .web-mypage-tabs .web-tab {
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 16px 20px;
+    padding: 16px 18px;
   }
 
   .web-mypage-panel {
@@ -4452,14 +4460,16 @@ button {
     padding: 22px 24px;
   }
 
-  .web-mypage-saved-state h3 {
+  .web-mypage-saved-state h3,
+  .web-mypage-saved-state strong {
     margin: 0;
     color: var(--web-text-1);
     font-size: 17px;
     font-weight: 800;
   }
 
-  .web-mypage-saved-state p {
+  .web-mypage-saved-state p,
+  .web-mypage-saved-state span {
     margin: 6px 0 0;
     color: var(--web-text-3);
     font-size: 13px;
@@ -4869,6 +4879,59 @@ button {
   .web-mypage-shopping-list {
     display: grid;
     gap: 12px;
+  }
+
+  .web-mypage-leftover-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .web-mypage-leftover-card {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+  }
+
+  .web-mypage-leftover-thumb {
+    display: inline-flex;
+    width: 56px;
+    height: 56px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--web-r-sm);
+    object-fit: cover;
+  }
+
+  .web-mypage-leftover-thumb-fallback {
+    background: var(--web-brand-wash);
+    color: var(--web-brand-accessible);
+  }
+
+  .web-mypage-leftover-copy {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .web-mypage-leftover-copy strong {
+    overflow: hidden;
+    color: var(--web-text-1);
+    font-size: 15px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .web-mypage-leftover-copy span {
+    color: var(--web-text-3);
+    font-size: 13px;
+  }
+
+  .web-mypage-sub-actions {
+    display: flex;
+    justify-content: flex-end;
   }
 
   .web-mypage-shopping-card {
