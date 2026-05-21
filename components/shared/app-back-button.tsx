@@ -21,7 +21,7 @@ export function AppBackButton({
     <button
       aria-label={ariaLabel}
       className={[
-        "flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529] transition-colors hover:bg-[#F1F3F5] disabled:opacity-40",
+        "flex h-[var(--app-back-button-size)] w-[var(--app-back-button-size)] shrink-0 items-center justify-center rounded-[var(--app-back-button-radius)] text-[var(--app-back-button-color)] transition-colors hover:bg-[var(--app-back-button-hover-bg)] disabled:opacity-40",
         className,
       ]
         .filter(Boolean)
@@ -31,7 +31,18 @@ export function AppBackButton({
       onClick={onClick}
       type="button"
     >
-      <span aria-hidden="true">‹</span>
+      <svg
+        aria-hidden="true"
+        className="h-[var(--app-back-button-icon-size)] w-[var(--app-back-button-icon-size)]"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="m15 18-6-6 6-6" />
+      </svg>
     </button>
   );
 }
@@ -41,7 +52,7 @@ export function AppBackButtonSpacer({ className }: { className?: string }) {
     <div
       aria-hidden="true"
       className={[
-        "h-[var(--control-height-md)] w-11 shrink-0",
+        "h-[var(--app-back-button-size)] w-[var(--app-back-button-size)] shrink-0",
         className,
       ]
         .filter(Boolean)
