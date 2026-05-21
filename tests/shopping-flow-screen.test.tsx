@@ -165,6 +165,12 @@ describe("shopping flow screen", () => {
       expect(screen.getByTestId("shopping-flow-state-shell").className).toContain(
         "bg-[var(--wave1-surface)]",
       );
+      expect(
+        screen
+          .getByRole("heading", { name: "장보기 대상이 없어요" })
+          .closest("[data-state-tone='empty']")
+          ?.className,
+      ).toContain("shopping-flow-blue-state");
     });
 
     it("should navigate to planner when clicking back button", async () => {
@@ -272,8 +278,8 @@ describe("shopping flow screen", () => {
       expect(screen.getByText("된장찌개")).toBeTruthy();
       expect(screen.queryByText("합산 계획 2인분")).toBeNull();
       expect(screen.queryByText("합산 계획 4인분")).toBeNull();
-      expect(screen.queryByLabelText("2인분")).toBeNull();
-      expect(screen.queryByLabelText("4인분")).toBeNull();
+      expect(screen.getByText("계획 2인분")).toBeTruthy();
+      expect(screen.getByText("계획 4인분")).toBeTruthy();
       expect(screen.getAllByText("장보기 목록 만들기")).toHaveLength(1);
       expect(screen.queryByText(/^#\d+$/)).not.toBeTruthy();
       expect(screen.queryByText(/[🍳🍚🥘🍽️]/u)).not.toBeTruthy();
@@ -336,6 +342,30 @@ describe("shopping flow screen", () => {
       });
 
       expect(screen.getByTestId("shopping-flow-shell").className).toContain("max-w-");
+    });
+
+    it("keeps the planner tab active in desktop shopping prep navigation", async () => {
+      fetchShoppingPreview.mockResolvedValue(
+        createPreviewData([
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_name: "김치찌개",
+            planned_servings: 2,
+          },
+        ])
+      );
+
+      render(<ShoppingFlowScreen initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("김치찌개")).toBeTruthy();
+      });
+
+      const activeLink = screen
+        .getByRole("navigation", { name: "데스크탑 주요 메뉴" })
+        .querySelector('a[aria-current="page"]');
+      expect(activeLink?.textContent).toContain("플래너");
     });
 
     it("should toggle meal selection when clicking checkbox", async () => {

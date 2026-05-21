@@ -170,6 +170,7 @@ export function MypageScreen({
   const renameInputRef = useRef<HTMLInputElement | null>(null);
   const createInputRef = useRef<HTMLInputElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -190,8 +191,22 @@ export function MypageScreen({
   }, []);
 
   const showToast = useCallback((message: string, tone: "success" | "error") => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
     setToast({ message, tone });
-    setTimeout(() => setToast(null), TOAST_DURATION_MS);
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, TOAST_DURATION_MS);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
   }, []);
 
   const switchDesktopTab = useCallback((tab: MypageTab) => {
@@ -456,7 +471,6 @@ export function MypageScreen({
   const savedRecipeCount =
     savedBook?.recipe_count ??
     books.reduce((sum, book) => sum + book.recipe_count, 0);
-  const totalRecipeCount = books.reduce((sum, book) => sum + book.recipe_count, 0);
 
   // Load actual saved recipes for the desktop saved tab.
   useEffect(() => {
@@ -824,16 +838,9 @@ export function MypageScreen({
         <section className="web-mypage-panel" role="tabpanel">
           {activeTab === "saved" ? (
             <SavedRecipesSurface
-              books={books}
               savedRecipes={savedRecipes}
               savedRecipeCount={savedRecipeCount}
               savedRecipesState={savedRecipesState}
-              shoppingCount={shoppingItems.length}
-              totalRecipeCount={totalRecipeCount}
-              onOpenEaten={() => switchDesktopTab("eaten")}
-              onOpenLeftovers={() => switchDesktopTab("leftovers")}
-              onOpenRecipebooks={() => switchDesktopTab("recipebooks")}
-              onOpenShopping={() => switchDesktopTab("shopping")}
               onRetrySavedRecipes={() => {
                 if (savedBook) {
                   void loadSavedRecipes(savedBook.id);
@@ -883,7 +890,6 @@ export function MypageScreen({
                 setMenuOpenBookId(null);
               }}
               onRenameValueChange={setRenameValue}
-              onReturnToMypage={() => switchDesktopTab("saved")}
               onShowCreateInput={() => setShowCreateInput(true)}
               renameInputRef={renameInputRef}
               renameValue={renameValue}
@@ -969,28 +975,14 @@ function WebProfilePill({ profile }: { profile: UserProfileData | null }) {
 }
 
 function SavedRecipesSurface({
-  books,
   savedRecipes,
   savedRecipeCount,
   savedRecipesState,
-  shoppingCount,
-  totalRecipeCount,
-  onOpenEaten,
-  onOpenLeftovers,
-  onOpenRecipebooks,
-  onOpenShopping,
   onRetrySavedRecipes,
 }: {
-  books: RecipeBookSummary[];
   savedRecipes: RecipeBookRecipeItem[];
   savedRecipeCount: number;
   savedRecipesState: SavedRecipesState;
-  shoppingCount: number;
-  totalRecipeCount: number;
-  onOpenEaten: () => void;
-  onOpenLeftovers: () => void;
-  onOpenRecipebooks: () => void;
-  onOpenShopping: () => void;
   onRetrySavedRecipes: () => void;
 }) {
   return (
@@ -1004,64 +996,6 @@ function SavedRecipesSurface({
         savedRecipesState={savedRecipesState}
         onRetry={onRetrySavedRecipes}
       />
-
-      <div className="web-mypage-link-list">
-        <div className="visually-hidden">
-          {books.map((book) => (
-            <span key={book.id}>{book.name}</span>
-          ))}
-        </div>
-        <button
-          className="web-list-row web-list-row-interactive web-mypage-action-row"
-          onClick={onOpenRecipebooks}
-          type="button"
-        >
-          <span className="web-mypage-row-icon"><BookIcon /></span>
-          <span className="web-mypage-row-copy">
-            <strong>레시피북 관리</strong>
-            <span>
-              {books.map((book) => book.name).join(" · ")} · 총 {totalRecipeCount}개
-            </span>
-          </span>
-          <ChevronRightIcon />
-        </button>
-        <button
-          className="web-list-row web-list-row-interactive web-mypage-action-row"
-          onClick={onOpenShopping}
-          type="button"
-        >
-          <span className="web-mypage-row-icon"><CartIcon /></span>
-          <span className="web-mypage-row-copy">
-            <strong>장보기 내역</strong>
-            <span>진행 중 · 완료된 장보기 {Math.max(shoppingCount, 2)}개</span>
-          </span>
-          <ChevronRightIcon />
-        </button>
-        <button
-          className="web-list-row web-list-row-interactive web-mypage-action-row"
-          onClick={onOpenLeftovers}
-          type="button"
-        >
-          <span className="web-mypage-row-icon"><LeftoverIcon /></span>
-          <span className="web-mypage-row-copy">
-            <strong>남은 요리</strong>
-            <span>남겨둔 음식 확인 · 플래너에 다시 추가</span>
-          </span>
-          <ChevronRightIcon />
-        </button>
-        <button
-          className="web-list-row web-list-row-interactive web-mypage-action-row"
-          onClick={onOpenEaten}
-          type="button"
-        >
-          <span className="web-mypage-row-icon"><CheckIcon /></span>
-          <span className="web-mypage-row-copy">
-            <strong>다먹은 목록</strong>
-            <span>다시 만들기 · 되돌리기 액션 관리</span>
-          </span>
-          <ChevronRightIcon />
-        </button>
-      </div>
     </div>
   );
 }
@@ -1597,7 +1531,6 @@ interface RecipeBookTabContentProps {
   onRequestDelete: (book: RecipeBookSummary) => void;
   onCloseDeleteDialog: () => void;
   onConfirmDelete: () => void;
-  onReturnToMypage: () => void;
   onShowCreateInput: () => void;
   onCancelCreate: () => void;
   onCreateNameChange: (value: string) => void;
@@ -1628,7 +1561,6 @@ function RecipeBookTabContent({
   onRequestDelete,
   onCloseDeleteDialog,
   onConfirmDelete,
-  onReturnToMypage,
   onShowCreateInput,
   onCancelCreate,
   onCreateNameChange,
@@ -1636,13 +1568,6 @@ function RecipeBookTabContent({
 }: RecipeBookTabContentProps) {
   return (
     <div className="web-recipebooks-screen" data-testid="recipebook-tab">
-      <nav aria-label="레시피북 경로" className="web-breadcrumb">
-        <button className="web-breadcrumb-link" onClick={onReturnToMypage} type="button">
-          ‹ 마이페이지
-        </button>
-        <span className="web-breadcrumb-sep">/</span>
-        <span className="web-breadcrumb-current">레시피북</span>
-      </nav>
       <div className="web-recipebooks-header">
         <div>
           <h2>레시피북</h2>

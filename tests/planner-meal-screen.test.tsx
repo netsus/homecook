@@ -131,6 +131,23 @@ const DEFAULT_PROPS = {
   initialAuthenticated: false,
 } as const;
 
+function setDesktopViewport(enabled: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: enabled && query === "(min-width: 1024px)",
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 // ── Test suite ────────────────────────────────────────────────────────────────
 
 describe("MealScreen", () => {
@@ -157,6 +174,7 @@ describe("MealScreen", () => {
     mockRouterReplace.mockReset();
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
+    setDesktopViewport(false);
     isMealApiError.mockImplementation(
       (error: unknown): error is Error & { status: number; code: string } =>
         Boolean(error) &&
@@ -413,6 +431,47 @@ describe("MealScreen", () => {
 
     expect(screen.queryByRole("button", { name: "김치찌개 요리하기" })).toBeNull();
     expect(createCookingSession).not.toHaveBeenCalled();
+  });
+
+  it("renders the desktop meal screen as a meal list with per-food actions", async () => {
+    setDesktopViewport(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({
+      items: [
+        buildMeal({
+          id: "meal-1",
+          recipe_id: "recipe-1",
+          recipe_title: "김치찌개",
+          status: "shopping_done",
+          planned_servings: 2,
+        }),
+        buildMeal({
+          id: "meal-2",
+          recipe_id: "recipe-2",
+          recipe_title: "파스타",
+          status: "registered",
+          planned_servings: 1,
+        }),
+      ],
+    });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    const list = await screen.findByTestId("web-meal-list");
+    const summary = screen.getByTestId("web-meal-summary");
+
+    expect(within(summary).getByText("음식")).toBeTruthy();
+    expect(within(summary).getByText("2개")).toBeTruthy();
+    expect(within(list).getByText("김치찌개")).toBeTruthy();
+    expect(within(list).getByText("파스타")).toBeTruthy();
+    expect(screen.queryByLabelText("김치찌개 레시피 보기")).toBeNull();
+    expect(within(list).queryByText("집밥")).toBeNull();
+    expect(within(list).queryByText("간단")).toBeNull();
+    expect(within(list).queryByText("플래너")).toBeNull();
+    expect(within(list).getByRole("button", { name: "김치찌개 요리하기" })).toBeTruthy();
+    expect(within(list).getAllByRole("button", { name: "장보기" })).toHaveLength(2);
+    expect(within(list).getAllByRole("button", { name: "인분 증가" })).toHaveLength(2);
+    expect(screen.getAllByTestId("meal-screen-add-cta")).toHaveLength(1);
   });
 
   // ── Stepper — registered (no modal) ────────────────────────────────────

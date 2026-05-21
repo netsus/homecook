@@ -235,6 +235,34 @@ describe("MenuAddScreen", () => {
     expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
+  it("switches back to recipe search when the desktop search option is clicked from another method", async () => {
+    installMatchMedia(true);
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-manual"));
+    expect(screen.getByTestId("manual-recipe-embedded")).toBeTruthy();
+
+    await user.click(screen.getByTestId("menu-add-option-search"));
+
+    expect(screen.getByLabelText("레시피 검색")).toBeTruthy();
+    expect(screen.queryByTestId("manual-recipe-embedded")).toBeNull();
+  });
+
+  it("omits redundant desktop picker eyebrow copy", async () => {
+    installMatchMedia(true);
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+
+    expect(screen.queryByText("현재 선택")).toBeNull();
+    expect(screen.queryByText("유튜브 가져오기")).toBeNull();
+    expect(screen.getByRole("heading", { name: "유튜브에서 가져오기" })).toBeTruthy();
+  });
+
   it("keeps the mobile manual option routed to the standalone create screen", async () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 

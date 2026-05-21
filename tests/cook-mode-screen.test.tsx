@@ -714,6 +714,7 @@ describe("CookModeScreen", () => {
   });
 
   it("uses the Wave1 white surface for cook mode loading states", async () => {
+    installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockReturnValue(new Promise(() => {}));
 
@@ -722,5 +723,18 @@ describe("CookModeScreen", () => {
 
     const screenRoot = await screen.findByTestId("cook-mode-screen");
     expect(screenRoot.className).toContain("bg-[var(--wave1-surface)]");
+  });
+
+  it("keeps desktop cook-mode loading inside the web cooking shell", async () => {
+    installMatchMedia(false);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockReturnValue(new Promise(() => {}));
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const loading = await screen.findByTestId("cook-mode-loading");
+    expect(loading.closest(".web-cooking-shell")).toBeTruthy();
+    expect(loading.closest(".web-cook-mode-state-card")).toBeTruthy();
   });
 });

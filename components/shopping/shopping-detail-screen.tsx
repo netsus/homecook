@@ -562,7 +562,7 @@ export function ShoppingDetailScreen({
 
   return (
     <WebShell className="web-shopping-shell" wide>
-      <WebTopNav activeId="mypage" items={WEB_NAV_ITEMS} />
+      <WebTopNav activeId="planner" items={WEB_NAV_ITEMS} />
       <main className="web-screen web-shopping-detail-screen">
         <nav aria-label="장보기 상세 경로" className="web-breadcrumb">
           <button
