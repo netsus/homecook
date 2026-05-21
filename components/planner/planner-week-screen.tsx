@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import React from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -293,6 +293,7 @@ function PlannerWeekWebView({
   shoppingListLinks: Array<{ id: string; title: string }>;
   todayKey: string;
 }) {
+  const [isFirstMealChooserOpen, setIsFirstMealChooserOpen] = useState(false);
   const primaryColumn = getPlannerPrimaryColumn(columns);
   const lunchColumn = findPlannerColumn(columns, "점심");
   const quickDateKey = dateKeys.includes(todayKey) ? todayKey : dateKeys[0];
@@ -301,6 +302,7 @@ function PlannerWeekWebView({
     .sort((a, b) => `${b.plan_date}:${b.id}`.localeCompare(`${a.plan_date}:${a.id}`))
     .slice(0, 4);
   const canShowGrid = screenState === "ready" || screenState === "empty";
+  const canChooseFirstMeal = dateKeys.length > 0 && columns.length > 0;
 
   return (
     <WebShell className="web-planner" wide>
@@ -480,21 +482,54 @@ function PlannerWeekWebView({
                 {screenState === "empty" ? (
                   <WebEmptyState
                     action={
-                      primaryColumn && quickDateKey ? (
-                        <Link
-                          className="web-button web-button-secondary"
-                          href={getMealAddHrefForSlot(quickDateKey, primaryColumn)}
-                        >
-                          첫 식사 추가
-                        </Link>
+                      canChooseFirstMeal ? (
+                        <div className="web-planner-empty-actions">
+                          <WebButton
+                            aria-controls="planner-first-meal-chooser"
+                            aria-expanded={isFirstMealChooserOpen}
+                            onClick={() =>
+                              setIsFirstMealChooserOpen((current) => !current)
+                            }
+                            variant="secondary"
+                          >
+                            날짜와 끼니 선택
+                          </WebButton>
+                          {isFirstMealChooserOpen ? (
+                            <div
+                              aria-label="첫 식사 날짜와 끼니 선택"
+                              className="web-planner-empty-picker"
+                              data-testid="planner-first-meal-chooser"
+                              id="planner-first-meal-chooser"
+                              role="group"
+                            >
+                              {dateKeys.map((dateKey) => (
+                                <div className="web-planner-empty-picker-row" key={dateKey}>
+                                  <span>
+                                    {formatWeekdayLabel(dateKey)} {formatCompactDateLabel(dateKey)}
+                                  </span>
+                                  <div>
+                                    {columns.map((column) => (
+                                      <Link
+                                        className="web-planner-empty-picker-option"
+                                        href={getMealAddHrefForSlot(dateKey, column)}
+                                        key={`${dateKey}-${column.id}`}
+                                      >
+                                        {column.name}
+                                      </Link>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
                       ) : null
                     }
                     className="web-planner-empty-callout"
-                    description="표의 빈 칸에서 바로 식사를 추가할 수 있어요."
+                    description="날짜와 끼니를 먼저 고른 뒤 식사를 추가해 주세요."
                     title="아직 등록된 식사가 없어요"
                   />
                 ) : null}
-
                 <div className="web-planner-grid">
                   <div className="web-planner-corner" aria-hidden="true" />
                   {dateKeys.map((dateKey) => {
@@ -605,6 +640,7 @@ export function PlannerWeekScreen({
   initialAuthenticated = false,
 }: PlannerWeekScreenProps) {
   const isDesktopViewport = useDesktopViewport();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const rangeStartDate = usePlannerStore((state) => state.rangeStartDate);
   const rangeEndDate = usePlannerStore((state) => state.rangeEndDate);
@@ -1045,8 +1081,21 @@ export function PlannerWeekScreen({
   }
 
   async function handleMealAddComplete() {
+    const completedTarget = mealAddSheet;
+
     setMealAddPickerMode(null);
     setMealAddSheet(null);
+
+    if (completedTarget) {
+      const slotSuffix = completedTarget.slotName
+        ? `?slot=${encodeURIComponent(completedTarget.slotName)}`
+        : "";
+
+      router.replace(
+        `/planner/${completedTarget.dateKey}/${completedTarget.columnId}${slotSuffix}`,
+      );
+      return;
+    }
 
     try {
       await loadPlanner();

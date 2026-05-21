@@ -17,10 +17,16 @@ const fetchPantryMatchRecipes = vi.fn();
 const createMealSafe = vi.fn();
 const fetchLeftovers = vi.fn();
 const navigationMocks = vi.hoisted(() => ({
+  push: vi.fn(),
+  replace: vi.fn(),
   searchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: navigationMocks.push,
+    replace: navigationMocks.replace,
+  }),
   useSearchParams: () => navigationMocks.searchParams(),
 }));
 
@@ -182,6 +188,8 @@ describe("planner week screen", () => {
     fetchPantryMatchRecipes.mockReset();
     createMealSafe.mockReset();
     fetchLeftovers.mockReset();
+    navigationMocks.push.mockReset();
+    navigationMocks.replace.mockReset();
     fetchRecipes.mockResolvedValue({
       success: true,
       data: {
@@ -363,6 +371,34 @@ describe("planner week screen", () => {
     ).toBeNull();
   });
 
+  it("lets desktop users choose the first meal date and slot instead of auto-picking one", async () => {
+    const user = userEvent.setup();
+
+    setDesktopViewport(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen />);
+
+    expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
+
+    const chooserButton = screen.getByRole("button", { name: "날짜와 끼니 선택" });
+    expect(chooserButton.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByTestId("planner-first-meal-chooser")).toBeNull();
+
+    await user.click(chooserButton);
+
+    const chooser = screen.getByTestId("planner-first-meal-chooser");
+    const firstDayDinner = within(chooser).getAllByRole("link", { name: "저녁" })[0] as HTMLAnchorElement;
+    const saturdayLunch = within(chooser).getAllByRole("link", { name: "점심" })[4] as HTMLAnchorElement;
+
+    expect(chooserButton.getAttribute("aria-expanded")).toBe("true");
+    expect(firstDayDinner.getAttribute("href")).toContain("date=2026-03-24");
+    expect(firstDayDinner.getAttribute("href")).toContain("columnId=column-dinner");
+    expect(saturdayLunch.getAttribute("href")).toContain("date=2026-03-28");
+    expect(saturdayLunch.getAttribute("href")).toContain("columnId=column-lunch");
+  });
+
   it("opens the Wave1 meal-add sheet and opens picker options as modal sheets without leaving the planner", async () => {
     const user = userEvent.setup();
 
@@ -430,6 +466,72 @@ describe("planner week screen", () => {
 
     await user.click(within(youtubeDialog).getByTestId("youtube-import-entry-back"));
     expect(screen.getByTestId("planner-meal-add-sheet")).toBeTruthy();
+  });
+
+  it("navigates to the completed meal screen after adding from the inline meal-add flow", async () => {
+    const user = userEvent.setup();
+
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+    fetchLeftovers.mockResolvedValue({
+      items: [
+        {
+          id: "leftover-1",
+          recipe_id: "recipe-1",
+          recipe_title: "김치찌개",
+          recipe_thumbnail_url: null,
+          status: "leftover",
+          cooked_at: "2026-03-23T00:00:00.000Z",
+          eaten_at: null,
+          cooking_servings: 2,
+          source_meal_label: "저녁",
+          source_planned_servings: 2,
+        },
+      ],
+    });
+    createMealSafe.mockResolvedValue({
+      success: true,
+      data: {
+        id: "meal-1",
+        recipe_id: "recipe-1",
+        plan_date: "2026-03-24",
+        column_id: "column-breakfast",
+        planned_servings: 1,
+        status: "registered",
+        is_leftover: true,
+        leftover_dish_id: "leftover-1",
+      },
+      error: null,
+    });
+
+    render(<PlannerWeekScreen />);
+
+    await screen.findByRole("heading", { name: "플래너" });
+    await user.click(screen.getByRole("button", { name: "3/24 아침 식사 추가" }));
+    await user.click(
+      within(screen.getByTestId("planner-meal-add-sheet")).getByTestId(
+        "meal-add-option-leftover",
+      ),
+    );
+
+    expect(await screen.findByText("김치찌개")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "추가" }));
+
+    const servingsDialog = await screen.findByRole("dialog", { name: "계획 인분 입력" });
+    await user.click(within(servingsDialog).getByRole("button", { name: "추가" }));
+
+    await waitFor(() => {
+      expect(createMealSafe).toHaveBeenCalledWith({
+        recipe_id: "recipe-1",
+        plan_date: "2026-03-24",
+        column_id: "column-breakfast",
+        planned_servings: 1,
+        leftover_dish_id: "leftover-1",
+      });
+    });
+    expect(navigationMocks.replace).toHaveBeenCalledWith(
+      "/planner/2026-03-24/column-breakfast?slot=%EC%95%84%EC%B9%A8",
+    );
   });
 
   it("shows a direct link back to an existing shopping list", async () => {
