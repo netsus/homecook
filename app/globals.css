@@ -5002,15 +5002,16 @@ button {
   }
 
   .web-pantry-card:disabled {
-    cursor: default;
-    opacity: 1;
+    cursor: wait;
+    opacity: 0.72;
   }
 
-  .web-pantry-card-selectable {
+  .web-pantry-card-selectable,
+  .web-pantry-card-toggle {
     cursor: pointer;
   }
 
-  .web-pantry-card:hover {
+  .web-pantry-card:not(:disabled):hover {
     border-color: rgba(0, 0, 0, 0.14);
     box-shadow: var(--web-shadow-card);
     transform: translateY(-1px);
@@ -5019,6 +5020,16 @@ button {
   .web-pantry-card-selected {
     border-color: var(--web-brand);
     background: var(--web-brand-wash);
+  }
+
+  .web-pantry-card-missing {
+    border-style: dashed;
+    background: var(--web-bg-alt);
+    color: var(--web-text-3);
+  }
+
+  .web-pantry-card-pending {
+    pointer-events: none;
   }
 
   .web-pantry-check {
@@ -5081,6 +5092,11 @@ button {
     padding: 0 9px;
     font-size: 12px;
     font-weight: 800;
+  }
+
+  .web-pantry-badge-missing {
+    background: rgba(108, 117, 125, 0.12);
+    color: var(--web-text-3);
   }
 
   .web-pantry-empty {
