@@ -14,6 +14,8 @@ import type {
   ManualRecipeStepInput,
   YoutubeExtractedCookingMethod,
   YoutubeExtractedIngredient,
+  YoutubeIngredientResolutionStatus,
+  YoutubeRecipeClassificationStatus,
   YoutubeRecipeExtractData,
   YoutubeRecipeRegisterData,
   YoutubeRecipeValidateData,
@@ -90,75 +92,87 @@ interface CookingMethodsTable {
   }): CookingMethodInsertQuery;
 }
 
-interface RecipeInsertQuery {
-  select(columns: string): RecipeInsertQuery;
-  maybeSingle(): MaybeSingleResult<{
-    id: string;
-    title: string;
-    source_type: "youtube";
-    created_by: string;
-    base_servings: number;
-  }>;
+interface YoutubeExtractionSessionInsert {
+  id: string;
+  user_id: string;
+  youtube_url: string;
+  youtube_video_id: string;
+  video_title: string;
+  channel_title: string;
+  thumbnail_url: string | null;
+  provider_version: string;
+  source_providers: string[];
+  classification_status: YoutubeRecipeClassificationStatus;
+  classification_reasons: string[];
+  raw_source_text: string;
+  extraction_meta_json: Record<string, unknown>;
+  draft_json: Record<string, unknown>;
+  extraction_methods: string[];
+  status: "draft";
+  expires_at: string;
 }
 
-interface RecipesTable {
-  insert(values: {
-    title: string;
-    base_servings: number;
-    source_type: "youtube";
-    created_by: string;
-  }): RecipeInsertQuery;
+interface YoutubeExtractionSessionRow {
+  id: string;
+  user_id: string;
+  youtube_url: string;
+  youtube_video_id: string;
+  provider_version: string | null;
+  extraction_methods: string[];
+  raw_source_text: string | null;
+  extraction_meta_json: Record<string, unknown>;
+  draft_json: Record<string, unknown>;
+  status: "draft" | "consumed" | "expired";
+  expires_at: string;
 }
 
-interface RecipeSourcesTable {
-  insert(values: {
-    recipe_id: string;
-    youtube_url: string;
-    youtube_video_id: string;
-    extraction_methods: string[];
-    extraction_meta_json: {
-      extraction_id: string;
-      provider: "mvp_stub";
-    };
-    raw_extracted_text: string;
-  }): PromiseLike<{
+interface YoutubeExtractionSessionSelectQuery {
+  eq(column: string, value: string): YoutubeExtractionSessionSelectQuery;
+  maybeSingle(): MaybeSingleResult<YoutubeExtractionSessionRow>;
+}
+
+interface YoutubeExtractionSessionsTable {
+  insert(values: YoutubeExtractionSessionInsert): PromiseLike<{
     data: null;
     error: QueryError | null;
   }>;
+  select(columns: string): YoutubeExtractionSessionSelectQuery;
 }
 
-interface RecipeIngredientInsertRow {
+interface YoutubeRecipeRegisterRpcData {
   recipe_id: string;
-  ingredient_id: string;
-  amount: number | null;
-  unit: string | null;
-  ingredient_type: "QUANT" | "TO_TASTE";
-  display_text: string | null;
-  scalable: boolean;
-  sort_order: number;
+  title: string;
 }
 
-interface RecipeIngredientsTable {
-  insert(values: RecipeIngredientInsertRow[]): PromiseLike<{
-    data: null;
-    error: QueryError | null;
-  }>;
+interface YoutubeRecipeRegisterRpcErrorData {
+  error_code:
+    | "EXTRACTION_NOT_FOUND"
+    | "EXTRACTION_EXPIRED"
+    | "EXTRACTION_ALREADY_REGISTERED"
+    | "EXTRACTION_MISMATCH"
+    | "VALIDATION_ERROR";
+  message?: string;
 }
 
-interface RecipeStepInsertRow {
-  recipe_id: string;
-  step_number: number;
-  instruction: string;
-  cooking_method_id: string;
-  ingredients_used: ManualRecipeStepInput["ingredients_used"];
-  heat_level: string | null;
-  duration_seconds: number | null;
-  duration_text: string | null;
-}
+type YoutubeRecipeRegisterRpcResultData =
+  | YoutubeRecipeRegisterRpcData
+  | YoutubeRecipeRegisterRpcErrorData;
 
-interface RecipeStepsTable {
-  insert(values: RecipeStepInsertRow[]): PromiseLike<{
-    data: null;
+interface YoutubeRecipeRegisterRpcClient {
+  rpc(
+    fn: "register_youtube_recipe_from_session",
+    args: {
+      p_extraction_id: string;
+      p_user_id: string;
+      p_title: string;
+      p_base_servings: number;
+      p_youtube_url: string;
+      p_youtube_video_id: string;
+      p_ingredients: ManualRecipeIngredientInput[];
+      p_steps: ManualRecipeStepInput[];
+    },
+  ): PromiseLike<{
+    data: YoutubeRecipeRegisterRpcResultData | null;
     error: QueryError | null;
   }>;
 }
@@ -175,13 +189,42 @@ interface ParsedYoutubeRegister {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,20}$/;
-const DEFAULT_EXTRACTION_METHODS = ["description", "manual"] as const;
+const DEFAULT_EXTRACTION_METHODS = ["description"] as const;
+const YOUTUBE_PROVIDER_VERSION = "youtube-videos-list-description-v1";
+const SESSION_TTL_HOURS = 24;
 const NEW_COOKING_METHOD = {
   code: "auto_salt",
   label: "절이기",
   color_key: "unassigned",
 } as const;
 const EXTRACTED_INGREDIENT_NAMES = ["김치", "소금"] as const;
+
+interface YoutubeProviderVideo {
+  videoId: string;
+  title: string;
+  channel: string;
+  thumbnailUrl: string | null;
+  description: string;
+  tags: string[];
+  categoryId: string | null;
+  duration: string | null;
+  captionFlag: string | null;
+}
+
+interface YoutubeClassification {
+  status: YoutubeRecipeClassificationStatus;
+  reasons: string[];
+}
+
+interface YoutubeProviderError {
+  code: "VIDEO_NOT_FOUND" | "PROVIDER_ERROR" | "QUOTA_EXCEEDED";
+  message: string;
+  status: number;
+}
+
+type YoutubeProviderResult =
+  | { video: YoutubeProviderVideo }
+  | { providerError: YoutubeProviderError };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -201,6 +244,10 @@ function normalizeNullableString(value: unknown) {
   }
 
   return typeof value === "string" ? value.trim() : null;
+}
+
+function canonicalYoutubeUrl(videoId: string) {
+  return `https://www.youtube.com/watch?v=${videoId}`;
 }
 
 function table<T>(dbClient: DbClient, tableName: string) {
@@ -240,7 +287,7 @@ export function parseYoutubeUrl(value: unknown) {
   }
 
   return {
-    youtubeUrl: rawUrl,
+    youtubeUrl: canonicalYoutubeUrl(videoId),
     videoId,
   };
 }
@@ -281,22 +328,307 @@ async function readJson(request: Request) {
   }
 }
 
-function buildVideoInfo(videoId: string) {
+function getBestThumbnail(thumbnails: unknown, videoId: string) {
+  if (isRecord(thumbnails)) {
+    for (const key of ["maxres", "standard", "high", "medium", "default"]) {
+      const thumbnail = thumbnails[key];
+      if (isRecord(thumbnail) && typeof thumbnail.url === "string") {
+        return thumbnail.url;
+      }
+    }
+  }
+
+  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+}
+
+function getFixtureVideo(videoId: string): YoutubeProviderResult {
+  if (videoId.includes("missing")) {
+    return {
+      providerError: {
+        code: "VIDEO_NOT_FOUND",
+        message: "유튜브 영상을 찾지 못했어요.",
+        status: 404,
+      },
+    };
+  }
+
   if (videoId.startsWith("nonrecipe")) {
     return {
-      isRecipeVideo: false,
-      title: "일반 영상",
-      channel: "채널명",
-      thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+      video: {
+        videoId,
+        title: "일반 영상",
+        channel: "채널명",
+        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        description: "음악과 일상 이야기를 담은 일반 영상입니다.",
+        tags: ["music", "vlog"],
+        categoryId: "10",
+        duration: "PT3M",
+        captionFlag: "false",
+      },
+    };
+  }
+
+  if (videoId.startsWith("uncertain")) {
+    return {
+      video: {
+        videoId,
+        title: "김치찌개 먹방 브이로그",
+        channel: "집밥 채널",
+        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        description: [
+          "오늘은 김치찌개를 먹었습니다.",
+          "김치 200g",
+          "소금 약간",
+          "김치를 한입 크기로 썬다.",
+        ].join("\n"),
+        tags: ["food", "vlog"],
+        categoryId: "26",
+        duration: "PT12M",
+        captionFlag: "false",
+      },
+    };
+  }
+
+  if (videoId.startsWith("incomplete")) {
+    return {
+      video: {
+        videoId,
+        title: "김치찌개 설명 부족한 레시피",
+        channel: "집밥 채널",
+        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        description: [
+          "김치찌개 레시피",
+          "재료",
+          "김치 200g",
+          "소금 약간",
+        ].join("\n"),
+        tags: ["recipe", "김치찌개", "레시피"],
+        categoryId: "26",
+        duration: "PT8M",
+        captionFlag: "false",
+      },
+    };
+  }
+
+  if (videoId.startsWith("needsreview")) {
+    return {
+      video: {
+        videoId,
+        title: "백종원 김치찌개 후보 확인 필요",
+        channel: "백종원의 요리비책",
+        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        description: [
+          "김치찌개 레시피",
+          "재료",
+          "김치 200g",
+          "소금 약간",
+          "조리 과정",
+          "김치를 한입 크기로 썬다.",
+        ].join("\n"),
+        tags: ["recipe", "김치찌개", "레시피"],
+        categoryId: "26",
+        duration: "PT15M30S",
+        captionFlag: "false",
+      },
     };
   }
 
   return {
-    isRecipeVideo: true,
-    title: "백종원 김치찌개",
-    channel: "백종원의 요리비책",
-    thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+    video: {
+      videoId,
+      title: "백종원 김치찌개",
+      channel: "백종원의 요리비책",
+      thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+      description: [
+        "김치찌개 레시피",
+        "재료",
+        "김치 200g",
+        "소금 약간",
+        "조리 과정",
+        "김치를 한입 크기로 썬다.",
+      ].join("\n"),
+      tags: ["recipe", "김치찌개", "레시피"],
+      categoryId: "26",
+      duration: "PT15M30S",
+      captionFlag: "false",
+    },
   };
+}
+
+function shouldUseYoutubeFixtureProvider() {
+  return process.env.NODE_ENV === "test" || process.env.HOMECOOK_YOUTUBE_FIXTURE_PROVIDER === "1";
+}
+
+function isQuotaErrorPayload(payload: unknown) {
+  if (!isRecord(payload) || !isRecord(payload.error)) {
+    return false;
+  }
+
+  const errors = payload.error.errors;
+  if (!Array.isArray(errors)) {
+    return false;
+  }
+
+  return errors.some((error) => {
+    if (!isRecord(error) || typeof error.reason !== "string") {
+      return false;
+    }
+
+    return ["quotaExceeded", "dailyLimitExceeded", "userRateLimitExceeded"].includes(error.reason);
+  });
+}
+
+function mapProviderError(payload: unknown): YoutubeProviderError {
+  if (isQuotaErrorPayload(payload)) {
+    return {
+      code: "QUOTA_EXCEEDED",
+      message: "YouTube API 할당량을 초과했어요.",
+      status: 429,
+    };
+  }
+
+  return {
+    code: "PROVIDER_ERROR",
+    message: "YouTube 영상 정보를 가져오지 못했어요.",
+    status: 502,
+  };
+}
+
+function parseYoutubeVideoPayload(videoId: string, payload: unknown): YoutubeProviderResult {
+  if (!isRecord(payload) || !Array.isArray(payload.items)) {
+    return {
+      providerError: {
+        code: "PROVIDER_ERROR",
+        message: "YouTube 영상 정보를 해석하지 못했어요.",
+        status: 502,
+      },
+    };
+  }
+
+  const item = payload.items[0];
+  if (!isRecord(item)) {
+    return {
+      providerError: {
+        code: "VIDEO_NOT_FOUND",
+        message: "유튜브 영상을 찾지 못했어요.",
+        status: 404,
+      },
+    };
+  }
+
+  const snippet = isRecord(item.snippet) ? item.snippet : {};
+  const contentDetails = isRecord(item.contentDetails) ? item.contentDetails : {};
+
+  return {
+    video: {
+      videoId,
+      title: typeof snippet.title === "string" ? snippet.title : "유튜브 영상 레시피",
+      channel: typeof snippet.channelTitle === "string" ? snippet.channelTitle : "YouTube",
+      thumbnailUrl: getBestThumbnail(snippet.thumbnails, videoId),
+      description: typeof snippet.description === "string" ? snippet.description : "",
+      tags: Array.isArray(snippet.tags)
+        ? snippet.tags.filter((tag): tag is string => typeof tag === "string")
+        : [],
+      categoryId: typeof snippet.categoryId === "string" ? snippet.categoryId : null,
+      duration: typeof contentDetails.duration === "string" ? contentDetails.duration : null,
+      captionFlag: typeof contentDetails.caption === "string" ? contentDetails.caption : null,
+    },
+  };
+}
+
+async function fetchYoutubeVideo(videoId: string): Promise<YoutubeProviderResult> {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+
+  if (!apiKey) {
+    if (shouldUseYoutubeFixtureProvider()) {
+      return getFixtureVideo(videoId);
+    }
+
+    return {
+      providerError: {
+        code: "PROVIDER_ERROR",
+        message: "YouTube API 키가 설정되지 않았어요.",
+        status: 502,
+      },
+    };
+  }
+
+  const params = new URLSearchParams({
+    part: "snippet,contentDetails",
+    id: videoId,
+    key: apiKey,
+  });
+
+  let response: Response;
+
+  try {
+    response = await fetch(`https://www.googleapis.com/youtube/v3/videos?${params.toString()}`);
+  } catch {
+    return {
+      providerError: {
+        code: "PROVIDER_ERROR",
+        message: "YouTube API에 연결하지 못했어요.",
+        status: 502,
+      },
+    };
+  }
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    return { providerError: mapProviderError(payload) };
+  }
+
+  return parseYoutubeVideoPayload(videoId, payload);
+}
+
+function classifyYoutubeVideo(video: YoutubeProviderVideo): YoutubeClassification {
+  const haystack = [
+    video.title,
+    video.description,
+    ...video.tags,
+  ].join(" ").toLowerCase();
+
+  const recipeKeywords = ["레시피", "재료", "만드는 법", "조리", "요리", "recipe", "ingredients"];
+  const foodKeywords = ["김치", "찌개", "국", "볶음", "구이", "밥", "먹방", "food"];
+  const nonRecipeKeywords = ["music", "게임", "game", "뉴스", "news", "뮤직비디오", "일반 영상"];
+
+  const recipeHits = recipeKeywords.filter((keyword) => haystack.includes(keyword.toLowerCase()));
+  const foodHits = foodKeywords.filter((keyword) => haystack.includes(keyword.toLowerCase()));
+  const nonRecipeHits = nonRecipeKeywords.filter((keyword) => haystack.includes(keyword.toLowerCase()));
+
+  if (recipeHits.length >= 2 || (recipeHits.length >= 1 && video.categoryId === "26")) {
+    return {
+      status: "recipe",
+      reasons: [
+        ...recipeHits.map((keyword) => `contains recipe signal: ${keyword}`),
+        ...(video.categoryId === "26" ? ["categoryId=26"] : []),
+      ],
+    };
+  }
+
+  if (nonRecipeHits.length > 0 && recipeHits.length === 0 && foodHits.length === 0 && video.categoryId !== "26") {
+    return {
+      status: "non_recipe",
+      reasons: nonRecipeHits.map((keyword) => `contains non-recipe signal: ${keyword}`),
+    };
+  }
+
+  return {
+    status: "uncertain",
+    reasons: foodHits.length > 0
+      ? foodHits.map((keyword) => `contains weak food signal: ${keyword}`)
+      : ["structured recipe signals not found"],
+  };
+}
+
+function failForProviderError(error: YoutubeProviderError) {
+  return fail(error.code, error.message, error.status);
 }
 
 export async function handleYoutubeValidate(request: Request) {
@@ -315,17 +647,27 @@ export async function handleYoutubeValidate(request: Request) {
     return buildInvalidUrlResponse();
   }
 
-  const video = buildVideoInfo(parsedUrl.videoId);
+  const videoResult = await fetchYoutubeVideo(parsedUrl.videoId);
+  if ("providerError" in videoResult) {
+    return failForProviderError(videoResult.providerError);
+  }
+
+  const { video } = videoResult;
+  const classification = classifyYoutubeVideo(video);
   const data: YoutubeRecipeValidateData = {
     is_valid_url: true,
-    is_recipe_video: video.isRecipeVideo,
+    is_recipe_video: classification.status !== "non_recipe",
+    classification_status: classification.status,
+    classification_reasons: classification.reasons,
     video_info: {
       video_id: parsedUrl.videoId,
       title: video.title,
       channel: video.channel,
-      thumbnail_url: video.thumbnailUrl,
+      thumbnail_url: video.thumbnailUrl ?? `https://img.youtube.com/vi/${parsedUrl.videoId}/hqdefault.jpg`,
+      duration: video.duration,
+      category_id: video.categoryId,
     },
-    ...(video.isRecipeVideo
+    ...(classification.status !== "non_recipe"
       ? {}
       : { message: "이 영상은 요리 레시피가 아닌 것 같아요" }),
   };
@@ -402,31 +744,130 @@ async function ensureGeneratedCookingMethod(dbClient: DbClient) {
   };
 }
 
-function buildExtractedIngredients(idsByName: Map<string, string>): YoutubeExtractedIngredient[] {
+function buildExtractedIngredient({
+  idsByName,
+  name,
+  amount,
+  unit,
+  ingredientType,
+  displayText,
+  sortOrder,
+  scalable,
+  confidence,
+  rawText,
+  forceNeedsReview = false,
+}: {
+  idsByName: Map<string, string>;
+  name: string;
+  amount: number | null;
+  unit: string | null;
+  ingredientType: "QUANT" | "TO_TASTE";
+  displayText: string;
+  sortOrder: number;
+  scalable: boolean;
+  confidence: number;
+  rawText: string;
+  forceNeedsReview?: boolean;
+}): YoutubeExtractedIngredient {
+  const ingredientId = idsByName.get(name) ?? "";
+  const resolutionStatus: YoutubeIngredientResolutionStatus = forceNeedsReview && ingredientId
+    ? "needs_review"
+    : ingredientId
+      ? "resolved"
+      : "unresolved";
+
+  return {
+    ingredient_id: resolutionStatus === "resolved" ? ingredientId : "",
+    standard_name: name,
+    amount,
+    unit,
+    ingredient_type: ingredientType,
+    display_text: displayText,
+    sort_order: sortOrder,
+    scalable,
+    confidence: ingredientId ? confidence : null,
+    resolution_status: resolutionStatus,
+    candidates: resolutionStatus === "needs_review"
+      ? [{ ingredient_id: ingredientId, standard_name: name, confidence }]
+      : ingredientId
+        ? undefined
+        : [],
+    raw_text: rawText,
+  };
+}
+
+function buildExtractedIngredients(
+  idsByName: Map<string, string>,
+  {
+    saltNeedsReview = false,
+  }: {
+    saltNeedsReview?: boolean;
+  } = {},
+): YoutubeExtractedIngredient[] {
   return [
-    {
-      ingredient_id: idsByName.get("김치") ?? "",
-      standard_name: "김치",
+    buildExtractedIngredient({
+      idsByName,
+      name: "김치",
       amount: 200,
       unit: "g",
-      ingredient_type: "QUANT",
-      display_text: "김치 200g",
-      sort_order: 1,
+      ingredientType: "QUANT",
+      displayText: "김치 200g",
+      sortOrder: 1,
       scalable: true,
       confidence: 0.95,
-    },
-    {
-      ingredient_id: idsByName.get("소금") ?? "",
-      standard_name: "소금",
+      rawText: "김치 200g",
+    }),
+    buildExtractedIngredient({
+      idsByName,
+      name: "소금",
       amount: null,
       unit: null,
-      ingredient_type: "TO_TASTE",
-      display_text: "소금 약간",
-      sort_order: 2,
+      ingredientType: "TO_TASTE",
+      displayText: "소금 약간",
+      sortOrder: 2,
       scalable: false,
       confidence: 0.8,
-    },
+      rawText: "소금 약간",
+      forceNeedsReview: saltNeedsReview,
+    }),
   ];
+}
+
+function buildBlockingIssues(ingredients: YoutubeExtractedIngredient[]) {
+  return ingredients
+    .map((ingredient, index) =>
+      ingredient.resolution_status === "resolved"
+        ? null
+        : `ingredients[${index}].ingredient_id`,
+    )
+    .filter((issue): issue is string => issue !== null);
+}
+
+function buildStepMissingFields(
+  video: YoutubeProviderVideo,
+): NonNullable<YoutubeRecipeExtractData["steps"][number]["missing_fields"]> {
+  const missingFields: NonNullable<YoutubeRecipeExtractData["steps"][number]["missing_fields"]> = [];
+
+  if (!video.description.includes("김치를 한입 크기로 썬다.")) {
+    missingFields.push("instruction");
+  }
+
+  return missingFields;
+}
+
+function buildSessionExpiresAt() {
+  const expiresAt = new Date(Date.now() + SESSION_TTL_HOURS * 60 * 60 * 1000);
+  return expiresAt.toISOString();
+}
+
+async function insertExtractionSession(
+  dbClient: DbClient,
+  session: YoutubeExtractionSessionInsert,
+) {
+  const result = await table<YoutubeExtractionSessionsTable>(dbClient, "youtube_extraction_sessions")
+    .insert(session);
+
+  return result.error;
 }
 
 export async function handleYoutubeExtract(request: Request) {
@@ -449,6 +890,17 @@ export async function handleYoutubeExtract(request: Request) {
     return fail("EXTRACTION_FAILED", "레시피를 추출하지 못했어요.", 500);
   }
 
+  const videoResult = await fetchYoutubeVideo(parsedUrl.videoId);
+  if ("providerError" in videoResult) {
+    return failForProviderError(videoResult.providerError);
+  }
+
+  const { video } = videoResult;
+  const classification = classifyYoutubeVideo(video);
+  if (classification.status === "non_recipe") {
+    return fail("NOT_RECIPE_VIDEO", "이 영상은 요리 레시피가 아닌 것 같아요.", 422);
+  }
+
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as DbClient;
   const ingredientLookup = await findIngredientIds(dbClient);
   if (ingredientLookup.error) {
@@ -460,23 +912,70 @@ export async function handleYoutubeExtract(request: Request) {
     return fail("INTERNAL_ERROR", "조리방법을 준비하지 못했어요.", 500);
   }
 
-  const video = buildVideoInfo(parsedUrl.videoId);
+  const ingredients = buildExtractedIngredients(ingredientLookup.idsByName, {
+    saltNeedsReview: parsedUrl.videoId.startsWith("needsreview"),
+  });
+  const stepMissingFields = buildStepMissingFields(video);
+  const blockingIssues = [
+    ...buildBlockingIssues(ingredients),
+    ...stepMissingFields.map((field) => `steps[0].${field}`),
+  ];
+  const draftWarnings = classification.status === "uncertain"
+    ? ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해주세요."]
+    : [];
+  const extractionId = crypto.randomUUID();
   const data: YoutubeRecipeExtractData = {
-    extraction_id: crypto.randomUUID(),
-    title: video.isRecipeVideo ? video.title : "유튜브 영상 레시피",
+    extraction_id: extractionId,
+    title: video.title,
     base_servings: 2,
     extraction_methods: [...DEFAULT_EXTRACTION_METHODS],
-    ingredients: buildExtractedIngredients(ingredientLookup.idsByName),
+    draft_warnings: draftWarnings,
+    blocking_issues: blockingIssues,
+    ingredients,
     steps: [
       {
         step_number: 1,
-        instruction: "김치를 한입 크기로 썬다.",
+        instruction: stepMissingFields.includes("instruction") ? "" : "김치를 한입 크기로 썬다.",
         cooking_method: cookingMethodResult.method,
         duration_text: null,
+        is_incomplete: stepMissingFields.length > 0,
+        missing_fields: stepMissingFields,
+        raw_text: stepMissingFields.includes("instruction") ? "" : "김치를 한입 크기로 썬다.",
       },
     ],
     new_cooking_methods: cookingMethodResult.method.is_new ? [cookingMethodResult.method] : [],
   };
+
+  const sessionError = await insertExtractionSession(dbClient, {
+    id: extractionId,
+    user_id: user.id,
+    youtube_url: parsedUrl.youtubeUrl,
+    youtube_video_id: parsedUrl.videoId,
+    video_title: video.title,
+    channel_title: video.channel,
+    thumbnail_url: video.thumbnailUrl,
+    provider_version: YOUTUBE_PROVIDER_VERSION,
+    source_providers: ["youtube_videos_list", "description_parser"],
+    classification_status: classification.status,
+    classification_reasons: classification.reasons,
+    raw_source_text: video.description,
+    extraction_meta_json: {
+      provider_version: YOUTUBE_PROVIDER_VERSION,
+      source_providers: ["youtube_videos_list", "description_parser"],
+      classification_status: classification.status,
+      classification_reasons: classification.reasons,
+      draft_warnings: draftWarnings,
+      caption_capability: "unknown",
+    },
+    draft_json: data as unknown as Record<string, unknown>,
+    extraction_methods: [...DEFAULT_EXTRACTION_METHODS],
+    status: "draft",
+    expires_at: buildSessionExpiresAt(),
+  });
+
+  if (sessionError) {
+    return fail("INTERNAL_ERROR", "추출 세션을 저장하지 못했어요.", 500);
+  }
 
   return ok(data);
 }
@@ -680,6 +1179,11 @@ function parseYoutubeRegisterBody(rawBody: unknown) {
 
     validateIngredient(ingredient, index, fields);
 
+    const resolutionStatus = isRecord(rawIngredient) ? rawIngredient.resolution_status : undefined;
+    if (resolutionStatus !== undefined && resolutionStatus !== "resolved") {
+      fields.push({ field: `ingredients[${index}].ingredient_id`, reason: "unresolved" });
+    }
+
     if (ingredientIds.has(ingredient.ingredient_id)) {
       fields.push({ field: `ingredients[${index}].ingredient_id`, reason: "duplicate" });
     }
@@ -786,40 +1290,75 @@ function buildMissingCookingMethodFields(
     .filter((field): field is ValidationField => field !== null);
 }
 
-function buildIngredientInsertRows(recipeId: string, ingredients: ManualRecipeIngredientInput[]) {
-  return ingredients.map((ingredient) => ({
-    recipe_id: recipeId,
-    ingredient_id: ingredient.ingredient_id,
-    amount: ingredient.amount,
-    unit: ingredient.unit,
-    ingredient_type: ingredient.ingredient_type,
-    display_text: ingredient.display_text,
-    scalable: ingredient.scalable,
-    sort_order: ingredient.sort_order,
-  })) satisfies RecipeIngredientInsertRow[];
+function isYoutubeRegisterRpcErrorData(
+  data: YoutubeRecipeRegisterRpcResultData,
+): data is YoutubeRecipeRegisterRpcErrorData {
+  return "error_code" in data;
 }
 
-function buildStepInsertRows(recipeId: string, steps: ManualRecipeStepInput[]) {
-  return steps.map((step) => ({
-    recipe_id: recipeId,
-    step_number: step.step_number,
-    instruction: step.instruction,
-    cooking_method_id: step.cooking_method_id,
-    ingredients_used: step.ingredients_used,
-    heat_level: step.heat_level,
-    duration_seconds: step.duration_seconds,
-    duration_text: step.duration_text,
-  })) satisfies RecipeStepInsertRow[];
+function failForRegisterRpcError(data: YoutubeRecipeRegisterRpcErrorData) {
+  if (data.error_code === "EXTRACTION_NOT_FOUND") {
+    return fail(data.error_code, data.message ?? "추출 세션을 찾을 수 없어요.", 404);
+  }
+
+  if (data.error_code === "EXTRACTION_EXPIRED") {
+    return fail(data.error_code, data.message ?? "추출 세션이 만료됐어요. 다시 가져와 주세요.", 410);
+  }
+
+  if (data.error_code === "EXTRACTION_ALREADY_REGISTERED") {
+    return fail(data.error_code, data.message ?? "이미 등록된 추출 결과예요.", 409);
+  }
+
+  if (data.error_code === "EXTRACTION_MISMATCH") {
+    return fail(data.error_code, data.message ?? "추출한 영상과 등록 요청이 일치하지 않아요.", 409);
+  }
+
+  return fail(data.error_code, data.message ?? "요청 값을 확인해주세요.", 422);
 }
 
-function buildRawExtractedText(parsed: ParsedYoutubeRegister) {
-  return [
-    parsed.title,
-    ...parsed.ingredients.map((ingredient) =>
-      ingredient.display_text ?? ingredient.standard_name,
-    ),
-    ...parsed.steps.map((step) => step.instruction),
-  ].join("\n");
+async function findExtractionSession(dbClient: DbClient, extractionId: string) {
+  const result = await table<YoutubeExtractionSessionsTable>(dbClient, "youtube_extraction_sessions")
+    .select([
+      "id",
+      "user_id",
+      "youtube_url",
+      "youtube_video_id",
+      "provider_version",
+      "extraction_methods",
+      "raw_source_text",
+      "extraction_meta_json",
+      "draft_json",
+      "status",
+      "expires_at",
+    ].join(", "))
+    .eq("id", extractionId)
+    .maybeSingle();
+
+  return result;
+}
+
+function validateSessionForRegister(
+  session: YoutubeExtractionSessionRow | null,
+  parsed: ParsedYoutubeRegister,
+  userId: string,
+) {
+  if (!session || session.user_id !== userId) {
+    return fail("EXTRACTION_NOT_FOUND", "추출 세션을 찾을 수 없어요.", 404);
+  }
+
+  if (session.status === "expired" || new Date(session.expires_at).getTime() <= Date.now()) {
+    return fail("EXTRACTION_EXPIRED", "추출 세션이 만료됐어요. 다시 가져와 주세요.", 410);
+  }
+
+  if (session.status === "consumed") {
+    return fail("EXTRACTION_ALREADY_REGISTERED", "이미 등록된 추출 결과예요.", 409);
+  }
+
+  if (session.youtube_video_id !== parsed.videoId || session.youtube_url !== parsed.youtubeUrl) {
+    return fail("EXTRACTION_MISMATCH", "추출한 영상과 등록 요청이 일치하지 않아요.", 409);
+  }
+
+  return null;
 }
 
 export async function handleYoutubeRegister(request: Request) {
@@ -849,6 +1388,16 @@ export async function handleYoutubeRegister(request: Request) {
       formatBootstrapErrorMessage(bootstrapError, "레시피를 등록하지 못했어요."),
       500,
     );
+  }
+
+  const sessionResult = await findExtractionSession(dbClient, parsed.extractionId);
+  if (sessionResult.error) {
+    return fail("INTERNAL_ERROR", "추출 세션을 확인하지 못했어요.", 500);
+  }
+
+  const sessionFailure = validateSessionForRegister(sessionResult.data, parsed, user.id);
+  if (sessionFailure) {
+    return sessionFailure;
   }
 
   const ingredientIds = [...new Set(parsed.ingredients.map((ingredient) => ingredient.ingredient_id))];
@@ -881,55 +1430,31 @@ export async function handleYoutubeRegister(request: Request) {
     );
   }
 
-  const recipeResult = await table<RecipesTable>(dbClient, "recipes")
-    .insert({
-      title: parsed.title,
-      base_servings: parsed.baseServings,
-      source_type: "youtube",
-      created_by: user.id,
-    })
-    .select("id, title, source_type, created_by, base_servings")
-    .maybeSingle();
+  const registerResult = await (dbClient as unknown as YoutubeRecipeRegisterRpcClient).rpc(
+    "register_youtube_recipe_from_session",
+    {
+      p_extraction_id: parsed.extractionId,
+      p_user_id: user.id,
+      p_title: parsed.title,
+      p_base_servings: parsed.baseServings,
+      p_youtube_url: parsed.youtubeUrl,
+      p_youtube_video_id: parsed.videoId,
+      p_ingredients: parsed.ingredients,
+      p_steps: parsed.steps,
+    },
+  );
 
-  if (recipeResult.error || !recipeResult.data) {
+  if (registerResult.error || !registerResult.data) {
     return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
   }
 
-  const recipeId = recipeResult.data.id;
-  const sourceResult = await table<RecipeSourcesTable>(dbClient, "recipe_sources")
-    .insert({
-      recipe_id: recipeId,
-      youtube_url: parsed.youtubeUrl,
-      youtube_video_id: parsed.videoId,
-      extraction_methods: [...DEFAULT_EXTRACTION_METHODS],
-      extraction_meta_json: {
-        extraction_id: parsed.extractionId,
-        provider: "mvp_stub",
-      },
-      raw_extracted_text: buildRawExtractedText(parsed),
-    });
-
-  if (sourceResult.error) {
-    return fail("INTERNAL_ERROR", "레시피 출처를 등록하지 못했어요.", 500);
-  }
-
-  const ingredientInsertResult = await table<RecipeIngredientsTable>(dbClient, "recipe_ingredients")
-    .insert(buildIngredientInsertRows(recipeId, parsed.ingredients));
-
-  if (ingredientInsertResult.error) {
-    return fail("INTERNAL_ERROR", "레시피 재료를 등록하지 못했어요.", 500);
-  }
-
-  const stepInsertResult = await table<RecipeStepsTable>(dbClient, "recipe_steps")
-    .insert(buildStepInsertRows(recipeId, parsed.steps));
-
-  if (stepInsertResult.error) {
-    return fail("INTERNAL_ERROR", "레시피 조리 순서를 등록하지 못했어요.", 500);
+  if (isYoutubeRegisterRpcErrorData(registerResult.data)) {
+    return failForRegisterRpcError(registerResult.data);
   }
 
   const data: YoutubeRecipeRegisterData = {
-    recipe_id: recipeId,
-    title: recipeResult.data.title,
+    recipe_id: registerResult.data.recipe_id,
+    title: registerResult.data.title,
   };
 
   return ok(data, { status: 201 });

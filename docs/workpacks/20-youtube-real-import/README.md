@@ -620,21 +620,21 @@
 
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 
-- [ ] 백엔드 계약 고정 (validate 3-way, extract session, register RPC) <!-- omo:id=20-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 (YouTube Data API `videos.list` adapter) <!-- omo:id=20-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 (request/response/error 타입, session types) <!-- omo:id=20-types;stage=2;scope=shared;review=3,6 -->
-- [ ] DB migration 적용 (`youtube_extraction_sessions`, `recipe_sources` FK, RPC) <!-- omo:id=20-db-migration;stage=2;scope=backend;review=3,6 -->
-- [ ] YouTube API adapter 구현 (`videos.list`, quota/error handling) <!-- omo:id=20-youtube-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] Classification 3-way 구현 (recipe/uncertain/non_recipe) <!-- omo:id=20-classification;stage=2;scope=backend;review=3,6 -->
-- [ ] Extract 세션 생성 구현 (draft_json, extraction_methods, provider info) <!-- omo:id=20-extract-session;stage=2;scope=backend;review=3,6 -->
-- [ ] Ingredient resolution status 구현 (resolved/needs_review/unresolved) <!-- omo:id=20-ingredient-resolution;stage=2;scope=backend;review=3,6 -->
-- [ ] Step incomplete detection 구현 (blocking/warning fields) <!-- omo:id=20-step-incomplete;stage=2;scope=backend;review=3,6 -->
-- [ ] Register RPC 원자적 등록 구현 (Postgres RPC transaction) <!-- omo:id=20-register-rpc;stage=2;scope=backend;review=3,6 -->
-- [ ] Register 세션 검증 구현 (ownership, expired, consumed, mismatch) <!-- omo:id=20-register-session-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] Provenance 구현 (recipe_sources에 세션 기반 provenance 복사) <!-- omo:id=20-provenance;stage=2;scope=backend;review=3,6 -->
-- [ ] Feature flag / auth guard 구현 (404 FEATURE_DISABLED, 401) <!-- omo:id=20-feature-flag-auth;stage=2;scope=backend;review=3,6 -->
-- [ ] Provider error handling (502 PROVIDER_ERROR, 429 QUOTA_EXCEEDED) <!-- omo:id=20-provider-error;stage=2;scope=backend;review=3,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=20-state-policy-tests;stage=2;scope=backend;review=3,6 -->
+- [x] 백엔드 계약 고정 (validate 3-way, extract session, register RPC) <!-- omo:id=20-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 (YouTube Data API `videos.list` adapter) <!-- omo:id=20-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 (request/response/error 타입, session types) <!-- omo:id=20-types;stage=2;scope=shared;review=3,6 -->
+- [x] DB migration 적용 (`youtube_extraction_sessions`, `recipe_sources` FK, RPC) <!-- omo:id=20-db-migration;stage=2;scope=backend;review=3,6 -->
+- [x] YouTube API adapter 구현 (`videos.list`, quota/error handling) <!-- omo:id=20-youtube-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] Classification 3-way 구현 (recipe/uncertain/non_recipe) <!-- omo:id=20-classification;stage=2;scope=backend;review=3,6 -->
+- [x] Extract 세션 생성 구현 (draft_json, extraction_methods, provider info) <!-- omo:id=20-extract-session;stage=2;scope=backend;review=3,6 -->
+- [x] Ingredient resolution status 구현 (resolved/needs_review/unresolved) <!-- omo:id=20-ingredient-resolution;stage=2;scope=backend;review=3,6 -->
+- [x] Step incomplete detection 구현 (blocking/warning fields) <!-- omo:id=20-step-incomplete;stage=2;scope=backend;review=3,6 -->
+- [x] Register RPC 원자적 등록 구현 (Postgres RPC transaction) <!-- omo:id=20-register-rpc;stage=2;scope=backend;review=3,6 -->
+- [x] Register 세션 검증 구현 (ownership, expired, consumed, mismatch) <!-- omo:id=20-register-session-validation;stage=2;scope=backend;review=3,6 -->
+- [x] Provenance 구현 (recipe_sources에 세션 기반 provenance 복사) <!-- omo:id=20-provenance;stage=2;scope=backend;review=3,6 -->
+- [x] Feature flag / auth guard 구현 (404 FEATURE_DISABLED, 401) <!-- omo:id=20-feature-flag-auth;stage=2;scope=backend;review=3,6 -->
+- [x] Provider error handling (502 PROVIDER_ERROR, 429 QUOTA_EXCEEDED) <!-- omo:id=20-provider-error;stage=2;scope=backend;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=20-state-policy-tests;stage=2;scope=backend;review=3,6 -->
 - [ ] UI 연결 (classification 3-way, draft warnings, resolution status, incomplete steps) <!-- omo:id=20-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [ ] Classification 3-way UI (recipe/uncertain 경고/non_recipe 차단) <!-- omo:id=20-classification-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] Extract indeterminate loading UI <!-- omo:id=20-extract-loading-ui;stage=4;scope=frontend;review=5,6 -->
@@ -647,7 +647,7 @@
 - [ ] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=20-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 로그인 게이트 + return-to-action 유지 확인 <!-- omo:id=20-login-gate;stage=4;scope=frontend;review=5,6 -->
 - [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=20-test-split;stage=4;scope=frontend;review=6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=20-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=20-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] Deterministic test fixture 유지 (기존 stub + 새 YouTube API mock) <!-- omo:id=20-deterministic-fixtures;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=20-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=20-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] Deterministic test fixture 유지 (기존 stub + 새 YouTube API mock) <!-- omo:id=20-deterministic-fixtures;stage=2;scope=shared;review=3,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=20-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
