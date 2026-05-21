@@ -3053,6 +3053,30 @@ button {
     gap: 16px;
   }
 
+  .web-picker-leftover-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .web-picker-leftover-state p {
+    margin: 4px 0 0;
+    color: var(--web-text-3);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .web-picker-leftover-state {
+    border: 1px dashed var(--web-line);
+    border-radius: var(--web-r-sm);
+    background: var(--web-bg-alt);
+    padding: 28px 18px;
+    color: var(--web-text-3);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+    text-align: center;
+  }
+
   .web-picker-book-row,
   .web-picker-pantry-row {
     width: 100%;

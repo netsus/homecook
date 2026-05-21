@@ -188,9 +188,10 @@ describe("MenuAddScreen", () => {
 
     render(<MenuAddScreen {...DEFAULT_PROPS} initialSource="leftover" />);
 
-    const dialog = await screen.findByRole("dialog", { name: "남은 요리에서 추가" });
+    const screenView = await screen.findByTestId("leftover-picker-screen");
 
-    expect(dialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
+    expect(screenView).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "남은 요리에서 추가" })).toBeNull();
     expect(leftoversApi.fetchLeftovers).toHaveBeenCalledWith("leftover");
   });
 
@@ -202,11 +203,11 @@ describe("MenuAddScreen", () => {
     const user = userEvent.setup();
     await user.click(screen.getByTestId("menu-add-option-leftover"));
 
-    const dialog = await screen.findByRole("dialog", { name: "남은 요리에서 추가" });
-    await user.click(within(dialog).getByTestId("leftover-picker-back"));
+    const pickerScreen = await screen.findByTestId("leftover-picker-screen");
+    await user.click(within(pickerScreen).getByTestId("leftover-picker-back"));
 
     expect(screen.getByTestId("menu-add-option-grid")).toBeTruthy();
-    expect(screen.queryByRole("dialog", { name: "남은 요리에서 추가" })).toBeNull();
+    expect(screen.queryByTestId("leftover-picker-screen")).toBeNull();
   });
 
   it("uses matching typography for YouTube and manual option tiles", () => {
@@ -259,6 +260,21 @@ describe("MenuAddScreen", () => {
     expect(screen.getByTestId("youtube-import-embedded")).toBeTruthy();
     expect(screen.getByLabelText("유튜브 URL")).toBeTruthy();
     expect(screen.queryByRole("dialog", { name: "유튜브에서 가져오기" })).toBeNull();
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it("keeps the desktop option rail visible while opening leftovers in the right panel", async () => {
+    installMatchMedia(true);
+    vi.mocked(leftoversApi.fetchLeftovers).mockResolvedValue({ items: [] });
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-leftover"));
+
+    expect(screen.getByTestId("menu-add-option-grid")).toBeTruthy();
+    expect(await screen.findByTestId("leftover-picker-web")).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "남은 요리에서 추가" })).toBeNull();
     expect(mockRouterPush).not.toHaveBeenCalled();
   });
 

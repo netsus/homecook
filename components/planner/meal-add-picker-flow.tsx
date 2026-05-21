@@ -323,7 +323,9 @@ export function MealAddPickerFlow({
               )
             : undefined
         }
+        presentation="sheet"
         selectedLeftover={selectedLeftover}
+        slotLabel={targetLabel}
       />
     </>
   );
