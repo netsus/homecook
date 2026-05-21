@@ -510,6 +510,84 @@ describe("planner week screen", () => {
     expect(dinnerButton.textContent?.replace(/\s+/g, " ").trim()).toBe("+");
   });
 
+  it("uses global planner status tokens for the mobile summary cards", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-registered",
+            recipe_id: "recipe-registered",
+            recipe_title: "된장찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+          },
+          {
+            id: "meal-shopping",
+            recipe_id: "recipe-shopping",
+            recipe_title: "카레",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-lunch",
+            planned_servings: 2,
+            status: "shopping_done",
+            is_leftover: false,
+          },
+          {
+            id: "meal-cooked",
+            recipe_id: "recipe-cooked",
+            recipe_title: "불고기",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-dinner",
+            planned_servings: 2,
+            status: "cook_done",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    render(<PlannerWeekScreen />);
+
+    const cookedLabel = await screen.findByText("요리 완료");
+    const shoppingLabel = screen.getByText("장보기 완료");
+    const registeredLabel = screen.getByText("등록");
+    const cookedCard = cookedLabel.closest("div");
+    const shoppingCard = shoppingLabel.closest("div");
+    const registeredCard = registeredLabel.closest("div");
+
+    expect(cookedCard?.className).toContain(
+      "bg-[var(--planner-status-cooked-soft)]",
+    );
+    expect(cookedLabel.className).toContain("text-[var(--planner-status-cooked)]");
+    expect(cookedLabel.nextElementSibling?.className).toContain(
+      "text-[var(--planner-status-cooked)]",
+    );
+    expect(shoppingCard?.className).toContain(
+      "bg-[var(--planner-status-shopping-soft)]",
+    );
+    expect(shoppingLabel.className).toContain(
+      "text-[var(--planner-status-shopping)]",
+    );
+    expect(shoppingLabel.nextElementSibling?.className).toContain(
+      "text-[var(--planner-status-shopping)]",
+    );
+    expect(registeredCard?.className).toContain(
+      "bg-[var(--planner-status-registered-soft)]",
+    );
+    expect(registeredLabel.className).toContain(
+      "text-[var(--planner-status-registered)]",
+    );
+    expect(registeredLabel.nextElementSibling?.className).toContain(
+      "text-[var(--planner-status-registered-strong)]",
+    );
+  });
+
   it("marks leftover meals with an explicit leftover chip", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(

@@ -1171,21 +1171,27 @@ export function PlannerWeekScreen({
             {mealStats.total}개 음식 계획 중
           </p>
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-[var(--radius-control)] bg-[#E8F8E0] p-3">
-              <p className="text-[11px] font-semibold text-[#51CF66]">요리 완료</p>
-              <p className="mt-0.5 text-[20px] font-bold leading-none text-[#51CF66]">
+            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-cooked-soft)] p-3">
+              <p className="text-[11px] font-semibold text-[var(--planner-status-cooked)]">
+                요리 완료
+              </p>
+              <p className="mt-0.5 text-[20px] font-bold leading-none text-[var(--planner-status-cooked)]">
                 {mealStats.cookDone}개
               </p>
             </div>
-            <div className="rounded-[var(--radius-control)] bg-[#FFEBEB] p-3">
-              <p className="text-[11px] font-semibold text-[#FF6B6B]">장보기 완료</p>
-              <p className="mt-0.5 text-[20px] font-bold leading-none text-[#FF6B6B]">
+            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-shopping-soft)] p-3">
+              <p className="text-[11px] font-semibold text-[var(--planner-status-shopping)]">
+                장보기 완료
+              </p>
+              <p className="mt-0.5 text-[20px] font-bold leading-none text-[var(--planner-status-shopping)]">
                 {mealStats.shoppingDone}개
               </p>
             </div>
-            <div className="rounded-[var(--radius-control)] bg-[#F8F9FA] p-3">
-              <p className="text-[11px] font-semibold text-[#495057]">등록</p>
-              <p className="mt-0.5 text-[20px] font-bold leading-none text-[#212529]">
+            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-registered-soft)] p-3">
+              <p className="text-[11px] font-semibold text-[var(--planner-status-registered)]">
+                등록
+              </p>
+              <p className="mt-0.5 text-[20px] font-bold leading-none text-[var(--planner-status-registered-strong)]">
                 {mealStats.registered}개
               </p>
             </div>
