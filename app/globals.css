@@ -2904,6 +2904,41 @@ button {
     padding: 24px;
   }
 
+  .web-menu-add-embedded {
+    display: grid;
+    gap: 16px;
+  }
+
+  .web-menu-add-embedded-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .web-menu-add-inline-entry {
+    display: grid;
+    gap: 18px;
+  }
+
+  .web-menu-add-inline-entry h3 {
+    margin: 0;
+    color: var(--web-text-1);
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .web-menu-add-inline-entry p:not(.web-menu-add-eyebrow) {
+    margin: 6px 0 0;
+    color: var(--web-text-3);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .web-menu-add-embedded-form,
+  .web-menu-add-embedded-flow {
+    min-width: 0;
+  }
+
   .web-menu-add-picker-head,
   .web-picker-section-head,
   .web-manual-section-head {

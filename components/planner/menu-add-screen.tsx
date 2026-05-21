@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useRef, useState } from "react";
 
@@ -9,8 +10,10 @@ import { RecipeBookDetailPicker } from "@/components/planner/recipe-book-detail-
 import { RecipeBookSelector } from "@/components/planner/recipe-book-selector";
 import { RecipeSearchPicker } from "@/components/planner/recipe-search-picker";
 import {
+  buildYoutubeImportHref,
   YoutubeImportEntrySheet,
 } from "@/components/planner/youtube-import-entry-sheet";
+import { ManualRecipeCreateScreen } from "@/components/recipe/manual-recipe-create-screen";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import {
   AppBackButton,
@@ -49,6 +52,7 @@ type PickerMode =
   | "recipebook-detail"
   | "pantry"
   | "leftover"
+  | "manual"
   | "youtube";
 
 const WEB_NAV_ITEMS = [
@@ -75,6 +79,53 @@ function formatTargetLabel(planDate: string, slotName: string) {
 
   if (dateLabel && slotName) return `${dateLabel} ${slotName}`;
   return slotName || dateLabel || "플래너";
+}
+
+function YoutubeImportEntryPanel({
+  onBack,
+  targetLabel,
+  youtubeHref,
+}: {
+  onBack: () => void;
+  targetLabel: string;
+  youtubeHref: string;
+}) {
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const importHref = buildYoutubeImportHref(youtubeHref, youtubeUrl);
+
+  return (
+    <div className="web-menu-add-inline-entry" data-testid="youtube-import-embedded">
+      <div>
+        <p className="web-menu-add-eyebrow">유튜브 가져오기</p>
+        <h3>영상 링크에서 레시피를 추출해요</h3>
+        <p>
+          {targetLabel}에 추가할 레시피 영상을 붙여넣고, 기존 가져오기 화면에서
+          추출 결과를 검토해요.
+        </p>
+      </div>
+
+      <label className="web-manual-field web-manual-field-wide">
+        <span>유튜브 URL</span>
+        <input
+          aria-label="유튜브 URL"
+          inputMode="url"
+          onChange={(event) => setYoutubeUrl(event.target.value)}
+          placeholder="https://www.youtube.com/watch?v=..."
+          type="url"
+          value={youtubeUrl}
+        />
+      </label>
+
+      <div className="web-yt-actions">
+        <WebButton onClick={onBack} variant="secondary">
+          다른 방법
+        </WebButton>
+        <Link className="web-button web-button-primary" href={importHref}>
+          가져오기 화면 열기
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -105,6 +156,7 @@ export function MenuAddScreen({
     if (initialSource === "recipebook") return "recipebook-selector";
     if (initialSource === "pantry") return "pantry";
     if (initialSource === "leftover") return "leftover";
+    if (initialSource === "manual") return "manual";
     if (initialSource === "youtube") return "youtube";
     return "none";
   });
@@ -379,6 +431,11 @@ export function MenuAddScreen({
   }, [appReturn, initialSource, isMealAddModalOrigin]);
 
   const handleManualRecipeClick = useCallback(() => {
+    if (isDesktopViewport) {
+      setPickerMode("manual");
+      return;
+    }
+
     const targetPath = mealAddQuery
       ? `/menu/add/manual?${mealAddQuery}`
       : "/menu/add/manual";
@@ -393,7 +450,7 @@ export function MenuAddScreen({
     router.push(
       buildReturnHref(targetPath, context),
     );
-  }, [appReturn.href, isMealAddModalOrigin, mealAddQuery, router]);
+  }, [appReturn.href, isDesktopViewport, isMealAddModalOrigin, mealAddQuery, router]);
 
   const getYoutubeTargetHref = useCallback(() => {
     const targetPath = mealAddQuery
@@ -411,13 +468,8 @@ export function MenuAddScreen({
   }, [appReturn.href, isMealAddModalOrigin, mealAddQuery]);
 
   const handleYoutubeRecipeClick = useCallback(() => {
-    if (!isDesktopViewport) {
-      setPickerMode("youtube");
-      return;
-    }
-
-    router.push(getYoutubeTargetHref());
-  }, [getYoutubeTargetHref, isDesktopViewport, router]);
+    setPickerMode("youtube");
+  }, []);
 
   const targetLabel = formatTargetLabel(planDate, slotName);
 
@@ -428,9 +480,13 @@ export function MenuAddScreen({
         ? selectedBook?.name ?? "레시피북"
         : pickerMode === "pantry"
           ? "팬트리 추천"
-          : pickerMode === "youtube"
-            ? "유튜브에서 가져오기"
-          : "레시피 검색";
+          : pickerMode === "leftover"
+            ? "남은요리에서 추가"
+            : pickerMode === "manual"
+              ? "레시피 직접 작성"
+              : pickerMode === "youtube"
+                ? "유튜브에서 가져오기"
+                : "레시피 검색";
 
   const actionMapForMobile = (id: (typeof MENU_ADD_OPTIONS)[number]["id"]) => {
     const actionMap: Record<(typeof MENU_ADD_OPTIONS)[number]["id"], () => void> = {
@@ -634,6 +690,8 @@ export function MenuAddScreen({
                         (pickerMode === "recipebook-selector" ||
                           pickerMode === "recipebook-detail")) ||
                       (option.id === "pantry" && pickerMode === "pantry") ||
+                      (option.id === "leftover" && pickerMode === "leftover") ||
+                      (option.id === "manual" && pickerMode === "manual") ||
                       (option.id === "youtube" && pickerMode === "youtube");
 
                     return (
@@ -745,13 +803,32 @@ export function MenuAddScreen({
                   />
                 )}
 
+                {pickerMode === "manual" && (
+                  <ManualRecipeCreateScreen
+                    initialAuthenticated
+                    onRequestClose={handlePickerBackToMenu}
+                    planDate={planDate}
+                    columnId={columnId}
+                    presentation="embedded"
+                    slotName={slotName}
+                  />
+                )}
+
                 {pickerMode === "youtube" && (
+                  isDesktopViewport ? (
+                    <YoutubeImportEntryPanel
+                      onBack={handlePickerBackToMenu}
+                      targetLabel={targetLabel}
+                      youtubeHref={getYoutubeTargetHref()}
+                    />
+                  ) : (
                   <YoutubeImportEntrySheet
                     onBack={handlePickerBackToMenu}
                     onClose={handlePickerBackToMenu}
                     targetLabel={targetLabel}
                     youtubeHref={getYoutubeTargetHref()}
                   />
+                  )
                 )}
               </WebCard>
             </div>

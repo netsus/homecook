@@ -29,6 +29,8 @@ import type {
 
 interface ManualRecipeCreateScreenProps {
   initialAuthenticated?: boolean;
+  presentation?: "page" | "embedded";
+  onRequestClose?: () => void;
   planDate: string;
   columnId: string;
   slotName: string;
@@ -619,6 +621,8 @@ function ServingsInputModal({
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function ManualRecipeCreateScreen({
+  presentation = "page",
+  onRequestClose,
   planDate,
   columnId,
   slotName,
@@ -673,8 +677,13 @@ export function ManualRecipeCreateScreen({
   const canSave = saveRequirements.length === 0;
 
   const handleBack = useCallback(() => {
+    if (presentation === "embedded" && onRequestClose) {
+      onRequestClose();
+      return;
+    }
+
     appReturn.goBack();
-  }, [appReturn]);
+  }, [appReturn, onRequestClose, presentation]);
 
   const handleAddIngredient = useCallback(
     (newIngredients: ManualRecipeIngredientInput[]) => {
@@ -827,8 +836,140 @@ export function ManualRecipeCreateScreen({
   }, [appReturn]);
 
   const targetLabel = formatTargetLabel(planDate, slotName);
+  const desktopManualBody = (
+    <>
+      <section className="web-manual-section">
+        <div className="web-manual-section-head">
+          <h2>기본 정보</h2>
+          <span>{targetLabel}</span>
+        </div>
+        <div className="web-manual-fields">
+          <label className="web-manual-field web-manual-field-wide">
+            <span>요리 이름</span>
+            <input
+              aria-label="요리 이름"
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="예: 김치찌개"
+              type="text"
+              value={title}
+            />
+            {showValidationErrors && title.trim().length === 0 ? (
+              <span className="text-[12px] font-semibold text-[var(--danger)]">
+                요리 이름을 입력해주세요.
+              </span>
+            ) : null}
+          </label>
+          <div className="web-manual-field">
+            <span>기준 인분</span>
+            <BaseServingsStepper
+              value={baseServings}
+              onChange={setBaseServings}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="web-manual-section">
+        <div className="web-manual-section-head">
+          <h2>재료</h2>
+          <span>{ingredients.length}개 선택됨</span>
+        </div>
+        <IngredientList
+          ingredients={ingredients}
+          showValidationError={showValidationErrors}
+          onChange={handleUpdateIngredient}
+          onRemove={handleRemoveIngredient}
+        />
+        <WebButton
+          className="web-manual-add-button"
+          onClick={() => setModalMode("ingredient-add")}
+          variant="secondary"
+        >
+          + 재료 추가하기
+        </WebButton>
+      </section>
+
+      <section className="web-manual-section">
+        <div className="web-manual-section-head">
+          <h2>조리법</h2>
+          <span>{steps.length}단계</span>
+        </div>
+        {isLoadingMethods ? (
+          <p className="web-picker-subtle">조리방법 불러오는 중...</p>
+        ) : (
+          <>
+            <StepList
+              steps={steps}
+              showValidationError={showValidationErrors}
+              onRemove={handleRemoveStep}
+            />
+            <StepInlineComposer
+              cookingMethods={cookingMethods}
+              nextStepNumber={steps.length + 1}
+              onAdd={handleAddStep}
+            />
+          </>
+        )}
+      </section>
+
+      {saveError ? (
+        <div className="web-menu-add-error" role="alert">
+          {saveError}
+        </div>
+      ) : null}
+    </>
+  );
+  const desktopManualModals = (
+    <>
+      {modalMode === "ingredient-add" && (
+        <RecipeIngredientAddModal
+          onClose={() => setModalMode("none")}
+          onAdd={handleAddIngredient}
+        />
+      )}
+      {modalMode === "success" && createdRecipeId && (
+        <SuccessModal
+          recipeTitle={createdRecipeTitle}
+          mealAddError={mealAddError}
+          onMealAdd={handleMealAdd}
+          onViewDetail={handleViewDetail}
+          onClose={handleSuccessClose}
+        />
+      )}
+      {modalMode === "servings-input" && (
+        <ServingsInputModal
+          onConfirm={handleServingsConfirm}
+          onCancel={() => setModalMode("success")}
+          defaultServings={baseServings}
+          isCreating={isCreatingMeal}
+          error={mealAddError}
+        />
+      )}
+    </>
+  );
 
   if (isDesktopViewport) {
+    if (presentation === "embedded") {
+      return (
+        <div
+          className="web-menu-add-embedded web-menu-add-embedded-manual"
+          data-testid="manual-recipe-embedded"
+        >
+          <div className="web-menu-add-embedded-actions">
+            <WebButton disabled={isSaving} onClick={handleSave} size="sm">
+              {isSaving ? "저장 중..." : "저장"}
+            </WebButton>
+          </div>
+
+          <div className="web-menu-add-embedded-form">
+            {desktopManualBody}
+          </div>
+
+          {desktopManualModals}
+        </div>
+      );
+    }
+
     return (
       <div className="web-menu-add-shell">
         <WebShell>
@@ -863,111 +1004,11 @@ export function ManualRecipeCreateScreen({
           </div>
 
           <WebCard className="web-manual-card">
-            <section className="web-manual-section">
-              <div className="web-manual-section-head">
-                <h2>기본 정보</h2>
-                <span>{targetLabel}</span>
-              </div>
-              <div className="web-manual-fields">
-                <label className="web-manual-field web-manual-field-wide">
-                  <span>요리 이름</span>
-                  <input
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="예: 김치찌개"
-                    type="text"
-                    value={title}
-                  />
-                  {showValidationErrors && title.trim().length === 0 ? (
-                    <span className="text-[12px] font-semibold text-[var(--danger)]">
-                      요리 이름을 입력해주세요.
-                    </span>
-                  ) : null}
-                </label>
-                <div className="web-manual-field">
-                  <span>기준 인분</span>
-                  <BaseServingsStepper
-                    value={baseServings}
-                    onChange={setBaseServings}
-                  />
-                </div>
-              </div>
-            </section>
-
-            <section className="web-manual-section">
-              <div className="web-manual-section-head">
-                <h2>재료</h2>
-                <span>{ingredients.length}개 선택됨</span>
-              </div>
-              <IngredientList
-                ingredients={ingredients}
-                showValidationError={showValidationErrors}
-                onChange={handleUpdateIngredient}
-                onRemove={handleRemoveIngredient}
-              />
-              <WebButton
-                className="web-manual-add-button"
-                onClick={() => setModalMode("ingredient-add")}
-                variant="secondary"
-              >
-                + 재료 추가하기
-              </WebButton>
-            </section>
-
-            <section className="web-manual-section">
-              <div className="web-manual-section-head">
-                <h2>조리법</h2>
-                <span>{steps.length}단계</span>
-              </div>
-              {isLoadingMethods ? (
-                <p className="web-picker-subtle">조리방법 불러오는 중...</p>
-              ) : (
-                <>
-                  <StepList
-                    steps={steps}
-                    showValidationError={showValidationErrors}
-                    onRemove={handleRemoveStep}
-                  />
-                  <StepInlineComposer
-                    cookingMethods={cookingMethods}
-                    nextStepNumber={steps.length + 1}
-                    onAdd={handleAddStep}
-                  />
-                </>
-              )}
-            </section>
-
-            {saveError ? (
-              <div className="web-menu-add-error" role="alert">
-                {saveError}
-              </div>
-            ) : null}
+            {desktopManualBody}
           </WebCard>
         </WebShell>
 
-        {modalMode === "ingredient-add" && (
-          <RecipeIngredientAddModal
-            onClose={() => setModalMode("none")}
-            onAdd={handleAddIngredient}
-          />
-        )}
-        {modalMode === "success" && createdRecipeId && (
-          <SuccessModal
-            recipeTitle={createdRecipeTitle}
-            mealAddError={mealAddError}
-            onMealAdd={handleMealAdd}
-            onViewDetail={handleViewDetail}
-            onClose={handleSuccessClose}
-          />
-        )}
-        {modalMode === "servings-input" && (
-          <ServingsInputModal
-            onConfirm={handleServingsConfirm}
-            onCancel={() => setModalMode("success")}
-            defaultServings={baseServings}
-            isCreating={isCreatingMeal}
-            error={mealAddError}
-          />
-        )}
+        {desktopManualModals}
       </div>
     );
   }

@@ -36,6 +36,22 @@ vi.mock("@/lib/api/recipe", () => ({
   fetchRecipes: vi.fn(),
 }));
 
+vi.mock("@/lib/api/cooking-methods", () => ({
+  fetchCookingMethods: vi.fn(() =>
+    Promise.resolve({
+      success: true,
+      data: { methods: [] },
+      error: null,
+    }),
+  ),
+}));
+
+vi.mock("@/lib/api/youtube-import", () => ({
+  validateYoutubeUrl: vi.fn(),
+  extractYoutubeRecipe: vi.fn(),
+  registerYoutubeRecipe: vi.fn(),
+}));
+
 const DEFAULT_PROPS = {
   planDate: "2026-04-18",
   columnId: "550e8400-e29b-41d4-a716-446655440050",
@@ -43,8 +59,26 @@ const DEFAULT_PROPS = {
   initialAuthenticated: true,
 } as const;
 
+function installMatchMedia(matchesDesktop = false) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: matchesDesktop,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe("MenuAddScreen", () => {
   beforeEach(() => {
+    installMatchMedia(false);
     mockRouterPush.mockReset();
     mockRouterReplace.mockReset();
     navigationMocks.searchParams.mockReset();
@@ -184,6 +218,48 @@ describe("MenuAddScreen", () => {
 
     expect(youtubeButton.className).toBe(recipeBookButton.className);
     expect(manualButton.className).toBe(recipeBookButton.className);
+  });
+
+  it("keeps the desktop option rail visible while opening manual recipe create in the right panel", async () => {
+    installMatchMedia(true);
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-manual"));
+
+    expect(screen.getByTestId("menu-add-option-grid")).toBeTruthy();
+    expect(screen.getByTestId("manual-recipe-embedded")).toBeTruthy();
+    expect(screen.getByLabelText("요리 이름")).toBeTruthy();
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it("keeps the mobile manual option routed to the standalone create screen", async () => {
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-manual"));
+
+    const pushedHref = mockRouterPush.mock.calls.at(-1)?.[0] as string;
+    expect(pushedHref).toContain("/menu/add/manual?");
+    expect(pushedHref).toContain(`date=${DEFAULT_PROPS.planDate}`);
+    expect(pushedHref).toContain(`columnId=${DEFAULT_PROPS.columnId}`);
+    expect(pushedHref).toContain(`slot=${encodeURIComponent(DEFAULT_PROPS.slotName)}`);
+  });
+
+  it("keeps the desktop option rail visible while opening YouTube import in the right panel", async () => {
+    installMatchMedia(true);
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+
+    expect(screen.getByTestId("menu-add-option-grid")).toBeTruthy();
+    expect(screen.getByTestId("youtube-import-embedded")).toBeTruthy();
+    expect(screen.getByLabelText("유튜브 URL")).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "유튜브에서 가져오기" })).toBeNull();
+    expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
   it("returns from a source picker to the planner meal-add modal context", async () => {
