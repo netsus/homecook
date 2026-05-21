@@ -488,6 +488,9 @@ describe("planner week screen", () => {
     const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
     // slot rows keep the meal link compact; empty rows open the Wave1 add sheet.
     const breakfastRow = within(firstDayCard).getByText("김치찌개").closest("a");
+    const breakfastAddButton = within(firstDayCard).getByRole("button", {
+      name: "3/24 아침 식사 추가",
+    });
     const dinnerButton = within(firstDayCard).getByRole("button", {
       name: "3/24 저녁 식사 추가",
     });
@@ -496,6 +499,12 @@ describe("planner week screen", () => {
     expect(dinnerButton).toBeTruthy();
     expect(breakfastRow?.className).toContain("min-h-[46px]");
     expect(within(breakfastRow as HTMLElement).getByText("2인분")).toBeTruthy();
+    expect(breakfastAddButton.className).toContain("border-[var(--planner-add)]");
+    expect(breakfastAddButton.className).toContain("bg-[var(--planner-add-soft)]");
+    expect(breakfastAddButton.className).toContain("text-[var(--planner-add)]");
+    expect(dinnerButton.className).toContain("border-[var(--planner-add)]");
+    expect(dinnerButton.className).toContain("bg-[var(--planner-add-soft)]");
+    expect(dinnerButton.className).toContain("text-[var(--planner-add)]");
     // Wave1: status badge removed — no "등록" text
     expect(within(breakfastRow as HTMLElement).queryByText("등록")).toBeNull();
     expect(dinnerButton.textContent?.replace(/\s+/g, " ").trim()).toBe("+");
