@@ -3,15 +3,21 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import {
   AppBottomSheet,
   AppCenterDialog,
   AppModalFooterActions,
   AppStepper,
 } from "@/components/shared/app-overlay";
-import { AppBackButton } from "@/components/shared/app-back-button";
+import {
+  AppBackButton,
+  AppBackButtonSpacer,
+} from "@/components/shared/app-back-button";
 import { fetchLeftovers } from "@/lib/api/leftovers";
 import type { LeftoverListItemData } from "@/types/leftover";
+
+type LeftoverPickerPresentation = "sheet" | "screen" | "web";
 
 export interface LeftoverPickerProps {
   selectedLeftover: LeftoverListItemData | null;
@@ -21,6 +27,8 @@ export interface LeftoverPickerProps {
   onServingsCancel: () => void;
   onBack?: () => void;
   onClose: () => void;
+  presentation?: LeftoverPickerPresentation;
+  slotLabel?: string;
 }
 
 type LoadState = "loading" | "ready" | "empty" | "error";
@@ -89,6 +97,94 @@ function LeftoverCard({
   );
 }
 
+function LeftoverPickerBody({
+  errorMessage,
+  items,
+  loadState,
+  onRetry,
+  onSelect,
+  presentation,
+}: {
+  errorMessage: string | null;
+  items: LeftoverListItemData[];
+  loadState: LoadState;
+  onRetry: () => void;
+  onSelect: (leftover: LeftoverListItemData) => void;
+  presentation: LeftoverPickerPresentation;
+}) {
+  if (loadState === "loading") {
+    return (
+      <div
+        className={
+          presentation === "web"
+            ? "web-picker-leftover-state"
+            : "py-8 text-center text-sm text-[var(--muted)]"
+        }
+        aria-busy="true"
+      >
+        남은요리를 불러오는 중...
+      </div>
+    );
+  }
+
+  if (loadState === "empty") {
+    return (
+      <div
+        className={
+          presentation === "web"
+            ? "web-picker-leftover-state"
+            : "py-8 text-center"
+        }
+      >
+        <p className="text-base font-semibold text-[var(--foreground)]">
+          남은요리가 없어요
+        </p>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          요리를 완료하면 남은요리로 추가할 수 있어요.
+        </p>
+      </div>
+    );
+  }
+
+  if (loadState === "error") {
+    return (
+      <div
+        className={
+          presentation === "web"
+            ? "web-menu-add-error"
+            : "rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
+        }
+        role="alert"
+      >
+        <p>{errorMessage}</p>
+        <button
+          className={
+            presentation === "web"
+              ? "web-button web-button-secondary web-button-sm mt-3"
+              : "mt-3 rounded-[var(--radius-control)] border border-red-300 bg-white px-3 py-2 font-semibold"
+          }
+          onClick={onRetry}
+          type="button"
+        >
+          다시 시도
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={presentation === "web" ? "web-picker-leftover-list" : "space-y-3"}>
+      {items.map((item) => (
+        <LeftoverCard
+          key={item.id}
+          leftover={item}
+          onSelect={onSelect}
+        />
+      ))}
+    </div>
+  );
+}
+
 function ServingsModal({
   leftover,
   isCreating,
@@ -144,6 +240,8 @@ export function LeftoverPicker({
   onServingsCancel,
   onBack,
   onClose,
+  presentation = "sheet",
+  slotLabel,
 }: LeftoverPickerProps) {
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [items, setItems] = useState<LeftoverListItemData[]>([]);
@@ -170,6 +268,74 @@ export function LeftoverPicker({
     void loadLeftovers();
   }, [loadLeftovers]);
 
+  const content = (
+    <LeftoverPickerBody
+      errorMessage={errorMessage}
+      items={items}
+      loadState={loadState}
+      onRetry={loadLeftovers}
+      onSelect={onLeftoverSelect}
+      presentation={presentation}
+    />
+  );
+
+  const servingsModal = selectedLeftover ? (
+    <ServingsModal
+      isCreating={isCreating}
+      leftover={selectedLeftover}
+      onCancel={onServingsCancel}
+      onConfirm={onServingsConfirm}
+    />
+  ) : null;
+
+  if (presentation === "screen") {
+    return (
+      <div
+        className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]"
+        data-testid="leftover-picker-screen"
+      >
+        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-2">
+          <AppBackButton
+            ariaLabel="식사 추가 방식으로 돌아가기"
+            onClick={onBack ?? onClose}
+            testId="leftover-picker-back"
+          />
+          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
+            남은 요리에서 추가
+          </h1>
+          <AppBackButtonSpacer />
+        </div>
+
+        <section className="px-4 py-4">
+          <p className="mb-3 text-[12px] font-medium leading-[1.5] text-[#495057]">
+            플래너에 다시 올릴 남은요리를 골라주세요
+            {slotLabel ? ` · ${slotLabel}` : ""}
+          </p>
+          {content}
+        </section>
+        {servingsModal}
+        <Wave1MobileBottomTab ariaLabel="남은 요리 추가 하단 탭" currentTab="planner" />
+      </div>
+    );
+  }
+
+  if (presentation === "web") {
+    return (
+      <section
+        aria-label="남은 요리에서 추가"
+        className="web-picker-section"
+        data-testid="leftover-picker-web"
+      >
+        <p className="web-picker-subtle">
+          플래너에 다시 올릴 남은요리를 골라주세요
+          {slotLabel ? ` · ${slotLabel}` : ""}
+        </p>
+        {content}
+        {servingsModal}
+      </section>
+    );
+  }
+
   return (
     <>
       <AppBottomSheet
@@ -185,60 +351,10 @@ export function LeftoverPicker({
         panelClassName="max-w-md"
         title="남은 요리에서 추가"
       >
-        {loadState === "loading" ? (
-          <div className="py-8 text-center text-sm text-[var(--muted)]" aria-busy="true">
-            남은요리를 불러오는 중...
-          </div>
-        ) : null}
-
-        {loadState === "empty" ? (
-          <div className="py-8 text-center">
-            <p className="text-base font-semibold text-[var(--foreground)]">
-              남은요리가 없어요
-            </p>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              요리를 완료하면 남은요리로 추가할 수 있어요.
-            </p>
-          </div>
-        ) : null}
-
-        {loadState === "error" ? (
-          <div
-            className="rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
-            role="alert"
-          >
-            <p>{errorMessage}</p>
-            <button
-              className="mt-3 rounded-[var(--radius-control)] border border-red-300 bg-white px-3 py-2 font-semibold"
-              onClick={loadLeftovers}
-              type="button"
-            >
-              다시 시도
-            </button>
-          </div>
-        ) : null}
-
-        {loadState === "ready" ? (
-          <div className="space-y-3">
-            {items.map((item) => (
-              <LeftoverCard
-                key={item.id}
-                leftover={item}
-                onSelect={onLeftoverSelect}
-              />
-            ))}
-          </div>
-        ) : null}
+        {content}
       </AppBottomSheet>
 
-      {selectedLeftover ? (
-        <ServingsModal
-          isCreating={isCreating}
-          leftover={selectedLeftover}
-          onCancel={onServingsCancel}
-          onConfirm={onServingsConfirm}
-        />
-      ) : null}
+      {servingsModal}
     </>
   );
 }

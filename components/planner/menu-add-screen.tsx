@@ -570,14 +570,16 @@ export function MenuAddScreen({
 
     if (pickerMode === "leftover") {
       return (
-          <LeftoverPicker
-            isCreating={isCreating}
-            onBack={handleLeftoverClose}
-            onClose={handleLeftoverClose}
-            onLeftoverSelect={handleLeftoverSelect}
+        <LeftoverPicker
+          isCreating={isCreating}
+          onBack={handleLeftoverClose}
+          onClose={handleLeftoverClose}
+          onLeftoverSelect={handleLeftoverSelect}
           onServingsCancel={handleLeftoverServingsCancel}
           onServingsConfirm={handleLeftoverServingsConfirm}
+          presentation="screen"
           selectedLeftover={selectedLeftover}
+          slotLabel={targetLabel}
         />
       );
     }
@@ -799,7 +801,9 @@ export function MenuAddScreen({
                     onLeftoverSelect={handleLeftoverSelect}
                     onServingsCancel={handleLeftoverServingsCancel}
                     onServingsConfirm={handleLeftoverServingsConfirm}
+                    presentation="web"
                     selectedLeftover={selectedLeftover}
+                    slotLabel={targetLabel}
                   />
                 )}
 
