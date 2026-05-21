@@ -2763,6 +2763,11 @@ button {
     --text-4: var(--web-text-4);
     --surface-fill: var(--web-bg-alt);
     --surface-subtle: var(--web-divider);
+    --wave1-mint: var(--web-brand);
+    --wave1-mint-deep: var(--web-brand-deep);
+    --wave1-mint-contrast: var(--web-brand);
+    --wave1-mint-contrast-deep: var(--web-brand-deep);
+    --wave1-mint-soft: var(--web-brand-wash);
     --shadow: var(--web-shadow-card);
     --shadow-1: var(--web-shadow-card);
     --shadow-2: var(--web-shadow-card);
@@ -3076,6 +3081,12 @@ button {
     border-radius: inherit;
   }
 
+  .web-picker-progress-brand,
+  .web-picker-score-brand {
+    background: rgba(0, 161, 255, 0.10);
+    color: var(--web-brand-accessible);
+  }
+
   .web-picker-progress-success,
   .web-picker-score-success {
     background: rgba(26, 174, 57, 0.12);
@@ -3096,6 +3107,10 @@ button {
 
   .web-picker-progress-success.web-picker-progress-fill {
     background: var(--web-success);
+  }
+
+  .web-picker-progress-brand.web-picker-progress-fill {
+    background: var(--web-brand);
   }
 
   .web-picker-progress-warning.web-picker-progress-fill {
