@@ -29,6 +29,9 @@ export interface ShoppingDetailScreenProps {
   listId: string;
   initialAuthenticated: boolean;
   navActiveId?: "planner" | "mypage";
+  presentation?: "screen" | "embedded";
+  onCompleted?: () => void;
+  onRequestClose?: () => void;
 }
 
 type ViewState = "loading" | "error" | "ready";
@@ -49,6 +52,9 @@ export function ShoppingDetailScreen({
   listId,
   initialAuthenticated,
   navActiveId = "planner",
+  presentation = "screen",
+  onCompleted,
+  onRequestClose,
 }: ShoppingDetailScreenProps) {
   const router = useRouter();
   const [viewState, setViewState] = useState<ViewState>("loading");
@@ -65,6 +71,8 @@ export function ShoppingDetailScreen({
   const isMobileViewport = useIsMobileViewport();
   const appReturn = useAppReturn({ fallback: "/planner" });
   const shareToastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isEmbedded = presentation === "embedded";
+  const handleBack = onRequestClose ?? appReturn.goBack;
 
   const clearShareToastTimer = useCallback(() => {
     if (shareToastTimeoutRef.current) {
@@ -456,6 +464,7 @@ export function ShoppingDetailScreen({
             type: "success",
             message: `장보기를 완료했어요 (${mealsText}${pantryText})`,
           });
+          onCompleted?.();
           setTimeout(() => setCompleteToast(null), 3000);
         }
       } catch (error) {
@@ -487,7 +496,7 @@ export function ShoppingDetailScreen({
         setIsCompleting(false);
       }
     },
-    [listId, listDetail, markListReadOnly, router]
+    [listId, listDetail, markListReadOnly, onCompleted, router]
   );
 
   const handlePantryCancel = useCallback(() => {
@@ -497,14 +506,33 @@ export function ShoppingDetailScreen({
   if (viewState === "loading") {
     return (
       <ShoppingDetailSkeleton
+        embedded={isEmbedded}
         mobile={isMobileViewport}
         navActiveId={navActiveId}
-        onBack={appReturn.goBack}
+        onBack={handleBack}
       />
     );
   }
 
   if (viewState === "error") {
+    if (isEmbedded) {
+      return (
+        <div
+          className="web-shopping-detail-embedded"
+          data-testid="shopping-detail-embedded"
+        >
+          <ContentState
+            tone="error"
+            title="장보기 리스트를 불러올 수 없어요"
+            description={errorMessage || "다시 시도해주세요"}
+            actionLabel="다시 시도"
+            onAction={loadDetail}
+            variant="panel"
+          />
+        </div>
+      );
+    }
+
     return (
       <div
         className="flex min-h-screen flex-col items-center justify-center bg-[var(--wave1-surface)] px-4"
@@ -542,7 +570,7 @@ export function ShoppingDetailScreen({
         isReordering={isReordering}
         isSharing={isSharing}
         navActiveId={navActiveId}
-        onBack={appReturn.goBack}
+        onBack={handleBack}
         onComplete={handleCompleteClick}
         onMoveItem={handleMoveItem}
         onShare={handleShare}
@@ -564,6 +592,195 @@ export function ShoppingDetailScreen({
     ? Math.round((completedCount / purchaseItems.length) * 100)
     : 100;
 
+  if (isEmbedded) {
+    return (
+      <div
+        className="web-shopping-detail-embedded"
+        data-testid="shopping-detail-embedded"
+      >
+        <header className="web-shopping-detail-head">
+          <div>
+            <p className="web-menu-add-eyebrow">
+              {isReadOnly ? "Completed Shopping" : "Shopping List"}
+            </p>
+            <h1>{listDetail.title}</h1>
+            <p>
+              생성 {formatDate(listDetail.created_at)} ·{" "}
+              {formatDateRange(
+                listDetail.date_range_start,
+                listDetail.date_range_end,
+              )}
+            </p>
+          </div>
+          <div className="web-shopping-detail-actions">
+            <WebButton onClick={handleBack} size="sm" variant="tertiary">
+              목록으로
+            </WebButton>
+            <WebButton
+              aria-label="공유(텍스트)"
+              disabled={isSharing}
+              onClick={handleShare}
+              variant="secondary"
+            >
+              {isSharing ? "공유 중..." : "공유"}
+            </WebButton>
+          </div>
+        </header>
+
+        {shareToast ? (
+          <StatusToast
+            message={shareToast.message}
+            tone={shareToast.type === "error" ? "error" : "success"}
+          />
+        ) : null}
+        {reorderError ? (
+          <StatusToast message={reorderError} tone="error" />
+        ) : null}
+        {completeToast ? (
+          <StatusToast message={completeToast.message} tone={completeToast.type} />
+        ) : null}
+
+        {isReadOnly ? (
+          <WebCard className="web-shopping-lock">
+            <strong>완료된 장보기 기록은 수정할 수 없어요</strong>
+            {listDetail.completed_at ? (
+              <span>
+                완료 {formatDate(listDetail.completed_at)}
+                <span className="sr-only">
+                  {" "}
+                  ✓ 완료됨 ({formatDate(listDetail.completed_at)})
+                </span>
+              </span>
+            ) : null}
+          </WebCard>
+        ) : (
+          <WebCard className="web-shopping-progress">
+            <div>
+              <span>진행률</span>
+              <strong>
+                {completedCount} / {purchaseItems.length} 항목 ({progressPercent}%)
+              </strong>
+            </div>
+            <span className="web-shopping-progress-track">
+              <span style={{ width: `${progressPercent}%` }} />
+            </span>
+          </WebCard>
+        )}
+
+        <div className="web-shopping-detail-layout">
+          <section
+            className="web-shopping-purchase-section"
+            aria-labelledby="shopping-purchase-title"
+          >
+            <div className="web-shopping-section-head">
+              <div>
+                <h2 id="shopping-purchase-title">
+                  {isReadOnly ? "구매한 재료" : "구매할 재료"}
+                  <span className="sr-only">
+                    {` ${isReadOnly ? "구매한 재료" : "구매할 재료"} (${purchaseItems.length}개)`}
+                  </span>
+                </h2>
+                <p>{purchaseItems.length}개 항목</p>
+              </div>
+              {!isReadOnly ? <span>체크 · 제외 · 순서 변경</span> : null}
+            </div>
+
+            {isEmpty ? (
+              <div className="web-modal-panel">
+                <p className="web-modal-copy">
+                  팬트리에 이미 있어서 장볼 재료가 없어요.
+                </p>
+              </div>
+            ) : (
+              <div className="web-shopping-item-grid">
+                {purchaseItems.map((item, index) => (
+                  <ShoppingItemCard
+                    isReadOnly={isReadOnly}
+                    isReordering={isReordering}
+                    isUpdating={updatingItem?.itemId === item.id}
+                    item={item}
+                    key={item.id}
+                    onMoveDown={
+                      index < purchaseItems.length - 1
+                        ? () => handleMoveItem(item.id, "down")
+                        : undefined
+                    }
+                    onMoveUp={
+                      index > 0 ? () => handleMoveItem(item.id, "up") : undefined
+                    }
+                    onToggleCheck={handleToggleCheck}
+                    onToggleExclude={handleToggleExclude}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <aside className="web-shopping-detail-rail">
+            {isReadOnly ? (
+              <WebCard className="web-shopping-rail-card">
+                <h2>읽기 전용</h2>
+                <p>완료된 장보기 기록은 체크와 제외 상태를 바꿀 수 없어요.</p>
+                <WebButton
+                  onClick={handleBack}
+                  variant="secondary"
+                >
+                  목록으로
+                </WebButton>
+              </WebCard>
+            ) : (
+              <WebCard className="web-shopping-rail-card">
+                <h2>장보기를 마쳤나요?</h2>
+                <p>완료하면 체크한 재료를 팬트리에 반영할 수 있어요.</p>
+                <WebButton
+                  disabled={isCompleting}
+                  fullWidth
+                  onClick={handleCompleteClick}
+                >
+                  {isCompleting ? "완료 처리 중..." : "장보기 완료"}
+                </WebButton>
+              </WebCard>
+            )}
+
+            <WebCard className="web-shopping-rail-card">
+              <h2>
+                팬트리 제외 항목
+                <span className="sr-only">
+                  {` 팬트리 제외 항목 (${excludedItems.length}개)`}
+                </span>
+              </h2>
+              <p>{excludedItems.length}개 항목</p>
+              {excludedItems.length > 0 ? (
+                <div className="web-shopping-excluded-list">
+                  {excludedItems.map((item) => (
+                    <ShoppingItemCard
+                      isReadOnly={isReadOnly}
+                      isUpdating={updatingItem?.itemId === item.id}
+                      item={item}
+                      key={item.id}
+                      onToggleCheck={handleToggleCheck}
+                      onToggleExclude={handleToggleExclude}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="web-modal-copy">팬트리에서 제외된 재료가 없어요.</p>
+              )}
+            </WebCard>
+          </aside>
+        </div>
+
+        {showPantryPopup && listDetail ? (
+          <PantryReflectionPopup
+            items={listDetail.items}
+            onCancel={handlePantryCancel}
+            onConfirm={handlePantryConfirm}
+          />
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <WebShell className="web-shopping-shell" wide>
       <WebTopNav activeId={navActiveId} items={WEB_NAV_ITEMS} />
@@ -572,7 +789,7 @@ export function ShoppingDetailScreen({
           <button
             aria-label="이전 화면으로 돌아가기"
             className="web-breadcrumb-link"
-            onClick={appReturn.goBack}
+            onClick={handleBack}
             type="button"
           >
             장보기
@@ -598,7 +815,7 @@ export function ShoppingDetailScreen({
           <div className="web-shopping-detail-actions">
             <WebIconButton
               aria-label="뒤로 가기"
-              onClick={appReturn.goBack}
+              onClick={handleBack}
             >
               ←
             </WebIconButton>
@@ -769,10 +986,12 @@ export function ShoppingDetailScreen({
 }
 
 function ShoppingDetailSkeleton({
+  embedded = false,
   mobile,
   navActiveId,
   onBack,
 }: {
+  embedded?: boolean;
   mobile: boolean;
   navActiveId: "planner" | "mypage";
   onBack: () => void;
@@ -831,6 +1050,46 @@ function ShoppingDetailSkeleton({
         ariaLabel="장보기 상세 화면 하단 탐색"
         currentTab={navActiveId}
       />
+      </div>
+    );
+  }
+
+  if (embedded) {
+    return (
+      <div
+        aria-busy="true"
+        aria-label="장보기 상세를 불러오는 중"
+        className="web-shopping-detail-embedded"
+        data-testid="shopping-detail-embedded-skeleton"
+      >
+        <div className="web-shopping-detail-head">
+          <div>
+            <div className="h-3 w-32 animate-pulse rounded-full bg-[#F1F3F5]" />
+            <div className="mt-4 h-8 w-56 animate-pulse rounded-[var(--radius-control)] bg-[#F1F3F5]" />
+            <div className="mt-3 h-4 w-72 animate-pulse rounded-full bg-[#F1F3F5]" />
+          </div>
+          <WebButton onClick={onBack} size="sm" variant="tertiary">
+            목록으로
+          </WebButton>
+        </div>
+        <div className="web-shopping-detail-layout">
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((index) => (
+              <div
+                className="h-20 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-white"
+                key={index}
+              />
+            ))}
+          </div>
+          <aside className="space-y-3">
+            {[1, 2].map((index) => (
+              <div
+                className="h-28 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-white"
+                key={index}
+              />
+            ))}
+          </aside>
+        </div>
       </div>
     );
   }
