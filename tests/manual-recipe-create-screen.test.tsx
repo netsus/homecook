@@ -120,6 +120,23 @@ describe("ManualRecipeCreateScreen", () => {
     );
   });
 
+  it("renders the desktop embedded form without nesting its own web shell", () => {
+    installMatchMedia(true);
+
+    const { container } = render(
+      <ManualRecipeCreateScreen
+        {...DEFAULT_PROPS}
+        onRequestClose={vi.fn()}
+        presentation="embedded"
+      />,
+    );
+
+    expect(screen.getByTestId("manual-recipe-embedded")).toBeTruthy();
+    expect(screen.getByLabelText("요리 이름")).toBeTruthy();
+    expect(container.querySelector(".web-menu-add-shell")).toBeNull();
+    expect(screen.queryByText("HOMECOOK")).toBeNull();
+  });
+
   it("does not show a non-interactive default step placeholder", async () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
