@@ -60,6 +60,11 @@
   --chip-height: 36px;
   --chip-height-lg: 44px;
   --input-height: 44px;
+  --app-back-button-size: 32px;
+  --app-back-button-icon-size: 20px;
+  --app-back-button-radius: var(--radius-full);
+  --app-back-button-color: #212529;
+  --app-back-button-hover-bg: #F8F9FA;
   --app-text-caption: 11px;
   --app-text-meta: 12px;
   --app-text-small: 13px;

@@ -399,9 +399,14 @@ describe("planner week screen", () => {
     await user.click(searchButton);
     const searchDialog = await screen.findByRole("dialog", { name: "검색으로 추가" });
     expect(searchDialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
+    const searchBackButton = within(searchDialog).getByLabelText("뒤로");
+    expect(searchBackButton.className).toContain("h-[var(--app-back-button-size)]");
+    expect(searchBackButton.className).toContain("w-[var(--app-back-button-size)]");
+    expect(searchBackButton.querySelector("svg")?.getAttribute("viewBox")).toBe("0 0 24 24");
+    expect(searchBackButton.textContent).toBe("");
     expect(screen.queryByTestId("planner-meal-add-sheet")).toBeNull();
 
-    await user.click(within(searchDialog).getByLabelText("뒤로"));
+    await user.click(searchBackButton);
     expect(screen.getByTestId("planner-meal-add-sheet")).toBeTruthy();
 
     await user.click(within(screen.getByTestId("planner-meal-add-sheet")).getByTestId("meal-add-option-recipebook"));
