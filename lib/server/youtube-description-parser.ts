@@ -189,6 +189,7 @@ const COMPONENT_KEYWORDS = [
   "가나슈",
   "가니쉬",
   "양념",
+  "양념장",
   "밑간",
   "육수",
   "드레싱",
@@ -206,7 +207,7 @@ const KOREAN_NUMBER_WORDS: Record<string, number> = {
   네: 4,
   반: 0.5,
 };
-const AMOUNT_SIGNAL_PATTERN = `(?:[0-9]+\\/[0-9]+|[0-9]+(?:[.,][0-9]+)?(?:\\s*[~\\-–]\\s*[0-9]+(?:[.,][0-9]+)?)?)\\s*(?:${UNIT_PATTERN})(?:\\b|$)`;
+const AMOUNT_SIGNAL_PATTERN = `(?:[0-9]+\\/[0-9]+|[0-9]+(?:[.,][0-9]+)?(?:\\s*[~\\-–]\\s*[0-9]+(?:[.,][0-9]+)?)?)\\s*(?:${UNIT_PATTERN})(?=\\s|[+＋,，/)]|$)`;
 const AMOUNT_SIGNAL_RE = new RegExp(AMOUNT_SIGNAL_PATTERN, "iu");
 const NUMERIC_INGREDIENT_RE = new RegExp(
   `^(.+?)(?:\\s*[：:]\\s*|\\s*)` +
@@ -214,6 +215,7 @@ const NUMERIC_INGREDIENT_RE = new RegExp(
     `(${UNIT_PATTERN})(?:\\s*\\([^)]*\\))?\\s*$`,
   "iu",
 );
+const COMPOUND_INGREDIENT_SEPARATOR_RE = /\s*[+＋]\s*/u;
 
 function stripOuterBrackets(value: string) {
   const trimmed = value.trim();
@@ -517,6 +519,29 @@ function parseIngredientLine(
     };
   }
 
+  const tapToTasteMatch = line.text.match(/^(.+?)\s+(?:톡)+$/u);
+  if (tapToTasteMatch) {
+    const name = normalizeIngredientName(tapToTasteMatch[1]);
+
+    if (!name) {
+      return null;
+    }
+
+    return {
+      name,
+      amount: null,
+      unit: null,
+      ingredientType: "TO_TASTE",
+      displayText: formatIngredientDisplayText({ name, amount: null, unit: null, componentLabel }),
+      rawText: line.raw.trim(),
+      componentLabel,
+      sourceLine: line.index,
+      confidence: 0.8,
+      flags: ["to_taste_tap"],
+      scalable: false,
+    };
+  }
+
   if (!allowAmountless || line.text.length > 60 || hasCookingAction(line.text) || hasSentenceEnding(line.text)) {
     return null;
   }
@@ -539,6 +564,58 @@ function parseIngredientLine(
     flags: ["amountless_section_item"],
     scalable: false,
   };
+}
+
+function splitCompoundIngredientSegments(text: string) {
+  if (!text.includes("+") && !text.includes("＋")) {
+    return [text];
+  }
+
+  const segments = text
+    .split(COMPOUND_INGREDIENT_SEPARATOR_RE)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  return segments.length > 1 ? segments : [text];
+}
+
+function isParsedIngredient(ingredient: ParsedIngredient | null): ingredient is ParsedIngredient {
+  return ingredient !== null;
+}
+
+function parseIngredientLines(
+  line: SourceLine,
+  options: {
+    allowAmountless: boolean;
+    componentLabel: string | null;
+  },
+) {
+  const segments = splitCompoundIngredientSegments(line.text);
+
+  if (segments.length === 1) {
+    const ingredient = parseIngredientLine(line, options);
+    return ingredient ? [ingredient] : [];
+  }
+
+  const parsedSegments = segments.map((segment) =>
+    parseIngredientLine({
+      ...line,
+      raw: segment,
+      text: segment,
+      normalized: segment.toLowerCase(),
+      ordinal: null,
+    }, options),
+  );
+
+  if (parsedSegments.every(isParsedIngredient)) {
+    return parsedSegments.map((ingredient) => ({
+      ...ingredient,
+      flags: [...new Set([...ingredient.flags, "compound_ingredient_line"])],
+    }));
+  }
+
+  const ingredient = parseIngredientLine(line, options);
+  return ingredient ? [ingredient] : [];
 }
 
 function parseStepLine(
@@ -696,10 +773,25 @@ function classifyLine(
 }
 
 function inferComponentSectionFromLookahead(lines: SourceLine[]): SectionKind | null {
+  const meaningfulLines = lines.filter((current) => current.text && !isNoiseText(current.text));
+  const firstLine = meaningfulLines[0];
+
+  if (firstLine) {
+    const firstScores = scoreLine(firstLine);
+
+    if (firstScores.ingredientScore >= 5 && firstScores.ingredientScore >= firstScores.stepScore + 2) {
+      return "ingredients";
+    }
+
+    if (firstScores.stepScore >= 4 && firstScores.stepScore >= firstScores.ingredientScore + 1) {
+      return "steps";
+    }
+  }
+
   let ingredientCount = 0;
   let stepCount = 0;
 
-  for (const line of lines.filter((current) => current.text && !isNoiseText(current.text)).slice(0, 3)) {
+  for (const line of meaningfulLines.slice(0, 3)) {
     const scores = scoreLine(line);
 
     if (getIngredientHeadingComponent(line.text) !== undefined) {
@@ -810,18 +902,18 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
 
     if (classification.kind === "heading.ingredients") {
       section = "ingredients";
-      if (classification.componentLabel !== null) {
-        componentLabel = resolveComponentLabel(components, classification.componentLabel);
-      }
+      componentLabel = classification.componentLabel === null
+        ? null
+        : resolveComponentLabel(components, classification.componentLabel);
       getComponent(components, componentLabel, line.index);
       continue;
     }
 
     if (classification.kind === "heading.steps") {
       section = "steps";
-      if (classification.componentLabel !== null) {
-        componentLabel = resolveComponentLabel(components, classification.componentLabel);
-      }
+      componentLabel = classification.componentLabel === null
+        ? null
+        : resolveComponentLabel(components, classification.componentLabel);
       getComponent(components, componentLabel, line.index);
       continue;
     }
@@ -834,13 +926,13 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
     }
 
     if (section === "ingredients") {
-      const ingredient = parseIngredientLine(line, {
+      const ingredients = parseIngredientLines(line, {
         allowAmountless: true,
         componentLabel,
       });
 
-      if (ingredient) {
-        getComponent(components, componentLabel, line.index).ingredients.push(ingredient);
+      if (ingredients.length > 0) {
+        getComponent(components, componentLabel, line.index).ingredients.push(...ingredients);
         continue;
       }
     }
@@ -858,13 +950,13 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
     }
 
     if (!section && classification.kind === "ingredient_candidate") {
-      const ingredient = parseIngredientLine(line, {
+      const ingredients = parseIngredientLines(line, {
         allowAmountless: false,
         componentLabel,
       });
 
-      if (ingredient) {
-        getComponent(components, componentLabel, line.index).ingredients.push(ingredient);
+      if (ingredients.length > 0) {
+        getComponent(components, componentLabel, line.index).ingredients.push(...ingredients);
         continue;
       }
     }

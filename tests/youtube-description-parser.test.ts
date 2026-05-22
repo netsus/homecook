@@ -110,6 +110,59 @@ describe("youtube description parser v2", () => {
     expect(draft.steps).toEqual(["[필링] 생크림을 데우고 초콜릿 필링을 섞어요."]);
   });
 
+  it("splits plus-separated sauce ingredients and does not import sauce heading as an ingredient", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "목살 양념구이",
+      description: [
+        "재료",
+        "- 돼지목살300g",
+        "",
+        "양념장",
+        "- 진간장3스푼 + 다진마늘1스푼 + 설탕1스푼 + 올리고당1스푼 + 참기름1스푼 + 맛술1스푼 + 물2스푼 + 후추 톡톡톡톡",
+        "(영상에서는 설탕이 빠져서 나중에 넣었습니다)",
+        "",
+        "만들기",
+        "1. 목살300g을 키친타올을 이용해 핏물을 제거해주세요.",
+        "2. 믹싱볼에 목살과 양념장을 넣고 조물조물 버무려주세요.(조금 더 맛있게 드시려면 10분정도 숙성해주세요)",
+        "3. 팬에 맛있게 구워주세요.(중불)(중간에 고기를 자르면서 구워도 돼요)",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toEqual([
+      "돼지목살",
+      "진간장",
+      "다진마늘",
+      "설탕",
+      "올리고당",
+      "참기름",
+      "맛술",
+      "물",
+      "후추",
+    ]);
+    expect(draft.ingredients).not.toContainEqual(expect.objectContaining({ name: "양념장" }));
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "진간장"))
+      .toMatchObject({
+        amount: 3,
+        unit: "스푼",
+        componentLabel: "양념장",
+        displayText: "[양념장] 진간장 3스푼",
+      });
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "후추"))
+      .toMatchObject({
+        amount: null,
+        unit: null,
+        componentLabel: "양념장",
+        displayText: "[양념장] 후추 약간",
+      });
+    expect(draft.steps).toEqual([
+      "목살300g을 키친타올을 이용해 핏물을 제거해주세요.",
+      "믹싱볼에 목살과 양념장을 넣고 조물조물 버무려주세요.(조금 더 맛있게 드시려면 10분정도 숙성해주세요)",
+      "팬에 맛있게 구워주세요.(중불)(중간에 고기를 자르면서 구워도 돼요)",
+    ]);
+    expect(draft.blockingIssues).toEqual([]);
+  });
+
   it("prefers the visible serving unit over parenthetical reference weight", () => {
     const document = parseYoutubeRecipeDescription({
       title: "오이 샌드위치",
