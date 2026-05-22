@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-22T10:42:54.863Z",
+  "updated_at": "2026-05-22T11:23:00.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1184,8 +1184,8 @@
     {
       "id": "22-youtube-ingredient-registration",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-22-youtube-ingredient-registration",
-      "lifecycle": "in_progress",
+      "branch": "feature/fe-22-youtube-ingredient-registration",
+      "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -1197,8 +1197,8 @@
         "pnpm validate:workpack -- --slice 22-youtube-ingredient-registration",
         "git diff --check"
       ],
-      "notes": "Stage 2 backend PR #558 opened; local backend verification passed and Claude Stage 3 returned APPROVED_NO_FEEDBACK. closeout_phase=collecting",
-      "pr_path": "https://github.com/netsus/homecook/pull/558",
+      "notes": "Stage 2 backend PR #558 merged. Stage 4 frontend implementation and evidence completed on feature/fe-22-youtube-ingredient-registration after Claude handoff; Codex verified targeted Vitest, targeted Playwright, screenshot evidence, pnpm verify:frontend:pr, validators, and diff check. Awaiting Stage 5 design review, frontend PR publication, CI, Stage 6 review, and merge gate. closeout_phase=collecting stage4_fallback=codex Stage 5 design review passed; Design Status confirmed.",
+      "pr_path": "pending",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
