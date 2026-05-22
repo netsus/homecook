@@ -80,7 +80,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 3. `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` — 공식 문서 버전 확인
 4. `docs/요구사항기준선-v1.6.9.md` — 해당 슬라이스 요구사항 범위
 5. `docs/화면정의서-v1.5.6.md` — 해당 화면 정의
-6. `docs/api문서-v1.2.8.md` — 해당 API 섹션
+6. `docs/api문서-v1.2.9.md` — 해당 API 섹션
 7. `docs/db설계-v1.3.5.md` — 영향받는 테이블
 8. `docs/engineering/qa-system.md` — QA 3-Layer와 real DB / fixture 운영 기준
 9. `docs/workpacks/README.md` — Slice Order의 Status 열로 선행 슬라이스 `merged` 여부 확인
@@ -254,7 +254,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 3. `docs/workpacks/<slice>/README.md` — Backend First Contract, Key Rules, In Scope
 4. `docs/workpacks/<slice>/acceptance.md` — 상태 전이·에러·권한 시나리오 확인
 5. `docs/workpacks/<slice>/automation-spec.json` — autonomous/evaluator/closeout contract 확인
-6. `docs/api문서-v1.2.8.md` — 해당 섹션 전체
+6. `docs/api문서-v1.2.9.md` — 해당 섹션 전체
 7. `docs/db설계-v1.3.5.md` — 해당 테이블
 8. `docs/engineering/tdd-vitest.md` — 테스트 전략
 9. `docs/engineering/qa-system.md` — Layer 1 deterministic gate + real DB smoke 운영 기준

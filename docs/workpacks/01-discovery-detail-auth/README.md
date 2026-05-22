@@ -32,9 +32,8 @@
   - `GET /api/v1/recipes` (목록 조회: `q`, `sort`, `cursor`, `limit`)
   - `GET /api/v1/recipes/themes` (테마 섹션 조회) ← **bootstrap 미구현, Retrofit Stage 2에서 추가**
   - `GET /api/v1/recipes/{recipe_id}` (상세 조회)
-  - `POST /api/v1/auth/login` (소셜 로그인)
-  - `PATCH /api/v1/auth/profile` (닉네임 설정, 신규 회원)
   - `GET /auth/callback` (OAuth 리다이렉트 핸들러 — 보안 검증 포함)
+  - `PATCH /api/v1/users/me` (닉네임 설정/변경, 신규 회원 profile 대체 경로)
 - 상태 전이:
   - 비로그인 → 로그인 세션 생성
   - 보호 액션 → 로그인 게이트 모달 → 소셜 로그인 → return-to-action 복귀
@@ -88,11 +87,11 @@
 - Response 200: `{ success: true, data: Recipe (ingredients + steps 포함), error: null }`
 - Error: 404 (`RESOURCE_NOT_FOUND`) — 존재하지 않는 레시피
 
-### `POST /api/v1/auth/login`
+### Legacy auth API note
 
-- Body: `provider` (`kakao`/`naver`/`google`), `access_token`
-- Response 200: `{ success: true, data: { token, refresh_token, user }, error: null }`
-- Error: 400 (`INVALID_REQUEST`) — 지원하지 않는 provider
+- `POST /api/v1/auth/login`은 API v1.2.9에서 제거됐다.
+- 웹 로그인은 Supabase browser client OAuth 시작 후 `GET /auth/callback`에서 세션 교환과 user bootstrap을 처리한다.
+- `PATCH /api/v1/auth/profile`도 API v1.2.9에서 제거됐고, 닉네임 설정/변경은 `PATCH /api/v1/users/me`를 사용한다.
 
 ### `GET /auth/callback`
 

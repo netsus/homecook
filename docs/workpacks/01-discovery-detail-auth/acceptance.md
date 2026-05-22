@@ -70,7 +70,7 @@
 - [x] **[Retrofit BE]** `GET /recipes` 응답 계약(`{ success, data, error }` 래퍼)이 단위 테스트로 고정되어 있다
 - [x] **[Retrofit BE]** `GET /recipes/themes` 엔드포인트 존재 및 응답 형식이 고정되어 있다
 - [x] **[Retrofit BE]** `GET /recipes/{recipe_id}` 404 에러 응답 형식이 고정되어 있다
-- [x] **[Retrofit BE]** `POST /auth/login` invalid provider 에러 처리가 고정되어 있다
+- [x] **[Contract cleanup]** API v1.2.9에서 `POST /auth/login` 제거. 웹 로그인은 Supabase OAuth callback 기준으로 고정되어 있다
 - [x] 로그인 게이트 트리거 조건(비로그인 + 보호 액션)이 단위 테스트로 고정되어 있다
 
 ### Playwright

@@ -44,7 +44,7 @@
 
 - [x] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 — `meal_plan_columns ×4`, `meals` (registered/shopping_done/cook_done) 각 최소 1개 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
 - [x] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 — `meals` 테이블 + `pnpm qa:seed:01-05` 결과 확인 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [x] 시스템 row 자동 생성이 필요한 슬라이스면 owning flow와 기대 결과가 명시되어 있다 — `meal_plan_columns ×4`는 회원가입 시 자동 생성 (`0-2 PATCH /auth/profile` 완료 후), 이 슬라이스는 해당 컬럼을 읽기만 한다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
+- [x] 시스템 row 자동 생성이 필요한 슬라이스면 owning flow와 기대 결과가 명시되어 있다 — `meal_plan_columns ×4`는 회원가입/bootstrap 시 자동 생성 또는 보정된다. API v1.2.9 기준 profile 설정은 `PATCH /users/me`가 담당하며, 이 슬라이스는 해당 컬럼을 읽기만 한다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
