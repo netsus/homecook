@@ -1,0 +1,141 @@
+{
+  "id": "22-youtube-ingredient-registration",
+  "title": "YouTube ingredient registration flow for unresolved extracted ingredients",
+  "summary": "YT_IMPORT 검수 단계에서 DB에 없는 재료를 사용자가 확인 후 표준 재료로 등록하고 현재 row를 resolved로 전환한다. Public API와 화면 계약 변경이 필요하므로 contract-evolution PR이 Stage 2 구현보다 먼저 merge되어야 한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "새로운 YouTube 재료가 나올 때마다 migration을 추가하지 않아도, 사용자가 검수 흐름 안에서 안전하게 표준 재료를 등록해 레시피 저장을 계속할 수 있게 한다.",
+  "owners": {
+    "claude": "stage1,stage3,stage5",
+    "codex": "stage1 orchestration, stage2 after contract-evolution, stage4/stage6 as assigned by workflow",
+    "workers": []
+  },
+  "dependencies": [
+    "19-youtube-import",
+    "20-youtube-real-import",
+    "21-ingredient-dictionary",
+    "contract-evolution-official-docs"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.6.9.md",
+      "docs/화면정의서-v1.5.6.md",
+      "docs/유저flow맵-v1.3.6.md",
+      "docs/api문서-v1.2.7.md",
+      "docs/db설계-v1.3.5.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/22-youtube-ingredient-registration/README.md",
+      "docs/workpacks/22-youtube-ingredient-registration/acceptance.md",
+      "docs/workpacks/22-youtube-ingredient-registration/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "pnpm dev:demo",
+      "pnpm dev:local-supabase"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 22-youtube-ingredient-registration",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "contract-evolution-docs",
+      "unresolved-create-flow",
+      "registration-sheet-mobile",
+      "resolved-row-after-create",
+      "real-db-smoke"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "claude_approved",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": "contract_evolution_required"
+  },
+  "closeout": {
+    "phase": "collecting",
+    "docs_projection": {
+      "roadmap_lifecycle": "planned",
+      "design_status": "temporary",
+      "delivery_checklist": "pending",
+      "design_authority": "not_required",
+      "acceptance": "pending",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "pending",
+      "external_smokes": "pending",
+      "authority_reports": [],
+      "actual_verification_refs": []
+    },
+    "merge_gate_projection": {
+      "current_head_sha": null,
+      "approval_state": "claude_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": null
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": null,
+      "evidence_sources": []
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-22T00:00:00+09:00",
+      "status_synced_at": "2026-05-22T00:00:00+09:00",
+      "pr_body_synced_at": null
+    }
+  },
+  "notes": "Stage 1 planning branch. Claude owns stage1 review/contract critique and later stage3/stage5 reviews. Claude plan review and official contract/workpack review both returned APPROVED_NO_FEEDBACK after one minor endpoint-count repair. Implementation is blocked until this docs/contract PR merges. Scoped YouTube registration endpoint is preferred over generic POST /ingredients for this slice; a generic ingredient create endpoint is future scope. Known non-blocking bookkeeping discrepancy: .workflow-v2/status.json still lists 20-youtube-real-import as planned while docs/workpacks/README.md lists it merged. closeout_phase=collecting",
+  "out_of_scope": [
+    "Automatic ingredient registration without user confirmation",
+    "Admin ingredient management UI",
+    "Bulk seed migrations for every new ingredient",
+    "Fuzzy or LLM-based canonical ingredient guessing",
+    "Long-term YouTube extraction session recovery UX",
+    "Generic POST /ingredients endpoint for future manual recipe reuse"
+  ],
+  "open_questions": []
+}

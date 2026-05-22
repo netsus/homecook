@@ -1180,6 +1180,24 @@
         "pnpm typecheck"
       ],
       "notes": "Merged via PR #553 on 2026-05-22T16:25:35+09:00 after Stage 1 docs PR #552, Codex Stage 2 backend implementation, Claude Stage 3 approval, and current-head GitHub checks. findIngredientIds now uses standard + synonym lookup with ingredientId dedup, canonical resolved names, needs_review candidates, DB error propagation, and idempotent synonym seed migration. Tested: pnpm vitest run tests/ingredient-dictionary.backend.test.ts tests/youtube-import.backend.test.ts; pnpm validate:workpack -- --slice 21-ingredient-dictionary; pnpm validate:workflow-v2; pnpm dev:local-supabase -p 3110 ready smoke; pnpm verify:backend. No public API contract change, no FE work, Stage 4-6 skip. closeout_phase=completed closeout_recovery=manual_patch:1 closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub_PR_553,GitHub_current_head_checks,pnpm_verify_backend,Claude_Stage3_artifact last_recovery_at=2026-05-22T16:25:35+09:00"
+    },
+    {
+      "id": "22-youtube-ingredient-registration",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/youtube-ingredient-registration-plan",
+      "lifecycle": "planned",
+      "approval_state": "claude_approved",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm validate:workpack -- --slice 22-youtube-ingredient-registration",
+        "pnpm validate:workflow-v2",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs/contract branch. Scope: user-confirmed registration flow for YT_IMPORT unresolved/needs_review ingredients. Official docs updated to v1.6.9/v1.5.6/v1.3.6/DB v1.3.5/API v1.2.7. Claude plan review and official contract/workpack review both returned APPROVED_NO_FEEDBACK after one minor endpoint-count repair. Implementation blocked until this docs/contract PR merges. closeout_phase=collecting"
     }
   ]
 }
