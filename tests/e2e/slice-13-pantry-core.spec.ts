@@ -205,6 +205,39 @@ test.describe("PANTRY screen", () => {
     await expect(page.getByText(/돼지고기/)).toBeVisible();
   });
 
+  test("keeps pantry card order stable while toggling ownership with missing items visible", async ({
+    page,
+  }) => {
+    await setAuthOverride(page, "authenticated");
+    await installPantryRoutes(page);
+    await page.goto("/pantry");
+
+    await expect(page.getByText(/양파/)).toBeVisible();
+    await page.getByRole("checkbox", { name: "없는 재료도 표시" }).click();
+    await expect(page.getByRole("switch", { name: "대파 보유로 변경" })).toBeVisible();
+
+    const gridSwitches = page.locator(".web-pantry-grid [role='switch']");
+    const getIngredientOrder = () =>
+      gridSwitches.evaluateAll((nodes) =>
+        nodes.map((node) =>
+          node
+            .getAttribute("aria-label")
+            ?.replace(/ 보유(?: 해제|로 변경)$/, ""),
+        ),
+      );
+
+    const initialOrder = await getIngredientOrder();
+    await page.getByRole("switch", { name: "양파 보유 해제" }).click();
+
+    await expect(page.getByRole("switch", { name: "양파 보유로 변경" })).toBeVisible();
+    await expect.poll(getIngredientOrder).toEqual(initialOrder);
+
+    await page.getByRole("switch", { name: "양파 보유로 변경" }).click();
+
+    await expect(page.getByRole("switch", { name: "양파 보유 해제" })).toBeVisible();
+    await expect.poll(getIngredientOrder).toEqual(initialOrder);
+  });
+
   test("shows empty state when no items exist", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await page.route("**/api/v1/pantry", async (route) => {
