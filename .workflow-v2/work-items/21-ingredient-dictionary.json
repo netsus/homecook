@@ -57,16 +57,16 @@
     "artifact_assertions": []
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "in_progress",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs PR repair for plan-only workpack. BE-only slice: Phase 1 synonym lookup integration + Phase 2 seed migration. No public API contract change, no FE work, Stage 4-6 skip. Phase 3/4 deferred to separate slices.",
+  "notes": "Stage 2 backend implementation complete. findIngredientIds uses standard + synonym lookup; seed migration is DML-only and idempotent. Tested: targeted Vitest, workpack/workflow validators, pnpm dev:local-supabase -p 3110 ready smoke, and pnpm verify:backend. No public API contract change, no FE work, Stage 4-6 skip. Phase 3/4 deferred to separate slices.",
   "out_of_scope": [
     "Phase 3 safe normalization layer (prefix/substring/fuzzy estimation matching)",
     "Phase 4 unregistered ingredient user registration flow (new API + UI + contract evolution)",

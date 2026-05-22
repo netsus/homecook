@@ -59,6 +59,13 @@ function createLookupTable<T>(result: QueryResult<T[]>) {
   };
 }
 
+function createEmptyIngredientSynonymsTable() {
+  return createLookupTable({
+    data: [],
+    error: null,
+  });
+}
+
 function createMaybeSingleQuery<T>(results: Array<QueryResult<T | null>>) {
   const query = {
     eq: vi.fn(() => query),
@@ -765,6 +772,7 @@ describe("20 youtube real import backend", () => {
       ],
       error: null,
     });
+    const ingredientSynonymsTable = createEmptyIngredientSynonymsTable();
     const cookingMethodsTable = createCookingMethodsTable({
       existingResult: { data: null, error: null },
       insertResult: {
@@ -782,6 +790,7 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
+        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -915,6 +924,7 @@ describe("20 youtube real import backend", () => {
       ],
       error: null,
     });
+    const ingredientSynonymsTable = createEmptyIngredientSynonymsTable();
     const cookingMethodsTable = createCookingMethodsTable({
       existingResult: {
         data: {
@@ -932,6 +942,7 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
+        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -1050,8 +1061,17 @@ describe("20 youtube real import backend", () => {
         { id: "ing-egg", standard_name: "달걀" },
         { id: "ing-onion", standard_name: "양파" },
         { id: "ing-green-onion", standard_name: "대파" },
-        { id: "ing-soy-sauce", standard_name: "진간장" },
+        { id: "ing-soy-sauce", standard_name: "간장" },
         { id: "ing-pepper", standard_name: "후추" },
+      ],
+      error: null,
+    });
+    const ingredientSynonymsTable = createLookupTable({
+      data: [
+        {
+          synonym: "진간장",
+          ingredients: { id: "ing-soy-sauce", standard_name: "간장" },
+        },
       ],
       error: null,
     });
@@ -1072,6 +1092,7 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
+        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -1114,7 +1135,7 @@ describe("20 youtube real import backend", () => {
             resolution_status: "resolved",
           },
           {
-            standard_name: "진간장",
+            standard_name: "간장",
             amount: 1.5,
             unit: "T",
             resolution_status: "resolved",
@@ -1145,6 +1166,13 @@ describe("20 youtube real import backend", () => {
       error: null,
     });
     expect(ingredientsTable.__query.in).toHaveBeenCalledWith("standard_name", [
+      "달걀",
+      "양파",
+      "대파",
+      "진간장",
+      "후추",
+    ]);
+    expect(ingredientSynonymsTable.__query.in).toHaveBeenCalledWith("synonym", [
       "달걀",
       "양파",
       "대파",
@@ -1195,6 +1223,7 @@ describe("20 youtube real import backend", () => {
       ],
       error: null,
     });
+    const ingredientSynonymsTable = createEmptyIngredientSynonymsTable();
     const cookingMethodsTable = createCookingMethodsTable({
       existingResult: {
         data: {
@@ -1212,6 +1241,7 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
+        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -1306,6 +1336,7 @@ describe("20 youtube real import backend", () => {
       ],
       error: null,
     });
+    const ingredientSynonymsTable = createEmptyIngredientSynonymsTable();
     const cookingMethodsTable = createCookingMethodsTable({
       existingResult: {
         data: {
@@ -1323,6 +1354,7 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
+        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -1363,6 +1395,7 @@ describe("20 youtube real import backend", () => {
       data: [{ id: kimchiIngredientId, standard_name: "김치" }],
       error: null,
     });
+    const ingredientSynonymsTable = createEmptyIngredientSynonymsTable();
     const cookingMethodsTable = createCookingMethodsTable({
       existingResult: {
         data: {
@@ -1380,6 +1413,7 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
+        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -1438,6 +1472,7 @@ describe("20 youtube real import backend", () => {
       ],
       error: null,
     });
+    const ingredientSynonymsTable = createEmptyIngredientSynonymsTable();
     const cookingMethodsTable = createCookingMethodsTable({
       existingResult: {
         data: {
@@ -1455,6 +1490,7 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
+        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);
@@ -1566,6 +1602,7 @@ describe("20 youtube real import backend", () => {
       ],
       error: null,
     });
+    const ingredientSynonymsTable = createEmptyIngredientSynonymsTable();
     const cookingMethodsTable = createCookingMethodsTable({
       existingResult: {
         data: {
@@ -1586,6 +1623,7 @@ describe("20 youtube real import backend", () => {
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "ingredients") return ingredientsTable;
+        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
         if (table === "cooking_methods") return cookingMethodsTable;
         if (table === "youtube_extraction_sessions") return sessionsTable;
         throw new Error(`unexpected table: ${table}`);

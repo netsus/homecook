@@ -62,6 +62,20 @@ interface IngredientLookupRow {
   standard_name: string;
 }
 
+type MatchSource = "direct" | "synonym";
+
+interface IngredientMatch {
+  standardName: string;
+  source: MatchSource;
+}
+
+interface IngredientSynonymLookupRow {
+  synonym: string;
+  ingredients: IngredientLookupRow | IngredientLookupRow[] | null;
+}
+
+type IngredientMatchesByName = Map<string, Map<string, IngredientMatch>>;
+
 interface ArrayLookupQuery<T> {
   in(column: string, values: string[]): ArrayLookupQuery<T>;
   then: ArrayQueryResult<T>["then"];
@@ -1176,30 +1190,89 @@ export async function handleYoutubeValidate(request: Request) {
   return ok(data);
 }
 
-async function findIngredientIds(dbClient: DbClient, ingredientNames: string[]) {
-  const uniqueIngredientNames = [...new Set(ingredientNames)];
+export async function findIngredientIds(dbClient: DbClient, ingredientNames: string[]) {
+  const lookupKeyToOriginalNames = new Map<string, Set<string>>();
 
-  if (uniqueIngredientNames.length === 0) {
+  for (const name of ingredientNames) {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    for (const key of new Set([trimmed, trimmed.toLowerCase()])) {
+      const originals = lookupKeyToOriginalNames.get(key);
+      if (originals) {
+        originals.add(name);
+      } else {
+        lookupKeyToOriginalNames.set(key, new Set([name]));
+      }
+    }
+  }
+
+  const lookupKeys = [...lookupKeyToOriginalNames.keys()];
+
+  if (lookupKeys.length === 0) {
     return {
       error: null,
-      idsByName: new Map<string, string>(),
+      matchesByName: new Map<string, Map<string, IngredientMatch>>(),
     };
   }
 
-  const result = await table<ArrayLookupTable<IngredientLookupRow>>(dbClient, "ingredients")
-    .select("id, standard_name")
-    .in("standard_name", uniqueIngredientNames);
+  const [directResult, synonymResult] = await Promise.all([
+    table<ArrayLookupTable<IngredientLookupRow>>(dbClient, "ingredients")
+      .select("id, standard_name")
+      .in("standard_name", lookupKeys),
+    table<ArrayLookupTable<IngredientSynonymLookupRow>>(dbClient, "ingredient_synonyms")
+      .select("synonym, ingredients!inner(id, standard_name)")
+      .in("synonym", lookupKeys),
+  ]);
 
-  if (result.error || !result.data) {
+  if (directResult.error || !directResult.data || synonymResult.error || !synonymResult.data) {
     return {
-      error: result.error ?? { message: "ingredient lookup failed" },
-      idsByName: new Map<string, string>(),
+      error: directResult.error
+        ?? synonymResult.error
+        ?? { message: "ingredient lookup failed" },
+      matchesByName: new Map<string, Map<string, IngredientMatch>>(),
     };
+  }
+
+  const matchesByName: IngredientMatchesByName = new Map();
+  const attach = (
+    lookupKey: string,
+    ingredientId: string,
+    standardName: string,
+    source: MatchSource,
+  ) => {
+    for (const originalName of lookupKeyToOriginalNames.get(lookupKey) ?? []) {
+      let bucket = matchesByName.get(originalName);
+      if (!bucket) {
+        bucket = new Map<string, IngredientMatch>();
+        matchesByName.set(originalName, bucket);
+      }
+
+      const existing = bucket.get(ingredientId);
+      if (!existing || (existing.source === "synonym" && source === "direct")) {
+        bucket.set(ingredientId, { standardName, source });
+      }
+    }
+  };
+
+  for (const row of directResult.data) {
+    attach(row.standard_name, row.id, row.standard_name, "direct");
+  }
+
+  for (const row of synonymResult.data) {
+    const ingredient = Array.isArray(row.ingredients) ? row.ingredients[0] : row.ingredients;
+    if (!ingredient) {
+      continue;
+    }
+
+    attach(row.synonym, ingredient.id, ingredient.standard_name, "synonym");
   }
 
   return {
     error: null,
-    idsByName: new Map(result.data.map((row) => [row.standard_name, row.id])),
+    matchesByName,
   };
 }
 
@@ -1254,8 +1327,22 @@ async function ensureGeneratedCookingMethod(dbClient: DbClient) {
   };
 }
 
-function buildExtractedIngredient({
-  idsByName,
+function sortIngredientMatches(
+  matches: Array<{ ingredientId: string; standardName: string; source: MatchSource }>,
+) {
+  return [...matches].sort((left, right) => {
+    const sourceRank = (source: MatchSource) => source === "direct" ? 0 : 1;
+    const sourceDiff = sourceRank(left.source) - sourceRank(right.source);
+    if (sourceDiff !== 0) {
+      return sourceDiff;
+    }
+
+    return left.standardName.localeCompare(right.standardName, "ko");
+  });
+}
+
+export function buildExtractedIngredient({
+  matchesByName,
   name,
   amount,
   unit,
@@ -1267,7 +1354,7 @@ function buildExtractedIngredient({
   rawText,
   forceNeedsReview = false,
 }: {
-  idsByName: Map<string, string>;
+  matchesByName: IngredientMatchesByName;
   name: string;
   amount: number | null;
   unit: string | null;
@@ -1279,27 +1366,42 @@ function buildExtractedIngredient({
   rawText: string;
   forceNeedsReview?: boolean;
 }): YoutubeExtractedIngredient {
-  const ingredientId = idsByName.get(name) ?? "";
-  const resolutionStatus: YoutubeIngredientResolutionStatus = forceNeedsReview && ingredientId
+  const matches = sortIngredientMatches(
+    Array.from(matchesByName.get(name)?.entries() ?? [])
+      .map(([ingredientId, match]) => ({
+        ingredientId,
+        standardName: match.standardName,
+        source: match.source,
+      })),
+  );
+  const resolvedMatch = matches.length === 1 ? matches[0] : null;
+  const hasMatch = matches.length > 0;
+  const resolutionStatus: YoutubeIngredientResolutionStatus = forceNeedsReview && hasMatch
     ? "needs_review"
-    : ingredientId
+    : resolvedMatch
       ? "resolved"
-      : "unresolved";
+      : hasMatch
+        ? "needs_review"
+        : "unresolved";
 
   return {
-    ingredient_id: resolutionStatus === "resolved" ? ingredientId : "",
-    standard_name: name,
+    ingredient_id: resolutionStatus === "resolved" ? resolvedMatch?.ingredientId ?? "" : "",
+    standard_name: resolutionStatus === "resolved" ? resolvedMatch?.standardName ?? name : name,
     amount,
     unit,
     ingredient_type: ingredientType,
     display_text: displayText,
     sort_order: sortOrder,
     scalable,
-    confidence: ingredientId ? confidence : null,
+    confidence: hasMatch ? confidence : null,
     resolution_status: resolutionStatus,
     candidates: resolutionStatus === "needs_review"
-      ? [{ ingredient_id: ingredientId, standard_name: name, confidence }]
-      : ingredientId
+      ? matches.map((match) => ({
+          ingredient_id: match.ingredientId,
+          standard_name: match.standardName,
+          confidence,
+        }))
+      : hasMatch
         ? undefined
         : [],
     raw_text: rawText,
@@ -1307,7 +1409,7 @@ function buildExtractedIngredient({
 }
 
 function buildExtractedIngredients(
-  idsByName: Map<string, string>,
+  matchesByName: IngredientMatchesByName,
   parsedIngredients: ParsedDescriptionIngredient[],
   {
     saltNeedsReview = false,
@@ -1317,7 +1419,7 @@ function buildExtractedIngredients(
 ): YoutubeExtractedIngredient[] {
   return parsedIngredients.map((ingredient, index) =>
     buildExtractedIngredient({
-      idsByName,
+      matchesByName,
       name: ingredient.name,
       amount: ingredient.amount,
       unit: ingredient.unit,
@@ -1442,7 +1544,7 @@ export async function handleYoutubeExtract(request: Request) {
     return fail("INTERNAL_ERROR", "조리방법을 준비하지 못했어요.", 500);
   }
 
-  const ingredients = buildExtractedIngredients(ingredientLookup.idsByName, parsedRecipe.ingredients, {
+  const ingredients = buildExtractedIngredients(ingredientLookup.matchesByName, parsedRecipe.ingredients, {
     saltNeedsReview: parsedUrl.videoId.startsWith("needsreview"),
   });
   const steps = buildExtractedSteps(parsedRecipe.steps, cookingMethodResult.method, {
