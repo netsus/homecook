@@ -399,6 +399,56 @@ describe("youtube description parser v2", () => {
     });
   });
 
+  it("splits a real one-line Korean ingredient list before treating the line as one numeric ingredient", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "목살 돼지갈비 양념",
+      description: [
+        "목살에 돼지갈비양념을 했어요! 배, 양파 안넣고 만드는 간단 버전입니다!",
+        "",
+        "📌재료(*밥 숟가락 기준)",
+        "목살 300g~400g, 다진 마늘 0.5스푼, 진간장 3스푼(또는 양조간장), 맛술 1.5스푼, 물엿 1스푼, 설탕 1스푼, 후추, 연겨자 0.2스푼, 물 3스푼, 참기름 0.3스푼",
+        "",
+        "* 영상 속의 연겨자 양 2번 넣었습니다",
+        "",
+        "📌만드는 법",
+        "1. 목살은 앞뒤로 칼집을 내주세요.",
+        "2. 진간장, 다진 마늘, 맛술, 물엿, 설탕, 후추, 연겨자, 물, 참기름을 넣고 잘 섞어서 양념을 만들어주세요.",
+        "3. 고기에 양념을 잘 버무린 뒤 최소 30분 이상 재우고 프라이팬에 중약불(또는 약불)로 자주 뒤집어가며 타지 않게 구워주세요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toEqual([
+      "목살",
+      "다진 마늘",
+      "진간장",
+      "맛술",
+      "물엿",
+      "설탕",
+      "후추",
+      "연겨자",
+      "물",
+      "참기름",
+    ]);
+    expect(draft.ingredients[0]).toMatchObject({
+      name: "목살",
+      amount: 300,
+      unit: "g",
+    });
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "참기름"))
+      .toMatchObject({
+        amount: 0.3,
+        unit: "스푼",
+      });
+    expect(draft.ingredients.every((ingredient) => !ingredient.name.includes(","))).toBe(true);
+    expect(draft.steps).toEqual([
+      "목살은 앞뒤로 칼집을 내주세요.",
+      "진간장, 다진 마늘, 맛술, 물엿, 설탕, 후추, 연겨자, 물, 참기름을 넣고 잘 섞어서 양념을 만들어주세요.",
+      "고기에 양념을 잘 버무린 뒤 최소 30분 이상 재우고 프라이팬에 중약불(또는 약불)로 자주 뒤집어가며 타지 않게 구워주세요.",
+    ]);
+    expect(draft.blockingIssues).toEqual([]);
+  });
+
   it("recognizes ingredient heading with parenthetical serving size", () => {
     const document = parseYoutubeRecipeDescription({
       title: "김치찌개",
