@@ -34,6 +34,8 @@ type IngredientListState = "loading" | "ready" | "empty" | "error";
 interface RecipeIngredientAddModalProps {
   onClose: () => void;
   onAdd: (ingredients: ManualRecipeIngredientInput[]) => void;
+  emptyActionLabel?: string;
+  onEmptyAction?: () => void;
 }
 
 const DEFAULT_INGREDIENT_AMOUNT = 100;
@@ -58,6 +60,8 @@ function buildIngredientInput(
 export function RecipeIngredientAddModal({
   onClose,
   onAdd,
+  emptyActionLabel,
+  onEmptyAction,
 }: RecipeIngredientAddModalProps) {
   const [selectedIngredients, setSelectedIngredients] = useState<
     IngredientItem[]
@@ -263,6 +267,13 @@ export function RecipeIngredientAddModal({
                   title="검색 결과가 없어요"
                 />
               ) : null}
+              {visibleListState === "empty" && onEmptyAction && emptyActionLabel ? (
+                <div className="mt-4 flex justify-center">
+                  <WebButton onClick={onEmptyAction} variant="secondary">
+                    {emptyActionLabel}
+                  </WebButton>
+                </div>
+              ) : null}
 
               {visibleListState === "ready" ? (
                 <ul className="web-ingredient-grid">
@@ -397,9 +408,18 @@ export function RecipeIngredientAddModal({
           ) : null}
 
           {visibleListState === "empty" ? (
-            <p className="py-8 text-center text-sm text-[var(--muted)]">
-              검색 결과가 없어요
-            </p>
+            <div className="py-8 text-center">
+              <p className="text-sm text-[var(--muted)]">검색 결과가 없어요</p>
+              {onEmptyAction && emptyActionLabel ? (
+                <button
+                  className="mt-4 rounded-[var(--radius-sm)] border border-[var(--brand)] px-4 py-2 text-sm font-semibold text-[var(--brand)]"
+                  onClick={onEmptyAction}
+                  type="button"
+                >
+                  {emptyActionLabel}
+                </button>
+              ) : null}
+            </div>
           ) : null}
 
           {visibleListState === "ready" ? (

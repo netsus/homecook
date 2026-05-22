@@ -9,8 +9,8 @@
   "preset": "vertical-slice-strict",
   "goal": "새로운 YouTube 재료가 나올 때마다 migration을 추가하지 않아도, 사용자가 검수 흐름 안에서 안전하게 표준 재료를 등록해 레시피 저장을 계속할 수 있게 한다.",
   "owners": {
-    "claude": "stage1,stage3,stage5",
-    "codex": "stage1 orchestration, stage2 after contract-evolution, stage4/stage6 as assigned by workflow",
+    "claude": "stage1,stage3,stage4 implementation handoff",
+    "codex": "stage1 orchestration, stage2 backend, stage4 verification/evidence/fallback repairs, stage5 design review, stage6 PR review",
     "workers": []
   },
   "dependencies": [
@@ -87,23 +87,30 @@
   "closeout": {
     "phase": "collecting",
     "docs_projection": {
-      "roadmap_lifecycle": "in_progress",
-      "design_status": "temporary",
-      "delivery_checklist": "pending",
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
       "design_authority": "not_required",
-      "acceptance": "pending",
+      "acceptance": "complete",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
       "required_checks": "passed",
-      "external_smokes": "pending",
-      "authority_reports": [],
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/evidence/22-youtube-ingredient-registration/stage5-design-review.md"
+      ],
       "actual_verification_refs": [
         "pnpm vitest run tests/youtube-import.backend.test.ts",
         "pnpm verify:backend",
         "pnpm validate:workflow-v2",
         "pnpm validate:workpack -- --slice 22-youtube-ingredient-registration",
-        "git diff --check"
+        "git diff --check",
+        "pnpm vitest run tests/menu-add-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx",
+        "pnpm exec playwright test tests/e2e/slice-22-youtube-ingredient-registration.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small",
+        "pnpm exec playwright test tests/e2e/qa-slice-22-youtube-ingredient-registration-evidence.spec.ts --project=mobile-chrome --project=mobile-ios-small",
+        "pnpm verify:frontend:pr",
+        "ui/designs/evidence/22-youtube-ingredient-registration/stage5-design-review.md"
       ]
     },
     "merge_gate_projection": {
@@ -129,12 +136,12 @@
       "evidence_sources": []
     },
     "projection_state": {
-      "docs_synced_at": "2026-05-22T00:00:00+09:00",
-      "status_synced_at": "2026-05-22T00:00:00+09:00",
-      "pr_body_synced_at": null
+      "docs_synced_at": "2026-05-22T20:25:00+09:00",
+      "status_synced_at": "2026-05-22T20:29:00+09:00",
+      "pr_body_synced_at": "2026-05-22T20:29:00+09:00"
     }
   },
-  "notes": "Stage 1 planning branch. Claude owns stage1 review/contract critique and later stage3/stage5 reviews. Claude plan review and official contract/workpack review both returned APPROVED_NO_FEEDBACK after one minor endpoint-count repair. Implementation is blocked until this docs/contract PR merges. Scoped YouTube registration endpoint is preferred over generic POST /ingredients for this slice; a generic ingredient create endpoint is future scope. Known non-blocking bookkeeping discrepancy: .workflow-v2/status.json still lists 20-youtube-real-import as planned while docs/workpacks/README.md lists it merged. closeout_phase=collecting",
+  "notes": "Stage 2 backend PR #558 merged. Stage 4 frontend implementation completed on feature/fe-22-youtube-ingredient-registration: YT_IMPORT unresolved/needs_review rows can open user-confirmed ingredient registration, successful registration resolves the local row while preserving amount/unit/display_text/raw_text, search-empty state can branch to registration, Playwright smoke and mobile screenshot evidence were added. Verification passed: targeted Vitest, targeted Playwright, screenshot evidence capture, pnpm verify:frontend:pr, workflow/workpack validators, git diff --check. Live external YouTube API smoke remains Manual Only per acceptance. Stage 5 design review passed with Design Status confirmed. Frontend PR #559 opened for Stage 6 review and merge gate.",
   "out_of_scope": [
     "Automatic ingredient registration without user confirmation",
     "Admin ingredient management UI",

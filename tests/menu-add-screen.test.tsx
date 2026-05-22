@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MenuAddScreen } from "@/components/planner/menu-add-screen";
 import * as leftoversApi from "@/lib/api/leftovers";
+import { fetchIngredients } from "@/lib/api/ingredients";
 import * as mealApi from "@/lib/api/meal";
 import * as recipeApi from "@/lib/api/recipe";
 import * as youtubeApi from "@/lib/api/youtube-import";
@@ -27,6 +28,10 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/api/leftovers", () => ({
   fetchLeftovers: vi.fn(),
+}));
+
+vi.mock("@/lib/api/ingredients", () => ({
+  fetchIngredients: vi.fn(),
 }));
 
 vi.mock("@/lib/api/meal", () => ({
@@ -51,6 +56,7 @@ vi.mock("@/lib/api/youtube-import", () => ({
   validateYoutubeUrl: vi.fn(),
   extractYoutubeRecipe: vi.fn(),
   registerYoutubeRecipe: vi.fn(),
+  registerYoutubeIngredient: vi.fn(),
 }));
 
 const DEFAULT_PROPS = {
@@ -85,6 +91,7 @@ describe("MenuAddScreen", () => {
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     vi.mocked(leftoversApi.fetchLeftovers).mockReset();
+    vi.mocked(fetchIngredients).mockReset();
     vi.mocked(mealApi.createMealSafe).mockReset();
     vi.mocked(recipeApi.fetchRecipes).mockReset();
     vi.mocked(recipeApi.fetchRecipes).mockResolvedValue({
@@ -96,8 +103,14 @@ describe("MenuAddScreen", () => {
       },
       error: null,
     });
+    vi.mocked(fetchIngredients).mockResolvedValue({
+      success: true,
+      data: { items: [] },
+      error: null,
+    });
     vi.mocked(youtubeApi.validateYoutubeUrl).mockReset();
     vi.mocked(youtubeApi.extractYoutubeRecipe).mockReset();
+    vi.mocked(youtubeApi.registerYoutubeIngredient).mockReset();
     vi.mocked(youtubeApi.registerYoutubeRecipe).mockReset();
     vi.mocked(youtubeApi.validateYoutubeUrl).mockResolvedValue({
       success: true,
@@ -167,6 +180,21 @@ describe("MenuAddScreen", () => {
       data: {
         recipe_id: "recipe-yt-1",
         title: "백종원 김치찌개",
+      },
+      error: null,
+    });
+    vi.mocked(youtubeApi.registerYoutubeIngredient).mockResolvedValue({
+      success: true,
+      data: {
+        ingredient: {
+          ingredient_id: "ing-registered",
+          standard_name: "연겨자",
+          category: "양념",
+          default_unit: null,
+          resolution_status: "resolved",
+        },
+        synonym_status: "attached",
+        warnings: [],
       },
       error: null,
     });
@@ -399,6 +427,165 @@ describe("MenuAddScreen", () => {
     expect(screen.getByTestId("menu-add-option-grid")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "가져오기 화면 열기" })).toBeNull();
     expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it("registers an unresolved YouTube ingredient from the review row", async () => {
+    installMatchMedia(true);
+    vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValueOnce({
+      success: true,
+      data: {
+        extraction_id: "ext-new-ingredient",
+        title: "목살 양념구이",
+        base_servings: 2,
+        extraction_methods: ["description"],
+        draft_warnings: [],
+        blocking_issues: ["ingredients[0].ingredient_id"],
+        ingredients: [
+          {
+            draft_ingredient_id: "draft-mustard",
+            ingredient_id: "",
+            standard_name: "연겨자",
+            amount: 0.2,
+            unit: "스푼",
+            ingredient_type: "QUANT",
+            display_text: "연겨자 0.2스푼",
+            sort_order: 1,
+            scalable: true,
+            confidence: 0.72,
+            resolution_status: "unresolved",
+            candidates: [],
+            raw_text: "연겨자 0.2스푼",
+          },
+        ],
+        steps: [
+          {
+            step_number: 1,
+            instruction: "양념을 섞어 고기에 바른다",
+            cooking_method: {
+              id: "method-1",
+              code: "mix",
+              label: "섞기",
+              color_key: "red",
+              is_new: false,
+            },
+            duration_text: null,
+            is_incomplete: false,
+            missing_fields: [],
+            raw_text: "양념을 섞어 고기에 바른다",
+          },
+        ],
+        new_cooking_methods: [],
+      },
+      error: null,
+    });
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+    await user.type(
+      screen.getByLabelText("유튜브 URL"),
+      "https://www.youtube.com/watch?v=recipe12345",
+    );
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    expect(await screen.findByText("재료를 찾지 못했어요")).toBeTruthy();
+
+    await user.click(screen.getByTestId("register-ingredient-action"));
+
+    const dialog = await screen.findByTestId("ingredient-register-modal");
+    expect((within(dialog).getByTestId("register-standard-name") as HTMLInputElement).value).toBe(
+      "연겨자",
+    );
+
+    await user.click(within(dialog).getByRole("button", { name: "등록" }));
+
+    await waitFor(() => {
+      expect(youtubeApi.registerYoutubeIngredient).toHaveBeenCalledWith({
+        extraction_id: "ext-new-ingredient",
+        draft_ingredient_id: "draft-mustard",
+        standard_name: "연겨자",
+        category: "양념",
+        default_unit: null,
+        synonym: "연겨자",
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("재료를 찾지 못했어요")).toBeNull();
+    });
+    expect((screen.getByLabelText("연겨자 수량") as HTMLInputElement).value).toBe("0.2");
+    expect(screen.getByRole("button", { name: "연겨자 스푼" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("does not offer ingredient registration from empty search when the draft id is missing", async () => {
+    installMatchMedia(true);
+    vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValueOnce({
+      success: true,
+      data: {
+        extraction_id: "ext-legacy-unresolved",
+        title: "목살 양념구이",
+        base_servings: 2,
+        extraction_methods: ["description"],
+        draft_warnings: [],
+        blocking_issues: ["ingredients[0].ingredient_id"],
+        ingredients: [
+          {
+            draft_ingredient_id: "",
+            ingredient_id: "",
+            standard_name: "연겨자",
+            amount: 0.2,
+            unit: "스푼",
+            ingredient_type: "QUANT",
+            display_text: "연겨자 0.2스푼",
+            sort_order: 1,
+            scalable: true,
+            confidence: 0.72,
+            resolution_status: "unresolved",
+            candidates: [],
+            raw_text: "연겨자 0.2스푼",
+          },
+        ],
+        steps: [
+          {
+            step_number: 1,
+            instruction: "양념을 섞어 고기에 바른다",
+            cooking_method: {
+              id: "method-1",
+              code: "mix",
+              label: "섞기",
+              color_key: "red",
+              is_new: false,
+            },
+            duration_text: null,
+            is_incomplete: false,
+            missing_fields: [],
+            raw_text: "양념을 섞어 고기에 바른다",
+          },
+        ],
+        new_cooking_methods: [],
+      },
+      error: null,
+    });
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+    await user.type(
+      screen.getByLabelText("유튜브 URL"),
+      "https://www.youtube.com/watch?v=recipe12345",
+    );
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    expect(await screen.findByText("재료를 찾지 못했어요")).toBeTruthy();
+    expect(screen.queryByTestId("register-ingredient-action")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "재료 검색으로 교체" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "재료 선택" });
+    expect(await within(dialog).findByText("검색 결과가 없어요")).toBeTruthy();
+    expect(within(dialog).queryByRole("button", { name: "새 재료로 등록" })).toBeNull();
   });
 
   it("keeps the desktop option rail visible while opening leftovers in the right panel", async () => {

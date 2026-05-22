@@ -17,18 +17,18 @@
 
 ## Happy Path
 
-- [ ] unresolved 재료에서 "새 재료로 등록"을 열 수 있다 <!-- omo:id=accept-open-register-from-unresolved;stage=4;scope=frontend;review=5,6 -->
+- [x] unresolved 재료에서 "새 재료로 등록"을 열 수 있다 <!-- omo:id=accept-open-register-from-unresolved;stage=4;scope=frontend;review=5,6 -->
 - [x] 표준명/카테고리 확인 후 등록하면 `ingredients` row가 생성되고 현재 재료가 `resolved`가 된다 <!-- omo:id=accept-create-and-resolve;stage=2;scope=shared;review=3,6 -->
 - [x] registration response `data.ingredient`가 클라이언트 row 업데이트에 필요한 `ingredient_id`와 canonical `standard_name`을 포함한다 <!-- omo:id=accept-response-row-update-fields;stage=2;scope=backend;review=3,6 -->
-- [ ] 등록 성공 후 수량, 단위, `display_text`, `raw_text`가 유지된다 <!-- omo:id=accept-preserve-quantity-unit-raw;stage=4;scope=frontend;review=5,6 -->
-- [ ] 다른 차단 재료가 없으면 기존 YouTube register 흐름으로 레시피 저장이 가능하다 <!-- omo:id=accept-register-after-resolve;stage=4;scope=frontend;review=5,6 -->
-- [ ] needs_review 재료도 후보 선택 외에 새 재료 등록 fallback을 사용할 수 있다 <!-- omo:id=accept-needs-review-create-fallback;stage=4;scope=frontend;review=5,6 -->
+- [x] 등록 성공 후 수량, 단위, `display_text`, `raw_text`가 유지된다 <!-- omo:id=accept-preserve-quantity-unit-raw;stage=4;scope=frontend;review=5,6 -->
+- [x] 다른 차단 재료가 없으면 기존 YouTube register 흐름으로 레시피 저장이 가능하다 <!-- omo:id=accept-register-after-resolve;stage=4;scope=frontend;review=5,6 -->
+- [x] needs_review 재료도 후보 선택 외에 새 재료 등록 fallback을 사용할 수 있다 <!-- omo:id=accept-needs-review-create-fallback;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 
-- [ ] 사용자 확인 없는 자동 등록 경로가 없다 <!-- omo:id=accept-no-auto-create;stage=4;scope=frontend;review=5,6 -->
+- [x] 사용자 확인 없는 자동 등록 경로가 없다 <!-- omo:id=accept-no-auto-create;stage=4;scope=frontend;review=5,6 -->
 - [x] `resolved` row만 최종 recipe register에 통과한다 <!-- omo:id=accept-register-resolved-only;stage=2;scope=shared;review=3,6 -->
 - [x] 이미 같은 `standard_name`이 있으면 기존 ingredient를 반환하고 중복 row를 만들지 않는다 <!-- omo:id=accept-standard-name-idempotent;stage=2;scope=backend;review=3,6 -->
 - [x] 동일 요청을 두 번 보내도 ingredient / synonym 중복 row가 생기지 않는다 <!-- omo:id=accept-request-idempotency;stage=2;scope=backend;review=3,6 -->
@@ -38,10 +38,10 @@
 
 ## Error / Permission
 
-- [ ] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 검색 결과 empty 상태에서 새 등록 CTA가 보인다 <!-- omo:id=accept-empty-create-cta;stage=4;scope=frontend;review=5,6 -->
-- [ ] validation / API error 상태가 있다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름과 return-to-action이 있다 <!-- omo:id=accept-unauthorized-return;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 검색 결과 empty 상태에서 새 등록 CTA가 보인다 <!-- omo:id=accept-empty-create-cta;stage=4;scope=frontend;review=5,6 -->
+- [x] validation / API error 상태가 있다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름과 return-to-action이 있다 <!-- omo:id=accept-unauthorized-return;stage=4;scope=frontend;review=5,6 -->
 - [x] session 만료는 410으로 처리하고 재추출 안내를 보여준다 <!-- omo:id=accept-session-expired;stage=2;scope=shared;review=3,6 -->
 - [x] 타인 extraction session은 404로 숨긴다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
 - [x] consumed / stale session은 409로 처리한다 <!-- omo:id=accept-session-conflict;stage=2;scope=backend;review=3,6 -->
@@ -64,10 +64,10 @@
 
 ## Integration / Regression
 
-- [ ] 기존 `GET /api/v1/ingredients` 검색/교체 흐름이 깨지지 않는다 <!-- omo:id=accept-ingredients-search-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 YT_IMPORT candidate 선택 흐름이 깨지지 않는다 <!-- omo:id=accept-candidate-selection-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 `GET /api/v1/ingredients` 검색/교체 흐름이 깨지지 않는다 <!-- omo:id=accept-ingredients-search-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 YT_IMPORT candidate 선택 흐름이 깨지지 않는다 <!-- omo:id=accept-candidate-selection-regression;stage=4;scope=frontend;review=5,6 -->
 - [x] 기존 YouTube register API가 unresolved / needs_review 차단을 유지한다 <!-- omo:id=accept-register-blocker-regression;stage=2;scope=backend;review=3,6 -->
-- [ ] 모바일 좁은 폭에서 unresolved 문구, 검색 교체, 새 등록 CTA, 수량/단위 입력이 겹치지 않는다 <!-- omo:id=accept-mobile-layout;stage=4;scope=frontend;review=5,6 -->
+- [x] 모바일 좁은 폭에서 unresolved 문구, 검색 교체, 새 등록 CTA, 수량/단위 입력이 겹치지 않는다 <!-- omo:id=accept-mobile-layout;stage=4;scope=frontend;review=5,6 -->
 
 ## Manual QA
 
@@ -86,13 +86,13 @@
 - [x] registration validation 유틸 테스트가 있다 <!-- omo:id=accept-vitest-validation;stage=2;scope=backend;review=3,6 -->
 - [x] API route/RPC 테스트가 owner guard, expired, conflict, idempotency, synonym conflict를 고정한다 <!-- omo:id=accept-vitest-api-policy;stage=2;scope=backend;review=3,6 -->
 - [x] 기존 `youtube-import.backend.test.ts` 회귀가 통과한다 <!-- omo:id=accept-vitest-youtube-regression;stage=2;scope=backend;review=3,6 -->
-- [ ] YT_IMPORT UI unit/component 테스트가 새 등록 성공/실패 상태를 고정한다 <!-- omo:id=accept-vitest-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] YT_IMPORT UI unit/component 테스트가 새 등록 성공/실패 상태를 고정한다 <!-- omo:id=accept-vitest-ui;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright
 
-- [ ] unresolved → 새 등록 → resolved → 저장 가능 흐름이 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-create-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] 모바일 viewport에서 registration sheet와 row layout screenshot evidence가 있다 <!-- omo:id=accept-playwright-mobile-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] live YouTube API가 필요한 경로와 fixture 기반 기본 게이트가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
+- [x] unresolved → 새 등록 → resolved → 저장 가능 흐름이 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-create-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] 모바일 viewport에서 registration sheet와 row layout screenshot evidence가 있다 <!-- omo:id=accept-playwright-mobile-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] live YouTube API가 필요한 경로와 fixture 기반 기본 게이트가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only
 
