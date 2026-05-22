@@ -57,8 +57,8 @@
     "artifact_assertions": []
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
@@ -66,7 +66,65 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 2 backend implementation complete. findIngredientIds uses standard + synonym lookup; seed migration is DML-only and idempotent. Tested: targeted Vitest, workpack/workflow validators, pnpm dev:local-supabase -p 3110 ready smoke, and pnpm verify:backend. No public API contract change, no FE work, Stage 4-6 skip. Phase 3/4 deferred to separate slices.",
+  "notes": "Merged via PR #553 on 2026-05-22T16:25:35+09:00 after Stage 1 docs PR #552, Codex Stage 2 backend implementation, Claude Stage 3 approval, and current-head GitHub checks. findIngredientIds uses standard + synonym lookup; seed migration is DML-only and idempotent. Tested: targeted Vitest, workpack/workflow validators, pnpm dev:local-supabase -p 3110 ready smoke, and pnpm verify:backend. No public API contract change, no FE work, Stage 4-6 skip. Phase 3/4 deferred to separate slices. closeout_phase=completed closeout_recovery=manual_patch:1 closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub_PR_553,GitHub_current_head_checks,pnpm_verify_backend,Claude_Stage3_artifact last_recovery_at=2026-05-22T16:25:35+09:00",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "PR #552 Stage 1 docs",
+        "PR #553 Stage 2/3 backend",
+        "pnpm vitest run tests/ingredient-dictionary.backend.test.ts tests/youtube-import.backend.test.ts",
+        "pnpm validate:workpack -- --slice 21-ingredient-dictionary",
+        "pnpm validate:workflow-v2",
+        "pnpm dev:local-supabase -p 3110 ready smoke",
+        "pnpm verify:backend",
+        ".omx/artifacts/claude-delegate-21-ingredient-dictionary-stage3-backend-review-response-20260522T161236KST.md"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "27171c567bbd6ac27913047b5e57ff0414fc9372",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-05-22T16:25:35+09:00"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 1,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "be_only_closeout_projection_after_merge",
+      "evidence_sources": [
+        "GitHub_PR_553",
+        "GitHub_current_head_checks",
+        "pnpm_verify_backend",
+        "Claude_Stage3_artifact"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-22T16:25:35+09:00",
+      "status_synced_at": "2026-05-22T16:25:35+09:00",
+      "pr_body_synced_at": "2026-05-22T16:25:35+09:00"
+    }
+  },
   "out_of_scope": [
     "Phase 3 safe normalization layer (prefix/substring/fuzzy estimation matching)",
     "Phase 4 unregistered ingredient user registration flow (new API + UI + contract evolution)",
