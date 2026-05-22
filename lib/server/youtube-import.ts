@@ -18,10 +18,13 @@ import {
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import type {
+  IngredientCategory,
   ManualRecipeIngredientInput,
   ManualRecipeStepInput,
   YoutubeExtractedCookingMethod,
   YoutubeExtractedIngredient,
+  YoutubeIngredientRegistrationData,
+  YoutubeIngredientRegistrationSynonymStatus,
   YoutubeIngredientResolutionStatus,
   YoutubeRecipeClassificationStatus,
   YoutubeRecipeExtractData,
@@ -199,6 +202,30 @@ interface YoutubeRecipeRegisterRpcClient {
   }>;
 }
 
+interface YoutubeIngredientRegistrationRpcData {
+  ingredient_id: string;
+  standard_name: string;
+  category: IngredientCategory;
+  default_unit: string | null;
+  synonym_status: YoutubeIngredientRegistrationSynonymStatus;
+  warnings: string[] | null;
+}
+
+interface YoutubeIngredientRegistrationRpcClient {
+  rpc(
+    fn: "register_youtube_ingredient",
+    args: {
+      p_standard_name: string;
+      p_category: IngredientCategory;
+      p_default_unit: string | null;
+      p_synonym: string | null;
+    },
+  ): PromiseLike<{
+    data: YoutubeIngredientRegistrationRpcData | null;
+    error: QueryError | null;
+  }>;
+}
+
 interface ParsedYoutubeRegister {
   extractionId: string;
   title: string;
@@ -209,8 +236,26 @@ interface ParsedYoutubeRegister {
   steps: ManualRecipeStepInput[];
 }
 
+interface ParsedYoutubeIngredientRegistration {
+  extractionId: string;
+  draftIngredientId: string;
+  standardName: string;
+  category: IngredientCategory;
+  defaultUnit: string | null;
+  synonym: string | null;
+}
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,20}$/;
+const INGREDIENT_CATEGORIES: readonly IngredientCategory[] = [
+  "채소",
+  "육류",
+  "해산물",
+  "양념",
+  "유제품",
+  "곡류",
+  "기타",
+] as const;
 const DEFAULT_EXTRACTION_METHODS = ["description"] as const;
 const YOUTUBE_PROVIDER_VERSION = "youtube-videos-list-description-v1";
 const SESSION_TTL_HOURS = 24;
@@ -314,6 +359,27 @@ function normalizeNullableString(value: unknown) {
   }
 
   return typeof value === "string" ? value.trim() : null;
+}
+
+function collapseWhitespace(value: string) {
+  return value.trim().replace(/\s+/gu, " ");
+}
+
+function hasControlCharacters(value: string) {
+  return /[\u0000-\u001f\u007f]/u.test(value);
+}
+
+function normalizeOptionalLowercaseString(value: unknown) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return normalized ? normalized : null;
 }
 
 function canonicalYoutubeUrl(videoId: string) {
@@ -1385,6 +1451,7 @@ export function buildExtractedIngredient({
         : "unresolved";
 
   return {
+    draft_ingredient_id: crypto.randomUUID(),
     ingredient_id: resolutionStatus === "resolved" ? resolvedMatch?.ingredientId ?? "" : "",
     standard_name: resolutionStatus === "resolved" ? resolvedMatch?.standardName ?? name : name,
     amount,
@@ -1869,6 +1936,79 @@ function parseYoutubeRegisterBody(rawBody: unknown) {
   return { fields, parsed };
 }
 
+function parseYoutubeIngredientRegistrationBody(rawBody: unknown) {
+  const fields: ValidationField[] = [];
+
+  if (!isRecord(rawBody)) {
+    return {
+      fields: [{ field: "body", reason: "invalid_object" }],
+      parsed: null,
+    };
+  }
+
+  const extractionId = typeof rawBody.extraction_id === "string" ? rawBody.extraction_id.trim() : "";
+  if (!extractionId) {
+    fields.push({ field: "extraction_id", reason: "required" });
+  } else if (!isUuid(extractionId)) {
+    fields.push({ field: "extraction_id", reason: "invalid_uuid" });
+  }
+
+  const draftIngredientId = typeof rawBody.draft_ingredient_id === "string"
+    ? rawBody.draft_ingredient_id.trim()
+    : "";
+  if (!draftIngredientId) {
+    fields.push({ field: "draft_ingredient_id", reason: "required" });
+  } else if (!isUuid(draftIngredientId)) {
+    fields.push({ field: "draft_ingredient_id", reason: "invalid_uuid" });
+  }
+
+  const rawStandardName = typeof rawBody.standard_name === "string" ? rawBody.standard_name : "";
+  const standardName = collapseWhitespace(rawStandardName);
+  if (!standardName) {
+    fields.push({ field: "standard_name", reason: "required" });
+  } else if (standardName.length > 100) {
+    fields.push({ field: "standard_name", reason: "max_length" });
+  } else if (hasControlCharacters(rawStandardName)) {
+    fields.push({ field: "standard_name", reason: "control_chars" });
+  }
+
+  const category = typeof rawBody.category === "string" ? rawBody.category.trim() : "";
+  if (!INGREDIENT_CATEGORIES.includes(category as IngredientCategory)) {
+    fields.push({ field: "category", reason: "invalid_enum" });
+  }
+
+  const defaultUnit = normalizeNullableString(rawBody.default_unit);
+  if (defaultUnit !== null) {
+    if (defaultUnit.length > 20) {
+      fields.push({ field: "default_unit", reason: "max_length" });
+    } else if (hasControlCharacters(defaultUnit)) {
+      fields.push({ field: "default_unit", reason: "control_chars" });
+    }
+  }
+
+  const synonym = normalizeOptionalLowercaseString(rawBody.synonym);
+  if (synonym !== null) {
+    if (synonym.length > 100) {
+      fields.push({ field: "synonym", reason: "max_length" });
+    } else if (hasControlCharacters(synonym)) {
+      fields.push({ field: "synonym", reason: "control_chars" });
+    }
+  }
+
+  const parsed = fields.length === 0
+    ? ({
+        extractionId,
+        draftIngredientId,
+        standardName,
+        category: category as IngredientCategory,
+        defaultUnit: defaultUnit === "" ? null : defaultUnit,
+        synonym,
+      } satisfies ParsedYoutubeIngredientRegistration)
+    : null;
+
+  return { fields, parsed };
+}
+
 async function findMissingIds(
   dbClient: DbClient,
   tableName: "ingredients" | "cooking_methods",
@@ -1992,6 +2132,101 @@ function validateSessionForRegister(
   }
 
   return null;
+}
+
+function findDraftIngredientRow(draftJson: Record<string, unknown>, draftIngredientId: string) {
+  const ingredients = Array.isArray(draftJson.ingredients) ? draftJson.ingredients : [];
+
+  return ingredients.find((ingredient): ingredient is Record<string, unknown> =>
+    isRecord(ingredient) && ingredient.draft_ingredient_id === draftIngredientId,
+  ) ?? null;
+}
+
+function validateSessionForIngredientRegistration(
+  session: YoutubeExtractionSessionRow | null,
+  parsed: ParsedYoutubeIngredientRegistration,
+  userId: string,
+) {
+  if (!session || session.user_id !== userId) {
+    return fail("NOT_FOUND", "추출 세션을 찾을 수 없어요.", 404);
+  }
+
+  if (session.status === "expired" || new Date(session.expires_at).getTime() <= Date.now()) {
+    return fail("SESSION_EXPIRED", "추출 세션이 만료됐어요. 다시 가져와 주세요.", 410);
+  }
+
+  if (session.status !== "draft") {
+    return fail("CONFLICT", "이미 처리된 추출 세션이에요. 다시 가져와 주세요.", 409);
+  }
+
+  const draftIngredient = findDraftIngredientRow(session.draft_json, parsed.draftIngredientId);
+  const resolutionStatus = draftIngredient?.resolution_status;
+  if (resolutionStatus !== "unresolved" && resolutionStatus !== "needs_review") {
+    return fail("CONFLICT", "등록할 재료 상태가 바뀌었어요. 다시 확인해주세요.", 409);
+  }
+
+  return null;
+}
+
+export async function handleYoutubeIngredientRegistration(request: Request) {
+  if (!isYoutubeImportEnabled()) {
+    return buildFeatureDisabledResponse();
+  }
+
+  const { routeClient, user } = await requireUser();
+
+  if (!user) {
+    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+  }
+
+  const rawBody = await readJson(request);
+  if (!isRecord(rawBody)) {
+    return fail("BAD_REQUEST", "요청 본문을 확인해주세요.", 400, [
+      { field: "body", reason: "invalid_json" },
+    ]);
+  }
+
+  const { fields, parsed } = parseYoutubeIngredientRegistrationBody(rawBody);
+  if (!parsed) {
+    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, fields);
+  }
+
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as DbClient
+    & YoutubeIngredientRegistrationRpcClient;
+  const sessionResult = await findExtractionSession(dbClient, parsed.extractionId);
+  if (sessionResult.error) {
+    return fail("INTERNAL_ERROR", "추출 세션을 확인하지 못했어요.", 500);
+  }
+
+  const sessionFailure = validateSessionForIngredientRegistration(sessionResult.data, parsed, user.id);
+  if (sessionFailure) {
+    return sessionFailure;
+  }
+
+  const registrationResult = await dbClient.rpc("register_youtube_ingredient", {
+    p_standard_name: parsed.standardName,
+    p_category: parsed.category,
+    p_default_unit: parsed.defaultUnit,
+    p_synonym: parsed.synonym,
+  });
+
+  if (registrationResult.error || !registrationResult.data) {
+    return fail("INTERNAL_ERROR", "재료를 등록하지 못했어요.", 500);
+  }
+
+  const data: YoutubeIngredientRegistrationData = {
+    ingredient: {
+      ingredient_id: registrationResult.data.ingredient_id,
+      standard_name: registrationResult.data.standard_name,
+      category: registrationResult.data.category,
+      default_unit: registrationResult.data.default_unit,
+      resolution_status: "resolved",
+    },
+    synonym_status: registrationResult.data.synonym_status,
+    warnings: registrationResult.data.warnings ?? [],
+  };
+
+  return ok(data);
 }
 
 export async function handleYoutubeRegister(request: Request) {

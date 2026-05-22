@@ -171,6 +171,8 @@ export interface YoutubeRecipeValidateData {
 
 export type YoutubeIngredientResolutionStatus = "resolved" | "needs_review" | "unresolved";
 
+export type IngredientCategory = "채소" | "육류" | "해산물" | "양념" | "유제품" | "곡류" | "기타";
+
 export interface YoutubeIngredientCandidate {
   ingredient_id: string;
   standard_name: string;
@@ -178,6 +180,7 @@ export interface YoutubeIngredientCandidate {
 }
 
 export interface YoutubeExtractedIngredient extends ManualRecipeIngredientInput {
+  draft_ingredient_id: string;
   confidence: number | null;
   resolution_status: YoutubeIngredientResolutionStatus;
   candidates?: YoutubeIngredientCandidate[];
@@ -226,6 +229,34 @@ export interface YoutubeRecipeRegisterBody {
 export interface YoutubeRecipeRegisterData {
   recipe_id: string;
   title: string;
+}
+
+export type YoutubeIngredientRegistrationSynonymStatus =
+  | "attached"
+  | "already_attached"
+  | "skipped_same_as_standard"
+  | "skipped_ambiguous"
+  | "not_requested";
+
+export interface YoutubeIngredientRegistrationBody {
+  extraction_id: string;
+  draft_ingredient_id: string;
+  standard_name: string;
+  category: IngredientCategory;
+  default_unit?: string | null;
+  synonym?: string | null;
+}
+
+export interface YoutubeIngredientRegistrationData {
+  ingredient: {
+    ingredient_id: string;
+    standard_name: string;
+    category: IngredientCategory;
+    default_unit: string | null;
+    resolution_status: "resolved";
+  };
+  synonym_status: YoutubeIngredientRegistrationSynonymStatus;
+  warnings: string[];
 }
 
 export interface RecipeUserStatus {
