@@ -517,9 +517,8 @@ describe("PantryScreen", () => {
     expect(mockFetchPantryList).toHaveBeenCalledTimes(1);
   });
 
-  it("toggles an owned desktop pantry card to missing and back to owned", async () => {
+  it("hides an owned desktop pantry card when toggled missing while missing items are hidden", async () => {
     mockDeletePantryItems.mockResolvedValue({ removed: 1 });
-    mockAddPantryItems.mockResolvedValue({ added: 1, items: [MOCK_ITEMS[0]] });
     mockFetchIngredients.mockResolvedValue({
       items: MOCK_ITEMS.map((item) => ({
         category: item.category,
@@ -538,30 +537,14 @@ describe("PantryScreen", () => {
     await waitFor(() => {
       expect(mockDeletePantryItems).toHaveBeenCalledWith(["i1"]);
     });
-    expect(mockFetchIngredients).toHaveBeenCalledTimes(1);
+    expect(mockFetchIngredients).not.toHaveBeenCalled();
     expect(screen.getByText("양파를 미보유로 바꿨어요")).toBeTruthy();
     expect(
       (screen.getByRole("checkbox", { name: "없는 재료도 표시" }) as HTMLInputElement)
         .checked,
-    ).toBe(true);
-    expect(
-      screen
-        .getByRole("switch", { name: "양파 보유로 변경" })
-        .getAttribute("aria-checked"),
-    ).toBe("false");
-    expect(screen.getByText("미보유")).toBeTruthy();
-
-    await user.click(screen.getByRole("switch", { name: "양파 보유로 변경" }));
-
-    await waitFor(() => {
-      expect(mockAddPantryItems).toHaveBeenCalledWith(["i1"]);
-    });
-    expect(screen.getByText("양파를 보유로 바꿨어요")).toBeTruthy();
-    expect(
-      screen
-        .getByRole("switch", { name: "양파 보유 해제" })
-        .getAttribute("aria-checked"),
-    ).toBe("true");
+    ).toBe(false);
+    expect(screen.queryByRole("switch", { name: "양파 보유로 변경" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "양파 보유 해제" })).toBeNull();
   });
 
   it("rolls back missing display when an owned desktop pantry toggle fails", async () => {

@@ -205,6 +205,24 @@ test.describe("PANTRY screen", () => {
     await expect(page.getByText(/돼지고기/)).toBeVisible();
   });
 
+  test("hides an owned pantry card when toggled missing while missing items are hidden", async ({
+    page,
+  }) => {
+    await setAuthOverride(page, "authenticated");
+    await installPantryRoutes(page);
+    await page.goto("/pantry");
+
+    await expect(page.getByRole("switch", { name: "양파 보유 해제" })).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: "없는 재료도 표시" })).not.toBeChecked();
+
+    await page.getByRole("switch", { name: "양파 보유 해제" }).click();
+
+    await expect(page.getByText("양파를 미보유로 바꿨어요")).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: "없는 재료도 표시" })).not.toBeChecked();
+    await expect(page.getByRole("switch", { name: "양파 보유 해제" })).toHaveCount(0);
+    await expect(page.getByRole("switch", { name: "양파 보유로 변경" })).toHaveCount(0);
+  });
+
   test("keeps pantry card order stable while toggling ownership with missing items visible", async ({
     page,
   }) => {
