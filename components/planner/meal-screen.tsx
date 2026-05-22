@@ -447,47 +447,19 @@ function MealWebListCard({
   const isMin = meal.planned_servings <= 1;
   const canStartCook = meal.status === "shopping_done";
   const visual = getMealVisualMeta(meal);
-  const { hiddenCount, visible } = getVisibleMealChips(visual.chips, 4);
-
   return (
     <article className="web-meal-list-card" aria-label={`${meal.recipe_title} 끼니 음식`}>
-      <div className="web-meal-list-visual">
-        <div
-          className="web-meal-list-thumb"
-          style={{ backgroundColor: visual.bg }}
-          aria-hidden="true"
-        >
-          {meal.recipe_thumbnail_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img alt="" src={meal.recipe_thumbnail_url} />
-          ) : (
-            <span>{visual.emoji}</span>
-          )}
-        </div>
-
-        <div className="web-meal-list-serving">
-          <div className="web-meal-inline-stepper" aria-label="인분 조절" role="group">
-            <button
-              aria-label="인분 감소"
-              disabled={isMin || isPending}
-              onClick={onStepDown}
-              type="button"
-            >
-              -
-            </button>
-            <span aria-label={`${meal.planned_servings}인분`} aria-live="polite">
-              {meal.planned_servings}인분
-            </span>
-            <button
-              aria-label="인분 증가"
-              disabled={isPending}
-              onClick={onStepUp}
-              type="button"
-            >
-              +
-            </button>
-          </div>
-        </div>
+      <div
+        className="web-meal-list-thumb"
+        style={{ backgroundColor: visual.bg }}
+        aria-hidden="true"
+      >
+        {meal.recipe_thumbnail_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img alt="" src={meal.recipe_thumbnail_url} />
+        ) : (
+          <span>{visual.emoji}</span>
+        )}
       </div>
 
       <div className="web-meal-list-copy">
@@ -506,47 +478,6 @@ function MealWebListCard({
           <span>{meal.planned_servings}인분</span>
           <span>{visual.minutes}분</span>
         </div>
-        {visible.length > 0 || hiddenCount > 0 ? (
-          <div className="web-meal-list-chips">
-            {visible.map((chip) => (
-              <span key={chip}>{chip}</span>
-            ))}
-            {hiddenCount > 0 ? <span>+{hiddenCount}</span> : null}
-          </div>
-        ) : null}
-        {conflictError ? (
-          <p className="web-meal-conflict" role="alert">
-            {conflictError}
-          </p>
-        ) : null}
-      </div>
-
-      <div
-        className={[
-          "web-meal-list-actions",
-          canStartCook ? "" : "web-meal-list-actions-single",
-        ].join(" ")}
-      >
-        {canStartCook ? (
-          <button
-            aria-label={`${meal.recipe_title} 요리하기`}
-            className="web-meal-action-primary"
-            disabled={isPending}
-            onClick={onStartCook}
-            type="button"
-          >
-            <CookIcon />
-            요리하기
-          </button>
-        ) : null}
-        <button
-          className="web-meal-action-secondary"
-          onClick={onCreateShopping}
-          type="button"
-        >
-          <ShoppingIcon />
-          장보기
-        </button>
       </div>
 
       <div className="web-meal-list-delete">
@@ -561,6 +492,59 @@ function MealWebListCard({
           <TrashIcon />
         </button>
       </div>
+
+      <div className="web-meal-list-footer">
+        <div className="web-meal-inline-stepper" aria-label="인분 조절" role="group">
+          <button
+            aria-label="인분 감소"
+            disabled={isMin || isPending}
+            onClick={onStepDown}
+            type="button"
+          >
+            -
+          </button>
+          <span aria-label={`${meal.planned_servings}인분`} aria-live="polite">
+            {meal.planned_servings}인분
+          </span>
+          <button
+            aria-label="인분 증가"
+            disabled={isPending}
+            onClick={onStepUp}
+            type="button"
+          >
+            +
+          </button>
+        </div>
+
+        <div className="web-meal-list-actions">
+          {canStartCook ? (
+            <button
+              aria-label={`${meal.recipe_title} 요리하기`}
+              className="web-meal-action-primary"
+              disabled={isPending}
+              onClick={onStartCook}
+              type="button"
+            >
+              <CookIcon />
+              요리하기
+            </button>
+          ) : null}
+          <button
+            className="web-meal-action-secondary"
+            onClick={onCreateShopping}
+            type="button"
+          >
+            <ShoppingIcon />
+            장보기
+          </button>
+        </div>
+      </div>
+
+      {conflictError ? (
+        <p className="web-meal-conflict" role="alert">
+          {conflictError}
+        </p>
+      ) : null}
     </article>
   );
 }
