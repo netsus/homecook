@@ -2,6 +2,8 @@
 
 이 문서는 자동화만으로 닫을 수 없는 베타 후보 P1/P2/P3 항목을 실제 배포 환경에서 확인하기 위한 체크리스트다.
 
+Last updated: 2026-05-23
+
 ## Usage
 
 - 실행 시점: staging 또는 beta candidate가 HTTPS로 배포된 뒤.
@@ -10,7 +12,46 @@
 - 공통 증거: 날짜, 배포 SHA, 기기, OS, 브라우저, 테스트 계정, 스크린샷 또는 짧은 화면 녹화.
 - 전제: 디자인 통일 이후 release-candidate SHA에서 regression baseline이 green이어야 한다. 이 체크리스트는 자동 회귀 검증을 대신하지 않고, 배포/실기기/외부 서비스 의존 항목만 닫는다.
 
+## CR-004 Release Candidate Tracking
+
+`docs/mvp-contract-risk-ledger.md`의 `CR-004 MANUAL_ONLY_RELEASE_CHECK`는 아래 표를 단일 실행표로 사용한다. 이 표는 "구현이 없다"는 뜻이 아니라, 자동화만으로 닫을 수 없는 release candidate 확인 항목에 owner/date/status/evidence를 붙이기 위한 운영 표다.
+
+Status vocabulary:
+- `todo`: 아직 실행하지 않음.
+- `blocked`: 계정, secret, staging deploy, 실제 기기, safe data 같은 외부 조건이 필요함.
+- `passed`: 같은 release-candidate SHA에서 통과 증거를 남김.
+- `failed`: 실제 결함이 발견되어 별도 버그/PR로 분리해야 함.
+- `stale-candidate`: 오래된 acceptance 항목이라 삭제 또는 정리 후보임.
+- `deferred`: MVP 1차 이후로 명시적으로 미룸.
+
+| Track | Maps to | Owner | Target date | Status | Evidence | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| RC-MO-01 live OAuth / return-to-action | BETA-QA-002, auth/logout, recipe like/save, meals, pantry, cooking, leftovers, mypage/settings | A | TBD after staging OAuth secret setup | blocked | TBD | 실제 provider redirect와 원래 action 복귀를 같은 deploy SHA에서 확인한다. |
+| RC-MO-02 real-device mobile / visual | BETA-QA-003, BETA-QA-006, BETA-QA-008, shopping complete popup, cook mode, leftovers, cooking method color | A | TBD after beta candidate deploy | todo | TBD | iOS Safari와 Android Chrome 중 최소 1개, 가능하면 둘 다 확인한다. |
+| RC-MO-03 live YouTube API | BETA-QA-004, BETA-QA-005, `POST /api/v1/recipes/youtube/*` | A+B | Before enabling YouTube import flag | blocked | TBD | flag off면 숨김/차단 증거를 남기고, flag on 전에는 live smoke를 먼저 통과시킨다. |
+| RC-MO-04 Supabase seed / existing data compatibility | ingredients, pantry bundles, planner columns, shopping, recipe books, system book bootstrap | A+B | TBD with staging seed refresh | blocked | TBD | local/staging/production seed 차이와 기존 사용자 컬럼 호환성을 확인한다. |
+| RC-MO-05 stale Manual Only cleanup | recipe save, shopping 10a/10b/11 placeholder manual items, old acceptance notes | B | TBD before RC branch/tag | todo | TBD | 후속 slice에서 이미 닫힌 항목인지 확인하고, 진짜 남은 수동 검증과 오래된 문서 부채를 분리한다. |
+
+Evidence record template:
+
+```md
+### <Track ID> Evidence
+
+- Date:
+- Release-candidate SHA:
+- Environment:
+- Owner:
+- Device / OS / browser:
+- Test account:
+- Result: todo | blocked | passed | failed | stale-candidate | deferred
+- Evidence:
+- Follow-up issue or PR:
+- Notes:
+```
+
 ## BETA-QA-002: Live OAuth Smoke
+
+CR-004 track: `RC-MO-01 live OAuth / return-to-action`.
 
 Prerequisites:
 - HTTPS staging/beta URL.
@@ -34,6 +75,8 @@ Pass criteria:
 
 ## BETA-QA-003: Real-device Mobile Smoke
 
+CR-004 track: `RC-MO-02 real-device mobile / visual`.
+
 Prerequisites:
 - HTTPS staging/beta URL.
 - 최소 1개 실제 모바일 기기. 가능하면 iOS Safari와 Android Chrome을 각각 1회씩 확인한다.
@@ -54,6 +97,8 @@ Pass criteria:
 - 실패가 있으면 기기/OS/브라우저와 화면 녹화 또는 스크린샷을 남긴다.
 
 ## BETA-QA-004/BETA-QA-005: Live YouTube Smoke
+
+CR-004 track: `RC-MO-03 live YouTube API`.
 
 Run this only if YouTube import will be visible to beta users. If the feature remains hidden, record the feature-flag-off evidence instead.
 
@@ -80,6 +125,8 @@ Pass criteria:
 
 ## BETA-QA-006: Web Share OS Sheet
 
+CR-004 track: `RC-MO-02 real-device mobile / visual`.
+
 Prerequisites:
 - HTTPS staging/beta URL.
 - 인증된 테스트 계정.
@@ -100,6 +147,8 @@ Pass criteria:
 
 ## BETA-QA-007: 30-day Eaten Leftover Auto-hide
 
+CR-004 track: `RC-MO-04 Supabase seed / existing data compatibility`.
+
 Prerequisites:
 - staging/beta DB에 테스트 계정 전용 남은요리 데이터가 있어야 한다.
 - `eaten_at` 또는 `auto_hide_at`을 제어할 수 있는 안전한 테스트 데이터 생성 방법이 있어야 한다.
@@ -119,6 +168,8 @@ Pass criteria:
 - 테스트는 테스트 계정 데이터에만 영향을 준다.
 
 ## BETA-QA-008: Wake Lock Cooking Mode
+
+CR-004 track: `RC-MO-02 real-device mobile / visual`.
 
 Prerequisites:
 - HTTPS staging/beta URL.
