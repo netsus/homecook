@@ -120,6 +120,31 @@ describe("RecipeIngredientAddModal", () => {
     expect(screen.queryByText("1개 선택됨")).toBeNull();
   });
 
+  it("shows the optional empty action when ingredient search has no results", async () => {
+    vi.mocked(fetchIngredients).mockResolvedValueOnce({
+      success: true,
+      data: { items: [] },
+      error: null,
+    });
+    const onEmptyAction = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <RecipeIngredientAddModal
+        emptyActionLabel="새 재료로 등록"
+        onAdd={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyAction={onEmptyAction}
+      />,
+    );
+
+    expect(await screen.findByText("검색 결과가 없어요")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "새 재료로 등록" }));
+
+    expect(onEmptyAction).toHaveBeenCalledTimes(1);
+  });
+
   it("filters desktop ingredient categories locally without showing a new loading pass", async () => {
     installMatchMedia(true);
     const user = userEvent.setup();

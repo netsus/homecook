@@ -22,6 +22,7 @@ import {
   validateYoutubeUrl,
   extractYoutubeRecipe,
   registerYoutubeRecipe,
+  registerYoutubeIngredient,
 } from "@/lib/api/youtube-import";
 import { createMealSafe } from "@/lib/api/meal";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
@@ -29,6 +30,7 @@ import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import type {
   CookingMethodItem,
+  IngredientCategory,
   ManualRecipeIngredientInput,
   ManualRecipeStepInput,
   YoutubeIngredientCandidate,
@@ -55,6 +57,7 @@ type ModalMode =
   | "none"
   | "ingredient-add"
   | "ingredient-edit"
+  | "ingredient-register"
   | "step-add"
   | "step-edit"
   | "servings-input"
@@ -63,6 +66,7 @@ type ModalMode =
 
 interface TempIngredient extends ManualRecipeIngredientInput {
   tempId: string;
+  draft_ingredient_id?: string;
   confidence: number | null;
   resolution_status?: YoutubeExtractedIngredient["resolution_status"];
   candidates?: YoutubeExtractedIngredient["candidates"];
@@ -622,6 +626,7 @@ interface ReviewStepProps {
     candidate: YoutubeIngredientCandidate,
   ) => void;
   onReplaceIngredient: (tempId: string) => void;
+  onRegisterIngredient: (tempId: string) => void;
   onRemoveIngredient: (tempId: string) => void;
   onRemoveStep: (tempId: string) => void;
   onAddIngredient: () => void;
@@ -641,6 +646,7 @@ interface ReviewIngredientRowProps {
     candidate: YoutubeIngredientCandidate,
   ) => void;
   onReplaceIngredient: (tempId: string) => void;
+  onRegisterIngredient: (tempId: string) => void;
   onRemoveIngredient: (tempId: string) => void;
 }
 
@@ -650,6 +656,7 @@ function ReviewIngredientRow({
   onUpdateIngredient,
   onResolveIngredientCandidate,
   onReplaceIngredient,
+  onRegisterIngredient,
   onRemoveIngredient,
 }: ReviewIngredientRowProps) {
   const ingredientName = getIngredientName(ingredient);
@@ -750,13 +757,25 @@ function ReviewIngredientRow({
               ))}
             </div>
           ) : null}
-          <button
-            className="mt-2 text-[12px] font-semibold text-[var(--brand)] underline-offset-2 hover:underline"
-            onClick={() => onReplaceIngredient(ingredient.tempId)}
-            type="button"
-          >
-            재료 검색으로 교체
-          </button>
+          <div className="mt-2 flex flex-wrap gap-3">
+            <button
+              className="text-[12px] font-semibold text-[var(--brand)] underline-offset-2 hover:underline"
+              onClick={() => onReplaceIngredient(ingredient.tempId)}
+              type="button"
+            >
+              재료 검색으로 교체
+            </button>
+            {ingredient.draft_ingredient_id ? (
+              <button
+                className="text-[12px] font-semibold text-[var(--brand)] underline-offset-2 hover:underline"
+                onClick={() => onRegisterIngredient(ingredient.tempId)}
+                type="button"
+                data-testid="register-ingredient-action"
+              >
+                새 재료로 등록
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </div>
@@ -870,6 +889,7 @@ function ReviewStep({
   onUpdateIngredient,
   onResolveIngredientCandidate,
   onReplaceIngredient,
+  onRegisterIngredient,
   onRemoveIngredient,
   onRemoveStep,
   onAddIngredient,
@@ -1014,6 +1034,7 @@ function ReviewStep({
                 ingredient={ing}
                 key={ing.tempId}
                 onRemoveIngredient={onRemoveIngredient}
+                onRegisterIngredient={onRegisterIngredient}
                 onReplaceIngredient={onReplaceIngredient}
                 onResolveIngredientCandidate={onResolveIngredientCandidate}
                 onUpdateIngredient={onUpdateIngredient}
@@ -1226,6 +1247,185 @@ function StepAddModal({
   );
 }
 
+// ─── Ingredient Register Modal ──────────────────────────────────────────────
+
+const INGREDIENT_CATEGORY_CHOICES: IngredientCategory[] = [
+  "채소", "육류", "해산물", "양념", "유제품", "곡류", "기타",
+];
+
+interface IngredientRegisterModalProps {
+  ingredient: TempIngredient;
+  extractionId: string;
+  onClose: () => void;
+  onSuccess: (
+    tempId: string,
+    ingredientId: string,
+    standardName: string,
+  ) => void;
+}
+
+function IngredientRegisterModal({
+  ingredient,
+  extractionId,
+  onClose,
+  onSuccess,
+}: IngredientRegisterModalProps) {
+  const initialName = ingredient.standard_name || ingredient.raw_text || "";
+  const [standardName, setStandardName] = useState(initialName);
+  const [category, setCategory] = useState<IngredientCategory>("양념");
+  const [defaultUnit, setDefaultUnit] = useState("");
+  const [synonym, setSynonym] = useState(initialName);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const canSubmit = standardName.trim().length > 0 && !isSubmitting;
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    if (!ingredient.draft_ingredient_id) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    const result = await registerYoutubeIngredient({
+      extraction_id: extractionId,
+      draft_ingredient_id: ingredient.draft_ingredient_id,
+      standard_name: standardName.trim(),
+      category,
+      default_unit: defaultUnit.trim() || null,
+      synonym: synonym.trim() || null,
+    });
+
+    setIsSubmitting(false);
+
+    if (!result.success || !result.data) {
+      const code = result.error?.code;
+      if (code === "SESSION_EXPIRED") {
+        setError("추출 세션이 만료됐어요. 다시 추출해주세요.");
+      } else if (code === "CONFLICT") {
+        setError(result.error?.message ?? "세션 상태가 변경됐어요. 다시 시도해주세요.");
+      } else if (code === "UNAUTHORIZED") {
+        setError("로그인이 필요해요.");
+      } else if (code === "VALIDATION_ERROR") {
+        setError(result.error?.message ?? "입력값을 확인해주세요.");
+      } else {
+        setError(result.error?.message ?? "재료를 등록하지 못했어요.");
+      }
+      return;
+    }
+
+    onSuccess(
+      ingredient.tempId,
+      result.data.ingredient.ingredient_id,
+      result.data.ingredient.standard_name,
+    );
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        aria-modal="true"
+        className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-labelledby="ingredient-register-title"
+        data-testid="ingredient-register-modal"
+      >
+        <ModalHeader title="새 재료 등록" titleId="ingredient-register-title" onClose={onClose} />
+
+        <div className="mt-5 space-y-4">
+          {/* Standard name */}
+          <div>
+            <label className="text-sm font-semibold text-[var(--text-2)]">표준 재료명</label>
+            <input
+              autoFocus
+              className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3 text-base text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
+              onChange={(e) => setStandardName(e.target.value)}
+              placeholder="예: 연겨자"
+              type="text"
+              value={standardName}
+              data-testid="register-standard-name"
+            />
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="text-sm font-semibold text-[var(--text-2)]">카테고리</label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {INGREDIENT_CATEGORY_CHOICES.map((cat) => (
+                <button
+                  aria-pressed={category === cat}
+                  className={[
+                    "rounded-[var(--radius-full)] border px-3 py-1.5 text-sm font-semibold transition",
+                    category === cat
+                      ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                      : "border-[var(--line)] bg-[var(--surface-fill)] text-[var(--foreground)]",
+                  ].join(" ")}
+                  key={cat}
+                  onClick={() => setCategory(cat)}
+                  type="button"
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Default unit (optional) */}
+          <div>
+            <label className="text-sm font-semibold text-[var(--text-2)]">기본 단위 (선택)</label>
+            <input
+              className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3 text-base text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
+              maxLength={20}
+              onChange={(e) => setDefaultUnit(e.target.value)}
+              placeholder="예: g, ml, 개"
+              type="text"
+              value={defaultUnit}
+            />
+          </div>
+
+          {/* Synonym (optional) */}
+          <div>
+            <label className="text-sm font-semibold text-[var(--text-2)]">동의어 (선택)</label>
+            <input
+              className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3 text-base text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
+              onChange={(e) => setSynonym(e.target.value)}
+              placeholder="원문명을 동의어로 등록"
+              type="text"
+              value={synonym}
+            />
+          </div>
+
+          {/* Error */}
+          {error ? (
+            <div
+              className="rounded-[var(--radius-card)] border border-[color:rgba(216,58,58,0.26)] bg-[color:rgba(216,58,58,0.08)] px-4 py-3 text-sm text-[var(--danger)]"
+              role="alert"
+              data-testid="register-ingredient-error"
+            >
+              {error}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-6">
+          <Button
+            fullWidth
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            loading={isSubmitting}
+          >
+            {isSubmitting ? "등록 중..." : "등록"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Register Error Modal ───────────────────────────────────────────────────
 
 interface RegisterErrorModalProps {
@@ -1369,6 +1569,7 @@ export function YoutubeImportScreen({
   const [ingredients, setIngredients] = useState<TempIngredient[]>([]);
   const [steps, setSteps] = useState<TempStep[]>([]);
   const [replacingIngredientId, setReplacingIngredientId] = useState<string | null>(null);
+  const [registeringIngredientId, setRegisteringIngredientId] = useState<string | null>(null);
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
 
   // Registration state
@@ -1687,6 +1888,45 @@ export function YoutubeImportScreen({
     setModalMode("ingredient-add");
   }, []);
 
+  const handleRegisterReplacingIngredient = useCallback(() => {
+    if (!replacingIngredientId) return;
+    setRegisteringIngredientId(replacingIngredientId);
+    setReplacingIngredientId(null);
+    setModalMode("ingredient-register");
+  }, [replacingIngredientId]);
+
+  const handleRegisterIngredient = useCallback((tempId: string) => {
+    setRegisteringIngredientId(tempId);
+    setModalMode("ingredient-register");
+  }, []);
+
+  const handleIngredientRegistered = useCallback(
+    (tempId: string, ingredientId: string, standardName: string) => {
+      const targetIndex = ingredients.findIndex((ingredient) => ingredient.tempId === tempId);
+      setIngredients((prev) =>
+        prev.map((ingredient) =>
+          ingredient.tempId === tempId
+            ? {
+                ...ingredient,
+                ingredient_id: ingredientId,
+                standard_name: standardName,
+                resolution_status: "resolved",
+                confidence: 1,
+                candidates: [],
+              }
+            : ingredient,
+        ),
+      );
+      if (targetIndex >= 0) {
+        const ingredientIssue = `ingredients[${targetIndex}].ingredient_id`;
+        setBlockingIssues((prev) => prev.filter((issue) => issue !== ingredientIssue));
+      }
+      setRegisteringIngredientId(null);
+      setModalMode("none");
+    },
+    [ingredients],
+  );
+
   const handleAddStep = useCallback((step: Omit<TempStep, "tempId" | "step_number">) => {
     if (editingStepId) {
       setSteps((prev) =>
@@ -1858,6 +2098,7 @@ export function YoutubeImportScreen({
     setDraftWarnings([]);
     setBlockingIssues([]);
     setReplacingIngredientId(null);
+    setRegisteringIngredientId(null);
     setEditingStepId(null);
     setCurrentStep("url-input");
   }, []);
@@ -2058,6 +2299,7 @@ export function YoutubeImportScreen({
             onUpdateIngredient={handleUpdateIngredient}
             onResolveIngredientCandidate={handleResolveIngredientCandidate}
             onReplaceIngredient={handleReplaceIngredient}
+            onRegisterIngredient={handleRegisterIngredient}
             onRemoveIngredient={handleRemoveIngredient}
             onRemoveStep={handleRemoveStep}
             onAddIngredient={() => setModalMode("ingredient-add")}
@@ -2097,11 +2339,13 @@ export function YoutubeImportScreen({
     <>
       {modalMode === "ingredient-add" && (
         <RecipeIngredientAddModal
+          emptyActionLabel={replacingIngredientId ? "새 재료로 등록" : undefined}
           onClose={() => {
             setReplacingIngredientId(null);
             setModalMode("none");
           }}
           onAdd={handleAddIngredient}
+          onEmptyAction={replacingIngredientId ? handleRegisterReplacingIngredient : undefined}
         />
       )}
       {(modalMode === "step-add" || modalMode === "step-edit") && (
@@ -2116,6 +2360,21 @@ export function YoutubeImportScreen({
           initialStep={editingStep}
         />
       )}
+      {modalMode === "ingredient-register" && registeringIngredientId && (() => {
+        const target = ingredients.find((i) => i.tempId === registeringIngredientId);
+        if (!target) return null;
+        return (
+          <IngredientRegisterModal
+            ingredient={target}
+            extractionId={extractionId}
+            onClose={() => {
+              setRegisteringIngredientId(null);
+              setModalMode("none");
+            }}
+            onSuccess={handleIngredientRegistered}
+          />
+        );
+      })()}
       {modalMode === "register-error" && registerError && (
         <RegisterErrorModal
           errorMessage={registerError}
@@ -2275,6 +2534,7 @@ export function YoutubeImportScreen({
             onUpdateIngredient={handleUpdateIngredient}
             onResolveIngredientCandidate={handleResolveIngredientCandidate}
             onReplaceIngredient={handleReplaceIngredient}
+            onRegisterIngredient={handleRegisterIngredient}
             onRemoveIngredient={handleRemoveIngredient}
             onRemoveStep={handleRemoveStep}
             onAddIngredient={() => setModalMode("ingredient-add")}
@@ -2300,11 +2560,13 @@ export function YoutubeImportScreen({
       {/* Modals */}
       {modalMode === "ingredient-add" && (
         <RecipeIngredientAddModal
+          emptyActionLabel={replacingIngredientId ? "새 재료로 등록" : undefined}
           onClose={() => {
             setReplacingIngredientId(null);
             setModalMode("none");
           }}
           onAdd={handleAddIngredient}
+          onEmptyAction={replacingIngredientId ? handleRegisterReplacingIngredient : undefined}
         />
       )}
       {(modalMode === "step-add" || modalMode === "step-edit") && (
@@ -2319,6 +2581,21 @@ export function YoutubeImportScreen({
           initialStep={editingStep}
         />
       )}
+      {modalMode === "ingredient-register" && registeringIngredientId && (() => {
+        const target = ingredients.find((i) => i.tempId === registeringIngredientId);
+        if (!target) return null;
+        return (
+          <IngredientRegisterModal
+            ingredient={target}
+            extractionId={extractionId}
+            onClose={() => {
+              setRegisteringIngredientId(null);
+              setModalMode("none");
+            }}
+            onSuccess={handleIngredientRegistered}
+          />
+        );
+      })()}
       {modalMode === "register-error" && registerError && (
         <RegisterErrorModal
           errorMessage={registerError}
