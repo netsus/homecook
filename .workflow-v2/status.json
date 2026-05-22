@@ -801,7 +801,7 @@
       "branch": "docs/20-youtube-real-import",
       "lifecycle": "planned",
       "approval_state": "not_started",
-      "verification_status": "pending",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
@@ -1170,16 +1170,16 @@
     {
       "id": "21-ingredient-dictionary",
       "preset": "vertical-slice-strict",
-      "branch": "docs/21-ingredient-dictionary",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/be-21-ingredient-dictionary",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs PR repair: plan-only workpack converted to implementation-ready Stage 1. BE-only slice: Phase 1 synonym lookup integration + Phase 2 seed migration. No public API contract change, no FE work, Stage 4-6 skip."
+      "notes": "Stage 2 backend implementation complete. findIngredientIds now uses standard + synonym lookup with ingredientId dedup, canonical resolved names, needs_review candidates, DB error propagation, and idempotent synonym seed migration. Tested: pnpm vitest run tests/ingredient-dictionary.backend.test.ts tests/youtube-import.backend.test.ts; pnpm validate:workpack -- --slice 21-ingredient-dictionary; pnpm validate:workflow-v2; pnpm dev:local-supabase -p 3110 ready smoke; pnpm verify:backend. No public API contract change, no FE work, Stage 4-6 skip."
     }
   ]
 }

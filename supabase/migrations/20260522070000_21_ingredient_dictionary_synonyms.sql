@@ -1,0 +1,90 @@
+-- Slice 21: ingredient dictionary seed data for YouTube extract matching.
+-- This migration is intentionally DML-only and idempotent. Existing ingredient
+-- rows are not overwritten because category/default_unit may have been curated.
+
+insert into public.ingredients (standard_name, category, default_unit)
+values
+  ('간장', '양념', null),
+  ('설탕', '양념', null),
+  ('식용유', '양념', null),
+  ('소금', '양념', null),
+  ('참기름', '양념', null),
+  ('고춧가루', '양념', null),
+  ('다진마늘', '양념', null),
+  ('후추', '양념', null),
+  ('생크림', '유제품', null),
+  ('버터', '유제품', null),
+  ('올리브 오일', '양념', null),
+  ('달걀', '기타', '개'),
+  ('대파', '채소', '대'),
+  ('청오이', '채소', '개'),
+  ('호밀빵', '곡류', '장'),
+  ('두유 그릭 요거트', '유제품', null),
+  ('알룰로스', '양념', null),
+  ('박력분', '곡류', 'g'),
+  ('아몬드가루', '곡류', 'g'),
+  ('바닐라 페이스트', '양념', null),
+  ('노른자', '기타', '개'),
+  ('크림치즈', '유제품', 'g'),
+  ('레몬즙', '양념', null),
+  ('밥', '곡류', '공기')
+on conflict (standard_name) do nothing;
+
+insert into public.ingredient_synonyms (ingredient_id, synonym)
+select i.id, lower(trim(v.synonym))
+from (values
+  ('간장', '진간장'),
+  ('간장', '양조간장'),
+  ('간장', '국간장'),
+  ('간장', 'soy sauce'),
+  ('설탕', '백설탕'),
+  ('설탕', '흰설탕'),
+  ('설탕', 'sugar'),
+  ('식용유', '포도씨유'),
+  ('식용유', '카놀라유'),
+  ('식용유', '식물성 기름'),
+  ('식용유', '요리유'),
+  ('식용유', 'cooking oil'),
+  ('소금', '천일염'),
+  ('소금', '꽃소금'),
+  ('소금', 'salt'),
+  ('참기름', 'sesame oil'),
+  ('고춧가루', '고추가루'),
+  ('고춧가루', '굵은 고춧가루'),
+  ('고춧가루', '고운 고춧가루'),
+  ('고춧가루', 'chili powder'),
+  ('다진마늘', '다진 마늘'),
+  ('다진마늘', '마늘다짐'),
+  ('다진마늘', 'minced garlic'),
+  ('후추', '후춧가루'),
+  ('후추', '통후추'),
+  ('후추', 'black pepper'),
+  ('생크림', '휘핑크림'),
+  ('생크림', 'heavy cream'),
+  ('생크림', 'whipping cream'),
+  ('버터', '무염버터'),
+  ('버터', '가염버터'),
+  ('버터', 'butter'),
+  ('올리브 오일', '올리브오일'),
+  ('올리브 오일', 'olive oil'),
+  ('달걀', '계란'),
+  ('달걀', 'egg'),
+  ('달걀', 'eggs'),
+  ('대파', 'green onion'),
+  ('청오이', '오이'),
+  ('청오이', 'cucumber'),
+  ('호밀빵', 'rye bread'),
+  ('두유 그릭 요거트', '두유그릭요거트'),
+  ('알룰로스', 'allulose'),
+  ('박력분', 'cake flour'),
+  ('아몬드가루', 'almond flour'),
+  ('바닐라 페이스트', '바닐라페이스트'),
+  ('바닐라 페이스트', 'vanilla paste'),
+  ('크림치즈', 'cream cheese'),
+  ('레몬즙', '레몬주스'),
+  ('레몬즙', 'lemon juice'),
+  ('밥', '공기밥')
+) as v(standard_name, synonym)
+join public.ingredients i on i.standard_name = v.standard_name
+where trim(v.synonym) <> ''
+on conflict (ingredient_id, synonym) do nothing;

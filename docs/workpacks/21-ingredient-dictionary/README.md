@@ -258,12 +258,12 @@ on conflict (ingredient_id, synonym) do nothing;
 > 이 체크리스트는 Stage 2~3 동안 계속 갱신하는 living closeout 문서다.
 > BE-only 슬라이스이므로 Stage 4~6은 스킵. Stage 3 merge 시 슬라이스 종료.
 
-- [ ] 백엔드 계약 고정 (findIngredientIds synonym 확장, buildExtractedIngredient 분기) <!-- omo:id=21-backend-contract;stage=2;scope=backend;review=3 -->
-- [ ] API 또는 adapter 연결 (synonym 병렬 조회 패턴 적용) <!-- omo:id=21-api-adapter;stage=2;scope=backend;review=3 -->
-- [ ] 타입 반영 (MatchSource, FindIngredientResult 타입) <!-- omo:id=21-types;stage=2;scope=shared;review=3 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 (resolved/needs_review/unresolved 판정, DB 에러 전파) <!-- omo:id=21-state-policy-tests;stage=2;scope=backend;review=3 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=21-fixture-smoke-split;stage=2;scope=shared;review=3 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 (ingredient_synonyms 테이블 존재) <!-- omo:id=21-bootstrap-readiness;stage=2;scope=shared;review=3 -->
-- [ ] synonym 시딩 migration idempotent 검증 <!-- omo:id=21-synonym-seeding;stage=2;scope=backend;review=3 -->
-- [ ] 기존 youtube-import 테스트 회귀 없음 <!-- omo:id=21-regression;stage=2;scope=backend;review=3 -->
-- [ ] 실패 케이스 매칭률 개선 확인 <!-- omo:id=21-matching-improvement;stage=2;scope=backend;review=3 -->
+- [x] 백엔드 계약 고정 (findIngredientIds synonym 확장, buildExtractedIngredient 분기) <!-- omo:id=21-backend-contract;stage=2;scope=backend;review=3 -->
+- [x] API 또는 adapter 연결 (synonym 병렬 조회 패턴 적용) <!-- omo:id=21-api-adapter;stage=2;scope=backend;review=3 -->
+- [x] 타입 반영 (MatchSource, FindIngredientResult 타입) <!-- omo:id=21-types;stage=2;scope=shared;review=3 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 (resolved/needs_review/unresolved 판정, DB 에러 전파) <!-- omo:id=21-state-policy-tests;stage=2;scope=backend;review=3 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=21-fixture-smoke-split;stage=2;scope=shared;review=3 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 (ingredient_synonyms 테이블 존재) <!-- omo:id=21-bootstrap-readiness;stage=2;scope=shared;review=3 -->
+- [x] synonym 시딩 migration idempotent 검증 <!-- omo:id=21-synonym-seeding;stage=2;scope=backend;review=3 -->
+- [x] 기존 youtube-import 테스트 회귀 없음 <!-- omo:id=21-regression;stage=2;scope=backend;review=3 -->
+- [x] 실패 케이스 매칭률 개선 확인 <!-- omo:id=21-matching-improvement;stage=2;scope=backend;review=3 -->
