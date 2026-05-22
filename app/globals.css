@@ -1724,6 +1724,7 @@ button {
   }
 
   .web-meal-conflict {
+    grid-column: 1 / -1;
     margin: 14px 0 0;
     color: var(--web-error);
     font-size: 13px;
@@ -1797,35 +1798,28 @@ button {
   }
 
   .web-meal-list-card {
-    position: relative;
     display: grid;
-    min-height: 236px;
-    grid-template-columns: 104px minmax(0, 1fr);
+    grid-template-columns: 96px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
     grid-template-areas:
-      "visual copy"
-      "actions actions";
-    align-items: start;
-    gap: 14px;
+      "thumb copy delete"
+      "footer footer footer";
+    column-gap: 14px;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-md);
     background: var(--web-surface);
-    padding: 14px;
+    padding: 16px;
     box-shadow: var(--web-shadow-card);
   }
 
-  .web-meal-list-visual {
-    display: grid;
-    gap: 10px;
-    grid-area: visual;
-    justify-items: center;
-  }
-
   .web-meal-list-thumb {
-    display: inline-flex;
-    width: 104px;
-    height: 92px;
+    grid-area: thumb;
+    display: flex;
+    width: 96px;
+    height: 84px;
     align-items: center;
     justify-content: center;
+    align-self: center;
     overflow: hidden;
     border-radius: var(--web-r-sm);
     font-size: 42px;
@@ -1841,15 +1835,15 @@ button {
   .web-meal-list-copy {
     grid-area: copy;
     min-width: 0;
-    padding-right: 36px;
+    align-self: center;
   }
 
   .web-meal-list-copy h2 {
     display: -webkit-box;
     overflow: hidden;
-    margin: 10px 0 0;
+    margin: 6px 0 0;
     color: var(--web-text-1);
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 800;
     letter-spacing: 0;
     line-height: 1.3;
@@ -1857,52 +1851,68 @@ button {
     -webkit-line-clamp: 2;
   }
 
-  .web-meal-list-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 12px;
+  .web-meal-list-delete {
+    grid-area: delete;
+    align-self: start;
   }
 
-  .web-meal-list-chips span {
+  .web-meal-list-delete .web-meal-delete-button {
     display: inline-flex;
-    height: 26px;
+    width: 36px;
+    height: 36px;
     align-items: center;
-    border-radius: var(--web-r-pill);
-    background: var(--web-bg-alt);
+    justify-content: center;
+    border-radius: var(--web-r-sm);
+    padding: 0;
     color: var(--web-text-3);
-    padding: 0 9px;
-    font-size: 12px;
-    font-weight: 800;
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .web-meal-list-delete .web-meal-delete-button:hover {
+    background: var(--web-bg-alt);
+    color: var(--web-error);
+  }
+
+  .web-meal-list-footer {
+    grid-area: footer;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-top: 1px solid var(--web-divider);
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+
+  .web-meal-list-footer .web-meal-inline-stepper {
+    min-width: 118px;
+    height: 34px;
+  }
+
+  .web-meal-list-footer .web-meal-inline-stepper span {
+    min-width: 48px;
   }
 
   .web-meal-list-actions {
-    display: grid;
-    grid-area: actions;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
     align-items: center;
     gap: 8px;
-    align-self: end;
-    min-width: 0;
   }
 
   .web-meal-action-primary,
   .web-meal-action-secondary {
     display: inline-flex;
-    min-height: 40px;
+    min-height: 36px;
     align-items: center;
     justify-content: center;
-    gap: 7px;
+    gap: 6px;
     margin: 0;
     border-radius: var(--web-r-sm);
-    padding: 0 10px;
-    font-size: 14px;
+    padding: 0 14px;
+    font-size: 13px;
     font-weight: 800;
     white-space: nowrap;
-  }
-
-  .web-meal-list-actions-single {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .web-meal-action-primary {
@@ -1917,38 +1927,6 @@ button {
     color: var(--web-text-2);
   }
 
-  .web-meal-list-serving {
-    display: flex;
-    justify-content: center;
-  }
-
-  .web-meal-list-serving .web-meal-inline-stepper {
-    min-width: 118px;
-    height: 34px;
-  }
-
-  .web-meal-list-serving .web-meal-inline-stepper span {
-    min-width: 48px;
-  }
-
-  .web-meal-list-delete {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    justify-self: end;
-  }
-
-  .web-meal-list-delete .web-meal-delete-button {
-    display: inline-flex;
-    width: 44px;
-    height: 44px;
-    align-items: center;
-    justify-content: center;
-    margin-top: 0;
-    border-radius: var(--web-r-sm);
-    padding: 0;
-  }
-
   @media (max-width: 1120px) {
     .web-meal-list-layout {
       grid-template-columns: minmax(0, 1fr) 260px;
@@ -1956,20 +1934,19 @@ button {
     }
 
     .web-meal-list-card {
-      grid-template-columns: 92px minmax(0, 1fr);
-      padding: 12px;
+      grid-template-columns: 84px minmax(0, 1fr) auto;
+      padding: 14px;
     }
 
     .web-meal-list-thumb {
-      width: 92px;
-      height: 84px;
+      width: 84px;
+      height: 74px;
     }
 
     .web-meal-action-primary,
     .web-meal-action-secondary {
-      gap: 5px;
-      padding: 0 8px;
-      font-size: 13px;
+      padding: 0 10px;
+      font-size: 12px;
     }
   }
 
