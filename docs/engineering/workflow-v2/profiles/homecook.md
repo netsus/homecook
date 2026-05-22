@@ -22,7 +22,7 @@
 - 화면 정의: [화면정의서-v1.5.6.md](../../화면정의서-v1.5.6.md)
 - 유저 flow: [유저flow맵-v1.3.6.md](../../유저flow맵-v1.3.6.md)
 - DB/Schema: [db설계-v1.3.5.md](../../db설계-v1.3.5.md)
-- API 문서: [api문서-v1.2.7.md](../../api문서-v1.2.7.md)
+- API 문서: [api문서-v1.2.8.md](../../api문서-v1.2.8.md)
 - 현재 운영 규칙: [AGENTS.md](../../../AGENTS.md), [agent-workflow-overview.md](../agent-workflow-overview.md), [slice-workflow.md](../slice-workflow.md)
 
 우선순위:

@@ -5,13 +5,23 @@
 - `docs/화면정의서-v1.5.6.md`
 - `docs/유저flow맵-v1.3.6.md`
 - `docs/db설계-v1.3.5.md`
-- `docs/api문서-v1.2.7.md`
+- `docs/api문서-v1.2.8.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## API v1.2.7 → API v1.2.8 변경 이력 (2026-05-22)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| API v1.2.8 | `POST /auth/refresh` 제거. 현재 인증 세션 갱신은 Supabase SDK / `@supabase/ssr` 세션 관리에 위임하며, 실제 route/화면/테스트 소비자가 없는 public refresh endpoint를 새로 만들지 않음. 엔드포인트 전체 목록 active method/path 수를 57개로 정리 |
+
+> 이 변경은 MVP 1 계약 위험 잠금 중 `CR-001` contract-evolution이다.
+> `docs/api문서-v1.2.7.md`에는 `POST /auth/refresh`가 남아 있었지만 `app/api/v1/auth/refresh/route.ts`, 화면 호출, 테스트가 없었다.
+> 구현을 추가하지 않고 공식 API 계약에서 제거해 실제 인증 구조와 문서 계약을 맞춘다.
 
 ## v1.6.8 / v1.5.5 / v1.3.5 / DB v1.3.4 / API v1.2.6 → v1.6.9 / v1.5.6 / v1.3.6 / DB v1.3.5 / API v1.2.7 변경 이력 (2026-05-22)
 
