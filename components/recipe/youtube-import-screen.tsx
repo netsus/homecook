@@ -1280,6 +1280,11 @@ function IngredientRegisterModal({
 
   const canSubmit = standardName.trim().length > 0 && !isSubmitting;
 
+  const handleClose = () => {
+    if (isSubmitting) return;
+    onClose();
+  };
+
   const handleSubmit = async () => {
     if (!canSubmit) return;
     if (!ingredient.draft_ingredient_id) return;
@@ -1324,7 +1329,7 @@ function IngredientRegisterModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         aria-modal="true"
@@ -1334,7 +1339,7 @@ function IngredientRegisterModal({
         aria-labelledby="ingredient-register-title"
         data-testid="ingredient-register-modal"
       >
-        <ModalHeader title="새 재료 등록" titleId="ingredient-register-title" onClose={onClose} />
+        <ModalHeader title="새 재료 등록" titleId="ingredient-register-title" onClose={handleClose} />
 
         <div className="mt-5 space-y-4">
           {/* Standard name */}
@@ -1890,15 +1895,24 @@ export function YoutubeImportScreen({
 
   const handleRegisterReplacingIngredient = useCallback(() => {
     if (!replacingIngredientId) return;
+    const target = ingredients.find((ingredient) => ingredient.tempId === replacingIngredientId);
+    if (!target?.draft_ingredient_id) return;
     setRegisteringIngredientId(replacingIngredientId);
     setReplacingIngredientId(null);
     setModalMode("ingredient-register");
-  }, [replacingIngredientId]);
+  }, [ingredients, replacingIngredientId]);
 
   const handleRegisterIngredient = useCallback((tempId: string) => {
     setRegisteringIngredientId(tempId);
     setModalMode("ingredient-register");
   }, []);
+
+  const canRegisterReplacingIngredient = replacingIngredientId
+    ? ingredients.some(
+        (ingredient) =>
+          ingredient.tempId === replacingIngredientId && Boolean(ingredient.draft_ingredient_id),
+      )
+    : false;
 
   const handleIngredientRegistered = useCallback(
     (tempId: string, ingredientId: string, standardName: string) => {
@@ -2339,13 +2353,13 @@ export function YoutubeImportScreen({
     <>
       {modalMode === "ingredient-add" && (
         <RecipeIngredientAddModal
-          emptyActionLabel={replacingIngredientId ? "새 재료로 등록" : undefined}
+          emptyActionLabel={canRegisterReplacingIngredient ? "새 재료로 등록" : undefined}
           onClose={() => {
             setReplacingIngredientId(null);
             setModalMode("none");
           }}
           onAdd={handleAddIngredient}
-          onEmptyAction={replacingIngredientId ? handleRegisterReplacingIngredient : undefined}
+          onEmptyAction={canRegisterReplacingIngredient ? handleRegisterReplacingIngredient : undefined}
         />
       )}
       {(modalMode === "step-add" || modalMode === "step-edit") && (
@@ -2560,13 +2574,13 @@ export function YoutubeImportScreen({
       {/* Modals */}
       {modalMode === "ingredient-add" && (
         <RecipeIngredientAddModal
-          emptyActionLabel={replacingIngredientId ? "새 재료로 등록" : undefined}
+          emptyActionLabel={canRegisterReplacingIngredient ? "새 재료로 등록" : undefined}
           onClose={() => {
             setReplacingIngredientId(null);
             setModalMode("none");
           }}
           onAdd={handleAddIngredient}
-          onEmptyAction={replacingIngredientId ? handleRegisterReplacingIngredient : undefined}
+          onEmptyAction={canRegisterReplacingIngredient ? handleRegisterReplacingIngredient : undefined}
         />
       )}
       {(modalMode === "step-add" || modalMode === "step-edit") && (
