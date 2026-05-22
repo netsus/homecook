@@ -791,8 +791,8 @@ test.describe("Slice 19: YouTube Import", () => {
     await expect(requirements).toContainText("조리 과정");
 
     // Empty section messages should show
-    await expect(page.locator("text=추출된 재료가 없어요. 직접 추가해주세요")).toBeVisible();
-    await expect(page.locator("text=추출된 조리 과정이 없어요. 직접 추가해주세요")).toBeVisible();
+    await expect(page.locator("text=설명란에서 재료를 찾지 못했어요")).toBeVisible();
+    await expect(page.locator("text=설명란에서 조리 과정을 찾지 못했어요")).toBeVisible();
   });
 
   test("review: blocks save until needs-review and unresolved ingredients are resolved", async ({ page }) => {

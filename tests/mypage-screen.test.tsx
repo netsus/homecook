@@ -747,8 +747,7 @@ describe("MypageScreen", () => {
     expect(await screen.findByText("4/30 장보기")).toBeTruthy();
     expect(screen.getByText("4/23 장보기")).toBeTruthy();
     expect(screen.getByText("✓ 완료")).toBeTruthy();
-    expect(screen.queryByText("다시열기")).toBeNull();
-    expect(screen.getByText("5/1 완료")).toBeTruthy();
+    expect(screen.getByText("5/1 완료 · 다시열기")).toBeTruthy();
     expect(screen.getByText("진행 중")).toBeTruthy();
     expect(screen.getByText(/12개 항목/)).toBeTruthy();
   });

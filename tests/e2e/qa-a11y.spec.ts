@@ -320,7 +320,7 @@ test.describe("QA accessibility smoke", () => {
     });
 
     await page
-      .locator(".web-meal-rail .web-stepper")
+      .getByRole("article", { name: "김치찌개 끼니 음식" })
       .getByRole("button", { name: "인분 증가" })
       .click();
     await expect(
@@ -489,11 +489,10 @@ test.describe("QA accessibility smoke", () => {
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });
-    await expectReadableTouchTarget(
-      page.getByRole("button", { name: /레시피북 관리/ }),
-    );
+    const recipebookTab = page.getByRole("tab", { name: /레시피북 관리/ });
+    await expectReadableTouchTarget(recipebookTab);
 
-    await page.getByRole("button", { name: /레시피북 관리/ }).click();
+    await recipebookTab.click();
     await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
@@ -506,7 +505,7 @@ test.describe("QA accessibility smoke", () => {
     });
 
     await page.goto(MYPAGE_VISUAL_PATH);
-    await page.getByRole("button", { name: /장보기 내역/ }).click();
+    await page.getByRole("tab", { name: /장보기 내역/ }).click();
     await expect(page.getByRole("heading", { name: "장보기 내역" })).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,

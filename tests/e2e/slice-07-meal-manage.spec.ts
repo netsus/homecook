@@ -174,7 +174,7 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     await page.goto(MEAL_SCREEN_URL);
 
     if (page.viewportSize()?.width && page.viewportSize()!.width >= 1024) {
-      await expect(page.getByRole("navigation", { name: "식사 경로" })).toContainText("아침 음식");
+      await expect(page.getByRole("navigation", { name: "식사 경로" })).toContainText("4월 18일 · 아침");
     } else {
       await expect(page.locator("h1:visible").first()).toBeVisible();
       await expect(page.locator("h1:visible").first()).toContainText("아침");
