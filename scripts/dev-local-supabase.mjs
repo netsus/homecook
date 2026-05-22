@@ -5,26 +5,14 @@ import path from "node:path";
 import {
   buildLocalSupabaseNextDevArgs,
   getLocalSupabaseNextArtifactsToReset,
+  toLocalSupabaseNextEnvFileContent,
 } from "./lib/dev-local-supabase-runtime.mjs";
 import { createLocalSupabaseNextEnv } from "./lib/local-supabase-env.mjs";
 
 const envFilePath = path.join(process.cwd(), ".env.development.local");
 const envEntries = createLocalSupabaseNextEnv(process.env);
 
-function toEnvFileContent(env) {
-  return [
-    `NEXT_PUBLIC_SUPABASE_URL=${env.NEXT_PUBLIC_SUPABASE_URL}`,
-    `NEXT_PUBLIC_SUPABASE_ANON_KEY=${env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-    `SUPABASE_SERVICE_ROLE_KEY=${env.SUPABASE_SERVICE_ROLE_KEY}`,
-    `NEXT_PUBLIC_APP_URL=${env.NEXT_PUBLIC_APP_URL}`,
-    "HOMECOOK_ENABLE_LOCAL_DEV_AUTH=1",
-    "NEXT_PUBLIC_HOMECOOK_ENABLE_LOCAL_DEV_AUTH=1",
-    `NEXT_PUBLIC_HOMECOOK_ENABLE_LOCAL_GOOGLE_OAUTH=${env.NEXT_PUBLIC_HOMECOOK_ENABLE_LOCAL_GOOGLE_OAUTH ?? "0"}`,
-    "",
-  ].join("\n");
-}
-
-fs.writeFileSync(envFilePath, toEnvFileContent(envEntries), "utf8");
+fs.writeFileSync(envFilePath, toLocalSupabaseNextEnvFileContent(envEntries), "utf8");
 
 for (const artifactPath of getLocalSupabaseNextArtifactsToReset(process.cwd())) {
   fs.rmSync(artifactPath, {

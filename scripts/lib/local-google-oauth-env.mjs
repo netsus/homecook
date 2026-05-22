@@ -48,7 +48,7 @@ function parseEnvFile(filePath) {
   return entries;
 }
 
-function readFallbackEnvFiles(rootDir) {
+export function readFallbackEnvFiles(rootDir) {
   return {
     ...parseEnvFile(path.join(rootDir, ".env")),
     ...parseEnvFile(path.join(rootDir, ".env.local")),
