@@ -266,4 +266,307 @@ describe("youtube description parser v2", () => {
     expect(draft.draftWarnings).toContain("설명란에서 구조화된 재료와 조리 과정을 찾지 못했어요. 직접 추가해서 등록할 수 있어요.");
     expect(draft.includeIncompleteStepFallback).toBe(false);
   });
+
+  it("normalizes double tildes in range amounts", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "오이 무침",
+      description: [
+        "재료",
+        "오이 2~~3개",
+        "소금 1큰술",
+        "만드는 법",
+        "1. 오이를 얇게 썰어요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients[0]).toMatchObject({
+      name: "오이",
+      amount: 2,
+      unit: "개",
+    });
+  });
+
+  it("recognizes keycap emoji ordinals as step numbers", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "간단 볶음밥",
+      description: [
+        "재료",
+        "밥 1공기",
+        "달걀 2개",
+        "만드는 법",
+        "1️⃣ 팬에 기름을 두르고 달걀을 볶아요.",
+        "2️⃣ 밥을 넣고 섞어요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.steps).toEqual([
+      "팬에 기름을 두르고 달걀을 볶아요.",
+      "밥을 넣고 섞어요.",
+    ]);
+  });
+
+  it("recognizes circled number ordinals as step numbers", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "된장찌개",
+      description: [
+        "재료",
+        "두부 1모",
+        "된장 2큰술",
+        "만드는 법",
+        "① 냄비에 물을 끓여요.",
+        "② 된장을 풀고 두부를 넣어요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.steps).toEqual([
+      "냄비에 물을 끓여요.",
+      "된장을 풀고 두부를 넣어요.",
+    ]);
+  });
+
+  it("stops parsing steps when a section stopper heading appears", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "오이참치 꼬마김밥",
+      description: [
+        "재료",
+        "오이 2개",
+        "참치캔 1개",
+        "밥 1공기",
+        "",
+        "만드는 법",
+        "1. 오이를 얇게 썰어요.",
+        "2. 참치와 밥을 섞어요.",
+        "",
+        "이런 분들께 추천해요",
+        "- 다이어트 중이신 분",
+        "- 건강한 한 끼를 원하시는 분",
+        "",
+        "보관법",
+        "냉장 보관 시 하루 안에 드세요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.steps).toEqual([
+      "오이를 얇게 썰어요.",
+      "참치와 밥을 섞어요.",
+    ]);
+    expect(draft.steps).not.toContainEqual(expect.stringContaining("다이어트"));
+    expect(draft.steps).not.toContainEqual(expect.stringContaining("보관"));
+  });
+
+  it("splits comma-separated ingredients in ingredient section", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "비빔밥",
+      description: [
+        "재료",
+        "밥 1공기",
+        "소금, 후추, 참기름",
+        "만드는 법",
+        "1. 밥에 재료를 넣고 비벼요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toContain("소금");
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toContain("후추");
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toContain("참기름");
+  });
+
+  it("splits comma-separated ingredients with amounts", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "파스타",
+      description: [
+        "재료",
+        "파스타면 200g",
+        "소금 1큰술, 후추 약간",
+        "만드는 법",
+        "1. 면을 삶아요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "소금")).toMatchObject({
+      amount: 1,
+      unit: "큰술",
+    });
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "후추")).toMatchObject({
+      amount: null,
+      unit: null,
+    });
+  });
+
+  it("recognizes ingredient heading with parenthetical serving size", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "김치찌개",
+      description: [
+        "재료 (2인분)",
+        "김치 200g",
+        "두부 1모",
+        "만드는 법",
+        "1. 김치를 볶아요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toEqual(["김치", "두부"]);
+  });
+
+  it("recognizes step heading with parenthetical annotation", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "스크램블 에그",
+      description: [
+        "재료",
+        "달걀 3개",
+        "버터 10g",
+        "만드는 법 (쉬운 버전)",
+        "1. 달걀을 풀어요.",
+        "2. 버터를 녹이고 달걀을 넣어요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.steps.length).toBe(2);
+    expect(draft.steps[0]).toBe("달걀을 풀어요.");
+  });
+
+  it("classifies expanded noise patterns correctly", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "테스트",
+      description: [
+        "재료",
+        "밥 1공기",
+        "만드는 법",
+        "1. 밥을 볶아요.",
+        "",
+        "협찬 및 광고 문의",
+        "@cooking_channel",
+        "BGM: Sunny Day",
+        "촬영 카메라: Sony A7",
+        "#요리 #맛있는",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.steps).toEqual(["밥을 볶아요."]);
+    expect(draft.steps).not.toContainEqual(expect.stringContaining("협찬"));
+    expect(draft.steps).not.toContainEqual(expect.stringContaining("카메라"));
+  });
+
+  it("detects expanded cooking verbs for step classification", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "나물 비빔밥",
+      description: [
+        "재료",
+        "밥 1공기",
+        "시금치 100g",
+        "",
+        "만드는 법",
+        "1. 시금치를 데쳐서 헹궈요.",
+        "2. 양념장에 재워요.",
+        "3. 밥 위에 올리고 비벼요.",
+        "4. 참기름을 걸러서 부어요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.steps.length).toBe(4);
+  });
+
+  it("handles additional known units like 봉지, 병, 잔, 톨", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "라면",
+      description: [
+        "재료",
+        "라면 1봉지",
+        "달걀 1개",
+        "마늘 3톨",
+        "맥주 1병",
+        "물 2잔",
+        "대파 1다발",
+        "만드는 법",
+        "1. 물을 끓여요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "라면")).toMatchObject({ amount: 1, unit: "봉지" });
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "마늘")).toMatchObject({ amount: 3, unit: "톨" });
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "맥주")).toMatchObject({ amount: 1, unit: "병" });
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "물")).toMatchObject({ amount: 2, unit: "잔" });
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "대파")).toMatchObject({ amount: 1, unit: "다발" });
+  });
+
+  it("recognizes 한 줌 as a Korean amount word and 한 움큼 as to-taste", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "샐러드",
+      description: [
+        "재료",
+        "양상추 한 줌",
+        "견과류 한 움큼",
+        "소금 한 꼬집",
+        "만드는 법",
+        "1. 양상추를 씻어요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "양상추")).toMatchObject({
+      amount: 1,
+      unit: "줌",
+      ingredientType: "QUANT",
+    });
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "견과류")).toMatchObject({
+      ingredientType: "TO_TASTE",
+    });
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "소금")).toMatchObject({
+      amount: 1,
+      unit: "꼬집",
+      ingredientType: "QUANT",
+    });
+  });
+
+  it("handles fullwidth tildes in range amounts", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "쿠키",
+      description: [
+        "재료",
+        "설탕 30～40g",
+        "만드는 법",
+        "1. 설탕을 넣고 섞어요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients[0]).toMatchObject({
+      name: "설탕",
+      amount: 30,
+      unit: "g",
+    });
+  });
+
+  it("does not treat section stopper content as ingredients", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "닭가슴살",
+      description: [
+        "재료",
+        "닭가슴살 200g",
+        "소금 약간",
+        "",
+        "만드는 법",
+        "1. 닭가슴살을 굽세요.",
+        "",
+        "영양 정보",
+        "칼로리 165kcal",
+        "단백질 31g",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toEqual(["닭가슴살", "소금"]);
+    expect(draft.steps).toEqual(["닭가슴살을 굽세요."]);
+  });
 });

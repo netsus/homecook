@@ -174,6 +174,25 @@ const KNOWN_UNITS = [
   "팩",
   "줄",
   "술",
+  "통",
+  "포기",
+  "송이",
+  "마리",
+  "숟가락",
+  "토막",
+  "조각",
+  "묶음",
+  "방울",
+  "근",
+  "봉지",
+  "병",
+  "잔",
+  "다발",
+  "움큼",
+  "톨",
+  "cc",
+  "oz",
+  "cup",
   "tbsp",
   "tsp",
 ] as const;
@@ -239,10 +258,19 @@ function normalizeLineText(raw: string) {
   const withoutTimestamp = raw
     .trim()
     .replace(/^(?:\d{1,2}:)?\d{1,2}:\d{2}\s*/u, "");
-  const ordinalMatch = withoutTimestamp.match(/^(?:step\s*)?(\d+)[.)]\s*/iu);
+
+  const withNormalizedOrdinals = withoutTimestamp
+    .replace(/(\d)️?⃣/gu, "$1) ")
+    .replace(/[①-⑳]/gu, (ch) => `${ch.charCodeAt(0) - 0x2460 + 1}) `);
+
+  const withNormalizedTildes = withNormalizedOrdinals
+    .replace(/[～∼]/gu, "~")
+    .replace(/~{2,}/gu, "~");
+
+  const ordinalMatch = withNormalizedTildes.match(/^(?:step\s*)?(\d+)[.)]\s*/iu);
   const withoutOrdinal = ordinalMatch
-    ? withoutTimestamp.slice(ordinalMatch[0].length)
-    : withoutTimestamp;
+    ? withNormalizedTildes.slice(ordinalMatch[0].length)
+    : withNormalizedTildes;
 
   const text = stripOuterBrackets(
     withoutOrdinal
@@ -280,6 +308,7 @@ function isNoiseText(text: string) {
     normalized.startsWith("#")
     || normalized.startsWith("http://")
     || normalized.startsWith("https://")
+    || /^@\w/u.test(normalized)
     || normalized.includes("bgm")
     || normalized.includes("instagram")
     || normalized.includes("제품 정보")
@@ -292,6 +321,17 @@ function isNoiseText(text: string) {
     || normalized.includes("알림")
     || normalized.includes("비즈니스 문의")
     || normalized.includes("business")
+    || normalized.includes("music")
+    || normalized.includes("음악")
+    || normalized.includes("협찬")
+    || normalized.includes("팔로우")
+    || normalized.includes("follow")
+    || normalized.includes("광고")
+    || normalized.includes("tiktok")
+    || normalized.includes("틱톡")
+    || normalized.includes("facebook")
+    || normalized.includes("페이스북")
+    || normalized.includes("카메라")
   );
 }
 
@@ -308,6 +348,42 @@ function shouldResetSectionOnNoise(text: string) {
     || normalized.includes("instagram")
     || normalized.includes("인스타")
     || normalized.includes("블로그")
+    || normalized.includes("music")
+    || normalized.includes("음악")
+    || normalized.includes("협찬")
+    || normalized.includes("팔로우")
+    || normalized.includes("follow")
+    || normalized.includes("광고")
+    || normalized.includes("제품 정보")
+    || normalized.includes("구매 링크")
+    || normalized.includes("비즈니스 문의")
+    || normalized.includes("business")
+  );
+}
+
+function isSectionStopperHeading(text: string) {
+  const normalized = text.trim();
+
+  if (normalized.length > 60 || hasCookingAction(normalized)) {
+    return false;
+  }
+
+  const lower = normalized.toLowerCase();
+
+  return (
+    (/추천/u.test(lower) && /분/u.test(lower))
+    || /^보관\s*(?:법|방법|팁|tip)?$/u.test(lower)
+    || /^주의\s*사항?$/u.test(lower)
+    || /^(?:사용\s*(?:한\s*)?)?(?:제품|도구|기구|장비|그릇|용품)\s*(?:정보|소개)?$/u.test(lower)
+    || /^촬영\s*(?:장비|기기|도구)?$/u.test(lower)
+    || /^영양\s*(?:정보|성분)?$/u.test(lower)
+    || /^칼로리\s*(?:정보)?$/u.test(lower)
+    || /^(?:자주\s*묻는\s*질문|faq)$/iu.test(lower)
+    || /^더보기$/u.test(lower)
+    || /^(?:관련|추천)\s*(?:영상|동영상|레시피)$/u.test(lower)
+    || /^(?:other|related)\s*(?:videos?|recipes?)/iu.test(lower)
+    || /^(?:태그|tags?)$/iu.test(lower)
+    || /^(?:copyright|저작권)/iu.test(lower)
   );
 }
 
@@ -326,7 +402,7 @@ function cleanupComponentLabel(value: string) {
 function getIngredientHeadingComponent(text: string) {
   const normalized = text.toLowerCase();
 
-  if (/^(?:기본\s*)?(?:재료|준비\s*재료|재료\s*준비|준비물|ingredients?)$/u.test(normalized)) {
+  if (/^(?:기본\s*)?(?:재료|준비\s*재료|재료\s*준비|준비물|ingredients?)\s*(?:\([^)]*\))?\s*$/u.test(normalized)) {
     return null;
   }
 
@@ -344,7 +420,7 @@ function getIngredientHeadingComponent(text: string) {
 function getStepHeadingComponent(text: string) {
   const normalized = text.toLowerCase();
 
-  if (/^(?:순서|조리\s*(?:과정|순서|방법|법)|조리법|만드는\s*(?:법|방법|순서)|만들기|요리\s*(?:법|과정)|레시피\s*순서|steps?|directions?|method)$/u.test(normalized)) {
+  if (/^(?:순서|조리\s*(?:과정|순서|방법|법)|조리법|만드는\s*(?:법|방법|순서)|만들기|요리\s*(?:법|과정)|레시피\s*순서|steps?|directions?|method)\s*(?:\([^)]*\))?\s*$/u.test(normalized)) {
     return null;
   }
 
@@ -385,11 +461,11 @@ function isComponentOnlyHeading(text: string) {
 }
 
 function hasCookingAction(text: string) {
-  return /(씻|자르|잘라|썰|썬다|볶|끓|삶|굽|구워|버무|섞|넣|절여|절이|올려|발라|뿌려|익혀|튀겨|찐|쪄|데쳐|풀|두르|맞춰|채우|채워|완성|식히|식힌|섞어|섞으|만들)/u.test(text);
+  return /(씻|자르|잘라|썰|썬다|볶|끓|삶|굽|구워|버무|섞|넣|절여|절이|절인|올려|발라|뿌려|익혀|튀겨|찐|쪄|데쳐|풀|두르|맞춰|채우|채워|완성|식히|식힌|섞어|섞으|만들|다져|다지|비벼|비비|무쳐|무치|조려|졸여|졸이|졸인|헹궈|헹구|담가|담근|갈아|펴|재워|재우|빚어|치대|부어|부치|지져|걸러|불려|불린|말아)/u.test(text);
 }
 
 function hasSpecificCookingAction(text: string) {
-  return /(씻|자르|잘라|썰|썬다|썰어|볶아|볶고|볶아요|볶는다|끓여|끓이|끓인다|삶|굽|구워|버무|섞|넣|절여|절이|올려|발라|뿌려|익혀|튀겨|찐|쪄|데쳐|풀|두르|맞춰|채우|채워|완성|식히|식힌|섞어|섞으)/u.test(text);
+  return /(씻|자르|잘라|썰|썬다|썰어|볶아|볶고|볶아요|볶는다|끓여|끓이|끓인다|삶|굽|구워|버무|섞|넣|절여|절이|절인|올려|발라|뿌려|익혀|튀겨|찐|쪄|데쳐|풀|두르|맞춰|채우|채워|완성|식히|식힌|섞어|섞으|다져|다지|비벼|비비|무쳐|무치|조려|졸여|졸이|헹궈|헹구|담가|담근|갈아|재워|재우|빚어|치대|부어|부치|지져|걸러|불려|불린|말아)/u.test(text);
 }
 
 function hasSentenceEnding(text: string) {
@@ -397,7 +473,7 @@ function hasSentenceEnding(text: string) {
 }
 
 function hasAmountSignal(text: string) {
-  return AMOUNT_SIGNAL_RE.test(text) || /(?:약간|조금|적당량|취향껏|취향에\s*따라|한\s*꼬집)$/u.test(text);
+  return AMOUNT_SIGNAL_RE.test(text) || /(?:약간|조금|적당량|소량|취향껏|취향에\s*따라|한\s*꼬집|한\s*줌|한\s*움큼|(?:톡)+)$/u.test(text);
 }
 
 function parseRecipeAmount(value: string) {
@@ -496,11 +572,11 @@ function parseIngredientLine(
     };
   }
 
-  const toTasteMatch = line.text.match(/^(.+?)\s*(?:약간|조금|적당량|취향껏|취향에\s*따라|원하는\s*만큼)$/u);
+  const toTasteMatch = line.text.match(/^(.+?)\s*(?:약간|조금|적당량|소량|취향껏|취향에\s*따라|원하는\s*만큼|한\s*꼬집|한\s*줌|한\s*움큼)$/u);
   if (toTasteMatch) {
     const name = normalizeIngredientName(toTasteMatch[1]);
 
-    if (!name) {
+    if (!name || /[,，]/u.test(name)) {
       return null;
     }
 
@@ -542,7 +618,7 @@ function parseIngredientLine(
     };
   }
 
-  if (!allowAmountless || line.text.length > 60 || hasCookingAction(line.text) || hasSentenceEnding(line.text)) {
+  if (!allowAmountless || line.text.length > 60 || hasCookingAction(line.text) || hasSentenceEnding(line.text) || /[,，]/u.test(line.text)) {
     return null;
   }
 
@@ -616,6 +692,46 @@ function parseIngredientLines(
 
   const ingredient = parseIngredientLine(line, options);
   return ingredient ? [ingredient] : [];
+}
+
+function parseCommaSeparatedIngredients(
+  line: SourceLine,
+  options: { componentLabel: string | null },
+): ParsedIngredient[] {
+  if (!line.text.includes(",") && !line.text.includes("，")) {
+    return [];
+  }
+
+  const segments = line.text
+    .split(/[,，]/u)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  if (segments.length < 2) {
+    return [];
+  }
+
+  const results = segments.map((segment) =>
+    parseIngredientLine(
+      {
+        ...line,
+        raw: segment,
+        text: segment,
+        normalized: segment.toLowerCase(),
+        ordinal: null,
+      },
+      { allowAmountless: true, componentLabel: options.componentLabel },
+    ),
+  );
+
+  if (results.every(isParsedIngredient)) {
+    return results.map((ingredient) => ({
+      ...ingredient,
+      flags: [...new Set([...ingredient.flags, "comma_separated"])],
+    }));
+  }
+
+  return [];
 }
 
 function parseStepLine(
@@ -883,6 +999,7 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
   const components: ParsedRecipeComponent[] = [];
   let section: SectionKind | null = null;
   let componentLabel: string | null = null;
+  let afterSectionStopper = false;
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -892,16 +1009,25 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
       continue;
     }
 
+    if (isSectionStopperHeading(line.text)) {
+      section = null;
+      componentLabel = null;
+      afterSectionStopper = true;
+      continue;
+    }
+
     if (classification.kind === "noise") {
       if (shouldResetSectionOnNoise(line.text)) {
         section = null;
         componentLabel = null;
+        afterSectionStopper = true;
       }
       continue;
     }
 
     if (classification.kind === "heading.ingredients") {
       section = "ingredients";
+      afterSectionStopper = false;
       componentLabel = classification.componentLabel === null
         ? null
         : resolveComponentLabel(components, classification.componentLabel);
@@ -911,6 +1037,7 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
 
     if (classification.kind === "heading.steps") {
       section = "steps";
+      afterSectionStopper = false;
       componentLabel = classification.componentLabel === null
         ? null
         : resolveComponentLabel(components, classification.componentLabel);
@@ -921,6 +1048,7 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
     if (classification.kind === "heading.component") {
       componentLabel = resolveComponentLabel(components, classification.componentLabel);
       section = classification.preferredSection ?? section;
+      afterSectionStopper = false;
       getComponent(components, componentLabel, line.index);
       continue;
     }
@@ -933,6 +1061,12 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
 
       if (ingredients.length > 0) {
         getComponent(components, componentLabel, line.index).ingredients.push(...ingredients);
+        continue;
+      }
+
+      const commaSplit = parseCommaSeparatedIngredients(line, { componentLabel });
+      if (commaSplit.length > 0) {
+        getComponent(components, componentLabel, line.index).ingredients.push(...commaSplit);
         continue;
       }
     }
@@ -949,7 +1083,7 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
       }
     }
 
-    if (!section && classification.kind === "ingredient_candidate") {
+    if (!section && !afterSectionStopper && classification.kind === "ingredient_candidate") {
       const ingredients = parseIngredientLines(line, {
         allowAmountless: false,
         componentLabel,
@@ -961,7 +1095,7 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
       }
     }
 
-    if (!section && classification.kind === "step_candidate") {
+    if (!section && !afterSectionStopper && classification.kind === "step_candidate") {
       if (line.ordinal === null && !hasSpecificCookingAction(line.text)) {
         continue;
       }
