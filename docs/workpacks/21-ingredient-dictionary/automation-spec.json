@@ -1,0 +1,60 @@
+{
+  "slice_id": "21-ingredient-dictionary",
+  "execution_mode": "autonomous",
+  "risk_class": "low",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "synonym-parallel-lookup",
+      "ingredient-id-dedup-direct-priority",
+      "needs-review-multi-candidate",
+      "resolved-canonical-substitution-only",
+      "needs-review-no-canonical-substitution",
+      "db-error-propagation-no-silent-unresolved",
+      "lookup-key-trim-empty-guard",
+      "embedded-join-array-normalize",
+      "english-synonym-lowercase-storage",
+      "migration-upsert-do-nothing",
+      "synonym-migration-idempotent",
+      "category-enum-validation",
+      "api-envelope-format"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/ingredient-dictionary.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [],
+    "playwright_projects": [],
+    "artifact_assertions": [],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase"
+  ],
+  "blocked_conditions": [
+    "ingredient-synonyms-table-missing",
+    "ingredients-table-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 0
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "id": "21-ingredient-dictionary",
+  "title": "Ingredient synonym matching and seed migration for YouTube extract matching rate improvement",
+  "summary": "findIngredientIds를 standard + synonym 병렬 조회로 확장하고, 소량의 synonym 시딩 migration으로 YouTube 추출 재료 매칭률을 개선한다. Phase 1 synonym 조회 연결 + Phase 2 소량 데이터 기반 시딩. BE-only.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "YouTube 설명란 파서가 추출한 재료명을 DB의 표준 재료에 더 폭넓게 매칭한다. 이미 존재하는 ingredient_synonyms 테이블을 매칭 경로에 연결하고, 소량의 초기 synonym 데이터를 시딩해 실제 영상 재료의 매칭률을 끌어올린다.",
+  "owners": {
+    "claude": "stage1,stage3",
+    "codex": "stage2",
+    "workers": []
+  },
+  "dependencies": [
+    "20-youtube-real-import"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/api문서-v1.2.6.md",
+      "docs/db설계-v1.3.4.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/21-ingredient-dictionary/README.md",
+      "docs/workpacks/21-ingredient-dictionary/acceptance.md",
+      "docs/workpacks/21-ingredient-dictionary/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/workpacks/20-youtube-real-import/README.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "pnpm dev:local-supabase"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 0
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": []
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Stage 1 docs PR repair for plan-only workpack. BE-only slice: Phase 1 synonym lookup integration + Phase 2 seed migration. No public API contract change, no FE work, Stage 4-6 skip. Phase 3/4 deferred to separate slices.",
+  "out_of_scope": [
+    "Phase 3 safe normalization layer (prefix/substring/fuzzy estimation matching)",
+    "Phase 4 unregistered ingredient user registration flow (new API + UI + contract evolution)",
+    "Unit conversion (spoon to g etc.)",
+    "Bulk synonym seeding (50-80 items)",
+    "UI changes (BE-only slice)"
+  ],
+  "open_questions": []
+}
