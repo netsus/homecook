@@ -1,17 +1,31 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.6.8.md`
-- `docs/화면정의서-v1.5.5.md`
-- `docs/유저flow맵-v1.3.5.md`
-- `docs/db설계-v1.3.4.md`
-- `docs/api문서-v1.2.6.md`
+- `docs/요구사항기준선-v1.6.9.md`
+- `docs/화면정의서-v1.5.6.md`
+- `docs/유저flow맵-v1.3.6.md`
+- `docs/db설계-v1.3.5.md`
+- `docs/api문서-v1.2.7.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## v1.6.8 / v1.5.5 / v1.3.5 / DB v1.3.4 / API v1.2.6 → v1.6.9 / v1.5.6 / v1.3.6 / DB v1.3.5 / API v1.2.7 변경 이력 (2026-05-22)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.6.9 | §2-4 유튜브 레시피 추출 정책: DB에 없는 재료를 사용자 확인 후 새 표준 재료로 등록하는 흐름, `draft_ingredient_id`, RPC 기반 ingredient/synonym 등록, client-side resolved 전환 정책 추가 |
+| 화면정의서 v1.5.6 | §10 YT_IMPORT: unresolved / needs_review 재료 row에 [새 재료로 등록] fallback 추가, 등록 sheet/modal, 성공/실패 상태, `draft_json` 불변 정책 명시 |
+| 유저플로우 v1.3.6 | ⑨ 유튜브 등록 여정: 검수 단계의 검색 교체 / 새 재료 등록 분기, `POST /recipes/youtube/ingredient-registration`, 데이터 변화에 ingredients/ingredient_synonyms 추가 |
+| DB v1.3.5 | `youtube_extraction_sessions.draft_json.ingredients[]`의 `draft_ingredient_id` 계약, `register_youtube_ingredient(...)` RPC, ambiguous synonym best-effort skip 정책 추가 |
+| API v1.2.7 | §6: extract ingredient 응답에 `draft_ingredient_id` 추가, §6-3 `POST /recipes/youtube/ingredient-registration` 신규, 기존 register를 §6-4로 이동, 엔드포인트 목록 갱신 |
+
+> 이 변경은 슬라이스 22 YouTube 미등록 재료 등록 contract-evolution이다.
+> 매번 migration으로 신규 재료를 추가하지 않고, YT_IMPORT 검수 단계에서 사용자 확인 후 `ingredients` / `ingredient_synonyms`를 안전하게 갱신하는 경로를 공식화한다.
+> 새 등록은 자동 실행하지 않으며, session 소유권·만료·`draft_ingredient_id`를 검증한다. registration API는 session `draft_json`을 수정하지 않고, 클라이언트가 현재 검수 row를 `resolved`로 전환한다.
 
 ## v1.6.7 / v1.5.4 / v1.3.4 / DB v1.3.3 / API v1.2.5 → v1.6.8 / v1.5.5 / v1.3.5 / DB v1.3.4 / API v1.2.6 변경 이력 (2026-05-21)
 

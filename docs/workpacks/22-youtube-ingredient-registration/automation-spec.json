@@ -1,0 +1,103 @@
+{
+  "slice_id": "22-youtube-ingredient-registration",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "conditional-auto",
+  "contract_evolution_required": true,
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/recipes/youtube/extract response includes draft_ingredient_id",
+      "POST /api/v1/recipes/youtube/ingredient-registration"
+    ],
+    "invariants": [
+      "official-contract-before-implementation",
+      "owner-guard-session-hidden-404",
+      "expired-session-410",
+      "stale-or-consumed-session-409",
+      "draft-ingredient-id-guard",
+      "client-side-row-update-no-draft-json-mutation",
+      "resolved-only-final-register",
+      "standard-name-idempotent-reuse",
+      "synonym-same-as-standard-case-insensitive-skip",
+      "synonym-ambiguous-best-effort-skip-warning",
+      "register-youtube-ingredient-rpc-boundary",
+      "category-enum-validation",
+      "standard-name-trim-collapse-control-char-guard",
+      "api-envelope-format"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/youtube-ingredient-registration.backend.test.ts",
+      "tests/youtube-import.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/menu/add/youtube"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "conflict",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "screenshot",
+      "unresolved-create-flow",
+      "registration-sheet-mobile",
+      "resolved-row-after-create"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "YT_IMPORT"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow"
+      ],
+      "authority_report_paths": [],
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/22-youtube-ingredient-registration/YT_IMPORT-unresolved-register-mobile.png",
+        "ui/designs/evidence/22-youtube-ingredient-registration/YT_IMPORT-register-sheet-mobile.png",
+        "ui/designs/evidence/22-youtube-ingredient-registration/YT_IMPORT-resolved-after-register-mobile.png"
+      ]
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:demo",
+    "pnpm dev:local-supabase"
+  ],
+  "blocked_conditions": [
+    "contract-evolution-not-merged",
+    "ingredients-table-missing",
+    "ingredient-synonyms-table-missing",
+    "youtube-extraction-sessions-table-missing",
+    "category-contract-missing",
+    "transaction-boundary-missing",
+    "draft-ingredient-id-missing-from-extract-response-or-draft-json"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
