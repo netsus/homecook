@@ -194,6 +194,20 @@ const cucumberSandwichDescription = [
   "만들었는데 정말 치즈보다 훨씬다 담백하고 고소해서",
   "더 맛있더라고요!",
 ].join("\n");
+const porkGalbiUrl = "https://www.youtube.com/watch?v=porkgalbi123";
+const porkGalbiDescription = [
+  "목살에 돼지갈비양념을 했어요! 배, 양파 안넣고 만드는 간단 버전입니다!",
+  "",
+  "📌재료(*밥 숟가락 기준)",
+  "목살 300g~400g, 다진 마늘 0.5스푼, 진간장 3스푼(또는 양조간장), 맛술 1.5스푼, 물엿 1스푼, 설탕 1스푼, 후추, 연겨자 0.2스푼, 물 3스푼, 참기름 0.3스푼",
+  "",
+  "* 영상 속의 연겨자 양 2번 넣었습니다",
+  "",
+  "📌만드는 법",
+  "1. 목살은 앞뒤로 칼집을 내주세요.",
+  "2. 진간장, 다진 마늘, 맛술, 물엿, 설탕, 후추, 연겨자, 물, 참기름을 넣고 잘 섞어서 양념을 만들어주세요.",
+  "3. 고기에 양념을 잘 버무린 뒤 최소 30분 이상 재우고 프라이팬에 중약불(또는 약불)로 자주 뒤집어가며 타지 않게 구워주세요.",
+].join("\n");
 const eggRiceUrl = "https://www.youtube.com/watch?v=eggrice123";
 const eggRiceDescription = [
   "오늘은 냉장고 재료로 빠르게 만드는 볶음밥이에요.",
@@ -1026,6 +1040,159 @@ describe("20 youtube real import backend", () => {
         ]),
       }),
     }));
+  });
+
+  it("POST /api/v1/recipes/youtube/extract splits one-line comma ingredients before resolving them", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({
+        items: [
+          {
+            snippet: {
+              title: "목살 돼지갈비 양념",
+              channelTitle: "집밥 채널",
+              description: porkGalbiDescription,
+              tags: ["목살", "돼지갈비", "레시피"],
+              categoryId: "26",
+              thumbnails: {
+                high: { url: "https://i.ytimg.com/vi/porkgalbi123/hqdefault.jpg" },
+              },
+            },
+            contentDetails: {
+              duration: "PT52S",
+              caption: "false",
+            },
+          },
+        ],
+      })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ingredientsTable = createLookupTable({
+      data: [
+        { id: "ing-pork-neck", standard_name: "목살" },
+        { id: "ing-cooking-wine", standard_name: "맛술" },
+        { id: "ing-corn-syrup", standard_name: "물엿" },
+        { id: "ing-sugar", standard_name: "설탕" },
+        { id: "ing-pepper", standard_name: "후추" },
+        { id: "ing-mustard", standard_name: "연겨자" },
+        { id: "ing-water", standard_name: "물" },
+        { id: "ing-sesame-oil", standard_name: "참기름" },
+      ],
+      error: null,
+    });
+    const ingredientSynonymsTable = createLookupTable({
+      data: [
+        {
+          synonym: "다진 마늘",
+          ingredients: { id: "ing-minced-garlic", standard_name: "다진마늘" },
+        },
+        {
+          synonym: "진간장",
+          ingredients: { id: "ing-soy-sauce", standard_name: "간장" },
+        },
+      ],
+      error: null,
+    });
+    const cookingMethodsTable = createCookingMethodsTable({
+      existingResult: {
+        data: {
+          id: newMethodId,
+          code: "auto_salt",
+          label: "절이기",
+          color_key: "unassigned",
+          is_system: false,
+        },
+        error: null,
+      },
+      insertResult: { data: null, error: { message: "should not insert" } },
+    });
+    const sessionsTable = createYoutubeSessionsTable({});
+    const dbClient = {
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsTable;
+        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+        if (table === "cooking_methods") return cookingMethodsTable;
+        if (table === "youtube_extraction_sessions") return sessionsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importExtractRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: porkGalbiUrl }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        title: "목살 돼지갈비 양념",
+        blocking_issues: [],
+      },
+      error: null,
+    });
+    expect(body.data.ingredients.map((ingredient: { standard_name: string }) => ingredient.standard_name)).toEqual([
+      "목살",
+      "다진마늘",
+      "간장",
+      "맛술",
+      "물엿",
+      "설탕",
+      "후추",
+      "연겨자",
+      "물",
+      "참기름",
+    ]);
+    expect(body.data.ingredients.every((ingredient: { resolution_status: string }) =>
+      ingredient.resolution_status === "resolved",
+    )).toBe(true);
+    expect(body.data.ingredients.every((ingredient: { standard_name: string }) =>
+      !ingredient.standard_name.includes(","),
+    )).toBe(true);
+    expect(body.data.ingredients[0]).toMatchObject({
+      standard_name: "목살",
+      amount: 300,
+      unit: "g",
+      ingredient_id: "ing-pork-neck",
+      raw_text: "목살 300g~400g",
+    });
+    expect(body.data.steps.map((step: { instruction: string }) => step.instruction)).toEqual([
+      "목살은 앞뒤로 칼집을 내주세요.",
+      "진간장, 다진 마늘, 맛술, 물엿, 설탕, 후추, 연겨자, 물, 참기름을 넣고 잘 섞어서 양념을 만들어주세요.",
+      "고기에 양념을 잘 버무린 뒤 최소 30분 이상 재우고 프라이팬에 중약불(또는 약불)로 자주 뒤집어가며 타지 않게 구워주세요.",
+    ]);
+    expect(ingredientsTable.__query.in).toHaveBeenCalledWith("standard_name", [
+      "목살",
+      "다진 마늘",
+      "진간장",
+      "맛술",
+      "물엿",
+      "설탕",
+      "후추",
+      "연겨자",
+      "물",
+      "참기름",
+    ]);
+    expect(ingredientSynonymsTable.__query.in).toHaveBeenCalledWith("synonym", [
+      "목살",
+      "다진 마늘",
+      "진간장",
+      "맛술",
+      "물엿",
+      "설탕",
+      "후추",
+      "연겨자",
+      "물",
+      "참기름",
+    ]);
   });
 
   it("POST /api/v1/recipes/youtube/extract parses varied headings, compact amounts, and timestamped steps", async () => {

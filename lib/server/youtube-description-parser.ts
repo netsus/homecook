@@ -226,12 +226,21 @@ const KOREAN_NUMBER_WORDS: Record<string, number> = {
   네: 4,
   반: 0.5,
 };
-const AMOUNT_SIGNAL_PATTERN = `(?:[0-9]+\\/[0-9]+|[0-9]+(?:[.,][0-9]+)?(?:\\s*[~\\-–]\\s*[0-9]+(?:[.,][0-9]+)?)?)\\s*(?:${UNIT_PATTERN})(?=\\s|[+＋,，/)]|$)`;
+const AMOUNT_NUMBER_PATTERN = `[0-9]+\\/[0-9]+|[0-9]+(?:[.,][0-9]+)?`;
+const AMOUNT_RANGE_PATTERN = `(?:${AMOUNT_NUMBER_PATTERN})(?:\\s*[~\\-–]\\s*[0-9]+(?:[.,][0-9]+)?)?`;
+const AMOUNT_SIGNAL_PATTERN = `(?:${AMOUNT_RANGE_PATTERN})\\s*(?:${UNIT_PATTERN})(?=\\s|[~\\-–+＋,，/)]|$)`;
 const AMOUNT_SIGNAL_RE = new RegExp(AMOUNT_SIGNAL_PATTERN, "iu");
 const NUMERIC_INGREDIENT_RE = new RegExp(
   `^(.+?)(?:\\s*[：:]\\s*|\\s*)` +
-    `([0-9]+\\/[0-9]+|[0-9]+(?:[.,][0-9]+)?(?:\\s*[~\\-–]\\s*[0-9]+(?:[.,][0-9]+)?)?)\\s*` +
+    `(${AMOUNT_RANGE_PATTERN})\\s*` +
     `(${UNIT_PATTERN})(?:\\s*\\([^)]*\\))?\\s*$`,
+  "iu",
+);
+const UNIT_SUFFIXED_RANGE_INGREDIENT_RE = new RegExp(
+  `^(.+?)(?:\\s*[：:]\\s*|\\s*)` +
+    `(${AMOUNT_NUMBER_PATTERN})\\s*` +
+    `(${UNIT_PATTERN})\\s*[~\\-–]\\s*` +
+    `[0-9]+(?:[.,][0-9]+)?\\s*(?:${UNIT_PATTERN})?(?:\\s*\\([^)]*\\))?\\s*$`,
   "iu",
 );
 const COMPOUND_INGREDIENT_SEPARATOR_RE = /\s*[+＋]\s*/u;
@@ -518,12 +527,13 @@ function parseIngredientLine(
   }
 
   const parseText = line.text.replace(/\s*\([^)]*\)\s*$/u, "").trim();
-  const numericMatch = parseText.match(NUMERIC_INGREDIENT_RE);
+  const numericMatch = parseText.match(UNIT_SUFFIXED_RANGE_INGREDIENT_RE)
+    ?? parseText.match(NUMERIC_INGREDIENT_RE);
   if (numericMatch) {
     const amount = parseRecipeAmount(numericMatch[2]);
     const name = normalizeIngredientName(numericMatch[1]);
 
-    if (!name || amount === null || hasCookingAction(name)) {
+    if (!name || amount === null || hasCookingAction(name) || /[,，]/u.test(name)) {
       return null;
     }
 
@@ -1000,6 +1010,8 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
   let section: SectionKind | null = null;
   let componentLabel: string | null = null;
   let afterSectionStopper = false;
+  let hasStructuredSectionHeading = false;
+  let hasParsedIngredient = false;
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -1027,6 +1039,7 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
 
     if (classification.kind === "heading.ingredients") {
       section = "ingredients";
+      hasStructuredSectionHeading = true;
       afterSectionStopper = false;
       componentLabel = classification.componentLabel === null
         ? null
@@ -1037,6 +1050,7 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
 
     if (classification.kind === "heading.steps") {
       section = "steps";
+      hasStructuredSectionHeading = true;
       afterSectionStopper = false;
       componentLabel = classification.componentLabel === null
         ? null
@@ -1048,12 +1062,20 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
     if (classification.kind === "heading.component") {
       componentLabel = resolveComponentLabel(components, classification.componentLabel);
       section = classification.preferredSection ?? section;
+      hasStructuredSectionHeading = true;
       afterSectionStopper = false;
       getComponent(components, componentLabel, line.index);
       continue;
     }
 
     if (section === "ingredients") {
+      const commaSplit = parseCommaSeparatedIngredients(line, { componentLabel });
+      if (commaSplit.length > 0) {
+        getComponent(components, componentLabel, line.index).ingredients.push(...commaSplit);
+        hasParsedIngredient = true;
+        continue;
+      }
+
       const ingredients = parseIngredientLines(line, {
         allowAmountless: true,
         componentLabel,
@@ -1061,12 +1083,7 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
 
       if (ingredients.length > 0) {
         getComponent(components, componentLabel, line.index).ingredients.push(...ingredients);
-        continue;
-      }
-
-      const commaSplit = parseCommaSeparatedIngredients(line, { componentLabel });
-      if (commaSplit.length > 0) {
-        getComponent(components, componentLabel, line.index).ingredients.push(...commaSplit);
+        hasParsedIngredient = true;
         continue;
       }
     }
@@ -1091,11 +1108,16 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
 
       if (ingredients.length > 0) {
         getComponent(components, componentLabel, line.index).ingredients.push(...ingredients);
+        hasParsedIngredient = true;
         continue;
       }
     }
 
     if (!section && !afterSectionStopper && classification.kind === "step_candidate") {
+      if (!hasStructuredSectionHeading && !hasParsedIngredient && line.ordinal === null) {
+        continue;
+      }
+
       if (line.ordinal === null && !hasSpecificCookingAction(line.text)) {
         continue;
       }
