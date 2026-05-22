@@ -350,6 +350,16 @@ test.describe("MYPAGE screen", () => {
 
     const card = page.getByTestId("shopping-card-list-1");
     await expect(card).toBeVisible();
+
+    if (!isMobileViewport(page)) {
+      await card.click();
+      await expect(page.getByTestId("shopping-detail-embedded")).toBeVisible();
+      await expect(
+        page.getByText("완료된 장보기 기록은 수정할 수 없어요"),
+      ).toBeVisible();
+      return;
+    }
+
     const href = await card.getAttribute("href");
     expect(href).toContain("/shopping/lists/list-1");
     expect(href).toContain("returnTo=");
@@ -364,11 +374,15 @@ test.describe("MYPAGE screen", () => {
 
     await openRecipebookSurface(page);
     await page.getByTestId("system-book-saved").click();
-    await page.waitForURL(/\/mypage\/recipe-books\/book-saved/);
-    await expect(page.getByTestId("recipebook-detail-header")).toBeVisible();
-
-    await page.getByLabel("뒤로 가기").first().click();
-    await page.waitForURL(/\/mypage\?.*restore=recipebook-tab/);
+    if (isMobileViewport(page)) {
+      await page.waitForURL(/\/mypage\/recipe-books\/book-saved/);
+      await expect(page.getByTestId("recipebook-detail-header")).toBeVisible();
+      await page.getByLabel("뒤로 가기").first().click();
+      await page.waitForURL(/\/mypage\?.*restore=recipebook-tab/);
+    } else {
+      await expect(page.getByRole("heading", { name: "저장한 레시피" })).toBeVisible();
+      await page.getByRole("button", { name: "목록으로" }).click();
+    }
 
     await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
     await expect(page.getByTestId("system-book-saved").getByText("저장한 레시피")).toBeVisible();
@@ -382,16 +396,24 @@ test.describe("MYPAGE screen", () => {
 
     await openShoppingSurface(page);
     await page.getByTestId("shopping-card-list-1").click();
-    await page.waitForURL(/\/shopping\/lists\/list-1/);
+    if (isMobileViewport(page)) {
+      await page.waitForURL(/\/shopping\/lists\/list-1/);
+    } else {
+      await expect(page.getByTestId("shopping-detail-embedded")).toBeVisible();
+    }
     await expect(
       page.getByText("완료된 장보기 기록은 수정할 수 없어요"),
     ).toBeVisible();
 
-    await page
-      .getByLabel(/뒤로 가기|이전 화면으로 돌아가기/)
-      .first()
-      .click();
-    await page.waitForURL(/\/mypage\?.*restore=shopping-history-tab/);
+    if (isMobileViewport(page)) {
+      await page
+        .getByLabel(/뒤로 가기|이전 화면으로 돌아가기/)
+        .first()
+        .click();
+      await page.waitForURL(/\/mypage\?.*restore=shopping-history-tab/);
+    } else {
+      await page.getByRole("button", { name: "목록으로" }).first().click();
+    }
 
     await expect(
       page.getByRole("heading", { name: isMobileViewport(page) ? "장보기 기록" : "장보기 내역" }),

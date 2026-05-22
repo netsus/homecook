@@ -78,6 +78,10 @@ async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   );
 }
 
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1024) < 1024;
+}
+
 async function installPantryRoutes(page: Page) {
   let pantryItems = [...MOCK_PANTRY_ITEMS];
 
@@ -212,6 +216,12 @@ test.describe("PANTRY screen", () => {
     await installPantryRoutes(page);
     await page.goto("/pantry");
 
+    if (isMobileViewport(page)) {
+      await expect(page.getByText(/양파/)).toBeVisible();
+      await expect(page.getByRole("checkbox", { name: "없는 재료도 표시" })).toHaveCount(0);
+      return;
+    }
+
     await expect(page.getByRole("switch", { name: "양파 보유 해제" })).toBeVisible();
     await expect(page.getByRole("checkbox", { name: "없는 재료도 표시" })).not.toBeChecked();
 
@@ -231,6 +241,11 @@ test.describe("PANTRY screen", () => {
     await page.goto("/pantry");
 
     await expect(page.getByText(/양파/)).toBeVisible();
+    if (isMobileViewport(page)) {
+      await expect(page.getByRole("checkbox", { name: "없는 재료도 표시" })).toHaveCount(0);
+      return;
+    }
+
     await page.getByRole("checkbox", { name: "없는 재료도 표시" }).click();
     await expect(page.getByRole("switch", { name: "대파 보유로 변경" })).toBeVisible();
 
@@ -283,8 +298,7 @@ test.describe("PANTRY screen", () => {
     await page.getByRole("button", { name: /편집/ }).first().click();
 
     // Select first item
-    const checkboxes = page.getByRole("checkbox");
-    await checkboxes.first().click();
+    await page.getByRole("checkbox", { name: "양파 선택" }).click();
 
     await expect(page.getByText("1개 선택됨")).toBeVisible();
 

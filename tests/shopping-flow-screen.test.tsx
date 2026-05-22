@@ -316,8 +316,9 @@ describe("shopping flow screen", () => {
       expect(screen.queryByText("식사 등록 완료")).toBeNull();
       expect(screen.getByText("대상 식사 2개")).toBeTruthy();
       expect(screen.getByText("합산 계획 6인분")).toBeTruthy();
-      expect(screen.queryByText("장보기 기준 인분")).toBeNull();
-      expect(screen.queryByLabelText("인분 늘리기")).toBeNull();
+      expect(screen.getByText("장보기 기준 인분")).toBeTruthy();
+      expect(screen.getByLabelText("6인분")).toBeTruthy();
+      expect(screen.getByLabelText("인분 늘리기")).toBeTruthy();
       expect(
         screen.getByText(/같은 레시피는 합산 계획 인분으로 묶어요/)
       ).toBeTruthy();
@@ -393,7 +394,7 @@ describe("shopping flow screen", () => {
       expect((screen.getByText("장보기 목록 만들기") as HTMLButtonElement).disabled).toBe(true);
     });
 
-    it("should keep shopping servings fixed to the planned total without showing edit controls", async () => {
+    it("should adjust shopping servings from the planned total with edit controls", async () => {
       fetchShoppingPreview.mockResolvedValue(
         createPreviewData([
           {
@@ -411,9 +412,14 @@ describe("shopping flow screen", () => {
         expect(screen.getByText("김치찌개")).toBeTruthy();
       });
 
-      expect(screen.queryByLabelText("인분 늘리기")).toBeNull();
-      expect(screen.queryByLabelText("인분 줄이기")).toBeNull();
-      expect(screen.queryByText("장보기 기준 인분")).toBeNull();
+      expect(screen.getByText("장보기 기준 인분")).toBeTruthy();
+      expect(screen.getByLabelText("2인분")).toBeTruthy();
+
+      await userEvent.click(screen.getByLabelText("인분 늘리기"));
+      expect(screen.getByLabelText("3인분")).toBeTruthy();
+
+      await userEvent.click(screen.getByLabelText("인분 줄이기"));
+      expect(screen.getByLabelText("2인분")).toBeTruthy();
     });
 
     it("should disable create button when no meals selected", async () => {
@@ -610,7 +616,7 @@ describe("shopping flow screen", () => {
       });
     });
 
-    it("should submit all grouped meals when servings are fixed to the planned total", async () => {
+    it("should submit all grouped meals when servings are adjusted above the planned total", async () => {
       fetchShoppingPreview.mockResolvedValue(
         createPreviewData([
           {
@@ -641,7 +647,8 @@ describe("shopping flow screen", () => {
         expect(screen.getByText("합산 계획 13인분")).toBeTruthy();
       });
 
-      expect(screen.queryByLabelText("인분 줄이기")).toBeNull();
+      await userEvent.click(screen.getByLabelText("인분 늘리기"));
+      expect(screen.getByLabelText("14인분")).toBeTruthy();
 
       await userEvent.click(screen.getByText("장보기 목록 만들기"));
 
@@ -651,7 +658,7 @@ describe("shopping flow screen", () => {
             {
               recipe_id: "recipe-1",
               meal_ids: ["meal-1", "meal-2"],
-              shopping_servings: 13,
+              shopping_servings: 14,
             },
           ],
         });
