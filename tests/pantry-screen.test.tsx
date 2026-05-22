@@ -538,6 +538,8 @@ describe("PantryScreen", () => {
     await waitFor(() => {
       expect(mockDeletePantryItems).toHaveBeenCalledWith(["i1"]);
     });
+    expect(mockFetchIngredients).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("양파를 미보유로 바꿨어요")).toBeTruthy();
     expect(
       (screen.getByRole("checkbox", { name: "없는 재료도 표시" }) as HTMLInputElement)
         .checked,
@@ -554,11 +556,120 @@ describe("PantryScreen", () => {
     await waitFor(() => {
       expect(mockAddPantryItems).toHaveBeenCalledWith(["i1"]);
     });
+    expect(screen.getByText("양파를 보유로 바꿨어요")).toBeTruthy();
     expect(
       screen
         .getByRole("switch", { name: "양파 보유 해제" })
         .getAttribute("aria-checked"),
     ).toBe("true");
+  });
+
+  it("rolls back missing display when an owned desktop pantry toggle fails", async () => {
+    mockDeletePantryItems.mockRejectedValue(new Error("delete failed"));
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("switch", { name: "양파 보유 해제" }));
+
+    await waitFor(() => {
+      expect(mockDeletePantryItems).toHaveBeenCalledWith(["i1"]);
+    });
+    await waitFor(() => {
+      expect(screen.getByText("보유 상태를 바꾸지 못했어요. 다시 시도해 주세요")).toBeTruthy();
+    });
+    expect(
+      (screen.getByRole("checkbox", { name: "없는 재료도 표시" }) as HTMLInputElement)
+        .checked,
+    ).toBe(false);
+    expect(mockFetchIngredients).not.toHaveBeenCalled();
+    expect(
+      screen
+        .getByRole("switch", { name: "양파 보유 해제" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+
+  it("keeps the desktop pantry card order stable while toggling ownership with missing items visible", async () => {
+    let resolveDelete!: (value: { removed: number }) => void;
+    let resolveAdd!: (value: { added: number; items: typeof MOCK_ITEMS }) => void;
+    mockDeletePantryItems.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveDelete = resolve;
+        }),
+    );
+    mockAddPantryItems.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveAdd = resolve;
+        }),
+    );
+    mockFetchIngredients.mockResolvedValue({
+      items: [
+        ...MOCK_ITEMS.map((item) => ({
+          category: item.category,
+          id: item.ingredient_id,
+          standard_name: item.standard_name,
+        })),
+        { id: "i4", standard_name: "대파", category: "채소" },
+      ],
+    });
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("checkbox", { name: "없는 재료도 표시" }));
+
+    await screen.findByRole("switch", { name: "대파 보유로 변경" });
+    expect(mockFetchIngredients).toHaveBeenCalledTimes(1);
+
+    const getIngredientOrder = () =>
+      screen
+        .getAllByRole("switch")
+        .map((card) =>
+          card
+            .getAttribute("aria-label")
+            ?.replace(/ 보유(?: 해제|로 변경)$/, ""),
+        );
+
+    const initialOrder = getIngredientOrder();
+
+    await user.click(screen.getByRole("switch", { name: "양파 보유 해제" }));
+
+    expect(
+      screen
+        .getByRole("switch", { name: "양파 보유로 변경" })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+    expect(getIngredientOrder()).toEqual(initialOrder);
+    resolveDelete({ removed: 1 });
+
+    await waitFor(() => {
+      expect(mockDeletePantryItems).toHaveBeenCalledWith(["i1"]);
+    });
+    expect(mockFetchIngredients).toHaveBeenCalledTimes(1);
+    expect(getIngredientOrder()).toEqual(initialOrder);
+
+    await user.click(screen.getByRole("switch", { name: "양파 보유로 변경" }));
+
+    expect(
+      screen
+        .getByRole("switch", { name: "양파 보유 해제" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(getIngredientOrder()).toEqual(initialOrder);
+    resolveAdd({ added: 1, items: [MOCK_ITEMS[0]] });
+
+    await waitFor(() => {
+      expect(mockAddPantryItems).toHaveBeenCalledWith(["i1"]);
+    });
+    expect(mockFetchIngredients).toHaveBeenCalledTimes(1);
+    expect(getIngredientOrder()).toEqual(initialOrder);
   });
 
   it("shows missing ingredients from the ingredient catalog when enabled", async () => {

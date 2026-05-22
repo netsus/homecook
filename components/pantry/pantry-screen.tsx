@@ -281,27 +281,52 @@ export function PantryScreen({
 
       try {
         if (displayItem.isOwned) {
-          await deletePantryItems([ingredientId]);
+          setShowMissingItems(true);
           setItems((prev) => prev.filter((item) => item.ingredient_id !== ingredientId));
           setSelectedIds((prev) => {
             const next = new Set(prev);
             next.delete(ingredientId);
             return next;
           });
-          setShowMissingItems(true);
-          showToast(`${displayItem.standard_name}을 미보유로 바꿨어요`, "success");
-          void loadIngredientCatalog();
+
+          await deletePantryItems([ingredientId]);
+          showToast(
+            `${formatIngredientObject(displayItem.standard_name)} 미보유로 바꿨어요`,
+            "success",
+          );
+          if (!showMissingItems) {
+            void loadIngredientCatalog();
+          }
           return;
         }
 
+        const optimisticItem = toPantryItem(displayItem);
+        setItems((prev) => mergePantryItems(prev, [optimisticItem]));
+
         const result = await addPantryItems([ingredientId]);
         if (result.items.length > 0) {
-          setItems((prev) => mergePantryItems(prev, result.items));
+          setItems((prev) =>
+            mergePantryItems(
+              prev.filter((item) => item.ingredient_id !== ingredientId),
+              result.items,
+            ),
+          );
         } else {
           void loadItems();
         }
-        showToast(`${displayItem.standard_name}을 보유로 바꿨어요`, "success");
+        showToast(
+          `${formatIngredientObject(displayItem.standard_name)} 보유로 바꿨어요`,
+          "success",
+        );
       } catch {
+        if (displayItem.isOwned) {
+          if (!showMissingItems) {
+            setShowMissingItems(false);
+          }
+          setItems((prev) => mergePantryItems(prev, [toPantryItem(displayItem)]));
+        } else {
+          setItems((prev) => prev.filter((item) => item.ingredient_id !== ingredientId));
+        }
         showToast("보유 상태를 바꾸지 못했어요. 다시 시도해 주세요", "error");
       } finally {
         setTogglingIngredientIds((prev) => {
@@ -311,7 +336,7 @@ export function PantryScreen({
         });
       }
     },
-    [loadIngredientCatalog, loadItems, showToast, togglingIngredientIds],
+    [loadIngredientCatalog, loadItems, showMissingItems, showToast, togglingIngredientIds],
   );
 
   // Auth check effect
@@ -756,7 +781,7 @@ export function PantryScreen({
                         isToggling ? "web-pantry-card-pending" : "",
                       ].join(" ")}
                       disabled={isToggling}
-                      key={item.id}
+                      key={item.ingredient_id}
                       onClick={() => {
                         if (isSelectMode) {
                           handleSelectToggle(item.ingredient_id);
@@ -818,6 +843,24 @@ function toIngredientItem(item: PantryDisplayItem): IngredientItem {
   };
 }
 
+function toPantryItem(item: PantryDisplayItem): PantryItem {
+  return {
+    category: item.category,
+    created_at: item.created_at ?? new Date().toISOString(),
+    id: item.isOwned ? item.id : `optimistic-${item.ingredient_id}`,
+    ingredient_id: item.ingredient_id,
+    standard_name: item.standard_name,
+  };
+}
+
+function formatIngredientObject(name: string) {
+  const trimmedName = name.trim();
+  const lastCharCode = trimmedName.charCodeAt(trimmedName.length - 1);
+  const isHangulSyllable = lastCharCode >= 0xac00 && lastCharCode <= 0xd7a3;
+  const hasFinalConsonant = isHangulSyllable && (lastCharCode - 0xac00) % 28 !== 0;
+  return `${name}${hasFinalConsonant ? "을" : "를"}`;
+}
+
 function buildPantryDisplayItems({
   catalogItems,
   ownedItems,
@@ -856,10 +899,6 @@ function comparePantryDisplayItems(
   left: PantryDisplayItem,
   right: PantryDisplayItem,
 ) {
-  if (left.isOwned !== right.isOwned) {
-    return left.isOwned ? -1 : 1;
-  }
-
   const categoryCompare = left.category.localeCompare(right.category, "ko");
   if (categoryCompare !== 0) {
     return categoryCompare;
