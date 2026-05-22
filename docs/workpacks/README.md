@@ -87,7 +87,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `18-manual-recipe-create`      | merged      | 직접 레시피 등록, 조리방법 선택, 상세/플래너 연계, `my_added` 반영                                               |
 | `19-youtube-import`            | merged | 유튜브 검증/추출/등록, 신규 조리방법 반영, 플래너 연계, `my_added` 반영                                          |
 | `20-youtube-real-import`       | merged        | 유튜브 실제 YouTube API description-first 추출, 3-way classification, 서버 세션, RPC 원자적 등록, 슬라이스 19 stub 교체 |
-| `21-ingredient-dictionary`     | in-progress   | ingredient synonym 매칭 연결 + 소량 synonym 시딩으로 YouTube 추출 재료 매칭률 개선 (BE-only, Phase 1+2)           |
+| `21-ingredient-dictionary`     | merged        | ingredient synonym 매칭 연결 + 소량 synonym 시딩으로 YouTube 추출 재료 매칭률 개선 (BE-only, Phase 1+2)           |
 | `planner-column-customization` | merged        | 끼니 컬럼 기본 3개 + 설정 커스터마이징(이름 변경/추가/삭제), 최소 1~최대 5, PLANNER_WEEK 동적 컬럼               |
 | `wave1-port-foundation` | merged | 공통 shell, 공용 UI 프리미티브(Button/Chip/Card/Modal/Sort Dropdown), CTA 위계, spacing/safe-area 정비 — Phase4 foundation re-audit PR #432 merged |
 | `wave1-port-discovery-detail` | merged | Historical closeout은 merged 상태로 보존. 다음 작업은 fixed prototype 기준 Slice B Phase4 prep 후 HOME/RECIPE_DETAIL/save modal/login 재포팅 |
