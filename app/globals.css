@@ -1838,17 +1838,28 @@ button {
     align-self: center;
   }
 
-  .web-meal-list-copy h2 {
+  .web-meal-list-copy h2,
+  .web-meal-title-button {
+    appearance: none;
     display: -webkit-box;
     overflow: hidden;
+    width: 100%;
     margin: 6px 0 0;
+    border: 0;
+    background: transparent;
     color: var(--web-text-1);
+    padding: 0;
+    text-align: left;
     font-size: 17px;
     font-weight: 800;
     letter-spacing: 0;
     line-height: 1.3;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+  }
+
+  .web-meal-title-button:hover {
+    color: var(--web-brand);
   }
 
   .web-meal-list-delete {

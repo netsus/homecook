@@ -326,6 +326,19 @@ export function ShoppingFlowScreen({
     );
   }, []);
 
+  const handleShoppingServingsChange = useCallback(
+    (recipeId: string, nextServings: number) => {
+      setMealConfigs((prev) =>
+        prev.map((config) =>
+          config.recipe_id === recipeId
+            ? { ...config, shopping_servings: Math.max(1, nextServings) }
+            : config,
+        ),
+      );
+    },
+    [],
+  );
+
   const handleCreateList = useCallback(async () => {
     const selectedConfigs = mealConfigs.filter((config) => config.isSelected);
 
@@ -778,6 +791,7 @@ export function ShoppingFlowScreen({
                 <RecipeCard
                   config={config}
                   key={config.recipe_id}
+                  onServingsChange={handleShoppingServingsChange}
                   onToggle={handleToggleSelection}
                 />
               ))}
@@ -1210,10 +1224,11 @@ function MobileReviewItem({
 
 interface RecipeCardProps {
   config: MealConfig;
+  onServingsChange: (recipeId: string, nextServings: number) => void;
   onToggle: (recipeId: string) => void;
 }
 
-function RecipeCard({ config, onToggle }: RecipeCardProps) {
+function RecipeCard({ config, onServingsChange, onToggle }: RecipeCardProps) {
   const selectedMealIds = selectMealIdsForShoppingServings(
     config.meals,
     config.meal_ids,
@@ -1269,6 +1284,34 @@ function RecipeCard({ config, onToggle }: RecipeCardProps) {
         <p className="web-shopping-recipe-servings">
           계획 {config.planned_servings_total}인분
         </p>
+        <div className="web-shopping-servings">
+          <p>장보기 기준 인분</p>
+          <div className="web-stepper" role="group" aria-label="장보기 기준 인분">
+            <button
+              aria-label="인분 줄이기"
+              disabled={!config.isSelected || config.shopping_servings <= 1}
+              onClick={() =>
+                onServingsChange(config.recipe_id, config.shopping_servings - 1)
+              }
+              type="button"
+            >
+              -
+            </button>
+            <span aria-label={`${config.shopping_servings}인분`} aria-live="polite">
+              {config.shopping_servings}인분
+            </span>
+            <button
+              aria-label="인분 늘리기"
+              disabled={!config.isSelected}
+              onClick={() =>
+                onServingsChange(config.recipe_id, config.shopping_servings + 1)
+              }
+              type="button"
+            >
+              +
+            </button>
+          </div>
+        </div>
       </div>
     </article>
   );

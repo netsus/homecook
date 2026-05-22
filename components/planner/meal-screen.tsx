@@ -431,6 +431,7 @@ function MealWebListCard({
   meal,
   onCreateShopping,
   onDelete,
+  onRecipeClick,
   onStartCook,
   onStepDown,
   onStepUp,
@@ -440,6 +441,7 @@ function MealWebListCard({
   meal: MealListItemData;
   onCreateShopping: () => void;
   onDelete: () => void;
+  onRecipeClick: () => void;
   onStartCook: () => void;
   onStepDown: () => void;
   onStepUp: () => void;
@@ -473,7 +475,14 @@ function MealWebListCard({
             <span className="web-meal-leftover">남은요리</span>
           ) : null}
         </div>
-        <h2>{meal.recipe_title}</h2>
+        <button
+          className="web-meal-title-button"
+          data-testid={`meal-recipe-link-${meal.id}`}
+          onClick={onRecipeClick}
+          type="button"
+        >
+          {meal.recipe_title}
+        </button>
         <div className="web-meal-meta-row">
           <span>{meal.planned_servings}인분</span>
           <span>{visual.minutes}분</span>
@@ -559,6 +568,7 @@ function MealWebView({
   onBack,
   onCreateShopping,
   onDelete,
+  onRecipeClick,
   onRetry,
   onStartCook,
   onStepDown,
@@ -578,6 +588,7 @@ function MealWebView({
   onBack: () => void;
   onCreateShopping: () => void;
   onDelete: (meal: MealListItemData) => void;
+  onRecipeClick: (meal: MealListItemData) => void;
   onRetry: () => void;
   onStartCook: (meal: MealListItemData) => void;
   onStepDown: (meal: MealListItemData) => void;
@@ -672,6 +683,7 @@ function MealWebView({
                     meal={meal}
                     onCreateShopping={onCreateShopping}
                     onDelete={() => onDelete(meal)}
+                    onRecipeClick={() => onRecipeClick(meal)}
                     onStartCook={() => onStartCook(meal)}
                     onStepDown={() => onStepDown(meal)}
                     onStepUp={() => onStepUp(meal)}
@@ -1254,6 +1266,7 @@ export function MealScreen({
             onBack={navigateToPlanner}
             onCreateShopping={() => router.push("/shopping/flow")}
             onDelete={(meal) => handleDeleteTap(meal.id)}
+            onRecipeClick={(meal) => router.push(`/recipe/${meal.recipe_id}`)}
             onRetry={() => void loadMeals()}
             onStartCook={(meal) => void startMealCooking(meal)}
             onStepDown={(meal) => handleStepperTap(meal, -1)}

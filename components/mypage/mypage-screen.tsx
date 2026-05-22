@@ -2428,7 +2428,7 @@ function ShoppingHistoryCard({
       </p>
       {item.completed_at ? (
         <p className="mt-1 text-sm text-[var(--text-3)]">
-          {formatShortDate(item.completed_at)} 완료
+          {formatShortDate(item.completed_at)} 완료 · 다시열기
         </p>
       ) : null}
       <span
