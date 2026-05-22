@@ -400,7 +400,7 @@ function cleanupComponentLabel(value: string) {
   const label = stripOuterBrackets(value)
     .replace(/(?:기본\s*)?재료$/u, "")
     .replace(/ingredients?$/iu, "")
-    .replace(/(?:만드는\s*법|만드는\s*방법|만들기|조리\s*법|조리법|method|directions?)$/iu, "")
+    .replace(/(?:만드는\s*법|만드는\s*방법|만들기|조리\s*법|조리법|요리\s*순서|method|directions?)$/iu, "")
     .replace(/^for\s+(?:the\s+)?/iu, "")
     .replace(/[：:]+$/u, "")
     .trim();
@@ -429,11 +429,11 @@ function getIngredientHeadingComponent(text: string) {
 function getStepHeadingComponent(text: string) {
   const normalized = text.toLowerCase();
 
-  if (/^(?:순서|조리\s*(?:과정|순서|방법|법)|조리법|만드는\s*(?:법|방법|순서)|만들기|요리\s*(?:법|과정)|레시피\s*순서|steps?|directions?|method)\s*(?:\([^)]*\))?\s*$/u.test(normalized)) {
+  if (/^(?:순서|조리\s*(?:과정|순서|방법|법)|조리법|만드는\s*(?:법|방법|순서)|만들기|요리\s*(?:법|과정|순서)|레시피\s*순서|steps?|directions?|method)\s*(?:\([^)]*\))?\s*$/u.test(normalized)) {
     return null;
   }
 
-  if (/^.+\s*(?:만드는\s*법|만드는\s*방법|만들기|조리\s*법|조리법|method|directions?)$/iu.test(text)) {
+  if (/^.+\s*(?:만드는\s*법|만드는\s*방법|만들기|조리\s*법|조리법|요리\s*순서|method|directions?)$/iu.test(text)) {
     return cleanupComponentLabel(text);
   }
 

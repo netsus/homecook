@@ -875,7 +875,7 @@ function getRecipeDescriptionSection(line: string): DescriptionSection | null {
     return "ingredients";
   }
 
-  if (/^(순서|조리\s*(과정|순서|방법|법)|만드는\s*(법|방법|순서)|만들기|요리\s*(법|과정)|레시피\s*순서|steps?|directions?|method)(\s|$)/u.test(normalized)) {
+  if (/^(순서|조리\s*(과정|순서|방법|법)|만드는\s*(법|방법|순서)|만들기|요리\s*(법|과정|순서)|레시피\s*순서|steps?|directions?|method)(\s|$)/u.test(normalized)) {
     return "steps";
   }
 

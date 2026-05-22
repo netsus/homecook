@@ -37,6 +37,36 @@ const bakingComponentDescription = [
 ].join("\n");
 
 describe("youtube description parser v2", () => {
+  it("switches from 준비재료 to 요리순서 and extracts numbered cooking steps", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "삼겹살 양배추 볶음",
+      description: [
+        "*준비재료",
+        "삼겹살 500g, 소금 1/2스푼, 미림 2스푼, 후추, 튀김가루, 양배추 1/4개,   간장 2스푼, 식초 1스푼, 굴소스 1스푼, 설탕 2스푼, 다진마늘 1스푼, 통깨",
+        "",
+        "*요리순서",
+        "1. 고기를 잘라 볼에 담아주세요",
+        "2. 소금 1/2스푼, 미림 2스푼, 후추, 튀김가루를 넣고 섞어주세요",
+        "3. 양배추 1/4을 썰고, 마늘을 다져주세요",
+        "4. 양념장(간장 2스푼, 식초 1스푼, 굴소스 1스푼, 설탕 2스푼, 다진마늘 1스푼)을 만들어주세요",
+        "5. 달군 팬에 고기를 넣고 익혀주세요",
+        "6. 고기가 익으면 양배추와 양념장을 넣고 섞어주세요",
+        "7. 불을 끄고 통깨를 넣어 섞어주면 완성",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.steps).toEqual([
+      "고기를 잘라 볼에 담아주세요",
+      "소금 1/2스푼, 미림 2스푼, 후추, 튀김가루를 넣고 섞어주세요",
+      "양배추 1/4을 썰고, 마늘을 다져주세요",
+      "양념장(간장 2스푼, 식초 1스푼, 굴소스 1스푼, 설탕 2스푼, 다진마늘 1스푼)을 만들어주세요",
+      "달군 팬에 고기를 넣고 익혀주세요",
+      "고기가 익으면 양배추와 양념장을 넣고 섞어주세요",
+      "불을 끄고 통깨를 넣어 섞어주면 완성",
+    ]);
+  });
+
   it("extracts multi-component baking ingredients and steps without skipping compact amount lines", () => {
     const document = parseYoutubeRecipeDescription({
       title: "딸기 치즈 타르트",
