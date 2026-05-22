@@ -137,11 +137,11 @@
     },
     "projection_state": {
       "docs_synced_at": "2026-05-22T20:25:00+09:00",
-      "status_synced_at": "2026-05-22T20:25:00+09:00",
-      "pr_body_synced_at": null
+      "status_synced_at": "2026-05-22T20:29:00+09:00",
+      "pr_body_synced_at": "2026-05-22T20:29:00+09:00"
     }
   },
-  "notes": "Stage 2 backend PR #558 merged. Stage 4 frontend implementation completed on feature/fe-22-youtube-ingredient-registration: YT_IMPORT unresolved/needs_review rows can open user-confirmed ingredient registration, successful registration resolves the local row while preserving amount/unit/display_text/raw_text, search-empty state can branch to registration, Playwright smoke and mobile screenshot evidence were added. Verification passed: targeted Vitest, targeted Playwright, screenshot evidence capture, pnpm verify:frontend:pr, workflow/workpack validators, git diff --check. Live external YouTube API smoke remains Manual Only per acceptance. Stage 5 design review passed with Design Status confirmed.",
+  "notes": "Stage 2 backend PR #558 merged. Stage 4 frontend implementation completed on feature/fe-22-youtube-ingredient-registration: YT_IMPORT unresolved/needs_review rows can open user-confirmed ingredient registration, successful registration resolves the local row while preserving amount/unit/display_text/raw_text, search-empty state can branch to registration, Playwright smoke and mobile screenshot evidence were added. Verification passed: targeted Vitest, targeted Playwright, screenshot evidence capture, pnpm verify:frontend:pr, workflow/workpack validators, git diff --check. Live external YouTube API smoke remains Manual Only per acceptance. Stage 5 design review passed with Design Status confirmed. Frontend PR #559 opened for Stage 6 review and merge gate.",
   "out_of_scope": [
     "Automatic ingredient registration without user confirmation",
     "Admin ingredient management UI",
