@@ -309,13 +309,13 @@ const MOCK_EATEN_LEFTOVERS = {
 
 async function openRecipebookSurface(user = userEvent.setup()) {
   await screen.findByText("집밥러");
-  await user.click(screen.getByRole("tab", { name: "레시피북 관리" }));
+  await user.click(screen.getByRole("tab", { name: "레시피북" }));
   return user;
 }
 
 async function openShoppingSurface(user = userEvent.setup()) {
   await screen.findByText("집밥러");
-  await user.click(screen.getByRole("tab", { name: "장보기 내역" }));
+  await user.click(screen.getByRole("tab", { name: "장보기 기록" }));
   return user;
 }
 
@@ -410,11 +410,11 @@ describe("MypageScreen", () => {
     expect(screen.getByTestId("mypage-profile")).toBeTruthy();
 
     expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "레시피북 관리" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "장보기 내역" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "레시피북" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "장보기 기록" })).toBeTruthy();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: "레시피북 관리" }));
+    await user.click(screen.getByRole("tab", { name: "레시피북" }));
 
     expect(screen.getByTestId("system-book-my_added").textContent).toContain("내가 추가한 레시피");
     expect(screen.getByTestId("system-book-saved").textContent).toContain("저장한 레시피");
@@ -427,7 +427,7 @@ describe("MypageScreen", () => {
 
     const user = userEvent.setup();
     await screen.findByText("집밥러");
-    await user.click(screen.getByRole("tab", { name: "레시피북 관리" }));
+    await user.click(screen.getByRole("tab", { name: "레시피북" }));
 
     expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
   });
@@ -775,8 +775,8 @@ describe("MypageScreen", () => {
 
     expect(screen.getByRole("tablist")).toBeTruthy();
     const savedTab = screen.getByRole("tab", { name: "저장한 레시피" });
-    const recipebooksTab = screen.getByRole("tab", { name: "레시피북 관리" });
-    const shoppingTab = screen.getByRole("tab", { name: "장보기 내역" });
+    const recipebooksTab = screen.getByRole("tab", { name: "레시피북" });
+    const shoppingTab = screen.getByRole("tab", { name: "장보기 기록" });
     const leftoversTab = screen.getByRole("tab", { name: "남은 요리" });
     const eatenTab = screen.getByRole("tab", { name: "다먹은 목록" });
     const accountTab = screen.getByRole("tab", { name: "계정 관리" });
@@ -797,8 +797,8 @@ describe("MypageScreen", () => {
     const savedPanel = screen.getByRole("tabpanel");
 
     expect(within(savedPanel).getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
-    expect(within(savedPanel).queryByRole("button", { name: /레시피북 관리/ })).toBeNull();
-    expect(within(savedPanel).queryByRole("button", { name: /장보기 내역/ })).toBeNull();
+    expect(within(savedPanel).queryByRole("button", { name: /^레시피북$/ })).toBeNull();
+    expect(within(savedPanel).queryByRole("button", { name: /^장보기 기록$/ })).toBeNull();
     expect(within(savedPanel).queryByRole("button", { name: /남은 요리/ })).toBeNull();
     expect(within(savedPanel).queryByRole("button", { name: /다먹은 목록/ })).toBeNull();
   });
@@ -905,7 +905,7 @@ describe("MypageScreen", () => {
     expect(screen.getByRole("button", { name: "양파 1개 되살리기" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "장보기 완료" })).toBeTruthy();
 
-    await user.click(screen.getByRole("tab", { name: "장보기 내역" }));
+    await user.click(screen.getByRole("tab", { name: "장보기 기록" }));
 
     expect(screen.queryByTestId("shopping-detail-embedded")).toBeNull();
     expect(await screen.findByTestId("shopping-tab")).toBeTruthy();
@@ -975,7 +975,7 @@ describe("MypageScreen", () => {
     expect(await screen.findByText("4/30 장보기")).toBeTruthy();
     expect(
       screen
-        .getByRole("tab", { name: "장보기 내역" })
+        .getByRole("tab", { name: "장보기 기록" })
         .getAttribute("aria-selected"),
     ).toBe("true");
   });

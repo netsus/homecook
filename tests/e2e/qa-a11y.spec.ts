@@ -489,7 +489,7 @@ test.describe("QA accessibility smoke", () => {
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });
-    const recipebookTab = page.getByRole("tab", { name: /레시피북 관리/ });
+    const recipebookTab = page.getByRole("tab", { name: /레시피북/ });
     await expectReadableTouchTarget(recipebookTab);
 
     await recipebookTab.click();
@@ -505,8 +505,8 @@ test.describe("QA accessibility smoke", () => {
     });
 
     await page.goto(MYPAGE_VISUAL_PATH);
-    await page.getByRole("tab", { name: /장보기 내역/ }).click();
-    await expect(page.getByRole("heading", { name: "장보기 내역" })).toBeVisible();
+    await page.getByRole("tab", { name: /장보기 기록/ }).click();
+    await expect(page.getByRole("heading", { name: "장보기 기록" })).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });

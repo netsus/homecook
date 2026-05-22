@@ -549,7 +549,7 @@ test.describe("QA visual regression", () => {
       maxDiffPixels: ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
     });
 
-    await page.getByRole("tab", { name: /레시피북 관리/ }).click();
+    await page.getByRole("tab", { name: /레시피북/ }).click();
     await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
     await stabilizeVisualSnapshot(page);
     await expect(page).toHaveScreenshot("qa-recipebooks.png", {
@@ -578,8 +578,8 @@ test.describe("QA visual regression", () => {
     });
 
     await page.goto(MYPAGE_VISUAL_PATH);
-    await page.getByRole("tab", { name: /장보기 내역/ }).click();
-    await expect(page.getByRole("heading", { name: "장보기 내역" })).toBeVisible();
+    await page.getByRole("tab", { name: /장보기 기록/ }).click();
+    await expect(page.getByRole("heading", { name: "장보기 기록" })).toBeVisible();
     await stabilizeVisualSnapshot(page);
     await expect(page).toHaveScreenshot("qa-mypage-shopping-history.png", {
       animations: "disabled",
