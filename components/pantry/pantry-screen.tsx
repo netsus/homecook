@@ -281,7 +281,6 @@ export function PantryScreen({
 
       try {
         if (displayItem.isOwned) {
-          setShowMissingItems(true);
           setItems((prev) => prev.filter((item) => item.ingredient_id !== ingredientId));
           setSelectedIds((prev) => {
             const next = new Set(prev);
@@ -294,9 +293,6 @@ export function PantryScreen({
             `${formatIngredientObject(displayItem.standard_name)} 미보유로 바꿨어요`,
             "success",
           );
-          if (!showMissingItems) {
-            void loadIngredientCatalog();
-          }
           return;
         }
 
@@ -320,9 +316,6 @@ export function PantryScreen({
         );
       } catch {
         if (displayItem.isOwned) {
-          if (!showMissingItems) {
-            setShowMissingItems(false);
-          }
           setItems((prev) => mergePantryItems(prev, [toPantryItem(displayItem)]));
         } else {
           setItems((prev) => prev.filter((item) => item.ingredient_id !== ingredientId));
@@ -336,7 +329,7 @@ export function PantryScreen({
         });
       }
     },
-    [loadIngredientCatalog, loadItems, showMissingItems, showToast, togglingIngredientIds],
+    [loadItems, showToast, togglingIngredientIds],
   );
 
   // Auth check effect
