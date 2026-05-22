@@ -1024,17 +1024,17 @@ export function MypageScreen({
           </WebTabButton>
           <WebTabButton
             active={activeTab === "recipebooks"}
-            aria-label="레시피북 관리"
+            aria-label="레시피북"
             onClick={() => switchDesktopTab("recipebooks")}
           >
-            <BookIcon /> 레시피북 관리
+            <BookIcon /> 레시피북
           </WebTabButton>
           <WebTabButton
             active={activeTab === "shopping"}
-            aria-label="장보기 내역"
+            aria-label="장보기 기록"
             onClick={() => switchDesktopTab("shopping")}
           >
-            <CartIcon /> 장보기 내역
+            <CartIcon /> 장보기 기록
           </WebTabButton>
           <WebTabButton
             active={activeTab === "leftovers"}
@@ -1454,7 +1454,7 @@ function MyPageNotificationSurface() {
 function MyPageHelpSurface() {
   const faqs = [
     ["레시피북은 어떻게 정리되나요?", "내가 추가한 레시피, 저장한 레시피, 좋아요한 레시피는 자동으로 정리되고 커스텀 북은 직접 만들 수 있어요."],
-    ["장보기 내역은 어디서 보나요?", "저장한 레시피 탭 하단의 장보기 내역에서 진행 중인 리스트와 완료된 리스트를 확인할 수 있어요."],
+    ["장보기 기록은 어디서 보나요?", "저장한 레시피 탭 하단의 장보기 기록에서 진행 중인 리스트와 완료된 리스트를 확인할 수 있어요."],
     ["팬트리와 플래너는 연결되나요?", "팬트리에 있는 재료는 장보기에서 제외할 수 있고, 플래너의 끼니와 함께 이어집니다."],
     ["계정을 바꾸면 데이터가 유지되나요?", "저장 데이터는 로그인 계정 기준으로 관리됩니다."],
     ["문제가 생기면 어디에 문의하나요?", "앱 내 문의 채널 또는 이메일로 상황을 남겨주세요."],
@@ -2322,7 +2322,7 @@ function ShoppingHistoryTabContent({
     return (
       <div className="web-mypage-subsurface">
         <div className="web-mypage-section-head">
-          <h2>장보기 내역</h2>
+          <h2>장보기 기록</h2>
           <p>진행 중이거나 완료한 장보기 목록을 확인합니다.</p>
         </div>
         {[1, 2, 3].map((i) => (
@@ -2378,7 +2378,7 @@ function ShoppingHistoryTabContent({
   return (
     <div className="web-mypage-subsurface" data-testid="shopping-tab">
       <div className="web-mypage-section-head">
-        <h2>장보기 내역</h2>
+        <h2>장보기 기록</h2>
         <p>진행 중이거나 완료한 장보기 목록을 확인합니다.</p>
       </div>
       <div aria-live="polite" className="web-mypage-shopping-list">

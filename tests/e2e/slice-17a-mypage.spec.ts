@@ -268,7 +268,7 @@ async function openRecipebookSurface(page: Page) {
     return;
   }
 
-  await page.getByRole("tab", { name: "레시피북 관리" }).click();
+  await page.getByRole("tab", { name: "레시피북" }).click();
   await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
 }
 
@@ -279,7 +279,7 @@ async function openShoppingSurface(page: Page) {
     return;
   }
 
-  await page.getByRole("tab", { name: "장보기 내역" }).click();
+  await page.getByRole("tab", { name: "장보기 기록" }).click();
   await expect(
     page.locator('[data-testid="shopping-tab"], [data-testid="shopping-empty"]'),
   ).toBeVisible();
@@ -416,7 +416,7 @@ test.describe("MYPAGE screen", () => {
     }
 
     await expect(
-      page.getByRole("heading", { name: isMobileViewport(page) ? "장보기 기록" : "장보기 내역" }),
+      page.getByRole("heading", { name: "장보기 기록" }),
     ).toBeVisible();
     await expect(page.getByText("4/30 장보기")).toBeVisible();
     await expect(page.getByRole("heading", { name: "저장한 레시피" })).toHaveCount(0);
