@@ -9,32 +9,32 @@
 
 ## Contract Gate
 
-- [ ] 공식 API 문서에 새 재료 등록 endpoint 계약이 반영되어 있다 <!-- omo:id=accept-contract-api-doc;stage=1;scope=shared;review=3,5,6 -->
-- [ ] 공식 API 문서에 extract 응답의 `draft_ingredient_id` 필드가 반영되어 있다 <!-- omo:id=accept-contract-draft-id-doc;stage=1;scope=shared;review=3,5,6 -->
-- [ ] 공식 화면정의서에 YT_IMPORT 새 재료 등록 액션과 상태가 반영되어 있다 <!-- omo:id=accept-contract-screen-doc;stage=1;scope=shared;review=3,5,6 -->
-- [ ] 공식 유저 flow 문서에 unresolved / needs_review → search 또는 create 분기가 반영되어 있다 <!-- omo:id=accept-contract-flow-doc;stage=1;scope=shared;review=3,5,6 -->
-- [ ] 공식 DB 문서에 `register_youtube_ingredient(...)` RPC 경계가 반영되어 있다 <!-- omo:id=accept-contract-db-doc;stage=1;scope=shared;review=3,5,6 -->
+- [x] 공식 API 문서에 새 재료 등록 endpoint 계약이 반영되어 있다 <!-- omo:id=accept-contract-api-doc;stage=2;scope=shared;review=3,6 -->
+- [x] 공식 API 문서에 extract 응답의 `draft_ingredient_id` 필드가 반영되어 있다 <!-- omo:id=accept-contract-draft-id-doc;stage=2;scope=shared;review=3,6 -->
+- [x] 공식 화면정의서에 YT_IMPORT 새 재료 등록 액션과 상태가 반영되어 있다 <!-- omo:id=accept-contract-screen-doc;stage=2;scope=shared;review=3,6 -->
+- [x] 공식 유저 flow 문서에 unresolved / needs_review → search 또는 create 분기가 반영되어 있다 <!-- omo:id=accept-contract-flow-doc;stage=2;scope=shared;review=3,6 -->
+- [x] 공식 DB 문서에 `register_youtube_ingredient(...)` RPC 경계가 반영되어 있다 <!-- omo:id=accept-contract-db-doc;stage=2;scope=shared;review=3,6 -->
 
 ## Happy Path
 
 - [ ] unresolved 재료에서 "새 재료로 등록"을 열 수 있다 <!-- omo:id=accept-open-register-from-unresolved;stage=4;scope=frontend;review=5,6 -->
-- [ ] 표준명/카테고리 확인 후 등록하면 `ingredients` row가 생성되고 현재 재료가 `resolved`가 된다 <!-- omo:id=accept-create-and-resolve;stage=2;scope=shared;review=3,5,6 -->
-- [ ] registration response `data.ingredient`가 클라이언트 row 업데이트에 필요한 `ingredient_id`와 canonical `standard_name`을 포함한다 <!-- omo:id=accept-response-row-update-fields;stage=2;scope=backend;review=3,6 -->
+- [x] 표준명/카테고리 확인 후 등록하면 `ingredients` row가 생성되고 현재 재료가 `resolved`가 된다 <!-- omo:id=accept-create-and-resolve;stage=2;scope=shared;review=3,6 -->
+- [x] registration response `data.ingredient`가 클라이언트 row 업데이트에 필요한 `ingredient_id`와 canonical `standard_name`을 포함한다 <!-- omo:id=accept-response-row-update-fields;stage=2;scope=backend;review=3,6 -->
 - [ ] 등록 성공 후 수량, 단위, `display_text`, `raw_text`가 유지된다 <!-- omo:id=accept-preserve-quantity-unit-raw;stage=4;scope=frontend;review=5,6 -->
-- [ ] 다른 차단 재료가 없으면 기존 YouTube register 흐름으로 레시피 저장이 가능하다 <!-- omo:id=accept-register-after-resolve;stage=4;scope=shared;review=5,6 -->
+- [ ] 다른 차단 재료가 없으면 기존 YouTube register 흐름으로 레시피 저장이 가능하다 <!-- omo:id=accept-register-after-resolve;stage=4;scope=frontend;review=5,6 -->
 - [ ] needs_review 재료도 후보 선택 외에 새 재료 등록 fallback을 사용할 수 있다 <!-- omo:id=accept-needs-review-create-fallback;stage=4;scope=frontend;review=5,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 
-- [ ] 사용자 확인 없는 자동 등록 경로가 없다 <!-- omo:id=accept-no-auto-create;stage=4;scope=shared;review=5,6 -->
-- [ ] `resolved` row만 최종 recipe register에 통과한다 <!-- omo:id=accept-register-resolved-only;stage=2;scope=shared;review=3,6 -->
-- [ ] 이미 같은 `standard_name`이 있으면 기존 ingredient를 반환하고 중복 row를 만들지 않는다 <!-- omo:id=accept-standard-name-idempotent;stage=2;scope=backend;review=3,6 -->
-- [ ] 동일 요청을 두 번 보내도 ingredient / synonym 중복 row가 생기지 않는다 <!-- omo:id=accept-request-idempotency;stage=2;scope=backend;review=3,6 -->
-- [ ] session draft row가 이미 resolved이면 새 등록을 거부한다 <!-- omo:id=accept-reject-already-resolved;stage=2;scope=backend;review=3,6 -->
-- [ ] session draft에 없는 `draft_ingredient_id`이거나 unresolved / needs_review가 아니면 409로 거부한다 <!-- omo:id=accept-draft-id-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] registration API는 `youtube_extraction_sessions.draft_json`을 수정하지 않고, 클라이언트가 로컬 row를 resolved로 업데이트한다 <!-- omo:id=accept-client-side-row-update;stage=2;scope=shared;review=3,6 -->
+- [ ] 사용자 확인 없는 자동 등록 경로가 없다 <!-- omo:id=accept-no-auto-create;stage=4;scope=frontend;review=5,6 -->
+- [x] `resolved` row만 최종 recipe register에 통과한다 <!-- omo:id=accept-register-resolved-only;stage=2;scope=shared;review=3,6 -->
+- [x] 이미 같은 `standard_name`이 있으면 기존 ingredient를 반환하고 중복 row를 만들지 않는다 <!-- omo:id=accept-standard-name-idempotent;stage=2;scope=backend;review=3,6 -->
+- [x] 동일 요청을 두 번 보내도 ingredient / synonym 중복 row가 생기지 않는다 <!-- omo:id=accept-request-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] session draft row가 이미 resolved이면 새 등록을 거부한다 <!-- omo:id=accept-reject-already-resolved;stage=2;scope=backend;review=3,6 -->
+- [x] session draft에 없는 `draft_ingredient_id`이거나 unresolved / needs_review가 아니면 409로 거부한다 <!-- omo:id=accept-draft-id-guard;stage=2;scope=backend;review=3,6 -->
+- [x] registration API는 `youtube_extraction_sessions.draft_json`을 수정하지 않고, 클라이언트가 로컬 row를 resolved로 업데이트한다 <!-- omo:id=accept-client-side-row-update;stage=2;scope=shared;review=3,6 -->
 
 ## Error / Permission
 
@@ -42,31 +42,31 @@
 - [ ] 기존 검색 결과 empty 상태에서 새 등록 CTA가 보인다 <!-- omo:id=accept-empty-create-cta;stage=4;scope=frontend;review=5,6 -->
 - [ ] validation / API error 상태가 있다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
 - [ ] unauthorized 처리 흐름과 return-to-action이 있다 <!-- omo:id=accept-unauthorized-return;stage=4;scope=frontend;review=5,6 -->
-- [ ] session 만료는 410으로 처리하고 재추출 안내를 보여준다 <!-- omo:id=accept-session-expired;stage=2;scope=shared;review=3,5,6 -->
-- [ ] 타인 extraction session은 404로 숨긴다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] consumed / stale session은 409로 처리한다 <!-- omo:id=accept-session-conflict;stage=2;scope=backend;review=3,6 -->
+- [x] session 만료는 410으로 처리하고 재추출 안내를 보여준다 <!-- omo:id=accept-session-expired;stage=2;scope=shared;review=3,6 -->
+- [x] 타인 extraction session은 404로 숨긴다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] consumed / stale session은 409로 처리한다 <!-- omo:id=accept-session-conflict;stage=2;scope=backend;review=3,6 -->
 
 ## Data Integrity
 
-- [ ] `standard_name`은 trim, 내부 공백 collapse, 길이 제한, 제어문자 금지를 적용한다 <!-- omo:id=accept-standard-name-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] category는 채소 / 육류 / 해산물 / 양념 / 유제품 / 곡류 / 기타 중 하나만 허용한다 <!-- omo:id=accept-category-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] `default_unit`은 null 또는 제한된 문자열만 허용한다 <!-- omo:id=accept-default-unit-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] synonym은 trim + 영어 lower-case로 저장한다 <!-- omo:id=accept-synonym-normalization;stage=2;scope=backend;review=3,6 -->
-- [ ] `lower(trim(synonym)) === lower(trim(standard_name))`이면 synonym 저장을 skip하고 현재 row는 resolved로 처리한다 <!-- omo:id=accept-synonym-same-as-standard;stage=2;scope=backend;review=3,6 -->
-- [ ] 같은 synonym이 다른 ingredient에 이미 있으면 best-effort advisory query로 새 synonym 연결을 skip하고 warning을 반환한다 <!-- omo:id=accept-synonym-ambiguous-skip;stage=2;scope=backend;review=3,6 -->
-- [ ] ingredient 생성과 synonym 연결은 `register_youtube_ingredient(...)` RPC로 묶여 partial success가 남지 않는다 <!-- omo:id=accept-rpc-boundary;stage=2;scope=backend;review=3,6 -->
+- [x] `standard_name`은 trim, 내부 공백 collapse, 길이 제한, 제어문자 금지를 적용한다 <!-- omo:id=accept-standard-name-validation;stage=2;scope=backend;review=3,6 -->
+- [x] category는 채소 / 육류 / 해산물 / 양념 / 유제품 / 곡류 / 기타 중 하나만 허용한다 <!-- omo:id=accept-category-validation;stage=2;scope=backend;review=3,6 -->
+- [x] `default_unit`은 null 또는 제한된 문자열만 허용한다 <!-- omo:id=accept-default-unit-validation;stage=2;scope=backend;review=3,6 -->
+- [x] synonym은 trim + 영어 lower-case로 저장한다 <!-- omo:id=accept-synonym-normalization;stage=2;scope=backend;review=3,6 -->
+- [x] `lower(trim(synonym)) === lower(trim(standard_name))`이면 synonym 저장을 skip하고 현재 row는 resolved로 처리한다 <!-- omo:id=accept-synonym-same-as-standard;stage=2;scope=backend;review=3,6 -->
+- [x] 같은 synonym이 다른 ingredient에 이미 있으면 best-effort advisory query로 새 synonym 연결을 skip하고 warning을 반환한다 <!-- omo:id=accept-synonym-ambiguous-skip;stage=2;scope=backend;review=3,6 -->
+- [x] ingredient 생성과 synonym 연결은 `register_youtube_ingredient(...)` RPC로 묶여 partial success가 남지 않는다 <!-- omo:id=accept-rpc-boundary;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
 
-- [ ] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] 21번 재료 사전 migration이 선행 적용되어 있다 <!-- omo:id=accept-dictionary-precondition;stage=2;scope=shared;review=3,6 -->
+- [x] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] 21번 재료 사전 migration이 선행 적용되어 있다 <!-- omo:id=accept-dictionary-precondition;stage=2;scope=shared;review=3,6 -->
 
 ## Integration / Regression
 
-- [ ] 기존 `GET /api/v1/ingredients` 검색/교체 흐름이 깨지지 않는다 <!-- omo:id=accept-ingredients-search-regression;stage=4;scope=shared;review=5,6 -->
+- [ ] 기존 `GET /api/v1/ingredients` 검색/교체 흐름이 깨지지 않는다 <!-- omo:id=accept-ingredients-search-regression;stage=4;scope=frontend;review=5,6 -->
 - [ ] 기존 YT_IMPORT candidate 선택 흐름이 깨지지 않는다 <!-- omo:id=accept-candidate-selection-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 YouTube register API가 unresolved / needs_review 차단을 유지한다 <!-- omo:id=accept-register-blocker-regression;stage=2;scope=backend;review=3,6 -->
+- [x] 기존 YouTube register API가 unresolved / needs_review 차단을 유지한다 <!-- omo:id=accept-register-blocker-regression;stage=2;scope=backend;review=3,6 -->
 - [ ] 모바일 좁은 폭에서 unresolved 문구, 검색 교체, 새 등록 CTA, 수량/단위 입력이 겹치지 않는다 <!-- omo:id=accept-mobile-layout;stage=4;scope=frontend;review=5,6 -->
 
 ## Manual QA
@@ -83,9 +83,9 @@
 
 ### Vitest
 
-- [ ] registration validation 유틸 테스트가 있다 <!-- omo:id=accept-vitest-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] API route/RPC 테스트가 owner guard, expired, conflict, idempotency, synonym conflict를 고정한다 <!-- omo:id=accept-vitest-api-policy;stage=2;scope=backend;review=3,6 -->
-- [ ] 기존 `youtube-import.backend.test.ts` 회귀가 통과한다 <!-- omo:id=accept-vitest-youtube-regression;stage=2;scope=backend;review=3,6 -->
+- [x] registration validation 유틸 테스트가 있다 <!-- omo:id=accept-vitest-validation;stage=2;scope=backend;review=3,6 -->
+- [x] API route/RPC 테스트가 owner guard, expired, conflict, idempotency, synonym conflict를 고정한다 <!-- omo:id=accept-vitest-api-policy;stage=2;scope=backend;review=3,6 -->
+- [x] 기존 `youtube-import.backend.test.ts` 회귀가 통과한다 <!-- omo:id=accept-vitest-youtube-regression;stage=2;scope=backend;review=3,6 -->
 - [ ] YT_IMPORT UI unit/component 테스트가 새 등록 성공/실패 상태를 고정한다 <!-- omo:id=accept-vitest-ui;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright

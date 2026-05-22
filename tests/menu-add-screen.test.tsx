@@ -126,6 +126,7 @@ describe("MenuAddScreen", () => {
         blocking_issues: [],
         ingredients: [
           {
+            draft_ingredient_id: "draft-ing-1",
             ingredient_id: "ing-1",
             standard_name: "김치",
             amount: 200,

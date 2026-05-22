@@ -149,6 +149,20 @@ interface YoutubeSessionRow {
   expires_at: string;
 }
 
+interface YoutubeIngredientRegistrationRpcData {
+  ingredient_id: string;
+  standard_name: string;
+  category: string;
+  default_unit: string | null;
+  synonym_status:
+    | "attached"
+    | "already_attached"
+    | "skipped_same_as_standard"
+    | "skipped_ambiguous"
+    | "not_requested";
+  warnings: string[];
+}
+
 const userId = "550e8400-e29b-41d4-a716-446655440030";
 const recipeId = "550e8400-e29b-41d4-a716-446655441001";
 const kimchiIngredientId = "550e8400-e29b-41d4-a716-446655440013";
@@ -156,6 +170,8 @@ const saltIngredientId = "550e8400-e29b-41d4-a716-446655440015";
 const prepMethodId = "550e8400-e29b-41d4-a716-446655440218";
 const newMethodId = "550e8400-e29b-41d4-a716-446655441101";
 const extractionId = "550e8400-e29b-41d4-a716-446655441201";
+const draftIngredientId = "550e8400-e29b-41d4-a716-446655441301";
+const mustardIngredientId = "550e8400-e29b-41d4-a716-446655441401";
 const recipeUrl = "https://www.youtube.com/watch?v=recipe12345";
 const nonRecipeUrl = "https://youtu.be/nonrecipe123";
 const uncertainUrl = "https://www.youtube.com/watch?v=uncertain123";
@@ -318,6 +334,46 @@ function createRegisterDbClient({
   };
 }
 
+function createIngredientRegistrationDbClient({
+  sessionResult = {
+    data: buildYoutubeSession({
+      draft_json: buildIngredientRegistrationDraftJson(),
+    }),
+    error: null,
+  },
+  rpcResult = {
+    data: {
+      ingredient_id: mustardIngredientId,
+      standard_name: "연겨자",
+      category: "양념",
+      default_unit: null,
+      synonym_status: "skipped_same_as_standard",
+      warnings: [],
+    } satisfies YoutubeIngredientRegistrationRpcData,
+    error: null,
+  },
+}: {
+  sessionResult?: QueryResult<YoutubeSessionRow | null>;
+  rpcResult?: QueryResult<YoutubeIngredientRegistrationRpcData | null>;
+} = {}) {
+  const sessionsTable = createYoutubeSessionsTable({
+    selectResult: sessionResult,
+  });
+  const rpc = vi.fn(async () => rpcResult);
+  const from = vi.fn((table: string) => {
+    if (table === "youtube_extraction_sessions") return sessionsTable;
+    throw new Error(`unexpected table: ${table}`);
+  });
+  const dbClient = { from, rpc };
+
+  return {
+    dbClient,
+    from,
+    rpc,
+    sessionsTable,
+  };
+}
+
 function buildRegisterBody() {
   return {
     extraction_id: extractionId,
@@ -380,6 +436,46 @@ function buildYoutubeSession(overrides: Partial<YoutubeSessionRow> = {}): Youtub
   };
 }
 
+function buildIngredientRegistrationDraftJson(
+  ingredientOverrides: Record<string, unknown> = {},
+) {
+  return {
+    extraction_id: extractionId,
+    ingredients: [
+      {
+        draft_ingredient_id: draftIngredientId,
+        ingredient_id: "",
+        standard_name: "연겨자",
+        amount: 0.2,
+        unit: "스푼",
+        ingredient_type: "QUANT",
+        display_text: "연겨자 0.2스푼",
+        sort_order: 1,
+        scalable: true,
+        confidence: null,
+        resolution_status: "unresolved",
+        candidates: [],
+        raw_text: "연겨자 0.2스푼",
+        ...ingredientOverrides,
+      },
+    ],
+  };
+}
+
+function buildIngredientRegistrationBody(
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    extraction_id: extractionId,
+    draft_ingredient_id: draftIngredientId,
+    standard_name: " 연겨자 ",
+    category: "양념",
+    default_unit: null,
+    synonym: "연겨자",
+    ...overrides,
+  };
+}
+
 function mockAuth(user: { id: string } | null = { id: userId }) {
   const routeClient = {
     auth: {
@@ -403,6 +499,10 @@ async function importExtractRoute() {
 
 async function importRegisterRoute() {
   return import("@/app/api/v1/recipes/youtube/register/route");
+}
+
+async function importIngredientRegistrationRoute() {
+  return import("@/app/api/v1/recipes/youtube/ingredient-registration/route");
 }
 
 describe("20 youtube real import backend", () => {
@@ -441,6 +541,11 @@ describe("20 youtube real import backend", () => {
         importRoute: importRegisterRoute,
         path: "register",
         body: buildRegisterBody(),
+      },
+      {
+        importRoute: importIngredientRegistrationRoute,
+        path: "ingredient-registration",
+        body: buildIngredientRegistrationBody(),
       },
     ];
 
@@ -493,6 +598,21 @@ describe("20 youtube real import backend", () => {
     expect(realImportSchema).toContain("youtube_extraction_session_id");
     expect(realImportSchema).toContain("register_youtube_recipe_from_session");
     expect(realImportSchema).toContain("v_session.youtube_url <> p_youtube_url");
+  });
+
+  it("schema includes the user-confirmed YouTube ingredient registration RPC", () => {
+    const registrationSchema = readFileSync(
+      "supabase/migrations/20260522102000_22_youtube_ingredient_registration_rpc.sql",
+      "utf8",
+    );
+
+    expect(registrationSchema).toContain("register_youtube_ingredient");
+    expect(registrationSchema).toContain("on conflict (standard_name) do nothing");
+    expect(registrationSchema).toContain("on conflict (ingredient_id, synonym) do nothing");
+    expect(registrationSchema).toContain("skipped_same_as_standard");
+    expect(registrationSchema).toContain("skipped_ambiguous");
+    expect(registrationSchema).toContain("already_attached");
+    expect(registrationSchema).toContain("grant execute on function public.register_youtube_ingredient");
   });
 
   it("POST /api/v1/recipes/youtube/validate returns 401 before validating an invalid body", async () => {
@@ -875,6 +995,12 @@ describe("20 youtube real import backend", () => {
       error: null,
     });
     expect(body.data.extraction_id).toEqual(expect.any(String));
+    expect(body.data.ingredients.map((ingredient: { draft_ingredient_id: string }) =>
+      ingredient.draft_ingredient_id,
+    )).toHaveLength(2);
+    expect(body.data.ingredients.every((ingredient: { draft_ingredient_id: string }) =>
+      /^[0-9a-f-]{36}$/i.test(ingredient.draft_ingredient_id),
+    )).toBe(true);
     expect(ingredientsTable.select).toHaveBeenCalledWith("id, standard_name");
     expect(ingredientsTable.__query.in).toHaveBeenCalledWith("standard_name", ["김치", "소금"]);
     expect(cookingMethodsTable.__selectQuery.eq).toHaveBeenCalledWith("code", "auto_salt");
@@ -896,6 +1022,14 @@ describe("20 youtube real import backend", () => {
         extraction_id: body.data.extraction_id,
       }),
     }));
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      draft_json: { ingredients: Array<{ draft_ingredient_id: string }> };
+    };
+    expect(insertedSession.draft_json.ingredients.map((ingredient) =>
+      ingredient.draft_ingredient_id,
+    )).toEqual(body.data.ingredients.map((ingredient: { draft_ingredient_id: string }) =>
+      ingredient.draft_ingredient_id,
+    ));
   });
 
   it("POST /api/v1/recipes/youtube/extract parses structured Korean description without fixed fallback ingredients", async () => {
@@ -1834,6 +1968,219 @@ describe("20 youtube real import backend", () => {
       success: false,
       data: null,
       error: { code: "UNAUTHORIZED", fields: [] },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/ingredient-registration returns 401 before validating the body", async () => {
+    mockAuth(null);
+
+    const { POST } = await importIngredientRegistrationRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/ingredient-registration", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{",
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "UNAUTHORIZED", fields: [] },
+    });
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/recipes/youtube/ingredient-registration validates user-confirmed ingredient input before database writes", async () => {
+    mockAuth();
+
+    const { POST } = await importIngredientRegistrationRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/ingredient-registration", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(buildIngredientRegistrationBody({
+        extraction_id: "not-a-uuid",
+        draft_ingredient_id: "",
+        standard_name: "  ",
+        category: "디저트",
+        default_unit: "123456789012345678901",
+        synonym: "bad\nname",
+      })),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "VALIDATION_ERROR",
+        fields: [
+          { field: "extraction_id", reason: "invalid_uuid" },
+          { field: "draft_ingredient_id", reason: "required" },
+          { field: "standard_name", reason: "required" },
+          { field: "category", reason: "invalid_enum" },
+          { field: "default_unit", reason: "max_length" },
+          { field: "synonym", reason: "control_chars" },
+        ],
+      },
+    });
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/recipes/youtube/ingredient-registration validates session ownership, expiry, status, and draft row", async () => {
+    const missingDraftId = "550e8400-e29b-41d4-a716-446655441302";
+    const cases = [
+      {
+        sessionResult: { data: null, error: null },
+        status: 404,
+        code: "NOT_FOUND",
+      },
+      {
+        sessionResult: {
+          data: buildYoutubeSession({
+            user_id: "550e8400-e29b-41d4-a716-446655449999",
+            draft_json: buildIngredientRegistrationDraftJson(),
+          }),
+          error: null,
+        },
+        status: 404,
+        code: "NOT_FOUND",
+      },
+      {
+        sessionResult: {
+          data: buildYoutubeSession({
+            expires_at: new Date(Date.now() - 60 * 1000).toISOString(),
+            draft_json: buildIngredientRegistrationDraftJson(),
+          }),
+          error: null,
+        },
+        status: 410,
+        code: "SESSION_EXPIRED",
+      },
+      {
+        sessionResult: {
+          data: buildYoutubeSession({
+            status: "consumed",
+            draft_json: buildIngredientRegistrationDraftJson(),
+          }),
+          error: null,
+        },
+        status: 409,
+        code: "CONFLICT",
+      },
+      {
+        sessionResult: {
+          data: buildYoutubeSession({
+            draft_json: buildIngredientRegistrationDraftJson({
+              draft_ingredient_id: missingDraftId,
+            }),
+          }),
+          error: null,
+        },
+        status: 409,
+        code: "CONFLICT",
+      },
+      {
+        sessionResult: {
+          data: buildYoutubeSession({
+            draft_json: buildIngredientRegistrationDraftJson({
+              ingredient_id: mustardIngredientId,
+              resolution_status: "resolved",
+            }),
+          }),
+          error: null,
+        },
+        status: 409,
+        code: "CONFLICT",
+      },
+    ] satisfies Array<{
+      sessionResult: QueryResult<YoutubeSessionRow | null>;
+      status: number;
+      code: string;
+    }>;
+
+    const { POST } = await importIngredientRegistrationRoute();
+
+    for (const currentCase of cases) {
+      mockAuth();
+      const { dbClient, rpc } = createIngredientRegistrationDbClient({
+        sessionResult: currentCase.sessionResult,
+      });
+      createServiceRoleClient.mockReturnValue(dbClient);
+
+      const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/ingredient-registration", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(buildIngredientRegistrationBody()),
+      }));
+      const body = await response.json();
+
+      expect(response.status).toBe(currentCase.status);
+      expect(body).toMatchObject({
+        success: false,
+        data: null,
+        error: { code: currentCase.code, fields: [] },
+      });
+      expect(rpc).not.toHaveBeenCalled();
+
+      createRouteHandlerClient.mockReset();
+      createServiceRoleClient.mockReset();
+    }
+  });
+
+  it("POST /api/v1/recipes/youtube/ingredient-registration delegates ingredient creation to the RPC", async () => {
+    mockAuth();
+
+    const { dbClient, rpc, sessionsTable } = createIngredientRegistrationDbClient({
+      rpcResult: {
+        data: {
+          ingredient_id: mustardIngredientId,
+          standard_name: "연겨자 소스",
+          category: "양념",
+          default_unit: "g",
+          synonym_status: "attached",
+          warnings: [],
+        },
+        error: null,
+      },
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importIngredientRegistrationRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/ingredient-registration", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(buildIngredientRegistrationBody({
+        standard_name: "  연겨자   소스  ",
+        default_unit: " g ",
+        synonym: "Soy Sauce",
+      })),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        ingredient: {
+          ingredient_id: mustardIngredientId,
+          standard_name: "연겨자 소스",
+          category: "양념",
+          default_unit: "g",
+          resolution_status: "resolved",
+        },
+        synonym_status: "attached",
+        warnings: [],
+      },
+      error: null,
+    });
+    expect(sessionsTable.__selectQuery.eq).toHaveBeenCalledWith("id", extractionId);
+    expect(rpc).toHaveBeenCalledWith("register_youtube_ingredient", {
+      p_standard_name: "연겨자 소스",
+      p_category: "양념",
+      p_default_unit: "g",
+      p_synonym: "soy sauce",
     });
   });
 
