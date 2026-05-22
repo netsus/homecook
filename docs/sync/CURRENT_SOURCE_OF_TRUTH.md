@@ -5,13 +5,23 @@
 - `docs/화면정의서-v1.5.6.md`
 - `docs/유저flow맵-v1.3.6.md`
 - `docs/db설계-v1.3.5.md`
-- `docs/api문서-v1.2.8.md`
+- `docs/api문서-v1.2.9.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## API v1.2.8 → API v1.2.9 변경 이력 (2026-05-23)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| API v1.2.9 | `POST /auth/login`, `PATCH /auth/profile` 제거. 현재 웹 로그인은 Supabase OAuth callback을 사용하고, 닉네임 설정/변경은 `PATCH /users/me`가 담당한다. 엔드포인트 전체 목록 active method/path 수를 55개로 정리 |
+
+> 이 변경은 MVP 1 계약 위험 잠금 중 `CR-002` contract-evolution이다.
+> 두 endpoint는 route와 테스트는 있었지만 현재 웹 화면에서 직접 소비하지 않았다.
+> 구현을 보존해 unused public auth surface를 늘리는 대신 공식 API 계약과 route/test를 함께 정리한다.
 
 ## API v1.2.7 → API v1.2.8 변경 이력 (2026-05-22)
 

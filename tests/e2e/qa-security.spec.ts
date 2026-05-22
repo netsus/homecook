@@ -25,7 +25,7 @@ test.describe("QA auth and session security smoke", () => {
       },
     });
 
-    const profileResponse = await request.patch("/api/v1/auth/profile", {
+    const profileResponse = await request.patch("/api/v1/users/me", {
       data: {
         nickname: "집밥닉네임",
       },
