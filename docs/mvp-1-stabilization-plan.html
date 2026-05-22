@@ -355,6 +355,77 @@
         font-weight: 800;
       }
 
+      .allocation-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+
+      .role-card {
+        padding: 20px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 12px 32px rgba(57, 45, 31, 0.07);
+      }
+
+      .role-card h3 {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin: 0 0 12px;
+        font-size: 20px;
+      }
+
+      .role-badge {
+        display: inline-flex;
+        width: 38px;
+        height: 38px;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        background: var(--ink);
+        border-radius: 14px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 22px;
+        font-weight: 800;
+      }
+
+      .role-card p {
+        margin: 0 0 14px;
+        color: #5f564e;
+        font-size: 15px;
+        font-weight: 650;
+      }
+
+      .rules-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 14px;
+      }
+
+      .rule-card {
+        padding: 16px;
+        background: #fcf7ed;
+        border: 1px solid #eadfce;
+        border-radius: 16px;
+      }
+
+      .rule-card strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+
+      .rule-card span {
+        display: block;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
       .board {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -625,8 +696,10 @@
 
       @media (max-width: 900px) {
         .hero-grid,
+        .allocation-grid,
         .board,
-        .checklist {
+        .checklist,
+        .rules-grid {
           grid-template-columns: 1fr;
         }
 
@@ -702,6 +775,8 @@
         }
 
         .phase,
+        .role-card,
+        .rule-card,
         .lane,
         .check,
         .table-wrap,
@@ -743,6 +818,7 @@
 
     <nav class="nav page" aria-label="문서 섹션">
       <ul class="nav-list">
+        <li><a href="#allocation">2인 분배</a></li>
         <li><a href="#sequence">실행 순서</a></li>
         <li><a href="#board">우선순위 보드</a></li>
         <li><a href="#decisions">합치기·분리</a></li>
@@ -762,6 +838,160 @@
         </div>
         <strong id="next-work-badge">Start P0</strong>
       </aside>
+
+      <section id="allocation">
+        <div class="section-head">
+          <div>
+            <h2>2인 진행 분배</h2>
+            <p class="section-note">
+              순서는 하나로 유지하고, 각 단계마다 리드와 서포트를 나눕니다. 완료 처리는 단계 리드가
+              완료 기준을 확인한 뒤 `시행 순서`에서만 합니다.
+            </p>
+          </div>
+        </div>
+
+        <div class="allocation-grid">
+          <article class="role-card">
+            <h3><span class="role-badge">A</span> 안정화 리드</h3>
+            <p>
+              계약, API, DB, 테스트, 배포 준비를 맡습니다. 서비스가 깨지지 않고 MVP로 닫히는지
+              확인하는 역할입니다.
+            </p>
+            <div class="chips">
+              <span class="chip">계약/API 대조</span>
+              <span class="chip">DB·Supabase</span>
+              <span class="chip">테스트·CI</span>
+              <span class="chip">RC·배포</span>
+            </div>
+          </article>
+
+          <article class="role-card">
+            <h3><span class="role-badge">B</span> UX·Beta 리드</h3>
+            <p>
+              웹과 모바일을 실제 사용자처럼 써보며 흐름, 문구, 디자인, 피드백을 맡습니다.
+              사용자가 이해하고 계속 쓸 수 있는지 확인하는 역할입니다.
+            </p>
+            <div class="chips">
+              <span class="chip">웹·모바일 사용성</span>
+              <span class="chip">문구·용어</span>
+              <span class="chip">디자인 polish</span>
+              <span class="chip">UAT·피드백</span>
+            </div>
+          </article>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>순서</th>
+                <th>작업</th>
+                <th>리드</th>
+                <th>서포트</th>
+                <th>완료 기준</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td>계약 위험 먼저 잠금</td>
+                <td><span class="risk keep">A</span></td>
+                <td>B</td>
+                <td>API 문서, route, 화면, 테스트 차이 목록 작성</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>유튜브 기능 긴급 개선</td>
+                <td><span class="risk keep">A</span></td>
+                <td>B</td>
+                <td>실제 YouTube URL로 조리법, 재료, 저장 흐름 확인</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td>전체 회귀 검증 주간</td>
+                <td><span class="risk keep">A</span></td>
+                <td>B</td>
+                <td>로그인, 장보기, 요리, 남은요리, 마이페이지 통합 흐름 통과</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td>실사용 UX 개선 루프</td>
+                <td><span class="risk split">B</span></td>
+                <td>A</td>
+                <td>불편함을 blocker/P0/P1로 분류하고 작은 PR로 수정</td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td>용어 통일</td>
+                <td><span class="risk split">B</span></td>
+                <td>A</td>
+                <td>웹과 모바일의 화면명, 버튼명, 상태명, 빈 상태 문구 통일</td>
+              </tr>
+              <tr>
+                <td>6</td>
+                <td>모바일 디자인 수정</td>
+                <td><span class="risk split">B</span></td>
+                <td>A</td>
+                <td>브랜드색, 장보기 상태 색상, 플래너 이번주 버튼을 screenshot 기준으로 확인</td>
+              </tr>
+              <tr>
+                <td>7</td>
+                <td>배포·운영 준비</td>
+                <td><span class="risk keep">A</span></td>
+                <td>B</td>
+                <td>Supabase, env, OAuth, 보안 smoke, rollback, 에러 로깅 체크 완료</td>
+              </tr>
+              <tr>
+                <td>8</td>
+                <td>Release Candidate 브랜치·태그</td>
+                <td><span class="risk keep">A</span></td>
+                <td>B</td>
+                <td>release 브랜치, rc 태그, known issues, release notes 준비</td>
+              </tr>
+              <tr>
+                <td>9</td>
+                <td>내부 Beta / UAT</td>
+                <td><span class="risk split">B</span></td>
+                <td>A</td>
+                <td>실제 사용자 시나리오로 피드백을 받고 go/no-go 판단</td>
+              </tr>
+              <tr>
+                <td>10</td>
+                <td>콘텐츠와 운영 후속</td>
+                <td><span class="risk split">B</span></td>
+                <td>A</td>
+                <td>레시피 DB, 마케팅, 데모 시나리오를 MVP 이후 작업으로 정리</td>
+              </tr>
+              <tr>
+                <td>11</td>
+                <td>하네스 단순화와 OMO 재평가</td>
+                <td><span class="risk keep">A</span></td>
+                <td>B</td>
+                <td>QA 강도, closeout surface, harness audit, promotion evidence 정리</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="rules-grid" aria-label="2인 진행 규칙">
+          <div class="rule-card">
+            <strong>완료 버튼은 리드가 누르기</strong>
+            <span>각 단계의 완료 기준을 확인한 뒤 한 번만 처리합니다.</span>
+          </div>
+          <div class="rule-card">
+            <strong>단계 사이 10분 sync</strong>
+            <span>완료된 것, 남은 위험, 다음 단계 영향을 짧게 확인합니다.</span>
+          </div>
+          <div class="rule-card">
+            <strong>P0는 둘 다 같이 보기</strong>
+            <span>계약, 유튜브, 회귀, UX 루프는 MVP 품질의 핵심입니다.</span>
+          </div>
+          <div class="rule-card">
+            <strong>역할 경계 유지</strong>
+            <span>A는 안정성, B는 실사용 품질을 끝까지 책임집니다.</span>
+          </div>
+        </div>
+      </section>
 
       <section id="sequence">
         <div class="section-head">
