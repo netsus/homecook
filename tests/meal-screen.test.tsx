@@ -101,6 +101,21 @@ describe("MealScreen", () => {
     cleanup();
   });
 
+  it("renders a stable loading skeleton that matches the meal card structure", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockReturnValue(new Promise(() => {}));
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    const skeleton = await screen.findByTestId("meal-screen-loading-skeleton");
+    expect(skeleton.getAttribute("aria-busy")).toBe("true");
+    expect(screen.getByTestId("meal-screen-loading-summary")).toBeTruthy();
+    expect(screen.getAllByTestId("meal-screen-loading-card")).toHaveLength(2);
+    expect(screen.getAllByTestId("meal-screen-loading-thumb")).toHaveLength(2);
+    expect(screen.getAllByTestId("meal-screen-loading-stepper")).toHaveLength(2);
+    expect(screen.getAllByTestId("meal-screen-loading-action")).toHaveLength(2);
+  });
+
   it("renders recipe title as a clickable button that routes to RECIPE_DETAIL (Wave1)", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({

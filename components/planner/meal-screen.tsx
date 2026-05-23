@@ -16,6 +16,7 @@ import { MealAddPickerFlow } from "@/components/planner/meal-add-picker-flow";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   WebButton,
   WebDialog,
@@ -195,22 +196,100 @@ function AppBar({ titleFull, titleShort, onBack }: AppBarProps) {
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-3" aria-busy="true" aria-label="식사 목록 불러오는 중">
+    <div
+      className="space-y-3"
+      aria-busy="true"
+      aria-label="식사 목록 불러오는 중"
+      data-testid="meal-screen-loading-skeleton"
+    >
       {[0, 1].map((i) => (
-        <div
+        <article
           key={i}
-          className="animate-pulse rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+          className="relative overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+          data-testid="meal-screen-loading-card"
         >
-          <div className="h-4 w-44 rounded-full bg-[#DEE2E6]" />
-          <div className="mt-2 h-3 w-20 rounded-full bg-[#DEE2E6]" />
-          <div className="mt-4 flex items-center gap-2">
-            <div className="h-[var(--control-height-md)] w-11 rounded-[var(--radius-card)] bg-[#DEE2E6]" />
-            <div className="h-4 w-6 rounded-full bg-[#DEE2E6]" />
-            <div className="h-[var(--control-height-md)] w-11 rounded-[var(--radius-card)] bg-[#DEE2E6]" />
+          <Skeleton
+            className="absolute right-3 top-3 z-[1] h-8 w-8 rounded-full"
+            data-testid="meal-screen-loading-delete"
+          />
+
+          <div className="flex gap-3 p-3.5">
+            <Skeleton
+              className="h-[76px] w-[76px] shrink-0 rounded-[var(--radius-card)]"
+              data-testid="meal-screen-loading-thumb"
+            />
+            <div className="min-w-0 flex-1 pr-7">
+              <Skeleton className="h-5 w-36 max-w-full" />
+              <Skeleton className="mt-2 h-4 w-24" />
+            </div>
           </div>
-        </div>
+
+          <div className="px-3.5 pb-3.5">
+            <div
+              className="mb-2.5 flex items-center justify-between rounded-[var(--radius-control)] bg-[#F8F9FA] p-2.5"
+              data-testid="meal-screen-loading-stepper"
+            >
+              <Skeleton className="h-4 w-16" />
+              <div className="flex items-center gap-2.5">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-5 w-12" />
+                <Skeleton className="h-8 w-8 rounded-full" />
+              </div>
+            </div>
+
+            <div className="mb-3 flex flex-wrap gap-[5px]">
+              {[48, 56, 44].map((width) => (
+                <Skeleton
+                  className="h-[26px] rounded-full"
+                  key={width}
+                  width={width}
+                />
+              ))}
+            </div>
+
+            <Skeleton
+              className="h-[38px] w-full rounded-[var(--radius-control)]"
+              data-testid="meal-screen-loading-action"
+            />
+          </div>
+        </article>
       ))}
     </div>
+  );
+}
+
+function LoadingSummarySkeleton({
+  planDate,
+  slotName,
+}: {
+  planDate: string;
+  slotName: string;
+}) {
+  return (
+    <section
+      className="border-b border-[#DEE2E6] bg-white px-5 py-5"
+      data-testid="meal-screen-loading-summary"
+    >
+      <div className="mb-2">
+        <span className="sr-only">끼니 요약 불러오는 중</span>
+        <Skeleton
+          className="h-[17px] rounded-full"
+          width={slotName ? 104 : 72}
+        />
+      </div>
+      <Skeleton
+        className="h-[30px] rounded-[var(--radius-md)]"
+        width="min(72%, 220px)"
+      />
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Skeleton className="h-[30px] w-[72px] rounded-full" />
+        <Skeleton className="h-[30px] w-[104px] rounded-full" />
+      </div>
+      <span className="sr-only">
+        {formatDateShort(planDate)}
+        {slotName ? ` · ${slotName}` : ""}
+      </span>
+    </section>
   );
 }
 
@@ -558,6 +637,112 @@ function MealWebListCard({
   );
 }
 
+function MealWebLoadingCardSkeleton() {
+  return (
+    <article
+      aria-hidden="true"
+      className="web-meal-list-card"
+      data-testid="web-meal-loading-card"
+    >
+      <WebSkeleton
+        className="web-meal-list-thumb"
+        data-testid="web-meal-loading-thumb"
+      />
+
+      <div className="web-meal-list-copy">
+        <div className="web-meal-title-meta">
+          <WebSkeleton height={30} width={62} />
+          <WebSkeleton height={30} width={72} />
+        </div>
+        <WebSkeleton className="mt-3" height={22} width="80%" />
+        <div className="web-meal-meta-row">
+          <WebSkeleton height={16} width={48} />
+          <WebSkeleton height={16} width={36} />
+        </div>
+      </div>
+
+      <div className="web-meal-list-delete">
+        <WebSkeleton height={36} width={36} />
+      </div>
+
+      <div className="web-meal-list-footer">
+        <WebSkeleton height={34} width={118} />
+        <div className="web-meal-list-actions">
+          <WebSkeleton height={36} width={86} />
+          <WebSkeleton height={36} width={78} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function MealWebLoadingSkeleton({
+  planDate,
+  slotName,
+}: {
+  planDate: string;
+  slotName: string;
+}) {
+  return (
+    <div
+      aria-busy="true"
+      aria-label="끼니 화면 불러오는 중"
+      className="web-meal-layout web-meal-list-layout"
+      data-testid="web-meal-loading-skeleton"
+    >
+      <section className="web-meal-main" aria-labelledby="web-meal-loading-title">
+        <div className="web-meal-list-head">
+          <div>
+            <WebSkeleton
+              aria-hidden="true"
+              className="mb-2"
+              height={36}
+              width={180}
+            />
+            <WebSkeleton aria-hidden="true" height={18} width={260} />
+            <h1 className="sr-only" id="web-meal-loading-title">
+              끼니 음식 불러오는 중
+            </h1>
+          </div>
+        </div>
+
+        <div className="web-meal-list">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <MealWebLoadingCardSkeleton key={index} />
+          ))}
+        </div>
+      </section>
+
+      <aside className="web-meal-rail">
+        <div
+          className="web-meal-rail-card"
+          data-testid="web-meal-loading-summary"
+        >
+          <div className="web-meal-rail-head">
+            <WebSkeleton height={14} width={64} />
+            <WebSkeleton className="mt-2" height={30} width="78%" />
+          </div>
+          <div className="web-meal-rail-stats">
+            <div>
+              <WebSkeleton height={14} width={42} />
+              <WebSkeleton className="mt-2" height={24} width={38} />
+            </div>
+            <div>
+              <WebSkeleton height={14} width={52} />
+              <WebSkeleton className="mt-2" height={24} width={52} />
+            </div>
+          </div>
+          <WebSkeleton className="mt-5" height={44} width="100%" />
+          <span className="sr-only">
+            {formatDateLong(planDate)}
+            {slotName ? ` · ${slotName}` : ""}
+          </span>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 function MealWebView({
   addMealHref,
   authState,
@@ -627,19 +812,7 @@ function MealWebView({
         </nav>
 
         {isLoading ? (
-          <div className="web-meal-layout">
-            <div className="web-meal-main">
-              <WebSkeleton height={74} width="68%" />
-              <div className="web-meal-list">
-                {Array.from({ length: 3 }).map((_, index) => (
-                  <WebSkeleton height={138} key={index} />
-                ))}
-              </div>
-            </div>
-            <aside className="web-meal-rail">
-              <WebSkeleton height={252} />
-            </aside>
-          </div>
+          <MealWebLoadingSkeleton planDate={planDate} slotName={slotName} />
         ) : null}
 
         {screenState === "error" ? (
@@ -1220,6 +1393,7 @@ export function MealScreen({
     process.env.NODE_ENV !== "test" || isDesktopViewport;
   const shouldRenderAppView =
     process.env.NODE_ENV !== "test" || !isDesktopViewport;
+  const isLoading = authState === "checking" || screenState === "loading";
   const navigateToPlanner = useCallback(() => {
     appReturn.goBack();
   }, [appReturn]);
@@ -1311,12 +1485,13 @@ export function MealScreen({
                 </div>
               </section>
             ) : null}
+            {isLoading ? (
+              <LoadingSummarySkeleton planDate={planDate} slotName={slotName} />
+            ) : null}
 
             <div className="space-y-3 p-4">
               {/* Loading skeletons */}
-              {authState === "checking" || screenState === "loading" ? (
-                <LoadingSkeleton />
-              ) : null}
+              {isLoading ? <LoadingSkeleton /> : null}
 
               {/* Error state */}
               {screenState === "error" ? (

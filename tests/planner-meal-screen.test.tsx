@@ -230,6 +230,26 @@ describe("MealScreen", () => {
     await waitFor(() => {
       expect(screen.getByLabelText("식사 목록 불러오는 중")).toBeTruthy();
     });
+    expect(screen.getByTestId("meal-screen-loading-summary")).toBeTruthy();
+    expect(screen.getAllByTestId("meal-screen-loading-card")).toHaveLength(2);
+    expect(screen.getAllByTestId("meal-screen-loading-thumb")).toHaveLength(2);
+    expect(screen.getAllByTestId("meal-screen-loading-stepper")).toHaveLength(2);
+    expect(screen.getAllByTestId("meal-screen-loading-action")).toHaveLength(2);
+  });
+
+  it("uses the final desktop meal layout for loading skeletons", async () => {
+    setDesktopViewport(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockReturnValue(new Promise(() => {}));
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    const skeleton = await screen.findByTestId("web-meal-loading-skeleton");
+    expect(skeleton.className).toContain("web-meal-list-layout");
+    expect(within(skeleton).getAllByTestId("web-meal-loading-card")).toHaveLength(2);
+    expect(within(skeleton).getAllByTestId("web-meal-loading-thumb")).toHaveLength(2);
+    expect(screen.getByTestId("web-meal-loading-summary")).toBeTruthy();
+    expect(screen.queryByTestId("web-meal-list")).toBeNull();
   });
 
   // ── Error state ─────────────────────────────────────────────────────────
