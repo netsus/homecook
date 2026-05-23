@@ -205,6 +205,27 @@ describe("recipe detail screen", () => {
     expect(screen.getByRole("navigation", { name: "데스크탑 주요 메뉴" })).toBeTruthy();
   });
 
+  it("uses return context for the desktop breadcrumb back link", async () => {
+    installMatchMedia(true);
+    navigationMocks.searchParams.mockReturnValue(
+      new URLSearchParams({
+        returnTo: "/mypage/recipe-books/book-my?type=my_added&name=내가 추가한 레시피",
+        returnSurface: "mypage.recipebooks",
+        restore: "recipebook-tab",
+      }),
+    );
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", { name: MOCK_RECIPE_DETAIL.title });
+
+    const breadcrumb = screen.getByRole("navigation", { name: "레시피 경로" });
+    const backLink = within(breadcrumb).getByRole("link");
+    expect(backLink.getAttribute("href")).toBe(
+      "/mypage/recipe-books/book-my?type=my_added&name=%EB%82%B4%EA%B0%80+%EC%B6%94%EA%B0%80%ED%95%9C+%EB%A0%88%EC%8B%9C%ED%94%BC&returnSurface=mypage.recipebooks&restore=recipebook-tab",
+    );
+  });
+
   it("shows recipe detail load errors on the prototype-derived state shell", async () => {
     fetchJson.mockRejectedValue(new Error("recipe failed"));
 

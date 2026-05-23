@@ -305,9 +305,7 @@ test.describe("MYPAGE screen", () => {
     }
     await expect(page.getByTestId("mypage-settings-link")).toHaveAttribute(
       "href",
-      isMobileViewport(page)
-        ? "/settings"
-        : "/settings?returnTo=%2Fmypage%3Ftab%3Daccount",
+      "/settings?returnTo=%2Fmypage%3Ftab%3Daccount",
     );
 
     await openRecipebookSurface(page);

@@ -197,6 +197,12 @@ describe("CookModeScreen", () => {
 
     expect(screen.getByText("김치찌개")).toBeTruthy();
     expect(screen.getByText("2인분")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "소진된 재료" })).toBeTruthy();
+    expect(
+      screen.getByText("체크된 재료는 팬트리에서 자동으로 빠져요."),
+    ).toBeTruthy();
+    expect(screen.queryByText("차감할 재료")).toBeNull();
+    expect(screen.getByRole("button", { name: "✓ 요리 완료 (3개 소진)" })).toBeTruthy();
   });
 
   it("does not bounce back to ready when a previous session left completed state behind", async () => {

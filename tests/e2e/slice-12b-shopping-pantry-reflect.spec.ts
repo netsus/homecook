@@ -122,24 +122,8 @@ function pantryDialog(page: Page) {
   return page.getByRole("dialog", { name: /팬트리에 (추가|반영)할까요\?/ });
 }
 
-function isMobilePage(page: Page) {
-  return (page.viewportSize()?.width ?? 1280) < 1024;
-}
-
-function pantryTitlePattern() {
-  return /팬트리에 (추가|반영)할까요\?/;
-}
-
 function pantryConfirmButton(page: Page) {
-  const dialog = pantryDialog(page);
-  if (isMobilePage(page)) {
-    return dialog.getByRole("button", { name: /개 반영하기/ });
-  }
-
-  return dialog.getByRole("button", {
-    name: "완료",
-    exact: true,
-  });
+  return pantryDialog(page).getByRole("button", { name: /개 반영하기/ });
 }
 
 function parseJsonRequestBody(request: Request): unknown {
@@ -170,20 +154,17 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       const completeButton = page.getByRole("button", { name: "장보기 완료" });
       await completeButton.click();
 
-      // Should show pantry popup
-      await expect(page.getByText(pantryTitlePattern())).toBeVisible();
-      if (isMobilePage(page)) {
-        await expect(page.getByText("반영 안 함")).toBeVisible();
-        await expect(page.getByRole("button", { name: "2개 반영하기" })).toBeVisible();
-        await expect(pantryDialog(page).getByRole("button", { name: /양파/ })).toBeVisible();
-      } else {
-        await expect(page.getByText("모두 추가")).toBeVisible();
-        await expect(page.getByText("선택 추가")).toBeVisible();
-        await expect(page.getByText("추가 안 함")).toBeVisible();
-      }
+      const dialog = pantryDialog(page);
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "반영 안 함" })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "2개 반영하기" })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: /양파/ })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: /대파/ })).toBeVisible();
+      await expect(page.getByText("모두 추가")).toHaveCount(0);
+      await expect(page.getByText("선택 추가")).toHaveCount(0);
     });
 
-    test("should complete with all items when 모두 추가 is selected", async ({ page }) => {
+    test("should complete with all items when every popup item remains selected", async ({ page }) => {
       await setAuthOverride(page, "authenticated");
 
       const listDetail = buildShoppingListDetail({ is_completed: false });
@@ -217,10 +198,8 @@ test.describe("slice 12b: shopping pantry reflect", () => {
 
       await page.getByRole("button", { name: "장보기 완료" }).click();
 
-      // Popup should appear
-      await expect(page.getByText(pantryTitlePattern())).toBeVisible();
+      await expect(pantryDialog(page)).toBeVisible();
 
-      // "모두 추가" is selected by default, click confirm
       const confirmButton = pantryConfirmButton(page);
       const completeRequestPromise = waitForCompleteRequest(page);
       await confirmButton.click();
@@ -269,16 +248,10 @@ test.describe("slice 12b: shopping pantry reflect", () => {
 
       await page.getByRole("button", { name: "장보기 완료" }).click();
 
-      // Popup should appear
-      await expect(page.getByText(pantryTitlePattern())).toBeVisible();
+      await expect(pantryDialog(page)).toBeVisible();
 
       const completeRequestPromise = waitForCompleteRequest(page);
-      if (isMobilePage(page)) {
-        await page.getByRole("button", { name: "반영 안 함" }).click();
-      } else {
-        await page.getByText("추가 안 함").click();
-        await pantryConfirmButton(page).click();
-      }
+      await pantryDialog(page).getByRole("button", { name: "반영 안 함" }).click();
       const completeRequest = await completeRequestPromise;
 
       // Should call API with empty array
@@ -289,7 +262,7 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       await expect(page.getByText(/팬트리.*추가/)).not.toBeVisible();
     });
 
-    test("should complete with selected items when 선택 추가 is chosen", async ({ page }) => {
+    test("should complete with selected pantry reflection items", async ({ page }) => {
       await setAuthOverride(page, "authenticated");
 
       const listDetail = buildShoppingListDetail({ is_completed: false });
@@ -323,12 +296,7 @@ test.describe("slice 12b: shopping pantry reflect", () => {
 
       await page.getByRole("button", { name: "장보기 완료" }).click();
 
-      // Popup should appear
-      await expect(page.getByText(pantryTitlePattern())).toBeVisible();
-
-      if (!isMobilePage(page)) {
-        await page.getByText("선택 추가").click();
-      }
+      await expect(pantryDialog(page)).toBeVisible();
 
       // Should show item list
       const dialog = pantryDialog(page);
@@ -339,11 +307,7 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       const dapaButton = dialog.getByRole("button", { name: /대파/ });
       await dapaButton.click();
 
-      if (isMobilePage(page)) {
-        await expect(page.getByRole("button", { name: "1개 반영하기" })).toBeVisible();
-      } else {
-        await expect(page.getByText("1개 선택됨")).toBeVisible();
-      }
+      await expect(dialog.getByRole("button", { name: "1개 반영하기" })).toBeVisible();
 
       // Click confirm
       const confirmButton = pantryConfirmButton(page);
@@ -381,13 +345,12 @@ test.describe("slice 12b: shopping pantry reflect", () => {
 
       await page.getByRole("button", { name: "장보기 완료" }).click();
 
-      // Popup should appear
-      await expect(page.getByText(pantryTitlePattern())).toBeVisible();
+      await expect(pantryDialog(page)).toBeVisible();
 
       await page.keyboard.press("Escape");
 
       // Popup should disappear
-      await expect(page.getByText(pantryTitlePattern())).not.toBeVisible();
+      await expect(pantryDialog(page)).not.toBeVisible();
 
       // API should not be called
       expect(completeRequestCalled).toBe(false);
@@ -440,18 +403,11 @@ test.describe("slice 12b: shopping pantry reflect", () => {
 
       await page.getByRole("button", { name: "장보기 완료" }).click();
 
-      // Popup should appear
-      await expect(page.getByText(pantryTitlePattern())).toBeVisible();
-
-      if (isMobilePage(page)) {
-        await expect(page.getByRole("button", { name: "1개 반영하기" })).toBeVisible();
-      } else {
-        await expect(page.getByText(/체크한 모든 재료를 팬트리에 추가해요 \(1개\)/)).toBeVisible();
-        await page.getByText("선택 추가").click();
-      }
+      const dialog = pantryDialog(page);
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "1개 반영하기" })).toBeVisible();
 
       // Only item-1 should be visible
-      const dialog = pantryDialog(page);
       await expect(dialog.getByRole("button", { name: /양파/ })).toBeVisible();
 
       // item-2 (unchecked) and item-3 (excluded) should not be visible
@@ -532,10 +488,8 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       // Click complete
       await page.getByRole("button", { name: "장보기 완료" }).click();
 
-      // Popup should appear
-      await expect(page.getByText(pantryTitlePattern())).toBeVisible();
+      await expect(pantryDialog(page)).toBeVisible();
 
-      // Confirm with default "모두 추가"
       const confirmButton = pantryConfirmButton(page);
       await confirmButton.click();
 

@@ -113,11 +113,11 @@ export function CookModeDesktopView({
           </div>
           <h1 data-testid={titleTestId}>{recipe.title}</h1>
           <p className="web-cook-mode-summary">
-            조리 단계 {recipe.steps.length}개 · 차감할 재료 {recipe.ingredients.length}개
+            조리 단계 {recipe.steps.length}개 · 소진된 재료 {recipe.ingredients.length}개
           </p>
           {variant === "standalone" ? (
             <p className="web-cook-standalone-notice">
-              이 요리는 플래너 끼니와 연결되지 않아요. 팬트리 재료 차감만 진행합니다.
+              이 요리는 플래너 끼니와 연결되지 않아요. 팬트리 재료 소진만 진행합니다.
             </p>
           ) : null}
         </section>
@@ -132,7 +132,10 @@ export function CookModeDesktopView({
           </section>
 
           <aside className="web-cook-checklist-panel" data-testid="cook-mode-action-rail">
-            <h2 id={`${screenTestId}-ingredients-heading`}>차감할 재료</h2>
+            <h2 id={`${screenTestId}-ingredients-heading`}>소진된 재료</h2>
+            <p className="web-cook-checklist-helper">
+              체크된 재료는 팬트리에서 자동으로 빠져요.
+            </p>
             <IngredientChecklist
               controlsDisabled={controlsDisabled}
               onToggle={handleToggleIngredient}
@@ -148,7 +151,7 @@ export function CookModeDesktopView({
               fullWidth
               onClick={handleComplete}
             >
-              ✓ 요리 완료 ({selectedCount}개 차감)
+              ✓ 요리 완료 ({selectedCount}개 소진)
             </WebButton>
             <WebButton
               data-testid={cancelButtonTestId}

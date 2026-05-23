@@ -70,6 +70,7 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   const router = useRouter();
   const isMobileViewport = useIsMobileViewport();
+  const appReturn = useAppReturn({ fallback: MYPAGE_ACCOUNT_HREF });
   const [mobileSurface, setMobileSurface] =
     useState<SettingsMobileSurface>("settings");
 
@@ -582,7 +583,7 @@ export function SettingsScreen({
       />
       <main className="web-settings-screen">
         <nav aria-label="설정 경로" className="web-breadcrumb">
-          <Link className="web-breadcrumb-link" href={MYPAGE_ACCOUNT_HREF}>
+          <Link className="web-breadcrumb-link" href={appReturn.href}>
             ‹ 마이페이지
           </Link>
           <span className="web-breadcrumb-sep">/</span>

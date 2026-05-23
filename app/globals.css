@@ -275,6 +275,45 @@ button {
   display: none;
 }
 
+.shopping-select-all-control {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--web-line, #dee2e6);
+  border-radius: var(--radius-control);
+  background: #fff;
+  color: var(--web-text-1, #212529);
+  padding: 0 11px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.shopping-select-all-control > span {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--web-line, #dee2e6);
+  border-radius: 5px;
+  background: #fff;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.shopping-select-all-control[aria-checked="true"] > span {
+  border-color: var(--brand);
+  background: var(--brand);
+}
+
+.shopping-select-all-control:disabled {
+  opacity: 0.45;
+}
+
 @media (min-width: 1024px) {
   :root {
     --web-brand: #00A1FF;
@@ -4334,6 +4373,18 @@ button {
     letter-spacing: 0;
   }
 
+  .web-cook-checklist-panel h2 {
+    margin-bottom: 6px;
+  }
+
+  .web-cook-checklist-helper {
+    margin: 0 0 16px;
+    color: var(--web-text-3);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
   .web-cook-step-list {
     display: grid;
     gap: 12px;
@@ -6276,6 +6327,12 @@ button {
     color: var(--web-text-3);
     font-size: 13px;
     font-weight: 700;
+  }
+
+  .web-shopping-section-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
   }
 
   .web-shopping-recipe-list,

@@ -31,6 +31,7 @@ import {
   fetchRecipeBookRecipes,
   removeRecipeBookRecipe,
 } from "@/lib/api/recipe";
+import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { RecipeBookRecipeItem, RecipeBookType } from "@/types/recipe";
@@ -137,6 +138,20 @@ export function RecipeBookDetailScreen({
 
   const scrollSentinelRef = useRef<HTMLDivElement | null>(null);
   const canManageBook = bookType === "custom";
+
+  const buildRecipeReturnHref = useCallback(
+    (recipeId: string) =>
+      buildReturnHref(`/recipe/${recipeId}`, {
+        restore: "recipebook-tab",
+        returnSurface: "mypage.recipebooks",
+        returnTo: buildRecipeBookDetailHref({
+          bookId,
+          bookName: currentBookName,
+          bookType,
+        }),
+      }),
+    [bookId, bookType, currentBookName],
+  );
 
   const showToast = useCallback(
     (message: string, tone: "success" | "error") => {
@@ -708,6 +723,7 @@ export function RecipeBookDetailScreen({
         isLoadingMore={isLoadingMore}
         isSaving={isBookActionSaving}
         items={items}
+        buildRecipeHref={buildRecipeReturnHref}
         onDeleteRequest={handleBookDeleteRequest}
         onMenuToggle={() => setBookMenuOpen((current) => !current)}
         onRemove={(recipeId) => void handleRemove(recipeId)}
@@ -738,6 +754,7 @@ export function RecipeBookDetailScreen({
             item={item}
             key={item.recipe_id}
             onRemove={() => void handleRemove(item.recipe_id)}
+            recipeHref={buildRecipeReturnHref(item.recipe_id)}
             removeLabel={removeLabel}
             removing={removingId === item.recipe_id}
           />
@@ -1109,6 +1126,7 @@ function BookDeleteConfirmDialog({
 
 function MobileRecipeBookDetailView({
   backHref,
+  buildRecipeHref,
   bookMenuOpen,
   bookName,
   bookRenameOpen,
@@ -1135,6 +1153,7 @@ function MobileRecipeBookDetailView({
   toast,
 }: {
   backHref: string;
+  buildRecipeHref: (recipeId: string) => string;
   bookMenuOpen: boolean;
   bookName: string;
   bookRenameOpen: boolean;
@@ -1192,6 +1211,7 @@ function MobileRecipeBookDetailView({
             item={item}
             key={item.recipe_id}
             onRemove={() => onRemove(item.recipe_id)}
+            recipeHref={buildRecipeHref(item.recipe_id)}
             removeLabel={removeLabel}
             removing={removingId === item.recipe_id}
           />
@@ -1361,6 +1381,7 @@ function MobileRecipeBookSummary({
 function MobileRecipeBookRecipeCard({
   canRemove,
   item,
+  recipeHref,
   onRemove,
   removeLabel,
   removing,
@@ -1373,7 +1394,7 @@ function MobileRecipeBookRecipeCard({
     >
       <Link
         className="flex min-w-0 flex-1 items-center gap-3"
-        href={`/recipe/${item.recipe_id}`}
+        href={recipeHref}
       >
         <MobileRecipeThumb item={item} />
         <div className="min-w-0 flex-1">
@@ -1627,6 +1648,7 @@ function RecipeBookDetailSkeleton({
 interface RecipeItemCardProps {
   item: RecipeBookRecipeItem;
   canRemove: boolean;
+  recipeHref: string;
   removeLabel: string;
   removing: boolean;
   onRemove: () => void;
@@ -1635,6 +1657,7 @@ interface RecipeItemCardProps {
 function RecipeItemCard({
   item,
   canRemove,
+  recipeHref,
   removeLabel,
   removing,
   onRemove,
@@ -1645,7 +1668,7 @@ function RecipeItemCard({
       data-testid={`recipe-item-${item.recipe_id}`}
       role="listitem"
     >
-      <Link href={`/recipe/${item.recipe_id}`}>
+      <Link href={recipeHref}>
         <WebRecipeCard
           alt={item.title}
           imageSrc={item.thumbnail_url ?? getFallbackRecipeImage(item.title)}

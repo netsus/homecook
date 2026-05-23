@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -37,6 +37,12 @@ function setMatchMedia(matches: boolean) {
       dispatchEvent: vi.fn(),
     })),
   });
+}
+
+async function expectPantryDialogVisible() {
+  expect(
+    await screen.findByRole("dialog", { name: /팬트리에 반영할까요/ }),
+  ).toBeTruthy();
 }
 
 describe("ShoppingDetailScreen", () => {
@@ -583,8 +589,8 @@ describe("ShoppingDetailScreen", () => {
     });
   });
 
-  describe("reorder (11)", () => {
-    it("shows reorder buttons for incomplete list", async () => {
+  describe("shopping item movement controls", () => {
+    it("does not render move up/down controls for incomplete lists", async () => {
       const listWithMultipleItems: ShoppingListDetail = {
         ...mockListDetail,
         items: [
@@ -619,32 +625,11 @@ describe("ShoppingDetailScreen", () => {
         expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
       });
 
-      const moveUpButton = screen.getByRole("button", { name: /대파.*위로 이동/ });
-      const moveDownButton = screen.getByRole("button", { name: /양파.*아래로 이동/ });
-      expect(moveUpButton).toBeTruthy();
-      expect(moveDownButton).toBeTruthy();
+      expect(screen.queryAllByRole("button", { name: /이동/ })).toHaveLength(0);
+      expect(screen.queryByText(/순서 변경/)).toBeNull();
     });
 
-    it("does not show reorder buttons for completed list", async () => {
-      const completedList: ShoppingListDetail = {
-        ...mockListDetail,
-        is_completed: true,
-        completed_at: "2026-04-13T00:00:00.000Z",
-      };
-
-      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(completedList);
-
-      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
-
-      await waitFor(() => {
-        expect(screen.getByText(/완료된 장보기 기록은 수정할 수 없어요/)).toBeTruthy();
-      });
-
-      const moveButtons = screen.queryAllByRole("button", { name: /이동/ });
-      expect(moveButtons.length).toBe(0);
-    });
-
-    it("calls reorder API when moving item down", async () => {
+    it("does not call reorder API from the shopping detail UI", async () => {
       const listWithMultipleItems: ShoppingListDetail = {
         ...mockListDetail,
         items: [
@@ -672,7 +657,65 @@ describe("ShoppingDetailScreen", () => {
       };
 
       vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithMultipleItems);
-      const reorderSpy = vi.spyOn(shoppingApi, "reorderShoppingListItems").mockResolvedValue({ updated: 2 });
+      const reorderSpy = vi.spyOn(shoppingApi, "reorderShoppingListItems");
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      expect(screen.queryAllByRole("button", { name: /위로 이동|아래로 이동/ })).toHaveLength(0);
+      expect(reorderSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("purchase select all", () => {
+    it("checks every purchase item from the desktop select-all control", async () => {
+      const listWithMultipleItems: ShoppingListDetail = {
+        ...mockListDetail,
+        items: [
+          {
+            id: "item-1",
+            ingredient_id: "ing-1",
+            display_text: "양파 2개",
+            amounts_json: [{ amount: 2, unit: "개" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 0,
+          },
+          {
+            id: "item-2",
+            ingredient_id: "ing-2",
+            display_text: "대파 1단",
+            amounts_json: [{ amount: 1, unit: "단" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 100,
+          },
+          {
+            id: "item-3",
+            ingredient_id: "ing-3",
+            display_text: "간장 2큰술",
+            amounts_json: [{ amount: 2, unit: "큰술" }],
+            is_checked: false,
+            is_pantry_excluded: true,
+            added_to_pantry: false,
+            sort_order: 200,
+          },
+        ],
+      };
+
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithMultipleItems);
+      const updateSpy = vi
+        .spyOn(shoppingApi, "updateShoppingListItem")
+        .mockImplementation(async (_listId, itemId, patch) => {
+          const item = listWithMultipleItems.items.find((entry) => entry.id === itemId);
+          if (!item) throw new Error("missing item");
+          return { ...item, is_checked: Boolean(patch.is_checked) };
+        });
 
       const user = userEvent.setup();
 
@@ -682,20 +725,24 @@ describe("ShoppingDetailScreen", () => {
         expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
       });
 
-      const moveDownButton = screen.getByRole("button", { name: /양파.*아래로 이동/ });
-      await user.click(moveDownButton);
+      await user.click(
+        screen.getByRole("checkbox", { name: "구매할 재료 전체 선택" }),
+      );
 
       await waitFor(() => {
-        expect(reorderSpy).toHaveBeenCalledWith("list-1", {
-          orders: [
-            { item_id: "item-2", sort_order: 0 },
-            { item_id: "item-1", sort_order: 10 },
-          ],
+        expect(updateSpy).toHaveBeenCalledWith("list-1", "item-1", {
+          is_checked: true,
+        });
+        expect(updateSpy).toHaveBeenCalledWith("list-1", "item-2", {
+          is_checked: true,
         });
       });
+
+      expect(updateSpy).not.toHaveBeenCalledWith("list-1", "item-3", expect.anything());
     });
 
-    it("rolls back and shows error toast when reorder fails", async () => {
+    it("checks every purchase item from the mobile select-all control", async () => {
+      setMatchMedia(true);
       const listWithMultipleItems: ShoppingListDetail = {
         ...mockListDetail,
         items: [
@@ -723,65 +770,13 @@ describe("ShoppingDetailScreen", () => {
       };
 
       vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithMultipleItems);
-
-      const reorderError = new Error("서버 오류가 발생했어요.") as shoppingApi.ShoppingApiError;
-      reorderError.status = 500;
-      reorderError.code = "INTERNAL_ERROR";
-      reorderError.fields = [];
-      vi.spyOn(shoppingApi, "reorderShoppingListItems").mockRejectedValue(reorderError);
-      vi.spyOn(shoppingApi, "isShoppingApiError").mockReturnValue(true);
-
-      const user = userEvent.setup();
-
-      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
-
-      await waitFor(() => {
-        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
-      });
-
-      const moveDownButton = screen.getByRole("button", { name: /양파.*아래로 이동/ });
-      await user.click(moveDownButton);
-
-      await waitFor(() => {
-        expect(screen.getByText("서버 오류가 발생했어요.")).toBeTruthy();
-      });
-    });
-
-    it("shows conflict error when reordering completed list", async () => {
-      const listWithMultipleItems: ShoppingListDetail = {
-        ...mockListDetail,
-        items: [
-          {
-            id: "item-1",
-            ingredient_id: "ing-1",
-            display_text: "양파 2개",
-            amounts_json: [{ amount: 2, unit: "개" }],
-            is_checked: false,
-            is_pantry_excluded: false,
-            added_to_pantry: false,
-            sort_order: 0,
-          },
-          {
-            id: "item-2",
-            ingredient_id: "ing-2",
-            display_text: "대파 1단",
-            amounts_json: [{ amount: 1, unit: "단" }],
-            is_checked: false,
-            is_pantry_excluded: false,
-            added_to_pantry: false,
-            sort_order: 100,
-          },
-        ],
-      };
-
-      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithMultipleItems);
-
-      const conflictError = new Error("완료된 장보기 기록은 수정할 수 없어요") as shoppingApi.ShoppingApiError;
-      conflictError.status = 409;
-      conflictError.code = "CONFLICT";
-      conflictError.fields = [];
-      vi.spyOn(shoppingApi, "reorderShoppingListItems").mockRejectedValue(conflictError);
-      vi.spyOn(shoppingApi, "isShoppingApiError").mockReturnValue(true);
+      const updateSpy = vi
+        .spyOn(shoppingApi, "updateShoppingListItem")
+        .mockImplementation(async (_listId, itemId, patch) => {
+          const item = listWithMultipleItems.items.find((entry) => entry.id === itemId);
+          if (!item) throw new Error("missing item");
+          return { ...item, is_checked: Boolean(patch.is_checked) };
+        });
 
       const user = userEvent.setup();
 
@@ -791,13 +786,12 @@ describe("ShoppingDetailScreen", () => {
         expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
       });
 
-      const moveDownButton = screen.getByRole("button", { name: /양파.*아래로 이동/ });
-      await user.click(moveDownButton);
+      await user.click(
+        screen.getByRole("checkbox", { name: "구매할 재료 전체 선택" }),
+      );
 
       await waitFor(() => {
-        expect(
-          screen.getAllByText("완료된 장보기 기록은 수정할 수 없어요").length
-        ).toBeGreaterThan(0);
+        expect(updateSpy).toHaveBeenCalledTimes(2);
       });
     });
   });
@@ -857,8 +851,14 @@ describe("ShoppingDetailScreen", () => {
       expect(mockPush).toHaveBeenCalledWith("/planner");
     });
 
-    it("shows pantry reflection popup when clicking complete button", async () => {
-      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+    it("shows the same direct pantry reflection choices as the mobile sheet", async () => {
+      const listWithCheckedItem: ShoppingListDetail = {
+        ...mockListDetail,
+        items: mockListDetail.items.map((item) =>
+          item.id === "item-1" ? { ...item, is_checked: true } : item
+        ),
+      };
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithCheckedItem);
 
       const user = userEvent.setup();
 
@@ -871,17 +871,17 @@ describe("ShoppingDetailScreen", () => {
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
 
-      // Should show pantry popup
-      await waitFor(() => {
-        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
-      });
+      await expectPantryDialogVisible();
 
-      expect(screen.getByText("모두 추가")).toBeTruthy();
-      expect(screen.getByText("선택 추가")).toBeTruthy();
-      expect(screen.getByText("추가 안 함")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "반영 안 함" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "1개 반영하기" })).toBeTruthy();
+      const dialog = screen.getByRole("dialog", { name: /팬트리에 반영할까요/ });
+      expect(within(dialog).getByRole("button", { name: /양파/ })).toBeTruthy();
+      expect(screen.queryByText("모두 추가")).toBeNull();
+      expect(screen.queryByText("선택 추가")).toBeNull();
     });
 
-    it("completes shopping list with 모두 추가 (null default body)", async () => {
+    it("completes shopping list with the default selected-all pantry policy", async () => {
       const listWithCheckedItem: ShoppingListDetail = {
         ...mockListDetail,
         items: mockListDetail.items.map((item) =>
@@ -908,13 +908,9 @@ describe("ShoppingDetailScreen", () => {
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
 
-      // Popup should appear
-      await waitFor(() => {
-        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
-      });
+      await expectPantryDialogVisible();
 
-      // "모두 추가" is selected by default, click confirm
-      const confirmButton = screen.getByRole("button", { name: "완료" });
+      const confirmButton = screen.getByRole("button", { name: "1개 반영하기" });
       await user.click(confirmButton);
 
       // Should call API with explicit null default policy
@@ -938,8 +934,14 @@ describe("ShoppingDetailScreen", () => {
       expect(screen.getByText(/완료됨/)).toBeTruthy();
     });
 
-    it("completes shopping list with 추가 안 함 (empty array)", async () => {
-      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+    it("completes shopping list with no pantry reflection", async () => {
+      const listWithCheckedItem: ShoppingListDetail = {
+        ...mockListDetail,
+        items: mockListDetail.items.map((item) =>
+          item.id === "item-1" ? { ...item, is_checked: true } : item
+        ),
+      };
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithCheckedItem);
       const completeSpy = vi.spyOn(shoppingApi, "completeShoppingList").mockResolvedValue({
         completed: true,
         meals_updated: 2,
@@ -958,20 +960,11 @@ describe("ShoppingDetailScreen", () => {
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
 
-      // Popup should appear
-      await waitFor(() => {
-        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
-      });
+      await expectPantryDialogVisible();
 
-      // Click "추가 안 함"
-      const noneButton = screen.getByText("추가 안 함");
+      const noneButton = screen.getByRole("button", { name: "반영 안 함" });
       await user.click(noneButton);
 
-      // Click confirm
-      const confirmButton = screen.getByRole("button", { name: "완료" });
-      await user.click(confirmButton);
-
-      // Should call API with empty array
       await waitFor(() => {
         expect(completeSpy).toHaveBeenCalledWith("list-1", { add_to_pantry_item_ids: [] });
       });
@@ -982,7 +975,7 @@ describe("ShoppingDetailScreen", () => {
       });
     });
 
-    it("completes shopping list with 선택 추가 (selected items)", async () => {
+    it("completes shopping list with only the checked pantry reflection items", async () => {
       const listWithMultipleChecked: ShoppingListDetail = {
         ...mockListDetail,
         items: [
@@ -1028,16 +1021,8 @@ describe("ShoppingDetailScreen", () => {
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
 
-      // Popup should appear
-      await waitFor(() => {
-        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
-      });
+      await expectPantryDialogVisible();
 
-      // Click "선택 추가"
-      const selectedButton = screen.getByText("선택 추가");
-      await user.click(selectedButton);
-
-      // Should show item list
       await waitFor(() => {
         expect(screen.getAllByText("양파").length).toBeGreaterThan(0);
         expect(screen.getAllByText("간장").length).toBeGreaterThan(0);
@@ -1049,13 +1034,11 @@ describe("ShoppingDetailScreen", () => {
       expect(item2Button).toBeTruthy();
       await user.click(item2Button!);
 
-      // Should show 1개 선택됨
       await waitFor(() => {
-        expect(screen.getByText("1개 선택됨")).toBeTruthy();
+        expect(screen.getByRole("button", { name: "1개 반영하기" })).toBeTruthy();
       });
 
-      // Click confirm
-      const confirmButton = screen.getByRole("button", { name: "완료" });
+      const confirmButton = screen.getByRole("button", { name: "1개 반영하기" });
       await user.click(confirmButton);
 
       // Should call API with selected item only
@@ -1087,9 +1070,7 @@ describe("ShoppingDetailScreen", () => {
       await user.click(completeButton);
 
       // Popup should appear
-      await waitFor(() => {
-        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
-      });
+      await expectPantryDialogVisible();
 
       // Click cancel
       const cancelButton = screen.getByRole("button", { name: "취소" });
@@ -1157,22 +1138,9 @@ describe("ShoppingDetailScreen", () => {
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
 
-      // Popup should appear
+      await expectPantryDialogVisible();
+
       await waitFor(() => {
-        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
-      });
-
-      // Should show "(1개)" for eligible items
-      expect(screen.getByText(/체크한 모든 재료를 팬트리에 추가해요 \(1개\)/)).toBeTruthy();
-
-      // Click "선택 추가" to see item list
-      const selectedButton = screen.getByText("선택 추가");
-      await user.click(selectedButton);
-
-      // Only item-1 should be visible (checked and not excluded)
-      // The popup should show "양파" in the selection list
-      await waitFor(() => {
-        // Look for "양파" inside the popup item list (not in the main list)
         const itemButtons = screen.getAllByRole("button");
         const yangpaInPopup = itemButtons.some((btn) =>
           btn.textContent?.includes("양파") &&
@@ -1182,8 +1150,6 @@ describe("ShoppingDetailScreen", () => {
         expect(yangpaInPopup).toBeTruthy();
       });
 
-      // item-2 (unchecked) and item-3 (excluded) should not be in the popup
-      // Check by looking for buttons without aria-label (popup items)
       const popupItemButtons = screen.getAllByRole("button").filter((btn) => !btn.getAttribute("aria-label"));
       const hasDaepa = popupItemButtons.some((btn) => btn.textContent?.includes("대파"));
       const hasGanjang = popupItemButtons.some((btn) => btn.textContent?.includes("간장"));
@@ -1192,7 +1158,13 @@ describe("ShoppingDetailScreen", () => {
     });
 
     it("handles 401 error by redirecting to login", async () => {
-      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+      const listWithCheckedItem: ShoppingListDetail = {
+        ...mockListDetail,
+        items: mockListDetail.items.map((item) =>
+          item.id === "item-1" ? { ...item, is_checked: true } : item
+        ),
+      };
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithCheckedItem);
 
       const authError = new Error("로그인이 필요해요") as shoppingApi.ShoppingApiError;
       authError.status = 401;
@@ -1212,13 +1184,9 @@ describe("ShoppingDetailScreen", () => {
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
 
-      // Popup should appear
-      await waitFor(() => {
-        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
-      });
+      await expectPantryDialogVisible();
 
-      // Confirm with default "모두 추가"
-      const confirmButton = screen.getByRole("button", { name: "완료" });
+      const confirmButton = screen.getByRole("button", { name: "1개 반영하기" });
       await user.click(confirmButton);
 
       await waitFor(() => {
@@ -1227,7 +1195,13 @@ describe("ShoppingDetailScreen", () => {
     });
 
     it("handles 409 conflict error", async () => {
-      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+      const listWithCheckedItem: ShoppingListDetail = {
+        ...mockListDetail,
+        items: mockListDetail.items.map((item) =>
+          item.id === "item-1" ? { ...item, is_checked: true } : item
+        ),
+      };
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithCheckedItem);
 
       const conflictError = new Error("이미 완료된 장보기 기록이에요") as shoppingApi.ShoppingApiError;
       conflictError.status = 409;
@@ -1247,13 +1221,9 @@ describe("ShoppingDetailScreen", () => {
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
 
-      // Popup should appear
-      await waitFor(() => {
-        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
-      });
+      await expectPantryDialogVisible();
 
-      // Confirm with default "모두 추가"
-      const confirmButton = screen.getByRole("button", { name: "완료" });
+      const confirmButton = screen.getByRole("button", { name: "1개 반영하기" });
       await user.click(confirmButton);
 
       await waitFor(() => {
@@ -1262,7 +1232,13 @@ describe("ShoppingDetailScreen", () => {
     });
 
     it("handles generic error", async () => {
-      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+      const listWithCheckedItem: ShoppingListDetail = {
+        ...mockListDetail,
+        items: mockListDetail.items.map((item) =>
+          item.id === "item-1" ? { ...item, is_checked: true } : item
+        ),
+      };
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithCheckedItem);
 
       const serverError = new Error("서버 오류") as shoppingApi.ShoppingApiError;
       serverError.status = 500;
@@ -1282,13 +1258,9 @@ describe("ShoppingDetailScreen", () => {
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
 
-      // Popup should appear
-      await waitFor(() => {
-        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
-      });
+      await expectPantryDialogVisible();
 
-      // Confirm with default "모두 추가"
-      const confirmButton = screen.getByRole("button", { name: "완료" });
+      const confirmButton = screen.getByRole("button", { name: "1개 반영하기" });
       await user.click(confirmButton);
 
       await waitFor(() => {
@@ -1297,7 +1269,13 @@ describe("ShoppingDetailScreen", () => {
     });
 
     it("handles non-API error", async () => {
-      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+      const listWithCheckedItem: ShoppingListDetail = {
+        ...mockListDetail,
+        items: mockListDetail.items.map((item) =>
+          item.id === "item-1" ? { ...item, is_checked: true } : item
+        ),
+      };
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithCheckedItem);
       vi.spyOn(shoppingApi, "completeShoppingList").mockRejectedValue(new Error("Network failure"));
       vi.spyOn(shoppingApi, "isShoppingApiError").mockReturnValue(false);
 
@@ -1312,13 +1290,9 @@ describe("ShoppingDetailScreen", () => {
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
 
-      // Popup should appear
-      await waitFor(() => {
-        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
-      });
+      await expectPantryDialogVisible();
 
-      // Confirm with default "모두 추가"
-      const confirmButton = screen.getByRole("button", { name: "완료" });
+      const confirmButton = screen.getByRole("button", { name: "1개 반영하기" });
       await user.click(confirmButton);
 
       await waitFor(() => {

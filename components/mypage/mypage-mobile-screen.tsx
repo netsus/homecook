@@ -249,12 +249,16 @@ function MobileHomeSurface({
     },
     {
       icon: "settings",
-      href: "/settings",
+      href: buildReturnHref("/settings", {
+        returnTo: "/mypage",
+      }),
       label: "환경설정",
     },
     {
       icon: "user",
-      href: "/settings?view=account",
+      href: buildReturnHref("/settings?view=account", {
+        returnTo: "/mypage?tab=account",
+      }),
       label: "계정 정보",
     },
   ];
@@ -295,7 +299,9 @@ function MobileHomeSurface({
           <Link
             className="flex h-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[#F8F9FA] px-3 text-[12px] font-bold text-[#495057]"
             data-testid="mypage-settings-link"
-            href="/settings"
+            href={buildReturnHref("/settings", {
+              returnTo: "/mypage?tab=account",
+            })}
           >
             편집
           </Link>

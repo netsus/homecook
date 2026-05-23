@@ -335,6 +335,23 @@ describe("SettingsScreen", () => {
     ).toBe("/mypage?tab=account");
   });
 
+  it("preserves the account tab return target from the settings URL", async () => {
+    navigationMocks.searchParams.mockReturnValue(
+      new URLSearchParams({ returnTo: "/mypage?tab=account" }),
+    );
+    mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
+    render(<SettingsScreen initialAuthenticated={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("요리모드 화면 꺼짐 방지")).toBeTruthy();
+    });
+
+    const breadcrumb = screen.getByRole("navigation", { name: "설정 경로" });
+    expect(
+      within(breadcrumb).getByRole("link", { name: /마이페이지/ }).getAttribute("href"),
+    ).toBe("/mypage?tab=account");
+  });
+
   // --- Wake lock toggle ---
 
   it("toggles screen wake lock on click", async () => {

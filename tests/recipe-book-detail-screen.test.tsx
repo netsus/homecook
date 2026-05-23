@@ -312,12 +312,12 @@ describe("RecipeBookDetailScreen", () => {
     });
   });
 
-  it("links recipe cards to RECIPE_DETAIL", async () => {
+  it("links recipe cards to RECIPE_DETAIL with the current book as the return target", async () => {
     render(
       <RecipeBookDetailScreen
-        bookId="book-1"
-        bookName="저장한 레시피"
-        bookType="saved"
+        bookId="book-my"
+        bookName="내가 추가한 레시피"
+        bookType="my_added"
         initialAuthenticated
       />,
     );
@@ -325,8 +325,14 @@ describe("RecipeBookDetailScreen", () => {
     await screen.findByText("된장찌개");
 
     const card1 = screen.getByTestId("recipe-item-recipe-1");
-    const link = card1.querySelector("a[href='/recipe/recipe-1']");
+    const link = card1.querySelector("a");
     expect(link).toBeTruthy();
+    expect(link?.getAttribute("href")).toContain("/recipe/recipe-1?");
+    expect(link?.getAttribute("href")).toContain(
+      "returnTo=%2Fmypage%2Frecipe-books%2Fbook-my",
+    );
+    expect(link?.getAttribute("href")).toContain("type%3Dmy_added");
+    expect(link?.getAttribute("href")).toContain("restore=recipebook-tab");
   });
 
   // ─── Empty ──────────────────────────────────────────────────────────────────
