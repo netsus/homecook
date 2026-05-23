@@ -20,18 +20,11 @@ export interface PantryReflectionPopupProps {
   onCancel: () => void;
 }
 
-type SelectionMode = "all" | "selected" | "none";
-
 /**
  * Pantry Reflection Popup
  *
  * Shows a bottom-sheet style popup before completing shopping,
  * allowing users to choose which checked items to add to pantry.
- *
- * Three modes:
- * - "모두 추가" (all): calls onConfirm(undefined) → parent sends default policy
- * - "선택 추가" (selected): shows checkboxes, calls onConfirm([...selectedIds])
- * - "추가 안 함" (none): calls onConfirm([])
  *
  * Only checked items where is_pantry_excluded=false are selectable.
  */
@@ -43,15 +36,13 @@ export function PantryReflectionPopup({
   const eligibleItems = items.filter(
     (item) => item.is_checked && !item.is_pantry_excluded
   );
-  const [mode, setMode] = useState<SelectionMode>(() =>
-    eligibleItems.length > 0 ? "all" : "none"
-  );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
     // Pre-select all eligible items
     return new Set(eligibleItems.map((item) => item.id));
   });
   const isMobileViewport = useIsMobileViewport();
-  const hasEligibleItems = eligibleItems.length > 0;
+  const selectedCount = selectedIds.size;
+  const hasSelectedItems = selectedCount > 0;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -85,22 +76,6 @@ export function PantryReflectionPopup({
 
     onConfirm(selectedItemIds);
   };
-
-  const handleConfirm = () => {
-    if (mode === "all") {
-      // undefined is the UI signal for the default pantry reflection policy.
-      onConfirm(undefined);
-    } else if (mode === "none") {
-      // [] → no pantry reflection
-      onConfirm([]);
-    } else {
-      // selected → reflect only selected items
-      onConfirm(Array.from(selectedIds));
-    }
-  };
-
-  const isConfirmDisabled =
-    mode === "selected" && selectedIds.size === 0;
 
   if (isMobileViewport) {
     return (
@@ -142,80 +117,35 @@ export function PantryReflectionPopup({
         </WebDialogHeader>
 
         <WebDialogBody>
-          <div className="web-reflect-options">
-            <ReflectOption
-              checked={mode === "all"}
-              disabled={!hasEligibleItems}
-              meta={
-                hasEligibleItems
-                  ? `체크한 모든 재료 ${eligibleItems.length}개`
-                  : "추가할 수 있는 재료가 없어요"
-              }
-              onClick={() => {
-                if (hasEligibleItems) {
-                  setMode("all");
-                }
-              }}
-              testAlias="모두 추가"
-              testMetaAlias={
-                hasEligibleItems
-                  ? `체크한 모든 재료를 팬트리에 추가해요 (${eligibleItems.length}개)`
-                  : undefined
-              }
-              title="모두 반영"
-            />
-            <ReflectOption
-              checked={mode === "selected"}
-              disabled={!hasEligibleItems}
-              meta="직접 선택한 재료만 팬트리에 반영해요"
-              onClick={() => {
-                if (hasEligibleItems) {
-                  setMode("selected");
-                }
-              }}
-              testAlias="선택 추가"
-              title="선택 반영"
-            />
-            <ReflectOption
-              checked={mode === "none"}
-              meta="팬트리에 반영하지 않고 장보기만 완료해요"
-              onClick={() => setMode("none")}
-              testAlias="추가 안 함"
-              title="반영 안 함"
-            />
+          <div className="web-reflect-list">
+            {eligibleItems.length === 0 ? (
+              <p className="web-modal-copy">선택할 수 있는 재료가 없어요</p>
+            ) : (
+              eligibleItems.map((item) => {
+                const checked = selectedIds.has(item.id);
+
+                return (
+                  <button
+                    aria-pressed={checked}
+                    className="web-reflect-item"
+                    key={item.id}
+                    onClick={() => handleToggleItem(item.id)}
+                    type="button"
+                  >
+                    <span aria-hidden="true">{checked ? "✓" : ""}</span>
+                    <strong>{formatPantryItemName(item)}</strong>
+                    <small>{formatPantryAmountText(item)}</small>
+                  </button>
+                );
+              })
+            )}
           </div>
-
-          {mode === "selected" ? (
-            <div className="web-reflect-list">
-              {eligibleItems.length === 0 ? (
-                <p className="web-modal-copy">선택할 수 있는 재료가 없어요</p>
-              ) : (
-                eligibleItems.map((item) => {
-                  const checked = selectedIds.has(item.id);
-
-                  return (
-                    <button
-                      aria-pressed={checked}
-                      className="web-reflect-item"
-                      key={item.id}
-                      onClick={() => handleToggleItem(item.id)}
-                      type="button"
-                    >
-                      <span aria-hidden="true">{checked ? "✓" : ""}</span>
-                      <strong>{formatPantryItemName(item)}</strong>
-                      <small>{formatPantryAmountText(item)}</small>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          ) : null}
         </WebDialogBody>
 
         <WebDialogFooter>
-          {mode === "selected" && eligibleItems.length > 0 ? (
+          {eligibleItems.length > 0 ? (
             <span className="web-modal-footer-note">
-              {selectedIds.size}개 선택됨
+              {selectedCount}개 선택됨
             </span>
           ) : null}
           <WebButton
@@ -226,60 +156,20 @@ export function PantryReflectionPopup({
             나중에
           </WebButton>
           <WebButton
-            aria-label="완료"
-            disabled={isConfirmDisabled}
-            onClick={handleConfirm}
+            onClick={() => onConfirm([])}
+            variant="tertiary"
           >
-            {mode === "selected" && selectedIds.size > 0
-              ? `${selectedIds.size}개 반영`
-              : "완료"}
+            반영 안 함
+          </WebButton>
+          <WebButton
+            disabled={!hasSelectedItems}
+            onClick={handleConfirmSelected}
+          >
+            {hasSelectedItems ? `${selectedCount}개 반영하기` : "반영할 재료 선택"}
           </WebButton>
         </WebDialogFooter>
       </WebDialog>
     </WebModal>
-  );
-}
-
-function ReflectOption({
-  checked,
-  disabled = false,
-  meta,
-  onClick,
-  testAlias,
-  testMetaAlias,
-  title,
-}: {
-  checked: boolean;
-  disabled?: boolean;
-  meta: string;
-  onClick: () => void;
-  testAlias?: string;
-  testMetaAlias?: string;
-  title: string;
-}) {
-  return (
-    <button
-      aria-pressed={checked}
-      className={[
-        "web-reflect-option",
-        checked ? "web-reflect-option-active" : "",
-      ].join(" ")}
-      disabled={disabled}
-      onClick={onClick}
-      type="button"
-    >
-      <span aria-hidden="true">{checked ? "●" : ""}</span>
-      <strong>
-        {title}
-        {testAlias ? <span className="sr-only"> {testAlias}</span> : null}
-      </strong>
-      <small>
-        {meta}
-        {testMetaAlias ? (
-          <span className="sr-only"> {testMetaAlias}</span>
-        ) : null}
-      </small>
-    </button>
   );
 }
 

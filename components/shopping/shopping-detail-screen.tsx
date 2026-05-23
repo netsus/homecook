@@ -20,7 +20,6 @@ import {
   fetchShoppingListDetail,
   fetchShoppingShareText,
   isShoppingApiError,
-  reorderShoppingListItems,
   updateShoppingListItem,
 } from "@/lib/api/shopping";
 import type { ShoppingListDetail, ShoppingListItemSummary } from "@/types/shopping";
@@ -63,8 +62,7 @@ export function ShoppingDetailScreen({
   const [updatingItem, setUpdatingItem] = useState<UpdateState | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [shareToast, setShareToast] = useState<{ type: "success" | "error" | "empty"; message: string } | null>(null);
-  const [isReordering, setIsReordering] = useState(false);
-  const [reorderError, setReorderError] = useState<string | null>(null);
+  const [isUpdatingAllPurchaseItems, setIsUpdatingAllPurchaseItems] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [completeToast, setCompleteToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [showPantryPopup, setShowPantryPopup] = useState(false);
@@ -273,6 +271,89 @@ export function ShoppingDetailScreen({
     [listId, listDetail, markListReadOnly]
   );
 
+  const handleToggleAllPurchaseItems = useCallback(async () => {
+    if (!listDetail || listDetail.is_completed || isUpdatingAllPurchaseItems) {
+      return;
+    }
+
+    const purchaseItems = listDetail.items.filter(
+      (item) => !item.is_pantry_excluded,
+    );
+    if (purchaseItems.length === 0) {
+      return;
+    }
+
+    const nextChecked = !purchaseItems.every((item) => item.is_checked);
+    const targetItems = purchaseItems.filter(
+      (item) => item.is_checked !== nextChecked,
+    );
+    if (targetItems.length === 0) {
+      return;
+    }
+
+    const previousItems = listDetail.items;
+    setIsUpdatingAllPurchaseItems(true);
+    setCompleteToast(null);
+
+    setListDetail((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: prev.items.map((item) =>
+          !item.is_pantry_excluded ? { ...item, is_checked: nextChecked } : item,
+        ),
+      };
+    });
+
+    try {
+      const updatedItems = await Promise.all(
+        targetItems.map((item) =>
+          updateShoppingListItem(listId, item.id, { is_checked: nextChecked }),
+        ),
+      );
+      const updatedById = new Map(updatedItems.map((item) => [item.id, item]));
+
+      setListDetail((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          items: prev.items.map((item) => updatedById.get(item.id) ?? item),
+        };
+      });
+    } catch (error) {
+      setListDetail((prev) => (prev ? { ...prev, items: previousItems } : prev));
+
+      if (isShoppingApiError(error)) {
+        if (error.status === 409) {
+          markListReadOnly("완료된 장보기 기록은 수정할 수 없어요");
+        } else if (error.status === 401) {
+          router.push(`/login?next=/shopping/lists/${listId}`);
+          return;
+        } else {
+          setCompleteToast({
+            type: "error",
+            message: error.message,
+          });
+        }
+      } else {
+        setCompleteToast({
+          type: "error",
+          message: "전체 선택을 저장하지 못했어요",
+        });
+      }
+
+      setTimeout(() => setCompleteToast(null), 3000);
+    } finally {
+      setIsUpdatingAllPurchaseItems(false);
+    }
+  }, [
+    isUpdatingAllPurchaseItems,
+    listDetail,
+    listId,
+    markListReadOnly,
+    router,
+  ]);
+
   const handleShare = useCallback(async () => {
     if (!listDetail) return;
 
@@ -321,87 +402,6 @@ export function ShoppingDetailScreen({
       scheduleShareToastClear();
     }
   }, [clearShareToastTimer, listId, listDetail, router, scheduleShareToastClear]);
-
-  const handleMoveItem = useCallback(
-    async (itemId: string, direction: "up" | "down") => {
-      if (!listDetail || listDetail.is_completed) {
-        return;
-      }
-
-      const purchaseItems = listDetail.items.filter((item) => !item.is_pantry_excluded);
-      const currentIndex = purchaseItems.findIndex((item) => item.id === itemId);
-
-      if (currentIndex === -1) {
-        return;
-      }
-
-      if (direction === "up" && currentIndex === 0) {
-        return;
-      }
-
-      if (direction === "down" && currentIndex === purchaseItems.length - 1) {
-        return;
-      }
-
-      const oldItems = [...listDetail.items];
-      const newPurchaseItems = [...purchaseItems];
-      const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
-
-      // Swap items
-      [newPurchaseItems[currentIndex], newPurchaseItems[newIndex]] = [
-        newPurchaseItems[newIndex],
-        newPurchaseItems[currentIndex],
-      ];
-
-      // Reconstruct full items list with purchase items in new order
-      const excludedItems = listDetail.items.filter((item) => item.is_pantry_excluded);
-      const newItems = [...newPurchaseItems, ...excludedItems];
-
-      // Update local state immediately (optimistic)
-      setListDetail((prev) => {
-        if (!prev) return prev;
-        return { ...prev, items: newItems };
-      });
-
-      // Calculate new sort_order values for all items
-      const orders = newItems.map((item, index) => ({
-        item_id: item.id,
-        sort_order: index * 10,
-      }));
-
-      setIsReordering(true);
-      setReorderError(null);
-
-      try {
-        await reorderShoppingListItems(listId, { orders });
-        // Success: keep the new order
-      } catch (error) {
-        // Rollback on error
-        setListDetail((prev) => {
-          if (!prev) return prev;
-          return { ...prev, items: oldItems };
-        });
-
-        if (isShoppingApiError(error)) {
-          if (error.status === 409) {
-            markListReadOnly("완료된 장보기 기록은 수정할 수 없어요");
-          } else if (error.status === 401) {
-            router.push(`/login?next=/shopping/lists/${listId}`);
-            return;
-          } else {
-            setReorderError(error.message);
-          }
-        } else {
-          setReorderError("순서 변경에 실패했어요");
-        }
-
-        setTimeout(() => setReorderError(null), 3000);
-      } finally {
-        setIsReordering(false);
-      }
-    },
-    [listId, listDetail, markListReadOnly, router]
-  );
 
   const handleCompleteClick = useCallback(() => {
     if (!listDetail || listDetail.is_completed) {
@@ -567,17 +567,16 @@ export function ShoppingDetailScreen({
         excludedItems={excludedItems}
         isCompleting={isCompleting}
         isReadOnly={isReadOnly}
-        isReordering={isReordering}
         isSharing={isSharing}
+        isUpdatingAllPurchaseItems={isUpdatingAllPurchaseItems}
         navActiveId={navActiveId}
         onBack={handleBack}
         onComplete={handleCompleteClick}
-        onMoveItem={handleMoveItem}
         onShare={handleShare}
+        onToggleAllPurchaseItems={handleToggleAllPurchaseItems}
         onToggleCheck={handleToggleCheck}
         onToggleExclude={handleToggleExclude}
         purchaseItems={purchaseItems}
-        reorderError={reorderError}
         shareToast={shareToast}
         showPantryPopup={showPantryPopup}
         updatingItem={updatingItem}
@@ -633,9 +632,6 @@ export function ShoppingDetailScreen({
             tone={shareToast.type === "error" ? "error" : "success"}
           />
         ) : null}
-        {reorderError ? (
-          <StatusToast message={reorderError} tone="error" />
-        ) : null}
         {completeToast ? (
           <StatusToast message={completeToast.message} tone={completeToast.type} />
         ) : null}
@@ -682,7 +678,21 @@ export function ShoppingDetailScreen({
                 </h2>
                 <p>{purchaseItems.length}개 항목</p>
               </div>
-              {!isReadOnly ? <span>체크 · 제외 · 순서 변경</span> : null}
+              {!isReadOnly ? (
+                <div className="web-shopping-section-actions">
+                  <PurchaseSelectAllControl
+                    checked={
+                      purchaseItems.length > 0 &&
+                      purchaseItems.every((item) => item.is_checked)
+                    }
+                    disabled={
+                      purchaseItems.length === 0 || isUpdatingAllPurchaseItems
+                    }
+                    onClick={handleToggleAllPurchaseItems}
+                  />
+                  <span>체크 · 제외</span>
+                </div>
+              ) : null}
             </div>
 
             {isEmpty ? (
@@ -693,21 +703,12 @@ export function ShoppingDetailScreen({
               </div>
             ) : (
               <div className="web-shopping-item-grid">
-                {purchaseItems.map((item, index) => (
+                {purchaseItems.map((item) => (
                   <ShoppingItemCard
                     isReadOnly={isReadOnly}
-                    isReordering={isReordering}
                     isUpdating={updatingItem?.itemId === item.id}
                     item={item}
                     key={item.id}
-                    onMoveDown={
-                      index < purchaseItems.length - 1
-                        ? () => handleMoveItem(item.id, "down")
-                        : undefined
-                    }
-                    onMoveUp={
-                      index > 0 ? () => handleMoveItem(item.id, "up") : undefined
-                    }
                     onToggleCheck={handleToggleCheck}
                     onToggleExclude={handleToggleExclude}
                   />
@@ -836,9 +837,6 @@ export function ShoppingDetailScreen({
             tone={shareToast.type === "error" ? "error" : "success"}
           />
         ) : null}
-        {reorderError ? (
-          <StatusToast message={reorderError} tone="error" />
-        ) : null}
         {completeToast ? (
           <StatusToast message={completeToast.message} tone={completeToast.type} />
         ) : null}
@@ -885,7 +883,21 @@ export function ShoppingDetailScreen({
                 </h2>
                 <p>{purchaseItems.length}개 항목</p>
               </div>
-              {!isReadOnly ? <span>체크 · 제외 · 순서 변경</span> : null}
+              {!isReadOnly ? (
+                <div className="web-shopping-section-actions">
+                  <PurchaseSelectAllControl
+                    checked={
+                      purchaseItems.length > 0 &&
+                      purchaseItems.every((item) => item.is_checked)
+                    }
+                    disabled={
+                      purchaseItems.length === 0 || isUpdatingAllPurchaseItems
+                    }
+                    onClick={handleToggleAllPurchaseItems}
+                  />
+                  <span>체크 · 제외</span>
+                </div>
+              ) : null}
             </div>
 
             {isEmpty ? (
@@ -896,21 +908,12 @@ export function ShoppingDetailScreen({
               </div>
             ) : (
               <div className="web-shopping-item-grid">
-                {purchaseItems.map((item, index) => (
+                {purchaseItems.map((item) => (
                   <ShoppingItemCard
                     isReadOnly={isReadOnly}
-                    isReordering={isReordering}
                     isUpdating={updatingItem?.itemId === item.id}
                     item={item}
                     key={item.id}
-                    onMoveDown={
-                      index < purchaseItems.length - 1
-                        ? () => handleMoveItem(item.id, "down")
-                        : undefined
-                    }
-                    onMoveUp={
-                      index > 0 ? () => handleMoveItem(item.id, "up") : undefined
-                    }
                     onToggleCheck={handleToggleCheck}
                     onToggleExclude={handleToggleExclude}
                   />
@@ -1139,19 +1142,18 @@ function MobileShoppingDetailScreen({
   excludedItems,
   isCompleting,
   isReadOnly,
-  isReordering,
   isSharing,
+  isUpdatingAllPurchaseItems,
   navActiveId,
   onBack,
   onComplete,
-  onMoveItem,
   onPantryCancel,
   onPantryConfirm,
   onShare,
+  onToggleAllPurchaseItems,
   onToggleCheck,
   onToggleExclude,
   purchaseItems,
-  reorderError,
   shareToast,
   showPantryPopup,
   updatingItem,
@@ -1161,15 +1163,15 @@ function MobileShoppingDetailScreen({
   excludedItems: ShoppingListItemSummary[];
   isCompleting: boolean;
   isReadOnly: boolean;
-  isReordering: boolean;
   isSharing: boolean;
+  isUpdatingAllPurchaseItems: boolean;
   navActiveId: "planner" | "mypage";
   onBack: () => void;
   onComplete: () => void;
-  onMoveItem: (itemId: string, direction: "up" | "down") => void;
   onPantryCancel: () => void;
   onPantryConfirm: (selectedItemIds: string[] | undefined) => void;
   onShare: () => void;
+  onToggleAllPurchaseItems: () => void;
   onToggleCheck: (itemId: string, currentChecked: boolean) => void;
   onToggleExclude: (
     itemId: string,
@@ -1177,7 +1179,6 @@ function MobileShoppingDetailScreen({
     currentChecked: boolean,
   ) => void;
   purchaseItems: ShoppingListItemSummary[];
-  reorderError: string | null;
   shareToast: { type: "success" | "error" | "empty"; message: string } | null;
   showPantryPopup: boolean;
   updatingItem: UpdateState | null;
@@ -1231,8 +1232,7 @@ function MobileShoppingDetailScreen({
         {shareToast ? (
           <MobileToast message={shareToast.message} type={shareToast.type} />
         ) : null}
-        {reorderError ? <MobileToast message={reorderError} type="error" /> : null}
-        {completeToast && completeToast.message !== reorderError ? (
+        {completeToast ? (
           <MobileToast message={completeToast.message} type={completeToast.type} />
         ) : null}
         {isReadOnly ? (
@@ -1257,17 +1257,27 @@ function MobileShoppingDetailScreen({
             팬트리 제외 항목 ({excludedItems.length}개)
           </span>
 
+          {!isReadOnly && purchaseItems.length > 0 ? (
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h3 className="text-[15px] font-extrabold leading-[1.3] text-[#212529]">
+                구매할 재료
+              </h3>
+              <PurchaseSelectAllControl
+                checked={purchaseItems.every((item) => item.is_checked)}
+                disabled={isUpdatingAllPurchaseItems}
+                onClick={onToggleAllPurchaseItems}
+              />
+            </div>
+          ) : null}
+
           {firstPurchaseItem ? (
             <MobileShoppingSection
               count={1}
               isReadOnly={isReadOnly}
-              isReordering={isReordering}
               items={[firstPurchaseItem]}
               label="냉장"
-              onMoveItem={onMoveItem}
               onToggleCheck={onToggleCheck}
               onToggleExclude={onToggleExclude}
-              purchaseItems={purchaseItems}
               updatingItem={updatingItem}
             />
           ) : null}
@@ -1276,13 +1286,10 @@ function MobileShoppingDetailScreen({
             <MobileShoppingSection
               count={otherPurchaseItems.length}
               isReadOnly={isReadOnly}
-              isReordering={isReordering}
               items={otherPurchaseItems}
               label="채소"
-              onMoveItem={onMoveItem}
               onToggleCheck={onToggleCheck}
               onToggleExclude={onToggleExclude}
-              purchaseItems={purchaseItems}
               updatingItem={updatingItem}
             />
           ) : null}
@@ -1297,13 +1304,10 @@ function MobileShoppingDetailScreen({
             <MobileShoppingSection
               count={excludedItems.length}
               isReadOnly={isReadOnly}
-              isReordering={isReordering}
               items={excludedItems}
               label="팬트리에 이미 있어 제외"
-              onMoveItem={onMoveItem}
               onToggleCheck={onToggleCheck}
               onToggleExclude={onToggleExclude}
-              purchaseItems={purchaseItems}
               updatingItem={updatingItem}
             />
           ) : null}
@@ -1402,28 +1406,22 @@ function MobileShareIcon() {
 function MobileShoppingSection({
   count,
   isReadOnly,
-  isReordering,
   items,
   label,
-  onMoveItem,
   onToggleCheck,
   onToggleExclude,
-  purchaseItems,
   updatingItem,
 }: {
   count: number;
   isReadOnly: boolean;
-  isReordering: boolean;
   items: ShoppingListItemSummary[];
   label: string;
-  onMoveItem: (itemId: string, direction: "up" | "down") => void;
   onToggleCheck: (itemId: string, currentChecked: boolean) => void;
   onToggleExclude: (
     itemId: string,
     currentExcluded: boolean,
     currentChecked: boolean,
   ) => void;
-  purchaseItems: ShoppingListItemSummary[];
   updatingItem: UpdateState | null;
 }) {
   return (
@@ -1432,31 +1430,16 @@ function MobileShoppingSection({
         {label} · {count}
       </h3>
       <div className="overflow-hidden rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white">
-        {items.map((item) => {
-          const purchaseIndex = purchaseItems.findIndex(
-            (purchaseItem) => purchaseItem.id === item.id,
-          );
-
-          return (
-            <MobileShoppingItemRow
-              isReadOnly={isReadOnly}
-              isReordering={isReordering}
-              isUpdating={updatingItem?.itemId === item.id}
-              item={item}
-              key={item.id}
-              onMoveDown={
-                purchaseIndex >= 0 && purchaseIndex < purchaseItems.length - 1
-                  ? () => onMoveItem(item.id, "down")
-                  : undefined
-              }
-              onMoveUp={
-                purchaseIndex > 0 ? () => onMoveItem(item.id, "up") : undefined
-              }
-              onToggleCheck={onToggleCheck}
-              onToggleExclude={onToggleExclude}
-            />
-          );
-        })}
+        {items.map((item) => (
+          <MobileShoppingItemRow
+            isReadOnly={isReadOnly}
+            isUpdating={updatingItem?.itemId === item.id}
+            item={item}
+            key={item.id}
+            onToggleCheck={onToggleCheck}
+            onToggleExclude={onToggleExclude}
+          />
+        ))}
       </div>
     </section>
   );
@@ -1464,20 +1447,14 @@ function MobileShoppingSection({
 
 function MobileShoppingItemRow({
   isReadOnly,
-  isReordering,
   isUpdating,
   item,
-  onMoveDown,
-  onMoveUp,
   onToggleCheck,
   onToggleExclude,
 }: {
   isReadOnly: boolean;
-  isReordering: boolean;
   isUpdating: boolean;
   item: ShoppingListItemSummary;
-  onMoveDown?: () => void;
-  onMoveUp?: () => void;
   onToggleCheck: (itemId: string, currentChecked: boolean) => void;
   onToggleExclude: (
     itemId: string,
@@ -1487,33 +1464,9 @@ function MobileShoppingItemRow({
 }) {
   const itemName = item.display_text.replace(/\s+\d+.*$/, "");
   const amountText = formatAmountText(item);
-  const canReorder = !isReadOnly && !item.is_pantry_excluded;
 
   return (
     <div className="relative flex min-h-[65px] items-center gap-3 border-b border-[#F1F3F5] px-4 py-2.5 last:border-b-0">
-      {canReorder ? (
-        <div className="absolute left-[3px] top-1/2 flex -translate-y-1/2 flex-col items-center justify-center gap-[2px] text-[#CED4DA]">
-          <button
-            aria-label={`${item.display_text} 위로 이동`}
-            className="h-4 w-4 text-[10px] leading-none opacity-70 disabled:opacity-20"
-            disabled={!onMoveUp || isReordering}
-            onClick={onMoveUp}
-            type="button"
-          >
-            ▲
-          </button>
-          <button
-            aria-label={`${item.display_text} 아래로 이동`}
-            className="h-4 w-4 text-[10px] leading-none opacity-70 disabled:opacity-20"
-            disabled={!onMoveDown || isReordering}
-            onClick={onMoveDown}
-            type="button"
-          >
-            ▼
-          </button>
-        </div>
-      ) : null}
-
       {!isReadOnly && !item.is_pantry_excluded ? (
         <button
           aria-checked={item.is_checked}
@@ -1614,15 +1567,37 @@ interface ShoppingItemCardProps {
   item: ShoppingListItemSummary;
   isReadOnly: boolean;
   isUpdating: boolean;
-  isReordering?: boolean;
   onToggleCheck: (itemId: string, currentChecked: boolean) => void;
   onToggleExclude: (
     itemId: string,
     currentExcluded: boolean,
     currentChecked: boolean,
   ) => void;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
+}
+
+function PurchaseSelectAllControl({
+  checked,
+  disabled,
+  onClick,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-checked={checked}
+      aria-label="구매할 재료 전체 선택"
+      className="shopping-select-all-control"
+      disabled={disabled}
+      onClick={onClick}
+      role="checkbox"
+      type="button"
+    >
+      <span aria-hidden="true">{checked ? "✓" : ""}</span>
+      전체 선택
+    </button>
+  );
 }
 
 function StatusToast({
@@ -1650,17 +1625,13 @@ function ShoppingItemCard({
   item,
   isReadOnly,
   isUpdating,
-  isReordering = false,
   onToggleCheck,
   onToggleExclude,
-  onMoveUp,
-  onMoveDown,
 }: ShoppingItemCardProps) {
   const amountText = item.amounts_json
     .map((a) => `${a.amount}${a.unit}`)
     .join(" + ");
 
-  const showReorderButtons = !isReadOnly && (onMoveUp || onMoveDown);
   const showCheckButton = !isReadOnly && !item.is_pantry_excluded;
   const toggleLabel = item.is_pantry_excluded ? "되살리기" : "이미있음";
 
@@ -1672,27 +1643,6 @@ function ShoppingItemCard({
         item.is_pantry_excluded ? "web-shopping-item-card-excluded" : "",
       ].join(" ")}
     >
-      {showReorderButtons ? (
-        <div className="web-shopping-reorder">
-          <button
-            aria-label={`${item.display_text} 위로 이동`}
-            disabled={!onMoveUp || isReordering}
-            onClick={onMoveUp}
-            type="button"
-          >
-            ↑
-          </button>
-          <button
-            aria-label={`${item.display_text} 아래로 이동`}
-            disabled={!onMoveDown || isReordering}
-            onClick={onMoveDown}
-            type="button"
-          >
-            ↓
-          </button>
-        </div>
-      ) : null}
-
       {showCheckButton ? (
         <button
           aria-checked={item.is_checked}

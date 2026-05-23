@@ -123,10 +123,7 @@ async function confirmDefaultPantryReflection(page: Page) {
     name: /팬트리에 (추가|반영)할까요\?/,
   });
   await expect(dialog).toBeVisible();
-  const isMobile = (page.viewportSize()?.width ?? 1280) < 1024;
-  await dialog
-    .getByRole("button", { name: isMobile ? /개 반영하기/ : "완료", exact: !isMobile })
-    .click();
+  await dialog.getByRole("button", { name: /개 반영하기/ }).click();
 }
 
 async function installPlannerRoute(

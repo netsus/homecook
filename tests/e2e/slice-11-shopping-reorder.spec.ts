@@ -48,12 +48,12 @@ async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
     ({ key, state }) => {
       window.localStorage.setItem(key, state);
     },
-    { key: E2E_AUTH_OVERRIDE_KEY, state: value }
+    { key: E2E_AUTH_OVERRIDE_KEY, state: value },
   );
 }
 
 function buildShoppingListDetail(
-  overrides: Partial<ShoppingListDetail> = {}
+  overrides: Partial<ShoppingListDetail> = {},
 ): ShoppingListDetail {
   return {
     id: SHOPPING_LIST_ID,
@@ -121,7 +121,7 @@ function buildShoppingListDetail(
 
 async function installShoppingDetailRoute(
   page: Page,
-  listDetail: ShoppingListDetail
+  listDetail: ShoppingListDetail,
 ) {
   await page.route(`**/api/v1/shopping/lists/${SHOPPING_LIST_ID}`, async (route) => {
     if (route.request().method() !== "GET") {
@@ -138,281 +138,66 @@ async function installShoppingDetailRoute(
   });
 }
 
-test.describe("slice 11: shopping reorder", () => {
-  test.describe("reorder button visibility", () => {
-    test("should show reorder buttons for incomplete list", async ({ page }) => {
-      await setAuthOverride(page, "authenticated");
+async function expectNoMovementControls(page: Page) {
+  await expect(page.getByRole("button", { name: /위로 이동|아래로 이동/ })).toHaveCount(
+    0,
+  );
+  await expect(page.getByText("순서 변경")).toHaveCount(0);
+}
 
-      const listDetail = buildShoppingListDetail();
-      await installShoppingDetailRoute(page, listDetail);
+test.describe("slice 11: shopping item movement controls removed", () => {
+  test("does not render item up/down controls on the web shopping screen", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await setAuthOverride(page, "authenticated");
+    await installShoppingDetailRoute(page, buildShoppingListDetail());
 
-      await page.goto(SHOPPING_DETAIL_URL);
+    let reorderCalled = false;
+    await page.route(
+      `**/api/v1/shopping/lists/${SHOPPING_LIST_ID}/items/reorder`,
+      async (route) => {
+        reorderCalled = true;
+        await route.fulfill({ json: { success: true, data: { updated: 0 }, error: null } });
+      },
+    );
 
-      await expect(page.getByText("4월 12일 장보기")).toBeVisible();
+    await page.goto(SHOPPING_DETAIL_URL);
 
-      // Check that reorder buttons are visible for purchase items
-      const moveUpButton = page.getByRole("button", { name: /대파.*위로 이동/ });
-      const moveDownButton = page.getByRole("button", { name: /양파.*아래로 이동/ });
-      await expect(moveUpButton).toBeVisible();
-      await expect(moveDownButton).toBeVisible();
-    });
+    await expect(page.getByText("4월 12일 장보기")).toBeVisible();
+    await expectNoMovementControls(page);
+    await page.waitForTimeout(200);
+    expect(reorderCalled).toBe(false);
+  });
 
-    test("should not show reorder buttons for completed list", async ({ page }) => {
-      await setAuthOverride(page, "authenticated");
+  test("does not render item up/down controls on the app shopping screen", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setAuthOverride(page, "authenticated");
+    await installShoppingDetailRoute(page, buildShoppingListDetail());
 
-      const completedList = buildShoppingListDetail({
+    await page.goto(SHOPPING_DETAIL_URL);
+
+    await expect(page.getByText("4월 12일 장보기")).toBeVisible();
+    await expectNoMovementControls(page);
+  });
+
+  test("keeps completed lists read-only without reorder controls", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installShoppingDetailRoute(
+      page,
+      buildShoppingListDetail({
         is_completed: true,
         completed_at: "2026-04-13T00:00:00.000Z",
-      });
+      }),
+    );
 
-      await installShoppingDetailRoute(page, completedList);
+    await page.goto(SHOPPING_DETAIL_URL);
 
-      await page.goto(SHOPPING_DETAIL_URL);
-
-      await expect(
-        page.getByText("완료된 장보기 기록은 수정할 수 없어요")
-      ).toBeVisible();
-
-      // Reorder buttons should not be present
-      const moveButtons = page.getByRole("button", { name: /이동/ });
-      await expect(moveButtons).not.toBeVisible();
-    });
-  });
-
-  test.describe("reorder happy path", () => {
-    test("should call reorder API when clicking move button", async ({ page }) => {
-      await setAuthOverride(page, "authenticated");
-
-      const listDetail = buildShoppingListDetail();
-      await installShoppingDetailRoute(page, listDetail);
-
-      let reorderCalled = false;
-      let reorderBody: { orders?: Array<{ item_id: string; sort_order: number }> } | null = null as { orders?: Array<{ item_id: string; sort_order: number }> } | null;
-      await page.route(
-        `**/api/v1/shopping/lists/${SHOPPING_LIST_ID}/items/reorder`,
-        async (route) => {
-          if (route.request().method() !== "PATCH") {
-            await route.continue();
-            return;
-          }
-          reorderCalled = true;
-          reorderBody = JSON.parse(route.request().postData() ?? "{}") as { orders?: Array<{ item_id: string; sort_order: number }> };
-          await route.fulfill({
-            json: {
-              success: true,
-              data: {
-                updated: reorderBody.orders?.length ?? 0,
-              },
-              error: null,
-            },
-          });
-        }
-      );
-
-      await page.goto(SHOPPING_DETAIL_URL);
-
-      await expect(page.getByText("4월 12일 장보기")).toBeVisible();
-
-      // Click move down button on first item
-      const moveDownButton = page.getByRole("button", { name: /양파.*아래로 이동/ });
-      await moveDownButton.click();
-
-      await page.waitForTimeout(500);
-
-      expect(reorderCalled).toBe(true);
-      expect(reorderBody).not.toBeNull();
-      expect(reorderBody?.orders).toEqual([
-        { item_id: "item-2", sort_order: 0 },
-        { item_id: "item-1", sort_order: 10 },
-        { item_id: "item-3", sort_order: 20 },
-        { item_id: "item-4", sort_order: 30 },
-      ]);
-    });
-  });
-
-  test.describe("reorder error handling", () => {
-    test("should show error toast when reorder fails", async ({ page }) => {
-      await setAuthOverride(page, "authenticated");
-
-      const listDetail = buildShoppingListDetail();
-      await installShoppingDetailRoute(page, listDetail);
-
-      await page.route(
-        `**/api/v1/shopping/lists/${SHOPPING_LIST_ID}/items/reorder`,
-        async (route) => {
-          if (route.request().method() !== "PATCH") {
-            await route.continue();
-            return;
-          }
-          await route.fulfill({
-            status: 500,
-            json: {
-              success: false,
-              data: null,
-              error: {
-                code: "INTERNAL_ERROR",
-                message: "서버 오류가 발생했어요.",
-                fields: [],
-              },
-            },
-          });
-        }
-      );
-
-      await page.goto(SHOPPING_DETAIL_URL);
-
-      await expect(page.getByText("4월 12일 장보기")).toBeVisible();
-
-      // Click move down button
-      const moveDownButton = page.getByRole("button", { name: /양파.*아래로 이동/ });
-      await moveDownButton.click();
-
-      await page.waitForTimeout(500);
-
-      // Error toast should appear
-      await expect(page.getByText("서버 오류가 발생했어요.")).toBeVisible();
-    });
-
-    test("should show conflict error when reordering completed list", async ({ page }) => {
-      await setAuthOverride(page, "authenticated");
-
-      const listDetail = buildShoppingListDetail();
-      await installShoppingDetailRoute(page, listDetail);
-
-      await page.route(
-        `**/api/v1/shopping/lists/${SHOPPING_LIST_ID}/items/reorder`,
-        async (route) => {
-          if (route.request().method() !== "PATCH") {
-            await route.continue();
-            return;
-          }
-          await route.fulfill({
-            status: 409,
-            json: {
-              success: false,
-              data: null,
-              error: {
-                code: "CONFLICT",
-                message: "완료된 장보기 기록은 수정할 수 없어요",
-                fields: [],
-              },
-            },
-          });
-        }
-      );
-
-      await page.goto(SHOPPING_DETAIL_URL);
-
-      await expect(page.getByText("4월 12일 장보기")).toBeVisible();
-
-      // Click move down button
-      const moveDownButton = page.getByRole("button", { name: /양파.*아래로 이동/ });
-      await moveDownButton.click();
-
-      await page.waitForTimeout(500);
-
-      // Conflict error should appear in the reorder error alert.
-      await expect(
-        page.getByRole("alert").filter({ hasText: "완료된 장보기 기록은 수정할 수 없어요" })
-      ).toBeVisible();
-    });
-
-    test("should rollback order on reorder failure", async ({ page }) => {
-      await setAuthOverride(page, "authenticated");
-
-      const listDetail = buildShoppingListDetail();
-      await installShoppingDetailRoute(page, listDetail);
-
-      await page.route(
-        `**/api/v1/shopping/lists/${SHOPPING_LIST_ID}/items/reorder`,
-        async (route) => {
-          if (route.request().method() !== "PATCH") {
-            await route.continue();
-            return;
-          }
-          await route.fulfill({
-            status: 500,
-            json: {
-              success: false,
-              data: null,
-              error: {
-                code: "INTERNAL_ERROR",
-                message: "순서 변경에 실패했어요",
-                fields: [],
-              },
-            },
-          });
-        }
-      );
-
-      await page.goto(SHOPPING_DETAIL_URL);
-
-      await expect(page.getByText("4월 12일 장보기")).toBeVisible();
-
-      // Get initial order
-      const purchaseCheckboxes = page.getByRole("checkbox", { name: /구매 완료 표시/ });
-      await expect(purchaseCheckboxes.first()).toBeVisible();
-      const firstItemText = await purchaseCheckboxes.first().getAttribute("aria-label");
-
-      // Click move down button
-      const moveDownButton = page.getByRole("button", { name: /양파.*아래로 이동/ });
-      await moveDownButton.click();
-
-      await page.waitForTimeout(500);
-
-      // Error should appear and order should be rolled back
-      await expect(page.getByText("순서 변경에 실패했어요")).toBeVisible();
-
-      // Check that order is restored (first item is still first)
-      const firstItemTextAfter = await purchaseCheckboxes.first().getAttribute("aria-label");
-      expect(firstItemTextAfter).toBe(firstItemText);
-    });
-  });
-
-  test.describe("read-only mode", () => {
-    test("should not allow reorder in completed list", async ({ page }) => {
-      await setAuthOverride(page, "authenticated");
-
-      const completedList = buildShoppingListDetail({
-        is_completed: true,
-        completed_at: "2026-04-13T00:00:00.000Z",
-      });
-
-      await installShoppingDetailRoute(page, completedList);
-
-      let reorderCalled = false;
-      await page.route(
-        `**/api/v1/shopping/lists/${SHOPPING_LIST_ID}/items/reorder`,
-        async (route) => {
-          reorderCalled = true;
-          await route.fulfill({
-            status: 409,
-            json: {
-              success: false,
-              data: null,
-              error: {
-                code: "CONFLICT",
-                message: "완료된 장보기 기록은 수정할 수 없어요",
-                fields: [],
-              },
-            },
-          });
-        }
-      );
-
-      await page.goto(SHOPPING_DETAIL_URL);
-
-      await expect(
-        page.getByText("완료된 장보기 기록은 수정할 수 없어요")
-      ).toBeVisible();
-
-      // Reorder buttons should not be visible
-      const moveButtons = page.getByRole("button", { name: /이동/ });
-      await expect(moveButtons).not.toBeVisible();
-
-      // Reorder API should not be called
-      await page.waitForTimeout(500);
-      expect(reorderCalled).toBe(false);
-    });
+    await expect(
+      page.getByText("완료된 장보기 기록은 수정할 수 없어요"),
+    ).toBeVisible();
+    await expectNoMovementControls(page);
   });
 });

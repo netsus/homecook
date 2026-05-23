@@ -172,6 +172,11 @@ describe("StandaloneCookModeScreen", () => {
     expect(screen.getByTestId("step-list")).toBeTruthy();
     expect(screen.queryByTestId("standalone-cook-mode-tabs")).not.toBeTruthy();
     expect(screen.getAllByTestId("ingredient-item")).toHaveLength(2);
+    expect(screen.getByRole("heading", { name: "소진된 재료" })).toBeTruthy();
+    expect(
+      screen.getByText("체크된 재료는 팬트리에서 자동으로 빠져요."),
+    ).toBeTruthy();
+    expect(screen.queryByText("차감할 재료")).toBeNull();
   });
 
   it("allows unauthenticated users to view cook-mode data", async () => {
