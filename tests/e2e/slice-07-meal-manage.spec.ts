@@ -151,6 +151,46 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
+  test("shows a meal-shaped skeleton while the slot meals are loading", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+
+    let releaseMeals!: () => void;
+    const allowMeals = new Promise<void>((resolve) => {
+      releaseMeals = resolve;
+    });
+
+    await page.route(`**/api/v1/meals?*`, async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
+      }
+
+      await allowMeals;
+      await route.fulfill({
+        json: {
+          success: true,
+          data: { items: [buildMeal()] },
+          error: null,
+        },
+      });
+    });
+
+    await page.goto(MEAL_SCREEN_URL);
+
+    if (page.viewportSize()?.width && page.viewportSize()!.width >= 1024) {
+      await expect(visibleTestId(page, "web-meal-loading-skeleton")).toBeVisible();
+      await expect(visibleTestId(page, "web-meal-loading-card").first()).toBeVisible();
+      await expect(visibleTestId(page, "web-meal-loading-summary")).toBeVisible();
+    } else {
+      await expect(visibleTestId(page, "meal-screen-loading-summary")).toBeVisible();
+      await expect(visibleTestId(page, "meal-screen-loading-card").first()).toBeVisible();
+      await expect(visibleTestId(page, "meal-screen-loading-thumb").first()).toBeVisible();
+    }
+
+    releaseMeals();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
+  });
+
   test("authenticated user loads meal list and sees meal cards", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMealsListRoute(page, [
