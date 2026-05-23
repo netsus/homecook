@@ -1191,7 +1191,7 @@ function MobileShoppingDetailScreen({
   const [firstPurchaseItem, ...otherPurchaseItems] = purchaseItems;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#F8F9FA] text-[#212529]">
+    <div className="flex min-h-dvh flex-col bg-[#F8F9FA] text-[#212529]" data-testid="shopping-detail-mobile">
       <MobileShoppingAppBar
         isSharing={isSharing}
         onBack={onBack}

@@ -50,7 +50,6 @@ export function AppHeader({
                 ].join(" ")}
                 href={item.href}
                 key={item.id}
-                prefetch={false}
               >
                 {item.label}
               </Link>

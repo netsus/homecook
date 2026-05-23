@@ -1,9 +1,9 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { AteListScreen } from "@/components/leftovers/ate-list-screen";
-import { getServerAuthUser } from "@/lib/supabase/server";
+import { getInitialAuthenticatedFromServer } from "@/lib/auth/server-initial-auth";
 
 export default async function AteListPage() {
-  const user = await getServerAuthUser();
+  const initialAuthenticated = await getInitialAuthenticatedFromServer();
 
   return (
     <AppShell
@@ -11,7 +11,7 @@ export default async function AteListPage() {
       currentTab="mypage"
       headerMode="hidden"
     >
-      <AteListScreen initialAuthenticated={Boolean(user)} />
+      <AteListScreen initialAuthenticated={initialAuthenticated} />
     </AppShell>
   );
 }

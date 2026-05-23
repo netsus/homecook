@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { RecipeBookDetailScreen } from "@/components/recipebook/recipebook-detail-screen";
-import { getServerAuthUser } from "@/lib/supabase/server";
+import { getInitialAuthenticatedFromServer } from "@/lib/auth/server-initial-auth";
 import type { RecipeBookType } from "@/types/recipe";
 
 const VALID_BOOK_TYPES = new Set<RecipeBookType>([
@@ -21,7 +21,7 @@ export default async function RecipeBookDetailPage({
 }: PageProps) {
   const { book_id: bookId } = await params;
   const query = await searchParams;
-  const user = await getServerAuthUser();
+  const initialAuthenticated = await getInitialAuthenticatedFromServer();
 
   const rawType = typeof query.type === "string" ? query.type : "";
   const bookType: RecipeBookType = VALID_BOOK_TYPES.has(
@@ -45,7 +45,7 @@ export default async function RecipeBookDetailPage({
         bookId={bookId}
         bookName={bookName}
         bookType={bookType}
-        initialAuthenticated={Boolean(user)}
+        initialAuthenticated={initialAuthenticated}
       />
     </AppShell>
   );

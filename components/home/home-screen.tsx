@@ -844,7 +844,7 @@ function HomeWebRecipeCard({
 
   return (
     <article className="web-home-recipe-card">
-      <Link href={`/recipe/${recipe.id}`} prefetch={false}>
+      <Link href={`/recipe/${recipe.id}`}>
         <WebRecipeCard
           alt={recipe.title}
           imageSrc={imageSrc}
@@ -883,7 +883,6 @@ function WebProfileButton() {
       aria-label="마이페이지"
       className="web-profile-button"
       href="/mypage"
-      prefetch={false}
     >
       <UserIcon />
     </Link>

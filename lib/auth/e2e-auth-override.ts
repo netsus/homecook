@@ -42,10 +42,17 @@ export function readE2EAuthOverrideHeader(headers: Headers) {
   return normalizeE2EAuthOverride(headers.get(E2E_AUTH_OVERRIDE_HEADER));
 }
 
+function isQaFixtureServerModeEnabled() {
+  return (
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES === "1" ||
+    isQaFixtureClientModeEnabled()
+  );
+}
+
 export function readE2EAuthOverrideCookie(cookieStore: {
   get(name: string): { value: string } | undefined;
 } | null | undefined) {
-  if (!isQaFixtureClientModeEnabled() || !cookieStore) {
+  if (!isQaFixtureServerModeEnabled() || !cookieStore) {
     return null;
   }
 

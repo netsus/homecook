@@ -857,7 +857,7 @@ export async function installPlannerWeekRoutes(page: Page) {
 }
 
 export async function installMealDetailRoutes(page: Page) {
-  await page.route("**/api/v1/meals?*", async (route) => {
+  await page.route("**/api/v1/meals**", async (route) => {
     if (route.request().method() !== "GET") {
       await route.continue();
       return;
@@ -1109,7 +1109,7 @@ export async function installMenuAddVisualRoutes(page: Page) {
 
   await page.route("**/api/v1/meals", async (route) => {
     if (route.request().method() !== "POST") {
-      await route.continue();
+      await route.fallback();
       return;
     }
 
@@ -1437,7 +1437,7 @@ export async function installLeftoversVisualRoutes(
 
   await page.route("**/api/v1/meals", async (route) => {
     if (route.request().method() !== "POST") {
-      await route.continue();
+      await route.fallback();
       return;
     }
 

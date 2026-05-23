@@ -46,7 +46,6 @@ export function WebTopNav({
                 )}
                 href={item.href}
                 key={item.id}
-                prefetch={false}
               >
                 {item.label}
               </Link>
