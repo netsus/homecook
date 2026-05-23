@@ -461,7 +461,10 @@ describe("MypageScreen", () => {
     });
 
     const savedRecipeLink = screen.getByRole("link", { name: /저장된 된장찌개/ });
-    expect(savedRecipeLink.getAttribute("href")).toBe("/recipe/recipe-saved-1");
+    expect(savedRecipeLink.getAttribute("href")).toContain("/recipe/recipe-saved-1?");
+    expect(savedRecipeLink.getAttribute("href")).toContain(
+      "returnTo=%2Fmypage%3Ftab%3Dsaved",
+    );
     expect(screen.queryByText("소고기 미역국")).toBeNull();
   });
 
@@ -835,6 +838,13 @@ describe("MypageScreen", () => {
     });
     expect(await screen.findByRole("heading", { name: "내가 추가한 레시피" })).toBeTruthy();
     expect(screen.getByText("저장된 된장찌개")).toBeTruthy();
+    const recipeLink = screen.getByRole("link", { name: /저장된 된장찌개/ });
+    expect(recipeLink.getAttribute("href")).toContain("/recipe/recipe-saved-1?");
+    expect(recipeLink.getAttribute("href")).toContain(
+      "returnTo=%2Fmypage%2Frecipe-books%2Fbook-my",
+    );
+    expect(recipeLink.getAttribute("href")).toContain("type%3Dmy_added");
+    expect(recipeLink.getAttribute("href")).toContain("restore=recipebook-tab");
     expect(screen.queryByRole("navigation", { name: "레시피북 경로" })).toBeNull();
   });
 
@@ -904,6 +914,17 @@ describe("MypageScreen", () => {
     expect(screen.getByRole("checkbox", { name: "감자 2개 구매 완료 표시" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "양파 1개 되살리기" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "장보기 완료" })).toBeTruthy();
+    expect(window.location.search).toContain("tab=shopping");
+    expect(window.location.search).toContain("shoppingListId=list-2");
+
+    window.history.back();
+    await waitFor(() => {
+      expect(screen.queryByTestId("shopping-detail-embedded")).toBeNull();
+    });
+    expect(screen.getByTestId("shopping-tab")).toBeTruthy();
+    expect(
+      screen.getByRole("tab", { name: "장보기 기록" }).getAttribute("aria-selected"),
+    ).toBe("true");
 
     await user.click(screen.getByRole("tab", { name: "장보기 기록" }));
 
@@ -945,6 +966,9 @@ describe("MypageScreen", () => {
     expect(screen.getByTestId("leftover-card-leftover-1")).toBeTruthy();
     expect(screen.getByRole("button", { name: "플래너에 추가" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "다먹음" })).toBeTruthy();
+    const leftoverRecipeLink = screen.getByRole("link", { name: "레시피 보기" });
+    expect(leftoverRecipeLink.getAttribute("href")).toContain("/recipe/recipe-leftover-1?");
+    expect(leftoverRecipeLink.getAttribute("href")).toContain("restore=leftovers-tab");
     expect(screen.queryByRole("link", { name: "남은 요리 전체 관리" })).toBeNull();
 
     await user.click(screen.getByRole("tab", { name: "다먹은 목록" }));
@@ -956,6 +980,9 @@ describe("MypageScreen", () => {
     ).toBe("true");
     expect(screen.getByTestId("leftover-card-eaten-1")).toBeTruthy();
     expect(screen.getByRole("button", { name: "남은 요리로" })).toBeTruthy();
+    const eatenRecipeLink = screen.getByRole("link", { name: "레시피 보기" });
+    expect(eatenRecipeLink.getAttribute("href")).toContain("/recipe/recipe-eaten-1?");
+    expect(eatenRecipeLink.getAttribute("href")).toContain("restore=eaten-list-tab");
     expect(screen.queryByRole("link", { name: "다먹은 목록 전체 관리" })).toBeNull();
   });
 

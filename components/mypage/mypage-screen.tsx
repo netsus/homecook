@@ -96,6 +96,47 @@ const MYPAGE_ACCOUNT_HREF = "/mypage?tab=account";
 const SETTINGS_FROM_ACCOUNT_HREF = buildReturnHref("/settings", {
   returnTo: MYPAGE_ACCOUNT_HREF,
 });
+const MYPAGE_SAVED_RECIPES_HREF = "/mypage?tab=saved";
+const MYPAGE_SHOPPING_HREF = "/mypage?tab=shopping";
+
+function buildMypageSavedRecipeHref(recipeId: string) {
+  return buildReturnHref(`/recipe/${recipeId}`, {
+    returnTo: MYPAGE_SAVED_RECIPES_HREF,
+  });
+}
+
+function buildMypageRecipeBookDetailHref(book: RecipeBookSummary) {
+  const params = new URLSearchParams({
+    type: book.book_type,
+    name: book.name,
+  });
+
+  return `/mypage/recipe-books/${book.id}?${params.toString()}`;
+}
+
+function buildMypageRecipeBookRecipeHref(
+  recipeId: string,
+  book: RecipeBookSummary,
+) {
+  return buildReturnHref(`/recipe/${recipeId}`, {
+    restore: "recipebook-tab",
+    returnSurface: "mypage.recipebooks",
+    returnTo: buildMypageRecipeBookDetailHref(book),
+  });
+}
+
+function buildMypageLeftoverRecipeHref(
+  recipeId: string,
+  tabKind: LeftoverDishStatus,
+) {
+  const isEaten = tabKind === "eaten";
+
+  return buildReturnHref(`/recipe/${recipeId}`, {
+    restore: isEaten ? "eaten-list-tab" : "leftovers-tab",
+    returnSurface: isEaten ? "mypage.eaten-list" : "mypage.leftovers",
+    returnTo: `/mypage?tab=${isEaten ? "eaten" : "leftovers"}`,
+  });
+}
 
 const WEB_NAV_ITEMS = [
   { id: "home", href: "/", label: "탐색" },
@@ -400,7 +441,49 @@ export function MypageScreen({
   }, []);
 
   const openShoppingDetail = useCallback((item: ShoppingListHistoryItem) => {
+    if (typeof window !== "undefined") {
+      window.history.replaceState(
+        { mypageTab: "shopping" },
+        "",
+        MYPAGE_SHOPPING_HREF,
+      );
+      const params = new URLSearchParams({ tab: "shopping", shoppingListId: item.id });
+      window.history.pushState(
+        { mypageTab: "shopping", shoppingListId: item.id },
+        "",
+        `/mypage?${params.toString()}`,
+      );
+    }
     setSelectedShoppingItem(item);
+  }, []);
+
+  const closeShoppingDetail = useCallback(() => {
+    setSelectedShoppingItem(null);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(
+        { mypageTab: "shopping" },
+        "",
+        MYPAGE_SHOPPING_HREF,
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tab = getMypageTabFromQuery(params.get("tab"));
+      if (tab) {
+        setActiveTab(tab);
+        setMobileSurface(getMobileSurfaceForTab(tab));
+      }
+
+      if (tab === "shopping" && !params.get("shoppingListId")) {
+        setSelectedShoppingItem(null);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   const loadMoreShopping = useCallback(async () => {
@@ -1154,9 +1237,7 @@ export function MypageScreen({
               isLoadingMore={isLoadingMore}
               items={shoppingItems}
               loaded={shoppingLoaded}
-              onCloseDetail={() => {
-                setSelectedShoppingItem(null);
-              }}
+              onCloseDetail={closeShoppingDetail}
               onHistoryRefresh={() => void loadShoppingHistory()}
               onOpenDetail={(item) => openShoppingDetail(item)}
               scrollSentinelRef={scrollSentinelRef}
@@ -1316,7 +1397,7 @@ function SavedRecipeGrid({
           key={recipe.recipe_id}
           role="listitem"
         >
-          <Link href={`/recipe/${recipe.recipe_id}`}>
+          <Link href={buildMypageSavedRecipeHref(recipe.recipe_id)}>
             <WebRecipeCard
               alt={recipe.title}
               imageSrc={recipe.thumbnail_url ?? getFallbackRecipeImage(recipe.title)}
@@ -2072,7 +2153,7 @@ function RecipeBookInlineDetail({
         <div className="web-mypage-recipe-grid" role="list">
           {recipes.map((recipe) => (
             <div key={recipe.recipe_id} role="listitem">
-              <Link href={`/recipe/${recipe.recipe_id}`}>
+              <Link href={buildMypageRecipeBookRecipeHref(recipe.recipe_id, book)}>
                 <WebRecipeCard
                   alt={recipe.title}
                   imageSrc={recipe.thumbnail_url ?? getFallbackRecipeImage(recipe.title)}
@@ -2644,7 +2725,7 @@ function LeftoverTabCard({
         )}
         <Link
           className="web-button web-button-tertiary web-button-sm"
-          href={`/recipe/${item.recipe_id}`}
+          href={buildMypageLeftoverRecipeHref(item.recipe_id, tabKind)}
         >
           레시피 보기
         </Link>

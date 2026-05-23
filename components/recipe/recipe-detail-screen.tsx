@@ -838,6 +838,7 @@ export function RecipeDetailScreen({
             onShare={handleShare}
             plannerCountLabel={desktopPlannerCountLabel}
             recipe={recipe}
+            returnHref={appReturn.href}
             saveCountLabel={desktopSaveCountLabel}
             scaledIngredients={scaledIngredients}
             selectedServings={selectedServings}
@@ -1531,6 +1532,7 @@ function RecipeDetailWebView({
   onShare,
   plannerCountLabel,
   recipe,
+  returnHref,
   saveCountLabel,
   scaledIngredients,
   selectedServings,
@@ -1545,6 +1547,7 @@ function RecipeDetailWebView({
   onShare: () => void;
   plannerCountLabel: string;
   recipe: RecipeDetail;
+  returnHref: string;
   saveCountLabel: string;
   scaledIngredients: Array<RecipeIngredient & { scaledText: string }>;
   selectedServings: number;
@@ -1562,7 +1565,7 @@ function RecipeDetailWebView({
       />
       <div className="web-screen">
         <nav aria-label="레시피 경로" className="web-breadcrumb">
-          <Link className="web-breadcrumb-link" href="/" prefetch={false}>
+          <Link className="web-breadcrumb-link" href={returnHref} prefetch={false}>
             <ChevronLeftIcon />
             탐색
           </Link>
