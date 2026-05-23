@@ -64,7 +64,6 @@ export function Wave1MobileBottomTab({
               ].join(" ")}
               href={item.href}
               key={item.id}
-              prefetch={false}
             >
               {item.icon(active)}
               <span>{item.label}</span>

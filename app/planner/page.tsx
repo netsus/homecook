@@ -1,9 +1,9 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { PlannerWeekScreen } from "@/components/planner/planner-week-screen";
-import { getServerAuthUser } from "@/lib/supabase/server";
+import { getInitialAuthenticatedFromServer } from "@/lib/auth/server-initial-auth";
 
 export default async function PlannerPage() {
-  const user = await getServerAuthUser();
+  const initialAuthenticated = await getInitialAuthenticatedFromServer();
 
   return (
     <AppShell
@@ -12,7 +12,7 @@ export default async function PlannerPage() {
       currentTab="planner"
       headerMode="hidden"
     >
-      <PlannerWeekScreen initialAuthenticated={Boolean(user)} />
+      <PlannerWeekScreen initialAuthenticated={initialAuthenticated} />
     </AppShell>
   );
 }

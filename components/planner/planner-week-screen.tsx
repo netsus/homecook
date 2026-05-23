@@ -179,7 +179,6 @@ function WebProfileButton() {
       aria-label="마이페이지"
       className="web-profile-button"
       href="/mypage"
-      prefetch={false}
     >
       <UserIcon />
     </Link>

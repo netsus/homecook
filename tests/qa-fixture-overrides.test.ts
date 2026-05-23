@@ -38,6 +38,7 @@ function createMemoryStorage() {
 
 describe("qa fixture override headers", () => {
   const originalQaFixtureFlag = process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES;
+  const originalServerQaFixtureFlag = process.env.HOMECOOK_ENABLE_QA_FIXTURES;
 
   beforeEach(() => {
     Object.defineProperty(globalThis, "window", {
@@ -53,10 +54,16 @@ describe("qa fixture override headers", () => {
   afterEach(() => {
     if (originalQaFixtureFlag === undefined) {
       delete process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES;
+    } else {
+      process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES = originalQaFixtureFlag;
+    }
+
+    if (originalServerQaFixtureFlag === undefined) {
+      delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
       return;
     }
 
-    process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES = originalQaFixtureFlag;
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES = originalServerQaFixtureFlag;
   });
 
   it("parses valid fault overrides from request headers", () => {
@@ -111,6 +118,23 @@ describe("qa fixture override headers", () => {
   });
 
   it("reads server-side auth override from cookies when QA fixture mode is enabled", () => {
+    expect(
+      readE2EAuthOverrideCookie({
+        get(name: string) {
+          if (name !== E2E_AUTH_OVERRIDE_COOKIE) {
+            return undefined;
+          }
+
+          return { value: "authenticated" };
+        },
+      }),
+    ).toBe("authenticated");
+  });
+
+  it("reads server-side auth override from cookies when server fixture mode is enabled", () => {
+    delete process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES;
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES = "1";
+
     expect(
       readE2EAuthOverrideCookie({
         get(name: string) {

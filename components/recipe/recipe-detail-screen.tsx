@@ -1565,7 +1565,7 @@ function RecipeDetailWebView({
       />
       <div className="web-screen">
         <nav aria-label="레시피 경로" className="web-breadcrumb">
-          <Link className="web-breadcrumb-link" href={returnHref} prefetch={false}>
+          <Link className="web-breadcrumb-link" href={returnHref}>
             <ChevronLeftIcon />
             탐색
           </Link>
@@ -1865,7 +1865,6 @@ function RecipeWebProfileButton() {
       aria-label="마이페이지"
       className="web-profile-button"
       href="/mypage"
-      prefetch={false}
     >
       <UserIcon />
     </Link>
@@ -1977,7 +1976,7 @@ function RecipeDetailWebLoadingSkeleton() {
       />
       <div className="web-screen" data-testid="recipe-detail-web-loading">
         <nav aria-label="레시피 경로" className="web-breadcrumb">
-          <Link className="web-breadcrumb-link" href="/" prefetch={false}>
+          <Link className="web-breadcrumb-link" href="/">
             <ChevronLeftIcon />
             탐색
           </Link>

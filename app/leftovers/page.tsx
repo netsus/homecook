@@ -1,9 +1,9 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { LeftoversScreen } from "@/components/leftovers/leftovers-screen";
-import { getServerAuthUser } from "@/lib/supabase/server";
+import { getInitialAuthenticatedFromServer } from "@/lib/auth/server-initial-auth";
 
 export default async function LeftoversPage() {
-  const user = await getServerAuthUser();
+  const initialAuthenticated = await getInitialAuthenticatedFromServer();
 
   return (
     <AppShell
@@ -11,7 +11,7 @@ export default async function LeftoversPage() {
       currentTab="mypage"
       headerMode="hidden"
     >
-      <LeftoversScreen initialAuthenticated={Boolean(user)} />
+      <LeftoversScreen initialAuthenticated={initialAuthenticated} />
     </AppShell>
   );
 }

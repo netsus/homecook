@@ -21,7 +21,6 @@ export function RecipeCard({ isSaved = false, onSave, recipe }: RecipeCardProps)
       <Link
         className="relative block overflow-hidden"
         href={`/recipe/${recipe.id}`}
-        prefetch={false}
       >
         <div
           className="relative overflow-hidden"
@@ -66,7 +65,7 @@ export function RecipeCard({ isSaved = false, onSave, recipe }: RecipeCardProps)
         <BookmarkIcon filled={isSaved} />
       </button>
       <div className="flex flex-1 flex-col gap-2 px-4 py-4">
-        <Link href={`/recipe/${recipe.id}`} prefetch={false}>
+        <Link href={`/recipe/${recipe.id}`}>
           <h3 className="line-clamp-2 text-[18px] font-bold leading-snug text-[#212529]">
             {recipe.title}
           </h3>

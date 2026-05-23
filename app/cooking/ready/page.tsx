@@ -1,9 +1,9 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { CookReadyListScreen } from "@/components/cooking/cook-ready-list-screen";
-import { getServerAuthUser } from "@/lib/supabase/server";
+import { getInitialAuthenticatedFromServer } from "@/lib/auth/server-initial-auth";
 
 export default async function CookingReadyPage() {
-  const user = await getServerAuthUser();
+  const initialAuthenticated = await getInitialAuthenticatedFromServer();
 
   return (
     <AppShell
@@ -11,7 +11,7 @@ export default async function CookingReadyPage() {
       currentTab="planner"
       headerMode="hidden"
     >
-      <CookReadyListScreen initialAuthenticated={Boolean(user)} />
+      <CookReadyListScreen initialAuthenticated={initialAuthenticated} />
     </AppShell>
   );
 }

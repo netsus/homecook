@@ -1,8 +1,8 @@
 import { SettingsScreen } from "@/components/settings/settings-screen";
-import { getServerAuthUser } from "@/lib/supabase/server";
+import { getInitialAuthenticatedFromServer } from "@/lib/auth/server-initial-auth";
 
 export default async function SettingsPage() {
-  const user = await getServerAuthUser();
+  const initialAuthenticated = await getInitialAuthenticatedFromServer();
 
-  return <SettingsScreen initialAuthenticated={Boolean(user)} />;
+  return <SettingsScreen initialAuthenticated={initialAuthenticated} />;
 }
