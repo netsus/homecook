@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-22T11:29:00.000Z",
+  "updated_at": "2026-05-23T19:46:31.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1199,6 +1199,28 @@
       ],
       "notes": "Stage 2 backend PR #558 merged. Stage 4 frontend implementation and evidence completed on feature/fe-22-youtube-ingredient-registration after Claude handoff; Codex verified targeted Vitest, targeted Playwright, screenshot evidence, pnpm verify:frontend:pr, validators, and diff check. Frontend PR #559 published; awaiting current-head CI, Stage 6 review, and merge gate. closeout_phase=collecting stage4_fallback=codex Stage 5 design review passed; Design Status confirmed.",
       "pr_path": "https://github.com/netsus/homecook/pull/559",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
+      "id": "ux-latency-resolution",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/ux-latency-resolution",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice ux-latency-resolution",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs in progress on docs/ux-latency-resolution. FE-only latency slice. RALPLAN-DR approved. Stage 2/3 N/A. Stage 4 Claude-owned.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

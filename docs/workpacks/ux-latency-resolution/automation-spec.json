@@ -1,0 +1,103 @@
+{
+  "slice_id": "ux-latency-resolution",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": [],
+    "notes": "FE-only slice. No backend changes."
+  },
+  "frontend": {
+    "required_routes": [
+      "/",
+      "/planner",
+      "/mypage",
+      "/recipe/[id]",
+      "/planner/[date]/[columnId]",
+      "/shopping/lists/[list_id]",
+      "/cooking/ready",
+      "/cooking/recipes/[recipe_id]/cook-mode",
+      "/cooking/sessions/[session_id]/cook-mode",
+      "/leftovers",
+      "/leftovers/ate",
+      "/settings",
+      "/mypage/recipe-books/[book_id]"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend:pr",
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "prodlike-summary"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [
+        "HOME",
+        "RECIPE_DETAIL",
+        "PLANNER_WEEK"
+      ],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [
+        "prodlike-before-after-summary",
+        "regression-guardrail-evidence"
+      ],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "pnpm-launcher-not-resolved",
+    "phase0-command-contract-not-locked"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  },
+  "stage_owners": {
+    "stage_1": "claude",
+    "stage_2": "N/A",
+    "stage_3": "N/A",
+    "stage_4": "claude",
+    "stage_5": "codex",
+    "stage_6": "codex",
+    "authority_precheck": "codex",
+    "final_authority_gate": "N/A"
+  },
+  "measurement_contract": {
+    "harness_path": "tests/e2e/qa-ux-latency.spec.ts",
+    "primary_lane": "prodlike",
+    "baseline_protocol": "1 cold + 5 warm, warm median as comparison",
+    "artifact_root": ".omx/artifacts/ux-latency",
+    "qa_artifact_root": ".artifacts/qa/ux-latency-resolution",
+    "regression_guardrails": {
+      "warm_median_regression": "+10% or +50ms",
+      "cold_regression": "+15% or +100ms",
+      "home_shell_visible_regression": "+75ms",
+      "fast_route_regression": "+25ms for routes already <=300ms",
+      "lighthouse_score_regression": "-3 points",
+      "tbt_regression": "+50ms"
+    }
+  },
+  "notes": "FE-only latency improvement slice. No API/DB/auth/state-transition changes. Stage 2/3 are N/A. Anchor screens are touched for prefetch/warm-up only — no structural/transition model changes. Authority review is not required unless Phase 4 escalation changes anchor screen rendering structure."
+}

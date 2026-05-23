@@ -1,0 +1,97 @@
+{
+  "id": "ux-latency-resolution",
+  "title": "UX latency resolution: reduce perceived >0.2s waiting on route entries and overlay opens",
+  "summary": "주요 화면 진입과 모달/시트 열기에서 체감되는 >0.2s 대기를 production-like 환경 기준으로 줄인다. targeted warm-up, cache reuse, 선택적 prefetch 개선을 FE-only로 적용하며, 기존 MVP 계약을 변경하지 않는다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 집밥 앱의 주요 화면 진입과 모달/시트 열기에서 느끼는 >0.2s 대기를 production-like 환경 측정 기준으로 줄인다.",
+  "owners": {
+    "claude": "stage1 docs, stage4 frontend implementation",
+    "codex": "stage1 orchestration, authority_precheck (if needed), stage5 design review, stage6 PR review, evidence/closeout validation",
+    "workers": []
+  },
+  "dependencies": [],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.6.9.md",
+      "docs/화면정의서-v1.5.6.md",
+      "docs/api문서-v1.2.9.md",
+      "docs/db설계-v1.3.5.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/ux-latency-resolution/README.md",
+      "docs/workpacks/ux-latency-resolution/acceptance.md",
+      "docs/workpacks/ux-latency-resolution/automation-spec.json",
+      ".omx/plans/ux-latency-resolution-ralplan-20260524.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/design/anchor-screens.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/engineering/product-design-authority.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice ux-latency-resolution",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend:pr",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "docs/workpacks/ux-latency-resolution/README.md",
+      "docs/workpacks/ux-latency-resolution/acceptance.md",
+      "docs/workpacks/ux-latency-resolution/automation-spec.json",
+      ".omx/artifacts/ux-latency/phase0-command-contract.md",
+      ".omx/artifacts/ux-latency/prodlike/summary.json",
+      "tests/e2e/qa-ux-latency.spec.ts"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "API/schema/DB/endpoint/auth contract changes",
+    "State transition changes (meals.status, shopping_lists, cooking_sessions)",
+    "Feature flag additions or changes",
+    "Anchor screen structural/transition model changes without authority review",
+    "New data fetching library (React Query/SWR) without explicit decision",
+    "Server Component service-role direct reads",
+    "Global prefetch toggle — route-by-route evidence-based decisions only",
+    "Claiming final success from next dev timing alone"
+  ],
+  "open_questions": [
+    "For each prefetch={false} target, is the current setting still serving a real regression guard or historical carryover?",
+    "If repeated shared-data pain remains after Phase 4, is a dedicated cache library allowed?"
+  ],
+  "notes": "FE-only latency slice. RALPLAN-DR approved (Architect APPROVE, Critic APPROVE). Stage 2/3 are N/A. Stage 4 implementation is Claude-owned. Codex handles authority_precheck (if needed), Stage 5/6 review, and evidence validation only."
+}
