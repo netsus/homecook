@@ -1,0 +1,60 @@
+{
+  "slice_id": "23-youtube-quality-corpus",
+  "execution_mode": "autonomous",
+  "risk_class": "low",
+  "merge_policy": "conditional-auto",
+  "contract_evolution_required": false,
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "corpus-fixture-minimum-36",
+      "real-description-ratio-24-of-36",
+      "category-minimum-3-each",
+      "scoring-harness-deterministic",
+      "in-corpus-wild-score-separation",
+      "noise-true-negative-f1-equals-1",
+      "fixture-error-resilience",
+      "report-artifact-schema-compliance",
+      "baseline-report-saved",
+      "no-db-writes",
+      "no-api-quota-usage",
+      "fixture-sanitization-no-pii"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/youtube-corpus.test.ts",
+      "tests/youtube-import.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [],
+    "playwright_projects": [],
+    "artifact_assertions": [],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "parser-v2-code-not-on-main",
+    "scoring-rubric-doc-missing",
+    "fixture-count-below-36"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 0
+  }
+}

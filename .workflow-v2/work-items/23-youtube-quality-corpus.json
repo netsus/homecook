@@ -1,0 +1,134 @@
+{
+  "id": "23-youtube-quality-corpus",
+  "title": "YouTube description parser quality corpus and scoring harness",
+  "summary": "YouTube 설명란 파서 품질을 증거 기반으로 측정하기 위한 코퍼스 fixture set과 결정론 채점 하네스를 설계하고 구현한다. 현재 ~10/100 추출 성공률을 baseline으로 기록하고, 후속 파서/사전/LLM 개선에서 80/100 도달을 추적할 수 있는 측정 인프라를 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "YouTube 설명란 파서의 품질을 코퍼스 fixture와 결정론 채점 하네스로 측정할 수 있게 해, 파서 회귀를 방지하고 개선 효과를 추적 가능하게 만든다.",
+  "owners": {
+    "claude": "stage1,stage3",
+    "codex": "stage2 backend",
+    "workers": []
+  },
+  "dependencies": [
+    "19-youtube-import",
+    "20-youtube-real-import",
+    "21-ingredient-dictionary",
+    "22-youtube-ingredient-registration"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.0.md",
+      "docs/화면정의서-v1.5.7.md",
+      "docs/api문서-v1.2.10.md",
+      "docs/db설계-v1.3.6.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/23-youtube-quality-corpus/README.md",
+      "docs/workpacks/23-youtube-quality-corpus/acceptance.md",
+      "docs/workpacks/23-youtube-quality-corpus/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/youtube-description-parser-scoring.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 23-youtube-quality-corpus",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "corpus-fixture-set",
+      "scoring-harness",
+      "baseline-report"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "collecting",
+    "docs_projection": {
+      "roadmap_lifecycle": "planned",
+      "design_status": "N/A",
+      "delivery_checklist": "pending",
+      "design_authority": "not_required",
+      "acceptance": "pending",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "pending",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": []
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head",
+      "approval_state": "not_started",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-05-24T15:08:58.000Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": null,
+      "evidence_sources": []
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-24T15:08:58.000Z",
+      "status_synced_at": "2026-05-24T15:08:58.000Z",
+      "pr_body_synced_at": "2026-05-24T15:08:58.000Z"
+    }
+  },
+  "notes": "Stage 1 docs — corpus fixture format, scoring harness contract, baseline measurement plan, category distribution, and reporting artifact shape. No product UI changes, no public API/DB contract changes. BE-only slice: Stage 4~6 skip. closeout_phase=collecting",
+  "out_of_scope": [
+    "Parser rule changes (regex, line scoring threshold modifications)",
+    "ingredient_synonyms seed expansion",
+    "Bulk ingredient registration UX",
+    "LLM-based extraction",
+    "Caption/ASR/OCR source expansion",
+    "Official API/DB contract changes",
+    "Production UI changes"
+  ],
+  "open_questions": []
+}
