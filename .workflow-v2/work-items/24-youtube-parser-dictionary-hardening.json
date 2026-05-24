@@ -69,9 +69,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
@@ -79,33 +79,41 @@
     "blocked_reason_code": null
   },
   "closeout": {
-    "phase": "collecting",
+    "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "planned",
+      "roadmap_lifecycle": "merged",
       "design_status": "N/A",
-      "delivery_checklist": "pending",
+      "delivery_checklist": "complete",
       "design_authority": "not_required",
-      "acceptance": "pending",
+      "acceptance": "complete",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
-      "required_checks": "pending",
+      "required_checks": "passed",
       "external_smokes": "skipped",
       "authority_reports": [],
-      "actual_verification_refs": []
+      "actual_verification_refs": [
+        "pnpm test:youtube-corpus",
+        "pnpm vitest run tests/youtube-description-parser.test.ts tests/youtube-import.backend.test.ts tests/youtube-corpus.test.ts",
+        "pnpm verify:backend",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 24-youtube-parser-dictionary-hardening",
+        "git diff --check",
+        "tests/fixtures/youtube-corpus/reports/parser-hardening-v1.json"
+      ]
     },
     "merge_gate_projection": {
-      "current_head_sha": null,
-      "approval_state": "not_started",
+      "current_head_sha": "pending-pr-head-after-closeout-finalize",
+      "approval_state": "dual_approved",
       "all_checks_green": false
     },
     "recovery_summary": {
       "manual_patch_count": 0,
       "manual_handoff": false,
       "stale_lock_count": 0,
-      "ci_resync_count": 0,
+      "ci_resync_count": 1,
       "artifact_missing": false,
-      "last_recovery_at": null
+      "last_recovery_at": "2026-05-25T02:23:00+09:00"
     },
     "repair_summary": {
       "codex_repairable_count": 0,
@@ -113,16 +121,21 @@
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": null,
-      "evidence_sources": []
+      "latest_reason_code": "ready_for_review_full_qa_unrelated_failures_resynced_by_closeout_commit",
+      "evidence_sources": [
+        "GitHub_PR_585",
+        "GitHub_CI",
+        "pnpm_verify_backend",
+        "Claude_Stage3_artifact"
+      ]
     },
     "projection_state": {
-      "docs_synced_at": null,
-      "status_synced_at": null,
-      "pr_body_synced_at": null
+      "docs_synced_at": "2026-05-25T01:56:00+09:00",
+      "status_synced_at": "2026-05-25T02:23:00+09:00",
+      "pr_body_synced_at": "pending-after-closeout-push"
     }
   },
-  "notes": "Stage 1 docs in progress on docs/24-youtube-parser-dictionary-hardening. BE-only parser hardening slice. Depends on slice 23 corpus infrastructure (merged). Target: in-corpus F1 >= 0.80 from baseline 0.4932.",
+  "notes": "Final BE-only closeout projection prepared for PR #585 after Codex Stage 2 implementation and Claude Stage 3 conditional approval. Parser-only hardening reached corpus_avg_f1=0.9160; no seed migration added because target was met without DB writes. Local checks passed: pnpm test:youtube-corpus, targeted Vitest, pnpm verify:backend, workflow/workpack validators, branch/commit validation, and git diff --check. Ready-for-review QA surfaced unrelated visual/full-regression failures; closeout commit resyncs current-head CI before merge. Stage 4-6 skipped. closeout_phase=completed closeout_recovery=ci_resync:1 closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub_PR_585,GitHub_CI,pnpm_verify_backend,Claude_Stage3_artifact last_recovery_at=2026-05-25T02:23:00+09:00",
   "out_of_scope": [
     "LLM-based extraction",
     "Caption/ASR/OCR source expansion",
@@ -133,5 +146,6 @@
     "Broad ingredient master expansion without corpus evidence",
     "Wild-video accuracy guarantees"
   ],
-  "open_questions": []
+  "open_questions": [],
+  "branch": "feature/be-24-youtube-parser-dictionary-hardening"
 }

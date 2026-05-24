@@ -193,6 +193,98 @@ describe("youtube description parser v2", () => {
     expect(draft.blockingIssues).toEqual([]);
   });
 
+  it("treats 레시피 as a step heading after an ingredient section", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "간장비빔국수",
+      description: [
+        "재료",
+        "소면 100g",
+        "간장 2스푼",
+        "설탕 1스푼",
+        "참기름 1스푼",
+        "",
+        "레시피",
+        "1. 소면을 삶아 찬물에 헹궈요.",
+        "2. 간장, 설탕, 참기름을 섞어 양념장을 만듭니다.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toEqual([
+      "소면",
+      "간장",
+      "설탕",
+      "참기름",
+    ]);
+    expect(draft.steps).toEqual([
+      "소면을 삶아 찬물에 헹궈요.",
+      "간장, 설탕, 참기름을 섞어 양념장을 만듭니다.",
+    ]);
+  });
+
+  it("splits unheaded slash-separated ingredient lists before prose steps", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "토마토 달걀볶음",
+      description: [
+        "토마토 달걀볶음",
+        "토마토 2개 / 달걀 3개 / 대파 1/2대 / 굴소스 1스푼 / 설탕 1작은술",
+        "",
+        "달걀은 먼저 부드럽게 익혀 덜어둡니다.",
+        "대파 향을 낸 뒤 토마토를 볶고 굴소스로 간해요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toEqual([
+      "토마토",
+      "달걀",
+      "대파",
+      "굴소스",
+      "설탕",
+    ]);
+    expect(draft.steps).toEqual([
+      "달걀은 먼저 부드럽게 익혀 덜어둡니다.",
+      "대파 향을 낸 뒤 토마토를 볶고 굴소스로 간해요.",
+    ]);
+  });
+
+  it("extracts weak prose ingredients and action clauses without a formal section", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "양파수프",
+      description: "양파 반 개를 얇게 썰어 버터 10g에 오래 볶다가 물 300ml와 치킨스톡 1작은술을 넣으면 간단한 양파수프가 됩니다.",
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toEqual([
+      "양파",
+      "버터",
+      "물",
+      "치킨스톡",
+    ]);
+    expect(draft.steps).toEqual([
+      "양파 반 개를 얇게 썰어 버터 10g에 오래 볶다가",
+      "물 300ml와 치킨스톡 1작은술을 넣으면 간단한 양파수프가 됩니다.",
+    ]);
+  });
+
+  it("keeps recipe-like 좋아요 prose out of noise classification", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "고구마 요거트 간식",
+      description: "고구마 1개는 전자레인지에 익히고 플레인요거트 3스푼과 견과류 조금을 올려 간식처럼 먹으면 좋아요.",
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toEqual([
+      "고구마",
+      "플레인요거트",
+      "견과류",
+    ]);
+    expect(draft.steps).toEqual([
+      "고구마 1개는 전자레인지에 익히고",
+      "플레인요거트 3스푼과 견과류 조금을 올려 간식처럼 먹으면 좋아요.",
+    ]);
+  });
+
   it("prefers the visible serving unit over parenthetical reference weight", () => {
     const document = parseYoutubeRecipeDescription({
       title: "오이 샌드위치",

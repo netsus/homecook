@@ -88,6 +88,7 @@
 - `ingredient_synonyms` 테이블: corpus fixture에서 드러난 누락 동의어 (예상 10~30건 이하)
 - 모든 INSERT는 `ON CONFLICT DO NOTHING` — 멱등, 기존 데이터 불변
 - 새 DDL (CREATE TABLE, ALTER TABLE) 없음
+- Stage 2 구현 결과: parser-only 개선으로 목표 F1을 달성해 seed migration을 추가하지 않았다. 따라서 DB 데이터 쓰기, seed idempotency smoke, 기존 데이터 변경 검증은 이번 PR에서 N/A로 처리한다.
 
 **채점 보고서 계약:**
 
@@ -152,7 +153,7 @@
   - 파서 개선은 DB 접근 없이 순수 파서 입출력 테스트: `pnpm test:youtube-corpus`
   - 사전 시딩 migration은 로컬 Supabase 또는 `pnpm dev:local-supabase`에서 idempotent 실행 확인
 - **Seed / reset 명령**:
-  - 사전 시딩 migration: `supabase db reset` 또는 `supabase migration up`
+  - 사전 시딩 migration: Stage 2에서 추가하지 않음 (parser-only로 목표 달성)
   - corpus 채점: `pnpm test:youtube-corpus`
 - **Bootstrap 선행 조건**:
   - deterministic parser v2 코드 존재 (`lib/server/youtube-description-parser.ts`)
@@ -197,15 +198,15 @@
 > 이 체크리스트는 Stage 2~3 동안 계속 갱신하는 living closeout 문서다.
 > BE-only 슬라이스이므로 Stage 4~6은 스킵. Stage 3 merge 시 슬라이스 종료.
 
-- [ ] 파서 라인 분류/점수 규칙 개선 구현 <!-- omo:id=24-parser-rule-improvement;stage=2;scope=backend;review=3 -->
-- [ ] semi-structured 카테고리 F1 baseline(0.1799) 대비 개선 <!-- omo:id=24-semi-structured-improvement;stage=2;scope=backend;review=3 -->
-- [ ] weak 카테고리 F1 baseline(0) 대비 개선 <!-- omo:id=24-weak-improvement;stage=2;scope=backend;review=3 -->
-- [ ] noise 카테고리 true-negative F1=1.0 유지 <!-- omo:id=24-noise-true-negative;stage=2;scope=backend;review=3 -->
-- [ ] structured 카테고리 F1 baseline(0.9145) 대비 0.05 이상 하락 없음 <!-- omo:id=24-structured-no-regression;stage=2;scope=backend;review=3 -->
-- [ ] in-corpus 전체 평균 F1 >= 0.80 달성 <!-- omo:id=24-corpus-avg-f1-target;stage=2;scope=backend;review=3 -->
-- [ ] parser-hardening 보고서 artifact 생성 <!-- omo:id=24-hardening-report;stage=2;scope=backend;review=3 -->
-- [ ] 사전 시딩 migration (필요한 경우) — idempotent, ON CONFLICT DO NOTHING <!-- omo:id=24-dictionary-seed;stage=2;scope=backend;review=3 -->
-- [ ] 기존 youtube-description-parser 테스트 회귀 없음 <!-- omo:id=24-parser-test-regression;stage=2;scope=backend;review=3 -->
-- [ ] 기존 youtube-import backend 테스트 회귀 없음 <!-- omo:id=24-import-test-regression;stage=2;scope=backend;review=3 -->
-- [ ] 기존 youtube-corpus 테스트 harness 동작 유지 <!-- omo:id=24-corpus-harness-regression;stage=2;scope=backend;review=3 -->
-- [ ] scoring rubric 문서 갱신 (규칙 변경 시) <!-- omo:id=24-rubric-update;stage=2;scope=backend;review=3 -->
+- [x] 파서 라인 분류/점수 규칙 개선 구현 <!-- omo:id=24-parser-rule-improvement;stage=2;scope=backend;review=3 -->
+- [x] semi-structured 카테고리 F1 baseline(0.1799) 대비 개선 — hardening 0.9356 <!-- omo:id=24-semi-structured-improvement;stage=2;scope=backend;review=3 -->
+- [x] weak 카테고리 F1 baseline(0) 대비 개선 — hardening 0.9577 <!-- omo:id=24-weak-improvement;stage=2;scope=backend;review=3 -->
+- [x] noise 카테고리 true-negative F1=1.0 유지 <!-- omo:id=24-noise-true-negative;stage=2;scope=backend;review=3 -->
+- [x] structured 카테고리 F1 baseline(0.9145) 대비 0.05 이상 하락 없음 — hardening 0.9814 <!-- omo:id=24-structured-no-regression;stage=2;scope=backend;review=3 -->
+- [x] in-corpus 전체 평균 F1 >= 0.80 달성 — hardening 0.9160 <!-- omo:id=24-corpus-avg-f1-target;stage=2;scope=backend;review=3 -->
+- [x] parser-hardening 보고서 artifact 생성 (`tests/fixtures/youtube-corpus/reports/parser-hardening-v1.json`) <!-- omo:id=24-hardening-report;stage=2;scope=backend;review=3 -->
+- [x] 사전 시딩 migration 추가 없음 — parser-only로 목표 달성, DB seed N/A <!-- omo:id=24-dictionary-seed;stage=2;scope=backend;review=3 -->
+- [x] 기존 youtube-description-parser 테스트 회귀 없음 <!-- omo:id=24-parser-test-regression;stage=2;scope=backend;review=3 -->
+- [x] 기존 youtube-import backend 테스트 회귀 없음 <!-- omo:id=24-import-test-regression;stage=2;scope=backend;review=3 -->
+- [x] 기존 youtube-corpus 테스트 harness 동작 유지 <!-- omo:id=24-corpus-harness-regression;stage=2;scope=backend;review=3 -->
+- [x] scoring rubric 문서 갱신 불필요 — 기존 rubric 범위 안의 규칙 보강 <!-- omo:id=24-rubric-update;stage=2;scope=backend;review=3 -->

@@ -20,6 +20,10 @@ const baselineReportPath = join(
   process.cwd(),
   "tests/fixtures/youtube-corpus/reports/baseline-v2.json",
 );
+const hardeningReportPath = join(
+  process.cwd(),
+  "tests/fixtures/youtube-corpus/reports/parser-hardening-v1.json",
+);
 
 describe("YouTube corpus fixture contract", () => {
   it("keeps the minimum corpus size, category distribution, real-description ratio, and sanitization contract", () => {
@@ -137,22 +141,51 @@ describe("YouTube corpus scoring harness", () => {
     expect(report.per_fixture[0].overall_f1).toBe(0);
   });
 
-  it("recomputes the checked-in parser v2 baseline exactly", () => {
-    const report = scoreYoutubeCorpusFixtures(corpus, {
-      parserVersion: "v2",
-      corpusVersion: "v1",
-      runId: "baseline-v2",
-      timestamp: "2026-05-24T15:30:00.000Z",
-      parser: parseFixtureWithYoutubeParserV2,
-    });
-
-    if (process.env.UPDATE_YOUTUBE_CORPUS_BASELINE === "1") {
-      writeFileSync(baselineReportPath, `${JSON.stringify(report, null, 2)}\n`);
-    }
-
+  it("keeps the checked-in parser v2 baseline as the pre-hardening artifact", () => {
     expect(existsSync(baselineReportPath)).toBe(true);
     const baselineReport = JSON.parse(readFileSync(baselineReportPath, "utf8")) as YoutubeCorpusReport;
 
-    expect(report).toEqual(baselineReport as YoutubeCorpusReport);
+    expect(baselineReport).toMatchObject({
+      run_id: "baseline-v2",
+      parser_version: "v2",
+      corpus_version: "v1",
+      aggregate: {
+        corpus_avg_f1: 0.4932,
+        category_avg: {
+          structured: 0.9145,
+          "semi-structured": 0.1799,
+          weak: 0,
+          noise: 1,
+          "multi-recipe": 0.5,
+        },
+      },
+    });
+    expect(baselineReport.per_fixture).toHaveLength(corpus.length);
+  });
+
+  it("recomputes the parser hardening report and enforces slice 24 score floors", () => {
+    const report = scoreYoutubeCorpusFixtures(corpus, {
+      parserVersion: "v2-hardening",
+      corpusVersion: "v1",
+      runId: "parser-hardening-v1",
+      timestamp: "2026-05-25T00:00:00.000Z",
+      parser: parseFixtureWithYoutubeParserV2,
+    });
+
+    if (process.env.UPDATE_YOUTUBE_CORPUS_HARDENING === "1") {
+      writeFileSync(hardeningReportPath, `${JSON.stringify(report, null, 2)}\n`);
+    }
+
+    expect(existsSync(hardeningReportPath)).toBe(true);
+    const hardeningReport = JSON.parse(readFileSync(hardeningReportPath, "utf8")) as YoutubeCorpusReport;
+
+    expect(report).toEqual(hardeningReport as YoutubeCorpusReport);
+    expect(report.aggregate.corpus_avg_f1).toBeGreaterThanOrEqual(0.8);
+    expect(report.aggregate.category_avg.structured).toBeGreaterThanOrEqual(0.8645);
+    expect(report.aggregate.category_avg["semi-structured"]).toBeGreaterThan(0.1799);
+    expect(report.aggregate.category_avg.weak).toBeGreaterThan(0);
+    expect(report.aggregate.category_avg.noise).toBe(1);
+    expect(report.aggregate.category_avg["multi-recipe"]).toBeGreaterThanOrEqual(0.5);
+    expect(report.per_fixture.every((fixture) => fixture.errors.length === 0)).toBe(true);
   });
 });
