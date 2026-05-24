@@ -1250,6 +1250,31 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "24-youtube-parser-dictionary-hardening",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/24-youtube-parser-dictionary-hardening",
+      "pr_path": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm test:youtube-corpus",
+        "pnpm vitest run tests/youtube-description-parser.test.ts tests/youtube-import.backend.test.ts tests/youtube-corpus.test.ts",
+        "pnpm verify:backend",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 24-youtube-parser-dictionary-hardening",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs in progress on docs/24-youtube-parser-dictionary-hardening. BE-only parser hardening slice. Depends on slice 23 corpus infrastructure (merged). Target: in-corpus F1 >= 0.80 from baseline 0.4932. closeout_phase=collecting",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
     }
   ]
 }
