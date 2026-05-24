@@ -1,0 +1,137 @@
+{
+  "id": "24-youtube-parser-dictionary-hardening",
+  "title": "YouTube description parser and ingredient dictionary hardening",
+  "summary": "코퍼스 채점 하네스 기반으로 결정론 설명란 파서의 라인 분류/점수 규칙을 개선하고 소량의 증거 기반 재료 사전 시딩을 추가해, in-corpus 전체 평균 F1을 0.4932에서 0.80 이상으로 끌어올린다. noise true-negative 유지, structured 회귀 방지.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "결정론 파서 규칙 개선과 소량 사전 시딩으로 YouTube 설명란 import 품질(in-corpus F1)을 0.80 이상으로 끌어올려, 사용자가 체감하는 추출 성공률을 실질적으로 개선한다.",
+  "owners": {
+    "claude": "stage1,stage3",
+    "codex": "stage2 backend",
+    "workers": []
+  },
+  "dependencies": [
+    "20-youtube-real-import",
+    "21-ingredient-dictionary",
+    "22-youtube-ingredient-registration",
+    "23-youtube-quality-corpus"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.0.md",
+      "docs/화면정의서-v1.5.7.md",
+      "docs/api문서-v1.2.10.md",
+      "docs/db설계-v1.3.6.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/24-youtube-parser-dictionary-hardening/README.md",
+      "docs/workpacks/24-youtube-parser-dictionary-hardening/acceptance.md",
+      "docs/workpacks/24-youtube-parser-dictionary-hardening/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/youtube-description-parser-scoring.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm test:youtube-corpus",
+      "pnpm vitest run tests/youtube-description-parser.test.ts tests/youtube-import.backend.test.ts tests/youtube-corpus.test.ts",
+      "pnpm verify:backend",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 24-youtube-parser-dictionary-hardening",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "parser-hardening-report",
+      "baseline-v2-preserved",
+      "corpus-fixtures-unchanged"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "collecting",
+    "docs_projection": {
+      "roadmap_lifecycle": "planned",
+      "design_status": "N/A",
+      "delivery_checklist": "pending",
+      "design_authority": "not_required",
+      "acceptance": "pending",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "pending",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": []
+    },
+    "merge_gate_projection": {
+      "current_head_sha": null,
+      "approval_state": "not_started",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": null
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": null,
+      "evidence_sources": []
+    },
+    "projection_state": {
+      "docs_synced_at": null,
+      "status_synced_at": null,
+      "pr_body_synced_at": null
+    }
+  },
+  "notes": "Stage 1 docs in progress on docs/24-youtube-parser-dictionary-hardening. BE-only parser hardening slice. Depends on slice 23 corpus infrastructure (merged). Target: in-corpus F1 >= 0.80 from baseline 0.4932.",
+  "out_of_scope": [
+    "LLM-based extraction",
+    "Caption/ASR/OCR source expansion",
+    "Public API response changes",
+    "DB schema DDL changes",
+    "Production UI changes",
+    "Bulk ingredient registration UX",
+    "Broad ingredient master expansion without corpus evidence",
+    "Wild-video accuracy guarantees"
+  ],
+  "open_questions": []
+}
