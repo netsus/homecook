@@ -197,10 +197,10 @@ export function SettingsMobileScreen({
         <MobileConfirmSheet
           confirmLabel={isDeleting ? "탈퇴 중..." : "탈퇴하기"}
           destructive
-          description="모든 식단, 레시피, 팬트리 기록이 영구 삭제됩니다. 이 동작은 되돌릴 수 없어요."
+          description="레시피북, 식단, 장보기, 팬트리 기록이 영구 삭제됩니다. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요."
           disabled={isDeleting}
           errorMessage={deleteError}
-          extraWarning="△ 7일 이내 재로그인 시 일부 데이터는 복구가 가능합니다 (베타)."
+          extraWarning="삭제 후 같은 소셜 계정으로 다시 로그인해도 이전 개인 기록은 복구되지 않아요."
           onCancel={onCloseDeleteDialog}
           onConfirm={onConfirmDelete}
           title="정말 탈퇴하시겠어요?"

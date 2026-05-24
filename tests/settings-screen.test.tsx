@@ -524,6 +524,11 @@ describe("SettingsScreen", () => {
 
     await waitFor(() => {
       expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
+      expect(
+        screen.getByText(
+          "계정을 삭제하면 레시피북, 플래너, 장보기, 팬트리 기록은 삭제되며 되돌릴 수 없어요. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요.",
+        ),
+      ).toBeTruthy();
     });
 
     await user.click(screen.getByText("취소"));

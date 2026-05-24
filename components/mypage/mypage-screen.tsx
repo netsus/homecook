@@ -1470,7 +1470,7 @@ function MyPageAccountSurface({ profile }: { profile: UserProfileData | null }) 
       <WebCard className="web-mypage-danger-card">
         <div>
           <h3>계정 삭제</h3>
-          <p>모든 레시피북, 플래너, 장보기 기록이 영구적으로 삭제됩니다.</p>
+          <p>레시피북, 플래너, 장보기, 팬트리 기록이 삭제됩니다. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요.</p>
         </div>
         <Link className="web-mypage-danger-button" href={SETTINGS_FROM_ACCOUNT_HREF}>
           계정 삭제하기
