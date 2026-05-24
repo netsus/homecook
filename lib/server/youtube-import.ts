@@ -265,6 +265,17 @@ const NEW_COOKING_METHOD = {
   label: "절이기",
   color_key: "unassigned",
 } as const;
+const DEFAULT_STEP_METHOD_CODE = "prep";
+type SystemStepMethodCode =
+  | "prep"
+  | "mix"
+  | "grill"
+  | "stir_fry"
+  | "boil"
+  | "deep_fry"
+  | "steam"
+  | "blanch";
+type StepMethodCode = SystemStepMethodCode | typeof NEW_COOKING_METHOD.code;
 
 type DescriptionSection = "ingredients" | "steps";
 type YoutubeDescriptionParserVersion = "legacy" | "v2" | "shadow";
@@ -1393,6 +1404,134 @@ async function ensureGeneratedCookingMethod(dbClient: DbClient) {
   };
 }
 
+async function findCookingMethodsByCode(dbClient: DbClient, codes: StepMethodCode[]) {
+  const uniqueCodes = [...new Set(codes)];
+
+  if (uniqueCodes.length === 0) {
+    return {
+      error: null,
+      methodsByCode: new Map<string, YoutubeExtractedCookingMethod>(),
+    };
+  }
+
+  const result = await table<ArrayLookupTable<CookingMethodRow>>(dbClient, "cooking_methods")
+    .select("id, code, label, color_key, is_system")
+    .in("code", uniqueCodes);
+
+  if (result.error || !result.data) {
+    return {
+      error: result.error ?? { message: "cooking method lookup failed" },
+      methodsByCode: new Map<string, YoutubeExtractedCookingMethod>(),
+    };
+  }
+
+  return {
+    error: null,
+    methodsByCode: new Map(
+      result.data.map((method) => [
+        method.code,
+        {
+          id: method.id,
+          code: method.code,
+          label: method.label,
+          color_key: method.color_key,
+          is_new: false,
+        } satisfies YoutubeExtractedCookingMethod,
+      ]),
+    ),
+  };
+}
+
+function inferStepCookingMethodCode(instruction: string): StepMethodCode {
+  const normalized = instruction.toLowerCase();
+
+  if (/(절여(?:준다|주세요|요|둔다|두|놓)|절이(?:고|기|면|세요|다)|절인다|재워|재우|숙성)/u.test(normalized)) {
+    return NEW_COOKING_METHOD.code;
+  }
+
+  if (/(굽|구워|구우|토스트|바삭하게|노릇)/u.test(normalized)) {
+    return "grill";
+  }
+
+  if (/(볶)/u.test(normalized)) {
+    return "stir_fry";
+  }
+
+  if (/(끓|삶|졸여|졸이|조려|조리듯)/u.test(normalized)) {
+    return "boil";
+  }
+
+  if (/(튀)/u.test(normalized)) {
+    return "deep_fry";
+  }
+
+  if (/(찐|쪄|찌기|찐다)/u.test(normalized)) {
+    return "steam";
+  }
+
+  if (/(데쳐|데치|헹궈|헹구)/u.test(normalized)) {
+    return "blanch";
+  }
+
+  if (/(버무|섞|비벼|비비|무쳐|무치|풀어|맞춰|발라|올려|뿌려|갈아\s*넣)/u.test(normalized)) {
+    return "mix";
+  }
+
+  return DEFAULT_STEP_METHOD_CODE;
+}
+
+async function resolveCookingMethodsForSteps(dbClient: DbClient, parsedSteps: string[]) {
+  const inferredCodes: StepMethodCode[] = parsedSteps.length > 0
+    ? parsedSteps.map(inferStepCookingMethodCode)
+    : [DEFAULT_STEP_METHOD_CODE];
+  const lookup = await findCookingMethodsByCode(dbClient, inferredCodes);
+
+  if (lookup.error) {
+    return {
+      error: lookup.error,
+      methods: [],
+      fallbackMethod: null,
+      newCookingMethods: [],
+    };
+  }
+
+  const missingInferredMethod = inferredCodes.some((code) => !lookup.methodsByCode.has(code));
+  let fallbackMethod = lookup.methodsByCode.get(DEFAULT_STEP_METHOD_CODE)
+    ?? lookup.methodsByCode.get(NEW_COOKING_METHOD.code)
+    ?? inferredCodes.map((code) => lookup.methodsByCode.get(code)).find(Boolean)
+    ?? null;
+  const newCookingMethods: YoutubeExtractedCookingMethod[] = [];
+
+  if (missingInferredMethod || !fallbackMethod) {
+    const generated = await ensureGeneratedCookingMethod(dbClient);
+
+    if (generated.error || !generated.method) {
+      return {
+        error: generated.error ?? { message: "cooking method fallback failed" },
+        methods: [],
+        fallbackMethod: null,
+        newCookingMethods: [],
+      };
+    }
+
+    lookup.methodsByCode.set(NEW_COOKING_METHOD.code, generated.method);
+    fallbackMethod = generated.method;
+
+    if (generated.method.is_new) {
+      newCookingMethods.push(generated.method);
+    }
+  }
+
+  return {
+    error: null,
+    methods: inferredCodes.map((code) =>
+      lookup.methodsByCode.get(code) ?? fallbackMethod,
+    ).filter((method): method is YoutubeExtractedCookingMethod => method !== null),
+    fallbackMethod,
+    newCookingMethods,
+  };
+}
+
 function sortIngredientMatches(
   matches: Array<{ ingredientId: string; standardName: string; source: MatchSource }>,
 ) {
@@ -1513,7 +1652,8 @@ function buildBlockingIssues(ingredients: YoutubeExtractedIngredient[]) {
 
 function buildExtractedSteps(
   parsedSteps: string[],
-  cookingMethod: YoutubeExtractedCookingMethod,
+  cookingMethods: YoutubeExtractedCookingMethod[],
+  fallbackCookingMethod: YoutubeExtractedCookingMethod,
   {
     includeIncompleteFallback = true,
   }: {
@@ -1529,7 +1669,7 @@ function buildExtractedSteps(
       {
         step_number: 1,
         instruction: "",
-        cooking_method: cookingMethod,
+        cooking_method: fallbackCookingMethod,
         duration_text: null,
         is_incomplete: true,
         missing_fields: ["instruction"],
@@ -1541,7 +1681,7 @@ function buildExtractedSteps(
   return parsedSteps.map((instruction, index) => ({
     step_number: index + 1,
     instruction,
-    cooking_method: cookingMethod,
+    cooking_method: cookingMethods[index] ?? fallbackCookingMethod,
     duration_text: null,
     is_incomplete: false,
     missing_fields: [],
@@ -1606,17 +1746,22 @@ export async function handleYoutubeExtract(request: Request) {
     return fail("INTERNAL_ERROR", "재료 정보를 확인하지 못했어요.", 500);
   }
 
-  const cookingMethodResult = await ensureGeneratedCookingMethod(dbClient);
-  if (cookingMethodResult.error || !cookingMethodResult.method) {
+  const cookingMethodResult = await resolveCookingMethodsForSteps(dbClient, parsedRecipe.steps);
+  if (cookingMethodResult.error || !cookingMethodResult.fallbackMethod) {
     return fail("INTERNAL_ERROR", "조리방법을 준비하지 못했어요.", 500);
   }
 
   const ingredients = buildExtractedIngredients(ingredientLookup.matchesByName, parsedRecipe.ingredients, {
     saltNeedsReview: parsedUrl.videoId.startsWith("needsreview"),
   });
-  const steps = buildExtractedSteps(parsedRecipe.steps, cookingMethodResult.method, {
-    includeIncompleteFallback: descriptionParse.includeIncompleteStepFallback,
-  });
+  const steps = buildExtractedSteps(
+    parsedRecipe.steps,
+    cookingMethodResult.methods,
+    cookingMethodResult.fallbackMethod,
+    {
+      includeIncompleteFallback: descriptionParse.includeIncompleteStepFallback,
+    },
+  );
   const blockingIssues = [
     ...descriptionParse.blockingIssues,
     ...buildBlockingIssues(ingredients),
@@ -1640,7 +1785,7 @@ export async function handleYoutubeExtract(request: Request) {
     blocking_issues: blockingIssues,
     ingredients,
     steps,
-    new_cooking_methods: cookingMethodResult.method.is_new ? [cookingMethodResult.method] : [],
+    new_cooking_methods: cookingMethodResult.newCookingMethods,
   };
 
   const sessionError = await insertExtractionSession(dbClient, {

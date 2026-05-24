@@ -84,6 +84,7 @@ function createMaybeSingleQuery<T>(results: Array<QueryResult<T | null>>) {
 function createCookingMethodsTable({
   existingResult,
   insertResult,
+  lookupRows = [],
 }: {
   existingResult: QueryResult<{
     id: string;
@@ -99,8 +100,21 @@ function createCookingMethodsTable({
     color_key: string;
     is_system: boolean;
   } | null>;
+  lookupRows?: Array<{
+    id: string;
+    code: string;
+    label: string;
+    color_key: string;
+    is_system: boolean;
+  }>;
 }) {
-  const selectQuery = createMaybeSingleQuery([existingResult]);
+  const lookupResult = { data: lookupRows, error: null };
+  const selectQuery = {
+    ...createMaybeSingleQuery([existingResult]),
+    in: vi.fn(() => selectQuery),
+    order: vi.fn(() => selectQuery),
+    then: createAwaitableQuery(lookupResult).then,
+  };
   const insertQuery = createMaybeSingleQuery([insertResult]);
 
   return {
@@ -168,6 +182,8 @@ const recipeId = "550e8400-e29b-41d4-a716-446655441001";
 const kimchiIngredientId = "550e8400-e29b-41d4-a716-446655440013";
 const saltIngredientId = "550e8400-e29b-41d4-a716-446655440015";
 const prepMethodId = "550e8400-e29b-41d4-a716-446655440218";
+const mixMethodId = "550e8400-e29b-41d4-a716-446655440217";
+const grillMethodId = "550e8400-e29b-41d4-a716-446655440215";
 const newMethodId = "550e8400-e29b-41d4-a716-446655441101";
 const extractionId = "550e8400-e29b-41d4-a716-446655441201";
 const draftIngredientId = "550e8400-e29b-41d4-a716-446655441301";
@@ -1085,6 +1101,36 @@ describe("20 youtube real import backend", () => {
         error: null,
       },
       insertResult: { data: null, error: { message: "should not insert" } },
+      lookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: newMethodId,
+          code: "auto_salt",
+          label: "절이기",
+          color_key: "unassigned",
+          is_system: false,
+        },
+        {
+          id: mixMethodId,
+          code: "mix",
+          label: "무치기",
+          color_key: "green",
+          is_system: true,
+        },
+        {
+          id: grillMethodId,
+          code: "grill",
+          label: "굽기",
+          color_key: "brown",
+          is_system: true,
+        },
+      ],
     });
     const sessionsTable = createYoutubeSessionsTable({});
     const dbClient = {
@@ -1151,12 +1197,26 @@ describe("20 youtube real import backend", () => {
         instruction: "깨끗이 씻은 오이는 양끝을 잘라내고 끄트머리 쪽에 포크를 꽂아 필러를 이용해 얇게 포를 떠준다",
         is_incomplete: false,
         missing_fields: [],
+        cooking_method: {
+          code: "prep",
+          label: "손질",
+        },
       },
       {
         step_number: 2,
         instruction: "그리고 소금에 버무려 10분간 절여준다",
+        cooking_method: {
+          code: "auto_salt",
+          label: "절이기",
+        },
       },
     ]);
+    expect(body.data.steps.map((step: { cooking_method: { code: string } }) =>
+      step.cooking_method.code,
+    )).toEqual(["prep", "auto_salt", "prep", "mix", "grill"]);
+    expect(new Set(body.data.steps.map((step: { cooking_method: { code: string } }) =>
+      step.cooking_method.code,
+    )).size).toBeGreaterThan(1);
     expect(ingredientsTable.__query.in).toHaveBeenCalledWith("standard_name", [
       "청오이",
       "두유 그릭 요거트",
