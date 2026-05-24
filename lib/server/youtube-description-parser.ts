@@ -178,6 +178,7 @@ const KNOWN_UNITS = [
   "포기",
   "송이",
   "마리",
+  "덩이",
   "숟가락",
   "토막",
   "조각",
@@ -313,12 +314,25 @@ function normalizeLines(description: string): SourceLine[] {
 function isNoiseText(text: string) {
   const normalized = text.trim().toLowerCase();
 
-  return (
+  if (
     normalized.startsWith("#")
     || normalized.startsWith("http://")
     || normalized.startsWith("https://")
     || /^@\w/u.test(normalized)
-    || normalized.includes("bgm")
+  ) {
+    return true;
+  }
+
+  const hasRecipeSignal = hasCookingAction(normalized)
+    || AMOUNT_SIGNAL_RE.test(normalized)
+    || /(?:약간|조금|적당량|소량|취향껏|한\s*꼬집|한\s*줌|한\s*움큼)/u.test(normalized);
+
+  if (hasRecipeSignal) {
+    return false;
+  }
+
+  return (
+    normalized.includes("bgm")
     || normalized.includes("instagram")
     || normalized.includes("제품 정보")
     || normalized.includes("구매 링크")
@@ -429,7 +443,7 @@ function getIngredientHeadingComponent(text: string) {
 function getStepHeadingComponent(text: string) {
   const normalized = text.toLowerCase();
 
-  if (/^(?:순서|조리\s*(?:과정|순서|방법|법)|조리법|만드는\s*(?:법|방법|순서)|만들기|요리\s*(?:법|과정|순서)|레시피\s*순서|steps?|directions?|method)\s*(?:\([^)]*\))?\s*$/u.test(normalized)) {
+  if (/^(?:순서|조리\s*(?:과정|순서|방법|법)|조리법|만드는\s*(?:법|방법|순서)|만들기|요리\s*(?:법|과정|순서)|레시피(?:\s*순서)?|steps?|directions?|method)\s*(?:\([^)]*\))?\s*$/u.test(normalized)) {
     return null;
   }
 
@@ -470,11 +484,11 @@ function isComponentOnlyHeading(text: string) {
 }
 
 function hasCookingAction(text: string) {
-  return /(씻|자르|잘라|썰|썬다|볶|끓|삶|굽|구워|버무|섞|넣|절여|절이|절인|올려|발라|뿌려|익혀|튀겨|찐|쪄|데쳐|풀|두르|맞춰|채우|채워|완성|식히|식힌|섞어|섞으|만들|다져|다지|비벼|비비|무쳐|무치|조려|졸여|졸이|졸인|헹궈|헹구|담가|담근|갈아|펴|재워|재우|빚어|치대|부어|부치|지져|걸러|불려|불린|말아)/u.test(text);
+  return /(씻|자르|잘라|썰|썬다|볶|끓|삶|굽|구워|버무|섞|넣|절여|절이|절인|올려|얹|발라|뿌려|익혀|익히|튀겨|찐|쪄|데쳐|풀|두르|맞춰|채우|채워|완성|식히|식힌|섞어|섞으|만들|다져|다지|비벼|비비|무쳐|무치|조려|졸여|졸이|졸인|헹궈|헹구|담가|담근|갈아|갈고|갈아|끼우|으깨|펴|재워|재우|빚어|치대|부어|부치|지져|걸러|불려|불리|불린|말아|간하|간해|간합|간하면|마무리)/u.test(text);
 }
 
 function hasSpecificCookingAction(text: string) {
-  return /(씻|자르|잘라|썰|썬다|썰어|볶아|볶고|볶아요|볶는다|끓여|끓이|끓인다|삶|굽|구워|버무|섞|넣|절여|절이|절인|올려|발라|뿌려|익혀|튀겨|찐|쪄|데쳐|풀|두르|맞춰|채우|채워|완성|식히|식힌|섞어|섞으|다져|다지|비벼|비비|무쳐|무치|조려|졸여|졸이|헹궈|헹구|담가|담근|갈아|재워|재우|빚어|치대|부어|부치|지져|걸러|불려|불린|말아)/u.test(text);
+  return /(씻|자르|잘라|썰|썬다|썰어|볶아|볶고|볶아요|볶는다|끓여|끓이|끓인다|삶|굽|구워|버무|섞|넣|절여|절이|절인|올려|얹|발라|뿌려|익혀|익히|튀겨|찐|쪄|데쳐|풀|두르|맞춰|채우|채워|완성|식히|식힌|섞어|섞으|다져|다지|비벼|비비|무쳐|무치|조려|졸여|졸이|헹궈|헹구|담가|담근|갈아|갈고|끼우|으깨|재워|재우|빚어|치대|부어|부치|지져|걸러|불려|불리|불린|말아|간하|간해|간합|간하면|마무리)/u.test(text);
 }
 
 function hasSentenceEnding(text: string) {
@@ -482,7 +496,7 @@ function hasSentenceEnding(text: string) {
 }
 
 function hasAmountSignal(text: string) {
-  return AMOUNT_SIGNAL_RE.test(text) || /(?:약간|조금|적당량|소량|취향껏|취향에\s*따라|한\s*꼬집|한\s*줌|한\s*움큼|(?:톡)+)$/u.test(text);
+  return AMOUNT_SIGNAL_RE.test(text) || /(?:약간|조금|적당량|소량|취향껏|취향에\s*따라|한\s*꼬집|한\s*줌|한\s*움큼|\s+(?:톡)+)$/u.test(text);
 }
 
 function parseRecipeAmount(value: string) {
@@ -744,6 +758,388 @@ function parseCommaSeparatedIngredients(
   return [];
 }
 
+function cleanupInlineIngredientName(value: string) {
+  let cleaned = stripOuterBrackets(value)
+    .replace(/^.*?[：:]\s*/u, "")
+    .replace(/^.*?(?:필요한\s*것|준비\s*재료|재료(?:는|로는)?|소스는)\s*/u, "")
+    .replace(new RegExp(`^.*(?:${AMOUNT_RANGE_PATTERN})\\s*(?:${UNIT_PATTERN})\\s*(?:와|과|및)\\s*`, "iu"), "")
+    .replace(/^(?:오늘은|남은|냉장고에\s*남은|마지막에|그리고|또|와|과|및|에|를|을|은|는|로|으로)\s*/u, "")
+    .replace(/^.*?(?:은|는)\s+(?=[\p{L}])/u, "")
+    .replace(/^.*?(?:썰고|익히고|볶고|불리고|넣어|올려|다가|고)\s+(?=[\p{L}])/u, "")
+    .replace(/\s+/gu, " ")
+    .trim();
+
+  cleaned = cleaned
+    .replace(/\s*(?:은|는|을|를|이|가|에|와|과|으로|로|정도면?|정도)\s*$/u, "")
+    .trim();
+
+  const tokens = cleaned.split(/\s+/u).filter(Boolean);
+  if (tokens.length > 3) {
+    cleaned = tokens.at(-1) ?? "";
+  }
+
+  return normalizeIngredientName(cleaned);
+}
+
+function makeParsedIngredient({
+  line,
+  name,
+  amount,
+  unit,
+  ingredientType,
+  componentLabel,
+  confidence,
+  flags,
+  scalable,
+}: {
+  line: SourceLine;
+  name: string;
+  amount: number | null;
+  unit: string | null;
+  ingredientType: IngredientType;
+  componentLabel: string | null;
+  confidence: number;
+  flags: string[];
+  scalable: boolean;
+}): ParsedIngredient | null {
+  const normalizedName = cleanupInlineIngredientName(name);
+
+  if (
+    !normalizedName
+    || normalizedName.length > 40
+    || hasCookingAction(normalizedName)
+    || isNoiseText(normalizedName)
+  ) {
+    return null;
+  }
+
+  return {
+    name: normalizedName,
+    amount,
+    unit,
+    ingredientType,
+    displayText: formatIngredientDisplayText({
+      name: normalizedName,
+      amount,
+      unit,
+      componentLabel,
+    }),
+    rawText: line.raw.trim(),
+    componentLabel,
+    sourceLine: line.index,
+    confidence,
+    flags,
+    scalable,
+  };
+}
+
+function parseInlineQuantifiedIngredients(
+  line: SourceLine,
+  options: { componentLabel: string | null },
+): ParsedIngredient[] {
+  const ingredients: ParsedIngredient[] = [];
+  const quantifiedIngredientRe = new RegExp(
+    `(?:^|[,，.]|\\s[/+]\\s*|(?:와|과|및|에|를|을|은|는|다가|고)\\s+|\\s(?:와|과|및|에|를|을|은|는|다가|고)\\s*)` +
+      `([^,，/+。.!\\n]{1,40}?)\\s*(${AMOUNT_RANGE_PATTERN}|한|두|세|네|반)\\s*(${UNIT_PATTERN})(?=\\s|[,，/+.)]|와|과|을|를|은|는|에|로|으로|$)`,
+    "giu",
+  );
+
+  for (const match of line.text.matchAll(quantifiedIngredientRe)) {
+    const amountToken = match[2];
+    const amount = KOREAN_NUMBER_WORDS[amountToken] ?? parseRecipeAmount(amountToken);
+    const unit = match[3].trim();
+    const ingredient = makeParsedIngredient({
+      line,
+      name: match[1],
+      amount,
+      unit,
+      ingredientType: "QUANT",
+      componentLabel: options.componentLabel,
+      confidence: 0.78,
+      flags: ["inline_quantified"],
+      scalable: true,
+    });
+
+    if (ingredient && amount !== null) {
+      ingredients.push(ingredient);
+    }
+  }
+
+  const looseQuantifiedIngredientRe = new RegExp(
+    `(?<![\\p{L}\\p{N}])([^,，/+。.!\\n]{1,48}?)\\s*(${AMOUNT_RANGE_PATTERN}|한|두|세|네|반)\\s*(${UNIT_PATTERN})(?=\\s|[,，/+.)]|와|과|을|를|은|는|에|로|으로|$)`,
+    "giu",
+  );
+
+  for (const match of line.text.matchAll(looseQuantifiedIngredientRe)) {
+    const amountToken = match[2];
+    const amount = KOREAN_NUMBER_WORDS[amountToken] ?? parseRecipeAmount(amountToken);
+    const unit = match[3].trim();
+    const ingredient = makeParsedIngredient({
+      line,
+      name: match[1],
+      amount,
+      unit,
+      ingredientType: "QUANT",
+      componentLabel: options.componentLabel,
+      confidence: 0.68,
+      flags: ["inline_quantified_loose"],
+      scalable: true,
+    });
+
+    if (ingredient && amount !== null) {
+      ingredients.push(ingredient);
+    }
+  }
+
+  const connectorQuantifiedIngredientRe = new RegExp(
+    `(?:썰어|볶다가|끓이다가|다가|고|에|와|과)\\s+([\\p{L}][\\p{L}\\s]{0,24}?)\\s*(${AMOUNT_RANGE_PATTERN}|한|두|세|네|반)\\s*(${UNIT_PATTERN})(?=\\s|[,，/+.)]|와|과|을|를|은|는|에|로|으로|$)`,
+    "giu",
+  );
+
+  for (const match of line.text.matchAll(connectorQuantifiedIngredientRe)) {
+    const amountToken = match[2];
+    const amount = KOREAN_NUMBER_WORDS[amountToken] ?? parseRecipeAmount(amountToken);
+    const unit = match[3].trim();
+    const ingredient = makeParsedIngredient({
+      line,
+      name: match[1],
+      amount,
+      unit,
+      ingredientType: "QUANT",
+      componentLabel: options.componentLabel,
+      confidence: 0.72,
+      flags: ["inline_quantified_connector"],
+      scalable: true,
+    });
+
+    if (ingredient && amount !== null) {
+      ingredients.push(ingredient);
+    }
+  }
+
+  const waterAmountRe = new RegExp(`(?:^|\\s)(물)\\s*(${AMOUNT_RANGE_PATTERN})\\s*(ml|l|L)(?=\\s|와|과|을|를|에|$)`, "giu");
+  for (const match of line.text.matchAll(waterAmountRe)) {
+    const amount = parseRecipeAmount(match[2]);
+    const ingredient = makeParsedIngredient({
+      line,
+      name: match[1],
+      amount,
+      unit: match[3],
+      ingredientType: "QUANT",
+      componentLabel: options.componentLabel,
+      confidence: 0.72,
+      flags: ["inline_water_amount"],
+      scalable: true,
+    });
+
+    if (ingredient && amount !== null) {
+      ingredients.push(ingredient);
+    }
+  }
+
+  return dedupeIngredients(ingredients);
+}
+
+function parseInlineToTasteIngredients(
+  line: SourceLine,
+  options: { componentLabel: string | null },
+): ParsedIngredient[] {
+  const ingredients: ParsedIngredient[] = [];
+  const toTasteRe = /(?:^|[,，.]|(?:와|과|및|에|를|을|은|는|다가|고)\s+|\s(?:와|과|및|에|를|을|은|는|다가|고)\s*)([^,，/+。.!]{1,28}?)(?:은|는|을|를)?\s*(?:약간|조금|적당량|소량|취향껏|살짝|\s+(?:톡)+)(?=\s|[,，.。!]|으로|로|을|를|와|과|은|는|에|$)/gu;
+
+  for (const match of line.text.matchAll(toTasteRe)) {
+    const ingredient = makeParsedIngredient({
+      line,
+      name: match[1],
+      amount: null,
+      unit: null,
+      ingredientType: "TO_TASTE",
+      componentLabel: options.componentLabel,
+      confidence: 0.7,
+      flags: ["inline_to_taste"],
+      scalable: false,
+    });
+
+    if (ingredient) {
+      ingredients.push(ingredient);
+    }
+  }
+
+  return ingredients;
+}
+
+function dedupeIngredients(ingredients: ParsedIngredient[]) {
+  const seen = new Set<string>();
+  const deduped: ParsedIngredient[] = [];
+
+  for (const ingredient of ingredients) {
+    const duplicateIndex = deduped.findIndex((existing) =>
+      existing.sourceLine === ingredient.sourceLine
+      && existing.amount === ingredient.amount
+      && existing.unit === ingredient.unit
+      && existing.componentLabel === ingredient.componentLabel
+      && (
+        existing.name.endsWith(ingredient.name)
+        || ingredient.name.endsWith(existing.name)
+      ),
+    );
+
+    if (duplicateIndex !== -1) {
+      const existing = deduped[duplicateIndex];
+
+      if (ingredient.name.length > existing.name.length) {
+        const existingKey = [
+          existing.name.trim().toLowerCase(),
+          existing.amount ?? "",
+          existing.unit ?? "",
+          existing.componentLabel ?? "",
+        ].join("|");
+        seen.delete(existingKey);
+        deduped.splice(duplicateIndex, 1);
+      } else {
+        continue;
+      }
+    }
+
+    const key = [
+      ingredient.name.trim().toLowerCase(),
+      ingredient.amount ?? "",
+      ingredient.unit ?? "",
+      ingredient.componentLabel ?? "",
+    ].join("|");
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    deduped.push(ingredient);
+  }
+
+  return deduped.sort((left, right) => {
+    if (left.sourceLine !== right.sourceLine) {
+      return left.sourceLine - right.sourceLine;
+    }
+
+    const leftIndex = left.rawText.indexOf(left.name);
+    const rightIndex = right.rawText.indexOf(right.name);
+
+    return (leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex)
+      - (rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex);
+  });
+}
+
+function normalizeLooseParsedIngredient(ingredient: ParsedIngredient): ParsedIngredient | null {
+  const name = cleanupInlineIngredientName(ingredient.name);
+
+  if (!name) {
+    return null;
+  }
+
+  return {
+    ...ingredient,
+    name,
+    displayText: formatIngredientDisplayText({
+      name,
+      amount: ingredient.amount,
+      unit: ingredient.unit,
+      componentLabel: ingredient.componentLabel,
+    }),
+  };
+}
+
+function parseLooseIngredientLines(
+  line: SourceLine,
+  options: { componentLabel: string | null },
+) {
+  if (!line.text || isNoiseText(line.text)) {
+    return [];
+  }
+
+  const slashOrCommaLine = /[,，]|\s\/\s/u.test(line.text);
+  if (slashOrCommaLine) {
+    const normalizedLine = {
+      ...line,
+      text: line.text
+        .replace(/^.*?[：:]\s*/u, "")
+        .replace(/^.*?(?:필요한\s*것|재료(?:는|로는)?|소스는)\s*/u, "")
+        .replace(/(?:입니다|면\s*충분합니다|입니다\.|[.。])\s*$/u, "")
+        .trim(),
+      normalized: line.normalized,
+    };
+    const segments = normalizedLine.text
+      .split(/\s*(?:[,，]|\s\/\s)\s*/u)
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+
+    if (!segments.some(hasAmountSignal)) {
+      return [];
+    }
+
+    const parsedSegments = segments
+      .flatMap((segment) => parseIngredientLines({
+        ...normalizedLine,
+        raw: segment,
+        text: segment,
+        normalized: segment.toLowerCase(),
+        ordinal: null,
+      }, { allowAmountless: true, componentLabel: options.componentLabel }))
+      .map(normalizeLooseParsedIngredient)
+      .filter((ingredient): ingredient is ParsedIngredient => ingredient !== null);
+
+    if (parsedSegments.length >= 2) {
+      return dedupeIngredients(parsedSegments);
+    }
+  }
+
+  return dedupeIngredients([
+    ...parseInlineQuantifiedIngredients(line, options),
+    ...parseInlineToTasteIngredients(line, options),
+  ]);
+}
+
+function splitProseStepTexts(text: string) {
+  const sentences = text
+    .split(/(?<=[.。!])\s*/u)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+  const results: string[] = [];
+
+  for (const sentence of sentences) {
+    const splitOnProgress = sentence.split(/(?<=다가)\s+|(?<=굽고)\s+|(?<=썰고)\s+|(?<=익히고)\s+|(?<=불리고)\s+|(?<=끼우고)\s+/u)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (splitOnProgress.length > 1 && splitOnProgress.every((part) => hasCookingAction(part))) {
+      results.push(...splitOnProgress);
+      continue;
+    }
+
+    results.push(sentence);
+  }
+
+  return results;
+}
+
+function parseProseStepLines(
+  line: SourceLine,
+  options: { componentLabel: string | null },
+) {
+  return splitProseStepTexts(line.text)
+    .map((text) => parseStepLine(
+      {
+        ...line,
+        text,
+        normalized: text.toLowerCase(),
+      },
+      {
+        componentLabel: options.componentLabel,
+        requireCookingAction: true,
+      },
+    ))
+    .filter((step): step is ParsedStep => step !== null);
+}
+
 function parseStepLine(
   line: SourceLine,
   {
@@ -754,7 +1150,7 @@ function parseStepLine(
     requireCookingAction: boolean;
   },
 ): ParsedStep | null {
-  if (!line.text || isNoiseText(line.text) || line.text.length < 4) {
+  if (!line.text || isNoiseText(line.text) || isRecipeNoteText(line.text) || line.text.length < 4) {
     return null;
   }
 
@@ -779,6 +1175,12 @@ function parseStepLine(
     confidence: line.ordinal !== null || hasCookingAction(line.text) ? 0.9 : 0.7,
     flags: [],
   };
+}
+
+function isRecipeNoteText(text: string) {
+  const normalized = text.trim();
+
+  return /(?:영상\s*(?:속|에서는)|실제\s*영상|나중에\s*넣|빠져서|참고|tip|팁)/iu.test(normalized);
 }
 
 function scoreLine(line: SourceLine): Omit<Classification, "kind" | "componentLabel" | "preferredSection"> {
@@ -1086,6 +1488,24 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
         hasParsedIngredient = true;
         continue;
       }
+
+      const looseIngredients = parseLooseIngredientLines(line, { componentLabel });
+
+      if (looseIngredients.length > 0) {
+        getComponent(components, componentLabel, line.index).ingredients.push(...looseIngredients);
+        hasParsedIngredient = true;
+        continue;
+      }
+
+      if (hasParsedIngredient && hasCookingAction(line.text)) {
+        const steps = parseProseStepLines(line, { componentLabel });
+
+        if (steps.length > 0) {
+          getComponent(components, componentLabel, line.index).steps.push(...steps);
+          section = "steps";
+          continue;
+        }
+      }
     }
 
     if (section === "steps") {
@@ -1097,6 +1517,35 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
       if (step) {
         getComponent(components, componentLabel, line.index).steps.push(step);
         continue;
+      }
+    }
+
+    if (!section && !afterSectionStopper && classification.kind === "ingredient_candidate") {
+      let ingredients = parseLooseIngredientLines(line, { componentLabel });
+
+      if (ingredients.length === 0) {
+        ingredients = parseIngredientLines(line, {
+          allowAmountless: false,
+          componentLabel,
+        });
+      }
+
+      if (ingredients.length > 0) {
+        getComponent(components, componentLabel, line.index).ingredients.push(...ingredients);
+        hasParsedIngredient = true;
+
+        if (!hasCookingAction(line.text)) {
+          continue;
+        }
+      }
+    }
+
+    if (!section && !afterSectionStopper && classification.kind !== "ingredient_candidate") {
+      const ingredients = parseLooseIngredientLines(line, { componentLabel });
+
+      if (ingredients.length > 0) {
+        getComponent(components, componentLabel, line.index).ingredients.push(...ingredients);
+        hasParsedIngredient = true;
       }
     }
 
@@ -1113,8 +1562,8 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
       }
     }
 
-    if (!section && !afterSectionStopper && classification.kind === "step_candidate") {
-      if (!hasStructuredSectionHeading && !hasParsedIngredient && line.ordinal === null) {
+    if (!section && !afterSectionStopper && (classification.kind === "step_candidate" || hasCookingAction(line.text))) {
+      if (!hasStructuredSectionHeading && !hasParsedIngredient && line.ordinal === null && !hasAmountSignal(line.text)) {
         continue;
       }
 
@@ -1122,13 +1571,10 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
         continue;
       }
 
-      const step = parseStepLine(line, {
-        componentLabel,
-        requireCookingAction: true,
-      });
+      const steps = parseProseStepLines(line, { componentLabel });
 
-      if (step) {
-        getComponent(components, componentLabel, line.index).steps.push(step);
+      if (steps.length > 0) {
+        getComponent(components, componentLabel, line.index).steps.push(...steps);
       }
     }
   }

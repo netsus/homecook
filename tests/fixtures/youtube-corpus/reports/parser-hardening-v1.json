@@ -1,0 +1,603 @@
+{
+  "run_id": "parser-hardening-v1",
+  "timestamp": "2026-05-25T00:00:00.000Z",
+  "parser_version": "v2-hardening",
+  "corpus_version": "v1",
+  "per_fixture": [
+    {
+      "id": "structured-real-001",
+      "category": "structured",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "structured-real-002",
+      "category": "structured",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 0.75,
+        "recall": 1,
+        "f1": 0.8571
+      },
+      "overall_f1": 0.9285,
+      "errors": []
+    },
+    {
+      "id": "structured-real-003",
+      "category": "structured",
+      "ingredients": {
+        "precision": 0.9286,
+        "recall": 0.9286,
+        "f1": 0.9286
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 0.9643,
+      "errors": []
+    },
+    {
+      "id": "structured-real-004",
+      "category": "structured",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "structured-real-005",
+      "category": "structured",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "structured-real-006",
+      "category": "structured",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "structured-real-007",
+      "category": "structured",
+      "ingredients": {
+        "precision": 0.9167,
+        "recall": 0.9167,
+        "f1": 0.9167
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 0.9584,
+      "errors": []
+    },
+    {
+      "id": "structured-real-008",
+      "category": "structured",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "semi-real-001",
+      "category": "semi-structured",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "semi-real-002",
+      "category": "semi-structured",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "semi-real-003",
+      "category": "semi-structured",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "semi-real-004",
+      "category": "semi-structured",
+      "ingredients": {
+        "precision": 0.9,
+        "recall": 0.9,
+        "f1": 0.9
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 0.95,
+      "errors": []
+    },
+    {
+      "id": "semi-real-005",
+      "category": "semi-structured",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 0.85,
+        "recall": 0.5667,
+        "f1": 0.68
+      },
+      "overall_f1": 0.84,
+      "errors": []
+    },
+    {
+      "id": "semi-real-006",
+      "category": "semi-structured",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "semi-real-007",
+      "category": "semi-structured",
+      "ingredients": {
+        "precision": 1,
+        "recall": 0.8,
+        "f1": 0.8889
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 0.9445,
+      "errors": []
+    },
+    {
+      "id": "semi-real-008",
+      "category": "semi-structured",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 0.3333,
+        "f1": 0.5
+      },
+      "overall_f1": 0.75,
+      "errors": []
+    },
+    {
+      "id": "weak-real-001",
+      "category": "weak",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "weak-real-002",
+      "category": "weak",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "weak-real-003",
+      "category": "weak",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 0.6667,
+        "recall": 1,
+        "f1": 0.8
+      },
+      "overall_f1": 0.9,
+      "errors": []
+    },
+    {
+      "id": "weak-real-004",
+      "category": "weak",
+      "ingredients": {
+        "precision": 1,
+        "recall": 0.75,
+        "f1": 0.8571
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 0.5,
+        "f1": 0.6667
+      },
+      "overall_f1": 0.7619,
+      "errors": []
+    },
+    {
+      "id": "multi-real-001",
+      "category": "multi-recipe",
+      "ingredients": {
+        "precision": 0.6,
+        "recall": 1,
+        "f1": 0.75
+      },
+      "steps": {
+        "precision": 0.5,
+        "recall": 1,
+        "f1": 0.6667
+      },
+      "overall_f1": 0.7084,
+      "errors": []
+    },
+    {
+      "id": "multi-real-002",
+      "category": "multi-recipe",
+      "ingredients": {
+        "precision": 0.6,
+        "recall": 0.75,
+        "f1": 0.6667
+      },
+      "steps": {
+        "precision": 0.5,
+        "recall": 1,
+        "f1": 0.6667
+      },
+      "overall_f1": 0.6667,
+      "errors": []
+    },
+    {
+      "id": "multi-real-003",
+      "category": "multi-recipe",
+      "ingredients": {
+        "precision": 0.5,
+        "recall": 0.8333,
+        "f1": 0.625
+      },
+      "steps": {
+        "precision": 0.5,
+        "recall": 1,
+        "f1": 0.6667
+      },
+      "overall_f1": 0.6459,
+      "errors": []
+    },
+    {
+      "id": "multi-real-004",
+      "category": "multi-recipe",
+      "ingredients": {
+        "precision": 0.5,
+        "recall": 1,
+        "f1": 0.6667
+      },
+      "steps": {
+        "precision": 0.5,
+        "recall": 0.5,
+        "f1": 0.5
+      },
+      "overall_f1": 0.5834,
+      "errors": []
+    },
+    {
+      "id": "weak-synthetic-001",
+      "category": "weak",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "weak-synthetic-002",
+      "category": "weak",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "weak-synthetic-003",
+      "category": "weak",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "weak-synthetic-004",
+      "category": "weak",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "multi-synthetic-001",
+      "category": "multi-recipe",
+      "ingredients": {
+        "precision": 0.5,
+        "recall": 1,
+        "f1": 0.6667
+      },
+      "steps": {
+        "precision": 0.5,
+        "recall": 1,
+        "f1": 0.6667
+      },
+      "overall_f1": 0.6667,
+      "errors": []
+    },
+    {
+      "id": "multi-synthetic-002",
+      "category": "multi-recipe",
+      "ingredients": {
+        "precision": 0.6,
+        "recall": 1,
+        "f1": 0.75
+      },
+      "steps": {
+        "precision": 0.5,
+        "recall": 1,
+        "f1": 0.6667
+      },
+      "overall_f1": 0.7084,
+      "errors": []
+    },
+    {
+      "id": "noise-synthetic-001",
+      "category": "noise",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "noise-synthetic-002",
+      "category": "noise",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "noise-synthetic-003",
+      "category": "noise",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "noise-synthetic-004",
+      "category": "noise",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "noise-synthetic-005",
+      "category": "noise",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    },
+    {
+      "id": "noise-synthetic-006",
+      "category": "noise",
+      "ingredients": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "steps": {
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      "overall_f1": 1,
+      "errors": []
+    }
+  ],
+  "aggregate": {
+    "corpus_avg_f1": 0.916,
+    "category_avg": {
+      "structured": 0.9814,
+      "semi-structured": 0.9356,
+      "weak": 0.9577,
+      "noise": 1,
+      "multi-recipe": 0.6633
+    },
+    "category_counts": {
+      "structured": 8,
+      "semi-structured": 8,
+      "weak": 8,
+      "noise": 6,
+      "multi-recipe": 6
+    },
+    "warnings": []
+  },
+  "wild_sample_aggregate": null
+}
