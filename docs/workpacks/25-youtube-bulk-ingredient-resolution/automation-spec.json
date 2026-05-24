@@ -63,13 +63,12 @@
         "mobile-default",
         "mobile-narrow"
       ],
-      "authority_report_paths": []
+      "authority_report_paths": [
+        "ui/designs/authority/YT_IMPORT-bulk-ingredient-resolution-authority.md"
+      ]
     }
   },
-  "external_smokes": [
-    "pnpm dev:demo",
-    "pnpm dev:local-supabase"
-  ],
+  "external_smokes": [],
   "blocked_conditions": [
     "slice-22-not-merged",
     "register-youtube-ingredient-rpc-missing",

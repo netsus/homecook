@@ -1279,11 +1279,11 @@
     {
       "id": "25-youtube-bulk-ingredient-resolution",
       "preset": "vertical-slice-strict",
-      "branch": "docs/25-youtube-bulk-ingredient-resolution",
+      "branch": "feature/fe-25-youtube-bulk-ingredient-resolution",
       "pr_path": null,
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "in_progress",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:frontend",
         "pnpm lint",
@@ -1292,11 +1292,11 @@
         "pnpm validate:workpack -- --slice 25-youtube-bulk-ingredient-resolution",
         "git diff --check"
       ],
-      "notes": "FE-only slice. Bulk resolution sheet for YT_IMPORT unresolved ingredients. Uses existing POST /api/v1/recipes/youtube/ingredient-registration endpoint sequentially. No backend changes. Stage 2/3 N/A. closeout_phase=collecting",
+      "notes": "FE-only slice. Bulk resolution sheet for YT_IMPORT unresolved ingredients. Uses existing POST /api/v1/recipes/youtube/ingredient-registration endpoint sequentially. No backend changes. Stage 2/3 N/A. Stage 4 Claude implementation completed through resume session 4f8182cb-e47e-4b1b-86f5-fa0fcb2f36b0; Stage 5/6 Codex approved after CTA visibility improvement and screenshot evidence. README Design Status remains pending-review for the pre-merge final review handoff invariant; authority report records confirmed_allowed=true. Tested: targeted Vitest, targeted slice25 Playwright, slice22 regression, screenshot evidence, pnpm lint, pnpm typecheck, pnpm test:product, pnpm build, workflow/workpack validators, git diff --check. pnpm verify:frontend reached 730 passed / 68 skipped / 3 failed; failures are known unrelated slice-17b recipebook detail locator issue. closeout_phase=completed closeout_recovery=manual_patch:1 closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/evidence/25-youtube-bulk-ingredient-resolution/YT_IMPORT-bulk-cta-mobile.png,ui/designs/evidence/25-youtube-bulk-ingredient-resolution/YT_IMPORT-bulk-sheet-mobile.png,ui/designs/evidence/25-youtube-bulk-ingredient-resolution/YT_IMPORT-bulk-success-mobile.png,ui/designs/evidence/25-youtube-bulk-ingredient-resolution/YT_IMPORT-bulk-sheet-mobile-narrow.png last_recovery_at=2026-05-25T03:40:00+09:00",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
-      "auto_merge_eligible": false,
+      "auto_merge_eligible": true,
       "blocked_reason_code": null
     }
   ]

@@ -144,20 +144,29 @@ YouTube 설명란 추출 시 여러 재료가 동시에 `unresolved` / `needs_re
 
 - UI risk: `low-risk`
 - Anchor screen dependency: 없음 (`YT_IMPORT`는 anchor screen이 아님)
-- Visual artifact: Stage 4에서 mobile default + mobile narrow screenshot evidence 촬영 예정
+- Visual artifact: mobile default + mobile narrow screenshot evidence captured
 - Authority status: `not-required`
 - Notes: 새 화면이 아니라 기존 확정된 `YT_IMPORT` 검수 화면과 `IngredientRegisterModal` sheet 패턴의 확장이다. 슬라이스 22에서 단건 등록 sheet가 low-risk로 확정(`confirmed`)되었고, 이 슬라이스는 같은 패턴의 bulk 버전이므로 low-risk로 분류한다. design-generator/design-critic 생략 근거: 기존 confirmed YT_IMPORT sheet 패턴 재사용, 새 interaction model 도입 없음.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
 - [ ] 확정 (confirmed) — Stage 5 public review 통과 후, Tailwind/공용 컴포넌트 정리 완료
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
-> Design Status 전이: `temporary` (Stage 1 기본값)
->   → `pending-review` (Stage 4 완료 후)
->   → `confirmed` (Stage 5 public review 통과 후)
+> Design Status 전이: ~~`temporary`~~ (Stage 1 기본값)
+>   → **`pending-review`** (Stage 4 완료, PR final review handoff)
+>   → `confirmed` (Stage 5 verdict pass recorded; merge/closeout projection에서 확정)
+
+### Stage 5 Evidence
+
+- Authority report: `ui/designs/authority/YT_IMPORT-bulk-ingredient-resolution-authority.md`
+- Screenshots:
+  - `ui/designs/evidence/25-youtube-bulk-ingredient-resolution/YT_IMPORT-bulk-cta-mobile.png`
+  - `ui/designs/evidence/25-youtube-bulk-ingredient-resolution/YT_IMPORT-bulk-sheet-mobile.png`
+  - `ui/designs/evidence/25-youtube-bulk-ingredient-resolution/YT_IMPORT-bulk-success-mobile.png`
+  - `ui/designs/evidence/25-youtube-bulk-ingredient-resolution/YT_IMPORT-bulk-sheet-mobile-narrow.png`
 
 ## Source Links
 
@@ -221,14 +230,14 @@ YouTube 설명란 추출 시 여러 재료가 동시에 `unresolved` / `needs_re
 > 이 슬라이스는 FE-only이므로 백엔드 계약 고정은 기존 슬라이스 22에서 완료됨.
 > Stage 4에서 프론트 관련 항목을, Stage 5~6에서 QA/디자인/closeout 항목을 닫는다.
 
-- [ ] 백엔드 계약 고정 — 기존 API 재사용, 변경 없음 <!-- omo:id=delivery-backend-contract;stage=4;scope=shared;review=5,6 -->
-- [ ] 프론트 타입 반영 (bulk helper 타입) <!-- omo:id=delivery-types;stage=4;scope=frontend;review=5,6 -->
-- [ ] YT_IMPORT bulk CTA 진입점 UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] Bulk Resolution Sheet UI 구현 <!-- omo:id=delivery-bulk-sheet;stage=4;scope=frontend;review=5,6 -->
-- [ ] 순차 호출 helper 구현 + 행별 결과 수집 <!-- omo:id=delivery-bulk-helper;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=4;scope=frontend;review=5,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=4;scope=shared;review=5,6 -->
-- [ ] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] 백엔드 계약 고정 — 기존 API 재사용, 변경 없음 <!-- omo:id=delivery-backend-contract;stage=4;scope=shared;review=6 -->
+- [x] 프론트 타입 반영 (bulk helper 타입) <!-- omo:id=delivery-types;stage=4;scope=frontend;review=5,6 -->
+- [x] YT_IMPORT bulk CTA 진입점 UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] Bulk Resolution Sheet UI 구현 <!-- omo:id=delivery-bulk-sheet;stage=4;scope=frontend;review=5,6 -->
+- [x] 순차 호출 helper 구현 + 행별 결과 수집 <!-- omo:id=delivery-bulk-helper;stage=4;scope=frontend;review=5,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=4;scope=frontend;review=5,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=4;scope=shared;review=6 -->
+- [x] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
