@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -252,6 +258,51 @@ describe("CookModeScreen", () => {
 
     await waitFor(() => {
       expect(request).toHaveBeenCalledWith("screen");
+    });
+  });
+
+  it("retries a rejected screen wake lock request after a user gesture", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchUserProfile.mockResolvedValue({
+      id: "user-1",
+      nickname: "집밥러",
+      email: "cook@example.com",
+      profile_image_url: null,
+      social_provider: "google",
+      settings: { screen_wake_lock: true },
+    });
+    fetchCookMode.mockResolvedValue(buildCookModeData());
+    const release = vi.fn().mockResolvedValue(undefined);
+    const request = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new DOMException("User activation required", "NotAllowedError"),
+      )
+      .mockResolvedValueOnce({
+        released: false,
+        release,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      });
+    Object.defineProperty(navigator, "wakeLock", {
+      configurable: true,
+      value: { request },
+    });
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cook-mode-title")).toBeTruthy();
+    });
+    await waitFor(() => {
+      expect(request).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.pointerDown(screen.getByTestId("cook-mode-screen"));
+
+    await waitFor(() => {
+      expect(request).toHaveBeenCalledTimes(2);
     });
   });
 

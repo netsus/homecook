@@ -229,6 +229,51 @@ describe("StandaloneCookModeScreen", () => {
     });
   });
 
+  it("retries a rejected standalone screen wake lock request after a user gesture", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchUserProfile.mockResolvedValue({
+      id: "user-1",
+      nickname: "집밥러",
+      email: "cook@example.com",
+      profile_image_url: null,
+      social_provider: "google",
+      settings: { screen_wake_lock: true },
+    });
+    fetchStandaloneCookMode.mockResolvedValue(buildStandaloneCookModeData());
+    const release = vi.fn().mockResolvedValue(undefined);
+    const request = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new DOMException("User activation required", "NotAllowedError"),
+      )
+      .mockResolvedValueOnce({
+        released: false,
+        release,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      });
+    Object.defineProperty(navigator, "wakeLock", {
+      configurable: true,
+      value: { request },
+    });
+
+    const Screen = await importScreen();
+    render(<Screen recipeId="recipe-1" servings={2} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("standalone-cook-mode-title")).toBeTruthy();
+    });
+    await waitFor(() => {
+      expect(request).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.pointerDown(screen.getByTestId("standalone-cook-mode-screen"));
+
+    await waitFor(() => {
+      expect(request).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it("allows unauthenticated users to view cook-mode data", async () => {
     readE2EAuthOverride.mockReturnValue(false);
     fetchStandaloneCookMode.mockResolvedValue(buildStandaloneCookModeData());

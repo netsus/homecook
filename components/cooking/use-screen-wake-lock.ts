@@ -23,6 +23,13 @@ type NavigatorWithWakeLock = Navigator & {
   };
 };
 
+const wakeLockUserActivationEvents = [
+  "pointerdown",
+  "touchend",
+  "click",
+  "keydown",
+] as const;
+
 function canRequestWakeLock() {
   return (
     typeof navigator !== "undefined" &&
@@ -83,12 +90,32 @@ export function useScreenWakeLock(enabled: boolean) {
       }
     }
 
+    function handleUserActivation() {
+      void requestWakeLock();
+    }
+
+    const userActivationListenerOptions = { capture: true };
+
     void requestWakeLock();
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    for (const eventType of wakeLockUserActivationEvents) {
+      document.addEventListener(
+        eventType,
+        handleUserActivation,
+        userActivationListenerOptions,
+      );
+    }
 
     return () => {
       disposed = true;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      for (const eventType of wakeLockUserActivationEvents) {
+        document.removeEventListener(
+          eventType,
+          handleUserActivation,
+          userActivationListenerOptions,
+        );
+      }
 
       const active = activeRef.current;
       activeRef.current = null;
