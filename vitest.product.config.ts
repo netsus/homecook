@@ -38,6 +38,7 @@ export default defineConfig({
       "tests/social-login-buttons.test.tsx",
       "tests/supabase-server.test.ts",
       "tests/user-bootstrap.test.ts",
+      "tests/youtube-corpus.test.ts",
     ],
   },
 });

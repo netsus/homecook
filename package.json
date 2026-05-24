@@ -33,6 +33,7 @@
     "lint": "eslint . --ignore-pattern '.agents/**'",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:youtube-corpus": "vitest run tests/youtube-corpus.test.ts",
     "test:product": "vitest run --config vitest.product.config.ts",
     "test:harness": "vitest run --config vitest.harness.config.ts",
     "test:e2e": "pnpm test:e2e:smoke",
