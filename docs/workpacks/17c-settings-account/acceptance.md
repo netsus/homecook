@@ -70,6 +70,10 @@
 - [x] 비로그인 → SETTINGS → 로그인 게이트 <!-- omo:id=accept-playwright-login-gate;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
-- [ ] Live OAuth 소셜 로그인 후 설정 화면 정상 진입 및 조작 확인
+- [x] Live OAuth 소셜 로그인 후 설정 화면 정상 진입 및 조작 확인
+  - RC-MO-01 live OAuth와 2026-05-24 account deletion smoke에서 Google 로그인 후 SETTINGS 진입/계정 삭제 조작/로그인 게이트를 확인.
 - [ ] 실기기 모바일 브라우저에서 화면 꺼짐 방지 토글 UX 확인
-- [ ] 회원 탈퇴 후 동일 소셜 계정으로 재가입 가능 여부 확인
+- [x] 회원 탈퇴 후 동일 소셜 계정으로 재가입 가능 여부 확인
+  - 2026-05-24 staging `https://homecook-flame.vercel.app`, macOS Chrome, `Share Notion` 계정으로 확인.
+  - 탈퇴 성공, HOME 이동, MYPAGE 로그인 요구, 동일 소셜 계정 재로그인 성공, 화면 에러 없음.
+  - 재로그인 후 기존 저장/플래너 데이터가 그대로 보여 삭제 안내 문구와 실제 데이터 보존 동작은 RC-MO-06 follow-up으로 남김.

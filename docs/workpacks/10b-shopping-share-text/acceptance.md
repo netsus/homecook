@@ -82,5 +82,6 @@
   - Web Share OS 시트 호출은 Manual Only (HTTPS + 실디바이스 전용). 클립보드 fallback은 deterministic Playwright 커버. 외부 연동 없음.
 
 ### Manual Only
-- [ ] Web Share API OS 공유 시트 호출은 HTTPS + 실제 디바이스에서만 확인한다
+- [x] Web Share API OS 공유 시트 호출은 HTTPS + 실제 디바이스에서만 확인한다
   - Web Share API는 HTTPS + 실제 디바이스에서만 동작하므로 OS 공유 시트 호출은 수동 확인 대상
+  - 2026-05-24 staging `https://homecook-flame.vercel.app`에서 Android Chrome과 iOS Safari 모두 OS 공유 시트 열림, 닫은 뒤 앱 정상 동작 확인.
