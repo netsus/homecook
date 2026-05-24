@@ -96,7 +96,7 @@
 
 ### Manual Only
 
-- [ ] 실제 외부 YouTube API description 추출 smoke는 YOUTUBE_API_KEY가 있는 환경에서 선택 실행한다
+- [x] 실제 외부 YouTube API description 추출 smoke는 YOUTUBE_API_KEY가 있는 환경에서 선택 실행한다 (RC-MO-03 staging evidence)
 
 ## Out of Scope (이 슬라이스 acceptance 아님)
 

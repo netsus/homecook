@@ -172,8 +172,8 @@
 
 ### Manual Only
 
-- [ ] 실제 YouTube Data API key를 사용한 live 영상 validate(oEmbed)/extract(videos.list)/register (credential-gated, deterministic 불가)
+- [x] 실제 YouTube Data API key를 사용한 live 영상 validate(oEmbed)/extract(videos.list)/register (RC-MO-03 staging evidence)
 - [ ] YouTube API 할당량 초과 시나리오 (실제 할당량 소진 필요)
-- [ ] 다양한 유튜브 URL 형식 호환성 (youtu.be, shorts, 플레이리스트 내 영상 등 — 실제 YouTube URL 파서 동작 의존)
-- [ ] 실제 YouTube 영상의 extract 단계 classification 정확도 수동 확인
+- [x] 다양한 유튜브 URL 형식 호환성 (youtu.be, shorts, 플레이리스트 내 영상 등 — `tests/youtube-import.backend.test.ts`)
+- [x] 실제 YouTube 영상의 extract 단계 classification 정확도 수동 확인 중 오이 샌드위치 all-`절이기` 회귀는 fixture regression으로 고정 (`tests/youtube-import.backend.test.ts`)
 - [ ] Future LLM/caption/ASR 통합 시 regression 확인 (이 슬라이스 범위 밖)
