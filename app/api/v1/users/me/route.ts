@@ -21,11 +21,6 @@ interface UserProfileRow {
   settings_json: Record<string, unknown> | null;
 }
 
-interface UserDeleteRow {
-  id: string;
-  deleted_at: string | null;
-}
-
 interface UserProfileRequestBody {
   nickname?: unknown;
 }
@@ -46,26 +41,32 @@ interface UsersUpdateProfileQuery {
   maybeSingle(): MaybeSingleResult<UserProfileRow>;
 }
 
-interface UsersDeleteQuery {
-  eq(column: string, value: string): UsersDeleteQuery;
-  select(columns: string): UsersDeleteQuery;
-  maybeSingle(): MaybeSingleResult<UserDeleteRow>;
-}
-
 interface UsersTable {
   select(columns: string): UsersSelectQuery;
   update(values: {
     nickname: string;
     updated_at: string;
   }): UsersUpdateProfileQuery;
-  update(values: {
-    deleted_at: string;
-    updated_at: string;
-  }): UsersDeleteQuery;
 }
 
 interface UsersMeDbClient {
   from(table: "users"): UsersTable;
+}
+
+interface UserDeletePolicyResult {
+  deleted: boolean;
+  user_deleted?: boolean;
+  preserved_recipe_count?: number;
+}
+
+interface UsersMeDeleteDbClient {
+  rpc(
+    functionName: "delete_user_private_data",
+    values: { p_user_id: string },
+  ): PromiseLike<{
+    data: UserDeletePolicyResult | null;
+    error: QueryError | null;
+  }>;
 }
 
 function readScreenWakeLock(settings: Record<string, unknown> | null) {
@@ -206,24 +207,21 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE() {
-  const { response, dbClient, user } =
-    await createAuthedUsersMeDbClient("회원 탈퇴를 처리하지 못했어요.");
+  const routeClient = await createRouteHandlerClient();
+  const authResult = await routeClient.auth.getUser();
+  const user = authResult.data.user;
 
-  if (response) {
-    return response;
+  if (!user) {
+    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const deleteResult = await dbClient
-    .from("users")
-    .update({
-      deleted_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", user.id)
-    .select("id, deleted_at")
-    .maybeSingle();
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as UsersMeDeleteDbClient;
 
-  if (deleteResult.error || !deleteResult.data) {
+  const deleteResult = await dbClient.rpc("delete_user_private_data", {
+    p_user_id: user.id,
+  });
+
+  if (deleteResult.error || !deleteResult.data?.deleted) {
     return fail("INTERNAL_ERROR", "회원 탈퇴를 처리하지 못했어요.", 500);
   }
 

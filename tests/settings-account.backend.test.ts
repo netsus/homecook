@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
@@ -71,13 +73,20 @@ function createUsersTable(results: Array<QueryResult<unknown>>) {
   };
 }
 
-function setupAuthedClient(dbClient: { from: ReturnType<typeof vi.fn> }, user = { id: "user-1" }) {
+function setupAuthedClient(
+  dbClient: {
+    from: ReturnType<typeof vi.fn>;
+    rpc?: ReturnType<typeof vi.fn>;
+  },
+  user = { id: "user-1" },
+) {
   const routeClient = {
     auth: {
       getUser: vi.fn(async () => ({ data: { user } })),
       signOut: vi.fn(async () => ({ error: null })),
     },
     from: dbClient.from,
+    rpc: dbClient.rpc,
   };
 
   createRouteHandlerClient.mockResolvedValue(routeClient);
@@ -303,21 +312,20 @@ describe("17c settings/account backend", () => {
     expect(createRouteHandlerClient).not.toHaveBeenCalled();
   });
 
-  it("DELETE /users/me soft deletes the current user idempotently", async () => {
-    const usersTable = createUsersTable([
-      {
-        data: {
-          id: "user-1",
-          deleted_at: "2026-04-30T06:00:00.000Z",
-        },
-        error: null,
+  it("DELETE /users/me removes private user data through the database cleanup policy", async () => {
+    const cleanupRpc = vi.fn(async () => ({
+      data: {
+        deleted: true,
+        user_deleted: true,
+        preserved_recipe_count: 2,
       },
-    ]);
+      error: null,
+    }));
     setupAuthedClient({
       from: vi.fn((table: string) => {
-        if (table === "users") return usersTable;
         throw new Error(`unexpected table: ${table}`);
       }),
+      rpc: cleanupRpc,
     });
 
     const { DELETE } = await importUsersMeRoute();
@@ -330,10 +338,47 @@ describe("17c settings/account backend", () => {
       data: { deleted: true },
       error: null,
     });
-    expect(usersTable.update).toHaveBeenCalledWith(
-      expect.objectContaining({ deleted_at: expect.any(String) }),
+    expect(cleanupRpc).toHaveBeenCalledWith("delete_user_private_data", {
+      p_user_id: "user-1",
+    });
+  });
+
+  it("DELETE /users/me surfaces cleanup failures before reporting account deletion success", async () => {
+    setupAuthedClient({
+      from: vi.fn((table: string) => {
+        throw new Error(`unexpected table: ${table}`);
+      }),
+      rpc: vi.fn(async () => ({
+        data: null,
+        error: { message: "cleanup failed" },
+      })),
+    });
+
+    const { DELETE } = await importUsersMeRoute();
+    const response = await DELETE();
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
+  });
+
+  it("adds an account deletion cleanup migration that preserves authored recipes", async () => {
+    const migration = await readFile(
+      "supabase/migrations/20260524154000_account_delete_private_data.sql",
+      "utf8",
     );
-    expect(usersTable.__query.eq).toHaveBeenCalledWith("id", "user-1");
+
+    expect(migration).toContain("public.delete_user_private_data");
+    expect(migration).toContain("delete from public.users");
+    expect(migration).toContain("from public.recipe_book_items");
+    expect(migration).toContain("set save_count =");
+    expect(migration).toContain("set like_count =");
+    expect(migration).toContain("where created_by = p_user_id");
+    expect(migration).not.toContain("delete from public.recipes");
   });
 
   it("rejects unauthenticated settings, nickname, and delete account requests", async () => {
