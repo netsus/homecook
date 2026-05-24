@@ -69,7 +69,7 @@
   },
   "status": {
     "lifecycle": "in_progress",
-    "approval_state": "not_started",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
@@ -100,12 +100,13 @@
         "pnpm validate:workflow-v2",
         "pnpm validate:workpack -- --slice 23-youtube-quality-corpus",
         "git diff --check",
-        "pnpm verify:backend"
+        "pnpm verify:backend",
+        "Claude Stage 3 backend review: APPROVE, blocking findings none"
       ]
     },
     "merge_gate_projection": {
       "current_head_sha": "pending-pr-head",
-      "approval_state": "not_started",
+      "approval_state": "dual_approved",
       "all_checks_green": false
     },
     "recovery_summary": {
@@ -131,7 +132,7 @@
       "pr_body_synced_at": "2026-05-24T15:08:58.000Z"
     }
   },
-  "notes": "Stage 2 backend/test tooling implemented and local required checks passed. Awaiting Stage 3 Claude backend review. Corpus fixture set, deterministic scoring harness, parser v2 baseline report, and wild sample guide complete. No product UI changes, no public API/DB contract changes. BE-only slice: Stage 4~6 skip. closeout_phase=collecting",
+  "notes": "Stage 2 backend/test tooling implemented. Local required checks and current-head PR checks passed; Claude Stage 3 backend review approved with no blockers. Corpus fixture set, deterministic scoring harness, parser v2 baseline report, and wild sample guide complete. No product UI changes, no public API/DB contract changes. BE-only slice: Stage 4~6 skip. closeout_phase=collecting",
   "out_of_scope": [
     "Parser rule changes (regex, line scoring threshold modifications)",
     "ingredient_synonyms seed expansion",
