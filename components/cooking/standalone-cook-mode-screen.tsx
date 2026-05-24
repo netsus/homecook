@@ -10,6 +10,7 @@ import {
   MobileCookModeView,
   useIsMobileViewport,
 } from "@/components/cooking/cook-mode-mobile-ui";
+import { useUserScreenWakeLock } from "@/components/cooking/use-screen-wake-lock";
 import { ContentState } from "@/components/shared/content-state";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -188,6 +189,10 @@ export function StandaloneCookModeScreen({
       returnSurface: "recipe.detail",
       returnTo: appReturnHref,
     },
+  );
+
+  useUserScreenWakeLock(
+    authState === "authenticated" && screenState === "ready",
   );
 
   // --- Auth checking ---

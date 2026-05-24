@@ -15,6 +15,7 @@ const readE2EAuthOverride = vi.fn();
 const fetchCookMode = vi.fn();
 const completeCookingSession = vi.fn();
 const cancelCookingSession = vi.fn();
+const fetchUserProfile = vi.fn();
 const isCookingApiError = vi.fn(
   (error: unknown): error is Error & { status: number; code: string } =>
     Boolean(error) &&
@@ -53,6 +54,10 @@ vi.mock("@/lib/api/cooking", () => ({
     completeCookingSession(...args),
   cancelCookingSession: (...args: unknown[]) => cancelCookingSession(...args),
   isCookingApiError: (error: unknown) => isCookingApiError(error),
+}));
+
+vi.mock("@/lib/api/mypage", () => ({
+  fetchUserProfile: (...args: unknown[]) => fetchUserProfile(...args),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -159,6 +164,15 @@ describe("CookModeScreen", () => {
     fetchCookMode.mockReset();
     completeCookingSession.mockReset();
     cancelCookingSession.mockReset();
+    fetchUserProfile.mockReset();
+    fetchUserProfile.mockResolvedValue({
+      id: "user-1",
+      nickname: "집밥러",
+      email: "cook@example.com",
+      profile_image_url: null,
+      social_provider: "google",
+      settings: { screen_wake_lock: false },
+    });
     isCookingApiError.mockClear();
     mockRouterPush.mockReset();
     navigationMocks.searchParams.mockReset();
@@ -171,6 +185,7 @@ describe("CookModeScreen", () => {
     resetStore();
     cleanup();
     Reflect.deleteProperty(window, "matchMedia");
+    Reflect.deleteProperty(navigator, "wakeLock");
   });
 
   it("shows unauthorized state when not authenticated", async () => {
@@ -203,6 +218,41 @@ describe("CookModeScreen", () => {
     ).toBeTruthy();
     expect(screen.queryByText("차감할 재료")).toBeNull();
     expect(screen.getByRole("button", { name: "✓ 요리 완료 (3개 소진)" })).toBeTruthy();
+  });
+
+  it("requests a screen wake lock in cook mode when the user setting is enabled", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchUserProfile.mockResolvedValue({
+      id: "user-1",
+      nickname: "집밥러",
+      email: "cook@example.com",
+      profile_image_url: null,
+      social_provider: "google",
+      settings: { screen_wake_lock: true },
+    });
+    fetchCookMode.mockResolvedValue(buildCookModeData());
+    const release = vi.fn().mockResolvedValue(undefined);
+    const request = vi.fn().mockResolvedValue({
+      released: false,
+      release,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+    Object.defineProperty(navigator, "wakeLock", {
+      configurable: true,
+      value: { request },
+    });
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cook-mode-title")).toBeTruthy();
+    });
+
+    await waitFor(() => {
+      expect(request).toHaveBeenCalledWith("screen");
+    });
   });
 
   it("does not bounce back to ready when a previous session left completed state behind", async () => {
