@@ -175,6 +175,84 @@ export async function registerYoutubeIngredient(
   }
 }
 
+// ─── Bulk ingredient registration ────────────────────────────────────────────
+
+export interface BulkRegistrationRowResult {
+  tempId: string;
+  status: "success" | "error" | "skipped";
+  data: YoutubeIngredientRegistrationData | null;
+  errorMessage: string | null;
+  errorCode: string | null;
+}
+
+export interface BulkRegistrationResult {
+  results: BulkRegistrationRowResult[];
+  sessionExpired: boolean;
+}
+
+export interface BulkRegistrationRow {
+  tempId: string;
+  body: YoutubeIngredientRegistrationBody;
+}
+
+export async function registerYoutubeIngredientsBulk(
+  rows: BulkRegistrationRow[],
+  onRowComplete?: (result: BulkRegistrationRowResult, index: number) => void,
+  register: (body: YoutubeIngredientRegistrationBody) => Promise<ApiResponse<YoutubeIngredientRegistrationData>> = registerYoutubeIngredient,
+): Promise<BulkRegistrationResult> {
+  const results: BulkRegistrationRowResult[] = [];
+  let sessionExpired = false;
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+
+    if (sessionExpired) {
+      const skipped: BulkRegistrationRowResult = {
+        tempId: row.tempId,
+        status: "skipped",
+        data: null,
+        errorMessage: "세션이 만료되어 건너뛰었어요.",
+        errorCode: "SESSION_EXPIRED",
+      };
+      results.push(skipped);
+      onRowComplete?.(skipped, i);
+      continue;
+    }
+
+    const apiResult = await register(row.body);
+
+    if (apiResult.success && apiResult.data) {
+      const success: BulkRegistrationRowResult = {
+        tempId: row.tempId,
+        status: "success",
+        data: apiResult.data,
+        errorMessage: null,
+        errorCode: null,
+      };
+      results.push(success);
+      onRowComplete?.(success, i);
+    } else {
+      const code = apiResult.error?.code ?? "UNKNOWN_ERROR";
+
+      if (code === "SESSION_EXPIRED") {
+        sessionExpired = true;
+      }
+
+      const error: BulkRegistrationRowResult = {
+        tempId: row.tempId,
+        status: "error",
+        data: null,
+        errorMessage: apiResult.error?.message ?? "재료를 등록하지 못했어요.",
+        errorCode: code,
+      };
+      results.push(error);
+      onRowComplete?.(error, i);
+    }
+  }
+
+  return { results, sessionExpired };
+}
+
 export async function registerYoutubeRecipe(
   body: YoutubeRecipeRegisterBody,
 ): Promise<ApiResponse<YoutubeRecipeRegisterData>> {

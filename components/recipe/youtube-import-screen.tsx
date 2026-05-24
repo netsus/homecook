@@ -23,6 +23,10 @@ import {
   extractYoutubeRecipe,
   registerYoutubeRecipe,
   registerYoutubeIngredient,
+  registerYoutubeIngredientsBulk,
+} from "@/lib/api/youtube-import";
+import type {
+  BulkRegistrationRowResult,
 } from "@/lib/api/youtube-import";
 import { createMealSafe } from "@/lib/api/meal";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
@@ -58,6 +62,7 @@ type ModalMode =
   | "ingredient-add"
   | "ingredient-edit"
   | "ingredient-register"
+  | "bulk-register"
   | "step-add"
   | "step-edit"
   | "servings-input"
@@ -632,6 +637,8 @@ interface ReviewStepProps {
   onAddIngredient: () => void;
   onAddStep: () => void;
   onEditStep: (tempId: string) => void;
+  onBulkRegister?: () => void;
+  bulkEligibleCount?: number;
 }
 
 interface ReviewIngredientRowProps {
@@ -895,6 +902,8 @@ function ReviewStep({
   onAddIngredient,
   onAddStep,
   onEditStep,
+  onBulkRegister,
+  bulkEligibleCount,
 }: ReviewStepProps) {
   const registerRequirements = getYoutubeRegisterRequirements({
     title,
@@ -1023,12 +1032,22 @@ function ReviewStep({
         <h3 className="text-lg font-semibold text-[var(--foreground)]">
           재료 ({ingredients.length}개)
         </h3>
+        {onBulkRegister && typeof bulkEligibleCount === "number" && bulkEligibleCount >= 2 && (
+          <button
+            className="mt-3 w-full rounded-[var(--radius-sm)] bg-[var(--brand)] py-3 text-base font-semibold text-white hover:bg-[var(--brand)]/90"
+            onClick={onBulkRegister}
+            type="button"
+            data-testid="bulk-register-cta"
+          >
+            미등록 재료 {bulkEligibleCount}건 일괄 등록
+          </button>
+        )}
         {ingredients.length === 0 ? (
           <p className="py-4 text-sm text-[var(--muted)]">
             설명란에서 재료를 찾지 못했어요. 아래 버튼으로 직접 추가할 수 있어요
           </p>
         ) : (
-          <div className="mt-2 overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]">
+          <div className="mt-3 overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]">
             {ingredients.map((ing, idx) => (
               <ReviewIngredientRow
                 ingredient={ing}
@@ -1425,6 +1444,351 @@ function IngredientRegisterModal({
           >
             {isSubmitting ? "등록 중..." : "등록"}
           </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Bulk Ingredient Registration Sheet ─────────────────────────────────────
+
+interface BulkRowState {
+  tempId: string;
+  ingredientName: string;
+  rawText: string;
+  draftIngredientId: string;
+  standardName: string;
+  category: IngredientCategory;
+  defaultUnit: string;
+  synonym: string;
+  skipped: boolean;
+  status: "pending" | "loading" | "success" | "error";
+  errorMessage: string | null;
+  ingredientId: string | null;
+  resolvedStandardName: string | null;
+}
+
+interface BulkIngredientRegistrationSheetProps {
+  ingredients: TempIngredient[];
+  extractionId: string;
+  onClose: () => void;
+  onComplete: (
+    results: Array<{
+      tempId: string;
+      ingredientId: string;
+      standardName: string;
+    }>,
+  ) => void;
+}
+
+function BulkIngredientRegistrationSheet({
+  ingredients,
+  extractionId,
+  onClose,
+  onComplete,
+}: BulkIngredientRegistrationSheetProps) {
+  const eligibleIngredients = ingredients.filter(
+    (ing) =>
+      ing.draft_ingredient_id &&
+      (ing.resolution_status === "unresolved" || ing.resolution_status === "needs_review"),
+  );
+
+  const [rows, setRows] = useState<BulkRowState[]>(() =>
+    eligibleIngredients.map((ing) => ({
+      tempId: ing.tempId,
+      ingredientName: getIngredientName(ing),
+      rawText: ing.raw_text ?? "",
+      draftIngredientId: ing.draft_ingredient_id!,
+      standardName: ing.standard_name || ing.raw_text || "",
+      category: "양념" as IngredientCategory,
+      defaultUnit: "",
+      synonym: ing.standard_name || ing.raw_text || "",
+      skipped: false,
+      status: "pending",
+      errorMessage: null,
+      ingredientId: null,
+      resolvedStandardName: null,
+    })),
+  );
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
+
+  const submittableCount = rows.filter(
+    (r) => !r.skipped && r.status !== "success" && r.standardName.trim().length > 0,
+  ).length;
+  const successCount = rows.filter((r) => r.status === "success").length;
+  const errorCount = rows.filter((r) => r.status === "error").length;
+  const allDone = rows.every((r) => r.status === "success" || r.skipped);
+
+  const canSubmit = submittableCount > 0 && !isSubmitting && !sessionExpiredMessage;
+
+  const handleClose = () => {
+    if (isSubmitting) return;
+    const successResults = rows
+      .filter((r) => r.status === "success" && r.ingredientId && r.resolvedStandardName)
+      .map((r) => ({
+        tempId: r.tempId,
+        ingredientId: r.ingredientId!,
+        standardName: r.resolvedStandardName!,
+      }));
+    if (successResults.length > 0) {
+      onComplete(successResults);
+    } else {
+      onClose();
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setIsSubmitting(true);
+    setSessionExpiredMessage(null);
+
+    const pendingRows = rows.filter(
+      (r) => !r.skipped && r.status !== "success" && r.standardName.trim().length > 0,
+    );
+
+    const bulkRows = pendingRows.map((r) => ({
+      tempId: r.tempId,
+      body: {
+        extraction_id: extractionId,
+        draft_ingredient_id: r.draftIngredientId,
+        standard_name: r.standardName.trim(),
+        category: r.category,
+        default_unit: r.defaultUnit.trim() || null,
+        synonym: r.synonym.trim() || null,
+      },
+    }));
+
+    const firstBulkRow = bulkRows[0];
+    setRows((prev) =>
+      prev.map((r) =>
+        firstBulkRow && r.tempId === firstBulkRow.tempId
+          ? { ...r, status: "loading" as const, errorMessage: null }
+          : pendingRows.some((pr) => pr.tempId === r.tempId)
+            ? { ...r, status: "pending" as const, errorMessage: null }
+            : r,
+      ),
+    );
+
+    const bulkResult = await registerYoutubeIngredientsBulk(
+      bulkRows,
+      (result: BulkRegistrationRowResult, index: number) => {
+        const nextBulkRow = bulkRows[index + 1];
+        setRows((prev) =>
+          prev.map((r) => {
+            if (r.tempId !== result.tempId) return r;
+            if (result.status === "success" && result.data) {
+              return {
+                ...r,
+                status: "success" as const,
+                ingredientId: result.data.ingredient.ingredient_id,
+                resolvedStandardName: result.data.ingredient.standard_name,
+                errorMessage: null,
+              };
+            }
+            if (result.status === "skipped") {
+              return {
+                ...r,
+                skipped: true,
+                status: "pending" as const,
+                errorMessage: result.errorMessage,
+              };
+            }
+            return {
+              ...r,
+              status: "error" as const,
+              errorMessage: result.errorMessage,
+            };
+          }).map((r) =>
+            result.status !== "skipped" &&
+            nextBulkRow &&
+            r.tempId === nextBulkRow.tempId &&
+            r.status !== "success"
+              ? { ...r, status: "loading" as const, errorMessage: null }
+              : r,
+          ),
+        );
+      },
+    );
+
+    if (bulkResult.sessionExpired) {
+      setSessionExpiredMessage("추출 세션이 만료됐어요. 다시 추출해주세요.");
+    }
+
+    setIsSubmitting(false);
+  };
+
+  const updateRow = (tempId: string, patch: Partial<BulkRowState>) => {
+    setRows((prev) =>
+      prev.map((r) => (r.tempId === tempId ? { ...r, ...patch } : r)),
+    );
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+      onClick={handleClose}
+    >
+      <div
+        aria-modal="true"
+        className="flex max-h-[88vh] w-full max-w-lg flex-col rounded-t-[var(--radius-sheet)] bg-[var(--surface)] sm:max-h-[85vh] sm:rounded-[var(--radius-sheet)]"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-labelledby="bulk-register-title"
+        data-testid="bulk-register-sheet"
+      >
+        <div className="shrink-0 p-6 pb-0">
+          <ModalHeader
+            title="일괄 재료 등록"
+            titleId="bulk-register-title"
+            onClose={handleClose}
+          />
+          <p className="mt-1 text-sm text-[var(--text-2)]">
+            미등록 재료 {rows.length}건을 한 번에 등록해요
+          </p>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-2 pt-4">
+          <div className="space-y-3">
+            {rows.map((row) => (
+              <div
+                key={row.tempId}
+                className={[
+                  "rounded-[var(--radius-card)] border p-3",
+                  row.status === "success"
+                    ? "border-green-200 bg-green-50"
+                    : row.status === "error"
+                      ? "border-[color:rgba(216,58,58,0.26)] bg-[color:rgba(216,58,58,0.08)]"
+                      : row.status === "loading"
+                        ? "border-[var(--brand)] bg-[var(--brand)]/5"
+                        : row.skipped
+                          ? "border-[var(--line)] bg-gray-50 opacity-60"
+                          : "border-[var(--line)] bg-[var(--surface)]",
+                ].join(" ")}
+                data-testid={`bulk-row-${row.tempId}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+                      {row.ingredientName}
+                    </p>
+                    {row.rawText && row.rawText !== row.ingredientName && (
+                      <p className="mt-0.5 truncate text-xs text-[var(--text-2)]">
+                        원문: {row.rawText}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {row.status === "success" && (
+                      <span className="text-xs font-semibold text-green-600">등록 완료</span>
+                    )}
+                    {row.status === "loading" && (
+                      <span className="text-xs font-semibold text-[var(--brand)]">등록 중...</span>
+                    )}
+                    {row.status === "error" && (
+                      <span className="text-xs font-semibold text-[var(--danger)]">실패</span>
+                    )}
+                    {row.status !== "success" && row.status !== "loading" && (
+                      <button
+                        className="text-xs text-[var(--text-2)] underline"
+                        onClick={() => updateRow(row.tempId, { skipped: !row.skipped })}
+                        type="button"
+                        disabled={isSubmitting}
+                      >
+                        {row.skipped ? "포함" : "건너뛰기"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {row.status === "error" && row.errorMessage && (
+                  <p className="mt-1 text-xs text-[var(--danger)]" role="alert">
+                    {row.errorMessage}
+                  </p>
+                )}
+
+                {row.status !== "success" && !row.skipped && (
+                  <div className="mt-2 space-y-2">
+                    <div>
+                      <label className="text-xs font-semibold text-[var(--text-2)]">
+                        표준 재료명
+                      </label>
+                      <input
+                        className="mt-0.5 w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
+                        onChange={(e) =>
+                          updateRow(row.tempId, { standardName: e.target.value })
+                        }
+                        type="text"
+                        value={row.standardName}
+                        disabled={isSubmitting}
+                        data-testid={`bulk-standard-name-${row.tempId}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-[var(--text-2)]">
+                        카테고리
+                      </label>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {INGREDIENT_CATEGORY_CHOICES.map((cat) => (
+                          <button
+                            aria-pressed={row.category === cat}
+                            className={[
+                              "rounded-[var(--radius-full)] border px-2 py-1 text-xs font-semibold transition",
+                              row.category === cat
+                                ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                                : "border-[var(--line)] bg-[var(--surface-fill)] text-[var(--foreground)]",
+                            ].join(" ")}
+                            key={cat}
+                            onClick={() => updateRow(row.tempId, { category: cat })}
+                            type="button"
+                            disabled={isSubmitting}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="shrink-0 p-6 pt-3">
+          {sessionExpiredMessage && (
+            <div
+              className="mb-3 rounded-[var(--radius-card)] border border-[color:rgba(216,58,58,0.26)] bg-[color:rgba(216,58,58,0.08)] px-4 py-3 text-sm text-[var(--danger)]"
+              role="alert"
+              data-testid="bulk-session-expired"
+            >
+              {sessionExpiredMessage}
+            </div>
+          )}
+          {successCount > 0 && (
+            <p className="mb-2 text-center text-xs text-[var(--text-2)]">
+              {successCount}건 성공{errorCount > 0 ? ` · ${errorCount}건 실패` : ""}
+            </p>
+          )}
+          {allDone || sessionExpiredMessage ? (
+            <Button fullWidth onClick={handleClose}>
+              닫기
+            </Button>
+          ) : (
+            <Button
+              fullWidth
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+              loading={isSubmitting}
+            >
+              {isSubmitting
+                ? "등록 중..."
+                : errorCount > 0
+                  ? `실패 ${errorCount}건 재시도`
+                  : `${submittableCount}건 일괄 등록`}
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -1941,6 +2305,55 @@ export function YoutubeImportScreen({
     [ingredients],
   );
 
+  const bulkEligibleIngredients = ingredients.filter(
+    (ing) =>
+      ing.draft_ingredient_id &&
+      (ing.resolution_status === "unresolved" || ing.resolution_status === "needs_review"),
+  );
+  const bulkEligibleCount = bulkEligibleIngredients.length;
+
+  const handleBulkRegister = useCallback(() => {
+    setModalMode("bulk-register");
+  }, []);
+
+  const handleBulkComplete = useCallback(
+    (
+      results: Array<{
+        tempId: string;
+        ingredientId: string;
+        standardName: string;
+      }>,
+    ) => {
+      for (const result of results) {
+        const targetIndex = ingredients.findIndex(
+          (ingredient) => ingredient.tempId === result.tempId,
+        );
+        setIngredients((prev) =>
+          prev.map((ingredient) =>
+            ingredient.tempId === result.tempId
+              ? {
+                  ...ingredient,
+                  ingredient_id: result.ingredientId,
+                  standard_name: result.standardName,
+                  resolution_status: "resolved" as const,
+                  confidence: 1,
+                  candidates: [],
+                }
+              : ingredient,
+          ),
+        );
+        if (targetIndex >= 0) {
+          const ingredientIssue = `ingredients[${targetIndex}].ingredient_id`;
+          setBlockingIssues((prev) =>
+            prev.filter((issue) => issue !== ingredientIssue),
+          );
+        }
+      }
+      setModalMode("none");
+    },
+    [ingredients],
+  );
+
   const handleAddStep = useCallback((step: Omit<TempStep, "tempId" | "step_number">) => {
     if (editingStepId) {
       setSteps((prev) =>
@@ -2332,6 +2745,8 @@ export function YoutubeImportScreen({
               setEditingStepId(tempId);
               setModalMode("step-edit");
             }}
+            onBulkRegister={handleBulkRegister}
+            bulkEligibleCount={bulkEligibleCount}
           />
         </section>
       ) : null}
@@ -2399,6 +2814,14 @@ export function YoutubeImportScreen({
           />
         );
       })()}
+      {modalMode === "bulk-register" && (
+        <BulkIngredientRegistrationSheet
+          ingredients={ingredients}
+          extractionId={extractionId}
+          onClose={() => setModalMode("none")}
+          onComplete={handleBulkComplete}
+        />
+      )}
       {modalMode === "register-error" && registerError && (
         <RegisterErrorModal
           errorMessage={registerError}
@@ -2567,6 +2990,8 @@ export function YoutubeImportScreen({
               setEditingStepId(tempId);
               setModalMode("step-edit");
             }}
+            onBulkRegister={handleBulkRegister}
+            bulkEligibleCount={bulkEligibleCount}
           />
         )}
 
@@ -2620,6 +3045,14 @@ export function YoutubeImportScreen({
           />
         );
       })()}
+      {modalMode === "bulk-register" && (
+        <BulkIngredientRegistrationSheet
+          ingredients={ingredients}
+          extractionId={extractionId}
+          onClose={() => setModalMode("none")}
+          onComplete={handleBulkComplete}
+        />
+      )}
       {modalMode === "register-error" && registerError && (
         <RegisterErrorModal
           errorMessage={registerError}

@@ -36,10 +36,7 @@
   "workflow": {
     "plan_loop": "skipped",
     "review_loop": "required",
-    "external_smokes": [
-      "pnpm dev:demo",
-      "pnpm dev:local-supabase"
-    ],
+    "external_smokes": [],
     "execution_mode": "autonomous",
     "evaluator_profile": "vertical-slice-strict",
     "merge_policy": "conditional-auto",
@@ -69,60 +66,80 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "in_progress",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
   "closeout": {
-    "phase": "collecting",
+    "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "planned",
-      "design_status": "temporary",
-      "delivery_checklist": "pending",
+      "roadmap_lifecycle": "in_progress",
+      "design_status": "pending-review",
+      "delivery_checklist": "complete",
       "design_authority": "not_required",
-      "acceptance": "pending",
+      "acceptance": "complete",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
-      "required_checks": "pending",
-      "external_smokes": "pending",
-      "authority_reports": [],
-      "actual_verification_refs": []
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/authority/YT_IMPORT-bulk-ingredient-resolution-authority.md"
+      ],
+      "actual_verification_refs": [
+        "pnpm vitest run tests/youtube-bulk-ingredient-registration.test.ts",
+        "pnpm playwright test tests/e2e/slice-25-youtube-bulk-ingredient-registration.spec.ts --project=mobile-chrome --project=desktop-chrome --reporter=list",
+        "pnpm playwright test tests/e2e/qa-slice-25-youtube-bulk-ingredient-registration-evidence.spec.ts --project=mobile-chrome --project=mobile-ios-small --reporter=list",
+        "pnpm playwright test tests/e2e/slice-22-youtube-ingredient-registration.spec.ts --project=mobile-chrome --reporter=list",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm test:product",
+        "pnpm build",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 25-youtube-bulk-ingredient-resolution",
+        "git diff --check",
+        "pnpm verify:frontend"
+      ]
     },
     "merge_gate_projection": {
       "current_head_sha": null,
-      "approval_state": "not_started",
+      "approval_state": "dual_approved",
       "all_checks_green": false
     },
     "recovery_summary": {
-      "manual_patch_count": 0,
+      "manual_patch_count": 1,
       "manual_handoff": false,
       "stale_lock_count": 0,
       "ci_resync_count": 0,
       "artifact_missing": false,
-      "last_recovery_at": null
+      "last_recovery_at": "2026-05-25T03:40:00+09:00"
     },
     "repair_summary": {
-      "codex_repairable_count": 0,
+      "codex_repairable_count": 1,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": null,
-      "evidence_sources": []
+      "latest_reason_code": "stage5_cta_visibility_improvement",
+      "evidence_sources": [
+        "ui/designs/evidence/25-youtube-bulk-ingredient-resolution/YT_IMPORT-bulk-cta-mobile.png",
+        "ui/designs/evidence/25-youtube-bulk-ingredient-resolution/YT_IMPORT-bulk-sheet-mobile.png",
+        "ui/designs/evidence/25-youtube-bulk-ingredient-resolution/YT_IMPORT-bulk-success-mobile.png",
+        "ui/designs/evidence/25-youtube-bulk-ingredient-resolution/YT_IMPORT-bulk-sheet-mobile-narrow.png"
+      ]
     },
     "projection_state": {
-      "docs_synced_at": null,
-      "status_synced_at": null,
+      "docs_synced_at": "2026-05-25T03:40:00+09:00",
+      "status_synced_at": "2026-05-25T03:40:00+09:00",
       "pr_body_synced_at": null
     }
   },
-  "notes": "FE-only slice. Stage 2/3 N/A (no backend changes). Stage 4 Claude frontend implementation. Stage 5/6 Codex design review and PR review. Uses existing POST /api/v1/recipes/youtube/ingredient-registration endpoint sequentially from a frontend bulk helper.",
+  "notes": "FE-only slice. Stage 2/3 N/A (no backend changes). Stage 4 Claude frontend implementation completed through resume session 4f8182cb-e47e-4b1b-86f5-fa0fcb2f36b0. Stage 5/6 Codex review approved after moving the bulk CTA above the ingredient list for visibility; README Design Status remains pending-review for the pre-merge final review handoff invariant, and the authority report records confirmed_allowed=true. Uses existing POST /api/v1/recipes/youtube/ingredient-registration endpoint sequentially from a frontend bulk helper. Local verification passed for targeted Vitest, targeted Playwright, screenshot evidence, lint, typecheck, product tests, build, workflow/workpack validators, and diff check. pnpm verify:frontend reached 730 passed / 68 skipped / 3 failed; all failures are the known unrelated slice-17b recipebook detail locator issue.",
   "out_of_scope": [
     "New bulk registration API endpoint",
     "Backend API or RPC changes",
