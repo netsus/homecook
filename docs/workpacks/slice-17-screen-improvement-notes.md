@@ -143,4 +143,4 @@
 
 - [ ] 실기기 모바일 확인
 - [ ] Live OAuth 로그인 후 프로필/설정 확인
-- [x] 회원 탈퇴 후 동일 소셜 계정 재가입 가능 여부 (2026-05-24 staging 확인. 재로그인은 성공했지만 기존 저장/플래너 데이터가 유지되어 delete-account 정책 follow-up 필요.)
+- [x] 회원 탈퇴 후 동일 소셜 계정 재가입 가능 여부 (2026-05-24 staging 확인. 재로그인은 성공했고, 기존 저장/플래너 데이터 유지 mismatch는 private data cleanup follow-up으로 구현됨. redeploy 후 재확인 필요.)

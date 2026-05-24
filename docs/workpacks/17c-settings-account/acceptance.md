@@ -12,14 +12,14 @@
 - [x] 화면 꺼짐 방지 토글 변경 시 즉시 서버에 저장된다 (PATCH /users/me/settings) <!-- omo:id=accept-wake-lock-toggle;stage=4;scope=frontend;review=5,6 -->
 - [x] 닉네임 변경 시 새 닉네임(2~30자)이 서버에 저장된다 (PATCH /users/me) <!-- omo:id=accept-nickname-change;stage=4;scope=frontend;review=5,6 -->
 - [x] 로그아웃 시 세션이 무효화되고 HOME으로 이동한다 (POST /auth/logout) <!-- omo:id=accept-logout;stage=4;scope=frontend;review=5,6 -->
-- [x] 회원 탈퇴 확인 후 소프트 삭제되고 HOME으로 이동한다 (DELETE /users/me) <!-- omo:id=accept-account-delete;stage=4;scope=frontend;review=5,6 -->
+- [x] 회원 탈퇴 확인 후 개인 데이터 cleanup을 실행하고 HOME으로 이동한다 (DELETE /users/me) <!-- omo:id=accept-account-delete;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 - [x] settings_json merge 업데이트가 기존 키를 보존한다 (전달된 키만 덮어쓰기) <!-- omo:id=accept-settings-merge;stage=2;scope=backend;review=3,6 -->
 - [x] 닉네임 길이 제약(2~30자)이 서버에서 검증된다 <!-- omo:id=accept-nickname-length-validation;stage=2;scope=backend;review=3,6 -->
-- [x] 회원 탈퇴가 소프트 삭제(deleted_at 세팅)로 동작한다 <!-- omo:id=accept-soft-delete;stage=2;scope=backend;review=3,6 -->
+- [x] 회원 탈퇴가 개인 데이터 삭제 + 작성 레시피 익명 보존으로 동작한다 <!-- omo:id=accept-private-data-cleanup;stage=2;scope=backend;review=3,6 -->
 - [x] PATCH /users/me/settings 동일 값 재전송 시 멱등 응답 <!-- omo:id=accept-settings-idempotency;stage=2;scope=backend;review=3,6 -->
 - [x] DELETE /users/me 이미 탈퇴 상태에서 재호출 시 멱등 응답 <!-- omo:id=accept-delete-idempotency;stage=2;scope=backend;review=3,6 -->
 
@@ -35,7 +35,8 @@
 
 ## Data Integrity
 - [x] /users/me 경로는 항상 인증된 사용자 자신에 대해서만 동작한다 (타인 접근 구조적 불가) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [x] 소프트 삭제 후 부분 유니크 인덱스(users_social_unique_active, users_email_unique_active)가 정상 동작한다 <!-- omo:id=accept-soft-delete-index;stage=2;scope=backend;review=3,6 -->
+- [x] 회원 탈퇴 후 같은 소셜 계정 재로그인은 새 bootstrap 사용자 상태로 시작한다 <!-- omo:id=accept-delete-rejoin-bootstrap;stage=2;scope=backend;review=3,6 -->
+- [x] 회원 탈퇴해도 사용자가 직접/유튜브로 등록한 레시피 row는 삭제하지 않고 `recipes.created_by = null`로 보존한다 <!-- omo:id=accept-delete-preserve-authored-recipes;stage=2;scope=backend;review=3,6 -->
 - [x] settings_json 업데이트가 기존 데이터를 파괴하지 않는다 <!-- omo:id=accept-settings-no-data-loss;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
@@ -50,7 +51,7 @@
   - 화면 꺼짐 방지 토글 ON → 새로고침 → 설정 유지 확인
   - 닉네임 변경 → MYPAGE 복귀 → 닉네임 반영 확인
   - 로그아웃 → HOME 이동 → 로그인 게이트 정상 작동 확인
-  - 회원 탈퇴 → 확인 다이얼로그 → 탈퇴 → HOME 이동, 동일 계정 재로그인 불가 확인
+  - 회원 탈퇴 → 확인 다이얼로그 → 탈퇴 → HOME 이동, 동일 계정 재로그인 후 이전 개인 기록이 보이지 않는지 확인
   - 비로그인 상태에서 SETTINGS 직접 접근 → 로그인 게이트 → 로그인 후 SETTINGS 복귀
   - Live OAuth 소셜 로그인 후 설정 화면 정상 진입 확인
 
@@ -59,7 +60,7 @@
 ### Vitest
 - [x] PATCH /users/me/settings 성공 응답, 422 응답 (비 boolean) <!-- omo:id=accept-vitest-settings-update;stage=2;scope=backend;review=3,6 -->
 - [x] PATCH /users/me 닉네임 변경 성공, 422 (빈 문자열, 2자 미만, 30자 초과) <!-- omo:id=accept-vitest-nickname-update;stage=2;scope=backend;review=3,6 -->
-- [x] DELETE /users/me 소프트 삭제 성공, 멱등 재호출 <!-- omo:id=accept-vitest-account-delete;stage=2;scope=backend;review=3,6 -->
+- [x] DELETE /users/me 개인 데이터 cleanup 성공, cleanup 실패 500 <!-- omo:id=accept-vitest-account-delete;stage=2;scope=backend;review=3,6 -->
 - [x] POST /auth/logout 성공, 401 (미인증) <!-- omo:id=accept-vitest-logout;stage=2;scope=backend;review=3,6 -->
 - [x] 모든 엔드포인트 401 미인증 검증 <!-- omo:id=accept-vitest-auth-guard;stage=2;scope=backend;review=3,6 -->
 
@@ -76,4 +77,4 @@
 - [x] 회원 탈퇴 후 동일 소셜 계정으로 재가입 가능 여부 확인
   - 2026-05-24 staging `https://homecook-flame.vercel.app`, macOS Chrome, `Share Notion` 계정으로 확인.
   - 탈퇴 성공, HOME 이동, MYPAGE 로그인 요구, 동일 소셜 계정 재로그인 성공, 화면 에러 없음.
-  - 재로그인 후 기존 저장/플래너 데이터가 그대로 보여 삭제 안내 문구와 실제 데이터 보존 동작은 RC-MO-06 follow-up으로 남김.
+  - 재로그인 후 기존 저장/플래너 데이터가 그대로 보여 RC-MO-06 follow-up으로 private data cleanup 정책을 구현했다. redeploy 후 이전 개인 기록이 보이지 않는지 재확인 필요.

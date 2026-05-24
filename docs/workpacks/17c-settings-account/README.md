@@ -13,10 +13,10 @@
 - API:
   - `PATCH /users/me/settings` (13-1) — 설정 업데이트 (screen_wake_lock)
   - `PATCH /users/me` (13-2) — 닉네임 변경 (2~30자)
-  - `DELETE /users/me` (13-3) — 회원 탈퇴 (소프트 삭제)
+  - `DELETE /users/me` (13-3) — 회원 탈퇴 (개인 데이터 cleanup, 작성 레시피 익명 보존)
   - `POST /auth/logout` (0-4) — 로그아웃
-- 상태 전이: `users.deleted_at` NULL → timestamptz (회원 탈퇴 시 소프트 삭제)
-- DB 영향: `users` (settings_json 업데이트, nickname 업데이트, deleted_at 업데이트)
+- 상태 전이: 회원 탈퇴 시 public `users` row 삭제, user-owned private data cascade 삭제, `recipes.created_by`는 `null`
+- DB 영향: `users` (settings_json 업데이트, nickname 업데이트, 회원 탈퇴 시 row 삭제), user-owned tables cascade, `recipes.created_by`, `recipes.save_count`, `recipes.like_count`
 - Schema Change:
   - [x] 없음 (기존 `users` 테이블 컬럼 활용)
 
@@ -27,7 +27,7 @@
 - 프로필 이미지 변경 (공식 문서에 엔드포인트 없음)
 - 이메일 변경 (소셜 로그인에서 받아오는 값이므로 직접 변경 불가)
 - 소셜 계정 연결/해제 (공식 문서 범위 밖)
-- 회원 탈퇴 후 재가입 복구 흐름 (부분 유니크 인덱스로 충돌 방지 설계는 이미 DB에 존재하나, 복구 UX는 공식 문서에 없음)
+- 회원 탈퇴 후 이전 개인 기록 복구 UX
 
 ## Dependencies
 
@@ -79,13 +79,18 @@
 
 ### DELETE /users/me (13-3)
 - 권한: 🔒 로그인 필수
-- 서버 동작: `users.deleted_at = NOW()` (소프트 삭제)
+- 서버 동작: `delete_user_private_data(p_user_id)` RPC 호출
+  - public `users` row 삭제
+  - 레시피북, 플래너, 장보기, 팬트리, 좋아요, 남은요리 등 user-owned private data 삭제
+  - 직접/유튜브 등록 레시피는 삭제하지 않고 `recipes.created_by = null`로 보존
+  - 삭제된 저장/좋아요 row가 반영되도록 `recipes.save_count`, `recipes.like_count` 재계산
 - 응답 (200) `{ success, data, error }` — `data`:
   ```json
   { "deleted": true }
   ```
 - 401: 미인증
-- 멱등성: 이미 탈퇴한 사용자 → 동일 응답 200 `{ deleted: true }` (deleted_at이 이미 설정됨)
+- 500: cleanup 실패
+- 멱등성: cleanup 대상 public `users` row가 이미 없어도 인증된 사용자 자신의 요청이면 동일 응답 200 `{ deleted: true }`
 
 ### POST /auth/logout (0-4)
 - 권한: 🔒 로그인 필수
@@ -107,7 +112,7 @@
 ### 멱등성 정책
 - PATCH /users/me/settings: 동일 값 재전송 시 200 + 동일 결과
 - PATCH /users/me: 동일 nickname 재전송 시 200 + 동일 결과
-- DELETE /users/me: 이미 탈퇴된 상태에서 재호출 시 200 + `{ deleted: true }`
+- DELETE /users/me: 이미 cleanup된 상태에서 재호출 시 200 + `{ deleted: true }`
 - POST /auth/logout: 이미 로그아웃 상태면 401
 
 ## Frontend Delivery Mode
@@ -146,15 +151,15 @@
 ## Source Links
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
 - `docs/workpacks/README.md`
-- `docs/요구사항기준선-v1.6.4.md` — §1-9 마이페이지 (회원정보 수정/회원탈퇴/설정)
-- `docs/화면정의서-v1.5.1.md` — §19 D SETTINGS
-- `docs/api문서-v1.2.2.md` — §13 설정 (13-1, 13-2, 13-3), §0-4 로그아웃
-- `docs/db설계-v1.3.1.md` — §1-1 users (settings_json, nickname, deleted_at)
+- `docs/요구사항기준선-v1.7.0.md` — §1-9 마이페이지, §2-9 회원 탈퇴 데이터 정리 정책
+- `docs/화면정의서-v1.5.7.md` — §19 D SETTINGS
+- `docs/api문서-v1.2.10.md` — §13 설정 (13-1, 13-2, 13-3), §0-4 로그아웃
+- `docs/db설계-v1.3.6.md` — §1-1 users, `delete_user_private_data(...)`, `recipes.created_by`
 - `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`
 
 ## QA / Test Data Plan
 - **fixture baseline**: 인증된 사용자 1명 (nickname, settings_json `{}` 초기값)
-- **real DB smoke**: `pnpm dev:local-supabase` — 설정 변경 확인, 닉네임 변경 확인, 회원 탈퇴 + 소프트 삭제 확인, 로그아웃 확인
+- **real DB smoke**: `pnpm dev:local-supabase` — 설정 변경 확인, 닉네임 변경 확인, 회원 탈퇴 + private data cleanup 확인, 로그아웃 확인
 - **seed / reset**: `pnpm dev:demo:reset` 또는 `pnpm local:reset:demo`
 - **bootstrap row 기대치**:
   - `users` 테이블: 회원가입 시 자동 생성됨 (이전 슬라이스에서 검증됨)
@@ -167,7 +172,8 @@
 - 모든 API는 `{ success, data, error }` envelope
 - `/users/me` 경로이므로 항상 인증된 사용자 자신에 대해서만 동작 (타인 접근 구조적 불가)
 - 닉네임 길이 제약: 2~30자 (`varchar(30)` DB 제약)
-- 회원 탈퇴는 소프트 삭제 (deleted_at 세팅) — 부분 유니크 인덱스 `users_social_unique_active`, `users_email_unique_active`로 재가입 충돌 방지
+- 회원 탈퇴는 private data cleanup — 개인 기록은 삭제하고 직접/유튜브 등록 레시피는 작성자 정보 없이 보존
+- 같은 소셜 계정 재로그인 시 이전 개인 기록은 보이지 않아야 한다
 - `settings_json`은 JSONB merge 업데이트 (기존 키 보존, 전달된 키만 덮어쓰기)
 - 로그아웃 후 클라이언트 상태 초기화 및 HOME 또는 로그인 화면으로 리다이렉트
 - 회원 탈퇴 후 클라이언트 상태 초기화 및 HOME으로 리다이렉트
@@ -181,7 +187,7 @@
 2. **요리모드 화면 꺼짐 방지** 토글을 ON/OFF하여 설정을 변경한다. 변경 즉시 서버에 저장된다.
 3. 닉네임 변경 영역에서 새 닉네임(2~30자)을 입력하고 저장한다.
 4. 로그아웃 버튼을 탭하면 확인 후 로그아웃되고 HOME으로 이동한다.
-5. 회원 탈퇴 버튼을 탭하면 확인 다이얼로그가 뜨고, 확인 시 소프트 삭제 후 HOME으로 이동한다.
+5. 회원 탈퇴 버튼을 탭하면 확인 다이얼로그가 뜨고, 확인 시 개인 데이터 cleanup 후 HOME으로 이동한다.
 
 ## Delivery Checklist
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
@@ -191,7 +197,7 @@
 - [x] API 또는 adapter 연결 (Route Handler 4개 추가) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 (settings update, nickname update, delete account, logout types) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [x] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [x] 상태 전이 / 권한 / 멱등성 테스트 (settings PATCH 멱등, nickname 422, delete 소프트 삭제 멱등, logout 401) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 (settings PATCH 멱등, nickname 422, delete cleanup 실패/성공, logout 401) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 (`users` 테이블, settings_json 기본값) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->

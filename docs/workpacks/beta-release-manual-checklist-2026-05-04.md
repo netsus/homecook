@@ -21,6 +21,7 @@ Status vocabulary:
 - `blocked`: 계정, secret, staging deploy, 실제 기기, safe data 같은 외부 조건이 필요함.
 - `passed`: 같은 release-candidate SHA에서 통과 증거를 남김.
 - `failed`: 실제 결함이 발견되어 별도 버그/PR로 분리해야 함.
+- `fix-implemented`: 결함 수정 PR에는 반영됐고, redeploy 후 같은 smoke 재확인이 남음.
 - `stale-candidate`: 오래된 acceptance 항목이라 삭제 또는 정리 후보임.
 - `deferred`: MVP 1차 이후로 명시적으로 미룸.
 
@@ -31,7 +32,7 @@ Status vocabulary:
 | RC-MO-03 live YouTube API | BETA-QA-004, BETA-QA-005, `POST /api/v1/recipes/youtube/*` | A+B | 2026-05-24 | passed | See `RC-MO-03 Evidence - live YouTube import passed on staging` | YouTube import flag/env를 켠 뒤 staging에서 실제 URL 등록까지 통과했다. 관찰된 all-`절이기` 회귀는 후속 자동화에서 수정했다. |
 | RC-MO-04 Supabase seed / existing data compatibility | ingredients, pantry bundles, planner columns, shopping, recipe books, system book bootstrap | A+B | 2026-05-24 | passed | See `RC-MO-04 Evidence - staging data compatibility passed` | staging schema/seed baseline과 planner/shopping/pantry/cooking/leftovers 데이터 호환 smoke가 통과했다. |
 | RC-MO-05 stale Manual Only cleanup | recipe save, shopping 10a/10b/11 placeholder manual items, old acceptance notes | B | 2026-05-24 | passed | See `RC-MO-05 Evidence - Manual Only classified` | 흩어진 Manual Only를 중앙 분류했다. 진짜 남은 release-gate, deferred backlog, stale placeholder가 분리되었다. |
-| RC-MO-06 account deletion / same-social rejoin | `DELETE /api/v1/users/me`, SETTINGS, MYPAGE | A | 2026-05-24 | failed | See `RC-MO-06 Evidence - account deletion rejoin checked with data-retention mismatch` | 탈퇴, HOME 이동, 재로그인, 화면 에러 없음은 통과했다. 다만 삭제 안내 문구와 달리 기존 저장/플래너 데이터가 재로그인 후 그대로 보여 release 전 정책 결정 또는 수정이 필요하다. |
+| RC-MO-06 account deletion / same-social rejoin | `DELETE /api/v1/users/me`, SETTINGS, MYPAGE | A | 2026-05-24 | fix-implemented | See `RC-MO-06 Evidence - account deletion policy fix implemented` | 탈퇴, HOME 이동, 재로그인, 화면 에러 없음은 통과했다. 기존 저장/플래너 데이터가 유지되던 mismatch는 private data cleanup + authored recipe 보존 정책으로 구현/문서/문구를 정렬했다. redeploy 후 재확인 필요. |
 | RC-MO-07 Web Share OS sheet | `GET /api/v1/shopping/lists/{id}/share-text`, SHOPPING_DETAIL | A | 2026-05-24 | passed | See `RC-MO-07 Evidence - Web Share OS sheet passed on real devices` | Android Chrome과 iOS Safari에서 OS 공유 시트가 열리고, 닫은 뒤 앱이 정상 동작했다. |
 | RC-MO-08 wake-lock cooking mode | BETA-QA-008, `PATCH /api/v1/users/me/settings`, COOK_MODE | A | before cooking-heavy beta/public launch | todo | See `BETA-QA-008: Wake Lock Cooking Mode` | 일반 모바일 smoke는 앱 blocker를 봤고, 실제 화면 꺼짐 방지 동작은 브라우저/OS 정책 의존이라 별도 실기기 장시간 확인이 필요하다. |
 
@@ -46,7 +47,7 @@ Evidence record template:
 - Owner:
 - Device / OS / browser:
 - Test account:
-- Result: todo | blocked | passed | failed | stale-candidate | deferred
+- Result: todo | blocked | passed | failed | fix-implemented | stale-candidate | deferred
 - Evidence:
 - Follow-up issue or PR:
 - Notes:
@@ -138,7 +139,7 @@ Evidence record template:
   - Broader YouTube hardening remains: quota exhaustion, wide URL/video quality matrix, synonym matching quality, and future caption/ASR/LLM regression.
 - Notes: This closes the live YouTube import availability/register smoke for the current staging SHA. The observed all-`절이기` cooking-method regression is fixed separately in this follow-up branch.
 
-### RC-MO-06 Evidence - account deletion rejoin checked with data-retention mismatch
+### RC-MO-06 Evidence - account deletion policy fix implemented
 
 - Date: 2026-05-24 KST
 - Release-candidate SHA: not captured from Vercel deploy metadata
@@ -146,7 +147,7 @@ Evidence record template:
 - Owner: A
 - Device / OS / browser: macOS / Chrome
 - Test account: `Share Notion`
-- Result: failed
+- Result: fix-implemented
 - Evidence:
   - User confirmed account deletion completed.
   - After deletion, the app navigated to HOME.
@@ -155,11 +156,14 @@ Evidence record template:
   - No screen error was observed during deletion, login gate, or re-login.
   - After re-login, previously saved recipe and planner-added data were still visible.
   - User-provided screenshots showed the delete confirmation modal and the post-relogin MYPAGE state. The screenshots were not committed because they contain personal account/share-target information.
+  - Follow-up implementation changes `DELETE /users/me` from soft-delete to `delete_user_private_data(p_user_id)` cleanup.
+  - The cleanup deletes private user-owned rows, keeps authored recipes with `recipes.created_by = null`, and recalculates save/like counts.
+  - UI copy now says personal records are deleted and directly registered recipes can remain without author information.
 - Follow-up issue or PR:
-  - Decide the account deletion policy before public beta: either hide the delete-account action for MVP, implement actual user-data cleanup/auth-user deletion, or change the copy and contract to an explicit recoverable soft-deactivation flow.
+  - Redeploy this fix to staging, then repeat the same account deletion/rejoin smoke. Pass requires old saved/planner data to be absent after same-social re-login.
 - Notes:
   - The narrow Manual Only question "can the same social account log in again without a screen error?" passed.
-  - The current UI copy says recipe books, planner, and shopping history are deleted and cannot be recovered, so preserved data is a release-blocking policy/copy/implementation mismatch while the delete-account action remains visible.
+  - The selected policy is not recoverable soft-deactivation. Private app data is deleted; authored recipes are preserved to protect other users' saved/planner references.
 
 ### RC-MO-07 Evidence - Web Share OS sheet passed on real devices
 
@@ -235,7 +239,7 @@ Pass criteria:
 | Web Share OS sheet | `10b-shopping-share-text` | already-covered | RC-MO-07 confirmed Android Chrome and iOS Safari open the native OS share sheet on HTTPS staging and return to the app normally after dismissal. |
 | Shopping complete pantry reflect popup | `12b-shopping-pantry-reflect` | split: already-covered + deferred | Core complete/read-only/history flow is covered by RC-MO-04, and mobile blocker checks are covered by RC-MO-02. Keyboard/screen-reader/Esc/swipe/network-error edge cases are deferred hardening unless accessibility QA is pulled into the RC gate. |
 | Cooking mode / leftovers | `14-cook-session-start`, `15a-cook-planner-complete`, `15b-cook-standalone-complete`, `16-leftovers`, `wave1-port-shopping-cooking` | already-covered for automation and RC smoke | RC-MO-04 confirmed cooking mode entry/complete and leftovers creation/eat/eaten-list. The 30-day eaten-leftover auto-hide rule is covered with fake-time backend regression in `tests/leftovers.backend.test.ts`. |
-| Settings / account destructive action | `17c-settings-account`, `wave1-port-account-library-leftovers` | failed until policy is decided | RC-MO-06 confirmed deletion flow, HOME redirect, login gate, same-social re-login, and no screen error. It also exposed that existing saved/planner data remains visible after re-login despite irreversible deletion copy, so the visible delete-account action needs a release decision before public beta. |
+| Settings / account destructive action | `17c-settings-account`, `wave1-port-account-library-leftovers` | fix-implemented; redeploy smoke pending | RC-MO-06 confirmed deletion flow, HOME redirect, login gate, same-social re-login, and no screen error. The data-retention mismatch is fixed by private data cleanup plus authored recipe anonymized preservation. Redeploy smoke must confirm old saved/planner data no longer appears after same-social re-login. |
 | Cooking method color / synonym quality | `18-manual-recipe-create`, `19-youtube-import`, `20-youtube-real-import`, `21-ingredient-dictionary` | split: regression fixed + deferred quality backlog | Basic manual recipe creation is covered by RC-MO-02. The known YouTube all-`절이기` cooking-method regression is fixed and covered in `tests/youtube-import.backend.test.ts`. Broader visual polish and synonym matching quality remain product-quality follow-ups, not route-contract blockers. |
 | Live YouTube import | `19-youtube-import`, `20-youtube-real-import`, `21-ingredient-dictionary`, `22-youtube-ingredient-registration`, `design-polish-slice5-manual-youtube` | already-covered for one live registration; quality/edge cases deferred | RC-MO-03 confirmed staging feature enablement, auth gating, one real YouTube recipe registration, DB persistence, and recipe detail API load. URL-shape matrix, quota exhaustion, classification accuracy, caption/ASR/LLM regression, and ingredient matching improvements remain deferred YouTube hardening. |
 | Design / prototype / desktop taste approval | `baemin-*`, `design-polish-*`, `desktop-*`, `h5-*`, `h6-*`, `h7-*`, `h8-*`, `mvp2-*`, `wave1-derived-state-ui-prep` | deferred / outside CR-004 contract risk | These are subjective visual approval or future-direction checks. Keep them in the design backlog unless a specific screen is selected for the RC visual pass. They should not appear as unresolved API/route contract risk. |
@@ -390,12 +394,15 @@ CR-004 track: `RC-MO-06 account deletion / same-social rejoin`.
 
 Closeout:
 - 2026-05-24 staging에서 탈퇴 성공, HOME 이동, MYPAGE 로그인 요구, 동일 소셜 계정 재로그인 성공, 화면 에러 없음은 확인했다.
-- 재로그인 후 기존 저장/플래너 데이터가 그대로 보여, 현재 delete-account action은 release decision이 필요하다.
+- 재로그인 후 기존 저장/플래너 데이터가 그대로 보이는 mismatch를 확인했다.
+- 이 PR에서 private data cleanup + authored recipe 보존 정책을 구현/문서/문구에 반영했다.
+- redeploy 후 같은 smoke를 다시 실행해야 최종 pass로 바꿀 수 있다.
 
-Decision options:
-1. MVP public beta에서는 delete-account action을 숨긴다.
-2. 실제 user-data cleanup과 Supabase auth-user deletion을 구현하고, 같은 소셜 계정 재가입 시 새 계정처럼 시작하게 한다.
-3. 공식 계약과 UI copy를 recoverable soft-deactivation으로 바꾼다. 이 경우 "삭제"라는 표현과 비가역 안내는 제거해야 한다.
+Selected decision:
+- 실제 app-private-data cleanup을 구현한다.
+- Supabase Auth user 자체는 route에서 삭제하지 않고, public `users` row와 user-owned app data를 삭제한다.
+- 같은 OAuth 계정으로 다시 로그인하면 bootstrap이 새 public `users` row와 기본 시스템 row를 만든다.
+- 직접/유튜브로 등록한 레시피는 삭제하지 않고 작성자 정보 없이 남긴다.
 
 Pass criteria:
 - public beta에 delete-account action이 보인다면 UI copy, API 동작, 재로그인 후 데이터 상태가 같은 정책을 말해야 한다.

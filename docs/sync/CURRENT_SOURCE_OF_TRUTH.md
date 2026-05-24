@@ -1,17 +1,30 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.6.9.md`
-- `docs/화면정의서-v1.5.6.md`
-- `docs/유저flow맵-v1.3.6.md`
-- `docs/db설계-v1.3.5.md`
-- `docs/api문서-v1.2.9.md`
+- `docs/요구사항기준선-v1.7.0.md`
+- `docs/화면정의서-v1.5.7.md`
+- `docs/유저flow맵-v1.3.7.md`
+- `docs/db설계-v1.3.6.md`
+- `docs/api문서-v1.2.10.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## v1.6.9 / v1.5.6 / v1.3.6 / DB v1.3.5 / API v1.2.9 → v1.7.0 / v1.5.7 / v1.3.7 / DB v1.3.6 / API v1.2.10 변경 이력 (2026-05-24)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.0 | §2-9 회원 탈퇴 정책: 사용자 개인 기록은 삭제하고, 직접/유튜브로 등록한 레시피는 작성자 정보 없이 보존. 동일 소셜 계정 재로그인 시 이전 개인 기록이 보이지 않아야 함 |
+| 화면정의서 v1.5.7 | SETTINGS 회원 탈퇴 확인 문구와 성공 후 HOME 이동/재로그인 기대 결과를 새 삭제 정책에 맞게 정리 |
+| 유저플로우 v1.3.7 | MYPAGE → SETTINGS → 회원탈퇴 flow에 private data cleanup, authored recipe anonymize 보존, 새 bootstrap 재로그인 상태 추가 |
+| DB v1.3.6 | `delete_user_private_data(p_user_id)` RPC 추가. `users` 삭제 cascade로 개인 데이터 정리, `recipes.created_by`는 `ON DELETE SET NULL`, save/like count 재계산 |
+| API v1.2.10 | `DELETE /users/me` 동작을 soft-delete에서 private data cleanup으로 변경. 엔드포인트 수 55개 유지 |
+
+> 이 변경은 RC-MO-06 account deletion/rejoin evidence에서 확인된 “탈퇴 후 재로그인 시 기존 저장/플래너 데이터가 유지됨” 문제를 닫기 위한 contract-evolution이다.
+> release 전 visible delete-account action의 안내 문구와 실제 데이터 정책을 일치시킨다.
 
 ## API v1.2.8 → API v1.2.9 변경 이력 (2026-05-23)
 
