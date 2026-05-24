@@ -5,6 +5,8 @@ const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 const YOUTUBE_IMPORT_URL = "/menu/add/youtube";
+const YOUTUBE_IMPORT_EMBEDDED_URL =
+  "/menu-add?date=2026-05-15&columnId=column-abc-123&slot=lunch&source=youtube";
 
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   await page.context().addCookies([
@@ -1084,5 +1086,45 @@ test.describe("Slice 19: YouTube Import", () => {
     // But "레시피 상세 보기" and "닫기" should be visible
     await expect(page.locator('button:has-text("레시피 상세 보기")')).toBeVisible();
     await expect(page.locator("text=닫기")).toBeVisible();
+  });
+});
+
+test.describe("Slice 19: YouTube Import desktop embedded", () => {
+  test("embedded review keeps the final register action visible @smoke-core", async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-chrome", "desktop embedded flow");
+
+    await setAuthOverride(page, "authenticated");
+    await installCookingMethodsRoute(page);
+    await installIngredientsRoute(page);
+    await installValidateRoute(page, { is_recipe_video: true });
+    await installExtractRoute(page, 0);
+    await installRegisterRoute(page);
+
+    await page.goto(YOUTUBE_IMPORT_EMBEDDED_URL);
+    const embeddedImport = page.getByTestId("youtube-import-embedded");
+    await expect(embeddedImport).toBeVisible();
+
+    await embeddedImport
+      .locator('input[type="url"]')
+      .fill("https://www.youtube.com/watch?v=recipe12345");
+    await embeddedImport.getByRole("button", { name: "가져오기" }).click();
+
+    await expect(
+      embeddedImport.getByRole("heading", { name: "추출 결과를 확인해주세요" }),
+    ).toBeVisible({ timeout: 10000 });
+
+    const registerButton = embeddedImport.getByRole("button", {
+      name: "등록",
+      exact: true,
+    });
+    await expect(registerButton).toBeVisible();
+    await expect(registerButton).toBeEnabled();
+
+    await registerButton.click();
+    await expect(embeddedImport.getByText("레시피가 등록됐어요")).toBeVisible({
+      timeout: 5000,
+    });
   });
 });

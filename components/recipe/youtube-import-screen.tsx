@@ -2298,6 +2298,16 @@ export function YoutubeImportScreen({
               등록 전 확인 필요: {desktopRegisterRequirements.join(", ")}
             </div>
           ) : null}
+          {isEmbedded ? (
+            <div className="web-yt-actions" data-testid="youtube-embedded-review-actions">
+              <WebButton
+                disabled={!canRegister || isRegistering}
+                onClick={handleRegister}
+              >
+                {isRegistering ? "등록 중..." : "등록"}
+              </WebButton>
+            </div>
+          ) : null}
           <ReviewStep
             title={title}
             onTitleChange={setTitle}
