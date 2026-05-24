@@ -143,4 +143,5 @@
 
 - [ ] 실기기 모바일 확인
 - [ ] Live OAuth 로그인 후 프로필/설정 확인
-- [x] 회원 탈퇴 후 동일 소셜 계정 재가입 가능 여부 (2026-05-24 staging 확인. 재로그인은 성공했고, 기존 저장/플래너 데이터 유지 mismatch는 private data cleanup follow-up으로 구현됨. redeploy 후 재확인 필요.)
+- [x] 화면 꺼짐 방지 ON 상태의 요리모드 실기기 확인 (2026-05-24 `https://homecook-flame.vercel.app`, PR #579 / `8c2a2b8b` 배포 후 iOS Safari와 Android Chrome 모두 화면이 꺼지지 않음.)
+- [x] 회원 탈퇴 후 동일 소셜 계정 재가입 가능 여부 (2026-05-24 staging 확인. Supabase migration 적용 후 재가입 시 기존 저장/플래너 데이터는 보이지 않고, 유튜브 등록 레시피는 보존되며 "내가 추가한 레시피"는 0개로 표시됨.)

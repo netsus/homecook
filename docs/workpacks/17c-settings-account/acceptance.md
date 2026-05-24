@@ -73,8 +73,11 @@
 ### Manual Only
 - [x] Live OAuth 소셜 로그인 후 설정 화면 정상 진입 및 조작 확인
   - RC-MO-01 live OAuth와 2026-05-24 account deletion smoke에서 Google 로그인 후 SETTINGS 진입/계정 삭제 조작/로그인 게이트를 확인.
-- [ ] 실기기 모바일 브라우저에서 화면 꺼짐 방지 토글 UX 확인
+- [x] 실기기 모바일 브라우저에서 화면 꺼짐 방지 토글 UX 확인
+  - 2026-05-24 `https://homecook-flame.vercel.app`, PR #579 / `8c2a2b8b` 배포 후 확인.
+  - iOS Safari와 Android Chrome 모두 화면 꺼짐 방지 ON 상태의 요리모드에서 화면이 꺼지지 않음을 확인했다.
 - [x] 회원 탈퇴 후 동일 소셜 계정으로 재가입 가능 여부 확인
   - 2026-05-24 staging `https://homecook-flame.vercel.app`, macOS Chrome, `Share Notion` 계정으로 확인.
   - 탈퇴 성공, HOME 이동, MYPAGE 로그인 요구, 동일 소셜 계정 재로그인 성공, 화면 에러 없음.
-  - 재로그인 후 기존 저장/플래너 데이터가 그대로 보여 RC-MO-06 follow-up으로 private data cleanup 정책을 구현했다. redeploy 후 이전 개인 기록이 보이지 않는지 재확인 필요.
+  - Supabase migration 적용 후 재테스트에서 기존 저장/플래너 개인 데이터가 재가입 계정에 보이지 않음을 확인했다.
+  - 유튜브로 등록한 레시피는 탈퇴 후에도 서비스에 남고, 재가입 후 "내가 추가한 레시피"는 0개로 표시됨을 확인했다.
