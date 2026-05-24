@@ -28,13 +28,13 @@ Status vocabulary:
 | Track | Maps to | Owner | Target date | Status | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | RC-MO-01 live OAuth / return-to-action | BETA-QA-002, auth/logout, recipe like/save, meals, pantry, cooking, leftovers, mypage/settings | A | 2026-05-23 | passed | See `RC-MO-01 Evidence - live OAuth passed on staging` | 실제 provider redirect와 원래 action 복귀, logout/re-login stale session check, GitHub Playwright Live OAuth run을 같은 SHA에서 확인했다. |
-| RC-MO-02 real-device mobile / visual | BETA-QA-003, shopping complete popup, cook mode, leftovers, cooking method color | A | 2026-05-24 | passed | See `RC-MO-02 Evidence - real-device mobile smoke passed` | 실제 모바일에서 핵심 흐름이 막히지 않았고, CTA/button/loading/server error blocker가 없었다. Web Share는 RC-MO-07, wake-lock 실제 브라우저 정책은 BETA-QA-008로 분리한다. |
+| RC-MO-02 real-device mobile / visual | BETA-QA-003, shopping complete popup, cook mode, leftovers, cooking method color | A | 2026-05-24 | passed | See `RC-MO-02 Evidence - real-device mobile smoke passed` | 실제 모바일에서 핵심 흐름이 막히지 않았고, CTA/button/loading/server error blocker가 없었다. Web Share는 RC-MO-07, wake-lock 실제 브라우저 정책은 RC-MO-08에서 별도로 닫았다. |
 | RC-MO-03 live YouTube API | BETA-QA-004, BETA-QA-005, `POST /api/v1/recipes/youtube/*` | A+B | 2026-05-24 | passed | See `RC-MO-03 Evidence - live YouTube import passed on staging` | YouTube import flag/env를 켠 뒤 staging에서 실제 URL 등록까지 통과했다. 관찰된 all-`절이기` 회귀는 후속 자동화에서 수정했다. |
 | RC-MO-04 Supabase seed / existing data compatibility | ingredients, pantry bundles, planner columns, shopping, recipe books, system book bootstrap | A+B | 2026-05-24 | passed | See `RC-MO-04 Evidence - staging data compatibility passed` | staging schema/seed baseline과 planner/shopping/pantry/cooking/leftovers 데이터 호환 smoke가 통과했다. |
 | RC-MO-05 stale Manual Only cleanup | recipe save, shopping 10a/10b/11 placeholder manual items, old acceptance notes | B | 2026-05-24 | passed | See `RC-MO-05 Evidence - Manual Only classified` | 흩어진 Manual Only를 중앙 분류했다. 진짜 남은 release-gate, deferred backlog, stale placeholder가 분리되었다. |
-| RC-MO-06 account deletion / same-social rejoin | `DELETE /api/v1/users/me`, SETTINGS, MYPAGE | A | 2026-05-24 | fix-implemented | See `RC-MO-06 Evidence - account deletion policy fix implemented` | 탈퇴, HOME 이동, 재로그인, 화면 에러 없음은 통과했다. 기존 저장/플래너 데이터가 유지되던 mismatch는 private data cleanup + authored recipe 보존 정책으로 구현/문서/문구를 정렬했다. redeploy 후 재확인 필요. |
+| RC-MO-06 account deletion / same-social rejoin | `DELETE /api/v1/users/me`, SETTINGS, MYPAGE | A | 2026-05-24 | passed | See `RC-MO-06 Evidence - account deletion policy passed on staging` | Supabase migration 적용 후 동일 소셜 계정 탈퇴/재가입 smoke가 통과했다. 재가입 후 기존 저장/플래너 개인 데이터는 보이지 않고, 유튜브로 등록한 레시피는 서비스에 남되 "내가 추가한 레시피"는 0개로 표시된다. |
 | RC-MO-07 Web Share OS sheet | `GET /api/v1/shopping/lists/{id}/share-text`, SHOPPING_DETAIL | A | 2026-05-24 | passed | See `RC-MO-07 Evidence - Web Share OS sheet passed on real devices` | Android Chrome과 iOS Safari에서 OS 공유 시트가 열리고, 닫은 뒤 앱이 정상 동작했다. |
-| RC-MO-08 wake-lock cooking mode | BETA-QA-008, `PATCH /api/v1/users/me/settings`, COOK_MODE | A | before cooking-heavy beta/public launch | todo | See `BETA-QA-008: Wake Lock Cooking Mode` | 일반 모바일 smoke는 앱 blocker를 봤고, 실제 화면 꺼짐 방지 동작은 브라우저/OS 정책 의존이라 별도 실기기 장시간 확인이 필요하다. |
+| RC-MO-08 wake-lock cooking mode | BETA-QA-008, `PATCH /api/v1/users/me/settings`, COOK_MODE | A | 2026-05-24 | passed | See `RC-MO-08 Evidence - wake-lock cooking mode passed on real devices` | PR #579 / `8c2a2b8b` 배포 후 iOS Safari와 Android Chrome에서 화면 꺼짐 방지 ON 상태의 요리모드가 꺼지지 않음을 확인했다. |
 
 Evidence record template:
 
@@ -139,31 +139,30 @@ Evidence record template:
   - Broader YouTube hardening remains: quota exhaustion, wide URL/video quality matrix, synonym matching quality, and future caption/ASR/LLM regression.
 - Notes: This closes the live YouTube import availability/register smoke for the current staging SHA. The observed all-`절이기` cooking-method regression is fixed separately in this follow-up branch.
 
-### RC-MO-06 Evidence - account deletion policy fix implemented
+### RC-MO-06 Evidence - account deletion policy passed on staging
 
 - Date: 2026-05-24 KST
-- Release-candidate SHA: not captured from Vercel deploy metadata
+- Release-candidate SHA: `66a27a48417361bc55f9bd587b98b21962e59efa`
 - Environment: `https://homecook-flame.vercel.app`
 - Owner: A
 - Device / OS / browser: macOS / Chrome
 - Test account: `Share Notion`
-- Result: fix-implemented
+- Result: passed
 - Evidence:
   - User confirmed account deletion completed.
   - After deletion, the app navigated to HOME.
   - After deletion, MYPAGE access required login.
   - Same social account re-login succeeded.
   - No screen error was observed during deletion, login gate, or re-login.
-  - After re-login, previously saved recipe and planner-added data were still visible.
+  - Supabase staging migration for `delete_user_private_data(p_user_id)` was applied before the final smoke.
+  - After re-login, previously saved recipe and planner-added private data were no longer visible.
+  - A recipe registered through YouTube before account deletion remained available in the service after deletion/rejoin.
+  - After rejoin, "내가 추가한 레시피" showed 0 recipes, confirming preserved authored recipes are no longer linked back to the rejoined user.
   - User-provided screenshots showed the delete confirmation modal and the post-relogin MYPAGE state. The screenshots were not committed because they contain personal account/share-target information.
-  - Follow-up implementation changes `DELETE /users/me` from soft-delete to `delete_user_private_data(p_user_id)` cleanup.
-  - The cleanup deletes private user-owned rows, keeps authored recipes with `recipes.created_by = null`, and recalculates save/like counts.
-  - UI copy now says personal records are deleted and directly registered recipes can remain without author information.
-- Follow-up issue or PR:
-  - Redeploy this fix to staging, then repeat the same account deletion/rejoin smoke. Pass requires old saved/planner data to be absent after same-social re-login.
+- Follow-up issue or PR: none for MVP RC-MO-06 closeout
 - Notes:
-  - The narrow Manual Only question "can the same social account log in again without a screen error?" passed.
-  - The selected policy is not recoverable soft-deactivation. Private app data is deleted; authored recipes are preserved to protect other users' saved/planner references.
+  - This closes the account deletion / same-social rejoin release-candidate manual gate.
+  - The selected policy is not recoverable soft-deactivation. Private app data is deleted; authored recipes are preserved without author linkage to protect other users' saved/planner references.
 
 ### RC-MO-07 Evidence - Web Share OS sheet passed on real devices
 
@@ -181,6 +180,27 @@ Evidence record template:
   - User-provided screenshots showed both OS share sheets. The screenshots were not committed because they include personal share targets/contact data.
 - Follow-up issue or PR: N/A
 - Notes: This closes the Web Share OS-sheet manual-only check for MVP staging smoke. Clipboard fallback remains covered by deterministic Playwright tests.
+
+### RC-MO-08 Evidence - wake-lock cooking mode passed on real devices
+
+- Date: 2026-05-24 KST
+- Release-candidate SHA: `8c2a2b8be1b41aad3b3d88038dd45d1800d00846`
+- Environment: `https://homecook-flame.vercel.app`
+- Owner: A
+- Device / OS / browser: iOS Safari and Android Chrome
+- Test account: authenticated staging user
+- Result: passed
+- Evidence:
+  - Settings screen wake-lock toggle was enabled before entering cook mode.
+  - PR #578 first deployed the cook-mode Screen Wake Lock API integration.
+  - User reported that screens still turned off on mobile, so PR #579 added gesture-based retry for browsers that reject the first automatic `navigator.wakeLock.request("screen")`.
+  - PR #579 was merged as `8c2a2b8be1b41aad3b3d88038dd45d1800d00846` and Vercel production deployment completed.
+  - The deployed `https://homecook-flame.vercel.app` bundle was checked and contains the wake-lock gesture retry code.
+  - User confirmed iOS and Android both no longer turn off during cook mode after the fix.
+- Follow-up issue or PR: N/A for MVP RC-MO-08 closeout
+- Notes:
+  - This closes the wake-lock cooking-mode release-candidate manual gate for the tested real-device browsers.
+  - Browser policy can still release Wake Lock when the tab is backgrounded, the device is locked manually, or the browser does not support the API. Cook mode re-requests while active and after user gestures.
 
 ## RC-MO-05: Stale Manual Only Cleanup
 
@@ -239,7 +259,7 @@ Pass criteria:
 | Web Share OS sheet | `10b-shopping-share-text` | already-covered | RC-MO-07 confirmed Android Chrome and iOS Safari open the native OS share sheet on HTTPS staging and return to the app normally after dismissal. |
 | Shopping complete pantry reflect popup | `12b-shopping-pantry-reflect` | split: already-covered + deferred | Core complete/read-only/history flow is covered by RC-MO-04, and mobile blocker checks are covered by RC-MO-02. Keyboard/screen-reader/Esc/swipe/network-error edge cases are deferred hardening unless accessibility QA is pulled into the RC gate. |
 | Cooking mode / leftovers | `14-cook-session-start`, `15a-cook-planner-complete`, `15b-cook-standalone-complete`, `16-leftovers`, `wave1-port-shopping-cooking` | already-covered for automation and RC smoke | RC-MO-04 confirmed cooking mode entry/complete and leftovers creation/eat/eaten-list. The 30-day eaten-leftover auto-hide rule is covered with fake-time backend regression in `tests/leftovers.backend.test.ts`. |
-| Settings / account destructive action | `17c-settings-account`, `wave1-port-account-library-leftovers` | fix-implemented; redeploy smoke pending | RC-MO-06 confirmed deletion flow, HOME redirect, login gate, same-social re-login, and no screen error. The data-retention mismatch is fixed by private data cleanup plus authored recipe anonymized preservation. Redeploy smoke must confirm old saved/planner data no longer appears after same-social re-login. |
+| Settings / account destructive action / wake lock | `17c-settings-account`, `wave1-port-account-library-leftovers` | already-covered | RC-MO-06 confirmed deletion flow, HOME redirect, login gate, same-social re-login, no screen error, old saved/planner data removal, and authored YouTube recipe preservation without re-linking to the rejoined user. RC-MO-08 confirmed iOS Safari and Android Chrome keep cook mode awake when the setting is on. |
 | Cooking method color / synonym quality | `18-manual-recipe-create`, `19-youtube-import`, `20-youtube-real-import`, `21-ingredient-dictionary` | split: regression fixed + deferred quality backlog | Basic manual recipe creation is covered by RC-MO-02. The known YouTube all-`절이기` cooking-method regression is fixed and covered in `tests/youtube-import.backend.test.ts`. Broader visual polish and synonym matching quality remain product-quality follow-ups, not route-contract blockers. |
 | Live YouTube import | `19-youtube-import`, `20-youtube-real-import`, `21-ingredient-dictionary`, `22-youtube-ingredient-registration`, `design-polish-slice5-manual-youtube` | already-covered for one live registration; quality/edge cases deferred | RC-MO-03 confirmed staging feature enablement, auth gating, one real YouTube recipe registration, DB persistence, and recipe detail API load. URL-shape matrix, quota exhaustion, classification accuracy, caption/ASR/LLM regression, and ingredient matching improvements remain deferred YouTube hardening. |
 | Design / prototype / desktop taste approval | `baemin-*`, `design-polish-*`, `desktop-*`, `h5-*`, `h6-*`, `h7-*`, `h8-*`, `mvp2-*`, `wave1-derived-state-ui-prep` | deferred / outside CR-004 contract risk | These are subjective visual approval or future-direction checks. Keep them in the design backlog unless a specific screen is selected for the RC visual pass. They should not appear as unresolved API/route contract risk. |
@@ -369,6 +389,12 @@ Pass criteria:
 
 CR-004 track: `RC-MO-08 wake-lock cooking mode`.
 
+Closeout:
+- 2026-05-24 staging/prod URL `https://homecook-flame.vercel.app`에서 PR #579 / `8c2a2b8be1b41aad3b3d88038dd45d1800d00846` 배포 후 확인했다.
+- iOS Safari와 Android Chrome 모두 화면 꺼짐 방지 ON 상태에서 요리모드 화면이 꺼지지 않았다.
+- 브라우저가 첫 자동 Wake Lock 요청을 거절하는 경우를 보완하기 위해 요리모드 터치/클릭/키 입력 후 재요청하도록 수정했고, 사용자가 실기기에서 재확인했다.
+- 아래 단계는 향후 브라우저/도메인/설정 저장 로직 변경 시 다시 돌릴 reference script로 유지한다.
+
 Prerequisites:
 - HTTPS staging/beta URL.
 - 실제 모바일 기기.
@@ -394,9 +420,9 @@ CR-004 track: `RC-MO-06 account deletion / same-social rejoin`.
 
 Closeout:
 - 2026-05-24 staging에서 탈퇴 성공, HOME 이동, MYPAGE 로그인 요구, 동일 소셜 계정 재로그인 성공, 화면 에러 없음은 확인했다.
-- 재로그인 후 기존 저장/플래너 데이터가 그대로 보이는 mismatch를 확인했다.
-- 이 PR에서 private data cleanup + authored recipe 보존 정책을 구현/문서/문구에 반영했다.
-- redeploy 후 같은 smoke를 다시 실행해야 최종 pass로 바꿀 수 있다.
+- Supabase migration 적용 후 재테스트에서 기존 저장/플래너 개인 데이터가 재가입 계정에 보이지 않음을 확인했다.
+- 유튜브로 등록한 레시피는 계정 탈퇴 후에도 서비스에 남고, 재가입 후 "내가 추가한 레시피"는 0개로 표시됨을 확인했다.
+- private data cleanup + authored recipe 보존 정책이 staging smoke로 통과했다.
 
 Selected decision:
 - 실제 app-private-data cleanup을 구현한다.

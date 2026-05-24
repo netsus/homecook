@@ -145,4 +145,4 @@
 - human_escalation은 0회 기록됐다.
 - manual_decision_required는 0회 기록됐다.
 - post-merge stale은 0회 기록됐다.
-- live OAuth와 동일 소셜 계정 재가입 가능 여부는 2026-05-24 staging evidence로 확인됐다. 계정 삭제 후 기존 저장/플래너 데이터가 유지되던 mismatch는 private data cleanup + authored recipe 보존 정책으로 후속 구현했다. 실제 모바일 브라우저 wake-lock UX와 redeploy 후 RC-MO-06 재확인은 Manual Only / deploy 이후 확인 항목으로 남아 있다.
+- live OAuth와 동일 소셜 계정 재가입 가능 여부는 2026-05-24 staging evidence로 확인됐다. Supabase migration 적용 후 계정 삭제/재가입 smoke에서 기존 저장/플래너 개인 데이터는 보이지 않고, 유튜브 등록 레시피는 보존되며 "내가 추가한 레시피"는 0개로 표시됨을 확인했다. PR #579 / `8c2a2b8b` 배포 후 iOS Safari와 Android Chrome에서 화면 꺼짐 방지 ON 상태의 요리모드가 꺼지지 않음을 확인해 wake-lock Manual Only도 closed 처리했다.

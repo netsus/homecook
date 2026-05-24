@@ -158,7 +158,8 @@
 
 - [ ] `pnpm test:e2e:oauth`로 live OAuth 시나리오를 별도 실행한다. 실제 외부 OAuth 설정이 있을 때만 수행한다.
 - [ ] 실기기 모바일 브라우저에서 `COOK_MODE` 전체화면 스와이프, `LEFTOVERS` 카드 액션, `MYPAGE` 탭 전환, `SETTINGS` 토글 UX를 확인한다.
-- [x] 회원 탈퇴 후 동일 소셜 계정으로 재가입 가능 여부를 확인한다. (2026-05-24 staging 확인. 재로그인은 성공했고, 기존 저장/플래너 데이터 유지 mismatch는 private data cleanup follow-up으로 구현됨. redeploy 후 재확인 필요.)
+- [x] 실기기 모바일 브라우저에서 화면 꺼짐 방지 ON 상태의 `COOK_MODE`가 자동 잠금 시간 이후에도 꺼지지 않는지 확인한다. (2026-05-24 `https://homecook-flame.vercel.app`, PR #579 / `8c2a2b8b` 배포 후 iOS Safari와 Android Chrome 모두 통과.)
+- [x] 회원 탈퇴 후 동일 소셜 계정으로 재가입 가능 여부를 확인한다. (2026-05-24 staging 확인. Supabase migration 적용 후 재가입 시 기존 저장/플래너 데이터는 보이지 않고, 유튜브 등록 레시피는 보존되며 "내가 추가한 레시피"는 0개로 표시됨.)
 - [ ] 실제 시간 조작 또는 장기 테스트로 30일 경과 `eaten` 항목 숨김을 확인한다.
 
 ## 완료 기준
