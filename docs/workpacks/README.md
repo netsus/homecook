@@ -90,7 +90,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `21-ingredient-dictionary`     | merged        | ingredient synonym 매칭 연결 + 소량 synonym 시딩으로 YouTube 추출 재료 매칭률 개선 (BE-only, Phase 1+2)           |
 | `22-youtube-ingredient-registration` | merged | YT_IMPORT unresolved 재료를 사용자 확인으로 새 표준 재료/동의어에 등록하고 현재 추출 row를 resolved로 전환 |
 | `23-youtube-quality-corpus` | merged | YouTube 설명란 파서 품질 코퍼스 fixture + 결정론 채점 하네스 + baseline 측정 (docs + BE/test tooling, UI 변경 없음) |
-| `24-youtube-parser-dictionary-hardening` | docs | 결정론 파서 규칙 개선 + 소량 증거 기반 사전 시딩으로 in-corpus F1을 0.80 이상으로 개선 (BE/test/data-only, UI 변경 없음) |
+| `24-youtube-parser-dictionary-hardening` | in-progress | 결정론 파서 규칙 개선 + 소량 증거 기반 사전 시딩으로 in-corpus F1을 0.80 이상으로 개선 (BE/test/data-only, UI 변경 없음) |
 | `planner-column-customization` | merged        | 끼니 컬럼 기본 3개 + 설정 커스터마이징(이름 변경/추가/삭제), 최소 1~최대 5, PLANNER_WEEK 동적 컬럼               |
 | `wave1-port-foundation` | merged | 공통 shell, 공용 UI 프리미티브(Button/Chip/Card/Modal/Sort Dropdown), CTA 위계, spacing/safe-area 정비 — Phase4 foundation re-audit PR #432 merged |
 | `wave1-port-discovery-detail` | merged | Historical closeout은 merged 상태로 보존. 다음 작업은 fixed prototype 기준 Slice B Phase4 prep 후 HOME/RECIPE_DETAIL/save modal/login 재포팅 |

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-24T15:47:00.000Z",
+  "updated_at": "2026-05-25T01:56:00+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1254,11 +1254,11 @@
     {
       "id": "24-youtube-parser-dictionary-hardening",
       "preset": "vertical-slice-strict",
-      "branch": "docs/24-youtube-parser-dictionary-hardening",
+      "branch": "feature/be-24-youtube-parser-dictionary-hardening",
       "pr_path": null,
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
-      "verification_status": "pending",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm test:youtube-corpus",
         "pnpm vitest run tests/youtube-description-parser.test.ts tests/youtube-import.backend.test.ts tests/youtube-corpus.test.ts",
@@ -1269,7 +1269,7 @@
         "pnpm validate:workpack -- --slice 24-youtube-parser-dictionary-hardening",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs in progress on docs/24-youtube-parser-dictionary-hardening. BE-only parser hardening slice. Depends on slice 23 corpus infrastructure (merged). Target: in-corpus F1 >= 0.80 from baseline 0.4932. closeout_phase=collecting",
+      "notes": "Stage 2 backend implementation ready for PR. Parser-only hardening reached corpus_avg_f1=0.9160 with structured=0.9814, semi=0.9356, weak=0.9577, noise=1.0000, multi=0.6633. No seed migration added because target was met without DB writes. Local checks passed: pnpm test:youtube-corpus, targeted Vitest, pnpm verify:backend, workflow/workpack validators, git diff --check. closeout_phase=collecting",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
