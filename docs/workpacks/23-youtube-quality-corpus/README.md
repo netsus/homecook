@@ -216,6 +216,22 @@ pnpm youtube:corpus:score -- --fixtures tests/fixtures/youtube-corpus/ --output 
   - parser v2 코드가 main에 없으면 scoring 대상 없음
   - fixture 수 < 36이면 Accuracy Contract 측정 기준 미달
 
+## Stage 2 Baseline Result
+
+- baseline artifact: `tests/fixtures/youtube-corpus/reports/baseline-v2.json`
+- parser version: `v2`
+- corpus version: `v1`
+- corpus average F1: `0.4932`
+- category average F1:
+  - `structured`: `0.9145`
+  - `semi-structured`: `0.1799`
+  - `weak`: `0`
+  - `multi-recipe`: `0.5`
+  - `noise`: `1`
+
+> 전체 평균은 `noise` true-negative와 명확한 `structured` 설명란이 끌어올린 값이다.
+> 사용자가 체감하는 낮은 품질은 `semi-structured` / `weak` 설명란에서 그대로 드러나며, 후속 파서/사전/LLM 개선은 이 두 카테고리를 우선 개선 대상으로 본다.
+
 ## Key Rules
 
 - corpus fixture는 오프라인 테스트 전용이며, YouTube Data API quota를 사용하지 않는다.
@@ -250,13 +266,13 @@ pnpm youtube:corpus:score -- --fixtures tests/fixtures/youtube-corpus/ --output 
 > 이 체크리스트는 Stage 2~3 동안 계속 갱신하는 living closeout 문서다.
 > BE-only 슬라이스이므로 Stage 4~6은 스킵. Stage 3 merge 시 슬라이스 종료.
 
-- [ ] corpus fixture 포맷 확정 + 스키마 검증 <!-- omo:id=23-corpus-fixture-schema;stage=2;scope=backend;review=3 -->
-- [ ] 초기 fixture set 36개 이상 작성 (24개 이상 real-description 기반) <!-- omo:id=23-initial-fixture-set;stage=2;scope=backend;review=3 -->
-- [ ] 카테고리별 최소 3개 fixture 확보 <!-- omo:id=23-category-coverage;stage=2;scope=backend;review=3 -->
-- [ ] 결정론 채점 하네스 구현 (precision/recall/F1 계산) <!-- omo:id=23-scoring-harness;stage=2;scope=backend;review=3 -->
-- [ ] 하네스 출력이 보고서 artifact schema를 따름 <!-- omo:id=23-report-artifact-schema;stage=2;scope=backend;review=3 -->
-- [ ] 현재 parser v2 baseline 측정 + 보고서 저장 <!-- omo:id=23-baseline-measurement;stage=2;scope=backend;review=3 -->
-- [ ] `pnpm test:youtube-corpus` 명령으로 실행 가능 <!-- omo:id=23-harness-cli;stage=2;scope=backend;review=3 -->
-- [ ] wild sample 측정 가이드 문서화 <!-- omo:id=23-wild-sample-guide;stage=2;scope=backend;review=3 -->
-- [ ] fixture 개인정보/링크 제거 sanitization 확인 <!-- omo:id=23-fixture-sanitization;stage=2;scope=backend;review=3 -->
-- [ ] 기존 youtube-import 테스트 회귀 없음 <!-- omo:id=23-regression;stage=2;scope=backend;review=3 -->
+- [x] corpus fixture 포맷 확정 + 스키마 검증 <!-- omo:id=23-corpus-fixture-schema;stage=2;scope=backend;review=3 -->
+- [x] 초기 fixture set 36개 이상 작성 (24개 이상 real-description 기반) <!-- omo:id=23-initial-fixture-set;stage=2;scope=backend;review=3 -->
+- [x] 카테고리별 최소 3개 fixture 확보 <!-- omo:id=23-category-coverage;stage=2;scope=backend;review=3 -->
+- [x] 결정론 채점 하네스 구현 (precision/recall/F1 계산) <!-- omo:id=23-scoring-harness;stage=2;scope=backend;review=3 -->
+- [x] 하네스 출력이 보고서 artifact schema를 따름 <!-- omo:id=23-report-artifact-schema;stage=2;scope=backend;review=3 -->
+- [x] 현재 parser v2 baseline 측정 + 보고서 저장 <!-- omo:id=23-baseline-measurement;stage=2;scope=backend;review=3 -->
+- [x] `pnpm test:youtube-corpus` 명령으로 실행 가능 <!-- omo:id=23-harness-cli;stage=2;scope=backend;review=3 -->
+- [x] wild sample 측정 가이드 문서화 <!-- omo:id=23-wild-sample-guide;stage=2;scope=backend;review=3 -->
+- [x] fixture 개인정보/링크 제거 sanitization 확인 <!-- omo:id=23-fixture-sanitization;stage=2;scope=backend;review=3 -->
+- [x] 기존 youtube-import 테스트 회귀 없음 <!-- omo:id=23-regression;stage=2;scope=backend;review=3 -->

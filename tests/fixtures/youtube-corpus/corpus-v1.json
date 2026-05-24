@@ -1,0 +1,624 @@
+[
+  {
+    "id": "structured-real-001",
+    "category": "structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-A",
+    "description": "김치볶음밥\n\n재료\n밥 1공기\n김치 200g\n대파 1대\n달걀 1개\n참기름 1스푼\n\n만드는 법\n1. 대파를 송송 썰어 기름에 볶아요.\n2. 김치를 넣고 수분이 날아갈 때까지 볶아요.\n3. 밥을 넣어 고루 섞고 달걀을 올려 마무리해요.",
+    "expected_ingredients": [
+      { "name": "밥", "amount": 1, "unit": "공기", "type": "QUANT" },
+      { "name": "김치", "amount": 200, "unit": "g", "type": "QUANT" },
+      { "name": "대파", "amount": 1, "unit": "대", "type": "QUANT" },
+      { "name": "달걀", "amount": 1, "unit": "개", "type": "QUANT" },
+      { "name": "참기름", "amount": 1, "unit": "스푼", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "대파.*볶" },
+      { "step_number": 2, "instruction_pattern": "김치.*볶" },
+      { "step_number": 3, "instruction_pattern": "밥.*섞" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "명확한 재료/만드는 법 섹션" }
+  },
+  {
+    "id": "structured-real-002",
+    "category": "structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-B",
+    "description": "감자조림\n\n[재료]\n감자 3개\n양파 1/2개\n간장 3스푼\n올리고당 1스푼\n물 150ml\n통깨 약간\n\n[조리법]\n1) 감자는 한입 크기로 썰고 양파도 썰어주세요.\n2) 팬에 감자와 물, 간장을 넣고 끓입니다.\n3) 양파와 올리고당을 넣고 윤기가 나게 조려요.\n4) 통깨를 뿌려 마무리합니다.",
+    "expected_ingredients": [
+      { "name": "감자", "amount": 3, "unit": "개", "type": "QUANT" },
+      { "name": "양파", "amount": 0.5, "unit": "개", "type": "QUANT" },
+      { "name": "간장", "amount": 3, "unit": "스푼", "type": "QUANT" },
+      { "name": "올리고당", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "물", "amount": 150, "unit": "ml", "type": "QUANT" },
+      { "name": "통깨", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "감자.*썰" },
+      { "step_number": 2, "instruction_pattern": "간장.*끓" },
+      { "step_number": 3, "instruction_pattern": "올리고당.*조" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "괄호 섹션과 번호 조리법" }
+  },
+  {
+    "id": "structured-real-003",
+    "category": "structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-C",
+    "description": "간단 된장찌개\n\n준비재료\n두부 1/2모\n애호박 1/3개\n양파 1/2개\n된장 2스푼\n다진마늘 1스푼\n물 600ml\n청양고추 1개\n\n요리순서\n1. 냄비에 물과 된장을 풀어 끓여요.\n2. 애호박과 양파를 넣고 익혀요.\n3. 두부, 다진마늘, 청양고추를 넣고 한 번 더 끓입니다.",
+    "expected_ingredients": [
+      { "name": "두부", "amount": 0.5, "unit": "모", "type": "QUANT" },
+      { "name": "애호박", "amount": 0.33, "unit": "개", "type": "QUANT" },
+      { "name": "양파", "amount": 0.5, "unit": "개", "type": "QUANT" },
+      { "name": "된장", "amount": 2, "unit": "스푼", "type": "QUANT" },
+      { "name": "다진마늘", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "물", "amount": 600, "unit": "ml", "type": "QUANT" },
+      { "name": "청양고추", "amount": 1, "unit": "개", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "된장.*풀.*끓" },
+      { "step_number": 2, "instruction_pattern": "애호박.*양파.*익" },
+      { "step_number": 3, "instruction_pattern": "두부.*끓" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "준비재료/요리순서 키워드" }
+  },
+  {
+    "id": "structured-real-004",
+    "category": "structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-D",
+    "description": "오이무침\n\nIngredients\n오이 2개\n고춧가루 1스푼\n식초 1스푼\n설탕 1스푼\n소금 1/2작은술\n참깨 약간\n\nDirections\n1. 오이는 얇게 썰어 소금에 잠시 절입니다.\n2. 물기를 짜고 고춧가루, 식초, 설탕을 넣어 무쳐요.\n3. 참깨를 뿌려 접시에 담습니다.",
+    "expected_ingredients": [
+      { "name": "오이", "amount": 2, "unit": "개", "type": "QUANT" },
+      { "name": "고춧가루", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "식초", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "설탕", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "소금", "amount": 0.5, "unit": "작은술", "type": "QUANT" },
+      { "name": "참깨", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "오이.*썰.*절" },
+      { "step_number": 2, "instruction_pattern": "고춧가루.*무" },
+      { "step_number": 3, "instruction_pattern": "참깨.*뿌" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "영문 heading 혼합" }
+  },
+  {
+    "id": "structured-real-005",
+    "category": "structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-E",
+    "description": "돼지고기 김치찌개\n\n재료\n돼지고기 300g\n김치 400g\n두부 1모\n대파 1대\n고춧가루 1스푼\n국간장 1스푼\n물 700ml\n\n만들기\n1. 냄비에 돼지고기를 먼저 볶아주세요.\n2. 김치를 넣고 충분히 볶습니다.\n3. 물, 고춧가루, 국간장을 넣고 끓여요.\n4. 두부와 대파를 넣고 5분 더 끓입니다.",
+    "expected_ingredients": [
+      { "name": "돼지고기", "amount": 300, "unit": "g", "type": "QUANT" },
+      { "name": "김치", "amount": 400, "unit": "g", "type": "QUANT" },
+      { "name": "두부", "amount": 1, "unit": "모", "type": "QUANT" },
+      { "name": "대파", "amount": 1, "unit": "대", "type": "QUANT" },
+      { "name": "고춧가루", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "국간장", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "물", "amount": 700, "unit": "ml", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "돼지고기.*볶" },
+      { "step_number": 2, "instruction_pattern": "김치.*볶" },
+      { "step_number": 3, "instruction_pattern": "물.*끓" },
+      { "step_number": 4, "instruction_pattern": "두부.*대파.*끓" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "찌개형 structured" }
+  },
+  {
+    "id": "structured-real-006",
+    "category": "structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-F",
+    "description": "계란말이\n\n재료\n달걀 4개\n당근 30g\n대파 20g\n소금 1꼬집\n식용유 1스푼\n\n만드는 방법\n1. 달걀을 풀고 소금으로 간을 합니다.\n2. 당근과 대파를 잘게 썰어 달걀물에 섞어요.\n3. 팬에 식용유를 두르고 약불에서 말아가며 익힙니다.",
+    "expected_ingredients": [
+      { "name": "달걀", "amount": 4, "unit": "개", "type": "QUANT" },
+      { "name": "당근", "amount": 30, "unit": "g", "type": "QUANT" },
+      { "name": "대파", "amount": 20, "unit": "g", "type": "QUANT" },
+      { "name": "소금", "amount": 1, "unit": "꼬집", "type": "QUANT" },
+      { "name": "식용유", "amount": 1, "unit": "스푼", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "달걀.*풀" },
+      { "step_number": 2, "instruction_pattern": "당근.*대파.*섞" },
+      { "step_number": 3, "instruction_pattern": "팬.*말.*익" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "짧은 재료와 numbered method" }
+  },
+  {
+    "id": "structured-real-007",
+    "category": "structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-G",
+    "description": "간장비빔국수\n\n재료\n소면 100g\n간장 2스푼\n설탕 1스푼\n참기름 1스푼\n오이 1/3개\n김가루 약간\n\n레시피\n1. 소면을 삶아 찬물에 헹궈요.\n2. 간장, 설탕, 참기름을 섞어 양념장을 만듭니다.\n3. 면에 양념장을 넣고 비빈 뒤 오이와 김가루를 올립니다.",
+    "expected_ingredients": [
+      { "name": "소면", "amount": 100, "unit": "g", "type": "QUANT" },
+      { "name": "간장", "amount": 2, "unit": "스푼", "type": "QUANT" },
+      { "name": "설탕", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "참기름", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "오이", "amount": 0.33, "unit": "개", "type": "QUANT" },
+      { "name": "김가루", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "소면.*삶" },
+      { "step_number": 2, "instruction_pattern": "간장.*섞" },
+      { "step_number": 3, "instruction_pattern": "면.*비빈" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "레시피 heading 사용" }
+  },
+  {
+    "id": "structured-real-008",
+    "category": "structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-H",
+    "description": "참치마요 덮밥\n\n재료\n밥 1공기\n참치캔 1캔\n마요네즈 2스푼\n간장 1스푼\n양파 1/4개\n김가루 약간\n\n조리 과정\n1. 참치는 기름을 빼고 양파는 잘게 썰어요.\n2. 참치, 양파, 마요네즈를 섞습니다.\n3. 밥 위에 참치마요를 올리고 간장과 김가루를 더해요.",
+    "expected_ingredients": [
+      { "name": "밥", "amount": 1, "unit": "공기", "type": "QUANT" },
+      { "name": "참치캔", "amount": 1, "unit": "캔", "type": "QUANT" },
+      { "name": "마요네즈", "amount": 2, "unit": "스푼", "type": "QUANT" },
+      { "name": "간장", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "양파", "amount": 0.25, "unit": "개", "type": "QUANT" },
+      { "name": "김가루", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "참치.*양파.*썰" },
+      { "step_number": 2, "instruction_pattern": "참치.*마요네즈.*섞" },
+      { "step_number": 3, "instruction_pattern": "밥.*올리" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "덮밥 structured" }
+  },
+  {
+    "id": "semi-real-001",
+    "category": "semi-structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-I",
+    "description": "오늘은 닭가슴살 샐러드입니다.\n닭가슴살 1덩이, 양상추 3장, 방울토마토 5개, 올리브오일 1스푼, 소금 조금\n\n닭가슴살은 팬에 굽고 한입 크기로 찢어주세요.\n채소를 씻어 담은 뒤 드레싱을 뿌리면 완성입니다.",
+    "expected_ingredients": [
+      { "name": "닭가슴살", "amount": 1, "unit": "덩이", "type": "QUANT" },
+      { "name": "양상추", "amount": 3, "unit": "장", "type": "QUANT" },
+      { "name": "방울토마토", "amount": 5, "unit": "개", "type": "QUANT" },
+      { "name": "올리브오일", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "소금", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "닭가슴살.*굽" },
+      { "step_number": 2, "instruction_pattern": "채소.*담" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "재료가 한 줄에 모인 반구조" }
+  },
+  {
+    "id": "semi-real-002",
+    "category": "semi-structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-J",
+    "description": "토마토 달걀볶음\n토마토 2개 / 달걀 3개 / 대파 1/2대 / 굴소스 1스푼 / 설탕 1작은술\n\n달걀은 먼저 부드럽게 익혀 덜어둡니다.\n대파 향을 낸 뒤 토마토를 볶고 굴소스로 간해요.\n마지막에 달걀을 다시 넣어 섞습니다.",
+    "expected_ingredients": [
+      { "name": "토마토", "amount": 2, "unit": "개", "type": "QUANT" },
+      { "name": "달걀", "amount": 3, "unit": "개", "type": "QUANT" },
+      { "name": "대파", "amount": 0.5, "unit": "대", "type": "QUANT" },
+      { "name": "굴소스", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "설탕", "amount": 1, "unit": "작은술", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "달걀.*익" },
+      { "step_number": 2, "instruction_pattern": "토마토.*볶" },
+      { "step_number": 3, "instruction_pattern": "달걀.*섞" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "슬래시 구분 재료" }
+  },
+  {
+    "id": "semi-real-003",
+    "category": "semi-structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-K",
+    "description": "어묵볶음 재료는 사각어묵 4장, 양파 1/2개, 당근 40g, 간장 2스푼, 물엿 1스푼, 식용유 1스푼입니다.\n\n팬에 식용유를 두르고 양파와 당근을 볶아요.\n어묵을 넣고 간장과 물엿을 넣어 윤기 나게 볶아주세요.",
+    "expected_ingredients": [
+      { "name": "사각어묵", "amount": 4, "unit": "장", "type": "QUANT" },
+      { "name": "양파", "amount": 0.5, "unit": "개", "type": "QUANT" },
+      { "name": "당근", "amount": 40, "unit": "g", "type": "QUANT" },
+      { "name": "간장", "amount": 2, "unit": "스푼", "type": "QUANT" },
+      { "name": "물엿", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "식용유", "amount": 1, "unit": "스푼", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "양파.*당근.*볶" },
+      { "step_number": 2, "instruction_pattern": "어묵.*볶" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "문장형 재료 소개" }
+  },
+  {
+    "id": "semi-real-004",
+    "category": "semi-structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-L",
+    "description": "양배추 덮밥\n양배추 1/6통, 베이컨 3줄, 달걀 1개, 간장 1스푼, 후추 톡톡\n양배추를 채 썰어 베이컨과 볶고 간장으로 간합니다. 밥 위에 올린 뒤 달걀프라이를 얹어주세요.",
+    "expected_ingredients": [
+      { "name": "양배추", "amount": 0.17, "unit": "통", "type": "QUANT" },
+      { "name": "베이컨", "amount": 3, "unit": "줄", "type": "QUANT" },
+      { "name": "달걀", "amount": 1, "unit": "개", "type": "QUANT" },
+      { "name": "간장", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "후추", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "양배추.*채.*베이컨.*볶" },
+      { "step_number": 2, "instruction_pattern": "밥.*달걀" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "짧은 본문형 설명" }
+  },
+  {
+    "id": "semi-real-005",
+    "category": "semi-structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-M",
+    "description": "버섯크림파스타\n필요한 것: 스파게티면 100g, 양송이버섯 5개, 생크림 150ml, 우유 50ml, 마늘 2쪽, 버터 10g\n\n면을 삶아두고 마늘과 버섯을 버터에 볶습니다.\n생크림과 우유를 넣어 끓인 뒤 면을 넣고 농도를 맞춰요.",
+    "expected_ingredients": [
+      { "name": "스파게티면", "amount": 100, "unit": "g", "type": "QUANT" },
+      { "name": "양송이버섯", "amount": 5, "unit": "개", "type": "QUANT" },
+      { "name": "생크림", "amount": 150, "unit": "ml", "type": "QUANT" },
+      { "name": "우유", "amount": 50, "unit": "ml", "type": "QUANT" },
+      { "name": "마늘", "amount": 2, "unit": "쪽", "type": "QUANT" },
+      { "name": "버터", "amount": 10, "unit": "g", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "면.*삶" },
+      { "step_number": 2, "instruction_pattern": "마늘.*버섯.*볶" },
+      { "step_number": 3, "instruction_pattern": "생크림.*우유.*끓" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "필요한 것 heading" }
+  },
+  {
+    "id": "semi-real-006",
+    "category": "semi-structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-N",
+    "description": "두부강정\n두부 1모, 전분가루 3스푼, 식용유\n소스는 고추장 1스푼 + 케첩 2스푼 + 올리고당 1스푼 + 간장 1스푼\n두부에 전분을 묻혀 굽고 소스를 끓여 버무리면 됩니다.",
+    "expected_ingredients": [
+      { "name": "두부", "amount": 1, "unit": "모", "type": "QUANT" },
+      { "name": "전분가루", "amount": 3, "unit": "스푼", "type": "QUANT" },
+      { "name": "식용유", "amount": null, "unit": null, "type": "TO_TASTE" },
+      { "name": "고추장", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "케첩", "amount": 2, "unit": "스푼", "type": "QUANT" },
+      { "name": "올리고당", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "간장", "amount": 1, "unit": "스푼", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "두부.*전분.*굽" },
+      { "step_number": 2, "instruction_pattern": "소스.*끓.*버무" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": true, "multi_recipe": false, "notes": "소스 한 줄 plus-separated" }
+  },
+  {
+    "id": "semi-real-007",
+    "category": "semi-structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-O",
+    "description": "콩나물국은 콩나물 300g, 물 1L, 국간장 1스푼, 다진마늘 1/2스푼, 대파 1/2대면 충분합니다.\n뚜껑을 열고 콩나물을 끓이다가 국간장과 마늘을 넣고 대파로 마무리하세요.",
+    "expected_ingredients": [
+      { "name": "콩나물", "amount": 300, "unit": "g", "type": "QUANT" },
+      { "name": "물", "amount": 1, "unit": "L", "type": "QUANT" },
+      { "name": "국간장", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "다진마늘", "amount": 0.5, "unit": "스푼", "type": "QUANT" },
+      { "name": "대파", "amount": 0.5, "unit": "대", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "콩나물.*끓" },
+      { "step_number": 2, "instruction_pattern": "국간장.*마늘.*대파" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "한 문장 재료와 한 문장 조리" }
+  },
+  {
+    "id": "semi-real-008",
+    "category": "semi-structured",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-P",
+    "description": "고추장삼겹살: 삼겹살 500g, 고추장 2스푼, 고춧가루 1스푼, 간장 1스푼, 맛술 1스푼, 다진마늘 1스푼, 양파 1개.\n양념을 섞어 고기에 재운 뒤 양파와 함께 구워주세요.",
+    "expected_ingredients": [
+      { "name": "삼겹살", "amount": 500, "unit": "g", "type": "QUANT" },
+      { "name": "고추장", "amount": 2, "unit": "스푼", "type": "QUANT" },
+      { "name": "고춧가루", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "간장", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "맛술", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "다진마늘", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "양파", "amount": 1, "unit": "개", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "양념.*섞" },
+      { "step_number": 2, "instruction_pattern": "고기.*재" },
+      { "step_number": 3, "instruction_pattern": "양파.*구" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "콜론 뒤 재료" }
+  },
+  {
+    "id": "weak-real-001",
+    "category": "weak",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-Q",
+    "description": "냉장고에 남은 애호박과 양파를 썰고 새우젓 조금으로 간하면 애호박볶음이 금방 됩니다. 애호박 1개, 양파 반 개 정도면 두 사람이 먹기 좋아요.",
+    "expected_ingredients": [
+      { "name": "애호박", "amount": 1, "unit": "개", "type": "QUANT" },
+      { "name": "양파", "amount": 0.5, "unit": "개", "type": "QUANT" },
+      { "name": "새우젓", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "애호박.*양파.*썰" },
+      { "step_number": 2, "instruction_pattern": "새우젓.*간" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "섹션 없는 자유 서술" }
+  },
+  {
+    "id": "weak-real-002",
+    "category": "weak",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-R",
+    "description": "바나나 1개와 우유 200ml, 오트밀 3스푼을 갈아 아침 스무디로 먹었습니다. 꿀은 취향껏 넣고 얼음을 조금 더하면 시원해요.",
+    "expected_ingredients": [
+      { "name": "바나나", "amount": 1, "unit": "개", "type": "QUANT" },
+      { "name": "우유", "amount": 200, "unit": "ml", "type": "QUANT" },
+      { "name": "오트밀", "amount": 3, "unit": "스푼", "type": "QUANT" },
+      { "name": "꿀", "amount": null, "unit": null, "type": "TO_TASTE" },
+      { "name": "얼음", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "바나나.*우유.*갈" },
+      { "step_number": 2, "instruction_pattern": "꿀.*얼음" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "스무디 자유 서술" }
+  },
+  {
+    "id": "weak-real-003",
+    "category": "weak",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-S",
+    "description": "남은 식빵 2장에 치즈 1장, 햄 2장을 끼우고 버터를 살짝 발라 구우면 간단한 토스트가 됩니다. 약불에서 천천히 눌러 구워주세요.",
+    "expected_ingredients": [
+      { "name": "식빵", "amount": 2, "unit": "장", "type": "QUANT" },
+      { "name": "치즈", "amount": 1, "unit": "장", "type": "QUANT" },
+      { "name": "햄", "amount": 2, "unit": "장", "type": "QUANT" },
+      { "name": "버터", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "식빵.*치즈.*햄.*끼우" },
+      { "step_number": 2, "instruction_pattern": "버터.*구" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "문장 하나에 재료와 조리" }
+  },
+  {
+    "id": "weak-real-004",
+    "category": "weak",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-T",
+    "description": "참나물은 한 줌 씻어 물기를 빼고, 간장 1스푼과 참기름 1스푼, 깨를 넣어 가볍게 무치면 향이 살아납니다.",
+    "expected_ingredients": [
+      { "name": "참나물", "amount": 1, "unit": "줌", "type": "QUANT" },
+      { "name": "간장", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "참기름", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "깨", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "참나물.*씻" },
+      { "step_number": 2, "instruction_pattern": "간장.*참기름.*무치" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "나물무침 자유 서술" }
+  },
+  {
+    "id": "multi-real-001",
+    "category": "multi-recipe",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-U",
+    "description": "Recipe 1 김치전\n재료\n김치 200g\n부침가루 1컵\n물 120ml\n\n만드는 법\n1. 김치와 부침가루, 물을 섞어요.\n2. 팬에 반죽을 얇게 부쳐요.\n\nRecipe 2 감자전\n재료\n감자 2개\n소금 조금\n만드는 법\n1. 감자를 갈아 팬에 부쳐요.",
+    "expected_ingredients": [
+      { "name": "김치", "amount": 200, "unit": "g", "type": "QUANT" },
+      { "name": "부침가루", "amount": 1, "unit": "컵", "type": "QUANT" },
+      { "name": "물", "amount": 120, "unit": "ml", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "김치.*부침가루.*섞" },
+      { "step_number": 2, "instruction_pattern": "반죽.*부쳐" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": true, "notes": "현재 flat contract 기준 첫 번째 레시피만 기대" }
+  },
+  {
+    "id": "multi-real-002",
+    "category": "multi-recipe",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-V",
+    "description": "첫 번째 레시피: 간장계란밥\n밥 1공기\n달걀 1개\n간장 1스푼\n참기름 1스푼\n1. 달걀프라이를 만들고 밥에 간장과 참기름을 넣어 비벼요.\n\n두 번째 레시피: 버터간장밥\n밥 1공기\n버터 10g\n간장 1스푼\n1. 뜨거운 밥에 버터와 간장을 넣어 섞어요.",
+    "expected_ingredients": [
+      { "name": "밥", "amount": 1, "unit": "공기", "type": "QUANT" },
+      { "name": "달걀", "amount": 1, "unit": "개", "type": "QUANT" },
+      { "name": "간장", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "참기름", "amount": 1, "unit": "스푼", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "달걀프라이.*비벼" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": true, "notes": "두 개 레시피 중 첫 번째 기대" }
+  },
+  {
+    "id": "multi-real-003",
+    "category": "multi-recipe",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-W",
+    "description": "[두부요리 2가지]\n\n1. 두부부침\n재료 두부 1모, 소금 조금, 식용유 1스푼\n두부를 썰어 소금을 뿌리고 노릇하게 부쳐요.\n\n2. 두부조림\n재료 두부 1모, 간장 2스푼, 고춧가루 1스푼\n양념을 끓여 두부를 조립니다.",
+    "expected_ingredients": [
+      { "name": "두부", "amount": 1, "unit": "모", "type": "QUANT" },
+      { "name": "소금", "amount": null, "unit": null, "type": "TO_TASTE" },
+      { "name": "식용유", "amount": 1, "unit": "스푼", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "두부.*썰.*부쳐" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": true, "notes": "제목형 다중 레시피" }
+  },
+  {
+    "id": "multi-real-004",
+    "category": "multi-recipe",
+    "source": "real-description",
+    "channel_hint": "anonymized-channel-X",
+    "description": "아침 도시락 2종\n\n샌드위치\n식빵 2장\n달걀 1개\n마요네즈 1스푼\n달걀을 으깨 마요네즈와 섞고 식빵에 넣어요.\n\n주먹밥\n밥 1공기\n김가루 약간\n참기름 1스푼\n밥에 김가루와 참기름을 섞어 뭉쳐요.",
+    "expected_ingredients": [
+      { "name": "식빵", "amount": 2, "unit": "장", "type": "QUANT" },
+      { "name": "달걀", "amount": 1, "unit": "개", "type": "QUANT" },
+      { "name": "마요네즈", "amount": 1, "unit": "스푼", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "달걀.*마요네즈.*섞" },
+      { "step_number": 2, "instruction_pattern": "식빵.*넣" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": true, "notes": "레시피 제목과 재료가 붙은 다중 예시" }
+  },
+  {
+    "id": "weak-synthetic-001",
+    "category": "weak",
+    "source": "synthetic",
+    "description": "양파 반 개를 얇게 썰어 버터 10g에 오래 볶다가 물 300ml와 치킨스톡 1작은술을 넣으면 간단한 양파수프가 됩니다.",
+    "expected_ingredients": [
+      { "name": "양파", "amount": 0.5, "unit": "개", "type": "QUANT" },
+      { "name": "버터", "amount": 10, "unit": "g", "type": "QUANT" },
+      { "name": "물", "amount": 300, "unit": "ml", "type": "QUANT" },
+      { "name": "치킨스톡", "amount": 1, "unit": "작은술", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "양파.*썰.*볶" },
+      { "step_number": 2, "instruction_pattern": "물.*치킨스톡.*넣" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "약한 구조 synthetic" }
+  },
+  {
+    "id": "weak-synthetic-002",
+    "category": "weak",
+    "source": "synthetic",
+    "description": "고구마 1개는 전자레인지에 익히고 플레인요거트 3스푼과 견과류 조금을 올려 간식처럼 먹으면 좋아요.",
+    "expected_ingredients": [
+      { "name": "고구마", "amount": 1, "unit": "개", "type": "QUANT" },
+      { "name": "플레인요거트", "amount": 3, "unit": "스푼", "type": "QUANT" },
+      { "name": "견과류", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "고구마.*익" },
+      { "step_number": 2, "instruction_pattern": "요거트.*견과류.*올" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "간식형 자유 서술" }
+  },
+  {
+    "id": "weak-synthetic-003",
+    "category": "weak",
+    "source": "synthetic",
+    "description": "양배추 두 줌과 당근 조금을 채 썰고 마요네즈 2스푼, 식초 1스푼, 설탕 1작은술을 섞으면 코울슬로가 됩니다.",
+    "expected_ingredients": [
+      { "name": "양배추", "amount": 2, "unit": "줌", "type": "QUANT" },
+      { "name": "당근", "amount": null, "unit": null, "type": "TO_TASTE" },
+      { "name": "마요네즈", "amount": 2, "unit": "스푼", "type": "QUANT" },
+      { "name": "식초", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "설탕", "amount": 1, "unit": "작은술", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "양배추.*당근.*채" },
+      { "step_number": 2, "instruction_pattern": "마요네즈.*섞" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "샐러드 자유 서술" }
+  },
+  {
+    "id": "weak-synthetic-004",
+    "category": "weak",
+    "source": "synthetic",
+    "description": "떡국떡 한 줌을 물에 불리고 어묵 2장과 대파 조금을 넣어 고추장 1스푼, 간장 1스푼으로 볶으면 빠른 떡볶이가 됩니다.",
+    "expected_ingredients": [
+      { "name": "떡국떡", "amount": 1, "unit": "줌", "type": "QUANT" },
+      { "name": "어묵", "amount": 2, "unit": "장", "type": "QUANT" },
+      { "name": "대파", "amount": null, "unit": null, "type": "TO_TASTE" },
+      { "name": "고추장", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "간장", "amount": 1, "unit": "스푼", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "떡국떡.*불" },
+      { "step_number": 2, "instruction_pattern": "어묵.*대파.*볶" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "약한 구조 떡볶이" }
+  },
+  {
+    "id": "multi-synthetic-001",
+    "category": "multi-recipe",
+    "source": "synthetic",
+    "description": "브런치 2가지\n\n아보카도 토스트\n식빵 1장\n아보카도 1/2개\n소금 조금\n아보카도를 으깨 식빵에 올려요.\n\n요거트볼\n요거트 150g\n그래놀라 30g\n꿀 조금\n그릇에 담아 섞어요.",
+    "expected_ingredients": [
+      { "name": "식빵", "amount": 1, "unit": "장", "type": "QUANT" },
+      { "name": "아보카도", "amount": 0.5, "unit": "개", "type": "QUANT" },
+      { "name": "소금", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "아보카도.*으깨.*올" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": true, "notes": "synthetic multi first recipe" }
+  },
+  {
+    "id": "multi-synthetic-002",
+    "category": "multi-recipe",
+    "source": "synthetic",
+    "description": "소스 두 가지\n\n간장소스\n간장 2스푼\n식초 1스푼\n설탕 1스푼\n모두 섞어 만듭니다.\n\n마요소스\n마요네즈 2스푼\n고추냉이 조금\n잘 섞어주세요.",
+    "expected_ingredients": [
+      { "name": "간장", "amount": 2, "unit": "스푼", "type": "QUANT" },
+      { "name": "식초", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "설탕", "amount": 1, "unit": "스푼", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "모두.*섞" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": true, "multi_recipe": true, "notes": "소스 다중 예시" }
+  },
+  {
+    "id": "noise-synthetic-001",
+    "category": "noise",
+    "source": "synthetic",
+    "description": "오늘 영상도 시청해주셔서 감사합니다. 구독과 좋아요는 큰 힘이 됩니다. 사용한 그릇과 촬영 장비 정보는 영상 하단 고정 댓글을 확인해주세요.",
+    "expected_ingredients": [],
+    "expected_steps": [],
+    "metadata": { "video_category": "not-recipe", "has_component_structure": false, "multi_recipe": false, "notes": "채널 안내 noise" }
+  },
+  {
+    "id": "noise-synthetic-002",
+    "category": "noise",
+    "source": "synthetic",
+    "description": "BGM 정보와 촬영 장소 안내입니다. 레시피는 영상 안 자막을 참고해주세요. 댓글 이벤트는 이번 주까지만 진행합니다.",
+    "expected_ingredients": [],
+    "expected_steps": [],
+    "metadata": { "video_category": "not-recipe", "has_component_structure": false, "multi_recipe": false, "notes": "BGM/이벤트 noise" }
+  },
+  {
+    "id": "noise-synthetic-003",
+    "category": "noise",
+    "source": "synthetic",
+    "description": "오늘은 장보기 브이로그입니다. 시장에서 산 제철 채소를 보여드리고 보관 팁을 이야기합니다. 구체적인 조리 과정은 없습니다.",
+    "expected_ingredients": [],
+    "expected_steps": [],
+    "metadata": { "video_category": "not-recipe", "has_component_structure": false, "multi_recipe": false, "notes": "브이로그 noise" }
+  },
+  {
+    "id": "noise-synthetic-004",
+    "category": "noise",
+    "source": "synthetic",
+    "description": "멤버십 공지입니다. 다음 라이브 방송에서 냉장고 정리와 주간 식단 이야기를 나눌 예정입니다. 레시피 설명란은 다음 영상에 올릴게요.",
+    "expected_ingredients": [],
+    "expected_steps": [],
+    "metadata": { "video_category": "not-recipe", "has_component_structure": false, "multi_recipe": false, "notes": "공지 noise" }
+  },
+  {
+    "id": "noise-synthetic-005",
+    "category": "noise",
+    "source": "synthetic",
+    "description": "사용한 도마, 냄비, 카메라 설정을 정리했습니다. 영상은 조리 도구 비교이며 실제 레시피 재료나 순서는 포함하지 않습니다.",
+    "expected_ingredients": [],
+    "expected_steps": [],
+    "metadata": { "video_category": "not-recipe", "has_component_structure": false, "multi_recipe": false, "notes": "도구 정보 noise" }
+  },
+  {
+    "id": "noise-synthetic-006",
+    "category": "noise",
+    "source": "synthetic",
+    "description": "식단 기록 영상입니다. 아침에는 과일, 점심에는 도시락, 저녁에는 외식을 했습니다. 정확한 레시피와 계량은 제공하지 않습니다.",
+    "expected_ingredients": [],
+    "expected_steps": [],
+    "metadata": { "video_category": "not-recipe", "has_component_structure": false, "multi_recipe": false, "notes": "식단 기록 noise" }
+  }
+]

@@ -8,37 +8,37 @@
 
 ## Happy Path
 
-- [ ] corpus fixture 36개 이상이 `tests/fixtures/youtube-corpus/`에 존재한다 <!-- omo:id=accept-corpus-minimum-count;stage=2;scope=backend;review=3 -->
-- [ ] 24개 이상 fixture가 real-description 기반 sanitized 텍스트다 <!-- omo:id=accept-real-description-ratio;stage=2;scope=backend;review=3 -->
-- [ ] 각 fixture의 expected_ingredients와 expected_steps가 수동 검증된 ground truth다 <!-- omo:id=accept-ground-truth-quality;stage=2;scope=backend;review=3 -->
-- [ ] `pnpm test:youtube-corpus` 실행 시 전체 corpus에 대해 per-fixture + aggregate 점수가 출력된다 <!-- omo:id=accept-harness-runs;stage=2;scope=backend;review=3 -->
-- [ ] 보고서 JSON이 정의된 artifact schema를 따른다 <!-- omo:id=accept-report-schema;stage=2;scope=backend;review=3 -->
-- [ ] baseline report가 `tests/fixtures/youtube-corpus/reports/baseline-v2.json`에 저장된다 <!-- omo:id=accept-baseline-saved;stage=2;scope=backend;review=3 -->
+- [x] corpus fixture 36개 이상이 `tests/fixtures/youtube-corpus/`에 존재한다 <!-- omo:id=accept-corpus-minimum-count;stage=2;scope=backend;review=3 -->
+- [x] 24개 이상 fixture가 real-description 기반 sanitized 텍스트다 <!-- omo:id=accept-real-description-ratio;stage=2;scope=backend;review=3 -->
+- [x] 각 fixture의 expected_ingredients와 expected_steps가 수동 검증된 ground truth다 <!-- omo:id=accept-ground-truth-quality;stage=2;scope=backend;review=3 -->
+- [x] `pnpm test:youtube-corpus` 실행 시 전체 corpus에 대해 per-fixture + aggregate 점수가 출력된다 <!-- omo:id=accept-harness-runs;stage=2;scope=backend;review=3 -->
+- [x] 보고서 JSON이 정의된 artifact schema를 따른다 <!-- omo:id=accept-report-schema;stage=2;scope=backend;review=3 -->
+- [x] baseline report가 `tests/fixtures/youtube-corpus/reports/baseline-v2.json`에 저장된다 <!-- omo:id=accept-baseline-saved;stage=2;scope=backend;review=3 -->
 
 ## State / Policy
 
-- [ ] harness가 deterministic하다 — 같은 corpus + parser로 재실행 시 동일 점수 <!-- omo:id=accept-deterministic-harness;stage=2;scope=backend;review=3 -->
-- [ ] in-corpus 점수와 wild sample 점수가 보고서에서 분리된다 <!-- omo:id=accept-score-separation;stage=2;scope=backend;review=3 -->
-- [ ] `noise` 카테고리 fixture에서 파서가 빈 결과를 반환하면 F1=1.0 처리된다 <!-- omo:id=accept-noise-true-negative;stage=2;scope=backend;review=3 -->
+- [x] harness가 deterministic하다 — 같은 corpus + parser로 재실행 시 동일 점수 <!-- omo:id=accept-deterministic-harness;stage=2;scope=backend;review=3 -->
+- [x] in-corpus 점수와 wild sample 점수가 보고서에서 분리된다 <!-- omo:id=accept-score-separation;stage=2;scope=backend;review=3 -->
+- [x] `noise` 카테고리 fixture에서 파서가 빈 결과를 반환하면 F1=1.0 처리된다 <!-- omo:id=accept-noise-true-negative;stage=2;scope=backend;review=3 -->
 
 ## Error / Permission
 
-- [ ] 형식 오류 fixture가 있어도 harness가 crash하지 않고 fixture-level error를 기록한다 <!-- omo:id=accept-fixture-error-resilience;stage=2;scope=backend;review=3 -->
-- [ ] fixture 수 < 36일 때 harness가 warning을 출력한다 <!-- omo:id=accept-fixture-count-warning;stage=2;scope=backend;review=3 -->
-- [ ] 카테고리별 < 3일 때 harness가 warning을 출력한다 <!-- omo:id=accept-category-count-warning;stage=2;scope=backend;review=3 -->
-- [ ] parser crash 시 해당 fixture의 f1=0 처리 + error 기록 <!-- omo:id=accept-parser-crash-handling;stage=2;scope=backend;review=3 -->
+- [x] 형식 오류 fixture가 있어도 harness가 crash하지 않고 fixture-level error를 기록한다 <!-- omo:id=accept-fixture-error-resilience;stage=2;scope=backend;review=3 -->
+- [x] fixture 수 < 36일 때 harness가 warning을 출력한다 <!-- omo:id=accept-fixture-count-warning;stage=2;scope=backend;review=3 -->
+- [x] 카테고리별 < 3일 때 harness가 warning을 출력한다 <!-- omo:id=accept-category-count-warning;stage=2;scope=backend;review=3 -->
+- [x] parser crash 시 해당 fixture의 f1=0 처리 + error 기록 <!-- omo:id=accept-parser-crash-handling;stage=2;scope=backend;review=3 -->
 
 ## Data Integrity
 
-- [ ] corpus fixture에 개인정보(이름/연락처/주소), 외부 링크, 브랜드 협찬 정보가 포함되지 않는다 <!-- omo:id=accept-sanitization;stage=2;scope=backend;review=3 -->
-- [ ] fixture JSON이 정의된 schema를 따르고 필수 필드가 누락되지 않는다 <!-- omo:id=accept-fixture-schema-valid;stage=2;scope=backend;review=3 -->
-- [ ] 카테고리 분포가 structured / semi-structured / weak / noise / multi-recipe를 모두 포함한다 <!-- omo:id=accept-category-distribution;stage=2;scope=backend;review=3 -->
+- [x] corpus fixture에 개인정보(이름/연락처/주소), 외부 링크, 브랜드 협찬 정보가 포함되지 않는다 <!-- omo:id=accept-sanitization;stage=2;scope=backend;review=3 -->
+- [x] fixture JSON이 정의된 schema를 따르고 필수 필드가 누락되지 않는다 <!-- omo:id=accept-fixture-schema-valid;stage=2;scope=backend;review=3 -->
+- [x] 카테고리 분포가 structured / semi-structured / weak / noise / multi-recipe를 모두 포함한다 <!-- omo:id=accept-category-distribution;stage=2;scope=backend;review=3 -->
 
 ## Data Setup / Preconditions
 
-- [ ] deterministic parser v2 코드가 main에 존재한다 (슬라이스 20 merged) <!-- omo:id=accept-parser-exists;stage=2;scope=backend;review=3 -->
-- [ ] `docs/engineering/youtube-description-parser-scoring.md` 채점 루브릭이 존재한다 <!-- omo:id=accept-rubric-exists;stage=2;scope=backend;review=3 -->
-- [ ] corpus fixture 파일이 테스트에서 접근 가능한 경로에 존재한다 <!-- omo:id=accept-fixture-path-accessible;stage=2;scope=backend;review=3 -->
+- [x] deterministic parser v2 코드가 main에 존재한다 (슬라이스 20 merged) <!-- omo:id=accept-parser-exists;stage=2;scope=backend;review=3 -->
+- [x] `docs/engineering/youtube-description-parser-scoring.md` 채점 루브릭이 존재한다 <!-- omo:id=accept-rubric-exists;stage=2;scope=backend;review=3 -->
+- [x] corpus fixture 파일이 테스트에서 접근 가능한 경로에 존재한다 <!-- omo:id=accept-fixture-path-accessible;stage=2;scope=backend;review=3 -->
 
 ## Manual QA
 
@@ -50,12 +50,12 @@
 
 ### Vitest
 
-- [ ] corpus fixture schema validation 테스트 <!-- omo:id=accept-vitest-fixture-schema;stage=2;scope=backend;review=3 -->
-- [ ] harness per-fixture scoring 정확성 테스트 (known input → expected F1) <!-- omo:id=accept-vitest-scoring-accuracy;stage=2;scope=backend;review=3 -->
-- [ ] harness aggregate 계산 정확성 테스트 <!-- omo:id=accept-vitest-aggregate-accuracy;stage=2;scope=backend;review=3 -->
-- [ ] harness error handling 테스트 (malformed fixture, parser crash) <!-- omo:id=accept-vitest-error-handling;stage=2;scope=backend;review=3 -->
-- [ ] noise category true-negative 처리 테스트 <!-- omo:id=accept-vitest-noise-handling;stage=2;scope=backend;review=3 -->
-- [ ] 기존 youtube-import 테스트 회귀 없음 <!-- omo:id=accept-vitest-regression;stage=2;scope=backend;review=3 -->
+- [x] corpus fixture schema validation 테스트 <!-- omo:id=accept-vitest-fixture-schema;stage=2;scope=backend;review=3 -->
+- [x] harness per-fixture scoring 정확성 테스트 (known input → expected F1) <!-- omo:id=accept-vitest-scoring-accuracy;stage=2;scope=backend;review=3 -->
+- [x] harness aggregate 계산 정확성 테스트 <!-- omo:id=accept-vitest-aggregate-accuracy;stage=2;scope=backend;review=3 -->
+- [x] harness error handling 테스트 (malformed fixture, parser crash) <!-- omo:id=accept-vitest-error-handling;stage=2;scope=backend;review=3 -->
+- [x] noise category true-negative 처리 테스트 <!-- omo:id=accept-vitest-noise-handling;stage=2;scope=backend;review=3 -->
+- [x] 기존 youtube-import 테스트 회귀 없음 <!-- omo:id=accept-vitest-regression;stage=2;scope=backend;review=3 -->
 
 ### Playwright
 
