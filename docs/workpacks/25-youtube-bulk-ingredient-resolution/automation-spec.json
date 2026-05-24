@@ -1,0 +1,84 @@
+{
+  "slice_id": "25-youtube-bulk-ingredient-resolution",
+  "execution_mode": "autonomous",
+  "risk_class": "low",
+  "merge_policy": "conditional-auto",
+  "contract_evolution_required": false,
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-new-api-endpoint",
+      "no-backend-code-change",
+      "no-schema-change",
+      "existing-registration-api-reuse",
+      "sequential-call-not-parallel",
+      "session-expired-abort-remaining",
+      "partial-failure-isolation",
+      "client-side-row-update-no-draft-json-mutation",
+      "resolved-only-final-register",
+      "api-envelope-format"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/menu/add/youtube"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "bulk-cta-visibility",
+      "bulk-sheet-mobile",
+      "bulk-register-partial-success",
+      "bulk-resolved-sync"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "YT_IMPORT"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow"
+      ],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:demo",
+    "pnpm dev:local-supabase"
+  ],
+  "blocked_conditions": [
+    "slice-22-not-merged",
+    "register-youtube-ingredient-rpc-missing",
+    "ingredients-table-missing",
+    "ingredient-synonyms-table-missing",
+    "youtube-extraction-sessions-table-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}
