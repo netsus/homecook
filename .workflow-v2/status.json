@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-24T15:42:32.000Z",
+  "updated_at": "2026-05-24T15:47:00.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1231,7 +1231,8 @@
       "id": "23-youtube-quality-corpus",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-23-youtube-quality-corpus",
-      "lifecycle": "in_progress",
+      "pr_path": "https://github.com/netsus/homecook/pull/582",
+      "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -1243,7 +1244,7 @@
         "pnpm validate:workpack -- --slice 23-youtube-quality-corpus",
         "git diff --check"
       ],
-      "notes": "Stage 2 backend/test tooling implemented on feature/be-23-youtube-quality-corpus. Local required checks and current-head PR checks passed; Claude Stage 3 backend review approved with no blockers. Corpus fixture set, deterministic scoring harness, parser v2 baseline report, and wild sample guide complete. BE-only, no API/DB contract changes, no product UI changes. Stage 4~6 skip. closeout_phase=collecting last_recovery_at=2026-05-24T15:08:58.000Z",
+      "notes": "Merged via PR #582 on 2026-05-24T15:46:34Z after local required checks, current-head PR checks, and Claude Stage 3 backend review approval. Corpus fixture set, deterministic scoring harness, parser v2 baseline report, and wild sample guide complete. BE-only, no API/DB contract changes, no product UI changes. Stage 4~6 skipped. closeout_phase=completed closeout_recovery=manual_patch:0 closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub_PR_582,GitHub_current_head_checks,pnpm_verify_backend,Claude_Stage3_artifact last_recovery_at=2026-05-24T15:47:00.000Z",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
