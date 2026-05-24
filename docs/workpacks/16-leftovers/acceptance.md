@@ -84,6 +84,6 @@
 - [x] 비로그인 → LEFTOVERS 접근 → 로그인 게이트 + return-to-action <!-- omo:id=accept-playwright-login-gate;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
-- [ ] live OAuth 로그인 후 LEFTOVERS/ATE_LIST 접근 및 eat/uneat/플래너 추가 동작 확인 (실제 소셜 로그인 환경)
-- [ ] 30일 경과 eaten 항목의 실제 시간 기반 자동 숨김 확인 (시간 조작 또는 장기 테스트)
-- [ ] 모바일 기기에서 LEFTOVERS/ATE_LIST 레이아웃 및 터치 인터랙션 확인
+- [x] live OAuth 로그인 후 LEFTOVERS/ATE_LIST 접근 및 eat/uneat/플래너 추가 동작 확인 (RC-MO-01/04 staging evidence)
+- [x] 30일 경과 eaten 항목의 실제 시간 기반 자동 숨김 확인 (시간 조작 테스트: `tests/leftovers.backend.test.ts`)
+- [x] 모바일 기기에서 LEFTOVERS/ATE_LIST 레이아웃 및 터치 인터랙션 확인 (RC-MO-02 real-device mobile smoke)

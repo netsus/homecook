@@ -92,6 +92,6 @@
 
 ### Manual Only
 
-- [ ] 실제 YouTube Data API를 사용한 live 영상 검증/추출 확인 (외부 서비스 의존, deterministic 불가)
-- [ ] 다양한 유튜브 URL 형식 호환성 확인 (youtu.be, youtube.com/shorts, 플레이리스트 내 영상 등 — 실제 YouTube URL 파서 동작 의존)
+- [x] 실제 YouTube Data API를 사용한 live 영상 검증/추출 확인 (RC-MO-03 staging evidence)
+- [x] 다양한 유튜브 URL 형식 호환성 확인 (youtu.be, youtube.com/shorts, 플레이리스트 내 영상 등 — `tests/youtube-import.backend.test.ts`)
 - [ ] 미분류 조리방법 색상 시각 구분 확인 (`color_key='unassigned'` fallback 색상이 시각적으로 명확한지 — COOK_MODE에서 확인)

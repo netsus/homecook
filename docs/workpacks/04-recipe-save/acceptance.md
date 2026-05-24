@@ -84,5 +84,5 @@
 
 ### Manual Only
 - [x] 소셜 로그인 복귀 후 저장 모달 재오픈 동작 (OAuth 흐름) (`2026-04-04`, local Supabase Google OAuth + `http://localhost:3000`, 게스트 상세 → 저장/로그인 → 동일 상세 복귀 + 저장 모달 재오픈 확인)
-- [ ] 저장된 레시피북 상세에서 레시피 노출 확인 (별도 슬라이스 17b 의존)
-- [ ] 저장 해제 기능 (별도 슬라이스 17b 의존)
+- [x] 저장된 레시피북 상세에서 레시피 노출 확인 (별도 슬라이스 17b에서 `tests/recipebook-detail.backend.test.ts`, `tests/e2e/slice-17b-recipebook-detail.spec.ts`로 고정)
+- [x] 저장 해제 기능 (별도 슬라이스 17b에서 `DELETE /recipe-books/{book_id}/recipes/{recipe_id}` backend/e2e 테스트로 고정)

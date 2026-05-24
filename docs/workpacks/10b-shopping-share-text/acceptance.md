@@ -82,5 +82,5 @@
   - Web Share OS 시트 호출은 Manual Only (HTTPS + 실디바이스 전용). 클립보드 fallback은 deterministic Playwright 커버. 외부 연동 없음.
 
 ### Manual Only
-- [ ] 자동화하지 않은 외부 서비스 또는 운영 의존 시나리오가 별도로 적혀 있다
+- [ ] Web Share API OS 공유 시트 호출은 HTTPS + 실제 디바이스에서만 확인한다
   - Web Share API는 HTTPS + 실제 디바이스에서만 동작하므로 OS 공유 시트 호출은 수동 확인 대상
