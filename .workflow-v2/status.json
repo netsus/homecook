@@ -1256,8 +1256,8 @@
       "preset": "vertical-slice-strict",
       "branch": "feature/be-24-youtube-parser-dictionary-hardening",
       "pr_path": null,
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm test:youtube-corpus",
@@ -1269,7 +1269,7 @@
         "pnpm validate:workpack -- --slice 24-youtube-parser-dictionary-hardening",
         "git diff --check"
       ],
-      "notes": "Stage 2 backend implementation ready for PR. Parser-only hardening reached corpus_avg_f1=0.9160 with structured=0.9814, semi=0.9356, weak=0.9577, noise=1.0000, multi=0.6633. No seed migration added because target was met without DB writes. Local checks passed: pnpm test:youtube-corpus, targeted Vitest, pnpm verify:backend, workflow/workpack validators, git diff --check. closeout_phase=collecting",
+      "notes": "Final BE-only closeout projection prepared for PR #585 after Codex Stage 2 implementation and Claude Stage 3 conditional approval. Parser-only hardening reached corpus_avg_f1=0.9160 with structured=0.9814, semi=0.9356, weak=0.9577, noise=1.0000, multi=0.6633. No seed migration added because target was met without DB writes. Local checks passed: pnpm test:youtube-corpus, targeted Vitest, pnpm verify:backend, workflow/workpack validators, branch/commit validation, and git diff --check. Ready-for-review QA surfaced unrelated visual/full-regression failures; closeout commit resyncs current-head CI before merge. Stage 4-6 skipped. closeout_phase=completed closeout_recovery=ci_resync:1 closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub_PR_585,GitHub_CI,pnpm_verify_backend,Claude_Stage3_artifact last_recovery_at=2026-05-25T02:23:00+09:00",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
