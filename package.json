@@ -35,6 +35,7 @@
     "test": "vitest run",
     "test:youtube-corpus": "vitest run tests/youtube-corpus.test.ts",
     "test:youtube-dictionary": "vitest run tests/youtube-dictionary-resolution.test.ts",
+    "test:youtube-readiness": "vitest run tests/youtube-readiness-score.test.ts",
     "test:product": "vitest run --config vitest.product.config.ts",
     "test:harness": "vitest run --config vitest.harness.config.ts",
     "test:e2e": "pnpm test:e2e:smoke",

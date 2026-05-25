@@ -11,10 +11,10 @@
 
 ## Fixture Minimum
 
-- 최소 36개 fixture를 유지한다.
-- 카테고리별 최소 3개 예시를 둔다.
-- 전체 fixture 중 24개 이상은 실제 채널 설명란에서 개인정보/링크를 제거한 real-description 기반이어야 한다.
-- wild sample은 최소 5개 채널, 10개 영상으로 별도 측정하고 in-corpus 점수와 섞지 않는다.
+- 최소 50개 fixture를 유지한다.
+- 전체 fixture 중 30개 이상은 실제 채널 설명란에서 개인정보/링크를 제거한 real-description 기반이어야 한다.
+- 각 category는 최소 5개 fixture를 유지한다.
+- wild fixture sample은 최소 5개 채널, 10개 영상의 설명란 텍스트를 고정해 별도 측정하고 in-corpus 점수와 섞지 않는다.
 
 ## Line Features
 

@@ -459,7 +459,9 @@ function isRecipeHeading(text: string) {
 
   return (
     /^(?:recipe\s*)?\d+\s*(?:번째\s*)?레시피$/iu.test(normalized)
+    || /^(?:recipe\s*)?\d+\s*[：: ]+\S.{0,40}$/iu.test(normalized)
     || /^(?:첫|두|세|네)\s*번째\s*레시피$/u.test(normalized)
+    || /^(?:첫|두|세|네)\s*번째\s*레시피\s+\S.{0,40}$/u.test(normalized)
     || /^recipe\s*\d+$/iu.test(normalized)
   );
 }
