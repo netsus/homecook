@@ -39,6 +39,7 @@ export default defineConfig({
       "tests/supabase-server.test.ts",
       "tests/user-bootstrap.test.ts",
       "tests/youtube-corpus.test.ts",
+      "tests/youtube-dictionary-resolution.test.ts",
     ],
   },
 });
