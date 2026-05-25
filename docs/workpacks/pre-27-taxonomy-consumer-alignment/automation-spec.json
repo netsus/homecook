@@ -1,0 +1,86 @@
+{
+  "slice_id": "pre-27-taxonomy-consumer-alignment",
+  "execution_mode": "autonomous",
+  "risk_class": "low",
+  "merge_policy": "conditional-auto",
+  "contract_evolution_required": false,
+  "backend": {
+    "required_endpoints": [
+      "GET /ingredients",
+      "GET /pantry",
+      "GET /cooking-methods",
+      "POST /recipes/youtube/ingredient-registration"
+    ],
+    "invariants": [
+      "no-new-api-endpoint",
+      "no-rpc-change",
+      "no-schema-ddl-change",
+      "legacy-7-category-freeze",
+      "category-query-label-compat",
+      "cooking-methods-v1-shape-compat",
+      "label-varchar5-non-overload",
+      "external-data-staging-only",
+      "visual-output-invariant",
+      "api-envelope-compat"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "required_test_targets": [
+      "tests/cooking-method-colors.test.ts",
+      "tests/pantry-core.backend.test.ts",
+      "tests/youtube-import.backend.test.ts",
+      "tests/manual-recipe-create.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "playwright_projects": [
+      "mobile-chrome"
+    ],
+    "artifact_assertions": [
+      "shared-source-no-hardcoded-category-literal",
+      "shared-helper-no-local-cooking-color-dup",
+      "visual-output-regression-free"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [
+        "HOME",
+        "RECIPE_DETAIL"
+      ],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "ingredients-table-missing",
+    "cooking-methods-table-missing",
+    "ingredient-synonyms-table-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
