@@ -1369,6 +1369,29 @@
         "git diff --check"
       ],
       "notes": "Stage 2 backend/test implementation in progress. Current Stage 2 evidence: 50-case in-corpus parser F1 0.9423, ingredient F1 0.9511, step F1 0.9334, dictionary resolution 1.0000, import readiness 0.9632, wild fixture sample structured F1 0.9900 / weak F1 0.7571. No LLM fallback."
+    },
+    {
+      "id": "28-external-ingredient-data-ingest-gate",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/28-external-ingredient-data-ingest-gate",
+      "pr_path": null,
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 28-external-ingredient-data-ingest-gate",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs/contract in progress. Scope: external ingredient data ingest gate, file batch first, no production direct-load, deterministic normalization, review status gate, approved-only seed artifact. Claude Stage 1 attempted via resume session 0b81bfad-abd1-4a51-8e1e-65f7410d0cea but hit usage limit before producing files; Codex prepared a docs draft for later Claude review/repair.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
     }
   ]
 }
