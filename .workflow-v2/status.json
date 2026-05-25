@@ -1303,9 +1303,9 @@
       "id": "26-youtube-dictionary-seed-uplift",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-26-youtube-dictionary-seed-uplift",
-      "pr_path": null,
-      "lifecycle": "in_progress",
-      "approval_state": "codex_approved",
+      "pr_path": "https://github.com/netsus/homecook/pull/589",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm test:youtube-corpus",
@@ -1317,11 +1317,11 @@
         "pnpm validate:workpack -- --slice 26-youtube-dictionary-seed-uplift",
         "git diff --check"
       ],
-      "notes": "BE/test/data-only slice. Stage 2 backend/data implementation completed locally on feature/be-26-youtube-dictionary-seed-uplift after Stage 1 docs PR #588 merged. Evidence source: 36 corpus fixtures + existing slice 21 seed. Dictionary-resolution scoring layer separate from parser F1. Stage 4-6 skipped (no UI changes). Local deterministic verification passed: pnpm test:youtube-dictionary, pnpm test:youtube-corpus, pnpm verify:backend, workflow/workpack validators, git diff --check. Local Supabase reset smoke attempted but blocked by Docker image layer no-space/rate-limit environment issue. closeout_phase=collecting closeout_recovery=manual_patch:0 closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:tests/fixtures/youtube-corpus/reports/dictionary-resolution-v1.json last_recovery_at=null",
+      "notes": "Merged via PR #589 on 2026-05-25 after Stage 1 docs PR #588. BE/test/data-only slice. Evidence source: 36 corpus fixtures + existing slice 21 seed. Dictionary-resolution scoring layer separate from parser F1. Stage 4-6 skipped (no UI changes). Current report: pre-seed ingredient_resolution_rate 0.4795 -> post-seed 1.0000. Claude Stage 3 backend review approved. Local deterministic verification passed: pnpm test:youtube-dictionary, pnpm test:youtube-corpus, pnpm typecheck, pnpm test:product, pnpm verify:backend, workflow/workpack validators, pr-ready validator, git diff --check. PR current-head checks passed after QA ready-gate repair. Local Supabase reset smoke attempted but blocked by Docker image layer no-space/rate-limit environment issue. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:1 closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR #589,GitHub current-head checks,Claude Stage 3 backend review artifact,tests/fixtures/youtube-corpus/reports/dictionary-resolution-v1.json last_recovery_at=2026-05-25T16:47:30+09:00",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
-      "auto_merge_eligible": false,
+      "auto_merge_eligible": true,
       "blocked_reason_code": null
     }
   ]
