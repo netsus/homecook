@@ -22,8 +22,17 @@ const COOKING_METHOD_COLORS: Record<string, string> = {
   other: "var(--cook-etc)",
 };
 
-function createCookingMethodTint(color: string) {
-  return `color-mix(in srgb, ${color} 16%, transparent)`;
+const COOKING_METHOD_TINT_WEIGHTS: Record<string, number> = {
+  red: 14,
+  boil: 14,
+  yellow: 18,
+  deep_fry: 18,
+  fry: 18,
+  bake: 18,
+};
+
+function createCookingMethodTint(color: string, weight = 16) {
+  return `color-mix(in srgb, ${color} ${weight}%, transparent)`;
 }
 
 interface CookingMethodVisualInput {
@@ -41,7 +50,8 @@ export function getCookingMethodColor(colorKey?: string | null): string {
 }
 
 export function getCookingMethodTint(colorKey?: string | null): string {
-  return createCookingMethodTint(getCookingMethodColor(colorKey));
+  const tintWeight = colorKey ? COOKING_METHOD_TINT_WEIGHTS[colorKey] : undefined;
+  return createCookingMethodTint(getCookingMethodColor(colorKey), tintWeight);
 }
 
 export function getCookingMethodVisual(method?: CookingMethodVisualInput | null) {

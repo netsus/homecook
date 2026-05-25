@@ -243,20 +243,20 @@ function getCookingMethodColor(colorKey?: string | null): string;
 - [x] `lib/server/youtube-import.ts` INGREDIENT_CATEGORIES를 shared source 참조로 전환 <!-- omo:id=delivery-yt-import-category-ref;stage=2;scope=backend;review=3,6 -->
 - [x] `app/api/v1/ingredients/route.ts` category query를 shared source 기준으로 정렬 <!-- omo:id=delivery-ingredients-api-align;stage=2;scope=backend;review=3,6 -->
 - [x] `app/api/v1/pantry/route.ts` category filter를 shared source 기준으로 정렬 <!-- omo:id=delivery-pantry-api-align;stage=2;scope=backend;review=3,6 -->
-- [ ] ingredient filter modal이 shared source를 소비 <!-- omo:id=delivery-ingredient-filter-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] recipe ingredient add modal의 category emoji를 공용 helper로 전환 <!-- omo:id=delivery-ingredient-add-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] pantry-screen desktop의 CATEGORY_VISUAL을 공용 helper로 전환 <!-- omo:id=delivery-pantry-desktop-visual;stage=4;scope=frontend;review=5,6 -->
-- [ ] pantry-add-sheet의 category 소비를 shared source 기준으로 정렬 <!-- omo:id=delivery-pantry-add-sheet;stage=4;scope=frontend;review=5,6 -->
-- [ ] pantry-mobile-visuals의 Wave1 그룹과 legacy 7-category mapping 명시 <!-- omo:id=delivery-pantry-mobile-mapping;stage=4;scope=frontend;review=5,6 -->
-- [ ] youtube-import-screen의 INGREDIENT_CATEGORY_CHOICES를 shared source에서 파생 <!-- omo:id=delivery-yt-import-screen-category;stage=4;scope=frontend;review=5,6 -->
+- [x] ingredient filter modal이 shared source를 소비 <!-- omo:id=delivery-ingredient-filter-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] recipe ingredient add modal의 category emoji를 공용 helper로 전환 <!-- omo:id=delivery-ingredient-add-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] pantry-screen desktop의 CATEGORY_VISUAL을 공용 helper로 전환 <!-- omo:id=delivery-pantry-desktop-visual;stage=4;scope=frontend;review=5,6 -->
+- [x] pantry-add-sheet의 category 소비를 shared source 기준으로 정렬 <!-- omo:id=delivery-pantry-add-sheet;stage=4;scope=frontend;review=5,6 -->
+- [x] pantry-mobile-visuals의 Wave1 그룹과 legacy 7-category mapping 명시 <!-- omo:id=delivery-pantry-mobile-mapping;stage=4;scope=frontend;review=5,6 -->
+- [x] youtube-import-screen의 INGREDIENT_CATEGORY_CHOICES를 shared source에서 파생 <!-- omo:id=delivery-yt-import-screen-category;stage=4;scope=frontend;review=5,6 -->
 
 ### Track B: Cooking
 
 - [x] Shared cooking helper 확인 및 필요 시 확장 (`lib/cooking-method-colors.ts`) <!-- omo:id=delivery-cooking-shared-helper;stage=2;scope=shared;review=3,6 -->
-- [ ] recipe-detail-screen 로컬 COOKING_METHOD_COLORS/TINTS를 shared helper 위임 <!-- omo:id=delivery-recipe-detail-cooking-color;stage=4;scope=frontend;review=5,6 -->
-- [ ] cook-mode-mobile-ui 로컬 METHOD_ALIASES/VISUALS를 shared helper 기준 정렬 <!-- omo:id=delivery-cook-mode-mobile-align;stage=4;scope=frontend;review=5,6 -->
-- [ ] manual-recipe-create-screen의 color 소비가 shared helper 사용 확인 <!-- omo:id=delivery-manual-create-cooking-color;stage=4;scope=frontend;review=5,6 -->
-- [ ] youtube-import-screen의 color 소비가 shared helper 사용 확인 <!-- omo:id=delivery-yt-import-cooking-color;stage=4;scope=frontend;review=5,6 -->
+- [x] recipe-detail-screen 로컬 COOKING_METHOD_COLORS/TINTS를 shared helper 위임 <!-- omo:id=delivery-recipe-detail-cooking-color;stage=4;scope=frontend;review=5,6 -->
+- [x] cook-mode-mobile-ui 로컬 METHOD_ALIASES/VISUALS를 shared helper 기준 정렬 <!-- omo:id=delivery-cook-mode-mobile-align;stage=4;scope=frontend;review=5,6 -->
+- [x] manual-recipe-create-screen의 color 소비가 shared helper 사용 확인 <!-- omo:id=delivery-manual-create-cooking-color;stage=4;scope=frontend;review=5,6 -->
+- [x] youtube-import-screen의 color 소비가 shared helper 사용 확인 <!-- omo:id=delivery-yt-import-cooking-color;stage=4;scope=frontend;review=5,6 -->
 - [x] blanch/lime color_key 불일치를 shared helper에서 정합 <!-- omo:id=delivery-blanch-lime-fix;stage=2;scope=shared;review=3,6 -->
 
 ### Consumer Sweep & Testing
@@ -266,9 +266,9 @@ function getCookingMethodColor(colorKey?: string | null): string;
 - [x] 상태 전이 / 권한 / 멱등성 테스트 (기존 유지 확인) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 (shared source/helper import 전환) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 (기존 유지 확인) <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] UI 연결 (shared source/helper import 전환) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 (기존 유지 확인) <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 - [x] 테스트에서 category/method 리터럴을 shared source import로 전환 <!-- omo:id=delivery-test-literal-cleanup;stage=2;scope=shared;review=3,6 -->
-- [ ] 시각적 출력 불변 regression 확인 <!-- omo:id=delivery-visual-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] 시각적 출력 불변 regression 확인 <!-- omo:id=delivery-visual-regression;stage=4;scope=frontend;review=5,6 -->

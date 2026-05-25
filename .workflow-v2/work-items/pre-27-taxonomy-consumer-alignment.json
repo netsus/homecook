@@ -87,9 +87,9 @@
     "docs_projection": {
       "roadmap_lifecycle": "in_progress",
       "design_status": "N/A",
-      "delivery_checklist": "pending",
+      "delivery_checklist": "complete",
       "design_authority": "not_required",
-      "acceptance": "pending",
+      "acceptance": "complete",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
@@ -104,7 +104,13 @@
         "pnpm validate:workpack -- --slice pre-27-taxonomy-consumer-alignment",
         "pnpm validate:workflow-v2",
         "git diff --check",
-        "pnpm local:reset:demo (blocked: Docker image layer no space left on device)"
+        "pnpm local:reset:demo (blocked: Docker image layer no space left on device)",
+        "pnpm exec vitest run (1541 tests, 150 files — full suite pass after Stage 4 frontend sweep)",
+        "pnpm exec vitest run tests/home-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx tests/pantry-screen.test.tsx tests/cooking-method-colors.test.ts tests/recipe-detail-screen.test.tsx (Codex post-review targeted pass)",
+        "pnpm verify:frontend:pr",
+        "pnpm exec playwright test tests/e2e/slice-02-discovery-filter.spec.ts --project=desktop-chrome",
+        "pnpm exec playwright test tests/e2e/slice-13-pantry-core.spec.ts --project=desktop-chrome",
+        "pnpm exec playwright test tests/e2e/slice-15a-cook-planner-complete.spec.ts --project=desktop-chrome"
       ]
     },
     "merge_gate_projection": {
@@ -134,16 +140,24 @@
         "tests/pantry-core.backend.test.ts",
         "tests/youtube-dictionary-resolution.test.ts",
         "tests/youtube-import.backend.test.ts",
-        "pnpm verify:backend"
+        "tests/home-screen.test.tsx",
+        "tests/recipe-ingredient-add-modal.test.tsx",
+        "tests/pantry-screen.test.tsx",
+        "tests/recipe-detail-screen.test.tsx",
+        "tests/e2e/slice-02-discovery-filter.spec.ts",
+        "tests/e2e/slice-13-pantry-core.spec.ts",
+        "tests/e2e/slice-15a-cook-planner-complete.spec.ts",
+        "pnpm verify:backend",
+        "pnpm verify:frontend:pr"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-05-25T19:39:00+09:00",
-      "status_synced_at": "2026-05-25T19:39:00+09:00",
+      "docs_synced_at": "2026-05-25T20:14:39+09:00",
+      "status_synced_at": "2026-05-25T20:14:39+09:00",
       "pr_body_synced_at": null
     }
   },
-  "notes": "Stage 2 backend/shared implementation ready for Claude Stage 3 review. Implemented canonical legacy-7 ingredient category shared source, derived IngredientCategory type, shared category validation for GET /ingredients, GET /pantry, and YouTube ingredient registration, plus shared cooking method tint/visual helper with lime -> blanch color consistency. No schema DDL, no new API endpoints, no contract-evolution. Frontend component consumer sweep remains Stage 4. Local deterministic verification passed: targeted Vitest, pnpm typecheck, pnpm lint, pnpm verify:backend, workflow/workpack validators, git diff --check. Local Supabase reset smoke attempted but blocked by Docker image layer no-space environment issue. closeout_phase=projecting closeout_recovery=local_docker_no_space closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:tests/ingredient-categories.test.ts,tests/cooking-method-colors.test.ts,tests/recipe-api-contracts.test.ts,tests/pantry-core.backend.test.ts,tests/youtube-dictionary-resolution.test.ts,tests/youtube-import.backend.test.ts,pnpm verify:backend",
+  "notes": "Stage 4 frontend consumer sweep complete. All ingredient category consumers now delegate to shared source (lib/ingredient-categories.ts): recipe-ingredient-add-modal emoji, pantry-screen CATEGORY_VISUAL, pantry-mobile-visuals fallback emoji, youtube-import-screen category choices. All cooking method consumers aligned to shared helper (lib/cooking-method-colors.ts): recipe-detail-screen local color/tint maps removed, cook-mode-mobile-ui lime alias added, and Codex preserved existing recipe-detail red/yellow tint weights in the shared helper. Already-compliant: ingredient-filter-modal, manual-recipe-create-screen, cook-mode-desktop-view, pantry-add-sheet. Claude full Vitest suite (1541 tests, 150 files) passed; Codex post-review targeted tests, typecheck, lint, build, smoke, a11y core, visual core, pnpm verify:frontend:pr, HOME filter E2E, PANTRY category E2E, and COOK_MODE method color E2E passed. closeout_phase=projecting closeout_recovery=local_docker_no_space closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:tests/ingredient-categories.test.ts,tests/cooking-method-colors.test.ts,tests/recipe-api-contracts.test.ts,tests/pantry-core.backend.test.ts,tests/youtube-dictionary-resolution.test.ts,tests/youtube-import.backend.test.ts,tests/home-screen.test.tsx,tests/recipe-ingredient-add-modal.test.tsx,tests/pantry-screen.test.tsx,tests/recipe-detail-screen.test.tsx,tests/e2e/slice-02-discovery-filter.spec.ts,tests/e2e/slice-13-pantry-core.spec.ts,tests/e2e/slice-15a-cook-planner-complete.spec.ts,pnpm verify:backend,pnpm verify:frontend:pr",
   "out_of_scope": [
     "ingredient_categories DB registry table",
     "cooking_method_categories full master table",

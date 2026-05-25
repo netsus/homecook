@@ -20,6 +20,8 @@ describe("getCookingMethodColor", () => {
 
   it("exposes shared tints and fallback visuals for screens that render method badges", () => {
     expect(getCookingMethodTint("lime")).toBe("color-mix(in srgb, var(--cook-blanch) 16%, transparent)");
+    expect(getCookingMethodTint("red")).toBe("color-mix(in srgb, var(--cook-boil) 14%, transparent)");
+    expect(getCookingMethodTint("yellow")).toBe("color-mix(in srgb, var(--cook-fry) 18%, transparent)");
     expect(getCookingMethodVisual({ code: "blanch", label: "데치기", color_key: "lime" })).toEqual({
       label: "데치기",
       color: "var(--cook-blanch)",
