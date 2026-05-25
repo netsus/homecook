@@ -1255,7 +1255,7 @@
       "id": "24-youtube-parser-dictionary-hardening",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-24-youtube-parser-dictionary-hardening",
-      "pr_path": null,
+      "pr_path": "https://github.com/netsus/homecook/pull/602",
       "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
