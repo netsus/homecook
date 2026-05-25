@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-25T20:32:26+09:00",
+  "updated_at": "2026-05-26T01:30:00+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1347,6 +1347,27 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": true,
       "blocked_reason_code": null
+    },
+    {
+      "id": "27-youtube-import-quality-uplift",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/27-youtube-import-quality-uplift",
+      "pr_path": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm test:youtube-corpus",
+        "pnpm test:youtube-dictionary",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 27-youtube-import-quality-uplift",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs in progress. YouTube import quality uplift: parser + dictionary + readiness >= 0.80 on 50-case corpus. No LLM fallback."
     }
   ]
 }
