@@ -64,7 +64,7 @@
     {
       "id": "omo-lite-phase7-budget-mode",
       "preset": "infra-governance",
-      "lifecycle": "ready_for_review",
+      "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -123,7 +123,7 @@
       "preset": "infra-governance",
       "branch": "docs/omo-session-orchestrator-spec",
       "pr_path": "https://github.com/netsus/homecook/pull/129",
-      "lifecycle": "ready_for_review",
+      "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -1327,10 +1327,10 @@
     {
       "id": "pre-27-taxonomy-consumer-alignment",
       "preset": "vertical-slice-strict",
-      "branch": "docs/pre-27-taxonomy-consumer-alignment",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/be-pre-27-taxonomy-consumer-alignment",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
@@ -1340,7 +1340,7 @@
         "pnpm validate:workpack -- --slice pre-27-taxonomy-consumer-alignment",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs PR in progress on docs/pre-27-taxonomy-consumer-alignment. Pre-slice-27 taxonomy consumer alignment. Tracks: A) ingredient category shared mapping source (legacy 7 frozen, no DB registry table), B) cooking method helper unification (local color/fallback maps consolidated). No schema DDL, no new API endpoints, no contract-evolution. Design Status N/A. closeout_phase=collecting",
+      "notes": "Stage 2 backend/shared implementation ready for Claude Stage 3 review. Implemented canonical legacy-7 ingredient category shared source, derived IngredientCategory type, shared category validation for GET /ingredients, GET /pantry, and YouTube ingredient registration, plus shared cooking method tint/visual helper with lime -> blanch color consistency. No schema DDL, no new API endpoints, no contract-evolution. Frontend component consumer sweep remains Stage 4. Local deterministic verification passed: targeted Vitest, pnpm typecheck, pnpm lint, pnpm verify:backend, workflow/workpack validators, git diff --check. Local Supabase reset smoke attempted but blocked by Docker image layer no-space environment issue. closeout_phase=projecting closeout_recovery=local_docker_no_space closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:tests/ingredient-categories.test.ts,tests/cooking-method-colors.test.ts,tests/recipe-api-contracts.test.ts,tests/pantry-core.backend.test.ts,tests/youtube-dictionary-resolution.test.ts,tests/youtube-import.backend.test.ts,pnpm verify:backend",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

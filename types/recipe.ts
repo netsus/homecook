@@ -1,4 +1,5 @@
 import type { ApiResponse } from "@/types/api";
+import type { IngredientCategory } from "@/lib/ingredient-categories";
 
 export type RecipeSortKey =
   | "view_count"
@@ -171,7 +172,7 @@ export interface YoutubeRecipeValidateData {
 
 export type YoutubeIngredientResolutionStatus = "resolved" | "needs_review" | "unresolved";
 
-export type IngredientCategory = "채소" | "육류" | "해산물" | "양념" | "유제품" | "곡류" | "기타";
+export type { IngredientCategory };
 
 export interface YoutubeIngredientCandidate {
   ingredient_id: string;

@@ -2,6 +2,10 @@ import { NextRequest } from "next/server";
 
 import { fail, ok } from "@/lib/api/response";
 import {
+  ALL_INGREDIENT_CATEGORY,
+  isValidIngredientCategory,
+} from "@/lib/ingredient-categories";
+import {
   normalizeIngredientIds,
   toPantryItems,
   type IngredientRow,
@@ -143,7 +147,14 @@ export async function GET(request: NextRequest) {
   }
 
   const q = request.nextUrl.searchParams.get("q")?.trim();
-  const category = request.nextUrl.searchParams.get("category")?.trim();
+  const rawCategory = request.nextUrl.searchParams.get("category")?.trim();
+  const category = rawCategory && rawCategory !== ALL_INGREDIENT_CATEGORY
+    ? rawCategory
+    : undefined;
+
+  if (category && !isValidIngredientCategory(category)) {
+    return ok({ items: [] });
+  }
 
   let query = auth.dbClient
     .from("pantry_items")

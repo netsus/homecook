@@ -2,6 +2,7 @@ import type { User } from "@supabase/supabase-js";
 
 import { fail, ok } from "@/lib/api/response";
 import { isYoutubeImportEnabled } from "@/lib/feature-flags";
+import { isValidIngredientCategory } from "@/lib/ingredient-categories";
 import {
   adaptCandidateToFlatDraft,
   parseYoutubeRecipeDescription,
@@ -247,15 +248,6 @@ interface ParsedYoutubeIngredientRegistration {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,20}$/;
-const INGREDIENT_CATEGORIES: readonly IngredientCategory[] = [
-  "채소",
-  "육류",
-  "해산물",
-  "양념",
-  "유제품",
-  "곡류",
-  "기타",
-] as const;
 const DEFAULT_EXTRACTION_METHODS = ["description"] as const;
 const YOUTUBE_PROVIDER_VERSION = "youtube-videos-list-description-v1";
 const SESSION_TTL_HOURS = 24;
@@ -2118,7 +2110,7 @@ function parseYoutubeIngredientRegistrationBody(rawBody: unknown) {
   }
 
   const category = typeof rawBody.category === "string" ? rawBody.category.trim() : "";
-  if (!INGREDIENT_CATEGORIES.includes(category as IngredientCategory)) {
+  if (!isValidIngredientCategory(category)) {
     fields.push({ field: "category", reason: "invalid_enum" });
   }
 

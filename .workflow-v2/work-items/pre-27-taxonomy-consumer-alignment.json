@@ -73,9 +73,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "in_progress",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
@@ -83,9 +83,9 @@
     "blocked_reason_code": null
   },
   "closeout": {
-    "phase": "collecting",
+    "phase": "projecting",
     "docs_projection": {
-      "roadmap_lifecycle": "planned",
+      "roadmap_lifecycle": "in_progress",
       "design_status": "N/A",
       "delivery_checklist": "pending",
       "design_authority": "not_required",
@@ -93,14 +93,23 @@
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
-      "required_checks": "pending",
-      "external_smokes": "skipped",
+      "required_checks": "passed",
+      "external_smokes": "failed",
       "authority_reports": [],
-      "actual_verification_refs": []
+      "actual_verification_refs": [
+        "pnpm exec vitest run tests/ingredient-categories.test.ts tests/cooking-method-colors.test.ts tests/recipe-api-contracts.test.ts tests/pantry-core.backend.test.ts tests/youtube-dictionary-resolution.test.ts tests/youtube-import.backend.test.ts",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm verify:backend",
+        "pnpm validate:workpack -- --slice pre-27-taxonomy-consumer-alignment",
+        "pnpm validate:workflow-v2",
+        "git diff --check",
+        "pnpm local:reset:demo (blocked: Docker image layer no space left on device)"
+      ]
     },
     "merge_gate_projection": {
-      "current_head_sha": null,
-      "approval_state": "not_started",
+      "current_head_sha": "pending-pr-head",
+      "approval_state": "codex_approved",
       "all_checks_green": false
     },
     "recovery_summary": {
@@ -117,16 +126,24 @@
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": null,
-      "evidence_sources": []
+      "latest_reason_code": "local_supabase_reset_docker_no_space",
+      "evidence_sources": [
+        "tests/ingredient-categories.test.ts",
+        "tests/cooking-method-colors.test.ts",
+        "tests/recipe-api-contracts.test.ts",
+        "tests/pantry-core.backend.test.ts",
+        "tests/youtube-dictionary-resolution.test.ts",
+        "tests/youtube-import.backend.test.ts",
+        "pnpm verify:backend"
+      ]
     },
     "projection_state": {
-      "docs_synced_at": null,
-      "status_synced_at": null,
+      "docs_synced_at": "2026-05-25T19:39:00+09:00",
+      "status_synced_at": "2026-05-25T19:39:00+09:00",
       "pr_body_synced_at": null
     }
   },
-  "notes": "Stage 1 docs PR in progress. Pre-slice-27 alignment workpack. Tracks: A) ingredient category shared mapping source (legacy 7 categories frozen, no DB registry table), B) cooking method helper unification (local color/fallback maps consolidated). No schema DDL, no new API endpoints, no contract-evolution required. Design Status N/A (internal refactor, visual output invariant). Ralplan decision: Option B from critic-approved ralplan.",
+  "notes": "Stage 2 backend/shared implementation ready for Claude Stage 3 review. Implemented canonical legacy-7 ingredient category shared source, derived IngredientCategory type, shared category validation for GET /ingredients, GET /pantry, and YouTube ingredient registration, plus shared cooking method tint/visual helper with lime -> blanch color consistency. No schema DDL, no new API endpoints, no contract-evolution. Frontend component consumer sweep remains Stage 4. Local deterministic verification passed: targeted Vitest, pnpm typecheck, pnpm lint, pnpm verify:backend, workflow/workpack validators, git diff --check. Local Supabase reset smoke attempted but blocked by Docker image layer no-space environment issue. closeout_phase=projecting closeout_recovery=local_docker_no_space closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:tests/ingredient-categories.test.ts,tests/cooking-method-colors.test.ts,tests/recipe-api-contracts.test.ts,tests/pantry-core.backend.test.ts,tests/youtube-dictionary-resolution.test.ts,tests/youtube-import.backend.test.ts,pnpm verify:backend",
   "out_of_scope": [
     "ingredient_categories DB registry table",
     "cooking_method_categories full master table",

@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { INGREDIENT_CATEGORY_LABELS } from "@/lib/ingredient-categories";
 import {
   scoreYoutubeDictionaryResolutionFixtures,
   type YoutubeDictionaryResolutionReport,
@@ -280,7 +281,7 @@ describe("YouTube dictionary resolution scoring", () => {
       extractValueBody(migration, "insert into public.ingredients"),
     );
     const slice26Ingredients = ingredientTuples.map(([standardName]) => standardName);
-    const allowedCategories = new Set(["채소", "육류", "해산물", "양념", "유제품", "곡류", "기타"]);
+    const allowedCategories = new Set<string>(INGREDIENT_CATEGORY_LABELS);
 
     expect(migration).toContain("on conflict (standard_name) do nothing");
     expect(migration).toContain("on conflict (ingredient_id, synonym) do nothing");
