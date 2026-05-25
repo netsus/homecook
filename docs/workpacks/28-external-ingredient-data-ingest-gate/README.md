@@ -217,4 +217,4 @@ Stage 2가 DB staging table을 선택하면 `docs/db설계` 영향 기록이 필
 - [x] invalid source row report 구현 <!-- omo:id=delivery-invalid-row-report;stage=2;scope=backend;review=3,6 -->
 - [x] public API shape unchanged 검증 <!-- omo:id=delivery-api-shape-unchanged;stage=2;scope=backend;review=3,6 -->
 - [x] no production direct-load test 추가 <!-- omo:id=delivery-no-direct-load-test;stage=2;scope=backend;review=3,6 -->
-- [x] Stage 3 backend/data-tooling review 완료 <!-- omo:id=delivery-stage3-review;stage=3;scope=backend;review=6 -->
+- [x] Stage 3 backend/data-tooling review 완료 <!-- omo:id=delivery-stage3-review;stage=2;scope=backend;review=6 -->
