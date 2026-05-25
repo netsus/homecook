@@ -93,7 +93,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `24-youtube-parser-dictionary-hardening` | merged | 결정론 파서 규칙 개선 + 소량 증거 기반 사전 시딩으로 in-corpus F1을 0.80 이상으로 개선 (BE/test/data-only, UI 변경 없음) |
 | `25-youtube-bulk-ingredient-resolution` | merged | YT_IMPORT 검수 화면에서 미등록 재료 여러 건을 한 화면에서 일괄 확인·등록하는 bulk resolution sheet (FE-only, 기존 API 순차 호출) |
 | `26-youtube-dictionary-seed-uplift` | merged | 코퍼스 증거 기반 재료·동의어 seed migration + dictionary-resolution 채점 레이어 (BE/test/data-only, UI 변경 없음) |
-| `pre-27-taxonomy-consumer-alignment` | in-progress | slice 27 선행: ingredient category shared mapping source + cooking method helper 통합으로 현재 MVP 소비 경로를 같은 기준에 정렬 (BE+FE shared, 신규 DB table 없음) |
+| `pre-27-taxonomy-consumer-alignment` | merged | slice 27 선행: ingredient category shared mapping source + cooking method helper 통합으로 현재 MVP 소비 경로를 같은 기준에 정렬 (BE+FE shared, 신규 DB table 없음) |
 | `planner-column-customization` | merged        | 끼니 컬럼 기본 3개 + 설정 커스터마이징(이름 변경/추가/삭제), 최소 1~최대 5, PLANNER_WEEK 동적 컬럼               |
 | `wave1-port-foundation` | merged | 공통 shell, 공용 UI 프리미티브(Button/Chip/Card/Modal/Sort Dropdown), CTA 위계, spacing/safe-area 정비 — Phase4 foundation re-audit PR #432 merged |
 | `wave1-port-discovery-detail` | merged | Historical closeout은 merged 상태로 보존. 다음 작업은 fixed prototype 기준 Slice B Phase4 prep 후 HOME/RECIPE_DETAIL/save modal/login 재포팅 |
