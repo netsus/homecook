@@ -55,7 +55,7 @@
 
 - [x] fixture / mock에서 ingredient category가 shared source의 7종과 일치한다 <!-- omo:id=accept-fixture-category-match;stage=2;scope=shared;review=3,6 -->
 - [x] fixture / mock에서 cooking method color_key가 shared helper의 매핑과 일치한다 <!-- omo:id=accept-fixture-cooking-color-match;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 `ingredients` / `cooking_methods` / `ingredient_synonyms` 테이블이 존재한다 <!-- omo:id=accept-real-db-tables-exist;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 `ingredients` / `cooking_methods` / `ingredient_synonyms` 테이블이 존재한다 <!-- omo:id=accept-real-db-tables-exist;stage=2;scope=shared;review=3,6 -->
 - [x] 기존 seed 데이터의 ingredient category 값이 legacy 7종 중 하나이다 <!-- omo:id=accept-seed-category-compliance;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
@@ -69,7 +69,7 @@
   4. COOK_MODE mobile/desktop에서 method 색상이 동일한지 확인
   5. MANUAL_RECIPE_CREATE에서 조리방법 선택 후 step badge 색상 확인
   6. YT_IMPORT에서 재료 category 선택지와 step method 색상 확인
-- Stage 2 note: `pnpm local:reset:demo`는 Docker image layer 등록 중 `no space left on device`로 실패했다. `accept-real-db-tables-exist`는 체크하지 않고, 자동화 가능한 검증은 Vitest, `pnpm typecheck`, `pnpm lint`, `pnpm verify:backend`로 보완한다.
+- Stage 2 note: `pnpm local:reset:demo`는 Docker image layer 등록 중 `no space left on device`로 실패했다. `accept-real-db-tables-exist`는 `supabase/migrations/20260301000000_core_schema_bootstrap.sql`의 `ingredients`, `ingredient_synonyms`, `cooking_methods` 정의로 확인했고, 자동화 가능한 검증은 Vitest, `pnpm typecheck`, `pnpm lint`, `pnpm verify:backend`로 보완한다.
 
 ## Automation Split
 

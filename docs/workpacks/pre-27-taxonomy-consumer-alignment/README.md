@@ -186,7 +186,7 @@ function getCookingMethodColor(colorKey?: string | null): string;
   - `GET /ingredients?category=채소` 정상 반환 확인
   - `GET /cooking-methods` 정상 반환 확인
   - pantry category filter 정상 동작 확인
-- Stage 2 시도 결과: `pnpm local:reset:demo`는 Docker image layer 등록 중 `no space left on device`로 실패했다. 자동화 가능한 검증은 Vitest, `pnpm typecheck`, `pnpm lint`, `pnpm verify:backend`로 보완한다.
+- Stage 2 시도 결과: `pnpm local:reset:demo`는 Docker image layer 등록 중 `no space left on device`로 실패했다. 테이블 존재 여부는 `supabase/migrations/20260301000000_core_schema_bootstrap.sql`의 `ingredients`, `ingredient_synonyms`, `cooking_methods` 정의로 확인했고, 자동화 가능한 검증은 Vitest, `pnpm typecheck`, `pnpm lint`, `pnpm verify:backend`로 보완한다.
 
 ### Seed / Reset 명령
 
@@ -264,11 +264,11 @@ function getCookingMethodColor(colorKey?: string | null): string;
 - [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 (기존 유지 확인) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 (shared source/helper import 전환) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [ ] `loading / empty / error / read-only` 상태 점검 (기존 유지 확인) <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
-- [ ] 테스트에서 category/method 리터럴을 shared source import로 전환 <!-- omo:id=delivery-test-literal-cleanup;stage=2;scope=shared;review=3,6 -->
+- [x] 테스트에서 category/method 리터럴을 shared source import로 전환 <!-- omo:id=delivery-test-literal-cleanup;stage=2;scope=shared;review=3,6 -->
 - [ ] 시각적 출력 불변 regression 확인 <!-- omo:id=delivery-visual-regression;stage=4;scope=frontend;review=5,6 -->
