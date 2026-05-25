@@ -1323,6 +1323,29 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": true,
       "blocked_reason_code": null
+    },
+    {
+      "id": "pre-27-taxonomy-consumer-alignment",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/pre-27-taxonomy-consumer-alignment",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice pre-27-taxonomy-consumer-alignment",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs PR in progress on docs/pre-27-taxonomy-consumer-alignment. Pre-slice-27 taxonomy consumer alignment. Tracks: A) ingredient category shared mapping source (legacy 7 frozen, no DB registry table), B) cooking method helper unification (local color/fallback maps consolidated). No schema DDL, no new API endpoints, no contract-evolution. Design Status N/A. closeout_phase=collecting",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
     }
   ]
 }
