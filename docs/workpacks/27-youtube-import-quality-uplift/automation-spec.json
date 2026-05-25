@@ -1,0 +1,116 @@
+{
+  "slice_id": "27-youtube-import-quality-uplift",
+  "execution_mode": "autonomous",
+  "risk_class": "low",
+  "merge_policy": "conditional-auto",
+  "contract_evolution_required": false,
+  "backend": {
+    "required_endpoints": [
+      "POST /recipes/youtube/validate",
+      "POST /recipes/youtube/extract",
+      "POST /recipes/youtube/ingredient-registration",
+      "POST /recipes/youtube/register"
+    ],
+    "invariants": [
+      "no-new-api-endpoint",
+      "no-new-api-response-field",
+      "no-schema-ddl-change",
+      "legacy-7-category-freeze",
+      "extract-response-shape-compat",
+      "session-contract-24h-ttl",
+      "session-ownership-validation",
+      "rpc-atomic-registration",
+      "label-varchar5-non-overload",
+      "external-data-staging-only",
+      "no-llm-fallback",
+      "corpus-evidence-required",
+      "api-envelope-compat",
+      "dictionary-resolution-no-regress"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm test:youtube-corpus",
+      "pnpm test:youtube-dictionary",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "required_test_targets": [
+      "tests/youtube-corpus-scoring.test.ts",
+      "tests/youtube-dictionary-resolution.test.ts",
+      "tests/youtube-import.backend.test.ts",
+      "tests/youtube-parser-rules.test.ts",
+      "tests/youtube-readiness-score.test.ts"
+    ],
+    "quality_gates": {
+      "in_corpus_ingredient_f1": ">= 0.90",
+      "in_corpus_step_f1": ">= 0.90",
+      "wild_structured_f1": ">= 0.85",
+      "wild_weak_f1": ">= 0.70",
+      "import_readiness_score": ">= 0.80",
+      "dictionary_resolution_rate": ">= 1.0000",
+      "corpus_fixture_count": ">= 50",
+      "real_description_fixture_count": ">= 30",
+      "category_min_fixture_count": ">= 5"
+    },
+    "readiness_formula": {
+      "description": "readiness = 0.35*ingredient_f1 + 0.25*step_f1 + 0.20*resolution_rate + 0.10*step_completeness_rate + 0.10*(1-blocking_issue_rate)",
+      "weights": {
+        "ingredient_f1": 0.35,
+        "step_f1": 0.25,
+        "resolution_rate": 0.20,
+        "step_completeness_rate": 0.10,
+        "blocking_issue_reduction": 0.10
+      },
+      "gate": 0.80
+    }
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "playwright_projects": [
+      "mobile-chrome"
+    ],
+    "artifact_assertions": [
+      "extract-response-shape-unchanged",
+      "shared-source-taxonomy-delegation",
+      "visual-output-regression-free"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "youtube-data-api-live-extraction"
+  ],
+  "blocked_conditions": [
+    "youtube-extraction-sessions-table-missing",
+    "ingredients-table-missing",
+    "ingredient-synonyms-table-missing",
+    "cooking-methods-table-missing",
+    "corpus-fixture-files-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

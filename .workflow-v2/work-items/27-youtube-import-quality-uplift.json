@@ -1,0 +1,111 @@
+{
+  "id": "27-youtube-import-quality-uplift",
+  "title": "YouTube import quality uplift: parser + dictionary + readiness >= 0.80",
+  "summary": "YouTube 설명란 파서 추출 품질과 import readiness를 현재 baseline(in-corpus F1 0.9160, dictionary resolution 1.0000)에서 readiness >= 0.80 수준으로 끌어올린다. LLM 없이 결정론 파서 규칙 + 사전 시딩 + 추출 후처리로 달성하며, 50건 evidence corpus에서 측정한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "YouTube 설명란 파서 추출 품질을 measurable하게 개선하여 사용자가 최소한의 수정으로 레시피를 등록할 수 있게 한다. 50건 corpus에서 import readiness >= 0.80을 달성한다.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "21-ingredient-dictionary",
+    "22-youtube-ingredient-registration",
+    "23-youtube-quality-corpus",
+    "24-youtube-parser-dictionary-hardening",
+    "25-youtube-bulk-ingredient-resolution",
+    "26-youtube-dictionary-seed-uplift",
+    "pre-27-taxonomy-consumer-alignment"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.1.md",
+      "docs/화면정의서-v1.5.8.md",
+      "docs/api문서-v1.2.11.md",
+      "docs/db설계-v1.3.7.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/27-youtube-import-quality-uplift/README.md",
+      "docs/workpacks/27-youtube-import-quality-uplift/acceptance.md",
+      "docs/workpacks/27-youtube-import-quality-uplift/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/youtube-description-parser-scoring.md",
+      ".omx/plans/youtube-description-parser-ralplan.md",
+      ".omx/plans/ingredient-cooking-taxonomy-ralplan-final-20260525.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "youtube-data-api-live-extraction"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm test:youtube-corpus",
+      "pnpm test:youtube-dictionary",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 27-youtube-import-quality-uplift",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "in-corpus-ingredient-f1-gte-0.90",
+      "in-corpus-step-f1-gte-0.90",
+      "import-readiness-gte-0.80",
+      "dictionary-resolution-no-regress",
+      "extract-response-shape-compat",
+      "corpus-fixture-count-gte-50"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 docs created. Pre-27 taxonomy consumer alignment merged — slice 27 can start without taxonomy branch divergence. Current baselines: in-corpus parser F1 0.9160, dictionary resolution 1.0000. Target: import readiness >= 0.80 on 50-case evidence corpus. No LLM fallback (user paused). Deterministic parser rules + dictionary seeding + post-processing only.",
+  "out_of_scope": [
+    "LLM-based extraction (caption/ASR/estimation)",
+    "Public API response shape changes",
+    "Multi-recipe selection UI",
+    "ingredient_categories / cooking_method_categories DB registry table",
+    "cooking_methods.label varchar(5) overload",
+    "External data (MFDS/KFRI) production direct-load",
+    "Legacy field removal",
+    "GET /cooking-methods response field additions",
+    "Ingredient category expansion beyond 7",
+    "New screen creation or screen redesign",
+    "YouTube caption/ASR/OCR extraction layers",
+    "Wild-video 90% success guarantee"
+  ],
+  "open_questions": []
+}
