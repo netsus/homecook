@@ -597,7 +597,7 @@ export function eatQaFixtureLeftover(leftoverDishId: string) {
     return {
       ok: false as const,
       code: "RESOURCE_NOT_FOUND",
-      message: "남은요리를 찾을 수 없어요.",
+      message: "남은 요리를 찾을 수 없어요.",
       status: 404,
     };
   }
@@ -606,7 +606,7 @@ export function eatQaFixtureLeftover(leftoverDishId: string) {
     return {
       ok: false as const,
       code: "FORBIDDEN",
-      message: "내 남은요리만 수정할 수 있어요.",
+      message: "내 남은 요리만 수정할 수 있어요.",
       status: 403,
     };
   }
@@ -640,7 +640,7 @@ export function uneatQaFixtureLeftover(leftoverDishId: string) {
     return {
       ok: false as const,
       code: "RESOURCE_NOT_FOUND",
-      message: "남은요리를 찾을 수 없어요.",
+      message: "남은 요리를 찾을 수 없어요.",
       status: 404,
     };
   }
@@ -649,7 +649,7 @@ export function uneatQaFixtureLeftover(leftoverDishId: string) {
     return {
       ok: false as const,
       code: "FORBIDDEN",
-      message: "내 남은요리만 수정할 수 있어요.",
+      message: "내 남은 요리만 수정할 수 있어요.",
       status: 403,
     };
   }
@@ -706,7 +706,7 @@ export function createQaFixtureMeal({
       return {
         ok: false as const,
         code: "RESOURCE_NOT_FOUND",
-        message: "남은요리를 찾을 수 없어요.",
+        message: "남은 요리를 찾을 수 없어요.",
         status: 404,
       };
     }
@@ -715,7 +715,7 @@ export function createQaFixtureMeal({
       return {
         ok: false as const,
         code: "FORBIDDEN",
-        message: "내 남은요리만 플래너에 추가할 수 있어요.",
+        message: "내 남은 요리만 플래너에 추가할 수 있어요.",
         status: 403,
       };
     }

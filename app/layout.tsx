@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "집밥",
-  description: "레시피 탐색부터 요리까지 이어지는 집밥 웹뷰앱",
+  description: "레시피 찾기부터 요리까지 이어지는 집밥 웹뷰앱",
 };
 
 export default function RootLayout({

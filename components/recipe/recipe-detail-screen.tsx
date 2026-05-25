@@ -73,7 +73,7 @@ interface RecipeDetailScreenProps {
 
 
 const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "탐색" },
+  { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
@@ -876,7 +876,7 @@ export function RecipeDetailScreen({
               <span className="text-[var(--line)]">·</span>
               <span>재료 {recipe.ingredients.length}개</span>
               <span className="text-[var(--line)]">·</span>
-              <span>조리 {recipe.steps.length}단계</span>
+              <span>만들기 {recipe.steps.length}단계</span>
             </p>
           </div>
 
@@ -951,7 +951,7 @@ export function RecipeDetailScreen({
           <div className="mb-5 rounded-[var(--radius-card)] bg-[var(--surface-fill)] px-4 py-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs text-[var(--muted)]">몇 인분?</div>
+                <div className="text-xs text-[var(--muted)]">인분 조절</div>
                 <div className="text-base font-bold text-[var(--foreground)]">
                   {selectedServings}인분
                 </div>
@@ -1037,7 +1037,7 @@ export function RecipeDetailScreen({
 
         <div className="rounded-[var(--radius-sheet)] border border-[var(--line)] bg-[var(--surface)] px-6 py-6">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--brand)]">
-            조리 단계
+            만들기
           </p>
           <ol className="space-y-3">
             {recipe.steps.map((step) => (
@@ -1107,7 +1107,7 @@ export function RecipeDetailScreen({
                   {selectedServings}인분 기준
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-[var(--text-2)]">
-                  재료 {recipe.ingredients.length}개 · 조리 {recipe.steps.length}단계
+                  재료 {recipe.ingredients.length}개 · 만들기 {recipe.steps.length}단계
                 </p>
               </div>
 
@@ -1244,7 +1244,7 @@ export function RecipeDetailScreen({
         >
           {[
             ["ingredients", "재료"],
-            ["steps", "조리법"],
+            ["steps", "만들기"],
             ["reviews", "리뷰"],
           ].map(([tab, label]) => {
             const key = tab as RecipeDetailTab;
@@ -1275,7 +1275,7 @@ export function RecipeDetailScreen({
             <div className="mb-5 flex items-center justify-between rounded-[var(--radius-card)] bg-[#F8F9FA] px-4 py-3">
               <div>
                 <div className="mb-0.5 text-[12px] text-[#5F6470]">
-                  몇 인분?
+                  인분 조절
                 </div>
                 <div className="text-[16px] font-bold text-[#212529]">
                   {selectedServings}인분
@@ -1364,7 +1364,7 @@ export function RecipeDetailScreen({
                       {step.step_number}
                     </span>
                     <span className="flex-1 text-[15px] font-bold text-[#212529]">
-                      {step.cooking_method?.label ?? "조리"}
+                      {step.cooking_method?.label ?? "만들기"}
                     </span>
                     {step.duration_text ? (
                       <span className="text-[12px] text-[#5F6470]">
@@ -1551,7 +1551,7 @@ function RecipeDetailWebView({
         <nav aria-label="레시피 경로" className="web-breadcrumb">
           <Link className="web-breadcrumb-link" href={returnHref}>
             <ChevronLeftIcon />
-            탐색
+            홈
           </Link>
           <span className="web-breadcrumb-sep">/</span>
           <span className="web-breadcrumb-current">{recipe.title}</span>
@@ -1606,7 +1606,7 @@ function RecipeDetailWebView({
             <section aria-label="레시피 요약" className="web-recipe-meta-row">
               <RecipeMetric label="기본" value={`${recipe.base_servings}인분`} />
               <RecipeMetric label="재료" value={String(recipe.ingredients.length)} />
-              <RecipeMetric label="조리 단계" value={String(recipe.steps.length)} />
+              <RecipeMetric label="만들기" value={String(recipe.steps.length)} />
               <RecipeMetric label="소요" value={minutesLabel} />
             </section>
 
@@ -1695,12 +1695,12 @@ function RecipeDetailWebView({
               </ul>
               <div className="web-pantry-note">
                 <CheckIcon />
-                팬트리에 있는 재료는 조리 전에 다시 확인해 주세요
+                팬트리에 있는 재료는 만들기 전에 다시 확인해 주세요
               </div>
             </section>
 
             <section className="web-reading-section">
-              <h2 className="web-reading-title">조리 순서</h2>
+              <h2 className="web-reading-title">만들기</h2>
               <ol className="web-step-list">
                 {recipe.steps.map((step) => (
                   <li className="web-step-row" key={step.id}>
@@ -1730,7 +1730,7 @@ function RecipeDetailWebView({
                             ),
                           }}
                         >
-                          {step.cooking_method?.label ?? "조리"}
+                          {step.cooking_method?.label ?? "만들기"}
                         </span>
                         {step.duration_text ? (
                           <span className="web-step-duration">
@@ -1962,7 +1962,7 @@ function RecipeDetailWebLoadingSkeleton() {
         <nav aria-label="레시피 경로" className="web-breadcrumb">
           <Link className="web-breadcrumb-link" href="/">
             <ChevronLeftIcon />
-            탐색
+            홈
           </Link>
           <span className="web-breadcrumb-sep">/</span>
           <span className="web-breadcrumb-current">레시피 불러오는 중</span>

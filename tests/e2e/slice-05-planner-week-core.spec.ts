@@ -189,7 +189,7 @@ test.describe("Slice 05 planner week core", () => {
     if (isMobile) {
       await expect(shoppingLink).toHaveClass(/fixed/);
       await expect(page.getByRole("navigation", { name: "플래너 하단 탭" })).toBeVisible();
-      await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "남은 요리" })).toHaveCount(0);
       await expect(plannerGrid.getByRole("button", { name: /저녁 식사 추가/ })).toHaveText("+");
     } else {
       const actions = page.getByRole("group", { name: "플래너 작업" });
@@ -199,7 +199,7 @@ test.describe("Slice 05 planner week core", () => {
       await expect(actions.getByRole("button", { name: "다음 주" })).toHaveText("다음 주 >");
       await expect(actions.getByRole("link", { name: "장보기", exact: true })).toBeVisible();
       await expect(page.getByRole("link", { name: "요리 준비" })).toHaveCount(0);
-      await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "남은 요리" })).toHaveCount(0);
     }
     await expect(page.getByRole("button", { name: "컬럼 추가" })).toHaveCount(0);
 
@@ -240,7 +240,7 @@ test.describe("Slice 05 planner week core", () => {
     if (isMobileViewport(page)) {
       await expect(shoppingLink).toHaveClass(/fixed/);
       await expect(page.getByRole("navigation", { name: "플래너 하단 탭" })).toBeVisible();
-      await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "남은 요리" })).toHaveCount(0);
     } else {
       const actions = page.getByRole("group", { name: "플래너 작업" });
 
@@ -249,7 +249,7 @@ test.describe("Slice 05 planner week core", () => {
       await expect(actions.getByRole("button", { name: "다음 주" })).toHaveText("다음 주 >");
       await expect(actions.getByRole("link", { name: "장보기", exact: true })).toBeVisible();
       await expect(page.getByRole("link", { name: "요리 준비" })).toHaveCount(0);
-      await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "남은 요리" })).toHaveCount(0);
     }
   });
 

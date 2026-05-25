@@ -781,7 +781,7 @@ describe("MypageScreen", () => {
     const recipebooksTab = screen.getByRole("tab", { name: "레시피북" });
     const shoppingTab = screen.getByRole("tab", { name: "장보기 기록" });
     const leftoversTab = screen.getByRole("tab", { name: "남은 요리" });
-    const eatenTab = screen.getByRole("tab", { name: "다먹은 목록" });
+    const eatenTab = screen.getByRole("tab", { name: "다먹은 요리" });
     const accountTab = screen.getByRole("tab", { name: "계정 관리" });
 
     expect(savedTab.getAttribute("aria-selected")).toBe("true");
@@ -803,7 +803,7 @@ describe("MypageScreen", () => {
     expect(within(savedPanel).queryByRole("button", { name: /^레시피북$/ })).toBeNull();
     expect(within(savedPanel).queryByRole("button", { name: /^장보기 기록$/ })).toBeNull();
     expect(within(savedPanel).queryByRole("button", { name: /남은 요리/ })).toBeNull();
-    expect(within(savedPanel).queryByRole("button", { name: /다먹은 목록/ })).toBeNull();
+    expect(within(savedPanel).queryByRole("button", { name: /다먹은 요리/ })).toBeNull();
   });
 
   it("renders profile image with fallback initial when no image URL", async () => {
@@ -971,19 +971,19 @@ describe("MypageScreen", () => {
     expect(leftoverRecipeLink.getAttribute("href")).toContain("restore=leftovers-tab");
     expect(screen.queryByRole("link", { name: "남은 요리 전체 관리" })).toBeNull();
 
-    await user.click(screen.getByRole("tab", { name: "다먹은 목록" }));
+    await user.click(screen.getByRole("tab", { name: "다먹은 요리" }));
 
     expect(await screen.findByText("다 먹은 된장찌개")).toBeTruthy();
     expect(mockFetchLeftovers).toHaveBeenCalledWith("eaten");
     expect(
-      screen.getByRole("tab", { name: "다먹은 목록" }).getAttribute("aria-selected"),
+      screen.getByRole("tab", { name: "다먹은 요리" }).getAttribute("aria-selected"),
     ).toBe("true");
     expect(screen.getByTestId("leftover-card-eaten-1")).toBeTruthy();
     expect(screen.getByRole("button", { name: "남은 요리로" })).toBeTruthy();
     const eatenRecipeLink = screen.getByRole("link", { name: "레시피 보기" });
     expect(eatenRecipeLink.getAttribute("href")).toContain("/recipe/recipe-eaten-1?");
     expect(eatenRecipeLink.getAttribute("href")).toContain("restore=eaten-list-tab");
-    expect(screen.queryByRole("link", { name: "다먹은 목록 전체 관리" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "다먹은 요리 전체 관리" })).toBeNull();
   });
 
   it("keeps mobile menu icons visually separated from labels", async () => {

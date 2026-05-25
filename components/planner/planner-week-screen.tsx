@@ -50,7 +50,7 @@ const WEEK_PAGE_INDEX_CURRENT = 1;
 const WEEK_SCROLL_SETTLE_MS = 96;
 
 const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "탐색" },
+  { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
@@ -1477,8 +1477,8 @@ export function PlannerWeekScreen({
                                         {meal.recipe_title}
                                       </span>
                                       {meal.is_leftover ? (
-                                        <span aria-label="남은요리 식사" className="sr-only">
-                                          남은요리
+                                        <span aria-label="남은 요리 식사" className="sr-only">
+                                          남은 요리
                                         </span>
                                       ) : null}
                                       <span className="mt-px block text-[10px] text-[#868E96]">

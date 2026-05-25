@@ -65,7 +65,7 @@ export async function POST(request: Request, context: RouteContext) {
   const { leftover_id: leftoverId } = await context.params;
 
   if (!isUuid(leftoverId)) {
-    return fail("RESOURCE_NOT_FOUND", "남은요리를 찾을 수 없어요.", 404);
+    return fail("RESOURCE_NOT_FOUND", "남은 요리를 찾을 수 없어요.", 404);
   }
 
   if (isQaFixtureModeEnabled()) {
@@ -100,7 +100,7 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
-      formatBootstrapErrorMessage(bootstrapError, "남은요리를 다먹음 처리하지 못했어요."),
+      formatBootstrapErrorMessage(bootstrapError, "남은 요리를 다먹음 처리하지 못했어요."),
       500,
     );
   }
@@ -112,11 +112,11 @@ export async function POST(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (leftoverResult.error || !leftoverResult.data) {
-    return fail("RESOURCE_NOT_FOUND", "남은요리를 찾을 수 없어요.", 404);
+    return fail("RESOURCE_NOT_FOUND", "남은 요리를 찾을 수 없어요.", 404);
   }
 
   if (leftoverResult.data.user_id !== user.id) {
-    return fail("FORBIDDEN", "내 남은요리만 수정할 수 있어요.", 403);
+    return fail("FORBIDDEN", "내 남은 요리만 수정할 수 있어요.", 403);
   }
 
   if (leftoverResult.data.status === "eaten") {
@@ -137,7 +137,7 @@ export async function POST(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (updateResult.error || !updateResult.data) {
-    return fail("INTERNAL_ERROR", "남은요리를 다먹음 처리하지 못했어요.", 500);
+    return fail("INTERNAL_ERROR", "남은 요리를 다먹음 처리하지 못했어요.", 500);
   }
 
   return ok(toLeftoverMutationData(updateResult.data));

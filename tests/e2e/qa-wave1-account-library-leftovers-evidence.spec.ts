@@ -277,7 +277,7 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     "/mypage",
     async (page) => {
       await expect(page.getByTestId("mypage-settings-link")).toBeVisible();
-      await expect(page.getByText("남은요리")).toBeVisible();
+      await expect(page.getByText("남은 요리")).toBeVisible();
       await expect(page.getByText("다먹은 요리")).toBeVisible();
     },
     "mypage-default.png",
@@ -289,7 +289,7 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     "/mypage",
     async (page) => {
       await expect(page.getByTestId("mypage-settings-link")).toBeVisible();
-      await expect(page.getByText("남은요리")).toBeVisible();
+      await expect(page.getByText("남은 요리")).toBeVisible();
       await expect(page.getByText("다먹은 요리")).toBeVisible();
     },
     "mypage-narrow.png",
@@ -324,7 +324,7 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     viewports.mobile,
     "/settings?view=account",
     async (page) => {
-      await expect(page.getByRole("heading", { name: "계정 정보" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "계정 관리" })).toBeVisible();
       await expect(page.getByTestId("nickname-row")).toBeVisible();
       await expect(page.getByRole("button", { name: "회원탈퇴" })).toBeVisible();
     },
@@ -336,7 +336,7 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     viewports.narrow,
     "/settings?view=account",
     async (page) => {
-      await expect(page.getByRole("heading", { name: "계정 정보" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "계정 관리" })).toBeVisible();
       await expect(page.getByTestId("nickname-row")).toBeVisible();
       await expect(page.getByRole("button", { name: "회원탈퇴" })).toBeVisible();
     },
@@ -372,7 +372,7 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     viewports.mobile,
     "/leftovers/ate",
     async (page) => {
-      await expect(page.getByRole("button", { name: "남은요리로 복귀" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "남은 요리로 복귀" })).toBeVisible();
       await expect(page.getByTestId("ate-list-card").first()).toBeVisible();
       await expect(page.getByText("볶음밥")).toBeVisible();
     },
@@ -384,7 +384,7 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     viewports.narrow,
     "/leftovers/ate",
     async (page) => {
-      await expect(page.getByRole("button", { name: "남은요리로 복귀" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "남은 요리로 복귀" })).toBeVisible();
       await expect(page.getByTestId("ate-list-card").first()).toBeVisible();
       await expect(page.getByText("볶음밥")).toBeVisible();
     },

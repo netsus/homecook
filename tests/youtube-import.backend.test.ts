@@ -1626,7 +1626,7 @@ describe("20 youtube real import backend", () => {
         title: "딸기 치즈 타르트",
         blocking_issues: [],
         draft_warnings: expect.arrayContaining([
-          "원본 조리 순서 번호가 1, 2, 9, 10처럼 비연속이라 중간 단계 누락 가능성이 있어요.",
+          "원본 만들기 번호가 1, 2, 9, 10처럼 비연속이라 중간 항목 누락 가능성이 있어요.",
           "같은 재료를 컴포넌트별로 합산했어요. 인분을 바꾸면 괄호 안 원본 수량은 자동으로 바뀌지 않아요.",
         ]),
       },

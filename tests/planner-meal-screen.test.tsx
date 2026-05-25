@@ -811,10 +811,10 @@ describe("MealScreen", () => {
 
     await user.click(await screen.findByTestId("meal-screen-add-cta"));
 
-    const youtubeLink = screen.getByRole("link", { name: /유튜브에서 가져오기/ });
+    const youtubeLink = screen.getByRole("link", { name: /유튜브 가져오기/ });
     expect(youtubeLink.getAttribute("href")).toContain("/menu/add/youtube?");
     expect(
-      screen.queryByRole("dialog", { name: "유튜브에서 가져오기" }),
+      screen.queryByRole("dialog", { name: "유튜브 가져오기" }),
     ).toBeNull();
   });
 });

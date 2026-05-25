@@ -965,7 +965,7 @@ function MobileSelectScreen({
         </button>
       </div>
       <Wave1MobileBottomTab
-        ariaLabel="장보기 목록 생성 화면 하단 탐색"
+        ariaLabel="장보기 목록 생성 화면 하단 내비게이션"
         currentTab="planner"
       />
     </div>
@@ -1148,7 +1148,7 @@ function MobileReviewScreen({
         </div>
       </div>
       <Wave1MobileBottomTab
-        ariaLabel="장보기 목록 리뷰 화면 하단 탐색"
+        ariaLabel="장보기 목록 리뷰 화면 하단 내비게이션"
         currentTab="planner"
       />
     </div>

@@ -139,7 +139,7 @@ function buildMypageLeftoverRecipeHref(
 }
 
 const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "탐색" },
+  { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
@@ -651,7 +651,7 @@ export function MypageScreen({
       try {
         await eatLeftover(item.id);
         await Promise.all([loadLeftoverTab("leftover"), loadLeftoverTab("eaten")]);
-        showToast("다먹은 목록으로 옮겼어요", "success");
+        showToast("다먹은 요리로 옮겼어요", "success");
       } catch (error) {
         if (isLeftoverApiError(error) && error.status === 401) {
           setAuthState("unauthorized");
@@ -1088,7 +1088,7 @@ export function MypageScreen({
             </div>
             <div>
               <strong>26</strong>
-              <span>다 먹은 끼니</span>
+              <span>다먹은 요리</span>
             </div>
             <div>
               <strong>14</strong>
@@ -1128,10 +1128,10 @@ export function MypageScreen({
           </WebTabButton>
           <WebTabButton
             active={activeTab === "eaten"}
-            aria-label="다먹은 목록"
+            aria-label="다먹은 요리"
             onClick={() => switchDesktopTab("eaten")}
           >
-            <CheckIcon /> 다먹은 목록
+            <CheckIcon /> 다먹은 요리
           </WebTabButton>
           <WebTabButton
             active={activeTab === "account"}
@@ -1261,16 +1261,16 @@ export function MypageScreen({
           ) : null}
           {activeTab === "eaten" ? (
             <LeftoverTabContent
-              description="다 먹은 목록을 확인하고 필요할 때 다시 만들 레시피로 이동합니다."
+              description="다먹은 요리를 확인하고 필요할 때 다시 만들 레시피로 이동합니다."
               emptyDescription="남은 요리를 다 먹음 처리하면 여기에 모여요."
-              emptyTitle="다 먹은 기록이 없어요"
+              emptyTitle="다먹은 요리가 없어요"
               items={eatenItems}
               mutatingId={leftoverMutatingId}
               onRetry={() => void loadLeftoverTab("eaten")}
               onUneat={handleUneatLeftover}
               state={eatenState}
               tabKind="eaten"
-              title="다먹은 목록"
+              title="다먹은 요리"
             />
           ) : null}
         </section>
@@ -1423,7 +1423,7 @@ function MyPageAccountSurface({ profile }: { profile: UserProfileData | null }) 
     <div className="web-mypage-subsurface" data-testid="mypage-account-tab">
       <div className="web-mypage-section-head">
         <h2>계정 관리</h2>
-        <p>프로필, 로그인 상태, 전체 설정을 관리합니다.</p>
+        <p>프로필, 로그인 상태, 환경설정을 관리합니다.</p>
       </div>
       <WebCard className="web-mypage-account-card">
         <div className="web-mypage-account-profile">
@@ -1461,7 +1461,7 @@ function MyPageAccountSurface({ profile }: { profile: UserProfileData | null }) 
         >
           <span className="web-mypage-row-icon"><SettingsIcon /></span>
           <span className="web-mypage-row-copy">
-            <strong>전체 설정</strong>
+            <strong>환경설정</strong>
             <span>끼니, 알림, 단위와 테마를 한 곳에서 관리합니다.</span>
           </span>
           <ChevronRightIcon />

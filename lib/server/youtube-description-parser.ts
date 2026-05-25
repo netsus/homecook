@@ -1618,7 +1618,7 @@ function buildParseWarnings(recipes: ParsedRecipeCandidate[]) {
       if (ordinals[index] !== ordinals[index - 1] + 1) {
         warnings.push({
           code: "non_contiguous_step_ordinals",
-          message: `원본 조리 순서 번호가 ${ordinals.join(", ")}처럼 비연속이라 중간 단계 누락 가능성이 있어요.`,
+          message: `원본 만들기 번호가 ${ordinals.join(", ")}처럼 비연속이라 중간 항목 누락 가능성이 있어요.`,
         });
         break;
       }
@@ -1821,7 +1821,7 @@ function adaptNoStructuredDraft(selectionOutcome: RecipeCandidateSelection["outc
   return {
     ingredients: [],
     steps: [],
-    draftWarnings: ["설명란에서 구조화된 재료와 조리 과정을 찾지 못했어요. 직접 추가해서 등록할 수 있어요."],
+    draftWarnings: ["설명란에서 구조화된 재료와 만들기를 찾지 못했어요. 직접 추가해서 등록할 수 있어요."],
     blockingIssues: ["ingredients", "steps"],
     includeIncompleteStepFallback: false,
     selectionOutcome,

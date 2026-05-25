@@ -222,7 +222,7 @@ describe("SettingsScreen", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "계정 정보" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "계정 관리" })).toBeTruthy();
     expect(
       screen.queryByRole("navigation", { name: "설정 하단 탭" }),
     ).toBeNull();

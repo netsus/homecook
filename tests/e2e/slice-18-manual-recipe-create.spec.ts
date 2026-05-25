@@ -70,7 +70,7 @@ async function openStepAdd(page: Page) {
 }
 
 async function submitInlineStep(page: Page) {
-  await page.getByRole("button", { name: "+ 조리 과정 추가" }).click();
+  await page.getByRole("button", { name: "+ 만들기 추가" }).click();
 }
 
 async function installCookingMethodsRoute(page: Page, methods: CookingMethodItem[]) {
@@ -223,7 +223,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await openStepAdd(page);
     await page.click('button:has-text("볶기")');
     await page.fill(
-      'textarea[placeholder="조리 설명을 입력하세요"]',
+      'textarea[placeholder="만들기 설명을 입력하세요"]',
       "양파를 한입 크기로 썰어 중불에서 볶아주세요"
     );
 
@@ -317,7 +317,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await openStepAdd(page);
     await page.click('button:has-text("볶기")');
     await page.fill(
-      'textarea[placeholder="조리 설명을 입력하세요"]',
+      'textarea[placeholder="만들기 설명을 입력하세요"]',
       "양파를 볶아주세요"
     );
     await submitInlineStep(page);
@@ -359,14 +359,14 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await saveButton.click();
     await expect(page.getByText("요리 이름을 입력해주세요.")).toBeVisible();
     await expect(page.getByText("재료를 1개 이상 추가해주세요.")).toBeVisible();
-    await expect(page.getByText("조리 과정을 추가해주세요.")).toBeVisible();
+    await expect(page.getByText("만들기를 추가해주세요.")).toBeVisible();
 
     // Add title only
     await fillRecipeTitle(page, "테스트 레시피");
     await expect(saveButton).toBeEnabled();
     await expect(page.getByText("요리 이름을 입력해주세요.")).toHaveCount(0);
     await expect(page.getByText("재료를 1개 이상 추가해주세요.")).toBeVisible();
-    await expect(page.getByText("조리 과정을 추가해주세요.")).toBeVisible();
+    await expect(page.getByText("만들기를 추가해주세요.")).toBeVisible();
 
     // Add ingredient
     await page.click("text=+ 재료 추가");
@@ -379,19 +379,19 @@ test.describe("Slice 18: Manual Recipe Create", () => {
 
     await expect(saveButton).toBeEnabled();
     await expect(page.getByText("재료를 1개 이상 추가해주세요.")).toHaveCount(0);
-    await expect(page.getByText("조리 과정을 추가해주세요.")).toBeVisible();
+    await expect(page.getByText("만들기를 추가해주세요.")).toBeVisible();
 
     // Add step
     await openStepAdd(page);
     await page.click('button:has-text("섞기/준비")');
-    await page.fill('textarea[placeholder="조리 설명을 입력하세요"]', "소금을 약간 넣어주세요");
+    await page.fill('textarea[placeholder="만들기 설명을 입력하세요"]', "소금을 약간 넣어주세요");
 
     await submitInlineStep(page);
 
     // Now save button should be enabled
     await expect(saveButton).toBeEnabled();
     await expect(page.getByTestId("manual-save-requirements")).toHaveCount(0);
-    await expect(page.getByText("조리 과정을 추가해주세요.")).toHaveCount(0);
+    await expect(page.getByText("만들기를 추가해주세요.")).toHaveCount(0);
   });
 
   test("guest: redirects to login with return-to-action", async ({ page }) => {
@@ -495,7 +495,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
 
     await openStepAdd(page);
     await page.click('button:has-text("섞기/준비")');
-    await page.fill('textarea[placeholder="조리 설명을 입력하세요"]', "소금을 약간 넣어주세요");
+    await page.fill('textarea[placeholder="만들기 설명을 입력하세요"]', "소금을 약간 넣어주세요");
     await submitInlineStep(page);
 
     await getSaveButton(page).click();
@@ -587,7 +587,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
 
     await openStepAdd(page);
     await page.click('button:has-text("섞기/준비")');
-    await page.fill('textarea[placeholder="조리 설명을 입력하세요"]', "재료를 잘 섞어주세요");
+    await page.fill('textarea[placeholder="만들기 설명을 입력하세요"]', "재료를 잘 섞어주세요");
     await submitInlineStep(page);
 
     await getSaveButton(page).click();
@@ -639,7 +639,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
 
     await openStepAdd(page);
     await page.click('button:has-text("섞기/준비")');
-    await page.fill('textarea[placeholder="조리 설명을 입력하세요"]', "재료를 잘 섞어주세요");
+    await page.fill('textarea[placeholder="만들기 설명을 입력하세요"]', "재료를 잘 섞어주세요");
     await submitInlineStep(page);
 
     await getSaveButton(page).click();
@@ -1002,7 +1002,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await openStepAdd(page);
 
     await expect(page.getByTestId("manual-step-composer")).toBeVisible();
-    await expect(page.getByRole("button", { name: "+ 조리 과정 추가" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "+ 만들기 추가" })).toBeDisabled();
     await expect(page.locator('div.fixed.inset-0.z-50')).toHaveCount(0);
   });
 });

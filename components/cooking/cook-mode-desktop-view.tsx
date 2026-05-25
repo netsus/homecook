@@ -22,7 +22,7 @@ interface CookModeDesktopViewProps {
 }
 
 const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "탐색" },
+  { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
@@ -113,7 +113,7 @@ export function CookModeDesktopView({
           </div>
           <h1 data-testid={titleTestId}>{recipe.title}</h1>
           <p className="web-cook-mode-summary">
-            조리 단계 {recipe.steps.length}개 · 소진된 재료 {recipe.ingredients.length}개
+            만들기 {recipe.steps.length}개 · 소진된 재료 {recipe.ingredients.length}개
           </p>
           {variant === "standalone" ? (
             <p className="web-cook-standalone-notice">
@@ -127,7 +127,7 @@ export function CookModeDesktopView({
             aria-labelledby={`${screenTestId}-steps-heading`}
             className="web-cook-step-panel"
           >
-            <h2 id={`${screenTestId}-steps-heading`}>조리 단계</h2>
+            <h2 id={`${screenTestId}-steps-heading`}>만들기</h2>
             <StepList steps={recipe.steps} />
           </section>
 
@@ -232,7 +232,7 @@ function StepList({ steps }: { steps: CookingModeStep[] }) {
   if (steps.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-[var(--muted)]">
-        등록된 조리 과정이 없어요.
+        등록된 만들기가 없어요.
       </p>
     );
   }

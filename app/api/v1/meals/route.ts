@@ -501,11 +501,11 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (leftoverResult.error || !leftoverResult.data) {
-      return fail("RESOURCE_NOT_FOUND", "남은요리를 찾을 수 없어요.", 404);
+      return fail("RESOURCE_NOT_FOUND", "남은 요리를 찾을 수 없어요.", 404);
     }
 
     if (leftoverResult.data.user_id !== user.id) {
-      return fail("FORBIDDEN", "내 남은요리만 플래너에 추가할 수 있어요.", 403);
+      return fail("FORBIDDEN", "내 남은 요리만 플래너에 추가할 수 있어요.", 403);
     }
 
     if (leftoverResult.data.recipe_id !== parsed.recipeId) {

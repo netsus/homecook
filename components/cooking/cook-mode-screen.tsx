@@ -37,7 +37,7 @@ import { useCookModeStore } from "@/stores/cook-mode-store";
 type AuthState = "checking" | "authenticated" | "unauthorized";
 
 const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "탐색" },
+  { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },

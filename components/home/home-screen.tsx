@@ -75,7 +75,7 @@ const RECIPE_CATEGORY_FILTERS = [
 type RecipeCategoryLabel = (typeof RECIPE_CATEGORY_FILTERS)[number]["label"];
 
 const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "탐색" },
+  { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
@@ -403,7 +403,7 @@ export function HomeScreen() {
             <div className="bg-white px-4 pb-3 pt-5">
               <div className="mb-0.5 text-[14px] text-[#495057]">목요일 저녁,</div>
               <h1 className="text-[22px] font-bold leading-[1.2] text-[#212529]">
-                오늘은 뭐 해먹지?
+                오늘 뭐 먹지?
               </h1>
             </div>
 

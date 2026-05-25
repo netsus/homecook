@@ -112,7 +112,7 @@ describe("youtube description parser v2", () => {
       "[치즈 필링] 크림치즈에 설탕을 넣고 풀어요.",
       "[치즈 필링] 식힌 타르트지에 필링을 채워요.",
     ]);
-    expect(draft.draftWarnings).toContain("원본 조리 순서 번호가 1, 2, 9, 10처럼 비연속이라 중간 단계 누락 가능성이 있어요.");
+    expect(draft.draftWarnings).toContain("원본 만들기 번호가 1, 2, 9, 10처럼 비연속이라 중간 항목 누락 가능성이 있어요.");
     expect(draft.blockingIssues).toEqual([]);
   });
 
@@ -385,7 +385,7 @@ describe("youtube description parser v2", () => {
     expect(draft.ingredients).toEqual([]);
     expect(draft.steps).toEqual([]);
     expect(draft.blockingIssues).toEqual(["ingredients", "steps"]);
-    expect(draft.draftWarnings).toContain("설명란에서 구조화된 재료와 조리 과정을 찾지 못했어요. 직접 추가해서 등록할 수 있어요.");
+    expect(draft.draftWarnings).toContain("설명란에서 구조화된 재료와 만들기를 찾지 못했어요. 직접 추가해서 등록할 수 있어요.");
     expect(draft.includeIncompleteStepFallback).toBe(false);
   });
 

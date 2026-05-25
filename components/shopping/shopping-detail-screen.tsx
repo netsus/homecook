@@ -1050,7 +1050,7 @@ function ShoppingDetailSkeleton({
           </section>
         </main>
       <Wave1MobileBottomTab
-        ariaLabel="장보기 상세 화면 하단 탐색"
+        ariaLabel="장보기 상세 화면 하단 내비게이션"
         currentTab={navActiveId}
       />
       </div>
@@ -1328,7 +1328,7 @@ function MobileShoppingDetailScreen({
       ) : null}
 
         <Wave1MobileBottomTab
-          ariaLabel="장보기 상세 화면 하단 탐색"
+          ariaLabel="장보기 상세 화면 하단 내비게이션"
           currentTab={navActiveId}
         />
 

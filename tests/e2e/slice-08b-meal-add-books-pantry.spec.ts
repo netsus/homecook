@@ -282,7 +282,7 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await expect(visibleButtonText(page, "레시피북")).toBeEnabled();
     await expect(visibleButtonText(page, "팬트리")).toBeEnabled();
     await expect(visibleButtonText(page, "유튜브")).toBeEnabled();
-    await expect(visibleButtonText(page, "남은요리")).toBeEnabled();
+    await expect(visibleButtonText(page, "남은 요리")).toBeEnabled();
   });
 
   // ── Recipe book selector ───────────────────────────────────────────────────

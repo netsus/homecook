@@ -312,7 +312,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.goto(YOUTUBE_IMPORT_URL);
 
     // Step 1: URL input
-    await expect(page.getByRole("heading", { name: "유튜브에서 가져오기" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "유튜브 가져오기" })).toBeVisible();
     await expect(page.locator("text=유튜브 영상에서")).toBeVisible();
     const urlInput = page.locator('input[type="url"]');
     await urlInput.fill("https://www.youtube.com/watch?v=recipe12345");
@@ -338,7 +338,7 @@ test.describe("Slice 19: YouTube Import", () => {
       "true",
     );
     await expect(page.locator("text=재료 (2개)")).toBeVisible();
-    await expect(page.locator("text=조리 과정 (3단계)")).toBeVisible();
+    await expect(page.locator("text=만들기 (3단계)")).toBeVisible();
 
     // Register
     await page.click('button:has-text("등록")');
@@ -728,13 +728,13 @@ test.describe("Slice 19: YouTube Import", () => {
     await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
 
     // Start with 3 steps
-    await expect(page.locator("text=조리 과정 (3단계)")).toBeVisible();
+    await expect(page.locator("text=만들기 (3단계)")).toBeVisible();
 
     // Remove step 1
     await page.locator('button[aria-label="스텝 1 삭제"]').click();
 
     // Should renumber to 2 steps
-    await expect(page.locator("text=조리 과정 (2단계)")).toBeVisible();
+    await expect(page.locator("text=만들기 (2단계)")).toBeVisible();
   });
 
   test("fetch button disabled when URL is empty", async ({ page }) => {
@@ -790,11 +790,11 @@ test.describe("Slice 19: YouTube Import", () => {
     await expect(registerButton).toBeDisabled();
     const requirements = page.getByTestId("youtube-register-requirements");
     await expect(requirements).toContainText("재료");
-    await expect(requirements).toContainText("조리 과정");
+    await expect(requirements).toContainText("만들기");
 
     // Empty section messages should show
     await expect(page.locator("text=설명란에서 재료를 찾지 못했어요")).toBeVisible();
-    await expect(page.locator("text=설명란에서 조리 과정을 찾지 못했어요")).toBeVisible();
+    await expect(page.locator("text=설명란에서 만들기를 찾지 못했어요")).toBeVisible();
   });
 
   test("review: blocks save until needs-review and unresolved ingredients are resolved", async ({ page }) => {
@@ -930,7 +930,7 @@ test.describe("Slice 19: YouTube Import", () => {
             base_servings: 2,
             extraction_methods: ["description"],
             draft_warnings: [],
-            blocking_issues: ["1단계 조리 설명이 비어 있어요"],
+            blocking_issues: ["1단계 만들기 설명이 비어 있어요"],
             ingredients: [
               {
                 ingredient_id: "ing-1",
@@ -968,15 +968,15 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.click('button:has-text("가져오기")');
 
     await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
-    await expect(page.locator("text=등록 전 필수 입력: 조리 설명")).toBeVisible();
+    await expect(page.locator("text=등록 전 필수 입력: 만들기 설명")).toBeVisible();
     await expect(page.locator("text=선택 확인 권장: 시간")).toBeVisible();
     await expect(page.locator('button:has-text("등록")')).toBeDisabled();
 
-    await page.getByRole("button", { name: "조리 과정 수정" }).click();
-    await page.locator('textarea[placeholder="조리 설명을 입력하세요"]').fill("김치를 먹기 좋게 썬다");
+    await page.getByRole("button", { name: "만들기 수정" }).click();
+    await page.locator('textarea[placeholder="만들기 설명을 입력하세요"]').fill("김치를 먹기 좋게 썬다");
     await page.getByRole("button", { name: "수정 완료" }).click();
 
-    await expect(page.locator("text=등록 전 필수 입력: 조리 설명")).toHaveCount(0);
+    await expect(page.locator("text=등록 전 필수 입력: 만들기 설명")).toHaveCount(0);
     await expect(page.locator("text=선택 확인 권장: 시간")).toBeVisible();
     await expect(page.locator('button:has-text("등록")')).toBeEnabled();
   });

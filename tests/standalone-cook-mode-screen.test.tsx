@@ -584,7 +584,7 @@ describe("StandaloneCookModeScreen", () => {
     const screenRoot = await screen.findByTestId("standalone-cook-mode-screen");
     expect(screenRoot.className).toContain("web-cook-mode-screen");
     expect(screenRoot.className).not.toContain("min-h-dvh");
-    expect(screen.getByRole("link", { name: "탐색" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "홈" })).toBeTruthy();
   });
 
   it("keeps the Wave1 white surface for mobile standalone cook loading states", async () => {

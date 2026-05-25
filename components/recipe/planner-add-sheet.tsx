@@ -260,7 +260,7 @@ export function PlannerAddSheet({
                 </div>
                 <AppStepper
                   disabled={isSubmitting}
-                  label="몇 인분 계획할까요?"
+                  label="인분 조절"
                   min={1}
                   onChange={onChangeServings}
                   unit="인분"
@@ -401,7 +401,7 @@ export function PlannerAddSheet({
 
                   <p className="web-modal-section-label">인분</p>
                   <div className="web-modal-stepper-row">
-                    <span className="web-modal-copy">몇 인분 계획할까요?</span>
+                    <span className="web-modal-copy">인분 조절</span>
                     <div className="web-stepper">
                       <button
                         aria-label="인분 줄이기"

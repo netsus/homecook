@@ -42,7 +42,7 @@ type FeedbackTone = "error" | "status";
 
 const FEEDBACK_AUTO_DISMISS_MS = 4000;
 const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "탐색" },
+  { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
@@ -124,7 +124,7 @@ function LeftoverCard({
               <path d="M12 5v14" />
               <path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
             </svg>
-            <span className="text-xs font-semibold">남은요리</span>
+            <span className="text-xs font-semibold">남은 요리</span>
           </div>
         )}
       </div>
@@ -308,7 +308,7 @@ export function LeftoversScreen({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "남은요리를 불러오지 못했어요.",
+          : "남은 요리를 불러오지 못했어요.",
       );
       setScreenState("error");
     }
@@ -494,7 +494,7 @@ export function LeftoversScreen({
           actionLabel="다먹은 요리"
           appReturnHref={appReturn.href}
           testId="leftovers-mobile-auth-loading"
-          title="남은요리"
+          title="남은 요리"
         >
           <div className="space-y-3 p-4" data-testid="leftovers-loading">
             {[1, 2].map((index) => (
@@ -515,11 +515,11 @@ export function LeftoversScreen({
           actionLabel="다먹은 요리"
           appReturnHref={appReturn.href}
           testId="leftovers-mobile-auth-gate"
-          title="남은요리"
+          title="남은 요리"
         >
           <div className="p-4">
             <ContentState
-              description="남은요리를 관리하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
+              description="남은 요리를 관리하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
               eyebrow="로그인 필요"
               safeBottomPadding
               tone="gate"
@@ -576,7 +576,7 @@ export function LeftoversScreen({
         <WebPageHeader
           actions={
             <Link className="web-button web-button-tertiary" href={eatenListHref}>
-              다먹은 목록
+              다먹은 요리
             </Link>
           }
           description="요리한 뒤 남은 음식을 메모해 두면 다음 끼니로 빠르게 옮길 수 있어요."
@@ -585,7 +585,7 @@ export function LeftoversScreen({
 
         {authState === "checking" ? (
           <WebEmptyState
-            description="남은요리 화면에 접근하기 위해 로그인 상태를 확인하고 있어요."
+            description="남은 요리 화면에 접근하기 위해 로그인 상태를 확인하고 있어요."
             icon={<span aria-hidden="true">...</span>}
             title="로그인 상태를 확인하고 있어요"
           />
@@ -601,7 +601,7 @@ export function LeftoversScreen({
                 </Link>
               </div>
             }
-            description="남은요리를 관리하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
+            description="남은 요리를 관리하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
             icon={<span aria-hidden="true">!</span>}
             title="이 화면은 로그인이 필요해요"
           />
@@ -650,7 +650,7 @@ export function LeftoversScreen({
           }
           description={errorMessage ?? "잠시 후 다시 시도해주세요."}
           icon={<span aria-hidden="true">!</span>}
-          title="남은요리를 불러오지 못했어요"
+          title="남은 요리를 불러오지 못했어요"
         />
       ) : null}
 
@@ -725,7 +725,7 @@ function LeftoversMobileView({
         actionHref={eatenListHref}
         actionLabel="다먹은 요리"
         backHref={appReturnHref}
-        title="남은요리"
+        title="남은 요리"
       />
 
       {feedback ? <MobileFeedback feedback={feedback} /> : null}
@@ -758,7 +758,7 @@ function LeftoversMobileView({
             onAction={() => {
               void onRetry();
             }}
-            title="남은요리를 불러오지 못했어요"
+            title="남은 요리를 불러오지 못했어요"
             tone="error"
           />
         </div>
@@ -794,7 +794,7 @@ function LeftoversMobileView({
       ) : null}
 
       {plannerAddSheet}
-      <Wave1MobileBottomTab ariaLabel="남은요리 하단 탭" currentTab="mypage" />
+      <Wave1MobileBottomTab ariaLabel="남은 요리 하단 탭" currentTab="mypage" />
     </div>
   );
 }

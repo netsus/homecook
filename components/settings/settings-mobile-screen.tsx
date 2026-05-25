@@ -123,7 +123,7 @@ export function SettingsMobileScreen({
   onToggleWakeLock,
   onNicknameInputChange,
 }: SettingsMobileScreenProps) {
-  const title = surface === "account" ? "계정 정보" : "설정";
+  const title = surface === "account" ? "계정 관리" : "설정";
   const appReturn = useAppReturn({ fallback: "/mypage" });
 
   return (
