@@ -1,17 +1,31 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.0.md`
-- `docs/화면정의서-v1.5.7.md`
-- `docs/유저flow맵-v1.3.7.md`
-- `docs/db설계-v1.3.6.md`
-- `docs/api문서-v1.2.10.md`
+- `docs/요구사항기준선-v1.7.1.md`
+- `docs/화면정의서-v1.5.8.md`
+- `docs/유저flow맵-v1.3.8.md`
+- `docs/db설계-v1.3.7.md`
+- `docs/api문서-v1.2.11.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## v1.7.0 / v1.5.7 / v1.3.7 / DB v1.3.6 / API v1.2.10 → v1.7.1 / v1.5.8 / v1.3.8 / DB v1.3.7 / API v1.2.11 변경 이력 (2026-05-25)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.1 | slice27 선행 taxonomy contract lock: legacy 7 ingredient category freeze, additive shadow taxonomy 원칙, cooking method optional metadata, `label` non-overload, external data staging-only gate 명시 |
+| 화면정의서 v1.5.8 | HOME/PANTRY/YT_IMPORT 화면의 category 선택지는 legacy 7종 label 유지, 조리방법 label/color_key 소비 유지, 외부 데이터 자동 직수입 금지 명시 |
+| 유저플로우 v1.3.8 | YouTube/직접등록/팬트리/HOME 흐름에서 legacy category와 shared mapping source 원칙, 외부 데이터 staging/review/approved seed gate 명시 |
+| DB v1.3.7 | schema DDL 없이 `ingredients.category` legacy 7종 유지, ingredient registry/FK cutover 제외, `cooking_methods.label` taxonomy 과적재 금지, 외부 raw data production 직적재 금지 명시 |
+| API v1.2.11 | `GET /ingredients?category=`와 `POST /recipes/youtube/ingredient-registration.category`는 legacy 7종 label 계약 유지. `GET /cooking-methods` v1 shape 유지, endpoint 수 55개 유지 |
+
+> 이 변경은 `pre-27-taxonomy-consumer-alignment` Phase 1 Contract Lock 보강이다.
+> slice27 YouTube 개선 전까지 “현재 MVP 소비 경로는 legacy 7 category + shared mapping/helper를 사용한다”는 계약을 공식 문서 5종에 고정한다.
+> 식약처/농식품올바로 등 외부 데이터 ingestion runtime은 이 변경의 범위 밖이며, production 직적재는 금지된다.
 
 ## v1.6.9 / v1.5.6 / v1.3.6 / DB v1.3.5 / API v1.2.9 → v1.7.0 / v1.5.7 / v1.3.7 / DB v1.3.6 / API v1.2.10 변경 이력 (2026-05-24)
 
