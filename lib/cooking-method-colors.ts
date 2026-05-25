@@ -4,6 +4,7 @@ const COOKING_METHOD_COLORS: Record<string, string> = {
   brown: "var(--cook-grill)",
   blue: "var(--cook-steam)",
   yellow: "var(--cook-fry)",
+  lime: "var(--cook-blanch)",
   green: "var(--cook-mix)",
   gray: "var(--cook-etc)",
   unassigned: "var(--cook-etc)",
@@ -21,10 +22,34 @@ const COOKING_METHOD_COLORS: Record<string, string> = {
   other: "var(--cook-etc)",
 };
 
+function createCookingMethodTint(color: string) {
+  return `color-mix(in srgb, ${color} 16%, transparent)`;
+}
+
+interface CookingMethodVisualInput {
+  code?: string | null;
+  label?: string | null;
+  color_key?: string | null;
+}
+
 export function getCookingMethodColor(colorKey?: string | null): string {
   if (!colorKey) {
     return "var(--cook-etc)";
   }
 
   return COOKING_METHOD_COLORS[colorKey] ?? "var(--cook-etc)";
+}
+
+export function getCookingMethodTint(colorKey?: string | null): string {
+  return createCookingMethodTint(getCookingMethodColor(colorKey));
+}
+
+export function getCookingMethodVisual(method?: CookingMethodVisualInput | null) {
+  const colorKey = method?.color_key ?? method?.code ?? null;
+
+  return {
+    label: method?.label?.trim() || "기타",
+    color: getCookingMethodColor(colorKey),
+    tint: getCookingMethodTint(colorKey),
+  };
 }

@@ -2,6 +2,10 @@ import { NextRequest } from "next/server";
 
 import { ok } from "@/lib/api/response";
 import {
+  ALL_INGREDIENT_CATEGORY,
+  isValidIngredientCategory,
+} from "@/lib/ingredient-categories";
+import {
   getMockIngredientList,
   isDiscoveryFilterManualMockEnabled,
 } from "@/lib/mock/recipes";
@@ -64,10 +68,18 @@ function createEmptyIngredientList(): IngredientListData {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    const rawCategory = searchParams.get("category")?.trim() || undefined;
+    const category = rawCategory && rawCategory !== ALL_INGREDIENT_CATEGORY
+      ? rawCategory
+      : undefined;
     const query: IngredientListQuery = {
       q: searchParams.get("q")?.trim() || undefined,
-      category: searchParams.get("category")?.trim() || undefined,
+      category,
     };
+
+    if (query.category && !isValidIngredientCategory(query.category)) {
+      return ok(createEmptyIngredientList());
+    }
 
     if (isDiscoveryFilterManualMockEnabled()) {
       return ok(getMockIngredientList(query.q, query.category));

@@ -189,6 +189,23 @@ describe("recipe API contracts", () => {
     expect(synonymsQuery.ilike).toHaveBeenCalledWith("synonym", "%양파%");
   });
 
+  it("returns an empty ingredient list for non-canonical category labels", async () => {
+    const { GET } = await import("@/app/api/v1/ingredients/route");
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/ingredients?category=%EB%8B%A8%EB%B0%B1%EC%A7%88"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: { items: [] },
+      error: null,
+    });
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+  });
+
   it("returns mock ingredients for manual browser testing when discovery-filter mock mode is enabled", async () => {
     process.env.HOMECOOK_ENABLE_DISCOVERY_FILTER_MOCK = "1";
 

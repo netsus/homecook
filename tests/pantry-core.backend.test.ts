@@ -226,6 +226,35 @@ describe("13 pantry core backend", () => {
     expect(selectQuery.eq).toHaveBeenCalledWith("ingredients.category", "채소");
   });
 
+  it("GET /pantry returns an empty list for non-canonical category labels after auth", async () => {
+    const pantryItemsTable = createTable({});
+    const from = vi.fn((table: string) => {
+      if (table === "pantry_items") return pantryItemsTable;
+      throw new Error(`unexpected table: ${table}`);
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from,
+    });
+
+    const { GET } = await importPantryRoute();
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/pantry?category=%EB%8B%A8%EB%B0%B1%EC%A7%88"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: { items: [] },
+      error: null,
+    });
+    expect(pantryItemsTable.select).not.toHaveBeenCalled();
+  });
+
   it("POST /pantry adds only valid new ingredients and silently skips duplicates", async () => {
     const ingredientsTable = createTable({
       selectResults: [
