@@ -1,0 +1,138 @@
+{
+  "id": "26-youtube-dictionary-seed-uplift",
+  "title": "Evidence-based ingredient dictionary seed uplift and dictionary-resolution scoring layer",
+  "summary": "코퍼스 fixture에서 관찰된 증거 기반 재료·동의어 seed migration을 투입하고, DB 재료 사전의 해소율을 측정하는 dictionary-resolution 채점 레이어를 추가한다. 파서 F1과 별도로 사전 해소 품질을 체계적으로 끌어올린다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "코퍼스 증거 기반 재료 사전 확장과 dictionary-resolution 채점 레이어로, YouTube 추출 시 unresolved 재료 비율을 줄여 사용자의 수동 등록 부담을 감소시킨다.",
+  "owners": {
+    "claude": "stage1,stage3",
+    "codex": "stage2 backend",
+    "workers": []
+  },
+  "dependencies": [
+    "21-ingredient-dictionary",
+    "22-youtube-ingredient-registration",
+    "23-youtube-quality-corpus",
+    "24-youtube-parser-dictionary-hardening",
+    "25-youtube-bulk-ingredient-resolution"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.0.md",
+      "docs/화면정의서-v1.5.7.md",
+      "docs/api문서-v1.2.10.md",
+      "docs/db설계-v1.3.6.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/26-youtube-dictionary-seed-uplift/README.md",
+      "docs/workpacks/26-youtube-dictionary-seed-uplift/acceptance.md",
+      "docs/workpacks/26-youtube-dictionary-seed-uplift/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/youtube-description-parser-scoring.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm test:youtube-corpus",
+      "pnpm verify:backend",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 26-youtube-dictionary-seed-uplift",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "dictionary-resolution-report",
+      "seed-migration-idempotent",
+      "parser-f1-floor-maintained"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "collecting",
+    "docs_projection": {
+      "roadmap_lifecycle": "planned",
+      "design_status": "N/A",
+      "delivery_checklist": "pending",
+      "design_authority": "not_required",
+      "acceptance": "pending",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "pending",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": []
+    },
+    "merge_gate_projection": {
+      "current_head_sha": null,
+      "approval_state": "not_started",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": null
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": null,
+      "evidence_sources": []
+    },
+    "projection_state": {
+      "docs_synced_at": null,
+      "status_synced_at": null,
+      "pr_body_synced_at": null
+    }
+  },
+  "notes": "BE/test/data-only slice. Stage 4-6 skipped (no UI changes). Corrects slice 24's decision to skip seed migration after reaching parser F1 floor — quality floors are minimums, not stopping criteria. Adds dictionary-resolution scoring layer separate from parser F1 to measure DB dictionary coverage independently.",
+  "out_of_scope": [
+    "LLM/caption/ASR/OCR extraction",
+    "Parser line classification rule changes (closed by slice 24)",
+    "UI changes (frontend code modifications)",
+    "DDL schema changes to ingredients/ingredient_synonyms",
+    "register_youtube_ingredient RPC logic changes",
+    "Production data migration scripts",
+    "Wild-video accuracy guarantees",
+    "Admin moderation queue",
+    "Ingredient category taxonomy changes"
+  ],
+  "open_questions": []
+}

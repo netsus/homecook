@@ -151,13 +151,13 @@ YouTube 설명란 추출 시 여러 재료가 동시에 `unresolved` / `needs_re
 ## Design Status
 
 - [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, Tailwind/공용 컴포넌트 정리 완료
+- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, Tailwind/공용 컴포넌트 정리 완료
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 > Design Status 전이: ~~`temporary`~~ (Stage 1 기본값)
->   → **`pending-review`** (Stage 4 완료, PR final review handoff)
->   → `confirmed` (Stage 5 verdict pass recorded; merge/closeout projection에서 확정)
+>   → ~~`pending-review`~~ (Stage 4 완료, PR final review handoff)
+>   → **`confirmed`** (Stage 5 verdict pass recorded; PR #587 merge/closeout projection에서 확정)
 
 ### Stage 5 Evidence
 
