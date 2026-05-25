@@ -1,0 +1,64 @@
+{
+  "slice_id": "26-youtube-dictionary-seed-uplift",
+  "execution_mode": "autonomous",
+  "risk_class": "low",
+  "merge_policy": "conditional-auto",
+  "contract_evolution_required": false,
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-new-api-endpoint",
+      "no-rpc-change",
+      "no-schema-ddl-change",
+      "dml-only-seed-migration",
+      "idempotent-on-conflict-do-nothing",
+      "no-curated-row-overwrite",
+      "category-enum-compliance",
+      "synonym-lower-trim-normalize",
+      "parser-f1-floor-0.90-maintained",
+      "dictionary-resolution-scoring-independent",
+      "quality-floor-not-stopping-criteria"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm test:youtube-corpus",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "required_test_targets": [
+      "tests/youtube-corpus.test.ts",
+      "tests/youtube-dictionary-resolution.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [],
+    "playwright_projects": [],
+    "artifact_assertions": [],
+    "design_authority": {
+      "ui_risk": "N/A",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "slice-21-not-merged",
+    "slice-23-not-merged",
+    "slice-24-not-merged",
+    "ingredients-table-missing",
+    "ingredient-synonyms-table-missing",
+    "corpus-v1-fixtures-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4
+  }
+}

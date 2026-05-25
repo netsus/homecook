@@ -66,7 +66,7 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
+    "lifecycle": "merged",
     "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "not_started",
@@ -78,8 +78,8 @@
   "closeout": {
     "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "in_progress",
-      "design_status": "pending-review",
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
       "delivery_checklist": "complete",
       "design_authority": "not_required",
       "acceptance": "complete",
@@ -139,7 +139,7 @@
       "pr_body_synced_at": null
     }
   },
-  "notes": "FE-only slice. Stage 2/3 N/A (no backend changes). Stage 4 Claude frontend implementation completed through resume session 4f8182cb-e47e-4b1b-86f5-fa0fcb2f36b0. Stage 5/6 Codex review approved after moving the bulk CTA above the ingredient list for visibility; README Design Status remains pending-review for the pre-merge final review handoff invariant, and the authority report records confirmed_allowed=true. Uses existing POST /api/v1/recipes/youtube/ingredient-registration endpoint sequentially from a frontend bulk helper. Local verification passed for targeted Vitest, targeted Playwright, screenshot evidence, lint, typecheck, product tests, build, workflow/workpack validators, and diff check. pnpm verify:frontend reached 730 passed / 68 skipped / 3 failed; all failures are the known unrelated slice-17b recipebook detail locator issue.",
+  "notes": "FE-only slice. Stage 2/3 N/A (no backend changes). Stage 4 Claude frontend implementation completed through resume session 4f8182cb-e47e-4b1b-86f5-fa0fcb2f36b0. Stage 5/6 Codex review approved after moving the bulk CTA above the ingredient list for visibility; README Design Status is confirmed after PR #587 merge/closeout, and the authority report records confirmed_allowed=true. Uses existing POST /api/v1/recipes/youtube/ingredient-registration endpoint sequentially from a frontend bulk helper. Local verification passed for targeted Vitest, targeted Playwright, screenshot evidence, lint, typecheck, product tests, build, workflow/workpack validators, and diff check. pnpm verify:frontend reached 730 passed / 68 skipped / 3 failed; all failures are the known unrelated slice-17b recipebook detail locator issue.",
   "out_of_scope": [
     "New bulk registration API endpoint",
     "Backend API or RPC changes",
