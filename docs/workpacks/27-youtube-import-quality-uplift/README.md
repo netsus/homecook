@@ -126,12 +126,12 @@ readiness = 0.35 × ingredient_f1
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5 lightweight design check 통과. 신규 화면/레이아웃 변경 없음, 기존 `YT_IMPORT` 화면 유지, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
-> 주요 변경은 파서/사전/추출 품질 개선이지만, 기존 `YT_IMPORT` 화면에서 full-flow 확인과 low-risk UX 보수가 필요할 수 있으므로 `temporary`로 시작한다. 신규 화면, 레이아웃 재설계, authority review는 요구하지 않는다.
+> 주요 변경은 파서/사전/추출 품질 개선이다. Stage 4에서 UI 코드는 변경하지 않고 기존 `YT_IMPORT` 화면의 full-flow/state/error 경로를 fixture-backed E2E로 고정했으므로, Stage 5는 lightweight design check로 흡수했다. 신규 화면, 레이아웃 재설계, authority review는 요구하지 않는다.
 
 ## Source Links
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
@@ -216,13 +216,13 @@ readiness = 0.35 × ingredient_f1
 - [x] Corpus 50건 확보 및 baseline 측정 <!-- omo:id=delivery-corpus-50;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 (기존 YT_IMPORT 화면이 개선된 백엔드 추출 품질을 그대로 소비, API shape 변경 없음) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 (Vitest: parser/corpus/readiness/dictionary harness, Playwright: full-flow/state/error E2E, Manual Only: live YouTube API) <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 (loading: ExtractionProgressStep, empty: 재료/과정 없음 메시지, error: ExtractionErrorStep + register-error modal, read-only: N/A 이 슬라이스) <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 (acceptance.md Manual QA 섹션: 5개 시나리오) <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 - [x] In-corpus F1 >= 0.90 gate 통과 <!-- omo:id=delivery-f1-gate;stage=2;scope=backend;review=3,6 -->
 - [x] Import readiness >= 0.80 gate 통과 <!-- omo:id=delivery-readiness-gate;stage=2;scope=backend;review=3,6 -->
 - [x] Wild sample F1 보고 (structured >= 0.85, weak >= 0.70) <!-- omo:id=delivery-wild-sample-report;stage=2;scope=backend;review=3,6 -->

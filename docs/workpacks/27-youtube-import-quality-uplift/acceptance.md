@@ -33,10 +33,10 @@
 
 ## Happy Path
 
-- [ ] 구조화된 설명란 YouTube URL로 추출 시 재료/과정이 정확히 추출된다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
-- [ ] 추출 결과 검수 화면에서 resolved 재료가 수정 없이 바로 사용 가능하다 <!-- omo:id=accept-resolved-usable;stage=4;scope=frontend;review=5,6 -->
+- [x] 구조화된 설명란 YouTube URL로 추출 시 재료/과정이 정확히 추출된다 (E2E: `slice-27-youtube-import-quality.spec.ts` full flow test) <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
+- [x] 추출 결과 검수 화면에서 resolved 재료가 수정 없이 바로 사용 가능하다 (E2E: all-resolved test verifies register enabled with no warnings) <!-- omo:id=accept-resolved-usable;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 (`types/recipe.ts` YoutubeRecipeExtractData/YoutubeExtractedIngredient/YoutubeExtractedStep match backend contract) <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 
@@ -48,14 +48,14 @@
 
 ## Error / Permission
 
-- [ ] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태가 있다 (추출 결과 없음) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 있다 (추출 실패) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 있다 (401 → 로그인 게이트) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] conflict 처리 흐름이 있다 (409 consumed/mismatch) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
-- [ ] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
-- [ ] non_recipe 분류 시 차단 + 재입력 안내가 올바르다 <!-- omo:id=accept-non-recipe-block;stage=4;scope=frontend;review=5,6 -->
-- [ ] 세션 만료(410) 처리가 올바르다 <!-- omo:id=accept-session-expired;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 (ExtractionProgressStep: spinner + progress bar, `youtube-import-screen.tsx:522-579`) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태가 있다 (추출 결과 없음 → "설명란에서 재료를 찾지 못했어요" + register disabled, E2E: slice-19 `register button disabled` test) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 (추출 실패 → ExtractionErrorStep: retry + reenter, E2E: slice-19 `extraction error` test) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 있다 (401 → 로그인 게이트, `page.tsx:49-63` server-side redirect) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] conflict 처리 흐름이 있다 (409 consumed/mismatch → error modal, E2E: slice-27 `conflict 409` test) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
+- [x] 로그인 게이트 후 return-to-action이 맞다 (E2E: slice-19 guest tests + slice-27 guest redirect test) <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] non_recipe 분류 시 차단 + 재입력 안내가 올바르다 (NonRecipeWarningStep + E2E: slice-19 `non-recipe gate` test) <!-- omo:id=accept-non-recipe-block;stage=4;scope=frontend;review=5,6 -->
+- [x] 세션 만료(410) 처리가 올바르다 (E2E: slice-27 `session expired 410` test + slice-19 `session error` test) <!-- omo:id=accept-session-expired;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
@@ -97,8 +97,8 @@
 - [x] 회귀 위험이 큰 계산과 정책이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
 
 ### Playwright
-- [ ] YT_IMPORT full flow E2E: URL 입력 → 추출 → 검수 → 등록 (fixture-backed) <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
+- [x] YT_IMPORT full flow E2E: URL 입력 → 추출 → 검수 → 등록 (fixture-backed) (`tests/e2e/slice-27-youtube-import-quality.spec.ts` full flow + all-resolved test) <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 (기본: fixture-backed Playwright, 선택: `@live-oauth` tag + Manual Only에 live YouTube API 테스트 분리) <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only
 - [ ] 실제 YouTube Data API를 사용한 live extraction 테스트 (5+ real URLs)
