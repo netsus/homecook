@@ -7,10 +7,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
 import { fetchIngredients } from "@/lib/api/ingredients";
+import { getIngredientCategoryEmoji, INGREDIENT_CATEGORIES } from "@/lib/ingredient-categories";
 
 vi.mock("@/lib/api/ingredients", () => ({
   fetchIngredients: vi.fn(),
 }));
+
+const VEGETABLE_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "vegetable")!.label;
 
 function installMatchMedia(matchesDesktop = false) {
   Object.defineProperty(window, "matchMedia", {
@@ -37,7 +40,7 @@ describe("RecipeIngredientAddModal", () => {
       success: true,
       data: {
         items: [
-          { id: "ing-onion", standard_name: "양파", category: "채소" },
+          { id: "ing-onion", standard_name: "양파", category: VEGETABLE_CATEGORY },
           { id: "ing-tofu", standard_name: "두부", category: "콩/두부" },
         ],
       },
@@ -99,6 +102,7 @@ describe("RecipeIngredientAddModal", () => {
 
     expect(onionCard.className).toContain("web-ingredient-cell");
     expect(onionCard.className).not.toContain("inline-flex");
+    expect(onionCard.textContent).toContain(getIngredientCategoryEmoji(VEGETABLE_CATEGORY));
     expect(screen.getByTestId("ingredient-list-region")).toBeTruthy();
 
     await user.click(onionCard);
@@ -154,7 +158,7 @@ describe("RecipeIngredientAddModal", () => {
     expect(await screen.findByRole("button", { name: "양파" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "두부" })).toBeTruthy();
 
-    await user.click(screen.getByRole("tab", { name: "채소" }));
+    await user.click(screen.getByRole("tab", { name: VEGETABLE_CATEGORY }));
 
     expect(screen.getByTestId("ingredient-list-region")).toBeTruthy();
     expect(screen.getByRole("button", { name: "양파" })).toBeTruthy();

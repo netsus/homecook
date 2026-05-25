@@ -11,6 +11,7 @@ import {
   getMockRecipeThemes,
   MOCK_RECIPE_CARD,
 } from "@/lib/mock/recipes";
+import { INGREDIENT_CATEGORIES } from "@/lib/ingredient-categories";
 import { PENDING_ACTION_KEY } from "@/lib/auth/pending-action";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
 
@@ -18,22 +19,24 @@ const fetchJson = vi.fn();
 const ONION_ID = "550e8400-e29b-41d4-a716-446655440010";
 const GREEN_ONION_ID = "550e8400-e29b-41d4-a716-446655440011";
 const BEEF_ID = "550e8400-e29b-41d4-a716-446655440012";
+const VEGETABLE_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "vegetable")!.label;
+const MEAT_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "meat")!.label;
 
 const INGREDIENT_ITEMS = [
   {
     id: ONION_ID,
     standard_name: "양파",
-    category: "채소",
+    category: VEGETABLE_CATEGORY,
   },
   {
     id: GREEN_ONION_ID,
     standard_name: "대파",
-    category: "채소",
+    category: VEGETABLE_CATEGORY,
   },
   {
     id: BEEF_ID,
     standard_name: "소고기",
-    category: "육류",
+    category: MEAT_CATEGORY,
   },
 ];
 
@@ -176,7 +179,7 @@ describe("home screen", () => {
     expect(ingredientGrid?.className).toContain("grid-cols-2");
     expect(onionOption?.className).toContain("rounded-[var(--radius-card)]");
 
-    await user.click(screen.getByRole("button", { name: "채소" }));
+    await user.click(screen.getByRole("button", { name: VEGETABLE_CATEGORY }));
     await user.type(screen.getByPlaceholderText("재료명으로 검색"), "파");
 
     await waitFor(() => {
@@ -190,7 +193,7 @@ describe("home screen", () => {
 
           return (
             url.searchParams.get("q") === "파" &&
-            url.searchParams.get("category") === "채소"
+            url.searchParams.get("category") === VEGETABLE_CATEGORY
           );
         }),
       ).toBe(true);

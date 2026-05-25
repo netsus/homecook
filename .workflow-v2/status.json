@@ -1327,7 +1327,7 @@
     {
       "id": "pre-27-taxonomy-consumer-alignment",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-pre-27-taxonomy-consumer-alignment",
+      "branch": "feature/fe-pre-27-taxonomy-consumer-alignment",
       "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
@@ -1340,7 +1340,7 @@
         "pnpm validate:workpack -- --slice pre-27-taxonomy-consumer-alignment",
         "git diff --check"
       ],
-      "notes": "Stage 2 backend/shared implementation ready for Claude Stage 3 review. Implemented canonical legacy-7 ingredient category shared source, derived IngredientCategory type, shared category validation for GET /ingredients, GET /pantry, and YouTube ingredient registration, plus shared cooking method tint/visual helper with lime -> blanch color consistency. No schema DDL, no new API endpoints, no contract-evolution. Frontend component consumer sweep remains Stage 4. Local deterministic verification passed: targeted Vitest, pnpm typecheck, pnpm lint, pnpm verify:backend, workflow/workpack validators, git diff --check. Local Supabase reset smoke attempted but blocked by Docker image layer no-space environment issue. closeout_phase=projecting closeout_recovery=local_docker_no_space closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:tests/ingredient-categories.test.ts,tests/cooking-method-colors.test.ts,tests/recipe-api-contracts.test.ts,tests/pantry-core.backend.test.ts,tests/youtube-dictionary-resolution.test.ts,tests/youtube-import.backend.test.ts,pnpm verify:backend",
+      "notes": "Stage 4 frontend consumer sweep complete on feature/fe-pre-27-taxonomy-consumer-alignment. Claude implemented frontend shared-source/helper consumers; Codex preserved recipe-detail tint weights in shared helper and added representative component-test shared-source coverage. Verification passed: targeted frontend Vitest, pnpm lint, pnpm typecheck, pnpm test:product, pnpm build, pnpm test:e2e:smoke, pnpm test:e2e:a11y:core, pnpm test:e2e:visual:core, pnpm verify:frontend:pr, HOME filter E2E, PANTRY category E2E, COOK_MODE method color E2E, workflow/workpack validators, git diff --check. Stage 5/6 review/final closeout remain pending. closeout_phase=projecting closeout_recovery=local_docker_no_space closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:tests/ingredient-categories.test.ts,tests/cooking-method-colors.test.ts,tests/recipe-api-contracts.test.ts,tests/pantry-core.backend.test.ts,tests/youtube-dictionary-resolution.test.ts,tests/youtube-import.backend.test.ts,tests/home-screen.test.tsx,tests/recipe-ingredient-add-modal.test.tsx,tests/pantry-screen.test.tsx,tests/recipe-detail-screen.test.tsx,tests/e2e/slice-02-discovery-filter.spec.ts,tests/e2e/slice-13-pantry-core.spec.ts,tests/e2e/slice-15a-cook-planner-complete.spec.ts,pnpm verify:backend,pnpm verify:frontend:pr",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

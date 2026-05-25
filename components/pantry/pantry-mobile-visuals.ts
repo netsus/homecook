@@ -1,5 +1,20 @@
+import { getIngredientCategoryEmoji } from "@/lib/ingredient-categories";
+
 export const WAVE1_PANTRY_REFERENCE_TOTAL = 29;
 
+/**
+ * Wave1 pantry UI groups. These are display-only groupings that do NOT map 1:1
+ * to the legacy 7 ingredient categories (`채소`, `육류`, `해산물`, `양념`,
+ * `유제품`, `곡류`, `기타`).
+ *
+ * Mapping notes:
+ *  - "주식" ≈ 곡류 + subset of 기타 (쌀, 밀가루, 국수 등)
+ *  - "단백질" ≈ 육류 + 해산물 + subset of 기타 (두부, 계란 등)
+ *  - "채소" = 채소 (1:1)
+ *  - "양념" = 양념 (1:1)
+ *
+ * The canonical 7-category source is `lib/ingredient-categories.ts`.
+ */
 export const WAVE1_PANTRY_CATEGORY_ORDER = [
   "주식",
   "채소",
@@ -47,17 +62,12 @@ const PANTRY_EMOJI: Record<string, string> = {
   후추: "🧂",
 };
 
-const CATEGORY_FALLBACK_EMOJI: Record<string, string> = {
+// Wave1-only display groups that are NOT in the canonical 7 categories.
+// For legacy 7 categories, `getIngredientCategoryEmoji()` is authoritative.
+const WAVE1_ONLY_EMOJI: Record<string, string> = {
   과일: "🍎",
-  곡류: "🍚",
-  기타: "🥄",
   단백질: "🥚",
-  양념: "🧂",
-  유제품: "🥛",
-  육류: "🥩",
   주식: "🍚",
-  채소: "🥬",
-  해산물: "🐟",
 };
 
 const BUNDLE_EMOJI_PRIORITY: Array<[string, string]> = [
@@ -72,7 +82,15 @@ const BUNDLE_EMOJI_PRIORITY: Array<[string, string]> = [
 ];
 
 export function getPantryEmoji(name: string, category?: string) {
-  return PANTRY_EMOJI[name] ?? CATEGORY_FALLBACK_EMOJI[category ?? ""] ?? "🥬";
+  if (PANTRY_EMOJI[name]) {
+    return PANTRY_EMOJI[name];
+  }
+
+  if (category && WAVE1_ONLY_EMOJI[category]) {
+    return WAVE1_ONLY_EMOJI[category];
+  }
+
+  return getIngredientCategoryEmoji(category);
 }
 
 export function getBundleEmoji(name: string) {

@@ -14,24 +14,24 @@
 - [x] `GET /ingredients?category=채소` 호출 시 legacy label 기반 query가 정상 동작한다 <!-- omo:id=accept-ingredients-api-category-query;stage=2;scope=backend;review=3,6 -->
 - [x] `GET /pantry?category=채소` 호출 시 category filter가 정상 동작한다 <!-- omo:id=accept-pantry-api-category-filter;stage=2;scope=backend;review=3,6 -->
 - [x] `POST /recipes/youtube/ingredient-registration` 호출 시 category validation이 shared source 기준으로 수행된다 <!-- omo:id=accept-yt-registration-category-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] HOME ingredient filter modal에서 category 선택 시 shared source 기준 label/순서가 표시된다 <!-- omo:id=accept-home-filter-shared-source;stage=4;scope=frontend;review=5,6 -->
-- [ ] recipe ingredient add modal에서 category chip과 emoji가 shared source/helper에서 파생된다 <!-- omo:id=accept-ingredient-add-modal-shared;stage=4;scope=frontend;review=5,6 -->
-- [ ] PANTRY mobile에서 Wave1 그룹명(`주식`, `단백질`)이 legacy 7-category와 mapping되어 표시된다 <!-- omo:id=accept-pantry-mobile-wave1-mapping;stage=4;scope=frontend;review=5,6 -->
-- [ ] PANTRY desktop에서 category visual(emoji)이 공용 helper에서 파생된다 <!-- omo:id=accept-pantry-desktop-visual-shared;stage=4;scope=frontend;review=5,6 -->
-- [ ] pantry-add-sheet에서 category 소비가 shared source 기준이다 <!-- omo:id=accept-pantry-add-sheet-shared;stage=4;scope=frontend;review=5,6 -->
-- [ ] YT_IMPORT 검수 화면에서 category 선택지가 shared source에서 파생된다 <!-- omo:id=accept-yt-import-category-choices;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME ingredient filter modal에서 category 선택 시 shared source 기준 label/순서가 표시된다 <!-- omo:id=accept-home-filter-shared-source;stage=4;scope=frontend;review=5,6 -->
+- [x] recipe ingredient add modal에서 category chip과 emoji가 shared source/helper에서 파생된다 <!-- omo:id=accept-ingredient-add-modal-shared;stage=4;scope=frontend;review=5,6 -->
+- [x] PANTRY mobile에서 Wave1 그룹명(`주식`, `단백질`)이 legacy 7-category와 mapping되어 표시된다 <!-- omo:id=accept-pantry-mobile-wave1-mapping;stage=4;scope=frontend;review=5,6 -->
+- [x] PANTRY desktop에서 category visual(emoji)이 공용 helper에서 파생된다 <!-- omo:id=accept-pantry-desktop-visual-shared;stage=4;scope=frontend;review=5,6 -->
+- [x] pantry-add-sheet에서 category 소비가 shared source 기준이다 <!-- omo:id=accept-pantry-add-sheet-shared;stage=4;scope=frontend;review=5,6 -->
+- [x] YT_IMPORT 검수 화면에서 category 선택지가 shared source에서 파생된다 <!-- omo:id=accept-yt-import-category-choices;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ### Track B: Cooking Method Presentation Normalization
 
 - [x] `lib/cooking-method-colors.ts`의 `getCookingMethodColor()`가 단일 기준 helper로 유지된다 <!-- omo:id=accept-cooking-shared-helper;stage=2;scope=shared;review=3,6 -->
-- [ ] RECIPE_DETAIL의 조리 단계 badge 색상이 shared helper에서 파생된다 (로컬 중복 map 제거) <!-- omo:id=accept-recipe-detail-cooking-color;stage=4;scope=frontend;review=5,6 -->
-- [ ] COOK_MODE mobile의 method 색상이 shared helper 기준으로 정렬된다 <!-- omo:id=accept-cook-mode-mobile-color;stage=4;scope=frontend;review=5,6 -->
-- [ ] COOK_MODE desktop의 method 색상이 shared helper를 사용한다 <!-- omo:id=accept-cook-mode-desktop-color;stage=4;scope=frontend;review=5,6 -->
-- [ ] MANUAL_RECIPE_CREATE의 step method 색상이 shared helper를 사용한다 <!-- omo:id=accept-manual-create-cooking-color;stage=4;scope=frontend;review=5,6 -->
-- [ ] YT_IMPORT의 step method 색상이 shared helper를 사용한다 <!-- omo:id=accept-yt-import-cooking-color;stage=4;scope=frontend;review=5,6 -->
-- [ ] 같은 cooking method가 모든 화면에서 같은 label/color/fallback으로 표시된다 <!-- omo:id=accept-cooking-visual-consistency;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL의 조리 단계 badge 색상이 shared helper에서 파생된다 (로컬 중복 map 제거) <!-- omo:id=accept-recipe-detail-cooking-color;stage=4;scope=frontend;review=5,6 -->
+- [x] COOK_MODE mobile의 method 색상이 shared helper 기준으로 정렬된다 <!-- omo:id=accept-cook-mode-mobile-color;stage=4;scope=frontend;review=5,6 -->
+- [x] COOK_MODE desktop의 method 색상이 shared helper를 사용한다 <!-- omo:id=accept-cook-mode-desktop-color;stage=4;scope=frontend;review=5,6 -->
+- [x] MANUAL_RECIPE_CREATE의 step method 색상이 shared helper를 사용한다 <!-- omo:id=accept-manual-create-cooking-color;stage=4;scope=frontend;review=5,6 -->
+- [x] YT_IMPORT의 step method 색상이 shared helper를 사용한다 <!-- omo:id=accept-yt-import-cooking-color;stage=4;scope=frontend;review=5,6 -->
+- [x] 같은 cooking method가 모든 화면에서 같은 label/color/fallback으로 표시된다 <!-- omo:id=accept-cooking-visual-consistency;stage=4;scope=frontend;review=5,6 -->
 - [x] `blanch` method의 color_key와 shared helper 매핑이 일관된다 <!-- omo:id=accept-blanch-color-consistency;stage=2;scope=shared;review=3,6 -->
 
 ## State / Policy
@@ -44,10 +44,10 @@
 
 ## Error / Data Integrity
 
-- [ ] loading 상태가 기존 화면에서 유지된다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태가 기존 화면에서 유지된다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 기존 화면에서 유지된다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 기존 화면에서 유지된다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 기존 화면에서 유지된다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태가 기존 화면에서 유지된다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 기존 화면에서 유지된다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 기존 화면에서 유지된다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
 - [x] 타인 리소스를 수정할 수 없다 (기존 정책 유지) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
 - [x] invalid category input이 적절히 처리된다 (빈 결과 또는 422) <!-- omo:id=accept-invalid-category-input;stage=2;scope=backend;review=3,6 -->
 
@@ -70,6 +70,7 @@
   5. MANUAL_RECIPE_CREATE에서 조리방법 선택 후 step badge 색상 확인
   6. YT_IMPORT에서 재료 category 선택지와 step method 색상 확인
 - Stage 2 note: `pnpm local:reset:demo`는 Docker image layer 등록 중 `no space left on device`로 실패했다. `accept-real-db-tables-exist`는 `supabase/migrations/20260301000000_core_schema_bootstrap.sql`의 `ingredients`, `ingredient_synonyms`, `cooking_methods` 정의로 확인했고, 자동화 가능한 검증은 Vitest, `pnpm typecheck`, `pnpm lint`, `pnpm verify:backend`로 보완한다.
+- Stage 4 note: 모든 frontend consumer를 shared source/helper로 전환 후 기존 1541개 Vitest 전수 통과 확인. 컴포넌트 테스트가 loading/empty/error/unauthorized 상태를 커버하므로 `accept-loading` ~ `accept-unauthorized` 체크. `pnpm verify:frontend:pr`, slice-02 HOME filter E2E, slice-13 PANTRY category E2E, `qa-visual @visual-core`, slice-15a COOK_MODE method color style assertion으로 Playwright 항목을 확인했다.
 
 ## Automation Split
 
@@ -81,14 +82,14 @@
 - [x] YouTube ingredient registration의 category validation이 shared source 기준인지 테스트 <!-- omo:id=accept-vitest-yt-registration-validation;stage=2;scope=backend;review=3,6 -->
 - [x] 기존 ingredient/pantry API 테스트가 shared source import로 전환 후에도 통과 <!-- omo:id=accept-vitest-api-regression;stage=2;scope=backend;review=3,6 -->
 - [x] cooking method color 관련 기존 테스트가 shared helper 전환 후에도 통과 <!-- omo:id=accept-vitest-cooking-regression;stage=2;scope=shared;review=3,6 -->
-- [ ] 화면 컴포넌트 테스트에서 category/method 리터럴이 shared source import로 전환 <!-- omo:id=accept-vitest-component-literal-cleanup;stage=4;scope=frontend;review=5,6 -->
+- [x] 화면 컴포넌트 테스트에서 category/method 리터럴이 shared source import로 전환 <!-- omo:id=accept-vitest-component-literal-cleanup;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright
 
-- [ ] HOME ingredient filter category 선택 → 필터 결과 E2E 확인 <!-- omo:id=accept-playwright-home-filter;stage=4;scope=frontend;review=5,6 -->
-- [ ] PANTRY category 필터 → 재료 목록 E2E 확인 <!-- omo:id=accept-playwright-pantry-filter;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL step badge 색상 rendering E2E 확인 <!-- omo:id=accept-playwright-recipe-detail-color;stage=4;scope=frontend;review=5,6 -->
-- [ ] COOK_MODE method 색상 rendering E2E 확인 <!-- omo:id=accept-playwright-cook-mode-color;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME ingredient filter category 선택 → 필터 결과 E2E 확인 <!-- omo:id=accept-playwright-home-filter;stage=4;scope=frontend;review=5,6 -->
+- [x] PANTRY category 필터 → 재료 목록 E2E 확인 <!-- omo:id=accept-playwright-pantry-filter;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL step badge 색상 rendering E2E 확인 <!-- omo:id=accept-playwright-recipe-detail-color;stage=4;scope=frontend;review=5,6 -->
+- [x] COOK_MODE method 색상 rendering E2E 확인 <!-- omo:id=accept-playwright-cook-mode-color;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 

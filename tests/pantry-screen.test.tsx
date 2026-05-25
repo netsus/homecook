@@ -6,12 +6,16 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PantryScreen } from "@/components/pantry/pantry-screen";
+import { getIngredientCategoryEmoji, INGREDIENT_CATEGORIES } from "@/lib/ingredient-categories";
 
 const mockFetchPantryList = vi.fn();
 const mockDeletePantryItems = vi.fn();
 const mockAddPantryItems = vi.fn();
 const mockFetchPantryBundles = vi.fn();
 const mockFetchIngredients = vi.fn();
+const VEGETABLE_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "vegetable")!.label;
+const MEAT_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "meat")!.label;
+const SEASONING_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "seasoning")!.label;
 
 vi.mock("@/lib/api/pantry", () => ({
   fetchPantryList: (...args: unknown[]) => mockFetchPantryList(...args),
@@ -80,21 +84,21 @@ const MOCK_ITEMS = [
     id: "p1",
     ingredient_id: "i1",
     standard_name: "양파",
-    category: "채소",
+    category: VEGETABLE_CATEGORY,
     created_at: "2026-04-29T00:00:00Z",
   },
   {
     id: "p2",
     ingredient_id: "i2",
     standard_name: "마늘",
-    category: "양념",
+    category: SEASONING_CATEGORY,
     created_at: "2026-04-29T01:00:00Z",
   },
   {
     id: "p3",
     ingredient_id: "i3",
     standard_name: "돼지고기",
-    category: "육류",
+    category: MEAT_CATEGORY,
     created_at: "2026-04-29T02:00:00Z",
   },
 ];
@@ -494,9 +498,10 @@ describe("PantryScreen", () => {
     await screen.findByText("양파", { exact: false });
 
     expect(screen.getByRole("tab", { name: "전체" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "채소" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "양념" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "육류" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: VEGETABLE_CATEGORY })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: SEASONING_CATEGORY })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: MEAT_CATEGORY })).toBeTruthy();
+    expect(screen.getByText(getIngredientCategoryEmoji(VEGETABLE_CATEGORY))).toBeTruthy();
   });
 
   it("filters items by category without collapsing the category tabs", async () => {
@@ -505,15 +510,15 @@ describe("PantryScreen", () => {
     await screen.findByText("양파", { exact: false });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: "채소" }));
+    await user.click(screen.getByRole("tab", { name: VEGETABLE_CATEGORY }));
 
     expect(screen.getByText("양파", { exact: false })).toBeTruthy();
     expect(screen.queryByText("마늘", { exact: false })).toBeNull();
     expect(screen.queryByText(/돼지고기/)).toBeNull();
     expect(screen.getByRole("tab", { name: "전체" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "채소" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "양념" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "육류" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: VEGETABLE_CATEGORY })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: SEASONING_CATEGORY })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: MEAT_CATEGORY })).toBeTruthy();
     expect(mockFetchPantryList).toHaveBeenCalledTimes(1);
   });
 

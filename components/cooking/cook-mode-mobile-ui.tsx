@@ -53,6 +53,7 @@ const METHOD_ALIASES: Record<string, keyof typeof METHOD_VISUALS> = {
   bake: "fry",
   blanch: "blanch",
   blue: "steam",
+  lime: "blanch",
   boil: "boil",
   brown: "roast",
   deep_fry: "fry",

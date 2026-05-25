@@ -30,6 +30,7 @@ import type {
 } from "@/lib/api/youtube-import";
 import { createMealSafe } from "@/lib/api/meal";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
+import { INGREDIENT_CATEGORY_LABELS } from "@/lib/ingredient-categories";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import type {
@@ -1268,9 +1269,7 @@ function StepAddModal({
 
 // ─── Ingredient Register Modal ──────────────────────────────────────────────
 
-const INGREDIENT_CATEGORY_CHOICES: IngredientCategory[] = [
-  "채소", "육류", "해산물", "양념", "유제품", "곡류", "기타",
-];
+const INGREDIENT_CATEGORY_CHOICES = INGREDIENT_CATEGORY_LABELS;
 
 interface IngredientRegisterModalProps {
   ingredient: TempIngredient;

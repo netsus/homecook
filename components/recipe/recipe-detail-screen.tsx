@@ -36,6 +36,7 @@ import {
   saveRecipeToBooks,
 } from "@/lib/api/recipe-save";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
+import { getCookingMethodColor, getCookingMethodTint } from "@/lib/cooking-method-colors";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { fetchPlanner } from "@/lib/api/planner";
 import {
@@ -70,23 +71,6 @@ interface RecipeDetailScreenProps {
   initialAuthenticated?: boolean;
 }
 
-const COOKING_METHOD_COLORS: Record<string, string> = {
-  orange: "var(--cook-stir)",
-  red: "var(--cook-boil)",
-  brown: "var(--cook-grill)",
-  blue: "var(--cook-steam)",
-  yellow: "var(--cook-fry)",
-  green: "var(--cook-mix)",
-};
-
-const COOKING_METHOD_TINTS: Record<string, string> = {
-  orange: "color-mix(in srgb, var(--cook-stir) 16%, transparent)",
-  red: "color-mix(in srgb, var(--cook-boil) 14%, transparent)",
-  brown: "color-mix(in srgb, var(--cook-grill) 16%, transparent)",
-  blue: "color-mix(in srgb, var(--cook-steam) 16%, transparent)",
-  yellow: "color-mix(in srgb, var(--cook-fry) 18%, transparent)",
-  green: "color-mix(in srgb, var(--cook-mix) 16%, transparent)",
-};
 
 const WEB_NAV_ITEMS = [
   { id: "home", href: "/", label: "탐색" },
@@ -1061,7 +1045,7 @@ export function RecipeDetailScreen({
                 key={step.id}
                 className="rounded-[var(--radius-card)] bg-[var(--panel)] p-4 shadow-[var(--shadow-1)]"
                 style={{
-                  borderLeft: `4px solid ${resolveCookingMethodColor(step.cooking_method?.color_key)}`,
+                  borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method?.color_key)}`,
                 }}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -1069,7 +1053,7 @@ export function RecipeDetailScreen({
                     <span
                       className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold"
                       style={{
-                        backgroundColor: resolveCookingMethodTint(
+                        backgroundColor: getCookingMethodTint(
                           step.cooking_method?.color_key,
                         ),
                         color: resolveCookingMethodDark(
@@ -1082,7 +1066,7 @@ export function RecipeDetailScreen({
                     <span
                       className="rounded px-2 py-0.5 text-[11px] font-bold"
                       style={{
-                        backgroundColor: resolveCookingMethodTint(
+                        backgroundColor: getCookingMethodTint(
                           step.cooking_method?.color_key,
                         ),
                         color: resolveCookingMethodDark(
@@ -1362,14 +1346,14 @@ export function RecipeDetailScreen({
                   className="rounded-[var(--radius-card)] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
                   key={step.id}
                   style={{
-                    borderLeft: `4px solid ${resolveCookingMethodColor(step.cooking_method?.color_key)}`,
+                    borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method?.color_key)}`,
                   }}
                 >
                   <div className="mb-2 flex items-center gap-2">
                     <span
                       className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold"
                       style={{
-                        backgroundColor: resolveCookingMethodTint(
+                        backgroundColor: getCookingMethodTint(
                           step.cooking_method?.color_key,
                         ),
                         color: resolveCookingMethodDark(
@@ -1723,7 +1707,7 @@ function RecipeDetailWebView({
                     <span
                       className="web-step-num"
                       style={{
-                        backgroundColor: resolveCookingMethodTint(
+                        backgroundColor: getCookingMethodTint(
                           step.cooking_method?.color_key,
                         ),
                         color: resolveCookingMethodDark(
@@ -1738,7 +1722,7 @@ function RecipeDetailWebView({
                         <span
                           className="web-step-method"
                           style={{
-                            backgroundColor: resolveCookingMethodTint(
+                            backgroundColor: getCookingMethodTint(
                               step.cooking_method?.color_key,
                             ),
                             color: resolveCookingMethodDark(
@@ -2144,24 +2128,8 @@ function RecipePhotoLightbox({
   );
 }
 
-function resolveCookingMethodColor(colorKey?: string | null) {
-  if (!colorKey) {
-    return "var(--cook-etc)";
-  }
-
-  return COOKING_METHOD_COLORS[colorKey] ?? "var(--cook-etc)";
-}
-
-function resolveCookingMethodTint(colorKey?: string | null) {
-  if (!colorKey) {
-    return "color-mix(in srgb, var(--cook-etc) 16%, transparent)";
-  }
-
-  return COOKING_METHOD_TINTS[colorKey] ?? "color-mix(in srgb, var(--cook-etc) 16%, transparent)";
-}
-
 function resolveCookingMethodDark(colorKey?: string | null) {
-  const base = resolveCookingMethodColor(colorKey);
+  const base = getCookingMethodColor(colorKey);
   return `color-mix(in srgb, ${base} 52%, var(--foreground))`;
 }
 

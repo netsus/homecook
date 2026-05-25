@@ -22,6 +22,7 @@ import {
 import { fetchIngredients } from "@/lib/api/ingredients";
 import {
   ALL_INGREDIENT_CATEGORY,
+  getIngredientCategoryEmoji,
   INGREDIENT_CATEGORY_OPTIONS,
 } from "@/lib/ingredient-categories";
 import type {
@@ -295,17 +296,7 @@ export function RecipeIngredientAddModal({
                             {isSelected ? "✓" : "+"}
                           </span>
                           <span aria-hidden="true">
-                            {ingredient.category === "육류"
-                              ? "🥩"
-                              : ingredient.category === "해산물"
-                                ? "🐟"
-                                : ingredient.category === "양념"
-                                  ? "🧄"
-                                  : ingredient.category === "곡류"
-                                    ? "🌾"
-                                    : ingredient.category === "유제품"
-                                      ? "🧈"
-                                      : "🥬"}
+                            {getIngredientCategoryEmoji(ingredient.category)}
                           </span>
                           <strong>{ingredient.standard_name}</strong>
                         </button>

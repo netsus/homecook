@@ -31,6 +31,7 @@ import {
   fetchPantryList,
   isPantryApiError,
 } from "@/lib/api/pantry";
+import { getIngredientCategoryEmoji } from "@/lib/ingredient-categories";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { PantryItem } from "@/types/pantry";
@@ -49,16 +50,6 @@ type PantryDisplayItem = {
 
 const TOAST_DURATION_MS = 3000;
 
-const CATEGORY_VISUAL: Record<string, string> = {
-  채소: "🥬",
-  육류: "🥩",
-  해산물: "🐟",
-  양념: "🧄",
-  곡류: "🌾",
-  유제품: "🧈",
-  과일: "🍎",
-  기타: "🥄",
-};
 
 const WEB_NAV_ITEMS = [
   { id: "home", href: "/", label: "홈" },
@@ -792,7 +783,7 @@ export function PantryScreen({
                         </span>
                       ) : null}
                       <span className="web-pantry-emoji" aria-hidden="true">
-                        {CATEGORY_VISUAL[item.category] ?? CATEGORY_VISUAL.기타}
+                        {getIngredientCategoryEmoji(item.category)}
                       </span>
                       <strong>{item.standard_name}</strong>
                       <small>{item.category}</small>
