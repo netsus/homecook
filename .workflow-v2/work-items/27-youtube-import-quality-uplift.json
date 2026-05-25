@@ -61,6 +61,7 @@
       "pnpm verify:frontend",
       "pnpm test:youtube-corpus",
       "pnpm test:youtube-dictionary",
+      "pnpm test:youtube-readiness",
       "pnpm lint",
       "pnpm typecheck",
       "pnpm validate:workflow-v2",
@@ -69,6 +70,7 @@
     ],
     "verify_commands": [
       "pnpm verify:backend",
+      "pnpm test:youtube-readiness",
       "pnpm verify:frontend"
     ],
     "evaluator_commands": [],
@@ -82,8 +84,8 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
+    "lifecycle": "in_progress",
+    "approval_state": "codex_approved",
     "verification_status": "pending",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
@@ -92,7 +94,7 @@
     "blocked_reason_code": null
   },
   "closeout": null,
-  "notes": "Stage 1 docs created. Pre-27 taxonomy consumer alignment merged — slice 27 can start without taxonomy branch divergence. Current baselines: in-corpus parser F1 0.9160, dictionary resolution 1.0000. Target: import readiness >= 0.80 on 50-case evidence corpus. No LLM fallback (user paused). Deterministic parser rules + dictionary seeding + post-processing only.",
+  "notes": "Stage 2 backend/test implementation in progress. Pre-27 taxonomy consumer alignment merged — slice 27 can start without taxonomy branch divergence. Current Stage 2 evidence: 50-case in-corpus parser F1 0.9423, ingredient F1 0.9511, step F1 0.9334, dictionary resolution 1.0000, import readiness 0.9632, wild fixture sample structured F1 0.9900 / weak F1 0.7571. No LLM fallback (user paused). Deterministic parser rules + dictionary seed verification + post-processing only.",
   "out_of_scope": [
     "LLM-based extraction (caption/ASR/estimation)",
     "Public API response shape changes",

@@ -1446,29 +1446,607 @@
         "resolution_rate": 1,
         "ingredients": [],
         "errors": []
+      },
+      {
+        "id": "structured-real-009",
+        "category": "structured",
+        "expected_count": 6,
+        "resolved_count": 5,
+        "needs_review_count": 0,
+        "unresolved_count": 1,
+        "resolution_rate": 0.8333,
+        "ingredients": [
+          {
+            "name": "두부",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "간장",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "간장"
+            ]
+          },
+          {
+            "name": "고춧가루",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "고춧가루"
+            ]
+          },
+          {
+            "name": "대파",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "대파"
+            ]
+          },
+          {
+            "name": "물",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "물"
+            ]
+          },
+          {
+            "name": "참기름",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "참기름"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "structured-real-010",
+        "category": "structured",
+        "expected_count": 5,
+        "resolved_count": 3,
+        "needs_review_count": 0,
+        "unresolved_count": 2,
+        "resolution_rate": 0.6,
+        "ingredients": [
+          {
+            "name": "감자",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "양파",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "식용유",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "식용유"
+            ]
+          },
+          {
+            "name": "소금",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "소금"
+            ]
+          },
+          {
+            "name": "후추",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "후추"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "structured-real-011",
+        "category": "structured",
+        "expected_count": 6,
+        "resolved_count": 4,
+        "needs_review_count": 0,
+        "unresolved_count": 2,
+        "resolution_rate": 0.6667,
+        "ingredients": [
+          {
+            "name": "어묵",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "물",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "물"
+            ]
+          },
+          {
+            "name": "간장",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "간장"
+            ]
+          },
+          {
+            "name": "다진마늘",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "다진마늘"
+            ]
+          },
+          {
+            "name": "대파",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "대파"
+            ]
+          },
+          {
+            "name": "청양고추",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "semi-real-009",
+        "category": "semi-structured",
+        "expected_count": 5,
+        "resolved_count": 2,
+        "needs_review_count": 0,
+        "unresolved_count": 3,
+        "resolution_rate": 0.4,
+        "ingredients": [
+          {
+            "name": "참치캔",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "마요네즈",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "양파",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "청오이",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "청오이"
+            ]
+          },
+          {
+            "name": "후추",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "후추"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "semi-real-010",
+        "category": "semi-structured",
+        "expected_count": 5,
+        "resolved_count": 2,
+        "needs_review_count": 0,
+        "unresolved_count": 3,
+        "resolution_rate": 0.4,
+        "ingredients": [
+          {
+            "name": "감자",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "베이컨",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "부침가루",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "달걀",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "달걀"
+            ]
+          },
+          {
+            "name": "식용유",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "식용유"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "semi-real-011",
+        "category": "semi-structured",
+        "expected_count": 5,
+        "resolved_count": 0,
+        "needs_review_count": 0,
+        "unresolved_count": 5,
+        "resolution_rate": 0,
+        "ingredients": [
+          {
+            "name": "오트밀",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "플레인요거트",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "바나나",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "견과류",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "꿀",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "weak-real-005",
+        "category": "weak",
+        "expected_count": 4,
+        "resolved_count": 4,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [
+          {
+            "name": "달걀",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "달걀"
+            ]
+          },
+          {
+            "name": "물",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "물"
+            ]
+          },
+          {
+            "name": "소금",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "소금"
+            ]
+          },
+          {
+            "name": "대파",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "대파"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "weak-real-006",
+        "category": "weak",
+        "expected_count": 5,
+        "resolved_count": 2,
+        "needs_review_count": 0,
+        "unresolved_count": 3,
+        "resolution_rate": 0.4,
+        "ingredients": [
+          {
+            "name": "토마토",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "양파",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "올리브 오일",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "올리브 오일"
+            ]
+          },
+          {
+            "name": "식초",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "소금",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "소금"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "weak-real-007",
+        "category": "weak",
+        "expected_count": 5,
+        "resolved_count": 2,
+        "needs_review_count": 0,
+        "unresolved_count": 3,
+        "resolution_rate": 0.4,
+        "ingredients": [
+          {
+            "name": "두부",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "밥",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "밥"
+            ]
+          },
+          {
+            "name": "간장",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "간장"
+            ]
+          },
+          {
+            "name": "마요네즈",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "참깨",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "weak-real-008",
+        "category": "weak",
+        "expected_count": 5,
+        "resolved_count": 3,
+        "needs_review_count": 0,
+        "unresolved_count": 2,
+        "resolution_rate": 0.6,
+        "ingredients": [
+          {
+            "name": "콩나물",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "다진마늘",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "다진마늘"
+            ]
+          },
+          {
+            "name": "참기름",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "참기름"
+            ]
+          },
+          {
+            "name": "소금",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "소금"
+            ]
+          },
+          {
+            "name": "깨",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "multi-real-005",
+        "category": "multi-recipe",
+        "expected_count": 4,
+        "resolved_count": 1,
+        "needs_review_count": 0,
+        "unresolved_count": 3,
+        "resolution_rate": 0.25,
+        "ingredients": [
+          {
+            "name": "김치",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "두부",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "돼지고기",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "대파",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "대파"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "multi-real-006",
+        "category": "multi-recipe",
+        "expected_count": 4,
+        "resolved_count": 1,
+        "needs_review_count": 0,
+        "unresolved_count": 3,
+        "resolution_rate": 0.25,
+        "ingredients": [
+          {
+            "name": "식빵",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "치즈",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "햄",
+            "resolution_status": "unresolved",
+            "match_count": 0,
+            "standard_names": []
+          },
+          {
+            "name": "버터",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "버터"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "noise-real-001",
+        "category": "noise",
+        "expected_count": 0,
+        "resolved_count": 0,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [],
+        "errors": []
+      },
+      {
+        "id": "noise-real-002",
+        "category": "noise",
+        "expected_count": 0,
+        "resolved_count": 0,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [],
+        "errors": []
       }
     ],
     "aggregate": {
-      "corpus_avg_resolution_rate": 0.5567,
-      "ingredient_resolution_rate": 0.4795,
+      "corpus_avg_resolution_rate": 0.5568,
+      "ingredient_resolution_rate": 0.4829,
       "category_avg": {
-        "structured": 0.578,
-        "semi-structured": 0.5292,
-        "weak": 0.2313,
+        "structured": 0.6113,
+        "semi-structured": 0.4576,
+        "weak": 0.3542,
         "noise": 1,
-        "multi-recipe": 0.5555
+        "multi-recipe": 0.4792
       },
       "category_counts": {
-        "structured": 8,
-        "semi-structured": 8,
-        "weak": 8,
-        "noise": 6,
-        "multi-recipe": 6
+        "structured": 11,
+        "semi-structured": 11,
+        "weak": 12,
+        "noise": 8,
+        "multi-recipe": 8
       },
-      "expected_count": 146,
-      "resolved_count": 70,
+      "expected_count": 205,
+      "resolved_count": 99,
       "needs_review_count": 0,
-      "unresolved_count": 76,
+      "unresolved_count": 106,
       "warnings": []
     }
   },
@@ -3071,6 +3649,644 @@
         "resolution_rate": 1,
         "ingredients": [],
         "errors": []
+      },
+      {
+        "id": "structured-real-009",
+        "category": "structured",
+        "expected_count": 6,
+        "resolved_count": 6,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [
+          {
+            "name": "두부",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "두부"
+            ]
+          },
+          {
+            "name": "간장",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "간장"
+            ]
+          },
+          {
+            "name": "고춧가루",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "고춧가루"
+            ]
+          },
+          {
+            "name": "대파",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "대파"
+            ]
+          },
+          {
+            "name": "물",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "물"
+            ]
+          },
+          {
+            "name": "참기름",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "참기름"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "structured-real-010",
+        "category": "structured",
+        "expected_count": 5,
+        "resolved_count": 5,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [
+          {
+            "name": "감자",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "감자"
+            ]
+          },
+          {
+            "name": "양파",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "양파"
+            ]
+          },
+          {
+            "name": "식용유",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "식용유"
+            ]
+          },
+          {
+            "name": "소금",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "소금"
+            ]
+          },
+          {
+            "name": "후추",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "후추"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "structured-real-011",
+        "category": "structured",
+        "expected_count": 6,
+        "resolved_count": 6,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [
+          {
+            "name": "어묵",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "어묵"
+            ]
+          },
+          {
+            "name": "물",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "물"
+            ]
+          },
+          {
+            "name": "간장",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "간장"
+            ]
+          },
+          {
+            "name": "다진마늘",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "다진마늘"
+            ]
+          },
+          {
+            "name": "대파",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "대파"
+            ]
+          },
+          {
+            "name": "청양고추",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "청양고추"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "semi-real-009",
+        "category": "semi-structured",
+        "expected_count": 5,
+        "resolved_count": 5,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [
+          {
+            "name": "참치캔",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "참치캔"
+            ]
+          },
+          {
+            "name": "마요네즈",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "마요네즈"
+            ]
+          },
+          {
+            "name": "양파",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "양파"
+            ]
+          },
+          {
+            "name": "청오이",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "청오이"
+            ]
+          },
+          {
+            "name": "후추",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "후추"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "semi-real-010",
+        "category": "semi-structured",
+        "expected_count": 5,
+        "resolved_count": 5,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [
+          {
+            "name": "감자",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "감자"
+            ]
+          },
+          {
+            "name": "베이컨",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "베이컨"
+            ]
+          },
+          {
+            "name": "부침가루",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "부침가루"
+            ]
+          },
+          {
+            "name": "달걀",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "달걀"
+            ]
+          },
+          {
+            "name": "식용유",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "식용유"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "semi-real-011",
+        "category": "semi-structured",
+        "expected_count": 5,
+        "resolved_count": 5,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [
+          {
+            "name": "오트밀",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "오트밀"
+            ]
+          },
+          {
+            "name": "플레인요거트",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "플레인요거트"
+            ]
+          },
+          {
+            "name": "바나나",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "바나나"
+            ]
+          },
+          {
+            "name": "견과류",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "견과류"
+            ]
+          },
+          {
+            "name": "꿀",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "꿀"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "weak-real-005",
+        "category": "weak",
+        "expected_count": 4,
+        "resolved_count": 4,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [
+          {
+            "name": "달걀",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "달걀"
+            ]
+          },
+          {
+            "name": "물",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "물"
+            ]
+          },
+          {
+            "name": "소금",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "소금"
+            ]
+          },
+          {
+            "name": "대파",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "대파"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "weak-real-006",
+        "category": "weak",
+        "expected_count": 5,
+        "resolved_count": 5,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [
+          {
+            "name": "토마토",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "토마토"
+            ]
+          },
+          {
+            "name": "양파",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "양파"
+            ]
+          },
+          {
+            "name": "올리브 오일",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "올리브 오일"
+            ]
+          },
+          {
+            "name": "식초",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "식초"
+            ]
+          },
+          {
+            "name": "소금",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "소금"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "weak-real-007",
+        "category": "weak",
+        "expected_count": 5,
+        "resolved_count": 5,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [
+          {
+            "name": "두부",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "두부"
+            ]
+          },
+          {
+            "name": "밥",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "밥"
+            ]
+          },
+          {
+            "name": "간장",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "간장"
+            ]
+          },
+          {
+            "name": "마요네즈",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "마요네즈"
+            ]
+          },
+          {
+            "name": "참깨",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "참깨"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "weak-real-008",
+        "category": "weak",
+        "expected_count": 5,
+        "resolved_count": 5,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [
+          {
+            "name": "콩나물",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "콩나물"
+            ]
+          },
+          {
+            "name": "다진마늘",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "다진마늘"
+            ]
+          },
+          {
+            "name": "참기름",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "참기름"
+            ]
+          },
+          {
+            "name": "소금",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "소금"
+            ]
+          },
+          {
+            "name": "깨",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "깨"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "multi-real-005",
+        "category": "multi-recipe",
+        "expected_count": 4,
+        "resolved_count": 4,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [
+          {
+            "name": "김치",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "김치"
+            ]
+          },
+          {
+            "name": "두부",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "두부"
+            ]
+          },
+          {
+            "name": "돼지고기",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "돼지고기"
+            ]
+          },
+          {
+            "name": "대파",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "대파"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "multi-real-006",
+        "category": "multi-recipe",
+        "expected_count": 4,
+        "resolved_count": 4,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [
+          {
+            "name": "식빵",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "식빵"
+            ]
+          },
+          {
+            "name": "치즈",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "치즈"
+            ]
+          },
+          {
+            "name": "햄",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "햄"
+            ]
+          },
+          {
+            "name": "버터",
+            "resolution_status": "resolved",
+            "match_count": 1,
+            "standard_names": [
+              "버터"
+            ]
+          }
+        ],
+        "errors": []
+      },
+      {
+        "id": "noise-real-001",
+        "category": "noise",
+        "expected_count": 0,
+        "resolved_count": 0,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [],
+        "errors": []
+      },
+      {
+        "id": "noise-real-002",
+        "category": "noise",
+        "expected_count": 0,
+        "resolved_count": 0,
+        "needs_review_count": 0,
+        "unresolved_count": 0,
+        "resolution_rate": 1,
+        "ingredients": [],
+        "errors": []
       }
     ],
     "aggregate": {
@@ -3084,14 +4300,14 @@
         "multi-recipe": 1
       },
       "category_counts": {
-        "structured": 8,
-        "semi-structured": 8,
-        "weak": 8,
-        "noise": 6,
-        "multi-recipe": 6
+        "structured": 11,
+        "semi-structured": 11,
+        "weak": 12,
+        "noise": 8,
+        "multi-recipe": 8
       },
-      "expected_count": 146,
-      "resolved_count": 146,
+      "expected_count": 205,
+      "resolved_count": 205,
       "needs_review_count": 0,
       "unresolved_count": 0,
       "warnings": []

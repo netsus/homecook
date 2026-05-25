@@ -158,7 +158,8 @@ readiness = 0.35 × ingredient_f1
 ### 채점 하네스
 - `pnpm test:youtube-corpus` — in-corpus F1 측정 (기존 하네스 확장)
 - `pnpm test:youtube-dictionary` — dictionary resolution rate 측정
-- 신규: import readiness score 계산 harness (위 가중 공식 적용)
+- `pnpm test:youtube-readiness` — import readiness score 계산 harness (위 가중 공식 적용)
+- `tests/fixtures/youtube-corpus/wild-sample-v1.json` — in-corpus와 섞지 않는 10건 wild fixture sample
 
 ### CI Safety
 - 모든 quality gate는 fixture 기반 결정론 테스트로 CI에서 실행 가능
@@ -208,20 +209,20 @@ readiness = 0.35 × ingredient_f1
 ## Delivery Checklist
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] 파서 규칙 개선 및 테스트 <!-- omo:id=delivery-parser-rules;stage=2;scope=backend;review=3,6 -->
-- [ ] 사전 시딩 migration <!-- omo:id=delivery-dictionary-seed;stage=2;scope=backend;review=3,6 -->
-- [ ] Import readiness 채점 하네스 <!-- omo:id=delivery-readiness-harness;stage=2;scope=backend;review=3,6 -->
-- [ ] Corpus 50건 확보 및 baseline 측정 <!-- omo:id=delivery-corpus-50;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] 파서 규칙 개선 및 테스트 <!-- omo:id=delivery-parser-rules;stage=2;scope=backend;review=3,6 -->
+- [x] 사전 시딩 필요 여부 확인 (slice26 seed로 50 corpus dictionary resolution 1.0000, 추가 migration 없음) <!-- omo:id=delivery-dictionary-seed;stage=2;scope=backend;review=3,6 -->
+- [x] Import readiness 채점 하네스 <!-- omo:id=delivery-readiness-harness;stage=2;scope=backend;review=3,6 -->
+- [x] Corpus 50건 확보 및 baseline 측정 <!-- omo:id=delivery-corpus-50;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
-- [ ] In-corpus F1 >= 0.90 gate 통과 <!-- omo:id=delivery-f1-gate;stage=2;scope=backend;review=3,6 -->
-- [ ] Import readiness >= 0.80 gate 통과 <!-- omo:id=delivery-readiness-gate;stage=2;scope=backend;review=3,6 -->
-- [ ] Wild sample F1 보고 (structured >= 0.85, weak >= 0.70) <!-- omo:id=delivery-wild-sample-report;stage=2;scope=backend;review=3,6 -->
+- [x] In-corpus F1 >= 0.90 gate 통과 <!-- omo:id=delivery-f1-gate;stage=2;scope=backend;review=3,6 -->
+- [x] Import readiness >= 0.80 gate 통과 <!-- omo:id=delivery-readiness-gate;stage=2;scope=backend;review=3,6 -->
+- [x] Wild sample F1 보고 (structured >= 0.85, weak >= 0.70) <!-- omo:id=delivery-wild-sample-report;stage=2;scope=backend;review=3,6 -->

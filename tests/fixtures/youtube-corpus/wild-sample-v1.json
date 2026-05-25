@@ -1,0 +1,189 @@
+[
+  {
+    "id": "wild-structured-001",
+    "category": "structured",
+    "source": "real-description",
+    "channel_hint": "wild-channel-A",
+    "description": "간장두부덮밥\n\n재료\n두부 1모\n밥 1공기\n간장 2스푼\n참기름 1스푼\n대파 1/2대\n\n만드는 법\n1. 두부를 으깨 팬에 볶아요.\n2. 간장과 참기름으로 간합니다.\n3. 밥 위에 올리고 대파를 뿌립니다.",
+    "expected_ingredients": [
+      { "name": "두부", "amount": 1, "unit": "모", "type": "QUANT" },
+      { "name": "밥", "amount": 1, "unit": "공기", "type": "QUANT" },
+      { "name": "간장", "amount": 2, "unit": "스푼", "type": "QUANT" },
+      { "name": "참기름", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "대파", "amount": 0.5, "unit": "대", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "두부.*볶" },
+      { "step_number": 2, "instruction_pattern": "간장.*간" },
+      { "step_number": 3, "instruction_pattern": "밥.*올" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "wild structured sample" }
+  },
+  {
+    "id": "wild-structured-002",
+    "category": "structured",
+    "source": "real-description",
+    "channel_hint": "wild-channel-B",
+    "description": "토마토 달걀국\n\n준비재료\n토마토 2개\n달걀 2개\n물 500ml\n소금 한 꼬집\n대파 조금\n\n조리법\n1. 물을 끓이고 토마토를 넣습니다.\n2. 달걀을 풀어 넣고 익혀요.\n3. 소금과 대파로 마무리합니다.",
+    "expected_ingredients": [
+      { "name": "토마토", "amount": 2, "unit": "개", "type": "QUANT" },
+      { "name": "달걀", "amount": 2, "unit": "개", "type": "QUANT" },
+      { "name": "물", "amount": 500, "unit": "ml", "type": "QUANT" },
+      { "name": "소금", "amount": 1, "unit": "꼬집", "type": "QUANT" },
+      { "name": "대파", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "물.*토마토" },
+      { "step_number": 2, "instruction_pattern": "달걀.*익" },
+      { "step_number": 3, "instruction_pattern": "소금.*대파.*마무리" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "wild structured sample" }
+  },
+  {
+    "id": "wild-structured-003",
+    "category": "structured",
+    "source": "real-description",
+    "channel_hint": "wild-channel-C",
+    "description": "베이컨 양배추볶음\n\nIngredients\n양배추 1/6통\n베이컨 3줄\n간장 1스푼\n식용유 1스푼\n후추 톡톡\n\nDirections\n1. 양배추와 베이컨을 썰어요.\n2. 팬에 식용유를 두르고 볶습니다.\n3. 간장과 후추를 넣어 간합니다.",
+    "expected_ingredients": [
+      { "name": "양배추", "amount": 0.16, "unit": "통", "type": "QUANT" },
+      { "name": "베이컨", "amount": 3, "unit": "줄", "type": "QUANT" },
+      { "name": "간장", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "식용유", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "후추", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "양배추.*베이컨.*썰" },
+      { "step_number": 2, "instruction_pattern": "식용유.*볶" },
+      { "step_number": 3, "instruction_pattern": "간장.*후추.*간" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "wild structured sample" }
+  },
+  {
+    "id": "wild-structured-004",
+    "category": "structured",
+    "source": "real-description",
+    "channel_hint": "wild-channel-D",
+    "description": "참치김치볶음\n\n재료\n김치 250g\n참치캔 1캔\n양파 1/2개\n설탕 1작은술\n참기름 1스푼\n\n순서\n1. 양파를 썰고 김치를 볶아요.\n2. 참치와 설탕을 넣어 더 볶습니다.\n3. 참기름을 넣고 섞습니다.",
+    "expected_ingredients": [
+      { "name": "김치", "amount": 250, "unit": "g", "type": "QUANT" },
+      { "name": "참치캔", "amount": 1, "unit": "캔", "type": "QUANT" },
+      { "name": "양파", "amount": 0.5, "unit": "개", "type": "QUANT" },
+      { "name": "설탕", "amount": 1, "unit": "작은술", "type": "QUANT" },
+      { "name": "참기름", "amount": 1, "unit": "스푼", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "김치.*볶" },
+      { "step_number": 2, "instruction_pattern": "참치.*설탕.*볶" },
+      { "step_number": 3, "instruction_pattern": "참기름.*섞" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "wild structured sample" }
+  },
+  {
+    "id": "wild-structured-005",
+    "category": "structured",
+    "source": "real-description",
+    "channel_hint": "wild-channel-E",
+    "description": "어묵감자조림\n\n재료\n어묵 3장\n감자 2개\n간장 2스푼\n물 150ml\n올리고당 1스푼\n\n만들기\n1. 감자와 어묵을 썰어요.\n2. 물과 간장을 넣고 끓입니다.\n3. 올리고당을 넣어 윤기 나게 조려요.",
+    "expected_ingredients": [
+      { "name": "어묵", "amount": 3, "unit": "장", "type": "QUANT" },
+      { "name": "감자", "amount": 2, "unit": "개", "type": "QUANT" },
+      { "name": "간장", "amount": 2, "unit": "스푼", "type": "QUANT" },
+      { "name": "물", "amount": 150, "unit": "ml", "type": "QUANT" },
+      { "name": "올리고당", "amount": 1, "unit": "스푼", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "감자.*어묵.*썰" },
+      { "step_number": 2, "instruction_pattern": "물.*간장.*끓" },
+      { "step_number": 3, "instruction_pattern": "올리고당.*조" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "wild structured sample" }
+  },
+  {
+    "id": "wild-weak-001",
+    "category": "weak",
+    "source": "real-description",
+    "channel_hint": "wild-channel-A",
+    "description": "밥 1공기에 달걀 1개와 간장 1스푼, 참기름 1스푼을 넣어 비비면 간단한 한 그릇이 됩니다.",
+    "expected_ingredients": [
+      { "name": "밥", "amount": 1, "unit": "공기", "type": "QUANT" },
+      { "name": "달걀", "amount": 1, "unit": "개", "type": "QUANT" },
+      { "name": "간장", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "참기름", "amount": 1, "unit": "스푼", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "밥.*달걀.*비비" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "wild weak sample" }
+  },
+  {
+    "id": "wild-weak-002",
+    "category": "weak",
+    "source": "real-description",
+    "channel_hint": "wild-channel-B",
+    "description": "두부 1모를 굽고 고추장 1스푼, 케첩 2스푼, 올리고당 1스푼을 섞은 소스에 버무리면 두부강정이 됩니다.",
+    "expected_ingredients": [
+      { "name": "두부", "amount": 1, "unit": "모", "type": "QUANT" },
+      { "name": "고추장", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "케첩", "amount": 2, "unit": "스푼", "type": "QUANT" },
+      { "name": "올리고당", "amount": 1, "unit": "스푼", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "두부.*굽.*버무" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "wild weak sample" }
+  },
+  {
+    "id": "wild-weak-003",
+    "category": "weak",
+    "source": "real-description",
+    "channel_hint": "wild-channel-C",
+    "description": "양상추 3장과 방울토마토 5개, 닭가슴살 1덩이에 올리브 오일 1스푼과 소금 조금을 뿌려 샐러드로 먹습니다.",
+    "expected_ingredients": [
+      { "name": "양상추", "amount": 3, "unit": "장", "type": "QUANT" },
+      { "name": "방울토마토", "amount": 5, "unit": "개", "type": "QUANT" },
+      { "name": "닭가슴살", "amount": 1, "unit": "덩이", "type": "QUANT" },
+      { "name": "올리브 오일", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "소금", "amount": null, "unit": null, "type": "TO_TASTE" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "양상추.*토마토.*뿌" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "wild weak sample" }
+  },
+  {
+    "id": "wild-weak-004",
+    "category": "weak",
+    "source": "real-description",
+    "channel_hint": "wild-channel-D",
+    "description": "스파게티면 100g을 삶고 양송이버섯 5개, 버터 10g, 우유 100ml를 넣어 끓이면 가벼운 크림파스타가 됩니다.",
+    "expected_ingredients": [
+      { "name": "스파게티면", "amount": 100, "unit": "g", "type": "QUANT" },
+      { "name": "양송이버섯", "amount": 5, "unit": "개", "type": "QUANT" },
+      { "name": "버터", "amount": 10, "unit": "g", "type": "QUANT" },
+      { "name": "우유", "amount": 100, "unit": "ml", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "면.*삶.*끓" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "wild weak sample" }
+  },
+  {
+    "id": "wild-weak-005",
+    "category": "weak",
+    "source": "real-description",
+    "channel_hint": "wild-channel-E",
+    "description": "떡국떡 한 줌을 불리고 어묵 2장, 대파 조금, 고추장 1스푼, 간장 1스푼을 넣어 볶으면 빠른 떡볶이가 됩니다.",
+    "expected_ingredients": [
+      { "name": "떡국떡", "amount": 1, "unit": "줌", "type": "QUANT" },
+      { "name": "어묵", "amount": 2, "unit": "장", "type": "QUANT" },
+      { "name": "대파", "amount": null, "unit": null, "type": "TO_TASTE" },
+      { "name": "고추장", "amount": 1, "unit": "스푼", "type": "QUANT" },
+      { "name": "간장", "amount": 1, "unit": "스푼", "type": "QUANT" }
+    ],
+    "expected_steps": [
+      { "step_number": 1, "instruction_pattern": "떡.*불리.*볶" }
+    ],
+    "metadata": { "video_category": "recipe", "has_component_structure": false, "multi_recipe": false, "notes": "wild weak sample" }
+  }
+]

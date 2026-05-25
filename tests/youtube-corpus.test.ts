@@ -14,8 +14,10 @@ import {
 } from "@/lib/server/youtube-corpus-scoring";
 
 import corpusData from "@/tests/fixtures/youtube-corpus/corpus-v1.json";
+import wildSampleData from "@/tests/fixtures/youtube-corpus/wild-sample-v1.json";
 
 const corpus = corpusData as YoutubeCorpusFixture[];
+const wildSample = wildSampleData as YoutubeCorpusFixture[];
 const baselineReportPath = join(
   process.cwd(),
   "tests/fixtures/youtube-corpus/reports/baseline-v2.json",
@@ -30,11 +32,11 @@ describe("YouTube corpus fixture contract", () => {
     const validation = validateYoutubeCorpusFixtures(corpus);
 
     expect(validation.errors).toEqual([]);
-    expect(corpus).toHaveLength(36);
-    expect(corpus.filter((fixture) => fixture.source === "real-description")).toHaveLength(24);
+    expect(corpus).toHaveLength(50);
+    expect(corpus.filter((fixture) => fixture.source === "real-description")).toHaveLength(38);
 
     for (const category of ["structured", "semi-structured", "weak", "noise", "multi-recipe"]) {
-      expect(corpus.filter((fixture) => fixture.category === category).length).toBeGreaterThanOrEqual(3);
+      expect(corpus.filter((fixture) => fixture.category === category).length).toBeGreaterThanOrEqual(5);
     }
   });
 
@@ -47,15 +49,17 @@ describe("YouTube corpus fixture contract", () => {
     expect(guide).toContain("5개 채널");
     expect(guide).toContain("10개 영상");
     expect(guide).toContain("wild_sample_aggregate");
+    expect(wildSample).toHaveLength(10);
+    expect(new Set(wildSample.map((fixture) => fixture.channel_hint)).size).toBeGreaterThanOrEqual(5);
   });
 
   it("warns when corpus fixture count or category minimums are below contract", () => {
     const validation = validateYoutubeCorpusFixtures([corpus[0]]);
 
     expect(validation.errors).toEqual([]);
-    expect(validation.warnings).toContain("fixture count is below 36: 1");
-    expect(validation.warnings).toContain("semi-structured fixture count is below 3: 0");
-    expect(validation.warnings).toContain("real-description fixture count is below 24: 1");
+    expect(validation.warnings).toContain("fixture count is below 50: 1");
+    expect(validation.warnings).toContain("semi-structured fixture count is below 5: 0");
+    expect(validation.warnings).toContain("real-description fixture count is below 30: 1");
   });
 });
 
@@ -160,7 +164,7 @@ describe("YouTube corpus scoring harness", () => {
         },
       },
     });
-    expect(baselineReport.per_fixture).toHaveLength(corpus.length);
+    expect(baselineReport.per_fixture).toHaveLength(36);
   });
 
   it("recomputes the parser hardening report and enforces slice 24 score floors", () => {
@@ -170,6 +174,7 @@ describe("YouTube corpus scoring harness", () => {
       runId: "parser-hardening-v1",
       timestamp: "2026-05-25T00:00:00.000Z",
       parser: parseFixtureWithYoutubeParserV2,
+      wildSampleFixtures: wildSample,
     });
 
     if (process.env.UPDATE_YOUTUBE_CORPUS_HARDENING === "1") {
@@ -180,12 +185,14 @@ describe("YouTube corpus scoring harness", () => {
     const hardeningReport = JSON.parse(readFileSync(hardeningReportPath, "utf8")) as YoutubeCorpusReport;
 
     expect(report).toEqual(hardeningReport as YoutubeCorpusReport);
-    expect(report.aggregate.corpus_avg_f1).toBeGreaterThanOrEqual(0.8);
+    expect(report.aggregate.corpus_avg_f1).toBeGreaterThanOrEqual(0.9);
     expect(report.aggregate.category_avg.structured).toBeGreaterThanOrEqual(0.8645);
     expect(report.aggregate.category_avg["semi-structured"]).toBeGreaterThan(0.1799);
     expect(report.aggregate.category_avg.weak).toBeGreaterThan(0);
     expect(report.aggregate.category_avg.noise).toBe(1);
     expect(report.aggregate.category_avg["multi-recipe"]).toBeGreaterThanOrEqual(0.5);
+    expect(report.wild_sample_aggregate?.category_avg.structured).toBeGreaterThanOrEqual(0.85);
+    expect(report.wild_sample_aggregate?.category_avg.weak).toBeGreaterThanOrEqual(0.7);
     expect(report.per_fixture.every((fixture) => fixture.errors.length === 0)).toBe(true);
   });
 });

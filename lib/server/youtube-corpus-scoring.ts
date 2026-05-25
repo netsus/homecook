@@ -312,18 +312,18 @@ export function validateYoutubeCorpusFixtures(fixtures: unknown[]): YoutubeCorpu
     }
   });
 
-  if (fixtures.length < 36) {
-    warnings.push(`fixture count is below 36: ${fixtures.length}`);
+  if (fixtures.length < 50) {
+    warnings.push(`fixture count is below 50: ${fixtures.length}`);
   }
 
   for (const category of CATEGORIES) {
-    if (categoryCounts[category] < 3) {
-      warnings.push(`${category} fixture count is below 3: ${categoryCounts[category]}`);
+    if (categoryCounts[category] < 5) {
+      warnings.push(`${category} fixture count is below 5: ${categoryCounts[category]}`);
     }
   }
 
-  if (realDescriptionCount < 24) {
-    warnings.push(`real-description fixture count is below 24: ${realDescriptionCount}`);
+  if (realDescriptionCount < 30) {
+    warnings.push(`real-description fixture count is below 30: ${realDescriptionCount}`);
   }
 
   return { errors, warnings };
@@ -335,6 +335,48 @@ function average(values: number[]) {
   return roundScore(values.reduce((sum, value) => sum + value, 0) / values.length);
 }
 
+function scoreFixture(
+  fixture: YoutubeCorpusFixture,
+  parser: (fixture: YoutubeCorpusFixture) => YoutubeParserOutput,
+): YoutubeCorpusFixtureResult {
+  try {
+    const parserOutput = parser(fixture);
+    const ingredients = scoreIngredientMatches(fixture.expected_ingredients, parserOutput.ingredients);
+    const steps = scoreStepMatches(fixture.expected_steps, parserOutput.steps);
+
+    return {
+      id: fixture.id,
+      category: fixture.category,
+      ingredients,
+      steps,
+      overall_f1: average([ingredients.f1, steps.f1]),
+      errors: [],
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    return {
+      id: fixture.id,
+      category: fixture.category,
+      ingredients: { precision: 0, recall: 0, f1: 0 },
+      steps: { precision: 0, recall: 0, f1: 0 },
+      overall_f1: 0,
+      errors: [message],
+    };
+  }
+}
+
+function categoryAverage(
+  fixtures: YoutubeCorpusFixtureResult[],
+): Record<YoutubeCorpusCategory, number> {
+  return Object.fromEntries(
+    CATEGORIES.map((category) => [
+      category,
+      average(fixtures.filter((fixture) => fixture.category === category).map((fixture) => fixture.overall_f1)),
+    ]),
+  ) as Record<YoutubeCorpusCategory, number>;
+}
+
 export function scoreYoutubeCorpusFixtures(
   fixtures: YoutubeCorpusFixture[],
   options: {
@@ -343,48 +385,24 @@ export function scoreYoutubeCorpusFixtures(
     runId: string;
     timestamp: string;
     parser: (fixture: YoutubeCorpusFixture) => YoutubeParserOutput;
+    wildSampleFixtures?: YoutubeCorpusFixture[];
   },
 ): YoutubeCorpusReport {
   const validation = validateYoutubeCorpusFixtures(fixtures);
-  const perFixture = fixtures.map((fixture): YoutubeCorpusFixtureResult => {
-    try {
-      const parserOutput = options.parser(fixture);
-      const ingredients = scoreIngredientMatches(fixture.expected_ingredients, parserOutput.ingredients);
-      const steps = scoreStepMatches(fixture.expected_steps, parserOutput.steps);
-
-      return {
-        id: fixture.id,
-        category: fixture.category,
-        ingredients,
-        steps,
-        overall_f1: average([ingredients.f1, steps.f1]),
-        errors: [],
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-
-      return {
-        id: fixture.id,
-        category: fixture.category,
-        ingredients: { precision: 0, recall: 0, f1: 0 },
-        steps: { precision: 0, recall: 0, f1: 0 },
-        overall_f1: 0,
-        errors: [message],
-      };
-    }
-  });
-  const categoryAvg = Object.fromEntries(
-    CATEGORIES.map((category) => [
-      category,
-      average(perFixture.filter((fixture) => fixture.category === category).map((fixture) => fixture.overall_f1)),
-    ]),
-  ) as Record<YoutubeCorpusCategory, number>;
+  const perFixture = fixtures.map((fixture) => scoreFixture(fixture, options.parser));
+  const categoryAvg = categoryAverage(perFixture);
   const categoryCounts = Object.fromEntries(
     CATEGORIES.map((category) => [
       category,
       perFixture.filter((fixture) => fixture.category === category).length,
     ]),
   ) as Record<YoutubeCorpusCategory, number>;
+  const wildSampleResults = options.wildSampleFixtures?.map((fixture) =>
+    scoreFixture(fixture, options.parser),
+  );
+  const wildSampleCategoryAvg = wildSampleResults
+    ? categoryAverage(wildSampleResults)
+    : null;
 
   return {
     run_id: options.runId,
@@ -398,6 +416,15 @@ export function scoreYoutubeCorpusFixtures(
       category_counts: categoryCounts,
       warnings: validation.warnings,
     },
-    wild_sample_aggregate: null,
+    wild_sample_aggregate: wildSampleResults && wildSampleCategoryAvg
+      ? {
+          corpus_avg_f1: average(wildSampleResults.map((fixture) => fixture.overall_f1)),
+          category_avg: Object.fromEntries(
+            CATEGORIES
+              .filter((category) => wildSampleResults.some((fixture) => fixture.category === category))
+              .map((category) => [category, wildSampleCategoryAvg[category]]),
+          ),
+        }
+      : null,
   };
 }

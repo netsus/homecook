@@ -31,6 +31,7 @@
       "pnpm verify:backend",
       "pnpm test:youtube-corpus",
       "pnpm test:youtube-dictionary",
+      "pnpm test:youtube-readiness",
       "pnpm lint",
       "pnpm typecheck"
     ],
