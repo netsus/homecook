@@ -1,0 +1,101 @@
+{
+  "id": "28-external-ingredient-data-ingest-gate",
+  "title": "External ingredient data ingest gate",
+  "summary": "식약처/농식품올바로 등 외부 재료 데이터를 운영 ingredients에 바로 넣지 않고, file export/import 기반 staging -> deterministic normalization -> review -> approved seed promotion 경로로만 들여오는 안전장치를 만든다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "external-integration",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "한국인이 자주 쓰는 재료/동의어를 넓히기 전에 production 직적재를 차단하고, 외부 데이터 row를 검수 가능한 후보 report와 approved-only seed artifact로 분리한다.",
+  "owners": {
+    "claude": "stage1,stage3",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "pre-27-taxonomy-consumer-alignment",
+    "27-youtube-import-quality-uplift"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.1.md",
+      "docs/화면정의서-v1.5.8.md",
+      "docs/유저flow맵-v1.3.8.md",
+      "docs/db설계-v1.3.7.md",
+      "docs/api문서-v1.2.11.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/28-external-ingredient-data-ingest-gate/README.md",
+      "docs/workpacks/28-external-ingredient-data-ingest-gate/acceptance.md",
+      "docs/workpacks/28-external-ingredient-data-ingest-gate/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      ".omx/plans/ingredient-cooking-taxonomy-ralplan-final-20260525.md",
+      ".omx/plans/ingredient-cooking-taxonomy-expansion-20260525.md",
+      ".omx/plans/open-questions.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "external-source-export-sample-review"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 0
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 28-external-ingredient-data-ingest-gate",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "candidate-report-generated",
+      "approved-only-promotion-artifact",
+      "no-production-direct-load",
+      "legacy-7-category-compat"
+    ]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 docs/contract in progress on docs/28-external-ingredient-data-ingest-gate. Claude Stage 1 was attempted through resume session 0b81bfad-abd1-4a51-8e1e-65f7410d0cea but hit usage limit before producing files; Codex prepared a docs draft for later Claude review/repair. Stage 2 should prefer file-backed batch staging before any DB staging table.",
+  "out_of_scope": [
+    "Production direct-load into ingredients",
+    "Automatic canonical ingredient creation",
+    "Automatic synonym creation",
+    "Live API key fetch as default path",
+    "LLM/model normalization",
+    "Public API response shape changes",
+    "Legacy category expansion beyond 7",
+    "Admin review UI",
+    "Ingredient category FK cutover",
+    "Cooking method taxonomy API expansion"
+  ],
+  "open_questions": [
+    "Whether Stage 2 remains file-backed only or adds DB staging tables after implementation design review"
+  ]
+}

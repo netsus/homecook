@@ -1,0 +1,76 @@
+{
+  "slice_id": "28-external-ingredient-data-ingest-gate",
+  "execution_mode": "autonomous",
+  "risk_class": "low",
+  "merge_policy": "conditional-auto",
+  "contract_evolution_required": false,
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-production-direct-load",
+      "staging-review-required",
+      "legacy-7-category-compat",
+      "no-public-api-shape-change",
+      "no-llm-normalization",
+      "file-batch-first",
+      "approved-seed-only",
+      "raw-row-preservation",
+      "idempotent-rerun",
+      "source-metadata-required",
+      "api-envelope-compat"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 28-external-ingredient-data-ingest-gate",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/external-ingredient-ingest.test.ts",
+      "tests/ingredient-categories.test.ts",
+      "tests/youtube-dictionary-resolution.test.ts"
+    ],
+    "artifact_assertions": [
+      "candidate-report-generated",
+      "approved-only-promotion-artifact",
+      "no-production-ingredients-write",
+      "legacy-category-output-only"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "frontend-n-a"
+    ],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "external-source-export-sample-review"
+  ],
+  "blocked_conditions": [
+    "source-export-license-unknown",
+    "sample-export-missing",
+    "legacy-category-shared-source-missing",
+    "candidate-report-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 0
+  }
+}
