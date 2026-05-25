@@ -1,0 +1,15 @@
+[
+  {
+    "source_file": "missing-source-system.json",
+    "source_version": "2026-05-sample",
+    "source_date": "2026-05-25",
+    "source_license": "public-open-data",
+    "source_row_id": "BROKEN-001",
+    "original_name": "부추",
+    "legacy_category": "채소",
+    "raw_payload": {
+      "foodName": "부추",
+      "category": "채소"
+    }
+  }
+]

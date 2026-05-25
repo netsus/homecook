@@ -1255,7 +1255,7 @@
       "id": "24-youtube-parser-dictionary-hardening",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-24-youtube-parser-dictionary-hardening",
-      "pr_path": null,
+      "pr_path": "https://github.com/netsus/homecook/pull/602",
       "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
@@ -1373,11 +1373,11 @@
     {
       "id": "28-external-ingredient-data-ingest-gate",
       "preset": "vertical-slice-strict",
-      "branch": "docs/28-external-ingredient-data-ingest-gate",
+      "branch": "feature/be-28-external-ingredient-data-ingest-gate",
       "pr_path": null,
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "ready_for_review",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm lint",
@@ -1386,7 +1386,7 @@
         "pnpm validate:workpack -- --slice 28-external-ingredient-data-ingest-gate",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs/contract in progress. Scope: external ingredient data ingest gate, file batch first, no production direct-load, deterministic normalization, review status gate, approved-only seed artifact. Claude Stage 1 attempted via resume session 0b81bfad-abd1-4a51-8e1e-65f7410d0cea but hit usage limit before producing files; Codex prepared a docs draft for later Claude review/repair.",
+      "notes": "Stage 2 file-backed ingest gate implemented and Claude Stage 3 backend/data-tooling review approved with no blocking findings. Verification passed: targeted ingest/category/youtube dictionary tests, workflow/workpack validators, diff check, lint, typecheck, and pnpm verify:backend.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
