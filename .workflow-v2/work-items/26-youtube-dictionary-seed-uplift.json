@@ -70,19 +70,19 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
   "closeout": {
-    "phase": "collecting",
+    "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "in_progress",
+      "roadmap_lifecycle": "merged",
       "design_status": "N/A",
       "delivery_checklist": "complete",
       "design_authority": "not_required",
@@ -104,36 +104,39 @@
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": null,
-      "approval_state": "codex_approved",
-      "all_checks_green": false
+      "current_head_sha": "9193c679e21a99102f2ce77cb1e94cc29a2baa2c",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
     },
     "recovery_summary": {
-      "manual_patch_count": 0,
+      "manual_patch_count": 1,
       "manual_handoff": false,
       "stale_lock_count": 0,
-      "ci_resync_count": 0,
+      "ci_resync_count": 1,
       "artifact_missing": false,
-      "last_recovery_at": null
+      "last_recovery_at": "2026-05-25T16:47:30+09:00"
     },
     "repair_summary": {
-      "codex_repairable_count": 0,
+      "codex_repairable_count": 1,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
-      "post_merge_stale_count": 0,
-      "latest_reason_code": null,
+      "post_merge_stale_count": 1,
+      "latest_reason_code": "post_merge_bookkeeping_sync",
       "evidence_sources": [
+        "GitHub PR #589",
+        "GitHub current-head checks",
+        "Claude Stage 3 backend review artifact",
         "tests/fixtures/youtube-corpus/reports/dictionary-resolution-v1.json"
       ]
     },
     "projection_state": {
-      "docs_synced_at": null,
-      "status_synced_at": null,
-      "pr_body_synced_at": null
+      "docs_synced_at": "2026-05-25T16:47:30+09:00",
+      "status_synced_at": "2026-05-25T16:47:30+09:00",
+      "pr_body_synced_at": "2026-05-25T16:47:30+09:00"
     }
   },
-  "notes": "BE/test/data-only slice. Stage 2 backend/data implementation completed locally; awaiting Stage 3 Claude review after PR CI. Stage 4-6 skipped (no UI changes). Corrects slice 24's decision to skip seed migration after reaching parser F1 floor — quality floors are minimums, not stopping criteria. Adds dictionary-resolution scoring layer separate from parser F1 to measure DB dictionary coverage independently. Current report: pre-seed ingredient_resolution_rate 0.4795 -> post-seed 1.0000 on the 36-fixture corpus. Local deterministic verification passed: pnpm test:youtube-dictionary, pnpm test:youtube-corpus, pnpm verify:backend, workflow/workpack validators, git diff --check. Local Supabase reset smoke attempted but blocked by Docker image layer no-space/rate-limit environment issue.",
+  "notes": "Merged via PR #589 after Stage 1 docs PR #588. BE/test/data-only slice. Stage 4-6 skipped (no UI changes). Corrects slice 24's decision to skip seed migration after reaching parser F1 floor; quality floors are minimums, not stopping criteria. Adds dictionary-resolution scoring layer separate from parser F1 to measure DB dictionary coverage independently. Current report: pre-seed ingredient_resolution_rate 0.4795 -> post-seed 1.0000 on the 36-fixture corpus. Claude Stage 3 backend review approved. Local deterministic verification passed: pnpm test:youtube-dictionary, pnpm test:youtube-corpus, pnpm typecheck, pnpm test:product, pnpm verify:backend, workflow/workpack validators, pr-ready validator, git diff --check. PR current-head checks passed after QA ready-gate repair. Local Supabase reset smoke attempted but blocked by Docker image layer no-space/rate-limit environment issue.",
   "out_of_scope": [
     "LLM/caption/ASR/OCR extraction",
     "Parser line classification rule changes (closed by slice 24)",
