@@ -719,7 +719,7 @@ export async function POST(request: Request) {
     .insert(buildStepInsertRows(recipeResult.data.id, parsed.steps));
 
   if (stepInsertResult.error) {
-    return fail("INTERNAL_ERROR", "레시피 조리 순서를 등록하지 못했어요.", 500);
+    return fail("INTERNAL_ERROR", "레시피 만들기를 등록하지 못했어요.", 500);
   }
 
   return ok(toManualRecipeCreateData(recipeResult.data), { status: 201 });

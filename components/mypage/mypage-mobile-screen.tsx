@@ -235,7 +235,7 @@ function MobileHomeSurface({
         returnSurface: "mypage.leftovers",
         returnTo: "/mypage",
       }),
-      label: "남은요리",
+      label: "남은 요리",
     },
     {
       detail: "히스토리",
@@ -259,7 +259,7 @@ function MobileHomeSurface({
       href: buildReturnHref("/settings?view=account", {
         returnTo: "/mypage?tab=account",
       }),
-      label: "계정 정보",
+      label: "계정 관리",
     },
   ];
 

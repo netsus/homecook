@@ -50,7 +50,7 @@ const mobileMethodColors = {
 } as const;
 
 const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "탐색" },
+  { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
@@ -245,7 +245,7 @@ function CookNoticeDialog({
             데스크탑에서 레시피 단계를 보면서 요리하고, 사용한 재료를 팬트리에서 차감할 수 있어요.
           </p>
           <ul className="web-cook-notice-list">
-            <li>조리 단계 확인</li>
+            <li>만들기 확인</li>
             <li>사용 재료 차감</li>
             <li>플래너 끼니 완료 처리</li>
           </ul>
@@ -721,7 +721,7 @@ function MobileCookReadyListScreen({
       </main>
 
       <Wave1MobileBottomTab
-        ariaLabel="요리 준비 목록 하단 탐색"
+        ariaLabel="요리 준비 목록 하단 내비게이션"
         currentTab="planner"
       />
     </div>

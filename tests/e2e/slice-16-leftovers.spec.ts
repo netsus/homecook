@@ -259,14 +259,8 @@ test.describe("LEFTOVERS screen", () => {
     await installLeftoverRoutes(page);
     await page.goto("/leftovers");
 
-    await expect(
-      page.getByRole("heading", {
-        name: isMobileViewport(page) ? "남은요리" : "남은 요리",
-      }),
-    ).toBeVisible();
-    const ateLink = page.getByText(
-      isMobileViewport(page) ? "다먹은 요리" : "다먹은 목록",
-    );
+    await expect(page.getByRole("heading", { name: "남은 요리" })).toBeVisible();
+    const ateLink = page.getByText("다먹은 요리");
     await expect(ateLink).toBeVisible();
     const ateHref = await ateLink.getAttribute("href");
     expect(ateHref).toContain("/leftovers/ate");
@@ -284,7 +278,7 @@ test.describe("ATE_LIST screen", () => {
     await expect(page.getByTestId("ate-list-card").first()).toBeVisible();
     await expect(
       page.getByRole("button", {
-        name: isMobileViewport(page) ? "남은요리로 복귀" : "되돌리기",
+        name: isMobileViewport(page) ? "남은 요리로 복귀" : "되돌리기",
       }),
     ).toBeVisible();
     await expect(
@@ -306,12 +300,12 @@ test.describe("ATE_LIST screen", () => {
     await expect(page.getByTestId("ate-list-card").first()).toBeVisible();
     await page
       .getByRole("button", {
-        name: isMobileViewport(page) ? "남은요리로 복귀" : "되돌리기",
+        name: isMobileViewport(page) ? "남은 요리로 복귀" : "되돌리기",
       })
       .click();
 
     await expect(page.getByTestId("feedback-toast")).toBeVisible();
-    await expect(page.getByTestId("feedback-toast")).toContainText("남은요리로 복귀됐어요");
+    await expect(page.getByTestId("feedback-toast")).toContainText("남은 요리로 복귀됐어요");
   });
 
   test("shows login gate for unauthenticated users", async ({ page }) => {
@@ -329,7 +323,7 @@ test.describe("ATE_LIST screen", () => {
 
     await expect(
       page.getByText(
-        isMobileViewport(page) ? "다먹은 기록이 없어요" : "아직 다먹은 요리가 없어요",
+        isMobileViewport(page) ? "다먹은 요리가 없어요" : "아직 다먹은 요리가 없어요",
       ),
     ).toBeVisible();
     await expect(

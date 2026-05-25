@@ -27,7 +27,7 @@ const PICKER_OPTIONS: Array<{
 }> = [
   { id: "recipebook", icon: "📖", label: "레시피북에서 추가" },
   { id: "pantry", icon: "🧊", label: "팬트리 기반 추천" },
-  { id: "leftover", icon: "🍱", label: "남은요리에서 추가" },
+  { id: "leftover", icon: "🍱", label: "남은 요리에서 추가" },
 ];
 
 const OPTION_TILE_CLASS =
@@ -129,7 +129,7 @@ export function MealAddOptionsSheet({
           <span className="text-[20px]" aria-hidden="true">
             🎬
           </span>
-          <span className={OPTION_LABEL_CLASS}>유튜브에서 가져오기</span>
+          <span className={OPTION_LABEL_CLASS}>유튜브 가져오기</span>
         </Link>
 
         <Link

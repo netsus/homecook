@@ -122,7 +122,7 @@ function LeftoverPickerBody({
         }
         aria-busy="true"
       >
-        남은요리를 불러오는 중...
+        남은 요리를 불러오는 중...
       </div>
     );
   }
@@ -137,10 +137,10 @@ function LeftoverPickerBody({
         }
       >
         <p className="text-base font-semibold text-[var(--foreground)]">
-          남은요리가 없어요
+          남은 요리가 없어요
         </p>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          요리를 완료하면 남은요리로 추가할 수 있어요.
+          요리를 완료하면 남은 요리로 추가할 수 있어요.
         </p>
       </div>
     );
@@ -207,7 +207,7 @@ function ServingsModal({
     <AppCenterDialog
       ariaLabelledBy="leftover-servings-title"
       closeDisabled={isCreating}
-      description={`${leftover.recipe_title} 남은요리`}
+      description={`${leftover.recipe_title} 남은 요리`}
       footer={
         <AppModalFooterActions
           cancelDisabled={isCreating}
@@ -258,7 +258,7 @@ export function LeftoverPicker({
     } catch (error) {
       setItems([]);
       setErrorMessage(
-        error instanceof Error ? error.message : "남은요리를 불러오지 못했어요.",
+        error instanceof Error ? error.message : "남은 요리를 불러오지 못했어요.",
       );
       setLoadState("error");
     }
@@ -308,7 +308,7 @@ export function LeftoverPicker({
 
         <section className="px-4 py-4">
           <p className="mb-3 text-[12px] font-medium leading-[1.5] text-[#495057]">
-            플래너에 다시 올릴 남은요리를 골라주세요
+            플래너에 다시 올릴 남은 요리를 골라주세요
             {slotLabel ? ` · ${slotLabel}` : ""}
           </p>
           {content}
@@ -327,7 +327,7 @@ export function LeftoverPicker({
         data-testid="leftover-picker-web"
       >
         <p className="web-picker-subtle">
-          플래너에 다시 올릴 남은요리를 골라주세요
+          플래너에 다시 올릴 남은 요리를 골라주세요
           {slotLabel ? ` · ${slotLabel}` : ""}
         </p>
         {content}
@@ -341,7 +341,7 @@ export function LeftoverPicker({
       <AppBottomSheet
         ariaLabelledBy="leftover-picker-title"
         bodyClassName="pb-5"
-        description="플래너에 다시 올릴 남은요리를 골라주세요"
+        description="플래너에 다시 올릴 남은 요리를 골라주세요"
         leadingAction={
           onBack ? (
             <AppBackButton onClick={onBack} testId="leftover-picker-back" />

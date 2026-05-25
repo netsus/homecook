@@ -53,7 +53,7 @@ type PickerMode =
   | "youtube";
 
 const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "탐색" },
+  { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
@@ -62,9 +62,9 @@ const WEB_NAV_ITEMS = [
 const MENU_ADD_OPTIONS = [
   { id: "search", emoji: "🔍", label: "검색", subtitle: "레시피 검색" },
   { id: "recipebook", emoji: "📖", label: "레시피북", subtitle: "저장한 레시피" },
-  { id: "pantry", emoji: "🧊", label: "팬트리 추천", subtitle: "보유 재료 기반" },
-  { id: "leftover", emoji: "🍱", label: "남은요리", subtitle: "남은 요리에서 추가" },
-  { id: "youtube", emoji: "🎬", label: "유튜브", subtitle: "유튜브에서 가져오기" },
+  { id: "pantry", emoji: "🧊", label: "팬트리 기반 추천", subtitle: "보유 재료 기반" },
+  { id: "leftover", emoji: "🍱", label: "남은 요리", subtitle: "남은 요리에서 추가" },
+  { id: "youtube", emoji: "🎬", label: "유튜브", subtitle: "유튜브 가져오기" },
   { id: "manual", emoji: "✏️", label: "직접 등록", subtitle: "레시피 직접 작성" },
 ] as const;
 
@@ -432,13 +432,13 @@ export function MenuAddScreen({
       : pickerMode === "recipebook-detail"
         ? selectedBook?.name ?? "레시피북"
         : pickerMode === "pantry"
-          ? "팬트리 추천"
+          ? "팬트리 기반 추천"
           : pickerMode === "leftover"
-            ? "남은요리에서 추가"
+            ? "남은 요리에서 추가"
             : pickerMode === "manual"
               ? "레시피 직접 작성"
               : pickerMode === "youtube"
-                ? "유튜브에서 가져오기"
+                ? "유튜브 가져오기"
                 : "레시피 검색";
 
   const actionMapForMobile = (id: (typeof MENU_ADD_OPTIONS)[number]["id"]) => {
@@ -600,7 +600,7 @@ export function MenuAddScreen({
         <div className="hidden lg:block">
           <WebShell wide className="web-menu-add-shell">
             <WebTopNav activeId="planner" items={WEB_NAV_ITEMS} />
-            <nav aria-label="메뉴 추가 경로" className="web-breadcrumb">
+            <nav aria-label="식사 추가 경로" className="web-breadcrumb">
               <button
                 className="web-breadcrumb-link"
                 onClick={() => router.push("/planner")}
@@ -617,13 +617,13 @@ export function MenuAddScreen({
                 {targetLabel}
               </button>
               <span className="web-breadcrumb-sep">/</span>
-              <span className="web-breadcrumb-current">메뉴 추가</span>
+              <span className="web-breadcrumb-current">식사 추가</span>
             </nav>
 
             <div className="web-menu-add-hero">
               <div>
                 <p className="web-menu-add-eyebrow">식사 추가</p>
-                <h1>어떤 방식으로 메뉴를 추가할까요?</h1>
+                <h1>어떤 방식으로 식사를 추가할까요?</h1>
                 <p>{targetLabel}에 넣을 레시피를 검색하거나 새로 등록할 수 있어요.</p>
               </div>
               <WebButton onClick={handleBack} variant="secondary">

@@ -572,7 +572,7 @@ export function PantryMatchPicker({
             slotLabel={slotLabel}
           />
         )}
-        <Wave1MobileBottomTab ariaLabel="팬트리 추천 하단 탭" currentTab="planner" />
+        <Wave1MobileBottomTab ariaLabel="팬트리 기반 추천 하단 탭" currentTab="planner" />
       </div>
     );
   }
@@ -600,7 +600,7 @@ export function PantryMatchPicker({
 
   if (presentation === "web") {
     return (
-      <section className="web-picker-section" aria-label="팬트리 추천">
+      <section className="web-picker-section" aria-label="팬트리 기반 추천">
         <p className="web-picker-subtle">
           보유 재료가 많은 순서로 보여드려요. 부족한 재료만 확인하세요.
           {slotLabel ? ` · ${slotLabel}` : ""}

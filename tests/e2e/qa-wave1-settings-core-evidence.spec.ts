@@ -147,14 +147,14 @@ test("capture Wave1 settings and account authority evidence", async ({ browser }
     viewports.mobile,
     "account-default.png",
     "/settings?view=account",
-    "계정 정보",
+    "계정 관리",
   );
   await capture(
     browser,
     viewports.narrow,
     "account-narrow.png",
     "/settings?view=account",
-    "계정 정보",
+    "계정 관리",
   );
 
   await capture(
@@ -162,7 +162,7 @@ test("capture Wave1 settings and account authority evidence", async ({ browser }
     viewports.mobile,
     "nickname-edit-sheet.png",
     "/settings?view=account",
-    "계정 정보",
+    "계정 관리",
     async (page) => {
       await page.getByTestId("nickname-row").click();
       await expect(
@@ -175,7 +175,7 @@ test("capture Wave1 settings and account authority evidence", async ({ browser }
     viewports.narrow,
     "nickname-edit-sheet-narrow.png",
     "/settings?view=account",
-    "계정 정보",
+    "계정 관리",
     async (page) => {
       await page.getByTestId("nickname-row").click();
       await expect(
@@ -189,7 +189,7 @@ test("capture Wave1 settings and account authority evidence", async ({ browser }
     viewports.mobile,
     "logout-confirm.png",
     "/settings?view=account",
-    "계정 정보",
+    "계정 관리",
     async (page) => {
       await page.getByRole("button", { name: "로그아웃" }).click();
       await expect(
@@ -202,7 +202,7 @@ test("capture Wave1 settings and account authority evidence", async ({ browser }
     viewports.narrow,
     "logout-confirm-narrow.png",
     "/settings?view=account",
-    "계정 정보",
+    "계정 관리",
     async (page) => {
       await page.getByRole("button", { name: "로그아웃" }).click();
       await expect(
@@ -216,7 +216,7 @@ test("capture Wave1 settings and account authority evidence", async ({ browser }
     viewports.mobile,
     "account-delete-confirm.png",
     "/settings?view=account",
-    "계정 정보",
+    "계정 관리",
     async (page) => {
       await page.getByRole("button", { name: "회원탈퇴" }).click();
       await expect(
@@ -229,7 +229,7 @@ test("capture Wave1 settings and account authority evidence", async ({ browser }
     viewports.narrow,
     "account-delete-confirm-narrow.png",
     "/settings?view=account",
-    "계정 정보",
+    "계정 관리",
     async (page) => {
       await page.getByRole("button", { name: "회원탈퇴" }).click();
       await expect(

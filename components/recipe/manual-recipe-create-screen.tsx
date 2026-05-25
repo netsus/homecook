@@ -43,7 +43,7 @@ type ModalMode =
   | "servings-input";
 
 const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "탐색" },
+  { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
@@ -115,7 +115,7 @@ function getManualSaveRequirements({
   if (title.trim().length === 0) requirements.push("요리 이름");
   if (baseServings < 1) requirements.push("기준 인분");
   if (ingredients.length === 0) requirements.push("재료");
-  if (steps.length === 0) requirements.push("조리법");
+  if (steps.length === 0) requirements.push("만들기");
 
   return requirements;
 }
@@ -341,7 +341,7 @@ function StepList({ steps, showValidationError, onRemove }: StepListProps) {
           showValidationError ? "text-[var(--danger)]" : "text-[#868E96]",
         ].join(" ")}
       >
-        조리 과정을 추가해주세요.
+        만들기를 추가해주세요.
       </p>
     );
   }
@@ -479,12 +479,12 @@ function StepInlineComposer({
         </div>
       </div>
       <label className="mt-2 block">
-        <span className="sr-only">조리 설명</span>
+        <span className="sr-only">만들기 설명</span>
         <textarea
-          aria-label={`조리 과정 ${nextStepNumber} 설명`}
+          aria-label={`만들기 ${nextStepNumber} 설명`}
           className="min-h-[92px] w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 py-2.5 text-[14px] leading-[1.55] text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
           onChange={(event) => setInstruction(event.target.value)}
-          placeholder="조리 설명을 입력하세요"
+          placeholder="만들기 설명을 입력하세요"
           rows={3}
           value={instruction}
         />
@@ -505,7 +505,7 @@ function StepInlineComposer({
         onClick={handleAdd}
         type="button"
       >
-        + 조리 과정 추가
+        + 만들기 추가
       </button>
     </div>
   );
@@ -891,7 +891,7 @@ export function ManualRecipeCreateScreen({
 
       <section className="web-manual-section">
         <div className="web-manual-section-head">
-          <h2>조리법</h2>
+          <h2>만들기</h2>
           <span>{steps.length}단계</span>
         </div>
         {isLoadingMethods ? (
@@ -985,13 +985,13 @@ export function ManualRecipeCreateScreen({
             <span className="web-breadcrumb-sep">/</span>
             <span className="web-breadcrumb-link">{targetLabel}</span>
             <span className="web-breadcrumb-sep">/</span>
-            <span className="web-breadcrumb-current">직접 입력</span>
+            <span className="web-breadcrumb-current">직접 등록</span>
           </nav>
           <div className="web-manual-head">
             <div>
               <p className="web-menu-add-eyebrow">직접 등록</p>
-              <h1>새 레시피를 직접 입력해요</h1>
-              <p>기본 정보, 재료, 조리법을 입력한 뒤 플래너에 바로 추가할 수 있어요.</p>
+              <h1>새 레시피를 직접 등록해요</h1>
+              <p>기본 정보, 재료, 만들기를 입력한 뒤 플래너에 바로 추가할 수 있어요.</p>
             </div>
             <div className="web-manual-actions">
               <WebButton onClick={handleBack} variant="secondary">
@@ -1086,7 +1086,7 @@ export function ManualRecipeCreateScreen({
           <section className="bg-white px-4 py-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
             <div className="mb-1 flex items-center justify-between">
               <h2 className="text-[16px] font-semibold leading-[1.3] text-[#212529]">
-                조리법
+                만들기
               </h2>
               <span className="text-[12px] font-medium text-[#868E96]">
                 {steps.length}단계
@@ -1124,7 +1124,7 @@ export function ManualRecipeCreateScreen({
 
       </div>
       <Wave1MobileBottomTab
-        ariaLabel="직접 등록 화면 하단 탐색"
+        ariaLabel="직접 등록 화면 하단 내비게이션"
         currentTab="planner"
       />
 

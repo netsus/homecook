@@ -107,7 +107,7 @@ test.describe("Slice 01 basic flow", () => {
     ).toBeVisible();
     if (isMobileViewport(page)) {
       await expect(
-        page.locator("div:visible").filter({ hasText: /^몇 인분\?$/ }).first(),
+        page.locator("div:visible").filter({ hasText: /^인분 조절$/ }).first(),
       ).toBeVisible();
     } else {
       await expect(

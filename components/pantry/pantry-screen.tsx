@@ -613,7 +613,7 @@ export function PantryScreen({
                 onClick={() => setShowBundlePicker(true)}
                 variant="secondary"
               >
-                번들로 추가
+                묶음 추가
               </WebButton>
               <WebButton
                 aria-label="재료 추가하기"

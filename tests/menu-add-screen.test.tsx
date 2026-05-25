@@ -214,7 +214,7 @@ describe("MenuAddScreen", () => {
 
     await user.click(youtubeButton);
 
-    const dialog = screen.getByRole("dialog", { name: "유튜브에서 가져오기" });
+    const dialog = screen.getByRole("dialog", { name: "유튜브 가져오기" });
     expect(dialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
     expect(mockRouterPush).not.toHaveBeenCalled();
 
@@ -365,8 +365,7 @@ describe("MenuAddScreen", () => {
     await user.click(screen.getByTestId("menu-add-option-youtube"));
 
     expect(screen.queryByText("현재 선택")).toBeNull();
-    expect(screen.queryByText("유튜브 가져오기")).toBeNull();
-    expect(screen.getByRole("heading", { name: "유튜브에서 가져오기" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "유튜브 가져오기" })).toBeTruthy();
   });
 
   it("keeps the mobile manual option routed to the standalone create screen", async () => {
@@ -396,7 +395,7 @@ describe("MenuAddScreen", () => {
     expect(screen.getByRole("button", { name: "가져오기" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: "가져오기 화면 열기" })).toBeNull();
     expect(screen.queryByRole("button", { name: "다른 방법" })).toBeNull();
-    expect(screen.queryByRole("dialog", { name: "유튜브에서 가져오기" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "유튜브 가져오기" })).toBeNull();
     expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
@@ -631,7 +630,7 @@ describe("MenuAddScreen", () => {
     // Check leftover option has all parts
     const leftoverBtn = screen.getByTestId("menu-add-option-leftover");
     expect(leftoverBtn.textContent).toContain("🍱");
-    expect(leftoverBtn.textContent).toContain("남은요리");
+    expect(leftoverBtn.textContent).toContain("남은 요리");
     expect(leftoverBtn.textContent).toContain("남은 요리에서 추가");
 
     // Check manual option
@@ -676,7 +675,7 @@ describe("MenuAddScreen", () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /남은요리/ }));
+    await user.click(screen.getByRole("button", { name: /남은 요리/ }));
 
     await waitFor(() => {
       expect(screen.getByText("김치찌개")).toBeTruthy();

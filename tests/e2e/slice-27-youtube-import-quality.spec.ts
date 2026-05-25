@@ -341,7 +341,7 @@ test.describe("Slice 27: YouTube Import Quality Uplift", () => {
     await expect(page.getByText("김치", { exact: true })).toBeVisible();
     await expect(page.getByText("돼지고기", { exact: true })).toBeVisible();
     await expect(page.locator("text=재료 (2개)")).toBeVisible();
-    await expect(page.locator("text=조리 과정 (2단계)")).toBeVisible();
+    await expect(page.locator("text=만들기 (2단계)")).toBeVisible();
 
     // No resolution issues
     await expect(page.getByText("확인이 필요한 재료")).toHaveCount(0);

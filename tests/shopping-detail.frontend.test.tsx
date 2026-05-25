@@ -350,7 +350,7 @@ describe("ShoppingDetailScreen", () => {
     });
 
     const nav = screen.getByRole("navigation", {
-      name: "장보기 상세 화면 하단 탐색",
+      name: "장보기 상세 화면 하단 내비게이션",
     });
     const activeLink = nav.querySelector('a[aria-current="page"]');
 

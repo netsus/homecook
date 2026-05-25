@@ -36,7 +36,7 @@ type FeedbackTone = "error" | "status";
 
 const FEEDBACK_AUTO_DISMISS_MS = 4000;
 const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "탐색" },
+  { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
@@ -262,7 +262,7 @@ export function AteListScreen({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "다먹은 목록을 불러오지 못했어요.",
+          : "다먹은 요리를 불러오지 못했어요.",
       );
       setScreenState("error");
     }
@@ -284,7 +284,7 @@ export function AteListScreen({
         await uneatLeftover(leftoverId);
         setItems((current) => current.filter((item) => item.id !== leftoverId));
         setFeedback({
-          message: "남은요리로 복귀됐어요",
+          message: "남은 요리로 복귀됐어요",
           tone: "status",
         });
 
@@ -306,7 +306,7 @@ export function AteListScreen({
           message:
             error instanceof Error
               ? error.message
-              : "남은요리 복귀에 실패했어요.",
+              : "남은 요리 복귀에 실패했어요.",
           tone: "error",
         });
       } finally {
@@ -355,7 +355,7 @@ export function AteListScreen({
         >
           <div className="p-4">
             <ContentState
-              description="다먹은 목록을 확인하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
+              description="다먹은 요리를 확인하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
               eyebrow="로그인 필요"
               safeBottomPadding
               tone="gate"
@@ -399,12 +399,12 @@ export function AteListScreen({
         rightSlot={<div className="web-profile-button">JY</div>}
       />
       <div className="web-leftovers-screen" data-testid="ate-list-screen">
-        <nav aria-label="다먹은 목록 경로" className="web-breadcrumb">
+        <nav aria-label="다먹은 요리 경로" className="web-breadcrumb">
           <Link className="web-breadcrumb-link" href="/mypage">
             &lt; 마이페이지
           </Link>
           <span className="web-breadcrumb-sep">/</span>
-          <span className="web-breadcrumb-current">다먹은 목록</span>
+          <span className="web-breadcrumb-current">다먹은 요리</span>
         </nav>
 
         <WebPageHeader
@@ -414,12 +414,12 @@ export function AteListScreen({
             </Link>
           }
           description="요리모드를 완료했거나 '다 먹었어요'를 누른 끼니가 기록됩니다."
-          title="다먹은 목록"
+          title="다먹은 요리"
         />
 
       {authState === "checking" ? (
         <WebEmptyState
-          description="다먹은 목록에 접근하기 위해 로그인 상태를 확인하고 있어요."
+          description="다먹은 요리에 접근하기 위해 로그인 상태를 확인하고 있어요."
           icon={<span aria-hidden="true">...</span>}
           title="로그인 상태를 확인하고 있어요"
         />
@@ -435,7 +435,7 @@ export function AteListScreen({
               </Link>
             </div>
           }
-          description="다먹은 목록을 확인하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
+          description="다먹은 요리를 확인하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
           icon={<span aria-hidden="true">!</span>}
           title="이 화면은 로그인이 필요해요"
         />
@@ -481,7 +481,7 @@ export function AteListScreen({
           }
           description={errorMessage ?? "잠시 후 다시 시도해주세요."}
           icon={<span aria-hidden="true">!</span>}
-          title="다먹은 목록을 불러오지 못했어요"
+          title="다먹은 요리를 불러오지 못했어요"
         />
       ) : null}
 
@@ -489,7 +489,7 @@ export function AteListScreen({
         <WebEmptyState
           action={
             <Link className="web-button web-button-tertiary" href={leftoversListHref}>
-              남은요리로 돌아가기
+              남은 요리로 돌아가기
             </Link>
           }
           description="요리를 완료하거나 남은 요리에서 '다 먹었어요'를 누르면 여기에 기록됩니다."
@@ -573,7 +573,7 @@ function AteListMobileView({
             onAction={() => {
               void onRetry();
             }}
-            title="다먹은 목록을 불러오지 못했어요"
+            title="다먹은 요리를 불러오지 못했어요"
             tone="error"
           />
         </div>
@@ -582,12 +582,12 @@ function AteListMobileView({
       {screenState === "empty" ? (
         <div className="p-4">
           <ContentState
-            actionLabel="남은요리로 돌아가기"
+            actionLabel="남은 요리로 돌아가기"
             description="먹은 기록이 여기에 모여요"
             onAction={() => {
               window.location.href = leftoversListHref;
             }}
-            title="다먹은 기록이 없어요"
+            title="다먹은 요리가 없어요"
             tone="empty"
           />
         </div>
@@ -671,7 +671,7 @@ function MobileAteCard({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
-            aria-label="남은요리로 복귀"
+            aria-label="남은 요리로 복귀"
             className="h-9 w-[96px] whitespace-nowrap rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-2 text-[11px] font-bold text-[#495057] disabled:opacity-60"
             data-testid="uneat-button"
             disabled={anyMutating}

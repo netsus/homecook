@@ -64,7 +64,7 @@ export interface MealScreenProps {
 // Status data preserved for logic; visual badges removed per Wave1 port.
 
 const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "탐색" },
+  { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
@@ -550,7 +550,7 @@ function MealWebListCard({
             {getMealStatusLabel(meal.status)}
           </span>
           {meal.is_leftover ? (
-            <span className="web-meal-leftover">남은요리</span>
+            <span className="web-meal-leftover">남은 요리</span>
           ) : null}
         </div>
         <button
@@ -831,7 +831,7 @@ function MealWebView({
               </WebButton>
             }
             data-testid="meal-screen-empty"
-            description="레시피 검색, 팬트리 추천, 직접 입력으로 식사를 추가할 수 있어요."
+            description="레시피 검색, 팬트리 기반 추천, 직접 등록으로 식사를 추가할 수 있어요."
             title="이 끼니에 등록된 식사가 없어요"
           />
         ) : null}
@@ -1571,7 +1571,7 @@ export function MealScreen({
 
       {shouldRenderAppView ? (
         <Wave1MobileBottomTab
-          ariaLabel="식사 화면 하단 탐색"
+          ariaLabel="식사 화면 하단 내비게이션"
           currentTab="planner"
         />
       ) : null}

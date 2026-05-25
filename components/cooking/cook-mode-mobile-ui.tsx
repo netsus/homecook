@@ -170,7 +170,7 @@ function MobileStepList({
   if (steps.length === 0) {
     return (
       <p className="py-8 text-center text-sm font-medium text-white/70">
-        등록된 조리 과정이 없어요.
+        등록된 만들기가 없어요.
       </p>
     );
   }

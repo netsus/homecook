@@ -183,7 +183,7 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     await expect(page.getByRole("heading", { name: "식사 추가" })).toBeVisible();
     await expect(visibleButtonText(page, "유튜브")).toBeEnabled();
     await expect(visibleButtonText(page, "레시피북")).toBeEnabled();
-    await expect(visibleButtonText(page, "남은요리")).toBeEnabled();
+    await expect(visibleButtonText(page, "남은 요리")).toBeEnabled();
     await expect(visibleButtonText(page, "팬트리")).toBeEnabled();
 
     if (isMobileViewport(page)) {

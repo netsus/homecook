@@ -110,7 +110,7 @@ test("capture Slice 8 desktop leftovers prototype-port evidence", async ({ brows
       `ate-list-${width}.png`,
       ATE_LIST_VISUAL_PATH,
       async (page) => {
-        await expect(page.getByRole("heading", { name: "다먹은 목록" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "다먹은 요리" })).toBeVisible();
         await expect(page.getByTestId("ate-item-list")).toBeVisible();
       },
     );

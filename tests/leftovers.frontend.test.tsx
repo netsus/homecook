@@ -182,7 +182,7 @@ describe("LeftoversScreen", () => {
     render(<LeftoversScreen initialAuthenticated={false} />);
 
     expect(await screen.findByTestId("leftovers-mobile-auth-gate")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "남은요리" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "남은 요리" })).toBeTruthy();
   });
 
   it("renders leftover list after loading", async () => {
@@ -238,7 +238,7 @@ describe("LeftoversScreen", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("남은요리를 불러오지 못했어요"),
+        screen.getByText("남은 요리를 불러오지 못했어요"),
       ).toBeTruthy();
     });
 
@@ -432,7 +432,7 @@ describe("LeftoversScreen", () => {
       expect(screen.getByText("김치찌개")).toBeTruthy();
     });
 
-    const ateListLink = screen.getByText("다먹은 목록");
+    const ateListLink = screen.getByText("다먹은 요리");
     const href = ateListLink.closest("a")?.getAttribute("href") ?? "";
     expect(href).toContain("/leftovers/ate");
     expect(href).toContain("returnTo=");
@@ -449,7 +449,7 @@ describe("LeftoversScreen", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("남은요리를 불러오지 못했어요"),
+        screen.getByText("남은 요리를 불러오지 못했어요"),
       ).toBeTruthy();
     });
 
@@ -570,7 +570,7 @@ describe("AteListScreen", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("다먹은 목록을 불러오지 못했어요"),
+        screen.getByText("다먹은 요리를 불러오지 못했어요"),
       ).toBeTruthy();
     });
   });
@@ -585,7 +585,7 @@ describe("AteListScreen", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("다먹은 목록을 불러오지 못했어요"),
+        screen.getByText("다먹은 요리를 불러오지 못했어요"),
       ).toBeTruthy();
     });
 
@@ -620,7 +620,7 @@ describe("AteListScreen", () => {
     await user.click(screen.getByTestId("uneat-button"));
 
     await waitFor(() => {
-      expect(screen.getByText("남은요리로 복귀됐어요")).toBeTruthy();
+      expect(screen.getByText("남은 요리로 복귀됐어요")).toBeTruthy();
     });
   });
 
@@ -629,7 +629,7 @@ describe("AteListScreen", () => {
       items: EATEN_ITEMS,
     });
     vi.spyOn(leftoversApi, "uneatLeftover").mockRejectedValue(
-      new Error("남은요리 복귀에 실패했어요."),
+      new Error("남은 요리 복귀에 실패했어요."),
     );
 
     render(<AteListScreen initialAuthenticated={true} />);
@@ -643,7 +643,7 @@ describe("AteListScreen", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("남은요리 복귀에 실패했어요."),
+        screen.getByText("남은 요리 복귀에 실패했어요."),
       ).toBeTruthy();
     });
 

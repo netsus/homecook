@@ -49,7 +49,7 @@ export function YoutubeImportEntrySheet({
       onClose={onClose}
       panelClassName="max-w-md"
       testId="youtube-import-entry-sheet"
-      title="유튜브에서 가져오기"
+      title="유튜브 가져오기"
     >
       <label
         className="block text-[13px] font-semibold text-[#495057]"

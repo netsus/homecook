@@ -145,7 +145,7 @@ describe("ManualRecipeCreateScreen", () => {
     });
 
     expect(screen.queryByText("STEP 1")).toBeNull();
-    expect(screen.getByText("조리 과정을 추가해주세요.")).toBeTruthy();
+    expect(screen.getByText("만들기를 추가해주세요.")).toBeTruthy();
     expect(screen.getByTestId("manual-step-composer")).toBeTruthy();
     expect(screen.getByRole("button", { name: "준비" })).toBeTruthy();
   });
@@ -160,7 +160,7 @@ describe("ManualRecipeCreateScreen", () => {
 
     expect(screen.getByText("요리 이름을 입력해주세요.")).toBeTruthy();
     expect(screen.getByText("재료를 1개 이상 추가해주세요.")).toBeTruthy();
-    expect(screen.getByText("조리 과정을 추가해주세요.")).toBeTruthy();
+    expect(screen.getByText("만들기를 추가해주세요.")).toBeTruthy();
   });
 
   it("uses plus and minus controls around base servings without going below one", async () => {
@@ -199,8 +199,8 @@ describe("ManualRecipeCreateScreen", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     await screen.findByRole("button", { name: "볶기" });
-    await user.type(screen.getByLabelText("조리 과정 1 설명"), "양파를 볶아요");
-    await user.click(screen.getByRole("button", { name: "+ 조리 과정 추가" }));
+    await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아요");
+    await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
 
     expect(screen.getByText("조리방법을 선택해주세요.")).toBeTruthy();
     expect(screen.queryByText("1.")).toBeNull();
@@ -236,17 +236,17 @@ describe("ManualRecipeCreateScreen", () => {
     const composer = await screen.findByTestId("manual-step-composer");
     await user.click(screen.getByRole("button", { name: "볶기" }));
     await user.type(
-      screen.getByLabelText("조리 과정 1 설명"),
+      screen.getByLabelText("만들기 1 설명"),
       "양파를 투명해질 때까지 볶아요",
     );
-    await user.click(screen.getByRole("button", { name: "+ 조리 과정 추가" }));
+    await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
 
     expect(composer).toBeTruthy();
     expect(screen.getByText("양파를 투명해질 때까지 볶아요")).toBeTruthy();
     expect(screen.getAllByText("볶기")[1].getAttribute("style")).toContain(
       getCookingMethodColor("orange"),
     );
-    expect(screen.getByLabelText("조리 과정 2 설명")).toBeTruthy();
+    expect(screen.getByLabelText("만들기 2 설명")).toBeTruthy();
   });
 
   it("lets selected ingredient chips deselect from the summary under categories", async () => {

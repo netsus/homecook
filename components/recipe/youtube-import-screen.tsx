@@ -143,12 +143,12 @@ function getYoutubeRegisterRequirements({
   if (title.trim().length === 0) requirements.push("레시피명");
   if (baseServings < 1) requirements.push("기본 인분");
   if (ingredients.length === 0) requirements.push("재료");
-  if (steps.length === 0) requirements.push("조리 과정");
+  if (steps.length === 0) requirements.push("만들기");
   if (ingredients.some((ingredient) => !isIngredientReadyForRegister(ingredient))) {
     requirements.push("확인 필요한 재료");
   }
   if (steps.some((step) => !isStepReadyForRegister(step))) {
-    requirements.push("필수 조리 과정");
+    requirements.push("필수 만들기");
   }
 
   return requirements;
@@ -158,7 +158,7 @@ const STEP_FIELD_LABELS: Record<
   NonNullable<YoutubeExtractedStep["missing_fields"]>[number],
   string
 > = {
-  instruction: "조리 설명",
+  instruction: "만들기 설명",
   cooking_method: "조리방법",
   duration: "시간",
   ingredients_used: "사용 재료",
@@ -234,7 +234,7 @@ function formatYoutubeBlockingIssue(issue: string) {
   }
 
   if (issue === "steps") {
-    return "조리 과정을 하나 이상 추가해주세요.";
+    return "만들기를 하나 이상 추가해주세요.";
   }
 
   const ingredientMatch = issue.match(/^ingredients\[(\d+)\]\.ingredient_id$/u);
@@ -244,7 +244,7 @@ function formatYoutubeBlockingIssue(issue: string) {
 
   const stepInstructionMatch = issue.match(/^steps\[(\d+)\]\.instruction$/u);
   if (stepInstructionMatch) {
-    return `${Number(stepInstructionMatch[1]) + 1}번째 조리 설명을 입력해주세요.`;
+    return `${Number(stepInstructionMatch[1]) + 1}번째 만들기 설명을 입력해주세요.`;
   }
 
   return issue;
@@ -255,7 +255,7 @@ function getApiErrorMessage(defaultMessage: string, message?: string | null) {
 }
 
 const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "탐색" },
+  { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
@@ -314,7 +314,7 @@ function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBar
           />
         )}
         <h1 className="min-w-0 flex-1 truncate text-lg font-semibold text-[var(--foreground)]">
-          {step === "review" ? "추출 결과 확인" : "유튜브에서 가져오기"}
+          {step === "review" ? "추출 결과 확인" : "유튜브 가져오기"}
         </h1>
         {step === "review" && (
           <button
@@ -359,7 +359,7 @@ function UrlInputStep({ url, onUrlChange, onSubmit, isValidating, urlError }: Ur
       <p className="mt-3 text-base text-[var(--text-2)]">
         영상 링크를 붙여넣으면
         <br />
-        재료와 조리법을 자동 추출해요
+        재료와 만들기를 자동 추출해요
       </p>
       <div className="mt-6">
         <input
@@ -838,7 +838,7 @@ function ReviewCookingStepRow({
             )}
           </div>
           <p className="whitespace-pre-wrap break-words text-base text-[var(--foreground)]">
-            {step.instruction || "조리 설명을 입력해주세요."}
+            {step.instruction || "만들기 설명을 입력해주세요."}
           </p>
           {step.duration_text && (
             <p className="mt-1 text-sm text-[var(--text-3)]">{step.duration_text}</p>
@@ -876,7 +876,7 @@ function ReviewCookingStepRow({
         onClick={() => onEditStep(step.tempId)}
         type="button"
       >
-        조리 과정 수정
+        만들기 수정
       </button>
     </div>
   );
@@ -1075,11 +1075,11 @@ function ReviewStep({
       {/* Steps */}
       <div className="mt-6">
         <h3 className="text-lg font-semibold text-[var(--foreground)]">
-          조리 과정 ({steps.length}단계)
+          만들기 ({steps.length}단계)
         </h3>
         {steps.length === 0 ? (
           <p className="py-4 text-sm text-[var(--muted)]">
-            설명란에서 조리 과정을 찾지 못했어요. 아래 버튼으로 직접 추가할 수 있어요
+            설명란에서 만들기를 찾지 못했어요. 아래 버튼으로 직접 추가할 수 있어요
           </p>
         ) : (
           <div className="mt-2 overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]">
@@ -1099,7 +1099,7 @@ function ReviewStep({
           onClick={onAddStep}
           type="button"
         >
-          + 조리 과정 추가
+          + 만들기 추가
         </button>
       </div>
     </div>
@@ -1206,7 +1206,7 @@ function StepAddModal({
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <ModalHeader title={isEditing ? "조리 과정 수정" : "조리 과정 추가"} onClose={onClose} />
+        <ModalHeader title={isEditing ? "만들기 수정" : "만들기 추가"} onClose={onClose} />
         <div className="mt-6 space-y-4">
           <div className="text-sm font-semibold text-[var(--text-2)]">스텝 번호: {nextStepNumber}</div>
           <div>
@@ -1237,9 +1237,9 @@ function StepAddModal({
             </div>
           </div>
           <div>
-            <div className="mb-2 text-sm font-semibold text-[var(--text-2)]">조리 설명</div>
+            <div className="mb-2 text-sm font-semibold text-[var(--text-2)]">만들기 설명</div>
             <textarea
-              placeholder="조리 설명을 입력하세요"
+              placeholder="만들기 설명을 입력하세요"
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
               rows={4}
@@ -2578,7 +2578,7 @@ export function YoutubeImportScreen({
         <section className="web-yt-content web-yt-url">
           <div>
             <h2>유튜브 링크를 붙여넣어 주세요</h2>
-            <p>영상 설명, 자막, 화면 텍스트에서 재료와 조리법을 찾아요.</p>
+            <p>영상 설명, 자막, 화면 텍스트에서 재료와 만들기를 찾아요.</p>
           </div>
           <label className="web-manual-field web-manual-field-wide">
             <span>유튜브 URL</span>
@@ -2699,7 +2699,7 @@ export function YoutubeImportScreen({
         <section className="web-yt-content web-yt-review">
           <div>
             <h2>추출 결과를 확인해주세요</h2>
-            <p>영상에서 찾은 재료와 조리 과정을 등록 전에 확인해요.</p>
+            <p>영상에서 찾은 재료와 만들기를 등록 전에 확인해요.</p>
           </div>
           {desktopRegisterRequirements.length > 0 ? (
             <div

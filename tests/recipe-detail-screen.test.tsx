@@ -969,7 +969,7 @@ describe("recipe detail screen", () => {
       name: MOCK_RECIPE_DETAIL.title,
     });
 
-    await userEvent.click(screen.getByRole("tab", { name: "조리법" }));
+    await userEvent.click(screen.getByRole("tab", { name: "만들기" }));
 
     const stepInstruction = screen.getByText(
       MOCK_RECIPE_DETAIL.steps[0]!.instruction,

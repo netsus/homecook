@@ -33,7 +33,7 @@ import { useStandaloneCookModeStore } from "@/stores/standalone-cook-mode-store"
 type AuthState = "checking" | "authenticated" | "unauthorized";
 
 const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "탐색" },
+  { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
@@ -282,7 +282,7 @@ export function StandaloneCookModeScreen({
     if (!isMobileViewport) {
       return (
         <StandaloneCookModeDesktopLoading
-          description="레시피와 조리 단계를 준비하고 있어요."
+          description="레시피와 만들기를 준비하고 있어요."
           recipeId={recipeId}
           title="요리모드를 불러오고 있어요"
         />

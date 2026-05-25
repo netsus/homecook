@@ -101,7 +101,7 @@ describe("home screen", () => {
     render(<HomeScreen />);
 
     expect(
-      await screen.findByRole("heading", { level: 1, name: "오늘은 뭐 해먹지?" }),
+      await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" }),
     ).toBeTruthy();
     expect(screen.getByText("목요일 저녁,")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "홈" })).toBeTruthy();

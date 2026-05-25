@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
   } catch (bootstrapError) {
     return fail(
       "INTERNAL_ERROR",
-      formatBootstrapErrorMessage(bootstrapError, "남은요리 목록을 불러오지 못했어요."),
+      formatBootstrapErrorMessage(bootstrapError, "남은 요리 목록을 불러오지 못했어요."),
       500,
     );
   }
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
   const leftoversResult = await leftoversQuery;
 
   if (leftoversResult.error || !leftoversResult.data) {
-    return fail("INTERNAL_ERROR", "남은요리 목록을 불러오지 못했어요.", 500);
+    return fail("INTERNAL_ERROR", "남은 요리 목록을 불러오지 못했어요.", 500);
   }
 
   const recipeIds = [...new Set(leftoversResult.data.map((item) => item.recipe_id))];
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
       .in("id", recipeIds);
 
     if (recipesResult.error || !recipesResult.data) {
-      return fail("INTERNAL_ERROR", "남은요리 목록을 불러오지 못했어요.", 500);
+      return fail("INTERNAL_ERROR", "남은 요리 목록을 불러오지 못했어요.", 500);
     }
 
     recipesResult.data.forEach((recipe) => {
