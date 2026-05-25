@@ -206,15 +206,15 @@ Stage 2가 DB staging table을 선택하면 `docs/db설계` 영향 기록이 필
 
 > 이 체크리스트는 Stage 2~6 동안 갱신하는 living closeout 문서다.
 
-- [ ] file-based batch import 실행 형태 확정 <!-- omo:id=delivery-file-batch-first;stage=2;scope=backend;review=3,6 -->
-- [ ] sample external source fixture 추가 <!-- omo:id=delivery-source-fixture;stage=2;scope=backend;review=3,6 -->
-- [ ] raw row preservation 구조 구현 <!-- omo:id=delivery-raw-row-preservation;stage=2;scope=backend;review=3,6 -->
-- [ ] deterministic normalization helper 구현 <!-- omo:id=delivery-normalization-helper;stage=2;scope=backend;review=3,6 -->
-- [ ] duplicate/synonym/category candidate 생성 <!-- omo:id=delivery-candidate-generation;stage=2;scope=backend;review=3,6 -->
-- [ ] review status gate 구현 <!-- omo:id=delivery-review-status-gate;stage=2;scope=backend;review=3,6 -->
-- [ ] approved-only seed promotion artifact 생성 <!-- omo:id=delivery-approved-seed-artifact;stage=2;scope=backend;review=3,6 -->
-- [ ] idempotent rerun guard 구현 <!-- omo:id=delivery-idempotency-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] invalid source row report 구현 <!-- omo:id=delivery-invalid-row-report;stage=2;scope=backend;review=3,6 -->
-- [ ] public API shape unchanged 검증 <!-- omo:id=delivery-api-shape-unchanged;stage=2;scope=backend;review=3,6 -->
-- [ ] no production direct-load test 추가 <!-- omo:id=delivery-no-direct-load-test;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 3 backend/data-tooling review 완료 <!-- omo:id=delivery-stage3-review;stage=3;scope=backend;review=6 -->
+- [x] file-based batch import 실행 형태 확정 <!-- omo:id=delivery-file-batch-first;stage=2;scope=backend;review=3,6 -->
+- [x] sample external source fixture 추가 <!-- omo:id=delivery-source-fixture;stage=2;scope=backend;review=3,6 -->
+- [x] raw row preservation 구조 구현 <!-- omo:id=delivery-raw-row-preservation;stage=2;scope=backend;review=3,6 -->
+- [x] deterministic normalization helper 구현 <!-- omo:id=delivery-normalization-helper;stage=2;scope=backend;review=3,6 -->
+- [x] duplicate/synonym/category candidate 생성 <!-- omo:id=delivery-candidate-generation;stage=2;scope=backend;review=3,6 -->
+- [x] review status gate 구현 <!-- omo:id=delivery-review-status-gate;stage=2;scope=backend;review=3,6 -->
+- [x] approved-only seed promotion artifact 생성 <!-- omo:id=delivery-approved-seed-artifact;stage=2;scope=backend;review=3,6 -->
+- [x] idempotent rerun guard 구현 <!-- omo:id=delivery-idempotency-guard;stage=2;scope=backend;review=3,6 -->
+- [x] invalid source row report 구현 <!-- omo:id=delivery-invalid-row-report;stage=2;scope=backend;review=3,6 -->
+- [x] public API shape unchanged 검증 <!-- omo:id=delivery-api-shape-unchanged;stage=2;scope=backend;review=3,6 -->
+- [x] no production direct-load test 추가 <!-- omo:id=delivery-no-direct-load-test;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 3 backend/data-tooling review 완료 <!-- omo:id=delivery-stage3-review;stage=3;scope=backend;review=6 -->

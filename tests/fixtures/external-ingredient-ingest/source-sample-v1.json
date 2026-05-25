@@ -1,0 +1,114 @@
+[
+  {
+    "source_system": "mfds",
+    "source_file": "mfds-sample-export-v1.json",
+    "source_version": "2026-05-sample",
+    "source_date": "2026-05-25",
+    "source_license": "public-open-data",
+    "source_row_id": "MFDS-001",
+    "original_name": " 양파 (국산) ",
+    "legacy_category": "채소",
+    "raw_payload": {
+      "PRDLST_NM": " 양파 (국산) ",
+      "CL_NM": "채소"
+    }
+  },
+  {
+    "source_system": "rda",
+    "source_file": "rda-sample-export-v1.json",
+    "source_version": "2026-05-sample",
+    "source_date": "2026-05-25",
+    "source_license": "public-open-data",
+    "source_row_id": "RDA-004",
+    "original_name": "양파",
+    "legacy_category": "채소",
+    "raw_payload": {
+      "foodName": "양파",
+      "category": "채소"
+    }
+  },
+  {
+    "source_system": "rda",
+    "source_file": "rda-sample-export-v1.json",
+    "source_version": "2026-05-sample",
+    "source_date": "2026-05-25",
+    "source_license": "public-open-data",
+    "source_row_id": "RDA-001",
+    "original_name": "간 장",
+    "legacy_category": "양념",
+    "raw_payload": {
+      "foodName": "간 장",
+      "category": "양념"
+    }
+  },
+  {
+    "source_system": "rda",
+    "source_file": "rda-sample-export-v1.json",
+    "source_version": "2026-05-sample",
+    "source_date": "2026-05-25",
+    "source_license": "public-open-data",
+    "source_row_id": "RDA-002",
+    "original_name": "간장",
+    "legacy_category": "양념",
+    "raw_payload": {
+      "foodName": "간장",
+      "category": "양념"
+    }
+  },
+  {
+    "source_system": "rda",
+    "source_file": "rda-sample-export-v1.json",
+    "source_version": "2026-05-sample",
+    "source_date": "2026-05-25",
+    "source_license": "public-open-data",
+    "source_row_id": "RDA-003",
+    "original_name": "실파",
+    "legacy_category": "채소",
+    "raw_payload": {
+      "foodName": "실파",
+      "category": "채소"
+    }
+  },
+  {
+    "source_system": "mfds",
+    "source_file": "mfds-sample-export-v1.json",
+    "source_version": "2026-05-sample",
+    "source_date": "2026-05-25",
+    "source_license": "",
+    "source_row_id": "MFDS-002",
+    "original_name": "참기름",
+    "legacy_category": "양념",
+    "raw_payload": {
+      "PRDLST_NM": "참기름",
+      "CL_NM": "양념"
+    }
+  },
+  {
+    "source_system": "mfds",
+    "source_file": "mfds-sample-export-v1.json",
+    "source_version": "2026-05-sample",
+    "source_date": "2026-05-25",
+    "source_license": "public-open-data",
+    "source_row_id": "MFDS-003",
+    "original_name": "   ",
+    "legacy_category": "기타",
+    "raw_payload": {
+      "PRDLST_NM": "   ",
+      "CL_NM": "기타"
+    }
+  },
+  {
+    "source_system": "mfds",
+    "source_file": "mfds-sample-export-v1.json",
+    "source_version": "2026-05-sample",
+    "source_date": "2026-05-25",
+    "source_license": "public-open-data",
+    "source_row_id": "MFDS-004",
+    "original_name": "어묵",
+    "legacy_category": "가공식품",
+    "raw_payload": {
+      "PRDLST_NM": "어묵",
+      "CL_NM": "가공식품"
+    }
+  }
+]
