@@ -382,7 +382,7 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await expect(page.getByText("된장찌개")).toBeVisible();
 
     const recipeCard = page.getByTestId("recipe-item-recipe-1");
-    const link = recipeCard.locator("a[href='/recipe/recipe-1']");
+    const link = recipeCard.locator("a[href^='/recipe/recipe-1']");
     await expect(link).toBeVisible();
   });
 

@@ -130,8 +130,11 @@ ON CONFLICT (ingredient_id, synonym) DO NOTHING;
 - `docs/요구사항기준선-v1.7.0.md` — §2-4 YouTube 미등록 재료 등록 정책
 - `supabase/migrations/20260522070000_21_ingredient_dictionary_synonyms.sql` — 기존 seed 패턴
 - `supabase/migrations/20260522073000_21_youtube_pork_galbi_ingredient_seed.sql` — 추가 seed 패턴
+- `supabase/migrations/20260525170000_26_youtube_dictionary_seed_uplift.sql` — slice 26 seed migration
 - `tests/fixtures/youtube-corpus/reports/parser-hardening-v1.json` — 현재 파서 F1 점수
+- `tests/fixtures/youtube-corpus/reports/dictionary-resolution-v1.json` — 사전 해소율 pre/post 리포트
 - `tests/fixtures/youtube-corpus/corpus-v1.json` — 코퍼스 fixture
+- `tests/youtube-dictionary-resolution.test.ts` — dictionary-resolution scoring + seed migration regression
 
 ## QA / Test Data Plan
 
@@ -144,11 +147,13 @@ ON CONFLICT (ingredient_id, synonym) DO NOTHING;
   - fixture별: expected name → `findIngredientIds` 결과 → `resolved` / `needs_review` / `unresolved` 분류
   - 카테고리별 평균 dictionary resolution rate
   - 전체 코퍼스 평균 dictionary resolution rate
+  - Stage 2 결과: ingredient-weighted resolution rate `0.4795` → `1.0000`, unresolved `76` → `0`
 - **Parser F1 회귀 방지**:
   - 기존 `pnpm test:youtube-corpus` 그대로 실행
   - parser F1 >= 0.90 floor 유지 확인
 - **Seed / reset 명령**:
   - `pnpm local:reset:demo`
+  - Stage 2 시도 결과: Docker image layer 등록 중 `no space left on device` + registry `toomanyrequests`로 local Supabase reset smoke는 미완료. SQL idempotency와 dictionary-resolution 동작은 Vitest로 고정.
 - **Bootstrap 선행 조건**:
   - `ingredients`, `ingredient_synonyms` 테이블 존재
   - 슬라이스 21/22/23/24/25 merge 완료
@@ -157,6 +162,7 @@ ON CONFLICT (ingredient_id, synonym) DO NOTHING;
 
 - Seed migration은 DML-only, idempotent (`ON CONFLICT DO NOTHING`)
 - 기존 curated row를 덮어쓰지 않는다 — `standard_name` conflict 시 기존 row 재사용
+- 이미 기존 synonym으로 안정 해소되는 alias(`국간장`→`간장`, `오이`→`청오이`, `올리브오일`→`올리브 오일`)는 새 표준명으로 중복 INSERT하지 않는다. 중복 표준명을 만들면 `findIngredientIds`가 multi-candidate로 `needs_review`를 만들 수 있다.
 - Category 값은 `채소 / 육류 / 해산물 / 양념 / 유제품 / 곡류 / 기타` 중 하나 (DB 계약 준수)
 - Synonym은 `lower(trim())` 정규화 후 INSERT
 - Dictionary resolution 채점은 parser F1 채점과 독립적으로 실행 가능해야 한다
@@ -181,11 +187,11 @@ ON CONFLICT (ingredient_id, synonym) DO NOTHING;
 > 이 체크리스트는 Stage 2~3 동안 계속 갱신하는 living closeout 문서다.
 > 이 슬라이스는 BE/test/data-only이므로 Stage 4~6은 스킵한다.
 
-- [ ] Seed migration SQL 작성 (evidence-based ingredient + synonym) <!-- omo:id=delivery-seed-migration;stage=2;scope=backend;review=3 -->
-- [ ] Dictionary-resolution 채점 함수 구현 <!-- omo:id=delivery-dict-scoring;stage=2;scope=backend;review=3 -->
-- [ ] Dictionary resolution rate 리포트 생성 (pre/post seed) <!-- omo:id=delivery-dict-report;stage=2;scope=backend;review=3 -->
-- [ ] Parser F1 회귀 방지 확인 (pnpm test:youtube-corpus) <!-- omo:id=delivery-parser-regression;stage=2;scope=backend;review=3 -->
-- [ ] Seed migration idempotency 확인 (반복 실행 안전성) <!-- omo:id=delivery-idempotency;stage=2;scope=backend;review=3 -->
-- [ ] 코퍼스 fixture 정합성 확인/업데이트 <!-- omo:id=delivery-fixture-update;stage=2;scope=backend;review=3 -->
-- [ ] Vitest 단위 테스트: dictionary resolution scoring <!-- omo:id=delivery-vitest-dict-scoring;stage=2;scope=backend;review=3 -->
-- [ ] 기존 Vitest 회귀 없음 확인 <!-- omo:id=delivery-vitest-regression;stage=2;scope=backend;review=3 -->
+- [x] Seed migration SQL 작성 (evidence-based ingredient + synonym) <!-- omo:id=delivery-seed-migration;stage=2;scope=backend;review=3 -->
+- [x] Dictionary-resolution 채점 함수 구현 <!-- omo:id=delivery-dict-scoring;stage=2;scope=backend;review=3 -->
+- [x] Dictionary resolution rate 리포트 생성 (pre/post seed) <!-- omo:id=delivery-dict-report;stage=2;scope=backend;review=3 -->
+- [x] Parser F1 회귀 방지 확인 (pnpm test:youtube-corpus) <!-- omo:id=delivery-parser-regression;stage=2;scope=backend;review=3 -->
+- [x] Seed migration idempotency 확인 (반복 실행 안전성) <!-- omo:id=delivery-idempotency;stage=2;scope=backend;review=3 -->
+- [x] 코퍼스 fixture 정합성 확인/업데이트 <!-- omo:id=delivery-fixture-update;stage=2;scope=backend;review=3 -->
+- [x] Vitest 단위 테스트: dictionary resolution scoring <!-- omo:id=delivery-vitest-dict-scoring;stage=2;scope=backend;review=3 -->
+- [x] 기존 Vitest 회귀 없음 확인 <!-- omo:id=delivery-vitest-regression;stage=2;scope=backend;review=3 -->

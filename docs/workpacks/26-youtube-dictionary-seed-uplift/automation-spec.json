@@ -21,6 +21,7 @@
     ],
     "verify_commands": [
       "pnpm verify:backend",
+      "pnpm test:youtube-dictionary",
       "pnpm test:youtube-corpus",
       "pnpm lint",
       "pnpm typecheck"
@@ -37,7 +38,7 @@
     "playwright_projects": [],
     "artifact_assertions": [],
     "design_authority": {
-      "ui_risk": "N/A",
+      "ui_risk": "not-required",
       "anchor_screens": [],
       "required_screens": [],
       "generator_required": false,
@@ -59,6 +60,7 @@
     "corpus-v1-fixtures-missing"
   ],
   "max_fix_rounds": {
-    "backend": 4
+    "backend": 4,
+    "frontend": 0
   }
 }
