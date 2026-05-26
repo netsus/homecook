@@ -34,8 +34,6 @@
 | [전체 ▾]  [전체 ▾]  [전체 ▾]         |  <- 필터 칩 행
 |  액션      관리자    대상유형          |     text-sm, --text-2
 |                                       |
-| 기간: [시작일] ~ [종료일]             |  <- 날짜 범위 필터
-|                                       |
 |  총 89건                              |  <- 결과 카운트, text-sm, --text-3
 |                                       |
 | +-----------------------------------+ |  <- 감사 로그 카드 (모바일)
@@ -72,8 +70,7 @@
 |  대시보드  사용자  이벤트  감사로그                               |
 +===================================================================+
 |                                                                   |
-|  액션: [전체▾]  관리자: [전체▾]  대상유형: [전체▾]  기간: [ ]~[ ]|
-|                                                       총 89건     |
+|  액션: [전체▾]  관리자: [전체▾]  대상유형: [전체▾]     총 89건   |
 |                                                                   |
 | +---------------------------------------------------------------+ |
 | | 액션              | 관리자      | 대상유형   | 경로           | |
@@ -149,11 +146,10 @@
 
 ### FilterBar (필터 바)
 
-> ADMIN_EVENTS FilterBar와 동일 패턴. 필터 항목만 다름:
+> ADMIN_EVENTS FilterBar와 동일 패턴. 필터 항목만 다름. 현재 Admin API 계약은 날짜 범위 필터를 제공하지 않으므로 기간 입력은 두지 않는다.
 - **칩 드롭다운 1**: 액션 (`action`) — 전체 / list_users / list_operational_events / list_audit_logs / admin_page_view
 - **칩 드롭다운 2**: 관리자 (`actor_admin_user_id`) — 전체 / 관리자 UUID 목록
 - **칩 드롭다운 3**: 대상유형 (`target_type`) — 전체 / user_list / user_search / operational_event_list / audit_log_list / admin_page
-- **날짜 범위**: `from` ~ `to` (ISO 8601)
 - **나머지 스타일링**: ADMIN_EVENTS FilterBar와 동일
 
 ### ResultPill (결과 배지)
@@ -241,7 +237,6 @@
 | 액션 필터 | 드롭다운 선택 | 해당 action만 필터링, page 1 리셋 | GET /admin/audit-logs?action=... | admin |
 | 관리자 필터 | 드롭다운 선택 | 해당 actor만 필터링 | GET /admin/audit-logs?actor_admin_user_id=... | admin |
 | 대상유형 필터 | 드롭다운 선택 | 해당 target_type만 필터링 | GET /admin/audit-logs?target_type=... | admin |
-| 날짜 범위 필터 | 시작일/종료일 입력 | ISO 8601 범위 필터링 | GET /admin/audit-logs?from=...&to=... | admin |
 | 페이지 이동 | 페이지 번호 또는 화살표 탭 | 해당 페이지 조회 | GET /admin/audit-logs?page=N | admin |
 
 ### 스크롤 정책
@@ -282,7 +277,7 @@
 
 3. **ResultPill 이진 분류**: result는 success/failure로만 구분한다. 운영 이벤트의 severity(info/warn/error)와 달리 감사 로그는 성공/실패만 의미가 있다.
 
-4. **ADMIN_EVENTS와 FilterBar 공유**: 필터 바 컴포넌트 구조가 동일하므로 칩 드롭다운 + 날짜 범위 패턴을 공유한다. 필터 항목 목록만 다르다.
+4. **ADMIN_EVENTS와 FilterBar 공유**: 필터 바 컴포넌트 구조가 동일하므로 칩 드롭다운 패턴을 공유한다. 필터 항목 목록만 다르다.
 
 5. **자기 참조 감사**: 감사 로그 조회 자체도 `list_audit_logs` 감사 기록을 남긴다. UI에서 이를 특별히 표시하지는 않으나, 필터에서 확인 가능하다.
 
@@ -312,13 +307,12 @@
 ## 접근성 노트
 
 - **필터 칩**: 각 `role="combobox"` 또는 `<select>`, 라벨 `aria-label`
-- **날짜 입력**: `type="date"`, `aria-label`
 - **감사 로그 카드**: `role="article"`, ResultPill에 `aria-label="결과: success"` 등
 - **테이블**: `role="table"`, 헤더 `role="columnheader"`
 - **해시 값**: `aria-label="IP 해시: sha256:d4e5..."` (시각적으로 축약되더라도 전체 값 접근 가능)
 - **결과 카운트**: `aria-live="polite"`
 - **색상 대비**: ResultPill success (--olive on --surface-fill) = 5.8:1 (AA 통과), failure (#C62828 on #FFEBEE) = 7.1:1 (AA 통과)
-- **터치 타겟**: 필터 칩 44px, 날짜 입력 44px, 페이지네이션 44x44px
+- **터치 타겟**: 필터 칩 44px, 페이지네이션 44x44px
 
 ---
 

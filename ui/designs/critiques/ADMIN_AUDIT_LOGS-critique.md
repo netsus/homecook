@@ -9,7 +9,7 @@
 
 **등급**: 통과 (Green)
 
-**한 줄 요약**: 화면정의서 SS 24의 감사 로그 목록 테이블(action, actor_admin_user_id, target_type, target_id, result, created_at), 필터(action, actor, target_type, 날짜 범위), 페이지네이션이 모두 반영되었다. ip_hash/user_agent_hash가 해시 값만 표시하며 모바일에서는 밀도를 위해 숨기는 합리적 결정이 포함되었다. 검색어 미저장 정책(target_id=null)과 request_path pathname-only 정책이 명확히 문서화되었다. 크리티컬 이슈 0건, 마이너 이슈 2건으로 Stage 1 통과 판정한다.
+**한 줄 요약**: 화면정의서 SS 24의 감사 로그 목록 테이블(action, actor_admin_user_id, target_type, target_id, result, created_at), 필터(action, actor, target_type), 페이지네이션이 모두 반영되었다. ip_hash/user_agent_hash가 해시 값만 표시하며 모바일에서는 밀도를 위해 숨기는 합리적 결정이 포함되었다. 검색어 미저장 정책(target_id=null)과 request_path pathname-only 정책이 명확히 문서화되었다. 크리티컬 이슈 0건, 마이너 이슈 2건으로 Stage 1 통과 판정한다.
 
 ## 크리티컬 이슈 (수정 필수)
 
@@ -29,7 +29,7 @@
 - [x] ip_hash/user_agent_hash가 해시 값만 표시하는가 — "sha256:... 축약" 명시. 원본 IP/User-Agent 미표시.
 - [x] 검색어 미저장 정책이 반영됐는가 — "target_id=null (검색어 미저장)" 명시.
 - [x] request_path pathname-only가 반영됐는가 — "pathname만 표시" 명시.
-- [x] API 매핑이 정확한가 — GET /api/v1/admin/audit-logs의 query 파라미터(page, limit, action, actor_admin_user_id, target_type, from, to)가 UI와 매핑.
+- [x] API 매핑이 정확한가 — GET /api/v1/admin/audit-logs의 query 파라미터(page, limit, action, actor_admin_user_id, target_type)가 UI와 매핑.
 - [x] 감사 로그 조회 자체의 자기 참조 감사가 언급됐는가 — "감사 로그 조회 자체도 list_audit_logs 감사 기록을 남긴다" 명시.
 
 ### B. 공통 상태 커버리지
@@ -44,7 +44,7 @@
 - [x] FilterBar가 ADMIN_EVENTS와 동일 패턴 — "동일 패턴. 필터 항목만 다름" 명시.
 
 ### D. UX 품질
-- [x] 터치 타겟 최소 44px — 필터 칩 44px, 날짜 입력 44px, 페이지네이션 44x44px.
+- [x] 터치 타겟 최소 44px — 필터 칩 44px, 페이지네이션 44x44px.
 - [x] 모바일 퍼스트 레이아웃 — 375px 카드 뷰 + 768px+ 테이블 뷰.
 - [x] 320px 대응 — 필터 칩 wrap, 카드 패딩 축소, action/path 말줄임.
 - [x] whole-page horizontal scroll 금지 — 스크롤 정책 명시.
@@ -82,5 +82,5 @@
 | ip_hash/user_agent_hash 모바일 숨김 운영 영향 | 모바일에서 Admin 화면을 사용하는 시나리오는 "긴급 조회(emergency lookup)"다. 긴급 상황에서 IP/UA 해시가 필요한 경우는 드물다. 심층 분석은 데스크톱에서 수행하는 것이 자연스럽다. |
 | 관리자 UUID 축약 8자 충분성 | UUID v4의 첫 8자(hex)는 4.3B 조합이므로 관리자 수가 소수일 때 충돌 가능성은 무시할 수 있다. MVP 1명이면 더더욱 충분. |
 | 자기 참조 감사 무한 루프 UX | 기술적으로 감사 로그 조회 → 새 감사 기록 → 다음 페이지에 나타남 → 조회 시 또 기록... 의 자기 참조가 있으나, 이는 최신 로그가 상단에 추가될 뿐 사용자가 인식하는 "무한 루프"가 아니다. 같은 페이지를 새로고침하면 최상단에 자기 조회 기록이 하나 추가되는 것이 전부. 운영 도구에서는 이 패턴이 일반적(AWS CloudTrail 등). |
-| 감사 로그 검색 기능 부재 | 필터(action, actor, target_type, 날짜 범위)로 대부분의 탐색 시나리오를 커버한다. 텍스트 검색은 감사 로그에서 "무엇을 검색하는가"가 불명확(action명은 필터, 시간은 날짜 범위)하므로 MVP에서 검색 필드를 추가하는 것보다 필터 조합이 더 적합하다. |
+| 감사 로그 검색 기능 부재 | 필터(action, actor, target_type)와 최신순 페이지네이션으로 MVP 탐색 시나리오를 커버한다. 텍스트 검색은 감사 로그에서 "무엇을 검색하는가"가 불명확하므로 MVP에서 검색 필드를 추가하는 것보다 필터 조합이 더 적합하다. |
 | ResultPill failure 시멘틱 컬러 | ADMIN_EVENTS의 SeverityPill error와 동일한 #FFEBEE/#C62828 조합이다. 시멘틱 컬러 토큰화는 ADMIN_EVENTS critique에서 다루었으므로 여기서는 중복하지 않는다. 두 화면이 동일 시멘틱 컬러를 공유하는 것 자체는 일관성 있는 결정. |

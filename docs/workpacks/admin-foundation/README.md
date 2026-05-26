@@ -178,6 +178,7 @@
 - `docs/api문서-v1.2.12.md` Admin Foundation 엔드포인트 3종
 - `.omx/plans/admin-foundation-ralplan-20260526.md`
 - `docs/workpacks/admin-foundation/backend-smoke.md`
+- `docs/workpacks/admin-foundation/stage3-backend-review.md`
 
 ## QA / Test Data Plan
 - **fixture baseline**: `admin_members` row 1건, 일반 사용자 row 다수, `operational_events` 샘플, `admin_audit_logs` 샘플
@@ -230,5 +231,6 @@
 - [x] recordAdminAudit 헬퍼 연결 (모든 admin API + /admin 진입) <!-- omo:id=delivery-admin-audit-helper;stage=2;scope=backend;review=3,6 -->
 - [x] 로그 sanitizer (pathname-only, PII 제거) <!-- omo:id=delivery-log-sanitizer;stage=2;scope=backend;review=3,6 -->
 - [x] real DB smoke 절차 준비 + deterministic migration/bootstrap/fail-closed 검증 <!-- omo:id=delivery-real-db-smoke;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 3 Claude backend review 완료 <!-- omo:id=delivery-stage3-backend-review;stage=3;scope=backend;review=6 -->
 - [ ] Design Authority evidence (Stage 4 screenshots) <!-- omo:id=delivery-design-authority-evidence;stage=4;scope=frontend;review=5,6 -->
 - [ ] exploratory QA + qa:eval <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=6 -->
