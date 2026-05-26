@@ -1417,6 +1417,30 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "admin-foundation",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/admin-foundation",
+      "pr_path": null,
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm install --frozen-lockfile && pnpm verify:backend",
+        "pnpm install --frozen-lockfile && pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice admin-foundation",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 workpack docs. Minimal internal admin foundation for launch operations. 4 new screens, 3 read-only APIs, 3 new DB tables, service-role/audit/PII security. Contract-evolution PR #609 merged.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
     }
   ]
 }
