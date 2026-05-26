@@ -101,6 +101,6 @@
 - [x] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 (기본: fixture-backed Playwright, 선택: `@live-oauth` tag + Manual Only에 live YouTube API 테스트 분리) <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only
-- [ ] 실제 YouTube Data API를 사용한 live extraction 테스트 (5+ real URLs)
+- [x] 실제 YouTube Data API를 사용한 live extraction 테스트 (5+ real URLs) — `live-smoke-2026-05-26.md`
 - [ ] YouTube API quota 소진 시 429 응답 확인
 - [ ] 실제 YouTube 영상 설명란 변경 후 재추출 결과 비교
