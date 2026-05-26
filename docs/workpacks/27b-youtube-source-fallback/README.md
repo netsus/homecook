@@ -153,10 +153,8 @@ YouTube 설명란에서 재료는 추출했지만 구체적인 조리 과정(ste
 ### Fixture Baseline
 - 기존 slice 27 corpus 50건 유지 (regression 보호)
 - 신규 transcript fixture 추가: provider-available / provider-unavailable / no-op-adapter 변형
-  - 최소 10건: description에 재료 있지만 step 없는 영상의 fixture (live smoke 5건 partial blocked 케이스 기반)
-  - 최소 5건: transcript에서 step 추출 가능한 fixture (provider adapter mock에 transcript text 주입)
-  - 최소 3건: provider 미가용 fixture (adapter가 no-op 또는 에러 반환)
-  - 최소 2건: 저품질 transcript fixture (step 추출 실패 → description-only fallback)
+  - Stage 2 backend 목표: transcript fallback 핵심 분기 5종(provider step 사용 / no-op / step 추출 실패 / provider error / caption 없음)을 결정론 fixture로 잠근다
+  - Stage 4~6 확장 목표: description에 재료 있지만 step 없는 영상 fixture, provider 가용 fixture, provider 미가용 fixture, 저품질 transcript fixture를 live smoke evidence 기반으로 확장한다
 
 ### 채점 하네스
 - `pnpm test:youtube-corpus` — 기존 in-corpus F1 측정 (regression gate)
@@ -219,6 +217,22 @@ YouTube Data API의 `captions.list`와 `captions.download`는 **OAuth scope** (`
 - 이 경로는 **Stage 2 feasibility investigation only**로 취급한다. production default로 채택하려면 제품/법률/정책 승인이 필요하다
 - Stage 2 결과에 따라: (a) compliant source 확인 → adapter 구현체 연결, (b) 미확인 → adapter no-op + 부분 draft UX만 출하
 
+### Stage 2 feasibility result (2026-05-26)
+
+- 공식 YouTube captions API는 API key만으로 임의 공개 영상 자막을 가져올 수 없으므로 production provider로 연결하지 않았다
+- 비공식 transcript source는 ToS/안정성 승인이 없으므로 production default에 포함하지 않았다
+- Stage 2 구현은 `TranscriptProvider` adapter + no-op default + test-only provider injection으로 닫았다
+- provider가 실제 transcript step을 제공한 fixture path에서만 `extraction_methods=["description", "caption"]`을 기록한다
+- provider 미가용/비활성/자막 신호 없음/step 추출 실패는 description-only partial draft로 graceful degradation 처리한다
+
+### Stage 2 backend closeout evidence (2026-05-26)
+
+- Fixture / real DB smoke split: CI gate는 fixture-backed Vitest와 기존 corpus regression으로 닫고, 실제 YouTube transcript provider live smoke는 `Manual Only`로 남겼다
+- Seed / bootstrap readiness: DDL 변경과 신규 seed/system row는 없다. 기존 `youtube_extraction_sessions`, `ingredients`, `cooking_methods`, `register_youtube_recipe_from_session`, `register_youtube_ingredient` migration만 사용한다
+- Transcript fixture coverage: provider step 사용, default no-op, parse 실패, provider throw, caption 없음 5개 backend fixture 경로를 `tests/youtube-import.backend.test.ts`에 추가했다
+- Regression: `tests/youtube-corpus.test.ts`, `tests/youtube-dictionary-resolution.test.ts`, `tests/youtube-readiness-score.test.ts`를 함께 실행해 기존 slice 27 경로 무위반을 확인했다
+- Session policy: 기존 register / ingredient-registration tests가 expired, consumed, mismatch, cross-user, invalid input, RPC delegation 경계를 계속 고정한다
+
 ## Contract Evolution Candidates (Optional)
 
 ### CE-1: `extraction_meta_json`에 transcript 가용성 필드 표준화
@@ -266,23 +280,23 @@ YouTube Data API의 `captions.list`와 `captions.download`는 **OAuth scope** (`
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 각 체크박스 끝에 OMO metadata를 유지한다.
 
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] TranscriptProvider adapter 인터페이스 설계 <!-- omo:id=delivery-provider-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] Transcript source feasibility 검증 (compliant source 사용 가능 여부) <!-- omo:id=delivery-feasibility-check;stage=2;scope=backend;review=3,6 -->
-- [ ] Transcript fallback 경로 구현 및 테스트 (또는 no-op adapter + 부분 draft 경로) <!-- omo:id=delivery-transcript-fallback;stage=2;scope=backend;review=3,6 -->
-- [ ] `videos.list contentDetails.caption` 기반 capability 신호 구현 <!-- omo:id=delivery-caption-signal;stage=2;scope=backend;review=3,6 -->
-- [ ] Transcript 텍스트에서 step 파싱 로직 (provider가 있는 경우) <!-- omo:id=delivery-transcript-step-parser;stage=2;scope=backend;review=3,6 -->
-- [ ] extraction_methods 배열 정직성 보장 (실제 step 제공 시에만 caption 기록) <!-- omo:id=delivery-extraction-methods;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] TranscriptProvider adapter 인터페이스 설계 <!-- omo:id=delivery-provider-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] Transcript source feasibility 검증 (compliant source 사용 가능 여부) <!-- omo:id=delivery-feasibility-check;stage=2;scope=backend;review=3,6 -->
+- [x] Transcript fallback 경로 구현 및 테스트 (또는 no-op adapter + 부분 draft 경로) <!-- omo:id=delivery-transcript-fallback;stage=2;scope=backend;review=3,6 -->
+- [x] `videos.list contentDetails.caption` 기반 capability 신호 구현 <!-- omo:id=delivery-caption-signal;stage=2;scope=backend;review=3,6 -->
+- [x] Transcript 텍스트에서 step 파싱 로직 (provider가 있는 경우) <!-- omo:id=delivery-transcript-step-parser;stage=2;scope=backend;review=3,6 -->
+- [x] extraction_methods 배열 정직성 보장 (실제 step 제공 시에만 caption 기록) <!-- omo:id=delivery-extraction-methods;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 (extraction_methods 표기 + 부분 draft 안내) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
-- [ ] Transcript fallback fixture coverage >= 목표치 <!-- omo:id=delivery-transcript-fixture-coverage;stage=2;scope=backend;review=3,6 -->
-- [ ] 기존 slice 27 corpus regression 무위반 <!-- omo:id=delivery-corpus-regression;stage=2;scope=backend;review=3,6 -->
+- [x] Transcript fallback fixture coverage >= Stage 2 목표치 <!-- omo:id=delivery-transcript-fixture-coverage;stage=2;scope=backend;review=3,6 -->
+- [x] 기존 slice 27 corpus regression 무위반 <!-- omo:id=delivery-corpus-regression;stage=2;scope=backend;review=3,6 -->
 - [ ] Partial draft UX 안내 구현 <!-- omo:id=delivery-partial-draft-ux;stage=4;scope=frontend;review=5,6 -->
-- [ ] No-provider path 검증 (adapter no-op 시 description-only + manual step UX 정상 동작) <!-- omo:id=delivery-no-provider-path;stage=2;scope=shared;review=3,6 -->
+- [x] No-provider backend path 검증 (adapter no-op 시 description-only partial draft 정상 반환, manual step UX는 Stage 4) <!-- omo:id=delivery-no-provider-path;stage=2;scope=shared;review=3,6 -->

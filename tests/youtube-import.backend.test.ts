@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import fixtureData from "@/qa/fixtures/slices-01-05.json";
+import type { YoutubeTranscriptProvider } from "@/lib/server/youtube-import";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
@@ -192,6 +193,8 @@ const recipeUrl = "https://www.youtube.com/watch?v=recipe12345";
 const nonRecipeUrl = "https://youtu.be/nonrecipe123";
 const uncertainUrl = "https://www.youtube.com/watch?v=uncertain123";
 const incompleteUrl = "https://www.youtube.com/watch?v=incomplete123";
+const transcriptFallbackUrl = "https://www.youtube.com/watch?v=transcript123";
+const transcriptNoCaptionUrl = "https://www.youtube.com/watch?v=nocaption123";
 const needsReviewUrl = "https://www.youtube.com/watch?v=needsreview123";
 const missingVideoUrl = "https://www.youtube.com/watch?v=missing123";
 const cucumberSandwichUrl = "https://www.youtube.com/watch?v=cucumber123";
@@ -519,6 +522,78 @@ async function importRegisterRoute() {
 
 async function importIngredientRegistrationRoute() {
   return import("@/app/api/v1/recipes/youtube/ingredient-registration/route");
+}
+
+function createTranscriptFallbackExtractDbClient({
+  cookingMethodLookupRows = [],
+}: {
+  cookingMethodLookupRows?: NonNullable<Parameters<typeof createCookingMethodsTable>[0]["lookupRows"]>;
+} = {}) {
+  const ingredientsTable = createLookupTable({
+    data: [
+      { id: kimchiIngredientId, standard_name: "김치" },
+      { id: saltIngredientId, standard_name: "소금" },
+    ],
+    error: null,
+  });
+  const ingredientSynonymsTable = createEmptyIngredientSynonymsTable();
+  const cookingMethodsTable = createCookingMethodsTable({
+    existingResult: {
+      data: {
+        id: newMethodId,
+        code: "auto_salt",
+        label: "절이기",
+        color_key: "unassigned",
+        is_system: false,
+      },
+      error: null,
+    },
+    insertResult: { data: null, error: { message: "should not insert" } },
+    lookupRows: cookingMethodLookupRows,
+  });
+  const sessionsTable = createYoutubeSessionsTable({});
+  const dbClient = {
+    from: vi.fn((table: string) => {
+      if (table === "ingredients") return ingredientsTable;
+      if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+      if (table === "cooking_methods") return cookingMethodsTable;
+      if (table === "youtube_extraction_sessions") return sessionsTable;
+      throw new Error(`unexpected table: ${table}`);
+    }),
+  };
+
+  return {
+    dbClient,
+    sessionsTable,
+  };
+}
+
+async function withYoutubeTranscriptProvider<T>(
+  provider: YoutubeTranscriptProvider,
+  callback: () => Promise<T>,
+) {
+  const youtubeImport = await import("@/lib/server/youtube-import");
+  const restoreTranscriptProvider = youtubeImport.setYoutubeTranscriptProviderForTest(provider);
+
+  try {
+    return await callback();
+  } finally {
+    restoreTranscriptProvider();
+  }
+}
+
+async function postYoutubeExtract(youtubeUrl: string) {
+  const { POST } = await importExtractRoute();
+  const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ youtube_url: youtubeUrl }),
+  }));
+
+  return {
+    body: await response.json(),
+    response,
+  };
 }
 
 describe("20 youtube real import backend", () => {
@@ -1821,6 +1896,287 @@ describe("20 youtube real import backend", () => {
         blocking_issues: ["ingredients[1].ingredient_id", "steps[0].instruction"],
       }),
     }));
+  });
+
+  it("POST /api/v1/recipes/youtube/extract uses transcript fallback only when a provider returns parseable steps", async () => {
+    mockAuth();
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440216",
+          code: "boil",
+          label: "끓이기",
+          color_key: "blue",
+          is_system: true,
+        },
+      ],
+    });
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: [
+          "만드는 법",
+          "1. 김치를 한입 크기로 썰어주세요.",
+          "2. 냄비에 넣고 끓여주세요.",
+        ].join("\n"),
+        language: "ko",
+        trackKind: "manual" as const,
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      postYoutubeExtract(transcriptFallbackUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description", "caption"],
+        blocking_issues: [],
+        steps: [
+          {
+            step_number: 1,
+            instruction: "김치를 한입 크기로 썰어주세요.",
+            is_incomplete: false,
+            missing_fields: [],
+          },
+          {
+            step_number: 2,
+            instruction: "냄비에 넣고 끓여주세요.",
+            is_incomplete: false,
+            missing_fields: [],
+          },
+        ],
+      },
+      error: null,
+    });
+    expect(transcriptProvider.fetchTranscript).toHaveBeenCalledWith({
+      videoId: "transcript123",
+      youtubeUrl: transcriptFallbackUrl,
+      title: "김치찌개 자막 보충 레시피",
+      channel: "집밥 채널",
+      captionCapability: "available",
+    });
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_methods: string[];
+      raw_source_text: string;
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_methods).toEqual(["description", "caption"]);
+    expect(insertedSession.raw_source_text).toContain("김치 200g");
+    expect(insertedSession.raw_source_text).toContain("김치를 한입 크기로 썰어주세요.");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      caption_capability: "available",
+      transcript_provider: {
+        attempted: true,
+        capability: "available",
+        provider: "fixture-transcript",
+        status: "used",
+        language: "ko",
+        track_kind: "manual",
+        step_count: 2,
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract keeps description-only partial drafts when transcript provider is disabled", async () => {
+    mockAuth();
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient();
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { response, body } = await postYoutubeExtract(transcriptFallbackUrl);
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description"],
+        blocking_issues: ["steps[0].instruction"],
+        steps: [
+          {
+            instruction: "",
+            is_incomplete: true,
+            missing_fields: ["instruction"],
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_methods: string[];
+      raw_source_text: string;
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_methods).toEqual(["description"]);
+    expect(insertedSession.raw_source_text).not.toContain("김치를 한입 크기로 썰어주세요.");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      caption_capability: "available",
+      transcript_provider: {
+        attempted: true,
+        capability: "available",
+        provider: "noop",
+        status: "disabled",
+        reason: "no_provider_configured",
+        step_count: 0,
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract does not mark captions when provider text has no parseable steps", async () => {
+    mockAuth();
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient();
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: "오늘은 김치찌개를 먹어봤어요.\n자세한 재료는 설명란을 봐주세요.",
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      postYoutubeExtract(transcriptFallbackUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description"],
+        blocking_issues: ["steps[0].instruction"],
+      },
+      error: null,
+    });
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_methods: string[];
+      raw_source_text: string;
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_methods).toEqual(["description"]);
+    expect(insertedSession.raw_source_text).not.toContain("오늘은 김치찌개를 먹어봤어요.");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      caption_capability: "available",
+      transcript_provider: {
+        attempted: true,
+        capability: "available",
+        provider: "fixture-transcript",
+        status: "no_steps",
+        reason: "no_parseable_steps",
+        language: "ko",
+        track_kind: "auto",
+        step_count: 0,
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract degrades to description-only when transcript provider fails", async () => {
+    mockAuth();
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient();
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => {
+        throw new Error("temporary transcript outage");
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      postYoutubeExtract(transcriptFallbackUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description"],
+        blocking_issues: ["steps[0].instruction"],
+      },
+      error: null,
+    });
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_methods: string[];
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_methods).toEqual(["description"]);
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      caption_capability: "available",
+      transcript_provider: {
+        attempted: true,
+        capability: "available",
+        provider: "fixture-transcript",
+        status: "error",
+        reason: "temporary transcript outage",
+        step_count: 0,
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract skips transcript provider when captions are unavailable", async () => {
+    mockAuth();
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient();
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        transcriptText: "만드는 법\n1. 김치를 썰어주세요.",
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      postYoutubeExtract(transcriptNoCaptionUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description"],
+        blocking_issues: ["steps[0].instruction"],
+      },
+      error: null,
+    });
+    expect(transcriptProvider.fetchTranscript).not.toHaveBeenCalled();
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_methods: string[];
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_methods).toEqual(["description"]);
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      caption_capability: "unavailable",
+      transcript_provider: {
+        attempted: false,
+        capability: "unavailable",
+        provider: null,
+        status: "capability_unavailable",
+        step_count: 0,
+      },
+    });
   });
 
   it("POST /api/v1/recipes/youtube/extract can return needs_review candidates before registration", async () => {

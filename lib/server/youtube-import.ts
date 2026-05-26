@@ -251,6 +251,7 @@ const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,20}$/;
 const DEFAULT_EXTRACTION_METHODS = ["description"] as const;
 const YOUTUBE_PROVIDER_VERSION = "youtube-videos-list-description-v1";
 const SESSION_TTL_HOURS = 24;
+const CAPTION_TRANSCRIPT_RAW_SOURCE_HEADER = "--- caption transcript ---";
 const OEMBED_PREVIEW_CLASSIFICATION_REASONS = [YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON];
 const NEW_COOKING_METHOD = {
   code: "auto_salt",
@@ -318,6 +319,34 @@ interface YoutubeProviderVideo {
   captionFlag: string | null;
 }
 
+export type YoutubeTranscriptProviderStatus =
+  | "available"
+  | "unavailable"
+  | "disabled"
+  | "error";
+
+export interface YoutubeTranscriptProviderContext {
+  videoId: string;
+  youtubeUrl: string;
+  title: string;
+  channel: string;
+  captionCapability: "available" | "unavailable" | "unknown";
+}
+
+export interface YoutubeTranscriptProviderResult {
+  status: YoutubeTranscriptProviderStatus;
+  providerName?: string;
+  transcriptText?: string | null;
+  language?: string | null;
+  trackKind?: "manual" | "auto" | "unknown" | null;
+  reason?: string | null;
+}
+
+export interface YoutubeTranscriptProvider {
+  name: string;
+  fetchTranscript(context: YoutubeTranscriptProviderContext): Promise<YoutubeTranscriptProviderResult>;
+}
+
 interface YoutubePreviewVideo {
   videoId: string;
   title: string;
@@ -343,6 +372,61 @@ type YoutubeProviderResult =
 type YoutubePreviewResult =
   | { video: YoutubePreviewVideo }
   | { providerError: YoutubeProviderError };
+
+interface TranscriptFallbackMeta {
+  attempted: boolean;
+  capability: "available" | "unavailable" | "unknown";
+  provider: string | null;
+  status:
+    | "not_needed"
+    | "capability_unavailable"
+    | "disabled"
+    | "unavailable"
+    | "error"
+    | "no_steps"
+    | "used";
+  reason: string | null;
+  language: string | null;
+  track_kind: string | null;
+  step_count: number;
+}
+
+interface TranscriptFallbackResult {
+  steps: string[];
+  usedTranscript: boolean;
+  rawTranscriptText: string | null;
+  meta: TranscriptFallbackMeta;
+}
+
+const NOOP_TRANSCRIPT_PROVIDER: YoutubeTranscriptProvider = {
+  name: "noop",
+  async fetchTranscript() {
+    return {
+      status: "disabled",
+      providerName: "noop",
+      reason: "no_provider_configured",
+    };
+  },
+};
+
+let transcriptProviderForTest: YoutubeTranscriptProvider | null = null;
+
+export function setYoutubeTranscriptProviderForTest(provider: YoutubeTranscriptProvider | null) {
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("setYoutubeTranscriptProviderForTest is only available in tests");
+  }
+
+  const previousProvider = transcriptProviderForTest;
+  transcriptProviderForTest = provider;
+
+  return () => {
+    transcriptProviderForTest = previousProvider;
+  };
+}
+
+function getYoutubeTranscriptProvider() {
+  return transcriptProviderForTest ?? NOOP_TRANSCRIPT_PROVIDER;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -549,6 +633,48 @@ function getFixtureVideo(videoId: string): YoutubeProviderResult {
     };
   }
 
+  if (videoId.startsWith("transcript")) {
+    return {
+      video: {
+        videoId,
+        title: "김치찌개 자막 보충 레시피",
+        channel: "집밥 채널",
+        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        description: [
+          "김치찌개 레시피",
+          "재료",
+          "김치 200g",
+          "소금 약간",
+        ].join("\n"),
+        tags: ["recipe", "김치찌개", "레시피"],
+        categoryId: "26",
+        duration: "PT8M",
+        captionFlag: "true",
+      },
+    };
+  }
+
+  if (videoId.startsWith("nocaption")) {
+    return {
+      video: {
+        videoId,
+        title: "김치찌개 자막 없는 레시피",
+        channel: "집밥 채널",
+        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        description: [
+          "김치찌개 레시피",
+          "재료",
+          "김치 200g",
+          "소금 약간",
+        ].join("\n"),
+        tags: ["recipe", "김치찌개", "레시피"],
+        categoryId: "26",
+        duration: "PT8M",
+        captionFlag: "false",
+      },
+    };
+  }
+
   if (videoId.startsWith("needsreview")) {
     return {
       video: {
@@ -687,7 +813,9 @@ function parseYoutubeVideoPayload(videoId: string, payload: unknown): YoutubePro
         : [],
       categoryId: typeof snippet.categoryId === "string" ? snippet.categoryId : null,
       duration: typeof contentDetails.duration === "string" ? contentDetails.duration : null,
-      captionFlag: typeof contentDetails.caption === "string" ? contentDetails.caption : null,
+      captionFlag: typeof contentDetails.caption === "string" || typeof contentDetails.caption === "boolean"
+        ? String(contentDetails.caption)
+        : null,
     },
   };
 }
@@ -1221,6 +1349,198 @@ function parseRecipeDescriptionForImport(video: YoutubeProviderVideo): ParsedRec
   };
 }
 
+function getCaptionCapability(
+  captionFlag: string | null,
+): YoutubeTranscriptProviderContext["captionCapability"] {
+  const normalized = captionFlag?.trim().toLowerCase();
+
+  if (normalized === "true") {
+    return "available";
+  }
+
+  if (normalized === "false") {
+    return "unavailable";
+  }
+
+  return "unknown";
+}
+
+function shouldAttemptTranscriptFallback(parsedRecipe: ParsedRecipeDescription) {
+  return parsedRecipe.ingredients.length > 0 && parsedRecipe.steps.length === 0;
+}
+
+function buildTranscriptFallbackMeta({
+  attempted,
+  capability,
+  provider,
+  status,
+  reason = null,
+  language = null,
+  trackKind = null,
+  stepCount = 0,
+}: {
+  attempted: boolean;
+  capability: TranscriptFallbackMeta["capability"];
+  provider: string | null;
+  status: TranscriptFallbackMeta["status"];
+  reason?: string | null;
+  language?: string | null;
+  trackKind?: string | null;
+  stepCount?: number;
+}): TranscriptFallbackMeta {
+  return {
+    attempted,
+    capability,
+    provider,
+    status,
+    reason,
+    language,
+    track_kind: trackKind,
+    step_count: stepCount,
+  };
+}
+
+function parseTranscriptSteps(transcriptText: string) {
+  const normalized = transcriptText.trim();
+
+  if (!normalized) {
+    return [];
+  }
+
+  return parseRecipeDescription(normalized).steps;
+}
+
+function buildRawSourceText(description: string, transcriptText: string | null) {
+  const normalizedTranscript = transcriptText?.trim();
+
+  if (!normalizedTranscript) {
+    return description;
+  }
+
+  return [
+    description,
+    CAPTION_TRANSCRIPT_RAW_SOURCE_HEADER,
+    normalizedTranscript,
+  ].join("\n\n");
+}
+
+async function resolveTranscriptFallback(
+  video: YoutubeProviderVideo,
+  parsedRecipe: ParsedRecipeDescription,
+  parsedUrl: { youtubeUrl: string; videoId: string },
+): Promise<TranscriptFallbackResult> {
+  const capability = getCaptionCapability(video.captionFlag);
+
+  if (!shouldAttemptTranscriptFallback(parsedRecipe)) {
+    return {
+      steps: parsedRecipe.steps,
+      usedTranscript: false,
+      rawTranscriptText: null,
+      meta: buildTranscriptFallbackMeta({
+        attempted: false,
+        capability,
+        provider: null,
+        status: "not_needed",
+      }),
+    };
+  }
+
+  if (capability === "unavailable") {
+    return {
+      steps: parsedRecipe.steps,
+      usedTranscript: false,
+      rawTranscriptText: null,
+      meta: buildTranscriptFallbackMeta({
+        attempted: false,
+        capability,
+        provider: null,
+        status: "capability_unavailable",
+      }),
+    };
+  }
+
+  const provider = getYoutubeTranscriptProvider();
+  let providerResult: YoutubeTranscriptProviderResult;
+
+  try {
+    providerResult = await provider.fetchTranscript({
+      videoId: parsedUrl.videoId,
+      youtubeUrl: parsedUrl.youtubeUrl,
+      title: video.title,
+      channel: video.channel,
+      captionCapability: capability,
+    });
+  } catch (error) {
+    return {
+      steps: parsedRecipe.steps,
+      usedTranscript: false,
+      rawTranscriptText: null,
+      meta: buildTranscriptFallbackMeta({
+        attempted: true,
+        capability,
+        provider: provider.name,
+        status: "error",
+        reason: error instanceof Error ? error.message : "provider_error",
+      }),
+    };
+  }
+
+  const providerName = providerResult.providerName ?? provider.name;
+  const transcriptText = providerResult.transcriptText?.trim() ?? "";
+
+  if (providerResult.status !== "available" || !transcriptText) {
+    return {
+      steps: parsedRecipe.steps,
+      usedTranscript: false,
+      rawTranscriptText: null,
+      meta: buildTranscriptFallbackMeta({
+        attempted: true,
+        capability,
+        provider: providerName,
+        status: providerResult.status === "available" ? "unavailable" : providerResult.status,
+        reason: providerResult.reason ?? (transcriptText ? null : "empty_transcript"),
+        language: providerResult.language ?? null,
+        trackKind: providerResult.trackKind ?? null,
+      }),
+    };
+  }
+
+  const transcriptSteps = parseTranscriptSteps(transcriptText);
+
+  if (transcriptSteps.length === 0) {
+    return {
+      steps: parsedRecipe.steps,
+      usedTranscript: false,
+      rawTranscriptText: null,
+      meta: buildTranscriptFallbackMeta({
+        attempted: true,
+        capability,
+        provider: providerName,
+        status: "no_steps",
+        reason: providerResult.reason ?? "no_parseable_steps",
+        language: providerResult.language ?? null,
+        trackKind: providerResult.trackKind ?? null,
+      }),
+    };
+  }
+
+  return {
+    steps: transcriptSteps,
+    usedTranscript: true,
+    rawTranscriptText: transcriptText,
+    meta: buildTranscriptFallbackMeta({
+      attempted: true,
+      capability,
+      provider: providerName,
+      status: "used",
+      reason: providerResult.reason ?? null,
+      language: providerResult.language ?? null,
+      trackKind: providerResult.trackKind ?? null,
+      stepCount: transcriptSteps.length,
+    }),
+  };
+}
+
 export async function handleYoutubeValidate(request: Request) {
   if (!isYoutubeImportEnabled()) {
     return buildFeatureDisabledResponse();
@@ -1730,30 +2050,41 @@ export async function handleYoutubeExtract(request: Request) {
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as DbClient;
   const descriptionParse = parseRecipeDescriptionForImport(video);
   const parsedRecipe = descriptionParse.recipe;
+  const transcriptFallback = await resolveTranscriptFallback(video, parsedRecipe, parsedUrl);
+  const finalParsedRecipe = {
+    ...parsedRecipe,
+    steps: transcriptFallback.steps,
+  };
   const ingredientLookup = await findIngredientIds(
     dbClient,
-    parsedRecipe.ingredients.map((ingredient) => ingredient.name),
+    finalParsedRecipe.ingredients.map((ingredient) => ingredient.name),
   );
   if (ingredientLookup.error) {
     return fail("INTERNAL_ERROR", "재료 정보를 확인하지 못했어요.", 500);
   }
 
-  const cookingMethodResult = await resolveCookingMethodsForSteps(dbClient, parsedRecipe.steps);
+  const cookingMethodResult = await resolveCookingMethodsForSteps(dbClient, finalParsedRecipe.steps);
   if (cookingMethodResult.error || !cookingMethodResult.fallbackMethod) {
     return fail("INTERNAL_ERROR", "조리방법을 준비하지 못했어요.", 500);
   }
 
-  const ingredients = buildExtractedIngredients(ingredientLookup.matchesByName, parsedRecipe.ingredients, {
+  const ingredients = buildExtractedIngredients(ingredientLookup.matchesByName, finalParsedRecipe.ingredients, {
     saltNeedsReview: parsedUrl.videoId.startsWith("needsreview"),
   });
   const steps = buildExtractedSteps(
-    parsedRecipe.steps,
+    finalParsedRecipe.steps,
     cookingMethodResult.methods,
     cookingMethodResult.fallbackMethod,
     {
       includeIncompleteFallback: descriptionParse.includeIncompleteStepFallback,
     },
   );
+  const extractionMethods = transcriptFallback.usedTranscript
+    ? [...DEFAULT_EXTRACTION_METHODS, "caption"]
+    : [...DEFAULT_EXTRACTION_METHODS];
+  const sourceProviders = transcriptFallback.usedTranscript
+    ? ["youtube_videos_list", "description_parser", "transcript_provider", "transcript_step_parser"]
+    : ["youtube_videos_list", "description_parser"];
   const blockingIssues = [
     ...descriptionParse.blockingIssues,
     ...buildBlockingIssues(ingredients),
@@ -1772,7 +2103,7 @@ export async function handleYoutubeExtract(request: Request) {
     extraction_id: extractionId,
     title: video.title,
     base_servings: 2,
-    extraction_methods: [...DEFAULT_EXTRACTION_METHODS],
+    extraction_methods: extractionMethods,
     draft_warnings: draftWarnings,
     blocking_issues: blockingIssues,
     ingredients,
@@ -1789,23 +2120,25 @@ export async function handleYoutubeExtract(request: Request) {
     channel_title: video.channel,
     thumbnail_url: video.thumbnailUrl,
     provider_version: YOUTUBE_PROVIDER_VERSION,
-    source_providers: ["youtube_videos_list", "description_parser"],
+    source_providers: sourceProviders,
     classification_status: classification.status,
     classification_reasons: classification.reasons,
-    raw_source_text: video.description,
+    raw_source_text: buildRawSourceText(video.description, transcriptFallback.rawTranscriptText),
     extraction_meta_json: {
       provider_version: YOUTUBE_PROVIDER_VERSION,
-      source_providers: ["youtube_videos_list", "description_parser"],
+      source_providers: sourceProviders,
       classification_status: classification.status,
       classification_reasons: classification.reasons,
       description_parser_version: descriptionParse.parserVersion,
       description_parser_selection_outcome: descriptionParse.selectionOutcome,
       description_parser_shadow: descriptionParse.shadowResult,
       draft_warnings: draftWarnings,
-      caption_capability: "unknown",
+      caption_capability: transcriptFallback.meta.capability,
+      transcript_provider: transcriptFallback.meta,
+      partial_extraction: finalParsedRecipe.ingredients.length > 0 && finalParsedRecipe.steps.length === 0,
     },
     draft_json: data as unknown as Record<string, unknown>,
-    extraction_methods: [...DEFAULT_EXTRACTION_METHODS],
+    extraction_methods: extractionMethods,
     status: "draft",
     expires_at: buildSessionExpiresAt(),
   });
