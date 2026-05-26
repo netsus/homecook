@@ -18,7 +18,7 @@ Admin Foundation Stage 4 implemented the first internal `/admin` UI:
 - full ESLint — 0 errors, 5 pre-existing `.omx/artifacts/*.mjs` warnings
 - `next build` — passed
 - `git diff --check` — passed
-- `qa:eval --checklist ui/designs/evidence/admin-foundation/exploratory-checklist.json --report ui/designs/evidence/admin-foundation/exploratory-report.json` — score 100, passed
+- `qa:eval --checklist ui/designs/evidence/admin-foundation/exploratory-checklist.json --report ui/designs/evidence/admin-foundation/exploratory-report.json` — `eval-result.json`, score 100, passed
 
 ## Browser Smoke
 
@@ -27,7 +27,7 @@ Browser smoke used the production build on `http://127.0.0.1:3001` with mocked A
 - Report: `ui/designs/evidence/admin-foundation/stage4-browser-smoke.json`
 - Exploratory QA checklist: `ui/designs/evidence/admin-foundation/exploratory-checklist.json`
 - Exploratory QA report: `ui/designs/evidence/admin-foundation/exploratory-report.json`
-- QA eval result: `ui/designs/evidence/admin-foundation/qa-eval-result.json`
+- QA eval result: `ui/designs/evidence/admin-foundation/eval-result.json`
 - Result: pass
 - Console errors: 0
 - Page errors: 0
