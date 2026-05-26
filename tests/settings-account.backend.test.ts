@@ -329,7 +329,9 @@ describe("17c settings/account backend", () => {
     });
 
     const { DELETE } = await importUsersMeRoute();
-    const response = await DELETE();
+    const response = await DELETE(
+      new Request("http://localhost:3000/api/v1/users/me", { method: "DELETE" }),
+    );
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -355,7 +357,9 @@ describe("17c settings/account backend", () => {
     });
 
     const { DELETE } = await importUsersMeRoute();
-    const response = await DELETE();
+    const response = await DELETE(
+      new Request("http://localhost:3000/api/v1/users/me", { method: "DELETE" }),
+    );
     const body = await response.json();
 
     expect(response.status).toBe(500);
@@ -406,7 +410,9 @@ describe("17c settings/account backend", () => {
         body: JSON.stringify({ nickname: "새집밥러" }),
       }),
     );
-    const deleteResponse = await usersMeRoute.DELETE();
+    const deleteResponse = await usersMeRoute.DELETE(
+      new Request("http://localhost:3000/api/v1/users/me", { method: "DELETE" }),
+    );
 
     await expect(settingsResponse.json()).resolves.toMatchObject({
       success: false,

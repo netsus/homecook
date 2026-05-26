@@ -5,6 +5,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import { recordOperationalEvent, type OperationalEventsDbClient } from "@/lib/server/admin-events";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { UserDeleteData, UserProfileData } from "@/types/user";
 
@@ -206,7 +207,7 @@ export async function PATCH(request: Request) {
   return ok(toUserProfileData(updateResult.data));
 }
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
   const routeClient = await createRouteHandlerClient();
   const authResult = await routeClient.auth.getUser();
   const user = authResult.data.user;
@@ -215,15 +216,39 @@ export async function DELETE() {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as UsersMeDeleteDbClient;
+  const serviceRoleClient = createServiceRoleClient();
+  const dbClient = (serviceRoleClient ?? routeClient) as unknown as UsersMeDeleteDbClient;
 
   const deleteResult = await dbClient.rpc("delete_user_private_data", {
     p_user_id: user.id,
   });
 
   if (deleteResult.error || !deleteResult.data?.deleted) {
+    await recordOperationalEvent(serviceRoleClient as unknown as OperationalEventsDbClient | null, {
+      event_type: "account_delete_failure",
+      severity: "error",
+      source: "account",
+      actor_user_id: user.id,
+      target_user_id: user.id,
+      request,
+      http_status: 500,
+      error_code: "ACCOUNT_DELETE_FAILED",
+      message_summary: "Account deletion failed",
+    });
+
     return fail("INTERNAL_ERROR", "회원 탈퇴를 처리하지 못했어요.", 500);
   }
+
+  await recordOperationalEvent(serviceRoleClient as unknown as OperationalEventsDbClient | null, {
+    event_type: "account_delete_success",
+    severity: "info",
+    source: "account",
+    actor_user_id: user.id,
+    target_user_id: user.id,
+    request,
+    http_status: 200,
+    message_summary: "Account deletion completed",
+  });
 
   return ok<UserDeleteData>({ deleted: true });
 }

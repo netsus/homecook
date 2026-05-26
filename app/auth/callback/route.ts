@@ -11,6 +11,7 @@ import {
   ensureUserBootstrapState,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 function getFailurePath(nextPath: string) {
@@ -33,6 +34,18 @@ function clearPostAuthNextCookie(response: NextResponse) {
   return response;
 }
 
+async function recordAuthFailure(request: Request, errorCode: string) {
+  await recordOperationalEventFromServiceRole({
+    event_type: "auth_failure",
+    severity: "warn",
+    source: "auth",
+    request,
+    http_status: 401,
+    error_code: errorCode,
+    message_summary: "OAuth callback authentication failed",
+  });
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
@@ -45,6 +58,7 @@ export async function GET(request: Request) {
 
   if (!code) {
     if (oauthError) {
+      await recordAuthFailure(request, "OAUTH_PROVIDER_ERROR");
       return clearPostAuthNextCookie(
         NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
       );
@@ -61,6 +75,7 @@ export async function GET(request: Request) {
     const redirectUrl = new URL(nextPath, requestUrl.origin);
 
     if (error) {
+      await recordAuthFailure(request, "OAUTH_EXCHANGE_FAILED");
       return clearPostAuthNextCookie(
         NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
       );
@@ -70,6 +85,7 @@ export async function GET(request: Request) {
     const user = authResult.data.user;
 
     if (!user) {
+      await recordAuthFailure(request, "OAUTH_USER_MISSING");
       return clearPostAuthNextCookie(
         NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
       );
@@ -81,6 +97,7 @@ export async function GET(request: Request) {
 
     return clearPostAuthNextCookie(NextResponse.redirect(redirectUrl));
   } catch {
+    await recordAuthFailure(request, "OAUTH_CALLBACK_UNHANDLED");
     return clearPostAuthNextCookie(
       NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
     );
