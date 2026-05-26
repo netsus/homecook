@@ -1,17 +1,34 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.1.md`
-- `docs/화면정의서-v1.5.8.md`
-- `docs/유저flow맵-v1.3.8.md`
-- `docs/db설계-v1.3.7.md`
-- `docs/api문서-v1.2.11.md`
+- `docs/요구사항기준선-v1.7.2.md`
+- `docs/화면정의서-v1.5.9.md`
+- `docs/유저flow맵-v1.3.9.md`
+- `docs/db설계-v1.3.8.md`
+- `docs/api문서-v1.2.12.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## v1.7.1 / v1.5.8 / v1.3.8 / DB v1.3.7 / API v1.2.11 → v1.7.2 / v1.5.9 / v1.3.9 / DB v1.3.8 / API v1.2.12 변경 이력 (2026-05-27)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.2 | §1-11 내부 운영 관리 (Admin Foundation) 추가: 읽기 전용 MVP 범위, admin_members 기반 접근 제어, PII 최소화, 운영 이벤트/감사 로깅 정책. §2-14 관리자 접근 정책 추가 |
+| 화면정의서 v1.5.9 | Admin Foundation 화면 4종 추가: ADMIN_DASHBOARD, ADMIN_USERS, ADMIN_EVENTS, ADMIN_AUDIT_LOGS. 각 화면 loading/empty/error/read-only/unauthorized/forbidden(403) 상태 정의 |
+| 유저플로우 v1.3.9 | ⑫ 내부 운영 관리 플로우 추가: 관리 대시보드 진입, 사용자 목록 조회, 운영 이벤트 조회, 감사 로그 조회. 화면↔여정 매핑 테이블에 Admin 4화면 추가 |
+| DB v1.3.8 | §12 Admin Foundation 테이블 3종 추가: admin_members (관리자 신원), operational_events (시스템 운영 이벤트), admin_audit_logs (관리자 감사 로그). service-role 전용 RLS, 인덱스 정의 |
+| API v1.2.12 | Admin Foundation 엔드포인트 3종 추가: `GET /api/v1/admin/users`, `GET /api/v1/admin/operational-events`, `GET /api/v1/admin/audit-logs`. createServiceRoleClient() 필수, 감사 로그 기록, PII 최소화. 엔드포인트 수 55 → 58 |
+
+> 이 변경은 Admin Foundation (내부 운영 관리 기반) contract-evolution이다.
+> 런칭 초기 운영에 필요한 최소한의 내부 관리 기반을 공식 문서 5종에 추가한다.
+> MVP 범위는 읽기 전용이며, 파괴적 관리 동작(사용자 정지·삭제·수정, 레시피 삭제 등)은 scope 밖이다.
+> 모든 admin API는 `createServiceRoleClient()` 필수, `routeClient` 폴백 금지, service-role 부재 시 fail closed.
+> admin_members 최초 등록은 Supabase SQL/service-role로 직접 수행하며, 환경변수 허용목록 우회 없음.
+> 구현(Stage 2)은 별도 Stage 1 workpack/acceptance re-lock PR이 main에 merge되고 pending recheck가 해소될 때까지 시작하지 않는다.
 
 ## v1.7.0 / v1.5.7 / v1.3.7 / DB v1.3.6 / API v1.2.10 → v1.7.1 / v1.5.8 / v1.3.8 / DB v1.3.7 / API v1.2.11 변경 이력 (2026-05-25)
 
