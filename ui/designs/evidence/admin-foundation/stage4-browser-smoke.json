@@ -1,0 +1,151 @@
+{
+  "baseUrl": "http://127.0.0.1:3001",
+  "capturedAt": "2026-05-26T22:08:50.349Z",
+  "consoleErrors": [],
+  "pageErrors": [],
+  "results": [
+    {
+      "label": "ADMIN_DASHBOARD-mobile",
+      "url": "/admin",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false,
+      "containsRawEmail": false,
+      "containsYoutubeUrl": false
+    },
+    {
+      "label": "ADMIN_USERS-mobile",
+      "url": "/admin/users",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false,
+      "containsRawEmail": false,
+      "containsYoutubeUrl": false
+    },
+    {
+      "label": "ADMIN_EVENTS-mobile",
+      "url": "/admin/events",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false,
+      "containsRawEmail": false,
+      "containsYoutubeUrl": false
+    },
+    {
+      "label": "ADMIN_AUDIT_LOGS-mobile",
+      "url": "/admin/audit-logs",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false,
+      "containsRawEmail": false,
+      "containsYoutubeUrl": false
+    },
+    {
+      "label": "ADMIN_USERS-mobile-narrow",
+      "url": "/admin/users",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "overflow": false,
+      "containsRawEmail": false,
+      "containsYoutubeUrl": false
+    },
+    {
+      "label": "ADMIN_EVENTS-mobile-narrow",
+      "url": "/admin/events",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "overflow": false,
+      "containsRawEmail": false,
+      "containsYoutubeUrl": false
+    },
+    {
+      "label": "ADMIN_AUDIT_LOGS-mobile-narrow",
+      "url": "/admin/audit-logs",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "overflow": false,
+      "containsRawEmail": false,
+      "containsYoutubeUrl": false
+    },
+    {
+      "label": "ADMIN_DASHBOARD-desktop",
+      "url": "/admin",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "overflow": false,
+      "containsRawEmail": false,
+      "containsYoutubeUrl": false
+    },
+    {
+      "label": "ADMIN_USERS-desktop",
+      "url": "/admin/users",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "overflow": false,
+      "containsRawEmail": false,
+      "containsYoutubeUrl": false
+    },
+    {
+      "label": "ADMIN_EVENTS-desktop",
+      "url": "/admin/events",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "overflow": false,
+      "containsRawEmail": false,
+      "containsYoutubeUrl": false
+    },
+    {
+      "label": "ADMIN_AUDIT_LOGS-desktop",
+      "url": "/admin/audit-logs",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "overflow": false,
+      "containsRawEmail": false,
+      "containsYoutubeUrl": false
+    },
+    {
+      "label": "ADMIN_UNAUTHORIZED-mobile",
+      "url": "/admin",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false,
+      "containsRawEmail": false,
+      "containsYoutubeUrl": false
+    },
+    {
+      "label": "ADMIN_FORBIDDEN-mobile",
+      "url": "/admin",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false,
+      "containsForbiddenCopy": true
+    }
+  ],
+  "pass": true
+}

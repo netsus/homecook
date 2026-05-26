@@ -163,8 +163,8 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [ ] 리뷰 대기 (pending-review)
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [x] 리뷰 대기 (pending-review)
 - [ ] 확정 (confirmed)
 - [ ] N/A
 
@@ -179,6 +179,7 @@
 - `.omx/plans/admin-foundation-ralplan-20260526.md`
 - `docs/workpacks/admin-foundation/backend-smoke.md`
 - `docs/workpacks/admin-foundation/stage3-backend-review.md`
+- `docs/workpacks/admin-foundation/stage4-frontend-qa.md`
 
 ## QA / Test Data Plan
 - **fixture baseline**: `admin_members` row 1건, 일반 사용자 row 다수, `operational_events` 샘플, `admin_audit_logs` 샘플
@@ -219,18 +220,18 @@
 - [x] 백엔드 계약 고정 (admin guard, service role fail-closed, 3 read APIs) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 연결 (GET /admin/users, /admin/operational-events, /admin/audit-logs) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 (AdminUser, OperationalEvent, AdminAuditLog 타입) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 (ADMIN_DASHBOARD, ADMIN_USERS, ADMIN_EVENTS, ADMIN_AUDIT_LOGS) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 (ADMIN_DASHBOARD, ADMIN_USERS, ADMIN_EVENTS, ADMIN_AUDIT_LOGS) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 (401/403/500 fail-closed, audit write) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 (admin bootstrap SQL) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] loading / empty / error / read-only / unauthorized 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] loading / empty / error / read-only / unauthorized 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 - [x] migration 파일 생성 (admin_members, operational_events, admin_audit_logs) <!-- omo:id=delivery-migration;stage=2;scope=backend;review=3,6 -->
 - [x] recordOperationalEvent 헬퍼 연결 (최소 이벤트 소스 5종) <!-- omo:id=delivery-operational-event-helper;stage=2;scope=backend;review=3,6 -->
 - [x] recordAdminAudit 헬퍼 연결 (모든 admin API + /admin 진입) <!-- omo:id=delivery-admin-audit-helper;stage=2;scope=backend;review=3,6 -->
 - [x] 로그 sanitizer (pathname-only, PII 제거) <!-- omo:id=delivery-log-sanitizer;stage=2;scope=backend;review=3,6 -->
 - [x] real DB smoke 절차 준비 + deterministic migration/bootstrap/fail-closed 검증 <!-- omo:id=delivery-real-db-smoke;stage=2;scope=backend;review=3,6 -->
 - [x] Stage 3 Claude backend review 완료 <!-- omo:id=delivery-stage3-backend-review;stage=3;scope=backend;review=6 -->
-- [ ] Design Authority evidence (Stage 4 screenshots) <!-- omo:id=delivery-design-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] exploratory QA + qa:eval <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=6 -->
+- [x] Design Authority evidence (Stage 4 screenshots) <!-- omo:id=delivery-design-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] exploratory QA + qa:eval <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=6 -->
