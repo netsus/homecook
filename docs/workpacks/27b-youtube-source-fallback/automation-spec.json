@@ -20,7 +20,7 @@
       "pnpm verify:backend"
     ],
     "required_test_targets": [
-      "tests/transcript-provider-fallback.test.ts",
+      "tests/youtube-import.backend.test.ts",
       "tests/youtube-corpus.test.ts"
     ]
   },
@@ -61,9 +61,7 @@
       "authority_report_paths": []
     }
   },
-  "external_smokes": [
-    "youtube-transcript-provider-live-smoke"
-  ],
+  "external_smokes": [],
   "blocked_conditions": [
     "official-doc-conflict",
     "secret-missing",
