@@ -1,0 +1,107 @@
+{
+  "slice_id": "admin-foundation",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/admin/users",
+      "GET /api/v1/admin/operational-events",
+      "GET /api/v1/admin/audit-logs"
+    ],
+    "invariants": [
+      "admin-members-identity-guard",
+      "service-role-only-no-route-client-fallback",
+      "service-role-fail-closed",
+      "guest-401-non-admin-403",
+      "audit-on-every-admin-read",
+      "admin-page-view-audit-before-render",
+      "audit-fail-closed",
+      "pathname-only-request-path",
+      "pii-minimization-masked-email-counts-only",
+      "no-oauth-token-youtube-url-search-term-in-logs",
+      "read-only-no-destructive-actions",
+      "no-env-allowlist-bypass",
+      "user-search-audit-no-search-term"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/admin-foundation.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/admin",
+      "/admin/users",
+      "/admin/events",
+      "/admin/audit-logs"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "new-screen",
+      "anchor_screens": [],
+      "required_screens": [
+        "ADMIN_DASHBOARD",
+        "ADMIN_USERS",
+        "ADMIN_EVENTS",
+        "ADMIN_AUDIT_LOGS"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/ADMIN_DASHBOARD.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/ADMIN_DASHBOARD-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "screenshot:ADMIN_DASHBOARD",
+        "screenshot:ADMIN_USERS",
+        "screenshot:ADMIN_EVENTS",
+        "screenshot:ADMIN_AUDIT_LOGS"
+      ],
+      "authority_report_paths": [
+        "ui/designs/ADMIN_DASHBOARD.md",
+        "ui/designs/ADMIN_USERS.md",
+        "ui/designs/ADMIN_EVENTS.md",
+        "ui/designs/ADMIN_AUDIT_LOGS.md",
+        "ui/designs/critiques/ADMIN_DASHBOARD-critique.md",
+        "ui/designs/critiques/ADMIN_USERS-critique.md",
+        "ui/designs/critiques/ADMIN_EVENTS-critique.md",
+        "ui/designs/critiques/ADMIN_AUDIT_LOGS-critique.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "local-supabase-migration-admin-tables",
+    "admin-bootstrap-sql-service-role",
+    "service-role-missing-fail-closed"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "secret-missing",
+    "service-role-key-absent"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
