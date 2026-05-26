@@ -34,8 +34,6 @@
 | [전체 ▾]  [전체 ▾]  [전체 ▾]         |  <- 필터 칩 행
 |  유형      심각도    소스              |     text-sm, --text-2
 |                                       |
-| 기간: [시작일] ~ [종료일]             |  <- 날짜 범위 필터
-|                                       |     text-sm, --text-2
 |  총 42건                              |  <- 결과 카운트, text-sm, --text-3
 |                                       |
 | +-----------------------------------+ |  <- 이벤트 카드 (모바일)
@@ -65,8 +63,7 @@
 |  대시보드  사용자  이벤트  감사로그                               |
 +===================================================================+
 |                                                                   |
-|  유형: [전체▾]  심각도: [전체▾]  소스: [전체▾]  기간: [ ]~[ ]    |
-|                                                       총 42건     |
+|  유형: [전체▾]  심각도: [전체▾]  소스: [전체▾]        총 42건     |
 |                                                                   |
 | +---------------------------------------------------------------+ |
 | | 유형            | 심각도 | 소스  | 경로            | 요약     | |
@@ -139,7 +136,7 @@
 
 ### FilterBar (필터 바)
 
-- **레이아웃**: 칩형 드롭다운 행 + 날짜 범위 행
+- **레이아웃**: 칩형 드롭다운 행. 현재 Admin API 계약은 날짜 범위 필터를 제공하지 않으므로 기간 입력은 두지 않는다.
 - **칩 드롭다운** (event_type, severity, source):
   - 라벨: text-xs, 600, --text-3
   - 선택값: text-sm, 500, --text-2
@@ -148,12 +145,6 @@
   - 패딩: --space-2 (8px) 수평
   - 터치 타겟: 44px 높이
   - 간격: --space-2 (8px)
-- **날짜 범위**:
-  - 라벨: "기간:", text-sm, 400, --text-3
-  - 입력: text-sm, 400, --text-2
-  - 구분자: "~", --text-3
-  - 입력 배경: --surface-fill, --radius-sm (8px)
-  - 터치 타겟: 44px 높이
 - **결과 카운트**: text-sm, --text-3, 우측 정렬
 - **수평 여백**: --space-4 (16px) 양쪽
 - **토큰 힌트**:
@@ -318,7 +309,6 @@
 | 유형 필터 | 드롭다운 선택 | 해당 event_type만 필터링, page 1 리셋 | GET /admin/operational-events?event_type=... | admin |
 | 심각도 필터 | 드롭다운 선택 | 해당 severity만 필터링 | GET /admin/operational-events?severity=... | admin |
 | 소스 필터 | 드롭다운 선택 | 해당 source만 필터링 | GET /admin/operational-events?source=... | admin |
-| 날짜 범위 필터 | 시작일/종료일 입력 | ISO 8601 범위 필터링 | GET /admin/operational-events?from=...&to=... | admin |
 | 페이지 이동 | 페이지 번호 또는 화살표 탭 | 해당 페이지 조회 | GET /admin/operational-events?page=N | admin |
 
 ### 스크롤 정책
@@ -337,7 +327,6 @@
 ## 320px 대응 (작은 모바일 sentinel)
 
 - **필터 칩 행**: 3개 칩이 320px에서 넘칠 수 있음 → 2행 wrap 허용, 또는 overflow-x auto
-- **날짜 범위**: 시작일/종료일이 좁아지면 날짜 선택기(date picker)로 대체 가능
 - **이벤트 카드**: 카드 패딩 --space-3 → --space-2 축소. message_summary 1행 말줄임
 - **request_path**: pathname이 길면 말줄임 (`/api/v1/auth/call...`)
 
@@ -388,19 +377,18 @@
 ## 접근성 노트
 
 - **필터 칩**: 각 `role="combobox"` 또는 `<select>`, 라벨 `aria-label`
-- **날짜 입력**: `type="date"`, `aria-label="시작일"` / `aria-label="종료일"`
 - **이벤트 카드**: `role="article"`, SeverityPill에 `aria-label="심각도: warn"` 등
 - **테이블**: `role="table"`, 헤더 `role="columnheader"`
 - **결과 카운트**: `aria-live="polite"`
 - **색상 대비**: SeverityPill warn (#E65100 on #FFF3E0) = 5.2:1 (AA 통과), error (#C62828 on #FFEBEE) = 7.1:1 (AA 통과)
-- **터치 타겟**: 필터 칩 44px, 날짜 입력 44px, 페이지네이션 44x44px
+- **터치 타겟**: 필터 칩 44px, 페이지네이션 44x44px
 
 ---
 
 ## design-critic 검토 필요 항목
 
 - [ ] 심각도 시멘틱 컬러(amber/red)가 기존 디자인 토큰과 조화로운지
-- [ ] 필터 칩 3개 + 날짜 범위가 모바일 첫 화면에서 과도한 공간을 차지하지 않는지
+- [ ] 필터 칩 3개가 모바일 첫 화면에서 과도한 공간을 차지하지 않는지
 - [ ] EventDetailPanel 확장 시 카드 높이 변화가 목록 스크롤에 어색하지 않은지
 - [ ] sanitized metadata_json의 key-value가 320px에서도 읽히는지
 - [ ] request_path가 pathname-only임을 사용자(관리자)가 자연스럽게 인지하는지
