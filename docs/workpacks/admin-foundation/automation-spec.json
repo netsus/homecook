@@ -73,10 +73,10 @@
       "critic_artifact": "ui/designs/critiques/ADMIN_DASHBOARD-critique.md",
       "authority_required": true,
       "stage4_evidence_requirements": [
-        "screenshot:ADMIN_DASHBOARD",
-        "screenshot:ADMIN_USERS",
-        "screenshot:ADMIN_EVENTS",
-        "screenshot:ADMIN_AUDIT_LOGS"
+        "ADMIN_DASHBOARD",
+        "ADMIN_USERS",
+        "ADMIN_EVENTS",
+        "ADMIN_AUDIT_LOGS"
       ],
       "authority_report_paths": [
         "ui/designs/ADMIN_DASHBOARD.md",

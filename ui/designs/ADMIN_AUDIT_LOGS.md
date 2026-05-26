@@ -3,6 +3,10 @@
 > 기준 문서: 화면정의서 v1.5.9 SS 24 / 요구사항 v1.7.2 SS 1-11, 2-14 / 유저플로우 v1.3.9 SS 12 / api문서 v1.2.12 GET /api/v1/admin/audit-logs
 > 슬라이스: admin-foundation
 > 생성일: 2026-05-27
+> evidence:
+> - `ui/designs/evidence/admin-foundation/ADMIN_AUDIT_LOGS-mobile.png`
+> - `ui/designs/evidence/admin-foundation/ADMIN_AUDIT_LOGS-mobile-narrow.png`
+> - `ui/designs/evidence/admin-foundation/ADMIN_AUDIT_LOGS-desktop.png`
 
 ---
 
