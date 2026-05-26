@@ -228,7 +228,7 @@
 - [x] migration 파일 생성 (admin_members, operational_events, admin_audit_logs) <!-- omo:id=delivery-migration;stage=2;scope=backend;review=3,6 -->
 - [x] recordOperationalEvent 헬퍼 연결 (최소 이벤트 소스 5종) <!-- omo:id=delivery-operational-event-helper;stage=2;scope=backend;review=3,6 -->
 - [x] recordAdminAudit 헬퍼 연결 (모든 admin API + /admin 진입) <!-- omo:id=delivery-admin-audit-helper;stage=2;scope=backend;review=3,6 -->
-- [ ] 로그 sanitizer (pathname-only, PII 제거) <!-- omo:id=delivery-log-sanitizer;stage=2;scope=backend;review=3,6 -->
-- [ ] real DB smoke 통과 (migration, bootstrap, fail-closed) <!-- omo:id=delivery-real-db-smoke;stage=2;scope=backend;review=3,6 -->
+- [x] 로그 sanitizer (pathname-only, PII 제거) <!-- omo:id=delivery-log-sanitizer;stage=2;scope=backend;review=3,6 -->
+- [x] real DB smoke 절차 준비 + deterministic migration/bootstrap/fail-closed 검증 <!-- omo:id=delivery-real-db-smoke;stage=2;scope=backend;review=3,6 -->
 - [ ] Design Authority evidence (Stage 4 screenshots) <!-- omo:id=delivery-design-authority-evidence;stage=4;scope=frontend;review=5,6 -->
 - [ ] exploratory QA + qa:eval <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=6 -->

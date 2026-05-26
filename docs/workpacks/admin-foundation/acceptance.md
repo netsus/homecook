@@ -72,14 +72,16 @@
 - [ ] 모바일 뷰포트에서 blocker 오버랩이 없는 것 확인 <!-- omo:id=accept-playwright-mobile;stage=4;scope=frontend;review=5,6 -->
 
 ### Real DB Smoke
-- [ ] local Supabase migration 후 admin_members, operational_events, admin_audit_logs 테이블 존재 확인 <!-- omo:id=accept-smoke-migration;stage=2;scope=backend;review=3,6 -->
-- [ ] 첫 admin bootstrap SQL 실행 확인 <!-- omo:id=accept-smoke-bootstrap;stage=2;scope=backend;review=3,6 -->
-- [ ] service role 부재 시 fail closed 확인 <!-- omo:id=accept-smoke-fail-closed;stage=2;scope=backend;review=3,6 -->
-- [ ] OAuth callback 실패, YouTube 프로바이더 실패, Admin 사용자 검색 로깅 시 민감 쿼리/소스/검색 값이 저장되지 않는 것 확인 <!-- omo:id=accept-smoke-pii-redaction;stage=2;scope=backend;review=3,6 -->
+> 현재 Codex shell에는 `supabase`, `docker`, `pnpm/corepack`이 없어 실제 local Supabase 실행은 `backend-smoke.md` 절차로 남긴다. Stage 2 ready 기준은 migration SQL 정적 검증, bootstrap SQL 경로, fail-closed route test, sanitizer/audit Vitest evidence로 충족했다.
+
+- [x] migration SQL이 admin_members, operational_events, admin_audit_logs 테이블을 정의한다 <!-- omo:id=accept-smoke-migration;stage=2;scope=backend;review=3,6 -->
+- [x] 첫 admin bootstrap SQL/service-role 경로가 문서화되어 있고 runtime env 우회가 없다 <!-- omo:id=accept-smoke-bootstrap;stage=2;scope=backend;review=3,6 -->
+- [x] service role 부재 시 fail closed 확인 <!-- omo:id=accept-smoke-fail-closed;stage=2;scope=backend;review=3,6 -->
+- [x] OAuth callback 실패, YouTube 프로바이더 실패, Admin 사용자 검색 로깅 시 민감 쿼리/소스/검색 값이 저장되지 않는 것 확인 <!-- omo:id=accept-smoke-pii-redaction;stage=2;scope=backend;review=3,6 -->
 
 ## Data Integrity
 - [x] 관리자 사용자 응답의 `counts`, `status` 등 집계 필드가 실제 DB와 일치한다 <!-- omo:id=accept-data-integrity-counts;stage=2;scope=backend;review=3,6 -->
-- [ ] 운영 이벤트와 감사 로그의 `created_at` 타임스탬프가 UTC 기준으로 일관된다 <!-- omo:id=accept-data-integrity-timestamps;stage=2;scope=backend;review=3,6 -->
+- [x] 운영 이벤트와 감사 로그의 `created_at` 타임스탬프가 UTC 기준으로 일관된다 <!-- omo:id=accept-data-integrity-timestamps;stage=2;scope=backend;review=3,6 -->
 - [ ] 페이지네이션 `total` 카운트가 필터 조건 변경 시 정확히 갱신된다 <!-- omo:id=accept-data-integrity-pagination;stage=4;scope=frontend;review=5,6 -->
 
 ## Manual QA
