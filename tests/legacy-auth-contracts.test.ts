@@ -17,11 +17,14 @@ describe("legacy auth API contract cleanup", () => {
 
   it("documents the profile replacement through the users/me API in the current contract", () => {
     const sourceOfTruth = read("docs/sync/CURRENT_SOURCE_OF_TRUTH.md");
-    expect(sourceOfTruth).toContain("docs/api문서-v1.2.11.md");
+    const apiDocMatch = sourceOfTruth.match(/`(docs\/api문서-v[\d.]+\.md)`/);
+    expect(apiDocMatch?.[1]).toBeTruthy();
 
-    const apiDoc = read("docs/api문서-v1.2.11.md");
+    const apiDocPath = apiDocMatch?.[1] ?? "";
+    const apiVersion = apiDocPath.match(/v[0-9]+(?:\.[0-9]+)*/)?.[0] ?? "";
+    const apiDoc = read(apiDocPath);
     const endpointList = apiDoc.slice(apiDoc.indexOf("## 엔드포인트 전체 목록"));
-    const endpointTable = endpointList.split("\n> **v1.2.11 총계**")[0];
+    const endpointTable = endpointList.split(`\n> **${apiVersion} 총계**`)[0];
 
     expect(endpointTable).not.toContain("/auth/login");
     expect(endpointTable).not.toContain("/auth/profile");
