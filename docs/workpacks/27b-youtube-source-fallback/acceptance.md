@@ -28,22 +28,22 @@
 - [x] Provider 미가용 시 `extraction_methods`는 `["description"]`만 포함한다 (caption을 거짓으로 포함하지 않음) <!-- omo:id=accept-no-provider-methods-honest;stage=2;scope=backend;review=3,6 -->
 - [x] Provider 미가용 시 `extraction_meta_json`에 provider 상태가 기록된다 (no_provider / disabled / error 등) <!-- omo:id=accept-no-provider-meta-recorded;stage=2;scope=backend;review=3,6 -->
 - [x] Provider adapter가 no-op인 경우에도 부분 draft가 세션에 저장되고 사용자가 검수할 수 있다 <!-- omo:id=accept-no-provider-draft-saved;stage=2;scope=backend;review=3,6 -->
-- [ ] UI에서 caption fallback이 발생하지 않았음을 pretend하지 않는다 (description-only 결과를 그대로 표시) <!-- omo:id=accept-no-provider-ui-honest;stage=4;scope=frontend;review=5,6 -->
-- [ ] Provider 미가용 시 사용자에게 step 수동 추가를 안내하는 UX가 동작한다 ("조리 과정을 직접 입력해주세요") <!-- omo:id=accept-no-provider-manual-guidance;stage=4;scope=frontend;review=5,6 -->
+- [x] UI에서 caption fallback이 발생하지 않았음을 pretend하지 않는다 (description-only 결과를 그대로 표시) <!-- omo:id=accept-no-provider-ui-honest;stage=4;scope=frontend;review=5,6 -->
+- [x] Provider 미가용 시 사용자에게 step 수동 추가를 안내하는 UX가 동작한다 ("조리 과정을 직접 입력해주세요") <!-- omo:id=accept-no-provider-manual-guidance;stage=4;scope=frontend;review=5,6 -->
 
 ## Partial Draft UX
 
 - [x] 재료는 있지만 step이 없는 부분 추출 draft가 세션에 저장된다 <!-- omo:id=accept-partial-draft-save;stage=2;scope=backend;review=3,6 -->
-- [ ] 검수 화면에서 부분 추출 안내 메시지가 표시된다 ("조리 과정을 직접 입력해주세요") <!-- omo:id=accept-partial-draft-guidance;stage=4;scope=frontend;review=5,6 -->
-- [ ] 부분 추출 상태에서 사용자가 step을 수동 추가하면 등록 활성화 조건을 만족할 수 있다 <!-- omo:id=accept-partial-manual-step-add;stage=4;scope=frontend;review=5,6 -->
-- [ ] `extraction_methods` 배열이 검수 화면에서 표시된다 (실제 사용된 소스만) <!-- omo:id=accept-extraction-methods-display;stage=4;scope=frontend;review=5,6 -->
+- [x] 검수 화면에서 부분 추출 안내 메시지가 표시된다 ("조리 과정을 직접 입력해주세요") <!-- omo:id=accept-partial-draft-guidance;stage=4;scope=frontend;review=5,6 -->
+- [x] 부분 추출 상태에서 사용자가 step을 수동 추가하면 등록 활성화 조건을 만족할 수 있다 <!-- omo:id=accept-partial-manual-step-add;stage=4;scope=frontend;review=5,6 -->
+- [x] `extraction_methods` 배열이 검수 화면에서 표시된다 (실제 사용된 소스만) <!-- omo:id=accept-extraction-methods-display;stage=4;scope=frontend;review=5,6 -->
 
 ## Happy Path
 
-- [ ] Transcript provider 가용 영상: 재료(description) + 조리 과정(transcript) 추출 → 검수 → 등록 full flow 동작 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
-- [ ] Provider 미가용 영상: 재료(description) 추출 → 부분 draft 안내 → 사용자 step 입력 → 등록 full flow 동작 <!-- omo:id=accept-happy-path-no-provider;stage=4;scope=frontend;review=5,6 -->
+- [x] Transcript provider 가용 영상: 재료(description) + 조리 과정(transcript) 추출 → 검수 → 등록 full flow 동작 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
+- [x] Provider 미가용 영상: 재료(description) 추출 → 부분 draft 안내 → 사용자 step 입력 → 등록 full flow 동작 <!-- omo:id=accept-happy-path-no-provider;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 
@@ -55,13 +55,13 @@
 
 ## Error / Permission
 
-- [ ] loading 상태가 있다 (ExtractionProgressStep: transcript fallback 시도 포함) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태가 있다 (재료/과정 모두 없음 → 기존 메시지 유지) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 있다 (추출 실패 → ExtractionErrorStep 유지) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 있다 (401 → 로그인 게이트) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] conflict 처리 흐름이 있다 (409 consumed/mismatch → error modal) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
-- [ ] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
-- [ ] 세션 만료(410) 처리가 올바르다 <!-- omo:id=accept-session-expired;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 (ExtractionProgressStep: transcript fallback 시도 포함) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태가 있다 (재료/과정 모두 없음 → 기존 메시지 유지) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 (추출 실패 → ExtractionErrorStep 유지) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 있다 (401 → 로그인 게이트) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] conflict 처리 흐름이 있다 (409 consumed/mismatch → error modal) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
+- [x] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] 세션 만료(410) 처리가 올바르다 <!-- omo:id=accept-session-expired;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
@@ -106,10 +106,10 @@
 - [x] 기존 corpus regression 하네스 통과 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
 
 ### Playwright
-- [ ] Transcript fallback full flow E2E: 재료(description) + step(transcript) → 검수 → 등록 (fixture-backed, provider mock) <!-- omo:id=accept-playwright-transcript-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] Partial draft / no-provider flow E2E: 재료만 추출 → 부분 안내 → step 수동 입력 → 등록 <!-- omo:id=accept-playwright-partial-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 description-only flow regression E2E <!-- omo:id=accept-playwright-description-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
+- [x] Transcript fallback full flow E2E: 재료(description) + step(transcript) → 검수 → 등록 (fixture-backed, provider mock) <!-- omo:id=accept-playwright-transcript-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] Partial draft / no-provider flow E2E: 재료만 추출 → 부분 안내 → step 수동 입력 → 등록 <!-- omo:id=accept-playwright-partial-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 description-only flow regression E2E <!-- omo:id=accept-playwright-description-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only
 - [ ] 실제 YouTube transcript source를 사용한 live transcript fallback 테스트 (5건 partial blocked URLs)

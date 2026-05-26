@@ -46,7 +46,17 @@ vi.mock("@/lib/api/cooking-methods", () => ({
   fetchCookingMethods: vi.fn(() =>
     Promise.resolve({
       success: true,
-      data: { methods: [] },
+      data: {
+        methods: [
+          {
+            id: "method-1",
+            code: "boil",
+            label: "끓이기",
+            color_key: "red",
+            is_system: true,
+          },
+        ],
+      },
       error: null,
     }),
   ),
@@ -729,5 +739,172 @@ describe("MenuAddScreen", () => {
 
     expect(await screen.findByText("된장찌개")).toBeTruthy();
     expect(screen.getByText("4/17 끼니 미상 인분 미상")).toBeTruthy();
+  });
+
+  // ─── Slice 27b: YouTube Source Fallback Frontend Tests ─────────────────────
+
+  it("renders extraction_methods as Korean labels with caption chip when transcript used", async () => {
+    installMatchMedia(true);
+    vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValueOnce({
+      success: true,
+      data: {
+        extraction_id: "ext-27b-caption",
+        title: "김치찌개 자막 보충 레시피",
+        base_servings: 2,
+        extraction_methods: ["description", "caption"],
+        draft_warnings: [],
+        blocking_issues: [],
+        ingredients: [
+          {
+            draft_ingredient_id: "draft-ing-1",
+            ingredient_id: "ing-1",
+            standard_name: "김치",
+            amount: 200,
+            unit: "g",
+            ingredient_type: "QUANT",
+            display_text: "김치 200g",
+            sort_order: 1,
+            scalable: true,
+            confidence: 0.9,
+            resolution_status: "resolved",
+            candidates: [],
+            raw_text: "김치 200g",
+          },
+        ],
+        steps: [
+          {
+            step_number: 1,
+            instruction: "김치를 한입 크기로 썰어주세요.",
+            cooking_method: {
+              id: "method-1",
+              code: "prep",
+              label: "손질",
+              color_key: "gray",
+              is_new: false,
+            },
+            duration_text: null,
+            is_incomplete: false,
+            missing_fields: [],
+            raw_text: "김치를 한입 크기로 썰어주세요.",
+          },
+        ],
+        new_cooking_methods: [],
+      },
+      error: null,
+    });
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+    await user.type(
+      screen.getByLabelText("유튜브 URL"),
+      "https://www.youtube.com/watch?v=transcript123",
+    );
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    const chips = await screen.findByTestId("extraction-method-chips");
+    expect(within(chips).getByText("설명란")).toBeTruthy();
+    expect(within(chips).getByText("자막")).toBeTruthy();
+    expect(within(chips).queryByText("description")).toBeNull();
+    expect(within(chips).queryByText("caption")).toBeNull();
+  });
+
+  it("renders extraction_methods as Korean labels without caption chip for description-only", async () => {
+    installMatchMedia(true);
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+    await user.type(
+      screen.getByLabelText("유튜브 URL"),
+      "https://www.youtube.com/watch?v=recipe12345",
+    );
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    const chips = await screen.findByTestId("extraction-method-chips");
+    expect(within(chips).getByText("설명란")).toBeTruthy();
+    expect(within(chips).queryByText("자막")).toBeNull();
+  });
+
+  it("shows partial draft guidance when ingredients exist but steps are empty, keeps register disabled, and allows step add", async () => {
+    installMatchMedia(true);
+    vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValueOnce({
+      success: true,
+      data: {
+        extraction_id: "ext-27b-partial",
+        title: "김치찌개 부분 추출",
+        base_servings: 2,
+        extraction_methods: ["description"],
+        draft_warnings: [],
+        blocking_issues: ["steps[0].instruction"],
+        ingredients: [
+          {
+            draft_ingredient_id: "draft-ing-1",
+            ingredient_id: "ing-1",
+            standard_name: "김치",
+            amount: 200,
+            unit: "g",
+            ingredient_type: "QUANT",
+            display_text: "김치 200g",
+            sort_order: 1,
+            scalable: true,
+            confidence: 0.9,
+            resolution_status: "resolved",
+            candidates: [],
+            raw_text: "김치 200g",
+          },
+        ],
+        steps: [],
+        new_cooking_methods: [],
+      },
+      error: null,
+    });
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+    await user.type(
+      screen.getByLabelText("유튜브 URL"),
+      "https://www.youtube.com/watch?v=incomplete123",
+    );
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    // Partial draft guidance should be visible
+    expect(await screen.findByTestId("partial-draft-guidance")).toBeTruthy();
+    expect(screen.getByText("조리 과정을 직접 입력해주세요")).toBeTruthy();
+
+    // Register button must be disabled
+    const registerButton = screen.getByRole("button", { name: "등록" });
+    expect(registerButton).toBeInstanceOf(HTMLButtonElement);
+    expect((registerButton as HTMLButtonElement).disabled).toBe(true);
+
+    // extraction_methods should show 설명란 only (no 자막)
+    const chips = screen.getByTestId("extraction-method-chips");
+    expect(within(chips).getByText("설명란")).toBeTruthy();
+    expect(within(chips).queryByText("자막")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
+
+    const dialog = screen.getByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "끓이기" }));
+    await user.type(
+      within(dialog).getByPlaceholderText("만들기 설명을 입력하세요"),
+      "김치를 냄비에 넣고 끓인다",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "추가" }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("partial-draft-guidance")).toBeNull();
+    });
+    expect((registerButton as HTMLButtonElement).disabled).toBe(false);
+
+    await user.click(registerButton);
+
+    await waitFor(() => {
+      expect(youtubeApi.registerYoutubeRecipe).toHaveBeenCalled();
+    });
   });
 });

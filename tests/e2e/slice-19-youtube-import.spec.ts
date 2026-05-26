@@ -325,8 +325,12 @@ test.describe("Slice 19: YouTube Import", () => {
     await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 15000 });
 
     // Verify extraction methods pills
-    await expect(page.locator("text=description")).toBeVisible();
-    await expect(page.locator("text=ocr")).toBeVisible();
+    await expect(page.locator("[data-testid='extraction-method-description']")).toHaveText(
+      "설명란",
+    );
+    await expect(page.locator("[data-testid='extraction-method-ocr']")).toHaveText(
+      "화면 텍스트",
+    );
 
     // Verify extracted data
     await expect(page.locator('input[value="백종원 김치찌개"]')).toBeVisible();

@@ -523,7 +523,17 @@ function NonRecipeWarningStep({
 
 const EXTRACTION_STAGES = [
   { key: "description", label: "설명란 분석" },
+  { key: "transcript", label: "자막/스크립트 보조 확인" },
 ] as const;
+
+const EXTRACTION_METHOD_LABELS: Record<string, string> = {
+  asr: "음성 자막",
+  caption: "자막",
+  description: "설명란",
+  estimation: "추정",
+  manual: "직접 입력",
+  ocr: "화면 텍스트",
+};
 
 interface ExtractionProgressStepProps {
   videoTitle: string;
@@ -541,6 +551,7 @@ function ExtractionProgressStep({ videoTitle, elapsedMs }: ExtractionProgressSte
       <p className="mt-3 text-base text-[var(--text-2)]">{videoTitle}</p>
       <div className="mt-8 rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]">
         {EXTRACTION_STAGES.map((stage, idx) => {
+          const isTranscriptStage = stage.key === "transcript";
           return (
             <React.Fragment key={stage.key}>
               {idx > 0 && <div className="my-3 border-t border-[var(--line)]" />}
@@ -556,7 +567,9 @@ function ExtractionProgressStep({ videoTitle, elapsedMs }: ExtractionProgressSte
                     {stage.label}
                   </p>
                   <p className="text-sm text-[var(--brand)]">
-                    영상 설명과 메타데이터를 확인하는 중...
+                    {isTranscriptStage
+                      ? "필요한 경우 자막에서 조리 과정을 보충할 수 있어요"
+                      : "영상 설명과 메타데이터를 확인하는 중..."}
                   </p>
                 </div>
               </div>
@@ -919,13 +932,14 @@ function ReviewStep({
 
       {/* Extraction method pills */}
       {extractionMethods.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-2 flex flex-wrap gap-2" data-testid="extraction-method-chips">
           {extractionMethods.map((method) => (
             <span
               key={method}
               className="rounded-full bg-[var(--brand)] px-2.5 py-0.5 text-xs font-semibold text-white"
+              data-testid={`extraction-method-${method}`}
             >
-              {method}
+              {EXTRACTION_METHOD_LABELS[method] ?? method}
             </span>
           ))}
         </div>
@@ -1077,7 +1091,20 @@ function ReviewStep({
         <h3 className="text-lg font-semibold text-[var(--foreground)]">
           만들기 ({steps.length}단계)
         </h3>
-        {steps.length === 0 ? (
+        {steps.length === 0 && ingredients.length > 0 ? (
+          <div
+            className="mt-3 rounded-[var(--radius-card)] border border-[color:rgba(255,149,0,0.26)] bg-[color:rgba(255,149,0,0.08)] px-4 py-3"
+            role="status"
+            data-testid="partial-draft-guidance"
+          >
+            <p className="text-[13px] font-semibold leading-[1.45] text-[var(--foreground)]">
+              조리 과정을 직접 입력해주세요
+            </p>
+            <p className="mt-1 text-[12px] text-[var(--text-2)]">
+              재료는 자동으로 추출됐지만 조리 과정을 찾지 못했어요. 아래 버튼으로 직접 추가해주세요.
+            </p>
+          </div>
+        ) : steps.length === 0 ? (
           <p className="py-4 text-sm text-[var(--muted)]">
             설명란에서 만들기를 찾지 못했어요. 아래 버튼으로 직접 추가할 수 있어요
           </p>

@@ -95,7 +95,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `26-youtube-dictionary-seed-uplift` | merged | 코퍼스 증거 기반 재료·동의어 seed migration + dictionary-resolution 채점 레이어 (BE/test/data-only, UI 변경 없음) |
 | `pre-27-taxonomy-consumer-alignment` | merged | slice 27 선행: ingredient category shared mapping source + cooking method helper 통합으로 현재 MVP 소비 경로를 같은 기준에 정렬 (BE+FE shared, 신규 DB table 없음) |
 | `27-youtube-import-quality-uplift` | merged | YouTube 설명란 파서 추출 품질 + import readiness >= 0.80 달성. 결정론 파서 규칙/사전 시딩/50건 corpus evidence + fixture-backed full-flow E2E (LLM 없음) |
-| `27b-youtube-source-fallback` | in-progress | YouTube 설명란에서 재료만 추출된 영상에 caption/transcript fallback으로 조리 과정 보충 + 부분 추출 draft UX (LLM 없음) |
+| `27b-youtube-source-fallback` | merged | YouTube 설명란에서 재료만 추출된 영상에 caption/transcript fallback으로 조리 과정 보충 + 부분 추출 draft UX (LLM 없음) |
 | `28-external-ingredient-data-ingest-gate` | in-progress | 식약처/농식품올바로 등 외부 재료 데이터를 production 직적재 없이 file batch -> staging/review -> approved seed artifact 경로로만 유입 |
 | `planner-column-customization` | merged        | 끼니 컬럼 기본 3개 + 설정 커스터마이징(이름 변경/추가/삭제), 최소 1~최대 5, PLANNER_WEEK 동적 컬럼               |
 | `wave1-port-foundation` | merged | 공통 shell, 공용 UI 프리미티브(Button/Chip/Card/Modal/Sort Dropdown), CTA 위계, spacing/safe-area 정비 — Phase4 foundation re-audit PR #432 merged |
