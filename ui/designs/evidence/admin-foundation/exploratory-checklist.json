@@ -1,0 +1,75 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "admin-foundation",
+  "generatedAt": "2026-05-27T07:10:00.000+09:00",
+  "baseUrl": "http://127.0.0.1:3001",
+  "sourceFiles": {
+    "readme": "docs/workpacks/admin-foundation/README.md",
+    "acceptance": "docs/workpacks/admin-foundation/acceptance.md"
+  },
+  "devices": ["desktop-chrome", "mobile-chrome", "mobile-ios-small"],
+  "primaryUserPath": [
+    "관리자가 /admin으로 진입한다.",
+    "사용자 목록을 조회한다.",
+    "운영 이벤트를 열고 상세 metadata를 확인한다.",
+    "감사 로그를 조회한다.",
+    "비관리자/게스트 상태에서는 Admin 데이터가 렌더링되지 않는다."
+  ],
+  "checklistItems": [
+    {
+      "id": "admin-dashboard-entry",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "관리자가 /admin 대시보드를 볼 수 있다.",
+      "priority": "high"
+    },
+    {
+      "id": "admin-users-read-only",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "관리자가 사용자 목록을 읽기 전용으로 조회할 수 있다.",
+      "priority": "high"
+    },
+    {
+      "id": "admin-events-detail-sanitized",
+      "section": "PII / Data Safety",
+      "subsection": null,
+      "text": "운영 이벤트 상세에서 raw email / YouTube URL 같은 민감 metadata가 표시되지 않는다.",
+      "priority": "high"
+    },
+    {
+      "id": "admin-audit-log-read-only",
+      "section": "Audit & Logging",
+      "subsection": null,
+      "text": "감사 로그가 actor/action/target/path/result/time을 읽기 전용으로 표시한다.",
+      "priority": "high"
+    },
+    {
+      "id": "admin-permission-states",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "unauthorized와 forbidden 상태가 Admin 데이터를 렌더링하지 않고 구분 표시된다.",
+      "priority": "high"
+    },
+    {
+      "id": "disabled-future-nav",
+      "section": "Navigation",
+      "subsection": null,
+      "text": "커뮤니티/신고/제재 후속 메뉴는 disabled placeholder이며 미구현 페이지로 이동하지 않는다.",
+      "priority": "normal"
+    },
+    {
+      "id": "mobile-overflow",
+      "section": "Mobile UX",
+      "subsection": null,
+      "text": "390px와 320px 모바일 뷰포트에서 whole-page horizontal overflow가 없다.",
+      "priority": "high"
+    }
+  ],
+  "edgeCases": [
+    {
+      "id": "invalid-page-view-path",
+      "text": "page-view audit path가 Admin 외 경로면 /admin으로 fallback한다."
+    }
+  ]
+}

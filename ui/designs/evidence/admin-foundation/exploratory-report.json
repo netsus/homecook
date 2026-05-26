@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "admin-foundation",
+  "generatedAt": "2026-05-27T07:10:00.000+09:00",
+  "baseUrl": "http://127.0.0.1:3001",
+  "devices": ["desktop-chrome", "mobile-chrome", "mobile-ios-small"],
+  "summary": "Admin Foundation Stage 4 screens were verified against mocked Admin API data in a local Next production build. The run covered dashboard entry, read-only user lookup, operational event detail with frontend metadata filtering, audit log browsing, unauthorized/forbidden states, disabled future navigation, desktop/mobile/narrow viewports, and horizontal overflow checks.",
+  "findings": [],
+  "remainingRisks": [
+    "Production/staging first admin bootstrap remains Manual Only.",
+    "Stage 5 Design Authority must still review the visual quality of these screenshots before final authority gate."
+  ],
+  "checklistCoverage": [
+    {
+      "item_id": "admin-dashboard-entry",
+      "status": "covered",
+      "notes": "Dashboard rendered with mocked admin users/events totals.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "admin-users-read-only",
+      "status": "covered",
+      "notes": "Users screen rendered masked emails and aggregate counts only.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "admin-events-detail-sanitized",
+      "status": "covered",
+      "notes": "Browser smoke injected raw email and YouTube URL into metadata; page text did not expose either value.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "admin-audit-log-read-only",
+      "status": "covered",
+      "notes": "Audit screen rendered actor, action, target, path, result, hashes, and timestamp in read-only rows.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "admin-permission-states",
+      "status": "covered",
+      "notes": "Unauthorized and forbidden screenshots captured; Admin data did not render before page-view verification.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "disabled-future-nav",
+      "status": "covered",
+      "notes": "Static test confirms future Admin nav entries are disabled placeholders without /admin/community, /admin/reports, or /admin/moderation links.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "mobile-overflow",
+      "status": "covered",
+      "notes": "Browser smoke measured no whole-page horizontal overflow across 390px and 320px screenshots.",
+      "linked_findings": []
+    }
+  ]
+}
