@@ -14,32 +14,32 @@
 - [ ] 관리자가 운영 이벤트 상세를 열어 sanitized `metadata_json`을 확인하고 PII가 표시되지 않는 것을 확인할 수 있다 <!-- omo:id=accept-admin-event-detail;stage=4;scope=frontend;review=5,6 -->
 - [ ] 관리자가 감사 로그를 필터/페이지네이션하여 조회할 수 있다 <!-- omo:id=accept-admin-audit-flow;stage=4;scope=frontend;review=5,6 -->
 - [ ] 문서 기준 화면 상태와 액션이 맞다 (화면정의서 v1.5.9 §21–24) <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## Admin Security
-- [ ] 게스트가 `/admin` 또는 `/api/v1/admin/*`에 접근하면 `401 Unauthorized`를 받는다 <!-- omo:id=accept-guest-401;stage=2;scope=backend;review=3,6 -->
-- [ ] 로그인한 비관리자가 Admin API를 호출하면 `403 Forbidden`을 받고 Admin 데이터를 볼 수 없다 <!-- omo:id=accept-non-admin-403;stage=2;scope=backend;review=3,6 -->
-- [ ] `admin_members` 테이블이 관리자 신원의 유일한 소스이며 환경변수 allowlist 우회가 없다 <!-- omo:id=accept-admin-identity-source;stage=2;scope=backend;review=3,6 -->
-- [ ] 모든 Admin API가 `createServiceRoleClient()`를 사용하며 `routeClient` 폴백이 없다 <!-- omo:id=accept-service-role-only;stage=2;scope=backend;review=3,6 -->
-- [ ] `SUPABASE_SERVICE_ROLE_KEY` 부재 시 Admin API가 fail closed하며 사용자 범위 클라이언트로 폴백하지 않는다 <!-- omo:id=accept-service-role-fail-closed;stage=2;scope=backend;review=3,6 -->
+- [x] 게스트가 `/admin` 또는 `/api/v1/admin/*`에 접근하면 `401 Unauthorized`를 받는다 <!-- omo:id=accept-guest-401;stage=2;scope=backend;review=3,6 -->
+- [x] 로그인한 비관리자가 Admin API를 호출하면 `403 Forbidden`을 받고 Admin 데이터를 볼 수 없다 <!-- omo:id=accept-non-admin-403;stage=2;scope=backend;review=3,6 -->
+- [x] `admin_members` 테이블이 관리자 신원의 유일한 소스이며 환경변수 allowlist 우회가 없다 <!-- omo:id=accept-admin-identity-source;stage=2;scope=backend;review=3,6 -->
+- [x] 모든 Admin API가 `createServiceRoleClient()`를 사용하며 `routeClient` 폴백이 없다 <!-- omo:id=accept-service-role-only;stage=2;scope=backend;review=3,6 -->
+- [x] `SUPABASE_SERVICE_ROLE_KEY` 부재 시 Admin API가 fail closed하며 사용자 범위 클라이언트로 폴백하지 않는다 <!-- omo:id=accept-service-role-fail-closed;stage=2;scope=backend;review=3,6 -->
 
 ## Audit & Logging
-- [ ] 모든 `/api/v1/admin/*` 읽기가 `admin_audit_logs`에 감사 기록을 남긴다 <!-- omo:id=accept-audit-on-read;stage=2;scope=backend;review=3,6 -->
+- [x] 모든 `/api/v1/admin/*` 읽기가 `admin_audit_logs`에 감사 기록을 남긴다 <!-- omo:id=accept-audit-on-read;stage=2;scope=backend;review=3,6 -->
 - [ ] `/admin` 페이지 진입 시 `admin_page_view` 감사 기록이 admin 데이터 렌더링 전에 작성된다 <!-- omo:id=accept-page-view-audit;stage=4;scope=frontend;review=5,6 -->
 - [ ] 감사 기록 실패 시 Admin 데이터가 렌더링되지 않는다 (fail closed) <!-- omo:id=accept-audit-fail-closed;stage=4;scope=frontend;review=5,6 -->
-- [ ] 사용자 목록/검색 감사에서 `target_type='user_search'`, `target_id=null`이며 검색어가 저장되지 않는다 <!-- omo:id=accept-no-search-term-in-audit;stage=2;scope=backend;review=3,6 -->
-- [ ] `request_path`가 pathname만 저장하고 쿼리스트링이 포함되지 않는다 <!-- omo:id=accept-pathname-only;stage=2;scope=backend;review=3,6 -->
-- [ ] 운영 이벤트가 최소 소스 5종(OAuth 실패, YouTube 프로바이더 실패, 계정 삭제, service-role 누락, 미처리 서버 에러)에서 기록된다 <!-- omo:id=accept-operational-event-sources;stage=2;scope=backend;review=3,6 -->
+- [x] 사용자 목록/검색 감사에서 `target_type='user_search'`, `target_id=null`이며 검색어가 저장되지 않는다 <!-- omo:id=accept-no-search-term-in-audit;stage=2;scope=backend;review=3,6 -->
+- [x] `request_path`가 pathname만 저장하고 쿼리스트링이 포함되지 않는다 <!-- omo:id=accept-pathname-only;stage=2;scope=backend;review=3,6 -->
+- [x] 운영 이벤트가 최소 소스 5종(OAuth 실패, YouTube 프로바이더 실패, 계정 삭제, service-role 누락, 미처리 서버 에러)에서 기록된다 <!-- omo:id=accept-operational-event-sources;stage=2;scope=backend;review=3,6 -->
 
 ## PII / Data Safety
-- [ ] 관리자 사용자 응답이 승인된 요약 필드만 포함한다 (id, email_masked, provider, nickname, created_at, counts/status) <!-- omo:id=accept-pii-user-response;stage=2;scope=backend;review=3,6 -->
-- [ ] 로그/메타데이터에 OAuth 토큰, OAuth code/next/error, YouTube URL, YouTube 소스 텍스트, 관리자 검색어, 이메일, 닉네임, 비공개 장보기/팬트리 상세가 없다 <!-- omo:id=accept-pii-log-sanitization;stage=2;scope=backend;review=3,6 -->
-- [ ] `ip_hash`, `user_agent_hash`가 원본이 아닌 해시 값만 저장한다 <!-- omo:id=accept-hash-only;stage=2;scope=backend;review=3,6 -->
+- [x] 관리자 사용자 응답이 승인된 요약 필드만 포함한다 (id, email_masked, provider, nickname, created_at, counts/status) <!-- omo:id=accept-pii-user-response;stage=2;scope=backend;review=3,6 -->
+- [x] 로그/메타데이터에 OAuth 토큰, OAuth code/next/error, YouTube URL, YouTube 소스 텍스트, 관리자 검색어, 이메일, 닉네임, 비공개 장보기/팬트리 상세가 없다 <!-- omo:id=accept-pii-log-sanitization;stage=2;scope=backend;review=3,6 -->
+- [x] `ip_hash`, `user_agent_hash`가 원본이 아닌 해시 값만 저장한다 <!-- omo:id=accept-hash-only;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
-- [ ] 읽기 전용 정책이 지켜진다 — 파괴적 admin 동작이 없다 <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
-- [ ] 중복 호출에도 결과가 꼬이지 않는다 (읽기 전용이므로 자동 멱등) <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] 읽기 전용 정책이 지켜진다 — 파괴적 admin 동작이 없다 <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
+- [x] 중복 호출에도 결과가 꼬이지 않는다 (읽기 전용이므로 자동 멱등) <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 - [ ] loading 상태가 있다 (4개 Admin 화면 모두) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
@@ -50,19 +50,19 @@
 - [ ] 후속 커뮤니티/신고/제재 네비게이션이 없거나 disabled placeholder이며 미구현 페이지로 이동하지 않는다 <!-- omo:id=accept-future-nav-disabled;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Setup / Preconditions
-- [ ] fixture/mock에서 admin_members, operational_events, admin_audit_logs baseline이 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 필요한 migration, seed, bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] 첫 admin bootstrap SQL/service-role 경로가 정확히 하나의 의도된 admin만 생성하고 runtime env 우회가 없다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
+- [x] fixture/mock에서 admin_members, operational_events, admin_audit_logs baseline이 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 migration, seed, bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] 첫 admin bootstrap SQL/service-role 경로가 정확히 하나의 의도된 admin만 생성하고 runtime env 우회가 없다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
 
 ## Automation Split
 
 ### Vitest
-- [ ] requireAdminUser 가드가 401/403/success를 올바르게 반환한다 <!-- omo:id=accept-vitest-guard;stage=2;scope=shared;review=3,6 -->
-- [ ] 이메일 마스킹 헬퍼가 null/short/normal 이메일을 처리한다 <!-- omo:id=accept-vitest-email-mask;stage=2;scope=shared;review=3,6 -->
-- [ ] 감사 로그 작성기가 기대 필드를 기록한다 <!-- omo:id=accept-vitest-audit-writer;stage=2;scope=shared;review=3,6 -->
-- [ ] admin 응답 매퍼가 private 상세를 제외한다 <!-- omo:id=accept-vitest-response-mapper;stage=2;scope=shared;review=3,6 -->
-- [ ] 로그 sanitizer가 pathname만 유지하고 OAuth code/next/error, YouTube URL, 관리자 검색어, 이메일, 닉네임을 제거한다 <!-- omo:id=accept-vitest-log-sanitizer;stage=2;scope=shared;review=3,6 -->
-- [ ] service role 부재 경로가 제어된 서버 에러를 반환하고 route client로 폴백하지 않는다 <!-- omo:id=accept-vitest-service-role-missing;stage=2;scope=shared;review=3,6 -->
+- [x] requireAdminUser 가드가 401/403/success를 올바르게 반환한다 <!-- omo:id=accept-vitest-guard;stage=2;scope=shared;review=3,6 -->
+- [x] 이메일 마스킹 헬퍼가 null/short/normal 이메일을 처리한다 <!-- omo:id=accept-vitest-email-mask;stage=2;scope=shared;review=3,6 -->
+- [x] 감사 로그 작성기가 기대 필드를 기록한다 <!-- omo:id=accept-vitest-audit-writer;stage=2;scope=shared;review=3,6 -->
+- [x] admin 응답 매퍼가 private 상세를 제외한다 <!-- omo:id=accept-vitest-response-mapper;stage=2;scope=shared;review=3,6 -->
+- [x] 로그 sanitizer가 pathname만 유지하고 OAuth code/next/error, YouTube URL, 관리자 검색어, 이메일, 닉네임을 제거한다 <!-- omo:id=accept-vitest-log-sanitizer;stage=2;scope=shared;review=3,6 -->
+- [x] service role 부재 경로가 제어된 서버 에러를 반환하고 route client로 폴백하지 않는다 <!-- omo:id=accept-vitest-service-role-missing;stage=2;scope=shared;review=3,6 -->
 
 ### Playwright
 - [ ] 게스트 `/admin` 접근 시 로그인/forbidden 처리 확인 <!-- omo:id=accept-playwright-guest;stage=4;scope=frontend;review=5,6 -->
@@ -78,7 +78,7 @@
 - [ ] OAuth callback 실패, YouTube 프로바이더 실패, Admin 사용자 검색 로깅 시 민감 쿼리/소스/검색 값이 저장되지 않는 것 확인 <!-- omo:id=accept-smoke-pii-redaction;stage=2;scope=backend;review=3,6 -->
 
 ## Data Integrity
-- [ ] 관리자 사용자 응답의 `recipe_count`, `status` 등 집계 필드가 실제 DB와 일치한다 <!-- omo:id=accept-data-integrity-counts;stage=2;scope=backend;review=3,6 -->
+- [x] 관리자 사용자 응답의 `counts`, `status` 등 집계 필드가 실제 DB와 일치한다 <!-- omo:id=accept-data-integrity-counts;stage=2;scope=backend;review=3,6 -->
 - [ ] 운영 이벤트와 감사 로그의 `created_at` 타임스탬프가 UTC 기준으로 일관된다 <!-- omo:id=accept-data-integrity-timestamps;stage=2;scope=backend;review=3,6 -->
 - [ ] 페이지네이션 `total` 카운트가 필터 조건 변경 시 정확히 갱신된다 <!-- omo:id=accept-data-integrity-pagination;stage=4;scope=frontend;review=5,6 -->
 

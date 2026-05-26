@@ -60,18 +60,21 @@
 
 ### GET /api/v1/admin/users
 - 권한: 🔒 Bearer Token + admin_members
-- Query: `page` (int, 기본 1), `limit` (int, 기본 20, 최대 100), `search` (string, 닉네임/마스킹된 이메일), `provider` (string)
+- Query: `q` (string, 이메일/닉네임 검색어), `page` (int, 기본 1), `limit` (int, 기본 20, 최대 100)
 - PII 최소화: 승인된 요약 정보만 반환
-  - 허용 필드: `id`, `email_masked`, `provider`, `nickname`, `created_at`, `recipe_count`, `status`
+  - 허용 필드: `id`, `email_masked`, `social_provider`, `nickname`, `created_at`, `counts`, `status`
   - 금지: 원문 이메일, OAuth 토큰, YouTube URL, 비공개 장보기/팬트리 상세
 - 응답 (200):
   ```json
   {
     "success": true,
     "data": {
-      "users": [{ "id": "uuid", "email_masked": "c***@example.com", "provider": "google", "nickname": "홈쿡러", "created_at": "2026-01-15T09:00:00Z", "recipe_count": 5, "status": "active" }],
-      "pagination": { "page": 1, "limit": 20, "total": 150 }
-    }
+      "items": [{ "id": "uuid", "email_masked": "c***@example.com", "social_provider": "google", "nickname": "홈쿡러", "created_at": "2026-01-15T09:00:00Z", "counts": { "recipe_books": 2, "meals": 8, "shopping_lists": 3, "pantry_items": 12 }, "status": "active" }],
+      "page": 1,
+      "limit": 20,
+      "total": 150
+    },
+    "error": null
   }
   ```
 - 감사 로그: `action='list_users'`. 검색어는 로그에 기록하지 않음 (`target_type='user_search'`, `target_id=null`).
@@ -79,15 +82,18 @@
 
 ### GET /api/v1/admin/operational-events
 - 권한: 🔒 Bearer Token + admin_members
-- Query: `page`, `limit`, `event_type`, `severity`, `source`, `from` (ISO 8601), `to` (ISO 8601)
+- Query: `event_type`, `severity`, `source`, `page`, `limit`
 - 응답 (200):
   ```json
   {
     "success": true,
     "data": {
-      "events": [{ "id": "uuid", "event_type": "auth_failure", "severity": "warn", "source": "auth", "actor_user_id": null, "target_user_id": "uuid", "request_path": "/api/v1/auth/callback", "http_status": 401, "error_code": "INVALID_TOKEN", "message_summary": "OAuth 콜백 인증 실패", "metadata_json": {}, "created_at": "2026-05-27T10:30:00Z" }],
-      "pagination": { "page": 1, "limit": 20, "total": 42 }
-    }
+      "items": [{ "id": "uuid", "event_type": "auth_failure", "severity": "warn", "source": "auth", "actor_user_id": null, "target_user_id": "uuid", "request_path": "/api/v1/auth/callback", "http_status": 401, "error_code": "INVALID_TOKEN", "message_summary": "OAuth 콜백 인증 실패", "metadata_json": {}, "created_at": "2026-05-27T10:30:00Z" }],
+      "page": 1,
+      "limit": 20,
+      "total": 42
+    },
+    "error": null
   }
   ```
 - 감사 로그: `action='list_operational_events'`
@@ -95,15 +101,18 @@
 
 ### GET /api/v1/admin/audit-logs
 - 권한: 🔒 Bearer Token + admin_members
-- Query: `page`, `limit`, `action`, `actor_admin_user_id`, `target_type`, `from`, `to`
+- Query: `action`, `actor_admin_user_id`, `target_type`, `page`, `limit`
 - 응답 (200):
   ```json
   {
     "success": true,
     "data": {
-      "audit_logs": [{ "id": "uuid", "actor_admin_user_id": "uuid", "action": "list_users", "target_type": "user_list", "target_id": null, "request_path": "/api/v1/admin/users", "result": "success", "ip_hash": "sha256:...", "user_agent_hash": "sha256:...", "created_at": "2026-05-27T10:35:00Z" }],
-      "pagination": { "page": 1, "limit": 20, "total": 89 }
-    }
+      "items": [{ "id": "uuid", "actor_admin_user_id": "uuid", "action": "list_users", "target_type": "user_search", "target_id": null, "request_path": "/api/v1/admin/users", "result": "success", "ip_hash": "sha256:...", "user_agent_hash": "sha256:...", "created_at": "2026-05-27T10:35:00Z" }],
+      "page": 1,
+      "limit": 20,
+      "total": 89
+    },
+    "error": null
   }
   ```
 - 감사 로그: `action='list_audit_logs'`
@@ -168,6 +177,7 @@
 - `docs/db설계-v1.3.8.md` §12
 - `docs/api문서-v1.2.12.md` Admin Foundation 엔드포인트 3종
 - `.omx/plans/admin-foundation-ralplan-20260526.md`
+- `docs/workpacks/admin-foundation/backend-smoke.md`
 
 ## QA / Test Data Plan
 - **fixture baseline**: `admin_members` row 1건, 일반 사용자 row 다수, `operational_events` 샘플, `admin_audit_logs` 샘플
@@ -205,19 +215,19 @@
 ## Delivery Checklist
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 
-- [ ] 백엔드 계약 고정 (admin guard, service role fail-closed, 3 read APIs) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 연결 (GET /admin/users, /admin/operational-events, /admin/audit-logs) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 (AdminUser, OperationalEvent, AdminAuditLog 타입) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 (admin guard, service role fail-closed, 3 read APIs) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 연결 (GET /admin/users, /admin/operational-events, /admin/audit-logs) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 (AdminUser, OperationalEvent, AdminAuditLog 타입) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 (ADMIN_DASHBOARD, ADMIN_USERS, ADMIN_EVENTS, ADMIN_AUDIT_LOGS) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 (401/403/500 fail-closed, audit write) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 (401/403/500 fail-closed, audit write) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 (admin bootstrap SQL) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 (admin bootstrap SQL) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] loading / empty / error / read-only / unauthorized 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
-- [ ] migration 파일 생성 (admin_members, operational_events, admin_audit_logs) <!-- omo:id=delivery-migration;stage=2;scope=backend;review=3,6 -->
-- [ ] recordOperationalEvent 헬퍼 연결 (최소 이벤트 소스 5종) <!-- omo:id=delivery-operational-event-helper;stage=2;scope=backend;review=3,6 -->
-- [ ] recordAdminAudit 헬퍼 연결 (모든 admin API + /admin 진입) <!-- omo:id=delivery-admin-audit-helper;stage=2;scope=backend;review=3,6 -->
+- [x] migration 파일 생성 (admin_members, operational_events, admin_audit_logs) <!-- omo:id=delivery-migration;stage=2;scope=backend;review=3,6 -->
+- [x] recordOperationalEvent 헬퍼 연결 (최소 이벤트 소스 5종) <!-- omo:id=delivery-operational-event-helper;stage=2;scope=backend;review=3,6 -->
+- [x] recordAdminAudit 헬퍼 연결 (모든 admin API + /admin 진입) <!-- omo:id=delivery-admin-audit-helper;stage=2;scope=backend;review=3,6 -->
 - [ ] 로그 sanitizer (pathname-only, PII 제거) <!-- omo:id=delivery-log-sanitizer;stage=2;scope=backend;review=3,6 -->
 - [ ] real DB smoke 통과 (migration, bootstrap, fail-closed) <!-- omo:id=delivery-real-db-smoke;stage=2;scope=backend;review=3,6 -->
 - [ ] Design Authority evidence (Stage 4 screenshots) <!-- omo:id=delivery-design-authority-evidence;stage=4;scope=frontend;review=5,6 -->

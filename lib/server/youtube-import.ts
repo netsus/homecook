@@ -16,6 +16,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import type {
@@ -987,6 +988,25 @@ function failForProviderError(error: YoutubeProviderError) {
   return fail(error.code, error.message, error.status);
 }
 
+async function recordYoutubeProviderFailure(
+  request: Request,
+  userId: string,
+  stage: "validate" | "extract" | "register",
+  error: YoutubeProviderError | { code: string; status: number },
+) {
+  await recordOperationalEventFromServiceRole({
+    event_type: "youtube_provider_failure",
+    severity: error.status === 429 ? "warn" : "error",
+    source: "youtube",
+    actor_user_id: userId,
+    request,
+    http_status: error.status,
+    error_code: error.code,
+    message_summary: "YouTube provider request failed",
+    metadata_json: { stage },
+  });
+}
+
 function getRecipeDescriptionSection(line: string): DescriptionSection | null {
   const normalized = line
     .trim()
@@ -1559,6 +1579,7 @@ export async function handleYoutubeValidate(request: Request) {
 
   const previewResult = await fetchYoutubePreview(parsedUrl.videoId, parsedUrl.youtubeUrl);
   if ("providerError" in previewResult) {
+    await recordYoutubeProviderFailure(request, user.id, "validate", previewResult.providerError);
     return failForProviderError(previewResult.providerError);
   }
 
@@ -2038,6 +2059,7 @@ export async function handleYoutubeExtract(request: Request) {
 
   const videoResult = await fetchYoutubeVideo(parsedUrl.videoId);
   if ("providerError" in videoResult) {
+    await recordYoutubeProviderFailure(request, user.id, "extract", videoResult.providerError);
     return failForProviderError(videoResult.providerError);
   }
 
@@ -2783,6 +2805,10 @@ export async function handleYoutubeRegister(request: Request) {
   );
 
   if (registerResult.error || !registerResult.data) {
+    await recordYoutubeProviderFailure(request, user.id, "register", {
+      code: "YOUTUBE_REGISTER_FAILED",
+      status: 500,
+    });
     return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
   }
 
