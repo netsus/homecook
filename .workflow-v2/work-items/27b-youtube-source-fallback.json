@@ -1,0 +1,100 @@
+{
+  "id": "27b-youtube-source-fallback",
+  "title": "YouTube source fallback (caption/transcript)",
+  "summary": "YouTube 설명란에서 재료는 추출했지만 조리 과정이 없는 영상에 대해, 자막/트랜스크립트를 보조 소스로 활용하여 step을 보충하고, 부분 추출 draft UX를 지원하여 사용자가 빈칸 채우기로 레시피를 완성할 수 있게 한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "description에서 재료만 추출된 영상의 조리 과정을 transcript provider adapter로 보충하고, 부분 추출 상태를 명시적으로 UX에 반영하여 사용자가 수동 완성할 수 있게 한다. LLM 없이 결정론 파서와 compliant transcript source로 달성한다.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "27-youtube-import-quality-uplift",
+    "pre-27-taxonomy-consumer-alignment"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.1.md",
+      "docs/화면정의서-v1.5.8.md",
+      "docs/유저flow맵-v1.3.8.md",
+      "docs/db설계-v1.3.7.md",
+      "docs/api문서-v1.2.11.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/27b-youtube-source-fallback/README.md",
+      "docs/workpacks/27b-youtube-source-fallback/acceptance.md",
+      "docs/workpacks/27b-youtube-source-fallback/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/workpacks/27-youtube-import-quality-uplift/live-smoke-expanded-2026-05-26.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "youtube-transcript-provider-live-smoke"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm test:youtube-corpus",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 27b-youtube-source-fallback",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "transcript-provider-adapter-implemented",
+      "no-provider-path-verified",
+      "corpus-regression-no-break",
+      "extraction-methods-honesty",
+      "partial-draft-ux-guidance"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 workpack docs created. Follows slice 27 live smoke finding: 5 videos had resolved ingredients but missing concrete cooking steps. This slice implements a TranscriptProvider adapter boundary, verifies compliant no-LLM transcript source feasibility, and ships partial draft UX. Official YouTube captions API requires OAuth/content-owner scope and cannot be used for arbitrary public videos with API key only. LLM fallback is out of scope.",
+  "out_of_scope": [
+    "LLM fallback default implementation",
+    "OCR/video-frame extraction",
+    "External ingredient data ingest",
+    "Automatic registration-ready claims for descriptions/captions without concrete cooking steps",
+    "Public API response shape changes",
+    "YouTube ASR quality guarantee",
+    "Multi-recipe selection UI",
+    "Ingredient category expansion beyond legacy 7",
+    "New screen or screen redesign"
+  ],
+  "open_questions": []
+}
