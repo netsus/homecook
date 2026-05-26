@@ -1392,6 +1392,31 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "27b-youtube-source-fallback",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/27b-youtube-source-fallback",
+      "pr_path": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm test:youtube-corpus",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 27b-youtube-source-fallback",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 workpack docs. Caption/transcript fallback for YouTube import when description has ingredients but no concrete cooking steps. LLM fallback out of scope.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
     }
   ]
 }
