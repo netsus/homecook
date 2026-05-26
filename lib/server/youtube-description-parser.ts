@@ -158,7 +158,9 @@ const KNOWN_UNITS = [
   "t",
   "큰술",
   "작은술",
+  "티스푼",
   "스푼",
+  "종이컵",
   "컵",
   "개",
   "장",
@@ -189,6 +191,7 @@ const KNOWN_UNITS = [
   "병",
   "잔",
   "다발",
+  "가닥",
   "움큼",
   "톨",
   "cc",
@@ -227,14 +230,15 @@ const KOREAN_NUMBER_WORDS: Record<string, number> = {
   네: 4,
   반: 0.5,
 };
-const AMOUNT_NUMBER_PATTERN = `[0-9]+\\/[0-9]+|[0-9]+(?:[.,][0-9]+)?`;
+const VULGAR_FRACTION_PATTERN = "[¼½⅓⅔⅛⅜⅝⅞]";
+const AMOUNT_NUMBER_PATTERN = `${VULGAR_FRACTION_PATTERN}|[0-9]+\\/[0-9]+|[0-9]+(?:[.,][0-9]+)?`;
 const AMOUNT_RANGE_PATTERN = `(?:${AMOUNT_NUMBER_PATTERN})(?:\\s*[~\\-–]\\s*[0-9]+(?:[.,][0-9]+)?)?`;
-const AMOUNT_SIGNAL_PATTERN = `(?:${AMOUNT_RANGE_PATTERN})\\s*(?:${UNIT_PATTERN})(?=\\s|[~\\-–+＋,，/)]|$)`;
+const AMOUNT_SIGNAL_PATTERN = `(?:${AMOUNT_RANGE_PATTERN})\\s*(?:${UNIT_PATTERN})(?:씩)?(?=\\s|[~\\-–+＋,，/)]|$)`;
 const AMOUNT_SIGNAL_RE = new RegExp(AMOUNT_SIGNAL_PATTERN, "iu");
 const NUMERIC_INGREDIENT_RE = new RegExp(
   `^(.+?)(?:\\s*[：:]\\s*|\\s*)` +
     `(${AMOUNT_RANGE_PATTERN})\\s*` +
-    `(${UNIT_PATTERN})(?:\\s*\\([^)]*\\))?\\s*$`,
+    `(${UNIT_PATTERN})(?:씩)?(?:\\s*\\([^)]*\\))?\\s*$`,
   "iu",
 );
 const UNIT_SUFFIXED_RANGE_INGREDIENT_RE = new RegExp(
@@ -246,6 +250,15 @@ const UNIT_SUFFIXED_RANGE_INGREDIENT_RE = new RegExp(
 );
 const COMPOUND_INGREDIENT_SEPARATOR_RE = /\s*[+＋]\s*/u;
 
+function stripDecorativeMarks(value: string) {
+  return value
+    .replace(/[\u200d\ufe0f]/gu, "")
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/^[\s\-–—•·*★☆✅✓✔︎✔️📌🧂🍳]+/gu, "")
+    .replace(/[\s\-–—•·*★☆✅✓✔︎✔️📌]+$/gu, "")
+    .trim();
+}
+
 function stripOuterBrackets(value: string) {
   const trimmed = value.trim();
   const pairs: Record<string, string> = {
@@ -253,6 +266,10 @@ function stripOuterBrackets(value: string) {
     "(": ")",
     "【": "】",
     "{": "}",
+    "《": "》",
+    "〈": "〉",
+    "「": "」",
+    "『": "』",
   };
   const first = trimmed[0];
   const last = trimmed.at(-1);
@@ -288,7 +305,10 @@ function normalizeLineText(raw: string) {
       .replace(/^[^\p{L}\p{N}#\[(]+/u, "")
       .replace(/\s+/gu, " ")
       .trim(),
-  );
+  )
+    .replace(/^[《〈「『]+|[》〉」』]+$/gu, "")
+    .replace(/[\s*★☆✅✓✔︎✔️📌]+$/gu, "")
+    .trim();
 
   return {
     text,
@@ -315,11 +335,18 @@ function isNoiseText(text: string) {
   const normalized = text.trim().toLowerCase();
 
   if (
-    normalized.startsWith("#")
+    isSeparatorText(normalized)
+    || normalized.startsWith("#")
     || normalized.startsWith("http://")
     || normalized.startsWith("https://")
+    || normalized.includes("http://")
+    || normalized.includes("https://")
     || /^@\w/u.test(normalized)
   ) {
+    return true;
+  }
+
+  if (isMeasurementGuideText(normalized)) {
     return true;
   }
 
@@ -358,6 +385,29 @@ function isNoiseText(text: string) {
   );
 }
 
+function isSeparatorText(normalized: string) {
+  return /^[\s\-–—_=|~·•*━─]+$/u.test(normalized);
+}
+
+function isMeasurementGuideText(normalized: string) {
+  const compact = normalized.replace(/\s+/gu, "");
+
+  return (
+    normalized.includes("계량도구")
+    || (
+      /(?:계량|ml|종이컵)/iu.test(normalized)
+      && /(?:스푼|큰술|작은술|컵|숟가락)/u.test(normalized)
+      && /[：:=|\-–—]/u.test(normalized)
+    )
+    || /^(?:큰술|작은술|스푼|컵)\s*[：:=]\s*[a-z]/iu.test(normalized)
+    || /^(?:큰술|작은술|스푼|컵)\s*[-–—]\s*계량/u.test(normalized)
+    || /^[0-9]+컵\s*\([^)]*\)\s*=/iu.test(normalized)
+    || /^[0-9]+스푼\s*=/iu.test(normalized)
+    || compact.includes("1스푼=15ml")
+    || compact.includes("1컵=200ml")
+  );
+}
+
 function shouldResetSectionOnNoise(text: string) {
   const normalized = text.trim().toLowerCase();
 
@@ -369,6 +419,8 @@ function shouldResetSectionOnNoise(text: string) {
     || normalized.includes("알림")
     || normalized.includes("출처")
     || normalized.includes("instagram")
+    || normalized.includes("http://")
+    || normalized.includes("https://")
     || normalized.includes("인스타")
     || normalized.includes("블로그")
     || normalized.includes("music")
@@ -395,6 +447,8 @@ function isSectionStopperHeading(text: string) {
 
   return (
     (/추천/u.test(lower) && /분/u.test(lower))
+    || /^(?:사용\s*할|사용할)\s*요리$/u.test(lower)
+    || /^(?:인스타그램|instagram|contact|e-mail|email|블로그|blog)$/iu.test(lower)
     || /^보관\s*(?:법|방법|팁|tip)?$/u.test(lower)
     || /^주의\s*사항?$/u.test(lower)
     || /^(?:사용\s*(?:한\s*)?)?(?:제품|도구|기구|장비|그릇|용품)\s*(?:정보|소개)?$/u.test(lower)
@@ -424,8 +478,19 @@ function cleanupComponentLabel(value: string) {
 
 function getIngredientHeadingComponent(text: string) {
   const normalized = text.toLowerCase();
+  const headingCore = stripOuterBrackets(
+    stripDecorativeMarks(text)
+      .replace(/^(\[[^\]]+\])\s*[：:].*$/u, "$1")
+      .replace(/^([^：:]+)[：:].*$/u, "$1")
+      .replace(/\s+/gu, " ")
+      .trim(),
+  ).toLowerCase();
 
-  if (/^(?:기본\s*)?(?:재료|준비\s*재료|재료\s*준비|준비물|ingredients?)\s*(?:\([^)]*\))?\s*$/u.test(normalized)) {
+  if (
+    /^(?:기본\s*)?(?:재료|준비\s*재료|재료\s*준비|준비물|ingredients?)\s*(?:\([^)]*\))?\s*$/u.test(normalized)
+    || /^(?:양념\s*및\s*)?(?:재료|양념\s*재료|양념장\s*재료)$/u.test(headingCore)
+    || /(?:재료\s*준비|준비\s*재료)$/u.test(headingCore)
+  ) {
     return null;
   }
 
@@ -433,8 +498,8 @@ function getIngredientHeadingComponent(text: string) {
     return cleanupComponentLabel(text);
   }
 
-  if (/^.+\s+(?:재료|ingredients?)$/iu.test(text)) {
-    return cleanupComponentLabel(text);
+  if (/^.+\s+(?:재료|ingredients?)$/iu.test(headingCore)) {
+    return cleanupComponentLabel(headingCore);
   }
 
   return undefined;
@@ -459,7 +524,8 @@ function isRecipeHeading(text: string) {
 
   return (
     /^(?:recipe\s*)?\d+\s*(?:번째\s*)?레시피$/iu.test(normalized)
-    || /^(?:recipe\s*)?\d+\s*[：: ]+\S.{0,40}$/iu.test(normalized)
+    || /^recipe\s*\d+\s*[：: ]+\S.{0,40}$/iu.test(normalized)
+    || /^\d+\s*[：: ]+\S.{0,40}레시피\S*$/iu.test(normalized)
     || /^(?:첫|두|세|네)\s*번째\s*레시피$/u.test(normalized)
     || /^(?:첫|두|세|네)\s*번째\s*레시피\s+\S.{0,40}$/u.test(normalized)
     || /^recipe\s*\d+$/iu.test(normalized)
@@ -471,7 +537,10 @@ function isComponentOnlyHeading(text: string) {
     return false;
   }
 
-  const normalized = text.toLowerCase().trim();
+  const normalized = stripDecorativeMarks(text)
+    .replace(/[：:]+$/u, "")
+    .toLowerCase()
+    .trim();
 
   return COMPONENT_KEYWORDS.some((keyword) => {
     const normalizedKeyword = keyword.toLowerCase();
@@ -485,12 +554,39 @@ function isComponentOnlyHeading(text: string) {
   });
 }
 
+function isShortIngredientBlockHeadingFromLookahead(line: SourceLine, lookahead: SourceLine[]) {
+  const text = line.text;
+  const raw = line.raw.trim();
+
+  if (!/^[[(【「『《]/u.test(raw)) {
+    return false;
+  }
+
+  if (!text || text.length > 32 || hasAmountSignal(text) || hasCookingAction(text) || hasSentenceEnding(text)) {
+    return false;
+  }
+
+  const meaningfulLines = lookahead
+    .filter((current) => current.text && !isNoiseText(current.text))
+    .slice(0, 3);
+
+  if (meaningfulLines.length === 0) {
+    return false;
+  }
+
+  return meaningfulLines.some((current) => {
+    const scores = scoreLine(current);
+
+    return scores.ingredientScore >= 5 && scores.ingredientScore >= scores.stepScore + 2;
+  });
+}
+
 function hasCookingAction(text: string) {
-  return /(씻|자르|잘라|썰|썬다|볶|끓|삶|굽|구워|버무|섞|넣|절여|절이|절인|올려|얹|발라|뿌려|익혀|익히|튀겨|찐|쪄|데쳐|풀|두르|맞춰|채우|채워|완성|식히|식힌|섞어|섞으|만들|다져|다지|비벼|비비|무쳐|무치|조려|졸여|졸이|졸인|헹궈|헹구|담가|담근|갈아|갈고|갈아|끼우|으깨|펴|재워|재우|빚어|치대|부어|부치|지져|걸러|불려|불리|불린|말아|간하|간해|간합|간하면|마무리)/u.test(text);
+  return /(씻|자르|잘라|썰|썬다|볶|끓|삶|굽|구워|버무|섞|넣|절여|절이|절인|올려|얹|발라|뿌려|익혀|익히|튀겨|찐|쪄|데쳐|풀|두르|맞춰|채우|채워|완성|식히|식힌|섞어|섞으|만들|준비|제거|다져|다지|비벼|비비|무쳐|무치|조려|졸여|졸이|졸인|헹궈|헹구|담가|담근|갈아|갈고|갈아|끼우|으깨|펴|재워|재우|빚어|치대|부어|부치|지져|걸러|불려|불리|불린|말아|간하|간해|간합|간하면|마무리)/u.test(text);
 }
 
 function hasSpecificCookingAction(text: string) {
-  return /(씻|자르|잘라|썰|썬다|썰어|볶아|볶고|볶아요|볶는다|끓여|끓이|끓인다|삶|굽|구워|버무|섞|넣|절여|절이|절인|올려|얹|발라|뿌려|익혀|익히|튀겨|찐|쪄|데쳐|풀|두르|맞춰|채우|채워|완성|식히|식힌|섞어|섞으|다져|다지|비벼|비비|무쳐|무치|조려|졸여|졸이|헹궈|헹구|담가|담근|갈아|갈고|끼우|으깨|재워|재우|빚어|치대|부어|부치|지져|걸러|불려|불리|불린|말아|간하|간해|간합|간하면|마무리)/u.test(text);
+  return /(씻|자르|잘라|썰|썬다|썰어|볶아|볶고|볶아요|볶는다|끓여|끓이|끓인다|삶|굽|구워|버무|섞|넣|절여|절이|절인|올려|얹|발라|뿌려|익혀|익히|튀겨|찐|쪄|데쳐|풀|두르|맞춰|채우|채워|완성|식히|식힌|섞어|섞으|준비|제거|다져|다지|비벼|비비|무쳐|무치|조려|졸여|졸이|헹궈|헹구|담가|담근|갈아|갈고|끼우|으깨|재워|재우|빚어|치대|부어|부치|지져|걸러|불려|불리|불린|말아|간하|간해|간합|간하면|마무리)/u.test(text);
 }
 
 function hasSentenceEnding(text: string) {
@@ -503,6 +599,20 @@ function hasAmountSignal(text: string) {
 
 function parseRecipeAmount(value: string) {
   const normalizedValue = value.trim();
+  const vulgarFractions: Record<string, number> = {
+    "¼": 0.25,
+    "½": 0.5,
+    "⅓": 1 / 3,
+    "⅔": 2 / 3,
+    "⅛": 0.125,
+    "⅜": 0.375,
+    "⅝": 0.625,
+    "⅞": 0.875,
+  };
+
+  if (normalizedValue in vulgarFractions) {
+    return vulgarFractions[normalizedValue];
+  }
 
   if (/[~\-–]/u.test(normalizedValue)) {
     const [firstValue] = normalizedValue.split(/[~\-–]/u);
@@ -522,10 +632,64 @@ function parseRecipeAmount(value: string) {
 }
 
 function normalizeIngredientName(value: string) {
-  return value
+  let normalized = stripDecorativeMarks(value)
     .replace(/[：:]+$/u, "")
+    .replace(/\s*[-–—]+\s*$/u, "")
+    .replace(/\s*\([^)]*$/u, "")
+    .replace(/\([^)]*\)/gu, "")
+    .replace(/\s+[A-Za-z][A-Za-z\s.'-]*$/u, "")
+    .replace(/\s*(?:또는|혹은|or)\s+.+$/iu, "")
+    .replace(new RegExp(`\\s*${AMOUNT_RANGE_PATTERN}\\s*(?:${UNIT_PATTERN})(?:씩)?$`, "iu"), "")
+    .replace(/([^\d\s])\s*\d+(?:[./]\d+)?$/u, "$1")
+    .replace(/\s+(?:큰\s*거|큰거|크게|깎아서|탈탈~?|솔솔)$/u, "")
+    .replace(/\s+(?:은|는|을|를|이|가|에|으로|로)$/u, "")
+    .replace(/(?:은|는|을|를|가|에|으로|로)$/u, "")
     .replace(/\s+/gu, " ")
     .trim();
+
+  normalized = normalized
+    .replace(/^(.+?)(?:은|는)\s+재료의\s+.+$/u, "$1")
+    .replace(/^(?:그리고|또|및)\s+/u, "")
+    .replace(/^소금\s+후추$/u, "후추")
+    .replace(/^재료\s+/u, "")
+    .replace(/^저렴이\s+/u, "")
+    .replace(/^저당\s+/u, "")
+    .replace(/^냉동\s*/u, "")
+    .replace(/^가루\s+/u, "")
+    .replace(/^(?:데친|손질한|볶아둔|익힌|채썬|채\s*썬)\s+/u, "")
+    .replace(/^다진\s+(?!마늘$)/u, "")
+    .replace(/^청[.\s·/]*홍\s*고추$/u, "홍고추")
+    .replace(/^게란(?:\s+.*)?$/u, "계란")
+    .trim();
+
+  return normalized;
+}
+
+function normalizeIngredientCandidateText(value: string) {
+  const stripped = stripDecorativeMarks(value)
+    .replace(/\s*\([^)]*\)\s*$/u, "")
+    .replace(/\s*\([^)]*$/u, "")
+    .trim();
+  const altAfterAmountRe = new RegExp(
+    `^(.+?${AMOUNT_RANGE_PATTERN}\\s*(?:${UNIT_PATTERN})(?:씩)?)(?:\\s*(?:or|또는|혹은)\\s+.+)$`,
+    "iu",
+  );
+
+  return stripped.replace(altAfterAmountRe, "$1").trim();
+}
+
+function isInvalidIngredientName(value: string) {
+  const normalized = value.trim().toLowerCase();
+
+  return (
+    !normalized
+    || /^[a-z][a-z\s.'-]*$/iu.test(normalized)
+    || /^[\d\s=|/.,:：+\-–—()]+$/u.test(normalized)
+    || /^\d+\s*도\s*\d+\s*분/u.test(normalized)
+    || (/^.+(?:밥|덮밥|볶음)$/u.test(normalized) && normalized !== "밥")
+    || /(?:레시피|멤버십|가입|사용할\s*요리|계량|숟가락보다|키친타월|핏물|제거|올린\s*뒤|구매|링크|http|영상\s*속|만드는\s*법|보관|냉장|드세요|괜찮)/iu.test(normalized)
+    || /^의\s*\d/u.test(normalized)
+  );
 }
 
 function parseIngredientLine(
@@ -542,14 +706,14 @@ function parseIngredientLine(
     return null;
   }
 
-  const parseText = line.text.replace(/\s*\([^)]*\)\s*$/u, "").trim();
+  const parseText = normalizeIngredientCandidateText(line.text);
   const numericMatch = parseText.match(UNIT_SUFFIXED_RANGE_INGREDIENT_RE)
     ?? parseText.match(NUMERIC_INGREDIENT_RE);
   if (numericMatch) {
     const amount = parseRecipeAmount(numericMatch[2]);
     const name = normalizeIngredientName(numericMatch[1]);
 
-    if (!name || amount === null || hasCookingAction(name) || /[,，]/u.test(name)) {
+    if (!name || amount === null || hasCookingAction(name) || /[,，]/u.test(name) || isInvalidIngredientName(name)) {
       return null;
     }
 
@@ -573,13 +737,13 @@ function parseIngredientLine(
     };
   }
 
-  const koreanAmountMatch = line.text.match(/^(.+?)\s*(한|두|세|네|반)\s*(꼬집|줌|컵|개|큰술|작은술)$/u);
+  const koreanAmountMatch = parseText.match(/^(.+?)\s*(한|두|세|네|반)\s*(꼬집|줌|컵|개|큰술|작은술)$/u);
   if (koreanAmountMatch) {
     const name = normalizeIngredientName(koreanAmountMatch[1]);
     const amount = KOREAN_NUMBER_WORDS[koreanAmountMatch[2]];
     const unit = koreanAmountMatch[3];
 
-    if (!name || amount === undefined) {
+    if (!name || amount === undefined || isInvalidIngredientName(name)) {
       return null;
     }
 
@@ -598,11 +762,11 @@ function parseIngredientLine(
     };
   }
 
-  const toTasteMatch = line.text.match(/^(.+?)\s*(?:약간|조금|적당량|소량|취향껏|취향에\s*따라|원하는\s*만큼|한\s*꼬집|한\s*줌|한\s*움큼)$/u);
+  const toTasteMatch = parseText.match(/^(.+?)\s*(?:약간|조금|적당량|소량|취향껏|취향에\s*따라|원하는\s*만큼|한\s*꼬집|한\s*줌|한\s*움큼)$/u);
   if (toTasteMatch) {
     const name = normalizeIngredientName(toTasteMatch[1]);
 
-    if (!name || /[,，]/u.test(name)) {
+    if (!name || /[,，]/u.test(name) || isInvalidIngredientName(name)) {
       return null;
     }
 
@@ -621,11 +785,11 @@ function parseIngredientLine(
     };
   }
 
-  const tapToTasteMatch = line.text.match(/^(.+?)\s+(?:톡)+$/u);
+  const tapToTasteMatch = parseText.match(/^(.+?)\s+(?:톡)+$/u);
   if (tapToTasteMatch) {
     const name = normalizeIngredientName(tapToTasteMatch[1]);
 
-    if (!name) {
+    if (!name || isInvalidIngredientName(name)) {
       return null;
     }
 
@@ -648,13 +812,19 @@ function parseIngredientLine(
     return null;
   }
 
+  const amountlessName = normalizeIngredientName(parseText);
+
+  if (isInvalidIngredientName(amountlessName)) {
+    return null;
+  }
+
   return {
-    name: normalizeIngredientName(line.text),
+    name: amountlessName,
     amount: null,
     unit: null,
     ingredientType: "TO_TASTE",
     displayText: formatIngredientDisplayText({
-      name: normalizeIngredientName(line.text),
+      name: amountlessName,
       amount: null,
       unit: null,
       componentLabel,
@@ -729,7 +899,7 @@ function parseCommaSeparatedIngredients(
   }
 
   const segments = line.text
-    .split(/[,，]/u)
+    .split(/\s*(?:[,，]|(?<!\d)[.。](?!\d))\s*/u)
     .map((segment) => segment.trim())
     .filter(Boolean);
 
@@ -765,14 +935,16 @@ function cleanupInlineIngredientName(value: string) {
     .replace(/^.*?[：:]\s*/u, "")
     .replace(/^.*?(?:필요한\s*것|준비\s*재료|재료(?:는|로는)?|소스는)\s*/u, "")
     .replace(new RegExp(`^.*(?:${AMOUNT_RANGE_PATTERN})\\s*(?:${UNIT_PATTERN})\\s*(?:와|과|및)\\s*`, "iu"), "")
-    .replace(/^(?:오늘은|남은|냉장고에\s*남은|마지막에|그리고|또|와|과|및|에|를|을|은|는|로|으로)\s*/u, "")
+    .replace(/^(?:(?:오늘은|남은|냉장고에\s*남은|마지막에|넉넉하게|살짝|충분히|그리고|또|와|과|및|에|를|을|은|는|로|으로)\s*)+/u, "")
     .replace(/^.*?(?:은|는)\s+(?=[\p{L}])/u, "")
     .replace(/^.*?(?:썰고|익히고|볶고|불리고|넣어|올려|다가|고)\s+(?=[\p{L}])/u, "")
     .replace(/\s+/gu, " ")
     .trim();
 
   cleaned = cleaned
-    .replace(/\s*(?:은|는|을|를|이|가|에|와|과|으로|로|정도면?|정도)\s*$/u, "")
+    .replace(/\s+(?:은|는|을|를|이|가|에|와|과|으로|로|정도면?|정도)\s*$/u, "")
+    .replace(/(?:은|는|을|를|으로|로)$/u, "")
+    .replace(/(?:정도면?|정도)$/u, "")
     .trim();
 
   const tokens = cleaned.split(/\s+/u).filter(Boolean);
@@ -811,6 +983,7 @@ function makeParsedIngredient({
     || normalizedName.length > 40
     || hasCookingAction(normalizedName)
     || isNoiseText(normalizedName)
+    || isInvalidIngredientName(normalizedName)
   ) {
     return null;
   }
@@ -1038,6 +1211,10 @@ function normalizeLooseParsedIngredient(ingredient: ParsedIngredient): ParsedIng
     return null;
   }
 
+  if (isInvalidIngredientName(name)) {
+    return null;
+  }
+
   return {
     ...ingredient,
     name,
@@ -1168,6 +1345,16 @@ function parseStepLine(
     return null;
   }
 
+  if (!hasCookingAction(line.text)) {
+    if (hasAmountSignal(line.text)) {
+      return null;
+    }
+
+    if (line.text.length <= 20 && !hasSentenceEnding(line.text)) {
+      return null;
+    }
+  }
+
   return {
     instruction: formatStepInstruction(line.text, componentLabel),
     rawText: line.raw.trim(),
@@ -1291,6 +1478,15 @@ function classifyLine(
     };
   }
 
+  if (isShortIngredientBlockHeadingFromLookahead(line, lookahead)) {
+    return {
+      kind: "heading.component",
+      componentLabel: cleanupComponentLabel(line.text),
+      preferredSection: "ingredients",
+      ...scores,
+    };
+  }
+
   if (scores.ingredientScore >= 5 && scores.ingredientScore >= scores.stepScore + 2) {
     return { kind: "ingredient_candidate", componentLabel: null, preferredSection: null, ...scores };
   }
@@ -1387,6 +1583,47 @@ function resolveComponentLabel(
   return existing?.label ?? label;
 }
 
+function getHeadingInlinePayload(text: string) {
+  const match = text.match(/^[^：:]+[：:]\s*(.+)$/u);
+  const payload = match?.[1]?.trim() ?? "";
+
+  if (!payload || /^[\d\s~\-–—./]+$/u.test(payload)) {
+    return null;
+  }
+
+  if (!payload.includes(",") && !payload.includes("，") && /(?:분량|기준|계량|servings?)/iu.test(payload)) {
+    return null;
+  }
+
+  return payload;
+}
+
+function parseHeadingInlineIngredients(
+  line: SourceLine,
+  options: { componentLabel: string | null },
+) {
+  const payload = getHeadingInlinePayload(line.text);
+
+  if (!payload) {
+    return [];
+  }
+
+  const payloadLine: SourceLine = {
+    ...line,
+    raw: payload,
+    text: payload,
+    normalized: payload.toLowerCase(),
+    ordinal: null,
+  };
+
+  const commaSplit = parseCommaSeparatedIngredients(payloadLine, options);
+  if (commaSplit.length > 0) {
+    return commaSplit;
+  }
+
+  return parseLooseIngredientLines(payloadLine, options);
+}
+
 function splitRecipeRanges(lines: SourceLine[]) {
   const headings = lines.filter((line) => isRecipeHeading(line.text));
 
@@ -1448,7 +1685,13 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
       componentLabel = classification.componentLabel === null
         ? null
         : resolveComponentLabel(components, classification.componentLabel);
-      getComponent(components, componentLabel, line.index);
+      const component = getComponent(components, componentLabel, line.index);
+      const inlineIngredients = parseHeadingInlineIngredients(line, { componentLabel });
+
+      if (inlineIngredients.length > 0) {
+        component.ingredients.push(...inlineIngredients);
+        hasParsedIngredient = true;
+      }
       continue;
     }
 
