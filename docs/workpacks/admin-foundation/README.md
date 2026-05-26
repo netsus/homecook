@@ -232,6 +232,6 @@
 - [x] recordAdminAudit 헬퍼 연결 (모든 admin API + /admin 진입) <!-- omo:id=delivery-admin-audit-helper;stage=2;scope=backend;review=3,6 -->
 - [x] 로그 sanitizer (pathname-only, PII 제거) <!-- omo:id=delivery-log-sanitizer;stage=2;scope=backend;review=3,6 -->
 - [x] real DB smoke 절차 준비 + deterministic migration/bootstrap/fail-closed 검증 <!-- omo:id=delivery-real-db-smoke;stage=2;scope=backend;review=3,6 -->
-- [x] Stage 3 Claude backend review 완료 <!-- omo:id=delivery-stage3-backend-review;stage=3;scope=backend;review=6 -->
+- [x] Stage 3 Claude backend review 완료 <!-- omo:id=delivery-stage3-backend-review;stage=2;scope=backend;review=3,6 -->
 - [x] Design Authority evidence (Stage 4 screenshots) <!-- omo:id=delivery-design-authority-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] exploratory QA + qa:eval <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=6 -->
