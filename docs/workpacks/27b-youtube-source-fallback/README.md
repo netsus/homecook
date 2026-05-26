@@ -128,9 +128,9 @@ YouTube 설명란에서 재료는 추출했지만 구체적인 조리 과정(ste
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 > Design Status 전이: `temporary` (Stage 1 기본값)
@@ -233,6 +233,25 @@ YouTube Data API의 `captions.list`와 `captions.download`는 **OAuth scope** (`
 - Regression: `tests/youtube-corpus.test.ts`, `tests/youtube-dictionary-resolution.test.ts`, `tests/youtube-readiness-score.test.ts`를 함께 실행해 기존 slice 27 경로 무위반을 확인했다
 - Session policy: 기존 register / ingredient-registration tests가 expired, consumed, mismatch, cross-user, invalid input, RPC delegation 경계를 계속 고정한다
 
+### Stage 4 frontend closeout evidence (2026-05-26)
+
+- **extraction_methods 한국어 라벨**: `EXTRACTION_METHOD_LABELS` 맵으로 `description` → `"설명란"`, `caption` → `"자막"`으로 렌더. legacy method(`ocr`, `asr`, `manual`, `estimation`)도 raw English가 노출되지 않도록 한국어 fallback을 추가. `data-testid="extraction-method-{method}"` 추가.
+- **부분 추출 draft UX**: 재료 있고 step 없을 때 `data-testid="partial-draft-guidance"` 경고 박스에 `"조리 과정을 직접 입력해주세요"` 안내 표시. 기존 step 추가 버튼으로 유도. 등록 버튼은 step 없으면 disabled 유지 (기존 `getYoutubeRegisterRequirements` 로직).
+- **추출 진행 UI**: `EXTRACTION_STAGES`에 transcript 보조 확인 단계 추가. `"필요한 경우 자막에서 조리 과정을 보충할 수 있어요"` 문구로 truthful 안내.
+- **5개 필수 UI 상태**: loading(ExtractionProgressStep), empty(재료/step 미발견), error(ExtractionErrorStep), read-only(409 consumed), unauthorized(401 로그인 게이트) — 모두 기존 동작 유지, 변경 없음.
+- **Vitest**: `tests/menu-add-screen.test.tsx`에 3개 테스트 추가: caption+description 라벨 확인, description-only 라벨 확인, 부분 draft guidance + register disabled 확인. 24/24 pass.
+- **Playwright**: `tests/e2e/slice-27b-youtube-source-fallback.spec.ts` 신규 생성. 부분 draft no-provider flow (guidance → step 추가 → register), caption flow (한국어 라벨 + 경고 없음). 2/2 pass.
+- **기존 slice 27 E2E**: `tests/e2e/slice-27-youtube-import-quality.spec.ts` extraction method pill locator를 한국어 라벨 기준 `data-testid`로 갱신. 5/5 pass.
+- **검증 명령**: `pnpm exec vitest run tests/menu-add-screen.test.tsx`, `pnpm exec playwright test tests/e2e/slice-27b-youtube-source-fallback.spec.ts --project=mobile-chrome`, `pnpm exec tsc --noEmit`, `pnpm validate:workpack -- --slice 27b-youtube-source-fallback`
+
+### Stage 5 design review evidence (2026-05-26)
+
+- **Design Status**: `pending-review` → `confirmed`
+- **Review scope**: low-risk UI change. 기존 YT_IMPORT 화면 내부의 loading 문구, source chip label, partial draft 안내만 추가했고 신규 화면/anchor extension/정보 구조 변경 없음.
+- **UI states**: loading / empty / error / read-only / unauthorized 유지. transcript 보조 확인 문구는 진행 상태 안내만 보강한다.
+- **Visual check**: `pnpm exec playwright test tests/e2e/qa-visual.spec.ts --grep "youtube import desktop flow" --project=desktop-chrome` pass. 현재 5-step YT_IMPORT 흐름과 한국어 source chip 기준으로 darwin snapshot 갱신.
+- **Legacy regression**: slice19 fixture의 legacy `ocr` method도 `"화면 텍스트"`로 라벨링해 raw English source chip 노출을 방지. `pnpm exec playwright test tests/e2e/slice-19-youtube-import.spec.ts --project=mobile-chrome` pass.
+
 ## Contract Evolution Candidates (Optional)
 
 ### CE-1: `extraction_meta_json`에 transcript 가용성 필드 표준화
@@ -289,14 +308,14 @@ YouTube Data API의 `captions.list`와 `captions.download`는 **OAuth scope** (`
 - [x] extraction_methods 배열 정직성 보장 (실제 step 제공 시에만 caption 기록) <!-- omo:id=delivery-extraction-methods;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 (extraction_methods 표기 + 부분 draft 안내) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 (extraction_methods 표기 + 부분 draft 안내) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 - [x] Transcript fallback fixture coverage >= Stage 2 목표치 <!-- omo:id=delivery-transcript-fixture-coverage;stage=2;scope=backend;review=3,6 -->
 - [x] 기존 slice 27 corpus regression 무위반 <!-- omo:id=delivery-corpus-regression;stage=2;scope=backend;review=3,6 -->
-- [ ] Partial draft UX 안내 구현 <!-- omo:id=delivery-partial-draft-ux;stage=4;scope=frontend;review=5,6 -->
+- [x] Partial draft UX 안내 구현 <!-- omo:id=delivery-partial-draft-ux;stage=4;scope=frontend;review=5,6 -->
 - [x] No-provider backend path 검증 (adapter no-op 시 description-only partial draft 정상 반환, manual step UX는 Stage 4) <!-- omo:id=delivery-no-provider-path;stage=2;scope=shared;review=3,6 -->
