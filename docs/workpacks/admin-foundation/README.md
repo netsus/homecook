@@ -157,8 +157,8 @@
 ## Design Authority
 - UI risk: `new-screen`
 - Anchor screen dependency: 없음 (Admin은 독립된 내부 화면)
-- Visual artifact: Stage 4 구현 후 스크린샷 evidence 수집 예정
-- Authority status: `required`
+- Visual artifact: `ui/designs/evidence/admin-foundation/*.png`
+- Authority status: `stage5-pass-final-gate-pending`
 - Notes: Admin 4화면 모두 신규 화면이므로 authority review 필수. Stage 4 스크린샷 → Codex `authority_precheck` → Stage 5 public design review → 수정 → Claude `final_authority_gate` 순서. 내부 운영 도구이므로 desktop-first acceptable하나, 모바일에서 emergency lookup이 가능해야 하며 mobile blocker 규칙은 여전히 적용.
 
 ## Design Status
@@ -180,6 +180,7 @@
 - `docs/workpacks/admin-foundation/backend-smoke.md`
 - `docs/workpacks/admin-foundation/stage3-backend-review.md`
 - `docs/workpacks/admin-foundation/stage4-frontend-qa.md`
+- `ui/designs/authority/ADMIN_FOUNDATION-authority.md`
 
 ## QA / Test Data Plan
 - **fixture baseline**: `admin_members` row 1건, 일반 사용자 row 다수, `operational_events` 샘플, `admin_audit_logs` 샘플
@@ -235,3 +236,4 @@
 - [x] Stage 3 Claude backend review 완료 <!-- omo:id=delivery-stage3-backend-review;stage=2;scope=backend;review=3,6 -->
 - [x] Design Authority evidence (Stage 4 screenshots) <!-- omo:id=delivery-design-authority-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] exploratory QA + qa:eval <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=6 -->
+- [x] Stage 5 Codex public design review 완료 <!-- omo:id=delivery-stage5-design-review;stage=4;scope=frontend;review=6 -->

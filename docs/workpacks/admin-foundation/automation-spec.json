@@ -83,6 +83,7 @@
         "ui/designs/ADMIN_USERS.md",
         "ui/designs/ADMIN_EVENTS.md",
         "ui/designs/ADMIN_AUDIT_LOGS.md",
+        "ui/designs/authority/ADMIN_FOUNDATION-authority.md",
         "ui/designs/critiques/ADMIN_DASHBOARD-critique.md",
         "ui/designs/critiques/ADMIN_USERS-critique.md",
         "ui/designs/critiques/ADMIN_EVENTS-critique.md",
