@@ -1,13 +1,28 @@
 import { readFile } from "node:fs/promises";
 
+import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
+const createServerComponentClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const notFound = vi.fn(() => {
+  throw new Error("NEXT_NOT_FOUND");
+});
+const redirect = vi.fn((url: string) => {
+  throw new Error(`NEXT_REDIRECT:${url}`);
+});
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
+  createServerComponentClient,
   createServiceRoleClient,
+}));
+
+vi.mock("next/navigation", () => ({
+  notFound,
+  redirect,
+  usePathname: () => "/admin",
 }));
 
 interface QueryError {
@@ -52,6 +67,19 @@ function setupRouteUser(user: { id: string } | null) {
   return routeClient;
 }
 
+function setupServerComponentUser(user: { id: string } | null) {
+  const serverComponentClient = {
+    auth: {
+      getUser: vi.fn(async () => ({ data: { user } })),
+    },
+    from: vi.fn(() => {
+      throw new Error("admin layout must not use serverComponentClient.from");
+    }),
+  };
+  createServerComponentClient.mockResolvedValue(serverComponentClient);
+  return serverComponentClient;
+}
+
 function setupAdminServiceClient({
   auditResult = { data: null, error: null },
   member = { user_id: "admin-1", role: "viewer" },
@@ -83,12 +111,20 @@ async function importPageViewRoute() {
   return import("@/app/api/v1/admin/page-view/route");
 }
 
+async function importAdminLayout() {
+  return import("@/app/admin/layout");
+}
+
 describe("admin page-view API route", () => {
   beforeEach(() => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
+    createServerComponentClient.mockReset();
     createServiceRoleClient.mockReset();
     createServiceRoleClient.mockReturnValue(null);
+    notFound.mockClear();
+    redirect.mockClear();
+    vi.stubGlobal("React", React);
   });
 
   it("returns 401 for unauthenticated users", async () => {
@@ -206,6 +242,57 @@ describe("admin page-view API route", () => {
 
     expect(response.status).toBe(500);
     expect(body.error.code).toBe("ADMIN_SERVICE_ROLE_UNAVAILABLE");
+  });
+});
+
+describe("admin server route guard", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    createRouteHandlerClient.mockReset();
+    createServerComponentClient.mockReset();
+    createServiceRoleClient.mockReset();
+    createServiceRoleClient.mockReturnValue(null);
+    notFound.mockClear();
+    redirect.mockClear();
+    vi.stubGlobal("React", React);
+  });
+
+  it("hides admin pages from unauthenticated visitors before content renders", async () => {
+    setupServerComponentUser(null);
+
+    const { default: AdminLayout } = await importAdminLayout();
+
+    await expect(
+      Promise.resolve().then(() => AdminLayout({ children: "admin-content" })),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(notFound).toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+  });
+
+  it("hides admin pages from authenticated non-admin users before content renders", async () => {
+    setupServerComponentUser({ id: "user-1" });
+    const serviceClient = setupAdminServiceClient({ member: null });
+
+    const { default: AdminLayout } = await importAdminLayout();
+
+    await expect(
+      Promise.resolve().then(() => AdminLayout({ children: "admin-content" })),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(notFound).toHaveBeenCalled();
+    expect(serviceClient.from).toHaveBeenCalledWith("admin_members");
+  });
+
+  it("renders admin page content only for admin members", async () => {
+    setupServerComponentUser({ id: "admin-1" });
+    setupAdminServiceClient();
+
+    const { default: AdminLayout } = await importAdminLayout();
+    const output = await AdminLayout({ children: "admin-content" });
+
+    expect(output.props.children).toBe("admin-content");
+    expect(notFound).not.toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
   });
 });
 
