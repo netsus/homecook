@@ -86,17 +86,75 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": "ui/designs/evidence/admin-foundation/eval-result.json",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "closeout": null,
-  "notes": "Stage 1 workpack docs. Admin Foundation is a new-screen product slice with 4 internal admin screens, 3 read-only APIs, 3 new DB tables, and service-role/audit/PII security requirements. Contract-evolution PR #609 merged. Stage 2 backend implementation blocked until this Stage 1 PR merges.",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/ADMIN_FOUNDATION-authority.md",
+        ".omx/artifacts/claude-delegate-admin-foundation-final-authority-gate-response-20260527T140615+0900.md"
+      ],
+      "actual_verification_refs": [
+        "docs/workpacks/admin-foundation/stage3-backend-review.md",
+        "docs/workpacks/admin-foundation/stage4-frontend-qa.md",
+        "docs/workpacks/admin-foundation/stage6-closeout.md",
+        "ui/designs/evidence/admin-foundation/stage4-browser-smoke.json",
+        "ui/designs/evidence/admin-foundation/exploratory-report.json",
+        "ui/designs/evidence/admin-foundation/eval-result.json",
+        "ui/designs/authority/ADMIN_FOUNDATION-authority.md",
+        ".omx/artifacts/claude-delegate-admin-foundation-final-authority-gate-response-20260527T140615+0900.md",
+        "local-supabase-migration-admin-tables",
+        "admin-bootstrap-sql-service-role",
+        "service-role-missing-fail-closed"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-05-27T05:12:30Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage6-final-authority-gate-pass",
+      "evidence_sources": []
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-27T05:12:30Z",
+      "status_synced_at": "2026-05-27T05:12:30Z",
+      "pr_body_synced_at": "2026-05-27T05:12:30Z"
+    }
+  },
+  "notes": "Internal Stage 6 closeout projection after Codex review. Contract-evolution PR #609, Stage 1 docs PR #610, Stage 2/3 backend PRs #611/#612, Stage 4 frontend PR #613, and Stage 5 authority PR #614 are merged. Claude final_authority_gate passed via resume session 41a515a4-3b3f-4969-b68f-4ed8aed631bf with blocker 0 and major 0. Design Status confirmed; authority reviewed. Stage 4 evidence covers browser smoke, exploratory QA, qa:eval score 100, screenshots, and admin security states. closeout_phase=completed last_recovery_at=2026-05-27T05:12:30Z",
   "out_of_scope": [
     "User deletion/suspension/impersonation",
     "Recipe/ingredient/synonym/cooking method CRUD",
