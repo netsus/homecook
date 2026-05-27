@@ -93,6 +93,8 @@ function main() {
     process.exit(0);
   }
 
+  const claudeProvider = assertSupportedClaudeProvider(options.claudeProvider);
+
   if (options.mode !== "artifact-only" && options.workItem) {
     ensureLaunchAgentInstalled({
       rootDir: process.cwd(),
@@ -109,7 +111,7 @@ function main() {
     claudeBudgetState: options.claudeBudgetState,
     mode: options.mode,
     ghBin: options.ghBin,
-    claudeProvider: assertSupportedClaudeProvider(options.claudeProvider),
+    claudeProvider,
     claudeBin: options.claudeBin,
     claudeModel: options.claudeModel,
     claudeEffort: options.claudeEffort,
