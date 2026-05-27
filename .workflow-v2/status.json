@@ -1421,11 +1421,11 @@
     {
       "id": "admin-foundation",
       "preset": "vertical-slice-strict",
-      "branch": "docs/admin-foundation",
+      "branch": "feature/fe-admin-foundation",
       "pr_path": null,
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm install --frozen-lockfile && pnpm verify:backend",
         "pnpm install --frozen-lockfile && pnpm verify:frontend",
@@ -1435,10 +1435,10 @@
         "pnpm validate:workpack -- --slice admin-foundation",
         "git diff --check"
       ],
-      "notes": "Stage 1 workpack docs. Minimal internal admin foundation for launch operations. 4 new screens, 3 read-only APIs, 3 new DB tables, service-role/audit/PII security. Contract-evolution PR #609 merged.",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
-      "last_evaluator_result": null,
+      "notes": "Internal Stage 6 closeout projection after Codex review. Contract-evolution PR #609, Stage 1 docs PR #610, Stage 2/3 backend PRs #611/#612, Stage 4 frontend PR #613, and Stage 5 authority PR #614 are merged. Claude final_authority_gate passed with blocker 0 and major 0. Design Status confirmed; authority reviewed. closeout_phase=completed last_recovery_at=2026-05-27T05:12:30Z",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
+      "last_evaluator_result": "ui/designs/evidence/admin-foundation/eval-result.json",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     }

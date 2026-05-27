@@ -158,14 +158,14 @@
 - UI risk: `new-screen`
 - Anchor screen dependency: 없음 (Admin은 독립된 내부 화면)
 - Visual artifact: `ui/designs/evidence/admin-foundation/*.png`
-- Authority status: `stage5-pass-final-gate-pending`
-- Notes: Admin 4화면 모두 신규 화면이므로 authority review 필수. Stage 4 스크린샷 → Codex `authority_precheck` → Stage 5 public design review → 수정 → Claude `final_authority_gate` 순서. 내부 운영 도구이므로 desktop-first acceptable하나, 모바일에서 emergency lookup이 가능해야 하며 mobile blocker 규칙은 여전히 적용.
+- Authority status: `reviewed`
+- Notes: Admin 4화면 모두 신규 화면이므로 authority review 필수. Stage 4 스크린샷 → Codex `authority_precheck` → Stage 5 public design review → Claude `final_authority_gate` 순서가 완료되었다. Claude final authority gate는 `PASS`, `confirmed_allowed=true`, blocker 0건, major 0건으로 Design Status `confirmed` 전환을 승인했다.
 
 ## Design Status
 
 - [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [x] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed)
 - [ ] N/A
 
 ## Source Links
@@ -180,7 +180,9 @@
 - `docs/workpacks/admin-foundation/backend-smoke.md`
 - `docs/workpacks/admin-foundation/stage3-backend-review.md`
 - `docs/workpacks/admin-foundation/stage4-frontend-qa.md`
+- `docs/workpacks/admin-foundation/stage6-closeout.md`
 - `ui/designs/authority/ADMIN_FOUNDATION-authority.md`
+- `.omx/artifacts/claude-delegate-admin-foundation-final-authority-gate-response-20260527T140615+0900.md`
 
 ## QA / Test Data Plan
 - **fixture baseline**: `admin_members` row 1건, 일반 사용자 row 다수, `operational_events` 샘플, `admin_audit_logs` 샘플
@@ -237,3 +239,4 @@
 - [x] Design Authority evidence (Stage 4 screenshots) <!-- omo:id=delivery-design-authority-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] exploratory QA + qa:eval <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=6 -->
 - [x] Stage 5 Codex public design review 완료 <!-- omo:id=delivery-stage5-design-review;stage=4;scope=frontend;review=6 -->
+- [x] Stage 6 Codex frontend review / Claude final authority gate / closeout 완료 <!-- omo:id=delivery-stage6-closeout;stage=4;scope=frontend;review=6 -->

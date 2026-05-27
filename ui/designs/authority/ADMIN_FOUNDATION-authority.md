@@ -26,9 +26,9 @@
 - blocker_count: 0
 - major_count: 0
 - minor_count: 2
-- confirmed_allowed: `pending Claude final_authority_gate`
+- confirmed_allowed: `true`
 
-Admin Foundation의 4개 내부 운영 화면은 모바일 기본/좁은 폭과 데스크톱에서 page-level horizontal overflow 없이 읽기 전용 운영 조회를 수행할 수 있다. 신규 화면 authority 기준에서 Stage 5 public design review를 통과하며, Stage 6에서 Claude final authority gate가 blocker 0건을 재확인하면 `confirmed`로 전환 가능하다.
+Admin Foundation의 4개 내부 운영 화면은 모바일 기본/좁은 폭과 데스크톱에서 page-level horizontal overflow 없이 읽기 전용 운영 조회를 수행할 수 있다. 신규 화면 authority 기준에서 Stage 5 public design review를 통과했고, Stage 6 Claude final authority gate가 `PASS`, `confirmed_allowed=true`, blocker 0건, major 0건을 재확인했으므로 `confirmed`로 전환 가능하다.
 
 ## Scorecard
 
@@ -88,4 +88,16 @@ Admin Foundation의 4개 내부 운영 화면은 모바일 기본/좁은 폭과 
 
 - Codex Stage 5 public design review: `approved`.
 - Required repair before Stage 6: 없음.
-- Claude final authority gate: 필요. 이 report와 Stage 4 screenshots를 읽고 blocker 0건을 재확인해야 `Design Status: confirmed`로 전환한다.
+- Claude final authority gate: `PASS`.
+- Claude response: `.omx/artifacts/claude-delegate-admin-foundation-final-authority-gate-response-20260527T140615+0900.md`.
+- Design Status: `confirmed`.
+
+## Final Authority Gate
+
+- Gate reviewer: Claude
+- Artifact: `.omx/artifacts/claude-delegate-admin-foundation-final-authority-gate-response-20260527T140615+0900.md`
+- Verdict: `PASS`
+- Confirmed allowed: `true`
+- Blockers: 0
+- Major issues: 0
+- Minor issues: 2 accepted non-blocking launch notes
