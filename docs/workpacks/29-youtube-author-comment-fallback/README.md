@@ -154,6 +154,7 @@ YouTube 설명란이 비어 있거나 설명란만으로 구체 재료/조리 �
 - `docs/db설계-v1.3.9.md` — §4-2 youtube_extraction_sessions
 - `docs/api문서-v1.2.13.md` — §6 YouTube Recipe Import
 - `docs/workpacks/27-youtube-import-quality-uplift/live-smoke-author-comment-baseline-2026-05-29.md`
+- `docs/workpacks/29-youtube-author-comment-fallback/live-smoke-author-comment-stage2-2026-05-29.md`
 - `.omx/plans/youtube-author-comment-fallback-ralplan-20260529.md`
 
 ## QA / Test Data Plan
@@ -231,22 +232,22 @@ YouTube 설명란이 비어 있거나 설명란만으로 구체 재료/조리 �
 ## Delivery Checklist
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] AuthorCommentProvider adapter 구현 <!-- omo:id=delivery-author-comment-provider;stage=2;scope=backend;review=3,6 -->
-- [ ] author-only top-level filtering 구현 <!-- omo:id=delivery-author-only-filter;stage=2;scope=backend;review=3,6 -->
-- [ ] recipe signal pre-filter 구현 <!-- omo:id=delivery-recipe-signal-filter;stage=2;scope=backend;review=3,6 -->
-- [ ] description-first trigger/skip 조건 구현 <!-- omo:id=delivery-trigger-skip;stage=2;scope=backend;review=3,6 -->
-- [ ] source merge policy 구현 <!-- omo:id=delivery-source-merge;stage=2;scope=backend;review=3,6 -->
-- [ ] extraction methods/source metadata 정직성 구현 <!-- omo:id=delivery-source-honesty;stage=2;scope=shared;review=3,6 -->
-- [ ] provider graceful degradation 구현 <!-- omo:id=delivery-provider-degrade;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] AuthorCommentProvider adapter 구현 <!-- omo:id=delivery-author-comment-provider;stage=2;scope=backend;review=3,6 -->
+- [x] author-only top-level filtering 구현 <!-- omo:id=delivery-author-only-filter;stage=2;scope=backend;review=3,6 -->
+- [x] recipe signal pre-filter 구현 <!-- omo:id=delivery-recipe-signal-filter;stage=2;scope=backend;review=3,6 -->
+- [x] description-first trigger/skip 조건 구현 <!-- omo:id=delivery-trigger-skip;stage=2;scope=backend;review=3,6 -->
+- [x] source merge policy 구현 <!-- omo:id=delivery-source-merge;stage=2;scope=backend;review=3,6 -->
+- [x] extraction methods/source metadata 정직성 구현 <!-- omo:id=delivery-source-honesty;stage=2;scope=shared;review=3,6 -->
+- [x] provider graceful degradation 구현 <!-- omo:id=delivery-provider-degrade;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI source label 연결 <!-- omo:id=delivery-ui-source-label;stage=4;scope=frontend;review=5,6 -->
 - [ ] 추출 진행 UI 단계에 작성자 댓글 확인 단계 추가 여부 결정 <!-- omo:id=delivery-extraction-stage-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 live smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 live smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 - [ ] 30건 이상 live smoke closeout 재측정 <!-- omo:id=delivery-final-live-smoke;stage=4;scope=shared;review=6 -->

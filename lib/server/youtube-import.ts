@@ -258,7 +258,11 @@ const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,20}$/;
 const DEFAULT_EXTRACTION_METHODS = ["description"] as const;
 const YOUTUBE_PROVIDER_VERSION = "youtube-videos-list-description-v1";
 const SESSION_TTL_HOURS = 24;
+const AUTHOR_COMMENT_RAW_SOURCE_HEADER = "--- author comment ---";
 const CAPTION_TRANSCRIPT_RAW_SOURCE_HEADER = "--- caption transcript ---";
+const AUTHOR_COMMENT_MAX_RESULTS = 100;
+const AUTHOR_COMMENT_ORDER = "relevance";
+const AUTHOR_COMMENT_QUOTA_UNITS_ESTIMATE = 1;
 const OEMBED_PREVIEW_CLASSIFICATION_REASONS = [YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON];
 const NEW_COOKING_METHOD = {
   code: "auto_salt",
@@ -321,6 +325,7 @@ interface YoutubeProviderVideo {
   videoId: string;
   title: string;
   channel: string;
+  channelId: string | null;
   thumbnailUrl: string | null;
   description: string;
   tags: string[];
@@ -355,6 +360,43 @@ export interface YoutubeTranscriptProviderResult {
 export interface YoutubeTranscriptProvider {
   name: string;
   fetchTranscript(context: YoutubeTranscriptProviderContext): Promise<YoutubeTranscriptProviderResult>;
+}
+
+export type YoutubeAuthorCommentProviderStatus =
+  | "available"
+  | "unavailable"
+  | "disabled"
+  | "comments_disabled"
+  | "error";
+
+export interface YoutubeAuthorCommentProviderContext {
+  videoId: string;
+  youtubeUrl: string;
+  title: string;
+  channel: string;
+  channelId: string | null;
+}
+
+export interface YoutubeAuthorComment {
+  text: string;
+  authorChannelId: string | null;
+  likeCount?: number | null;
+  publishedAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface YoutubeAuthorCommentProviderResult {
+  status: YoutubeAuthorCommentProviderStatus;
+  providerName?: string;
+  comments?: YoutubeAuthorComment[];
+  reason?: string | null;
+}
+
+export interface YoutubeAuthorCommentProvider {
+  name: string;
+  fetchAuthorComments(
+    context: YoutubeAuthorCommentProviderContext,
+  ): Promise<YoutubeAuthorCommentProviderResult>;
 }
 
 interface YoutubePreviewVideo {
@@ -408,6 +450,42 @@ interface TranscriptFallbackResult {
   meta: TranscriptFallbackMeta;
 }
 
+interface AuthorCommentFallbackMeta {
+  attempted: boolean;
+  provider: string | null;
+  status:
+    | "not_needed"
+    | "no_author_channel"
+    | "disabled"
+    | "unavailable"
+    | "comments_disabled"
+    | "error"
+    | "no_author_comments"
+    | "no_recipe_signal"
+    | "no_parseable_recipe"
+    | "used";
+  reason: string | null;
+  used: boolean;
+  fetched_comment_count: number;
+  author_comment_count: number;
+  recipe_signal_comment_count: number;
+  used_ingredient_count: number;
+  used_step_count: number;
+  request: {
+    order: typeof AUTHOR_COMMENT_ORDER;
+    max_results: typeof AUTHOR_COMMENT_MAX_RESULTS;
+    page_count: 1;
+    quota_units_estimate: typeof AUTHOR_COMMENT_QUOTA_UNITS_ESTIMATE;
+  };
+}
+
+interface AuthorCommentFallbackResult {
+  recipe: ParsedRecipeDescription;
+  usedAuthorComment: boolean;
+  rawAuthorCommentText: string | null;
+  meta: AuthorCommentFallbackMeta;
+}
+
 const NOOP_TRANSCRIPT_PROVIDER: YoutubeTranscriptProvider = {
   name: "noop",
   async fetchTranscript() {
@@ -419,7 +497,27 @@ const NOOP_TRANSCRIPT_PROVIDER: YoutubeTranscriptProvider = {
   },
 };
 
+const NOOP_AUTHOR_COMMENT_PROVIDER: YoutubeAuthorCommentProvider = {
+  name: "noop",
+  async fetchAuthorComments() {
+    return {
+      status: "disabled",
+      providerName: "noop",
+      reason: "no_provider_configured",
+      comments: [],
+    };
+  },
+};
+
+const YOUTUBE_COMMENT_THREADS_PROVIDER: YoutubeAuthorCommentProvider = {
+  name: "youtube_comment_threads",
+  async fetchAuthorComments(context) {
+    return fetchYoutubeAuthorComments(context.videoId);
+  },
+};
+
 let transcriptProviderForTest: YoutubeTranscriptProvider | null = null;
+let authorCommentProviderForTest: YoutubeAuthorCommentProvider | null = null;
 
 export function setYoutubeTranscriptProviderForTest(provider: YoutubeTranscriptProvider | null) {
   if (process.env.NODE_ENV !== "test") {
@@ -436,6 +534,31 @@ export function setYoutubeTranscriptProviderForTest(provider: YoutubeTranscriptP
 
 function getYoutubeTranscriptProvider() {
   return transcriptProviderForTest ?? NOOP_TRANSCRIPT_PROVIDER;
+}
+
+export function setYoutubeAuthorCommentProviderForTest(provider: YoutubeAuthorCommentProvider | null) {
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("setYoutubeAuthorCommentProviderForTest is only available in tests");
+  }
+
+  const previousProvider = authorCommentProviderForTest;
+  authorCommentProviderForTest = provider;
+
+  return () => {
+    authorCommentProviderForTest = previousProvider;
+  };
+}
+
+function getYoutubeAuthorCommentProvider() {
+  if (authorCommentProviderForTest) {
+    return authorCommentProviderForTest;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return NOOP_AUTHOR_COMMENT_PROVIDER;
+  }
+
+  return YOUTUBE_COMMENT_THREADS_PROVIDER;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -583,6 +706,10 @@ function getBestThumbnail(thumbnails: unknown, videoId: string) {
   return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 }
 
+function getFixtureChannelId(videoId: string) {
+  return `channel-${videoId}`;
+}
+
 function getFixtureVideo(videoId: string): YoutubeProviderResult {
   if (videoId.includes("missing")) {
     return {
@@ -600,6 +727,7 @@ function getFixtureVideo(videoId: string): YoutubeProviderResult {
         videoId,
         title: "일반 영상",
         channel: "채널명",
+        channelId: getFixtureChannelId(videoId),
         thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
         description: "음악과 일상 이야기를 담은 일반 영상입니다.",
         tags: ["music", "vlog"],
@@ -616,6 +744,7 @@ function getFixtureVideo(videoId: string): YoutubeProviderResult {
         videoId,
         title: "김치찌개 먹방 브이로그",
         channel: "집밥 채널",
+        channelId: getFixtureChannelId(videoId),
         thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
         description: [
           "오늘은 김치찌개를 먹었습니다.",
@@ -637,6 +766,7 @@ function getFixtureVideo(videoId: string): YoutubeProviderResult {
         videoId,
         title: "김치찌개 설명 부족한 레시피",
         channel: "집밥 채널",
+        channelId: getFixtureChannelId(videoId),
         thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
         description: [
           "김치찌개 레시피",
@@ -658,6 +788,7 @@ function getFixtureVideo(videoId: string): YoutubeProviderResult {
         videoId,
         title: "김치찌개 자막 보충 레시피",
         channel: "집밥 채널",
+        channelId: getFixtureChannelId(videoId),
         thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
         description: [
           "김치찌개 레시피",
@@ -679,6 +810,7 @@ function getFixtureVideo(videoId: string): YoutubeProviderResult {
         videoId,
         title: "김치찌개 자막 없는 레시피",
         channel: "집밥 채널",
+        channelId: getFixtureChannelId(videoId),
         thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
         description: [
           "김치찌개 레시피",
@@ -700,6 +832,7 @@ function getFixtureVideo(videoId: string): YoutubeProviderResult {
         videoId,
         title: "백종원 김치찌개 후보 확인 필요",
         channel: "백종원의 요리비책",
+        channelId: getFixtureChannelId(videoId),
         thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
         description: [
           "김치찌개 레시피",
@@ -722,6 +855,7 @@ function getFixtureVideo(videoId: string): YoutubeProviderResult {
       videoId,
       title: "백종원 김치찌개",
       channel: "백종원의 요리비책",
+      channelId: getFixtureChannelId(videoId),
       thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
       description: [
         "김치찌개 레시피",
@@ -791,6 +925,20 @@ function isQuotaErrorPayload(payload: unknown) {
   });
 }
 
+function getYoutubeErrorReasons(payload: unknown) {
+  if (!isRecord(payload) || !isRecord(payload.error) || !Array.isArray(payload.error.errors)) {
+    return [];
+  }
+
+  return payload.error.errors
+    .map((error) => isRecord(error) && typeof error.reason === "string" ? error.reason : null)
+    .filter((reason): reason is string => reason !== null);
+}
+
+function isCommentsDisabledPayload(payload: unknown) {
+  return getYoutubeErrorReasons(payload).includes("commentsDisabled");
+}
+
 function mapProviderError(payload: unknown): YoutubeProviderError {
   if (isQuotaErrorPayload(payload)) {
     return {
@@ -837,6 +985,7 @@ function parseYoutubeVideoPayload(videoId: string, payload: unknown): YoutubePro
       videoId,
       title: typeof snippet.title === "string" ? snippet.title : "유튜브 영상 레시피",
       channel: typeof snippet.channelTitle === "string" ? snippet.channelTitle : "YouTube",
+      channelId: typeof snippet.channelId === "string" ? snippet.channelId : null,
       thumbnailUrl: getBestThumbnail(snippet.thumbnails, videoId),
       description: typeof snippet.description === "string" ? snippet.description : "",
       tags: Array.isArray(snippet.tags)
@@ -972,6 +1121,110 @@ async function fetchYoutubeVideo(videoId: string): Promise<YoutubeProviderResult
   }
 
   return parseYoutubeVideoPayload(videoId, payload);
+}
+
+function parseYoutubeCommentThreadsPayload(payload: unknown): YoutubeAuthorCommentProviderResult {
+  if (!isRecord(payload) || !Array.isArray(payload.items)) {
+    return {
+      status: "error",
+      providerName: YOUTUBE_COMMENT_THREADS_PROVIDER.name,
+      reason: "invalid_comment_threads_payload",
+      comments: [],
+    };
+  }
+
+  return {
+    status: "available",
+    providerName: YOUTUBE_COMMENT_THREADS_PROVIDER.name,
+    comments: payload.items.flatMap((item): YoutubeAuthorComment[] => {
+      if (!isRecord(item) || !isRecord(item.snippet)) {
+        return [];
+      }
+
+      const topLevelComment = item.snippet.topLevelComment;
+      if (!isRecord(topLevelComment) || !isRecord(topLevelComment.snippet)) {
+        return [];
+      }
+
+      const snippet = topLevelComment.snippet;
+      const text = typeof snippet.textOriginal === "string"
+        ? snippet.textOriginal
+        : typeof snippet.textDisplay === "string"
+          ? snippet.textDisplay
+          : "";
+      const authorChannel = isRecord(snippet.authorChannelId) ? snippet.authorChannelId : null;
+
+      return [{
+        text,
+        authorChannelId: typeof authorChannel?.value === "string" ? authorChannel.value : null,
+        likeCount: typeof snippet.likeCount === "number" ? snippet.likeCount : null,
+        publishedAt: typeof snippet.publishedAt === "string" ? snippet.publishedAt : null,
+        updatedAt: typeof snippet.updatedAt === "string" ? snippet.updatedAt : null,
+      }];
+    }),
+  };
+}
+
+async function fetchYoutubeAuthorComments(videoId: string): Promise<YoutubeAuthorCommentProviderResult> {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+
+  if (!apiKey) {
+    return {
+      status: "disabled",
+      providerName: YOUTUBE_COMMENT_THREADS_PROVIDER.name,
+      reason: "missing_youtube_api_key",
+      comments: [],
+    };
+  }
+
+  const params = new URLSearchParams({
+    part: "snippet",
+    videoId,
+    textFormat: "plainText",
+    order: AUTHOR_COMMENT_ORDER,
+    maxResults: String(AUTHOR_COMMENT_MAX_RESULTS),
+    key: apiKey,
+  });
+
+  let response: Response;
+
+  try {
+    response = await fetch(`https://www.googleapis.com/youtube/v3/commentThreads?${params.toString()}`);
+  } catch {
+    return {
+      status: "error",
+      providerName: YOUTUBE_COMMENT_THREADS_PROVIDER.name,
+      reason: "comment_threads_network_error",
+      comments: [],
+    };
+  }
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    if (isCommentsDisabledPayload(payload)) {
+      return {
+        status: "comments_disabled",
+        providerName: YOUTUBE_COMMENT_THREADS_PROVIDER.name,
+        reason: "comments_disabled",
+        comments: [],
+      };
+    }
+
+    return {
+      status: isQuotaErrorPayload(payload) ? "unavailable" : "error",
+      providerName: YOUTUBE_COMMENT_THREADS_PROVIDER.name,
+      reason: isQuotaErrorPayload(payload) ? "quota_exceeded" : "comment_threads_provider_error",
+      comments: [],
+    };
+  }
+
+  return parseYoutubeCommentThreadsPayload(payload);
 }
 
 function classifyYoutubeVideo(video: YoutubeProviderVideo): YoutubeClassification {
@@ -1326,6 +1579,7 @@ function buildRecipioParityProviderVideo(
     videoId: fixture.videoId,
     title: fixture.sourceTitle,
     channel: fixture.channel,
+    channelId: null,
     thumbnailUrl: fixture.thumbnailUrl,
     description: fixture.sourceDescription,
     tags: ["recipe", "레시피"],
@@ -1449,6 +1703,323 @@ function parseRecipeDescriptionForImport(video: YoutubeProviderVideo): ParsedRec
   };
 }
 
+function buildAuthorCommentFallbackMeta({
+  attempted,
+  provider,
+  status,
+  reason = null,
+  used = false,
+  fetchedCommentCount = 0,
+  authorCommentCount = 0,
+  recipeSignalCommentCount = 0,
+  usedIngredientCount = 0,
+  usedStepCount = 0,
+}: {
+  attempted: boolean;
+  provider: string | null;
+  status: AuthorCommentFallbackMeta["status"];
+  reason?: string | null;
+  used?: boolean;
+  fetchedCommentCount?: number;
+  authorCommentCount?: number;
+  recipeSignalCommentCount?: number;
+  usedIngredientCount?: number;
+  usedStepCount?: number;
+}): AuthorCommentFallbackMeta {
+  return {
+    attempted,
+    provider,
+    status,
+    reason,
+    used,
+    fetched_comment_count: fetchedCommentCount,
+    author_comment_count: authorCommentCount,
+    recipe_signal_comment_count: recipeSignalCommentCount,
+    used_ingredient_count: usedIngredientCount,
+    used_step_count: usedStepCount,
+    request: {
+      order: AUTHOR_COMMENT_ORDER,
+      max_results: AUTHOR_COMMENT_MAX_RESULTS,
+      page_count: 1,
+      quota_units_estimate: AUTHOR_COMMENT_QUOTA_UNITS_ESTIMATE,
+    },
+  };
+}
+
+function shouldAttemptAuthorCommentFallback(
+  parsedRecipe: ParsedRecipeDescription,
+  blockingIssues: string[],
+) {
+  return (
+    parsedRecipe.ingredients.length === 0
+    || parsedRecipe.steps.length === 0
+    || blockingIssues.some((issue) => issue.includes("steps") || issue.includes("missing_steps"))
+  );
+}
+
+function normalizeAuthorCommentText(text: string) {
+  return text
+    .replace(/\r\n?/gu, "\n")
+    .replace(/\n{4,}/gu, "\n\n\n")
+    .trim();
+}
+
+function isPromotionHeavyComment(text: string) {
+  const normalized = text.toLowerCase();
+  const promoHits = [
+    "구독",
+    "좋아요",
+    "알림설정",
+    "구매 링크",
+    "제품 정보",
+    "instagram",
+    "인스타",
+    "블로그",
+    "협찬",
+    "광고",
+    "bgm",
+  ].filter((keyword) => normalized.includes(keyword)).length;
+  const recipeHits = [
+    "재료",
+    "만드는",
+    "조리",
+    "레시피",
+    "ingredients",
+    "steps",
+  ].filter((keyword) => normalized.includes(keyword)).length;
+
+  return promoHits >= 2 && recipeHits === 0;
+}
+
+function scoreAuthorCommentRecipeSignal(text: string) {
+  const normalized = normalizeAuthorCommentText(text);
+  if (normalized.length < 12 || isPromotionHeavyComment(normalized)) {
+    return 0;
+  }
+
+  const lines = normalized.split("\n").map((line) => line.trim()).filter(Boolean);
+  const headingScore = [
+    /(재료|준비물|ingredients?)/iu,
+    /(만드는\s*(법|방법)|조리\s*(법|방법|순서)|순서|레시피|steps?|directions?|method)/iu,
+  ].filter((pattern) => pattern.test(normalized)).length;
+  const amountScore = lines.filter((line) =>
+    /(?:\d+(?:[.,]\d+)?|\d+\/\d+)\s*(?:g|kg|ml|l|L|t|T|스푼|큰술|작은술|컵|개|장|대|쪽|줌|꼬집|숟가락)?/u.test(line),
+  ).length;
+  const numberedStepScore = lines.filter((line) =>
+    /^\s*(?:\d+[.)]|[①②③④⑤⑥⑦⑧⑨⑩]|[-•])\s*/u.test(line) && hasCookingAction(line),
+  ).length;
+  const cookingActionScore = lines.filter(hasCookingAction).length;
+
+  return headingScore * 3
+    + Math.min(amountScore, 4) * 2
+    + Math.min(numberedStepScore, 4) * 2
+    + Math.min(cookingActionScore, 4);
+}
+
+function parseAuthorCommentRecipe(
+  video: YoutubeProviderVideo,
+  text: string,
+): ParsedRecipeDescriptionForImport {
+  return parseRecipeDescriptionForImport({
+    ...video,
+    description: text,
+  });
+}
+
+function mergeAuthorCommentRecipe(
+  descriptionRecipe: ParsedRecipeDescription,
+  authorRecipe: ParsedRecipeDescription,
+) {
+  const useAuthorIngredients = descriptionRecipe.ingredients.length === 0
+    && authorRecipe.ingredients.length > 0;
+  const useAuthorSteps = descriptionRecipe.steps.length === 0 && authorRecipe.steps.length > 0;
+
+  return {
+    recipe: {
+      ...descriptionRecipe,
+      ingredients: useAuthorIngredients ? authorRecipe.ingredients : descriptionRecipe.ingredients,
+      steps: useAuthorSteps ? authorRecipe.steps : descriptionRecipe.steps,
+      stepComponentLabels: useAuthorSteps
+        ? authorRecipe.stepComponentLabels
+        : descriptionRecipe.stepComponentLabels,
+    },
+    usedIngredientCount: useAuthorIngredients ? authorRecipe.ingredients.length : 0,
+    usedStepCount: useAuthorSteps ? authorRecipe.steps.length : 0,
+  };
+}
+
+async function resolveAuthorCommentFallback(
+  video: YoutubeProviderVideo,
+  parsedRecipe: ParsedRecipeDescription,
+  descriptionParse: ParsedRecipeDescriptionForImport,
+  parsedUrl: { youtubeUrl: string; videoId: string },
+): Promise<AuthorCommentFallbackResult> {
+  if (!shouldAttemptAuthorCommentFallback(parsedRecipe, descriptionParse.blockingIssues)) {
+    return {
+      recipe: parsedRecipe,
+      usedAuthorComment: false,
+      rawAuthorCommentText: null,
+      meta: buildAuthorCommentFallbackMeta({
+        attempted: false,
+        provider: null,
+        status: "not_needed",
+      }),
+    };
+  }
+
+  if (!video.channelId) {
+    return {
+      recipe: parsedRecipe,
+      usedAuthorComment: false,
+      rawAuthorCommentText: null,
+      meta: buildAuthorCommentFallbackMeta({
+        attempted: false,
+        provider: null,
+        status: "no_author_channel",
+        reason: "missing_video_channel_id",
+      }),
+    };
+  }
+
+  const provider = getYoutubeAuthorCommentProvider();
+  let providerResult: YoutubeAuthorCommentProviderResult;
+
+  try {
+    providerResult = await provider.fetchAuthorComments({
+      videoId: parsedUrl.videoId,
+      youtubeUrl: parsedUrl.youtubeUrl,
+      title: video.title,
+      channel: video.channel,
+      channelId: video.channelId,
+    });
+  } catch (error) {
+    return {
+      recipe: parsedRecipe,
+      usedAuthorComment: false,
+      rawAuthorCommentText: null,
+      meta: buildAuthorCommentFallbackMeta({
+        attempted: true,
+        provider: provider.name,
+        status: "error",
+        reason: error instanceof Error ? error.message : "provider_error",
+      }),
+    };
+  }
+
+  const providerName = providerResult.providerName ?? provider.name;
+  const comments = providerResult.comments ?? [];
+  const fetchedCommentCount = comments.length;
+
+  if (providerResult.status !== "available") {
+    return {
+      recipe: parsedRecipe,
+      usedAuthorComment: false,
+      rawAuthorCommentText: null,
+      meta: buildAuthorCommentFallbackMeta({
+        attempted: true,
+        provider: providerName,
+        status: providerResult.status,
+        reason: providerResult.reason ?? null,
+        fetchedCommentCount,
+      }),
+    };
+  }
+
+  const authorComments = comments
+    .filter((comment) => comment.authorChannelId === video.channelId)
+    .map((comment) => ({
+      ...comment,
+      text: normalizeAuthorCommentText(comment.text),
+      signalScore: scoreAuthorCommentRecipeSignal(comment.text),
+    }))
+    .filter((comment) => comment.text.length > 0);
+
+  if (authorComments.length === 0) {
+    return {
+      recipe: parsedRecipe,
+      usedAuthorComment: false,
+      rawAuthorCommentText: null,
+      meta: buildAuthorCommentFallbackMeta({
+        attempted: true,
+        provider: providerName,
+        status: "no_author_comments",
+        fetchedCommentCount,
+      }),
+    };
+  }
+
+  const signalCandidates = authorComments
+    .filter((comment) => comment.signalScore >= 3)
+    .sort((left, right) => right.signalScore - left.signalScore);
+
+  if (signalCandidates.length === 0) {
+    return {
+      recipe: parsedRecipe,
+      usedAuthorComment: false,
+      rawAuthorCommentText: null,
+      meta: buildAuthorCommentFallbackMeta({
+        attempted: true,
+        provider: providerName,
+        status: "no_recipe_signal",
+        fetchedCommentCount,
+        authorCommentCount: authorComments.length,
+      }),
+    };
+  }
+
+  const parsedCandidates = signalCandidates
+    .map((comment) => {
+      const parsed = parseAuthorCommentRecipe(video, comment.text);
+      const merged = mergeAuthorCommentRecipe(parsedRecipe, parsed.recipe);
+      const contributionScore = merged.usedIngredientCount * 3 + merged.usedStepCount * 4;
+
+      return {
+        comment,
+        parsed,
+        merged,
+        score: comment.signalScore + contributionScore,
+      };
+    })
+    .filter((candidate) =>
+      candidate.merged.usedIngredientCount > 0 || candidate.merged.usedStepCount > 0,
+    )
+    .sort((left, right) => right.score - left.score);
+
+  const selected = parsedCandidates[0];
+  if (!selected) {
+    return {
+      recipe: parsedRecipe,
+      usedAuthorComment: false,
+      rawAuthorCommentText: null,
+      meta: buildAuthorCommentFallbackMeta({
+        attempted: true,
+        provider: providerName,
+        status: "no_parseable_recipe",
+        fetchedCommentCount,
+        authorCommentCount: authorComments.length,
+        recipeSignalCommentCount: signalCandidates.length,
+      }),
+    };
+  }
+
+  return {
+    recipe: selected.merged.recipe,
+    usedAuthorComment: true,
+    rawAuthorCommentText: selected.comment.text,
+    meta: buildAuthorCommentFallbackMeta({
+      attempted: true,
+      provider: providerName,
+      status: "used",
+      used: true,
+      fetchedCommentCount,
+      authorCommentCount: authorComments.length,
+      recipeSignalCommentCount: signalCandidates.length,
+      usedIngredientCount: selected.merged.usedIngredientCount,
+      usedStepCount: selected.merged.usedStepCount,
+    }),
+  };
+}
+
 function getCaptionCapability(
   captionFlag: string | null,
 ): YoutubeTranscriptProviderContext["captionCapability"] {
@@ -1510,18 +2081,24 @@ function parseTranscriptSteps(transcriptText: string) {
   return parseRecipeDescription(normalized).steps;
 }
 
-function buildRawSourceText(description: string, transcriptText: string | null) {
+function buildRawSourceText(
+  description: string,
+  authorCommentText: string | null,
+  transcriptText: string | null,
+) {
+  const normalizedAuthorComment = authorCommentText?.trim();
   const normalizedTranscript = transcriptText?.trim();
+  const parts = [description];
 
-  if (!normalizedTranscript) {
-    return description;
+  if (normalizedAuthorComment) {
+    parts.push(AUTHOR_COMMENT_RAW_SOURCE_HEADER, normalizedAuthorComment);
   }
 
-  return [
-    description,
-    CAPTION_TRANSCRIPT_RAW_SOURCE_HEADER,
-    normalizedTranscript,
-  ].join("\n\n");
+  if (normalizedTranscript) {
+    parts.push(CAPTION_TRANSCRIPT_RAW_SOURCE_HEADER, normalizedTranscript);
+  }
+
+  return parts.join("\n\n");
 }
 
 async function resolveTranscriptFallback(
@@ -2190,9 +2767,22 @@ export async function handleYoutubeExtract(request: Request) {
     ? parseRecipioParityFixtureForImport(parityFixture)
     : parseRecipeDescriptionForImport(video);
   const parsedRecipe = descriptionParse.recipe;
+  const authorCommentFallback = parityFixture
+    ? {
+        recipe: parsedRecipe,
+        usedAuthorComment: false,
+        rawAuthorCommentText: null,
+        meta: buildAuthorCommentFallbackMeta({
+          attempted: false,
+          provider: null,
+          status: "not_needed",
+          reason: "recipio_parity_fixture",
+        }),
+      } satisfies AuthorCommentFallbackResult
+    : await resolveAuthorCommentFallback(video, parsedRecipe, descriptionParse, parsedUrl);
   const transcriptFallback = parityFixture
     ? {
-        steps: parsedRecipe.steps,
+        steps: authorCommentFallback.recipe.steps,
         usedTranscript: false,
         rawTranscriptText: null,
         meta: {
@@ -2203,16 +2793,16 @@ export async function handleYoutubeExtract(request: Request) {
           reason: "recipio_parity_fixture",
           language: null,
           track_kind: null,
-          step_count: parsedRecipe.steps.length,
+          step_count: authorCommentFallback.recipe.steps.length,
         },
       } satisfies TranscriptFallbackResult
-    : await resolveTranscriptFallback(video, parsedRecipe, parsedUrl);
+    : await resolveTranscriptFallback(video, authorCommentFallback.recipe, parsedUrl);
   const finalParsedRecipe = {
-    ...parsedRecipe,
+    ...authorCommentFallback.recipe,
     steps: transcriptFallback.steps,
     stepComponentLabels: transcriptFallback.usedTranscript
       ? transcriptFallback.steps.map(() => null)
-      : parsedRecipe.stepComponentLabels,
+      : authorCommentFallback.recipe.stepComponentLabels,
   };
   const ingredientLookup = await findIngredientIds(
     dbClient,
@@ -2243,16 +2833,39 @@ export async function handleYoutubeExtract(request: Request) {
     ...step,
     duration_text: descriptionParse.stepDurationTexts?.[index] ?? step.duration_text,
   }));
-  const extractionMethods = transcriptFallback.usedTranscript
-    ? [...DEFAULT_EXTRACTION_METHODS, "caption"]
-    : [...DEFAULT_EXTRACTION_METHODS];
+  const descriptionContributed = parsedRecipe.ingredients.length > 0 || parsedRecipe.steps.length > 0;
+  const extractionMethods = [
+    ...(descriptionContributed || (!authorCommentFallback.usedAuthorComment && !transcriptFallback.usedTranscript)
+      ? [...DEFAULT_EXTRACTION_METHODS]
+      : []),
+    ...(authorCommentFallback.usedAuthorComment ? ["author_comment"] : []),
+    ...(transcriptFallback.usedTranscript ? ["caption"] : []),
+  ];
   const sourceProviders = parityFixture
     ? ["recipio_live_parity_fixture"]
-    : transcriptFallback.usedTranscript
-    ? ["youtube_videos_list", "description_parser", "transcript_provider", "transcript_step_parser"]
-    : ["youtube_videos_list", "description_parser"];
+    : [
+        "youtube_videos_list",
+        "description_parser",
+        ...(authorCommentFallback.usedAuthorComment
+          ? ["comment_threads_api", "author_comment_filter", "author_comment_parser"]
+          : []),
+        ...(transcriptFallback.usedTranscript
+          ? ["transcript_provider", "transcript_step_parser"]
+          : []),
+      ];
+  const remainingDescriptionBlockingIssues = descriptionParse.blockingIssues.filter((issue) => {
+    if (issue === "ingredients" && finalParsedRecipe.ingredients.length > 0) {
+      return false;
+    }
+
+    if (issue === "steps" && finalParsedRecipe.steps.length > 0) {
+      return false;
+    }
+
+    return true;
+  });
   const blockingIssues = [
-    ...descriptionParse.blockingIssues,
+    ...remainingDescriptionBlockingIssues,
     ...buildBlockingIssues(ingredients),
     ...steps.flatMap((step, index) =>
       (step.missing_fields ?? []).map((field) => `steps[${index}].${field}`),
@@ -2289,7 +2902,11 @@ export async function handleYoutubeExtract(request: Request) {
     source_providers: sourceProviders,
     classification_status: classification.status,
     classification_reasons: classification.reasons,
-    raw_source_text: buildRawSourceText(video.description, transcriptFallback.rawTranscriptText),
+    raw_source_text: buildRawSourceText(
+      video.description,
+      authorCommentFallback.rawAuthorCommentText,
+      transcriptFallback.rawTranscriptText,
+    ),
     extraction_meta_json: {
       provider_version: YOUTUBE_PROVIDER_VERSION,
       source_providers: sourceProviders,
@@ -2300,6 +2917,7 @@ export async function handleYoutubeExtract(request: Request) {
       description_parser_selection_outcome: descriptionParse.selectionOutcome,
       description_parser_shadow: descriptionParse.shadowResult,
       draft_warnings: draftWarnings,
+      author_comment_provider: authorCommentFallback.meta,
       caption_capability: transcriptFallback.meta.capability,
       transcript_provider: transcriptFallback.meta,
       partial_extraction: finalParsedRecipe.ingredients.length > 0 && finalParsedRecipe.steps.length === 0,

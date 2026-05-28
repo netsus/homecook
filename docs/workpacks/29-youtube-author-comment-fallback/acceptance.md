@@ -9,43 +9,43 @@
 
 ## Author Comment Source Policy
 
-- [ ] 작성자 top-level comment만 parser input으로 사용한다 <!-- omo:id=accept-author-top-level-only;stage=2;scope=backend;review=3,6 -->
-- [ ] 일반 시청자 댓글은 recipe text가 있어도 무시한다 <!-- omo:id=accept-non-author-ignored;stage=2;scope=backend;review=3,6 -->
-- [ ] reply 댓글은 작성자 댓글이어도 MVP 범위에서 사용하지 않는다 <!-- omo:id=accept-replies-ignored;stage=2;scope=backend;review=3,6 -->
-- [ ] pinned 여부에 의존하지 않는다 <!-- omo:id=accept-pinned-not-required;stage=2;scope=backend;review=3,6 -->
-- [ ] `commentThreads.list`는 `order=relevance`, `maxResults=100`, 1 page cap을 지킨다 <!-- omo:id=accept-one-page-cap;stage=2;scope=backend;review=3,6 -->
+- [x] 작성자 top-level comment만 parser input으로 사용한다 <!-- omo:id=accept-author-top-level-only;stage=2;scope=backend;review=3,6 -->
+- [x] 일반 시청자 댓글은 recipe text가 있어도 무시한다 <!-- omo:id=accept-non-author-ignored;stage=2;scope=backend;review=3,6 -->
+- [x] reply 댓글은 작성자 댓글이어도 MVP 범위에서 사용하지 않는다 <!-- omo:id=accept-replies-ignored;stage=2;scope=backend;review=3,6 -->
+- [x] pinned 여부에 의존하지 않는다 <!-- omo:id=accept-pinned-not-required;stage=2;scope=backend;review=3,6 -->
+- [x] `commentThreads.list`는 `order=relevance`, `maxResults=100`, 1 page cap을 지킨다 <!-- omo:id=accept-one-page-cap;stage=2;scope=backend;review=3,6 -->
 
 ## Fallback Trigger & Merge
 
-- [ ] description 결과가 registration-ready이면 comment provider를 호출하지 않는다 <!-- omo:id=accept-description-ready-skip;stage=2;scope=backend;review=3,6 -->
-- [ ] description이 비어 있고 작성자 댓글에 recipe text가 있으면 draft를 생성한다 <!-- omo:id=accept-empty-description-author-draft;stage=2;scope=backend;review=3,6 -->
-- [ ] description에 재료만 있고 작성자 댓글에 step이 있으면 step을 보충한다 <!-- omo:id=accept-author-steps-fill;stage=2;scope=backend;review=3,6 -->
-- [ ] description과 작성자 댓글이 충돌하면 description 값을 우선한다 <!-- omo:id=accept-description-precedence;stage=2;scope=backend;review=3,6 -->
-- [ ] 작성자 댓글에 recipe signal이 없으면 registration-ready로 주장하지 않는다 <!-- omo:id=accept-no-signal-no-false-ready;stage=2;scope=backend;review=3,6 -->
-- [ ] 여러 작성자 댓글 중 recipe signal이 가장 강한 후보를 선택하거나 안전하게 병합한다 <!-- omo:id=accept-multiple-author-comments;stage=2;scope=backend;review=3,6 -->
+- [x] description 결과가 registration-ready이면 comment provider를 호출하지 않는다 <!-- omo:id=accept-description-ready-skip;stage=2;scope=backend;review=3,6 -->
+- [x] description이 비어 있고 작성자 댓글에 recipe text가 있으면 draft를 생성한다 <!-- omo:id=accept-empty-description-author-draft;stage=2;scope=backend;review=3,6 -->
+- [x] description에 재료만 있고 작성자 댓글에 step이 있으면 step을 보충한다 <!-- omo:id=accept-author-steps-fill;stage=2;scope=backend;review=3,6 -->
+- [x] description과 작성자 댓글이 충돌하면 description 값을 우선한다 <!-- omo:id=accept-description-precedence;stage=2;scope=backend;review=3,6 -->
+- [x] 작성자 댓글에 recipe signal이 없으면 registration-ready로 주장하지 않는다 <!-- omo:id=accept-no-signal-no-false-ready;stage=2;scope=backend;review=3,6 -->
+- [x] 여러 작성자 댓글 중 recipe signal이 가장 강한 후보를 선택하거나 안전하게 병합한다 <!-- omo:id=accept-multiple-author-comments;stage=2;scope=backend;review=3,6 -->
 
 ## Provider Failure & Metadata
 
-- [ ] comments disabled는 extract 실패가 아니라 description-only graceful degradation으로 처리한다 <!-- omo:id=accept-comments-disabled-degrade;stage=2;scope=backend;review=3,6 -->
-- [ ] author comment provider error는 기존 description 결과를 깨지 않는다 <!-- omo:id=accept-provider-error-degrade;stage=2;scope=backend;review=3,6 -->
-- [ ] provider 시도 여부, 후보 수, 사용 여부, failure reason이 `extraction_meta_json`에 기록된다 <!-- omo:id=accept-author-meta-recorded;stage=2;scope=backend;review=3,6 -->
-- [ ] 작성자 댓글 원문 전체를 운영 로그나 operational_events metadata에 저장하지 않는다 <!-- omo:id=accept-no-raw-comment-operational-log;stage=2;scope=backend;review=3,6 -->
-- [ ] `extraction_methods`는 실제 기여 source만 포함한다 <!-- omo:id=accept-extraction-methods-honest;stage=2;scope=shared;review=3,6 -->
+- [x] comments disabled는 extract 실패가 아니라 description-only graceful degradation으로 처리한다 <!-- omo:id=accept-comments-disabled-degrade;stage=2;scope=backend;review=3,6 -->
+- [x] author comment provider error는 기존 description 결과를 깨지 않는다 <!-- omo:id=accept-provider-error-degrade;stage=2;scope=backend;review=3,6 -->
+- [x] provider 시도 여부, 후보 수, 사용 여부, failure reason이 `extraction_meta_json`에 기록된다 <!-- omo:id=accept-author-meta-recorded;stage=2;scope=backend;review=3,6 -->
+- [x] 작성자 댓글 원문 전체를 운영 로그나 operational_events metadata에 저장하지 않는다 <!-- omo:id=accept-no-raw-comment-operational-log;stage=2;scope=backend;review=3,6 -->
+- [x] `extraction_methods`는 실제 기여 source만 포함한다 <!-- omo:id=accept-extraction-methods-honest;stage=2;scope=shared;review=3,6 -->
 
 ## Happy Path
 
 - [ ] 작성자 댓글 recipe 영상: URL 입력 → extract → 작성자 댓글 보충 draft → 검수 → 등록 full flow가 동작한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 - [ ] `author_comment` source label이 검수 화면에서 "작성자 댓글"로 표시된다 <!-- omo:id=accept-author-comment-label;stage=4;scope=frontend;review=5,6 -->
 
 ## State / Policy
 
-- [ ] 상태 전이가 공식 문서와 일치한다 (draft → consumed / expired) <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
-- [ ] read-only 정책이 지켜진다 (consumed session 재사용 불가) <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
-- [ ] 중복 호출에도 결과가 꼬이지 않는다 (extract는 새 세션, register consumed는 409) <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
-- [ ] Taxonomy freeze contract를 지킨다 (legacy 7 category 유지) <!-- omo:id=accept-taxonomy-freeze;stage=2;scope=shared;review=3,6 -->
-- [ ] LLM/OCR/transcript fallback은 이 슬라이스에서 호출하지 않는다 <!-- omo:id=accept-no-other-fallbacks;stage=2;scope=backend;review=3,6 -->
+- [x] 상태 전이가 공식 문서와 일치한다 (draft → consumed / expired) <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
+- [x] read-only 정책이 지켜진다 (consumed session 재사용 불가) <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
+- [x] 중복 호출에도 결과가 꼬이지 않는다 (extract는 새 세션, register consumed는 409) <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] Taxonomy freeze contract를 지킨다 (legacy 7 category 유지) <!-- omo:id=accept-taxonomy-freeze;stage=2;scope=shared;review=3,6 -->
+- [x] 신규 LLM/OCR fallback은 호출하지 않고, 기존 transcript fallback은 author-comment 보충 후 기존 조건에서만 이어진다 <!-- omo:id=accept-no-other-fallbacks;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 
@@ -59,24 +59,24 @@
 
 ## Data Integrity
 
-- [ ] 타인 리소스를 수정할 수 없다 (session ownership) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] invalid input을 적절히 거부하거나 무시한다 <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
-- [ ] 파생 필드와 비정규화 값이 맞다 (`extraction_meta_json`, `draft_json`, `extraction_methods`) <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
-- [ ] raw YouTube URL/source text/comment text를 운영 이벤트 로그에 저장하지 않는다 <!-- omo:id=accept-operational-log-minimized;stage=2;scope=backend;review=3,6 -->
+- [x] 타인 리소스를 수정할 수 없다 (session ownership) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] invalid input을 적절히 거부하거나 무시한다 <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
+- [x] 파생 필드와 비정규화 값이 맞다 (`extraction_meta_json`, `draft_json`, `extraction_methods`) <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
+- [x] raw YouTube URL/source text/comment text를 운영 이벤트 로그에 저장하지 않는다 <!-- omo:id=accept-operational-log-minimized;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
 
-- [ ] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] 신규 system row가 필요 없음을 확인했다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
-- [ ] `YOUTUBE_API_KEY` 부재 시 author-comment fallback만 비활성/진단되고 기존 정책과 충돌하지 않는다 <!-- omo:id=accept-youtube-key-gate;stage=2;scope=backend;review=3,6 -->
+- [x] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] 신규 system row가 필요 없음을 확인했다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
+- [x] `YOUTUBE_API_KEY` 부재 시 author-comment fallback만 비활성/진단되고 기존 정책과 충돌하지 않는다 <!-- omo:id=accept-youtube-key-gate;stage=2;scope=backend;review=3,6 -->
 
 ## Regression Protection
 
-- [ ] 기존 slice 27/27b parser/corpus tests가 regression 없이 통과한다 <!-- omo:id=accept-corpus-regression;stage=2;scope=backend;review=3,6 -->
-- [ ] 기존 description-only registration-ready 영상은 comment provider 호출 없이 기존 결과를 유지한다 <!-- omo:id=accept-description-only-compat;stage=2;scope=backend;review=3,6 -->
-- [ ] dictionary resolution rate가 기존 baseline 이하로 떨어지지 않는다 <!-- omo:id=accept-resolution-no-regress;stage=2;scope=backend;review=3,6 -->
-- [ ] `POST /extract` 응답 shape이 변경되지 않았다 <!-- omo:id=accept-extract-shape-compat;stage=2;scope=backend;review=3,6 -->
+- [x] 기존 slice 27/27b parser/corpus tests가 regression 없이 통과한다 <!-- omo:id=accept-corpus-regression;stage=2;scope=backend;review=3,6 -->
+- [x] 기존 description-only registration-ready 영상은 comment provider 호출 없이 기존 결과를 유지한다 <!-- omo:id=accept-description-only-compat;stage=2;scope=backend;review=3,6 -->
+- [x] dictionary resolution rate가 기존 baseline 이하로 떨어지지 않는다 <!-- omo:id=accept-resolution-no-regress;stage=2;scope=backend;review=3,6 -->
+- [x] `POST /extract` 응답 shape이 변경되지 않았다 <!-- omo:id=accept-extract-shape-compat;stage=2;scope=backend;review=3,6 -->
 
 ## Manual QA
 
@@ -94,15 +94,15 @@
 
 ### Vitest
 
-- [ ] AuthorCommentProvider adapter / official provider request shape 테스트 <!-- omo:id=accept-vitest-provider;stage=2;scope=backend;review=3,6 -->
-- [ ] author-only top-level filter 테스트 <!-- omo:id=accept-vitest-author-filter;stage=2;scope=backend;review=3,6 -->
-- [ ] non-author/reply 무시 negative test <!-- omo:id=accept-vitest-non-author-negative;stage=2;scope=backend;review=3,6 -->
-- [ ] recipe signal pre-filter 테스트 <!-- omo:id=accept-vitest-recipe-signal;stage=2;scope=backend;review=3,6 -->
-- [ ] fallback trigger/skip 조건 테스트 <!-- omo:id=accept-vitest-trigger-skip;stage=2;scope=backend;review=3,6 -->
-- [ ] source merge policy 테스트 <!-- omo:id=accept-vitest-source-merge;stage=2;scope=backend;review=3,6 -->
-- [ ] provider failure graceful degradation 테스트 <!-- omo:id=accept-vitest-provider-degrade;stage=2;scope=backend;review=3,6 -->
-- [ ] extraction_methods 정직성 테스트 <!-- omo:id=accept-vitest-methods-honesty;stage=2;scope=shared;review=3,6 -->
-- [ ] 기존 corpus/readiness/dictionary regression 하네스 통과 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
+- [x] AuthorCommentProvider adapter / official provider request shape 테스트 <!-- omo:id=accept-vitest-provider;stage=2;scope=backend;review=3,6 -->
+- [x] author-only top-level filter 테스트 <!-- omo:id=accept-vitest-author-filter;stage=2;scope=backend;review=3,6 -->
+- [x] non-author/reply 무시 negative test <!-- omo:id=accept-vitest-non-author-negative;stage=2;scope=backend;review=3,6 -->
+- [x] recipe signal pre-filter 테스트 <!-- omo:id=accept-vitest-recipe-signal;stage=2;scope=backend;review=3,6 -->
+- [x] fallback trigger/skip 조건 테스트 <!-- omo:id=accept-vitest-trigger-skip;stage=2;scope=backend;review=3,6 -->
+- [x] source merge policy 테스트 <!-- omo:id=accept-vitest-source-merge;stage=2;scope=backend;review=3,6 -->
+- [x] provider failure graceful degradation 테스트 <!-- omo:id=accept-vitest-provider-degrade;stage=2;scope=backend;review=3,6 -->
+- [x] extraction_methods 정직성 테스트 <!-- omo:id=accept-vitest-methods-honesty;stage=2;scope=shared;review=3,6 -->
+- [x] 기존 corpus/readiness/dictionary regression 하네스 통과 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
 
 ### Playwright
 
@@ -116,3 +116,23 @@
 - [ ] 실제 YouTube comments API를 사용한 author-comment fallback live smoke 30건 이상
 - [ ] YouTube comments API quota 소진 시 graceful degradation 확인
 - [ ] 인기 영상에서 author comment가 relevance 첫 페이지에 없는 경우의 missed fallback 확인
+
+## Stage 2 Automation Evidence
+
+- `pnpm vitest run tests/youtube-import.backend.test.ts` — 50 passed
+- `pnpm typecheck` — passed
+- `pnpm lint` — passed
+- `pnpm test:youtube-corpus` — 9 passed
+- `pnpm test:youtube-readiness` — 1 passed
+- `pnpm test:youtube-dictionary` — 10 passed
+- `pnpm test:product` — 796 passed
+- `pnpm validate:workpack` — passed
+- `BRANCH_NAME=feature/be-29-youtube-author-comment-fallback BASE_REF=master PR_IS_DRAFT=false pnpm validate:closeout-sync` — passed
+- `pnpm build` — passed
+- `youtube-author-comment-live-smoke` — 3 sampled URLs, official YouTube comments API path available, author recipe-signal comments found in 3/3 (`live-smoke-author-comment-stage2-2026-05-29.md`)
+- Claude Stage 2 backend review — `APPROVE`, `NO_FURTHER_REASONABLE_IMPROVEMENTS`
+
+Stage 2 precondition notes:
+
+- `accept-real-db-ready`: no new DDL/system seed is required; existing schema/bootstrap prerequisites are covered by schema baseline tests and `pnpm build`. Real URL smoke remains Manual Only.
+- `accept-youtube-key-gate`: production extraction still requires `YOUTUBE_API_KEY` for the existing required `videos.list` provider before optional author-comment fallback can run; this PR adds no new fatal key path beyond that existing upstream gate.
