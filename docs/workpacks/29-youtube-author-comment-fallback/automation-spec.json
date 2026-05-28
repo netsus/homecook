@@ -1,0 +1,80 @@
+{
+  "slice_id": "29-youtube-author-comment-fallback",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/recipes/youtube/extract",
+      "POST /api/v1/recipes/youtube/register"
+    ],
+    "invariants": [
+      "documented-state-transition",
+      "owner-authorization",
+      "read-only-guard",
+      "api-shape-immutable",
+      "author-comment-only",
+      "provider-graceful-degradation",
+      "extraction-methods-honesty",
+      "no-registration-ready-without-concrete-recipe",
+      "one-page-comment-cap"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/youtube-import.backend.test.ts",
+      "tests/youtube-corpus.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/menu/add/youtube"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "youtube-author-comment-live-smoke"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "secret-missing",
+    "youtube-api-key-missing",
+    "youtube-comments-api-unavailable"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

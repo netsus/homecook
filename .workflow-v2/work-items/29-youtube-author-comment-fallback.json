@@ -1,0 +1,103 @@
+{
+  "id": "29-youtube-author-comment-fallback",
+  "title": "YouTube author-comment fallback",
+  "summary": "YouTube 설명란이 비어 있거나 부족한 영상에서 영상 작성자 top-level 댓글만 보조 source로 사용해 레시피 draft를 보강한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "Description-first 추출을 유지하되, 등록 가능하지 않은 경우 official YouTube comments API로 작성자 top-level 댓글 1페이지를 조회하고, author-only filtering과 recipe signal gate를 통과한 텍스트만 기존 결정론 파서에 넣어 재료/조리 과정을 보충한다.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "27-youtube-import-quality-uplift",
+    "27b-youtube-source-fallback",
+    "pre-27-taxonomy-consumer-alignment"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.3.md",
+      "docs/화면정의서-v1.5.10.md",
+      "docs/유저flow맵-v1.3.10.md",
+      "docs/db설계-v1.3.9.md",
+      "docs/api문서-v1.2.13.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/29-youtube-author-comment-fallback/README.md",
+      "docs/workpacks/29-youtube-author-comment-fallback/acceptance.md",
+      "docs/workpacks/29-youtube-author-comment-fallback/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/workpacks/27-youtube-import-quality-uplift/live-smoke-author-comment-baseline-2026-05-29.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "youtube-author-comment-live-smoke"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm test:youtube-corpus",
+      "pnpm test:youtube-dictionary",
+      "pnpm test:youtube-readiness",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 29-youtube-author-comment-fallback",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "author-comment-only-filter",
+      "one-page-comment-cap",
+      "provider-graceful-degradation",
+      "extraction-methods-honesty",
+      "final-live-smoke-30-url"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 workpack docs created after PR #619 live smoke showed 10/30 videos with weak or missing description but author recipe-signal comments. General viewer comments, replies, pinned-comment dependency, transcript/OCR/LLM, and external ingredient ingest are out of scope.",
+  "out_of_scope": [
+    "Viewer comments",
+    "Reply comments",
+    "Pinned status as a trust gate",
+    "Additional comment pagination",
+    "Transcript/OCR/LLM production fallback",
+    "External ingredient data ingest",
+    "Public API response shape changes",
+    "Ingredient category expansion",
+    "New screen or screen redesign"
+  ],
+  "open_questions": []
+}

@@ -1419,6 +1419,33 @@
       "blocked_reason_code": null
     },
     {
+      "id": "29-youtube-author-comment-fallback",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/youtube-author-comment-fallback-contract",
+      "pr_path": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm test:youtube-corpus",
+        "pnpm test:youtube-dictionary",
+        "pnpm test:youtube-readiness",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 29-youtube-author-comment-fallback",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 workpack docs. Author-comment-only fallback for YouTube import when description is empty or not registration-ready. General viewer comments, replies, pinned dependency, transcript/OCR/LLM, and external ingredient ingest are out of scope.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
       "id": "admin-foundation",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-admin-foundation",
