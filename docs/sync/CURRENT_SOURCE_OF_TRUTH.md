@@ -1,17 +1,44 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.2.md`
-- `docs/화면정의서-v1.5.9.md`
-- `docs/유저flow맵-v1.3.9.md`
-- `docs/db설계-v1.3.8.md`
-- `docs/api문서-v1.2.12.md`
+- `docs/요구사항기준선-v1.7.3.md`
+- `docs/화면정의서-v1.5.10.md`
+- `docs/유저flow맵-v1.3.10.md`
+- `docs/db설계-v1.3.9.md`
+- `docs/api문서-v1.2.13.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## v1.7.2 / v1.5.9 / v1.3.9 / DB v1.3.8 / API v1.2.12 → v1.7.3 / v1.5.10 / v1.3.10 / DB v1.3.9 / API v1.2.13 변경 이력 (2026-05-28)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.3 | YouTube 추출/등록의 ingredient/step `component_label` 영속화, 상세/요리모드 섹션 소제목 표시, manual create 비확장 명시 |
+| 화면정의서 v1.5.10 | YT_IMPORT 검수, RECIPE_DETAIL, COOK_MODE의 인접 label heading 규칙과 중복 prefix 억제 규칙 추가 |
+| 유저플로우 v1.3.10 | extract → review → register → DB → detail/cook-mode까지 `component_label` 보존 흐름 추가 |
+| DB v1.3.9 | `recipe_ingredients.component_label`, `recipe_steps.component_label` nullable 컬럼 추가 |
+| API v1.2.13 | `POST /recipes/youtube/extract`, `POST /recipes/youtube/register`, recipe detail, cook-mode 응답에 nullable `component_label` 추가. `POST /recipes` manual body는 no-`component_label`로 분리 |
+
+> 이 변경은 `docs/workpacks/28-youtube-section-label-persistence` contract-evolution이다.
+> `component_label`은 표시용 metadata이며 shopping aggregation, manual create authoring, pantry consumed checklist semantics는 변경하지 않는다.
+
+## Recipio-style YouTube Import Parity Addendum (2026-05-28)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.2 | §2-4에 레시피오형 빠른 유튜브 가져오기 모드 추가: 중복 확인 → 미리보기 → 비동기 진행률 → 자동 등록, 단 검수 필요 draft는 기존 YT_IMPORT 검수 화면으로 fallback |
+| 화면정의서 v1.5.9 | §10에 `/recipes/new/youtube` 별도 진입면, 추천 영상 카드, 중복 카드, 진행률, 검수 fallback 상태 추가 |
+| 유저플로우 v1.3.9 | ⑨에 Quick Import 분기 추가: `GET /recipes/youtube/recipio/check`로 중복 확인 후 기존 validate/extract/register 계약 재사용 |
+| API v1.2.12 | §6-5 `GET /api/v1/recipes/youtube/recipio/check` 추가. 새 저장 계약은 만들지 않고 기존 §6-1/6-2/6-4를 순차 소비 |
+| DB v1.3.8 | 변경 없음. `recipe_sources.youtube_video_id`와 기존 `youtube_extraction_sessions`/RPC를 재사용 |
+
+> 이 addendum은 사용자가 승인한 레시피오 parity 구현이다.
+> 신규 LLM/이미지 생성/유료 provider 계약은 추가하지 않는다.
+> quick import는 기존 YouTube import feature flag/auth guard를 그대로 따른다.
 
 ## v1.7.1 / v1.5.8 / v1.3.8 / DB v1.3.7 / API v1.2.11 → v1.7.2 / v1.5.9 / v1.3.9 / DB v1.3.8 / API v1.2.12 변경 이력 (2026-05-27)
 

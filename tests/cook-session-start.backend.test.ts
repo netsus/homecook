@@ -565,7 +565,8 @@ describe("14 cook session start backend", () => {
             ingredient_id: "ing-kimchi",
             amount: 200,
             unit: "g",
-            display_text: "김치 200g",
+            display_text: "[찌개 재료] 김치 200g",
+            component_label: "찌개 재료",
             ingredient_type: "QUANT",
             scalable: true,
             sort_order: 1,
@@ -580,7 +581,8 @@ describe("14 cook session start backend", () => {
         data: [
           {
             step_number: 1,
-            instruction: "김치를 썬다",
+            instruction: "[찌개 재료] 김치를 썬다",
+            component_label: "찌개 재료",
             ingredients_used: ["김치"],
             heat_level: null,
             duration_seconds: null,
@@ -629,6 +631,7 @@ describe("14 cook session start backend", () => {
               amount: 400,
               unit: "g",
               display_text: "김치 400g",
+              component_label: "찌개 재료",
               ingredient_type: "QUANT",
               scalable: true,
             },
@@ -637,6 +640,7 @@ describe("14 cook session start backend", () => {
             {
               step_number: 1,
               instruction: "김치를 썬다",
+              component_label: "찌개 재료",
               cooking_method: { code: "prep", label: "손질", color_key: "gray" },
               ingredients_used: ["김치"],
               heat_level: null,

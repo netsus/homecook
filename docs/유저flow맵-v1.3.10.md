@@ -1,12 +1,17 @@
-# 유저 Flow맵 v1.3.9
+# 유저 Flow맵 v1.3.10
 
 상태: 공식문서
 담당자: 채실장
-날짜: 5월 27
+날짜: 5월 28
 
-> 기준 문서: 요구사항 기준선 v1.7.2 / 화면정의서 v1.5.9 / DB 설계 v1.3.8 / API 설계 v1.2.12
+> 기준 문서: 요구사항 기준선 v1.7.3 / 화면정의서 v1.5.10 / DB 설계 v1.3.9 / API 설계 v1.2.13
 >
 > 작성: Claude / Codex (H2 Stage 1, Baemin prototype planner contract-evolution)
+>
+> v1.3.9 → v1.3.10 변경: YouTube 섹션 라벨 영속화 flow
+> - extract 결과의 ingredient/step `component_label`을 검수/등록/DB 저장까지 보존
+> - RECIPE_DETAIL, COOK_MODE에서 같은 섹션 소제목 표시
+> - manual recipe create와 shopping aggregation flow는 변경 없음
 >
 > v1.3.8 → v1.3.9 변경: Admin Foundation 내부 운영자 플로우 추가
 >
@@ -525,10 +530,12 @@ COOK_READY_LIST (요리하기 준비 리스트)
        ├─ (좌) 재료 화면
        │    조리 인분 (읽기 전용)
        │    재료 전체 목록 + 수량/단위
+       │    component_label 소제목(있는 경우)
        │
        ├─ (우) 과정 화면
        │    스텝 카드 리스트
        │    카드: 스텝번호 + 조리방법(색상) + 재료/양 + 불세기 + 시간
+       │    component_label 소제목(있는 경우)
        │
        ├─ [취소]
        │    → cooking_sessions.status = 'cancelled'
@@ -801,6 +808,8 @@ COOK_MODE (요리모드 — 전체화면)
           RECIPE_DETAIL 복귀
 ```
 
+> YouTube 등록 레시피의 `component_label`은 독립 요리 COOK_MODE에서도 유지된다. 재료/스텝 목록은 기존 순서를 유지하고 인접 label이 바뀌는 지점에만 소제목을 표시한다.
+
 ### 종료 조건
 
 - 요리 완료 → 남은요리 저장 + 팬트리 업데이트 → 이전 화면 복귀
@@ -859,6 +868,7 @@ Step 2) description-first 추출
   │ recipe/uncertain/non_recipe 판정 (non_recipe → 422 차단)
   │ 서버: youtube_extraction_sessions 생성 (status=draft, 24h TTL)
   │ 설명란 파싱 → 재료/스텝 추출
+  │ 재료/스텝 섹션명은 component_label로 응답
   │ extraction_methods: ["description"] (MVP)
   │ 미분류 조리방법은 이 단계에서 즉시 생성
   │ UI: indeterminate spinner/progress
@@ -868,6 +878,7 @@ Step 3) 결과 검수/수정
   │ ├─ 레시피명 (편집 가능)
   │ ├─ 기본 인분 (필수, 편집 가능)
   │ ├─ 재료 리스트 (추가/삭제/수정)
+  │ │    ├─ component_label 보존, 인접 label 변경 지점에 소제목 표시
   │ │    └─ resolution_status: resolved / needs_review / unresolved
   │ │         각 서버 추출 row는 draft_ingredient_id 보유
   │ │         needs_review → 경고 배지, candidate 선택/검색 교체/새 재료 등록 전 저장 차단
@@ -883,6 +894,7 @@ Step 3) 결과 검수/수정
   │ │            → RPC register_youtube_ingredient
   │ │            → 응답 ingredient_id / standard_name으로 client row resolved
   │ ├─ 스텝 리스트 (추가/삭제/수정)
+  │ │    ├─ component_label 보존, 인접 label 변경 지점에 소제목 표시
   │ │    └─ is_incomplete / missing_fields 표시
   │ │         blocking (instruction, cooking_method) → 빈값 시 저장 차단
   │ │         warning  (duration, ingredients_used) → 빈값 시 경고만
@@ -896,6 +908,7 @@ Step 4) [레시피 등록]
   │ 서버: RPC register_youtube_recipe_from_session
   │   - 소유권 검증 (cross-user → 404, expired → 410, consumed → 409)
   │   - 원자적 INSERT: recipes + recipe_sources + recipe_ingredients + recipe_steps
+  │   - recipe_ingredients.component_label / recipe_steps.component_label 저장
   │   - Provenance: session에서 복사 (client body 아님)
   │   - session status → consumed
   │

@@ -36,6 +36,59 @@ const bakingComponentDescription = [
   "#베이킹 #타르트",
 ].join("\n");
 
+const custardBreadComponentDescription = [
+  "🧈재료 Ingredients",
+  "",
+  "| 빵 반죽",
+  "170g 강력분",
+  "15g 박력분",
+  "15g 설탕",
+  "3g 소금",
+  "4g 인스턴트 드라이 이스트",
+  "50g 우유",
+  "30g 생크림",
+  "35g 달걀 (전란)",
+  "15g 연유",
+  "25g 무염버터",
+  "",
+  "| 커스터드 크림",
+  "2개 달걀노른자",
+  "30g 설탕",
+  "2g 바닐라빈 페이스트",
+  "10g 옥수수전분",
+  "150g 따뜻한 우유",
+  "5g 무염버터",
+  "",
+  "| 쿠키 토핑",
+  "10g 무염버터",
+  "10g 설탕",
+  "10g 박력분",
+  "5g 우유",
+  "",
+  "📝만드는 과정",
+  "",
+  "빵 반죽 만들기",
+  "1. 밀가루에 설탕, 소금, 인스턴트 드라이 이스트를 넣고 골고루 섞어 주세요.",
+  "2. 우유, 생크림, 달걀, 연유를 넣고 잘 섞어 약 10분 정도 손으로 반죽해 주세요.(반죽기 사용 권장)",
+  "3. 실온 상태의 무염버터를 넣고 반죽해 매끈한 상태가 되면 볼에 넣고 비닐 랩을 씌워 주세요.",
+  "4. 따뜻한 곳에서 반죽이 2~2.5배로 부풀 때까지 1시간 정도 발효시켜 주세요.",
+  "",
+  "커스터드 필링 만들기",
+  "5. 달걀노른자에 설탕과 바닐라빈 페이스트를 넣고 잘 섞어 주세요.",
+  "6. 옥수수전분을 넣고 섞은 다음 따뜻한 우유를 넣고 잘 섞은 다음 약불에 올려 가열해 주세요.",
+  "7. 기포가 보글 보글 올라오면 불에서 내려 무염버터를 넣고 잘 섞어 체에 내려 비닐 랩을 덮고 식혀 주세요.",
+  "",
+  "8. 발효된 반죽을 꺼내 가스를 제거하고 5개로 나누어 동그랗게 만들고 비닐 랩을 씌워 15분 중간 발효해 주세요.",
+  "9. 반죽 하나를 가스를 빼고 납작하게 하고 커스터드를 넣어 잘 붙여 동그랗게 만들어 주세요.",
+  "10. 틀에 넣고 비닐 랩을 씌워 크기가 2배로 부풀 때까지 40분 정도 발효시켜 주세요.",
+  "",
+  "쿠기 토핑 만들기",
+  "11. 무염버터를 풀고 설탕을 섞은 다음 박력분을 섞고 우유를 넣어 섞어 주세요.",
+  "",
+  "12. 발효된 빵 위에 우유를 바르고 쿠키 토핑을 사선으로 짜주세요.",
+  "13. 180도 오븐에서 18~20분 정도 구워 주세요.(예열 200도)",
+].join("\n");
+
 describe("youtube description parser v2", () => {
   it("switches from 준비재료 to 요리순서 and extracts numbered cooking steps", () => {
     const document = parseYoutubeRecipeDescription({
@@ -85,6 +138,7 @@ describe("youtube description parser v2", () => {
       "노른자",
       "크림치즈",
       "생크림",
+      "설탕",
       "레몬즙",
     ]);
     expect(draft.ingredients.find((ingredient) => ingredient.name === "바닐라 페이스트"))
@@ -92,7 +146,7 @@ describe("youtube description parser v2", () => {
         amount: 1,
         unit: "t",
         componentLabel: "타르트 반죽",
-        displayText: "[타르트 반죽] 바닐라 페이스트 1t",
+        displayText: "바닐라 페이스트 1t",
       });
     expect(draft.ingredients.find((ingredient) => ingredient.name === "노른자"))
       .toMatchObject({
@@ -100,20 +154,90 @@ describe("youtube description parser v2", () => {
         unit: "개",
         componentLabel: "타르트 반죽",
       });
-    expect(draft.ingredients.find((ingredient) => ingredient.name === "설탕"))
-      .toMatchObject({
-        amount: 65,
-        unit: "g",
-        displayText: "[타르트 반죽+치즈 필링] 설탕 65g (타르트 반죽 35g + 치즈 필링 30g)",
-      });
+    expect(draft.ingredients.filter((ingredient) => ingredient.name === "설탕"))
+      .toEqual([
+        expect.objectContaining({
+          amount: 35,
+          unit: "g",
+          componentLabel: "타르트 반죽",
+          displayText: "설탕 35g",
+        }),
+        expect.objectContaining({
+          amount: 30,
+          unit: "g",
+          componentLabel: "치즈 필링",
+          displayText: "설탕 30g",
+        }),
+      ]);
     expect(draft.steps).toEqual([
-      "[타르트 반죽] 버터를 부드럽게 풀고 설탕을 섞어요.",
-      "[타르트 반죽] 노른자와 바닐라 페이스트를 넣고 섞어요.",
-      "[치즈 필링] 크림치즈에 설탕을 넣고 풀어요.",
-      "[치즈 필링] 식힌 타르트지에 필링을 채워요.",
+      "버터를 부드럽게 풀고 설탕을 섞어요.",
+      "노른자와 바닐라 페이스트를 넣고 섞어요.",
+      "크림치즈에 설탕을 넣고 풀어요.",
+      "식힌 타르트지에 필링을 채워요.",
+    ]);
+    expect(draft.stepComponentLabels).toEqual([
+      "타르트 반죽",
+      "타르트 반죽",
+      "치즈 필링",
+      "치즈 필링",
     ]);
     expect(draft.draftWarnings).toContain("원본 만들기 번호가 1, 2, 9, 10처럼 비연속이라 중간 항목 누락 가능성이 있어요.");
     expect(draft.blockingIssues).toEqual([]);
+  });
+
+  it("preserves component sections and numbered steps for custard cream bread", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "커스터드 크림빵 만들기",
+      description: custardBreadComponentDescription,
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients.map((ingredient) => [
+      ingredient.componentLabel,
+      ingredient.name,
+      ingredient.amount,
+      ingredient.unit,
+      ingredient.displayText,
+    ])).toEqual([
+      ["빵 반죽", "강력분", 170, "g", "강력분 170g"],
+      ["빵 반죽", "박력분", 15, "g", "박력분 15g"],
+      ["빵 반죽", "설탕", 15, "g", "설탕 15g"],
+      ["빵 반죽", "소금", 3, "g", "소금 3g"],
+      ["빵 반죽", "인스턴트 드라이 이스트", 4, "g", "인스턴트 드라이 이스트 4g"],
+      ["빵 반죽", "우유", 50, "g", "우유 50g"],
+      ["빵 반죽", "생크림", 30, "g", "생크림 30g"],
+      ["빵 반죽", "달걀", 35, "g", "달걀 35g"],
+      ["빵 반죽", "연유", 15, "g", "연유 15g"],
+      ["빵 반죽", "무염버터", 25, "g", "무염버터 25g"],
+      ["커스터드 크림", "달걀노른자", 2, "개", "달걀노른자 2개"],
+      ["커스터드 크림", "설탕", 30, "g", "설탕 30g"],
+      ["커스터드 크림", "바닐라빈 페이스트", 2, "g", "바닐라빈 페이스트 2g"],
+      ["커스터드 크림", "옥수수전분", 10, "g", "옥수수전분 10g"],
+      ["커스터드 크림", "따뜻한 우유", 150, "g", "따뜻한 우유 150g"],
+      ["커스터드 크림", "무염버터", 5, "g", "무염버터 5g"],
+      ["쿠키 토핑", "무염버터", 10, "g", "무염버터 10g"],
+      ["쿠키 토핑", "설탕", 10, "g", "설탕 10g"],
+      ["쿠키 토핑", "박력분", 10, "g", "박력분 10g"],
+      ["쿠키 토핑", "우유", 5, "g", "우유 5g"],
+    ]);
+    expect(draft.steps).toHaveLength(13);
+    expect(draft.steps[0]).toBe("밀가루에 설탕, 소금, 인스턴트 드라이 이스트를 넣고 골고루 섞어 주세요.");
+    expect(draft.steps[12]).toBe("180도 오븐에서 18~20분 정도 구워 주세요.(예열 200도)");
+    expect(draft.stepComponentLabels).toEqual([
+      "빵 반죽",
+      "빵 반죽",
+      "빵 반죽",
+      "빵 반죽",
+      "커스터드 필링",
+      "커스터드 필링",
+      "커스터드 필링",
+      "커스터드 필링",
+      "커스터드 필링",
+      "커스터드 필링",
+      "쿠키 토핑",
+      "쿠키 토핑",
+      "쿠키 토핑",
+    ]);
   });
 
   it("uses lookahead so a component heading is not treated as an amountless ingredient", () => {
@@ -137,7 +261,8 @@ describe("youtube description parser v2", () => {
       "생크림",
     ]);
     expect(draft.ingredients).not.toContainEqual(expect.objectContaining({ name: "필링" }));
-    expect(draft.steps).toEqual(["[필링] 생크림을 데우고 초콜릿 필링을 섞어요."]);
+    expect(draft.steps).toEqual(["생크림을 데우고 초콜릿 필링을 섞어요."]);
+    expect(draft.stepComponentLabels).toEqual(["필링"]);
   });
 
   it("splits plus-separated sauce ingredients and does not import sauce heading as an ingredient", () => {
@@ -176,14 +301,14 @@ describe("youtube description parser v2", () => {
         amount: 3,
         unit: "스푼",
         componentLabel: "양념장",
-        displayText: "[양념장] 진간장 3스푼",
+        displayText: "진간장 3스푼",
       });
     expect(draft.ingredients.find((ingredient) => ingredient.name === "후추"))
       .toMatchObject({
         amount: null,
         unit: null,
         componentLabel: "양념장",
-        displayText: "[양념장] 후추 약간",
+        displayText: "후추 약간",
       });
     expect(draft.steps).toEqual([
       "목살300g을 키친타올을 이용해 핏물을 제거해주세요.",
@@ -306,7 +431,7 @@ describe("youtube description parser v2", () => {
     });
   });
 
-  it("aggregates duplicate component ingredients only when their parsed unit is compatible", () => {
+  it("keeps duplicate component ingredients separated by component label", () => {
     const document = parseYoutubeRecipeDescription({
       title: "크림 쿠키",
       description: [
@@ -327,13 +452,22 @@ describe("youtube description parser v2", () => {
     });
     const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
 
-    expect(draft.ingredients.find((ingredient) => ingredient.name === "설탕"))
-      .toMatchObject({
-        amount: 70,
-        unit: "g",
-        displayText: "[반죽+크림] 설탕 70g (반죽 50g + 크림 20g)",
-      });
-    expect(draft.draftWarnings).toContain("같은 재료를 컴포넌트별로 합산했어요. 인분을 바꾸면 괄호 안 원본 수량은 자동으로 바뀌지 않아요.");
+    expect(draft.ingredients.filter((ingredient) => ingredient.name === "설탕"))
+      .toEqual([
+        expect.objectContaining({
+          amount: 50,
+          unit: "g",
+          componentLabel: "반죽",
+          displayText: "설탕 50g",
+        }),
+        expect.objectContaining({
+          amount: 20,
+          unit: "g",
+          componentLabel: "크림",
+          displayText: "설탕 20g",
+        }),
+      ]);
+    expect(draft.draftWarnings).not.toContain("같은 재료를 컴포넌트별로 합산했어요. 인분을 바꾸면 괄호 안 원본 수량은 자동으로 바뀌지 않아요.");
   });
 
   it("selects the first structured recipe when one description contains multiple recipes", () => {

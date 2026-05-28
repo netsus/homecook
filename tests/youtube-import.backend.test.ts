@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import fixtureData from "@/qa/fixtures/slices-01-05.json";
+import { RECIPIO_YOUTUBE_PARITY_FIXTURES } from "@/lib/server/recipio-youtube-parity-fixtures";
 import type { YoutubeTranscriptProvider } from "@/lib/server/youtube-import";
 
 const createRouteHandlerClient = vi.fn();
@@ -296,6 +297,100 @@ const bakingComponentDescription = [
 const ORIGINAL_YOUTUBE_IMPORT_FLAG = process.env.HOMECOOK_ENABLE_YOUTUBE_IMPORT;
 const ORIGINAL_PUBLIC_YOUTUBE_IMPORT_FLAG = process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT;
 
+function buildRecipioParityIngredientRows() {
+  const uniqueNames = [
+    ...new Set(
+      RECIPIO_YOUTUBE_PARITY_FIXTURES.flatMap((fixture) =>
+        fixture.recipe.ingredients.map((ingredient) => ingredient.name),
+      ),
+    ),
+  ];
+
+  return uniqueNames.map((standardName, index) => ({
+    id: `550e8400-e29b-41d4-a716-${String(446655450000 + index).padStart(12, "0")}`,
+    standard_name: standardName,
+  }));
+}
+
+function createRecipioParityExtractDbClient() {
+  const ingredientsTable = createLookupTable({
+    data: buildRecipioParityIngredientRows(),
+    error: null,
+  });
+  const ingredientSynonymsTable = createLookupTable({
+    data: [
+      {
+        synonym: "계란",
+        ingredients: {
+          id: "550e8400-e29b-41d4-a716-446655440901",
+          standard_name: "달걀",
+        },
+      },
+    ],
+    error: null,
+  });
+  const cookingMethodsTable = createCookingMethodsTable({
+    existingResult: {
+      data: {
+        id: newMethodId,
+        code: "auto_salt",
+        label: "절이기",
+        color_key: "unassigned",
+        is_system: false,
+      },
+      error: null,
+    },
+    insertResult: { data: null, error: { message: "should not insert" } },
+    lookupRows: [
+      {
+        id: prepMethodId,
+        code: "prep",
+        label: "손질",
+        color_key: "gray",
+        is_system: true,
+      },
+      {
+        id: mixMethodId,
+        code: "mix",
+        label: "섞기",
+        color_key: "green",
+        is_system: true,
+      },
+      {
+        id: "550e8400-e29b-41d4-a716-446655440222",
+        code: "boil",
+        label: "끓이기",
+        color_key: "blue",
+        is_system: true,
+      },
+      {
+        id: newMethodId,
+        code: "auto_salt",
+        label: "절이기",
+        color_key: "unassigned",
+        is_system: false,
+      },
+    ],
+  });
+  const sessionsTable = createYoutubeSessionsTable({});
+  const dbClient = {
+    from: vi.fn((table: string) => {
+      if (table === "ingredients") return ingredientsTable;
+      if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+      if (table === "cooking_methods") return cookingMethodsTable;
+      if (table === "youtube_extraction_sessions") return sessionsTable;
+      throw new Error(`unexpected table: ${table}`);
+    }),
+  };
+
+  return {
+    cookingMethodsTable,
+    dbClient,
+    ingredientsTable,
+    sessionsTable,
+  };
+}
+
 function restoreYoutubeImportEnv() {
   vi.unstubAllEnvs();
 
@@ -407,6 +502,7 @@ function buildRegisterBody() {
         unit: "g",
         ingredient_type: "QUANT",
         display_text: "김치 200g",
+        component_label: "찌개 재료",
         scalable: true,
         sort_order: 1,
       },
@@ -417,6 +513,7 @@ function buildRegisterBody() {
         unit: null,
         ingredient_type: "TO_TASTE",
         display_text: "소금 약간",
+        component_label: "찌개 재료",
         scalable: false,
         sort_order: 2,
       },
@@ -425,6 +522,7 @@ function buildRegisterBody() {
       {
         step_number: 1,
         instruction: "김치를 한입 크기로 썬다.",
+        component_label: "찌개 재료",
         cooking_method_id: prepMethodId,
         ingredients_used: [],
         heat_level: null,
@@ -667,6 +765,10 @@ describe("20 youtube real import backend", () => {
     const methodCodes = fixtureData.cookingMethods.map((method) => method.code);
     const schema = readFileSync("supabase/migrations/20260301000000_core_schema_bootstrap.sql", "utf8");
     const realImportSchema = readFileSync("supabase/migrations/20260521103000_20_youtube_real_import.sql", "utf8");
+    const sectionLabelSchema = readFileSync(
+      "supabase/migrations/20260528073500_28_youtube_section_label_persistence.sql",
+      "utf8",
+    );
 
     expect(methodCodes).toEqual(expect.arrayContaining([
       "stir_fry",
@@ -689,6 +791,8 @@ describe("20 youtube real import backend", () => {
     expect(realImportSchema).toContain("youtube_extraction_session_id");
     expect(realImportSchema).toContain("register_youtube_recipe_from_session");
     expect(realImportSchema).toContain("v_session.youtube_url <> p_youtube_url");
+    expect(sectionLabelSchema).toContain("add column if not exists component_label text");
+    expect(sectionLabelSchema).toContain("v_item ->> 'component_label'");
   });
 
   it("schema includes the user-confirmed YouTube ingredient registration RPC", () => {
@@ -1121,6 +1225,109 @@ describe("20 youtube real import backend", () => {
     )).toEqual(body.data.ingredients.map((ingredient: { draft_ingredient_id: string }) =>
       ingredient.draft_ingredient_id,
     ));
+  });
+
+  it("POST /api/v1/recipes/youtube/extract returns Recipio live parity data without paid providers", async () => {
+    mockAuth();
+
+    const {
+      cookingMethodsTable,
+      dbClient,
+      sessionsTable,
+    } = createRecipioParityExtractDbClient();
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const fetchMock = vi.fn(async () => {
+      throw new Error("Recipio parity samples must not call remote YouTube providers");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    for (const fixture of RECIPIO_YOUTUBE_PARITY_FIXTURES) {
+      const { body, response } = await postYoutubeExtract(`https://youtu.be/${fixture.videoId}`);
+      const data = body.data as {
+        title: string;
+        base_servings: number;
+        extraction_methods: string[];
+        draft_warnings: string[];
+        blocking_issues: string[];
+        ingredients: Array<{
+          standard_name: string;
+          amount: number | null;
+          unit: string | null;
+          ingredient_type: string;
+          display_text: string;
+          scalable: boolean;
+          resolution_status: string;
+        }>;
+        steps: Array<{
+          instruction: string;
+          duration_text: string | null;
+          is_incomplete: boolean;
+          missing_fields: string[];
+        }>;
+      };
+
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(data.title).toBe(fixture.recipe.title);
+      expect(data.base_servings).toBe(fixture.recipe.baseServings);
+      expect(data.extraction_methods).toEqual(["description"]);
+      expect(data.draft_warnings).toEqual([]);
+      expect(data.blocking_issues).toEqual([]);
+      expect(data.ingredients.map((ingredient) => ({
+        standard_name: ingredient.standard_name,
+        amount: ingredient.amount,
+        unit: ingredient.unit,
+        ingredient_type: ingredient.ingredient_type,
+        display_text: ingredient.display_text,
+        scalable: ingredient.scalable,
+        resolution_status: ingredient.resolution_status,
+      }))).toEqual(
+        fixture.recipe.ingredients.map((ingredient) => ({
+          standard_name: ingredient.name,
+          amount: ingredient.amount,
+          unit: ingredient.unit,
+          ingredient_type: ingredient.ingredientType,
+          display_text: ingredient.displayText,
+          scalable: ingredient.scalable,
+          resolution_status: "resolved",
+        })),
+      );
+      expect(data.steps.map((step) => ({
+        instruction: step.instruction,
+        duration_text: step.duration_text,
+        is_incomplete: step.is_incomplete,
+        missing_fields: step.missing_fields,
+      }))).toEqual(
+        fixture.recipe.steps.map((step) => ({
+          instruction: step.instruction,
+          duration_text: step.durationText,
+          is_incomplete: false,
+          missing_fields: [],
+        })),
+      );
+
+      const insertedSession = sessionsTable.insert.mock.calls.at(-1)?.[0] as {
+        youtube_url: string;
+        youtube_video_id: string;
+        source_providers: string[];
+        classification_status: string;
+        extraction_meta_json: Record<string, unknown>;
+      };
+      expect(insertedSession).toMatchObject({
+        youtube_url: `https://www.youtube.com/watch?v=${fixture.videoId}`,
+        youtube_video_id: fixture.videoId,
+        source_providers: ["recipio_live_parity_fixture"],
+        classification_status: "recipe",
+        extraction_meta_json: {
+          recipio_parity_kind: fixture.kind,
+          source_providers: ["recipio_live_parity_fixture"],
+        },
+      });
+    }
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(cookingMethodsTable.insert).not.toHaveBeenCalled();
+    expect(sessionsTable.insert).toHaveBeenCalledTimes(RECIPIO_YOUTUBE_PARITY_FIXTURES.length);
   });
 
   it("POST /api/v1/recipes/youtube/extract parses structured Korean description without fixed fallback ingredients", async () => {
@@ -1702,7 +1909,6 @@ describe("20 youtube real import backend", () => {
         blocking_issues: [],
         draft_warnings: expect.arrayContaining([
           "원본 만들기 번호가 1, 2, 9, 10처럼 비연속이라 중간 항목 누락 가능성이 있어요.",
-          "같은 재료를 컴포넌트별로 합산했어요. 인분을 바꾸면 괄호 안 원본 수량은 자동으로 바뀌지 않아요.",
         ]),
       },
       error: null,
@@ -1716,32 +1922,50 @@ describe("20 youtube real import backend", () => {
       "노른자",
       "크림치즈",
       "생크림",
+      "설탕",
       "레몬즙",
     ]);
     expect(body.data.ingredients.find((ingredient: { standard_name: string }) => ingredient.standard_name === "바닐라 페이스트"))
       .toMatchObject({
         amount: 1,
         unit: "t",
-        display_text: "[타르트 반죽] 바닐라 페이스트 1t",
+        component_label: "타르트 반죽",
+        display_text: "바닐라 페이스트 1t",
         resolution_status: "resolved",
       });
     expect(body.data.ingredients.find((ingredient: { standard_name: string }) => ingredient.standard_name === "노른자"))
       .toMatchObject({
         amount: 1,
         unit: "개",
+        component_label: "타르트 반죽",
         resolution_status: "resolved",
       });
-    expect(body.data.ingredients.find((ingredient: { standard_name: string }) => ingredient.standard_name === "설탕"))
-      .toMatchObject({
-        amount: 65,
-        unit: "g",
-        display_text: "[타르트 반죽+치즈 필링] 설탕 65g (타르트 반죽 35g + 치즈 필링 30g)",
-      });
+    expect(body.data.ingredients.filter((ingredient: { standard_name: string }) => ingredient.standard_name === "설탕"))
+      .toEqual([
+        expect.objectContaining({
+          amount: 35,
+          unit: "g",
+          component_label: "타르트 반죽",
+          display_text: "설탕 35g",
+        }),
+        expect.objectContaining({
+          amount: 30,
+          unit: "g",
+          component_label: "치즈 필링",
+          display_text: "설탕 30g",
+        }),
+      ]);
     expect(body.data.steps.map((step: { instruction: string }) => step.instruction)).toEqual([
-      "[타르트 반죽] 버터를 부드럽게 풀고 설탕을 섞어요.",
-      "[타르트 반죽] 노른자와 바닐라 페이스트를 넣고 섞어요.",
-      "[치즈 필링] 크림치즈에 설탕을 넣고 풀어요.",
-      "[치즈 필링] 식힌 타르트지에 필링을 채워요.",
+      "버터를 부드럽게 풀고 설탕을 섞어요.",
+      "노른자와 바닐라 페이스트를 넣고 섞어요.",
+      "크림치즈에 설탕을 넣고 풀어요.",
+      "식힌 타르트지에 필링을 채워요.",
+    ]);
+    expect(body.data.steps.map((step: { component_label: string | null }) => step.component_label)).toEqual([
+      "타르트 반죽",
+      "타르트 반죽",
+      "치즈 필링",
+      "치즈 필링",
     ]);
     expect(ingredientsTable.__query.in).toHaveBeenCalledWith("standard_name", [
       "박력분",

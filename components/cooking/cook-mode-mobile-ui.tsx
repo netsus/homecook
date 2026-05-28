@@ -7,6 +7,11 @@ import type {
   CookingModeRecipe,
   CookingModeStep,
 } from "@/types/cooking";
+import {
+  normalizeRecipeSectionLabel,
+  shouldShowSectionHeading,
+  stripMatchingSectionPrefix,
+} from "@/lib/recipe-section-labels";
 
 export { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 
@@ -177,41 +182,56 @@ function MobileStepList({
 
   return (
     <ol className="flex flex-col gap-3" data-testid="step-list">
-      {steps.map((step) => {
+      {steps.map((step, idx) => {
         const method = getMethodVisual(step);
         const title = getMobileStepTitle(recipeTitle, step);
+        const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
+        const previousLabel = idx > 0 ? steps[idx - 1]?.component_label : null;
+        const showSectionHeading = shouldShowSectionHeading(
+          sectionLabel,
+          previousLabel,
+        );
 
         return (
-          <li
-            className="rounded-[var(--radius-panel)] p-5 text-[#1A1A2E]"
-            data-testid="step-item"
-            key={step.step_number}
-            style={{
-              background: method.bg,
-              borderLeft: `5px solid ${method.border}`,
-            }}
-          >
-            <div className="mb-2.5 flex items-center gap-2">
-              <span
-                className="rounded-full px-2.5 py-[3px] text-[11px] font-bold leading-[1.2] text-white"
-                style={{ background: method.border }}
-              >
-                STEP {step.step_number}
-              </span>
-              <span
-                className="rounded-full bg-white px-2 py-[3px] text-[11px] font-bold leading-[1.2]"
-                style={{ color: method.text }}
-              >
-                {method.label}
-              </span>
-            </div>
-            <h2 className="mb-2 text-[18px] font-bold leading-[1.3]">
-              {title}
-            </h2>
-            <p className="text-[15px] font-medium leading-[1.6] text-[#1A1A2E]">
-              {step.instruction}
-            </p>
-          </li>
+          <React.Fragment key={step.step_number}>
+            {showSectionHeading ? (
+              <li className="list-none px-1 pt-1 text-[13px] font-bold leading-[1.3] text-white/78">
+                {sectionLabel}
+              </li>
+            ) : null}
+            <li
+              className="rounded-[var(--radius-panel)] p-5 text-[#1A1A2E]"
+              data-testid="step-item"
+              style={{
+                background: method.bg,
+                borderLeft: `5px solid ${method.border}`,
+              }}
+            >
+              <div className="mb-2.5 flex items-center gap-2">
+                <span
+                  className="rounded-full px-2.5 py-[3px] text-[11px] font-bold leading-[1.2] text-white"
+                  style={{ background: method.border }}
+                >
+                  STEP {step.step_number}
+                </span>
+                <span
+                  className="rounded-full bg-white px-2 py-[3px] text-[11px] font-bold leading-[1.2]"
+                  style={{ color: method.text }}
+                >
+                  {method.label}
+                </span>
+              </div>
+              <h2 className="mb-2 text-[18px] font-bold leading-[1.3]">
+                {title}
+              </h2>
+              <p className="text-[15px] font-medium leading-[1.6] text-[#1A1A2E]">
+                {stripMatchingSectionPrefix(
+                  step.instruction,
+                  step.component_label,
+                ) ?? step.instruction}
+              </p>
+            </li>
+          </React.Fragment>
         );
       })}
     </ol>
@@ -243,25 +263,46 @@ function MobileIngredientSummary({
         className="flex flex-wrap gap-x-2 gap-y-1.5"
         data-testid="ingredient-list"
       >
-        {ingredients.map((ingredient) => {
+        {ingredients.map((ingredient, idx) => {
           const amountLabel = formatIngredientAmount(ingredient);
+          const displayText = ingredient.display_text
+            ? stripMatchingSectionPrefix(
+                ingredient.display_text,
+                ingredient.component_label,
+              )
+            : null;
           const usesDisplayText =
-            typeof ingredient.display_text === "string" &&
-            ingredient.display_text.includes(ingredient.standard_name);
+            typeof displayText === "string" &&
+            displayText.includes(ingredient.standard_name);
+          const sectionLabel = normalizeRecipeSectionLabel(
+            ingredient.component_label,
+          );
+          const previousLabel =
+            idx > 0 ? ingredients[idx - 1]?.component_label : null;
+          const showSectionHeading = shouldShowSectionHeading(
+            sectionLabel,
+            previousLabel,
+          );
 
           return (
-            <li
-              className="inline-flex min-h-7 items-center gap-1.5 rounded-full bg-white/[0.11] px-2.5 py-1 text-[13px] font-medium leading-[1.25] text-white/88"
-              data-testid="ingredient-item"
-              key={ingredient.ingredient_id}
-            >
-              <span>
-                {usesDisplayText ? ingredient.display_text : ingredient.standard_name}
-              </span>
-              {!usesDisplayText && amountLabel ? (
-                <span className="text-white/70">{amountLabel}</span>
+            <React.Fragment key={`${ingredient.ingredient_id}-${idx}`}>
+              {showSectionHeading ? (
+                <li className="basis-full pt-1 text-[12px] font-bold leading-[1.3] text-white/72">
+                  {sectionLabel}
+                </li>
               ) : null}
-            </li>
+              <li
+                className="inline-flex min-h-7 items-center gap-1.5 rounded-full bg-white/[0.11] px-2.5 py-1 text-[13px] font-medium leading-[1.25] text-white/88"
+                data-testid="ingredient-item"
+              >
+                <span>
+                  {usesDisplayText ? displayText : ingredient.standard_name}
+                </span>
+                {!usesDisplayText && amountLabel ? (
+                  <span className="text-white/70">{amountLabel}</span>
+                ) : null}
+              </li>
+            </React.Fragment>
           );
         })}
       </ul>
@@ -306,7 +347,12 @@ function getMobileStepTitle(recipeTitle: string, step: CookingModeStep) {
 
 function formatIngredientAmount(ingredient: CookingModeIngredient) {
   if (ingredient.display_text) {
-    return ingredient.display_text;
+    return (
+      stripMatchingSectionPrefix(
+        ingredient.display_text,
+        ingredient.component_label,
+      ) ?? ingredient.display_text
+    );
   }
 
   if (ingredient.ingredient_type === "TO_TASTE") {

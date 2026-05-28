@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -492,11 +499,29 @@ describe("StandaloneCookModeScreen", () => {
       buildStandaloneCookModeData({
         recipe: {
           ...buildStandaloneCookModeData().recipe,
+          ingredients: [
+            buildIngredient({
+              ingredient_id: "ing-bread-flour",
+              standard_name: "강력분",
+              component_label: "빵 반죽",
+            }),
+            buildIngredient({
+              ingredient_id: "ing-yolk",
+              standard_name: "달걀노른자",
+              component_label: "커스터드 크림",
+            }),
+          ],
           steps: [
             buildStep({
               duration_seconds: 600,
               duration_text: null,
               heat_level: "medium",
+              component_label: "빵 반죽",
+            }),
+            buildStep({
+              step_number: 2,
+              instruction: "커스터드를 만들어 주세요.",
+              component_label: "커스터드 크림",
             }),
           ],
         },
@@ -512,6 +537,16 @@ describe("StandaloneCookModeScreen", () => {
 
     expect(screen.getByTestId("ingredient-list")).toBeTruthy();
     expect(screen.getByTestId("step-list")).toBeTruthy();
+    expect(
+      within(screen.getByTestId("standalone-cook-mode-content")).getAllByText(
+        "빵 반죽",
+      ).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      within(screen.getByTestId("standalone-cook-mode-content")).getAllByText(
+        "커스터드 크림",
+      ).length,
+    ).toBeGreaterThanOrEqual(1);
     expect(screen.queryByTestId("tab-steps")).not.toBeTruthy();
     expect(screen.queryByTestId("tab-ingredients")).not.toBeTruthy();
     expect(screen.queryByText("10분")).not.toBeTruthy();

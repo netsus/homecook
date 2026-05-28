@@ -977,6 +977,83 @@ describe("recipe detail screen", () => {
     expect(stepInstruction.className).toContain("text-base");
   });
 
+  it("shows component labels as section headings on ingredients and steps", async () => {
+    installMatchMedia(false);
+    fetchJson.mockResolvedValue(
+      buildRecipeDetail({
+        ingredients: [
+          {
+            ...MOCK_RECIPE_DETAIL.ingredients[0]!,
+            id: "recipe-ing-bread-flour",
+            ingredient_id: "ing-bread-flour",
+            standard_name: "강력분",
+            display_text: "[빵 반죽] 강력분 170g",
+            component_label: "빵 반죽",
+            sort_order: 1,
+          },
+          {
+            ...MOCK_RECIPE_DETAIL.ingredients[0]!,
+            id: "recipe-ing-sugar",
+            ingredient_id: "ing-sugar",
+            standard_name: "설탕",
+            display_text: "[빵 반죽] 설탕 15g",
+            component_label: "빵 반죽",
+            sort_order: 2,
+          },
+          {
+            ...MOCK_RECIPE_DETAIL.ingredients[0]!,
+            id: "recipe-ing-yolk",
+            ingredient_id: "ing-yolk",
+            standard_name: "달걀노른자",
+            display_text: "[커스터드 크림] 달걀노른자 2개",
+            component_label: "커스터드 크림",
+            sort_order: 3,
+          },
+        ],
+        steps: [
+          {
+            ...MOCK_RECIPE_DETAIL.steps[0]!,
+            id: "step-bread-1",
+            step_number: 1,
+            instruction: "[빵 반죽] 밀가루와 설탕을 섞어 주세요.",
+            component_label: "빵 반죽",
+          },
+          {
+            ...MOCK_RECIPE_DETAIL.steps[0]!,
+            id: "step-bread-2",
+            step_number: 2,
+            instruction: "[빵 반죽] 버터를 넣고 반죽해 주세요.",
+            component_label: "빵 반죽",
+          },
+          {
+            ...MOCK_RECIPE_DETAIL.steps[0]!,
+            id: "step-custard-1",
+            step_number: 3,
+            instruction: "[커스터드 크림] 노른자와 설탕을 섞어 주세요.",
+            component_label: "커스터드 크림",
+          },
+        ],
+      }),
+    );
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    expect(screen.getAllByText("빵 반죽")).toHaveLength(1);
+    expect(screen.getByText("커스터드 크림")).toBeTruthy();
+    expect(screen.queryByText("[빵 반죽] 강력분 170g")).toBeNull();
+
+    await userEvent.click(screen.getByRole("tab", { name: "만들기" }));
+
+    expect(screen.getAllByText("빵 반죽")).toHaveLength(1);
+    expect(screen.getByText("커스터드 크림")).toBeTruthy();
+    expect(screen.queryByText("[빵 반죽] 밀가루와 설탕을 섞어 주세요.")).toBeNull();
+  });
+
   it("does not display view_count in the metrics area", async () => {
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 

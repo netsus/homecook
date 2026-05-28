@@ -61,14 +61,14 @@ export async function GET(request: Request, context: RouteContext) {
       dbClient
         .from("recipe_ingredients")
         .select(
-          "id, ingredient_id, amount, unit, ingredient_type, display_text, scalable, sort_order, ingredients(standard_name)",
+          "id, ingredient_id, amount, unit, ingredient_type, display_text, component_label, scalable, sort_order, ingredients(standard_name)",
         )
         .eq("recipe_id", id)
         .order("sort_order", { ascending: true }),
       dbClient
         .from("recipe_steps")
         .select(
-          "id, step_number, instruction, ingredients_used, heat_level, duration_seconds, duration_text, cooking_methods(id, code, label, color_key)",
+          "id, step_number, instruction, component_label, ingredients_used, heat_level, duration_seconds, duration_text, cooking_methods(id, code, label, color_key)",
         )
         .eq("recipe_id", id)
         .order("step_number", { ascending: true }),

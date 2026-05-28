@@ -123,7 +123,8 @@ describe("15b cook standalone complete backend", () => {
             ingredient_id: ingredientId1,
             amount: 100,
             unit: "g",
-            display_text: "김치 100g",
+            display_text: "[찌개 재료] 김치 100g",
+            component_label: "찌개 재료",
             ingredient_type: "QUANT",
             scalable: true,
             sort_order: 1,
@@ -134,6 +135,7 @@ describe("15b cook standalone complete backend", () => {
             amount: 1,
             unit: "큰술",
             display_text: "고춧가루 1큰술",
+            component_label: "양념",
             ingredient_type: "QUANT",
             scalable: true,
             sort_order: 2,
@@ -148,7 +150,8 @@ describe("15b cook standalone complete backend", () => {
         data: [
           {
             step_number: 1,
-            instruction: "김치를 볶아주세요.",
+            instruction: "[찌개 재료] 김치를 볶아주세요.",
+            component_label: "찌개 재료",
             ingredients_used: [],
             heat_level: "medium",
             duration_seconds: 300,
@@ -194,6 +197,7 @@ describe("15b cook standalone complete backend", () => {
               amount: 200,
               unit: "g",
               display_text: "김치 200g",
+              component_label: "찌개 재료",
               ingredient_type: "QUANT",
               scalable: true,
             },
@@ -203,6 +207,7 @@ describe("15b cook standalone complete backend", () => {
               amount: 2,
               unit: "큰술",
               display_text: "고춧가루 2큰술",
+              component_label: "양념",
               ingredient_type: "QUANT",
               scalable: true,
             },
@@ -211,6 +216,7 @@ describe("15b cook standalone complete backend", () => {
             {
               step_number: 1,
               instruction: "김치를 볶아주세요.",
+              component_label: "찌개 재료",
               cooking_method: {
                 code: "stir_fry",
                 label: "볶기",

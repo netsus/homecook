@@ -80,7 +80,8 @@ describe("recipe route helpers", () => {
           amount: "2",
           unit: "개",
           ingredient_type: "QUANT",
-          display_text: "양파 2개",
+          display_text: "[빵 반죽] 양파 2개",
+          component_label: "빵 반죽",
           scalable: true,
           sort_order: 1,
           ingredients: [{ standard_name: "양파" }],
@@ -98,7 +99,12 @@ describe("recipe route helpers", () => {
         },
       ]),
     ).toEqual([
-      expect.objectContaining({ standard_name: "양파", amount: 2 }),
+      expect.objectContaining({
+        standard_name: "양파",
+        amount: 2,
+        display_text: "양파 2개",
+        component_label: "빵 반죽",
+      }),
       expect.objectContaining({ standard_name: "소금", amount: null }),
     ]);
   });
@@ -109,7 +115,8 @@ describe("recipe route helpers", () => {
         {
           id: "step-1",
           step_number: 1,
-          instruction: "끓입니다.",
+          instruction: "[커스터드 크림] 끓입니다.",
+          component_label: "커스터드 크림",
           ingredients_used: null,
           heat_level: "중",
           duration_seconds: 60,
@@ -126,6 +133,8 @@ describe("recipe route helpers", () => {
       ]),
     ).toEqual([
       expect.objectContaining({
+        instruction: "끓입니다.",
+        component_label: "커스터드 크림",
         ingredients_used: [],
         cooking_method: expect.objectContaining({ label: "끓이기" }),
       }),

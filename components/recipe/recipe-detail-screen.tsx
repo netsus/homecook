@@ -44,6 +44,11 @@ import {
   formatRecipeSourceLabel,
   formatScaledIngredient,
 } from "@/lib/recipe";
+import {
+  normalizeRecipeSectionLabel,
+  shouldShowSectionHeading,
+  stripMatchingSectionPrefix,
+} from "@/lib/recipe-section-labels";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -996,40 +1001,54 @@ export function RecipeDetailScreen({
               )
                 ? ingredient.scaledText.slice(ingredient.standard_name.length + 1)
                 : ingredient.scaledText;
+              const sectionLabel = normalizeRecipeSectionLabel(ingredient.component_label);
+              const previousLabel = idx > 0
+                ? scaledIngredients[idx - 1]?.component_label
+                : null;
+              const showSectionHeading = shouldShowSectionHeading(
+                sectionLabel,
+                previousLabel,
+              );
 
               return (
-                <li
-                  key={ingredient.id}
-                  className="flex items-center justify-between py-3 text-[15px]"
-                  style={{
-                    borderBottom:
-                      idx < scaledIngredients.length - 1
-                        ? "1px solid var(--surface-subtle)"
-                        : "none",
-                  }}
-                >
-                  <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--foreground)]">
-                    <span>{ingredient.standard_name}</span>
-                    {ingredient.ingredient_type === "TO_TASTE" ? (
-                      <span
-                        className="rounded-[var(--radius-full)] border px-2 py-0.5 text-[10px] font-semibold"
-                        style={{
-                          backgroundColor:
-                            "color-mix(in srgb, var(--brand) 8%, transparent)",
-                          borderColor:
-                            "color-mix(in srgb, var(--brand) 16%, transparent)",
-                          color:
-                            "color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))",
-                        }}
-                      >
-                        취향껏
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="text-sm text-[var(--text-2)]">
-                    {quantityText}
-                  </span>
-                </li>
+                <React.Fragment key={ingredient.id}>
+                  {showSectionHeading ? (
+                    <li className="border-t border-[var(--surface-subtle)] pt-4 text-[13px] font-bold text-[var(--brand)] first:border-t-0 first:pt-0">
+                      {sectionLabel}
+                    </li>
+                  ) : null}
+                  <li
+                    className="flex items-center justify-between py-3 text-[15px]"
+                    style={{
+                      borderBottom:
+                        idx < scaledIngredients.length - 1
+                          ? "1px solid var(--surface-subtle)"
+                          : "none",
+                    }}
+                  >
+                    <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--foreground)]">
+                      <span>{ingredient.standard_name}</span>
+                      {ingredient.ingredient_type === "TO_TASTE" ? (
+                        <span
+                          className="rounded-[var(--radius-full)] border px-2 py-0.5 text-[10px] font-semibold"
+                          style={{
+                            backgroundColor:
+                              "color-mix(in srgb, var(--brand) 8%, transparent)",
+                            borderColor:
+                              "color-mix(in srgb, var(--brand) 16%, transparent)",
+                            color:
+                              "color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))",
+                          }}
+                        >
+                          취향껏
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="text-sm text-[var(--text-2)]">
+                      {quantityText}
+                    </span>
+                  </li>
+                </React.Fragment>
               );
             })}
           </ul>
@@ -1040,14 +1059,24 @@ export function RecipeDetailScreen({
             만들기
           </p>
           <ol className="space-y-3">
-            {recipe.steps.map((step) => (
-              <li
-                key={step.id}
-                className="rounded-[var(--radius-card)] bg-[var(--panel)] p-4 shadow-[var(--shadow-1)]"
-                style={{
-                  borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method?.color_key)}`,
-                }}
-              >
+            {recipe.steps.map((step, idx) => {
+              const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
+              const previousLabel = idx > 0 ? recipe.steps[idx - 1]?.component_label : null;
+              const showSectionHeading = shouldShowSectionHeading(sectionLabel, previousLabel);
+
+              return (
+                <React.Fragment key={step.id}>
+                  {showSectionHeading ? (
+                    <li className="list-none px-1 pt-2 text-[13px] font-bold text-[var(--brand)]">
+                      {sectionLabel}
+                    </li>
+                  ) : null}
+                  <li
+                    className="rounded-[var(--radius-card)] bg-[var(--panel)] p-4 shadow-[var(--shadow-1)]"
+                    style={{
+                      borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method?.color_key)}`,
+                    }}
+                  >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span
@@ -1084,15 +1113,20 @@ export function RecipeDetailScreen({
                   ) : null}
                 </div>
                 <p className="mt-2 pl-9 text-base leading-7 text-[var(--text-2)]">
-                  {step.instruction}
+                  {stripMatchingSectionPrefix(
+                    step.instruction,
+                    step.component_label,
+                  ) ?? step.instruction}
                 </p>
                 {step.heat_level ? (
                   <p className="mt-1.5 pl-9 text-xs text-[var(--muted)]">
                     불 세기 {step.heat_level}
                   </p>
                 ) : null}
-              </li>
-            ))}
+                  </li>
+                </React.Fragment>
+              );
+            })}
           </ol>
         </div>
           </div>
@@ -1308,30 +1342,42 @@ export function RecipeDetailScreen({
             </div>
 
             <ul>
-              {scaledIngredients.map((ingredient) => {
+              {scaledIngredients.map((ingredient, idx) => {
                 const quantityText = ingredient.scaledText.startsWith(
                   `${ingredient.standard_name} `,
                 )
                   ? ingredient.scaledText.slice(ingredient.standard_name.length + 1)
                   : ingredient.scaledText;
+                const sectionLabel = normalizeRecipeSectionLabel(ingredient.component_label);
+                const previousLabel = idx > 0
+                  ? scaledIngredients[idx - 1]?.component_label
+                  : null;
+                const showSectionHeading = shouldShowSectionHeading(
+                  sectionLabel,
+                  previousLabel,
+                );
 
                 return (
-                  <li
-                    className="flex items-center justify-between border-b border-[#F1F3F5] py-3 text-[15px] last:border-b-0"
-                    key={ingredient.id}
-                  >
-                    <span className="flex min-w-0 items-center gap-2 font-medium text-[#212529]">
-                      <span>{ingredient.standard_name}</span>
-                      {ingredient.ingredient_type === "TO_TASTE" ? (
-                        <span className="rounded-full border border-[var(--brand-border)] bg-[var(--brand-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand)]">
-                          취향껏
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className="text-[14px] text-[#495057]">
-                      {quantityText}
-                    </span>
-                  </li>
+                  <React.Fragment key={ingredient.id}>
+                    {showSectionHeading ? (
+                      <li className="border-t border-[#F1F3F5] pt-4 text-[13px] font-bold text-[var(--brand)] first:border-t-0 first:pt-0">
+                        {sectionLabel}
+                      </li>
+                    ) : null}
+                    <li className="flex items-center justify-between border-b border-[#F1F3F5] py-3 text-[15px] last:border-b-0">
+                      <span className="flex min-w-0 items-center gap-2 font-medium text-[#212529]">
+                        <span>{ingredient.standard_name}</span>
+                        {ingredient.ingredient_type === "TO_TASTE" ? (
+                          <span className="rounded-full border border-[var(--brand-border)] bg-[var(--brand-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand)]">
+                            취향껏
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="text-[14px] text-[#495057]">
+                        {quantityText}
+                      </span>
+                    </li>
+                  </React.Fragment>
                 );
               })}
             </ul>
@@ -1341,14 +1387,24 @@ export function RecipeDetailScreen({
         {activeTab === "steps" ? (
           <section className="bg-[#F8F9FA] px-4 py-5">
             <ol className="space-y-3">
-              {recipe.steps.map((step) => (
-                <li
-                  className="rounded-[var(--radius-card)] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
-                  key={step.id}
-                  style={{
-                    borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method?.color_key)}`,
-                  }}
-                >
+              {recipe.steps.map((step, idx) => {
+                const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
+                const previousLabel = idx > 0 ? recipe.steps[idx - 1]?.component_label : null;
+                const showSectionHeading = shouldShowSectionHeading(sectionLabel, previousLabel);
+
+                return (
+                  <React.Fragment key={step.id}>
+                    {showSectionHeading ? (
+                      <li className="list-none px-1 pt-1 text-[13px] font-bold text-[var(--brand)]">
+                        {sectionLabel}
+                      </li>
+                    ) : null}
+                    <li
+                      className="rounded-[var(--radius-card)] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+                      style={{
+                        borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method?.color_key)}`,
+                      }}
+                    >
                   <div className="mb-2 flex items-center gap-2">
                     <span
                       className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold"
@@ -1373,15 +1429,20 @@ export function RecipeDetailScreen({
                     ) : null}
                   </div>
                   <p className="pl-9 text-base leading-[1.6] text-[#495057]">
-                    {step.instruction}
+                    {stripMatchingSectionPrefix(
+                      step.instruction,
+                      step.component_label,
+                    ) ?? step.instruction}
                   </p>
                   {step.heat_level ? (
                     <p className="mt-1.5 pl-9 text-[12px] text-[#5F6470]">
                       불 세기 {step.heat_level}
                     </p>
                   ) : null}
-                </li>
-              ))}
+                    </li>
+                  </React.Fragment>
+                );
+              })}
             </ol>
           </section>
         ) : null}
@@ -1673,23 +1734,38 @@ function RecipeDetailWebView({
             <section className="web-reading-section">
               <h2 className="web-reading-title">재료</h2>
               <ul className="web-ingredient-list">
-                {scaledIngredients.map((ingredient) => {
+                {scaledIngredients.map((ingredient, idx) => {
                   const quantityText = ingredient.scaledText.startsWith(
                     `${ingredient.standard_name} `,
                   )
                     ? ingredient.scaledText.slice(ingredient.standard_name.length + 1)
                     : ingredient.scaledText;
+                  const sectionLabel = normalizeRecipeSectionLabel(ingredient.component_label);
+                  const previousLabel = idx > 0
+                    ? scaledIngredients[idx - 1]?.component_label
+                    : null;
+                  const showSectionHeading = shouldShowSectionHeading(
+                    sectionLabel,
+                    previousLabel,
+                  );
 
                   return (
-                    <li className="web-ingredient-row" key={ingredient.id}>
-                      <span className="web-ingredient-name">
-                        {ingredient.standard_name}
-                        {ingredient.ingredient_type === "TO_TASTE" ? (
-                          <span className="web-ingredient-badge">취향껏</span>
-                        ) : null}
-                      </span>
-                      <span className="web-ingredient-amount">{quantityText}</span>
-                    </li>
+                    <React.Fragment key={ingredient.id}>
+                      {showSectionHeading ? (
+                        <li className="px-1 pt-3 text-[13px] font-bold text-[var(--brand)] first:pt-0">
+                          {sectionLabel}
+                        </li>
+                      ) : null}
+                      <li className="web-ingredient-row">
+                        <span className="web-ingredient-name">
+                          {ingredient.standard_name}
+                          {ingredient.ingredient_type === "TO_TASTE" ? (
+                            <span className="web-ingredient-badge">취향껏</span>
+                          ) : null}
+                        </span>
+                        <span className="web-ingredient-amount">{quantityText}</span>
+                      </li>
+                    </React.Fragment>
                   );
                 })}
               </ul>
@@ -1702,25 +1778,21 @@ function RecipeDetailWebView({
             <section className="web-reading-section">
               <h2 className="web-reading-title">만들기</h2>
               <ol className="web-step-list">
-                {recipe.steps.map((step) => (
-                  <li className="web-step-row" key={step.id}>
-                    <span
-                      className="web-step-num"
-                      style={{
-                        backgroundColor: getCookingMethodTint(
-                          step.cooking_method?.color_key,
-                        ),
-                        color: resolveCookingMethodDark(
-                          step.cooking_method?.color_key,
-                        ),
-                      }}
-                    >
-                      {step.step_number}
-                    </span>
-                    <div className="web-step-body">
-                      <div className="web-step-meta">
+                {recipe.steps.map((step, idx) => {
+                  const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
+                  const previousLabel = idx > 0 ? recipe.steps[idx - 1]?.component_label : null;
+                  const showSectionHeading = shouldShowSectionHeading(sectionLabel, previousLabel);
+
+                  return (
+                    <React.Fragment key={step.id}>
+                      {showSectionHeading ? (
+                        <li className="px-1 pt-2 text-[13px] font-bold text-[var(--brand)] first:pt-0">
+                          {sectionLabel}
+                        </li>
+                      ) : null}
+                      <li className="web-step-row">
                         <span
-                          className="web-step-method"
+                          className="web-step-num"
                           style={{
                             backgroundColor: getCookingMethodTint(
                               step.cooking_method?.color_key,
@@ -1730,21 +1802,45 @@ function RecipeDetailWebView({
                             ),
                           }}
                         >
-                          {step.cooking_method?.label ?? "만들기"}
+                          {step.step_number}
                         </span>
-                        {step.duration_text ? (
-                          <span className="web-step-duration">
-                            {step.duration_text}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p>{step.instruction}</p>
-                      {step.heat_level ? (
-                        <span className="web-step-heat">불 세기 {step.heat_level}</span>
-                      ) : null}
-                    </div>
-                  </li>
-                ))}
+                        <div className="web-step-body">
+                          <div className="web-step-meta">
+                            <span
+                              className="web-step-method"
+                              style={{
+                                backgroundColor: getCookingMethodTint(
+                                  step.cooking_method?.color_key,
+                                ),
+                                color: resolveCookingMethodDark(
+                                  step.cooking_method?.color_key,
+                                ),
+                              }}
+                            >
+                              {step.cooking_method?.label ?? "만들기"}
+                            </span>
+                            {step.duration_text ? (
+                              <span className="web-step-duration">
+                                {step.duration_text}
+                              </span>
+                            ) : null}
+                          </div>
+                          <p>
+                            {stripMatchingSectionPrefix(
+                              step.instruction,
+                              step.component_label,
+                            ) ?? step.instruction}
+                          </p>
+                          {step.heat_level ? (
+                            <span className="web-step-heat">
+                              불 세기 {step.heat_level}
+                            </span>
+                          ) : null}
+                        </div>
+                      </li>
+                    </React.Fragment>
+                  );
+                })}
               </ol>
             </section>
           </div>

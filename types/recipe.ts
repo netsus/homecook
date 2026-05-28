@@ -78,6 +78,7 @@ export interface RecipeIngredient {
   unit: string | null;
   ingredient_type: "QUANT" | "TO_TASTE";
   display_text: string | null;
+  component_label?: string | null;
   scalable: boolean;
   sort_order: number;
 }
@@ -86,6 +87,7 @@ export interface RecipeStep {
   id: string;
   step_number: number;
   instruction: string;
+  component_label?: string | null;
   cooking_method: {
     id: string;
     code: string;
@@ -138,6 +140,14 @@ export interface ManualRecipeCreateBody {
   steps: ManualRecipeStepInput[];
 }
 
+export interface YoutubeRecipeRegisterIngredientInput extends ManualRecipeIngredientInput {
+  component_label?: string | null;
+}
+
+export interface YoutubeRecipeRegisterStepInput extends ManualRecipeStepInput {
+  component_label?: string | null;
+}
+
 export interface ManualRecipeCreateData {
   id: string;
   title: string;
@@ -184,6 +194,7 @@ export interface YoutubeExtractedIngredient extends ManualRecipeIngredientInput 
   draft_ingredient_id: string;
   confidence: number | null;
   resolution_status: YoutubeIngredientResolutionStatus;
+  component_label?: string | null;
   candidates?: YoutubeIngredientCandidate[];
   raw_text?: string;
 }
@@ -201,6 +212,7 @@ export interface YoutubeExtractedStep {
   instruction: string;
   cooking_method: YoutubeExtractedCookingMethod;
   duration_text: string | null;
+  component_label?: string | null;
   is_incomplete?: boolean;
   missing_fields?: Array<"instruction" | "cooking_method" | "duration" | "ingredients_used">;
   raw_text?: string;
@@ -223,13 +235,26 @@ export interface YoutubeRecipeRegisterBody {
   title: string;
   base_servings: number;
   youtube_url: string;
-  ingredients: ManualRecipeIngredientInput[];
-  steps: ManualRecipeStepInput[];
+  ingredients: YoutubeRecipeRegisterIngredientInput[];
+  steps: YoutubeRecipeRegisterStepInput[];
 }
 
 export interface YoutubeRecipeRegisterData {
   recipe_id: string;
   title: string;
+}
+
+export interface RecipioYoutubeDuplicateRecipe {
+  recipe_id: string;
+  title: string;
+  thumbnail_url: string | null;
+  youtube_url: string;
+  youtube_video_id: string;
+}
+
+export interface RecipioYoutubeDuplicateCheckData {
+  is_duplicate: boolean;
+  recipe: RecipioYoutubeDuplicateRecipe | null;
 }
 
 export type YoutubeIngredientRegistrationSynonymStatus =

@@ -1,12 +1,12 @@
-# API\_설계\_v1.2.12
+# API\_설계\_v1.2.13
 
 상태: 공식문서
 담당자: 킴실장
-날짜: 5월 27
+날짜: 5월 28
 
-# 집밥 서비스 — API 설계 v1.2.12
+# 집밥 서비스 — API 설계 v1.2.13
 
-> 기준 문서: 요구사항 기준선 v1.7.2 / 화면정의서 v1.5.9 / DB 설계 v1.3.8 / 유저 Flow맵 v1.3.9
+> 기준 문서: 요구사항 기준선 v1.7.3 / 화면정의서 v1.5.10 / DB 설계 v1.3.9 / 유저 Flow맵 v1.3.10
 > 작성: 킴실장
 > v1.1 → v1.2: 채실장 2차 리뷰 A1~A4 + 장보기 구현 아이디어 반영
 > v1.2 → v1.2.1: 채실장 3차 리뷰 P0 4건 + P1 3건 (예시 수정 + 정책 문구 추가, 엔드포인트 변경 없음)
@@ -22,6 +22,19 @@
 > v1.2.10 → v1.2.11: slice27 선행 taxonomy contract lock. `GET /ingredients?category=`와 YouTube ingredient registration은 legacy 7종 category label을 유지하고, cooking method category는 optional additive metadata로만 취급한다. 엔드포인트 수 변경 없음
 > v1.2.11 → v1.2.12: Admin Foundation 읽기 전용 엔드포인트 3종 추가. `GET /api/v1/admin/users`, `GET /api/v1/admin/operational-events`, `GET /api/v1/admin/audit-logs`. `createServiceRoleClient()` 필수, 감사 로그 기록, PII 최소화. 엔드포인트 수 55 → 58
 > 2026-05-28 addendum: 레시피오형 quick import 중복 확인 `GET /api/v1/recipes/youtube/recipio/check` 추가. 기존 validate/extract/register 계약 재사용, DB 변경 없음. 엔드포인트 수 58 → 59
+> v1.2.12 → v1.2.13: YouTube section label persistence. `component_label` nullable field를 extract/register/detail/cook-mode ingredient/step 계약에 추가. `POST /recipes` manual body는 6-4 참조에서 분리하고 `component_label` 비허용을 명시. 엔드포인트 수 변경 없음
+
+---
+
+## v1.2.12 → v1.2.13 변경
+
+### YouTube 섹션 라벨 영속화
+
+| # | 변경 내용 | 조치 |
+| --- | --- | --- |
+| YT-SECTION-1 | 설명란의 재료/단계 섹션 라벨을 등록 후에도 유지 | `component_label` nullable field를 YouTube extract/register, recipe detail, cook-mode 응답에 추가 |
+| YT-SECTION-2 | 섹션 라벨과 본문 prefix 중복 표시 방지 | `component_label`이 있으면 `display_text`, `instruction`은 같은 `[섹션명]` prefix를 포함하지 않음 |
+| YT-SECTION-3 | 직접 레시피 등록 계약 보호 | `POST /recipes` manual body를 §6-4 참조에서 분리하고 `component_label` 비허용 명시 |
 
 ---
 
@@ -411,6 +424,7 @@ GET /recipes/{recipe_id}
       "unit": "g",
       "ingredient_type": "QUANT",
       "display_text": "김치 200g",
+      "component_label": "찌개 재료",
       "scalable": true,
       "sort_order": 1
     },
@@ -422,6 +436,7 @@ GET /recipes/{recipe_id}
       "unit": null,
       "ingredient_type": "TO_TASTE",
       "display_text": "소금 약간",
+      "component_label": "간 맞추기",
       "scalable": false,
       "sort_order": 5
     }
@@ -431,6 +446,7 @@ GET /recipes/{recipe_id}
       "id": "uuid",
       "step_number": 1,
       "instruction": "김치를 한입 크기로 썬다",
+      "component_label": "재료 손질",
       "cooking_method": {
         "id": "uuid",
         "code": "prep",
@@ -459,6 +475,7 @@ GET /recipes/{recipe_id}
 ```
 
 > 비로그인 시 `user_status`는 null. 조회 시 view_count += 1.
+> `component_label`은 nullable이다. 값이 있으면 UI는 인접 항목의 label 변경 지점에만 섹션 소제목을 표시한다. 같은 label prefix가 본문에 있으면 중복 표시하지 않는다.
 
 ### 2-2. 좋아요 토글
 
@@ -877,6 +894,7 @@ POST /api/v1/recipes/youtube/extract
       "unit": "g",
       "ingredient_type": "QUANT",
       "display_text": "김치 200g",
+      "component_label": "찌개 재료",
       "ingredient_id": "uuid",
       "resolution_status": "resolved",
       "confidence": 0.95
@@ -888,6 +906,7 @@ POST /api/v1/recipes/youtube/extract
       "unit": null,
       "ingredient_type": "TO_TASTE",
       "display_text": "소금 약간",
+      "component_label": "간 맞추기",
       "ingredient_id": "uuid",
       "resolution_status": "resolved",
       "confidence": 0.80
@@ -897,6 +916,7 @@ POST /api/v1/recipes/youtube/extract
     {
       "step_number": 1,
       "instruction": "김치를 한입 크기로 썬다",
+      "component_label": "재료 손질",
       "cooking_method": {
         "id": "uuid",
         "code": "prep",
@@ -932,6 +952,7 @@ POST /api/v1/recipes/youtube/extract
 | `unresolved` | 매칭 실패 | 에러 배지 (저장 차단) |
 
 > `draft_ingredient_id`는 extract 시 서버가 생성해 응답과 `youtube_extraction_sessions.draft_json.ingredients[]`에 같이 저장하는 안정 식별자다. 검수 화면에서 사용자가 재료명/수량/단위/순서를 수정해도 값은 유지하며, 미등록 재료 등록 API가 대상 draft row를 확인할 때 사용한다.
+> `component_label`은 nullable이다. YouTube 설명란에서 `| 빵 반죽` 같은 섹션 heading이 감지되면 extract 응답과 session draft에 보존한다. `component_label`이 있으면 `display_text`, `instruction`에는 같은 `[섹션명]` prefix를 포함하지 않는다.
 
 **step missing_fields**
 
@@ -1053,19 +1074,20 @@ POST /api/v1/recipes/youtube/register
 | Body | ingredients   | array  | 검수/수정된 재료 목록 |
 | Body | steps         | array  | 검수/수정된 스텝 목록 |
 
-**ingredients 항목**: `{ ingredient_id, standard_name, amount, unit, ingredient_type, display_text, sort_order }`
+**ingredients 항목**: `{ ingredient_id, standard_name, amount, unit, ingredient_type, display_text, component_label, sort_order }`
 
-**steps 항목**: `{ step_number, instruction, cooking_method_id, ingredients_used, heat_level, duration_seconds, duration_text }`
+**steps 항목**: `{ step_number, instruction, component_label, cooking_method_id, ingredients_used, heat_level, duration_seconds, duration_text }`
 
 > `cooking_method_id`만 수신 (항상 uuid 필수).
+> `component_label`은 nullable이며 YouTube register 전용이다. 빈 문자열은 `null`로 정규화한다. `display_text`와 `instruction`은 같은 섹션 라벨 prefix를 중복 포함하지 않는다.
 
 **처리**: extraction_id로 `youtube_extraction_sessions` 조회 → 소유권 검증(user_id == current_user) → 만료/소비 검증 → client body의 `youtube_url`을 파싱한 값과 session의 canonical URL/video ID를 비교해 EXTRACTION_MISMATCH 검증 → Postgres RPC `register_youtube_recipe_from_session` 원자적 실행
 
 **RPC 원자적 INSERT 순서**:
 1. `recipes` INSERT (source_type='youtube', created_by=current_user)
 2. `recipe_sources` INSERT (youtube_url, youtube_video_id, youtube_extraction_session_id, extraction_methods — 세션에서 복사)
-3. `recipe_ingredients` INSERT (복수)
-4. `recipe_steps` INSERT (복수)
+3. `recipe_ingredients` INSERT (복수, `component_label` 포함)
+4. `recipe_steps` INSERT (복수, `component_label` 포함)
 5. `youtube_extraction_sessions` UPDATE status='consumed', recipe_id=신규 recipe_id
 
 > **Provenance**: recipe_sources의 youtube_url, youtube_video_id, extraction_methods는 **세션에서 복사** — 클라이언트 body 아님
@@ -1155,8 +1177,14 @@ POST /recipes
 | ---- | ------------- | ------ | --------------------------- |
 | Body | title         | string | 레시피명                    |
 | Body | base_servings | int    | 기본 인분                   |
-| Body | ingredients   | array  | 재료 목록 (6-4와 동일 형식) |
-| Body | steps         | array  | 스텝 목록 (6-4와 동일 형식) |
+| Body | ingredients   | array  | 재료 목록. `component_label` 비허용 |
+| Body | steps         | array  | 스텝 목록. `component_label` 비허용 |
+
+**manual ingredients 항목**: `{ ingredient_id, standard_name, amount, unit, ingredient_type, display_text, sort_order, scalable }`
+
+**manual steps 항목**: `{ step_number, instruction, cooking_method_id, ingredients_used, heat_level, duration_seconds, duration_text }`
+
+> 직접 레시피 등록은 §6-4 YouTube register body를 참조하지 않는다. `component_label`은 YouTube extract/register 전용 field이며 manual create body에는 허용하지 않는다.
 
 **응답 (201)**: 생성된 recipe 객체
 
@@ -1519,6 +1547,7 @@ GET /cooking/sessions/{session_id}/cook-mode
         "amount": 400,
         "unit": "g",
         "display_text": "김치 400g",
+        "component_label": "찌개 재료",
         "ingredient_type": "QUANT",
         "scalable": true
       }
@@ -1527,6 +1556,7 @@ GET /cooking/sessions/{session_id}/cook-mode
       {
         "step_number": 1,
         "instruction": "김치를 한입 크기로 썬다",
+        "component_label": "재료 손질",
         "cooking_method": {
           "code": "prep",
           "label": "손질",
@@ -1571,6 +1601,8 @@ GET /recipes/{recipe_id}/cook-mode
   }
 }
 ```
+
+> cook-mode의 ingredient/step `component_label`은 nullable이며 recipe detail과 같은 의미다. UI는 인접 항목의 label 변경 지점에만 섹션 소제목을 표시한다.
 
 ### 9-4. 요리 완료 (플래너 경유)
 
@@ -2362,7 +2394,7 @@ GET /api/v1/admin/audit-logs
 
 ---
 
-## 엔드포인트 전체 목록 (59개) `v1.2.12 + 2026-05-28 addendum`
+## 엔드포인트 전체 목록 (59개) `v1.2.13`
 
 | #        | Method     | Path                                   | 화면                     | 인증   | v1.2 변경                        |
 | -------- | ---------- | -------------------------------------- | ------------------------ | ------ | -------------------------------- |
@@ -2427,6 +2459,7 @@ GET /api/v1/admin/audit-logs
 | 15-2     | GET        | /api/v1/admin/operational-events       | ADMIN_EVENTS             | 🔐     | v1.2.12 신규                     |
 | 15-3     | GET        | /api/v1/admin/audit-logs               | ADMIN_AUDIT_LOGS         | 🔐     | v1.2.12 신규                     |
 
+> **v1.2.13 총계**: 59개 (레시피오형 quick import endpoint 1개 추가, YouTube section label field 추가는 엔드포인트 수 변경 없음)
 > **v1.2.12 총계**: 58개 (Admin Foundation read-only endpoint 3개 추가)
 > **v1.2.11 총계**: 55개 (slice27 taxonomy contract lock, 신규 endpoint 없음)
 > **v1.2.10 총계**: 55개 (`DELETE /users/me` 회원 탈퇴 데이터 정리 정책 변경, 신규 endpoint 없음)

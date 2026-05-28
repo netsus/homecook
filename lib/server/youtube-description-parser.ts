@@ -132,6 +132,7 @@ export interface FlatDraftIngredient {
 export interface FlatDraftAdaptation {
   ingredients: FlatDraftIngredient[];
   steps: string[];
+  stepComponentLabels: Array<string | null>;
   draftWarnings: string[];
   blockingIssues: string[];
   includeIncompleteStepFallback: boolean;
@@ -223,6 +224,11 @@ const COMPONENT_KEYWORDS = [
   "sauce",
   "syrup",
 ] as const;
+const NON_SEPARATING_INGREDIENT_COMPONENT_LABELS = [
+  "양념",
+  "양념장",
+  "밑간",
+] as const;
 const KOREAN_NUMBER_WORDS: Record<string, number> = {
   한: 1,
   두: 2,
@@ -239,6 +245,12 @@ const NUMERIC_INGREDIENT_RE = new RegExp(
   `^(.+?)(?:\\s*[：:]\\s*|\\s*)` +
     `(${AMOUNT_RANGE_PATTERN})\\s*` +
     `(${UNIT_PATTERN})(?:씩)?(?:\\s*\\([^)]*\\))?\\s*$`,
+  "iu",
+);
+const LEADING_NUMERIC_INGREDIENT_RE = new RegExp(
+  `^(${AMOUNT_RANGE_PATTERN})\\s*` +
+    `(${UNIT_PATTERN})(?:씩)?\\s+` +
+    `(.+?)(?:\\s*\\([^)]*\\))?\\s*$`,
   "iu",
 );
 const UNIT_SUFFIXED_RANGE_INGREDIENT_RE = new RegExp(
@@ -468,12 +480,12 @@ function cleanupComponentLabel(value: string) {
   const label = stripOuterBrackets(value)
     .replace(/(?:기본\s*)?재료$/u, "")
     .replace(/ingredients?$/iu, "")
-    .replace(/(?:만드는\s*법|만드는\s*방법|만들기|조리\s*법|조리법|요리\s*순서|method|directions?)$/iu, "")
+    .replace(/(?:만드는\s*법|만드는\s*방법|만드는\s*과정|만들기|조리\s*법|조리법|요리\s*순서|method|directions?)$/iu, "")
     .replace(/^for\s+(?:the\s+)?/iu, "")
     .replace(/[：:]+$/u, "")
     .trim();
 
-  return label || null;
+  return label.replace(/^쿠기\s+토핑$/u, "쿠키 토핑") || null;
 }
 
 function getIngredientHeadingComponent(text: string) {
@@ -508,11 +520,11 @@ function getIngredientHeadingComponent(text: string) {
 function getStepHeadingComponent(text: string) {
   const normalized = text.toLowerCase();
 
-  if (/^(?:순서|조리\s*(?:과정|순서|방법|법)|조리법|만드는\s*(?:법|방법|순서)|만들기|요리\s*(?:법|과정|순서)|레시피(?:\s*순서)?|steps?|directions?|method)\s*(?:\([^)]*\))?\s*$/u.test(normalized)) {
+  if (/^(?:순서|조리\s*(?:과정|순서|방법|법)|조리법|만드는\s*(?:법|방법|과정|순서)|만들기|요리\s*(?:법|과정|순서)|레시피(?:\s*순서)?|steps?|directions?|method)\s*(?:\([^)]*\))?\s*$/u.test(normalized)) {
     return null;
   }
 
-  if (/^.+\s*(?:만드는\s*법|만드는\s*방법|만들기|조리\s*법|조리법|요리\s*순서|method|directions?)$/iu.test(text)) {
+  if (/^.+\s*(?:만드는\s*법|만드는\s*방법|만드는\s*과정|만들기|조리\s*법|조리법|요리\s*순서|method|directions?)$/iu.test(text)) {
     return cleanupComponentLabel(text);
   }
 
@@ -552,6 +564,22 @@ function isComponentOnlyHeading(text: string) {
         && normalized.split(/\s+/u).length <= 3
       );
   });
+}
+
+function shouldSeparateIngredientComponent(label: string | null) {
+  if (!label) {
+    return false;
+  }
+
+  const normalized = stripDecorativeMarks(label)
+    .replace(/[：:]+$/u, "")
+    .replace(/\s+/gu, " ")
+    .toLowerCase()
+    .trim();
+
+  return !NON_SEPARATING_INGREDIENT_COMPONENT_LABELS.some((keyword) =>
+    normalized === keyword || normalized === `${keyword} 재료`,
+  );
 }
 
 function isShortIngredientBlockHeadingFromLookahead(line: SourceLine, lookahead: SourceLine[]) {
@@ -733,6 +761,35 @@ function parseIngredientLine(
       sourceLine: line.index,
       confidence: 0.95,
       flags: [],
+      scalable: true,
+    };
+  }
+
+  const leadingNumericMatch = parseText.match(LEADING_NUMERIC_INGREDIENT_RE);
+  if (leadingNumericMatch) {
+    const amount = parseRecipeAmount(leadingNumericMatch[1]);
+    const name = normalizeIngredientName(leadingNumericMatch[3]);
+
+    if (!name || amount === null || hasCookingAction(name) || /[,，]/u.test(name) || isInvalidIngredientName(name)) {
+      return null;
+    }
+
+    return {
+      name,
+      amount,
+      unit: leadingNumericMatch[2].trim(),
+      ingredientType: "QUANT",
+      displayText: formatIngredientDisplayText({
+        name,
+        amount,
+        unit: leadingNumericMatch[2].trim(),
+        componentLabel,
+      }),
+      rawText: line.raw.trim(),
+      componentLabel,
+      sourceLine: line.index,
+      confidence: 0.95,
+      flags: ["leading_amount"],
       scalable: true,
     };
   }
@@ -1356,7 +1413,7 @@ function parseStepLine(
   }
 
   return {
-    instruction: formatStepInstruction(line.text, componentLabel),
+    instruction: formatStepInstruction(line.text),
     rawText: line.raw.trim(),
     componentLabel,
     sourceLine: line.index,
@@ -1967,24 +2024,21 @@ function formatIngredientDisplayText({
   name,
   amount,
   unit,
-  componentLabel,
 }: {
   name: string;
   amount: number | null;
   unit: string | null;
   componentLabel: string | null;
 }) {
-  const prefix = componentLabel ? `[${componentLabel}] ` : "";
-
   if (amount === null || !unit) {
-    return `${prefix}${name} 약간`;
+    return `${name} 약간`;
   }
 
-  return `${prefix}${name} ${amount}${unit}`;
+  return `${name} ${amount}${unit}`;
 }
 
-function formatStepInstruction(instruction: string, componentLabel: string | null) {
-  return componentLabel ? `[${componentLabel}] ${instruction}` : instruction;
+function formatStepInstruction(instruction: string) {
+  return instruction;
 }
 
 function formatAmount(amount: number, unit: string) {
@@ -1995,7 +2049,12 @@ function aggregateIngredients(ingredients: ParsedIngredient[]) {
   const grouped = new Map<string, ParsedIngredient[]>();
 
   for (const ingredient of ingredients) {
-    const key = ingredient.name.trim().toLowerCase();
+    const key = [
+      shouldSeparateIngredientComponent(ingredient.componentLabel)
+        ? ingredient.componentLabel?.trim().toLowerCase()
+        : "",
+      ingredient.name.trim().toLowerCase(),
+    ].join("|");
     grouped.set(key, [...(grouped.get(key) ?? []), ingredient]);
   }
 
@@ -2032,7 +2091,13 @@ function aggregateIngredients(ingredients: ParsedIngredient[]) {
     const unit = group[0].unit;
     const amount = group.reduce((sum, ingredient) => sum + (ingredient.amount ?? 0), 0);
     const componentLabels = [...new Set(group.map((ingredient) => ingredient.componentLabel).filter((label): label is string => Boolean(label)))];
-    const componentPrefix = componentLabels.length > 0 ? `[${componentLabels.join("+")}] ` : "";
+    const separatedComponentLabels = componentLabels.filter(shouldSeparateIngredientComponent);
+    const outputComponentLabels = separatedComponentLabels.length > 0
+      ? separatedComponentLabels
+      : componentLabels.length === 1 && group.every((ingredient) => ingredient.componentLabel === componentLabels[0])
+        ? componentLabels
+        : [];
+    const componentPrefix = outputComponentLabels.length > 0 ? `[${outputComponentLabels.join("+")}] ` : "";
     const parts = group.map((ingredient) => {
       const label = ingredient.componentLabel ?? "공통";
       return `${label} ${formatAmount(ingredient.amount ?? 0, unit ?? "")}`;
@@ -2046,7 +2111,7 @@ function aggregateIngredients(ingredients: ParsedIngredient[]) {
       ingredientType: "QUANT",
       displayText: `${componentPrefix}${group[0].name} ${formatAmount(amount, unit ?? "")} (${parts.join(" + ")})`,
       rawText: group.map((ingredient) => ingredient.rawText).join(" / "),
-      componentLabel: componentLabels.length > 0 ? componentLabels.join("+") : null,
+      componentLabel: outputComponentLabels.length > 0 ? outputComponentLabels.join("+") : null,
       sourceLine: group[0].sourceLine,
       confidence: Math.min(...group.map((ingredient) => ingredient.confidence)),
       flags: [...new Set(group.flatMap((ingredient) => ingredient.flags).concat("aggregated_component_amounts"))],
@@ -2064,6 +2129,7 @@ function adaptNoStructuredDraft(selectionOutcome: RecipeCandidateSelection["outc
   return {
     ingredients: [],
     steps: [],
+    stepComponentLabels: [],
     draftWarnings: ["설명란에서 구조화된 재료와 만들기를 찾지 못했어요. 직접 추가해서 등록할 수 있어요."],
     blockingIssues: ["ingredients", "steps"],
     includeIncompleteStepFallback: false,
@@ -2084,9 +2150,10 @@ export function adaptCandidateToFlatDraft(
 
   const allIngredients = selection.candidate.components.flatMap((component) => component.ingredients);
   const aggregation = aggregateIngredients(allIngredients);
-  const steps = selection.candidate.components.flatMap((component) =>
-    component.steps.map((step) => step.instruction),
-  );
+  const flatSteps = selection.candidate.components
+    .flatMap((component) => component.steps)
+    .sort((left, right) => left.sourceLine - right.sourceLine);
+  const steps = flatSteps.map((step) => step.instruction);
   const warningMessages = [
     ...selection.warnings.map((warning) => warning.message),
     ...aggregation.warnings,
@@ -2100,6 +2167,7 @@ export function adaptCandidateToFlatDraft(
   return {
     ingredients: aggregation.ingredients,
     steps,
+    stepComponentLabels: flatSteps.map((step) => step.componentLabel),
     draftWarnings: [...new Set(warningMessages)],
     blockingIssues,
     includeIncompleteStepFallback: true,

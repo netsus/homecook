@@ -81,6 +81,7 @@ export interface CookingModeIngredient {
   amount: number | null;
   unit: string | null;
   display_text: string | null;
+  component_label?: string | null;
   ingredient_type: "QUANT" | "TO_TASTE";
   scalable: boolean;
 }
@@ -88,6 +89,7 @@ export interface CookingModeIngredient {
 export interface CookingModeStep {
   step_number: number;
   instruction: string;
+  component_label?: string | null;
   cooking_method: CookingMethodSummary;
   ingredients_used: unknown[];
   heat_level: string | null;

@@ -5,6 +5,11 @@ import React from "react";
 
 import type { CookingModeRecipe, CookingModeStep } from "@/types/cooking";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
+import {
+  normalizeRecipeSectionLabel,
+  shouldShowSectionHeading,
+  stripMatchingSectionPrefix,
+} from "@/lib/recipe-section-labels";
 import { WebButton, WebShell, WebTopNav } from "@/components/web";
 
 interface CookModeDesktopViewProps {
@@ -193,35 +198,51 @@ function IngredientChecklist({
       className="web-cook-checklist"
       data-testid="ingredient-list"
     >
-      {recipe.ingredients.map((ingredient) => {
+      {recipe.ingredients.map((ingredient, idx) => {
         const selected = selectedIds.has(ingredient.ingredient_id);
+        const sectionLabel = normalizeRecipeSectionLabel(
+          ingredient.component_label,
+        );
+        const previousLabel =
+          idx > 0 ? recipe.ingredients[idx - 1]?.component_label : null;
+        const showSectionHeading = shouldShowSectionHeading(
+          sectionLabel,
+          previousLabel,
+        );
 
         return (
-          <li data-testid="ingredient-item" key={ingredient.ingredient_id}>
-            <button
-              aria-pressed={selected}
-              className={
-                selected
-                  ? "web-cook-checklist-item web-cook-checklist-item-selected"
-                  : "web-cook-checklist-item"
-              }
-              data-testid={`consumed-check-${ingredient.ingredient_id}`}
-              disabled={controlsDisabled}
-              onClick={() => onToggle(ingredient.ingredient_id)}
-              type="button"
-            >
-              <span className="web-cook-checkmark" aria-hidden="true">
-                {selected ? "✓" : ""}
-              </span>
-              <span className="web-cook-check-name">
-                {ingredient.standard_name}
-              </span>
-              <span className="web-cook-check-amount">
-                {formatIngredientAmount(ingredient)}
-              </span>
-              <span className="web-cook-check-owned">보유</span>
-            </button>
-          </li>
+          <React.Fragment key={`${ingredient.ingredient_id}-${idx}`}>
+            {showSectionHeading ? (
+              <li className="px-1 pt-2 text-[13px] font-bold text-[var(--brand)] first:pt-0">
+                {sectionLabel}
+              </li>
+            ) : null}
+            <li data-testid="ingredient-item">
+              <button
+                aria-pressed={selected}
+                className={
+                  selected
+                    ? "web-cook-checklist-item web-cook-checklist-item-selected"
+                    : "web-cook-checklist-item"
+                }
+                data-testid={`consumed-check-${ingredient.ingredient_id}`}
+                disabled={controlsDisabled}
+                onClick={() => onToggle(ingredient.ingredient_id)}
+                type="button"
+              >
+                <span className="web-cook-checkmark" aria-hidden="true">
+                  {selected ? "✓" : ""}
+                </span>
+                <span className="web-cook-check-name">
+                  {ingredient.standard_name}
+                </span>
+                <span className="web-cook-check-amount">
+                  {formatIngredientAmount(ingredient)}
+                </span>
+                <span className="web-cook-check-owned">보유</span>
+              </button>
+            </li>
+          </React.Fragment>
         );
       })}
     </ul>
@@ -239,39 +260,50 @@ function StepList({ steps }: { steps: CookingModeStep[] }) {
 
   return (
     <ol className="web-cook-step-list" data-testid="step-list">
-      {steps.map((step) => {
+      {steps.map((step, idx) => {
         const methodColor = getCookingMethodColor(step.cooking_method.color_key);
         const heat = formatHeatLevel(step.heat_level);
+        const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
+        const previousLabel = idx > 0 ? steps[idx - 1]?.component_label : null;
+        const showSectionHeading = shouldShowSectionHeading(
+          sectionLabel,
+          previousLabel,
+        );
 
         return (
-          <li
-            className="web-cook-step-item"
-            data-testid="step-item"
-            key={step.step_number}
-            style={{ borderLeft: `4px solid ${methodColor}` }}
-          >
-            <div className="web-cook-step-copy">
-              <div className="web-cook-step-meta">
-                {step.cooking_method.label ? (
-                  <span
-                    className="web-cook-method-pill"
-                    style={{ backgroundColor: methodColor }}
-                  >
-                    {step.cooking_method.label}
-                  </span>
-                ) : null}
-                {heat ? (
-                  <span className="web-cook-heat-pill">
-                    {heat}
-                  </span>
-                ) : null}
+          <React.Fragment key={step.step_number}>
+            {showSectionHeading ? (
+              <li className="list-none px-1 pt-2 text-[13px] font-bold text-[var(--brand)] first:pt-0">
+                {sectionLabel}
+              </li>
+            ) : null}
+            <li
+              className="web-cook-step-item"
+              data-testid="step-item"
+              style={{ borderLeft: `4px solid ${methodColor}` }}
+            >
+              <div className="web-cook-step-copy">
+                <div className="web-cook-step-meta">
+                  {step.cooking_method.label ? (
+                    <span
+                      className="web-cook-method-pill"
+                      style={{ backgroundColor: methodColor }}
+                    >
+                      {step.cooking_method.label}
+                    </span>
+                  ) : null}
+                  {heat ? <span className="web-cook-heat-pill">{heat}</span> : null}
+                </div>
+                <p>
+                  {stripMatchingSectionPrefix(
+                    step.instruction,
+                    step.component_label,
+                  ) ?? step.instruction}
+                </p>
               </div>
-              <p>
-                {step.instruction}
-              </p>
-            </div>
-            <span className="web-cook-step-number">단계 {step.step_number}</span>
-          </li>
+              <span className="web-cook-step-number">단계 {step.step_number}</span>
+            </li>
+          </React.Fragment>
         );
       })}
     </ol>
@@ -282,7 +314,12 @@ function formatIngredientAmount(
   ingredient: CookingModeRecipe["ingredients"][number],
 ) {
   if (ingredient.display_text) {
-    return ingredient.display_text;
+    return (
+      stripMatchingSectionPrefix(
+        ingredient.display_text,
+        ingredient.component_label,
+      ) ?? ingredient.display_text
+    );
   }
 
   if (ingredient.ingredient_type === "TO_TASTE") {
