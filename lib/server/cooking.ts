@@ -6,6 +6,10 @@ import type {
   CookingSessionCompleteBody,
   CookingSessionCreateBody,
 } from "@/types/cooking";
+import {
+  normalizeRecipeSectionLabel,
+  stripMatchingSectionPrefix,
+} from "@/lib/recipe-section-labels";
 
 export interface CookingReadyMealRow {
   id: string;
@@ -36,6 +40,7 @@ export interface CookingIngredientRow {
   amount: number | null;
   unit: string | null;
   display_text: string | null;
+  component_label?: string | null;
   ingredient_type: "QUANT" | "TO_TASTE";
   scalable: boolean;
   sort_order?: number | null;
@@ -51,6 +56,7 @@ interface CookingMethodJoinRow {
 export interface CookingStepRow {
   step_number: number;
   instruction: string;
+  component_label?: string | null;
   ingredients_used: unknown;
   heat_level: string | null;
   duration_seconds: number | null;
@@ -325,16 +331,19 @@ export function toCookingModeIngredient({
     scalable: row.scalable,
   });
   const amountText = formatAmount(amount);
+  const componentLabel = normalizeRecipeSectionLabel(row.component_label);
+  const displayText =
+    row.ingredient_type === "QUANT" && amountText && row.unit
+      ? `${ingredient.standard_name ?? ""} ${amountText}${row.unit}`
+      : stripMatchingSectionPrefix(row.display_text, componentLabel);
 
   return {
     ingredient_id: row.ingredient_id,
     standard_name: ingredient.standard_name ?? "",
     amount,
     unit: row.unit,
-    display_text:
-      row.ingredient_type === "QUANT" && amountText && row.unit
-        ? `${ingredient.standard_name ?? ""} ${amountText}${row.unit}`
-        : row.display_text,
+    display_text: displayText,
+    component_label: componentLabel,
     ingredient_type: row.ingredient_type,
     scalable: row.scalable,
   };
@@ -343,10 +352,12 @@ export function toCookingModeIngredient({
 export function toCookingModeStep(row: CookingStepRow): CookingModeStep {
   const method = firstJoin(row.cooking_methods) ?? {};
   const ingredientsUsed = Array.isArray(row.ingredients_used) ? row.ingredients_used : [];
+  const componentLabel = normalizeRecipeSectionLabel(row.component_label);
 
   return {
     step_number: row.step_number,
-    instruction: row.instruction,
+    instruction: stripMatchingSectionPrefix(row.instruction, componentLabel) ?? row.instruction,
+    component_label: componentLabel,
     cooking_method: {
       code: method.code ?? "",
       label: method.label ?? "",

@@ -17,6 +17,10 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
+import {
+  getRecipioYoutubeParityFixture,
+  type RecipioYoutubeParityFixture,
+} from "@/lib/server/recipio-youtube-parity-fixtures";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import type {
@@ -31,6 +35,8 @@ import type {
   YoutubeRecipeClassificationStatus,
   YoutubeRecipeExtractData,
   YoutubeRecipeRegisterData,
+  YoutubeRecipeRegisterIngredientInput,
+  YoutubeRecipeRegisterStepInput,
   YoutubeRecipeValidateData,
 } from "@/types/recipe";
 
@@ -195,8 +201,8 @@ interface YoutubeRecipeRegisterRpcClient {
       p_base_servings: number;
       p_youtube_url: string;
       p_youtube_video_id: string;
-      p_ingredients: ManualRecipeIngredientInput[];
-      p_steps: ManualRecipeStepInput[];
+      p_ingredients: YoutubeRecipeRegisterIngredientInput[];
+      p_steps: YoutubeRecipeRegisterStepInput[];
     },
   ): PromiseLike<{
     data: YoutubeRecipeRegisterRpcResultData | null;
@@ -234,8 +240,8 @@ interface ParsedYoutubeRegister {
   baseServings: number;
   youtubeUrl: string;
   videoId: string;
-  ingredients: ManualRecipeIngredientInput[];
-  steps: ManualRecipeStepInput[];
+  ingredients: YoutubeRecipeRegisterIngredientInput[];
+  steps: YoutubeRecipeRegisterStepInput[];
 }
 
 interface ParsedYoutubeIngredientRegistration {
@@ -281,6 +287,7 @@ interface ParsedDescriptionIngredient {
   ingredientType: "QUANT" | "TO_TASTE";
   displayText: string;
   rawText: string;
+  componentLabel: string | null;
   scalable: boolean;
   confidence: number;
 }
@@ -288,6 +295,7 @@ interface ParsedDescriptionIngredient {
 interface ParsedRecipeDescription {
   ingredients: ParsedDescriptionIngredient[];
   steps: string[];
+  stepComponentLabels: Array<string | null>;
 }
 
 interface ParsedRecipeDescriptionForImport {
@@ -297,6 +305,7 @@ interface ParsedRecipeDescriptionForImport {
   draftWarnings: string[];
   blockingIssues: string[];
   includeIncompleteStepFallback: boolean;
+  stepDurationTexts?: Array<string | null>;
   shadowResult?: {
     selectionOutcome: string;
     ingredientCount: number;
@@ -447,6 +456,15 @@ function normalizeNullableString(value: unknown) {
   }
 
   return typeof value === "string" ? value.trim() : null;
+}
+
+function stripMatchingComponentPrefix(value: string | null, componentLabel: string | null) {
+  if (!value || !componentLabel) {
+    return value;
+  }
+
+  const prefix = `[${componentLabel}]`;
+  return value.startsWith(prefix) ? value.slice(prefix.length).trimStart() : value;
 }
 
 function collapseWhitespace(value: string) {
@@ -722,6 +740,18 @@ function getFixtureVideo(videoId: string): YoutubeProviderResult {
 }
 
 function getFixturePreview(videoId: string): YoutubePreviewResult {
+  const parityFixture = getRecipioYoutubeParityFixture(videoId);
+  if (parityFixture) {
+    return {
+      video: {
+        videoId,
+        title: parityFixture.sourceTitle,
+        channel: parityFixture.channel,
+        thumbnailUrl: parityFixture.thumbnailUrl,
+      },
+    };
+  }
+
   const fixture = getFixtureVideo(videoId);
 
   if ("providerError" in fixture) {
@@ -1123,6 +1153,7 @@ function parseDescriptionIngredientLine(
       ingredientType: "QUANT",
       displayText: cleanText,
       rawText,
+      componentLabel: null,
       scalable: true,
       confidence: 0.95,
     };
@@ -1143,6 +1174,7 @@ function parseDescriptionIngredientLine(
       ingredientType: "TO_TASTE",
       displayText: cleanText,
       rawText,
+      componentLabel: null,
       scalable: false,
       confidence: 0.8,
     };
@@ -1159,6 +1191,7 @@ function parseDescriptionIngredientLine(
     ingredientType: "TO_TASTE",
     displayText: cleanText,
     rawText,
+    componentLabel: null,
     scalable: false,
     confidence: 0.8,
   };
@@ -1268,6 +1301,7 @@ function parseRecipeDescription(description: string): ParsedRecipeDescription {
   return {
     ingredients: uniqueParsedIngredients(ingredients),
     steps,
+    stepComponentLabels: steps.map(() => null),
   };
 }
 
@@ -1285,6 +1319,50 @@ function getYoutubeDescriptionParserVersion(): YoutubeDescriptionParserVersion {
   return "v2";
 }
 
+function buildRecipioParityProviderVideo(
+  fixture: RecipioYoutubeParityFixture,
+): YoutubeProviderVideo {
+  return {
+    videoId: fixture.videoId,
+    title: fixture.sourceTitle,
+    channel: fixture.channel,
+    thumbnailUrl: fixture.thumbnailUrl,
+    description: fixture.sourceDescription,
+    tags: ["recipe", "레시피"],
+    categoryId: "26",
+    duration: null,
+    captionFlag: null,
+  };
+}
+
+function parseRecipioParityFixtureForImport(
+  fixture: RecipioYoutubeParityFixture,
+): ParsedRecipeDescriptionForImport {
+  return {
+    recipe: {
+      ingredients: fixture.recipe.ingredients.map((ingredient) => ({
+        name: ingredient.name,
+        amount: ingredient.amount,
+        unit: ingredient.unit,
+        ingredientType: ingredient.ingredientType,
+        displayText: ingredient.displayText,
+        rawText: ingredient.displayText,
+        componentLabel: ingredient.componentLabel ?? null,
+        scalable: ingredient.scalable,
+        confidence: 1,
+      })),
+      steps: fixture.recipe.steps.map((item) => item.instruction),
+      stepComponentLabels: fixture.recipe.steps.map((item) => item.componentLabel ?? null),
+    },
+    parserVersion: "v2",
+    selectionOutcome: `recipio_parity_${fixture.kind}`,
+    draftWarnings: [],
+    blockingIssues: [],
+    includeIncompleteStepFallback: false,
+    stepDurationTexts: fixture.recipe.steps.map((item) => item.durationText),
+  };
+}
+
 function adaptFlatDraftIngredient(ingredient: FlatDraftIngredient): ParsedDescriptionIngredient {
   return {
     name: ingredient.name,
@@ -1293,6 +1371,7 @@ function adaptFlatDraftIngredient(ingredient: FlatDraftIngredient): ParsedDescri
     ingredientType: ingredient.ingredientType,
     displayText: ingredient.displayText,
     rawText: ingredient.rawText,
+    componentLabel: ingredient.componentLabel,
     scalable: ingredient.scalable,
     confidence: ingredient.confidence,
   };
@@ -1302,6 +1381,7 @@ function adaptFlatDraftRecipe(draft: FlatDraftAdaptation): ParsedRecipeDescripti
   return {
     ingredients: draft.ingredients.map(adaptFlatDraftIngredient),
     steps: draft.steps,
+    stepComponentLabels: draft.stepComponentLabels,
   };
 }
 
@@ -1577,7 +1657,17 @@ export async function handleYoutubeValidate(request: Request) {
     return buildInvalidUrlResponse();
   }
 
-  const previewResult = await fetchYoutubePreview(parsedUrl.videoId, parsedUrl.youtubeUrl);
+  const parityFixture = getRecipioYoutubeParityFixture(parsedUrl.videoId);
+  const previewResult = parityFixture
+    ? {
+        video: {
+          videoId: parsedUrl.videoId,
+          title: parityFixture.sourceTitle,
+          channel: parityFixture.channel,
+          thumbnailUrl: parityFixture.thumbnailUrl,
+        },
+      } satisfies YoutubePreviewResult
+    : await fetchYoutubePreview(parsedUrl.videoId, parsedUrl.youtubeUrl);
   if ("providerError" in previewResult) {
     await recordYoutubeProviderFailure(request, user.id, "validate", previewResult.providerError);
     return failForProviderError(previewResult.providerError);
@@ -1890,7 +1980,9 @@ export function buildExtractedIngredient({
   scalable,
   confidence,
   rawText,
+  componentLabel = null,
   forceNeedsReview = false,
+  preferDirectMatch = false,
 }: {
   matchesByName: IngredientMatchesByName;
   name: string;
@@ -1902,7 +1994,9 @@ export function buildExtractedIngredient({
   scalable: boolean;
   confidence: number;
   rawText: string;
+  componentLabel?: string | null;
   forceNeedsReview?: boolean;
+  preferDirectMatch?: boolean;
 }): YoutubeExtractedIngredient {
   const matches = sortIngredientMatches(
     Array.from(matchesByName.get(name)?.entries() ?? [])
@@ -1912,7 +2006,12 @@ export function buildExtractedIngredient({
         source: match.source,
       })),
   );
-  const resolvedMatch = matches.length === 1 ? matches[0] : null;
+  const directMatches = matches.filter((match) => match.source === "direct");
+  const resolvedMatch = preferDirectMatch && directMatches.length === 1
+    ? directMatches[0]
+    : matches.length === 1
+      ? matches[0]
+      : null;
   const hasMatch = matches.length > 0;
   const resolutionStatus: YoutubeIngredientResolutionStatus = forceNeedsReview && hasMatch
     ? "needs_review"
@@ -1934,6 +2033,7 @@ export function buildExtractedIngredient({
     scalable,
     confidence: hasMatch ? confidence : null,
     resolution_status: resolutionStatus,
+    component_label: componentLabel,
     candidates: resolutionStatus === "needs_review"
       ? matches.map((match) => ({
           ingredient_id: match.ingredientId,
@@ -1952,8 +2052,10 @@ function buildExtractedIngredients(
   parsedIngredients: ParsedDescriptionIngredient[],
   {
     saltNeedsReview = false,
+    preferDirectMatches = false,
   }: {
     saltNeedsReview?: boolean;
+    preferDirectMatches?: boolean;
   } = {},
 ): YoutubeExtractedIngredient[] {
   return parsedIngredients.map((ingredient, index) =>
@@ -1968,7 +2070,9 @@ function buildExtractedIngredients(
       scalable: ingredient.scalable,
       confidence: ingredient.confidence,
       rawText: ingredient.rawText,
+      componentLabel: ingredient.componentLabel,
       forceNeedsReview: saltNeedsReview && ingredient.name === "소금",
+      preferDirectMatch: preferDirectMatches,
     }),
   );
 }
@@ -1989,8 +2093,10 @@ function buildExtractedSteps(
   fallbackCookingMethod: YoutubeExtractedCookingMethod,
   {
     includeIncompleteFallback = true,
+    stepComponentLabels = [],
   }: {
     includeIncompleteFallback?: boolean;
+    stepComponentLabels?: Array<string | null>;
   } = {},
 ): YoutubeRecipeExtractData["steps"] {
   if (parsedSteps.length === 0) {
@@ -2004,6 +2110,7 @@ function buildExtractedSteps(
         instruction: "",
         cooking_method: fallbackCookingMethod,
         duration_text: null,
+        component_label: null,
         is_incomplete: true,
         missing_fields: ["instruction"],
         raw_text: "",
@@ -2016,6 +2123,7 @@ function buildExtractedSteps(
     instruction,
     cooking_method: cookingMethods[index] ?? fallbackCookingMethod,
     duration_text: null,
+    component_label: stepComponentLabels[index] ?? null,
     is_incomplete: false,
     missing_fields: [],
     raw_text: instruction,
@@ -2057,25 +2165,54 @@ export async function handleYoutubeExtract(request: Request) {
     return fail("EXTRACTION_FAILED", "레시피를 추출하지 못했어요.", 500);
   }
 
-  const videoResult = await fetchYoutubeVideo(parsedUrl.videoId);
+  const parityFixture = getRecipioYoutubeParityFixture(parsedUrl.videoId);
+  const videoResult = parityFixture
+    ? { video: buildRecipioParityProviderVideo(parityFixture) } satisfies YoutubeProviderResult
+    : await fetchYoutubeVideo(parsedUrl.videoId);
   if ("providerError" in videoResult) {
     await recordYoutubeProviderFailure(request, user.id, "extract", videoResult.providerError);
     return failForProviderError(videoResult.providerError);
   }
 
   const { video } = videoResult;
-  const classification = classifyYoutubeVideo(video);
+  const classification = parityFixture
+    ? {
+        status: "recipe",
+        reasons: [`recipio parity fixture: ${parityFixture.kind}`],
+      } satisfies YoutubeClassification
+    : classifyYoutubeVideo(video);
   if (classification.status === "non_recipe") {
     return fail("NOT_RECIPE_VIDEO", "이 영상은 요리 레시피가 아닌 것 같아요.", 422);
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as DbClient;
-  const descriptionParse = parseRecipeDescriptionForImport(video);
+  const descriptionParse = parityFixture
+    ? parseRecipioParityFixtureForImport(parityFixture)
+    : parseRecipeDescriptionForImport(video);
   const parsedRecipe = descriptionParse.recipe;
-  const transcriptFallback = await resolveTranscriptFallback(video, parsedRecipe, parsedUrl);
+  const transcriptFallback = parityFixture
+    ? {
+        steps: parsedRecipe.steps,
+        usedTranscript: false,
+        rawTranscriptText: null,
+        meta: {
+          attempted: false,
+          capability: "unknown",
+          provider: null,
+          status: "not_needed",
+          reason: "recipio_parity_fixture",
+          language: null,
+          track_kind: null,
+          step_count: parsedRecipe.steps.length,
+        },
+      } satisfies TranscriptFallbackResult
+    : await resolveTranscriptFallback(video, parsedRecipe, parsedUrl);
   const finalParsedRecipe = {
     ...parsedRecipe,
     steps: transcriptFallback.steps,
+    stepComponentLabels: transcriptFallback.usedTranscript
+      ? transcriptFallback.steps.map(() => null)
+      : parsedRecipe.stepComponentLabels,
   };
   const ingredientLookup = await findIngredientIds(
     dbClient,
@@ -2092,6 +2229,7 @@ export async function handleYoutubeExtract(request: Request) {
 
   const ingredients = buildExtractedIngredients(ingredientLookup.matchesByName, finalParsedRecipe.ingredients, {
     saltNeedsReview: parsedUrl.videoId.startsWith("needsreview"),
+    preferDirectMatches: Boolean(parityFixture),
   });
   const steps = buildExtractedSteps(
     finalParsedRecipe.steps,
@@ -2099,12 +2237,18 @@ export async function handleYoutubeExtract(request: Request) {
     cookingMethodResult.fallbackMethod,
     {
       includeIncompleteFallback: descriptionParse.includeIncompleteStepFallback,
+      stepComponentLabels: finalParsedRecipe.stepComponentLabels,
     },
-  );
+  ).map((step, index) => ({
+    ...step,
+    duration_text: descriptionParse.stepDurationTexts?.[index] ?? step.duration_text,
+  }));
   const extractionMethods = transcriptFallback.usedTranscript
     ? [...DEFAULT_EXTRACTION_METHODS, "caption"]
     : [...DEFAULT_EXTRACTION_METHODS];
-  const sourceProviders = transcriptFallback.usedTranscript
+  const sourceProviders = parityFixture
+    ? ["recipio_live_parity_fixture"]
+    : transcriptFallback.usedTranscript
     ? ["youtube_videos_list", "description_parser", "transcript_provider", "transcript_step_parser"]
     : ["youtube_videos_list", "description_parser"];
   const blockingIssues = [
@@ -2123,8 +2267,8 @@ export async function handleYoutubeExtract(request: Request) {
   const extractionId = crypto.randomUUID();
   const data: YoutubeRecipeExtractData = {
     extraction_id: extractionId,
-    title: video.title,
-    base_servings: 2,
+    title: parityFixture?.recipe.title ?? video.title,
+    base_servings: parityFixture?.recipe.baseServings ?? 2,
     extraction_methods: extractionMethods,
     draft_warnings: draftWarnings,
     blocking_issues: blockingIssues,
@@ -2151,6 +2295,7 @@ export async function handleYoutubeExtract(request: Request) {
       source_providers: sourceProviders,
       classification_status: classification.status,
       classification_reasons: classification.reasons,
+      recipio_parity_kind: parityFixture?.kind ?? null,
       description_parser_version: descriptionParse.parserVersion,
       description_parser_selection_outcome: descriptionParse.selectionOutcome,
       description_parser_shadow: descriptionParse.shadowResult,
@@ -2172,14 +2317,18 @@ export async function handleYoutubeExtract(request: Request) {
   return ok(data);
 }
 
-function normalizeIngredient(row: Record<string, unknown>): ManualRecipeIngredientInput {
+function normalizeIngredient(row: Record<string, unknown>): YoutubeRecipeRegisterIngredientInput {
+  const componentLabel = normalizeNullableString(row.component_label);
+  const displayText = normalizeNullableString(row.display_text);
+
   return {
     ingredient_id: typeof row.ingredient_id === "string" ? row.ingredient_id.trim() : "",
     standard_name: typeof row.standard_name === "string" ? row.standard_name.trim() : "",
     amount: typeof row.amount === "number" ? row.amount : null,
     unit: normalizeNullableString(row.unit),
     ingredient_type: row.ingredient_type === "TO_TASTE" ? "TO_TASTE" : "QUANT",
-    display_text: normalizeNullableString(row.display_text),
+    display_text: stripMatchingComponentPrefix(displayText, componentLabel),
+    component_label: componentLabel,
     sort_order: typeof row.sort_order === "number" ? row.sort_order : Number.NaN,
     scalable: typeof row.scalable === "boolean" ? row.scalable : true,
   };
@@ -2209,10 +2358,14 @@ function normalizeIngredientsUsed(value: unknown): ManualRecipeStepInput["ingred
   });
 }
 
-function normalizeStep(row: Record<string, unknown>): ManualRecipeStepInput {
+function normalizeStep(row: Record<string, unknown>): YoutubeRecipeRegisterStepInput {
+  const componentLabel = normalizeNullableString(row.component_label);
+  const instruction = typeof row.instruction === "string" ? row.instruction.trim() : "";
+
   return {
     step_number: typeof row.step_number === "number" ? row.step_number : Number.NaN,
-    instruction: typeof row.instruction === "string" ? row.instruction.trim() : "",
+    instruction: stripMatchingComponentPrefix(instruction, componentLabel) ?? "",
+    component_label: componentLabel,
     cooking_method_id: typeof row.cooking_method_id === "string" ? row.cooking_method_id.trim() : "",
     ingredients_used: normalizeIngredientsUsed(row.ingredients_used),
     heat_level: normalizeNullableString(row.heat_level),

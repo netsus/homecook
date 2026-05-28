@@ -7,6 +7,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -417,6 +418,63 @@ describe("CookModeScreen", () => {
     expect(screen.getByText("적당량")).toBeTruthy();
   });
 
+  it("shows component section headings in mobile cook-mode ingredients and steps", async () => {
+    installMatchMedia(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(
+      buildCookModeData({
+        recipe: {
+          ...buildCookModeData().recipe,
+          ingredients: [
+            buildIngredient({
+              ingredient_id: "ing-bread-flour",
+              standard_name: "강력분",
+              display_text: "강력분 170g",
+              component_label: "빵 반죽",
+            }),
+            buildIngredient({
+              ingredient_id: "ing-sugar",
+              standard_name: "설탕",
+              display_text: "설탕 15g",
+              component_label: "빵 반죽",
+            }),
+            buildIngredient({
+              ingredient_id: "ing-yolk",
+              standard_name: "달걀노른자",
+              display_text: "달걀노른자 2개",
+              component_label: "커스터드 크림",
+            }),
+          ],
+          steps: [
+            buildStep({
+              step_number: 1,
+              instruction: "밀가루와 설탕을 섞어 주세요.",
+              component_label: "빵 반죽",
+            }),
+            buildStep({
+              step_number: 2,
+              instruction: "노른자와 설탕을 섞어 주세요.",
+              component_label: "커스터드 크림",
+            }),
+          ],
+        },
+      }),
+    );
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const ingredientSummary = await screen.findByTestId(
+      "mobile-ingredient-summary",
+    );
+    const stepList = screen.getByTestId("step-list");
+
+    expect(within(ingredientSummary).getByText("빵 반죽")).toBeTruthy();
+    expect(within(ingredientSummary).getByText("커스터드 크림")).toBeTruthy();
+    expect(within(stepList).getByText("빵 반죽")).toBeTruthy();
+    expect(within(stepList).getByText("커스터드 크림")).toBeTruthy();
+  });
+
   it("uses cooking method color keys from recipe data on step cards", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(
@@ -751,6 +809,52 @@ describe("CookModeScreen", () => {
     expect(actionRail.contains(cancelButton)).toBe(true);
     expect(actionRail.contains(completeButton)).toBe(true);
     expect(actionRail.className).toContain("web-cook-checklist-panel");
+  });
+
+  it("shows component section headings in desktop cook-mode panels", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(
+      buildCookModeData({
+        recipe: {
+          ...buildCookModeData().recipe,
+          ingredients: [
+            buildIngredient({
+              ingredient_id: "ing-bread-flour",
+              standard_name: "강력분",
+              component_label: "빵 반죽",
+            }),
+            buildIngredient({
+              ingredient_id: "ing-yolk",
+              standard_name: "달걀노른자",
+              component_label: "커스터드 크림",
+            }),
+          ],
+          steps: [
+            buildStep({
+              step_number: 1,
+              instruction: "반죽을 만들어 주세요.",
+              component_label: "빵 반죽",
+            }),
+            buildStep({
+              step_number: 2,
+              instruction: "커스터드를 만들어 주세요.",
+              component_label: "커스터드 크림",
+            }),
+          ],
+        },
+      }),
+    );
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const actionRail = await screen.findByTestId("cook-mode-action-rail");
+    const stepList = screen.getByTestId("step-list");
+
+    expect(within(actionRail).getByText("빵 반죽")).toBeTruthy();
+    expect(within(actionRail).getByText("커스터드 크림")).toBeTruthy();
+    expect(within(stepList).getByText("빵 반죽")).toBeTruthy();
+    expect(within(stepList).getByText("커스터드 크림")).toBeTruthy();
   });
 
   it("keeps cancel and complete buttons in the mobile fixed bottom bar", async () => {

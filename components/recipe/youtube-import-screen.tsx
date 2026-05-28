@@ -32,6 +32,7 @@ import { createMealSafe } from "@/lib/api/meal";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import { INGREDIENT_CATEGORY_LABELS } from "@/lib/ingredient-categories";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
+import { stripMatchingSectionPrefix } from "@/lib/recipe-section-labels";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import type {
   CookingMethodItem,
@@ -75,6 +76,7 @@ interface TempIngredient extends ManualRecipeIngredientInput {
   draft_ingredient_id?: string;
   confidence: number | null;
   resolution_status?: YoutubeExtractedIngredient["resolution_status"];
+  component_label?: string | null;
   candidates?: YoutubeExtractedIngredient["candidates"];
   raw_text?: string;
 }
@@ -122,6 +124,7 @@ function normalizeIngredient(ingredient: TempIngredient): TempIngredient {
 interface TempStep extends Omit<ManualRecipeStepInput, "cooking_method_id"> {
   tempId: string;
   cooking_method: (CookingMethodItem & { is_new?: boolean }) | null;
+  component_label?: string | null;
   is_incomplete?: boolean;
   missing_fields?: YoutubeExtractedStep["missing_fields"];
   raw_text?: string;
@@ -851,7 +854,10 @@ function ReviewCookingStepRow({
             )}
           </div>
           <p className="whitespace-pre-wrap break-words text-base text-[var(--foreground)]">
-            {step.instruction || "만들기 설명을 입력해주세요."}
+            {stripMatchingSectionPrefix(
+              step.instruction,
+              step.component_label,
+            )?.trim() || "만들기 설명을 입력해주세요."}
           </p>
           {step.duration_text && (
             <p className="mt-1 text-sm text-[var(--text-3)]">{step.duration_text}</p>
@@ -1063,18 +1069,37 @@ function ReviewStep({
           </p>
         ) : (
           <div className="mt-3 overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]">
-            {ingredients.map((ing, idx) => (
-              <ReviewIngredientRow
-                ingredient={ing}
-                key={ing.tempId}
-                onRemoveIngredient={onRemoveIngredient}
-                onRegisterIngredient={onRegisterIngredient}
-                onReplaceIngredient={onReplaceIngredient}
-                onResolveIngredientCandidate={onResolveIngredientCandidate}
-                onUpdateIngredient={onUpdateIngredient}
-                showDivider={idx > 0}
-              />
-            ))}
+            {ingredients.map((ing, idx) => {
+              const currentLabel = ing.component_label?.trim() || null;
+              const previousLabel = idx > 0
+                ? ingredients[idx - 1]?.component_label?.trim() || null
+                : null;
+              const showSectionHeading = Boolean(currentLabel && currentLabel !== previousLabel);
+
+              return (
+                <React.Fragment key={ing.tempId}>
+                  {showSectionHeading ? (
+                    <div
+                      className={[
+                        "bg-[var(--surface-fill)] px-3 py-2 text-[13px] font-bold text-[var(--text-2)]",
+                        idx > 0 ? "border-t border-[var(--line)]" : "",
+                      ].join(" ")}
+                    >
+                      {currentLabel}
+                    </div>
+                  ) : null}
+                  <ReviewIngredientRow
+                    ingredient={ing}
+                    onRemoveIngredient={onRemoveIngredient}
+                    onRegisterIngredient={onRegisterIngredient}
+                    onReplaceIngredient={onReplaceIngredient}
+                    onResolveIngredientCandidate={onResolveIngredientCandidate}
+                    onUpdateIngredient={onUpdateIngredient}
+                    showDivider={idx > 0 && !showSectionHeading}
+                  />
+                </React.Fragment>
+              );
+            })}
           </div>
         )}
         <button
@@ -1110,15 +1135,34 @@ function ReviewStep({
           </p>
         ) : (
           <div className="mt-2 overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]">
-            {steps.map((step, idx) => (
-              <ReviewCookingStepRow
-                key={step.tempId}
-                onEditStep={onEditStep}
-                onRemoveStep={onRemoveStep}
-                showDivider={idx > 0}
-                step={step}
-              />
-            ))}
+            {steps.map((step, idx) => {
+              const currentLabel = step.component_label?.trim() || null;
+              const previousLabel = idx > 0
+                ? steps[idx - 1]?.component_label?.trim() || null
+                : null;
+              const showSectionHeading = Boolean(currentLabel && currentLabel !== previousLabel);
+
+              return (
+                <React.Fragment key={step.tempId}>
+                  {showSectionHeading ? (
+                    <div
+                      className={[
+                        "bg-[var(--surface-fill)] px-4 py-2 text-[13px] font-bold text-[var(--text-2)]",
+                        idx > 0 ? "border-t border-[var(--line)]" : "",
+                      ].join(" ")}
+                    >
+                      {currentLabel}
+                    </div>
+                  ) : null}
+                  <ReviewCookingStepRow
+                    onEditStep={onEditStep}
+                    onRemoveStep={onRemoveStep}
+                    showDivider={idx > 0 && !showSectionHeading}
+                    step={step}
+                  />
+                </React.Fragment>
+              );
+            })}
           </div>
         )}
         <button
@@ -2156,6 +2200,7 @@ export function YoutubeImportScreen({
           standard_name: ing.standard_name ?? "",
           display_text: ing.display_text ?? ing.raw_text ?? null,
           resolution_status: ing.resolution_status ?? "resolved",
+          component_label: ing.component_label ?? null,
           tempId: `yt-ing-${idx}`,
         })),
       );
@@ -2179,6 +2224,7 @@ export function YoutubeImportScreen({
           heat_level: null,
           duration_seconds: null,
           duration_text: step.duration_text,
+          component_label: step.component_label ?? null,
           is_incomplete: step.is_incomplete,
           missing_fields: step.missing_fields ?? [],
           raw_text: step.raw_text,
@@ -2215,6 +2261,7 @@ export function YoutubeImportScreen({
                 confidence: 1,
                 resolution_status: "resolved",
                 raw_text: ingredient.raw_text,
+                component_label: ingredient.component_label ?? null,
                 sort_order: ingredient.sort_order,
                 tempId: ingredient.tempId,
               })
@@ -2449,12 +2496,14 @@ export function YoutubeImportScreen({
         unit: ing.unit,
         ingredient_type: ing.ingredient_type,
         display_text: ing.display_text,
+        component_label: ing.component_label ?? null,
         scalable: ing.scalable,
         sort_order: idx + 1,
       })),
       steps: steps.map((step) => ({
         step_number: step.step_number,
         instruction: step.instruction,
+        component_label: step.component_label ?? null,
         cooking_method_id: step.cooking_method?.id ?? "",
         ingredients_used: step.ingredients_used,
         heat_level: step.heat_level,

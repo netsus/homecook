@@ -148,7 +148,7 @@ export async function GET(request: Request, context: RouteContext) {
     const ingredientsResult = await dbClient
       .from("recipe_ingredients")
       .select(
-        "ingredient_id, amount, unit, display_text, ingredient_type, scalable, sort_order, ingredients(standard_name)",
+        "ingredient_id, amount, unit, display_text, component_label, ingredient_type, scalable, sort_order, ingredients(standard_name)",
       )
       .eq("recipe_id", recipeId)
       .order("sort_order", { ascending: true });
@@ -160,7 +160,7 @@ export async function GET(request: Request, context: RouteContext) {
     const stepsResult = await dbClient
       .from("recipe_steps")
       .select(
-        "step_number, instruction, ingredients_used, heat_level, duration_seconds, duration_text, cooking_methods(code, label, color_key)",
+        "step_number, instruction, component_label, ingredients_used, heat_level, duration_seconds, duration_text, cooking_methods(code, label, color_key)",
       )
       .eq("recipe_id", recipeId)
       .order("step_number", { ascending: true });
