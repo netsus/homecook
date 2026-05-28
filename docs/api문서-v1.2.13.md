@@ -2394,7 +2394,7 @@ GET /api/v1/admin/audit-logs
 
 ---
 
-## 엔드포인트 전체 목록 (59개) `v1.2.12 + 2026-05-28 addendum`
+## 엔드포인트 전체 목록 (59개) `v1.2.13`
 
 | #        | Method     | Path                                   | 화면                     | 인증   | v1.2 변경                        |
 | -------- | ---------- | -------------------------------------- | ------------------------ | ------ | -------------------------------- |
@@ -2459,6 +2459,7 @@ GET /api/v1/admin/audit-logs
 | 15-2     | GET        | /api/v1/admin/operational-events       | ADMIN_EVENTS             | 🔐     | v1.2.12 신규                     |
 | 15-3     | GET        | /api/v1/admin/audit-logs               | ADMIN_AUDIT_LOGS         | 🔐     | v1.2.12 신규                     |
 
+> **v1.2.13 총계**: 59개 (레시피오형 quick import endpoint 1개 추가, YouTube section label field 추가는 엔드포인트 수 변경 없음)
 > **v1.2.12 총계**: 58개 (Admin Foundation read-only endpoint 3개 추가)
 > **v1.2.11 총계**: 55개 (slice27 taxonomy contract lock, 신규 endpoint 없음)
 > **v1.2.10 총계**: 55개 (`DELETE /users/me` 회원 탈퇴 데이터 정리 정책 변경, 신규 endpoint 없음)

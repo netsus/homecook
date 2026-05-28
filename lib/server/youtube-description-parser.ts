@@ -224,6 +224,11 @@ const COMPONENT_KEYWORDS = [
   "sauce",
   "syrup",
 ] as const;
+const NON_SEPARATING_INGREDIENT_COMPONENT_LABELS = [
+  "양념",
+  "양념장",
+  "밑간",
+] as const;
 const KOREAN_NUMBER_WORDS: Record<string, number> = {
   한: 1,
   두: 2,
@@ -559,6 +564,22 @@ function isComponentOnlyHeading(text: string) {
         && normalized.split(/\s+/u).length <= 3
       );
   });
+}
+
+function shouldSeparateIngredientComponent(label: string | null) {
+  if (!label) {
+    return false;
+  }
+
+  const normalized = stripDecorativeMarks(label)
+    .replace(/[：:]+$/u, "")
+    .replace(/\s+/gu, " ")
+    .toLowerCase()
+    .trim();
+
+  return !NON_SEPARATING_INGREDIENT_COMPONENT_LABELS.some((keyword) =>
+    normalized === keyword || normalized === `${keyword} 재료`,
+  );
 }
 
 function isShortIngredientBlockHeadingFromLookahead(line: SourceLine, lookahead: SourceLine[]) {
@@ -2029,7 +2050,9 @@ function aggregateIngredients(ingredients: ParsedIngredient[]) {
 
   for (const ingredient of ingredients) {
     const key = [
-      ingredient.componentLabel?.trim().toLowerCase() ?? "",
+      shouldSeparateIngredientComponent(ingredient.componentLabel)
+        ? ingredient.componentLabel?.trim().toLowerCase()
+        : "",
       ingredient.name.trim().toLowerCase(),
     ].join("|");
     grouped.set(key, [...(grouped.get(key) ?? []), ingredient]);
@@ -2068,7 +2091,13 @@ function aggregateIngredients(ingredients: ParsedIngredient[]) {
     const unit = group[0].unit;
     const amount = group.reduce((sum, ingredient) => sum + (ingredient.amount ?? 0), 0);
     const componentLabels = [...new Set(group.map((ingredient) => ingredient.componentLabel).filter((label): label is string => Boolean(label)))];
-    const componentPrefix = componentLabels.length > 0 ? `[${componentLabels.join("+")}] ` : "";
+    const separatedComponentLabels = componentLabels.filter(shouldSeparateIngredientComponent);
+    const outputComponentLabels = separatedComponentLabels.length > 0
+      ? separatedComponentLabels
+      : componentLabels.length === 1 && group.every((ingredient) => ingredient.componentLabel === componentLabels[0])
+        ? componentLabels
+        : [];
+    const componentPrefix = outputComponentLabels.length > 0 ? `[${outputComponentLabels.join("+")}] ` : "";
     const parts = group.map((ingredient) => {
       const label = ingredient.componentLabel ?? "공통";
       return `${label} ${formatAmount(ingredient.amount ?? 0, unit ?? "")}`;
@@ -2082,7 +2111,7 @@ function aggregateIngredients(ingredients: ParsedIngredient[]) {
       ingredientType: "QUANT",
       displayText: `${componentPrefix}${group[0].name} ${formatAmount(amount, unit ?? "")} (${parts.join(" + ")})`,
       rawText: group.map((ingredient) => ingredient.rawText).join(" / "),
-      componentLabel: componentLabels.length > 0 ? componentLabels.join("+") : null,
+      componentLabel: outputComponentLabels.length > 0 ? outputComponentLabels.join("+") : null,
       sourceLine: group[0].sourceLine,
       confidence: Math.min(...group.map((ingredient) => ingredient.confidence)),
       flags: [...new Set(group.flatMap((ingredient) => ingredient.flags).concat("aggregated_component_amounts"))],
