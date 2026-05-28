@@ -810,6 +810,71 @@ describe("MenuAddScreen", () => {
     expect(within(chips).queryByText("caption")).toBeNull();
   });
 
+  it("renders author_comment extraction method as Korean label", async () => {
+    installMatchMedia(true);
+    vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValueOnce({
+      success: true,
+      data: {
+        extraction_id: "ext-29-author-comment",
+        title: "작성자 댓글 보충 레시피",
+        base_servings: 1,
+        extraction_methods: ["author_comment"],
+        draft_warnings: [],
+        blocking_issues: [],
+        ingredients: [
+          {
+            draft_ingredient_id: "draft-ing-author-comment",
+            ingredient_id: "ing-1",
+            standard_name: "오이",
+            amount: 1,
+            unit: "개",
+            ingredient_type: "QUANT",
+            display_text: "오이 1개",
+            sort_order: 1,
+            scalable: true,
+            confidence: 0.9,
+            resolution_status: "resolved",
+            candidates: [],
+            raw_text: "오이 1개",
+          },
+        ],
+        steps: [
+          {
+            step_number: 1,
+            instruction: "오이를 소금에 절여 물기를 빼주세요.",
+            cooking_method: {
+              id: "method-1",
+              code: "prep",
+              label: "손질",
+              color_key: "gray",
+              is_new: false,
+            },
+            duration_text: null,
+            is_incomplete: false,
+            missing_fields: [],
+            raw_text: "오이를 소금에 절여 물기를 빼주세요.",
+          },
+        ],
+        new_cooking_methods: [],
+      },
+      error: null,
+    });
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+    await user.type(
+      screen.getByLabelText("유튜브 URL"),
+      "https://www.youtube.com/watch?v=authorcomment1",
+    );
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    const chips = await screen.findByTestId("extraction-method-chips");
+    expect(within(chips).getByText("작성자 댓글")).toBeTruthy();
+    expect(within(chips).queryByText("author_comment")).toBeNull();
+  });
+
   it("renders extraction_methods as Korean labels without caption chip for description-only", async () => {
     installMatchMedia(true);
 
