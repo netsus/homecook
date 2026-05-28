@@ -114,7 +114,7 @@ async function installAuthorCommentExtractRoute(page: Page, delayMs = 0) {
           extraction_id: "ext-29-author-comment-e2e",
           title: "작성자 댓글 오이 김밥",
           base_servings: 1,
-          extraction_methods: ["author_comment"],
+          extraction_methods: ["comment"],
           draft_warnings: [],
           blocking_issues: [],
           ingredients: [
@@ -289,8 +289,8 @@ test.describe("Slice 29: YouTube Author Comment Fallback", () => {
 
     await navigateToReview(page, "authorcmt29");
 
-    await expect(page.locator("[data-testid='extraction-method-author_comment']")).toHaveText("작성자 댓글");
-    await expect(page.locator("text=author_comment")).toHaveCount(0);
+    await expect(page.locator("[data-testid='extraction-method-comment']")).toHaveText("댓글");
+    await expect(page.locator("text=comment")).toHaveCount(0);
     await expect(page.locator("text=재료 (2개)")).toBeVisible();
     await expect(page.locator("text=만들기 (2단계)")).toBeVisible();
 
@@ -344,6 +344,6 @@ test.describe("Slice 29: YouTube Author Comment Fallback", () => {
     await navigateToReview(page, "descready29");
 
     await expect(page.locator("[data-testid='extraction-method-description']")).toHaveText("설명란");
-    await expect(page.locator("[data-testid='extraction-method-author_comment']")).toHaveCount(0);
+    await expect(page.locator("[data-testid='extraction-method-comment']")).toHaveCount(0);
   });
 });

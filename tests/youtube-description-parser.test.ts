@@ -89,6 +89,82 @@ const custardBreadComponentDescription = [
   "13. 180도 오븐에서 18~20분 정도 구워 주세요.(예열 200도)",
 ].join("\n");
 
+const fullCustardBreadDescription = [
+  "커스터드 크림빵은 촉촉한 우유식빵 속에 부드러운 커스터드 크림을 채워 집에서 편안하게 즐길 수 있는 빵이에요.",
+  "",
+  "⏱️타임스탬프 Timestamp",
+  "",
+  "00:00 인트로 Intro",
+  "00:12 빵반죽 Bread dough",
+  "02:35 커스터드 크림 Custard cream",
+  "04:38 빵 성형 Bread shaping",
+  "07:22 쿠키 토핑 Cookie topping",
+  "09:05 완성 Final Look",
+  "",
+  "🧈재료 Ingredients",
+  "",
+  "틀 사이즈 : 25cm x 7cm x 6cm",
+  "",
+  "| 빵 반죽",
+  "170g 강력분",
+  "15g 박력분",
+  "15g 설탕",
+  "3g 소금",
+  "4g 인스턴트 드라이 이스트",
+  "50g 우유",
+  "30g 생크림",
+  "35g 달걀 (전란)",
+  "15g 연유",
+  "25g 무염버터",
+  "",
+  "| 커스터드 크림",
+  "2개 달걀노른자",
+  "30g 설탕",
+  "2g 바닐라빈 페이스트",
+  "10g 옥수수전분",
+  "150g 따뜻한 우유",
+  "5g 무염버터",
+  "",
+  "| 쿠키 토핑",
+  "10g 무염버터",
+  "10g 설탕",
+  "10g 박력분",
+  "5g 우유",
+  "",
+  "Mold size : 25cm x 7cm x 6cm",
+  "",
+  "| Bread dough",
+  "170g Bread flour",
+  "15g Cake flour",
+  "",
+  "📝만드는 과정",
+  "",
+  "빵 반죽 만들기",
+  "1. 밀가루에 설탕, 소금, 인스턴트 드라이 이스트를 넣고 골고루 섞어 주세요.",
+  "2. 우유, 생크림, 달걀, 연유를 넣고 잘 섞어 약 10분 정도 손으로 반죽해 주세요.(반죽기 사용 권장)",
+  "3. 실온 상태의 무염버터를 넣고 반죽해 매끈한 상태가 되면 볼에 넣고 비닐 랩을 씌워 주세요.",
+  "4. 따뜻한 곳에서 반죽이 2~2.5배로 부풀 때까지 1시간 정도 발효시켜 주세요.",
+  "",
+  "커스터드 필링 만들기",
+  "5. 달걀노른자에 설탕과 바닐라빈 페이스트를 넣고 잘 섞어 주세요.",
+  "6. 옥수수전분을 넣고 섞은 다음 따뜻한 우유를 넣고 잘 섞은 다음 약불에 올려 가열해 주세요.",
+  "7. 기포가 보글 보글 올라오면 불에서 내려 무염버터를 넣고 잘 섞어 체에 내려 비닐 랩을 덮고 식혀 주세요.",
+  "",
+  "8. 발효된 반죽을 꺼내 가스를 제거하고 5개로 나누어 동그랗게 만들고 비닐 랩을 씌워 15분 중간 발효해 주세요.",
+  "9. 반죽 하나를 가스를 빼고 납작하게 하고 커스터드를 넣어 잘 붙여 동그랗게 만들어 주세요.",
+  "10. 틀에 넣고 비닐 랩을 씌워 크기가 2배로 부풀 때까지 40분 정도 발효시켜 주세요.",
+  "",
+  "쿠기 토핑 만들기",
+  "11. 무염버터를 풀고 설탕을 섞은 다음 박력분을 섞고 우유를 넣어 섞어 주세요.",
+  "",
+  "12. 발효된 빵 위에 우유를 바르고 쿠키 토핑을 사선으로 짜주세요.",
+  "13. 180도 오븐에서 18~20분 정도 구워 주세요.(예열 200도)",
+  "",
+  "🤍",
+  "",
+  "시청해주셔서 감사합니다. Thank you for watching!",
+].join("\n");
+
 describe("youtube description parser v2", () => {
   it("switches from 준비재료 to 요리순서 and extracts numbered cooking steps", () => {
     const document = parseYoutubeRecipeDescription({
@@ -238,6 +314,37 @@ describe("youtube description parser v2", () => {
       "쿠키 토핑",
       "쿠키 토핑",
     ]);
+  });
+
+  it("ignores timestamps, mold sizes, and outro copy in full baking descriptions", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "커스터드 크림빵 만들기",
+      description: fullCustardBreadDescription,
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients).toHaveLength(20);
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).not.toContain("틀 사이즈");
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).not.toContain("Mold size");
+    expect(draft.steps).toHaveLength(13);
+    expect(draft.steps[0]).toBe("밀가루에 설탕, 소금, 인스턴트 드라이 이스트를 넣고 골고루 섞어 주세요.");
+    expect(draft.steps[12]).toBe("180도 오븐에서 18~20분 정도 구워 주세요.(예열 200도)");
+    expect(draft.steps.join("\n")).not.toContain("Final Look");
+    expect(draft.steps.join("\n")).not.toContain("Thank you");
+  });
+
+  it("does not treat viewer reply notes with 조금 as ingredients", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "주간 집밥",
+      description: [
+        "요청이 많아 댓글 답장이 조금 늦더라도 너그럽게 이해 부탁드려요.😊🙏🏻",
+        "여러분의 댓글은 모두 읽고 있어요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients).toEqual([]);
+    expect(draft.blockingIssues).toEqual(["ingredients", "steps"]);
   });
 
   it("uses lookahead so a component heading is not treated as an amountless ingredient", () => {

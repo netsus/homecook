@@ -533,6 +533,7 @@ const EXTRACTION_METHOD_LABELS: Record<string, string> = {
   asr: "음성 자막",
   author_comment: "작성자 댓글",
   caption: "자막",
+  comment: "댓글",
   description: "설명란",
   estimation: "추정",
   manual: "직접 입력",

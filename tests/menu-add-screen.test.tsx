@@ -810,7 +810,7 @@ describe("MenuAddScreen", () => {
     expect(within(chips).queryByText("caption")).toBeNull();
   });
 
-  it("renders author_comment extraction method as Korean label", async () => {
+  it("renders comment extraction method as Korean label", async () => {
     installMatchMedia(true);
     vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValueOnce({
       success: true,
@@ -818,7 +818,7 @@ describe("MenuAddScreen", () => {
         extraction_id: "ext-29-author-comment",
         title: "작성자 댓글 보충 레시피",
         base_servings: 1,
-        extraction_methods: ["author_comment"],
+        extraction_methods: ["comment"],
         draft_warnings: [],
         blocking_issues: [],
         ingredients: [
@@ -871,8 +871,8 @@ describe("MenuAddScreen", () => {
     await user.click(screen.getByRole("button", { name: "가져오기" }));
 
     const chips = await screen.findByTestId("extraction-method-chips");
-    expect(within(chips).getByText("작성자 댓글")).toBeTruthy();
-    expect(within(chips).queryByText("author_comment")).toBeNull();
+    expect(within(chips).getByText("댓글")).toBeTruthy();
+    expect(within(chips).queryByText("comment")).toBeNull();
   });
 
   it("renders extraction_methods as Korean labels without caption chip for description-only", async () => {

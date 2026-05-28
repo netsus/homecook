@@ -17,6 +17,7 @@ export interface SourceLine {
   text: string;
   normalized: string;
   ordinal: number | null;
+  hadTimestamp: boolean;
 }
 
 export interface ParseWarning {
@@ -294,6 +295,7 @@ function stripOuterBrackets(value: string) {
 }
 
 function normalizeLineText(raw: string) {
+  const hadTimestamp = /^(?:\d{1,2}:)?\d{1,2}:\d{2}\s*/u.test(raw.trim());
   const withoutTimestamp = raw
     .trim()
     .replace(/^(?:\d{1,2}:)?\d{1,2}:\d{2}\s*/u, "");
@@ -326,6 +328,7 @@ function normalizeLineText(raw: string) {
     text,
     normalized: text.toLowerCase(),
     ordinal: ordinalMatch ? Number(ordinalMatch[1]) : null,
+    hadTimestamp,
   };
 }
 
@@ -339,6 +342,7 @@ function normalizeLines(description: string): SourceLine[] {
       text: normalized.text,
       normalized: normalized.normalized,
       ordinal: normalized.ordinal,
+      hadTimestamp: normalized.hadTimestamp,
     };
   });
 }
@@ -359,6 +363,16 @@ function isNoiseText(text: string) {
   }
 
   if (isMeasurementGuideText(normalized)) {
+    return true;
+  }
+
+  if (
+    normalized.includes("답장이")
+    || normalized.includes("답변이")
+    || normalized.includes("이해 부탁")
+    || normalized.includes("댓글로")
+    || normalized.includes("댓글을")
+  ) {
     return true;
   }
 
@@ -394,6 +408,13 @@ function isNoiseText(text: string) {
     || normalized.includes("facebook")
     || normalized.includes("페이스북")
     || normalized.includes("카메라")
+    || normalized.includes("시청해주셔서")
+    || normalized.includes("시청해 주셔서")
+    || normalized.includes("thank you for watching")
+    || normalized.includes("thanks for watching")
+    || normalized.includes("자막에 재료")
+    || normalized.includes("멤버십")
+    || normalized.includes("무단 도용")
   );
 }
 
@@ -417,6 +438,8 @@ function isMeasurementGuideText(normalized: string) {
     || /^[0-9]+스푼\s*=/iu.test(normalized)
     || compact.includes("1스푼=15ml")
     || compact.includes("1컵=200ml")
+    || /^(?:틀|몰드|팬|용기)\s*(?:사이즈|크기)\s*[:：]/u.test(normalized)
+    || /^(?:mold|pan|tin)\s*size\s*[:：]/iu.test(normalized)
   );
 }
 
@@ -445,6 +468,13 @@ function shouldResetSectionOnNoise(text: string) {
     || normalized.includes("구매 링크")
     || normalized.includes("비즈니스 문의")
     || normalized.includes("business")
+    || normalized.includes("시청해주셔서")
+    || normalized.includes("시청해 주셔서")
+    || normalized.includes("thank you for watching")
+    || normalized.includes("thanks for watching")
+    || normalized.includes("자막에 재료")
+    || normalized.includes("멤버십")
+    || normalized.includes("무단 도용")
   );
 }
 
@@ -1814,6 +1844,10 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
     const classification = classifyLine(line, lines.slice(index + 1));
 
     if (classification.kind === "blank" || classification.kind === "heading.recipe") {
+      continue;
+    }
+
+    if (line.hadTimestamp && !section && !hasStructuredSectionHeading) {
       continue;
     }
 

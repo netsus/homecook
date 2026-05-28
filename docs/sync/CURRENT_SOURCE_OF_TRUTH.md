@@ -36,9 +36,10 @@
 | API v1.2.12 | §6-5 `GET /api/v1/recipes/youtube/recipio/check` 추가. 새 저장 계약은 만들지 않고 기존 §6-1/6-2/6-4를 순차 소비 |
 | DB v1.3.8 | 변경 없음. `recipe_sources.youtube_video_id`와 기존 `youtube_extraction_sessions`/RPC를 재사용 |
 
-> 이 addendum은 사용자가 승인한 레시피오 parity 구현이다.
+> 이 addendum은 사용자가 승인한 레시피오형 UX flow parity 구현이다.
 > 신규 LLM/이미지 생성/유료 provider 계약은 추가하지 않는다.
 > quick import는 기존 YouTube import feature flag/auth guard를 그대로 따른다.
+> 2026-05-29 clarification: 여기서 parity는 UX flow parity만 의미한다. 특정 YouTube video_id별로 레시피오 생성 데이터를 코드 fixture로 반환하는 shortcut은 금지하며, 중복 확인을 제외한 신규 추출은 항상 provider/parser 경로를 거친다.
 
 ## v1.7.1 / v1.5.8 / v1.3.8 / DB v1.3.7 / API v1.2.11 → v1.7.2 / v1.5.9 / v1.3.9 / DB v1.3.8 / API v1.2.12 변경 이력 (2026-05-27)
 
@@ -130,7 +131,7 @@
 
 > 이 변경은 슬라이스 20 YouTube 실제 API description-first 추출 contract-evolution이다.
 > 슬라이스 19의 deterministic stub 추출을 실제 YouTube Data API videos.list 기반으로 교체하고, validate 단계는 quota를 쓰지 않는 oEmbed 미리보기로 제한하며, 서버 세션 관리·ingredient resolution·step incomplete·원자적 RPC 등록·provenance session FK를 도입한다.
-> Caption/ASR/LLM/OCR/추정 레이어는 scope 밖이며, extraction_methods 배열에 `description`만 기록한다.
+> 공개 작성자 댓글과 공개 caption timedtext는 description-first 보조 source로 허용하며, extraction_methods 배열에는 `description`, `comment`, `caption`만 기록한다. ASR/LLM/OCR/추정 레이어는 scope 밖이다.
 
 ## v1.6.6 / v1.5.3 / v1.3.3 / API v1.2.4 → v1.6.7 / v1.5.4 / v1.3.4 / API v1.2.5 변경 이력 (2026-05-18)
 
