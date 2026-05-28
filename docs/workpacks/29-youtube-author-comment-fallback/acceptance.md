@@ -34,9 +34,9 @@
 
 ## Happy Path
 
-- [ ] 작성자 댓글 recipe 영상: URL 입력 → extract → 작성자 댓글 보충 draft → 검수 → 등록 full flow가 동작한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
+- [x] 작성자 댓글 recipe 영상: URL 입력 → extract → 작성자 댓글 보충 draft → 검수 → 등록 full flow가 동작한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 - [x] `author_comment` source label이 검수 화면에서 "작성자 댓글"로 표시된다 <!-- omo:id=accept-author-comment-label;stage=4;scope=frontend;review=5,6 -->
 
 ## State / Policy
@@ -49,13 +49,13 @@
 
 ## Error / Permission
 
-- [ ] loading 상태가 있다 (author comment fallback 시도 중 기존 추출 진행 UI 유지) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태가 있다 (description/comment 모두 recipe 없음 → 기존 empty/blocked 안내) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 있다 (필수 provider 실패/validation 실패 → 기존 error 흐름 유지) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 있다 (401 → 로그인 게이트) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] conflict 처리 흐름이 있다 (409 consumed/mismatch → error modal) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
-- [ ] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
-- [ ] 세션 만료(410) 처리가 올바르다 <!-- omo:id=accept-session-expired;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 (author comment fallback 시도 중 기존 추출 진행 UI 유지) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태가 있다 (description/comment 모두 recipe 없음 → 기존 empty/blocked 안내) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 (필수 provider 실패/validation 실패 → 기존 error 흐름 유지) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 있다 (401 → 로그인 게이트) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] conflict 처리 흐름이 있다 (409 consumed/mismatch → error modal) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
+- [x] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] 세션 만료(410) 처리가 올바르다 <!-- omo:id=accept-session-expired;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
@@ -106,18 +106,18 @@
 
 ### Playwright
 
-- [ ] Author-comment fallback fixture-backed full flow E2E <!-- omo:id=accept-playwright-author-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] Description-ready skip path E2E 또는 component test <!-- omo:id=accept-playwright-description-ready;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 description-only YT_IMPORT flow regression E2E <!-- omo:id=accept-playwright-description-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
+- [x] Author-comment fallback fixture-backed full flow E2E <!-- omo:id=accept-playwright-author-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] Description-ready skip path E2E 또는 component test <!-- omo:id=accept-playwright-description-ready;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 description-only YT_IMPORT flow regression E2E <!-- omo:id=accept-playwright-description-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only
 
-- [ ] 실제 YouTube comments API를 사용한 author-comment fallback live smoke 30건 이상
+- [x] 실제 YouTube comments API를 사용한 author-comment fallback live smoke 30건 이상
 - [ ] YouTube comments API quota 소진 시 graceful degradation 확인
 - [ ] 인기 영상에서 author comment가 relevance 첫 페이지에 없는 경우의 missed fallback 확인
 
-## Stage 2 Automation Evidence
+## Stage 2 / Stage 4 Automation Evidence
 
 - `pnpm vitest run tests/youtube-import.backend.test.ts` — 50 passed
 - `pnpm typecheck` — passed
@@ -130,6 +130,8 @@
 - `BRANCH_NAME=feature/be-29-youtube-author-comment-fallback BASE_REF=master PR_IS_DRAFT=false pnpm validate:closeout-sync` — passed
 - `pnpm build` — passed
 - `youtube-author-comment-live-smoke` — 3 sampled URLs, official YouTube comments API path available, author recipe-signal comments found in 3/3 (`live-smoke-author-comment-stage2-2026-05-29.md`)
+- `pnpm exec playwright test tests/e2e/slice-29-youtube-author-comment-fallback.spec.ts --project=mobile-chrome` — 4 passed
+- `youtube-author-comment-live-smoke` closeout — 30 URL provider probe, `videos.list` 30/30, `commentThreads.list` 29/30, author top-level comments 19/30, author recipe-signal comments 13/30 (`live-smoke-author-comment-closeout-2026-05-29.md`)
 - Claude Stage 2 backend review — `APPROVE`, `NO_FURTHER_REASONABLE_IMPROVEMENTS`
 
 Stage 2 precondition notes:
