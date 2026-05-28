@@ -37,7 +37,7 @@
 - [ ] 작성자 댓글 recipe 영상: URL 입력 → extract → 작성자 댓글 보충 draft → 검수 → 등록 full flow가 동작한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
-- [ ] `author_comment` source label이 검수 화면에서 "작성자 댓글"로 표시된다 <!-- omo:id=accept-author-comment-label;stage=4;scope=frontend;review=5,6 -->
+- [x] `author_comment` source label이 검수 화면에서 "작성자 댓글"로 표시된다 <!-- omo:id=accept-author-comment-label;stage=4;scope=frontend;review=5,6 -->
 
 ## State / Policy
 
