@@ -4,7 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import fixtureData from "@/qa/fixtures/slices-01-05.json";
 import { RECIPIO_YOUTUBE_PARITY_FIXTURES } from "@/lib/server/recipio-youtube-parity-fixtures";
-import type { YoutubeTranscriptProvider } from "@/lib/server/youtube-import";
+import type {
+  YoutubeAuthorCommentProvider,
+  YoutubeTranscriptProvider,
+} from "@/lib/server/youtube-import";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
@@ -196,6 +199,7 @@ const uncertainUrl = "https://www.youtube.com/watch?v=uncertain123";
 const incompleteUrl = "https://www.youtube.com/watch?v=incomplete123";
 const transcriptFallbackUrl = "https://www.youtube.com/watch?v=transcript123";
 const transcriptNoCaptionUrl = "https://www.youtube.com/watch?v=nocaption123";
+const authorCommentFetchUrl = "https://www.youtube.com/watch?v=authorfetch123";
 const needsReviewUrl = "https://www.youtube.com/watch?v=needsreview123";
 const missingVideoUrl = "https://www.youtube.com/watch?v=missing123";
 const cucumberSandwichUrl = "https://www.youtube.com/watch?v=cucumber123";
@@ -677,6 +681,20 @@ async function withYoutubeTranscriptProvider<T>(
     return await callback();
   } finally {
     restoreTranscriptProvider();
+  }
+}
+
+async function withYoutubeAuthorCommentProvider<T>(
+  provider: YoutubeAuthorCommentProvider,
+  callback: () => Promise<T>,
+) {
+  const youtubeImport = await import("@/lib/server/youtube-import");
+  const restoreAuthorCommentProvider = youtubeImport.setYoutubeAuthorCommentProviderForTest(provider);
+
+  try {
+    return await callback();
+  } finally {
+    restoreAuthorCommentProvider();
   }
 }
 
@@ -2212,6 +2230,542 @@ describe("20 youtube real import backend", () => {
         language: "ko",
         track_kind: "manual",
         step_count: 2,
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract fetches one author comment page and uses only author recipe text", async () => {
+    mockAuth();
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("HOMECOOK_ENABLE_YOUTUBE_IMPORT", "1");
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("/videos?")) {
+        return new Response(JSON.stringify({
+          items: [
+            {
+              snippet: {
+                title: "김치찌개 댓글 레시피",
+                channelTitle: "집밥 채널",
+                channelId: "owner-channel",
+                description: "레시피는 작성자 댓글에 남겼어요.",
+                tags: ["레시피", "김치찌개"],
+                categoryId: "26",
+                thumbnails: {
+                  high: { url: "https://i.ytimg.com/vi/authorfetch123/hqdefault.jpg" },
+                },
+              },
+              contentDetails: {
+                duration: "PT8M",
+                caption: "false",
+              },
+            },
+          ],
+        }));
+      }
+
+      if (url.includes("/commentThreads?")) {
+        return new Response(JSON.stringify({
+          items: [
+            {
+              snippet: {
+                topLevelComment: {
+                  snippet: {
+                    textOriginal: [
+                      "만드는 법",
+                      "1. 약한 작성자 댓글은 김치를 썰어주세요.",
+                    ].join("\n"),
+                    authorChannelId: { value: "owner-channel" },
+                  },
+                },
+              },
+            },
+            {
+              snippet: {
+                topLevelComment: {
+                  snippet: {
+                    textOriginal: [
+                      "재료",
+                      "김치 200g",
+                      "소금 약간",
+                      "만드는 법",
+                      "1. 김치를 한입 크기로 썰어주세요.",
+                      "2. 냄비에 넣고 끓여주세요.",
+                    ].join("\n"),
+                    authorChannelId: { value: "owner-channel" },
+                  },
+                },
+              },
+            },
+            {
+              snippet: {
+                topLevelComment: {
+                  snippet: {
+                    textOriginal: "재료\n김치 500g\n만드는 법\n1. 일반 댓글 레시피입니다.",
+                    authorChannelId: { value: "viewer-channel" },
+                  },
+                },
+                replies: {
+                  comments: [
+                    {
+                      snippet: {
+                        textOriginal: "재료\n소고기 1kg\n만드는 법\n1. 작성자 reply 레시피는 무시됩니다.",
+                        authorChannelId: { value: "owner-channel" },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        }));
+      }
+
+      throw new Error(`unexpected fetch URL: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440216",
+          code: "boil",
+          label: "끓이기",
+          color_key: "blue",
+          is_system: true,
+        },
+      ],
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { response, body } = await postYoutubeExtract(authorCommentFetchUrl);
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["author_comment"],
+        blocking_issues: [],
+        ingredients: [
+          { standard_name: "김치", resolution_status: "resolved" },
+          { standard_name: "소금", resolution_status: "resolved" },
+        ],
+        steps: [
+          {
+            instruction: "김치를 한입 크기로 썰어주세요.",
+            is_incomplete: false,
+            missing_fields: [],
+          },
+          {
+            instruction: "냄비에 넣고 끓여주세요.",
+            is_incomplete: false,
+            missing_fields: [],
+          },
+        ],
+      },
+      error: null,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/commentThreads?"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("part=snippet"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("videoId=authorfetch123"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("textFormat=plainText"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("order=relevance"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("maxResults=100"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("key=test-key"));
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining("pageToken="));
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_methods: string[];
+      raw_source_text: string;
+      source_providers: string[];
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_methods).toEqual(["author_comment"]);
+    expect(insertedSession.source_providers).toEqual([
+      "youtube_videos_list",
+      "description_parser",
+      "comment_threads_api",
+      "author_comment_filter",
+      "author_comment_parser",
+    ]);
+    expect(insertedSession.raw_source_text).toContain("--- author comment ---");
+    expect(insertedSession.raw_source_text).toContain("김치를 한입 크기로 썰어주세요.");
+    expect(insertedSession.raw_source_text).not.toContain("약한 작성자 댓글");
+    expect(insertedSession.raw_source_text).not.toContain("일반 댓글 레시피입니다.");
+    expect(insertedSession.raw_source_text).not.toContain("작성자 reply 레시피");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      author_comment_provider: {
+        attempted: true,
+        provider: "youtube_comment_threads",
+        status: "used",
+        used: true,
+        fetched_comment_count: 3,
+        author_comment_count: 2,
+        recipe_signal_comment_count: 2,
+        used_ingredient_count: 2,
+        used_step_count: 2,
+        request: {
+          order: "relevance",
+          max_results: 100,
+          page_count: 1,
+          quota_units_estimate: 1,
+        },
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract skips author comments when description is already ready", async () => {
+    mockAuth();
+
+    const provider: YoutubeAuthorCommentProvider = {
+      name: "fixture-comments",
+      fetchAuthorComments: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-comments",
+        comments: [
+          {
+            text: "재료\n김치 500g\n만드는 법\n1. 댓글 레시피입니다.",
+            authorChannelId: "channel-recipe12345",
+          },
+        ],
+      })),
+    };
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+      ],
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { response, body } = await withYoutubeAuthorCommentProvider(provider, () =>
+      postYoutubeExtract(recipeUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description"],
+        blocking_issues: [],
+      },
+      error: null,
+    });
+    expect(provider.fetchAuthorComments).not.toHaveBeenCalled();
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_methods: string[];
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_methods).toEqual(["description"]);
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      author_comment_provider: {
+        attempted: false,
+        status: "not_needed",
+        used: false,
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract fills missing steps from author comments before transcript fallback", async () => {
+    mockAuth();
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440216",
+          code: "boil",
+          label: "끓이기",
+          color_key: "blue",
+          is_system: true,
+        },
+      ],
+    });
+    const authorProvider: YoutubeAuthorCommentProvider = {
+      name: "fixture-comments",
+      fetchAuthorComments: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-comments",
+        comments: [
+          {
+            text: [
+              "재료",
+              "김치 500g",
+              "소금 약간",
+              "만드는 법",
+              "1. 김치를 한입 크기로 썰어주세요.",
+              "2. 냄비에 넣고 끓여주세요.",
+            ].join("\n"),
+            authorChannelId: "channel-transcript123",
+          },
+        ],
+      })),
+    };
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        transcriptText: "만드는 법\n1. 자막 fallback을 쓰면 안 됩니다.",
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeAuthorCommentProvider(authorProvider, () =>
+      withYoutubeTranscriptProvider(transcriptProvider, () =>
+        postYoutubeExtract(transcriptFallbackUrl),
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description", "author_comment"],
+        blocking_issues: [],
+        ingredients: [
+          { standard_name: "김치", amount: 200, unit: "g" },
+          { standard_name: "소금", amount: null, unit: null },
+        ],
+        steps: [
+          { instruction: "김치를 한입 크기로 썰어주세요.", is_incomplete: false },
+          { instruction: "냄비에 넣고 끓여주세요.", is_incomplete: false },
+        ],
+      },
+      error: null,
+    });
+    expect(authorProvider.fetchAuthorComments).toHaveBeenCalledWith({
+      videoId: "transcript123",
+      youtubeUrl: transcriptFallbackUrl,
+      title: "김치찌개 자막 보충 레시피",
+      channel: "집밥 채널",
+      channelId: "channel-transcript123",
+    });
+    expect(transcriptProvider.fetchTranscript).not.toHaveBeenCalled();
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_methods: string[];
+      raw_source_text: string;
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_methods).toEqual(["description", "author_comment"]);
+    expect(insertedSession.raw_source_text).toContain("--- author comment ---");
+    expect(insertedSession.raw_source_text).not.toContain("caption transcript");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      author_comment_provider: {
+        status: "used",
+        used: true,
+        used_ingredient_count: 0,
+        used_step_count: 2,
+      },
+      transcript_provider: {
+        attempted: false,
+        status: "not_needed",
+      },
+      partial_extraction: false,
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract keeps partial drafts when author comments are promotional", async () => {
+    mockAuth();
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient();
+    const authorProvider: YoutubeAuthorCommentProvider = {
+      name: "fixture-comments",
+      fetchAuthorComments: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-comments",
+        comments: [
+          {
+            text: "구독과 좋아요 부탁드려요. 제품 정보는 인스타 링크를 확인해주세요.",
+            authorChannelId: "channel-incomplete123",
+          },
+        ],
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeAuthorCommentProvider(authorProvider, () =>
+      postYoutubeExtract(incompleteUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description"],
+        blocking_issues: ["steps[0].instruction"],
+      },
+      error: null,
+    });
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      author_comment_provider: {
+        attempted: true,
+        status: "no_recipe_signal",
+        used: false,
+        author_comment_count: 1,
+        recipe_signal_comment_count: 0,
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract ignores non-author comments even when they contain steps", async () => {
+    mockAuth();
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient();
+    const authorProvider: YoutubeAuthorCommentProvider = {
+      name: "fixture-comments",
+      fetchAuthorComments: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-comments",
+        comments: [
+          {
+            text: "만드는 법\n1. 김치를 한입 크기로 썰어주세요.",
+            authorChannelId: "viewer-channel",
+          },
+        ],
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeAuthorCommentProvider(authorProvider, () =>
+      postYoutubeExtract(incompleteUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description"],
+        blocking_issues: ["steps[0].instruction"],
+      },
+      error: null,
+    });
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      raw_source_text: string;
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.raw_source_text).not.toContain("--- author comment ---");
+    expect(insertedSession.raw_source_text).not.toContain("김치를 한입 크기로 썰어주세요.");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      author_comment_provider: {
+        attempted: true,
+        status: "no_author_comments",
+        used: false,
+        fetched_comment_count: 1,
+        author_comment_count: 0,
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract degrades to description-only when comments are disabled", async () => {
+    mockAuth();
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient();
+    const authorProvider: YoutubeAuthorCommentProvider = {
+      name: "fixture-comments",
+      fetchAuthorComments: vi.fn(async () => ({
+        status: "comments_disabled" as const,
+        providerName: "fixture-comments",
+        reason: "comments_disabled",
+        comments: [],
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeAuthorCommentProvider(authorProvider, () =>
+      postYoutubeExtract(incompleteUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description"],
+        blocking_issues: ["steps[0].instruction"],
+      },
+      error: null,
+    });
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      author_comment_provider: {
+        attempted: true,
+        provider: "fixture-comments",
+        status: "comments_disabled",
+        reason: "comments_disabled",
+        used: false,
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract degrades to description-only when author comments fail", async () => {
+    mockAuth();
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient();
+    const authorProvider: YoutubeAuthorCommentProvider = {
+      name: "fixture-comments",
+      fetchAuthorComments: vi.fn(async () => {
+        throw new Error("temporary comments outage");
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeAuthorCommentProvider(authorProvider, () =>
+      postYoutubeExtract(incompleteUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description"],
+        blocking_issues: ["steps[0].instruction"],
+      },
+      error: null,
+    });
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_methods: string[];
+      raw_source_text: string;
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_methods).toEqual(["description"]);
+    expect(insertedSession.raw_source_text).not.toContain("--- author comment ---");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      author_comment_provider: {
+        attempted: true,
+        provider: "fixture-comments",
+        status: "error",
+        reason: "temporary comments outage",
+        used: false,
       },
     });
   });
