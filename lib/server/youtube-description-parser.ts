@@ -708,13 +708,22 @@ function normalizeIngredientCandidateText(value: string) {
 
 function isInvalidIngredientName(value: string) {
   const normalized = value.trim().toLowerCase();
+  const knownRiceIngredientNames = new Set([
+    "밥",
+    "쌀밥",
+    "흰밥",
+    "현미밥",
+    "잡곡밥",
+    "즉석밥",
+    "햇반",
+  ]);
 
   return (
     !normalized
     || /^[a-z][a-z\s.'-]*$/iu.test(normalized)
     || /^[\d\s=|/.,:：+\-–—()]+$/u.test(normalized)
     || /^\d+\s*도\s*\d+\s*분/u.test(normalized)
-    || (/^.+(?:밥|덮밥|볶음)$/u.test(normalized) && normalized !== "밥")
+    || (/^.+(?:밥|덮밥|볶음)$/u.test(normalized) && !knownRiceIngredientNames.has(normalized))
     || /(?:레시피|멤버십|가입|사용할\s*요리|계량|숟가락보다|키친타월|핏물|제거|올린\s*뒤|구매|링크|http|영상\s*속|만드는\s*법|보관|냉장|드세요|괜찮)/iu.test(normalized)
     || /^의\s*\d/u.test(normalized)
   );
@@ -792,6 +801,38 @@ function parseIngredientLine(
       flags: ["leading_amount"],
       scalable: true,
     };
+  }
+
+  const parentheticalAmountMatch = line.text.match(new RegExp(
+    `^(.+?)\\s*\\([^)]*?(${AMOUNT_RANGE_PATTERN})\\s*(${UNIT_PATTERN})(?:씩)?[^)]*\\)\\s*$`,
+    "iu",
+  ));
+  if (parentheticalAmountMatch && !hasAmountSignal(parentheticalAmountMatch[1])) {
+    const amount = parseRecipeAmount(parentheticalAmountMatch[2]);
+    const unit = parentheticalAmountMatch[3].trim();
+    const name = normalizeIngredientName(parentheticalAmountMatch[1]);
+
+    if (
+      name
+      && amount !== null
+      && !hasCookingAction(name)
+      && !/[,，]/u.test(name)
+      && !isInvalidIngredientName(name)
+    ) {
+      return {
+        name,
+        amount,
+        unit,
+        ingredientType: "QUANT",
+        displayText: formatIngredientDisplayText({ name, amount, unit, componentLabel }),
+        rawText: line.raw.trim(),
+        componentLabel,
+        sourceLine: line.index,
+        confidence: 0.86,
+        flags: ["parenthetical_amount"],
+        scalable: true,
+      };
+    }
   }
 
   const koreanAmountMatch = parseText.match(/^(.+?)\s*(한|두|세|네|반)\s*(꼬집|줌|컵|개|큰술|작은술)$/u);
@@ -992,7 +1033,8 @@ function cleanupInlineIngredientName(value: string) {
     .replace(/^.*?[：:]\s*/u, "")
     .replace(/^.*?(?:필요한\s*것|준비\s*재료|재료(?:는|로는)?|소스는)\s*/u, "")
     .replace(new RegExp(`^.*(?:${AMOUNT_RANGE_PATTERN})\\s*(?:${UNIT_PATTERN})\\s*(?:와|과|및)\\s*`, "iu"), "")
-    .replace(/^(?:(?:오늘은|남은|냉장고에\s*남은|마지막에|넉넉하게|살짝|충분히|그리고|또|와|과|및|에|를|을|은|는|로|으로)\s*)+/u, "")
+    .replace(/^(?:(?:오늘은|남은|냉장고에\s*남은|마지막에|넉넉하게|살짝|충분히|그리고|또)\s*)+/u, "")
+    .replace(/^(?:(?:와|과|및|에|를|을|은|는|로|으로)\s+)+/u, "")
     .replace(/^.*?(?:은|는)\s+(?=[\p{L}])/u, "")
     .replace(/^.*?(?:썰고|익히고|볶고|불리고|넣어|올려|다가|고)\s+(?=[\p{L}])/u, "")
     .replace(/\s+/gu, " ")
@@ -1681,6 +1723,62 @@ function parseHeadingInlineIngredients(
   return parseLooseIngredientLines(payloadLine, options);
 }
 
+function getInlineComponentIngredientPayload(text: string) {
+  const match = text.match(/^([^：:]{1,40})[：:]\s*(.+)$/u);
+  if (!match) {
+    return null;
+  }
+
+  const rawLabel = match[1].trim();
+  const payload = match[2].trim();
+
+  if (!payload || !hasAmountSignal(payload)) {
+    return null;
+  }
+
+  const genericIngredientHeading = getIngredientHeadingComponent(rawLabel);
+  const componentLabel = genericIngredientHeading === null
+    ? null
+    : cleanupComponentLabel(rawLabel);
+
+  return {
+    componentLabel,
+    payload,
+  };
+}
+
+function parseInlineComponentIngredients(
+  line: SourceLine,
+  options: { fallbackComponentLabel: string | null },
+) {
+  const componentPayload = getInlineComponentIngredientPayload(line.text);
+
+  if (!componentPayload) {
+    return {
+      componentLabel: options.fallbackComponentLabel,
+      ingredients: [],
+    };
+  }
+
+  const componentLabel = componentPayload.componentLabel ?? options.fallbackComponentLabel;
+  const payloadLine: SourceLine = {
+    ...line,
+    raw: componentPayload.payload,
+    text: componentPayload.payload,
+    normalized: componentPayload.payload.toLowerCase(),
+    ordinal: null,
+  };
+  const commaSplit = parseCommaSeparatedIngredients(payloadLine, { componentLabel });
+  const ingredients = commaSplit.length > 0
+    ? commaSplit
+    : parseLooseIngredientLines(payloadLine, { componentLabel });
+
+  return {
+    componentLabel,
+    ingredients,
+  };
+}
+
 function splitRecipeRanges(lines: SourceLine[]) {
   const headings = lines.filter((line) => isRecipeHeading(line.text));
 
@@ -1773,6 +1871,17 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
     }
 
     if (section === "ingredients") {
+      const inlineComponentIngredients = parseInlineComponentIngredients(line, {
+        fallbackComponentLabel: componentLabel,
+      });
+
+      if (inlineComponentIngredients.ingredients.length > 0) {
+        getComponent(components, inlineComponentIngredients.componentLabel, line.index)
+          .ingredients.push(...inlineComponentIngredients.ingredients);
+        hasParsedIngredient = true;
+        continue;
+      }
+
       const commaSplit = parseCommaSeparatedIngredients(line, { componentLabel });
       if (commaSplit.length > 0) {
         getComponent(components, componentLabel, line.index).ingredients.push(...commaSplit);
@@ -1823,17 +1932,25 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
     }
 
     if (!section && !afterSectionStopper && classification.kind === "ingredient_candidate") {
-      let ingredients = parseLooseIngredientLines(line, { componentLabel });
+      const inlineComponentIngredients = parseInlineComponentIngredients(line, {
+        fallbackComponentLabel: componentLabel,
+      });
+      let ingredients = inlineComponentIngredients.ingredients;
+      const ingredientComponentLabel = inlineComponentIngredients.componentLabel;
+
+      if (ingredients.length === 0) {
+        ingredients = parseLooseIngredientLines(line, { componentLabel: ingredientComponentLabel });
+      }
 
       if (ingredients.length === 0) {
         ingredients = parseIngredientLines(line, {
           allowAmountless: false,
-          componentLabel,
+          componentLabel: ingredientComponentLabel,
         });
       }
 
       if (ingredients.length > 0) {
-        getComponent(components, componentLabel, line.index).ingredients.push(...ingredients);
+        getComponent(components, ingredientComponentLabel, line.index).ingredients.push(...ingredients);
         hasParsedIngredient = true;
 
         if (!hasCookingAction(line.text)) {

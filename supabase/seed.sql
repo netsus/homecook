@@ -18,14 +18,14 @@ values
   ('550e8400-e29b-41d4-a716-446655440013', '김치', '기타', 'g'),
   ('550e8400-e29b-41d4-a716-446655440014', '돼지고기', '육류', 'g'),
   ('550e8400-e29b-41d4-a716-446655440015', '소금', '양념', null)
-on conflict (id) do update set
-  standard_name = excluded.standard_name,
+on conflict (standard_name) do update set
   category = excluded.category,
   default_unit = excluded.default_unit;
 
 insert into public.ingredient_synonyms (id, ingredient_id, synonym)
-values
-  ('550e8400-e29b-41d4-a716-446655440110', '550e8400-e29b-41d4-a716-446655440011', '파')
+select '550e8400-e29b-41d4-a716-446655440110', ingredients.id, '파'
+from public.ingredients
+where ingredients.standard_name = '대파'
 on conflict (ingredient_id, synonym) do nothing;
 
 insert into public.ingredient_bundles (id, name, display_order)
@@ -36,31 +36,37 @@ on conflict (id) do update set
   name = excluded.name,
   display_order = excluded.display_order;
 
+with seed_bundle_items (id, bundle_id, standard_name) as (
+  values
+    (
+      '660e8400-e29b-41d4-a716-446655440511'::uuid,
+      '660e8400-e29b-41d4-a716-446655440501'::uuid,
+      '소금'
+    ),
+    (
+      '660e8400-e29b-41d4-a716-446655440521'::uuid,
+      '660e8400-e29b-41d4-a716-446655440502'::uuid,
+      '김치'
+    ),
+    (
+      '660e8400-e29b-41d4-a716-446655440522'::uuid,
+      '660e8400-e29b-41d4-a716-446655440502'::uuid,
+      '돼지고기'
+    ),
+    (
+      '660e8400-e29b-41d4-a716-446655440523'::uuid,
+      '660e8400-e29b-41d4-a716-446655440502'::uuid,
+      '양파'
+    ),
+    (
+      '660e8400-e29b-41d4-a716-446655440524'::uuid,
+      '660e8400-e29b-41d4-a716-446655440502'::uuid,
+      '대파'
+    )
+)
 insert into public.ingredient_bundle_items (id, bundle_id, ingredient_id)
-values
-  (
-    '660e8400-e29b-41d4-a716-446655440511',
-    '660e8400-e29b-41d4-a716-446655440501',
-    '550e8400-e29b-41d4-a716-446655440015'
-  ),
-  (
-    '660e8400-e29b-41d4-a716-446655440521',
-    '660e8400-e29b-41d4-a716-446655440502',
-    '550e8400-e29b-41d4-a716-446655440013'
-  ),
-  (
-    '660e8400-e29b-41d4-a716-446655440522',
-    '660e8400-e29b-41d4-a716-446655440502',
-    '550e8400-e29b-41d4-a716-446655440014'
-  ),
-  (
-    '660e8400-e29b-41d4-a716-446655440523',
-    '660e8400-e29b-41d4-a716-446655440502',
-    '550e8400-e29b-41d4-a716-446655440010'
-  ),
-  (
-    '660e8400-e29b-41d4-a716-446655440524',
-    '660e8400-e29b-41d4-a716-446655440502',
-    '550e8400-e29b-41d4-a716-446655440011'
-  )
+select seed_bundle_items.id, seed_bundle_items.bundle_id, ingredients.id
+from seed_bundle_items
+join public.ingredients
+  on ingredients.standard_name = seed_bundle_items.standard_name
 on conflict (bundle_id, ingredient_id) do nothing;
