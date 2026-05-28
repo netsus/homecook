@@ -862,14 +862,14 @@ Step 1.5) 3-way Classification 결과
   │ └──────────────────────────────────────────────────┘
   │
   ▼
-Step 2) description-first 추출
+Step 2) 공개 텍스트 우선 추출
   │ → POST /recipes/youtube/extract
   │ YouTube videos.list API → description/tags/category 분석
   │ recipe/uncertain/non_recipe 판정 (non_recipe → 422 차단)
   │ 서버: youtube_extraction_sessions 생성 (status=draft, 24h TTL)
-  │ 설명란 파싱 → 재료/스텝 추출
+  │ 설명란 파싱 → 부족하면 공개 작성자 댓글 → 부족하면 공개 caption timedtext 파싱
   │ 재료/스텝 섹션명은 component_label로 응답
-  │ extraction_methods: ["description"] (MVP)
+  │ extraction_methods: ["description"], ["comment"], ["caption"] 또는 조합
   │ 미분류 조리방법은 이 단계에서 즉시 생성
   │ UI: indeterminate spinner/progress
   │

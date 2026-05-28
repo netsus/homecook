@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { INGREDIENT_CATEGORY_LABELS } from "@/lib/ingredient-categories";
-import { RECIPIO_YOUTUBE_PARITY_FIXTURES } from "@/lib/server/recipio-youtube-parity-fixtures";
 import {
   scoreYoutubeDictionaryResolutionFixtures,
   type YoutubeDictionaryResolutionReport,
@@ -43,7 +42,7 @@ const slice27GoalEggMigrationPath =
   "supabase/migrations/20260526204500_27_youtube_live_goal_egg_synonym.sql";
 const slice27GoalMultiRecipeMigrationPath =
   "supabase/migrations/20260526205500_27_youtube_live_goal_multi_recipe_seed.sql";
-const recipioYoutubeParityMigrationPath =
+const supplementalYoutubeDictionaryMigrationPath =
   "supabase/migrations/20260528042000_29_recipio_youtube_parity_dictionary_seed.sql";
 const dictionaryReportPath = join(
   process.cwd(),
@@ -380,8 +379,8 @@ describe("YouTube dictionary resolution scoring", () => {
     );
   });
 
-  it("keeps the Recipio parity seed DML-only and covers the registered live sample ingredients", async () => {
-    const migration = readFileSync(recipioYoutubeParityMigrationPath, "utf8");
+  it("keeps the supplemental YouTube dictionary seed DML-only", async () => {
+    const migration = readFileSync(supplementalYoutubeDictionaryMigrationPath, "utf8");
     const ingredientTuples = extractTuples(
       extractValueBody(migration, "insert into public.ingredients"),
     );
@@ -389,54 +388,6 @@ describe("YouTube dictionary resolution scoring", () => {
       extractValueBody(migration, "insert into public.ingredient_synonyms"),
     );
     const allowedCategories = new Set<string>(INGREDIENT_CATEGORY_LABELS);
-    const seed = parseIngredientSeeds([
-      ...slice21MigrationPaths,
-      slice26MigrationPath,
-      slice27MigrationPath,
-      slice27GoalMigrationPath,
-      slice27GoalEggMigrationPath,
-      slice27GoalMultiRecipeMigrationPath,
-      recipioYoutubeParityMigrationPath,
-    ]);
-    const expectedIngredients = [
-      ...new Map(
-        RECIPIO_YOUTUBE_PARITY_FIXTURES.flatMap((fixture) =>
-          fixture.recipe.ingredients.map((ingredient) => [
-            ingredient.name,
-            {
-              name: ingredient.name,
-              amount: ingredient.amount,
-              unit: ingredient.unit,
-              type: ingredient.ingredientType,
-            },
-          ] as const),
-        ),
-      ).values(),
-    ];
-    const report = await scoreYoutubeDictionaryResolutionFixtures(
-      [
-        {
-          id: "recipio-live-parity-2026-05-28",
-          category: "structured",
-          source: "real-description",
-          description: "레시피오에 실제 신규 등록한 YouTube 샘플 3종의 재료",
-          expected_ingredients: expectedIngredients,
-          expected_steps: [],
-          metadata: { video_category: "recipe", has_component_structure: true, multi_recipe: false },
-        },
-      ],
-      {
-        dictionaryVersion: "recipio-youtube-parity-seed",
-        corpusVersion: "recipio-live-parity",
-        runId: "recipio-live-parity-dictionary-regression",
-        timestamp: "2026-05-28T00:00:00.000Z",
-        dbClient: createDictionaryDb({
-          ingredients: seed.ingredientRows,
-          synonyms: seed.synonymRows,
-        }),
-      },
-    );
-
     expect(migration).toContain("on conflict (standard_name) do nothing");
     expect(migration).toContain("on conflict (ingredient_id, synonym) do nothing");
     expect(migration).toContain("lower(trim(v.synonym))");
@@ -460,38 +411,6 @@ describe("YouTube dictionary resolution scoring", () => {
       "따뜻한 우유",
     ]));
     expect(synonymTuples).not.toEqual(expect.arrayContaining([["계란", "달걀"]]));
-    expect(report.aggregate.unresolved_count).toBe(0);
-    expect(report.aggregate.needs_review_count).toBeLessThanOrEqual(2);
-    expect(report.per_fixture[0].ingredients).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        name: "계란",
-        standard_names: expect.arrayContaining(["계란"]),
-      }),
-      expect.objectContaining({
-        name: "즉석밥 작은 거",
-        resolution_status: "resolved",
-        standard_names: ["즉석밥 작은 거"],
-      }),
-      expect.objectContaining({
-        name: "초밥용 밥",
-        resolution_status: "resolved",
-        standard_names: ["초밥용 밥"],
-      }),
-      expect.objectContaining({
-        name: "강력분",
-        resolution_status: "resolved",
-        standard_names: ["강력분"],
-      }),
-      expect.objectContaining({
-        name: "무염버터",
-        standard_names: expect.arrayContaining(["무염버터"]),
-      }),
-      expect.objectContaining({
-        name: "따뜻한 우유",
-        resolution_status: "resolved",
-        standard_names: ["따뜻한 우유"],
-      }),
-    ]));
   });
 
   it("resolves true ingredient names found during the goal-mode 30 URL live smoke", async () => {
@@ -502,7 +421,7 @@ describe("YouTube dictionary resolution scoring", () => {
       slice27GoalMigrationPath,
       slice27GoalEggMigrationPath,
       slice27GoalMultiRecipeMigrationPath,
-      recipioYoutubeParityMigrationPath,
+      supplementalYoutubeDictionaryMigrationPath,
     ]);
     const report = await scoreYoutubeDictionaryResolutionFixtures(
       [

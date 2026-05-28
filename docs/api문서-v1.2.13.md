@@ -876,7 +876,14 @@ POST /api/v1/recipes/youtube/extract
 | ---- | ----------- | ------ | ---------- |
 | Body | youtube_url | string | 유튜브 URL |
 
-**처리**: video_id 파싱 → YouTube `videos.list` 호출 → description/tags/category 기반 3-way classification → description 파싱으로 재료/스텝 추출 → `youtube_extraction_sessions` INSERT (status=`draft`, expires_at=now+24h, user_id=서버 설정) → 추출 결과 반환
+**처리**: video_id 파싱 → YouTube `videos.list` 호출 → description/tags/category 기반 3-way classification → 설명란 파싱으로 재료/스텝 추출 → 부족하면 공개 작성자 댓글 후보와 공개 caption timedtext를 순서대로 보조 source로 파싱 → `youtube_extraction_sessions` INSERT (status=`draft`, expires_at=now+24h, user_id=서버 설정) → 추출 결과 반환
+
+`extraction_methods` 허용값:
+- `description`: YouTube 설명란
+- `comment`: 공개 작성자 top-level 댓글 후보
+- `caption`: 공개 caption timedtext
+
+레시피오 quick import 중복 확인을 제외한 추출 단계는 특정 `youtube_video_id`별 고정 recipe fixture를 반환하지 않고 항상 provider/parser 경로를 거친다.
 
 **응답 (200)**
 
@@ -885,7 +892,7 @@ POST /api/v1/recipes/youtube/extract
   "extraction_id": "uuid",
   "title": "백종원 김치찌개",
   "base_servings": 2,
-  "extraction_methods": ["description"],
+  "extraction_methods": ["description", "comment", "caption"],
   "ingredients": [
     {
       "draft_ingredient_id": "uuid",

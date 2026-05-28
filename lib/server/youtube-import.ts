@@ -17,10 +17,6 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
-import {
-  getRecipioYoutubeParityFixture,
-  type RecipioYoutubeParityFixture,
-} from "@/lib/server/recipio-youtube-parity-fixtures";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import type {
@@ -256,7 +252,9 @@ interface ParsedYoutubeIngredientRegistration {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,20}$/;
 const DEFAULT_EXTRACTION_METHODS = ["description"] as const;
-const YOUTUBE_PROVIDER_VERSION = "youtube-videos-list-description-v1";
+const COMMENT_EXTRACTION_METHOD = "comment";
+const CAPTION_EXTRACTION_METHOD = "caption";
+const YOUTUBE_PROVIDER_VERSION = "youtube-videos-list-public-text-v2";
 const SESSION_TTL_HOURS = 24;
 const AUTHOR_COMMENT_RAW_SOURCE_HEADER = "--- author comment ---";
 const CAPTION_TRANSCRIPT_RAW_SOURCE_HEADER = "--- caption transcript ---";
@@ -440,11 +438,12 @@ interface TranscriptFallbackMeta {
   reason: string | null;
   language: string | null;
   track_kind: string | null;
+  used_ingredient_count: number;
   step_count: number;
 }
 
 interface TranscriptFallbackResult {
-  steps: string[];
+  recipe: ParsedRecipeDescription;
   usedTranscript: boolean;
   rawTranscriptText: string | null;
   meta: TranscriptFallbackMeta;
@@ -497,6 +496,13 @@ const NOOP_TRANSCRIPT_PROVIDER: YoutubeTranscriptProvider = {
   },
 };
 
+const PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER: YoutubeTranscriptProvider = {
+  name: "youtube_public_timedtext",
+  async fetchTranscript(context) {
+    return fetchPublicYoutubeTranscript(context);
+  },
+};
+
 const NOOP_AUTHOR_COMMENT_PROVIDER: YoutubeAuthorCommentProvider = {
   name: "noop",
   async fetchAuthorComments() {
@@ -533,7 +539,15 @@ export function setYoutubeTranscriptProviderForTest(provider: YoutubeTranscriptP
 }
 
 function getYoutubeTranscriptProvider() {
-  return transcriptProviderForTest ?? NOOP_TRANSCRIPT_PROVIDER;
+  if (transcriptProviderForTest) {
+    return transcriptProviderForTest;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return NOOP_TRANSCRIPT_PROVIDER;
+  }
+
+  return PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER;
 }
 
 export function setYoutubeAuthorCommentProviderForTest(provider: YoutubeAuthorCommentProvider | null) {
@@ -874,18 +888,6 @@ function getFixtureVideo(videoId: string): YoutubeProviderResult {
 }
 
 function getFixturePreview(videoId: string): YoutubePreviewResult {
-  const parityFixture = getRecipioYoutubeParityFixture(videoId);
-  if (parityFixture) {
-    return {
-      video: {
-        videoId,
-        title: parityFixture.sourceTitle,
-        channel: parityFixture.channel,
-        thumbnailUrl: parityFixture.thumbnailUrl,
-      },
-    };
-  }
-
   const fixture = getFixtureVideo(videoId);
 
   if ("providerError" in fixture) {
@@ -1225,6 +1227,320 @@ async function fetchYoutubeAuthorComments(videoId: string): Promise<YoutubeAutho
   }
 
   return parseYoutubeCommentThreadsPayload(payload);
+}
+
+interface PublicCaptionTrack {
+  baseUrl: string;
+  languageCode: string | null;
+  name: string | null;
+  trackKind: "manual" | "auto" | "unknown";
+}
+
+function decodeHtmlEntities(value: string) {
+  const named: Record<string, string> = {
+    amp: "&",
+    quot: "\"",
+    apos: "'",
+    lt: "<",
+    gt: ">",
+    nbsp: " ",
+  };
+
+  return value
+    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/giu, (match, entity: string) => {
+      const lowerEntity = entity.toLowerCase();
+      if (lowerEntity.startsWith("#x")) {
+        const codePoint = Number.parseInt(lowerEntity.slice(2), 16);
+        return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : match;
+      }
+
+      if (lowerEntity.startsWith("#")) {
+        const codePoint = Number.parseInt(lowerEntity.slice(1), 10);
+        return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : match;
+      }
+
+      return named[lowerEntity] ?? match;
+    })
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function extractJsonObjectAfterMarker(source: string, marker: string) {
+  const markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) {
+    return null;
+  }
+
+  const objectStart = source.indexOf("{", markerIndex + marker.length);
+  if (objectStart < 0) {
+    return null;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = objectStart; index < source.length; index += 1) {
+    const char = source[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = true;
+      continue;
+    }
+
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(objectStart, index + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+function normalizeCaptionTrackName(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const simpleText = value.simpleText;
+  if (typeof simpleText === "string") {
+    return simpleText;
+  }
+
+  const runs = value.runs;
+  if (!Array.isArray(runs)) {
+    return null;
+  }
+
+  const text = runs
+    .map((run) => isRecord(run) && typeof run.text === "string" ? run.text : "")
+    .join("")
+    .trim();
+
+  return text || null;
+}
+
+function parsePublicCaptionTracksFromWatchHtml(html: string): PublicCaptionTrack[] {
+  const jsonText = extractJsonObjectAfterMarker(html, "ytInitialPlayerResponse");
+  if (!jsonText) {
+    return [];
+  }
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(jsonText);
+  } catch {
+    return [];
+  }
+
+  if (!isRecord(payload) || !isRecord(payload.captions)) {
+    return [];
+  }
+
+  const renderer = payload.captions.playerCaptionsTracklistRenderer;
+  if (!isRecord(renderer) || !Array.isArray(renderer.captionTracks)) {
+    return [];
+  }
+
+  return renderer.captionTracks.flatMap((track): PublicCaptionTrack[] => {
+    if (!isRecord(track) || typeof track.baseUrl !== "string") {
+      return [];
+    }
+
+    const kind = typeof track.kind === "string" ? track.kind : null;
+
+    return [{
+      baseUrl: track.baseUrl,
+      languageCode: typeof track.languageCode === "string" ? track.languageCode : null,
+      name: normalizeCaptionTrackName(track.name),
+      trackKind: kind === "asr" ? "auto" : kind ? "unknown" : "manual",
+    }];
+  });
+}
+
+function selectPublicCaptionTrack(
+  tracks: PublicCaptionTrack[],
+  preferredLanguages = ["ko", "en"],
+) {
+  if (tracks.length === 0) {
+    return null;
+  }
+
+  const normalizedPreferredLanguages = preferredLanguages.map((language) => language.toLowerCase());
+  const languageRank = (track: PublicCaptionTrack) => {
+    const languageCode = track.languageCode?.toLowerCase() ?? "";
+    const exactRank = normalizedPreferredLanguages.indexOf(languageCode);
+    if (exactRank >= 0) {
+      return exactRank;
+    }
+
+    const prefixRank = normalizedPreferredLanguages.findIndex((language) =>
+      languageCode.startsWith(`${language}-`) || languageCode.startsWith(language),
+    );
+
+    return prefixRank >= 0 ? prefixRank + 10 : 100;
+  };
+  const kindRank = (track: PublicCaptionTrack) => track.trackKind === "manual"
+    ? 0
+    : track.trackKind === "auto"
+      ? 1
+      : 2;
+
+  return [...tracks].sort((left, right) => {
+    const languageDiff = languageRank(left) - languageRank(right);
+    if (languageDiff !== 0) {
+      return languageDiff;
+    }
+
+    return kindRank(left) - kindRank(right);
+  })[0] ?? null;
+}
+
+function withTimedTextJsonFormat(baseUrl: string) {
+  try {
+    const url = new URL(baseUrl);
+    url.searchParams.set("fmt", "json3");
+    return url.toString();
+  } catch {
+    return baseUrl.includes("fmt=")
+      ? baseUrl
+      : `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}fmt=json3`;
+  }
+}
+
+function parseTimedTextJson3(value: unknown) {
+  if (!isRecord(value) || !Array.isArray(value.events)) {
+    return "";
+  }
+
+  return value.events
+    .flatMap((event) => {
+      if (!isRecord(event) || !Array.isArray(event.segs)) {
+        return [];
+      }
+
+      return event.segs
+        .map((segment) => isRecord(segment) && typeof segment.utf8 === "string" ? segment.utf8 : "")
+        .join("");
+    })
+    .map((text) => text.replace(/\s+/gu, " ").trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+function parseTimedTextXml(xml: string) {
+  return [...xml.matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/giu)]
+    .map((match) => decodeHtmlEntities(match[1].replace(/<[^>]+>/gu, "")))
+    .filter(Boolean)
+    .join("\n");
+}
+
+function parseTimedTextTranscript(text: string) {
+  try {
+    const parsed = JSON.parse(text);
+    const transcript = parseTimedTextJson3(parsed);
+    if (transcript) {
+      return transcript;
+    }
+  } catch {
+    // Fall through to XML parsing.
+  }
+
+  return parseTimedTextXml(text);
+}
+
+async function fetchPublicYoutubeTranscript(
+  context: YoutubeTranscriptProviderContext,
+): Promise<YoutubeTranscriptProviderResult> {
+  let watchResponse: Response;
+
+  try {
+    watchResponse = await fetch(
+      `https://www.youtube.com/watch?v=${encodeURIComponent(context.videoId)}&hl=ko`,
+      {
+        headers: {
+          "accept-language": "ko,en;q=0.8",
+        },
+      },
+    );
+  } catch {
+    return {
+      status: "error",
+      providerName: PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER.name,
+      reason: "watch_page_network_error",
+    };
+  }
+
+  if (!watchResponse.ok) {
+    return {
+      status: watchResponse.status === 404 ? "unavailable" : "error",
+      providerName: PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER.name,
+      reason: watchResponse.status === 404 ? "watch_page_not_found" : "watch_page_provider_error",
+    };
+  }
+
+  const watchHtml = await watchResponse.text();
+  const selectedTrack = selectPublicCaptionTrack(parsePublicCaptionTracksFromWatchHtml(watchHtml));
+
+  if (!selectedTrack) {
+    return {
+      status: "unavailable",
+      providerName: PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER.name,
+      reason: context.captionCapability === "unavailable"
+        ? "no_public_caption_tracks_with_caption_flag_unavailable"
+        : "no_public_caption_tracks",
+    };
+  }
+
+  let transcriptResponse: Response;
+
+  try {
+    transcriptResponse = await fetch(withTimedTextJsonFormat(selectedTrack.baseUrl));
+  } catch {
+    return {
+      status: "error",
+      providerName: PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER.name,
+      language: selectedTrack.languageCode,
+      trackKind: selectedTrack.trackKind,
+      reason: "timedtext_network_error",
+    };
+  }
+
+  if (!transcriptResponse.ok) {
+    return {
+      status: "error",
+      providerName: PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER.name,
+      language: selectedTrack.languageCode,
+      trackKind: selectedTrack.trackKind,
+      reason: "timedtext_provider_error",
+    };
+  }
+
+  const transcriptText = parseTimedTextTranscript(await transcriptResponse.text());
+
+  return {
+    status: transcriptText ? "available" : "unavailable",
+    providerName: PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER.name,
+    transcriptText,
+    language: selectedTrack.languageCode,
+    trackKind: selectedTrack.trackKind,
+    reason: transcriptText ? null : "empty_timedtext",
+  };
 }
 
 function classifyYoutubeVideo(video: YoutubeProviderVideo): YoutubeClassification {
@@ -1570,51 +1886,6 @@ function getYoutubeDescriptionParserVersion(): YoutubeDescriptionParserVersion {
   }
 
   return "v2";
-}
-
-function buildRecipioParityProviderVideo(
-  fixture: RecipioYoutubeParityFixture,
-): YoutubeProviderVideo {
-  return {
-    videoId: fixture.videoId,
-    title: fixture.sourceTitle,
-    channel: fixture.channel,
-    channelId: null,
-    thumbnailUrl: fixture.thumbnailUrl,
-    description: fixture.sourceDescription,
-    tags: ["recipe", "레시피"],
-    categoryId: "26",
-    duration: null,
-    captionFlag: null,
-  };
-}
-
-function parseRecipioParityFixtureForImport(
-  fixture: RecipioYoutubeParityFixture,
-): ParsedRecipeDescriptionForImport {
-  return {
-    recipe: {
-      ingredients: fixture.recipe.ingredients.map((ingredient) => ({
-        name: ingredient.name,
-        amount: ingredient.amount,
-        unit: ingredient.unit,
-        ingredientType: ingredient.ingredientType,
-        displayText: ingredient.displayText,
-        rawText: ingredient.displayText,
-        componentLabel: ingredient.componentLabel ?? null,
-        scalable: ingredient.scalable,
-        confidence: 1,
-      })),
-      steps: fixture.recipe.steps.map((item) => item.instruction),
-      stepComponentLabels: fixture.recipe.steps.map((item) => item.componentLabel ?? null),
-    },
-    parserVersion: "v2",
-    selectionOutcome: `recipio_parity_${fixture.kind}`,
-    draftWarnings: [],
-    blockingIssues: [],
-    includeIncompleteStepFallback: false,
-    stepDurationTexts: fixture.recipe.steps.map((item) => item.durationText),
-  };
 }
 
 function adaptFlatDraftIngredient(ingredient: FlatDraftIngredient): ParsedDescriptionIngredient {
@@ -2037,7 +2308,7 @@ function getCaptionCapability(
 }
 
 function shouldAttemptTranscriptFallback(parsedRecipe: ParsedRecipeDescription) {
-  return parsedRecipe.ingredients.length > 0 && parsedRecipe.steps.length === 0;
+  return parsedRecipe.ingredients.length === 0 || parsedRecipe.steps.length === 0;
 }
 
 function buildTranscriptFallbackMeta({
@@ -2048,6 +2319,7 @@ function buildTranscriptFallbackMeta({
   reason = null,
   language = null,
   trackKind = null,
+  usedIngredientCount = 0,
   stepCount = 0,
 }: {
   attempted: boolean;
@@ -2057,6 +2329,7 @@ function buildTranscriptFallbackMeta({
   reason?: string | null;
   language?: string | null;
   trackKind?: string | null;
+  usedIngredientCount?: number;
   stepCount?: number;
 }): TranscriptFallbackMeta {
   return {
@@ -2067,18 +2340,29 @@ function buildTranscriptFallbackMeta({
     reason,
     language,
     track_kind: trackKind,
+    used_ingredient_count: usedIngredientCount,
     step_count: stepCount,
   };
 }
 
-function parseTranscriptSteps(transcriptText: string) {
+function parseTranscriptRecipe(
+  video: YoutubeProviderVideo,
+  transcriptText: string,
+) {
   const normalized = transcriptText.trim();
 
   if (!normalized) {
-    return [];
+    return {
+      ingredients: [],
+      steps: [],
+      stepComponentLabels: [],
+    } satisfies ParsedRecipeDescription;
   }
 
-  return parseRecipeDescription(normalized).steps;
+  return parseRecipeDescriptionForImport({
+    ...video,
+    description: normalized,
+  }).recipe;
 }
 
 function buildRawSourceText(
@@ -2110,7 +2394,7 @@ async function resolveTranscriptFallback(
 
   if (!shouldAttemptTranscriptFallback(parsedRecipe)) {
     return {
-      steps: parsedRecipe.steps,
+      recipe: parsedRecipe,
       usedTranscript: false,
       rawTranscriptText: null,
       meta: buildTranscriptFallbackMeta({
@@ -2118,20 +2402,6 @@ async function resolveTranscriptFallback(
         capability,
         provider: null,
         status: "not_needed",
-      }),
-    };
-  }
-
-  if (capability === "unavailable") {
-    return {
-      steps: parsedRecipe.steps,
-      usedTranscript: false,
-      rawTranscriptText: null,
-      meta: buildTranscriptFallbackMeta({
-        attempted: false,
-        capability,
-        provider: null,
-        status: "capability_unavailable",
       }),
     };
   }
@@ -2149,7 +2419,7 @@ async function resolveTranscriptFallback(
     });
   } catch (error) {
     return {
-      steps: parsedRecipe.steps,
+      recipe: parsedRecipe,
       usedTranscript: false,
       rawTranscriptText: null,
       meta: buildTranscriptFallbackMeta({
@@ -2167,7 +2437,7 @@ async function resolveTranscriptFallback(
 
   if (providerResult.status !== "available" || !transcriptText) {
     return {
-      steps: parsedRecipe.steps,
+      recipe: parsedRecipe,
       usedTranscript: false,
       rawTranscriptText: null,
       meta: buildTranscriptFallbackMeta({
@@ -2182,11 +2452,13 @@ async function resolveTranscriptFallback(
     };
   }
 
-  const transcriptSteps = parseTranscriptSteps(transcriptText);
+  const transcriptRecipe = parseTranscriptRecipe(video, transcriptText);
+  const merged = mergeAuthorCommentRecipe(parsedRecipe, transcriptRecipe);
+  const contributionCount = merged.usedIngredientCount + merged.usedStepCount;
 
-  if (transcriptSteps.length === 0) {
+  if (contributionCount === 0) {
     return {
-      steps: parsedRecipe.steps,
+      recipe: parsedRecipe,
       usedTranscript: false,
       rawTranscriptText: null,
       meta: buildTranscriptFallbackMeta({
@@ -2194,7 +2466,7 @@ async function resolveTranscriptFallback(
         capability,
         provider: providerName,
         status: "no_steps",
-        reason: providerResult.reason ?? "no_parseable_steps",
+        reason: providerResult.reason ?? "no_parseable_recipe",
         language: providerResult.language ?? null,
         trackKind: providerResult.trackKind ?? null,
       }),
@@ -2202,7 +2474,7 @@ async function resolveTranscriptFallback(
   }
 
   return {
-    steps: transcriptSteps,
+    recipe: merged.recipe,
     usedTranscript: true,
     rawTranscriptText: transcriptText,
     meta: buildTranscriptFallbackMeta({
@@ -2213,7 +2485,8 @@ async function resolveTranscriptFallback(
       reason: providerResult.reason ?? null,
       language: providerResult.language ?? null,
       trackKind: providerResult.trackKind ?? null,
-      stepCount: transcriptSteps.length,
+      usedIngredientCount: merged.usedIngredientCount,
+      stepCount: merged.usedStepCount,
     }),
   };
 }
@@ -2234,17 +2507,7 @@ export async function handleYoutubeValidate(request: Request) {
     return buildInvalidUrlResponse();
   }
 
-  const parityFixture = getRecipioYoutubeParityFixture(parsedUrl.videoId);
-  const previewResult = parityFixture
-    ? {
-        video: {
-          videoId: parsedUrl.videoId,
-          title: parityFixture.sourceTitle,
-          channel: parityFixture.channel,
-          thumbnailUrl: parityFixture.thumbnailUrl,
-        },
-      } satisfies YoutubePreviewResult
-    : await fetchYoutubePreview(parsedUrl.videoId, parsedUrl.youtubeUrl);
+  const previewResult = await fetchYoutubePreview(parsedUrl.videoId, parsedUrl.youtubeUrl);
   if ("providerError" in previewResult) {
     await recordYoutubeProviderFailure(request, user.id, "validate", previewResult.providerError);
     return failForProviderError(previewResult.providerError);
@@ -2559,7 +2822,6 @@ export function buildExtractedIngredient({
   rawText,
   componentLabel = null,
   forceNeedsReview = false,
-  preferDirectMatch = false,
 }: {
   matchesByName: IngredientMatchesByName;
   name: string;
@@ -2573,7 +2835,6 @@ export function buildExtractedIngredient({
   rawText: string;
   componentLabel?: string | null;
   forceNeedsReview?: boolean;
-  preferDirectMatch?: boolean;
 }): YoutubeExtractedIngredient {
   const matches = sortIngredientMatches(
     Array.from(matchesByName.get(name)?.entries() ?? [])
@@ -2583,12 +2844,7 @@ export function buildExtractedIngredient({
         source: match.source,
       })),
   );
-  const directMatches = matches.filter((match) => match.source === "direct");
-  const resolvedMatch = preferDirectMatch && directMatches.length === 1
-    ? directMatches[0]
-    : matches.length === 1
-      ? matches[0]
-      : null;
+  const resolvedMatch = matches.length === 1 ? matches[0] : null;
   const hasMatch = matches.length > 0;
   const resolutionStatus: YoutubeIngredientResolutionStatus = forceNeedsReview && hasMatch
     ? "needs_review"
@@ -2629,10 +2885,8 @@ function buildExtractedIngredients(
   parsedIngredients: ParsedDescriptionIngredient[],
   {
     saltNeedsReview = false,
-    preferDirectMatches = false,
   }: {
     saltNeedsReview?: boolean;
-    preferDirectMatches?: boolean;
   } = {},
 ): YoutubeExtractedIngredient[] {
   return parsedIngredients.map((ingredient, index) =>
@@ -2649,7 +2903,6 @@ function buildExtractedIngredients(
       rawText: ingredient.rawText,
       componentLabel: ingredient.componentLabel,
       forceNeedsReview: saltNeedsReview && ingredient.name === "소금",
-      preferDirectMatch: preferDirectMatches,
     }),
   );
 }
@@ -2742,68 +2995,24 @@ export async function handleYoutubeExtract(request: Request) {
     return fail("EXTRACTION_FAILED", "레시피를 추출하지 못했어요.", 500);
   }
 
-  const parityFixture = getRecipioYoutubeParityFixture(parsedUrl.videoId);
-  const videoResult = parityFixture
-    ? { video: buildRecipioParityProviderVideo(parityFixture) } satisfies YoutubeProviderResult
-    : await fetchYoutubeVideo(parsedUrl.videoId);
+  const videoResult = await fetchYoutubeVideo(parsedUrl.videoId);
   if ("providerError" in videoResult) {
     await recordYoutubeProviderFailure(request, user.id, "extract", videoResult.providerError);
     return failForProviderError(videoResult.providerError);
   }
 
   const { video } = videoResult;
-  const classification = parityFixture
-    ? {
-        status: "recipe",
-        reasons: [`recipio parity fixture: ${parityFixture.kind}`],
-      } satisfies YoutubeClassification
-    : classifyYoutubeVideo(video);
+  const classification = classifyYoutubeVideo(video);
   if (classification.status === "non_recipe") {
     return fail("NOT_RECIPE_VIDEO", "이 영상은 요리 레시피가 아닌 것 같아요.", 422);
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as DbClient;
-  const descriptionParse = parityFixture
-    ? parseRecipioParityFixtureForImport(parityFixture)
-    : parseRecipeDescriptionForImport(video);
+  const descriptionParse = parseRecipeDescriptionForImport(video);
   const parsedRecipe = descriptionParse.recipe;
-  const authorCommentFallback = parityFixture
-    ? {
-        recipe: parsedRecipe,
-        usedAuthorComment: false,
-        rawAuthorCommentText: null,
-        meta: buildAuthorCommentFallbackMeta({
-          attempted: false,
-          provider: null,
-          status: "not_needed",
-          reason: "recipio_parity_fixture",
-        }),
-      } satisfies AuthorCommentFallbackResult
-    : await resolveAuthorCommentFallback(video, parsedRecipe, descriptionParse, parsedUrl);
-  const transcriptFallback = parityFixture
-    ? {
-        steps: authorCommentFallback.recipe.steps,
-        usedTranscript: false,
-        rawTranscriptText: null,
-        meta: {
-          attempted: false,
-          capability: "unknown",
-          provider: null,
-          status: "not_needed",
-          reason: "recipio_parity_fixture",
-          language: null,
-          track_kind: null,
-          step_count: authorCommentFallback.recipe.steps.length,
-        },
-      } satisfies TranscriptFallbackResult
-    : await resolveTranscriptFallback(video, authorCommentFallback.recipe, parsedUrl);
-  const finalParsedRecipe = {
-    ...authorCommentFallback.recipe,
-    steps: transcriptFallback.steps,
-    stepComponentLabels: transcriptFallback.usedTranscript
-      ? transcriptFallback.steps.map(() => null)
-      : authorCommentFallback.recipe.stepComponentLabels,
-  };
+  const authorCommentFallback = await resolveAuthorCommentFallback(video, parsedRecipe, descriptionParse, parsedUrl);
+  const transcriptFallback = await resolveTranscriptFallback(video, authorCommentFallback.recipe, parsedUrl);
+  const finalParsedRecipe = transcriptFallback.recipe;
   const ingredientLookup = await findIngredientIds(
     dbClient,
     finalParsedRecipe.ingredients.map((ingredient) => ingredient.name),
@@ -2819,7 +3028,6 @@ export async function handleYoutubeExtract(request: Request) {
 
   const ingredients = buildExtractedIngredients(ingredientLookup.matchesByName, finalParsedRecipe.ingredients, {
     saltNeedsReview: parsedUrl.videoId.startsWith("needsreview"),
-    preferDirectMatches: Boolean(parityFixture),
   });
   const steps = buildExtractedSteps(
     finalParsedRecipe.steps,
@@ -2838,21 +3046,19 @@ export async function handleYoutubeExtract(request: Request) {
     ...(descriptionContributed || (!authorCommentFallback.usedAuthorComment && !transcriptFallback.usedTranscript)
       ? [...DEFAULT_EXTRACTION_METHODS]
       : []),
-    ...(authorCommentFallback.usedAuthorComment ? ["author_comment"] : []),
-    ...(transcriptFallback.usedTranscript ? ["caption"] : []),
+    ...(authorCommentFallback.usedAuthorComment ? [COMMENT_EXTRACTION_METHOD] : []),
+    ...(transcriptFallback.usedTranscript ? [CAPTION_EXTRACTION_METHOD] : []),
   ];
-  const sourceProviders = parityFixture
-    ? ["recipio_live_parity_fixture"]
-    : [
-        "youtube_videos_list",
-        "description_parser",
-        ...(authorCommentFallback.usedAuthorComment
-          ? ["comment_threads_api", "author_comment_filter", "author_comment_parser"]
-          : []),
-        ...(transcriptFallback.usedTranscript
-          ? ["transcript_provider", "transcript_step_parser"]
-          : []),
-      ];
+  const sourceProviders = [
+    "youtube_videos_list",
+    "description_parser",
+    ...(authorCommentFallback.usedAuthorComment
+      ? ["youtube_comment_threads", "comment_filter", "comment_parser"]
+      : []),
+    ...(transcriptFallback.usedTranscript
+      ? ["public_caption_timedtext", "caption_parser"]
+      : []),
+  ];
   const remainingDescriptionBlockingIssues = descriptionParse.blockingIssues.filter((issue) => {
     if (issue === "ingredients" && finalParsedRecipe.ingredients.length > 0) {
       return false;
@@ -2880,8 +3086,8 @@ export async function handleYoutubeExtract(request: Request) {
   const extractionId = crypto.randomUUID();
   const data: YoutubeRecipeExtractData = {
     extraction_id: extractionId,
-    title: parityFixture?.recipe.title ?? video.title,
-    base_servings: parityFixture?.recipe.baseServings ?? 2,
+    title: video.title,
+    base_servings: 2,
     extraction_methods: extractionMethods,
     draft_warnings: draftWarnings,
     blocking_issues: blockingIssues,
@@ -2912,7 +3118,6 @@ export async function handleYoutubeExtract(request: Request) {
       source_providers: sourceProviders,
       classification_status: classification.status,
       classification_reasons: classification.reasons,
-      recipio_parity_kind: parityFixture?.kind ?? null,
       description_parser_version: descriptionParse.parserVersion,
       description_parser_selection_outcome: descriptionParse.selectionOutcome,
       description_parser_shadow: descriptionParse.shadowResult,

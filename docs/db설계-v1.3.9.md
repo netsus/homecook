@@ -309,13 +309,13 @@ CHECK (view_count>=0AND like_count>=0AND save_count>=0AND plan_count>=0AND cook_
 | channel_title | text | nullable | 채널명 (videos.list snippet.channelTitle) |
 | thumbnail_url | text | nullable | 썸네일 URL |
 | provider_version | text | nullable | YouTube provider / extractor version |
-| source_providers | text[] | NOT NULL, DEFAULT '{}' | 실제 사용한 source provider (`youtube_videos_list`, `description_parser` 등) |
+| source_providers | text[] | NOT NULL, DEFAULT '{}' | 실제 사용한 source provider (`youtube_videos_list`, `description_parser`, `youtube_comment_threads`, `public_caption_timedtext` 등) |
 | classification_status | varchar(20) | NOT NULL | `recipe` / `uncertain` / `non_recipe` |
 | classification_reasons | text[] | NOT NULL, DEFAULT '{}' | 판정 근거 배열 |
-| raw_source_text | text | nullable | 원본 설명란 텍스트 등 추출 source text |
+| raw_source_text | text | nullable | 원본 설명란, 사용된 공개 작성자 댓글, 사용된 공개 caption text 등 추출 source text |
 | extraction_meta_json | jsonb | NOT NULL, DEFAULT '{}' | provider_version, classification, warnings 등 |
 | draft_json | jsonb | NOT NULL, DEFAULT '{}' | 추출 결과 전체 draft (title, ingredients, steps 등). `ingredients[]` 각 항목은 `draft_ingredient_id` UUID를 포함 |
-| extraction_methods | text[] | NOT NULL, DEFAULT '{}' | `description` (MVP) |
+| extraction_methods | text[] | NOT NULL, DEFAULT '{}' | `description`, `comment`, `caption` |
 | status | varchar(20) | NOT NULL, DEFAULT 'draft' | `draft` / `consumed` / `expired` |
 | recipe_id | uuid | FK → recipes, nullable | consumed 시 등록된 레시피 ID |
 | expires_at | timestamptz | NOT NULL | created_at + 24h |

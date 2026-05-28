@@ -85,7 +85,6 @@ function createIngredientDb({
 function buildIngredient(
   name: string,
   matchesByName: Awaited<ReturnType<typeof findIngredientIds>>["matchesByName"],
-  { preferDirectMatch = false }: { preferDirectMatch?: boolean } = {},
 ) {
   return buildExtractedIngredient({
     matchesByName,
@@ -98,7 +97,6 @@ function buildIngredient(
     scalable: true,
     confidence: 0.93,
     rawText: `${name} 1T`,
-    preferDirectMatch,
   });
 }
 
@@ -188,35 +186,6 @@ describe("21 ingredient dictionary backend", () => {
         { ingredient_id: largeGreenOnionId, standard_name: "대파", confidence: 0.93 },
         { ingredient_id: chiveId, standard_name: "쪽파", confidence: 0.93 },
       ],
-    });
-  });
-
-  it("can prefer an exact standard-name match for Recipio parity imports", async () => {
-    const eggId = "00000000-0000-4000-8000-000000000017";
-    const legacyEggId = "00000000-0000-4000-8000-000000000018";
-    const { dbClient } = createIngredientDb({
-      ingredients: [{ id: eggId, standard_name: "계란" }],
-      synonyms: [
-        { synonym: "계란", ingredients: { id: legacyEggId, standard_name: "달걀" } },
-      ],
-    });
-
-    const lookup = await findIngredientIds(dbClient, ["계란"]);
-    const regularIngredient = buildIngredient("계란", lookup.matchesByName);
-    const parityIngredient = buildIngredient("계란", lookup.matchesByName, {
-      preferDirectMatch: true,
-    });
-
-    expect(regularIngredient).toMatchObject({
-      ingredient_id: "",
-      standard_name: "계란",
-      resolution_status: "needs_review",
-    });
-    expect(parityIngredient).toMatchObject({
-      ingredient_id: eggId,
-      standard_name: "계란",
-      resolution_status: "resolved",
-      candidates: undefined,
     });
   });
 
