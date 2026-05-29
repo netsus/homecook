@@ -154,6 +154,17 @@ async function stabilizeVisualSnapshot(page: Page) {
   });
 }
 
+async function stabilizeFixedHeaderForScrolledFullPageSnapshot(page: Page) {
+  await page.addStyleTag({
+    content: `
+      .web-topnav {
+        position: absolute !important;
+        top: 0 !important;
+      }
+    `,
+  });
+}
+
 test.describe("QA visual regression", () => {
   test("home default shell matches the visual baseline @visual-core", async ({ page }) => {
     await installDiscoveryRoutes(page);
@@ -180,6 +191,7 @@ test.describe("QA visual regression", () => {
     await expect(visibleOption(page, "플래너 등록순")).toBeVisible();
 
     await stabilizeVisualSnapshot(page);
+    await stabilizeFixedHeaderForScrolledFullPageSnapshot(page);
     await expect(page).toHaveScreenshot("qa-home-sort-open.png", {
       animations: "disabled",
       fullPage: true,
