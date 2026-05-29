@@ -262,6 +262,7 @@ const AUTHOR_COMMENT_MAX_RESULTS = 100;
 const AUTHOR_COMMENT_ORDER = "relevance";
 const AUTHOR_COMMENT_QUOTA_UNITS_ESTIMATE = 1;
 const OEMBED_PREVIEW_CLASSIFICATION_REASONS = [YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON];
+const AMBIGUOUS_DIRECT_MATCH_NAMES = new Set(["파"]);
 const NEW_COOKING_METHOD = {
   code: "auto_salt",
   label: "절이기",
@@ -2508,12 +2509,28 @@ export async function handleYoutubeValidate(request: Request) {
   }
 
   const previewResult = await fetchYoutubePreview(parsedUrl.videoId, parsedUrl.youtubeUrl);
-  if ("providerError" in previewResult) {
-    await recordYoutubeProviderFailure(request, user.id, "validate", previewResult.providerError);
-    return failForProviderError(previewResult.providerError);
+  let preview = previewResult;
+  if ("providerError" in preview && preview.providerError.code === "PROVIDER_ERROR") {
+    const fallbackResult = await fetchYoutubeVideo(parsedUrl.videoId);
+
+    if ("video" in fallbackResult) {
+      preview = {
+        video: {
+          videoId: fallbackResult.video.videoId,
+          title: fallbackResult.video.title,
+          channel: fallbackResult.video.channel,
+          thumbnailUrl: fallbackResult.video.thumbnailUrl,
+        },
+      };
+    }
   }
 
-  const { video } = previewResult;
+  if ("providerError" in preview) {
+    await recordYoutubeProviderFailure(request, user.id, "validate", preview.providerError);
+    return failForProviderError(preview.providerError);
+  }
+
+  const { video } = preview;
   const data: YoutubeRecipeValidateData = {
     is_valid_url: true,
     is_recipe_video: true,
@@ -2809,6 +2826,10 @@ function sortIngredientMatches(
   });
 }
 
+function shouldPreferExactDirectIngredientMatch(name: string) {
+  return !AMBIGUOUS_DIRECT_MATCH_NAMES.has(name.trim());
+}
+
 export function buildExtractedIngredient({
   matchesByName,
   name,
@@ -2844,7 +2865,12 @@ export function buildExtractedIngredient({
         source: match.source,
       })),
   );
-  const resolvedMatch = matches.length === 1 ? matches[0] : null;
+  const directMatches = matches.filter((match) => match.source === "direct");
+  const resolvedMatch = shouldPreferExactDirectIngredientMatch(name) && directMatches.length === 1
+    ? directMatches[0]
+    : matches.length === 1
+      ? matches[0]
+      : null;
   const hasMatch = matches.length > 0;
   const resolutionStatus: YoutubeIngredientResolutionStatus = forceNeedsReview && hasMatch
     ? "needs_review"
@@ -3352,9 +3378,6 @@ function parseYoutubeRegisterBody(rawBody: unknown) {
       fields.push({ field: `ingredients[${index}].ingredient_id`, reason: "unresolved" });
     }
 
-    if (ingredientIds.has(ingredient.ingredient_id)) {
-      fields.push({ field: `ingredients[${index}].ingredient_id`, reason: "duplicate" });
-    }
     ingredientIds.add(ingredient.ingredient_id);
 
     if (Number.isInteger(ingredient.sort_order)) {

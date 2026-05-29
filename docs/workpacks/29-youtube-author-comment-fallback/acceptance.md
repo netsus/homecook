@@ -132,6 +132,7 @@
 - `youtube-author-comment-live-smoke` — 3 sampled URLs, official YouTube comments API path available, author recipe-signal comments found in 3/3 (`live-smoke-author-comment-stage2-2026-05-29.md`)
 - `pnpm exec playwright test tests/e2e/slice-29-youtube-author-comment-fallback.spec.ts --project=mobile-chrome` — 4 passed
 - `youtube-author-comment-live-smoke` closeout — 30 URL provider probe, `videos.list` 30/30, `commentThreads.list` 29/30, author top-level comments 19/30, author recipe-signal comments 13/30 (`live-smoke-author-comment-closeout-2026-05-29.md`)
+- `pnpm smoke:youtube-real-app-route -- --limit 30` — real Supabase Auth session + actual app routes + real YouTube providers. `validate` 30/30, `extract` 30/30, review 30/30, `author_comment` used 4/30, register succeeded 13/13 attempted, generated recipes 13 + sessions 30 cleaned up with remaining rows 0 (`real-app-route-smoke-2026-05-29.md`)
 - Claude Stage 2 backend review — `APPROVE`, `NO_FURTHER_REASONABLE_IMPROVEMENTS`
 
 Stage 2 precondition notes:

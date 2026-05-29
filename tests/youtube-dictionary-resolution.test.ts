@@ -44,6 +44,8 @@ const slice27GoalMultiRecipeMigrationPath =
   "supabase/migrations/20260526205500_27_youtube_live_goal_multi_recipe_seed.sql";
 const supplementalYoutubeDictionaryMigrationPath =
   "supabase/migrations/20260528042000_29_recipio_youtube_parity_dictionary_seed.sql";
+const authorCommentAppRouteMigrationPath =
+  "supabase/migrations/20260529043000_29_author_comment_app_route_dictionary_seed.sql";
 const dictionaryReportPath = join(
   process.cwd(),
   "tests/fixtures/youtube-corpus/reports/dictionary-resolution-v1.json",
@@ -411,6 +413,73 @@ describe("YouTube dictionary resolution scoring", () => {
       "따뜻한 우유",
     ]));
     expect(synonymTuples).not.toEqual(expect.arrayContaining([["계란", "달걀"]]));
+  });
+
+  it("keeps the author-comment app-route seed DML-only and covers blocked smoke ingredients", async () => {
+    const migration = readFileSync(authorCommentAppRouteMigrationPath, "utf8");
+    const synonymTuples = extractTuples(
+      extractValueBody(migration, "insert into public.ingredient_synonyms"),
+    );
+    const seed = parseIngredientSeeds([
+      ...slice21MigrationPaths,
+      slice26MigrationPath,
+      slice27MigrationPath,
+      slice27GoalMigrationPath,
+      slice27GoalEggMigrationPath,
+      slice27GoalMultiRecipeMigrationPath,
+      supplementalYoutubeDictionaryMigrationPath,
+      authorCommentAppRouteMigrationPath,
+    ]);
+    const report = await scoreYoutubeDictionaryResolutionFixtures(
+      [
+        {
+          id: "author-comment-app-route-smoke-2026-05-29",
+          category: "structured",
+          source: "real-description",
+          description: "실제 author_comment app-route smoke에서 DB 사전으로 막힌 재료",
+          expected_ingredients: [
+            { name: "통삼겹", amount: 250, unit: "g", type: "QUANT" },
+            { name: "타피오카전분", amount: 150, unit: "g", type: "QUANT" },
+          ],
+          expected_steps: [],
+          metadata: { video_category: "recipe", has_component_structure: false, multi_recipe: false },
+        },
+      ],
+      {
+        dictionaryVersion: "author-comment-app-route-seed",
+        corpusVersion: "author-comment-app-route",
+        runId: "author-comment-app-route-dictionary-regression",
+        timestamp: "2026-05-29T00:00:00.000Z",
+        dbClient: createDictionaryDb({
+          ingredients: seed.ingredientRows,
+          synonyms: seed.synonymRows,
+        }),
+      },
+    );
+
+    expect(migration).toContain("insert into public.ingredient_synonyms");
+    expect(migration).toContain("on conflict (ingredient_id, synonym) do nothing");
+    expect(migration).toContain("lower(trim(v.synonym))");
+    expect(migration).not.toMatch(/\bcreate\s+(table|index|policy|function|type)\b/i);
+    expect(migration).not.toMatch(/on conflict \(standard_name\) do update/i);
+    expect(synonymTuples).toEqual(expect.arrayContaining([
+      ["삼겹살", "통삼겹"],
+      ["전분가루", "타피오카전분"],
+    ]));
+    expect(report.aggregate.unresolved_count).toBe(0);
+    expect(report.aggregate.needs_review_count).toBe(0);
+    expect(report.per_fixture[0].ingredients).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: "통삼겹",
+        resolution_status: "resolved",
+        standard_names: ["삼겹살"],
+      }),
+      expect.objectContaining({
+        name: "타피오카전분",
+        resolution_status: "resolved",
+        standard_names: ["전분가루"],
+      }),
+    ]));
   });
 
   it("resolves true ingredient names found during the goal-mode 30 URL live smoke", async () => {

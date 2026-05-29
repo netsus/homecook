@@ -178,6 +178,7 @@ const KNOWN_UNITS = [
   "팩",
   "줄",
   "술",
+  "수저",
   "통",
   "포기",
   "송이",
@@ -652,7 +653,7 @@ function hasSentenceEnding(text: string) {
 }
 
 function hasAmountSignal(text: string) {
-  return AMOUNT_SIGNAL_RE.test(text) || /(?:약간|조금|적당량|소량|취향껏|취향에\s*따라|한\s*꼬집|한\s*줌|한\s*움큼|\s+(?:톡)+)$/u.test(text);
+  return AMOUNT_SIGNAL_RE.test(text) || /(?:약간|조금|적당히|적당량|소량|취향껏|취향에\s*따라|한\s*꼬집|한\s*줌|한\s*움큼|\s+(?:톡)+)$/u.test(text);
 }
 
 function parseRecipeAmount(value: string) {
@@ -715,6 +716,7 @@ function normalizeIngredientName(value: string) {
     .replace(/^냉동\s*/u, "")
     .replace(/^가루\s+/u, "")
     .replace(/^(?:데친|손질한|볶아둔|익힌|채썬|채\s*썬)\s+/u, "")
+    .replace(/^.+에\s+(물)$/u, "$1")
     .replace(/^다진\s+(?!마늘$)/u, "")
     .replace(/^청[.\s·/]*홍\s*고추$/u, "홍고추")
     .replace(/^게란(?:\s+.*)?$/u, "계란")
@@ -727,6 +729,7 @@ function normalizeIngredientCandidateText(value: string) {
   const stripped = stripDecorativeMarks(value)
     .replace(/\s*\([^)]*\)\s*$/u, "")
     .replace(/\s*\([^)]*$/u, "")
+    .replace(/\)+\s*$/u, "")
     .trim();
   const altAfterAmountRe = new RegExp(
     `^(.+?${AMOUNT_RANGE_PATTERN}\\s*(?:${UNIT_PATTERN})(?:씩)?)(?:\\s*(?:or|또는|혹은)\\s+.+)$`,
@@ -840,7 +843,9 @@ function parseIngredientLine(
   if (parentheticalAmountMatch && !hasAmountSignal(parentheticalAmountMatch[1])) {
     const amount = parseRecipeAmount(parentheticalAmountMatch[2]);
     const unit = parentheticalAmountMatch[3].trim();
-    const name = normalizeIngredientName(parentheticalAmountMatch[1]);
+    const name = normalizeIngredientName(parentheticalAmountMatch[1])
+      .replace(/\s+(?:반)$/u, "")
+      .trim();
 
     if (
       name
@@ -865,7 +870,7 @@ function parseIngredientLine(
     }
   }
 
-  const koreanAmountMatch = parseText.match(/^(.+?)\s*(한|두|세|네|반)\s*(꼬집|줌|컵|개|큰술|작은술)$/u);
+  const koreanAmountMatch = parseText.match(/^(.+?)\s*(한|두|세|네|반)\s*(꼬집|줌|컵|개|큰술|작은술|수저)$/u);
   if (koreanAmountMatch) {
     const name = normalizeIngredientName(koreanAmountMatch[1]);
     const amount = KOREAN_NUMBER_WORDS[koreanAmountMatch[2]];
@@ -890,7 +895,7 @@ function parseIngredientLine(
     };
   }
 
-  const toTasteMatch = parseText.match(/^(.+?)\s*(?:약간|조금|적당량|소량|취향껏|취향에\s*따라|원하는\s*만큼|한\s*꼬집|한\s*줌|한\s*움큼)$/u);
+  const toTasteMatch = parseText.match(/^(.+?)\s*(?:약간|조금|적당히|적당량|소량|취향껏|취향에\s*따라|원하는\s*만큼|한\s*꼬집|한\s*줌|한\s*움큼)$/u);
   if (toTasteMatch) {
     const name = normalizeIngredientName(toTasteMatch[1]);
 
