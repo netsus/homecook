@@ -266,12 +266,18 @@ describe("YouTube live description parser regressions", () => {
       "간장",
       "굴소스",
       "후추",
+      "항정살",
     ]);
     expect(draft.ingredients.find((ingredient) => ingredient.name === "물"))
       .toMatchObject({
         amount: 400,
         unit: "ml",
         displayText: "물 400ml",
+      });
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "항정살"))
+      .toMatchObject({
+        ingredientType: "TO_TASTE",
+        flags: expect.arrayContaining(["inferred_from_step"]),
       });
     expect(draft.blockingIssues).toEqual([]);
   });
@@ -292,6 +298,63 @@ describe("YouTube live description parser regressions", () => {
         amount: 0.5,
         unit: "스푼",
         displayText: "굴소스 0.5스푼",
+      });
+  });
+
+  it("supplements sparse ingredient lists from concrete step ingredient mentions", () => {
+    const draft = parseDraft([
+      "[일본식 제육덮밥]",
+      "※ 소스",
+      "간장(50cc), 청주(50cc), 맛술(100cc), 다진 마늘(0.5큰술), 다진 생강(0.5큰술)",
+      "",
+      "1. 냄비에 간장, 청주, 맛술을 1:1:2의 비율로 넣고, 다진 마늘과 다진 생강을 넣어 끓여준다.",
+      "2. 프라이팬에 대패 삼겹살, 양파, 파 같은 채소를 넣고 볶아주다 후추를 뿌려준다.",
+      "3. 고기가 익으면 만들어둔 소스를 4~6큰술 넣어 양념한다.",
+      "4. 밥 위에 고기 올리고, 노른자로 마무리하면 끝!!!",
+    ].join("\n"));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toEqual([
+      "간장",
+      "청주",
+      "맛술",
+      "다진 마늘",
+      "생강",
+      "대패 삼겹살",
+      "양파",
+      "파",
+      "후추",
+      "밥",
+      "노른자",
+    ]);
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "대패 삼겹살"))
+      .toMatchObject({
+        ingredientType: "TO_TASTE",
+        flags: expect.arrayContaining(["inferred_from_step"]),
+      });
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).not.toContain("고기");
+  });
+
+  it("adds missing oil and topping ingredients from simple step verbs without duplicating measured ingredients", () => {
+    const draft = parseDraft([
+      "※ 재료",
+      "감자(큰 거 2개), 다진마늘, 생크림(250ml), 소금, 케첩or토마토 소스, 모차렐라 피자치즈, 파마산 치즈",
+      "",
+      "1. 전자레인지용 용기에 감자를 적당하게 잘라 넣는다.",
+      "2. 소금 한 꼬집, 다진 마늘 한 큰술을 넣고 올리브 오일을 둘러 준다.",
+      "3. 전자레인지에 돌려 감자를 충분히 익혀준다.",
+      "4. 큰 냄비에 생크림 250ml를 넣고 끓여준다.",
+      "5. 다 익은 감자를 으깨주고, 그 위에 졸인 생크림과 케첩을 발라준다.",
+      "6. 모차렐라 치즈와 파마산 치즈까지 뿌려준 뒤 전자레인지에 돌려 치즈를 녹여준다.",
+    ].join("\n"));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toEqual(
+      expect.arrayContaining(["감자", "생크림", "올리브 오일", "모차렐라 피자치즈", "파마산 치즈"]),
+    );
+    expect(draft.ingredients.filter((ingredient) => ingredient.name === "생크림")).toHaveLength(1);
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "올리브 오일"))
+      .toMatchObject({
+        ingredientType: "TO_TASTE",
+        flags: expect.arrayContaining(["inferred_from_step"]),
       });
   });
 });
