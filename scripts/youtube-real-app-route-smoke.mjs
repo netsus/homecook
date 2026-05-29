@@ -6,6 +6,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 import { chromium } from "@playwright/test";
 import { createServerClient } from "@supabase/ssr";
@@ -939,9 +940,9 @@ async function countRemainingRows(adminClient, tableName, ids) {
   return result.count ?? 0;
 }
 
-function summarize(results) {
+export function summarize(results) {
   return {
-    authorCommentUsed: results.filter((result) => result.methods.includes("author_comment")).length,
+    authorCommentUsed: results.filter((result) => result.methods.some(isAuthorCommentMethod)).length,
     cleanedRecipes: results.filter((result) => result.cleanup.recipeDeleted).length,
     cleanedSessions: results.filter((result) => result.cleanup.sessionDeleted).length,
     extractOk: results.filter((result) => result.extract?.ok && result.extract?.body?.success !== false).length,
@@ -951,6 +952,10 @@ function summarize(results) {
     total: results.length,
     validateOk: results.filter((result) => result.validate?.ok && result.validate?.body?.success !== false).length,
   };
+}
+
+function isAuthorCommentMethod(method) {
+  return method === "comment" || method === "author_comment";
 }
 
 function hashValue(value) {
@@ -1186,7 +1191,13 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
-});
+const isDirectRun = process.argv[1]
+  ? import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+  : false;
+
+if (isDirectRun) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
+}
