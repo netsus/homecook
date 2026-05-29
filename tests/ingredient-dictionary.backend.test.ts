@@ -249,4 +249,43 @@ describe("21 ingredient dictionary backend", () => {
     expect(migration).toMatch(/'간장',\s*'양념'/);
     expect(migration).toMatch(/'soy sauce'/);
   });
+
+  it("promotes only missing approved external seed ingredients without overwriting existing rows", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20260530001000_28_external_ingredient_seed_promotion.sql",
+      "utf8",
+    );
+
+    expect(migration).toContain("on conflict (standard_name) do nothing");
+    expect(migration).not.toMatch(/on conflict \(standard_name\) do update/i);
+
+    for (const [name, category] of [
+      ["귀리", "곡류"],
+      ["기장", "곡류"],
+      ["강낭콩", "곡류"],
+      ["녹두", "곡류"],
+      ["도토리", "곡류"],
+      ["도토리묵", "곡류"],
+      ["가지", "채소"],
+      ["다랑어", "해산물"],
+      ["고등어", "해산물"],
+      ["고추기름", "양념"],
+      ["땅콩 버터", "양념"],
+      ["겨자", "양념"],
+    ]) {
+      expect(migration).toMatch(new RegExp(`'${name}',\\s*'${category}'`));
+    }
+
+    for (const existingOrHeldName of [
+      "감자",
+      "달걀",
+      "햄",
+      "김",
+      "들기름",
+      "간장",
+      "다시마 육수",
+    ]) {
+      expect(migration).not.toContain(`'${existingOrHeldName}'`);
+    }
+  });
 });
