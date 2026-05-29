@@ -22,6 +22,7 @@ YouTube에서 가져온 레시피와 사용자가 직접 등록한 레시피에 
 - 상태 전이:
   - YouTube session: 기존 `draft -> consumed / expired` 유지
   - 이미지 업로드: 레시피 저장 전 임시 참조. 저장 전 제거/교체된 미사용 객체는 cleanup 대상
+  - 미사용 업로드 cleanup 경로: Stage 4 프론트는 업로드 API 응답의 `storage_path`를 보관하고, 저장 전 사용자가 이미지를 제거/교체하면 같은 사용자 Storage 객체 삭제를 시도한다. 삭제 실패 또는 저장 중단으로 남은 orphan object는 Stage 6 real DB smoke cleanup에서 제거하며, 반복 발생 시 후속 ops cleanup 자동화로 분리한다.
 - DB 영향:
   - `recipes.thumbnail_url` — 기존 nullable 컬럼 사용
   - `recipes.tags` — 기존 text[] 컬럼 사용, 최대 6개
@@ -166,16 +167,16 @@ YouTube에서 가져온 레시피와 사용자가 직접 등록한 레시피에 
 > Stage 6 merge 시점에는 In Scope인데도 남아 있는 unchecked 항목이 없어야 하며, `N/A` 또는 후속 분리는 README/PR 본문에 근거를 남긴다.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
 
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] 이미지 업로드 API / Storage policy 구현 <!-- omo:id=delivery-image-upload-api;stage=2;scope=backend;review=3,6 -->
-- [ ] 공유 tag generator 구현 <!-- omo:id=delivery-tag-generator;stage=2;scope=shared;review=3,6 -->
-- [ ] YouTube extract/register thumbnail/tags 연결 <!-- omo:id=delivery-youtube-media-tags;stage=2;scope=backend;review=3,6 -->
-- [ ] manual create thumbnail/tags 연결 <!-- omo:id=delivery-manual-media-tags;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] 이미지 업로드 API / Storage policy 구현 <!-- omo:id=delivery-image-upload-api;stage=2;scope=backend;review=3,6 -->
+- [x] 공유 tag generator 구현 <!-- omo:id=delivery-tag-generator;stage=2;scope=shared;review=3,6 -->
+- [x] YouTube extract/register thumbnail/tags 연결 <!-- omo:id=delivery-youtube-media-tags;stage=2;scope=backend;review=3,6 -->
+- [x] manual create thumbnail/tags 연결 <!-- omo:id=delivery-manual-media-tags;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] Storage bucket / policy 준비 여부 점검 <!-- omo:id=delivery-storage-readiness;stage=2;scope=backend;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] Storage bucket / policy 준비 여부 점검 <!-- omo:id=delivery-storage-readiness;stage=2;scope=backend;review=3,6 -->
 - [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->

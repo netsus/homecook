@@ -18,6 +18,8 @@ function buildExtractData(
     extraction_id: "550e8400-e29b-41d4-a716-446655441201",
     title: "백종원 불어묵 꼬마김밥",
     base_servings: 1,
+    thumbnail_url: "https://i.ytimg.com/vi/X9CqUvteeMo/hqdefault.jpg",
+    tags: ["꼬마김밥"],
     extraction_methods: ["description"],
     draft_warnings: [],
     blocking_issues: [],

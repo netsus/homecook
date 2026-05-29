@@ -17,6 +17,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import { generateRecipeTags, parseRecipeImagePublicUrl } from "@/lib/server/recipe-media";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type {
   ManualRecipeCreateBody,
@@ -50,6 +51,7 @@ type MaybeSingleResult<T> = PromiseLike<{
 
 interface IdLookupRow {
   id: string;
+  label?: string | null;
 }
 
 interface ManualRecipeRow {
@@ -66,7 +68,7 @@ interface IdLookupQuery {
 }
 
 interface IdLookupTable {
-  select(columns: "id"): IdLookupQuery;
+  select(columns: string): IdLookupQuery;
 }
 
 interface ManualRecipeInsertQuery {
@@ -80,6 +82,8 @@ interface RecipesInsertTable {
     base_servings: number;
     source_type: "manual";
     created_by: string;
+    thumbnail_url: string | null;
+    tags: string[];
   }): ManualRecipeInsertQuery;
 }
 
@@ -137,6 +141,7 @@ interface ParsedManualRecipeCreate {
   baseServings: number;
   ingredients: ManualRecipeIngredientInput[];
   steps: ManualRecipeStepInput[];
+  thumbnailUrl: string | null;
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -315,6 +320,10 @@ function parseManualRecipeCreateBody(rawBody: unknown) {
     };
   }
 
+  if (rawBody.tags !== undefined) {
+    fields.push({ field: "tags", reason: "not_allowed" });
+  }
+
   const title = typeof rawBody.title === "string" ? rawBody.title.trim() : "";
   if (!title) {
     fields.push({ field: "title", reason: "required" });
@@ -325,6 +334,15 @@ function parseManualRecipeCreateBody(rawBody: unknown) {
   const baseServings = rawBody.base_servings;
   if (!isPositiveInteger(baseServings)) {
     fields.push({ field: "base_servings", reason: "positive_integer_required" });
+  }
+
+  let thumbnailUrl: string | null = null;
+  if (rawBody.thumbnail_url !== undefined && rawBody.thumbnail_url !== null) {
+    if (typeof rawBody.thumbnail_url === "string") {
+      thumbnailUrl = rawBody.thumbnail_url.trim() || null;
+    } else {
+      fields.push({ field: "thumbnail_url", reason: "invalid_reference" });
+    }
   }
 
   const ingredientRecords = Array.isArray(rawBody.ingredients) ? rawBody.ingredients : [];
@@ -391,6 +409,7 @@ function parseManualRecipeCreateBody(rawBody: unknown) {
           baseServings: baseServings as number,
           ingredients,
           steps,
+          thumbnailUrl,
         } satisfies ParsedManualRecipeCreate)
       : null;
 
@@ -572,18 +591,20 @@ async function findMissingIds(
   dbClient: ManualRecipeDbClient,
   table: "ingredients" | "cooking_methods",
   ids: string[],
+  selectColumns = "id",
 ) {
   const tableClient = table === "ingredients"
     ? dbClient.from("ingredients")
     : dbClient.from("cooking_methods");
   const result = await tableClient
-    .select("id")
+    .select(selectColumns)
     .in("id", ids);
 
   if (result.error || !result.data) {
     return {
       error: result.error ?? { message: "lookup failed" },
       missingIds: [],
+      rows: [],
     };
   }
 
@@ -592,6 +613,7 @@ async function findMissingIds(
   return {
     error: null,
     missingIds: ids.filter((id) => !existingIds.has(id)),
+    rows: result.data,
   };
 }
 
@@ -648,6 +670,20 @@ export async function POST(request: Request) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, fields);
   }
 
+  if (parsed.thumbnailUrl) {
+    const imageReference = parseRecipeImagePublicUrl({
+      thumbnailUrl: parsed.thumbnailUrl,
+      userId: user.id,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    });
+
+    if (!imageReference) {
+      return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, [
+        { field: "thumbnail_url", reason: "invalid_reference" },
+      ]);
+    }
+  }
+
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as ManualRecipeDbClient & UserBootstrapDbClient;
 
   try {
@@ -677,7 +713,7 @@ export async function POST(request: Request) {
   }
 
   const cookingMethodIds = [...new Set(parsed.steps.map((step) => step.cooking_method_id))];
-  const cookingMethodLookup = await findMissingIds(dbClient, "cooking_methods", cookingMethodIds);
+  const cookingMethodLookup = await findMissingIds(dbClient, "cooking_methods", cookingMethodIds, "id, label");
   if (cookingMethodLookup.error) {
     return fail("INTERNAL_ERROR", "조리방법을 확인하지 못했어요.", 500);
   }
@@ -691,6 +727,15 @@ export async function POST(request: Request) {
     );
   }
 
+  const tags = generateRecipeTags({
+    title: parsed.title,
+    ingredientNames: parsed.ingredients.map((ingredient) => ingredient.standard_name),
+    stepTexts: parsed.steps.map((step) => step.instruction),
+    cookingMethodLabels: cookingMethodLookup.rows
+      .map((row) => row.label)
+      .filter((label): label is string => typeof label === "string"),
+  });
+
   const recipeResult = await dbClient
     .from("recipes")
     .insert({
@@ -698,6 +743,8 @@ export async function POST(request: Request) {
       base_servings: parsed.baseServings,
       source_type: "manual",
       created_by: user.id,
+      thumbnail_url: parsed.thumbnailUrl,
+      tags,
     })
     .select("id, title, source_type, created_by, base_servings")
     .maybeSingle();

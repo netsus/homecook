@@ -162,6 +162,7 @@ async function importCookingMethodsRoute() {
 
 describe("18 manual recipe create backend", () => {
   beforeEach(() => {
+    vi.unstubAllEnvs();
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
@@ -512,7 +513,72 @@ describe("18 manual recipe create backend", () => {
     });
   });
 
+  it("POST /api/v1/recipes rejects client-supplied tags before database writes", async () => {
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn(),
+    });
+
+    const { POST } = await importRecipesRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ...buildValidBody(),
+        tags: ["클라이언트태그"],
+      }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "VALIDATION_ERROR",
+        fields: [{ field: "tags", reason: "not_allowed" }],
+      },
+    });
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/recipes rejects arbitrary external thumbnail URLs before database writes", async () => {
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn(),
+    });
+
+    const { POST } = await importRecipesRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ...buildValidBody(),
+        thumbnail_url: "https://example.com/not-from-storage.webp",
+      }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "VALIDATION_ERROR",
+        fields: [{ field: "thumbnail_url", reason: "invalid_reference" }],
+      },
+    });
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+  });
+
   it("POST /api/v1/recipes creates a manual recipe without recipe_book_items membership", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    const thumbnailUrl =
+      "https://project.supabase.co/storage/v1/object/public/recipe-images/user-1/550e8400-e29b-41d4-a716-446655440401.webp";
     const ingredientsTable = createLookupTable({
       data: [{ id: ingredientId }, { id: toTasteIngredientId }],
       error: null,
@@ -559,7 +625,10 @@ describe("18 manual recipe create backend", () => {
     const response = await POST(new Request("http://localhost:3000/api/v1/recipes", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(buildValidBody()),
+      body: JSON.stringify({
+        ...buildValidBody(),
+        thumbnail_url: thumbnailUrl,
+      }),
     }));
     const body = await response.json();
 
@@ -577,12 +646,14 @@ describe("18 manual recipe create backend", () => {
     });
     expect(ensurePublicUserRow).toHaveBeenCalled();
     expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), "user-1");
-    expect(recipesTable.insert).toHaveBeenCalledWith({
+    expect(recipesTable.insert).toHaveBeenCalledWith(expect.objectContaining({
       title: "직접 김치찌개",
       base_servings: 2,
       source_type: "manual",
       created_by: "user-1",
-    });
+      thumbnail_url: thumbnailUrl,
+      tags: expect.arrayContaining(["직접 김치찌개", "김치", "소금"]),
+    }));
     expect(recipeIngredientsTable.insert).toHaveBeenCalledWith([
       {
         recipe_id: recipeId,

@@ -16,6 +16,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import { generateRecipeTags } from "@/lib/server/recipe-media";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import {
   buildTextSegments,
@@ -3140,6 +3141,28 @@ function buildExtractedSteps(
   }));
 }
 
+function generateYoutubeExtractTags({
+  title,
+  ingredients,
+  steps,
+  providerTags,
+}: {
+  title: string;
+  ingredients: YoutubeRecipeExtractData["ingredients"];
+  steps: YoutubeRecipeExtractData["steps"];
+  providerTags?: string[];
+}) {
+  return generateRecipeTags({
+    title,
+    ingredientNames: ingredients.map((ingredient) => ingredient.standard_name),
+    stepTexts: steps.map((step) => step.instruction),
+    cookingMethodLabels: steps
+      .map((step) => step.cooking_method?.label)
+      .filter((label): label is string => typeof label === "string"),
+    providerTags,
+  });
+}
+
 function candidateSourceToExtractionMethod(source: YoutubePublicTextSource) {
   if (source === "comment") return COMMENT_EXTRACTION_METHOD;
   if (source === "caption" || source === "transcript") return CAPTION_EXTRACTION_METHOD;
@@ -3454,10 +3477,18 @@ export async function handleYoutubeExtract(request: Request) {
         : []),
       "영상 안에서 여러 요리 후보를 찾았어요. 저장할 요리를 먼저 선택해주세요.",
     ];
+    const tags = generateYoutubeExtractTags({
+      title: video.title,
+      ingredients: candidateBuild.candidates.flatMap((candidate) => candidate.ingredients),
+      steps: candidateBuild.candidates.flatMap((candidate) => candidate.steps),
+      providerTags: video.tags,
+    });
     const data: YoutubeRecipeExtractData = {
       extraction_id: extractionId,
       title: video.title,
       base_servings: 1,
+      thumbnail_url: video.thumbnailUrl,
+      tags,
       extraction_methods: extractionMethods,
       draft_warnings: draftWarnings,
       blocking_issues: [MULTI_CANDIDATE_REVIEW_REQUIRED],
@@ -3553,6 +3584,12 @@ export async function handleYoutubeExtract(request: Request) {
     ...step,
     duration_text: descriptionParse.stepDurationTexts?.[index] ?? step.duration_text,
   }));
+  const tags = generateYoutubeExtractTags({
+    title: video.title,
+    ingredients,
+    steps,
+    providerTags: video.tags,
+  });
   const descriptionContributed = parsedRecipe.ingredients.length > 0 || parsedRecipe.steps.length > 0;
   const extractionMethods = [
     ...(descriptionContributed || (!authorCommentFallback.usedAuthorComment && !transcriptFallback.usedTranscript)
@@ -3600,6 +3637,8 @@ export async function handleYoutubeExtract(request: Request) {
     extraction_id: extractionId,
     title: video.title,
     base_servings: 2,
+    thumbnail_url: video.thumbnailUrl,
+    tags,
     extraction_methods: extractionMethods,
     draft_warnings: draftWarnings,
     blocking_issues: blockingIssues,
@@ -3811,6 +3850,14 @@ function parseYoutubeRegisterBody(rawBody: unknown) {
       fields: [{ field: "body", reason: "invalid_object" }],
       parsed: null,
     };
+  }
+
+  if (rawBody.thumbnail_url !== undefined) {
+    fields.push({ field: "thumbnail_url", reason: "not_allowed" });
+  }
+
+  if (rawBody.tags !== undefined) {
+    fields.push({ field: "tags", reason: "not_allowed" });
   }
 
   const extractionId = typeof rawBody.extraction_id === "string" ? rawBody.extraction_id.trim() : "";
@@ -4290,11 +4337,19 @@ function buildChildDraftFromCandidate({
   const extractionMethods = parentDraft.extraction_methods?.length
     ? parentDraft.extraction_methods
     : parentSession.extraction_methods;
+  const tags = generateYoutubeExtractTags({
+    title: candidate.title,
+    ingredients: candidate.ingredients,
+    steps: candidate.steps,
+    providerTags: parentDraft.tags,
+  });
 
   return {
     extraction_id: childExtractionId,
     title: candidate.title,
     base_servings: parentDraft.base_servings ?? 1,
+    thumbnail_url: parentSession.thumbnail_url ?? parentDraft.thumbnail_url ?? null,
+    tags,
     extraction_methods: extractionMethods,
     draft_warnings: candidate.draft_warnings,
     blocking_issues: candidate.blocking_issues,

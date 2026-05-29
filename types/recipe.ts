@@ -136,6 +136,7 @@ export interface ManualRecipeStepInput {
 export interface ManualRecipeCreateBody {
   title: string;
   base_servings: number;
+  thumbnail_url?: string | null;
   ingredients: ManualRecipeIngredientInput[];
   steps: ManualRecipeStepInput[];
 }
@@ -253,6 +254,8 @@ export interface YoutubeRecipeExtractData {
   extraction_id: string;
   title: string;
   base_servings: number;
+  thumbnail_url: string | null;
+  tags: string[];
   extraction_methods: string[];
   draft_warnings: string[];
   blocking_issues: string[];
