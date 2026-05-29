@@ -60,5 +60,5 @@
 
 ### Manual Only
 
-- [ ] 실제 식약처/농식품올바로 export sample 확보 및 이용 조건 확인
-- [ ] 실제 source sample 1개 이상으로 candidate report를 수동 검토
+- [x] 실제 식약처/농식품올바로 export sample 확보 및 이용 조건 확인
+- [x] 실제 source sample 1개 이상으로 candidate report를 수동 검토

@@ -136,6 +136,7 @@ const CONFIRMED_SOURCE_LICENSE_TOKENS = new Set([
   "open-data",
   "public-domain",
   "public-open-data",
+  "kogl-type-1",
 ]);
 
 function stringOrNull(value: unknown) {

@@ -1,0 +1,77 @@
+{
+  "dataGoKrProcessedFoodRows": [
+    {
+      "FOOD_CD": "P101-205000200-2401",
+      "FOOD_NM": "망고맛 소프트 젤리",
+      "TYPE_NM": "가공식품",
+      "SRC_NM": "식품의약품안전처",
+      "INSTT_NM": "식품의약품안전처",
+      "FOOD_LV3_NM": "과자류·빵류 또는 떡류",
+      "FOOD_LV4_NM": "젤리",
+      "FOOD_LV5_NM": "캔디류",
+      "FOOD_LV6_NM": "해당없음",
+      "CRTR_YMD": "2026-04-29"
+    },
+    {
+      "FOOD_CD": "P120-600060000-1716",
+      "FOOD_NM": "망고맛 열빙어알",
+      "TYPE_NM": "가공식품",
+      "SRC_NM": "식품의약품안전처",
+      "INSTT_NM": "식품의약품안전처",
+      "FOOD_LV3_NM": "수산가공식품류",
+      "FOOD_LV4_NM": "기타 수산가공품",
+      "FOOD_LV5_NM": "기타 수산물가공품",
+      "FOOD_LV6_NM": "해당없음",
+      "CRTR_YMD": "2026-04-29"
+    },
+    {
+      "FOOD_CD": "P109-802080200-2332",
+      "FOOD_NM": "망고맛 음료분말",
+      "TYPE_NM": "가공식품",
+      "SRC_NM": "식품의약품안전처",
+      "INSTT_NM": "식품의약품안전처",
+      "FOOD_LV3_NM": "음료류",
+      "FOOD_LV4_NM": "농축음료/베이스",
+      "FOOD_LV5_NM": "기타음료",
+      "FOOD_LV6_NM": "음료베이스",
+      "CRTR_YMD": "2026-04-29"
+    }
+  ],
+  "rdaFoodCompositionRows": [
+    {
+      "fdCode": "A001001A010a",
+      "fdGrupp": "A",
+      "fdGruppNm": "곡류 및 그 제품",
+      "fdNm": "귀리, 겉귀리, 도정, 생것",
+      "originNm": "국가표준식품성분 DB 10.4(2026)"
+    },
+    {
+      "fdCode": "A001002A010a",
+      "fdGrupp": "A",
+      "fdGruppNm": "곡류 및 그 제품",
+      "fdNm": "귀리, 쌀귀리, 도정, 생것",
+      "originNm": "국가표준식품성분 DB 10.4(2026)"
+    },
+    {
+      "fdCode": "A0020000009a",
+      "fdGrupp": "A",
+      "fdGruppNm": "곡류 및 그 제품",
+      "fdNm": "귀리, 오트밀",
+      "originNm": "국가표준식품성분 DB 10.4(2026)"
+    },
+    {
+      "fdCode": "A003000A010a",
+      "fdGrupp": "A",
+      "fdGruppNm": "곡류 및 그 제품",
+      "fdNm": "기장, 도정, 생것",
+      "originNm": "국가표준식품성분 DB 10.4(2026)"
+    },
+    {
+      "fdCode": "A003001A010a",
+      "fdGrupp": "A",
+      "fdGruppNm": "곡류 및 그 제품",
+      "fdNm": "기장, 찰기장, 도정, 생것",
+      "originNm": "국가표준식품성분 DB 10.4(2026)"
+    }
+  ]
+}

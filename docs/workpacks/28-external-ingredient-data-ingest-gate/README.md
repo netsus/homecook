@@ -156,6 +156,11 @@ Stage 2 구현은 다음 중 하나를 선택한다.
 - `.omx/plans/open-questions.md`
 - `docs/workpacks/pre-27-taxonomy-consumer-alignment/README.md`
 - `docs/workpacks/27-youtube-import-quality-uplift/README.md`
+- `https://www.data.go.kr/data/15100066/standard.do`
+- `https://www.data.go.kr/ugs/selectPortalPolicyView.do`
+- `https://koreanfood.rda.go.kr/kfi/fct/fctFoodSrch/list`
+- `https://koreanfood.rda.go.kr/kfi/openapi/useGuidance`
+- `docs/workpacks/28-external-ingredient-data-ingest-gate/real-source-sample-review-2026-05-29.md`
 
 ## Contract Evolution Required Before Stage 2
 
@@ -164,11 +169,12 @@ Stage 2가 DB staging table을 선택하면 `docs/db설계` 영향 기록이 필
 ## QA / Test Data Plan
 
 - sample input fixture: 식약처/농식품올바로 형태를 모사한 소량 CSV/JSON
+- real source sample fixture: 공공데이터포털 식약처 sample row + 농식품올바로 국가표준식품성분표 search row
 - normalized candidate fixture: deterministic expected output
 - duplicate fixture: 같은 normalized name, synonym candidate, source collision 포함
 - invalid fixture: 필수 metadata 누락, empty ingredient name, unknown category
 - report fixture: row counts, approved/rejected/pending counts, duplicate count, low-confidence count
-- real external source export는 Manual Only로 분리하고 기본 CI에 넣지 않는다.
+- real external source export/live fetch는 Manual Only로 분리하고 기본 CI에 넣지 않는다.
 
 ## Key Rules
 
@@ -218,3 +224,4 @@ Stage 2가 DB staging table을 선택하면 `docs/db설계` 영향 기록이 필
 - [x] public API shape unchanged 검증 <!-- omo:id=delivery-api-shape-unchanged;stage=2;scope=backend;review=3,6 -->
 - [x] no production direct-load test 추가 <!-- omo:id=delivery-no-direct-load-test;stage=2;scope=backend;review=3,6 -->
 - [x] Stage 3 backend/data-tooling review 완료 <!-- omo:id=delivery-stage3-review;stage=2;scope=backend;review=6 -->
+- [x] 실제 source sample fixture와 manual candidate review 기록 추가 <!-- omo:id=delivery-real-source-sample-review;stage=2;scope=backend;review=6 -->
