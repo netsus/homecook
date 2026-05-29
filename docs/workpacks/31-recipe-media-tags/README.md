@@ -22,6 +22,7 @@ YouTube에서 가져온 레시피와 사용자가 직접 등록한 레시피에 
 - 상태 전이:
   - YouTube session: 기존 `draft -> consumed / expired` 유지
   - 이미지 업로드: 레시피 저장 전 임시 참조. 저장 전 제거/교체된 미사용 객체는 cleanup 대상
+  - 미사용 업로드 cleanup 경로: Stage 4 프론트는 업로드 API 응답의 `storage_path`를 보관하고, 저장 전 사용자가 이미지를 제거/교체하면 같은 사용자 Storage 객체 삭제를 시도한다. 삭제 실패 또는 저장 중단으로 남은 orphan object는 Stage 6 real DB smoke cleanup에서 제거하며, 반복 발생 시 후속 ops cleanup 자동화로 분리한다.
 - DB 영향:
   - `recipes.thumbnail_url` — 기존 nullable 컬럼 사용
   - `recipes.tags` — 기존 text[] 컬럼 사용, 최대 6개

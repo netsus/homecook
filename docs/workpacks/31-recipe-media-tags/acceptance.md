@@ -19,7 +19,7 @@
 - [x] 업로드 객체는 `recipe-images/{user_id}/{uuid}.{ext}` 경로에 저장된다 <!-- omo:id=accept-storage-path;stage=2;scope=backend;review=3,6 -->
 - [x] `POST /recipes`는 현재 사용자 업로드 참조만 `thumbnail_url`로 허용한다 <!-- omo:id=accept-manual-current-user-image-only;stage=2;scope=backend;review=3,6 -->
 - [x] 임의 외부 URL, signed URL, cross-user Storage URL은 거부한다 <!-- omo:id=accept-manual-image-negative;stage=2;scope=backend;review=3,6 -->
-- [ ] 사용자가 저장 전에 이미지를 제거하거나 교체하면 미사용 업로드 cleanup 경로가 정의되어 있다 <!-- omo:id=accept-unused-upload-cleanup;stage=2;scope=backend;review=3,6 -->
+- [x] 사용자가 저장 전에 이미지를 제거하거나 교체하면 미사용 업로드 cleanup 경로가 정의되어 있다 <!-- omo:id=accept-unused-upload-cleanup;stage=2;scope=backend;review=3,6 -->
 
 ## Tag Generator
 - [x] YouTube/직접 등록은 같은 결정론 tag generator를 사용한다 <!-- omo:id=accept-shared-tag-generator;stage=2;scope=shared;review=3,6 -->
