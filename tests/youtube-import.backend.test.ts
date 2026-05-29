@@ -3941,6 +3941,8 @@ describe("20 youtube real import backend", () => {
     expect(body).toMatchObject({
       success: true,
       data: {
+        thumbnail_url: "https://img.youtube.com/vi/needsreview123/hqdefault.jpg",
+        tags: expect.arrayContaining(["백종원 김치찌개 후보 확인 필요", "김치", "소금"]),
         blocking_issues: ["ingredients[1].ingredient_id"],
         ingredients: [
           { standard_name: "김치", resolution_status: "resolved" },
@@ -3961,6 +3963,13 @@ describe("20 youtube real import backend", () => {
       },
       error: null,
     });
+    expect(sessionsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      thumbnail_url: "https://img.youtube.com/vi/needsreview123/hqdefault.jpg",
+      draft_json: expect.objectContaining({
+        thumbnail_url: "https://img.youtube.com/vi/needsreview123/hqdefault.jpg",
+        tags: expect.arrayContaining(["백종원 김치찌개 후보 확인 필요", "김치", "소금"]),
+      }),
+    }));
   });
 
   it("POST /api/v1/recipes/youtube/extract returns 401 before parsing the URL", async () => {
@@ -4424,6 +4433,36 @@ describe("20 youtube real import backend", () => {
         fields: [
           { field: "ingredients[1].sort_order", reason: "duplicate" },
           { field: "steps[1].step_number", reason: "duplicate" },
+        ],
+      },
+    });
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/recipes/youtube/register rejects client thumbnail and tag overrides before database writes", async () => {
+    mockAuth();
+
+    const { POST } = await importRegisterRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ...buildRegisterBody(),
+        thumbnail_url: "https://example.com/override.webp",
+        tags: ["클라이언트태그"],
+      }),
+    }));
+    const responseBody = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(responseBody).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "VALIDATION_ERROR",
+        fields: [
+          { field: "thumbnail_url", reason: "not_allowed" },
+          { field: "tags", reason: "not_allowed" },
         ],
       },
     });

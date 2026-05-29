@@ -131,4 +131,24 @@ describe("supabase schema migrations", () => {
     expect(sql).toMatch(/unique\s*\(\s*shopping_list_id\s*,\s*ingredient_id\s*\)/i);
     expect(sql).toMatch(/unique\s*\(\s*shopping_list_id\s*,\s*recipe_id\s*\)/i);
   });
+
+  it("defines recipe image storage bucket and owner-scoped policies", () => {
+    const sql = readAllMigrationSql();
+
+    expect(sql).toMatch(/insert into storage\.buckets\s*\(/i);
+    expect(sql).toMatch(/'recipe-images'/i);
+    expect(sql).toMatch(/allowed_mime_types\s*=\s*array\['image\/jpeg',\s*'image\/png',\s*'image\/webp'\]/i);
+    expect(sql).toMatch(/create policy recipe_images_public_read/i);
+    expect(sql).toMatch(/create policy recipe_images_insert_own/i);
+    expect(sql).toMatch(/storage\.foldername\(name\)\)\[1\]\s*=\s*auth\.uid\(\)::text/i);
+  });
+
+  it("persists YouTube session thumbnail and draft tags in the registration RPC", () => {
+    const sql = readAllMigrationSql();
+
+    expect(sql).toMatch(/create or replace function public\.register_youtube_recipe_from_session/i);
+    expect(sql).toMatch(/thumbnail_url,\s*tags/i);
+    expect(sql).toMatch(/nullif\(v_session\.thumbnail_url,\s*''\)/i);
+    expect(sql).toMatch(/v_session\.draft_json\s*->\s*'tags'/i);
+  });
 });
