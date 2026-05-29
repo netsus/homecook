@@ -96,8 +96,9 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `pre-27-taxonomy-consumer-alignment` | merged | slice 27 선행: ingredient category shared mapping source + cooking method helper 통합으로 현재 MVP 소비 경로를 같은 기준에 정렬 (BE+FE shared, 신규 DB table 없음) |
 | `27-youtube-import-quality-uplift` | merged | YouTube 설명란 파서 추출 품질 + import readiness >= 0.80 달성. 결정론 파서 규칙/사전 시딩/50건 corpus evidence + fixture-backed full-flow E2E (LLM 없음) |
 | `27b-youtube-source-fallback` | merged | YouTube 설명란에서 재료만 추출된 영상에 caption/transcript fallback으로 조리 과정 보충 + 부분 추출 draft UX (LLM 없음) |
-| `29-youtube-author-comment-fallback` | in-progress | YouTube 설명란이 비어 있거나 부족한 영상에서 영상 작성자 top-level 댓글만 보조 source로 사용해 레시피 draft 보강. 일반 댓글/reply/LLM 없음 |
-| `28-external-ingredient-data-ingest-gate` | in-progress | 식약처/농식품올바로 등 외부 재료 데이터를 production 직적재 없이 file batch -> staging/review -> approved seed artifact 경로로만 유입 |
+| `28-external-ingredient-data-ingest-gate` | merged | 식약처/농식품올바로 등 외부 재료 데이터를 production 직적재 없이 file batch -> staging/review -> approved seed artifact 경로로만 유입 |
+| `29-youtube-author-comment-fallback` | merged | YouTube 설명란이 비어 있거나 부족한 영상에서 영상 작성자 top-level 댓글만 보조 source로 사용해 레시피 draft 보강. 일반 댓글/reply/LLM 없음 |
+| `30-recipe-media-tags` | docs | YouTube 등록 레시피 썸네일 영속화, 직접 등록 이미지 업로드, YouTube/직접 등록 공용 서버 태그 자동 생성 |
 | `admin-foundation` | merged | 런칭 초기 운영용 최소 내부 관리 기반. /admin 읽기 전용 shell, 사용자 조회, 운영 이벤트/감사 로그 조회. admin_members 기반 접근 제어, service-role fail-closed, PII 최소화 |
 | `planner-column-customization` | merged        | 끼니 컬럼 기본 3개 + 설정 커스터마이징(이름 변경/추가/삭제), 최소 1~최대 5, PLANNER_WEEK 동적 컬럼               |
 | `wave1-port-foundation` | merged | 공통 shell, 공용 UI 프리미티브(Button/Chip/Card/Modal/Sort Dropdown), CTA 위계, spacing/safe-area 정비 — Phase4 foundation re-audit PR #432 merged |

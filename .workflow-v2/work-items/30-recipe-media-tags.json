@@ -1,0 +1,108 @@
+{
+  "id": "30-recipe-media-tags",
+  "title": "Recipe media and tags",
+  "summary": "YouTube 등록 레시피는 세션 썸네일을 상세 이미지로 저장하고, 직접 등록 레시피는 사용자 이미지 업로드를 지원하며, 두 등록 경로 모두 서버 결정론 태그 생성기로 tags를 저장한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "기존 recipes.thumbnail_url과 recipes.tags를 재사용해 YouTube/직접 등록 레시피의 카드/상세 품질을 높이되, YouTube 썸네일 리호스팅과 클라이언트 임의 태그/이미지 URL 주입은 막는다.",
+  "owners": {
+    "claude": "stage1,stage3,stage5",
+    "codex": "stage2,stage4,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "18-manual-recipe-create",
+    "19-youtube-import",
+    "20-youtube-real-import",
+    "22-youtube-ingredient-registration",
+    "27-youtube-import-quality-uplift",
+    "27b-youtube-source-fallback",
+    "29-youtube-author-comment-fallback"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.4.md",
+      "docs/화면정의서-v1.5.11.md",
+      "docs/유저flow맵-v1.3.11.md",
+      "docs/db설계-v1.3.10.md",
+      "docs/api문서-v1.2.14.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/30-recipe-media-tags/README.md",
+      "docs/workpacks/30-recipe-media-tags/acceptance.md",
+      "docs/workpacks/30-recipe-media-tags/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      ".omx/plans/recipe-media-tags-ralplan.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "youtube-real-app-route-smoke",
+      "manual-image-upload-real-storage-smoke"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm test:youtube-corpus",
+      "pnpm test:youtube-dictionary",
+      "pnpm test:youtube-readiness",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 30-recipe-media-tags",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "youtube-session-thumbnail-persisted",
+      "manual-image-current-user-reference-only",
+      "shared-deterministic-tag-generator",
+      "recipe-detail-source-note",
+      "real-storage-smoke"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 contract-evolution docs. New recipe app table/column DDL is out of scope because recipes.thumbnail_url and recipes.tags already exist; Supabase Storage bucket/policy migration is required for manual image upload. YouTube thumbnails are not downloaded or rehosted. Generated/AI image fallback and normalized tag tables are future candidates.",
+  "out_of_scope": [
+    "YouTube thumbnail rehosting",
+    "Database image binary storage",
+    "Multiple recipe images",
+    "Generated or AI image fallback",
+    "Manual tag input",
+    "Normalized tag tables",
+    "Tag search redesign",
+    "Existing recipe backfill",
+    "External ingredient data ingest"
+  ],
+  "open_questions": []
+}
