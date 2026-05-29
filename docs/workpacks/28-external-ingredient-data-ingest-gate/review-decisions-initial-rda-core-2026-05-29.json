@@ -1,0 +1,109 @@
+{
+  "selection_policy": {
+    "generated_at": "2026-05-29T00:00:00.000Z",
+    "source_report": ".artifacts/external-ingredient-ingest/live-public-data-balanced-sample-2026-05-29/candidate-report.json",
+    "rule": "Initial conservative approval: mostly RDA, one fingerprint per normalized_name, simple recipe ingredient names only. Explicit user-approved additions allow one MFDS ham category row and one RDA peanut butter row. Exact source evidence for 다시마 was not found in the sampled RDA/MFDS data, so 다시마 육수 is not promoted as 다시마."
+  },
+  "decisions": [
+    {
+      "source_fingerprint": "d33f25593f65f15528d57fa3ccecbeb6d5c958209448ade615e6493568829e0b",
+      "status": "approved",
+      "reviewer_note": "귀리 / 곡류 / rda:A001001A010a"
+    },
+    {
+      "source_fingerprint": "5e6d88b72eb766f5f3bb5d36ae52e7245d7902f515c6077580f42bb9c656f993",
+      "status": "approved",
+      "reviewer_note": "기장 / 곡류 / rda:A003000A010a"
+    },
+    {
+      "source_fingerprint": "e2ae7e1e858e54c92ab6c324b273e790167c2cbac152f6ac9f81df1eaddd8350",
+      "status": "approved",
+      "reviewer_note": "감자 / 곡류 / rda:B0010060000a"
+    },
+    {
+      "source_fingerprint": "22b19d45db61f6b38f8a6d558ba139175c11650cc126db1f7580bfb0d40237d8",
+      "status": "approved",
+      "reviewer_note": "강낭콩 / 곡류 / rda:D0010000000a"
+    },
+    {
+      "source_fingerprint": "2c7254f1c0c39d21a148195f8d3d3c57245f9f22b6551969aafdc6b9cbe54782",
+      "status": "approved",
+      "reviewer_note": "녹두 / 곡류 / rda:D0020000001a"
+    },
+    {
+      "source_fingerprint": "e9bbd2699eddf498c9d8c7c2da5ab799088a82a380aa698ec9a967969d084cd9",
+      "status": "approved",
+      "reviewer_note": "도토리 / 곡류 / rda:E0020000000a"
+    },
+    {
+      "source_fingerprint": "c9b1ae885b18da81f9db7ec935e509c2e75bb619ee919ae8914e90c52b684eac",
+      "status": "approved",
+      "reviewer_note": "도토리묵 / 곡류 / rda:E0040000009a"
+    },
+    {
+      "source_fingerprint": "52699af0fa353b5ba85cb6d8ad62f8167ba5ae97a851b7a4ab8bb1776f90aa83",
+      "status": "approved",
+      "reviewer_note": "가지 / 채소 / rda:F0030000000a"
+    },
+    {
+      "source_fingerprint": "898fb220effb6c1e4e136dbf07901c2e133bd16486b6a699584bbc3715ef9e33",
+      "status": "approved",
+      "reviewer_note": "달걀 / 육류 / rda:J0030000000a"
+    },
+    {
+      "source_fingerprint": "9191fe51f6c8152b540dc436d87be3e313885415bdf67dcd558033a3103c93e8",
+      "status": "approved",
+      "reviewer_note": "햄 / 육류 / mfds:P117-100010100-0385 / user-approved explicit addition"
+    },
+    {
+      "source_fingerprint": "174e074977b4aa6dd69153b8286530394b333131ae4493581f90008ebd99946d",
+      "status": "rejected",
+      "reviewer_note": "햄 / 육류 / mfds:P117-100010100-0856 / duplicate normalized_name; first 햄 fingerprint selected"
+    },
+    {
+      "source_fingerprint": "572d92f5054cc70dc7fafc4221e64f4d57c31617bafea482a8f7a16de0684d5c",
+      "status": "approved",
+      "reviewer_note": "다랑어 / 해산물 / rda:K001000000Sa"
+    },
+    {
+      "source_fingerprint": "3821e45bb7f331392efee12418ab6d346285f09471549a86237c80aedacc2038",
+      "status": "approved",
+      "reviewer_note": "고등어 / 해산물 / rda:K0150000004a"
+    },
+    {
+      "source_fingerprint": "16d765d23d8ad15022a9f95eb4977aa83f2beb68d2fb3bf047336dd90e3530a3",
+      "status": "approved",
+      "reviewer_note": "김 / 해산물 / rda:L0030010001a"
+    },
+    {
+      "source_fingerprint": "80373f8346b778e2652399f0d0721fc49a8cc7ebb5843a117f1bd84aeb97bd9d",
+      "status": "needs_source_check",
+      "reviewer_note": "다시마 육수 / 해산물 / rda:L0070000009a / not promoted as 다시마 because the source name is broth, not kelp"
+    },
+    {
+      "source_fingerprint": "430c1746edcd49f0c8491fc8c52e7ba5e015e89d5a776b5d5b119d1bec461823",
+      "status": "approved",
+      "reviewer_note": "고추기름 / 양념 / rda:N0270000009a"
+    },
+    {
+      "source_fingerprint": "9c7b70f48064ecd28085a4a57eda9001efe4f07672c40693a54dab3dc81df709",
+      "status": "approved",
+      "reviewer_note": "들기름 / 양념 / rda:N0030000009a"
+    },
+    {
+      "source_fingerprint": "e804f3ab1ca6529e8af70362038a3242129eb0c38df21491f217599bf57a8408",
+      "status": "approved",
+      "reviewer_note": "땅콩 버터 / 양념 / rda:N0050000009a / user-approved explicit addition"
+    },
+    {
+      "source_fingerprint": "9b05202c5ed268d4a9e9ad0c4005c19ef24622e5d83e2fda338af02caad5d043",
+      "status": "approved",
+      "reviewer_note": "간장 / 양념 / rda:R0010010009a"
+    },
+    {
+      "source_fingerprint": "c9d0f6d3b1d766eb46a07fea922ffef301c4b27eb9a8083f2a38384bf21af471",
+      "status": "approved",
+      "reviewer_note": "겨자 / 양념 / rda:R0520000005a"
+    }
+  ]
+}
