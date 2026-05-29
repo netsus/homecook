@@ -96,6 +96,15 @@ const FULL_REGRESSION_PATTERNS = [
  *   labels?: Array<string | CiLabel>;
  *   draft?: boolean;
  * }} CiPathFilterInput
+ *
+ * @typedef {{
+ *   smoke: boolean;
+ *   accessibility: boolean;
+ *   visual: boolean;
+ *   lighthouse: boolean;
+ *   full_regression: boolean;
+ *   complete_regression_matrix: boolean;
+ * }} CiPathFilterOutput
  */
 
 export const CI_PATH_FILTERS = {
@@ -164,6 +173,7 @@ function normalizeLabels(labels) {
 
 /**
  * @param {CiPathFilterInput} [input]
+ * @returns {CiPathFilterOutput}
  */
 export function evaluateCiPathFilters(input = {}) {
   const {
@@ -178,6 +188,7 @@ export function evaluateCiPathFilters(input = {}) {
   const isManualFullRun = eventName === "workflow_dispatch" || eventName === "schedule";
   const isReadyForReview = eventName === "pull_request" && action === "ready_for_review";
   const hasFullCiLabel = labelNames.includes("full-ci");
+  const completeRegressionMatrix = isManualFullRun || hasFullCiLabel;
   const hasFullRegressionChange = hasAnyMatch(files, FULL_REGRESSION_PATTERNS);
   const fullRegression =
     isManualFullRun ||
@@ -195,6 +206,7 @@ export function evaluateCiPathFilters(input = {}) {
     visual: forceCoreSuites || hasAnyMatch(files, VISUAL_PATTERNS),
     lighthouse,
     full_regression: fullRegression,
+    complete_regression_matrix: completeRegressionMatrix,
   };
 }
 

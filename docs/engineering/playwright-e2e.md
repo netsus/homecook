@@ -22,6 +22,7 @@
 - `pnpm test:e2e`: `pnpm test:e2e:smoke`의 alias
 - `pnpm test:e2e:smoke`: `@smoke-core` 대표 브라우저 흐름만 실행하는 PR 빠른 smoke
 - `pnpm test:e2e:regression`: live OAuth를 제외한 전체 product slice 브라우저 회귀
+- `pnpm test:e2e:regression:ci`: protected branch push / Ready for Review에서 쓰는 CI용 slice 회귀. `desktop-chrome` + `mobile-chrome`만 실행한다
 - `pnpm test:e2e:a11y`: 전체 axe 기반 접근성 smoke
 - `pnpm test:e2e:a11y:core`: `@a11y-core` 대표 접근성 smoke
 - `pnpm test:e2e:visual`: 전체 Playwright screenshot baseline 기반 visual regression
@@ -62,6 +63,8 @@ npx playwright install --with-deps chromium
 - 기본 PR 게이트에는 안정적인 core smoke, core a11y, core visual을 포함한다.
 - `smoke`, `a11y`, `visual`, `lighthouse`는 `scripts/ci-path-filter.mjs`의 job-level path filter가 `true`를 출력할 때만 실행한다.
 - `full-regression` job은 Ready for Review, `full-ci` label, nightly/manual, protected branch push에서 실행한다.
+- Ready for Review와 protected branch push의 `full-regression`은 `pnpm test:e2e:regression:ci`를 사용한다.
+- nightly/manual과 `full-ci` label은 기존 complete device matrix인 `pnpm test:e2e:regression`을 사용한다.
 - Lighthouse는 성능 관련 경로가 바뀐 비초안 PR에서만 blocker다. 성능 관련 경로가 아니면 PR 본문에 `N/A` 근거를 남긴다.
 - `security smoke`는 별도 workflow에서 auth/backend/frontend security 관련 변경에만 자동 실행한다.
 - docs-only 또는 governance-only PR은 전체 Playwright gate 대신 관련 최소 검증만 보일 수 있다.
@@ -72,7 +75,8 @@ npx playwright install --with-deps chromium
 
 - core smoke / core a11y는 `desktop-chrome`, `mobile-chrome`, `mobile-ios-small` 프로젝트에서 실행한다.
 - core visual은 앱(`mobile-chrome`, `mobile-ios-small`)과 웹(`desktop-chrome`)을 별도 command로 나눠 실행한다.
-- 전체 regression / 전체 a11y / 전체 visual은 `playwright.config.ts`의 전체 project matrix를 따른다.
+- CI용 slice regression은 `desktop-chrome`, `mobile-chrome` 프로젝트에서 실행한다.
+- complete slice regression / 전체 a11y / 전체 visual은 `playwright.config.ts`의 전체 project matrix를 따른다.
 
 ## Local Live OAuth
 
