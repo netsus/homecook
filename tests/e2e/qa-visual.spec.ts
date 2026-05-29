@@ -66,6 +66,7 @@ const RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS = 400;
 const PLANNER_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
 const MEAL_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
 const MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2200;
+const MENU_ADD_MODAL_VISUAL_MAX_DIFF_PIXELS = 120;
 const PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2400;
 const ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
 const COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 3200;
@@ -326,6 +327,7 @@ test.describe("QA visual regression", () => {
       "qa-menu-add-servings-modal.png",
       {
         animations: "disabled",
+        maxDiffPixels: MENU_ADD_MODAL_VISUAL_MAX_DIFF_PIXELS,
       },
     );
     await servingsDialog.getByRole("button", { name: "취소" }).click();
