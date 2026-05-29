@@ -189,6 +189,27 @@ describe("21 ingredient dictionary backend", () => {
     });
   });
 
+  it("prefers an exact non-ambiguous standard-name match over legacy synonyms", async () => {
+    const eggId = "00000000-0000-4000-8000-000000000017";
+    const legacyEggId = "00000000-0000-4000-8000-000000000018";
+    const { dbClient } = createIngredientDb({
+      ingredients: [{ id: eggId, standard_name: "계란" }],
+      synonyms: [
+        { synonym: "계란", ingredients: { id: legacyEggId, standard_name: "달걀" } },
+      ],
+    });
+
+    const lookup = await findIngredientIds(dbClient, ["계란"]);
+    const ingredient = buildIngredient("계란", lookup.matchesByName);
+
+    expect(ingredient).toMatchObject({
+      ingredient_id: eggId,
+      standard_name: "계란",
+      resolution_status: "resolved",
+      candidates: undefined,
+    });
+  });
+
   it("propagates synonym lookup errors instead of treating matches as unresolved", async () => {
     const { dbClient } = createIngredientDb({
       ingredients: [{ id: "00000000-0000-4000-8000-000000000007", standard_name: "김치" }],

@@ -946,6 +946,57 @@ describe("20 youtube real import backend", () => {
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("https://www.youtube.com/oembed?"));
   });
 
+  it("POST /api/v1/recipes/youtube/validate falls back to YouTube Data API when oEmbed preview fails", async () => {
+    mockAuth();
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("HOMECOOK_ENABLE_YOUTUBE_IMPORT", "1");
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: "temporary" }), { status: 500 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        items: [
+          {
+            snippet: {
+              title: "Data API fallback title",
+              channelTitle: "Data API channel",
+              thumbnails: {
+                high: { url: "https://i.ytimg.com/vi/recipe12345/hqdefault.jpg" },
+              },
+              description: "fallback description",
+              tags: ["레시피"],
+              categoryId: "26",
+            },
+            contentDetails: { duration: "PT3M", caption: "false" },
+          },
+        ],
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { POST } = await importValidateRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/validate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: "https://www.youtube.com/watch?v=fallback123" }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        video_info: {
+          video_id: "fallback123",
+          title: "Data API fallback title",
+          channel: "Data API channel",
+        },
+      },
+      error: null,
+    });
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("https://www.youtube.com/oembed?"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("https://www.googleapis.com/youtube/v3/videos?"));
+  });
+
   it("POST /api/v1/recipes/youtube/extract maps YouTube Data API provider failures and quota errors", async () => {
     mockAuth();
     vi.stubEnv("YOUTUBE_API_KEY", "test-key");
@@ -3599,6 +3650,45 @@ describe("20 youtube real import backend", () => {
       },
     });
     expect(createServiceRoleClient).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/recipes/youtube/register allows repeated ingredient ids with distinct rows", async () => {
+    mockAuth();
+
+    const body = buildRegisterBody();
+    body.ingredients[1] = {
+      ...body.ingredients[1],
+      ingredient_id: kimchiIngredientId,
+      standard_name: "김치",
+      amount: 50,
+      unit: "g",
+      ingredient_type: "QUANT",
+      display_text: "김치 50g",
+      scalable: true,
+      sort_order: 2,
+    };
+    const { dbClient, rpc } = createRegisterDbClient({
+      ingredientRows: [{ id: kimchiIngredientId }],
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importRegisterRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }));
+    const responseBody = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(responseBody).toMatchObject({
+      success: true,
+      data: { recipe_id: recipeId },
+      error: null,
+    });
+    expect(rpc).toHaveBeenCalledWith("register_youtube_recipe_from_session", expect.objectContaining({
+      p_ingredients: body.ingredients,
+    }));
   });
 
   it("POST /api/v1/recipes/youtube/register rejects unresolved and needs_review ingredient drafts before database writes", async () => {

@@ -206,4 +206,92 @@ describe("YouTube live description parser regressions", () => {
     expect(draft.steps).toHaveLength(5);
     expect(draft.blockingIssues).toEqual([]);
   });
+
+  it("normalizes author comment ingredient shorthand from real app-route smoke", () => {
+    const draft = parseDraft([
+      "재료",
+      "-통삼겹 반 (250g)",
+      "-미림 4수저",
+      "-소금",
+      "-후추 적당히",
+      "-양파 큰거 1개",
+      "",
+      "만드는 법",
+      "1. 통삼겹에 소금과 후추를 뿌려 밑간해요.",
+      "2. 양파와 미림을 넣고 익혀요.",
+    ].join("\n"));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toEqual([
+      "통삼겹",
+      "미림",
+      "소금",
+      "후추",
+      "양파",
+    ]);
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "통삼겹"))
+      .toMatchObject({
+        amount: 250,
+        unit: "g",
+        displayText: "통삼겹 250g",
+      });
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "미림"))
+      .toMatchObject({
+        amount: 4,
+        unit: "수저",
+        displayText: "미림 4수저",
+      });
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "후추"))
+      .toMatchObject({
+        ingredientType: "TO_TASTE",
+        displayText: "후추 약간",
+      });
+    expect(draft.blockingIssues).toEqual([]);
+  });
+
+  it("keeps the measured liquid when an author comment sentence-like fragment contains water", () => {
+    const draft = parseDraft([
+      "재료",
+      "구운 항정살에 물 400ml",
+      "간장 2큰술",
+      "굴소스 1큰술",
+      "후추 적당히",
+      "",
+      "레시피",
+      "1. 항정살을 굽고 물과 양념을 넣어요.",
+      "2. 졸여서 완성해요.",
+    ].join("\n"));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toEqual([
+      "물",
+      "간장",
+      "굴소스",
+      "후추",
+    ]);
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "물"))
+      .toMatchObject({
+        amount: 400,
+        unit: "ml",
+        displayText: "물 400ml",
+      });
+    expect(draft.blockingIssues).toEqual([]);
+  });
+
+  it("parses amount lines with an unmatched trailing closing parenthesis", () => {
+    const draft = parseDraft([
+      "재료",
+      "굴소스 1/2스푼)",
+      "계란 2개",
+      "",
+      "만드는 법",
+      "1. 재료를 넣고 볶아요.",
+    ].join("\n"));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toEqual(["굴소스", "계란"]);
+    expect(draft.ingredients.find((ingredient) => ingredient.name === "굴소스"))
+      .toMatchObject({
+        amount: 0.5,
+        unit: "스푼",
+        displayText: "굴소스 0.5스푼",
+      });
+  });
 });
