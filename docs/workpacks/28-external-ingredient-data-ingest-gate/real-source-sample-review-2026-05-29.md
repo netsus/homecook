@@ -44,6 +44,18 @@ Fixture: `tests/fixtures/external-ingredient-ingest/real-source-sample-2026-05-2
 
 Generated through `tests/external-ingredient-ingest.test.ts` using the real source sample fixture.
 
+Keyless file dry-run command:
+
+```bash
+pnpm external:ingredients:dry-run -- --input tests/fixtures/external-ingredient-ingest/real-source-sample-2026-05-29.json --output-dir .artifacts/external-ingredient-ingest/keyless-real-source-sample-2026-05-29 --generated-at 2026-05-29T00:00:00.000Z
+```
+
+Generated artifacts:
+
+- `.artifacts/external-ingredient-ingest/keyless-real-source-sample-2026-05-29/candidate-report.json`
+- `.artifacts/external-ingredient-ingest/keyless-real-source-sample-2026-05-29/approved-seed-promotion-artifact.json`
+- `.artifacts/external-ingredient-ingest/keyless-real-source-sample-2026-05-29/summary.md`
+
 Summary:
 
 - total rows: 8
@@ -71,12 +83,18 @@ Command:
 
 ```bash
 pnpm exec vitest run tests/external-ingredient-ingest.test.ts
+pnpm exec vitest run tests/external-ingredient-file-dry-run-script.test.ts tests/external-ingredient-ingest.test.ts
+pnpm exec vitest run tests/external-ingredient-live-fetch-script.test.ts tests/external-ingredient-file-dry-run-script.test.ts tests/external-ingredient-ingest.test.ts
+pnpm external:ingredients:dry-run -- --input tests/fixtures/external-ingredient-ingest/real-source-sample-2026-05-29.json --output-dir .artifacts/external-ingredient-ingest/keyless-real-source-sample-2026-05-29 --generated-at 2026-05-29T00:00:00.000Z
 ```
 
 Result:
 
 - 12 tests passed
+- 14 focused tests passed when file dry-run CLI coverage was included
+- 16 focused tests passed when live fetch CLI mock coverage was included
 - real source adapter, confirmed license token gate, candidate report generation, and no direct production write regression all passed
+- keyless file dry-run generated candidate report, empty approved seed artifact, and summary without API key or production DB write
 
 ## Remaining Risk
 

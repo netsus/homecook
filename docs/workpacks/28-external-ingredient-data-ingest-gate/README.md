@@ -81,6 +81,44 @@ Stage 2 구현은 다음 중 하나를 선택한다.
 - `data/external-ingredients/` 또는 `tests/fixtures/external-ingredients/` 아래 sample input/output fixture를 둔다.
 - CLI/test helper가 raw input -> normalized candidates -> report artifact를 생성한다.
 - DB DDL 없이 시작할 수 있어 Stage 2 blast radius가 가장 작다.
+- 현재 키 없는 실행 명령은 다음과 같다:
+
+```bash
+pnpm external:ingredients:dry-run -- --input tests/fixtures/external-ingredient-ingest/real-source-sample-2026-05-29.json --output-dir .artifacts/external-ingredient-ingest/keyless-real-source-sample-2026-05-29 --generated-at 2026-05-29T00:00:00.000Z
+```
+
+이 명령은 `candidate-report.json`, `approved-seed-promotion-artifact.json`, `summary.md`만 생성하며 네트워크 호출, API key 읽기, production DB write를 하지 않는다.
+
+Live provider fetch smoke는 다음 명령으로 실행한다:
+
+```bash
+pnpm external:ingredients:live-fetch -- --providers mfds,rda --output-dir .artifacts/external-ingredient-ingest/live-public-data-2026-05-29 --generated-at 2026-05-29T00:00:00.000Z --rda-groups A --mfds-rows 5 --rda-page-size 5
+```
+
+이 명령은 `.env.local`의 `DATA_GO_KR_API_KEY`를 읽고, RDA 전용 키가 없으면 RDA 공공데이터포털 API에도 같은 key를 fallback으로 사용한다. 결과는 `live-fetch-report.json`, `live-source-export.json`, `live-fetch-summary.md`에 남기며 production DB write는 하지 않는다.
+
+검수 후 seed promotion artifact를 만들 때는 먼저 `candidate-report.json`에서 승인할 `source_fingerprint`를 고른 뒤 review decision 파일을 만든다:
+
+```json
+{
+  "decisions": [
+    {
+      "source_fingerprint": "candidate-report에서 복사한 fingerprint",
+      "status": "approved"
+    }
+  ]
+}
+```
+
+그리고 같은 source export 파일에 review decision을 적용해 다시 dry-run 한다:
+
+```bash
+pnpm external:ingredients:dry-run -- --input .artifacts/external-ingredient-ingest/live-public-data-balanced-sample-2026-05-29/live-source-export.json --review-decisions path/to/review-decisions.json --output-dir .artifacts/external-ingredient-ingest/reviewed-seed-candidates-2026-05-29 --generated-at 2026-05-29T00:00:00.000Z
+```
+
+`approved`로 검수된 fingerprint만 `approved-seed-promotion-artifact.json`의 `seed_rows`에 들어간다. source license가 미확인됐거나 원문명이 비어 있는 row는 review decision이 있어도 승인 seed로 승격되지 않는다.
+
+초기 보수 승인 목록은 `docs/workpacks/28-external-ingredient-data-ingest-gate/review-decisions-initial-rda-core-2026-05-29.json`에 둔다. 이 목록은 대부분 RDA source만 대상으로, 같은 normalized name에서 하나의 fingerprint만 골랐고, MFDS의 넓은 가공식품 분류명은 제외했다. 사용자 명시 승인으로 MFDS `햄` 1개와 RDA `땅콩 버터` 1개를 추가했으며, `다시마 육수`는 요청명 `다시마`와 달라 seed 승격에서 보류했다.
 
 ### Option B: DB staging table
 
@@ -157,9 +195,13 @@ Stage 2 구현은 다음 중 하나를 선택한다.
 - `docs/workpacks/pre-27-taxonomy-consumer-alignment/README.md`
 - `docs/workpacks/27-youtube-import-quality-uplift/README.md`
 - `https://www.data.go.kr/data/15100066/standard.do`
+- `https://www.data.go.kr/data/15143598/openapi.do`
 - `https://www.data.go.kr/ugs/selectPortalPolicyView.do`
 - `https://koreanfood.rda.go.kr/kfi/fct/fctFoodSrch/list`
 - `https://koreanfood.rda.go.kr/kfi/openapi/useGuidance`
+- `docs/workpacks/28-external-ingredient-data-ingest-gate/live-fetch-public-data-2026-05-29.md`
+- `docs/workpacks/28-external-ingredient-data-ingest-gate/live-fetch-balanced-sample-2026-05-29.md`
+- `docs/workpacks/28-external-ingredient-data-ingest-gate/review-decisions-initial-rda-core-2026-05-29.json`
 - `docs/workpacks/28-external-ingredient-data-ingest-gate/real-source-sample-review-2026-05-29.md`
 
 ## Contract Evolution Required Before Stage 2
@@ -223,5 +265,10 @@ Stage 2가 DB staging table을 선택하면 `docs/db설계` 영향 기록이 필
 - [x] invalid source row report 구현 <!-- omo:id=delivery-invalid-row-report;stage=2;scope=backend;review=3,6 -->
 - [x] public API shape unchanged 검증 <!-- omo:id=delivery-api-shape-unchanged;stage=2;scope=backend;review=3,6 -->
 - [x] no production direct-load test 추가 <!-- omo:id=delivery-no-direct-load-test;stage=2;scope=backend;review=3,6 -->
+- [x] keyless file dry-run CLI 추가 <!-- omo:id=delivery-keyless-file-dry-run-cli;stage=2;scope=backend;review=6 -->
+- [x] public data portal live fetch smoke CLI 추가 <!-- omo:id=delivery-public-data-live-fetch-cli;stage=2;scope=backend;review=6 -->
+- [x] 식약처/RDA balanced live sample 후보 품질 기록 <!-- omo:id=delivery-balanced-live-sample-review;stage=2;scope=backend;review=6 -->
+- [x] review decision 기반 approved-only seed artifact 입력 경로 추가 <!-- omo:id=delivery-review-decision-input;stage=2;scope=backend;review=6 -->
+- [x] 초기 core 후보 18개 보수 승인 artifact 생성 <!-- omo:id=delivery-initial-rda-core-review-decisions;stage=2;scope=backend;review=6 -->
 - [x] Stage 3 backend/data-tooling review 완료 <!-- omo:id=delivery-stage3-review;stage=2;scope=backend;review=6 -->
 - [x] 실제 source sample fixture와 manual candidate review 기록 추가 <!-- omo:id=delivery-real-source-sample-review;stage=2;scope=backend;review=6 -->
