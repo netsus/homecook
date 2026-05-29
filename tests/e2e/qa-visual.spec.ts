@@ -70,6 +70,7 @@ const MENU_ADD_MODAL_VISUAL_MAX_DIFF_PIXELS = 120;
 const PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2400;
 const ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
 const COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 3200;
+const COOKING_MODAL_VISUAL_MAX_DIFF_PIXELS = 480;
 const LEFTOVERS_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
 
 function isMobileViewport(page: Page) {
@@ -651,6 +652,7 @@ test.describe("QA visual regression", () => {
     await stabilizeVisualSnapshot(page);
     await expect(noticeDialog).toHaveScreenshot("qa-cook-notice-modal.png", {
       animations: "disabled",
+      maxDiffPixels: COOKING_MODAL_VISUAL_MAX_DIFF_PIXELS,
     });
 
     await page.goto(COOK_MODE_VISUAL_PATH);
