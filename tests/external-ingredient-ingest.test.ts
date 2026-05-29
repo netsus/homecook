@@ -9,8 +9,17 @@ import {
   normalizeExternalIngredientName,
   parseExternalIngredientSourceRows,
 } from "@/lib/server/external-ingredient-ingest";
+import {
+  chooseDataGoKrIngredientName,
+  chooseRdaFoodCompositionIngredientName,
+  mapDataGoKrNutritionRowsToExternalIngredientSourceRows,
+  mapRdaFoodCompositionRowsToExternalIngredientSourceRows,
+  type DataGoKrNutritionStandardRow,
+  type RdaFoodCompositionRow,
+} from "@/lib/server/external-ingredient-source-adapters";
 
 import invalidRowsFixture from "@/tests/fixtures/external-ingredient-ingest/source-invalid-v1.json";
+import realSourceSampleFixture from "@/tests/fixtures/external-ingredient-ingest/real-source-sample-2026-05-29.json";
 import sourceRowsFixture from "@/tests/fixtures/external-ingredient-ingest/source-sample-v1.json";
 
 describe("external ingredient ingest gate", () => {
@@ -145,6 +154,95 @@ describe("external ingredient ingest gate", () => {
     });
   });
 
+  it("accepts confirmed Kogl type 1 source rows after explicit source review", () => {
+    const report = buildExternalIngredientCandidateReport(
+      parseExternalIngredientSourceRows([
+        {
+          ...sourceRowsFixture[0],
+          source_license: "kogl-type-1",
+          source_row_id: "RDA-KOGL-001",
+          original_name: "귀리",
+        },
+      ]).rows,
+      {
+        generatedAt: "2026-05-29T00:00:00.000Z",
+      },
+    );
+
+    expect(report.candidates[0]).toMatchObject({
+      normalized_name: "귀리",
+      review_status: "pending_review",
+      reason_codes: [],
+    });
+  });
+
+  it("maps actual public source sample rows into the file-backed ingest shape", () => {
+    const mfdsRows = mapDataGoKrNutritionRowsToExternalIngredientSourceRows(
+      realSourceSampleFixture.dataGoKrProcessedFoodRows as DataGoKrNutritionStandardRow[],
+      {
+        sourceFile: "data-go-kr-15100066-standard-html-sample-2026-05-29",
+        sourceVersion: "data.go.kr 15100066 2026-04-29",
+        sourceLicense: "public-open-data",
+      },
+    );
+    const rdaRows = mapRdaFoodCompositionRowsToExternalIngredientSourceRows(
+      realSourceSampleFixture.rdaFoodCompositionRows as RdaFoodCompositionRow[],
+      {
+        sourceFile: "rda-koreanfood-search-grid-sample-2026-05-29",
+        sourceVersion: "RDA National Standard Food Composition DB 10.4",
+        sourceLicense: "kogl-type-1",
+      },
+    );
+    const parsed = parseExternalIngredientSourceRows([...mfdsRows, ...rdaRows]);
+    const report = buildExternalIngredientCandidateReport(parsed.rows, {
+      generatedAt: "2026-05-29T00:00:00.000Z",
+    });
+
+    expect(parsed.file_errors).toEqual([]);
+    expect(parsed.rows).toHaveLength(8);
+    expect(parsed.rows.find((row) => row.source_row_id === "P120-600060000-1716")).toMatchObject({
+      source_system: "mfds",
+      original_name: "기타 수산가공품",
+      legacy_category: "해산물",
+      raw_payload: {
+        FOOD_NM: "망고맛 열빙어알",
+        SRC_NM: "식품의약품안전처",
+      },
+    });
+    expect(parsed.rows.find((row) => row.source_row_id === "A001001A010a")).toMatchObject({
+      source_system: "rda",
+      original_name: "귀리",
+      legacy_category: "곡류",
+      raw_payload: {
+        fdNm: "귀리, 겉귀리, 도정, 생것",
+      },
+    });
+    expect(report).toMatchObject({
+      blocked: false,
+      summary: {
+        total_rows: 8,
+        candidate_count: 8,
+        pending_review_count: 8,
+        needs_source_check_count: 0,
+      },
+    });
+    expect(report.candidates.every((candidate) => candidate.review_status === "pending_review")).toBe(
+      true,
+    );
+  });
+
+  it("keeps source-name selection deterministic for representative ingredient levels", () => {
+    expect(
+      chooseDataGoKrIngredientName({
+        FOOD_NM: "파_대파_생것",
+        FOOD_LV4_NM: "파",
+        FOOD_LV5_NM: "대파",
+      }),
+    ).toBe("대파");
+    expect(chooseRdaFoodCompositionIngredientName({ fdNm: "파, 대파, 생것" })).toBe("대파");
+    expect(chooseRdaFoodCompositionIngredientName({ fdNm: "마늘, 구근, 생것" })).toBe("마늘");
+  });
+
   it("blocks import when required source metadata is missing", () => {
     const report = buildExternalIngredientCandidateReport(parseExternalIngredientSourceRows(invalidRowsFixture).rows, {
       generatedAt: "2026-05-25T00:00:00.000Z",
@@ -252,10 +350,12 @@ describe("external ingredient ingest gate", () => {
   });
 
   it("keeps the gate file-backed without production ingredient writes", () => {
-    const source = readFileSync(
-      join(process.cwd(), "lib/server/external-ingredient-ingest.ts"),
-      "utf8",
-    );
+    const source = [
+      "lib/server/external-ingredient-ingest.ts",
+      "lib/server/external-ingredient-source-adapters.ts",
+    ]
+      .map((filePath) => readFileSync(join(process.cwd(), filePath), "utf8"))
+      .join("\n");
 
     expect(source).not.toContain("insert into public.ingredients");
     expect(source).not.toContain("insert into public.ingredient_synonyms");
