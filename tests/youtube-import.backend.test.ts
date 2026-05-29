@@ -134,14 +134,18 @@ function createCookingMethodsTable({
 
 function createYoutubeSessionsTable({
   selectResult,
+  selectResults,
   insertResult = { data: null, error: null },
 }: {
   selectResult?: QueryResult<YoutubeSessionRow | null>;
+  selectResults?: Array<QueryResult<YoutubeSessionRow | null>>;
   insertResult?: QueryResult<null>;
 }) {
-  const selectQuery = createMaybeSingleQuery<YoutubeSessionRow>([
-    selectResult ?? { data: null, error: { message: "session lookup not configured" } },
-  ]);
+  const selectQuery = createMaybeSingleQuery<YoutubeSessionRow>(
+    selectResults ?? [
+      selectResult ?? { data: null, error: { message: "session lookup not configured" } },
+    ],
+  );
 
   return {
     __selectQuery: selectQuery,
@@ -153,18 +157,74 @@ function createYoutubeSessionsTable({
   };
 }
 
+interface YoutubeExtractionCandidateRow {
+  id: string;
+  extraction_session_id: string;
+  candidate_id: string;
+  status: "draft" | "promoted" | "registered" | "skipped" | "expired";
+  child_extraction_session_id: string | null;
+  recipe_id: string | null;
+  title: string;
+  start_ms: number | null;
+  end_ms: number | null;
+  confidence: number | null;
+  draft_ingredient_ids_json: string[];
+  source_meta_json: Record<string, unknown>;
+  promoted_at?: string | null;
+  registered_at?: string | null;
+}
+
+function createYoutubeExtractionCandidatesTable({
+  selectResults = [{ data: null, error: { message: "candidate lookup not configured" } }],
+  insertResult = { data: null, error: null },
+  updateResult = { data: null, error: null },
+}: {
+  selectResults?: Array<QueryResult<YoutubeExtractionCandidateRow | null>>;
+  insertResult?: QueryResult<null>;
+  updateResult?: QueryResult<null>;
+} = {}) {
+  const selectQuery = createMaybeSingleQuery<YoutubeExtractionCandidateRow>(selectResults);
+  const updateQuery = {
+    eq: vi.fn(() => updateQuery),
+    then: createAwaitableQuery(updateResult).then,
+  };
+
+  return {
+    __selectQuery: selectQuery,
+    __updateQuery: updateQuery,
+    insert: vi.fn((values: unknown) => {
+      void values;
+      return createAwaitableQuery(insertResult);
+    }),
+    select: vi.fn(() => selectQuery),
+    update: vi.fn((values: unknown) => {
+      void values;
+      return updateQuery;
+    }),
+  };
+}
+
 interface YoutubeSessionRow {
   id: string;
   user_id: string;
   youtube_url: string;
   youtube_video_id: string;
+  video_title?: string | null;
+  channel_title?: string | null;
+  thumbnail_url?: string | null;
   provider_version: string | null;
+  source_providers?: string[];
+  classification_status?: "recipe" | "uncertain" | "non_recipe";
+  classification_reasons?: string[];
   extraction_methods: string[];
   raw_source_text: string | null;
   extraction_meta_json: Record<string, unknown>;
   draft_json: Record<string, unknown>;
   status: "draft" | "consumed" | "expired";
   expires_at: string;
+  session_kind?: "single" | "multi_parent" | "candidate_child";
+  parent_extraction_session_id?: string | null;
+  parent_candidate_id?: string | null;
 }
 
 interface YoutubeIngredientRegistrationRpcData {
@@ -185,11 +245,15 @@ const userId = "550e8400-e29b-41d4-a716-446655440030";
 const recipeId = "550e8400-e29b-41d4-a716-446655441001";
 const kimchiIngredientId = "550e8400-e29b-41d4-a716-446655440013";
 const saltIngredientId = "550e8400-e29b-41d4-a716-446655440015";
+const waterIngredientId = "550e8400-e29b-41d4-a716-446655440016";
+const riceIngredientId = "550e8400-e29b-41d4-a716-446655440017";
+const eggIngredientId = "550e8400-e29b-41d4-a716-446655440018";
 const prepMethodId = "550e8400-e29b-41d4-a716-446655440218";
 const mixMethodId = "550e8400-e29b-41d4-a716-446655440217";
 const grillMethodId = "550e8400-e29b-41d4-a716-446655440215";
 const newMethodId = "550e8400-e29b-41d4-a716-446655441101";
 const extractionId = "550e8400-e29b-41d4-a716-446655441201";
+const childExtractionId = "550e8400-e29b-41d4-a716-446655441202";
 const draftIngredientId = "550e8400-e29b-41d4-a716-446655441301";
 const mustardIngredientId = "550e8400-e29b-41d4-a716-446655441401";
 const recipeUrl = "https://www.youtube.com/watch?v=recipe12345";
@@ -339,9 +403,11 @@ function createRegisterDbClient({
   const sessionsTable = createYoutubeSessionsTable({
     selectResult: sessionResult,
   });
+  const candidatesTable = createYoutubeExtractionCandidatesTable();
   const rpc = vi.fn(async () => rpcResult);
   const from = vi.fn((table: string) => {
     if (table === "youtube_extraction_sessions") return sessionsTable;
+    if (table === "youtube_extraction_candidates") return candidatesTable;
     if (table === "ingredients") return ingredientsTable;
     if (table === "cooking_methods") return cookingMethodsTable;
     throw new Error(`unexpected table: ${table}`);
@@ -351,6 +417,7 @@ function createRegisterDbClient({
   return {
     cookingMethodsTable,
     dbClient,
+    candidatesTable,
     from,
     ingredientsTable,
     rpc,
@@ -449,7 +516,13 @@ function buildYoutubeSession(overrides: Partial<YoutubeSessionRow> = {}): Youtub
     user_id: userId,
     youtube_url: recipeUrl,
     youtube_video_id: "recipe12345",
+    video_title: "백종원 김치찌개",
+    channel_title: "백종원의 요리비책",
+    thumbnail_url: "https://img.youtube.com/vi/recipe12345/hqdefault.jpg",
     provider_version: "youtube-videos-list-description-v1",
+    source_providers: ["youtube_videos_list", "description_parser"],
+    classification_status: "recipe",
+    classification_reasons: [],
     extraction_methods: ["description"],
     raw_source_text: "김치찌개 레시피\n재료\n김치 200g",
     extraction_meta_json: {
@@ -459,6 +532,9 @@ function buildYoutubeSession(overrides: Partial<YoutubeSessionRow> = {}): Youtub
     draft_json: {},
     status: "draft",
     expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    session_kind: "single",
+    parent_extraction_session_id: null,
+    parent_candidate_id: null,
     ...overrides,
   };
 }
@@ -503,6 +579,83 @@ function buildIngredientRegistrationBody(
   };
 }
 
+function buildYoutubeRecipeCandidate(overrides: Record<string, unknown> = {}) {
+  return {
+    candidate_id: "candidate-1",
+    title: "김치볶음밥",
+    start_ms: 10_000,
+    end_ms: 40_000,
+    confidence: 0.88,
+    ingredients: [
+      {
+        draft_ingredient_id: draftIngredientId,
+        ingredient_id: kimchiIngredientId,
+        standard_name: "김치",
+        amount: 200,
+        unit: "g",
+        ingredient_type: "QUANT",
+        display_text: "김치 200g",
+        sort_order: 1,
+        scalable: true,
+        confidence: 0.95,
+        resolution_status: "resolved",
+        raw_text: "김치 200g",
+      },
+    ],
+    steps: [
+      {
+        step_number: 1,
+        instruction: "김치를 볶아요.",
+        cooking_method: {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_new: false,
+        },
+        duration_text: null,
+        is_incomplete: false,
+        missing_fields: [],
+        raw_text: "김치를 볶아요.",
+      },
+    ],
+    draft_warnings: [],
+    blocking_issues: [],
+    evidence_refs: [
+      {
+        source: "caption",
+        line_index: 0,
+        start_ms: 10_000,
+        end_ms: 14_000,
+        text: "김치볶음밥",
+      },
+    ],
+    ...overrides,
+  };
+}
+
+function buildExtractionCandidateRow(
+  overrides: Partial<YoutubeExtractionCandidateRow> = {},
+): YoutubeExtractionCandidateRow {
+  return {
+    id: "550e8400-e29b-41d4-a716-446655441501",
+    extraction_session_id: extractionId,
+    candidate_id: "candidate-1",
+    status: "draft",
+    child_extraction_session_id: null,
+    recipe_id: null,
+    title: "김치볶음밥",
+    start_ms: 10_000,
+    end_ms: 40_000,
+    confidence: 0.88,
+    draft_ingredient_ids_json: [draftIngredientId],
+    source_meta_json: {},
+    promoted_at: null,
+    registered_at: null,
+    ...overrides,
+  };
+}
+
 function mockAuth(user: { id: string } | null = { id: userId }) {
   const routeClient = {
     auth: {
@@ -532,16 +685,22 @@ async function importIngredientRegistrationRoute() {
   return import("@/app/api/v1/recipes/youtube/ingredient-registration/route");
 }
 
+async function importCandidateDraftRoute() {
+  return import("@/app/api/v1/recipes/youtube/candidate-drafts/route");
+}
+
 function createTranscriptFallbackExtractDbClient({
+  ingredientLookupRows = [
+    { id: kimchiIngredientId, standard_name: "김치" },
+    { id: saltIngredientId, standard_name: "소금" },
+  ],
   cookingMethodLookupRows = [],
 }: {
+  ingredientLookupRows?: Array<{ id: string; standard_name: string }>;
   cookingMethodLookupRows?: NonNullable<Parameters<typeof createCookingMethodsTable>[0]["lookupRows"]>;
 } = {}) {
   const ingredientsTable = createLookupTable({
-    data: [
-      { id: kimchiIngredientId, standard_name: "김치" },
-      { id: saltIngredientId, standard_name: "소금" },
-    ],
+    data: ingredientLookupRows,
     error: null,
   });
   const ingredientSynonymsTable = createEmptyIngredientSynonymsTable();
@@ -560,17 +719,22 @@ function createTranscriptFallbackExtractDbClient({
     lookupRows: cookingMethodLookupRows,
   });
   const sessionsTable = createYoutubeSessionsTable({});
+  const candidatesTable = createYoutubeExtractionCandidatesTable({
+    selectResults: [],
+  });
   const dbClient = {
     from: vi.fn((table: string) => {
       if (table === "ingredients") return ingredientsTable;
       if (table === "ingredient_synonyms") return ingredientSynonymsTable;
       if (table === "cooking_methods") return cookingMethodsTable;
       if (table === "youtube_extraction_sessions") return sessionsTable;
+      if (table === "youtube_extraction_candidates") return candidatesTable;
       throw new Error(`unexpected table: ${table}`);
     }),
   };
 
   return {
+    candidatesTable,
     dbClient,
     sessionsTable,
   };
@@ -660,6 +824,11 @@ describe("20 youtube real import backend", () => {
         path: "ingredient-registration",
         body: buildIngredientRegistrationBody(),
       },
+      {
+        importRoute: importCandidateDraftRoute,
+        path: "candidate-drafts",
+        body: { extraction_id: extractionId, candidate_id: "candidate-1" },
+      },
     ];
 
     for (const route of routes) {
@@ -693,6 +862,10 @@ describe("20 youtube real import backend", () => {
       "supabase/migrations/20260528073500_28_youtube_section_label_persistence.sql",
       "utf8",
     );
+    const multiRecipeSchema = readFileSync(
+      "supabase/migrations/20260530090000_30_youtube_multi_recipe_candidates.sql",
+      "utf8",
+    );
 
     expect(methodCodes).toEqual(expect.arrayContaining([
       "stir_fry",
@@ -717,6 +890,11 @@ describe("20 youtube real import backend", () => {
     expect(realImportSchema).toContain("v_session.youtube_url <> p_youtube_url");
     expect(sectionLabelSchema).toContain("add column if not exists component_label text");
     expect(sectionLabelSchema).toContain("v_item ->> 'component_label'");
+    expect(multiRecipeSchema).toContain("add column if not exists session_kind");
+    expect(multiRecipeSchema).toContain("youtube_extraction_sessions_candidate_child_uidx");
+    expect(multiRecipeSchema).toContain("create table if not exists public.youtube_extraction_candidates");
+    expect(multiRecipeSchema).toContain("youtube_extraction_candidates_select_own");
+    expect(multiRecipeSchema).toContain("CANDIDATE_PROMOTION_REQUIRED");
   });
 
   it("schema includes the user-confirmed YouTube ingredient registration RPC", () => {
@@ -735,7 +913,11 @@ describe("20 youtube real import backend", () => {
   });
 
   it("does not keep Recipio result fixture shortcuts in the extraction path", () => {
-    const extractionSource = readFileSync("lib/server/youtube-import.ts", "utf8");
+    const extractionSource = [
+      "lib/server/youtube-import.ts",
+      "lib/server/youtube-multi-recipe-extractor.ts",
+      "lib/server/youtube-caption-normalizer.ts",
+    ].map((file) => readFileSync(file, "utf8")).join("\n");
 
     expect(existsSync("lib/server/recipio-youtube-parity-fixtures.ts")).toBe(false);
     expect(extractionSource).not.toContain("recipio-youtube-parity-fixtures");
@@ -2289,8 +2471,20 @@ describe("20 youtube real import backend", () => {
         headers: expect.objectContaining({ "accept-language": "ko,en;q=0.8" }),
       }),
     );
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/api/timedtext"));
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("fmt=json3"));
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/timedtext"),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "accept-language": "ko,en;q=0.8",
+          referer: publicCaptionUrl,
+          "user-agent": expect.stringContaining("Mozilla/5.0"),
+        }),
+      }),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("fmt=json3"),
+      expect.anything(),
+    );
 
     const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
       extraction_methods: string[];
@@ -2320,6 +2514,568 @@ describe("20 youtube real import backend", () => {
         step_count: 2,
       },
     });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract can build a draft from auto-generated conversational captions", async () => {
+    mockAuth();
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("HOMECOOK_ENABLE_YOUTUBE_IMPORT", "1");
+    vi.stubEnv("HOMECOOK_YOUTUBE_FIXTURE_PROVIDER", "0");
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+
+    const watchHtml = [
+      "<html><script>",
+      "var ytInitialPlayerResponse = {\"captions\":{\"playerCaptionsTracklistRenderer\":{\"captionTracks\":[",
+      [
+        "{\"baseUrl\":\"https://www.youtube.com/api/timedtext?v=asrcaption123&lang=ko&kind=asr\",",
+        "\"languageCode\":\"ko\",",
+        "\"kind\":\"asr\",",
+        "\"name\":{\"simpleText\":\"한국어(자동 생성)\"}}",
+      ].join(""),
+      "]}}};",
+      "</script></html>",
+    ].join("");
+    const timedTextPayload = {
+      events: [
+        {
+          tStartMs: 812000,
+          segs: [{ utf8: "오늘은 김치 200g하고 소금 약간으로 김치찌개를 만들게요" }],
+        },
+        {
+          tStartMs: 818000,
+          segs: [{ utf8: "먼저 김치를 한입 크기로 썰어주세요" }],
+        },
+        {
+          tStartMs: 824000,
+          segs: [{ utf8: "냄비에 물 500ml를 넣고 끓입니다" }],
+        },
+        {
+          tStartMs: 831000,
+          segs: [{ utf8: "김치와 소금을 넣고 10분간 끓여주세요" }],
+        },
+      ],
+    };
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("/videos?")) {
+        return new Response(JSON.stringify({
+          items: [
+            {
+              snippet: {
+                title: "자동 자막 김치찌개",
+                channelTitle: "집밥 채널",
+                channelId: "caption-owner",
+                description: "오늘 레시피는 영상 자막으로 확인해주세요.",
+                tags: ["레시피", "김치찌개"],
+                categoryId: "26",
+                thumbnails: {
+                  high: { url: "https://i.ytimg.com/vi/asrcaption123/hqdefault.jpg" },
+                },
+              },
+              contentDetails: {
+                duration: "PT15M",
+                caption: "true",
+              },
+            },
+          ],
+        }));
+      }
+
+      if (url.includes("/commentThreads?")) {
+        return new Response(JSON.stringify({ items: [] }));
+      }
+
+      if (url.includes("watch?v=asrcaption123")) {
+        return new Response(watchHtml);
+      }
+
+      if (url.includes("/api/timedtext")) {
+        return new Response(JSON.stringify(timedTextPayload));
+      }
+
+      throw new Error(`unexpected fetch URL: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: kimchiIngredientId, standard_name: "김치" },
+        { id: saltIngredientId, standard_name: "소금" },
+        { id: waterIngredientId, standard_name: "물" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440216",
+          code: "boil",
+          label: "끓이기",
+          color_key: "blue",
+          is_system: true,
+        },
+      ],
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { response, body } = await postYoutubeExtract("https://www.youtube.com/watch?v=asrcaption123");
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["caption"],
+        blocking_issues: [],
+        ingredients: [
+          { standard_name: "김치", amount: 200, unit: "g", resolution_status: "resolved" },
+          { standard_name: "소금", amount: null, unit: null, resolution_status: "resolved" },
+          { standard_name: "물", amount: 500, unit: "ml", resolution_status: "resolved" },
+        ],
+        steps: [
+          { instruction: "먼저 김치를 한입 크기로 썰어주세요", is_incomplete: false },
+          { instruction: "냄비에 물 500ml를 넣고 끓입니다", is_incomplete: false },
+          { instruction: "김치와 소금을 넣고 10분간 끓여주세요", is_incomplete: false },
+        ],
+      },
+      error: null,
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/timedtext"),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "accept-language": "ko,en;q=0.8",
+          referer: "https://www.youtube.com/watch?v=asrcaption123",
+          "user-agent": expect.stringContaining("Mozilla/5.0"),
+        }),
+      }),
+    );
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_methods: string[];
+      raw_source_text: string;
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_methods).toEqual(["caption"]);
+    expect(insertedSession.raw_source_text).toContain("--- caption transcript ---");
+    expect(insertedSession.raw_source_text).toContain("오늘은 김치 200g하고 소금 약간으로 김치찌개를 만들게요");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      caption_capability: "available",
+      transcript_provider: {
+        attempted: true,
+        capability: "available",
+        provider: "youtube_public_timedtext",
+        status: "used",
+        language: "ko",
+        track_kind: "auto",
+        used_ingredient_count: 3,
+        step_count: 3,
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract returns multi-recipe candidates from caption transcript", async () => {
+    mockAuth();
+
+    const transcriptLines = [
+      "첫 번째 요리 김치볶음밥",
+      "재료",
+      "김치 200g",
+      "밥 1공기",
+      "만드는 법",
+      "1. 김치를 볶아요.",
+      "2. 밥을 넣고 볶아요.",
+      "두 번째 요리 계란국",
+      "재료",
+      "달걀 2개",
+      "물 500ml",
+      "만드는 법",
+      "1. 물을 끓여요.",
+      "2. 달걀을 풀어 넣어요.",
+    ];
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: transcriptLines.join("\n"),
+        transcriptSegments: transcriptLines.map((text, lineIndex) => ({
+          source: "caption" as const,
+          lineIndex,
+          text,
+          startMs: 60_000 + lineIndex * 5_000,
+          durationMs: 4_000,
+          language: "ko",
+          trackKind: "auto",
+        })),
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+    const { dbClient, sessionsTable, candidatesTable } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: kimchiIngredientId, standard_name: "김치" },
+        { id: riceIngredientId, standard_name: "밥" },
+        { id: eggIngredientId, standard_name: "달걀" },
+        { id: waterIngredientId, standard_name: "물" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: mixMethodId,
+          code: "stir_fry",
+          label: "볶기",
+          color_key: "orange",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440216",
+          code: "boil",
+          label: "끓이기",
+          color_key: "blue",
+          is_system: true,
+        },
+      ],
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      postYoutubeExtract("https://www.youtube.com/watch?v=transcriptmulti1"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        title: "김치찌개 자막 보충 레시피",
+        extraction_methods: ["caption"],
+        blocking_issues: ["MULTI_CANDIDATE_REVIEW_REQUIRED"],
+        ingredients: [],
+        steps: [],
+        multi_recipe_status: "multiple",
+        caption_source: "server_timedtext",
+        recipe_candidates: [
+          {
+            candidate_id: "candidate-1",
+            title: "김치볶음밥",
+            ingredients: [
+              { standard_name: "김치", resolution_status: "resolved" },
+              { standard_name: "밥", resolution_status: "resolved" },
+            ],
+            steps: [
+              { instruction: "김치를 볶아요.", is_incomplete: false },
+              { instruction: "밥을 넣고 볶아요.", is_incomplete: false },
+            ],
+          },
+          {
+            candidate_id: "candidate-2",
+            title: "계란국",
+            ingredients: [
+              { standard_name: "달걀", resolution_status: "resolved" },
+              { standard_name: "물", resolution_status: "resolved" },
+            ],
+            steps: [
+              { instruction: "물을 끓여요.", is_incomplete: false },
+              { instruction: "달걀을 풀어 넣어요.", is_incomplete: false },
+            ],
+          },
+        ],
+        source_segments_summary: [
+          {
+            source: "caption",
+            language: "ko",
+            track_kind: "auto",
+            segment_count: transcriptLines.length,
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      session_kind: string;
+      source_providers: string[];
+      draft_json: Record<string, unknown>;
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.session_kind).toBe("multi_parent");
+    expect(insertedSession.source_providers).toEqual([
+      "youtube_videos_list",
+      "public_caption_timedtext",
+      "caption_parser",
+      "multi_recipe_candidate_parser",
+    ]);
+    expect(insertedSession.draft_json).toMatchObject({
+      multi_recipe_status: "multiple",
+      primary_candidate_id: "candidate-1",
+    });
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      description_parser_selection_outcome: "multi_recipe_candidates",
+      candidate_count: 2,
+    });
+    expect(candidatesTable.insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        extraction_session_id: body.data.extraction_id,
+        candidate_id: "candidate-1",
+        status: "draft",
+        title: "김치볶음밥",
+      }),
+      expect.objectContaining({
+        extraction_session_id: body.data.extraction_id,
+        candidate_id: "candidate-2",
+        status: "draft",
+        title: "계란국",
+      }),
+    ]);
+  });
+
+  it("POST /api/v1/recipes/youtube/candidate-drafts promotes one multi-recipe candidate into a child draft", async () => {
+    mockAuth();
+
+    const parentCandidate = buildYoutubeRecipeCandidate();
+    const parentSession = buildYoutubeSession({
+      session_kind: "multi_parent",
+      extraction_methods: ["caption"],
+      raw_source_text: "첫 번째 요리 김치볶음밥",
+      draft_json: {
+        extraction_id: extractionId,
+        title: "집밥 모음",
+        base_servings: 1,
+        extraction_methods: ["caption"],
+        draft_warnings: ["영상 안에서 여러 요리 후보를 찾았어요. 저장할 요리를 먼저 선택해주세요."],
+        blocking_issues: ["MULTI_CANDIDATE_REVIEW_REQUIRED"],
+        ingredients: [],
+        steps: [],
+        new_cooking_methods: [],
+        multi_recipe_status: "multiple",
+        primary_candidate_id: "candidate-1",
+        caption_source: "server_timedtext",
+        source_segments_summary: [
+          {
+            source: "caption",
+            language: "ko",
+            track_kind: "auto",
+            segment_count: 4,
+          },
+        ],
+        recipe_candidates: [parentCandidate],
+      },
+    });
+    const sessionsTable = createYoutubeSessionsTable({
+      selectResult: { data: parentSession, error: null },
+    });
+    const candidatesTable = createYoutubeExtractionCandidatesTable({
+      selectResults: [{ data: buildExtractionCandidateRow(), error: null }],
+    });
+    const from = vi.fn((table: string) => {
+      if (table === "youtube_extraction_sessions") return sessionsTable;
+      if (table === "youtube_extraction_candidates") return candidatesTable;
+      throw new Error(`unexpected table: ${table}`);
+    });
+    createServiceRoleClient.mockReturnValue({ from });
+
+    const { POST } = await importCandidateDraftRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/candidate-drafts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ extraction_id: extractionId, candidate_id: "candidate-1" }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        parent_extraction_id: extractionId,
+        candidate_id: "candidate-1",
+        draft: {
+          title: "김치볶음밥",
+          extraction_methods: ["caption"],
+          blocking_issues: [],
+          ingredients: [
+            { standard_name: "김치", ingredient_id: kimchiIngredientId },
+          ],
+          steps: [
+            { instruction: "김치를 볶아요." },
+          ],
+          multi_recipe_status: "single",
+          primary_candidate_id: "candidate-1",
+          caption_source: "server_timedtext",
+        },
+      },
+      error: null,
+    });
+    expect(body.data.draft.extraction_id).toEqual(expect.any(String));
+    expect(sessionsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      id: body.data.draft.extraction_id,
+      session_kind: "candidate_child",
+      parent_extraction_session_id: extractionId,
+      parent_candidate_id: "candidate-1",
+      extraction_meta_json: expect.objectContaining({
+        parent_extraction_session_id: extractionId,
+        parent_candidate_id: "candidate-1",
+        selected_candidate_start_ms: 10_000,
+        selected_candidate_end_ms: 40_000,
+        selected_candidate_evidence_refs: parentCandidate.evidence_refs,
+        source_segments_summary: expect.arrayContaining([
+          expect.objectContaining({
+            source: "caption",
+            segment_count: 4,
+          }),
+        ]),
+      }),
+      draft_json: expect.objectContaining({
+        extraction_id: body.data.draft.extraction_id,
+        title: "김치볶음밥",
+        multi_recipe_status: "single",
+      }),
+    }));
+    expect(candidatesTable.update).toHaveBeenCalledWith(expect.objectContaining({
+      status: "promoted",
+      child_extraction_session_id: body.data.draft.extraction_id,
+      promoted_at: expect.any(String),
+    }));
+    expect(candidatesTable.__updateQuery.eq).toHaveBeenCalledWith("extraction_session_id", extractionId);
+    expect(candidatesTable.__updateQuery.eq).toHaveBeenCalledWith("candidate_id", "candidate-1");
+  });
+
+  it("POST /api/v1/recipes/youtube/candidate-drafts returns an existing child draft idempotently", async () => {
+    mockAuth();
+
+    const childDraft = {
+      extraction_id: childExtractionId,
+      title: "김치볶음밥",
+      base_servings: 1,
+      extraction_methods: ["caption"],
+      draft_warnings: [],
+      blocking_issues: [],
+      ingredients: [],
+      steps: [],
+      new_cooking_methods: [],
+      multi_recipe_status: "single",
+      primary_candidate_id: "candidate-1",
+    };
+    const parentSession = buildYoutubeSession({
+      session_kind: "multi_parent",
+      draft_json: {
+        extraction_id: extractionId,
+        title: "집밥 모음",
+        base_servings: 1,
+        extraction_methods: ["caption"],
+        draft_warnings: ["영상 안에서 여러 요리 후보를 찾았어요. 저장할 요리를 먼저 선택해주세요."],
+        blocking_issues: ["MULTI_CANDIDATE_REVIEW_REQUIRED"],
+        ingredients: [],
+        steps: [],
+        new_cooking_methods: [],
+        multi_recipe_status: "multiple",
+        primary_candidate_id: "candidate-1",
+        recipe_candidates: [buildYoutubeRecipeCandidate()],
+      },
+    });
+    const childSession = buildYoutubeSession({
+      id: childExtractionId,
+      session_kind: "candidate_child",
+      parent_extraction_session_id: extractionId,
+      parent_candidate_id: "candidate-1",
+      draft_json: childDraft,
+      expires_at: parentSession.expires_at,
+    });
+    const sessionsTable = createYoutubeSessionsTable({
+      selectResults: [
+        { data: parentSession, error: null },
+        { data: childSession, error: null },
+      ],
+    });
+    const candidatesTable = createYoutubeExtractionCandidatesTable({
+      selectResults: [
+        {
+          data: buildExtractionCandidateRow({
+            status: "promoted",
+            child_extraction_session_id: childExtractionId,
+          }),
+          error: null,
+        },
+      ],
+    });
+    const from = vi.fn((table: string) => {
+      if (table === "youtube_extraction_sessions") return sessionsTable;
+      if (table === "youtube_extraction_candidates") return candidatesTable;
+      throw new Error(`unexpected table: ${table}`);
+    });
+    createServiceRoleClient.mockReturnValue({ from });
+
+    const { POST } = await importCandidateDraftRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/candidate-drafts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ extraction_id: extractionId, candidate_id: "candidate-1" }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        parent_extraction_id: extractionId,
+        candidate_id: "candidate-1",
+        draft: {
+          extraction_id: childExtractionId,
+          title: "김치볶음밥",
+          multi_recipe_status: "single",
+        },
+      },
+      error: null,
+    });
+    expect(sessionsTable.insert).not.toHaveBeenCalled();
+    expect(candidatesTable.update).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/recipes/youtube/candidate-drafts rejects expired parent sessions", async () => {
+    mockAuth();
+
+    const sessionsTable = createYoutubeSessionsTable({
+      selectResult: {
+        data: buildYoutubeSession({
+          session_kind: "multi_parent",
+          expires_at: new Date(Date.now() - 60 * 1000).toISOString(),
+        }),
+        error: null,
+      },
+    });
+    const candidatesTable = createYoutubeExtractionCandidatesTable({
+      selectResults: [{ data: buildExtractionCandidateRow(), error: null }],
+    });
+    const from = vi.fn((table: string) => {
+      if (table === "youtube_extraction_sessions") return sessionsTable;
+      if (table === "youtube_extraction_candidates") return candidatesTable;
+      throw new Error(`unexpected table: ${table}`);
+    });
+    createServiceRoleClient.mockReturnValue({ from });
+
+    const { POST } = await importCandidateDraftRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/candidate-drafts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ extraction_id: extractionId, candidate_id: "candidate-1" }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(410);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "EXTRACTION_EXPIRED", fields: [] },
+    });
+    expect(candidatesTable.select).not.toHaveBeenCalled();
+    expect(sessionsTable.insert).not.toHaveBeenCalled();
   });
 
   it("POST /api/v1/recipes/youtube/extract returns blockers instead of invented data when public text has no recipe", async () => {
@@ -3445,6 +4201,17 @@ describe("20 youtube real import backend", () => {
       {
         sessionResult: {
           data: buildYoutubeSession({
+            session_kind: "multi_parent",
+            draft_json: buildIngredientRegistrationDraftJson(),
+          }),
+          error: null,
+        },
+        status: 409,
+        code: "CANDIDATE_PROMOTION_REQUIRED",
+      },
+      {
+        sessionResult: {
+          data: buildYoutubeSession({
             draft_json: buildIngredientRegistrationDraftJson({
               draft_ingredient_id: missingDraftId,
             }),
@@ -3812,6 +4579,12 @@ describe("20 youtube real import backend", () => {
         code: "EXTRACTION_ALREADY_REGISTERED",
       },
       {
+        session: buildYoutubeSession({ session_kind: "multi_parent" }),
+        body: buildRegisterBody(),
+        status: 409,
+        code: "CANDIDATE_PROMOTION_REQUIRED",
+      },
+      {
         session: buildYoutubeSession(),
         body: {
           ...buildRegisterBody(),
@@ -3955,5 +4728,52 @@ describe("20 youtube real import backend", () => {
       p_steps: buildRegisterBody().steps,
     });
     expect(from).not.toHaveBeenCalledWith("recipe_book_items");
+  });
+
+  it("POST /api/v1/recipes/youtube/register marks the parent candidate after a child draft is registered", async () => {
+    mockAuth();
+
+    const { candidatesTable, dbClient, rpc } = createRegisterDbClient({
+      sessionResult: {
+        data: buildYoutubeSession({
+          id: childExtractionId,
+          session_kind: "candidate_child",
+          parent_extraction_session_id: extractionId,
+          parent_candidate_id: "candidate-1",
+        }),
+        error: null,
+      },
+      rpcResult: {
+        data: { recipe_id: recipeId, title: "김치볶음밥" },
+        error: null,
+      },
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importRegisterRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ...buildRegisterBody(),
+        extraction_id: childExtractionId,
+      }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body).toMatchObject({
+      success: true,
+      data: { recipe_id: recipeId },
+      error: null,
+    });
+    expect(rpc).toHaveBeenCalled();
+    expect(candidatesTable.update).toHaveBeenCalledWith(expect.objectContaining({
+      status: "registered",
+      recipe_id: recipeId,
+      registered_at: expect.any(String),
+    }));
+    expect(candidatesTable.__updateQuery.eq).toHaveBeenCalledWith("extraction_session_id", extractionId);
+    expect(candidatesTable.__updateQuery.eq).toHaveBeenCalledWith("candidate_id", "candidate-1");
   });
 });

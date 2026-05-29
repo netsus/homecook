@@ -21,6 +21,7 @@ import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import {
   validateYoutubeUrl,
   extractYoutubeRecipe,
+  createYoutubeCandidateDraft,
   registerYoutubeRecipe,
   registerYoutubeIngredient,
   registerYoutubeIngredientsBulk,
@@ -44,6 +45,8 @@ import type {
   YoutubeVideoInfo,
   YoutubeExtractedIngredient,
   YoutubeExtractedStep,
+  YoutubeRecipeCandidate,
+  YoutubeRecipeExtractData,
 } from "@/types/recipe";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -232,6 +235,10 @@ function formatStepFieldList(fields: NonNullable<YoutubeExtractedStep["missing_f
 }
 
 function formatYoutubeBlockingIssue(issue: string) {
+  if (issue === "MULTI_CANDIDATE_REVIEW_REQUIRED") {
+    return "저장할 요리를 먼저 선택해주세요.";
+  }
+
   if (issue === "ingredients") {
     return "재료를 하나 이상 추가해주세요.";
   }
@@ -639,8 +646,13 @@ interface ReviewStepProps {
   classificationReasons: string[];
   draftWarnings: string[];
   blockingIssues: string[];
+  recipeCandidates: YoutubeRecipeCandidate[];
+  selectedCandidateId: string | null;
+  isPromotingCandidate: boolean;
+  candidatePromotionError: string | null;
   ingredients: TempIngredient[];
   steps: TempStep[];
+  onSelectCandidate: (candidateId: string) => void;
   onUpdateIngredient: (
     tempId: string,
     patch: Pick<ManualRecipeIngredientInput, "amount" | "unit">,
@@ -913,8 +925,13 @@ function ReviewStep({
   classificationReasons,
   draftWarnings,
   blockingIssues,
+  recipeCandidates,
+  selectedCandidateId,
+  isPromotingCandidate,
+  candidatePromotionError,
   ingredients,
   steps,
+  onSelectCandidate,
   onUpdateIngredient,
   onResolveIngredientCandidate,
   onReplaceIngredient,
@@ -967,6 +984,58 @@ function ReviewStep({
                 <li key={reason}>{reason}</li>
               ))}
             </ul>
+          ) : null}
+        </div>
+      ) : null}
+
+      {recipeCandidates.length > 0 ? (
+        <div
+          className="mt-4 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] px-4 py-3"
+          data-testid="youtube-recipe-candidates"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[13px] font-semibold text-[var(--foreground)]">
+              요리 후보 {recipeCandidates.length}개
+            </p>
+            {isPromotingCandidate ? (
+              <span className="text-[12px] font-semibold text-[var(--brand)]">
+                불러오는 중...
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-3 grid gap-2">
+            {recipeCandidates.map((candidate) => {
+              const isSelected = selectedCandidateId === candidate.candidate_id;
+
+              return (
+                <button
+                  aria-pressed={isSelected}
+                  className={[
+                    "w-full rounded-[var(--radius-sm)] border px-3 py-2 text-left transition",
+                    isSelected
+                      ? "border-[var(--brand)] bg-[var(--brand)]/8"
+                      : "border-[var(--line)] bg-[var(--surface-fill)] hover:border-[var(--brand)]",
+                  ].join(" ")}
+                  data-testid={`youtube-recipe-candidate-${candidate.candidate_id}`}
+                  disabled={isPromotingCandidate}
+                  key={candidate.candidate_id}
+                  onClick={() => onSelectCandidate(candidate.candidate_id)}
+                  type="button"
+                >
+                  <span className="block truncate text-[14px] font-semibold text-[var(--foreground)]">
+                    {candidate.title}
+                  </span>
+                  <span className="mt-1 block text-[12px] text-[var(--text-2)]">
+                    재료 {candidate.ingredients.length}개 · 만들기 {candidate.steps.length}단계
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {candidatePromotionError ? (
+            <p className="mt-2 text-[12px] font-semibold text-[var(--danger)]" role="alert">
+              {candidatePromotionError}
+            </p>
           ) : null}
         </div>
       ) : null}
@@ -2007,6 +2076,11 @@ export function YoutubeImportScreen({
   const [title, setTitle] = useState("");
   const [baseServings, setBaseServings] = useState(1);
   const [extractionMethods, setExtractionMethods] = useState<string[]>([]);
+  const [parentExtractionId, setParentExtractionId] = useState<string | null>(null);
+  const [recipeCandidates, setRecipeCandidates] = useState<YoutubeRecipeCandidate[]>([]);
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+  const [isPromotingCandidate, setIsPromotingCandidate] = useState(false);
+  const [candidatePromotionError, setCandidatePromotionError] = useState<string | null>(null);
   const [ingredients, setIngredients] = useState<TempIngredient[]>([]);
   const [steps, setSteps] = useState<TempStep[]>([]);
   const [replacingIngredientId, setReplacingIngredientId] = useState<string | null>(null);
@@ -2104,6 +2178,11 @@ export function YoutubeImportScreen({
     setDraftWarnings([]);
     setBlockingIssues([]);
     setExtractionError(null);
+    setParentExtractionId(null);
+    setRecipeCandidates([]);
+    setSelectedCandidateId(null);
+    setIsPromotingCandidate(false);
+    setCandidatePromotionError(null);
 
     const result = await validateYoutubeUrl({ youtube_url: youtubeUrl.trim() });
 
@@ -2154,6 +2233,53 @@ export function YoutubeImportScreen({
     handleValidate();
   }, [initialYoutubeUrl, handleValidate]);
 
+  const applyExtractDataToReview = useCallback((data: YoutubeRecipeExtractData) => {
+    setExtractionId(data.extraction_id);
+    setTitle(data.title);
+    setBaseServings(data.base_servings ?? 1);
+    setExtractionMethods(data.extraction_methods ?? []);
+    setDraftWarnings(data.draft_warnings ?? []);
+    setBlockingIssues(data.blocking_issues ?? []);
+
+    setIngredients(
+      data.ingredients.map((ing: YoutubeExtractedIngredient, idx: number) => ({
+        ...ing,
+        ingredient_id: ing.ingredient_id ?? "",
+        standard_name: ing.standard_name ?? "",
+        display_text: ing.display_text ?? ing.raw_text ?? null,
+        resolution_status: ing.resolution_status ?? "resolved",
+        component_label: ing.component_label ?? null,
+        tempId: `yt-ing-${idx}`,
+      })),
+    );
+
+    setSteps(
+      data.steps.map((step: YoutubeExtractedStep, idx: number) => ({
+        tempId: `yt-step-${idx}`,
+        step_number: step.step_number,
+        instruction: step.instruction,
+        cooking_method: step.cooking_method
+          ? {
+              id: step.cooking_method.id,
+              code: step.cooking_method.code,
+              label: step.cooking_method.label,
+              color_key: step.cooking_method.color_key,
+              is_system: false,
+              is_new: step.cooking_method.is_new,
+            }
+          : null,
+        ingredients_used: [],
+        heat_level: null,
+        duration_seconds: null,
+        duration_text: step.duration_text,
+        component_label: step.component_label ?? null,
+        is_incomplete: step.is_incomplete,
+        missing_fields: step.missing_fields ?? [],
+        raw_text: step.raw_text,
+      })),
+    );
+  }, []);
+
   // ─── Extraction (triggered by entering "extracting" step) ──────────
 
   // Ref to avoid double-fire in StrictMode
@@ -2185,59 +2311,19 @@ export function YoutubeImportScreen({
         return;
       }
 
-      // Populate review state from extraction result
       const data = result.data;
-      setExtractionId(data.extraction_id);
-      setTitle(data.title);
-      // Carry-forward: base_servings null default → 1
-      setBaseServings(data.base_servings ?? 1);
-      setExtractionMethods(data.extraction_methods ?? []);
-      setDraftWarnings(data.draft_warnings ?? []);
-      setBlockingIssues(data.blocking_issues ?? []);
-
-      setIngredients(
-        data.ingredients.map((ing: YoutubeExtractedIngredient, idx: number) => ({
-          ...ing,
-          ingredient_id: ing.ingredient_id ?? "",
-          standard_name: ing.standard_name ?? "",
-          display_text: ing.display_text ?? ing.raw_text ?? null,
-          resolution_status: ing.resolution_status ?? "resolved",
-          component_label: ing.component_label ?? null,
-          tempId: `yt-ing-${idx}`,
-        })),
-      );
-
-      setSteps(
-        data.steps.map((step: YoutubeExtractedStep, idx: number) => ({
-          tempId: `yt-step-${idx}`,
-          step_number: step.step_number,
-          instruction: step.instruction,
-          cooking_method: step.cooking_method
-            ? {
-                id: step.cooking_method.id,
-                code: step.cooking_method.code,
-                label: step.cooking_method.label,
-                color_key: step.cooking_method.color_key,
-                is_system: false,
-                is_new: step.cooking_method.is_new,
-              }
-            : null,
-          ingredients_used: [],
-          heat_level: null,
-          duration_seconds: null,
-          duration_text: step.duration_text,
-          component_label: step.component_label ?? null,
-          is_incomplete: step.is_incomplete,
-          missing_fields: step.missing_fields ?? [],
-          raw_text: step.raw_text,
-        })),
-      );
+      const candidates = data.recipe_candidates ?? [];
+      setRecipeCandidates(candidates);
+      setParentExtractionId(candidates.length > 0 ? data.extraction_id : null);
+      setSelectedCandidateId(data.primary_candidate_id ?? candidates[0]?.candidate_id ?? null);
+      setCandidatePromotionError(null);
+      applyExtractDataToReview(data);
 
       pushStep("review");
     })();
 
     return () => { cancelled = true; };
-  }, [currentStep, youtubeUrl, pushStep]);
+  }, [applyExtractDataToReview, currentStep, youtubeUrl, pushStep]);
 
   // Helper to initiate extraction from non-recipe warning proceed button
   const triggerExtraction = useCallback(() => {
@@ -2247,6 +2333,38 @@ export function YoutubeImportScreen({
     setExtractionElapsedMs(0);
     pushStep("extracting");
   }, [pushStep]);
+
+  const handleSelectCandidate = useCallback(async (candidateId: string) => {
+    const parentId = parentExtractionId ?? extractionId;
+    if (!parentId || isPromotingCandidate) return;
+
+    setIsPromotingCandidate(true);
+    setCandidatePromotionError(null);
+    setSelectedCandidateId(candidateId);
+
+    const result = await createYoutubeCandidateDraft({
+      extraction_id: parentId,
+      candidate_id: candidateId,
+    });
+
+    setIsPromotingCandidate(false);
+
+    if (!result.success || !result.data) {
+      setCandidatePromotionError(
+        getApiErrorMessage("레시피 후보를 불러오지 못했어요.", result.error?.message),
+      );
+      return;
+    }
+
+    setParentExtractionId(result.data.parent_extraction_id);
+    setSelectedCandidateId(result.data.candidate_id);
+    applyExtractDataToReview(result.data.draft);
+  }, [
+    applyExtractDataToReview,
+    extractionId,
+    isPromotingCandidate,
+    parentExtractionId,
+  ]);
 
   // ─── Step 3 handlers ───────────────────────────────────────────────
 
@@ -2601,6 +2719,11 @@ export function YoutubeImportScreen({
     setExtractionError(null);
     setDraftWarnings([]);
     setBlockingIssues([]);
+    setParentExtractionId(null);
+    setRecipeCandidates([]);
+    setSelectedCandidateId(null);
+    setIsPromotingCandidate(false);
+    setCandidatePromotionError(null);
     setReplacingIngredientId(null);
     setRegisteringIngredientId(null);
     setEditingStepId(null);
@@ -2808,8 +2931,13 @@ export function YoutubeImportScreen({
             classificationReasons={classificationReasons}
             draftWarnings={draftWarnings}
             blockingIssues={blockingIssues}
+            recipeCandidates={recipeCandidates}
+            selectedCandidateId={selectedCandidateId}
+            isPromotingCandidate={isPromotingCandidate}
+            candidatePromotionError={candidatePromotionError}
             ingredients={ingredients}
             steps={steps}
+            onSelectCandidate={handleSelectCandidate}
             onUpdateIngredient={handleUpdateIngredient}
             onResolveIngredientCandidate={handleResolveIngredientCandidate}
             onReplaceIngredient={handleReplaceIngredient}
@@ -3053,8 +3181,13 @@ export function YoutubeImportScreen({
             classificationReasons={classificationReasons}
             draftWarnings={draftWarnings}
             blockingIssues={blockingIssues}
+            recipeCandidates={recipeCandidates}
+            selectedCandidateId={selectedCandidateId}
+            isPromotingCandidate={isPromotingCandidate}
+            candidatePromotionError={candidatePromotionError}
             ingredients={ingredients}
             steps={steps}
+            onSelectCandidate={handleSelectCandidate}
             onUpdateIngredient={handleUpdateIngredient}
             onResolveIngredientCandidate={handleResolveIngredientCandidate}
             onReplaceIngredient={handleReplaceIngredient}

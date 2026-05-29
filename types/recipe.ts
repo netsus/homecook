@@ -218,6 +218,37 @@ export interface YoutubeExtractedStep {
   raw_text?: string;
 }
 
+export type YoutubeMultiRecipeStatus = "single" | "multiple" | "ambiguous";
+
+export interface YoutubeRecipeEvidenceRef {
+  source: "description" | "comment" | "caption" | "transcript";
+  line_index: number;
+  start_ms?: number | null;
+  end_ms?: number | null;
+  text?: string;
+}
+
+export interface YoutubeSourceSegmentsSummary {
+  source: "description" | "comment" | "caption" | "transcript";
+  language: string | null;
+  track_kind: string | null;
+  segment_count: number;
+  blocked_reason?: string | null;
+}
+
+export interface YoutubeRecipeCandidate {
+  candidate_id: string;
+  title: string;
+  start_ms: number | null;
+  end_ms: number | null;
+  confidence: number;
+  ingredients: YoutubeExtractedIngredient[];
+  steps: YoutubeExtractedStep[];
+  draft_warnings: string[];
+  blocking_issues: string[];
+  evidence_refs: YoutubeRecipeEvidenceRef[];
+}
+
 export interface YoutubeRecipeExtractData {
   extraction_id: string;
   title: string;
@@ -228,6 +259,22 @@ export interface YoutubeRecipeExtractData {
   ingredients: YoutubeExtractedIngredient[];
   steps: YoutubeExtractedStep[];
   new_cooking_methods: YoutubeExtractedCookingMethod[];
+  multi_recipe_status?: YoutubeMultiRecipeStatus;
+  primary_candidate_id?: string | null;
+  caption_source?: "none" | "server_timedtext" | "browser_fallback";
+  source_segments_summary?: YoutubeSourceSegmentsSummary[];
+  recipe_candidates?: YoutubeRecipeCandidate[];
+}
+
+export interface YoutubeCandidateDraftBody {
+  extraction_id: string;
+  candidate_id: string;
+}
+
+export interface YoutubeCandidateDraftData {
+  parent_extraction_id: string;
+  candidate_id: string;
+  draft: YoutubeRecipeExtractData;
 }
 
 export interface YoutubeRecipeRegisterBody {

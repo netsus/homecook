@@ -101,6 +101,35 @@ describe("Recipio-style YouTube import helpers", () => {
     expect(getRecipioAutoRegisterBlockers(buildExtractData())).toEqual([]);
     expect(getRecipioAutoRegisterBlockers(unresolved)).toContain("확정되지 않은 재료가 있어요.");
     expect(getRecipioAutoRegisterBlockers(incompleteStep)).toContain("필수 조리 단계가 비어 있어요.");
+    expect(getRecipioAutoRegisterBlockers(buildExtractData({
+      multi_recipe_status: "multiple",
+      recipe_candidates: [
+        {
+          candidate_id: "candidate-1",
+          title: "첫 번째 요리",
+          start_ms: null,
+          end_ms: null,
+          confidence: 0.8,
+          ingredients: buildExtractData().ingredients,
+          steps: buildExtractData().steps,
+          draft_warnings: [],
+          blocking_issues: [],
+          evidence_refs: [],
+        },
+        {
+          candidate_id: "candidate-2",
+          title: "두 번째 요리",
+          start_ms: null,
+          end_ms: null,
+          confidence: 0.8,
+          ingredients: buildExtractData().ingredients,
+          steps: buildExtractData().steps,
+          draft_warnings: [],
+          blocking_issues: [],
+          evidence_refs: [],
+        },
+      ],
+    }))).toContain("영상 안에 여러 요리 후보가 있어요.");
   });
 
   it("builds the existing register contract from extracted data without leaking draft-only fields", () => {

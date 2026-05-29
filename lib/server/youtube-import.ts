@@ -17,22 +17,37 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
+import {
+  buildTextSegments,
+  joinSegmentText,
+  summarizeSourceSegments,
+  type YoutubePublicTextSource,
+  type YoutubeSourceSegment,
+} from "@/lib/server/youtube-caption-normalizer";
+import {
+  extractYoutubeMultiRecipeCandidates,
+  type YoutubeRawRecipeCandidate,
+} from "@/lib/server/youtube-multi-recipe-extractor";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import type {
   IngredientCategory,
   ManualRecipeIngredientInput,
   ManualRecipeStepInput,
+  YoutubeCandidateDraftBody,
+  YoutubeCandidateDraftData,
   YoutubeExtractedCookingMethod,
   YoutubeExtractedIngredient,
   YoutubeIngredientRegistrationData,
   YoutubeIngredientRegistrationSynonymStatus,
   YoutubeIngredientResolutionStatus,
+  YoutubeRecipeCandidate,
   YoutubeRecipeClassificationStatus,
   YoutubeRecipeExtractData,
   YoutubeRecipeRegisterData,
   YoutubeRecipeRegisterIngredientInput,
   YoutubeRecipeRegisterStepInput,
+  YoutubeSourceSegmentsSummary,
   YoutubeRecipeValidateData,
 } from "@/types/recipe";
 
@@ -139,6 +154,9 @@ interface YoutubeExtractionSessionInsert {
   extraction_methods: string[];
   status: "draft";
   expires_at: string;
+  session_kind?: "single" | "multi_parent" | "candidate_child";
+  parent_extraction_session_id?: string | null;
+  parent_candidate_id?: string | null;
 }
 
 interface YoutubeExtractionSessionRow {
@@ -146,13 +164,22 @@ interface YoutubeExtractionSessionRow {
   user_id: string;
   youtube_url: string;
   youtube_video_id: string;
+  video_title?: string | null;
+  channel_title?: string | null;
+  thumbnail_url?: string | null;
   provider_version: string | null;
+  source_providers?: string[];
+  classification_status?: YoutubeRecipeClassificationStatus;
+  classification_reasons?: string[];
   extraction_methods: string[];
   raw_source_text: string | null;
   extraction_meta_json: Record<string, unknown>;
   draft_json: Record<string, unknown>;
   status: "draft" | "consumed" | "expired";
   expires_at: string;
+  session_kind?: "single" | "multi_parent" | "candidate_child";
+  parent_extraction_session_id?: string | null;
+  parent_candidate_id?: string | null;
 }
 
 interface YoutubeExtractionSessionSelectQuery {
@@ -168,6 +195,48 @@ interface YoutubeExtractionSessionsTable {
   select(columns: string): YoutubeExtractionSessionSelectQuery;
 }
 
+interface YoutubeExtractionCandidateInsert {
+  id: string;
+  extraction_session_id: string;
+  candidate_id: string;
+  status: "draft" | "promoted" | "registered" | "skipped" | "expired";
+  child_extraction_session_id: string | null;
+  recipe_id: string | null;
+  title: string;
+  start_ms: number | null;
+  end_ms: number | null;
+  confidence: number | null;
+  draft_ingredient_ids_json: string[];
+  source_meta_json: Record<string, unknown>;
+}
+
+interface YoutubeExtractionCandidateRow extends YoutubeExtractionCandidateInsert {
+  promoted_at?: string | null;
+  registered_at?: string | null;
+}
+
+interface YoutubeExtractionCandidateSelectQuery {
+  eq(column: string, value: string): YoutubeExtractionCandidateSelectQuery;
+  maybeSingle(): MaybeSingleResult<YoutubeExtractionCandidateRow>;
+}
+
+interface YoutubeExtractionCandidateUpdateQuery {
+  eq(column: string, value: string): YoutubeExtractionCandidateUpdateQuery;
+  then: PromiseLike<{
+    data: null;
+    error: QueryError | null;
+  }>["then"];
+}
+
+interface YoutubeExtractionCandidatesTable {
+  insert(values: YoutubeExtractionCandidateInsert[]): PromiseLike<{
+    data: null;
+    error: QueryError | null;
+  }>;
+  select(columns: string): YoutubeExtractionCandidateSelectQuery;
+  update(values: Partial<YoutubeExtractionCandidateRow>): YoutubeExtractionCandidateUpdateQuery;
+}
+
 interface YoutubeRecipeRegisterRpcData {
   recipe_id: string;
   title: string;
@@ -179,6 +248,7 @@ interface YoutubeRecipeRegisterRpcErrorData {
     | "EXTRACTION_EXPIRED"
     | "EXTRACTION_ALREADY_REGISTERED"
     | "EXTRACTION_MISMATCH"
+    | "CANDIDATE_PROMOTION_REQUIRED"
     | "VALIDATION_ERROR";
   message?: string;
 }
@@ -249,6 +319,11 @@ interface ParsedYoutubeIngredientRegistration {
   synonym: string | null;
 }
 
+interface ParsedYoutubeCandidateDraft {
+  extractionId: string;
+  candidateId: string;
+}
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,20}$/;
 const DEFAULT_EXTRACTION_METHODS = ["description"] as const;
@@ -258,9 +333,12 @@ const YOUTUBE_PROVIDER_VERSION = "youtube-videos-list-public-text-v2";
 const SESSION_TTL_HOURS = 24;
 const AUTHOR_COMMENT_RAW_SOURCE_HEADER = "--- author comment ---";
 const CAPTION_TRANSCRIPT_RAW_SOURCE_HEADER = "--- caption transcript ---";
+const MULTI_CANDIDATE_REVIEW_REQUIRED = "MULTI_CANDIDATE_REVIEW_REQUIRED";
 const AUTHOR_COMMENT_MAX_RESULTS = 100;
 const AUTHOR_COMMENT_ORDER = "relevance";
 const AUTHOR_COMMENT_QUOTA_UNITS_ESTIMATE = 1;
+const YOUTUBE_BROWSER_USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const OEMBED_PREVIEW_CLASSIFICATION_REASONS = [YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON];
 const AMBIGUOUS_DIRECT_MATCH_NAMES = new Set(["파"]);
 const NEW_COOKING_METHOD = {
@@ -351,6 +429,7 @@ export interface YoutubeTranscriptProviderResult {
   status: YoutubeTranscriptProviderStatus;
   providerName?: string;
   transcriptText?: string | null;
+  transcriptSegments?: YoutubeSourceSegment[];
   language?: string | null;
   trackKind?: "manual" | "auto" | "unknown" | null;
   reason?: string | null;
@@ -447,6 +526,7 @@ interface TranscriptFallbackResult {
   recipe: ParsedRecipeDescription;
   usedTranscript: boolean;
   rawTranscriptText: string | null;
+  rawTranscriptSegments: YoutubeSourceSegment[];
   meta: TranscriptFallbackMeta;
 }
 
@@ -1428,24 +1508,66 @@ function withTimedTextJsonFormat(baseUrl: string) {
   }
 }
 
-function parseTimedTextJson3(value: unknown) {
+function buildYoutubePageFetchHeaders() {
+  return {
+    accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "accept-language": "ko,en;q=0.8",
+    "user-agent": YOUTUBE_BROWSER_USER_AGENT,
+  };
+}
+
+function buildYoutubeTimedTextFetchHeaders(referer: string) {
+  return {
+    accept: "application/json,text/xml,application/xml,text/plain,*/*;q=0.8",
+    "accept-language": "ko,en;q=0.8",
+    referer,
+    "user-agent": YOUTUBE_BROWSER_USER_AGENT,
+  };
+}
+
+function parseTimedTextJson3Segments(
+  value: unknown,
+  {
+    language,
+    trackKind,
+  }: {
+    language: string | null;
+    trackKind: string | null;
+  },
+): YoutubeSourceSegment[] {
   if (!isRecord(value) || !Array.isArray(value.events)) {
-    return "";
+    return [];
   }
 
-  return value.events
-    .flatMap((event) => {
-      if (!isRecord(event) || !Array.isArray(event.segs)) {
-        return [];
-      }
+  const segments: YoutubeSourceSegment[] = [];
 
-      return event.segs
-        .map((segment) => isRecord(segment) && typeof segment.utf8 === "string" ? segment.utf8 : "")
-        .join("");
-    })
-    .map((text) => text.replace(/\s+/gu, " ").trim())
-    .filter(Boolean)
-    .join("\n");
+  value.events.forEach((event, lineIndex) => {
+    if (!isRecord(event) || !Array.isArray(event.segs)) {
+      return;
+    }
+
+    const text = event.segs
+      .map((segment) => isRecord(segment) && typeof segment.utf8 === "string" ? segment.utf8 : "")
+      .join("")
+      .replace(/\s+/gu, " ")
+      .trim();
+
+    if (!text) {
+      return;
+    }
+
+    segments.push({
+      source: "caption",
+      lineIndex,
+      text,
+      startMs: typeof event.tStartMs === "number" ? event.tStartMs : null,
+      durationMs: typeof event.dDurationMs === "number" ? event.dDurationMs : null,
+      language,
+      trackKind,
+    });
+  });
+
+  return segments;
 }
 
 function parseTimedTextXml(xml: string) {
@@ -1455,18 +1577,35 @@ function parseTimedTextXml(xml: string) {
     .join("\n");
 }
 
-function parseTimedTextTranscript(text: string) {
+function parseTimedTextTranscript(
+  text: string,
+  {
+    language,
+    trackKind,
+  }: {
+    language: string | null;
+    trackKind: string | null;
+  },
+) {
   try {
     const parsed = JSON.parse(text);
-    const transcript = parseTimedTextJson3(parsed);
+    const segments = parseTimedTextJson3Segments(parsed, { language, trackKind });
+    const transcript = joinSegmentText(segments);
     if (transcript) {
-      return transcript;
+      return { transcript, segments };
     }
   } catch {
     // Fall through to XML parsing.
   }
 
-  return parseTimedTextXml(text);
+  const transcript = parseTimedTextXml(text);
+
+  return {
+    transcript,
+    segments: transcript
+      ? buildTextSegments({ text: transcript, source: "caption", language, trackKind })
+      : [],
+  };
 }
 
 async function fetchPublicYoutubeTranscript(
@@ -1478,9 +1617,7 @@ async function fetchPublicYoutubeTranscript(
     watchResponse = await fetch(
       `https://www.youtube.com/watch?v=${encodeURIComponent(context.videoId)}&hl=ko`,
       {
-        headers: {
-          "accept-language": "ko,en;q=0.8",
-        },
+        headers: buildYoutubePageFetchHeaders(),
       },
     );
   } catch {
@@ -1515,7 +1652,9 @@ async function fetchPublicYoutubeTranscript(
   let transcriptResponse: Response;
 
   try {
-    transcriptResponse = await fetch(withTimedTextJsonFormat(selectedTrack.baseUrl));
+    transcriptResponse = await fetch(withTimedTextJsonFormat(selectedTrack.baseUrl), {
+      headers: buildYoutubeTimedTextFetchHeaders(context.youtubeUrl),
+    });
   } catch {
     return {
       status: "error",
@@ -1536,12 +1675,17 @@ async function fetchPublicYoutubeTranscript(
     };
   }
 
-  const transcriptText = parseTimedTextTranscript(await transcriptResponse.text());
+  const parsedTranscript = parseTimedTextTranscript(await transcriptResponse.text(), {
+    language: selectedTrack.languageCode,
+    trackKind: selectedTrack.trackKind,
+  });
+  const transcriptText = parsedTranscript.transcript;
 
   return {
     status: transcriptText ? "available" : "unavailable",
     providerName: PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER.name,
     transcriptText,
+    transcriptSegments: parsedTranscript.segments,
     language: selectedTrack.languageCode,
     trackKind: selectedTrack.trackKind,
     reason: transcriptText ? null : "empty_timedtext",
@@ -2402,6 +2546,7 @@ async function resolveTranscriptFallback(
       recipe: parsedRecipe,
       usedTranscript: false,
       rawTranscriptText: null,
+      rawTranscriptSegments: [],
       meta: buildTranscriptFallbackMeta({
         attempted: false,
         capability,
@@ -2427,6 +2572,7 @@ async function resolveTranscriptFallback(
       recipe: parsedRecipe,
       usedTranscript: false,
       rawTranscriptText: null,
+      rawTranscriptSegments: [],
       meta: buildTranscriptFallbackMeta({
         attempted: true,
         capability,
@@ -2439,12 +2585,14 @@ async function resolveTranscriptFallback(
 
   const providerName = providerResult.providerName ?? provider.name;
   const transcriptText = providerResult.transcriptText?.trim() ?? "";
+  const transcriptSegments = providerResult.transcriptSegments ?? [];
 
   if (providerResult.status !== "available" || !transcriptText) {
     return {
       recipe: parsedRecipe,
       usedTranscript: false,
       rawTranscriptText: null,
+      rawTranscriptSegments: [],
       meta: buildTranscriptFallbackMeta({
         attempted: true,
         capability,
@@ -2466,6 +2614,7 @@ async function resolveTranscriptFallback(
       recipe: parsedRecipe,
       usedTranscript: false,
       rawTranscriptText: null,
+      rawTranscriptSegments: [],
       meta: buildTranscriptFallbackMeta({
         attempted: true,
         capability,
@@ -2482,6 +2631,7 @@ async function resolveTranscriptFallback(
     recipe: merged.recipe,
     usedTranscript: true,
     rawTranscriptText: transcriptText,
+    rawTranscriptSegments: transcriptSegments,
     meta: buildTranscriptFallbackMeta({
       attempted: true,
       capability,
@@ -2990,6 +3140,221 @@ function buildExtractedSteps(
   }));
 }
 
+function candidateSourceToExtractionMethod(source: YoutubePublicTextSource) {
+  if (source === "comment") return COMMENT_EXTRACTION_METHOD;
+  if (source === "caption" || source === "transcript") return CAPTION_EXTRACTION_METHOD;
+  return DEFAULT_EXTRACTION_METHODS[0];
+}
+
+function buildCandidateSourceSegments({
+  source,
+  text,
+  transcriptSegments = [],
+}: {
+  source: YoutubePublicTextSource;
+  text: string;
+  transcriptSegments?: YoutubeSourceSegment[];
+}) {
+  if ((source === "caption" || source === "transcript") && transcriptSegments.length > 0) {
+    return transcriptSegments;
+  }
+
+  return buildTextSegments({ text, source });
+}
+
+function selectMultiRecipeExtraction({
+  video,
+  descriptionText,
+  authorCommentText,
+  transcriptText,
+  transcriptSegments,
+}: {
+  video: YoutubeProviderVideo;
+  descriptionText: string;
+  authorCommentText: string | null;
+  transcriptText: string | null;
+  transcriptSegments: YoutubeSourceSegment[];
+}) {
+  const sourceCandidates: Array<{
+    source: YoutubePublicTextSource;
+    text: string;
+    segments: YoutubeSourceSegment[];
+  }> = [
+    ...(transcriptText?.trim()
+      ? [{
+          source: "caption" as const,
+          text: transcriptText,
+          segments: buildCandidateSourceSegments({
+            source: "caption",
+            text: transcriptText,
+            transcriptSegments,
+          }),
+        }]
+      : []),
+    ...(authorCommentText?.trim()
+      ? [{
+          source: "comment" as const,
+          text: authorCommentText,
+          segments: buildCandidateSourceSegments({ source: "comment", text: authorCommentText }),
+        }]
+      : []),
+    {
+      source: "description" as const,
+      text: descriptionText,
+      segments: buildCandidateSourceSegments({ source: "description", text: descriptionText }),
+    },
+  ];
+
+  for (const sourceCandidate of sourceCandidates) {
+    const extraction = extractYoutubeMultiRecipeCandidates({
+      title: video.title,
+      text: sourceCandidate.text,
+      source: sourceCandidate.source,
+      segments: sourceCandidate.segments,
+    });
+
+    if (extraction && extraction.candidates.length >= 2) {
+      return {
+        ...extraction,
+        segments: sourceCandidate.segments,
+      };
+    }
+  }
+
+  return null;
+}
+
+async function buildExtractedRecipeCandidate({
+  dbClient,
+  rawCandidate,
+}: {
+  dbClient: DbClient;
+  rawCandidate: YoutubeRawRecipeCandidate;
+}): Promise<{
+  candidate: YoutubeRecipeCandidate | null;
+  newCookingMethods: YoutubeExtractedCookingMethod[];
+  error: QueryError | null;
+}> {
+  const parsedIngredients = rawCandidate.draft.ingredients.map(adaptFlatDraftIngredient);
+  const ingredientLookup = await findIngredientIds(
+    dbClient,
+    parsedIngredients.map((ingredient) => ingredient.name),
+  );
+
+  if (ingredientLookup.error) {
+    return { candidate: null, newCookingMethods: [], error: ingredientLookup.error };
+  }
+
+  const cookingMethodResult = await resolveCookingMethodsForSteps(dbClient, rawCandidate.draft.steps);
+  if (cookingMethodResult.error || !cookingMethodResult.fallbackMethod) {
+    return {
+      candidate: null,
+      newCookingMethods: [],
+      error: cookingMethodResult.error ?? { message: "missing fallback cooking method" },
+    };
+  }
+
+  const ingredients = buildExtractedIngredients(ingredientLookup.matchesByName, parsedIngredients);
+  const steps = buildExtractedSteps(
+    rawCandidate.draft.steps,
+    cookingMethodResult.methods,
+    cookingMethodResult.fallbackMethod,
+    {
+      includeIncompleteFallback: rawCandidate.draft.includeIncompleteStepFallback,
+      stepComponentLabels: rawCandidate.draft.stepComponentLabels,
+    },
+  );
+  const blockingIssues = [
+    ...rawCandidate.draft.blockingIssues,
+    ...buildBlockingIssues(ingredients),
+    ...steps.flatMap((step, index) =>
+      (step.missing_fields ?? []).map((field) => `steps[${index}].${field}`),
+    ),
+  ].filter((issue, index, issues) => issues.indexOf(issue) === index);
+
+  return {
+    candidate: {
+      candidate_id: rawCandidate.candidateId,
+      title: rawCandidate.title,
+      start_ms: rawCandidate.startMs,
+      end_ms: rawCandidate.endMs,
+      confidence: rawCandidate.confidence,
+      ingredients,
+      steps,
+      draft_warnings: rawCandidate.draft.draftWarnings,
+      blocking_issues: blockingIssues,
+      evidence_refs: rawCandidate.evidenceRefs,
+    },
+    newCookingMethods: cookingMethodResult.newCookingMethods,
+    error: null,
+  };
+}
+
+async function buildExtractedRecipeCandidates({
+  dbClient,
+  rawCandidates,
+}: {
+  dbClient: DbClient;
+  rawCandidates: YoutubeRawRecipeCandidate[];
+}) {
+  const candidates: YoutubeRecipeCandidate[] = [];
+  const newCookingMethods: YoutubeExtractedCookingMethod[] = [];
+
+  for (const rawCandidate of rawCandidates) {
+    const result = await buildExtractedRecipeCandidate({ dbClient, rawCandidate });
+    if (result.error || !result.candidate) {
+      return { candidates: [], newCookingMethods: [], error: result.error ?? { message: "candidate failed" } };
+    }
+
+    candidates.push(result.candidate);
+    for (const method of result.newCookingMethods) {
+      if (!newCookingMethods.some((existing) => existing.id === method.id || existing.code === method.code)) {
+        newCookingMethods.push(method);
+      }
+    }
+  }
+
+  return { candidates, newCookingMethods, error: null };
+}
+
+function buildMultiRecipeCandidateRows(
+  extractionSessionId: string,
+  candidates: YoutubeRecipeCandidate[],
+): YoutubeExtractionCandidateInsert[] {
+  return candidates.map((candidate) => ({
+    id: crypto.randomUUID(),
+    extraction_session_id: extractionSessionId,
+    candidate_id: candidate.candidate_id,
+    status: "draft",
+    child_extraction_session_id: null,
+    recipe_id: null,
+    title: candidate.title,
+    start_ms: candidate.start_ms,
+    end_ms: candidate.end_ms,
+    confidence: candidate.confidence,
+    draft_ingredient_ids_json: candidate.ingredients.map((ingredient) => ingredient.draft_ingredient_id),
+    source_meta_json: {
+      evidence_refs: candidate.evidence_refs,
+      blocking_issues: candidate.blocking_issues,
+      draft_warnings: candidate.draft_warnings,
+    },
+  }));
+}
+
+async function insertExtractionCandidates(
+  dbClient: DbClient,
+  rows: YoutubeExtractionCandidateInsert[],
+) {
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const result = await table<YoutubeExtractionCandidatesTable>(dbClient, "youtube_extraction_candidates")
+    .insert(rows);
+
+  return result.error;
+}
+
 function buildSessionExpiresAt() {
   const expiresAt = new Date(Date.now() + SESSION_TTL_HOURS * 60 * 60 * 1000);
   return expiresAt.toISOString();
@@ -3043,6 +3408,123 @@ export async function handleYoutubeExtract(request: Request) {
   const authorCommentFallback = await resolveAuthorCommentFallback(video, parsedRecipe, descriptionParse, parsedUrl);
   const transcriptFallback = await resolveTranscriptFallback(video, authorCommentFallback.recipe, parsedUrl);
   const finalParsedRecipe = transcriptFallback.recipe;
+  const rawSourceText = buildRawSourceText(
+    video.description,
+    authorCommentFallback.rawAuthorCommentText,
+    transcriptFallback.rawTranscriptText,
+  );
+  const multiRecipeExtraction = selectMultiRecipeExtraction({
+    video,
+    descriptionText: video.description,
+    authorCommentText: authorCommentFallback.rawAuthorCommentText,
+    transcriptText: transcriptFallback.rawTranscriptText,
+    transcriptSegments: transcriptFallback.rawTranscriptSegments,
+  });
+
+  if (multiRecipeExtraction) {
+    const candidateBuild = await buildExtractedRecipeCandidates({
+      dbClient,
+      rawCandidates: multiRecipeExtraction.candidates,
+    });
+
+    if (candidateBuild.error) {
+      return fail("INTERNAL_ERROR", "다중 레시피 후보를 만들지 못했어요.", 500);
+    }
+
+    const extractionId = crypto.randomUUID();
+    const extractionMethod = candidateSourceToExtractionMethod(multiRecipeExtraction.source);
+    const extractionMethods = [extractionMethod];
+    const sourceProviders = [
+      "youtube_videos_list",
+      ...(multiRecipeExtraction.source === "description" ? ["description_parser"] : []),
+      ...(multiRecipeExtraction.source === "comment"
+        ? ["youtube_comment_threads", "comment_filter", "comment_parser"]
+        : []),
+      ...(multiRecipeExtraction.source === "caption" || multiRecipeExtraction.source === "transcript"
+        ? ["public_caption_timedtext", "caption_parser"]
+        : []),
+      "multi_recipe_candidate_parser",
+    ];
+    const sourceSegmentsSummary: YoutubeSourceSegmentsSummary[] = [
+      summarizeSourceSegments(multiRecipeExtraction.segments),
+    ];
+    const draftWarnings = [
+      ...(classification.status === "uncertain"
+        ? ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해주세요."]
+        : []),
+      "영상 안에서 여러 요리 후보를 찾았어요. 저장할 요리를 먼저 선택해주세요.",
+    ];
+    const data: YoutubeRecipeExtractData = {
+      extraction_id: extractionId,
+      title: video.title,
+      base_servings: 1,
+      extraction_methods: extractionMethods,
+      draft_warnings: draftWarnings,
+      blocking_issues: [MULTI_CANDIDATE_REVIEW_REQUIRED],
+      ingredients: [],
+      steps: [],
+      new_cooking_methods: candidateBuild.newCookingMethods,
+      multi_recipe_status: multiRecipeExtraction.candidates.length > 1 ? "multiple" : "ambiguous",
+      primary_candidate_id: candidateBuild.candidates[0]?.candidate_id ?? null,
+      caption_source: extractionMethod === CAPTION_EXTRACTION_METHOD ? "server_timedtext" : "none",
+      source_segments_summary: sourceSegmentsSummary,
+      recipe_candidates: candidateBuild.candidates,
+    };
+    const expiresAt = buildSessionExpiresAt();
+    const sessionError = await insertExtractionSession(dbClient, {
+      id: extractionId,
+      user_id: user.id,
+      youtube_url: parsedUrl.youtubeUrl,
+      youtube_video_id: parsedUrl.videoId,
+      video_title: video.title,
+      channel_title: video.channel,
+      thumbnail_url: video.thumbnailUrl,
+      provider_version: YOUTUBE_PROVIDER_VERSION,
+      source_providers: sourceProviders,
+      classification_status: classification.status,
+      classification_reasons: classification.reasons,
+      raw_source_text: rawSourceText,
+      extraction_meta_json: {
+        provider_version: YOUTUBE_PROVIDER_VERSION,
+        source_providers: sourceProviders,
+        classification_status: classification.status,
+        classification_reasons: classification.reasons,
+        description_parser_version: descriptionParse.parserVersion,
+        description_parser_selection_outcome: "multi_recipe_candidates",
+        draft_warnings: draftWarnings,
+        author_comment_provider: authorCommentFallback.meta,
+        caption_capability: transcriptFallback.meta.capability,
+        transcript_provider: transcriptFallback.meta,
+        multi_recipe_status: data.multi_recipe_status,
+        primary_candidate_id: data.primary_candidate_id,
+        candidate_count: candidateBuild.candidates.length,
+        source_segments_summary: sourceSegmentsSummary,
+      },
+      draft_json: data as unknown as Record<string, unknown>,
+      extraction_methods: extractionMethods,
+      status: "draft",
+      expires_at: expiresAt,
+      session_kind: "multi_parent",
+      parent_extraction_session_id: null,
+      parent_candidate_id: null,
+    });
+
+    if (sessionError) {
+      return fail("INTERNAL_ERROR", "추출 세션을 저장하지 못했어요.", 500);
+    }
+
+    const candidateError = await insertExtractionCandidates(
+      dbClient,
+      buildMultiRecipeCandidateRows(extractionId, candidateBuild.candidates),
+    );
+
+    if (candidateError) {
+      return fail("INTERNAL_ERROR", "레시피 후보를 저장하지 못했어요.", 500);
+    }
+
+    return ok(data);
+  }
+
   const ingredientLookup = await findIngredientIds(
     dbClient,
     finalParsedRecipe.ingredients.map((ingredient) => ingredient.name),
@@ -3138,11 +3620,7 @@ export async function handleYoutubeExtract(request: Request) {
     source_providers: sourceProviders,
     classification_status: classification.status,
     classification_reasons: classification.reasons,
-    raw_source_text: buildRawSourceText(
-      video.description,
-      authorCommentFallback.rawAuthorCommentText,
-      transcriptFallback.rawTranscriptText,
-    ),
+    raw_source_text: rawSourceText,
     extraction_meta_json: {
       provider_version: YOUTUBE_PROVIDER_VERSION,
       source_providers: sourceProviders,
@@ -3161,6 +3639,9 @@ export async function handleYoutubeExtract(request: Request) {
     extraction_methods: extractionMethods,
     status: "draft",
     expires_at: buildSessionExpiresAt(),
+    session_kind: "single",
+    parent_extraction_session_id: null,
+    parent_candidate_id: null,
   });
 
   if (sessionError) {
@@ -3504,6 +3985,41 @@ function parseYoutubeIngredientRegistrationBody(rawBody: unknown) {
   return { fields, parsed };
 }
 
+function parseYoutubeCandidateDraftBody(rawBody: unknown) {
+  const fields: ValidationField[] = [];
+
+  if (!isRecord(rawBody)) {
+    return {
+      fields: [{ field: "body", reason: "invalid_object" }],
+      parsed: null,
+    };
+  }
+
+  const body = rawBody as Partial<YoutubeCandidateDraftBody>;
+  const extractionId = typeof body.extraction_id === "string" ? body.extraction_id.trim() : "";
+  if (!extractionId) {
+    fields.push({ field: "extraction_id", reason: "required" });
+  } else if (!isUuid(extractionId)) {
+    fields.push({ field: "extraction_id", reason: "invalid_uuid" });
+  }
+
+  const candidateId = typeof body.candidate_id === "string" ? body.candidate_id.trim() : "";
+  if (!candidateId) {
+    fields.push({ field: "candidate_id", reason: "required" });
+  } else if (!/^[A-Za-z0-9_.:-]{1,80}$/u.test(candidateId)) {
+    fields.push({ field: "candidate_id", reason: "invalid_format" });
+  }
+
+  const parsed = fields.length === 0
+    ? ({
+        extractionId,
+        candidateId,
+      } satisfies ParsedYoutubeCandidateDraft)
+    : null;
+
+  return { fields, parsed };
+}
+
 async function findMissingIds(
   dbClient: DbClient,
   tableName: "ingredients" | "cooking_methods",
@@ -3581,6 +4097,10 @@ function failForRegisterRpcError(data: YoutubeRecipeRegisterRpcErrorData) {
     return fail(data.error_code, data.message ?? "추출한 영상과 등록 요청이 일치하지 않아요.", 409);
   }
 
+  if (data.error_code === "CANDIDATE_PROMOTION_REQUIRED") {
+    return fail(data.error_code, data.message ?? "저장할 요리를 먼저 선택해주세요.", 409);
+  }
+
   return fail(data.error_code, data.message ?? "요청 값을 확인해주세요.", 422);
 }
 
@@ -3591,18 +4111,70 @@ async function findExtractionSession(dbClient: DbClient, extractionId: string) {
       "user_id",
       "youtube_url",
       "youtube_video_id",
+      "video_title",
+      "channel_title",
+      "thumbnail_url",
       "provider_version",
+      "source_providers",
+      "classification_status",
+      "classification_reasons",
       "extraction_methods",
       "raw_source_text",
       "extraction_meta_json",
       "draft_json",
       "status",
       "expires_at",
+      "session_kind",
+      "parent_extraction_session_id",
+      "parent_candidate_id",
     ].join(", "))
     .eq("id", extractionId)
     .maybeSingle();
 
   return result;
+}
+
+async function findExtractionCandidate(
+  dbClient: DbClient,
+  extractionSessionId: string,
+  candidateId: string,
+) {
+  const result = await table<YoutubeExtractionCandidatesTable>(dbClient, "youtube_extraction_candidates")
+    .select([
+      "id",
+      "extraction_session_id",
+      "candidate_id",
+      "status",
+      "child_extraction_session_id",
+      "recipe_id",
+      "title",
+      "start_ms",
+      "end_ms",
+      "confidence",
+      "draft_ingredient_ids_json",
+      "source_meta_json",
+      "promoted_at",
+      "registered_at",
+    ].join(", "))
+    .eq("extraction_session_id", extractionSessionId)
+    .eq("candidate_id", candidateId)
+    .maybeSingle();
+
+  return result;
+}
+
+async function updateExtractionCandidate(
+  dbClient: DbClient,
+  extractionSessionId: string,
+  candidateId: string,
+  values: Partial<YoutubeExtractionCandidateRow>,
+) {
+  const result = await table<YoutubeExtractionCandidatesTable>(dbClient, "youtube_extraction_candidates")
+    .update(values)
+    .eq("extraction_session_id", extractionSessionId)
+    .eq("candidate_id", candidateId);
+
+  return result.error;
 }
 
 function validateSessionForRegister(
@@ -3620,6 +4192,10 @@ function validateSessionForRegister(
 
   if (session.status === "consumed") {
     return fail("EXTRACTION_ALREADY_REGISTERED", "이미 등록된 추출 결과예요.", 409);
+  }
+
+  if (session.session_kind === "multi_parent") {
+    return fail("CANDIDATE_PROMOTION_REQUIRED", "저장할 요리를 먼저 선택해주세요.", 409);
   }
 
   if (session.youtube_video_id !== parsed.videoId || session.youtube_url !== parsed.youtubeUrl) {
@@ -3654,6 +4230,10 @@ function validateSessionForIngredientRegistration(
     return fail("CONFLICT", "이미 처리된 추출 세션이에요. 다시 가져와 주세요.", 409);
   }
 
+  if (session.session_kind === "multi_parent") {
+    return fail("CANDIDATE_PROMOTION_REQUIRED", "저장할 요리를 먼저 선택해주세요.", 409);
+  }
+
   const draftIngredient = findDraftIngredientRow(session.draft_json, parsed.draftIngredientId);
   const resolutionStatus = draftIngredient?.resolution_status;
   if (resolutionStatus !== "unresolved" && resolutionStatus !== "needs_review") {
@@ -3661,6 +4241,245 @@ function validateSessionForIngredientRegistration(
   }
 
   return null;
+}
+
+function readRecipeCandidatesFromDraft(draftJson: Record<string, unknown>) {
+  if (!Array.isArray(draftJson.recipe_candidates)) {
+    return [];
+  }
+
+  return draftJson.recipe_candidates.filter((candidate): candidate is YoutubeRecipeCandidate => {
+    if (!isRecord(candidate)) {
+      return false;
+    }
+
+    return (
+      typeof candidate.candidate_id === "string" &&
+      typeof candidate.title === "string" &&
+      Array.isArray(candidate.ingredients) &&
+      Array.isArray(candidate.steps)
+    );
+  });
+}
+
+function findRecipeCandidateInDraft(
+  draftJson: Record<string, unknown>,
+  candidateId: string,
+) {
+  return readRecipeCandidatesFromDraft(draftJson).find(
+    (candidate) => candidate.candidate_id === candidateId,
+  ) ?? null;
+}
+
+function readStringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function buildChildDraftFromCandidate({
+  childExtractionId,
+  parentSession,
+  candidate,
+}: {
+  childExtractionId: string;
+  parentSession: YoutubeExtractionSessionRow;
+  candidate: YoutubeRecipeCandidate;
+}): YoutubeRecipeExtractData {
+  const parentDraft = parentSession.draft_json as unknown as Partial<YoutubeRecipeExtractData>;
+  const extractionMethods = parentDraft.extraction_methods?.length
+    ? parentDraft.extraction_methods
+    : parentSession.extraction_methods;
+
+  return {
+    extraction_id: childExtractionId,
+    title: candidate.title,
+    base_servings: parentDraft.base_servings ?? 1,
+    extraction_methods: extractionMethods,
+    draft_warnings: candidate.draft_warnings,
+    blocking_issues: candidate.blocking_issues,
+    ingredients: candidate.ingredients,
+    steps: candidate.steps,
+    new_cooking_methods: parentDraft.new_cooking_methods ?? [],
+    multi_recipe_status: "single",
+    primary_candidate_id: candidate.candidate_id,
+    caption_source: parentDraft.caption_source,
+    source_segments_summary: parentDraft.source_segments_summary,
+  };
+}
+
+function validateMultiParentSession(
+  session: YoutubeExtractionSessionRow | null,
+  userId: string,
+) {
+  if (!session || session.user_id !== userId) {
+    return fail("EXTRACTION_NOT_FOUND", "추출 세션을 찾을 수 없어요.", 404);
+  }
+
+  if (session.status === "expired" || new Date(session.expires_at).getTime() <= Date.now()) {
+    return fail("EXTRACTION_EXPIRED", "추출 세션이 만료됐어요. 다시 가져와 주세요.", 410);
+  }
+
+  if (session.status === "consumed") {
+    return fail("EXTRACTION_ALREADY_REGISTERED", "이미 등록된 추출 결과예요.", 409);
+  }
+
+  if (session.session_kind !== "multi_parent") {
+    return fail("INVALID_EXTRACTION_SESSION", "여러 요리 후보가 있는 추출 세션이 아니에요.", 409);
+  }
+
+  return null;
+}
+
+export async function handleYoutubeCandidateDraft(request: Request) {
+  if (!isYoutubeImportEnabled()) {
+    return buildFeatureDisabledResponse();
+  }
+
+  const { routeClient, user } = await requireUser();
+
+  if (!user) {
+    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+  }
+
+  const { fields, parsed } = parseYoutubeCandidateDraftBody(await readJson(request));
+  if (!parsed) {
+    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, fields);
+  }
+
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as DbClient;
+  const parentResult = await findExtractionSession(dbClient, parsed.extractionId);
+  if (parentResult.error) {
+    return fail("INTERNAL_ERROR", "추출 세션을 확인하지 못했어요.", 500);
+  }
+
+  const parentFailure = validateMultiParentSession(parentResult.data, user.id);
+  if (parentFailure) {
+    return parentFailure;
+  }
+
+  const parentSession = parentResult.data as YoutubeExtractionSessionRow;
+  const candidateResult = await findExtractionCandidate(
+    dbClient,
+    parsed.extractionId,
+    parsed.candidateId,
+  );
+  if (candidateResult.error) {
+    return fail("INTERNAL_ERROR", "레시피 후보를 확인하지 못했어요.", 500);
+  }
+
+  const candidateRow = candidateResult.data;
+  if (!candidateRow) {
+    return fail("CANDIDATE_NOT_FOUND", "레시피 후보를 찾을 수 없어요.", 404);
+  }
+
+  if (candidateRow.status === "registered") {
+    return fail("EXTRACTION_ALREADY_REGISTERED", "이미 등록된 레시피 후보예요.", 409);
+  }
+
+  if (candidateRow.status === "promoted" && candidateRow.child_extraction_session_id) {
+    const childResult = await findExtractionSession(dbClient, candidateRow.child_extraction_session_id);
+    if (childResult.error) {
+      return fail("INTERNAL_ERROR", "후보 추출 세션을 확인하지 못했어요.", 500);
+    }
+
+    const childSession = childResult.data;
+    if (!childSession || childSession.user_id !== user.id) {
+      return fail("EXTRACTION_NOT_FOUND", "후보 추출 세션을 찾을 수 없어요.", 404);
+    }
+
+    if (childSession.status === "expired" || new Date(childSession.expires_at).getTime() <= Date.now()) {
+      return fail("EXTRACTION_EXPIRED", "추출 세션이 만료됐어요. 다시 가져와 주세요.", 410);
+    }
+
+    if (childSession.status === "consumed") {
+      return fail("EXTRACTION_ALREADY_REGISTERED", "이미 등록된 추출 결과예요.", 409);
+    }
+
+    return ok({
+      parent_extraction_id: parsed.extractionId,
+      candidate_id: parsed.candidateId,
+      draft: childSession.draft_json as unknown as YoutubeRecipeExtractData,
+    } satisfies YoutubeCandidateDraftData);
+  }
+
+  if (candidateRow.status !== "draft") {
+    return fail("INVALID_CANDIDATE_STATE", "선택할 수 없는 레시피 후보예요.", 409);
+  }
+
+  const candidate = findRecipeCandidateInDraft(parentSession.draft_json, parsed.candidateId);
+  if (!candidate) {
+    return fail("CANDIDATE_NOT_FOUND", "레시피 후보를 찾을 수 없어요.", 404);
+  }
+
+  const childExtractionId = crypto.randomUUID();
+  const draft = buildChildDraftFromCandidate({
+    childExtractionId,
+    parentSession,
+    candidate,
+  });
+  const parentMeta = parentSession.extraction_meta_json ?? {};
+  const sourceProviders =
+    parentSession.source_providers?.length
+      ? parentSession.source_providers
+      : readStringArray(parentMeta.source_providers);
+  const childSessionError = await insertExtractionSession(dbClient, {
+    id: childExtractionId,
+    user_id: user.id,
+    youtube_url: parentSession.youtube_url,
+    youtube_video_id: parentSession.youtube_video_id,
+    video_title: parentSession.video_title ?? draft.title,
+    channel_title: parentSession.channel_title ?? "",
+    thumbnail_url: parentSession.thumbnail_url ?? null,
+    provider_version: parentSession.provider_version ?? YOUTUBE_PROVIDER_VERSION,
+    source_providers: sourceProviders,
+    classification_status: parentSession.classification_status ?? "recipe",
+    classification_reasons: parentSession.classification_reasons ?? [],
+    raw_source_text: parentSession.raw_source_text ?? "",
+    extraction_meta_json: {
+      ...parentMeta,
+      parent_extraction_session_id: parentSession.id,
+      parent_candidate_id: candidate.candidate_id,
+      selected_candidate_title: candidate.title,
+      selected_candidate_start_ms: candidate.start_ms,
+      selected_candidate_end_ms: candidate.end_ms,
+      selected_candidate_evidence_refs: candidate.evidence_refs,
+      source_segments_summary: draft.source_segments_summary,
+      description_parser_selection_outcome: "selected_multi_recipe_candidate",
+    },
+    draft_json: draft as unknown as Record<string, unknown>,
+    extraction_methods: draft.extraction_methods,
+    status: "draft",
+    expires_at: parentSession.expires_at,
+    session_kind: "candidate_child",
+    parent_extraction_session_id: parentSession.id,
+    parent_candidate_id: candidate.candidate_id,
+  });
+
+  if (childSessionError) {
+    return fail("INTERNAL_ERROR", "후보 추출 세션을 저장하지 못했어요.", 500);
+  }
+
+  const candidateUpdateError = await updateExtractionCandidate(
+    dbClient,
+    parentSession.id,
+    candidate.candidate_id,
+    {
+      status: "promoted",
+      child_extraction_session_id: childExtractionId,
+      promoted_at: new Date().toISOString(),
+    },
+  );
+
+  if (candidateUpdateError) {
+    return fail("INTERNAL_ERROR", "레시피 후보 상태를 저장하지 못했어요.", 500);
+  }
+
+  return ok({
+    parent_extraction_id: parentSession.id,
+    candidate_id: candidate.candidate_id,
+    draft,
+  } satisfies YoutubeCandidateDraftData, { status: 201 });
 }
 
 export async function handleYoutubeIngredientRegistration(request: Request) {
@@ -3823,6 +4642,19 @@ export async function handleYoutubeRegister(request: Request) {
     recipe_id: registerResult.data.recipe_id,
     title: registerResult.data.title,
   };
+
+  const session = sessionResult.data;
+  if (
+    session?.session_kind === "candidate_child" &&
+    session.parent_extraction_session_id &&
+    session.parent_candidate_id
+  ) {
+    await updateExtractionCandidate(dbClient, session.parent_extraction_session_id, session.parent_candidate_id, {
+      status: "registered",
+      recipe_id: data.recipe_id,
+      registered_at: new Date().toISOString(),
+    });
+  }
 
   return ok(data, { status: 201 });
 }
