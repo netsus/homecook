@@ -1,0 +1,109 @@
+{
+  "slice_id": "31-recipe-media-tags",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/recipes/images",
+      "POST /api/v1/recipes",
+      "POST /api/v1/recipes/youtube/extract",
+      "POST /api/v1/recipes/youtube/register"
+    ],
+    "invariants": [
+      "documented-state-transition",
+      "owner-authorization",
+      "read-only-guard",
+      "api-envelope",
+      "current-user-image-reference-only",
+      "no-arbitrary-external-image-url",
+      "no-youtube-thumbnail-rehost",
+      "no-client-tags",
+      "shared-deterministic-tag-generator",
+      "tags-capped-at-six"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm test:youtube-corpus",
+      "pnpm test:youtube-dictionary",
+      "pnpm test:youtube-readiness"
+    ],
+    "required_test_targets": [
+      "tests/youtube-import.backend.test.ts",
+      "tests/recipe-api-contracts.test.ts",
+      "tests/manual-recipe-create.backend.test.ts",
+      "tests/youtube-corpus.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/menu/add/youtube",
+      "/menu/add/manual",
+      "/recipes/[id]"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot",
+      "design-authority-report"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [
+        "RECIPE_DETAIL",
+        "MANUAL_RECIPE_CREATE",
+        "YT_IMPORT"
+      ],
+      "required_screens": [
+        "RECIPE_DETAIL",
+        "MANUAL_RECIPE_CREATE",
+        "YT_IMPORT"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": true,
+      "critic_artifact": "ui/designs/authority/31_RECIPE_MEDIA_TAGS-authority.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "YT_IMPORT thumbnail/tag preview mobile screenshot",
+        "MANUAL_RECIPE_CREATE image upload mobile screenshot",
+        "RECIPE_DETAIL source note/tag display mobile screenshot",
+        "narrow viewport text fit screenshot"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/31_RECIPE_MEDIA_TAGS-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "youtube-real-app-route-smoke",
+    "manual-image-upload-real-storage-smoke"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "storage-bucket-missing",
+    "storage-policy-missing",
+    "secret-missing",
+    "youtube-api-key-missing",
+    "supabase-auth-session-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

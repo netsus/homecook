@@ -1,17 +1,31 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.3.md`
-- `docs/화면정의서-v1.5.10.md`
-- `docs/유저flow맵-v1.3.10.md`
-- `docs/db설계-v1.3.9.md`
-- `docs/api문서-v1.2.13.md`
+- `docs/요구사항기준선-v1.7.4.md`
+- `docs/화면정의서-v1.5.11.md`
+- `docs/유저flow맵-v1.3.11.md`
+- `docs/db설계-v1.3.10.md`
+- `docs/api문서-v1.2.14.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## v1.7.3 / v1.5.10 / v1.3.10 / DB v1.3.9 / API v1.2.13 → v1.7.4 / v1.5.11 / v1.3.11 / DB v1.3.10 / API v1.2.14 변경 이력 (2026-05-30)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.4 | YouTube 등록 시 세션 썸네일을 `recipes.thumbnail_url`에 서버 측 복사, 직접 등록 이미지 업로드 정책, 공유 결정론 태그 생성기 정책 추가 |
+| 화면정의서 v1.5.11 | RECIPE_DETAIL 썸네일 source note/placeholder, HOME/상세 태그 표시, MANUAL_RECIPE_CREATE 이미지 업로드, YT_IMPORT 썸네일/태그 preview 추가 |
+| 유저플로우 v1.3.11 | YouTube register와 직접 등록에서 `thumbnail_url`/`tags`가 `recipes`에 저장되는 흐름 추가 |
+| DB v1.3.10 | 기존 `recipes.thumbnail_url`/`recipes.tags` 활용 계약, `recipe-images` Storage bucket/policy 추가. 신규 recipe image/tag table은 scope 밖 |
+| API v1.2.14 | `POST /api/v1/recipes/images` 추가, YouTube extract/register thumbnail/tags 계약, manual `POST /recipes` image reference 검증과 server-generated tags 계약 추가 |
+
+> 이 변경은 `docs/workpacks/31-recipe-media-tags` contract-evolution이다.
+> YouTube 썸네일은 다운로드/리호스팅하지 않고 원본 URL을 보존한다.
+> 이미지 바이너리는 DB에 저장하지 않으며, 생성/AI 이미지 fallback과 정규화 tag table은 MVP scope 밖이다.
 
 ## YouTube Multi-Recipe Caption Addendum (2026-05-30)
 
@@ -23,6 +37,7 @@
 | DB v1.3.9 | `youtube_extraction_sessions.session_kind`, parent 참조 컬럼, `youtube_extraction_candidates` 후보 ledger 추가 |
 | API v1.2.13 | extract 응답에 `multi_recipe_status`, `recipe_candidates[]`, source segment metadata 추가, `POST /recipes/youtube/candidate-drafts` 추가 |
 
+> v1.7.4 / v1.5.11 / v1.3.11 / DB v1.3.10 / API v1.2.14는 이 addendum을 포함한 v1.7.3 계열 문서를 기준으로 작성한다.
 > 특정 video_id별 결과 fixture, 레시피오 결과 반환, 유료 provider/LLM 호출 없이 공개 텍스트 provider/parser 경로만 사용한다.
 
 ## v1.7.2 / v1.5.9 / v1.3.9 / DB v1.3.8 / API v1.2.12 → v1.7.3 / v1.5.10 / v1.3.10 / DB v1.3.9 / API v1.2.13 변경 이력 (2026-05-28)
