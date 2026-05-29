@@ -1453,6 +1453,183 @@ function parseProseStepLines(
     .filter((step): step is ParsedStep => step !== null);
 }
 
+const GENERIC_STEP_INGREDIENT_NAMES = new Set([
+  "재료",
+  "채소",
+  "야채",
+  "고기",
+  "소스",
+  "양념",
+  "양념장",
+  "드레싱",
+  "반죽",
+  "크림",
+  "토핑",
+  "전자레인지",
+  "오븐",
+  "토치",
+  "프라이팬",
+  "팬",
+  "냄비",
+  "볼",
+  "믹싱볼",
+  "용기",
+  "그릇",
+  "접시",
+  "틀",
+  "키친타올",
+  "나눠",
+  "때",
+]);
+
+function normalizeIngredientKey(value: string) {
+  return value
+    .replace(/\s+/gu, "")
+    .replace(/피자(?=치즈)/gu, "")
+    .replace(/전분가루$/u, "전분")
+    .replace(/캔$/u, "")
+    .replace(/(달걀|계란)프라(?:이)?$/u, "$1")
+    .toLowerCase()
+    .trim();
+}
+
+function hasSimilarIngredientKey(existingKeys: Set<string>, key: string) {
+  if (key === "파" && existingKeys.has("대파")) {
+    return true;
+  }
+
+  return [...existingKeys].some((existingKey) =>
+    existingKey === key
+    || (
+      existingKey.length >= 2
+      && key.length >= 2
+      && (existingKey.endsWith(key) || key.endsWith(existingKey))
+    ),
+  );
+}
+
+function cleanupStepIngredientSegment(value: string) {
+  return normalizeIngredientName(
+    stripDecorativeMarks(value)
+      .replace(/^(?:전자레인지용\s+)?(?:프라이팬|팬|냄비|볼|믹싱볼|용기|그릇|접시|틀)(?:에|에는|으로|로)?\s*/u, "")
+      .replace(/^(?:준비한|만들어둔|다\s*익은|익힌|삶은|데친|구운|발효된|남은|같은)\s+/u, "")
+      .replace(/^.*?(?:에|에는)\s+(?=[\p{L}])/u, "")
+      .replace(/^.*?(?:위에|겉면에)\s*/u, "")
+      .replace(/\s*(?:을|를)?\s*(?:프라이팬|팬|냄비|볼|믹싱볼|용기|그릇|접시|틀)(?:에|에는|으로|로)?$/u, "")
+      .replace(/\s*(?:을|를)?\s*(?:체\s*쳐|나눠|문질러가며).*$/u, "")
+      .replace(/\s*(?:적당하게|먹기\s*좋게|잘게|크게|도톰하게)?\s*(?:썰어|썰고|잘라|자르고|다져|다지고|묻혀|묻히고).*$/u, "")
+      .replace(/\s*(?:같은|등의?)\s*(?:채소|야채|재료).*$/u, "")
+      .replace(/\s*(?:송송|총총|어슷하게|먼저|다시|고루|잘|충분히|살짝|한번|바로|따로|가볍게|오래|넉넉히).*$/u, "")
+      .replace(/\s+채\s*$/u, "")
+      .replace(/\s+(?:그릇|볼|용기|팬|냄비|접시)(?:에|에는)?$/u, "")
+      .replace(/\s*(?:까지|위에|겉면에|마지막으로|마지막에|살짝|충분히|적당하게)\s*$/u, "")
+      .replace(/\s+(?:은|는|을|를|이|가|에|와|과|으로|로)$/u, "")
+      .replace(/(?:은|는|을|를|이|가|에|와|과|으로|로)$/u, "")
+      .trim(),
+  );
+}
+
+function isValidInferredStepIngredientName(value: string) {
+  const normalized = normalizeIngredientKey(value);
+
+  return (
+    normalized.length > 0
+    && !GENERIC_STEP_INGREDIENT_NAMES.has(normalized)
+    && !/[0-9]+\s*:\s*[0-9]/u.test(value)
+    && !/(?:비율|정도|분량|마요)$/u.test(value)
+    && !/(?:한|두|세|네|반)\s*(?:큰술|작은술|스푼|수저|컵|개|꼬집|줌|움큼)/u.test(value)
+    && !/(?:모두|담아|담고|잘|오래|도톰하게)$/u.test(value)
+    && !isInvalidIngredientName(value)
+    && !hasCookingAction(value)
+  );
+}
+
+function splitStepIngredientSegments(value: string) {
+  return value
+    .split(/\s*(?:[,，]|(?:\s+및\s+)|(?:\s*[와과]\s+))\s*/u)
+    .map(cleanupStepIngredientSegment)
+    .filter(isValidInferredStepIngredientName);
+}
+
+function inferIngredientsFromStep(step: ParsedStep, existingKeys: Set<string>) {
+  const inferred: ParsedIngredient[] = [];
+  const line: SourceLine = {
+    index: step.sourceLine,
+    raw: step.rawText,
+    text: step.instruction,
+    normalized: step.instruction.toLowerCase(),
+    ordinal: step.originalOrdinal,
+    hadTimestamp: false,
+  };
+  const candidatePhrases: string[] = [];
+  const phrasePatterns = [
+    /(?:프라이팬|팬|냄비|볼|용기|그릇|접시|틀)(?:에|에는|위에)?\s*([^。!]{1,80}?)(?:을|를)?\s*(?:넣|올리|얹|볶|굽|익히)/gu,
+    /(?:^|[.。!,，]\s*|(?:넣고|볶아주다|볶다가|볶고|굽고|익히고|섞고|올리고|바르고)\s*)([^,.。!]{1,50}?)(?:을|를|으로|로|까지)?\s*(?:넣|올리|얹|뿌려|뿌리|바르|둘러|섞|볶|굽|익히|녹여|마무리)/gu,
+    /(?:넣고|볶고|굽고|익히고|섞고|올리고|바르고|후|뒤)\s+([^,.。!]{1,36}?)(?:을|를|으로|로|까지)?\s*(?:둘러|뿌려|뿌리|바르|얹|올리|마무리)/gu,
+  ];
+
+  if (/밥\s*위에/u.test(step.instruction)) {
+    candidatePhrases.push("밥");
+  }
+
+  for (const pattern of phrasePatterns) {
+    for (const match of step.instruction.matchAll(pattern)) {
+      const phrase = match[1]?.trim();
+      if (phrase && !hasAmountSignal(phrase)) {
+        candidatePhrases.push(phrase);
+      }
+    }
+  }
+
+  for (const phrase of candidatePhrases) {
+    for (const name of splitStepIngredientSegments(phrase)) {
+      const key = normalizeIngredientKey(name);
+
+      if (hasSimilarIngredientKey(existingKeys, key)) {
+        continue;
+      }
+
+      const ingredient = makeParsedIngredient({
+        line,
+        name,
+        amount: null,
+        unit: null,
+        ingredientType: "TO_TASTE",
+        componentLabel: null,
+        confidence: 0.58,
+        flags: ["inferred_from_step"],
+        scalable: false,
+      });
+
+      if (!ingredient || !isValidInferredStepIngredientName(ingredient.name)) {
+        continue;
+      }
+
+      existingKeys.add(key);
+      inferred.push(ingredient);
+    }
+  }
+
+  return inferred;
+}
+
+function appendInferredStepIngredients(components: ParsedRecipeComponent[]) {
+  const explicitIngredients = components.flatMap((component) => component.ingredients);
+  const steps = components.flatMap((component) => component.steps);
+
+  if (explicitIngredients.length === 0 || explicitIngredients.length >= 10 || steps.length === 0) {
+    return;
+  }
+
+  const existingKeys = new Set(explicitIngredients.map((ingredient) => normalizeIngredientKey(ingredient.name)));
+  const targetComponent = getComponent(components, null, steps[0]?.sourceLine ?? 0);
+  const inferred = steps.flatMap((step) => inferIngredientsFromStep(step, existingKeys));
+
+  if (inferred.length > 0) {
+    targetComponent.ingredients.push(...inferred);
+  }
+}
+
 function parseStepLine(
   line: SourceLine,
   {
@@ -2037,7 +2214,13 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
     }
   }
 
-  const nonEmptyComponents = components.filter((component) =>
+  let nonEmptyComponents = components.filter((component) =>
+    component.ingredients.length > 0 || component.steps.length > 0,
+  );
+
+  appendInferredStepIngredients(nonEmptyComponents);
+
+  nonEmptyComponents = nonEmptyComponents.filter((component) =>
     component.ingredients.length > 0 || component.steps.length > 0,
   );
   const componentCount = nonEmptyComponents.filter((component) => component.label !== null).length;

@@ -544,7 +544,7 @@ function getYoutubeTranscriptProvider() {
     return transcriptProviderForTest;
   }
 
-  if (process.env.NODE_ENV === "test") {
+  if (shouldUseYoutubeFixtureProvider()) {
     return NOOP_TRANSCRIPT_PROVIDER;
   }
 
@@ -569,7 +569,7 @@ function getYoutubeAuthorCommentProvider() {
     return authorCommentProviderForTest;
   }
 
-  if (process.env.NODE_ENV === "test") {
+  if (shouldUseYoutubeFixtureProvider()) {
     return NOOP_AUTHOR_COMMENT_PROVIDER;
   }
 
@@ -906,6 +906,10 @@ function getFixturePreview(videoId: string): YoutubePreviewResult {
 }
 
 function shouldUseYoutubeFixtureProvider() {
+  if (process.env.HOMECOOK_YOUTUBE_FIXTURE_PROVIDER === "0") {
+    return false;
+  }
+
   return process.env.NODE_ENV === "test" || process.env.HOMECOOK_YOUTUBE_FIXTURE_PROVIDER === "1";
 }
 

@@ -268,23 +268,23 @@
     {
       "id": "semi-real-004",
       "category": "semi-structured",
-      "ingredient_f1": 0.9,
+      "ingredient_f1": 0.8182,
       "step_f1": 1,
       "resolution_rate": 1,
       "step_completeness_rate": 1,
       "blocking_issue": false,
-      "import_readiness_score": 0.965,
+      "import_readiness_score": 0.9364,
       "ingredients": {
-        "precision": 0.9,
+        "precision": 0.75,
         "recall": 0.9,
-        "f1": 0.9
+        "f1": 0.8182
       },
       "steps": {
         "precision": 1,
         "recall": 1,
         "f1": 1
       },
-      "parsed_ingredient_count": 5,
+      "parsed_ingredient_count": 6,
       "parsed_step_count": 2,
       "errors": []
     },
@@ -337,23 +337,23 @@
     {
       "id": "semi-real-007",
       "category": "semi-structured",
-      "ingredient_f1": 0.8889,
+      "ingredient_f1": 0.9,
       "step_f1": 1,
       "resolution_rate": 1,
       "step_completeness_rate": 1,
       "blocking_issue": false,
-      "import_readiness_score": 0.9611,
+      "import_readiness_score": 0.965,
       "ingredients": {
-        "precision": 1,
-        "recall": 0.8,
-        "f1": 0.8889
+        "precision": 0.9,
+        "recall": 0.9,
+        "f1": 0.9
       },
       "steps": {
         "precision": 1,
         "recall": 1,
         "f1": 1
       },
-      "parsed_ingredient_count": 4,
+      "parsed_ingredient_count": 5,
       "parsed_step_count": 2,
       "errors": []
     },
@@ -452,23 +452,23 @@
     {
       "id": "weak-real-004",
       "category": "weak",
-      "ingredient_f1": 0.8571,
+      "ingredient_f1": 1,
       "step_f1": 0.6667,
       "resolution_rate": 1,
       "step_completeness_rate": 0.5,
       "blocking_issue": false,
-      "import_readiness_score": 0.8167,
+      "import_readiness_score": 0.8667,
       "ingredients": {
         "precision": 1,
-        "recall": 0.75,
-        "f1": 0.8571
+        "recall": 1,
+        "f1": 1
       },
       "steps": {
         "precision": 1,
         "recall": 0.5,
         "f1": 0.6667
       },
-      "parsed_ingredient_count": 3,
+      "parsed_ingredient_count": 4,
       "parsed_step_count": 1,
       "errors": []
     },
@@ -1164,8 +1164,8 @@
     }
   ],
   "aggregate": {
-    "import_readiness_score": 0.9663,
-    "ingredient_f1": 0.9597,
+    "import_readiness_score": 0.9668,
+    "ingredient_f1": 0.9612,
     "step_f1": 0.9334,
     "resolution_rate": 1,
     "step_completeness_rate": 0.97,

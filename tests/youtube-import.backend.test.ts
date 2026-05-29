@@ -1659,6 +1659,7 @@ describe("20 youtube real import backend", () => {
         { id: "ing-green-onion", standard_name: "대파" },
         { id: "ing-soy-sauce", standard_name: "간장" },
         { id: "ing-pepper", standard_name: "후추" },
+        { id: "ing-rice", standard_name: "밥" },
       ],
       error: null,
     });
@@ -1743,6 +1744,13 @@ describe("20 youtube real import backend", () => {
             ingredient_type: "TO_TASTE",
             resolution_status: "resolved",
           },
+          {
+            standard_name: "밥",
+            amount: null,
+            unit: null,
+            ingredient_type: "TO_TASTE",
+            resolution_status: "resolved",
+          },
         ],
         steps: [
           {
@@ -1767,6 +1775,7 @@ describe("20 youtube real import backend", () => {
       "대파",
       "진간장",
       "후추",
+      "밥",
     ]);
     expect(ingredientSynonymsTable.__query.in).toHaveBeenCalledWith("synonym", [
       "달걀",
@@ -1774,6 +1783,7 @@ describe("20 youtube real import backend", () => {
       "대파",
       "진간장",
       "후추",
+      "밥",
     ]);
   });
 
@@ -2169,10 +2179,11 @@ describe("20 youtube real import backend", () => {
     });
   });
 
-  it("POST /api/v1/recipes/youtube/extract reads public YouTube timedtext captions without a paid provider", async () => {
+  it("POST /api/v1/recipes/youtube/extract can read public timedtext captions when fixture mode is explicitly off in tests", async () => {
     mockAuth();
-    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NODE_ENV", "test");
     vi.stubEnv("HOMECOOK_ENABLE_YOUTUBE_IMPORT", "1");
+    vi.stubEnv("HOMECOOK_YOUTUBE_FIXTURE_PROVIDER", "0");
     vi.stubEnv("YOUTUBE_API_KEY", "test-key");
 
     const watchHtml = [
