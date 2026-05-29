@@ -120,6 +120,8 @@ pnpm external:ingredients:dry-run -- --input .artifacts/external-ingredient-inge
 
 초기 보수 승인 목록은 `docs/workpacks/28-external-ingredient-data-ingest-gate/review-decisions-initial-rda-core-2026-05-29.json`에 둔다. 이 목록은 대부분 RDA source만 대상으로, 같은 normalized name에서 하나의 fingerprint만 골랐고, MFDS의 넓은 가공식품 분류명은 제외했다. 사용자 명시 승인으로 MFDS `햄` 1개와 RDA `땅콩 버터` 1개를 추가했으며, `다시마 육수`는 요청명 `다시마`와 달라 seed 승격에서 보류했다.
 
+첫 seed promotion migration은 `supabase/migrations/20260530001000_28_external_ingredient_seed_promotion.sql`이다. 승인 artifact 18개 중 기존 seed migration에 이미 있는 row와 보류 row를 제외하고, missing ingredient 12개만 `on conflict (standard_name) do nothing`으로 추가한다. 기존 category/default_unit은 덮어쓰지 않는다.
+
 ### Option B: DB staging table
 
 - 예: `external_ingredient_import_batches`, `external_ingredient_import_rows`
@@ -270,5 +272,6 @@ Stage 2가 DB staging table을 선택하면 `docs/db설계` 영향 기록이 필
 - [x] 식약처/RDA balanced live sample 후보 품질 기록 <!-- omo:id=delivery-balanced-live-sample-review;stage=2;scope=backend;review=6 -->
 - [x] review decision 기반 approved-only seed artifact 입력 경로 추가 <!-- omo:id=delivery-review-decision-input;stage=2;scope=backend;review=6 -->
 - [x] 초기 core 후보 18개 보수 승인 artifact 생성 <!-- omo:id=delivery-initial-rda-core-review-decisions;stage=2;scope=backend;review=6 -->
+- [x] 첫 approved seed promotion migration 작성 <!-- omo:id=delivery-first-seed-promotion-migration;stage=2;scope=backend;review=6 -->
 - [x] Stage 3 backend/data-tooling review 완료 <!-- omo:id=delivery-stage3-review;stage=2;scope=backend;review=6 -->
 - [x] 실제 source sample fixture와 manual candidate review 기록 추가 <!-- omo:id=delivery-real-source-sample-review;stage=2;scope=backend;review=6 -->

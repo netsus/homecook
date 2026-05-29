@@ -138,3 +138,58 @@ Dry-run output:
 
 - `.artifacts/external-ingredient-ingest/reviewed-seed-candidates-initial-rda-core-user-additions-2026-05-29/candidate-report.json`
 - `.artifacts/external-ingredient-ingest/reviewed-seed-candidates-initial-rda-core-user-additions-2026-05-29/approved-seed-promotion-artifact.json`
+
+## Seed Promotion Migration
+
+Approved artifact rows were compared against existing ingredient seed migrations before DB promotion.
+
+Migration:
+
+- `supabase/migrations/20260530001000_28_external_ingredient_seed_promotion.sql`
+
+Promotion rule:
+
+- insert only approved canonical ingredients that are not already present in existing seed migrations
+- use `on conflict (standard_name) do nothing`
+- do not overwrite existing categories/default units
+- do not promote held source rows
+
+Promoted rows:
+
+| Name | Category |
+| --- | --- |
+| 귀리 | 곡류 |
+| 기장 | 곡류 |
+| 강낭콩 | 곡류 |
+| 녹두 | 곡류 |
+| 도토리 | 곡류 |
+| 도토리묵 | 곡류 |
+| 가지 | 채소 |
+| 다랑어 | 해산물 |
+| 고등어 | 해산물 |
+| 고추기름 | 양념 |
+| 땅콩 버터 | 양념 |
+| 겨자 | 양념 |
+
+Approved but not inserted because existing seed migrations already provide the row:
+
+- `감자`
+- `달걀`
+- `햄`
+- `김`
+- `들기름`
+- `간장`
+
+Held:
+
+- `다시마 육수` remains `needs_source_check`; it is not promoted as `다시마`.
+
+Remote apply and smoke:
+
+- `supabase db push --linked --dry-run` showed only `20260530001000_28_external_ingredient_seed_promotion.sql`.
+- `supabase db push --linked --yes` applied the migration to project `vfubnhtawezmheylfhsv`.
+- Remote DB smoke found all 12 promoted rows and confirmed held row `다시마 육수` was not inserted.
+- Existing curated rows were preserved by `on conflict do nothing`: `감자`, `달걀`, `햄`, `김`, `들기름`, `간장`.
+- API smoke found the promoted rows through `GET /api/v1/ingredients`: `땅콩 버터`, `귀리`, `고등어`.
+- 30 URL real app-route smoke after promotion: `validate 30/30`, `extract 30/30`, `review 30/30`, `author_comment 4/30`, `register 9/30`, cleanup remaining recipe/session rows `0/0`.
+- App-route smoke report: `docs/workpacks/29-youtube-author-comment-fallback/real-app-route-smoke-2026-05-30.md`.
