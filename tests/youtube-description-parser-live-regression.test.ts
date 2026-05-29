@@ -357,4 +357,39 @@ describe("YouTube live description parser regressions", () => {
         flags: expect.arrayContaining(["inferred_from_step"]),
       });
   });
+
+  it("ignores substitution guidance fragments when inferring step ingredients", () => {
+    const draft = parseDraft([
+      "*****양념 및 재료*****",
+      "황태채150g, 매실청1/2종이컵(100ml), 들기름2, 참기름2, 고추장3큰술, 간장3스푼, 꿀2스푼, 다진마늘2,",
+      "통깨2스푼",
+      "",
+      "1. 황태채를 먹기 좋은 크기로 잘라주세요.",
+      "2. 황태채를 믹싱볼에 넣고 매실청 100미리, 참기름 한바퀴반, 들기름 한바퀴반 넣고 조물조물 해주세요.",
+      "3. 양념장은 고추장3큰술, 간장3스푼, 꿀2스푼, 다진마늘2큰술 넣고 잘 섞어주세요.",
+      "4. 들기름 없으시면 참기름으로 더 넣어주시고 매실청 없으시면 매실음료 넣어주시고 꿀 없으시면 올리고당 넣어주세요.",
+      "5. 양념장 넣고 살살살 무쳐주세요.",
+      "6. 통깨를 넉넉히 넣고 조물조물 하시면 완성입니다.",
+    ].join("\n"));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).not.toEqual(
+      expect.arrayContaining(["더", "꿀 없으시면"]),
+    );
+    expect(draft.blockingIssues).toEqual([]);
+  });
+
+  it("does not infer prepared dish labels or carried sauce phrases from plating steps", () => {
+    const draft = parseDraft([
+      "레시피",
+      "1. 코팅된 냄비에 통항정살은 앞뒤로 3분씩 구워주세요.",
+      "2. 구운 항정살에 물 400ml, 간장 2T, 굴소스 2T, 맛술 3T, 설탕 2T, 후추 적당히, 마늘 2알, 대파 넣고 끓여주세요.",
+      "3. 중간에 뒤집으면서 졸여주세요.",
+      "4. 통항정살 수육은 최대한 얇게 썰어주세요.",
+      "5. 상추 위에 수육 올리고 졸였던 양념 얹고 깨 뿌리면 완성.",
+    ].join("\n"));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).not.toEqual(
+      expect.arrayContaining(["수육", "졸였던 양념"]),
+    );
+  });
 });

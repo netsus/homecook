@@ -1476,10 +1476,12 @@ const GENERIC_STEP_INGREDIENT_NAMES = new Set([
   "용기",
   "그릇",
   "접시",
+  "수육",
   "틀",
   "키친타올",
   "나눠",
   "때",
+  "더",
 ]);
 
 function normalizeIngredientKey(value: string) {
@@ -1512,7 +1514,7 @@ function cleanupStepIngredientSegment(value: string) {
   return normalizeIngredientName(
     stripDecorativeMarks(value)
       .replace(/^(?:전자레인지용\s+)?(?:프라이팬|팬|냄비|볼|믹싱볼|용기|그릇|접시|틀)(?:에|에는|으로|로)?\s*/u, "")
-      .replace(/^(?:준비한|만들어둔|다\s*익은|익힌|삶은|데친|구운|발효된|남은|같은)\s+/u, "")
+      .replace(/^(?:준비한|만들어둔|다\s*익은|익힌|삶은|데친|구운|졸인|졸였던|발효된|남은|같은)\s+/u, "")
       .replace(/^.*?(?:에|에는)\s+(?=[\p{L}])/u, "")
       .replace(/^.*?(?:위에|겉면에)\s*/u, "")
       .replace(/\s*(?:을|를)?\s*(?:프라이팬|팬|냄비|볼|믹싱볼|용기|그릇|접시|틀)(?:에|에는|으로|로)?$/u, "")
@@ -1537,6 +1539,7 @@ function isValidInferredStepIngredientName(value: string) {
     && !GENERIC_STEP_INGREDIENT_NAMES.has(normalized)
     && !/[0-9]+\s*:\s*[0-9]/u.test(value)
     && !/(?:비율|정도|분량|마요)$/u.test(value)
+    && !/(?:없으시면|없으면|있으면|대신)$/u.test(value)
     && !/(?:한|두|세|네|반)\s*(?:큰술|작은술|스푼|수저|컵|개|꼬집|줌|움큼)/u.test(value)
     && !/(?:모두|담아|담고|잘|오래|도톰하게)$/u.test(value)
     && !isInvalidIngredientName(value)
