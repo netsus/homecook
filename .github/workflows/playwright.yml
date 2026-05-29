@@ -34,6 +34,7 @@ jobs:
       visual: ${{ steps.filter.outputs.visual }}
       lighthouse: ${{ steps.filter.outputs.lighthouse }}
       full_regression: ${{ steps.filter.outputs.full_regression }}
+      complete_regression_matrix: ${{ steps.filter.outputs.complete_regression_matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -233,8 +234,13 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run full Playwright slice regression
+      - name: Run full Playwright slice regression complete matrix
+        if: needs.changes.outputs.complete_regression_matrix == 'true'
         run: pnpm test:e2e:regression
+
+      - name: Run full Playwright slice regression CI matrix
+        if: needs.changes.outputs.complete_regression_matrix != 'true'
+        run: pnpm test:e2e:regression:ci
 
       - name: Upload full regression report
         if: failure()

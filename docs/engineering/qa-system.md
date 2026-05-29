@@ -45,6 +45,8 @@ PR 빠른 게이트 자동 실행 대상:
 
 - 작은 viewport는 한국 서비스에서도 여전히 유효한 회귀 감지 센서로 본다.
 - 하단 CTA 가림, 정보 과적층, 작은 control 글자, modal footer 잘림 같은 문제를 조기에 드러내기 위한 sentinel device다.
+- protected branch push와 Ready for Review의 slice regression은 CI 시간 예산을 위해 `desktop-chrome` + `mobile-chrome`만 기본 실행한다.
+- `mobile-ios-small`은 core smoke/a11y/visual과 전체 a11y/visual에서 계속 sentinel로 유지하며, complete slice regression은 nightly/manual 또는 `full-ci` label에서 실행한다.
 - core visual regression은 앱(`mobile-chrome`, `mobile-ios-small`)과 웹(`desktop-chrome`)을 분리 실행해 실패 위치를 빠르게 보여준다.
 - 전체 visual regression은 위 device matrix 전체에서 실행한다.
 - core accessibility는 axe scan, 터치 타깃, 읽기 가능성 중심으로 본다.

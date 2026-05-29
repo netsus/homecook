@@ -40,6 +40,7 @@
 - `required_checks`는 로컬/PR 준비 단계의 최소 검증 세트다. merge gate는 별도로 현재 PR head SHA에 대해 시작된 check 전체가 완료/green인지 확인한다.
 - GitHub Actions는 변경 범위에 따라 무거운 job만 자동 실행한다. policy/PR governance는 기본 유지하고, code CI·frontend QA·security smoke·qa eval은 관련 파일 변경이 있을 때만 뜨는 것을 기본값으로 본다.
 - Frontend QA는 `scripts/ci-path-filter.mjs`의 job-level path filter를 따른다. 일반 디자인 PR은 core smoke/a11y/visual만 blocker로 두고, 전체 slice regression과 전체 visual/a11y는 Ready for Review, `full-ci` label, nightly/manual, protected branch push에서 실행한다.
+- Slice regression의 device matrix 강도는 `docs/engineering/playwright-e2e.md`가 정한다. Ready for Review/protected branch push는 CI matrix, `full-ci`/nightly/manual은 complete matrix를 사용한다.
 - Lighthouse는 성능 관련 경로가 바뀐 비초안 PR에서만 blocker다. 성능 관련 경로 변경이 없으면 PR 본문 Performance 섹션에 `N/A: 성능 관련 경로 변경 없음`처럼 근거를 남긴다.
 
 ### PR Template Guidance

@@ -40,6 +40,7 @@
     "test:harness": "vitest run --config vitest.harness.config.ts",
     "test:e2e": "pnpm test:e2e:smoke",
     "test:e2e:regression": "playwright test tests/e2e/slice-*.spec.ts --grep-invert '@live-oauth'",
+    "test:e2e:regression:ci": "playwright test tests/e2e/slice-*.spec.ts --grep-invert '@live-oauth' --project=desktop-chrome --project=mobile-chrome",
     "test:e2e:smoke": "playwright test tests/e2e/slice-*.spec.ts --grep '@smoke-core' --grep-invert '@live-oauth'",
     "test:e2e:a11y": "playwright test tests/e2e/qa-a11y.spec.ts",
     "test:e2e:a11y:core": "playwright test tests/e2e/qa-a11y.spec.ts --grep '@a11y-core'",

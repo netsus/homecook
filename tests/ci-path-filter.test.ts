@@ -32,6 +32,7 @@ describe("ci path filter", () => {
       visual: true,
       lighthouse: false,
       full_regression: false,
+      complete_regression_matrix: false,
     });
   });
 
@@ -59,21 +60,34 @@ describe("ci path filter", () => {
   });
 
   it("enables full regression for ready-for-review and full-ci label events", () => {
+    const readyForReviewResult = evaluateCiPathFilters({
+      changedFiles: ["components/home/home-screen.tsx"],
+      eventName: "pull_request",
+      action: "ready_for_review",
+    });
+    const fullCiResult = evaluateCiPathFilters({
+      changedFiles: ["docs/engineering/qa-system.md"],
+      eventName: "pull_request",
+      labels: [{ name: "full-ci" }],
+    });
+
+    expect(readyForReviewResult.full_regression).toBe(true);
+    expect(readyForReviewResult.complete_regression_matrix).toBe(false);
+
+    expect(fullCiResult.full_regression).toBe(true);
+    expect(fullCiResult.complete_regression_matrix).toBe(true);
+  });
+
+  it("uses the trimmed CI regression matrix for protected branch pushes", () => {
     expect(
       evaluateCiPathFilters({
         changedFiles: ["components/home/home-screen.tsx"],
-        eventName: "pull_request",
-        action: "ready_for_review",
-      }).full_regression,
-    ).toBe(true);
-
-    expect(
-      evaluateCiPathFilters({
-        changedFiles: ["docs/engineering/qa-system.md"],
-        eventName: "pull_request",
-        labels: [{ name: "full-ci" }],
-      }).full_regression,
-    ).toBe(true);
+        eventName: "push",
+      }),
+    ).toMatchObject({
+      full_regression: true,
+      complete_regression_matrix: false,
+    });
   });
 
   it("runs the complete QA set for manual and nightly executions", () => {
@@ -88,6 +102,7 @@ describe("ci path filter", () => {
       visual: true,
       lighthouse: true,
       full_regression: true,
+      complete_regression_matrix: true,
     });
 
     expect(
@@ -101,6 +116,7 @@ describe("ci path filter", () => {
       visual: true,
       lighthouse: true,
       full_regression: true,
+      complete_regression_matrix: true,
     });
   });
 });
