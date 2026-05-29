@@ -2,6 +2,72 @@ import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiResponse } from "@/types/api";
 import type { ManualRecipeCreateBody, ManualRecipeCreateData } from "@/types/recipe";
 
+export interface RecipeImageUploadData {
+  thumbnail_url: string;
+  storage_path: string;
+}
+
+export async function uploadRecipeImage(
+  file: File,
+): Promise<ApiResponse<RecipeImageUploadData>> {
+  try {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const response = await fetch(
+      "/api/v1/recipes/images",
+      withE2EAuthOverrideHeaders({
+        method: "POST",
+        body: formData,
+      }),
+    );
+
+    let payload: ApiResponse<RecipeImageUploadData> | null = null;
+
+    try {
+      payload = (await response.json()) as ApiResponse<RecipeImageUploadData>;
+    } catch {
+      return {
+        success: false,
+        data: null,
+        error: {
+          code: "INVALID_RESPONSE",
+          message: "서버 응답을 해석하지 못했어요.",
+          fields: [],
+        },
+      };
+    }
+
+    if (!response.ok || !payload.success) {
+      return {
+        success: false,
+        data: null,
+        error: payload.error ?? {
+          code: "UNKNOWN_ERROR",
+          message: "이미지를 업로드하지 못했어요.",
+          fields: [],
+        },
+      };
+    }
+
+    return {
+      success: true,
+      data: payload.data,
+      error: null,
+    };
+  } catch {
+    return {
+      success: false,
+      data: null,
+      error: {
+        code: "NETWORK_ERROR",
+        message: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해주세요.",
+        fields: [],
+      },
+    };
+  }
+}
+
 export async function createManualRecipe(
   body: ManualRecipeCreateBody
 ): Promise<ApiResponse<ManualRecipeCreateData>> {

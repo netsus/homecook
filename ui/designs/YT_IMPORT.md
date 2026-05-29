@@ -643,3 +643,10 @@
 - [ ] 추출 중 네트워크 끊김 시 timeout/retry UX 확인
 - [ ] 키보드 열림 시 Step 1 URL 입력 필드가 가려지지 않는지 확인 (특히 320px)
 - [ ] Step 3에서 base_servings가 null로 추출된 경우 사용자에게 필수 입력 강조 확인
+
+## Slice 31 Media/Tags Update
+
+- Step 3 검수 화면은 추출된 `thumbnail_url`이 있을 때 레시피 초안 이미지로 표시한다.
+- 추출된 `tags`는 읽기 전용 chip으로만 표시하고, 사용자가 추가/수정/삭제할 수 없다.
+- `thumbnail_url`이 없거나 `tags`가 빈 배열이면 해당 영역을 숨겨 기존 검수 흐름을 유지한다.
+- Stage 4 evidence: `ui/designs/evidence/31-recipe-media-tags/YT_IMPORT-thumbnail-tag-preview-mobile-screenshot.png`

@@ -177,4 +177,25 @@ describe("Recipio-style YouTube import helpers", () => {
     expect(getRecipioYoutubeProgress({ phase: "extracting", elapsedMs: 90_000 }).percent).toBe(95);
     expect(getRecipioYoutubeProgress({ phase: "complete", elapsedMs: 90_000 }).percent).toBe(100);
   });
+
+  it("extract data includes thumbnail_url and tags for frontend preview", () => {
+    const data = buildExtractData();
+    expect(data.thumbnail_url).toBe("https://i.ytimg.com/vi/X9CqUvteeMo/hqdefault.jpg");
+    expect(data.tags).toEqual(["꼬마김밥"]);
+  });
+
+  it("extract data allows empty tags and null thumbnail gracefully", () => {
+    const data = buildExtractData({ thumbnail_url: null, tags: [] });
+    expect(data.thumbnail_url).toBeNull();
+    expect(data.tags).toEqual([]);
+  });
+
+  it("register body does not include thumbnail_url or tags (server-only fields)", () => {
+    const registerBody = buildRecipioYoutubeRegisterBody(
+      buildExtractData(),
+      "https://www.youtube.com/watch?v=X9CqUvteeMo",
+    );
+    expect(registerBody).not.toHaveProperty("thumbnail_url");
+    expect(registerBody).not.toHaveProperty("tags");
+  });
 });

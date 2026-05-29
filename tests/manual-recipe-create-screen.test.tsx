@@ -8,7 +8,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ManualRecipeCreateScreen } from "@/components/recipe/manual-recipe-create-screen";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import { fetchIngredients } from "@/lib/api/ingredients";
+import { createManualRecipe, uploadRecipeImage, type RecipeImageUploadData } from "@/lib/api/manual-recipe";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
+import type { ApiResponse } from "@/types/api";
 
 const mockRouterReplace = vi.fn();
 const navigationMocks = vi.hoisted(() => ({
@@ -30,10 +32,20 @@ vi.mock("@/lib/api/ingredients", () => ({
 
 vi.mock("@/lib/api/manual-recipe", () => ({
   createManualRecipe: vi.fn(),
+  uploadRecipeImage: vi.fn(),
 }));
 
 vi.mock("@/lib/api/meal", () => ({
   createMealSafe: vi.fn(),
+}));
+
+const mockStorageRemove = vi.fn().mockResolvedValue({ error: null });
+vi.mock("@/lib/supabase/browser", () => ({
+  getSupabaseBrowserClient: () => ({
+    storage: {
+      from: () => ({ remove: mockStorageRemove }),
+    },
+  }),
 }));
 
 function installMatchMedia(matchesDesktop = false) {
@@ -64,10 +76,21 @@ describe("ManualRecipeCreateScreen", () => {
   beforeEach(() => {
     installMatchMedia(false);
     mockRouterReplace.mockReset();
+    mockStorageRemove.mockClear();
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     vi.mocked(fetchCookingMethods).mockReset();
     vi.mocked(fetchIngredients).mockReset();
+    vi.mocked(createManualRecipe).mockReset();
+    vi.mocked(uploadRecipeImage).mockReset();
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: vi.fn(() => "blob:manual-recipe-preview"),
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: vi.fn(),
+    });
     vi.mocked(fetchCookingMethods).mockResolvedValue({
       success: true,
       data: {
@@ -269,5 +292,326 @@ describe("ManualRecipeCreateScreen", () => {
         name: "선택한 재료 0개 추가",
       }) as HTMLButtonElement).disabled,
     ).toBe(true);
+  });
+
+  it("choosing an image calls upload helper and shows preview with uploading state", async () => {
+    // Keep upload pending so we can observe the uploading state
+    let resolveUpload!: (value: ApiResponse<RecipeImageUploadData>) => void;
+    vi.mocked(uploadRecipeImage).mockReturnValue(
+      new Promise((resolve) => {
+        resolveUpload = resolve;
+      }),
+    );
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const file = new File(["dummy"], "photo.jpg", { type: "image/jpeg" });
+
+    await user.upload(fileInput, file);
+
+    expect(uploadRecipeImage).toHaveBeenCalledWith(file);
+    expect(screen.getByTestId("manual-image-preview")).toBeTruthy();
+    expect(screen.getByTestId("manual-image-uploading-indicator")).toBeTruthy();
+
+    // Resolve the upload so the component settles
+    resolveUpload({
+      success: true,
+      data: { thumbnail_url: "https://cdn.test/thumb.jpg", storage_path: "recipe-images/user/abc.jpg" },
+      error: null,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
+    });
+    expect(screen.getByTestId("manual-image-remove-button")).toBeTruthy();
+    expect(screen.queryByTestId("manual-image-uploading-indicator")).toBeNull();
+  });
+
+  it("keeps the latest image when an older upload resolves last", async () => {
+    let resolveFirst!: (value: ApiResponse<RecipeImageUploadData>) => void;
+    let resolveSecond!: (value: ApiResponse<RecipeImageUploadData>) => void;
+    vi.mocked(uploadRecipeImage)
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        }),
+      )
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveSecond = resolve;
+        }),
+      );
+    vi.mocked(createManualRecipe).mockResolvedValue({
+      success: true,
+      data: {
+        id: "recipe-latest-img",
+        title: "최신 이미지 요리",
+        source_type: "manual",
+        created_by: "user-1",
+        base_servings: 2,
+      },
+      error: null,
+    });
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const firstFile = new File(["first"], "first.jpg", { type: "image/jpeg" });
+    const secondFile = new File(["second"], "second.jpg", { type: "image/jpeg" });
+
+    await user.upload(fileInput, firstFile);
+    await user.upload(fileInput, secondFile);
+
+    resolveSecond({
+      success: true,
+      data: {
+        thumbnail_url: "https://cdn.test/second.jpg",
+        storage_path: "recipe-images/user/second.jpg",
+      },
+      error: null,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
+    });
+
+    resolveFirst({
+      success: true,
+      data: {
+        thumbnail_url: "https://cdn.test/first.jpg",
+        storage_path: "recipe-images/user/first.jpg",
+      },
+      error: null,
+    });
+
+    await waitFor(() => {
+      expect(mockStorageRemove).toHaveBeenCalledWith(["user/first.jpg"]);
+    });
+
+    await user.type(screen.getByPlaceholderText("예: 김치찌개"), "최신 이미지 요리");
+    await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
+    await user.click(await screen.findByRole("button", { name: "양파" }));
+    await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+
+    await screen.findByRole("button", { name: "준비" });
+    await user.click(screen.getByRole("button", { name: "준비" }));
+    await user.type(screen.getByLabelText("만들기 1 설명"), "최신 이미지로 준비하기");
+    await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(createManualRecipe).toHaveBeenCalled();
+    });
+    expect(vi.mocked(createManualRecipe).mock.calls[0][0].thumbnail_url).toBe(
+      "https://cdn.test/second.jpg",
+    );
+  });
+
+  it("removes an uploaded image from storage when the unsaved form unmounts", async () => {
+    vi.mocked(uploadRecipeImage).mockResolvedValue({
+      success: true,
+      data: {
+        thumbnail_url: "https://cdn.test/discard.jpg",
+        storage_path: "recipe-images/user/discard.jpg",
+      },
+      error: null,
+    });
+
+    const user = userEvent.setup();
+    const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    await user.upload(fileInput, new File(["img"], "discard.png", { type: "image/png" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
+    });
+
+    view.unmount();
+
+    expect(mockStorageRemove).toHaveBeenCalledWith(["user/discard.jpg"]);
+  });
+
+  it("removes an upload that finishes after the unsaved form unmounts", async () => {
+    let resolveUpload!: (value: ApiResponse<RecipeImageUploadData>) => void;
+    vi.mocked(uploadRecipeImage).mockReturnValue(
+      new Promise((resolve) => {
+        resolveUpload = resolve;
+      }),
+    );
+
+    const user = userEvent.setup();
+    const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    await user.upload(fileInput, new File(["img"], "slow.png", { type: "image/png" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-uploading-indicator")).toBeTruthy();
+    });
+
+    view.unmount();
+
+    resolveUpload({
+      success: true,
+      data: {
+        thumbnail_url: "https://cdn.test/slow.jpg",
+        storage_path: "recipe-images/user/slow.jpg",
+      },
+      error: null,
+    });
+
+    await waitFor(() => {
+      expect(mockStorageRemove).toHaveBeenCalledWith(["user/slow.jpg"]);
+    });
+  });
+
+  it("successful save includes thumbnail_url from uploaded image", async () => {
+    vi.mocked(uploadRecipeImage).mockResolvedValue({
+      success: true,
+      data: { thumbnail_url: "https://cdn.test/thumb.jpg", storage_path: "recipe-images/user/abc.jpg" },
+      error: null,
+    });
+    vi.mocked(createManualRecipe).mockResolvedValue({
+      success: true,
+      data: {
+        id: "recipe-new",
+        title: "테스트 요리",
+        source_type: "manual",
+        created_by: "user-1",
+        base_servings: 2,
+      },
+      error: null,
+    });
+    vi.mocked(fetchCookingMethods).mockResolvedValue({
+      success: true,
+      data: {
+        methods: [
+          { id: "method-prep", code: "prep", label: "준비", color_key: "gray", is_system: true },
+        ],
+      },
+      error: null,
+    });
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    // Upload an image
+    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    await user.upload(fileInput, new File(["img"], "pic.png", { type: "image/png" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
+    });
+
+    // Fill required fields: title
+    await user.type(screen.getByPlaceholderText("예: 김치찌개"), "테스트 요리");
+
+    // Add an ingredient
+    await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
+    await user.click(await screen.findByRole("button", { name: "양파" }));
+    await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+
+    // Add a step
+    await screen.findByRole("button", { name: "준비" });
+    await user.click(screen.getByRole("button", { name: "준비" }));
+    await user.type(screen.getByLabelText("만들기 1 설명"), "양파 썰기");
+    await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
+
+    // Save
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(createManualRecipe).toHaveBeenCalled();
+    });
+    const callBody = vi.mocked(createManualRecipe).mock.calls[0][0];
+    expect(callBody.thumbnail_url).toBe("https://cdn.test/thumb.jpg");
+  });
+
+  it("upload failure shows error with retry and clears the error after success", async () => {
+    vi.mocked(uploadRecipeImage)
+      .mockResolvedValueOnce({
+        success: false,
+        data: null,
+        error: { code: "NETWORK_ERROR", message: "네트워크 오류가 발생했어요.", fields: [] },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { thumbnail_url: "https://cdn.test/thumb2.jpg", storage_path: "recipe-images/user/def.jpg" },
+        error: null,
+      });
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    // Upload will fail.
+    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    await user.upload(fileInput, new File(["bad"], "fail.jpg", { type: "image/jpeg" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-error")).toBeTruthy();
+    });
+    expect(screen.getByText("네트워크 오류가 발생했어요.")).toBeTruthy();
+    expect(screen.getByTestId("manual-image-retry-button")).toBeTruthy();
+
+    // Retry will succeed.
+    await user.click(screen.getByTestId("manual-image-retry-button"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
+    });
+    expect(screen.queryByTestId("manual-image-error")).toBeNull();
+  });
+
+  it("save without image works and does not include thumbnail_url", async () => {
+    vi.mocked(createManualRecipe).mockResolvedValue({
+      success: true,
+      data: {
+        id: "recipe-no-img",
+        title: "이미지 없는 요리",
+        source_type: "manual",
+        created_by: "user-1",
+        base_servings: 2,
+      },
+      error: null,
+    });
+    vi.mocked(fetchCookingMethods).mockResolvedValue({
+      success: true,
+      data: {
+        methods: [
+          { id: "method-prep", code: "prep", label: "준비", color_key: "gray", is_system: true },
+        ],
+      },
+      error: null,
+    });
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    // Fill required fields only. No image is selected.
+    await user.type(screen.getByPlaceholderText("예: 김치찌개"), "이미지 없는 요리");
+
+    // Add ingredient
+    await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
+    await user.click(await screen.findByRole("button", { name: "양파" }));
+    await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+
+    // Add step
+    await screen.findByRole("button", { name: "준비" });
+    await user.click(screen.getByRole("button", { name: "준비" }));
+    await user.type(screen.getByLabelText("만들기 1 설명"), "준비하기");
+    await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
+
+    // Save
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(createManualRecipe).toHaveBeenCalled();
+    });
+    const callBody = vi.mocked(createManualRecipe).mock.calls[0][0];
+    expect(callBody.thumbnail_url).toBeUndefined();
+    expect(uploadRecipeImage).not.toHaveBeenCalled();
   });
 });

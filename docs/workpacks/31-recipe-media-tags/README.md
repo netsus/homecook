@@ -99,9 +99,9 @@ YouTube에서 가져온 레시피와 사용자가 직접 등록한 레시피에 
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 ## Source Links
@@ -173,10 +173,33 @@ YouTube에서 가져온 레시피와 사용자가 직접 등록한 레시피에 
 - [x] YouTube extract/register thumbnail/tags 연결 <!-- omo:id=delivery-youtube-media-tags;stage=2;scope=backend;review=3,6 -->
 - [x] manual create thumbnail/tags 연결 <!-- omo:id=delivery-manual-media-tags;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] Storage bucket / policy 준비 여부 점검 <!-- omo:id=delivery-storage-readiness;stage=2;scope=backend;review=3,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+
+## Stage 4 Evidence
+
+- Vitest: `pnpm exec vitest run tests/manual-recipe-create-screen.test.tsx tests/menu-add-screen.test.tsx tests/recipio-youtube-import.test.ts tests/recipe-detail-screen.test.tsx` (82 passed)
+- Product tests: `pnpm test:product` (829 passed)
+- Type/lint/build: `pnpm typecheck`, `pnpm lint`, `pnpm build`
+- Playwright slice evidence: `pnpm exec playwright test tests/e2e/slice-31-recipe-media-tags.spec.ts --project=desktop-chrome` (1 passed)
+- Playwright regression: `pnpm test:e2e:smoke` (37 passed, 2 skipped), `pnpm test:e2e:a11y:core` (6 passed), `pnpm test:e2e:visual:app-core` (8 passed)
+- Local visual note: `pnpm test:e2e:visual:web-core` still fails on existing Darwin `qa-home-sort-open.png` snapshot drift, outside Slice 31 changed routes.
+- Screenshots:
+  - `ui/designs/evidence/31-recipe-media-tags/YT_IMPORT-thumbnail-tag-preview-mobile-screenshot.png`
+  - `ui/designs/evidence/31-recipe-media-tags/MANUAL_RECIPE_CREATE-image-upload-mobile-screenshot.png`
+  - `ui/designs/evidence/31-recipe-media-tags/RECIPE_DETAIL-source-note-tag-display-mobile-screenshot.png`
+  - `ui/designs/evidence/31-recipe-media-tags/RECIPE_DETAIL-narrow-viewport-text-fit-screenshot.png`
+
+## Stage 5 Authority Evidence
+
+- Codex authority precheck: `ui/designs/authority/31_RECIPE_MEDIA_TAGS-authority.md`
+- Claude final authority gate: `.omx/artifacts/claude-delegate-31-recipe-media-tags-stage5-final-authority-response-20260529T194441Z.md`
+- Verdict: `pass`
+- Blockers: none
+- Majors: none
+- Required Fix Before Merge: no

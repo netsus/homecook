@@ -783,7 +783,7 @@ export function RecipeDetailScreen({
   const heroBackground = getRecipeHeroBackground(recipe);
   const mobileHeroStyle = recipe.thumbnail_url
     ? {
-        backgroundImage: `linear-gradient(rgba(33,37,41,0.04),rgba(33,37,41,0.32)),url(${recipe.thumbnail_url})`,
+        backgroundImage: `linear-gradient(rgba(33,37,41,0.04),rgba(33,37,41,0.32)),url("${recipe.thumbnail_url}")`,
         backgroundPosition: "center",
         backgroundSize: "cover",
       }
@@ -845,7 +845,7 @@ export function RecipeDetailScreen({
           style={
             recipe.thumbnail_url
               ? {
-                  backgroundImage: `linear-gradient(color-mix(in srgb, var(--foreground) 6%, transparent),color-mix(in srgb, var(--foreground) 22%, transparent)),url(${recipe.thumbnail_url})`,
+                  backgroundImage: `linear-gradient(color-mix(in srgb, var(--foreground) 6%, transparent),color-mix(in srgb, var(--foreground) 22%, transparent)),url("${recipe.thumbnail_url}")`,
                   backgroundPosition: "center",
                   backgroundSize: "cover",
                 }
@@ -1244,24 +1244,31 @@ export function RecipeDetailScreen({
         </section>
 
         <section className="border-b border-[#DEE2E6] bg-white p-5">
-          <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            {displayTags.map((tag, index) => (
-              <span
-                className={[
-                  "rounded-full px-[9px] py-1 text-[12px] font-extrabold",
-                  index === 0
-                    ? "bg-[var(--brand-soft)] text-[var(--brand)]"
-                    : "bg-[#F8F9FA] text-[#495057]",
-                ].join(" ")}
-                key={`${tag}-${index}`}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
+          {displayTags.length > 0 ? (
+            <div className="mb-2 flex flex-wrap items-center gap-1.5" data-testid="recipe-detail-tags">
+              {displayTags.map((tag, index) => (
+                <span
+                  className={[
+                    "rounded-full px-[9px] py-1 text-[12px] font-extrabold",
+                    index === 0
+                      ? "bg-[var(--brand-soft)] text-[var(--brand)]"
+                      : "bg-[#F8F9FA] text-[#495057]",
+                  ].join(" ")}
+                  key={`${tag}-${index}`}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
           <h1 className="mb-2.5 text-[24px] font-bold leading-tight text-[#212529]">
             {recipe.title}
           </h1>
+          {recipe.source_type === "youtube" ? (
+            <p className="mb-1.5 text-[12px] text-[var(--text-3)]" data-testid="recipe-youtube-source-note">
+              YouTube에서 가져온 레시피
+            </p>
+          ) : null}
           <div className="flex items-center gap-2 text-[12px] text-[#5F6470]">
             <ClockIcon />
             <span>{minutesLabel}</span>
@@ -1652,6 +1659,11 @@ function RecipeDetailWebView({
 
             <section className="web-recipe-titleblock">
               <h1 className="web-recipe-title">{recipe.title}</h1>
+              {recipe.source_type === "youtube" ? (
+                <p className="mt-1 text-[13px] text-[var(--text-3)]" data-testid="recipe-youtube-source-note">
+                  YouTube에서 가져온 레시피
+                </p>
+              ) : null}
               <div className="web-recipe-tags">
                 {recipe.tags.map((tag) => (
                   <WebChip className="web-tag" key={tag}>

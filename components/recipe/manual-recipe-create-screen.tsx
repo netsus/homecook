@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
@@ -11,8 +12,9 @@ import { ModalHeader } from "@/components/shared/modal-header";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
-import { createManualRecipe } from "@/lib/api/manual-recipe";
+import { createManualRecipe, uploadRecipeImage } from "@/lib/api/manual-recipe";
 import { createMealSafe } from "@/lib/api/meal";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 import {
@@ -126,9 +128,12 @@ interface AppBarProps {
   onBack: () => void;
   onSave: () => void;
   isSaving: boolean;
+  isUploading?: boolean;
 }
 
-function AppBar({ onBack, onSave, isSaving }: AppBarProps) {
+function AppBar({ onBack, onSave, isSaving, isUploading = false }: AppBarProps) {
+  const isDisabled = isSaving || isUploading;
+
   return (
     <div className="shrink-0 border-b border-[#DEE2E6] bg-white">
       <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
@@ -137,7 +142,7 @@ function AppBar({ onBack, onSave, isSaving }: AppBarProps) {
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529] hover:bg-[#F8F9FA]"
           onClick={onBack}
           type="button"
-          disabled={isSaving}
+          disabled={isDisabled}
         >
           <svg
             fill="none"
@@ -161,12 +166,12 @@ function AppBar({ onBack, onSave, isSaving }: AppBarProps) {
         <button
           className={[
             "h-[var(--control-height-md)] shrink-0 rounded-[var(--radius-control)] px-3 text-sm font-semibold lg:px-4 lg:text-base",
-            !isSaving
+            !isDisabled
               ? "text-[var(--brand)] hover:bg-[var(--brand-soft)]"
               : "cursor-not-allowed text-[#ADB5BD]",
           ].join(" ")}
           onClick={onSave}
-          disabled={isSaving}
+          disabled={isDisabled}
           type="button"
         >
           {isSaving ? "저장 중..." : "저장"}
@@ -646,6 +651,19 @@ export function ManualRecipeCreateScreen({
   const [createdRecipeId, setCreatedRecipeId] = useState<string | null>(null);
   const [createdRecipeTitle, setCreatedRecipeTitle] = useState<string>("");
 
+  type ImageUploadStatus = "idle" | "uploading" | "uploaded" | "failed";
+  const [imageStatus, setImageStatus] = useState<ImageUploadStatus>("idle");
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [uploadedThumbnailUrl, setUploadedThumbnailUrl] = useState<string | null>(null);
+  const [uploadedStoragePath, setUploadedStoragePath] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const uploadRequestIdRef = useRef(0);
+  const uploadedStoragePathRef = useRef<string | null>(null);
+  const shouldCleanupUploadedImageRef = useRef(false);
+  const isMountedRef = useRef(true);
+
   // API data states
   const [cookingMethods, setCookingMethods] = useState<CookingMethodItem[]>(
     []
@@ -742,7 +760,147 @@ export function ManualRecipeCreateScreen({
     });
   }, []);
 
+  const cleanupUploadedImage = useCallback((storagePath: string) => {
+    const objectPath = storagePath.replace(/^recipe-images\//, "");
+    try {
+      void getSupabaseBrowserClient()
+        .storage.from("recipe-images")
+        .remove([objectPath])
+        .catch(() => undefined);
+    } catch {
+      return;
+    }
+  }, []);
+
+  useEffect(() => {
+    uploadedStoragePathRef.current = uploadedStoragePath;
+  }, [uploadedStoragePath]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+      const storagePath = uploadedStoragePathRef.current;
+      if (shouldCleanupUploadedImageRef.current && storagePath) {
+        cleanupUploadedImage(storagePath);
+      }
+    };
+  }, [cleanupUploadedImage]);
+
+  const revokePreviewUrl = useCallback((previewUrl: string | null) => {
+    if (!previewUrl) return;
+    try {
+      URL.revokeObjectURL(previewUrl);
+    } catch {
+      return;
+    }
+  }, []);
+
+  const doUpload = useCallback(async (file: File) => {
+    const requestId = uploadRequestIdRef.current + 1;
+    uploadRequestIdRef.current = requestId;
+    const nextPreviewUrl = URL.createObjectURL(file);
+
+    if (uploadedStoragePath) {
+      cleanupUploadedImage(uploadedStoragePath);
+      shouldCleanupUploadedImageRef.current = false;
+      uploadedStoragePathRef.current = null;
+    }
+    revokePreviewUrl(imagePreviewUrl);
+
+    setImageStatus("uploading");
+    setImageError(null);
+    setPendingFile(file);
+    setUploadedThumbnailUrl(null);
+    setUploadedStoragePath(null);
+    setImagePreviewUrl(nextPreviewUrl);
+
+    const result = await uploadRecipeImage(file);
+
+    if (!isMountedRef.current) {
+      revokePreviewUrl(nextPreviewUrl);
+      if (result.success && result.data) {
+        cleanupUploadedImage(result.data.storage_path);
+      }
+      return;
+    }
+
+    if (uploadRequestIdRef.current !== requestId) {
+      revokePreviewUrl(nextPreviewUrl);
+      if (result.success && result.data) {
+        cleanupUploadedImage(result.data.storage_path);
+      }
+      return;
+    }
+
+    if (!result.success || !result.data) {
+      shouldCleanupUploadedImageRef.current = false;
+      uploadedStoragePathRef.current = null;
+      setImageStatus("failed");
+      setImageError(result.error?.message ?? "이미지를 업로드하지 못했어요.");
+      return;
+    }
+
+    uploadedStoragePathRef.current = result.data.storage_path;
+    shouldCleanupUploadedImageRef.current = true;
+    setUploadedThumbnailUrl(result.data.thumbnail_url);
+    setUploadedStoragePath(result.data.storage_path);
+    setImageStatus("uploaded");
+    setPendingFile(null);
+  }, [
+    cleanupUploadedImage,
+    imagePreviewUrl,
+    revokePreviewUrl,
+    uploadedStoragePath,
+  ]);
+
+  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    void doUpload(file);
+  }, [doUpload]);
+
+  const handleImageRetry = useCallback(() => {
+    if (pendingFile) {
+      void doUpload(pendingFile);
+    }
+  }, [doUpload, pendingFile]);
+
+  const handleImageRemove = useCallback(() => {
+    const storagePath = uploadedStoragePath ?? uploadedStoragePathRef.current;
+    if (storagePath) {
+      cleanupUploadedImage(storagePath);
+    }
+    revokePreviewUrl(imagePreviewUrl);
+    shouldCleanupUploadedImageRef.current = false;
+    uploadedStoragePathRef.current = null;
+    setImageStatus("idle");
+    setImagePreviewUrl(null);
+    setUploadedThumbnailUrl(null);
+    setUploadedStoragePath(null);
+    setImageError(null);
+    setPendingFile(null);
+  }, [cleanupUploadedImage, imagePreviewUrl, revokePreviewUrl, uploadedStoragePath]);
+
+  const handleImageReplace = useCallback(() => {
+    imageInputRef.current?.click();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      revokePreviewUrl(imagePreviewUrl);
+    };
+  }, [imagePreviewUrl, revokePreviewUrl]);
+
+  const isUploading = imageStatus === "uploading";
+
   const handleSave = useCallback(async () => {
+    if (isUploading) {
+      return;
+    }
+
     if (!canSave) {
       setShowValidationErrors(true);
       setSaveError(null);
@@ -756,6 +914,7 @@ export function ManualRecipeCreateScreen({
     const response = await createManualRecipe({
       title: title.trim(),
       base_servings: baseServings,
+      thumbnail_url: uploadedThumbnailUrl ?? undefined,
       ingredients: ingredients.map((ing, idx) => ({
         ingredient_id: ing.ingredient_id,
         standard_name: ing.standard_name,
@@ -785,9 +944,10 @@ export function ManualRecipeCreateScreen({
 
     setCreatedRecipeId(response.data.id);
     setCreatedRecipeTitle(response.data.title);
+    shouldCleanupUploadedImageRef.current = false;
     setModalMode("success");
     setIsSaving(false);
-  }, [canSave, title, baseServings, ingredients, steps]);
+  }, [isUploading, canSave, title, baseServings, uploadedThumbnailUrl, ingredients, steps]);
 
   const handleMealAdd = useCallback(() => {
     if (!planDate || !columnId) {
@@ -867,6 +1027,72 @@ export function ManualRecipeCreateScreen({
             />
           </div>
         </div>
+      </section>
+
+      <section className="web-manual-section" data-testid="manual-image-upload-section-desktop">
+        <div className="web-manual-section-head">
+          <h2>이미지</h2>
+          <span>선택사항</span>
+        </div>
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          data-testid="manual-image-file-input"
+          onChange={handleImageSelect}
+        />
+        {imageStatus === "idle" ? (
+          <WebButton
+            className="web-manual-add-button"
+            onClick={() => imageInputRef.current?.click()}
+            variant="secondary"
+          >
+            사진 선택
+          </WebButton>
+        ) : null}
+        {(imageStatus === "uploading" || imageStatus === "uploaded") && imagePreviewUrl ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div
+              style={{ position: "relative", aspectRatio: "16/9", overflow: "hidden", borderRadius: "var(--radius-card)", background: "var(--surface-fill)" }}
+              data-testid="manual-image-preview"
+            >
+              <Image
+                src={imagePreviewUrl}
+                alt="레시피 이미지 미리보기"
+                fill
+                className="object-cover"
+                sizes="(min-width: 768px) 42rem, 100vw"
+                unoptimized
+              />
+              {imageStatus === "uploading" ? (
+                <div
+                  style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.3)" }}
+                  data-testid="manual-image-uploading-indicator"
+                >
+                  <span style={{ color: "white", fontSize: "13px", fontWeight: 600 }}>업로드 중...</span>
+                </div>
+              ) : null}
+            </div>
+            {imageStatus === "uploaded" ? (
+              <div style={{ display: "flex", gap: "8px" }}>
+                <WebButton onClick={handleImageReplace} variant="secondary">교체</WebButton>
+                <WebButton onClick={handleImageRemove} variant="secondary">제거</WebButton>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {imageStatus === "failed" ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div className="web-menu-add-error" role="alert" data-testid="manual-image-error">
+              {imageError}
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <WebButton onClick={handleImageRetry}>다시 시도</WebButton>
+              <WebButton onClick={handleImageRemove} variant="secondary">제거</WebButton>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="web-manual-section">
@@ -956,7 +1182,7 @@ export function ManualRecipeCreateScreen({
           data-testid="manual-recipe-embedded"
         >
           <div className="web-menu-add-embedded-actions">
-            <WebButton disabled={isSaving} onClick={handleSave} size="sm">
+            <WebButton disabled={isSaving || isUploading} onClick={handleSave} size="sm">
               {isSaving ? "저장 중..." : "저장"}
             </WebButton>
           </div>
@@ -997,7 +1223,7 @@ export function ManualRecipeCreateScreen({
               <WebButton onClick={handleBack} variant="secondary">
                 취소
               </WebButton>
-              <WebButton disabled={isSaving} onClick={handleSave}>
+              <WebButton disabled={isSaving || isUploading} onClick={handleSave}>
                 {isSaving ? "저장 중..." : "저장"}
               </WebButton>
             </div>
@@ -1019,6 +1245,7 @@ export function ManualRecipeCreateScreen({
         onBack={handleBack}
         onSave={handleSave}
         isSaving={isSaving}
+        isUploading={isUploading}
       />
       <div className="mb-[96px] min-h-0 flex-1 scroll-pb-[120px] overflow-y-auto pb-[120px] md:mb-0 md:px-4 md:pb-6 md:scroll-pb-6">
         <div className="mx-auto max-w-2xl space-y-2 md:space-y-6 md:py-4">
@@ -1055,6 +1282,107 @@ export function ManualRecipeCreateScreen({
                 />
               </div>
             </div>
+          </section>
+
+          {/* Image Upload */}
+          <section
+            className="bg-white px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]"
+            data-testid="manual-image-upload-section"
+          >
+            <h2 className="mb-3 text-[16px] font-semibold leading-[1.3] text-[#212529]">
+              이미지
+            </h2>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              data-testid="manual-image-file-input"
+              onChange={handleImageSelect}
+            />
+            {imageStatus === "idle" ? (
+              <button
+                className="flex h-[100px] w-full items-center justify-center rounded-[var(--radius-card)] border border-dashed border-[#CED4DA] bg-[#F8F9FA] text-[13px] text-[#868E96]"
+                data-testid="manual-image-choose-button"
+                onClick={() => imageInputRef.current?.click()}
+                type="button"
+              >
+                사진 선택 (선택사항)
+              </button>
+            ) : null}
+            {(imageStatus === "uploading" || imageStatus === "uploaded") && imagePreviewUrl ? (
+              <div className="space-y-2">
+                <div
+                  className="relative aspect-video w-full overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface-fill)]"
+                  data-testid="manual-image-preview"
+                >
+                  <Image
+                    src={imagePreviewUrl}
+                    alt="레시피 이미지 미리보기"
+                    fill
+                    className="object-cover"
+                    sizes="(min-width: 768px) 42rem, 100vw"
+                    unoptimized
+                  />
+                  {imageStatus === "uploading" ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <span className="text-[13px] font-semibold text-white" data-testid="manual-image-uploading-indicator">
+                        업로드 중...
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+                {imageStatus === "uploaded" ? (
+                  <div className="flex gap-2">
+                    <button
+                      className="flex-1 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white py-2 text-[13px] font-medium text-[#495057]"
+                      data-testid="manual-image-replace-button"
+                      onClick={handleImageReplace}
+                      type="button"
+                    >
+                      교체
+                    </button>
+                    <button
+                      className="flex-1 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white py-2 text-[13px] font-medium text-[#495057]"
+                      data-testid="manual-image-remove-button"
+                      onClick={handleImageRemove}
+                      type="button"
+                    >
+                      제거
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {imageStatus === "failed" ? (
+              <div className="space-y-2">
+                <div
+                  className="rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-3 text-[13px] text-red-700"
+                  data-testid="manual-image-error"
+                  role="alert"
+                >
+                  {imageError}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    className="flex-1 rounded-[var(--radius-control)] bg-[var(--brand)] py-2 text-[13px] font-semibold text-white"
+                    data-testid="manual-image-retry-button"
+                    onClick={handleImageRetry}
+                    type="button"
+                  >
+                    다시 시도
+                  </button>
+                  <button
+                    className="flex-1 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white py-2 text-[13px] font-medium text-[#495057]"
+                    data-testid="manual-image-remove-button"
+                    onClick={handleImageRemove}
+                    type="button"
+                  >
+                    제거
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </section>
 
           {/* Ingredients */}

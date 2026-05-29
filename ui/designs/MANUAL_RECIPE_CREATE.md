@@ -408,3 +408,11 @@
 - [ ] Baemin vocabulary/material 사용이 기존 토큰 시스템과 조화를 이루는지 확인
 - [ ] 로그인 게이트 후 return-to-action 흐름이 자연스러운지 확인 (입력 내용 복원)
 - [ ] 재료 타입 선택 UI가 QUANT/TO_TASTE 구분을 명확히 하는지 확인
+
+## Slice 31 Media/Tags Update
+
+- 이미지 섹션은 기본 정보 다음, 재료 섹션 전에 배치한다.
+- 이미지 업로드는 선택사항이며 `선택 -> 미리보기 -> 교체/제거` 흐름을 제공한다.
+- 업로드 중에는 저장 액션을 비활성화하고, 업로드 실패 시 같은 파일 재시도와 제거를 제공한다.
+- 저장 전 제거/교체된 업로드 객체는 Storage에서 best-effort cleanup을 시도한다.
+- Stage 4 evidence: `ui/designs/evidence/31-recipe-media-tags/MANUAL_RECIPE_CREATE-image-upload-mobile-screenshot.png`

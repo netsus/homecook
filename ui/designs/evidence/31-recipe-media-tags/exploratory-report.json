@@ -1,0 +1,319 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "31-recipe-media-tags",
+  "generatedAt": "2026-05-29T19:55:04.915Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "summary": "Exploratory QA covered the Slice 31 recipe media/tag flows across YouTube import, manual recipe creation, and recipe detail. Fixture-backed browser evidence plus Vitest/product/build/smoke/a11y/mobile visual checks show thumbnail preview, read-only tags, manual image upload states, cleanup behavior, source note display, and narrow mobile text fit with no unresolved blocker or major finding.",
+  "findings": [],
+  "remainingRisks": [
+    "Real YouTube provider + real Supabase Auth/DB/Storage end-to-end smoke remains Manual Only and is documented in docs/workpacks/31-recipe-media-tags/acceptance.md.",
+    "Manual upload screenshot uses a fixture image to prove preview geometry and controls; real food photography quality remains outside automated evidence.",
+    "Local pnpm test:e2e:visual:web-core still fails on an existing Darwin HOME snapshot drift outside Slice 31 changed routes."
+  ],
+  "evidence": [
+    "ui/designs/authority/31_RECIPE_MEDIA_TAGS-authority.md",
+    "ui/designs/evidence/31-recipe-media-tags/YT_IMPORT-thumbnail-tag-preview-mobile-screenshot.png",
+    "ui/designs/evidence/31-recipe-media-tags/MANUAL_RECIPE_CREATE-image-upload-mobile-screenshot.png",
+    "ui/designs/evidence/31-recipe-media-tags/RECIPE_DETAIL-source-note-tag-display-mobile-screenshot.png",
+    "ui/designs/evidence/31-recipe-media-tags/RECIPE_DETAIL-narrow-viewport-text-fit-screenshot.png",
+    ".omx/artifacts/claude-delegate-31-recipe-media-tags-stage5-final-authority-response-20260529T194441Z.md"
+  ],
+  "checks": [
+    "pnpm lint",
+    "pnpm typecheck",
+    "pnpm exec vitest run tests/manual-recipe-create-screen.test.tsx tests/menu-add-screen.test.tsx tests/recipio-youtube-import.test.ts tests/recipe-detail-screen.test.tsx",
+    "pnpm test:product",
+    "pnpm build",
+    "pnpm exec playwright test tests/e2e/slice-31-recipe-media-tags.spec.ts --project=desktop-chrome",
+    "pnpm test:e2e:smoke",
+    "pnpm test:e2e:a11y:core",
+    "pnpm test:e2e:visual:app-core",
+    "pnpm validate:workpack",
+    "pnpm validate:authority-evidence-presence",
+    "pnpm validate:real-smoke-presence",
+    "git diff --check"
+  ],
+  "checklistCoverage": [
+    {
+      "item_id": "youtube-media-tags-1",
+      "status": "covered",
+      "notes": "Vitest covers extract/register contract, server-owned thumbnail/tags, no client override, and no thumbnail rehost. Playwright fixture shows preview UI and detail display.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "youtube-media-tags-2",
+      "status": "covered",
+      "notes": "Vitest covers extract/register contract, server-owned thumbnail/tags, no client override, and no thumbnail rehost. Playwright fixture shows preview UI and detail display.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "youtube-media-tags-3",
+      "status": "covered",
+      "notes": "Vitest covers extract/register contract, server-owned thumbnail/tags, no client override, and no thumbnail rehost. Playwright fixture shows preview UI and detail display.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "youtube-media-tags-4",
+      "status": "covered",
+      "notes": "Vitest covers extract/register contract, server-owned thumbnail/tags, no client override, and no thumbnail rehost. Playwright fixture shows preview UI and detail display.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "youtube-media-tags-5",
+      "status": "covered",
+      "notes": "Vitest covers extract/register contract, server-owned thumbnail/tags, no client override, and no thumbnail rehost. Playwright fixture shows preview UI and detail display.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-image-upload-1",
+      "status": "covered",
+      "notes": "Vitest and component tests cover upload success, validation, storage path reference, owner guard, negative URLs, retry, replace/remove, and unused-upload cleanup behavior.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-image-upload-2",
+      "status": "covered",
+      "notes": "Vitest and component tests cover upload success, validation, storage path reference, owner guard, negative URLs, retry, replace/remove, and unused-upload cleanup behavior.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-image-upload-3",
+      "status": "covered",
+      "notes": "Vitest and component tests cover upload success, validation, storage path reference, owner guard, negative URLs, retry, replace/remove, and unused-upload cleanup behavior.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-image-upload-4",
+      "status": "covered",
+      "notes": "Vitest and component tests cover upload success, validation, storage path reference, owner guard, negative URLs, retry, replace/remove, and unused-upload cleanup behavior.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-image-upload-5",
+      "status": "covered",
+      "notes": "Vitest and component tests cover upload success, validation, storage path reference, owner guard, negative URLs, retry, replace/remove, and unused-upload cleanup behavior.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-image-upload-6",
+      "status": "covered",
+      "notes": "Vitest and component tests cover upload success, validation, storage path reference, owner guard, negative URLs, retry, replace/remove, and unused-upload cleanup behavior.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "tag-generator-1",
+      "status": "covered",
+      "notes": "Shared tag generator/backend tests cover deterministic inputs, provider tags, normalization, cap, empty fallback, and readonly frontend display.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "tag-generator-2",
+      "status": "covered",
+      "notes": "Shared tag generator/backend tests cover deterministic inputs, provider tags, normalization, cap, empty fallback, and readonly frontend display.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "tag-generator-3",
+      "status": "covered",
+      "notes": "Shared tag generator/backend tests cover deterministic inputs, provider tags, normalization, cap, empty fallback, and readonly frontend display.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "tag-generator-4",
+      "status": "covered",
+      "notes": "Shared tag generator/backend tests cover deterministic inputs, provider tags, normalization, cap, empty fallback, and readonly frontend display.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "tag-generator-5",
+      "status": "covered",
+      "notes": "Shared tag generator/backend tests cover deterministic inputs, provider tags, normalization, cap, empty fallback, and readonly frontend display.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "tag-generator-6",
+      "status": "covered",
+      "notes": "Shared tag generator/backend tests cover deterministic inputs, provider tags, normalization, cap, empty fallback, and readonly frontend display.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-1",
+      "status": "covered",
+      "notes": "Fixture-backed Playwright covers YouTube preview/register-detail display and manual upload/save body. Lint/type/product/build/smoke checks confirm API envelope and FE type use.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-2",
+      "status": "covered",
+      "notes": "Fixture-backed Playwright covers YouTube preview/register-detail display and manual upload/save body. Lint/type/product/build/smoke checks confirm API envelope and FE type use.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-3",
+      "status": "covered",
+      "notes": "Fixture-backed Playwright covers YouTube preview/register-detail display and manual upload/save body. Lint/type/product/build/smoke checks confirm API envelope and FE type use.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-4",
+      "status": "covered",
+      "notes": "Fixture-backed Playwright covers YouTube preview/register-detail display and manual upload/save body. Lint/type/product/build/smoke checks confirm API envelope and FE type use.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-1",
+      "status": "covered",
+      "notes": "Backend/product tests cover session guard, consumed conflict, idempotency, no DB binary storage, and no signed URL persistence.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-2",
+      "status": "covered",
+      "notes": "Backend/product tests cover session guard, consumed conflict, idempotency, no DB binary storage, and no signed URL persistence.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-3",
+      "status": "covered",
+      "notes": "Backend/product tests cover session guard, consumed conflict, idempotency, no DB binary storage, and no signed URL persistence.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-4",
+      "status": "covered",
+      "notes": "Backend/product tests cover session guard, consumed conflict, idempotency, no DB binary storage, and no signed URL persistence.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-5",
+      "status": "covered",
+      "notes": "Backend/product tests cover session guard, consumed conflict, idempotency, no DB binary storage, and no signed URL persistence.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-1",
+      "status": "covered",
+      "notes": "Component and Playwright tests cover loading, empty, upload failure retry, save failure, unauthorized/login-gate flows, conflict handling, and return-to-action behavior.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-2",
+      "status": "covered",
+      "notes": "Component and Playwright tests cover loading, empty, upload failure retry, save failure, unauthorized/login-gate flows, conflict handling, and return-to-action behavior.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-3",
+      "status": "covered",
+      "notes": "Component and Playwright tests cover loading, empty, upload failure retry, save failure, unauthorized/login-gate flows, conflict handling, and return-to-action behavior.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-4",
+      "status": "covered",
+      "notes": "Component and Playwright tests cover loading, empty, upload failure retry, save failure, unauthorized/login-gate flows, conflict handling, and return-to-action behavior.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-5",
+      "status": "covered",
+      "notes": "Component and Playwright tests cover loading, empty, upload failure retry, save failure, unauthorized/login-gate flows, conflict handling, and return-to-action behavior.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-6",
+      "status": "covered",
+      "notes": "Component and Playwright tests cover loading, empty, upload failure retry, save failure, unauthorized/login-gate flows, conflict handling, and return-to-action behavior.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-1",
+      "status": "covered",
+      "notes": "Backend/product tests cover owner guard, invalid input handling, derived thumbnail/tag fields, and no excessive operational log persistence.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-2",
+      "status": "covered",
+      "notes": "Backend/product tests cover owner guard, invalid input handling, derived thumbnail/tag fields, and no excessive operational log persistence.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-3",
+      "status": "covered",
+      "notes": "Backend/product tests cover owner guard, invalid input handling, derived thumbnail/tag fields, and no excessive operational log persistence.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-4",
+      "status": "covered",
+      "notes": "Backend/product tests cover owner guard, invalid input handling, derived thumbnail/tag fields, and no excessive operational log persistence.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-1",
+      "status": "covered",
+      "notes": "Manual-only live smoke scenarios are documented in acceptance.md for real YouTube/provider/Supabase/Auth/Storage execution; this exploratory artifact records the handoff, not a live-provider claim.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-2",
+      "status": "covered",
+      "notes": "Manual-only live smoke scenarios are documented in acceptance.md for real YouTube/provider/Supabase/Auth/Storage execution; this exploratory artifact records the handoff, not a live-provider claim.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-3",
+      "status": "covered",
+      "notes": "Manual-only live smoke scenarios are documented in acceptance.md for real YouTube/provider/Supabase/Auth/Storage execution; this exploratory artifact records the handoff, not a live-provider claim.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-mobile-readability",
+      "status": "covered",
+      "notes": "Stage 4 screenshots and authority review cover mobile/narrow readability, CTA visibility, duplicate CTA scan, information hierarchy, copy sanity, empty/error affordances, and non-placeholder visual quality for the implemented surfaces.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-small-viewport-cta",
+      "status": "covered",
+      "notes": "Stage 4 screenshots and authority review cover mobile/narrow readability, CTA visibility, duplicate CTA scan, information hierarchy, copy sanity, empty/error affordances, and non-placeholder visual quality for the implemented surfaces.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-duplicate-cta",
+      "status": "covered",
+      "notes": "Stage 4 screenshots and authority review cover mobile/narrow readability, CTA visibility, duplicate CTA scan, information hierarchy, copy sanity, empty/error affordances, and non-placeholder visual quality for the implemented surfaces.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-information-hierarchy",
+      "status": "covered",
+      "notes": "Stage 4 screenshots and authority review cover mobile/narrow readability, CTA visibility, duplicate CTA scan, information hierarchy, copy sanity, empty/error affordances, and non-placeholder visual quality for the implemented surfaces.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-copy-sanity",
+      "status": "covered",
+      "notes": "Stage 4 screenshots and authority review cover mobile/narrow readability, CTA visibility, duplicate CTA scan, information hierarchy, copy sanity, empty/error affordances, and non-placeholder visual quality for the implemented surfaces.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-empty-noop",
+      "status": "covered",
+      "notes": "Stage 4 screenshots and authority review cover mobile/narrow readability, CTA visibility, duplicate CTA scan, information hierarchy, copy sanity, empty/error affordances, and non-placeholder visual quality for the implemented surfaces.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-placeholder-polish",
+      "status": "covered",
+      "notes": "Stage 4 screenshots and authority review cover mobile/narrow readability, CTA visibility, duplicate CTA scan, information hierarchy, copy sanity, empty/error affordances, and non-placeholder visual quality for the implemented surfaces.",
+      "linked_findings": []
+    }
+  ]
+}
