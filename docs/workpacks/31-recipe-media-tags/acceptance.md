@@ -27,13 +27,13 @@
 - [x] YouTube tag generator는 provider `snippet.tags`를 필터링해 참고한다 <!-- omo:id=accept-tag-inputs-youtube;stage=2;scope=backend;review=3,6 -->
 - [x] 태그는 정규화되고 중복 제거되며 최대 6개로 제한된다 <!-- omo:id=accept-tags-normalized-capped;stage=2;scope=shared;review=3,6 -->
 - [x] 태그를 생성할 수 없으면 `recipes.tags`는 `[]`이다 <!-- omo:id=accept-tags-empty-fallback;stage=2;scope=shared;review=3,6 -->
-- [ ] 사용자는 태그를 수동 입력/수정/삭제할 수 없다 <!-- omo:id=accept-tags-readonly;stage=4;scope=frontend;review=5,6 -->
+- [x] 사용자는 태그를 수동 입력/수정/삭제할 수 없다 <!-- omo:id=accept-tags-readonly;stage=4;scope=frontend;review=5,6 -->
 
 ## Happy Path
-- [ ] YouTube URL 입력 → extract → 썸네일/태그 preview → 검수 → 등록 → 상세 표시가 동작한다 <!-- omo:id=accept-youtube-happy-path;stage=4;scope=frontend;review=5,6 -->
-- [ ] 직접 등록 이미지 선택 → upload → 저장 → 상세 표시가 동작한다 <!-- omo:id=accept-manual-happy-path;stage=4;scope=frontend;review=5,6 -->
+- [x] YouTube URL 입력 → extract → 썸네일/태그 preview → 검수 → 등록 → 상세 표시가 동작한다 <!-- omo:id=accept-youtube-happy-path;stage=4;scope=frontend;review=5,6 -->
+- [x] 직접 등록 이미지 선택 → upload → 저장 → 상세 표시가 동작한다 <!-- omo:id=accept-manual-happy-path;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 - [x] YouTube session 상태 전이가 공식 문서와 일치한다 (draft → consumed / expired) <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
@@ -43,12 +43,12 @@
 - [x] `recipes.thumbnail_url`에는 만료 signed URL을 저장하지 않는다 <!-- omo:id=accept-no-signed-url-persist;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
-- [ ] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태가 있다 (이미지 없음 placeholder, 태그 없음 영역 숨김) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 있다 (업로드 실패, 저장 실패, YouTube provider 실패) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 있다 (이미지 업로드/등록 401 → 로그인 게이트) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] conflict 처리 흐름이 있다 (consumed/expired/mismatch session) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
-- [ ] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태가 있다 (이미지 없음 placeholder, 태그 없음 영역 숨김) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 (업로드 실패, 저장 실패, YouTube provider 실패) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 있다 (이미지 업로드/등록 401 → 로그인 게이트) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] conflict 처리 흐름이 있다 (consumed/expired/mismatch session) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
+- [x] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 - [x] 타인 이미지/세션/레시피 리소스를 수정할 수 없다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
@@ -83,10 +83,10 @@
 - [x] 기존 YouTube corpus/readiness/dictionary regression 하네스 통과 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
 
 ### Playwright
-- [ ] YouTube thumbnail/tag preview fixture-backed flow <!-- omo:id=accept-playwright-youtube-preview;stage=4;scope=frontend;review=5,6 -->
-- [ ] Manual image upload fixture-backed flow <!-- omo:id=accept-playwright-manual-upload;stage=4;scope=frontend;review=5,6 -->
-- [ ] Recipe detail placeholder/source-note/tag display flow <!-- omo:id=accept-playwright-detail-display;stage=4;scope=frontend;review=5,6 -->
-- [ ] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
+- [x] YouTube thumbnail/tag preview fixture-backed flow <!-- omo:id=accept-playwright-youtube-preview;stage=4;scope=frontend;review=5,6 -->
+- [x] Manual image upload fixture-backed flow <!-- omo:id=accept-playwright-manual-upload;stage=4;scope=frontend;review=5,6 -->
+- [x] Recipe detail placeholder/source-note/tag display flow <!-- omo:id=accept-playwright-detail-display;stage=4;scope=frontend;review=5,6 -->
+- [x] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only
 - [ ] 실제 YouTube URL + 실제 provider + 실제 Supabase Auth/DB/Storage를 사용한 end-to-end smoke

@@ -523,3 +523,13 @@ LoginGateModal                   →    토큰 기반 modal chrome
 - 리트로핏 설계 critique: `ui/designs/critiques/RECIPE_DETAIL-baemin-style-retrofit-critique.md`
 - Authority report (Stage 4/5 생성): `ui/designs/authority/BAEMIN_STYLE_RECIPE_DETAIL_RETROFIT-authority.md`
 - Evidence directory: `ui/designs/evidence/baemin-style/recipe-detail-retrofit/`
+
+## Slice 31 Media/Tags Update
+
+- `thumbnail_url`이 있으면 모바일 hero와 web gallery의 대표 이미지로 사용한다.
+- `thumbnail_url`이 없으면 기존 emoji/color placeholder를 유지한다.
+- `source_type === "youtube"`인 레시피는 제목 아래에 `YouTube에서 가져온 레시피` source note를 표시한다.
+- 태그는 읽기 전용 chip으로 표시하고, 태그가 없으면 모바일 tag row를 렌더링하지 않는다.
+- Stage 4 evidence:
+  - `ui/designs/evidence/31-recipe-media-tags/RECIPE_DETAIL-source-note-tag-display-mobile-screenshot.png`
+  - `ui/designs/evidence/31-recipe-media-tags/RECIPE_DETAIL-narrow-viewport-text-fit-screenshot.png`

@@ -641,6 +641,8 @@ interface ReviewStepProps {
   onTitleChange: (title: string) => void;
   baseServings: number;
   onServingsChange: (servings: number) => void;
+  thumbnailUrl: string | null;
+  tags: string[];
   extractionMethods: string[];
   classificationStatus: YoutubeRecipeClassificationStatus | null;
   classificationReasons: string[];
@@ -920,6 +922,8 @@ function ReviewStep({
   onTitleChange,
   baseServings,
   onServingsChange,
+  thumbnailUrl,
+  tags,
   extractionMethods,
   classificationStatus,
   classificationReasons,
@@ -969,6 +973,36 @@ function ReviewStep({
           ))}
         </div>
       )}
+
+      {thumbnailUrl ? (
+        <div
+          className="mt-4 overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface-fill)]"
+          data-testid="youtube-draft-thumbnail"
+        >
+          <div className="relative aspect-video w-full">
+            <Image
+              src={thumbnailUrl}
+              alt={title || "레시피 썸네일"}
+              fill
+              className="object-cover"
+              unoptimized
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {tags.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-1.5" data-testid="youtube-draft-tags">
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-[12px] font-semibold text-[var(--brand)]"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       {classificationStatus === "uncertain" ? (
         <div
@@ -2083,6 +2117,8 @@ export function YoutubeImportScreen({
   const [candidatePromotionError, setCandidatePromotionError] = useState<string | null>(null);
   const [ingredients, setIngredients] = useState<TempIngredient[]>([]);
   const [steps, setSteps] = useState<TempStep[]>([]);
+  const [draftThumbnailUrl, setDraftThumbnailUrl] = useState<string | null>(null);
+  const [draftTags, setDraftTags] = useState<string[]>([]);
   const [replacingIngredientId, setReplacingIngredientId] = useState<string | null>(null);
   const [registeringIngredientId, setRegisteringIngredientId] = useState<string | null>(null);
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
@@ -2238,6 +2274,8 @@ export function YoutubeImportScreen({
     setTitle(data.title);
     setBaseServings(data.base_servings ?? 1);
     setExtractionMethods(data.extraction_methods ?? []);
+    setDraftThumbnailUrl(data.thumbnail_url ?? null);
+    setDraftTags(data.tags ?? []);
     setDraftWarnings(data.draft_warnings ?? []);
     setBlockingIssues(data.blocking_issues ?? []);
 
@@ -2926,6 +2964,8 @@ export function YoutubeImportScreen({
             onTitleChange={setTitle}
             baseServings={baseServings}
             onServingsChange={setBaseServings}
+            thumbnailUrl={draftThumbnailUrl}
+            tags={draftTags}
             extractionMethods={extractionMethods}
             classificationStatus={classificationStatus}
             classificationReasons={classificationReasons}
@@ -3176,6 +3216,8 @@ export function YoutubeImportScreen({
             onTitleChange={setTitle}
             baseServings={baseServings}
             onServingsChange={setBaseServings}
+            thumbnailUrl={draftThumbnailUrl}
+            tags={draftTags}
             extractionMethods={extractionMethods}
             classificationStatus={classificationStatus}
             classificationReasons={classificationReasons}

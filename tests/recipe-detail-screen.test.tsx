@@ -1065,4 +1065,72 @@ describe("recipe detail screen", () => {
     expect(screen.queryByText("조회")).toBeNull();
     expect(screen.queryByText("조회수")).toBeNull();
   });
+
+  it("shows tag chips when recipe has tags", async () => {
+    fetchJson.mockResolvedValue(
+      buildRecipeDetail({ tags: ["한식", "찌개"] }),
+    );
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    const tagContainer = screen.getByTestId("recipe-detail-tags");
+    expect(tagContainer).toBeTruthy();
+    expect(screen.getByText("한식")).toBeTruthy();
+    expect(screen.getByText("찌개")).toBeTruthy();
+  });
+
+  it("hides the tag row entirely when recipe has no tags", async () => {
+    fetchJson.mockResolvedValue(buildRecipeDetail({ tags: [] }));
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    expect(screen.queryByTestId("recipe-detail-tags")).toBeNull();
+  });
+
+  it("shows YouTube source note for youtube recipes", async () => {
+    fetchJson.mockResolvedValue(
+      buildRecipeDetail({
+        source_type: "youtube",
+        source: {
+          youtube_url: "https://www.youtube.com/watch?v=abc",
+          youtube_video_id: "abc",
+        },
+      }),
+    );
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    expect(screen.getByTestId("recipe-youtube-source-note")).toBeTruthy();
+    expect(screen.getByText("YouTube에서 가져온 레시피")).toBeTruthy();
+  });
+
+  it("does not show YouTube source note for non-youtube recipes", async () => {
+    fetchJson.mockResolvedValue(
+      buildRecipeDetail({ source_type: "manual" }),
+    );
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    expect(screen.queryByTestId("recipe-youtube-source-note")).toBeNull();
+  });
 });
