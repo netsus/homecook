@@ -13,6 +13,18 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 
+## YouTube Multi-Recipe Caption Addendum (2026-05-30)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.3 | 한 영상에 여러 요리가 있는 경우 공개 자막/설명/작성자 댓글에서 후보를 분리하고 사용자가 저장할 후보를 선택해야 함을 추가 |
+| 화면정의서 v1.5.10 | YT_IMPORT 검수 화면에 요리 후보 목록과 후보 선택 로딩/오류 상태 추가 |
+| 유저플로우 v1.3.10 | extract에서 `multi_parent` 세션과 후보 ledger를 만들고, 후보 선택 후 `candidate_child` 세션으로 register하는 흐름 추가 |
+| DB v1.3.9 | `youtube_extraction_sessions.session_kind`, parent 참조 컬럼, `youtube_extraction_candidates` 후보 ledger 추가 |
+| API v1.2.13 | extract 응답에 `multi_recipe_status`, `recipe_candidates[]`, source segment metadata 추가, `POST /recipes/youtube/candidate-drafts` 추가 |
+
+> 특정 video_id별 결과 fixture, 레시피오 결과 반환, 유료 provider/LLM 호출 없이 공개 텍스트 provider/parser 경로만 사용한다.
+
 ## v1.7.2 / v1.5.9 / v1.3.9 / DB v1.3.8 / API v1.2.12 → v1.7.3 / v1.5.10 / v1.3.10 / DB v1.3.9 / API v1.2.13 변경 이력 (2026-05-28)
 
 | 문서 | 변경 내용 |

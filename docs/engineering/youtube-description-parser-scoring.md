@@ -61,12 +61,15 @@ Negative signals:
 - 재료 2개 이상과 조리 과정 1개 이상이 있으면 구조화된 후보로 본다.
 - 재료/조리 과정 중 하나만 있으면 부분 추출 draft를 만들고 누락된 영역을 `blockingIssues`에 넣는다.
 - 구조화 신호가 없으면 빈 draft와 직접 추가 안내 warning을 반환한다.
-- 다중 레시피가 감지되었고 후보 하나가 명확히 우세하지 않으면 `ambiguous_multi_recipe`로 빈 draft를 반환한다.
-- 첫 후보가 명확히 우세하면 `selected_first_candidate`로 반환하고 나머지 후보는 내부 진단에 보존한다.
+- 다중 레시피가 감지되면 provider/parser가 후보별 `ingredients`, `steps`, `evidence_refs`를 만든다.
+- 일반 extract 응답은 `multi_parent` 세션의 `recipe_candidates[]`로 후보를 노출하고, top-level `ingredients` / `steps`는 비워 둔 채 `MULTI_CANDIDATE_REVIEW_REQUIRED`를 반환한다.
+- 사용자가 후보 하나를 선택하면 `selected_multi_recipe_candidate` child draft를 만들고, 기존 flat 검수/등록 계약을 재사용한다.
+- 단일 후보가 명확히 우세한 경우에만 `selected_single_recipe`로 flat draft를 반환한다.
 
 ## Flattening Rules
 
-- 현재 public contract는 flat `ingredients[]` / `steps[]`만 지원한다.
+- 단일 후보 또는 선택된 child draft의 public register contract는 flat `ingredients[]` / `steps[]`를 사용한다.
+- parent multi draft는 후보 목록을 유지하며, 후보 선택 전에는 amount 합산이나 컴포넌트 간 flattening을 하지 않는다.
 - 컴포넌트 라벨은 `displayText`와 step instruction prefix에만 넣는다.
 - 같은 재료가 같은 unit/type으로 여러 컴포넌트에 나오면 amount를 합산한다.
 - 합산된 display text의 괄호 안 원본 수량은 정적 텍스트이므로 draft warning을 추가한다.

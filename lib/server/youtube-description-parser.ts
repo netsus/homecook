@@ -571,6 +571,8 @@ function isRecipeHeading(text: string) {
     || /^\d+\s*[：: ]+\S.{0,40}레시피\S*$/iu.test(normalized)
     || /^(?:첫|두|세|네)\s*번째\s*레시피$/u.test(normalized)
     || /^(?:첫|두|세|네)\s*번째\s*레시피\s+\S.{0,40}$/u.test(normalized)
+    || /^(?:첫|두|세|네|다섯|여섯|일곱|여덟|아홉|열|열한|열두|열세|열네)\s*번째\s*(?:요리|메뉴|반찬|음식)\s*(?:는|은|로)?\s*\S.{0,40}$/u.test(normalized)
+    || /^\d+\s*(?:번째\s*)?(?:요리|메뉴|반찬|음식)\s*[：: ]+\S.{0,40}$/u.test(normalized)
     || /^recipe\s*\d+$/iu.test(normalized)
   );
 }
@@ -1149,7 +1151,7 @@ function parseInlineQuantifiedIngredients(
   const ingredients: ParsedIngredient[] = [];
   const quantifiedIngredientRe = new RegExp(
     `(?:^|[,，.]|\\s[/+]\\s*|(?:와|과|및|에|를|을|은|는|다가|고)\\s+|\\s(?:와|과|및|에|를|을|은|는|다가|고)\\s*)` +
-      `([^,，/+。.!\\n]{1,40}?)\\s*(${AMOUNT_RANGE_PATTERN}|한|두|세|네|반)\\s*(${UNIT_PATTERN})(?=\\s|[,，/+.)]|와|과|을|를|은|는|에|로|으로|$)`,
+      `([^,，/+。.!\\n]{1,40}?)\\s*(${AMOUNT_RANGE_PATTERN}|한|두|세|네|반)\\s*(${UNIT_PATTERN})(?=\\s|[,，/+.)]|와|과|하고|랑|이랑|도|만|부터|까지|을|를|은|는|에|로|으로|$)`,
     "giu",
   );
 
@@ -1175,7 +1177,7 @@ function parseInlineQuantifiedIngredients(
   }
 
   const looseQuantifiedIngredientRe = new RegExp(
-    `(?<![\\p{L}\\p{N}])([^,，/+。.!\\n]{1,48}?)\\s*(${AMOUNT_RANGE_PATTERN}|한|두|세|네|반)\\s*(${UNIT_PATTERN})(?=\\s|[,，/+.)]|와|과|을|를|은|는|에|로|으로|$)`,
+    `(?<![\\p{L}\\p{N}])([^,，/+。.!\\n]{1,48}?)\\s*(${AMOUNT_RANGE_PATTERN}|한|두|세|네|반)\\s*(${UNIT_PATTERN})(?=\\s|[,，/+.)]|와|과|하고|랑|이랑|도|만|부터|까지|을|를|은|는|에|로|으로|$)`,
     "giu",
   );
 
@@ -1201,7 +1203,7 @@ function parseInlineQuantifiedIngredients(
   }
 
   const connectorQuantifiedIngredientRe = new RegExp(
-    `(?:썰어|볶다가|끓이다가|다가|고|에|와|과)\\s+([\\p{L}][\\p{L}\\s]{0,24}?)\\s*(${AMOUNT_RANGE_PATTERN}|한|두|세|네|반)\\s*(${UNIT_PATTERN})(?=\\s|[,，/+.)]|와|과|을|를|은|는|에|로|으로|$)`,
+    `(?:썰어|볶다가|끓이다가|다가|고|에|와|과)\\s+([\\p{L}][\\p{L}\\s]{0,24}?)\\s*(${AMOUNT_RANGE_PATTERN}|한|두|세|네|반)\\s*(${UNIT_PATTERN})(?=\\s|[,，/+.)]|와|과|하고|랑|이랑|도|만|부터|까지|을|를|은|는|에|로|으로|$)`,
     "giu",
   );
 

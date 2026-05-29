@@ -316,6 +316,9 @@ CHECK (view_count>=0AND like_count>=0AND save_count>=0AND plan_count>=0AND cook_
 | extraction_meta_json | jsonb | NOT NULL, DEFAULT '{}' | provider_version, classification, warnings 등 |
 | draft_json | jsonb | NOT NULL, DEFAULT '{}' | 추출 결과 전체 draft (title, ingredients, steps 등). `ingredients[]` 각 항목은 `draft_ingredient_id` UUID를 포함 |
 | extraction_methods | text[] | NOT NULL, DEFAULT '{}' | `description`, `comment`, `caption` |
+| session_kind | varchar(20) | NOT NULL, DEFAULT 'single' | `single` / `multi_parent` / `candidate_child` |
+| parent_extraction_session_id | uuid | FK → youtube_extraction_sessions, nullable | `candidate_child`가 참조하는 parent multi session |
+| parent_candidate_id | text | nullable | parent `recipe_candidates[].candidate_id` |
 | status | varchar(20) | NOT NULL, DEFAULT 'draft' | `draft` / `consumed` / `expired` |
 | recipe_id | uuid | FK → recipes, nullable | consumed 시 등록된 레시피 ID |
 | expires_at | timestamptz | NOT NULL | created_at + 24h |
@@ -327,6 +330,7 @@ CHECK (view_count>=0AND like_count>=0AND save_count>=0AND plan_count>=0AND cook_
 
 ```
 CHECK (status IN ('draft', 'consumed', 'expired'))
+CHECK (session_kind IN ('single', 'multi_parent', 'candidate_child'))
 CHECK (classification_status IN ('recipe', 'uncertain', 'non_recipe'))
 CHECK (expires_at > created_at)
 ```
@@ -336,6 +340,7 @@ CHECK (expires_at > created_at)
 ```
 INDEX idx_youtube_sessions_user_id ON youtube_extraction_sessions (user_id)
 INDEX idx_youtube_sessions_status ON youtube_extraction_sessions (status) WHERE status = 'draft'
+INDEX idx_youtube_sessions_parent ON youtube_extraction_sessions (parent_extraction_session_id, parent_candidate_id) WHERE parent_extraction_session_id IS NOT NULL
 ```
 
 ### draft_json.ingredients[] 계약 `v1.3.5 변경`
@@ -355,7 +360,39 @@ INDEX idx_youtube_sessions_status ON youtube_extraction_sessions (status) WHERE 
 - 미등록 재료 등록 API는 이 ID로 session draft의 unresolved / needs_review row를 확인한다.
 - 재료 등록 API는 `draft_json`을 update하지 않는다. draft는 원본 추출 snapshot/provenance로 유지한다.
 
-## 4-2b. register_youtube_ingredient(...) RPC `v1.3.5 신규`
+### 4-2b. youtube_extraction_candidates `2026-05-30 addendum`
+
+> 한 YouTube 영상 안에서 여러 요리 후보가 감지된 경우 parent 추출 세션의 후보 ledger. 후보를 선택하면 child 추출 세션으로 승격하고 기존 register RPC를 사용한다.
+
+| 컬럼 | 타입 | 제약 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK | 후보 ledger ID |
+| extraction_session_id | uuid | FK → youtube_extraction_sessions, NOT NULL | parent `multi_parent` 세션 |
+| candidate_id | text | NOT NULL | extract 응답 후보 ID. parent 안에서 unique |
+| status | varchar(20) | NOT NULL, DEFAULT 'draft' | `draft` / `promoted` / `registered` / `skipped` / `expired` |
+| child_extraction_session_id | uuid | FK → youtube_extraction_sessions, nullable | 후보 선택 시 생성된 `candidate_child` 세션 |
+| recipe_id | uuid | FK → recipes, nullable | 최종 등록된 레시피 ID |
+| title | text | NOT NULL | 후보 요리명 |
+| start_ms / end_ms | integer | nullable | timedtext evidence 기준 후보 시간 범위 |
+| confidence | numeric | nullable | 후보 분리 신뢰도(0~1) |
+| draft_ingredient_ids_json | jsonb | NOT NULL, DEFAULT '[]' | 후보 draft ingredient id snapshot |
+| source_meta_json | jsonb | NOT NULL, DEFAULT '{}' | evidence_refs, warnings, blocking_issues |
+| promoted_at / registered_at | timestamptz | nullable | 승격/등록 시각 |
+
+### CHECK / INDEX / RLS
+
+```
+UNIQUE (extraction_session_id, candidate_id)
+CHECK (status IN ('draft', 'promoted', 'registered', 'skipped', 'expired'))
+INDEX youtube_extraction_candidates_session_idx ON youtube_extraction_candidates (extraction_session_id)
+INDEX youtube_extraction_candidates_child_idx ON youtube_extraction_candidates (child_extraction_session_id) WHERE child_extraction_session_id IS NOT NULL
+```
+
+- RLS select는 parent `youtube_extraction_sessions.user_id = auth.uid()`일 때만 허용한다.
+- insert/update는 route handler의 service-role 경로에서만 수행한다.
+- `register_youtube_recipe_from_session`은 `multi_parent` 세션 직접 등록을 거부하고, `candidate_child` 등록 성공 시 parent candidate row를 `registered`로 갱신한다.
+
+## 4-2c. register_youtube_ingredient(...) RPC `v1.3.5 신규`
 
 > YT_IMPORT 검수 단계에서 DB에 없는 재료를 사용자 확인 후 표준 재료로 등록하거나 기존 표준 재료를 재사용한다. `ingredients`와 optional `ingredient_synonyms` 처리를 하나의 transaction 안에서 수행한다.
 
@@ -1023,6 +1060,8 @@ CHECK (cooking_servings>0)
 | recipe_book_items | `(book_id)` | 레시피북 상세 |
 | recipe_book_items | `(recipe_id)` | 저장 수 집계 |
 | cooking_methods | `(code)` | 조리방법 조회 |
+| youtube_extraction_candidates | `(extraction_session_id)` | 다중 요리 후보 조회 |
+| youtube_extraction_candidates | `(child_extraction_session_id)` | 선택 후보 child 세션 역조회 |
 | admin_members | `(user_id)` UNIQUE | 관리자 조회 `v1.3.8` |
 | operational_events | `(event_type)` | 이벤트 유형별 조회 `v1.3.8` |
 | operational_events | `(severity)` | 심각도별 조회 `v1.3.8` |
@@ -1044,7 +1083,7 @@ CHECK (cooking_servings>0)
 
 ---
 
-# 17. 전체 테이블 목록 (25개)
+# 17. 전체 테이블 목록 (26개)
 
 | # | 테이블 | 구분 |
 | --- | --- | --- |
@@ -1073,6 +1112,7 @@ CHECK (cooking_servings>0)
 | 23 | admin_members | Admin Foundation `v1.3.8` |
 | 24 | operational_events | Admin Foundation `v1.3.8` |
 | 25 | admin_audit_logs | Admin Foundation `v1.3.8` |
+| 26 | youtube_extraction_candidates | YouTube 다중 후보 `2026-05-30` |
 
 ---
 

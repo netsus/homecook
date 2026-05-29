@@ -160,6 +160,13 @@ export function getRecipioYoutubeProgress({
 export function getRecipioAutoRegisterBlockers(data: YoutubeRecipeExtractData) {
   const blockers = new Set<string>();
 
+  if (
+    (data.multi_recipe_status && data.multi_recipe_status !== "single") ||
+    (data.recipe_candidates?.length ?? 0) > 1
+  ) {
+    blockers.add("영상 안에 여러 요리 후보가 있어요.");
+  }
+
   if (data.blocking_issues.length > 0) {
     blockers.add("자동 등록 전에 확인할 항목이 있어요.");
   }

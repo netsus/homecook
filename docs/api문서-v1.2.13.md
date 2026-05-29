@@ -23,6 +23,7 @@
 > v1.2.11 → v1.2.12: Admin Foundation 읽기 전용 엔드포인트 3종 추가. `GET /api/v1/admin/users`, `GET /api/v1/admin/operational-events`, `GET /api/v1/admin/audit-logs`. `createServiceRoleClient()` 필수, 감사 로그 기록, PII 최소화. 엔드포인트 수 55 → 58
 > 2026-05-28 addendum: 레시피오형 quick import 중복 확인 `GET /api/v1/recipes/youtube/recipio/check` 추가. 기존 validate/extract/register 계약 재사용, DB 변경 없음. 엔드포인트 수 58 → 59
 > v1.2.12 → v1.2.13: YouTube section label persistence. `component_label` nullable field를 extract/register/detail/cook-mode ingredient/step 계약에 추가. `POST /recipes` manual body는 6-4 참조에서 분리하고 `component_label` 비허용을 명시. 엔드포인트 수 변경 없음
+> 2026-05-30 addendum: 한 영상에 여러 요리가 있는 YouTube 영상은 공개 설명란/작성자 댓글/caption timedtext에서 후보를 분리해 `multi_parent` 세션으로 저장한다. 사용자는 `POST /recipes/youtube/candidate-drafts`로 후보 하나를 `candidate_child` 세션으로 승격한 뒤 기존 register 계약을 사용한다. 엔드포인트 수 59 → 60
 
 ---
 
@@ -876,7 +877,7 @@ POST /api/v1/recipes/youtube/extract
 | ---- | ----------- | ------ | ---------- |
 | Body | youtube_url | string | 유튜브 URL |
 
-**처리**: video_id 파싱 → YouTube `videos.list` 호출 → description/tags/category 기반 3-way classification → 설명란 파싱으로 재료/스텝 추출 → 부족하면 공개 작성자 댓글 후보와 공개 caption timedtext를 순서대로 보조 source로 파싱 → `youtube_extraction_sessions` INSERT (status=`draft`, expires_at=now+24h, user_id=서버 설정) → 추출 결과 반환
+**처리**: video_id 파싱 → YouTube `videos.list` 호출 → description/tags/category 기반 3-way classification → 설명란 파싱으로 재료/스텝 추출 → 부족하면 공개 작성자 댓글 후보와 공개 caption timedtext를 순서대로 보조 source로 파싱 → 한 영상에서 여러 요리 후보가 감지되면 `multi_parent` 세션과 `recipe_candidates[]`를 생성 → 그 외에는 단일 draft 세션 생성 → 추출 결과 반환
 
 `extraction_methods` 허용값:
 - `description`: YouTube 설명란
@@ -884,6 +885,14 @@ POST /api/v1/recipes/youtube/extract
 - `caption`: 공개 caption timedtext
 
 레시피오 quick import 중복 확인을 제외한 추출 단계는 특정 `youtube_video_id`별 고정 recipe fixture를 반환하지 않고 항상 provider/parser 경로를 거친다.
+
+**다중 레시피 응답 규칙 (2026-05-30 addendum)**
+
+- `multi_recipe_status`: `single` / `multiple` / `ambiguous`
+- `recipe_candidates[]`: 후보별 title, time range, confidence, ingredients, steps, warnings, blocking_issues, evidence_refs
+- `source_segments_summary[]`: 후보 분리에 사용한 공개 source(`description`/`comment`/`caption`), 언어, track kind, segment count
+- top-level `ingredients` / `steps`는 비워 두고 `blocking_issues=["MULTI_CANDIDATE_REVIEW_REQUIRED"]`를 반환한다.
+- 저장하려면 먼저 §6-3b 후보 초안 API로 하나를 선택해야 한다. `multi_parent` 세션은 §6-4 register와 §6-3 ingredient-registration에서 409 `CANDIDATE_PROMOTION_REQUIRED`로 거부된다.
 
 **응답 (200)**
 
@@ -1064,6 +1073,51 @@ POST /api/v1/recipes/youtube/ingredient-registration
 | 422 | VALIDATION_ERROR | 표준명/카테고리/default_unit/synonym 입력 오류 |
 | 500 | INTERNAL_ERROR | DB/RPC 실패 |
 
+### 6-3b. 다중 레시피 후보 초안 생성 (Step 3 후보 선택)
+
+```
+POST /api/v1/recipes/youtube/candidate-drafts
+```
+
+🔒 로그인 필수 / Feature flag guard
+
+| 구분 | 필드 | 타입 | 설명 |
+| --- | --- | --- | --- |
+| Body | extraction_id | string | `multi_parent` 추출 세션 ID |
+| Body | candidate_id | string | extract 응답의 `recipe_candidates[].candidate_id` |
+
+**처리**: parent session 소유권/만료/status 검증 → `youtube_extraction_candidates` 후보 확인 → parent `draft_json.recipe_candidates[]`에서 후보 하나를 선택 → `candidate_child` 추출 세션 생성 → 후보 ledger를 `promoted`로 갱신 → 기존 YT_IMPORT 검수 화면이 소비할 단일 `YoutubeRecipeExtractData` 반환
+
+**응답 (201 또는 idempotent 200)**
+
+```json
+{
+  "parent_extraction_id": "uuid",
+  "candidate_id": "candidate-1",
+  "draft": {
+    "extraction_id": "child-session-uuid",
+    "title": "김치볶음밥",
+    "multi_recipe_status": "single",
+    "ingredients": [],
+    "steps": []
+  }
+}
+```
+
+**에러 응답**
+
+| HTTP | code | 조건 |
+| --- | --- | --- |
+| 404 | EXTRACTION_NOT_FOUND | parent/child 세션 없음 또는 cross-user |
+| 404 | CANDIDATE_NOT_FOUND | 후보 없음 |
+| 404 | FEATURE_DISABLED | feature flag off |
+| 409 | INVALID_EXTRACTION_SESSION | `multi_parent` 세션이 아님 |
+| 409 | INVALID_CANDIDATE_STATE | 선택 불가 상태 |
+| 409 | EXTRACTION_ALREADY_REGISTERED | 후보 또는 child 세션이 이미 등록됨 |
+| 410 | EXTRACTION_EXPIRED | 24h TTL 초과 |
+| 422 | VALIDATION_ERROR | body 형식 오류 |
+| 500 | INTERNAL_ERROR | DB 실패 |
+
 ### 6-4. 유튜브 레시피 등록 확정 (Step 3 → Step 4)
 
 ```
@@ -1088,7 +1142,7 @@ POST /api/v1/recipes/youtube/register
 > `cooking_method_id`만 수신 (항상 uuid 필수).
 > `component_label`은 nullable이며 YouTube register 전용이다. 빈 문자열은 `null`로 정규화한다. `display_text`와 `instruction`은 같은 섹션 라벨 prefix를 중복 포함하지 않는다.
 
-**처리**: extraction_id로 `youtube_extraction_sessions` 조회 → 소유권 검증(user_id == current_user) → 만료/소비 검증 → client body의 `youtube_url`을 파싱한 값과 session의 canonical URL/video ID를 비교해 EXTRACTION_MISMATCH 검증 → Postgres RPC `register_youtube_recipe_from_session` 원자적 실행
+**처리**: extraction_id로 `youtube_extraction_sessions` 조회 → 소유권 검증(user_id == current_user) → 만료/소비 검증 → `multi_parent` 세션이면 CANDIDATE_PROMOTION_REQUIRED 거부 → client body의 `youtube_url`을 파싱한 값과 session의 canonical URL/video ID를 비교해 EXTRACTION_MISMATCH 검증 → Postgres RPC `register_youtube_recipe_from_session` 원자적 실행
 
 **RPC 원자적 INSERT 순서**:
 1. `recipes` INSERT (source_type='youtube', created_by=current_user)
@@ -1113,6 +1167,7 @@ POST /api/v1/recipes/youtube/register
 | 404 | FEATURE_DISABLED | feature flag off |
 | 409 | EXTRACTION_ALREADY_REGISTERED | 이미 등록 완료된 세션 |
 | 409 | EXTRACTION_MISMATCH | immutable 필드(youtube_video_id 등) 불일치 |
+| 409 | CANDIDATE_PROMOTION_REQUIRED | 여러 요리 후보 parent 세션을 직접 등록하려 함 |
 | 410 | EXTRACTION_EXPIRED | 24h TTL 초과 |
 | 422 | VALIDATION_ERROR | base_servings < 1, ingredient_type 불일치, step_number 중복, cooking_method_id 미존재 등 |
 
@@ -2401,7 +2456,7 @@ GET /api/v1/admin/audit-logs
 
 ---
 
-## 엔드포인트 전체 목록 (59개) `v1.2.13`
+## 엔드포인트 전체 목록 (60개) `v1.2.13`
 
 | #        | Method     | Path                                   | 화면                     | 인증   | v1.2 변경                        |
 | -------- | ---------- | -------------------------------------- | ------------------------ | ------ | -------------------------------- |
@@ -2426,6 +2481,7 @@ GET /api/v1/admin/audit-logs
 | 6-1      | POST       | /recipes/youtube/validate              | YT_IMPORT                | 🔒     |                                  |
 | 6-2      | POST       | /recipes/youtube/extract               | YT_IMPORT                | 🔒     |                                  |
 | 6-3      | POST       | /recipes/youtube/ingredient-registration | YT_IMPORT              | 🔒     | v1.2.7 신규                      |
+| 6-3b     | POST       | /recipes/youtube/candidate-drafts      | YT_IMPORT                | 🔒     | 2026-05-30 addendum              |
 | 6-4      | POST       | /recipes/youtube/register              | YT_IMPORT                | 🔒     |                                  |
 | 6-5      | GET        | /recipes/youtube/recipio/check         | YT_IMPORT quick          | 🔒     | 2026-05-28 addendum              |
 | 7-1      | POST       | /recipes                               | MANUAL_RECIPE_CREATE     | 🔒     |                                  |
@@ -2466,7 +2522,7 @@ GET /api/v1/admin/audit-logs
 | 15-2     | GET        | /api/v1/admin/operational-events       | ADMIN_EVENTS             | 🔐     | v1.2.12 신규                     |
 | 15-3     | GET        | /api/v1/admin/audit-logs               | ADMIN_AUDIT_LOGS         | 🔐     | v1.2.12 신규                     |
 
-> **v1.2.13 총계**: 59개 (레시피오형 quick import endpoint 1개 추가, YouTube section label field 추가는 엔드포인트 수 변경 없음)
+> **v1.2.13 총계**: 60개 (2026-05-30 다중 후보 초안 endpoint 1개 추가)
 > **v1.2.12 총계**: 58개 (Admin Foundation read-only endpoint 3개 추가)
 > **v1.2.11 총계**: 55개 (slice27 taxonomy contract lock, 신규 endpoint 없음)
 > **v1.2.10 총계**: 55개 (`DELETE /users/me` 회원 탈퇴 데이터 정리 정책 변경, 신규 endpoint 없음)

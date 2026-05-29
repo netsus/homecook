@@ -868,6 +868,7 @@ Step 2) 공개 텍스트 우선 추출
   │ recipe/uncertain/non_recipe 판정 (non_recipe → 422 차단)
   │ 서버: youtube_extraction_sessions 생성 (status=draft, 24h TTL)
   │ 설명란 파싱 → 부족하면 공개 작성자 댓글 → 부족하면 공개 caption timedtext 파싱
+  │ 한 영상에 여러 요리 후보가 있으면 multi_parent 세션 + recipe_candidates[] 생성
   │ 재료/스텝 섹션명은 component_label로 응답
   │ extraction_methods: ["description"], ["comment"], ["caption"] 또는 조합
   │ 미분류 조리방법은 이 단계에서 즉시 생성
@@ -875,6 +876,10 @@ Step 2) 공개 텍스트 우선 추출
   │
   ▼
 Step 3) 결과 검수/수정
+  │ ├─ 다중 후보 목록 (필요 시)
+  │ │    ├─ 후보명 / 재료 개수 / 단계 수 표시
+  │ │    ├─ 후보 선택 → POST /recipes/youtube/candidate-drafts
+  │ │    └─ 서버: candidate_child 세션 생성 후 단일 draft 반환
   │ ├─ 레시피명 (편집 가능)
   │ ├─ 기본 인분 (필수, 편집 가능)
   │ ├─ 재료 리스트 (추가/삭제/수정)
@@ -962,6 +967,10 @@ Meal 생성 (status='registered') → MEAL_SCREEN 복귀
 | 시점 | 테이블 | 변화 |
 | --- | --- | --- |
 | 추출 시 | youtube_extraction_sessions | INSERT (status='draft', expires_at=now+24h) |
+| 다중 후보 감지 시 | youtube_extraction_sessions | INSERT (session_kind='multi_parent', recipe_candidates[] 포함) |
+| 다중 후보 감지 시 | youtube_extraction_candidates | INSERT (후보별 draft ledger) |
+| 후보 선택 시 | youtube_extraction_sessions | INSERT (session_kind='candidate_child', parent 참조) |
+| 후보 선택 시 | youtube_extraction_candidates | UPDATE status='promoted', child_extraction_session_id |
 | 미분류 조리방법 | cooking_methods | INSERT (is_system=false) |
 | 미등록 재료 등록 (RPC) | ingredients | INSERT 또는 기존 standard_name row 재사용 |
 | 미등록 재료 등록 (RPC) | ingredient_synonyms | optional INSERT, ambiguous synonym은 skip |
@@ -970,6 +979,7 @@ Meal 생성 (status='registered') → MEAL_SCREEN 복귀
 | 레시피 등록 (RPC) | recipe_ingredients | INSERT (복수) |
 | 레시피 등록 (RPC) | recipe_steps | INSERT (복수) |
 | 레시피 등록 (RPC) | youtube_extraction_sessions | UPDATE status='consumed' |
+| 후보 child 등록 시 | youtube_extraction_candidates | UPDATE status='registered', recipe_id |
 | 플래너 추가 | meals | INSERT (status='registered') |
 
 > 재료 카테고리는 freeze 기간 동안 legacy 7종 label을 유지한다. 외부 데이터 raw row는 이 flow에서 production ingredient로 자동 승격되지 않으며, 별도 staging/review/approved seed gate를 거친 뒤에만 검색/매칭 대상이 된다.
