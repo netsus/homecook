@@ -288,4 +288,22 @@ describe("21 ingredient dictionary backend", () => {
       expect(migration).not.toContain(`'${existingOrHeldName}'`);
     }
   });
+
+  it("seeds remaining YouTube register-blocker ingredients without overwriting existing rows", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20260530020000_29_youtube_register_blocker_dictionary_seed.sql",
+      "utf8",
+    );
+
+    expect(migration).toContain("on conflict (standard_name) do nothing");
+    expect(migration).not.toMatch(/on conflict \(standard_name\) do update/i);
+
+    for (const [name, category] of [
+      ["중력분", "곡류"],
+      ["허브솔트", "양념"],
+      ["배", "기타"],
+    ]) {
+      expect(migration).toMatch(new RegExp(`'${name}',\\s*'${category}'`));
+    }
+  });
 });
