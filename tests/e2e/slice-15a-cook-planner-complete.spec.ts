@@ -176,14 +176,26 @@ test.describe("Slice 15a cook planner complete", () => {
     await expect(page.getByTestId("cook-mode-servings")).toHaveText(
       /2(인분|단계)/,
     );
-    await expect(page.getByTestId("step-item").first()).toHaveAttribute(
-      "style",
-      /var\(--cook-stir\)/,
-    );
-    await expect(page.getByText("볶기").first()).toHaveAttribute(
-      "style",
-      /var\(--cook-stir\)/,
-    );
+
+    if (isDesktopViewport(page)) {
+      await expect(page.getByTestId("step-item").first()).toHaveCSS(
+        "border-left-color",
+        "rgb(255, 140, 66)",
+      );
+      await expect(page.getByText("볶기").first()).toHaveCSS(
+        "background-color",
+        "rgb(255, 140, 66)",
+      );
+    } else {
+      await expect(page.getByTestId("step-item").first()).toHaveCSS(
+        "border-left-color",
+        "rgb(255, 179, 71)",
+      );
+      await expect(page.getByText("볶기").first()).toHaveCSS(
+        "color",
+        "rgb(217, 119, 6)",
+      );
+    }
   });
 
   test("ingredients and steps show together in one scroll view", async ({ page }) => {
