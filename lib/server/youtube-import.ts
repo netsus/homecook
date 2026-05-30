@@ -238,6 +238,77 @@ interface YoutubeExtractionCandidatesTable {
   update(values: Partial<YoutubeExtractionCandidateRow>): YoutubeExtractionCandidateUpdateQuery;
 }
 
+interface YoutubeTranscriptCacheRow {
+  id: string;
+  youtube_video_id: string;
+  language: string;
+  source_provider: string;
+  source_kind: string;
+  transcript_text: string | null;
+  segments_json: unknown;
+  expires_at: string;
+}
+
+interface YoutubeTranscriptCacheSelectQuery {
+  eq(column: string, value: string): YoutubeTranscriptCacheSelectQuery;
+  gt(column: string, value: string): YoutubeTranscriptCacheSelectQuery;
+  order(column: string, options?: { ascending?: boolean }): YoutubeTranscriptCacheSelectQuery;
+  limit(count: number): YoutubeTranscriptCacheSelectQuery;
+  then: ArrayQueryResult<YoutubeTranscriptCacheRow>["then"];
+}
+
+interface YoutubeTranscriptCacheUpdateQuery {
+  eq(column: string, value: string): YoutubeTranscriptCacheUpdateQuery;
+  then: ArrayQueryResult<null>["then"];
+}
+
+interface YoutubeTranscriptCacheTable {
+  select(columns: string): YoutubeTranscriptCacheSelectQuery;
+  insert(values: {
+    youtube_video_id: string;
+    language: string;
+    source_provider: string;
+    source_kind: string;
+    transcript_text: string;
+    segments_json: unknown;
+    expires_at: string;
+    last_used_at: string;
+  }): PromiseLike<{
+    data: null;
+    error: QueryError | null;
+  }>;
+  update(values: { last_used_at: string }): YoutubeTranscriptCacheUpdateQuery;
+}
+
+interface YoutubeTranscriptFetchEventRow {
+  user_id: string | null;
+  provider: string;
+  status: string;
+  created_at: string;
+}
+
+interface YoutubeTranscriptFetchEventSelectQuery {
+  eq(column: string, value: string): YoutubeTranscriptFetchEventSelectQuery;
+  gte(column: string, value: string): YoutubeTranscriptFetchEventSelectQuery;
+  then: ArrayQueryResult<YoutubeTranscriptFetchEventRow>["then"];
+}
+
+interface YoutubeTranscriptFetchEventsTable {
+  select(columns: string): YoutubeTranscriptFetchEventSelectQuery;
+  insert(values: {
+    user_id: string | null;
+    youtube_video_id: string;
+    provider: string;
+    cache_hit: boolean;
+    status: "success" | "unavailable" | "error" | "skipped";
+    reason: string | null;
+    estimated_cost_microusd: number;
+  }): PromiseLike<{
+    data: null;
+    error: QueryError | null;
+  }>;
+}
+
 interface YoutubeRecipeRegisterRpcData {
   recipe_id: string;
   title: string;
@@ -338,6 +409,13 @@ const MULTI_CANDIDATE_REVIEW_REQUIRED = "MULTI_CANDIDATE_REVIEW_REQUIRED";
 const AUTHOR_COMMENT_MAX_RESULTS = 100;
 const AUTHOR_COMMENT_ORDER = "relevance";
 const AUTHOR_COMMENT_QUOTA_UNITS_ESTIMATE = 1;
+const TRANSCRIPT_CACHE_TTL_DAYS = 90;
+const TRANSCRIPT_CACHE_PROVIDER = "transcript_cache";
+const YOUTUBE_PUBLIC_TIMEDTEXT_PROVIDER = "youtube_public_timedtext";
+const YOUTUBE_TIMEDTEXT_COOKIE_PROVIDER = "youtube_timedtext_cookie_retry";
+const EXTERNAL_TRANSCRIPT_PROVIDER = "external_transcript_api";
+const TRANSCRIPT_PARSE_PROVIDER = "caption_parser";
+const PREFERRED_TRANSCRIPT_LANGUAGES = ["ko", "en"] as const;
 const YOUTUBE_BROWSER_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const OEMBED_PREVIEW_CLASSIFICATION_REASONS = [YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON];
@@ -521,6 +599,8 @@ interface TranscriptFallbackMeta {
   track_kind: string | null;
   used_ingredient_count: number;
   step_count: number;
+  cache_hit: boolean;
+  source_provider: string | null;
 }
 
 interface TranscriptFallbackResult {
@@ -579,7 +659,7 @@ const NOOP_TRANSCRIPT_PROVIDER: YoutubeTranscriptProvider = {
 };
 
 const PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER: YoutubeTranscriptProvider = {
-  name: "youtube_public_timedtext",
+  name: YOUTUBE_PUBLIC_TIMEDTEXT_PROVIDER,
   async fetchTranscript(context) {
     return fetchPublicYoutubeTranscript(context);
   },
@@ -620,7 +700,7 @@ export function setYoutubeTranscriptProviderForTest(provider: YoutubeTranscriptP
   };
 }
 
-function getYoutubeTranscriptProvider() {
+function getYoutubeTranscriptProvider(dbClient: DbClient | null, userId: string) {
   if (transcriptProviderForTest) {
     return transcriptProviderForTest;
   }
@@ -629,7 +709,7 @@ function getYoutubeTranscriptProvider() {
     return NOOP_TRANSCRIPT_PROVIDER;
   }
 
-  return PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER;
+  return createDefaultYoutubeTranscriptProvider(dbClient, userId);
 }
 
 export function setYoutubeAuthorCommentProviderForTest(provider: YoutubeAuthorCommentProvider | null) {
@@ -1509,21 +1589,33 @@ function withTimedTextJsonFormat(baseUrl: string) {
   }
 }
 
-function buildYoutubePageFetchHeaders() {
-  return {
+function buildYoutubePageFetchHeaders(cookieHeader: string | null = null) {
+  const headers: Record<string, string> = {
     accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "accept-language": "ko,en;q=0.8",
     "user-agent": YOUTUBE_BROWSER_USER_AGENT,
   };
+
+  if (cookieHeader) {
+    headers.cookie = cookieHeader;
+  }
+
+  return headers;
 }
 
-function buildYoutubeTimedTextFetchHeaders(referer: string) {
-  return {
+function buildYoutubeTimedTextFetchHeaders(referer: string, cookieHeader: string | null = null) {
+  const headers: Record<string, string> = {
     accept: "application/json,text/xml,application/xml,text/plain,*/*;q=0.8",
     "accept-language": "ko,en;q=0.8",
     referer,
     "user-agent": YOUTUBE_BROWSER_USER_AGENT,
   };
+
+  if (cookieHeader) {
+    headers.cookie = cookieHeader;
+  }
+
+  return headers;
 }
 
 function parseTimedTextJson3Segments(
@@ -1609,22 +1701,44 @@ function parseTimedTextTranscript(
   };
 }
 
+async function fetchTextWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchPublicYoutubeTranscript(
   context: YoutubeTranscriptProviderContext,
+  {
+    providerName = PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER.name,
+    cookieHeader = null,
+  }: {
+    providerName?: string;
+    cookieHeader?: string | null;
+  } = {},
 ): Promise<YoutubeTranscriptProviderResult> {
   let watchResponse: Response;
 
   try {
-    watchResponse = await fetch(
+    watchResponse = await fetchTextWithTimeout(
       `https://www.youtube.com/watch?v=${encodeURIComponent(context.videoId)}&hl=ko`,
       {
-        headers: buildYoutubePageFetchHeaders(),
+        headers: buildYoutubePageFetchHeaders(cookieHeader),
       },
+      10_000,
     );
   } catch {
     return {
       status: "error",
-      providerName: PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER.name,
+      providerName,
       reason: "watch_page_network_error",
     };
   }
@@ -1632,8 +1746,12 @@ async function fetchPublicYoutubeTranscript(
   if (!watchResponse.ok) {
     return {
       status: watchResponse.status === 404 ? "unavailable" : "error",
-      providerName: PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER.name,
-      reason: watchResponse.status === 404 ? "watch_page_not_found" : "watch_page_provider_error",
+      providerName,
+      reason: watchResponse.status === 404
+        ? "watch_page_not_found"
+        : watchResponse.status === 403 || watchResponse.status === 429
+          ? "watch_page_rate_limited_or_blocked"
+          : "watch_page_provider_error",
     };
   }
 
@@ -1643,7 +1761,7 @@ async function fetchPublicYoutubeTranscript(
   if (!selectedTrack) {
     return {
       status: "unavailable",
-      providerName: PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER.name,
+      providerName,
       reason: context.captionCapability === "unavailable"
         ? "no_public_caption_tracks_with_caption_flag_unavailable"
         : "no_public_caption_tracks",
@@ -1653,13 +1771,17 @@ async function fetchPublicYoutubeTranscript(
   let transcriptResponse: Response;
 
   try {
-    transcriptResponse = await fetch(withTimedTextJsonFormat(selectedTrack.baseUrl), {
-      headers: buildYoutubeTimedTextFetchHeaders(context.youtubeUrl),
-    });
+    transcriptResponse = await fetchTextWithTimeout(
+      withTimedTextJsonFormat(selectedTrack.baseUrl),
+      {
+        headers: buildYoutubeTimedTextFetchHeaders(context.youtubeUrl, cookieHeader),
+      },
+      10_000,
+    );
   } catch {
     return {
       status: "error",
-      providerName: PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER.name,
+      providerName,
       language: selectedTrack.languageCode,
       trackKind: selectedTrack.trackKind,
       reason: "timedtext_network_error",
@@ -1669,10 +1791,12 @@ async function fetchPublicYoutubeTranscript(
   if (!transcriptResponse.ok) {
     return {
       status: "error",
-      providerName: PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER.name,
+      providerName,
       language: selectedTrack.languageCode,
       trackKind: selectedTrack.trackKind,
-      reason: "timedtext_provider_error",
+      reason: transcriptResponse.status === 403 || transcriptResponse.status === 429
+        ? "timedtext_rate_limited_or_blocked"
+        : "timedtext_provider_error",
     };
   }
 
@@ -1684,7 +1808,7 @@ async function fetchPublicYoutubeTranscript(
 
   return {
     status: transcriptText ? "available" : "unavailable",
-    providerName: PUBLIC_TIMEDTEXT_TRANSCRIPT_PROVIDER.name,
+    providerName,
     transcriptText,
     transcriptSegments: parsedTranscript.segments,
     language: selectedTrack.languageCode,
@@ -2471,6 +2595,8 @@ function buildTranscriptFallbackMeta({
   trackKind = null,
   usedIngredientCount = 0,
   stepCount = 0,
+  cacheHit = false,
+  sourceProvider = null,
 }: {
   attempted: boolean;
   capability: TranscriptFallbackMeta["capability"];
@@ -2481,6 +2607,8 @@ function buildTranscriptFallbackMeta({
   trackKind?: string | null;
   usedIngredientCount?: number;
   stepCount?: number;
+  cacheHit?: boolean;
+  sourceProvider?: string | null;
 }): TranscriptFallbackMeta {
   return {
     attempted,
@@ -2492,6 +2620,8 @@ function buildTranscriptFallbackMeta({
     track_kind: trackKind,
     used_ingredient_count: usedIngredientCount,
     step_count: stepCount,
+    cache_hit: cacheHit,
+    source_provider: sourceProvider,
   };
 }
 
@@ -2535,10 +2665,540 @@ function buildRawSourceText(
   return parts.join("\n\n");
 }
 
+function buildTranscriptCacheExpiresAt() {
+  return new Date(Date.now() + TRANSCRIPT_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function normalizeTranscriptLanguage(value: string | null | undefined) {
+  const normalized = value?.trim().toLowerCase();
+  return normalized || PREFERRED_TRANSCRIPT_LANGUAGES[0];
+}
+
+function isYoutubePublicTextSource(value: unknown): value is YoutubePublicTextSource {
+  return value === "description" || value === "comment" || value === "caption" || value === "transcript";
+}
+
+function isYoutubeSourceSegment(value: unknown): value is YoutubeSourceSegment {
+  return isRecord(value)
+    && isYoutubePublicTextSource(value.source)
+    && typeof value.lineIndex === "number"
+    && typeof value.text === "string"
+    && (typeof value.startMs === "number" || value.startMs === null)
+    && (typeof value.durationMs === "number" || value.durationMs === null)
+    && (typeof value.language === "string" || value.language === null)
+    && (typeof value.trackKind === "string" || value.trackKind === null);
+}
+
+function normalizeTranscriptSegments(value: unknown): YoutubeSourceSegment[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(isYoutubeSourceSegment);
+}
+
+async function recordTranscriptFetchEvent(
+  dbClient: DbClient | null,
+  {
+    userId,
+    videoId,
+    provider,
+    cacheHit,
+    status,
+    reason = null,
+    estimatedCostMicrousd = 0,
+  }: {
+    userId: string | null;
+    videoId: string;
+    provider: string;
+    cacheHit: boolean;
+    status: "success" | "unavailable" | "error" | "skipped";
+    reason?: string | null;
+    estimatedCostMicrousd?: number;
+  },
+) {
+  if (!dbClient) {
+    return;
+  }
+
+  try {
+    await table<YoutubeTranscriptFetchEventsTable>(dbClient, "youtube_transcript_fetch_events")
+      .insert({
+        user_id: userId,
+        youtube_video_id: videoId,
+        provider,
+        cache_hit: cacheHit,
+        status,
+        reason,
+        estimated_cost_microusd: estimatedCostMicrousd,
+      });
+  } catch {
+    // Observability must not block recipe extraction.
+  }
+}
+
+async function readTranscriptCache(
+  dbClient: DbClient | null,
+  videoId: string,
+): Promise<YoutubeTranscriptProviderResult | null> {
+  if (!dbClient) {
+    return null;
+  }
+
+  let rows: YoutubeTranscriptCacheRow[] | null;
+
+  try {
+    const result = await table<YoutubeTranscriptCacheTable>(dbClient, "youtube_transcript_cache")
+      .select("id,youtube_video_id,language,source_provider,source_kind,transcript_text,segments_json,expires_at")
+      .eq("youtube_video_id", videoId)
+      .gt("expires_at", new Date().toISOString())
+      .order("last_used_at", { ascending: false })
+      .limit(20);
+
+    if (result.error) {
+      return null;
+    }
+
+    rows = result.data;
+  } catch {
+    return null;
+  }
+
+  if (!rows || rows.length === 0) {
+    return null;
+  }
+
+  const row = PREFERRED_TRANSCRIPT_LANGUAGES
+    .map((language) => rows?.find((candidate) => candidate.language === language))
+    .find(Boolean)
+    ?? rows[0];
+  const transcriptText = row.transcript_text?.trim();
+
+  if (!transcriptText) {
+    return null;
+  }
+
+  try {
+    await table<YoutubeTranscriptCacheTable>(dbClient, "youtube_transcript_cache")
+      .update({ last_used_at: new Date().toISOString() })
+      .eq("id", row.id);
+  } catch {
+    // Cache freshness updates are best-effort.
+  }
+
+  return {
+    status: "available",
+    providerName: row.source_provider,
+    transcriptText,
+    transcriptSegments: normalizeTranscriptSegments(row.segments_json),
+    language: row.language,
+    trackKind: row.source_kind === "caption" || row.source_kind === "transcript" ? "unknown" : null,
+    reason: "cache_hit",
+  };
+}
+
+async function writeTranscriptCache(
+  dbClient: DbClient | null,
+  videoId: string,
+  result: YoutubeTranscriptProviderResult,
+  sourceProvider: string,
+) {
+  const transcriptText = result.transcriptText?.trim();
+
+  if (!dbClient || !transcriptText) {
+    return;
+  }
+
+  try {
+    await table<YoutubeTranscriptCacheTable>(dbClient, "youtube_transcript_cache")
+      .insert({
+        youtube_video_id: videoId,
+        language: normalizeTranscriptLanguage(result.language),
+        source_provider: sourceProvider,
+        source_kind: sourceProvider === EXTERNAL_TRANSCRIPT_PROVIDER ? "transcript" : "caption",
+        transcript_text: transcriptText,
+        segments_json: result.transcriptSegments ?? [],
+        expires_at: buildTranscriptCacheExpiresAt(),
+        last_used_at: new Date().toISOString(),
+      });
+  } catch {
+    // Cache writes are best-effort; extraction can still return the freshly fetched transcript.
+  }
+}
+
+function parsePositiveIntegerEnv(value: string | undefined, fallback: number) {
+  if (!value) {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function getPaidTranscriptConfig() {
+  if (process.env.YOUTUBE_TRANSCRIPT_PAID_PROVIDER !== "apify") {
+    return null;
+  }
+
+  const token = process.env.APIFY_TOKEN?.trim();
+  const actorId = process.env.YOUTUBE_TRANSCRIPT_APIFY_ACTOR_ID?.trim();
+
+  if (!token || !actorId) {
+    return null;
+  }
+
+  return {
+    token,
+    actorId,
+    dailyLimit: parsePositiveIntegerEnv(process.env.YOUTUBE_TRANSCRIPT_PAID_DAILY_LIMIT, 50),
+    userDailyLimit: parsePositiveIntegerEnv(process.env.YOUTUBE_TRANSCRIPT_PAID_USER_DAILY_LIMIT, 5),
+    timeoutMs: parsePositiveIntegerEnv(process.env.YOUTUBE_TRANSCRIPT_PAID_TIMEOUT_MS, 15_000),
+  };
+}
+
+function getUtcDayStartIso() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+}
+
+async function canUsePaidTranscriptProvider(
+  dbClient: DbClient | null,
+  userId: string,
+  config: NonNullable<ReturnType<typeof getPaidTranscriptConfig>>,
+) {
+  if (!dbClient) {
+    return false;
+  }
+
+  try {
+    const result = await table<YoutubeTranscriptFetchEventsTable>(dbClient, "youtube_transcript_fetch_events")
+      .select("user_id,provider,status,created_at")
+      .eq("provider", EXTERNAL_TRANSCRIPT_PROVIDER)
+      .eq("status", "success")
+      .gte("created_at", getUtcDayStartIso());
+
+    if (result.error) {
+      return false;
+    }
+
+    const rows = result.data ?? [];
+    const totalCount = rows.length;
+    const userCount = rows.filter((row) => row.user_id === userId).length;
+
+    return totalCount < config.dailyLimit && userCount < config.userDailyLimit;
+  } catch {
+    return false;
+  }
+}
+
+function collectTextFromUnknownTranscript(
+  value: unknown,
+  language: string | null,
+): YoutubeSourceSegment[] {
+  if (typeof value === "string") {
+    return buildTextSegments({ text: value, source: "transcript", language, trackKind: "unknown" });
+  }
+
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((item, lineIndex): YoutubeSourceSegment[] => {
+    if (typeof item === "string") {
+      const text = item.trim();
+      if (!text) {
+        return [];
+      }
+
+      return [{
+        source: "transcript",
+        lineIndex,
+        text,
+        startMs: null,
+        durationMs: null,
+        language,
+        trackKind: "unknown",
+      }];
+    }
+
+    if (!isRecord(item)) {
+      return [];
+    }
+
+    const textValue = item.text ?? item.utf8 ?? item.caption ?? item.content;
+    if (typeof textValue !== "string" || !textValue.trim()) {
+      return [];
+    }
+
+    const startSeconds = typeof item.start === "number" ? item.start : null;
+    const durationSeconds = typeof item.duration === "number" ? item.duration : null;
+
+    return [{
+      source: "transcript",
+      lineIndex,
+      text: textValue.trim(),
+      startMs: startSeconds === null ? null : Math.round(startSeconds * 1000),
+      durationMs: durationSeconds === null ? null : Math.round(durationSeconds * 1000),
+      language,
+      trackKind: "unknown",
+    }];
+  });
+}
+
+function parsePaidTranscriptPayload(payload: unknown): {
+  text: string;
+  segments: YoutubeSourceSegment[];
+  language: string | null;
+} | null {
+  const items = Array.isArray(payload) ? payload : [payload];
+
+  for (const item of items) {
+    if (!isRecord(item)) {
+      continue;
+    }
+
+    const language = typeof item.language === "string"
+      ? item.language
+      : typeof item.languageCode === "string"
+        ? item.languageCode
+        : null;
+    const directText = item.transcriptText ?? item.transcript_text ?? item.text ?? item.content;
+    const nestedTranscript = item.transcript ?? item.captions ?? item.subtitles ?? item.segments;
+    const segments = [
+      ...collectTextFromUnknownTranscript(nestedTranscript, language),
+      ...collectTextFromUnknownTranscript(directText, language),
+    ];
+    const text = joinSegmentText(segments);
+
+    if (text) {
+      return { text, segments, language };
+    }
+  }
+
+  return null;
+}
+
+async function fetchApifyTranscript(
+  context: YoutubeTranscriptProviderContext,
+  config: NonNullable<ReturnType<typeof getPaidTranscriptConfig>>,
+): Promise<YoutubeTranscriptProviderResult> {
+  const actorId = encodeURIComponent(config.actorId).replace(/%7E/gu, "~");
+  const params = new URLSearchParams({
+    token: config.token,
+    timeout: String(Math.ceil(config.timeoutMs / 1000)),
+    format: "json",
+    clean: "true",
+    maxItems: "1",
+  });
+  const url = `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?${params.toString()}`;
+  let response: Response;
+
+  try {
+    response = await fetchTextWithTimeout(
+      url,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          url: context.youtubeUrl,
+          videoUrl: context.youtubeUrl,
+          videoUrls: [context.youtubeUrl],
+          startUrls: [{ url: context.youtubeUrl }],
+          languages: PREFERRED_TRANSCRIPT_LANGUAGES,
+        }),
+      },
+      config.timeoutMs,
+    );
+  } catch {
+    return {
+      status: "error",
+      providerName: EXTERNAL_TRANSCRIPT_PROVIDER,
+      reason: "external_transcript_api_fetch_failed",
+    };
+  }
+
+  if (!response.ok) {
+    return {
+      status: "error",
+      providerName: EXTERNAL_TRANSCRIPT_PROVIDER,
+      reason: response.status === 408
+        ? "external_transcript_api_timeout"
+        : "external_transcript_api_error",
+    };
+  }
+
+  let payload: unknown;
+
+  try {
+    payload = await response.json();
+  } catch {
+    return {
+      status: "error",
+      providerName: EXTERNAL_TRANSCRIPT_PROVIDER,
+      reason: "external_transcript_api_invalid_json",
+    };
+  }
+
+  const parsed = parsePaidTranscriptPayload(payload);
+  if (!parsed) {
+    return {
+      status: "unavailable",
+      providerName: EXTERNAL_TRANSCRIPT_PROVIDER,
+      reason: "external_transcript_api_empty_transcript",
+    };
+  }
+
+  return {
+    status: "available",
+    providerName: EXTERNAL_TRANSCRIPT_PROVIDER,
+    transcriptText: parsed.text,
+    transcriptSegments: parsed.segments,
+    language: parsed.language,
+    trackKind: "unknown",
+  };
+}
+
+function createDefaultYoutubeTranscriptProvider(
+  dbClient: DbClient | null,
+  userId: string,
+): YoutubeTranscriptProvider {
+  return {
+    name: "youtube_transcript_chain",
+    async fetchTranscript(context) {
+      const cached = await readTranscriptCache(dbClient, context.videoId);
+      if (cached) {
+        await recordTranscriptFetchEvent(dbClient, {
+          userId,
+          videoId: context.videoId,
+          provider: TRANSCRIPT_CACHE_PROVIDER,
+          cacheHit: true,
+          status: "success",
+        });
+        return cached;
+      }
+
+      const publicResult = await fetchPublicYoutubeTranscript(context, {
+        providerName: YOUTUBE_PUBLIC_TIMEDTEXT_PROVIDER,
+      });
+      if (publicResult.status === "available" && publicResult.transcriptText?.trim()) {
+        await writeTranscriptCache(dbClient, context.videoId, publicResult, YOUTUBE_PUBLIC_TIMEDTEXT_PROVIDER);
+        await recordTranscriptFetchEvent(dbClient, {
+          userId,
+          videoId: context.videoId,
+          provider: YOUTUBE_PUBLIC_TIMEDTEXT_PROVIDER,
+          cacheHit: false,
+          status: "success",
+        });
+        return publicResult;
+      }
+
+      const cookieHeader = process.env.YOUTUBE_TRANSCRIPT_COOKIE_HEADER?.trim()
+        || process.env.YOUTUBE_COOKIE_HEADER?.trim()
+        || null;
+      if (cookieHeader) {
+        const cookieResult = await fetchPublicYoutubeTranscript(context, {
+          providerName: YOUTUBE_TIMEDTEXT_COOKIE_PROVIDER,
+          cookieHeader,
+        });
+        if (cookieResult.status === "available" && cookieResult.transcriptText?.trim()) {
+          await writeTranscriptCache(dbClient, context.videoId, cookieResult, YOUTUBE_TIMEDTEXT_COOKIE_PROVIDER);
+          await recordTranscriptFetchEvent(dbClient, {
+            userId,
+            videoId: context.videoId,
+            provider: YOUTUBE_TIMEDTEXT_COOKIE_PROVIDER,
+            cacheHit: false,
+            status: "success",
+          });
+          return cookieResult;
+        }
+      }
+
+      const paidConfig = getPaidTranscriptConfig();
+      if (!paidConfig) {
+        await recordTranscriptFetchEvent(dbClient, {
+          userId,
+          videoId: context.videoId,
+          provider: EXTERNAL_TRANSCRIPT_PROVIDER,
+          cacheHit: false,
+          status: "skipped",
+          reason: "external_transcript_api_disabled",
+        });
+        return {
+          status: "disabled",
+          providerName: EXTERNAL_TRANSCRIPT_PROVIDER,
+          reason: publicResult.reason ?? "external_transcript_api_disabled",
+        };
+      }
+
+      const paidAllowed = await canUsePaidTranscriptProvider(dbClient, userId, paidConfig);
+      if (!paidAllowed) {
+        await recordTranscriptFetchEvent(dbClient, {
+          userId,
+          videoId: context.videoId,
+          provider: EXTERNAL_TRANSCRIPT_PROVIDER,
+          cacheHit: false,
+          status: "skipped",
+          reason: "transcript_paid_limit_exceeded",
+        });
+        return {
+          status: "unavailable",
+          providerName: EXTERNAL_TRANSCRIPT_PROVIDER,
+          reason: "transcript_paid_limit_exceeded",
+        };
+      }
+
+      const paidResult = await fetchApifyTranscript(context, paidConfig);
+      if (paidResult.status === "available" && paidResult.transcriptText?.trim()) {
+        await writeTranscriptCache(dbClient, context.videoId, paidResult, EXTERNAL_TRANSCRIPT_PROVIDER);
+        await recordTranscriptFetchEvent(dbClient, {
+          userId,
+          videoId: context.videoId,
+          provider: EXTERNAL_TRANSCRIPT_PROVIDER,
+          cacheHit: false,
+          status: "success",
+        });
+        return paidResult;
+      }
+
+      await recordTranscriptFetchEvent(dbClient, {
+        userId,
+        videoId: context.videoId,
+        provider: EXTERNAL_TRANSCRIPT_PROVIDER,
+        cacheHit: false,
+        status: paidResult.status === "error" ? "error" : "unavailable",
+        reason: paidResult.reason ?? publicResult.reason ?? "transcript_unavailable",
+      });
+
+      return paidResult;
+    },
+  };
+}
+
+function buildTranscriptSourceProviders(meta: TranscriptFallbackMeta) {
+  if (!meta.source_provider) {
+    return ["public_caption_timedtext", TRANSCRIPT_PARSE_PROVIDER];
+  }
+
+  const sourceProviders = meta.cache_hit ? [TRANSCRIPT_CACHE_PROVIDER] : [];
+  const normalizedProvider =
+    meta.source_provider === YOUTUBE_TIMEDTEXT_COOKIE_PROVIDER
+    || meta.source_provider === EXTERNAL_TRANSCRIPT_PROVIDER
+      ? meta.source_provider
+      : "public_caption_timedtext";
+
+  return [
+    ...sourceProviders,
+    normalizedProvider,
+    TRANSCRIPT_PARSE_PROVIDER,
+  ].filter((provider, index, providers) => providers.indexOf(provider) === index);
+}
+
 async function resolveTranscriptFallback(
   video: YoutubeProviderVideo,
   parsedRecipe: ParsedRecipeDescription,
   parsedUrl: { youtubeUrl: string; videoId: string },
+  dbClient: DbClient,
+  userId: string,
 ): Promise<TranscriptFallbackResult> {
   const capability = getCaptionCapability(video.captionFlag);
 
@@ -2557,7 +3217,7 @@ async function resolveTranscriptFallback(
     };
   }
 
-  const provider = getYoutubeTranscriptProvider();
+  const provider = getYoutubeTranscriptProvider(dbClient, userId);
   let providerResult: YoutubeTranscriptProviderResult;
 
   try {
@@ -2602,6 +3262,8 @@ async function resolveTranscriptFallback(
         reason: providerResult.reason ?? (transcriptText ? null : "empty_transcript"),
         language: providerResult.language ?? null,
         trackKind: providerResult.trackKind ?? null,
+        cacheHit: providerResult.reason === "cache_hit",
+        sourceProvider: providerName,
       }),
     };
   }
@@ -2624,6 +3286,8 @@ async function resolveTranscriptFallback(
         reason: providerResult.reason ?? "no_parseable_recipe",
         language: providerResult.language ?? null,
         trackKind: providerResult.trackKind ?? null,
+        cacheHit: providerResult.reason === "cache_hit",
+        sourceProvider: providerName,
       }),
     };
   }
@@ -2643,6 +3307,8 @@ async function resolveTranscriptFallback(
       trackKind: providerResult.trackKind ?? null,
       usedIngredientCount: merged.usedIngredientCount,
       stepCount: merged.usedStepCount,
+      cacheHit: providerResult.reason === "cache_hit",
+      sourceProvider: providerName,
     }),
   };
 }
@@ -3434,7 +4100,13 @@ export async function handleYoutubeExtract(request: Request) {
   const descriptionParse = parseRecipeDescriptionForImport(video);
   const parsedRecipe = descriptionParse.recipe;
   const authorCommentFallback = await resolveAuthorCommentFallback(video, parsedRecipe, descriptionParse, parsedUrl);
-  const transcriptFallback = await resolveTranscriptFallback(video, authorCommentFallback.recipe, parsedUrl);
+  const transcriptFallback = await resolveTranscriptFallback(
+    video,
+    authorCommentFallback.recipe,
+    parsedUrl,
+    dbClient,
+    user.id,
+  );
   const finalParsedRecipe = transcriptFallback.recipe;
   const rawSourceText = buildRawSourceText(
     video.description,
@@ -3469,7 +4141,7 @@ export async function handleYoutubeExtract(request: Request) {
         ? ["youtube_comment_threads", "comment_filter", "comment_parser"]
         : []),
       ...(multiRecipeExtraction.source === "caption" || multiRecipeExtraction.source === "transcript"
-        ? ["public_caption_timedtext", "caption_parser"]
+        ? buildTranscriptSourceProviders(transcriptFallback.meta)
         : []),
       "multi_recipe_candidate_parser",
     ];
@@ -3612,7 +4284,7 @@ export async function handleYoutubeExtract(request: Request) {
       ? ["youtube_comment_threads", "comment_filter", "comment_parser"]
       : []),
     ...(transcriptFallback.usedTranscript
-      ? ["public_caption_timedtext", "caption_parser"]
+      ? buildTranscriptSourceProviders(transcriptFallback.meta)
       : []),
   ];
   const remainingDescriptionBlockingIssues = descriptionParse.blockingIssues.filter((issue) => {

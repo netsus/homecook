@@ -53,6 +53,17 @@
 > 이 변경은 `docs/workpacks/28-youtube-section-label-persistence` contract-evolution이다.
 > `component_label`은 표시용 metadata이며 shopping aggregation, manual create authoring, pantry consumed checklist semantics는 변경하지 않는다.
 
+## Low-cost YouTube Transcript Fallback Addendum (2026-05-30)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.3 | YouTube extract가 설명란/작성자 댓글만으로 부족할 때 transcript cache → 공개 timedtext → cookie retry → 제한적 Apify fallback 순서로 자막/전사를 보완할 수 있음을 명시. paid fallback은 env/일일 한도 없이는 비활성화 |
+| API v1.2.13 | §6 공통 정책에 transcript fallback 순서, Apify env, secret logging 금지, `source_providers`/`transcript_provider` provenance 계약 추가 |
+| DB v1.3.9 | `youtube_transcript_cache`, `youtube_transcript_fetch_events` 서버 전용 테이블 추가. 90일 TTL cache와 provider/user daily limit 집계를 지원 |
+
+> 이 addendum은 무료 공개 텍스트를 먼저 쓰고 실패 시에만 제한적 유료 transcript API를 쓰기 위한 contract-evolution이다.
+> 오디오 STT/Whisper, 로그인/소유자 전용 caption download, 영상 ID별 fixture 반환은 범위 밖이다.
+
 ## Recipio-style YouTube Import Parity Addendum (2026-05-28)
 
 | 문서 | 변경 내용 |

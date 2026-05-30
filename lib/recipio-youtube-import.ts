@@ -39,12 +39,6 @@ export interface RecipioRecommendedYoutubeVideo {
 
 export const RECIPIO_RECOMMENDED_YOUTUBE_VIDEOS: RecipioRecommendedYoutubeVideo[] = [
   {
-    videoId: "OyXZEi9kMGU",
-    title: "일본의 고급 스시 오마카세에서 사용하는 기술?",
-    channel: "magic chef Kim",
-    viewLabel: "조회수 137.8만회",
-  },
-  {
     videoId: "bdwkJly5g60",
     title: "가장 비싼 궁중요리 피자를 만들었습니다 @만원요리최씨남매",
     channel: "magic chef Kim",
