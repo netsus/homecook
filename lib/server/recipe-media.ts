@@ -24,6 +24,27 @@ const GENERIC_TAGS = new Set([
   "fyp",
 ]);
 
+const RECIPE_TAG_LIMIT = 3;
+
+const DISH_KEYWORD_PATTERN =
+  /(찌개|국|탕|전골|볶음|구이|조림|찜|무침|밥|죽|면|국수|파스타|샌드위치|토스트|샐러드|타르트|케이크|쿠키|빵|푸딩|디저트)/u;
+
+const TITLE_WORD_STOP_TAGS = new Set([
+  "오븐도",
+  "젤라틴도",
+  "없이",
+  "만드는",
+  "만들기",
+  "방법",
+  "부드러운",
+  "촉촉한",
+  "쉬운",
+  "간단한",
+  "초간단",
+  "노오븐",
+  "레시피",
+]);
+
 export type RecipeImageMimeType = keyof typeof ALLOWED_IMAGE_TYPES;
 
 export interface RecipeTagInput {
@@ -83,8 +104,93 @@ function normalizeTag(rawValue: string) {
   return canonical;
 }
 
+function hasHangul(value: string) {
+  return /[가-힣]/u.test(value);
+}
+
+function stripTitleNoise(title: string) {
+  const firstSegment = title.split(/[|｜:：]/u)[0] ?? title;
+
+  return collapseWhitespace(
+    firstSegment
+      .replace(/\b(?:recipe|recipes|how to make|cooking)\b/giu, " ")
+      .replace(/(?:레시피|만들기|만드는 법|만드는 방법)/gu, " ")
+      .replace(/[~!♡❤😊]+/gu, " "),
+  );
+}
+
+function normalizeTitleWord(word: string) {
+  return word
+    .replace(/(?:이에요|예요|입니다|해요|어요|아요)$/u, "")
+    .trim();
+}
+
+function buildDishPhraseFromTitle(title: string) {
+  const words = Array.from(title.matchAll(/[가-힣A-Za-z0-9]+/gu), (match) => normalizeTitleWord(match[0]))
+    .filter(Boolean);
+  const dishWordIndex = words.findIndex((word) => DISH_KEYWORD_PATTERN.test(word));
+
+  if (dishWordIndex < 0) {
+    return null;
+  }
+
+  const startIndex = Math.max(0, dishWordIndex - 4);
+  const phraseWords = words
+    .slice(startIndex, dishWordIndex + 1)
+    .filter((word) => !TITLE_WORD_STOP_TAGS.has(word.toLowerCase()))
+    .slice(-4);
+  const phrase = collapseWhitespace(phraseWords.join(" "));
+
+  return phrase || null;
+}
+
+function buildTitleTagCandidates(title: string) {
+  const candidates: string[] = [];
+  const cleanedTitle = stripTitleNoise(title);
+
+  if (normalizeTag(cleanedTitle)) {
+    candidates.push(cleanedTitle);
+  }
+
+  if (candidates.length === 0 || cleanedTitle.length > 30) {
+    const dishPhrase = buildDishPhraseFromTitle(cleanedTitle || title);
+    if (dishPhrase) {
+      candidates.unshift(dishPhrase);
+    }
+  }
+
+  return candidates;
+}
+
+function buildProviderTagGroups(providerTags: string[]) {
+  const seen = new Set<string>();
+  const primary: string[] = [];
+  const secondary: string[] = [];
+
+  for (const providerTag of providerTags) {
+    const tag = normalizeTag(providerTag);
+    if (!tag) {
+      continue;
+    }
+
+    const key = tag.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    if (hasHangul(tag)) {
+      primary.push(tag);
+    } else {
+      secondary.push(tag);
+    }
+  }
+
+  return { primary, secondary };
+}
+
 function pushTag(tags: string[], seen: Set<string>, rawValue: string) {
-  if (tags.length >= 6) {
+  if (tags.length >= RECIPE_TAG_LIMIT) {
     return;
   }
 
@@ -102,11 +208,23 @@ function pushTag(tags: string[], seen: Set<string>, rawValue: string) {
   tags.push(tag);
 }
 
+export function extractHashTagsFromText(text: string) {
+  return Array.from(text.matchAll(/(?:^|\s)#([0-9A-Za-z가-힣_]+)/gu), (match) => match[1])
+    .filter((tag): tag is string => typeof tag === "string" && tag.length > 0);
+}
+
 export function generateRecipeTags(input: RecipeTagInput) {
   const tags: string[] = [];
   const seen = new Set<string>();
+  const providerTagGroups = buildProviderTagGroups(input.providerTags ?? []);
 
-  pushTag(tags, seen, input.title);
+  for (const providerTag of providerTagGroups.primary) {
+    pushTag(tags, seen, providerTag);
+  }
+
+  for (const titleCandidate of buildTitleTagCandidates(input.title)) {
+    pushTag(tags, seen, titleCandidate);
+  }
 
   for (const ingredientName of input.ingredientNames) {
     pushTag(tags, seen, ingredientName);
@@ -116,12 +234,8 @@ export function generateRecipeTags(input: RecipeTagInput) {
     pushTag(tags, seen, cookingMethodLabel);
   }
 
-  for (const providerTag of input.providerTags ?? []) {
-    pushTag(tags, seen, providerTag);
-  }
-
   for (const stepText of input.stepTexts) {
-    if (tags.length >= 6) {
+    if (tags.length >= RECIPE_TAG_LIMIT) {
       break;
     }
 
@@ -129,6 +243,10 @@ export function generateRecipeTags(input: RecipeTagInput) {
     if (matchedMethod) {
       pushTag(tags, seen, matchedMethod);
     }
+  }
+
+  for (const providerTag of providerTagGroups.secondary) {
+    pushTag(tags, seen, providerTag);
   }
 
   return tags;

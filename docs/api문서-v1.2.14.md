@@ -37,7 +37,7 @@
 | MEDIA-TAG-1 | YouTube 등록 레시피 상세에 영상 썸네일을 표시 | extract session의 `thumbnail_url`을 register 시 `recipes.thumbnail_url`에 서버가 복사. 클라이언트 override 금지 |
 | MEDIA-TAG-2 | 직접 등록 레시피에 사용자 이미지 업로드 지원 | `POST /api/v1/recipes/images` 추가. Supabase Storage `recipe-images/{user_id}/{uuid}.{ext}`에 저장 |
 | MEDIA-TAG-3 | 임의 외부 이미지 URL과 cross-user 이미지 참조 차단 | `POST /recipes`는 현재 사용자 업로드 API가 반환한 참조만 허용 |
-| MEDIA-TAG-4 | YouTube/직접 등록 모두 자동 태그 생성 | 공유 결정론 tag generator가 `recipes.tags`를 최대 6개 생성. 클라이언트 임의 태그 입력 금지 |
+| MEDIA-TAG-4 | YouTube/직접 등록 모두 자동 태그 생성 | 공유 결정론 tag generator가 `recipes.tags`를 최대 3개 생성. 클라이언트 임의 태그 입력 금지 |
 | MEDIA-TAG-5 | MVP 범위 보호 | YouTube 썸네일 다운로드/리호스팅/압축, DB binary 저장, generated/AI image fallback, normalized tag table은 scope 밖 |
 
 ---
@@ -987,7 +987,7 @@ POST /api/v1/recipes/youtube/extract
 > `draft_ingredient_id`는 extract 시 서버가 생성해 응답과 `youtube_extraction_sessions.draft_json.ingredients[]`에 같이 저장하는 안정 식별자다. 검수 화면에서 사용자가 재료명/수량/단위/순서를 수정해도 값은 유지하며, 미등록 재료 등록 API가 대상 draft row를 확인할 때 사용한다.
 > `component_label`은 nullable이다. YouTube 설명란에서 `| 빵 반죽` 같은 섹션 heading이 감지되면 extract 응답과 session draft에 보존한다. `component_label`이 있으면 `display_text`, `instruction`에는 같은 `[섹션명]` prefix를 포함하지 않는다.
 > `thumbnail_url`은 YouTube provider thumbnail URL이며 session에 저장된다. register 단계에서 클라이언트가 제공하거나 override하지 않는다.
-> `tags`는 서버 결정론 tag generator preview 결과다. 제목, 재료, 조리 과정, 조리방법, provider `snippet.tags`를 입력으로 정규화하고 최대 6개로 제한한다. 클라이언트는 태그를 수정/추가/삭제할 수 없다.
+> `tags`는 서버 결정론 tag generator preview 결과다. YouTube 설명란 해시태그, provider `snippet.tags`, 제목, 재료, 조리 과정, 조리방법을 입력으로 정규화하고 최대 3개로 제한한다. 클라이언트는 태그를 수정/추가/삭제할 수 없다.
 
 **step missing_fields**
 
@@ -1311,7 +1311,7 @@ POST /recipes
 
 > 직접 레시피 등록은 §6-4 YouTube register body를 참조하지 않는다. `component_label`은 YouTube extract/register 전용 field이며 manual create body에는 허용하지 않는다.
 > `thumbnail_url`은 `POST /api/v1/recipes/images`가 반환한 현재 사용자 소유 참조만 허용한다. 임의 외부 URL, 만료 signed URL, 다른 사용자의 Storage 경로는 422 `VALIDATION_ERROR`로 거부한다.
-> `tags`는 body로 받지 않는다. 서버가 제목, 재료, 조리 과정, 조리방법 라벨에서 결정론적으로 최대 6개를 생성해 `recipes.tags`에 저장한다. 생성할 수 없으면 `[]`.
+> `tags`는 body로 받지 않는다. 서버가 제목, 재료, 조리 과정, 조리방법 라벨에서 결정론적으로 최대 3개를 생성해 `recipes.tags`에 저장한다. 생성할 수 없으면 `[]`.
 
 **응답 (201)**: 생성된 recipe 객체
 

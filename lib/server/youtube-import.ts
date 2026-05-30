@@ -16,7 +16,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
-import { generateRecipeTags } from "@/lib/server/recipe-media";
+import { extractHashTagsFromText, generateRecipeTags } from "@/lib/server/recipe-media";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import {
   buildTextSegments,
@@ -3143,11 +3143,13 @@ function buildExtractedSteps(
 
 function generateYoutubeExtractTags({
   title,
+  description,
   ingredients,
   steps,
   providerTags,
 }: {
   title: string;
+  description?: string;
   ingredients: YoutubeRecipeExtractData["ingredients"];
   steps: YoutubeRecipeExtractData["steps"];
   providerTags?: string[];
@@ -3159,7 +3161,10 @@ function generateYoutubeExtractTags({
     cookingMethodLabels: steps
       .map((step) => step.cooking_method?.label)
       .filter((label): label is string => typeof label === "string"),
-    providerTags,
+    providerTags: [
+      ...extractHashTagsFromText(description ?? ""),
+      ...(providerTags ?? []),
+    ],
   });
 }
 
@@ -3479,6 +3484,7 @@ export async function handleYoutubeExtract(request: Request) {
     ];
     const tags = generateYoutubeExtractTags({
       title: video.title,
+      description: video.description,
       ingredients: candidateBuild.candidates.flatMap((candidate) => candidate.ingredients),
       steps: candidateBuild.candidates.flatMap((candidate) => candidate.steps),
       providerTags: video.tags,
@@ -3586,6 +3592,7 @@ export async function handleYoutubeExtract(request: Request) {
   }));
   const tags = generateYoutubeExtractTags({
     title: video.title,
+    description: video.description,
     ingredients,
     steps,
     providerTags: video.tags,
