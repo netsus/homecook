@@ -1029,7 +1029,7 @@ describe("MenuAddScreen", () => {
     await user.click(screen.getByRole("button", { name: "가져오기" }));
 
     const chips = await screen.findByTestId("extraction-method-chips");
-    expect(within(chips).getByText("댓글")).toBeTruthy();
+    expect(within(chips).getByText("작성자 댓글")).toBeTruthy();
     expect(within(chips).queryByText("comment")).toBeNull();
   });
 

@@ -818,6 +818,9 @@ GET /recipes/pantry-match
 - **인증**: 모든 엔드포인트 🔒 로그인 필수 (미인증 → 401)
 - **Provider 에러**: oEmbed/YouTube API 장애 → 502 `PROVIDER_ERROR`, YouTube API quota 초과 → 429 `QUOTA_EXCEEDED`
 - **YouTube API key**: 서버 환경변수 `YOUTUBE_API_KEY`, 클라이언트 노출 금지
+- **Transcript fallback**: 설명란만으로 충분하면 댓글/자막 provider를 호출하지 않는다. 부족할 때만 작성자 댓글 후보 → `youtube_transcript_cache` → 공개 timedtext → cookie retry → 제한적 외부 transcript API 순서로 시도한다.
+- **Paid transcript fallback env**: `YOUTUBE_TRANSCRIPT_PAID_PROVIDER=apify`, `APIFY_TOKEN`, `YOUTUBE_TRANSCRIPT_APIFY_ACTOR_ID`가 모두 있을 때만 활성화한다. `YOUTUBE_TRANSCRIPT_PAID_DAILY_LIMIT` 기본 50, `YOUTUBE_TRANSCRIPT_PAID_USER_DAILY_LIMIT` 기본 5, `YOUTUBE_TRANSCRIPT_PAID_TIMEOUT_MS` 기본 15000.
+- **Secret logging 금지**: YouTube cookie, Apify token, 외부 provider 원문 응답은 `raw_source_text`, `extraction_meta_json`, fetch event에 저장하지 않는다.
 
 ### 6-1. 유튜브 URL 검증 + oEmbed 미리보기 (Step 1)
 
@@ -877,7 +880,7 @@ POST /api/v1/recipes/youtube/extract
 | ---- | ----------- | ------ | ---------- |
 | Body | youtube_url | string | 유튜브 URL |
 
-**처리**: video_id 파싱 → YouTube `videos.list` 호출 → description/tags/category 기반 3-way classification → 설명란 파싱으로 재료/스텝 추출 → 부족하면 공개 작성자 댓글 후보와 공개 caption timedtext를 순서대로 보조 source로 파싱 → 한 영상에서 여러 요리 후보가 감지되면 `multi_parent` 세션과 `recipe_candidates[]`를 생성 → 그 외에는 단일 draft 세션 생성 → 추출 결과 반환
+**처리**: video_id 파싱 → YouTube `videos.list` 호출 → description/tags/category 기반 3-way classification → 설명란 파싱으로 재료/스텝 추출 → 부족하면 공개 작성자 댓글 후보와 transcript fallback(`cache` → `timedtext` → `cookie retry` → 제한적 외부 transcript API)을 보조 source로 파싱 → 한 영상에서 여러 요리 후보가 감지되면 `multi_parent` 세션과 `recipe_candidates[]`를 생성 → 그 외에는 단일 draft 세션 생성 → 추출 결과 반환
 
 `extraction_methods` 허용값:
 - `description`: YouTube 설명란
@@ -969,6 +972,9 @@ POST /api/v1/recipes/youtube/extract
 
 > `draft_ingredient_id`는 extract 시 서버가 생성해 응답과 `youtube_extraction_sessions.draft_json.ingredients[]`에 같이 저장하는 안정 식별자다. 검수 화면에서 사용자가 재료명/수량/단위/순서를 수정해도 값은 유지하며, 미등록 재료 등록 API가 대상 draft row를 확인할 때 사용한다.
 > `component_label`은 nullable이다. YouTube 설명란에서 `| 빵 반죽` 같은 섹션 heading이 감지되면 extract 응답과 session draft에 보존한다. `component_label`이 있으면 `display_text`, `instruction`에는 같은 `[섹션명]` prefix를 포함하지 않는다.
+> `extraction_methods`는 기존 string[] 계약을 유지한다. 설명란만 쓰면 `["description"]`, 작성자 댓글이 보완하면 `comment`, 자막/전사 fallback이 재료 또는 단계를 보완하면 `caption`을 추가한다.
+> `youtube_extraction_sessions.source_providers`에는 실제 사용 출처를 남긴다. 허용 값 예: `youtube_videos_list`, `description_parser`, `youtube_comment_threads`, `comment_filter`, `comment_parser`, `transcript_cache`, `public_caption_timedtext`, `youtube_timedtext_cookie_retry`, `external_transcript_api`, `caption_parser`, `multi_recipe_candidate_parser`.
+> `extraction_meta_json.transcript_provider`에는 provider, cache hit 여부, language, track kind, 실패 reason, 추출된 ingredient/step count만 저장한다. cookie/token/raw provider response는 저장하지 않는다.
 
 **step missing_fields**
 

@@ -309,7 +309,7 @@ CHECK (view_count>=0AND like_count>=0AND save_count>=0AND plan_count>=0AND cook_
 | channel_title | text | nullable | 채널명 (videos.list snippet.channelTitle) |
 | thumbnail_url | text | nullable | 썸네일 URL |
 | provider_version | text | nullable | YouTube provider / extractor version |
-| source_providers | text[] | NOT NULL, DEFAULT '{}' | 실제 사용한 source provider (`youtube_videos_list`, `description_parser`, `youtube_comment_threads`, `public_caption_timedtext` 등) |
+| source_providers | text[] | NOT NULL, DEFAULT '{}' | 실제 사용한 source provider (`youtube_videos_list`, `description_parser`, `youtube_comment_threads`, `comment_filter`, `comment_parser`, `transcript_cache`, `public_caption_timedtext`, `youtube_timedtext_cookie_retry`, `external_transcript_api`, `caption_parser`, `multi_recipe_candidate_parser` 등) |
 | classification_status | varchar(20) | NOT NULL | `recipe` / `uncertain` / `non_recipe` |
 | classification_reasons | text[] | NOT NULL, DEFAULT '{}' | 판정 근거 배열 |
 | raw_source_text | text | nullable | 원본 설명란, 사용된 공개 작성자 댓글, 사용된 공개 caption text 등 추출 source text |
@@ -359,6 +359,49 @@ INDEX idx_youtube_sessions_parent ON youtube_extraction_sessions (parent_extract
 - 검수 화면에서 사용자가 재료명/수량/단위/순서를 수정해도 이 ID는 유지한다.
 - 미등록 재료 등록 API는 이 ID로 session draft의 unresolved / needs_review row를 확인한다.
 - 재료 등록 API는 `draft_json`을 update하지 않는다. draft는 원본 추출 snapshot/provenance로 유지한다.
+
+### 4-2a. youtube_transcript_cache / youtube_transcript_fetch_events `2026-05-30 신규`
+
+> YouTube 자막/전사 fallback의 비용을 줄이기 위한 서버 전용 캐시와 사용량 이벤트. 같은 영상/언어/provider 조합은 TTL 안에서 외부 provider를 다시 호출하지 않는다. API key, cookie, 외부 provider 원문 응답은 저장하지 않는다.
+
+#### youtube_transcript_cache
+
+| 컬럼 | 타입 | 제약 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, default gen_random_uuid() | 캐시 row ID |
+| youtube_video_id | varchar(20) | NOT NULL | 영상 ID |
+| language | text | NOT NULL | transcript language code (`ko`, `en` 등) |
+| source_provider | text | NOT NULL | `youtube_public_timedtext` / `youtube_timedtext_cookie_retry` / `external_transcript_api` |
+| source_kind | text | NOT NULL, default `caption` | `caption` / `transcript` |
+| transcript_text | text | NOT NULL | 정규화된 자막/전사 텍스트 |
+| segments_json | jsonb | NOT NULL, default `[]` | `{ source, lineIndex, text, startMs, durationMs, language, trackKind }[]` 형태의 segment |
+| expires_at | timestamptz | NOT NULL | 기본 `created_at + 90일` |
+| created_at | timestamptz | NOT NULL, default now() | 생성 시각 |
+| last_used_at | timestamptz | NOT NULL, default now() | 마지막 cache hit 시각 |
+
+#### youtube_transcript_fetch_events
+
+| 컬럼 | 타입 | 제약 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, default gen_random_uuid() | 이벤트 ID |
+| user_id | uuid | FK → users, nullable | 요청 사용자. 사용자 삭제 시 null |
+| youtube_video_id | varchar(20) | NOT NULL | 영상 ID |
+| provider | text | NOT NULL | `transcript_cache` / `youtube_public_timedtext` / `youtube_timedtext_cookie_retry` / `external_transcript_api` |
+| cache_hit | boolean | NOT NULL, default false | 캐시 hit 여부 |
+| status | text | NOT NULL | `success` / `unavailable` / `error` / `skipped` |
+| reason | text | nullable | 실패/skip reason. 비밀값 금지 |
+| estimated_cost_microusd | integer | NOT NULL, default 0 | 추정 비용(마이크로 USD). 무료 경로는 0 |
+| created_at | timestamptz | NOT NULL, default now() | 이벤트 시각 |
+
+#### INDEX / RLS
+
+```
+UNIQUE youtube_transcript_cache (youtube_video_id, language, source_provider)
+INDEX youtube_transcript_cache_lookup_idx (youtube_video_id, expires_at desc, last_used_at desc)
+INDEX youtube_transcript_fetch_events_provider_day_idx (provider, status, created_at desc)
+INDEX youtube_transcript_fetch_events_user_day_idx (user_id, provider, status, created_at desc)
+RLS enabled, client policy 없음 (server/service-role only)
+```
 
 ### 4-2b. youtube_extraction_candidates `2026-05-30 addendum`
 

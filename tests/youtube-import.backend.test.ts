@@ -46,7 +46,11 @@ function createAwaitableQuery<T>(result: QueryResult<T>) {
 
 function createArrayQuery<T>(result: QueryResult<T[]>) {
   const query = {
+    eq: vi.fn(() => query),
+    gt: vi.fn(() => query),
+    gte: vi.fn(() => query),
     in: vi.fn(() => query),
+    limit: vi.fn(() => query),
     order: vi.fn(() => query),
     then: createAwaitableQuery(result).then,
   };
@@ -204,6 +208,55 @@ function createYoutubeExtractionCandidatesTable({
   };
 }
 
+function createYoutubeTranscriptCacheTable({
+  rows = [],
+  insertResult = { data: null, error: null },
+  updateResult = { data: null, error: null },
+}: {
+  rows?: YoutubeTranscriptCacheRow[];
+  insertResult?: QueryResult<null>;
+  updateResult?: QueryResult<null>;
+} = {}) {
+  const selectQuery = createArrayQuery({ data: rows, error: null });
+  const updateQuery = {
+    eq: vi.fn(() => updateQuery),
+    then: createAwaitableQuery(updateResult).then,
+  };
+
+  return {
+    __selectQuery: selectQuery,
+    __updateQuery: updateQuery,
+    insert: vi.fn((values: unknown) => {
+      void values;
+      return createAwaitableQuery(insertResult);
+    }),
+    select: vi.fn(() => selectQuery),
+    update: vi.fn((values: unknown) => {
+      void values;
+      return updateQuery;
+    }),
+  };
+}
+
+function createYoutubeTranscriptFetchEventsTable({
+  rows = [],
+  insertResult = { data: null, error: null },
+}: {
+  rows?: YoutubeTranscriptFetchEventRow[];
+  insertResult?: QueryResult<null>;
+} = {}) {
+  const selectQuery = createArrayQuery({ data: rows, error: null });
+
+  return {
+    __selectQuery: selectQuery,
+    insert: vi.fn((values: unknown) => {
+      void values;
+      return createAwaitableQuery(insertResult);
+    }),
+    select: vi.fn(() => selectQuery),
+  };
+}
+
 interface YoutubeSessionRow {
   id: string;
   user_id: string;
@@ -225,6 +278,29 @@ interface YoutubeSessionRow {
   session_kind?: "single" | "multi_parent" | "candidate_child";
   parent_extraction_session_id?: string | null;
   parent_candidate_id?: string | null;
+}
+
+interface YoutubeTranscriptCacheRow {
+  id: string;
+  youtube_video_id: string;
+  language: string;
+  source_provider: string;
+  source_kind: string;
+  transcript_text: string;
+  segments_json: unknown;
+  expires_at: string;
+}
+
+interface YoutubeTranscriptFetchEventRow {
+  id: string;
+  user_id: string | null;
+  youtube_video_id: string;
+  provider: string;
+  cache_hit: boolean;
+  status: string;
+  reason: string | null;
+  estimated_cost_microusd: number;
+  created_at: string;
 }
 
 interface YoutubeIngredientRegistrationRpcData {
@@ -695,9 +771,13 @@ function createTranscriptFallbackExtractDbClient({
     { id: saltIngredientId, standard_name: "소금" },
   ],
   cookingMethodLookupRows = [],
+  transcriptCacheRows = [],
+  transcriptFetchEventRows = [],
 }: {
   ingredientLookupRows?: Array<{ id: string; standard_name: string }>;
   cookingMethodLookupRows?: NonNullable<Parameters<typeof createCookingMethodsTable>[0]["lookupRows"]>;
+  transcriptCacheRows?: YoutubeTranscriptCacheRow[];
+  transcriptFetchEventRows?: YoutubeTranscriptFetchEventRow[];
 } = {}) {
   const ingredientsTable = createLookupTable({
     data: ingredientLookupRows,
@@ -722,6 +802,12 @@ function createTranscriptFallbackExtractDbClient({
   const candidatesTable = createYoutubeExtractionCandidatesTable({
     selectResults: [],
   });
+  const transcriptCacheTable = createYoutubeTranscriptCacheTable({
+    rows: transcriptCacheRows,
+  });
+  const transcriptFetchEventsTable = createYoutubeTranscriptFetchEventsTable({
+    rows: transcriptFetchEventRows,
+  });
   const dbClient = {
     from: vi.fn((table: string) => {
       if (table === "ingredients") return ingredientsTable;
@@ -729,6 +815,8 @@ function createTranscriptFallbackExtractDbClient({
       if (table === "cooking_methods") return cookingMethodsTable;
       if (table === "youtube_extraction_sessions") return sessionsTable;
       if (table === "youtube_extraction_candidates") return candidatesTable;
+      if (table === "youtube_transcript_cache") return transcriptCacheTable;
+      if (table === "youtube_transcript_fetch_events") return transcriptFetchEventsTable;
       throw new Error(`unexpected table: ${table}`);
     }),
   };
@@ -737,6 +825,8 @@ function createTranscriptFallbackExtractDbClient({
     candidatesTable,
     dbClient,
     sessionsTable,
+    transcriptCacheTable,
+    transcriptFetchEventsTable,
   };
 }
 
@@ -866,6 +956,10 @@ describe("20 youtube real import backend", () => {
       "supabase/migrations/20260530090000_30_youtube_multi_recipe_candidates.sql",
       "utf8",
     );
+    const transcriptCacheSchema = readFileSync(
+      "supabase/migrations/20260530120000_youtube_transcript_cache_and_events.sql",
+      "utf8",
+    );
 
     expect(methodCodes).toEqual(expect.arrayContaining([
       "stir_fry",
@@ -895,6 +989,12 @@ describe("20 youtube real import backend", () => {
     expect(multiRecipeSchema).toContain("create table if not exists public.youtube_extraction_candidates");
     expect(multiRecipeSchema).toContain("youtube_extraction_candidates_select_own");
     expect(multiRecipeSchema).toContain("CANDIDATE_PROMOTION_REQUIRED");
+    expect(transcriptCacheSchema).toContain("create table if not exists public.youtube_transcript_cache");
+    expect(transcriptCacheSchema).toContain("youtube_video_id, language, source_provider");
+    expect(transcriptCacheSchema).toContain("create table if not exists public.youtube_transcript_fetch_events");
+    expect(transcriptCacheSchema).toContain("estimated_cost_microusd");
+    expect(transcriptCacheSchema).not.toContain("api_key");
+    expect(transcriptCacheSchema).not.toContain("cookie_header");
   });
 
   it("schema includes the user-confirmed YouTube ingredient registration RPC", () => {
@@ -2427,24 +2527,25 @@ describe("20 youtube real import backend", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
-      cookingMethodLookupRows: [
-        {
-          id: prepMethodId,
-          code: "prep",
-          label: "손질",
-          color_key: "gray",
-          is_system: true,
-        },
-        {
-          id: "550e8400-e29b-41d4-a716-446655440216",
-          code: "boil",
-          label: "끓이기",
-          color_key: "blue",
-          is_system: true,
-        },
-      ],
-    });
+    const { dbClient, sessionsTable, transcriptCacheTable, transcriptFetchEventsTable } =
+      createTranscriptFallbackExtractDbClient({
+        cookingMethodLookupRows: [
+          {
+            id: prepMethodId,
+            code: "prep",
+            label: "손질",
+            color_key: "gray",
+            is_system: true,
+          },
+          {
+            id: "550e8400-e29b-41d4-a716-446655440216",
+            code: "boil",
+            label: "끓이기",
+            color_key: "blue",
+            is_system: true,
+          },
+        ],
+      });
     createServiceRoleClient.mockReturnValue(dbClient);
 
     const { response, body } = await postYoutubeExtract(publicCaptionUrl);
@@ -2486,6 +2587,19 @@ describe("20 youtube real import backend", () => {
       expect.stringContaining("fmt=json3"),
       expect.anything(),
     );
+    expect(transcriptCacheTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      youtube_video_id: "captionpublic123",
+      language: "ko",
+      source_provider: "youtube_public_timedtext",
+      source_kind: "caption",
+      transcript_text: expect.stringContaining("김치를 한입 크기로 썰어주세요."),
+      expires_at: expect.any(String),
+    }));
+    expect(transcriptFetchEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "youtube_public_timedtext",
+      cache_hit: false,
+      status: "success",
+    }));
 
     const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
       extraction_methods: string[];
@@ -3151,8 +3265,8 @@ describe("20 youtube real import backend", () => {
       },
       transcript_provider: {
         attempted: true,
-        provider: "youtube_public_timedtext",
-        status: "unavailable",
+        provider: "external_transcript_api",
+        status: "disabled",
       },
     });
   });
@@ -3691,6 +3805,388 @@ describe("20 youtube real import backend", () => {
         used: false,
       },
     });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract uses cached transcript before network transcript providers", async () => {
+    mockAuth();
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("HOMECOOK_ENABLE_YOUTUBE_IMPORT", "1");
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+
+    const cachedTranscript = [
+      "만드는 법",
+      "1. 김치를 잘게 썰어주세요.",
+      "2. 냄비에 넣고 한 번 끓여주세요.",
+    ].join("\n");
+    const { dbClient, sessionsTable, transcriptCacheTable, transcriptFetchEventsTable } =
+      createTranscriptFallbackExtractDbClient({
+        cookingMethodLookupRows: [
+          {
+            id: prepMethodId,
+            code: "prep",
+            label: "손질",
+            color_key: "gray",
+            is_system: true,
+          },
+          {
+            id: "550e8400-e29b-41d4-a716-446655440216",
+            code: "boil",
+            label: "끓이기",
+            color_key: "blue",
+            is_system: true,
+          },
+        ],
+        transcriptCacheRows: [{
+          id: "550e8400-e29b-41d4-a716-446655442001",
+          youtube_video_id: "transcript123",
+          language: "ko",
+          source_provider: "youtube_public_timedtext",
+          source_kind: "caption",
+          transcript_text: cachedTranscript,
+          segments_json: [],
+          expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+        }],
+      });
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("/videos?")) {
+        return new Response(JSON.stringify({
+          items: [{
+            snippet: {
+              title: "김치찌개 자막 보충 레시피",
+              channelTitle: "집밥 채널",
+              channelId: "channel-transcript123",
+              description: "김치찌개 레시피\n재료\n김치 200g\n소금 약간",
+              tags: ["recipe", "김치찌개", "레시피"],
+              categoryId: "26",
+            },
+            contentDetails: {
+              duration: "PT8M",
+              caption: "true",
+            },
+          }],
+        }), { status: 200 });
+      }
+
+      if (url.includes("/commentThreads?")) {
+        return new Response(JSON.stringify({ items: [] }), { status: 200 });
+      }
+
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { response, body } = await postYoutubeExtract(transcriptFallbackUrl);
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description", "caption"],
+        steps: [
+          { instruction: "김치를 잘게 썰어주세요." },
+          { instruction: "냄비에 넣고 한 번 끓여주세요." },
+        ],
+      },
+      error: null,
+    });
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining("timedtext"), expect.anything());
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining("api.apify.com"), expect.anything());
+    expect(transcriptCacheTable.update).toHaveBeenCalledWith(expect.objectContaining({
+      last_used_at: expect.any(String),
+    }));
+    expect(transcriptCacheTable.insert).not.toHaveBeenCalled();
+    expect(transcriptFetchEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "transcript_cache",
+      cache_hit: true,
+      status: "success",
+      reason: null,
+    }));
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      source_providers: string[];
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.source_providers).toEqual([
+      "youtube_videos_list",
+      "description_parser",
+      "transcript_cache",
+      "public_caption_timedtext",
+      "caption_parser",
+    ]);
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      transcript_provider: {
+        provider: "youtube_public_timedtext",
+        status: "used",
+        cache_hit: true,
+        source_provider: "youtube_public_timedtext",
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract retries timedtext once with cookie before paid fallback", async () => {
+    mockAuth();
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("HOMECOOK_ENABLE_YOUTUBE_IMPORT", "1");
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+    vi.stubEnv("YOUTUBE_TRANSCRIPT_COOKIE_HEADER", "VISITOR_INFO1_LIVE=secret-cookie");
+    vi.stubEnv("YOUTUBE_TRANSCRIPT_PAID_PROVIDER", "apify");
+    vi.stubEnv("APIFY_TOKEN", "secret-apify-token");
+    vi.stubEnv("YOUTUBE_TRANSCRIPT_APIFY_ACTOR_ID", "user~youtube-transcript");
+
+    const { dbClient, transcriptCacheTable, transcriptFetchEventsTable } =
+      createTranscriptFallbackExtractDbClient();
+    const timedTextBaseUrl = "https://www.youtube.com/api/timedtext?v=transcript123&lang=ko";
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      const hasCookie = headers.get("cookie")?.includes("secret-cookie") ?? false;
+
+      if (url.includes("/videos?")) {
+        return new Response(JSON.stringify({
+          items: [{
+            snippet: {
+              title: "김치찌개 자막 보충 레시피",
+              channelTitle: "집밥 채널",
+              channelId: "channel-transcript123",
+              description: "김치찌개 레시피\n재료\n김치 200g\n소금 약간",
+              tags: ["recipe", "김치찌개", "레시피"],
+              categoryId: "26",
+            },
+            contentDetails: {
+              duration: "PT8M",
+              caption: "true",
+            },
+          }],
+        }), { status: 200 });
+      }
+
+      if (url.includes("/commentThreads?")) {
+        return new Response(JSON.stringify({ items: [] }), { status: 200 });
+      }
+
+      if (url.includes("/watch?")) {
+        return new Response(`ytInitialPlayerResponse = ${JSON.stringify({
+          captions: {
+            playerCaptionsTracklistRenderer: {
+              captionTracks: [{
+                baseUrl: timedTextBaseUrl,
+                languageCode: "ko",
+                kind: "asr",
+              }],
+            },
+          },
+        })};`, { status: 200 });
+      }
+
+      if (url.startsWith(timedTextBaseUrl) && !hasCookie) {
+        return new Response("rate limited", { status: 429 });
+      }
+
+      if (url.startsWith(timedTextBaseUrl) && hasCookie) {
+        return new Response(JSON.stringify({
+          events: [
+            { tStartMs: 0, dDurationMs: 1000, segs: [{ utf8: "만드는 법\n" }] },
+            { tStartMs: 1000, dDurationMs: 1000, segs: [{ utf8: "1. 김치를 썰어주세요.\n" }] },
+          ],
+        }), { status: 200 });
+      }
+
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { response } = await postYoutubeExtract(transcriptFallbackUrl);
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("api.apify.com"),
+      expect.anything(),
+    );
+    expect(transcriptCacheTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      source_provider: "youtube_timedtext_cookie_retry",
+      transcript_text: expect.stringContaining("김치를 썰어주세요."),
+    }));
+    expect(transcriptFetchEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "youtube_timedtext_cookie_retry",
+      cache_hit: false,
+      status: "success",
+    }));
+  });
+
+  it("POST /api/v1/recipes/youtube/extract uses Apify only after free transcript sources fail within limits", async () => {
+    mockAuth();
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("HOMECOOK_ENABLE_YOUTUBE_IMPORT", "1");
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+    vi.stubEnv("YOUTUBE_TRANSCRIPT_PAID_PROVIDER", "apify");
+    vi.stubEnv("APIFY_TOKEN", "secret-apify-token");
+    vi.stubEnv("YOUTUBE_TRANSCRIPT_APIFY_ACTOR_ID", "user~youtube-transcript");
+    vi.stubEnv("YOUTUBE_TRANSCRIPT_PAID_DAILY_LIMIT", "50");
+    vi.stubEnv("YOUTUBE_TRANSCRIPT_PAID_USER_DAILY_LIMIT", "5");
+
+    const { dbClient, sessionsTable, transcriptCacheTable, transcriptFetchEventsTable } =
+      createTranscriptFallbackExtractDbClient();
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("/videos?")) {
+        return new Response(JSON.stringify({
+          items: [{
+            snippet: {
+              title: "김치찌개 자막 보충 레시피",
+              channelTitle: "집밥 채널",
+              channelId: "channel-transcript123",
+              description: "김치찌개 레시피\n재료\n김치 200g\n소금 약간",
+              tags: ["recipe", "김치찌개", "레시피"],
+              categoryId: "26",
+            },
+            contentDetails: {
+              duration: "PT8M",
+              caption: "true",
+            },
+          }],
+        }), { status: 200 });
+      }
+
+      if (url.includes("/commentThreads?")) {
+        return new Response(JSON.stringify({ items: [] }), { status: 200 });
+      }
+
+      if (url.includes("/watch?")) {
+        return new Response("ytInitialPlayerResponse = {};", { status: 200 });
+      }
+
+      if (url.includes("api.apify.com")) {
+        return new Response(JSON.stringify([{
+          transcript: [
+            { text: "만드는 법", start: 0, duration: 1 },
+            { text: "1. 김치를 썰어주세요.", start: 1, duration: 1 },
+          ],
+          language: "ko",
+        }]), { status: 201 });
+      }
+
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { response, body } = await postYoutubeExtract(transcriptFallbackUrl);
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      data: {
+        extraction_methods: ["description", "caption"],
+        steps: [{ instruction: "김치를 썰어주세요." }],
+      },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("https://api.apify.com/v2/acts/user~youtube-transcript/run-sync-get-dataset-items"),
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining(transcriptFallbackUrl),
+      }),
+    );
+    expect(transcriptCacheTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      source_provider: "external_transcript_api",
+      transcript_text: expect.stringContaining("김치를 썰어주세요."),
+    }));
+    expect(transcriptFetchEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "external_transcript_api",
+      cache_hit: false,
+      status: "success",
+    }));
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      raw_source_text: string;
+      extraction_meta_json: Record<string, unknown>;
+    };
+    const eventPayloads = transcriptFetchEventsTable.insert.mock.calls.map((call) => call[0]);
+    expect(insertedSession.raw_source_text).not.toContain("secret-apify-token");
+    expect(JSON.stringify(insertedSession.extraction_meta_json)).not.toContain("secret-apify-token");
+    expect(JSON.stringify(eventPayloads)).not.toContain("secret-apify-token");
+  });
+
+  it("POST /api/v1/recipes/youtube/extract does not call paid transcript API when daily limits are exceeded", async () => {
+    mockAuth();
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("HOMECOOK_ENABLE_YOUTUBE_IMPORT", "1");
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+    vi.stubEnv("YOUTUBE_TRANSCRIPT_PAID_PROVIDER", "apify");
+    vi.stubEnv("APIFY_TOKEN", "secret-apify-token");
+    vi.stubEnv("YOUTUBE_TRANSCRIPT_APIFY_ACTOR_ID", "user~youtube-transcript");
+    vi.stubEnv("YOUTUBE_TRANSCRIPT_PAID_DAILY_LIMIT", "1");
+    vi.stubEnv("YOUTUBE_TRANSCRIPT_PAID_USER_DAILY_LIMIT", "1");
+
+    const { dbClient, transcriptFetchEventsTable } =
+      createTranscriptFallbackExtractDbClient({
+        transcriptFetchEventRows: [{
+          id: "550e8400-e29b-41d4-a716-446655442101",
+          user_id: userId,
+          youtube_video_id: "other-video",
+          provider: "external_transcript_api",
+          cache_hit: false,
+          status: "success",
+          reason: null,
+          estimated_cost_microusd: 0,
+          created_at: new Date().toISOString(),
+        }],
+      });
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("/videos?")) {
+        return new Response(JSON.stringify({
+          items: [{
+            snippet: {
+              title: "김치찌개 자막 보충 레시피",
+              channelTitle: "집밥 채널",
+              channelId: "channel-transcript123",
+              description: "김치찌개 레시피\n재료\n김치 200g\n소금 약간",
+              tags: ["recipe", "김치찌개", "레시피"],
+              categoryId: "26",
+            },
+            contentDetails: {
+              duration: "PT8M",
+              caption: "true",
+            },
+          }],
+        }), { status: 200 });
+      }
+
+      if (url.includes("/commentThreads?")) {
+        return new Response(JSON.stringify({ items: [] }), { status: 200 });
+      }
+
+      if (url.includes("/watch?")) {
+        return new Response("ytInitialPlayerResponse = {};", { status: 200 });
+      }
+
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { response, body } = await postYoutubeExtract(transcriptFallbackUrl);
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      data: {
+        extraction_methods: ["description"],
+        blocking_issues: ["steps[0].instruction"],
+      },
+    });
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("api.apify.com"),
+      expect.anything(),
+    );
+    expect(transcriptFetchEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "external_transcript_api",
+      cache_hit: false,
+      status: "skipped",
+      reason: "transcript_paid_limit_exceeded",
+    }));
   });
 
   it("POST /api/v1/recipes/youtube/extract keeps description-only partial drafts when transcript provider is disabled", async () => {
