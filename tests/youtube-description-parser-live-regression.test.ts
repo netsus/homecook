@@ -207,6 +207,144 @@ describe("YouTube live description parser regressions", () => {
     expect(draft.blockingIssues).toEqual([]);
   });
 
+  it("filters Cooking Tree dessert yield lines, English duplicates, and storage copy", () => {
+    const draft = parseDraft([
+      "오븐도 젤라틴도 없이 만드는 부드러운 딸기 우유 푸딩 디저트예요.",
+      "",
+      "🧈재료 Ingredients",
+      "",
+      "900ml 용기 1개, 250ml 컵 2개 분량",
+      "",
+      "| 딸기 우유 푸딩",
+      "",
+      "270g 생딸기",
+      "540g 우유",
+      "75g 설탕",
+      "1g 소금",
+      "60g 옥수수전분",
+      "15g 무염버터",
+      "4g 바닐라 익스트랙",
+      "",
+      "| 딸기 콩포트",
+      "",
+      "230g 생딸기",
+      "45g 설탕",
+      "8g 레몬즙",
+      "3g 옥수수전분",
+      "10g 물",
+      "",
+      "Makes 1 × 900ml container and 2 × 250ml cups",
+      "",
+      "| Strawberry milk pudding",
+      "",
+      "270g Fresh strawberries",
+      "540g Milk",
+      "75g Sugar",
+      "",
+      "📝만드는 과정",
+      "",
+      "딸기 우유 푸딩 만들기",
+      "1. 믹서에 딸기와 우유를 넣고 곱게 갈아 체에 걸러 씨와 큰 섬유질을 제거해 주세요.",
+      "2. 설탕과 소금, 옥수수전분을 넣고 완전히 섞은 다음 중약불에 올려 가열해 끓여 주세요.",
+      "3. 계속 천천히 젓다가 뭉치기 시작하면 빠르게 저으며 섞고 끓어오르고 1분 정도 더 가열해 주세요.",
+      "4. 불에서 내려 무염버터와 바닐라 익스트랙을 넣고 섞어 용기에 부어 주세요.",
+      "(900ml 용기에 600g 정도를 담고 나머지를 푸딩 컵 2개에 나눠 담아 주세요)",
+      "5. 실온에서 15분 정도 식힌 다음 윗면에 랩을 덮어 냉장실에서 1시간 정도 굳혀 주세요.",
+      "",
+      "딸기 콩포트 만들기",
+      "6. 딸기를 다양한 크기로 잘라 냄비에 넣고 설탕, 레몬즙을 넣고 중약불에서 3~4분 정도 끓여 주세요.",
+      "7. 옥수수전분과 물을 섞은 전분물을 붓고 30~1분 정도 더 끓여 주세요.",
+      "8. 완전히 식힌 다음 푸딩 위에 올려 냉장고에서 3~4시간 정도 굳히고 생딸기를 올려 주세요.",
+      "",
+      "🧁보관방법 Storage",
+      "",
+      "완성한 딸기 밀크 푸딩은 밀폐하거나 랩을 씌워 냉장 보관해 주세요.",
+      "냉장 보관 시 2일 이내에 먹는 것이 가장 맛있어요.",
+      "생딸기와 콩포트가 올라간 디저트라 실온 보관은 추천하지 않아요.",
+      "Store the strawberry milk pudding covered in the refrigerator.",
+      "It tastes best within 2 days.",
+    ].join("\n"));
+
+    expect(draft.ingredients.map((ingredient) => [
+      ingredient.componentLabel,
+      ingredient.name,
+      ingredient.amount,
+      ingredient.unit,
+    ])).toEqual([
+      ["딸기 우유 푸딩", "생딸기", 270, "g"],
+      ["딸기 우유 푸딩", "우유", 540, "g"],
+      ["딸기 우유 푸딩", "설탕", 75, "g"],
+      ["딸기 우유 푸딩", "소금", 1, "g"],
+      ["딸기 우유 푸딩", "옥수수전분", 60, "g"],
+      ["딸기 우유 푸딩", "무염버터", 15, "g"],
+      ["딸기 우유 푸딩", "바닐라 익스트랙", 4, "g"],
+      ["딸기 콩포트", "생딸기", 230, "g"],
+      ["딸기 콩포트", "설탕", 45, "g"],
+      ["딸기 콩포트", "레몬즙", 8, "g"],
+      ["딸기 콩포트", "옥수수전분", 3, "g"],
+      ["딸기 콩포트", "물", 10, "g"],
+    ]);
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).not.toEqual(
+      expect.arrayContaining(["900ml 용기", "컵 2개 분량", "딸기 우유 푸딩", "딸기 콩포트", "Makes"]),
+    );
+    expect(draft.steps).toHaveLength(8);
+    expect(draft.steps.join("\n")).not.toMatch(/보관|2일|Store|refrigerator|Serve/u);
+    expect(draft.stepComponentLabels).toEqual([
+      "딸기 우유 푸딩",
+      "딸기 우유 푸딩",
+      "딸기 우유 푸딩",
+      "딸기 우유 푸딩",
+      "딸기 우유 푸딩",
+      "딸기 콩포트",
+      "딸기 콩포트",
+      "딸기 콩포트",
+    ]);
+  });
+
+  it("does not treat storage guidance variants as cooking steps", () => {
+    const draft = parseDraft([
+      "재료",
+      "두부 1모",
+      "간장 2큰술",
+      "",
+      "만드는 법",
+      "1. 두부를 먹기 좋게 썰어요.",
+      "2. 간장을 넣고 조려요.",
+      "",
+      "보관 및 해동 방법 Storage Tips",
+      "밀폐 용기에 담아 냉장 보관해 주세요.",
+      "냉장 보관 시 2일 이내에 먹는 것이 가장 맛있어요.",
+      "실온 보관은 추천하지 않아요.",
+      "Store covered in the refrigerator.",
+      "It tastes best within 2 days.",
+      "Serve it chilled straight from the refrigerator.",
+    ].join("\n"));
+
+    expect(draft.steps).toEqual([
+      "두부를 먹기 좋게 썰어요.",
+      "간장을 넣고 조려요.",
+    ]);
+  });
+
+  it("drops storage guidance even when it appears without a separate heading", () => {
+    const draft = parseDraft([
+      "재료",
+      "우유 500ml",
+      "설탕 50g",
+      "",
+      "만드는 법",
+      "1. 우유와 설탕을 넣고 끓여 주세요.",
+      "2. 식힌 다음 컵에 담아 주세요.",
+      "냉장 보관 시 2일 이내에 먹는 것이 가장 맛있어요.",
+      "실온 보관은 추천하지 않아요.",
+    ].join("\n"));
+
+    expect(draft.steps).toEqual([
+      "우유와 설탕을 넣고 끓여 주세요.",
+      "식힌 다음 컵에 담아 주세요.",
+    ]);
+  });
+
   it("normalizes author comment ingredient shorthand from real app-route smoke", () => {
     const draft = parseDraft([
       "재료",
