@@ -367,6 +367,10 @@ function isNoiseText(text: string) {
     return true;
   }
 
+  if (isStorageGuidanceText(normalized)) {
+    return true;
+  }
+
   if (
     normalized.includes("답장이")
     || normalized.includes("답변이")
@@ -439,8 +443,37 @@ function isMeasurementGuideText(normalized: string) {
     || /^[0-9]+스푼\s*=/iu.test(normalized)
     || compact.includes("1스푼=15ml")
     || compact.includes("1컵=200ml")
+    || isContainerYieldGuideText(normalized)
     || /^(?:틀|몰드|팬|용기)\s*(?:사이즈|크기)\s*[:：]/u.test(normalized)
     || /^(?:mold|pan|tin)\s*size\s*[:：]/iu.test(normalized)
+  );
+}
+
+function isContainerYieldGuideText(normalized: string) {
+  if (/(?:재료|ingredients?|만드는\s*(?:법|과정|방법)|steps?|directions?)/iu.test(normalized)) {
+    return false;
+  }
+
+  return (
+    /분량/u.test(normalized)
+    && /(?:용기|컨테이너|컵|틀|container|containers|cup|cups)/iu.test(normalized)
+    && AMOUNT_SIGNAL_RE.test(normalized)
+  ) || (
+    /^(?:makes?|yield|serves?)\b/iu.test(normalized)
+    && /(?:container|containers|cup|cups|servings?)/iu.test(normalized)
+  );
+}
+
+function isStorageGuidanceText(normalized: string) {
+  if (/(?:재료|ingredients?|만드는\s*(?:법|과정|방법)|steps?|directions?|method|recipe)/iu.test(normalized)) {
+    return false;
+  }
+
+  return (
+    /보관/u.test(normalized)
+    || /(?:먹는\s*것이\s*가장\s*맛있|드시면\s*가장\s*맛있|추천하지\s*않)/u.test(normalized)
+  ) || (
+    /(?:\bstorage\b|\bstorage\s+tips\b|\bstore\b|\bstored\b|refrigerator|freezer|room\s+temperature|best\s+within|serve\s+it\s+chilled)/iu.test(normalized)
   );
 }
 
@@ -476,6 +509,8 @@ function shouldResetSectionOnNoise(text: string) {
     || normalized.includes("자막에 재료")
     || normalized.includes("멤버십")
     || normalized.includes("무단 도용")
+    || isContainerYieldGuideText(normalized)
+    || isStorageGuidanceText(normalized)
   );
 }
 
@@ -492,7 +527,8 @@ function isSectionStopperHeading(text: string) {
     (/추천/u.test(lower) && /분/u.test(lower))
     || /^(?:사용\s*할|사용할)\s*요리$/u.test(lower)
     || /^(?:인스타그램|instagram|contact|e-mail|email|블로그|blog)$/iu.test(lower)
-    || /^보관\s*(?:법|방법|팁|tip)?$/u.test(lower)
+    || /^(?:보관\s*(?:법|방법|팁|tip)?|보관방법|보관\s*및\s*해동\s*방법)(?:\s*(?:storage|storage\s*tips|보관))?$/iu.test(lower)
+    || /^storage(?:\s+tips?)?$/iu.test(lower)
     || /^주의\s*사항?$/u.test(lower)
     || /^(?:사용\s*(?:한\s*)?)?(?:제품|도구|기구|장비|그릇|용품)\s*(?:정보|소개)?$/u.test(lower)
     || /^촬영\s*(?:장비|기기|도구)?$/u.test(lower)
@@ -531,6 +567,7 @@ function getIngredientHeadingComponent(text: string) {
 
   if (
     /^(?:기본\s*)?(?:재료|준비\s*재료|재료\s*준비|준비물|ingredients?)\s*(?:\([^)]*\))?\s*$/u.test(normalized)
+    || /^(?:(?:재료|준비\s*재료|재료\s*준비|준비물)\s+ingredients?|ingredients?\s+(?:재료|준비\s*재료|재료\s*준비|준비물))$/iu.test(normalized)
     || /^(?:양념\s*및\s*)?(?:재료|양념\s*재료|양념장\s*재료)$/u.test(headingCore)
     || /(?:재료\s*준비|준비\s*재료)$/u.test(headingCore)
   ) {
@@ -619,7 +656,7 @@ function isShortIngredientBlockHeadingFromLookahead(line: SourceLine, lookahead:
   const text = line.text;
   const raw = line.raw.trim();
 
-  if (!/^[[(【「『《]/u.test(raw)) {
+  if (!/^[[(【「『《|｜]/u.test(raw)) {
     return false;
   }
 
