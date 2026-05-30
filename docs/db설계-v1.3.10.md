@@ -290,7 +290,7 @@ WHERE deleted_atISNULLAND emailISNOTNULL;
 | description | text | nullable | 설명 |
 | thumbnail_url | text | nullable | 썸네일. YouTube: 세션 thumbnail_url 서버 복사. Manual: 업로드 API가 반환한 public Storage URL. 만료 signed URL 금지 `v1.3.10 계약` |
 | base_servings | int | NOT NULL, DEFAULT 2 | 기본 인분 |
-| tags | text[] | NOT NULL, DEFAULT '{}' | 서버 태그 생성기 결과. 최대 6개. 생성 불가 시 `[]` `v1.3.10 계약` |
+| tags | text[] | NOT NULL, DEFAULT '{}' | 서버 태그 생성기 결과. 최대 3개. 생성 불가 시 `[]` `v1.3.10 계약` |
 | source_type | enum | NOT NULL | `system` / `youtube` / `manual` |
 | created_by | uuid | FK → users, nullable, ON DELETE SET NULL | 직접/유튜브 등록자. 회원 탈퇴 시 레시피는 남고 작성자 정보만 비워질 수 있음 |
 | view_count | int | NOT NULL, DEFAULT 0 | 조회수 |

@@ -24,8 +24,8 @@
 ## Tag Generator
 - [x] YouTube/직접 등록은 같은 결정론 tag generator를 사용한다 <!-- omo:id=accept-shared-tag-generator;stage=2;scope=shared;review=3,6 -->
 - [x] tag generator는 제목, 재료, step, 조리방법 label을 입력으로 사용한다 <!-- omo:id=accept-tag-inputs-common;stage=2;scope=shared;review=3,6 -->
-- [x] YouTube tag generator는 provider `snippet.tags`를 필터링해 참고한다 <!-- omo:id=accept-tag-inputs-youtube;stage=2;scope=backend;review=3,6 -->
-- [x] 태그는 정규화되고 중복 제거되며 최대 6개로 제한된다 <!-- omo:id=accept-tags-normalized-capped;stage=2;scope=shared;review=3,6 -->
+- [x] YouTube tag generator는 description hashtag와 provider `snippet.tags`를 필터링해 참고한다 <!-- omo:id=accept-tag-inputs-youtube;stage=2;scope=backend;review=3,6 -->
+- [x] 태그는 정규화되고 중복 제거되며 최대 3개로 제한된다 <!-- omo:id=accept-tags-normalized-capped;stage=2;scope=shared;review=3,6 -->
 - [x] 태그를 생성할 수 없으면 `recipes.tags`는 `[]`이다 <!-- omo:id=accept-tags-empty-fallback;stage=2;scope=shared;review=3,6 -->
 - [x] 사용자는 태그를 수동 입력/수정/삭제할 수 없다 <!-- omo:id=accept-tags-readonly;stage=4;scope=frontend;review=5,6 -->
 

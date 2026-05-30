@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  extractHashTagsFromText,
   generateRecipeTags,
   parseRecipeImagePublicUrl,
 } from "@/lib/server/recipe-media";
@@ -15,10 +16,10 @@ describe("recipe media and tag helpers", () => {
       providerTags: ["#김치찌개", "레시피", "vlog", "김치"],
     });
 
-    expect(tags).toEqual(["김치찌개", "김치", "소금", "볶기", "끓이기"]);
+    expect(tags).toEqual(["김치찌개", "김치", "소금"]);
   });
 
-  it("caps generated tags at six values", () => {
+  it("caps generated tags at three values", () => {
     const tags = generateRecipeTags({
       title: "집밥 반찬",
       ingredientNames: ["두부", "대파", "마늘", "고추장", "참기름", "깨", "간장"],
@@ -27,8 +28,49 @@ describe("recipe media and tag helpers", () => {
       providerTags: ["밑반찬"],
     });
 
-    expect(tags).toHaveLength(6);
-    expect(tags).toEqual(["집밥 반찬", "두부", "대파", "마늘", "고추장", "참기름"]);
+    expect(tags).toHaveLength(3);
+    expect(tags).toEqual(["밑반찬", "집밥 반찬", "두부"]);
+  });
+
+  it("prioritizes Korean provider tags before title and low-signal ingredient fallback", () => {
+    const tags = generateRecipeTags({
+      title: "오븐도 젤라틴도 없이 만드는 부드러운 딸기 우유 푸딩 디저트예요",
+      ingredientNames: ["생딸기", "우유", "설탕", "소금", "옥수수전분", "무염버터", "레몬즙"],
+      stepTexts: ["딸기와 우유를 갈고 냉장실에서 굳혀요."],
+      cookingMethodLabels: ["끓이기"],
+      providerTags: [
+        "#StrawberryPudding",
+        "#딸기푸딩",
+        "#BakingASMR",
+        "#NoBakeDessert",
+        "#노오븐디저트",
+        "#딸기디저트",
+        "#MilkPudding",
+        "#CookingTree",
+      ],
+    });
+
+    expect(tags).toEqual(["딸기푸딩", "노오븐디저트", "딸기디저트"]);
+    expect(tags).not.toContain("딸기 우유 푸딩");
+    expect(tags).not.toContain("소금");
+  });
+
+  it("falls back to the title when fewer than three Korean provider tags exist", () => {
+    const tags = generateRecipeTags({
+      title: "오븐도 젤라틴도 없이 만드는 부드러운 딸기 우유 푸딩 디저트예요",
+      ingredientNames: ["생딸기", "우유", "설탕"],
+      stepTexts: [],
+      cookingMethodLabels: [],
+      providerTags: ["#StrawberryPudding", "#딸기푸딩", "#BakingASMR"],
+    });
+
+    expect(tags).toEqual(["딸기푸딩", "딸기 우유 푸딩", "생딸기"]);
+  });
+
+  it("extracts hash tags from description text for provider tag candidates", () => {
+    expect(extractHashTagsFromText(
+      "#StrawberryPudding #딸기푸딩\n#NoBakeDessert #노오븐디저트 #BakingASMR",
+    )).toEqual(["StrawberryPudding", "딸기푸딩", "NoBakeDessert", "노오븐디저트", "BakingASMR"]);
   });
 
   it("returns an empty tag list when no useful inputs exist", () => {

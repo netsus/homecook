@@ -2051,6 +2051,7 @@ describe("20 youtube real import backend", () => {
       success: true,
       data: {
         title: "딸기 치즈 타르트",
+        tags: ["베이킹", "타르트", "딸기 치즈 타르트"],
         blocking_issues: [],
         draft_warnings: expect.arrayContaining([
           "원본 만들기 번호가 1, 2, 9, 10처럼 비연속이라 중간 항목 누락 가능성이 있어요.",
@@ -3942,7 +3943,7 @@ describe("20 youtube real import backend", () => {
       success: true,
       data: {
         thumbnail_url: "https://img.youtube.com/vi/needsreview123/hqdefault.jpg",
-        tags: expect.arrayContaining(["백종원 김치찌개 후보 확인 필요", "김치", "소금"]),
+        tags: ["김치찌개", "백종원 김치찌개 후보 확인 필요", "김치"],
         blocking_issues: ["ingredients[1].ingredient_id"],
         ingredients: [
           { standard_name: "김치", resolution_status: "resolved" },
@@ -3967,7 +3968,7 @@ describe("20 youtube real import backend", () => {
       thumbnail_url: "https://img.youtube.com/vi/needsreview123/hqdefault.jpg",
       draft_json: expect.objectContaining({
         thumbnail_url: "https://img.youtube.com/vi/needsreview123/hqdefault.jpg",
-        tags: expect.arrayContaining(["백종원 김치찌개 후보 확인 필요", "김치", "소금"]),
+        tags: ["김치찌개", "백종원 김치찌개 후보 확인 필요", "김치"],
       }),
     }));
   });

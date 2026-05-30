@@ -25,7 +25,7 @@ YouTube에서 가져온 레시피와 사용자가 직접 등록한 레시피에 
   - 미사용 업로드 cleanup 경로: Stage 4 프론트는 업로드 API 응답의 `storage_path`를 보관하고, 저장 전 사용자가 이미지를 제거/교체하면 같은 사용자 Storage 객체 삭제를 시도한다. 삭제 실패 또는 저장 중단으로 남은 orphan object는 Stage 6 real DB smoke cleanup에서 제거하며, 반복 발생 시 후속 ops cleanup 자동화로 분리한다.
 - DB 영향:
   - `recipes.thumbnail_url` — 기존 nullable 컬럼 사용
-  - `recipes.tags` — 기존 text[] 컬럼 사용, 최대 6개
+  - `recipes.tags` — 기존 text[] 컬럼 사용, 최대 3개
   - Supabase Storage `recipe-images` bucket/policy 추가
   - `youtube_extraction_sessions.draft_json` 또는 session metadata에 thumbnail/tags preview 저장
 - Schema Change:
@@ -69,15 +69,15 @@ YouTube에서 가져온 레시피와 사용자가 직접 등록한 레시피에 
   - `tags`는 body로 받지 않고 서버가 생성
 - `POST /api/v1/recipes/youtube/extract`
   - provider thumbnail을 session에 저장하고 preview로 반환
-  - tag generator preview를 최대 6개 반환
+  - tag generator preview를 최대 3개 반환
 - `POST /api/v1/recipes/youtube/register`
   - client body의 thumbnail/tags는 무시가 아니라 계약상 비허용
   - `recipes.thumbnail_url`은 session thumbnail에서만 복사
   - `recipes.tags`는 session/server tag generator 결과만 저장
 - 태그 생성기:
-  - 입력: title, ingredient standard names, step text, cooking method labels, YouTube provider tags
+  - 입력: title, ingredient standard names, step text, cooking method labels, YouTube provider tags, YouTube description hashtags
   - normalize: trim, lower/canonical where applicable, duplicate removal, empty/promo/channel/hash-only removal
-  - output: `string[]`, max 6, generate 불가 시 `[]`
+  - output: `string[]`, max 3, generate 불가 시 `[]`
 - 권한 / 소유자 검증 / 상태 전이 / 멱등성:
   - 기존 YouTube session ownership/expiry/consumed guard 유지
   - upload reference는 current user scope로 검증
