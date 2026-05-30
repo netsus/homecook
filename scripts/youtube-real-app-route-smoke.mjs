@@ -22,6 +22,7 @@ const RUN_DATE = new Intl.DateTimeFormat("en-CA", {
   month: "2-digit",
   day: "2-digit",
 }).format(new Date());
+const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,20}$/u;
 
 // Balanced 30 URL set from the slice 29 provider-level closeout smoke.
 const SAMPLE_URLS = [
@@ -245,6 +246,7 @@ function parseArgs(argv) {
     limit: 7,
     noServer: false,
     port: null,
+    urls: [],
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -272,6 +274,12 @@ function parseArgs(argv) {
 
     if (token === "--artifact-dir" && next) {
       args.artifactDir = next;
+      index += 1;
+      continue;
+    }
+
+    if (token === "--url" && next) {
+      args.urls.push(next);
       index += 1;
       continue;
     }
@@ -309,12 +317,61 @@ function printHelp() {
       "Usage:",
       "  node scripts/youtube-real-app-route-smoke.mjs",
       "  node scripts/youtube-real-app-route-smoke.mjs --limit 9",
+      "  node scripts/youtube-real-app-route-smoke.mjs --url https://www.youtube.com/watch?v=lTCplQtiGw8",
       "  node scripts/youtube-real-app-route-smoke.mjs --base-url http://127.0.0.1:3200 --no-server",
       "",
       "This smoke uses real Supabase Auth, real app routes, real YouTube provider calls,",
       "DB verification through service role, and cleanup of generated recipes/sessions.",
     ].join("\n") + "\n",
   );
+}
+
+function normalizeYoutubeUrlForSmoke(value) {
+  const trimmed = value.trim();
+  const url = new URL(trimmed);
+  const host = url.hostname.replace(/^www\./u, "");
+  let videoId = null;
+
+  if (host === "youtube.com" || host === "m.youtube.com" || host === "music.youtube.com") {
+    if (url.pathname === "/watch") {
+      videoId = url.searchParams.get("v");
+    } else if (url.pathname.startsWith("/shorts/") || url.pathname.startsWith("/embed/")) {
+      videoId = url.pathname.split("/").filter(Boolean)[1] ?? null;
+    }
+  } else if (host === "youtu.be") {
+    videoId = url.pathname.split("/").filter(Boolean)[0] ?? null;
+  }
+
+  if (!videoId || !YOUTUBE_VIDEO_ID_PATTERN.test(videoId)) {
+    throw new Error(`Invalid YouTube URL for --url: ${value}`);
+  }
+
+  return {
+    videoId,
+    url: `https://www.youtube.com/watch?v=${videoId}`,
+  };
+}
+
+export function buildCustomSample(value, index = 1) {
+  const normalized = normalizeYoutubeUrlForSmoke(value);
+
+  return {
+    id: `custom-${index}-${normalized.videoId}`,
+    bucket: "custom",
+    videoId: normalized.videoId,
+    url: normalized.url,
+    note: "custom smoke input",
+  };
+}
+
+export function selectSamples(args) {
+  const urls = Array.isArray(args.urls) ? args.urls : [];
+
+  if (urls.length > 0) {
+    return urls.map((url, index) => buildCustomSample(url, index + 1));
+  }
+
+  return SAMPLE_URLS.slice(0, args.limit);
 }
 
 async function readEnvFile(filePath) {
@@ -786,8 +843,11 @@ async function verifyDbState(adminClient, { extractionId, recipeId, sample, star
     recipeSourceFound: false,
     sessionFound: false,
     sessionMethods: [],
+    sessionRawSourceHasCaptionTranscript: false,
     sessionRecipeId: null,
+    sessionSourceProviders: [],
     sessionStatus: null,
+    sessionTranscriptProvider: null,
     stepCount: 0,
   };
 
@@ -811,7 +871,7 @@ async function verifyDbState(adminClient, { extractionId, recipeId, sample, star
   if (resolvedExtractionId) {
     const sessionResult = await adminClient
       .from("youtube_extraction_sessions")
-      .select("id, status, recipe_id, extraction_methods")
+      .select("id, status, recipe_id, extraction_methods, source_providers, extraction_meta_json, raw_source_text")
       .eq("id", resolvedExtractionId)
       .maybeSingle();
 
@@ -822,6 +882,11 @@ async function verifyDbState(adminClient, { extractionId, recipeId, sample, star
       db.sessionStatus = sessionResult.data.status;
       db.sessionRecipeId = sessionResult.data.recipe_id;
       db.sessionMethods = sessionResult.data.extraction_methods ?? [];
+      db.sessionSourceProviders = sessionResult.data.source_providers ?? [];
+      db.sessionTranscriptProvider =
+        sessionResult.data.extraction_meta_json?.transcript_provider ?? null;
+      db.sessionRawSourceHasCaptionTranscript =
+        sessionResult.data.raw_source_text?.includes("--- caption transcript ---") ?? false;
     }
   }
 
@@ -1138,7 +1203,7 @@ async function main() {
 
   const auth = await createAuthCookies({ env, baseUrl });
   const browser = await chromium.launch({ headless: true });
-  const selectedSamples = SAMPLE_URLS.slice(0, args.limit);
+  const selectedSamples = selectSamples(args);
   const results = [];
 
   try {

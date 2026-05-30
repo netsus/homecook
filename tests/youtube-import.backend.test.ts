@@ -240,12 +240,14 @@ function createYoutubeTranscriptCacheTable({
 
 function createYoutubeTranscriptFetchEventsTable({
   rows = [],
+  selectResult,
   insertResult = { data: null, error: null },
 }: {
   rows?: YoutubeTranscriptFetchEventRow[];
+  selectResult?: QueryResult<YoutubeTranscriptFetchEventRow[]>;
   insertResult?: QueryResult<null>;
 } = {}) {
-  const selectQuery = createArrayQuery({ data: rows, error: null });
+  const selectQuery = createArrayQuery(selectResult ?? { data: rows, error: null });
 
   return {
     __selectQuery: selectQuery,
@@ -324,6 +326,12 @@ const saltIngredientId = "550e8400-e29b-41d4-a716-446655440015";
 const waterIngredientId = "550e8400-e29b-41d4-a716-446655440016";
 const riceIngredientId = "550e8400-e29b-41d4-a716-446655440017";
 const eggIngredientId = "550e8400-e29b-41d4-a716-446655440018";
+const carrotIngredientId = "550e8400-e29b-41d4-a716-446655440019";
+const onionIngredientId = "550e8400-e29b-41d4-a716-446655440020";
+const garlicChiveIngredientId = "550e8400-e29b-41d4-a716-446655440021";
+const shrimpIngredientId = "550e8400-e29b-41d4-a716-446655440022";
+const starchIngredientId = "550e8400-e29b-41d4-a716-446655440023";
+const pepperIngredientId = "550e8400-e29b-41d4-a716-446655440024";
 const prepMethodId = "550e8400-e29b-41d4-a716-446655440218";
 const mixMethodId = "550e8400-e29b-41d4-a716-446655440217";
 const grillMethodId = "550e8400-e29b-41d4-a716-446655440215";
@@ -773,11 +781,13 @@ function createTranscriptFallbackExtractDbClient({
   cookingMethodLookupRows = [],
   transcriptCacheRows = [],
   transcriptFetchEventRows = [],
+  transcriptFetchEventSelectResult,
 }: {
   ingredientLookupRows?: Array<{ id: string; standard_name: string }>;
   cookingMethodLookupRows?: NonNullable<Parameters<typeof createCookingMethodsTable>[0]["lookupRows"]>;
   transcriptCacheRows?: YoutubeTranscriptCacheRow[];
   transcriptFetchEventRows?: YoutubeTranscriptFetchEventRow[];
+  transcriptFetchEventSelectResult?: QueryResult<YoutubeTranscriptFetchEventRow[]>;
 } = {}) {
   const ingredientsTable = createLookupTable({
     data: ingredientLookupRows,
@@ -807,6 +817,7 @@ function createTranscriptFallbackExtractDbClient({
   });
   const transcriptFetchEventsTable = createYoutubeTranscriptFetchEventsTable({
     rows: transcriptFetchEventRows,
+    selectResult: transcriptFetchEventSelectResult,
   });
   const dbClient = {
     from: vi.fn((table: string) => {
@@ -2486,7 +2497,9 @@ describe("20 youtube real import backend", () => {
         { segs: [{ utf8: "2. 냄비에 넣고 끓여주세요.\n" }] },
       ],
     };
-    const fetchMock = vi.fn(async (url: string) => {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      void init;
+
       if (url.includes("/videos?")) {
         return new Response(JSON.stringify({
           items: [
@@ -2670,7 +2683,9 @@ describe("20 youtube real import backend", () => {
         },
       ],
     };
-    const fetchMock = vi.fn(async (url: string) => {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      void init;
+
       if (url.includes("/videos?")) {
         return new Response(JSON.stringify({
           items: [
@@ -2950,6 +2965,162 @@ describe("20 youtube real import backend", () => {
         title: "계란국",
       }),
     ]);
+  });
+
+  it("POST /api/v1/recipes/youtube/extract returns multi-recipe candidates from conversational caption transcript", async () => {
+    mockAuth();
+
+    const transcriptLines = [
+      "주방을 정리하고 남편도시락과 아침을 준비해요.",
+      "쌀은 잠시 불려놓아요.",
+      "당근, 양파, 부추.",
+      "다진 새우, 전분, 소금, 후추, 채소, 물 조금.",
+      "미니 파프리카에 부침가루를 묻히고 속을 꽉 채워요.",
+      "냉동 채소는 씻은 후 오일에 볶아요.",
+      "굴소스 1T, 어간장 1T.",
+      "소금, 후추.",
+      "한번 씻은 김치를 썰어서 준비해요.",
+      "어간장, 참기름, 통깨.",
+      "아침에 먹기 좋은 순두부찌개 만들어요.",
+      "꽃게액젓, 참치액만 넣어도 맛있어요.",
+      "계란 넣고 바로 불을 끄면 부드러운 계란을 먹을 수 있어요.",
+      "쪽파 넣고 부족한 간은 소금을 넣어요.",
+      "속편한 배추말이전골 만들어요.",
+      "배추는 3분만 쪄서 준비해요.",
+      "목살, 부추, 당근.",
+    ];
+    const transcriptStartsMs = [
+      45_000,
+      68_000,
+      108_000,
+      129_000,
+      156_000,
+      238_000,
+      250_000,
+      272_000,
+      348_000,
+      368_000,
+      485_000,
+      499_000,
+      509_000,
+      518_000,
+      880_000,
+      890_000,
+      926_000,
+    ];
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: transcriptLines.join("\n"),
+        transcriptSegments: transcriptLines.map((text, lineIndex) => ({
+          source: "caption" as const,
+          lineIndex,
+          text,
+          startMs: transcriptStartsMs[lineIndex],
+          durationMs: 4_000,
+          language: "ko",
+          trackKind: "auto",
+        })),
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+    const { dbClient } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: carrotIngredientId, standard_name: "당근" },
+        { id: onionIngredientId, standard_name: "양파" },
+        { id: garlicChiveIngredientId, standard_name: "부추" },
+        { id: shrimpIngredientId, standard_name: "새우" },
+        { id: starchIngredientId, standard_name: "전분가루" },
+        { id: saltIngredientId, standard_name: "소금" },
+        { id: pepperIngredientId, standard_name: "후추" },
+        { id: waterIngredientId, standard_name: "물" },
+        { id: eggIngredientId, standard_name: "계란" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: mixMethodId,
+          code: "stir_fry",
+          label: "볶기",
+          color_key: "orange",
+          is_system: true,
+        },
+        {
+          id: grillMethodId,
+          code: "grill",
+          label: "굽기",
+          color_key: "red",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440220",
+          code: "boil",
+          label: "끓이기",
+          color_key: "blue",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440221",
+          code: "steam",
+          label: "찌기",
+          color_key: "green",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440222",
+          code: "mix",
+          label: "섞기",
+          color_key: "yellow",
+          is_system: true,
+        },
+      ],
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      postYoutubeExtract("https://www.youtube.com/watch?v=transcriptconvo1"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body.data).toMatchObject({
+      extraction_methods: ["caption"],
+      multi_recipe_status: "multiple",
+      blocking_issues: ["MULTI_CANDIDATE_REVIEW_REQUIRED"],
+    });
+
+    const candidates = body.data.recipe_candidates as Array<{
+      title: string;
+      ingredients: Array<{ display_text: string }>;
+      steps: Array<{ instruction: string }>;
+    }>;
+    expect(candidates.length).toBeGreaterThanOrEqual(4);
+    expect(candidates.map((candidate) => candidate.title)).toEqual(expect.arrayContaining([
+      "미니 파프리카",
+      "냉동 채소",
+      "김치",
+      "순두부찌개",
+      "배추말이전골",
+    ]));
+    const miniPaprika = candidates.find((candidate) => candidate.title === "미니 파프리카");
+    expect(miniPaprika?.ingredients.map((ingredient) => ingredient.display_text)).toEqual(
+      expect.arrayContaining(["당근 약간", "양파 약간", "부추 약간", "새우 약간"]),
+    );
+    expect(miniPaprika?.steps.map((step) => step.instruction)).toContain(
+      "미니 파프리카에 부침가루를 묻히고 속을 꽉 채워요",
+    );
+    const hotPot = candidates.find((candidate) => candidate.title === "배추말이전골");
+    expect(hotPot?.ingredients.map((ingredient) => ingredient.display_text)).toEqual(
+      expect.arrayContaining(["목살 약간", "부추 약간", "당근 약간"]),
+    );
   });
 
   it("POST /api/v1/recipes/youtube/candidate-drafts promotes one multi-recipe candidate into a child draft", async () => {
@@ -4023,12 +4194,132 @@ describe("20 youtube real import backend", () => {
     vi.stubEnv("YOUTUBE_API_KEY", "test-key");
     vi.stubEnv("YOUTUBE_TRANSCRIPT_PAID_PROVIDER", "apify");
     vi.stubEnv("APIFY_TOKEN", "secret-apify-token");
-    vi.stubEnv("YOUTUBE_TRANSCRIPT_APIFY_ACTOR_ID", "user~youtube-transcript");
+    vi.stubEnv("YOUTUBE_TRANSCRIPT_APIFY_ACTOR_ID", "tubelens~youtube-video-scraper");
     vi.stubEnv("YOUTUBE_TRANSCRIPT_PAID_DAILY_LIMIT", "50");
     vi.stubEnv("YOUTUBE_TRANSCRIPT_PAID_USER_DAILY_LIMIT", "5");
 
     const { dbClient, sessionsTable, transcriptCacheTable, transcriptFetchEventsTable } =
       createTranscriptFallbackExtractDbClient();
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      void init;
+
+      if (url.includes("/videos?")) {
+        return new Response(JSON.stringify({
+          items: [{
+            snippet: {
+              title: "김치찌개 자막 보충 레시피",
+              channelTitle: "집밥 채널",
+              channelId: "channel-transcript123",
+              description: "김치찌개 레시피\n재료\n김치 200g\n소금 약간",
+              tags: ["recipe", "김치찌개", "레시피"],
+              categoryId: "26",
+            },
+            contentDetails: {
+              duration: "PT8M",
+              caption: "true",
+            },
+          }],
+        }), { status: 200 });
+      }
+
+      if (url.includes("/commentThreads?")) {
+        return new Response(JSON.stringify({ items: [] }), { status: 200 });
+      }
+
+      if (url.includes("/watch?")) {
+        return new Response("ytInitialPlayerResponse = {};", { status: 200 });
+      }
+
+      if (url.includes("api.apify.com")) {
+        return new Response(JSON.stringify([{
+          transcript: {
+            language: "Korean",
+            languageCode: "ko",
+            text: "만드는 법 1. 김치를 썰어주세요.",
+            segments: [
+              { text: "만드는 법", startMs: 0, durationMs: 1000 },
+              { text: "1. 김치를 썰어주세요.", startMs: 1000, durationMs: 1000 },
+            ],
+          },
+        }]), { status: 201 });
+      }
+
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { response, body } = await postYoutubeExtract(transcriptFallbackUrl);
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      data: {
+        extraction_methods: ["description", "caption"],
+        steps: [{ instruction: "김치를 썰어주세요." }],
+      },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("https://api.apify.com/v2/acts/tubelens~youtube-video-scraper/run-sync-get-dataset-items"),
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining(transcriptFallbackUrl),
+      }),
+    );
+    const apifyCall = fetchMock.mock.calls.find(([url]) => String(url).includes("api.apify.com"));
+    const apifyBody = JSON.parse(String((apifyCall?.[1] as RequestInit | undefined)?.body ?? "{}")) as {
+      includeChannel?: boolean;
+      includeComments?: boolean;
+      includeTranscript?: boolean;
+      maxCommentsPerVideo?: number;
+      transcriptLanguage?: string;
+    };
+    expect(apifyBody).toMatchObject({
+      includeChannel: false,
+      includeComments: false,
+      includeTranscript: true,
+      maxCommentsPerVideo: 0,
+      transcriptLanguage: "ko",
+    });
+    expect(transcriptCacheTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      language: "ko",
+      source_provider: "external_transcript_api",
+      transcript_text: expect.stringContaining("김치를 썰어주세요."),
+    }));
+    expect(transcriptFetchEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "external_transcript_api",
+      cache_hit: false,
+      status: "success",
+    }));
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      raw_source_text: string;
+      extraction_meta_json: Record<string, unknown>;
+    };
+    const eventPayloads = transcriptFetchEventsTable.insert.mock.calls.map((call) => call[0]);
+    expect(insertedSession.raw_source_text).not.toContain("secret-apify-token");
+    expect(JSON.stringify(insertedSession.extraction_meta_json)).not.toContain("secret-apify-token");
+    expect(JSON.stringify(eventPayloads)).not.toContain("secret-apify-token");
+  });
+
+  it("POST /api/v1/recipes/youtube/extract can use Apify in local dev before transcript event tables are migrated", async () => {
+    mockAuth();
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("HOMECOOK_ENABLE_YOUTUBE_IMPORT", "1");
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+    vi.stubEnv("YOUTUBE_TRANSCRIPT_PAID_PROVIDER", "apify");
+    vi.stubEnv("APIFY_TOKEN", "secret-apify-token");
+    vi.stubEnv("YOUTUBE_TRANSCRIPT_APIFY_ACTOR_ID", "tubelens~youtube-video-scraper");
+
+    const { dbClient } = createTranscriptFallbackExtractDbClient({
+      transcriptFetchEventSelectResult: {
+        data: [],
+        error: {
+          code: "PGRST205",
+          message: "Could not find the table 'public.youtube_transcript_fetch_events' in the schema cache",
+        },
+      },
+    });
     const fetchMock = vi.fn(async (url: string) => {
       if (url.includes("/videos?")) {
         return new Response(JSON.stringify({
@@ -4059,11 +4350,15 @@ describe("20 youtube real import backend", () => {
 
       if (url.includes("api.apify.com")) {
         return new Response(JSON.stringify([{
-          transcript: [
-            { text: "만드는 법", start: 0, duration: 1 },
-            { text: "1. 김치를 썰어주세요.", start: 1, duration: 1 },
-          ],
-          language: "ko",
+          transcript: {
+            language: "Korean",
+            languageCode: "ko",
+            text: "만드는 법 1. 김치를 썰어주세요.",
+            segments: [
+              { text: "만드는 법", startMs: 0, durationMs: 1000 },
+              { text: "1. 김치를 썰어주세요.", startMs: 1000, durationMs: 1000 },
+            ],
+          },
         }]), { status: 201 });
       }
 
@@ -4083,30 +4378,9 @@ describe("20 youtube real import backend", () => {
       },
     });
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("https://api.apify.com/v2/acts/user~youtube-transcript/run-sync-get-dataset-items"),
-      expect.objectContaining({
-        method: "POST",
-        body: expect.stringContaining(transcriptFallbackUrl),
-      }),
+      expect.stringContaining("api.apify.com"),
+      expect.objectContaining({ method: "POST" }),
     );
-    expect(transcriptCacheTable.insert).toHaveBeenCalledWith(expect.objectContaining({
-      source_provider: "external_transcript_api",
-      transcript_text: expect.stringContaining("김치를 썰어주세요."),
-    }));
-    expect(transcriptFetchEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
-      provider: "external_transcript_api",
-      cache_hit: false,
-      status: "success",
-    }));
-
-    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
-      raw_source_text: string;
-      extraction_meta_json: Record<string, unknown>;
-    };
-    const eventPayloads = transcriptFetchEventsTable.insert.mock.calls.map((call) => call[0]);
-    expect(insertedSession.raw_source_text).not.toContain("secret-apify-token");
-    expect(JSON.stringify(insertedSession.extraction_meta_json)).not.toContain("secret-apify-token");
-    expect(JSON.stringify(eventPayloads)).not.toContain("secret-apify-token");
   });
 
   it("POST /api/v1/recipes/youtube/extract does not call paid transcript API when daily limits are exceeded", async () => {

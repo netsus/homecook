@@ -2861,6 +2861,23 @@ function getUtcDayStartIso() {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
 }
 
+function isMissingSupabaseRelationError(error: unknown) {
+  if (!isRecord(error)) {
+    return false;
+  }
+
+  const code = typeof error.code === "string" ? error.code : "";
+  const message = typeof error.message === "string" ? error.message : "";
+
+  return code === "PGRST205"
+    || code === "42P01"
+    || /could not find the table|relation .+ does not exist|schema cache/iu.test(message);
+}
+
+function canUsePaidTranscriptWithoutEventTable(error: unknown) {
+  return process.env.NODE_ENV !== "production" && isMissingSupabaseRelationError(error);
+}
+
 async function canUsePaidTranscriptProvider(
   dbClient: DbClient | null,
   userId: string,
@@ -2878,7 +2895,7 @@ async function canUsePaidTranscriptProvider(
       .gte("created_at", getUtcDayStartIso());
 
     if (result.error) {
-      return false;
+      return canUsePaidTranscriptWithoutEventTable(result.error);
     }
 
     const rows = result.data ?? [];
@@ -2886,8 +2903,8 @@ async function canUsePaidTranscriptProvider(
     const userCount = rows.filter((row) => row.user_id === userId).length;
 
     return totalCount < config.dailyLimit && userCount < config.userDailyLimit;
-  } catch {
-    return false;
+  } catch (error) {
+    return canUsePaidTranscriptWithoutEventTable(error);
   }
 }
 
@@ -2897,6 +2914,27 @@ function collectTextFromUnknownTranscript(
 ): YoutubeSourceSegment[] {
   if (typeof value === "string") {
     return buildTextSegments({ text: value, source: "transcript", language, trackKind: "unknown" });
+  }
+
+  if (isRecord(value)) {
+    const nestedLanguage = typeof value.languageCode === "string"
+      ? value.languageCode
+      : typeof value.language === "string"
+        ? value.language
+        : language;
+    const nestedSegments = collectTextFromUnknownTranscript(
+      value.segments ?? value.items ?? value.transcript ?? value.captions ?? value.subtitles,
+      nestedLanguage,
+    );
+
+    if (nestedSegments.length > 0) {
+      return nestedSegments;
+    }
+
+    return collectTextFromUnknownTranscript(
+      value.transcriptText ?? value.transcript_text ?? value.text ?? value.content,
+      nestedLanguage,
+    );
   }
 
   if (!Array.isArray(value)) {
@@ -2932,13 +2970,23 @@ function collectTextFromUnknownTranscript(
 
     const startSeconds = typeof item.start === "number" ? item.start : null;
     const durationSeconds = typeof item.duration === "number" ? item.duration : null;
+    const startMs = typeof item.startMs === "number"
+      ? Math.round(item.startMs)
+      : startSeconds === null
+        ? null
+        : Math.round(startSeconds * 1000);
+    const durationMs = typeof item.durationMs === "number"
+      ? Math.round(item.durationMs)
+      : durationSeconds === null
+        ? null
+        : Math.round(durationSeconds * 1000);
 
     return [{
       source: "transcript",
       lineIndex,
       text: textValue.trim(),
-      startMs: startSeconds === null ? null : Math.round(startSeconds * 1000),
-      durationMs: durationSeconds === null ? null : Math.round(durationSeconds * 1000),
+      startMs,
+      durationMs,
       language,
       trackKind: "unknown",
     }];
@@ -2957,13 +3005,21 @@ function parsePaidTranscriptPayload(payload: unknown): {
       continue;
     }
 
-    const language = typeof item.language === "string"
+    const directLanguage = typeof item.language === "string"
       ? item.language
       : typeof item.languageCode === "string"
         ? item.languageCode
         : null;
     const directText = item.transcriptText ?? item.transcript_text ?? item.text ?? item.content;
     const nestedTranscript = item.transcript ?? item.captions ?? item.subtitles ?? item.segments;
+    const nestedLanguage = isRecord(nestedTranscript)
+      ? typeof nestedTranscript.languageCode === "string"
+        ? nestedTranscript.languageCode
+        : typeof nestedTranscript.language === "string"
+          ? nestedTranscript.language
+          : null
+      : null;
+    const language = directLanguage ?? nestedLanguage;
     const segments = [
       ...collectTextFromUnknownTranscript(nestedTranscript, language),
       ...collectTextFromUnknownTranscript(directText, language),
@@ -2976,6 +3032,34 @@ function parsePaidTranscriptPayload(payload: unknown): {
   }
 
   return null;
+}
+
+function buildApifyTranscriptInput(
+  context: YoutubeTranscriptProviderContext,
+  config: NonNullable<ReturnType<typeof getPaidTranscriptConfig>>,
+) {
+  const baseInput = {
+    url: context.youtubeUrl,
+    videoUrl: context.youtubeUrl,
+    videoUrls: [context.youtubeUrl],
+    startUrls: [{ url: context.youtubeUrl }],
+    languages: PREFERRED_TRANSCRIPT_LANGUAGES,
+  };
+  const normalizedActorId = config.actorId.replace(/\//gu, "~").toLowerCase();
+
+  if (normalizedActorId === "tubelens~youtube-video-scraper") {
+    return {
+      ...baseInput,
+      includeMetadata: false,
+      includeTranscript: true,
+      transcriptLanguage: PREFERRED_TRANSCRIPT_LANGUAGES[0] ?? "ko",
+      includeComments: false,
+      includeChannel: false,
+      maxCommentsPerVideo: 0,
+    };
+  }
+
+  return baseInput;
 }
 
 async function fetchApifyTranscript(
@@ -2999,13 +3083,7 @@ async function fetchApifyTranscript(
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          url: context.youtubeUrl,
-          videoUrl: context.youtubeUrl,
-          videoUrls: [context.youtubeUrl],
-          startUrls: [{ url: context.youtubeUrl }],
-          languages: PREFERRED_TRANSCRIPT_LANGUAGES,
-        }),
+        body: JSON.stringify(buildApifyTranscriptInput(context, config)),
       },
       config.timeoutMs,
     );
