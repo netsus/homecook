@@ -78,11 +78,7 @@ function isMobileViewport(page: Page) {
 }
 
 function visibleSearchInput(page: Page) {
-  return page
-    .getByPlaceholder(
-      isMobileViewport(page) ? "김치볶음밥, 된장찌개…" : "레시피 제목 검색",
-    )
-    .first();
+  return page.locator('input[placeholder="레시피 제목 검색"]:visible').first();
 }
 
 function visibleTextButton(page: Page, text: string | RegExp) {

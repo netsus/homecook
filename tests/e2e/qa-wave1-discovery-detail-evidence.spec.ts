@@ -120,7 +120,7 @@ test("capture Wave1 discovery/detail authority evidence", async ({ browser }) =>
     const { context, page } = await preparePage(browser, viewports.mobile);
     await installDiscoveryRoutes(page);
     await page.goto(`${BASE_URL}/`);
-    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개…")).toBeVisible();
+    await expect(page.getByPlaceholder("레시피 제목 검색")).toBeVisible();
     await stabilize(page);
     await page.screenshot({
       fullPage: false,
@@ -141,7 +141,7 @@ test("capture Wave1 discovery/detail authority evidence", async ({ browser }) =>
     const { context, page } = await preparePage(browser, viewports.narrow);
     await installDiscoveryRoutes(page);
     await page.goto(`${BASE_URL}/`);
-    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개…")).toBeVisible();
+    await expect(page.getByPlaceholder("레시피 제목 검색")).toBeVisible();
     await stabilize(page);
     await page.screenshot({
       fullPage: false,

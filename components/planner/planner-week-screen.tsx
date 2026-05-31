@@ -1149,7 +1149,6 @@ export function PlannerWeekScreen({
     return (
       <>
         <ContentState
-          className="-mt-5 md:mt-0"
           description="로그인 후 보던 주간 범위로 돌아와 식단을 계속 관리할 수 있어요."
           eyebrow="플래너 접근"
           safeBottomPadding

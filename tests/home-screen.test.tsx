@@ -106,7 +106,8 @@ describe("home screen", () => {
     ).toBeTruthy();
     expect(screen.getByText(/요일 (아침|점심|오후|저녁|밤),/)).toBeTruthy();
     expect(screen.getByRole("heading", { name: "HOMECOOK" })).toBeTruthy();
-    expect(screen.getByPlaceholderText("김치볶음밥, 된장찌개…")).toBeTruthy();
+    expect(screen.getByText("레시피 제목으로 검색하거나, 재료로 좁혀 보세요.")).toBeTruthy();
+    expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /재료로 검색/ })).toHaveLength(1);
     expect(screen.queryByRole("button", { name: "전체" })).toBeNull();
     expect(screen.queryByRole("button", { name: "국물요리" })).toBeNull();
@@ -276,7 +277,11 @@ describe("home screen", () => {
     await waitFor(() => {
       expect(window.location.search).toContain(`ingredient_ids=${ONION_ID}`);
     });
-    expect(screen.getByRole("button", { name: "재료 1개" })).toBeTruthy();
+    const activeIngredientChip = screen.getByRole("button", { name: "재료 1개" });
+    expect(activeIngredientChip.className).toContain("home-mobile-filter-chip-active");
+    expect(screen.getByRole("button", { name: "초기화" }).className).toContain(
+      "home-mobile-filter-reset",
+    );
   });
 
   it("uses the narrower desktop ingredient modal with compact centered ingredient pills", async () => {
@@ -363,9 +368,7 @@ describe("home screen", () => {
 
     render(<HomeScreen />);
 
-    const searchInput = await screen.findByPlaceholderText(
-      "김치볶음밥, 된장찌개…",
-    );
+    const searchInput = await screen.findByPlaceholderText("레시피 제목 검색");
 
     await waitFor(() => {
       expect(
@@ -503,12 +506,15 @@ describe("home screen", () => {
       screen.getByText("다른 키워드나 재료 조합으로 다시 찾아보세요."),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "초기화" })).toBeTruthy();
+    expect(screen.getByTestId("home-search-empty-state").className).toContain(
+      "home-search-empty-state",
+    );
+    expect(screen.queryByText("비어 있어요")).toBeNull();
     expect(
       screen
         .getByRole("heading", { name: "조건에 맞는 레시피가 없어요" })
-        .closest("[data-state-kind='prototype-derived']")
-        ?.getAttribute("data-state-tone"),
-    ).toBe("empty");
+        .closest("[data-testid='home-search-empty-state']"),
+    ).toBeTruthy();
   });
 
   it("shows the desktop empty state when web recipes and themes are empty", async () => {
@@ -535,6 +541,9 @@ describe("home screen", () => {
       await screen.findByRole("heading", { name: "조건에 맞는 레시피가 없어요" }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "초기화" })).toBeTruthy();
+    expect(screen.getByTestId("home-search-empty-state").className).toContain(
+      "home-search-empty-state",
+    );
   });
 
   it("keeps the recipe list visible when only themes fail", async () => {
@@ -641,7 +650,7 @@ describe("home screen", () => {
     render(<HomeScreen />);
 
     await user.type(
-      await screen.findByPlaceholderText("김치볶음밥, 된장찌개…"),
+      await screen.findByPlaceholderText("레시피 제목 검색"),
       "김치",
     );
 
@@ -664,7 +673,7 @@ describe("home screen", () => {
 
     await user.click(screen.getAllByRole("button", { name: "초기화" })[0]!);
 
-    expect(screen.getByPlaceholderText("김치볶음밥, 된장찌개…")).toHaveProperty(
+    expect(screen.getByPlaceholderText("레시피 제목 검색")).toHaveProperty(
       "value",
       "김치",
     );
@@ -691,9 +700,9 @@ describe("home screen", () => {
   it("positions the ingredient filter action under the mobile search field", async () => {
     render(<HomeScreen />);
 
-    const searchInput = await screen.findByPlaceholderText("김치볶음밥, 된장찌개…");
+    const searchInput = await screen.findByPlaceholderText("레시피 제목 검색");
     const moreButton = screen.getByRole("button", { name: /재료로 검색/ });
-    const searchBlock = searchInput.closest("div");
+    const searchBlock = searchInput.closest(".home-mobile-discovery-search");
 
     expect(screen.queryByRole("button", { name: "국물요리" })).toBeNull();
     expect(searchBlock).not.toBeNull();

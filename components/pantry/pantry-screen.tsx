@@ -412,7 +412,6 @@ export function PantryScreen({
     return (
       <>
         <ContentState
-          className="-mt-5 md:mt-0"
           description="보유 재료를 등록하면 장보기 목록에서 자동으로 제외돼요."
           eyebrow="팬트리 접근"
           safeBottomPadding

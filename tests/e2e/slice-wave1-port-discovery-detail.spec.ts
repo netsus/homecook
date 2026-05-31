@@ -43,13 +43,7 @@ test.describe("wave1 port discovery detail", () => {
   }) => {
     await page.goto("/");
     await expect(
-      page
-        .getByPlaceholder(
-          isMobileViewport(page)
-            ? "김치볶음밥, 된장찌개…"
-            : "레시피 제목 검색",
-        )
-        .first(),
+      page.locator('input[placeholder="레시피 제목 검색"]:visible').first(),
     ).toBeVisible();
 
     const sortButton = page

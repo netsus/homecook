@@ -23,11 +23,7 @@ test.describe("Slice 01 basic flow", () => {
   }) => {
     await page.goto("/");
 
-    const searchInput = page
-      .getByPlaceholder(
-        isMobileViewport(page) ? "김치볶음밥, 된장찌개…" : "레시피 제목 검색",
-      )
-      .first();
+    const searchInput = page.locator('input[placeholder="레시피 제목 검색"]:visible').first();
     await expect(searchInput).toBeVisible();
     await expect(
       page.locator('a[href="/recipe/mock-kimchi-jjigae"]:visible').first(),
@@ -53,7 +49,7 @@ test.describe("Slice 01 basic flow", () => {
 
     await page
       .locator("button:visible")
-      .filter({ hasText: "검색 초기화" })
+      .filter({ hasText: "초기화" })
       .click();
     await expect(searchInput).toHaveValue("");
     await expect(

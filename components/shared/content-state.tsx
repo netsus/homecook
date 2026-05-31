@@ -64,7 +64,7 @@ export function ContentState({
   }[tone];
   const variantClassName =
     tone === "gate"
-      ? "flex min-h-[min(520px,calc(100vh-176px))] items-center justify-center rounded-[var(--radius-panel)] border border-[var(--brand-border)] bg-[linear-gradient(180deg,var(--brand-alpha-08)_0%,var(--surface)_44%)] px-5 py-10 shadow-[0px_10px_28px_var(--brand-shadow-color)] md:min-h-[min(520px,calc(100vh-96px))] md:px-8 md:py-12"
+      ? "flex min-h-[calc(100dvh-92px)] items-center justify-center border-0 bg-[linear-gradient(180deg,var(--brand-alpha-08)_0%,var(--surface)_44%)] px-5 py-10 shadow-none md:min-h-[calc(100dvh-96px)] md:px-8 md:py-12"
       : variant === "panel"
         ? "rounded-[var(--radius-panel)] border border-[var(--line-strong)] bg-[var(--surface)] px-5 py-7 shadow-[0px_1px_3px_var(--shadow-color-subtle)] md:px-8 md:py-8"
         : "rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-5 py-6";
@@ -77,7 +77,7 @@ export function ContentState({
     >
       <div className="mx-auto max-w-[28rem]">
         {tone === "gate" ? (
-          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-[20px] bg-[var(--brand-soft)] text-[var(--brand-contrast)] shadow-[0px_8px_22px_var(--brand-shadow-color)]">
+          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-[20px] bg-[var(--brand-soft)] text-[var(--brand)] shadow-[0px_8px_22px_var(--brand-shadow-color)]">
             <LockIcon />
           </div>
         ) : null}
@@ -102,7 +102,7 @@ export function ContentState({
         {actionLabel && onAction ? (
           <div className="mt-5 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
             <button
-              className="flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand-contrast)] px-5 py-3 text-[14px] font-bold text-[var(--text-inverse)]"
+              className="flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-5 py-3 text-[14px] font-bold text-[var(--text-inverse)]"
               onClick={onAction}
               type="button"
             >
