@@ -352,6 +352,7 @@ export function IngredientFilterModal({
                         <label
                           className={[
                             "web-ingredient-option",
+                            "web-ingredient-option-card",
                             isChecked ? "web-ingredient-option-active" : "",
                           ].join(" ")}
                         >

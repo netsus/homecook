@@ -13,6 +13,7 @@ import {
 } from "@/lib/mock/recipes";
 import { INGREDIENT_CATEGORIES } from "@/lib/ingredient-categories";
 import { PENDING_ACTION_KEY } from "@/lib/auth/pending-action";
+import { formatCount } from "@/lib/recipe";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
 
 const fetchJson = vi.fn();
@@ -291,8 +292,35 @@ describe("home screen", () => {
 
     expect(dialog.className).toContain("web-dialog-narrow");
     expect(onionOption?.className).toContain("web-ingredient-option");
+    expect(onionOption?.className).toContain("web-ingredient-option-card");
     expect(screen.queryByText("1개 선택됨")).toBeNull();
     expect(screen.getByRole("button", { name: "적용" })).toBeTruthy();
+
+    await user.click(onionCheckbox);
+
+    expect(onionOption?.className).toContain("web-ingredient-option-card");
+    expect(onionOption?.className).toContain("web-ingredient-option-active");
+  });
+
+  it("updates the visible app recipe card view count when the recipe is opened", async () => {
+    const user = userEvent.setup();
+
+    render(<HomeScreen />);
+
+    await screen.findByRole("heading", { name: MOCK_RECIPE_CARD.title });
+    expect(
+      screen.getByText(`조회 ${formatCount(MOCK_RECIPE_CARD.view_count)}`),
+    ).toBeTruthy();
+
+    const recipeLinks = screen.getAllByRole("link", {
+      name: MOCK_RECIPE_CARD.title,
+    });
+    recipeLinks[0]!.addEventListener("click", (event) => event.preventDefault());
+    await user.click(recipeLinks[0]!);
+
+    expect(
+      screen.getByText(`조회 ${formatCount(MOCK_RECIPE_CARD.view_count + 1)}`),
+    ).toBeTruthy();
   });
 
   it("clears the theme filter when the active theme card is tapped again", async () => {
@@ -469,11 +497,15 @@ describe("home screen", () => {
     render(<HomeScreen />);
 
     expect(
-      await screen.findByRole("heading", { name: "다른 조합을 찾아보세요" }),
+      await screen.findByRole("heading", { name: "조건에 맞는 레시피가 없어요" }),
     ).toBeTruthy();
     expect(
+      screen.getByText("다른 키워드나 재료 조합으로 다시 찾아보세요."),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "초기화" })).toBeTruthy();
+    expect(
       screen
-        .getByRole("heading", { name: "다른 조합을 찾아보세요" })
+        .getByRole("heading", { name: "조건에 맞는 레시피가 없어요" })
         .closest("[data-state-kind='prototype-derived']")
         ?.getAttribute("data-state-tone"),
     ).toBe("empty");

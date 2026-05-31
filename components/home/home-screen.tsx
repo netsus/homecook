@@ -348,6 +348,40 @@ export function HomeScreen() {
     });
   }, []);
 
+  const incrementRecipeViewCount = useCallback((recipeId: string) => {
+    const bumpRecipe = (recipe: RecipeCardItem) =>
+      recipe.id === recipeId
+        ? {
+            ...recipe,
+            view_count: recipe.view_count + 1,
+          }
+        : recipe;
+
+    setRecipes((currentRecipes) => {
+      if (!currentRecipes) {
+        return currentRecipes;
+      }
+
+      return {
+        ...currentRecipes,
+        items: currentRecipes.items.map(bumpRecipe),
+      };
+    });
+
+    setThemes((currentThemes) => {
+      if (!currentThemes) {
+        return currentThemes;
+      }
+
+      return {
+        themes: currentThemes.themes.map((theme) => ({
+          ...theme,
+          recipes: theme.recipes.map(bumpRecipe),
+        })),
+      };
+    });
+  }, []);
+
   const homeSaveFlow = useHomeRecipeSaveFlow({
     isAuthenticated,
     onRecipeSaved: updateRecipeSaveState,
@@ -404,6 +438,7 @@ export function HomeScreen() {
           mealGreeting={mealGreeting}
           emptyStateActionLabel={emptyStateActionLabel}
           onOpenIngredientModal={() => setIngredientModalOpen(true)}
+          onRecipeOpen={incrementRecipeViewCount}
           onRecipeSave={homeSaveFlow.openRecipeSaveModal}
           onRetry={() => void loadRecipes()}
           onSelectSort={selectSort}
@@ -464,13 +499,13 @@ export function HomeScreen() {
                   className={[
                     "inline-flex h-[var(--control-height-md)] items-center gap-1.5 rounded-[var(--radius-control)] border px-3 text-[13px] font-semibold",
                     hasIngredientFilter
-                      ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
-                      : "border-[var(--brand)] bg-[var(--surface)] text-[var(--brand)]",
+                      ? "border-[var(--brand)] bg-[var(--brand-contrast)] text-[var(--text-inverse)]"
+                      : "border-[var(--brand)] bg-[var(--surface)] text-[var(--brand-contrast)]",
                   ].join(" ")}
                   onClick={() => setIngredientModalOpen(true)}
                   type="button"
                 >
-                  <SearchSmallIcon color={hasIngredientFilter ? "var(--text-inverse)" : "var(--brand)"} />
+                  <SearchSmallIcon color={hasIngredientFilter ? "var(--text-inverse)" : "var(--brand-contrast)"} />
                   {hasIngredientFilter ? `재료 ${appliedIngredientIds.length}개` : "재료로 검색"}
                 </button>
                 {hasIngredientFilter ? (
@@ -543,6 +578,7 @@ export function HomeScreen() {
                       <RecipeCard
                         isSaved={homeSaveFlow.savedRecipeIds.has(recipe.id)}
                         key={recipe.id}
+                        onOpen={() => incrementRecipeViewCount(recipe.id)}
                         onSave={homeSaveFlow.openRecipeSaveModal}
                         recipe={recipe}
                       />
@@ -554,15 +590,15 @@ export function HomeScreen() {
                   <div className="px-4">
                     <ContentState
                       actionLabel={emptyStateActionLabel}
-                      description="조건에 맞는 레시피가 없어요."
-                      eyebrow="다른 조합"
+                      description="다른 키워드나 재료 조합으로 다시 찾아보세요."
+                      showEyebrow={false}
                       tone="empty"
                       onAction={() => {
                         clearIngredientFilters();
                         clearSearch();
                         setActiveThemeId(null);
                       }}
-                      title="다른 조합을 찾아보세요"
+                      title="조건에 맞는 레시피가 없어요"
                     />
                   </div>
                 ) : null}
@@ -615,6 +651,7 @@ function HomeWebScreen({
   listTitle,
   mealGreeting,
   onOpenIngredientModal,
+  onRecipeOpen,
   onRecipeSave,
   onRetry,
   onSelectSort,
@@ -636,6 +673,7 @@ function HomeWebScreen({
   listTitle: string;
   mealGreeting: string;
   onOpenIngredientModal: () => void;
+  onRecipeOpen: (recipeId: string) => void;
   onRecipeSave: (recipe: RecipeCardItem) => void;
   onRetry: () => void;
   onSelectSort: (nextSort: string) => void;
@@ -813,6 +851,7 @@ function HomeWebScreen({
                 <HomeWebRecipeCard
                   isSaved={savedRecipeIds.has(recipe.id)}
                   key={recipe.id}
+                  onOpen={onRecipeOpen}
                   onSave={onRecipeSave}
                   recipe={recipe}
                   variantIndex={index}
@@ -866,11 +905,13 @@ function RecipeGridSkeleton() {
 
 function HomeWebRecipeCard({
   isSaved,
+  onOpen,
   onSave,
   recipe,
   variantIndex,
 }: {
   isSaved: boolean;
+  onOpen: (recipeId: string) => void;
   onSave: (recipe: RecipeCardItem) => void;
   recipe: RecipeCardItem;
   variantIndex: number;
@@ -882,7 +923,7 @@ function HomeWebRecipeCard({
 
   return (
     <article className="web-home-recipe-card">
-      <Link href={`/recipe/${recipe.id}`}>
+      <Link href={`/recipe/${recipe.id}`} onClick={() => onOpen(recipe.id)}>
         <WebRecipeCard
           alt={recipe.title}
           badge={sourceBadge}

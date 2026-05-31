@@ -128,7 +128,7 @@ describe("PantryScreen", () => {
     expect(
       screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
     ).toBeTruthy();
-    expect(screen.getByText(/팬트리 화면으로 바로 복귀/)).toBeTruthy();
+    expect(screen.getByText(/보유 재료를 등록하면 장보기 목록에서 자동으로 제외/)).toBeTruthy();
   });
 
   it("keeps the mobile bottom tab visible on the unauthorized gate", async () => {

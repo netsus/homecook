@@ -900,21 +900,13 @@ export function MypageScreen({
       <>
         <ContentState
           className="-mt-5 md:mt-0"
-          description="마이페이지를 보려면 로그인이 필요해요."
+          description="레시피북, 장보기 기록 등 나만의 데이터를 로그인 후 확인할 수 있어요."
           eyebrow="마이페이지 접근"
           safeBottomPadding
           title="이 화면은 로그인이 필요해요"
           tone="gate"
         >
           <div className="space-y-3">
-            <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4">
-              <p className="text-sm font-semibold text-[var(--foreground)]">
-                로그인하면 마이페이지로 바로 복귀해요.
-              </p>
-              <p className="mt-1.5 text-xs leading-5 text-[var(--muted)]">
-                레시피북, 장보기 기록 등 나만의 데이터를 확인할 수 있어요.
-              </p>
-            </div>
             <SocialLoginButtons nextPath="/mypage" />
             <Link
               className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
@@ -952,7 +944,7 @@ export function MypageScreen({
           데이터를 불러오지 못했어요
         </h2>
         <button
-          className="mt-4 flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-[var(--text-inverse)]"
+          className="mt-4 flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-contrast)] px-6 py-3 text-sm font-semibold text-[var(--text-inverse)]"
           onClick={() => {
             if (activeTab === "shopping") {
               setShoppingLoaded(false);
@@ -1036,7 +1028,7 @@ export function MypageScreen({
           <div
             className={`fixed inset-x-4 bottom-24 z-50 mx-auto max-w-md rounded-[var(--radius-card)] px-4 py-3 text-center text-sm font-bold shadow-lg ${
               toast.tone === "success"
-                ? "bg-[var(--brand)] text-[var(--text-inverse)]"
+                ? "bg-[var(--brand-contrast)] text-[var(--text-inverse)]"
                 : "bg-[var(--danger)] text-[var(--text-inverse)]"
             }`}
             role="status"
@@ -1282,7 +1274,7 @@ export function MypageScreen({
         <div
           className={`fixed inset-x-4 bottom-8 z-50 mx-auto max-w-md rounded-[var(--radius-lg)] px-4 py-3 text-center text-sm font-semibold shadow-lg ${
             toast.tone === "success"
-              ? "bg-[var(--brand)] text-[var(--text-inverse)]"
+              ? "bg-[var(--brand-contrast)] text-[var(--text-inverse)]"
               : "bg-[var(--danger)] text-[var(--text-inverse)]"
           }`}
           role="status"

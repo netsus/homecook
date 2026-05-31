@@ -26,6 +26,53 @@ interface RecipeViewCountIncrementRow {
   view_count: number;
 }
 
+async function incrementRecipeViewCountWithFallback(
+  serviceClient: NonNullable<ReturnType<typeof createServiceRoleClient>>,
+  recipeId: string,
+  initialViewCount: number,
+) {
+  let currentViewCount = initialViewCount;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const nextViewCount = currentViewCount + 1;
+    const fallbackViewCountResult = await serviceClient
+      .from("recipes")
+      .update({ view_count: nextViewCount })
+      .eq("id", recipeId)
+      .eq("view_count", currentViewCount)
+      .select("id, view_count")
+      .maybeSingle() as {
+        data: RecipeViewCountIncrementRow | null;
+        error: unknown;
+      };
+
+    if (typeof fallbackViewCountResult.data?.view_count === "number") {
+      return fallbackViewCountResult.data.view_count;
+    }
+
+    if (fallbackViewCountResult.error) {
+      return nextViewCount;
+    }
+
+    const refreshedViewCountResult = await serviceClient
+      .from("recipes")
+      .select("id, view_count")
+      .eq("id", recipeId)
+      .maybeSingle() as {
+        data: RecipeViewCountIncrementRow | null;
+        error: unknown;
+      };
+
+    if (typeof refreshedViewCountResult.data?.view_count !== "number") {
+      return nextViewCount;
+    }
+
+    currentViewCount = refreshedViewCountResult.data.view_count;
+  }
+
+  return currentViewCount + 1;
+}
+
 export async function GET(request: Request, context: RouteContext) {
   const { id } = await context.params;
 
@@ -117,8 +164,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const ingredients = normalizeRecipeIngredients(ingredientsResult.data);
     const steps = normalizeRecipeSteps(stepsResult.data);
-    const nextViewCount = recipeResult.data.view_count + (serviceClient ? 1 : 0);
-    let viewCount = nextViewCount;
+    let viewCount = recipeResult.data.view_count + (serviceClient ? 1 : 0);
 
     if (serviceClient) {
       const viewCountResult = await serviceClient
@@ -130,7 +176,15 @@ export async function GET(request: Request, context: RouteContext) {
           error: unknown;
         };
 
-      viewCount = viewCountResult.data?.view_count ?? nextViewCount;
+      if (typeof viewCountResult.data?.view_count === "number") {
+        viewCount = viewCountResult.data.view_count;
+      } else {
+        viewCount = await incrementRecipeViewCountWithFallback(
+          serviceClient,
+          id,
+          recipeResult.data.view_count,
+        );
+      }
     }
 
     const detail: RecipeDetail = {

@@ -385,7 +385,7 @@ describe("MypageScreen", () => {
     expect(
       screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
     ).toBeTruthy();
-    expect(screen.getByText(/마이페이지로 바로 복귀/)).toBeTruthy();
+    expect(screen.getByText(/나만의 데이터를 로그인 후 확인/)).toBeTruthy();
   });
 
   it("keeps the mobile bottom tab visible on the unauthorized gate", () => {

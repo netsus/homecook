@@ -413,21 +413,13 @@ export function PantryScreen({
       <>
         <ContentState
           className="-mt-5 md:mt-0"
-          description="집에 있는 재료를 등록하면 장보기 때 자동으로 빼줘요."
+          description="보유 재료를 등록하면 장보기 목록에서 자동으로 제외돼요."
           eyebrow="팬트리 접근"
           safeBottomPadding
           title="이 화면은 로그인이 필요해요"
           tone="gate"
         >
           <div className="space-y-3">
-            <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4">
-              <p className="text-sm font-semibold text-[var(--foreground)]">
-                로그인하면 팬트리 화면으로 바로 복귀해요.
-              </p>
-              <p className="mt-1.5 text-xs leading-5 text-[var(--muted)]">
-                보유 재료를 등록하면 장보기 목록에서 자동 제외됩니다.
-              </p>
-            </div>
             <SocialLoginButtons nextPath="/pantry" />
             <Link
               className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
