@@ -5,6 +5,7 @@ import { cn } from "@/components/web/utils";
 export interface WebRecipeCardProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
   alt: string;
+  badge?: React.ReactNode;
   imageSrc?: string;
   meta?: React.ReactNode;
   title: React.ReactNode;
@@ -12,6 +13,7 @@ export interface WebRecipeCardProps
 
 export function WebRecipeCard({
   alt,
+  badge,
   className,
   imageSrc,
   meta,
@@ -29,6 +31,7 @@ export function WebRecipeCard({
             style={{ backgroundImage: `url(${imageSrc})` }}
           />
         ) : null}
+        {badge ? <span className="web-recipe-card-badge">{badge}</span> : null}
       </div>
       <div className="web-recipe-card-body">
         <div className="web-recipe-card-title">{title}</div>

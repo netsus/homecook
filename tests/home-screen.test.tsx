@@ -103,21 +103,22 @@ describe("home screen", () => {
     expect(
       await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" }),
     ).toBeTruthy();
-    expect(screen.getByText("목요일 저녁,")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "홈" })).toBeTruthy();
+    expect(screen.getByText(/요일 (아침|점심|오후|저녁|밤),/)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "HOMECOOK" })).toBeTruthy();
     expect(screen.getByPlaceholderText("김치볶음밥, 된장찌개…")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /재료로 검색/ })).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "전체" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "국물요리" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "전체" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "국물요리" })).toBeNull();
     expect(screen.queryByRole("button", { name: "양파" })).toBeNull();
     expect(
-      screen.getByRole("heading", { level: 2, name: "테마별 레시피" }),
+      screen.getByRole("heading", { level: 2, name: "이번 주 인기 테마" }),
     ).toBeTruthy();
-    expect(screen.getByRole("link", { name: /이번 주 식단 플래너/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /이번 주 식단 플래너/ })).toBeNull();
     expect(screen.getByRole("navigation", { name: "HOME 하단 탭" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "팬트리" }).getAttribute("href")).toBe("/pantry");
     expect(screen.getByRole("link", { name: "마이" }).getAttribute("href")).toBe("/mypage");
     expect(screen.getByRole("heading", { level: 2, name: "모든 레시피" })).toBeTruthy();
+    expect(screen.queryByText(`(${getMockRecipeList().items.length})`)).toBeNull();
   });
 
   it("renders the desktop HOME discovery layout at the web breakpoint", async () => {
@@ -128,6 +129,7 @@ describe("home screen", () => {
     expect(
       await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" }),
     ).toBeTruthy();
+    expect(screen.getByText(/요일 (아침|점심|오후|저녁|밤),/)).toBeTruthy();
     expect(screen.getByRole("link", { name: /HOMECOOK/ })).toBeTruthy();
     expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
     expect(
@@ -144,20 +146,44 @@ describe("home screen", () => {
     ).toBeTruthy();
   });
 
-  it("filters recipes with the single-select recipe category chip rail", async () => {
-    const user = userEvent.setup();
+  it("shows YouTube source as a web card image badge instead of bottom meta text", async () => {
+    installMatchMedia(true);
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
 
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({ themes: [] });
+      }
+
+      return Promise.resolve({
+        items: [
+          {
+            ...MOCK_RECIPE_CARD,
+            id: "recipe-youtube",
+            source_type: "youtube" as const,
+            save_count: 20,
+          },
+        ],
+        next_cursor: null,
+        has_next: false,
+      });
+    });
+
+    const { container } = render(<HomeScreen />);
+
+    await screen.findByText(MOCK_RECIPE_CARD.title);
+    expect(container.querySelector(".web-recipe-card-badge")?.textContent).toBe("유튜브");
+    expect(container.querySelector(".web-recipe-card-meta")?.textContent).not.toContain("유튜브");
+  });
+
+  it("removes the non-functional mobile recipe category chip rail", async () => {
     render(<HomeScreen />);
 
-    await user.click(await screen.findByRole("button", { name: "국물요리" }));
-
-    expect(screen.getByRole("button", { name: "국물요리" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("heading", { level: 2, name: "국물요리" })).toBeTruthy();
-    expect(screen.getByText(MOCK_RECIPE_CARD.title)).toBeTruthy();
-
-    await user.click(screen.getByRole("button", { name: "전체" }));
-
-    expect(screen.getByRole("button", { name: "전체" }).getAttribute("aria-pressed")).toBe("true");
+    await screen.findByRole("button", { name: /재료로 검색/ });
+    expect(screen.queryByRole("button", { name: "국물요리" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "전체" })).toBeNull();
     expect(screen.getByRole("heading", { level: 2, name: "모든 레시피" })).toBeTruthy();
   });
 
@@ -204,7 +230,8 @@ describe("home screen", () => {
       .getByRole("checkbox", { name: "양파" })
       .closest("label");
     expect(selectedOnionOption?.className).toContain("bg-[var(--brand-soft)]");
-    expect(screen.getByText("1개 선택")).toBeTruthy();
+    expect(screen.queryByText("1개 선택")).toBeNull();
+    expect(screen.queryByText("1개 선택됨")).toBeNull();
     await user.click(screen.getByRole("button", { name: /적용/ }));
 
     await waitFor(() => {
@@ -309,6 +336,7 @@ describe("home screen", () => {
     const listbox = screen.getByRole("listbox");
     expect(listbox).toBeTruthy();
     expect(screen.getByText("최신순")).toBeTruthy();
+    expect(screen.getByText("요리완료순")).toBeTruthy();
     expect(screen.queryByText("좋아요순")).toBeNull();
 
     await user.click(screen.getByText("최신순"));
@@ -335,7 +363,7 @@ describe("home screen", () => {
 
     await screen.findByRole("heading", {
       level: 2,
-      name: "테마별 레시피",
+      name: "이번 주 인기 테마",
     });
 
     const initialThemeCalls = fetchJson.mock.calls.filter(([input]) => {
@@ -346,7 +374,7 @@ describe("home screen", () => {
     await user.click(screen.getByText("저장순"));
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { level: 2, name: "테마별 레시피" })).toBeTruthy();
+      expect(screen.getByRole("heading", { level: 2, name: "이번 주 인기 테마" })).toBeTruthy();
       expect(
         fetchJson.mock.calls.some(([input]) => {
           if (typeof input !== "string" || !input.startsWith("/api/v1/recipes?")) {
@@ -525,26 +553,22 @@ describe("home screen", () => {
     expect(window.location.search).toBe("");
   });
 
-  it("positions the discovery filter rail under the recipe list heading", async () => {
+  it("positions the ingredient filter action under the mobile search field", async () => {
     render(<HomeScreen />);
 
-    const allRecipesHeading = await screen.findByRole("heading", {
-      level: 2,
-      name: "모든 레시피",
-    });
-    const categoryButton = screen.getByRole("button", { name: "국물요리" });
+    const searchInput = await screen.findByPlaceholderText("김치볶음밥, 된장찌개…");
     const moreButton = screen.getByRole("button", { name: /재료로 검색/ });
-    const listSection = allRecipesHeading.closest("section");
+    const searchBlock = searchInput.closest("div");
 
-    expect(listSection).not.toBeNull();
-    expect(listSection?.contains(categoryButton)).toBe(true);
-    expect(listSection?.contains(moreButton)).toBe(true);
+    expect(screen.queryByRole("button", { name: "국물요리" })).toBeNull();
+    expect(searchBlock).not.toBeNull();
+    expect(searchBlock?.contains(moreButton)).toBe(true);
   });
 
   it("does not render header profile or cart icons", async () => {
     render(<HomeScreen />);
 
-    await screen.findByRole("heading", { name: "홈" });
+    await screen.findByRole("heading", { name: "HOMECOOK" });
 
     expect(screen.queryByRole("button", { name: "장보기" })).toBeNull();
     expect(screen.queryByText("채")).toBeNull();

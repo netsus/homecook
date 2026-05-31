@@ -5,7 +5,8 @@ export type RecipeSortKey =
   | "view_count"
   | "latest"
   | "save_count"
-  | "plan_count";
+  | "plan_count"
+  | "cook_count";
 
 export interface RecipeCardItem {
   id: string;

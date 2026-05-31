@@ -81,10 +81,10 @@ export function LoginScreen({
               HOMECOOK
             </p>
             <h1 className="web-login-title">
-              집밥 루틴을 이어가려면 로그인하세요
+              로그인이 필요해요
             </h1>
             <p className="web-login-description">
-              저장한 레시피, 플래너, 팬트리를 같은 계정으로 관리할 수 있어요.
+              로그인하면 이전 화면으로 돌아가 이어서 진행할 수 있어요.
             </p>
 
             <div className="web-login-provider-list">
@@ -106,10 +106,10 @@ export function LoginScreen({
 
   return (
     <div className="min-h-screen bg-[var(--surface)] text-[var(--wave1-ink)]">
-      <section className="mx-auto flex min-h-screen max-w-[430px] flex-col bg-[var(--surface)] px-6 pb-[calc(40px+env(safe-area-inset-bottom))] pt-[56px] md:min-h-[720px] md:justify-center md:pb-16 md:pt-16">
+      <section className="relative mx-auto flex min-h-screen max-w-[430px] flex-col justify-center bg-[var(--surface)] px-6 pb-[calc(40px+env(safe-area-inset-bottom))] pt-[calc(32px+env(safe-area-inset-top))] text-center md:min-h-[720px] md:pb-16 md:pt-16">
         <button
           aria-label="이전 화면으로"
-          className="mb-7 flex h-9 w-9 items-center justify-center rounded-full text-[var(--wave1-ink)] transition-colors hover:bg-[var(--wave1-surface-fill)]"
+          className="absolute left-5 top-[calc(18px+env(safe-area-inset-top))] flex h-9 w-9 items-center justify-center rounded-full text-[var(--wave1-ink)] transition-colors hover:bg-[var(--wave1-surface-fill)]"
           onClick={() => {
             window.location.assign(safeNextPath);
           }}
@@ -118,23 +118,20 @@ export function LoginScreen({
           <ChevronLeftIcon />
         </button>
 
-        <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[var(--radius-panel)] bg-[var(--wave1-mint)] text-[var(--text-inverse)] shadow-[0_10px_22px_var(--brand-shadow-color-strong)]">
-          <span
-            aria-hidden="true"
-            className="text-[30px] leading-none"
-          >
-            홈
-          </span>
+        <div className="mx-auto inline-flex rounded-[var(--radius-full)] bg-[var(--brand-soft)] px-3 py-1 text-[12px] font-extrabold tracking-[0.08em] text-[var(--brand)]">
+          HOMECOOK
         </div>
 
         <h1 className="mt-5 text-[26px] font-bold leading-[1.35] text-[var(--wave1-ink)]">
-          홈쿡과 함께
-          <br />
-          오늘 뭐 먹지 정해봐요
+          로그인이 필요해요
         </h1>
-        <p className="mt-4 text-[14px] font-medium leading-6 text-[var(--wave1-text-3)]">
-          식단을 짜고, 장 보고, 요리한 기록을 남길 수 있어요.
+        <p className="mx-auto mt-3 max-w-[300px] text-[14px] font-medium leading-6 text-[var(--wave1-text-3)]">
+          로그인하면 이전 화면으로 돌아가 이어서 진행할 수 있어요.
         </p>
+
+        <div className="mt-6 rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--brand)_18%,transparent)] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-4 py-3 text-left text-[13px] font-semibold leading-6 text-[var(--wave1-ink)]">
+          저장한 레시피, 플래너, 팬트리를 같은 계정으로 관리합니다.
+        </div>
 
         {showAuthError ? (
           <div className="mt-7 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] font-semibold text-[var(--danger-strong)]">
@@ -142,7 +139,7 @@ export function LoginScreen({
           </div>
         ) : null}
 
-        <div className={showAuthError ? "mt-4" : "mt-8"}>
+        <div className={showAuthError ? "mt-4" : "mt-6"}>
           <SocialLoginButtonsDeferred nextPath={safeNextPath} />
         </div>
 

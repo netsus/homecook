@@ -90,11 +90,12 @@ describe("login screen", () => {
     render(<LoginScreen />);
 
     expect(
-      screen.getByRole("heading", { name: "홈쿡과 함께오늘 뭐 먹지 정해봐요" }),
+      screen.getByRole("heading", { name: "로그인이 필요해요" }),
     ).toBeTruthy();
     expect(
-      screen.getByText("식단을 짜고, 장 보고, 요리한 기록을 남길 수 있어요."),
+      screen.getByText("로그인하면 이전 화면으로 돌아가 이어서 진행할 수 있어요."),
     ).toBeTruthy();
+    expect(screen.getByText("HOMECOOK")).toBeTruthy();
   });
 
   it("uses the provided nextPath for login actions", () => {
@@ -110,7 +111,7 @@ describe("login screen", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "집밥 루틴을 이어가려면 로그인하세요",
+        name: "로그인이 필요해요",
       }),
     ).toBeTruthy();
     expect(screen.getByText("social-buttons:/planner")).toBeTruthy();
