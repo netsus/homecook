@@ -38,7 +38,20 @@
 | API v1.2.13 | extract 응답에 `multi_recipe_status`, `recipe_candidates[]`, source segment metadata 추가, `POST /recipes/youtube/candidate-drafts` 추가 |
 
 > v1.7.4 / v1.5.11 / v1.3.11 / DB v1.3.10 / API v1.2.14는 이 addendum을 포함한 v1.7.3 계열 문서를 기준으로 작성한다.
-> 특정 video_id별 결과 fixture, 레시피오 결과 반환, 유료 provider/LLM 호출 없이 공개 텍스트 provider/parser 경로만 사용한다.
+> 특정 video_id별 결과 fixture, 레시피오 결과 반환은 금지한다. 공개 텍스트 provider/parser를 우선 사용하고, 아래 Gemini addendum의 조건을 만족하는 경우에만 구조화 fallback을 허용한다.
+
+## Gemini YouTube Structured Fallback Addendum (2026-06-01)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.4 | 설명란/작성자 댓글/caption parser가 재료 또는 조리 단계를 충분히 만들지 못할 때 env/한도/cache/근거 검증 기반 Gemini structured fallback 허용 |
+| 화면정의서 v1.5.11 | YT_IMPORT 처리 파이프라인에 Gemini 구조화 보조 단계를 추가하되 source label은 설명란/작성자 댓글/자막으로 유지 |
+| 유저플로우 v1.3.11 | extract 단계에서 공개 텍스트 파싱 후 부족한 경우 Gemini JSON 구조화 보조를 거치는 흐름 추가 |
+| DB v1.3.10 | `youtube_llm_extraction_cache`, `youtube_llm_extraction_events` 서버 전용 cache/event 테이블 추가 |
+| API v1.2.14 | `source_providers`의 `gemini_structured_extractor`, `gemini_structured_extractor_cache`와 `extraction_meta_json.llm_extractor` provenance 계약 추가 |
+
+> Gemini는 원천 source가 아니라 이미 수집한 공개 텍스트를 정리하는 보조 extractor다. `extraction_methods`는 `description` / `comment` / `caption`만 유지한다.
+> API key, provider raw response, secret, 레시피오 결과, 영상별 fixture는 저장하거나 반환하지 않는다.
 
 ## v1.7.2 / v1.5.9 / v1.3.9 / DB v1.3.8 / API v1.2.12 → v1.7.3 / v1.5.10 / v1.3.10 / DB v1.3.9 / API v1.2.13 변경 이력 (2026-05-28)
 

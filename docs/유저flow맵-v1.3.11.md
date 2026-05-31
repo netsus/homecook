@@ -873,6 +873,7 @@ Step 2) 공개 텍스트 우선 추출
   │ recipe/uncertain/non_recipe 판정 (non_recipe → 422 차단)
   │ 서버: youtube_extraction_sessions 생성 (status=draft, 24h TTL)
   │ 설명란 파싱 → 부족하면 공개 작성자 댓글 → 부족하면 공개 caption timedtext 파싱
+  │ 그래도 재료/스텝이 부족하면 조건부 Gemini structured fallback으로 공개 텍스트 JSON 구조화
   │ 한 영상에 여러 요리 후보가 있으면 multi_parent 세션 + recipe_candidates[] 생성
   │ 재료/스텝 섹션명은 component_label로 응답
   │ extraction_methods: ["description"], ["comment"], ["caption"] 또는 조합
