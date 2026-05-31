@@ -13,9 +13,7 @@ function isDesktopProject(testInfo: TestInfo) {
 
 function recipeDetailSaveCount(page: Page, testInfo: TestInfo, count: string) {
   if (isDesktopProject(testInfo)) {
-    return page
-      .locator(".web-recipe-rail-stat:visible")
-      .filter({ hasText: "저장" })
+    return recipeDetailSaveButton(page, testInfo)
       .filter({ hasText: count })
       .first();
   }
@@ -23,6 +21,14 @@ function recipeDetailSaveCount(page: Page, testInfo: TestInfo, count: string) {
   return page
     .locator('button[aria-label="저장"][aria-pressed]:visible')
     .getByText(count);
+}
+
+function recipeDetailSaveButton(page: Page, testInfo: TestInfo) {
+  if (isDesktopProject(testInfo)) {
+    return page.getByRole("button", { name: /^저장\s*\d+$/ });
+  }
+
+  return page.locator('button[aria-label="저장"][aria-pressed]:visible');
 }
 
 interface SaveBook {
@@ -264,7 +270,7 @@ test.describe("Slice 04 recipe save flow", () => {
     await expect(
       page
         .locator("article:visible")
-        .filter({ hasText: isDesktopProject(testInfo) ? /저장\s*90/ : "90저장" })
+        .filter({ hasText: /저장\s*90/ })
         .first(),
     ).toBeVisible();
 
@@ -293,7 +299,7 @@ test.describe("Slice 04 recipe save flow", () => {
     await expect(
       page
         .locator("article:visible")
-        .filter({ hasText: isDesktopProject(testInfo) ? /저장\s*89/ : "89저장" })
+        .filter({ hasText: /저장\s*89/ })
         .first(),
     ).toBeVisible();
   });
@@ -306,12 +312,10 @@ test.describe("Slice 04 recipe save flow", () => {
     await mockRecipeSaveRoutes(page);
 
     await page.goto(RECIPE_PATH);
-    const saveActionButton = page.locator(
-      'button[aria-label="저장"][aria-pressed]:visible',
-    );
+    const saveActionButton = recipeDetailSaveButton(page, testInfo);
     await expect(recipeDetailSaveCount(page, testInfo, "89")).toBeVisible();
 
-    await page.getByRole("button", { name: "저장" }).click();
+    await saveActionButton.click();
 
     const modal = page.getByRole("dialog");
     await expect(modal).toBeVisible();
@@ -340,12 +344,10 @@ test.describe("Slice 04 recipe save flow", () => {
     await mockRecipeSaveRoutes(page);
 
     await page.goto(RECIPE_PATH);
-    const saveActionButton = page.locator(
-      'button[aria-label="저장"][aria-pressed]:visible',
-    );
+    const saveActionButton = recipeDetailSaveButton(page, testInfo);
     await expect(recipeDetailSaveCount(page, testInfo, "89")).toBeVisible();
 
-    await page.getByRole("button", { name: "저장" }).click();
+    await saveActionButton.click();
 
     const modal = page.getByRole("dialog");
     await expect(modal).toBeVisible();
@@ -377,7 +379,7 @@ test.describe("Slice 04 recipe save flow", () => {
     await mockRecipeSaveRoutes(page);
 
     await page.goto(RECIPE_PATH);
-    await page.getByRole("button", { name: "저장" }).click();
+    await recipeDetailSaveButton(page, testInfo).click();
 
     await expect(page.getByRole("dialog")).toBeVisible();
     await expect(

@@ -538,7 +538,7 @@ test.describe("QA visual regression", () => {
 
     await page.goto(LOGIN_VISUAL_PATH);
     await expect(
-      page.getByRole("heading", { name: "집밥 루틴을 이어가려면 로그인하세요" }),
+      page.getByRole("heading", { name: "로그인이 필요해요" }),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Google로 시작하기" })).toBeVisible();
     await stabilizeVisualSnapshot(page);
