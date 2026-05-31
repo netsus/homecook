@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import fixtureData from "@/qa/fixtures/slices-01-05.json";
 import type {
   YoutubeAuthorCommentProvider,
+  YoutubeRecipeLlmExtractor,
   YoutubeTranscriptProvider,
 } from "@/lib/server/youtube-import";
 
@@ -259,6 +260,57 @@ function createYoutubeTranscriptFetchEventsTable({
   };
 }
 
+function createYoutubeLlmExtractionCacheTable({
+  rows = [],
+  insertResult = { data: null, error: null },
+  updateResult = { data: null, error: null },
+}: {
+  rows?: YoutubeLlmExtractionCacheRow[];
+  insertResult?: QueryResult<null>;
+  updateResult?: QueryResult<null>;
+} = {}) {
+  const selectQuery = createArrayQuery({ data: rows, error: null });
+  const updateQuery = {
+    eq: vi.fn(() => updateQuery),
+    then: createAwaitableQuery(updateResult).then,
+  };
+
+  return {
+    __selectQuery: selectQuery,
+    __updateQuery: updateQuery,
+    insert: vi.fn((values: unknown) => {
+      void values;
+      return createAwaitableQuery(insertResult);
+    }),
+    select: vi.fn(() => selectQuery),
+    update: vi.fn((values: unknown) => {
+      void values;
+      return updateQuery;
+    }),
+  };
+}
+
+function createYoutubeLlmExtractionEventsTable({
+  rows = [],
+  selectResult,
+  insertResult = { data: null, error: null },
+}: {
+  rows?: YoutubeLlmExtractionEventRow[];
+  selectResult?: QueryResult<YoutubeLlmExtractionEventRow[]>;
+  insertResult?: QueryResult<null>;
+} = {}) {
+  const selectQuery = createArrayQuery(selectResult ?? { data: rows, error: null });
+
+  return {
+    __selectQuery: selectQuery,
+    insert: vi.fn((values: unknown) => {
+      void values;
+      return createAwaitableQuery(insertResult);
+    }),
+    select: vi.fn(() => selectQuery),
+  };
+}
+
 interface YoutubeSessionRow {
   id: string;
   user_id: string;
@@ -301,6 +353,32 @@ interface YoutubeTranscriptFetchEventRow {
   cache_hit: boolean;
   status: string;
   reason: string | null;
+  estimated_cost_microusd: number;
+  created_at: string;
+}
+
+interface YoutubeLlmExtractionCacheRow {
+  id: string;
+  youtube_video_id: string;
+  source_hash: string;
+  schema_version: string;
+  model: string;
+  source_kinds: string[];
+  result_json: unknown;
+  expires_at: string;
+}
+
+interface YoutubeLlmExtractionEventRow {
+  id: string;
+  user_id: string | null;
+  youtube_video_id: string;
+  provider: string;
+  model: string | null;
+  cache_hit: boolean;
+  status: string;
+  reason: string | null;
+  input_tokens: number;
+  output_tokens: number;
   estimated_cost_microusd: number;
   created_at: string;
 }
@@ -782,12 +860,18 @@ function createTranscriptFallbackExtractDbClient({
   transcriptCacheRows = [],
   transcriptFetchEventRows = [],
   transcriptFetchEventSelectResult,
+  llmCacheRows = [],
+  llmEventRows = [],
+  llmEventSelectResult,
 }: {
   ingredientLookupRows?: Array<{ id: string; standard_name: string }>;
   cookingMethodLookupRows?: NonNullable<Parameters<typeof createCookingMethodsTable>[0]["lookupRows"]>;
   transcriptCacheRows?: YoutubeTranscriptCacheRow[];
   transcriptFetchEventRows?: YoutubeTranscriptFetchEventRow[];
   transcriptFetchEventSelectResult?: QueryResult<YoutubeTranscriptFetchEventRow[]>;
+  llmCacheRows?: YoutubeLlmExtractionCacheRow[];
+  llmEventRows?: YoutubeLlmExtractionEventRow[];
+  llmEventSelectResult?: QueryResult<YoutubeLlmExtractionEventRow[]>;
 } = {}) {
   const ingredientsTable = createLookupTable({
     data: ingredientLookupRows,
@@ -819,6 +903,13 @@ function createTranscriptFallbackExtractDbClient({
     rows: transcriptFetchEventRows,
     selectResult: transcriptFetchEventSelectResult,
   });
+  const llmExtractionCacheTable = createYoutubeLlmExtractionCacheTable({
+    rows: llmCacheRows,
+  });
+  const llmExtractionEventsTable = createYoutubeLlmExtractionEventsTable({
+    rows: llmEventRows,
+    selectResult: llmEventSelectResult,
+  });
   const dbClient = {
     from: vi.fn((table: string) => {
       if (table === "ingredients") return ingredientsTable;
@@ -828,6 +919,8 @@ function createTranscriptFallbackExtractDbClient({
       if (table === "youtube_extraction_candidates") return candidatesTable;
       if (table === "youtube_transcript_cache") return transcriptCacheTable;
       if (table === "youtube_transcript_fetch_events") return transcriptFetchEventsTable;
+      if (table === "youtube_llm_extraction_cache") return llmExtractionCacheTable;
+      if (table === "youtube_llm_extraction_events") return llmExtractionEventsTable;
       throw new Error(`unexpected table: ${table}`);
     }),
   };
@@ -835,6 +928,8 @@ function createTranscriptFallbackExtractDbClient({
   return {
     candidatesTable,
     dbClient,
+    llmExtractionCacheTable,
+    llmExtractionEventsTable,
     sessionsTable,
     transcriptCacheTable,
     transcriptFetchEventsTable,
@@ -866,6 +961,20 @@ async function withYoutubeAuthorCommentProvider<T>(
     return await callback();
   } finally {
     restoreAuthorCommentProvider();
+  }
+}
+
+async function withYoutubeRecipeLlmExtractor<T>(
+  provider: YoutubeRecipeLlmExtractor,
+  callback: () => Promise<T>,
+) {
+  const youtubeImport = await import("@/lib/server/youtube-import");
+  const restoreLlmExtractor = youtubeImport.setYoutubeRecipeLlmExtractorForTest(provider);
+
+  try {
+    return await callback();
+  } finally {
+    restoreLlmExtractor();
   }
 }
 
@@ -971,6 +1080,10 @@ describe("20 youtube real import backend", () => {
       "supabase/migrations/20260530120000_youtube_transcript_cache_and_events.sql",
       "utf8",
     );
+    const llmExtractionSchema = readFileSync(
+      "supabase/migrations/20260601090000_youtube_llm_extraction_cache_and_events.sql",
+      "utf8",
+    );
 
     expect(methodCodes).toEqual(expect.arrayContaining([
       "stir_fry",
@@ -1006,6 +1119,13 @@ describe("20 youtube real import backend", () => {
     expect(transcriptCacheSchema).toContain("estimated_cost_microusd");
     expect(transcriptCacheSchema).not.toContain("api_key");
     expect(transcriptCacheSchema).not.toContain("cookie_header");
+    expect(llmExtractionSchema).toContain("create table if not exists public.youtube_llm_extraction_cache");
+    expect(llmExtractionSchema).toContain("youtube_video_id, source_hash, schema_version, model");
+    expect(llmExtractionSchema).toContain("create table if not exists public.youtube_llm_extraction_events");
+    expect(llmExtractionSchema).toContain("input_tokens");
+    expect(llmExtractionSchema).toContain("output_tokens");
+    expect(llmExtractionSchema).not.toContain("api_key");
+    expect(llmExtractionSchema).not.toContain("cookie_header");
   });
 
   it("schema includes the user-confirmed YouTube ingredient registration RPC", () => {
@@ -1034,7 +1154,7 @@ describe("20 youtube real import backend", () => {
     expect(extractionSource).not.toContain("recipio-youtube-parity-fixtures");
     expect(extractionSource).not.toContain("recipio_live_parity_fixture");
     expect(extractionSource).not.toContain("getRecipioYoutubeParityFixture");
-    expect(extractionSource).not.toMatch(/mQUg_liCC34|KBPJt2mkOh4|OyXZEi9kMGU|g9uOBA3j02M/u);
+    expect(extractionSource).not.toMatch(/mQUg_liCC34|KBPJt2mkOh4|OyXZEi9kMGU|g9uOBA3j02M|OEassmynRro/u);
   });
 
   it("POST /api/v1/recipes/youtube/validate returns 401 before validating an invalid body", async () => {
@@ -4557,6 +4677,284 @@ describe("20 youtube real import backend", () => {
         language: "ko",
         track_kind: "auto",
         step_count: 0,
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract uses Gemini structured fallback after transcript parsing is still insufficient", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+
+    const { dbClient, sessionsTable, llmExtractionCacheTable, llmExtractionEventsTable } =
+      createTranscriptFallbackExtractDbClient({
+        ingredientLookupRows: [
+          { id: "550e8400-e29b-41d4-a716-446655440050", standard_name: "미니 파프리카" },
+          { id: "550e8400-e29b-41d4-a716-446655440051", standard_name: "굴소스" },
+        ],
+        cookingMethodLookupRows: [
+          {
+            id: prepMethodId,
+            code: "prep",
+            label: "손질",
+            color_key: "gray",
+            is_system: true,
+          },
+        ],
+      });
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: [
+          "미니 파프리카에 부침가루를 묻히고 속을 꽉 채워요.",
+          "굴소스 1T와 어간장 1T로 채소볶음 맛을 내요.",
+        ].join("\n"),
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+    const llmExtractor: YoutubeRecipeLlmExtractor = {
+      name: "gemini_structured_extractor",
+      fetchStructuredRecipe: vi.fn(async (context) => {
+        const sourceBlocks = context.sourceBlocks as Array<{ source: string; text: string }>;
+        expect(sourceBlocks.some((block) =>
+          block.source === "caption" && block.text.includes("속을 꽉 채워요"),
+        )).toBe(true);
+
+        return {
+          status: "available" as const,
+          providerName: "gemini",
+          model: "gemini-3.1-flash-lite",
+          fallbackModel: "gemini-2.5-flash-lite",
+          inputTokens: 120,
+          outputTokens: 90,
+          resultJson: {
+            recipes: [
+              {
+                title: "미니 파프리카 새우전",
+                confidence: 0.86,
+                ingredients: [
+                  {
+                    name: "미니 파프리카",
+                    amount: null,
+                    unit: null,
+                    raw_text: "미니 파프리카에 부침가루를 묻히고 속을 꽉 채워요.",
+                    evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                  },
+                ],
+                steps: [
+                  {
+                    instruction: "미니 파프리카에 속을 꽉 채워요.",
+                    raw_text: "미니 파프리카에 부침가루를 묻히고 속을 꽉 채워요.",
+                    evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                  },
+                ],
+                warnings: [],
+              },
+              {
+                title: "채소볶음",
+                confidence: 0.82,
+                ingredients: [
+                  {
+                    name: "굴소스",
+                    amount: "1",
+                    unit: "T",
+                    raw_text: "굴소스 1T와 어간장 1T로 채소볶음 맛을 내요.",
+                    evidence_refs: [{ source: "caption", line_index: 1, start_ms: null, end_ms: null }],
+                  },
+                ],
+                steps: [
+                  {
+                    instruction: "굴소스와 어간장으로 채소볶음 맛을 내요.",
+                    raw_text: "굴소스 1T와 어간장 1T로 채소볶음 맛을 내요.",
+                    evidence_refs: [{ source: "caption", line_index: 1, start_ms: null, end_ms: null }],
+                  },
+                ],
+                warnings: [],
+              },
+            ],
+            excluded_mentions: ["도시락"],
+          },
+        };
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      withYoutubeRecipeLlmExtractor(llmExtractor, () => postYoutubeExtract(transcriptFallbackUrl)),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description", "caption"],
+        multi_recipe_status: "multiple",
+        blocking_issues: ["MULTI_CANDIDATE_REVIEW_REQUIRED"],
+        ingredients: [],
+        steps: [],
+        recipe_candidates: [
+          {
+            title: "미니 파프리카 새우전",
+            steps: [{ instruction: "미니 파프리카에 속을 꽉 채워요." }],
+          },
+          {
+            title: "채소볶음",
+            ingredients: [{ standard_name: "굴소스", amount: 1, unit: "T" }],
+          },
+        ],
+      },
+      error: null,
+    });
+    expect(llmExtractor.fetchStructuredRecipe).toHaveBeenCalledTimes(1);
+    expect(llmExtractionCacheTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      youtube_video_id: "transcript123",
+      model: "gemini-3.1-flash-lite",
+      source_kinds: ["description", "caption"],
+      result_json: expect.objectContaining({ recipes: expect.any(Array) }),
+    }));
+    expect(llmExtractionEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "gemini",
+      model: "gemini-3.1-flash-lite",
+      cache_hit: false,
+      status: "success",
+      input_tokens: 120,
+      output_tokens: 90,
+    }));
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      source_providers: string[];
+      raw_source_text: string;
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.source_providers).toContain("gemini_structured_extractor");
+    expect(insertedSession.raw_source_text).toContain("--- caption transcript ---");
+    expect(insertedSession.raw_source_text).toContain("속을 꽉 채워요");
+    expect(insertedSession.raw_source_text).not.toContain("test-gemini-key");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      llm_extractor: {
+        provider: "gemini",
+        model: "gemini-3.1-flash-lite",
+        status: "used",
+        cache_hit: false,
+        recipe_count: 2,
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract reuses Gemini cache before calling the model", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+
+    const { dbClient, sessionsTable, llmExtractionCacheTable, llmExtractionEventsTable } =
+      createTranscriptFallbackExtractDbClient({
+        ingredientLookupRows: [
+          { id: "550e8400-e29b-41d4-a716-446655440052", standard_name: "미니 파프리카" },
+        ],
+        cookingMethodLookupRows: [
+          {
+            id: prepMethodId,
+            code: "prep",
+            label: "손질",
+            color_key: "gray",
+            is_system: true,
+          },
+        ],
+        llmCacheRows: [
+          {
+            id: "550e8400-e29b-41d4-a716-446655441701",
+            youtube_video_id: "transcript123",
+            source_hash: "cached-source-hash",
+            schema_version: "2026-06-01",
+            model: "gemini-3.1-flash-lite",
+            source_kinds: ["description", "caption"],
+            expires_at: new Date(Date.now() + 60_000).toISOString(),
+            result_json: {
+              recipes: [
+                {
+                  title: "미니 파프리카 새우전",
+                  confidence: 0.9,
+                  ingredients: [
+                    {
+                      name: "미니 파프리카",
+                      amount: null,
+                      unit: null,
+                      raw_text: "미니 파프리카에 부침가루를 묻히고 속을 꽉 채워요.",
+                      evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                    },
+                  ],
+                  steps: [
+                    {
+                      instruction: "미니 파프리카에 속을 꽉 채워요.",
+                      raw_text: "미니 파프리카에 부침가루를 묻히고 속을 꽉 채워요.",
+                      evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                    },
+                  ],
+                  warnings: [],
+                },
+              ],
+            },
+          },
+        ],
+      });
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: "미니 파프리카에 부침가루를 묻히고 속을 꽉 채워요.",
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+    const llmExtractor: YoutubeRecipeLlmExtractor = {
+      name: "gemini_structured_extractor",
+      fetchStructuredRecipe: vi.fn(async () => {
+        throw new Error("Gemini should not be called on cache hit");
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      withYoutubeRecipeLlmExtractor(llmExtractor, () => postYoutubeExtract(transcriptFallbackUrl)),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description", "caption"],
+        ingredients: [{ standard_name: "미니 파프리카" }],
+        steps: [{ instruction: "미니 파프리카에 속을 꽉 채워요." }],
+      },
+      error: null,
+    });
+    expect(llmExtractor.fetchStructuredRecipe).not.toHaveBeenCalled();
+    expect(llmExtractionCacheTable.__updateQuery.eq).toHaveBeenCalledWith(
+      "id",
+      "550e8400-e29b-41d4-a716-446655441701",
+    );
+    expect(llmExtractionEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "gemini",
+      model: "gemini-3.1-flash-lite",
+      cache_hit: true,
+      status: "success",
+    }));
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      source_providers: string[];
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.source_providers).toContain("gemini_structured_extractor_cache");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      llm_extractor: {
+        status: "cache_hit",
+        cache_hit: true,
       },
     });
   });

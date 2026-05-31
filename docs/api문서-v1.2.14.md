@@ -899,12 +899,16 @@ POST /api/v1/recipes/youtube/extract
 | ---- | ----------- | ------ | ---------- |
 | Body | youtube_url | string | 유튜브 URL |
 
-**처리**: video_id 파싱 → YouTube `videos.list` 호출 → description/tags/category 기반 3-way classification → 설명란 파싱으로 재료/스텝 추출 → 부족하면 공개 작성자 댓글 후보와 공개 caption timedtext를 순서대로 보조 source로 파싱 → 한 영상에서 여러 요리 후보가 감지되면 `multi_parent` 세션과 `recipe_candidates[]`를 생성 → 그 외에는 단일 draft 세션 생성 → 추출 결과 반환
+**처리**: video_id 파싱 → YouTube `videos.list` 호출 → description/tags/category 기반 3-way classification → 설명란 파싱으로 재료/스텝 추출 → 부족하면 공개 작성자 댓글 후보와 공개 caption timedtext를 순서대로 보조 source로 파싱 → 그래도 부족하고 env/API key/cache/한도/근거 검증 조건을 만족하면 Gemini structured fallback으로 공개 텍스트를 JSON 구조화 → 한 영상에서 여러 요리 후보가 감지되면 `multi_parent` 세션과 `recipe_candidates[]`를 생성 → 그 외에는 단일 draft 세션 생성 → 추출 결과 반환
 
 `extraction_methods` 허용값:
 - `description`: YouTube 설명란
 - `comment`: 공개 작성자 top-level 댓글 후보
 - `caption`: 공개 caption timedtext
+
+Gemini는 원천 source가 아니라 구조화 보조 extractor이므로 `extraction_methods`에 별도 값을 추가하지 않는다.
+Gemini 사용 시 `source_providers`에는 `gemini_structured_extractor` 또는 `gemini_structured_extractor_cache`를 추가하고, `extraction_meta_json.llm_extractor`에 `provider`, `model`, `fallback_model`, `schema_version`, `status`, `cache_hit`, `retry_count`, `fallback_used`, `input_tokens`, `output_tokens`, `reason`을 저장한다.
+`raw_source_text`에는 설명란/작성자 댓글/caption 같은 공개 텍스트만 저장하고 API key, provider raw response, secret, 레시피오 결과는 저장하지 않는다.
 
 레시피오 quick import 중복 확인을 제외한 추출 단계는 특정 `youtube_video_id`별 고정 recipe fixture를 반환하지 않고 항상 provider/parser 경로를 거친다.
 

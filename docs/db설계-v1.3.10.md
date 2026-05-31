@@ -327,11 +327,11 @@ CHECK (view_count>=0AND like_count>=0AND save_count>=0AND plan_count>=0AND cook_
 | channel_title | text | nullable | 채널명 (videos.list snippet.channelTitle) |
 | thumbnail_url | text | nullable | 썸네일 URL |
 | provider_version | text | nullable | YouTube provider / extractor version |
-| source_providers | text[] | NOT NULL, DEFAULT '{}' | 실제 사용한 source provider (`youtube_videos_list`, `description_parser`, `youtube_comment_threads`, `public_caption_timedtext` 등) |
+| source_providers | text[] | NOT NULL, DEFAULT '{}' | 실제 사용한 source provider (`youtube_videos_list`, `description_parser`, `youtube_comment_threads`, `public_caption_timedtext`, `gemini_structured_extractor` 등) |
 | classification_status | varchar(20) | NOT NULL | `recipe` / `uncertain` / `non_recipe` |
 | classification_reasons | text[] | NOT NULL, DEFAULT '{}' | 판정 근거 배열 |
 | raw_source_text | text | nullable | 원본 설명란, 사용된 공개 작성자 댓글, 사용된 공개 caption text 등 추출 source text |
-| extraction_meta_json | jsonb | NOT NULL, DEFAULT '{}' | provider_version, classification, warnings 등 |
+| extraction_meta_json | jsonb | NOT NULL, DEFAULT '{}' | provider_version, classification, warnings, optional `llm_extractor` 등 |
 | draft_json | jsonb | NOT NULL, DEFAULT '{}' | 추출 결과 전체 draft (title, ingredients, steps 등). `ingredients[]` 각 항목은 `draft_ingredient_id` UUID를 포함 |
 | extraction_methods | text[] | NOT NULL, DEFAULT '{}' | `description`, `comment`, `caption` |
 | session_kind | varchar(20) | NOT NULL, DEFAULT 'single' | `single` / `multi_parent` / `candidate_child` |
@@ -410,7 +410,57 @@ INDEX youtube_extraction_candidates_child_idx ON youtube_extraction_candidates (
 - insert/update는 route handler의 service-role 경로에서만 수행한다.
 - `register_youtube_recipe_from_session`은 `multi_parent` 세션 직접 등록을 거부하고, `candidate_child` 등록 성공 시 parent candidate row를 `registered`로 갱신한다.
 
-## 4-2c. register_youtube_ingredient(...) RPC `v1.3.5 신규`
+## 4-2c. youtube_llm_extraction_cache / youtube_llm_extraction_events `2026-06-01 addendum`
+
+> YouTube 공개 텍스트를 Gemini structured fallback으로 구조화할 때만 사용하는 서버 전용 cache/event 테이블. Gemini는 source가 아니라 extractor이므로 `extraction_methods` 값은 늘리지 않는다.
+
+### youtube_llm_extraction_cache
+
+| 컬럼 | 타입 | 제약 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK | cache row ID |
+| youtube_video_id | varchar(20) | NOT NULL | 영상 ID |
+| source_hash | text | NOT NULL | 공개 source text + schema version 기반 hash |
+| schema_version | text | NOT NULL | Gemini 응답 schema version |
+| model | text | NOT NULL | cache를 생성한 Gemini model |
+| source_kinds | text[] | NOT NULL, DEFAULT '{}' | `description`, `comment`, `caption`, `transcript` |
+| result_json | jsonb | NOT NULL | 서버 검증 전 Gemini 구조화 결과. secret/provider raw response는 저장하지 않음 |
+| expires_at | timestamptz | NOT NULL | 기본 90일 TTL |
+| created_at | timestamptz | NOT NULL | 생성 시각 |
+| last_used_at | timestamptz | NOT NULL | 마지막 cache hit 시각 |
+
+```
+UNIQUE (youtube_video_id, source_hash, schema_version, model)
+INDEX youtube_llm_extraction_cache_lookup_idx ON youtube_llm_extraction_cache (youtube_video_id, source_hash, expires_at DESC, last_used_at DESC)
+```
+
+### youtube_llm_extraction_events
+
+| 컬럼 | 타입 | 제약 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK | event row ID |
+| user_id | uuid | FK → users, nullable | 요청 사용자. 사용자 삭제 시 null 처리 |
+| youtube_video_id | varchar(20) | NOT NULL | 영상 ID |
+| provider | text | NOT NULL | `gemini` |
+| model | text | nullable | 사용 또는 시도한 Gemini model |
+| cache_hit | boolean | NOT NULL, DEFAULT false | cache 사용 여부 |
+| status | text | NOT NULL | `success` / `unavailable` / `error` / `skipped` |
+| reason | text | nullable | 실패/skip 이유 |
+| input_tokens | integer | NOT NULL, DEFAULT 0 | provider usage metadata 기준 best-effort |
+| output_tokens | integer | NOT NULL, DEFAULT 0 | provider usage metadata 기준 best-effort |
+| estimated_cost_microusd | integer | NOT NULL, DEFAULT 0 | 추정 비용. 무료 tier 사용 시 0 가능 |
+| created_at | timestamptz | NOT NULL | 이벤트 시각 |
+
+```
+INDEX youtube_llm_extraction_events_provider_day_idx ON youtube_llm_extraction_events (provider, status, created_at DESC)
+INDEX youtube_llm_extraction_events_user_day_idx ON youtube_llm_extraction_events (user_id, provider, status, created_at DESC)
+```
+
+- 두 테이블 모두 RLS를 켜고 route handler service-role 경로에서만 insert/update한다.
+- API key, cookie, provider raw response, 레시피오 결과, 사용자 로그인 세션 secret은 저장하지 않는다.
+- 일일/사용자 한도 계산은 `youtube_llm_extraction_events`의 success event를 기준으로 한다.
+
+## 4-2d. register_youtube_ingredient(...) RPC `v1.3.5 신규`
 
 > YT_IMPORT 검수 단계에서 DB에 없는 재료를 사용자 확인 후 표준 재료로 등록하거나 기존 표준 재료를 재사용한다. `ingredients`와 optional `ingredient_synonyms` 처리를 하나의 transaction 안에서 수행한다.
 
