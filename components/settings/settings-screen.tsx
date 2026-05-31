@@ -462,7 +462,7 @@ export function SettingsScreen({
             {errorMessage ?? "데이터를 불러오지 못했어요"}
           </h2>
           <button
-            className="mt-4 flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-white"
+            className="mt-4 flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-[var(--text-inverse)]"
             onClick={() => void loadProfile()}
             type="button"
           >
@@ -948,16 +948,16 @@ function SettingsMobileLoadingShell({
 
   return (
     <div
-      className="min-h-dvh bg-[#F8F9FA] pb-[calc(24px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
+      className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(24px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden"
       data-testid="settings-mobile-loading"
     >
       <div
-        className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+        className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4"
         style={{ borderBottomWidth: "0.5px" }}
       >
         <button
           aria-label="뒤로가기"
-          className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start border-0 bg-transparent p-0 text-[#212529]"
+          className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start border-0 bg-transparent p-0 text-[var(--foreground)]"
           onClick={appReturn.goBack}
           type="button"
         >
@@ -974,12 +974,12 @@ function SettingsMobileLoadingShell({
             <path d="m15 18-6-6 6-6" />
           </svg>
         </button>
-        <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[#212529]">
+        <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[var(--foreground)]">
           {title}
         </h1>
       </div>
       <div className="space-y-4 p-4" data-testid="settings-loading">
-        <section className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-4">
+        <section className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-2">
               <Skeleton className="h-5 w-40" />
@@ -988,13 +988,13 @@ function SettingsMobileLoadingShell({
             <Skeleton className="h-7 w-12 rounded-full" />
           </div>
         </section>
-        <section className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-4">
+        <section className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
           <div className="space-y-2">
             <Skeleton className="h-4 w-14" />
             <Skeleton className="h-5 w-28" />
           </div>
         </section>
-        <section className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-4">
+        <section className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
           <div className="space-y-2">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-5 w-36" />
@@ -1321,7 +1321,7 @@ function ColumnNameSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 lg:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] p-4 lg:items-center"
       data-testid={`${testIdPrefix}-sheet-backdrop`}
       onClick={onClose}
     >
@@ -1390,7 +1390,7 @@ function ColumnNameSheet({
           className={`mt-4 flex w-full min-h-[var(--control-height-xl)] items-center justify-center rounded-[var(--radius-md)] text-base font-semibold ${
             saveDisabled
               ? "bg-[var(--surface-subtle)] text-[var(--text-4)]"
-              : "bg-[var(--brand)] text-white"
+              : "bg-[var(--brand)] text-[var(--text-inverse)]"
           }`}
           data-testid={`${testIdPrefix}-save`}
           disabled={saveDisabled}

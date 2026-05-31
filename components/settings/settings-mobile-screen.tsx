@@ -127,7 +127,7 @@ export function SettingsMobileScreen({
   const appReturn = useAppReturn({ fallback: "/mypage" });
 
   return (
-    <div className="min-h-dvh bg-[#F8F9FA] pb-[calc(24px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden">
+    <div className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(24px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden">
       <MobileAppBar
         onBack={appReturn.goBack}
         title={title}
@@ -135,7 +135,7 @@ export function SettingsMobileScreen({
 
       {errorMessage ? (
         <div
-          className="mx-4 mt-2 rounded-[var(--radius-control)] bg-[#FF6B6B] px-4 py-3 text-center text-[13px] font-extrabold text-white"
+          className="mx-4 mt-2 rounded-[var(--radius-control)] bg-[var(--danger)] px-4 py-3 text-center text-[13px] font-extrabold text-[var(--text-inverse)]"
           data-testid="settings-error-toast"
           role="status"
         >
@@ -260,18 +260,18 @@ function MobileAppBar({
 }) {
   return (
     <div
-      className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+      className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4"
       style={{ borderBottomWidth: "0.5px" }}
     >
       <button
         aria-label="뒤로가기"
-        className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start border-0 bg-transparent p-0 text-[#212529]"
+        className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start border-0 bg-transparent p-0 text-[var(--foreground)]"
         onClick={onBack}
         type="button"
       >
         <BackIcon />
       </button>
-      <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[#212529]">
+      <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[var(--foreground)]">
         {title}
       </h1>
     </div>
@@ -311,11 +311,11 @@ function SettingsSurface({
 }) {
   return (
     <main className="pb-4">
-      <section className="border-b border-[#F1F3F5] bg-white px-4 pb-2 pt-5">
-        <h2 className="mb-2.5 text-[16px] font-extrabold text-[#212529]">
+      <section className="border-b border-[var(--surface-subtle)] bg-[var(--surface)] px-4 pb-2 pt-5">
+        <h2 className="mb-2.5 text-[16px] font-extrabold text-[var(--foreground)]">
           요리 모드
         </h2>
-        <div className="divide-y divide-[#F1F3F5]">
+        <div className="divide-y divide-[var(--surface-subtle)]">
           <SettingToggleRow
             checked={profile?.settings.screen_wake_lock ?? false}
             description="요리 중 화면이 꺼지지 않아요"
@@ -341,12 +341,12 @@ function SettingsSurface({
         data-testid="column-management-section"
       >
         <div className="mb-2 flex items-center justify-between gap-3">
-          <h2 className="text-[16px] font-bold text-[#212529]">
+          <h2 className="text-[16px] font-bold text-[var(--foreground)]">
             플래너 끼니 컬럼
           </h2>
           {!columnsLoading && !columnsError ? (
             <button
-              className="h-8 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-[12px] font-bold text-[#495057]"
+              className="h-8 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[12px] font-bold text-[var(--text-2)]"
               onClick={() => onColumnsEditModeChange(!columnsEditMode)}
               type="button"
             >
@@ -362,21 +362,21 @@ function SettingsSurface({
           >
             {[1, 2, 3].map((index) => (
               <div
-                className="h-[38px] rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white"
+                className="h-[38px] rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)]"
                 key={index}
               />
             ))}
           </div>
         ) : columnsError ? (
           <div
-            className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-4"
+            className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4"
             data-testid="columns-error"
           >
-            <p className="text-[13px] font-bold text-[#FF6B6B]">
+            <p className="text-[13px] font-bold text-[var(--danger)]">
               {columnsError}
             </p>
             <button
-              className="mt-3 h-10 rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-[13px] font-extrabold text-white"
+              className="mt-3 h-10 rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-[13px] font-extrabold text-[var(--text-inverse)]"
               onClick={onRetryColumns}
               type="button"
             >
@@ -397,7 +397,7 @@ function SettingsSurface({
                   key={column.id}
                 >
                   <button
-                    className="h-[38px] truncate rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-left text-[14px] font-medium text-[#212529]"
+                    className="h-[38px] truncate rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-left text-[14px] font-medium text-[var(--foreground)]"
                     data-testid={`rename-column-${column.id}`}
                     onClick={() => onRenameColumnTarget(column)}
                     type="button"
@@ -407,7 +407,7 @@ function SettingsSurface({
                   {columnsEditMode ? (
                     <button
                       aria-label={`${column.name} 삭제`}
-                      className="flex h-[38px] items-center justify-center rounded-[var(--radius-control)] border border-[#FFD8D8] bg-white text-[16px] font-bold text-[#FF6B6B] disabled:border-[#DEE2E6] disabled:text-[#ADB5BD]"
+                      className="flex h-[38px] items-center justify-center rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--surface)] text-[16px] font-bold text-[var(--danger)] disabled:border-[var(--line-strong)] disabled:text-[var(--text-4)]"
                       data-testid={`delete-column-${column.id}`}
                       disabled={plannerColumns.length <= 1}
                       onClick={() => onDeleteColumnTarget(column)}
@@ -423,7 +423,7 @@ function SettingsSurface({
             <div className="mt-3 grid grid-cols-1 gap-2 min-[390px]:grid-cols-[minmax(0,1fr)_132px]">
               <input
                 aria-label="새 끼니 이름"
-                className="h-[38px] min-w-0 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-[14px] font-medium text-[#212529] outline-none placeholder:text-[#868E96] focus:ring-2 focus:ring-[var(--brand)]"
+                className="h-[38px] min-w-0 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[14px] font-medium text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)] focus:ring-2 focus:ring-[var(--brand)]"
                 maxLength={30}
                 onChange={(event) => onColumnAddInputChange(event.target.value)}
                 placeholder="새 끼니 이름"
@@ -431,7 +431,7 @@ function SettingsSurface({
                 value={columnAddInput}
               />
               <button
-                className="h-[38px] whitespace-nowrap rounded-[var(--radius-control)] bg-[var(--brand)] px-3 text-[12px] font-bold text-white disabled:bg-[#DEE2E6]"
+                className="h-[38px] whitespace-nowrap rounded-[var(--radius-control)] bg-[var(--brand)] px-3 text-[12px] font-bold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)]"
                 data-testid="add-column-button"
                 disabled={plannerColumns.length >= 5}
                 onClick={() => {
@@ -447,7 +447,7 @@ function SettingsSurface({
               </button>
             </div>
 
-            <p className="mt-2 text-[12px] font-medium text-[#868E96]">
+            <p className="mt-2 text-[12px] font-medium text-[var(--text-3)]">
               최소 2개, 최대 5개의 끼니를 등록할 수 있어요. 현재{" "}
               {plannerColumns.length}/5개
             </p>
@@ -455,16 +455,16 @@ function SettingsSurface({
         )}
       </section>
 
-      <div className="mt-2 grid grid-cols-[78px_minmax(0,1fr)] gap-2 border-t border-[#DEE2E6] bg-white px-4 py-3">
+      <div className="mt-2 grid grid-cols-[78px_minmax(0,1fr)] gap-2 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 py-3">
         <button
-          className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[#DEE2E6] text-[16px] font-extrabold text-[#ADB5BD]"
+          className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--line-strong)] text-[16px] font-extrabold text-[var(--text-4)]"
           disabled
           type="button"
         >
           취소
         </button>
         <button
-          className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[#DEE2E6] text-[16px] font-extrabold text-[#ADB5BD]"
+          className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--line-strong)] text-[16px] font-extrabold text-[var(--text-4)]"
           disabled
           type="button"
         >
@@ -491,11 +491,11 @@ function SettingToggleRow({
   return (
     <div className="flex min-h-[54px] items-center justify-between gap-3 py-3">
       <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-extrabold leading-[1.3] text-[#212529]">
+        <p className="text-[15px] font-extrabold leading-[1.3] text-[var(--foreground)]">
           {label}
         </p>
         {description ? (
-          <p className="mt-0.5 text-[12px] font-medium leading-[1.35] text-[#868E96]">
+          <p className="mt-0.5 text-[12px] font-medium leading-[1.35] text-[var(--text-3)]">
             {description}
           </p>
         ) : null}
@@ -505,7 +505,7 @@ function SettingToggleRow({
         aria-label={label}
         className={[
           "relative h-7 w-11 shrink-0 rounded-full transition-colors",
-          checked ? "bg-[var(--brand)]" : "bg-[#DEE2E6]",
+          checked ? "bg-[var(--brand)]" : "bg-[var(--line-strong)]",
         ].join(" ")}
         disabled={disabled}
         onClick={onClick}
@@ -514,7 +514,7 @@ function SettingToggleRow({
       >
         <span
           className={[
-            "absolute left-0 top-0.5 h-6 w-6 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.20)] transition-transform",
+            "absolute left-0 top-0.5 h-6 w-6 rounded-full bg-[var(--surface)] shadow-[0_1px_3px_var(--overlay-20)] transition-transform",
             checked ? "translate-x-[18px]" : "translate-x-0.5",
           ].join(" ")}
         />
@@ -549,23 +549,23 @@ function AccountSurface({
 
   return (
     <main className="px-4 py-4">
-      <div className="overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white">
+      <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]">
         {fields.map(([label, value], index) => (
           <div
             className={[
               "flex min-h-[var(--control-height-lg)] w-full items-center px-4 text-left",
-              index < fields.length - 1 ? "border-b border-[#F1F3F5]" : "",
+              index < fields.length - 1 ? "border-b border-[var(--surface-subtle)]" : "",
             ].join(" ")}
             key={label}
           >
             <span
-              className="shrink-0 text-[13px] font-bold text-[#868E96]"
+              className="shrink-0 text-[13px] font-bold text-[var(--text-3)]"
               style={{ width: "clamp(92px, 26vw, 100px)" }}
             >
               {label}
             </span>
             <span
-              className="min-w-0 flex-1 truncate font-semibold text-[#212529]"
+              className="min-w-0 flex-1 truncate font-semibold text-[var(--foreground)]"
               style={{ fontSize: "clamp(13px, 3.6vw, 14px)" }}
             >
               {value}
@@ -576,7 +576,7 @@ function AccountSurface({
 
       <div className="mt-3 space-y-3">
         <button
-          className="h-[var(--control-height-lg)] w-full rounded-[var(--radius-control)] bg-[var(--brand)] text-[15px] font-bold text-white"
+          className="h-[var(--control-height-lg)] w-full rounded-[var(--radius-control)] bg-[var(--brand)] text-[15px] font-bold text-[var(--text-inverse)]"
           data-testid="nickname-row"
           onClick={onOpenNicknameSheet}
           type="button"
@@ -584,14 +584,14 @@ function AccountSurface({
           닉네임 변경
         </button>
         <button
-          className="h-[var(--control-height-lg)] w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[15px] font-bold text-[#212529]"
+          className="h-[var(--control-height-lg)] w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[15px] font-bold text-[var(--foreground)]"
           onClick={onOpenLogoutDialog}
           type="button"
         >
           로그아웃
         </button>
         <button
-          className="h-[var(--control-height-lg)] w-full rounded-[var(--radius-control)] bg-transparent text-[14px] font-bold text-[#FF6B6B]"
+          className="h-[var(--control-height-lg)] w-full rounded-[var(--radius-control)] bg-transparent text-[14px] font-bold text-[var(--danger)]"
           onClick={onOpenDeleteDialog}
           type="button"
         >
@@ -621,44 +621,44 @@ function MobileNicknameSheet({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)]"
       data-testid="nickname-sheet-backdrop"
       onClick={onClose}
     >
       <div
         aria-modal="true"
-        className="w-full rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-4"
+        className="w-full rounded-t-[var(--radius-sheet)] bg-[var(--surface)] px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-4"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <h2 className="text-[18px] font-extrabold text-[#212529]">
+        <h2 className="text-[18px] font-extrabold text-[var(--foreground)]">
           닉네임 변경
         </h2>
         <input
-          className="mt-4 h-[38px] w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-[14px] font-medium text-[#212529] outline-none focus:ring-2 focus:ring-[var(--brand)]"
+          className="mt-4 h-[38px] w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[14px] font-medium text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--brand)]"
           maxLength={12}
           onChange={(event) => onInputChange(event.target.value)}
           type="text"
           value={nicknameInput}
         />
-        <p className="mt-2 text-[12px] font-medium text-[#868E96]">
+        <p className="mt-2 text-[12px] font-medium text-[var(--text-3)]">
           {nicknameInput.length}/12자
         </p>
         {errorMessage ? (
-          <p className="mt-2 text-[12px] font-bold text-[#FF6B6B]" data-testid="nickname-error">
+          <p className="mt-2 text-[12px] font-bold text-[var(--danger)]" data-testid="nickname-error">
             {errorMessage}
           </p>
         ) : null}
         <div className="mt-4 grid grid-cols-[78px_minmax(0,1fr)] gap-2">
           <button
-            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[#F8F9FA] text-[16px] font-extrabold text-[#212529]"
+            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[16px] font-extrabold text-[var(--foreground)]"
             onClick={onClose}
             type="button"
           >
             취소
           </button>
           <button
-            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-extrabold text-white disabled:bg-[#DEE2E6]"
+            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-extrabold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)]"
             disabled={saveDisabled}
             onClick={onSave}
             type="button"
@@ -694,47 +694,47 @@ function MobileColumnNameSheet({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)]"
       data-testid={`${testIdPrefix}-sheet-backdrop`}
       onClick={onClose}
     >
       <div
         aria-modal="true"
-        className="w-full rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-4"
+        className="w-full rounded-t-[var(--radius-sheet)] bg-[var(--surface)] px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-4"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <h2 className="text-[18px] font-extrabold text-[#212529]">
+        <h2 className="text-[18px] font-extrabold text-[var(--foreground)]">
           {title}
         </h2>
         <input
           aria-label={title}
           autoFocus
-          className="mt-4 h-[38px] w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-[14px] font-medium text-[#212529] outline-none focus:ring-2 focus:ring-[var(--brand)]"
+          className="mt-4 h-[38px] w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[14px] font-medium text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--brand)]"
           data-testid={`${testIdPrefix}-input`}
           maxLength={30}
           onChange={(event) => onInputChange(event.target.value)}
           type="text"
           value={inputValue}
         />
-        <p className="mt-2 text-[12px] font-medium text-[#868E96]">
+        <p className="mt-2 text-[12px] font-medium text-[var(--text-3)]">
           1~30자로 입력해 주세요
         </p>
         {errorMessage ? (
-          <p className="mt-2 text-[12px] font-bold text-[#FF6B6B]" data-testid={`${testIdPrefix}-sheet-error`}>
+          <p className="mt-2 text-[12px] font-bold text-[var(--danger)]" data-testid={`${testIdPrefix}-sheet-error`}>
             {errorMessage}
           </p>
         ) : null}
         <div className="mt-4 grid grid-cols-[78px_minmax(0,1fr)] gap-2">
           <button
-            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[#F8F9FA] text-[16px] font-extrabold text-[#212529]"
+            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[16px] font-extrabold text-[var(--foreground)]"
             onClick={onClose}
             type="button"
           >
             취소
           </button>
           <button
-            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-extrabold text-white disabled:bg-[#DEE2E6]"
+            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-extrabold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)]"
             data-testid={`${testIdPrefix}-save`}
             disabled={saveDisabled}
             onClick={onSave}
@@ -770,34 +770,34 @@ function MobileConfirmSheet({
   title: string;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)]">
       <div
         aria-modal="true"
-        className="w-full rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2"
+        className="w-full rounded-t-[var(--radius-sheet)] bg-[var(--surface)] px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2"
         role="alertdialog"
       >
-        <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-[#DEE2E6]" />
-        <h2 className="text-[18px] font-extrabold text-[#212529]">
+        <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-[var(--line-strong)]" />
+        <h2 className="text-[18px] font-extrabold text-[var(--foreground)]">
           {title}
         </h2>
         {description ? (
-          <p className="mt-3 text-[13px] font-medium leading-5 text-[#495057]">
+          <p className="mt-3 text-[13px] font-medium leading-5 text-[var(--text-2)]">
             {description}
           </p>
         ) : null}
         {extraWarning ? (
-          <p className="mt-4 rounded-[var(--radius-control)] bg-[#FFF5F5] px-3 py-2 text-[11px] font-bold leading-5 text-[#FF6B6B]">
+          <p className="mt-4 rounded-[var(--radius-control)] bg-[var(--danger-soft)] px-3 py-2 text-[11px] font-bold leading-5 text-[var(--danger)]">
             {extraWarning}
           </p>
         ) : null}
         {errorMessage ? (
-          <p className="mt-3 text-[12px] font-bold text-[#FF6B6B]" data-testid="dialog-error">
+          <p className="mt-3 text-[12px] font-bold text-[var(--danger)]" data-testid="dialog-error">
             {errorMessage}
           </p>
         ) : null}
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
-            className="h-[var(--control-height-md)] rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057]"
+            className="h-[var(--control-height-md)] rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-extrabold text-[var(--text-2)]"
             disabled={disabled}
             onClick={onCancel}
             type="button"
@@ -806,8 +806,8 @@ function MobileConfirmSheet({
           </button>
           <button
             className={[
-              "h-[var(--control-height-md)] rounded-[var(--radius-control)] text-[14px] font-extrabold text-white disabled:opacity-60",
-              destructive ? "bg-[#FF6B6B]" : "bg-[var(--brand)]",
+              "h-[var(--control-height-md)] rounded-[var(--radius-control)] text-[14px] font-extrabold text-[var(--text-inverse)] disabled:opacity-60",
+              destructive ? "bg-[var(--danger)]" : "bg-[var(--brand)]",
             ].join(" ")}
             disabled={disabled}
             onClick={onConfirm}

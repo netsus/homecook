@@ -404,7 +404,7 @@ export function CookModeScreen({
                   아니요
                 </button>
                 <button
-                  className="flex min-h-[var(--control-height-md)] flex-1 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-deep)] text-sm font-bold text-white"
+                  className="flex min-h-[var(--control-height-md)] flex-1 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-deep)] text-sm font-bold text-[var(--text-inverse)]"
                   data-testid="cancel-confirm-yes"
                   onClick={handleCancelConfirm}
                   type="button"

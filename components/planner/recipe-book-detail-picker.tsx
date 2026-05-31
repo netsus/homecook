@@ -70,18 +70,18 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
     return (
       <button
         aria-label={`${recipe.title} 선택`}
-        className="overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white text-left active:border-[var(--brand)] active:bg-[var(--brand-soft)]"
+        className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] text-left active:border-[var(--brand)] active:bg-[var(--brand-soft)]"
         onClick={() => onSelect(recipe)}
         type="button"
       >
-        <div className="flex aspect-[4/3] w-full items-center justify-center bg-[#F8F9FA]">
+        <div className="flex aspect-[4/3] w-full items-center justify-center bg-[var(--surface-fill)]">
           <RecipeThumb recipe={recipe} />
         </div>
         <div className="p-2.5">
-          <h3 className="line-clamp-2 text-[13px] font-bold text-[#212529]">
+          <h3 className="line-clamp-2 text-[13px] font-bold text-[var(--foreground)]">
             {recipe.title}
           </h3>
-          <p className="mt-0.5 truncate text-[11px] text-[#868E96]">
+          <p className="mt-0.5 truncate text-[11px] text-[var(--text-3)]">
             {recipe.tags.slice(0, 2).join(" · ") || "저장한 레시피"}
           </p>
           <span className="mt-2 inline-flex rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-2.5 py-1.5 text-[12px] font-semibold text-[var(--brand)]">
@@ -112,7 +112,7 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
   }
 
   return (
-    <div className="rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
+    <div className="rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_var(--shadow-color-soft)]">
       <h3 className="line-clamp-2 text-2xl font-bold tracking-[-0.02em] text-[var(--foreground)]">
         {recipe.title}
       </h3>
@@ -121,7 +121,7 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
           {recipe.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="inline-flex rounded-full bg-[var(--brand)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--brand)]"
+              className="inline-flex rounded-full bg-[var(--brand-alpha-10)] px-2 py-0.5 text-xs font-semibold text-[var(--brand)]"
             >
               {tag}
             </span>
@@ -129,7 +129,7 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
         </div>
       )}
       <button
-        className="mt-3 h-[var(--control-height-md)] w-full rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
+        className="mt-3 h-[var(--control-height-md)] w-full rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-[var(--text-inverse)] hover:bg-[var(--brand-deep)]"
         onClick={() => onSelect(recipe)}
         type="button"
       >
@@ -167,42 +167,42 @@ function ServingsModal({
 
   if (presentation === "screen" || presentation === "sheet") {
     return (
-      <div className="fixed inset-0 z-50 flex items-end bg-black/42" onClick={onCancel}>
+      <div className="fixed inset-0 z-50 flex items-end bg-[var(--overlay-42)]" onClick={onCancel}>
         <div
           aria-labelledby="servings-modal-title"
           aria-modal="true"
-          className="w-full rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)]"
+          className="w-full rounded-t-[var(--radius-sheet)] bg-[var(--surface)] px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_var(--shadow-color-strong)]"
           onClick={(e) => e.stopPropagation()}
           role="dialog"
         >
           <div className="flex justify-center pb-4">
-            <div className="h-1 w-9 rounded-full bg-[#DEE2E6]" />
+            <div className="h-1 w-9 rounded-full bg-[var(--line-strong)]" />
           </div>
-          <h2 className="text-[20px] font-bold text-[#212529]" id="servings-modal-title">
+          <h2 className="text-[20px] font-bold text-[var(--foreground)]" id="servings-modal-title">
             플래너에 추가
           </h2>
-          <p className="mt-1 text-[13px] text-[#868E96]">
+          <p className="mt-1 text-[13px] text-[var(--text-3)]">
             {slotLabel ? `${slotLabel}에 추가할 인분을 선택해주세요.` : "추가할 인분을 선택해주세요."}
           </p>
-          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-[#F8F9FA] p-2.5">
+          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] p-2.5">
             <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--brand-soft)]">
               <RecipeThumb recipe={recipe} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-extrabold text-[#212529]">
+              <span className="block truncate text-[13px] font-extrabold text-[var(--foreground)]">
                 {recipe.title}
               </span>
-              <span className="mt-0.5 block text-[11px] text-[#868E96]">
+              <span className="mt-0.5 block text-[11px] text-[var(--text-3)]">
                 선택 {servings}인분
               </span>
             </span>
           </div>
           {slotLabel ? (
-            <div className="mt-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-[#F8F9FA] px-3.5 py-3 text-[14px] font-bold text-[#495057]">
+            <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3.5 py-3 text-[14px] font-bold text-[var(--text-2)]">
               {slotLabel}
             </div>
           ) : null}
-          <p className="mt-3 text-[13px] font-bold text-[#495057]">인분</p>
+          <p className="mt-3 text-[13px] font-bold text-[var(--text-2)]">인분</p>
           <div className="mt-3 [&>div]:w-full">
             <NumericStepperCompact
               disabled={isCreating}
@@ -214,7 +214,7 @@ function ServingsModal({
           </div>
           <div className="mt-6 flex gap-3">
             <button
-              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[14px] font-bold text-[#495057]"
+              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-bold text-[var(--text-2)]"
               disabled={isCreating}
               onClick={onCancel}
               type="button"
@@ -222,7 +222,7 @@ function ServingsModal({
               취소
             </button>
             <button
-              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] bg-[var(--brand)] text-[14px] font-bold text-white disabled:opacity-50"
+              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] bg-[var(--brand)] text-[14px] font-bold text-[var(--text-inverse)] disabled:opacity-50"
               disabled={isCreating || servings < 1}
               onClick={handleConfirm}
               type="button"
@@ -297,7 +297,7 @@ function ServingsModal({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end bg-black/42 p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
+      className="fixed inset-0 z-40 flex items-end bg-[var(--overlay-42)] p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
       onClick={onCancel}
     >
       <div
@@ -333,7 +333,7 @@ function ServingsModal({
             취소
           </button>
           <button
-            className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)] disabled:opacity-50"
+            className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-[var(--text-inverse)] hover:bg-[var(--brand-deep)] disabled:opacity-50"
             disabled={isCreating || servings < 1}
             onClick={handleConfirm}
             type="button"
@@ -424,7 +424,7 @@ export function RecipeBookDetailPicker({
 
       {loadState === "error" && (
         <div
-          className="rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
+          className="rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-4 text-sm text-[var(--danger)]"
           role="alert"
         >
           {errorMessage}
@@ -448,10 +448,10 @@ export function RecipeBookDetailPicker({
 
   if (presentation === "screen") {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]">
-        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-2">
+      <div className="min-h-screen bg-[var(--surface-fill)] pb-[112px] text-[var(--foreground)]">
+        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-2">
           <AppBackButton onClick={onBack} />
-          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
+          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[var(--foreground)]">
             {book.name}
           </h1>
           <AppBackButtonSpacer />
@@ -521,7 +521,7 @@ export function RecipeBookDetailPicker({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end bg-black/42 p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
+      className="fixed inset-0 z-40 flex items-end bg-[var(--overlay-42)] p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
       onClick={onBack}
     >
       <div

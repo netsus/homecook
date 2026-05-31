@@ -73,8 +73,8 @@ export function SelectionChipRail({
             className={[
               "min-h-[var(--control-height-md)] shrink-0 rounded-[var(--radius-card)] border px-3 py-2 text-[13px] transition-colors",
               isSelected
-                ? "border-[var(--wave1-ink)] bg-[var(--wave1-ink)] font-bold text-white"
-                : "border-[var(--wave1-border)] bg-white font-medium text-[var(--wave1-text-2)]",
+                ? "border-[var(--wave1-ink)] bg-[var(--wave1-ink)] font-bold text-[var(--text-inverse)]"
+                : "border-[var(--wave1-border)] bg-[var(--surface)] font-medium text-[var(--wave1-text-2)]",
               disabled ? "opacity-60" : "",
             ]
               .filter(Boolean)

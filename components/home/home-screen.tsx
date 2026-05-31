@@ -384,36 +384,36 @@ export function HomeScreen() {
       ) : null}
       {shouldRenderAppView ? (
       <div
-        className="min-h-screen bg-white text-[#212529] lg:hidden"
+        className="min-h-screen bg-[var(--surface)] text-[var(--foreground)] lg:hidden"
         style={
           {
             "--home-mint": "var(--brand)",
             "--home-mint-deep": "var(--brand-deep)",
             "--home-mint-soft": "var(--brand-soft)",
-            "--home-bg": "#FFFFFF",
-            "--home-ink": "#212529",
+            "--home-bg": "var(--surface)",
+            "--home-ink": "var(--foreground)",
           } as React.CSSProperties
         }
       >
-        <div className="mx-auto flex min-h-screen max-w-[430px] flex-col bg-white pb-[calc(86px+env(safe-area-inset-bottom))] shadow-[0_0_0_1px_rgba(33,37,41,0.04)]">
+        <div className="mx-auto flex min-h-screen max-w-[430px] flex-col bg-[var(--surface)] pb-[calc(86px+env(safe-area-inset-bottom))] shadow-[0_0_0_1px_var(--foreground-alpha-04)]">
           <HomeAppBar />
 
           <div className="pb-[100px]">
             {/* Hero greeting */}
-            <div className="bg-white px-4 pb-3 pt-5">
-              <div className="mb-0.5 text-[14px] text-[#495057]">목요일 저녁,</div>
-              <h1 className="text-[22px] font-bold leading-[1.2] text-[#212529]">
+            <div className="bg-[var(--surface)] px-4 pb-3 pt-5">
+              <div className="mb-0.5 text-[14px] text-[var(--text-2)]">목요일 저녁,</div>
+              <h1 className="text-[22px] font-bold leading-[1.2] text-[var(--foreground)]">
                 오늘 뭐 먹지?
               </h1>
             </div>
 
             {/* Search */}
             <div className="px-4 pb-3 pt-1">
-              <label className="flex h-[44px] items-center gap-2 rounded-[var(--radius-sheet)] bg-[#F8F9FA] px-4">
+              <label className="flex h-[44px] items-center gap-2 rounded-[var(--radius-sheet)] bg-[var(--surface-fill)] px-4">
                 <SearchIcon />
                 <span className="visually-hidden">레시피 제목 검색</span>
                 <input
-                  className="w-full bg-transparent text-[14px] text-[#212529] outline-none placeholder:text-[#868E96]"
+                  className="w-full bg-transparent text-[14px] text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)]"
                   onChange={(event) => {
                     setQuery(event.target.value);
                     setActiveThemeId(null);
@@ -459,10 +459,10 @@ export function HomeScreen() {
                 {/* Section header with sort */}
                 <div className="flex items-center justify-between px-4 pb-2">
                   <div className="flex items-baseline gap-1.5">
-                    <h2 className="text-[18px] font-bold text-[#212529]">
+                    <h2 className="text-[18px] font-bold text-[var(--foreground)]">
                       {listTitle}
                     </h2>
-                    <span className="text-[14px] font-medium text-[#495057]">
+                    <span className="text-[14px] font-medium text-[var(--text-2)]">
                       ({displayedRecipes.length})
                     </span>
                   </div>
@@ -891,8 +891,8 @@ function WebProfileButton() {
 
 function HomeAppBar() {
   return (
-    <header className="sticky top-0 z-20 flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-4" style={{ borderBottomWidth: "0.5px" }}>
-      <h1 className="text-[18px] font-bold leading-none text-[#212529]">홈</h1>
+    <header className="sticky top-0 z-20 flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4" style={{ borderBottomWidth: "0.5px" }}>
+      <h1 className="text-[18px] font-bold leading-none text-[var(--foreground)]">홈</h1>
     </header>
   );
 }
@@ -946,13 +946,13 @@ function DiscoveryFilterRail({
       <button
         className={`flex h-[var(--control-height-md)] shrink-0 items-center gap-1.5 rounded-[var(--radius-control)] border px-3 text-[13px] font-semibold ${
           hasFilters
-            ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-            : "border-[var(--brand)] bg-white text-[var(--brand)]"
+            ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
+            : "border-[var(--brand)] bg-[var(--surface)] text-[var(--brand)]"
         }`}
         onClick={onOpenModal}
         type="button"
       >
-        <SearchSmallIcon color={hasFilters ? "#fff" : "var(--brand)"} />
+        <SearchSmallIcon color={hasFilters ? "var(--text-inverse)" : "var(--brand)"} />
         {hasFilters ? `재료 ${appliedIngredientIds.length}개` : "재료로 검색"}
       </button>
 
@@ -965,8 +965,8 @@ function DiscoveryFilterRail({
             className={[
               "flex h-[var(--control-height-md)] shrink-0 items-center rounded-[var(--radius-control)] border px-3 text-[13px] transition-colors",
               isActive
-                ? "border-[#212529] bg-[#212529] font-bold text-white"
-                : "border-[#DEE2E6] bg-[#F8F9FA] font-medium text-[#495057]",
+                ? "border-[var(--foreground)] bg-[var(--foreground)] font-bold text-[var(--text-inverse)]"
+                : "border-[var(--line-strong)] bg-[var(--surface-fill)] font-medium text-[var(--text-2)]",
             ].join(" ")}
             key={filter.label}
             onClick={() => onSelectRecipeCategory(filter.label)}
@@ -979,7 +979,7 @@ function DiscoveryFilterRail({
 
       {hasFilters ? (
         <button
-          className="flex h-[var(--control-height-md)] shrink-0 items-center rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-[13px] font-medium text-[#495057]"
+          className="flex h-[var(--control-height-md)] shrink-0 items-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[13px] font-medium text-[var(--text-2)]"
           onClick={onClear}
           type="button"
         >
@@ -1027,7 +1027,7 @@ function ThemeCarousel({
   return (
     <section aria-label="테마별 레시피" className="pb-4 pt-2">
       <div className="flex items-baseline justify-between px-4 pb-3">
-        <h2 className="text-[18px] font-bold text-[#212529]">테마별 레시피</h2>
+        <h2 className="text-[18px] font-bold text-[var(--foreground)]">테마별 레시피</h2>
         {activeThemeId ? (
           <button
             className="text-[12px] font-semibold text-[var(--brand)]"
@@ -1064,7 +1064,7 @@ function ThemeCarouselCard({
   theme: RecipeTheme;
   variantIndex: number;
 }) {
-  const THEME_BGS = ["#FFE8DC", "#E8F5FF", "#E8F8E0", "#FFEBEB", "#F3E8FF"];
+  const THEME_BGS = ["var(--accent-peach-soft)", "var(--accent-blue-soft)", "var(--accent-green-soft)", "var(--danger-soft)", "var(--accent-purple-soft)"];
   const emoji = ["🍳", "🏠", "🥗", "🍚", "🍷"][variantIndex % 5];
 
   return (
@@ -1076,7 +1076,7 @@ function ThemeCarouselCard({
       onClick={onClick}
       style={{
         background: THEME_BGS[variantIndex % THEME_BGS.length],
-        boxShadow: "0px 1px 3px rgba(0,0,0,0.04)",
+        boxShadow: "0px 1px 3px var(--shadow-color-subtle)",
         border: isActive ? "2px solid var(--brand)" : "2px solid transparent",
       }}
       type="button"
@@ -1084,7 +1084,7 @@ function ThemeCarouselCard({
       <span className="text-[30px] leading-none" aria-hidden="true">
         {emoji}
       </span>
-      <span className="line-clamp-2 text-[14px] font-bold leading-[1.15] text-[#212529]">
+      <span className="line-clamp-2 text-[14px] font-bold leading-[1.15] text-[var(--foreground)]">
         {theme.title}
       </span>
     </button>
@@ -1095,7 +1095,7 @@ function PromoStrip() {
   return (
     <div className="px-4 pb-3">
       <Link
-        className="flex items-center justify-between rounded-[var(--radius-card)] px-4 py-3 text-white"
+        className="flex items-center justify-between rounded-[var(--radius-card)] px-4 py-3 text-[var(--text-inverse)]"
         href="/planner"
         style={{
           background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%)",
@@ -1121,7 +1121,7 @@ function SearchIcon() {
   return (
     <svg
       aria-hidden="true"
-      className="h-4 w-4 shrink-0 text-[#495057]"
+      className="h-4 w-4 shrink-0 text-[var(--text-2)]"
       fill="none"
       stroke="currentColor"
       strokeLinecap="round"

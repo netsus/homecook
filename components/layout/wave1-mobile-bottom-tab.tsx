@@ -47,7 +47,7 @@ export function Wave1MobileBottomTab({
       className="fixed inset-x-0 bottom-[calc(8px+env(safe-area-inset-bottom))] z-30 px-4 lg:hidden"
     >
       <div
-        className="mx-auto grid h-16 max-w-[360px] grid-cols-4 rounded-full border border-[var(--wave1-border)] bg-[var(--wave1-surface)] px-2 shadow-[0_14px_36px_rgba(33,37,41,0.16)]"
+        className="mx-auto grid h-16 max-w-[360px] grid-cols-4 rounded-full border border-[var(--wave1-border)] bg-[var(--wave1-surface)] px-2 shadow-[0_14px_36px_var(--foreground-alpha-16)]"
         data-slot="bottom-tab-container"
       >
         {items.map((item) => {
@@ -59,7 +59,7 @@ export function Wave1MobileBottomTab({
               className={[
                 "flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-[3px] py-1 text-[11px] transition-colors",
                 active
-                  ? "bottom-tab-active-link font-extrabold text-[#111111]"
+                  ? "bottom-tab-active-link font-extrabold text-[var(--foreground)]"
                   : "font-semibold text-[var(--wave1-text-3)] hover:text-[var(--wave1-text-2)]",
               ].join(" ")}
               href={item.href}

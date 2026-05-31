@@ -113,8 +113,8 @@ export function LocalDevLoginPanel({
             <button
               className={
                 index === 0
-                  ? "flex min-h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-card)] bg-[var(--brand)] px-4 py-4 text-base font-semibold text-white transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
-                  : "flex min-h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--brand)_24%,transparent)] bg-white px-4 py-4 text-base font-semibold text-[var(--brand)] transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
+                  ? "flex min-h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-card)] bg-[var(--brand)] px-4 py-4 text-base font-semibold text-[var(--text-inverse)] transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
+                  : "flex min-h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--brand)_24%,transparent)] bg-[var(--surface)] px-4 py-4 text-base font-semibold text-[var(--brand)] transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
               }
               disabled={isPending}
               onClick={() => handleLocalLogin(account.id)}
@@ -132,7 +132,7 @@ export function LocalDevLoginPanel({
         첫 로그인에서는 계정을 만들고, 이후에는 같은 계정과 같은 local DB를 계속 사용합니다.
       </p>
       {errorMessage ? (
-        <p className="mt-3 rounded-[var(--radius-card)] border border-[color:rgba(255,107,107,0.2)] bg-[color:rgba(255,107,107,0.08)] px-4 py-3 text-sm text-[var(--danger)]">
+        <p className="mt-3 rounded-[var(--radius-card)] border border-[color:var(--danger-border)] bg-[color:var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]">
           {errorMessage}
         </p>
       ) : null}

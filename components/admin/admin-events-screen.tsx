@@ -133,18 +133,18 @@ export function AdminEventsScreen() {
       {state.status === "loading" && <EventsSkeleton />}
 
       {state.status === "empty" && (
-        <div className="py-16 text-center text-sm text-[var(--text-3,#868E96)]">
+        <div className="py-16 text-center text-sm text-[var(--text-3)]">
           운영 이벤트가 없어요
         </div>
       )}
 
       {state.status === "error" && (
         <div className="flex flex-col items-center py-16">
-          <p className="text-lg font-bold text-[var(--foreground,#212529)]">
+          <p className="text-lg font-bold text-[var(--foreground)]">
             {state.message}
           </p>
           <button
-            className="mt-4 inline-flex h-11 items-center rounded-xl bg-[var(--brand,#F97316)] px-6 text-sm font-semibold text-white"
+            className="mt-4 inline-flex h-11 items-center rounded-xl bg-[var(--brand)] px-6 text-sm font-semibold text-[var(--text-inverse)]"
             onClick={() => load(eventType, severity, source, page)}
             type="button"
           >
@@ -195,9 +195,9 @@ function FilterSelect({
   return (
     <select
       aria-label={label}
-      className="h-11 rounded-lg border bg-[var(--surface,#ffffff)] px-2 text-sm"
+      className="h-11 rounded-lg border bg-[var(--surface)] px-2 text-sm"
       onChange={(e) => onChange(e.target.value)}
-      style={{ borderColor: "var(--line, #E9ECEF)" }}
+      style={{ borderColor: "var(--line-strong)" }}
       value={value}
     >
       <option value="">{label} 전체</option>
@@ -210,13 +210,13 @@ function FilterSelect({
 
 function SeverityPill({ severity }: { severity: string }) {
   const styles: Record<string, string> = {
-    info: "bg-blue-50 text-blue-700",
-    warn: "bg-amber-50 text-amber-800",
-    error: "bg-red-50 text-red-700",
-    critical: "bg-red-100 text-red-900",
+    info: "bg-[var(--brand-soft)] text-[var(--olive)]",
+    warn: "bg-[var(--warning-soft)] text-[var(--warning)]",
+    error: "bg-[var(--danger-soft)] text-[var(--danger)]",
+    critical: "bg-[var(--danger-soft)] text-[var(--danger-strong)]",
   };
   return (
-    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${styles[severity] ?? "bg-gray-100 text-gray-700"}`}>
+    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${styles[severity] ?? "bg-[var(--surface-fill)] text-[var(--text-2)]"}`}>
       {severity}
     </span>
   );
@@ -238,20 +238,20 @@ function EventDetailPanel({ event }: { event: AdminOperationalEventItem }) {
 
   if (displayFields.length === 0) {
     return (
-      <p className="py-2 text-xs text-[var(--text-3,#868E96)]">상세 메타데이터 없음</p>
+      <p className="py-2 text-xs text-[var(--text-3)]">상세 메타데이터 없음</p>
     );
   }
 
   return (
-    <div className="border-t py-2" style={{ borderColor: "var(--line, #E9ECEF)" }}>
-      <p className="mb-1 text-xs font-semibold text-[var(--text-3,#868E96)]">
+    <div className="border-t py-2" style={{ borderColor: "var(--line-strong)" }}>
+      <p className="mb-1 text-xs font-semibold text-[var(--text-3)]">
         상세 메타데이터
       </p>
       <dl className="space-y-1">
         {displayFields.map(([key, value]) => (
           <div key={key} className="flex gap-2 text-sm">
-            <dt className="w-28 shrink-0 text-xs text-[var(--text-3,#868E96)]">{key}</dt>
-            <dd className="break-all text-sm text-[var(--foreground,#212529)]">
+            <dt className="w-28 shrink-0 text-xs text-[var(--text-3)]">{key}</dt>
+            <dd className="break-all text-sm text-[var(--foreground)]">
               {typeof value === "object" ? JSON.stringify(value) : String(value ?? "")}
             </dd>
           </div>
@@ -271,29 +271,29 @@ function EventsTable({
   onToggle: (id: string) => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border" style={{ borderColor: "var(--line, #E9ECEF)" }}>
+    <div className="overflow-hidden rounded-xl border" style={{ borderColor: "var(--line-strong)" }}>
       <table className="w-full text-sm">
-        <thead className="bg-[var(--surface-fill,#F8F9FA)]">
+        <thead className="bg-[var(--surface-fill,var(--surface-fill))]">
           <tr>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">유형</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">심각도</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">소스</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">요약</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">시간</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">유형</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">심각도</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">소스</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">요약</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">시간</th>
             <th className="w-8 px-3 py-2" />
           </tr>
         </thead>
-        <tbody className="divide-y" style={{ borderColor: "var(--line, #E9ECEF)" }}>
+        <tbody className="divide-y" style={{ borderColor: "var(--line-strong)" }}>
           {items.map((event) => (
-            <tr key={event.id} className="cursor-pointer bg-[var(--surface,#ffffff)]" onClick={() => onToggle(event.id)}>
-              <td className="px-3 py-2 text-[var(--foreground,#212529)]">{event.event_type}</td>
+            <tr key={event.id} className="cursor-pointer bg-[var(--surface)]" onClick={() => onToggle(event.id)}>
+              <td className="px-3 py-2 text-[var(--foreground)]">{event.event_type}</td>
               <td className="px-3 py-2"><SeverityPill severity={event.severity} /></td>
-              <td className="px-3 py-2 text-[var(--text-3,#868E96)]">{event.source}</td>
-              <td className="max-w-xs truncate px-3 py-2 text-[var(--text-2,#495057)]">{event.message_summary ?? "-"}</td>
-              <td className="px-3 py-2 text-[var(--text-3,#868E96)]">
+              <td className="px-3 py-2 text-[var(--text-3)]">{event.source}</td>
+              <td className="max-w-xs truncate px-3 py-2 text-[var(--text-2)]">{event.message_summary ?? "-"}</td>
+              <td className="px-3 py-2 text-[var(--text-3)]">
                 {new Date(event.created_at).toLocaleString("ko-KR")}
               </td>
-              <td className="px-3 py-2 text-[var(--text-3,#868E96)]">
+              <td className="px-3 py-2 text-[var(--text-3)]">
                 {expandedId === event.id ? "\u25B4" : "\u25BE"}
               </td>
             </tr>
@@ -301,7 +301,7 @@ function EventsTable({
         </tbody>
       </table>
       {expandedId && items.find((e) => e.id === expandedId) && (
-        <div className="border-t bg-[var(--surface,#ffffff)] px-4 py-2" style={{ borderColor: "var(--line, #E9ECEF)" }}>
+        <div className="border-t bg-[var(--surface)] px-4 py-2" style={{ borderColor: "var(--line-strong)" }}>
           <EventDetailPanel event={items.find((e) => e.id === expandedId)!} />
         </div>
       )}
@@ -323,23 +323,23 @@ function EventsCardList({
       {items.map((event) => (
         <button
           key={event.id}
-          className="w-full rounded-xl bg-[var(--surface,#ffffff)] p-3 text-left shadow-sm"
+          className="w-full rounded-xl bg-[var(--surface)] p-3 text-left shadow-sm"
           onClick={() => onToggle(event.id)}
           type="button"
         >
           <div className="flex items-center justify-between">
-            <span className="font-medium text-[var(--foreground,#212529)]">{event.event_type}</span>
+            <span className="font-medium text-[var(--foreground)]">{event.event_type}</span>
             <div className="flex items-center gap-2">
               <SeverityPill severity={event.severity} />
-              <span className="text-xs text-[var(--text-3,#868E96)]">
+              <span className="text-xs text-[var(--text-3)]">
                 {expandedId === event.id ? "\u25B4" : "\u25BE"}
               </span>
             </div>
           </div>
-          <p className="mt-1 truncate text-sm text-[var(--text-2,#495057)]">
+          <p className="mt-1 truncate text-sm text-[var(--text-2)]">
             {event.message_summary ?? "-"}
           </p>
-          <p className="mt-1 text-xs text-[var(--text-3,#868E96)]">
+          <p className="mt-1 text-xs text-[var(--text-3)]">
             {event.source} &middot; {new Date(event.created_at).toLocaleString("ko-KR")}
           </p>
           {expandedId === event.id && <EventDetailPanel event={event} />}
@@ -353,10 +353,10 @@ function EventsSkeleton() {
   return (
     <div className="space-y-2">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="rounded-xl bg-[var(--surface,#ffffff)] p-3 shadow-sm">
-          <div className="h-4 w-32 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
-          <div className="mt-2 h-3 w-48 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
-          <div className="mt-2 h-3 w-24 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
+        <div key={i} className="rounded-xl bg-[var(--surface)] p-3 shadow-sm">
+          <div className="h-4 w-32 animate-pulse rounded bg-[var(--line-strong)]" />
+          <div className="mt-2 h-3 w-48 animate-pulse rounded bg-[var(--line-strong)]" />
+          <div className="mt-2 h-3 w-24 animate-pulse rounded bg-[var(--line-strong)]" />
         </div>
       ))}
     </div>

@@ -195,22 +195,22 @@ function MobilePantryReflectionSheet({
     <div
       aria-labelledby="pantry-reflection-title"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/35"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-35)]"
       onClick={onCancel}
       role="dialog"
     >
       <div
-        className="max-h-[78dvh] w-full max-w-[430px] overflow-hidden rounded-t-[var(--radius-sheet)] bg-white shadow-[0_-8px_24px_rgba(0,0,0,0.12)]"
+        className="max-h-[78dvh] w-full max-w-[430px] overflow-hidden rounded-t-[var(--radius-sheet)] bg-[var(--surface)] shadow-[0_-8px_24px_var(--shadow-color-raised)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="border-b border-[#DEE2E6] px-5 pb-[17px] pt-[18px]">
+        <div className="border-b border-[var(--line-strong)] px-5 pb-[17px] pt-[18px]">
           <h2
-            className="text-[18px] font-extrabold leading-[1.3] text-[#212529]"
+            className="text-[18px] font-extrabold leading-[1.3] text-[var(--foreground)]"
             id="pantry-reflection-title"
           >
             팬트리에 반영할까요?
           </h2>
-          <p className="mt-[7px] text-[12px] font-semibold leading-[1.55] text-[#868E96]">
+          <p className="mt-[7px] text-[12px] font-semibold leading-[1.55] text-[var(--text-3)]">
             장 본 재료 중 팬트리에 추가할 항목을 선택하세요. 선택하지
             않으면 반영하지 않아요.
           </p>
@@ -218,11 +218,11 @@ function MobilePantryReflectionSheet({
 
         <div className="max-h-[38dvh] overflow-y-auto px-4">
           {eligibleItems.length === 0 ? (
-            <div className="py-8 text-center text-[14px] font-bold text-[#868E96]">
+            <div className="py-8 text-center text-[14px] font-bold text-[var(--text-3)]">
               반영할 수 있는 재료가 없어요
             </div>
           ) : (
-            <div className="divide-y divide-[#F1F3F5]">
+            <div className="divide-y divide-[var(--surface-subtle)]">
               {eligibleItems.map((item) => {
                 const isSelected = selectedIds.has(item.id);
 
@@ -238,17 +238,17 @@ function MobilePantryReflectionSheet({
                       className={[
                         "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[5px] border text-[13px] font-extrabold",
                         isSelected
-                          ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                          : "border-[#DEE2E6] bg-white text-transparent",
+                          ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
+                          : "border-[var(--line-strong)] bg-[var(--surface)] text-transparent",
                       ].join(" ")}
                     >
                       ✓
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[14px] font-extrabold leading-[1.3] text-[#212529]">
+                      <span className="block truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
                         {formatPantryItemName(item)}
                       </span>
-                      <span className="mt-[2px] block truncate text-[12px] font-semibold leading-[1.3] text-[#868E96]">
+                      <span className="mt-[2px] block truncate text-[12px] font-semibold leading-[1.3] text-[var(--text-3)]">
                         {formatPantryAmountText(item)}
                       </span>
                     </span>
@@ -259,16 +259,16 @@ function MobilePantryReflectionSheet({
           )}
         </div>
 
-        <div className="flex gap-2 border-t border-[#DEE2E6] px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-4">
+        <div className="flex gap-2 border-t border-[var(--line-strong)] px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-4">
           <button
-            className="flex h-[48px] w-[82px] shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057]"
+            className="flex h-[48px] w-[82px] shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-extrabold text-[var(--text-2)]"
             onClick={onConfirmNone}
             type="button"
           >
             반영 안 함
           </button>
           <button
-            className="flex h-[48px] min-w-0 flex-1 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-3 text-[16px] font-extrabold text-white disabled:bg-[#DEE2E6]"
+            className="flex h-[48px] min-w-0 flex-1 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-3 text-[16px] font-extrabold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)]"
             disabled={!hasSelectedItems}
             onClick={onConfirmSelected}
             type="button"

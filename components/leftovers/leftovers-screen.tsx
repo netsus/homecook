@@ -499,7 +499,7 @@ export function LeftoversScreen({
           <div className="space-y-3 p-4" data-testid="leftovers-loading">
             {[1, 2].map((index) => (
               <div
-                className="h-[136px] rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white"
+                className="h-[136px] rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
                 key={index}
               />
             ))}
@@ -528,7 +528,7 @@ export function LeftoversScreen({
               <div className="space-y-3">
                 <SocialLoginButtons nextPath={leftoversSelfHref} />
                 <Link
-                  className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[#DEE2E6] bg-white px-5 py-3 text-sm font-semibold text-[#495057]"
+                  className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--text-2)]"
                   href={appReturn.href}
                 >
                   이전 화면으로 돌아가기
@@ -718,7 +718,7 @@ function LeftoversMobileView({
 }) {
   return (
     <div
-      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
+      className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden"
       data-testid="leftovers-screen"
     >
       <MobileAppBar
@@ -730,11 +730,11 @@ function LeftoversMobileView({
 
       {feedback ? <MobileFeedback feedback={feedback} /> : null}
 
-      <section className="border-b border-[#DEE2E6] bg-white px-4 py-3">
-        <h2 className="text-[18px] font-extrabold leading-[1.35] text-[#212529]">
+      <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-4 py-3">
+        <h2 className="text-[18px] font-extrabold leading-[1.35] text-[var(--foreground)]">
           남은 요리 {items.length}개
         </h2>
-        <p className="mt-1 text-[12px] font-medium leading-[1.35] text-[#868E96]">
+        <p className="mt-1 text-[12px] font-medium leading-[1.35] text-[var(--text-3)]">
           요리한 끼니를 다시 플래너에 올리거나 다 먹은 것으로 정리할 수 있어요.
         </p>
       </section>
@@ -743,7 +743,7 @@ function LeftoversMobileView({
         <div className="space-y-3 p-4" data-testid="leftovers-loading">
           {[1, 2].map((index) => (
             <div
-              className="h-[136px] rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white"
+              className="h-[136px] rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
               key={index}
             />
           ))}
@@ -816,7 +816,7 @@ function LeftoversMobileStateShell({
 }) {
   return (
     <div
-      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
+      className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden"
       data-testid={testId}
     >
       <MobileAppBar
@@ -846,7 +846,7 @@ function MobileLeftoverCard({
 }) {
   return (
     <article
-      className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-3"
+      className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
       data-testid="leftover-card"
     >
       <div className="flex items-center gap-3">
@@ -855,10 +855,10 @@ function MobileLeftoverCard({
           src={item.recipe_thumbnail_url}
         />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-extrabold leading-[1.35] text-[#212529]">
+          <p className="truncate text-[14px] font-extrabold leading-[1.35] text-[var(--foreground)]">
             {item.recipe_title}
           </p>
-          <p className="mt-0.5 truncate text-[12px] font-medium leading-[1.35] text-[#868E96]">
+          <p className="mt-0.5 truncate text-[12px] font-medium leading-[1.35] text-[var(--text-3)]">
             {formatShortDate(item.cooked_at)} 요리 · {formatLeftoverMeta(item)}
           </p>
         </div>
@@ -866,7 +866,7 @@ function MobileLeftoverCard({
 
       <div className="mt-3 grid grid-cols-[106px_minmax(0,1fr)] gap-2">
         <button
-          className="flex h-10 min-w-0 items-center justify-center gap-1 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-2 text-center text-[12px] font-extrabold leading-none text-[#495057] disabled:opacity-60"
+          className="flex h-10 min-w-0 items-center justify-center gap-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-2 text-center text-[12px] font-extrabold leading-none text-[var(--text-2)] disabled:opacity-60"
           data-testid="planner-add-button"
           disabled={anyMutating}
           onClick={() => onPlannerAdd(item)}
@@ -875,7 +875,7 @@ function MobileLeftoverCard({
           <span className="whitespace-nowrap">플래너에 추가</span>
         </button>
         <button
-          className="flex h-10 min-w-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-2 text-center text-[13px] font-extrabold leading-none text-white disabled:opacity-60"
+          className="flex h-10 min-w-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-2 text-center text-[13px] font-extrabold leading-none text-[var(--text-inverse)] disabled:opacity-60"
           data-testid="eat-button"
           disabled={anyMutating}
           onClick={() => onEat(item.id)}
@@ -909,7 +909,7 @@ function MobileDishThumb({
   }
 
   return (
-    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[#FFE3E3] text-[24px]">
+    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--danger-soft)] text-[24px]">
       <span aria-hidden="true">{emoji}</span>
     </div>
   );
@@ -925,8 +925,8 @@ function MobileFeedback({
       className={[
         "mx-4 mt-2 rounded-[var(--radius-control)] px-4 py-3 text-center text-[13px] font-extrabold",
         feedback.tone === "error"
-          ? "bg-[#FFF5F5] text-[#FF6B6B]"
-          : "bg-[#E6FCF5] text-[#099268]",
+          ? "bg-[var(--danger-soft)] text-[var(--danger)]"
+          : "bg-[var(--success-soft)] text-[var(--success-strong)]",
       ].join(" ")}
       data-testid="feedback-toast"
       role="alert"
@@ -949,12 +949,12 @@ function MobileAppBar({
 }) {
   return (
     <div
-      className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+      className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4"
       style={{ borderBottomWidth: "0.5px" }}
     >
       <Link
         aria-label="뒤로가기"
-        className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start text-[#212529]"
+        className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start text-[var(--foreground)]"
         href={backHref}
       >
         <svg
@@ -970,11 +970,11 @@ function MobileAppBar({
           <path d="m15 18-6-6 6-6" />
         </svg>
       </Link>
-      <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[#212529]">
+      <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[var(--foreground)]">
         {title}
       </h1>
       <Link
-        className="absolute right-4 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center rounded-full border border-[#DEE2E6] bg-white px-3 text-[12px] font-extrabold text-[var(--brand)]"
+        className="absolute right-4 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[12px] font-extrabold text-[var(--brand)]"
         href={actionHref}
       >
         {actionLabel}

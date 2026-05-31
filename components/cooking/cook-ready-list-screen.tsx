@@ -43,10 +43,10 @@ const MOBILE_COOK_READY_PLACEMENTS = [
 ] as const;
 
 const mobileMethodColors = {
-  boil: { bg: "#FFEBEB", border: "#FF6B6B", label: "끓이기", text: "#C92A2A" },
-  mix: { bg: "#D3F9D8", border: "#51CF66", label: "무치기", text: "#2B8A3E" },
-  prep: { bg: "#F1F3F5", border: "#ADB5BD", label: "준비", text: "#495057" },
-  stirfry: { bg: "#FFF4E8", border: "#FFB347", label: "볶기", text: "#D97706" },
+  boil: { bg: "var(--danger-soft)", border: "var(--danger)", label: "끓이기", text: "var(--danger-strong)" },
+  mix: { bg: "var(--success-soft)", border: "var(--success-border)", label: "무치기", text: "var(--success-strong)" },
+  prep: { bg: "var(--surface-subtle)", border: "var(--text-4)", label: "준비", text: "var(--text-2)" },
+  stirfry: { bg: "var(--warning-soft)", border: "var(--warning-border)", label: "볶기", text: "var(--warning-strong)" },
 } as const;
 
 const WEB_NAV_ITEMS = [
@@ -129,43 +129,43 @@ function getMobileReadyVisual(recipe: CookingReadyRecipe, index: number) {
 
   if (title.includes("된장")) {
     return {
-      bg: "linear-gradient(135deg, #FFE0E0 0%, #FFB8B8 100%)",
+      bg: "linear-gradient(135deg, var(--danger-soft) 0%, var(--danger-border) 100%)",
       emoji: "🍲",
       method: mobileMethodColors.boil,
       minutes: 25,
       status:
         index === 1
-          ? { bg: "#FFF4E1", label: "장보기 완료", text: "#B8860B" }
-          : { bg: "#F1F3F5", label: "등록", text: "#495057" },
+          ? { bg: "var(--warning-soft)", label: "장보기 완료", text: "var(--warning-strong)" }
+          : { bg: "var(--surface-subtle)", label: "등록", text: "var(--text-2)" },
     };
   }
 
   if (title.includes("샐러드")) {
     return {
-      bg: "linear-gradient(135deg, #E8F5E0 0%, #C8E6A0 100%)",
+      bg: "linear-gradient(135deg, var(--accent-green-soft) 0%, var(--success-border) 100%)",
       emoji: "🥗",
       method: mobileMethodColors.mix,
       minutes: 10,
-      status: { bg: "#F1F3F5", label: "등록", text: "#495057" },
+      status: { bg: "var(--surface-subtle)", label: "등록", text: "var(--text-2)" },
     };
   }
 
   if (title.includes("볶음")) {
     return {
-      bg: "linear-gradient(135deg, #FFE8E0 0%, #FFD0BC 100%)",
+      bg: "linear-gradient(135deg, var(--accent-peach-soft) 0%, var(--accent-peach) 100%)",
       emoji: "🍚",
       method: mobileMethodColors.stirfry,
       minutes: 15,
-      status: { bg: "#F1F3F5", label: "등록", text: "#495057" },
+      status: { bg: "var(--surface-subtle)", label: "등록", text: "var(--text-2)" },
     };
   }
 
   return {
-    bg: "linear-gradient(135deg, #F1F3F5 0%, #DEE2E6 100%)",
+    bg: "linear-gradient(135deg, var(--surface-subtle) 0%, var(--line-strong) 100%)",
     emoji: "🍳",
     method: mobileMethodColors.prep,
     minutes: 15,
-    status: { bg: "#F1F3F5", label: "등록", text: "#495057" },
+    status: { bg: "var(--surface-subtle)", label: "등록", text: "var(--text-2)" },
   };
 }
 
@@ -603,14 +603,14 @@ function MobileCookReadyListScreen({
 }) {
   return (
     <div
-      className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] lg:hidden"
+      className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface-fill)] lg:hidden"
       data-testid="cook-ready-list-screen"
     >
-      <div className="shrink-0 border-b border-[#DEE2E6] bg-white">
+      <div className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)]">
         <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
           <Link
             aria-label="뒤로가기"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529]"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--foreground)]"
             href="/planner"
           >
             <svg
@@ -629,7 +629,7 @@ function MobileCookReadyListScreen({
               />
             </svg>
           </Link>
-          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[#212529]">
+          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[var(--foreground)]">
             요리하기
           </h1>
           <div aria-hidden="true" className="h-8 w-8 shrink-0" />
@@ -637,11 +637,11 @@ function MobileCookReadyListScreen({
       </div>
 
       <main className="min-h-0 flex-1 overflow-y-auto pb-[110px]">
-        <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
-          <p className="text-[13px] font-medium leading-[1.35] text-[#868E96]">
+        <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5">
+          <p className="text-[13px] font-medium leading-[1.35] text-[var(--text-3)]">
             {formatMobileCookDate(dateRange?.start)}
           </p>
-          <h2 className="mt-1 text-[20px] font-extrabold leading-[1.3] text-[#212529]">
+          <h2 className="mt-1 text-[20px] font-extrabold leading-[1.3] text-[var(--foreground)]">
             어떤 요리부터 시작할까요?
           </h2>
         </section>
@@ -664,7 +664,7 @@ function MobileCookReadyListScreen({
             >
               {Array.from({ length: 3 }).map((_, index) => (
                 <Skeleton
-                  className="border border-[#DEE2E6] bg-white"
+                  className="border border-[var(--line-strong)] bg-[var(--surface)]"
                   height={154}
                   key={index}
                   rounded="lg"
@@ -697,9 +697,9 @@ function MobileCookReadyListScreen({
 
           {screenState === "ready" ? (
             <section data-testid="cook-ready-recipe-list">
-              <h3 className="mb-[10px] text-[14px] font-bold leading-[1.3] text-[#212529]">
+              <h3 className="mb-[10px] text-[14px] font-bold leading-[1.3] text-[var(--foreground)]">
                 오늘{" "}
-                <span className="font-medium text-[#868E96]">
+                <span className="font-medium text-[var(--text-3)]">
                   · {recipes.length}개
                 </span>
               </h3>
@@ -750,10 +750,10 @@ function MobileCookReadyCard({
 
   return (
     <article
-      className="overflow-hidden rounded-[var(--radius-card)] border border-l-[4px] bg-white"
+      className="overflow-hidden rounded-[var(--radius-card)] border border-l-[4px] bg-[var(--surface)]"
       data-testid="recipe-ready-card"
       style={{
-        borderColor: "#DEE2E6",
+        borderColor: "var(--line-strong)",
         borderLeftColor: visual.method.border,
       }}
     >
@@ -796,10 +796,10 @@ function MobileCookReadyCard({
               {visual.status.label}
             </span>
           </div>
-          <p className="truncate text-[15px] font-bold leading-[1.3] text-[#212529]">
+          <p className="truncate text-[15px] font-bold leading-[1.3] text-[var(--foreground)]">
             {recipe.recipe_title}
           </p>
-          <p className="mt-0.5 truncate text-[11px] font-medium leading-[1.3] text-[#868E96]">
+          <p className="mt-0.5 truncate text-[11px] font-medium leading-[1.3] text-[var(--text-3)]">
             {dateLabel} {placement.slot} #{placement.index} ·{" "}
             {recipe.total_servings}인분 · {visual.minutes}분
           </p>
@@ -807,7 +807,7 @@ function MobileCookReadyCard({
       </div>
       <div className="px-[14px] pb-[14px]">
         <button
-          className="flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold leading-none text-white disabled:bg-[#DEE2E6] disabled:text-[#ADB5BD]"
+          className="flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold leading-none text-[var(--text-inverse)] disabled:bg-[var(--line-strong)] disabled:text-[var(--text-4)]"
           data-testid="start-session-button"
           disabled={anyCreating}
           onClick={() => onStartSession(recipe)}

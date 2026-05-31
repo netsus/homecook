@@ -783,7 +783,7 @@ export function RecipeDetailScreen({
   const heroBackground = getRecipeHeroBackground(recipe);
   const mobileHeroStyle = recipe.thumbnail_url
     ? {
-        backgroundImage: `linear-gradient(rgba(33,37,41,0.04),rgba(33,37,41,0.32)),url("${recipe.thumbnail_url}")`,
+        backgroundImage: `linear-gradient(var(--foreground-alpha-04),var(--foreground-alpha-32)),url("${recipe.thumbnail_url}")`,
         backgroundPosition: "center",
         backgroundSize: "cover",
       }
@@ -975,7 +975,7 @@ export function RecipeDetailScreen({
                   {selectedServings}
                 </span>
                 <button
-                  className="flex h-[var(--control-height-md)] w-11 items-center justify-center rounded-full bg-[var(--brand)] text-lg font-bold text-white"
+                  className="flex h-[var(--control-height-md)] w-11 items-center justify-center rounded-full bg-[var(--brand)] text-lg font-bold text-[var(--text-inverse)]"
                   onClick={() => setSelectedServings((value) => value + 1)}
                   type="button"
                 >
@@ -1188,7 +1188,7 @@ export function RecipeDetailScreen({
       </div>
       ) : null}
       {shouldRenderAppView ? (
-      <div className="min-h-screen bg-white pb-[190px] text-[#212529] lg:hidden">
+      <div className="min-h-screen bg-[var(--surface)] pb-[190px] text-[var(--foreground)] lg:hidden">
         <section
           className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden text-[132px] max-[360px]:text-[108px] md:max-h-[460px]"
           data-testid="recipe-detail-hero"
@@ -1201,7 +1201,7 @@ export function RecipeDetailScreen({
           )}
           <button
             aria-label="뒤로가기"
-            className="absolute left-4 top-[calc(12px+env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-full bg-white/92 text-[#212529] shadow-[0_2px_8px_rgba(0,0,0,0.16)]"
+            className="absolute left-4 top-[calc(12px+env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-alpha-92)] text-[var(--foreground)] shadow-[0_2px_8px_var(--shadow-color-strong)]"
             onClick={appReturn.goBack}
             type="button"
           >
@@ -1243,7 +1243,7 @@ export function RecipeDetailScreen({
           </div>
         </section>
 
-        <section className="border-b border-[#DEE2E6] bg-white p-5">
+        <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] p-5">
           {displayTags.length > 0 ? (
             <div className="mb-2 flex flex-wrap items-center gap-1.5" data-testid="recipe-detail-tags">
               {displayTags.map((tag, index) => (
@@ -1252,7 +1252,7 @@ export function RecipeDetailScreen({
                     "rounded-full px-[9px] py-1 text-[12px] font-extrabold",
                     index === 0
                       ? "bg-[var(--brand-soft)] text-[var(--brand)]"
-                      : "bg-[#F8F9FA] text-[#495057]",
+                      : "bg-[var(--surface-fill)] text-[var(--text-2)]",
                   ].join(" ")}
                   key={`${tag}-${index}`}
                 >
@@ -1261,7 +1261,7 @@ export function RecipeDetailScreen({
               ))}
             </div>
           ) : null}
-          <h1 className="mb-2.5 text-[24px] font-bold leading-tight text-[#212529]">
+          <h1 className="mb-2.5 text-[24px] font-bold leading-tight text-[var(--foreground)]">
             {recipe.title}
           </h1>
           {recipe.source_type === "youtube" ? (
@@ -1269,7 +1269,7 @@ export function RecipeDetailScreen({
               YouTube에서 가져온 레시피
             </p>
           ) : null}
-          <div className="flex items-center gap-2 text-[12px] text-[#5F6470]">
+          <div className="flex items-center gap-2 text-[12px] text-[var(--text-2)]">
             <ClockIcon />
             <span>{minutesLabel}</span>
             <span>·</span>
@@ -1280,7 +1280,7 @@ export function RecipeDetailScreen({
 
         <div
           aria-label="레시피 상세 탭"
-          className="sticky top-0 z-10 flex border-b border-[#DEE2E6] bg-white"
+          className="sticky top-0 z-10 flex border-b border-[var(--line-strong)] bg-[var(--surface)]"
           role="tablist"
         >
           {[
@@ -1297,8 +1297,8 @@ export function RecipeDetailScreen({
                 className={[
                   "min-h-[var(--control-height-lg)] flex-1 border-b-2 px-2 py-3.5 text-[14px]",
                   isActive
-                    ? "border-[var(--brand)] font-bold text-[#212529]"
-                    : "border-transparent font-medium text-[#5F6470]",
+                    ? "border-[var(--brand)] font-bold text-[var(--foreground)]"
+                    : "border-transparent font-medium text-[var(--text-2)]",
                 ].join(" ")}
                 key={key}
                 onClick={() => setActiveTab(key)}
@@ -1312,20 +1312,20 @@ export function RecipeDetailScreen({
         </div>
 
         {activeTab === "ingredients" ? (
-          <section className="bg-white p-5">
-            <div className="mb-5 flex items-center justify-between rounded-[var(--radius-card)] bg-[#F8F9FA] px-4 py-3">
+          <section className="bg-[var(--surface)] p-5">
+            <div className="mb-5 flex items-center justify-between rounded-[var(--radius-card)] bg-[var(--surface-fill)] px-4 py-3">
               <div>
-                <div className="mb-0.5 text-[12px] text-[#5F6470]">
+                <div className="mb-0.5 text-[12px] text-[var(--text-2)]">
                   인분 조절
                 </div>
-                <div className="text-[16px] font-bold text-[#212529]">
+                <div className="text-[16px] font-bold text-[var(--foreground)]">
                   {selectedServings}인분
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   aria-label="인분 줄이기"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-[#DEE2E6] bg-white text-base font-medium text-[#212529] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] text-base font-medium text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={selectedServings <= 1}
                   onClick={() =>
                     setSelectedServings((value) => Math.max(1, value - 1))
@@ -1334,12 +1334,12 @@ export function RecipeDetailScreen({
                 >
                   −
                 </button>
-                <span className="min-w-6 text-center font-bold text-[#212529]">
+                <span className="min-w-6 text-center font-bold text-[var(--foreground)]">
                   {selectedServings}
                 </span>
                 <button
                   aria-label="인분 늘리기"
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand)] text-base font-bold text-white"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand)] text-base font-bold text-[var(--text-inverse)]"
                   onClick={() => setSelectedServings((value) => value + 1)}
                   type="button"
                 >
@@ -1367,12 +1367,12 @@ export function RecipeDetailScreen({
                 return (
                   <React.Fragment key={ingredient.id}>
                     {showSectionHeading ? (
-                      <li className="border-t border-[#F1F3F5] pt-4 text-[13px] font-bold text-[var(--brand)] first:border-t-0 first:pt-0">
+                      <li className="border-t border-[var(--surface-subtle)] pt-4 text-[13px] font-bold text-[var(--brand)] first:border-t-0 first:pt-0">
                         {sectionLabel}
                       </li>
                     ) : null}
-                    <li className="flex items-center justify-between border-b border-[#F1F3F5] py-3 text-[15px] last:border-b-0">
-                      <span className="flex min-w-0 items-center gap-2 font-medium text-[#212529]">
+                    <li className="flex items-center justify-between border-b border-[var(--surface-subtle)] py-3 text-[15px] last:border-b-0">
+                      <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--foreground)]">
                         <span>{ingredient.standard_name}</span>
                         {ingredient.ingredient_type === "TO_TASTE" ? (
                           <span className="rounded-full border border-[var(--brand-border)] bg-[var(--brand-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand)]">
@@ -1380,7 +1380,7 @@ export function RecipeDetailScreen({
                           </span>
                         ) : null}
                       </span>
-                      <span className="text-[14px] text-[#495057]">
+                      <span className="text-[14px] text-[var(--text-2)]">
                         {quantityText}
                       </span>
                     </li>
@@ -1392,7 +1392,7 @@ export function RecipeDetailScreen({
         ) : null}
 
         {activeTab === "steps" ? (
-          <section className="bg-[#F8F9FA] px-4 py-5">
+          <section className="bg-[var(--surface-fill)] px-4 py-5">
             <ol className="space-y-3">
               {recipe.steps.map((step, idx) => {
                 const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
@@ -1407,7 +1407,7 @@ export function RecipeDetailScreen({
                       </li>
                     ) : null}
                     <li
-                      className="rounded-[var(--radius-card)] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+                      className="rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[0_2px_8px_var(--shadow-color-soft)]"
                       style={{
                         borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method?.color_key)}`,
                       }}
@@ -1426,23 +1426,23 @@ export function RecipeDetailScreen({
                     >
                       {step.step_number}
                     </span>
-                    <span className="flex-1 text-[15px] font-bold text-[#212529]">
+                    <span className="flex-1 text-[15px] font-bold text-[var(--foreground)]">
                       {step.cooking_method?.label ?? "만들기"}
                     </span>
                     {step.duration_text ? (
-                      <span className="text-[12px] text-[#5F6470]">
+                      <span className="text-[12px] text-[var(--text-2)]">
                         {step.duration_text}
                       </span>
                     ) : null}
                   </div>
-                  <p className="pl-9 text-base leading-[1.6] text-[#495057]">
+                  <p className="pl-9 text-base leading-[1.6] text-[var(--text-2)]">
                     {stripMatchingSectionPrefix(
                       step.instruction,
                       step.component_label,
                     ) ?? step.instruction}
                   </p>
                   {step.heat_level ? (
-                    <p className="mt-1.5 pl-9 text-[12px] text-[#5F6470]">
+                    <p className="mt-1.5 pl-9 text-[12px] text-[var(--text-2)]">
                       불 세기 {step.heat_level}
                     </p>
                   ) : null}
@@ -1455,8 +1455,8 @@ export function RecipeDetailScreen({
         ) : null}
 
         {activeTab === "reviews" ? (
-          <section className="bg-white p-5">
-            <div className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-[#F8F9FA] px-4 py-5 text-[14px] leading-5 text-[#5F6470]">
+          <section className="bg-[var(--surface)] p-5">
+            <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-4 py-5 text-[14px] leading-5 text-[var(--text-2)]">
               아직 등록된 리뷰가 없어요.
             </div>
           </section>
@@ -1464,7 +1464,7 @@ export function RecipeDetailScreen({
       </div>
       ) : null}
       {shouldRenderWebView ? (
-      <div className="sticky bottom-0 z-20 hidden border-t border-[var(--line)] bg-[var(--surface)] px-5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] lg:block xl:hidden">
+      <div className="sticky bottom-0 z-20 hidden border-t border-[var(--line)] bg-[var(--surface)] px-5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_var(--shadow-color-soft)] lg:block xl:hidden">
         <div className="grid grid-cols-[1fr_2fr] gap-2">
           <ActionButton
             label="플래너에 추가"
@@ -1480,7 +1480,7 @@ export function RecipeDetailScreen({
       </div>
       ) : null}
       {shouldRenderAppView ? (
-      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 flex gap-2 border-t border-[#DEE2E6] bg-white px-4 pb-3 pt-3 lg:hidden">
+      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 flex gap-2 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-3 pt-3 lg:hidden">
         <button
           className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-[var(--brand-soft)] px-3 text-[15px] font-bold text-[var(--brand)]"
           onClick={() => handleProtectedAction("planner")}
@@ -1489,7 +1489,7 @@ export function RecipeDetailScreen({
           플래너에 추가
         </button>
         <button
-          className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] bg-[var(--brand)] px-3 text-[15px] font-bold text-white"
+          className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] bg-[var(--brand)] px-3 text-[15px] font-bold text-[var(--text-inverse)]"
           onClick={() => router.push(cookModeHref)}
           type="button"
         >
@@ -2261,7 +2261,7 @@ function Wave1HeroMetricButton({
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
       className={[
-        "flex min-h-[48px] min-w-11 flex-col items-center justify-center gap-1 rounded-full bg-transparent px-1 py-0 text-[12px] font-bold leading-none text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.75)] transition-transform duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70",
+        "flex min-h-[48px] min-w-11 flex-col items-center justify-center gap-1 rounded-full bg-transparent px-1 py-0 text-[12px] font-bold leading-none text-[var(--text-inverse)] drop-shadow-[0_2px_5px_var(--overlay-75)] transition-transform duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70",
         ariaPressed ? "scale-110" : "",
       ].join(" ")}
       disabled={disabled}
@@ -2293,7 +2293,7 @@ function Wave1HeroMetricStatus({
   return (
     <div
       aria-label={ariaLabel}
-      className="flex min-h-[48px] min-w-11 flex-col items-center justify-center gap-1 rounded-full bg-transparent px-1 py-0 text-[12px] font-bold leading-none text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.75)]"
+      className="flex min-h-[48px] min-w-11 flex-col items-center justify-center gap-1 rounded-full bg-transparent px-1 py-0 text-[12px] font-bold leading-none text-[var(--text-inverse)] drop-shadow-[0_2px_5px_var(--overlay-75)]"
       role="status"
     >
       <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center">
@@ -2457,7 +2457,7 @@ function HeartIcon({ filled = false }: { filled?: boolean }) {
   return (
     <svg
       aria-hidden="true"
-      className={filled ? "text-[#E03131]" : undefined}
+      className={filled ? "text-[var(--danger-strong)]" : undefined}
       fill={filled ? "currentColor" : "none"}
       height="18"
       stroke="currentColor"
@@ -2741,22 +2741,22 @@ function getRecipeHeroBackground(recipe: RecipeDetail) {
   ].join(" ");
 
   if (/제육|돼지|소고기|고기|스테이크|불고기/.test(searchableText)) {
-    return "linear-gradient(135deg, #FFD6C0 0%, #FFA07A 100%)";
+    return "linear-gradient(135deg, var(--accent-peach) 0%, var(--accent-peach) 100%)";
   }
 
   if (/김치|찌개|국물|매운탕|감자탕|삼계탕/.test(searchableText)) {
-    return "#FFB89F";
+    return "var(--accent-peach)";
   }
 
   if (/밥|볶음밥|덮밥/.test(searchableText)) {
-    return "#FFD166";
+    return "var(--accent-gold)";
   }
 
   if (/면|파스타|국수|라면/.test(searchableText)) {
-    return "#B7E4C7";
+    return "var(--success-border)";
   }
 
-  return "#FFD6A5";
+  return "var(--accent-peach)";
 }
 
 function getRecipeMinutesLabel(recipe: RecipeDetail) {

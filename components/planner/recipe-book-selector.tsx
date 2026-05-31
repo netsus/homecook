@@ -62,25 +62,25 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
         className={[
           "mb-2 flex min-h-[74px] w-full items-center gap-3 rounded-[var(--radius-card)] border px-4 py-3.5 text-left",
           hasRecipes
-            ? "border-[#DEE2E6] bg-white active:border-[var(--brand)] active:bg-[var(--brand-soft)]"
-            : "border-[#F1F3F5] bg-[#F8F9FA]",
+            ? "border-[var(--line-strong)] bg-[var(--surface)] active:border-[var(--brand)] active:bg-[var(--brand-soft)]"
+            : "border-[var(--surface-subtle)] bg-[var(--surface-fill)]",
         ].join(" ")}
         onClick={() => onSelect(book)}
         type="button"
       >
-        <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-white text-[20px] shadow-[inset_0_0_0_1px_#DEE2E6]">
+        <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface)] text-[20px] shadow-[inset_0_0_0_1px_var(--line-strong)]">
           {screenIcon}
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-[15px] font-bold text-[#212529]">{book.name}</span>
+            <span className="truncate text-[15px] font-bold text-[var(--foreground)]">{book.name}</span>
             <span className="shrink-0 rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--brand)]">
               {hasRecipes ? `${book.recipe_count}개` : "비어 있음"}
             </span>
           </span>
-          <span className="mt-0.5 block text-[12px] text-[#868E96]">{screenSubtitle}</span>
+          <span className="mt-0.5 block text-[12px] text-[var(--text-3)]">{screenSubtitle}</span>
         </span>
-        <span className="text-[22px] text-[#ADB5BD]" aria-hidden="true">
+        <span className="text-[22px] text-[var(--text-4)]" aria-hidden="true">
           ›
         </span>
         <span className="sr-only">선택</span>
@@ -112,7 +112,7 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
   }
 
   return (
-    <div className="rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
+    <div className="rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_var(--shadow-color-soft)]">
       <h3 className="text-xl font-bold tracking-[-0.02em] text-[var(--foreground)]">
         {book.name}
       </h3>
@@ -122,7 +122,7 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
         <span>레시피 {book.recipe_count}개</span>
       </div>
       <button
-        className="mt-3 h-[var(--control-height-md)] w-full rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
+        className="mt-3 h-[var(--control-height-md)] w-full rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-[var(--text-inverse)] hover:bg-[var(--brand-deep)]"
         onClick={() => onSelect(book)}
         type="button"
       >
@@ -206,7 +206,7 @@ export function RecipeBookSelector({
 
       {loadState === "error" && (
         <div
-          className="rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
+          className="rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-4 text-sm text-[var(--danger)]"
           role="alert"
         >
           {errorMessage}
@@ -243,10 +243,10 @@ export function RecipeBookSelector({
 
   if (presentation === "screen") {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]">
-        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-2">
+      <div className="min-h-screen bg-[var(--surface-fill)] pb-[112px] text-[var(--foreground)]">
+        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-2">
           <AppBackButton onClick={onBack ?? onClose} />
-          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
+          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[var(--foreground)]">
             레시피북에서 추가
           </h1>
           <AppBackButtonSpacer />
@@ -259,7 +259,7 @@ export function RecipeBookSelector({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end bg-black/42 p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
+      className="fixed inset-0 z-40 flex items-end bg-[var(--overlay-42)] p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
       onClick={onClose}
     >
       <div

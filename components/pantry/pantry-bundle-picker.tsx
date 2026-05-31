@@ -167,7 +167,7 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
           sheetState === "ready" && expandedBundle ? (
             <div className="space-y-2">
               {addErrorMessage ? (
-                <p className="text-[13px] font-bold text-[#C92A2A]" role="alert">
+                <p className="text-[13px] font-bold text-[var(--danger-strong)]" role="alert">
                   {addErrorMessage}
                 </p>
               ) : null}
@@ -203,11 +203,11 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
           </div>
         ) : sheetState === "error" ? (
           <div className="flex flex-col items-center py-10 text-center">
-            <p className="text-sm font-semibold text-[#212529]">
+            <p className="text-sm font-semibold text-[var(--foreground)]">
               묶음 목록을 불러오지 못했어요
             </p>
             <button
-              className="mt-4 h-10 rounded-[var(--radius-control)] bg-[var(--brand)] px-5 text-[13px] font-extrabold text-white"
+              className="mt-4 h-10 rounded-[var(--radius-control)] bg-[var(--brand)] px-5 text-[13px] font-extrabold text-[var(--text-inverse)]"
               onClick={() => void loadBundles()}
               type="button"
             >
@@ -216,10 +216,10 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
           </div>
         ) : sheetState === "empty" ? (
           <div className="py-10 text-center">
-            <p className="text-[15px] font-bold text-[#212529]">
+            <p className="text-[15px] font-bold text-[var(--foreground)]">
               등록된 묶음이 없어요
             </p>
-            <p className="mt-2 text-[13px] text-[#868E96]">
+            <p className="mt-2 text-[13px] text-[var(--text-3)]">
               묶음이 준비되면 여기서 한 번에 추가할 수 있어요
             </p>
           </div>
@@ -238,10 +238,10 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
                       : ingredient.standard_name
                   }
                   className={[
-                    "flex min-h-[48px] w-full items-center gap-3 rounded-[var(--radius-control)] border border-[#DEE2E6] px-3 text-left disabled:opacity-60",
+                    "flex min-h-[48px] w-full items-center gap-3 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 text-left disabled:opacity-60",
                     isInPantry
-                      ? "bg-[#F8F9FA] opacity-60 grayscale"
-                      : "bg-white",
+                      ? "bg-[var(--surface-fill)] opacity-60 grayscale"
+                      : "bg-[var(--surface)]",
                   ].join(" ")}
                   data-owned={isInPantry ? "true" : undefined}
                   disabled={isInPantry}
@@ -255,8 +255,8 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
                     className={[
                       "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[var(--radius-control)] border text-[13px] font-bold",
                       isChecked
-                        ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                        : "border-[#DEE2E6] bg-white text-transparent",
+                        ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
+                        : "border-[var(--line-strong)] bg-[var(--surface)] text-transparent",
                     ].join(" ")}
                   >
                     ✓
@@ -264,13 +264,13 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
                   <span
                     className={[
                       "min-w-0 flex-1 truncate text-[14px] font-bold",
-                      isInPantry ? "text-[#868E96]" : "text-[#212529]",
+                      isInPantry ? "text-[var(--text-3)]" : "text-[var(--foreground)]",
                     ].join(" ")}
                   >
                     {ingredient.standard_name}
                   </span>
                   {isInPantry ? (
-                    <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-[#495057]">
+                    <span className="shrink-0 rounded-full bg-[var(--surface)] px-2 py-0.5 text-[11px] font-bold text-[var(--text-2)]">
                       보유중
                     </span>
                   ) : null}
@@ -286,28 +286,28 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
 
               return (
                 <button
-                  className="flex min-h-[64px] w-full items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white px-3.5 py-2.5 text-left"
+                  className="flex min-h-[64px] w-full items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] px-3.5 py-2.5 text-left"
                   key={bundle.id}
                   onClick={() => handleToggleBundleExpand(bundle.id)}
                   type="button"
                 >
                   <span
                     aria-hidden="true"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F8F9FA] text-[20px]"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-fill)] text-[20px]"
                   >
                     {getBundleEmoji(bundle.name)}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-extrabold text-[#212529]">
+                    <span className="block truncate text-[14px] font-extrabold text-[var(--foreground)]">
                       {bundle.name}
                     </span>
-                    <span className="mt-0.5 block truncate text-[11px] font-bold text-[#495057]">
+                    <span className="mt-0.5 block truncate text-[11px] font-bold text-[var(--text-2)]">
                       {missingCount > 0
                         ? `추가 가능 ${missingCount}개`
                         : "추가할 새 재료 없음"}
                       {ownedCount > 0 ? ` · 보유중 ${ownedCount}개` : ""}
                     </span>
-                    <span className="mt-0.5 block truncate text-[11px] font-medium text-[#868E96]">
+                    <span className="mt-0.5 block truncate text-[11px] font-medium text-[var(--text-3)]">
                       {bundle.ingredients
                         .map((ingredient) => ingredient.standard_name)
                         .join(", ")}
@@ -504,7 +504,7 @@ function ChevronRightIcon() {
   return (
     <svg
       aria-hidden="true"
-      className="h-6 w-6 shrink-0 text-[#ADB5BD]"
+      className="h-6 w-6 shrink-0 text-[var(--text-4)]"
       fill="none"
       stroke="currentColor"
       strokeLinecap="round"

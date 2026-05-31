@@ -72,13 +72,13 @@ export function AdminAuditLogsScreen() {
         />
         <input
           aria-label="관리자 UUID"
-          className="h-11 min-w-0 flex-1 rounded-lg border bg-[var(--surface,#ffffff)] px-2 text-sm sm:flex-none"
+          className="h-11 min-w-0 flex-1 rounded-lg border bg-[var(--surface)] px-2 text-sm sm:flex-none"
           onChange={(event) => {
             setActorAdminUserId(event.target.value.trim());
             setPage(1);
           }}
           placeholder="관리자 UUID"
-          style={{ borderColor: "var(--line, #E9ECEF)" }}
+          style={{ borderColor: "var(--line-strong)" }}
           value={actorAdminUserId}
         />
         <FilterSelect
@@ -92,18 +92,18 @@ export function AdminAuditLogsScreen() {
       {state.status === "loading" && <AuditLogsSkeleton />}
 
       {state.status === "empty" && (
-        <div className="py-16 text-center text-sm text-[var(--text-3,#868E96)]">
+        <div className="py-16 text-center text-sm text-[var(--text-3)]">
           감사 로그가 없어요
         </div>
       )}
 
       {state.status === "error" && (
         <div className="flex flex-col items-center py-16">
-          <p className="text-lg font-bold text-[var(--foreground,#212529)]">
+          <p className="text-lg font-bold text-[var(--foreground)]">
             {state.message}
           </p>
           <button
-            className="mt-4 inline-flex h-11 items-center rounded-xl bg-[var(--brand,#F97316)] px-6 text-sm font-semibold text-white"
+            className="mt-4 inline-flex h-11 items-center rounded-xl bg-[var(--brand)] px-6 text-sm font-semibold text-[var(--text-inverse)]"
             onClick={() => load(action, actorAdminUserId, targetType, page)}
             type="button"
           >
@@ -146,9 +146,9 @@ function FilterSelect({
   return (
     <select
       aria-label={label}
-      className="h-11 rounded-lg border bg-[var(--surface,#ffffff)] px-2 text-sm"
+      className="h-11 rounded-lg border bg-[var(--surface)] px-2 text-sm"
       onChange={(e) => onChange(e.target.value)}
-      style={{ borderColor: "var(--line, #E9ECEF)" }}
+      style={{ borderColor: "var(--line-strong)" }}
       value={value}
     >
       <option value="">{label} 전체</option>
@@ -161,12 +161,12 @@ function FilterSelect({
 
 function ResultPill({ result }: { result: string }) {
   const styles: Record<string, string> = {
-    success: "bg-green-50 text-green-700",
-    failure: "bg-red-50 text-red-700",
-    forbidden: "bg-amber-50 text-amber-800",
+    success: "bg-[var(--success-soft)] text-[var(--success)]",
+    failure: "bg-[var(--danger-soft)] text-[var(--danger)]",
+    forbidden: "bg-[var(--warning-soft)] text-[var(--warning)]",
   };
   return (
-    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${styles[result] ?? "bg-gray-100 text-gray-700"}`}>
+    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${styles[result] ?? "bg-[var(--surface-fill)] text-[var(--text-2)]"}`}>
       {result}
     </span>
   );
@@ -174,37 +174,37 @@ function ResultPill({ result }: { result: string }) {
 
 function AuditLogsTable({ items }: { items: AdminAuditLogItem[] }) {
   return (
-    <div className="overflow-hidden rounded-xl border" style={{ borderColor: "var(--line, #E9ECEF)" }}>
+    <div className="overflow-hidden rounded-xl border" style={{ borderColor: "var(--line-strong)" }}>
       <table className="w-full text-sm">
-        <thead className="bg-[var(--surface-fill,#F8F9FA)]">
+        <thead className="bg-[var(--surface-fill,var(--surface-fill))]">
           <tr>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">액션</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">관리자</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">대상</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">경로</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">결과</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">IP 해시</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">UA 해시</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">시간</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">액션</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">관리자</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">대상</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">경로</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">결과</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">IP 해시</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">UA 해시</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">시간</th>
           </tr>
         </thead>
-        <tbody className="divide-y" style={{ borderColor: "var(--line, #E9ECEF)" }}>
+        <tbody className="divide-y" style={{ borderColor: "var(--line-strong)" }}>
           {items.map((log) => (
-            <tr key={log.id} className="bg-[var(--surface,#ffffff)]">
-              <td className="px-3 py-2 text-[var(--foreground,#212529)]">{log.action}</td>
-              <td className="max-w-28 truncate px-3 py-2 text-[var(--text-2,#495057)]">
+            <tr key={log.id} className="bg-[var(--surface)]">
+              <td className="px-3 py-2 text-[var(--foreground)]">{log.action}</td>
+              <td className="max-w-28 truncate px-3 py-2 text-[var(--text-2)]">
                 {shorten(log.actor_admin_user_id)}
               </td>
-              <td className="px-3 py-2 text-[var(--text-2,#495057)]">{log.target_type ?? "-"}</td>
-              <td className="px-3 py-2 text-[var(--text-3,#868E96)]">{log.request_path}</td>
+              <td className="px-3 py-2 text-[var(--text-2)]">{log.target_type ?? "-"}</td>
+              <td className="px-3 py-2 text-[var(--text-3)]">{log.request_path}</td>
               <td className="px-3 py-2"><ResultPill result={log.result} /></td>
-              <td className="max-w-28 truncate px-3 py-2 text-[var(--text-3,#868E96)]">
+              <td className="max-w-28 truncate px-3 py-2 text-[var(--text-3)]">
                 {shortenHash(log.ip_hash)}
               </td>
-              <td className="max-w-28 truncate px-3 py-2 text-[var(--text-3,#868E96)]">
+              <td className="max-w-28 truncate px-3 py-2 text-[var(--text-3)]">
                 {shortenHash(log.user_agent_hash)}
               </td>
-              <td className="px-3 py-2 text-[var(--text-3,#868E96)]">
+              <td className="px-3 py-2 text-[var(--text-3)]">
                 {new Date(log.created_at).toLocaleString("ko-KR")}
               </td>
             </tr>
@@ -221,19 +221,19 @@ function AuditLogsCardList({ items }: { items: AdminAuditLogItem[] }) {
       {items.map((log) => (
         <div
           key={log.id}
-          className="rounded-xl bg-[var(--surface,#ffffff)] p-3 shadow-sm"
+          className="rounded-xl bg-[var(--surface)] p-3 shadow-sm"
         >
           <div className="flex items-center justify-between">
-            <span className="font-medium text-[var(--foreground,#212529)]">{log.action}</span>
+            <span className="font-medium text-[var(--foreground)]">{log.action}</span>
             <ResultPill result={log.result} />
           </div>
-          <p className="mt-1 text-sm text-[var(--text-2,#495057)]">
+          <p className="mt-1 text-sm text-[var(--text-2)]">
             관리자 {shorten(log.actor_admin_user_id)} &middot; {log.target_type ?? "-"}
           </p>
-          <p className="mt-1 break-all text-sm text-[var(--text-2,#495057)]">
+          <p className="mt-1 break-all text-sm text-[var(--text-2)]">
             {log.request_path}
           </p>
-          <p className="mt-1 text-xs text-[var(--text-3,#868E96)]">
+          <p className="mt-1 text-xs text-[var(--text-3)]">
             {new Date(log.created_at).toLocaleString("ko-KR")}
           </p>
         </div>
@@ -257,10 +257,10 @@ function AuditLogsSkeleton() {
   return (
     <div className="space-y-2">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="rounded-xl bg-[var(--surface,#ffffff)] p-3 shadow-sm">
-          <div className="h-4 w-24 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
-          <div className="mt-2 h-3 w-40 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
-          <div className="mt-2 h-3 w-24 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
+        <div key={i} className="rounded-xl bg-[var(--surface)] p-3 shadow-sm">
+          <div className="h-4 w-24 animate-pulse rounded bg-[var(--line-strong)]" />
+          <div className="mt-2 h-3 w-40 animate-pulse rounded bg-[var(--line-strong)]" />
+          <div className="mt-2 h-3 w-24 animate-pulse rounded bg-[var(--line-strong)]" />
         </div>
       ))}
     </div>

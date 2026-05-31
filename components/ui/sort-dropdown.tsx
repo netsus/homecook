@@ -102,8 +102,8 @@ export function SortDropdown({
         aria-haspopup="listbox"
         aria-label={`${label}: ${selectedOption?.label ?? ""}`}
         className={[
-          "inline-flex min-h-[var(--control-height-md)] items-center gap-1 whitespace-nowrap rounded-none border-0 bg-transparent px-0 py-1 text-[13px] font-semibold text-[#495057] transition-colors",
-          open ? "text-[#212529]" : "hover:text-[#212529]",
+          "inline-flex min-h-[var(--control-height-md)] items-center gap-1 whitespace-nowrap rounded-none border-0 bg-transparent px-0 py-1 text-[13px] font-semibold text-[var(--text-2)] transition-colors",
+          open ? "text-[var(--foreground)]" : "hover:text-[var(--foreground)]",
           disabled ? "cursor-not-allowed opacity-60" : "",
         ]
           .filter(Boolean)
@@ -116,7 +116,7 @@ export function SortDropdown({
         <span>{selectedOption?.label ?? label}</span>
         <svg
           aria-hidden="true"
-          className={`h-3 w-3 text-[#495057] transition-transform ${open ? "rotate-180" : ""}`}
+          className={`h-3 w-3 text-[var(--text-2)] transition-transform ${open ? "rotate-180" : ""}`}
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
@@ -135,7 +135,7 @@ export function SortDropdown({
         <ul
           aria-label={`${label} 옵션`}
           className={[
-            "absolute right-0 z-40 min-w-[140px] overflow-hidden rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white shadow-[0px_4px_12px_rgba(0,0,0,0.10)]",
+            "absolute right-0 z-40 min-w-[140px] overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] shadow-[0px_4px_12px_var(--shadow-color-medium)]",
             placement === "top" ? "bottom-full mb-1" : "top-full mt-1",
           ].join(" ")}
           ref={listRef}
@@ -149,8 +149,8 @@ export function SortDropdown({
                 className={[
                   "flex min-h-[var(--control-height-md)] w-full cursor-pointer items-center whitespace-nowrap px-4 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--wave1-mint-contrast)] focus:ring-inset",
                   isSelected
-                    ? "bg-[#F1F3F5] font-bold text-[#212529]"
-                    : "bg-white font-medium text-[#212529] hover:bg-[#F8F9FA]",
+                    ? "bg-[var(--surface-subtle)] font-bold text-[var(--foreground)]"
+                    : "bg-[var(--surface)] font-medium text-[var(--foreground)] hover:bg-[var(--surface-fill)]",
                 ].join(" ")}
                 key={option.value}
                 onClick={() => handleSelect(option.value)}

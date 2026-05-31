@@ -489,7 +489,7 @@ export function PantryScreen({
       {/* Delete confirm modal */}
       {showDeleteConfirm && (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-black/40 p-4 lg:items-center lg:justify-center"
+          className="fixed inset-0 z-50 flex items-end bg-[var(--overlay-40)] p-4 lg:items-center lg:justify-center"
           onClick={() => setShowDeleteConfirm(false)}
         >
           <div

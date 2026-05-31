@@ -105,8 +105,8 @@ export function LoginScreen({
   }
 
   return (
-    <div className="min-h-screen bg-white text-[var(--wave1-ink)]">
-      <section className="mx-auto flex min-h-screen max-w-[430px] flex-col bg-white px-6 pb-[calc(40px+env(safe-area-inset-bottom))] pt-[56px] md:min-h-[720px] md:justify-center md:pb-16 md:pt-16">
+    <div className="min-h-screen bg-[var(--surface)] text-[var(--wave1-ink)]">
+      <section className="mx-auto flex min-h-screen max-w-[430px] flex-col bg-[var(--surface)] px-6 pb-[calc(40px+env(safe-area-inset-bottom))] pt-[56px] md:min-h-[720px] md:justify-center md:pb-16 md:pt-16">
         <button
           aria-label="이전 화면으로"
           className="mb-7 flex h-9 w-9 items-center justify-center rounded-full text-[var(--wave1-ink)] transition-colors hover:bg-[var(--wave1-surface-fill)]"
@@ -118,7 +118,7 @@ export function LoginScreen({
           <ChevronLeftIcon />
         </button>
 
-        <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[var(--radius-panel)] bg-[var(--wave1-mint)] text-white shadow-[0_10px_22px_var(--brand-shadow-color-strong)]">
+        <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[var(--radius-panel)] bg-[var(--wave1-mint)] text-[var(--text-inverse)] shadow-[0_10px_22px_var(--brand-shadow-color-strong)]">
           <span
             aria-hidden="true"
             className="text-[30px] leading-none"
@@ -137,7 +137,7 @@ export function LoginScreen({
         </p>
 
         {showAuthError ? (
-          <div className="mt-7 rounded-[var(--radius-card)] border border-[#FFC9C9] bg-[#FFEBEB] px-4 py-3 text-[13px] font-semibold text-[#E03131]">
+          <div className="mt-7 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] font-semibold text-[var(--danger-strong)]">
             로그인에 실패했어요. 다시 시도해주세요.
           </div>
         ) : null}

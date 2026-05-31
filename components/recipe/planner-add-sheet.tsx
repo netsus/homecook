@@ -148,7 +148,7 @@ export function PlannerAddSheet({
                 {errorMessage ?? "플래너 정보를 불러오지 못했어요."}
               </p>
               <button
-                className="min-h-[var(--control-height-md)] rounded-[var(--radius-control)] bg-[var(--wave1-mint-contrast)] px-5 text-[14px] font-bold text-white"
+                className="min-h-[var(--control-height-md)] rounded-[var(--radius-control)] bg-[var(--wave1-mint-contrast)] px-5 text-[14px] font-bold text-[var(--text-inverse)]"
                 onClick={onRetryLoad}
                 type="button"
               >
@@ -203,8 +203,8 @@ export function PlannerAddSheet({
                         className={[
                           "shrink-0 rounded-[var(--radius-chip)] border px-3 py-2 text-[13px] transition-colors",
                           isSelected
-                            ? "border-[var(--wave1-ink)] bg-[var(--wave1-ink)] font-bold text-white"
-                            : "border-[var(--wave1-border)] bg-white font-medium text-[var(--wave1-text-2)]",
+                            ? "border-[var(--wave1-ink)] bg-[var(--wave1-ink)] font-bold text-[var(--text-inverse)]"
+                            : "border-[var(--wave1-border)] bg-[var(--surface)] font-medium text-[var(--wave1-text-2)]",
                           isSubmitting ? "opacity-60" : "",
                         ]
                           .filter(Boolean)
@@ -237,7 +237,7 @@ export function PlannerAddSheet({
                           shouldScrollMealColumns ? "min-w-[76px] shrink-0" : "min-w-0",
                           isSelected
                             ? "border-[var(--wave1-mint-contrast)] bg-[var(--wave1-mint-soft)] font-semibold text-[var(--wave1-mint-contrast)]"
-                            : "border-[var(--wave1-border)] bg-white font-medium text-[var(--wave1-text-2)]",
+                            : "border-[var(--wave1-border)] bg-[var(--surface)] font-medium text-[var(--wave1-text-2)]",
                           isSubmitting ? "opacity-60" : "",
                         ]
                           .filter(Boolean)
@@ -270,7 +270,7 @@ export function PlannerAddSheet({
               </div>
 
               {errorMessage && sheetState === "ready" ? (
-                <p className="text-[13px] font-semibold text-[#E03131]">
+                <p className="text-[13px] font-semibold text-[var(--danger-strong)]">
                   {errorMessage}
                 </p>
               ) : null}
@@ -537,7 +537,7 @@ export function PlannerAddSheet({
                         "rounded-[var(--radius-control)] border px-2 py-2.5 text-sm transition-colors",
                         isSelected
                           ? "border-[var(--brand)] bg-[var(--brand-soft)] font-bold text-[var(--brand-deep)]"
-                          : "border-[var(--line)] bg-white font-medium text-[var(--text-2)]",
+                          : "border-[var(--line)] bg-[var(--surface)] font-medium text-[var(--text-2)]",
                         isSubmitting ? "opacity-60" : "",
                       ]
                         .filter(Boolean)

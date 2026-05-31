@@ -1004,14 +1004,14 @@ function ShoppingDetailSkeleton({
       <div
         aria-busy="true"
         aria-label="장보기 상세를 불러오는 중"
-        className="flex min-h-dvh flex-col bg-[#F8F9FA] text-[#212529]"
+        className="flex min-h-dvh flex-col bg-[var(--surface-fill)] text-[var(--foreground)]"
         data-testid="shopping-detail-skeleton"
       >
-        <header className="shrink-0 border-b border-[#DEE2E6] bg-white">
+        <header className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)]">
           <div className="grid min-h-[var(--control-height-xl)] grid-cols-[36px_1fr_36px] items-center gap-2 px-4 py-2.5">
             <button
               aria-label="뒤로 가기"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529]"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--foreground)]"
               onClick={onBack}
               type="button"
             >
@@ -1026,25 +1026,25 @@ function ShoppingDetailSkeleton({
           </div>
         </header>
         <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
-          <section className="border-b border-[#DEE2E6] bg-white px-5 pb-5 pt-[18px]">
+          <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 pb-5 pt-[18px]">
             <div className="space-y-3">
-              <div className="h-3 w-32 animate-pulse rounded-full bg-[#F1F3F5]" />
-              <div className="h-7 w-44 animate-pulse rounded-[var(--radius-control)] bg-[#F1F3F5]" />
-              <div className="h-4 w-56 animate-pulse rounded-full bg-[#F1F3F5]" />
+              <div className="h-3 w-32 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
+              <div className="h-7 w-44 animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-subtle)]" />
+              <div className="h-4 w-56 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
             </div>
           </section>
           <section className="space-y-3 px-4 py-4">
             {[1, 2, 3, 4].map((index) => (
               <div
-                className="flex min-h-[74px] items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-3"
+                className="flex min-h-[74px] items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
                 key={index}
               >
-                <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-[#F1F3F5]" />
+                <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
                 <div className="min-w-0 flex-1 space-y-2">
-                  <div className="h-4 w-36 animate-pulse rounded-full bg-[#F1F3F5]" />
-                  <div className="h-3 w-24 animate-pulse rounded-full bg-[#F1F3F5]" />
+                  <div className="h-4 w-36 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
+                  <div className="h-3 w-24 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
                 </div>
-                <div className="h-8 w-16 animate-pulse rounded-full bg-[#F1F3F5]" />
+                <div className="h-8 w-16 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
               </div>
             ))}
           </section>
@@ -1067,9 +1067,9 @@ function ShoppingDetailSkeleton({
       >
         <div className="web-shopping-detail-head">
           <div>
-            <div className="h-3 w-32 animate-pulse rounded-full bg-[#F1F3F5]" />
-            <div className="mt-4 h-8 w-56 animate-pulse rounded-[var(--radius-control)] bg-[#F1F3F5]" />
-            <div className="mt-3 h-4 w-72 animate-pulse rounded-full bg-[#F1F3F5]" />
+            <div className="h-3 w-32 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
+            <div className="mt-4 h-8 w-56 animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-subtle)]" />
+            <div className="mt-3 h-4 w-72 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
           </div>
           <WebButton onClick={onBack} size="sm" variant="tertiary">
             목록으로
@@ -1079,7 +1079,7 @@ function ShoppingDetailSkeleton({
           <div className="space-y-3">
             {[1, 2, 3, 4].map((index) => (
               <div
-                className="h-20 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-white"
+                className="h-20 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)]"
                 key={index}
               />
             ))}
@@ -1087,7 +1087,7 @@ function ShoppingDetailSkeleton({
           <aside className="space-y-3">
             {[1, 2].map((index) => (
               <div
-                className="h-28 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-white"
+                className="h-28 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)]"
                 key={index}
               />
             ))}
@@ -1107,16 +1107,16 @@ function ShoppingDetailSkeleton({
       <WebShell>
         <WebTopNav activeId={navActiveId} items={WEB_NAV_ITEMS} />
         <main className="mx-auto max-w-5xl px-5 py-8">
-          <div className="mb-6 rounded-[var(--radius-card)] border border-[var(--line)] bg-white p-5">
-            <div className="h-4 w-40 animate-pulse rounded-full bg-[#F1F3F5]" />
-            <div className="mt-4 h-8 w-64 animate-pulse rounded-[var(--radius-control)] bg-[#F1F3F5]" />
-            <div className="mt-3 h-4 w-80 animate-pulse rounded-full bg-[#F1F3F5]" />
+          <div className="mb-6 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-5">
+            <div className="h-4 w-40 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
+            <div className="mt-4 h-8 w-64 animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-subtle)]" />
+            <div className="mt-3 h-4 w-80 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
           </div>
           <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-3">
               {[1, 2, 3, 4].map((index) => (
                 <div
-                  className="h-20 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-white"
+                  className="h-20 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)]"
                   key={index}
                 />
               ))}
@@ -1124,7 +1124,7 @@ function ShoppingDetailSkeleton({
             <aside className="space-y-3">
               {[1, 2].map((index) => (
                 <div
-                  className="h-28 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-white"
+                  className="h-28 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)]"
                   key={index}
                 />
               ))}
@@ -1191,7 +1191,7 @@ function MobileShoppingDetailScreen({
   const [firstPurchaseItem, ...otherPurchaseItems] = purchaseItems;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#F8F9FA] text-[#212529]" data-testid="shopping-detail-mobile">
+    <div className="flex min-h-dvh flex-col bg-[var(--surface-fill)] text-[var(--foreground)]" data-testid="shopping-detail-mobile">
       <MobileShoppingAppBar
         isSharing={isSharing}
         onBack={onBack}
@@ -1200,16 +1200,16 @@ function MobileShoppingDetailScreen({
       />
 
       <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
-        <section className="border-b border-[#DEE2E6] bg-white px-5 pb-5 pt-[18px]">
-          <p className="text-[12px] font-semibold leading-[1.3] text-[#868E96]">
+        <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 pb-5 pt-[18px]">
+          <p className="text-[12px] font-semibold leading-[1.3] text-[var(--text-3)]">
             {formatDateIsoDot(detail.created_at)} 생성
           </p>
           <div className="mt-4 flex items-end justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-[12px] font-semibold leading-[1.3] text-[#868E96]">
+              <p className="text-[12px] font-semibold leading-[1.3] text-[var(--text-3)]">
                 {isReadOnly ? "방금 완료" : `사야 할 재료 ${remainingCount}개`}
               </p>
-              <h2 className="mt-1 text-[20px] font-extrabold leading-[1.12] text-[#212529]">
+              <h2 className="mt-1 text-[20px] font-extrabold leading-[1.12] text-[var(--foreground)]">
                 {isReadOnly ? "장보기 완료" : "장보기 진행 중"}
               </h2>
             </div>
@@ -1220,7 +1220,7 @@ function MobileShoppingDetailScreen({
             ) : null}
           </div>
           {!isReadOnly ? (
-            <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-[#E9ECEF]">
+            <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-[var(--line-strong)]">
               <div
                 className="h-full rounded-full bg-[var(--brand)]"
                 style={{ width: `${progress}%` }}
@@ -1259,7 +1259,7 @@ function MobileShoppingDetailScreen({
 
           {!isReadOnly && purchaseItems.length > 0 ? (
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h3 className="text-[15px] font-extrabold leading-[1.3] text-[#212529]">
+              <h3 className="text-[15px] font-extrabold leading-[1.3] text-[var(--foreground)]">
                 구매할 재료
               </h3>
               <PurchaseSelectAllControl
@@ -1295,7 +1295,7 @@ function MobileShoppingDetailScreen({
           ) : null}
 
           {purchaseItems.length === 0 ? (
-            <div className="py-8 text-center text-[15px] font-bold text-[#495057]">
+            <div className="py-8 text-center text-[15px] font-bold text-[var(--text-2)]">
               팬트리에 이미 있어서 장볼 재료가 없어요
             </div>
           ) : null}
@@ -1315,9 +1315,9 @@ function MobileShoppingDetailScreen({
       </main>
 
       {!isReadOnly ? (
-        <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[#DEE2E6] bg-white px-4 py-4">
+        <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 py-4">
           <button
-            className="flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-white disabled:bg-[#DEE2E6]"
+            className="flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)]"
             disabled={isCompleting}
             onClick={onComplete}
             type="button"
@@ -1355,11 +1355,11 @@ function MobileShoppingAppBar({
   title: string;
 }) {
   return (
-    <header className="shrink-0 border-b border-[#DEE2E6] bg-white">
+    <header className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)]">
       <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
         <button
           aria-label="뒤로 가기"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529]"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--foreground)]"
           onClick={onBack}
           type="button"
         >
@@ -1372,7 +1372,7 @@ function MobileShoppingAppBar({
         </h1>
         <button
           aria-label="공유(텍스트)"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F8F9FA] text-[#495057] disabled:opacity-50"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-fill)] text-[var(--text-2)] disabled:opacity-50"
           disabled={isSharing}
           onClick={onShare}
           type="button"
@@ -1426,10 +1426,10 @@ function MobileShoppingSection({
 }) {
   return (
     <section className="mb-4">
-      <h3 className="mb-2 text-[12px] font-extrabold leading-[1.3] text-[#868E96]">
+      <h3 className="mb-2 text-[12px] font-extrabold leading-[1.3] text-[var(--text-3)]">
         {label} · {count}
       </h3>
-      <div className="overflow-hidden rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white">
+      <div className="overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)]">
         {items.map((item) => (
           <MobileShoppingItemRow
             isReadOnly={isReadOnly}
@@ -1466,7 +1466,7 @@ function MobileShoppingItemRow({
   const amountText = formatAmountText(item);
 
   return (
-    <div className="relative flex min-h-[65px] items-center gap-3 border-b border-[#F1F3F5] px-4 py-2.5 last:border-b-0">
+    <div className="relative flex min-h-[65px] items-center gap-3 border-b border-[var(--surface-subtle)] px-4 py-2.5 last:border-b-0">
       {!isReadOnly && !item.is_pantry_excluded ? (
         <button
           aria-checked={item.is_checked}
@@ -1480,10 +1480,10 @@ function MobileShoppingItemRow({
           <span
             aria-hidden="true"
             className={[
-              "flex h-[22px] w-[22px] items-center justify-center rounded-full border text-[12px] text-white",
+              "flex h-[22px] w-[22px] items-center justify-center rounded-full border text-[12px] text-[var(--text-inverse)]",
               item.is_checked
                 ? "border-[var(--brand)] bg-[var(--brand)]"
-                : "border-[#DEE2E6] bg-white",
+                : "border-[var(--line-strong)] bg-[var(--surface)]",
             ].join(" ")}
           >
             {item.is_checked ? "✓" : ""}
@@ -1497,7 +1497,7 @@ function MobileShoppingItemRow({
             "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[var(--radius-badge)] border text-[12px]",
             item.is_checked || item.is_pantry_excluded
               ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand)]"
-              : "border-[#DEE2E6] text-transparent",
+              : "border-[var(--line-strong)] text-transparent",
           ].join(" ")}
         >
           ✓
@@ -1505,10 +1505,10 @@ function MobileShoppingItemRow({
       )}
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[#212529]">
+        <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
           {itemName}
         </p>
-        <p className="mt-[2px] truncate text-[11px] font-semibold leading-[1.3] text-[#868E96]">
+        <p className="mt-[2px] truncate text-[11px] font-semibold leading-[1.3] text-[var(--text-3)]">
           {amountText} · 1끼에 사용
         </p>
       </div>
@@ -1519,10 +1519,10 @@ function MobileShoppingItemRow({
             item.is_pantry_excluded ? "되살리기" : "이미있음"
           }`}
           className={[
-            "flex h-[30px] w-[64px] shrink-0 items-center justify-center rounded-[var(--radius-control)] border bg-white px-0 text-[11px] font-extrabold disabled:opacity-50",
+            "flex h-[30px] w-[64px] shrink-0 items-center justify-center rounded-[var(--radius-control)] border bg-[var(--surface)] px-0 text-[11px] font-extrabold disabled:opacity-50",
             item.is_pantry_excluded
               ? "border-[var(--brand)] text-[var(--brand)]"
-              : "border-[#DEE2E6] text-[#495057]",
+              : "border-[var(--line-strong)] text-[var(--text-2)]",
           ].join(" ")}
           disabled={isUpdating}
           onClick={() =>
@@ -1533,7 +1533,7 @@ function MobileShoppingItemRow({
           {item.is_pantry_excluded ? "되살리기" : "이미있음"}
         </button>
       ) : item.added_to_pantry ? (
-        <span className="shrink-0 text-[11px] font-bold text-[#868E96]">
+        <span className="shrink-0 text-[11px] font-bold text-[var(--text-3)]">
           팬트리 반영 완료
         </span>
       ) : null}
@@ -1554,7 +1554,7 @@ function MobileToast({
     <div
       className={[
         "mx-4 mt-3 rounded-[var(--radius-control)] px-4 py-3 text-[13px] font-bold",
-        isError ? "bg-red-50 text-red-700" : "bg-[var(--brand-soft)] text-[var(--brand)]",
+        isError ? "bg-[var(--danger-soft)] text-[var(--danger)]" : "bg-[var(--brand-soft)] text-[var(--brand)]",
       ].join(" ")}
       role={isError ? "alert" : "status"}
     >

@@ -96,31 +96,31 @@ const mealVisualMeta: Record<
   { bg: string; chips: string[]; emoji: string; minutes: number }
 > = {
   김치볶음밥: {
-    bg: "#FFE2CF",
+    bg: "var(--accent-peach-soft)",
     chips: ["묵은지", "찬밥", "대파", "계란", "참기름", "+2"],
     emoji: "🍚",
     minutes: 15,
   },
   된장찌개: {
-    bg: "#FFE1E1",
+    bg: "var(--danger-soft)",
     chips: ["된장", "애호박", "감자", "두부", "청양고추", "+1"],
     emoji: "🍲",
     minutes: 25,
   },
   "닭가슴살 샐러드": {
-    bg: "#DFF5E7",
+    bg: "var(--success-soft)",
     chips: ["닭가슴살", "양상추", "토마토", "오이", "올리브유"],
     emoji: "🥗",
     minutes: 20,
   },
   김치찌개: {
-    bg: "#FFE1E1",
+    bg: "var(--danger-soft)",
     chips: ["김치", "돼지고기", "두부", "대파", "고춧가루"],
     emoji: "🍲",
     minutes: 25,
   },
   미역국: {
-    bg: "#E8F5FF",
+    bg: "var(--accent-blue-soft)",
     chips: ["미역", "소고기", "국간장", "마늘"],
     emoji: "🍜",
     minutes: 20,
@@ -156,11 +156,11 @@ interface AppBarProps {
 
 function AppBar({ titleFull, titleShort, onBack }: AppBarProps) {
   return (
-    <div className="shrink-0 border-b border-[#DEE2E6] bg-white">
+    <div className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)]">
       <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
         <button
           aria-label="뒤로 가기"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529] hover:bg-[#F8F9FA]"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-[var(--surface-fill)]"
           onClick={onBack}
           type="button"
         >
@@ -180,7 +180,7 @@ function AppBar({ titleFull, titleShort, onBack }: AppBarProps) {
             />
           </svg>
         </button>
-        <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[#212529]">
+        <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[var(--foreground)]">
           {/* Full title on ≥361px, short title on narrow */}
           <span className="hidden [@media(min-width:361px)]:inline">{titleFull}</span>
           <span className="[@media(min-width:361px)]:hidden">{titleShort}</span>
@@ -205,7 +205,7 @@ function LoadingSkeleton() {
       {[0, 1].map((i) => (
         <article
           key={i}
-          className="relative overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+          className="relative overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] shadow-[0_1px_3px_var(--shadow-color-subtle)]"
           data-testid="meal-screen-loading-card"
         >
           <Skeleton
@@ -226,7 +226,7 @@ function LoadingSkeleton() {
 
           <div className="px-3.5 pb-3.5">
             <div
-              className="mb-2.5 flex items-center justify-between rounded-[var(--radius-control)] bg-[#F8F9FA] p-2.5"
+              className="mb-2.5 flex items-center justify-between rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-2.5"
               data-testid="meal-screen-loading-stepper"
             >
               <Skeleton className="h-4 w-16" />
@@ -267,7 +267,7 @@ function LoadingSummarySkeleton({
 }) {
   return (
     <section
-      className="border-b border-[#DEE2E6] bg-white px-5 py-5"
+      className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5"
       data-testid="meal-screen-loading-summary"
     >
       <div className="mb-2">
@@ -332,12 +332,12 @@ function MealCard({
   return (
     <article
       aria-label={`${meal.recipe_title} 식사 카드`}
-      className={`relative overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-opacity ${isPending ? "opacity-60" : ""}`}
+      className={`relative overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] shadow-[0_1px_3px_var(--shadow-color-subtle)] transition-opacity ${isPending ? "opacity-60" : ""}`}
     >
       {/* Delete trash icon — top-right */}
       <button
         aria-label={`${meal.recipe_title} 삭제`}
-        className="absolute right-3 top-3 z-[1] flex h-8 w-8 items-center justify-center rounded-full bg-[#F8F9FA] text-[#868E96] disabled:opacity-40"
+        className="absolute right-3 top-3 z-[1] flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-fill)] text-[var(--text-3)] disabled:opacity-40"
         data-testid={`meal-delete-${meal.id}`}
         disabled={isPending}
         onClick={(e) => { e.stopPropagation(); onDelete(); }}
@@ -366,14 +366,14 @@ function MealCard({
         </div>
         <div className="min-w-0 flex-1 pr-7">
           <button
-            className="block w-full truncate text-left text-[16px] font-semibold leading-[1.3] text-[#212529] hover:text-[var(--brand)]"
+            className="block w-full truncate text-left text-[16px] font-semibold leading-[1.3] text-[var(--foreground)] hover:text-[var(--brand)]"
             data-testid={`meal-recipe-link-${meal.id}`}
             onClick={onRecipeClick}
             type="button"
           >
             {meal.recipe_title}
           </button>
-          <div className="mt-[3px] text-[12px] font-medium leading-[1.4] text-[#868E96]">
+          <div className="mt-[3px] text-[12px] font-medium leading-[1.4] text-[var(--text-3)]">
             {visual.minutes}분 · {meal.planned_servings}인분
           </div>
         </div>
@@ -381,18 +381,18 @@ function MealCard({
 
       <div className="px-3.5 pb-3.5">
         <div
-          className="mb-2.5 flex items-center justify-between rounded-[var(--radius-control)] bg-[#F8F9FA] p-2.5"
+          className="mb-2.5 flex items-center justify-between rounded-[var(--radius-control)] bg-[var(--surface-fill)] p-2.5"
           onClick={stopProp}
           role="group"
           aria-label="인분 조절"
         >
-          <span className="text-[12px] font-semibold leading-[1.3] text-[#495057]">
+          <span className="text-[12px] font-semibold leading-[1.3] text-[var(--text-2)]">
             계획 인분
           </span>
           <div className="flex items-center gap-2.5">
           <button
             aria-label="인분 감소"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#495057] disabled:opacity-40"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--text-2)] disabled:opacity-40"
             disabled={isMin || isPending}
             onClick={onStepDown}
             type="button"
@@ -400,7 +400,7 @@ function MealCard({
             <span aria-hidden="true" className="text-lg font-bold leading-none">−</span>
           </button>
           <span
-            className="min-w-[42px] text-center text-[17px] font-semibold leading-[1.3] text-[#212529]"
+            className="min-w-[42px] text-center text-[17px] font-semibold leading-[1.3] text-[var(--foreground)]"
             aria-live="polite"
             aria-label={`${meal.planned_servings}인분`}
           >
@@ -409,7 +409,7 @@ function MealCard({
           </span>
           <button
             aria-label="인분 증가"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand)] text-white disabled:opacity-40"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--text-inverse)] disabled:opacity-40"
             disabled={isPending}
             onClick={onStepUp}
             type="button"
@@ -422,14 +422,14 @@ function MealCard({
         <div className="mb-3 flex flex-wrap gap-[5px]">
           {visible.map((chip) => (
             <span
-              className="rounded-full bg-[#F8F9FA] px-2 py-[5px] text-[11px] font-medium leading-[1.3] text-[#495057]"
+              className="rounded-full bg-[var(--surface-fill)] px-2 py-[5px] text-[11px] font-medium leading-[1.3] text-[var(--text-2)]"
               key={chip}
             >
               {chip}
             </span>
           ))}
           {hiddenCount > 0 ? (
-            <span className="rounded-full bg-[#F1F3F5] px-2 py-[5px] text-[11px] font-semibold leading-[1.3] text-[#868E96]">
+            <span className="rounded-full bg-[var(--surface-subtle)] px-2 py-[5px] text-[11px] font-semibold leading-[1.3] text-[var(--text-3)]">
               +{hiddenCount}
             </span>
           ) : null}
@@ -437,7 +437,7 @@ function MealCard({
 
         <div className={canStartCook ? "grid grid-cols-2 gap-2" : "grid grid-cols-1 gap-2"}>
           <button
-            className="min-h-[38px] rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[14px] font-bold text-[#212529]"
+            className="min-h-[38px] rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-bold text-[var(--foreground)]"
             onClick={onCreateShopping}
             type="button"
           >
@@ -446,7 +446,7 @@ function MealCard({
           {canStartCook ? (
             <button
               aria-label={`${meal.recipe_title} 요리하기`}
-              className="min-h-[38px] rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand)] text-[14px] font-bold text-white"
+              className="min-h-[38px] rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand)] text-[14px] font-bold text-[var(--text-inverse)]"
               disabled={isPending}
               onClick={onStartCook}
               type="button"
@@ -459,7 +459,7 @@ function MealCard({
 
       {/* 409 conflict inline error */}
       {conflictError ? (
-        <p className="px-3.5 pb-3 text-sm text-[#E03131]" role="alert">
+        <p className="px-3.5 pb-3 text-sm text-[var(--danger-strong)]" role="alert">
           {conflictError}
         </p>
       ) : null}
@@ -1037,18 +1037,18 @@ function CenterModal({ children, onClose, labelledBy }: CenterModalProps) {
       {/* backdrop */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-[var(--overlay-40)] backdrop-blur-[2px]"
         onClick={onClose}
       />
       {/* content */}
       <div
         ref={contentRef}
-        className="relative w-full max-w-sm rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)] lg:rounded-[var(--radius-sheet)] lg:p-5"
+        className="relative w-full max-w-sm rounded-t-[var(--radius-sheet)] bg-[var(--surface)] px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_var(--shadow-color-strong)] lg:rounded-[var(--radius-sheet)] lg:p-5"
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex justify-center lg:hidden">
-          <span className="h-1 w-9 rounded-full bg-[#DEE2E6]" />
+          <span className="h-1 w-9 rounded-full bg-[var(--line-strong)]" />
         </div>
         {children}
       </div>
@@ -1401,7 +1401,7 @@ export function MealScreen({
   if (authState === "unauthorized") {
     return (
       <div
-        className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] lg:bg-[var(--background)]"
+        className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface-fill)] lg:bg-[var(--background)]"
         style={{ paddingBottom: "84px" }}
       >
         <AppBar
@@ -1410,11 +1410,11 @@ export function MealScreen({
           onBack={navigateToPlanner}
         />
         <div className="flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6 text-center">
-          <div className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <p className="text-base font-semibold text-[#212529]">
+          <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-5 shadow-[0_1px_3px_var(--shadow-color-subtle)]">
+            <p className="text-base font-semibold text-[var(--foreground)]">
               식사 목록을 보려면 로그인이 필요해요.
             </p>
-            <p className="mt-1.5 text-sm leading-relaxed text-[#868E96]">
+            <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-3)]">
               로그인 후 이 화면으로 자동으로 돌아옵니다.
             </p>
           </div>
@@ -1454,7 +1454,7 @@ export function MealScreen({
       ) : null}
       {shouldRenderAppView ? (
         <div
-          className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] lg:hidden"
+          className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface-fill)] lg:hidden"
           style={{ paddingBottom: "84px" }}
         >
         <AppBar
@@ -1467,18 +1467,18 @@ export function MealScreen({
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto overflow-x-hidden">
             {screenState === "ready" ? (
-              <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
+              <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5">
                 <div className="mb-1 text-[13px] font-semibold leading-[1.3] text-[var(--brand)]">
                   {formatDateShort(planDate)}{slotName ? ` · ${slotName}` : ""}
                 </div>
-                <h2 className="text-[24px] font-semibold leading-[1.25] text-[#212529]">
+                <h2 className="text-[24px] font-semibold leading-[1.25] text-[var(--foreground)]">
                   {summaryTitle}
                 </h2>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-[#F8F9FA] px-2.5 py-1.5 text-[12px] font-bold leading-[1.3] text-[#495057]">
+                  <span className="rounded-full bg-[var(--surface-fill)] px-2.5 py-1.5 text-[12px] font-bold leading-[1.3] text-[var(--text-2)]">
                     {meals.length}개 음식
                   </span>
-                  <span className="rounded-full bg-[#F8F9FA] px-2.5 py-1.5 text-[12px] font-bold leading-[1.3] text-[#495057]">
+                  <span className="rounded-full bg-[var(--surface-fill)] px-2.5 py-1.5 text-[12px] font-bold leading-[1.3] text-[var(--text-2)]">
                     총 {totalServings}인분 계획
                   </span>
                 </div>
@@ -1498,11 +1498,11 @@ export function MealScreen({
                   className="flex flex-col items-center justify-center py-12 text-center"
                   data-testid="meal-screen-error"
                 >
-                  <p className="text-base text-[#868E96]">
+                  <p className="text-base text-[var(--text-3)]">
                     식사 목록을 불러오지 못했어요.
                   </p>
                   {errorMessage ? (
-                    <p className="mt-1 text-sm text-[#868E96]">{errorMessage}</p>
+                    <p className="mt-1 text-sm text-[var(--text-3)]">{errorMessage}</p>
                   ) : null}
                   <button
                     className="mt-4 min-h-[var(--control-height-md)] rounded-[var(--radius-control)] border border-[var(--brand)] px-5 py-2.5 text-sm font-semibold text-[var(--brand)]"
@@ -1520,12 +1520,12 @@ export function MealScreen({
                   className="flex flex-col items-center justify-center py-12 text-center"
                   data-testid="meal-screen-empty"
                 >
-                  <p className="text-base text-[#868E96]">
+                  <p className="text-base text-[var(--text-3)]">
                     이 끼니에 등록된 식사가 없어요.
                   </p>
                   {/* Inline prominent CTA for empty state */}
                   <button
-                    className="mt-6 flex h-[var(--control-height-xl)] w-full max-w-xs items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-base font-semibold text-white hover:bg-[var(--brand)]"
+                    className="mt-6 flex h-[var(--control-height-xl)] w-full max-w-xs items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-base font-semibold text-[var(--text-inverse)] hover:bg-[var(--brand)]"
                     data-testid="meal-screen-add-cta"
                     onClick={openMealAddSheet}
                     type="button"
@@ -1555,7 +1555,7 @@ export function MealScreen({
 
               {screenState === "ready" ? (
                 <button
-                  className="mt-2 flex h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-white px-4 text-base font-semibold text-[var(--brand)]"
+                  className="mt-2 flex h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-4 text-base font-semibold text-[var(--brand)]"
                   data-testid="meal-screen-add-cta"
                   onClick={openMealAddSheet}
                   type="button"
@@ -1622,14 +1622,14 @@ export function MealScreen({
             </p>
             <div className="mt-5 flex gap-2.5">
               <button
-                className="flex-1 rounded-[var(--radius-card)] border border-[var(--line)] bg-white/60 py-3.5 text-sm font-semibold text-[var(--foreground)]"
+                className="flex-1 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface-alpha-60)] py-3.5 text-sm font-semibold text-[var(--foreground)]"
                 onClick={handleModalCancel}
                 type="button"
               >
                 취소
               </button>
               <button
-                className="flex-[2] rounded-[var(--radius-card)] bg-[var(--brand)] py-3.5 text-sm font-bold text-white"
+                className="flex-[2] rounded-[var(--radius-card)] bg-[var(--brand)] py-3.5 text-sm font-bold text-[var(--text-inverse)]"
                 data-testid="serving-change-confirm"
                 onClick={handleServingChangeConfirm}
                 type="button"
@@ -1666,14 +1666,14 @@ export function MealScreen({
             </p>
             <div className="mt-5 flex gap-2.5">
               <button
-                className="flex-1 rounded-[var(--radius-card)] border border-[var(--line)] bg-white/60 py-3.5 text-sm font-semibold text-[var(--foreground)]"
+                className="flex-1 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface-alpha-60)] py-3.5 text-sm font-semibold text-[var(--foreground)]"
                 onClick={handleModalCancel}
                 type="button"
               >
                 취소
               </button>
               <button
-                className="flex-[2] rounded-[var(--radius-card)] bg-[var(--brand-deep)] py-3.5 text-sm font-bold text-white"
+                className="flex-[2] rounded-[var(--radius-card)] bg-[var(--brand-deep)] py-3.5 text-sm font-bold text-[var(--text-inverse)]"
                 data-testid="delete-confirm"
                 onClick={handleDeleteConfirm}
                 type="button"

@@ -317,7 +317,7 @@ describe("recipe detail screen", () => {
       "bg-transparent",
     );
     expect((await screen.findByRole("button", { name: "저장" })).className).toContain(
-      "text-white",
+      "text-[var(--text-inverse)]",
     );
     expect(
       (await screen.findByRole("button", { name: "플래너에 추가" })).className,
