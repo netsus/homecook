@@ -18,6 +18,12 @@ export interface RecipeCardItem {
   like_count: number;
   save_count: number;
   source_type: "system" | "youtube" | "manual";
+  user_status?: RecipeCardUserStatus | null;
+}
+
+export interface RecipeCardUserStatus {
+  is_saved: boolean;
+  saved_book_ids: string[];
 }
 
 export interface RecipeListData {

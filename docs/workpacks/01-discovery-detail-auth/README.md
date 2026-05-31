@@ -72,14 +72,16 @@
 
 ### `GET /api/v1/recipes`
 
-- Query: `q` (string?, 제목 검색), `sort` (string?, `view_count`/`latest`/`save_count`/`plan_count`, 기본 `view_count`), `cursor` (string?, opaque), `limit` (int?, 기본 20)
+- Query: `q` (string?, 제목 검색), `sort` (string?, `view_count`/`latest`/`save_count`/`plan_count`/`cook_count`, 기본 `view_count`), `cursor` (string?, opaque), `limit` (int?, 기본 20)
 - `ingredient_ids`는 이 슬라이스 Out of Scope
 - Response 200: `{ success: true, data: { items: Recipe[], next_cursor: string|null, has_next: bool }, error: null }`
+- 로그인 사용자의 카드에는 `user_status: { is_saved, saved_book_ids }`가 포함될 수 있으며, HOME 책갈피 초기 상태는 이 값을 사용한다.
 - Error: 없음 (비로그인 허용, 검색 결과 없으면 빈 배열)
 
 ### `GET /api/v1/recipes/themes`
 
 - Response 200: `{ success: true, data: { themes: [{ id, title, recipes: Recipe[] }] }, error: null }`
+- `popular` 외에 태그/제목/source 기반 분류 테마를 추가로 반환할 수 있다.
 
 ### `GET /api/v1/recipes/{recipe_id}`
 

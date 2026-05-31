@@ -21,6 +21,11 @@ interface RouteContext {
   }>;
 }
 
+interface RecipeViewCountIncrementRow {
+  id: string;
+  view_count: number;
+}
+
 export async function GET(request: Request, context: RouteContext) {
   const { id } = await context.params;
 
@@ -112,6 +117,21 @@ export async function GET(request: Request, context: RouteContext) {
 
     const ingredients = normalizeRecipeIngredients(ingredientsResult.data);
     const steps = normalizeRecipeSteps(stepsResult.data);
+    const nextViewCount = recipeResult.data.view_count + (serviceClient ? 1 : 0);
+    let viewCount = nextViewCount;
+
+    if (serviceClient) {
+      const viewCountResult = await serviceClient
+        .rpc("increment_recipe_view_count", {
+          p_recipe_id: id,
+        })
+        .maybeSingle() as {
+          data: RecipeViewCountIncrementRow | null;
+          error: unknown;
+        };
+
+      viewCount = viewCountResult.data?.view_count ?? nextViewCount;
+    }
 
     const detail: RecipeDetail = {
       id: recipeResult.data.id,
@@ -127,7 +147,7 @@ export async function GET(request: Request, context: RouteContext) {
             youtube_video_id: sourceResult.data.youtube_video_id,
           }
         : null,
-      view_count: recipeResult.data.view_count + (serviceClient ? 1 : 0),
+      view_count: viewCount,
       like_count: recipeResult.data.like_count,
       save_count: recipeResult.data.save_count,
       plan_count: recipeResult.data.plan_count,
@@ -136,15 +156,6 @@ export async function GET(request: Request, context: RouteContext) {
       steps,
       user_status: userStatus,
     };
-
-    if (serviceClient) {
-      void serviceClient
-        .from("recipes")
-        .update({
-          view_count: recipeResult.data.view_count + 1,
-        })
-        .eq("id", id);
-    }
 
     return ok(detail);
   } catch (error) {

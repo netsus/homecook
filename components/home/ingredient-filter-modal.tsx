@@ -265,6 +265,7 @@ export function IngredientFilterModal({
         <WebDialog
           aria-labelledby="ingredient-filter-title"
           ref={dialogRef}
+          size="narrow"
         >
           <WebDialogHeader>
             <div>
@@ -479,7 +480,7 @@ export function IngredientFilterModal({
             return (
               <li key={ingredient.id}>
                 <label
-                  className={`relative flex min-h-[54px] cursor-pointer items-center justify-center rounded-[var(--radius-card)] border px-3 py-2 text-center text-[14px] font-semibold transition ${
+                  className={`relative flex min-h-[54px] cursor-pointer items-center justify-center rounded-[var(--radius-card)] border px-3 py-2 text-center text-[15px] font-semibold transition ${
                     isChecked
                       ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--foreground)]"
                       : "border-[var(--line-strong)] bg-[var(--surface)] text-[var(--foreground)]"

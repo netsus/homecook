@@ -18,6 +18,10 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { generateRecipeTags, parseRecipeImagePublicUrl } from "@/lib/server/recipe-media";
+import {
+  readRecipeCardUserStatuses,
+  type RecipeCardUserStatusDbClient,
+} from "@/lib/server/recipe-card-user-status";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type {
   ManualRecipeCreateBody,
@@ -475,7 +479,7 @@ function mapRecipeCard(recipe: {
   like_count: number;
   save_count: number;
   source_type: "system" | "youtube" | "manual";
-}): RecipeCardItem {
+}, userStatus?: RecipeCardItem["user_status"]): RecipeCardItem {
   return {
     id: recipe.id,
     title: recipe.title,
@@ -486,6 +490,7 @@ function mapRecipeCard(recipe: {
     like_count: recipe.like_count,
     save_count: recipe.save_count,
     source_type: recipe.source_type,
+    user_status: userStatus ?? null,
   };
 }
 
@@ -511,7 +516,8 @@ export async function GET(request: NextRequest) {
       return ok(getMockRecipeList(listQuery.q, listQuery.ingredient_ids));
     }
 
-    const supabase = createServiceRoleClient() ?? await createRouteHandlerClient();
+    const routeClient = await createRouteHandlerClient();
+    const supabase = createServiceRoleClient() ?? routeClient;
     let filteredRecipeIds: string[] | null = null;
 
     if (listQuery.ingredient_ids?.length) {
@@ -565,8 +571,28 @@ export async function GET(request: NextRequest) {
       return filteredRecipeIds ? ok(createEmptyRecipeList()) : ok(getMockRecipeList(listQuery.q));
     }
 
+    const rows = data ?? [];
+    let userId: string | null = null;
+
+    try {
+      const authResult = typeof routeClient.auth?.getUser === "function"
+        ? await routeClient.auth.getUser()
+        : { data: { user: null } };
+      userId = authResult.data.user?.id ?? null;
+    } catch {
+      userId = null;
+    }
+
+    const userStatusByRecipeId = await readRecipeCardUserStatuses({
+      dbClient: supabase as unknown as RecipeCardUserStatusDbClient,
+      recipeIds: rows.map((recipe) => recipe.id),
+      userId,
+    });
     const items: RecipeCardItem[] =
-      data?.map((recipe) => mapRecipeCard(recipe)) ?? [];
+      rows.map((recipe) => mapRecipeCard(
+        recipe,
+        userStatusByRecipeId.get(recipe.id) ?? null,
+      ));
 
     const response: RecipeListData =
       items.length > 0

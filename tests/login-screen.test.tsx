@@ -92,9 +92,11 @@ describe("login screen", () => {
     expect(
       screen.getByRole("heading", { name: "로그인이 필요해요" }),
     ).toBeTruthy();
+    expect(screen.getByTestId("login-brand-mark")).toBeTruthy();
+    expect(screen.getAllByText("로그인 후 이전 화면으로 돌아갑니다.")).toHaveLength(1);
     expect(
-      screen.getByText("로그인하면 이전 화면으로 돌아가 이어서 진행할 수 있어요."),
-    ).toBeTruthy();
+      screen.queryByText("저장한 레시피, 플래너, 팬트리를 같은 계정으로 관리합니다."),
+    ).toBeNull();
     expect(screen.getByText("HOMECOOK")).toBeTruthy();
   });
 
@@ -114,6 +116,8 @@ describe("login screen", () => {
         name: "로그인이 필요해요",
       }),
     ).toBeTruthy();
+    expect(screen.getByTestId("login-brand-mark")).toBeTruthy();
+    expect(screen.getAllByText("로그인 후 이전 화면으로 돌아갑니다.")).toHaveLength(1);
     expect(screen.getByText("social-buttons:/planner")).toBeTruthy();
     expect(
       screen.queryByRole("heading", {
