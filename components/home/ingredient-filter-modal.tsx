@@ -33,6 +33,7 @@ import {
 import type { IngredientItem, IngredientListData } from "@/types/recipe";
 
 type IngredientModalState = "loading" | "ready" | "empty" | "error";
+const INGREDIENT_FILTER_DESCRIPTION = "재료를 골라 좁혀요";
 
 interface IngredientFilterModalProps {
   isOpen: boolean;
@@ -272,7 +273,7 @@ export function IngredientFilterModal({
               <WebDialogTitle id="ingredient-filter-title">
                 재료로 검색
               </WebDialogTitle>
-              <p className="web-modal-copy">원하는 재료를 골라 레시피를 좁혀요</p>
+              <p className="web-modal-copy">{INGREDIENT_FILTER_DESCRIPTION}</p>
             </div>
             <WebIconButton
               aria-label="닫기"
@@ -395,7 +396,7 @@ export function IngredientFilterModal({
     <AppBottomSheet
       ariaLabelledBy="ingredient-filter-title"
       closeButtonRef={closeButtonRef}
-      description="원하는 재료를 골라 레시피를 좁혀요"
+      description={INGREDIENT_FILTER_DESCRIPTION}
       footer={
         <div>
           <AppModalFooterActions
