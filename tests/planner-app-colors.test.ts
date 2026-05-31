@@ -13,12 +13,12 @@ function tokenValue(tokenName: string) {
 }
 
 describe("planner app colors", () => {
-  it("aligns app brand tokens with the web blue palette", () => {
-    expect(tokenValue("--brand-primary")).toBe("#00A1FF");
-    expect(tokenValue("--brand-primary-hover")).toBe("#0085db");
-    expect(tokenValue("--brand-primary-soft")).toBe("rgba(0, 161, 255, 0.06)");
-    expect(tokenValue("--brand-primary-border")).toBe("#B9E5FF");
-    expect(tokenValue("--brand-primary-rgb")).toBe("0, 161, 255");
+  it("aligns app brand tokens with an accessible web-blue palette", () => {
+    expect(tokenValue("--brand-primary")).toBe("#0072BD");
+    expect(tokenValue("--brand-primary-hover")).toBe("#005f9f");
+    expect(tokenValue("--brand-primary-soft")).toBe("rgba(0, 114, 189, 0.08)");
+    expect(tokenValue("--brand-primary-border")).toBe("#8BD2FF");
+    expect(tokenValue("--brand-primary-rgb")).toBe("0, 114, 189");
   });
 
   it("routes app planner accents through global tokens", () => {
