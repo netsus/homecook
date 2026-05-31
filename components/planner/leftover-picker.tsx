@@ -59,7 +59,7 @@ function LeftoverCard({
   onSelect: (leftover: LeftoverListItemData) => void;
 }) {
   return (
-    <article className="flex items-center gap-3 rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-3 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
+    <article className="flex items-center gap-3 rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-3 shadow-[0_2px_10px_var(--shadow-color-soft)]">
       {leftover.recipe_thumbnail_url ? (
         <Image
           alt=""
@@ -85,7 +85,7 @@ function LeftoverCard({
         </p>
       </div>
       <button
-        className="flex min-h-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] px-1 text-[13px] font-semibold text-white"
+        className="flex min-h-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] px-1 text-[13px] font-semibold text-[var(--text-inverse)]"
         onClick={() => onSelect(leftover)}
         type="button"
       >
@@ -152,7 +152,7 @@ function LeftoverPickerBody({
         className={
           presentation === "web"
             ? "web-menu-add-error"
-            : "rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
+            : "rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-4 text-sm text-[var(--danger)]"
         }
         role="alert"
       >
@@ -161,7 +161,7 @@ function LeftoverPickerBody({
           className={
             presentation === "web"
               ? "web-button web-button-secondary web-button-sm mt-3"
-              : "mt-3 rounded-[var(--radius-control)] border border-red-300 bg-white px-3 py-2 font-semibold"
+              : "mt-3 rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--surface)] px-3 py-2 font-semibold"
           }
           onClick={onRetry}
           type="button"
@@ -291,23 +291,23 @@ export function LeftoverPicker({
   if (presentation === "screen") {
     return (
       <div
-        className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]"
+        className="min-h-screen bg-[var(--surface-fill)] pb-[112px] text-[var(--foreground)]"
         data-testid="leftover-picker-screen"
       >
-        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-2">
+        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-2">
           <AppBackButton
             ariaLabel="식사 추가 방식으로 돌아가기"
             onClick={onBack ?? onClose}
             testId="leftover-picker-back"
           />
-          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
+          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[var(--foreground)]">
             남은 요리에서 추가
           </h1>
           <AppBackButtonSpacer />
         </div>
 
         <section className="px-4 py-4">
-          <p className="mb-3 text-[12px] font-medium leading-[1.5] text-[#495057]">
+          <p className="mb-3 text-[12px] font-medium leading-[1.5] text-[var(--text-2)]">
             플래너에 다시 올릴 남은 요리를 골라주세요
             {slotLabel ? ` · ${slotLabel}` : ""}
           </p>

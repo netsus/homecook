@@ -20,19 +20,19 @@ export function AdminPagination({ page, limit, total, onPageChange }: AdminPagin
         className="flex h-11 w-11 items-center justify-center rounded-lg border text-sm disabled:opacity-30"
         disabled={page <= 1}
         onClick={() => onPageChange(page - 1)}
-        style={{ borderColor: "var(--line, #E9ECEF)" }}
+        style={{ borderColor: "var(--line-strong)" }}
         type="button"
       >
         &#8249;
       </button>
-      <span className="px-3 text-sm text-[var(--text-3,#868E96)]">
+      <span className="px-3 text-sm text-[var(--text-3)]">
         {page} / {totalPages}
       </span>
       <button
         className="flex h-11 w-11 items-center justify-center rounded-lg border text-sm disabled:opacity-30"
         disabled={page >= totalPages}
         onClick={() => onPageChange(page + 1)}
-        style={{ borderColor: "var(--line, #E9ECEF)" }}
+        style={{ borderColor: "var(--line-strong)" }}
         type="button"
       >
         &#8250;

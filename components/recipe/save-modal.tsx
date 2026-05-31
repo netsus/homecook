@@ -119,18 +119,18 @@ export function SaveModal({
         title="레시피 저장"
       >
         {viewState === "loading" ? (
-          <div className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-[#F8F9FA] px-4 py-5 text-[14px] text-[#5F6470]">
+          <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-4 py-5 text-[14px] text-[var(--text-2)]">
             저장 가능한 레시피북을 불러오는 중이에요...
           </div>
         ) : null}
 
         {viewState === "error" ? (
-          <div className="rounded-[var(--radius-card)] border border-[#FFC9C9] bg-[#FFEBEB] px-4 py-5">
-            <p className="text-[14px] font-semibold text-[#E03131]">
+          <div className="rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-5">
+            <p className="text-[14px] font-semibold text-[var(--danger-strong)]">
               {loadErrorMessage ?? "레시피북 목록을 불러오지 못했어요."}
             </p>
             <button
-              className="mt-3 min-h-[var(--control-height-md)] rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-[14px] font-bold text-white"
+              className="mt-3 min-h-[var(--control-height-md)] rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-[14px] font-bold text-[var(--text-inverse)]"
               onClick={onRetry}
               type="button"
             >
@@ -141,13 +141,13 @@ export function SaveModal({
 
         {viewState === "ready" ? (
             <div className="space-y-4">
-              <p className="text-[13px] font-semibold text-[#495057]">
+              <p className="text-[13px] font-semibold text-[var(--text-2)]">
                 레시피북 다중 선택
               </p>
 
-              <div className="overflow-hidden rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white">
+              <div className="overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)]">
                 {books.length === 0 ? (
-                  <div className="px-4 py-5 text-[14px] leading-5 text-[#5F6470]">
+                  <div className="px-4 py-5 text-[14px] leading-5 text-[var(--text-2)]">
                     저장 가능한 레시피북이 아직 없어요. 아래에서 새 레시피북을 만들어 저장할 수 있어요.
                   </div>
                 ) : (
@@ -159,7 +159,7 @@ export function SaveModal({
                     return (
                       <button
                         aria-pressed={isSelected}
-                        className="flex w-full items-center gap-2.5 border-b border-[#F1F3F5] px-4 py-3 text-left last:border-b-0 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="flex w-full items-center gap-2.5 border-b border-[var(--surface-subtle)] px-4 py-3 text-left last:border-b-0 disabled:cursor-not-allowed disabled:opacity-60"
                         disabled={isSavingRecipe || isCreatingBook}
                         key={book.id}
                         onClick={() => onSelectBook(book.id)}
@@ -170,17 +170,17 @@ export function SaveModal({
                           className={[
                             "flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--radius-badge)] border-2",
                             isSelected
-                              ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                              : "border-[#DEE2E6] bg-white",
+                              ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
+                              : "border-[var(--line-strong)] bg-[var(--surface)]",
                           ].join(" ")}
                         >
                           {isSelected ? <CheckIcon /> : null}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[14px] font-extrabold text-[#212529]">
+                          <span className="block truncate text-[14px] font-extrabold text-[var(--foreground)]">
                             {book.name}
                           </span>
-                          <span className="mt-0.5 block text-[11px] text-[#5F6470]">
+                          <span className="mt-0.5 block text-[11px] text-[var(--text-2)]">
                             {getBookSelectionMeta({ isAlreadySaved, isSelected })}
                           </span>
                         </span>
@@ -189,7 +189,7 @@ export function SaveModal({
                             "rounded-full px-2 py-[3px] text-[11px] font-extrabold",
                             isSavedBook
                               ? "bg-[var(--brand-soft)] text-[var(--brand)]"
-                              : "bg-[#F8F9FA] text-[#5F6470]",
+                              : "bg-[var(--surface-fill)] text-[var(--text-2)]",
                           ].join(" ")}
                         >
                           {getBookSelectionBadge({
@@ -216,14 +216,14 @@ export function SaveModal({
                   <div className="flex items-center gap-2 px-3 py-2">
                     <input
                       autoFocus
-                      className="min-h-10 min-w-0 flex-1 rounded-[var(--radius-control)] border border-[var(--brand)] bg-white px-3 text-[14px] text-[#212529] outline-none"
+                      className="min-h-10 min-w-0 flex-1 rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-3 text-[14px] text-[var(--foreground)] outline-none"
                       maxLength={50}
                       onChange={(event) => onNewBookNameChange(event.target.value)}
                       placeholder="레시피북 이름"
                       value={newBookName}
                     />
                     <button
-                      className="min-h-10 rounded-[var(--radius-control)] bg-[var(--brand)] px-3 text-[13px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      className="min-h-10 rounded-[var(--radius-control)] bg-[var(--brand)] px-3 text-[13px] font-bold text-[var(--text-inverse)] disabled:cursor-not-allowed disabled:opacity-60"
                       disabled={disableCreate}
                       onClick={onCreateBook}
                       type="button"
@@ -235,7 +235,7 @@ export function SaveModal({
               </div>
 
               {saveErrorMessage ? (
-                <p className="rounded-[var(--radius-control)] border border-[#FFC9C9] bg-[#FFEBEB] px-4 py-3 text-[13px] font-semibold text-[#E03131]">
+                <p className="rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] font-semibold text-[var(--danger-strong)]">
                   {saveErrorMessage}
                 </p>
               ) : null}

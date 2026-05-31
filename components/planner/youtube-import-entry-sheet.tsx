@@ -38,7 +38,7 @@ export function YoutubeImportEntrySheet({
       description="링크를 붙여넣고 기존 유튜브 가져오기 화면에서 추출을 이어가요"
       headerSlot={
         targetLabel ? (
-          <p className="text-[12px] font-medium text-[#868E96]">
+          <p className="text-[12px] font-medium text-[var(--text-3)]">
             대상 · {targetLabel}
           </p>
         ) : null
@@ -52,13 +52,13 @@ export function YoutubeImportEntrySheet({
       title="유튜브 가져오기"
     >
       <label
-        className="block text-[13px] font-semibold text-[#495057]"
+        className="block text-[13px] font-semibold text-[var(--text-2)]"
         htmlFor="youtube-import-entry-url"
       >
         유튜브 링크
       </label>
       <input
-        className="mt-2 w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3.5 py-3 text-[14px] text-[#212529] outline-none placeholder:text-[#ADB5BD] focus:border-[var(--brand)]"
+        className="mt-2 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3.5 py-3 text-[14px] text-[var(--foreground)] outline-none placeholder:text-[var(--text-4)] focus:border-[var(--brand)]"
         id="youtube-import-entry-url"
         inputMode="url"
         onChange={(event) => setYoutubeUrl(event.target.value)}
@@ -66,7 +66,7 @@ export function YoutubeImportEntrySheet({
         type="url"
         value={youtubeUrl}
       />
-      <p className="mt-2 text-[12px] leading-[1.45] text-[#868E96]">
+      <p className="mt-2 text-[12px] leading-[1.45] text-[var(--text-3)]">
         링크를 비워도 가져오기 화면을 열 수 있어요.
       </p>
       <div className="mt-5 flex gap-2.5">

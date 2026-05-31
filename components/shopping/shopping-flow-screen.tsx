@@ -240,11 +240,11 @@ function groupConfigsByDate(configs: MealConfig[]) {
 }
 
 const recipeVisualMeta: Record<string, { bg: string; emoji: string; meal: string }> = {
-  감자: { bg: "#FFEBC5", emoji: "🥟", meal: "저녁" },
-  감자수제비: { bg: "#FFEBC5", emoji: "🥟", meal: "저녁" },
-  김치볶음밥: { bg: "#FFE6E6", emoji: "🍚", meal: "아침" },
-  된장찌개: { bg: "#FFE7E2", emoji: "🍲", meal: "저녁" },
-  제육볶음: { bg: "#FFB69D", emoji: "🥩", meal: "저녁" },
+  감자: { bg: "var(--warning-soft)", emoji: "🥟", meal: "저녁" },
+  감자수제비: { bg: "var(--warning-soft)", emoji: "🥟", meal: "저녁" },
+  김치볶음밥: { bg: "var(--danger-soft)", emoji: "🍚", meal: "아침" },
+  된장찌개: { bg: "var(--accent-meat-soft)", emoji: "🍲", meal: "저녁" },
+  제육볶음: { bg: "var(--accent-peach)", emoji: "🥩", meal: "저녁" },
 };
 
 const WEB_NAV_ITEMS = [
@@ -829,7 +829,7 @@ function AppBar({ onBack }: AppBarProps) {
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-6">
         <button
           aria-label="뒤로 가기"
-          className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-white/60"
+          className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-[var(--surface-alpha-60)]"
           onClick={onBack}
           type="button"
         >
@@ -867,11 +867,11 @@ function MobileAppBar({
   title?: string;
 }) {
   return (
-    <div className="shrink-0 border-b border-[#DEE2E6] bg-white">
+    <div className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)]">
       <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
         <button
           aria-label="뒤로 가기"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529] hover:bg-[#F8F9FA]"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-[var(--surface-fill)]"
           onClick={onBack}
           type="button"
         >
@@ -891,7 +891,7 @@ function MobileAppBar({
             />
           </svg>
         </button>
-        <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[#212529]">
+        <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[var(--foreground)]">
           {title}
         </h1>
         <div aria-hidden="true" className="h-8 w-8 shrink-0" />
@@ -914,18 +914,18 @@ function MobileSelectScreen({
   onToggle: (recipeId: string) => void;
 }) {
   return (
-    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] lg:hidden">
+    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface-fill)] lg:hidden">
       <MobileAppBar onBack={onBack} />
 
       <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
-        <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
+        <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5">
           <p className="text-[12px] font-extrabold leading-[1.3] text-[var(--brand)]">
             STEP 1 / 2
           </p>
-          <h2 className="mt-1 text-[20px] font-extrabold leading-[1.3] text-[#212529]">
+          <h2 className="mt-1 text-[20px] font-extrabold leading-[1.3] text-[var(--foreground)]">
             어떤 끼니의 재료를 살까요?
           </h2>
-          <p className="mt-3 text-[13px] font-medium leading-[1.5] text-[#868E96]">
+          <p className="mt-3 text-[13px] font-medium leading-[1.5] text-[var(--text-3)]">
             선택한 끼니의 재료를 자동으로 모아드려요
           </p>
         </section>
@@ -933,13 +933,13 @@ function MobileSelectScreen({
         <div className="space-y-3 p-4">
           {groupConfigsByDate(configs).map(([dateLabel, items]) => (
             <section
-              className="overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white"
+              className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
               key={dateLabel}
             >
-              <h3 className="border-b border-[#F1F3F5] bg-[#F8F9FA] px-4 py-2.5 text-[14px] font-extrabold leading-[1.3] text-[#212529]">
+              <h3 className="border-b border-[var(--surface-subtle)] bg-[var(--surface-fill)] px-4 py-2.5 text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
                 {dateLabel}
               </h3>
-              <div className="divide-y divide-[#F1F3F5]">
+              <div className="divide-y divide-[var(--surface-subtle)]">
                 {items.map((config) => (
                   <MobileSelectRow
                     config={config}
@@ -953,9 +953,9 @@ function MobileSelectScreen({
         </div>
       </main>
 
-      <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[#DEE2E6] bg-white px-4 py-4">
+      <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 py-4">
         <button
-          className="flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-white disabled:bg-[#DEE2E6] disabled:text-[#ADB5BD]"
+          className="flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)] disabled:text-[var(--text-4)]"
           data-testid="shopping-create-button"
           disabled={isCreateDisabled}
           onClick={onCreate}
@@ -996,10 +996,10 @@ function MobileSelectRow({
         <span
           aria-hidden="true"
           className={[
-            "flex h-[22px] w-[22px] items-center justify-center rounded-[var(--radius-badge)] border text-white",
+            "flex h-[22px] w-[22px] items-center justify-center rounded-[var(--radius-badge)] border text-[var(--text-inverse)]",
             config.isSelected
               ? "border-[var(--brand)] bg-[var(--brand)]"
-              : "border-[#DEE2E6] bg-white",
+              : "border-[var(--line-strong)] bg-[var(--surface)]",
           ].join(" ")}
         >
           {config.isSelected ? "✓" : ""}
@@ -1021,10 +1021,10 @@ function MobileSelectRow({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[#212529]">
+        <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
           {config.recipe_name}
         </p>
-        <p className="mt-[2px] truncate text-[11px] font-medium leading-[1.3] text-[#868E96]">
+        <p className="mt-[2px] truncate text-[11px] font-medium leading-[1.3] text-[var(--text-3)]">
           {visual.meal} · {config.shopping_servings}인분 · 장보기 대기
         </p>
       </div>
@@ -1067,20 +1067,20 @@ function MobileReviewScreen({
     : 100;
 
   return (
-    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] lg:hidden">
+    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface-fill)] lg:hidden">
       <MobileAppBar onBack={onBack} />
 
       <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
-        <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
+        <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[12px] font-extrabold leading-[1.3] text-[var(--brand)]">
                 STEP 2 / 2
               </p>
-              <h2 className="mt-1 truncate text-[20px] font-extrabold leading-[1.3] text-[#212529]">
+              <h2 className="mt-1 truncate text-[20px] font-extrabold leading-[1.3] text-[var(--foreground)]">
                 {formatDateDot(detail.created_at)} · 장보기 목록
               </h2>
-              <p className="mt-2 text-[12px] font-medium leading-[1.4] text-[#868E96]">
+              <p className="mt-2 text-[12px] font-medium leading-[1.4] text-[var(--text-3)]">
                 {purchaseItems.length}개 구매 예정 · {excludedItems.length}개 팬트리 제외
               </p>
             </div>
@@ -1088,7 +1088,7 @@ function MobileReviewScreen({
               {progress}%
             </div>
           </div>
-          <div className="mt-3 h-1 rounded-full bg-[#F1F3F5]">
+          <div className="mt-3 h-1 rounded-full bg-[var(--surface-subtle)]">
             <div
               className="h-full rounded-full bg-[var(--brand)]"
               style={{ width: `${progress}%` }}
@@ -1106,14 +1106,14 @@ function MobileReviewScreen({
         ) : null}
 
         <section className="px-4 py-5">
-          <h3 className="text-[14px] font-extrabold leading-[1.3] text-[#212529]">
+          <h3 className="text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
             장볼 재료 목록
           </h3>
-          <p className="mt-3 text-[12px] font-bold leading-[1.3] text-[#868E96]">
+          <p className="mt-3 text-[12px] font-bold leading-[1.3] text-[var(--text-3)]">
             메인 · {purchaseItems.length}
           </p>
 
-          <div className="mt-3 overflow-hidden rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white">
+          <div className="mt-3 overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)]">
             {purchaseItems.map((item) => (
               <MobileReviewItem
                 isUpdating={updatingItemId === item.id}
@@ -1127,10 +1127,10 @@ function MobileReviewScreen({
         </section>
       </main>
 
-      <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[#DEE2E6] bg-white px-4 py-4">
+      <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 py-4">
         <div className="grid grid-cols-[1fr_86px] gap-2">
           <button
-            className="flex h-[var(--control-height-lg)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-white disabled:bg-[#DEE2E6]"
+            className="flex h-[var(--control-height-lg)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)]"
             disabled={isCompleting || detail.is_completed}
             onClick={onComplete}
             type="button"
@@ -1138,7 +1138,7 @@ function MobileReviewScreen({
             {detail.is_completed ? "완료됨" : isCompleting ? "완료 중..." : "장보기 완료"}
           </button>
           <button
-            className="flex h-[var(--control-height-lg)] items-center justify-center rounded-[var(--radius-control)] bg-[#F8F9FA] text-[15px] font-bold text-[#212529] disabled:opacity-50"
+            className="flex h-[var(--control-height-lg)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[15px] font-bold text-[var(--foreground)] disabled:opacity-50"
             disabled={isSharing}
             onClick={onShare}
             type="button"
@@ -1173,7 +1173,7 @@ function MobileReviewItem({
   const label = item.display_text.replace(/\s+\d+.*$/, "");
 
   return (
-    <div className="flex min-h-[64px] items-center gap-3 border-b border-[#F1F3F5] px-4 py-2.5 last:border-b-0">
+    <div className="flex min-h-[64px] items-center gap-3 border-b border-[var(--surface-subtle)] px-4 py-2.5 last:border-b-0">
       <button
         aria-checked={item.is_checked}
         aria-label={`${item.display_text} 구매 완료 표시`}
@@ -1186,10 +1186,10 @@ function MobileReviewItem({
         <span
           aria-hidden="true"
           className={[
-            "flex h-[22px] w-[22px] items-center justify-center rounded-full border text-[12px] text-white",
+            "flex h-[22px] w-[22px] items-center justify-center rounded-full border text-[12px] text-[var(--text-inverse)]",
             item.is_checked
               ? "border-[var(--brand)] bg-[var(--brand)]"
-              : "border-[#DEE2E6] bg-white",
+              : "border-[var(--line-strong)] bg-[var(--surface)]",
           ].join(" ")}
         >
           {item.is_checked ? "✓" : ""}
@@ -1197,17 +1197,17 @@ function MobileReviewItem({
       </button>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[#212529]">
+        <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
           {label}
         </p>
-        <p className="mt-1 truncate text-[11px] font-medium leading-[1.3] text-[#868E96]">
+        <p className="mt-1 truncate text-[11px] font-medium leading-[1.3] text-[var(--text-3)]">
           {amountText(item)} · 1끼에 사용
         </p>
       </div>
 
       <button
         aria-label={`${item.display_text} 이미있음`}
-        className="flex h-[30px] shrink-0 items-center justify-center rounded-full border border-[#DEE2E6] bg-white px-3 text-[11px] font-extrabold text-[#495057] disabled:opacity-50"
+        className="flex h-[30px] shrink-0 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[11px] font-extrabold text-[var(--text-2)] disabled:opacity-50"
         disabled={isUpdating}
         onClick={() =>
           onToggleExclude(item.id, item.is_pantry_excluded, item.is_checked)

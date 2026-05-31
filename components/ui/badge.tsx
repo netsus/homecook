@@ -11,7 +11,7 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 
 const variantStyles: Record<BadgeVariant, string> = {
   brand: "bg-[var(--wave1-mint-soft)] text-[var(--wave1-mint-contrast)]",
-  danger: "bg-[#FFEBEB] text-[var(--wave1-red-contrast)]",
+  danger: "bg-[var(--danger-soft)] text-[var(--wave1-red-contrast)]",
   olive: "bg-[var(--brand-soft)] text-[var(--wave1-teal-contrast)]",
   muted: "bg-[var(--wave1-surface-fill)] text-[var(--wave1-text-2)]",
 };

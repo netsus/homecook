@@ -319,7 +319,7 @@ export function RecipeIngredientAddModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] sm:items-center"
       onClick={onClose}
     >
       <div
@@ -367,7 +367,7 @@ export function RecipeIngredientAddModal({
                 {selectedIngredients.map((ingredient) => (
                   <button
                     aria-label={`${ingredient.standard_name} 선택 해제`}
-                    className="rounded-[var(--radius-sm)] bg-[var(--brand)] px-3 py-1.5 text-sm font-semibold text-white shadow-[var(--shadow-1)]"
+                    className="rounded-[var(--radius-sm)] bg-[var(--brand)] px-3 py-1.5 text-sm font-semibold text-[var(--text-inverse)] shadow-[var(--shadow-1)]"
                     key={ingredient.id}
                     onClick={() => removeIngredient(ingredient.id)}
                     type="button"
@@ -425,7 +425,7 @@ export function RecipeIngredientAddModal({
                       className={[
                         "inline-flex min-h-10 max-w-[12rem] items-center rounded-[var(--radius-full)] border px-4 py-2 text-sm font-semibold transition",
                         isSelected
-                          ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                          ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
                           : "border-[var(--line)] bg-[var(--surface-fill)] text-[var(--foreground)] hover:bg-[var(--surface)]",
                       ].join(" ")}
                       onClick={() => toggleIngredient(ingredient)}

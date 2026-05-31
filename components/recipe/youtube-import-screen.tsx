@@ -314,7 +314,7 @@ interface AppBarProps {
 
 function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBarProps) {
   return (
-    <div className="shrink-0 border-b border-[var(--line)] bg-white">
+    <div className="shrink-0 border-b border-[var(--line)] bg-[var(--surface)]">
       <div className="flex h-14 items-center gap-2 px-2">
         {step !== "complete" && (
           <AppBackButton
@@ -331,8 +331,8 @@ function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBar
             className={[
               "h-[var(--control-height-md)] rounded-[var(--radius-sm)] px-4 text-base font-semibold",
               canRegister && !isRegistering
-                ? "bg-[var(--wave1-mint-contrast)] text-white shadow-[var(--wave1-shadow-soft)] hover:bg-[var(--wave1-mint-contrast-deep)]"
-                : "cursor-not-allowed bg-[#DEE2E6] text-[#ADB5BD]",
+                ? "bg-[var(--wave1-mint-contrast)] text-[var(--text-inverse)] shadow-[var(--wave1-shadow-soft)] hover:bg-[var(--wave1-mint-contrast-deep)]"
+                : "cursor-not-allowed bg-[var(--line-strong)] text-[var(--text-4)]",
             ].join(" ")}
             onClick={onRegister}
             disabled={!canRegister || isRegistering}
@@ -749,7 +749,7 @@ function ReviewIngredientRow({
               className={[
                 "h-9 min-w-9 rounded-[var(--radius-sm)] px-1.5 text-[14px] font-semibold transition",
                 (ingredient.unit ?? "g") === option
-                  ? "bg-[var(--brand)] text-white"
+                  ? "bg-[var(--brand)] text-[var(--text-inverse)]"
                   : "text-[var(--text-2)] hover:bg-[var(--surface)]",
               ].join(" ")}
               key={option}
@@ -776,7 +776,7 @@ function ReviewIngredientRow({
       </div>
 
       {needsResolution ? (
-        <div className="mt-2 rounded-[var(--radius-card)] border border-[color:rgba(216,58,58,0.2)] bg-[color:rgba(216,58,58,0.06)] p-3">
+        <div className="mt-2 rounded-[var(--radius-card)] border border-[color:var(--danger-border)] bg-[color:var(--danger-soft)] p-3">
           {ingredient.raw_text ? (
             <p className="text-[12px] text-[var(--text-2)]">
               원문: {ingredient.raw_text}
@@ -787,7 +787,7 @@ function ReviewIngredientRow({
             <div className="mt-2 flex flex-wrap gap-2">
               {ingredient.candidates?.map((candidate) => (
                 <button
-                  className="rounded-[var(--radius-full)] border border-[var(--brand)] bg-white px-3 py-1.5 text-[12px] font-semibold text-[var(--brand)]"
+                  className="rounded-[var(--radius-full)] border border-[var(--brand)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold text-[var(--brand)]"
                   key={candidate.ingredient_id}
                   onClick={() => onResolveIngredientCandidate(ingredient.tempId, candidate)}
                   type="button"
@@ -853,7 +853,7 @@ function ReviewCookingStepRow({
             </span>
             {step.cooking_method && (
               <span
-                className="rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
+                className="rounded-full px-2.5 py-0.5 text-xs font-semibold text-[var(--text-inverse)]"
                 style={{
                   backgroundColor: getCookingMethodColor(
                     step.cooking_method.color_key,
@@ -890,7 +890,7 @@ function ReviewCookingStepRow({
       </div>
 
       {blockingFields.length > 0 ? (
-        <div className="mt-3 rounded-[var(--radius-card)] border border-[color:rgba(216,58,58,0.2)] bg-[color:rgba(216,58,58,0.06)] p-3">
+        <div className="mt-3 rounded-[var(--radius-card)] border border-[color:var(--danger-border)] bg-[color:var(--danger-soft)] p-3">
           <p className="text-[12px] font-semibold text-[var(--danger)]">
             등록 전 필수 입력: {formatStepFieldList(blockingFields)}
           </p>
@@ -965,7 +965,7 @@ function ReviewStep({
           {extractionMethods.map((method) => (
             <span
               key={method}
-              className="rounded-full bg-[var(--brand)] px-2.5 py-0.5 text-xs font-semibold text-white"
+              className="rounded-full bg-[var(--brand)] px-2.5 py-0.5 text-xs font-semibold text-[var(--text-inverse)]"
               data-testid={`extraction-method-${method}`}
             >
               {EXTRACTION_METHOD_LABELS[method] ?? method}
@@ -1006,7 +1006,7 @@ function ReviewStep({
 
       {classificationStatus === "uncertain" ? (
         <div
-          className="mt-4 rounded-[var(--radius-card)] border border-[color:rgba(255,149,0,0.26)] bg-[color:rgba(255,149,0,0.08)] px-4 py-3"
+          className="mt-4 rounded-[var(--radius-card)] border border-[color:var(--warning-border)] bg-[color:var(--warning-soft)] px-4 py-3"
           role="status"
         >
           <p className="text-[13px] font-semibold leading-[1.45] text-[var(--foreground)]">
@@ -1047,7 +1047,7 @@ function ReviewStep({
                   className={[
                     "w-full rounded-[var(--radius-sm)] border px-3 py-2 text-left transition",
                     isSelected
-                      ? "border-[var(--brand)] bg-[var(--brand)]/8"
+                      ? "border-[var(--brand)] bg-[var(--brand-alpha-08)]"
                       : "border-[var(--line)] bg-[var(--surface-fill)] hover:border-[var(--brand)]",
                   ].join(" ")}
                   data-testid={`youtube-recipe-candidate-${candidate.candidate_id}`}
@@ -1076,7 +1076,7 @@ function ReviewStep({
 
       {draftWarnings.length > 0 ? (
         <div
-          className="mt-4 rounded-[var(--radius-card)] border border-[color:rgba(255,149,0,0.26)] bg-[color:rgba(255,149,0,0.08)] px-4 py-3"
+          className="mt-4 rounded-[var(--radius-card)] border border-[color:var(--warning-border)] bg-[color:var(--warning-soft)] px-4 py-3"
           role="status"
         >
           <p className="text-[13px] font-semibold leading-[1.45] text-[var(--foreground)]">
@@ -1092,7 +1092,7 @@ function ReviewStep({
 
       {blockingIssues.length > 0 && registerRequirements.length > 0 ? (
         <div
-          className="mt-4 rounded-[var(--radius-card)] border border-[color:rgba(216,58,58,0.26)] bg-[color:rgba(216,58,58,0.08)] px-4 py-3"
+          className="mt-4 rounded-[var(--radius-card)] border border-[color:var(--danger-border)] bg-[color:var(--danger-soft)] px-4 py-3"
           role="alert"
         >
           <p className="text-[13px] font-semibold leading-[1.45] text-[var(--danger)]">
@@ -1108,17 +1108,17 @@ function ReviewStep({
 
       {registerRequirements.length > 0 ? (
         <div
-          className="mt-4 rounded-[var(--radius-card)] bg-[#F8F9FA] px-4 py-3"
+          className="mt-4 rounded-[var(--radius-card)] bg-[var(--surface-fill)] px-4 py-3"
           data-testid="youtube-register-requirements"
           role="status"
         >
-          <p className="text-[13px] font-semibold leading-[1.45] text-[#495057]">
+          <p className="text-[13px] font-semibold leading-[1.45] text-[var(--text-2)]">
             등록하려면 아래 항목을 확인해주세요.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {registerRequirements.map((requirement) => (
               <span
-                className="rounded-[var(--radius-control)] bg-white px-2.5 py-1 text-[12px] font-medium text-[#495057]"
+                className="rounded-[var(--radius-control)] bg-[var(--surface)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-2)]"
                 key={requirement}
               >
                 {requirement}
@@ -1160,7 +1160,7 @@ function ReviewStep({
         </h3>
         {onBulkRegister && typeof bulkEligibleCount === "number" && bulkEligibleCount >= 2 && (
           <button
-            className="mt-3 w-full rounded-[var(--radius-sm)] bg-[var(--brand)] py-3 text-base font-semibold text-white hover:bg-[var(--brand)]/90"
+            className="mt-3 w-full rounded-[var(--radius-sm)] bg-[var(--brand)] py-3 text-base font-semibold text-[var(--text-inverse)] hover:bg-[var(--brand-deep)]"
             onClick={onBulkRegister}
             type="button"
             data-testid="bulk-register-cta"
@@ -1208,7 +1208,7 @@ function ReviewStep({
           </div>
         )}
         <button
-          className="mt-3 w-full rounded-[var(--radius-sm)] border border-[var(--brand)] bg-transparent py-3 text-base font-semibold text-[var(--brand)] hover:bg-[var(--brand)]/10"
+          className="mt-3 w-full rounded-[var(--radius-sm)] border border-[var(--brand)] bg-transparent py-3 text-base font-semibold text-[var(--brand)] hover:bg-[var(--brand-alpha-10)]"
           onClick={onAddIngredient}
           type="button"
         >
@@ -1223,7 +1223,7 @@ function ReviewStep({
         </h3>
         {steps.length === 0 && ingredients.length > 0 ? (
           <div
-            className="mt-3 rounded-[var(--radius-card)] border border-[color:rgba(255,149,0,0.26)] bg-[color:rgba(255,149,0,0.08)] px-4 py-3"
+            className="mt-3 rounded-[var(--radius-card)] border border-[color:var(--warning-border)] bg-[color:var(--warning-soft)] px-4 py-3"
             role="status"
             data-testid="partial-draft-guidance"
           >
@@ -1271,7 +1271,7 @@ function ReviewStep({
           </div>
         )}
         <button
-          className="mt-3 w-full rounded-[var(--radius-sm)] border border-[var(--brand)] bg-transparent py-3 text-base font-semibold text-[var(--brand)] hover:bg-[var(--brand)]/10"
+          className="mt-3 w-full rounded-[var(--radius-sm)] border border-[var(--brand)] bg-transparent py-3 text-base font-semibold text-[var(--brand)] hover:bg-[var(--brand-alpha-10)]"
           onClick={onAddStep}
           type="button"
         >
@@ -1373,7 +1373,7 @@ function StepAddModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] sm:items-center"
       onClick={onClose}
     >
       <div
@@ -1402,7 +1402,7 @@ function StepAddModal({
                         ? color
                         : `color-mix(in srgb, ${color} 12%, transparent)`,
                       borderColor: color,
-                      color: isSelected ? "#fff" : "var(--foreground)",
+                      color: isSelected ? "var(--text-inverse)" : "var(--foreground)",
                     }}
                     type="button"
                   >
@@ -1522,7 +1522,7 @@ function IngredientRegisterModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] sm:items-center"
       onClick={handleClose}
     >
       <div
@@ -1560,7 +1560,7 @@ function IngredientRegisterModal({
                   className={[
                     "rounded-[var(--radius-full)] border px-3 py-1.5 text-sm font-semibold transition",
                     category === cat
-                      ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                      ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
                       : "border-[var(--line)] bg-[var(--surface-fill)] text-[var(--foreground)]",
                   ].join(" ")}
                   key={cat}
@@ -1601,7 +1601,7 @@ function IngredientRegisterModal({
           {/* Error */}
           {error ? (
             <div
-              className="rounded-[var(--radius-card)] border border-[color:rgba(216,58,58,0.26)] bg-[color:rgba(216,58,58,0.08)] px-4 py-3 text-sm text-[var(--danger)]"
+              className="rounded-[var(--radius-card)] border border-[color:var(--danger-border)] bg-[color:var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]"
               role="alert"
               data-testid="register-ingredient-error"
             >
@@ -1802,7 +1802,7 @@ function BulkIngredientRegistrationSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] sm:items-center"
       onClick={handleClose}
     >
       <div
@@ -1832,13 +1832,13 @@ function BulkIngredientRegistrationSheet({
                 className={[
                   "rounded-[var(--radius-card)] border p-3",
                   row.status === "success"
-                    ? "border-green-200 bg-green-50"
+                    ? "border-[color:var(--success-border)] bg-[var(--success-soft)]"
                     : row.status === "error"
-                      ? "border-[color:rgba(216,58,58,0.26)] bg-[color:rgba(216,58,58,0.08)]"
+                      ? "border-[color:var(--danger-border)] bg-[color:var(--danger-soft)]"
                       : row.status === "loading"
-                        ? "border-[var(--brand)] bg-[var(--brand)]/5"
+                        ? "border-[var(--brand)] bg-[var(--brand-alpha-05)]"
                         : row.skipped
-                          ? "border-[var(--line)] bg-gray-50 opacity-60"
+                          ? "border-[var(--line)] bg-[var(--surface-fill)] opacity-60"
                           : "border-[var(--line)] bg-[var(--surface)]",
                 ].join(" ")}
                 data-testid={`bulk-row-${row.tempId}`}
@@ -1856,7 +1856,7 @@ function BulkIngredientRegistrationSheet({
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     {row.status === "success" && (
-                      <span className="text-xs font-semibold text-green-600">등록 완료</span>
+                      <span className="text-xs font-semibold text-[var(--success)]">등록 완료</span>
                     )}
                     {row.status === "loading" && (
                       <span className="text-xs font-semibold text-[var(--brand)]">등록 중...</span>
@@ -1911,7 +1911,7 @@ function BulkIngredientRegistrationSheet({
                             className={[
                               "rounded-[var(--radius-full)] border px-2 py-1 text-xs font-semibold transition",
                               row.category === cat
-                                ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                                ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
                                 : "border-[var(--line)] bg-[var(--surface-fill)] text-[var(--foreground)]",
                             ].join(" ")}
                             key={cat}
@@ -1934,7 +1934,7 @@ function BulkIngredientRegistrationSheet({
         <div className="shrink-0 p-6 pt-3">
           {sessionExpiredMessage && (
             <div
-              className="mb-3 rounded-[var(--radius-card)] border border-[color:rgba(216,58,58,0.26)] bg-[color:rgba(216,58,58,0.08)] px-4 py-3 text-sm text-[var(--danger)]"
+              className="mb-3 rounded-[var(--radius-card)] border border-[color:var(--danger-border)] bg-[color:var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]"
               role="alert"
               data-testid="bulk-session-expired"
             >
@@ -1980,7 +1980,7 @@ interface RegisterErrorModalProps {
 
 function RegisterErrorModal({ errorMessage, onRetry, onClose }: RegisterErrorModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] sm:items-center">
       <div className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]">
         <ModalHeader title="레시피 등록 실패" onClose={onClose} />
         <p className="mt-4 text-base text-[var(--text-2)]">
@@ -2010,7 +2010,7 @@ interface ConfirmBackModalProps {
 
 function ConfirmBackModal({ onConfirm, onCancel }: ConfirmBackModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] sm:items-center">
       <div className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]">
         <ModalHeader title="수정 내용이 사라져요" onClose={onCancel} description="뒤로 가면 수정한 내용이 모두 사라져요." />
         <div className="mt-6 space-y-3">
@@ -2040,14 +2040,14 @@ function ServingsInputModal({ onConfirm, onCancel, defaultServings, isCreating, 
   const [servings, setServings] = useState(defaultServings);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] sm:items-center">
       <div className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]">
         <ModalHeader title="이 끼니에 추가" description="계획 인분을 정해주세요" onClose={onCancel} />
         <div className="mt-6">
           <NumericStepperCompact value={servings} min={1} onChange={setServings} unit="인분" disabled={isCreating} />
         </div>
         {error && (
-          <div className="mt-4 rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-3 text-sm text-red-700" role="alert">
+          <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]" role="alert">
             {error}
           </div>
         )}
@@ -3154,7 +3154,7 @@ export function YoutubeImportScreen({
   }
 
   return (
-    <div className="flex h-screen flex-col bg-white">
+    <div className="flex h-screen flex-col bg-[var(--surface)]">
       {currentStep !== "complete" && (
         <AppBar
           step={currentStep}

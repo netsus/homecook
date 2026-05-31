@@ -952,7 +952,7 @@ export function MypageScreen({
           데이터를 불러오지 못했어요
         </h2>
         <button
-          className="mt-4 flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-white"
+          className="mt-4 flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-[var(--text-inverse)]"
           onClick={() => {
             if (activeTab === "shopping") {
               setShoppingLoaded(false);
@@ -1036,8 +1036,8 @@ export function MypageScreen({
           <div
             className={`fixed inset-x-4 bottom-24 z-50 mx-auto max-w-md rounded-[var(--radius-card)] px-4 py-3 text-center text-sm font-bold shadow-lg ${
               toast.tone === "success"
-                ? "bg-[var(--brand)] text-white"
-                : "bg-[#FF6B6B] text-white"
+                ? "bg-[var(--brand)] text-[var(--text-inverse)]"
+                : "bg-[var(--danger)] text-[var(--text-inverse)]"
             }`}
             role="status"
           >
@@ -1282,8 +1282,8 @@ export function MypageScreen({
         <div
           className={`fixed inset-x-4 bottom-8 z-50 mx-auto max-w-md rounded-[var(--radius-lg)] px-4 py-3 text-center text-sm font-semibold shadow-lg ${
             toast.tone === "success"
-              ? "bg-[var(--brand)] text-white"
-              : "bg-[var(--danger)] text-white"
+              ? "bg-[var(--brand)] text-[var(--text-inverse)]"
+              : "bg-[var(--danger)] text-[var(--text-inverse)]"
           }`}
           role="status"
         >
@@ -1625,12 +1625,12 @@ function MypageLoadingSkeleton({
 
     return (
       <div
-        className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
+        className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden"
         data-testid="mypage-mobile-loading"
       >
         <div
           className={[
-            "sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-4",
+            "sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4",
             showBack ? "justify-center" : "",
           ].join(" ")}
           style={{ borderBottomWidth: "0.5px" }}
@@ -1638,7 +1638,7 @@ function MypageLoadingSkeleton({
           {showBack ? (
             <button
               aria-label="뒤로"
-              className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start border-0 bg-transparent p-0 text-[#212529]"
+              className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start border-0 bg-transparent p-0 text-[var(--foreground)]"
               onClick={onBack}
               type="button"
             >
@@ -1647,7 +1647,7 @@ function MypageLoadingSkeleton({
           ) : null}
           <h1
             className={[
-              "truncate text-[18px] font-bold leading-none text-[#212529]",
+              "truncate text-[18px] font-bold leading-none text-[var(--foreground)]",
               showBack ? "text-center" : "",
             ].join(" ")}
           >
@@ -1718,7 +1718,7 @@ function MypageSkeletonBackIcon() {
 function MypageHomeLoadingBody() {
   return (
     <>
-      <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
+      <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5">
         <div className="mb-[18px] flex items-center gap-[14px]">
           <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
           <div className="min-w-0 flex-1 space-y-2">
@@ -1730,7 +1730,7 @@ function MypageHomeLoadingBody() {
         <div className="grid grid-cols-3 gap-2">
           {[1, 2, 3].map((index) => (
             <div
-              className="rounded-[var(--radius-control)] bg-[#F8F9FA] px-2 py-3"
+              className="rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-2 py-3"
               key={index}
             >
               <Skeleton className="mx-auto h-6 w-8" />
@@ -1740,12 +1740,12 @@ function MypageHomeLoadingBody() {
         </div>
       </section>
       <section className="p-4">
-        <div className="overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white">
+        <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]">
           {[1, 2, 3, 4].map((index) => (
             <div
               className={[
                 "flex min-h-[57px] w-full items-center gap-3 px-4",
-                index < 4 ? "border-b border-[#F1F3F5]" : "",
+                index < 4 ? "border-b border-[var(--surface-subtle)]" : "",
               ].join(" ")}
               key={index}
             >
@@ -1768,7 +1768,7 @@ function MypageListLoadingBody({ kind }: { kind: "recipebook" | "shopping" }) {
       <div className="space-y-[10px]">
         {Array.from({ length: rowCount }, (_, index) => (
           <div
-            className="flex min-h-[82px] items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-3"
+            className="flex min-h-[82px] items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
             key={index}
           >
             <Skeleton className="h-14 w-14 shrink-0 rounded-[var(--radius-control)]" />

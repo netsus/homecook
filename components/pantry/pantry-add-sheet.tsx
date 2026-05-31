@@ -192,7 +192,7 @@ export function PantryAddSheet({
         footer={
           <div className="space-y-2">
             {errorMessage ? (
-              <p className="text-[13px] font-bold text-[#C92A2A]" role="alert">
+              <p className="text-[13px] font-bold text-[var(--danger-strong)]" role="alert">
                 {errorMessage}
               </p>
             ) : null}
@@ -214,7 +214,7 @@ export function PantryAddSheet({
           <>
             <input
               aria-label="재료명 검색"
-              className="h-[38px] w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-[14px] font-medium text-[#212529] placeholder:text-[#868E96] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
+              className="h-[38px] w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[14px] font-medium text-[var(--foreground)] placeholder:text-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="재료 검색"
               type="text"
@@ -249,11 +249,11 @@ export function PantryAddSheet({
           </div>
         ) : visibleSheetState === "error" ? (
           <div className="flex flex-col items-center py-8 text-center">
-            <p className="text-sm font-semibold text-[#212529]">
+            <p className="text-sm font-semibold text-[var(--foreground)]">
               재료 목록을 불러오지 못했어요
             </p>
             <button
-              className="mt-4 h-10 rounded-[var(--radius-control)] bg-[var(--brand)] px-5 text-[13px] font-extrabold text-white"
+              className="mt-4 h-10 rounded-[var(--radius-control)] bg-[var(--brand)] px-5 text-[13px] font-extrabold text-[var(--text-inverse)]"
               onClick={() => void loadIngredients(debouncedQuery)}
               type="button"
             >
@@ -261,7 +261,7 @@ export function PantryAddSheet({
             </button>
           </div>
         ) : visibleSheetState === "empty" ? (
-          <p className="py-8 text-center text-[13px] font-medium text-[#868E96]">
+          <p className="py-8 text-center text-[13px] font-medium text-[var(--text-3)]">
             검색 결과가 없어요
           </p>
         ) : (
@@ -281,10 +281,10 @@ export function PantryAddSheet({
                   className={[
                     "flex min-h-[54px] items-center gap-2 rounded-[var(--radius-card)] border px-3 text-left disabled:opacity-60",
                     isExisting
-                      ? "border-[#DEE2E6] bg-[#F8F9FA] opacity-60 grayscale"
+                      ? "border-[var(--line-strong)] bg-[var(--surface-fill)] opacity-60 grayscale"
                       : isChecked
                         ? "border-[var(--brand)] bg-[var(--brand-soft)]"
-                        : "border-[#DEE2E6] bg-white",
+                        : "border-[var(--line-strong)] bg-[var(--surface)]",
                   ].join(" ")}
                   data-owned={isExisting ? "true" : undefined}
                   disabled={isExisting}
@@ -296,7 +296,7 @@ export function PantryAddSheet({
                   <span
                     aria-hidden="true"
                     className={[
-                      "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[#F8F9FA] text-[18px]",
+                      "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[18px]",
                       isExisting ? "opacity-70" : "",
                     ].join(" ")}
                   >
@@ -305,13 +305,13 @@ export function PantryAddSheet({
                   <span
                     className={[
                       "min-w-0 flex-1 truncate text-[13px] font-extrabold",
-                      isExisting ? "text-[#868E96]" : "text-[#212529]",
+                      isExisting ? "text-[var(--text-3)]" : "text-[var(--foreground)]",
                     ].join(" ")}
                   >
                     {ingredient.standard_name}
                   </span>
                   {isExisting ? (
-                    <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-extrabold text-[#495057]">
+                    <span className="shrink-0 rounded-full bg-[var(--surface)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--text-2)]">
                       보유중
                     </span>
                   ) : isChecked ? (
@@ -523,8 +523,8 @@ function MobileCategoryChip({
       className={[
         "h-[31px] shrink-0 rounded-full border px-3 text-[12px] font-extrabold leading-none",
         active
-          ? "border-[var(--brand)] bg-white text-[var(--brand)]"
-          : "border-[#DEE2E6] bg-white text-[#495057]",
+          ? "border-[var(--brand)] bg-[var(--surface)] text-[var(--brand)]"
+          : "border-[var(--line-strong)] bg-[var(--surface)] text-[var(--text-2)]",
       ].join(" ")}
       onClick={onClick}
       role="tab"

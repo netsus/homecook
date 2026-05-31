@@ -135,11 +135,11 @@ function AppBar({ onBack, onSave, isSaving, isUploading = false }: AppBarProps) 
   const isDisabled = isSaving || isUploading;
 
   return (
-    <div className="shrink-0 border-b border-[#DEE2E6] bg-white">
+    <div className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)]">
       <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
         <button
           aria-label="뒤로 가기"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529] hover:bg-[#F8F9FA]"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-[var(--surface-fill)]"
           onClick={onBack}
           type="button"
           disabled={isDisabled}
@@ -160,7 +160,7 @@ function AppBar({ onBack, onSave, isSaving, isUploading = false }: AppBarProps) 
             />
           </svg>
         </button>
-        <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[#212529]">
+        <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[var(--foreground)]">
           직접 등록
         </h1>
         <button
@@ -168,7 +168,7 @@ function AppBar({ onBack, onSave, isSaving, isUploading = false }: AppBarProps) 
             "h-[var(--control-height-md)] shrink-0 rounded-[var(--radius-control)] px-3 text-sm font-semibold lg:px-4 lg:text-base",
             !isDisabled
               ? "text-[var(--brand)] hover:bg-[var(--brand-soft)]"
-              : "cursor-not-allowed text-[#ADB5BD]",
+              : "cursor-not-allowed text-[var(--text-4)]",
           ].join(" ")}
           onClick={onSave}
           disabled={isDisabled}
@@ -194,12 +194,12 @@ function BaseServingsStepper({ value, onChange }: BaseServingsStepperProps) {
   return (
     <div
       aria-label="기준 인분 조절"
-      className="grid h-[38px] grid-cols-[2.5rem_minmax(3.5rem,1fr)_2.5rem] overflow-hidden rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white"
+      className="grid h-[38px] grid-cols-[2.5rem_minmax(3.5rem,1fr)_2.5rem] overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)]"
       role="group"
     >
       <button
         aria-label="기준 인분 줄이기"
-        className="flex items-center justify-center border-r border-[#DEE2E6] text-[18px] font-semibold text-[#212529] disabled:text-[#ADB5BD]"
+        className="flex items-center justify-center border-r border-[var(--line-strong)] text-[18px] font-semibold text-[var(--foreground)] disabled:text-[var(--text-4)]"
         disabled={value <= 1}
         onClick={() => updateValue(value - 1)}
         type="button"
@@ -208,7 +208,7 @@ function BaseServingsStepper({ value, onChange }: BaseServingsStepperProps) {
       </button>
       <input
         aria-label="기준 인분"
-        className="min-w-0 bg-white px-2 text-center text-[14px] font-semibold text-[#212529] outline-none focus:bg-[var(--brand-soft)]"
+        className="min-w-0 bg-[var(--surface)] px-2 text-center text-[14px] font-semibold text-[var(--foreground)] outline-none focus:bg-[var(--brand-soft)]"
         inputMode="numeric"
         min={1}
         onChange={(event) => updateValue(Number(event.target.value) || 1)}
@@ -217,7 +217,7 @@ function BaseServingsStepper({ value, onChange }: BaseServingsStepperProps) {
       />
       <button
         aria-label="기준 인분 늘리기"
-        className="flex items-center justify-center border-l border-[#DEE2E6] text-[18px] font-semibold text-[#212529]"
+        className="flex items-center justify-center border-l border-[var(--line-strong)] text-[18px] font-semibold text-[var(--foreground)]"
         onClick={() => updateValue(value + 1)}
         type="button"
       >
@@ -250,7 +250,7 @@ function IngredientList({
       <p
         className={[
           "mb-2 text-[12px] font-medium leading-[1.4]",
-          showValidationError ? "text-[var(--danger)]" : "text-[#868E96]",
+          showValidationError ? "text-[var(--danger)]" : "text-[var(--text-3)]",
         ].join(" ")}
       >
         재료를 1개 이상 추가해주세요.
@@ -298,7 +298,7 @@ function IngredientList({
                   className={[
                     "h-9 min-w-9 rounded-[var(--radius-sm)] px-1.5 text-[14px] font-semibold transition",
                     (ing.unit ?? "g") === option
-                      ? "bg-[var(--brand)] text-white"
+                      ? "bg-[var(--brand)] text-[var(--text-inverse)]"
                       : "text-[var(--text-2)] hover:bg-[var(--surface)]",
                   ].join(" ")}
                   key={option}
@@ -343,7 +343,7 @@ function StepList({ steps, showValidationError, onRemove }: StepListProps) {
       <p
         className={[
           "mb-2 text-[12px] font-medium leading-[1.4]",
-          showValidationError ? "text-[var(--danger)]" : "text-[#868E96]",
+          showValidationError ? "text-[var(--danger)]" : "text-[var(--text-3)]",
         ].join(" ")}
       >
         만들기를 추가해주세요.
@@ -369,7 +369,7 @@ function StepList({ steps, showValidationError, onRemove }: StepListProps) {
                 </span>
                 {step.cooking_method && (
                   <span
-                    className="rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
+                    className="rounded-full px-2.5 py-0.5 text-xs font-semibold text-[var(--text-inverse)]"
                     style={{
                       backgroundColor: getCookingMethodColor(step.cooking_method.color_key),
                     }}
@@ -445,7 +445,7 @@ function StepInlineComposer({
         <span className="text-[13px] font-semibold text-[var(--foreground)]">
           {nextStepNumber}단계 입력
         </span>
-        <span className="text-[12px] font-medium text-[#868E96]">
+        <span className="text-[12px] font-medium text-[var(--text-3)]">
           조리방법을 먼저 골라주세요
         </span>
       </div>
@@ -473,7 +473,7 @@ function StepInlineComposer({
                     ? color
                     : `color-mix(in srgb, ${color} 14%, transparent)`,
                   borderColor: color,
-                  color: isSelected ? "#fff" : "var(--foreground)",
+                  color: isSelected ? "var(--text-inverse)" : "var(--foreground)",
                 }}
                 type="button"
               >
@@ -503,8 +503,8 @@ function StepInlineComposer({
         className={[
           "mt-2 flex h-10 w-full items-center justify-center rounded-[var(--radius-control)] text-[13px] font-semibold",
           selectedMethod && instruction.trim()
-            ? "bg-[var(--brand)] text-white"
-            : "bg-[#DEE2E6] text-[#ADB5BD]",
+            ? "bg-[var(--brand)] text-[var(--text-inverse)]"
+            : "bg-[var(--line-strong)] text-[var(--text-4)]",
         ].join(" ")}
         disabled={!instruction.trim()}
         onClick={handleAdd}
@@ -534,7 +534,7 @@ function SuccessModal({
   onClose,
 }: SuccessModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] sm:items-center">
       <div className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]">
         <div className="mb-6 text-center">
           <h2 className="text-lg font-bold text-[var(--foreground)]">
@@ -546,7 +546,7 @@ function SuccessModal({
         </div>
         {mealAddError && (
           <div
-            className="mb-4 rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-3 text-sm text-red-700"
+            className="mb-4 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]"
             role="alert"
           >
             {mealAddError}
@@ -588,7 +588,7 @@ function ServingsInputModal({
   const [servings, setServings] = useState(defaultServings);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] sm:items-center">
       <div className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]">
         <ModalHeader title="끼니에 추가" onClose={onCancel} />
         <div className="mt-6">
@@ -602,7 +602,7 @@ function ServingsInputModal({
         </div>
         {error && (
           <div
-            className="mt-4 rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-3 text-sm text-red-700"
+            className="mt-4 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]"
             role="alert"
           >
             {error}
@@ -1067,10 +1067,10 @@ export function ManualRecipeCreateScreen({
               />
               {imageStatus === "uploading" ? (
                 <div
-                  style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.3)" }}
+                  style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--overlay-30)" }}
                   data-testid="manual-image-uploading-indicator"
                 >
-                  <span style={{ color: "white", fontSize: "13px", fontWeight: 600 }}>업로드 중...</span>
+                  <span style={{ color: "var(--text-inverse)", fontSize: "13px", fontWeight: 600 }}>업로드 중...</span>
                 </div>
               ) : null}
             </div>
@@ -1240,7 +1240,7 @@ export function ManualRecipeCreateScreen({
   }
 
   return (
-    <div className="flex h-screen flex-col bg-[#F8F9FA] md:bg-[var(--background)]">
+    <div className="flex h-screen flex-col bg-[var(--surface-fill)] md:bg-[var(--background)]">
       <AppBar
         onBack={handleBack}
         onSave={handleSave}
@@ -1250,13 +1250,13 @@ export function ManualRecipeCreateScreen({
       <div className="mb-[96px] min-h-0 flex-1 scroll-pb-[120px] overflow-y-auto pb-[120px] md:mb-0 md:px-4 md:pb-6 md:scroll-pb-6">
         <div className="mx-auto max-w-2xl space-y-2 md:space-y-6 md:py-4">
           {/* Basic Info */}
-          <section className="bg-white px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
-            <h2 className="mb-3 text-[16px] font-semibold leading-[1.3] text-[#212529]">
+          <section className="bg-[var(--surface)] px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
+            <h2 className="mb-3 text-[16px] font-semibold leading-[1.3] text-[var(--foreground)]">
               기본 정보
             </h2>
             <div className="space-y-3">
               <label className="block">
-                <span className="mb-1.5 block text-[12px] font-medium leading-[1.4] text-[#868E96]">
+                <span className="mb-1.5 block text-[12px] font-medium leading-[1.4] text-[var(--text-3)]">
                   요리 이름
                 </span>
                 <input
@@ -1264,7 +1264,7 @@ export function ManualRecipeCreateScreen({
                   placeholder="예: 김치찌개"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="h-[38px] w-full rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-normal text-[#212529] placeholder:text-[#868E96] focus:border-[var(--brand)] focus:outline-none"
+                  className="h-[38px] w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3.5 text-[14px] font-normal text-[var(--foreground)] placeholder:text-[var(--text-3)] focus:border-[var(--brand)] focus:outline-none"
                 />
                 {showValidationErrors && title.trim().length === 0 ? (
                   <span className="mt-1.5 block text-[12px] font-semibold leading-[1.4] text-[var(--danger)]">
@@ -1273,7 +1273,7 @@ export function ManualRecipeCreateScreen({
                 ) : null}
               </label>
               <div className="block max-w-[13rem]">
-                <span className="mb-1.5 block text-[12px] font-medium leading-[1.4] text-[#868E96]">
+                <span className="mb-1.5 block text-[12px] font-medium leading-[1.4] text-[var(--text-3)]">
                   기준 인분
                 </span>
                 <BaseServingsStepper
@@ -1286,10 +1286,10 @@ export function ManualRecipeCreateScreen({
 
           {/* Image Upload */}
           <section
-            className="bg-white px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]"
+            className="bg-[var(--surface)] px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]"
             data-testid="manual-image-upload-section"
           >
-            <h2 className="mb-3 text-[16px] font-semibold leading-[1.3] text-[#212529]">
+            <h2 className="mb-3 text-[16px] font-semibold leading-[1.3] text-[var(--foreground)]">
               이미지
             </h2>
             <input
@@ -1302,7 +1302,7 @@ export function ManualRecipeCreateScreen({
             />
             {imageStatus === "idle" ? (
               <button
-                className="flex h-[100px] w-full items-center justify-center rounded-[var(--radius-card)] border border-dashed border-[#CED4DA] bg-[#F8F9FA] text-[13px] text-[#868E96]"
+                className="flex h-[100px] w-full items-center justify-center rounded-[var(--radius-card)] border border-dashed border-[var(--line-strong)] bg-[var(--surface-fill)] text-[13px] text-[var(--text-3)]"
                 data-testid="manual-image-choose-button"
                 onClick={() => imageInputRef.current?.click()}
                 type="button"
@@ -1325,8 +1325,8 @@ export function ManualRecipeCreateScreen({
                     unoptimized
                   />
                   {imageStatus === "uploading" ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                      <span className="text-[13px] font-semibold text-white" data-testid="manual-image-uploading-indicator">
+                    <div className="absolute inset-0 flex items-center justify-center bg-[var(--overlay-30)]">
+                      <span className="text-[13px] font-semibold text-[var(--text-inverse)]" data-testid="manual-image-uploading-indicator">
                         업로드 중...
                       </span>
                     </div>
@@ -1335,7 +1335,7 @@ export function ManualRecipeCreateScreen({
                 {imageStatus === "uploaded" ? (
                   <div className="flex gap-2">
                     <button
-                      className="flex-1 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white py-2 text-[13px] font-medium text-[#495057]"
+                      className="flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] py-2 text-[13px] font-medium text-[var(--text-2)]"
                       data-testid="manual-image-replace-button"
                       onClick={handleImageReplace}
                       type="button"
@@ -1343,7 +1343,7 @@ export function ManualRecipeCreateScreen({
                       교체
                     </button>
                     <button
-                      className="flex-1 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white py-2 text-[13px] font-medium text-[#495057]"
+                      className="flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] py-2 text-[13px] font-medium text-[var(--text-2)]"
                       data-testid="manual-image-remove-button"
                       onClick={handleImageRemove}
                       type="button"
@@ -1357,7 +1357,7 @@ export function ManualRecipeCreateScreen({
             {imageStatus === "failed" ? (
               <div className="space-y-2">
                 <div
-                  className="rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-3 text-[13px] text-red-700"
+                  className="rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-[13px] text-[var(--danger)]"
                   data-testid="manual-image-error"
                   role="alert"
                 >
@@ -1365,7 +1365,7 @@ export function ManualRecipeCreateScreen({
                 </div>
                 <div className="flex gap-2">
                   <button
-                    className="flex-1 rounded-[var(--radius-control)] bg-[var(--brand)] py-2 text-[13px] font-semibold text-white"
+                    className="flex-1 rounded-[var(--radius-control)] bg-[var(--brand)] py-2 text-[13px] font-semibold text-[var(--text-inverse)]"
                     data-testid="manual-image-retry-button"
                     onClick={handleImageRetry}
                     type="button"
@@ -1373,7 +1373,7 @@ export function ManualRecipeCreateScreen({
                     다시 시도
                   </button>
                   <button
-                    className="flex-1 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white py-2 text-[13px] font-medium text-[#495057]"
+                    className="flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] py-2 text-[13px] font-medium text-[var(--text-2)]"
                     data-testid="manual-image-remove-button"
                     onClick={handleImageRemove}
                     type="button"
@@ -1386,12 +1386,12 @@ export function ManualRecipeCreateScreen({
           </section>
 
           {/* Ingredients */}
-          <section className="bg-white px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
+          <section className="bg-[var(--surface)] px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
             <div className="mb-1 flex items-center justify-between">
-              <h2 className="text-[16px] font-semibold leading-[1.3] text-[#212529]">
+              <h2 className="text-[16px] font-semibold leading-[1.3] text-[var(--foreground)]">
                 재료
               </h2>
-              <span className="text-[12px] font-medium text-[#868E96]">
+              <span className="text-[12px] font-medium text-[var(--text-3)]">
                 {ingredients.length}개 선택됨
               </span>
             </div>
@@ -1411,17 +1411,17 @@ export function ManualRecipeCreateScreen({
           </section>
 
           {/* Steps */}
-          <section className="bg-white px-4 py-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
+          <section className="bg-[var(--surface)] px-4 py-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
             <div className="mb-1 flex items-center justify-between">
-              <h2 className="text-[16px] font-semibold leading-[1.3] text-[#212529]">
+              <h2 className="text-[16px] font-semibold leading-[1.3] text-[var(--foreground)]">
                 만들기
               </h2>
-              <span className="text-[12px] font-medium text-[#868E96]">
+              <span className="text-[12px] font-medium text-[var(--text-3)]">
                 {steps.length}단계
               </span>
             </div>
             {isLoadingMethods ? (
-              <p className="py-4 text-sm text-[#868E96]">
+              <p className="py-4 text-sm text-[var(--text-3)]">
                 조리방법 불러오는 중...
               </p>
             ) : (
@@ -1442,7 +1442,7 @@ export function ManualRecipeCreateScreen({
 
           {saveError && (
             <div
-              className="mx-4 rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-3 text-sm text-red-700 md:mx-0"
+              className="mx-4 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)] md:mx-0"
               role="alert"
             >
               {saveError}

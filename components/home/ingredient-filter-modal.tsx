@@ -510,7 +510,7 @@ export function IngredientFilterModal({
                   className={`flex min-h-[54px] cursor-pointer items-center rounded-[var(--radius-card)] border px-3 py-2 text-[13px] font-semibold transition ${
                     isChecked
                       ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--foreground)]"
-                      : "border-[#DEE2E6] bg-white text-[var(--foreground)]"
+                      : "border-[var(--line-strong)] bg-[var(--surface)] text-[var(--foreground)]"
                   }`}
                 >
                   <input

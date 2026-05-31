@@ -59,7 +59,7 @@ function AppOverlayBackdrop({
   return (
     <div
       className={[
-        "fixed inset-0 z-50 flex bg-black/40",
+        "fixed inset-0 z-50 flex bg-[var(--overlay-40)]",
         variant === "bottom"
           ? "items-end justify-center"
           : "items-center justify-center p-4",
@@ -95,7 +95,7 @@ export function AppBottomSheet({
         aria-labelledby={ariaLabelledBy}
         aria-modal="true"
         className={[
-          "flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-[var(--radius-sheet)] bg-[var(--wave1-surface)] text-[var(--wave1-ink)] shadow-[0_-10px_30px_rgba(0,0,0,0.18)]",
+          "flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-[var(--radius-sheet)] bg-[var(--wave1-surface)] text-[var(--wave1-ink)] shadow-[0_-10px_30px_var(--shadow-color-heavy)]",
           panelClassName,
         ]
           .filter(Boolean)

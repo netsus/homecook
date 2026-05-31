@@ -26,7 +26,7 @@ export function Skeleton({
   return (
     <div
       className={[
-        "animate-pulse bg-[#F1F3F5]",
+        "animate-pulse bg-[var(--surface-subtle)]",
         roundedMap[rounded],
         className,
       ]

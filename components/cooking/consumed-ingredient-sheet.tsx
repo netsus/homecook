@@ -93,7 +93,7 @@ export function ConsumedIngredientSheet({
 
             return (
             <button
-              className="mb-1.5 flex w-full cursor-pointer items-center gap-3 rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-white px-3.5 py-3 text-left last:mb-0"
+              className="mb-1.5 flex w-full cursor-pointer items-center gap-3 rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-[var(--surface)] px-3.5 py-3 text-left last:mb-0"
               data-testid={`consumed-check-${ingredient.ingredient_id}`}
               key={ingredient.ingredient_id}
               onClick={() => toggleIngredient(ingredient.ingredient_id)}
@@ -105,7 +105,7 @@ export function ConsumedIngredientSheet({
                   "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[4px] border-[1.5px]",
                   isChecked
                     ? "border-[var(--wave1-mint-contrast)] bg-[var(--wave1-mint-contrast)]"
-                    : "border-[var(--wave1-border)] bg-white",
+                    : "border-[var(--wave1-border)] bg-[var(--surface)]",
                 ].join(" ")}
               >
                 {isChecked ? <CheckIcon /> : null}
@@ -216,7 +216,7 @@ export function ConsumedIngredientSheet({
             건너뛰기
           </button>
           <button
-            className="flex min-h-[var(--control-height-md)] min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] bg-[var(--brand)] px-3 text-sm font-bold text-white"
+            className="flex min-h-[var(--control-height-md)] min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] bg-[var(--brand)] px-3 text-sm font-bold text-[var(--text-inverse)]"
             data-testid="consumed-confirm-button"
             onClick={handleConfirm}
             type="button"
@@ -256,7 +256,7 @@ function CheckIcon() {
     >
       <path
         d="m5 12 4 4 10-10"
-        stroke="white"
+        stroke="var(--text-inverse)"
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="3"

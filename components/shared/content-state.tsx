@@ -36,34 +36,34 @@ export function ContentState({
   const toneMeta = {
     default: {
       eyebrow: eyebrow ?? "안내",
-      eyebrowClassName: "border-[#DEE2E6] bg-[#F8F9FA] text-[#495057]",
-      titleClassName: "text-[#212529]",
+      eyebrowClassName: "border-[var(--line-strong)] bg-[var(--surface-fill)] text-[var(--text-2)]",
+      titleClassName: "text-[var(--foreground)]",
     },
     error: {
       eyebrow: eyebrow ?? "문제가 생겼어요",
-      eyebrowClassName: "border-[#FFEBEB] bg-[#FFEBEB] text-[#E03131]",
-      titleClassName: "text-[#212529]",
+      eyebrowClassName: "border-[var(--danger-soft)] bg-[var(--danger-soft)] text-[var(--danger-strong)]",
+      titleClassName: "text-[var(--foreground)]",
     },
     empty: {
       eyebrow: eyebrow ?? "비어 있어요",
       eyebrowClassName: "border-[var(--brand-soft)] bg-[var(--brand-soft)] text-[var(--brand)]",
-      titleClassName: "text-[#212529]",
+      titleClassName: "text-[var(--foreground)]",
     },
     gate: {
       eyebrow: eyebrow ?? "보호된 화면",
-      eyebrowClassName: "border-[#DEE2E6] bg-white text-[#495057]",
-      titleClassName: "text-[#212529]",
+      eyebrowClassName: "border-[var(--line-strong)] bg-[var(--surface)] text-[var(--text-2)]",
+      titleClassName: "text-[var(--foreground)]",
     },
     loading: {
       eyebrow: eyebrow ?? "불러오는 중",
-      eyebrowClassName: "border-[#DEE2E6] bg-[#F1F3F5] text-[#868E96]",
-      titleClassName: "text-[#212529]",
+      eyebrowClassName: "border-[var(--line-strong)] bg-[var(--surface-subtle)] text-[var(--text-3)]",
+      titleClassName: "text-[var(--foreground)]",
     },
   }[tone];
   const variantClassName =
     variant === "panel"
-      ? "rounded-[var(--radius-panel)] border border-[#DEE2E6] bg-white px-5 py-7 shadow-[0px_1px_3px_rgba(0,0,0,0.04)] md:px-8 md:py-8"
-      : "rounded-[var(--radius-card)] border border-[#DEE2E6] bg-[#F8F9FA] px-5 py-6";
+      ? "rounded-[var(--radius-panel)] border border-[var(--line-strong)] bg-[var(--surface)] px-5 py-7 shadow-[0px_1px_3px_var(--shadow-color-subtle)] md:px-8 md:py-8"
+      : "rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-5 py-6";
 
   return (
     <div
@@ -83,7 +83,7 @@ export function ContentState({
           {title}
         </h2>
         {description ? (
-          <p className="mt-2 text-[14px] font-medium leading-[1.5] text-[#495057]">
+          <p className="mt-2 text-[14px] font-medium leading-[1.5] text-[var(--text-2)]">
             {description}
           </p>
         ) : null}
@@ -91,7 +91,7 @@ export function ContentState({
         {actionLabel && onAction ? (
           <div className="mt-5 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
             <button
-              className="flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-5 py-3 text-[14px] font-bold text-white"
+              className="flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-5 py-3 text-[14px] font-bold text-[var(--text-inverse)]"
               onClick={onAction}
               type="button"
             >
@@ -99,7 +99,7 @@ export function ContentState({
             </button>
             {secondaryActionLabel && onSecondaryAction ? (
               <button
-                className="flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-5 py-3 text-[14px] font-bold text-[#495057]"
+                className="flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-5 py-3 text-[14px] font-bold text-[var(--text-2)]"
                 onClick={onSecondaryAction}
                 type="button"
               >

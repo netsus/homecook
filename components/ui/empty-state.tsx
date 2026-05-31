@@ -18,7 +18,7 @@ export function EmptyState({ title, description, icon, action }: EmptyStateProps
   const stateIcon = icon ?? (
     <svg
       aria-hidden="true"
-      className="h-10 w-10 text-[#ADB5BD]"
+      className="h-10 w-10 text-[var(--text-4)]"
       fill="none"
       stroke="currentColor"
       strokeWidth="1.5"

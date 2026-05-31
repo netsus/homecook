@@ -549,10 +549,10 @@ export function MenuAddScreen({
     }
 
     return (
-      <div className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]">
-        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-2">
+      <div className="min-h-screen bg-[var(--surface-fill)] pb-[112px] text-[var(--foreground)]">
+        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-2">
           <AppBackButton ariaLabel="뒤로 가기" onClick={handleBack} />
-          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
+          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[var(--foreground)]">
             식사 추가
           </h1>
           <AppBackButtonSpacer />
@@ -560,13 +560,13 @@ export function MenuAddScreen({
 
         <section className="px-5 py-3">
           <p className="text-[11px] font-bold text-[var(--brand)]">대상</p>
-          <p className="mt-0.5 text-[16px] font-bold text-[#212529]">{targetLabel}</p>
+          <p className="mt-0.5 text-[16px] font-bold text-[var(--foreground)]">{targetLabel}</p>
         </section>
 
         <section className="flex flex-col gap-2.5 px-4 pb-8" data-testid="menu-add-option-grid">
           {MENU_ADD_OPTIONS.map((option) => (
             <button
-              className="flex min-h-[76px] w-full items-center gap-3.5 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-4 text-left"
+              className="flex min-h-[76px] w-full items-center gap-3.5 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4 text-left"
               data-testid={`menu-add-option-${option.id}`}
               key={option.id}
               onClick={actionMapForMobile(option.id)}
@@ -576,10 +576,10 @@ export function MenuAddScreen({
                 {option.emoji}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-bold text-[#212529]">{option.label}</span>
-                <span className="mt-0.5 block text-[12px] text-[#868E96]">{option.subtitle}</span>
+                <span className="block text-[15px] font-bold text-[var(--foreground)]">{option.label}</span>
+                <span className="mt-0.5 block text-[12px] text-[var(--text-3)]">{option.subtitle}</span>
               </span>
-              <span className="text-[22px] text-[#ADB5BD]" aria-hidden="true">
+              <span className="text-[22px] text-[var(--text-4)]" aria-hidden="true">
                 ›
               </span>
             </button>

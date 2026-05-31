@@ -32,12 +32,12 @@ describe("BottomTabs", () => {
     expect(screen.queryByText("준비중")).toBeNull();
   });
 
-  it("marks the active tab with the shared black selected state", () => {
+  it("marks the active tab with the shared token selected state", () => {
     render(<BottomTabs currentTab="pantry" />);
 
     const activeTab = screen.getByRole("link", { current: "page" });
     expect(activeTab.textContent).toContain("팬트리");
-    expect(activeTab.className).toContain("text-[#111111]");
+    expect(activeTab.className).toContain("text-[var(--foreground)]");
     expect(screen.getByTestId("bottom-tab-icon-pantry-fridge")).toBeTruthy();
   });
 

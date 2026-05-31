@@ -20,7 +20,7 @@ export function NumericStepperCompact({
   unit,
 }: NumericStepperCompactProps) {
   return (
-    <div className="flex items-center justify-between rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-white px-3 py-2.5">
+    <div className="flex items-center justify-between rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-[var(--surface)] px-3 py-2.5">
       <span className="text-sm text-[var(--wave1-text-2)]">
         {unit ? `몇 ${unit} 계획할까요?` : ""}
       </span>
@@ -32,7 +32,7 @@ export function NumericStepperCompact({
           onClick={() => onChange(Math.max(min, value - 1))}
           type="button"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--wave1-border)] bg-white text-sm font-medium text-[var(--wave1-ink)]">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--wave1-border)] bg-[var(--surface)] text-sm font-medium text-[var(--wave1-ink)]">
             −
           </span>
         </button>
@@ -50,7 +50,7 @@ export function NumericStepperCompact({
           onClick={() => onChange(value + 1)}
           type="button"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-full border-none bg-[var(--wave1-ink)] text-sm font-bold text-white">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border-none bg-[var(--wave1-ink)] text-sm font-bold text-[var(--text-inverse)]">
             +
           </span>
         </button>

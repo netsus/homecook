@@ -50,10 +50,10 @@ function MatchScoreBadge({ score }: MatchScoreBadgeProps) {
   const percentage = Math.round(score * 100);
   const colorClass =
     percentage >= 80
-      ? "bg-green-100 text-green-800"
+      ? "bg-[var(--success-soft)] text-[var(--success)]"
       : percentage >= 50
-        ? "bg-yellow-100 text-yellow-800"
-        : "bg-gray-100 text-gray-800";
+        ? "bg-[var(--warning-soft)] text-[var(--warning)]"
+        : "bg-[var(--surface-fill)] text-[var(--text-2)]";
 
   return (
     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${colorClass}`}>
@@ -77,7 +77,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
     return (
       <button
         aria-label={`${recipe.title} 선택`}
-        className="mb-2 flex w-full gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-3 text-left active:border-[var(--brand)] active:bg-[var(--brand-soft)]"
+        className="mb-2 flex w-full gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3 text-left active:border-[var(--brand)] active:bg-[var(--brand-soft)]"
         onClick={() => onSelect(recipe)}
         type="button"
       >
@@ -96,16 +96,16 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
           )}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] font-bold text-[#212529]">
+          <span className="block truncate text-[14px] font-bold text-[var(--foreground)]">
             {recipe.title}
           </span>
-          <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-[#F1F3F5]">
+          <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-[var(--surface-subtle)]">
             <span
               className="block h-full rounded-full bg-[var(--brand)]"
               style={{ width: `${Math.max(4, Math.min(100, percentage))}%` }}
             />
           </span>
-          <span className="mt-1 flex items-center justify-between gap-2 text-[11px] font-bold text-[#868E96]">
+          <span className="mt-1 flex items-center justify-between gap-2 text-[11px] font-bold text-[var(--text-3)]">
             <span className="text-[var(--brand)]">매칭 {percentage}%</span>
             <span>
               {recipe.matched_ingredients}/{recipe.total_ingredients}개 보유
@@ -116,19 +116,19 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
               className="mt-2 flex flex-wrap items-center gap-1"
               data-testid={`pantry-missing-ingredients-row-${recipe.id}`}
             >
-              <span className="mr-0.5 text-[11px] font-semibold text-[#495057]">
+              <span className="mr-0.5 text-[11px] font-semibold text-[var(--text-2)]">
                 부족 ·
               </span>
               {recipe.missing_ingredients.slice(0, 3).map((ingredient) => (
                 <span
-                  className="rounded-[var(--radius-badge)] bg-[#FFF3BF] px-1.5 py-0.5 text-[11px] font-semibold text-[#8A5A00]"
+                  className="rounded-[var(--radius-badge)] bg-[var(--warning-soft)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--warning-strong)]"
                   key={ingredient.id}
                 >
                   {ingredient.standard_name}
                 </span>
               ))}
               {recipe.missing_ingredients.length > 3 ? (
-                <span className="rounded-[var(--radius-badge)] bg-[#F1F3F5] px-1.5 py-0.5 text-[11px] font-semibold text-[#868E96]">
+                <span className="rounded-[var(--radius-badge)] bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--text-3)]">
                   +{recipe.missing_ingredients.length - 3}
                 </span>
               ) : null}
@@ -196,7 +196,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
   }
 
   return (
-    <div className="rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
+    <div className="rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_var(--shadow-color-soft)]">
       <div className="flex items-start justify-between gap-2">
         <h3 className="flex-1 line-clamp-2 text-2xl font-bold tracking-[-0.02em] text-[var(--foreground)]">
           {recipe.title}
@@ -215,7 +215,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
             {recipe.missing_ingredients.slice(0, 5).map((ingredient) => (
               <span
                 key={ingredient.id}
-                className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800"
+                className="inline-flex rounded-full bg-[var(--danger-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--danger)]"
               >
                 {ingredient.standard_name}
               </span>
@@ -229,7 +229,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
         </div>
       )}
       <button
-        className="mt-3 h-[var(--control-height-md)] w-full rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
+        className="mt-3 h-[var(--control-height-md)] w-full rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-[var(--text-inverse)] hover:bg-[var(--brand-deep)]"
         onClick={() => onSelect(recipe)}
         type="button"
       >
@@ -267,42 +267,42 @@ function ServingsModal({
 
   if (presentation === "screen" || presentation === "sheet") {
     return (
-      <div className="fixed inset-0 z-50 flex items-end bg-black/42" onClick={onCancel}>
+      <div className="fixed inset-0 z-50 flex items-end bg-[var(--overlay-42)]" onClick={onCancel}>
         <div
           aria-labelledby="servings-modal-title"
           aria-modal="true"
-          className="w-full rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)]"
+          className="w-full rounded-t-[var(--radius-sheet)] bg-[var(--surface)] px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_var(--shadow-color-strong)]"
           onClick={(e) => e.stopPropagation()}
           role="dialog"
         >
           <div className="flex justify-center pb-4">
-            <div className="h-1 w-9 rounded-full bg-[#DEE2E6]" />
+            <div className="h-1 w-9 rounded-full bg-[var(--line-strong)]" />
           </div>
-          <h2 className="text-[20px] font-bold text-[#212529]" id="servings-modal-title">
+          <h2 className="text-[20px] font-bold text-[var(--foreground)]" id="servings-modal-title">
             플래너에 추가
           </h2>
-          <p className="mt-1 text-[13px] text-[#868E96]">
+          <p className="mt-1 text-[13px] text-[var(--text-3)]">
             {slotLabel ? `${slotLabel}에 추가할 인분을 선택해주세요.` : "추가할 인분을 선택해주세요."}
           </p>
-          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-[#F8F9FA] p-2.5">
+          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] p-2.5">
             <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand-soft)] text-[22px]">
               🍳
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-extrabold text-[#212529]">
+              <span className="block truncate text-[13px] font-extrabold text-[var(--foreground)]">
                 {recipe.title}
               </span>
-              <span className="mt-0.5 block text-[11px] text-[#868E96]">
+              <span className="mt-0.5 block text-[11px] text-[var(--text-3)]">
                 선택 {servings}인분
               </span>
             </span>
           </div>
           {slotLabel ? (
-            <div className="mt-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-[#F8F9FA] px-3.5 py-3 text-[14px] font-bold text-[#495057]">
+            <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3.5 py-3 text-[14px] font-bold text-[var(--text-2)]">
               {slotLabel}
             </div>
           ) : null}
-          <p className="mt-3 text-[13px] font-bold text-[#495057]">인분</p>
+          <p className="mt-3 text-[13px] font-bold text-[var(--text-2)]">인분</p>
           <div className="mt-3 [&>div]:w-full">
             <NumericStepperCompact
               disabled={isCreating}
@@ -314,7 +314,7 @@ function ServingsModal({
           </div>
           <div className="mt-6 flex gap-3">
             <button
-              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[14px] font-bold text-[#495057]"
+              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-bold text-[var(--text-2)]"
               disabled={isCreating}
               onClick={onCancel}
               type="button"
@@ -322,7 +322,7 @@ function ServingsModal({
               취소
             </button>
             <button
-              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] bg-[var(--brand)] text-[14px] font-bold text-white disabled:opacity-50"
+              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] bg-[var(--brand)] text-[14px] font-bold text-[var(--text-inverse)] disabled:opacity-50"
               disabled={isCreating || servings < 1}
               onClick={handleConfirm}
               type="button"
@@ -397,7 +397,7 @@ function ServingsModal({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end bg-black/42 p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
+      className="fixed inset-0 z-40 flex items-end bg-[var(--overlay-42)] p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
       onClick={onCancel}
     >
       <div
@@ -433,7 +433,7 @@ function ServingsModal({
             취소
           </button>
           <button
-            className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)] disabled:opacity-50"
+            className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-[var(--text-inverse)] hover:bg-[var(--brand-deep)] disabled:opacity-50"
             disabled={isCreating || servings < 1}
             onClick={handleConfirm}
             type="button"
@@ -524,7 +524,7 @@ export function PantryMatchPicker({
 
       {loadState === "error" && (
         <div
-          className="rounded-[var(--radius-card)] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
+          className="rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-4 text-sm text-[var(--danger)]"
           role="alert"
         >
           {errorMessage}
@@ -548,16 +548,16 @@ export function PantryMatchPicker({
 
   if (presentation === "screen") {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]">
-        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-2">
+      <div className="min-h-screen bg-[var(--surface-fill)] pb-[112px] text-[var(--foreground)]">
+        <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-2">
           <AppBackButton onClick={onBack ?? onClose} />
-          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
+          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[var(--foreground)]">
             팬트리 기반 추천
           </h1>
           <AppBackButtonSpacer />
         </div>
-        <div className="border-b border-[#DEE2E6] bg-white px-4 py-3.5">
-          <p className="text-[12px] font-medium leading-[1.5] text-[#495057]">
+        <div className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-4 py-3.5">
+          <p className="text-[12px] font-medium leading-[1.5] text-[var(--text-2)]">
             보유 재료가 많은 순서로 보여드려요. 부족한 재료만 확인하세요.
           </p>
         </div>
@@ -580,7 +580,7 @@ export function PantryMatchPicker({
   if (presentation === "sheet") {
     return (
       <>
-        <p className="mb-3 text-[12px] font-medium leading-[1.5] text-[#495057]">
+        <p className="mb-3 text-[12px] font-medium leading-[1.5] text-[var(--text-2)]">
           보유 재료가 많은 순서로 보여드려요. 부족한 재료만 확인하세요.
         </p>
         {content}
@@ -622,7 +622,7 @@ export function PantryMatchPicker({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end bg-black/42 p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
+      className="fixed inset-0 z-40 flex items-end bg-[var(--overlay-42)] p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
       onClick={onClose}
     >
       <div

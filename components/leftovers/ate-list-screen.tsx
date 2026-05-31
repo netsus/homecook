@@ -337,7 +337,7 @@ export function AteListScreen({
           <div className="space-y-3 p-4" data-testid="ate-list-loading">
             {[1, 2].map((index) => (
               <div
-                className="h-[76px] rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white"
+                className="h-[76px] rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
                 key={index}
               />
             ))}
@@ -364,7 +364,7 @@ export function AteListScreen({
               <div className="space-y-3">
                 <SocialLoginButtons nextPath={ateListSelfHref} />
                 <Link
-                  className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[#DEE2E6] bg-white px-5 py-3 text-sm font-semibold text-[#495057]"
+                  className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--text-2)]"
                   href={appReturn.href}
                 >
                   이전 화면으로 돌아가기
@@ -542,7 +542,7 @@ function AteListMobileView({
 }) {
   return (
     <div
-      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
+      className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden"
       data-testid="ate-list-screen"
     >
       <MobileAppBar
@@ -558,7 +558,7 @@ function AteListMobileView({
         <div className="space-y-3 p-4" data-testid="ate-list-loading">
           {[1, 2].map((index) => (
             <div
-              className="h-[76px] rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white"
+              className="h-[76px] rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
               key={index}
             />
           ))}
@@ -625,7 +625,7 @@ function AteListMobileStateShell({
 }) {
   return (
     <div
-      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
+      className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden"
       data-testid={testId}
     >
       <MobileAppBar
@@ -653,7 +653,7 @@ function MobileAteCard({
 }) {
   return (
     <article
-      className="rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white p-3"
+      className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
       data-testid="ate-list-card"
     >
       <div className="flex items-center gap-3">
@@ -662,17 +662,17 @@ function MobileAteCard({
           src={item.recipe_thumbnail_url}
         />
         <div className="min-w-0 flex-1">
-          <p className="break-keep text-[14px] font-extrabold leading-[1.25] text-[#212529]">
+          <p className="break-keep text-[14px] font-extrabold leading-[1.25] text-[var(--foreground)]">
             {item.recipe_title}
           </p>
-          <p className="mt-0.5 text-[12px] font-medium leading-[1.25] text-[#868E96]">
+          <p className="mt-0.5 text-[12px] font-medium leading-[1.25] text-[var(--text-3)]">
             {formatShortDate(item.cooked_at)} 요리 · {formatLeftoverMeta(item)}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
             aria-label="남은 요리로 복귀"
-            className="h-9 w-[96px] whitespace-nowrap rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-2 text-[11px] font-bold text-[#495057] disabled:opacity-60"
+            className="h-9 w-[96px] whitespace-nowrap rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-2 text-[11px] font-bold text-[var(--text-2)] disabled:opacity-60"
             data-testid="uneat-button"
             disabled={anyMutating}
             onClick={() => onUneat(item.id)}
@@ -707,7 +707,7 @@ function MobileDishThumb({
   }
 
   return (
-    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[#FFD8D8] text-[24px]">
+    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--danger-border)] text-[24px]">
       <span aria-hidden="true">{emoji}</span>
     </div>
   );
@@ -723,8 +723,8 @@ function MobileFeedback({
       className={[
         "mx-4 mt-2 rounded-[var(--radius-control)] px-4 py-3 text-center text-[13px] font-extrabold",
         feedback.tone === "error"
-          ? "bg-[#FFF5F5] text-[#FF6B6B]"
-          : "bg-[#E6FCF5] text-[#099268]",
+          ? "bg-[var(--danger-soft)] text-[var(--danger)]"
+          : "bg-[var(--success-soft)] text-[var(--success-strong)]",
       ].join(" ")}
       data-testid="feedback-toast"
       role="alert"
@@ -747,12 +747,12 @@ function MobileAppBar({
 }) {
   return (
     <div
-      className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+      className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4"
       style={{ borderBottomWidth: "0.5px" }}
     >
       <Link
         aria-label="뒤로가기"
-        className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start text-[#212529]"
+        className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start text-[var(--foreground)]"
         href={backHref}
       >
         <svg
@@ -768,11 +768,11 @@ function MobileAppBar({
           <path d="m15 18-6-6 6-6" />
         </svg>
       </Link>
-      <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[#212529]">
+      <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[var(--foreground)]">
         {title}
       </h1>
       <Link
-        className="absolute right-4 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center rounded-full border border-[#DEE2E6] bg-white px-3 text-[12px] font-extrabold text-[var(--brand)]"
+        className="absolute right-4 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[12px] font-extrabold text-[var(--brand)]"
         href={actionHref}
       >
         {actionLabel}

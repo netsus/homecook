@@ -52,10 +52,10 @@ export function AdminUsersScreen() {
     <div className="space-y-4">
       <div>
         <input
-          className="h-11 w-full rounded-xl border bg-[var(--surface,#ffffff)] px-3 text-sm"
+          className="h-11 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm"
           onChange={(e) => handleSearch(e.target.value)}
           placeholder="이메일 또는 닉네임 검색"
-          style={{ borderColor: "var(--line, #E9ECEF)" }}
+          style={{ borderColor: "var(--line-strong)" }}
           type="search"
           value={search}
         />
@@ -64,18 +64,18 @@ export function AdminUsersScreen() {
       {state.status === "loading" && <UsersSkeleton />}
 
       {state.status === "empty" && (
-        <div className="py-16 text-center text-sm text-[var(--text-3,#868E96)]">
+        <div className="py-16 text-center text-sm text-[var(--text-3)]">
           사용자가 없어요
         </div>
       )}
 
       {state.status === "error" && (
         <div className="flex flex-col items-center py-16">
-          <p className="text-lg font-bold text-[var(--foreground,#212529)]">
+          <p className="text-lg font-bold text-[var(--foreground)]">
             {state.message}
           </p>
           <button
-            className="mt-4 inline-flex h-11 items-center rounded-xl bg-[var(--brand,#F97316)] px-6 text-sm font-semibold text-white"
+            className="mt-4 inline-flex h-11 items-center rounded-xl bg-[var(--brand)] px-6 text-sm font-semibold text-[var(--text-inverse)]"
             onClick={() => load(search, page)}
             type="button"
           >
@@ -106,35 +106,35 @@ export function AdminUsersScreen() {
 
 function UsersTable({ items }: { items: AdminUserItem[] }) {
   return (
-    <div className="overflow-hidden rounded-xl border" style={{ borderColor: "var(--line, #E9ECEF)" }}>
+    <div className="overflow-hidden rounded-xl border" style={{ borderColor: "var(--line-strong)" }}>
       <table className="w-full text-sm">
-        <thead className="bg-[var(--surface-fill,#F8F9FA)]">
+        <thead className="bg-[var(--surface-fill,var(--surface-fill))]">
           <tr>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">닉네임</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">이메일</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">소셜</th>
-            <th className="px-3 py-2 text-right font-semibold text-[var(--text-3,#868E96)]">레시피북</th>
-            <th className="px-3 py-2 text-right font-semibold text-[var(--text-3,#868E96)]">식사</th>
-            <th className="px-3 py-2 text-right font-semibold text-[var(--text-3,#868E96)]">장보기</th>
-            <th className="px-3 py-2 text-right font-semibold text-[var(--text-3,#868E96)]">팬트리</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">상태</th>
-            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3,#868E96)]">가입일</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">닉네임</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">이메일</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">소셜</th>
+            <th className="px-3 py-2 text-right font-semibold text-[var(--text-3)]">레시피북</th>
+            <th className="px-3 py-2 text-right font-semibold text-[var(--text-3)]">식사</th>
+            <th className="px-3 py-2 text-right font-semibold text-[var(--text-3)]">장보기</th>
+            <th className="px-3 py-2 text-right font-semibold text-[var(--text-3)]">팬트리</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">상태</th>
+            <th className="px-3 py-2 text-left font-semibold text-[var(--text-3)]">가입일</th>
           </tr>
         </thead>
-        <tbody className="divide-y" style={{ borderColor: "var(--line, #E9ECEF)" }}>
+        <tbody className="divide-y" style={{ borderColor: "var(--line-strong)" }}>
           {items.map((user) => (
-            <tr key={user.id} className="bg-[var(--surface,#ffffff)]">
-              <td className="px-3 py-2 text-[var(--foreground,#212529)]">{user.nickname}</td>
-              <td className="px-3 py-2 text-[var(--text-2,#495057)]">{user.email_masked ?? "-"}</td>
-              <td className="px-3 py-2 text-[var(--text-3,#868E96)]">{user.social_provider}</td>
-              <td className="px-3 py-2 text-right text-[var(--text-2,#495057)]">{user.counts.recipe_books}</td>
-              <td className="px-3 py-2 text-right text-[var(--text-2,#495057)]">{user.counts.meals}</td>
-              <td className="px-3 py-2 text-right text-[var(--text-2,#495057)]">{user.counts.shopping_lists}</td>
-              <td className="px-3 py-2 text-right text-[var(--text-2,#495057)]">{user.counts.pantry_items}</td>
+            <tr key={user.id} className="bg-[var(--surface)]">
+              <td className="px-3 py-2 text-[var(--foreground)]">{user.nickname}</td>
+              <td className="px-3 py-2 text-[var(--text-2)]">{user.email_masked ?? "-"}</td>
+              <td className="px-3 py-2 text-[var(--text-3)]">{user.social_provider}</td>
+              <td className="px-3 py-2 text-right text-[var(--text-2)]">{user.counts.recipe_books}</td>
+              <td className="px-3 py-2 text-right text-[var(--text-2)]">{user.counts.meals}</td>
+              <td className="px-3 py-2 text-right text-[var(--text-2)]">{user.counts.shopping_lists}</td>
+              <td className="px-3 py-2 text-right text-[var(--text-2)]">{user.counts.pantry_items}</td>
               <td className="px-3 py-2">
                 <StatusBadge status={user.status} />
               </td>
-              <td className="px-3 py-2 text-[var(--text-3,#868E96)]">
+              <td className="px-3 py-2 text-[var(--text-3)]">
                 {new Date(user.created_at).toLocaleDateString("ko-KR")}
               </td>
             </tr>
@@ -151,16 +151,16 @@ function UsersCardList({ items }: { items: AdminUserItem[] }) {
       {items.map((user) => (
         <div
           key={user.id}
-          className="rounded-xl bg-[var(--surface,#ffffff)] p-3 shadow-sm"
+          className="rounded-xl bg-[var(--surface)] p-3 shadow-sm"
         >
           <div className="flex items-center justify-between">
-            <span className="font-medium text-[var(--foreground,#212529)]">{user.nickname}</span>
+            <span className="font-medium text-[var(--foreground)]">{user.nickname}</span>
             <StatusBadge status={user.status} />
           </div>
-          <p className="mt-1 text-sm text-[var(--text-2,#495057)]">
+          <p className="mt-1 text-sm text-[var(--text-2)]">
             {user.email_masked ?? "-"} &middot; {user.social_provider}
           </p>
-          <p className="mt-1 text-xs text-[var(--text-3,#868E96)]">
+          <p className="mt-1 text-xs text-[var(--text-3)]">
             레시피북 {user.counts.recipe_books} &middot; 식사 {user.counts.meals} &middot; 장보기{" "}
             {user.counts.shopping_lists} &middot; 팬트리 {user.counts.pantry_items} &middot;{" "}
             {new Date(user.created_at).toLocaleDateString("ko-KR")}
@@ -177,8 +177,8 @@ function StatusBadge({ status }: { status: string }) {
     <span
       className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
         isActive
-          ? "bg-green-50 text-green-700"
-          : "bg-red-50 text-red-700"
+          ? "bg-[var(--success-soft)] text-[var(--success)]"
+          : "bg-[var(--danger-soft)] text-[var(--danger)]"
       }`}
     >
       {isActive ? "활성" : "삭제"}
@@ -190,10 +190,10 @@ function UsersSkeleton() {
   return (
     <div className="space-y-2">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="rounded-xl bg-[var(--surface,#ffffff)] p-3 shadow-sm">
-          <div className="h-4 w-24 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
-          <div className="mt-2 h-3 w-40 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
-          <div className="mt-2 h-3 w-32 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
+        <div key={i} className="rounded-xl bg-[var(--surface)] p-3 shadow-sm">
+          <div className="h-4 w-24 animate-pulse rounded bg-[var(--line-strong)]" />
+          <div className="mt-2 h-3 w-40 animate-pulse rounded bg-[var(--line-strong)]" />
+          <div className="mt-2 h-3 w-32 animate-pulse rounded bg-[var(--line-strong)]" />
         </div>
       ))}
     </div>

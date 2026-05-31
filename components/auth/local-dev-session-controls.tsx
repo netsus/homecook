@@ -33,7 +33,7 @@ export function LocalDevSessionControls() {
               : "local auth tools"}
         </div>
         <button
-          className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-1 text-xs font-semibold text-[var(--muted)]"
+          className="rounded-full border border-[var(--line)] bg-[var(--surface-alpha-80)] px-3 py-1 text-xs font-semibold text-[var(--muted)]"
           onClick={handleLogout}
           type="button"
         >

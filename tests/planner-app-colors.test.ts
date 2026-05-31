@@ -13,18 +13,26 @@ function tokenValue(tokenName: string) {
 }
 
 describe("planner app colors", () => {
+  it("aligns app brand tokens with an accessible web-blue palette", () => {
+    expect(tokenValue("--brand-primary")).toBe("#0072BD");
+    expect(tokenValue("--brand-primary-hover")).toBe("#005f9f");
+    expect(tokenValue("--brand-primary-soft")).toBe("rgba(0, 114, 189, 0.08)");
+    expect(tokenValue("--brand-primary-border")).toBe("#8BD2FF");
+    expect(tokenValue("--brand-primary-rgb")).toBe("0, 114, 189");
+  });
+
   it("routes app planner accents through global tokens", () => {
     expect(tokenValue("--planner-add")).toBe("var(--brand)");
     expect(tokenValue("--planner-add-soft")).toBe("var(--brand-soft)");
   });
 
   it("defines status summary tokens in globals.css", () => {
-    expect(tokenValue("--planner-status-cooked")).toBe("#2F8F5B");
-    expect(tokenValue("--planner-status-cooked-soft")).toBe("#EAF7EE");
-    expect(tokenValue("--planner-status-shopping")).toBe("#B7791F");
-    expect(tokenValue("--planner-status-shopping-soft")).toBe("#FFF3D6");
-    expect(tokenValue("--planner-status-registered")).toBe("#6B7280");
-    expect(tokenValue("--planner-status-registered-strong")).toBe("#374151");
-    expect(tokenValue("--planner-status-registered-soft")).toBe("#F3F5F7");
+    expect(tokenValue("--planner-status-cooked")).toBe("var(--success)");
+    expect(tokenValue("--planner-status-cooked-soft")).toBe("var(--success-soft)");
+    expect(tokenValue("--planner-status-shopping")).toBe("var(--warning)");
+    expect(tokenValue("--planner-status-shopping-soft")).toBe("var(--warning-soft)");
+    expect(tokenValue("--planner-status-registered")).toBe("var(--text-3)");
+    expect(tokenValue("--planner-status-registered-strong")).toBe("var(--text-2)");
+    expect(tokenValue("--planner-status-registered-soft")).toBe("var(--surface-fill)");
   });
 });

@@ -148,7 +148,7 @@ export function SocialLoginButtons({
         </p>
       ) : null}
       {errorMessage ? (
-        <p className="rounded-[var(--radius-card)] border border-[color:rgba(255,107,107,0.2)] bg-[color:rgba(255,107,107,0.08)] px-4 py-3 text-sm text-[var(--danger)]">
+        <p className="rounded-[var(--radius-card)] border border-[color:var(--danger-border)] bg-[color:var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]">
           {errorMessage}
         </p>
       ) : null}
@@ -169,11 +169,11 @@ function getProviderButtonClass(
   fallbackClassName: string,
 ) {
   if (providerId === "google") {
-    return "border border-[#DEE2E6] bg-white text-[#212529]";
+    return "border border-[var(--line-strong)] bg-[var(--surface)] text-[var(--foreground)]";
   }
 
   if (providerId === "naver") {
-    return "border border-[#03C75A] bg-[#03C75A] text-white";
+    return "border border-[var(--social-naver)] bg-[var(--social-naver)] text-[var(--text-inverse)]";
   }
 
   return fallbackClassName;

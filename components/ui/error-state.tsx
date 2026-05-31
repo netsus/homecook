@@ -29,7 +29,7 @@ export function ErrorState({
       <div className="flex justify-center">
         <svg
           aria-hidden="true"
-          className="h-10 w-10 text-[#FF6B6B]"
+          className="h-10 w-10 text-[var(--danger)]"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.5"

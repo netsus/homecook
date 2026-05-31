@@ -53,7 +53,7 @@ function getApiMessage(fallback: string, message?: string | null) {
 
 function DuplicateRecipeCard({ recipe }: { recipe: RecipioYoutubeDuplicateRecipe }) {
   return (
-    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--line)] bg-white shadow-[var(--shadow-1)]">
+    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-1)]">
       <div className="relative aspect-video bg-[var(--surface-fill)]">
         {recipe.thumbnail_url ? (
           <Image
@@ -79,7 +79,7 @@ function DuplicateRecipeCard({ recipe }: { recipe: RecipioYoutubeDuplicateRecipe
         </p>
         <Link
           href={`/recipes/${recipe.recipe_id}`}
-          className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand)] px-4 text-base font-semibold text-white"
+          className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand)] px-4 text-base font-semibold text-[var(--text-inverse)]"
         >
           레시피 보러가기
         </Link>
@@ -96,7 +96,7 @@ function VideoPreviewCard({
   onImport: () => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--line)] bg-white shadow-[var(--shadow-1)]">
+    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-1)]">
       <div className="relative aspect-video bg-[var(--surface-fill)]">
         <Image
           src={videoInfo.thumbnail_url}
@@ -112,7 +112,7 @@ function VideoPreviewCard({
           {videoInfo.title}
         </h3>
         <button
-          className="mt-4 h-11 w-full rounded-[var(--radius-sm)] bg-[var(--brand)] px-4 text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
+          className="mt-4 h-11 w-full rounded-[var(--radius-sm)] bg-[var(--brand)] px-4 text-base font-semibold text-[var(--text-inverse)] hover:bg-[var(--brand-deep)]"
           onClick={onImport}
           type="button"
         >
@@ -133,7 +133,7 @@ function ProgressPanel({
   const progress = getRecipioYoutubeProgress({ phase, elapsedMs });
 
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-white p-5 shadow-[var(--shadow-1)]">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-[var(--brand)]">{progress.label}</p>
@@ -167,7 +167,7 @@ function RecommendedVideoButton({
 }) {
   return (
     <button
-      className="group grid grid-cols-[7.5rem_minmax(0,1fr)] gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-white p-2 text-left shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"
+      className="group grid grid-cols-[7.5rem_minmax(0,1fr)] gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] p-2 text-left shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"
       onClick={() => onSelect(buildCanonicalRecipioYoutubeUrl(video.videoId))}
       type="button"
     >
@@ -411,7 +411,7 @@ export function RecipioYoutubeImportScreen({
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-6 md:grid-cols-[minmax(0,1fr)_22rem] md:px-6 md:py-10">
         <section className="min-w-0">
           <div className="flex items-center gap-3">
-            <span className="relative flex h-12 w-12 overflow-hidden rounded-[var(--radius-md)] bg-white shadow-[var(--shadow-1)]">
+            <span className="relative flex h-12 w-12 overflow-hidden rounded-[var(--radius-md)] bg-[var(--surface)] shadow-[var(--shadow-1)]">
               <Image
                 src="https://haemeok-s3-bucket.s3.ap-northeast-2.amazonaws.com/images/icons/youtube.webp"
                 alt=""
@@ -434,14 +434,14 @@ export function RecipioYoutubeImportScreen({
             {CAPABILITY_ITEMS.map((item) => (
               <span
                 key={item}
-                className="rounded-[var(--radius-md)] border border-[var(--line)] bg-white px-3 py-2 text-center text-sm font-semibold text-[var(--text-2)]"
+                className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-center text-sm font-semibold text-[var(--text-2)]"
               >
                 {item}
               </span>
             ))}
           </div>
 
-          <div className="mt-6 rounded-[var(--radius-lg)] border border-[var(--line)] bg-white p-4 shadow-[var(--shadow-1)]">
+          <div className="mt-6 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]">
             <label
               htmlFor="recipio-youtube-url"
               className="text-sm font-semibold text-[var(--foreground)]"
@@ -470,8 +470,8 @@ export function RecipioYoutubeImportScreen({
                 className={[
                   "h-12 rounded-[var(--radius-sm)] px-5 text-base font-bold",
                   canSubmit && status !== "checking" && status !== "importing"
-                    ? "bg-[var(--brand)] text-white hover:bg-[var(--brand-deep)]"
-                    : "cursor-not-allowed bg-[#DEE2E6] text-[#ADB5BD]",
+                    ? "bg-[var(--brand)] text-[var(--text-inverse)] hover:bg-[var(--brand-deep)]"
+                    : "cursor-not-allowed bg-[var(--line-strong)] text-[var(--text-4)]",
                 ].join(" ")}
               >
                 가져오기
@@ -499,7 +499,7 @@ export function RecipioYoutubeImportScreen({
             ) : null}
 
             {status === "review-required" ? (
-              <div className="rounded-[var(--radius-lg)] border border-[color:rgba(255,149,0,0.26)] bg-white p-5 shadow-[var(--shadow-1)]">
+              <div className="rounded-[var(--radius-lg)] border border-[color:var(--warning-border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
                 <p className="text-sm font-semibold text-[var(--brand)]">검수가 필요해요</p>
                 <h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">
                   자동 저장 전에 확인할 항목이 있어요.
@@ -516,7 +516,7 @@ export function RecipioYoutubeImportScreen({
                 ) : null}
                 <Link
                   href={reviewHref}
-                  className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand)] px-4 text-base font-semibold text-white"
+                  className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand)] px-4 text-base font-semibold text-[var(--text-inverse)]"
                 >
                   검수 화면에서 마무리
                 </Link>
@@ -524,14 +524,14 @@ export function RecipioYoutubeImportScreen({
             ) : null}
 
             {status === "complete" && registeredRecipeId ? (
-              <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-white p-5 text-center shadow-[var(--shadow-1)]">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 text-center shadow-[var(--shadow-1)]">
                 <p className="text-sm font-semibold text-[var(--brand)]">레시피 저장 완료</p>
                 <h2 className="mt-2 text-xl font-bold text-[var(--foreground)]">
                   레시피 상세로 이동하고 있어요.
                 </h2>
                 <Link
                   href={`/recipes/${registeredRecipeId}`}
-                  className="mt-4 inline-flex h-11 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand)] px-5 text-base font-semibold text-white"
+                  className="mt-4 inline-flex h-11 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand)] px-5 text-base font-semibold text-[var(--text-inverse)]"
                 >
                   지금 보기
                 </Link>

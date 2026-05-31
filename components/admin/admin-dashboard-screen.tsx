@@ -62,11 +62,11 @@ export function AdminDashboardScreen() {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <div className="mb-4 text-4xl">&#9888;&#65039;</div>
-        <h2 className="text-lg font-bold text-[var(--foreground,#212529)]">
+        <h2 className="text-lg font-bold text-[var(--foreground)]">
           {state.message}
         </h2>
         <button
-          className="mt-4 inline-flex h-11 items-center rounded-xl bg-[var(--brand,#F97316)] px-6 text-sm font-semibold text-white"
+          className="mt-4 inline-flex h-11 items-center rounded-xl bg-[var(--brand)] px-6 text-sm font-semibold text-[var(--text-inverse)]"
           onClick={load}
           type="button"
         >
@@ -79,17 +79,17 @@ export function AdminDashboardScreen() {
   return (
     <div className="space-y-6">
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-[var(--text-3,#868E96)]">
+        <h2 className="mb-2 text-sm font-semibold text-[var(--text-3)]">
           사용자 현황
         </h2>
-        <div className="grid grid-cols-2 gap-3 rounded-xl bg-[var(--surface,#ffffff)] p-3 shadow-sm">
+        <div className="grid grid-cols-2 gap-3 rounded-xl bg-[var(--surface)] p-3 shadow-sm">
           <SummaryCell label="총 사용자" value={state.summary.totalUsers} />
           <SummaryCell label="운영 이벤트" value={state.summary.recentEvents} />
         </div>
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-[var(--text-3,#868E96)]">
+        <h2 className="mb-2 text-sm font-semibold text-[var(--text-3)]">
           바로가기
         </h2>
         <div className="space-y-2">
@@ -105,8 +105,8 @@ export function AdminDashboardScreen() {
 function SummaryCell({ label, value }: { label: string; value: number }) {
   return (
     <div className="space-y-1">
-      <p className="text-xs font-semibold text-[var(--text-3,#868E96)]">{label}</p>
-      <p className="text-2xl font-extrabold text-[var(--foreground,#212529)]">
+      <p className="text-xs font-semibold text-[var(--text-3)]">{label}</p>
+      <p className="text-2xl font-extrabold text-[var(--foreground)]">
         {value.toLocaleString()}
       </p>
     </div>
@@ -116,14 +116,14 @@ function SummaryCell({ label, value }: { label: string; value: number }) {
 function NavRow({ href, label }: { href: string; label: string }) {
   return (
     <Link
-      className="flex h-[52px] items-center justify-between rounded-xl bg-[var(--surface,#ffffff)] px-4 shadow-sm transition-colors active:bg-[var(--surface-fill,#F8F9FA)]"
+      className="flex h-[52px] items-center justify-between rounded-xl bg-[var(--surface)] px-4 shadow-sm transition-colors active:bg-[var(--surface-fill,var(--surface-fill))]"
       href={href}
       role="link"
     >
-      <span className="text-base font-medium text-[var(--foreground,#212529)]">
+      <span className="text-base font-medium text-[var(--foreground)]">
         {label}
       </span>
-      <span className="text-[var(--text-3,#868E96)]">&#8250;</span>
+      <span className="text-[var(--text-3)]">&#8250;</span>
     </Link>
   );
 }
@@ -132,27 +132,27 @@ function DashboardSkeleton() {
   return (
     <div className="space-y-6">
       <section>
-        <div className="mb-2 h-4 w-20 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
-        <div className="grid grid-cols-2 gap-3 rounded-xl bg-[var(--surface,#ffffff)] p-3 shadow-sm">
+        <div className="mb-2 h-4 w-20 animate-pulse rounded bg-[var(--line-strong)]" />
+        <div className="grid grid-cols-2 gap-3 rounded-xl bg-[var(--surface)] p-3 shadow-sm">
           <div className="space-y-1">
-            <div className="h-3 w-12 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
-            <div className="h-8 w-16 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
+            <div className="h-3 w-12 animate-pulse rounded bg-[var(--line-strong)]" />
+            <div className="h-8 w-16 animate-pulse rounded bg-[var(--line-strong)]" />
           </div>
           <div className="space-y-1">
-            <div className="h-3 w-16 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
-            <div className="h-8 w-16 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
+            <div className="h-3 w-16 animate-pulse rounded bg-[var(--line-strong)]" />
+            <div className="h-8 w-16 animate-pulse rounded bg-[var(--line-strong)]" />
           </div>
         </div>
       </section>
       <section>
-        <div className="mb-2 h-4 w-16 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
+        <div className="mb-2 h-4 w-16 animate-pulse rounded bg-[var(--line-strong)]" />
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="flex h-[52px] items-center rounded-xl bg-[var(--surface,#ffffff)] px-4 shadow-sm"
+              className="flex h-[52px] items-center rounded-xl bg-[var(--surface)] px-4 shadow-sm"
             >
-              <div className="h-4 w-32 animate-pulse rounded bg-[var(--line,#E9ECEF)]" />
+              <div className="h-4 w-32 animate-pulse rounded bg-[var(--line-strong)]" />
             </div>
           ))}
         </div>

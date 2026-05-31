@@ -17,7 +17,7 @@ export function RecipeCard({ isSaved = false, onSave, recipe }: RecipeCardProps)
     recipe.save_count > 100 ? "인기" : formatRecipeSourceLabel(recipe.source_type);
 
   return (
-    <article className="group relative flex min-h-full flex-col overflow-hidden rounded-[var(--radius-card)] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0px_4px_12px_rgba(0,0,0,0.10)]">
+    <article className="group relative flex min-h-full flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[0px_2px_8px_var(--shadow-color-soft)] transition hover:-translate-y-0.5 hover:shadow-[0px_4px_12px_var(--shadow-color-medium)]">
       <Link
         className="relative block overflow-hidden"
         href={`/recipe/${recipe.id}`}
@@ -27,7 +27,7 @@ export function RecipeCard({ isSaved = false, onSave, recipe }: RecipeCardProps)
           style={
             recipe.thumbnail_url
               ? {
-                  backgroundImage: `linear-gradient(rgba(33,37,41,0.03),rgba(33,37,41,0.18)),url(${recipe.thumbnail_url})`,
+                  backgroundImage: `linear-gradient(var(--foreground-alpha-03),var(--foreground-alpha-18)),url(${recipe.thumbnail_url})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                   aspectRatio: "16/9",
@@ -46,7 +46,7 @@ export function RecipeCard({ isSaved = false, onSave, recipe }: RecipeCardProps)
               {presentation.emoji}
             </span>
           ) : null}
-          <span className="absolute left-3 top-3 inline-flex min-h-6 items-center justify-center rounded-[var(--radius-badge)] bg-white/92 px-2 text-center text-[11px] font-bold leading-none text-[var(--brand)] shadow-[0_1px_4px_rgba(0,0,0,0.10)]">
+          <span className="absolute left-3 top-3 inline-flex min-h-6 items-center justify-center rounded-[var(--radius-badge)] bg-[var(--surface-alpha-92)] px-2 text-center text-[11px] font-bold leading-none text-[var(--brand)] shadow-[0_1px_4px_var(--shadow-color-medium)]">
             {badgeLabel}
           </span>
         </div>
@@ -55,8 +55,8 @@ export function RecipeCard({ isSaved = false, onSave, recipe }: RecipeCardProps)
         aria-label={`${recipe.title} 저장`}
         aria-pressed={isSaved}
         className={[
-          "absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/94 shadow-[0_1px_5px_rgba(0,0,0,0.14)]",
-          isSaved ? "text-[var(--brand)]" : "text-[#495057]",
+          "absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-[var(--surface-alpha-94)] shadow-[0_1px_5px_var(--shadow-color-panel)]",
+          isSaved ? "text-[var(--brand)]" : "text-[var(--text-2)]",
         ].join(" ")}
         data-testid="recipe-card-bookmark"
         onClick={() => onSave?.(recipe)}
@@ -66,31 +66,31 @@ export function RecipeCard({ isSaved = false, onSave, recipe }: RecipeCardProps)
       </button>
       <div className="flex flex-1 flex-col gap-2 px-4 py-4">
         <Link href={`/recipe/${recipe.id}`}>
-          <h3 className="line-clamp-2 text-[18px] font-bold leading-snug text-[#212529]">
+          <h3 className="line-clamp-2 text-[18px] font-bold leading-snug text-[var(--foreground)]">
             {recipe.title}
           </h3>
         </Link>
-        <div className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-[#495057]">
+        <div className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-[var(--text-2)]">
           <span className="inline-flex items-center gap-1">
             <EyeIcon />
             <span>조회 {formatCount(recipe.view_count)}</span>
           </span>
           <span>·</span>
           <span>{formatCount(recipe.save_count)}저장</span>
-          <span aria-hidden="true" className="text-[#ADB5BD]">·</span>
+          <span aria-hidden="true" className="text-[var(--text-4)]">·</span>
           <span>기본 {recipe.base_servings}인</span>
         </div>
         <div className="flex flex-wrap gap-1.5 pt-0.5">
           {recipe.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-[#F1F3F5] px-2.5 py-1 text-[12px] font-medium text-[#495057]"
+              className="rounded-full bg-[var(--surface-subtle)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-2)]"
             >
               {tag}
             </span>
           ))}
           {remainingTagCount ? (
-            <span className="rounded-full bg-[#F1F3F5] px-2.5 py-1 text-[12px] font-medium text-[#495057]">
+            <span className="rounded-full bg-[var(--surface-subtle)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-2)]">
               +{remainingTagCount}
             </span>
           ) : null}
@@ -120,7 +120,7 @@ function EyeIcon() {
   return (
     <svg
       aria-hidden="true"
-      className="h-3.5 w-3.5 text-[#495057]"
+      className="h-3.5 w-3.5 text-[var(--text-2)]"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
@@ -147,10 +147,10 @@ function getRecipePresentation(recipe: RecipeCardItem) {
   const index = recipe.id.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
   const emoji = matched?.emoji ?? fallbackEmojis[index % fallbackEmojis.length]!;
   const gradients = [
-    "linear-gradient(135deg,#FFE8E0 0%,#FFD0BC 100%)",
-    "linear-gradient(135deg,var(--brand-soft),#FFF4D6)",
-    "linear-gradient(135deg,#F1F8E9,var(--brand-soft))",
-    "linear-gradient(135deg,#E8F0FF,#FFF4D6)",
+    "linear-gradient(135deg,var(--accent-peach-soft) 0%,var(--accent-peach) 100%)",
+    "linear-gradient(135deg,var(--brand-soft),var(--accent-gold-soft))",
+    "linear-gradient(135deg,var(--accent-green-soft),var(--brand-soft))",
+    "linear-gradient(135deg,var(--accent-blue-soft),var(--accent-gold-soft))",
   ];
   const gradient = /밥|김치/.test(sourceText)
     ? gradients[0]!

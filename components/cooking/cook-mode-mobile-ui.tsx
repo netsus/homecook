@@ -40,18 +40,18 @@ interface MethodVisual {
 
 const METHOD_VISUALS = {
   blanch: {
-    bg: "#E8F5D8",
-    border: "#A9E34B",
+    bg: "var(--accent-green-soft)",
+    border: "var(--cook-blanch-border)",
     label: "데치기",
-    text: "#5C940D",
+    text: "var(--cook-blanch-text)",
   },
-  boil: { bg: "#FFEBEB", border: "#FF6B6B", label: "끓이기", text: "#C92A2A" },
-  fry: { bg: "#FFF9DB", border: "#FFD43B", label: "튀기기", text: "#B38B00" },
-  mix: { bg: "#D3F9D8", border: "#51CF66", label: "무치기", text: "#2B8A3E" },
-  prep: { bg: "#F1F3F5", border: "#ADB5BD", label: "준비", text: "#495057" },
-  roast: { bg: "#F1E8DC", border: "#A0826D", label: "굽기", text: "#7C5A3F" },
-  steam: { bg: "#E0F0FF", border: "#74C0FC", label: "찌기", text: "#1971C2" },
-  stirfry: { bg: "#FFF4E8", border: "#FFB347", label: "볶기", text: "#D97706" },
+  boil: { bg: "var(--danger-soft)", border: "var(--danger)", label: "끓이기", text: "var(--danger-strong)" },
+  fry: { bg: "var(--warning-soft)", border: "var(--warning-border)", label: "튀기기", text: "var(--warning-strong)" },
+  mix: { bg: "var(--success-soft)", border: "var(--success-border)", label: "무치기", text: "var(--success-strong)" },
+  prep: { bg: "var(--surface-subtle)", border: "var(--text-4)", label: "준비", text: "var(--text-2)" },
+  roast: { bg: "var(--cook-roast-bg)", border: "var(--cook-roast-border)", label: "굽기", text: "var(--cook-roast-text)" },
+  steam: { bg: "var(--cook-steam-bg)", border: "var(--cook-steam-border)", label: "찌기", text: "var(--cook-steam-text)" },
+  stirfry: { bg: "var(--warning-soft)", border: "var(--warning-border)", label: "볶기", text: "var(--warning-strong)" },
 } as const satisfies Record<string, MethodVisual>;
 
 const METHOD_ALIASES: Record<string, keyof typeof METHOD_VISUALS> = {
@@ -97,31 +97,31 @@ export function MobileCookModeView({
     variant === "standalone" ? "요리 모드 · 독립 요리" : "요리 모드 · 4/23 점심";
   return (
     <div
-      className="relative min-h-dvh overflow-hidden bg-[#212529] text-white"
+      className="relative min-h-dvh overflow-hidden bg-[var(--foreground)] text-[var(--text-inverse)]"
       data-testid={screenTestId}
     >
       <div className="flex min-h-dvh flex-col pb-[118px]">
         <header className="flex items-center justify-between px-4 pb-[14px] pt-[52px]">
           <button
             aria-label="뒤로"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-[rgba(255,255,255,0.10)] text-white"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-alpha-10)] text-[var(--text-inverse)]"
             onClick={onCancel}
             type="button"
           >
             <ChevronLeftIcon />
           </button>
           <div className="min-w-0 flex-1 px-3 text-center">
-            <p className="mb-0.5 text-[11px] font-medium leading-[1.3] text-white/65">
+            <p className="mb-0.5 text-[11px] font-medium leading-[1.3] text-[var(--text-inverse-65)]">
               {eyebrow}
             </p>
             <h1
-              className="truncate text-[17px] font-bold leading-[1.12] text-white/95"
+              className="truncate text-[17px] font-bold leading-[1.12] text-[var(--text-inverse-95)]"
               data-testid={titleTestId}
             >
               {recipe.title}
             </h1>
             <p
-              className="text-[13px] font-medium leading-[1.2] text-white"
+              className="text-[13px] font-medium leading-[1.2] text-[var(--text-inverse)]"
               data-testid={servingsTestId}
             >
               {recipe.cooking_servings}인분
@@ -139,10 +139,10 @@ export function MobileCookModeView({
         </main>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.50))] px-4 pb-[calc(18px+env(safe-area-inset-bottom))] pt-3">
+      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] bg-[linear-gradient(180deg,transparent,var(--overlay-50))] px-4 pb-[calc(18px+env(safe-area-inset-bottom))] pt-3">
         <div className="flex items-center gap-2">
           <button
-            className="flex h-14 shrink-0 items-center justify-center rounded-[var(--radius-card)] border border-white/10 bg-[rgba(255,255,255,0.08)] px-4 text-[14px] font-medium text-white/82 disabled:opacity-60"
+            className="flex h-14 shrink-0 items-center justify-center rounded-[var(--radius-card)] border border-[var(--surface-alpha-10)] bg-[var(--surface-alpha-08)] px-4 text-[14px] font-medium text-[var(--text-inverse-82)] disabled:opacity-60"
             data-testid={cancelButtonTestId}
             disabled={controlsDisabled}
             onClick={onCancel}
@@ -151,7 +151,7 @@ export function MobileCookModeView({
             나가기
           </button>
           <button
-            className="flex h-14 min-w-0 flex-1 items-center justify-center rounded-[var(--radius-card)] border-0 bg-[var(--brand)] px-4 text-[16px] font-bold leading-none text-white disabled:opacity-60"
+            className="flex h-14 min-w-0 flex-1 items-center justify-center rounded-[var(--radius-card)] border-0 bg-[var(--brand)] px-4 text-[16px] font-bold leading-none text-[var(--text-inverse)] disabled:opacity-60"
             data-testid={completeButtonTestId}
             disabled={controlsDisabled}
             onClick={onComplete}
@@ -174,7 +174,7 @@ function MobileStepList({
 }) {
   if (steps.length === 0) {
     return (
-      <p className="py-8 text-center text-sm font-medium text-white/70">
+      <p className="py-8 text-center text-sm font-medium text-[var(--text-inverse-70)]">
         등록된 만들기가 없어요.
       </p>
     );
@@ -195,12 +195,12 @@ function MobileStepList({
         return (
           <React.Fragment key={step.step_number}>
             {showSectionHeading ? (
-              <li className="list-none px-1 pt-1 text-[13px] font-bold leading-[1.3] text-white/78">
+              <li className="list-none px-1 pt-1 text-[13px] font-bold leading-[1.3] text-[var(--text-inverse-78)]">
                 {sectionLabel}
               </li>
             ) : null}
             <li
-              className="rounded-[var(--radius-panel)] p-5 text-[#1A1A2E]"
+              className="rounded-[var(--radius-panel)] p-5 text-[var(--foreground)]"
               data-testid="step-item"
               style={{
                 background: method.bg,
@@ -209,13 +209,13 @@ function MobileStepList({
             >
               <div className="mb-2.5 flex items-center gap-2">
                 <span
-                  className="rounded-full px-2.5 py-[3px] text-[11px] font-bold leading-[1.2] text-white"
+                  className="rounded-full px-2.5 py-[3px] text-[11px] font-bold leading-[1.2] text-[var(--text-inverse)]"
                   style={{ background: method.border }}
                 >
                   STEP {step.step_number}
                 </span>
                 <span
-                  className="rounded-full bg-white px-2 py-[3px] text-[11px] font-bold leading-[1.2]"
+                  className="rounded-full bg-[var(--surface)] px-2 py-[3px] text-[11px] font-bold leading-[1.2]"
                   style={{ color: method.text }}
                 >
                   {method.label}
@@ -224,7 +224,7 @@ function MobileStepList({
               <h2 className="mb-2 text-[18px] font-bold leading-[1.3]">
                 {title}
               </h2>
-              <p className="text-[15px] font-medium leading-[1.6] text-[#1A1A2E]">
+              <p className="text-[15px] font-medium leading-[1.6] text-[var(--foreground)]">
                 {stripMatchingSectionPrefix(
                   step.instruction,
                   step.component_label,
@@ -250,11 +250,11 @@ function MobileIngredientSummary({
   return (
     <section
       aria-labelledby="mobile-ingredients-heading"
-      className="mb-3 rounded-[var(--radius-card)] bg-white/[0.07] px-3 py-3"
+      className="mb-3 rounded-[var(--radius-card)] bg-[var(--surface-alpha-08)] px-3 py-3"
       data-testid="mobile-ingredient-summary"
     >
       <h2
-        className="mb-2 text-[12px] font-semibold leading-[1.2] text-white/68"
+        className="mb-2 text-[12px] font-semibold leading-[1.2] text-[var(--text-inverse-68)]"
         id="mobile-ingredients-heading"
       >
         재료
@@ -287,19 +287,19 @@ function MobileIngredientSummary({
           return (
             <React.Fragment key={`${ingredient.ingredient_id}-${idx}`}>
               {showSectionHeading ? (
-                <li className="basis-full pt-1 text-[12px] font-bold leading-[1.3] text-white/72">
+                <li className="basis-full pt-1 text-[12px] font-bold leading-[1.3] text-[var(--text-inverse-72)]">
                   {sectionLabel}
                 </li>
               ) : null}
               <li
-                className="inline-flex min-h-7 items-center gap-1.5 rounded-full bg-white/[0.11] px-2.5 py-1 text-[13px] font-medium leading-[1.25] text-white/88"
+                className="inline-flex min-h-7 items-center gap-1.5 rounded-full bg-[var(--surface-alpha-11)] px-2.5 py-1 text-[13px] font-medium leading-[1.25] text-[var(--text-inverse-88)]"
                 data-testid="ingredient-item"
               >
                 <span>
                   {usesDisplayText ? displayText : ingredient.standard_name}
                 </span>
                 {!usesDisplayText && amountLabel ? (
-                  <span className="text-white/70">{amountLabel}</span>
+                  <span className="text-[var(--text-inverse-70)]">{amountLabel}</span>
                 ) : null}
               </li>
             </React.Fragment>

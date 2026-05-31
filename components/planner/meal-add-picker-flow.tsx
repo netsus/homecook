@@ -152,7 +152,7 @@ export function MealAddPickerFlow({
 
   const errorBanner = creationError ? (
     <div
-      className="fixed left-4 right-4 top-4 z-[60] rounded-[var(--radius-card)] border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-semibold text-red-700 shadow-[0_8px_20px_rgba(0,0,0,0.12)]"
+      className="fixed left-4 right-4 top-4 z-[60] rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] font-semibold text-[var(--danger)] shadow-[0_8px_20px_var(--shadow-color-raised)]"
       role="alert"
     >
       {creationError}

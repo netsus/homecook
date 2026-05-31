@@ -97,7 +97,7 @@ export function MypageMobileScreen({
         : "마이페이지";
 
   return (
-    <div className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden">
+    <div className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden">
       <MobileAppBar
         onBack={surface === "home" ? undefined : () => onSurfaceChange("home")}
         title={title}
@@ -169,7 +169,7 @@ function MobileAppBar({
   return (
     <div
       className={[
-        "sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-4",
+        "sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4",
         onBack ? "justify-center" : "",
       ].join(" ")}
       style={{ borderBottomWidth: "0.5px" }}
@@ -177,7 +177,7 @@ function MobileAppBar({
       {onBack ? (
         <button
           aria-label="뒤로"
-          className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start border-0 bg-transparent p-0 text-[#212529]"
+          className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start border-0 bg-transparent p-0 text-[var(--foreground)]"
           onClick={onBack}
           type="button"
         >
@@ -186,7 +186,7 @@ function MobileAppBar({
       ) : null}
       <h1
         className={[
-          "truncate text-[18px] font-bold leading-none text-[#212529]",
+          "truncate text-[18px] font-bold leading-none text-[var(--foreground)]",
           onBack ? "text-center" : "",
         ].join(" ")}
       >
@@ -266,7 +266,7 @@ function MobileHomeSurface({
   return (
     <>
       <section
-        className="border-b border-[#DEE2E6] bg-white px-5 py-5"
+        className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5"
         data-testid="mypage-profile"
       >
         <div className="mb-[18px] flex items-center gap-[14px]">
@@ -282,22 +282,22 @@ function MobileHomeSurface({
           ) : (
             <div
               aria-label="프로필 이니셜"
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--brand)] to-[var(--brand-deep)] text-[24px] font-extrabold text-white"
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--brand)] to-[var(--brand-deep)] text-[24px] font-extrabold text-[var(--text-inverse)]"
               data-testid="profile-fallback-avatar"
             >
               {fallbackInitial}
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[18px] font-extrabold leading-[1.25] text-[#212529]">
+            <p className="truncate text-[18px] font-extrabold leading-[1.25] text-[var(--foreground)]">
               {nickname}
             </p>
-            <p className="mt-0.5 truncate text-[13px] font-medium leading-[1.35] text-[#868E96]">
+            <p className="mt-0.5 truncate text-[13px] font-medium leading-[1.35] text-[var(--text-3)]">
               🍳 집밥 러너 · 레벨 5
             </p>
           </div>
           <Link
-            className="flex h-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[#F8F9FA] px-3 text-[12px] font-bold text-[#495057]"
+            className="flex h-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-3 text-[12px] font-bold text-[var(--text-2)]"
             data-testid="mypage-settings-link"
             href={buildReturnHref("/settings", {
               returnTo: "/mypage?tab=account",
@@ -310,38 +310,38 @@ function MobileHomeSurface({
         <div className="grid grid-cols-3 gap-2">
           <MobileStatCard color="var(--brand)" label="요리 완료" value="24" />
           <MobileStatCard
-            color="#FFB347"
+            color="var(--warning-border)"
             label="레시피북"
             value={String(recipeBookCount)}
           />
-          <MobileStatCard color="#FF6B6B" label="연속" value="7" />
+          <MobileStatCard color="var(--danger)" label="연속" value="7" />
         </div>
       </section>
 
       <section className="p-4">
         <div
-          className="overflow-hidden rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white"
+          className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
           data-testid="mypage-menu-card"
         >
           {menuRows.map((row, index) => {
             const className = [
               "flex min-h-[57px] w-full items-center gap-3 px-4 text-left",
-              index < menuRows.length - 1 ? "border-b border-[#F1F3F5]" : "",
+              index < menuRows.length - 1 ? "border-b border-[var(--surface-subtle)]" : "",
             ].join(" ");
 
             const content = (
               <>
                 <span
                   aria-hidden="true"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[#F8F9FA] text-[#495057]"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[var(--text-2)]"
                 >
                   <MenuLineIcon name={row.icon} />
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-[#212529]">
+                <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-[var(--foreground)]">
                   {row.label}
                 </span>
                 {row.detail ? (
-                  <span className="mr-2 shrink-0 text-[13px] font-medium text-[#868E96]">
+                  <span className="mr-2 shrink-0 text-[13px] font-medium text-[var(--text-3)]">
                     {row.detail}
                   </span>
                 ) : null}
@@ -384,14 +384,14 @@ function MobileStatCard({
   value: string;
 }) {
   return (
-    <div className="rounded-[var(--radius-control)] bg-[#F8F9FA] px-2 py-3 text-center">
+    <div className="rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-2 py-3 text-center">
       <div
         className="text-[22px] font-extrabold leading-none"
         style={{ color }}
       >
         {value}
       </div>
-      <div className="mt-1 text-[12px] font-medium leading-[1.25] text-[#868E96]">
+      <div className="mt-1 text-[12px] font-medium leading-[1.25] text-[var(--text-3)]">
         {label}
       </div>
     </div>
@@ -560,10 +560,10 @@ function MobileRecipebookSurface({
       </div>
 
       {showCreateInput ? (
-        <div className="mt-2 flex min-h-[58px] items-center gap-2 rounded-[var(--radius-card)] border-2 border-[var(--brand)] bg-white px-4 py-3">
+        <div className="mt-2 flex min-h-[58px] items-center gap-2 rounded-[var(--radius-card)] border-2 border-[var(--brand)] bg-[var(--surface)] px-4 py-3">
           <input
             ref={createInputRef}
-            className="min-w-0 flex-1 bg-transparent text-[14px] font-bold text-[#212529] outline-none placeholder:text-[#868E96]"
+            className="min-w-0 flex-1 bg-transparent text-[14px] font-bold text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)]"
             disabled={isCreating}
             maxLength={50}
             onChange={(event) => onCreateNameChange(event.target.value)}
@@ -584,7 +584,7 @@ function MobileRecipebookSurface({
             {isCreating ? "만드는 중..." : "완료"}
           </button>
           <button
-            className="shrink-0 text-[13px] font-bold text-[#868E96]"
+            className="shrink-0 text-[13px] font-bold text-[var(--text-3)]"
             onClick={onCancelCreate}
             type="button"
           >
@@ -595,7 +595,7 @@ function MobileRecipebookSurface({
 
       <button
         aria-label="새 레시피북 만들기"
-        className="mt-3 flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-card)] border border-dashed border-[#DEE2E6] bg-transparent text-[13px] font-extrabold text-[#868E96]"
+        className="mt-3 flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-card)] border border-dashed border-[var(--line-strong)] bg-transparent text-[13px] font-extrabold text-[var(--text-3)]"
         onClick={onShowCreateInput}
         type="button"
       >
@@ -619,7 +619,7 @@ function MobileSystemBookCard({ book }: { book: RecipeBookSummary }) {
 
   return (
     <Link
-      className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white px-4 py-[14px]"
+      className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] px-4 py-[14px]"
       data-testid={`system-book-${book.book_type}`}
       href={buildBookDetailHref(book)}
       role="listitem"
@@ -627,12 +627,12 @@ function MobileSystemBookCard({ book }: { book: RecipeBookSummary }) {
       <BookIconBox emoji={visual.emoji} />
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <span className="min-w-0 truncate text-[14px] font-extrabold leading-[1.35] text-[#212529]">
+          <span className="min-w-0 truncate text-[14px] font-extrabold leading-[1.35] text-[var(--foreground)]">
             {book.name}
           </span>
           <RecipeCountBadge count={book.recipe_count} />
         </div>
-        <div className="mt-0.5 text-[11px] font-medium leading-[1.35] text-[#868E96]">
+        <div className="mt-0.5 text-[11px] font-medium leading-[1.35] text-[var(--text-3)]">
           {visual.kindLabel}
         </div>
       </div>
@@ -677,12 +677,12 @@ function MobileCustomBookCard({
   if (isRenaming) {
     return (
       <div
-        className="flex min-h-[72px] items-center gap-2 rounded-[var(--radius-card)] border-2 border-[var(--brand)] bg-white px-4 py-3"
+        className="flex min-h-[72px] items-center gap-2 rounded-[var(--radius-card)] border-2 border-[var(--brand)] bg-[var(--surface)] px-4 py-3"
         role="listitem"
       >
         <input
           ref={renameInputRef}
-          className="min-w-0 flex-1 bg-transparent text-[14px] font-extrabold text-[#212529] outline-none"
+          className="min-w-0 flex-1 bg-transparent text-[14px] font-extrabold text-[var(--foreground)] outline-none"
           disabled={isRenamingLoading}
           maxLength={50}
           onChange={(event) => onRenameValueChange(event.target.value)}
@@ -702,7 +702,7 @@ function MobileCustomBookCard({
           {isRenamingLoading ? "저장 중..." : "완료"}
         </button>
         <button
-          className="shrink-0 text-[13px] font-bold text-[#868E96]"
+          className="shrink-0 text-[13px] font-bold text-[var(--text-3)]"
           onClick={onCancelRename}
           type="button"
         >
@@ -714,26 +714,26 @@ function MobileCustomBookCard({
 
   return (
     <div className="relative" role="listitem">
-      <div className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white px-4 py-[14px]">
+      <div className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] px-4 py-[14px]">
         <BookIconBox emoji={visual.emoji} />
         <Link
           className="min-w-0 flex-1"
           href={buildBookDetailHref(book)}
         >
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <span className="min-w-0 truncate text-[14px] font-extrabold leading-[1.35] text-[#212529]">
+            <span className="min-w-0 truncate text-[14px] font-extrabold leading-[1.35] text-[var(--foreground)]">
               {book.name}
             </span>
             <RecipeCountBadge count={book.recipe_count} />
           </div>
-          <div className="mt-0.5 text-[11px] font-medium leading-[1.35] text-[#868E96]">
+          <div className="mt-0.5 text-[11px] font-medium leading-[1.35] text-[var(--text-3)]">
             {visual.kindLabel}
           </div>
         </Link>
         <button
           aria-haspopup="menu"
           aria-label={`${book.name} 옵션 메뉴`}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-[18px] font-bold leading-none text-[#ADB5BD]"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-[18px] font-bold leading-none text-[var(--text-4)]"
           onClick={(event) => {
             event.preventDefault();
             onMenuOpen();
@@ -747,11 +747,11 @@ function MobileCustomBookCard({
       {isMenuOpen ? (
         <div
           ref={menuRef}
-          className="absolute right-3 top-11 z-20 min-w-[120px] overflow-hidden rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+          className="absolute right-3 top-11 z-20 min-w-[120px] overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] shadow-[0_2px_8px_var(--shadow-color-soft)]"
           role="menu"
         >
           <button
-            className="flex w-full items-center px-3 py-2.5 text-left text-[13px] font-bold text-[#212529]"
+            className="flex w-full items-center px-3 py-2.5 text-left text-[13px] font-bold text-[var(--foreground)]"
             onClick={onRenameStart}
             role="menuitem"
             type="button"
@@ -759,7 +759,7 @@ function MobileCustomBookCard({
             이름 변경
           </button>
           <button
-            className="flex w-full items-center border-t border-[#F1F3F5] px-3 py-2.5 text-left text-[13px] font-bold text-[#FF6B6B]"
+            className="flex w-full items-center border-t border-[var(--surface-subtle)] px-3 py-2.5 text-left text-[13px] font-bold text-[var(--danger)]"
             onClick={onRequestDelete}
             role="menuitem"
             type="button"
@@ -807,26 +807,26 @@ function MobileDeleteConfirmDialog({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-0"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] px-0"
       data-testid="delete-confirm-dialog"
     >
       <div
         aria-modal="true"
-        className="w-full rounded-t-[var(--radius-sheet)] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)]"
+        className="w-full rounded-t-[var(--radius-sheet)] bg-[var(--surface)] px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_var(--shadow-color-strong)]"
         role="alertdialog"
       >
         <div className="flex justify-center pb-2">
-          <div className="h-1 w-9 rounded-full bg-[#DEE2E6]" />
+          <div className="h-1 w-9 rounded-full bg-[var(--line-strong)]" />
         </div>
-        <h2 className="text-[18px] font-extrabold leading-[1.35] text-[#212529]">
+        <h2 className="text-[18px] font-extrabold leading-[1.35] text-[var(--foreground)]">
           레시피북을 삭제할까요?
         </h2>
-        <p className="mt-2 text-[13px] font-medium leading-5 text-[#495057]">
+        <p className="mt-2 text-[13px] font-medium leading-5 text-[var(--text-2)]">
           &ldquo;{bookName}&rdquo; 안의 레시피는 삭제되지 않아요.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
-            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057]"
+            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-extrabold text-[var(--text-2)]"
             disabled={isDeleting}
             onClick={onCancel}
             type="button"
@@ -834,7 +834,7 @@ function MobileDeleteConfirmDialog({
             취소
           </button>
           <button
-            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[#FF6B6B] text-[14px] font-extrabold text-white disabled:opacity-50"
+            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--danger)] text-[14px] font-extrabold text-[var(--text-inverse)] disabled:opacity-50"
             disabled={isDeleting}
             onClick={() => void onConfirm()}
             type="button"
@@ -865,7 +865,7 @@ function MobileShoppingSurface({
       <main className="space-y-2 px-4 py-4">
         {[1, 2].map((index) => (
           <div
-            className="h-[68px] rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white"
+            className="h-[68px] rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
             key={index}
           />
         ))}
@@ -876,9 +876,9 @@ function MobileShoppingSurface({
   if (items.length === 0) {
     return (
       <main className="px-4 py-4" data-testid="shopping-empty">
-        <div className="rounded-[var(--radius-card)] bg-white px-10 py-10 text-center">
+        <div className="rounded-[var(--radius-card)] bg-[var(--surface)] px-10 py-10 text-center">
           <div className="mb-2 text-[36px] leading-none">🛒</div>
-          <p className="text-[13px] font-medium text-[#868E96]">
+          <p className="text-[13px] font-medium text-[var(--text-3)]">
             아직 장보기 기록이 없어요
           </p>
           <Link
@@ -900,7 +900,7 @@ function MobileShoppingSurface({
         ))}
       </div>
       {isLoadingMore ? (
-        <div className="py-4 text-center text-[13px] font-bold text-[#868E96]">
+        <div className="py-4 text-center text-[13px] font-bold text-[var(--text-3)]">
           불러오는 중...
         </div>
       ) : null}
@@ -914,7 +914,7 @@ function MobileShoppingCard({ item }: { item: ShoppingListHistoryItem }) {
 
   return (
     <Link
-      className="flex min-h-[68px] items-center gap-3 rounded-[var(--radius-card)] border border-[#DEE2E6] bg-white px-4 py-[14px]"
+      className="flex min-h-[68px] items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] px-4 py-[14px]"
       data-testid={`shopping-card-${item.id}`}
       href={buildReturnHref(`/shopping/lists/${item.id}`, {
         restore: "shopping-history-tab",
@@ -929,16 +929,16 @@ function MobileShoppingCard({ item }: { item: ShoppingListHistoryItem }) {
           "flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[18px]",
           completed
             ? "bg-[var(--brand-soft)] text-[var(--brand)]"
-            : "bg-[#F8F9FA] text-[#495057]",
+            : "bg-[var(--surface-fill)] text-[var(--text-2)]",
         ].join(" ")}
       >
         {completed ? "✓" : "🛒"}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[14px] font-extrabold leading-[1.35] text-[#212529]">
+        <p className="truncate text-[14px] font-extrabold leading-[1.35] text-[var(--foreground)]">
           {item.title}
         </p>
-        <p className="mt-0.5 truncate text-[11px] font-medium leading-[1.35] text-[#868E96]">
+        <p className="mt-0.5 truncate text-[11px] font-medium leading-[1.35] text-[var(--text-3)]">
           {item.item_count}개 재료 · {completed ? "다시열기" : "진행 중"}
           {item.completed_at ? ` · ${formatShortDate(item.completed_at)} 완료` : ""}
         </p>
@@ -1011,7 +1011,7 @@ function ChevronRightIcon() {
   return (
     <svg
       aria-hidden="true"
-      className="h-5 w-5 shrink-0 text-[#ADB5BD]"
+      className="h-5 w-5 shrink-0 text-[var(--text-4)]"
       fill="none"
       stroke="currentColor"
       strokeLinecap="round"

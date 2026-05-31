@@ -31,7 +31,7 @@ const PICKER_OPTIONS: Array<{
 ];
 
 const OPTION_TILE_CLASS =
-  "flex min-h-[58px] items-center gap-2.5 rounded-[var(--radius-control)] border border-[#DEE2E6] bg-white px-3 text-left text-[14px] font-semibold leading-[1.25] text-[#212529]";
+  "flex min-h-[58px] items-center gap-2.5 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-left text-[14px] font-semibold leading-[1.25] text-[var(--foreground)]";
 const OPTION_LABEL_CLASS = "text-[14px] leading-[1.25]";
 
 function SearchIcon({ className }: { className?: string }) {
@@ -95,13 +95,13 @@ export function MealAddOptionsSheet({
       title={title}
     >
       <button
-        className="mb-4 flex min-h-[var(--control-height-md)] w-full items-center gap-2 rounded-[var(--radius-control)] bg-[#F8F9FA] px-3 text-left text-[14px] text-[#495057]"
+        className="mb-4 flex min-h-[var(--control-height-md)] w-full items-center gap-2 rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-3 text-left text-[14px] text-[var(--text-2)]"
         data-testid="meal-add-option-search"
         onClick={() => onPickerSelect("search")}
         type="button"
       >
         <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center text-[#495057]"
+          className="flex h-9 w-9 shrink-0 items-center justify-center text-[var(--text-2)]"
           aria-hidden="true"
         >
           <SearchIcon className="h-6 w-6" />

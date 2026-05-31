@@ -1189,18 +1189,18 @@ export function PlannerWeekScreen({
   return (
     <>
       {shouldRenderAppView ? (
-        <div className="min-h-screen bg-[#F8F9FA] pb-[128px] text-[#212529] lg:hidden">
+        <div className="min-h-screen bg-[var(--surface-fill)] pb-[128px] text-[var(--foreground)] lg:hidden">
         <div
-          className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center border-b border-[#DEE2E6] bg-white px-4"
+          className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4"
           style={{ borderBottomWidth: "0.5px" }}
         >
-          <h1 className="text-[18px] font-bold leading-none text-[#212529]">
+          <h1 className="text-[18px] font-bold leading-none text-[var(--foreground)]">
             플래너
           </h1>
         </div>
 
-        <section className="border-b border-[#F1F3F5] bg-white px-5 py-4">
-          <p className="mb-3 text-[20px] font-bold leading-[1.25] text-[#212529]">
+        <section className="border-b border-[var(--surface-subtle)] bg-[var(--surface)] px-5 py-4">
+          <p className="mb-3 text-[20px] font-bold leading-[1.25] text-[var(--foreground)]">
             {mealStats.total}개 음식 계획 중
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1245,8 +1245,8 @@ export function PlannerWeekScreen({
                     className={[
                       "ml-2 rounded-full px-2 py-0.5 text-[10px]",
                       shoppingList.status === "completed"
-                        ? "bg-[rgba(26,174,57,0.12)] text-[var(--web-success)]"
-                        : "bg-white text-[var(--brand)]",
+                        ? "bg-[var(--success-soft)] text-[var(--web-success)]"
+                        : "bg-[var(--surface)] text-[var(--brand)]",
                     ].join(" ")}
                   >
                     {shoppingList.status === "completed" ? "✓ 완료" : "진행 중"}
@@ -1258,24 +1258,24 @@ export function PlannerWeekScreen({
         </section>
 
         <section
-          className="sticky top-[52px] z-20 border-b border-[#DEE2E6] bg-white px-3.5 py-3"
+          className="sticky top-[52px] z-20 border-b border-[var(--line-strong)] bg-[var(--surface)] px-3.5 py-3"
           data-testid="planner-week-shell"
         >
           <div className="mb-2 flex items-center justify-between gap-2">
             <button
               aria-label="이전 주"
-              className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[#DEE2E6] bg-[#F8F9FA] text-[17px] leading-none text-[#495057]"
+              className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface-fill)] text-[17px] leading-none text-[var(--text-2)]"
               onClick={() => runPlannerAction(shiftRange(-RANGE_SHIFT_DAYS))}
               type="button"
             >
               ‹
             </button>
-            <p className="min-w-0 flex-1 truncate text-center text-[14px] font-semibold text-[#212529]">
+            <p className="min-w-0 flex-1 truncate text-center text-[14px] font-semibold text-[var(--foreground)]">
               {rangeContextLabel} {formatMobileWeekRangeLabel(rangeStartDate, rangeEndDate)}
             </p>
             <button
               aria-label="다음 주"
-              className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[#DEE2E6] bg-[#F8F9FA] text-[17px] leading-none text-[#495057]"
+              className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface-fill)] text-[17px] leading-none text-[var(--text-2)]"
               onClick={() => runPlannerAction(shiftRange(RANGE_SHIFT_DAYS))}
               type="button"
             >
@@ -1323,7 +1323,7 @@ export function PlannerWeekScreen({
                               "relative flex h-[54px] w-full min-w-0 flex-col items-center justify-center gap-px rounded-[var(--radius-card)] text-center transition-colors",
                               isSelected
                                 ? "border-2 border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand)] shadow-[0_2px_8px_var(--brand-shadow-color)]"
-                                : "border border-[#DEE2E6] bg-white text-[#495057]",
+                                : "border border-[var(--line-strong)] bg-[var(--surface)] text-[var(--text-2)]",
                             ].join(" ")}
                             onClick={() => handleDateChipClick(page.key, dateKey)}
                             type="button"
@@ -1352,7 +1352,7 @@ export function PlannerWeekScreen({
           <div className="grid gap-3 p-4">
             {Array.from({ length: 4 }).map((_, index) => (
               <Skeleton
-                className="min-h-36 border border-[#DEE2E6]"
+                className="min-h-36 border border-[var(--line-strong)]"
                 key={index}
                 style={{ borderRadius: 12 }}
               />
@@ -1394,10 +1394,10 @@ export function PlannerWeekScreen({
                 <article
                   aria-label={`${formatDateLabel(dateKey)} 식단 카드`}
                   className={[
-                    "scroll-mt-[164px] overflow-hidden rounded-[var(--radius-card)] bg-white",
+                    "scroll-mt-[164px] overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)]",
                     isSelected
-                      ? "border-2 border-[var(--brand)] shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
-                      : "border border-[#DEE2E6]",
+                      ? "border-2 border-[var(--brand)] shadow-[0_2px_8px_var(--shadow-color-soft)]"
+                      : "border border-[var(--line-strong)]",
                   ].join(" ")}
                   data-testid={`planner-day-card-${dateKey}`}
                   key={dateKey}
@@ -1405,19 +1405,19 @@ export function PlannerWeekScreen({
                     mobileDayCardRefs.current[dateKey] = node;
                   }}
                 >
-                  <div className="flex items-center border-b border-[#F1F3F5] px-4 py-3">
+                  <div className="flex items-center border-b border-[var(--surface-subtle)] px-4 py-3">
                     <span
                       className={[
                         "mr-2.5 flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold",
-                        isToday ? "bg-[var(--brand)] text-white" : "bg-[#F8F9FA] text-[#212529]",
+                        isToday ? "bg-[var(--brand)] text-[var(--text-inverse)]" : "bg-[var(--surface-fill)] text-[var(--foreground)]",
                       ].join(" ")}
                     >
                       {formatWeekdayLabel(dateKey)}
                     </span>
-                    <p className="flex-1 text-[16px] font-semibold text-[#212529]">
+                    <p className="flex-1 text-[16px] font-semibold text-[var(--foreground)]">
                       {formatCompactDateLabel(dateKey)}
                     </p>
-                    <span className="text-[12px] text-[#868E96]">
+                    <span className="text-[12px] text-[var(--text-3)]">
                       {dayMealCount}/{columns.length}
                     </span>
                   </div>
@@ -1432,11 +1432,11 @@ export function PlannerWeekScreen({
                         <div
                           className={[
                             "flex items-center gap-2 px-2.5 py-1.5",
-                            columnIndex < columns.length - 1 ? "border-b border-[#F1F3F5]" : "",
+                            columnIndex < columns.length - 1 ? "border-b border-[var(--surface-subtle)]" : "",
                           ].join(" ")}
                           key={slotKey}
                         >
-                          <div className="w-[34px] shrink-0 text-[12px] font-bold text-[#212529]">
+                          <div className="w-[34px] shrink-0 text-[12px] font-bold text-[var(--foreground)]">
                             {column.name}
                           </div>
 
@@ -1453,7 +1453,7 @@ export function PlannerWeekScreen({
                               >
                                 {visibleMeals.map((meal, mealIndex) => (
                                   <span
-                                    className="relative flex h-[46px] min-w-0 items-center overflow-hidden rounded-[var(--radius-control)] bg-[#F8F9FA] text-[#212529]"
+                                    className="relative flex h-[46px] min-w-0 items-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[var(--foreground)]"
                                     key={`${meal.id}-${mealIndex}`}
                                   >
                                     {meal.recipe_thumbnail_url ? (
@@ -1472,7 +1472,7 @@ export function PlannerWeekScreen({
                                     )}
                                     <span className="min-w-0 flex-1 px-1.5">
                                       <span
-                                        className={`block truncate text-[12px] font-extrabold ${meal.is_leftover ? "text-[var(--brand-deep)]" : "text-[#212529]"}`}
+                                        className={`block truncate text-[12px] font-extrabold ${meal.is_leftover ? "text-[var(--brand-deep)]" : "text-[var(--foreground)]"}`}
                                       >
                                         {meal.recipe_title}
                                       </span>
@@ -1481,12 +1481,12 @@ export function PlannerWeekScreen({
                                           남은 요리
                                         </span>
                                       ) : null}
-                                      <span className="mt-px block text-[10px] text-[#868E96]">
+                                      <span className="mt-px block text-[10px] text-[var(--text-3)]">
                                         {meal.planned_servings}인분
                                       </span>
                                     </span>
                                     {mealIndex === 1 && slotMeals.length > 2 ? (
-                                      <span className="absolute bottom-1 right-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-extrabold text-[#495057]">
+                                      <span className="absolute bottom-1 right-1 rounded-full bg-[var(--surface-alpha-90)] px-1.5 py-0.5 text-[10px] font-extrabold text-[var(--text-2)]">
                                         +{slotMeals.length - 2}
                                       </span>
                                     ) : null}
@@ -1523,9 +1523,9 @@ export function PlannerWeekScreen({
         ) : null}
 
         <Link
-          className="fixed bottom-[92px] right-4 z-20 inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full bg-[#212529] px-[18px] text-[14px] font-bold text-white shadow-[0_4px_12px_rgba(0,0,0,0.10)]"
+          className="fixed bottom-[92px] right-4 z-20 inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full bg-[var(--foreground)] px-[18px] text-[14px] font-bold text-[var(--text-inverse)] shadow-[0_4px_12px_var(--shadow-color-medium)]"
           href="/shopping/flow"
-          style={{ color: "#FFFFFF" }}
+          style={{ color: "var(--text-inverse)" }}
         >
           장보기
         </Link>
