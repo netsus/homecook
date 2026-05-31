@@ -899,7 +899,6 @@ export function MypageScreen({
     return (
       <>
         <ContentState
-          className="-mt-5 md:mt-0"
           description="레시피북, 장보기 기록 등 나만의 데이터를 로그인 후 확인할 수 있어요."
           eyebrow="마이페이지 접근"
           safeBottomPadding

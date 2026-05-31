@@ -16,11 +16,11 @@ describe("planner app colors", () => {
   it("aligns app brand tokens with the desktop web brand blue", () => {
     expect(tokenValue("--brand-primary")).toBe("#00A1FF");
     expect(tokenValue("--brand-primary-hover")).toBe("#0087d7");
-    expect(tokenValue("--brand-primary-accessible")).toBe("#0072BD");
+    expect(tokenValue("--brand-primary-accessible")).toBe("#00A1FF");
     expect(tokenValue("--brand-primary-soft")).toBe("rgba(0, 161, 255, 0.08)");
     expect(tokenValue("--brand-primary-border")).toBe("#8BD2FF");
     expect(tokenValue("--brand-primary-rgb")).toBe("0, 161, 255");
-    expect(tokenValue("--brand-contrast")).toBe("var(--brand-primary-accessible)");
+    expect(tokenValue("--brand-contrast")).toBe("var(--brand-primary)");
   });
 
   it("routes app planner accents through global tokens", () => {

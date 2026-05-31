@@ -47,6 +47,26 @@ describe("prototype-derived state UI primitives", () => {
     expect(skeleton.getAttribute("aria-hidden")).toBe("true");
   });
 
+  it("centers login gates without a visible bordered card shell", () => {
+    render(
+      <ContentState
+        description="로그인 후 이어서 사용할 수 있어요."
+        safeBottomPadding
+        tone="gate"
+        title="이 화면은 로그인이 필요해요"
+      />,
+    );
+
+    const shell = screen
+      .getByRole("heading", { name: "이 화면은 로그인이 필요해요" })
+      .closest("[data-state-kind='prototype-derived']");
+
+    expect(shell?.className).toContain("min-h-[calc(100dvh-92px)]");
+    expect(shell?.className).toContain("border-0");
+    expect(shell?.className).toContain("shadow-none");
+    expect(shell?.className).toContain("items-center");
+  });
+
   it("keeps legacy EmptyState and ErrorState on the shared ContentState shell", () => {
     const retry = vi.fn();
 

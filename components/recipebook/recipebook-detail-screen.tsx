@@ -575,7 +575,6 @@ export function RecipeBookDetailScreen({
   if (authState === "unauthorized") {
     return (
       <ContentState
-        className="-mt-5 md:mt-0"
         description="레시피북을 보려면 로그인이 필요해요."
         eyebrow="레시피북 접근"
         safeBottomPadding

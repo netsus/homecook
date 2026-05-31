@@ -9,8 +9,8 @@
   /* ── 앱 브랜드 조절 토큰 ── */
   --brand-primary: #00A1FF;
   --brand-primary-hover: #0087d7;
-  --brand-primary-accessible: #0072BD;
-  --brand-primary-accessible-hover: #0066a8;
+  --brand-primary-accessible: #00A1FF;
+  --brand-primary-accessible-hover: #0087d7;
   --brand-primary-soft: rgba(0, 161, 255, 0.08);
   --brand-primary-border: #8BD2FF;
   --brand-primary-rgb: 0, 161, 255;
@@ -21,6 +21,10 @@
   --brand-alpha-10: rgba(var(--brand-primary-rgb), 0.10);
   --brand-primary-shadow: 0 2px 8px rgba(var(--brand-primary-rgb), 0.18);
   --brand-primary-shadow-lg: 0 10px 22px rgba(var(--brand-primary-rgb), 0.22);
+  --google-brand-blue: #4285F4;
+  --google-brand-green: #34A853;
+  --google-brand-yellow: #FBBC05;
+  --google-brand-red: #EA4335;
 
   /* ── 색상 토큰 (mobile app runtime) ── */
   --background: #FFFFFF;
@@ -31,7 +35,7 @@
   --line:       rgba(0, 0, 0, 0.08);
   --brand:      var(--brand-primary);
   --brand-deep: var(--brand-primary-hover);
-  --brand-contrast: var(--brand-primary-accessible);
+  --brand-contrast: var(--brand-primary);
   --brand-contrast-deep: var(--brand-primary-accessible-hover);
   --brand-soft: var(--brand-primary-soft);
   --brand-border: var(--brand-primary-border);
@@ -250,7 +254,181 @@
   --brand-deep: #0087d7;
   --brand-soft: rgba(0, 161, 255, 0.08);
   --brand-border: #8BD2FF;
-  --olive: #0087d7;
+  --brand-contrast: #00A1FF;
+  --olive: #00A1FF;
+}
+
+.home-mobile-discovery-kicker {
+  margin: 0;
+  color: var(--brand);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.home-mobile-discovery-title {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.28;
+}
+
+.home-mobile-discovery-sub {
+  margin: -2px 0 0;
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.home-mobile-discovery-search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-mobile-discovery-search-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.home-mobile-search-bar {
+  display: flex;
+  min-width: 0;
+  height: 52px;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 0 14px;
+}
+
+.home-mobile-search-bar input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 15px;
+}
+
+.home-mobile-search-bar input::placeholder {
+  color: var(--text-3);
+}
+
+.home-mobile-filter-button {
+  display: inline-flex;
+  height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--brand);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--brand);
+  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.home-mobile-filter-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.home-mobile-filter-chip,
+.home-mobile-filter-reset {
+  display: inline-flex;
+  height: 34px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.home-mobile-filter-chip {
+  background: var(--surface-fill);
+  color: var(--text-2);
+}
+
+.home-mobile-filter-chip-active {
+  background: var(--brand);
+  color: var(--text-inverse);
+}
+
+.home-mobile-filter-reset {
+  background: transparent;
+  color: var(--text-2);
+}
+
+.home-search-empty-state {
+  display: flex;
+  min-height: 264px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.home-search-empty-icon {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 4px;
+  border-radius: 9999px;
+  background: #EAEDEF;
+}
+
+.home-search-empty-title {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  line-height: 1.3;
+}
+
+.home-search-empty-description {
+  max-width: 360px;
+  margin: 0;
+  color: var(--text-3);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.home-search-empty-action {
+  display: inline-flex;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+  border: 1px solid var(--brand);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--brand);
+  padding: 0 20px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 @theme inline {

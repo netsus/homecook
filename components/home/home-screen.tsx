@@ -22,7 +22,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   WebButton,
   WebChip,
-  WebEmptyState,
   WebErrorState,
   WebIconButton,
   WebRecipeCard,
@@ -261,10 +260,7 @@ export function HomeScreen() {
   const showEmptyState =
     (screenState === "ready" || screenState === "empty") &&
     displayedRecipes.length === 0;
-  const emptyStateActionLabel =
-    hasQuery && !hasIngredientFilter && !selectedTheme
-      ? "검색 초기화"
-      : "초기화";
+  const emptyStateActionLabel = "초기화";
   const mealGreeting = useMemo(() => formatHomeMealGreeting(), []);
 
   const clearIngredientFilters = useCallback(() => {
@@ -472,50 +468,59 @@ export function HomeScreen() {
 
           <div className="pb-[100px]">
             {/* Hero greeting */}
-            <div className="bg-[var(--surface)] px-4 pb-3 pt-5">
-              <div className="mb-0.5 text-[14px] text-[var(--text-2)]">{mealGreeting}</div>
-              <h1 className="text-[22px] font-bold leading-[1.2] text-[var(--foreground)]">
+            <div className="bg-[var(--surface)] px-5 pb-3 pt-5">
+              <div className="home-mobile-discovery-kicker">{mealGreeting}</div>
+              <h1 className="home-mobile-discovery-title">
                 오늘 뭐 먹지?
               </h1>
+              <p className="home-mobile-discovery-sub">
+                레시피 제목으로 검색하거나, 재료로 좁혀 보세요.
+              </p>
             </div>
 
             {/* Search */}
-            <div className="space-y-2 px-4 pb-3 pt-1">
-              <label className="flex h-[44px] items-center gap-2 rounded-[var(--radius-sheet)] bg-[var(--surface-fill)] px-4">
-                <SearchIcon />
-                <span className="visually-hidden">레시피 제목 검색</span>
-                <input
-                  className="w-full bg-transparent text-[14px] text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)]"
-                  onChange={(event) => {
-                    setQuery(event.target.value);
-                    setActiveThemeId(null);
-                  }}
-                  placeholder="김치볶음밥, 된장찌개…"
-                  value={query}
-                />
-              </label>
-              <div className="flex items-center gap-2">
+            <div className="home-mobile-discovery-search px-5 pb-3 pt-1">
+              <div className="home-mobile-discovery-search-row">
+                <label className="home-mobile-search-bar">
+                  <SearchIcon />
+                  <span className="visually-hidden">레시피 제목 검색</span>
+                  <input
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setActiveThemeId(null);
+                    }}
+                    placeholder="레시피 제목 검색"
+                    value={query}
+                  />
+                </label>
                 <button
-                  className={[
-                    "inline-flex h-[var(--control-height-md)] items-center gap-1.5 rounded-[var(--radius-control)] border px-3 text-[13px] font-semibold",
-                    hasIngredientFilter
-                      ? "border-[var(--brand)] bg-[var(--brand-contrast)] text-[var(--text-inverse)]"
-                      : "border-[var(--brand)] bg-[var(--surface)] text-[var(--brand-contrast)]",
-                  ].join(" ")}
+                  className="home-mobile-filter-button"
                   onClick={() => setIngredientModalOpen(true)}
                   type="button"
                 >
-                  <SearchSmallIcon color={hasIngredientFilter ? "var(--text-inverse)" : "var(--brand-contrast)"} />
-                  {hasIngredientFilter ? `재료 ${appliedIngredientIds.length}개` : "재료로 검색"}
+                  <SearchSmallIcon color="currentColor" />
+                  재료로 검색
                 </button>
+              </div>
+              <div className="home-mobile-filter-chip-row">
                 {hasIngredientFilter ? (
-                  <button
-                    className="inline-flex h-[var(--control-height-md)] items-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[13px] font-medium text-[var(--text-2)]"
-                    onClick={clearIngredientFilters}
-                    type="button"
-                  >
-                    초기화
-                  </button>
+                  <>
+                    <button
+                      className="home-mobile-filter-chip home-mobile-filter-chip-active"
+                      onClick={() => setIngredientModalOpen(true)}
+                      type="button"
+                    >
+                      <SearchSmallIcon color="currentColor" />
+                      재료 {appliedIngredientIds.length}개
+                    </button>
+                    <button
+                      className="home-mobile-filter-reset"
+                      onClick={clearIngredientFilters}
+                      type="button"
+                    >
+                      초기화
+                    </button>
+                  </>
                 ) : null}
               </div>
             </div>
@@ -588,11 +593,9 @@ export function HomeScreen() {
 
                 {showEmptyState ? (
                   <div className="px-4">
-                    <ContentState
+                    <HomeSearchEmptyState
                       actionLabel={emptyStateActionLabel}
                       description="다른 키워드나 재료 조합으로 다시 찾아보세요."
-                      showEyebrow={false}
-                      tone="empty"
                       onAction={() => {
                         clearIngredientFilters();
                         clearSearch();
@@ -861,20 +864,14 @@ function HomeWebScreen({
           ) : null}
 
           {showEmptyState ? (
-            <WebEmptyState
-              action={
-                <WebButton
-                  onClick={() => {
-                    clearIngredientFilters();
-                    clearSearch();
-                    setActiveThemeId(null);
-                  }}
-                  variant="secondary"
-                >
-                  {emptyStateActionLabel}
-                </WebButton>
-              }
+            <HomeSearchEmptyState
+              actionLabel={emptyStateActionLabel}
               description="다른 키워드나 재료 조합으로 다시 찾아보세요."
+              onAction={() => {
+                clearIngredientFilters();
+                clearSearch();
+                setActiveThemeId(null);
+              }}
               title="조건에 맞는 레시피가 없어요"
             />
           ) : null}
@@ -899,6 +896,36 @@ function RecipeGridSkeleton() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function HomeSearchEmptyState({
+  actionLabel,
+  description,
+  onAction,
+  title,
+}: {
+  actionLabel: string;
+  description: string;
+  onAction: () => void;
+  title: string;
+}) {
+  return (
+    <div
+      className="home-search-empty-state"
+      data-testid="home-search-empty-state"
+    >
+      <div className="home-search-empty-icon" aria-hidden="true" />
+      <h2 className="home-search-empty-title">{title}</h2>
+      <p className="home-search-empty-description">{description}</p>
+      <button
+        className="home-search-empty-action"
+        onClick={onAction}
+        type="button"
+      >
+        {actionLabel}
+      </button>
     </div>
   );
 }

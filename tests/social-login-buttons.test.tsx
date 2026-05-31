@@ -121,6 +121,14 @@ describe("social login buttons", () => {
     ).toBeTruthy();
   });
 
+  it("renders the Google provider with the official multicolor logo", () => {
+    render(<SocialLoginButtons nextPath="/planner" />);
+
+    expect(screen.getByRole("button", { name: "Google로 시작하기" })).toBeTruthy();
+    expect(screen.getByTestId("google-provider-logo")).toBeTruthy();
+    expect(screen.queryByText("G")).toBeNull();
+  });
+
   it("hides dev-only login helpers during QA fixture runs", () => {
     isLocalDevAuthEnabled.mockReturnValue(true);
     isLocalGoogleOAuthEnabled.mockReturnValue(true);
