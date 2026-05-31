@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { User } from "@supabase/supabase-js";
 
 import { fail, ok } from "@/lib/api/response";
@@ -309,6 +311,80 @@ interface YoutubeTranscriptFetchEventsTable {
   }>;
 }
 
+interface YoutubeLlmExtractionCacheRow {
+  id: string;
+  youtube_video_id: string;
+  source_hash: string;
+  schema_version: string;
+  model: string;
+  source_kinds: string[];
+  result_json: unknown;
+  expires_at: string;
+}
+
+interface YoutubeLlmExtractionCacheSelectQuery {
+  eq(column: string, value: string): YoutubeLlmExtractionCacheSelectQuery;
+  gt(column: string, value: string): YoutubeLlmExtractionCacheSelectQuery;
+  order(column: string, options?: { ascending?: boolean }): YoutubeLlmExtractionCacheSelectQuery;
+  limit(count: number): YoutubeLlmExtractionCacheSelectQuery;
+  then: ArrayQueryResult<YoutubeLlmExtractionCacheRow>["then"];
+}
+
+interface YoutubeLlmExtractionCacheUpdateQuery {
+  eq(column: string, value: string): YoutubeLlmExtractionCacheUpdateQuery;
+  then: ArrayQueryResult<null>["then"];
+}
+
+interface YoutubeLlmExtractionCacheTable {
+  select(columns: string): YoutubeLlmExtractionCacheSelectQuery;
+  insert(values: {
+    youtube_video_id: string;
+    source_hash: string;
+    schema_version: string;
+    model: string;
+    source_kinds: string[];
+    result_json: unknown;
+    expires_at: string;
+    last_used_at: string;
+  }): PromiseLike<{
+    data: null;
+    error: QueryError | null;
+  }>;
+  update(values: { last_used_at: string }): YoutubeLlmExtractionCacheUpdateQuery;
+}
+
+interface YoutubeLlmExtractionEventRow {
+  user_id: string | null;
+  provider: string;
+  status: string;
+  created_at: string;
+}
+
+interface YoutubeLlmExtractionEventSelectQuery {
+  eq(column: string, value: string): YoutubeLlmExtractionEventSelectQuery;
+  gte(column: string, value: string): YoutubeLlmExtractionEventSelectQuery;
+  then: ArrayQueryResult<YoutubeLlmExtractionEventRow>["then"];
+}
+
+interface YoutubeLlmExtractionEventsTable {
+  select(columns: string): YoutubeLlmExtractionEventSelectQuery;
+  insert(values: {
+    user_id: string | null;
+    youtube_video_id: string;
+    provider: string;
+    model: string | null;
+    cache_hit: boolean;
+    status: "success" | "unavailable" | "error" | "skipped";
+    reason: string | null;
+    input_tokens: number;
+    output_tokens: number;
+    estimated_cost_microusd: number;
+  }): PromiseLike<{
+    data: null;
+    error: QueryError | null;
+  }>;
+}
+
 interface YoutubeRecipeRegisterRpcData {
   recipe_id: string;
   title: string;
@@ -415,6 +491,15 @@ const YOUTUBE_PUBLIC_TIMEDTEXT_PROVIDER = "youtube_public_timedtext";
 const YOUTUBE_TIMEDTEXT_COOKIE_PROVIDER = "youtube_timedtext_cookie_retry";
 const EXTERNAL_TRANSCRIPT_PROVIDER = "external_transcript_api";
 const TRANSCRIPT_PARSE_PROVIDER = "caption_parser";
+const LLM_CACHE_TTL_DAYS = 90;
+const GEMINI_LLM_PROVIDER = "gemini";
+const GEMINI_STRUCTURED_EXTRACTOR_PROVIDER = "gemini_structured_extractor";
+const GEMINI_STRUCTURED_EXTRACTOR_CACHE_PROVIDER = "gemini_structured_extractor_cache";
+const DEFAULT_GEMINI_PRIMARY_MODEL = "gemini-3.1-flash-lite";
+const DEFAULT_GEMINI_FALLBACK_MODEL = "gemini-2.5-flash-lite";
+const DEFAULT_LLM_SCHEMA_VERSION = "2026-06-01";
+const LLM_MAX_RECIPES = 12;
+const LLM_MAX_SOURCE_LINES = 240;
 const PREFERRED_TRANSCRIPT_LANGUAGES = ["ko", "en"] as const;
 const YOUTUBE_BROWSER_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -608,7 +693,111 @@ interface TranscriptFallbackResult {
   usedTranscript: boolean;
   rawTranscriptText: string | null;
   rawTranscriptSegments: YoutubeSourceSegment[];
+  availableTranscriptText: string | null;
+  availableTranscriptSegments: YoutubeSourceSegment[];
   meta: TranscriptFallbackMeta;
+}
+
+interface LlmEvidenceRef {
+  source: YoutubePublicTextSource;
+  line_index: number;
+  start_ms: number | null;
+  end_ms: number | null;
+}
+
+interface LlmSourceLine extends YoutubeSourceSegment {
+  source: YoutubePublicTextSource;
+  lineIndex: number;
+  text: string;
+}
+
+interface LlmSourceBlock {
+  source: YoutubePublicTextSource;
+  text: string;
+  segments: LlmSourceLine[];
+}
+
+export type YoutubeRecipeLlmExtractorStatus =
+  | "available"
+  | "disabled"
+  | "unavailable"
+  | "error";
+
+export interface YoutubeRecipeLlmExtractorContext {
+  videoId: string;
+  youtubeUrl: string;
+  title: string;
+  channel: string;
+  sourceBlocks: LlmSourceBlock[];
+  schemaVersion: string;
+  primaryModel: string;
+  fallbackModel: string;
+  timeoutMs: number;
+}
+
+export interface YoutubeRecipeLlmExtractorResult {
+  status: YoutubeRecipeLlmExtractorStatus;
+  providerName?: string;
+  model?: string | null;
+  fallbackModel?: string | null;
+  resultJson?: unknown;
+  reason?: string | null;
+  retryCount?: number;
+  fallbackUsed?: boolean;
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
+export interface YoutubeRecipeLlmExtractor {
+  name: string;
+  fetchStructuredRecipe(
+    context: YoutubeRecipeLlmExtractorContext,
+  ): Promise<YoutubeRecipeLlmExtractorResult>;
+}
+
+interface LlmExtractorMeta {
+  attempted: boolean;
+  provider: string | null;
+  model: string | null;
+  fallback_model: string | null;
+  schema_version: string;
+  status:
+    | "not_needed"
+    | "disabled"
+    | "cache_hit"
+    | "used"
+    | "unavailable"
+    | "error"
+    | "invalid_result";
+  cache_hit: boolean;
+  retry_count: number;
+  fallback_used: boolean;
+  input_tokens: number;
+  output_tokens: number;
+  reason: string | null;
+  recipe_count: number;
+  source_kinds: string[];
+}
+
+interface SelectedMultiRecipeExtraction {
+  source: YoutubePublicTextSource;
+  candidates: YoutubeRawRecipeCandidate[];
+  segments: YoutubeSourceSegment[];
+}
+
+interface LlmFallbackResult {
+  recipe: ParsedRecipeDescription;
+  usedLlm: boolean;
+  multiRecipeExtraction: SelectedMultiRecipeExtraction | null;
+  meta: LlmExtractorMeta;
+  sourceProviders: string[];
+  extractionMethods: string[];
+  sourceSegmentsSummary: YoutubeSourceSegmentsSummary[];
+}
+
+interface NormalizedLlmIngredient {
+  ingredient: FlatDraftIngredient;
+  evidenceRefs: Array<LlmEvidenceRef & { text: string }>;
 }
 
 interface AuthorCommentFallbackMeta {
@@ -686,6 +875,7 @@ const YOUTUBE_COMMENT_THREADS_PROVIDER: YoutubeAuthorCommentProvider = {
 
 let transcriptProviderForTest: YoutubeTranscriptProvider | null = null;
 let authorCommentProviderForTest: YoutubeAuthorCommentProvider | null = null;
+let recipeLlmExtractorForTest: YoutubeRecipeLlmExtractor | null = null;
 
 export function setYoutubeTranscriptProviderForTest(provider: YoutubeTranscriptProvider | null) {
   if (process.env.NODE_ENV !== "test") {
@@ -735,6 +925,27 @@ function getYoutubeAuthorCommentProvider() {
   }
 
   return YOUTUBE_COMMENT_THREADS_PROVIDER;
+}
+
+export function setYoutubeRecipeLlmExtractorForTest(provider: YoutubeRecipeLlmExtractor | null) {
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("setYoutubeRecipeLlmExtractorForTest is only available in tests");
+  }
+
+  const previousProvider = recipeLlmExtractorForTest;
+  recipeLlmExtractorForTest = provider;
+
+  return () => {
+    recipeLlmExtractorForTest = previousProvider;
+  };
+}
+
+function getYoutubeRecipeLlmExtractor() {
+  if (recipeLlmExtractorForTest) {
+    return recipeLlmExtractorForTest;
+  }
+
+  return createDefaultYoutubeRecipeLlmExtractor();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -3252,6 +3463,696 @@ function createDefaultYoutubeTranscriptProvider(
   };
 }
 
+function buildLlmCacheExpiresAt() {
+  return new Date(Date.now() + LLM_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function getLlmExtractionConfig() {
+  if (process.env.YOUTUBE_RECIPE_LLM_ENABLED !== "true") {
+    return null;
+  }
+
+  const provider = process.env.YOUTUBE_RECIPE_LLM_PROVIDER?.trim() || GEMINI_LLM_PROVIDER;
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+
+  if (provider !== GEMINI_LLM_PROVIDER || !apiKey) {
+    return null;
+  }
+
+  return {
+    provider,
+    apiKey,
+    primaryModel: process.env.YOUTUBE_RECIPE_LLM_PRIMARY_MODEL?.trim() || DEFAULT_GEMINI_PRIMARY_MODEL,
+    fallbackModel: process.env.YOUTUBE_RECIPE_LLM_FALLBACK_MODEL?.trim() || DEFAULT_GEMINI_FALLBACK_MODEL,
+    dailyLimit: parsePositiveIntegerEnv(process.env.YOUTUBE_RECIPE_LLM_DAILY_LIMIT, 450),
+    userDailyLimit: parsePositiveIntegerEnv(process.env.YOUTUBE_RECIPE_LLM_USER_DAILY_LIMIT, 20),
+    timeoutMs: parsePositiveIntegerEnv(process.env.YOUTUBE_RECIPE_LLM_TIMEOUT_MS, 15_000),
+    schemaVersion: process.env.YOUTUBE_RECIPE_LLM_SCHEMA_VERSION?.trim() || DEFAULT_LLM_SCHEMA_VERSION,
+  };
+}
+
+function buildLlmExtractorMeta({
+  attempted,
+  provider = null,
+  model = null,
+  fallbackModel = null,
+  schemaVersion = DEFAULT_LLM_SCHEMA_VERSION,
+  status,
+  cacheHit = false,
+  retryCount = 0,
+  fallbackUsed = false,
+  inputTokens = 0,
+  outputTokens = 0,
+  reason = null,
+  recipeCount = 0,
+  sourceKinds = [],
+}: {
+  attempted: boolean;
+  provider?: string | null;
+  model?: string | null;
+  fallbackModel?: string | null;
+  schemaVersion?: string;
+  status: LlmExtractorMeta["status"];
+  cacheHit?: boolean;
+  retryCount?: number;
+  fallbackUsed?: boolean;
+  inputTokens?: number;
+  outputTokens?: number;
+  reason?: string | null;
+  recipeCount?: number;
+  sourceKinds?: string[];
+}): LlmExtractorMeta {
+  return {
+    attempted,
+    provider,
+    model,
+    fallback_model: fallbackModel,
+    schema_version: schemaVersion,
+    status,
+    cache_hit: cacheHit,
+    retry_count: retryCount,
+    fallback_used: fallbackUsed,
+    input_tokens: inputTokens,
+    output_tokens: outputTokens,
+    reason,
+    recipe_count: recipeCount,
+    source_kinds: sourceKinds,
+  };
+}
+
+async function recordLlmExtractionEvent(
+  dbClient: DbClient | null,
+  {
+    userId,
+    videoId,
+    model,
+    cacheHit,
+    status,
+    reason = null,
+    inputTokens = 0,
+    outputTokens = 0,
+    estimatedCostMicrousd = 0,
+  }: {
+    userId: string | null;
+    videoId: string;
+    model: string | null;
+    cacheHit: boolean;
+    status: "success" | "unavailable" | "error" | "skipped";
+    reason?: string | null;
+    inputTokens?: number;
+    outputTokens?: number;
+    estimatedCostMicrousd?: number;
+  },
+) {
+  if (!dbClient) {
+    return;
+  }
+
+  try {
+    await table<YoutubeLlmExtractionEventsTable>(dbClient, "youtube_llm_extraction_events")
+      .insert({
+        user_id: userId,
+        youtube_video_id: videoId,
+        provider: GEMINI_LLM_PROVIDER,
+        model,
+        cache_hit: cacheHit,
+        status,
+        reason,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        estimated_cost_microusd: estimatedCostMicrousd,
+      });
+  } catch {
+    // Observability must not block recipe extraction.
+  }
+}
+
+function canUseLlmWithoutEventTable(error: unknown) {
+  return process.env.NODE_ENV !== "production" && isMissingSupabaseRelationError(error);
+}
+
+async function canUseLlmExtractor(
+  dbClient: DbClient | null,
+  userId: string,
+  config: NonNullable<ReturnType<typeof getLlmExtractionConfig>>,
+) {
+  if (!dbClient) {
+    return false;
+  }
+
+  try {
+    const result = await table<YoutubeLlmExtractionEventsTable>(dbClient, "youtube_llm_extraction_events")
+      .select("user_id,provider,status,created_at")
+      .eq("provider", GEMINI_LLM_PROVIDER)
+      .eq("status", "success")
+      .gte("created_at", getUtcDayStartIso());
+
+    if (result.error) {
+      return canUseLlmWithoutEventTable(result.error);
+    }
+
+    const rows = result.data ?? [];
+    const totalCount = rows.length;
+    const userCount = rows.filter((row) => row.user_id === userId).length;
+
+    return totalCount < config.dailyLimit && userCount < config.userDailyLimit;
+  } catch (error) {
+    return canUseLlmWithoutEventTable(error);
+  }
+}
+
+function buildLlmSourceHash(
+  sourceBlocks: LlmSourceBlock[],
+  schemaVersion: string,
+) {
+  return createHash("sha256")
+    .update(JSON.stringify({
+      schemaVersion,
+      sources: sourceBlocks.map((block) => ({
+        source: block.source,
+        text: block.text,
+      })),
+    }))
+    .digest("hex");
+}
+
+async function readLlmExtractionCache(
+  dbClient: DbClient | null,
+  {
+    videoId,
+    sourceHash,
+    schemaVersion,
+    models,
+  }: {
+    videoId: string;
+    sourceHash: string;
+    schemaVersion: string;
+    models: string[];
+  },
+): Promise<YoutubeLlmExtractionCacheRow | null> {
+  if (!dbClient) {
+    return null;
+  }
+
+  let rows: YoutubeLlmExtractionCacheRow[] | null;
+
+  try {
+    const result = await table<YoutubeLlmExtractionCacheTable>(dbClient, "youtube_llm_extraction_cache")
+      .select("id,youtube_video_id,source_hash,schema_version,model,source_kinds,result_json,expires_at")
+      .eq("youtube_video_id", videoId)
+      .eq("source_hash", sourceHash)
+      .eq("schema_version", schemaVersion)
+      .gt("expires_at", new Date().toISOString())
+      .order("last_used_at", { ascending: false })
+      .limit(20);
+
+    if (result.error) {
+      return null;
+    }
+
+    rows = result.data;
+  } catch {
+    return null;
+  }
+
+  if (!rows || rows.length === 0) {
+    return null;
+  }
+
+  const row = models
+    .map((model) => rows?.find((candidate) => candidate.model === model))
+    .find(Boolean)
+    ?? rows[0];
+
+  try {
+    await table<YoutubeLlmExtractionCacheTable>(dbClient, "youtube_llm_extraction_cache")
+      .update({ last_used_at: new Date().toISOString() })
+      .eq("id", row.id);
+  } catch {
+    // Cache freshness updates are best-effort.
+  }
+
+  return row;
+}
+
+async function writeLlmExtractionCache(
+  dbClient: DbClient | null,
+  {
+    videoId,
+    sourceHash,
+    schemaVersion,
+    model,
+    sourceKinds,
+    resultJson,
+  }: {
+    videoId: string;
+    sourceHash: string;
+    schemaVersion: string;
+    model: string;
+    sourceKinds: string[];
+    resultJson: unknown;
+  },
+) {
+  if (!dbClient) {
+    return;
+  }
+
+  try {
+    await table<YoutubeLlmExtractionCacheTable>(dbClient, "youtube_llm_extraction_cache")
+      .insert({
+        youtube_video_id: videoId,
+        source_hash: sourceHash,
+        schema_version: schemaVersion,
+        model,
+        source_kinds: sourceKinds,
+        result_json: resultJson,
+        expires_at: buildLlmCacheExpiresAt(),
+        last_used_at: new Date().toISOString(),
+      });
+  } catch {
+    // Cache writes are best-effort.
+  }
+}
+
+function normalizeLlmSourceBlock(
+  source: YoutubePublicTextSource,
+  text: string,
+  segments: YoutubeSourceSegment[] = [],
+): LlmSourceBlock | null {
+  const normalizedText = text.trim();
+  if (!normalizedText) {
+    return null;
+  }
+
+  const baseSegments = segments.length > 0
+    ? segments
+    : buildTextSegments({ text: normalizedText, source });
+  const normalizedSegments = baseSegments
+    .map((segment, index): LlmSourceLine => ({
+      source,
+      lineIndex: index,
+      text: segment.text.trim(),
+      startMs: segment.startMs,
+      durationMs: segment.durationMs,
+      language: segment.language,
+      trackKind: segment.trackKind,
+    }))
+    .filter((segment) => segment.text);
+
+  if (normalizedSegments.length === 0) {
+    return null;
+  }
+
+  return {
+    source,
+    text: joinSegmentText(normalizedSegments),
+    segments: normalizedSegments.slice(0, LLM_MAX_SOURCE_LINES),
+  };
+}
+
+function buildLlmSourceBlocks({
+  descriptionText,
+  authorCommentText,
+  transcriptText,
+  transcriptSegments,
+}: {
+  descriptionText: string;
+  authorCommentText: string | null;
+  transcriptText: string | null;
+  transcriptSegments: YoutubeSourceSegment[];
+}) {
+  const blocks: LlmSourceBlock[] = [];
+  const descriptionBlock = normalizeLlmSourceBlock("description", descriptionText);
+  if (descriptionBlock) blocks.push(descriptionBlock);
+
+  const commentBlock = authorCommentText
+    ? normalizeLlmSourceBlock("comment", authorCommentText)
+    : null;
+  if (commentBlock) blocks.push(commentBlock);
+
+  const transcriptSource = transcriptSegments.some((segment) => segment.source === "transcript")
+    ? "transcript"
+    : "caption";
+  const transcriptBlock = transcriptText
+    ? normalizeLlmSourceBlock(transcriptSource, transcriptText, transcriptSegments)
+    : null;
+  if (transcriptBlock) blocks.push(transcriptBlock);
+
+  return blocks;
+}
+
+function buildLlmPrompt(context: YoutubeRecipeLlmExtractorContext) {
+  const sourceText = context.sourceBlocks
+    .map((block) => {
+      const lines = block.segments
+        .map((segment) => {
+          const start = segment.startMs === null ? "null" : String(segment.startMs);
+          const end = segment.startMs === null || segment.durationMs === null
+            ? "null"
+            : String(segment.startMs + segment.durationMs);
+          return `[${block.source}:${segment.lineIndex}:start=${start}:end=${end}] ${segment.text}`;
+        })
+        .join("\n");
+
+      return `SOURCE ${block.source}\n${lines}`;
+    })
+    .join("\n\n");
+
+  return [
+    "You extract cooking recipes from public YouTube text.",
+    "Return only JSON that matches the schema.",
+    "Rules:",
+    "- Use only the provided source lines. Do not invent ingredients, amounts, or steps.",
+    "- If a video contains multiple dishes, return one recipe object per dish.",
+    "- Do not merge ingredients across different dishes.",
+    "- Preserve repeated ingredients inside each dish; do not sum amounts.",
+    "- Unknown amount/unit must be null.",
+    "- Every ingredient and step must include evidence_refs pointing to real source/line_index values.",
+    "- Exclude promotions, product ads, subscriptions, likes, comments, BGM, pets, family talk, and diary-only lines.",
+    "- Do not create recipes titled only like 도시락, 집밥, 아침, 점심, 저녁, Cook with me, vlog, or routine.",
+    "",
+    `Video title: ${context.title}`,
+    `Channel: ${context.channel}`,
+    "",
+    sourceText,
+  ].join("\n");
+}
+
+const GEMINI_RECIPE_RESPONSE_SCHEMA = {
+  type: "object",
+  properties: {
+    recipes: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          confidence: { type: "number" },
+          time_range: {
+            type: "object",
+            nullable: true,
+            properties: {
+              start_ms: { type: "integer", nullable: true },
+              end_ms: { type: "integer", nullable: true },
+            },
+          },
+          ingredients: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                amount: { type: "string", nullable: true },
+                unit: { type: "string", nullable: true },
+                raw_text: { type: "string" },
+                evidence_refs: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      source: { type: "string" },
+                      line_index: { type: "integer" },
+                      start_ms: { type: "integer", nullable: true },
+                      end_ms: { type: "integer", nullable: true },
+                    },
+                    required: ["source", "line_index"],
+                  },
+                },
+              },
+              required: ["name", "amount", "unit", "raw_text", "evidence_refs"],
+            },
+          },
+          steps: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                instruction: { type: "string" },
+                raw_text: { type: "string" },
+                evidence_refs: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      source: { type: "string" },
+                      line_index: { type: "integer" },
+                      start_ms: { type: "integer", nullable: true },
+                      end_ms: { type: "integer", nullable: true },
+                    },
+                    required: ["source", "line_index"],
+                  },
+                },
+              },
+              required: ["instruction", "raw_text", "evidence_refs"],
+            },
+          },
+          warnings: {
+            type: "array",
+            items: { type: "string" },
+          },
+        },
+        required: ["title", "confidence", "ingredients", "steps", "warnings"],
+      },
+    },
+    excluded_mentions: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+  required: ["recipes"],
+} as const;
+
+function getGeminiUsage(payload: unknown) {
+  const usage = isRecord(payload) && isRecord(payload.usageMetadata)
+    ? payload.usageMetadata
+    : {};
+
+  return {
+    inputTokens: typeof usage.promptTokenCount === "number" ? usage.promptTokenCount : 0,
+    outputTokens: typeof usage.candidatesTokenCount === "number" ? usage.candidatesTokenCount : 0,
+  };
+}
+
+function getGeminiResponseText(payload: unknown) {
+  if (!isRecord(payload) || !Array.isArray(payload.candidates)) {
+    return null;
+  }
+
+  const candidate = payload.candidates[0];
+  if (!isRecord(candidate) || !isRecord(candidate.content) || !Array.isArray(candidate.content.parts)) {
+    return null;
+  }
+
+  const part = candidate.content.parts.find((candidatePart) =>
+    isRecord(candidatePart) && typeof candidatePart.text === "string",
+  );
+
+  return isRecord(part) && typeof part.text === "string" ? part.text : null;
+}
+
+function isRetryableGeminiStatus(status: number) {
+  return status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+}
+
+async function callGeminiStructuredRecipe(
+  model: string,
+  context: YoutubeRecipeLlmExtractorContext,
+  apiKey: string,
+): Promise<{
+  ok: boolean;
+  retryable: boolean;
+  resultJson?: unknown;
+  reason?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+}> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  let response: Response;
+
+  try {
+    response = await fetchTextWithTimeout(
+      url,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: buildLlmPrompt(context) }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0,
+            maxOutputTokens: 8192,
+            responseMimeType: "application/json",
+            responseSchema: GEMINI_RECIPE_RESPONSE_SCHEMA,
+          },
+        }),
+      },
+      context.timeoutMs,
+    );
+  } catch {
+    return {
+      ok: false,
+      retryable: true,
+      reason: "gemini_fetch_failed",
+    };
+  }
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      retryable: isRetryableGeminiStatus(response.status),
+      reason: response.status === 429
+        ? "gemini_rate_limited"
+        : response.status === 503
+          ? "gemini_unavailable"
+          : "gemini_error",
+      ...getGeminiUsage(payload),
+    };
+  }
+
+  const responseText = getGeminiResponseText(payload);
+  if (!responseText) {
+    return {
+      ok: false,
+      retryable: false,
+      reason: "gemini_empty_response",
+      ...getGeminiUsage(payload),
+    };
+  }
+
+  try {
+    return {
+      ok: true,
+      retryable: false,
+      resultJson: JSON.parse(responseText),
+      ...getGeminiUsage(payload),
+    };
+  } catch {
+    return {
+      ok: false,
+      retryable: false,
+      reason: "gemini_invalid_json",
+      ...getGeminiUsage(payload),
+    };
+  }
+}
+
+async function sleep(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function createDefaultYoutubeRecipeLlmExtractor(): YoutubeRecipeLlmExtractor {
+  return {
+    name: GEMINI_STRUCTURED_EXTRACTOR_PROVIDER,
+    async fetchStructuredRecipe(context) {
+      const config = getLlmExtractionConfig();
+      if (!config) {
+        return {
+          status: "disabled",
+          providerName: GEMINI_LLM_PROVIDER,
+          reason: "gemini_disabled",
+        };
+      }
+
+      const firstAttempt = await callGeminiStructuredRecipe(config.primaryModel, context, config.apiKey);
+      if (firstAttempt.ok) {
+        return {
+          status: "available",
+          providerName: GEMINI_LLM_PROVIDER,
+          model: config.primaryModel,
+          fallbackModel: config.fallbackModel,
+          resultJson: firstAttempt.resultJson,
+          retryCount: 0,
+          fallbackUsed: false,
+          inputTokens: firstAttempt.inputTokens ?? 0,
+          outputTokens: firstAttempt.outputTokens ?? 0,
+        };
+      }
+
+      if (firstAttempt.retryable) {
+        await sleep(250);
+        const retryAttempt = await callGeminiStructuredRecipe(config.primaryModel, context, config.apiKey);
+        if (retryAttempt.ok) {
+          return {
+            status: "available",
+            providerName: GEMINI_LLM_PROVIDER,
+            model: config.primaryModel,
+            fallbackModel: config.fallbackModel,
+            resultJson: retryAttempt.resultJson,
+            retryCount: 1,
+            fallbackUsed: false,
+            inputTokens: retryAttempt.inputTokens ?? 0,
+            outputTokens: retryAttempt.outputTokens ?? 0,
+          };
+        }
+
+        if (retryAttempt.retryable) {
+          const fallbackAttempt = await callGeminiStructuredRecipe(config.fallbackModel, context, config.apiKey);
+          if (fallbackAttempt.ok) {
+            return {
+              status: "available",
+              providerName: GEMINI_LLM_PROVIDER,
+              model: config.fallbackModel,
+              fallbackModel: config.fallbackModel,
+              resultJson: fallbackAttempt.resultJson,
+              retryCount: 1,
+              fallbackUsed: true,
+              inputTokens: fallbackAttempt.inputTokens ?? 0,
+              outputTokens: fallbackAttempt.outputTokens ?? 0,
+            };
+          }
+
+          return {
+            status: fallbackAttempt.retryable ? "unavailable" : "error",
+            providerName: GEMINI_LLM_PROVIDER,
+            model: config.fallbackModel,
+            fallbackModel: config.fallbackModel,
+            reason: fallbackAttempt.reason ?? retryAttempt.reason ?? firstAttempt.reason ?? "gemini_failed",
+            retryCount: 1,
+            fallbackUsed: true,
+            inputTokens: fallbackAttempt.inputTokens ?? 0,
+            outputTokens: fallbackAttempt.outputTokens ?? 0,
+          };
+        }
+
+        return {
+          status: "error",
+          providerName: GEMINI_LLM_PROVIDER,
+          model: config.primaryModel,
+          fallbackModel: config.fallbackModel,
+          reason: retryAttempt.reason ?? firstAttempt.reason ?? "gemini_failed",
+          retryCount: 1,
+          fallbackUsed: false,
+          inputTokens: retryAttempt.inputTokens ?? 0,
+          outputTokens: retryAttempt.outputTokens ?? 0,
+        };
+      }
+
+      return {
+        status: "error",
+        providerName: GEMINI_LLM_PROVIDER,
+        model: config.primaryModel,
+        fallbackModel: config.fallbackModel,
+        reason: firstAttempt.reason ?? "gemini_failed",
+        retryCount: 0,
+        fallbackUsed: false,
+        inputTokens: firstAttempt.inputTokens ?? 0,
+        outputTokens: firstAttempt.outputTokens ?? 0,
+      };
+    },
+  };
+}
+
 function buildTranscriptSourceProviders(meta: TranscriptFallbackMeta) {
   if (!meta.source_provider) {
     return ["public_caption_timedtext", TRANSCRIPT_PARSE_PROVIDER];
@@ -3286,6 +4187,8 @@ async function resolveTranscriptFallback(
       usedTranscript: false,
       rawTranscriptText: null,
       rawTranscriptSegments: [],
+      availableTranscriptText: null,
+      availableTranscriptSegments: [],
       meta: buildTranscriptFallbackMeta({
         attempted: false,
         capability,
@@ -3312,6 +4215,8 @@ async function resolveTranscriptFallback(
       usedTranscript: false,
       rawTranscriptText: null,
       rawTranscriptSegments: [],
+      availableTranscriptText: null,
+      availableTranscriptSegments: [],
       meta: buildTranscriptFallbackMeta({
         attempted: true,
         capability,
@@ -3332,6 +4237,8 @@ async function resolveTranscriptFallback(
       usedTranscript: false,
       rawTranscriptText: null,
       rawTranscriptSegments: [],
+      availableTranscriptText: null,
+      availableTranscriptSegments: [],
       meta: buildTranscriptFallbackMeta({
         attempted: true,
         capability,
@@ -3356,6 +4263,8 @@ async function resolveTranscriptFallback(
       usedTranscript: false,
       rawTranscriptText: null,
       rawTranscriptSegments: [],
+      availableTranscriptText: transcriptText,
+      availableTranscriptSegments: transcriptSegments,
       meta: buildTranscriptFallbackMeta({
         attempted: true,
         capability,
@@ -3375,6 +4284,8 @@ async function resolveTranscriptFallback(
     usedTranscript: true,
     rawTranscriptText: transcriptText,
     rawTranscriptSegments: transcriptSegments,
+    availableTranscriptText: transcriptText,
+    availableTranscriptSegments: transcriptSegments,
     meta: buildTranscriptFallbackMeta({
       attempted: true,
       capability,
@@ -3388,6 +4299,682 @@ async function resolveTranscriptFallback(
       cacheHit: providerResult.reason === "cache_hit",
       sourceProvider: providerName,
     }),
+  };
+}
+
+function buildLlmSourceProviders(meta: LlmExtractorMeta) {
+  if (!meta.attempted || (meta.status !== "used" && meta.status !== "cache_hit")) {
+    return [];
+  }
+
+  return [
+    meta.cache_hit ? GEMINI_STRUCTURED_EXTRACTOR_CACHE_PROVIDER : GEMINI_STRUCTURED_EXTRACTOR_PROVIDER,
+  ];
+}
+
+function sourceKindsToExtractionMethods(sourceKinds: string[]) {
+  const methods = sourceKinds
+    .filter(isYoutubePublicTextSource)
+    .map(candidateSourceToExtractionMethod);
+
+  return methods.filter((method, index) => methods.indexOf(method) === index);
+}
+
+function buildLlmSourceLineMap(sourceBlocks: LlmSourceBlock[]) {
+  const lineMap = new Map<string, LlmSourceLine>();
+
+  for (const block of sourceBlocks) {
+    for (const segment of block.segments) {
+      lineMap.set(`${block.source}:${segment.lineIndex}`, segment);
+    }
+  }
+
+  return lineMap;
+}
+
+function normalizeLlmEvidenceRefs(value: unknown, lineMap: Map<string, LlmSourceLine>) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const refs: Array<LlmEvidenceRef & { text: string }> = [];
+  for (const item of value) {
+    if (!isRecord(item) || !isYoutubePublicTextSource(item.source) || typeof item.line_index !== "number") {
+      continue;
+    }
+
+    const lineIndex = Math.trunc(item.line_index);
+    const line = lineMap.get(`${item.source}:${lineIndex}`);
+    if (!line) {
+      continue;
+    }
+
+    const startMs = typeof item.start_ms === "number" ? Math.trunc(item.start_ms) : line.startMs;
+    const endMs = typeof item.end_ms === "number"
+      ? Math.trunc(item.end_ms)
+      : line.startMs === null || line.durationMs === null
+        ? null
+        : line.startMs + line.durationMs;
+
+    refs.push({
+      source: item.source,
+      line_index: lineIndex,
+      start_ms: startMs,
+      end_ms: endMs,
+      text: line.text,
+    });
+  }
+
+  return refs;
+}
+
+function normalizeLlmAmount(value: unknown) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const amountMatch = value.trim().match(/[0-9]+\/[0-9]+|[0-9]+(?:[.,][0-9]+)?(?:\s*[~-]\s*[0-9]+(?:[.,][0-9]+)?)?/u);
+  if (!amountMatch) {
+    return null;
+  }
+
+  return parseRecipeAmount(amountMatch[0]);
+}
+
+function normalizeLlmOptionalText(value: unknown) {
+  return typeof value === "string" ? collapseWhitespace(value) : "";
+}
+
+function isInvalidLlmIngredientName(name: string) {
+  return !name
+    || name.length > 60
+    || /(?:구독|좋아요|댓글|시청|영상|제품|공구|링크|BGM|장비|엄마|남편|아이|루시|책|운동)/iu.test(name);
+}
+
+function hasLlmCookingAction(instruction: string) {
+  return hasCookingAction(instruction)
+    || /(?:채워|채우|담아|담고|담아요|말아|말고|감싸|부쳐|부치|맛을\s*내|간을\s*해|간해|재워|재우|펴|덮어|올리|익히|섞어|무쳐)/u
+      .test(instruction);
+}
+
+function isInvalidLlmStepInstruction(instruction: string) {
+  return !instruction
+    || instruction.length < 5
+    || /(?:구독|좋아요|댓글|시청|멤버십|공구|제품 정보|BGM|책을 많이 읽|운동 다녀)/iu.test(instruction)
+    || !hasLlmCookingAction(instruction);
+}
+
+function isContainerOnlyRecipeTitle(title: string) {
+  return /^(?:새벽\s*)?\d?\s*(?:집밥|도시락|아침|점심|저녁|브이로그|vlog|routine|cook with me|meal prep|하루|기상)$/iu
+    .test(title.trim());
+}
+
+function normalizeLlmIngredient(
+  item: unknown,
+  lineMap: Map<string, LlmSourceLine>,
+): NormalizedLlmIngredient | null {
+  if (!isRecord(item)) {
+    return null;
+  }
+
+  const name = normalizeParsedIngredientName(normalizeLlmOptionalText(item.name));
+  if (isInvalidLlmIngredientName(name)) {
+    return null;
+  }
+
+  const evidenceRefs = normalizeLlmEvidenceRefs(item.evidence_refs, lineMap);
+  if (evidenceRefs.length === 0) {
+    return null;
+  }
+
+  const amount = normalizeLlmAmount(item.amount);
+  const unit = normalizeNullableString(item.unit);
+  const normalizedUnit = amount === null ? null : unit;
+  const ingredientType = amount === null || !normalizedUnit ? "TO_TASTE" : "QUANT";
+  const rawText = normalizeLlmOptionalText(item.raw_text) || evidenceRefs[0].text;
+  const displayText = rawText || [name, amount, normalizedUnit].filter(Boolean).join(" ");
+
+  return {
+    ingredient: {
+      name,
+      amount: ingredientType === "QUANT" ? amount : null,
+      unit: ingredientType === "QUANT" ? normalizedUnit : null,
+      ingredientType,
+      displayText,
+      rawText,
+      componentLabel: null,
+      sourceLine: evidenceRefs[0].line_index,
+      confidence: 0.82,
+      flags: ["llm_structured"],
+      scalable: ingredientType === "QUANT",
+    },
+    evidenceRefs,
+  };
+}
+
+function normalizeLlmStep(
+  item: unknown,
+  lineMap: Map<string, LlmSourceLine>,
+) {
+  if (!isRecord(item)) {
+    return null;
+  }
+
+  const instruction = cleanDescriptionItemText(normalizeLlmOptionalText(item.instruction));
+  if (isInvalidLlmStepInstruction(instruction)) {
+    return null;
+  }
+
+  const evidenceRefs = normalizeLlmEvidenceRefs(item.evidence_refs, lineMap);
+  if (evidenceRefs.length === 0) {
+    return null;
+  }
+
+  return {
+    instruction,
+    evidenceRefs,
+    rawText: normalizeLlmOptionalText(item.raw_text) || evidenceRefs[0].text,
+  };
+}
+
+function getLlmRecipeTimeRange(
+  recipe: Record<string, unknown>,
+  refs: Array<LlmEvidenceRef & { text: string }>,
+) {
+  const timeRange = isRecord(recipe.time_range) ? recipe.time_range : {};
+  const explicitStart = typeof timeRange.start_ms === "number" ? Math.trunc(timeRange.start_ms) : null;
+  const explicitEnd = typeof timeRange.end_ms === "number" ? Math.trunc(timeRange.end_ms) : null;
+  const refStarts = refs
+    .map((ref) => ref.start_ms)
+    .filter((value): value is number => typeof value === "number");
+  const refEnds = refs
+    .map((ref) => ref.end_ms)
+    .filter((value): value is number => typeof value === "number");
+
+  return {
+    startMs: explicitStart ?? (refStarts.length > 0 ? Math.min(...refStarts) : null),
+    endMs: explicitEnd ?? (refEnds.length > 0 ? Math.max(...refEnds) : null),
+  };
+}
+
+function normalizeLlmRecipe(
+  item: unknown,
+  index: number,
+  lineMap: Map<string, LlmSourceLine>,
+  videoTitle: string,
+): YoutubeRawRecipeCandidate | null {
+  if (!isRecord(item)) {
+    return null;
+  }
+
+  const normalizedIngredients = Array.isArray(item.ingredients)
+    ? item.ingredients
+      .map((ingredient) => normalizeLlmIngredient(ingredient, lineMap))
+      .filter((ingredient): ingredient is NormalizedLlmIngredient => ingredient !== null)
+    : [];
+  const ingredients = normalizedIngredients.map((ingredient) => ingredient.ingredient);
+  const normalizedSteps = Array.isArray(item.steps)
+    ? item.steps
+      .map((step) => normalizeLlmStep(step, lineMap))
+      .filter((step): step is NonNullable<ReturnType<typeof normalizeLlmStep>> => step !== null)
+    : [];
+
+  if (ingredients.length === 0 && normalizedSteps.length === 0) {
+    return null;
+  }
+
+  const rawTitle = normalizeLlmOptionalText(item.title);
+  const title = rawTitle && !isContainerOnlyRecipeTitle(rawTitle)
+    ? rawTitle
+    : normalizedIngredients[0]?.ingredient.name
+      ? `${normalizedIngredients[0].ingredient.name} 요리`
+      : `${videoTitle} 후보 ${index + 1}`;
+  const confidence = typeof item.confidence === "number" && Number.isFinite(item.confidence)
+    ? Math.max(0, Math.min(1, item.confidence))
+    : 0.72;
+  const warnings = Array.isArray(item.warnings)
+    ? item.warnings
+      .filter((warning): warning is string => typeof warning === "string")
+      .map(collapseWhitespace)
+      .filter(Boolean)
+    : [];
+  const evidenceRefs = [
+    ...normalizedIngredients.flatMap((ingredient) => ingredient.evidenceRefs.map((ref) => ({
+      source: ref.source,
+      line_index: ref.line_index,
+      start_ms: ref.start_ms,
+      end_ms: ref.end_ms,
+      text: ref.text,
+    }))),
+    ...normalizedSteps.flatMap((step) => step.evidenceRefs.map((ref) => ({
+      source: ref.source,
+      line_index: ref.line_index,
+      start_ms: ref.start_ms,
+      end_ms: ref.end_ms,
+      text: ref.text,
+    }))),
+  ];
+  const timeRange = getLlmRecipeTimeRange(
+    item,
+    normalizedSteps.flatMap((step) => step.evidenceRefs),
+  );
+  const blockingIssues = [
+    ...(ingredients.length === 0 ? ["ingredients"] : []),
+    ...(normalizedSteps.length === 0 ? ["steps"] : []),
+  ];
+
+  return {
+    candidateId: `llm-${index + 1}`,
+    title,
+    startMs: timeRange.startMs,
+    endMs: timeRange.endMs,
+    confidence,
+    draft: {
+      ingredients,
+      steps: normalizedSteps.map((step) => step.instruction),
+      stepComponentLabels: normalizedSteps.map(() => null),
+      draftWarnings: warnings,
+      blockingIssues,
+      includeIncompleteStepFallback: false,
+      selectionOutcome: "selected_single_recipe",
+    },
+    evidenceRefs: evidenceRefs.filter((ref, refIndex, refs) =>
+      refs.findIndex((candidate) =>
+        candidate.source === ref.source
+        && candidate.line_index === ref.line_index
+        && candidate.text === ref.text,
+      ) === refIndex,
+    ),
+  };
+}
+
+function parseLlmStructuredExtractionPayload(
+  resultJson: unknown,
+  sourceBlocks: LlmSourceBlock[],
+  videoTitle: string,
+) {
+  if (!isRecord(resultJson) || !Array.isArray(resultJson.recipes)) {
+    return [];
+  }
+
+  const lineMap = buildLlmSourceLineMap(sourceBlocks);
+
+  return resultJson.recipes
+    .slice(0, LLM_MAX_RECIPES)
+    .map((recipe, index) => normalizeLlmRecipe(recipe, index, lineMap, videoTitle))
+    .filter((recipe): recipe is YoutubeRawRecipeCandidate => recipe !== null);
+}
+
+function choosePrimarySourceFromCandidates(
+  candidates: YoutubeRawRecipeCandidate[],
+  fallback: YoutubePublicTextSource,
+) {
+  const sourceCounts = new Map<YoutubePublicTextSource, number>();
+
+  for (const candidate of candidates) {
+    for (const ref of candidate.evidenceRefs) {
+      sourceCounts.set(ref.source, (sourceCounts.get(ref.source) ?? 0) + 1);
+    }
+  }
+
+  return [...sourceCounts.entries()]
+    .sort((left, right) => right[1] - left[1])[0]?.[0] ?? fallback;
+}
+
+function buildLlmMultiRecipeExtraction(
+  candidates: YoutubeRawRecipeCandidate[],
+  sourceBlocks: LlmSourceBlock[],
+): SelectedMultiRecipeExtraction | null {
+  if (candidates.length < 2) {
+    return null;
+  }
+
+  const fallbackSource = sourceBlocks[0]?.source ?? "description";
+  const source = choosePrimarySourceFromCandidates(candidates, fallbackSource);
+  const segments = sourceBlocks
+    .filter((block) => block.source === source)
+    .flatMap((block) => block.segments);
+
+  return {
+    source,
+    candidates,
+    segments,
+  };
+}
+
+function buildLlmSingleRecipe(
+  candidate: YoutubeRawRecipeCandidate | null,
+  fallbackRecipe: ParsedRecipeDescription,
+) {
+  if (!candidate) {
+    return fallbackRecipe;
+  }
+
+  return adaptFlatDraftRecipe(candidate.draft);
+}
+
+function shouldAttemptLlmFallback({
+  parsedRecipe,
+  multiRecipeExtraction,
+  sourceBlocks,
+}: {
+  parsedRecipe: ParsedRecipeDescription;
+  multiRecipeExtraction: SelectedMultiRecipeExtraction | null;
+  sourceBlocks: LlmSourceBlock[];
+}) {
+  return !multiRecipeExtraction
+    && sourceBlocks.length > 0
+    && (parsedRecipe.ingredients.length === 0 || parsedRecipe.steps.length === 0);
+}
+
+async function resolveLlmStructuredFallback({
+  video,
+  parsedRecipe,
+  parsedUrl,
+  dbClient,
+  userId,
+  sourceBlocks,
+  multiRecipeExtraction,
+}: {
+  video: YoutubeProviderVideo;
+  parsedRecipe: ParsedRecipeDescription;
+  parsedUrl: { youtubeUrl: string; videoId: string };
+  dbClient: DbClient;
+  userId: string;
+  sourceBlocks: LlmSourceBlock[];
+  multiRecipeExtraction: SelectedMultiRecipeExtraction | null;
+}): Promise<LlmFallbackResult> {
+  const config = getLlmExtractionConfig();
+  const sourceKinds = sourceBlocks.map((block) => block.source);
+  const sourceSegmentsSummary = sourceBlocks.map((block) => summarizeSourceSegments(block.segments));
+  const notNeededMeta = buildLlmExtractorMeta({
+    attempted: false,
+    schemaVersion: config?.schemaVersion ?? DEFAULT_LLM_SCHEMA_VERSION,
+    status: "not_needed",
+    sourceKinds,
+  });
+
+  if (!shouldAttemptLlmFallback({ parsedRecipe, multiRecipeExtraction, sourceBlocks })) {
+    return {
+      recipe: parsedRecipe,
+      usedLlm: false,
+      multiRecipeExtraction: null,
+      meta: notNeededMeta,
+      sourceProviders: [],
+      extractionMethods: [],
+      sourceSegmentsSummary,
+    };
+  }
+
+  if (!config) {
+    const meta = buildLlmExtractorMeta({
+      attempted: true,
+      provider: GEMINI_LLM_PROVIDER,
+      schemaVersion: DEFAULT_LLM_SCHEMA_VERSION,
+      status: "disabled",
+      reason: "gemini_disabled",
+      sourceKinds,
+    });
+    await recordLlmExtractionEvent(dbClient, {
+      userId,
+      videoId: parsedUrl.videoId,
+      model: null,
+      cacheHit: false,
+      status: "skipped",
+      reason: "gemini_disabled",
+    });
+
+    return {
+      recipe: parsedRecipe,
+      usedLlm: false,
+      multiRecipeExtraction: null,
+      meta,
+      sourceProviders: [],
+      extractionMethods: [],
+      sourceSegmentsSummary,
+    };
+  }
+
+  const sourceHash = buildLlmSourceHash(sourceBlocks, config.schemaVersion);
+  const cached = await readLlmExtractionCache(dbClient, {
+    videoId: parsedUrl.videoId,
+    sourceHash,
+    schemaVersion: config.schemaVersion,
+    models: [config.primaryModel, config.fallbackModel],
+  });
+
+  if (cached) {
+    const candidates = parseLlmStructuredExtractionPayload(cached.result_json, sourceBlocks, video.title);
+    if (candidates.length > 0) {
+      const llmMultiRecipeExtraction = buildLlmMultiRecipeExtraction(candidates, sourceBlocks);
+      const meta = buildLlmExtractorMeta({
+        attempted: true,
+        provider: GEMINI_LLM_PROVIDER,
+        model: cached.model,
+        fallbackModel: config.fallbackModel,
+        schemaVersion: config.schemaVersion,
+        status: "cache_hit",
+        cacheHit: true,
+        recipeCount: candidates.length,
+        sourceKinds,
+      });
+      await recordLlmExtractionEvent(dbClient, {
+        userId,
+        videoId: parsedUrl.videoId,
+        model: cached.model,
+        cacheHit: true,
+        status: "success",
+      });
+
+      return {
+        recipe: llmMultiRecipeExtraction ? parsedRecipe : buildLlmSingleRecipe(candidates[0] ?? null, parsedRecipe),
+        usedLlm: true,
+        multiRecipeExtraction: llmMultiRecipeExtraction,
+        meta,
+        sourceProviders: buildLlmSourceProviders(meta),
+        extractionMethods: sourceKindsToExtractionMethods(sourceKinds),
+        sourceSegmentsSummary,
+      };
+    }
+  }
+
+  const allowed = await canUseLlmExtractor(dbClient, userId, config);
+  if (!allowed) {
+    const meta = buildLlmExtractorMeta({
+      attempted: true,
+      provider: GEMINI_LLM_PROVIDER,
+      model: config.primaryModel,
+      fallbackModel: config.fallbackModel,
+      schemaVersion: config.schemaVersion,
+      status: "unavailable",
+      reason: "llm_daily_limit_exceeded",
+      sourceKinds,
+    });
+    await recordLlmExtractionEvent(dbClient, {
+      userId,
+      videoId: parsedUrl.videoId,
+      model: config.primaryModel,
+      cacheHit: false,
+      status: "skipped",
+      reason: "llm_daily_limit_exceeded",
+    });
+
+    return {
+      recipe: parsedRecipe,
+      usedLlm: false,
+      multiRecipeExtraction: null,
+      meta,
+      sourceProviders: [],
+      extractionMethods: [],
+      sourceSegmentsSummary,
+    };
+  }
+
+  const extractor = getYoutubeRecipeLlmExtractor();
+  let extractorResult: YoutubeRecipeLlmExtractorResult;
+  try {
+    extractorResult = await extractor.fetchStructuredRecipe({
+      videoId: parsedUrl.videoId,
+      youtubeUrl: parsedUrl.youtubeUrl,
+      title: video.title,
+      channel: video.channel,
+      sourceBlocks,
+      schemaVersion: config.schemaVersion,
+      primaryModel: config.primaryModel,
+      fallbackModel: config.fallbackModel,
+      timeoutMs: config.timeoutMs,
+    });
+  } catch (error) {
+    const meta = buildLlmExtractorMeta({
+      attempted: true,
+      provider: GEMINI_LLM_PROVIDER,
+      model: config.primaryModel,
+      fallbackModel: config.fallbackModel,
+      schemaVersion: config.schemaVersion,
+      status: "error",
+      reason: error instanceof Error ? error.message : "llm_provider_error",
+      sourceKinds,
+    });
+    await recordLlmExtractionEvent(dbClient, {
+      userId,
+      videoId: parsedUrl.videoId,
+      model: config.primaryModel,
+      cacheHit: false,
+      status: "error",
+      reason: meta.reason,
+    });
+
+    return {
+      recipe: parsedRecipe,
+      usedLlm: false,
+      multiRecipeExtraction: null,
+      meta,
+      sourceProviders: [],
+      extractionMethods: [],
+      sourceSegmentsSummary,
+    };
+  }
+
+  if (extractorResult.status !== "available" || !extractorResult.resultJson) {
+    const meta = buildLlmExtractorMeta({
+      attempted: true,
+      provider: extractorResult.providerName ?? GEMINI_LLM_PROVIDER,
+      model: extractorResult.model ?? config.primaryModel,
+      fallbackModel: extractorResult.fallbackModel ?? config.fallbackModel,
+      schemaVersion: config.schemaVersion,
+      status: extractorResult.status === "error" ? "error" : "unavailable",
+      retryCount: extractorResult.retryCount ?? 0,
+      fallbackUsed: extractorResult.fallbackUsed ?? false,
+      inputTokens: extractorResult.inputTokens ?? 0,
+      outputTokens: extractorResult.outputTokens ?? 0,
+      reason: extractorResult.reason ?? "llm_unavailable",
+      sourceKinds,
+    });
+    await recordLlmExtractionEvent(dbClient, {
+      userId,
+      videoId: parsedUrl.videoId,
+      model: meta.model,
+      cacheHit: false,
+      status: meta.status === "error" ? "error" : "unavailable",
+      reason: meta.reason,
+      inputTokens: meta.input_tokens,
+      outputTokens: meta.output_tokens,
+    });
+
+    return {
+      recipe: parsedRecipe,
+      usedLlm: false,
+      multiRecipeExtraction: null,
+      meta,
+      sourceProviders: [],
+      extractionMethods: [],
+      sourceSegmentsSummary,
+    };
+  }
+
+  const candidates = parseLlmStructuredExtractionPayload(extractorResult.resultJson, sourceBlocks, video.title);
+  if (candidates.length === 0) {
+    const meta = buildLlmExtractorMeta({
+      attempted: true,
+      provider: extractorResult.providerName ?? GEMINI_LLM_PROVIDER,
+      model: extractorResult.model ?? config.primaryModel,
+      fallbackModel: extractorResult.fallbackModel ?? config.fallbackModel,
+      schemaVersion: config.schemaVersion,
+      status: "invalid_result",
+      retryCount: extractorResult.retryCount ?? 0,
+      fallbackUsed: extractorResult.fallbackUsed ?? false,
+      inputTokens: extractorResult.inputTokens ?? 0,
+      outputTokens: extractorResult.outputTokens ?? 0,
+      reason: "llm_result_without_valid_evidence",
+      sourceKinds,
+    });
+    await recordLlmExtractionEvent(dbClient, {
+      userId,
+      videoId: parsedUrl.videoId,
+      model: meta.model,
+      cacheHit: false,
+      status: "unavailable",
+      reason: meta.reason,
+      inputTokens: meta.input_tokens,
+      outputTokens: meta.output_tokens,
+    });
+
+    return {
+      recipe: parsedRecipe,
+      usedLlm: false,
+      multiRecipeExtraction: null,
+      meta,
+      sourceProviders: [],
+      extractionMethods: [],
+      sourceSegmentsSummary,
+    };
+  }
+
+  await writeLlmExtractionCache(dbClient, {
+    videoId: parsedUrl.videoId,
+    sourceHash,
+    schemaVersion: config.schemaVersion,
+    model: extractorResult.model ?? config.primaryModel,
+    sourceKinds,
+    resultJson: extractorResult.resultJson,
+  });
+  const llmMultiRecipeExtraction = buildLlmMultiRecipeExtraction(candidates, sourceBlocks);
+  const meta = buildLlmExtractorMeta({
+    attempted: true,
+    provider: extractorResult.providerName ?? GEMINI_LLM_PROVIDER,
+    model: extractorResult.model ?? config.primaryModel,
+    fallbackModel: extractorResult.fallbackModel ?? config.fallbackModel,
+    schemaVersion: config.schemaVersion,
+    status: "used",
+    retryCount: extractorResult.retryCount ?? 0,
+    fallbackUsed: extractorResult.fallbackUsed ?? false,
+    inputTokens: extractorResult.inputTokens ?? 0,
+    outputTokens: extractorResult.outputTokens ?? 0,
+    recipeCount: candidates.length,
+    sourceKinds,
+  });
+  await recordLlmExtractionEvent(dbClient, {
+    userId,
+    videoId: parsedUrl.videoId,
+    model: meta.model,
+    cacheHit: false,
+    status: "success",
+    inputTokens: meta.input_tokens,
+    outputTokens: meta.output_tokens,
+  });
+
+  return {
+    recipe: llmMultiRecipeExtraction ? parsedRecipe : buildLlmSingleRecipe(candidates[0] ?? null, parsedRecipe),
+    usedLlm: true,
+    multiRecipeExtraction: llmMultiRecipeExtraction,
+    meta,
+    sourceProviders: buildLlmSourceProviders(meta),
+    extractionMethods: sourceKindsToExtractionMethods(sourceKinds),
+    sourceSegmentsSummary,
   };
 }
 
@@ -4185,19 +5772,44 @@ export async function handleYoutubeExtract(request: Request) {
     dbClient,
     user.id,
   );
-  const finalParsedRecipe = transcriptFallback.recipe;
-  const rawSourceText = buildRawSourceText(
+  let rawSourceText = buildRawSourceText(
     video.description,
     authorCommentFallback.rawAuthorCommentText,
     transcriptFallback.rawTranscriptText,
   );
-  const multiRecipeExtraction = selectMultiRecipeExtraction({
+  const sourceBlocks = buildLlmSourceBlocks({
+    descriptionText: video.description,
+    authorCommentText: authorCommentFallback.rawAuthorCommentText,
+    transcriptText: transcriptFallback.availableTranscriptText ?? transcriptFallback.rawTranscriptText,
+    transcriptSegments: transcriptFallback.availableTranscriptSegments.length > 0
+      ? transcriptFallback.availableTranscriptSegments
+      : transcriptFallback.rawTranscriptSegments,
+  });
+  const deterministicMultiRecipeExtraction = selectMultiRecipeExtraction({
     video,
     descriptionText: video.description,
     authorCommentText: authorCommentFallback.rawAuthorCommentText,
     transcriptText: transcriptFallback.rawTranscriptText,
     transcriptSegments: transcriptFallback.rawTranscriptSegments,
   });
+  const llmFallback = await resolveLlmStructuredFallback({
+    video,
+    parsedRecipe: transcriptFallback.recipe,
+    parsedUrl,
+    dbClient,
+    userId: user.id,
+    sourceBlocks,
+    multiRecipeExtraction: deterministicMultiRecipeExtraction,
+  });
+  const finalParsedRecipe = llmFallback.recipe;
+  const multiRecipeExtraction = deterministicMultiRecipeExtraction ?? llmFallback.multiRecipeExtraction;
+  if (llmFallback.usedLlm && !transcriptFallback.rawTranscriptText && transcriptFallback.availableTranscriptText) {
+    rawSourceText = buildRawSourceText(
+      video.description,
+      authorCommentFallback.rawAuthorCommentText,
+      transcriptFallback.availableTranscriptText,
+    );
+  }
 
   if (multiRecipeExtraction) {
     const candidateBuild = await buildExtractedRecipeCandidates({
@@ -4211,20 +5823,27 @@ export async function handleYoutubeExtract(request: Request) {
 
     const extractionId = crypto.randomUUID();
     const extractionMethod = candidateSourceToExtractionMethod(multiRecipeExtraction.source);
-    const extractionMethods = [extractionMethod];
+    const extractionMethods = llmFallback.usedLlm && llmFallback.extractionMethods.length > 0
+      ? llmFallback.extractionMethods
+      : [extractionMethod];
+    const usesDescriptionSource = extractionMethods.includes(DEFAULT_EXTRACTION_METHODS[0]);
+    const usesCommentSource = extractionMethods.includes(COMMENT_EXTRACTION_METHOD);
+    const usesCaptionSource = extractionMethods.includes(CAPTION_EXTRACTION_METHOD);
     const sourceProviders = [
       "youtube_videos_list",
-      ...(multiRecipeExtraction.source === "description" ? ["description_parser"] : []),
-      ...(multiRecipeExtraction.source === "comment"
+      ...(usesDescriptionSource ? ["description_parser"] : []),
+      ...(usesCommentSource
         ? ["youtube_comment_threads", "comment_filter", "comment_parser"]
         : []),
-      ...(multiRecipeExtraction.source === "caption" || multiRecipeExtraction.source === "transcript"
+      ...(usesCaptionSource
         ? buildTranscriptSourceProviders(transcriptFallback.meta)
         : []),
-      "multi_recipe_candidate_parser",
+      ...(llmFallback.usedLlm ? llmFallback.sourceProviders : ["multi_recipe_candidate_parser"]),
     ];
     const sourceSegmentsSummary: YoutubeSourceSegmentsSummary[] = [
-      summarizeSourceSegments(multiRecipeExtraction.segments),
+      ...(llmFallback.usedLlm && llmFallback.sourceSegmentsSummary.length > 0
+        ? llmFallback.sourceSegmentsSummary
+        : [summarizeSourceSegments(multiRecipeExtraction.segments)]),
     ];
     const draftWarnings = [
       ...(classification.status === "uncertain"
@@ -4282,6 +5901,7 @@ export async function handleYoutubeExtract(request: Request) {
         author_comment_provider: authorCommentFallback.meta,
         caption_capability: transcriptFallback.meta.capability,
         transcript_provider: transcriptFallback.meta,
+        llm_extractor: llmFallback.meta,
         multi_recipe_status: data.multi_recipe_status,
         primary_candidate_id: data.primary_candidate_id,
         candidate_count: candidateBuild.candidates.length,
@@ -4333,7 +5953,7 @@ export async function handleYoutubeExtract(request: Request) {
     cookingMethodResult.methods,
     cookingMethodResult.fallbackMethod,
     {
-      includeIncompleteFallback: descriptionParse.includeIncompleteStepFallback,
+      includeIncompleteFallback: llmFallback.usedLlm ? false : descriptionParse.includeIncompleteStepFallback,
       stepComponentLabels: finalParsedRecipe.stepComponentLabels,
     },
   ).map((step, index) => ({
@@ -4348,13 +5968,15 @@ export async function handleYoutubeExtract(request: Request) {
     providerTags: video.tags,
   });
   const descriptionContributed = parsedRecipe.ingredients.length > 0 || parsedRecipe.steps.length > 0;
-  const extractionMethods = [
-    ...(descriptionContributed || (!authorCommentFallback.usedAuthorComment && !transcriptFallback.usedTranscript)
-      ? [...DEFAULT_EXTRACTION_METHODS]
-      : []),
-    ...(authorCommentFallback.usedAuthorComment ? [COMMENT_EXTRACTION_METHOD] : []),
-    ...(transcriptFallback.usedTranscript ? [CAPTION_EXTRACTION_METHOD] : []),
-  ];
+  const extractionMethods = llmFallback.usedLlm && llmFallback.extractionMethods.length > 0
+    ? llmFallback.extractionMethods
+    : [
+        ...(descriptionContributed || (!authorCommentFallback.usedAuthorComment && !transcriptFallback.usedTranscript)
+          ? [...DEFAULT_EXTRACTION_METHODS]
+          : []),
+        ...(authorCommentFallback.usedAuthorComment ? [COMMENT_EXTRACTION_METHOD] : []),
+        ...(transcriptFallback.usedTranscript ? [CAPTION_EXTRACTION_METHOD] : []),
+      ];
   const sourceProviders = [
     "youtube_videos_list",
     "description_parser",
@@ -4364,6 +5986,7 @@ export async function handleYoutubeExtract(request: Request) {
     ...(transcriptFallback.usedTranscript
       ? buildTranscriptSourceProviders(transcriptFallback.meta)
       : []),
+    ...llmFallback.sourceProviders,
   ];
   const remainingDescriptionBlockingIssues = descriptionParse.blockingIssues.filter((issue) => {
     if (issue === "ingredients" && finalParsedRecipe.ingredients.length > 0) {
@@ -4429,6 +6052,7 @@ export async function handleYoutubeExtract(request: Request) {
       author_comment_provider: authorCommentFallback.meta,
       caption_capability: transcriptFallback.meta.capability,
       transcript_provider: transcriptFallback.meta,
+      llm_extractor: llmFallback.meta,
       partial_extraction: finalParsedRecipe.ingredients.length > 0 && finalParsedRecipe.steps.length === 0,
     },
     draft_json: data as unknown as Record<string, unknown>,
