@@ -1052,6 +1052,9 @@ describe("recipe detail screen", () => {
     expect(screen.getAllByText("빵 반죽")).toHaveLength(1);
     expect(screen.getByText("커스터드 크림")).toBeTruthy();
     expect(screen.queryByText("[빵 반죽] 밀가루와 설탕을 섞어 주세요.")).toBeNull();
+    expect(screen.getByText("빵 반죽").closest("li")?.className).toContain(
+      "recipe-step-section-heading",
+    );
   });
 
   it("does not display view_count in the metrics area", async () => {
@@ -1117,6 +1120,144 @@ describe("recipe detail screen", () => {
 
     expect(screen.getByTestId("recipe-youtube-source-note")).toBeTruthy();
     expect(screen.getByText("YouTube에서 가져온 레시피")).toBeTruthy();
+  });
+
+  it("places the mobile YouTube source note and source tag before the recipe title", async () => {
+    fetchJson.mockResolvedValue(
+      buildRecipeDetail({
+        source_type: "youtube",
+        source: {
+          youtube_url: "https://www.youtube.com/watch?v=abc",
+          youtube_video_id: "abc",
+        },
+        tags: ["딸기푸딩", "노오븐디저트"],
+      }),
+    );
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    const title = await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+    const note = screen.getByTestId("recipe-youtube-source-note");
+    const youtubeTag = screen.getByRole("link", { name: "유튜브" });
+
+    expect(note.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(youtubeTag.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(youtubeTag.getAttribute("href")).toBe("https://www.youtube.com/watch?v=abc");
+    expect(youtubeTag.getAttribute("target")).toBe("_blank");
+  });
+
+  it("matches mobile cooking method chips to the web treatment without left card rails", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    await userEvent.click(screen.getByRole("tab", { name: "만들기" }));
+
+    const firstInstruction = screen.getByText(MOCK_RECIPE_DETAIL.steps[0]!.instruction);
+    const stepCard = firstInstruction.closest("li");
+    const method = screen.getByText(MOCK_RECIPE_DETAIL.steps[0]!.cooking_method!.label);
+    const number = screen.getByText(String(MOCK_RECIPE_DETAIL.steps[0]!.step_number));
+
+    expect(stepCard?.getAttribute("style") ?? "").not.toContain("border-left");
+    expect(method.getAttribute("style") ?? "").toContain("background-color");
+    expect(number.className).toContain("leading-none");
+  });
+
+  it("adds horizontal breathing room to mobile ingredient rows", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    const ingredientName = screen.getByText(MOCK_RECIPE_DETAIL.ingredients[0]!.standard_name);
+    expect(ingredientName.closest("li")?.className).toContain("px-2");
+  });
+
+  it("uses the desktop YouTube source tag as the original video link and hides the old description copy", async () => {
+    installMatchMedia(true);
+    fetchJson.mockResolvedValue(
+      buildRecipeDetail({
+        source_type: "youtube",
+        source: {
+          youtube_url: "https://www.youtube.com/watch?v=abc",
+          youtube_video_id: "abc",
+        },
+        tags: ["딸기푸딩", "노오븐디저트"],
+      }),
+    );
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    const title = await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+    const note = screen.getByTestId("recipe-youtube-source-note");
+    const youtubeTag = screen.getByRole("link", { name: "유튜브" });
+
+    expect(note.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(youtubeTag.getAttribute("href")).toBe("https://www.youtube.com/watch?v=abc");
+    expect(screen.queryByText(MOCK_RECIPE_DETAIL.description!)).toBeNull();
+  });
+
+  it("keeps desktop recipe photos to one tile when only one registered photo exists", async () => {
+    installMatchMedia(true);
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    expect(screen.getByRole("button", { name: "레시피 사진 크게 보기" })).toBeTruthy();
+    expect(screen.queryByLabelText("레시피 사진 2 보기")).toBeNull();
+  });
+
+  it("moves desktop engagement counts into the summary row and removes duplicate rail stats", async () => {
+    installMatchMedia(true);
+    const { container } = render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    const summary = screen.getByLabelText("레시피 요약");
+    const summaryScope = within(summary);
+
+    expect(summaryScope.getByText("기본인분")).toBeTruthy();
+    expect(summaryScope.getByText("플래너등록")).toBeTruthy();
+    expect(summaryScope.getByText("요리완료")).toBeTruthy();
+    expect(summaryScope.getByRole("button", { name: "좋아요 203" })).toBeTruthy();
+    expect(summaryScope.getByRole("button", { name: "저장 89" })).toBeTruthy();
+    expect(summaryScope.getByRole("button", { name: "공유하기" })).toBeTruthy();
+    expect(summaryScope.queryByText("재료")).toBeNull();
+    expect(summaryScope.queryByText("만들기")).toBeNull();
+    expect(container.querySelector(".web-recipe-rail-stats")).toBeNull();
+  });
+
+  it("lays out desktop ingredients and steps in a shared horizontal reading grid", async () => {
+    installMatchMedia(true);
+    const { container } = render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    const readingGrid = container.querySelector(".web-recipe-reading-grid");
+    expect(readingGrid).not.toBeNull();
+    expect(readingGrid?.textContent).toContain("재료");
+    expect(readingGrid?.textContent).toContain("만들기");
   });
 
   it("does not show YouTube source note for non-youtube recipes", async () => {

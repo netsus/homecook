@@ -789,7 +789,8 @@ export function RecipeDetailScreen({
       }
     : { background: heroBackground };
   const minutesLabel = getRecipeMinutesLabel(recipe);
-  const displayTags = recipe.tags.slice(0, 3);
+  const displayTags = getVisibleRecipeTags(recipe);
+  const youtubeSourceHref = getYoutubeSourceHref(recipe);
   const recipeDetailReturnHref = buildReturnHref(`/recipe/${recipeId}`, {
     returnSurface: "recipe.detail",
     returnTo: appReturn.href,
@@ -1244,6 +1245,11 @@ export function RecipeDetailScreen({
         </section>
 
         <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] p-5">
+          {recipe.source_type === "youtube" ? (
+            <p className="mb-2 text-[12px] text-[var(--text-3)]" data-testid="recipe-youtube-source-note">
+              YouTube에서 가져온 레시피
+            </p>
+          ) : null}
           {displayTags.length > 0 ? (
             <div className="mb-2 flex flex-wrap items-center gap-1.5" data-testid="recipe-detail-tags">
               {displayTags.map((tag, index) => (
@@ -1259,16 +1265,32 @@ export function RecipeDetailScreen({
                   {tag}
                 </span>
               ))}
+              {youtubeSourceHref ? (
+                <a
+                  className="rounded-full bg-[var(--brand-soft)] px-[9px] py-1 text-[12px] font-extrabold text-[var(--brand)]"
+                  href={youtubeSourceHref}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  유튜브
+                </a>
+              ) : null}
+            </div>
+          ) : youtubeSourceHref ? (
+            <div className="mb-2 flex flex-wrap items-center gap-1.5" data-testid="recipe-detail-tags">
+              <a
+                className="rounded-full bg-[var(--brand-soft)] px-[9px] py-1 text-[12px] font-extrabold text-[var(--brand)]"
+                href={youtubeSourceHref}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                유튜브
+              </a>
             </div>
           ) : null}
           <h1 className="mb-2.5 text-[24px] font-bold leading-tight text-[var(--foreground)]">
             {recipe.title}
           </h1>
-          {recipe.source_type === "youtube" ? (
-            <p className="mb-1.5 text-[12px] text-[var(--text-3)]" data-testid="recipe-youtube-source-note">
-              YouTube에서 가져온 레시피
-            </p>
-          ) : null}
           <div className="flex items-center gap-2 text-[12px] text-[var(--text-2)]">
             <ClockIcon />
             <span>{minutesLabel}</span>
@@ -1367,11 +1389,11 @@ export function RecipeDetailScreen({
                 return (
                   <React.Fragment key={ingredient.id}>
                     {showSectionHeading ? (
-                      <li className="border-t border-[var(--surface-subtle)] pt-4 text-[13px] font-bold text-[var(--brand)] first:border-t-0 first:pt-0">
+                      <li className="border-t border-[var(--surface-subtle)] px-2 pt-4 text-[13px] font-bold text-[var(--brand)] first:border-t-0 first:pt-0">
                         {sectionLabel}
                       </li>
                     ) : null}
-                    <li className="flex items-center justify-between border-b border-[var(--surface-subtle)] py-3 text-[15px] last:border-b-0">
+                    <li className="flex items-center justify-between border-b border-[var(--surface-subtle)] px-2 py-3 text-[15px] last:border-b-0">
                       <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--foreground)]">
                         <span>{ingredient.standard_name}</span>
                         {ingredient.ingredient_type === "TO_TASTE" ? (
@@ -1402,19 +1424,14 @@ export function RecipeDetailScreen({
                 return (
                   <React.Fragment key={step.id}>
                     {showSectionHeading ? (
-                      <li className="list-none px-1 pt-1 text-[13px] font-bold text-[var(--brand)]">
+                      <li className="recipe-step-section-heading list-none">
                         {sectionLabel}
                       </li>
                     ) : null}
-                    <li
-                      className="rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[0_2px_8px_var(--shadow-color-soft)]"
-                      style={{
-                        borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method?.color_key)}`,
-                      }}
-                    >
+                    <li className="rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[0_2px_8px_var(--shadow-color-soft)]">
                   <div className="mb-2 flex items-center gap-2">
                     <span
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold leading-none"
                       style={{
                         backgroundColor: getCookingMethodTint(
                           step.cooking_method?.color_key,
@@ -1426,11 +1443,21 @@ export function RecipeDetailScreen({
                     >
                       {step.step_number}
                     </span>
-                    <span className="flex-1 text-[15px] font-bold text-[var(--foreground)]">
+                    <span
+                      className="rounded px-2 py-0.5 text-[12px] font-bold"
+                      style={{
+                        backgroundColor: getCookingMethodTint(
+                          step.cooking_method?.color_key,
+                        ),
+                        color: resolveCookingMethodDark(
+                          step.cooking_method?.color_key,
+                        ),
+                      }}
+                    >
                       {step.cooking_method?.label ?? "만들기"}
                     </span>
                     {step.duration_text ? (
-                      <span className="text-[12px] text-[var(--text-2)]">
+                      <span className="ml-auto text-[12px] text-[var(--text-2)]">
                         {step.duration_text}
                       </span>
                     ) : null}
@@ -1605,8 +1632,12 @@ function RecipeDetailWebView({
   selectedServings: number;
 }) {
   const photos = getRecipePhotoSet(recipe);
+  const photoGridClassName = photos.length > 1
+    ? "web-recipe-photos"
+    : "web-recipe-photos web-recipe-photos-single";
   const sourceLabel = formatRecipeSourceLabel(recipe.source_type);
-  const minutesLabel = getRecipeMinutesLabel(recipe);
+  const visibleTags = getVisibleRecipeTags(recipe);
+  const youtubeSourceHref = getYoutubeSourceHref(recipe);
 
   return (
     <WebShell className="web-recipe-detail" wide>
@@ -1627,7 +1658,7 @@ function RecipeDetailWebView({
 
         <div className="web-recipe-layout">
           <div className="web-recipe-main">
-            <div className="web-recipe-photos">
+            <div className={photoGridClassName}>
               <button
                 aria-label="레시피 사진 크게 보기"
                 className="web-recipe-photo-main"
@@ -1636,69 +1667,66 @@ function RecipeDetailWebView({
               >
                 <span style={{ backgroundImage: `url(${photos[0]})` }} />
               </button>
-              <div className="web-recipe-photo-side">
-                {photos.slice(1, 4).map((photo, index) => (
-                  <button
-                    aria-label={`레시피 사진 ${index + 2} 보기`}
-                    className="web-recipe-photo-thumb"
-                    key={photo}
-                    onClick={() => onOpenLightbox(index + 1)}
-                    type="button"
-                  >
-                    <span style={{ backgroundImage: `url(${photo})` }} />
-                    {index === 2 ? (
-                      <span className="web-recipe-photo-more">
-                        <GridIcon />
-                        사진 전체
-                      </span>
-                    ) : null}
-                  </button>
-                ))}
-              </div>
+              {photos.length > 1 ? (
+                <div className="web-recipe-photo-side">
+                  {photos.slice(1, 4).map((photo, index) => (
+                    <button
+                      aria-label={`레시피 사진 ${index + 2} 보기`}
+                      className="web-recipe-photo-thumb"
+                      key={photo}
+                      onClick={() => onOpenLightbox(index + 1)}
+                      type="button"
+                    >
+                      <span style={{ backgroundImage: `url(${photo})` }} />
+                      {index === 2 ? (
+                        <span className="web-recipe-photo-more">
+                          <GridIcon />
+                          사진 전체
+                        </span>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             <section className="web-recipe-titleblock">
-              <h1 className="web-recipe-title">{recipe.title}</h1>
               {recipe.source_type === "youtube" ? (
-                <p className="mt-1 text-[13px] text-[var(--text-3)]" data-testid="recipe-youtube-source-note">
+                <p className="web-recipe-source-note" data-testid="recipe-youtube-source-note">
                   YouTube에서 가져온 레시피
                 </p>
               ) : null}
+              <h1 className="web-recipe-title">{recipe.title}</h1>
               <div className="web-recipe-tags">
-                {recipe.tags.map((tag) => (
+                {visibleTags.map((tag) => (
                   <WebChip className="web-tag" key={tag}>
                     {tag}
                   </WebChip>
                 ))}
-                <WebChip active className="web-tag">
-                  {sourceLabel}
-                </WebChip>
+                {youtubeSourceHref ? (
+                  <a
+                    className="web-chip web-chip-active web-tag web-source-tag"
+                    href={youtubeSourceHref}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    {sourceLabel}
+                  </a>
+                ) : (
+                  <WebChip active className="web-tag">
+                    {sourceLabel}
+                  </WebChip>
+                )}
               </div>
             </section>
 
             <section aria-label="레시피 요약" className="web-recipe-meta-row">
-              <RecipeMetric label="기본" value={`${recipe.base_servings}인분`} />
-              <RecipeMetric label="재료" value={String(recipe.ingredients.length)} />
-              <RecipeMetric label="만들기" value={String(recipe.steps.length)} />
-              <RecipeMetric label="소요" value={minutesLabel} />
-            </section>
-
-            <section className="web-recipe-secondary">
-              <div className="web-recipe-secondary-meta">
-                <CalendarIcon />
-                <span>플래너 등록 </span>
-                <strong>{plannerCountLabel}</strong>
+              <div className="web-recipe-metric-group">
+                <RecipeMetric label="기본인분" value={`${recipe.base_servings}인분`} />
+                <RecipeMetric label="플래너등록" value={plannerCountLabel} />
+                <RecipeMetric label="요리완료" value={cookCountLabel} />
               </div>
-              <div className="web-recipe-secondary-actions">
-                <button
-                  aria-label="공유하기"
-                  className="web-icon-action"
-                  onClick={onShare}
-                  type="button"
-                >
-                  <ShareIcon />
-                  <span>공유</span>
-                </button>
+              <div className="web-recipe-summary-actions">
                 <button
                   aria-label={
                     isLikePending ? "좋아요 처리 중..." : `좋아요 ${likeCountLabel}`
@@ -1713,22 +1741,26 @@ function RecipeDetailWebView({
                   <span>{isLikePending ? "처리 중" : likeCountLabel}</span>
                 </button>
                 <button
-                  aria-label="저장"
+                  aria-label={`저장 ${saveCountLabel}`}
                   aria-pressed={recipe.user_status?.is_saved ?? false}
                   className="web-icon-action web-icon-action-brand"
                   onClick={() => onProtectedAction("save")}
                   type="button"
                 >
                   <BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />
-                  <span className="visually-hidden">{saveCountLabel}</span>
-                  <span>{recipe.user_status?.is_saved ? "저장됨" : "저장"}</span>
+                  <span>{saveCountLabel}</span>
+                </button>
+                <button
+                  aria-label="공유하기"
+                  className="web-icon-action"
+                  onClick={onShare}
+                  type="button"
+                >
+                  <ShareIcon />
+                  <span>공유</span>
                 </button>
               </div>
             </section>
-
-            <p className="web-recipe-description">
-              {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
-            </p>
 
             <section className="web-reading-section">
               <div className="web-reading-head">
@@ -1743,118 +1775,120 @@ function RecipeDetailWebView({
               </div>
             </section>
 
-            <section className="web-reading-section">
-              <h2 className="web-reading-title">재료</h2>
-              <ul className="web-ingredient-list">
-                {scaledIngredients.map((ingredient, idx) => {
-                  const quantityText = ingredient.scaledText.startsWith(
-                    `${ingredient.standard_name} `,
-                  )
-                    ? ingredient.scaledText.slice(ingredient.standard_name.length + 1)
-                    : ingredient.scaledText;
-                  const sectionLabel = normalizeRecipeSectionLabel(ingredient.component_label);
-                  const previousLabel = idx > 0
-                    ? scaledIngredients[idx - 1]?.component_label
-                    : null;
-                  const showSectionHeading = shouldShowSectionHeading(
-                    sectionLabel,
-                    previousLabel,
-                  );
+            <div className="web-recipe-reading-grid">
+              <section className="web-reading-section web-reading-section-grid">
+                <h2 className="web-reading-title">재료</h2>
+                <ul className="web-ingredient-list">
+                  {scaledIngredients.map((ingredient, idx) => {
+                    const quantityText = ingredient.scaledText.startsWith(
+                      `${ingredient.standard_name} `,
+                    )
+                      ? ingredient.scaledText.slice(ingredient.standard_name.length + 1)
+                      : ingredient.scaledText;
+                    const sectionLabel = normalizeRecipeSectionLabel(ingredient.component_label);
+                    const previousLabel = idx > 0
+                      ? scaledIngredients[idx - 1]?.component_label
+                      : null;
+                    const showSectionHeading = shouldShowSectionHeading(
+                      sectionLabel,
+                      previousLabel,
+                    );
 
-                  return (
-                    <React.Fragment key={ingredient.id}>
-                      {showSectionHeading ? (
-                        <li className="px-1 pt-3 text-[13px] font-bold text-[var(--brand)] first:pt-0">
-                          {sectionLabel}
+                    return (
+                      <React.Fragment key={ingredient.id}>
+                        {showSectionHeading ? (
+                          <li className="px-1 pt-3 text-[13px] font-bold text-[var(--brand)] first:pt-0">
+                            {sectionLabel}
+                          </li>
+                        ) : null}
+                        <li className="web-ingredient-row">
+                          <span className="web-ingredient-name">
+                            {ingredient.standard_name}
+                            {ingredient.ingredient_type === "TO_TASTE" ? (
+                              <span className="web-ingredient-badge">취향껏</span>
+                            ) : null}
+                          </span>
+                          <span className="web-ingredient-amount">{quantityText}</span>
                         </li>
-                      ) : null}
-                      <li className="web-ingredient-row">
-                        <span className="web-ingredient-name">
-                          {ingredient.standard_name}
-                          {ingredient.ingredient_type === "TO_TASTE" ? (
-                            <span className="web-ingredient-badge">취향껏</span>
-                          ) : null}
-                        </span>
-                        <span className="web-ingredient-amount">{quantityText}</span>
-                      </li>
-                    </React.Fragment>
-                  );
-                })}
-              </ul>
-              <div className="web-pantry-note">
-                <CheckIcon />
-                팬트리에 있는 재료는 만들기 전에 다시 확인해 주세요
-              </div>
-            </section>
+                      </React.Fragment>
+                    );
+                  })}
+                </ul>
+                <div className="web-pantry-note">
+                  <CheckIcon />
+                  팬트리에 있는 재료는 만들기 전에 다시 확인해 주세요
+                </div>
+              </section>
 
-            <section className="web-reading-section">
-              <h2 className="web-reading-title">만들기</h2>
-              <ol className="web-step-list">
-                {recipe.steps.map((step, idx) => {
-                  const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
-                  const previousLabel = idx > 0 ? recipe.steps[idx - 1]?.component_label : null;
-                  const showSectionHeading = shouldShowSectionHeading(sectionLabel, previousLabel);
+              <section className="web-reading-section web-reading-section-grid">
+                <h2 className="web-reading-title">만들기</h2>
+                <ol className="web-step-list">
+                  {recipe.steps.map((step, idx) => {
+                    const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
+                    const previousLabel = idx > 0 ? recipe.steps[idx - 1]?.component_label : null;
+                    const showSectionHeading = shouldShowSectionHeading(sectionLabel, previousLabel);
 
-                  return (
-                    <React.Fragment key={step.id}>
-                      {showSectionHeading ? (
-                        <li className="px-1 pt-2 text-[13px] font-bold text-[var(--brand)] first:pt-0">
-                          {sectionLabel}
-                        </li>
-                      ) : null}
-                      <li className="web-step-row">
-                        <span
-                          className="web-step-num"
-                          style={{
-                            backgroundColor: getCookingMethodTint(
-                              step.cooking_method?.color_key,
-                            ),
-                            color: resolveCookingMethodDark(
-                              step.cooking_method?.color_key,
-                            ),
-                          }}
-                        >
-                          {step.step_number}
-                        </span>
-                        <div className="web-step-body">
-                          <div className="web-step-meta">
-                            <span
-                              className="web-step-method"
-                              style={{
-                                backgroundColor: getCookingMethodTint(
-                                  step.cooking_method?.color_key,
-                                ),
-                                color: resolveCookingMethodDark(
-                                  step.cooking_method?.color_key,
-                                ),
-                              }}
-                            >
-                              {step.cooking_method?.label ?? "만들기"}
-                            </span>
-                            {step.duration_text ? (
-                              <span className="web-step-duration">
-                                {step.duration_text}
+                    return (
+                      <React.Fragment key={step.id}>
+                        {showSectionHeading ? (
+                          <li className="web-step-section-heading">
+                            {sectionLabel}
+                          </li>
+                        ) : null}
+                        <li className="web-step-row">
+                          <span
+                            className="web-step-num"
+                            style={{
+                              backgroundColor: getCookingMethodTint(
+                                step.cooking_method?.color_key,
+                              ),
+                              color: resolveCookingMethodDark(
+                                step.cooking_method?.color_key,
+                              ),
+                            }}
+                          >
+                            {step.step_number}
+                          </span>
+                          <div className="web-step-body">
+                            <div className="web-step-meta">
+                              <span
+                                className="web-step-method"
+                                style={{
+                                  backgroundColor: getCookingMethodTint(
+                                    step.cooking_method?.color_key,
+                                  ),
+                                  color: resolveCookingMethodDark(
+                                    step.cooking_method?.color_key,
+                                  ),
+                                }}
+                              >
+                                {step.cooking_method?.label ?? "만들기"}
+                              </span>
+                              {step.duration_text ? (
+                                <span className="web-step-duration">
+                                  {step.duration_text}
+                                </span>
+                              ) : null}
+                            </div>
+                            <p>
+                              {stripMatchingSectionPrefix(
+                                step.instruction,
+                                step.component_label,
+                              ) ?? step.instruction}
+                            </p>
+                            {step.heat_level ? (
+                              <span className="web-step-heat">
+                                불 세기 {step.heat_level}
                               </span>
                             ) : null}
                           </div>
-                          <p>
-                            {stripMatchingSectionPrefix(
-                              step.instruction,
-                              step.component_label,
-                            ) ?? step.instruction}
-                          </p>
-                          {step.heat_level ? (
-                            <span className="web-step-heat">
-                              불 세기 {step.heat_level}
-                            </span>
-                          ) : null}
-                        </div>
-                      </li>
-                    </React.Fragment>
-                  );
-                })}
-              </ol>
-            </section>
+                        </li>
+                      </React.Fragment>
+                    );
+                  })}
+                </ol>
+              </section>
+            </div>
           </div>
 
           <aside className="web-recipe-rail">
@@ -1873,12 +1907,6 @@ function RecipeDetailWebView({
                     <CookIcon />
                     요리하기
                   </WebButton>
-                </div>
-                <div className="web-recipe-rail-stats">
-                  <RecipeRailStat label="좋아요" value={likeCountLabel} />
-                  <RecipeRailStat label="저장" value={saveCountLabel} />
-                  <RecipeRailStat label="플래너 등록" value={plannerCountLabel} />
-                  <RecipeRailStat label="요리완료" value={cookCountLabel} />
                 </div>
                 <p className="web-recipe-rail-note">
                   <InfoIcon />
@@ -1905,19 +1933,6 @@ function RecipeMetric({ label, value }: { label: string; value: string }) {
     <div className="web-recipe-metric">
       <div className="web-recipe-metric-value">{value}</div>
       <div className="web-recipe-metric-label">{label}</div>
-    </div>
-  );
-}
-
-function RecipeRailStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      aria-label={`${label} ${value}`}
-      className="web-recipe-rail-stat"
-      role="status"
-    >
-      <span>{label}</span>
-      <strong>{value}</strong>
     </div>
   );
 }
@@ -1964,11 +1979,26 @@ function RecipeWebProfileButton() {
 }
 
 function getRecipePhotoSet(recipe: RecipeDetail) {
-  const first = recipe.thumbnail_url ?? WEB_RECIPE_FALLBACK_IMAGES[0];
-  return [
-    first,
-    ...WEB_RECIPE_FALLBACK_IMAGES.filter((photo) => photo !== first),
-  ].slice(0, 4);
+  if (recipe.thumbnail_url) {
+    return [recipe.thumbnail_url];
+  }
+
+  return [WEB_RECIPE_FALLBACK_IMAGES[0]];
+}
+
+function getYoutubeSourceHref(recipe: RecipeDetail) {
+  if (recipe.source_type !== "youtube") {
+    return null;
+  }
+
+  return recipe.source?.youtube_url ?? null;
+}
+
+function getVisibleRecipeTags(recipe: RecipeDetail) {
+  const sourceLabel = formatRecipeSourceLabel(recipe.source_type);
+  return recipe.tags
+    .filter((tag) => tag !== sourceLabel)
+    .slice(0, 3);
 }
 
 function RecipeDetailLoadingSkeleton() {
