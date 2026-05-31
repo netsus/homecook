@@ -14,7 +14,7 @@ describe("recipe card", () => {
     cleanup();
   });
 
-  it("renders title, meta row, and tag pills in prototype parity layout", () => {
+  it("renders title, web-parity meta row, and tag pills in prototype parity layout", () => {
     render(<RecipeCard recipe={MOCK_RECIPE_CARD} />);
 
     const title = screen.getByRole("heading", { name: MOCK_RECIPE_CARD.title });
@@ -25,13 +25,11 @@ describe("recipe card", () => {
     // Title is rendered as h3
     expect(title.tagName).toBe("H3");
 
-    // Meta row contains servings info
+    // Meta row matches the web card: views and saves, without servings.
     expect(screen.getByTestId("recipe-card-bookmark")).toBeTruthy();
-    expect(
-      screen.getByText(
-        new RegExp(`기본 ${MOCK_RECIPE_CARD.base_servings}인`),
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(new RegExp(`조회`))).toBeTruthy();
+    expect(screen.getByText(new RegExp(`저장`))).toBeTruthy();
+    expect(screen.queryByText(new RegExp(`기본 ${MOCK_RECIPE_CARD.base_servings}인`))).toBeNull();
 
     // Tags are rendered as pills
     expect(screen.getByText(MOCK_RECIPE_CARD.tags[0])).toBeTruthy();
@@ -119,5 +117,15 @@ describe("recipe card", () => {
     expect(badge.className).toContain("inline-flex");
     expect(badge.className).toContain("items-center");
     expect(badge.className).toContain("justify-center");
+  });
+
+  it("adds the same pressed visual affordance as the web card", () => {
+    const { container } = render(<RecipeCard recipe={MOCK_RECIPE_CARD} />);
+    const card = container.querySelector("article");
+    const imageLayer = container.querySelector("[data-slot='recipe-card-image-layer']");
+
+    expect(card?.className).toContain("active:scale-[0.99]");
+    expect(imageLayer?.className).toContain("group-hover:scale-105");
+    expect(imageLayer?.className).toContain("group-active:scale-105");
   });
 });

@@ -139,6 +139,26 @@ describe("recipe API contracts", () => {
     expect(listQuery.order).toHaveBeenNthCalledWith(2, "id", { ascending: false });
   });
 
+  it("maps cook_count sort to completed-cooking count descending", async () => {
+    const listQuery = createQuery({
+      data: [],
+      error: null,
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      from: vi.fn(() => listQuery),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/route");
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/recipes?sort=cook_count"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(listQuery.order).toHaveBeenNthCalledWith(1, "cook_count", { ascending: false });
+    expect(listQuery.order).toHaveBeenNthCalledWith(2, "id", { ascending: true });
+  });
+
   it("returns a wrapped ingredient list for standard-name matches", async () => {
     const ingredientsQuery = createQuery({
       data: [

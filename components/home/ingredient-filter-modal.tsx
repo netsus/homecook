@@ -3,7 +3,6 @@
 import React, {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -241,13 +240,6 @@ export function IngredientFilterModal({
     };
   }, [activeCategory, debouncedQuery, isOpen, reloadKey]);
 
-  const selectionMessage = useMemo(() => {
-    if (draftIngredientIds.length === 0) {
-      return "재료를 선택해 레시피를 좁혀보세요";
-    }
-
-    return `${draftIngredientIds.length}개 선택됨`;
-  }, [draftIngredientIds.length]);
   const applyButtonLabel =
     draftIngredientIds.length > 0 ? `${draftIngredientIds.length}개 적용` : "적용";
   const isApplyDisabled =
@@ -273,7 +265,6 @@ export function IngredientFilterModal({
         <WebDialog
           aria-labelledby="ingredient-filter-title"
           ref={dialogRef}
-          size="wide"
         >
           <WebDialogHeader>
             <div>
@@ -380,10 +371,6 @@ export function IngredientFilterModal({
           </WebDialogBody>
 
           <WebDialogFooter>
-            <div className="web-modal-footer-note">
-              <strong>{selectionMessage}</strong>
-              <span className="ml-2">선택 재료가 모두 포함된 레시피만 보여줘요.</span>
-            </div>
             <WebButton
               disabled={draftIngredientIds.length === 0}
               onClick={() => setDraftIngredientIds([])}
@@ -406,25 +393,10 @@ export function IngredientFilterModal({
   return (
     <AppBottomSheet
       ariaLabelledBy="ingredient-filter-title"
-      badge={
-        draftIngredientIds.length > 0 ? (
-          <span className="rounded-[var(--radius-full)] border border-[color-mix(in_srgb,var(--brand)_16%,transparent)] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)] px-2.5 py-1 text-[11px] font-semibold text-[var(--brand)]">
-            {draftIngredientIds.length}개 선택
-          </span>
-        ) : undefined
-      }
       closeButtonRef={closeButtonRef}
       description="원하는 재료를 골라 레시피를 좁혀요"
       footer={
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-[var(--wave1-ink)]">
-              {selectionMessage}
-            </p>
-            <p className="text-xs text-[var(--wave1-text-2)]">
-              선택 재료가 모두 포함된 레시피만 보여줘요.
-            </p>
-          </div>
+        <div>
           <AppModalFooterActions
             cancelDisabled={draftIngredientIds.length === 0}
             cancelLabel="초기화"
@@ -507,7 +479,7 @@ export function IngredientFilterModal({
             return (
               <li key={ingredient.id}>
                 <label
-                  className={`flex min-h-[54px] cursor-pointer items-center rounded-[var(--radius-card)] border px-3 py-2 text-[13px] font-semibold transition ${
+                  className={`relative flex min-h-[54px] cursor-pointer items-center justify-center rounded-[var(--radius-card)] border px-3 py-2 text-center text-[14px] font-semibold transition ${
                     isChecked
                       ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--foreground)]"
                       : "border-[var(--line-strong)] bg-[var(--surface)] text-[var(--foreground)]"
@@ -519,11 +491,11 @@ export function IngredientFilterModal({
                     onChange={() => toggleIngredient(ingredient.id)}
                     type="checkbox"
                   />
-                  <span className="min-w-0 flex-1 truncate">{ingredient.standard_name}</span>
+                  <span className="min-w-0 truncate">{ingredient.standard_name}</span>
                   {isChecked ? (
                     <span
                       aria-hidden="true"
-                      className="ml-1 shrink-0 text-[15px] font-bold text-[var(--brand)]"
+                      className="absolute right-3 text-[15px] font-bold text-[var(--brand)]"
                     >
                       ✓
                     </span>

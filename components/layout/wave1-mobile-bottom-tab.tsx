@@ -57,9 +57,9 @@ export function Wave1MobileBottomTab({
             <Link
               aria-current={active ? "page" : undefined}
               className={[
-                "flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-[3px] py-1 text-[11px] transition-colors",
+                "bottom-tab-link flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-[3px] py-1 text-[11px] transition-colors",
                 active
-                  ? "bottom-tab-active-link font-extrabold text-[var(--foreground)]"
+                  ? "bottom-tab-active-link font-extrabold text-[var(--brand)]"
                   : "font-semibold text-[var(--wave1-text-3)] hover:text-[var(--wave1-text-2)]",
               ].join(" ")}
               href={item.href}
@@ -79,7 +79,7 @@ function HomeIcon({ active }: { active: boolean }) {
   return (
     <svg
       aria-hidden="true"
-      className={active ? "bottom-tab-active-icon h-6 w-6" : "h-6 w-6"}
+      className={active ? "bottom-tab-icon bottom-tab-active-icon h-6 w-6" : "bottom-tab-icon h-6 w-6"}
       fill={active ? "currentColor" : "none"}
       stroke="currentColor"
       strokeLinejoin="round"
@@ -95,7 +95,7 @@ function CalendarIcon({ active }: { active: boolean }) {
   return (
     <svg
       aria-hidden="true"
-      className={active ? "bottom-tab-active-icon h-6 w-6" : "h-6 w-6"}
+      className={active ? "bottom-tab-icon bottom-tab-active-icon h-6 w-6" : "bottom-tab-icon h-6 w-6"}
       data-testid="bottom-tab-icon-planner"
       fill={active ? "currentColor" : "none"}
       stroke="currentColor"
@@ -131,7 +131,7 @@ function PantryIcon({ active }: { active: boolean }) {
   return (
     <svg
       aria-hidden="true"
-      className={active ? "bottom-tab-active-icon h-6 w-6" : "h-6 w-6"}
+      className={active ? "bottom-tab-icon bottom-tab-active-icon h-6 w-6" : "bottom-tab-icon h-6 w-6"}
       data-testid="bottom-tab-icon-pantry-fridge"
       fill={active ? "currentColor" : "none"}
       stroke="currentColor"
@@ -151,7 +151,7 @@ function UserIcon({ active }: { active: boolean }) {
   return (
     <svg
       aria-hidden="true"
-      className={active ? "bottom-tab-active-icon h-6 w-6" : "h-6 w-6"}
+      className={active ? "bottom-tab-icon bottom-tab-active-icon h-6 w-6" : "bottom-tab-icon h-6 w-6"}
       fill={active ? "currentColor" : "none"}
       stroke="currentColor"
       strokeLinecap="round"

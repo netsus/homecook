@@ -5,6 +5,7 @@ const SORT_KEYS: RecipeSortKey[] = [
   "latest",
   "save_count",
   "plan_count",
+  "cook_count",
 ];
 
 export function parseRecipeSortKey(value: string | null): RecipeSortKey {

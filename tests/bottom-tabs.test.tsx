@@ -37,17 +37,19 @@ describe("BottomTabs", () => {
 
     const activeTab = screen.getByRole("link", { current: "page" });
     expect(activeTab.textContent).toContain("팬트리");
-    expect(activeTab.className).toContain("text-[var(--foreground)]");
+    expect(activeTab.className).toContain("bottom-tab-link");
+    expect(activeTab.className).toContain("text-[var(--brand)]");
     expect(screen.getByTestId("bottom-tab-icon-pantry-fridge")).toBeTruthy();
   });
 
-  it("renders the planner selected icon with the white center dot and pop animation", () => {
+  it("renders the planner selected icon with a stable selected icon class", () => {
     render(<BottomTabs currentTab="planner" />);
 
     const activeTab = screen.getByRole("link", { current: "page" });
     const plannerIcon = activeTab.querySelector("[data-testid='bottom-tab-icon-planner']");
 
     expect(plannerIcon?.getAttribute("class")).toContain("bottom-tab-active-icon");
+    expect(plannerIcon?.getAttribute("class")).toContain("bottom-tab-icon");
     expect(
       activeTab.querySelector("[data-testid='bottom-tab-planner-center-dot']"),
     ).toBeTruthy();
