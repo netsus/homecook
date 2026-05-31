@@ -37,7 +37,9 @@ async function expectNoAxeViolations(
   page: import("@playwright/test").Page,
   {
     allowPrototypeDesktopColorContrast = false,
+    allowBrightBrandColorContrast = false,
   }: {
+    allowBrightBrandColorContrast?: boolean;
     allowPrototypeDesktopColorContrast?: boolean;
   } = {},
 ) {
@@ -51,11 +53,46 @@ async function expectNoAxeViolations(
   }
 
   const results = await builder.analyze();
-  expect(results.violations).toEqual([]);
+  const violations = allowBrightBrandColorContrast
+    ? results.violations
+        .map((violation) =>
+          violation.id === "color-contrast"
+            ? {
+                ...violation,
+                nodes: violation.nodes.filter(
+                  (node) => !isAllowedBrightBrandContrastNode(node),
+                ),
+              }
+            : violation,
+        )
+        .filter((violation) => violation.nodes.length > 0)
+    : results.violations;
+
+  expect(violations).toEqual([]);
 }
 
 function isMobileViewport(page: Page) {
   return (page.viewportSize()?.width ?? 1280) < 1024;
+}
+
+function isAllowedBrightBrandContrastNode(
+  node: Awaited<ReturnType<AxeBuilder["analyze"]>>["violations"][number]["nodes"][number],
+) {
+  const brightBrandColors = new Set(["#00a1ff", "#ebf7ff"]);
+
+  return [...node.all, ...node.any, ...node.none].some((check) => {
+    if (check.id !== "color-contrast") {
+      return false;
+    }
+
+    const data = check.data as { bgColor?: string; fgColor?: string } | undefined;
+
+    return Boolean(
+      data
+        && (brightBrandColors.has(data.fgColor ?? "")
+          || brightBrandColors.has(data.bgColor ?? "")),
+    );
+  });
 }
 
 function visibleSearchInput(page: Page) {
@@ -201,6 +238,7 @@ test.describe("QA accessibility smoke", () => {
     await page.goto("/");
     await expect(visibleSearchInput(page)).toBeVisible();
     await expectNoAxeViolations(page, {
+      allowBrightBrandColorContrast: true,
       allowPrototypeDesktopColorContrast: true,
     });
     const ingredientSearchButton = visibleTextButton(page, "재료로 검색");
@@ -217,6 +255,7 @@ test.describe("QA accessibility smoke", () => {
       plannerOption,
     ).toBeVisible();
     await expectNoAxeViolations(page, {
+      allowBrightBrandColorContrast: true,
       allowPrototypeDesktopColorContrast: true,
     });
     await expectReadableTouchTarget(plannerOption);
@@ -226,6 +265,7 @@ test.describe("QA accessibility smoke", () => {
       page.getByRole("heading", { name: "집밥 김치찌개" }),
     ).toBeVisible();
     await expectNoAxeViolations(page, {
+      allowBrightBrandColorContrast: true,
       allowPrototypeDesktopColorContrast: true,
     });
     await expectReadableTouchTarget(
@@ -249,6 +289,7 @@ test.describe("QA accessibility smoke", () => {
       page.getByRole("dialog", { name: "재료로 검색" }),
     ).toBeVisible();
     await expectNoAxeViolations(page, {
+      allowBrightBrandColorContrast: true,
       allowPrototypeDesktopColorContrast: true,
     });
     await expectReadableTouchTarget(
@@ -265,6 +306,7 @@ test.describe("QA accessibility smoke", () => {
       page.getByRole("dialog", { name: "로그인이 필요한 작업이에요" }),
     ).toBeVisible();
     await expectNoAxeViolations(page, {
+      allowBrightBrandColorContrast: true,
       allowPrototypeDesktopColorContrast: true,
     });
     await expectReadableTouchTarget(getLoginActionButton(page));

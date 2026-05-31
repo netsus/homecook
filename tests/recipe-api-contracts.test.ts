@@ -763,6 +763,185 @@ describe("recipe API contracts", () => {
     expect(body.data.view_count).toBe(11);
   });
 
+  it("falls back to a direct recipe update when the view-count RPC is unavailable", async () => {
+    const recipeReadQuery = createQuery({
+      data: {
+        id: "recipe-1",
+        title: "김치찌개",
+        description: null,
+        thumbnail_url: null,
+        base_servings: 2,
+        tags: ["한식"],
+        source_type: "system",
+        view_count: 10,
+        like_count: 0,
+        save_count: 0,
+        plan_count: 0,
+        cook_count: 0,
+      },
+      error: null,
+    });
+    const viewCountRpcQuery = createQuery({
+      data: null,
+      error: { message: "function public.increment_recipe_view_count does not exist" },
+    });
+    const viewCountUpdateQuery = createQuery({
+      data: {
+        id: "recipe-1",
+        view_count: 11,
+      },
+      error: null,
+    });
+    const sourceQuery = createQuery({
+      data: null,
+      error: null,
+    });
+    const ingredientsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+    const stepsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+    const recipesTable = {
+      select: vi.fn(() => recipeReadQuery),
+      update: vi.fn(() => viewCountUpdateQuery),
+    };
+    const rpc = vi.fn(() => viewCountRpcQuery);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: null },
+        })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc,
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return recipesTable;
+        if (table === "recipe_sources") return sourceQuery;
+        if (table === "recipe_ingredients") return ingredientsQuery;
+        if (table === "recipe_steps") return stepsQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/[id]/route");
+    const response = await GET(new Request("http://localhost:3000/api/v1/recipes/recipe-1"), {
+      params: Promise.resolve({ id: "recipe-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith("increment_recipe_view_count", {
+      p_recipe_id: "recipe-1",
+    });
+    expect(recipesTable.update).toHaveBeenCalledWith({ view_count: 11 });
+    expect(viewCountUpdateQuery.eq).toHaveBeenCalledWith("id", "recipe-1");
+    expect(viewCountUpdateQuery.eq).toHaveBeenCalledWith("view_count", 10);
+    expect(viewCountUpdateQuery.maybeSingle).toHaveBeenCalled();
+    expect(body.data.view_count).toBe(11);
+  });
+
+  it("retries the direct view-count fallback when a concurrent update wins first", async () => {
+    const recipeReadQuery = createQuery({
+      data: {
+        id: "recipe-1",
+        title: "김치찌개",
+        description: null,
+        thumbnail_url: null,
+        base_servings: 2,
+        tags: ["한식"],
+        source_type: "system",
+        view_count: 10,
+        like_count: 0,
+        save_count: 0,
+        plan_count: 0,
+        cook_count: 0,
+      },
+      error: null,
+    });
+    const viewCountRpcQuery = createQuery({
+      data: null,
+      error: { message: "function public.increment_recipe_view_count does not exist" },
+    });
+    const missedUpdateQuery = createQuery({
+      data: null,
+      error: null,
+    });
+    const refreshedViewCountQuery = createQuery({
+      data: {
+        id: "recipe-1",
+        view_count: 11,
+      },
+      error: null,
+    });
+    const retryUpdateQuery = createQuery({
+      data: {
+        id: "recipe-1",
+        view_count: 12,
+      },
+      error: null,
+    });
+    const sourceQuery = createQuery({
+      data: null,
+      error: null,
+    });
+    const ingredientsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+    const stepsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+    const recipesTable = {
+      select: vi
+        .fn()
+        .mockImplementationOnce(() => recipeReadQuery)
+        .mockImplementationOnce(() => refreshedViewCountQuery),
+      update: vi
+        .fn()
+        .mockImplementationOnce(() => missedUpdateQuery)
+        .mockImplementationOnce(() => retryUpdateQuery),
+    };
+    const rpc = vi.fn(() => viewCountRpcQuery);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: null },
+        })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc,
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return recipesTable;
+        if (table === "recipe_sources") return sourceQuery;
+        if (table === "recipe_ingredients") return ingredientsQuery;
+        if (table === "recipe_steps") return stepsQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/[id]/route");
+    const response = await GET(new Request("http://localhost:3000/api/v1/recipes/recipe-1"), {
+      params: Promise.resolve({ id: "recipe-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(recipesTable.update).toHaveBeenNthCalledWith(1, { view_count: 11 });
+    expect(missedUpdateQuery.eq).toHaveBeenCalledWith("view_count", 10);
+    expect(refreshedViewCountQuery.eq).toHaveBeenCalledWith("id", "recipe-1");
+    expect(recipesTable.update).toHaveBeenNthCalledWith(2, { view_count: 12 });
+    expect(retryUpdateQuery.eq).toHaveBeenCalledWith("view_count", 11);
+    expect(body.data.view_count).toBe(12);
+  });
+
   it("does not serve the QA mock recipe from the real DB route when fixture mode is off", async () => {
     const recipeQuery = createQuery({
       data: null,

@@ -15,7 +15,7 @@ describe("recipe card", () => {
   });
 
   it("renders title, web-parity meta row, and tag pills in prototype parity layout", () => {
-    render(<RecipeCard recipe={MOCK_RECIPE_CARD} />);
+    const { container } = render(<RecipeCard recipe={MOCK_RECIPE_CARD} />);
 
     const title = screen.getByRole("heading", { name: MOCK_RECIPE_CARD.title });
     const titleLink = title.closest("a");
@@ -30,6 +30,7 @@ describe("recipe card", () => {
     expect(screen.getByText(new RegExp(`조회`))).toBeTruthy();
     expect(screen.getByText(new RegExp(`저장`))).toBeTruthy();
     expect(screen.queryByText(new RegExp(`기본 ${MOCK_RECIPE_CARD.base_servings}인`))).toBeNull();
+    expect(container.querySelectorAll("svg")).toHaveLength(1);
 
     // Tags are rendered as pills
     expect(screen.getByText(MOCK_RECIPE_CARD.tags[0])).toBeTruthy();
@@ -61,6 +62,20 @@ describe("recipe card", () => {
     );
 
     expect(onSave).toHaveBeenCalledWith(MOCK_RECIPE_CARD);
+  });
+
+  it("calls the card open action when the detail link is selected", async () => {
+    const onOpen = vi.fn();
+    const user = userEvent.setup();
+
+    render(<RecipeCard onOpen={onOpen} recipe={MOCK_RECIPE_CARD} />);
+
+    const detailLink = screen.getByRole("link", { name: MOCK_RECIPE_CARD.title });
+    detailLink.addEventListener("click", (event) => event.preventDefault());
+
+    await user.click(detailLink);
+
+    expect(onOpen).toHaveBeenCalledWith(MOCK_RECIPE_CARD);
   });
 
   it("renders source badges with localized Korean labels instead of raw enums", () => {
@@ -124,7 +139,7 @@ describe("recipe card", () => {
     const card = container.querySelector("article");
     const imageLayer = container.querySelector("[data-slot='recipe-card-image-layer']");
 
-    expect(card?.className).toContain("active:scale-[0.99]");
+    expect(card?.className).not.toContain("active:scale");
     expect(imageLayer?.className).toContain("group-hover:scale-105");
     expect(imageLayer?.className).toContain("group-active:scale-105");
   });

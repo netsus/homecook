@@ -13,6 +13,7 @@ interface ContentStateProps {
   variant?: "panel" | "subtle";
   className?: string;
   safeBottomPadding?: boolean;
+  showEyebrow?: boolean;
 }
 
 export function ContentState({
@@ -28,6 +29,7 @@ export function ContentState({
   variant = "panel",
   className,
   safeBottomPadding = false,
+  showEyebrow = true,
 }: ContentStateProps) {
   const shellClassName =
     (actionLabel && onAction) || safeBottomPadding
@@ -51,7 +53,7 @@ export function ContentState({
     },
     gate: {
       eyebrow: eyebrow ?? "보호된 화면",
-      eyebrowClassName: "border-[var(--line-strong)] bg-[var(--surface)] text-[var(--text-2)]",
+      eyebrowClassName: "border-[var(--brand-border)] bg-[var(--brand-soft)] text-[var(--brand-contrast)]",
       titleClassName: "text-[var(--foreground)]",
     },
     loading: {
@@ -61,9 +63,11 @@ export function ContentState({
     },
   }[tone];
   const variantClassName =
-    variant === "panel"
-      ? "rounded-[var(--radius-panel)] border border-[var(--line-strong)] bg-[var(--surface)] px-5 py-7 shadow-[0px_1px_3px_var(--shadow-color-subtle)] md:px-8 md:py-8"
-      : "rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-5 py-6";
+    tone === "gate"
+      ? "flex min-h-[min(520px,calc(100vh-176px))] items-center justify-center rounded-[var(--radius-panel)] border border-[var(--brand-border)] bg-[linear-gradient(180deg,var(--brand-alpha-08)_0%,var(--surface)_44%)] px-5 py-10 shadow-[0px_10px_28px_var(--brand-shadow-color)] md:min-h-[min(520px,calc(100vh-96px))] md:px-8 md:py-12"
+      : variant === "panel"
+        ? "rounded-[var(--radius-panel)] border border-[var(--line-strong)] bg-[var(--surface)] px-5 py-7 shadow-[0px_1px_3px_var(--shadow-color-subtle)] md:px-8 md:py-8"
+        : "rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-5 py-6";
 
   return (
     <div
@@ -72,13 +76,20 @@ export function ContentState({
       data-state-tone={tone}
     >
       <div className="mx-auto max-w-[28rem]">
-        <div
-          className={`inline-flex rounded-[var(--radius-chip)] border px-3 py-1 text-[var(--app-text-caption)] font-semibold ${toneMeta.eyebrowClassName}`.trim()}
-        >
-          <span>{toneMeta.eyebrow}</span>
-        </div>
+        {tone === "gate" ? (
+          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-[20px] bg-[var(--brand-soft)] text-[var(--brand-contrast)] shadow-[0px_8px_22px_var(--brand-shadow-color)]">
+            <LockIcon />
+          </div>
+        ) : null}
+        {showEyebrow ? (
+          <div
+            className={`inline-flex rounded-[var(--radius-chip)] border px-3 py-1 text-[var(--app-text-caption)] font-semibold ${toneMeta.eyebrowClassName}`.trim()}
+          >
+            <span>{toneMeta.eyebrow}</span>
+          </div>
+        ) : null}
         <h2
-          className={`mt-3 text-[22px] font-bold leading-[1.3] ${toneMeta.titleClassName}`.trim()}
+          className={`${showEyebrow ? "mt-3" : ""} text-[22px] font-bold leading-[1.3] ${toneMeta.titleClassName}`.trim()}
         >
           {title}
         </h2>
@@ -91,7 +102,7 @@ export function ContentState({
         {actionLabel && onAction ? (
           <div className="mt-5 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
             <button
-              className="flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-5 py-3 text-[14px] font-bold text-[var(--text-inverse)]"
+              className="flex min-h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand-contrast)] px-5 py-3 text-[14px] font-bold text-[var(--text-inverse)]"
               onClick={onAction}
               type="button"
             >
@@ -110,5 +121,23 @@ export function ContentState({
         ) : null}
       </div>
     </div>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-7 w-7"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <rect height="11" rx="2" width="18" x="3" y="11" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
   );
 }

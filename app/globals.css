@@ -2,17 +2,18 @@
 
 :root {
   /*
-   * App runtime tokens use the desktop web blue family, with a slightly deeper
-   * app blue so mobile text/buttons keep WCAG AA contrast. Desktop web colors
+   * App runtime tokens use the same bright web blue family. Desktop web colors
    * remain owned by the --web-* tokens in the 1024px media block.
    * Keep typography separate: Jua brand font is intentionally not restored.
    */
   /* ── 앱 브랜드 조절 토큰 ── */
-  --brand-primary: #0072BD;
-  --brand-primary-hover: #005f9f;
-  --brand-primary-soft: rgba(0, 114, 189, 0.08);
+  --brand-primary: #00A1FF;
+  --brand-primary-hover: #0087d7;
+  --brand-primary-accessible: #0072BD;
+  --brand-primary-accessible-hover: #0066a8;
+  --brand-primary-soft: rgba(0, 161, 255, 0.08);
   --brand-primary-border: #8BD2FF;
-  --brand-primary-rgb: 0, 114, 189;
+  --brand-primary-rgb: 0, 161, 255;
   --brand-primary-shadow-color: rgba(var(--brand-primary-rgb), 0.18);
   --brand-primary-shadow-color-strong: rgba(var(--brand-primary-rgb), 0.22);
   --brand-alpha-05: rgba(var(--brand-primary-rgb), 0.05);
@@ -30,6 +31,8 @@
   --line:       rgba(0, 0, 0, 0.08);
   --brand:      var(--brand-primary);
   --brand-deep: var(--brand-primary-hover);
+  --brand-contrast: var(--brand-primary-accessible);
+  --brand-contrast-deep: var(--brand-primary-accessible-hover);
   --brand-soft: var(--brand-primary-soft);
   --brand-border: var(--brand-primary-border);
   --brand-shadow-color: var(--brand-primary-shadow-color);
@@ -48,7 +51,7 @@
   --danger-soft: rgba(255, 59, 48, 0.10);
   --danger-border: rgba(255, 59, 48, 0.26);
   --danger-strong: #b62620;
-  --olive:      #0072bd;
+  --olive:      #00A1FF;
   --muted:      #8a8e93;
   --text-2:     #424242;
   --text-3:     #8a8e93;
@@ -161,8 +164,8 @@
   /* ── Wave1 compatibility aliases: keep old names, route app color through brand tokens ── */
   --wave1-mint: var(--brand);
   --wave1-mint-deep: var(--brand-deep);
-  --wave1-mint-contrast: var(--brand);
-  --wave1-mint-contrast-deep: var(--brand-deep);
+  --wave1-mint-contrast: var(--brand-contrast);
+  --wave1-mint-contrast-deep: var(--brand-contrast-deep);
   --wave1-mint-soft: var(--brand-soft);
   --wave1-teal: var(--brand);
   --wave1-teal-contrast: var(--brand);
@@ -243,11 +246,11 @@
 }
 
 .shopping-flow-blue-state {
-  --brand: #0072BD;
-  --brand-deep: #005f9f;
-  --brand-soft: rgba(0, 114, 189, 0.08);
+  --brand: #00A1FF;
+  --brand-deep: #0087d7;
+  --brand-soft: rgba(0, 161, 255, 0.08);
   --brand-border: #8BD2FF;
-  --olive: #005f9f;
+  --olive: #0087d7;
 }
 
 @theme inline {
@@ -3183,32 +3186,45 @@ button {
   }
 
   .web-ingredient-modal-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
     gap: 8px;
   }
 
   .web-ingredient-modal-grid .web-skeleton {
-    width: 112px;
+    width: 100%;
+    border-radius: var(--web-r-sm);
   }
 
   .web-ingredient-option {
+    position: relative;
     display: inline-flex;
     min-height: 44px;
-    min-width: 78px;
+    width: 100%;
+    min-width: 0;
     cursor: pointer;
     align-items: center;
     justify-content: center;
-    gap: 10px;
     border: 1px solid var(--web-line);
-    border-radius: var(--web-r-pill);
+    border-radius: var(--web-r-sm);
     background: var(--web-surface);
     color: var(--web-text-1);
-    padding: 0 13px;
+    padding: 0 28px;
     font-size: 14px;
     font-weight: 700;
     text-align: center;
     transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .web-ingredient-option-card {
+    border-radius: var(--web-r-sm);
+  }
+
+  .web-ingredient-option svg {
+    position: absolute;
+    right: 10px;
+    height: 16px;
+    width: 16px;
   }
 
   .web-ingredient-option-active {

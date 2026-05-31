@@ -46,9 +46,7 @@ test.describe("Slice 01 basic flow", () => {
       page
         .locator("h2:visible")
         .filter({
-          hasText: isMobileViewport(page)
-            ? "다른 조합을 찾아보세요"
-            : "조건에 맞는 레시피가 없어요",
+          hasText: "조건에 맞는 레시피가 없어요",
         })
         .first(),
     ).toBeVisible();

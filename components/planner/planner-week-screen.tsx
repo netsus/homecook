@@ -1150,21 +1150,13 @@ export function PlannerWeekScreen({
       <>
         <ContentState
           className="-mt-5 md:mt-0"
-          description="플래너를 사용하려면 로그인해주세요. 로그인 후에는 다시 플래너 화면으로 돌아옵니다."
+          description="로그인 후 보던 주간 범위로 돌아와 식단을 계속 관리할 수 있어요."
           eyebrow="플래너 접근"
           safeBottomPadding
           tone="gate"
           title="이 화면은 로그인이 필요해요"
         >
           <div className="space-y-3">
-            <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4">
-              <p className="text-sm font-semibold text-[var(--foreground)]">
-                로그인하면 원래 보던 주간 범위로 바로 복귀해요.
-              </p>
-              <p className="mt-1.5 text-xs leading-5 text-[var(--muted)]">
-                데스크톱과 모바일 모두 같은 헤더와 상태 셸 톤으로 접근을 안내합니다.
-              </p>
-            </div>
             <SocialLoginButtons nextPath="/planner" />
             <Link
               className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
@@ -1409,7 +1401,7 @@ export function PlannerWeekScreen({
                     <span
                       className={[
                         "mr-2.5 flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold",
-                        isToday ? "bg-[var(--brand)] text-[var(--text-inverse)]" : "bg-[var(--surface-fill)] text-[var(--foreground)]",
+                        isToday ? "bg-[var(--brand-contrast)] text-[var(--text-inverse)]" : "bg-[var(--surface-fill)] text-[var(--foreground)]",
                       ].join(" ")}
                     >
                       {formatWeekdayLabel(dateKey)}
