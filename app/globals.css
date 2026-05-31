@@ -324,11 +324,11 @@ button {
 }
 
 .bottom-tab-icon {
-  transition: transform 160ms ease-out;
+  transition: opacity 160ms ease-out;
 }
 
 .bottom-tab-link:active .bottom-tab-icon {
-  transform: scale(1.08);
+  opacity: 0.72;
 }
 
 .bottom-tab-active-link {
@@ -2160,8 +2160,8 @@ button {
   .web-discovery {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 28px 0 0;
+    gap: 8px;
+    padding: 20px 0 0;
     text-align: left;
   }
 
@@ -2193,7 +2193,7 @@ button {
     align-items: center;
     justify-content: flex-start;
     gap: 16px;
-    margin-top: 10px;
+    margin-top: 6px;
   }
 
   .web-search-bar {
@@ -2234,7 +2234,7 @@ button {
   }
 
   .web-theme-strip {
-    margin-top: 30px;
+    margin-top: 24px;
   }
 
   .web-theme-strip-head,
@@ -2331,7 +2331,7 @@ button {
   }
 
   .web-all-recipes {
-    margin-top: 32px;
+    margin-top: 28px;
   }
 
   .web-home-grid {
@@ -2377,6 +2377,8 @@ button {
 
   .web-sort-dropdown {
     display: inline-flex;
+    align-items: flex-end;
+    flex-direction: column;
     justify-content: flex-end;
     min-width: 176px;
   }
@@ -3183,7 +3185,7 @@ button {
   .web-ingredient-modal-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
   }
 
   .web-ingredient-modal-grid .web-skeleton {
@@ -3193,7 +3195,7 @@ button {
   .web-ingredient-option {
     display: inline-flex;
     min-height: 44px;
-    min-width: 96px;
+    min-width: 78px;
     cursor: pointer;
     align-items: center;
     justify-content: center;
@@ -3202,7 +3204,7 @@ button {
     border-radius: var(--web-r-pill);
     background: var(--web-surface);
     color: var(--web-text-1);
-    padding: 0 15px;
+    padding: 0 13px;
     font-size: 14px;
     font-weight: 700;
     text-align: center;
@@ -4118,6 +4120,19 @@ button {
     font-size: 13px;
     font-weight: 800;
     letter-spacing: 0;
+  }
+
+  .web-login-mark {
+    display: flex;
+    width: 46px;
+    height: 46px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-sm);
+    background: var(--web-brand-wash);
+    color: var(--web-brand-accessible);
   }
 
   .web-login-brand-offset {

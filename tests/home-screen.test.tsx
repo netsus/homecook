@@ -178,6 +178,42 @@ describe("home screen", () => {
     expect(container.querySelector(".web-recipe-card-meta")?.textContent).not.toContain("유튜브");
   });
 
+  it("keeps hydrated saved bookmarks visible after HOME reload", async () => {
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({ themes: [] });
+      }
+
+      return Promise.resolve({
+        items: [
+          {
+            ...MOCK_RECIPE_CARD,
+            user_status: {
+              is_saved: true,
+              saved_book_ids: ["book-saved"],
+            },
+          },
+        ],
+        next_cursor: null,
+        has_next: false,
+      });
+    });
+
+    render(<HomeScreen />);
+
+    const saveButton = await screen.findByRole("button", {
+      name: `${MOCK_RECIPE_CARD.title} 저장`,
+    });
+
+    await waitFor(() => {
+      expect(saveButton.getAttribute("aria-pressed")).toBe("true");
+    });
+  });
+
   it("removes the non-functional mobile recipe category chip rail", async () => {
     render(<HomeScreen />);
 
@@ -204,6 +240,8 @@ describe("home screen", () => {
     expect(onionCheckbox).toBeTruthy();
     expect(ingredientGrid?.className).toContain("grid-cols-2");
     expect(onionOption?.className).toContain("rounded-[var(--radius-card)]");
+    expect(onionOption?.className).toContain("text-[15px]");
+    expect(onionOption?.className).toContain("text-center");
 
     await user.click(screen.getByRole("button", { name: VEGETABLE_CATEGORY }));
     await user.type(screen.getByPlaceholderText("재료명으로 검색"), "파");
@@ -238,6 +276,23 @@ describe("home screen", () => {
       expect(window.location.search).toContain(`ingredient_ids=${ONION_ID}`);
     });
     expect(screen.getByRole("button", { name: "재료 1개" })).toBeTruthy();
+  });
+
+  it("uses the narrower desktop ingredient modal with compact centered ingredient pills", async () => {
+    const user = userEvent.setup();
+    installMatchMedia(true);
+
+    render(<HomeScreen />);
+
+    await user.click(await screen.findByRole("button", { name: /재료로 검색/ }));
+    const dialog = await screen.findByRole("dialog", { name: "재료로 검색" });
+    const onionCheckbox = await screen.findByRole("checkbox", { name: "양파" });
+    const onionOption = onionCheckbox.closest("label");
+
+    expect(dialog.className).toContain("web-dialog-narrow");
+    expect(onionOption?.className).toContain("web-ingredient-option");
+    expect(screen.queryByText("1개 선택됨")).toBeNull();
+    expect(screen.getByRole("button", { name: "적용" })).toBeTruthy();
   });
 
   it("clears the theme filter when the active theme card is tapped again", async () => {
@@ -424,6 +479,32 @@ describe("home screen", () => {
     ).toBe("empty");
   });
 
+  it("shows the desktop empty state when web recipes and themes are empty", async () => {
+    installMatchMedia(true);
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({ themes: [] });
+      }
+
+      return Promise.resolve({
+        items: [],
+        next_cursor: null,
+        has_next: false,
+      });
+    });
+
+    render(<HomeScreen />);
+
+    expect(
+      await screen.findByRole("heading", { name: "조건에 맞는 레시피가 없어요" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "초기화" })).toBeTruthy();
+  });
+
   it("keeps the recipe list visible when only themes fail", async () => {
     fetchJson.mockImplementation((input: string) => {
       if (input.startsWith("/api/v1/ingredients")) {
@@ -471,6 +552,28 @@ describe("home screen", () => {
         .closest("[data-state-kind='prototype-derived']")
         ?.getAttribute("data-state-tone"),
     ).toBe("error");
+  });
+
+  it("shows the desktop recipe error state with a retry action", async () => {
+    installMatchMedia(true);
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({ themes: [] });
+      }
+
+      return Promise.reject(new Error("recipes failed"));
+    });
+
+    render(<HomeScreen />);
+
+    expect(
+      await screen.findByRole("heading", { name: "레시피를 불러오지 못했어요" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
   });
 
   it("keeps the title search when clearing only the ingredient filter", async () => {

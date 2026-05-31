@@ -324,7 +324,7 @@ GET /recipes
 | ----- | -------------- | ------- | --------------------------------------------------------------- |
 | Query | q              | string? | 제목 검색어                                                     |
 | Query | ingredient_ids | string? | 재료 ID 콤마 구분 (AND 필터)                                    |
-| Query | sort           | string? | `view_count`(기본) / `latest` / `save_count` / `plan_count` |
+| Query | sort           | string? | `view_count`(기본) / `latest` / `save_count` / `plan_count` / `cook_count` |
 | Query | cursor         | string? | opaque 커서                                                     |
 | Query | limit          | int?    | 기본 20                                                         |
 
@@ -342,7 +342,11 @@ GET /recipes
       "view_count": 1520,
       "like_count": 340,
       "save_count": 210,
-      "source_type": "youtube"
+      "source_type": "youtube",
+      "user_status": {
+        "is_saved": true,
+        "saved_book_ids": ["uuid"]
+      }
     }
   ],
   "next_cursor": "opaque-cursor",
@@ -350,7 +354,8 @@ GET /recipes
 }
 ```
 
-> `latest`는 `recipes.created_at DESC, id DESC` 기준이다. `like_count`는 응답 지표와 좋아요 토글에는 남지만 HOME 노출 정렬 키에서는 제외한다.
+> 로그인 사용자는 목록/테마 카드에 `user_status`가 포함된다. 비로그인 또는 저장 없음은 `user_status: null` 또는 `{ "is_saved": false, "saved_book_ids": [] }`로 처리할 수 있다.
+> `latest`는 `recipes.created_at DESC, id DESC` 기준이다. `cook_count`는 요리완료 수 기준이다. `like_count`는 응답 지표와 좋아요 토글에는 남지만 HOME 노출 정렬 키에서는 제외한다.
 
 ### 1-2. 테마 섹션 조회
 
@@ -366,7 +371,7 @@ GET /recipes/themes
 {
   "themes": [
     {
-      "id": "uuid",
+      "id": "popular",
       "title": "이번 주 인기 레시피",
       "recipes": [
         /* 레시피 카드 배열 (최대 10개) */
@@ -375,6 +380,8 @@ GET /recipes/themes
   ]
 }
 ```
+
+> 테마는 `popular`를 기본으로 포함하고, 태그/제목/source 기반 분류 결과가 있으면 `korean-home`, `quick-meal`, `noodle-pasta`, `dessert`, `youtube` 같은 추가 테마를 함께 반환한다.
 
 ### 1-3. 재료 목록 조회 (재료 필터용)
 
@@ -490,7 +497,7 @@ GET /recipes/{recipe_id}
 }
 ```
 
-> 비로그인 시 `user_status`는 null. 조회 시 view_count += 1.
+> 비로그인 시 `user_status`는 null. 조회 시 `increment_recipe_view_count(p_recipe_id)`로 `view_count += 1`을 원자적으로 반영한 뒤 응답한다.
 > `component_label`은 nullable이다. 값이 있으면 UI는 인접 항목의 label 변경 지점에만 섹션 소제목을 표시한다. 같은 label prefix가 본문에 있으면 중복 표시하지 않는다.
 
 ### 2-2. 좋아요 토글

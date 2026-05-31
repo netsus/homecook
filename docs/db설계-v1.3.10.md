@@ -301,6 +301,11 @@ WHERE deleted_atISNULLAND emailISNOTNULL;
 | created_at | timestamptz | NOT NULL |  |
 | updated_at | timestamptz | NOT NULL |  |
 
+### 조회수 증가 RPC
+
+`increment_recipe_view_count(p_recipe_id uuid)`는 `recipes.view_count = recipes.view_count + 1`을 DB에서 원자적으로 실행하고 `id, view_count`를 반환한다.
+`GET /recipes/{recipe_id}`는 응답 전 이 RPC를 기다려 HOME의 조회수 정렬/카드 지표가 실제 저장값과 어긋나지 않게 한다.
+
 ### CHECK
 
 ```

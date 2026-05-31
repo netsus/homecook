@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import React from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -53,5 +55,16 @@ describe("BottomTabs", () => {
     expect(
       activeTab.querySelector("[data-testid='bottom-tab-planner-center-dot']"),
     ).toBeTruthy();
+  });
+
+  it("keeps press feedback from resizing bottom tab icons", () => {
+    const globalsCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+    const activeRule = globalsCss.match(
+      /\.bottom-tab-link:active \.bottom-tab-icon \{[^}]+\}/,
+    )?.[0];
+
+    expect(activeRule).toContain("opacity");
+    expect(activeRule).not.toContain("scale(");
+    expect(activeRule).not.toContain("transform");
   });
 });

@@ -17,7 +17,11 @@ type SaveModalState = "idle" | "loading" | "ready" | "error";
 
 interface UseHomeRecipeSaveFlowArgs {
   isAuthenticated: boolean;
-  onRecipeSaved: (recipeId: string, saveCount: number) => void;
+  onRecipeSaved: (
+    recipeId: string,
+    saveCount: number,
+    savedBookIds: string[],
+  ) => void;
   requestLogin: (recipeId: string) => void;
 }
 
@@ -134,6 +138,34 @@ export function useHomeRecipeSaveFlow({
     void loadSaveBooks(saveTargetRecipe.id);
   }, [loadSaveBooks, saveTargetRecipe]);
 
+  const syncSavedBookIds = useCallback(
+    (savedBookIdsByRecipe: Record<string, string[]>) => {
+      setSavedBookIdsByRecipeId((currentByRecipeId) => {
+        const nextByRecipeId = { ...currentByRecipeId };
+
+        Object.entries(savedBookIdsByRecipe).forEach(([recipeId, bookIds]) => {
+          nextByRecipeId[recipeId] = bookIds;
+        });
+
+        return nextByRecipeId;
+      });
+      setSavedRecipeIds((currentRecipeIds) => {
+        const nextRecipeIds = new Set(currentRecipeIds);
+
+        Object.entries(savedBookIdsByRecipe).forEach(([recipeId, bookIds]) => {
+          if (bookIds.length > 0) {
+            nextRecipeIds.add(recipeId);
+          } else {
+            nextRecipeIds.delete(recipeId);
+          }
+        });
+
+        return nextRecipeIds;
+      });
+    },
+    [],
+  );
+
   const createSaveBook = useCallback(async () => {
     const normalizedName = newSaveBookName.trim();
 
@@ -239,7 +271,7 @@ export function useHomeRecipeSaveFlow({
           [recipeId]: nextSavedBookIds,
         };
       });
-      onRecipeSaved(recipeId, nextSaveCount);
+      onRecipeSaved(recipeId, nextSaveCount, nextSavedBookIds);
       setIsSaveModalOpen(false);
       setSaveTargetRecipe(null);
       setSaveModalState("idle");
@@ -286,5 +318,6 @@ export function useHomeRecipeSaveFlow({
     selectSaveBook,
     selectedSaveBookIds,
     setNewSaveBookName,
+    syncSavedBookIds,
   };
 }

@@ -90,6 +90,13 @@ describe("SortDropdown", () => {
     });
   });
 
+  it("right-aligns the options list to the trigger container", () => {
+    render(<SortDropdown onChange={() => {}} options={options} value="latest" />);
+    fireEvent.click(screen.getByRole("button", { expanded: false }));
+
+    expect(screen.getByRole("listbox").className).toContain("right-0");
+  });
+
   it("uses the accessible Wave1 mint focus ring for keyboard navigation", () => {
     render(<SortDropdown onChange={() => {}} options={options} value="latest" />);
     fireEvent.click(screen.getByRole("button", { expanded: false }));

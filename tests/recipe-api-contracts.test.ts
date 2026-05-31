@@ -95,6 +95,11 @@ describe("recipe API contracts", () => {
     });
 
     createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: null },
+        })),
+      },
       from: vi.fn(() => listQuery),
     });
 
@@ -117,6 +122,83 @@ describe("recipe API contracts", () => {
         ],
       },
     });
+  });
+
+  it("hydrates authenticated recipe list cards with saved book status", async () => {
+    const listQuery = createQuery({
+      data: [
+        {
+          id: "recipe-1",
+          title: "김치찌개",
+          thumbnail_url: "https://example.com/kimchi.jpg",
+          tags: ["한식"],
+          base_servings: 2,
+          view_count: 10,
+          like_count: 4,
+          save_count: 2,
+          source_type: "system",
+        },
+        {
+          id: "recipe-2",
+          title: "딸기 푸딩",
+          thumbnail_url: "https://example.com/pudding.jpg",
+          tags: ["딸기푸딩"],
+          base_servings: 4,
+          view_count: 8,
+          like_count: 1,
+          save_count: 0,
+          source_type: "youtube",
+        },
+      ],
+      error: null,
+    });
+    const savedItemsQuery = createQuery({
+      data: [
+        {
+          recipe_id: "recipe-1",
+          book_id: "book-saved",
+        },
+      ],
+      error: null,
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return listQuery;
+        if (table === "recipe_book_items") return savedItemsQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/route");
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/recipes"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items).toMatchObject([
+      {
+        id: "recipe-1",
+        user_status: {
+          is_saved: true,
+          saved_book_ids: ["book-saved"],
+        },
+      },
+      {
+        id: "recipe-2",
+        user_status: {
+          is_saved: false,
+          saved_book_ids: [],
+        },
+      },
+    ]);
+    expect(savedItemsQuery.in).toHaveBeenCalledWith("recipe_id", ["recipe-1", "recipe-2"]);
+    expect(savedItemsQuery.eq).toHaveBeenCalledWith("recipe_books.user_id", "user-1");
+    expect(savedItemsQuery.in).toHaveBeenCalledWith("recipe_books.book_type", ["saved", "custom"]);
   });
 
   it("maps latest sort to created_at descending with deterministic id tie-break", async () => {
@@ -471,7 +553,7 @@ describe("recipe API contracts", () => {
     expect(listQuery.ilike).toHaveBeenCalledWith("title", "%김치%");
   });
 
-  it("returns themed recipe sections in the API envelope", async () => {
+  it("returns tag-classified themed recipe sections in the API envelope", async () => {
     const listQuery = createQuery({
       data: [
         {
@@ -485,11 +567,27 @@ describe("recipe API contracts", () => {
           save_count: 2,
           source_type: "system",
         },
+        {
+          id: "recipe-2",
+          title: "딸기 우유 푸딩",
+          thumbnail_url: "https://example.com/pudding.jpg",
+          tags: ["딸기푸딩", "디저트"],
+          base_servings: 4,
+          view_count: 8,
+          like_count: 1,
+          save_count: 0,
+          source_type: "youtube",
+        },
       ],
       error: null,
     });
 
     createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: null },
+        })),
+      },
       from: vi.fn(() => listQuery),
     });
 
@@ -498,22 +596,18 @@ describe("recipe API contracts", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toMatchObject({
-      success: true,
-      error: null,
-      data: {
-        themes: [
-          {
-            id: "popular",
-            title: "이번 주 인기 레시피",
-            recipes: [
-              {
-                id: "recipe-1",
-              },
-            ],
-          },
-        ],
-      },
+    expect(body.success).toBe(true);
+    expect(body.error).toBeNull();
+    expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("popular");
+    expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("korean-home");
+    expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("dessert");
+    expect(body.data.themes.find((theme: { id: string }) => theme.id === "dessert")).toMatchObject({
+      title: "디저트와 베이킹",
+      recipes: [
+        {
+          id: "recipe-2",
+        },
+      ],
     });
   });
 
@@ -593,6 +687,80 @@ describe("recipe API contracts", () => {
         fields: [],
       },
     });
+  });
+
+  it("awaits the recipe detail view-count persistence when service role is available", async () => {
+    const recipeReadQuery = createQuery({
+      data: {
+        id: "recipe-1",
+        title: "김치찌개",
+        description: null,
+        thumbnail_url: null,
+        base_servings: 2,
+        tags: ["한식"],
+        source_type: "system",
+        view_count: 10,
+        like_count: 0,
+        save_count: 0,
+        plan_count: 0,
+        cook_count: 0,
+      },
+      error: null,
+    });
+    const viewCountRpcQuery = createQuery({
+      data: {
+        id: "recipe-1",
+        view_count: 11,
+      },
+      error: null,
+    });
+    const sourceQuery = createQuery({
+      data: null,
+      error: null,
+    });
+    const ingredientsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+    const stepsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+    const recipesTable = {
+      select: vi.fn(() => recipeReadQuery),
+    };
+    const rpc = vi.fn(() => viewCountRpcQuery);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: null },
+        })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc,
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return recipesTable;
+        if (table === "recipe_sources") return sourceQuery;
+        if (table === "recipe_ingredients") return ingredientsQuery;
+        if (table === "recipe_steps") return stepsQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/[id]/route");
+    const response = await GET(new Request("http://localhost:3000/api/v1/recipes/recipe-1"), {
+      params: Promise.resolve({ id: "recipe-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith("increment_recipe_view_count", {
+      p_recipe_id: "recipe-1",
+    });
+    expect(viewCountRpcQuery.maybeSingle).toHaveBeenCalled();
+    expect(body.data.view_count).toBe(11);
   });
 
   it("does not serve the QA mock recipe from the real DB route when fixture mode is off", async () => {

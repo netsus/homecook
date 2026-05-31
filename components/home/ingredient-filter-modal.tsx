@@ -33,6 +33,7 @@ import {
 import type { IngredientItem, IngredientListData } from "@/types/recipe";
 
 type IngredientModalState = "loading" | "ready" | "empty" | "error";
+const INGREDIENT_FILTER_DESCRIPTION = "재료를 골라 좁혀요";
 
 interface IngredientFilterModalProps {
   isOpen: boolean;
@@ -265,13 +266,14 @@ export function IngredientFilterModal({
         <WebDialog
           aria-labelledby="ingredient-filter-title"
           ref={dialogRef}
+          size="narrow"
         >
           <WebDialogHeader>
             <div>
               <WebDialogTitle id="ingredient-filter-title">
                 재료로 검색
               </WebDialogTitle>
-              <p className="web-modal-copy">원하는 재료를 골라 레시피를 좁혀요</p>
+              <p className="web-modal-copy">{INGREDIENT_FILTER_DESCRIPTION}</p>
             </div>
             <WebIconButton
               aria-label="닫기"
@@ -394,7 +396,7 @@ export function IngredientFilterModal({
     <AppBottomSheet
       ariaLabelledBy="ingredient-filter-title"
       closeButtonRef={closeButtonRef}
-      description="원하는 재료를 골라 레시피를 좁혀요"
+      description={INGREDIENT_FILTER_DESCRIPTION}
       footer={
         <div>
           <AppModalFooterActions
@@ -479,7 +481,7 @@ export function IngredientFilterModal({
             return (
               <li key={ingredient.id}>
                 <label
-                  className={`relative flex min-h-[54px] cursor-pointer items-center justify-center rounded-[var(--radius-card)] border px-3 py-2 text-center text-[14px] font-semibold transition ${
+                  className={`relative flex min-h-[54px] cursor-pointer items-center justify-center rounded-[var(--radius-card)] border px-3 py-2 text-center text-[15px] font-semibold transition ${
                     isChecked
                       ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--foreground)]"
                       : "border-[var(--line-strong)] bg-[var(--surface)] text-[var(--foreground)]"

@@ -77,6 +77,9 @@ export function LoginScreen({
               </div>
             ) : null}
 
+            <div className="web-login-mark" data-testid="login-brand-mark">
+              <LoginMarkIcon />
+            </div>
             <p className={showAuthError ? "web-login-brand web-login-brand-offset" : "web-login-brand"}>
               HOMECOOK
             </p>
@@ -84,7 +87,7 @@ export function LoginScreen({
               로그인이 필요해요
             </h1>
             <p className="web-login-description">
-              로그인하면 이전 화면으로 돌아가 이어서 진행할 수 있어요.
+              로그인 후 이전 화면으로 돌아갑니다.
             </p>
 
             <div className="web-login-provider-list">
@@ -118,7 +121,13 @@ export function LoginScreen({
           <ChevronLeftIcon />
         </button>
 
-        <div className="mx-auto inline-flex rounded-[var(--radius-full)] bg-[var(--brand-soft)] px-3 py-1 text-[12px] font-extrabold tracking-[0.08em] text-[var(--brand)]">
+        <div
+          className="mx-auto flex h-12 w-12 items-center justify-center rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--brand-soft)] text-[var(--brand)] shadow-[var(--shadow-1)]"
+          data-testid="login-brand-mark"
+        >
+          <LoginMarkIcon />
+        </div>
+        <div className="mx-auto mt-4 inline-flex rounded-[var(--radius-full)] bg-[var(--brand-soft)] px-3 py-1 text-[12px] font-extrabold tracking-[0.08em] text-[var(--brand)]">
           HOMECOOK
         </div>
 
@@ -126,12 +135,8 @@ export function LoginScreen({
           로그인이 필요해요
         </h1>
         <p className="mx-auto mt-3 max-w-[300px] text-[14px] font-medium leading-6 text-[var(--wave1-text-3)]">
-          로그인하면 이전 화면으로 돌아가 이어서 진행할 수 있어요.
+          로그인 후 이전 화면으로 돌아갑니다.
         </p>
-
-        <div className="mt-6 rounded-[var(--radius-card)] border border-[color-mix(in_srgb,var(--brand)_18%,transparent)] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-4 py-3 text-left text-[13px] font-semibold leading-6 text-[var(--wave1-ink)]">
-          저장한 레시피, 플래너, 팬트리를 같은 계정으로 관리합니다.
-        </div>
 
         {showAuthError ? (
           <div className="mt-7 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] font-semibold text-[var(--danger-strong)]">
@@ -149,6 +154,25 @@ export function LoginScreen({
         </p>
       </section>
     </div>
+  );
+}
+
+function LoginMarkIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-6 w-6"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M7 10V8a5 5 0 0 1 10 0v2" />
+      <rect height="10" rx="2.5" width="14" x="5" y="10" />
+      <path d="M12 14v2.5" />
+    </svg>
   );
 }
 

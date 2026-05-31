@@ -296,7 +296,11 @@ export function HomeScreen() {
     );
   }, []);
 
-  const updateRecipeSaveState = useCallback((recipeId: string, saveCount: number) => {
+  const updateRecipeSaveState = useCallback((
+    recipeId: string,
+    saveCount: number,
+    savedBookIds: string[],
+  ) => {
     setRecipes((currentRecipes) => {
       if (!currentRecipes) {
         return currentRecipes;
@@ -306,7 +310,14 @@ export function HomeScreen() {
         ...currentRecipes,
         items: currentRecipes.items.map((recipe) =>
           recipe.id === recipeId
-            ? { ...recipe, save_count: saveCount }
+            ? {
+                ...recipe,
+                save_count: saveCount,
+                user_status: {
+                  is_saved: savedBookIds.length > 0,
+                  saved_book_ids: savedBookIds,
+                },
+              }
             : recipe,
         ),
       };
@@ -322,7 +333,14 @@ export function HomeScreen() {
           ...theme,
           recipes: theme.recipes.map((recipe) =>
             recipe.id === recipeId
-              ? { ...recipe, save_count: saveCount }
+              ? {
+                  ...recipe,
+                  save_count: saveCount,
+                  user_status: {
+                    is_saved: savedBookIds.length > 0,
+                    saved_book_ids: savedBookIds,
+                  },
+                }
               : recipe,
           ),
         })),
@@ -337,6 +355,28 @@ export function HomeScreen() {
       openAuthGate({ recipeId, type: "save" });
     },
   });
+  const syncSavedBookIds = homeSaveFlow.syncSavedBookIds;
+
+  useEffect(() => {
+    const hydratedSavedBookIdsByRecipe: Record<string, string[]> = {};
+    const collectRecipeStatus = (recipe: RecipeCardItem) => {
+      if (recipe.user_status === undefined) {
+        return;
+      }
+
+      hydratedSavedBookIdsByRecipe[recipe.id] =
+        recipe.user_status?.saved_book_ids ?? [];
+    };
+
+    recipes?.items.forEach(collectRecipeStatus);
+    themes?.themes.forEach((theme) => {
+      theme.recipes.forEach(collectRecipeStatus);
+    });
+
+    if (Object.keys(hydratedSavedBookIdsByRecipe).length > 0) {
+      syncSavedBookIds(hydratedSavedBookIdsByRecipe);
+    }
+  }, [recipes, syncSavedBookIds, themes]);
 
   const ingredientFilterModal = (
     <IngredientFilterModal
