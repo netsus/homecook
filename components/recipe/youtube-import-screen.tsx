@@ -506,6 +506,7 @@ function UrlInputStep({ url, onUrlChange, onSubmit, isValidating, urlError }: Ur
       </p>
       <div className="mt-6">
         <input
+          aria-label="유튜브 URL"
           ref={inputRef}
           type="url"
           inputMode="url"
