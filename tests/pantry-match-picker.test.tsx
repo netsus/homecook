@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
@@ -40,7 +40,7 @@ describe("PantryMatchPicker", () => {
     cleanup();
   });
 
-  it("keeps missing ingredient label and chips aligned in the mobile picker", async () => {
+  it("keeps owned count and missing ingredient chips in the same mobile row", async () => {
     render(
       <PantryMatchPicker
         isCreating={false}
@@ -55,11 +55,32 @@ describe("PantryMatchPicker", () => {
 
     await screen.findByText("두부조림");
 
-    const row = screen.getByTestId("pantry-missing-ingredients-row-recipe-1");
-    expect(row.className).toContain("items-center");
-    expect(row.textContent).toContain("부족");
+    const row = screen.getByTestId("pantry-ingredient-summary-row-recipe-1");
+    expect(row.textContent).toContain("2/4개 보유");
     expect(row.textContent).toContain("간장");
     expect(row.textContent).toContain("고춧가루");
+    expect(row.textContent).not.toContain("부족 ·");
+  });
+
+  it("moves the percentage inside a thicker mobile progress bar", async () => {
+    render(
+      <PantryMatchPicker
+        isCreating={false}
+        onClose={vi.fn()}
+        onRecipeSelect={vi.fn()}
+        onServingsCancel={vi.fn()}
+        onServingsConfirm={vi.fn()}
+        presentation="screen"
+        selectedRecipe={null}
+      />,
+    );
+
+    await screen.findByText("두부조림");
+
+    const progress = screen.getByTestId("pantry-match-progress-recipe-1");
+    expect(progress.className).toContain("h-5");
+    expect(within(progress).getByText("50%")).toBeTruthy();
+    expect(screen.queryByText("매칭 50%")).toBeNull();
   });
 
   it("uses brand tone instead of success green for high desktop web matches", async () => {
@@ -95,11 +116,12 @@ describe("PantryMatchPicker", () => {
 
     await screen.findByText("닭갈비");
 
-    const score = screen.getByText("90%");
-    const progressFill = document.querySelector(".web-picker-progress-fill");
+    const progress = screen.getByTestId("pantry-match-progress-recipe-brand");
+    const progressFill = progress.querySelector(".web-picker-progress-fill");
 
-    expect(score.className).toContain("web-picker-score-brand");
-    expect(score.className).not.toContain("web-picker-score-success");
+    expect(within(progress).getByText("90%")).toBeTruthy();
+    expect(progress.className).toContain("web-picker-progress-brand");
+    expect(progress.className).not.toContain("web-picker-progress-success");
     expect(progressFill?.className).toContain("web-picker-progress-brand");
     expect(progressFill?.className).not.toContain("web-picker-progress-success");
   });

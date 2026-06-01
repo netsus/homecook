@@ -190,11 +190,13 @@ function ServingsModal({
   isCreating,
   onConfirm,
   onCancel,
+  slotLabel,
 }: {
   leftover: LeftoverListItemData;
   isCreating: boolean;
   onConfirm: (servings: number) => void;
   onCancel: () => void;
+  slotLabel?: string;
 }) {
   const [servings, setServings] = useState(1);
 
@@ -207,7 +209,8 @@ function ServingsModal({
     <AppCenterDialog
       ariaLabelledBy="leftover-servings-title"
       closeDisabled={isCreating}
-      description={`${leftover.recipe_title} 남은 요리`}
+      description={slotLabel ? `대상 · ${slotLabel}` : undefined}
+      descriptionClassName="text-[var(--wave1-mint-contrast)] font-bold"
       footer={
         <AppModalFooterActions
           cancelDisabled={isCreating}
@@ -220,6 +223,9 @@ function ServingsModal({
       onClose={onCancel}
       title="계획 인분 입력"
     >
+      <p className="mb-3 truncate text-[14px] font-bold text-[var(--wave1-ink)]">
+        {leftover.recipe_title}
+      </p>
       <AppStepper
         disabled={isCreating}
         label="계획 인분"
@@ -285,6 +291,7 @@ export function LeftoverPicker({
       leftover={selectedLeftover}
       onCancel={onServingsCancel}
       onConfirm={onServingsConfirm}
+      slotLabel={slotLabel}
     />
   ) : null;
 
@@ -307,10 +314,11 @@ export function LeftoverPicker({
         </div>
 
         <section className="px-4 py-4">
-          <p className="mb-3 text-[12px] font-medium leading-[1.5] text-[var(--text-2)]">
-            플래너에 다시 올릴 남은 요리를 골라주세요
-            {slotLabel ? ` · ${slotLabel}` : ""}
-          </p>
+          {slotLabel ? (
+            <p className="mb-3 text-[12px] font-bold leading-[1.5] text-[var(--brand)]">
+              대상 · {slotLabel}
+            </p>
+          ) : null}
           {content}
         </section>
         {servingsModal}
@@ -326,10 +334,7 @@ export function LeftoverPicker({
         className="web-picker-section"
         data-testid="leftover-picker-web"
       >
-        <p className="web-picker-subtle">
-          플래너에 다시 올릴 남은 요리를 골라주세요
-          {slotLabel ? ` · ${slotLabel}` : ""}
-        </p>
+        {slotLabel ? <p className="web-picker-subtle web-picker-target">대상 · {slotLabel}</p> : null}
         {content}
         {servingsModal}
       </section>
@@ -341,7 +346,8 @@ export function LeftoverPicker({
       <AppBottomSheet
         ariaLabelledBy="leftover-picker-title"
         bodyClassName="pb-5"
-        description="플래너에 다시 올릴 남은 요리를 골라주세요"
+        description={slotLabel ? `대상 · ${slotLabel}` : undefined}
+        descriptionClassName="text-[var(--wave1-mint-contrast)] font-bold"
         leadingAction={
           onBack ? (
             <AppBackButton onClick={onBack} testId="leftover-picker-back" />

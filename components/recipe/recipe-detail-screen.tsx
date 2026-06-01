@@ -1587,6 +1587,7 @@ export function RecipeDetailScreen({
         recipePreview={{
           background: heroBackground,
           emoji: heroEmoji,
+          imageSrc: recipe.thumbnail_url ?? undefined,
           meta: `${minutesLabel} · 선택 ${plannerServings}인분`,
           title: recipe.title,
         }}

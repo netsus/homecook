@@ -70,21 +70,21 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
     return (
       <button
         aria-label={`${recipe.title} 선택`}
-        className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] text-left active:border-[var(--brand)] active:bg-[var(--brand-soft)]"
+        className="flex min-h-[216px] flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] text-left active:border-[var(--brand)] active:bg-[var(--brand-soft)]"
         onClick={() => onSelect(recipe)}
         type="button"
       >
         <div className="flex aspect-[4/3] w-full items-center justify-center bg-[var(--surface-fill)]">
           <RecipeThumb recipe={recipe} />
         </div>
-        <div className="p-2.5">
-          <h3 className="line-clamp-2 text-[13px] font-bold text-[var(--foreground)]">
+        <div className="flex flex-1 flex-col p-2.5">
+          <h3 className="truncate text-[13px] font-bold text-[var(--foreground)]">
             {recipe.title}
           </h3>
           <p className="mt-0.5 truncate text-[11px] text-[var(--text-3)]">
             {recipe.tags.slice(0, 2).join(" · ") || "저장한 레시피"}
           </p>
-          <span className="mt-2 inline-flex rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-2.5 py-1.5 text-[12px] font-semibold text-[var(--brand)]">
+          <span className="mt-auto inline-flex w-fit rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-2.5 py-1.5 text-[12px] font-semibold text-[var(--brand)]">
             선택
           </span>
         </div>
@@ -181,9 +181,11 @@ function ServingsModal({
           <h2 className="text-[20px] font-bold text-[var(--foreground)]" id="servings-modal-title">
             플래너에 추가
           </h2>
-          <p className="mt-1 text-[13px] text-[var(--text-3)]">
-            {slotLabel ? `${slotLabel}에 추가할 인분을 선택해주세요.` : "추가할 인분을 선택해주세요."}
-          </p>
+          {slotLabel ? (
+            <p className="mt-1 text-[13px] font-bold text-[var(--brand)]">
+              대상 · {slotLabel}
+            </p>
+          ) : null}
           <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] p-2.5">
             <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--brand-soft)]">
               <RecipeThumb recipe={recipe} />
@@ -197,11 +199,6 @@ function ServingsModal({
               </span>
             </span>
           </div>
-          {slotLabel ? (
-            <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3.5 py-3 text-[14px] font-bold text-[var(--text-2)]">
-              {slotLabel}
-            </div>
-          ) : null}
           <p className="mt-3 text-[13px] font-bold text-[var(--text-2)]">인분</p>
           <div className="mt-3 [&>div]:w-full">
             <NumericStepperCompact
@@ -240,9 +237,14 @@ function ServingsModal({
       <WebModal onBackdropClick={onCancel}>
         <WebDialog aria-labelledby="recipebook-servings-title" size="narrow">
           <WebDialogHeader>
-            <WebDialogTitle id="recipebook-servings-title">
-              계획 인분 입력
-            </WebDialogTitle>
+            <div>
+              <WebDialogTitle id="recipebook-servings-title">
+                플래너에 추가
+              </WebDialogTitle>
+              {slotLabel ? (
+                <p className="web-modal-target">대상 · {slotLabel}</p>
+              ) : null}
+            </div>
             <button
               aria-label="닫기"
               className="web-modal-close"
@@ -253,10 +255,16 @@ function ServingsModal({
             </button>
           </WebDialogHeader>
           <WebDialogBody>
-            <p className="web-modal-copy">{recipe.title}</p>
-            {slotLabel ? (
-              <p className="web-modal-footer-note">대상 · {slotLabel}</p>
-            ) : null}
+            <div className="web-modal-preview web-modal-preview-compact">
+              <div className="web-modal-preview-thumb">
+                <RecipeThumb recipe={recipe} />
+              </div>
+              <div className="min-w-0">
+                <div className="web-modal-preview-title">{recipe.title}</div>
+                <div className="web-modal-preview-meta">선택 {servings}인분</div>
+              </div>
+            </div>
+            <p className="web-modal-section-label">인분</p>
             <div className="web-servings-stepper">
               <div className="web-stepper" aria-label="계획 인분" role="group">
                 <button
@@ -287,7 +295,7 @@ function ServingsModal({
               disabled={isCreating || servings < 1}
               onClick={handleConfirm}
             >
-              {isCreating ? "추가 중..." : "추가"}
+              {isCreating ? "추가 중..." : "추가하기"}
             </WebButton>
           </WebDialogFooter>
         </WebDialog>
@@ -502,8 +510,8 @@ export function RecipeBookDetailPicker({
           >
             ‹ 레시피북
           </button>
-          <h3>{book.name}</h3>
         </div>
+        {slotLabel ? <p className="web-picker-subtle web-picker-target">대상 · {slotLabel}</p> : null}
         {content}
         {selectedRecipe && (
           <ServingsModal

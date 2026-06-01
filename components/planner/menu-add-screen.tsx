@@ -60,12 +60,12 @@ const WEB_NAV_ITEMS = [
 ] as const;
 
 const MENU_ADD_OPTIONS = [
-  { id: "search", emoji: "🔍", label: "검색", subtitle: "레시피 검색" },
-  { id: "recipebook", emoji: "📖", label: "레시피북", subtitle: "저장한 레시피" },
-  { id: "pantry", emoji: "🧊", label: "팬트리 기반 추천", subtitle: "보유 재료 기반" },
-  { id: "leftover", emoji: "🍱", label: "남은 요리", subtitle: "남은 요리에서 추가" },
-  { id: "youtube", emoji: "🎬", label: "유튜브", subtitle: "유튜브 가져오기" },
-  { id: "manual", emoji: "✏️", label: "직접 등록", subtitle: "레시피 직접 작성" },
+  { id: "search", emoji: "🔍", label: "검색" },
+  { id: "recipebook", emoji: "📖", label: "레시피북" },
+  { id: "pantry", emoji: "🧊", label: "팬트리 기반 추천" },
+  { id: "leftover", emoji: "🍱", label: "남은 요리" },
+  { id: "youtube", emoji: "🎬", label: "유튜브" },
+  { id: "manual", emoji: "✏️", label: "직접 등록" },
 ] as const;
 
 function formatTargetLabel(planDate: string, slotName: string) {
@@ -82,6 +82,7 @@ function formatTargetLabel(planDate: string, slotName: string) {
 
 export function MenuAddScreen({
   initialSource = "",
+  initialAuthenticated,
   planDate,
   columnId,
   slotName,
@@ -158,9 +159,36 @@ export function MenuAddScreen({
     setSelectedRecipe(recipe);
   }, []);
 
-  const handleSearchOptionClick = useCallback(() => {
-    setPickerMode("search");
+  const resetPickerSelections = useCallback(() => {
+    setSelectedRecipe(null);
+    setSelectedBook(null);
+    setSelectedBookRecipe(null);
+    setSelectedPantryRecipe(null);
+    setSelectedLeftover(null);
+    setCreationError(null);
   }, []);
+
+  const resetPickerState = useCallback(() => {
+    resetPickerSelections();
+    setPickerMode("none");
+  }, [resetPickerSelections]);
+
+  const activatePickerMode = useCallback(
+    (mode: PickerMode) => {
+      resetPickerSelections();
+      setPickerMode(mode);
+    },
+    [resetPickerSelections],
+  );
+
+  const handleSearchOptionClick = useCallback(() => {
+    if (isDesktopViewport && pickerMode === "search") {
+      resetPickerState();
+      return;
+    }
+
+    activatePickerMode("search");
+  }, [activatePickerMode, isDesktopViewport, pickerMode, resetPickerState]);
 
   useEffect(() => {
     if (!isDesktopViewport || pickerMode !== "search") {
@@ -177,15 +205,9 @@ export function MenuAddScreen({
       return;
     }
 
-    setPickerMode("none");
-    setSelectedRecipe(null);
-    setSelectedBook(null);
-    setSelectedBookRecipe(null);
-    setSelectedPantryRecipe(null);
-    setSelectedLeftover(null);
-    setCreationError(null);
+    resetPickerState();
     replaceMenuAddSource();
-  }, [appReturn, initialSource, isMealAddModalOrigin, replaceMenuAddSource]);
+  }, [appReturn, initialSource, isMealAddModalOrigin, replaceMenuAddSource, resetPickerState]);
 
   const handleServingsConfirm = useCallback(
     async (servings: number) => {
@@ -220,8 +242,16 @@ export function MenuAddScreen({
 
   // Recipe book handlers
   const handleRecipeBookClick = useCallback(() => {
-    setPickerMode("recipebook-selector");
-  }, []);
+    const isActive =
+      pickerMode === "recipebook-selector" || pickerMode === "recipebook-detail";
+
+    if (isDesktopViewport && isActive) {
+      resetPickerState();
+      return;
+    }
+
+    activatePickerMode("recipebook-selector");
+  }, [activatePickerMode, isDesktopViewport, pickerMode, resetPickerState]);
 
   const handleBookSelect = useCallback((book: RecipeBookSummary) => {
     setSelectedBook(book);
@@ -286,8 +316,13 @@ export function MenuAddScreen({
 
   // Pantry match handlers
   const handlePantryClick = useCallback(() => {
-    setPickerMode("pantry");
-  }, []);
+    if (isDesktopViewport && pickerMode === "pantry") {
+      resetPickerState();
+      return;
+    }
+
+    activatePickerMode("pantry");
+  }, [activatePickerMode, isDesktopViewport, pickerMode, resetPickerState]);
 
   const handlePantryRecipeSelect = useCallback((recipe: PantryMatchRecipeItem) => {
     setSelectedPantryRecipe(recipe);
@@ -335,8 +370,13 @@ export function MenuAddScreen({
   }, [appReturn, initialSource, isMealAddModalOrigin]);
 
   const handleLeftoverClick = useCallback(() => {
-    setPickerMode("leftover");
-  }, []);
+    if (isDesktopViewport && pickerMode === "leftover") {
+      resetPickerState();
+      return;
+    }
+
+    activatePickerMode("leftover");
+  }, [activatePickerMode, isDesktopViewport, pickerMode, resetPickerState]);
 
   const handleLeftoverSelect = useCallback((leftover: LeftoverListItemData) => {
     setSelectedLeftover(leftover);
@@ -385,7 +425,12 @@ export function MenuAddScreen({
 
   const handleManualRecipeClick = useCallback(() => {
     if (isDesktopViewport) {
-      setPickerMode("manual");
+      if (pickerMode === "manual") {
+        resetPickerState();
+        return;
+      }
+
+      activatePickerMode("manual");
       return;
     }
 
@@ -403,7 +448,16 @@ export function MenuAddScreen({
     router.push(
       buildReturnHref(targetPath, context),
     );
-  }, [appReturn.href, isDesktopViewport, isMealAddModalOrigin, mealAddQuery, router]);
+  }, [
+    activatePickerMode,
+    appReturn.href,
+    isDesktopViewport,
+    isMealAddModalOrigin,
+    mealAddQuery,
+    pickerMode,
+    resetPickerState,
+    router,
+  ]);
 
   const getYoutubeTargetHref = useCallback(() => {
     const targetPath = mealAddQuery
@@ -421,10 +475,16 @@ export function MenuAddScreen({
   }, [appReturn.href, isMealAddModalOrigin, mealAddQuery]);
 
   const handleYoutubeRecipeClick = useCallback(() => {
-    setPickerMode("youtube");
-  }, []);
+    if (isDesktopViewport && pickerMode === "youtube") {
+      resetPickerState();
+      return;
+    }
+
+    activatePickerMode("youtube");
+  }, [activatePickerMode, isDesktopViewport, pickerMode, resetPickerState]);
 
   const targetLabel = formatTargetLabel(planDate, slotName);
+  const targetText = `대상 · ${targetLabel}`;
 
   const desktopPickerTitle =
     pickerMode === "recipebook-selector"
@@ -577,7 +637,7 @@ export function MenuAddScreen({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-bold text-[var(--foreground)]">{option.label}</span>
-                <span className="mt-0.5 block text-[12px] text-[var(--text-3)]">{option.subtitle}</span>
+                <span className="mt-0.5 block text-[12px] font-semibold text-[var(--brand)]">{targetText}</span>
               </span>
               <span className="text-[22px] text-[var(--text-4)]" aria-hidden="true">
                 ›
@@ -624,7 +684,7 @@ export function MenuAddScreen({
               <div>
                 <p className="web-menu-add-eyebrow">식사 추가</p>
                 <h1>어떤 방식으로 식사를 추가할까요?</h1>
-                <p>{targetLabel}에 넣을 레시피를 검색하거나 새로 등록할 수 있어요.</p>
+                <p className="web-menu-add-target">{targetText}</p>
               </div>
               <WebButton onClick={handleBack} variant="secondary">
                 플래너로 돌아가기
@@ -665,7 +725,7 @@ export function MenuAddScreen({
                         </span>
                         <span className="web-menu-add-card-copy">
                           <span>{option.label}</span>
-                          <small>{option.subtitle}</small>
+                          <small>{targetText}</small>
                         </span>
                       </button>
                     );
@@ -678,15 +738,6 @@ export function MenuAddScreen({
                   <div>
                     <h2>{desktopPickerTitle}</h2>
                   </div>
-                  {pickerMode !== "none" ? (
-                    <WebButton
-                      onClick={handlePickerBackToMenu}
-                      size="sm"
-                      variant="tertiary"
-                    >
-                      초기화
-                    </WebButton>
-                  ) : null}
                 </div>
 
                 {creationError ? (
@@ -761,7 +812,7 @@ export function MenuAddScreen({
 
                 {pickerMode === "manual" && (
                   <ManualRecipeCreateScreen
-                    initialAuthenticated
+                    initialAuthenticated={initialAuthenticated}
                     onRequestClose={handlePickerBackToMenu}
                     planDate={planDate}
                     columnId={columnId}

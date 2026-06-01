@@ -279,7 +279,7 @@ describe("MenuAddScreen", () => {
     expect(document.activeElement).toBe(screen.getByLabelText("레시피 검색"));
   });
 
-  it("uses a larger clear magnifier in the mobile recipe search field", async () => {
+  it("uses the web-style search row in the mobile recipe search field", async () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 
     const user = userEvent.setup();
@@ -287,9 +287,11 @@ describe("MenuAddScreen", () => {
 
     const icon = screen.getByTestId("recipe-search-submit-icon");
     const iconClass = icon.getAttribute("class") ?? "";
-    expect(iconClass).toContain("h-7");
-    expect(iconClass).toContain("w-7");
+    expect(iconClass).toContain("h-5");
+    expect(iconClass).toContain("w-5");
     expect(iconClass).not.toContain("rotate-[-12deg]");
+    expect(screen.getByLabelText("레시피 검색")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "검색" })).toBeTruthy();
   });
 
   it("shows the mobile target context instead of the legacy secondary heading (Wave1)", () => {
@@ -368,6 +370,23 @@ describe("MenuAddScreen", () => {
 
     expect(screen.getByLabelText("레시피 검색")).toBeTruthy();
     expect(screen.queryByTestId("manual-recipe-embedded")).toBeNull();
+  });
+
+  it("resets the desktop picker by clicking the active option again", async () => {
+    installMatchMedia(true);
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-manual"));
+
+    expect(screen.getByTestId("manual-recipe-embedded")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "초기화" })).toBeNull();
+
+    await user.click(screen.getByTestId("menu-add-option-manual"));
+
+    expect(screen.queryByTestId("manual-recipe-embedded")).toBeNull();
+    expect(screen.getByLabelText("레시피 검색")).toBeTruthy();
   });
 
   it("omits redundant desktop picker eyebrow copy", async () => {
@@ -788,20 +807,20 @@ describe("MenuAddScreen", () => {
     expect(replacedHref).toContain("restore=meal-add-modal");
   });
 
-  it("renders each option with emoji, label, and subtitle (Wave1)", () => {
+  it("renders each option with emoji, label, and the unified target label", () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 
-    // Check leftover option has all parts
     const leftoverBtn = screen.getByTestId("menu-add-option-leftover");
     expect(leftoverBtn.textContent).toContain("🍱");
     expect(leftoverBtn.textContent).toContain("남은 요리");
-    expect(leftoverBtn.textContent).toContain("남은 요리에서 추가");
+    expect(leftoverBtn.textContent).toContain("대상 · 4/18 아침");
+    expect(leftoverBtn.textContent).not.toContain("남은 요리에서 추가");
 
-    // Check manual option
     const manualBtn = screen.getByTestId("menu-add-option-manual");
     expect(manualBtn.textContent).toContain("✏️");
     expect(manualBtn.textContent).toContain("직접 등록");
-    expect(manualBtn.textContent).toContain("레시피 직접 작성");
+    expect(manualBtn.textContent).toContain("대상 · 4/18 아침");
+    expect(manualBtn.textContent).not.toContain("레시피 직접 작성");
   });
 
   it("adds a leftover dish to the current planner slot", async () => {

@@ -273,7 +273,7 @@ export function AppStepper({
           type="button"
         >
           {isCompact ? (
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--wave1-ink)] text-sm font-bold leading-none text-[var(--wave1-surface)]">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--wave1-mint-contrast)] text-sm font-bold leading-none text-[var(--wave1-surface)]">
               +
             </span>
           ) : (

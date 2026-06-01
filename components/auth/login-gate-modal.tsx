@@ -38,6 +38,10 @@ export function LoginGateModal() {
       return "";
     }
 
+    if (action.type === "planner") {
+      return "로그인하면 원래 하려던 작업으로 자동 이동합니다.";
+    }
+
     return `${ACTION_LABELS[action.type]} 기능은 로그인 후 이용할 수 있어요. 로그인하면 원래 하려던 작업으로 자동 이동합니다.`;
   }, [action]);
 

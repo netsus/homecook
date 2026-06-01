@@ -71,6 +71,11 @@ export function LoginScreen({
         <WebTopNav activeId="login" items={WEB_NAV_ITEMS} />
         <div className="web-login-screen">
           <section className="web-login-card" data-testid="login-web-card">
+            <div
+              aria-hidden="true"
+              className="web-login-gradient"
+              data-testid="login-required-gradient"
+            />
             {showAuthError ? (
               <div className="web-login-alert">
                 로그인에 실패했어요. 다시 시도해주세요.
@@ -110,9 +115,14 @@ export function LoginScreen({
   return (
     <div className="min-h-screen bg-[var(--surface)] text-[var(--wave1-ink)]">
       <section className="relative mx-auto flex min-h-screen max-w-[430px] flex-col justify-center bg-[var(--surface)] px-6 pb-[calc(40px+env(safe-area-inset-bottom))] pt-[calc(32px+env(safe-area-inset-top))] text-center md:min-h-[720px] md:pb-16 md:pt-16">
+        <div
+          aria-hidden="true"
+          className="login-required-gradient pointer-events-none absolute inset-x-0 top-0 h-36"
+          data-testid="login-required-gradient"
+        />
         <button
           aria-label="이전 화면으로"
-          className="absolute left-5 top-[calc(18px+env(safe-area-inset-top))] flex h-9 w-9 items-center justify-center rounded-full text-[var(--wave1-ink)] transition-colors hover:bg-[var(--wave1-surface-fill)]"
+          className="absolute left-5 top-[calc(18px+env(safe-area-inset-top))] z-10 flex h-9 w-9 items-center justify-center rounded-full text-[var(--wave1-ink)] transition-colors hover:bg-[var(--wave1-surface-fill)]"
           onClick={() => {
             window.location.assign(safeNextPath);
           }}
