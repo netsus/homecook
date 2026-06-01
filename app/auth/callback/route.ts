@@ -25,6 +25,17 @@ function buildFailureRedirectUrl(requestUrl: URL, nextPath: string) {
   return redirectUrl;
 }
 
+function buildNicknameOnboardingRedirectUrl(requestUrl: URL, nextPath: string) {
+  const redirectUrl = new URL("/onboarding/nickname", requestUrl.origin);
+  redirectUrl.searchParams.set("next", nextPath);
+
+  return redirectUrl;
+}
+
+function shouldCollectNickname(userRow: { nickname?: unknown }) {
+  return typeof userRow.nickname === "string" && userRow.nickname.trim().length === 0;
+}
+
 function clearPostAuthNextCookie(response: NextResponse) {
   response.cookies.set(POST_AUTH_NEXT_COOKIE, "", {
     maxAge: 0,
@@ -92,8 +103,16 @@ export async function GET(request: Request) {
     }
 
     const dbClient = (createServiceRoleClient() ?? supabase) as unknown as UserBootstrapDbClient;
-    await ensurePublicUserRow(dbClient, user);
+    const userRow = await ensurePublicUserRow(dbClient, user);
     await ensureUserBootstrapState(dbClient, user.id);
+
+    if (shouldCollectNickname(userRow)) {
+      return clearPostAuthNextCookie(
+        NextResponse.redirect(
+          buildNicknameOnboardingRedirectUrl(requestUrl, nextPath),
+        ),
+      );
+    }
 
     return clearPostAuthNextCookie(NextResponse.redirect(redirectUrl));
   } catch {
