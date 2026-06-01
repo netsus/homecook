@@ -1236,11 +1236,6 @@ export function RecipeDetailScreen({
               icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
               onClick={() => handleProtectedAction("save")}
             />
-            <Wave1HeroMetricStatus
-              ariaLabel={`요리완료 ${cookCountLabel}`}
-              count={cookCountLabel}
-              icon={<CookIcon />}
-            />
           </div>
         </section>
 
@@ -1250,24 +1245,14 @@ export function RecipeDetailScreen({
               YouTube에서 가져온 레시피
             </p>
           ) : null}
+          <h1 className="mb-2.5 text-[24px] font-bold leading-tight text-[var(--foreground)]">
+            {recipe.title}
+          </h1>
           {displayTags.length > 0 ? (
-            <div className="mb-2 flex flex-wrap items-center gap-1.5" data-testid="recipe-detail-tags">
-              {displayTags.map((tag, index) => (
-                <span
-                  className={[
-                    "rounded-full px-[9px] py-1 text-[12px] font-extrabold",
-                    index === 0
-                      ? "bg-[var(--brand-soft)] text-[var(--brand)]"
-                      : "bg-[var(--surface-fill)] text-[var(--text-2)]",
-                  ].join(" ")}
-                  key={`${tag}-${index}`}
-                >
-                  {tag}
-                </span>
-              ))}
+            <div className="mb-3 flex flex-wrap items-center gap-1.5" data-testid="recipe-detail-tags">
               {youtubeSourceHref ? (
                 <a
-                  className="rounded-full bg-[var(--brand-soft)] px-[9px] py-1 text-[12px] font-extrabold text-[var(--brand)]"
+                  className="rounded-full bg-[var(--brand)] px-[9px] py-1 text-[12px] font-bold text-[var(--text-inverse)]"
                   href={youtubeSourceHref}
                   rel="noopener noreferrer"
                   target="_blank"
@@ -1275,11 +1260,19 @@ export function RecipeDetailScreen({
                   유튜브
                 </a>
               ) : null}
+              {displayTags.map((tag, index) => (
+                <span
+                  className="rounded-full bg-[var(--surface-fill)] px-[9px] py-1 text-[12px] font-medium text-[var(--text-2)]"
+                  key={`${tag}-${index}`}
+                >
+                  {tag}
+                </span>
+              ))}
             </div>
           ) : youtubeSourceHref ? (
-            <div className="mb-2 flex flex-wrap items-center gap-1.5" data-testid="recipe-detail-tags">
+            <div className="mb-3 flex flex-wrap items-center gap-1.5" data-testid="recipe-detail-tags">
               <a
-                className="rounded-full bg-[var(--brand-soft)] px-[9px] py-1 text-[12px] font-extrabold text-[var(--brand)]"
+                className="rounded-full bg-[var(--brand)] px-[9px] py-1 text-[12px] font-bold text-[var(--text-inverse)]"
                 href={youtubeSourceHref}
                 rel="noopener noreferrer"
                 target="_blank"
@@ -1288,15 +1281,22 @@ export function RecipeDetailScreen({
               </a>
             </div>
           ) : null}
-          <h1 className="mb-2.5 text-[24px] font-bold leading-tight text-[var(--foreground)]">
-            {recipe.title}
-          </h1>
-          <div className="flex items-center gap-2 text-[12px] text-[var(--text-2)]">
-            <ClockIcon />
-            <span>{minutesLabel}</span>
-            <span>·</span>
-            <ServingsIcon />
-            <span>{recipe.base_servings}인분</span>
+          <div
+            aria-label="레시피 요약"
+            className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px] font-semibold text-[var(--text-2)]"
+          >
+            <span className="inline-flex items-center gap-1.25">
+              <ServingsIcon />
+              <span>{recipe.base_servings}인분</span>
+            </span>
+            <span className="inline-flex items-center gap-1.25">
+              <PlannerIcon />
+              <span>플래너등록 {desktopPlannerCountLabel}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.25">
+              <CookIcon />
+              <span>요리완료 {cookCountLabel}</span>
+            </span>
           </div>
         </section>
 
@@ -1431,7 +1431,7 @@ export function RecipeDetailScreen({
                     <li className="rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[0_2px_8px_var(--shadow-color-soft)]">
                   <div className="mb-2 flex items-center gap-2">
                     <span
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold leading-none"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full pt-px text-[13px] font-bold leading-[1]"
                       style={{
                         backgroundColor: getCookingMethodTint(
                           step.cooking_method?.color_key,
@@ -1444,7 +1444,7 @@ export function RecipeDetailScreen({
                       {step.step_number}
                     </span>
                     <span
-                      className="rounded px-2 py-0.5 text-[12px] font-bold"
+                      className="rounded-full px-2 py-0.5 text-[12px] font-bold"
                       style={{
                         backgroundColor: getCookingMethodTint(
                           step.cooking_method?.color_key,
@@ -1507,16 +1507,16 @@ export function RecipeDetailScreen({
       </div>
       ) : null}
       {shouldRenderAppView ? (
-      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 flex gap-2 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-3 pt-3 lg:hidden">
+      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-[calc(84px+env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_var(--shadow-color-soft)] lg:hidden">
         <button
-          className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-[var(--brand-soft)] px-3 text-[15px] font-bold text-[var(--brand)]"
+          className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-[var(--brand)] px-3 text-[15px] font-bold text-[var(--text-inverse)]"
           onClick={() => handleProtectedAction("planner")}
           type="button"
         >
           플래너에 추가
         </button>
         <button
-          className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] bg-[var(--brand)] px-3 text-[15px] font-bold text-[var(--text-inverse)]"
+          className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-transparent px-3 text-[15px] font-bold text-[var(--brand)]"
           onClick={() => router.push(cookModeHref)}
           type="button"
         >
@@ -1762,7 +1762,7 @@ function RecipeDetailWebView({
               </div>
             </section>
 
-            <section className="web-reading-section">
+            <section className="web-reading-section web-servings-section">
               <div className="web-reading-head">
                 <div>
                   <h2>인분 조절</h2>
@@ -1919,10 +1919,10 @@ function RecipeDetailWebView({
       </div>
 
       <WebCTA className="web-recipe-bottom-cta">
-        <WebButton onClick={() => onProtectedAction("planner")} variant="secondary">
+        <WebButton onClick={() => onProtectedAction("planner")}>
           플래너에 추가
         </WebButton>
-        <WebButton onClick={onCook}>요리하기</WebButton>
+        <WebButton onClick={onCook} variant="secondary">요리하기</WebButton>
       </WebCTA>
     </WebShell>
   );
@@ -2291,48 +2291,23 @@ function Wave1HeroMetricButton({
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
       className={[
-        "flex min-h-[48px] min-w-11 flex-col items-center justify-center gap-1 rounded-full bg-transparent px-1 py-0 text-[12px] font-bold leading-none text-[var(--text-inverse)] drop-shadow-[0_2px_5px_var(--overlay-75)] transition-transform duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70",
-        ariaPressed ? "scale-110" : "",
+        "flex min-h-[56px] min-w-12 flex-col items-center justify-center gap-1 rounded-full bg-transparent px-1 py-0 text-[13px] font-bold leading-none text-[var(--text-inverse)] drop-shadow-[0_2px_5px_var(--overlay-75)] transition-transform duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70",
+        ariaPressed ? "scale-110 text-[var(--brand)]" : "",
       ].join(" ")}
       disabled={disabled}
       onClick={onClick}
       type="button"
     >
-      <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center">
+      <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center">
         {icon}
       </span>
       <span
         aria-hidden={ariaLabel !== `좋아요 ${count}`}
-        className="text-[12px] font-bold leading-none"
+        className="text-[13px] font-bold leading-none"
       >
         {count}
       </span>
     </button>
-  );
-}
-
-function Wave1HeroMetricStatus({
-  ariaLabel,
-  count,
-  icon,
-}: {
-  ariaLabel: string;
-  count: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div
-      aria-label={ariaLabel}
-      className="flex min-h-[48px] min-w-11 flex-col items-center justify-center gap-1 rounded-full bg-transparent px-1 py-0 text-[12px] font-bold leading-none text-[var(--text-inverse)] drop-shadow-[0_2px_5px_var(--overlay-75)]"
-      role="status"
-    >
-      <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center">
-        {icon}
-      </span>
-      <span className="text-[12px] font-bold leading-none">
-        {count}
-      </span>
-    </div>
   );
 }
 
@@ -2504,6 +2479,7 @@ function BookmarkIcon({ filled = false }: { filled?: boolean }) {
   return (
     <svg
       aria-hidden="true"
+      className={filled ? "text-[var(--brand)]" : undefined}
       fill={filled ? "currentColor" : "none"}
       height="18"
       stroke="currentColor"
@@ -2583,25 +2559,6 @@ function CloseIcon() {
       width="20"
     >
       <path d="M6 6l12 12M18 6 6 18" />
-    </svg>
-  );
-}
-
-function ClockIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="16"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="1.8"
-      viewBox="0 0 24 24"
-      width="16"
-    >
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M12 7.5V12l3 2" />
     </svg>
   );
 }
@@ -2697,10 +2654,10 @@ function ServingsIcon() {
       viewBox="0 0 24 24"
       width="18"
     >
-      <circle cx="8" cy="8" r="3" />
-      <circle cx="16" cy="8" r="3" />
-      <path d="M3.5 20a5 5 0 0 1 9 0" />
-      <path d="M11.5 20a5 5 0 0 1 9 0" />
+      <circle cx="9" cy="8" r="3.4" />
+      <path d="M3.5 20a5.6 5.6 0 0 1 11 0" />
+      <circle cx="16.3" cy="9" r="2.3" opacity="0.72" />
+      <path d="M13.3 19.4a4.2 4.2 0 0 1 7.2 0" opacity="0.72" />
     </svg>
   );
 }

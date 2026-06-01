@@ -284,6 +284,13 @@ describe("recipe detail screen", () => {
     const ctaBar = plannerButton.closest(".wave1-recipe-cta-bar");
     expect(ctaBar).not.toBeNull();
     expect(ctaBar?.contains(cookButton)).toBe(true);
+    expect(ctaBar?.className).toContain("bottom-0");
+    expect(ctaBar?.className).toContain("pb-[calc(84px+env(safe-area-inset-bottom))]");
+    expect(plannerButton.className).toContain("bg-[var(--brand)]");
+    expect(plannerButton.className).toContain("text-[var(--text-inverse)]");
+    expect(cookButton.className).toContain("border-[var(--brand)]");
+    expect(cookButton.className).toContain("bg-transparent");
+    expect(cookButton.className).toContain("text-[var(--brand)]");
     expect(screen.queryByText("Recipe Snapshot")).toBeNull();
     expect(screen.queryByText("Slice Note")).toBeNull();
   });
@@ -683,11 +690,10 @@ describe("recipe detail screen", () => {
 
     const likeButton = await screen.findByRole("button", { name: "좋아요 203" });
     const saveButton = await screen.findByRole("button", { name: "저장" });
-    const cookStatus = screen.getByRole("status", { name: "요리완료 34" });
 
     expect(likeButton.textContent).toBe("203");
     expect(saveButton.textContent).toBe("89");
-    expect(cookStatus.textContent).toBe("34");
+    expect(screen.queryByRole("status", { name: "요리완료 34" })).toBeNull();
   });
 
   it("creates a custom recipe book and saves the recipe", async () => {
@@ -936,14 +942,29 @@ describe("recipe detail screen", () => {
     });
   });
 
-  it("displays hero action metrics with prototype like/save/cook stack", async () => {
+  it("displays larger hero like and save actions without the cook count", async () => {
+    fetchJson.mockResolvedValue(
+      buildRecipeDetail({
+        user_status: {
+          is_liked: true,
+          is_saved: true,
+          saved_book_ids: ["book-saved"],
+        },
+      }),
+    );
+
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
     await screen.findByTestId("recipe-detail-hero");
-    expect(screen.queryByText("요리완료")).toBeNull();
-    expect(
-      screen.getByRole("status", { name: /요리완료/ }),
-    ).toBeTruthy();
+    const likeButton = screen.getByRole("button", { name: "좋아요 203" });
+    const saveButton = screen.getByRole("button", { name: "저장" });
+
+    expect(likeButton.className).toContain("min-h-[56px]");
+    expect(saveButton.className).toContain("min-h-[56px]");
+    expect(saveButton.querySelector("svg")?.className.baseVal).toContain(
+      "text-[var(--brand)]",
+    );
+    expect(screen.queryByRole("status", { name: /요리완료/ })).toBeNull();
     expect(screen.queryByRole("status", { name: /플래너 등록/ })).toBeNull();
   });
 
@@ -958,7 +979,8 @@ describe("recipe detail screen", () => {
     const ctaBar = plannerButton.closest(".wave1-recipe-cta-bar");
     expect(ctaBar).not.toBeNull();
     expect(ctaBar?.contains(cookButton)).toBe(true);
-    expect(ctaBar?.className).toContain("bottom-[calc(72px+env(safe-area-inset-bottom))]");
+    expect(ctaBar?.className).toContain("bottom-0");
+    expect(ctaBar?.className).toContain("pb-[calc(84px+env(safe-area-inset-bottom))]");
   });
 
   it("renders cooking step instructions with text-base font size", async () => {
@@ -1122,7 +1144,7 @@ describe("recipe detail screen", () => {
     expect(screen.getByText("YouTube에서 가져온 레시피")).toBeTruthy();
   });
 
-  it("places the mobile YouTube source note and source tag before the recipe title", async () => {
+  it("places the mobile YouTube source note above the title and active source tag below the title", async () => {
     fetchJson.mockResolvedValue(
       buildRecipeDetail({
         source_type: "youtube",
@@ -1130,7 +1152,7 @@ describe("recipe detail screen", () => {
           youtube_url: "https://www.youtube.com/watch?v=abc",
           youtube_video_id: "abc",
         },
-        tags: ["딸기푸딩", "노오븐디저트"],
+        tags: ["생딸기", "노오븐디저트"],
       }),
     );
 
@@ -1141,12 +1163,42 @@ describe("recipe detail screen", () => {
       name: MOCK_RECIPE_DETAIL.title,
     });
     const note = screen.getByTestId("recipe-youtube-source-note");
+    const tagContainer = screen.getByTestId("recipe-detail-tags");
     const youtubeTag = screen.getByRole("link", { name: "유튜브" });
+    const strawberryTag = within(tagContainer).getByText("생딸기");
 
     expect(note.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(youtubeTag.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(title.compareDocumentPosition(tagContainer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(title.compareDocumentPosition(youtubeTag) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(Array.from(tagContainer.children).map((child) => child.textContent)).toEqual([
+      "유튜브",
+      "생딸기",
+      "노오븐디저트",
+    ]);
     expect(youtubeTag.getAttribute("href")).toBe("https://www.youtube.com/watch?v=abc");
     expect(youtubeTag.getAttribute("target")).toBe("_blank");
+    expect(youtubeTag.className).toContain("bg-[var(--brand)]");
+    expect(youtubeTag.className).toContain("text-[var(--text-inverse)]");
+    expect(strawberryTag.className).not.toContain("bg-[var(--brand-soft)]");
+    expect(strawberryTag.className).not.toContain("text-[var(--brand)]");
+    expect(strawberryTag.className).not.toContain("font-extrabold");
+  });
+
+  it("replaces the mobile time row with servings, planner count, and cook count summary", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    const summary = screen.getByLabelText("레시피 요약");
+    const summaryScope = within(summary);
+
+    expect(summaryScope.getByText("2인분")).toBeTruthy();
+    expect(summaryScope.getByText("플래너등록 52")).toBeTruthy();
+    expect(summaryScope.getByText("요리완료 34")).toBeTruthy();
+    expect(summaryScope.queryByText("14분")).toBeNull();
   });
 
   it("matches mobile cooking method chips to the web treatment without left card rails", async () => {
@@ -1166,7 +1218,9 @@ describe("recipe detail screen", () => {
 
     expect(stepCard?.getAttribute("style") ?? "").not.toContain("border-left");
     expect(method.getAttribute("style") ?? "").toContain("background-color");
-    expect(number.className).toContain("leading-none");
+    expect(method.className).toContain("rounded-full");
+    expect(number.className).toContain("leading-[1]");
+    expect(number.className).toContain("pt-px");
   });
 
   it("adds horizontal breathing room to mobile ingredient rows", async () => {
@@ -1255,7 +1309,9 @@ describe("recipe detail screen", () => {
     });
 
     const readingGrid = container.querySelector(".web-recipe-reading-grid");
+    const servingsSection = container.querySelector(".web-servings-section");
     expect(readingGrid).not.toBeNull();
+    expect(servingsSection).not.toBeNull();
     expect(readingGrid?.textContent).toContain("재료");
     expect(readingGrid?.textContent).toContain("만들기");
   });

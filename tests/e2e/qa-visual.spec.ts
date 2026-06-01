@@ -72,6 +72,7 @@ const ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
 const COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 3200;
 const COOKING_MODAL_VISUAL_MAX_DIFF_PIXELS = 480;
 const LEFTOVERS_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
+const FIXED_HOME_VISUAL_NOW = "2026-06-01T14:30:00.000Z";
 
 function isMobileViewport(page: Page) {
   return (page.viewportSize()?.width ?? 1280) < 1024;
@@ -161,8 +162,34 @@ async function stabilizeFixedHeaderForScrolledFullPageSnapshot(page: Page) {
   });
 }
 
+async function installFixedHomeVisualClock(page: Page) {
+  await page.addInitScript(({ fixedNow }: { fixedNow: string }) => {
+    const RealDate = Date;
+    const fixedTime = new RealDate(fixedNow).getTime();
+
+    class FixedDate extends RealDate {
+      constructor(...args: unknown[]) {
+        if (args.length === 0) {
+          super(fixedTime);
+          return;
+        }
+
+        super(...(args as [number]));
+      }
+
+      static now() {
+        return fixedTime;
+      }
+    }
+
+    Object.setPrototypeOf(FixedDate, RealDate);
+    globalThis.Date = FixedDate as DateConstructor;
+  }, { fixedNow: FIXED_HOME_VISUAL_NOW });
+}
+
 test.describe("QA visual regression", () => {
   test("home default shell matches the visual baseline @visual-core", async ({ page }) => {
+    await installFixedHomeVisualClock(page);
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
@@ -177,6 +204,7 @@ test.describe("QA visual regression", () => {
   });
 
   test("home sort menu open matches the visual baseline @visual-core", async ({ page }) => {
+    await installFixedHomeVisualClock(page);
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
