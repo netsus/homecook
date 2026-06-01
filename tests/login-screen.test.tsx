@@ -119,6 +119,9 @@ describe("login screen", () => {
     expect(screen.getByTestId("login-brand-mark")).toBeTruthy();
     expect(screen.getAllByText("로그인 후 이전 화면으로 돌아갑니다.")).toHaveLength(1);
     expect(screen.getByText("social-buttons:/planner")).toBeTruthy();
+    expect(screen.getByTestId("login-required-gradient").className).toContain(
+      "web-login-gradient",
+    );
     expect(
       screen.queryByRole("heading", {
         name: "홈쿡과 함께오늘 뭐 먹지 정해봐요",

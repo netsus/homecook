@@ -170,6 +170,12 @@ describe("planner add flow", () => {
     });
     expect(dialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
     expect(within(dialog).getByText(/로그인이 필요한 작업이에요/)).toBeTruthy();
+    expect(
+      within(dialog).queryByText(/플래너 추가 기능은 로그인 후 이용할 수 있어요/),
+    ).toBeNull();
+    expect(
+      within(dialog).getByText("로그인하면 원래 하려던 작업으로 자동 이동합니다."),
+    ).toBeTruthy();
     expect(useAuthGateStore.getState().action?.type).toBe("planner");
   });
 
@@ -281,7 +287,9 @@ describe("planner add flow", () => {
 
     const todayLabel = buildSelectedDateLabel(new Date());
     expect(within(dialog).queryByText(todayLabel)).toBeNull();
-    expect(within(dialog).getByText("플래너에 추가")).toBeTruthy();
+    expect(
+      within(dialog).getByRole("heading", { name: "플래너에 추가" }),
+    ).toBeTruthy();
     expect(
       within(dialog).getByRole("button", { name: "플래너에 추가" }),
     ).toBeTruthy();
@@ -340,6 +348,45 @@ describe("planner add flow", () => {
     expect(dateButtons[0].querySelector(".web-planner-date-today")?.textContent).toBe("오늘");
     expect(dateButtons[1].querySelector(".web-planner-date-today")).toBeNull();
     expect(dateButtons[7].querySelector(".web-planner-date-day")?.textContent).toBe("5/28");
+  });
+
+  it("shows the selected target under the desktop planner add title with the recipe detail image", () => {
+    installMatchMedia(true);
+
+    render(
+      <PlannerAddSheet
+        columns={buildPlannerData().columns}
+        errorMessage={null}
+        isOpen
+        onChangeServings={vi.fn()}
+        onClose={vi.fn()}
+        onRetryLoad={vi.fn()}
+        onSelectColumn={vi.fn()}
+        onSelectDate={vi.fn()}
+        onSubmit={vi.fn()}
+        recipePreview={{
+          background: "#eef8ff",
+          emoji: "🍳",
+          imageSrc: "https://img.example.com/recipe-detail.jpg",
+          meta: "25분 · 선택 2인분",
+          title: "긴 이름의 레시피",
+        }}
+        selectableDates={["2026-05-21"]}
+        selectedColumnId="col-dinner"
+        selectedDate="2026-05-21"
+        servings={2}
+        sheetState="ready"
+        variant="recipe-detail"
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "플래너에 추가" });
+    const target = within(dialog).getByText("대상 · 5/21 저녁");
+    const image = within(dialog).getByTestId("planner-add-recipe-preview-image");
+
+    expect(target.className).toContain("text-[var(--web-brand-accessible)]");
+    expect(image.getAttribute("style")).toContain("recipe-detail.jpg");
+    expect(within(dialog).queryByText("날짜와 끼니를 선택해 주세요")).toBeNull();
   });
 
   it("keeps four meal columns in one row and scrolls when there are five or more", async () => {

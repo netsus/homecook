@@ -290,9 +290,11 @@ function ServingsModal({
           >
             플래너에 추가
           </h2>
-          <p className="mt-1 text-[13px] text-[var(--text-3)]">
-            {slotLabel ? `${slotLabel}에 추가할 인분을 선택해주세요.` : "추가할 인분을 선택해주세요."}
-          </p>
+          {slotLabel ? (
+            <p className="mt-1 text-[13px] font-bold text-[var(--brand)]">
+              대상 · {slotLabel}
+            </p>
+          ) : null}
           <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] p-2.5">
             <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--brand-soft)]">
               <RecipeThumb recipe={recipe} />
@@ -306,11 +308,6 @@ function ServingsModal({
               </span>
             </span>
           </div>
-          {slotLabel ? (
-            <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3.5 py-2.5 text-[14px] font-bold text-[var(--text-2)]">
-              {slotLabel}
-            </div>
-          ) : null}
           <p className="mt-2.5 text-[13px] font-bold text-[var(--text-2)]">인분</p>
           <ScreenServingsStepper
             disabled={isCreating}
@@ -344,9 +341,14 @@ function ServingsModal({
     <WebModal onBackdropClick={onCancel}>
       <WebDialog aria-labelledby="servings-modal-title" size="narrow">
         <WebDialogHeader>
-          <WebDialogTitle id="servings-modal-title">
-            계획 인분 입력
-          </WebDialogTitle>
+          <div>
+            <WebDialogTitle id="servings-modal-title">
+              플래너에 추가
+            </WebDialogTitle>
+            {slotLabel ? (
+              <p className="web-modal-target">대상 · {slotLabel}</p>
+            ) : null}
+          </div>
           <button
             aria-label="닫기"
             className="web-modal-close"
@@ -357,11 +359,18 @@ function ServingsModal({
           </button>
         </WebDialogHeader>
         <WebDialogBody>
-          <p className="web-modal-copy">{recipe.title}</p>
-          <p className="web-modal-footer-note">
-            기본 {recipe.base_servings}인분
-            {slotLabel ? ` · ${slotLabel}` : ""}
-          </p>
+          <div className="web-modal-preview web-modal-preview-compact">
+            <div className="web-modal-preview-thumb">
+              <RecipeThumb recipe={recipe} />
+            </div>
+            <div className="min-w-0">
+              <div className="web-modal-preview-title">{recipe.title}</div>
+              <div className="web-modal-preview-meta">
+                기본 {recipe.base_servings}인분 · 선택 {servings}인분
+              </div>
+            </div>
+          </div>
+          <p className="web-modal-section-label">인분</p>
           <div className="web-servings-stepper">
             <div className="web-stepper" aria-label="계획 인분" role="group">
               <button
@@ -392,7 +401,7 @@ function ServingsModal({
             disabled={isCreating || servings < 1}
             onClick={handleConfirm}
           >
-            {isCreating ? "추가 중..." : "추가"}
+            {isCreating ? "추가 중..." : "추가하기"}
           </WebButton>
         </WebDialogFooter>
       </WebDialog>
@@ -476,19 +485,13 @@ export function RecipeSearchPicker({
           <AppBackButtonSpacer />
         </div>
         <div className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-3 pt-4">
-          <div className="flex items-center gap-2 rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-3.5 py-2.5">
-            <button
-              aria-label="검색"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--text-2)]"
-              disabled={searchState === "loading"}
-              onClick={() => void handleSearch()}
-              type="button"
-            >
+          <div className="flex min-h-[48px] items-center gap-2 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3.5">
+            <span aria-hidden="true" className="shrink-0 text-[var(--text-2)]">
               <SearchGlyph
-                className="h-7 w-7"
+                className="h-5 w-5"
                 testId="recipe-search-submit-icon"
               />
-            </button>
+            </span>
             <input
               aria-label="레시피 검색"
               autoFocus
@@ -498,23 +501,23 @@ export function RecipeSearchPicker({
               onKeyDown={(event) => {
                 if (event.key === "Enter") void handleSearch();
               }}
-              placeholder="레시피 이름 또는 재료"
+              placeholder="레시피 이름으로 검색"
               ref={searchInputRef}
               type="text"
               value={searchQuery}
             />
-            {searchQuery ? (
-              <button
-                className="text-[14px] font-bold text-[var(--text-3)]"
-                onClick={() => setSearchQuery("")}
-                type="button"
-              >
-                ×
-              </button>
-            ) : null}
+            <button
+              aria-label="검색"
+              className="h-8 shrink-0 rounded-[var(--radius-control)] bg-[var(--brand)] px-3 text-[13px] font-bold text-[var(--text-inverse)] disabled:opacity-50"
+              disabled={searchState === "loading"}
+              onClick={() => void handleSearch()}
+              type="button"
+            >
+              검색
+            </button>
           </div>
           {slotLabel ? (
-            <p className="mt-2 text-[11px] text-[var(--text-3)]">대상 · {slotLabel}</p>
+            <p className="mt-2 text-[11px] font-bold text-[var(--brand)]">대상 · {slotLabel}</p>
           ) : null}
         </div>
         <div className="p-4 pb-[112px]">

@@ -62,6 +62,80 @@ function MatchScoreBadge({ score }: MatchScoreBadgeProps) {
   );
 }
 
+function MissingIngredientChips({
+  ingredients,
+  max = 3,
+}: {
+  ingredients: PantryMatchRecipeItem["missing_ingredients"];
+  max?: number;
+}) {
+  if (ingredients.length === 0) {
+    return null;
+  }
+
+  return (
+    <span className="flex min-w-0 flex-wrap items-center justify-end gap-1">
+      {ingredients.slice(0, max).map((ingredient) => (
+        <span
+          className="rounded-[var(--radius-badge)] bg-[var(--warning-soft)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--warning-strong)]"
+          key={ingredient.id}
+        >
+          {ingredient.standard_name}
+        </span>
+      ))}
+      {ingredients.length > max ? (
+        <span className="rounded-[var(--radius-badge)] bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--text-3)]">
+          +{ingredients.length - max}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function PantryProgress({
+  percentage,
+  recipeId,
+  tone,
+  variant,
+}: {
+  percentage: number;
+  recipeId: string;
+  tone: "brand" | "warning" | "danger";
+  variant: "mobile" | "web";
+}) {
+  const width = `${Math.max(4, Math.min(100, percentage))}%`;
+
+  if (variant === "web") {
+    return (
+      <span
+        className={`web-picker-progress web-picker-progress-${tone}`}
+        data-testid={`pantry-match-progress-${recipeId}`}
+      >
+        <span
+          className={`web-picker-progress-fill web-picker-progress-${tone}`}
+          style={{ width }}
+        />
+        <span className="web-picker-progress-label">{percentage}%</span>
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="relative mt-1.5 block h-5 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--brand)_14%,var(--surface)_86%)]"
+      data-testid={`pantry-match-progress-${recipeId}`}
+    >
+      <span
+        className="block h-full rounded-full bg-[color-mix(in_srgb,var(--brand)_28%,var(--surface)_72%)]"
+        style={{ width }}
+      />
+      <span className="absolute inset-y-0 right-2 flex items-center text-[10px] font-extrabold text-[var(--brand)]">
+        {percentage}%
+      </span>
+    </span>
+  );
+}
+
 // ─── Pantry Recipe Card ──────────────────────────────────────────────────────
 
 interface PantryRecipeCardProps {
@@ -99,41 +173,21 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
           <span className="block truncate text-[14px] font-bold text-[var(--foreground)]">
             {recipe.title}
           </span>
-          <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-[var(--surface-subtle)]">
-            <span
-              className="block h-full rounded-full bg-[var(--brand)]"
-              style={{ width: `${Math.max(4, Math.min(100, percentage))}%` }}
-            />
-          </span>
-          <span className="mt-1 flex items-center justify-between gap-2 text-[11px] font-bold text-[var(--text-3)]">
-            <span className="text-[var(--brand)]">매칭 {percentage}%</span>
-            <span>
+          <PantryProgress
+            percentage={percentage}
+            recipeId={recipe.id}
+            tone="brand"
+            variant="mobile"
+          />
+          <span
+            className="mt-1.5 flex items-center justify-between gap-2 text-[11px] font-bold text-[var(--text-3)]"
+            data-testid={`pantry-ingredient-summary-row-${recipe.id}`}
+          >
+            <span className="shrink-0">
               {recipe.matched_ingredients}/{recipe.total_ingredients}개 보유
             </span>
+            <MissingIngredientChips ingredients={recipe.missing_ingredients} />
           </span>
-          {recipe.missing_ingredients.length > 0 ? (
-            <span
-              className="mt-2 flex flex-wrap items-center gap-1"
-              data-testid={`pantry-missing-ingredients-row-${recipe.id}`}
-            >
-              <span className="mr-0.5 text-[11px] font-semibold text-[var(--text-2)]">
-                부족 ·
-              </span>
-              {recipe.missing_ingredients.slice(0, 3).map((ingredient) => (
-                <span
-                  className="rounded-[var(--radius-badge)] bg-[var(--warning-soft)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--warning-strong)]"
-                  key={ingredient.id}
-                >
-                  {ingredient.standard_name}
-                </span>
-              ))}
-              {recipe.missing_ingredients.length > 3 ? (
-                <span className="rounded-[var(--radius-badge)] bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--text-3)]">
-                  +{recipe.missing_ingredients.length - 3}
-                </span>
-              ) : null}
-            </span>
-          ) : null}
           <span className="mt-2 inline-flex rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-2.5 py-1.5 text-[12px] font-semibold text-[var(--brand)]">
             선택
           </span>
@@ -144,7 +198,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
 
   if (presentation === "web") {
     const percentage = Math.round(recipe.match_score * 100);
-    const scoreTone =
+    const scoreTone: "brand" | "warning" | "danger" =
       percentage >= 80 ? "brand" : percentage >= 50 ? "warning" : "danger";
 
     return (
@@ -173,22 +227,14 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
             <span>{recipe.title}</span>
             <small>
               {recipe.matched_ingredients}/{recipe.total_ingredients}개 보유
-              {recipe.missing_ingredients.length > 0
-                ? ` · 부족 ${recipe.missing_ingredients
-                    .slice(0, 3)
-                    .map((ingredient) => ingredient.standard_name)
-                    .join(", ")}`
-                : ""}
+              <MissingIngredientChips ingredients={recipe.missing_ingredients} max={2} />
             </small>
-            <span className="web-picker-progress">
-              <span
-                className={`web-picker-progress-fill web-picker-progress-${scoreTone}`}
-                style={{ width: `${Math.max(4, Math.min(100, percentage))}%` }}
-              />
-            </span>
-          </span>
-          <span className={`web-picker-score web-picker-score-${scoreTone}`}>
-            {percentage}%
+            <PantryProgress
+              percentage={percentage}
+              recipeId={recipe.id}
+              tone={scoreTone}
+              variant="web"
+            />
           </span>
         </WebListRow>
       </button>
@@ -281,12 +327,25 @@ function ServingsModal({
           <h2 className="text-[20px] font-bold text-[var(--foreground)]" id="servings-modal-title">
             플래너에 추가
           </h2>
-          <p className="mt-1 text-[13px] text-[var(--text-3)]">
-            {slotLabel ? `${slotLabel}에 추가할 인분을 선택해주세요.` : "추가할 인분을 선택해주세요."}
-          </p>
+          {slotLabel ? (
+            <p className="mt-1 text-[13px] font-bold text-[var(--brand)]">
+              대상 · {slotLabel}
+            </p>
+          ) : null}
           <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] p-2.5">
-            <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand-soft)] text-[22px]">
-              🍳
+            <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--brand-soft)] text-[22px]">
+              {recipe.thumbnail_url ? (
+                <Image
+                  alt=""
+                  className="h-full w-full object-cover"
+                  height={44}
+                  src={recipe.thumbnail_url}
+                  unoptimized
+                  width={44}
+                />
+              ) : (
+                "🍳"
+              )}
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[13px] font-extrabold text-[var(--foreground)]">
@@ -297,11 +356,6 @@ function ServingsModal({
               </span>
             </span>
           </div>
-          {slotLabel ? (
-            <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3.5 py-3 text-[14px] font-bold text-[var(--text-2)]">
-              {slotLabel}
-            </div>
-          ) : null}
           <p className="mt-3 text-[13px] font-bold text-[var(--text-2)]">인분</p>
           <div className="mt-3 [&>div]:w-full">
             <NumericStepperCompact
@@ -340,9 +394,14 @@ function ServingsModal({
       <WebModal onBackdropClick={onCancel}>
         <WebDialog aria-labelledby="pantry-servings-title" size="narrow">
           <WebDialogHeader>
-            <WebDialogTitle id="pantry-servings-title">
-              계획 인분 입력
-            </WebDialogTitle>
+            <div>
+              <WebDialogTitle id="pantry-servings-title">
+                플래너에 추가
+              </WebDialogTitle>
+              {slotLabel ? (
+                <p className="web-modal-target">대상 · {slotLabel}</p>
+              ) : null}
+            </div>
             <button
               aria-label="닫기"
               className="web-modal-close"
@@ -353,10 +412,27 @@ function ServingsModal({
             </button>
           </WebDialogHeader>
           <WebDialogBody>
-            <p className="web-modal-copy">{recipe.title}</p>
-            {slotLabel ? (
-              <p className="web-modal-footer-note">대상 · {slotLabel}</p>
-            ) : null}
+            <div className="web-modal-preview web-modal-preview-compact">
+              <div className="web-modal-preview-thumb">
+                {recipe.thumbnail_url ? (
+                  <Image
+                    alt=""
+                    className="h-full w-full object-cover"
+                    height={52}
+                    src={recipe.thumbnail_url}
+                    unoptimized
+                    width={52}
+                  />
+                ) : (
+                  "🍳"
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="web-modal-preview-title">{recipe.title}</div>
+                <div className="web-modal-preview-meta">선택 {servings}인분</div>
+              </div>
+            </div>
+            <p className="web-modal-section-label">인분</p>
             <div className="web-servings-stepper">
               <div className="web-stepper" aria-label="계획 인분" role="group">
                 <button
@@ -387,7 +463,7 @@ function ServingsModal({
               disabled={isCreating || servings < 1}
               onClick={handleConfirm}
             >
-              {isCreating ? "추가 중..." : "추가"}
+              {isCreating ? "추가 중..." : "추가하기"}
             </WebButton>
           </WebDialogFooter>
         </WebDialog>
@@ -556,11 +632,13 @@ export function PantryMatchPicker({
           </h1>
           <AppBackButtonSpacer />
         </div>
-        <div className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-4 py-3.5">
-          <p className="text-[12px] font-medium leading-[1.5] text-[var(--text-2)]">
-            보유 재료가 많은 순서로 보여드려요. 부족한 재료만 확인하세요.
-          </p>
-        </div>
+        {slotLabel ? (
+          <div className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-4 py-3.5">
+            <p className="text-[12px] font-bold leading-[1.5] text-[var(--brand)]">
+              대상 · {slotLabel}
+            </p>
+          </div>
+        ) : null}
         <div className="p-3 pb-[112px]">{content}</div>
         {selectedRecipe && (
           <ServingsModal
@@ -580,9 +658,11 @@ export function PantryMatchPicker({
   if (presentation === "sheet") {
     return (
       <>
-        <p className="mb-3 text-[12px] font-medium leading-[1.5] text-[var(--text-2)]">
-          보유 재료가 많은 순서로 보여드려요. 부족한 재료만 확인하세요.
-        </p>
+        {slotLabel ? (
+          <p className="mb-3 text-[12px] font-bold leading-[1.5] text-[var(--brand)]">
+            대상 · {slotLabel}
+          </p>
+        ) : null}
         {content}
         {selectedRecipe && (
           <ServingsModal
@@ -601,10 +681,7 @@ export function PantryMatchPicker({
   if (presentation === "web") {
     return (
       <section className="web-picker-section" aria-label="팬트리 기반 추천">
-        <p className="web-picker-subtle">
-          보유 재료가 많은 순서로 보여드려요. 부족한 재료만 확인하세요.
-          {slotLabel ? ` · ${slotLabel}` : ""}
-        </p>
+        {slotLabel ? <p className="web-picker-subtle web-picker-target">대상 · {slotLabel}</p> : null}
         {content}
         {selectedRecipe && (
           <ServingsModal

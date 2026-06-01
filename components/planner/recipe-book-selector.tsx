@@ -43,12 +43,7 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
     liked: "좋아요",
     custom: "커스텀",
   }[book.book_type];
-  const screenSubtitle =
-    {
-      "저장한 레시피": "좋아요·북마크한 레시피 모음",
-      "평일 저녁 빠른요리": "30분 이내 간단 저녁 메뉴",
-      "주말 한 상 차림": "주말 특별 식사용 레시피",
-    }[book.name] ?? bookTypeLabel;
+  const screenSubtitle = bookTypeLabel;
   const screenIcon =
     {
       "저장한 레시피": "🔖",
@@ -238,7 +233,16 @@ export function RecipeBookSelector({
   }
 
   if (presentation === "sheet") {
-    return <>{content}</>;
+    return (
+      <>
+        {slotLabel ? (
+          <p className="mb-3 text-[12px] font-bold leading-[1.5] text-[var(--brand)]">
+            대상 · {slotLabel}
+          </p>
+        ) : null}
+        {content}
+      </>
+    );
   }
 
   if (presentation === "screen") {
@@ -251,7 +255,14 @@ export function RecipeBookSelector({
           </h1>
           <AppBackButtonSpacer />
         </div>
-        <div className="p-4 pb-[112px]">{content}</div>
+        <div className="p-4 pb-[112px]">
+          {slotLabel ? (
+            <p className="mb-3 text-[12px] font-bold leading-[1.5] text-[var(--brand)]">
+              대상 · {slotLabel}
+            </p>
+          ) : null}
+          {content}
+        </div>
         <Wave1MobileBottomTab ariaLabel="레시피북 선택 하단 탭" currentTab="planner" />
       </div>
     );

@@ -48,6 +48,7 @@ interface PlannerAddSheetProps {
     meta: string;
     emoji: string;
     background: string;
+    imageSrc?: string;
   };
 }
 
@@ -107,6 +108,10 @@ export function PlannerAddSheet({
   const selectedColumnName =
     columns.find((column) => column.id === selectedColumnId)?.name ?? "끼니";
   const selectedDateShort = selectedDate ? formatDateLabel(selectedDate) : "";
+  const selectedTargetLabel =
+    selectedDateShort && selectedColumnName
+      ? `대상 · ${selectedDateShort} ${selectedColumnName}`
+      : "";
   const shouldScrollMealColumns = columns.length > 4;
   const mealColumnGroupClass = shouldScrollMealColumns
     ? "scrollbar-hide mb-4 flex gap-2 overflow-x-auto pb-1"
@@ -122,18 +127,15 @@ export function PlannerAddSheet({
         <AppBottomSheet
           ariaLabelledBy="planner-add-sheet-title-mobile"
           closeDisabled={isSubmitting}
-          description="날짜와 끼니를 선택해 주세요"
+          description={selectedTargetLabel}
+          descriptionClassName="text-[var(--wave1-mint-contrast)] font-bold"
           footer={
             !isError && !isLoading ? (
               <AppModalFooterActions
                 cancelDisabled={isSubmitting}
                 confirmAriaLabel={isSubmitting ? "추가 중…" : "플래너에 추가"}
                 confirmDisabled={!canSubmit || isSubmitting}
-                confirmLabel={
-                  isSubmitting
-                    ? "추가 중…"
-                    : `${selectedDateShort} ${selectedColumnName}에 추가`
-                }
+                confirmLabel={isSubmitting ? "추가 중…" : "플래너에 추가"}
                 onCancel={onClose}
                 onConfirm={onSubmit}
               />
@@ -173,10 +175,15 @@ export function PlannerAddSheet({
                 <div className="flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--wave1-border)] bg-[var(--wave1-surface-fill)] p-3">
                   <div
                     aria-hidden="true"
-                    className="flex h-[var(--control-height-lg)] w-12 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[26px]"
-                    style={{ background: recipePreview.background }}
+                    className="flex h-[var(--control-height-lg)] w-12 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-cover bg-center text-[26px]"
+                    data-testid={recipePreview.imageSrc ? "planner-add-recipe-preview-image" : undefined}
+                    style={
+                      recipePreview.imageSrc
+                        ? { backgroundImage: `url(${recipePreview.imageSrc})` }
+                        : { background: recipePreview.background }
+                    }
                   >
-                    {recipePreview.emoji}
+                    {recipePreview.imageSrc ? null : recipePreview.emoji}
                   </div>
                   <div className="min-w-0">
                     <div className="truncate text-[15px] font-bold text-[var(--wave1-ink)]">
@@ -203,7 +210,7 @@ export function PlannerAddSheet({
                         className={[
                           "shrink-0 rounded-[var(--radius-chip)] border px-3 py-2 text-[13px] transition-colors",
                           isSelected
-                            ? "border-[var(--wave1-ink)] bg-[var(--wave1-ink)] font-bold text-[var(--text-inverse)]"
+                            ? "border-[var(--wave1-mint-contrast)] bg-[var(--wave1-mint-contrast)] font-bold text-[var(--text-inverse)]"
                             : "border-[var(--wave1-border)] bg-[var(--surface)] font-medium text-[var(--wave1-text-2)]",
                           isSubmitting ? "opacity-60" : "",
                         ]
@@ -289,7 +296,11 @@ export function PlannerAddSheet({
                 <WebDialogTitle id="planner-add-sheet-title-desktop">
                   플래너에 추가
                 </WebDialogTitle>
-                <p className="web-modal-copy">날짜와 끼니를 선택해 주세요</p>
+                {selectedTargetLabel ? (
+                  <p className="web-modal-target text-[var(--web-brand-accessible)]">
+                    {selectedTargetLabel}
+                  </p>
+                ) : null}
               </div>
               <WebIconButton
                 aria-label="닫기"
@@ -330,9 +341,14 @@ export function PlannerAddSheet({
                       <div
                         aria-hidden="true"
                         className="web-modal-preview-thumb"
-                        style={{ background: recipePreview.background }}
+                        data-testid={recipePreview.imageSrc ? "planner-add-recipe-preview-image" : undefined}
+                        style={
+                          recipePreview.imageSrc
+                            ? { backgroundImage: `url(${recipePreview.imageSrc})` }
+                            : { background: recipePreview.background }
+                        }
                       >
-                        {recipePreview.emoji}
+                        {recipePreview.imageSrc ? null : recipePreview.emoji}
                       </div>
                       <div className="min-w-0">
                         <div className="web-modal-preview-title">
@@ -430,9 +446,6 @@ export function PlannerAddSheet({
                   ) : null}
                 </WebDialogBody>
                 <WebDialogFooter>
-                  <span className="web-modal-footer-note">
-                    {selectedDateShort} {selectedColumnName}
-                  </span>
                   <WebButton
                     disabled={isSubmitting}
                     onClick={onClose}
