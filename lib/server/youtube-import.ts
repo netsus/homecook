@@ -44,6 +44,9 @@ import type {
   YoutubeIngredientRegistrationData,
   YoutubeIngredientRegistrationSynonymStatus,
   YoutubeIngredientResolutionStatus,
+  YoutubeQuantityConfirmationStatus,
+  YoutubeQuantityEvidenceRef,
+  YoutubeQuantitySource,
   YoutubeRecipeCandidate,
   YoutubeRecipeClassificationStatus,
   YoutubeRecipeExtractData,
@@ -385,6 +388,80 @@ interface YoutubeLlmExtractionEventsTable {
   }>;
 }
 
+interface YoutubeVisualExtractionCacheRow {
+  id: string;
+  youtube_video_id: string;
+  provider: string;
+  schema_version: string;
+  visual_request_hash: string;
+  result_json: unknown;
+  expires_at: string;
+}
+
+interface YoutubeVisualExtractionCacheSelectQuery {
+  eq(column: string, value: string): YoutubeVisualExtractionCacheSelectQuery;
+  gt(column: string, value: string): YoutubeVisualExtractionCacheSelectQuery;
+  order(column: string, options?: { ascending?: boolean }): YoutubeVisualExtractionCacheSelectQuery;
+  limit(count: number): YoutubeVisualExtractionCacheSelectQuery;
+  then: ArrayQueryResult<YoutubeVisualExtractionCacheRow>["then"];
+}
+
+interface YoutubeVisualExtractionCacheUpdateQuery {
+  eq(column: string, value: string): YoutubeVisualExtractionCacheUpdateQuery;
+  then: ArrayQueryResult<null>["then"];
+}
+
+interface YoutubeVisualExtractionCacheTable {
+  select(columns: string): YoutubeVisualExtractionCacheSelectQuery;
+  insert(values: {
+    youtube_video_id: string;
+    provider: string;
+    schema_version: string;
+    visual_request_hash: string;
+    result_json: unknown;
+    expires_at: string;
+    last_used_at: string;
+  }): PromiseLike<{
+    data: null;
+    error: QueryError | null;
+  }>;
+  update(values: { last_used_at: string }): YoutubeVisualExtractionCacheUpdateQuery;
+}
+
+interface YoutubeVisualExtractionEventRow {
+  user_id: string | null;
+  provider: string;
+  event_type: string;
+  status: string;
+  created_at: string;
+}
+
+interface YoutubeVisualExtractionEventSelectQuery {
+  eq(column: string, value: string): YoutubeVisualExtractionEventSelectQuery;
+  gte(column: string, value: string): YoutubeVisualExtractionEventSelectQuery;
+  then: ArrayQueryResult<YoutubeVisualExtractionEventRow>["then"];
+}
+
+interface YoutubeVisualExtractionEventsTable {
+  select(columns: string): YoutubeVisualExtractionEventSelectQuery;
+  insert(values: {
+    user_id: string | null;
+    youtube_video_id: string;
+    provider: string;
+    model: string | null;
+    cache_hit: boolean;
+    event_type: "attempted" | "cache_hit" | "quota_denied" | "success" | "error";
+    status: "success" | "unavailable" | "error" | "skipped";
+    reason: string | null;
+    input_tokens: number;
+    output_tokens: number;
+    estimated_cost_microusd: number;
+  }): PromiseLike<{
+    data: null;
+    error: QueryError | null;
+  }>;
+}
+
 interface YoutubeRecipeRegisterRpcData {
   recipe_id: string;
   title: string;
@@ -448,6 +525,11 @@ interface YoutubeIngredientRegistrationRpcClient {
   }>;
 }
 
+interface ParsedYoutubeUrl {
+  videoId: string;
+  youtubeUrl: string;
+}
+
 interface ParsedYoutubeRegister {
   extractionId: string;
   title: string;
@@ -495,9 +577,13 @@ const LLM_CACHE_TTL_DAYS = 90;
 const GEMINI_LLM_PROVIDER = "gemini";
 const GEMINI_STRUCTURED_EXTRACTOR_PROVIDER = "gemini_structured_extractor";
 const GEMINI_STRUCTURED_EXTRACTOR_CACHE_PROVIDER = "gemini_structured_extractor_cache";
+const VISUAL_QUANTITY_EXTRACTOR_PROVIDER = "visual_quantity_extractor";
+const VISUAL_QUANTITY_EXTRACTOR_CACHE_PROVIDER = "visual_quantity_extractor_cache";
 const DEFAULT_GEMINI_PRIMARY_MODEL = "gemini-3.1-flash-lite";
 const DEFAULT_GEMINI_FALLBACK_MODEL = "gemini-2.5-flash-lite";
 const DEFAULT_LLM_SCHEMA_VERSION = "2026-06-01-quality-v2";
+const DEFAULT_VISUAL_QUANTITY_SCHEMA_VERSION = "2026-06-02-visual-quantity-v1";
+const VISUAL_QUANTITY_CACHE_TTL_DAYS = 90;
 const LLM_MAX_RECIPES = 12;
 const LLM_MAX_SOURCE_LINES = 240;
 const PREFERRED_TRANSCRIPT_LANGUAGES = ["ko", "en"] as const;
@@ -755,6 +841,52 @@ export interface YoutubeRecipeLlmExtractor {
   ): Promise<YoutubeRecipeLlmExtractorResult>;
 }
 
+export type YoutubeVisualQuantityExtractorStatus =
+  | "available"
+  | "disabled"
+  | "unavailable"
+  | "error";
+
+export interface YoutubeVisualQuantityExtractorIngredient {
+  draft_ingredient_id: string;
+  ingredient_id: string;
+  standard_name: string;
+  amount: number | null;
+  unit: string | null;
+  ingredient_type: "QUANT" | "TO_TASTE";
+  display_text: string | null;
+  quantity_source: YoutubeQuantitySource;
+  quantity_raw_text: string | null;
+}
+
+export interface YoutubeVisualQuantityExtractorContext {
+  videoId: string;
+  youtubeUrl: string;
+  title: string;
+  channel: string;
+  ingredients: YoutubeVisualQuantityExtractorIngredient[];
+  schemaVersion: string;
+  model: string;
+  timeoutMs: number;
+}
+
+export interface YoutubeVisualQuantityExtractorResult {
+  status: YoutubeVisualQuantityExtractorStatus;
+  providerName?: string;
+  model?: string | null;
+  resultJson?: unknown;
+  reason?: string | null;
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
+export interface YoutubeVisualQuantityExtractor {
+  name: string;
+  fetchVisualQuantities(
+    context: YoutubeVisualQuantityExtractorContext,
+  ): Promise<YoutubeVisualQuantityExtractorResult>;
+}
+
 interface ParsedRecipeQualityMeta {
   low_quality: boolean;
   score: number;
@@ -790,6 +922,28 @@ interface LlmExtractorMeta {
   recipe_count: number;
   source_kinds: string[];
   parser_quality: ParsedRecipeQualityMeta | null;
+}
+
+interface VisualQuantityExtractorMeta {
+  attempted: boolean;
+  provider: string | null;
+  model: string | null;
+  schema_version: string;
+  status:
+    | "not_needed"
+    | "disabled"
+    | "cache_hit"
+    | "used"
+    | "unavailable"
+    | "error"
+    | "invalid_result";
+  cache_hit: boolean;
+  trigger_reason: string | null;
+  enriched_count: number;
+  review_required_count: number;
+  input_tokens: number;
+  output_tokens: number;
+  reason: string | null;
 }
 
 interface SelectedMultiRecipeExtraction {
@@ -889,6 +1043,7 @@ const YOUTUBE_COMMENT_THREADS_PROVIDER: YoutubeAuthorCommentProvider = {
 let transcriptProviderForTest: YoutubeTranscriptProvider | null = null;
 let authorCommentProviderForTest: YoutubeAuthorCommentProvider | null = null;
 let recipeLlmExtractorForTest: YoutubeRecipeLlmExtractor | null = null;
+let visualQuantityExtractorForTest: YoutubeVisualQuantityExtractor | null = null;
 
 export function setYoutubeTranscriptProviderForTest(provider: YoutubeTranscriptProvider | null) {
   if (process.env.NODE_ENV !== "test") {
@@ -959,6 +1114,27 @@ function getYoutubeRecipeLlmExtractor() {
   }
 
   return createDefaultYoutubeRecipeLlmExtractor();
+}
+
+export function setYoutubeVisualQuantityExtractorForTest(provider: YoutubeVisualQuantityExtractor | null) {
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("setYoutubeVisualQuantityExtractorForTest is only available in tests");
+  }
+
+  const previousProvider = visualQuantityExtractorForTest;
+  visualQuantityExtractorForTest = provider;
+
+  return () => {
+    visualQuantityExtractorForTest = previousProvider;
+  };
+}
+
+function getYoutubeVisualQuantityExtractor() {
+  if (visualQuantityExtractorForTest) {
+    return visualQuantityExtractorForTest;
+  }
+
+  return createDefaultYoutubeVisualQuantityExtractor();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -3750,6 +3926,273 @@ async function writeLlmExtractionCache(
   }
 }
 
+function buildVisualQuantityCacheExpiresAt() {
+  return new Date(Date.now() + VISUAL_QUANTITY_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function getVisualQuantityExtractionConfig() {
+  if (process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED !== "true") {
+    return null;
+  }
+
+  const provider = process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_PROVIDER?.trim() || GEMINI_LLM_PROVIDER;
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+
+  if (provider !== GEMINI_LLM_PROVIDER || !apiKey) {
+    return null;
+  }
+
+  return {
+    provider,
+    apiKey,
+    model: process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_MODEL?.trim()
+      || process.env.YOUTUBE_RECIPE_LLM_PRIMARY_MODEL?.trim()
+      || DEFAULT_GEMINI_PRIMARY_MODEL,
+    dailyLimit: parsePositiveIntegerEnv(process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_DAILY_LIMIT, 200),
+    userDailyLimit: parsePositiveIntegerEnv(process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_USER_DAILY_LIMIT, 10),
+    timeoutMs: parsePositiveIntegerEnv(process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_TIMEOUT_MS, 20_000),
+    schemaVersion: process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_SCHEMA_VERSION?.trim()
+      || DEFAULT_VISUAL_QUANTITY_SCHEMA_VERSION,
+  };
+}
+
+function buildVisualQuantityExtractorMeta({
+  attempted,
+  provider = null,
+  model = null,
+  schemaVersion = DEFAULT_VISUAL_QUANTITY_SCHEMA_VERSION,
+  status,
+  cacheHit = false,
+  triggerReason = null,
+  enrichedCount = 0,
+  reviewRequiredCount = 0,
+  inputTokens = 0,
+  outputTokens = 0,
+  reason = null,
+}: {
+  attempted: boolean;
+  provider?: string | null;
+  model?: string | null;
+  schemaVersion?: string;
+  status: VisualQuantityExtractorMeta["status"];
+  cacheHit?: boolean;
+  triggerReason?: string | null;
+  enrichedCount?: number;
+  reviewRequiredCount?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  reason?: string | null;
+}): VisualQuantityExtractorMeta {
+  return {
+    attempted,
+    provider,
+    model,
+    schema_version: schemaVersion,
+    status,
+    cache_hit: cacheHit,
+    trigger_reason: triggerReason,
+    enriched_count: enrichedCount,
+    review_required_count: reviewRequiredCount,
+    input_tokens: inputTokens,
+    output_tokens: outputTokens,
+    reason,
+  };
+}
+
+async function recordVisualQuantityExtractionEvent(
+  dbClient: DbClient | null,
+  {
+    userId,
+    videoId,
+    model,
+    cacheHit,
+    eventType,
+    status,
+    reason = null,
+    inputTokens = 0,
+    outputTokens = 0,
+    estimatedCostMicrousd = 0,
+  }: {
+    userId: string | null;
+    videoId: string;
+    model: string | null;
+    cacheHit: boolean;
+    eventType: "attempted" | "cache_hit" | "quota_denied" | "success" | "error";
+    status: "success" | "unavailable" | "error" | "skipped";
+    reason?: string | null;
+    inputTokens?: number;
+    outputTokens?: number;
+    estimatedCostMicrousd?: number;
+  },
+) {
+  if (!dbClient) {
+    return;
+  }
+
+  try {
+    await table<YoutubeVisualExtractionEventsTable>(dbClient, "youtube_visual_extraction_events")
+      .insert({
+        user_id: userId,
+        youtube_video_id: videoId,
+        provider: GEMINI_LLM_PROVIDER,
+        model,
+        cache_hit: cacheHit,
+        event_type: eventType,
+        status,
+        reason,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        estimated_cost_microusd: estimatedCostMicrousd,
+      });
+  } catch {
+    // Observability must not block recipe extraction.
+  }
+}
+
+function canUseVisualQuantityWithoutEventTable(error: unknown) {
+  return process.env.NODE_ENV !== "production" && isMissingSupabaseRelationError(error);
+}
+
+async function canUseVisualQuantityExtractor(
+  dbClient: DbClient | null,
+  userId: string,
+  config: NonNullable<ReturnType<typeof getVisualQuantityExtractionConfig>>,
+) {
+  if (!dbClient) {
+    return false;
+  }
+
+  try {
+    const result = await table<YoutubeVisualExtractionEventsTable>(dbClient, "youtube_visual_extraction_events")
+      .select("user_id,provider,event_type,status,created_at")
+      .eq("provider", GEMINI_LLM_PROVIDER)
+      .eq("status", "success")
+      .gte("created_at", getUtcDayStartIso());
+
+    if (result.error) {
+      return canUseVisualQuantityWithoutEventTable(result.error);
+    }
+
+    const rows = result.data ?? [];
+    const totalCount = rows.length;
+    const userCount = rows.filter((row) => row.user_id === userId).length;
+
+    return totalCount < config.dailyLimit && userCount < config.userDailyLimit;
+  } catch (error) {
+    return canUseVisualQuantityWithoutEventTable(error);
+  }
+}
+
+function buildVisualQuantityRequestHash({
+  ingredients,
+  schemaVersion,
+}: {
+  ingredients: YoutubeExtractedIngredient[];
+  schemaVersion: string;
+}) {
+  return createHash("sha256")
+    .update(JSON.stringify({
+      schemaVersion,
+      ingredients: ingredients.map((ingredient) => ({
+        draft_ingredient_id: ingredient.draft_ingredient_id,
+        standard_name: ingredient.standard_name,
+        raw_text: ingredient.raw_text ?? null,
+      })),
+    }))
+    .digest("hex");
+}
+
+async function readVisualQuantityExtractionCache(
+  dbClient: DbClient | null,
+  {
+    videoId,
+    visualRequestHash,
+    schemaVersion,
+    provider,
+  }: {
+    videoId: string;
+    visualRequestHash: string;
+    schemaVersion: string;
+    provider: string;
+  },
+): Promise<YoutubeVisualExtractionCacheRow | null> {
+  if (!dbClient) {
+    return null;
+  }
+
+  let rows: YoutubeVisualExtractionCacheRow[] | null;
+  try {
+    const result = await table<YoutubeVisualExtractionCacheTable>(dbClient, "youtube_visual_extraction_cache")
+      .select("id,youtube_video_id,provider,schema_version,visual_request_hash,result_json,expires_at")
+      .eq("youtube_video_id", videoId)
+      .eq("provider", provider)
+      .eq("schema_version", schemaVersion)
+      .eq("visual_request_hash", visualRequestHash)
+      .gt("expires_at", new Date().toISOString())
+      .order("last_used_at", { ascending: false })
+      .limit(1);
+
+    if (result.error) {
+      return null;
+    }
+
+    rows = result.data;
+  } catch {
+    return null;
+  }
+
+  const row = rows?.[0] ?? null;
+  if (!row) {
+    return null;
+  }
+
+  try {
+    await table<YoutubeVisualExtractionCacheTable>(dbClient, "youtube_visual_extraction_cache")
+      .update({ last_used_at: new Date().toISOString() })
+      .eq("id", row.id);
+  } catch {
+    // Cache freshness updates are best-effort.
+  }
+
+  return row;
+}
+
+async function writeVisualQuantityExtractionCache(
+  dbClient: DbClient | null,
+  {
+    videoId,
+    provider,
+    schemaVersion,
+    visualRequestHash,
+    resultJson,
+  }: {
+    videoId: string;
+    provider: string;
+    schemaVersion: string;
+    visualRequestHash: string;
+    resultJson: unknown;
+  },
+) {
+  if (!dbClient) {
+    return;
+  }
+
+  try {
+    await table<YoutubeVisualExtractionCacheTable>(dbClient, "youtube_visual_extraction_cache")
+      .insert({
+        youtube_video_id: videoId,
+        provider,
+        schema_version: schemaVersion,
+        visual_request_hash: visualRequestHash,
+        result_json: resultJson,
+        expires_at: buildVisualQuantityCacheExpiresAt(),
+        last_used_at: new Date().toISOString(),
+      });
+  } catch {
+    // Cache writes are best-effort.
+  }
+}
+
 function normalizeLlmSourceBlock(
   source: YoutubePublicTextSource,
   text: string,
@@ -4067,8 +4510,229 @@ async function callGeminiStructuredRecipe(
   }
 }
 
+const GEMINI_VISUAL_QUANTITY_RESPONSE_SCHEMA = {
+  type: "object",
+  properties: {
+    ingredient_quantities: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          draft_ingredient_id: { type: "string", nullable: true },
+          standard_name: { type: "string" },
+          amount: { type: "number", nullable: true },
+          unit: { type: "string", nullable: true },
+          ingredient_type: { type: "string" },
+          display_text: { type: "string" },
+          quantity_source: { type: "string" },
+          quantity_confidence: { type: "number" },
+          quantity_raw_text: { type: "string" },
+          quantity_evidence_refs: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                source_method: { type: "string" },
+                source_provider: { type: "string" },
+                start_ms: { type: "integer", nullable: true },
+                end_ms: { type: "integer", nullable: true },
+                frame_ts_ms: { type: "integer", nullable: true },
+                snippet: { type: "string" },
+                locator_hash: { type: "string", nullable: true },
+              },
+              required: ["source_method", "source_provider", "snippet"],
+            },
+          },
+        },
+        required: [
+          "standard_name",
+          "amount",
+          "unit",
+          "ingredient_type",
+          "display_text",
+          "quantity_source",
+          "quantity_confidence",
+          "quantity_raw_text",
+          "quantity_evidence_refs",
+        ],
+      },
+    },
+  },
+  required: ["ingredient_quantities"],
+} as const;
+
+function buildVisualQuantityPrompt(context: YoutubeVisualQuantityExtractorContext) {
+  const ingredientLines = context.ingredients
+    .map((ingredient, index) =>
+      [
+        `${index + 1}. draft_ingredient_id=${ingredient.draft_ingredient_id}`,
+        `standard_name=${ingredient.standard_name}`,
+        `current_amount=${ingredient.amount ?? "null"}`,
+        `current_unit=${ingredient.unit ?? "null"}`,
+        `raw_text=${ingredient.quantity_raw_text ?? ingredient.display_text ?? ""}`,
+      ].join(" | "),
+    )
+    .join("\n");
+
+  return [
+    "You extract only on-screen quantity text for cooking ingredients from a public YouTube video.",
+    "Return only JSON that matches the response schema.",
+    "Rules:",
+    "- Use visual on-screen text only. Do not use audio, guesses, comments, product ads, or external recipe data.",
+    "- Only return rows for the provided draft ingredients.",
+    "- Prefer exact on-screen amounts and units. If evidence is not visible, omit that ingredient.",
+    "- visual_explicit requires a visible on-screen text snippet and a timestamp.",
+    "- unit_normalized is allowed only when raw visible text supports the conversion.",
+    "- ingredient_default is allowed only when visible count evidence supports a known cooking default.",
+    "- recipe_inferred is review-only and must include the visible clue that caused the inference.",
+    "- Do not mention API keys, raw provider responses, or unrelated video details.",
+    "",
+    `Video title: ${context.title}`,
+    `Channel: ${context.channel}`,
+    "Draft ingredients:",
+    ingredientLines,
+  ].join("\n");
+}
+
+async function callGeminiVisualQuantity(
+  model: string,
+  context: YoutubeVisualQuantityExtractorContext,
+  apiKey: string,
+): Promise<{
+  ok: boolean;
+  retryable: boolean;
+  resultJson?: unknown;
+  reason?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+}> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  let response: Response;
+
+  try {
+    response = await fetchTextWithTimeout(
+      url,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  file_data: {
+                    file_uri: context.youtubeUrl,
+                  },
+                },
+                { text: buildVisualQuantityPrompt(context) },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0,
+            maxOutputTokens: 4096,
+            responseMimeType: "application/json",
+            responseSchema: GEMINI_VISUAL_QUANTITY_RESPONSE_SCHEMA,
+          },
+        }),
+      },
+      context.timeoutMs,
+    );
+  } catch {
+    return {
+      ok: false,
+      retryable: true,
+      reason: "gemini_visual_fetch_failed",
+    };
+  }
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      retryable: isRetryableGeminiStatus(response.status),
+      reason: response.status === 429
+        ? "gemini_visual_rate_limited"
+        : response.status === 503
+          ? "gemini_visual_unavailable"
+          : "gemini_visual_error",
+      ...getGeminiUsage(payload),
+    };
+  }
+
+  const responseText = getGeminiResponseText(payload);
+  if (!responseText) {
+    return {
+      ok: false,
+      retryable: false,
+      reason: "gemini_visual_empty_response",
+      ...getGeminiUsage(payload),
+    };
+  }
+
+  try {
+    return {
+      ok: true,
+      retryable: false,
+      resultJson: JSON.parse(responseText),
+      ...getGeminiUsage(payload),
+    };
+  } catch {
+    return {
+      ok: false,
+      retryable: false,
+      reason: "gemini_visual_invalid_json",
+      ...getGeminiUsage(payload),
+    };
+  }
+}
+
 async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function createDefaultYoutubeVisualQuantityExtractor(): YoutubeVisualQuantityExtractor {
+  return {
+    name: VISUAL_QUANTITY_EXTRACTOR_PROVIDER,
+    async fetchVisualQuantities(context) {
+      const config = getVisualQuantityExtractionConfig();
+      if (!config) {
+        return {
+          status: "disabled",
+          providerName: GEMINI_LLM_PROVIDER,
+          reason: "gemini_visual_disabled",
+        };
+      }
+
+      const result = await callGeminiVisualQuantity(config.model, context, config.apiKey);
+      if (result.ok) {
+        return {
+          status: "available",
+          providerName: GEMINI_LLM_PROVIDER,
+          model: config.model,
+          resultJson: result.resultJson,
+          inputTokens: result.inputTokens ?? 0,
+          outputTokens: result.outputTokens ?? 0,
+        };
+      }
+
+      return {
+        status: result.retryable ? "unavailable" : "error",
+        providerName: GEMINI_LLM_PROVIDER,
+        model: config.model,
+        reason: result.reason ?? "gemini_visual_unavailable",
+        inputTokens: result.inputTokens ?? 0,
+        outputTokens: result.outputTokens ?? 0,
+      };
+    },
+  };
 }
 
 function createDefaultYoutubeRecipeLlmExtractor(): YoutubeRecipeLlmExtractor {
@@ -5164,6 +5828,487 @@ async function resolveLlmStructuredFallback({
   };
 }
 
+function buildVisualQuantitySourceProviders(meta: VisualQuantityExtractorMeta) {
+  if (!meta.attempted || (meta.status !== "used" && meta.status !== "cache_hit")) {
+    return [];
+  }
+
+  return [
+    meta.cache_hit ? VISUAL_QUANTITY_EXTRACTOR_CACHE_PROVIDER : VISUAL_QUANTITY_EXTRACTOR_PROVIDER,
+  ];
+}
+
+function buildQuantityEnrichmentSummary(meta: VisualQuantityExtractorMeta) {
+  return {
+    provider: meta.provider,
+    cache_hit: meta.cache_hit,
+    trigger_reason: meta.trigger_reason,
+    enriched_count: meta.enriched_count,
+    review_required_count: meta.review_required_count,
+    schema_version: meta.schema_version,
+    status: meta.status,
+  };
+}
+
+function hasVisualQuantityGap(ingredient: YoutubeExtractedIngredient) {
+  return ingredient.quantity_source === "unknown"
+    || ingredient.quantity_source === undefined
+    || (ingredient.ingredient_type === "QUANT" && (ingredient.amount === null || !ingredient.unit));
+}
+
+function buildVisualQuantityExtractorIngredients(
+  ingredients: YoutubeExtractedIngredient[],
+): YoutubeVisualQuantityExtractorIngredient[] {
+  return ingredients.filter(hasVisualQuantityGap).map((ingredient) => ({
+    draft_ingredient_id: ingredient.draft_ingredient_id,
+    ingredient_id: ingredient.ingredient_id,
+    standard_name: ingredient.standard_name,
+    amount: ingredient.amount,
+    unit: ingredient.unit,
+    ingredient_type: ingredient.ingredient_type,
+    display_text: ingredient.display_text,
+    quantity_source: ingredient.quantity_source ?? "unknown",
+    quantity_raw_text: ingredient.quantity_raw_text ?? ingredient.raw_text ?? null,
+  }));
+}
+
+function normalizeQuantitySource(value: unknown): YoutubeQuantitySource | null {
+  if (
+    value === "text_explicit"
+    || value === "visual_explicit"
+    || value === "unit_normalized"
+    || value === "ingredient_default"
+    || value === "recipe_inferred"
+    || value === "user_entered"
+    || value === "unknown"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function normalizeVisualEvidenceRefs(value: unknown): YoutubeQuantityEvidenceRef[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item): YoutubeQuantityEvidenceRef | null => {
+      if (!isRecord(item) || item.source_method !== "visual") {
+        return null;
+      }
+
+      const snippet = normalizeLlmOptionalText(item.snippet);
+      if (!snippet) {
+        return null;
+      }
+
+      return {
+        source_method: "visual",
+        source_provider: typeof item.source_provider === "string" && item.source_provider.trim()
+          ? item.source_provider.trim()
+          : VISUAL_QUANTITY_EXTRACTOR_PROVIDER,
+        start_ms: typeof item.start_ms === "number" ? Math.trunc(item.start_ms) : null,
+        end_ms: typeof item.end_ms === "number" ? Math.trunc(item.end_ms) : null,
+        frame_ts_ms: typeof item.frame_ts_ms === "number" ? Math.trunc(item.frame_ts_ms) : null,
+        snippet,
+        locator_hash: normalizeNullableString(item.locator_hash),
+      };
+    })
+    .filter((ref): ref is YoutubeQuantityEvidenceRef => ref !== null);
+}
+
+interface VisualQuantitySuggestion {
+  draftIngredientId: string | null;
+  standardName: string;
+  amount: number | null;
+  unit: string | null;
+  ingredientType: "QUANT" | "TO_TASTE";
+  displayText: string | null;
+  quantitySource: Exclude<YoutubeQuantitySource, "text_explicit" | "user_entered" | "unknown">;
+  quantityConfidence: number | null;
+  quantityRawText: string | null;
+  quantityEvidenceRefs: YoutubeQuantityEvidenceRef[];
+}
+
+function normalizeVisualQuantitySuggestion(item: unknown): VisualQuantitySuggestion | null {
+  if (!isRecord(item)) {
+    return null;
+  }
+
+  const quantitySource = normalizeQuantitySource(item.quantity_source);
+  if (
+    quantitySource !== "visual_explicit"
+    && quantitySource !== "unit_normalized"
+    && quantitySource !== "ingredient_default"
+    && quantitySource !== "recipe_inferred"
+  ) {
+    return null;
+  }
+
+  const evidenceRefs = normalizeVisualEvidenceRefs(item.quantity_evidence_refs);
+  if (evidenceRefs.length === 0) {
+    return null;
+  }
+
+  const amount = typeof item.amount === "number" && Number.isFinite(item.amount) && item.amount > 0
+    ? item.amount
+    : null;
+  const unit = normalizeNullableString(item.unit);
+  const ingredientType = item.ingredient_type === "TO_TASTE" || amount === null || !unit
+    ? "TO_TASTE"
+    : "QUANT";
+  if (ingredientType === "QUANT" && (amount === null || !unit)) {
+    return null;
+  }
+
+  const standardName = normalizeParsedIngredientName(normalizeLlmOptionalText(item.standard_name));
+  if (!standardName) {
+    return null;
+  }
+
+  return {
+    draftIngredientId: typeof item.draft_ingredient_id === "string" && isUuid(item.draft_ingredient_id)
+      ? item.draft_ingredient_id
+      : null,
+    standardName,
+    amount: ingredientType === "QUANT" ? amount : null,
+    unit: ingredientType === "QUANT" ? unit : null,
+    ingredientType,
+    displayText: normalizeNullableString(item.display_text)
+      ?? [standardName, amount, unit].filter(Boolean).join(" "),
+    quantitySource,
+    quantityConfidence: typeof item.quantity_confidence === "number"
+      ? Math.max(0, Math.min(1, item.quantity_confidence))
+      : null,
+    quantityRawText: normalizeNullableString(item.quantity_raw_text) ?? evidenceRefs[0].snippet,
+    quantityEvidenceRefs: evidenceRefs,
+  };
+}
+
+function parseVisualQuantitySuggestions(payload: unknown) {
+  if (!isRecord(payload)) {
+    return [];
+  }
+
+  const items = Array.isArray(payload.ingredient_quantities)
+    ? payload.ingredient_quantities
+    : Array.isArray(payload.quantities)
+      ? payload.quantities
+      : [];
+
+  return items
+    .map(normalizeVisualQuantitySuggestion)
+    .filter((suggestion): suggestion is VisualQuantitySuggestion => suggestion !== null);
+}
+
+function applyVisualQuantitySuggestions(
+  ingredients: YoutubeExtractedIngredient[],
+  suggestions: VisualQuantitySuggestion[],
+) {
+  const usedSuggestionIndexes = new Set<number>();
+  let enrichedCount = 0;
+
+  const enrichedIngredients = ingredients.map((ingredient) => {
+    if (!hasVisualQuantityGap(ingredient)) {
+      return ingredient;
+    }
+
+    const suggestionIndex = suggestions.findIndex((suggestion, index) => {
+      if (usedSuggestionIndexes.has(index)) {
+        return false;
+      }
+
+      if (suggestion.draftIngredientId) {
+        return suggestion.draftIngredientId === ingredient.draft_ingredient_id;
+      }
+
+      return suggestion.standardName === ingredient.standard_name;
+    });
+
+    if (suggestionIndex === -1) {
+      return ingredient;
+    }
+
+    const suggestion = suggestions[suggestionIndex];
+    usedSuggestionIndexes.add(suggestionIndex);
+    enrichedCount += 1;
+
+    return {
+      ...ingredient,
+      amount: suggestion.amount,
+      unit: suggestion.unit,
+      ingredient_type: suggestion.ingredientType,
+      display_text: suggestion.displayText,
+      scalable: suggestion.ingredientType === "QUANT",
+      quantity_source: suggestion.quantitySource,
+      quantity_confidence: suggestion.quantityConfidence,
+      quantity_raw_text: suggestion.quantityRawText,
+      quantity_evidence_refs: suggestion.quantityEvidenceRefs,
+      quantity_review_required: true,
+      quantity_user_confirmed: false,
+    };
+  });
+
+  return { ingredients: enrichedIngredients, enrichedCount };
+}
+
+function countQuantityReviewRequired(ingredients: YoutubeExtractedIngredient[]) {
+  return ingredients.filter((ingredient) => ingredient.quantity_review_required === true).length;
+}
+
+function mergeVisualQuantityIntoCandidates(
+  candidates: YoutubeRecipeCandidate[],
+  suggestions: VisualQuantitySuggestion[],
+) {
+  let enrichedCount = 0;
+  const enrichedCandidates = candidates.map((candidate) => {
+    const result = applyVisualQuantitySuggestions(candidate.ingredients, suggestions);
+    enrichedCount += result.enrichedCount;
+    return {
+      ...candidate,
+      ingredients: result.ingredients,
+    };
+  });
+
+  return { candidates: enrichedCandidates, enrichedCount };
+}
+
+async function resolveVisualQuantityEnrichment({
+  dbClient,
+  userId,
+  video,
+  parsedUrl,
+  ingredients,
+  candidates = [],
+}: {
+  dbClient: DbClient;
+  userId: string;
+  video: YoutubeProviderVideo;
+  parsedUrl: ParsedYoutubeUrl;
+  ingredients: YoutubeExtractedIngredient[];
+  candidates?: YoutubeRecipeCandidate[];
+}) {
+  const candidateIngredients = candidates.flatMap((candidate) => candidate.ingredients);
+  const allIngredients = [...ingredients, ...candidateIngredients];
+  const gapIngredients = allIngredients.filter(hasVisualQuantityGap);
+  const notNeededMeta = buildVisualQuantityExtractorMeta({
+    attempted: false,
+    status: "not_needed",
+    triggerReason: "no_quantity_gap",
+  });
+
+  if (gapIngredients.length === 0) {
+    return {
+      ingredients,
+      candidates,
+      meta: notNeededMeta,
+      sourceProviders: [],
+    };
+  }
+
+  const config = getVisualQuantityExtractionConfig();
+  if (!config) {
+    return {
+      ingredients,
+      candidates,
+      meta: buildVisualQuantityExtractorMeta({
+        attempted: true,
+        provider: GEMINI_LLM_PROVIDER,
+        status: "disabled",
+        reason: "gemini_visual_disabled",
+        triggerReason: "quantity_gap",
+      }),
+      sourceProviders: [],
+    };
+  }
+
+  const visualRequestHash = buildVisualQuantityRequestHash({
+    ingredients: gapIngredients,
+    schemaVersion: config.schemaVersion,
+  });
+  const cached = await readVisualQuantityExtractionCache(dbClient, {
+    videoId: parsedUrl.videoId,
+    visualRequestHash,
+    schemaVersion: config.schemaVersion,
+    provider: config.provider,
+  });
+
+  if (cached) {
+    const suggestions = parseVisualQuantitySuggestions(cached.result_json);
+    const ingredientResult = applyVisualQuantitySuggestions(ingredients, suggestions);
+    const candidateResult = mergeVisualQuantityIntoCandidates(candidates, suggestions);
+    const allEnriched = [...ingredientResult.ingredients, ...candidateResult.candidates.flatMap((candidate) => candidate.ingredients)];
+    const enrichedCount = ingredientResult.enrichedCount + candidateResult.enrichedCount;
+    const meta = buildVisualQuantityExtractorMeta({
+      attempted: true,
+      provider: cached.provider,
+      model: config.model,
+      schemaVersion: config.schemaVersion,
+      status: enrichedCount > 0 ? "cache_hit" : "invalid_result",
+      cacheHit: true,
+      triggerReason: "quantity_gap",
+      enrichedCount,
+      reviewRequiredCount: countQuantityReviewRequired(allEnriched),
+      reason: enrichedCount > 0 ? null : "visual_result_without_valid_evidence",
+    });
+    await recordVisualQuantityExtractionEvent(dbClient, {
+      userId,
+      videoId: parsedUrl.videoId,
+      model: config.model,
+      cacheHit: true,
+      eventType: "cache_hit",
+      status: enrichedCount > 0 ? "success" : "unavailable",
+      reason: meta.reason,
+    });
+
+    return {
+      ingredients: ingredientResult.ingredients,
+      candidates: candidateResult.candidates,
+      meta,
+      sourceProviders: buildVisualQuantitySourceProviders(meta),
+    };
+  }
+
+  const allowed = await canUseVisualQuantityExtractor(dbClient, userId, config);
+  if (!allowed) {
+    const meta = buildVisualQuantityExtractorMeta({
+      attempted: true,
+      provider: config.provider,
+      model: config.model,
+      schemaVersion: config.schemaVersion,
+      status: "unavailable",
+      triggerReason: "quantity_gap",
+      reason: "visual_quantity_daily_limit_exceeded",
+    });
+    await recordVisualQuantityExtractionEvent(dbClient, {
+      userId,
+      videoId: parsedUrl.videoId,
+      model: config.model,
+      cacheHit: false,
+      eventType: "quota_denied",
+      status: "skipped",
+      reason: meta.reason,
+    });
+
+    return {
+      ingredients,
+      candidates,
+      meta,
+      sourceProviders: [],
+    };
+  }
+
+  const extractor = getYoutubeVisualQuantityExtractor();
+  let extractorResult: YoutubeVisualQuantityExtractorResult;
+  try {
+    extractorResult = await extractor.fetchVisualQuantities({
+      videoId: parsedUrl.videoId,
+      youtubeUrl: parsedUrl.youtubeUrl,
+      title: video.title,
+      channel: video.channel,
+      ingredients: buildVisualQuantityExtractorIngredients(gapIngredients),
+      schemaVersion: config.schemaVersion,
+      model: config.model,
+      timeoutMs: config.timeoutMs,
+    });
+  } catch (error) {
+    const meta = buildVisualQuantityExtractorMeta({
+      attempted: true,
+      provider: config.provider,
+      model: config.model,
+      schemaVersion: config.schemaVersion,
+      status: "error",
+      triggerReason: "quantity_gap",
+      reason: error instanceof Error ? error.message : "visual_quantity_provider_error",
+    });
+    await recordVisualQuantityExtractionEvent(dbClient, {
+      userId,
+      videoId: parsedUrl.videoId,
+      model: config.model,
+      cacheHit: false,
+      eventType: "error",
+      status: "error",
+      reason: meta.reason,
+    });
+
+    return { ingredients, candidates, meta, sourceProviders: [] };
+  }
+
+  if (extractorResult.status !== "available" || !extractorResult.resultJson) {
+    const meta = buildVisualQuantityExtractorMeta({
+      attempted: true,
+      provider: extractorResult.providerName ?? config.provider,
+      model: extractorResult.model ?? config.model,
+      schemaVersion: config.schemaVersion,
+      status: extractorResult.status === "error" ? "error" : "unavailable",
+      triggerReason: "quantity_gap",
+      inputTokens: extractorResult.inputTokens ?? 0,
+      outputTokens: extractorResult.outputTokens ?? 0,
+      reason: extractorResult.reason ?? "visual_quantity_unavailable",
+    });
+    await recordVisualQuantityExtractionEvent(dbClient, {
+      userId,
+      videoId: parsedUrl.videoId,
+      model: meta.model,
+      cacheHit: false,
+      eventType: meta.status === "error" ? "error" : "attempted",
+      status: meta.status === "error" ? "error" : "unavailable",
+      reason: meta.reason,
+      inputTokens: meta.input_tokens,
+      outputTokens: meta.output_tokens,
+    });
+
+    return { ingredients, candidates, meta, sourceProviders: [] };
+  }
+
+  const suggestions = parseVisualQuantitySuggestions(extractorResult.resultJson);
+  await writeVisualQuantityExtractionCache(dbClient, {
+    videoId: parsedUrl.videoId,
+    provider: extractorResult.providerName ?? config.provider,
+    schemaVersion: config.schemaVersion,
+    visualRequestHash,
+    resultJson: extractorResult.resultJson,
+  });
+
+  const ingredientResult = applyVisualQuantitySuggestions(ingredients, suggestions);
+  const candidateResult = mergeVisualQuantityIntoCandidates(candidates, suggestions);
+  const allEnriched = [...ingredientResult.ingredients, ...candidateResult.candidates.flatMap((candidate) => candidate.ingredients)];
+  const enrichedCount = ingredientResult.enrichedCount + candidateResult.enrichedCount;
+  const meta = buildVisualQuantityExtractorMeta({
+    attempted: true,
+    provider: extractorResult.providerName ?? config.provider,
+    model: extractorResult.model ?? config.model,
+    schemaVersion: config.schemaVersion,
+    status: enrichedCount > 0 ? "used" : "invalid_result",
+    triggerReason: "quantity_gap",
+    enrichedCount,
+    reviewRequiredCount: countQuantityReviewRequired(allEnriched),
+    inputTokens: extractorResult.inputTokens ?? 0,
+    outputTokens: extractorResult.outputTokens ?? 0,
+    reason: enrichedCount > 0 ? null : "visual_result_without_valid_evidence",
+  });
+  await recordVisualQuantityExtractionEvent(dbClient, {
+    userId,
+    videoId: parsedUrl.videoId,
+    model: meta.model,
+    cacheHit: false,
+    eventType: meta.status === "used" ? "success" : "attempted",
+    status: meta.status === "used" ? "success" : "unavailable",
+    reason: meta.reason,
+    inputTokens: meta.input_tokens,
+    outputTokens: meta.output_tokens,
+  });
+
+  return {
+    ingredients: ingredientResult.ingredients,
+    candidates: candidateResult.candidates,
+    meta,
+    sourceProviders: buildVisualQuantitySourceProviders(meta),
+  };
+}
+
 export async function handleYoutubeValidate(request: Request) {
   if (!isYoutubeImportEnabled()) {
     return buildFeatureDisabledResponse();
@@ -5502,6 +6647,54 @@ function shouldPreferExactDirectIngredientMatch(name: string) {
   return !AMBIGUOUS_DIRECT_MATCH_NAMES.has(name.trim());
 }
 
+function hasToTasteQuantityText(value: string) {
+  return /(?:약간|조금|적당량|취향껏|한\s*꼬집|한꼬집|넉넉히|살짝)/u.test(value);
+}
+
+function inferInitialQuantitySource({
+  amount,
+  unit,
+  rawText,
+  displayText,
+}: {
+  amount: number | null;
+  unit: string | null;
+  rawText: string;
+  displayText: string;
+}): YoutubeQuantitySource {
+  if (amount !== null && unit) {
+    return "text_explicit";
+  }
+
+  if (hasToTasteQuantityText(`${rawText}\n${displayText}`)) {
+    return "text_explicit";
+  }
+
+  return "unknown";
+}
+
+function buildInitialQuantityEvidenceRef({
+  rawText,
+  displayText,
+}: {
+  rawText: string;
+  displayText: string;
+}): YoutubeQuantityEvidenceRef[] {
+  const snippet = collapseWhitespace(rawText || displayText);
+  if (!snippet) {
+    return [];
+  }
+
+  return [{
+    source_method: "description",
+    source_provider: "public_text_parser",
+    line_index: null,
+    start_ms: null,
+    end_ms: null,
+    snippet,
+  }];
+}
+
 export function buildExtractedIngredient({
   matchesByName,
   name,
@@ -5551,6 +6744,10 @@ export function buildExtractedIngredient({
       : hasMatch
         ? "needs_review"
         : "unresolved";
+  const quantitySource = inferInitialQuantitySource({ amount, unit, rawText, displayText });
+  const quantityEvidenceRefs = quantitySource === "text_explicit"
+    ? buildInitialQuantityEvidenceRef({ rawText, displayText })
+    : [];
 
   return {
     draft_ingredient_id: crypto.randomUUID(),
@@ -5575,6 +6772,12 @@ export function buildExtractedIngredient({
         ? undefined
         : [],
     raw_text: rawText,
+    quantity_source: quantitySource,
+    quantity_confidence: quantitySource === "text_explicit" ? confidence : null,
+    quantity_raw_text: quantitySource === "text_explicit" ? rawText || displayText : null,
+    quantity_evidence_refs: quantityEvidenceRefs,
+    quantity_review_required: quantitySource === "recipe_inferred",
+    quantity_user_confirmed: false,
   };
 }
 
@@ -5613,6 +6816,17 @@ function buildBlockingIssues(ingredients: YoutubeExtractedIngredient[]) {
         : `ingredients[${index}].ingredient_id`,
     )
     .filter((issue): issue is string => issue !== null);
+}
+
+function isYoutubeQuantityConfirmationStatus(value: unknown): value is YoutubeQuantityConfirmationStatus {
+  return value === "not_required"
+    || value === "confirmed_suggestion"
+    || value === "edited_quantity"
+    || value === "cleared_to_taste";
+}
+
+function normalizeQuantityConfirmationStatus(value: unknown): YoutubeQuantityConfirmationStatus {
+  return isYoutubeQuantityConfirmationStatus(value) ? value : "not_required";
 }
 
 function buildExtractedSteps(
@@ -6007,6 +7221,15 @@ export async function handleYoutubeExtract(request: Request) {
       return fail("INTERNAL_ERROR", "다중 레시피 후보를 만들지 못했어요.", 500);
     }
 
+    const visualQuantityEnrichment = await resolveVisualQuantityEnrichment({
+      dbClient,
+      userId: user.id,
+      video,
+      parsedUrl,
+      ingredients: [],
+      candidates: candidateBuild.candidates,
+    });
+    const recipeCandidates = visualQuantityEnrichment.candidates;
     const extractionId = crypto.randomUUID();
     const extractionMethod = candidateSourceToExtractionMethod(multiRecipeExtraction.source);
     const extractionMethods = llmFallback.usedLlm && llmFallback.extractionMethods.length > 0
@@ -6025,6 +7248,7 @@ export async function handleYoutubeExtract(request: Request) {
         ? buildTranscriptSourceProviders(transcriptFallback.meta)
         : []),
       ...(llmFallback.usedLlm ? llmFallback.sourceProviders : ["multi_recipe_candidate_parser"]),
+      ...visualQuantityEnrichment.sourceProviders,
     ];
     const sourceSegmentsSummary: YoutubeSourceSegmentsSummary[] = [
       ...(llmFallback.usedLlm && llmFallback.sourceSegmentsSummary.length > 0
@@ -6040,8 +7264,8 @@ export async function handleYoutubeExtract(request: Request) {
     const tags = generateYoutubeExtractTags({
       title: video.title,
       description: video.description,
-      ingredients: candidateBuild.candidates.flatMap((candidate) => candidate.ingredients),
-      steps: candidateBuild.candidates.flatMap((candidate) => candidate.steps),
+      ingredients: recipeCandidates.flatMap((candidate) => candidate.ingredients),
+      steps: recipeCandidates.flatMap((candidate) => candidate.steps),
       providerTags: video.tags,
     });
     const data: YoutubeRecipeExtractData = {
@@ -6057,10 +7281,10 @@ export async function handleYoutubeExtract(request: Request) {
       steps: [],
       new_cooking_methods: candidateBuild.newCookingMethods,
       multi_recipe_status: multiRecipeExtraction.candidates.length > 1 ? "multiple" : "ambiguous",
-      primary_candidate_id: candidateBuild.candidates[0]?.candidate_id ?? null,
+      primary_candidate_id: recipeCandidates[0]?.candidate_id ?? null,
       caption_source: extractionMethod === CAPTION_EXTRACTION_METHOD ? "server_timedtext" : "none",
       source_segments_summary: sourceSegmentsSummary,
-      recipe_candidates: candidateBuild.candidates,
+      recipe_candidates: recipeCandidates,
     };
     const expiresAt = buildSessionExpiresAt();
     const sessionError = await insertExtractionSession(dbClient, {
@@ -6088,9 +7312,11 @@ export async function handleYoutubeExtract(request: Request) {
         caption_capability: transcriptFallback.meta.capability,
         transcript_provider: transcriptFallback.meta,
         llm_extractor: llmFallback.meta,
+        visual_quantity_extractor: visualQuantityEnrichment.meta,
+        quantity_enrichment_summary: buildQuantityEnrichmentSummary(visualQuantityEnrichment.meta),
         multi_recipe_status: data.multi_recipe_status,
         primary_candidate_id: data.primary_candidate_id,
-        candidate_count: candidateBuild.candidates.length,
+        candidate_count: recipeCandidates.length,
         source_segments_summary: sourceSegmentsSummary,
       },
       draft_json: data as unknown as Record<string, unknown>,
@@ -6108,7 +7334,7 @@ export async function handleYoutubeExtract(request: Request) {
 
     const candidateError = await insertExtractionCandidates(
       dbClient,
-      buildMultiRecipeCandidateRows(extractionId, candidateBuild.candidates),
+      buildMultiRecipeCandidateRows(extractionId, recipeCandidates),
     );
 
     if (candidateError) {
@@ -6131,9 +7357,17 @@ export async function handleYoutubeExtract(request: Request) {
     return fail("INTERNAL_ERROR", "조리방법을 준비하지 못했어요.", 500);
   }
 
-  const ingredients = buildExtractedIngredients(ingredientLookup.matchesByName, finalParsedRecipe.ingredients, {
+  const extractedIngredients = buildExtractedIngredients(ingredientLookup.matchesByName, finalParsedRecipe.ingredients, {
     saltNeedsReview: parsedUrl.videoId.startsWith("needsreview"),
   });
+  const visualQuantityEnrichment = await resolveVisualQuantityEnrichment({
+    dbClient,
+    userId: user.id,
+    video,
+    parsedUrl,
+    ingredients: extractedIngredients,
+  });
+  const ingredients = visualQuantityEnrichment.ingredients;
   const suppressIncompleteStepFallback = isLlmParserSuppression(llmFallback.meta);
   const steps = buildExtractedSteps(
     finalParsedRecipe.steps,
@@ -6176,6 +7410,7 @@ export async function handleYoutubeExtract(request: Request) {
       ? buildTranscriptSourceProviders(transcriptFallback.meta)
       : []),
     ...llmFallback.sourceProviders,
+    ...visualQuantityEnrichment.sourceProviders,
   ];
   const remainingDescriptionBlockingIssues = descriptionParse.blockingIssues.filter((issue) => {
     if (issue === "ingredients" && finalParsedRecipe.ingredients.length > 0) {
@@ -6244,6 +7479,8 @@ export async function handleYoutubeExtract(request: Request) {
       caption_capability: transcriptFallback.meta.capability,
       transcript_provider: transcriptFallback.meta,
       llm_extractor: llmFallback.meta,
+      visual_quantity_extractor: visualQuantityEnrichment.meta,
+      quantity_enrichment_summary: buildQuantityEnrichmentSummary(visualQuantityEnrichment.meta),
       partial_extraction: finalParsedRecipe.ingredients.length > 0 && finalParsedRecipe.steps.length === 0,
     },
     draft_json: data as unknown as Record<string, unknown>,
@@ -6265,8 +7502,11 @@ export async function handleYoutubeExtract(request: Request) {
 function normalizeIngredient(row: Record<string, unknown>): YoutubeRecipeRegisterIngredientInput {
   const componentLabel = normalizeNullableString(row.component_label);
   const displayText = normalizeNullableString(row.display_text);
+  const draftIngredientId = typeof row.draft_ingredient_id === "string" ? row.draft_ingredient_id.trim() : "";
+  const quantityConfirmationStatus = normalizeQuantityConfirmationStatus(row.quantity_confirmation_status);
 
   return {
+    draft_ingredient_id: draftIngredientId,
     ingredient_id: typeof row.ingredient_id === "string" ? row.ingredient_id.trim() : "",
     standard_name: typeof row.standard_name === "string" ? row.standard_name.trim() : "",
     amount: typeof row.amount === "number" ? row.amount : null,
@@ -6276,6 +7516,7 @@ function normalizeIngredient(row: Record<string, unknown>): YoutubeRecipeRegiste
     component_label: componentLabel,
     sort_order: typeof row.sort_order === "number" ? row.sort_order : Number.NaN,
     scalable: typeof row.scalable === "boolean" ? row.scalable : true,
+    quantity_confirmation_status: quantityConfirmationStatus,
   };
 }
 
@@ -6470,9 +7711,27 @@ function parseYoutubeRegisterBody(rawBody: unknown) {
   ingredients.forEach((ingredient, index) => {
     const rawIngredient = ingredientRecords[index];
     const ingredientType = isRecord(rawIngredient) ? rawIngredient.ingredient_type : undefined;
+    const rawDraftIngredientId = isRecord(rawIngredient) ? rawIngredient.draft_ingredient_id : undefined;
+    const rawConfirmationStatus = isRecord(rawIngredient)
+      ? rawIngredient.quantity_confirmation_status
+      : undefined;
 
     if (ingredientType !== "QUANT" && ingredientType !== "TO_TASTE") {
       fields.push({ field: `ingredients[${index}].ingredient_type`, reason: "invalid_enum" });
+    }
+
+    if (!ingredient.draft_ingredient_id) {
+      fields.push({ field: `ingredients[${index}].draft_ingredient_id`, reason: "required" });
+    } else if (!isUuid(ingredient.draft_ingredient_id)) {
+      fields.push({ field: `ingredients[${index}].draft_ingredient_id`, reason: "invalid_uuid" });
+    }
+
+    if (!isYoutubeQuantityConfirmationStatus(rawConfirmationStatus)) {
+      fields.push({ field: `ingredients[${index}].quantity_confirmation_status`, reason: "invalid_enum" });
+    }
+
+    if (rawDraftIngredientId !== undefined && typeof rawDraftIngredientId !== "string") {
+      fields.push({ field: `ingredients[${index}].draft_ingredient_id`, reason: "invalid_uuid" });
     }
 
     validateIngredient(ingredient, index, fields);
@@ -6830,6 +8089,82 @@ function findDraftIngredientRow(draftJson: Record<string, unknown>, draftIngredi
   return ingredients.find((ingredient): ingredient is Record<string, unknown> =>
     isRecord(ingredient) && ingredient.draft_ingredient_id === draftIngredientId,
   ) ?? null;
+}
+
+function readDraftIngredientType(row: Record<string, unknown>) {
+  return row.ingredient_type === "TO_TASTE" ? "TO_TASTE" : "QUANT";
+}
+
+function readDraftAmount(row: Record<string, unknown>) {
+  return typeof row.amount === "number" ? row.amount : null;
+}
+
+function readDraftUnit(row: Record<string, unknown>) {
+  return normalizeNullableString(row.unit);
+}
+
+function isDraftQuantityReviewRequired(row: Record<string, unknown>) {
+  return row.quantity_review_required === true || row.quantity_source === "recipe_inferred";
+}
+
+function quantityMatchesDraftSuggestion(
+  ingredient: YoutubeRecipeRegisterIngredientInput,
+  draftIngredient: Record<string, unknown>,
+) {
+  const draftAmount = readDraftAmount(draftIngredient);
+  const draftUnit = readDraftUnit(draftIngredient);
+  const draftType = readDraftIngredientType(draftIngredient);
+
+  return ingredient.ingredient_type === draftType
+    && ingredient.amount === draftAmount
+    && ingredient.unit === draftUnit;
+}
+
+function validateQuantityConfirmationForRegister(
+  session: YoutubeExtractionSessionRow,
+  ingredients: YoutubeRecipeRegisterIngredientInput[],
+) {
+  const fields: ValidationField[] = [];
+
+  ingredients.forEach((ingredient, index) => {
+    const draftIngredient = findDraftIngredientRow(session.draft_json, ingredient.draft_ingredient_id);
+    if (!draftIngredient) {
+      fields.push({ field: `ingredients[${index}].draft_ingredient_id`, reason: "not_found" });
+      return;
+    }
+
+    const reviewRequired = isDraftQuantityReviewRequired(draftIngredient);
+    if (ingredient.quantity_confirmation_status === "not_required") {
+      if (reviewRequired) {
+        fields.push({ field: "quantity_review_required", reason: "confirmation_required" });
+      }
+      return;
+    }
+
+    if (ingredient.quantity_confirmation_status === "confirmed_suggestion") {
+      if (!quantityMatchesDraftSuggestion(ingredient, draftIngredient)) {
+        fields.push({ field: "quantity_review_required", reason: "suggestion_mismatch" });
+      }
+      return;
+    }
+
+    if (ingredient.quantity_confirmation_status === "edited_quantity") {
+      if (ingredient.ingredient_type !== "QUANT" || ingredient.amount === null || !ingredient.unit) {
+        fields.push({ field: "quantity_review_required", reason: "invalid_edited_quantity" });
+      }
+      return;
+    }
+
+    if (
+      ingredient.ingredient_type !== "TO_TASTE"
+      || ingredient.amount !== null
+      || ingredient.unit !== null
+    ) {
+      fields.push({ field: "quantity_review_required", reason: "invalid_cleared_to_taste" });
+    }
+  });
+
+  return fields;
 }
 
 function validateSessionForIngredientRegistration(
@@ -7207,6 +8542,19 @@ export async function handleYoutubeRegister(request: Request) {
   const sessionFailure = validateSessionForRegister(sessionResult.data, parsed, user.id);
   if (sessionFailure) {
     return sessionFailure;
+  }
+
+  const quantityConfirmationFields = validateQuantityConfirmationForRegister(
+    sessionResult.data as YoutubeExtractionSessionRow,
+    parsed.ingredients,
+  );
+  if (quantityConfirmationFields.length > 0) {
+    return fail(
+      "VALIDATION_ERROR",
+      "요청 값을 확인해주세요.",
+      422,
+      quantityConfirmationFields,
+    );
   }
 
   const ingredientIds = [...new Set(parsed.ingredients.map((ingredient) => ingredient.ingredient_id))];

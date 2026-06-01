@@ -148,8 +148,36 @@ export interface ManualRecipeCreateBody {
   steps: ManualRecipeStepInput[];
 }
 
+export type YoutubeQuantitySource =
+  | "text_explicit"
+  | "visual_explicit"
+  | "unit_normalized"
+  | "ingredient_default"
+  | "recipe_inferred"
+  | "user_entered"
+  | "unknown";
+
+export interface YoutubeQuantityEvidenceRef {
+  source_method: "description" | "comment" | "caption" | "visual";
+  source_provider: string;
+  line_index?: number | null;
+  start_ms?: number | null;
+  end_ms?: number | null;
+  frame_ts_ms?: number | null;
+  snippet: string;
+  locator_hash?: string | null;
+}
+
+export type YoutubeQuantityConfirmationStatus =
+  | "not_required"
+  | "confirmed_suggestion"
+  | "edited_quantity"
+  | "cleared_to_taste";
+
 export interface YoutubeRecipeRegisterIngredientInput extends ManualRecipeIngredientInput {
   component_label?: string | null;
+  draft_ingredient_id: string;
+  quantity_confirmation_status: YoutubeQuantityConfirmationStatus;
 }
 
 export interface YoutubeRecipeRegisterStepInput extends ManualRecipeStepInput {
@@ -205,6 +233,12 @@ export interface YoutubeExtractedIngredient extends ManualRecipeIngredientInput 
   component_label?: string | null;
   candidates?: YoutubeIngredientCandidate[];
   raw_text?: string;
+  quantity_source?: YoutubeQuantitySource;
+  quantity_confidence?: number | null;
+  quantity_raw_text?: string | null;
+  quantity_evidence_refs?: YoutubeQuantityEvidenceRef[];
+  quantity_review_required?: boolean;
+  quantity_user_confirmed?: boolean;
 }
 
 export interface YoutubeExtractedCookingMethod {

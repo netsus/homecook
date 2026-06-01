@@ -99,9 +99,19 @@ describe("Recipio-style YouTube import helpers", () => {
         },
       ],
     });
+    const reviewRequiredQuantity = buildExtractData({
+      ingredients: [
+        {
+          ...buildExtractData().ingredients[0],
+          quantity_source: "visual_explicit",
+          quantity_review_required: true,
+        },
+      ],
+    });
 
     expect(getRecipioAutoRegisterBlockers(buildExtractData())).toEqual([]);
     expect(getRecipioAutoRegisterBlockers(unresolved)).toContain("확정되지 않은 재료가 있어요.");
+    expect(getRecipioAutoRegisterBlockers(reviewRequiredQuantity)).toContain("수량 확인이 필요한 재료가 있어요.");
     expect(getRecipioAutoRegisterBlockers(incompleteStep)).toContain("필수 조리 단계가 비어 있어요.");
     expect(getRecipioAutoRegisterBlockers(buildExtractData({
       multi_recipe_status: "multiple",
@@ -134,7 +144,7 @@ describe("Recipio-style YouTube import helpers", () => {
     }))).toContain("영상 안에 여러 요리 후보가 있어요.");
   });
 
-  it("builds the existing register contract from extracted data without leaking draft-only fields", () => {
+  it("builds the register contract from extracted data with quantity confirmation fields", () => {
     const registerBody = buildRecipioYoutubeRegisterBody(
       buildExtractData(),
       "https://www.youtube.com/watch?v=X9CqUvteeMo",
@@ -156,6 +166,8 @@ describe("Recipio-style YouTube import helpers", () => {
           component_label: "김밥 속재료",
           scalable: true,
           sort_order: 1,
+          draft_ingredient_id: "550e8400-e29b-41d4-a716-446655441301",
+          quantity_confirmation_status: "not_required",
         },
       ],
       steps: [

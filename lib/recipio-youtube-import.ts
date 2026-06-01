@@ -180,6 +180,10 @@ export function getRecipioAutoRegisterBlockers(data: YoutubeRecipeExtractData) {
     blockers.add("확정되지 않은 재료가 있어요.");
   }
 
+  if (data.ingredients.some((ingredient) => ingredient.quantity_review_required === true)) {
+    blockers.add("수량 확인이 필요한 재료가 있어요.");
+  }
+
   if (data.steps.length === 0) {
     blockers.add("추출된 조리 단계가 없어요.");
   }
@@ -217,6 +221,10 @@ export function buildRecipioYoutubeRegisterBody(
       component_label: ingredient.component_label ?? null,
       scalable: ingredient.scalable,
       sort_order: index + 1,
+      draft_ingredient_id: ingredient.draft_ingredient_id,
+      quantity_confirmation_status: ingredient.quantity_review_required
+        ? "edited_quantity"
+        : "not_required",
     })),
     steps: data.steps.map((step) => ({
       step_number: step.step_number,

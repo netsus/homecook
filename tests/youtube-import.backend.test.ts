@@ -7,6 +7,7 @@ import type {
   YoutubeAuthorCommentProvider,
   YoutubeRecipeLlmExtractor,
   YoutubeTranscriptProvider,
+  YoutubeVisualQuantityExtractor,
 } from "@/lib/server/youtube-import";
 
 const createRouteHandlerClient = vi.fn();
@@ -311,6 +312,57 @@ function createYoutubeLlmExtractionEventsTable({
   };
 }
 
+function createYoutubeVisualExtractionCacheTable({
+  rows = [],
+  insertResult = { data: null, error: null },
+  updateResult = { data: null, error: null },
+}: {
+  rows?: YoutubeVisualExtractionCacheRow[];
+  insertResult?: QueryResult<null>;
+  updateResult?: QueryResult<null>;
+} = {}) {
+  const selectQuery = createArrayQuery({ data: rows, error: null });
+  const updateQuery = {
+    eq: vi.fn(() => updateQuery),
+    then: createAwaitableQuery(updateResult).then,
+  };
+
+  return {
+    __selectQuery: selectQuery,
+    __updateQuery: updateQuery,
+    insert: vi.fn((values: unknown) => {
+      void values;
+      return createAwaitableQuery(insertResult);
+    }),
+    select: vi.fn(() => selectQuery),
+    update: vi.fn((values: unknown) => {
+      void values;
+      return updateQuery;
+    }),
+  };
+}
+
+function createYoutubeVisualExtractionEventsTable({
+  rows = [],
+  selectResult,
+  insertResult = { data: null, error: null },
+}: {
+  rows?: YoutubeVisualExtractionEventRow[];
+  selectResult?: QueryResult<YoutubeVisualExtractionEventRow[]>;
+  insertResult?: QueryResult<null>;
+} = {}) {
+  const selectQuery = createArrayQuery(selectResult ?? { data: rows, error: null });
+
+  return {
+    __selectQuery: selectQuery,
+    insert: vi.fn((values: unknown) => {
+      void values;
+      return createAwaitableQuery(insertResult);
+    }),
+    select: vi.fn(() => selectQuery),
+  };
+}
+
 interface YoutubeSessionRow {
   id: string;
   user_id: string;
@@ -383,6 +435,32 @@ interface YoutubeLlmExtractionEventRow {
   created_at: string;
 }
 
+interface YoutubeVisualExtractionCacheRow {
+  id: string;
+  youtube_video_id: string;
+  provider: string;
+  schema_version: string;
+  visual_request_hash: string;
+  result_json: unknown;
+  expires_at: string;
+}
+
+interface YoutubeVisualExtractionEventRow {
+  id: string;
+  user_id: string | null;
+  youtube_video_id: string;
+  provider: string;
+  model: string | null;
+  cache_hit: boolean;
+  event_type: string;
+  status: string;
+  reason: string | null;
+  input_tokens: number;
+  output_tokens: number;
+  estimated_cost_microusd: number;
+  created_at: string;
+}
+
 interface YoutubeIngredientRegistrationRpcData {
   ingredient_id: string;
   standard_name: string;
@@ -417,6 +495,7 @@ const newMethodId = "550e8400-e29b-41d4-a716-446655441101";
 const extractionId = "550e8400-e29b-41d4-a716-446655441201";
 const childExtractionId = "550e8400-e29b-41d4-a716-446655441202";
 const draftIngredientId = "550e8400-e29b-41d4-a716-446655441301";
+const saltDraftIngredientId = "550e8400-e29b-41d4-a716-446655441302";
 const mustardIngredientId = "550e8400-e29b-41d4-a716-446655441401";
 const recipeUrl = "https://www.youtube.com/watch?v=recipe12345";
 const nonRecipeUrl = "https://youtu.be/nonrecipe123";
@@ -635,6 +714,7 @@ function buildRegisterBody() {
     youtube_url: recipeUrl,
     ingredients: [
       {
+        draft_ingredient_id: draftIngredientId,
         ingredient_id: kimchiIngredientId,
         standard_name: "김치",
         amount: 200,
@@ -644,8 +724,10 @@ function buildRegisterBody() {
         component_label: "찌개 재료",
         scalable: true,
         sort_order: 1,
+        quantity_confirmation_status: "not_required",
       },
       {
+        draft_ingredient_id: saltDraftIngredientId,
         ingredient_id: saltIngredientId,
         standard_name: "소금",
         amount: null,
@@ -655,6 +737,7 @@ function buildRegisterBody() {
         component_label: "찌개 재료",
         scalable: false,
         sort_order: 2,
+        quantity_confirmation_status: "not_required",
       },
     ],
     steps: [
@@ -667,6 +750,72 @@ function buildRegisterBody() {
         heat_level: null,
         duration_seconds: null,
         duration_text: null,
+      },
+    ],
+  };
+}
+
+function buildRegisterDraftJson({
+  kimchiOverrides = {},
+  saltOverrides = {},
+}: {
+  kimchiOverrides?: Record<string, unknown>;
+  saltOverrides?: Record<string, unknown>;
+} = {}) {
+  return {
+    extraction_id: extractionId,
+    ingredients: [
+      {
+        draft_ingredient_id: draftIngredientId,
+        ingredient_id: kimchiIngredientId,
+        standard_name: "김치",
+        amount: 200,
+        unit: "g",
+        ingredient_type: "QUANT",
+        display_text: "김치 200g",
+        sort_order: 1,
+        scalable: true,
+        confidence: 0.95,
+        resolution_status: "resolved",
+        raw_text: "김치 200g",
+        quantity_source: "text_explicit",
+        quantity_confidence: 0.95,
+        quantity_raw_text: "김치 200g",
+        quantity_evidence_refs: [{
+          source_method: "description",
+          source_provider: "description_parser",
+          line_index: 2,
+          snippet: "김치 200g",
+        }],
+        quantity_review_required: false,
+        quantity_user_confirmed: false,
+        ...kimchiOverrides,
+      },
+      {
+        draft_ingredient_id: saltDraftIngredientId,
+        ingredient_id: saltIngredientId,
+        standard_name: "소금",
+        amount: null,
+        unit: null,
+        ingredient_type: "TO_TASTE",
+        display_text: "소금 약간",
+        sort_order: 2,
+        scalable: false,
+        confidence: 0.8,
+        resolution_status: "resolved",
+        raw_text: "소금 약간",
+        quantity_source: "text_explicit",
+        quantity_confidence: 0.8,
+        quantity_raw_text: "소금 약간",
+        quantity_evidence_refs: [{
+          source_method: "description",
+          source_provider: "description_parser",
+          line_index: 3,
+          snippet: "소금 약간",
+        }],
+        quantity_review_required: false,
+        quantity_user_confirmed: false,
+        ...saltOverrides,
       },
     ],
   };
@@ -691,7 +840,7 @@ function buildYoutubeSession(overrides: Partial<YoutubeSessionRow> = {}): Youtub
       provider_version: "youtube-videos-list-description-v1",
       classification_status: "recipe",
     },
-    draft_json: {},
+    draft_json: buildRegisterDraftJson(),
     status: "draft",
     expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     session_kind: "single",
@@ -863,6 +1012,9 @@ function createTranscriptFallbackExtractDbClient({
   llmCacheRows = [],
   llmEventRows = [],
   llmEventSelectResult,
+  visualCacheRows = [],
+  visualEventRows = [],
+  visualEventSelectResult,
 }: {
   ingredientLookupRows?: Array<{ id: string; standard_name: string }>;
   cookingMethodLookupRows?: NonNullable<Parameters<typeof createCookingMethodsTable>[0]["lookupRows"]>;
@@ -872,6 +1024,9 @@ function createTranscriptFallbackExtractDbClient({
   llmCacheRows?: YoutubeLlmExtractionCacheRow[];
   llmEventRows?: YoutubeLlmExtractionEventRow[];
   llmEventSelectResult?: QueryResult<YoutubeLlmExtractionEventRow[]>;
+  visualCacheRows?: YoutubeVisualExtractionCacheRow[];
+  visualEventRows?: YoutubeVisualExtractionEventRow[];
+  visualEventSelectResult?: QueryResult<YoutubeVisualExtractionEventRow[]>;
 } = {}) {
   const ingredientsTable = createLookupTable({
     data: ingredientLookupRows,
@@ -910,6 +1065,13 @@ function createTranscriptFallbackExtractDbClient({
     rows: llmEventRows,
     selectResult: llmEventSelectResult,
   });
+  const visualExtractionCacheTable = createYoutubeVisualExtractionCacheTable({
+    rows: visualCacheRows,
+  });
+  const visualExtractionEventsTable = createYoutubeVisualExtractionEventsTable({
+    rows: visualEventRows,
+    selectResult: visualEventSelectResult,
+  });
   const dbClient = {
     from: vi.fn((table: string) => {
       if (table === "ingredients") return ingredientsTable;
@@ -921,6 +1083,8 @@ function createTranscriptFallbackExtractDbClient({
       if (table === "youtube_transcript_fetch_events") return transcriptFetchEventsTable;
       if (table === "youtube_llm_extraction_cache") return llmExtractionCacheTable;
       if (table === "youtube_llm_extraction_events") return llmExtractionEventsTable;
+      if (table === "youtube_visual_extraction_cache") return visualExtractionCacheTable;
+      if (table === "youtube_visual_extraction_events") return visualExtractionEventsTable;
       throw new Error(`unexpected table: ${table}`);
     }),
   };
@@ -933,6 +1097,8 @@ function createTranscriptFallbackExtractDbClient({
     sessionsTable,
     transcriptCacheTable,
     transcriptFetchEventsTable,
+    visualExtractionCacheTable,
+    visualExtractionEventsTable,
   };
 }
 
@@ -975,6 +1141,20 @@ async function withYoutubeRecipeLlmExtractor<T>(
     return await callback();
   } finally {
     restoreLlmExtractor();
+  }
+}
+
+async function withYoutubeVisualQuantityExtractor<T>(
+  provider: YoutubeVisualQuantityExtractor,
+  callback: () => Promise<T>,
+) {
+  const youtubeImport = await import("@/lib/server/youtube-import");
+  const restoreVisualQuantityExtractor = youtubeImport.setYoutubeVisualQuantityExtractorForTest(provider);
+
+  try {
+    return await callback();
+  } finally {
+    restoreVisualQuantityExtractor();
   }
 }
 
@@ -1084,6 +1264,10 @@ describe("20 youtube real import backend", () => {
       "supabase/migrations/20260601090000_youtube_llm_extraction_cache_and_events.sql",
       "utf8",
     );
+    const visualExtractionSchema = readFileSync(
+      "supabase/migrations/20260602103000_32_youtube_visual_extraction_cache_and_events.sql",
+      "utf8",
+    );
 
     expect(methodCodes).toEqual(expect.arrayContaining([
       "stir_fry",
@@ -1126,6 +1310,16 @@ describe("20 youtube real import backend", () => {
     expect(llmExtractionSchema).toContain("output_tokens");
     expect(llmExtractionSchema).not.toContain("api_key");
     expect(llmExtractionSchema).not.toContain("cookie_header");
+    expect(visualExtractionSchema).toContain("create table if not exists public.youtube_visual_extraction_cache");
+    expect(visualExtractionSchema).toContain("youtube_video_id, provider, schema_version, visual_request_hash");
+    expect(visualExtractionSchema).toContain("create table if not exists public.youtube_visual_extraction_events");
+    expect(visualExtractionSchema).toContain("event_type");
+    expect(visualExtractionSchema).toContain("alter table public.youtube_visual_extraction_cache enable row level security");
+    expect(visualExtractionSchema).toContain("alter table public.youtube_visual_extraction_events enable row level security");
+    expect(visualExtractionSchema).not.toContain("api_key");
+    expect(visualExtractionSchema).not.toContain("cookie_header");
+    expect(visualExtractionSchema).not.toContain("raw_frame");
+    expect(visualExtractionSchema).not.toContain("raw_provider_response");
   });
 
   it("schema includes the user-confirmed YouTube ingredient registration RPC", () => {
@@ -5049,6 +5243,352 @@ describe("20 youtube real import backend", () => {
     });
   });
 
+  it("POST /api/v1/recipes/youtube/extract enriches missing quantities with visual provider without changing extraction methods", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
+    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+
+    const {
+      dbClient,
+      sessionsTable,
+      visualExtractionCacheTable,
+      visualExtractionEventsTable,
+    } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: "550e8400-e29b-41d4-a716-446655440052", standard_name: "미니 파프리카" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+      ],
+    });
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: "미니 파프리카에 부침가루를 묻히고 속을 꽉 채워요.",
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+    const llmExtractor: YoutubeRecipeLlmExtractor = {
+      name: "gemini_structured_extractor",
+      fetchStructuredRecipe: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "gemini",
+        model: "gemini-3.1-flash-lite",
+        fallbackModel: "gemini-2.5-flash-lite",
+        resultJson: {
+          recipes: [
+            {
+              title: "미니 파프리카 새우전",
+              confidence: 0.9,
+              ingredients: [
+                {
+                  name: "미니 파프리카",
+                  amount: null,
+                  unit: null,
+                  raw_text: "미니 파프리카에 부침가루를 묻히고 속을 꽉 채워요.",
+                  evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                },
+              ],
+              steps: [
+                {
+                  instruction: "미니 파프리카에 속을 꽉 채워요.",
+                  raw_text: "미니 파프리카에 부침가루를 묻히고 속을 꽉 채워요.",
+                  evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                },
+              ],
+              warnings: [],
+            },
+          ],
+        },
+      })),
+    };
+    const visualExtractor: YoutubeVisualQuantityExtractor = {
+      name: "visual_quantity_extractor",
+      fetchVisualQuantities: vi.fn(async (context) => {
+        expect(context.youtubeUrl).toBe(transcriptFallbackUrl);
+        expect(context.ingredients).toEqual([
+          expect.objectContaining({
+            standard_name: "미니 파프리카",
+            amount: null,
+            quantity_source: "unknown",
+          }),
+        ]);
+
+        return {
+          status: "available" as const,
+          providerName: "gemini",
+          model: "gemini-3.1-flash-lite",
+          inputTokens: 64,
+          outputTokens: 32,
+          resultJson: {
+            ingredient_quantities: [
+              {
+                draft_ingredient_id: context.ingredients[0]?.draft_ingredient_id,
+                standard_name: "미니 파프리카",
+                amount: 4,
+                unit: "개",
+                ingredient_type: "QUANT",
+                display_text: "미니 파프리카 4개",
+                quantity_source: "visual_explicit",
+                quantity_confidence: 0.84,
+                quantity_raw_text: "미니 파프리카 4개",
+                quantity_evidence_refs: [
+                  {
+                    source_method: "visual",
+                    source_provider: "visual_quantity_extractor",
+                    start_ms: 12_000,
+                    end_ms: 13_000,
+                    frame_ts_ms: 12_500,
+                    snippet: "화면 자막: 미니 파프리카 4개",
+                    locator_hash: "visual-locator-1",
+                  },
+                ],
+              },
+            ],
+          },
+        };
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      withYoutubeRecipeLlmExtractor(llmExtractor, () =>
+        withYoutubeVisualQuantityExtractor(visualExtractor, () => postYoutubeExtract(transcriptFallbackUrl)),
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(visualExtractor.fetchVisualQuantities).toHaveBeenCalledTimes(1);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description", "caption"],
+        ingredients: [
+          {
+            standard_name: "미니 파프리카",
+            amount: 4,
+            unit: "개",
+            ingredient_type: "QUANT",
+            quantity_source: "visual_explicit",
+            quantity_confidence: 0.84,
+            quantity_raw_text: "미니 파프리카 4개",
+            quantity_review_required: true,
+            quantity_user_confirmed: false,
+          },
+        ],
+      },
+      error: null,
+    });
+    expect(body.data.ingredients[0].quantity_evidence_refs).toEqual([
+      expect.objectContaining({
+        source_method: "visual",
+        source_provider: "visual_quantity_extractor",
+        snippet: "화면 자막: 미니 파프리카 4개",
+      }),
+    ]);
+    expect(visualExtractionCacheTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      youtube_video_id: "transcript123",
+      provider: "gemini",
+      schema_version: expect.any(String),
+      result_json: expect.objectContaining({ ingredient_quantities: expect.any(Array) }),
+    }));
+    expect(visualExtractionEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "gemini",
+      model: "gemini-3.1-flash-lite",
+      event_type: "success",
+      status: "success",
+      cache_hit: false,
+      input_tokens: 64,
+      output_tokens: 32,
+    }));
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_methods: string[];
+      source_providers: string[];
+      extraction_meta_json: Record<string, unknown>;
+      draft_json: { ingredients: Array<Record<string, unknown>> };
+    };
+    expect(insertedSession.extraction_methods).toEqual(["description", "caption"]);
+    expect(insertedSession.source_providers).toContain("visual_quantity_extractor");
+    expect(insertedSession.draft_json.ingredients[0]).toMatchObject({
+      quantity_source: "visual_explicit",
+      quantity_review_required: true,
+    });
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      visual_quantity_extractor: {
+        attempted: true,
+        provider: "gemini",
+        status: "used",
+        cache_hit: false,
+        enriched_count: 1,
+        review_required_count: 1,
+      },
+      quantity_enrichment_summary: {
+        provider: "gemini",
+        cache_hit: false,
+        trigger_reason: "quantity_gap",
+        enriched_count: 1,
+        review_required_count: 1,
+        status: "used",
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract reuses visual quantity cache before calling the provider", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
+    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+
+    const { dbClient, sessionsTable, visualExtractionCacheTable, visualExtractionEventsTable } =
+      createTranscriptFallbackExtractDbClient({
+        ingredientLookupRows: [
+          { id: "550e8400-e29b-41d4-a716-446655440052", standard_name: "미니 파프리카" },
+        ],
+        cookingMethodLookupRows: [
+          {
+            id: prepMethodId,
+            code: "prep",
+            label: "손질",
+            color_key: "gray",
+            is_system: true,
+          },
+        ],
+        visualCacheRows: [
+          {
+            id: "550e8400-e29b-41d4-a716-446655441801",
+            youtube_video_id: "transcript123",
+            provider: "gemini",
+            schema_version: "2026-06-02-visual-quantity-v1",
+            visual_request_hash: "cached-visual-hash",
+            expires_at: new Date(Date.now() + 60_000).toISOString(),
+            result_json: {
+              ingredient_quantities: [
+                {
+                  standard_name: "미니 파프리카",
+                  amount: 4,
+                  unit: "개",
+                  ingredient_type: "QUANT",
+                  display_text: "미니 파프리카 4개",
+                  quantity_source: "visual_explicit",
+                  quantity_confidence: 0.84,
+                  quantity_raw_text: "미니 파프리카 4개",
+                  quantity_evidence_refs: [
+                    {
+                      source_method: "visual",
+                      source_provider: "visual_quantity_extractor",
+                      snippet: "미니 파프리카 4개",
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      });
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: "미니 파프리카에 부침가루를 묻히고 속을 꽉 채워요.",
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+    const llmExtractor: YoutubeRecipeLlmExtractor = {
+      name: "gemini_structured_extractor",
+      fetchStructuredRecipe: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "gemini",
+        model: "gemini-3.1-flash-lite",
+        fallbackModel: "gemini-2.5-flash-lite",
+        resultJson: {
+          recipes: [
+            {
+              title: "미니 파프리카 새우전",
+              confidence: 0.9,
+              ingredients: [
+                {
+                  name: "미니 파프리카",
+                  amount: null,
+                  unit: null,
+                  raw_text: "미니 파프리카에 부침가루를 묻히고 속을 꽉 채워요.",
+                  evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                },
+              ],
+              steps: [
+                {
+                  instruction: "미니 파프리카에 속을 꽉 채워요.",
+                  raw_text: "미니 파프리카에 부침가루를 묻히고 속을 꽉 채워요.",
+                  evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                },
+              ],
+              warnings: [],
+            },
+          ],
+        },
+      })),
+    };
+    const visualExtractor: YoutubeVisualQuantityExtractor = {
+      name: "visual_quantity_extractor",
+      fetchVisualQuantities: vi.fn(async () => {
+        throw new Error("visual provider should not be called on cache hit");
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      withYoutubeRecipeLlmExtractor(llmExtractor, () =>
+        withYoutubeVisualQuantityExtractor(visualExtractor, () => postYoutubeExtract(transcriptFallbackUrl)),
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body.data.ingredients[0]).toMatchObject({
+      standard_name: "미니 파프리카",
+      amount: 4,
+      unit: "개",
+      quantity_source: "visual_explicit",
+    });
+    expect(visualExtractor.fetchVisualQuantities).not.toHaveBeenCalled();
+    expect(visualExtractionCacheTable.__updateQuery.eq).toHaveBeenCalledWith(
+      "id",
+      "550e8400-e29b-41d4-a716-446655441801",
+    );
+    expect(visualExtractionEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "gemini",
+      event_type: "cache_hit",
+      cache_hit: true,
+      status: "success",
+    }));
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      source_providers: string[];
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.source_providers).toContain("visual_quantity_extractor_cache");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      visual_quantity_extractor: {
+        status: "cache_hit",
+        cache_hit: true,
+        enriched_count: 1,
+      },
+    });
+  });
+
   it("POST /api/v1/recipes/youtube/extract keeps review-needed draft when conversational caption is low quality and Gemini is disabled", async () => {
     mockAuth();
 
@@ -5920,6 +6460,286 @@ describe("20 youtube real import backend", () => {
       },
     });
     expect(createServiceRoleClient).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/recipes/youtube/register requires draft ingredient id and confirmation status before database writes", async () => {
+    mockAuth();
+
+    const body = structuredClone(buildRegisterBody()) as ReturnType<typeof buildRegisterBody> & {
+      ingredients: Array<Record<string, unknown>>;
+    };
+    delete (body.ingredients[0] as Record<string, unknown>).draft_ingredient_id;
+    body.ingredients[1].quantity_confirmation_status = "unknown_status";
+
+    const { POST } = await importRegisterRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }));
+    const responseBody = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(responseBody).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "VALIDATION_ERROR",
+        fields: [
+          { field: "ingredients[0].draft_ingredient_id", reason: "required" },
+          { field: "ingredients[1].quantity_confirmation_status", reason: "invalid_enum" },
+        ],
+      },
+    });
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/recipes/youtube/register rejects review-required draft quantities sent as not_required", async () => {
+    mockAuth();
+
+    const body = {
+      ...buildRegisterBody(),
+      ingredients: buildRegisterBody().ingredients.map((ingredient, index) =>
+        index === 0
+          ? {
+              ...ingredient,
+              amount: 4,
+              unit: "개",
+              display_text: "김치 4개",
+              quantity_confirmation_status: "not_required",
+            }
+          : ingredient,
+      ),
+    };
+    const { dbClient, rpc } = createRegisterDbClient({
+      sessionResult: {
+        data: buildYoutubeSession({
+          draft_json: buildRegisterDraftJson({
+            kimchiOverrides: {
+              amount: 4,
+              unit: "개",
+              display_text: "김치 4개",
+              quantity_source: "visual_explicit",
+              quantity_review_required: true,
+            },
+          }),
+        }),
+        error: null,
+      },
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importRegisterRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }));
+    const responseBody = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(responseBody).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "VALIDATION_ERROR",
+        fields: [{ field: "quantity_review_required", reason: "confirmation_required" }],
+      },
+    });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/recipes/youtube/register accepts confirmed visual suggestions only when body matches the draft", async () => {
+    mockAuth();
+
+    const body = {
+      ...buildRegisterBody(),
+      ingredients: buildRegisterBody().ingredients.map((ingredient, index) =>
+        index === 0
+          ? {
+              ...ingredient,
+              amount: 4,
+              unit: "개",
+              display_text: "김치 4개",
+              quantity_confirmation_status: "confirmed_suggestion",
+            }
+          : ingredient,
+      ),
+    };
+    const { dbClient, rpc } = createRegisterDbClient({
+      sessionResult: {
+        data: buildYoutubeSession({
+          draft_json: buildRegisterDraftJson({
+            kimchiOverrides: {
+              amount: 4,
+              unit: "개",
+              display_text: "김치 4개",
+              quantity_source: "visual_explicit",
+              quantity_review_required: true,
+            },
+          }),
+        }),
+        error: null,
+      },
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importRegisterRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }));
+    const responseBody = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(responseBody).toMatchObject({
+      success: true,
+      data: { recipe_id: recipeId },
+      error: null,
+    });
+    expect(rpc).toHaveBeenCalledWith("register_youtube_recipe_from_session", expect.objectContaining({
+      p_ingredients: body.ingredients,
+    }));
+  });
+
+  it("POST /api/v1/recipes/youtube/register rejects confirmed suggestions when body differs from draft", async () => {
+    mockAuth();
+
+    const body = {
+      ...buildRegisterBody(),
+      ingredients: buildRegisterBody().ingredients.map((ingredient, index) =>
+        index === 0
+          ? {
+              ...ingredient,
+              amount: 5,
+              unit: "개",
+              display_text: "김치 5개",
+              quantity_confirmation_status: "confirmed_suggestion",
+            }
+          : ingredient,
+      ),
+    };
+    const { dbClient, rpc } = createRegisterDbClient({
+      sessionResult: {
+        data: buildYoutubeSession({
+          draft_json: buildRegisterDraftJson({
+            kimchiOverrides: {
+              amount: 4,
+              unit: "개",
+              display_text: "김치 4개",
+              quantity_source: "visual_explicit",
+              quantity_review_required: true,
+            },
+          }),
+        }),
+        error: null,
+      },
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importRegisterRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }));
+    const responseBody = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(responseBody).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "VALIDATION_ERROR",
+        fields: [{ field: "quantity_review_required", reason: "suggestion_mismatch" }],
+      },
+    });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/recipes/youtube/register accepts edited quantities and cleared to-taste confirmations", async () => {
+    const cases = [
+      {
+        status: "edited_quantity",
+        ingredient: {
+          amount: 5,
+          unit: "개",
+          ingredient_type: "QUANT",
+          display_text: "김치 5개",
+          scalable: true,
+          quantity_confirmation_status: "edited_quantity",
+        },
+      },
+      {
+        status: "cleared_to_taste",
+        ingredient: {
+          amount: null,
+          unit: null,
+          ingredient_type: "TO_TASTE",
+          display_text: "김치 약간",
+          scalable: false,
+          quantity_confirmation_status: "cleared_to_taste",
+        },
+      },
+    ];
+    const { POST } = await importRegisterRoute();
+
+    for (const currentCase of cases) {
+      mockAuth();
+      const body = {
+        ...buildRegisterBody(),
+        ingredients: buildRegisterBody().ingredients.map((ingredient, index) =>
+          index === 0
+            ? {
+                ...ingredient,
+                ...currentCase.ingredient,
+              }
+            : ingredient,
+        ),
+      };
+      const { dbClient, rpc } = createRegisterDbClient({
+        sessionResult: {
+          data: buildYoutubeSession({
+            draft_json: buildRegisterDraftJson({
+              kimchiOverrides: {
+                amount: 4,
+                unit: "개",
+                display_text: "김치 4개",
+                quantity_source: "recipe_inferred",
+                quantity_review_required: true,
+              },
+            }),
+          }),
+          error: null,
+        },
+      });
+      createServiceRoleClient.mockReturnValue(dbClient);
+
+      const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }));
+      const responseBody = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(responseBody).toMatchObject({
+        success: true,
+        data: { recipe_id: recipeId },
+        error: null,
+      });
+      expect(rpc).toHaveBeenCalledWith("register_youtube_recipe_from_session", expect.objectContaining({
+        p_ingredients: body.ingredients,
+      }));
+
+      createRouteHandlerClient.mockReset();
+      createServiceRoleClient.mockReset();
+      ensurePublicUserRow.mockReset();
+      ensureUserBootstrapState.mockReset();
+      ensurePublicUserRow.mockResolvedValue({});
+      ensureUserBootstrapState.mockResolvedValue(undefined);
+    }
   });
 
   it("POST /api/v1/recipes/youtube/register allows repeated ingredient ids with distinct rows", async () => {

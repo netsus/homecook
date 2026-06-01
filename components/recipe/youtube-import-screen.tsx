@@ -82,6 +82,12 @@ interface TempIngredient extends ManualRecipeIngredientInput {
   component_label?: string | null;
   candidates?: YoutubeExtractedIngredient["candidates"];
   raw_text?: string;
+  quantity_source?: YoutubeExtractedIngredient["quantity_source"];
+  quantity_confidence?: YoutubeExtractedIngredient["quantity_confidence"];
+  quantity_raw_text?: YoutubeExtractedIngredient["quantity_raw_text"];
+  quantity_evidence_refs?: YoutubeExtractedIngredient["quantity_evidence_refs"];
+  quantity_review_required?: boolean;
+  quantity_user_confirmed?: boolean;
 }
 
 function formatIngredientDisplayText(ingredient: ManualRecipeIngredientInput) {
@@ -179,6 +185,10 @@ function isIngredientReadyForRegister(ingredient: TempIngredient) {
     (ingredient.resolution_status === undefined || ingredient.resolution_status === "resolved");
 
   if (!hasResolvedIngredient) {
+    return false;
+  }
+
+  if (ingredient.quantity_review_required === true && ingredient.quantity_user_confirmed !== true) {
     return false;
   }
 
@@ -2420,6 +2430,13 @@ export function YoutubeImportScreen({
                 resolution_status: "resolved",
                 raw_text: ingredient.raw_text,
                 component_label: ingredient.component_label ?? null,
+                draft_ingredient_id: ingredient.draft_ingredient_id,
+                quantity_source: ingredient.quantity_source,
+                quantity_confidence: ingredient.quantity_confidence,
+                quantity_raw_text: ingredient.quantity_raw_text,
+                quantity_evidence_refs: ingredient.quantity_evidence_refs,
+                quantity_review_required: ingredient.quantity_review_required,
+                quantity_user_confirmed: ingredient.quantity_user_confirmed,
                 sort_order: ingredient.sort_order,
                 tempId: ingredient.tempId,
               })
@@ -2657,6 +2674,10 @@ export function YoutubeImportScreen({
         component_label: ing.component_label ?? null,
         scalable: ing.scalable,
         sort_order: idx + 1,
+        draft_ingredient_id: ing.draft_ingredient_id ?? "",
+        quantity_confirmation_status: ing.quantity_review_required
+          ? "edited_quantity"
+          : "not_required",
       })),
       steps: steps.map((step) => ({
         step_number: step.step_number,
