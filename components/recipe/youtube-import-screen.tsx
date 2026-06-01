@@ -47,6 +47,7 @@ import type {
   YoutubeExtractedStep,
   YoutubeRecipeCandidate,
   YoutubeRecipeExtractData,
+  YoutubeQuantityConfirmationStatus,
 } from "@/types/recipe";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -88,7 +89,35 @@ interface TempIngredient extends ManualRecipeIngredientInput {
   quantity_evidence_refs?: YoutubeExtractedIngredient["quantity_evidence_refs"];
   quantity_review_required?: boolean;
   quantity_user_confirmed?: boolean;
+  quantity_confirmation_status?: YoutubeQuantityConfirmationStatus;
 }
+
+type IngredientQuantityPatch = Partial<
+  Pick<
+    TempIngredient,
+    | "amount"
+    | "unit"
+    | "ingredient_type"
+    | "display_text"
+    | "scalable"
+    | "quantity_source"
+    | "quantity_user_confirmed"
+    | "quantity_confirmation_status"
+  >
+>;
+
+const QUANTITY_SOURCE_LABELS: Record<
+  NonNullable<YoutubeExtractedIngredient["quantity_source"]>,
+  string
+> = {
+  text_explicit: "텍스트 확인",
+  visual_explicit: "화면 확인",
+  unit_normalized: "단위 변환",
+  ingredient_default: "기본값",
+  recipe_inferred: "추정",
+  user_entered: "직접 입력",
+  unknown: "미확인",
+};
 
 function formatIngredientDisplayText(ingredient: ManualRecipeIngredientInput) {
   if (ingredient.ingredient_type !== "QUANT") {
@@ -128,6 +157,49 @@ function normalizeIngredient(ingredient: TempIngredient): TempIngredient {
       unit,
     }),
   };
+}
+
+function applyIngredientQuantityPatch(
+  ingredient: TempIngredient,
+  patch: IngredientQuantityPatch,
+): TempIngredient {
+  const next = { ...ingredient, ...patch };
+
+  if (next.ingredient_type === "TO_TASTE") {
+    return {
+      ...next,
+      ingredient_type: "TO_TASTE",
+      amount: null,
+      unit: null,
+      scalable: false,
+      display_text: formatIngredientDisplayText({
+        ...next,
+        ingredient_type: "TO_TASTE",
+        amount: null,
+        unit: null,
+      }),
+    };
+  }
+
+  if ("amount" in patch) {
+    const amount = typeof next.amount === "number" ? next.amount : 0;
+    const unit = next.unit ?? "g";
+
+    return {
+      ...next,
+      ingredient_type: "QUANT",
+      amount,
+      unit,
+      display_text: formatIngredientDisplayText({
+        ...next,
+        ingredient_type: "QUANT",
+        amount,
+        unit,
+      }),
+    };
+  }
+
+  return normalizeIngredient(next);
 }
 
 interface TempStep extends Omit<ManualRecipeStepInput, "cooking_method_id"> {
@@ -179,12 +251,7 @@ const STEP_FIELD_LABELS: Record<
 const STEP_BLOCKING_FIELDS = new Set(["instruction", "cooking_method"]);
 
 function isIngredientReadyForRegister(ingredient: TempIngredient) {
-  const hasResolvedIngredient =
-    typeof ingredient.ingredient_id === "string" &&
-    ingredient.ingredient_id.trim().length > 0 &&
-    (ingredient.resolution_status === undefined || ingredient.resolution_status === "resolved");
-
-  if (!hasResolvedIngredient) {
+  if (!isIngredientResolvedForRegister(ingredient)) {
     return false;
   }
 
@@ -204,6 +271,14 @@ function isIngredientReadyForRegister(ingredient: TempIngredient) {
   );
 }
 
+function isIngredientResolvedForRegister(ingredient: TempIngredient) {
+  return (
+    typeof ingredient.ingredient_id === "string" &&
+    ingredient.ingredient_id.trim().length > 0 &&
+    (ingredient.resolution_status === undefined || ingredient.resolution_status === "resolved")
+  );
+}
+
 function getIngredientResolutionLabel(ingredient: TempIngredient) {
   if (ingredient.resolution_status === "needs_review") {
     return "확인이 필요한 재료";
@@ -218,6 +293,54 @@ function getIngredientResolutionLabel(ingredient: TempIngredient) {
 
 function getIngredientName(ingredient: TempIngredient) {
   return ingredient.standard_name || ingredient.raw_text || "확인할 재료";
+}
+
+function getQuantitySourceLabel(ingredient: TempIngredient) {
+  return ingredient.quantity_source
+    ? QUANTITY_SOURCE_LABELS[ingredient.quantity_source]
+    : null;
+}
+
+function getQuantityEvidenceSnippet(ingredient: TempIngredient) {
+  const evidenceSnippet = ingredient.quantity_evidence_refs
+    ?.find((ref) => ref.snippet.trim().length > 0)
+    ?.snippet.trim();
+
+  return evidenceSnippet || ingredient.quantity_raw_text?.trim() || null;
+}
+
+function getQuantityEditPatch(ingredient: TempIngredient): IngredientQuantityPatch {
+  if (ingredient.quantity_review_required !== true) {
+    return {};
+  }
+
+  return {
+    quantity_source: "user_entered",
+    quantity_user_confirmed: true,
+    quantity_confirmation_status: "edited_quantity",
+  };
+}
+
+function getQuantityConfirmationStatus(
+  ingredient: TempIngredient,
+): YoutubeQuantityConfirmationStatus {
+  if (ingredient.quantity_review_required !== true) {
+    return "not_required";
+  }
+
+  if (ingredient.quantity_confirmation_status) {
+    return ingredient.quantity_confirmation_status;
+  }
+
+  if (ingredient.ingredient_type === "TO_TASTE") {
+    return "cleared_to_taste";
+  }
+
+  if (ingredient.quantity_user_confirmed === true) {
+    return "confirmed_suggestion";
+  }
+
+  return "not_required";
 }
 
 function getStepBlockingFields(step: TempStep) {
@@ -665,10 +788,7 @@ interface ReviewStepProps {
   ingredients: TempIngredient[];
   steps: TempStep[];
   onSelectCandidate: (candidateId: string) => void;
-  onUpdateIngredient: (
-    tempId: string,
-    patch: Pick<ManualRecipeIngredientInput, "amount" | "unit">,
-  ) => void;
+  onUpdateIngredient: (tempId: string, patch: IngredientQuantityPatch) => void;
   onResolveIngredientCandidate: (
     tempId: string,
     candidate: YoutubeIngredientCandidate,
@@ -687,10 +807,7 @@ interface ReviewStepProps {
 interface ReviewIngredientRowProps {
   ingredient: TempIngredient;
   showDivider: boolean;
-  onUpdateIngredient: (
-    tempId: string,
-    patch: Pick<ManualRecipeIngredientInput, "amount" | "unit">,
-  ) => void;
+  onUpdateIngredient: (tempId: string, patch: IngredientQuantityPatch) => void;
   onResolveIngredientCandidate: (
     tempId: string,
     candidate: YoutubeIngredientCandidate,
@@ -711,7 +828,20 @@ function ReviewIngredientRow({
 }: ReviewIngredientRowProps) {
   const ingredientName = getIngredientName(ingredient);
   const resolutionLabel = getIngredientResolutionLabel(ingredient);
-  const needsResolution = !isIngredientReadyForRegister(ingredient);
+  const needsIngredientResolution = !isIngredientResolvedForRegister(ingredient);
+  const needsQuantityReview =
+    ingredient.quantity_review_required === true &&
+    ingredient.quantity_user_confirmed !== true;
+  const quantitySourceLabel = getQuantitySourceLabel(ingredient);
+  const quantityEvidenceSnippet = getQuantityEvidenceSnippet(ingredient);
+  const hasValidQuantitySuggestion =
+    ingredient.ingredient_type === "TO_TASTE" ||
+    (
+      typeof ingredient.amount === "number" &&
+      ingredient.amount > 0 &&
+      typeof ingredient.unit === "string" &&
+      ingredient.unit.trim().length > 0
+    );
   const unitOptions = getIngredientUnitOptions(ingredient.unit);
 
   return (
@@ -726,6 +856,33 @@ function ReviewIngredientRow({
           <span className="block truncate text-[14px] font-semibold text-[var(--foreground)]">
             {ingredientName}
           </span>
+          {quantitySourceLabel || ingredient.quantity_review_required || ingredient.quantity_user_confirmed ? (
+            <span className="mt-1 flex flex-wrap gap-1.5">
+              {quantitySourceLabel ? (
+                <span
+                  className="rounded-full bg-[var(--surface-fill)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-2)]"
+                  data-testid={`quantity-source-${ingredient.tempId}`}
+                >
+                  {quantitySourceLabel}
+                </span>
+              ) : null}
+              {ingredient.quantity_review_required ? (
+                <span className="rounded-full bg-[var(--warning-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--warning)]">
+                  확인 필요
+                </span>
+              ) : null}
+              {ingredient.quantity_user_confirmed ? (
+                <span className="rounded-full bg-[var(--success-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--success)]">
+                  확인됨
+                </span>
+              ) : null}
+            </span>
+          ) : null}
+          {quantityEvidenceSnippet ? (
+            <span className="mt-1 block truncate text-[12px] text-[var(--text-3)]">
+              근거: {quantityEvidenceSnippet}
+            </span>
+          ) : null}
           {resolutionLabel ? (
             <span className="mt-1 block text-[12px] font-semibold text-[var(--danger)]">
               {resolutionLabel}
@@ -742,6 +899,7 @@ function ReviewIngredientRow({
             onUpdateIngredient(ingredient.tempId, {
               amount: value === "" ? 0 : Number(value),
               unit: ingredient.unit ?? "g",
+              ...getQuantityEditPatch(ingredient),
             });
           }}
           type="number"
@@ -767,6 +925,7 @@ function ReviewIngredientRow({
                 onUpdateIngredient(ingredient.tempId, {
                   amount: ingredient.amount ?? 0,
                   unit: option,
+                  ...getQuantityEditPatch(ingredient),
                 })
               }
               type="button"
@@ -785,7 +944,62 @@ function ReviewIngredientRow({
         </button>
       </div>
 
-      {needsResolution ? (
+      {needsQuantityReview ? (
+        <div
+          className="mt-2 rounded-[var(--radius-card)] border border-[var(--warning-border)] bg-[var(--warning-soft)] p-3"
+          data-testid={`quantity-review-${ingredient.tempId}`}
+        >
+          <p className="text-[12px] font-semibold text-[var(--warning)]">
+            화면/추정 수량을 저장 전에 확인해주세요.
+          </p>
+          {quantityEvidenceSnippet ? (
+            <p className="mt-1 text-[12px] text-[var(--text-2)]">
+              근거: {quantityEvidenceSnippet}
+            </p>
+          ) : null}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              className={[
+                "rounded-[var(--radius-full)] px-3 py-1.5 text-[12px] font-semibold",
+                hasValidQuantitySuggestion
+                  ? "bg-[var(--brand)] text-[var(--text-inverse)]"
+                  : "cursor-not-allowed bg-[var(--surface-fill)] text-[var(--text-3)]",
+              ].join(" ")}
+              data-testid={`quantity-confirm-${ingredient.tempId}`}
+              disabled={!hasValidQuantitySuggestion}
+              onClick={() =>
+                onUpdateIngredient(ingredient.tempId, {
+                  quantity_user_confirmed: true,
+                  quantity_confirmation_status: "confirmed_suggestion",
+                })
+              }
+              type="button"
+            >
+              수량 확인
+            </button>
+            <button
+              className="rounded-[var(--radius-full)] border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold text-[var(--foreground)]"
+              data-testid={`quantity-clear-${ingredient.tempId}`}
+              onClick={() =>
+                onUpdateIngredient(ingredient.tempId, {
+                  ingredient_type: "TO_TASTE",
+                  amount: null,
+                  unit: null,
+                  scalable: false,
+                  quantity_source: "user_entered",
+                  quantity_user_confirmed: true,
+                  quantity_confirmation_status: "cleared_to_taste",
+                })
+              }
+              type="button"
+            >
+              약간으로 저장
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {needsIngredientResolution ? (
         <div className="mt-2 rounded-[var(--radius-card)] border border-[color:var(--danger-border)] bg-[color:var(--danger-soft)] p-3">
           {ingredient.raw_text ? (
             <p className="text-[12px] text-[var(--text-2)]">
@@ -2437,6 +2651,7 @@ export function YoutubeImportScreen({
                 quantity_evidence_refs: ingredient.quantity_evidence_refs,
                 quantity_review_required: ingredient.quantity_review_required,
                 quantity_user_confirmed: ingredient.quantity_user_confirmed,
+                quantity_confirmation_status: ingredient.quantity_confirmation_status,
                 sort_order: ingredient.sort_order,
                 tempId: ingredient.tempId,
               })
@@ -2462,14 +2677,11 @@ export function YoutubeImportScreen({
   }, [replacingIngredientId]);
 
   const handleUpdateIngredient = useCallback(
-    (
-      tempId: string,
-      patch: Pick<ManualRecipeIngredientInput, "amount" | "unit">,
-    ) => {
+    (tempId: string, patch: IngredientQuantityPatch) => {
       setIngredients((prev) =>
         prev.map((ingredient) =>
           ingredient.tempId === tempId
-            ? normalizeIngredient({ ...ingredient, ...patch })
+            ? applyIngredientQuantityPatch(ingredient, patch)
             : ingredient,
         ),
       );
@@ -2675,9 +2887,7 @@ export function YoutubeImportScreen({
         scalable: ing.scalable,
         sort_order: idx + 1,
         draft_ingredient_id: ing.draft_ingredient_id ?? "",
-        quantity_confirmation_status: ing.quantity_review_required
-          ? "edited_quantity"
-          : "not_required",
+        quantity_confirmation_status: getQuantityConfirmationStatus(ing),
       })),
       steps: steps.map((step) => ({
         step_number: step.step_number,

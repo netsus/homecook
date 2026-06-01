@@ -94,6 +94,73 @@ function installMatchMedia(matchesDesktop = false) {
   });
 }
 
+function mockVisualQuantityExtract(ingredientOverrides = {}) {
+  vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValueOnce({
+    success: true,
+    data: {
+      extraction_id: "ext-visual-quantity",
+      title: "두부조림",
+      base_servings: 2,
+      thumbnail_url: "https://i.ytimg.com/vi/visual12345/hqdefault.jpg",
+      tags: ["두부조림"],
+      extraction_methods: ["description"],
+      draft_warnings: [],
+      blocking_issues: [],
+      ingredients: [
+        {
+          draft_ingredient_id: "11111111-1111-4111-8111-111111111111",
+          ingredient_id: "ing-tofu",
+          standard_name: "두부",
+          amount: 300,
+          unit: "g",
+          ingredient_type: "QUANT",
+          display_text: "두부 300g",
+          sort_order: 1,
+          scalable: true,
+          confidence: 0.9,
+          resolution_status: "resolved",
+          candidates: [],
+          raw_text: "두부",
+          quantity_source: "visual_explicit",
+          quantity_confidence: 0.86,
+          quantity_raw_text: "화면 자막: 두부 300g",
+          quantity_evidence_refs: [
+            {
+              source_method: "visual",
+              source_provider: "gemini",
+              frame_ts_ms: 12000,
+              snippet: "두부 300g",
+              locator_hash: "hash-tofu-300g",
+            },
+          ],
+          quantity_review_required: true,
+          quantity_user_confirmed: false,
+          ...ingredientOverrides,
+        },
+      ],
+      steps: [
+        {
+          step_number: 1,
+          instruction: "두부를 양념장에 졸인다",
+          cooking_method: {
+            id: "method-1",
+            code: "boil",
+            label: "끓이기",
+            color_key: "red",
+            is_new: false,
+          },
+          duration_text: "10분",
+          is_incomplete: false,
+          missing_fields: [],
+          raw_text: "두부를 양념장에 졸인다",
+        },
+      ],
+      new_cooking_methods: [],
+    },
+    error: null,
+  });
+}
+
 describe("MenuAddScreen", () => {
   beforeEach(() => {
     installMatchMedia(false);
@@ -768,6 +835,126 @@ describe("MenuAddScreen", () => {
     const dialog = await screen.findByRole("dialog", { name: "재료 선택" });
     expect(await within(dialog).findByText("검색 결과가 없어요")).toBeTruthy();
     expect(within(dialog).queryByRole("button", { name: "새 재료로 등록" })).toBeNull();
+  });
+
+  it("requires visual quantity confirmation before registering a YouTube recipe", async () => {
+    installMatchMedia(true);
+    mockVisualQuantityExtract();
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+    await user.type(
+      screen.getByLabelText("유튜브 URL"),
+      "https://www.youtube.com/watch?v=visual12345",
+    );
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    expect((await screen.findByTestId("quantity-source-yt-ing-0")).textContent).toContain("화면 확인");
+    expect(screen.getByTestId("quantity-review-yt-ing-0")).toBeTruthy();
+    const registerButton = screen.getByRole("button", { name: "등록" });
+    expect((registerButton as HTMLButtonElement).disabled).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "수량 확인" }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("quantity-review-yt-ing-0")).toBeNull();
+    });
+    expect((registerButton as HTMLButtonElement).disabled).toBe(false);
+
+    await user.click(registerButton);
+
+    await waitFor(() => {
+      expect(youtubeApi.registerYoutubeRecipe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ingredients: [
+            expect.objectContaining({
+              draft_ingredient_id: "11111111-1111-4111-8111-111111111111",
+              amount: 300,
+              unit: "g",
+              quantity_confirmation_status: "confirmed_suggestion",
+            }),
+          ],
+        }),
+      );
+    });
+  });
+
+  it("sends edited_quantity when a review-required quantity is changed", async () => {
+    installMatchMedia(true);
+    mockVisualQuantityExtract();
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+    await user.type(
+      screen.getByLabelText("유튜브 URL"),
+      "https://www.youtube.com/watch?v=visual12345",
+    );
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    const amountInput = await screen.findByLabelText("두부 수량");
+    await user.clear(amountInput);
+    await user.type(amountInput, "250");
+
+    expect((await screen.findByTestId("quantity-source-yt-ing-0")).textContent).toContain("직접 입력");
+
+    const registerButton = screen.getByRole("button", { name: "등록" });
+    expect((registerButton as HTMLButtonElement).disabled).toBe(false);
+    await user.click(registerButton);
+
+    await waitFor(() => {
+      expect(youtubeApi.registerYoutubeRecipe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ingredients: [
+            expect.objectContaining({
+              amount: 250,
+              unit: "g",
+              quantity_confirmation_status: "edited_quantity",
+            }),
+          ],
+        }),
+      );
+    });
+  });
+
+  it("sends cleared_to_taste when a review-required quantity is cleared", async () => {
+    installMatchMedia(true);
+    mockVisualQuantityExtract();
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+    await user.type(
+      screen.getByLabelText("유튜브 URL"),
+      "https://www.youtube.com/watch?v=visual12345",
+    );
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    await user.click(await screen.findByRole("button", { name: "약간으로 저장" }));
+
+    const registerButton = screen.getByRole("button", { name: "등록" });
+    expect((registerButton as HTMLButtonElement).disabled).toBe(false);
+    await user.click(registerButton);
+
+    await waitFor(() => {
+      expect(youtubeApi.registerYoutubeRecipe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ingredients: [
+            expect.objectContaining({
+              amount: null,
+              unit: null,
+              ingredient_type: "TO_TASTE",
+              display_text: "두부 약간",
+              quantity_confirmation_status: "cleared_to_taste",
+            }),
+          ],
+        }),
+      );
+    });
   });
 
   it("keeps the desktop option rail visible while opening leftovers in the right panel", async () => {

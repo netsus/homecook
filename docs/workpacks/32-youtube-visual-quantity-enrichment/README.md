@@ -187,6 +187,7 @@ quantity_confirmation_status: YoutubeQuantityConfirmationStatus;
 - Visual artifact: N/A (low-risk, 기존 화면 내 소규모 UI 추가)
 - Authority status: `not-required`
 - Notes: YT_IMPORT 화면 구조 변경 없이 ingredient row 내 배지와 confirm/edit/clear 인터랙션 추가
+- Evidence: `ui/designs/evidence/32-youtube-visual-quantity-enrichment/review-quantity-confirm-desktop.png`
 
 ## Design Status
 
@@ -275,9 +276,9 @@ pnpm verify:backend
 - [x] 백엔드 계약 고정 (quantity fields, confirmation status, visual cache/events) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] Visual quantity extractor provider/adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 (`YoutubeQuantitySource`, `YoutubeQuantityConfirmationStatus`, `YoutubeQuantityEvidenceRef`) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 (YT_IMPORT 수량 배지, confirm/edit/clear, quick import 차단) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 (YT_IMPORT 수량 배지, confirm/edit/clear, quick import 차단) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 (register confirmation rules, review-required 검증) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 (youtube_visual_extraction_cache/events DDL) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
