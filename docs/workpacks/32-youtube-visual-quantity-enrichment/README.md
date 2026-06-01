@@ -191,9 +191,9 @@ quantity_confirmation_status: YoutubeQuantityConfirmationStatus;
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review 또는 low-risk 판단에 따라 confirmed 유지
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review 또는 low-risk 판단에 따라 confirmed 유지
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후
+- [x] 확정 (confirmed) — low-risk UI change, 기존 YT_IMPORT 화면 구조 유지, Claude review OK
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 > Design Status 전이: `temporary` (Stage 1 기본값) → Stage 4 완료 후 low-risk UI change로 `confirmed` 유지 가능 (PR 본문에 low-risk 판단 근거 기록). 기존 YT_IMPORT 검수 화면에 배지/인터랙션을 추가하는 수준이므로 화면 구조 변경 없음.
@@ -281,8 +281,8 @@ pnpm verify:backend
 - [x] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 (youtube_visual_extraction_cache/events DDL) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 - [x] `recipe_sources.extraction_methods` mismatch 정리 (`ocr/asr/estimation/manual` → `description/comment/caption` 기준) <!-- omo:id=delivery-extraction-methods-fix;stage=2;scope=backend;review=3,6 -->
 - [x] eval harness (`youtube-visual-quantity-eval.test.ts`) + fixture 구축 <!-- omo:id=delivery-eval-harness;stage=2;scope=backend;review=3,6 -->
 - [x] `amount_coverage_ratio` +0.25 gate 통과 <!-- omo:id=delivery-coverage-gate;stage=2;scope=backend;review=3,6 -->

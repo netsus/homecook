@@ -31,12 +31,12 @@
 
 ## Error / Permission
 
-- [ ] loading 상태가 있다 (visual enrichment 진행 중 포함) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 있다 (visual extractor 실패 시 graceful fallback) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 있다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] conflict 처리 흐름이 있다 (session consumed 409) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
-- [ ] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 (visual enrichment 진행 중 포함) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 (visual extractor 실패 시 graceful fallback) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 있다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] conflict 처리 흐름이 있다 (session consumed 409) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
+- [x] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
