@@ -24,17 +24,21 @@ describe("planner app colors", () => {
   });
 
   it("routes app planner accents through global tokens", () => {
-    expect(tokenValue("--planner-add")).toBe("var(--brand)");
-    expect(tokenValue("--planner-add-soft")).toBe("var(--brand-soft)");
+    expect(tokenValue("--planner-add")).toBe("var(--text-3)");
+    expect(tokenValue("--planner-add-soft")).toBe("transparent");
   });
 
-  it("defines status summary tokens in globals.css", () => {
-    expect(tokenValue("--planner-status-cooked")).toBe("var(--success)");
-    expect(tokenValue("--planner-status-cooked-soft")).toBe("var(--success-soft)");
-    expect(tokenValue("--planner-status-shopping")).toBe("var(--warning)");
-    expect(tokenValue("--planner-status-shopping-soft")).toBe("var(--warning-soft)");
-    expect(tokenValue("--planner-status-registered")).toBe("var(--text-3)");
-    expect(tokenValue("--planner-status-registered-strong")).toBe("var(--text-2)");
-    expect(tokenValue("--planner-status-registered-soft")).toBe("var(--surface-fill)");
+  it("matches app planner status tokens to the desktop web palette", () => {
+    expect(tokenValue("--planner-status-cooked")).toBe("#F5C542");
+    expect(tokenValue("--planner-status-cooked-soft")).toBe("rgba(245, 197, 66, 0.18)");
+    expect(tokenValue("--planner-status-shopping")).toBe("#21C36B");
+    expect(tokenValue("--planner-status-shopping-soft")).toBe("rgba(33, 195, 107, 0.12)");
+    expect(tokenValue("--planner-status-registered")).toBe("#00A1FF");
+    expect(tokenValue("--planner-status-registered-strong")).toBe("#007fd0");
+    expect(tokenValue("--planner-status-registered-soft")).toBe("rgba(0, 161, 255, 0.08)");
+  });
+
+  it("uses a brighter active like color", () => {
+    expect(tokenValue("--like-active")).toBe("#ff4f5a");
   });
 });

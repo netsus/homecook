@@ -54,7 +54,7 @@ export function PantryMobileScreen({
   return (
     <div className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden">
       <div className="relative flex h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4" style={{ borderBottomWidth: "0.5px" }}>
-        <h1 className="text-[18px] font-bold leading-none text-[var(--foreground)]">
+        <h1 className="text-[18px] font-bold leading-none text-[var(--brand)]">
           팬트리
         </h1>
         <button

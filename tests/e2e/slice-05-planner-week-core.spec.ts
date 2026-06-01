@@ -239,6 +239,8 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByRole("link", { name: "요리하기" })).toHaveCount(0);
     if (isMobileViewport(page)) {
       await expect(shoppingLink).toHaveClass(/fixed/);
+      await expect(shoppingLink).toHaveClass(/bg-\[var\(--brand\)\]/);
+      await expect(page.getByRole("button", { name: "이번 주로 이동" })).toBeVisible();
       await expect(page.getByRole("navigation", { name: "플래너 하단 탭" })).toBeVisible();
       await expect(page.getByRole("link", { name: "남은 요리" })).toHaveCount(0);
     } else {

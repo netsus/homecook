@@ -8,6 +8,7 @@ export interface WebRecipeCardProps
   badge?: React.ReactNode;
   imageSrc?: string;
   meta?: React.ReactNode;
+  tags?: React.ReactNode;
   title: React.ReactNode;
 }
 
@@ -17,6 +18,7 @@ export function WebRecipeCard({
   className,
   imageSrc,
   meta,
+  tags,
   title,
   ...props
 }: WebRecipeCardProps) {
@@ -36,6 +38,7 @@ export function WebRecipeCard({
       <div className="web-recipe-card-body">
         <div className="web-recipe-card-title">{title}</div>
         {meta ? <div className="web-recipe-card-meta">{meta}</div> : null}
+        {tags ? <div className="web-recipe-card-tags">{tags}</div> : null}
       </div>
     </div>
   );

@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import React from "react";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -22,6 +24,7 @@ const GREEN_ONION_ID = "550e8400-e29b-41d4-a716-446655440011";
 const BEEF_ID = "550e8400-e29b-41d4-a716-446655440012";
 const VEGETABLE_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "vegetable")!.label;
 const MEAT_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "meat")!.label;
+const globalsCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 
 const INGREDIENT_ITEMS = [
   {
@@ -59,6 +62,13 @@ function installMatchMedia(matches: boolean) {
       dispatchEvent: vi.fn(),
     })),
   });
+}
+
+function ruleBody(selector: string) {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = globalsCss.match(new RegExp(`${escapedSelector}\\s*\\{([^}]+)\\}`));
+
+  return match?.[1] ?? "";
 }
 
 describe("home screen", () => {
@@ -105,7 +115,9 @@ describe("home screen", () => {
       await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" }),
     ).toBeTruthy();
     expect(screen.getByText(/요일 (아침|점심|오후|저녁|밤),/)).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "HOMECOOK" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "HOMECOOK" }).className).toContain(
+      "text-[var(--brand)]",
+    );
     expect(screen.getByText("레시피 제목으로 검색하거나, 재료로 좁혀 보세요.")).toBeTruthy();
     expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /재료로 검색/ })).toHaveLength(1);
@@ -113,14 +125,24 @@ describe("home screen", () => {
     expect(screen.queryByRole("button", { name: "국물요리" })).toBeNull();
     expect(screen.queryByRole("button", { name: "양파" })).toBeNull();
     expect(
-      screen.getByRole("heading", { level: 2, name: "이번 주 인기 테마" }),
-    ).toBeTruthy();
+      screen.getByRole("heading", { level: 2, name: "이번 주 인기 테마" }).className,
+    ).toContain("text-[var(--foreground)]");
     expect(screen.queryByRole("link", { name: /이번 주 식단 플래너/ })).toBeNull();
     expect(screen.getByRole("navigation", { name: "HOME 하단 탭" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "팬트리" }).getAttribute("href")).toBe("/pantry");
     expect(screen.getByRole("link", { name: "마이" }).getAttribute("href")).toBe("/mypage");
-    expect(screen.getByRole("heading", { level: 2, name: "모든 레시피" })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "모든 레시피" }).className,
+    ).toContain("text-[var(--foreground)]");
     expect(screen.queryByText(`(${getMockRecipeList().items.length})`)).toBeNull();
+  });
+
+  it("keeps the mobile meal greeting lighter than section titles", () => {
+    expect(ruleBody(".home-mobile-discovery-kicker")).toContain("font-weight: 600;");
+  });
+
+  it("adds left breathing room to web recipe card titles and metrics", () => {
+    expect(ruleBody(".web-recipe-card-body")).toContain("padding: 12px 12px 8px;");
   });
 
   it("renders the desktop HOME discovery layout at the web breakpoint", async () => {
@@ -177,7 +199,12 @@ describe("home screen", () => {
 
     await screen.findByText(MOCK_RECIPE_CARD.title);
     expect(container.querySelector(".web-recipe-card-badge")?.textContent).toBe("유튜브");
+    expect(container.querySelector(".web-recipe-card-body")?.className).toContain(
+      "web-recipe-card-body",
+    );
     expect(container.querySelector(".web-recipe-card-meta")?.textContent).not.toContain("유튜브");
+    expect(container.querySelector(".web-recipe-card-tags")?.textContent).toContain("한식");
+    expect(container.querySelector(".web-recipe-card-tags")?.textContent).toContain("찌개");
   });
 
   it("keeps hydrated saved bookmarks visible after HOME reload", async () => {

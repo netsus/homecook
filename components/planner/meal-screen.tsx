@@ -180,7 +180,10 @@ function AppBar({ titleFull, titleShort, onBack }: AppBarProps) {
             />
           </svg>
         </button>
-        <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[var(--foreground)]">
+        <h1
+          aria-label={titleFull}
+          className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[var(--foreground)]"
+        >
           {/* Full title on ≥361px, short title on narrow */}
           <span className="hidden [@media(min-width:361px)]:inline">{titleFull}</span>
           <span className="[@media(min-width:361px)]:hidden">{titleShort}</span>
@@ -324,6 +327,7 @@ function MealCard({
   const canStartCook = meal.status === "shopping_done";
   const visual = getMealVisualMeta(meal);
   const { hiddenCount, visible } = getVisibleMealChips(visual.chips);
+  const statusClassName = getAppMealStatusClass(meal.status);
 
   function stopProp(e: React.MouseEvent) {
     e.stopPropagation();
@@ -337,7 +341,7 @@ function MealCard({
       {/* Delete trash icon — top-right */}
       <button
         aria-label={`${meal.recipe_title} 삭제`}
-        className="absolute right-3 top-3 z-[1] flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-fill)] text-[var(--text-3)] disabled:opacity-40"
+        className="absolute right-3 top-3 z-[1] flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger)] disabled:opacity-40"
         data-testid={`meal-delete-${meal.id}`}
         disabled={isPending}
         onClick={(e) => { e.stopPropagation(); onDelete(); }}
@@ -365,16 +369,25 @@ function MealCard({
           )}
         </div>
         <div className="min-w-0 flex-1 pr-7">
+          <span
+            className={[
+              "mb-1 inline-flex h-6 items-center rounded-full px-2 text-[11px] font-extrabold leading-none",
+              statusClassName,
+            ].join(" ")}
+          >
+            {getMealStatusLabel(meal.status)}
+          </span>
           <button
-            className="block w-full truncate text-left text-[16px] font-semibold leading-[1.3] text-[var(--foreground)] hover:text-[var(--brand)]"
+            className="block w-full truncate text-left text-[16px] font-extrabold leading-[1.3] text-[var(--foreground)] hover:text-[var(--brand)]"
             data-testid={`meal-recipe-link-${meal.id}`}
             onClick={onRecipeClick}
+            style={{ fontWeight: 800 }}
             type="button"
           >
             {meal.recipe_title}
           </button>
           <div className="mt-[3px] text-[12px] font-medium leading-[1.4] text-[var(--text-3)]">
-            {visual.minutes}분 · {meal.planned_servings}인분
+            {meal.planned_servings}인분 · {visual.minutes}분
           </div>
         </div>
       </div>
@@ -437,10 +450,11 @@ function MealCard({
 
         <div className={canStartCook ? "grid grid-cols-2 gap-2" : "grid grid-cols-1 gap-2"}>
           <button
-            className="min-h-[38px] rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-bold text-[var(--foreground)]"
+            className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-bold text-[var(--foreground)]"
             onClick={onCreateShopping}
             type="button"
           >
+            <ShoppingIcon />
             장보기
           </button>
           {canStartCook ? (
@@ -489,6 +503,18 @@ function getMealStatusClass(status: MealListItemData["status"]) {
   }
 
   return "registered";
+}
+
+function getAppMealStatusClass(status: MealListItemData["status"]) {
+  if (status === "shopping_done") {
+    return "bg-[var(--planner-status-shopping-soft)] text-[var(--planner-status-shopping)]";
+  }
+
+  if (status === "cook_done") {
+    return "bg-[var(--planner-status-cooked-soft)] text-[var(--planner-status-cooked)]";
+  }
+
+  return "bg-[var(--planner-status-registered-soft)] text-[var(--planner-status-registered-strong)]";
 }
 
 function MealWebProfileButton() {
@@ -584,22 +610,24 @@ function MealWebListCard({
         <div className="web-meal-inline-stepper" aria-label="인분 조절" role="group">
           <button
             aria-label="인분 감소"
+            className="web-meal-stepper-button web-meal-stepper-decrease"
             disabled={isMin || isPending}
             onClick={onStepDown}
             type="button"
           >
-            -
+            <span aria-hidden="true" className="web-meal-stepper-symbol">−</span>
           </button>
           <span aria-label={`${meal.planned_servings}인분`} aria-live="polite">
             {meal.planned_servings}인분
           </span>
           <button
             aria-label="인분 증가"
+            className="web-meal-stepper-button web-meal-stepper-increase"
             disabled={isPending}
             onClick={onStepUp}
             type="button"
           >
-            +
+            <span aria-hidden="true" className="web-meal-stepper-symbol">+</span>
           </button>
         </div>
 
@@ -787,6 +815,9 @@ function MealWebView({
   const breadcrumbCurrent = slotName
     ? `${formatDateLong(planDate)} · ${slotName}`
     : formatDateLong(planDate);
+  const summaryTitle = slotName
+    ? `${formatDateLong(planDate)} ${slotName}`
+    : formatDateLong(planDate);
 
   return (
     <WebShell className="web-meal" wide>
@@ -838,14 +869,7 @@ function MealWebView({
 
         {screenState === "ready" && meals.length > 0 ? (
           <div className="web-meal-layout web-meal-list-layout">
-            <section aria-labelledby="web-meal-list-title" className="web-meal-main">
-              <div className="web-meal-list-head">
-                <div>
-                  <h1 id="web-meal-list-title">끼니 음식 {meals.length}개</h1>
-                  <p>이 끼니에 등록된 음식을 한 번에 관리해요.</p>
-                </div>
-              </div>
-
+            <section aria-label="끼니 음식 목록" className="web-meal-main">
               <div className="web-meal-list" data-testid="web-meal-list">
                 {meals.map((meal) => (
                   <MealWebListCard
@@ -868,7 +892,7 @@ function MealWebView({
               <div className="web-meal-rail-card" data-testid="web-meal-summary">
                 <div className="web-meal-rail-head">
                   <p>끼니 요약</p>
-                  <h2>{slotName || formatDateLong(planDate)}</h2>
+                  <h1>{summaryTitle}</h1>
                 </div>
                 <div className="web-meal-rail-stats">
                   <div>
@@ -1353,15 +1377,11 @@ export function MealScreen({
 
   // ── Computed values ───────────────────────────────────────────────────────
   const titleFull = slotName
-    ? `${slotName} 음식${meals.length > 0 ? ` ${meals.length}개` : ""}`
+    ? `${formatDateLong(planDate)} · ${slotName}`
     : formatDateLong(planDate);
   const titleShort = slotName
-    ? `${slotName} 음식${meals.length > 0 ? ` ${meals.length}개` : ""}`
+    ? `${formatDateShort(planDate)} · ${slotName}`
     : formatDateShort(planDate);
-  const summaryTitle =
-    meals.length > 1
-      ? "한 끼에 여러 음식을 같이 먹어요"
-      : "이 끼니에 등록된 식사";
   const totalServings = meals.reduce(
     (sum, meal) => sum + meal.planned_servings,
     0,
@@ -1466,24 +1486,6 @@ export function MealScreen({
         {/* Scrollable content area */}
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto overflow-x-hidden">
-            {screenState === "ready" ? (
-              <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5">
-                <div className="mb-1 text-[13px] font-semibold leading-[1.3] text-[var(--brand)]">
-                  {formatDateShort(planDate)}{slotName ? ` · ${slotName}` : ""}
-                </div>
-                <h2 className="text-[24px] font-semibold leading-[1.25] text-[var(--foreground)]">
-                  {summaryTitle}
-                </h2>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-[var(--surface-fill)] px-2.5 py-1.5 text-[12px] font-bold leading-[1.3] text-[var(--text-2)]">
-                    {meals.length}개 음식
-                  </span>
-                  <span className="rounded-full bg-[var(--surface-fill)] px-2.5 py-1.5 text-[12px] font-bold leading-[1.3] text-[var(--text-2)]">
-                    총 {totalServings}인분 계획
-                  </span>
-                </div>
-              </section>
-            ) : null}
             {isLoading ? (
               <LoadingSummarySkeleton planDate={planDate} slotName={slotName} />
             ) : null}
@@ -1657,12 +1659,20 @@ export function MealScreen({
         ) : (
           <CenterModal labelledBy="delete-confirm-title" onClose={handleModalCancel}>
             <ModalHeader
-              title="식사 삭제"
+              title="이 식사를 삭제하시겠어요?"
               titleId="delete-confirm-title"
+              leadingAction={
+                <span
+                  className="flex h-[42px] w-[42px] items-center justify-center rounded-[var(--radius-control)] bg-[var(--danger-soft)] text-[var(--danger)]"
+                  data-testid="delete-confirm-icon"
+                >
+                  <TrashIcon />
+                </span>
+              }
               onClose={handleModalCancel}
             />
             <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-              이 식사를 삭제하시겠어요?
+              삭제하면 되돌릴 수 없어요.
             </p>
             <div className="mt-5 flex gap-2.5">
               <button
@@ -1673,7 +1683,7 @@ export function MealScreen({
                 취소
               </button>
               <button
-                className="flex-[2] rounded-[var(--radius-card)] bg-[var(--brand-deep)] py-3.5 text-sm font-bold text-[var(--text-inverse)]"
+                className="min-w-[104px] rounded-[var(--radius-card)] bg-[var(--danger)] px-5 py-3 text-sm font-bold text-[var(--text-inverse)]"
                 data-testid="delete-confirm"
                 onClick={handleDeleteConfirm}
                 type="button"

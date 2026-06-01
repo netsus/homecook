@@ -162,6 +162,32 @@ describe("auth callback", () => {
     expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
   });
 
+  it("redirects newly bootstrapped users with empty nicknames to nickname onboarding", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      error: null,
+    });
+    ensurePublicUserRow.mockResolvedValueOnce({
+      nickname: "",
+    });
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(
+      new Request("http://localhost:3000/auth/callback?code=abc&next=/planner"),
+    );
+
+    expect(ensureUserBootstrapState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        auth: expect.objectContaining({
+          getUser,
+        }),
+      }),
+      "user-1",
+    );
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/onboarding/nickname?next=%2Fplanner",
+    );
+  });
+
   it("falls back to the saved post-auth next cookie when the callback query omits next", async () => {
     exchangeCodeForSession.mockResolvedValue({
       error: null,

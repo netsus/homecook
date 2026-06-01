@@ -305,7 +305,7 @@ describe("MealScreen", () => {
 
   // ── Meal cards ──────────────────────────────────────────────────────────
 
-  it("renders meal cards with recipe title and hides status badges", async () => {
+  it("renders mobile meal cards with status tags, stronger titles, and swapped meta order", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({
       items: [
@@ -322,20 +322,33 @@ describe("MealScreen", () => {
     });
     expect(screen.getByText("미역국")).toBeTruthy();
     expect(screen.getByText("시금치볶음")).toBeTruthy();
-    expect(screen.queryByLabelText("식사 등록 완료")).toBeNull();
-    expect(screen.queryByLabelText("장보기 완료")).toBeNull();
-    expect(screen.queryByLabelText("요리 완료")).toBeNull();
+    expect(screen.getByText("등록")).toBeTruthy();
+    expect(screen.getByText("장보기 완료")).toBeTruthy();
+    expect(screen.getByText("요리 완료")).toBeTruthy();
+
+    const firstCard = screen.getByLabelText("김치찌개 식사 카드");
+    const titleButton = within(firstCard).getByText("김치찌개");
+    expect(titleButton.className).toContain("font-extrabold");
+    expect(titleButton.getAttribute("style") ?? "").toContain("font-weight: 800");
+    expect(within(firstCard).getByText(/2인분 · \d+분/)).toBeTruthy();
+    expect(within(firstCard).queryByText(/\d+분 · 2인분/)).toBeNull();
+    expect(within(firstCard).getByRole("button", { name: "장보기" }).querySelector("svg")).toBeTruthy();
+    expect(screen.queryByText(/등록된 음식/)).toBeNull();
+    expect(screen.queryByText(/개 음식/)).toBeNull();
+    expect(screen.queryByText(/총 \d+인분 계획/)).toBeNull();
   });
 
-  it("shows the app bar title heading", async () => {
+  it("shows the app bar title as date and meal slot", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [] });
 
     render(<MealScreen {...DEFAULT_PROPS} />);
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { level: 1 })).toBeTruthy();
+      expect(screen.getByRole("heading", { level: 1, name: "4월 18일 · 아침" })).toBeTruthy();
     });
+    expect(screen.queryByText(/아침 음식/)).toBeNull();
+    expect(screen.queryByText("한 끼에 여러 음식을 같이 먹어요")).toBeNull();
   });
 
   it("returns to planner on back button tap", async () => {
@@ -480,9 +493,11 @@ describe("MealScreen", () => {
     const list = await screen.findByTestId("web-meal-list");
     const summary = screen.getByTestId("web-meal-summary");
 
+    expect(within(summary).getByRole("heading", { name: "4월 18일 아침" })).toBeTruthy();
     expect(within(summary).getByText("음식")).toBeTruthy();
     expect(within(summary).getByText("2개")).toBeTruthy();
-    expect(screen.getByText("4월 18일 · 아침")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "4월 18일 · 아침" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "끼니 음식 2개" })).toBeNull();
     expect(within(list).getByText("김치찌개")).toBeTruthy();
     expect(within(list).getByText("파스타")).toBeTruthy();
     expect(screen.queryByLabelText("김치찌개 레시피 보기")).toBeNull();
@@ -492,9 +507,16 @@ describe("MealScreen", () => {
     expect(within(list).getByRole("button", { name: "김치찌개 요리하기" })).toBeTruthy();
     expect(within(list).getAllByRole("button", { name: "장보기" })).toHaveLength(2);
     expect(within(list).getAllByRole("button", { name: "인분 증가" })).toHaveLength(2);
+    expect(within(list).getAllByRole("button", { name: "인분 감소" })[0]?.className).toContain(
+      "web-meal-stepper-decrease",
+    );
+    expect(within(list).getAllByRole("button", { name: "인분 증가" })[0]?.className).toContain(
+      "web-meal-stepper-increase",
+    );
     expect(list.querySelectorAll(".web-meal-list-footer")).toHaveLength(2);
     expect(list.querySelectorAll(".web-meal-list-delete .web-meal-delete-button")).toHaveLength(2);
-    expect(screen.getAllByTestId("meal-screen-add-cta")).toHaveLength(1);
+    const addCta = screen.getByTestId("meal-screen-add-cta");
+    expect(addCta.className).toContain("web-meal-add-link");
   });
 
   // ── Stepper — registered (no modal) ────────────────────────────────────
@@ -636,8 +658,12 @@ describe("MealScreen", () => {
 
     await user.click(screen.getByRole("button", { name: "김치찌개 삭제" }));
 
-    expect(screen.getByRole("dialog")).toBeTruthy();
-    expect(screen.getByText("이 식사를 삭제하시겠어요?")).toBeTruthy();
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "이 식사를 삭제하시겠어요?" })).toBeTruthy();
+    expect(screen.getByTestId("delete-confirm-icon")).toBeTruthy();
+    expect(screen.getByTestId("delete-confirm").className).toContain("bg-[var(--danger)]");
+    expect(screen.getByTestId("delete-confirm").className).toContain("min-w-[104px]");
     expect(deleteMeal).not.toHaveBeenCalled();
   });
 

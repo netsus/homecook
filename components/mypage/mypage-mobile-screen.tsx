@@ -186,7 +186,7 @@ function MobileAppBar({
       ) : null}
       <h1
         className={[
-          "truncate text-[18px] font-bold leading-none text-[var(--foreground)]",
+          "truncate text-[18px] font-bold leading-none text-[var(--brand)]",
           onBack ? "text-center" : "",
         ].join(" ")}
       >

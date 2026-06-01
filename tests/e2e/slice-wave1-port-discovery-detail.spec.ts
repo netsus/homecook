@@ -80,16 +80,13 @@ test.describe("wave1 port discovery detail", () => {
     if (isMobileViewport(page)) {
       const recipeListSection = page.locator('section[aria-label="모든 레시피"]');
       await expect(
-        recipeListSection.getByRole("button", { name: "재료로 검색" }),
+        page.locator("button:visible").filter({ hasText: "재료로 검색" }).first(),
       ).toBeVisible();
       await expect(
         recipeListSection.getByRole("button", { name: "전체" }),
-      ).toBeVisible();
+      ).not.toBeVisible();
       await expect(
         recipeListSection.getByRole("button", { name: "다이어트" }),
-      ).toBeVisible();
-      await expect(
-        recipeListSection.getByRole("button", { name: "양파" }),
       ).not.toBeVisible();
     } else {
       await expect(
@@ -104,7 +101,7 @@ test.describe("wave1 port discovery detail", () => {
   }) => {
     await page.goto("/");
     if (isMobileViewport(page)) {
-      await expect(page.getByRole("heading", { name: "홈" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "HOMECOOK" })).toBeVisible();
     } else {
       await expect(page.getByRole("link", { name: "HOMECOOK" })).toBeVisible();
       await expect(
@@ -124,7 +121,9 @@ test.describe("wave1 port discovery detail", () => {
 
     await expect(page.getByRole("button", { name: "좋아요 203" })).toBeVisible();
     await expect(page.getByRole("button", { name: "저장" })).toBeVisible();
-    await expect(page.getByRole("status", { name: /요리완료/ })).toBeVisible();
+    const visibleSummary = page.locator('[aria-label="레시피 요약"]:visible').first();
+    await expect(visibleSummary).toContainText("요리완료");
+    await expect(visibleSummary).toContainText("34");
 
     const plannerCta = page.getByRole("button", { name: "플래너에 추가" }).first();
     const cookCta = page.getByRole("button", { name: "요리하기" }).first();
