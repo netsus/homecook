@@ -142,37 +142,6 @@ function getPlannerMealStatusClass(status: PlannerMealData["status"]) {
   return "registered";
 }
 
-function getPlannerMealStatusLabel(status: PlannerMealData["status"]) {
-  if (status === "shopping_done") {
-    return "장보기 완료";
-  }
-
-  if (status === "cook_done") {
-    return "요리 완료";
-  }
-
-  return "등록";
-}
-
-function findPlannerColumn(
-  columns: PlannerColumnData[],
-  preferredName: string,
-) {
-  return (
-    columns.find((column) => column.name.includes(preferredName)) ??
-    columns[0] ??
-    null
-  );
-}
-
-function getPlannerPrimaryColumn(columns: PlannerColumnData[]) {
-  return (
-    columns.find((column) => column.name.includes("저녁")) ??
-    columns.at(-1) ??
-    null
-  );
-}
-
 function WebProfileButton() {
   return (
     <Link
@@ -197,27 +166,6 @@ function PlusIcon() {
     >
       <path
         d="M8 3.5v9M3.5 8h9"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.8"
-      />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="16"
-      viewBox="0 0 16 16"
-      width="16"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle cx="7" cy="7" r="4.25" stroke="currentColor" strokeWidth="1.8" />
-      <path
-        d="M10.2 10.2L13 13"
         stroke="currentColor"
         strokeLinecap="round"
         strokeWidth="1.8"
@@ -299,10 +247,6 @@ function PlannerWeekWebView({
   }>;
   todayKey: string;
 }) {
-  const primaryColumn = getPlannerPrimaryColumn(columns);
-  const lunchColumn = findPlannerColumn(columns, "점심");
-  const quickDateKey = dateKeys.includes(todayKey) ? todayKey : dateKeys[0];
-  const weekendDateKey = dateKeys.at(-1) ?? quickDateKey;
   const recentMeals = [...meals]
     .sort((a, b) => `${b.plan_date}:${b.id}`.localeCompare(`${a.plan_date}:${a.id}`))
     .slice(0, 4);
@@ -358,10 +302,6 @@ function PlannerWeekWebView({
             <section className="web-planner-side-section">
               <p className="web-planner-side-label">이번 주 요약</p>
               <div className="web-planner-stat-list">
-                <div className="web-planner-stat">
-                  <span>등록된 끼니</span>
-                  <strong>{mealStats.total}개</strong>
-                </div>
                 <div className="web-planner-stat web-planner-stat-success">
                   <span><i className="web-planner-dot web-planner-dot-cooked" />요리 완료</span>
                   <strong>{mealStats.cookDone}개</strong>
@@ -370,38 +310,10 @@ function PlannerWeekWebView({
                   <span><i className="web-planner-dot web-planner-dot-shopped" />장본 끼니</span>
                   <strong>{mealStats.shoppingDone}개</strong>
                 </div>
-                <div className="web-planner-stat">
+                <div className="web-planner-stat web-planner-stat-registered">
                   <span><i className="web-planner-dot web-planner-dot-registered" />등록</span>
                   <strong>{mealStats.registered}개</strong>
                 </div>
-              </div>
-            </section>
-
-            <section className="web-planner-side-section">
-              <p className="web-planner-side-label">빠른 추가</p>
-              <div className="web-planner-quick-list">
-                {primaryColumn && quickDateKey ? (
-                  <Link
-                    className="web-planner-quick"
-                    href={getMealAddHrefForSlot(quickDateKey, primaryColumn)}
-                  >
-                    <PlusIcon />
-                    오늘 {primaryColumn.name}
-                  </Link>
-                ) : null}
-                {lunchColumn && weekendDateKey ? (
-                  <Link
-                    className="web-planner-quick"
-                    href={getMealAddHrefForSlot(weekendDateKey, lunchColumn)}
-                  >
-                    <PlusIcon />
-                    주말 {lunchColumn.name}
-                  </Link>
-                ) : null}
-                <Link className="web-planner-quick" href="/menu-add">
-                  <SearchIcon />
-                  레시피 검색
-                </Link>
               </div>
             </section>
 
@@ -569,7 +481,7 @@ function PlannerWeekWebView({
                                     {meal.recipe_title}
                                   </span>
                                   <span className="web-planner-meal-meta">
-                                    {meal.planned_servings}인분 · {getPlannerMealStatusLabel(meal.status)}
+                                    {meal.planned_servings}인분
                                   </span>
                                 </span>
                               </Link>
@@ -1185,13 +1097,16 @@ export function PlannerWeekScreen({
           className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4"
           style={{ borderBottomWidth: "0.5px" }}
         >
-          <h1 className="text-[18px] font-bold leading-none text-[var(--foreground)]">
+          <h1 className="text-[18px] font-bold leading-none text-[var(--brand)]">
             플래너
           </h1>
         </div>
 
         <section className="border-b border-[var(--surface-subtle)] bg-[var(--surface)] px-5 py-4">
-          <p className="mb-3 text-[20px] font-bold leading-[1.25] text-[var(--foreground)]">
+          <p className="mb-1 text-[20px] font-bold leading-[1.25] text-[var(--foreground)]">
+            {formatMobileWeekRangeLabel(rangeStartDate, rangeEndDate)}
+          </p>
+          <p className="mb-3 text-[13px] font-semibold leading-[1.35] text-[var(--text-3)]">
             {mealStats.total}개 음식 계획 중
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1236,7 +1151,7 @@ export function PlannerWeekScreen({
                     className={[
                       "ml-2 rounded-full px-2 py-0.5 text-[10px]",
                       shoppingList.status === "completed"
-                        ? "bg-[var(--success-soft)] text-[var(--web-success)]"
+                        ? "bg-[var(--planner-status-cooked-soft)] text-[var(--planner-status-cooked)]"
                         : "bg-[var(--surface)] text-[var(--brand)]",
                     ].join(" ")}
                   >
@@ -1252,7 +1167,7 @@ export function PlannerWeekScreen({
           className="sticky top-[52px] z-20 border-b border-[var(--line-strong)] bg-[var(--surface)] px-3.5 py-3"
           data-testid="planner-week-shell"
         >
-          <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="mb-2 grid grid-cols-[30px_minmax(0,1fr)_30px] items-center gap-2">
             <button
               aria-label="이전 주"
               className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface-fill)] text-[17px] leading-none text-[var(--text-2)]"
@@ -1261,9 +1176,22 @@ export function PlannerWeekScreen({
             >
               ‹
             </button>
-            <p className="min-w-0 flex-1 truncate text-center text-[14px] font-semibold text-[var(--foreground)]">
-              {rangeContextLabel} {formatMobileWeekRangeLabel(rangeStartDate, rangeEndDate)}
-            </p>
+            <div className="flex min-w-0 justify-center">
+              <button
+                aria-label="이번 주로 이동"
+                className={[
+                  "inline-flex h-[30px] shrink-0 items-center justify-center rounded-full border px-3 text-[12px] font-bold",
+                  isCurrentRange
+                    ? "border-[var(--line-strong)] bg-[var(--surface-fill)] text-[var(--text-3)]"
+                    : "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand)]",
+                ].join(" ")}
+                disabled={isCurrentRange}
+                onClick={() => runPlannerAction(resetRange())}
+                type="button"
+              >
+                이번 주
+              </button>
+            </div>
             <button
               aria-label="다음 주"
               className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface-fill)] text-[17px] leading-none text-[var(--text-2)]"
@@ -1486,7 +1414,7 @@ export function PlannerWeekScreen({
                               </Link>
                               <button
                                 aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
-                                className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[var(--planner-add)] bg-[var(--planner-add-soft)] text-[20px] font-semibold leading-none text-[var(--planner-add)]"
+                                className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[var(--line-strong)] bg-transparent text-[20px] font-semibold leading-none text-[var(--text-3)]"
                                 onClick={() => openMealAddSheet(dateKey, column)}
                                 type="button"
                               >
@@ -1496,7 +1424,7 @@ export function PlannerWeekScreen({
                           ) : (
                             <button
                               aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
-                              className="flex h-[38px] flex-1 items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[var(--planner-add)] bg-[var(--planner-add-soft)] text-[20px] font-semibold leading-none text-[var(--planner-add)]"
+                              className="flex h-[38px] flex-1 items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[var(--line-strong)] bg-transparent text-[20px] font-semibold leading-none text-[var(--text-3)]"
                               onClick={() => openMealAddSheet(dateKey, column)}
                               type="button"
                             >
@@ -1514,7 +1442,7 @@ export function PlannerWeekScreen({
         ) : null}
 
         <Link
-          className="fixed bottom-[92px] right-4 z-20 inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full bg-[var(--foreground)] px-[18px] text-[14px] font-bold text-[var(--text-inverse)] shadow-[0_4px_12px_var(--shadow-color-medium)]"
+          className="fixed bottom-[92px] right-4 z-20 inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full bg-[var(--brand)] px-[18px] text-[14px] font-bold text-[var(--text-inverse)] shadow-[0_4px_12px_var(--brand-shadow-color-strong)] transition-transform duration-150 active:scale-95"
           href="/shopping/flow"
           style={{ color: "var(--text-inverse)" }}
         >

@@ -490,9 +490,9 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
   });
 
-  // ── Wave1 acceptance: no status badges/selectors ───────────────────────────
+  // ── Wave1 acceptance: visible status tags without status selectors ─────────
 
-  test("no status badges or selectors visible on meal cards (Wave1)", async ({ page }) => {
+  test("status tags are visible on meal cards without status selectors (Wave1)", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMealsListRoute(page, [
       buildMeal({ id: "meal-1", status: "registered" }),
@@ -503,11 +503,12 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     await expect(visibleText(page, "김치찌개")).toBeVisible();
     await expect(visibleText(page, "파스타")).toBeVisible();
 
-    // Status badge text should not be present on cards
+    await expect(visibleText(page, "등록")).toBeVisible();
+    await expect(visibleText(page, "장보기 완료")).toBeVisible();
+    // Legacy status-badge aria labels and status dropdown remain removed.
     await expect(page.getByLabel("식사 등록 완료")).toHaveCount(0);
     await expect(page.getByLabel("장보기 완료")).toHaveCount(0);
     await expect(page.getByLabel("요리 완료")).toHaveCount(0);
-    // No status dropdown
     await expect(page.getByLabel("상태 변경")).toHaveCount(0);
   });
 });

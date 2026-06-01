@@ -1638,7 +1638,7 @@ function MypageLoadingSkeleton({
           ) : null}
           <h1
             className={[
-              "truncate text-[18px] font-bold leading-none text-[var(--foreground)]",
+              "truncate text-[18px] font-bold leading-none text-[var(--brand)]",
               showBack ? "text-center" : "",
             ].join(" ")}
           >

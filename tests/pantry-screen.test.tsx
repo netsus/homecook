@@ -155,6 +155,16 @@ describe("PantryScreen", () => {
     expect(screen.queryByText("3개 재료 보유 중")).toBeNull();
   });
 
+  it("uses the theme color for the mobile pantry screen title", async () => {
+    installMatchMedia(true);
+
+    render(<PantryScreen initialAuthenticated />);
+
+    expect((await screen.findByRole("heading", { name: "팬트리" })).className).toContain(
+      "text-[var(--brand)]",
+    );
+  });
+
   it("shows the desktop loading skeleton inside the web pantry shell", () => {
     mockFetchPantryList.mockReturnValue(new Promise(() => {}));
 

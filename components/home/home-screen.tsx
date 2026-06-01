@@ -947,6 +947,8 @@ function HomeWebRecipeCard({
     recipe.thumbnail_url ?? WEB_FALLBACK_IMAGES[variantIndex % WEB_FALLBACK_IMAGES.length];
   const sourceLabel = formatRecipeSourceLabel(recipe.source_type);
   const sourceBadge = recipe.source_type === "youtube" ? sourceLabel : null;
+  const visibleTags = recipe.tags.slice(0, 3);
+  const remainingTagCount = Math.max(recipe.tags.length - visibleTags.length, 0);
 
   return (
     <article className="web-home-recipe-card">
@@ -961,6 +963,20 @@ function HomeWebRecipeCard({
               <span className="web-meta-separator">·</span>
               <span>저장 {formatCount(recipe.save_count)}</span>
             </>
+          }
+          tags={
+            visibleTags.length ? (
+              <>
+                {visibleTags.map((tag) => (
+                  <span className="web-recipe-card-tag" key={tag}>
+                    {tag}
+                  </span>
+                ))}
+                {remainingTagCount > 0 ? (
+                  <span className="web-recipe-card-tag">+{remainingTagCount}</span>
+                ) : null}
+              </>
+            ) : null
           }
           title={recipe.title}
         />
@@ -997,7 +1013,7 @@ function WebProfileButton() {
 function HomeAppBar() {
   return (
     <header className="sticky top-0 z-20 flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4" style={{ borderBottomWidth: "0.5px" }}>
-      <h1 className="text-[18px] font-bold leading-none text-[var(--foreground)]">HOMECOOK</h1>
+      <h1 className="text-[18px] font-bold leading-none text-[var(--brand)]">HOMECOOK</h1>
     </header>
   );
 }

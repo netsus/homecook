@@ -150,13 +150,16 @@ describe("MealScreen", () => {
     // Should contain an SVG icon, not text "삭제"
     expect(deleteBtn.querySelector("svg")).toBeTruthy();
     expect(deleteBtn.textContent?.trim()).toBe("");
-    // Wave1 fixed reference uses a compact 32px circular icon button.
+    // Current mobile treatment uses the same warning surface as the delete dialog.
     expect(deleteBtn.className).toContain("h-8");
     expect(deleteBtn.className).toContain("w-8");
-    expect(deleteBtn.className).toContain("rounded-full");
+    expect(deleteBtn.className).toContain("rounded-[var(--radius-control)]");
+    expect(deleteBtn.className).toContain("border-[var(--danger-border)]");
+    expect(deleteBtn.className).toContain("bg-[var(--danger-soft)]");
+    expect(deleteBtn.className).toContain("text-[var(--danger)]");
   });
 
-  it("does not render status badges or status selectors on meal cards (Wave1)", async () => {
+  it("renders meal status tags without status selectors", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({
       items: [
@@ -170,9 +173,8 @@ describe("MealScreen", () => {
     await screen.findByText("김치찌개");
     await screen.findByText("파스타");
 
-    // No status badge text should appear
-    expect(screen.queryByText("등록")).toBeNull();
-    expect(screen.queryByText("장보기 완료")).toBeNull();
+    expect(screen.getByText("등록")).toBeTruthy();
+    expect(screen.getByText("장보기 완료")).toBeTruthy();
     expect(screen.queryByText("요리 완료")).toBeNull();
     // No status dropdown/selector
     expect(screen.queryByRole("combobox")).toBeNull();
@@ -191,10 +193,12 @@ describe("MealScreen", () => {
     const deleteBtn = await screen.findByTestId("meal-delete-meal-1");
     await user.click(deleteBtn);
 
-    // Modal should appear
-    expect(screen.getByText("식사 삭제")).toBeTruthy();
-    expect(screen.getByText("이 식사를 삭제하시겠어요?")).toBeTruthy();
-    expect(screen.getByTestId("delete-confirm")).toBeTruthy();
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "이 식사를 삭제하시겠어요?" })).toBeTruthy();
+    expect(screen.getByTestId("delete-confirm-icon")).toBeTruthy();
+    expect(screen.getByText("삭제하면 되돌릴 수 없어요.")).toBeTruthy();
+    expect(screen.getByTestId("delete-confirm").className).toContain("bg-[var(--danger)]");
   });
 
   it("confirms delete and removes the meal card (Wave1)", async () => {

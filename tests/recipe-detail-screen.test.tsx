@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import React from "react";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -24,9 +26,19 @@ const fetchPlanner = vi.fn();
 const createMeal = vi.fn();
 const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
+const globalsCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 const navigationMocks = vi.hoisted(() => ({
   searchParams: vi.fn(() => new URLSearchParams()),
 }));
+
+function ruleBody(selector: string) {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const matches = Array.from(
+    globalsCss.matchAll(new RegExp(`${escapedSelector}\\s*\\{([^}]+)\\}`, "g")),
+  );
+
+  return matches.at(-1)?.[1] ?? "";
+}
 
 vi.mock("@/lib/api/fetch-json", () => ({
   fetchJson: (...args: unknown[]) => fetchJson(...args),
@@ -271,6 +283,12 @@ describe("recipe detail screen", () => {
     expect(metricsRow).not.toBeNull();
     expect(metricsRow?.className).toContain("recipe-overview-metrics-compact");
     expect(metricsRow?.className).toContain("flex-wrap");
+    expect(metricsRow?.className).toContain("gap-0");
+    expect(metricsRow?.getAttribute("style") ?? "").toContain("gap: 0px");
+    expect(likeButton.className).toContain("min-h-[60px]");
+    expect(likeButton.className).toContain("min-w-[64px]");
+    expect(likeButton.className).not.toContain("min-h-[66px]");
+    expect(likeButton.className).toContain("font-extrabold");
   });
 
   it("removes internal scaffolding cards and places primary CTA in a sticky bottom bar", async () => {
@@ -324,7 +342,7 @@ describe("recipe detail screen", () => {
       "bg-transparent",
     );
     expect((await screen.findByRole("button", { name: "저장" })).className).toContain(
-      "text-[var(--text-inverse)]",
+      "[color:var(--text-inverse)]",
     );
     expect(
       (await screen.findByRole("button", { name: "플래너에 추가" })).className,
@@ -959,11 +977,22 @@ describe("recipe detail screen", () => {
     const likeButton = screen.getByRole("button", { name: "좋아요 203" });
     const saveButton = screen.getByRole("button", { name: "저장" });
 
-    expect(likeButton.className).toContain("min-h-[56px]");
-    expect(saveButton.className).toContain("min-h-[56px]");
+    expect(likeButton.closest(".recipe-overview-metrics-compact")?.className).toContain(
+      "gap-0",
+    );
+    expect(likeButton.className).toContain("min-h-[60px]");
+    expect(likeButton.className).toContain("min-w-[64px]");
+    expect(likeButton.className).not.toContain("min-h-[66px]");
+    expect(saveButton.className).toContain("min-h-[60px]");
+    expect(saveButton.className).toContain("min-w-[64px]");
+    expect(saveButton.className).not.toContain("min-h-[66px]");
+    expect(likeButton.querySelector("svg")?.getAttribute("stroke-width")).toBe("2.2");
+    expect(saveButton.querySelector("svg")?.getAttribute("stroke-width")).toBe("2.2");
     expect(saveButton.querySelector("svg")?.className.baseVal).toContain(
       "text-[var(--brand)]",
     );
+    expect(likeButton.className).not.toContain("text-[var(--brand)]");
+    expect(saveButton.className).not.toContain("text-[var(--brand)]");
     expect(screen.queryByRole("status", { name: /요리완료/ })).toBeNull();
     expect(screen.queryByRole("status", { name: /플래너 등록/ })).toBeNull();
   });
@@ -1179,6 +1208,7 @@ describe("recipe detail screen", () => {
     expect(youtubeTag.getAttribute("target")).toBe("_blank");
     expect(youtubeTag.className).toContain("bg-[var(--brand)]");
     expect(youtubeTag.className).toContain("text-[var(--text-inverse)]");
+    expect(youtubeTag.getAttribute("style") ?? "").toContain("color: var(--text-inverse)");
     expect(strawberryTag.className).not.toContain("bg-[var(--brand-soft)]");
     expect(strawberryTag.className).not.toContain("text-[var(--brand)]");
     expect(strawberryTag.className).not.toContain("font-extrabold");
@@ -1199,6 +1229,8 @@ describe("recipe detail screen", () => {
     expect(summaryScope.getByText("플래너등록 52")).toBeTruthy();
     expect(summaryScope.getByText("요리완료 34")).toBeTruthy();
     expect(summaryScope.queryByText("14분")).toBeNull();
+    expect(summary.querySelector("path[d^='M12 3v2']")).toBeNull();
+    expect(summary.querySelector("[data-testid='cook-icon']")).toBeTruthy();
   });
 
   it("matches mobile cooking method chips to the web treatment without left card rails", async () => {
@@ -1260,6 +1292,10 @@ describe("recipe detail screen", () => {
     expect(note.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(youtubeTag.getAttribute("href")).toBe("https://www.youtube.com/watch?v=abc");
     expect(screen.queryByText(MOCK_RECIPE_DETAIL.description!)).toBeNull();
+    expect(
+      screen.queryByText("팬트리에 있는 재료는 만들기 전에 다시 확인해 주세요"),
+    ).toBeNull();
+    expect(ruleBody(".web-recipe-titleblock")).toContain("padding: 18px 0 8px;");
   });
 
   it("keeps desktop recipe photos to one tile when only one registered photo exists", async () => {

@@ -1216,7 +1216,10 @@ export function RecipeDetailScreen({
           >
             공유하기
           </button>
-          <div className="recipe-overview-metrics-compact absolute bottom-[18px] right-3.5 flex flex-col flex-wrap items-center gap-[9px]">
+          <div
+            className="recipe-overview-metrics-compact absolute bottom-[18px] right-3.5 flex flex-col flex-wrap items-center gap-0"
+            style={{ gap: 0 }}
+          >
             <Wave1HeroMetricButton
               ariaLabel={
                 likeRequestState === "pending"
@@ -1255,6 +1258,7 @@ export function RecipeDetailScreen({
                   className="rounded-full bg-[var(--brand)] px-[9px] py-1 text-[12px] font-bold text-[var(--text-inverse)]"
                   href={youtubeSourceHref}
                   rel="noopener noreferrer"
+                  style={{ color: "var(--text-inverse)" }}
                   target="_blank"
                 >
                   유튜브
@@ -1275,6 +1279,7 @@ export function RecipeDetailScreen({
                 className="rounded-full bg-[var(--brand)] px-[9px] py-1 text-[12px] font-bold text-[var(--text-inverse)]"
                 href={youtubeSourceHref}
                 rel="noopener noreferrer"
+                style={{ color: "var(--text-inverse)" }}
                 target="_blank"
               >
                 유튜브
@@ -1814,10 +1819,6 @@ function RecipeDetailWebView({
                     );
                   })}
                 </ul>
-                <div className="web-pantry-note">
-                  <CheckIcon />
-                  팬트리에 있는 재료는 만들기 전에 다시 확인해 주세요
-                </div>
               </section>
 
               <section className="web-reading-section web-reading-section-grid">
@@ -2291,19 +2292,23 @@ function Wave1HeroMetricButton({
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
       className={[
-        "flex min-h-[56px] min-w-12 flex-col items-center justify-center gap-1 rounded-full bg-transparent px-1 py-0 text-[13px] font-bold leading-none text-[var(--text-inverse)] drop-shadow-[0_2px_5px_var(--overlay-75)] transition-transform duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70",
-        ariaPressed ? "scale-110 text-[var(--brand)]" : "",
+        "flex min-h-[60px] min-w-[64px] flex-col items-center justify-center gap-0 rounded-full bg-transparent px-1 py-0 font-extrabold leading-none [color:var(--text-inverse)] drop-shadow-[0_2px_5px_var(--overlay-75)] transition-transform duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70",
+        ariaPressed ? "scale-105" : "",
       ].join(" ")}
       disabled={disabled}
       onClick={onClick}
+      style={{ fontSize: 14 }}
       type="button"
     >
-      <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center">
+      <span
+        aria-hidden="true"
+        className="flex h-9 w-9 items-center justify-center [&>svg]:h-7 [&>svg]:w-7"
+      >
         {icon}
       </span>
       <span
         aria-hidden={ariaLabel !== `좋아요 ${count}`}
-        className="text-[13px] font-bold leading-none"
+        className="text-[14px] font-extrabold leading-none"
       >
         {count}
       </span>
@@ -2462,13 +2467,13 @@ function HeartIcon({ filled = false }: { filled?: boolean }) {
   return (
     <svg
       aria-hidden="true"
-      className={filled ? "text-[var(--danger-strong)]" : undefined}
+      className={filled ? "text-[var(--like-active)]" : undefined}
       fill={filled ? "currentColor" : "none"}
-      height="18"
+      height="20"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2.2"
       viewBox="0 0 24 24"
-      width="18"
+      width="20"
     >
       <path d="M12 20.2 4.9 13.4a4.8 4.8 0 0 1 6.8-6.8L12 7l.3-.4a4.8 4.8 0 0 1 6.8 6.8Z" />
     </svg>
@@ -2481,11 +2486,11 @@ function BookmarkIcon({ filled = false }: { filled?: boolean }) {
       aria-hidden="true"
       className={filled ? "text-[var(--brand)]" : undefined}
       fill={filled ? "currentColor" : "none"}
-      height="18"
+      height="20"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2.2"
       viewBox="0 0 24 24"
-      width="18"
+      width="20"
     >
       <path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.7L6 20V5.5a1 1 0 0 1 1-1Z" />
     </svg>
@@ -2496,15 +2501,20 @@ function CookIcon() {
   return (
     <svg
       aria-hidden="true"
+      data-testid="cook-icon"
       fill="none"
       height="18"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
       viewBox="0 0 24 24"
       width="18"
     >
-      <path d="M12 3v2M5.6 5.6l1.4 1.4M3 12h2M5.6 18.4l1.4-1.4M12 19v2M17 17l1.4 1.4M19 12h2M17 7l1.4-1.4" />
-      <circle cx="12" cy="12" r="4" />
+      <path d="M6 9h12l-.8 8.2A2 2 0 0 1 15.2 19H8.8a2 2 0 0 1-2-1.8L6 9Z" />
+      <path d="M9 9V7.5A3 3 0 0 1 12 4.5a3 3 0 0 1 3 3V9" />
+      <path d="M4 11h2" />
+      <path d="M18 11h2" />
     </svg>
   );
 }
@@ -2581,24 +2591,6 @@ function GridIcon() {
       width="16"
     >
       <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="16"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-      width="16"
-    >
-      <path d="m5 12 4 4L19 6" />
     </svg>
   );
 }

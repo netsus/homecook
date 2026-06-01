@@ -546,7 +546,19 @@ describe("MypageScreen", () => {
     render(<MypageScreen initialAuthenticated />);
 
     expect(screen.getByTestId("mypage-mobile-loading")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "마이페이지" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "마이페이지" }).className).toContain(
+      "text-[var(--brand)]",
+    );
+  });
+
+  it("uses the theme color for the mobile mypage screen title", async () => {
+    installMatchMedia(true);
+
+    render(<MypageScreen initialAuthenticated />);
+
+    expect((await screen.findByRole("heading", { name: "마이페이지" })).className).toContain(
+      "text-[var(--brand)]",
+    );
   });
 
   it("uses the restored recipebook surface title during mobile loading", () => {

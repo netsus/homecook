@@ -291,13 +291,16 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    expect(await screen.findByRole("heading", { name: "플래너" })).toBeTruthy();
+    expect((await screen.findByRole("heading", { name: "플래너" })).className).toContain(
+      "text-[var(--brand)]",
+    );
     expect(screen.getAllByText("아침").length).toBeGreaterThan(0);
     expect(screen.getAllByText("점심").length).toBeGreaterThan(0);
     expect(screen.getAllByText("간식").length).toBeGreaterThan(0);
     expect(screen.getAllByText("저녁").length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText(/식단 카드$/)).toHaveLength(7);
-    expect(screen.getByText("이번 주 3월 24일 - 3월 30일")).toBeTruthy();
+    expect(screen.getByText("3월 24일 - 3월 30일")).toBeTruthy();
+    expect(screen.queryByText("이번 주 3월 24일 - 3월 30일")).toBeNull();
     expect(screen.queryByText("화면 상태")).toBeNull();
     // Wave1: week nav buttons now always visible (mobile uses icon-only)
     expect(screen.getByRole("button", { name: "이전 주" })).toBeTruthy();
@@ -324,11 +327,33 @@ describe("planner week screen", () => {
 
     expect(shoppingLink.closest(".fixed")).not.toBeNull();
     expect(shoppingLink.getAttribute("href")).toBe("/shopping/flow");
+    expect(shoppingLink.className).toContain("bg-[var(--brand)]");
+    expect(shoppingLink.className).toContain("active:scale-95");
     expect(plannerTab.getAttribute("aria-current")).toBe("page");
     expect(
       within(bottomTabs).getByTestId("bottom-tab-icon-pantry-fridge"),
     ).toBeTruthy();
     expect(screen.queryByRole("group", { name: "플래너 보조 작업" })).toBeNull();
+  });
+
+  it("shows a current-week shortcut in the mobile week controls", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen />);
+
+    expect(await screen.findByRole("heading", { name: "플래너" })).toBeTruthy();
+
+    const weekShell = screen.getByTestId("planner-week-shell");
+    const currentWeekButton = within(weekShell).getByRole("button", {
+      name: "이번 주로 이동",
+    });
+
+    expect(currentWeekButton.textContent?.trim()).toBe("이번 주");
+    expect(currentWeekButton.className).toContain("border-[var(--line-strong)]");
+    expect(weekShell.querySelector(".grid")?.className).toContain(
+      "grid-cols-[30px_minmax(0,1fr)_30px]",
+    );
   });
 
   it("renders the desktop planner header with the prototype's three week actions", async () => {
@@ -386,6 +411,94 @@ describe("planner week screen", () => {
     expect(screen.getByTestId("planner-week-body")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "날짜와 끼니 선택" })).toBeNull();
     expect(screen.queryByTestId("planner-first-meal-chooser")).toBeNull();
+  });
+
+  it("keeps desktop meal card meta to servings without duplicate status text", async () => {
+    setDesktopViewport(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-registered",
+            recipe_id: "recipe-registered",
+            recipe_title: "된장찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    const { container } = render(<PlannerWeekScreen />);
+
+    await screen.findAllByText("된장찌개");
+
+    const meta = container.querySelector(".web-planner-meal-meta");
+    expect(meta?.textContent).toBe("2인분");
+    expect(screen.queryByText("2인분 · 등록")).toBeNull();
+  });
+
+  it("keeps the desktop planner side summary focused without duplicate registered totals or quick add", async () => {
+    setDesktopViewport(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-registered",
+            recipe_id: "recipe-registered",
+            recipe_title: "된장찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+          },
+          {
+            id: "meal-shopping",
+            recipe_id: "recipe-shopping",
+            recipe_title: "카레",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-lunch",
+            planned_servings: 2,
+            status: "shopping_done",
+            is_leftover: false,
+          },
+          {
+            id: "meal-cooked",
+            recipe_id: "recipe-cooked",
+            recipe_title: "불고기",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-dinner",
+            planned_servings: 2,
+            status: "cook_done",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    render(<PlannerWeekScreen />);
+
+    expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
+
+    const summary = screen.getByLabelText("플래너 요약");
+
+    expect(within(summary).getByText("이번 주 요약")).toBeTruthy();
+    expect(within(summary).queryByText("등록된 끼니")).toBeNull();
+    expect(within(summary).getByText("요리 완료")).toBeTruthy();
+    expect(within(summary).getByText("장본 끼니")).toBeTruthy();
+    expect(within(summary).getByText("등록")).toBeTruthy();
+    expect(within(summary).queryByText("빠른 추가")).toBeNull();
+    expect(within(summary).queryByText("레시피 검색")).toBeNull();
   });
 
   it("opens the Wave1 meal-add sheet and opens picker options as modal sheets without leaving the planner", async () => {
@@ -611,12 +724,12 @@ describe("planner week screen", () => {
     expect(dinnerButton).toBeTruthy();
     expect(breakfastRow?.className).toContain("min-h-[46px]");
     expect(within(breakfastRow as HTMLElement).getByText("2인분")).toBeTruthy();
-    expect(breakfastAddButton.className).toContain("border-[var(--planner-add)]");
-    expect(breakfastAddButton.className).toContain("bg-[var(--planner-add-soft)]");
-    expect(breakfastAddButton.className).toContain("text-[var(--planner-add)]");
-    expect(dinnerButton.className).toContain("border-[var(--planner-add)]");
-    expect(dinnerButton.className).toContain("bg-[var(--planner-add-soft)]");
-    expect(dinnerButton.className).toContain("text-[var(--planner-add)]");
+    expect(breakfastAddButton.className).toContain("border-[var(--line-strong)]");
+    expect(breakfastAddButton.className).toContain("bg-transparent");
+    expect(breakfastAddButton.className).toContain("text-[var(--text-3)]");
+    expect(dinnerButton.className).toContain("border-[var(--line-strong)]");
+    expect(dinnerButton.className).toContain("bg-transparent");
+    expect(dinnerButton.className).toContain("text-[var(--text-3)]");
     // Wave1: status badge removed — no "등록" text
     expect(within(breakfastRow as HTMLElement).queryByText("등록")).toBeNull();
     expect(dinnerButton.textContent?.replace(/\s+/g, " ").trim()).toBe("+");

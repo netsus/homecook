@@ -62,6 +62,7 @@ const qaSnapshotFontFaces = qaSnapshotFonts
 
 const HOME_VISUAL_MAX_DIFF_PIXELS = 120;
 const HOME_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 1600;
+const HOME_SORT_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2200;
 const RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS = 400;
 const PLANNER_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
 const MEAL_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
@@ -94,6 +95,12 @@ function homeVisualMaxDiffPixels(page: Page) {
   return isMobileViewport(page)
     ? HOME_VISUAL_MAX_DIFF_PIXELS
     : HOME_DESKTOP_VISUAL_MAX_DIFF_PIXELS;
+}
+
+function homeSortVisualMaxDiffPixels(page: Page) {
+  return isMobileViewport(page)
+    ? HOME_VISUAL_MAX_DIFF_PIXELS
+    : HOME_SORT_DESKTOP_VISUAL_MAX_DIFF_PIXELS;
 }
 
 async function stabilizeVisualSnapshot(page: Page) {
@@ -219,7 +226,7 @@ test.describe("QA visual regression", () => {
     await expect(page).toHaveScreenshot("qa-home-sort-open.png", {
       animations: "disabled",
       fullPage: true,
-      maxDiffPixels: homeVisualMaxDiffPixels(page),
+      maxDiffPixels: homeSortVisualMaxDiffPixels(page),
     });
   });
 

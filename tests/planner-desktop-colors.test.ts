@@ -7,39 +7,50 @@ const globalsCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 
 function ruleBody(selector: string) {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = globalsCss.match(new RegExp(`${escapedSelector}\\s*\\{([^}]+)\\}`));
+  const matches = Array.from(
+    globalsCss.matchAll(new RegExp(`${escapedSelector}\\s*\\{([^}]+)\\}`, "g")),
+  );
+
+  return matches.at(-1)?.[1] ?? "";
+}
+
+function ruleBodyPattern(selectorPattern: string) {
+  const match = globalsCss.match(new RegExp(`${selectorPattern}\\s*\\{([^}]+)\\}`));
 
   return match?.[1] ?? "";
 }
 
 describe("planner desktop colors", () => {
-  it("keeps the web planner on the existing web-owned palette", () => {
+  it("routes the web planner through shared planner status tokens", () => {
     expect(ruleBody(".web-planner-stat-success strong")).toContain(
-      "color: var(--web-success);",
+      "color: var(--planner-status-cooked);",
     );
     expect(ruleBody(".web-planner-stat-warning strong")).toContain(
-      "color: var(--web-warning);",
+      "color: var(--planner-status-shopping);",
+    );
+    expect(ruleBody(".web-planner-stat-registered strong")).toContain(
+      "color: var(--planner-status-registered);",
     );
     expect(ruleBody(".web-planner-meal")).toContain(
-      "border-left: 3px solid var(--web-brand);",
+      "border-left: 3px solid var(--planner-status-registered);",
     );
     expect(ruleBody(".web-planner-meal-registered")).toContain(
-      "border-left-color: var(--web-brand);",
+      "border-left-color: var(--planner-status-registered);",
     );
     expect(ruleBody(".web-planner-meal-shopped")).toContain(
-      "border-left-color: var(--web-warning);",
+      "border-left-color: var(--planner-status-shopping);",
     );
     expect(ruleBody(".web-planner-meal-cooked")).toContain(
-      "border-left-color: var(--web-success);",
+      "border-left-color: var(--planner-status-cooked);",
     );
     expect(ruleBody(".web-planner-dot-registered")).toContain(
-      "background: var(--web-brand);",
+      "background: var(--planner-status-registered);",
     );
     expect(ruleBody(".web-planner-dot-shopped")).toContain(
-      "background: var(--web-warning);",
+      "background: var(--planner-status-shopping);",
     );
     expect(ruleBody(".web-planner-dot-cooked")).toContain(
-      "background: var(--web-success);",
+      "background: var(--planner-status-cooked);",
     );
     expect(ruleBody(".web-planner-add")).toContain(
       "border: 1px dashed var(--web-line-strong);",
@@ -57,6 +68,43 @@ describe("planner desktop colors", () => {
       "background: var(--web-brand-wash);",
     );
     expect(ruleBody(".web-planner-add:hover")).toContain(
+      "color: var(--web-brand-accessible);",
+    );
+    expect(ruleBody(".web-meal-status-shopped")).toContain(
+      "color: var(--planner-status-shopping);",
+    );
+    expect(ruleBodyPattern("\\.web-meal-status-cooked,\\s+\\.web-meal-leftover")).toContain(
+      "color: var(--planner-status-cooked);",
+    );
+    expect(ruleBody(".web-meal-list-delete .web-meal-delete-button")).toContain(
+      "color: var(--web-error);",
+    );
+  });
+
+  it("matches the desktop meal serving stepper to the app control treatment", () => {
+    expect(ruleBody(".web-meal-inline-stepper")).toContain(
+      "background: var(--surface-fill);",
+    );
+    expect(ruleBody(".web-meal-inline-stepper")).toContain("padding: 4px 7px;");
+    expect(ruleBody(".web-meal-inline-stepper button")).toContain(
+      "place-items: center;",
+    );
+    expect(ruleBody(".web-meal-inline-stepper button")).toContain(
+      "border: 1px solid var(--line-strong);",
+    );
+    expect(ruleBody(".web-meal-inline-stepper button")).toContain("width: 38px;");
+    expect(ruleBody(".web-meal-inline-stepper button")).toContain("height: 38px;");
+    expect(ruleBody(".web-meal-inline-stepper button")).toContain("line-height: 0;");
+    expect(ruleBody(".web-meal-inline-stepper button")).toContain("font-weight: 500;");
+    expect(ruleBody(".web-meal-stepper-symbol")).toContain("transform: translateY(-1px);");
+  });
+
+  it("matches the desktop meal add CTA to the app outline treatment", () => {
+    expect(ruleBody(".web-meal-add-link")).toContain(
+      "border: 1px solid var(--web-brand);",
+    );
+    expect(ruleBody(".web-meal-add-link")).toContain("background: transparent;");
+    expect(ruleBody(".web-meal-add-link")).toContain(
       "color: var(--web-brand-accessible);",
     );
   });
