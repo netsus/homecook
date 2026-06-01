@@ -1,0 +1,87 @@
+{
+  "slice_id": "32-youtube-visual-quantity-enrichment",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/recipes/youtube/extract",
+      "POST /api/v1/recipes/youtube/register",
+      "POST /api/v1/recipes/youtube/candidate-drafts"
+    ],
+    "invariants": [
+      "documented-state-transition",
+      "owner-authorization",
+      "read-only-guard",
+      "quantity-review-required-server-enforced",
+      "extraction-methods-text-only",
+      "no-hardcoded-video-id",
+      "no-recipio-fixture",
+      "cache-sanitized-only",
+      "events-no-raw-provider-response"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/youtube-visual-quantity-eval.test.ts",
+      "tests/youtube-import.backend.test.ts",
+      "tests/youtube-corpus.test.ts"
+    ],
+    "eval_gates": {
+      "amount_coverage_improvement": "+0.25 absolute over public-text baseline",
+      "false_explicit_count": 0,
+      "recipe_inferred_register_blocked": true,
+      "quick_import_review_block": true
+    }
+  },
+  "frontend": {
+    "required_routes": [
+      "/recipes/new/youtube"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "youtube-visual-quantity-live-smoke"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "secret-missing",
+    "visual-extractor-env-gate-disabled"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

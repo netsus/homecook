@@ -1494,6 +1494,26 @@
       "last_evaluator_result": "ui/designs/evidence/admin-foundation/eval-result.json",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "32-youtube-visual-quantity-enrichment",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/32-youtube-visual-quantity-enrichment",
+      "pr_path": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm test:youtube-corpus",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 32-youtube-visual-quantity-enrichment",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 contract-evolution docs for YouTube visual quantity enrichment. Visual quantity extractor as an optional enrichment stage after public text path. Implementation starts only after this docs PR merges."
     }
   ]
 }

@@ -1,0 +1,106 @@
+{
+  "id": "32-youtube-visual-quantity-enrichment",
+  "title": "YouTube visual quantity enrichment",
+  "summary": "YouTube 레시피 영상에서 공개 텍스트로 빠지는 재료 수량을 화면 속 수량 텍스트 기반으로 보강한다. visual_quantity_extractor provider, quantity review fields, register confirmation contract, visual cache/events 테이블을 추가한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "공개 텍스트 추출만으로 빠지는 YouTube 레시피 재료 수량을 화면 속 명시 수량 기반으로 보강하되, 추정 수량은 사용자 확인 없이 등록되지 않게 한다.",
+  "owners": {
+    "claude": "stage1,stage3,stage5",
+    "codex": "stage2,stage4,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "19-youtube-import",
+    "20-youtube-real-import",
+    "22-youtube-ingredient-registration",
+    "23-youtube-quality-corpus",
+    "24-youtube-parser-dictionary-hardening",
+    "27-youtube-import-quality-uplift",
+    "27b-youtube-source-fallback",
+    "29-youtube-author-comment-fallback"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.5.md",
+      "docs/화면정의서-v1.5.12.md",
+      "docs/유저flow맵-v1.3.12.md",
+      "docs/db설계-v1.3.11.md",
+      "docs/api문서-v1.2.15.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/32-youtube-visual-quantity-enrichment/README.md",
+      "docs/workpacks/32-youtube-visual-quantity-enrichment/acceptance.md",
+      "docs/workpacks/32-youtube-visual-quantity-enrichment/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      ".omx/plans/youtube-visual-quantity-extraction-ralplan-20260602.md",
+      ".omx/plans/prd-youtube-visual-quantity-extraction.md",
+      ".omx/plans/test-spec-youtube-visual-quantity-extraction.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "youtube-visual-quantity-live-smoke"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm test:youtube-corpus",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 32-youtube-visual-quantity-enrichment",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "visual-quantity-eval-pass",
+      "amount-coverage-improvement",
+      "false-explicit-zero",
+      "no-hardcoded-video-id",
+      "register-confirmation-validated",
+      "visual-cache-sanitized"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 contract-evolution docs. Visual quantity enrichment adds a new optional visual_quantity_extractor stage after the existing public text path. First adapter is Gemini video understanding over public YouTube URL behind env/quota/cache gates. V1 provenance is session-scoped — no per-row durable provenance on recipe_ingredients/recipe_steps.",
+  "out_of_scope": [
+    "recipe_ingredients/recipe_steps per-row durable provenance columns",
+    "shopping_list_items aggregation changes",
+    "cook-mode/detail provenance display",
+    "ASR/STT",
+    "selected-frame OCR / Cloud Vision",
+    "video ID fixture / Recipio result copy"
+  ],
+  "open_questions": []
+}
