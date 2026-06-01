@@ -2789,12 +2789,18 @@ button {
     padding-top: 28px;
   }
 
+  .web-servings-section {
+    margin-top: 18px;
+    border-top: 0;
+    padding-top: 0;
+  }
+
   .web-recipe-reading-grid {
     display: grid;
-    grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.15fr);
-    gap: 30px;
+    grid-template-columns: minmax(210px, 0.68fr) minmax(0, 1.32fr);
+    gap: 28px;
     align-items: start;
-    margin-top: 28px;
+    margin-top: 22px;
   }
 
   .web-reading-section-grid {
