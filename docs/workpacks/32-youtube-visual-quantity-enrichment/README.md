@@ -272,18 +272,18 @@ pnpm verify:backend
 ## Delivery Checklist
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 
-- [ ] 백엔드 계약 고정 (quantity fields, confirmation status, visual cache/events) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] Visual quantity extractor provider/adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 (`YoutubeQuantitySource`, `YoutubeQuantityConfirmationStatus`, `YoutubeQuantityEvidenceRef`) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 (quantity fields, confirmation status, visual cache/events) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] Visual quantity extractor provider/adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 (`YoutubeQuantitySource`, `YoutubeQuantityConfirmationStatus`, `YoutubeQuantityEvidenceRef`) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 (YT_IMPORT 수량 배지, confirm/edit/clear, quick import 차단) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 (register confirmation rules, review-required 검증) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 (register confirmation rules, review-required 검증) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 (youtube_visual_extraction_cache/events DDL) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 (youtube_visual_extraction_cache/events DDL) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
-- [ ] `recipe_sources.extraction_methods` mismatch 정리 (`ocr/asr/estimation/manual` → `description/comment/caption` 기준) <!-- omo:id=delivery-extraction-methods-fix;stage=2;scope=backend;review=3,6 -->
-- [ ] eval harness (`youtube-visual-quantity-eval.test.ts`) + fixture 구축 <!-- omo:id=delivery-eval-harness;stage=2;scope=backend;review=3,6 -->
-- [ ] `amount_coverage_ratio` +0.25 gate 통과 <!-- omo:id=delivery-coverage-gate;stage=2;scope=backend;review=3,6 -->
-- [ ] `false_explicit_count=0` gate 통과 <!-- omo:id=delivery-false-explicit-gate;stage=2;scope=backend;review=3,6 -->
-- [ ] `OEassmynRro` / Recipio hardcoding source scan 통과 <!-- omo:id=delivery-no-hardcoding;stage=2;scope=shared;review=3,6 -->
+- [x] `recipe_sources.extraction_methods` mismatch 정리 (`ocr/asr/estimation/manual` → `description/comment/caption` 기준) <!-- omo:id=delivery-extraction-methods-fix;stage=2;scope=backend;review=3,6 -->
+- [x] eval harness (`youtube-visual-quantity-eval.test.ts`) + fixture 구축 <!-- omo:id=delivery-eval-harness;stage=2;scope=backend;review=3,6 -->
+- [x] `amount_coverage_ratio` +0.25 gate 통과 <!-- omo:id=delivery-coverage-gate;stage=2;scope=backend;review=3,6 -->
+- [x] `false_explicit_count=0` gate 통과 <!-- omo:id=delivery-false-explicit-gate;stage=2;scope=backend;review=3,6 -->
+- [x] `OEassmynRro` / Recipio hardcoding source scan 통과 <!-- omo:id=delivery-no-hardcoding;stage=2;scope=shared;review=3,6 -->

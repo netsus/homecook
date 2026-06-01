@@ -1,0 +1,151 @@
+{
+  "schema_version": "2026-06-02-visual-quantity-v1",
+  "cases": [
+    {
+      "case_id": "single-visual-explicit",
+      "baseline": [
+        { "name": "두부", "amount": null, "unit": null },
+        { "name": "대파", "amount": null, "unit": null },
+        { "name": "간장", "amount": 1, "unit": "큰술" },
+        { "name": "소금", "amount": null, "unit": null }
+      ],
+      "enriched": [
+        {
+          "name": "두부",
+          "amount": 300,
+          "unit": "g",
+          "quantity_source": "ingredient_default",
+          "quantity_review_required": true,
+          "evidence_refs": [
+            { "source_method": "visual", "source_provider": "visual_quantity_extractor", "snippet": "두부 1모" }
+          ]
+        },
+        {
+          "name": "대파",
+          "amount": 1,
+          "unit": "대",
+          "quantity_source": "visual_explicit",
+          "quantity_review_required": true,
+          "evidence_refs": [
+            { "source_method": "visual", "source_provider": "visual_quantity_extractor", "snippet": "대파 1대" }
+          ]
+        },
+        {
+          "name": "간장",
+          "amount": 1,
+          "unit": "큰술",
+          "quantity_source": "text_explicit",
+          "quantity_review_required": false,
+          "evidence_refs": [
+            { "source_method": "description", "source_provider": "description_parser", "snippet": "간장 1큰술" }
+          ]
+        },
+        {
+          "name": "소금",
+          "amount": null,
+          "unit": null,
+          "quantity_source": "text_explicit",
+          "quantity_review_required": false,
+          "evidence_refs": [
+            { "source_method": "description", "source_provider": "description_parser", "snippet": "소금 약간" }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "unit-normalized",
+      "baseline": [
+        { "name": "물", "amount": null, "unit": null },
+        { "name": "양파", "amount": 0.5, "unit": "개" },
+        { "name": "고추장", "amount": null, "unit": null }
+      ],
+      "enriched": [
+        {
+          "name": "물",
+          "amount": 100,
+          "unit": "ml",
+          "quantity_source": "unit_normalized",
+          "quantity_review_required": true,
+          "evidence_refs": [
+            { "source_method": "visual", "source_provider": "visual_quantity_extractor", "snippet": "물 1/2 종이컵" }
+          ]
+        },
+        {
+          "name": "양파",
+          "amount": 0.5,
+          "unit": "개",
+          "quantity_source": "text_explicit",
+          "quantity_review_required": false,
+          "evidence_refs": [
+            { "source_method": "description", "source_provider": "description_parser", "snippet": "양파 1/2개" }
+          ]
+        },
+        {
+          "name": "고추장",
+          "amount": 1,
+          "unit": "큰술",
+          "quantity_source": "recipe_inferred",
+          "quantity_review_required": true,
+          "evidence_refs": [
+            { "source_method": "visual", "source_provider": "visual_quantity_extractor", "snippet": "양념장에 고추장 표시" }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "multi-candidate",
+      "baseline": [
+        { "name": "미니 파프리카", "amount": null, "unit": null },
+        { "name": "굴소스", "amount": 1, "unit": "T" }
+      ],
+      "enriched": [
+        {
+          "name": "미니 파프리카",
+          "amount": 4,
+          "unit": "개",
+          "quantity_source": "visual_explicit",
+          "quantity_review_required": true,
+          "evidence_refs": [
+            { "source_method": "visual", "source_provider": "visual_quantity_extractor", "snippet": "미니 파프리카 4개" }
+          ]
+        },
+        {
+          "name": "굴소스",
+          "amount": 1,
+          "unit": "T",
+          "quantity_source": "text_explicit",
+          "quantity_review_required": false,
+          "evidence_refs": [
+            { "source_method": "caption", "source_provider": "caption_parser", "snippet": "굴소스 1T" }
+          ]
+        }
+      ],
+      "candidate_child": [
+        {
+          "name": "미니 파프리카",
+          "amount": 4,
+          "unit": "개",
+          "quantity_source": "visual_explicit",
+          "quantity_review_required": true
+        },
+        {
+          "name": "굴소스",
+          "amount": 1,
+          "unit": "T",
+          "quantity_source": "text_explicit",
+          "quantity_review_required": false
+        }
+      ]
+    }
+  ],
+  "provider_failure_fallback": {
+    "baseline": [
+      { "name": "애호박", "amount": null, "unit": null },
+      { "name": "달걀", "amount": 2, "unit": "개" }
+    ],
+    "after_failure": [
+      { "name": "애호박", "amount": null, "unit": null },
+      { "name": "달걀", "amount": 2, "unit": "개" }
+    ]
+  }
+}
