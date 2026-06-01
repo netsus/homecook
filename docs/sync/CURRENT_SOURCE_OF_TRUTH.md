@@ -1,17 +1,33 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.4.md`
-- `docs/화면정의서-v1.5.11.md`
-- `docs/유저flow맵-v1.3.11.md`
-- `docs/db설계-v1.3.10.md`
-- `docs/api문서-v1.2.14.md`
+- `docs/요구사항기준선-v1.7.5.md`
+- `docs/화면정의서-v1.5.12.md`
+- `docs/유저flow맵-v1.3.12.md`
+- `docs/db설계-v1.3.11.md`
+- `docs/api문서-v1.2.15.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## v1.7.4 / v1.5.11 / v1.3.11 / DB v1.3.10 / API v1.2.14 → v1.7.5 / v1.5.12 / v1.3.12 / DB v1.3.11 / API v1.2.15 변경 이력 (2026-06-02)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.5 | 공개 텍스트 추출 이후 조건부 `visual_quantity_extractor` enrichment 단계 추가, `YoutubeQuantitySource` enum, `quantity_confirmation_status` register 검증, `recipe_sources.extraction_methods` mismatch 정리 |
+| 화면정의서 v1.5.12 | YT_IMPORT 검수 화면에 수량 provenance 배지, confirm/edit/clear 인터랙션, quick import 수량 리뷰 차단 추가 |
+| 유저플로우 v1.3.12 | extract 후 visual quantity enrichment 흐름, 검수 화면 수량 확인 인터랙션, quick import review-required fallback 분기 추가 |
+| DB v1.3.11 | `youtube_visual_extraction_cache`, `youtube_visual_extraction_events` 서버 전용 테이블 추가, `recipe_sources.extraction_methods` 설명을 실제 YouTube session 값에 맞게 정리 |
+| API v1.2.15 | extract 응답 `ingredients[]`에 `quantity_*` review fields 추가, register에 `quantity_confirmation_status` 검증 추가, `source_providers`에 `visual_quantity_extractor` 계약 추가 |
+
+> 이 변경은 `docs/workpacks/32-youtube-visual-quantity-enrichment` contract-evolution이다.
+> visual enrichment는 원천 extraction method가 아니라 보조 enrichment이므로 `extraction_methods`는 `description | comment | caption`만 유지한다.
+> `recipe_inferred` 수량은 사용자 확인 없이 register/quick auto-register할 수 없다.
+> raw video, raw frame, raw provider response, API key, secret, 레시피오 data는 저장/반환하지 않는다.
+> selected-frame OCR, Cloud Vision, ASR/STT는 v1 out of scope이다.
 
 ## v1.7.3 / v1.5.10 / v1.3.10 / DB v1.3.9 / API v1.2.13 → v1.7.4 / v1.5.11 / v1.3.11 / DB v1.3.10 / API v1.2.14 변경 이력 (2026-05-30)
 
