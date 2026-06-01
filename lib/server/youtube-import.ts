@@ -497,7 +497,7 @@ const GEMINI_STRUCTURED_EXTRACTOR_PROVIDER = "gemini_structured_extractor";
 const GEMINI_STRUCTURED_EXTRACTOR_CACHE_PROVIDER = "gemini_structured_extractor_cache";
 const DEFAULT_GEMINI_PRIMARY_MODEL = "gemini-3.1-flash-lite";
 const DEFAULT_GEMINI_FALLBACK_MODEL = "gemini-2.5-flash-lite";
-const DEFAULT_LLM_SCHEMA_VERSION = "2026-06-01";
+const DEFAULT_LLM_SCHEMA_VERSION = "2026-06-01-quality-v2";
 const LLM_MAX_RECIPES = 12;
 const LLM_MAX_SOURCE_LINES = 240;
 const PREFERRED_TRANSCRIPT_LANGUAGES = ["ko", "en"] as const;
@@ -755,6 +755,18 @@ export interface YoutubeRecipeLlmExtractor {
   ): Promise<YoutubeRecipeLlmExtractorResult>;
 }
 
+interface ParsedRecipeQualityMeta {
+  low_quality: boolean;
+  score: number;
+  reasons: string[];
+  ingredient_count: number;
+  step_count: number;
+  noisy_ingredient_count: number;
+  weak_step_count: number;
+  conversational_step_count: number;
+  cooking_action_step_count: number;
+}
+
 interface LlmExtractorMeta {
   attempted: boolean;
   provider: string | null;
@@ -777,6 +789,7 @@ interface LlmExtractorMeta {
   reason: string | null;
   recipe_count: number;
   source_kinds: string[];
+  parser_quality: ParsedRecipeQualityMeta | null;
 }
 
 interface SelectedMultiRecipeExtraction {
@@ -3506,6 +3519,7 @@ function buildLlmExtractorMeta({
   reason = null,
   recipeCount = 0,
   sourceKinds = [],
+  parserQuality = null,
 }: {
   attempted: boolean;
   provider?: string | null;
@@ -3521,6 +3535,7 @@ function buildLlmExtractorMeta({
   reason?: string | null;
   recipeCount?: number;
   sourceKinds?: string[];
+  parserQuality?: ParsedRecipeQualityMeta | null;
 }): LlmExtractorMeta {
   return {
     attempted,
@@ -3537,6 +3552,7 @@ function buildLlmExtractorMeta({
     reason,
     recipe_count: recipeCount,
     source_kinds: sourceKinds,
+    parser_quality: parserQuality,
   };
 }
 
@@ -3830,6 +3846,10 @@ function buildLlmPrompt(context: YoutubeRecipeLlmExtractorContext) {
     "- Every ingredient and step must include evidence_refs pointing to real source/line_index values.",
     "- Exclude promotions, product ads, subscriptions, likes, comments, BGM, pets, family talk, and diary-only lines.",
     "- Do not create recipes titled only like 도시락, 집밥, 아침, 점심, 저녁, Cook with me, vlog, or routine.",
+    "- Auto captions often contain broken conversation. Ignore questions, filler, reactions, jokes, and half-sentences.",
+    "- Ingredient names must be real food items only. Do not output fragments like 좀, 이건 언제, 뭐야, 그거, or verb phrases.",
+    "- Steps must be usable cooking actions. Rewrite only when the source clearly says the action; otherwise omit the step.",
+    "- If evidence is too weak for either ingredients or steps, return an empty array for that side and add a warning.",
     "",
     `Video title: ${context.title}`,
     `Channel: ${context.channel}`,
@@ -4657,18 +4677,175 @@ function buildLlmSingleRecipe(
   return adaptFlatDraftRecipe(candidate.draft);
 }
 
+const CONVERSATIONAL_CAPTION_FRAGMENT_RE =
+  /(?:뭐야|뭐\s|언제|이건|이거|그거|그래\s*가지고|그래야지|되거든|한면|아\s+|루시|구독|좋아요|댓글|공구|제품)/u;
+const INCOMPLETE_CAPTION_TRAILING_RE = /(?:고|면|는|남은|수추|뭐)$/u;
+
+function isNoisyParsedIngredientName(name: string) {
+  const normalized = collapseWhitespace(name);
+
+  return !normalized
+    || normalized.length <= 1
+    || normalized.length > 32
+    || hasCookingAction(normalized)
+    || /[?？.!。]/u.test(normalized)
+    || /(?:습니다|주세요|합니다|됩니다|먹으면|넣어|섞어|썰어|올려|둘러)/u.test(normalized)
+    || CONVERSATIONAL_CAPTION_FRAGMENT_RE.test(`${normalized} `)
+    || /(?:^|\s)(?:좀|그냥|약간|많이|조금|언제)(?:\s|$)/u.test(normalized);
+}
+
+function isConversationalParsedStep(step: string) {
+  const normalized = collapseWhitespace(step);
+
+  return /[?？]/u.test(normalized)
+    || CONVERSATIONAL_CAPTION_FRAGMENT_RE.test(`${normalized} `)
+    || /(?:이거\s*뭐|그\s*굴\s*뭐|돼\s*한면|좀\s*골고리|엄마|남편|아이)/u.test(normalized);
+}
+
+function isWeakParsedStep(step: string) {
+  const normalized = collapseWhitespace(step);
+
+  return !normalized
+    || normalized.length < 8
+    || isConversationalParsedStep(normalized)
+    || INCOMPLETE_CAPTION_TRAILING_RE.test(normalized)
+    || !hasLlmCookingAction(normalized);
+}
+
+function evaluateParsedRecipeQuality(parsedRecipe: ParsedRecipeDescription): ParsedRecipeQualityMeta {
+  const ingredientCount = parsedRecipe.ingredients.length;
+  const stepCount = parsedRecipe.steps.length;
+  const noisyIngredientCount = parsedRecipe.ingredients
+    .filter((ingredient) => isNoisyParsedIngredientName(ingredient.name))
+    .length;
+  const weakStepCount = parsedRecipe.steps
+    .filter((step) => isWeakParsedStep(step))
+    .length;
+  const conversationalStepCount = parsedRecipe.steps
+    .filter((step) => isConversationalParsedStep(step))
+    .length;
+  const cookingActionStepCount = parsedRecipe.steps
+    .filter((step) => hasLlmCookingAction(step))
+    .length;
+  const noisyIngredientRatio = ingredientCount === 0 ? 0 : noisyIngredientCount / ingredientCount;
+  const weakStepRatio = stepCount === 0 ? 0 : weakStepCount / stepCount;
+  const reasons: string[] = [];
+
+  if (ingredientCount === 0) {
+    reasons.push("missing_ingredients");
+  } else if (noisyIngredientRatio >= 0.5) {
+    reasons.push("noisy_ingredient_names");
+  }
+
+  if (stepCount === 0) {
+    reasons.push("missing_steps");
+  } else {
+    if (cookingActionStepCount === 0) {
+      reasons.push("steps_without_cooking_actions");
+    }
+
+    if (weakStepRatio >= 0.4 && weakStepCount >= 2) {
+      reasons.push("weak_step_fragments");
+    }
+
+    if (conversationalStepCount >= 2) {
+      reasons.push("conversational_step_fragments");
+    }
+  }
+
+  const score = Math.max(
+    0,
+    Math.round(
+      100
+        - noisyIngredientRatio * 35
+        - weakStepRatio * 40
+        - Math.min(conversationalStepCount, 4) * 8
+        - (ingredientCount === 0 ? 20 : 0)
+        - (stepCount === 0 ? 25 : 0),
+    ),
+  );
+  const lowQuality = reasons.includes("missing_ingredients")
+    || reasons.includes("missing_steps")
+    || reasons.includes("noisy_ingredient_names")
+    || reasons.includes("steps_without_cooking_actions")
+    || reasons.includes("conversational_step_fragments")
+    || (reasons.includes("weak_step_fragments") && score < 75)
+    || score < 50;
+
+  return {
+    low_quality: lowQuality,
+    score,
+    reasons,
+    ingredient_count: ingredientCount,
+    step_count: stepCount,
+    noisy_ingredient_count: noisyIngredientCount,
+    weak_step_count: weakStepCount,
+    conversational_step_count: conversationalStepCount,
+    cooking_action_step_count: cookingActionStepCount,
+  };
+}
+
+function shouldSuppressLowQualityParsedRecipe(parserQuality: ParsedRecipeQualityMeta) {
+  return parserQuality.low_quality
+    && (
+      parserQuality.reasons.includes("noisy_ingredient_names")
+      || parserQuality.reasons.includes("weak_step_fragments")
+      || parserQuality.reasons.includes("conversational_step_fragments")
+      || parserQuality.reasons.includes("steps_without_cooking_actions")
+    );
+}
+
+function buildReviewNeededParsedRecipe(
+  parsedRecipe: ParsedRecipeDescription,
+  parserQuality: ParsedRecipeQualityMeta,
+): ParsedRecipeDescription {
+  const suppressIngredients = parserQuality.reasons.includes("noisy_ingredient_names");
+  const suppressSteps = parserQuality.reasons.includes("weak_step_fragments")
+    || parserQuality.reasons.includes("conversational_step_fragments")
+    || parserQuality.reasons.includes("steps_without_cooking_actions");
+
+  return {
+    ingredients: suppressIngredients ? [] : parsedRecipe.ingredients,
+    steps: suppressSteps ? [] : parsedRecipe.steps,
+    stepComponentLabels: suppressSteps ? [] : parsedRecipe.stepComponentLabels,
+  };
+}
+
+function buildParsedRecipeAfterUnavailableLlm(
+  parsedRecipe: ParsedRecipeDescription,
+  parserQuality: ParsedRecipeQualityMeta,
+  sourceKinds: string[],
+) {
+  const hasTranscriptSource = sourceKinds.includes("caption") || sourceKinds.includes("transcript");
+
+  return hasTranscriptSource && shouldSuppressLowQualityParsedRecipe(parserQuality)
+    ? buildReviewNeededParsedRecipe(parsedRecipe, parserQuality)
+    : parsedRecipe;
+}
+
+function isLlmParserSuppression(meta: LlmExtractorMeta) {
+  return meta.attempted
+    && meta.parser_quality !== null
+    && (meta.source_kinds.includes("caption") || meta.source_kinds.includes("transcript"))
+    && shouldSuppressLowQualityParsedRecipe(meta.parser_quality);
+}
+
 function shouldAttemptLlmFallback({
-  parsedRecipe,
+  parserQuality,
   multiRecipeExtraction,
   sourceBlocks,
 }: {
-  parsedRecipe: ParsedRecipeDescription;
+  parserQuality: ParsedRecipeQualityMeta;
   multiRecipeExtraction: SelectedMultiRecipeExtraction | null;
   sourceBlocks: LlmSourceBlock[];
 }) {
+  const hasMissingCore = parserQuality.reasons.includes("missing_ingredients")
+    || parserQuality.reasons.includes("missing_steps");
+  const hasTranscriptSource = sourceBlocks.some((block) => block.source === "caption" || block.source === "transcript");
+
   return !multiRecipeExtraction
     && sourceBlocks.length > 0
-    && (parsedRecipe.ingredients.length === 0 || parsedRecipe.steps.length === 0);
+    && (hasMissingCore || (hasTranscriptSource && parserQuality.low_quality));
 }
 
 async function resolveLlmStructuredFallback({
@@ -4691,14 +4868,16 @@ async function resolveLlmStructuredFallback({
   const config = getLlmExtractionConfig();
   const sourceKinds = sourceBlocks.map((block) => block.source);
   const sourceSegmentsSummary = sourceBlocks.map((block) => summarizeSourceSegments(block.segments));
+  const parserQuality = evaluateParsedRecipeQuality(parsedRecipe);
   const notNeededMeta = buildLlmExtractorMeta({
     attempted: false,
     schemaVersion: config?.schemaVersion ?? DEFAULT_LLM_SCHEMA_VERSION,
     status: "not_needed",
     sourceKinds,
+    parserQuality,
   });
 
-  if (!shouldAttemptLlmFallback({ parsedRecipe, multiRecipeExtraction, sourceBlocks })) {
+  if (!shouldAttemptLlmFallback({ parserQuality, multiRecipeExtraction, sourceBlocks })) {
     return {
       recipe: parsedRecipe,
       usedLlm: false,
@@ -4718,6 +4897,7 @@ async function resolveLlmStructuredFallback({
       status: "disabled",
       reason: "gemini_disabled",
       sourceKinds,
+      parserQuality,
     });
     await recordLlmExtractionEvent(dbClient, {
       userId,
@@ -4729,7 +4909,7 @@ async function resolveLlmStructuredFallback({
     });
 
     return {
-      recipe: parsedRecipe,
+      recipe: buildParsedRecipeAfterUnavailableLlm(parsedRecipe, parserQuality, sourceKinds),
       usedLlm: false,
       multiRecipeExtraction: null,
       meta,
@@ -4761,6 +4941,7 @@ async function resolveLlmStructuredFallback({
         cacheHit: true,
         recipeCount: candidates.length,
         sourceKinds,
+        parserQuality,
       });
       await recordLlmExtractionEvent(dbClient, {
         userId,
@@ -4793,6 +4974,7 @@ async function resolveLlmStructuredFallback({
       status: "unavailable",
       reason: "llm_daily_limit_exceeded",
       sourceKinds,
+      parserQuality,
     });
     await recordLlmExtractionEvent(dbClient, {
       userId,
@@ -4804,7 +4986,7 @@ async function resolveLlmStructuredFallback({
     });
 
     return {
-      recipe: parsedRecipe,
+      recipe: buildParsedRecipeAfterUnavailableLlm(parsedRecipe, parserQuality, sourceKinds),
       usedLlm: false,
       multiRecipeExtraction: null,
       meta,
@@ -4838,6 +5020,7 @@ async function resolveLlmStructuredFallback({
       status: "error",
       reason: error instanceof Error ? error.message : "llm_provider_error",
       sourceKinds,
+      parserQuality,
     });
     await recordLlmExtractionEvent(dbClient, {
       userId,
@@ -4849,7 +5032,7 @@ async function resolveLlmStructuredFallback({
     });
 
     return {
-      recipe: parsedRecipe,
+      recipe: buildParsedRecipeAfterUnavailableLlm(parsedRecipe, parserQuality, sourceKinds),
       usedLlm: false,
       multiRecipeExtraction: null,
       meta,
@@ -4873,6 +5056,7 @@ async function resolveLlmStructuredFallback({
       outputTokens: extractorResult.outputTokens ?? 0,
       reason: extractorResult.reason ?? "llm_unavailable",
       sourceKinds,
+      parserQuality,
     });
     await recordLlmExtractionEvent(dbClient, {
       userId,
@@ -4886,7 +5070,7 @@ async function resolveLlmStructuredFallback({
     });
 
     return {
-      recipe: parsedRecipe,
+      recipe: buildParsedRecipeAfterUnavailableLlm(parsedRecipe, parserQuality, sourceKinds),
       usedLlm: false,
       multiRecipeExtraction: null,
       meta,
@@ -4911,6 +5095,7 @@ async function resolveLlmStructuredFallback({
       outputTokens: extractorResult.outputTokens ?? 0,
       reason: "llm_result_without_valid_evidence",
       sourceKinds,
+      parserQuality,
     });
     await recordLlmExtractionEvent(dbClient, {
       userId,
@@ -4924,7 +5109,7 @@ async function resolveLlmStructuredFallback({
     });
 
     return {
-      recipe: parsedRecipe,
+      recipe: buildParsedRecipeAfterUnavailableLlm(parsedRecipe, parserQuality, sourceKinds),
       usedLlm: false,
       multiRecipeExtraction: null,
       meta,
@@ -4956,6 +5141,7 @@ async function resolveLlmStructuredFallback({
     outputTokens: extractorResult.outputTokens ?? 0,
     recipeCount: candidates.length,
     sourceKinds,
+    parserQuality,
   });
   await recordLlmExtractionEvent(dbClient, {
     userId,
@@ -5948,12 +6134,15 @@ export async function handleYoutubeExtract(request: Request) {
   const ingredients = buildExtractedIngredients(ingredientLookup.matchesByName, finalParsedRecipe.ingredients, {
     saltNeedsReview: parsedUrl.videoId.startsWith("needsreview"),
   });
+  const suppressIncompleteStepFallback = isLlmParserSuppression(llmFallback.meta);
   const steps = buildExtractedSteps(
     finalParsedRecipe.steps,
     cookingMethodResult.methods,
     cookingMethodResult.fallbackMethod,
     {
-      includeIncompleteFallback: llmFallback.usedLlm ? false : descriptionParse.includeIncompleteStepFallback,
+      includeIncompleteFallback: llmFallback.usedLlm || suppressIncompleteStepFallback
+        ? false
+        : descriptionParse.includeIncompleteStepFallback,
       stepComponentLabels: finalParsedRecipe.stepComponentLabels,
     },
   ).map((step, index) => ({
@@ -6001,6 +6190,8 @@ export async function handleYoutubeExtract(request: Request) {
   });
   const blockingIssues = [
     ...remainingDescriptionBlockingIssues,
+    ...(suppressIncompleteStepFallback && finalParsedRecipe.ingredients.length === 0 ? ["ingredients"] : []),
+    ...(suppressIncompleteStepFallback && finalParsedRecipe.steps.length === 0 ? ["steps"] : []),
     ...buildBlockingIssues(ingredients),
     ...steps.flatMap((step, index) =>
       (step.missing_fields ?? []).map((field) => `steps[${index}].${field}`),

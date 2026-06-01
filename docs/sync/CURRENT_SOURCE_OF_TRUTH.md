@@ -44,11 +44,11 @@
 
 | 문서 | 변경 내용 |
 |------|----------|
-| 요구사항 기준선 v1.7.4 | 설명란/작성자 댓글/caption parser가 재료 또는 조리 단계를 충분히 만들지 못할 때 env/한도/cache/근거 검증 기반 Gemini structured fallback 허용 |
+| 요구사항 기준선 v1.7.4 | 설명란/작성자 댓글/caption parser가 재료 또는 조리 단계를 충분히 만들지 못하거나 자막/전사 parser 결과가 대화 파편 중심으로 저품질일 때 env/한도/cache/근거 검증 기반 Gemini structured fallback 허용 |
 | 화면정의서 v1.5.11 | YT_IMPORT 처리 파이프라인에 Gemini 구조화 보조 단계를 추가하되 source label은 설명란/작성자 댓글/자막으로 유지 |
 | 유저플로우 v1.3.11 | extract 단계에서 공개 텍스트 파싱 후 부족한 경우 Gemini JSON 구조화 보조를 거치는 흐름 추가 |
 | DB v1.3.10 | `youtube_llm_extraction_cache`, `youtube_llm_extraction_events` 서버 전용 cache/event 테이블 추가 |
-| API v1.2.14 | `source_providers`의 `gemini_structured_extractor`, `gemini_structured_extractor_cache`와 `extraction_meta_json.llm_extractor` provenance 계약 추가 |
+| API v1.2.14 | `source_providers`의 `gemini_structured_extractor`, `gemini_structured_extractor_cache`와 `extraction_meta_json.llm_extractor.parser_quality` 포함 provenance 계약 추가 |
 
 > Gemini는 원천 source가 아니라 이미 수집한 공개 텍스트를 정리하는 보조 extractor다. `extraction_methods`는 `description` / `comment` / `caption`만 유지한다.
 > API key, provider raw response, secret, 레시피오 결과, 영상별 fixture는 저장하거나 반환하지 않는다.

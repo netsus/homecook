@@ -4845,6 +4845,290 @@ describe("20 youtube real import backend", () => {
     });
   });
 
+  it("POST /api/v1/recipes/youtube/extract does not call Gemini for a complete structured description", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+      ],
+    });
+    const llmExtractor: YoutubeRecipeLlmExtractor = {
+      name: "gemini_structured_extractor",
+      fetchStructuredRecipe: vi.fn(async () => {
+        throw new Error("Gemini should not be called for complete structured descriptions");
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeRecipeLlmExtractor(llmExtractor, () =>
+      postYoutubeExtract(recipeUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description"],
+        ingredients: [{ standard_name: "김치" }, { standard_name: "소금" }],
+        steps: [{ instruction: "김치를 한입 크기로 썬다." }],
+      },
+      error: null,
+    });
+    expect(llmExtractor.fetchStructuredRecipe).not.toHaveBeenCalled();
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      llm_extractor: {
+        status: "not_needed",
+        parser_quality: {
+          low_quality: false,
+        },
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract calls Gemini when caption parsing yields conversational fragments", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: "550e8400-e29b-41d4-a716-446655440060", standard_name: "마늘" },
+        { id: "550e8400-e29b-41d4-a716-446655440061", standard_name: "굴소스" },
+        { id: "550e8400-e29b-41d4-a716-446655440062", standard_name: "참기름" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: mixMethodId,
+          code: "mix",
+          label: "섞기",
+          color_key: "green",
+          is_system: true,
+        },
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+      ],
+    });
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: [
+          "만드는 법",
+          "1. 뭐야? 그 굴 뭐야? 소스 조금 넣.",
+          "2. 그래 가지고 마늘 좀 많이 넣고 수추",
+          "3. 조금 넣고 아 양념에 물도 좀 섞어",
+          "4. 그래야지 그거 좀 골고리 좀 섞이거든",
+          "5. 이제 양파하고 대파하고 좀 썰어 놓고",
+          "6. 이건 언제 넣어야 돼 한면 이거 뭐",
+          "7. 올려서 참기름 둘러 먹으면 되고 남은",
+        ].join("\n"),
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+    const llmExtractor: YoutubeRecipeLlmExtractor = {
+      name: "gemini_structured_extractor",
+      fetchStructuredRecipe: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "gemini",
+        model: "gemini-3.1-flash-lite",
+        fallbackModel: "gemini-2.5-flash-lite",
+        inputTokens: 150,
+        outputTokens: 100,
+        resultJson: {
+          recipes: [
+            {
+              title: "마늘 굴소스 볶음",
+              confidence: 0.78,
+              ingredients: [
+                {
+                  name: "마늘",
+                  amount: null,
+                  unit: null,
+                  raw_text: "그래 가지고 마늘 좀 많이 넣고 수추",
+                  evidence_refs: [{ source: "caption", line_index: 2, start_ms: null, end_ms: null }],
+                },
+                {
+                  name: "굴소스",
+                  amount: null,
+                  unit: null,
+                  raw_text: "뭐야? 그 굴 뭐야? 소스 조금 넣.",
+                  evidence_refs: [{ source: "caption", line_index: 1, start_ms: null, end_ms: null }],
+                },
+                {
+                  name: "참기름",
+                  amount: null,
+                  unit: null,
+                  raw_text: "올려서 참기름 둘러 먹으면 되고 남은",
+                  evidence_refs: [{ source: "caption", line_index: 7, start_ms: null, end_ms: null }],
+                },
+              ],
+              steps: [
+                {
+                  instruction: "마늘과 굴소스를 넣고 양념에 물을 조금 섞어요.",
+                  raw_text: "조금 넣고 아 양념에 물도 좀 섞어",
+                  evidence_refs: [{ source: "caption", line_index: 3, start_ms: null, end_ms: null }],
+                },
+                {
+                  instruction: "양파와 대파를 썰어 준비해요.",
+                  raw_text: "이제 양파하고 대파하고 좀 썰어 놓고",
+                  evidence_refs: [{ source: "caption", line_index: 5, start_ms: null, end_ms: null }],
+                },
+                {
+                  instruction: "완성된 요리에 참기름을 둘러 마무리해요.",
+                  raw_text: "올려서 참기름 둘러 먹으면 되고 남은",
+                  evidence_refs: [{ source: "caption", line_index: 7, start_ms: null, end_ms: null }],
+                },
+              ],
+              warnings: ["자동 자막 대화 파편을 제외했어요."],
+            },
+          ],
+        },
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      withYoutubeRecipeLlmExtractor(llmExtractor, () => postYoutubeExtract(transcriptFallbackUrl)),
+    );
+
+    expect(response.status).toBe(200);
+    expect(llmExtractor.fetchStructuredRecipe).toHaveBeenCalledTimes(1);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description", "caption"],
+        ingredients: [
+          { standard_name: "마늘" },
+          { standard_name: "굴소스" },
+          { standard_name: "참기름" },
+        ],
+        steps: [
+          { instruction: "마늘과 굴소스를 넣고 양념에 물을 조금 섞어요." },
+          { instruction: "양파와 대파를 썰어 준비해요." },
+          { instruction: "완성된 요리에 참기름을 둘러 마무리해요." },
+        ],
+      },
+      error: null,
+    });
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      source_providers: string[];
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.source_providers).toContain("gemini_structured_extractor");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      llm_extractor: {
+        status: "used",
+        parser_quality: {
+          low_quality: true,
+          reasons: expect.arrayContaining(["conversational_step_fragments"]),
+        },
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract keeps review-needed draft when conversational caption is low quality and Gemini is disabled", async () => {
+    mockAuth();
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: mixMethodId,
+          code: "mix",
+          label: "섞기",
+          color_key: "green",
+          is_system: true,
+        },
+      ],
+    });
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: [
+          "만드는 법",
+          "1. 뭐야? 그 굴 뭐야? 소스 조금 넣.",
+          "2. 그래 가지고 마늘 좀 많이 넣고 수추",
+          "3. 이건 언제 넣어야 돼 한면 이거 뭐",
+          "4. 올려서 참기름 둘러 먹으면 되고 남은",
+        ].join("\n"),
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      postYoutubeExtract(transcriptFallbackUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description", "caption"],
+        blocking_issues: ["steps"],
+        ingredients: [
+          { standard_name: "김치", amount: 200, unit: "g" },
+          { standard_name: "소금", amount: null, unit: null },
+        ],
+        steps: [],
+      },
+      error: null,
+    });
+    expect(JSON.stringify(body.data)).not.toContain("뭐야");
+    expect(JSON.stringify(body.data)).not.toContain("마늘 좀 많이");
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      source_providers: string[];
+      raw_source_text: string;
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.source_providers).not.toContain("gemini_structured_extractor");
+    expect(insertedSession.raw_source_text).toContain("--- caption transcript ---");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      llm_extractor: {
+        attempted: true,
+        status: "disabled",
+        reason: "gemini_disabled",
+        parser_quality: {
+          low_quality: true,
+          reasons: expect.arrayContaining(["conversational_step_fragments"]),
+        },
+      },
+    });
+  });
+
   it("POST /api/v1/recipes/youtube/extract reuses Gemini cache before calling the model", async () => {
     mockAuth();
     vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
