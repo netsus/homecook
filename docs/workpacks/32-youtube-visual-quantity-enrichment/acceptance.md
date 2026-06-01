@@ -12,10 +12,10 @@
 - [x] `recipe_candidates[].ingredients[]`와 candidate child draft에 quantity fields가 전파된다 <!-- omo:id=accept-multi-recipe-propagation;stage=2;scope=backend;review=3,6 -->
 - [x] register 시 `draft_ingredient_id`와 `quantity_confirmation_status`가 서버에서 검증된다 <!-- omo:id=accept-register-confirmation;stage=2;scope=backend;review=3,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
-- [ ] YT_IMPORT 검수 화면에서 수량 provenance 배지가 표시된다 <!-- omo:id=accept-quantity-badges;stage=4;scope=frontend;review=5,6 -->
-- [ ] review-required 수량에 대해 confirm/edit/clear 인터랙션이 동작한다 <!-- omo:id=accept-review-interaction;stage=4;scope=frontend;review=5,6 -->
-- [ ] 대표 사용자 흐름 (URL 입력 → 추출 → 수량 확인 → 등록)이 정상 동작한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] YT_IMPORT 검수 화면에서 수량 provenance 배지가 표시된다 <!-- omo:id=accept-quantity-badges;stage=4;scope=frontend;review=5,6 -->
+- [x] review-required 수량에 대해 confirm/edit/clear 인터랙션이 동작한다 <!-- omo:id=accept-review-interaction;stage=4;scope=frontend;review=5,6 -->
+- [x] 대표 사용자 흐름 (URL 입력 → 추출 → 수량 확인 → 등록)이 정상 동작한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
 
 ## State / Policy
 
@@ -24,19 +24,19 @@
 - [x] `confirmed_suggestion` 시 body가 draft suggestion과 canonical match해야 한다 <!-- omo:id=accept-confirmed-match;stage=2;scope=backend;review=3,6 -->
 - [x] `edited_quantity` 시 유효한 QUANT amount/unit이어야 한다 <!-- omo:id=accept-edited-valid;stage=2;scope=backend;review=3,6 -->
 - [x] `cleared_to_taste` 시 `ingredient_type="TO_TASTE"`, `amount=null`, `unit=null`이어야 한다 <!-- omo:id=accept-cleared-to-taste;stage=2;scope=backend;review=3,6 -->
-- [ ] quick import에서 `quantity_review_required=true`가 하나라도 있으면 auto-register 차단 <!-- omo:id=accept-quick-import-block;stage=4;scope=frontend;review=5,6 -->
+- [x] quick import에서 `quantity_review_required=true`가 하나라도 있으면 auto-register 차단 <!-- omo:id=accept-quick-import-block;stage=4;scope=frontend;review=5,6 -->
 - [x] visual extractor 비활성화/실패 시 public-text-only 결과로 fallback <!-- omo:id=accept-visual-fallback;stage=2;scope=backend;review=3,6 -->
 - [x] `extraction_methods`는 `description | comment | caption`만 기록 (visual은 `source_providers`에 기록) <!-- omo:id=accept-extraction-methods;stage=2;scope=backend;review=3,6 -->
 - [x] 중복 호출에도 결과가 꼬이지 않는다 (cache hit 경로) <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 
-- [ ] loading 상태가 있다 (visual enrichment 진행 중 포함) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 있다 (visual extractor 실패 시 graceful fallback) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 있다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] conflict 처리 흐름이 있다 (session consumed 409) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
-- [ ] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 (visual enrichment 진행 중 포함) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 (visual extractor 실패 시 graceful fallback) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 있다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] conflict 처리 흐름이 있다 (session consumed 409) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
+- [x] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
@@ -81,8 +81,8 @@
 - [x] eval harness (`youtube-visual-quantity-eval.test.ts`) 통과 <!-- omo:id=accept-vitest-eval;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright
-- [ ] YT_IMPORT에서 수량 배지 표시, confirm/edit/clear, register 성공 흐름 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] quick import에서 review-required 수량 존재 시 auto-register 차단 → 검수 화면 fallback <!-- omo:id=accept-playwright-quick-import;stage=4;scope=frontend;review=5,6 -->
+- [x] YT_IMPORT에서 수량 배지 표시, confirm/edit/clear, register 성공 흐름 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] quick import에서 review-required 수량 존재 시 auto-register 차단 → 검수 화면 fallback <!-- omo:id=accept-playwright-quick-import;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 - [ ] `OEassmynRro` live smoke: 두부/간장/물 수량이 fixture 없이 실제 provider 경로에서 추출되어 reviewable하게 보이는지 확인
