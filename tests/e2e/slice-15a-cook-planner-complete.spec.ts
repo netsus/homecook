@@ -189,11 +189,11 @@ test.describe("Slice 15a cook planner complete", () => {
     } else {
       await expect(page.getByTestId("step-item").first()).toHaveCSS(
         "border-left-color",
-        "rgb(255, 179, 71)",
+        "rgba(255, 149, 0, 0.26)",
       );
       await expect(page.getByText("볶기").first()).toHaveCSS(
         "color",
-        "rgb(217, 119, 6)",
+        "rgb(177, 95, 0)",
       );
     }
   });

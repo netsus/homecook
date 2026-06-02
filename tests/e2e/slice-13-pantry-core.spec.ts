@@ -194,7 +194,7 @@ test.describe("PANTRY screen", () => {
     await page.goto("/pantry");
 
     await expect(page.getByText("이 화면은 로그인이 필요해요")).toBeVisible();
-    await expect(page.getByText("팬트리 화면으로 바로 복귀")).toBeVisible();
+    await expect(page.getByRole("link", { name: "홈으로 돌아가기" })).toBeVisible();
   });
 
   test("shows pantry items after authentication", async ({ page }) => {

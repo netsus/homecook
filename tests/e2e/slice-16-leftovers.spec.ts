@@ -259,7 +259,7 @@ test.describe("LEFTOVERS screen", () => {
     await installLeftoverRoutes(page);
     await page.goto("/leftovers");
 
-    await expect(page.getByRole("heading", { name: "남은 요리" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "남은 요리", exact: true })).toBeVisible();
     const ateLink = page.getByText("다먹은 요리");
     await expect(ateLink).toBeVisible();
     const ateHref = await ateLink.getAttribute("href");

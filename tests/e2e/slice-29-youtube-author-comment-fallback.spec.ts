@@ -289,7 +289,7 @@ test.describe("Slice 29: YouTube Author Comment Fallback", () => {
 
     await navigateToReview(page, "authorcmt29");
 
-    await expect(page.locator("[data-testid='extraction-method-comment']")).toHaveText("댓글");
+    await expect(page.locator("[data-testid='extraction-method-comment']")).toHaveText("작성자 댓글");
     await expect(page.locator("text=comment")).toHaveCount(0);
     await expect(page.locator("text=재료 (2개)")).toBeVisible();
     await expect(page.locator("text=만들기 (2단계)")).toBeVisible();
