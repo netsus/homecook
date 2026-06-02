@@ -8,6 +8,7 @@ import type {
   YoutubeRecipeLlmExtractor,
   YoutubeTranscriptProvider,
   YoutubeVisualQuantityExtractor,
+  YoutubeVisualRecipeExtractor,
 } from "@/lib/server/youtube-import";
 
 const createRouteHandlerClient = vi.fn();
@@ -1155,6 +1156,20 @@ async function withYoutubeVisualQuantityExtractor<T>(
     return await callback();
   } finally {
     restoreVisualQuantityExtractor();
+  }
+}
+
+async function withYoutubeVisualRecipeExtractor<T>(
+  provider: YoutubeVisualRecipeExtractor,
+  callback: () => Promise<T>,
+) {
+  const youtubeImport = await import("@/lib/server/youtube-import");
+  const restoreVisualRecipeExtractor = youtubeImport.setYoutubeVisualRecipeExtractorForTest(provider);
+
+  try {
+    return await callback();
+  } finally {
+    restoreVisualRecipeExtractor();
   }
 }
 
@@ -5603,6 +5618,248 @@ describe("20 youtube real import backend", () => {
         enriched_count: 2,
         review_required_count: 2,
         status: "used",
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract uses visual OCR recipe fallback when captions alone stay partial", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
+    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_RECIPE_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: "550e8400-e29b-41d4-a716-446655440052", standard_name: "미니 파프리카" },
+        { id: shrimpIngredientId, standard_name: "새우살" },
+        { id: "550e8400-e29b-41d4-a716-446655440053", standard_name: "부침가루" },
+        { id: eggIngredientId, standard_name: "계란" },
+        { id: garlicChiveIngredientId, standard_name: "쪽파" },
+        { id: "550e8400-e29b-41d4-a716-446655440072", standard_name: "다진 마늘" },
+        { id: "550e8400-e29b-41d4-a716-446655440073", standard_name: "굴소스" },
+        { id: "550e8400-e29b-41d4-a716-446655440074", standard_name: "간장" },
+        { id: "550e8400-e29b-41d4-a716-446655440075", standard_name: "알룰로스" },
+        { id: "550e8400-e29b-41d4-a716-446655440076", standard_name: "참기름" },
+        { id: "550e8400-e29b-41d4-a716-446655440077", standard_name: "통깨" },
+        { id: "550e8400-e29b-41d4-a716-446655440078", standard_name: "식용유" },
+        { id: pepperIngredientId, standard_name: "후추" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: mixMethodId,
+          code: "mix",
+          label: "섞기",
+          color_key: "green",
+          is_system: true,
+        },
+        {
+          id: grillMethodId,
+          code: "grill",
+          label: "굽기",
+          color_key: "brown",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440219",
+          code: "stir_fry",
+          label: "볶기",
+          color_key: "orange",
+          is_system: true,
+        },
+      ],
+    });
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: [
+          "미니 파프리카 화면에 나와요.",
+          "재료는 화면 글자를 보면 돼요.",
+          "완성하면 도시락에 담아요.",
+        ].join("\n"),
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+    const llmExtractor: YoutubeRecipeLlmExtractor = {
+      name: "gemini_structured_extractor",
+      fetchStructuredRecipe: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "gemini",
+        model: "gemini-3.1-flash-lite",
+        fallbackModel: "gemini-2.5-flash-lite",
+        resultJson: {
+          recipes: [
+            {
+              title: "미니 파프리카 새우전",
+              confidence: 0.76,
+              ingredients: [
+                {
+                  name: "미니 파프리카",
+                  amount: null,
+                  unit: null,
+                  raw_text: "미니 파프리카에 속을 채워요.",
+                  evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                },
+                {
+                  name: "새우살",
+                  amount: null,
+                  unit: null,
+                  raw_text: "미니 파프리카에 속을 채워요.",
+                  evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                },
+              ],
+              steps: [
+                {
+                  instruction: "미니 파프리카에 새우살 속을 채워요.",
+                  raw_text: "미니 파프리카에 속을 채워요.",
+                  evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                },
+              ],
+              warnings: ["자막만으로는 재료 수량이 부족해요."],
+            },
+          ],
+        },
+      })),
+    };
+    const visualRecipeExtractor: YoutubeVisualRecipeExtractor = {
+      name: "visual_recipe_extractor",
+      fetchVisualRecipe: vi.fn(async (
+        context: Parameters<YoutubeVisualRecipeExtractor["fetchVisualRecipe"]>[0],
+      ) => {
+        expect(context.youtubeUrl).toBe(transcriptFallbackUrl);
+        expect(context.sourceBlocks.some((block) => block.source === "caption")).toBe(true);
+
+        return {
+          status: "available" as const,
+          providerName: "gemini",
+          model: "gemini-3.1-flash-lite",
+          inputTokens: 256,
+          outputTokens: 128,
+          resultJson: {
+            visual_source_lines: [
+              { line_index: 0, text: "화면 자막: 미니 파프리카 4개", start_ms: 1_000, end_ms: 2_000 },
+              { line_index: 1, text: "화면 자막: 새우살 200g", start_ms: 2_000, end_ms: 3_000 },
+              { line_index: 2, text: "화면 자막: 부침가루 2큰술, 계란 1개", start_ms: 3_000, end_ms: 4_000 },
+              { line_index: 3, text: "화면 자막: 쪽파 2줄, 다진 마늘 1작은술, 굴소스 1큰술", start_ms: 4_000, end_ms: 5_000 },
+              { line_index: 4, text: "화면 자막: 간장 1큰술, 알룰로스 1큰술, 참기름 1큰술", start_ms: 5_000, end_ms: 6_000 },
+              { line_index: 5, text: "화면 자막: 통깨 1큰술, 식용유 2큰술, 후추 약간", start_ms: 6_000, end_ms: 7_000 },
+              { line_index: 6, text: "화면 자막: 파프리카를 반으로 자르고 씨를 제거한다.", start_ms: 8_000, end_ms: 9_000 },
+              { line_index: 7, text: "화면 자막: 새우살을 다진 뒤 쪽파, 마늘, 굴소스, 후추와 섞는다.", start_ms: 9_000, end_ms: 10_000 },
+              { line_index: 8, text: "화면 자막: 파프리카 안쪽에 부침가루를 묻힌다.", start_ms: 10_000, end_ms: 11_000 },
+              { line_index: 9, text: "화면 자막: 새우 반죽을 파프리카에 채운다.", start_ms: 11_000, end_ms: 12_000 },
+              { line_index: 10, text: "화면 자막: 계란물을 묻혀 팬에 올린다.", start_ms: 12_000, end_ms: 13_000 },
+              { line_index: 11, text: "화면 자막: 앞뒤로 노릇하게 부친다.", start_ms: 13_000, end_ms: 14_000 },
+              { line_index: 12, text: "화면 자막: 간장, 알룰로스, 참기름, 통깨를 섞은 양념장을 곁들인다.", start_ms: 14_000, end_ms: 15_000 },
+            ],
+            recipes: [
+              {
+                title: "미니 파프리카 새우전",
+                confidence: 0.91,
+                ingredients: [
+                  { name: "미니 파프리카", amount: "4", unit: "개", raw_text: "미니 파프리카 4개", evidence_refs: [{ source: "visual", line_index: 0 }] },
+                  { name: "새우살", amount: "200", unit: "g", raw_text: "새우살 200g", evidence_refs: [{ source: "visual", line_index: 1 }] },
+                  { name: "부침가루", amount: "2", unit: "큰술", raw_text: "부침가루 2큰술", evidence_refs: [{ source: "visual", line_index: 2 }] },
+                  { name: "계란", amount: "1", unit: "개", raw_text: "계란 1개", evidence_refs: [{ source: "visual", line_index: 2 }] },
+                  { name: "쪽파", amount: "2", unit: "줄", raw_text: "쪽파 2줄", evidence_refs: [{ source: "visual", line_index: 3 }] },
+                  { name: "다진 마늘", amount: "1", unit: "작은술", raw_text: "다진 마늘 1작은술", evidence_refs: [{ source: "visual", line_index: 3 }] },
+                  { name: "굴소스", amount: "1", unit: "큰술", raw_text: "굴소스 1큰술", evidence_refs: [{ source: "visual", line_index: 3 }] },
+                  { name: "간장", amount: "1", unit: "큰술", raw_text: "간장 1큰술", evidence_refs: [{ source: "visual", line_index: 4 }] },
+                  { name: "알룰로스", amount: "1", unit: "큰술", raw_text: "알룰로스 1큰술", evidence_refs: [{ source: "visual", line_index: 4 }] },
+                  { name: "참기름", amount: "1", unit: "큰술", raw_text: "참기름 1큰술", evidence_refs: [{ source: "visual", line_index: 4 }] },
+                  { name: "통깨", amount: "1", unit: "큰술", raw_text: "통깨 1큰술", evidence_refs: [{ source: "visual", line_index: 5 }] },
+                  { name: "식용유", amount: "2", unit: "큰술", raw_text: "식용유 2큰술", evidence_refs: [{ source: "visual", line_index: 5 }] },
+                  { name: "후추", amount: null, unit: null, raw_text: "후추 약간", evidence_refs: [{ source: "visual", line_index: 5 }] },
+                ],
+                steps: [
+                  { instruction: "미니 파프리카를 반으로 자르고 씨를 제거해요.", raw_text: "파프리카를 반으로 자르고 씨를 제거한다.", evidence_refs: [{ source: "visual", line_index: 6 }] },
+                  { instruction: "새우살을 다진 뒤 쪽파, 다진 마늘, 굴소스, 후추와 섞어요.", raw_text: "새우살을 다진 뒤 쪽파, 마늘, 굴소스, 후추와 섞는다.", evidence_refs: [{ source: "visual", line_index: 7 }] },
+                  { instruction: "파프리카 안쪽에 부침가루를 묻혀요.", raw_text: "파프리카 안쪽에 부침가루를 묻힌다.", evidence_refs: [{ source: "visual", line_index: 8 }] },
+                  { instruction: "새우 반죽을 파프리카에 채워요.", raw_text: "새우 반죽을 파프리카에 채운다.", evidence_refs: [{ source: "visual", line_index: 9 }] },
+                  { instruction: "계란물을 묻혀 팬에 올려요.", raw_text: "계란물을 묻혀 팬에 올린다.", evidence_refs: [{ source: "visual", line_index: 10 }] },
+                  { instruction: "앞뒤로 노릇하게 부쳐요.", raw_text: "앞뒤로 노릇하게 부친다.", evidence_refs: [{ source: "visual", line_index: 11 }] },
+                  { instruction: "간장, 알룰로스, 참기름, 통깨를 섞은 양념장을 곁들여요.", raw_text: "간장, 알룰로스, 참기름, 통깨를 섞은 양념장을 곁들인다.", evidence_refs: [{ source: "visual", line_index: 12 }] },
+                ],
+                warnings: [],
+              },
+            ],
+          },
+        };
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      withYoutubeRecipeLlmExtractor(llmExtractor, () =>
+        withYoutubeVisualRecipeExtractor(visualRecipeExtractor, () => postYoutubeExtract(transcriptFallbackUrl)),
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(llmExtractor.fetchStructuredRecipe).toHaveBeenCalledTimes(1);
+    expect(visualRecipeExtractor.fetchVisualRecipe).toHaveBeenCalledTimes(1);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description", "caption"],
+        ingredients: expect.arrayContaining([
+          expect.objectContaining({
+            standard_name: "미니 파프리카",
+            amount: 4,
+            unit: "개",
+            quantity_source: "visual_explicit",
+            quantity_review_required: true,
+          }),
+          expect.objectContaining({ standard_name: "새우살", amount: 200, unit: "g" }),
+          expect.objectContaining({ standard_name: "부침가루", amount: 2, unit: "큰술" }),
+        ]),
+        steps: [
+          { instruction: "미니 파프리카를 반으로 자르고 씨를 제거해요." },
+          { instruction: "새우살을 다진 뒤 쪽파, 다진 마늘, 굴소스, 후추와 섞어요." },
+          { instruction: "파프리카 안쪽에 부침가루를 묻혀요." },
+          { instruction: "새우 반죽을 파프리카에 채워요." },
+          { instruction: "계란물을 묻혀 팬에 올려요." },
+          { instruction: "앞뒤로 노릇하게 부쳐요." },
+          { instruction: "간장, 알룰로스, 참기름, 통깨를 섞은 양념장을 곁들여요." },
+        ],
+      },
+      error: null,
+    });
+    expect(body.data.ingredients).toHaveLength(13);
+    expect(body.data.ingredients[0].quantity_evidence_refs).toEqual([
+      expect.objectContaining({
+        source_method: "visual",
+        source_provider: "visual_recipe_extractor",
+        snippet: "미니 파프리카 4개",
+      }),
+    ]);
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_methods: string[];
+      source_providers: string[];
+      raw_source_text: string;
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_methods).toEqual(["description", "caption"]);
+    expect(insertedSession.source_providers).toContain("visual_recipe_extractor");
+    expect(insertedSession.raw_source_text).toContain("--- visual recipe evidence ---");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      visual_recipe_extractor: {
+        attempted: true,
+        provider: "gemini",
+        status: "used",
+        recipe_count: 1,
+        visual_source_line_count: 13,
       },
     });
   });
