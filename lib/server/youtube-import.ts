@@ -4855,18 +4855,19 @@ function buildVisualRecipePrompt(context: YoutubeVisualRecipeExtractorContext) {
     .join("\n\n");
 
   return [
-    "You extract a cooking recipe from a public YouTube video using visible frames, on-screen text OCR, and captions.",
+    "You extract a cooking recipe from a public YouTube video using on-screen text OCR and captions.",
     "Return only JSON that matches the response schema.",
     "Rules:",
-    "- Use the attached video as the primary evidence source. Use captions only to disambiguate visible actions or spoken cooking actions.",
-    "- First create visual_source_lines: concise evidence lines for visible ingredient cards, OCR text, measured amounts, and visible cooking actions.",
+    "- Use the attached video frames for OCR, visible text timing, and timestamp alignment. Do not invent image-only cooking actions.",
+    "- Use captions to recover spoken cooking actions when on-screen text is sparse.",
+    "- First create visual_source_lines: concise evidence lines for visible ingredient cards, OCR text, measured amounts, and caption-backed cooking actions.",
     "- Each visual_source_lines item must have a stable line_index. Every recipe ingredient and step must reference those visual_source_lines.",
     "- In recipes[].ingredients[].evidence_refs and recipes[].steps[].evidence_refs, set source to visual and line_index to the matching visual_source_lines line_index.",
     "- Do not use external recipe sites, comments, description text guesses, product ads, or channel metadata.",
     "- Keep every visible cooking ingredient for the selected dish, including oils, sweeteners, sauce ingredients, garnish, and finishing seasoning.",
     "- Preserve exact visible amount and unit text in raw_text whenever on-screen text shows it.",
     "- Unknown amount/unit must be null. Do not infer a quantity unless visible text or repeated visible count supports it.",
-    "- Steps must be usable cooking actions. Split prep, filling/mixing, coating, pan-frying, sauce mixing, and finishing into separate steps when visible.",
+    "- Steps must be usable cooking actions supported by on-screen text or captions. Split prep, filling/mixing, coating, pan-frying, sauce mixing, and finishing into separate steps when text evidence supports it.",
     "- For one clearly demonstrated dish, prefer a complete 5-9 step recipe when the video supports that many actions.",
     "- Exclude promotions, products, subscriptions, likes, comments, diary-only footage, family talk, and unrelated food.",
     "- If visual evidence is too weak for either ingredients or steps, return an empty array for that side and add a warning.",
