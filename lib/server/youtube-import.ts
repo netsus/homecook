@@ -581,8 +581,8 @@ const VISUAL_QUANTITY_EXTRACTOR_PROVIDER = "visual_quantity_extractor";
 const VISUAL_QUANTITY_EXTRACTOR_CACHE_PROVIDER = "visual_quantity_extractor_cache";
 const DEFAULT_GEMINI_PRIMARY_MODEL = "gemini-3.1-flash-lite";
 const DEFAULT_GEMINI_FALLBACK_MODEL = "gemini-2.5-flash-lite";
-const DEFAULT_LLM_SCHEMA_VERSION = "2026-06-01-quality-v2";
-const DEFAULT_VISUAL_QUANTITY_SCHEMA_VERSION = "2026-06-02-visual-quantity-v1";
+const DEFAULT_LLM_SCHEMA_VERSION = "2026-06-02-quality-v3";
+const DEFAULT_VISUAL_QUANTITY_SCHEMA_VERSION = "2026-06-02-visual-quantity-v2";
 const VISUAL_QUANTITY_CACHE_TTL_DAYS = 90;
 const LLM_MAX_RECIPES = 12;
 const LLM_MAX_SOURCE_LINES = 240;
@@ -2441,7 +2441,7 @@ function parseDescriptionIngredientLine(
 }
 
 function hasCookingAction(text: string) {
-  return /(씻|자르|잘라|썰|썬다|볶아|볶고|볶아요|볶는다|끓|삶|굽|구워|버무|섞|넣|절여|절이|올려|발라|뿌려|익혀|튀겨|찐|쪄|데쳐|풀어|두르|맞춰|완성)/u.test(text);
+  return /(씻|자르|잘라|썰|썬다|볶|졸|조리|끓|삶|굽|구워|버무|섞|넣|절여|절이|올려|발라|뿌리|뿌려|익혀|튀겨|찐|쪄|데쳐|풀어|두르|맞춰|완성)/u.test(text);
 }
 
 function parseDescriptionStepLine(
@@ -4285,6 +4285,8 @@ function buildLlmPrompt(context: YoutubeRecipeLlmExtractorContext) {
     "- If a video contains multiple dishes, return one recipe object per dish.",
     "- Do not merge ingredients across different dishes.",
     "- Preserve repeated ingredients inside each dish; do not sum amounts.",
+    "- Keep every real cooking ingredient mentioned for the selected dish, including oils, sweeteners, finishing seasonings, garnishes, and sauce ingredients.",
+    "- Preserve explicit amount and unit text whenever the source line says it; do not drop quantities from raw_text.",
     "- Unknown amount/unit must be null.",
     "- Every ingredient and step must include evidence_refs pointing to real source/line_index values.",
     "- Exclude promotions, product ads, subscriptions, likes, comments, BGM, pets, family talk, and diary-only lines.",
@@ -4292,6 +4294,8 @@ function buildLlmPrompt(context: YoutubeRecipeLlmExtractorContext) {
     "- Auto captions often contain broken conversation. Ignore questions, filler, reactions, jokes, and half-sentences.",
     "- Ingredient names must be real food items only. Do not output fragments like 좀, 이건 언제, 뭐야, 그거, or verb phrases.",
     "- Steps must be usable cooking actions. Rewrite only when the source clearly says the action; otherwise omit the step.",
+    "- Split distinct cooking actions into separate steps when the source supports it: prep, sauce mixing, vegetable cutting, adding vegetables, simmering/reducing, and finishing should not be collapsed into one step.",
+    "- For one clearly demonstrated dish, prefer a complete 5-9 step recipe when the source supports that many actions.",
     "- If evidence is too weak for either ingredients or steps, return an empty array for that side and add a warning.",
     "",
     `Video title: ${context.title}`,
@@ -4579,8 +4583,13 @@ function buildVisualQuantityPrompt(context: YoutubeVisualQuantityExtractorContex
     "Return only JSON that matches the response schema.",
     "Rules:",
     "- Use visual on-screen text only. Do not use audio, guesses, comments, product ads, or external recipe data.",
-    "- Only return rows for the provided draft ingredients.",
+    "- Return rows for provided draft ingredients and any additional cooking ingredients with clearly visible on-screen quantity text.",
+    "- For additional ingredients, set draft_ingredient_id to null and use the visible ingredient name as standard_name.",
     "- Prefer exact on-screen amounts and units. If evidence is not visible, omit that ingredient.",
+    "- Include sauce, sweetener, oil, garnish, and finishing seasoning rows when they have visible quantities.",
+    "- quantity_source must be visual_explicit when visible text directly shows the quantity.",
+    "- quantity_evidence_refs[].source_method must be visual exactly.",
+    "- ingredient_type must be QUANT for measured quantities or TO_TASTE only when no amount/unit is visible.",
     "- visual_explicit requires a visible on-screen text snippet and a timestamp.",
     "- unit_normalized is allowed only when raw visible text supports the conversion.",
     "- ingredient_default is allowed only when visible count evidence supports a known cooking default.",
@@ -5895,7 +5904,12 @@ function normalizeVisualEvidenceRefs(value: unknown): YoutubeQuantityEvidenceRef
 
   return value
     .map((item): YoutubeQuantityEvidenceRef | null => {
-      if (!isRecord(item) || item.source_method !== "visual") {
+      if (!isRecord(item)) {
+        return null;
+      }
+
+      const sourceMethod = normalizeNullableString(item.source_method);
+      if (sourceMethod !== "visual" && sourceMethod !== "visual_explicit") {
         return null;
       }
 
@@ -5917,6 +5931,102 @@ function normalizeVisualEvidenceRefs(value: unknown): YoutubeQuantityEvidenceRef
       };
     })
     .filter((ref): ref is YoutubeQuantityEvidenceRef => ref !== null);
+}
+
+function inferVisualQuantityUnitFromText({
+  standardName,
+  rawText,
+  amount,
+}: {
+  standardName: string;
+  rawText: string;
+  amount: number | null;
+}) {
+  if (amount === null || !/[0-9]/u.test(rawText)) {
+    return null;
+  }
+
+  const normalizedRawText = rawText.trim();
+  const compactName = standardName.replace(/\s+/gu, "");
+
+  if (/종이\s*컵/u.test(normalizedRawText)) return "종이컵";
+  if (/작은\s*술|티스푼|tsp|\bt\b/u.test(normalizedRawText)) return "작은술";
+  if (/큰\s*술|밥\s*숟가락|스푼|tbsp|\bT\b/u.test(normalizedRawText)) return "스푼";
+  if (/줌/u.test(normalizedRawText)) return "줌";
+  if (/모/u.test(normalizedRawText)) return "모";
+  if (/대/u.test(normalizedRawText)) return "대";
+  if (/개/u.test(normalizedRawText)) return "개";
+  if (/ml|㎖/iu.test(normalizedRawText)) return "ml";
+  if (/g|그램/iu.test(normalizedRawText)) return "g";
+
+  if (/(?:양파|무|배추|당근|오이|감자|고구마|토마토|레몬|두부)$/u.test(compactName)) {
+    return "개";
+  }
+
+  if (/(?:간장|고춧가루|가루|소스|마늘|알룰로스|오일|기름|참기름|들기름|설탕|소금|후추|깨|통깨|식초|맛술|액젓)/u
+    .test(compactName)) {
+    return "스푼";
+  }
+
+  return null;
+}
+
+function normalizeVisualQuantityUnit(
+  unit: string | null,
+  rawText: string,
+  standardName: string,
+  amount: number | null,
+) {
+  const inferredUnit = inferVisualQuantityUnitFromText({ standardName, rawText, amount });
+  if (!unit) {
+    return inferredUnit;
+  }
+
+  const normalizedUnit = unit.trim();
+  const normalizedRawText = rawText.trim();
+  const loweredUnit = normalizedUnit.toLowerCase();
+
+  if (/종이\s*컵/u.test(normalizedRawText)) return "종이컵";
+  if (/작은\s*술|티스푼|tsp|\bt\b/u.test(normalizedRawText)) return "작은술";
+  if (/큰\s*술|밥\s*숟가락|스푼|tbsp|\bT\b/u.test(normalizedRawText)) return "큰술";
+  if (/줌/u.test(normalizedRawText)) return "줌";
+  if (/모/u.test(normalizedRawText)) return "모";
+  if (/대/u.test(normalizedRawText)) return "대";
+  if (/개/u.test(normalizedRawText)) return "개";
+  if (/ml|㎖/iu.test(normalizedRawText)) return "ml";
+  if (/g|그램|㎎|kg/iu.test(normalizedRawText)) return loweredUnit === "gram" ? "g" : normalizedUnit;
+
+  if (["spoon", "tbsp", "tablespoon", "tbs", "t"].includes(loweredUnit)) return "큰술";
+  if (["tsp", "teaspoon"].includes(loweredUnit)) return "작은술";
+  if (["piece", "pieces", "ea", "count"].includes(loweredUnit)) return "개";
+  if (["handful", "handfuls"].includes(loweredUnit)) return "줌";
+  if (["cup", "cups"].includes(loweredUnit)) return "컵";
+  if (["gram", "grams"].includes(loweredUnit)) return "g";
+  if (["milliliter", "milliliters"].includes(loweredUnit)) return "ml";
+
+  return normalizedUnit || inferredUnit;
+}
+
+function buildVisualQuantityDisplayText({
+  rawDisplayText,
+  standardName,
+  amount,
+  unit,
+}: {
+  rawDisplayText: string | null;
+  standardName: string;
+  amount: number | null;
+  unit: string | null;
+}) {
+  if (rawDisplayText && (!unit || rawDisplayText.includes(unit))) {
+    return rawDisplayText;
+  }
+
+  if (amount !== null && unit) {
+    return `${standardName} ${amount}${unit}`;
+  }
+
+  return rawDisplayText ?? standardName;
 }
 
 interface VisualQuantitySuggestion {
@@ -5955,16 +6065,23 @@ function normalizeVisualQuantitySuggestion(item: unknown): VisualQuantitySuggest
   const amount = typeof item.amount === "number" && Number.isFinite(item.amount) && item.amount > 0
     ? item.amount
     : null;
-  const unit = normalizeNullableString(item.unit);
+  const evidenceRawText = normalizeNullableString(item.quantity_raw_text)
+    ?? evidenceRefs[0].snippet;
+  const standardName = normalizeParsedIngredientName(normalizeLlmOptionalText(item.standard_name));
+  if (!standardName) {
+    return null;
+  }
+
+  const unit = normalizeVisualQuantityUnit(
+    normalizeNullableString(item.unit),
+    evidenceRawText,
+    standardName,
+    amount,
+  );
   const ingredientType = item.ingredient_type === "TO_TASTE" || amount === null || !unit
     ? "TO_TASTE"
     : "QUANT";
   if (ingredientType === "QUANT" && (amount === null || !unit)) {
-    return null;
-  }
-
-  const standardName = normalizeParsedIngredientName(normalizeLlmOptionalText(item.standard_name));
-  if (!standardName) {
     return null;
   }
 
@@ -5976,13 +6093,17 @@ function normalizeVisualQuantitySuggestion(item: unknown): VisualQuantitySuggest
     amount: ingredientType === "QUANT" ? amount : null,
     unit: ingredientType === "QUANT" ? unit : null,
     ingredientType,
-    displayText: normalizeNullableString(item.display_text)
-      ?? [standardName, amount, unit].filter(Boolean).join(" "),
+    displayText: buildVisualQuantityDisplayText({
+      rawDisplayText: normalizeNullableString(item.display_text),
+      standardName,
+      amount: ingredientType === "QUANT" ? amount : null,
+      unit: ingredientType === "QUANT" ? unit : null,
+    }),
     quantitySource,
     quantityConfidence: typeof item.quantity_confidence === "number"
       ? Math.max(0, Math.min(1, item.quantity_confidence))
       : null,
-    quantityRawText: normalizeNullableString(item.quantity_raw_text) ?? evidenceRefs[0].snippet,
+    quantityRawText: evidenceRawText,
     quantityEvidenceRefs: evidenceRefs,
   };
 }
@@ -6003,9 +6124,149 @@ function parseVisualQuantitySuggestions(payload: unknown) {
     .filter((suggestion): suggestion is VisualQuantitySuggestion => suggestion !== null);
 }
 
+function normalizeVisualIngredientKey(name: string) {
+  return normalizeParsedIngredientName(name)
+    .replace(/\s+/gu, "")
+    .replace(/^다진(?=마늘)/u, "")
+    .toLowerCase();
+}
+
+function isAppendableVisualQuantitySuggestion(suggestion: VisualQuantitySuggestion) {
+  return (
+    suggestion.quantitySource === "visual_explicit"
+    || suggestion.quantitySource === "unit_normalized"
+  )
+    && suggestion.ingredientType === "QUANT"
+    && suggestion.amount !== null
+    && !!suggestion.unit
+    && (suggestion.quantityConfidence ?? 0.7) >= 0.55;
+}
+
+function collectAppendableVisualSuggestionNames(
+  ingredients: YoutubeExtractedIngredient[],
+  suggestions: VisualQuantitySuggestion[],
+) {
+  const existingKeys = new Set(ingredients.map((ingredient) =>
+    normalizeVisualIngredientKey(ingredient.standard_name),
+  ));
+  const names: string[] = [];
+
+  for (const suggestion of suggestions) {
+    if (!isAppendableVisualQuantitySuggestion(suggestion)) {
+      continue;
+    }
+
+    const key = normalizeVisualIngredientKey(suggestion.standardName);
+    if (!key || existingKeys.has(key) || names.some((name) => normalizeVisualIngredientKey(name) === key)) {
+      continue;
+    }
+
+    names.push(suggestion.standardName);
+  }
+
+  return names;
+}
+
+async function resolveVisualSuggestionIngredientMatches(
+  dbClient: DbClient,
+  ingredients: YoutubeExtractedIngredient[],
+  suggestions: VisualQuantitySuggestion[],
+) {
+  const names = collectAppendableVisualSuggestionNames(ingredients, suggestions);
+  if (names.length === 0) {
+    return new Map<string, Map<string, IngredientMatch>>();
+  }
+
+  const lookup = await findIngredientIds(dbClient, names);
+  return lookup.error ? new Map<string, Map<string, IngredientMatch>>() : lookup.matchesByName;
+}
+
+function buildVisualSuggestionIngredient(
+  suggestion: VisualQuantitySuggestion,
+  matchesByName: IngredientMatchesByName,
+  sortOrder: number,
+): YoutubeExtractedIngredient {
+  const displayText = suggestion.displayText
+    ?? buildVisualQuantityDisplayText({
+      rawDisplayText: suggestion.quantityRawText,
+      standardName: suggestion.standardName,
+      amount: suggestion.amount,
+      unit: suggestion.unit,
+    });
+  const rawText = suggestion.quantityRawText ?? displayText;
+
+  return {
+    ...buildExtractedIngredient({
+      matchesByName,
+      name: suggestion.standardName,
+      amount: suggestion.amount,
+      unit: suggestion.unit,
+      ingredientType: suggestion.ingredientType,
+      displayText,
+      sortOrder,
+      scalable: suggestion.ingredientType === "QUANT",
+      confidence: suggestion.quantityConfidence ?? 0.72,
+      rawText,
+    }),
+    quantity_source: suggestion.quantitySource,
+    quantity_confidence: suggestion.quantityConfidence,
+    quantity_raw_text: rawText,
+    quantity_evidence_refs: suggestion.quantityEvidenceRefs,
+    quantity_review_required: true,
+    quantity_user_confirmed: false,
+  };
+}
+
+function appendVisualQuantitySuggestions({
+  ingredients,
+  suggestions,
+  usedSuggestionIndexes,
+  matchesByName,
+}: {
+  ingredients: YoutubeExtractedIngredient[];
+  suggestions: VisualQuantitySuggestion[];
+  usedSuggestionIndexes: Set<number>;
+  matchesByName: IngredientMatchesByName;
+}) {
+  const ingredientsWithAppends = [...ingredients];
+  const existingKeys = new Set(ingredientsWithAppends.map((ingredient) =>
+    normalizeVisualIngredientKey(ingredient.standard_name),
+  ));
+  let appendedCount = 0;
+
+  suggestions.forEach((suggestion, index) => {
+    if (usedSuggestionIndexes.has(index) || !isAppendableVisualQuantitySuggestion(suggestion)) {
+      return;
+    }
+
+    const key = normalizeVisualIngredientKey(suggestion.standardName);
+    if (!key || existingKeys.has(key)) {
+      return;
+    }
+
+    ingredientsWithAppends.push(buildVisualSuggestionIngredient(
+      suggestion,
+      matchesByName,
+      ingredientsWithAppends.length + 1,
+    ));
+    existingKeys.add(key);
+    usedSuggestionIndexes.add(index);
+    appendedCount += 1;
+  });
+
+  return { ingredients: ingredientsWithAppends, appendedCount };
+}
+
 function applyVisualQuantitySuggestions(
   ingredients: YoutubeExtractedIngredient[],
   suggestions: VisualQuantitySuggestion[],
+  {
+    appendMissing = false,
+    matchesByName = new Map<string, Map<string, IngredientMatch>>(),
+  }: {
+    appendMissing?: boolean;
+    matchesByName?: IngredientMatchesByName;
+  } = {},
 ) {
   const usedSuggestionIndexes = new Set<number>();
   let enrichedCount = 0;
@@ -6051,7 +6312,22 @@ function applyVisualQuantitySuggestions(
     };
   });
 
-  return { ingredients: enrichedIngredients, enrichedCount };
+  if (!appendMissing) {
+    return { ingredients: enrichedIngredients, enrichedCount, appendedCount: 0 };
+  }
+
+  const appendResult = appendVisualQuantitySuggestions({
+    ingredients: enrichedIngredients,
+    suggestions,
+    usedSuggestionIndexes,
+    matchesByName,
+  });
+
+  return {
+    ingredients: appendResult.ingredients,
+    enrichedCount: enrichedCount + appendResult.appendedCount,
+    appendedCount: appendResult.appendedCount,
+  };
 }
 
 function countQuantityReviewRequired(ingredients: YoutubeExtractedIngredient[]) {
@@ -6137,7 +6413,13 @@ async function resolveVisualQuantityEnrichment({
 
   if (cached) {
     const suggestions = parseVisualQuantitySuggestions(cached.result_json);
-    const ingredientResult = applyVisualQuantitySuggestions(ingredients, suggestions);
+    const suggestionMatches = ingredients.length > 0
+      ? await resolveVisualSuggestionIngredientMatches(dbClient, ingredients, suggestions)
+      : new Map<string, Map<string, IngredientMatch>>();
+    const ingredientResult = applyVisualQuantitySuggestions(ingredients, suggestions, {
+      appendMissing: ingredients.length > 0,
+      matchesByName: suggestionMatches,
+    });
     const candidateResult = mergeVisualQuantityIntoCandidates(candidates, suggestions);
     const allEnriched = [...ingredientResult.ingredients, ...candidateResult.candidates.flatMap((candidate) => candidate.ingredients)];
     const enrichedCount = ingredientResult.enrichedCount + candidateResult.enrichedCount;
@@ -6272,7 +6554,13 @@ async function resolveVisualQuantityEnrichment({
     resultJson: extractorResult.resultJson,
   });
 
-  const ingredientResult = applyVisualQuantitySuggestions(ingredients, suggestions);
+  const suggestionMatches = ingredients.length > 0
+    ? await resolveVisualSuggestionIngredientMatches(dbClient, ingredients, suggestions)
+    : new Map<string, Map<string, IngredientMatch>>();
+  const ingredientResult = applyVisualQuantitySuggestions(ingredients, suggestions, {
+    appendMissing: ingredients.length > 0,
+    matchesByName: suggestionMatches,
+  });
   const candidateResult = mergeVisualQuantityIntoCandidates(candidates, suggestions);
   const allEnriched = [...ingredientResult.ingredients, ...candidateResult.candidates.flatMap((candidate) => candidate.ingredients)];
   const enrichedCount = ingredientResult.enrichedCount + candidateResult.enrichedCount;
@@ -6554,7 +6842,7 @@ function inferStepCookingMethodCode(instruction: string): StepMethodCode {
     return "stir_fry";
   }
 
-  if (/(끓|삶|졸여|졸이|조려|조리듯)/u.test(normalized)) {
+  if (/(끓|삶|졸|조려|조리듯)/u.test(normalized)) {
     return "boil";
   }
 

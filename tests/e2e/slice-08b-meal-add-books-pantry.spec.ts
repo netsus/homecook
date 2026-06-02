@@ -534,11 +534,14 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await expect(visibleText(page, "김치찌개")).toBeVisible();
     await expect(visibleText(page, "된장찌개")).toBeVisible();
     if (isMobileViewport(page)) {
-      await expect(visibleText(page, "매칭 80%")).toBeVisible();
-      await expect(visibleText(page, "매칭 60%")).toBeVisible();
-      await expect(visibleText(page, "부족 ·")).toBeVisible();
       await expect(
-        page.getByTestId("pantry-missing-ingredients-row-r1").filter({ visible: true }),
+        page.getByTestId("pantry-match-progress-r1").filter({ visible: true }),
+      ).toHaveText(/80%/);
+      await expect(
+        page.getByTestId("pantry-match-progress-r2").filter({ visible: true }),
+      ).toHaveText(/60%/);
+      await expect(
+        page.getByTestId("pantry-ingredient-summary-row-r1").filter({ visible: true }),
       ).toHaveClass(/items-center/);
     } else {
       await expect(visibleText(page, "80% 일치")).toBeVisible();

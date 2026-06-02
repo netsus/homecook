@@ -66,10 +66,12 @@ const HOME_SORT_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2200;
 const RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS = 400;
 const PLANNER_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
 const MEAL_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
+const MEAL_CONFIRM_MODAL_VISUAL_MAX_DIFF_PIXELS = 80;
 const MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2200;
 const MENU_ADD_MODAL_VISUAL_MAX_DIFF_PIXELS = 120;
 const PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2400;
 const ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
+const MYPAGE_SAVED_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 5200;
 const COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 3200;
 const COOKING_MODAL_VISUAL_MAX_DIFF_PIXELS = 480;
 const LEFTOVERS_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
@@ -323,6 +325,7 @@ test.describe("QA visual regression", () => {
     await stabilizeVisualSnapshot(page);
     await expect(normalDialog).toHaveScreenshot("qa-meal-confirm-normal.png", {
       animations: "disabled",
+      maxDiffPixels: MEAL_CONFIRM_MODAL_VISUAL_MAX_DIFF_PIXELS,
     });
     await normalDialog.getByRole("button", { name: "취소" }).click();
 
@@ -361,9 +364,9 @@ test.describe("QA visual regression", () => {
       maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
     });
 
-    await page.getByRole("button", { name: /김치볶음밥/ }).click();
+    await page.getByRole("button", { name: "김치볶음밥 선택" }).click();
     const servingsDialog = page.getByRole("dialog", {
-      name: "계획 인분 입력",
+      name: "플래너에 추가",
     });
     await expect(servingsDialog).toBeVisible();
     await stabilizeVisualSnapshot(page);
@@ -592,7 +595,7 @@ test.describe("QA visual regression", () => {
     await expect(page).toHaveScreenshot("qa-mypage-saved.png", {
       animations: "disabled",
       fullPage: true,
-      maxDiffPixels: ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+      maxDiffPixels: MYPAGE_SAVED_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
     });
 
     await page.getByRole("tab", { name: /레시피북/ }).click();

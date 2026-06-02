@@ -5243,6 +5243,128 @@ describe("20 youtube real import backend", () => {
     });
   });
 
+  it("POST /api/v1/recipes/youtube/extract keeps formal LLM stir-fry and simmer steps", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+
+    const { dbClient } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: "550e8400-e29b-41d4-a716-446655440070", standard_name: "두부" },
+        { id: "550e8400-e29b-41d4-a716-446655440071", standard_name: "간장" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: grillMethodId,
+          code: "grill",
+          label: "굽기",
+          color_key: "brown",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440219",
+          code: "stir_fry",
+          label: "볶기",
+          color_key: "orange",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440220",
+          code: "boil",
+          label: "끓이기",
+          color_key: "blue",
+          is_system: true,
+        },
+      ],
+    });
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: [
+          "1. 뭐야? 그 굴 뭐야? 소스 조금 넣.",
+          "2. 이건 언제 넣어야 돼 한면 이거 뭐",
+          "3. 두부를 뒤집고 기름을 추가하여 한쪽에서 볶습니다.",
+          "4. 양념장을 두부 위에 뿌리고 졸입니다.",
+        ].join("\n"),
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+    const llmExtractor: YoutubeRecipeLlmExtractor = {
+      name: "gemini_structured_extractor",
+      fetchStructuredRecipe: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "gemini",
+        model: "gemini-3.1-flash-lite",
+        fallbackModel: "gemini-2.5-flash-lite",
+        resultJson: {
+          recipes: [
+            {
+              title: "두부조림",
+              confidence: 0.84,
+              ingredients: [
+                {
+                  name: "두부",
+                  amount: null,
+                  unit: null,
+                  raw_text: "두부를 뒤집고 기름을 추가하여 한쪽에서 볶습니다.",
+                  evidence_refs: [{ source: "caption", line_index: 2, start_ms: null, end_ms: null }],
+                },
+                {
+                  name: "간장",
+                  amount: null,
+                  unit: null,
+                  raw_text: "양념장을 두부 위에 뿌리고 졸입니다.",
+                  evidence_refs: [{ source: "caption", line_index: 3, start_ms: null, end_ms: null }],
+                },
+              ],
+              steps: [
+                {
+                  instruction: "두부를 뒤집고 기름을 추가하여 한쪽에서 볶습니다.",
+                  raw_text: "두부를 뒤집고 기름을 추가하여 한쪽에서 볶습니다.",
+                  evidence_refs: [{ source: "caption", line_index: 2, start_ms: null, end_ms: null }],
+                },
+                {
+                  instruction: "양념장을 두부 위에 뿌리고 졸입니다.",
+                  raw_text: "양념장을 두부 위에 뿌리고 졸입니다.",
+                  evidence_refs: [{ source: "caption", line_index: 3, start_ms: null, end_ms: null }],
+                },
+              ],
+              warnings: [],
+            },
+          ],
+        },
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      withYoutubeRecipeLlmExtractor(llmExtractor, () => postYoutubeExtract(transcriptFallbackUrl)),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description", "caption"],
+        steps: [
+          {
+            instruction: "두부를 뒤집고 기름을 추가하여 한쪽에서 볶습니다.",
+            cooking_method: { code: "stir_fry" },
+          },
+          {
+            instruction: "양념장을 두부 위에 뿌리고 졸입니다.",
+            cooking_method: { code: "boil" },
+          },
+        ],
+      },
+      error: null,
+    });
+  });
+
   it("POST /api/v1/recipes/youtube/extract enriches missing quantities with visual provider without changing extraction methods", async () => {
     mockAuth();
     vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
@@ -5258,6 +5380,7 @@ describe("20 youtube real import backend", () => {
     } = createTranscriptFallbackExtractDbClient({
       ingredientLookupRows: [
         { id: "550e8400-e29b-41d4-a716-446655440052", standard_name: "미니 파프리카" },
+        { id: "550e8400-e29b-41d4-a716-446655440053", standard_name: "부침가루" },
       ],
       cookingMethodLookupRows: [
         {
@@ -5345,13 +5468,34 @@ describe("20 youtube real import backend", () => {
                 quantity_raw_text: "미니 파프리카 4개",
                 quantity_evidence_refs: [
                   {
-                    source_method: "visual",
-                    source_provider: "visual_quantity_extractor",
+                    source_method: "visual_explicit",
+                    source_provider: "video_frame",
                     start_ms: 12_000,
                     end_ms: 13_000,
                     frame_ts_ms: 12_500,
                     snippet: "화면 자막: 미니 파프리카 4개",
                     locator_hash: "visual-locator-1",
+                  },
+                ],
+              },
+              {
+                draft_ingredient_id: null,
+                standard_name: "부침가루",
+                amount: 2,
+                unit: null,
+                ingredient_type: "seasoning",
+                display_text: "부침가루 2",
+                quantity_source: "visual_explicit",
+                quantity_confidence: 0.78,
+                quantity_raw_text: "부침가루 2",
+                quantity_evidence_refs: [
+                  {
+                    source_method: "visual_explicit",
+                    source_provider: "video_frame",
+                    start_ms: 10_000,
+                    end_ms: 11_000,
+                    frame_ts_ms: 10_500,
+                    snippet: "화면 자막: 부침가루 2",
                   },
                 ],
               },
@@ -5386,6 +5530,17 @@ describe("20 youtube real import backend", () => {
             quantity_review_required: true,
             quantity_user_confirmed: false,
           },
+          {
+            standard_name: "부침가루",
+            amount: 2,
+            unit: "스푼",
+            ingredient_type: "QUANT",
+            quantity_source: "visual_explicit",
+            quantity_confidence: 0.78,
+            quantity_raw_text: "부침가루 2",
+            quantity_review_required: true,
+            quantity_user_confirmed: false,
+          },
         ],
       },
       error: null,
@@ -5393,8 +5548,15 @@ describe("20 youtube real import backend", () => {
     expect(body.data.ingredients[0].quantity_evidence_refs).toEqual([
       expect.objectContaining({
         source_method: "visual",
-        source_provider: "visual_quantity_extractor",
+        source_provider: "video_frame",
         snippet: "화면 자막: 미니 파프리카 4개",
+      }),
+    ]);
+    expect(body.data.ingredients[1].quantity_evidence_refs).toEqual([
+      expect.objectContaining({
+        source_method: "visual",
+        source_provider: "video_frame",
+        snippet: "화면 자막: 부침가루 2",
       }),
     ]);
     expect(visualExtractionCacheTable.insert).toHaveBeenCalledWith(expect.objectContaining({
@@ -5431,15 +5593,15 @@ describe("20 youtube real import backend", () => {
         provider: "gemini",
         status: "used",
         cache_hit: false,
-        enriched_count: 1,
-        review_required_count: 1,
+        enriched_count: 2,
+        review_required_count: 2,
       },
       quantity_enrichment_summary: {
         provider: "gemini",
         cache_hit: false,
         trigger_reason: "quantity_gap",
-        enriched_count: 1,
-        review_required_count: 1,
+        enriched_count: 2,
+        review_required_count: 2,
         status: "used",
       },
     });
