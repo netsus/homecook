@@ -229,33 +229,24 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    expect(await screen.findByText("이 화면은 로그인이 필요해요")).toBeTruthy();
-    expect(
-      screen
-        .getByRole("heading", { name: "이 화면은 로그인이 필요해요" })
-        .closest("[data-state-kind='prototype-derived']")
-        ?.getAttribute("data-state-tone"),
-    ).toBe("gate");
-    expect(
-      screen.getByRole("button", { name: /Google로 시작하기|로컬 테스트 계정으로 시작/ }),
-    ).toBeTruthy();
-    expect(screen.getByRole("navigation", { name: "플래너 하단 탭" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "플래너" }).getAttribute("aria-current")).toBe(
-      "page",
-    );
+    expect(await screen.findByText("잠시만 기다려 주세요")).toBeTruthy();
+    expect(screen.getByText("세션 확인")).toBeTruthy();
+    expect(screen.getByText("로그인 화면으로 이동하고 있어요.")).toBeTruthy();
+    expect(navigationMocks.replace).toHaveBeenCalledWith("/login?next=%2Fplanner");
   });
 
-  it("reserves bottom-tab safe area for guest actions on small screens", async () => {
+  it("uses the centered login redirect state for guests on small screens", async () => {
     readE2EAuthOverride.mockReturnValue(false);
 
     render(<PlannerWeekScreen />);
 
     const heading = await screen.findByRole("heading", {
-      name: "이 화면은 로그인이 필요해요",
+      name: "잠시만 기다려 주세요",
     });
-    const authGate = heading.closest(".action-safe-bottom-panel");
+    const authGate = heading.closest("[data-state-kind='prototype-derived']");
 
     expect(authGate).not.toBeNull();
+    expect(authGate?.getAttribute("data-state-tone")).toBe("loading");
   });
 
   it("loads planner data into four fixed slots inside the same day card", async () => {
@@ -513,7 +504,9 @@ describe("planner week screen", () => {
     await user.click(screen.getByRole("button", { name: "3/24 아침 식사 추가" }));
 
     const sheet = screen.getByTestId("planner-meal-add-sheet");
-    expect(within(sheet).getByRole("heading", { name: "3/24 아침 · 식사 추가" })).toBeTruthy();
+    expect(within(sheet).getByRole("heading", { name: "식사 추가" })).toBeTruthy();
+    expect(within(sheet).getByText("3/24 아침")).toBeTruthy();
+    expect(within(sheet).queryByText(/대상 ·/)).toBeNull();
 
     const searchButton = within(sheet).getByRole("button", { name: /레시피 검색/ });
     const recipeBookButton = within(sheet).getByTestId("meal-add-option-recipebook");
@@ -523,14 +516,18 @@ describe("planner week screen", () => {
     const manualLink = within(sheet).getByRole("link", { name: /직접 등록/ });
 
     expect(searchButton).toBeTruthy();
+    expect(recipeBookButton.textContent).toContain("레시피북");
+    expect(pantryButton.textContent).toContain("팬트리 추천");
+    expect(leftoverButton.textContent).toContain("남은 요리");
+    expect(leftoverButton.textContent).not.toContain("남은 요리에서 추가");
     expect(recipeBookButton.tagName).toBe("BUTTON");
     expect(pantryButton.tagName).toBe("BUTTON");
     expect(leftoverButton.tagName).toBe("BUTTON");
     expect(youtubeLink.getAttribute("href")).toContain("/menu/add/youtube?");
     expect(manualLink.getAttribute("href")).toContain("/menu/add/manual?");
-    expect(within(recipeBookButton).getByText("레시피북에서 추가").className).toContain("text-[14px]");
-    expect(within(pantryButton).getByText("팬트리 기반 추천").className).toContain("text-[14px]");
-    expect(within(leftoverButton).getByText("남은 요리에서 추가").className).toContain("text-[14px]");
+    expect(within(recipeBookButton).getByText("레시피북").className).toContain("text-[14px]");
+    expect(within(pantryButton).getByText("팬트리 추천").className).toContain("text-[14px]");
+    expect(within(leftoverButton).getByText("남은 요리").className).toContain("text-[14px]");
     expect(within(youtubeLink).getByText("유튜브 가져오기").className).toContain("text-[14px]");
     expect(within(manualLink).getByText("직접 등록").className).toContain("text-[14px]");
 
@@ -621,7 +618,7 @@ describe("planner week screen", () => {
     await user.click(screen.getByRole("button", { name: "추가" }));
 
     const servingsDialog = await screen.findByRole("dialog", { name: "계획 인분 입력" });
-    await user.click(within(servingsDialog).getByRole("button", { name: "추가" }));
+    await user.click(within(servingsDialog).getByRole("button", { name: "추가하기" }));
 
     await waitFor(() => {
       expect(createMealSafe).toHaveBeenCalledWith({

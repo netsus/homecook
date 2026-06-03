@@ -295,7 +295,7 @@ describe("planner add flow", () => {
     ).toBeTruthy();
   });
 
-  it("renders desktop recipe-detail planner dates as a fixed 7-column grid", () => {
+  it("renders desktop recipe-detail planner dates as a horizontal date rail", () => {
     installMatchMedia(true);
     const selectableDates = [
       "2026-05-21",
@@ -382,10 +382,16 @@ describe("planner add flow", () => {
 
     const dialog = screen.getByRole("dialog", { name: "플래너에 추가" });
     const target = within(dialog).getByText("대상 · 5/21 저녁");
-    const image = within(dialog).getByTestId("planner-add-recipe-preview-image");
+    const imageShell = within(dialog).getByTestId("planner-add-recipe-preview-image");
+    const image = imageShell.querySelector("img");
 
     expect(target.className).toContain("text-[var(--web-brand-accessible)]");
-    expect(image.getAttribute("style")).toContain("recipe-detail.jpg");
+    expect(imageShell.className).toContain("web-modal-preview-thumb");
+    expect(image?.getAttribute("src")).toContain("recipe-detail.jpg");
+    expect(image?.className).toContain("web-modal-preview-thumb-image");
+    expect(
+      within(dialog).getByRole("button", { name: "5/21 저녁에 추가" }),
+    ).toBeTruthy();
     expect(within(dialog).queryByText("날짜와 끼니를 선택해 주세요")).toBeNull();
   });
 

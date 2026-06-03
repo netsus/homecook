@@ -33,6 +33,7 @@ import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
+import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
@@ -61,15 +62,6 @@ const WEB_NAV_ITEMS = [
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
-const WEB_FALLBACK_IMAGES = [
-  "https://images.unsplash.com/photo-1583224944844-5b268c057b72?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1553163147-622ab57be1c7?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?w=900&h=675&fit=crop&q=80",
 ] as const;
 
 const KOREA_TIME_ZONE = "Asia/Seoul";
@@ -800,7 +792,7 @@ function HomeWebScreen({
                   <span
                     className="web-theme-card-thumb"
                     style={{
-                      backgroundImage: `url(${theme.recipes[0]?.thumbnail_url ?? WEB_FALLBACK_IMAGES[index % WEB_FALLBACK_IMAGES.length]})`,
+                      backgroundImage: `url(${resolveRecipeImage(theme.recipes[0] ?? { id: String(index) })})`,
                     }}
                   >
                     <span className="web-theme-card-overlay">
@@ -850,14 +842,13 @@ function HomeWebScreen({
 
           {screenState === "ready" && displayedRecipes.length ? (
             <div className="web-home-grid">
-              {displayedRecipes.map((recipe, index) => (
+              {displayedRecipes.map((recipe) => (
                 <HomeWebRecipeCard
                   isSaved={savedRecipeIds.has(recipe.id)}
                   key={recipe.id}
                   onOpen={onRecipeOpen}
                   onSave={onRecipeSave}
                   recipe={recipe}
-                  variantIndex={index}
                 />
               ))}
             </div>
@@ -935,16 +926,13 @@ function HomeWebRecipeCard({
   onOpen,
   onSave,
   recipe,
-  variantIndex,
 }: {
   isSaved: boolean;
   onOpen: (recipeId: string) => void;
   onSave: (recipe: RecipeCardItem) => void;
   recipe: RecipeCardItem;
-  variantIndex: number;
 }) {
-  const imageSrc =
-    recipe.thumbnail_url ?? WEB_FALLBACK_IMAGES[variantIndex % WEB_FALLBACK_IMAGES.length];
+  const imageSrc = resolveRecipeImage(recipe);
   const sourceLabel = formatRecipeSourceLabel(recipe.source_type);
   const sourceBadge = recipe.source_type === "youtube" ? sourceLabel : null;
   const visibleTags = recipe.tags.slice(0, 3);
@@ -1067,8 +1055,9 @@ function ThemeCarouselCard({
   theme: RecipeTheme;
   variantIndex: number;
 }) {
-  const imageSrc =
-    theme.recipes[0]?.thumbnail_url ?? WEB_FALLBACK_IMAGES[variantIndex % WEB_FALLBACK_IMAGES.length];
+  const imageSrc = resolveRecipeImage(
+    theme.recipes[0] ?? { id: String(variantIndex) },
+  );
 
   return (
     <button

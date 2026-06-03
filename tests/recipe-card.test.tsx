@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RecipeCard } from "@/components/home/recipe-card";
 import { MOCK_RECIPE_CARD } from "@/lib/mock/recipes";
+import { resolveRecipeImage } from "@/lib/recipe-image";
 import type { RecipeCardItem } from "@/types/recipe";
 
 describe("recipe card", () => {
@@ -49,6 +50,19 @@ describe("recipe card", () => {
 
     expect(screen.getByText("인기")).toBeTruthy();
     expect(screen.getAllByTestId("recipe-card-bookmark")).toHaveLength(1);
+  });
+
+  it("uses the shared recipe image resolver when thumbnail_url is empty", () => {
+    const recipe = {
+      ...MOCK_RECIPE_CARD,
+      id: "recipe-no-thumbnail-card",
+      thumbnail_url: null,
+    };
+    const { container } = render(<RecipeCard recipe={recipe} />);
+    const imageLayer = container.querySelector("[data-slot='recipe-card-image-layer']");
+
+    expect(imageLayer?.getAttribute("style")).toContain(resolveRecipeImage(recipe));
+    expect(imageLayer?.textContent?.trim()).toBe("");
   });
 
   it("calls the card save action without navigating the detail link", async () => {

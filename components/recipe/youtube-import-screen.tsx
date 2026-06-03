@@ -415,15 +415,12 @@ const YOUTUBE_STEP_LABELS = [
 function formatTargetLabel(planDate: string, slotName: string) {
   if (!planDate && !slotName) return "플래너";
 
-  const dateLabel = planDate
-    ? new Intl.DateTimeFormat("ko-KR", {
-        month: "long",
-        day: "numeric",
-        weekday: "short",
-      }).format(new Date(`${planDate}T00:00:00`))
-    : "날짜 미지정";
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(planDate);
+  const dateLabel = match
+    ? `${Number(match[2])}/${Number(match[3])}`
+    : planDate || "날짜 미지정";
 
-  return slotName ? `${dateLabel} · ${slotName}` : dateLabel;
+  return slotName ? `${dateLabel} ${slotName}` : dateLabel;
 }
 
 function getYoutubeStepIndex(step: Step) {
@@ -3047,10 +3044,6 @@ export function YoutubeImportScreen({
 
       {currentStep === "url-input" ? (
         <section className="web-yt-content web-yt-url">
-          <div>
-            <h2>유튜브 링크를 붙여넣어 주세요</h2>
-            <p>영상 설명, 자막, 화면 텍스트에서 재료와 만들기를 찾아요.</p>
-          </div>
           <label className="web-manual-field web-manual-field-wide">
             <span>유튜브 URL</span>
             <input
@@ -3262,6 +3255,7 @@ export function YoutubeImportScreen({
           }}
           onAdd={handleAddIngredient}
           onEmptyAction={canRegisterReplacingIngredient ? handleRegisterReplacingIngredient : undefined}
+          presentation="web"
         />
       )}
       {(modalMode === "step-add" || modalMode === "step-edit") && (
@@ -3380,6 +3374,39 @@ export function YoutubeImportScreen({
 
           {desktopImportCard}
         </WebShell>
+        {desktopModals}
+      </div>
+    );
+  }
+
+  if (presentation === "screen") {
+    return (
+      <div className="yt-mobile-import-shell min-h-screen px-4 py-5">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+          <div className="web-yt-head flex-wrap">
+            <div>
+              <p className="web-menu-add-eyebrow">유튜브 가져오기</p>
+              <h1>영상 링크에서 레시피를 추출해요</h1>
+              <p className="web-menu-add-target">{targetLabel}</p>
+            </div>
+            <div className="web-manual-actions">
+              {currentStep !== "complete" ? (
+                <WebButton onClick={handleBack} variant="secondary">
+                  뒤로
+                </WebButton>
+              ) : null}
+              {currentStep === "review" ? (
+                <WebButton
+                  disabled={!canRegister || isRegistering}
+                  onClick={handleRegister}
+                >
+                  {isRegistering ? "등록 중..." : "등록"}
+                </WebButton>
+              ) : null}
+            </div>
+          </div>
+          {desktopImportCard}
+        </div>
         {desktopModals}
       </div>
     );

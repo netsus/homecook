@@ -4,17 +4,15 @@ import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
-import {
-  AppBottomSheet,
-  AppCenterDialog,
-  AppModalFooterActions,
-  AppStepper,
-} from "@/components/shared/app-overlay";
+import { MealAddServingsModal } from "@/components/planner/meal-add-servings-modal";
+import { MealAddTargetBadge } from "@/components/planner/meal-add-target-badge";
+import { AppBottomSheet } from "@/components/shared/app-overlay";
 import {
   AppBackButton,
   AppBackButtonSpacer,
 } from "@/components/shared/app-back-button";
 import { fetchLeftovers } from "@/lib/api/leftovers";
+import { resolveRecipeImage } from "@/lib/recipe-image";
 import type { LeftoverListItemData } from "@/types/leftover";
 
 type LeftoverPickerPresentation = "sheet" | "screen" | "web";
@@ -51,6 +49,13 @@ function formatLeftoverMeta(leftover: LeftoverListItemData) {
   return `${datePart} ${mealLabel} ${servingsPart}`;
 }
 
+function resolveLeftoverRecipeImage(leftover: LeftoverListItemData) {
+  return resolveRecipeImage({
+    id: leftover.recipe_id ?? leftover.id,
+    thumbnail_url: leftover.recipe_thumbnail_url,
+  });
+}
+
 function LeftoverCard({
   leftover,
   onSelect,
@@ -60,22 +65,14 @@ function LeftoverCard({
 }) {
   return (
     <article className="flex items-center gap-3 rounded-[var(--radius-panel)] border border-[var(--line)] bg-[var(--surface)] p-3 shadow-[0_2px_10px_var(--shadow-color-soft)]">
-      {leftover.recipe_thumbnail_url ? (
-        <Image
-          alt=""
-          className="h-12 w-12 shrink-0 rounded-[var(--radius-card)] object-cover"
-          height={48}
-          src={leftover.recipe_thumbnail_url}
-          unoptimized
-          width={48}
-        />
-      ) : (
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-card)] bg-[var(--surface-fill)]">
-          <span className="text-lg" aria-hidden="true">
-            🍲
-          </span>
-        </div>
-      )}
+      <Image
+        alt=""
+        className="h-12 w-12 shrink-0 rounded-[var(--radius-card)] object-cover"
+        height={48}
+        src={resolveLeftoverRecipeImage(leftover)}
+        unoptimized
+        width={48}
+      />
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-[15px] font-bold text-[var(--foreground)]">
           {leftover.recipe_title}
@@ -198,43 +195,26 @@ function ServingsModal({
   onCancel: () => void;
   slotLabel?: string;
 }) {
-  const [servings, setServings] = useState(1);
-
-  const handleConfirm = useCallback(() => {
-    if (servings < 1) return;
-    onConfirm(servings);
-  }, [onConfirm, servings]);
-
   return (
-    <AppCenterDialog
-      ariaLabelledBy="leftover-servings-title"
-      closeDisabled={isCreating}
-      description={slotLabel ? `대상 · ${slotLabel}` : undefined}
-      descriptionClassName="text-[var(--wave1-mint-contrast)] font-bold"
-      footer={
-        <AppModalFooterActions
-          cancelDisabled={isCreating}
-          confirmDisabled={isCreating || servings < 1}
-          confirmLabel={isCreating ? "추가 중..." : "추가"}
-          onCancel={onCancel}
-          onConfirm={handleConfirm}
+    <MealAddServingsModal
+      initialServings={1}
+      isCreating={isCreating}
+      metaText="남은 요리"
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+      recipeTitle={leftover.recipe_title}
+      targetLabel={slotLabel}
+      thumbnail={
+        <Image
+          alt=""
+          className="h-full w-full object-cover"
+          height={44}
+          src={resolveLeftoverRecipeImage(leftover)}
+          unoptimized
+          width={44}
         />
       }
-      onClose={onCancel}
-      title="계획 인분 입력"
-    >
-      <p className="mb-3 truncate text-[14px] font-bold text-[var(--wave1-ink)]">
-        {leftover.recipe_title}
-      </p>
-      <AppStepper
-        disabled={isCreating}
-        label="계획 인분"
-        min={1}
-        onChange={setServings}
-        unit="인분"
-        value={servings}
-      />
-    </AppCenterDialog>
+    />
   );
 }
 
@@ -308,17 +288,13 @@ export function LeftoverPicker({
             testId="leftover-picker-back"
           />
           <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[var(--foreground)]">
-            남은 요리에서 추가
+            남은 요리
           </h1>
           <AppBackButtonSpacer />
         </div>
 
         <section className="px-4 py-4">
-          {slotLabel ? (
-            <p className="mb-3 text-[12px] font-bold leading-[1.5] text-[var(--brand)]">
-              대상 · {slotLabel}
-            </p>
-          ) : null}
+          <MealAddTargetBadge className="mb-3" label={slotLabel} />
           {content}
         </section>
         {servingsModal}
@@ -334,7 +310,7 @@ export function LeftoverPicker({
         className="web-picker-section"
         data-testid="leftover-picker-web"
       >
-        {slotLabel ? <p className="web-picker-subtle web-picker-target">대상 · {slotLabel}</p> : null}
+        <MealAddTargetBadge className="mb-3" label={slotLabel} tone="web" />
         {content}
         {servingsModal}
       </section>
@@ -345,9 +321,8 @@ export function LeftoverPicker({
     <>
       <AppBottomSheet
         ariaLabelledBy="leftover-picker-title"
+        badge={<MealAddTargetBadge className="shrink-0" label={slotLabel} />}
         bodyClassName="pb-5"
-        description={slotLabel ? `대상 · ${slotLabel}` : undefined}
-        descriptionClassName="text-[var(--wave1-mint-contrast)] font-bold"
         leadingAction={
           onBack ? (
             <AppBackButton onClick={onBack} testId="leftover-picker-back" />

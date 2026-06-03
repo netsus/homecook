@@ -7,7 +7,6 @@ import React from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
-import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { MealAddOptionsSheet } from "@/components/planner/meal-add-options-sheet";
 import type { MealAddPickerMode } from "@/components/planner/meal-add-options-sheet";
@@ -895,6 +894,15 @@ export function PlannerWeekScreen({
     }
   }, [dateKeys, selectedDateKey, todayKey]);
 
+  // Single source for the "login required" surface: send unauthenticated
+  // visitors to /login (same screen everywhere) instead of rendering a
+  // separate inline gate here.
+  useEffect(() => {
+    if (authState === "unauthorized") {
+      router.replace(`/login?next=${encodeURIComponent("/planner")}`);
+    }
+  }, [authState, router]);
+
   useEffect(() => {
     if (
       searchParams.get("restore") !== "meal-add-modal" &&
@@ -1058,29 +1066,16 @@ export function PlannerWeekScreen({
   }
 
   if (authState === "unauthorized") {
+    // Redirect handled by the effect above; render a lightweight placeholder
+    // while navigation to /login completes.
     return (
-      <>
-        <ContentState
-          description="로그인 후 보던 주간 범위로 돌아와 식단을 계속 관리할 수 있어요."
-          eyebrow="플래너 접근"
-          safeBottomPadding
-          tone="gate"
-          title="이 화면은 로그인이 필요해요"
-        >
-          <div className="space-y-3">
-            <SocialLoginButtons nextPath="/planner" />
-            <Link
-              className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
-              href="/"
-            >
-              홈으로 돌아가기
-            </Link>
-          </div>
-        </ContentState>
-        {!isDesktopViewport ? (
-          <Wave1MobileBottomTab ariaLabel="플래너 하단 탭" currentTab="planner" />
-        ) : null}
-      </>
+      <ContentState
+        className="md:px-7"
+        description="로그인 화면으로 이동하고 있어요."
+        eyebrow="세션 확인"
+        tone="loading"
+        title="잠시만 기다려 주세요"
+      />
     );
   }
 
@@ -1454,8 +1449,9 @@ export function PlannerWeekScreen({
             onClose={closeMealAddSheet}
             onPickerSelect={openMealAddPicker}
             routeHrefFor={(mode) => getMealAddHref(mode)}
+            targetLabel={`${formatCompactDateLabel(mealAddSheet.dateKey)} ${mealAddSheet.slotName}`}
             testId="planner-meal-add-sheet"
-            title={`${formatCompactDateLabel(mealAddSheet.dateKey)} ${mealAddSheet.slotName} · 식사 추가`}
+            title="식사 추가"
           />
         ) : null}
 

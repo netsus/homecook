@@ -22,12 +22,6 @@ import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
 import { savePendingAction } from "@/lib/auth/pending-action";
 import { useAuthGateStore } from "@/stores/ui-store";
 
-const ACTION_LABELS = {
-  like: "좋아요",
-  save: "저장",
-  planner: "플래너 추가",
-} as const;
-
 export function LoginGateModal() {
   const { action, close, isOpen } = useAuthGateStore();
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -38,11 +32,7 @@ export function LoginGateModal() {
       return "";
     }
 
-    if (action.type === "planner") {
-      return "로그인하면 원래 하려던 작업으로 자동 이동합니다.";
-    }
-
-    return `${ACTION_LABELS[action.type]} 기능은 로그인 후 이용할 수 있어요. 로그인하면 원래 하려던 작업으로 자동 이동합니다.`;
+    return "로그인하면 원래 하려던 작업으로 자동 이동합니다.";
   }, [action]);
 
   useEffect(() => {

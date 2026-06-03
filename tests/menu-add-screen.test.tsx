@@ -285,7 +285,7 @@ describe("MenuAddScreen", () => {
     cleanup();
   });
 
-  it("opens a YouTube entry sheet before continuing to the import route", async () => {
+  it("opens the mobile YouTube import screen from the option tile", async () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 
     const user = userEvent.setup();
@@ -295,27 +295,13 @@ describe("MenuAddScreen", () => {
 
     await user.click(youtubeButton);
 
-    const dialog = screen.getByRole("dialog", { name: "유튜브 가져오기" });
-    expect(dialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
     expect(mockRouterPush).not.toHaveBeenCalled();
-
-    await user.type(
-      within(dialog).getByLabelText("유튜브 링크"),
-      "https://www.youtube.com/watch?v=recipe12345",
-    );
-    const continueLink = within(dialog).getByRole("link", {
-      name: "가져오기 화면 열기",
-    }) as HTMLAnchorElement;
-    const pushedHref = continueLink.getAttribute("href") ?? "";
-
-    expect(pushedHref).toContain("/menu/add/youtube?");
-    expect(pushedHref).toContain(`date=${DEFAULT_PROPS.planDate}`);
-    expect(pushedHref).toContain(`columnId=${DEFAULT_PROPS.columnId}`);
-    expect(pushedHref).toContain(`slot=${encodeURIComponent(DEFAULT_PROPS.slotName)}`);
-    expect(pushedHref).toContain(
-      `youtubeUrl=${encodeURIComponent("https://www.youtube.com/watch?v=recipe12345")}`,
-    );
-    expect(pushedHref).toContain("returnTo=");
+    expect(screen.queryByRole("dialog", { name: "유튜브 가져오기" })).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: "영상 링크에서 레시피를 추출해요" }),
+    ).toBeTruthy();
+    expect(screen.getByText("4/18 아침")).toBeTruthy();
+    expect(screen.getByLabelText("유튜브 URL")).toBeTruthy();
   });
 
   // ─── Wave1 acceptance tests ─────────────────────────────────────────────────
@@ -364,8 +350,8 @@ describe("MenuAddScreen", () => {
   it("shows the mobile target context instead of the legacy secondary heading (Wave1)", () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 
-    expect(screen.getByText("대상")).toBeTruthy();
-    expect(screen.getByText("4/18 아침")).toBeTruthy();
+    expect(screen.getAllByText("4/18 아침").length).toBeGreaterThan(0);
+    expect(screen.queryByText("대상")).toBeNull();
     expect(screen.queryByText("다른 방법으로 추가")).toBeNull();
   });
 
@@ -832,7 +818,7 @@ describe("MenuAddScreen", () => {
 
     await user.click(screen.getByRole("button", { name: "재료 검색으로 교체" }));
 
-    const dialog = await screen.findByRole("dialog", { name: "재료 선택" });
+    const dialog = await screen.findByRole("dialog", { name: "재료로 검색" });
     expect(await within(dialog).findByText("검색 결과가 없어요")).toBeTruthy();
     expect(within(dialog).queryByRole("button", { name: "새 재료로 등록" })).toBeNull();
   });
@@ -997,16 +983,24 @@ describe("MenuAddScreen", () => {
   it("renders each option with emoji, label, and the unified target label", () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 
+    expect(screen.getByTestId("meal-add-target-badge").textContent).toContain("4/18 아침");
+    expect(screen.getByTestId("menu-add-option-search").textContent).toContain("레시피 검색");
+    expect(screen.getByTestId("menu-add-option-recipebook").textContent).toContain("레시피북");
+    expect(screen.getByTestId("menu-add-option-pantry").textContent).toContain("팬트리 추천");
+    expect(screen.getByTestId("menu-add-option-youtube").textContent).toContain("유튜브 가져오기");
+
     const leftoverBtn = screen.getByTestId("menu-add-option-leftover");
     expect(leftoverBtn.textContent).toContain("🍱");
     expect(leftoverBtn.textContent).toContain("남은 요리");
-    expect(leftoverBtn.textContent).toContain("대상 · 4/18 아침");
+    expect(leftoverBtn.textContent).not.toContain("4/18 아침");
+    expect(leftoverBtn.textContent).not.toContain("대상 ·");
     expect(leftoverBtn.textContent).not.toContain("남은 요리에서 추가");
 
     const manualBtn = screen.getByTestId("menu-add-option-manual");
     expect(manualBtn.textContent).toContain("✏️");
     expect(manualBtn.textContent).toContain("직접 등록");
-    expect(manualBtn.textContent).toContain("대상 · 4/18 아침");
+    expect(manualBtn.textContent).not.toContain("4/18 아침");
+    expect(manualBtn.textContent).not.toContain("대상 ·");
     expect(manualBtn.textContent).not.toContain("레시피 직접 작성");
   });
 
@@ -1059,7 +1053,7 @@ describe("MenuAddScreen", () => {
     await user.click(
       within(screen.getByRole("dialog", { name: "계획 인분 입력" })).getByRole(
         "button",
-        { name: "추가" },
+        { name: "추가하기" },
       ),
     );
 

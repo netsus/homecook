@@ -165,10 +165,10 @@ function AppBar({ onBack, onSave, isSaving, isUploading = false }: AppBarProps) 
         </h1>
         <button
           className={[
-            "h-[var(--control-height-md)] shrink-0 rounded-[var(--radius-control)] px-3 text-sm font-semibold lg:px-4 lg:text-base",
+            "h-[var(--control-height-md)] shrink-0 rounded-[var(--radius-control)] px-3 text-sm font-bold lg:px-4 lg:text-base",
             !isDisabled
-              ? "text-[var(--brand)] hover:bg-[var(--brand-soft)]"
-              : "cursor-not-allowed text-[var(--text-4)]",
+              ? "bg-[var(--brand)] text-[var(--text-inverse)] shadow-[0_8px_18px_var(--brand-shadow-color)] hover:bg-[var(--brand-deep)]"
+              : "cursor-not-allowed bg-[var(--surface-subtle)] text-[var(--text-4)]",
           ].join(" ")}
           onClick={onSave}
           disabled={isDisabled}
@@ -194,35 +194,38 @@ function BaseServingsStepper({ value, onChange }: BaseServingsStepperProps) {
   return (
     <div
       aria-label="기준 인분 조절"
-      className="grid h-[38px] grid-cols-[2.5rem_minmax(3.5rem,1fr)_2.5rem] overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)]"
+      className="inline-flex w-fit items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-2 py-1.5"
       role="group"
     >
-      <button
-        aria-label="기준 인분 줄이기"
-        className="flex items-center justify-center border-r border-[var(--line-strong)] text-[18px] font-semibold text-[var(--foreground)] disabled:text-[var(--text-4)]"
-        disabled={value <= 1}
-        onClick={() => updateValue(value - 1)}
-        type="button"
-      >
-        -
-      </button>
-      <input
-        aria-label="기준 인분"
-        className="min-w-0 bg-[var(--surface)] px-2 text-center text-[14px] font-semibold text-[var(--foreground)] outline-none focus:bg-[var(--brand-soft)]"
-        inputMode="numeric"
-        min={1}
-        onChange={(event) => updateValue(Number(event.target.value) || 1)}
-        type="number"
-        value={value}
-      />
-      <button
-        aria-label="기준 인분 늘리기"
-        className="flex items-center justify-center border-l border-[var(--line-strong)] text-[18px] font-semibold text-[var(--foreground)]"
-        onClick={() => updateValue(value + 1)}
-        type="button"
-      >
-        +
-      </button>
+      <div className="flex items-center gap-1.5">
+        <button
+          aria-label="기준 인분 줄이기"
+          className="flex h-9 w-9 items-center justify-center disabled:opacity-40"
+          disabled={value <= 1}
+          onClick={() => updateValue(value - 1)}
+          type="button"
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] text-sm font-medium leading-none text-[var(--foreground)]">
+            −
+          </span>
+        </button>
+        <span
+          aria-live="polite"
+          className="min-w-11 text-center text-sm font-bold text-[var(--foreground)]"
+        >
+          {value}인분
+        </span>
+        <button
+          aria-label="기준 인분 늘리기"
+          className="flex h-9 w-9 items-center justify-center"
+          onClick={() => updateValue(value + 1)}
+          type="button"
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand)] text-sm font-bold leading-none text-[var(--text-inverse)]">
+            +
+          </span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -451,7 +454,7 @@ function StepInlineComposer({
       </div>
       <div
         aria-label="조리방법 선택"
-        className="-mx-1 overflow-x-auto px-1 pb-1"
+        className="-mx-1 overflow-x-auto px-1 pb-1 scrollbar-hide"
         role="group"
       >
         <div className="flex w-max gap-2">
@@ -1001,7 +1004,6 @@ export function ManualRecipeCreateScreen({
       <section className="web-manual-section">
         <div className="web-manual-section-head">
           <h2>기본 정보</h2>
-          <span>{targetLabel}</span>
         </div>
         <div className="web-manual-fields">
           <label className="web-manual-field web-manual-field-wide">
@@ -1019,8 +1021,8 @@ export function ManualRecipeCreateScreen({
               </span>
             ) : null}
           </label>
-          <div className="web-manual-field">
-            <span>기준 인분</span>
+          <div className="web-manual-field web-manual-field-servings">
+            <span>기준 수량</span>
             <BaseServingsStepper
               value={baseServings}
               onChange={setBaseServings}
@@ -1151,6 +1153,7 @@ export function ManualRecipeCreateScreen({
         <RecipeIngredientAddModal
           onClose={() => setModalMode("none")}
           onAdd={handleAddIngredient}
+          presentation="web"
         />
       )}
       {modalMode === "success" && createdRecipeId && (
@@ -1251,7 +1254,7 @@ export function ManualRecipeCreateScreen({
         <div className="mx-auto max-w-2xl space-y-2 md:space-y-6 md:py-4">
           {/* Basic Info */}
           <section className="bg-[var(--surface)] px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
-            <h2 className="mb-3 text-[16px] font-semibold leading-[1.3] text-[var(--foreground)]">
+            <h2 className="mb-3 text-[16px] font-bold leading-[1.3] text-[var(--foreground)]">
               기본 정보
             </h2>
             <div className="space-y-3">
@@ -1272,7 +1275,7 @@ export function ManualRecipeCreateScreen({
                   </span>
                 ) : null}
               </label>
-              <div className="block max-w-[13rem]">
+              <div className="block max-w-[10.5rem]">
                 <span className="mb-1.5 block text-[12px] font-medium leading-[1.4] text-[var(--text-3)]">
                   기준 인분
                 </span>
@@ -1289,7 +1292,7 @@ export function ManualRecipeCreateScreen({
             className="bg-[var(--surface)] px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]"
             data-testid="manual-image-upload-section"
           >
-            <h2 className="mb-3 text-[16px] font-semibold leading-[1.3] text-[var(--foreground)]">
+            <h2 className="mb-3 text-[16px] font-bold leading-[1.3] text-[var(--foreground)]">
               이미지
             </h2>
             <input
@@ -1388,7 +1391,7 @@ export function ManualRecipeCreateScreen({
           {/* Ingredients */}
           <section className="bg-[var(--surface)] px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
             <div className="mb-1 flex items-center justify-between">
-              <h2 className="text-[16px] font-semibold leading-[1.3] text-[var(--foreground)]">
+              <h2 className="text-[16px] font-bold leading-[1.3] text-[var(--foreground)]">
                 재료
               </h2>
               <span className="text-[12px] font-medium text-[var(--text-3)]">
@@ -1402,7 +1405,7 @@ export function ManualRecipeCreateScreen({
               onRemove={handleRemoveIngredient}
             />
             <button
-              className="flex h-[42px] w-full items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[var(--brand)] bg-[var(--brand-soft)] text-[13px] font-semibold text-[var(--brand)] hover:bg-[var(--brand-soft)]"
+              className="mt-2 flex h-[42px] w-fit items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-4 text-[13px] font-bold text-[var(--brand)] hover:bg-[var(--brand-soft)]"
               onClick={() => setModalMode("ingredient-add")}
               type="button"
             >
@@ -1413,7 +1416,7 @@ export function ManualRecipeCreateScreen({
           {/* Steps */}
           <section className="bg-[var(--surface)] px-4 py-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
             <div className="mb-1 flex items-center justify-between">
-              <h2 className="text-[16px] font-semibold leading-[1.3] text-[var(--foreground)]">
+              <h2 className="text-[16px] font-bold leading-[1.3] text-[var(--foreground)]">
                 만들기
               </h2>
               <span className="text-[12px] font-medium text-[var(--text-3)]">

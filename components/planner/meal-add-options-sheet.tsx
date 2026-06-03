@@ -3,6 +3,7 @@
 import Link from "next/link";
 import React from "react";
 
+import { MealAddTargetBadge } from "@/components/planner/meal-add-target-badge";
 import { AppBottomSheet } from "@/components/shared/app-overlay";
 
 export type MealAddPickerMode =
@@ -14,6 +15,7 @@ export type MealAddRouteMode = "youtube" | "manual";
 
 interface MealAddOptionsSheetProps {
   title: string;
+  targetLabel?: string;
   onClose: () => void;
   onPickerSelect: (mode: MealAddPickerMode) => void;
   routeHrefFor: (mode: MealAddRouteMode) => string;
@@ -25,9 +27,9 @@ const PICKER_OPTIONS: Array<{
   icon: string;
   label: string;
 }> = [
-  { id: "recipebook", icon: "📖", label: "레시피북에서 추가" },
-  { id: "pantry", icon: "🧊", label: "팬트리 기반 추천" },
-  { id: "leftover", icon: "🍱", label: "남은 요리에서 추가" },
+  { id: "recipebook", icon: "📖", label: "레시피북" },
+  { id: "pantry", icon: "🧊", label: "팬트리 추천" },
+  { id: "leftover", icon: "🍱", label: "남은 요리" },
 ];
 
 const OPTION_TILE_CLASS =
@@ -80,6 +82,7 @@ function OptionButton({
 
 export function MealAddOptionsSheet({
   title,
+  targetLabel,
   onClose,
   onPickerSelect,
   routeHrefFor,
@@ -88,6 +91,7 @@ export function MealAddOptionsSheet({
   return (
     <AppBottomSheet
       ariaLabelledBy="meal-add-options-title"
+      badge={<MealAddTargetBadge className="shrink-0" label={targetLabel} />}
       bodyClassName="pb-6"
       onClose={onClose}
       panelClassName="max-w-[480px]"

@@ -1400,7 +1400,7 @@ export function MealScreen({
     returnSurface: "planner.meal-add-modal",
     returnTo: `/planner?${mealAddQuery}`,
   });
-  const mealAddSheetTitle = `${formatDateShort(planDate)}${slotName ? ` ${slotName}` : ""} · 식사 추가`;
+  const mealAddTargetLabel = `${formatDateShort(planDate)}${slotName ? ` ${slotName}` : ""}`;
   function getMealAddRouteHref(mode: MealAddRouteMode) {
     const targetPath = `/menu/add/${mode}?${mealAddQuery}`;
 
@@ -1583,8 +1583,9 @@ export function MealScreen({
           onClose={closeMealAddSheet}
           onPickerSelect={openMealAddPicker}
           routeHrefFor={getMealAddRouteHref}
+          targetLabel={mealAddTargetLabel}
           testId="meal-screen-meal-add-sheet"
-          title={mealAddSheetTitle}
+          title="식사 추가"
         />
       ) : null}
 

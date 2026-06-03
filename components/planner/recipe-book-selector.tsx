@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import { MealAddTargetBadge } from "@/components/planner/meal-add-target-badge";
 import {
   AppBackButton,
   AppBackButtonSpacer,
@@ -226,7 +227,7 @@ export function RecipeBookSelector({
   if (presentation === "web") {
     return (
       <section className="web-picker-section" aria-label="레시피북 선택">
-        {slotLabel ? <p className="web-picker-subtle">대상 · {slotLabel}</p> : null}
+        <MealAddTargetBadge className="mb-3" label={slotLabel} tone="web" />
         {content}
       </section>
     );
@@ -235,11 +236,6 @@ export function RecipeBookSelector({
   if (presentation === "sheet") {
     return (
       <>
-        {slotLabel ? (
-          <p className="mb-3 text-[12px] font-bold leading-[1.5] text-[var(--brand)]">
-            대상 · {slotLabel}
-          </p>
-        ) : null}
         {content}
       </>
     );
@@ -256,11 +252,7 @@ export function RecipeBookSelector({
           <AppBackButtonSpacer />
         </div>
         <div className="p-4 pb-[112px]">
-          {slotLabel ? (
-            <p className="mb-3 text-[12px] font-bold leading-[1.5] text-[var(--brand)]">
-              대상 · {slotLabel}
-            </p>
-          ) : null}
+          <MealAddTargetBadge className="mb-3" label={slotLabel} />
           {content}
         </div>
         <Wave1MobileBottomTab ariaLabel="레시피북 선택 하단 탭" currentTab="planner" />

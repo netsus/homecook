@@ -90,14 +90,14 @@ describe("login screen", () => {
     render(<LoginScreen />);
 
     expect(
-      screen.getByRole("heading", { name: "로그인이 필요해요" }),
+      screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
     ).toBeTruthy();
     expect(screen.getByTestId("login-brand-mark")).toBeTruthy();
+    expect(screen.getByText("로그인 필요")).toBeTruthy();
     expect(screen.getAllByText("로그인 후 이전 화면으로 돌아갑니다.")).toHaveLength(1);
     expect(
       screen.queryByText("저장한 레시피, 플래너, 팬트리를 같은 계정으로 관리합니다."),
     ).toBeNull();
-    expect(screen.getByText("HOMECOOK")).toBeTruthy();
   });
 
   it("uses the provided nextPath for login actions", () => {
@@ -113,15 +113,26 @@ describe("login screen", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "로그인이 필요해요",
+        name: "이 화면은 로그인이 필요해요",
       }),
     ).toBeTruthy();
     expect(screen.getByTestId("login-brand-mark")).toBeTruthy();
-    expect(screen.getAllByText("로그인 후 이전 화면으로 돌아갑니다.")).toHaveLength(1);
+    expect(screen.getByText("플래너 접근")).toBeTruthy();
+    expect(
+      screen.getAllByText("로그인 후 보던 주간 범위로 돌아와 식단을 계속 관리할 수 있어요."),
+    ).toHaveLength(1);
     expect(screen.getByText("social-buttons:/planner")).toBeTruthy();
-    expect(screen.getByTestId("login-required-gradient").className).toContain(
-      "web-login-gradient",
-    );
+    expect(
+      screen
+        .getByRole("heading", { name: "이 화면은 로그인이 필요해요" })
+        .closest("[data-state-kind='prototype-derived']")
+        ?.getAttribute("data-state-tone"),
+    ).toBe("gate");
+    expect(
+      screen
+        .getByRole("heading", { name: "이 화면은 로그인이 필요해요" })
+        .closest(".web-login-gate"),
+    ).toBeTruthy();
     expect(
       screen.queryByRole("heading", {
         name: "홈쿡과 함께오늘 뭐 먹지 정해봐요",

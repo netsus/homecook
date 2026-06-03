@@ -818,8 +818,12 @@ describe("MealScreen", () => {
     await user.click(await screen.findByTestId("meal-screen-add-cta"));
 
     expect(mockRouterPush).not.toHaveBeenCalledWith(expect.stringContaining("/menu-add"));
-    expect(screen.getByTestId("meal-screen-meal-add-sheet")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "4/18 아침 · 식사 추가" })).toBeTruthy();
+    const sheet = screen.getByTestId("meal-screen-meal-add-sheet");
+    expect(sheet).toBeTruthy();
+    expect(within(sheet).getByRole("heading", { name: "식사 추가" })).toBeTruthy();
+    expect(within(sheet).getByTestId("meal-add-target-badge").textContent).toContain(
+      "4/18 아침",
+    );
 
     await user.click(screen.getByRole("button", { name: /레시피 검색/ }));
 
