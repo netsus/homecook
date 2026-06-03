@@ -160,6 +160,43 @@ describe("ManualRecipeCreateScreen", () => {
     expect(screen.queryByText("HOMECOOK")).toBeNull();
   });
 
+  it("places the desktop embedded save button at the bottom as a larger CTA", () => {
+    installMatchMedia(true);
+
+    render(
+      <ManualRecipeCreateScreen
+        {...DEFAULT_PROPS}
+        onRequestClose={vi.fn()}
+        presentation="embedded"
+      />,
+    );
+
+    const embeddedManual = screen.getByTestId("manual-recipe-embedded");
+    expect(embeddedManual.querySelector(".web-menu-add-embedded-actions")).toBeNull();
+
+    const footer = embeddedManual.querySelector(".web-manual-footer");
+    expect(footer).toBeTruthy();
+    const saveButton = within(footer as HTMLElement).getByRole("button", { name: "저장" });
+    expect(saveButton.className).toContain("web-manual-save-button");
+    expect(saveButton.className).toContain("web-button-lg");
+  });
+
+  it("places the standalone desktop save button at the bottom as a larger CTA", () => {
+    installMatchMedia(true);
+
+    const { container } = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    const manualHead = container.querySelector(".web-manual-head");
+    expect(manualHead).toBeTruthy();
+    expect(within(manualHead as HTMLElement).queryByRole("button", { name: "저장" })).toBeNull();
+
+    const footer = container.querySelector(".web-manual-card .web-manual-footer");
+    expect(footer).toBeTruthy();
+    const saveButton = within(footer as HTMLElement).getByRole("button", { name: "저장" });
+    expect(saveButton.className).toContain("web-manual-save-button");
+    expect(saveButton.className).toContain("web-button-lg");
+  });
+
   it("does not show a non-interactive default step placeholder", async () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
