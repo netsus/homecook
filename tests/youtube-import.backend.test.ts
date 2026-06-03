@@ -7,6 +7,7 @@ import type {
   YoutubeAuthorCommentProvider,
   YoutubeRecipeLlmExtractor,
   YoutubeTranscriptProvider,
+  YoutubeVideoProvider,
   YoutubeVisualQuantityExtractor,
   YoutubeVisualRecipeExtractor,
 } from "@/lib/server/youtube-import";
@@ -506,7 +507,7 @@ const transcriptFallbackUrl = "https://www.youtube.com/watch?v=transcript123";
 const transcriptNoCaptionUrl = "https://www.youtube.com/watch?v=nocaption123";
 const publicCaptionUrl = "https://www.youtube.com/watch?v=captionpublic123";
 const authorCommentFetchUrl = "https://www.youtube.com/watch?v=authorfetch123";
-const needsReviewUrl = "https://www.youtube.com/watch?v=needsreview123";
+const ambiguousMatchUrl = "https://www.youtube.com/watch?v=ambiguousmatch123";
 const missingVideoUrl = "https://www.youtube.com/watch?v=missing123";
 const cucumberSandwichUrl = "https://www.youtube.com/watch?v=cucumber123";
 const cucumberSandwichDescription = [
@@ -1131,6 +1132,20 @@ async function withYoutubeAuthorCommentProvider<T>(
   }
 }
 
+async function withYoutubeVideoProvider<T>(
+  provider: YoutubeVideoProvider,
+  callback: () => Promise<T>,
+) {
+  const youtubeImport = await import("@/lib/server/youtube-import");
+  const restoreVideoProvider = youtubeImport.setYoutubeVideoProviderForTest(provider);
+
+  try {
+    return await callback();
+  } finally {
+    restoreVideoProvider();
+  }
+}
+
 async function withYoutubeRecipeLlmExtractor<T>(
   provider: YoutubeRecipeLlmExtractor,
   callback: () => Promise<T>,
@@ -1363,7 +1378,12 @@ describe("20 youtube real import backend", () => {
     expect(extractionSource).not.toContain("recipio-youtube-parity-fixtures");
     expect(extractionSource).not.toContain("recipio_live_parity_fixture");
     expect(extractionSource).not.toContain("getRecipioYoutubeParityFixture");
-    expect(extractionSource).not.toMatch(/mQUg_liCC34|KBPJt2mkOh4|OyXZEi9kMGU|g9uOBA3j02M|OEassmynRro/u);
+    expect(extractionSource).not.toContain('startsWith("needsreview")');
+    expect(extractionSource).not.toContain("saltNeedsReview");
+    expect(extractionSource).not.toContain("forceNeedsReview");
+    expect(extractionSource).not.toMatch(
+      /mQUg_liCC34|KBPJt2mkOh4|OyXZEi9kMGU|g9uOBA3j02M|OEassmynRro|alkaimTlnPg|O9ScSqgm64c|a9jVn17Yxu8|YGcpbm73wTc|wKcW7x_ZxeY|DQAN8Si_3Z4|suwUaEEpopU|l5iUteLjrVg|nzV3i7fhD7w|Egpjve8caK0|40UQZlbYw0g|J5Rmux3ttaY/u,
+    );
   });
 
   it("POST /api/v1/recipes/youtube/validate returns 401 before validating an invalid body", async () => {
@@ -5628,6 +5648,7 @@ describe("20 youtube real import backend", () => {
     vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
     vi.stubEnv("YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED", "true");
     vi.stubEnv("YOUTUBE_RECIPE_VISUAL_RECIPE_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_RECIPE_CONTRACT_ALIGNED", "true");
     vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
 
     const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
@@ -5856,6 +5877,7 @@ describe("20 youtube real import backend", () => {
     expect(insertedSession.extraction_meta_json).toMatchObject({
       visual_recipe_extractor: {
         attempted: true,
+        contract_aligned: true,
         provider: "gemini",
         status: "used",
         recipe_count: 1,
@@ -6310,11 +6332,22 @@ describe("20 youtube real import backend", () => {
     const ingredientsTable = createLookupTable({
       data: [
         { id: kimchiIngredientId, standard_name: "김치" },
-        { id: saltIngredientId, standard_name: "소금" },
       ],
       error: null,
     });
-    const ingredientSynonymsTable = createEmptyIngredientSynonymsTable();
+    const ingredientSynonymsTable = createLookupTable({
+      data: [
+        {
+          synonym: "소금",
+          ingredients: { id: saltIngredientId, standard_name: "천일염" },
+        },
+        {
+          synonym: "소금",
+          ingredients: { id: waterIngredientId, standard_name: "꽃소금" },
+        },
+      ],
+      error: null,
+    });
     const cookingMethodsTable = createCookingMethodsTable({
       existingResult: {
         data: {
@@ -6341,19 +6374,40 @@ describe("20 youtube real import backend", () => {
 
     createServiceRoleClient.mockReturnValue(dbClient);
 
-    const { POST } = await importExtractRoute();
-    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ youtube_url: needsReviewUrl }),
-    }));
-    const body = await response.json();
+    const videoProvider: YoutubeVideoProvider = {
+      name: "fixture-video",
+      fetchVideo: vi.fn(async (videoId) => ({
+        video: {
+          videoId,
+          title: "백종원 김치찌개 후보 확인 필요",
+          channel: "백종원의 요리비책",
+          channelId: `channel-${videoId}`,
+          thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+          description: [
+            "김치찌개 레시피",
+            "재료",
+            "김치 200g",
+            "소금 약간",
+            "만들기",
+            "김치를 한입 크기로 썬다.",
+          ].join("\n"),
+          tags: ["recipe", "김치찌개", "레시피"],
+          categoryId: "26",
+          duration: "PT15M30S",
+          captionFlag: "false",
+        },
+      })),
+    };
+
+    const { response, body } = await withYoutubeVideoProvider(videoProvider, () =>
+      postYoutubeExtract(ambiguousMatchUrl),
+    );
 
     expect(response.status).toBe(200);
     expect(body).toMatchObject({
       success: true,
       data: {
-        thumbnail_url: "https://img.youtube.com/vi/needsreview123/hqdefault.jpg",
+        thumbnail_url: "https://img.youtube.com/vi/ambiguousmatch123/hqdefault.jpg",
         tags: ["김치찌개", "백종원 김치찌개", "김치"],
         blocking_issues: ["ingredients[1].ingredient_id"],
         ingredients: [
@@ -6363,22 +6417,28 @@ describe("20 youtube real import backend", () => {
             ingredient_id: "",
             confidence: 0.8,
             resolution_status: "needs_review",
-            candidates: [
+            candidates: expect.arrayContaining([
               {
                 ingredient_id: saltIngredientId,
-                standard_name: "소금",
+                standard_name: "천일염",
                 confidence: 0.8,
               },
-            ],
+              {
+                ingredient_id: waterIngredientId,
+                standard_name: "꽃소금",
+                confidence: 0.8,
+              },
+            ]),
           },
         ],
       },
       error: null,
     });
+    expect(videoProvider.fetchVideo).toHaveBeenCalledWith("ambiguousmatch123");
     expect(sessionsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
-      thumbnail_url: "https://img.youtube.com/vi/needsreview123/hqdefault.jpg",
+      thumbnail_url: "https://img.youtube.com/vi/ambiguousmatch123/hqdefault.jpg",
       draft_json: expect.objectContaining({
-        thumbnail_url: "https://img.youtube.com/vi/needsreview123/hqdefault.jpg",
+        thumbnail_url: "https://img.youtube.com/vi/ambiguousmatch123/hqdefault.jpg",
         tags: ["김치찌개", "백종원 김치찌개", "김치"],
       }),
     }));
