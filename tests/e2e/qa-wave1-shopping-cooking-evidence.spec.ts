@@ -254,7 +254,9 @@ async function installShoppingRoutes(page: Page) {
         data: {
           eligible_meals: [
             {
+              column_id: "column-dinner",
               id: "meal-1",
+              plan_date: "2026-04-20",
               recipe_id: "recipe-1",
               recipe_name: "된장찌개",
               recipe_thumbnail: null,
@@ -262,7 +264,9 @@ async function installShoppingRoutes(page: Page) {
               created_at: "2026-04-20T00:00:00.000Z",
             },
             {
+              column_id: "column-breakfast",
               id: "meal-2",
+              plan_date: "2026-04-21",
               recipe_id: "recipe-2",
               recipe_name: "김치볶음밥",
               recipe_thumbnail: null,
@@ -270,7 +274,9 @@ async function installShoppingRoutes(page: Page) {
               created_at: "2026-04-21T00:00:00.000Z",
             },
             {
+              column_id: "column-dinner",
               id: "meal-3",
+              plan_date: "2026-04-22",
               recipe_id: "recipe-3",
               recipe_name: "제육볶음",
               recipe_thumbnail: null,

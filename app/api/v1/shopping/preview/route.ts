@@ -19,6 +19,7 @@ interface QueryOrderOption {
 
 interface MealRow {
   id: string;
+  column_id: string;
   recipe_id: string;
   plan_date: string;
   planned_servings: number;
@@ -92,7 +93,7 @@ export async function GET() {
 
   const mealsResult = await dbClient
     .from("meals")
-    .select("id, recipe_id, plan_date, planned_servings, status, shopping_list_id, created_at")
+    .select("id, recipe_id, column_id, plan_date, planned_servings, status, shopping_list_id, created_at")
     .eq("user_id", user.id)
     .eq("status", "registered")
     .is("shopping_list_id", null)
@@ -155,6 +156,8 @@ export async function GET() {
   return ok({
     eligible_meals: eligibleMeals.map((meal) => ({
       id: meal.id,
+      column_id: meal.column_id,
+      plan_date: meal.plan_date,
       recipe_id: meal.recipe_id,
       recipe_name: recipeMap.get(meal.recipe_id)?.title ?? "",
       recipe_thumbnail: recipeMap.get(meal.recipe_id)?.thumbnail_url ?? null,

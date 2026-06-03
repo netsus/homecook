@@ -278,6 +278,7 @@ describe("shopping stage2 backend", () => {
           {
             id: "550e8400-e29b-41d4-a716-446655440001",
             recipe_id: "recipe-1",
+            column_id: "column-breakfast",
             plan_date: "2026-04-25",
             planned_servings: 2,
             status: "registered",
@@ -331,6 +332,8 @@ describe("shopping stage2 backend", () => {
             recipe_id: "recipe-1",
             recipe_name: "김치찌개",
             recipe_thumbnail: "https://example.com/kimchi.jpg",
+            column_id: "column-breakfast",
+            plan_date: "2026-04-25",
             planned_servings: 2,
             created_at: "2026-04-25T00:00:00.000Z",
           },

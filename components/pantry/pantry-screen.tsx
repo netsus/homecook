@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
@@ -50,7 +50,6 @@ type PantryDisplayItem = {
 
 const TOAST_DURATION_MS = 3000;
 
-
 const WEB_NAV_ITEMS = [
   { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
@@ -82,6 +81,7 @@ export function PantryScreen({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobileViewport = useIsMobileViewport();
 
   const allDisplayItems = useMemo(() => {
@@ -143,8 +143,23 @@ export function PantryScreen({
   );
 
   const showToast = useCallback((message: string, tone: "success" | "error") => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+
     setToast({ message, tone });
-    setTimeout(() => setToast(null), TOAST_DURATION_MS);
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, TOAST_DURATION_MS);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
   }, []);
 
   const loadItems = useCallback(
