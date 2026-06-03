@@ -201,7 +201,9 @@ test.describe("Slice 06 recipe-to-planner", () => {
     await dialog.getByRole("button", { name: "아침" }).click();
 
     // Submit
-    await dialog.getByRole("button", { name: "플래너에 추가" }).click();
+    await dialog
+      .getByRole("button", { name: /(플래너에 추가|\d+\/\d+ 아침에 추가)/ })
+      .click();
 
     // Sheet closes, success toast appears with date + meal slot name (D3)
     await expect(dialog).not.toBeVisible();
@@ -315,7 +317,9 @@ test.describe("Slice 06 recipe-to-planner", () => {
     const dialog = page.getByRole("dialog", { name: "플래너에 추가" });
     await expect(dialog.getByRole("button", { name: "아침" })).toBeVisible();
     await dialog.getByRole("button", { name: "아침" }).click();
-    await dialog.getByRole("button", { name: "플래너에 추가" }).click();
+    await dialog
+      .getByRole("button", { name: /(플래너에 추가|\d+\/\d+ 아침에 추가)/ })
+      .click();
 
     // Error appears inside dialog, dialog stays open
     await expect(dialog.getByText(/플래너 추가에 실패했어요/)).toBeVisible();

@@ -3389,11 +3389,21 @@ export function YoutubeImportScreen({
               <h1>영상 링크에서 레시피를 추출해요</h1>
               <p className="web-menu-add-target">{targetLabel}</p>
             </div>
-            {currentStep !== "complete" ? (
-              <WebButton onClick={handleBack} variant="secondary">
-                뒤로
-              </WebButton>
-            ) : null}
+            <div className="web-manual-actions">
+              {currentStep !== "complete" ? (
+                <WebButton onClick={handleBack} variant="secondary">
+                  뒤로
+                </WebButton>
+              ) : null}
+              {currentStep === "review" ? (
+                <WebButton
+                  disabled={!canRegister || isRegistering}
+                  onClick={handleRegister}
+                >
+                  {isRegistering ? "등록 중..." : "등록"}
+                </WebButton>
+              ) : null}
+            </div>
           </div>
           {desktopImportCard}
         </div>

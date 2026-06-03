@@ -3637,15 +3637,16 @@ button {
     background: var(--web-surface);
     clip-path: inset(0 round 10px);
     font-size: 26px;
+    isolation: isolate;
   }
 
   .web-modal-preview-thumb-image {
     display: block;
-    width: 100%;
-    height: 100%;
+    width: 100% !important;
+    height: 100% !important;
     max-width: 100%;
     max-height: 100%;
-    border-radius: inherit;
+    border-radius: 10px;
     background: var(--web-surface);
     object-fit: cover;
   }
