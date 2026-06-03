@@ -57,9 +57,9 @@
   --danger-strong: #b62620;
   --like-active: #ff4f5a;
   --olive:      #00A1FF;
-  --muted:      #8a8e93;
+  --muted:      #6b7280;
   --text-2:     #424242;
-  --text-3:     #8a8e93;
+  --text-3:     #6b7280;
   --text-4:     #cfd4d8;
   --text-inverse: #ffffff;
   --text-inverse-65: rgba(255, 255, 255, 0.65);
@@ -857,7 +857,7 @@ button {
     --web-image-placeholder: #EAEDEF;
     --web-text-1: #2f3438;
     --web-text-2: #424242;
-    --web-text-3: #8a8e93;
+    --web-text-3: #6b7280;
     --web-text-4: #cfd4d8;
     --web-text-inverse: #ffffff;
     --web-line: rgba(0, 0, 0, 0.08);
@@ -1519,6 +1519,10 @@ button {
 
   .web-screen {
     padding: 48px 0 96px;
+  }
+
+  .web-home .web-screen {
+    padding-top: 32px;
   }
 
   .web-profile-button {
@@ -3952,13 +3956,14 @@ button {
 
   .web-menu-add-embedded {
     display: grid;
-    gap: 16px;
+    gap: 10px;
     width: 100%;
   }
 
   .web-menu-add-embedded-actions {
     display: flex;
     justify-content: flex-end;
+    margin-bottom: -2px;
   }
 
   .web-menu-add-inline-entry {
@@ -4092,6 +4097,13 @@ button {
   .web-picker-recipe-card .web-recipe-card-title {
     -webkit-line-clamp: 1;
     line-clamp: 1;
+  }
+
+  .web-picker-recipe-card .web-recipe-card-meta {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .web-picker-select-badge {

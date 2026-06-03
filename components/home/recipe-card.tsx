@@ -19,7 +19,7 @@ export function RecipeCard({ isSaved = false, onOpen, onSave, recipe }: RecipeCa
     recipe.save_count > 100 ? "인기" : formatRecipeSourceLabel(recipe.source_type);
 
   return (
-    <article className="group relative flex min-h-full flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[0px_2px_8px_var(--shadow-color-soft)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0px_4px_12px_var(--shadow-color-medium)] active:shadow-[0px_4px_12px_var(--shadow-color-medium)]">
+    <article className="group relative flex min-h-full flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[0px_2px_8px_var(--shadow-color-soft)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0px_4px_12px_var(--shadow-color-medium)] active:-translate-y-0.5 active:shadow-[0px_4px_12px_var(--shadow-color-medium)]">
       <Link
         className="relative block overflow-hidden"
         href={`/recipe/${recipe.id}`}
@@ -62,7 +62,7 @@ export function RecipeCard({ isSaved = false, onOpen, onSave, recipe }: RecipeCa
             {recipe.title}
           </h3>
         </Link>
-        <div className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-[var(--text-2)]">
+        <div className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-[var(--text-3)]">
           <span>조회 {formatCount(recipe.view_count)}</span>
           <span>·</span>
           <span>저장 {formatCount(recipe.save_count)}</span>

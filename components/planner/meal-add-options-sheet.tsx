@@ -92,7 +92,7 @@ export function MealAddOptionsSheet({
     <AppBottomSheet
       ariaLabelledBy="meal-add-options-title"
       badge={<MealAddTargetBadge className="shrink-0" label={targetLabel} />}
-      bodyClassName="pb-6"
+      bodyClassName="pb-[calc(24px+env(safe-area-inset-bottom))]"
       onClose={onClose}
       panelClassName="max-w-[480px]"
       testId={testId}

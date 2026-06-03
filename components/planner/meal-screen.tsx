@@ -218,6 +218,7 @@ function LoadingSkeleton() {
               data-testid="meal-screen-loading-thumb"
             />
             <div className="min-w-0 flex-1 pr-7">
+              <Skeleton className="mb-1 h-6 w-12 rounded-full" />
               <Skeleton className="h-5 w-36 max-w-full" />
               <Skeleton className="mt-2 h-4 w-24" />
             </div>
@@ -254,41 +255,6 @@ function LoadingSkeleton() {
         </article>
       ))}
     </div>
-  );
-}
-
-function LoadingSummarySkeleton({
-  planDate,
-  slotName,
-}: {
-  planDate: string;
-  slotName: string;
-}) {
-  return (
-    <section
-      className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5"
-      data-testid="meal-screen-loading-summary"
-    >
-      <div className="mb-2">
-        <span className="sr-only">끼니 요약 불러오는 중</span>
-        <Skeleton
-          className="h-[17px] rounded-full"
-          width={slotName ? 104 : 72}
-        />
-      </div>
-      <Skeleton
-        className="h-[30px] rounded-[var(--radius-md)]"
-        width="min(72%, 220px)"
-      />
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Skeleton className="h-[30px] w-[72px] rounded-full" />
-        <Skeleton className="h-[30px] w-[104px] rounded-full" />
-      </div>
-      <span className="sr-only">
-        {formatDateShort(planDate)}
-        {slotName ? ` · ${slotName}` : ""}
-      </span>
-    </section>
   );
 }
 
@@ -714,20 +680,9 @@ function MealWebLoadingSkeleton({
       data-testid="web-meal-loading-skeleton"
     >
       <section className="web-meal-main" aria-labelledby="web-meal-loading-title">
-        <div className="web-meal-list-head">
-          <div>
-            <WebSkeleton
-              aria-hidden="true"
-              className="mb-2"
-              height={36}
-              width={180}
-            />
-            <WebSkeleton aria-hidden="true" height={18} width={260} />
-            <h1 className="sr-only" id="web-meal-loading-title">
-              끼니 음식 불러오는 중
-            </h1>
-          </div>
-        </div>
+        <h1 className="sr-only" id="web-meal-loading-title">
+          끼니 음식 불러오는 중
+        </h1>
 
         <div className="web-meal-list">
           {Array.from({ length: 2 }).map((_, index) => (
@@ -1482,10 +1437,6 @@ export function MealScreen({
         {/* Scrollable content area */}
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto overflow-x-hidden">
-            {isLoading ? (
-              <LoadingSummarySkeleton planDate={planDate} slotName={slotName} />
-            ) : null}
-
             <div className="space-y-3 p-4">
               {/* Loading skeletons */}
               {isLoading ? <LoadingSkeleton /> : null}

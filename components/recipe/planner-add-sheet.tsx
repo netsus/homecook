@@ -109,10 +109,6 @@ export function PlannerAddSheet({
   const selectedColumnName =
     columns.find((column) => column.id === selectedColumnId)?.name ?? "끼니";
   const selectedDateShort = selectedDate ? formatDateLabel(selectedDate) : "";
-  const selectedTargetLabel =
-    selectedDateShort && selectedColumnName
-      ? `대상 · ${selectedDateShort} ${selectedColumnName}`
-      : "";
   const shouldScrollMealColumns = columns.length > 4;
   const mealColumnGroupClass = shouldScrollMealColumns
     ? "scrollbar-hide mb-4 flex gap-2 overflow-x-auto pb-1"
@@ -405,7 +401,6 @@ export function PlannerAddSheet({
           <AppBottomSheet
             ariaLabelledBy="planner-add-sheet-title-mobile"
             closeDisabled={isSubmitting}
-            description="날짜와 끼니를 선택해 주세요"
             footer={footerActions}
             onClose={onClose}
             title="플래너에 추가"
@@ -421,11 +416,6 @@ export function PlannerAddSheet({
                   <WebDialogTitle id="planner-add-sheet-title-desktop">
                     플래너에 추가
                   </WebDialogTitle>
-                  {selectedTargetLabel ? (
-                    <p className="web-modal-target text-[var(--web-brand-accessible)]">
-                      {selectedTargetLabel}
-                    </p>
-                  ) : null}
                 </div>
                 <WebIconButton
                   aria-label="닫기"

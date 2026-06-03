@@ -467,7 +467,6 @@ export function PantryMatchPicker({
   if (presentation === "web") {
     return (
       <section className="web-picker-section" aria-label="팬트리 기반 추천">
-        <MealAddTargetBadge className="mb-3" label={slotLabel} tone="web" />
         {content}
         {selectedRecipe && (
           <ServingsModal

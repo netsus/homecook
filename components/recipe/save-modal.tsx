@@ -108,7 +108,11 @@ export function SaveModal({
               confirmLabel={
                 isSavingRecipe
                   ? "저장 중..."
-                  : formatSaveConfirmLabel(newSelectedBookCount, removedBookCount)
+                  : formatSaveConfirmLabel(
+                      newSelectedBookCount,
+                      removedBookCount,
+                      alreadySavedBookIds.length > 0,
+                    )
               }
               onCancel={onClose}
               onConfirm={onSaveRecipe}
@@ -383,7 +387,11 @@ export function SaveModal({
               <WebButton disabled={disableSave} onClick={onSaveRecipe}>
                 {isSavingRecipe
                   ? "저장 중..."
-                  : formatSaveConfirmLabel(newSelectedBookCount, removedBookCount)}
+                  : formatSaveConfirmLabel(
+                      newSelectedBookCount,
+                      removedBookCount,
+                      alreadySavedBookIds.length > 0,
+                    )}
               </WebButton>
           </WebDialogFooter>
           </>
@@ -396,13 +404,19 @@ export function SaveModal({
   );
 }
 
-function formatSaveConfirmLabel(addCount: number, removeCount: number) {
+function formatSaveConfirmLabel(
+  addCount: number,
+  removeCount: number,
+  hasExistingSave: boolean,
+) {
   if (addCount > 0 && removeCount > 0) {
     return `${addCount}개 추가 · ${removeCount}개 저장 해제`;
   }
 
   if (addCount > 0) {
-    return `${addCount}개 레시피북에 추가 저장`;
+    return hasExistingSave
+      ? `${addCount}개 레시피북에 추가 저장`
+      : `${addCount}개 레시피북에 저장`;
   }
 
   if (removeCount > 0) {

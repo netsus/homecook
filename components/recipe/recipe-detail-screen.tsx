@@ -1191,14 +1191,6 @@ export function RecipeDetailScreen({
           >
             <ChevronLeftIcon />
           </button>
-          <button
-            aria-label="공유하기"
-            className="visually-hidden"
-            onClick={handleShare}
-            type="button"
-          >
-            공유하기
-          </button>
           <div
             className="recipe-overview-metrics-compact absolute bottom-[18px] right-3.5 flex flex-col flex-wrap items-center gap-0"
             style={{ gap: 0 }}
@@ -1221,6 +1213,12 @@ export function RecipeDetailScreen({
               count={saveCountLabel}
               icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
               onClick={() => handleProtectedAction("save")}
+            />
+            <Wave1HeroMetricButton
+              ariaLabel="공유하기"
+              count="공유"
+              icon={<ShareIcon />}
+              onClick={handleShare}
             />
           </div>
         </section>
@@ -1687,12 +1685,7 @@ function RecipeDetailWebView({
               ) : null}
               <h1 className="web-recipe-title">{recipe.title}</h1>
               <div className="web-recipe-tags">
-                {visibleTags.map((tag) => (
-                  <WebChip className="web-tag" key={tag}>
-                    {tag}
-                  </WebChip>
-                ))}
-                {youtubeSourceHref ? (
+                {recipe.source_type === "youtube" && youtubeSourceHref ? (
                   <a
                     className="web-chip web-chip-active web-tag web-source-tag"
                     href={youtubeSourceHref}
@@ -1701,11 +1694,22 @@ function RecipeDetailWebView({
                   >
                     {sourceLabel}
                   </a>
-                ) : (
+                ) : null}
+                {recipe.source_type === "youtube" && !youtubeSourceHref ? (
                   <WebChip active className="web-tag">
                     {sourceLabel}
                   </WebChip>
-                )}
+                ) : null}
+                {visibleTags.map((tag) => (
+                  <WebChip className="web-tag" key={tag}>
+                    {tag}
+                  </WebChip>
+                ))}
+                {recipe.source_type !== "youtube" ? (
+                  <WebChip active className="web-tag">
+                    {sourceLabel}
+                  </WebChip>
+                ) : null}
               </div>
             </section>
 
@@ -1979,9 +1983,19 @@ function getYoutubeSourceHref(recipe: RecipeDetail) {
 
 function getVisibleRecipeTags(recipe: RecipeDetail) {
   const sourceLabel = formatRecipeSourceLabel(recipe.source_type);
+  const sourceKey = normalizeRecipeTag(sourceLabel);
+  const titleKey = normalizeRecipeTag(recipe.title);
+
   return recipe.tags
-    .filter((tag) => tag !== sourceLabel)
+    .filter((tag) => {
+      const tagKey = normalizeRecipeTag(tag);
+      return tagKey.length > 0 && tagKey !== sourceKey && tagKey !== titleKey;
+    })
     .slice(0, 3);
+}
+
+function normalizeRecipeTag(value: string) {
+  return value.trim().replace(/^#+/, "").trim().toLowerCase();
 }
 
 function RecipeDetailLoadingSkeleton() {

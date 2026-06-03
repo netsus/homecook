@@ -227,7 +227,6 @@ export function RecipeBookSelector({
   if (presentation === "web") {
     return (
       <section className="web-picker-section" aria-label="레시피북 선택">
-        <MealAddTargetBadge className="mb-3" label={slotLabel} tone="web" />
         {content}
       </section>
     );

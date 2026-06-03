@@ -109,7 +109,7 @@ describe("MealScreen", () => {
 
     const skeleton = await screen.findByTestId("meal-screen-loading-skeleton");
     expect(skeleton.getAttribute("aria-busy")).toBe("true");
-    expect(screen.getByTestId("meal-screen-loading-summary")).toBeTruthy();
+    expect(screen.queryByTestId("meal-screen-loading-summary")).toBeNull();
     expect(screen.getAllByTestId("meal-screen-loading-card")).toHaveLength(2);
     expect(screen.getAllByTestId("meal-screen-loading-thumb")).toHaveLength(2);
     expect(screen.getAllByTestId("meal-screen-loading-stepper")).toHaveLength(2);
