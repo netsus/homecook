@@ -25,6 +25,7 @@ import {
   uneatLeftover,
 } from "@/lib/api/leftovers";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { formatKoreaCompactDate, formatKoreaDate } from "@/lib/korean-date";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -48,19 +49,15 @@ export interface AteListScreenProps {
 
 function formatEatenAt(dateStr: string | null) {
   if (!dateStr) return "";
-  const date = new Date(dateStr);
 
-  return new Intl.DateTimeFormat("ko-KR", {
+  return formatKoreaDate(dateStr, {
     month: "long",
     day: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+  });
 }
 
 function formatShortDate(dateStr: string) {
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return "";
-  return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
+  return formatKoreaCompactDate(dateStr);
 }
 
 function formatLeftoverMeta(item: LeftoverListItemData) {

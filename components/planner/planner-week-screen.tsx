@@ -23,6 +23,11 @@ import {
 } from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
+  formatKoreaCompactDate,
+  formatKoreaDate,
+  formatKoreaWeekday,
+} from "@/lib/korean-date";
+import {
   createDefaultPlannerRange,
   isPlannerApiError,
   shiftPlannerRange,
@@ -77,22 +82,14 @@ function buildDateKeys(startDate: string, endDate: string) {
 }
 
 function formatDateLabel(dateKey: string) {
-  const date = new Date(`${dateKey}T00:00:00.000Z`);
-
-  return new Intl.DateTimeFormat("ko-KR", {
+  return formatKoreaDate(dateKey, {
     month: "long",
     day: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+  });
 }
 
 function formatWeekdayLabel(dateKey: string) {
-  const date = new Date(`${dateKey}T00:00:00.000Z`);
-
-  return new Intl.DateTimeFormat("ko-KR", {
-    weekday: "short",
-    timeZone: "UTC",
-  }).format(date);
+  return formatKoreaWeekday(dateKey, "short");
 }
 
 function formatRangeLabel(startDate: string, endDate: string) {
@@ -100,9 +97,7 @@ function formatRangeLabel(startDate: string, endDate: string) {
 }
 
 function formatCompactDateLabel(dateKey: string) {
-  const date = new Date(`${dateKey}T00:00:00.000Z`);
-
-  return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
+  return formatKoreaCompactDate(dateKey);
 }
 
 function formatMobileWeekRangeLabel(startDate: string, endDate: string) {

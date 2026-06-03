@@ -213,6 +213,22 @@ describe("LeftoversScreen", () => {
     expect(screen.getAllByRole("link", { name: "요리하기" })).toHaveLength(2);
   });
 
+  it("formats leftover timestamps with the Korea calendar day", async () => {
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
+      items: [
+        {
+          ...LEFTOVER_ITEMS[0],
+          cooked_at: "2026-04-20T16:30:00.000Z",
+        },
+      ],
+    });
+
+    render(<LeftoversScreen initialAuthenticated={true} />);
+
+    expect(await screen.findByText("김치찌개")).toBeTruthy();
+    expect(screen.getByText(/4월 21일/)).toBeTruthy();
+  });
+
   it("renders empty state when no leftovers", async () => {
     vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
       items: [],
@@ -541,6 +557,22 @@ describe("AteListScreen", () => {
     ).toBeTruthy();
     expect(screen.getByText(/4월 22일/)).toBeTruthy();
     expect(screen.queryByText(/다먹음/)).toBeNull();
+  });
+
+  it("formats eaten timestamps with the Korea calendar day", async () => {
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
+      items: [
+        {
+          ...EATEN_ITEMS[0],
+          eaten_at: "2026-04-22T16:30:00.000Z",
+        },
+      ],
+    });
+
+    render(<AteListScreen initialAuthenticated={true} />);
+
+    expect(await screen.findByText("김치찌개")).toBeTruthy();
+    expect(screen.getByText(/4월 23일/)).toBeTruthy();
   });
 
   it("renders empty state when no eaten items", async () => {

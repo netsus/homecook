@@ -40,6 +40,7 @@ import {
   updateMealServings,
 } from "@/lib/api/meal";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { formatKoreaCompactDate, formatKoreaDate } from "@/lib/korean-date";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -71,19 +72,14 @@ const WEB_NAV_ITEMS = [
 ] as const;
 
 function formatDateLong(planDate: string) {
-  const date = new Date(`${planDate}T00:00:00.000Z`);
-  return new Intl.DateTimeFormat("ko-KR", {
+  return formatKoreaDate(planDate, {
     month: "long",
     day: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+  });
 }
 
 function formatDateShort(planDate: string) {
-  const date = new Date(`${planDate}T00:00:00.000Z`);
-  const month = date.getUTCMonth() + 1;
-  const day = date.getUTCDate();
-  return `${month}/${day}`;
+  return formatKoreaCompactDate(planDate);
 }
 
 function buildNextPath(planDate: string, columnId: string, slotName: string) {

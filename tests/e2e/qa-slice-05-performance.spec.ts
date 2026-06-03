@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { formatKoreaDate } from "../../lib/korean-date";
 import { buildSlice05PerformanceDataset } from "../../scripts/lib/slice-05-performance-fixture.mjs";
 
 const dataset = buildSlice05PerformanceDataset({
@@ -13,13 +14,10 @@ const PERFORMANCE_BUDGET_MS = {
 };
 
 function formatRangeLabel(dateKey: string) {
-  const date = new Date(`${dateKey}T00:00:00.000Z`);
-
-  return new Intl.DateTimeFormat("ko-KR", {
+  return formatKoreaDate(dateKey, {
     month: "long",
     day: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+  });
 }
 
 async function waitForPlannerRange(page: Page, {

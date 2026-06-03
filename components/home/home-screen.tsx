@@ -33,6 +33,7 @@ import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
+import { KOREA_TIME_ZONE } from "@/lib/korean-date";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -63,8 +64,6 @@ const WEB_NAV_ITEMS = [
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
 ] as const;
-
-const KOREA_TIME_ZONE = "Asia/Seoul";
 
 function formatHomeMealGreeting(now = new Date()) {
   const weekday = new Intl.DateTimeFormat("ko-KR", {

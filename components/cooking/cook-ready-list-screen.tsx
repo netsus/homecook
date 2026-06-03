@@ -24,6 +24,11 @@ import {
 } from "@/components/web";
 import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import {
+  formatKoreaCompactDate,
+  formatKoreaDate,
+  formatKoreaWeekday,
+} from "@/lib/korean-date";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import {
@@ -62,13 +67,10 @@ export interface CookReadyListScreenProps {
 
 function formatDateRange(start: string, end: string) {
   function format(dateStr: string) {
-    const date = new Date(`${dateStr}T00:00:00.000Z`);
-
-    return new Intl.DateTimeFormat("ko-KR", {
+    return formatKoreaDate(dateStr, {
       month: "long",
       day: "numeric",
-      timeZone: "UTC",
-    }).format(date);
+    });
   }
 
   return `${format(start)} ~ ${format(end)}`;
@@ -77,13 +79,11 @@ function formatDateRange(start: string, end: string) {
 function formatMobileCookDate(start: string | undefined) {
   if (!start) return "오늘";
 
-  const date = new Date(`${start}T00:00:00.000Z`);
-  const label = new Intl.DateTimeFormat("ko-KR", {
+  const label = formatKoreaDate(start, {
     day: "numeric",
     month: "long",
-    timeZone: "UTC",
     weekday: "long",
-  }).format(date);
+  });
 
   return `오늘 ${label}`;
 }
@@ -91,24 +91,17 @@ function formatMobileCookDate(start: string | undefined) {
 function formatMobileMealDate(start: string | undefined) {
   if (!start) return "오늘";
 
-  const date = new Date(`${start}T00:00:00.000Z`);
-
-  return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
+  return formatKoreaCompactDate(start);
 }
 
 function formatDesktopCookDate(start: string | undefined) {
   if (!start) return "오늘";
 
-  const date = new Date(`${start}T00:00:00.000Z`);
-  const weekday = new Intl.DateTimeFormat("ko-KR", {
-    timeZone: "UTC",
-    weekday: "long",
-  }).format(date);
-  const monthDay = new Intl.DateTimeFormat("ko-KR", {
+  const weekday = formatKoreaWeekday(start, "long");
+  const monthDay = formatKoreaDate(start, {
     day: "numeric",
     month: "long",
-    timeZone: "UTC",
-  }).format(date);
+  });
 
   return `${weekday} (${monthDay})`;
 }
