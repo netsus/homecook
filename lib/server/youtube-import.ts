@@ -589,7 +589,7 @@ const DEFAULT_VISUAL_RECIPE_SCHEMA_VERSION = "2026-06-02-visual-recipe-v1";
 const VISUAL_QUANTITY_CACHE_TTL_DAYS = 90;
 const LLM_MAX_RECIPES = 12;
 const LLM_MAX_SOURCE_LINES = 240;
-const VISUAL_RECIPE_SPARSE_TEXT_MIN_INGREDIENTS = 8;
+const VISUAL_RECIPE_SPARSE_TEXT_MIN_INGREDIENTS = 5;
 const VISUAL_RECIPE_SPARSE_TEXT_MIN_STEPS = 5;
 const PREFERRED_TRANSCRIPT_LANGUAGES = ["ko", "en"] as const;
 const YOUTUBE_BROWSER_USER_AGENT =
@@ -658,7 +658,7 @@ interface ParsedRecipeDescriptionForImport {
   };
 }
 
-interface YoutubeProviderVideo {
+export interface YoutubeProviderVideo {
   videoId: string;
   title: string;
   channel: string;
@@ -755,13 +755,18 @@ interface YoutubeProviderError {
   status: number;
 }
 
-type YoutubeProviderResult =
+export type YoutubeProviderResult =
   | { video: YoutubeProviderVideo }
   | { providerError: YoutubeProviderError };
 
 type YoutubePreviewResult =
   | { video: YoutubePreviewVideo }
   | { providerError: YoutubeProviderError };
+
+export interface YoutubeVideoProvider {
+  name: string;
+  fetchVideo(videoId: string): Promise<YoutubeProviderResult>;
+}
 
 interface TranscriptFallbackMeta {
   attempted: boolean;
@@ -995,6 +1000,7 @@ interface VisualRecipeExtractorMeta {
   provider: string | null;
   model: string | null;
   schema_version: string;
+  contract_aligned: boolean;
   status:
     | "not_needed"
     | "disabled"
@@ -1126,9 +1132,23 @@ const YOUTUBE_COMMENT_THREADS_PROVIDER: YoutubeAuthorCommentProvider = {
 
 let transcriptProviderForTest: YoutubeTranscriptProvider | null = null;
 let authorCommentProviderForTest: YoutubeAuthorCommentProvider | null = null;
+let youtubeVideoProviderForTest: YoutubeVideoProvider | null = null;
 let recipeLlmExtractorForTest: YoutubeRecipeLlmExtractor | null = null;
 let visualQuantityExtractorForTest: YoutubeVisualQuantityExtractor | null = null;
 let visualRecipeExtractorForTest: YoutubeVisualRecipeExtractor | null = null;
+
+export function setYoutubeVideoProviderForTest(provider: YoutubeVideoProvider | null) {
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("setYoutubeVideoProviderForTest is only available in tests");
+  }
+
+  const previousProvider = youtubeVideoProviderForTest;
+  youtubeVideoProviderForTest = provider;
+
+  return () => {
+    youtubeVideoProviderForTest = previousProvider;
+  };
+}
 
 export function setYoutubeTranscriptProviderForTest(provider: YoutubeTranscriptProvider | null) {
   if (process.env.NODE_ENV !== "test") {
@@ -1508,30 +1528,6 @@ function getFixtureVideo(videoId: string): YoutubeProviderResult {
     };
   }
 
-  if (videoId.startsWith("needsreview")) {
-    return {
-      video: {
-        videoId,
-        title: "백종원 김치찌개 후보 확인 필요",
-        channel: "백종원의 요리비책",
-        channelId: getFixtureChannelId(videoId),
-        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
-        description: [
-          "김치찌개 레시피",
-          "재료",
-          "김치 200g",
-          "소금 약간",
-          "만들기",
-          "김치를 한입 크기로 썬다.",
-        ].join("\n"),
-        tags: ["recipe", "김치찌개", "레시피"],
-        categoryId: "26",
-        duration: "PT15M30S",
-        captionFlag: "false",
-      },
-    };
-  }
-
   return {
     video: {
       videoId,
@@ -1747,6 +1743,10 @@ async function fetchYoutubePreview(
 }
 
 async function fetchYoutubeVideo(videoId: string): Promise<YoutubeProviderResult> {
+  if (youtubeVideoProviderForTest) {
+    return youtubeVideoProviderForTest.fetchVideo(videoId);
+  }
+
   const apiKey = process.env.YOUTUBE_API_KEY;
 
   if (!apiKey) {
@@ -4078,13 +4078,14 @@ function getVisualQuantityExtractionConfig() {
 
 function getVisualRecipeExtractionConfig() {
   const explicitVisualRecipeEnabled = process.env.YOUTUBE_RECIPE_VISUAL_RECIPE_ENABLED;
+  const contractAligned = process.env.YOUTUBE_RECIPE_VISUAL_RECIPE_CONTRACT_ALIGNED === "true";
   const enabled = explicitVisualRecipeEnabled === "true"
     || (
       explicitVisualRecipeEnabled === undefined
       && process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED === "true"
     );
 
-  if (!enabled) {
+  if (!enabled || !contractAligned) {
     return null;
   }
 
@@ -4118,6 +4119,7 @@ function getVisualRecipeExtractionConfig() {
     ),
     schemaVersion: process.env.YOUTUBE_RECIPE_VISUAL_RECIPE_SCHEMA_VERSION?.trim()
       || DEFAULT_VISUAL_RECIPE_SCHEMA_VERSION,
+    contractAligned,
   };
 }
 
@@ -4169,6 +4171,7 @@ function buildVisualRecipeExtractorMeta({
   provider = null,
   model = null,
   schemaVersion = DEFAULT_VISUAL_RECIPE_SCHEMA_VERSION,
+  contractAligned = false,
   status,
   cacheHit = false,
   triggerReason = null,
@@ -4182,6 +4185,7 @@ function buildVisualRecipeExtractorMeta({
   provider?: string | null;
   model?: string | null;
   schemaVersion?: string;
+  contractAligned?: boolean;
   status: VisualRecipeExtractorMeta["status"];
   cacheHit?: boolean;
   triggerReason?: string | null;
@@ -4196,6 +4200,7 @@ function buildVisualRecipeExtractorMeta({
     provider,
     model,
     schema_version: schemaVersion,
+    contract_aligned: contractAligned,
     status,
     cache_hit: cacheHit,
     trigger_reason: triggerReason,
@@ -5504,7 +5509,7 @@ function isInvalidLlmIngredientName(name: string) {
 
 function hasLlmCookingAction(instruction: string) {
   return hasCookingAction(instruction)
-    || /(?:채워|채우|담아|담고|담아요|말아|말고|감싸|묻히|묻혀|부쳐|부치|맛을\s*내|간을\s*해|간해|재워|재우|펴|덮어|올리|익히|섞어|무쳐)/u
+    || /(?:채워|채우|담아|담고|담아요|말아|말고|감싸|묻히|묻혀|부쳐|부치|부친|맛을\s*내|간을\s*해|간해|재워|재우|펴|깔아|깔고|깐다|덮어|올리|올린|익히|익힌|섞어|무쳐|무치|무친|비벼|비비|비빈|다져|다지|다진|불려|불리|불린|헹궈|헹구|헹군|식혀|식히|식힌|마무리)/u
       .test(instruction);
 }
 
@@ -6586,10 +6591,13 @@ async function resolveVisualRecipeFallback({
   multiRecipeExtraction: SelectedMultiRecipeExtraction | null;
 }): Promise<VisualRecipeFallbackResult> {
   const config = getVisualRecipeExtractionConfig();
+  const contractAligned = config?.contractAligned
+    ?? process.env.YOUTUBE_RECIPE_VISUAL_RECIPE_CONTRACT_ALIGNED === "true";
   const triggerReason = shouldAttemptVisualRecipeFallback({ recipe: parsedRecipe, sourceBlocks, multiRecipeExtraction });
   const notNeededMeta = buildVisualRecipeExtractorMeta({
     attempted: false,
     schemaVersion: config?.schemaVersion ?? DEFAULT_VISUAL_RECIPE_SCHEMA_VERSION,
+    contractAligned,
     status: "not_needed",
     triggerReason,
   });
@@ -6615,9 +6623,10 @@ async function resolveVisualRecipeFallback({
         attempted: true,
         provider: GEMINI_LLM_PROVIDER,
         schemaVersion: DEFAULT_VISUAL_RECIPE_SCHEMA_VERSION,
+        contractAligned,
         status: "disabled",
         triggerReason,
-        reason: "gemini_visual_recipe_disabled",
+        reason: contractAligned ? "gemini_visual_recipe_disabled" : "visual_recipe_contract_unaligned",
       }),
     };
   }
@@ -6647,6 +6656,7 @@ async function resolveVisualRecipeFallback({
       provider: cached.provider,
       model: config.model,
       schemaVersion: config.schemaVersion,
+      contractAligned,
       status,
       cacheHit: true,
       triggerReason,
@@ -6683,6 +6693,7 @@ async function resolveVisualRecipeFallback({
       provider: config.provider,
       model: config.model,
       schemaVersion: config.schemaVersion,
+      contractAligned,
       status: "unavailable",
       triggerReason,
       reason: "visual_recipe_daily_limit_exceeded",
@@ -6719,6 +6730,7 @@ async function resolveVisualRecipeFallback({
       provider: config.provider,
       model: config.model,
       schemaVersion: config.schemaVersion,
+      contractAligned,
       status: "error",
       triggerReason,
       reason: error instanceof Error ? error.message : "visual_recipe_provider_error",
@@ -6742,6 +6754,7 @@ async function resolveVisualRecipeFallback({
       provider: extractorResult.providerName ?? config.provider,
       model: extractorResult.model ?? config.model,
       schemaVersion: config.schemaVersion,
+      contractAligned,
       status: extractorResult.status === "error" ? "error" : "unavailable",
       triggerReason,
       inputTokens: extractorResult.inputTokens ?? 0,
@@ -6784,6 +6797,7 @@ async function resolveVisualRecipeFallback({
     provider: extractorResult.providerName ?? config.provider,
     model: extractorResult.model ?? config.model,
     schemaVersion: config.schemaVersion,
+    contractAligned,
     status,
     triggerReason,
     recipeCount: candidates.length,
@@ -7974,7 +7988,6 @@ export function buildExtractedIngredient({
   confidence,
   rawText,
   componentLabel = null,
-  forceNeedsReview = false,
   quantitySourceOverride,
   quantityConfidenceOverride,
   quantityRawTextOverride,
@@ -7992,7 +8005,6 @@ export function buildExtractedIngredient({
   confidence: number;
   rawText: string;
   componentLabel?: string | null;
-  forceNeedsReview?: boolean;
   quantitySourceOverride?: YoutubeQuantitySource;
   quantityConfidenceOverride?: number | null;
   quantityRawTextOverride?: string | null;
@@ -8014,9 +8026,7 @@ export function buildExtractedIngredient({
       ? matches[0]
       : null;
   const hasMatch = matches.length > 0;
-  const resolutionStatus: YoutubeIngredientResolutionStatus = forceNeedsReview && hasMatch
-    ? "needs_review"
-    : resolvedMatch
+  const resolutionStatus: YoutubeIngredientResolutionStatus = resolvedMatch
       ? "resolved"
       : hasMatch
         ? "needs_review"
@@ -8067,11 +8077,6 @@ export function buildExtractedIngredient({
 function buildExtractedIngredients(
   matchesByName: IngredientMatchesByName,
   parsedIngredients: ParsedDescriptionIngredient[],
-  {
-    saltNeedsReview = false,
-  }: {
-    saltNeedsReview?: boolean;
-  } = {},
 ): YoutubeExtractedIngredient[] {
   return parsedIngredients.map((ingredient, index) =>
     buildExtractedIngredient({
@@ -8086,7 +8091,6 @@ function buildExtractedIngredients(
       confidence: ingredient.confidence,
       rawText: ingredient.rawText,
       componentLabel: ingredient.componentLabel,
-      forceNeedsReview: saltNeedsReview && ingredient.name === "소금",
       quantitySourceOverride: ingredient.quantitySource,
       quantityConfidenceOverride: ingredient.quantityConfidence,
       quantityRawTextOverride: ingredient.quantityRawText,
@@ -8667,9 +8671,7 @@ export async function handleYoutubeExtract(request: Request) {
     return fail("INTERNAL_ERROR", "조리방법을 준비하지 못했어요.", 500);
   }
 
-  const extractedIngredients = buildExtractedIngredients(ingredientLookup.matchesByName, finalParsedRecipe.ingredients, {
-    saltNeedsReview: parsedUrl.videoId.startsWith("needsreview"),
-  });
+  const extractedIngredients = buildExtractedIngredients(ingredientLookup.matchesByName, finalParsedRecipe.ingredients);
   const visualQuantityEnrichment = await resolveVisualQuantityEnrichment({
     dbClient,
     userId: user.id,

@@ -1,0 +1,321 @@
+{
+  "version": "youtube-recipio-parity-v1",
+  "benchmarks": [
+    {
+      "id": "recipio-01-alio-olio-tteokbokki",
+      "video_id": "alkaimTlnPg",
+      "title": "알리오올리오 떡볶이",
+      "source_profile": "description_detailed",
+      "public_score": 0.96,
+      "historical_local_score": 0.92,
+      "requires_visual_recipe_contract": false,
+      "description": "재료\n떡볶이떡 300g\n마늘 6쪽\n올리브오일 3큰술\n페퍼론치노 3개\n소금 약간\n후추 약간\n만드는 법\n1. 떡은 물에 헹궈 준비한다.\n2. 팬에 올리브오일을 두르고 마늘과 페퍼론치노를 볶는다.\n3. 떡을 넣고 겉이 말랑해질 때까지 볶는다.\n4. 소금과 후추로 간을 맞춘다.",
+      "author_comment": null,
+      "transcript": null,
+      "expected_ingredients": [
+        { "name": "떡", "amount": null, "unit": null, "type": "TO_TASTE" },
+        { "name": "마늘", "amount": 6, "unit": "쪽", "type": "QUANT" },
+        { "name": "올리브오일", "amount": 3, "unit": "큰술", "type": "QUANT" },
+        { "name": "페퍼론치노", "amount": 3, "unit": "개", "type": "QUANT" },
+        { "name": "소금", "amount": null, "unit": null, "type": "TO_TASTE" },
+        { "name": "후추", "amount": null, "unit": null, "type": "TO_TASTE" }
+      ],
+      "expected_steps": [
+        { "step_number": 1, "instruction_pattern": "떡.*헹궈.*준비" },
+        { "step_number": 2, "instruction_pattern": "올리브오일.*마늘.*페퍼론치노.*볶" },
+        { "step_number": 3, "instruction_pattern": "떡.*볶" },
+        { "step_number": 4, "instruction_pattern": "소금.*후추.*간" }
+      ]
+    },
+    {
+      "id": "recipio-02-bokjumeoni-mandu",
+      "video_id": "O9ScSqgm64c",
+      "title": "복주머니 만두",
+      "source_profile": "description_detailed",
+      "public_score": 0.95,
+      "historical_local_score": 0.91,
+      "requires_visual_recipe_contract": false,
+      "description": "재료\n만두피 12장\n돼지고기 다짐육 200g\n부추 50g\n두부 100g\n간장 1큰술\n참기름 1큰술\n만드는 법\n1. 두부는 물기를 짜고 부추는 잘게 썬다.\n2. 돼지고기, 두부, 부추, 간장, 참기름을 섞어 소를 만든다.\n3. 만두피에 소를 올리고 복주머니 모양으로 감싼다.\n4. 찜기에 올려 속이 익을 때까지 찐다.",
+      "author_comment": null,
+      "transcript": null,
+      "expected_ingredients": [
+        { "name": "만두피", "amount": 12, "unit": "장", "type": "QUANT" },
+        { "name": "돼지고기 다짐육", "amount": 200, "unit": "g", "type": "QUANT" },
+        { "name": "부추", "amount": 50, "unit": "g", "type": "QUANT" },
+        { "name": "두부", "amount": 100, "unit": "g", "type": "QUANT" },
+        { "name": "간장", "amount": 1, "unit": "큰술", "type": "QUANT" },
+        { "name": "참기름", "amount": 1, "unit": "큰술", "type": "QUANT" }
+      ],
+      "expected_steps": [
+        { "step_number": 1, "instruction_pattern": "두부.*물기.*부추.*썬" },
+        { "step_number": 2, "instruction_pattern": "돼지고기.*두부.*부추.*섞" },
+        { "step_number": 3, "instruction_pattern": "만두피.*소.*감" },
+        { "step_number": 4, "instruction_pattern": "찜기.*찐" }
+      ]
+    },
+    {
+      "id": "recipio-03-aehobak-tuna-rice",
+      "video_id": "a9jVn17Yxu8",
+      "title": "애호박참치밥",
+      "source_profile": "author_comment",
+      "public_score": 0.86,
+      "historical_local_score": 0.66,
+      "requires_visual_recipe_contract": false,
+      "description": "오늘은 간단한 밥 요리입니다. 자세한 레시피는 고정 댓글에 적어두었어요.",
+      "author_comment": "재료\n밥 1공기\n애호박 0.5개\n참치캔 1캔\n간장 1큰술\n참기름 1큰술\n통깨 약간\n만드는 법\n1. 애호박은 작게 썰어 팬에 볶는다.\n2. 참치는 기름을 빼고 애호박과 함께 볶는다.\n3. 밥을 넣고 간장으로 간한다.\n4. 참기름과 통깨를 넣고 비빈다.",
+      "transcript": null,
+      "expected_ingredients": [
+        { "name": "밥", "amount": 1, "unit": "공기", "type": "QUANT" },
+        { "name": "애호박", "amount": 0.5, "unit": "개", "type": "QUANT" },
+        { "name": "참치캔", "amount": 1, "unit": "캔", "type": "QUANT" },
+        { "name": "간장", "amount": 1, "unit": "큰술", "type": "QUANT" },
+        { "name": "참기름", "amount": 1, "unit": "큰술", "type": "QUANT" },
+        { "name": "통깨", "amount": null, "unit": null, "type": "TO_TASTE" }
+      ],
+      "expected_steps": [
+        { "step_number": 1, "instruction_pattern": "애호박.*썰.*볶" },
+        { "step_number": 2, "instruction_pattern": "참치.*기름.*볶" },
+        { "step_number": 3, "instruction_pattern": "밥.*간장.*간" },
+        { "step_number": 4, "instruction_pattern": "참기름.*통깨.*비" }
+      ]
+    },
+    {
+      "id": "recipio-04-egg-roll-gimbap",
+      "video_id": "YGcpbm73wTc",
+      "title": "계란말이 김밥",
+      "source_profile": "description_detailed",
+      "public_score": 0.95,
+      "historical_local_score": 0.88,
+      "requires_visual_recipe_contract": false,
+      "description": "재료\n김밥김 2장\n밥 2공기\n계란 4개\n당근 0.5개\n시금치 50g\n소금 약간\n만드는 법\n1. 계란은 소금으로 간해 풀어준다.\n2. 팬에 계란물을 부어 두툼하게 말아준다.\n3. 김 위에 밥을 펼치고 당근과 시금치를 올린다.\n4. 계란말이를 올려 단단하게 말아 자른다.",
+      "author_comment": null,
+      "transcript": null,
+      "expected_ingredients": [
+        { "name": "김밥김", "amount": 2, "unit": "장", "type": "QUANT" },
+        { "name": "밥", "amount": 2, "unit": "공기", "type": "QUANT" },
+        { "name": "계란", "amount": 4, "unit": "개", "type": "QUANT" },
+        { "name": "당근", "amount": 0.5, "unit": "개", "type": "QUANT" },
+        { "name": "시금치", "amount": 50, "unit": "g", "type": "QUANT" },
+        { "name": "소금", "amount": null, "unit": null, "type": "TO_TASTE" }
+      ],
+      "expected_steps": [
+        { "step_number": 1, "instruction_pattern": "계란.*소금.*풀" },
+        { "step_number": 2, "instruction_pattern": "계란물.*말" },
+        { "step_number": 3, "instruction_pattern": "김.*밥.*당근.*시금치" },
+        { "step_number": 4, "instruction_pattern": "계란말이.*말아.*자" }
+      ]
+    },
+    {
+      "id": "recipio-05-myeongran-aglio-olio",
+      "video_id": "wKcW7x_ZxeY",
+      "title": "명란 알리오올리오 파스타",
+      "source_profile": "caption_llm",
+      "public_score": 0.95,
+      "historical_local_score": 0.6,
+      "requires_visual_recipe_contract": false,
+      "description": "자막에 재료와 과정이 빠르게 지나갑니다.",
+      "author_comment": null,
+      "transcript": "명란 알리오올리오 파스타를 만들어요. 재료는 화면 자막을 따라 준비하고 팬에서 순서대로 볶아주세요.",
+      "expected_ingredients": [
+        { "name": "스파게티면", "amount": 100, "unit": "g", "type": "QUANT" },
+        { "name": "명란", "amount": 1, "unit": "개", "type": "QUANT" },
+        { "name": "마늘", "amount": 5, "unit": "쪽", "type": "QUANT" },
+        { "name": "올리브오일", "amount": 3, "unit": "큰술", "type": "QUANT" },
+        { "name": "페퍼론치노", "amount": 2, "unit": "개", "type": "QUANT" },
+        { "name": "파슬리", "amount": null, "unit": null, "type": "TO_TASTE" }
+      ],
+      "expected_steps": [
+        { "step_number": 1, "instruction_pattern": "스파게티면.*삶" },
+        { "step_number": 2, "instruction_pattern": "올리브오일.*마늘.*페퍼론치노.*볶" },
+        { "step_number": 3, "instruction_pattern": "면.*면수.*볶" },
+        { "step_number": 4, "instruction_pattern": "명란.*섞" }
+      ]
+    },
+    {
+      "id": "recipio-06-oiji-muchim",
+      "video_id": "DQAN8Si_3Z4",
+      "title": "오이지무침",
+      "source_profile": "author_comment",
+      "public_score": 0.98,
+      "historical_local_score": 0.74,
+      "requires_visual_recipe_contract": false,
+      "description": "고정 댓글에 재료와 양념 비율을 남겨두었습니다.",
+      "author_comment": "재료\n오이지 3개\n고춧가루 2큰술\n다진마늘 1큰술\n대파 1대\n참기름 1큰술\n통깨 약간\n만드는 법\n1. 오이지는 얇게 썰어 물기를 꼭 짠다.\n2. 대파는 잘게 썬다.\n3. 고춧가루, 다진마늘, 참기름을 넣어 양념한다.\n4. 오이지와 대파를 넣고 무친 뒤 통깨를 뿌린다.",
+      "transcript": null,
+      "expected_ingredients": [
+        { "name": "오이지", "amount": 3, "unit": "개", "type": "QUANT" },
+        { "name": "고춧가루", "amount": 2, "unit": "큰술", "type": "QUANT" },
+        { "name": "다진마늘", "amount": 1, "unit": "큰술", "type": "QUANT" },
+        { "name": "대파", "amount": 1, "unit": "대", "type": "QUANT" },
+        { "name": "참기름", "amount": 1, "unit": "큰술", "type": "QUANT" },
+        { "name": "통깨", "amount": null, "unit": null, "type": "TO_TASTE" }
+      ],
+      "expected_steps": [
+        { "step_number": 1, "instruction_pattern": "오이지.*썰.*물기" },
+        { "step_number": 2, "instruction_pattern": "대파.*썬" },
+        { "step_number": 3, "instruction_pattern": "고춧가루.*다진마늘.*참기름.*양념" },
+        { "step_number": 4, "instruction_pattern": "오이지.*대파.*무" }
+      ]
+    },
+    {
+      "id": "recipio-07-kongnamul-bibim-udon",
+      "video_id": "suwUaEEpopU",
+      "title": "콩나물 비빔우동",
+      "source_profile": "sparse_visual",
+      "public_score": 0.97,
+      "historical_local_score": 0.42,
+      "requires_visual_recipe_contract": true,
+      "description": "자세한 재료는 영상 화면 자막을 확인해주세요.",
+      "author_comment": null,
+      "transcript": "콩나물 비빔우동을 만들어요. 화면 자막에 양념과 순서가 나옵니다.",
+      "expected_ingredients": [
+        { "name": "우동면", "amount": 1, "unit": "봉", "type": "QUANT" },
+        { "name": "콩나물", "amount": 150, "unit": "g", "type": "QUANT" },
+        { "name": "고추장", "amount": 1, "unit": "큰술", "type": "QUANT" },
+        { "name": "간장", "amount": 1, "unit": "큰술", "type": "QUANT" },
+        { "name": "식초", "amount": 1, "unit": "큰술", "type": "QUANT" },
+        { "name": "참기름", "amount": 1, "unit": "큰술", "type": "QUANT" }
+      ],
+      "expected_steps": [
+        { "step_number": 1, "instruction_pattern": "우동면.*삶" },
+        { "step_number": 2, "instruction_pattern": "콩나물.*데쳐" },
+        { "step_number": 3, "instruction_pattern": "고추장.*간장.*식초.*섞" },
+        { "step_number": 4, "instruction_pattern": "우동면.*콩나물.*비" },
+        { "step_number": 5, "instruction_pattern": "참기름.*마무리" }
+      ]
+    },
+    {
+      "id": "recipio-08-garlic-chive-bibimbap",
+      "video_id": "l5iUteLjrVg",
+      "title": "마늘쫑 비빔밥",
+      "source_profile": "author_comment",
+      "public_score": 0.78,
+      "historical_local_score": 0.84,
+      "requires_visual_recipe_contract": false,
+      "description": "댓글에 재료와 레시피를 같이 적어두었습니다.",
+      "author_comment": "재료\n밥 1공기\n마늘쫑 100g\n계란 1개\n고추장 1큰술\n간장 1작은술\n참기름 1큰술\n만드는 법\n1. 마늘쫑은 잘게 썰어 볶는다.\n2. 계란은 프라이한다.\n3. 밥 위에 마늘쫑과 계란을 올린다.\n4. 고추장, 간장, 참기름을 넣고 비빈다.",
+      "transcript": null,
+      "expected_ingredients": [
+        { "name": "밥", "amount": 1, "unit": "공기", "type": "QUANT" },
+        { "name": "마늘쫑", "amount": 100, "unit": "g", "type": "QUANT" },
+        { "name": "계란", "amount": 1, "unit": "개", "type": "QUANT" },
+        { "name": "고추장", "amount": 1, "unit": "큰술", "type": "QUANT" },
+        { "name": "간장", "amount": 1, "unit": "작은술", "type": "QUANT" },
+        { "name": "참기름", "amount": 1, "unit": "큰술", "type": "QUANT" }
+      ],
+      "expected_steps": [
+        { "step_number": 1, "instruction_pattern": "마늘쫑.*썰.*볶" },
+        { "step_number": 2, "instruction_pattern": "계란.*프라이" },
+        { "step_number": 3, "instruction_pattern": "밥.*마늘쫑.*계란.*올" },
+        { "step_number": 4, "instruction_pattern": "고추장.*간장.*참기름.*비" }
+      ]
+    },
+    {
+      "id": "recipio-09-shiitake-donburi",
+      "video_id": "nzV3i7fhD7w",
+      "title": "표고버섯 덮밥",
+      "source_profile": "author_comment",
+      "public_score": 0.92,
+      "historical_local_score": 0.7,
+      "requires_visual_recipe_contract": false,
+      "description": "덮밥 레시피는 고정 댓글에 정리했습니다.",
+      "author_comment": "재료\n밥 1공기\n표고버섯 4개\n양파 0.5개\n간장 2큰술\n맛술 1큰술\n전분물 2큰술\n만드는 법\n1. 표고버섯과 양파를 얇게 썬다.\n2. 팬에 버섯과 양파를 볶는다.\n3. 간장과 맛술을 넣고 끓인다.\n4. 전분물을 넣어 농도를 맞춘다.\n5. 밥 위에 올린다.",
+      "transcript": null,
+      "expected_ingredients": [
+        { "name": "밥", "amount": 1, "unit": "공기", "type": "QUANT" },
+        { "name": "표고버섯", "amount": 4, "unit": "개", "type": "QUANT" },
+        { "name": "양파", "amount": 0.5, "unit": "개", "type": "QUANT" },
+        { "name": "간장", "amount": 2, "unit": "큰술", "type": "QUANT" },
+        { "name": "맛술", "amount": 1, "unit": "큰술", "type": "QUANT" },
+        { "name": "전분물", "amount": 2, "unit": "큰술", "type": "QUANT" }
+      ],
+      "expected_steps": [
+        { "step_number": 1, "instruction_pattern": "표고버섯.*양파.*썬" },
+        { "step_number": 2, "instruction_pattern": "버섯.*양파.*볶" },
+        { "step_number": 3, "instruction_pattern": "간장.*맛술.*끓" },
+        { "step_number": 4, "instruction_pattern": "전분물.*농도" },
+        { "step_number": 5, "instruction_pattern": "밥.*올" }
+      ]
+    },
+    {
+      "id": "recipio-10-no-oven-ratatouille",
+      "video_id": "Egpjve8caK0",
+      "title": "노오븐 라따뚜이",
+      "source_profile": "sparse_visual",
+      "public_score": 0.98,
+      "historical_local_score": 0,
+      "requires_visual_recipe_contract": true,
+      "description": "오븐 없이 만드는 과정은 영상 자막을 참고해주세요.",
+      "author_comment": null,
+      "transcript": "라따뚜이를 팬으로 만들어요. 화면 자막에 채소와 소스가 표시됩니다.",
+      "expected_ingredients": [
+        { "name": "가지", "amount": 1, "unit": "개", "type": "QUANT" },
+        { "name": "애호박", "amount": 1, "unit": "개", "type": "QUANT" },
+        { "name": "토마토", "amount": 2, "unit": "개", "type": "QUANT" },
+        { "name": "토마토소스", "amount": 200, "unit": "g", "type": "QUANT" },
+        { "name": "올리브오일", "amount": 2, "unit": "큰술", "type": "QUANT" },
+        { "name": "소금", "amount": null, "unit": null, "type": "TO_TASTE" }
+      ],
+      "expected_steps": [
+        { "step_number": 1, "instruction_pattern": "가지.*애호박.*토마토.*썬" },
+        { "step_number": 2, "instruction_pattern": "팬.*토마토소스.*깔" },
+        { "step_number": 3, "instruction_pattern": "채소.*겹쳐.*올" },
+        { "step_number": 4, "instruction_pattern": "올리브오일.*소금.*뿌" },
+        { "step_number": 5, "instruction_pattern": "뚜껑.*익" }
+      ]
+    },
+    {
+      "id": "recipio-11-chadol-doenjang-rice-soup",
+      "video_id": "40UQZlbYw0g",
+      "title": "차돌된장술밥",
+      "source_profile": "description_detailed",
+      "public_score": 0.92,
+      "historical_local_score": 0.86,
+      "requires_visual_recipe_contract": false,
+      "description": "재료\n차돌박이 150g\n밥 1공기\n된장 1큰술\n고추장 0.5큰술\n대파 1대\n물 500ml\n만드는 법\n1. 냄비에 차돌박이를 볶아 기름을 낸다.\n2. 물을 붓고 된장과 고추장을 풀어 끓인다.\n3. 밥과 대파를 넣고 끓인다.\n4. 국물이 걸쭉해지면 마무리한다.",
+      "author_comment": null,
+      "transcript": null,
+      "expected_ingredients": [
+        { "name": "차돌박이", "amount": 150, "unit": "g", "type": "QUANT" },
+        { "name": "밥", "amount": 1, "unit": "공기", "type": "QUANT" },
+        { "name": "된장", "amount": 1, "unit": "큰술", "type": "QUANT" },
+        { "name": "고추장", "amount": 0.5, "unit": "큰술", "type": "QUANT" },
+        { "name": "대파", "amount": 1, "unit": "대", "type": "QUANT" },
+        { "name": "물", "amount": 500, "unit": "ml", "type": "QUANT" }
+      ],
+      "expected_steps": [
+        { "step_number": 1, "instruction_pattern": "차돌박이.*볶" },
+        { "step_number": 2, "instruction_pattern": "물.*된장.*고추장.*끓" },
+        { "step_number": 3, "instruction_pattern": "밥.*대파.*끓" },
+        { "step_number": 4, "instruction_pattern": "걸쭉.*마무리" }
+      ]
+    },
+    {
+      "id": "recipio-12-dashima-gochu-dadaegi",
+      "video_id": "J5Rmux3ttaY",
+      "title": "다시마 고추다대기",
+      "source_profile": "sparse_visual",
+      "public_score": 0.97,
+      "historical_local_score": 0.1,
+      "requires_visual_recipe_contract": true,
+      "description": "영상 속 자막으로 재료와 만드는 법을 보여드립니다.",
+      "author_comment": null,
+      "transcript": "다시마 고추다대기를 만들어요. 자세한 분량은 화면 자막에 나옵니다.",
+      "expected_ingredients": [
+        { "name": "다시마", "amount": 50, "unit": "g", "type": "QUANT" },
+        { "name": "청양고추", "amount": 10, "unit": "개", "type": "QUANT" },
+        { "name": "홍고추", "amount": 3, "unit": "개", "type": "QUANT" },
+        { "name": "간장", "amount": 4, "unit": "큰술", "type": "QUANT" },
+        { "name": "매실청", "amount": 2, "unit": "큰술", "type": "QUANT" },
+        { "name": "참기름", "amount": 1, "unit": "큰술", "type": "QUANT" }
+      ],
+      "expected_steps": [
+        { "step_number": 1, "instruction_pattern": "다시마.*불려.*자" },
+        { "step_number": 2, "instruction_pattern": "청양고추.*홍고추.*다" },
+        { "step_number": 3, "instruction_pattern": "간장.*매실청.*섞" },
+        { "step_number": 4, "instruction_pattern": "다시마.*고추.*버무" },
+        { "step_number": 5, "instruction_pattern": "참기름.*마무리" }
+      ]
+    }
+  ]
+}
