@@ -41,6 +41,38 @@ interface MatchScoreBadgeProps {
   score: number;
 }
 
+type PantryMatchScoreTone = "brand" | "warning" | "danger";
+
+function getPantryMatchScoreTone(percentage: number): PantryMatchScoreTone {
+  if (percentage >= 80) return "brand";
+  if (percentage >= 50) return "warning";
+  return "danger";
+}
+
+function getMobileProgressToneClasses(tone: PantryMatchScoreTone) {
+  if (tone === "brand") {
+    return {
+      track: "bg-[var(--brand-soft)]",
+      fill: "bg-[color-mix(in_srgb,var(--brand)_32%,transparent)]",
+      label: "text-[var(--brand)]",
+    };
+  }
+
+  if (tone === "warning") {
+    return {
+      track: "bg-[var(--warning-soft)]",
+      fill: "bg-[color-mix(in_srgb,var(--warning)_36%,transparent)]",
+      label: "text-[var(--warning)]",
+    };
+  }
+
+  return {
+    track: "bg-[var(--danger-soft)]",
+    fill: "bg-[color-mix(in_srgb,var(--danger)_32%,transparent)]",
+    label: "text-[var(--danger)]",
+  };
+}
+
 function MatchScoreBadge({ score }: MatchScoreBadgeProps) {
   const percentage = Math.round(score * 100);
   const colorClass =
@@ -68,6 +100,8 @@ interface PantryRecipeCardProps {
 function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryRecipeCardProps) {
   if (presentation === "screen" || presentation === "sheet") {
     const percentage = Math.round(recipe.match_score * 100);
+    const scoreTone = getPantryMatchScoreTone(percentage);
+    const scoreToneClasses = getMobileProgressToneClasses(scoreTone);
 
     return (
       <button
@@ -91,14 +125,28 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
             {recipe.title}
           </span>
           <span
-            className="relative mt-1.5 flex h-5 items-center overflow-hidden rounded-full bg-[var(--brand-soft)]"
+            className={[
+              "relative mt-1.5 flex h-5 items-center overflow-hidden rounded-full",
+              `pantry-match-progress-${scoreTone}`,
+              scoreToneClasses.track,
+            ].join(" ")}
             data-testid={`pantry-match-progress-${recipe.id}`}
           >
             <span
-              className="absolute left-0 top-0 h-full rounded-full bg-[color-mix(in_srgb,var(--brand)_32%,transparent)]"
+              className={[
+                "absolute left-0 top-0 h-full rounded-full",
+                `pantry-match-progress-fill-${scoreTone}`,
+                scoreToneClasses.fill,
+              ].join(" ")}
               style={{ width: `${Math.max(4, Math.min(100, percentage))}%` }}
             />
-            <span className="relative ml-auto pr-2 text-[10px] font-extrabold text-[var(--brand)]">
+            <span
+              className={[
+                "relative ml-auto pr-2 text-[10px] font-extrabold",
+                `pantry-match-progress-label-${scoreTone}`,
+                scoreToneClasses.label,
+              ].join(" ")}
+            >
               {percentage}%
             </span>
           </span>
@@ -123,9 +171,6 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
               </span>
             ) : null}
           </span>
-          <span className="mt-2 inline-flex rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-2.5 py-1.5 text-[12px] font-semibold text-[var(--brand)]">
-            선택
-          </span>
         </span>
       </button>
     );
@@ -133,8 +178,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
 
   if (presentation === "web") {
     const percentage = Math.round(recipe.match_score * 100);
-    const scoreTone =
-      percentage >= 80 ? "brand" : percentage >= 50 ? "warning" : "danger";
+    const scoreTone = getPantryMatchScoreTone(percentage);
 
     return (
       <button
@@ -147,7 +191,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
           <span className="web-picker-pantry-thumb" aria-hidden="true">
             <Image
               alt=""
-              className="h-full w-full object-cover"
+              className="web-picker-pantry-thumb-image h-full w-full object-cover"
               height={56}
               src={resolveRecipeImage(recipe)}
               unoptimized

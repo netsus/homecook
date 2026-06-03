@@ -240,7 +240,7 @@ async function clickFirstRecipe(page: Page) {
 
 async function expectServingsDialog(page: Page) {
   if (isMobileViewport(page)) {
-    await expect(page.getByRole("dialog", { name: "플래너에 추가" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "계획 인분 입력" })).toBeVisible();
     return;
   }
 
@@ -530,7 +530,7 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
 
     await visibleButtonText(page, "팬트리").click();
 
-    await expect(visibleText(page, "팬트리 기반 추천")).toBeVisible();
+    await expect(visibleText(page, "팬트리 추천")).toBeVisible();
     await expect(visibleText(page, "김치찌개")).toBeVisible();
     await expect(visibleText(page, "된장찌개")).toBeVisible();
     if (isMobileViewport(page)) {

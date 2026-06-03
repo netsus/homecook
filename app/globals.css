@@ -4149,6 +4149,18 @@ button {
     font-size: 24px;
   }
 
+  .web-picker-pantry-thumb {
+    overflow: hidden;
+  }
+
+  .web-picker-pantry-thumb-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+  }
+
   .web-picker-book-copy,
   .web-picker-pantry-copy {
     display: grid;
