@@ -590,7 +590,7 @@ describe("recipe detail screen", () => {
     expect(modalScope.queryByText(MOCK_RECIPE_DETAIL.description!)).toBeNull();
 
     const saveButton = modalScope.getByRole("button", { name: "저장" });
-    expect(saveButton.textContent).toBe("1개 레시피북에 추가 저장");
+    expect(saveButton.textContent).toBe("1개 레시피북에 저장");
   });
 
   it("shows load error UI and retries recipe-book loading", async () => {
@@ -1276,7 +1276,12 @@ describe("recipe detail screen", () => {
           youtube_url: "https://www.youtube.com/watch?v=abc",
           youtube_video_id: "abc",
         },
-        tags: ["딸기푸딩", "노오븐디저트"],
+        tags: [
+          "유튜브",
+          MOCK_RECIPE_DETAIL.title,
+          "딸기푸딩",
+          "노오븐디저트",
+        ],
       }),
     );
 
@@ -1288,8 +1293,12 @@ describe("recipe detail screen", () => {
     });
     const note = screen.getByTestId("recipe-youtube-source-note");
     const youtubeTag = screen.getByRole("link", { name: "유튜브" });
+    const tagContainer = youtubeTag.closest(".web-recipe-tags");
 
     expect(note.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      Array.from(tagContainer?.children ?? []).map((child) => child.textContent),
+    ).toEqual(["유튜브", "딸기푸딩", "노오븐디저트"]);
     expect(youtubeTag.getAttribute("href")).toBe("https://www.youtube.com/watch?v=abc");
     expect(screen.queryByText(MOCK_RECIPE_DETAIL.description!)).toBeNull();
     expect(

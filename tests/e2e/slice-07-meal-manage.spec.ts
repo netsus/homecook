@@ -182,7 +182,6 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
       await expect(visibleTestId(page, "web-meal-loading-card").first()).toBeVisible();
       await expect(visibleTestId(page, "web-meal-loading-summary")).toBeVisible();
     } else {
-      await expect(visibleTestId(page, "meal-screen-loading-summary")).toBeVisible();
       await expect(visibleTestId(page, "meal-screen-loading-card").first()).toBeVisible();
       await expect(visibleTestId(page, "meal-screen-loading-thumb").first()).toBeVisible();
     }

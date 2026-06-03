@@ -350,7 +350,7 @@ describe("planner add flow", () => {
     expect(dateButtons[7].querySelector(".web-planner-date-day")?.textContent).toBe("5/28");
   });
 
-  it("shows the selected target under the desktop planner add title with the recipe detail image", () => {
+  it("keeps the desktop planner add header clean while preserving selected target in the submit action", () => {
     installMatchMedia(true);
 
     render(
@@ -381,11 +381,10 @@ describe("planner add flow", () => {
     );
 
     const dialog = screen.getByRole("dialog", { name: "플래너에 추가" });
-    const target = within(dialog).getByText("대상 · 5/21 저녁");
     const imageShell = within(dialog).getByTestId("planner-add-recipe-preview-image");
     const image = imageShell.querySelector("img");
 
-    expect(target.className).toContain("text-[var(--web-brand-accessible)]");
+    expect(within(dialog).queryByText("대상 · 5/21 저녁")).toBeNull();
     expect(imageShell.className).toContain("web-modal-preview-thumb");
     expect(image?.getAttribute("src")).toContain("recipe-detail.jpg");
     expect(image?.className).toContain("web-modal-preview-thumb-image");
