@@ -57,9 +57,9 @@
   --danger-strong: #b62620;
   --like-active: #ff4f5a;
   --olive:      #00A1FF;
-  --muted:      #8a8e93;
+  --muted:      #6b7280;
   --text-2:     #424242;
-  --text-3:     #8a8e93;
+  --text-3:     #6b7280;
   --text-4:     #cfd4d8;
   --text-inverse: #ffffff;
   --text-inverse-65: rgba(255, 255, 255, 0.65);
@@ -857,7 +857,7 @@ button {
     --web-image-placeholder: #EAEDEF;
     --web-text-1: #2f3438;
     --web-text-2: #424242;
-    --web-text-3: #8a8e93;
+    --web-text-3: #6b7280;
     --web-text-4: #cfd4d8;
     --web-text-inverse: #ffffff;
     --web-line: rgba(0, 0, 0, 0.08);
