@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   extractHashTagsFromText,
   generateRecipeTags,
+  RECIPE_TAG_MAX_LENGTH,
   parseRecipeImagePublicUrl,
 } from "@/lib/server/recipe-media";
 
@@ -65,6 +66,19 @@ describe("recipe media and tag helpers", () => {
     });
 
     expect(tags).toEqual(["딸기푸딩", "딸기 우유 푸딩", "생딸기"]);
+  });
+
+  it("drops overlong provider, title, and ingredient tag candidates", () => {
+    const tags = generateRecipeTags({
+      title: "정말 긴 유튜브 영상 제목이 그대로 태그에 들어가면 안 되는 김치찌개",
+      ingredientNames: ["돼지고기 앞다리살을 아주 길게 쓴 재료", "김치", "소금"],
+      stepTexts: [],
+      cookingMethodLabels: ["끓이기"],
+      providerTags: ["#이것은너무긴유튜브해시태그입니다", "#집밥김치찌개"],
+    });
+
+    expect(tags).toEqual(["집밥김치찌개", "김치찌개", "김치"]);
+    expect(tags.every((tag) => tag.length <= RECIPE_TAG_MAX_LENGTH)).toBe(true);
   });
 
   it("extracts hash tags from description text for provider tag candidates", () => {

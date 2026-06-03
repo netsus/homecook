@@ -6354,7 +6354,7 @@ describe("20 youtube real import backend", () => {
       success: true,
       data: {
         thumbnail_url: "https://img.youtube.com/vi/needsreview123/hqdefault.jpg",
-        tags: ["김치찌개", "백종원 김치찌개 후보 확인 필요", "김치"],
+        tags: ["김치찌개", "백종원 김치찌개", "김치"],
         blocking_issues: ["ingredients[1].ingredient_id"],
         ingredients: [
           { standard_name: "김치", resolution_status: "resolved" },
@@ -6379,7 +6379,7 @@ describe("20 youtube real import backend", () => {
       thumbnail_url: "https://img.youtube.com/vi/needsreview123/hqdefault.jpg",
       draft_json: expect.objectContaining({
         thumbnail_url: "https://img.youtube.com/vi/needsreview123/hqdefault.jpg",
-        tags: ["김치찌개", "백종원 김치찌개 후보 확인 필요", "김치"],
+        tags: ["김치찌개", "백종원 김치찌개", "김치"],
       }),
     }));
   });
