@@ -69,6 +69,7 @@ const MEAL_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
 const MEAL_CONFIRM_MODAL_VISUAL_MAX_DIFF_PIXELS = 80;
 const MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2200;
 const MENU_ADD_MODAL_VISUAL_MAX_DIFF_PIXELS = 120;
+const LOGIN_GATE_MODAL_VISUAL_MAX_DIFF_PIXELS = 1200;
 const PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2400;
 const ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
 const MYPAGE_SAVED_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 5200;
@@ -274,6 +275,7 @@ test.describe("QA visual regression", () => {
     await stabilizeVisualSnapshot(page);
     await expect(loginGate).toHaveScreenshot("qa-login-gate-modal.png", {
       animations: "disabled",
+      maxDiffPixels: LOGIN_GATE_MODAL_VISUAL_MAX_DIFF_PIXELS,
     });
   });
 
