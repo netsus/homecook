@@ -2,6 +2,8 @@ import type { ApiResponse } from "@/types/api";
 
 export interface ShoppingPreviewMeal {
   id: string;
+  column_id: string;
+  plan_date: string;
   recipe_id: string;
   recipe_name: string;
   recipe_thumbnail: string | null;

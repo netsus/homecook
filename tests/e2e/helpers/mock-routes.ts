@@ -1699,24 +1699,30 @@ export async function installPantryShoppingVisualRoutes(page: Page) {
         data: {
           eligible_meals: [
             {
+              column_id: "column-breakfast",
               created_at: "2026-05-18T08:30:00.000Z",
               id: "meal-shopping-visual-1",
+              plan_date: "2026-05-18",
               planned_servings: 2,
               recipe_id: "recipe-jeyuk",
               recipe_name: "제육볶음",
               recipe_thumbnail: createQaFoodThumbDataUri("🥩", "#FFAC87"),
             },
             {
+              column_id: "column-dinner",
               created_at: "2026-05-19T08:30:00.000Z",
               id: "meal-shopping-visual-2",
+              plan_date: "2026-05-19",
               planned_servings: 2,
               recipe_id: "recipe-sujebi",
               recipe_name: "감자 수제비",
               recipe_thumbnail: createQaFoodThumbDataUri("🥟", "#E7D9B7"),
             },
             {
+              column_id: "column-lunch",
               created_at: "2026-05-20T08:30:00.000Z",
               id: "meal-shopping-visual-3",
+              plan_date: "2026-05-20",
               planned_servings: 1,
               recipe_id: "recipe-salad",
               recipe_name: "닭가슴살 샐러드",

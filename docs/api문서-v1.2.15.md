@@ -1427,15 +1427,23 @@ GET /shopping/preview
 
 ```json
 {
-  "date_range": {
-    "start": "2026-03-01",
-    "end": "2026-03-07"
-  },
+  "eligible_meals": [
+    {
+      "id": "uuid",
+      "recipe_id": "uuid",
+      "recipe_name": "김치찌개",
+      "recipe_thumbnail": "https://...",
+      "plan_date": "2026-03-01",
+      "column_id": "uuid",
+      "planned_servings": 2,
+      "created_at": "2026-03-01T09:00:00.000Z"
+    }
+  ],
   "recipes": [
     {
       "recipe_id": "uuid",
-      "recipe_title": "김치찌개",
-      "recipe_thumbnail_url": "https://...",
+      "recipe_name": "김치찌개",
+      "recipe_thumbnail": "https://...",
       "meal_ids": ["uuid", "uuid"],
       "planned_servings_total": 4,
       "shopping_servings": 4,
@@ -1446,6 +1454,7 @@ GET /shopping/preview
 ```
 
 > 대상 조건: `status='registered' AND shopping_list_id IS NULL`
+> `eligible_meals[].plan_date`와 `eligible_meals[].column_id`는 SHOPPING_FLOW에서 레시피 제목 클릭 시 해당 끼니화면으로 돌아가기 위한 링크 컨텍스트다.
 
 ### 8-2. 장보기 목록 생성 (Step D) `v1.2 변경`
 

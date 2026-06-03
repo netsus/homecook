@@ -8,6 +8,8 @@ const SHOPPING_FLOW_URL = "/shopping/flow";
 
 interface ShoppingPreviewMeal {
   id: string;
+  column_id: string;
+  plan_date: string;
   recipe_id: string;
   recipe_name: string;
   recipe_thumbnail: string | null;
@@ -44,6 +46,8 @@ function buildPreviewMeal(
 ): ShoppingPreviewMeal {
   return {
     id: "meal-1",
+    column_id: "column-breakfast",
+    plan_date: "2026-04-26",
     recipe_id: "recipe-1",
     recipe_name: "김치찌개",
     recipe_thumbnail: null,
@@ -72,10 +76,6 @@ async function installShoppingPreviewRoute(
       },
     });
   });
-}
-
-function isMobileViewport(page: Page) {
-  return (page.viewportSize()?.width ?? 0) < 1024;
 }
 
 test.describe("slice 09: shopping preview and list creation", () => {
@@ -233,7 +233,7 @@ test.describe("slice 09: shopping preview and list creation", () => {
       await expect(page.getByText("장보기 목록 만들기")).toBeEnabled();
     });
 
-    test("should adjust shopping servings", async ({ page }) => {
+    test("should show serving tags without shopping serving edit controls", async ({ page }) => {
       await setAuthOverride(page, "authenticated");
       await installShoppingPreviewRoute(page, [
         buildPreviewMeal({
@@ -246,74 +246,60 @@ test.describe("slice 09: shopping preview and list creation", () => {
       await page.goto(SHOPPING_FLOW_URL);
 
       await expect(page.getByText("김치찌개")).toBeVisible();
-
-      if (isMobileViewport(page)) {
-        await expect(page.getByLabel("인분 늘리기")).toHaveCount(0);
-        await expect(page.getByText("장보기 목록 만들기")).toBeEnabled();
-        return;
-      }
-
-      // Increase servings
-      const plusButton = page.getByLabel("인분 늘리기");
-      await plusButton.click();
-      await expect(page.getByLabel("3인분")).toBeVisible();
-
-      await plusButton.click();
-      await expect(page.getByLabel("4인분")).toBeVisible();
-
-      // Decrease servings
-      const minusButton = page.getByLabel("인분 줄이기");
-      await minusButton.click();
-      await expect(page.getByLabel("3인분")).toBeVisible();
+      await expect(page.getByText("2인분")).toBeVisible();
+      await expect(page.getByRole("link", { name: "김치찌개" })).toHaveAttribute(
+        "href",
+        "/planner/2026-04-26/column-breakfast",
+      );
+      await expect(page.getByText("장보기 기준 인분")).toHaveCount(0);
+      await expect(page.getByLabel("인분 늘리기")).toHaveCount(0);
+      await expect(page.getByLabel("인분 줄이기")).toHaveCount(0);
+      await expect(page.getByText("장보기 목록 만들기")).toBeEnabled();
     });
 
-    test("should not allow servings below 1", async ({ page }) => {
+    test("should group duplicate recipes with an aggregate serving tag", async ({ page }) => {
       await setAuthOverride(page, "authenticated");
       await installShoppingPreviewRoute(page, [
         buildPreviewMeal({
           id: "meal-1",
           recipe_name: "김치찌개",
-          planned_servings: 1,
+          planned_servings: 2,
+        }),
+        buildPreviewMeal({
+          id: "meal-2",
+          recipe_name: "김치찌개",
+          planned_servings: 3,
         }),
       ]);
 
       await page.goto(SHOPPING_FLOW_URL);
 
       await expect(page.getByText("김치찌개")).toBeVisible();
-
-      if (isMobileViewport(page)) {
-        await expect(page.getByLabel("인분 줄이기")).toHaveCount(0);
-        return;
-      }
-
-      const minusButton = page.getByLabel("인분 줄이기");
-      await expect(minusButton).toBeDisabled();
+      await expect(page.getByText(/합산.*5인분/)).toBeVisible();
+      await expect(page.getByText("합산 계획 5인분")).toHaveCount(0);
+      await expect(page.getByText("대상 식사 2개")).toHaveCount(0);
     });
 
-    test("should disable stepper when meal is deselected", async ({ page }) => {
+    test("should select and clear every recipe", async ({ page }) => {
       await setAuthOverride(page, "authenticated");
       await installShoppingPreviewRoute(page, [
         buildPreviewMeal({ id: "meal-1", recipe_name: "김치찌개" }),
+        buildPreviewMeal({ id: "meal-2", recipe_id: "recipe-2", recipe_name: "된장찌개" }),
       ]);
 
       await page.goto(SHOPPING_FLOW_URL);
 
       await expect(page.getByText("김치찌개")).toBeVisible();
 
-      const checkbox = page.getByLabel("김치찌개 선택 해제");
-      await checkbox.click();
+      await page.getByRole("button", { name: "전체 해제" }).click();
+      await expect(page.getByLabel("김치찌개 선택")).toBeVisible();
+      await expect(page.getByLabel("된장찌개 선택")).toBeVisible();
+      await expect(page.getByText("장보기 목록 만들기")).toBeDisabled();
 
-      if (isMobileViewport(page)) {
-        await expect(page.getByLabel("인분 늘리기")).toHaveCount(0);
-        await expect(page.getByLabel("인분 줄이기")).toHaveCount(0);
-        await expect(page.getByText("장보기 목록 만들기")).toBeDisabled();
-        return;
-      }
-
-      const plusButton = page.getByLabel("인분 늘리기");
-      const minusButton = page.getByLabel("인분 줄이기");
-      await expect(plusButton).toBeDisabled();
-      await expect(minusButton).toBeDisabled();
+      await page.getByRole("button", { name: "전체 선택" }).click();
+      await expect(page.getByLabel("김치찌개 선택 해제")).toBeVisible();
+      await expect(page.getByLabel("된장찌개 선택 해제")).toBeVisible();
+      await expect(page.getByText("장보기 목록 만들기")).toBeEnabled();
     });
   });
 
@@ -414,7 +400,7 @@ test.describe("slice 09: shopping preview and list creation", () => {
       });
     });
 
-    test("should submit adjusted servings", async ({ page }) => {
+    test("should submit the planned shopping servings without local adjustment", async ({ page }) => {
       await setAuthOverride(page, "authenticated");
       await installShoppingPreviewRoute(page, [
         buildPreviewMeal({
@@ -446,12 +432,12 @@ test.describe("slice 09: shopping preview and list creation", () => {
       await page.goto(SHOPPING_FLOW_URL);
 
       await expect(page.getByText("김치찌개")).toBeVisible();
+      await expect(page.getByLabel("인분 늘리기")).toHaveCount(0);
 
-      if (isMobileViewport(page)) {
-        await expect(page.getByLabel("인분 늘리기")).toHaveCount(0);
-        await page.getByText("장보기 목록 만들기").click();
-        expect(requestBody).toEqual({
-          recipes: [
+      await page.getByText("장보기 목록 만들기").click();
+
+      expect(requestBody).toEqual({
+        recipes: [
             {
               recipe_id: "recipe-1",
               meal_ids: ["meal-1"],
@@ -459,25 +445,6 @@ test.describe("slice 09: shopping preview and list creation", () => {
             },
           ],
         });
-        return;
-      }
-
-      // Increase to 4 servings
-      const plusButton = page.getByLabel("인분 늘리기");
-      await plusButton.click();
-      await plusButton.click();
-
-      await page.getByText("장보기 목록 만들기").click();
-
-      expect(requestBody).toEqual({
-        recipes: [
-          {
-            recipe_id: "recipe-1",
-            meal_ids: ["meal-1"],
-            shopping_servings: 4,
-          },
-        ],
-      });
     });
 
     test("should show creating state", async ({ page }) => {

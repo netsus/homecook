@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
 
@@ -38,7 +39,9 @@ interface MealConfig {
   recipe_id: string;
   meal_ids: string[];
   meals: Array<{
+    column_id: string;
     id: string;
+    plan_date: string;
     planned_servings: number;
     created_at: string;
   }>;
@@ -48,6 +51,7 @@ interface MealConfig {
   recipe_thumbnail: string | null;
   planned_servings_total: number;
   meal_count: number;
+  plan_date: string;
   created_at: string;
 }
 
@@ -62,7 +66,9 @@ function groupMealsByRecipe(meals: ShoppingPreviewMeal[]): MealConfig[] {
     if (existing) {
       existing.meal_ids.push(meal.id);
       existing.meals.push({
+        column_id: meal.column_id,
         id: meal.id,
+        plan_date: meal.plan_date,
         planned_servings: meal.planned_servings,
         created_at: meal.created_at,
       });
@@ -80,7 +86,9 @@ function groupMealsByRecipe(meals: ShoppingPreviewMeal[]): MealConfig[] {
       meal_ids: [meal.id],
       meals: [
         {
+          column_id: meal.column_id,
           id: meal.id,
+          plan_date: meal.plan_date,
           planned_servings: meal.planned_servings,
           created_at: meal.created_at,
         },
@@ -91,6 +99,7 @@ function groupMealsByRecipe(meals: ShoppingPreviewMeal[]): MealConfig[] {
       recipe_thumbnail: meal.recipe_thumbnail,
       planned_servings_total: meal.planned_servings,
       meal_count: 1,
+      plan_date: meal.plan_date,
       created_at: meal.created_at,
     });
   });
@@ -111,6 +120,8 @@ function buildMealConfigs(data: ShoppingPreviewData): MealConfig[] {
       meal.id,
       {
         id: meal.id,
+        column_id: meal.column_id,
+        plan_date: meal.plan_date,
         planned_servings: meal.planned_servings,
         created_at: meal.created_at,
       },
@@ -126,6 +137,12 @@ function buildMealConfigs(data: ShoppingPreviewData): MealConfig[] {
         [...meals].sort((left, right) =>
           left.created_at.localeCompare(right.created_at),
         )[0]?.created_at ?? "";
+      const primaryMeal =
+        [...meals].sort((left, right) => {
+          const byPlanDate = left.plan_date.localeCompare(right.plan_date);
+          if (byPlanDate !== 0) return byPlanDate;
+          return left.created_at.localeCompare(right.created_at);
+        })[0] ?? null;
 
       return {
         recipe_id: recipe.recipe_id,
@@ -137,6 +154,7 @@ function buildMealConfigs(data: ShoppingPreviewData): MealConfig[] {
         recipe_thumbnail: recipe.recipe_thumbnail,
         planned_servings_total: recipe.planned_servings_total,
         meal_count: recipe.meal_ids.length,
+        plan_date: primaryMeal?.plan_date ?? "",
         created_at: createdAt,
       };
     });
@@ -232,11 +250,29 @@ function groupConfigsByDate(configs: MealConfig[]) {
   const groups = new Map<string, MealConfig[]>();
 
   configs.forEach((config) => {
-    const key = formatDateShort(config.created_at);
+    const key = formatDateShort(config.plan_date || config.created_at);
     groups.set(key, [...(groups.get(key) ?? []), config]);
   });
 
   return [...groups.entries()];
+}
+
+function getPrimaryMeal(config: MealConfig) {
+  return [...config.meals].sort((left, right) => {
+    const byPlanDate = left.plan_date.localeCompare(right.plan_date);
+    if (byPlanDate !== 0) return byPlanDate;
+
+    const byCreatedAt = left.created_at.localeCompare(right.created_at);
+    if (byCreatedAt !== 0) return byCreatedAt;
+
+    return left.id.localeCompare(right.id);
+  })[0];
+}
+
+function buildMealHref(config: MealConfig) {
+  const meal = getPrimaryMeal(config);
+  if (!meal?.plan_date || !meal.column_id) return "/planner";
+  return `/planner/${meal.plan_date}/${meal.column_id}`;
 }
 
 const recipeVisualMeta: Record<string, { bg: string; emoji: string; meal: string }> = {
@@ -326,18 +362,17 @@ export function ShoppingFlowScreen({
     );
   }, []);
 
-  const handleShoppingServingsChange = useCallback(
-    (recipeId: string, nextServings: number) => {
-      setMealConfigs((prev) =>
-        prev.map((config) =>
-          config.recipe_id === recipeId
-            ? { ...config, shopping_servings: Math.max(1, nextServings) }
-            : config,
-        ),
-      );
-    },
-    [],
-  );
+  const handleSelectAll = useCallback(() => {
+    setMealConfigs((prev) =>
+      prev.map((config) => ({ ...config, isSelected: true })),
+    );
+  }, []);
+
+  const handleClearAll = useCallback(() => {
+    setMealConfigs((prev) =>
+      prev.map((config) => ({ ...config, isSelected: false })),
+    );
+  }, []);
 
   const handleCreateList = useCallback(async () => {
     const selectedConfigs = mealConfigs.filter((config) => config.isSelected);
@@ -719,7 +754,9 @@ export function ShoppingFlowScreen({
         configs={mealConfigs}
         isCreateDisabled={isCreateDisabled}
         onBack={handleBack}
+        onClearAll={handleClearAll}
         onCreate={handleCreateList}
+        onSelectAll={handleSelectAll}
         onToggle={handleToggleSelection}
       />
     );
@@ -784,16 +821,30 @@ export function ShoppingFlowScreen({
                 <h2 id="shopping-flow-meals-title">장볼 끼니</h2>
                 <p>대상 식사와 합산 인분을 확인하세요.</p>
               </div>
-              <span>{mealConfigs.length}개 묶음</span>
+              <div className="web-shopping-section-actions">
+                <span>{mealConfigs.length}개 묶음</span>
+                <button onClick={handleSelectAll} type="button">
+                  전체 선택
+                </button>
+                <button onClick={handleClearAll} type="button">
+                  전체 해제
+                </button>
+              </div>
             </div>
-            <div className="web-shopping-recipe-list">
-              {mealConfigs.map((config) => (
-                <RecipeCard
-                  config={config}
-                  key={config.recipe_id}
-                  onServingsChange={handleShoppingServingsChange}
-                  onToggle={handleToggleSelection}
-                />
+            <div className="web-shopping-date-list">
+              {groupConfigsByDate(mealConfigs).map(([dateLabel, items]) => (
+                <section className="web-shopping-date-section" key={dateLabel}>
+                  <h3 className="web-shopping-date-heading">{dateLabel}</h3>
+                  <div className="web-shopping-recipe-list">
+                    {items.map((config) => (
+                      <RecipeCard
+                        config={config}
+                        key={config.recipe_id}
+                        onToggle={handleToggleSelection}
+                      />
+                    ))}
+                  </div>
+                </section>
               ))}
             </div>
           </section>
@@ -904,13 +955,17 @@ function MobileSelectScreen({
   configs,
   isCreateDisabled,
   onBack,
+  onClearAll,
   onCreate,
+  onSelectAll,
   onToggle,
 }: {
   configs: MealConfig[];
   isCreateDisabled: boolean;
   onBack: () => void;
+  onClearAll: () => void;
   onCreate: () => void;
+  onSelectAll: () => void;
   onToggle: (recipeId: string) => void;
 }) {
   return (
@@ -928,6 +983,22 @@ function MobileSelectScreen({
           <p className="mt-3 text-[13px] font-medium leading-[1.5] text-[var(--text-3)]">
             선택한 끼니의 재료를 자동으로 모아드려요
           </p>
+          <div className="mt-4 flex gap-2">
+            <button
+              className="h-9 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[13px] font-bold text-[var(--brand)]"
+              onClick={onSelectAll}
+              type="button"
+            >
+              전체 선택
+            </button>
+            <button
+              className="h-9 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[13px] font-bold text-[var(--text-2)]"
+              onClick={onClearAll}
+              type="button"
+            >
+              전체 해제
+            </button>
+          </div>
         </section>
 
         <div className="space-y-3 p-4">
@@ -980,6 +1051,7 @@ function MobileSelectRow({
   onToggle: (recipeId: string) => void;
 }) {
   const visual = getRecipeVisual(config);
+  const isAggregated = config.meal_count > 1;
 
   return (
     <div className={`flex min-h-[56px] items-center gap-3 px-4 py-2.5 ${config.isSelected ? "" : "opacity-45"}`}>
@@ -1021,11 +1093,20 @@ function MobileSelectRow({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+        <Link
+          className="block truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]"
+          href={buildMealHref(config)}
+        >
           {config.recipe_name}
-        </p>
-        <p className="mt-[2px] truncate text-[11px] font-medium leading-[1.3] text-[var(--text-3)]">
-          {visual.meal} · {config.shopping_servings}인분 · 장보기 대기
+        </Link>
+        <p className="mt-[2px] truncate text-[11px] font-bold leading-[1.3] text-[var(--text-3)]">
+          {isAggregated ? (
+            <>
+              <span className="text-[var(--brand)]">합산</span>
+              <span> · </span>
+            </>
+          ) : null}
+          {config.shopping_servings}인분
         </p>
       </div>
     </div>
@@ -1224,19 +1305,12 @@ function MobileReviewItem({
 
 interface RecipeCardProps {
   config: MealConfig;
-  onServingsChange: (recipeId: string, nextServings: number) => void;
   onToggle: (recipeId: string) => void;
 }
 
-function RecipeCard({ config, onServingsChange, onToggle }: RecipeCardProps) {
-  const selectedMealIds = selectMealIdsForShoppingServings(
-    config.meals,
-    config.meal_ids,
-    config.shopping_servings,
-  );
+function RecipeCard({ config, onToggle }: RecipeCardProps) {
   const visual = getRecipeVisual(config);
-  const shouldShowAggregationMeta =
-    selectedMealIds.length > 1 || config.meal_count > 1;
+  const isAggregated = config.meal_count > 1;
 
   return (
     <article
@@ -1272,45 +1346,26 @@ function RecipeCard({ config, onServingsChange, onToggle }: RecipeCardProps) {
 
       <div className="web-shopping-recipe-copy">
         <div className="web-shopping-recipe-title-row">
-          <h3>{config.recipe_name}</h3>
+          <h3>
+            <Link
+              className="web-shopping-recipe-title-link"
+              href={buildMealHref(config)}
+            >
+              {config.recipe_name}
+            </Link>
+          </h3>
         </div>
 
-        {shouldShowAggregationMeta ? (
-          <div className="web-shopping-recipe-meta">
-            <span>대상 식사 {selectedMealIds.length}개</span>
-            <span>합산 계획 {config.planned_servings_total}인분</span>
-          </div>
-        ) : null}
-        <p className="web-shopping-recipe-servings">
-          계획 {config.planned_servings_total}인분
-        </p>
-        <div className="web-shopping-servings">
-          <p>장보기 기준 인분</p>
-          <div className="web-stepper" role="group" aria-label="장보기 기준 인분">
-            <button
-              aria-label="인분 줄이기"
-              disabled={!config.isSelected || config.shopping_servings <= 1}
-              onClick={() =>
-                onServingsChange(config.recipe_id, config.shopping_servings - 1)
-              }
-              type="button"
-            >
-              -
-            </button>
-            <span aria-label={`${config.shopping_servings}인분`} aria-live="polite">
-              {config.shopping_servings}인분
-            </span>
-            <button
-              aria-label="인분 늘리기"
-              disabled={!config.isSelected}
-              onClick={() =>
-                onServingsChange(config.recipe_id, config.shopping_servings + 1)
-              }
-              type="button"
-            >
-              +
-            </button>
-          </div>
+        <div className="web-shopping-recipe-meta">
+          <span
+            className={
+              isAggregated ? "web-shopping-recipe-meta-aggregate" : undefined
+            }
+          >
+            {isAggregated
+              ? `합산 ${config.shopping_servings}인분`
+              : `${config.shopping_servings}인분`}
+          </span>
         </div>
       </div>
     </article>
