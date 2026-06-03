@@ -5,6 +5,8 @@ const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 const YOUTUBE_IMPORT_URL = "/menu/add/youtube";
+const YOUTUBE_IMPORT_SCREEN_HEADING = "영상 링크에서 레시피를 추출해요";
+const YOUTUBE_REVIEW_HEADING = "추출 결과를 확인해주세요";
 const YOUTUBE_IMPORT_EMBEDDED_URL =
   "/menu-add?date=2026-05-15&columnId=column-abc-123&slot=lunch&source=youtube";
 
@@ -312,8 +314,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.goto(YOUTUBE_IMPORT_URL);
 
     // Step 1: URL input
-    await expect(page.getByRole("heading", { name: "유튜브 가져오기" })).toBeVisible();
-    await expect(page.locator("text=유튜브 영상에서")).toBeVisible();
+    await expect(page.getByRole("heading", { name: YOUTUBE_IMPORT_SCREEN_HEADING })).toBeVisible();
     const urlInput = page.locator('input[type="url"]');
     await urlInput.fill("https://www.youtube.com/watch?v=recipe12345");
 
@@ -322,7 +323,8 @@ test.describe("Slice 19: YouTube Import", () => {
 
     // Step 2 → Step 3: extraction progress transitions to review
     // The extracting screen may be brief; we verify review arrives
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 15000 });
+    await expect(page.locator(".yt-mobile-import-shell")).toHaveCSS("overflow-y", "auto");
 
     // Verify extraction methods pills
     await expect(page.locator("[data-testid='extraction-method-description']")).toHaveText(
@@ -373,7 +375,7 @@ test.describe("Slice 19: YouTube Import", () => {
     expect(extractRoute.getCallCount()).toBe(0);
 
     await page.click('button:has-text("레시피 추출하기")');
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
     expect(extractRoute.getCallCount()).toBe(1);
   });
 
@@ -412,7 +414,7 @@ test.describe("Slice 19: YouTube Import", () => {
 
     await page.click('button:has-text("다시 입력")');
     expect(extractCalled).toBe(false);
-    await expect(page.locator("text=유튜브 영상에서")).toBeVisible();
+    await expect(page.getByRole("heading", { name: YOUTUBE_IMPORT_SCREEN_HEADING })).toBeVisible();
   });
 
   test("non-recipe warning: re-enter goes back to URL input", async ({ page }) => {
@@ -429,7 +431,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.click('button:has-text("다시 입력")');
 
     // Should go back to URL input with cleared field
-    await expect(page.locator("text=유튜브 영상에서")).toBeVisible();
+    await expect(page.getByRole("heading", { name: YOUTUBE_IMPORT_SCREEN_HEADING })).toBeVisible();
     const urlInput = page.locator('input[type="url"]');
     await expect(urlInput).toHaveValue("");
   });
@@ -449,7 +451,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=uncertain123");
     await page.click('button:has-text("가져오기")');
 
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
     await expect(page.locator("text=레시피 영상인지 확실하지 않아요")).toBeVisible();
     await expect(page.locator("text=음식 영상이지만 설명란 구조가 부족해요")).toBeVisible();
   });
@@ -482,7 +484,7 @@ test.describe("Slice 19: YouTube Import", () => {
 
     // Click "다른 영상 입력" to go back to step 1
     await page.click('button:has-text("다른 영상 입력")');
-    await expect(page.locator("text=유튜브 영상에서")).toBeVisible();
+    await expect(page.getByRole("heading", { name: YOUTUBE_IMPORT_SCREEN_HEADING })).toBeVisible();
   });
 
   test("register error: shows error modal with retry", async ({ page }) => {
@@ -498,7 +500,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.click('button:has-text("가져오기")');
 
     // Wait for review step
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
 
     // Try to register
     await page.click('button:has-text("등록")');
@@ -523,7 +525,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.goto(YOUTUBE_IMPORT_URL);
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=recipe12345");
     await page.click('button:has-text("가져오기")');
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
 
     await page.click('button:has-text("등록")');
 
@@ -543,7 +545,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=recipe12345");
     await page.click('button:has-text("가져오기")');
 
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
     await page.locator('input[value="백종원 김치찌개"]').fill("수정한 김치찌개");
 
     await page.getByLabel("뒤로 가기").click();
@@ -565,7 +567,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.goto(YOUTUBE_IMPORT_URL);
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=recipe12345");
     await page.click('button:has-text("가져오기")');
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
     await page.click('button:has-text("등록")');
 
     await expect(page.locator("text=레시피가 등록됐어요")).toBeVisible({ timeout: 5000 });
@@ -647,7 +649,7 @@ test.describe("Slice 19: YouTube Import", () => {
     // Go through full flow to complete
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=recipe12345");
     await page.click('button:has-text("가져오기")');
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
     await page.click('button:has-text("등록")');
     await expect(page.locator("text=레시피가 등록됐어요")).toBeVisible({ timeout: 5000 });
 
@@ -695,7 +697,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.click('button:has-text("가져오기")');
 
     // Wait for review step
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
 
     // Should start with 2 ingredients
     await expect(page.locator("text=재료 (2개)")).toBeVisible();
@@ -729,7 +731,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=recipe12345");
     await page.click('button:has-text("가져오기")');
 
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
 
     // Start with 3 steps
     await expect(page.locator("text=만들기 (3단계)")).toBeVisible();
@@ -787,7 +789,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=recipe12345");
     await page.click('button:has-text("가져오기")');
 
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
 
     // Register button should be disabled (no ingredients or steps)
     const registerButton = page.locator('button:has-text("등록")');
@@ -892,7 +894,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=needsreview123");
     await page.click('button:has-text("가져오기")');
 
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
     await expect(page.locator("text=확인 필요한 재료")).toBeVisible();
     await expect(page.locator("text=재료를 찾지 못했어요")).toBeVisible();
     await expect(page.locator('button:has-text("등록")')).toBeDisabled();
@@ -971,7 +973,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=incomplete123");
     await page.click('button:has-text("가져오기")');
 
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
     await expect(page.locator("text=등록 전 필수 입력: 만들기 설명")).toBeVisible();
     await expect(page.locator("text=선택 확인 권장: 시간")).toBeVisible();
     await expect(page.locator('button:has-text("등록")')).toBeDisabled();
@@ -1038,7 +1040,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.goto(YOUTUBE_IMPORT_URL);
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=recipe12345");
     await page.click('button:has-text("가져오기")');
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
 
     // Verify base_servings defaults to 1 via the stepper's aria-label
     await expect(page.getByLabel("1인분")).toBeVisible();
@@ -1079,7 +1081,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.goto(YOUTUBE_IMPORT_URL);
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=recipe12345");
     await page.click('button:has-text("가져오기")');
-    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
     await page.click('button:has-text("등록")');
 
     await expect(page.locator("text=레시피가 등록됐어요")).toBeVisible({ timeout: 5000 });
