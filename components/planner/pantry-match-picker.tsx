@@ -90,7 +90,10 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
           <span className="block truncate text-[14px] font-bold text-[var(--foreground)]">
             {recipe.title}
           </span>
-          <span className="relative mt-1.5 flex h-4 items-center overflow-hidden rounded-full bg-[var(--brand-soft)]">
+          <span
+            className="relative mt-1.5 flex h-5 items-center overflow-hidden rounded-full bg-[var(--brand-soft)]"
+            data-testid={`pantry-match-progress-${recipe.id}`}
+          >
             <span
               className="absolute left-0 top-0 h-full rounded-full bg-[color-mix(in_srgb,var(--brand)_32%,transparent)]"
               style={{ width: `${Math.max(4, Math.min(100, percentage))}%` }}
@@ -101,7 +104,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
           </span>
           <span
             className="mt-1.5 flex flex-wrap items-center gap-1"
-            data-testid={`pantry-missing-ingredients-row-${recipe.id}`}
+            data-testid={`pantry-ingredient-summary-row-${recipe.id}`}
           >
             <span className="mr-0.5 text-[11px] font-bold text-[var(--text-2)]">
               {recipe.matched_ingredients}/{recipe.total_ingredients}개 보유
@@ -153,7 +156,10 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
           </span>
           <span className="web-picker-pantry-copy">
             <span>{recipe.title}</span>
-            <span className="web-picker-progress">
+            <span
+              className={`web-picker-progress web-picker-progress-${scoreTone}`}
+              data-testid={`pantry-match-progress-${recipe.id}`}
+            >
               <span
                 className={`web-picker-progress-fill web-picker-progress-${scoreTone}`}
                 style={{ width: `${Math.max(4, Math.min(100, percentage))}%` }}
