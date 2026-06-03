@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -124,7 +124,7 @@ describe("ManualRecipeCreateScreen", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
-    await user.click(await screen.findByRole("button", { name: "양파" }));
+    await user.click(await screen.findByRole("checkbox", { name: "양파" }));
 
     expect(screen.queryByLabelText("양파 수량")).toBeNull();
 
@@ -173,6 +173,19 @@ describe("ManualRecipeCreateScreen", () => {
     expect(screen.getByRole("button", { name: "준비" })).toBeTruthy();
   });
 
+  it("uses the tighter mobile manual-create controls requested for meal add", async () => {
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    const ingredientAddButton = screen.getByRole("button", { name: "+ 재료 추가하기" });
+    expect(screen.getByRole("heading", { name: "기본 정보" }).className).toContain("font-bold");
+    expect(ingredientAddButton.className).not.toContain("w-full");
+    expect(ingredientAddButton.className).not.toContain("border-dashed");
+
+    const composer = await screen.findByTestId("manual-step-composer");
+    const methodRail = composer.querySelector("[aria-label='조리방법 선택']");
+    expect(methodRail?.className).toContain("scrollbar-hide");
+  });
+
   it("shows inline validation instead of the bottom save requirements box after invalid save", async () => {
     const user = userEvent.setup();
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
@@ -192,13 +205,17 @@ describe("ManualRecipeCreateScreen", () => {
 
     await user.click(screen.getByRole("button", { name: "기준 인분 늘리기" }));
 
-    expect(screen.getByLabelText("기준 인분").getAttribute("value")).toBe("3");
+    expect(
+      within(screen.getByRole("group", { name: "기준 인분 조절" })).getByText("3인분"),
+    ).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "기준 인분 줄이기" }));
     await user.click(screen.getByRole("button", { name: "기준 인분 줄이기" }));
     await user.click(screen.getByRole("button", { name: "기준 인분 줄이기" }));
 
-    expect(screen.getByLabelText("기준 인분").getAttribute("value")).toBe("1");
+    expect(
+      within(screen.getByRole("group", { name: "기준 인분 조절" })).getByText("1인분"),
+    ).toBeTruthy();
   });
 
   it("requires choosing a cooking method before adding an inline cooking step", async () => {
@@ -277,16 +294,17 @@ describe("ManualRecipeCreateScreen", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
-    await user.click(await screen.findByRole("button", { name: "양파" }));
+    const onionCheckbox = await screen.findByRole("checkbox", { name: "양파" });
+    await user.click(onionCheckbox);
 
     const addButton = screen.getByRole("button", {
       name: "선택한 재료 1개 추가",
     });
     expect(addButton.className).toContain("bg-[var(--wave1-mint-contrast)]");
 
-    await user.click(screen.getByRole("button", { name: "양파 선택 해제" }));
+    await user.click(onionCheckbox);
 
-    expect(screen.queryByRole("button", { name: "양파 선택 해제" })).toBeNull();
+    expect((onionCheckbox as HTMLInputElement).checked).toBe(false);
     expect(
       (screen.getByRole("button", {
         name: "선택한 재료 0개 추가",
@@ -393,7 +411,7 @@ describe("ManualRecipeCreateScreen", () => {
 
     await user.type(screen.getByPlaceholderText("예: 김치찌개"), "최신 이미지 요리");
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
-    await user.click(await screen.findByRole("button", { name: "양파" }));
+    await user.click(await screen.findByRole("checkbox", { name: "양파" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
 
     await screen.findByRole("button", { name: "준비" });
@@ -511,7 +529,7 @@ describe("ManualRecipeCreateScreen", () => {
 
     // Add an ingredient
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
-    await user.click(await screen.findByRole("button", { name: "양파" }));
+    await user.click(await screen.findByRole("checkbox", { name: "양파" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
 
     // Add a step
@@ -595,7 +613,7 @@ describe("ManualRecipeCreateScreen", () => {
 
     // Add ingredient
     await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
-    await user.click(await screen.findByRole("button", { name: "양파" }));
+    await user.click(await screen.findByRole("checkbox", { name: "양파" }));
     await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
 
     // Add step

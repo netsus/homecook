@@ -4,24 +4,19 @@ import Image from "next/image";
 import React, { useCallback, useEffect, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import { MealAddServingsModal } from "@/components/planner/meal-add-servings-modal";
+import { MealAddTargetBadge } from "@/components/planner/meal-add-target-badge";
 import {
   AppBackButton,
   AppBackButtonSpacer,
 } from "@/components/shared/app-back-button";
-import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import {
-  WebButton,
-  WebDialog,
-  WebDialogBody,
-  WebDialogFooter,
-  WebDialogHeader,
-  WebDialogTitle,
   WebEmptyState,
   WebListRow,
-  WebModal,
   WebSkeleton,
 } from "@/components/web";
 import { fetchPantryMatchRecipes } from "@/lib/api/recipe";
+import { resolveRecipeImage } from "@/lib/recipe-image";
 import type { PantryMatchRecipeItem } from "@/types/recipe";
 
 type PantryMatchPresentation = "dialog" | "screen" | "web" | "sheet";
@@ -62,80 +57,6 @@ function MatchScoreBadge({ score }: MatchScoreBadgeProps) {
   );
 }
 
-function MissingIngredientChips({
-  ingredients,
-  max = 3,
-}: {
-  ingredients: PantryMatchRecipeItem["missing_ingredients"];
-  max?: number;
-}) {
-  if (ingredients.length === 0) {
-    return null;
-  }
-
-  return (
-    <span className="flex min-w-0 flex-wrap items-center justify-end gap-1">
-      {ingredients.slice(0, max).map((ingredient) => (
-        <span
-          className="rounded-[var(--radius-badge)] bg-[var(--warning-soft)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--warning-strong)]"
-          key={ingredient.id}
-        >
-          {ingredient.standard_name}
-        </span>
-      ))}
-      {ingredients.length > max ? (
-        <span className="rounded-[var(--radius-badge)] bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--text-3)]">
-          +{ingredients.length - max}
-        </span>
-      ) : null}
-    </span>
-  );
-}
-
-function PantryProgress({
-  percentage,
-  recipeId,
-  tone,
-  variant,
-}: {
-  percentage: number;
-  recipeId: string;
-  tone: "brand" | "warning" | "danger";
-  variant: "mobile" | "web";
-}) {
-  const width = `${Math.max(4, Math.min(100, percentage))}%`;
-
-  if (variant === "web") {
-    return (
-      <span
-        className={`web-picker-progress web-picker-progress-${tone}`}
-        data-testid={`pantry-match-progress-${recipeId}`}
-      >
-        <span
-          className={`web-picker-progress-fill web-picker-progress-${tone}`}
-          style={{ width }}
-        />
-        <span className="web-picker-progress-label">{percentage}%</span>
-      </span>
-    );
-  }
-
-  return (
-    <span
-      className="relative mt-1.5 block h-5 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--brand)_14%,var(--surface)_86%)]"
-      data-testid={`pantry-match-progress-${recipeId}`}
-    >
-      <span
-        className="block h-full rounded-full bg-[color-mix(in_srgb,var(--brand)_28%,var(--surface)_72%)]"
-        style={{ width }}
-      />
-      <span className="absolute inset-y-0 right-2 flex items-center text-[10px] font-extrabold text-[var(--brand)]">
-        {percentage}%
-      </span>
-    </span>
-  );
-}
-
 // ─── Pantry Recipe Card ──────────────────────────────────────────────────────
 
 interface PantryRecipeCardProps {
@@ -156,37 +77,48 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
         type="button"
       >
         <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--brand-soft)] text-[28px]">
-          {recipe.thumbnail_url ? (
-            <Image
-              alt=""
-              className="h-full w-full object-cover"
-              height={64}
-              src={recipe.thumbnail_url}
-              unoptimized
-              width={64}
-            />
-          ) : (
-            "🍳"
-          )}
+          <Image
+            alt=""
+            className="h-full w-full object-cover"
+            height={64}
+            src={resolveRecipeImage(recipe)}
+            unoptimized
+            width={64}
+          />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[14px] font-bold text-[var(--foreground)]">
             {recipe.title}
           </span>
-          <PantryProgress
-            percentage={percentage}
-            recipeId={recipe.id}
-            tone="brand"
-            variant="mobile"
-          />
+          <span className="relative mt-1.5 flex h-4 items-center overflow-hidden rounded-full bg-[var(--brand-soft)]">
+            <span
+              className="absolute left-0 top-0 h-full rounded-full bg-[color-mix(in_srgb,var(--brand)_32%,transparent)]"
+              style={{ width: `${Math.max(4, Math.min(100, percentage))}%` }}
+            />
+            <span className="relative ml-auto pr-2 text-[10px] font-extrabold text-[var(--brand)]">
+              {percentage}%
+            </span>
+          </span>
           <span
-            className="mt-1.5 flex items-center justify-between gap-2 text-[11px] font-bold text-[var(--text-3)]"
-            data-testid={`pantry-ingredient-summary-row-${recipe.id}`}
+            className="mt-1.5 flex flex-wrap items-center gap-1"
+            data-testid={`pantry-missing-ingredients-row-${recipe.id}`}
           >
-            <span className="shrink-0">
+            <span className="mr-0.5 text-[11px] font-bold text-[var(--text-2)]">
               {recipe.matched_ingredients}/{recipe.total_ingredients}개 보유
             </span>
-            <MissingIngredientChips ingredients={recipe.missing_ingredients} />
+            {recipe.missing_ingredients.slice(0, 3).map((ingredient) => (
+              <span
+                className="rounded-[var(--radius-badge)] bg-[var(--warning-soft)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--warning-strong)]"
+                key={ingredient.id}
+              >
+                {ingredient.standard_name}
+              </span>
+            ))}
+            {recipe.missing_ingredients.length > 3 ? (
+              <span className="rounded-[var(--radius-badge)] bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--text-3)]">
+                +{recipe.missing_ingredients.length - 3}
+              </span>
+            ) : null}
           </span>
           <span className="mt-2 inline-flex rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-2.5 py-1.5 text-[12px] font-semibold text-[var(--brand)]">
             선택
@@ -198,7 +130,7 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
 
   if (presentation === "web") {
     const percentage = Math.round(recipe.match_score * 100);
-    const scoreTone: "brand" | "warning" | "danger" =
+    const scoreTone =
       percentage >= 80 ? "brand" : percentage >= 50 ? "warning" : "danger";
 
     return (
@@ -210,31 +142,41 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
       >
         <WebListRow interactive className="web-picker-pantry-row">
           <span className="web-picker-pantry-thumb" aria-hidden="true">
-            {recipe.thumbnail_url ? (
-              <Image
-                alt=""
-                className="h-full w-full object-cover"
-                height={56}
-                src={recipe.thumbnail_url}
-                unoptimized
-                width={56}
-              />
-            ) : (
-              "🍳"
-            )}
+            <Image
+              alt=""
+              className="h-full w-full object-cover"
+              height={56}
+              src={resolveRecipeImage(recipe)}
+              unoptimized
+              width={56}
+            />
           </span>
           <span className="web-picker-pantry-copy">
             <span>{recipe.title}</span>
-            <small>
-              {recipe.matched_ingredients}/{recipe.total_ingredients}개 보유
-              <MissingIngredientChips ingredients={recipe.missing_ingredients} max={2} />
-            </small>
-            <PantryProgress
-              percentage={percentage}
-              recipeId={recipe.id}
-              tone={scoreTone}
-              variant="web"
-            />
+            <span className="web-picker-progress">
+              <span
+                className={`web-picker-progress-fill web-picker-progress-${scoreTone}`}
+                style={{ width: `${Math.max(4, Math.min(100, percentage))}%` }}
+              />
+              <span className={`web-picker-progress-label web-picker-progress-label-${scoreTone}`}>
+                {percentage}%
+              </span>
+            </span>
+            <span className="web-picker-pantry-stats">
+              <span className="web-picker-pantry-have">
+                {recipe.matched_ingredients}/{recipe.total_ingredients}개 보유
+              </span>
+              {recipe.missing_ingredients.slice(0, 3).map((ingredient) => (
+                <span className="web-picker-missing-chip" key={ingredient.id}>
+                  {ingredient.standard_name}
+                </span>
+              ))}
+              {recipe.missing_ingredients.length > 3 ? (
+                <span className="web-picker-missing-more">
+                  +{recipe.missing_ingredients.length - 3}
+                </span>
+              ) : null}
+            </span>
           </span>
         </WebListRow>
       </button>
@@ -285,14 +227,13 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
   );
 }
 
-// ─── Servings Modal ──────────────────────────────────────────────────────────
+// ─── Servings Modal ───────────────────────────────────────
 
 interface ServingsModalProps {
   recipe: PantryMatchRecipeItem;
   isCreating: boolean;
   onConfirm: (servings: number) => void;
   onCancel: () => void;
-  presentation?: PantryMatchPresentation;
   slotLabel?: string;
 }
 
@@ -301,224 +242,28 @@ function ServingsModal({
   isCreating,
   onConfirm,
   onCancel,
-  presentation = "dialog",
   slotLabel,
 }: ServingsModalProps) {
-  const [servings, setServings] = useState(2);
-
-  const handleConfirm = useCallback(() => {
-    if (servings < 1) return;
-    onConfirm(servings);
-  }, [servings, onConfirm]);
-
-  if (presentation === "screen" || presentation === "sheet") {
-    return (
-      <div className="fixed inset-0 z-50 flex items-end bg-[var(--overlay-42)]" onClick={onCancel}>
-        <div
-          aria-labelledby="servings-modal-title"
-          aria-modal="true"
-          className="w-full rounded-t-[var(--radius-sheet)] bg-[var(--surface)] px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_var(--shadow-color-strong)]"
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-        >
-          <div className="flex justify-center pb-4">
-            <div className="h-1 w-9 rounded-full bg-[var(--line-strong)]" />
-          </div>
-          <h2 className="text-[20px] font-bold text-[var(--foreground)]" id="servings-modal-title">
-            플래너에 추가
-          </h2>
-          {slotLabel ? (
-            <p className="mt-1 text-[13px] font-bold text-[var(--brand)]">
-              대상 · {slotLabel}
-            </p>
-          ) : null}
-          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] p-2.5">
-            <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--brand-soft)] text-[22px]">
-              {recipe.thumbnail_url ? (
-                <Image
-                  alt=""
-                  className="h-full w-full object-cover"
-                  height={44}
-                  src={recipe.thumbnail_url}
-                  unoptimized
-                  width={44}
-                />
-              ) : (
-                "🍳"
-              )}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-extrabold text-[var(--foreground)]">
-                {recipe.title}
-              </span>
-              <span className="mt-0.5 block text-[11px] text-[var(--text-3)]">
-                선택 {servings}인분
-              </span>
-            </span>
-          </div>
-          <p className="mt-3 text-[13px] font-bold text-[var(--text-2)]">인분</p>
-          <div className="mt-3 [&>div]:w-full">
-            <NumericStepperCompact
-              disabled={isCreating}
-              min={1}
-              onChange={setServings}
-              unit="인분"
-              value={servings}
-            />
-          </div>
-          <div className="mt-6 flex gap-3">
-            <button
-              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-bold text-[var(--text-2)]"
-              disabled={isCreating}
-              onClick={onCancel}
-              type="button"
-            >
-              취소
-            </button>
-            <button
-              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] bg-[var(--brand)] text-[14px] font-bold text-[var(--text-inverse)] disabled:opacity-50"
-              disabled={isCreating || servings < 1}
-              onClick={handleConfirm}
-              type="button"
-            >
-              {isCreating ? "추가 중..." : "추가하기"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (presentation === "web") {
-    return (
-      <WebModal onBackdropClick={onCancel}>
-        <WebDialog aria-labelledby="pantry-servings-title" size="narrow">
-          <WebDialogHeader>
-            <div>
-              <WebDialogTitle id="pantry-servings-title">
-                플래너에 추가
-              </WebDialogTitle>
-              {slotLabel ? (
-                <p className="web-modal-target">대상 · {slotLabel}</p>
-              ) : null}
-            </div>
-            <button
-              aria-label="닫기"
-              className="web-modal-close"
-              onClick={onCancel}
-              type="button"
-            >
-              ×
-            </button>
-          </WebDialogHeader>
-          <WebDialogBody>
-            <div className="web-modal-preview web-modal-preview-compact">
-              <div className="web-modal-preview-thumb">
-                {recipe.thumbnail_url ? (
-                  <Image
-                    alt=""
-                    className="h-full w-full object-cover"
-                    height={52}
-                    src={recipe.thumbnail_url}
-                    unoptimized
-                    width={52}
-                  />
-                ) : (
-                  "🍳"
-                )}
-              </div>
-              <div className="min-w-0">
-                <div className="web-modal-preview-title">{recipe.title}</div>
-                <div className="web-modal-preview-meta">선택 {servings}인분</div>
-              </div>
-            </div>
-            <p className="web-modal-section-label">인분</p>
-            <div className="web-servings-stepper">
-              <div className="web-stepper" aria-label="계획 인분" role="group">
-                <button
-                  aria-label="인분 줄이기"
-                  disabled={isCreating || servings <= 1}
-                  onClick={() => setServings((value) => Math.max(1, value - 1))}
-                  type="button"
-                >
-                  −
-                </button>
-                <span>{servings}인분</span>
-                <button
-                  aria-label="인분 늘리기"
-                  disabled={isCreating}
-                  onClick={() => setServings((value) => value + 1)}
-                  type="button"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          </WebDialogBody>
-          <WebDialogFooter>
-            <WebButton disabled={isCreating} onClick={onCancel} variant="secondary">
-              취소
-            </WebButton>
-            <WebButton
-              disabled={isCreating || servings < 1}
-              onClick={handleConfirm}
-            >
-              {isCreating ? "추가 중..." : "추가하기"}
-            </WebButton>
-          </WebDialogFooter>
-        </WebDialog>
-      </WebModal>
-    );
-  }
-
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-end bg-[var(--overlay-42)] p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
-      onClick={onCancel}
-    >
-      <div
-        aria-labelledby="servings-modal-title"
-        aria-modal="true"
-        className="glass-panel w-full max-w-md rounded-[var(--radius-sheet)] px-5 py-6 md:px-6"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-      >
-        <h2
-          className="text-lg font-bold text-[var(--foreground)]"
-          id="servings-modal-title"
-        >
-          계획 인분 입력
-        </h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">{recipe.title}</p>
-        <div className="mt-4 flex items-center justify-center gap-4">
-          <NumericStepperCompact
-            disabled={isCreating}
-            min={1}
-            onChange={setServings}
-            unit="인분"
-            value={servings}
-          />
-        </div>
-        <div className="mt-6 flex gap-3">
-          <button
-            className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--foreground)] hover:bg-[var(--line)]"
-            disabled={isCreating}
-            onClick={onCancel}
-            type="button"
-          >
-            취소
-          </button>
-          <button
-            className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-[var(--text-inverse)] hover:bg-[var(--brand-deep)] disabled:opacity-50"
-            disabled={isCreating || servings < 1}
-            onClick={handleConfirm}
-            type="button"
-          >
-            {isCreating ? "추가 중..." : "추가"}
-          </button>
-        </div>
-      </div>
-    </div>
+    <MealAddServingsModal
+      initialServings={2}
+      isCreating={isCreating}
+      metaText="팬트리 추천"
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+      recipeTitle={recipe.title}
+      targetLabel={slotLabel}
+      thumbnail={
+        <Image
+          alt=""
+          className="h-full w-full object-cover"
+          height={44}
+          src={resolveRecipeImage(recipe)}
+          unoptimized
+          width={44}
+        />
+      }
+    />
   );
 }
 
@@ -628,15 +373,13 @@ export function PantryMatchPicker({
         <div className="flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-2">
           <AppBackButton onClick={onBack ?? onClose} />
           <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[var(--foreground)]">
-            팬트리 기반 추천
+            팬트리 추천
           </h1>
           <AppBackButtonSpacer />
         </div>
         {slotLabel ? (
           <div className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-4 py-3.5">
-            <p className="text-[12px] font-bold leading-[1.5] text-[var(--brand)]">
-              대상 · {slotLabel}
-            </p>
+            <MealAddTargetBadge label={slotLabel} />
           </div>
         ) : null}
         <div className="p-3 pb-[112px]">{content}</div>
@@ -645,7 +388,6 @@ export function PantryMatchPicker({
             isCreating={isCreating}
             onCancel={onServingsCancel}
             onConfirm={onServingsConfirm}
-            presentation="screen"
             recipe={selectedRecipe}
             slotLabel={slotLabel}
           />
@@ -658,18 +400,12 @@ export function PantryMatchPicker({
   if (presentation === "sheet") {
     return (
       <>
-        {slotLabel ? (
-          <p className="mb-3 text-[12px] font-bold leading-[1.5] text-[var(--brand)]">
-            대상 · {slotLabel}
-          </p>
-        ) : null}
         {content}
         {selectedRecipe && (
           <ServingsModal
             isCreating={isCreating}
             onCancel={onServingsCancel}
             onConfirm={onServingsConfirm}
-            presentation="sheet"
             recipe={selectedRecipe}
             slotLabel={slotLabel}
           />
@@ -681,14 +417,13 @@ export function PantryMatchPicker({
   if (presentation === "web") {
     return (
       <section className="web-picker-section" aria-label="팬트리 기반 추천">
-        {slotLabel ? <p className="web-picker-subtle web-picker-target">대상 · {slotLabel}</p> : null}
+        <MealAddTargetBadge className="mb-3" label={slotLabel} tone="web" />
         {content}
         {selectedRecipe && (
           <ServingsModal
             isCreating={isCreating}
             onCancel={onServingsCancel}
             onConfirm={onServingsConfirm}
-            presentation="web"
             recipe={selectedRecipe}
             slotLabel={slotLabel}
           />
@@ -747,7 +482,6 @@ export function PantryMatchPicker({
           isCreating={isCreating}
           onCancel={onServingsCancel}
           onConfirm={onServingsConfirm}
-          presentation={presentation}
           recipe={selectedRecipe}
         />
       )}

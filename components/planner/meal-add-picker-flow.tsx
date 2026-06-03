@@ -8,6 +8,7 @@ import { RecipeBookDetailPicker } from "@/components/planner/recipe-book-detail-
 import { RecipeBookSelector } from "@/components/planner/recipe-book-selector";
 import { RecipeSearchPicker } from "@/components/planner/recipe-search-picker";
 import type { MealAddPickerMode } from "@/components/planner/meal-add-options-sheet";
+import { MealAddTargetBadge } from "@/components/planner/meal-add-target-badge";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { AppBottomSheet } from "@/components/shared/app-overlay";
 import { createMealSafe } from "@/lib/api/meal";
@@ -33,25 +34,25 @@ type InternalPickerMode = MealAddPickerMode | "recipebook-detail";
 interface PickerSheetProps {
   ariaLabelledBy: string;
   children: React.ReactNode;
-  description?: string;
   onBack: () => void;
   onClose: () => void;
+  targetLabel?: string;
   title: string;
 }
 
 function PickerSheet({
   ariaLabelledBy,
   children,
-  description,
   onBack,
   onClose,
+  targetLabel,
   title,
 }: PickerSheetProps) {
   return (
     <AppBottomSheet
       ariaLabelledBy={ariaLabelledBy}
+      badge={<MealAddTargetBadge className="shrink-0" label={targetLabel} />}
       bodyClassName="pb-5"
-      description={description}
       leadingAction={<AppBackButton onClick={onBack} />}
       onClose={onClose}
       panelClassName="max-w-[480px]"
@@ -165,9 +166,9 @@ export function MealAddPickerFlow({
         {errorBanner}
         <PickerSheet
           ariaLabelledBy="meal-add-search-picker-title"
-          description={`대상 · ${targetLabel}`}
           onBack={handlePickerBackToOptions}
           onClose={handlePickerBackToOptions}
+          targetLabel={targetLabel}
           title="검색으로 추가"
         >
           <RecipeSearchPicker
@@ -200,9 +201,9 @@ export function MealAddPickerFlow({
         {errorBanner}
         <PickerSheet
           ariaLabelledBy="meal-add-recipebook-picker-title"
-          description={`대상 · ${targetLabel}`}
           onBack={handlePickerBackToOptions}
           onClose={handlePickerBackToOptions}
+          targetLabel={targetLabel}
           title="레시피북에서 추가"
         >
           <RecipeBookSelector
@@ -226,9 +227,9 @@ export function MealAddPickerFlow({
         {errorBanner}
         <PickerSheet
           ariaLabelledBy="meal-add-recipebook-detail-picker-title"
-          description={`대상 · ${targetLabel}`}
           onBack={handleRecipeBookBack}
           onClose={handlePickerBackToOptions}
+          targetLabel={targetLabel}
           title={selectedBook.name}
         >
           <RecipeBookDetailPicker
@@ -260,9 +261,9 @@ export function MealAddPickerFlow({
         {errorBanner}
         <PickerSheet
           ariaLabelledBy="meal-add-pantry-picker-title"
-          description={`대상 · ${targetLabel}`}
           onBack={handlePickerBackToOptions}
           onClose={handlePickerBackToOptions}
+          targetLabel={targetLabel}
           title="팬트리 기반 추천"
         >
           <PantryMatchPicker

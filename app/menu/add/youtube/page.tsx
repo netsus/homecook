@@ -68,6 +68,7 @@ export default async function YoutubeImportPage({ searchParams }: YoutubeImportP
         initialYoutubeUrl={youtubeUrl ?? ""}
         planDate={date ?? ""}
         columnId={columnId ?? ""}
+        presentation={date || columnId || slot ? "screen" : undefined}
         slotName={slot ?? ""}
       />
     </main>

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
 import { fetchIngredients } from "@/lib/api/ingredients";
-import { getIngredientCategoryEmoji, INGREDIENT_CATEGORIES } from "@/lib/ingredient-categories";
+import { INGREDIENT_CATEGORIES } from "@/lib/ingredient-categories";
 
 vi.mock("@/lib/api/ingredients", () => ({
   fetchIngredients: vi.fn(),
@@ -52,20 +52,21 @@ describe("RecipeIngredientAddModal", () => {
     cleanup();
   });
 
-  it("renders ingredient options as content-sized multi-select chips and adds them only after done", async () => {
+  it("renders ingredient options as home-style grid cards and adds them only after done", async () => {
     const onAdd = vi.fn();
     const user = userEvent.setup();
 
     render(<RecipeIngredientAddModal onAdd={onAdd} onClose={vi.fn()} />);
 
-    const onionChip = await screen.findByRole("button", { name: "양파" });
-    const tofuChip = screen.getByRole("button", { name: "두부" });
+    const onionCheckbox = await screen.findByRole("checkbox", { name: "양파" });
+    const tofuCheckbox = screen.getByRole("checkbox", { name: "두부" });
+    const onionCard = onionCheckbox.closest("label");
 
-    expect(onionChip.className).toContain("inline-flex");
-    expect(onionChip.className).not.toContain("w-full");
+    expect(onionCard?.className).toContain("rounded-[var(--radius-card)]");
+    expect(onionCard?.className).not.toContain("inline-flex");
 
-    await user.click(onionChip);
-    await user.click(tofuChip);
+    await user.click(onionCheckbox);
+    await user.click(tofuCheckbox);
 
     expect(onAdd).not.toHaveBeenCalled();
 
@@ -91,37 +92,51 @@ describe("RecipeIngredientAddModal", () => {
     });
   });
 
-  it("renders desktop ingredient options as full grid cards and keeps multi-selection", async () => {
+  it("renders desktop ingredient options like the home ingredient filter and keeps multi-selection", async () => {
     installMatchMedia(true);
     const user = userEvent.setup();
 
     render(<RecipeIngredientAddModal onAdd={vi.fn()} onClose={vi.fn()} />);
 
-    const onionCard = await screen.findByRole("button", { name: "양파" });
-    const tofuCard = screen.getByRole("button", { name: "두부" });
+    const onionCheckbox = await screen.findByRole("checkbox", { name: "양파" });
+    const tofuCheckbox = screen.getByRole("checkbox", { name: "두부" });
+    const onionCard = onionCheckbox.closest("label");
 
-    expect(onionCard.className).toContain("web-ingredient-cell");
-    expect(onionCard.className).not.toContain("inline-flex");
-    expect(onionCard.textContent).toContain(getIngredientCategoryEmoji(VEGETABLE_CATEGORY));
+    expect(onionCard?.className).toContain("web-ingredient-option");
+    expect(onionCard?.className).toContain("web-ingredient-option-card");
+    expect(onionCard?.className).not.toContain("inline-flex");
     expect(screen.getByTestId("ingredient-list-region")).toBeTruthy();
 
-    await user.click(onionCard);
-    await user.click(tofuCard);
+    await user.click(onionCheckbox);
+    await user.click(tofuCheckbox);
 
-    expect(onionCard.getAttribute("aria-pressed")).toBe("true");
-    expect(tofuCard.getAttribute("aria-pressed")).toBe("true");
+    expect((onionCheckbox as HTMLInputElement).checked).toBe(true);
+    expect((tofuCheckbox as HTMLInputElement).checked).toBe(true);
     expect(
       screen.getByRole("button", { name: "선택한 재료 2개 추가" }),
     ).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "양파 선택 해제" }));
+    await user.click(onionCheckbox);
 
-    expect(onionCard.getAttribute("aria-pressed")).toBe("false");
-    expect(tofuCard.getAttribute("aria-pressed")).toBe("true");
+    expect((onionCheckbox as HTMLInputElement).checked).toBe(false);
+    expect((tofuCheckbox as HTMLInputElement).checked).toBe(true);
     expect(
       screen.getByRole("button", { name: "선택한 재료 1개 추가" }),
     ).toBeTruthy();
     expect(screen.queryByText("1개 선택됨")).toBeNull();
+  });
+
+  it("can force the desktop picker presentation even on a narrow viewport", async () => {
+    render(
+      <RecipeIngredientAddModal
+        onAdd={vi.fn()}
+        onClose={vi.fn()}
+        presentation="web"
+      />,
+    );
+
+    expect(await screen.findByRole("dialog", { name: "재료로 검색" })).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "재료 추가" })).toBeNull();
   });
 
   it("shows the optional empty action when ingredient search has no results", async () => {
@@ -155,14 +170,14 @@ describe("RecipeIngredientAddModal", () => {
 
     render(<RecipeIngredientAddModal onAdd={vi.fn()} onClose={vi.fn()} />);
 
-    expect(await screen.findByRole("button", { name: "양파" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "두부" })).toBeTruthy();
+    expect(await screen.findByRole("checkbox", { name: "양파" })).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "두부" })).toBeTruthy();
 
-    await user.click(screen.getByRole("tab", { name: VEGETABLE_CATEGORY }));
+    await user.click(screen.getByRole("button", { name: VEGETABLE_CATEGORY }));
 
     expect(screen.getByTestId("ingredient-list-region")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "양파" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "두부" })).toBeNull();
+    expect(screen.getByRole("checkbox", { name: "양파" })).toBeTruthy();
+    expect(screen.queryByRole("checkbox", { name: "두부" })).toBeNull();
     expect(vi.mocked(fetchIngredients)).toHaveBeenCalledTimes(1);
   });
 });

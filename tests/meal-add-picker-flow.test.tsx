@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MealAddPickerFlow } from "@/components/planner/meal-add-picker-flow";
@@ -39,8 +39,15 @@ describe("MealAddPickerFlow leftover picker presentation", () => {
     );
 
     const dialog = await screen.findByRole("dialog", { name: "남은 요리에서 추가" });
+    const heading = within(dialog).getByRole("heading", {
+      name: "남은 요리에서 추가",
+    });
+    const targetBadge = within(dialog).getByTestId("meal-add-target-badge");
 
     expect(dialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
+    expect(targetBadge.textContent).toContain("4/18 아침");
+    expect(heading.parentElement?.contains(targetBadge)).toBe(true);
+    expect(screen.queryByText(/대상 ·/)).toBeNull();
     expect(screen.queryByTestId("leftover-picker-screen")).toBeNull();
     expect(screen.queryByTestId("leftover-picker-web")).toBeNull();
   });

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import React, { useState } from "react";
 
+import { MealAddTargetBadge } from "@/components/planner/meal-add-target-badge";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { AppBottomSheet } from "@/components/shared/app-overlay";
 
@@ -34,15 +35,9 @@ export function YoutubeImportEntrySheet({
   return (
     <AppBottomSheet
       ariaLabelledBy="youtube-import-entry-title"
+      badge={<MealAddTargetBadge className="shrink-0" label={targetLabel} />}
       bodyClassName="pb-5"
       description="링크를 붙여넣고 기존 유튜브 가져오기 화면에서 추출을 이어가요"
-      headerSlot={
-        targetLabel ? (
-          <p className="text-[12px] font-medium text-[var(--text-3)]">
-            대상 · {targetLabel}
-          </p>
-        ) : null
-      }
       leadingAction={
         <AppBackButton onClick={onBack} testId="youtube-import-entry-back" />
       }

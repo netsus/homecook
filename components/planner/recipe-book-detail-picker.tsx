@@ -4,24 +4,19 @@ import Image from "next/image";
 import React, { useCallback, useEffect, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import { MealAddServingsModal } from "@/components/planner/meal-add-servings-modal";
+import { MealAddTargetBadge } from "@/components/planner/meal-add-target-badge";
 import {
   AppBackButton,
   AppBackButtonSpacer,
 } from "@/components/shared/app-back-button";
-import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import {
-  WebButton,
-  WebDialog,
-  WebDialogBody,
-  WebDialogFooter,
-  WebDialogHeader,
-  WebDialogTitle,
   WebEmptyState,
-  WebModal,
   WebRecipeCard,
   WebSkeleton,
 } from "@/components/web";
 import { fetchRecipeBookRecipes } from "@/lib/api/recipe";
+import { resolveRecipeImage } from "@/lib/recipe-image";
 import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
 
 type RecipeBookDetailPresentation = "dialog" | "screen" | "web" | "sheet";
@@ -49,20 +44,16 @@ interface RecipeCardProps {
 }
 
 function RecipeThumb({ recipe }: { recipe: RecipeBookRecipeItem }) {
-  if (recipe.thumbnail_url) {
-    return (
-      <Image
-        alt=""
-        className="h-full w-full object-cover"
-        height={120}
-        src={recipe.thumbnail_url}
-        unoptimized
-        width={160}
-      />
-    );
-  }
-
-  return <span className="text-[34px]" aria-hidden="true">🍳</span>;
+  return (
+    <Image
+      alt=""
+      className="h-full w-full object-cover"
+      height={120}
+      src={resolveRecipeImage(recipe)}
+      unoptimized
+      width={160}
+    />
+  );
 }
 
 function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardProps) {
@@ -70,21 +61,21 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
     return (
       <button
         aria-label={`${recipe.title} 선택`}
-        className="flex min-h-[216px] flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] text-left active:border-[var(--brand)] active:bg-[var(--brand-soft)]"
+        className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] text-left active:border-[var(--brand)] active:bg-[var(--brand-soft)]"
         onClick={() => onSelect(recipe)}
         type="button"
       >
         <div className="flex aspect-[4/3] w-full items-center justify-center bg-[var(--surface-fill)]">
           <RecipeThumb recipe={recipe} />
         </div>
-        <div className="flex flex-1 flex-col p-2.5">
+        <div className="p-2.5">
           <h3 className="truncate text-[13px] font-bold text-[var(--foreground)]">
             {recipe.title}
           </h3>
           <p className="mt-0.5 truncate text-[11px] text-[var(--text-3)]">
             {recipe.tags.slice(0, 2).join(" · ") || "저장한 레시피"}
           </p>
-          <span className="mt-auto inline-flex w-fit rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-2.5 py-1.5 text-[12px] font-semibold text-[var(--brand)]">
+          <span className="mt-2 inline-flex rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-2.5 py-1.5 text-[12px] font-semibold text-[var(--brand)]">
             선택
           </span>
         </div>
@@ -102,7 +93,7 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
       >
         <WebRecipeCard
           alt={recipe.title}
-          imageSrc={recipe.thumbnail_url ?? undefined}
+          imageSrc={resolveRecipeImage(recipe)}
           meta={recipe.tags.slice(0, 2).join(" · ") || "저장한 레시피"}
           title={recipe.title}
         />
@@ -139,14 +130,13 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
   );
 }
 
-// ─── Servings Modal ──────────────────────────────────────────────────────────
+// ─── Servings Modal ───────────────────────────────────────
 
 interface ServingsModalProps {
   recipe: RecipeBookRecipeItem;
   isCreating: boolean;
   onConfirm: (servings: number) => void;
   onCancel: () => void;
-  presentation?: RecipeBookDetailPresentation;
   slotLabel?: string;
 }
 
@@ -155,202 +145,19 @@ function ServingsModal({
   isCreating,
   onConfirm,
   onCancel,
-  presentation = "dialog",
   slotLabel,
 }: ServingsModalProps) {
-  const [servings, setServings] = useState(2);
-
-  const handleConfirm = useCallback(() => {
-    if (servings < 1) return;
-    onConfirm(servings);
-  }, [servings, onConfirm]);
-
-  if (presentation === "screen" || presentation === "sheet") {
-    return (
-      <div className="fixed inset-0 z-50 flex items-end bg-[var(--overlay-42)]" onClick={onCancel}>
-        <div
-          aria-labelledby="servings-modal-title"
-          aria-modal="true"
-          className="w-full rounded-t-[var(--radius-sheet)] bg-[var(--surface)] px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_var(--shadow-color-strong)]"
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-        >
-          <div className="flex justify-center pb-4">
-            <div className="h-1 w-9 rounded-full bg-[var(--line-strong)]" />
-          </div>
-          <h2 className="text-[20px] font-bold text-[var(--foreground)]" id="servings-modal-title">
-            플래너에 추가
-          </h2>
-          {slotLabel ? (
-            <p className="mt-1 text-[13px] font-bold text-[var(--brand)]">
-              대상 · {slotLabel}
-            </p>
-          ) : null}
-          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] p-2.5">
-            <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--brand-soft)]">
-              <RecipeThumb recipe={recipe} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-extrabold text-[var(--foreground)]">
-                {recipe.title}
-              </span>
-              <span className="mt-0.5 block text-[11px] text-[var(--text-3)]">
-                선택 {servings}인분
-              </span>
-            </span>
-          </div>
-          <p className="mt-3 text-[13px] font-bold text-[var(--text-2)]">인분</p>
-          <div className="mt-3 [&>div]:w-full">
-            <NumericStepperCompact
-              disabled={isCreating}
-              min={1}
-              onChange={setServings}
-              unit="인분"
-              value={servings}
-            />
-          </div>
-          <div className="mt-6 flex gap-3">
-            <button
-              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-bold text-[var(--text-2)]"
-              disabled={isCreating}
-              onClick={onCancel}
-              type="button"
-            >
-              취소
-            </button>
-            <button
-              className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-control)] bg-[var(--brand)] text-[14px] font-bold text-[var(--text-inverse)] disabled:opacity-50"
-              disabled={isCreating || servings < 1}
-              onClick={handleConfirm}
-              type="button"
-            >
-              {isCreating ? "추가 중..." : "추가하기"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (presentation === "web") {
-    return (
-      <WebModal onBackdropClick={onCancel}>
-        <WebDialog aria-labelledby="recipebook-servings-title" size="narrow">
-          <WebDialogHeader>
-            <div>
-              <WebDialogTitle id="recipebook-servings-title">
-                플래너에 추가
-              </WebDialogTitle>
-              {slotLabel ? (
-                <p className="web-modal-target">대상 · {slotLabel}</p>
-              ) : null}
-            </div>
-            <button
-              aria-label="닫기"
-              className="web-modal-close"
-              onClick={onCancel}
-              type="button"
-            >
-              ×
-            </button>
-          </WebDialogHeader>
-          <WebDialogBody>
-            <div className="web-modal-preview web-modal-preview-compact">
-              <div className="web-modal-preview-thumb">
-                <RecipeThumb recipe={recipe} />
-              </div>
-              <div className="min-w-0">
-                <div className="web-modal-preview-title">{recipe.title}</div>
-                <div className="web-modal-preview-meta">선택 {servings}인분</div>
-              </div>
-            </div>
-            <p className="web-modal-section-label">인분</p>
-            <div className="web-servings-stepper">
-              <div className="web-stepper" aria-label="계획 인분" role="group">
-                <button
-                  aria-label="인분 줄이기"
-                  disabled={isCreating || servings <= 1}
-                  onClick={() => setServings((value) => Math.max(1, value - 1))}
-                  type="button"
-                >
-                  −
-                </button>
-                <span>{servings}인분</span>
-                <button
-                  aria-label="인분 늘리기"
-                  disabled={isCreating}
-                  onClick={() => setServings((value) => value + 1)}
-                  type="button"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          </WebDialogBody>
-          <WebDialogFooter>
-            <WebButton disabled={isCreating} onClick={onCancel} variant="secondary">
-              취소
-            </WebButton>
-            <WebButton
-              disabled={isCreating || servings < 1}
-              onClick={handleConfirm}
-            >
-              {isCreating ? "추가 중..." : "추가하기"}
-            </WebButton>
-          </WebDialogFooter>
-        </WebDialog>
-      </WebModal>
-    );
-  }
-
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-end bg-[var(--overlay-42)] p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
-      onClick={onCancel}
-    >
-      <div
-        aria-labelledby="servings-modal-title"
-        aria-modal="true"
-        className="glass-panel w-full max-w-md rounded-[var(--radius-sheet)] px-5 py-6 md:px-6"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-      >
-        <h2
-          className="text-lg font-bold text-[var(--foreground)]"
-          id="servings-modal-title"
-        >
-          계획 인분 입력
-        </h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">{recipe.title}</p>
-        <div className="mt-4 flex items-center justify-center gap-4">
-          <NumericStepperCompact
-            disabled={isCreating}
-            min={1}
-            onChange={setServings}
-            unit="인분"
-            value={servings}
-          />
-        </div>
-        <div className="mt-6 flex gap-3">
-          <button
-            className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--foreground)] hover:bg-[var(--line)]"
-            disabled={isCreating}
-            onClick={onCancel}
-            type="button"
-          >
-            취소
-          </button>
-          <button
-            className="h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] bg-[var(--brand)] text-base font-semibold text-[var(--text-inverse)] hover:bg-[var(--brand-deep)] disabled:opacity-50"
-            disabled={isCreating || servings < 1}
-            onClick={handleConfirm}
-            type="button"
-          >
-            {isCreating ? "추가 중..." : "추가"}
-          </button>
-        </div>
-      </div>
-    </div>
+    <MealAddServingsModal
+      initialServings={recipe.base_servings}
+      isCreating={isCreating}
+      metaText={`기본 ${recipe.base_servings}인분`}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+      recipeTitle={recipe.title}
+      targetLabel={slotLabel}
+      thumbnail={<RecipeThumb recipe={recipe} />}
+    />
   );
 }
 
@@ -464,13 +271,17 @@ export function RecipeBookDetailPicker({
           </h1>
           <AppBackButtonSpacer />
         </div>
+        {slotLabel ? (
+          <div className="px-4 pt-3.5">
+            <MealAddTargetBadge label={slotLabel} />
+          </div>
+        ) : null}
         <div className="p-3 pb-[112px]">{content}</div>
         {selectedRecipe && (
           <ServingsModal
             isCreating={isCreating}
             onCancel={onServingsCancel}
             onConfirm={onServingsConfirm}
-            presentation="screen"
             recipe={selectedRecipe}
             slotLabel={slotLabel}
           />
@@ -489,7 +300,6 @@ export function RecipeBookDetailPicker({
             isCreating={isCreating}
             onCancel={onServingsCancel}
             onConfirm={onServingsConfirm}
-            presentation="sheet"
             recipe={selectedRecipe}
             slotLabel={slotLabel}
           />
@@ -508,17 +318,16 @@ export function RecipeBookDetailPicker({
             onClick={onBack}
             type="button"
           >
-            ‹ 레시피북
+            ‹ 레시피북 목록
           </button>
         </div>
-        {slotLabel ? <p className="web-picker-subtle web-picker-target">대상 · {slotLabel}</p> : null}
+        <MealAddTargetBadge className="mb-3" label={slotLabel} tone="web" />
         {content}
         {selectedRecipe && (
           <ServingsModal
             isCreating={isCreating}
             onCancel={onServingsCancel}
             onConfirm={onServingsConfirm}
-            presentation="web"
             recipe={selectedRecipe}
             slotLabel={slotLabel}
           />
@@ -557,7 +366,6 @@ export function RecipeBookDetailPicker({
           isCreating={isCreating}
           onCancel={onServingsCancel}
           onConfirm={onServingsConfirm}
-          presentation={presentation}
           recipe={selectedRecipe}
         />
       )}

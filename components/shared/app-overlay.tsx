@@ -16,6 +16,7 @@ interface AppOverlayBaseProps {
   descriptionClassName?: string;
   footer?: React.ReactNode;
   headerSlot?: React.ReactNode;
+  headerSlotClassName?: string;
   leadingAction?: React.ReactNode;
   onClose: () => void;
   panelClassName?: string;
@@ -82,6 +83,7 @@ export function AppBottomSheet({
   descriptionClassName,
   footer,
   headerSlot,
+  headerSlotClassName,
   leadingAction,
   onClose,
   panelClassName,
@@ -124,7 +126,9 @@ export function AppBottomSheet({
             title={title}
             titleId={ariaLabelledBy}
           />
-          {headerSlot ? <div className="mt-3">{headerSlot}</div> : null}
+          {headerSlot ? (
+            <div className={headerSlotClassName ?? "mt-3"}>{headerSlot}</div>
+          ) : null}
         </div>
         <div
           className={[

@@ -49,6 +49,7 @@ interface PlannerAddSheetProps {
     emoji: string;
     background: string;
     imageSrc?: string;
+    imageUrl?: string;
   };
 }
 
@@ -121,350 +122,360 @@ export function PlannerAddSheet({
       ].join(" ");
 
   if (variant === "recipe-detail") {
+    const previewImageSrc = recipePreview?.imageSrc ?? recipePreview?.imageUrl;
+    const previewThumb = recipePreview ? (
+      previewImageSrc ? null : (
+        <span
+          className="flex h-full w-full items-center justify-center text-[26px]"
+          style={{ background: recipePreview.background }}
+        >
+          {recipePreview.emoji}
+        </span>
+      )
+    ) : null;
+
+    const recipeDetailBody = (
+      <div className="space-y-4">
+        {recipePreview ? (
+          <div className="flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--wave1-border)] bg-[var(--wave1-surface-fill)] p-3">
+            <div
+              aria-hidden="true"
+              className="flex h-[var(--control-height-lg)] w-12 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--wave1-surface-fill)] bg-cover bg-center"
+              data-testid={previewImageSrc ? "planner-add-recipe-preview-image" : undefined}
+              style={
+                previewImageSrc
+                  ? { backgroundImage: `url(${previewImageSrc})` }
+                  : undefined
+              }
+            >
+              {previewThumb}
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-[15px] font-bold text-[var(--wave1-ink)]">
+                {recipePreview.title}
+              </div>
+              <div className="mt-0.5 text-[12px] text-[var(--wave1-text-2)]">
+                {recipePreview.meta}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        <div>
+          <div className="mb-2 text-[13px] font-semibold text-[var(--wave1-text-2)]">
+            날짜
+          </div>
+          <div className="scrollbar-hide flex gap-1.5 overflow-x-auto pb-1">
+            {selectableDates.map((dateKey) => {
+              const isSelected = dateKey === selectedDate;
+
+              return (
+                <button
+                  aria-pressed={isSelected}
+                  className={[
+                    "shrink-0 rounded-[var(--radius-chip)] border px-3 py-2 text-[13px] transition-colors",
+                    isSelected
+                      ? "border-[var(--wave1-mint-contrast)] bg-[var(--wave1-mint-contrast)] font-bold text-[var(--text-inverse)]"
+                      : "border-[var(--wave1-border)] bg-[var(--surface)] font-medium text-[var(--wave1-text-2)]",
+                    isSubmitting ? "opacity-60" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  disabled={isSubmitting}
+                  key={dateKey}
+                  onClick={() => onSelectDate(dateKey)}
+                  type="button"
+                >
+                  {formatWeekdayLabel(dateKey)} {formatDateLabel(dateKey)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-2 text-[13px] font-semibold text-[var(--wave1-text-2)]">
+            끼니
+          </div>
+          <div aria-label="끼니 선택" className={mealColumnGroupClass} role="group">
+            {columns.map((column) => {
+              const isSelected = column.id === selectedColumnId;
+
+              return (
+                <button
+                  aria-pressed={isSelected}
+                  className={[
+                    "min-h-[var(--control-height-md)] rounded-[var(--radius-control)] border px-2 text-[14px] transition-colors",
+                    shouldScrollMealColumns ? "min-w-[76px] shrink-0" : "min-w-0",
+                    isSelected
+                      ? "border-[var(--wave1-mint-contrast)] bg-[var(--wave1-mint-contrast)] font-bold text-[var(--text-inverse)]"
+                      : "border-[var(--wave1-border)] bg-[var(--surface)] font-medium text-[var(--wave1-text-2)]",
+                    isSubmitting ? "opacity-60" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  disabled={isSubmitting}
+                  key={column.id}
+                  onClick={() => onSelectColumn(column.id)}
+                  type="button"
+                >
+                  {column.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-2 text-[13px] font-semibold text-[var(--wave1-text-2)]">
+            인분
+          </div>
+          <AppStepper
+            disabled={isSubmitting}
+            label="인분 조절"
+            min={1}
+            onChange={onChangeServings}
+            unit="인분"
+            value={servings}
+            variant="compact"
+          />
+        </div>
+
+        {errorMessage && sheetState === "ready" ? (
+          <p className="text-[13px] font-semibold text-[var(--danger-strong)]">
+            {errorMessage}
+          </p>
+        ) : null}
+      </div>
+    );
+
+    const recipeDetailContent = isError ? (
+      <div className="flex flex-col items-center gap-4 py-8 text-center">
+        <p className="text-[14px] leading-5 text-[var(--wave1-text-2)]">
+          {errorMessage ?? "플래너 정보를 불러오지 못했어요."}
+        </p>
+        <button
+          className="min-h-[var(--control-height-md)] rounded-[var(--radius-control)] bg-[var(--wave1-mint-contrast)] px-5 text-[14px] font-bold text-[var(--text-inverse)]"
+          onClick={onRetryLoad}
+          type="button"
+        >
+          다시 시도
+        </button>
+      </div>
+    ) : isLoading ? (
+      <div aria-label="플래너 정보 불러오는 중" className="flex flex-col gap-4 py-8">
+        {[1, 2, 3].map((i) => (
+          <div
+            className="h-10 animate-pulse rounded-[var(--radius-control)] bg-[var(--wave1-surface-fill)]"
+            key={i}
+          />
+        ))}
+      </div>
+    ) : (
+      recipeDetailBody
+    );
+
+    const recipeDetailWebBody = (
+      <>
+        {recipePreview ? (
+          <div className="web-modal-preview">
+            <div
+              aria-hidden="true"
+              className="web-modal-preview-thumb"
+              data-testid={previewImageSrc ? "planner-add-recipe-preview-image" : undefined}
+              style={previewImageSrc ? undefined : { background: recipePreview.background }}
+            >
+              {previewImageSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  alt=""
+                  className="web-modal-preview-thumb-image"
+                  src={previewImageSrc}
+                />
+              ) : (
+                recipePreview.emoji
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="web-modal-preview-title">{recipePreview.title}</div>
+              <div className="web-modal-preview-meta">{recipePreview.meta}</div>
+            </div>
+          </div>
+        ) : null}
+
+        <p className="web-modal-section-label">날짜</p>
+        <div
+          aria-label="날짜 선택"
+          className="web-planner-date-grid mb-5"
+          role="group"
+        >
+          {selectableDates.map((dateKey, index) => {
+            const isSelected = dateKey === selectedDate;
+            const isToday = index === 0;
+
+            return (
+              <WebChip
+                active={isSelected}
+                className="web-planner-date-cell"
+                disabled={isSubmitting}
+                key={dateKey}
+                onClick={() => onSelectDate(dateKey)}
+              >
+                {isToday ? (
+                  <span className="web-planner-date-today">오늘</span>
+                ) : null}
+                <span className="web-planner-date-weekday">
+                  {formatWeekdayLabel(dateKey)}
+                </span>
+                <span className="web-planner-date-day">
+                  {formatDateLabel(dateKey)}
+                </span>
+              </WebChip>
+            );
+          })}
+        </div>
+
+        <p className="web-modal-section-label">끼니</p>
+        <div aria-label="끼니 선택" className="web-modal-chip-grid mb-5" role="group">
+          {columns.map((column) => {
+            const isSelected = column.id === selectedColumnId;
+
+            return (
+              <WebChip
+                active={isSelected}
+                disabled={isSubmitting}
+                key={column.id}
+                onClick={() => onSelectColumn(column.id)}
+              >
+                {column.name}
+              </WebChip>
+            );
+          })}
+        </div>
+
+        <p className="web-modal-section-label">인분</p>
+        <div className="web-modal-stepper-row">
+          <span className="web-modal-copy">인분 조절</span>
+          <div className="web-stepper">
+            <button
+              aria-label="인분 줄이기"
+              disabled={isSubmitting || servings <= 1}
+              onClick={() => onChangeServings(Math.max(1, servings - 1))}
+              type="button"
+            >
+              -
+            </button>
+            <span>{servings}인분</span>
+            <button
+              aria-label="인분 늘리기"
+              disabled={isSubmitting}
+              onClick={() => onChangeServings(servings + 1)}
+              type="button"
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        {errorMessage && sheetState === "ready" ? (
+          <p className="web-modal-panel web-modal-panel-error mt-4">{errorMessage}</p>
+        ) : null}
+      </>
+    );
+
+    const confirmLabel = isSubmitting
+      ? "추가 중…"
+      : `${selectedDateShort} ${selectedColumnName}에 추가`;
+
+    const footerActions =
+      !isError && !isLoading ? (
+        <AppModalFooterActions
+          cancelDisabled={isSubmitting}
+          confirmAriaLabel={isSubmitting ? "추가 중…" : "플래너에 추가"}
+          confirmDisabled={!canSubmit || isSubmitting}
+          confirmLabel={confirmLabel}
+          onCancel={onClose}
+          onConfirm={onSubmit}
+        />
+      ) : null;
+
     return (
       <>
-      {!isDesktopViewport ? (
-        <AppBottomSheet
-          ariaLabelledBy="planner-add-sheet-title-mobile"
-          closeDisabled={isSubmitting}
-          description={selectedTargetLabel}
-          descriptionClassName="text-[var(--wave1-mint-contrast)] font-bold"
-          footer={
-            !isError && !isLoading ? (
-              <AppModalFooterActions
-                cancelDisabled={isSubmitting}
-                confirmAriaLabel={isSubmitting ? "추가 중…" : "플래너에 추가"}
-                confirmDisabled={!canSubmit || isSubmitting}
-                confirmLabel={isSubmitting ? "추가 중…" : "플래너에 추가"}
-                onCancel={onClose}
-                onConfirm={onSubmit}
-              />
-            ) : null
-          }
-          onClose={onClose}
-          title="플래너에 추가"
-        >
-          {isError ? (
-            <div className="flex flex-col items-center gap-4 py-8 text-center">
-              <p className="text-[14px] leading-5 text-[var(--wave1-text-2)]">
-                {errorMessage ?? "플래너 정보를 불러오지 못했어요."}
-              </p>
-              <button
-                className="min-h-[var(--control-height-md)] rounded-[var(--radius-control)] bg-[var(--wave1-mint-contrast)] px-5 text-[14px] font-bold text-[var(--text-inverse)]"
-                onClick={onRetryLoad}
-                type="button"
-              >
-                다시 시도
-              </button>
-            </div>
-          ) : isLoading ? (
-            <div
-              aria-label="플래너 정보 불러오는 중"
-              className="flex flex-col gap-4 py-8"
-            >
-              {[1, 2, 3].map((i) => (
-                <div
-                  className="h-10 animate-pulse rounded-[var(--radius-control)] bg-[var(--wave1-surface-fill)]"
-                  key={i}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {recipePreview ? (
-                <div className="flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--wave1-border)] bg-[var(--wave1-surface-fill)] p-3">
-                  <div
-                    aria-hidden="true"
-                    className="flex h-[var(--control-height-lg)] w-12 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-cover bg-center text-[26px]"
-                    data-testid={recipePreview.imageSrc ? "planner-add-recipe-preview-image" : undefined}
-                    style={
-                      recipePreview.imageSrc
-                        ? { backgroundImage: `url(${recipePreview.imageSrc})` }
-                        : { background: recipePreview.background }
-                    }
-                  >
-                    {recipePreview.imageSrc ? null : recipePreview.emoji}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate text-[15px] font-bold text-[var(--wave1-ink)]">
-                      {recipePreview.title}
-                    </div>
-                    <div className="mt-0.5 text-[12px] text-[var(--wave1-text-2)]">
-                      {recipePreview.meta}
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              <div>
-                <div className="mb-2 text-[13px] font-semibold text-[var(--wave1-text-2)]">
-                  날짜
-                </div>
-                <div className="scrollbar-hide flex gap-1.5 overflow-x-auto pb-1">
-                  {selectableDates.map((dateKey) => {
-                    const isSelected = dateKey === selectedDate;
-
-                    return (
-                      <button
-                        aria-pressed={isSelected}
-                        className={[
-                          "shrink-0 rounded-[var(--radius-chip)] border px-3 py-2 text-[13px] transition-colors",
-                          isSelected
-                            ? "border-[var(--wave1-mint-contrast)] bg-[var(--wave1-mint-contrast)] font-bold text-[var(--text-inverse)]"
-                            : "border-[var(--wave1-border)] bg-[var(--surface)] font-medium text-[var(--wave1-text-2)]",
-                          isSubmitting ? "opacity-60" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                        disabled={isSubmitting}
-                        key={dateKey}
-                        onClick={() => onSelectDate(dateKey)}
-                        type="button"
-                      >
-                        {formatWeekdayLabel(dateKey)} {formatDateLabel(dateKey)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2 text-[13px] font-semibold text-[var(--wave1-text-2)]">
-                  끼니
-                </div>
-                <div aria-label="끼니 선택" className={mealColumnGroupClass} role="group">
-                  {columns.map((column) => {
-                    const isSelected = column.id === selectedColumnId;
-
-                    return (
-                      <button
-                        aria-pressed={isSelected}
-                        className={[
-                          "min-h-[var(--control-height-md)] rounded-[var(--radius-control)] border px-2 text-[14px] transition-colors",
-                          shouldScrollMealColumns ? "min-w-[76px] shrink-0" : "min-w-0",
-                          isSelected
-                            ? "border-[var(--wave1-mint-contrast)] bg-[var(--wave1-mint-soft)] font-semibold text-[var(--wave1-mint-contrast)]"
-                            : "border-[var(--wave1-border)] bg-[var(--surface)] font-medium text-[var(--wave1-text-2)]",
-                          isSubmitting ? "opacity-60" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                        disabled={isSubmitting}
-                        key={column.id}
-                        onClick={() => onSelectColumn(column.id)}
-                        type="button"
-                      >
-                        {column.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2 text-[13px] font-semibold text-[var(--wave1-text-2)]">
-                  인분
-                </div>
-                <AppStepper
-                  disabled={isSubmitting}
-                  label="인분 조절"
-                  min={1}
-                  onChange={onChangeServings}
-                  unit="인분"
-                  value={servings}
-                  variant="compact"
-                />
-              </div>
-
-              {errorMessage && sheetState === "ready" ? (
-                <p className="text-[13px] font-semibold text-[var(--danger-strong)]">
-                  {errorMessage}
-                </p>
-              ) : null}
-            </div>
-          )}
-        </AppBottomSheet>
-      ) : null}
-      {isDesktopViewport ? (
-        <WebModal onBackdropClick={onClose}>
-          <WebDialog
-            aria-labelledby="planner-add-sheet-title-desktop"
-            size="wide"
+        {!isDesktopViewport ? (
+          <AppBottomSheet
+            ariaLabelledBy="planner-add-sheet-title-mobile"
+            closeDisabled={isSubmitting}
+            description="날짜와 끼니를 선택해 주세요"
+            footer={footerActions}
+            onClose={onClose}
+            title="플래너에 추가"
           >
-            <WebDialogHeader>
-              <div>
-                <WebDialogTitle id="planner-add-sheet-title-desktop">
-                  플래너에 추가
-                </WebDialogTitle>
-                {selectedTargetLabel ? (
-                  <p className="web-modal-target text-[var(--web-brand-accessible)]">
-                    {selectedTargetLabel}
-                  </p>
-                ) : null}
-              </div>
-              <WebIconButton
-                aria-label="닫기"
-                disabled={isSubmitting}
-                onClick={onClose}
-              >
-                <CloseIcon />
-              </WebIconButton>
-            </WebDialogHeader>
-
-            {isError ? (
-              <WebDialogBody>
-                <div className="web-modal-panel web-modal-panel-error">
-                  <p className="web-modal-copy">
-                    {errorMessage ?? "플래너 정보를 불러오지 못했어요."}
-                  </p>
-                  <WebButton className="mt-3" onClick={onRetryLoad} size="sm">
-                    다시 시도
-                  </WebButton>
-                </div>
-              </WebDialogBody>
-            ) : isLoading ? (
-              <WebDialogBody>
-                <div
-                  aria-label="플래너 정보 불러오는 중"
-                  className="flex flex-col gap-3"
-                >
-                  {[1, 2, 3].map((i) => (
-                    <div className="web-skeleton h-10" key={i} />
-                  ))}
-                </div>
-              </WebDialogBody>
-            ) : (
-              <>
-                <WebDialogBody>
-                  {recipePreview ? (
-                    <div className="web-modal-preview">
-                      <div
-                        aria-hidden="true"
-                        className="web-modal-preview-thumb"
-                        data-testid={recipePreview.imageSrc ? "planner-add-recipe-preview-image" : undefined}
-                        style={
-                          recipePreview.imageSrc
-                            ? { backgroundImage: `url(${recipePreview.imageSrc})` }
-                            : { background: recipePreview.background }
-                        }
-                      >
-                        {recipePreview.imageSrc ? null : recipePreview.emoji}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="web-modal-preview-title">
-                          {recipePreview.title}
-                        </div>
-                        <div className="web-modal-preview-meta">
-                          {recipePreview.meta}
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <p className="web-modal-section-label">날짜</p>
-                  <div
-                    aria-label="날짜 선택"
-                    className="web-planner-date-grid mb-5"
-                    role="group"
-                  >
-                    {selectableDates.map((dateKey, index) => {
-                      const isSelected = dateKey === selectedDate;
-                      const isToday = index === 0;
-
-                      return (
-                        <WebChip
-                          active={isSelected}
-                          className="web-planner-date-cell"
-                          disabled={isSubmitting}
-                          key={dateKey}
-                          onClick={() => onSelectDate(dateKey)}
-                        >
-                          {isToday ? (
-                            <span className="web-planner-date-today">오늘</span>
-                          ) : null}
-                          <span className="web-planner-date-weekday">
-                            {formatWeekdayLabel(dateKey)}
-                          </span>
-                          <span className="web-planner-date-day">
-                            {formatDateLabel(dateKey)}
-                          </span>
-                        </WebChip>
-                      );
-                    })}
-                  </div>
-
-                  <p className="web-modal-section-label">끼니</p>
-                  <div
-                    aria-label="끼니 선택"
-                    className="web-modal-chip-grid mb-5"
-                    role="group"
-                  >
-                    {columns.map((column) => {
-                      const isSelected = column.id === selectedColumnId;
-
-                      return (
-                        <WebChip
-                          active={isSelected}
-                          disabled={isSubmitting}
-                          key={column.id}
-                          onClick={() => onSelectColumn(column.id)}
-                        >
-                          {column.name}
-                        </WebChip>
-                      );
-                    })}
-                  </div>
-
-                  <p className="web-modal-section-label">인분</p>
-                  <div className="web-modal-stepper-row">
-                    <span className="web-modal-copy">인분 조절</span>
-                    <div className="web-stepper">
-                      <button
-                        aria-label="인분 줄이기"
-                        disabled={isSubmitting || servings <= 1}
-                        onClick={() => onChangeServings(Math.max(1, servings - 1))}
-                        type="button"
-                      >
-                        -
-                      </button>
-                      <span>{servings}인분</span>
-                      <button
-                        aria-label="인분 늘리기"
-                        disabled={isSubmitting}
-                        onClick={() => onChangeServings(servings + 1)}
-                        type="button"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  {errorMessage && sheetState === "ready" ? (
-                    <p className="web-modal-panel web-modal-panel-error mt-4">
-                      {errorMessage}
+            {recipeDetailContent}
+          </AppBottomSheet>
+        ) : null}
+        {isDesktopViewport ? (
+          <WebModal onBackdropClick={onClose}>
+            <WebDialog aria-labelledby="planner-add-sheet-title-desktop" size="wide">
+              <WebDialogHeader>
+                <div>
+                  <WebDialogTitle id="planner-add-sheet-title-desktop">
+                    플래너에 추가
+                  </WebDialogTitle>
+                  {selectedTargetLabel ? (
+                    <p className="web-modal-target text-[var(--web-brand-accessible)]">
+                      {selectedTargetLabel}
                     </p>
                   ) : null}
+                </div>
+                <WebIconButton
+                  aria-label="닫기"
+                  disabled={isSubmitting}
+                  onClick={onClose}
+                >
+                  <CloseIcon />
+                </WebIconButton>
+              </WebDialogHeader>
+              {isError ? (
+                <WebDialogBody>
+                  <div className="web-modal-panel web-modal-panel-error">
+                    <p className="web-modal-copy">
+                      {errorMessage ?? "플래너 정보를 불러오지 못했어요."}
+                    </p>
+                    <WebButton className="mt-3" onClick={onRetryLoad} size="sm">
+                      다시 시도
+                    </WebButton>
+                  </div>
                 </WebDialogBody>
-                <WebDialogFooter>
-                  <WebButton
-                    disabled={isSubmitting}
-                    onClick={onClose}
-                    variant="tertiary"
+              ) : isLoading ? (
+                <WebDialogBody>
+                  <div
+                    aria-label="플래너 정보 불러오는 중"
+                    className="flex flex-col gap-3"
                   >
-                    취소
-                  </WebButton>
-                  <WebButton
-                    disabled={!canSubmit || isSubmitting}
-                    onClick={onSubmit}
-                  >
-                    {isSubmitting ? "추가 중..." : "플래너에 추가"}
-                  </WebButton>
-                </WebDialogFooter>
-              </>
-            )}
-          </WebDialog>
-        </WebModal>
-      ) : null}
+                    {[1, 2, 3].map((i) => (
+                      <div className="web-skeleton h-10" key={i} />
+                    ))}
+                  </div>
+                </WebDialogBody>
+              ) : (
+                <>
+                  <WebDialogBody>{recipeDetailWebBody}</WebDialogBody>
+                  <WebDialogFooter>
+                    <WebButton disabled={isSubmitting} onClick={onClose} variant="tertiary">
+                      취소
+                    </WebButton>
+                    <WebButton
+                      disabled={!canSubmit || isSubmitting}
+                      onClick={onSubmit}
+                    >
+                      {isSubmitting ? "추가 중..." : `${selectedDateShort} ${selectedColumnName}에 추가`}
+                    </WebButton>
+                  </WebDialogFooter>
+                </>
+              )}
+            </WebDialog>
+          </WebModal>
+        ) : null}
       </>
     );
   }

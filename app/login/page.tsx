@@ -1,5 +1,4 @@
 import { LoginScreen } from "@/components/auth/login-screen";
-import { AppShell } from "@/components/layout/app-shell";
 import { resolveNextPath } from "@/lib/auth/callback";
 import { getServerAuthUser } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -21,16 +20,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <AppShell
-      bottomTabsMode="hidden"
-      className="wave1-login-shell"
-      currentTab="home"
-      headerMode="hidden"
-    >
-      <LoginScreen
-        authError={resolvedSearchParams.authError ?? null}
-        nextPath={nextPath}
-      />
-    </AppShell>
+    <LoginScreen
+      authError={resolvedSearchParams.authError ?? null}
+      nextPath={nextPath}
+    />
   );
 }

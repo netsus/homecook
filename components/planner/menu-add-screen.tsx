@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { LeftoverPicker } from "@/components/planner/leftover-picker";
+import { MealAddTargetBadge } from "@/components/planner/meal-add-target-badge";
 import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
 import { RecipeBookDetailPicker } from "@/components/planner/recipe-book-detail-picker";
 import { RecipeBookSelector } from "@/components/planner/recipe-book-selector";
@@ -60,11 +61,11 @@ const WEB_NAV_ITEMS = [
 ] as const;
 
 const MENU_ADD_OPTIONS = [
-  { id: "search", emoji: "🔍", label: "검색" },
+  { id: "search", emoji: "🔍", label: "레시피 검색" },
   { id: "recipebook", emoji: "📖", label: "레시피북" },
-  { id: "pantry", emoji: "🧊", label: "팬트리 기반 추천" },
+  { id: "pantry", emoji: "🧊", label: "팬트리 추천" },
   { id: "leftover", emoji: "🍱", label: "남은 요리" },
-  { id: "youtube", emoji: "🎬", label: "유튜브" },
+  { id: "youtube", emoji: "🎬", label: "유튜브 가져오기" },
   { id: "manual", emoji: "✏️", label: "직접 등록" },
 ] as const;
 
@@ -82,7 +83,6 @@ function formatTargetLabel(planDate: string, slotName: string) {
 
 export function MenuAddScreen({
   initialSource = "",
-  initialAuthenticated,
   planDate,
   columnId,
   slotName,
@@ -119,6 +119,10 @@ export function MenuAddScreen({
     null,
   );
   const [selectedLeftover, setSelectedLeftover] = useState<LeftoverListItemData | null>(null);
+
+  // Bumped to force the active web picker to remount (re-fetch + clear its own
+  // internal state) when the user re-clicks the option they're already on.
+  const [pickerNonce, setPickerNonce] = useState(0);
 
   const isMealAddModalOrigin =
     searchParams.get("restore") === "meal-add-modal" ||
@@ -159,36 +163,9 @@ export function MenuAddScreen({
     setSelectedRecipe(recipe);
   }, []);
 
-  const resetPickerSelections = useCallback(() => {
-    setSelectedRecipe(null);
-    setSelectedBook(null);
-    setSelectedBookRecipe(null);
-    setSelectedPantryRecipe(null);
-    setSelectedLeftover(null);
-    setCreationError(null);
-  }, []);
-
-  const resetPickerState = useCallback(() => {
-    resetPickerSelections();
-    setPickerMode("none");
-  }, [resetPickerSelections]);
-
-  const activatePickerMode = useCallback(
-    (mode: PickerMode) => {
-      resetPickerSelections();
-      setPickerMode(mode);
-    },
-    [resetPickerSelections],
-  );
-
   const handleSearchOptionClick = useCallback(() => {
-    if (isDesktopViewport && pickerMode === "search") {
-      resetPickerState();
-      return;
-    }
-
-    activatePickerMode("search");
-  }, [activatePickerMode, isDesktopViewport, pickerMode, resetPickerState]);
+    setPickerMode("search");
+  }, []);
 
   useEffect(() => {
     if (!isDesktopViewport || pickerMode !== "search") {
@@ -205,9 +182,15 @@ export function MenuAddScreen({
       return;
     }
 
-    resetPickerState();
+    setPickerMode("none");
+    setSelectedRecipe(null);
+    setSelectedBook(null);
+    setSelectedBookRecipe(null);
+    setSelectedPantryRecipe(null);
+    setSelectedLeftover(null);
+    setCreationError(null);
     replaceMenuAddSource();
-  }, [appReturn, initialSource, isMealAddModalOrigin, replaceMenuAddSource, resetPickerState]);
+  }, [appReturn, initialSource, isMealAddModalOrigin, replaceMenuAddSource]);
 
   const handleServingsConfirm = useCallback(
     async (servings: number) => {
@@ -242,16 +225,8 @@ export function MenuAddScreen({
 
   // Recipe book handlers
   const handleRecipeBookClick = useCallback(() => {
-    const isActive =
-      pickerMode === "recipebook-selector" || pickerMode === "recipebook-detail";
-
-    if (isDesktopViewport && isActive) {
-      resetPickerState();
-      return;
-    }
-
-    activatePickerMode("recipebook-selector");
-  }, [activatePickerMode, isDesktopViewport, pickerMode, resetPickerState]);
+    setPickerMode("recipebook-selector");
+  }, []);
 
   const handleBookSelect = useCallback((book: RecipeBookSummary) => {
     setSelectedBook(book);
@@ -316,13 +291,8 @@ export function MenuAddScreen({
 
   // Pantry match handlers
   const handlePantryClick = useCallback(() => {
-    if (isDesktopViewport && pickerMode === "pantry") {
-      resetPickerState();
-      return;
-    }
-
-    activatePickerMode("pantry");
-  }, [activatePickerMode, isDesktopViewport, pickerMode, resetPickerState]);
+    setPickerMode("pantry");
+  }, []);
 
   const handlePantryRecipeSelect = useCallback((recipe: PantryMatchRecipeItem) => {
     setSelectedPantryRecipe(recipe);
@@ -370,13 +340,8 @@ export function MenuAddScreen({
   }, [appReturn, initialSource, isMealAddModalOrigin]);
 
   const handleLeftoverClick = useCallback(() => {
-    if (isDesktopViewport && pickerMode === "leftover") {
-      resetPickerState();
-      return;
-    }
-
-    activatePickerMode("leftover");
-  }, [activatePickerMode, isDesktopViewport, pickerMode, resetPickerState]);
+    setPickerMode("leftover");
+  }, []);
 
   const handleLeftoverSelect = useCallback((leftover: LeftoverListItemData) => {
     setSelectedLeftover(leftover);
@@ -425,12 +390,7 @@ export function MenuAddScreen({
 
   const handleManualRecipeClick = useCallback(() => {
     if (isDesktopViewport) {
-      if (pickerMode === "manual") {
-        resetPickerState();
-        return;
-      }
-
-      activatePickerMode("manual");
+      setPickerMode("manual");
       return;
     }
 
@@ -448,16 +408,7 @@ export function MenuAddScreen({
     router.push(
       buildReturnHref(targetPath, context),
     );
-  }, [
-    activatePickerMode,
-    appReturn.href,
-    isDesktopViewport,
-    isMealAddModalOrigin,
-    mealAddQuery,
-    pickerMode,
-    resetPickerState,
-    router,
-  ]);
+  }, [appReturn.href, isDesktopViewport, isMealAddModalOrigin, mealAddQuery, router]);
 
   const getYoutubeTargetHref = useCallback(() => {
     const targetPath = mealAddQuery
@@ -475,28 +426,22 @@ export function MenuAddScreen({
   }, [appReturn.href, isMealAddModalOrigin, mealAddQuery]);
 
   const handleYoutubeRecipeClick = useCallback(() => {
-    if (isDesktopViewport && pickerMode === "youtube") {
-      resetPickerState();
-      return;
-    }
-
-    activatePickerMode("youtube");
-  }, [activatePickerMode, isDesktopViewport, pickerMode, resetPickerState]);
+    setPickerMode("youtube");
+  }, []);
 
   const targetLabel = formatTargetLabel(planDate, slotName);
-  const targetText = `대상 · ${targetLabel}`;
 
   const desktopPickerTitle =
     pickerMode === "recipebook-selector"
-      ? "레시피북에서 추가"
+      ? "레시피북"
       : pickerMode === "recipebook-detail"
         ? selectedBook?.name ?? "레시피북"
         : pickerMode === "pantry"
-          ? "팬트리 기반 추천"
+          ? "팬트리 추천"
           : pickerMode === "leftover"
-            ? "남은 요리에서 추가"
+            ? "남은 요리"
             : pickerMode === "manual"
-              ? "레시피 직접 작성"
+              ? "직접 등록"
               : pickerMode === "youtube"
                 ? "유튜브 가져오기"
                 : "레시피 검색";
@@ -513,6 +458,46 @@ export function MenuAddScreen({
 
     return actionMap[id];
   };
+
+  const isOptionActive = useCallback(
+    (id: (typeof MENU_ADD_OPTIONS)[number]["id"]) =>
+      (id === "search" && pickerMode === "search") ||
+      (id === "recipebook" &&
+        (pickerMode === "recipebook-selector" ||
+          pickerMode === "recipebook-detail")) ||
+      (id === "pantry" && pickerMode === "pantry") ||
+      (id === "leftover" && pickerMode === "leftover") ||
+      (id === "manual" && pickerMode === "manual") ||
+      (id === "youtube" && pickerMode === "youtube"),
+    [pickerMode],
+  );
+
+  // Web only: clicking the option you're already on resets that picker back to
+  // its initial state (replaces the old explicit "초기화" button).
+  const handleWebOptionClick = useCallback(
+    (id: (typeof MENU_ADD_OPTIONS)[number]["id"]) => {
+      if (isOptionActive(id)) {
+        setSelectedRecipe(null);
+        setSelectedBookRecipe(null);
+        setSelectedPantryRecipe(null);
+        setSelectedLeftover(null);
+        setCreationError(null);
+        if (id === "recipebook") {
+          setSelectedBook(null);
+          setPickerMode("recipebook-selector");
+        } else {
+          setPickerMode("search");
+        }
+        setPickerNonce((nonce) => nonce + 1);
+        return;
+      }
+
+      actionMapForMobile(id)();
+    },
+    // actionMapForMobile is stable enough for our usage here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isOptionActive],
+  );
 
   const shouldRenderWebView =
     process.env.NODE_ENV !== "test" || isDesktopViewport;
@@ -599,11 +584,12 @@ export function MenuAddScreen({
 
     if (pickerMode === "youtube") {
       return (
-        <YoutubeImportEntrySheet
-          onBack={handlePickerBackToMenu}
-          onClose={handlePickerBackToMenu}
-          targetLabel={targetLabel}
-          youtubeHref={getYoutubeTargetHref()}
+        <YoutubeImportScreen
+          onRequestClose={handlePickerBackToMenu}
+          planDate={planDate}
+          columnId={columnId}
+          presentation="screen"
+          slotName={slotName}
         />
       );
     }
@@ -618,15 +604,14 @@ export function MenuAddScreen({
           <AppBackButtonSpacer />
         </div>
 
-        <section className="px-5 py-3">
-          <p className="text-[11px] font-bold text-[var(--brand)]">대상</p>
-          <p className="mt-0.5 text-[16px] font-bold text-[var(--foreground)]">{targetLabel}</p>
+        <section className="px-5 py-3.5">
+          <MealAddTargetBadge label={targetLabel} />
         </section>
 
         <section className="flex flex-col gap-2.5 px-4 pb-8" data-testid="menu-add-option-grid">
           {MENU_ADD_OPTIONS.map((option) => (
             <button
-              className="flex min-h-[76px] w-full items-center gap-3.5 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4 text-left"
+              className="flex min-h-[64px] w-full items-center gap-3.5 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4 text-left"
               data-testid={`menu-add-option-${option.id}`}
               key={option.id}
               onClick={actionMapForMobile(option.id)}
@@ -635,9 +620,8 @@ export function MenuAddScreen({
               <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-[var(--radius-card)] bg-[var(--brand-soft)] text-[22px]">
                 {option.emoji}
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-bold text-[var(--foreground)]">{option.label}</span>
-                <span className="mt-0.5 block text-[12px] font-semibold text-[var(--brand)]">{targetText}</span>
+              <span className="min-w-0 flex-1 text-[15px] font-bold text-[var(--foreground)]">
+                {option.label}
               </span>
               <span className="text-[22px] text-[var(--text-4)]" aria-hidden="true">
                 ›
@@ -660,31 +644,11 @@ export function MenuAddScreen({
         <div className="hidden lg:block">
           <WebShell wide className="web-menu-add-shell">
             <WebTopNav activeId="planner" items={WEB_NAV_ITEMS} />
-            <nav aria-label="식사 추가 경로" className="web-breadcrumb">
-              <button
-                className="web-breadcrumb-link"
-                onClick={() => router.push("/planner")}
-                type="button"
-              >
-                Planner
-              </button>
-              <span className="web-breadcrumb-sep">/</span>
-              <button
-                className="web-breadcrumb-link"
-                onClick={handleBack}
-                type="button"
-              >
-                {targetLabel}
-              </button>
-              <span className="web-breadcrumb-sep">/</span>
-              <span className="web-breadcrumb-current">식사 추가</span>
-            </nav>
-
+            <div className="web-menu-add-screen">
             <div className="web-menu-add-hero">
               <div>
-                <p className="web-menu-add-eyebrow">식사 추가</p>
-                <h1>어떤 방식으로 식사를 추가할까요?</h1>
-                <p className="web-menu-add-target">{targetText}</p>
+                <h1>식사 추가</h1>
+                <p className="web-menu-add-date">{targetLabel}</p>
               </div>
               <WebButton onClick={handleBack} variant="secondary">
                 플래너로 돌아가기
@@ -692,22 +656,10 @@ export function MenuAddScreen({
             </div>
 
             <div className="web-menu-add-layout">
-              <section aria-labelledby="menu-add-options-title">
-                <h2 className="web-menu-add-section-title" id="menu-add-options-title">
-                  추가 방법
-                </h2>
+              <section aria-label="추가 방법">
                 <div className="web-menu-add-grid" data-testid="menu-add-option-grid">
                   {MENU_ADD_OPTIONS.map((option) => {
-                    const onClick = actionMapForMobile(option.id);
-                    const active =
-                      (option.id === "search" && pickerMode === "search") ||
-                      (option.id === "recipebook" &&
-                        (pickerMode === "recipebook-selector" ||
-                          pickerMode === "recipebook-detail")) ||
-                      (option.id === "pantry" && pickerMode === "pantry") ||
-                      (option.id === "leftover" && pickerMode === "leftover") ||
-                      (option.id === "manual" && pickerMode === "manual") ||
-                      (option.id === "youtube" && pickerMode === "youtube");
+                    const active = isOptionActive(option.id);
 
                     return (
                       <button
@@ -717,7 +669,7 @@ export function MenuAddScreen({
                         ].join(" ")}
                         data-testid={`menu-add-option-${option.id}`}
                         key={option.id}
-                        onClick={onClick}
+                        onClick={() => handleWebOptionClick(option.id)}
                         type="button"
                       >
                         <span className="web-menu-add-card-icon" aria-hidden="true">
@@ -725,7 +677,6 @@ export function MenuAddScreen({
                         </span>
                         <span className="web-menu-add-card-copy">
                           <span>{option.label}</span>
-                          <small>{targetText}</small>
                         </span>
                       </button>
                     );
@@ -738,6 +689,7 @@ export function MenuAddScreen({
                   <div>
                     <h2>{desktopPickerTitle}</h2>
                   </div>
+                  <MealAddTargetBadge label={targetLabel} tone="web" />
                 </div>
 
                 {creationError ? (
@@ -748,6 +700,7 @@ export function MenuAddScreen({
 
                 {(pickerMode === "none" || pickerMode === "search") && (
                   <RecipeSearchPicker
+                    key={`search-${pickerNonce}`}
                     isCreating={isCreating}
                     onRecipeSelect={handleRecipeSelect}
                     onServingsCancel={handleServingsCancel}
@@ -760,6 +713,7 @@ export function MenuAddScreen({
 
                 {pickerMode === "recipebook-selector" && (
                   <RecipeBookSelector
+                    key={`recipebook-selector-${pickerNonce}`}
                     onBack={handlePickerBackToMenu}
                     onBookSelect={handleBookSelect}
                     onClose={handleRecipeBookClose}
@@ -784,6 +738,7 @@ export function MenuAddScreen({
 
                 {pickerMode === "pantry" && (
                   <PantryMatchPicker
+                    key={`pantry-${pickerNonce}`}
                     isCreating={isCreating}
                     onBack={handlePickerBackToMenu}
                     onClose={handlePantryClose}
@@ -798,6 +753,7 @@ export function MenuAddScreen({
 
                 {pickerMode === "leftover" && (
                   <LeftoverPicker
+                    key={`leftover-${pickerNonce}`}
                     isCreating={isCreating}
                     onBack={handleLeftoverClose}
                     onClose={handleLeftoverClose}
@@ -812,7 +768,7 @@ export function MenuAddScreen({
 
                 {pickerMode === "manual" && (
                   <ManualRecipeCreateScreen
-                    initialAuthenticated={initialAuthenticated}
+                    initialAuthenticated
                     onRequestClose={handlePickerBackToMenu}
                     planDate={planDate}
                     columnId={columnId}
@@ -839,6 +795,7 @@ export function MenuAddScreen({
                     />
                   ))}
               </WebCard>
+            </div>
             </div>
           </WebShell>
         </div>
