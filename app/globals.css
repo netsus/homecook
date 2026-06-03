@@ -1522,7 +1522,7 @@ button {
   }
 
   .web-home .web-screen {
-    padding-top: 32px;
+    padding-top: 0;
   }
 
   .web-profile-button {
@@ -4409,6 +4409,18 @@ button {
 
   .web-manual-add-button {
     margin-top: 12px;
+  }
+
+  .web-manual-footer {
+    border-top: 1px solid var(--web-divider);
+    margin-top: 4px;
+    padding-top: 24px;
+  }
+
+  .web-manual-save-button {
+    min-height: 56px;
+    font-size: 17px;
+    font-weight: 800;
   }
 
   .web-ingredient-dialog {

@@ -25,9 +25,10 @@ const GENERIC_TAGS = new Set([
 ]);
 
 const RECIPE_TAG_LIMIT = 3;
+export const RECIPE_TAG_MAX_LENGTH = 12;
 
 const DISH_KEYWORD_PATTERN =
-  /(찌개|국|탕|전골|볶음|구이|조림|찜|무침|밥|죽|면|국수|파스타|샌드위치|토스트|샐러드|타르트|케이크|쿠키|빵|푸딩|디저트)/u;
+  /(찌개|국|탕|전골|볶음|구이|조림|찜|무침|밥|죽|라면|냉면|쫄면|우동|국수|파스타|샌드위치|토스트|샐러드|타르트|케이크|쿠키|빵|푸딩|디저트)$/u;
 
 const TITLE_WORD_STOP_TAGS = new Set([
   "오븐도",
@@ -97,7 +98,7 @@ function normalizeTag(rawValue: string) {
     return null;
   }
 
-  if (canonical.length > 30) {
+  if (canonical.length > RECIPE_TAG_MAX_LENGTH) {
     return null;
   }
 
@@ -141,7 +142,11 @@ function buildDishPhraseFromTitle(title: string) {
     .slice(-4);
   const phrase = collapseWhitespace(phraseWords.join(" "));
 
-  return phrase || null;
+  if (phrase && normalizeTag(phrase)) {
+    return phrase;
+  }
+
+  return words[dishWordIndex] ?? null;
 }
 
 function buildTitleTagCandidates(title: string) {
@@ -152,7 +157,7 @@ function buildTitleTagCandidates(title: string) {
     candidates.push(cleanedTitle);
   }
 
-  if (candidates.length === 0 || cleanedTitle.length > 30) {
+  if (candidates.length === 0 || cleanedTitle.length > RECIPE_TAG_MAX_LENGTH) {
     const dishPhrase = buildDishPhraseFromTitle(cleanedTitle || title);
     if (dishPhrase) {
       candidates.unshift(dishPhrase);

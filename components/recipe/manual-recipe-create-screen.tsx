@@ -1147,6 +1147,19 @@ export function ManualRecipeCreateScreen({
       ) : null}
     </>
   );
+  const desktopManualFooter = (
+    <div className="web-manual-footer">
+      <WebButton
+        className="web-manual-save-button"
+        disabled={isSaving || isUploading}
+        fullWidth
+        onClick={handleSave}
+        size="lg"
+      >
+        {isSaving ? "저장 중..." : "저장"}
+      </WebButton>
+    </div>
+  );
   const desktopManualModals = (
     <>
       {modalMode === "ingredient-add" && (
@@ -1184,14 +1197,9 @@ export function ManualRecipeCreateScreen({
           className="web-menu-add-embedded web-menu-add-embedded-manual"
           data-testid="manual-recipe-embedded"
         >
-          <div className="web-menu-add-embedded-actions">
-            <WebButton disabled={isSaving || isUploading} onClick={handleSave} size="sm">
-              {isSaving ? "저장 중..." : "저장"}
-            </WebButton>
-          </div>
-
           <div className="web-menu-add-embedded-form">
             {desktopManualBody}
+            {desktopManualFooter}
           </div>
 
           {desktopManualModals}
@@ -1226,14 +1234,12 @@ export function ManualRecipeCreateScreen({
               <WebButton onClick={handleBack} variant="secondary">
                 취소
               </WebButton>
-              <WebButton disabled={isSaving || isUploading} onClick={handleSave}>
-                {isSaving ? "저장 중..." : "저장"}
-              </WebButton>
             </div>
           </div>
 
           <WebCard className="web-manual-card">
             {desktopManualBody}
+            {desktopManualFooter}
           </WebCard>
         </WebShell>
 
