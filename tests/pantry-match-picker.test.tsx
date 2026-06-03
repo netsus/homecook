@@ -125,4 +125,86 @@ describe("PantryMatchPicker", () => {
     expect(progressFill?.className).toContain("web-picker-progress-brand");
     expect(progressFill?.className).not.toContain("web-picker-progress-success");
   });
+
+  it("uses the same brand, warning, and danger score tones on mobile pantry recommendations", async () => {
+    vi.mocked(fetchPantryMatchRecipes).mockResolvedValueOnce({
+      success: true,
+      data: {
+        items: [
+          {
+            id: "recipe-high",
+            title: "고일치 레시피",
+            thumbnail_url: null,
+            matched_ingredients: 9,
+            total_ingredients: 10,
+            match_score: 0.9,
+            missing_ingredients: [],
+          },
+          {
+            id: "recipe-mid",
+            title: "중간일치 레시피",
+            thumbnail_url: null,
+            matched_ingredients: 6,
+            total_ingredients: 10,
+            match_score: 0.6,
+            missing_ingredients: [],
+          },
+          {
+            id: "recipe-low",
+            title: "낮은일치 레시피",
+            thumbnail_url: null,
+            matched_ingredients: 2,
+            total_ingredients: 10,
+            match_score: 0.2,
+            missing_ingredients: [],
+          },
+        ],
+      },
+      error: null,
+    });
+
+    render(
+      <PantryMatchPicker
+        isCreating={false}
+        onClose={vi.fn()}
+        onRecipeSelect={vi.fn()}
+        onServingsCancel={vi.fn()}
+        onServingsConfirm={vi.fn()}
+        presentation="screen"
+        selectedRecipe={null}
+      />,
+    );
+
+    await screen.findByText("고일치 레시피");
+
+    expect(screen.getByTestId("pantry-match-progress-recipe-high").className).toContain(
+      "pantry-match-progress-brand",
+    );
+    expect(screen.getByTestId("pantry-match-progress-recipe-mid").className).toContain(
+      "pantry-match-progress-warning",
+    );
+    expect(screen.getByTestId("pantry-match-progress-recipe-low").className).toContain(
+      "pantry-match-progress-danger",
+    );
+    expect(screen.queryByText("선택")).toBeNull();
+  });
+
+  it("marks web pantry recommendation thumbnails with a rounded image class", async () => {
+    const { container } = render(
+      <PantryMatchPicker
+        isCreating={false}
+        onClose={vi.fn()}
+        onRecipeSelect={vi.fn()}
+        onServingsCancel={vi.fn()}
+        onServingsConfirm={vi.fn()}
+        presentation="web"
+        selectedRecipe={null}
+      />,
+    );
+
+    await screen.findByText("두부조림");
+
+    const image = container.querySelector(".web-picker-pantry-thumb img");
+    expect(image?.className).toContain("web-picker-pantry-thumb-image");
+  });
 });

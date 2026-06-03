@@ -3381,7 +3381,7 @@ export function YoutubeImportScreen({
 
   if (presentation === "screen") {
     return (
-      <div className="yt-mobile-import-shell min-h-screen px-4 py-5">
+      <div className="yt-mobile-import-shell h-dvh overflow-y-auto overscroll-y-contain px-4 py-5">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
           <div className="web-yt-head flex-wrap">
             <div>

@@ -304,6 +304,25 @@ describe("MenuAddScreen", () => {
     expect(screen.getByLabelText("유튜브 URL")).toBeTruthy();
   });
 
+  it("keeps the mobile YouTube review step scrollable", async () => {
+    const { container } = render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+    await user.type(
+      screen.getByLabelText("유튜브 URL"),
+      "https://www.youtube.com/watch?v=recipe12345",
+    );
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    expect(await screen.findByRole("heading", { name: "추출 결과를 확인해주세요" })).toBeTruthy();
+
+    const shell = container.querySelector(".yt-mobile-import-shell");
+    expect(shell?.className).toContain("h-dvh");
+    expect(shell?.className).toContain("overflow-y-auto");
+    expect(shell?.className).toContain("overscroll-y-contain");
+  });
+
   // ─── Wave1 acceptance tests ─────────────────────────────────────────────────
 
   it("renders the mobile option list with correct data-testids (Wave1)", () => {
