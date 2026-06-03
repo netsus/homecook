@@ -12,6 +12,7 @@ import {
   AppBackButtonSpacer,
 } from "@/components/shared/app-back-button";
 import { fetchLeftovers } from "@/lib/api/leftovers";
+import { formatKoreaCompactDate } from "@/lib/korean-date";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import type { LeftoverListItemData } from "@/types/leftover";
 
@@ -32,10 +33,7 @@ export interface LeftoverPickerProps {
 type LoadState = "loading" | "ready" | "empty" | "error";
 
 function formatCompactDate(dateStr: string) {
-  const date = new Date(dateStr);
-  const m = date.getUTCMonth() + 1;
-  const d = date.getUTCDate();
-  return `${m}/${d}`;
+  return formatKoreaCompactDate(dateStr);
 }
 
 function formatLeftoverMeta(leftover: LeftoverListItemData) {
