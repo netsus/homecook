@@ -84,6 +84,8 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
   }
 
   if (presentation === "web") {
+    const meta = formatRecipeBookRecipeMeta(recipe.tags);
+
     return (
       <button
         aria-label={`${recipe.title} 선택`}
@@ -94,7 +96,7 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
         <WebRecipeCard
           alt={recipe.title}
           imageSrc={resolveRecipeImage(recipe)}
-          meta={recipe.tags.slice(0, 2).join(" · ") || "저장한 레시피"}
+          meta={meta}
           title={recipe.title}
         />
         <span className="web-picker-select-badge">선택</span>
@@ -321,7 +323,6 @@ export function RecipeBookDetailPicker({
             ‹ 레시피북 목록
           </button>
         </div>
-        <MealAddTargetBadge className="mb-3" label={slotLabel} tone="web" />
         {content}
         {selectedRecipe && (
           <ServingsModal
@@ -371,4 +372,13 @@ export function RecipeBookDetailPicker({
       )}
     </div>
   );
+}
+
+function formatRecipeBookRecipeMeta(tags: string[]) {
+  const joined = tags.slice(0, 2).join(" · ");
+  if (!joined) {
+    return "저장한 레시피";
+  }
+
+  return joined.length > 20 ? `${joined.slice(0, 20)}...` : joined;
 }

@@ -552,7 +552,7 @@ export function HomeScreen() {
                     <h2 className="text-[18px] font-bold text-[var(--foreground)]">
                       {listTitle}
                     </h2>
-                    <p className="mt-0.5 text-[13px] font-medium text-[var(--text-2)]">
+                    <p className="mt-0.5 text-[13px] font-medium text-[var(--text-3)]">
                       {displayedRecipes.length}개
                     </p>
                   </div>

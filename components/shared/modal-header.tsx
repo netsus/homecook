@@ -33,14 +33,14 @@ export function ModalHeader({
     <div className="flex items-start justify-between gap-3">
       {leadingAction ? <div className="shrink-0">{leadingAction}</div> : null}
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-start justify-between gap-2">
           <h2
-            className="text-lg font-bold text-[var(--wave1-ink)]"
+            className="min-w-0 flex-1 truncate text-lg font-bold text-[var(--wave1-ink)]"
             id={titleId}
           >
             {title}
           </h2>
-          {badge}
+          {badge ? <div className="shrink-0 pt-0.5">{badge}</div> : null}
         </div>
         {description ? (
           <p className={descriptionClassName ?? "mt-1 text-sm text-[var(--wave1-text-2)]"}>

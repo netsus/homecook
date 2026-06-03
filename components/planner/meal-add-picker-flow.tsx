@@ -52,7 +52,7 @@ function PickerSheet({
     <AppBottomSheet
       ariaLabelledBy={ariaLabelledBy}
       badge={<MealAddTargetBadge className="shrink-0" label={targetLabel} />}
-      bodyClassName="pb-5"
+      bodyClassName="pb-[calc(20px+env(safe-area-inset-bottom))]"
       leadingAction={<AppBackButton onClick={onBack} />}
       onClose={onClose}
       panelClassName="max-w-[480px]"

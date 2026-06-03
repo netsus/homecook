@@ -97,7 +97,7 @@ export function AppBottomSheet({
         aria-labelledby={ariaLabelledBy}
         aria-modal="true"
         className={[
-          "flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-[var(--radius-sheet)] bg-[var(--wave1-surface)] text-[var(--wave1-ink)] shadow-[0_-10px_30px_var(--shadow-color-heavy)]",
+          "flex max-h-[calc(100dvh-16px)] w-full flex-col overflow-hidden rounded-t-[var(--radius-sheet)] bg-[var(--wave1-surface)] text-[var(--wave1-ink)] shadow-[0_-10px_30px_var(--shadow-color-heavy)]",
           panelClassName,
         ]
           .filter(Boolean)

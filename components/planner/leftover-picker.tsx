@@ -308,7 +308,6 @@ export function LeftoverPicker({
         className="web-picker-section"
         data-testid="leftover-picker-web"
       >
-        <MealAddTargetBadge className="mb-3" label={slotLabel} tone="web" />
         {content}
         {servingsModal}
       </section>
