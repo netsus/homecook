@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 
 import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
+import { resolveRecipeImage } from "@/lib/recipe-image";
 import type { RecipeCardItem } from "@/types/recipe";
 
 interface RecipeCardProps {
@@ -13,7 +14,7 @@ interface RecipeCardProps {
 
 export function RecipeCard({ isSaved = false, onOpen, onSave, recipe }: RecipeCardProps) {
   const remainingTagCount = Math.max(recipe.tags.length - 3, 0);
-  const presentation = getRecipePresentation(recipe);
+  const imageSrc = resolveRecipeImage(recipe);
   const badgeLabel =
     recipe.save_count > 100 ? "인기" : formatRecipeSourceLabel(recipe.source_type);
 
@@ -31,27 +32,12 @@ export function RecipeCard({ isSaved = false, onOpen, onSave, recipe }: RecipeCa
           <div
             className="absolute inset-0 transition-transform duration-300 ease-out group-hover:scale-105 group-active:scale-105"
             data-slot="recipe-card-image-layer"
-            style={
-              recipe.thumbnail_url
-                ? {
-                    backgroundImage: `linear-gradient(var(--foreground-alpha-03),var(--foreground-alpha-18)),url(${recipe.thumbnail_url})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                  }
-                : {
-                    background: presentation.gradient,
-                  }
-            }
-          >
-            {!recipe.thumbnail_url ? (
-              <span
-                aria-hidden="true"
-                className="absolute inset-0 grid place-items-center text-[88px]"
-              >
-                {presentation.emoji}
-              </span>
-            ) : null}
-          </div>
+            style={{
+              backgroundImage: `linear-gradient(var(--foreground-alpha-03),var(--foreground-alpha-18)),url(${imageSrc})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
           <span className="absolute left-3 top-3 inline-flex min-h-6 items-center justify-center rounded-[var(--radius-badge)] bg-[var(--surface-alpha-92)] px-2 text-center text-[11px] font-bold leading-none text-[var(--brand)] shadow-[0_1px_4px_var(--shadow-color-medium)]">
             {badgeLabel}
           </span>
@@ -115,34 +101,4 @@ function BookmarkIcon({ filled = false }: { filled?: boolean }) {
       <path d="M6 3h12v18l-6-4-6 4V3z" />
     </svg>
   );
-}
-
-function getRecipePresentation(recipe: RecipeCardItem) {
-  const emojiByTag = [
-    { keyword: "밥", emoji: "🍚" },
-    { keyword: "김치", emoji: "🥘" },
-    { keyword: "찌개", emoji: "🍲" },
-    { keyword: "면", emoji: "🍜" },
-    { keyword: "고기", emoji: "🥩" },
-    { keyword: "채소", emoji: "🥬" },
-  ];
-  const sourceText = [recipe.title, ...recipe.tags].join(" ");
-  const matched = emojiByTag.find((item) => sourceText.includes(item.keyword));
-  const fallbackEmojis = ["🍳", "🥗", "🍛", "🥘"];
-  const index = recipe.id.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const emoji = matched?.emoji ?? fallbackEmojis[index % fallbackEmojis.length]!;
-  const gradients = [
-    "linear-gradient(135deg,var(--accent-peach-soft) 0%,var(--accent-peach) 100%)",
-    "linear-gradient(135deg,var(--brand-soft),var(--accent-gold-soft))",
-    "linear-gradient(135deg,var(--accent-green-soft),var(--brand-soft))",
-    "linear-gradient(135deg,var(--accent-blue-soft),var(--accent-gold-soft))",
-  ];
-  const gradient = /밥|김치/.test(sourceText)
-    ? gradients[0]!
-    : gradients[index % gradients.length]!;
-
-  return {
-    emoji,
-    gradient,
-  };
 }

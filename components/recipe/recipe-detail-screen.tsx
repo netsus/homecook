@@ -37,6 +37,7 @@ import {
 } from "@/lib/api/recipe-save";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
 import { getCookingMethodColor, getCookingMethodTint } from "@/lib/cooking-method-colors";
+import { resolveRecipeImage } from "@/lib/recipe-image";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { fetchPlanner } from "@/lib/api/planner";
 import {
@@ -82,13 +83,6 @@ const WEB_NAV_ITEMS = [
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
-const WEB_RECIPE_FALLBACK_IMAGES = [
-  "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1553163147-622ab57be1c7?w=900&h=675&fit=crop&q=80",
 ] as const;
 
 export function RecipeDetailScreen({
@@ -781,13 +775,12 @@ export function RecipeDetailScreen({
   const cookCountLabel = formatRecipeHeroCount(recipe.cook_count);
   const heroEmoji = getRecipeHeroEmoji(recipe);
   const heroBackground = getRecipeHeroBackground(recipe);
-  const mobileHeroStyle = recipe.thumbnail_url
-    ? {
-        backgroundImage: `linear-gradient(var(--foreground-alpha-04),var(--foreground-alpha-32)),url("${recipe.thumbnail_url}")`,
-        backgroundPosition: "center",
-        backgroundSize: "cover",
-      }
-    : { background: heroBackground };
+  const heroImageSrc = resolveRecipeImage(recipe);
+  const mobileHeroStyle = {
+    backgroundImage: `linear-gradient(var(--foreground-alpha-04),var(--foreground-alpha-32)),url("${heroImageSrc}")`,
+    backgroundPosition: "center",
+    backgroundSize: "cover",
+  } as const;
   const minutesLabel = getRecipeMinutesLabel(recipe);
   const displayTags = getVisibleRecipeTags(recipe);
   const youtubeSourceHref = getYoutubeSourceHref(recipe);
@@ -840,18 +833,13 @@ export function RecipeDetailScreen({
         <button
           aria-label={recipe.thumbnail_url ? "레시피 사진 크게 보기" : "레시피 대표 이미지"}
           className="block aspect-[4/3] w-full max-[360px]:aspect-[16/9] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--brand)_22%,transparent),color-mix(in_srgb,var(--background)_85%,transparent),color-mix(in_srgb,var(--brand)_18%,transparent))] text-left disabled:cursor-default"
-          disabled={!recipe.thumbnail_url}
           onClick={() => setIsLightboxOpen(true)}
           type="button"
-          style={
-            recipe.thumbnail_url
-              ? {
-                  backgroundImage: `linear-gradient(color-mix(in srgb, var(--foreground) 6%, transparent),color-mix(in srgb, var(--foreground) 22%, transparent)),url("${recipe.thumbnail_url}")`,
-                  backgroundPosition: "center",
-                  backgroundSize: "cover",
-                }
-              : undefined
-          }
+          style={{
+            backgroundImage: `linear-gradient(color-mix(in srgb, var(--foreground) 6%, transparent),color-mix(in srgb, var(--foreground) 22%, transparent)),url("${resolveRecipeImage(recipe)}")`,
+            backgroundPosition: "center",
+            backgroundSize: "cover",
+          }}
         />
 
         <div className="mx-auto grid max-w-[1200px] gap-6 px-8 py-8 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -1191,15 +1179,10 @@ export function RecipeDetailScreen({
       {shouldRenderAppView ? (
       <div className="min-h-screen bg-[var(--surface)] pb-[190px] text-[var(--foreground)] lg:hidden">
         <section
-          className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden text-[132px] max-[360px]:text-[108px] md:max-h-[460px]"
+          className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden md:max-h-[460px]"
           data-testid="recipe-detail-hero"
           style={mobileHeroStyle}
         >
-          {recipe.thumbnail_url ? null : (
-            <span aria-hidden="true" className="select-none leading-none">
-              {heroEmoji}
-            </span>
-          )}
           <button
             aria-label="뒤로가기"
             className="absolute left-4 top-[calc(12px+env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-alpha-92)] text-[var(--foreground)] shadow-[0_2px_8px_var(--shadow-color-strong)]"
@@ -1587,7 +1570,7 @@ export function RecipeDetailScreen({
         recipePreview={{
           background: heroBackground,
           emoji: heroEmoji,
-          imageSrc: recipe.thumbnail_url ?? undefined,
+          imageSrc: heroImageSrc,
           meta: `${minutesLabel} · 선택 ${plannerServings}인분`,
           title: recipe.title,
         }}
@@ -1981,11 +1964,9 @@ function RecipeWebProfileButton() {
 }
 
 function getRecipePhotoSet(recipe: RecipeDetail) {
-  if (recipe.thumbnail_url) {
-    return [recipe.thumbnail_url];
-  }
-
-  return [WEB_RECIPE_FALLBACK_IMAGES[0]];
+  // Single shared resolver (thumbnail column first, shared deterministic
+  // fallback) so home card / detail / planner-add modal show the same image.
+  return [resolveRecipeImage(recipe)];
 }
 
 function getYoutubeSourceHref(recipe: RecipeDetail) {
