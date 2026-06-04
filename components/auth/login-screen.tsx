@@ -99,6 +99,7 @@ export function LoginScreen({
       eyebrow={gateContext.eyebrow}
       safeBottomPadding
       title="이 화면은 로그인이 필요해요"
+      titleLevel={1}
       tone="gate"
     >
       <div className="space-y-3">
@@ -126,13 +127,13 @@ export function LoginScreen({
 
   if (viewMode === "web") {
     return (
-      <div className="web-login-shell web-login-fullscreen">{gateBody}</div>
+      <main className="web-login-shell web-login-fullscreen">{gateBody}</main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--surface)] text-[var(--wave1-ink)]">
+    <main className="min-h-screen bg-[var(--surface)] text-[var(--wave1-ink)]">
       {gateBody}
-    </div>
+    </main>
   );
 }

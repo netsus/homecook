@@ -382,7 +382,7 @@ test.describe("QA accessibility smoke", () => {
 
     await page.goto(MENU_ADD_VISUAL_PATH);
     await expect(
-      page.getByRole("heading", { name: "어떤 방식으로 식사를 추가할까요?" }),
+      page.getByRole("heading", { name: "식사 추가" }),
     ).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
@@ -397,7 +397,7 @@ test.describe("QA accessibility smoke", () => {
     });
 
     await page.goto(`${MENU_ADD_VISUAL_PATH}&source=pantry`);
-    await expect(page.getByRole("heading", { name: "팬트리 기반 추천" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "팬트리 추천" })).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });
@@ -412,7 +412,7 @@ test.describe("QA accessibility smoke", () => {
 
     await page.getByRole("button", { name: /재료 추가/ }).click();
     await expect(
-      page.getByRole("dialog", { name: "재료 선택" }),
+      page.getByRole("dialog", { name: "재료로 검색" }),
     ).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
