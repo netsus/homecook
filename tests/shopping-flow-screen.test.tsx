@@ -291,14 +291,18 @@ describe("shopping flow screen", () => {
       expect(screen.queryByText("대상 식사 2개")).toBeNull();
       expect(screen.getByText("2인분")).toBeTruthy();
       expect(screen.getByText("4인분")).toBeTruthy();
-      expect(screen.getByRole("heading", { name: "4/26" })).toBeTruthy();
-      expect(screen.getByRole("heading", { name: "4/27" })).toBeTruthy();
+      expect(screen.getByRole("heading", { name: "4월 26일 일요일" })).toBeTruthy();
+      expect(screen.getByRole("heading", { name: "4월 27일 월요일" })).toBeTruthy();
       expect(screen.getByRole("link", { name: "김치찌개" }).getAttribute("href")).toBe(
-        "/planner/2026-04-26/column-breakfast",
+        "/planner/2026-04-26/column-breakfast?returnTo=%2Fshopping%2Fflow",
       );
       expect(screen.getAllByText("장보기 목록 만들기")).toHaveLength(1);
-      expect(screen.getByRole("button", { name: "전체 해제" })).toBeTruthy();
-      expect(screen.getByRole("button", { name: "전체 선택" })).toBeTruthy();
+      expect((screen.getByRole("button", { name: "전체 해제" }) as HTMLButtonElement).disabled).toBe(false);
+      expect((screen.getByRole("button", { name: "전체 선택" }) as HTMLButtonElement).disabled).toBe(true);
+      expect(screen.getByText("2개 선택 · 총 6인분")).toBeTruthy();
+      expect(screen.getByText("총 6인분을 장보기 목록으로 만들어요.")).toBeTruthy();
+      expect(screen.queryByText("진행할 장보기")).toBeNull();
+      expect(screen.queryByRole("navigation", { name: "장보기 경로" })).toBeNull();
       expect(screen.queryByText(/^#\d+$/)).not.toBeTruthy();
       expect(screen.queryByText(/[🍳🍚🥘🍽️]/u)).not.toBeTruthy();
       expect(screen.getByTestId("shopping-create-button").textContent).toBe(
@@ -335,6 +339,7 @@ describe("shopping flow screen", () => {
       expect(screen.queryByText("대상 식사 2개")).toBeNull();
       expect(screen.queryByText("합산 계획 6인분")).toBeNull();
       expect(screen.getByText("합산 6인분")).toBeTruthy();
+      expect(screen.getByText("대표 끼니로 이동")).toBeTruthy();
       expect(screen.queryByText("장보기 기준 인분")).toBeNull();
       expect(screen.queryByLabelText("6인분")).toBeNull();
       expect(screen.queryByLabelText("인분 늘리기")).toBeNull();
@@ -388,6 +393,57 @@ describe("shopping flow screen", () => {
       expect(activeLink?.textContent).toContain("플래너");
     });
 
+    it("should toggle meal selection when clicking the recipe card", async () => {
+      fetchShoppingPreview.mockResolvedValue(
+        createPreviewData([
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_name: "김치찌개",
+            planned_servings: 2,
+          },
+        ])
+      );
+
+      render(<ShoppingFlowScreen initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("김치찌개")).toBeTruthy();
+      });
+
+      await userEvent.click(screen.getByTestId("shopping-recipe-card-recipe-1"));
+      expect(screen.getByLabelText("김치찌개 선택")).toBeTruthy();
+      expect((screen.getByText("장보기 목록 만들기") as HTMLButtonElement).disabled).toBe(true);
+
+      await userEvent.click(screen.getByTestId("shopping-recipe-card-recipe-1"));
+      expect(screen.getByLabelText("김치찌개 선택 해제")).toBeTruthy();
+      expect((screen.getByText("장보기 목록 만들기") as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it("should keep the card selected when clicking the recipe title link", async () => {
+      fetchShoppingPreview.mockResolvedValue(
+        createPreviewData([
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_name: "김치찌개",
+            planned_servings: 2,
+          },
+        ])
+      );
+
+      render(<ShoppingFlowScreen initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("김치찌개")).toBeTruthy();
+      });
+
+      const link = screen.getByRole("link", { name: "김치찌개" });
+      link.addEventListener("click", (event) => event.preventDefault(), { once: true });
+      link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      expect(screen.getByLabelText("김치찌개 선택 해제")).toBeTruthy();
+    });
+
     it("should toggle meal selection when clicking checkbox", async () => {
       fetchShoppingPreview.mockResolvedValue(
         createPreviewData([
@@ -411,6 +467,45 @@ describe("shopping flow screen", () => {
 
       expect(screen.getByLabelText("김치찌개 선택")).toBeTruthy();
       expect((screen.getByText("장보기 목록 만들기") as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it("should sort recipe cards by planner date ascending", async () => {
+      fetchShoppingPreview.mockResolvedValue(
+        createPreviewData([
+          {
+            id: "meal-late",
+            column_id: "column-dinner",
+            created_at: "2026-04-24T00:00:00.000Z",
+            plan_date: "2026-04-28",
+            recipe_id: "recipe-late",
+            recipe_name: "늦은 식사",
+            planned_servings: 2,
+          },
+          {
+            id: "meal-early",
+            column_id: "column-breakfast",
+            created_at: "2026-04-29T00:00:00.000Z",
+            plan_date: "2026-04-26",
+            recipe_id: "recipe-early",
+            recipe_name: "이른 식사",
+            planned_servings: 2,
+          },
+        ])
+      );
+
+      render(<ShoppingFlowScreen initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("이른 식사")).toBeTruthy();
+      });
+
+      const dateHeadings = screen
+        .getAllByRole("heading", { level: 3 })
+        .filter((heading) => /^\d+월 \d+일 [일월화수목금토]요일$/.test(heading.textContent ?? ""));
+      expect(dateHeadings.map((heading) => heading.textContent)).toEqual([
+        "4월 26일 일요일",
+        "4월 28일 화요일",
+      ]);
     });
 
     it("should select and clear every recipe without changing servings in the shopping flow", async () => {
@@ -438,10 +533,13 @@ describe("shopping flow screen", () => {
       await userEvent.click(screen.getByRole("button", { name: "전체 해제" }));
       expect(screen.getByLabelText("김치찌개 선택")).toBeTruthy();
       expect((screen.getByText("장보기 목록 만들기") as HTMLButtonElement).disabled).toBe(true);
+      expect((screen.getByRole("button", { name: "전체 해제" }) as HTMLButtonElement).disabled).toBe(true);
+      expect((screen.getByRole("button", { name: "전체 선택" }) as HTMLButtonElement).disabled).toBe(false);
 
       await userEvent.click(screen.getByRole("button", { name: "전체 선택" }));
       expect(screen.getByLabelText("김치찌개 선택 해제")).toBeTruthy();
       expect((screen.getByText("장보기 목록 만들기") as HTMLButtonElement).disabled).toBe(false);
+      expect((screen.getByRole("button", { name: "전체 선택" }) as HTMLButtonElement).disabled).toBe(true);
     });
 
     it("should disable create button when no meals selected", async () => {
@@ -709,11 +807,36 @@ describe("shopping flow screen", () => {
         expect(screen.getByText("김치찌개")).toBeTruthy();
       });
 
+      expect(screen.getByRole("heading", { name: "장보기 준비" })).toBeTruthy();
       expect(screen.queryByText(/식사/)).toBeNull();
       expect(screen.queryByText(/장보기 대기/)).toBeNull();
       const aggregateBadge = screen.getByText("합산");
       expect(aggregateBadge.className).toContain("text-[var(--brand)]");
       expect(screen.getByText("4인분")).toBeTruthy();
+    });
+
+    it("should toggle mobile meal selection when clicking the row", async () => {
+      setMatchMedia(true);
+      fetchShoppingPreview.mockResolvedValue(
+        createPreviewData([
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_name: "김치찌개",
+            planned_servings: 2,
+          },
+        ]),
+      );
+
+      render(<ShoppingFlowScreen initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("김치찌개")).toBeTruthy();
+      });
+
+      await userEvent.click(screen.getByTestId("shopping-mobile-recipe-row-recipe-1"));
+      expect(screen.getByLabelText("김치찌개 선택")).toBeTruthy();
+      expect((screen.getByText("장보기 목록 만들기") as HTMLButtonElement).disabled).toBe(true);
     });
 
     it("should restore a checked item when mobile pantry exclusion fails", async () => {
@@ -770,7 +893,8 @@ describe("shopping flow screen", () => {
   });
 
   describe("navigation", () => {
-    it("should navigate back to planner when clicking back button", async () => {
+    it("should navigate back to planner when clicking the mobile back button", async () => {
+      setMatchMedia(true);
       fetchShoppingPreview.mockResolvedValue(
         createPreviewData([
           {

@@ -11,7 +11,6 @@ import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
 import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
 import {
   WebButton,
-  WebCard,
   WebShell,
   WebTopNav,
 } from "@/components/web";
@@ -24,6 +23,7 @@ import {
   isShoppingApiError,
   updateShoppingListItem,
 } from "@/lib/api/shopping";
+import { buildReturnHref } from "@/lib/navigation/return-context";
 import type {
   ShoppingListDetail,
   ShoppingListItemSummary,
@@ -56,6 +56,8 @@ interface MealConfig {
 }
 
 type ViewState = "loading" | "empty" | "error" | "ready" | "creating" | "review";
+const SHOPPING_FLOW_RETURN_PATH = "/shopping/flow";
+const KOREAN_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 function groupMealsByRecipe(meals: ShoppingPreviewMeal[]): MealConfig[] {
   const grouped = new Map<string, MealConfig>();
@@ -104,14 +106,7 @@ function groupMealsByRecipe(meals: ShoppingPreviewMeal[]): MealConfig[] {
     });
   });
 
-  return [...grouped.values()].sort((left, right) => {
-    const byCreatedAt = left.created_at.localeCompare(right.created_at);
-    if (byCreatedAt !== 0) {
-      return byCreatedAt;
-    }
-
-    return left.recipe_id.localeCompare(right.recipe_id);
-  });
+  return [...grouped.values()].sort(compareMealConfigs);
 }
 
 function buildMealConfigs(data: ShoppingPreviewData): MealConfig[] {
@@ -157,7 +152,7 @@ function buildMealConfigs(data: ShoppingPreviewData): MealConfig[] {
         plan_date: primaryMeal?.plan_date ?? "",
         created_at: createdAt,
       };
-    });
+    }).sort(compareMealConfigs);
   }
 
   return groupMealsByRecipe(data.eligible_meals);
@@ -238,23 +233,56 @@ function formatDateDot(dateString: string) {
   return `${date.getFullYear()}.${month}.${day}`;
 }
 
-function formatDateShort(dateString: string) {
+function formatShoppingDateLabel(dateString: string) {
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) {
-    return "예정";
+    return "날짜 미정";
   }
-  return `${date.getMonth() + 1}/${date.getDate()}`;
+  return `${date.getMonth() + 1}월 ${date.getDate()}일 ${KOREAN_WEEKDAYS[date.getDay()]}요일`;
+}
+
+function getShoppingDateKey(dateString: string) {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return "unknown";
+  }
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function getDateSortValue(dateString: string) {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  return date.getTime();
 }
 
 function groupConfigsByDate(configs: MealConfig[]) {
-  const groups = new Map<string, MealConfig[]>();
+  const groups = new Map<
+    string,
+    { items: MealConfig[]; label: string; sortValue: number }
+  >();
 
-  configs.forEach((config) => {
-    const key = formatDateShort(config.plan_date || config.created_at);
-    groups.set(key, [...(groups.get(key) ?? []), config]);
+  [...configs].sort(compareMealConfigs).forEach((config) => {
+    const dateString = getPrimaryMeal(config)?.plan_date || config.plan_date || config.created_at;
+    const key = getShoppingDateKey(dateString);
+    const existing = groups.get(key);
+    if (existing) {
+      existing.items.push(config);
+      return;
+    }
+    groups.set(key, {
+      items: [config],
+      label: formatShoppingDateLabel(dateString),
+      sortValue: getDateSortValue(dateString),
+    });
   });
 
-  return [...groups.entries()];
+  return [...groups.entries()]
+    .sort(([, left], [, right]) => left.sortValue - right.sortValue)
+    .map(([key, group]) => ({ key, ...group }));
 }
 
 function getPrimaryMeal(config: MealConfig) {
@@ -269,10 +297,31 @@ function getPrimaryMeal(config: MealConfig) {
   })[0];
 }
 
+function compareMealConfigs(left: MealConfig, right: MealConfig) {
+  const leftMeal = getPrimaryMeal(left);
+  const rightMeal = getPrimaryMeal(right);
+  const byPlanDate =
+    getDateSortValue(leftMeal?.plan_date ?? left.plan_date) -
+    getDateSortValue(rightMeal?.plan_date ?? right.plan_date);
+  if (byPlanDate !== 0) return byPlanDate;
+
+  const byCreatedAt =
+    getDateSortValue(leftMeal?.created_at ?? left.created_at) -
+    getDateSortValue(rightMeal?.created_at ?? right.created_at);
+  if (byCreatedAt !== 0) return byCreatedAt;
+
+  const byName = left.recipe_name.localeCompare(right.recipe_name, "ko");
+  if (byName !== 0) return byName;
+
+  return left.recipe_id.localeCompare(right.recipe_id);
+}
+
 function buildMealHref(config: MealConfig) {
   const meal = getPrimaryMeal(config);
   if (!meal?.plan_date || !meal.column_id) return "/planner";
-  return `/planner/${meal.plan_date}/${meal.column_id}`;
+  return buildReturnHref(`/planner/${meal.plan_date}/${meal.column_id}`, {
+    returnTo: SHOPPING_FLOW_RETURN_PATH,
+  });
 }
 
 const recipeVisualMeta: Record<string, { bg: string; emoji: string; meal: string }> = {
@@ -746,12 +795,18 @@ export function ShoppingFlowScreen({
 
   // Ready state
   const selectedCount = mealConfigs.filter((config) => config.isSelected).length;
+  const selectedServings = mealConfigs.reduce(
+    (total, config) => total + (config.isSelected ? config.shopping_servings : 0),
+    0,
+  );
+  const isAllSelected = mealConfigs.length > 0 && selectedCount === mealConfigs.length;
   const isCreateDisabled = selectedCount === 0;
 
   if (isMobileViewport) {
     return (
       <MobileSelectScreen
         configs={mealConfigs}
+        isAllSelected={isAllSelected}
         isCreateDisabled={isCreateDisabled}
         onBack={handleBack}
         onClearAll={handleClearAll}
@@ -769,19 +824,6 @@ export function ShoppingFlowScreen({
         className="web-screen web-shopping-flow-screen max-w-none"
         data-testid="shopping-flow-shell"
       >
-        <nav aria-label="장보기 경로" className="web-breadcrumb">
-          <button
-            aria-label="뒤로 가기"
-            className="web-breadcrumb-link"
-            onClick={handleBack}
-            type="button"
-          >
-            Planner
-          </button>
-          <span className="web-breadcrumb-sep">/</span>
-          <span className="web-breadcrumb-current">장보기</span>
-        </nav>
-
         <header className="web-shopping-flow-head">
           <div>
             <p className="web-menu-add-eyebrow">Shopping</p>
@@ -791,28 +833,18 @@ export function ShoppingFlowScreen({
               같은 레시피는 합산 계획 인분으로 묶어요.
             </p>
           </div>
-        </header>
-
-        <section className="web-shopping-mode-grid" aria-label="장보기 메뉴">
-          <WebCard className="web-shopping-mode-card web-shopping-mode-card-active">
-            <strong>진행할 장보기</strong>
-            <span>{selectedCount}개 레시피 선택</span>
-          </WebCard>
-          <WebCard className="web-shopping-mode-card">
-            <strong>지난 장보기</strong>
-            <span>완료된 목록을 다시 확인</span>
+          <div className="web-shopping-flow-tools" aria-label="장보기 보조 메뉴">
+            <span>
+              {selectedCount}개 선택 · 총 {selectedServings}인분
+            </span>
             <button onClick={() => push("/mypage?restore=shopping-history-tab")} type="button">
-              기록 보기 &gt;
+              지난 장보기
             </button>
-          </WebCard>
-          <WebCard className="web-shopping-mode-card">
-            <strong>직접 추가</strong>
-            <span>필요한 재료를 직접 담기</span>
             <button onClick={() => push("/pantry")} type="button">
-              팬트리 보기 &gt;
+              팬트리 보기
             </button>
-          </WebCard>
-        </section>
+          </div>
+        </header>
 
         <div className="web-shopping-flow-layout">
           <section className="web-shopping-flow-main" aria-labelledby="shopping-flow-meals-title">
@@ -823,20 +855,20 @@ export function ShoppingFlowScreen({
               </div>
               <div className="web-shopping-section-actions">
                 <span>{mealConfigs.length}개 묶음</span>
-                <button onClick={handleSelectAll} type="button">
+                <button disabled={isAllSelected} onClick={handleSelectAll} type="button">
                   전체 선택
                 </button>
-                <button onClick={handleClearAll} type="button">
+                <button disabled={isCreateDisabled} onClick={handleClearAll} type="button">
                   전체 해제
                 </button>
               </div>
             </div>
             <div className="web-shopping-date-list">
-              {groupConfigsByDate(mealConfigs).map(([dateLabel, items]) => (
-                <section className="web-shopping-date-section" key={dateLabel}>
-                  <h3 className="web-shopping-date-heading">{dateLabel}</h3>
+              {groupConfigsByDate(mealConfigs).map((group) => (
+                <section className="web-shopping-date-section" key={group.key}>
+                  <h3 className="web-shopping-date-heading">{group.label}</h3>
                   <div className="web-shopping-recipe-list">
-                    {items.map((config) => (
+                    {group.items.map((config) => (
                       <RecipeCard
                         config={config}
                         key={config.recipe_id}
@@ -852,7 +884,7 @@ export function ShoppingFlowScreen({
           <aside className="web-shopping-summary" aria-label="장보기 요약">
             <h2>선택한 레시피</h2>
             <strong>{selectedCount}</strong>
-            <p>선택한 레시피로 장보기 목록을 생성하세요.</p>
+            <p>총 {selectedServings}인분을 장보기 목록으로 만들어요.</p>
             <WebButton
               data-testid="shopping-create-button"
               disabled={isCreateDisabled}
@@ -953,6 +985,7 @@ function MobileAppBar({
 
 function MobileSelectScreen({
   configs,
+  isAllSelected,
   isCreateDisabled,
   onBack,
   onClearAll,
@@ -961,6 +994,7 @@ function MobileSelectScreen({
   onToggle,
 }: {
   configs: MealConfig[];
+  isAllSelected: boolean;
   isCreateDisabled: boolean;
   onBack: () => void;
   onClearAll: () => void;
@@ -970,7 +1004,7 @@ function MobileSelectScreen({
 }) {
   return (
     <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface-fill)] lg:hidden">
-      <MobileAppBar onBack={onBack} />
+      <MobileAppBar onBack={onBack} title="장보기 준비" />
 
       <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
         <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5">
@@ -985,14 +1019,16 @@ function MobileSelectScreen({
           </p>
           <div className="mt-4 flex gap-2">
             <button
-              className="h-9 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[13px] font-bold text-[var(--brand)]"
+              className="h-9 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[13px] font-bold text-[var(--brand)] disabled:text-[var(--text-4)]"
+              disabled={isAllSelected}
               onClick={onSelectAll}
               type="button"
             >
               전체 선택
             </button>
             <button
-              className="h-9 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[13px] font-bold text-[var(--text-2)]"
+              className="h-9 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[13px] font-bold text-[var(--text-2)] disabled:text-[var(--text-4)]"
+              disabled={isCreateDisabled}
               onClick={onClearAll}
               type="button"
             >
@@ -1002,16 +1038,16 @@ function MobileSelectScreen({
         </section>
 
         <div className="space-y-3 p-4">
-          {groupConfigsByDate(configs).map(([dateLabel, items]) => (
+          {groupConfigsByDate(configs).map((group) => (
             <section
               className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
-              key={dateLabel}
+              key={group.key}
             >
               <h3 className="border-b border-[var(--surface-subtle)] bg-[var(--surface-fill)] px-4 py-2.5 text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
-                {dateLabel}
+                {group.label}
               </h3>
               <div className="divide-y divide-[var(--surface-subtle)]">
-                {items.map((config) => (
+                {group.items.map((config) => (
                   <MobileSelectRow
                     config={config}
                     key={config.recipe_id}
@@ -1024,9 +1060,9 @@ function MobileSelectScreen({
         </div>
       </main>
 
-      <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 py-4">
+      <div className="fixed inset-x-0 bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mx-auto max-w-[430px] px-4">
         <button
-          className="flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)] disabled:text-[var(--text-4)]"
+          className="flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-[var(--text-inverse)] shadow-[0_10px_26px_var(--brand-shadow-color-soft)] disabled:bg-[var(--line-strong)] disabled:text-[var(--text-4)] disabled:shadow-none"
           data-testid="shopping-create-button"
           disabled={isCreateDisabled}
           onClick={onCreate}
@@ -1054,7 +1090,11 @@ function MobileSelectRow({
   const isAggregated = config.meal_count > 1;
 
   return (
-    <div className={`flex min-h-[56px] items-center gap-3 px-4 py-2.5 ${config.isSelected ? "" : "opacity-45"}`}>
+    <div
+      className={`flex min-h-[56px] cursor-pointer items-center gap-3 px-4 py-2.5 ${config.isSelected ? "" : "opacity-45"}`}
+      data-testid={`shopping-mobile-recipe-row-${config.recipe_id}`}
+      onClick={() => onToggle(config.recipe_id)}
+    >
       <button
         aria-label={
           config.isSelected
@@ -1062,7 +1102,10 @@ function MobileSelectRow({
             : `${config.recipe_name} 선택`
         }
         className="flex h-8 w-8 shrink-0 items-center justify-center"
-        onClick={() => onToggle(config.recipe_id)}
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggle(config.recipe_id);
+        }}
         type="button"
       >
         <span
@@ -1094,8 +1137,15 @@ function MobileSelectRow({
       </div>
       <div className="min-w-0 flex-1">
         <Link
+          aria-label={
+            isAggregated
+              ? `${config.recipe_name} 대표 끼니로 이동`
+              : undefined
+          }
           className="block truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]"
           href={buildMealHref(config)}
+          onClick={(event) => event.stopPropagation()}
+          title={isAggregated ? "합산된 레시피의 가장 이른 끼니로 이동" : undefined}
         >
           {config.recipe_name}
         </Link>
@@ -1103,7 +1153,7 @@ function MobileSelectRow({
           {isAggregated ? (
             <>
               <span className="text-[var(--brand)]">합산</span>
-              <span> · </span>
+              <span> · 대표 끼니로 이동 · </span>
             </>
           ) : null}
           {config.shopping_servings}인분
@@ -1208,10 +1258,10 @@ function MobileReviewScreen({
         </section>
       </main>
 
-      <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 py-4">
+      <div className="fixed inset-x-0 bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mx-auto max-w-[430px] px-4">
         <div className="grid grid-cols-[1fr_86px] gap-2">
           <button
-            className="flex h-[var(--control-height-lg)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)]"
+            className="flex h-[var(--control-height-lg)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-[var(--text-inverse)] shadow-[0_10px_26px_var(--brand-shadow-color-soft)] disabled:bg-[var(--line-strong)] disabled:shadow-none"
             disabled={isCompleting || detail.is_completed}
             onClick={onComplete}
             type="button"
@@ -1219,7 +1269,7 @@ function MobileReviewScreen({
             {detail.is_completed ? "완료됨" : isCompleting ? "완료 중..." : "장보기 완료"}
           </button>
           <button
-            className="flex h-[var(--control-height-lg)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[15px] font-bold text-[var(--foreground)] disabled:opacity-50"
+            className="flex h-[var(--control-height-lg)] items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[15px] font-bold text-[var(--foreground)] shadow-[0_10px_26px_var(--shadow-color-soft)] disabled:opacity-50 disabled:shadow-none"
             disabled={isSharing}
             onClick={onShare}
             type="button"
@@ -1318,6 +1368,8 @@ function RecipeCard({ config, onToggle }: RecipeCardProps) {
         "web-shopping-recipe-card",
         config.isSelected ? "web-shopping-recipe-card-selected" : "",
       ].join(" ")}
+      data-testid={`shopping-recipe-card-${config.recipe_id}`}
+      onClick={() => onToggle(config.recipe_id)}
     >
       <button
         aria-label={
@@ -1326,7 +1378,10 @@ function RecipeCard({ config, onToggle }: RecipeCardProps) {
             : `${config.recipe_name} 선택`
         }
         className="web-shopping-recipe-toggle"
-        onClick={() => onToggle(config.recipe_id)}
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggle(config.recipe_id);
+        }}
         type="button"
       >
         {config.isSelected ? "✓" : ""}
@@ -1348,8 +1403,15 @@ function RecipeCard({ config, onToggle }: RecipeCardProps) {
         <div className="web-shopping-recipe-title-row">
           <h3>
             <Link
+              aria-label={
+                isAggregated
+                  ? `${config.recipe_name} 대표 끼니로 이동`
+                  : undefined
+              }
               className="web-shopping-recipe-title-link"
               href={buildMealHref(config)}
+              onClick={(event) => event.stopPropagation()}
+              title={isAggregated ? "합산된 레시피의 가장 이른 끼니로 이동" : undefined}
             >
               {config.recipe_name}
             </Link>
@@ -1366,6 +1428,7 @@ function RecipeCard({ config, onToggle }: RecipeCardProps) {
               ? `합산 ${config.shopping_servings}인분`
               : `${config.shopping_servings}인분`}
           </span>
+          {isAggregated ? <span>대표 끼니로 이동</span> : null}
         </div>
       </div>
     </article>

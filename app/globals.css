@@ -3770,6 +3770,10 @@ button {
     color: var(--web-text-4);
   }
 
+  .web-breadcrumb {
+    display: none !important;
+  }
+
   .web-menu-add-shell {
     --background: var(--web-bg);
     --foreground: var(--web-text-1);
@@ -7047,41 +7051,37 @@ button {
     font-weight: 700;
   }
 
-  .web-shopping-mode-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
-    margin-bottom: 24px;
-  }
-
-  .web-shopping-mode-card {
-    display: grid;
+  .web-shopping-flow-tools {
+    display: flex;
+    max-width: 420px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
     gap: 8px;
-    padding: 20px;
   }
 
-  .web-shopping-mode-card-active {
-    border-color: var(--web-brand);
-    background: var(--web-brand-wash);
-  }
-
-  .web-shopping-mode-card strong {
-    color: var(--web-text-1);
-    font-size: 17px;
-    font-weight: 800;
-  }
-
-  .web-shopping-mode-card span {
+  .web-shopping-flow-tools span {
     color: var(--web-text-3);
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 800;
   }
 
-  .web-shopping-mode-card button {
-    width: fit-content;
+  .web-shopping-flow-tools button {
+    display: inline-flex;
+    height: 32px;
+    align-items: center;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-pill);
+    background: var(--web-surface);
     color: var(--web-brand-accessible);
-    font-size: 13px;
+    padding: 0 12px;
+    font-size: 12px;
     font-weight: 800;
+  }
+
+  .web-shopping-flow-tools button:hover {
+    border-color: rgba(0, 161, 255, 0.34);
+    background: var(--web-brand-wash);
   }
 
   .web-shopping-flow-layout,
@@ -7162,6 +7162,12 @@ button {
     font-weight: 800;
   }
 
+  .web-shopping-section-actions button:disabled {
+    color: var(--web-text-4);
+    cursor: not-allowed;
+    opacity: 0.62;
+  }
+
   .web-shopping-date-list {
     display: grid;
     gap: 18px;
@@ -7190,15 +7196,25 @@ button {
     display: grid;
     grid-template-columns: 34px 56px minmax(0, 1fr);
     gap: 12px;
+    min-width: 0;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-md);
     background: var(--web-surface);
     padding: 16px;
+    cursor: pointer;
+    overflow: hidden;
     opacity: 0.62;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
   }
 
   .web-shopping-recipe-card-selected {
     opacity: 1;
+  }
+
+  .web-shopping-recipe-card:hover {
+    border-color: rgba(0, 161, 255, 0.32);
+    box-shadow: var(--web-shadow-card);
+    transform: translateY(-1px);
   }
 
   .web-shopping-recipe-toggle,
@@ -7247,6 +7263,7 @@ button {
   .web-shopping-recipe-copy {
     display: grid;
     min-width: 0;
+    overflow: hidden;
     gap: 10px;
   }
 
@@ -7255,11 +7272,17 @@ button {
     align-items: flex-start;
     justify-content: space-between;
     gap: 10px;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .web-shopping-recipe-title-row h3 {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
     margin: 0;
+    overflow: hidden;
     color: var(--web-text-1);
     font-size: 16px;
     font-weight: 800;
@@ -7267,6 +7290,8 @@ button {
 
   .web-shopping-recipe-title-link {
     display: block;
+    width: 100%;
+    max-width: 100%;
     overflow: hidden;
     color: inherit;
     text-overflow: ellipsis;
