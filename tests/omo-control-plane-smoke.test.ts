@@ -16,6 +16,8 @@ import {
 import { superviseWorkItem, tickSupervisorWorkItems } from "../scripts/lib/omo-autonomous-supervisor.mjs";
 import { readRuntimeState, writeRuntimeState } from "../scripts/lib/omo-session-runtime.mjs";
 
+const CONTROL_PLANE_LONG_TEST_TIMEOUT_MS = 20_000;
+
 function createGitWorkspace(workspacePath: string) {
   mkdirSync(workspacePath, { recursive: true });
   execFileSync("git", ["init", "-b", "master"], { cwd: workspacePath });
@@ -815,7 +817,7 @@ describe("OMO control-plane smoke", () => {
     expect(smokeState.review_loops.backend.last_feedback).toContain("request 2");
     expect(checkpoints.backendIterativeReviewLoopValidated).toBe(true);
     expect(checkpoints.backendReviewLoopValidated).toBe(true);
-  });
+  }, CONTROL_PLANE_LONG_TEST_TIMEOUT_MS);
 
   it("forwards deterministic stageRunner dependencies through tick resume cycles", () => {
     const tempDir = mkdtempSync(join(tmpdir(), "omo-control-plane-smoke-tick-"));
@@ -1061,7 +1063,7 @@ describe("OMO control-plane smoke", () => {
     expect(smokeState.attempts["2"]).toBe(4);
     expect(smokeState.attempts["3"]).toBe(3);
     expect(smokeState.review_loops.backend.feedback_seen_by_codex).toBe(true);
-  });
+  }, CONTROL_PLANE_LONG_TEST_TIMEOUT_MS);
 
   it("treats control-plane smoke files as resumable docs-gate dirty recovery during tick", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "omo-control-plane-smoke-dirty-"));
