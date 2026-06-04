@@ -6,6 +6,10 @@ const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100
 
 const SHOPPING_FLOW_URL = "/shopping/flow";
 
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1280) < 1024;
+}
+
 interface ShoppingPreviewMeal {
   id: string;
   column_id: string;
@@ -246,10 +250,15 @@ test.describe("slice 09: shopping preview and list creation", () => {
       await page.goto(SHOPPING_FLOW_URL);
 
       await expect(page.getByText("김치찌개")).toBeVisible();
-      await expect(page.getByText("2인분")).toBeVisible();
+      const recipeEntry = page
+        .locator(
+          '[data-testid="shopping-recipe-card-recipe-1"], [data-testid="shopping-mobile-recipe-row-recipe-1"]',
+        )
+        .filter({ hasText: "김치찌개" });
+      await expect(recipeEntry.getByText("2인분")).toBeVisible();
       await expect(page.getByRole("link", { name: "김치찌개" })).toHaveAttribute(
         "href",
-        "/planner/2026-04-26/column-breakfast",
+        "/planner/2026-04-26/column-breakfast?returnTo=%2Fshopping%2Fflow",
       );
       await expect(page.getByText("장보기 기준 인분")).toHaveCount(0);
       await expect(page.getByLabel("인분 늘리기")).toHaveCount(0);
@@ -275,7 +284,13 @@ test.describe("slice 09: shopping preview and list creation", () => {
       await page.goto(SHOPPING_FLOW_URL);
 
       await expect(page.getByText("김치찌개")).toBeVisible();
-      await expect(page.getByText(/합산.*5인분/)).toBeVisible();
+      const recipeEntry = page
+        .locator(
+          '[data-testid="shopping-recipe-card-recipe-1"], [data-testid="shopping-mobile-recipe-row-recipe-1"]',
+        )
+        .filter({ hasText: "김치찌개" });
+      await expect(recipeEntry.getByText(/합산.*5인분/)).toBeVisible();
+      await expect(recipeEntry.getByText("대표 끼니로 이동")).toBeVisible();
       await expect(page.getByText("합산 계획 5인분")).toHaveCount(0);
       await expect(page.getByText("대상 식사 2개")).toHaveCount(0);
     });
@@ -505,7 +520,9 @@ test.describe("slice 09: shopping preview and list creation", () => {
   });
 
   test.describe("navigation", () => {
-    test("should navigate back to planner", async ({ page }) => {
+    test("should handle shopping prep navigation for the current viewport", async ({
+      page,
+    }) => {
       await setAuthOverride(page, "authenticated");
       await installShoppingPreviewRoute(page, [
         buildPreviewMeal({ id: "meal-1", recipe_name: "김치찌개" }),
@@ -515,8 +532,13 @@ test.describe("slice 09: shopping preview and list creation", () => {
 
       await expect(page.getByText("김치찌개")).toBeVisible();
 
-      await page.getByLabel("뒤로 가기").click();
+      if (!isMobileViewport(page)) {
+        await expect(page.getByLabel("뒤로 가기")).toHaveCount(0);
+        await expect(page.getByText("Planner / 장보기")).toHaveCount(0);
+        return;
+      }
 
+      await page.getByLabel("뒤로 가기").click();
       await expect(page).toHaveURL("/planner");
     });
   });
