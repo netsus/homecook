@@ -90,8 +90,12 @@ describe("login screen", () => {
     render(<LoginScreen />);
 
     expect(
-      screen.getByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "이 화면은 로그인이 필요해요",
+      }),
     ).toBeTruthy();
+    expect(screen.getByRole("main")).toBeTruthy();
     expect(screen.getByTestId("login-brand-mark")).toBeTruthy();
     expect(screen.getByText("로그인 필요")).toBeTruthy();
     expect(screen.getAllByText("로그인 후 이전 화면으로 돌아갑니다.")).toHaveLength(1);
@@ -113,9 +117,11 @@ describe("login screen", () => {
 
     expect(
       screen.getByRole("heading", {
+        level: 1,
         name: "이 화면은 로그인이 필요해요",
       }),
     ).toBeTruthy();
+    expect(screen.getByRole("main")).toBeTruthy();
     expect(screen.getByTestId("login-brand-mark")).toBeTruthy();
     expect(screen.getByText("플래너 접근")).toBeTruthy();
     expect(

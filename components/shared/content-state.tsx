@@ -14,6 +14,7 @@ interface ContentStateProps {
   className?: string;
   safeBottomPadding?: boolean;
   showEyebrow?: boolean;
+  titleLevel?: 1 | 2;
 }
 
 export function ContentState({
@@ -30,6 +31,7 @@ export function ContentState({
   className,
   safeBottomPadding = false,
   showEyebrow = true,
+  titleLevel = 2,
 }: ContentStateProps) {
   const shellClassName =
     (actionLabel && onAction) || safeBottomPadding
@@ -88,11 +90,19 @@ export function ContentState({
             <span>{toneMeta.eyebrow}</span>
           </div>
         ) : null}
-        <h2
-          className={`${showEyebrow ? "mt-3" : ""} text-[22px] font-bold leading-[1.3] ${toneMeta.titleClassName}`.trim()}
-        >
-          {title}
-        </h2>
+        {titleLevel === 1 ? (
+          <h1
+            className={`${showEyebrow ? "mt-3" : ""} text-[22px] font-bold leading-[1.3] ${toneMeta.titleClassName}`.trim()}
+          >
+            {title}
+          </h1>
+        ) : (
+          <h2
+            className={`${showEyebrow ? "mt-3" : ""} text-[22px] font-bold leading-[1.3] ${toneMeta.titleClassName}`.trim()}
+          >
+            {title}
+          </h2>
+        )}
         {description ? (
           <p className="mt-2 text-[14px] font-medium leading-[1.5] text-[var(--text-2)]">
             {description}

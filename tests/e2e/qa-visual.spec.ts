@@ -355,7 +355,7 @@ test.describe("QA visual regression", () => {
 
     await page.goto(MENU_ADD_VISUAL_PATH);
     await expect(
-      page.getByRole("heading", { name: "어떤 방식으로 식사를 추가할까요?" }),
+      page.getByRole("heading", { name: "식사 추가" }),
     ).toBeVisible();
     await expect(page.getByText("김치볶음밥")).toBeVisible();
 
@@ -368,7 +368,7 @@ test.describe("QA visual regression", () => {
 
     await page.getByRole("button", { name: "김치볶음밥 선택" }).click();
     const servingsDialog = page.getByRole("dialog", {
-      name: "플래너에 추가",
+      name: "계획 인분 입력",
     });
     await expect(servingsDialog).toBeVisible();
     await stabilizeVisualSnapshot(page);
@@ -402,7 +402,7 @@ test.describe("QA visual regression", () => {
     });
 
     await page.goto(`${MENU_ADD_VISUAL_PATH}&source=pantry`);
-    await expect(page.getByRole("heading", { name: "팬트리 기반 추천" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "팬트리 추천" })).toBeVisible();
     await expect(page.getByRole("button", { name: /연어 스테이크/ })).toBeVisible();
     await stabilizeVisualSnapshot(page);
     await expect(page).toHaveScreenshot("qa-menu-add-pantry.png", {
@@ -431,7 +431,7 @@ test.describe("QA visual regression", () => {
     });
 
     await page.getByRole("button", { name: /재료 추가/ }).click();
-    const ingredientDialog = page.getByRole("dialog", { name: "재료 선택" });
+    const ingredientDialog = page.getByRole("dialog", { name: "재료로 검색" });
     await expect(ingredientDialog).toBeVisible();
     await stabilizeVisualSnapshot(page);
     await expect(ingredientDialog).toHaveScreenshot(
