@@ -20,6 +20,7 @@ const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 const YOUTUBE_IMPORT_URL = "/menu/add/youtube";
+const YOUTUBE_REVIEW_HEADING = "추출 결과를 확인해주세요";
 
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   await page.context().addCookies([
@@ -243,7 +244,7 @@ async function navigateToReview(page: Page) {
   await page.goto(YOUTUBE_IMPORT_URL);
   await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=partial12345");
   await page.click('button:has-text("가져오기")');
-  await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 15000 });
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────

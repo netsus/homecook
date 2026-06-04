@@ -78,7 +78,17 @@ function visibleSearchInput(page: Page) {
 }
 
 function visibleSearchButton(page: Page) {
-  return page.locator('button[aria-label="검색"]').filter({ visible: true }).first();
+  return page.getByRole("button", { name: "검색" }).filter({ visible: true }).first();
+}
+
+async function submitRecipeSearch(page: Page) {
+  const searchButton = visibleSearchButton(page);
+  if ((await searchButton.count()) > 0) {
+    await searchButton.click();
+    return;
+  }
+
+  await visibleSearchInput(page).press("Enter");
 }
 
 async function openMobileSearchPicker(page: Page) {
@@ -90,7 +100,7 @@ async function openMobileSearchPicker(page: Page) {
 
 async function expectServingsDialog(page: Page) {
   if (isMobileViewport(page)) {
-    await expect(page.getByRole("dialog", { name: "플래너에 추가" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "계획 인분 입력" })).toBeVisible();
     return;
   }
 
@@ -204,7 +214,7 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
 
     const searchInput = visibleSearchInput(page);
     await searchInput.fill("존재하지않는레시피");
-    await visibleSearchButton(page).click();
+    await submitRecipeSearch(page);
 
     await expect(visibleText(page, "검색 결과가 없어요")).toBeVisible();
   });
@@ -221,7 +231,7 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
 
     const searchInput = visibleSearchInput(page);
     await searchInput.fill("김치");
-    await visibleSearchButton(page).click();
+    await submitRecipeSearch(page);
 
     await expect(visibleText(page, "김치찌개")).toBeVisible();
     await expect(visibleText(page, "김치볶음밥")).toBeVisible();
@@ -238,7 +248,7 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
 
     const searchInput = visibleSearchInput(page);
     await searchInput.fill("김치");
-    await visibleSearchButton(page).click();
+    await submitRecipeSearch(page);
 
     await expect(visibleText(page, "김치찌개")).toBeVisible();
     await visibleButtonText(page, "선택").click();
@@ -278,7 +288,7 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
 
     const searchInput = visibleSearchInput(page);
     await searchInput.fill("김치");
-    await visibleSearchButton(page).click();
+    await submitRecipeSearch(page);
 
     await expect(visibleText(page, "김치찌개")).toBeVisible();
     await visibleButtonText(page, "선택").click();

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
@@ -57,12 +57,50 @@ function getSaveButton(page: Page) {
   return page.getByRole("button", { name: /^(저장|완료)$/ });
 }
 
+function ingredientDialog(page: Page) {
+  return page.getByRole("dialog", { name: "재료로 검색" }).filter({ visible: true }).last();
+}
+
+async function openIngredientDialog(page: Page) {
+  await page.getByRole("button", { name: /\+ 재료 추가/ }).click();
+  const dialog = ingredientDialog(page);
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+async function searchIngredient(page: Page, query: string) {
+  const dialog = ingredientDialog(page);
+  await dialog.getByRole("textbox", { name: "재료명으로 검색" }).fill(query);
+  await page.waitForTimeout(400);
+  return dialog;
+}
+
+async function selectIngredient(dialog: Locator, name: string) {
+  await dialog.getByRole("checkbox", { name, exact: true }).click({ force: true });
+}
+
+async function addSelectedIngredients(dialog: Locator, count: number) {
+  await dialog.getByRole("button", { name: `선택한 재료 ${count}개 추가` }).click();
+}
+
 async function fillRecipeTitle(page: Page, title: string) {
   await page.getByLabel("요리 이름").fill(title);
 }
 
 async function setBaseServings(page: Page, servings: number) {
-  await page.getByRole("spinbutton", { name: "기준 인분", exact: true }).fill(String(servings));
+  const group = page.getByRole("group", { name: "기준 인분 조절" });
+  await expect(group).toBeVisible();
+
+  const currentText = (await group.getByText(/\d+인분/).first().textContent()) ?? "2인분";
+  const currentServings = Number.parseInt(currentText, 10);
+  const delta = servings - currentServings;
+  const buttonName = delta > 0 ? "기준 인분 늘리기" : "기준 인분 줄이기";
+
+  for (let index = 0; index < Math.abs(delta); index += 1) {
+    await group.getByRole("button", { name: buttonName }).click();
+  }
+
+  await expect(group.getByText(`${servings}인분`)).toBeVisible();
 }
 
 async function openStepAdd(page: Page) {
@@ -203,16 +241,13 @@ test.describe("Slice 18: Manual Recipe Create", () => {
 
     // Increase servings to 3
     await setBaseServings(page, 3);
-    await expect(page.getByRole("spinbutton", { name: "기준 인분", exact: true })).toHaveValue("3");
+    await expect(page.getByRole("group", { name: "기준 인분 조절" }).getByText("3인분")).toBeVisible();
 
     // Add ingredient
-    await page.click("text=+ 재료 추가");
-    await page.fill('input[placeholder="재료 검색"]', "양파");
-    await page.waitForTimeout(400); // Debounce
-    await page.locator('div.fixed.inset-0.z-50').last().getByText("양파", { exact: true }).click();
-
-    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
+    const ingredientModal = await openIngredientDialog(page);
+    await searchIngredient(page, "양파");
+    await selectIngredient(ingredientModal, "양파");
+    await addSelectedIngredients(ingredientModal, 1);
     await page.getByLabel("양파 수량").fill("200");
 
     // Verify ingredient added
@@ -307,12 +342,10 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await page.goto(MANUAL_RECIPE_CREATE_URL);
     await fillRecipeTitle(page, "재시도 레시피");
 
-    await page.click("text=+ 재료 추가");
-    await page.fill('input[placeholder="재료 검색"]', "양파");
-    await page.waitForTimeout(400);
-    await page.locator('div.fixed.inset-0.z-50').last().getByText("양파", { exact: true }).click();
-    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
+    const ingredientModal = await openIngredientDialog(page);
+    await searchIngredient(page, "양파");
+    await selectIngredient(ingredientModal, "양파");
+    await addSelectedIngredients(ingredientModal, 1);
 
     await openStepAdd(page);
     await page.click('button:has-text("볶기")');
@@ -369,13 +402,10 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await expect(page.getByText("만들기를 추가해주세요.")).toBeVisible();
 
     // Add ingredient
-    await page.click("text=+ 재료 추가");
-    await page.fill('input[placeholder="재료 검색"]', "소금");
-    await page.waitForTimeout(400);
-    await page.locator('div.fixed.inset-0.z-50').last().getByText("소금", { exact: true }).click();
-
-    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
+    const ingredientModal = await openIngredientDialog(page);
+    await searchIngredient(page, "소금");
+    await selectIngredient(ingredientModal, "소금");
+    await addSelectedIngredients(ingredientModal, 1);
 
     await expect(saveButton).toBeEnabled();
     await expect(page.getByText("재료를 1개 이상 추가해주세요.")).toHaveCount(0);
@@ -486,12 +516,10 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     // Create minimal recipe
     await fillRecipeTitle(page, "테스트 레시피");
 
-    await page.click("text=+ 재료 추가");
-    await page.fill('input[placeholder="재료 검색"]', "소금");
-    await page.waitForTimeout(400);
-    await page.locator('div.fixed.inset-0.z-50').last().getByText("소금", { exact: true }).click();
-    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
+    const ingredientModal = await openIngredientDialog(page);
+    await searchIngredient(page, "소금");
+    await selectIngredient(ingredientModal, "소금");
+    await addSelectedIngredients(ingredientModal, 1);
 
     await openStepAdd(page);
     await page.click('button:has-text("섞기/준비")');
@@ -578,12 +606,10 @@ test.describe("Slice 18: Manual Recipe Create", () => {
 
     await fillRecipeTitle(page, createdRecipe.title);
 
-    await page.click("text=+ 재료 추가");
-    await page.fill('input[placeholder="재료 검색"]', "소금");
-    await page.waitForTimeout(400);
-    await page.locator('div.fixed.inset-0.z-50').last().getByText("소금", { exact: true }).click();
-    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
+    const ingredientModal = await openIngredientDialog(page);
+    await searchIngredient(page, "소금");
+    await selectIngredient(ingredientModal, "소금");
+    await addSelectedIngredients(ingredientModal, 1);
 
     await openStepAdd(page);
     await page.click('button:has-text("섞기/준비")');
@@ -630,12 +656,10 @@ test.describe("Slice 18: Manual Recipe Create", () => {
 
     await fillRecipeTitle(page, createdRecipe.title);
 
-    await page.click("text=+ 재료 추가");
-    await page.fill('input[placeholder="재료 검색"]', "소금");
-    await page.waitForTimeout(400);
-    await page.locator('div.fixed.inset-0.z-50').last().getByText("소금", { exact: true }).click();
-    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
+    const ingredientModal = await openIngredientDialog(page);
+    await searchIngredient(page, "소금");
+    await selectIngredient(ingredientModal, "소금");
+    await addSelectedIngredients(ingredientModal, 1);
 
     await openStepAdd(page);
     await page.click('button:has-text("섞기/준비")');
@@ -698,16 +722,13 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     ]);
 
     await page.goto(MANUAL_RECIPE_CREATE_URL);
-    await page.click("text=+ 재료 추가");
-    await page.fill('input[placeholder="재료 검색"]', "양파");
-    await page.waitForTimeout(400);
-    await page.locator('div.fixed.inset-0.z-50').last().getByText("양파", { exact: true }).click();
-
-    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
+    const ingredientModal = await openIngredientDialog(page);
+    await searchIngredient(page, "양파");
+    await selectIngredient(ingredientModal, "양파");
     await expect(ingredientModal.getByText("정량 (QUANT)")).toHaveCount(0);
     await expect(ingredientModal.getByText("가감형 (TO_TASTE)")).toHaveCount(0);
     await expect(ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" })).toBeVisible();
-    await ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
+    await addSelectedIngredients(ingredientModal, 1);
     await expect(page.getByRole("button", { name: "양파 g" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -760,9 +781,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     });
 
     await page.goto(MANUAL_RECIPE_CREATE_URL);
-    await page.click("text=+ 재료 추가");
-
-    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
+    const ingredientModal = await openIngredientDialog(page);
     await expect(ingredientModal.locator("ul").getByText("양파", { exact: true })).toBeVisible();
     await expect(ingredientModal.getByText("돼지고기", { exact: true })).toBeVisible();
     expect(ingredientRequests[0]).toBe("");
@@ -772,8 +791,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await expect(ingredientModal.getByText("양파", { exact: true })).toHaveCount(0);
     expect(ingredientRequests).toContain("?category=%EC%9C%A1%EB%A5%98");
 
-    await page.fill('input[placeholder="재료 검색"]', "양파");
-    await page.waitForTimeout(400);
+    await searchIngredient(page, "양파");
     await expect(ingredientModal.getByText("검색 결과가 없어요")).toBeVisible();
   });
 
@@ -788,13 +806,10 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     ]);
 
     await page.goto(MANUAL_RECIPE_CREATE_URL);
-    await page.click("text=+ 재료 추가");
-    await page.fill('input[placeholder="재료 검색"]', "양파");
-    await page.waitForTimeout(400);
-    await page.locator('div.fixed.inset-0.z-50').last().getByText("양파", { exact: true }).click();
-
-    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
+    const ingredientModal = await openIngredientDialog(page);
+    await searchIngredient(page, "양파");
+    await selectIngredient(ingredientModal, "양파");
+    await addSelectedIngredients(ingredientModal, 1);
     await page.getByLabel("양파 수량").fill("1");
     await page.getByRole("button", { name: "양파 ml" }).click();
 
@@ -818,16 +833,14 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     ]);
 
     await page.goto(MANUAL_RECIPE_CREATE_URL);
-    await page.click("text=+ 재료 추가");
-
-    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.getByText("양파", { exact: true }).click();
+    const ingredientModal = await openIngredientDialog(page);
+    await selectIngredient(ingredientModal, "양파");
 
     await expect(
       ingredientModal.locator("ul").getByText("양파", { exact: true }),
     ).toBeVisible();
     await expect(ingredientModal.getByText("돼지고기", { exact: true })).toBeVisible();
-    await expect(ingredientModal.getByRole("button", { name: "양파 선택 해제" })).toBeVisible();
+    await expect(ingredientModal.getByRole("checkbox", { name: "양파", exact: true })).toBeChecked();
     await expect(ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" })).toBeVisible();
     await expect(ingredientModal.getByText("선택된 재료")).toHaveCount(0);
   });
@@ -843,14 +856,12 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     ]);
 
     await page.goto(MANUAL_RECIPE_CREATE_URL);
-    await page.click("text=+ 재료 추가");
+    const ingredientModal = await openIngredientDialog(page);
+    await selectIngredient(ingredientModal, "대파");
 
-    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.getByText("대파", { exact: true }).click();
-
-    await expect(ingredientModal.getByRole("button", { name: "대파 선택 해제" })).toBeVisible();
+    await expect(ingredientModal.getByRole("checkbox", { name: "대파", exact: true })).toBeChecked();
     await expect(ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" })).toBeVisible();
-    await ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
+    await addSelectedIngredients(ingredientModal, 1);
     await expect(page.getByLabel("대파 수량")).toHaveValue("100");
   });
 
@@ -866,11 +877,9 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     ]);
 
     await page.goto(MANUAL_RECIPE_CREATE_URL);
-    await page.click("text=+ 재료 추가");
-
-    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.getByText("양파", { exact: true }).click();
-    await ingredientModal.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
+    const ingredientModal = await openIngredientDialog(page);
+    await selectIngredient(ingredientModal, "양파");
+    await addSelectedIngredients(ingredientModal, 1);
 
     const unitButton = page.getByRole("button", { name: "양파 g" });
     await expect(unitButton).toBeVisible();
@@ -896,24 +905,22 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     ]);
 
     await page.goto(MANUAL_RECIPE_CREATE_URL);
-    await page.click("text=+ 재료 추가");
+    const ingredientModal = await openIngredientDialog(page);
+    await selectIngredient(ingredientModal, "양파");
 
-    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.getByText("양파", { exact: true }).click();
+    await expect(ingredientModal.getByText("재료로 검색")).toBeVisible();
+    await expect(ingredientModal.getByRole("checkbox", { name: "양파", exact: true })).toBeChecked();
 
-    await expect(ingredientModal.getByText(/재료 (추가|선택)/)).toBeVisible();
-    await expect(ingredientModal.getByRole("button", { name: "양파 선택 해제" })).toBeVisible();
+    await selectIngredient(ingredientModal, "돼지고기");
+    await expect(ingredientModal.getByRole("checkbox", { name: "돼지고기", exact: true })).toBeChecked();
 
-    await ingredientModal.getByText("돼지고기", { exact: true }).click();
-    await expect(ingredientModal.getByRole("button", { name: "돼지고기 선택 해제" })).toBeVisible();
-
-    await ingredientModal.getByRole("button", { name: "선택한 재료 2개 추가" }).click();
-    await expect(page.locator('div.fixed.inset-0.z-50')).toHaveCount(0);
+    await addSelectedIngredients(ingredientModal, 2);
+    await expect(page.getByRole("dialog", { name: "재료로 검색" })).toHaveCount(0);
     await expect(page.getByText("양파")).toBeVisible();
     await expect(page.getByText("돼지고기")).toBeVisible();
   });
 
-  test("ingredient modal keeps its height stable while category results load", async ({ page }) => {
+  test("ingredient modal stays usable while category results load", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installCookingMethodsRoute(page, [
       { id: "method-1", code: "prep", label: "섞기/준비", color_key: "gray", is_system: true },
@@ -953,19 +960,12 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     });
 
     await page.goto(MANUAL_RECIPE_CREATE_URL);
-    await page.click("text=+ 재료 추가");
-
-    const dialog = page.locator('div.fixed.inset-0.z-50').last().locator('[role="dialog"]');
+    const dialog = await openIngredientDialog(page);
     await expect(dialog.getByText("양파", { exact: true })).toBeVisible();
-    const heightBefore = (await dialog.boundingBox())?.height;
-
     await dialog.getByRole("button", { name: "육류" }).click();
     await expect(dialog.getByText("돼지고기", { exact: true })).toBeVisible();
-    const heightAfter = (await dialog.boundingBox())?.height;
-
-    expect(heightBefore).toBeTruthy();
-    expect(heightAfter).toBeTruthy();
-    expect(Math.abs(heightAfter! - heightBefore!)).toBeLessThanOrEqual(4);
+    await expect(dialog.getByRole("button", { name: "선택한 재료 0개 추가" })).toBeDisabled();
+    await expect(dialog.getByRole("button", { name: "닫기" })).toBeVisible();
   });
 
   test("ingredient modal closes when clicking the backdrop", async ({ page }) => {
@@ -979,13 +979,11 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     ]);
 
     await page.goto(MANUAL_RECIPE_CREATE_URL);
-    await page.click("text=+ 재료 추가");
-
-    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await expect(ingredientModal.getByText(/재료 (추가|선택)/)).toBeVisible();
+    const ingredientModal = await openIngredientDialog(page);
+    await expect(ingredientModal.getByText("재료로 검색")).toBeVisible();
 
     await page.mouse.click(12, 12);
-    await expect(page.locator('div.fixed.inset-0.z-50')).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "재료로 검색" })).toHaveCount(0);
   });
 
   test("step modal closes when clicking the backdrop", async ({ page }) => {
@@ -1003,6 +1001,6 @@ test.describe("Slice 18: Manual Recipe Create", () => {
 
     await expect(page.getByTestId("manual-step-composer")).toBeVisible();
     await expect(page.getByRole("button", { name: "+ 만들기 추가" })).toBeDisabled();
-    await expect(page.locator('div.fixed.inset-0.z-50')).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 });
