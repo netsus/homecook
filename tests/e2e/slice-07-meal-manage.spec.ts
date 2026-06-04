@@ -213,7 +213,8 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     await page.goto(MEAL_SCREEN_URL);
 
     if (page.viewportSize()?.width && page.viewportSize()!.width >= 1024) {
-      await expect(page.getByRole("navigation", { name: "식사 경로" })).toContainText("4월 18일 · 아침");
+      await expect(page.getByRole("heading", { name: "이 끼니에 등록된 식사가 없어요" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "식사 추가" })).toBeVisible();
     } else {
       await expect(page.locator("h1:visible").first()).toBeVisible();
       await expect(page.locator("h1:visible").first()).toContainText("아침");

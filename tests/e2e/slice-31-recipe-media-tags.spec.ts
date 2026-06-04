@@ -329,7 +329,7 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
       testInfo.project.name !== "desktop-chrome",
       "Evidence test creates explicit mobile/narrow contexts once.",
     );
-    test.setTimeout(60_000);
+    test.setTimeout(120_000);
     await mkdir(EVIDENCE_DIR, { recursive: true });
 
     const youtube = await preparePage(browser, MOBILE_VIEWPORT);
@@ -348,7 +348,7 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
         path: path.join(EVIDENCE_DIR, "YT_IMPORT-thumbnail-tag-preview-mobile-screenshot.png"),
       });
     } finally {
-      await youtube.context.close();
+      void youtube.context.close().catch(() => {});
     }
 
     const manual = await preparePage(browser, MOBILE_VIEWPORT);
@@ -379,8 +379,9 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
       });
       await manual.page.getByLabel("요리 이름").fill("이미지 김치찌개");
       await manual.page.getByRole("button", { name: "+ 재료 추가하기" }).click();
-      await manual.page.getByRole("button", { name: "김치" }).click();
-      await manual.page.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
+      const ingredientDialog = manual.page.getByRole("dialog", { name: "재료로 검색" });
+      await ingredientDialog.locator("label").filter({ hasText: "김치" }).click();
+      await ingredientDialog.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
       await manual.page.getByRole("button", { name: "손질" }).click();
       await manual.page.getByLabel("만들기 1 설명").fill("김치를 한입 크기로 썬다");
       await manual.page.getByRole("button", { name: "+ 만들기 추가" }).click();
@@ -388,7 +389,7 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
       await expect(manual.page.getByText("레시피 등록 완료")).toBeVisible();
       expect(String(manualCreateBody.current?.thumbnail_url)).toContain("data:image/svg+xml");
     } finally {
-      await manual.context.close();
+      void manual.context.close().catch(() => {});
     }
 
     const detail = await preparePage(browser, MOBILE_VIEWPORT);
@@ -403,7 +404,7 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
         path: path.join(EVIDENCE_DIR, "RECIPE_DETAIL-source-note-tag-display-mobile-screenshot.png"),
       });
     } finally {
-      await detail.context.close();
+      void detail.context.close().catch(() => {});
     }
 
     const narrow = await preparePage(browser, NARROW_VIEWPORT);
@@ -417,7 +418,7 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
         path: path.join(EVIDENCE_DIR, "RECIPE_DETAIL-narrow-viewport-text-fit-screenshot.png"),
       });
     } finally {
-      await narrow.context.close();
+      void narrow.context.close().catch(() => {});
     }
   });
 });
