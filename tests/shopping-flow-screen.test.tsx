@@ -508,6 +508,38 @@ describe("shopping flow screen", () => {
       ]);
     });
 
+    it("should keep date-only planner labels stable across host timezones", async () => {
+      const originalTimezone = process.env.TZ;
+      process.env.TZ = "America/Los_Angeles";
+      try {
+        fetchShoppingPreview.mockResolvedValue(
+          createPreviewData([
+            {
+              id: "meal-date-only",
+              column_id: "column-breakfast",
+              plan_date: "2026-04-26",
+              recipe_id: "recipe-date-only",
+              recipe_name: "날짜 전용 식사",
+              planned_servings: 2,
+            },
+          ]),
+        );
+
+        render(<ShoppingFlowScreen initialAuthenticated={true} />);
+
+        await waitFor(() => {
+          expect(screen.getByText("날짜 전용 식사")).toBeTruthy();
+        });
+
+        expect(
+          screen.getByRole("heading", { name: "4월 26일 일요일" }),
+        ).toBeTruthy();
+        expect(screen.queryByRole("heading", { name: "4월 25일 토요일" })).toBeNull();
+      } finally {
+        process.env.TZ = originalTimezone;
+      }
+    });
+
     it("should select and clear every recipe without changing servings in the shopping flow", async () => {
       fetchShoppingPreview.mockResolvedValue(
         createPreviewData([

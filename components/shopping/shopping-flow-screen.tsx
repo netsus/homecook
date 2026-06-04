@@ -58,6 +58,7 @@ interface MealConfig {
 type ViewState = "loading" | "empty" | "error" | "ready" | "creating" | "review";
 const SHOPPING_FLOW_RETURN_PATH = "/shopping/flow";
 const KOREAN_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
+const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 function groupMealsByRecipe(meals: ShoppingPreviewMeal[]): MealConfig[] {
   const grouped = new Map<string, MealConfig>();
@@ -233,7 +234,44 @@ function formatDateDot(dateString: string) {
   return `${date.getFullYear()}.${month}.${day}`;
 }
 
+function parseDateOnly(dateString: string) {
+  const match = DATE_ONLY_PATTERN.exec(dateString);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const sortValue = Date.UTC(year, month - 1, day);
+  const parsedDate = new Date(sortValue);
+
+  if (
+    !Number.isFinite(sortValue) ||
+    parsedDate.getUTCFullYear() !== year ||
+    parsedDate.getUTCMonth() !== month - 1 ||
+    parsedDate.getUTCDate() !== day ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return null;
+  }
+
+  return {
+    day,
+    key: `${match[1]}-${match[2]}-${match[3]}`,
+    month,
+    sortValue,
+    weekday: KOREAN_WEEKDAYS[new Date(sortValue).getUTCDay()],
+  };
+}
+
 function formatShoppingDateLabel(dateString: string) {
+  const dateOnly = parseDateOnly(dateString);
+  if (dateOnly) {
+    return `${dateOnly.month}월 ${dateOnly.day}일 ${dateOnly.weekday}요일`;
+  }
+
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) {
     return "날짜 미정";
@@ -242,6 +280,11 @@ function formatShoppingDateLabel(dateString: string) {
 }
 
 function getShoppingDateKey(dateString: string) {
+  const dateOnly = parseDateOnly(dateString);
+  if (dateOnly) {
+    return dateOnly.key;
+  }
+
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) {
     return "unknown";
@@ -252,6 +295,11 @@ function getShoppingDateKey(dateString: string) {
 }
 
 function getDateSortValue(dateString: string) {
+  const dateOnly = parseDateOnly(dateString);
+  if (dateOnly) {
+    return dateOnly.sortValue;
+  }
+
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) {
     return Number.MAX_SAFE_INTEGER;
