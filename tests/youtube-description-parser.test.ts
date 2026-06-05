@@ -425,6 +425,32 @@ describe("youtube description parser v2", () => {
     expect(draft.blockingIssues).toEqual([]);
   });
 
+  it("does not treat garnish-like ingredient names as cooking steps", () => {
+    const document = parseYoutubeRecipeDescription({
+      title: "대파 양념밥",
+      description: [
+        "재료",
+        "대파 1대, 양파 1개, 올리브오일 약간",
+        "올리고당 2스푼",
+        "",
+        "만들기",
+        "1. 대파를 썰어주세요.",
+      ].join("\n"),
+    });
+    const draft = adaptCandidateToFlatDraft(selectPrimaryRecipeCandidate(document));
+
+    expect(draft.ingredients.map((ingredient) => ingredient.name)).toEqual([
+      "대파",
+      "양파",
+      "올리브오일",
+      "올리고당",
+    ]);
+    expect(draft.steps).toEqual(["대파를 썰어주세요."]);
+    expect(draft.steps.join("\n")).not.toContain("올리브오일");
+    expect(draft.steps.join("\n")).not.toContain("올리고당");
+    expect(draft.blockingIssues).toEqual([]);
+  });
+
   it("treats 레시피 as a step heading after an ingredient section", () => {
     const document = parseYoutubeRecipeDescription({
       title: "간장비빔국수",

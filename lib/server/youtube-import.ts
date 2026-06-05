@@ -946,6 +946,8 @@ interface ParsedRecipeQualityMeta {
   weak_step_count: number;
   conversational_step_count: number;
   cooking_action_step_count: number;
+  suppressed_step_count: number;
+  step_quality_flags: StepQualityFlag[];
 }
 
 interface LlmExtractorMeta {
@@ -1023,6 +1025,14 @@ interface SelectedMultiRecipeExtraction {
   candidates: YoutubeRawRecipeCandidate[];
   segments: YoutubeSourceSegment[];
 }
+
+type StepQualityFlag =
+  | "non_cooking_product_note"
+  | "social_cta"
+  | "health_advice"
+  | "conversational_filler"
+  | "number_artifact"
+  | "incomplete_fragment";
 
 interface LlmFallbackResult {
   recipe: ParsedRecipeDescription;
@@ -2433,14 +2443,113 @@ function shouldStopDescriptionSection(line: string) {
 }
 
 function cleanDescriptionItemText(line: string) {
-  return line
+  const withoutTimestamp = line
     .trim()
-    .replace(/^(?:\d{1,2}:)?\d{1,2}:\d{2}\s*/u, "")
-    .replace(/^[\s>]*(?:[^\p{L}\p{N}#]+)\s*/u, "")
+    .replace(/^(?:\d{1,2}:)?\d{1,2}:\d{2}\s*/u, "");
+
+  return withoutTimestamp
+    .replace(/^[\s>]*[(（]\s*\d{1,2}\s*[)）.]\s*/u, "")
     .replace(/^[\s>]*[-–—•·*]+\s*/u, "")
     .replace(/^[\s>]*\d+[.)]\s*/u, "")
     .replace(/^[\s>]*[①②③④⑤⑥⑦⑧⑨⑩]\s*/u, "")
     .trim();
+}
+
+const TEXT_AMOUNT_SIGNAL_RE =
+  /(?:\d+(?:[.,]\d+)?|\d+\/\d+)\s*(?:g|kg|ml|l|L|t|T|스푼|큰술|작은술|숟가락|컵|개|장|대|쪽|줌|꼬집|분|초|인분|도)?/u;
+const TO_TASTE_SIGNAL_RE =
+  /(?:약간|조금|적당량|소량|취향껏|취향에\s*따라|한\s*꼬집|한\s*줌|한\s*움큼)/u;
+const GARNISH_STEP_SIGNAL_RE =
+  /(?:^|\s)(?:통깨|참깨|깨소금|김가루|파슬리|쪽파|대파|고명)(?:을|를|은|는)?(?:\s+[가-힣]{1,6}){0,2}\s*(?:솔솔|톡톡|올려|올린|뿌려|뿌린|뿌리고|마무리(?:해|합|$|\s|[.!。]))/u;
+const LEADING_NUMBER_ARTIFACT_RE =
+  /^[\s>]*(?:[(（]\s*\d{1,2}\s*[)）.]\s*|\d{1,2}[.)]\s*|[①②③④⑤⑥⑦⑧⑨⑩]\s*)/u;
+
+function hasStepRecipeSignal(text: string) {
+  return hasCookingAction(text)
+    || TEXT_AMOUNT_SIGNAL_RE.test(text)
+    || TO_TASTE_SIGNAL_RE.test(text)
+    || GARNISH_STEP_SIGNAL_RE.test(text);
+}
+
+function hasCommercialSignal(text: string) {
+  const normalized = text.toLowerCase();
+
+  return /(?:제품|상품|도구|팬|용기|브랜드|협찬|광고|구매|판매|가격|공구|쿠폰|스마트\s*스토어|스토어|마켓|링크|tag|tags?)/iu.test(normalized)
+    && /(?:정보|태그|링크|구매|판매|추천|확인|프로필|고정\s*댓글|오프라인|온라인|할인|협찬|광고|store|shop|link)/iu.test(normalized);
+}
+
+function hasSocialCtaSignal(text: string) {
+  const normalized = text.toLowerCase();
+
+  return /(?:구독|좋아요|알림\s*설정|댓글|팔로우|follow|subscribe|like|프로필|채널|인스타|instagram|틱톡|tiktok|블로그|고정\s*댓글)/iu.test(normalized)
+    && /(?:눌러|부탁|확인|참고|링크|남겨|방문|보러|보기|follow|subscribe|like)/iu.test(normalized);
+}
+
+function hasHealthAdviceSignal(text: string) {
+  const normalized = text.toLowerCase();
+
+  return /(?:kcal|칼로리|열량|단백질|탄수화물|지방|다이어트|식단|영양\s*성분|저탄|고단백|혈당)/iu.test(normalized)
+    && /(?:추천|좋아요|관리|식단|참고|섭취|챙겨|도움|효과)/iu.test(normalized);
+}
+
+function hasConversationalFillerSignal(text: string) {
+  const normalized = text.toLowerCase();
+  const stripped = normalized.replace(/\s+/gu, "");
+
+  return /(?:[ㅋㅎ]{2,}|(?:하하|호호|헤헤|흐흐)|\^\^|ㅠㅠ|ㅜㅜ|!!{1,}|~~{1,})/u.test(stripped)
+    || /(?:뭐야|되거든|그래\s*가지고|(?:^|\s)(?:아|어|음)\s+)/u.test(normalized);
+}
+
+function hasIncompleteTrailingSignal(text: string) {
+  const normalized = collapseWhitespace(text);
+
+  return normalized.length < 12
+    || /(?:고|면|뒤|후|는|은|남은|다가)$/u.test(normalized);
+}
+
+function evaluateStepTextQuality(text: string) {
+  const cleanText = cleanDescriptionItemText(text);
+  const flags = new Set<StepQualityFlag>();
+  const hasRecipeSignal = hasStepRecipeSignal(cleanText);
+
+  if (LEADING_NUMBER_ARTIFACT_RE.test(text.trim())) {
+    flags.add("number_artifact");
+  }
+
+  if (hasCommercialSignal(cleanText)) {
+    flags.add("non_cooking_product_note");
+  }
+
+  if (hasSocialCtaSignal(cleanText)) {
+    flags.add("social_cta");
+  }
+
+  if (hasHealthAdviceSignal(cleanText)) {
+    flags.add("health_advice");
+  }
+
+  if (hasConversationalFillerSignal(cleanText)) {
+    flags.add("conversational_filler");
+  }
+
+  if (hasIncompleteTrailingSignal(cleanText) && !hasLlmCookingAction(cleanText)) {
+    flags.add("incomplete_fragment");
+  }
+
+  const hardNoise = flags.has("non_cooking_product_note")
+    || flags.has("social_cta")
+    || flags.has("health_advice");
+  const suppress = (
+    (hardNoise && !hasRecipeSignal)
+    || (flags.has("conversational_filler") && !hasRecipeSignal)
+    || (flags.has("incomplete_fragment") && !hasRecipeSignal)
+  );
+
+  return {
+    cleanText,
+    flags: [...flags],
+    suppress,
+  };
 }
 
 function parseRecipeAmount(value: string) {
@@ -2558,13 +2667,20 @@ function parseDescriptionStepLine(
     requireCookingAction: boolean;
   },
 ) {
-  if (shouldStopDescriptionSection(line)) {
+  const quality = evaluateStepTextQuality(line);
+  if (shouldStopDescriptionSection(line) && !hasStepRecipeSignal(quality.cleanText)) {
     return null;
   }
 
-  const cleanText = cleanDescriptionItemText(line);
+  const cleanText = quality.cleanText;
 
-  if (!cleanText || cleanText.length < 5 || getRecipeDescriptionSection(cleanText) || shouldStopDescriptionSection(cleanText)) {
+  if (
+    !cleanText
+    || cleanText.length < 5
+    || quality.suppress
+    || getRecipeDescriptionSection(cleanText)
+    || (shouldStopDescriptionSection(cleanText) && !hasStepRecipeSignal(cleanText))
+  ) {
     return null;
   }
 
@@ -3102,7 +3218,11 @@ function getCaptionCapability(
 }
 
 function shouldAttemptTranscriptFallback(parsedRecipe: ParsedRecipeDescription) {
-  return parsedRecipe.ingredients.length === 0 || parsedRecipe.steps.length === 0;
+  const parserQuality = evaluateParsedRecipeQuality(parsedRecipe);
+
+  return parsedRecipe.ingredients.length === 0
+    || parsedRecipe.steps.length === 0
+    || parserQuality.low_quality;
 }
 
 function buildTranscriptFallbackMeta({
@@ -5510,7 +5630,8 @@ function isInvalidLlmIngredientName(name: string) {
 function hasLlmCookingAction(instruction: string) {
   return hasCookingAction(instruction)
     || /(?:채워|채우|담아|담고|담아요|말아|말고|감싸|묻히|묻혀|부쳐|부치|부친|맛을\s*내|간을\s*해|간해|재워|재우|펴|깔아|깔고|깐다|덮어|올리|올린|익히|익힌|섞어|무쳐|무치|무친|비벼|비비|비빈|다져|다지|다진|불려|불리|불린|헹궈|헹구|헹군|식혀|식히|식힌|마무리)/u
-      .test(instruction);
+      .test(instruction)
+    || GARNISH_STEP_SIGNAL_RE.test(instruction);
 }
 
 function isInvalidLlmStepInstruction(instruction: string) {
@@ -5812,7 +5933,7 @@ function buildLlmSingleRecipe(
 }
 
 const CONVERSATIONAL_CAPTION_FRAGMENT_RE =
-  /(?:뭐야|뭐\s|언제|이건|이거|그거|그래\s*가지고|그래야지|되거든|한면|아\s+|루시|구독|좋아요|댓글|공구|제품)/u;
+  /(?:뭐야|뭐\s|언제|이건|이거|그거|그래\s*가지고|그래야지|되거든|한면|(?:^|\s)아\s+|루시|구독|좋아요|댓글|공구|제품)/u;
 const INCOMPLETE_CAPTION_TRAILING_RE = /(?:고|면|는|남은|수추|뭐)$/u;
 
 function isNoisyParsedIngredientName(name: string) {
@@ -5831,9 +5952,25 @@ function isNoisyParsedIngredientName(name: string) {
 function isConversationalParsedStep(step: string) {
   const normalized = collapseWhitespace(step);
 
-  return /[?？]/u.test(normalized)
-    || CONVERSATIONAL_CAPTION_FRAGMENT_RE.test(`${normalized} `)
+  return hasSemanticConversationalStepNoise(normalized)
+    || hasConversationalFillerSignal(normalized)
     || /(?:이거\s*뭐|그\s*굴\s*뭐|돼\s*한면|좀\s*골고리|엄마|남편|아이)/u.test(normalized);
+}
+
+function hasBrokenCaptionStepNoise(step: string) {
+  const normalized = collapseWhitespace(step);
+
+  return /[?？]/u.test(normalized)
+    || /(?:뭐야|뭐\s|언제|이건|그래\s*가지고|그래야지|되거든|한면|(?:^|\s)아\s+)/u.test(`${normalized} `)
+    || /(?:이거\s*뭐|그\s*굴\s*뭐|돼\s*한면|좀\s*골고리)/u.test(normalized);
+}
+
+function hasSemanticConversationalStepNoise(step: string) {
+  const normalized = collapseWhitespace(step);
+
+  return hasBrokenCaptionStepNoise(normalized)
+    || /(?:루시|구독|좋아요|댓글|공구|제품)/u.test(`${normalized} `)
+    || /(?:엄마|남편|아이)/u.test(normalized);
 }
 
 function isWeakParsedStep(step: string) {
@@ -5849,14 +5986,19 @@ function isWeakParsedStep(step: string) {
 function evaluateParsedRecipeQuality(parsedRecipe: ParsedRecipeDescription): ParsedRecipeQualityMeta {
   const ingredientCount = parsedRecipe.ingredients.length;
   const stepCount = parsedRecipe.steps.length;
+  const stepQualityResults = parsedRecipe.steps.map(evaluateStepTextQuality);
+  const stepQualityFlags = [...new Set(stepQualityResults.flatMap((result) => result.flags))];
+  const suppressedStepCount = stepQualityResults.filter((result) => result.suppress).length;
   const noisyIngredientCount = parsedRecipe.ingredients
     .filter((ingredient) => isNoisyParsedIngredientName(ingredient.name))
     .length;
   const weakStepCount = parsedRecipe.steps
-    .filter((step) => isWeakParsedStep(step))
+    .filter((step, index) => isWeakParsedStep(step) || stepQualityResults[index]?.suppress === true)
     .length;
   const conversationalStepCount = parsedRecipe.steps
-    .filter((step) => isConversationalParsedStep(step))
+    .filter((step, index) =>
+      isConversationalParsedStep(step) || stepQualityResults[index]?.flags.includes("conversational_filler"),
+    )
     .length;
   const cookingActionStepCount = parsedRecipe.steps
     .filter((step) => hasLlmCookingAction(step))
@@ -5885,6 +6027,22 @@ function evaluateParsedRecipeQuality(parsedRecipe: ParsedRecipeDescription): Par
     if (conversationalStepCount >= 2) {
       reasons.push("conversational_step_fragments");
     }
+
+    if (stepQualityFlags.includes("non_cooking_product_note")) {
+      reasons.push("non_cooking_product_notes");
+    }
+
+    if (stepQualityFlags.includes("social_cta")) {
+      reasons.push("social_cta_steps");
+    }
+
+    if (stepQualityFlags.includes("health_advice")) {
+      reasons.push("health_advice_steps");
+    }
+
+    if (stepQualityFlags.includes("number_artifact")) {
+      reasons.push("number_artifacts");
+    }
   }
 
   const score = Math.max(
@@ -5894,6 +6052,7 @@ function evaluateParsedRecipeQuality(parsedRecipe: ParsedRecipeDescription): Par
         - noisyIngredientRatio * 35
         - weakStepRatio * 40
         - Math.min(conversationalStepCount, 4) * 8
+        - Math.min(suppressedStepCount, 4) * 12
         - (ingredientCount === 0 ? 20 : 0)
         - (stepCount === 0 ? 25 : 0),
     ),
@@ -5903,6 +6062,9 @@ function evaluateParsedRecipeQuality(parsedRecipe: ParsedRecipeDescription): Par
     || reasons.includes("noisy_ingredient_names")
     || reasons.includes("steps_without_cooking_actions")
     || reasons.includes("conversational_step_fragments")
+    || reasons.includes("non_cooking_product_notes")
+    || reasons.includes("social_cta_steps")
+    || reasons.includes("health_advice_steps")
     || (reasons.includes("weak_step_fragments") && score < 75)
     || score < 50;
 
@@ -5916,6 +6078,8 @@ function evaluateParsedRecipeQuality(parsedRecipe: ParsedRecipeDescription): Par
     weak_step_count: weakStepCount,
     conversational_step_count: conversationalStepCount,
     cooking_action_step_count: cookingActionStepCount,
+    suppressed_step_count: suppressedStepCount,
+    step_quality_flags: stepQualityFlags,
   };
 }
 
@@ -5925,8 +6089,34 @@ function shouldSuppressLowQualityParsedRecipe(parserQuality: ParsedRecipeQuality
       parserQuality.reasons.includes("noisy_ingredient_names")
       || parserQuality.reasons.includes("weak_step_fragments")
       || parserQuality.reasons.includes("conversational_step_fragments")
+      || parserQuality.reasons.includes("non_cooking_product_notes")
+      || parserQuality.reasons.includes("social_cta_steps")
+      || parserQuality.reasons.includes("health_advice_steps")
       || parserQuality.reasons.includes("steps_without_cooking_actions")
     );
+}
+
+function sanitizeParsedRecipeSteps(parsedRecipe: ParsedRecipeDescription) {
+  const steps: string[] = [];
+  const stepComponentLabels: Array<string | null> = [];
+
+  parsedRecipe.steps.forEach((step, index) => {
+    const quality = evaluateStepTextQuality(step);
+
+    if (quality.suppress) {
+      return;
+    }
+
+    const cleanText = quality.cleanText;
+    if (!cleanText) {
+      return;
+    }
+
+    steps.push(cleanText);
+    stepComponentLabels.push(parsedRecipe.stepComponentLabels[index] ?? null);
+  });
+
+  return { steps, stepComponentLabels };
 }
 
 function buildReviewNeededParsedRecipe(
@@ -5936,12 +6126,41 @@ function buildReviewNeededParsedRecipe(
   const suppressIngredients = parserQuality.reasons.includes("noisy_ingredient_names");
   const suppressSteps = parserQuality.reasons.includes("weak_step_fragments")
     || parserQuality.reasons.includes("conversational_step_fragments")
+    || parserQuality.reasons.includes("non_cooking_product_notes")
+    || parserQuality.reasons.includes("social_cta_steps")
+    || parserQuality.reasons.includes("health_advice_steps")
     || parserQuality.reasons.includes("steps_without_cooking_actions");
+  const sanitizedSteps = sanitizeParsedRecipeSteps(parsedRecipe);
+  const useSanitizedSteps = sanitizedSteps.steps.length > 0
+    && sanitizedSteps.steps.length < parsedRecipe.steps.length;
+  const hasNonConversationalHardStepNoise = parserQuality.reasons.includes("non_cooking_product_notes")
+    || parserQuality.reasons.includes("social_cta_steps")
+    || parserQuality.reasons.includes("health_advice_steps")
+    || parserQuality.reasons.includes("steps_without_cooking_actions");
+  const hasBrokenCaptionNoise = sanitizedSteps.steps.some((step) =>
+    hasBrokenCaptionStepNoise(step),
+  );
+  const sanitizedCookingStepCount = sanitizedSteps.steps.filter((step) => hasLlmCookingAction(step)).length;
+  const hasUsableSanitizedSteps = sanitizedSteps.steps.length > 0
+    && sanitizedCookingStepCount > 0
+    && (
+      sanitizedSteps.steps.length <= 2
+      || sanitizedCookingStepCount / sanitizedSteps.steps.length >= 0.5
+    );
+  const preserveStructurallyUsableSteps = hasUsableSanitizedSteps
+    && (!hasNonConversationalHardStepNoise || useSanitizedSteps)
+    && !hasBrokenCaptionNoise;
+  const finalSteps = suppressSteps
+    ? (preserveStructurallyUsableSteps ? sanitizedSteps.steps : [])
+    : sanitizedSteps.steps;
+  const finalStepComponentLabels = suppressSteps
+    ? (preserveStructurallyUsableSteps ? sanitizedSteps.stepComponentLabels : [])
+    : sanitizedSteps.stepComponentLabels;
 
   return {
     ingredients: suppressIngredients ? [] : parsedRecipe.ingredients,
-    steps: suppressSteps ? [] : parsedRecipe.steps,
-    stepComponentLabels: suppressSteps ? [] : parsedRecipe.stepComponentLabels,
+    steps: finalSteps,
+    stepComponentLabels: finalStepComponentLabels,
   };
 }
 
@@ -5950,9 +6169,9 @@ function buildParsedRecipeAfterUnavailableLlm(
   parserQuality: ParsedRecipeQualityMeta,
   sourceKinds: string[],
 ) {
-  const hasTranscriptSource = sourceKinds.includes("caption") || sourceKinds.includes("transcript");
+  void sourceKinds;
 
-  return hasTranscriptSource && shouldSuppressLowQualityParsedRecipe(parserQuality)
+  return shouldSuppressLowQualityParsedRecipe(parserQuality)
     ? buildReviewNeededParsedRecipe(parsedRecipe, parserQuality)
     : parsedRecipe;
 }
@@ -5960,7 +6179,6 @@ function buildParsedRecipeAfterUnavailableLlm(
 function isLlmParserSuppression(meta: LlmExtractorMeta) {
   return meta.attempted
     && meta.parser_quality !== null
-    && (meta.source_kinds.includes("caption") || meta.source_kinds.includes("transcript"))
     && shouldSuppressLowQualityParsedRecipe(meta.parser_quality);
 }
 
@@ -5975,11 +6193,10 @@ function shouldAttemptLlmFallback({
 }) {
   const hasMissingCore = parserQuality.reasons.includes("missing_ingredients")
     || parserQuality.reasons.includes("missing_steps");
-  const hasTranscriptSource = sourceBlocks.some((block) => block.source === "caption" || block.source === "transcript");
 
   return !multiRecipeExtraction
     && sourceBlocks.length > 0
-    && (hasMissingCore || (hasTranscriptSource && parserQuality.low_quality));
+    && (hasMissingCore || parserQuality.low_quality);
 }
 
 async function resolveLlmStructuredFallback({

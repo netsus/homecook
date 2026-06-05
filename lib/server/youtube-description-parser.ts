@@ -263,6 +263,8 @@ const UNIT_SUFFIXED_RANGE_INGREDIENT_RE = new RegExp(
   "iu",
 );
 const COMPOUND_INGREDIENT_SEPARATOR_RE = /\s*[+＋]\s*/u;
+const GARNISH_STEP_SIGNAL_RE =
+  /(?:^|\s)(?:통깨|참깨|깨소금|김가루|파슬리|쪽파|대파|고명)(?:을|를|은|는)?(?:\s+[가-힣]{1,6}){0,2}\s*(?:솔솔|톡톡|올려|올린|뿌려|뿌린|뿌리고|마무리(?:해|합|$|\s|[.!。]))/u;
 
 function stripDecorativeMarks(value: string) {
   return value
@@ -302,6 +304,7 @@ function normalizeLineText(raw: string) {
     .replace(/^(?:\d{1,2}:)?\d{1,2}:\d{2}\s*/u, "");
 
   const withNormalizedOrdinals = withoutTimestamp
+    .replace(/^[\s>]*[(（]\s*(\d{1,2})\s*[)）.]\s*/u, "$1) ")
     .replace(/(\d)️?⃣/gu, "$1) ")
     .replace(/[①-⑳]/gu, (ch) => `${ch.charCodeAt(0) - 0x2460 + 1}) `);
 
@@ -615,7 +618,7 @@ function isRecipeHeading(text: string) {
 }
 
 function isComponentOnlyHeading(text: string) {
-  if (!text || text.length > 32 || hasAmountSignal(text) || hasCookingAction(text) || hasSentenceEnding(text)) {
+  if (!text || text.length > 32 || hasAmountSignal(text) || hasStepActionSignal(text) || hasSentenceEnding(text)) {
     return false;
   }
 
@@ -660,7 +663,7 @@ function isShortIngredientBlockHeadingFromLookahead(line: SourceLine, lookahead:
     return false;
   }
 
-  if (!text || text.length > 32 || hasAmountSignal(text) || hasCookingAction(text) || hasSentenceEnding(text)) {
+  if (!text || text.length > 32 || hasAmountSignal(text) || hasStepActionSignal(text) || hasSentenceEnding(text)) {
     return false;
   }
 
@@ -681,6 +684,10 @@ function isShortIngredientBlockHeadingFromLookahead(line: SourceLine, lookahead:
 
 function hasCookingAction(text: string) {
   return /(씻|자르|잘라|썰|썬다|볶|끓|삶|굽|구워|버무|섞|넣|절여|절이|절인|올려|얹|발라|뿌려|익혀|익히|튀겨|찐|쪄|데쳐|풀|두르|맞춰|채우|채워|완성|식히|식힌|섞어|섞으|만들|준비|제거|다져|다지|비벼|비비|무쳐|무치|조려|졸여|졸이|졸인|헹궈|헹구|담가|담근|갈아|갈고|갈아|끼우|으깨|펴|재워|재우|빚어|치대|부어|부치|지져|걸러|불려|불리|불린|말아|간하|간해|간합|간하면|마무리)/u.test(text);
+}
+
+function hasStepActionSignal(text: string) {
+  return hasCookingAction(text) || GARNISH_STEP_SIGNAL_RE.test(text);
 }
 
 function hasSpecificCookingAction(text: string) {
@@ -1694,11 +1701,11 @@ function parseStepLine(
     return null;
   }
 
-  if (requireCookingAction && !hasCookingAction(line.text)) {
+  if (requireCookingAction && !hasStepActionSignal(line.text)) {
     return null;
   }
 
-  if (!hasCookingAction(line.text)) {
+  if (!hasStepActionSignal(line.text)) {
     if (hasAmountSignal(line.text)) {
       return null;
     }
@@ -1714,7 +1721,7 @@ function parseStepLine(
     componentLabel,
     sourceLine: line.index,
     originalOrdinal: line.ordinal,
-    confidence: line.ordinal !== null || hasCookingAction(line.text) ? 0.9 : 0.7,
+    confidence: line.ordinal !== null || hasStepActionSignal(line.text) ? 0.9 : 0.7,
     flags: [],
   };
 }
@@ -1754,7 +1761,7 @@ function scoreLine(line: SourceLine): Omit<Classification, "kind" | "componentLa
     stepScore += 2;
   }
 
-  if (hasCookingAction(line.text)) {
+  if (hasStepActionSignal(line.text)) {
     stepScore += 4;
     ingredientScore -= 4;
   }
@@ -1763,7 +1770,7 @@ function scoreLine(line: SourceLine): Omit<Classification, "kind" | "componentLa
     stepScore += 1;
   }
 
-  if (line.text.length <= 40 && !hasCookingAction(line.text)) {
+  if (line.text.length <= 40 && !hasStepActionSignal(line.text)) {
     ingredientScore += 2;
   }
 
@@ -2166,7 +2173,7 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
         continue;
       }
 
-      if (hasParsedIngredient && hasCookingAction(line.text)) {
+      if (hasParsedIngredient && hasStepActionSignal(line.text)) {
         const steps = parseProseStepLines(line, { componentLabel });
 
         if (steps.length > 0) {
@@ -2211,7 +2218,7 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
         getComponent(components, ingredientComponentLabel, line.index).ingredients.push(...ingredients);
         hasParsedIngredient = true;
 
-        if (!hasCookingAction(line.text)) {
+        if (!hasStepActionSignal(line.text)) {
           continue;
         }
       }
@@ -2239,7 +2246,7 @@ function parseCandidate(title: string | null, lines: SourceLine[]): ParsedRecipe
       }
     }
 
-    if (!section && !afterSectionStopper && (classification.kind === "step_candidate" || hasCookingAction(line.text))) {
+    if (!section && !afterSectionStopper && (classification.kind === "step_candidate" || hasStepActionSignal(line.text))) {
       if (!hasStructuredSectionHeading && !hasParsedIngredient && line.ordinal === null && !hasAmountSignal(line.text)) {
         continue;
       }
