@@ -208,6 +208,11 @@ describe("CookModeScreen", () => {
 
   it("shows loading then recipe data after authentication", async () => {
     readE2EAuthOverride.mockReturnValue(true);
+    navigationMocks.searchParams.mockReturnValue(
+      new URLSearchParams({
+        returnTo: "/planner/2026-04-18/column-1?slot=%EC%95%84%EC%B9%A8",
+      }),
+    );
     fetchCookMode.mockResolvedValue(buildCookModeData());
 
     const CookModeScreen = await importCookModeScreen();
@@ -217,14 +222,19 @@ describe("CookModeScreen", () => {
       expect(screen.getByTestId("cook-mode-title")).toBeTruthy();
     });
 
+    expect(screen.getByRole("heading", { name: "요리모드" })).toBeTruthy();
     expect(screen.getByText("김치찌개")).toBeTruthy();
     expect(screen.getByText("2인분")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "소진된 재료" })).toBeTruthy();
-    expect(
-      screen.getByText("체크된 재료는 팬트리에서 자동으로 빠져요."),
-    ).toBeTruthy();
+    expect(screen.getByText("4/18 아침")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "필요한 재료" })).toBeTruthy();
+    const firstIngredient = screen.getAllByTestId("ingredient-item")[0]!;
+    expect(within(firstIngredient).getByText("양파")).toBeTruthy();
+    expect(within(firstIngredient).getByText("1개")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "소진된 재료" })).toBeNull();
+    expect(screen.queryByText("장보기 완료")).toBeNull();
+    expect(screen.queryByText("플래너 끼니")).toBeNull();
     expect(screen.queryByText("차감할 재료")).toBeNull();
-    expect(screen.getByRole("button", { name: "✓ 요리 완료 (3개 소진)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "요리 완료" })).toBeTruthy();
   });
 
   it("requests a screen wake lock in cook mode when the user setting is enabled", async () => {
@@ -381,7 +391,9 @@ describe("CookModeScreen", () => {
     );
 
     expect(ingredientSummary.className).not.toContain("mt-[520px]");
-    expect(screen.getByTestId("cook-mode-servings").textContent).toBe("2인분");
+    expect(screen.getByTestId("cook-mode-servings").textContent).toContain(
+      "2인분",
+    );
     expect(screen.getByTestId("cook-mode-content").firstElementChild).toBe(
       ingredientSummary,
     );
@@ -416,6 +428,21 @@ describe("CookModeScreen", () => {
     );
     expect(screen.getByText("김치 200g")).toBeTruthy();
     expect(screen.getByText("적당량")).toBeTruthy();
+  });
+
+  it("removes the duplicated STEP label from mobile cooking cards", async () => {
+    installMatchMedia(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(buildCookModeData());
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const stepList = await screen.findByTestId("step-list");
+
+    expect(within(stepList).queryByText(/STEP/i)).toBeNull();
+    expect(within(stepList).getByText("1")).toBeTruthy();
+    expect(within(stepList).getByText("2")).toBeTruthy();
   });
 
   it("shows component section headings in mobile cook-mode ingredients and steps", async () => {
@@ -508,7 +535,7 @@ describe("CookModeScreen", () => {
     expect(methodBadgeStyle).toContain("var(--cook-stir)");
   });
 
-  it("renders a desktop inline consumed ingredient checklist", async () => {
+  it("shows desktop ingredients in the left rail and opens the consumed ingredient sheet on complete", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
 
@@ -519,12 +546,24 @@ describe("CookModeScreen", () => {
       expect(screen.getByTestId("ingredient-list")).toBeTruthy();
     });
 
-    expect(screen.getByTestId("consumed-check-ing-1")).toBeTruthy();
+    const content = screen.getByTestId("cook-mode-content");
+    const orderedSections = Array.from(
+      content.querySelectorAll(
+        '[data-testid="cook-mode-action-rail"], [data-testid="step-list"]',
+      ),
+    ).map((element) => element.getAttribute("data-testid"));
+
+    expect(orderedSections).toEqual(["cook-mode-action-rail", "step-list"]);
+    expect(screen.queryByTestId("consumed-check-ing-1")).toBeNull();
     expect(screen.queryByTestId("consumed-ingredient-sheet")).toBeNull();
-    expect(screen.getByText("3개 중 3개 선택")).toBeTruthy();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("complete-button"));
+
+    expect(await screen.findByTestId("consumed-ingredient-sheet")).toBeTruthy();
   });
 
-  it("sends checked desktop consumed ingredient ids on complete", async () => {
+  it("opens the desktop consumed sheet and sends checked ingredient ids on confirm", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
     completeCookingSession.mockResolvedValue({
@@ -544,9 +583,11 @@ describe("CookModeScreen", () => {
     });
 
     const user = userEvent.setup();
+    await user.click(screen.getByTestId("complete-button"));
+    await screen.findByTestId("consumed-ingredient-sheet");
     await user.click(screen.getByTestId("consumed-check-ing-2"));
     await user.click(screen.getByTestId("consumed-check-ing-3"));
-    await user.click(screen.getByTestId("complete-button"));
+    await user.click(screen.getByTestId("consumed-confirm-button"));
 
     await waitFor(() => {
       expect(completeCookingSession).toHaveBeenCalledWith("session-1", {
@@ -575,10 +616,12 @@ describe("CookModeScreen", () => {
     });
 
     const user = userEvent.setup();
+    await user.click(screen.getByTestId("complete-button"));
+    await screen.findByTestId("consumed-ingredient-sheet");
     await user.click(screen.getByTestId("consumed-check-ing-1"));
     await user.click(screen.getByTestId("consumed-check-ing-2"));
     await user.click(screen.getByTestId("consumed-check-ing-3"));
-    await user.click(screen.getByTestId("complete-button"));
+    await user.click(screen.getByTestId("consumed-confirm-button"));
 
     await waitFor(() => {
       expect(completeCookingSession).toHaveBeenCalledWith("session-1", {
@@ -608,6 +651,8 @@ describe("CookModeScreen", () => {
 
     const user = userEvent.setup();
     await user.click(screen.getByTestId("complete-button"));
+    await screen.findByTestId("consumed-ingredient-sheet");
+    await user.click(screen.getByTestId("consumed-confirm-button"));
 
     await waitFor(() => {
       expect(mockRouterPush).toHaveBeenCalledWith("/planner");
@@ -640,6 +685,8 @@ describe("CookModeScreen", () => {
 
     const user = userEvent.setup();
     await user.click(screen.getByTestId("complete-button"));
+    await screen.findByTestId("consumed-ingredient-sheet");
+    await user.click(screen.getByTestId("consumed-confirm-button"));
 
     await waitFor(() => {
       expect(mockRouterPush).toHaveBeenCalledWith(
@@ -761,6 +808,8 @@ describe("CookModeScreen", () => {
 
     const user = userEvent.setup();
     await user.click(screen.getByTestId("complete-button"));
+    await screen.findByTestId("consumed-ingredient-sheet");
+    await user.click(screen.getByTestId("consumed-confirm-button"));
 
     // Should transition to error state with conflict message
     await waitFor(() => {
@@ -878,10 +927,17 @@ describe("CookModeScreen", () => {
     expect(fixedBottomBar?.contains(completeButton)).toBe(true);
   });
 
-  it("uses square mobile check controls and lighter helper copy in the consumed sheet", async () => {
+  it("uses compact two-column mobile consumed ingredient cards without duplicate names", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
-    fetchCookMode.mockResolvedValue(buildCookModeData());
+    fetchCookMode.mockResolvedValue(
+      buildCookModeData({
+        recipe: {
+          ...buildCookModeData().recipe,
+          title: "정말 이름이 긴 김치찌개 레시피입니다 한 줄로 줄여야 해요",
+        },
+      }),
+    );
 
     const CookModeScreen = await importCookModeScreen();
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
@@ -898,12 +954,20 @@ describe("CookModeScreen", () => {
     });
 
     const helperText = screen.getByText(/체크된 재료는 팬트리에서 자동으로 빠져요/);
+    const recipeTitle = screen.getByTestId("consumed-sheet-recipe-title");
+    const ingredientList = screen.getByTestId("consumed-ingredient-list");
+    const firstIngredient = screen.getAllByTestId("consumed-ingredient-item")[0]!;
     const checkVisual = screen
       .getByTestId("consumed-check-ing-1")
       .querySelector('[aria-hidden="true"]');
 
     expect(helperText.className).toContain("text-[13px]");
     expect(helperText.className).toContain("font-normal");
+    expect(recipeTitle.className).toContain("truncate");
+    expect(ingredientList.className).toContain("grid-cols-2");
+    expect(within(firstIngredient).getByText("양파")).toBeTruthy();
+    expect(within(firstIngredient).getByText("1개")).toBeTruthy();
+    expect(firstIngredient.textContent).toBe("양파1개");
     expect(checkVisual?.className).toContain("rounded-[4px]");
   });
 

@@ -146,18 +146,6 @@ export function StandaloneCookModeScreen({
     [complete],
   );
 
-  const handleDesktopConsumedConfirm = useCallback(
-    async (consumedIds: string[]) => {
-      if (authState !== "authenticated") {
-        setShowLoginGate(true);
-        return;
-      }
-
-      await handleConsumedConfirm(consumedIds);
-    },
-    [authState, handleConsumedConfirm],
-  );
-
   const handleConsumedSkip = useCallback(async () => {
     if (completePendingRef.current) return;
     completePendingRef.current = true;
@@ -467,13 +455,23 @@ export function StandaloneCookModeScreen({
         contentTestId="standalone-cook-mode-content"
         controlsDisabled={screenState !== "ready"}
         onCancel={handleCancelClick}
-        onComplete={handleDesktopConsumedConfirm}
+        onComplete={handleCompleteClick}
         recipe={recipe}
         screenTestId="standalone-cook-mode-screen"
         servingsTestId="standalone-cook-mode-servings"
         titleTestId="standalone-cook-mode-title"
         variant="standalone"
       />
+
+      {showConsumedSheet ? (
+        <ConsumedIngredientSheet
+          ingredients={recipe.ingredients}
+          onClose={() => setShowConsumedSheet(false)}
+          onConfirm={handleConsumedConfirm}
+          onSkip={handleConsumedSkip}
+          recipeTitle={recipe.title}
+        />
+      ) : null}
 
     </>
   );

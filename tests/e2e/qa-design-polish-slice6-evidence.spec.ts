@@ -191,7 +191,7 @@ async function installCookModeRoutes(page: Page) {
 
 async function expectCompactCookMode(page: Page) {
   await expect(page.getByTestId("mobile-ingredient-summary")).toBeVisible();
-  await expect(page.getByTestId("cook-mode-servings")).toHaveText("3인분");
+  await expect(page.getByTestId("cook-mode-servings")).toContainText("3인분");
   await expect(page.getByTestId("step-list")).toBeVisible();
 
   const order = await page
