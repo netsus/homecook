@@ -7,9 +7,9 @@ import type {
   ShoppingListItemUpdateBody,
   ShoppingListCompleteBody,
   ShoppingListCompleteData,
+  ShoppingListCreateData,
   ShoppingListReorderBody,
   ShoppingListReorderData,
-  ShoppingListSummary,
   ShoppingPreviewData,
   ShoppingShareTextData,
 } from "@/types/shopping";
@@ -80,7 +80,7 @@ export async function fetchShoppingPreview() {
 }
 
 export async function createShoppingList(body: ShoppingListCreateBody) {
-  return requestShopping<ShoppingListSummary>("/api/v1/shopping/lists", {
+  return requestShopping<ShoppingListCreateData>("/api/v1/shopping/lists", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),

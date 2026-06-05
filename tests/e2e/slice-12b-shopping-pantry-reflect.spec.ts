@@ -483,7 +483,7 @@ test.describe("slice 12b: shopping pantry reflect", () => {
 
       // Before completion
       await expect(page.getByText("양파")).toBeVisible();
-      await expect(page.getByText("팬트리 반영 완료")).not.toBeVisible();
+      await expect(page.getByText("팬트리 반영 완료", { exact: true })).not.toBeVisible();
 
       // Click complete
       await page.getByRole("button", { name: "장보기 완료" }).click();
@@ -496,8 +496,15 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       // Should show success message
       await expect(page.getByText(/장보기를 완료했어요.*1개 식사.*팬트리 1개 추가/)).toBeVisible();
 
-      // Should show "팬트리 반영 완료" indicator
-      await expect(page.getByText("팬트리 반영 완료")).toBeVisible();
+      // The completed detail no longer repeats pantry reflection on every item.
+      await expect(page.getByText("팬트리 반영 완료", { exact: true })).not.toBeVisible();
+      await expect(page.getByText("완료된 장보기 기록은 수정할 수 없어요")).toBeVisible();
+
+      if ((page.viewportSize()?.width ?? 0) < 768) {
+        await expect(page.getByText("1개 구매")).toBeVisible();
+      } else {
+        await expect(page.getByText("1개 재료 팬트리 반영 완료")).toBeVisible();
+      }
     });
   });
 });

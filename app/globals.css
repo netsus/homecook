@@ -7022,7 +7022,7 @@ button {
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-sm);
     background: var(--web-surface);
-    padding: 0 12px;
+    padding: 0 22px 0 12px;
     text-align: left;
   }
 
@@ -7049,6 +7049,7 @@ button {
     color: var(--web-text-3);
     font-size: 12px;
     font-weight: 700;
+    margin-right: 8px;
   }
 
   .web-shopping-flow-tools {
@@ -7422,6 +7423,10 @@ button {
     background: rgba(26, 174, 57, 0.08);
   }
 
+  .web-shopping-lock-complete strong {
+    color: var(--web-success);
+  }
+
   .web-shopping-lock strong,
   .web-shopping-progress strong {
     color: var(--web-text-1);
@@ -7461,6 +7466,12 @@ button {
     display: inline-flex;
     align-items: baseline;
     gap: 10px;
+  }
+
+  .web-shopping-progress-title-row span:first-child {
+    color: var(--web-text-1);
+    font-size: 17px;
+    font-weight: 900;
   }
 
   .web-shopping-progress-title-row span:last-child {
@@ -7511,6 +7522,10 @@ button {
     border-radius: var(--web-r-md);
     background: var(--web-surface);
     padding: 12px;
+  }
+
+  .web-shopping-item-card-readonly {
+    grid-template-columns: 28px minmax(0, 1fr);
   }
 
   .web-shopping-item-card-clickable {
@@ -7568,10 +7583,23 @@ button {
     color: var(--web-brand);
   }
 
+  .web-shopping-check-complete {
+    border-color: var(--web-success);
+    background: rgba(26, 174, 57, 0.1);
+    color: var(--web-success);
+  }
+
   .web-shopping-item-copy {
     display: grid;
     min-width: 0;
     gap: 3px;
+  }
+
+  .web-shopping-item-copy-inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
   }
 
   .web-shopping-item-copy strong {
@@ -7587,6 +7615,21 @@ button {
     color: var(--web-text-3);
     font-size: 12px;
     font-weight: 700;
+  }
+
+  .web-shopping-item-copy-inline small {
+    flex: 0 0 auto;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .web-shopping-rail-note-success {
+    border: 1px solid rgba(26, 174, 57, 0.16);
+    border-radius: var(--web-r-xs);
+    background: rgba(26, 174, 57, 0.08);
+    color: var(--web-success) !important;
+    padding: 9px 10px;
+    font-weight: 900 !important;
   }
 
   .web-shopping-exclude {

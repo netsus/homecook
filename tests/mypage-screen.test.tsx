@@ -922,7 +922,7 @@ describe("MypageScreen", () => {
       expect(mockFetchShoppingListDetail).toHaveBeenCalledWith("list-2");
     });
     expect(screen.getByTestId("shopping-detail-embedded")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "4/23 장보기" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "4월 23일 장보기" })).toBeTruthy();
     expect(screen.getByText("장보기 진행 중")).toBeTruthy();
     expect(screen.getByText("0 / 1 항목")).toBeTruthy();
     expect(screen.getByText("0%")).toBeTruthy();

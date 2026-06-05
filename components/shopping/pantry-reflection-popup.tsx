@@ -149,13 +149,6 @@ export function PantryReflectionPopup({
             </span>
           ) : null}
           <WebButton
-            aria-label="취소"
-            onClick={onCancel}
-            variant="tertiary"
-          >
-            나중에
-          </WebButton>
-          <WebButton
             onClick={() => onConfirm([])}
             variant="tertiary"
           >
@@ -211,8 +204,7 @@ function MobilePantryReflectionSheet({
             팬트리에 반영할까요?
           </h2>
           <p className="mt-[7px] text-[12px] font-semibold leading-[1.55] text-[var(--text-3)]">
-            장 본 재료 중 팬트리에 추가할 항목을 선택하세요. 선택하지
-            않으면 반영하지 않아요.
+            장 본 재료 중 팬트리에 추가할 항목을 선택하세요.
           </p>
         </div>
 
@@ -222,35 +214,39 @@ function MobilePantryReflectionSheet({
               반영할 수 있는 재료가 없어요
             </div>
           ) : (
-            <div className="divide-y divide-[var(--surface-subtle)]">
+            <div className="space-y-2 py-3">
               {eligibleItems.map((item) => {
                 const isSelected = selectedIds.has(item.id);
 
                 return (
                   <button
-                    className="flex min-h-[71px] w-full items-center gap-3 py-[14px] text-left"
+                    className="flex min-h-[54px] w-full items-center justify-between gap-3 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 py-[10px] text-left"
+                    data-testid={`pantry-reflection-row-${item.id}`}
                     key={item.id}
                     onClick={() => onToggleItem(item.id)}
                     type="button"
                   >
-                    <span
-                      aria-hidden="true"
-                      className={[
-                        "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[5px] border text-[13px] font-extrabold",
-                        isSelected
-                          ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
-                          : "border-[var(--line-strong)] bg-[var(--surface)] text-transparent",
-                      ].join(" ")}
-                    >
-                      ✓
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span
+                        aria-hidden="true"
+                        className={[
+                          "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[5px] border text-[13px] font-extrabold",
+                          isSelected
+                            ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
+                            : "border-[var(--line-strong)] bg-[var(--surface)] text-transparent",
+                        ].join(" ")}
+                      >
+                        ✓
+                      </span>
+                      <span className="block min-w-0 truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
                         {formatPantryItemName(item)}
                       </span>
-                      <span className="mt-[2px] block truncate text-[12px] font-semibold leading-[1.3] text-[var(--text-3)]">
-                        {formatPantryAmountText(item)}
-                      </span>
+                    </span>
+                    <span
+                      className="shrink-0 text-right text-[12px] font-extrabold leading-[1.3] text-[var(--text-3)]"
+                      data-testid={`pantry-reflection-amount-${item.id}`}
+                    >
+                      {formatPantryAmountText(item)}
                     </span>
                   </button>
                 );

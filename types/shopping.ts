@@ -54,6 +54,23 @@ export interface ShoppingListSummary {
   created_at: string;
 }
 
+export interface ShoppingListAllPantryCompletionSummary {
+  id: null;
+  title: string;
+  date_range_start?: string;
+  date_range_end?: string;
+  is_completed: true;
+  completed_at: string;
+  completed_without_list: true;
+  meals_updated: number;
+  pantry_item_count: number;
+  created_at: string;
+}
+
+export type ShoppingListCreateData =
+  | ShoppingListSummary
+  | ShoppingListAllPantryCompletionSummary;
+
 export interface ShoppingListHistoryItem {
   id: string;
   title: string;
@@ -138,7 +155,7 @@ export interface ShoppingShareTextData {
 }
 
 export type ShoppingPreviewResponse = ApiResponse<ShoppingPreviewData>;
-export type ShoppingListCreateResponse = ApiResponse<ShoppingListSummary>;
+export type ShoppingListCreateResponse = ApiResponse<ShoppingListCreateData>;
 export type ShoppingListHistoryResponse = ApiResponse<ShoppingListHistoryData>;
 export type ShoppingListDetailResponse = ApiResponse<ShoppingListDetail>;
 export type ShoppingListItemUpdateResponse = ApiResponse<ShoppingListItemSummary>;

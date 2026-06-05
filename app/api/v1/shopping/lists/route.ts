@@ -14,7 +14,12 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
-import type { ShoppingListCreateBody, ShoppingListHistoryData, ShoppingListSummary } from "@/types/shopping";
+import type {
+  ShoppingListAllPantryCompletionSummary,
+  ShoppingListCreateBody,
+  ShoppingListHistoryData,
+  ShoppingListSummary,
+} from "@/types/shopping";
 
 interface QueryError {
   message: string;
@@ -161,7 +166,12 @@ interface MealsTable {
     shopping_list_id: null;
     cooked_at: null;
   }>): MealsInsertQuery;
-  update(values: { shopping_list_id: string } | { planned_servings: number }): MealsUpdateQuery;
+  update(
+    values:
+      | { shopping_list_id: string }
+      | { planned_servings: number }
+      | { status: "shopping_done" },
+  ): MealsUpdateQuery;
 }
 
 interface ShoppingListsTable {
@@ -444,24 +454,6 @@ export async function POST(request: Request) {
   const dateRangeStart = dates[0] ?? shoppingMeals[0]!.plan_date;
   const dateRangeEnd = dates.at(-1) ?? shoppingMeals[0]!.plan_date;
 
-  const shoppingListInsertResult = await dbClient
-    .from("shopping_lists")
-    .insert({
-      user_id: user.id,
-      title: buildShoppingListTitle(dateRangeStart),
-      date_range_start: dateRangeStart,
-      date_range_end: dateRangeEnd,
-      is_completed: false,
-    })
-    .select("id, title, is_completed, created_at")
-    .maybeSingle();
-
-  if (shoppingListInsertResult.error || !shoppingListInsertResult.data) {
-    return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
-  }
-
-  const shoppingList = shoppingListInsertResult.data;
-
   if (splitMeals.length > 0) {
     const splitRemainderInsertResult = await dbClient
       .from("meals")
@@ -540,23 +532,6 @@ export async function POST(request: Request) {
         shopping_servings: existing.shopping_servings + mealConfig.shopping_servings,
       });
     });
-  }
-
-  const shoppingRecipeRows = [...recipeAggregation.entries()].map(([recipeId, totals]) => ({
-    shopping_list_id: shoppingList.id,
-    recipe_id: recipeId,
-    shopping_servings: totals.shopping_servings,
-    planned_servings_total: totals.planned_servings_total,
-  }));
-
-  if (shoppingRecipeRows.length > 0) {
-    const shoppingListRecipesResult = await dbClient
-      .from("shopping_list_recipes")
-      .insert(shoppingRecipeRows);
-
-    if (shoppingListRecipesResult.error) {
-      return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
-    }
   }
 
   const recipeIds = [...recipeAggregation.keys()];
@@ -641,6 +616,73 @@ export async function POST(request: Request) {
       })
       .filter((value): value is NonNullable<typeof value> => value !== null),
   );
+
+  const allNeededIngredientsAreInPantry =
+    aggregatedIngredients.length > 0 &&
+    aggregatedIngredients.every((ingredient) =>
+      pantryIngredientIds.has(ingredient.ingredient_id),
+    );
+
+  if (allNeededIngredientsAreInPantry) {
+    const mealDoneUpdateResult = await dbClient
+      .from("meals")
+      .update({ status: "shopping_done" })
+      .in("id", shoppingMeals.map((meal) => meal.id))
+      .eq("user_id", user.id);
+
+    if (mealDoneUpdateResult.error) {
+      return fail("INTERNAL_ERROR", "장보기 완료 상태로 바꾸지 못했어요.", 500);
+    }
+
+    const completedAt = new Date().toISOString();
+
+    return ok({
+      id: null,
+      title: buildShoppingListTitle(dateRangeStart),
+      date_range_start: dateRangeStart,
+      date_range_end: dateRangeEnd,
+      is_completed: true,
+      completed_at: completedAt,
+      completed_without_list: true,
+      meals_updated: shoppingMeals.length,
+      pantry_item_count: aggregatedIngredients.length,
+      created_at: completedAt,
+    } satisfies ShoppingListAllPantryCompletionSummary, { status: 200 });
+  }
+
+  const shoppingListInsertResult = await dbClient
+    .from("shopping_lists")
+    .insert({
+      user_id: user.id,
+      title: buildShoppingListTitle(dateRangeStart),
+      date_range_start: dateRangeStart,
+      date_range_end: dateRangeEnd,
+      is_completed: false,
+    })
+    .select("id, title, is_completed, created_at")
+    .maybeSingle();
+
+  if (shoppingListInsertResult.error || !shoppingListInsertResult.data) {
+    return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
+  }
+
+  const shoppingList = shoppingListInsertResult.data;
+  const shoppingRecipeRows = [...recipeAggregation.entries()].map(([recipeId, totals]) => ({
+    shopping_list_id: shoppingList.id,
+    recipe_id: recipeId,
+    shopping_servings: totals.shopping_servings,
+    planned_servings_total: totals.planned_servings_total,
+  }));
+
+  if (shoppingRecipeRows.length > 0) {
+    const shoppingListRecipesResult = await dbClient
+      .from("shopping_list_recipes")
+      .insert(shoppingRecipeRows);
+
+    if (shoppingListRecipesResult.error) {
+      return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
+    }
+  }
 
   if (aggregatedIngredients.length > 0) {
     const itemsInsertResult = await dbClient

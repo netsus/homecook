@@ -121,9 +121,15 @@ describe("ShoppingDetailScreen", () => {
 
     expect(screen.getByTestId("shopping-detail-skeleton")).toBeTruthy();
     expect(screen.queryByText(/장보기 리스트를 불러오고 있어요/)).toBeNull();
-    expect(screen.getByTestId("shopping-detail-skeleton").className).toContain(
-      "bg-[var(--wave1-surface)]",
-    );
+    expect(
+      screen.getByTestId("shopping-detail-skeleton").querySelector(".web-shopping-detail-screen"),
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("shopping-detail-skeleton").querySelector(".web-shopping-progress"),
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("shopping-detail-skeleton").querySelector(".web-shopping-detail-layout"),
+    ).toBeTruthy();
   });
 
   it("renders list detail after loading", async () => {
@@ -206,8 +212,16 @@ describe("ShoppingDetailScreen", () => {
   it("renders read-only mode for completed list", async () => {
     const completedList: ShoppingListDetail = {
       ...mockListDetail,
+      title: "6/4 장보기",
       is_completed: true,
-      completed_at: "2026-04-13T00:00:00.000Z",
+      completed_at: "2026-06-05T09:30:00.000Z",
+      created_at: "2026-06-05T09:00:00.000Z",
+      updated_at: "2026-06-05T09:30:00.000Z",
+      items: mockListDetail.items.map((item) =>
+        item.id === "item-1"
+          ? { ...item, is_checked: true, added_to_pantry: true }
+          : item,
+      ),
     };
 
     vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(completedList);
@@ -218,11 +232,52 @@ describe("ShoppingDetailScreen", () => {
       expect(screen.getByText(/완료된 장보기 기록은 수정할 수 없어요/)).toBeTruthy();
     });
 
-    expect(screen.getByText(/✓ 완료됨 \(4월 13일\)/)).toBeTruthy();
+    expect(screen.getByText("6월 5일 장보기")).toBeTruthy();
+    expect(screen.queryByText("6/4 장보기")).toBeNull();
+    expect(screen.queryByText(/완료 6월 5일/)).toBeNull();
+    expect(screen.queryByText(/✓ 완료됨/)).toBeNull();
+    expect(screen.getByText("1개 재료 팬트리 반영 완료")).toBeTruthy();
     expect(screen.getByText(/구매한 재료 \(1개\)/)).toBeTruthy();
-    expect(screen.getByTestId("shopping-readonly-status-item-1").className).toContain(
-      "rounded-[var(--radius-badge)]",
+    expect(screen.getByTestId("shopping-readonly-status-item-1").className).toContain("web-shopping-check-complete");
+    expect(screen.queryByText("팬트리 반영 완료")).toBeNull();
+    expect(screen.getByText("양파").closest(".web-shopping-item-copy")?.className).toContain(
+      "web-shopping-item-copy-inline",
     );
+  });
+
+  it("renders mobile completed lists with green checks and purchased count", async () => {
+    setMatchMedia(true);
+    const completedList: ShoppingListDetail = {
+      ...mockListDetail,
+      title: "6/4 장보기",
+      is_completed: true,
+      completed_at: "2026-06-05T09:30:00.000Z",
+      created_at: "2026-06-05T09:00:00.000Z",
+      updated_at: "2026-06-05T09:30:00.000Z",
+      items: mockListDetail.items.map((item) =>
+        item.id === "item-1"
+          ? { ...item, is_checked: true, added_to_pantry: true }
+          : item,
+      ),
+    };
+
+    vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(completedList);
+
+    render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("6월 5일 장보기")).toBeTruthy();
+    });
+
+    expect(screen.getByText("1개 구매")).toBeTruthy();
+    expect(screen.queryByText("방금 완료")).toBeNull();
+    expect(screen.getByText("장보기 완료").className).toContain(
+      "text-[var(--success-strong)]",
+    );
+    expect(screen.getByTestId("shopping-readonly-status-item-1").className).toContain(
+      "border-[var(--success)]",
+    );
+    expect(screen.queryByText("팬트리 반영 완료")).toBeNull();
   });
 
   it("returns directly to the mypage shopping history context from the back button", async () => {
@@ -861,7 +916,8 @@ describe("ShoppingDetailScreen", () => {
       });
 
       expect(screen.queryByRole("button", { name: "장보기 완료" })).toBeFalsy();
-      expect(screen.getByText(/완료됨/)).toBeTruthy();
+      expect(screen.queryByText(/완료됨/)).toBeNull();
+      expect(screen.getByText(/완료된 장보기 기록은 수정할 수 없어요/)).toBeTruthy();
       expect(screen.getByRole("button", { name: "플래너로 돌아가기" })).toBeTruthy();
     });
 
@@ -913,8 +969,43 @@ describe("ShoppingDetailScreen", () => {
       expect(screen.getByRole("button", { name: "1개 반영하기" })).toBeTruthy();
       const dialog = screen.getByRole("dialog", { name: /팬트리에 반영할까요/ });
       expect(within(dialog).getByRole("button", { name: /양파/ })).toBeTruthy();
+      expect(within(dialog).queryByText("나중에")).toBeNull();
       expect(screen.queryByText("모두 추가")).toBeNull();
       expect(screen.queryByText("선택 추가")).toBeNull();
+    });
+
+    it("uses compact mobile pantry reflection rows without the no-selection warning", async () => {
+      setMatchMedia(true);
+      const listWithCheckedItem: ShoppingListDetail = {
+        ...mockListDetail,
+        items: mockListDetail.items.map((item) =>
+          item.id === "item-1" ? { ...item, is_checked: true } : item
+        ),
+      };
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithCheckedItem);
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      await user.click(screen.getByRole("button", { name: "장보기 완료" }));
+      await expectPantryDialogVisible();
+
+      const dialog = screen.getByRole("dialog", { name: /팬트리에 반영할까요/ });
+      expect(within(dialog).queryByText(/선택하지/)).toBeNull();
+
+      const row = within(dialog).getByTestId("pantry-reflection-row-item-1");
+      expect(row.className).toContain("justify-between");
+      expect(within(row).getByText("양파")).toBeTruthy();
+
+      const amount = within(row).getByTestId("pantry-reflection-amount-item-1");
+      expect(amount.textContent).toBe("2개");
+      expect(amount.className).toContain("shrink-0");
+      expect(amount.className).toContain("text-right");
     });
 
     it("completes shopping list with the default selected-all pantry policy", async () => {
@@ -966,8 +1057,9 @@ describe("ShoppingDetailScreen", () => {
         expect(screen.queryByRole("button", { name: "장보기 완료" })).toBeFalsy();
       });
 
-      // Should show completed badge
-      expect(screen.getByText(/완료됨/)).toBeTruthy();
+      // Should show completed read-only state without the old hidden completion-date badge
+      expect(screen.queryByText(/완료됨/)).toBeNull();
+      expect(screen.getByText(/완료된 장보기 기록은 수정할 수 없어요/)).toBeTruthy();
     });
 
     it("completes shopping list with no pantry reflection", async () => {
@@ -1108,8 +1200,8 @@ describe("ShoppingDetailScreen", () => {
       // Popup should appear
       await expectPantryDialogVisible();
 
-      // Click cancel
-      const cancelButton = screen.getByRole("button", { name: "취소" });
+      // Click close
+      const cancelButton = screen.getByRole("button", { name: "닫기" });
       await user.click(cancelButton);
 
       // Popup should disappear
