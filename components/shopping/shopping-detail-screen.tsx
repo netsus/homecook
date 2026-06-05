@@ -11,7 +11,6 @@ import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-p
 import {
   WebButton,
   WebCard,
-  WebIconButton,
   WebShell,
   WebTopNav,
 } from "@/components/web";
@@ -163,7 +162,7 @@ export function ShoppingDetailScreen({
           return {
             ...prev,
             items: prev.items.map((item) =>
-              item.id === itemId ? updatedItem : item
+              item.id === itemId ? { ...updatedItem, category: item.category } : item
             ),
           };
         });
@@ -235,7 +234,7 @@ export function ShoppingDetailScreen({
           return {
             ...prev,
             items: prev.items.map((item) =>
-              item.id === itemId ? updatedItem : item
+              item.id === itemId ? { ...updatedItem, category: item.category } : item
             ),
           };
         });
@@ -317,7 +316,10 @@ export function ShoppingDetailScreen({
         if (!prev) return prev;
         return {
           ...prev,
-          items: prev.items.map((item) => updatedById.get(item.id) ?? item),
+          items: prev.items.map((item) => {
+            const updated = updatedById.get(item.id);
+            return updated ? { ...updated, category: item.category } : item;
+          }),
         };
       });
     } catch (error) {
@@ -590,6 +592,7 @@ export function ShoppingDetailScreen({
   const progressPercent = purchaseItems.length
     ? Math.round((completedCount / purchaseItems.length) * 100)
     : 100;
+  const displayTitle = formatShoppingDisplayTitle(listDetail);
 
   if (isEmbedded) {
     return (
@@ -602,14 +605,7 @@ export function ShoppingDetailScreen({
             <p className="web-menu-add-eyebrow">
               {isReadOnly ? "Completed Shopping" : "Shopping List"}
             </p>
-            <h1>{listDetail.title}</h1>
-            <p>
-              생성 {formatDate(listDetail.created_at)} ·{" "}
-              {formatDateRange(
-                listDetail.date_range_start,
-                listDetail.date_range_end,
-              )}
-            </p>
+            <h1>{displayTitle}</h1>
           </div>
           <div className="web-shopping-detail-actions">
             <WebButton onClick={handleBack} size="sm" variant="tertiary">
@@ -652,9 +648,12 @@ export function ShoppingDetailScreen({
         ) : (
           <WebCard className="web-shopping-progress">
             <div>
-              <span>진행률</span>
-              <strong>
-                {completedCount} / {purchaseItems.length} 항목 ({progressPercent}%)
+              <div className="web-shopping-progress-title-row">
+                <span>장보기 진행 중</span>
+                <span>{completedCount} / {purchaseItems.length} 항목</span>
+              </div>
+              <strong className="web-shopping-progress-count">
+                <em>{progressPercent}%</em>
               </strong>
             </div>
             <span className="web-shopping-progress-track">
@@ -702,18 +701,13 @@ export function ShoppingDetailScreen({
                 </p>
               </div>
             ) : (
-              <div className="web-shopping-item-grid">
-                {purchaseItems.map((item) => (
-                  <ShoppingItemCard
-                    isReadOnly={isReadOnly}
-                    isUpdating={updatingItem?.itemId === item.id}
-                    item={item}
-                    key={item.id}
-                    onToggleCheck={handleToggleCheck}
-                    onToggleExclude={handleToggleExclude}
-                  />
-                ))}
-              </div>
+              <ShoppingItemCategoryGroups
+                isReadOnly={isReadOnly}
+                items={purchaseItems}
+                onToggleCheck={handleToggleCheck}
+                onToggleExclude={handleToggleExclude}
+                updatingItem={updatingItem}
+              />
             )}
           </section>
 
@@ -745,27 +739,23 @@ export function ShoppingDetailScreen({
 
             <WebCard className="web-shopping-rail-card">
               <h2>
-                팬트리 제외 항목
+                팬트리에 있는 재료
                 <span className="sr-only">
-                  {` 팬트리 제외 항목 (${excludedItems.length}개)`}
+                  {` 팬트리에 있는 재료 (${excludedItems.length}개)`}
                 </span>
               </h2>
               <p>{excludedItems.length}개 항목</p>
               {excludedItems.length > 0 ? (
-                <div className="web-shopping-excluded-list">
-                  {excludedItems.map((item) => (
-                    <ShoppingItemCard
-                      isReadOnly={isReadOnly}
-                      isUpdating={updatingItem?.itemId === item.id}
-                      item={item}
-                      key={item.id}
-                      onToggleCheck={handleToggleCheck}
-                      onToggleExclude={handleToggleExclude}
-                    />
-                  ))}
-                </div>
+                <ShoppingItemCategoryGroups
+                  className="web-shopping-excluded-list"
+                  isReadOnly={isReadOnly}
+                  items={excludedItems}
+                  onToggleCheck={handleToggleCheck}
+                  onToggleExclude={handleToggleExclude}
+                  updatingItem={updatingItem}
+                />
               ) : (
-                <p className="web-modal-copy">팬트리에서 제외된 재료가 없어요.</p>
+                <p className="web-modal-copy">팬트리에 있는 재료가 없어요.</p>
               )}
             </WebCard>
           </aside>
@@ -804,22 +794,9 @@ export function ShoppingDetailScreen({
             <p className="web-menu-add-eyebrow">
               {isReadOnly ? "Completed Shopping" : "Shopping List"}
             </p>
-            <h1>{listDetail.title}</h1>
-            <p>
-              생성 {formatDate(listDetail.created_at)} ·{" "}
-              {formatDateRange(
-                listDetail.date_range_start,
-                listDetail.date_range_end,
-              )}
-            </p>
+            <h1>{displayTitle}</h1>
           </div>
           <div className="web-shopping-detail-actions">
-            <WebIconButton
-              aria-label="뒤로 가기"
-              onClick={handleBack}
-            >
-              ←
-            </WebIconButton>
             <WebButton
               aria-label="공유(텍스트)"
               disabled={isSharing}
@@ -857,9 +834,12 @@ export function ShoppingDetailScreen({
         ) : (
           <WebCard className="web-shopping-progress">
             <div>
-              <span>진행률</span>
-              <strong>
-                {completedCount} / {purchaseItems.length} 항목 ({progressPercent}%)
+              <div className="web-shopping-progress-title-row">
+                <span>장보기 진행 중</span>
+                <span>{completedCount} / {purchaseItems.length} 항목</span>
+              </div>
+              <strong className="web-shopping-progress-count">
+                <em>{progressPercent}%</em>
               </strong>
             </div>
             <span className="web-shopping-progress-track">
@@ -907,18 +887,13 @@ export function ShoppingDetailScreen({
                 </p>
               </div>
             ) : (
-              <div className="web-shopping-item-grid">
-                {purchaseItems.map((item) => (
-                  <ShoppingItemCard
-                    isReadOnly={isReadOnly}
-                    isUpdating={updatingItem?.itemId === item.id}
-                    item={item}
-                    key={item.id}
-                    onToggleCheck={handleToggleCheck}
-                    onToggleExclude={handleToggleExclude}
-                  />
-                ))}
-              </div>
+              <ShoppingItemCategoryGroups
+                isReadOnly={isReadOnly}
+                items={purchaseItems}
+                onToggleCheck={handleToggleCheck}
+                onToggleExclude={handleToggleExclude}
+                updatingItem={updatingItem}
+              />
             )}
           </section>
 
@@ -950,27 +925,23 @@ export function ShoppingDetailScreen({
 
             <WebCard className="web-shopping-rail-card">
               <h2>
-                팬트리 제외 항목
+                팬트리에 있는 재료
                 <span className="sr-only">
-                  {` 팬트리 제외 항목 (${excludedItems.length}개)`}
+                  {` 팬트리에 있는 재료 (${excludedItems.length}개)`}
                 </span>
               </h2>
               <p>{excludedItems.length}개 항목</p>
               {excludedItems.length > 0 ? (
-                <div className="web-shopping-excluded-list">
-                  {excludedItems.map((item) => (
-                    <ShoppingItemCard
-                      isReadOnly={isReadOnly}
-                      isUpdating={updatingItem?.itemId === item.id}
-                      item={item}
-                      key={item.id}
-                      onToggleCheck={handleToggleCheck}
-                      onToggleExclude={handleToggleExclude}
-                    />
-                  ))}
-                </div>
+                <ShoppingItemCategoryGroups
+                  className="web-shopping-excluded-list"
+                  isReadOnly={isReadOnly}
+                  items={excludedItems}
+                  onToggleCheck={handleToggleCheck}
+                  onToggleExclude={handleToggleExclude}
+                  updatingItem={updatingItem}
+                />
               ) : (
-                <p className="web-modal-copy">팬트리에서 제외된 재료가 없어요.</p>
+                <p className="web-modal-copy">팬트리에 있는 재료가 없어요.</p>
               )}
             </WebCard>
           </aside>
@@ -1188,39 +1159,49 @@ function MobileShoppingDetailScreen({
   const progress = purchaseItems.length
     ? Math.round((checkedCount / purchaseItems.length) * 100)
     : 100;
-  const [firstPurchaseItem, ...otherPurchaseItems] = purchaseItems;
+  const purchaseGroups = groupShoppingItemsByCategory(purchaseItems);
+  const excludedGroups = groupShoppingItemsByCategory(excludedItems);
 
   return (
     <div className="flex min-h-dvh flex-col bg-[var(--surface-fill)] text-[var(--foreground)]" data-testid="shopping-detail-mobile">
       <MobileShoppingAppBar
+        isCompleting={isCompleting}
+        isReadOnly={isReadOnly}
         isSharing={isSharing}
         onBack={onBack}
+        onComplete={onComplete}
         onShare={onShare}
-        title={detail.title}
+        title={formatShoppingDisplayTitle(detail)}
       />
 
-      <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
+      <main className="min-h-0 flex-1 overflow-y-auto pb-[104px] pt-[58px]">
         <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 pb-5 pt-[18px]">
-          <p className="text-[12px] font-semibold leading-[1.3] text-[var(--text-3)]">
-            {formatDateIsoDot(detail.created_at)} 생성
-          </p>
           <div className="mt-4 flex items-end justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[12px] font-semibold leading-[1.3] text-[var(--text-3)]">
                 {isReadOnly ? "방금 완료" : `사야 할 재료 ${remainingCount}개`}
               </p>
-              <h2 className="mt-1 text-[20px] font-extrabold leading-[1.12] text-[var(--foreground)]">
-                {isReadOnly ? "장보기 완료" : "장보기 진행 중"}
-              </h2>
+              <div className="mt-1 flex min-w-0 items-baseline gap-2">
+                <h2 className="text-[20px] font-extrabold leading-[1.12] text-[var(--foreground)]">
+                  {isReadOnly ? "장보기 완료" : "장보기 진행 중"}
+                </h2>
+                {!isReadOnly ? (
+                  <span className="shrink-0 text-[12px] font-extrabold leading-[1.2] text-[var(--text-3)]">
+                    {checkedCount} / {purchaseItems.length} 항목
+                  </span>
+                ) : null}
+              </div>
             </div>
             {!isReadOnly ? (
-              <p className="shrink-0 text-[32px] font-extrabold leading-none text-[var(--brand)]">
-                {progress}%
-              </p>
+              <div className="shrink-0 text-right">
+                <p className="text-[32px] font-extrabold leading-none text-[var(--brand)]">
+                  {progress}%
+                </p>
+              </div>
             ) : null}
           </div>
           {!isReadOnly ? (
-            <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-[var(--line-strong)]">
+            <div className="mt-4 h-3 overflow-hidden rounded-full bg-[var(--line-strong)]">
               <div
                 className="h-full rounded-full bg-[var(--brand)]"
                 style={{ width: `${progress}%` }}
@@ -1245,16 +1226,13 @@ function MobileShoppingDetailScreen({
           <span className="absolute h-px w-px opacity-0">
             {isReadOnly ? "구매한 재료" : "구매할 재료"} ({purchaseItems.length}개)
           </span>
-          <span className="absolute h-px w-px opacity-0">
-            {formatDateRange(detail.date_range_start, detail.date_range_end)}
-          </span>
           {isReadOnly && detail.completed_at ? (
             <span className="absolute h-px w-px opacity-0">
               ✓ 완료됨 ({formatDate(detail.completed_at)})
             </span>
           ) : null}
           <span className="absolute h-px w-px opacity-0">
-            팬트리 제외 항목 ({excludedItems.length}개)
+            팬트리에 있는 재료 ({excludedItems.length}개)
           </span>
 
           {!isReadOnly && purchaseItems.length > 0 ? (
@@ -1270,29 +1248,18 @@ function MobileShoppingDetailScreen({
             </div>
           ) : null}
 
-          {firstPurchaseItem ? (
+          {purchaseGroups.map((group) => (
             <MobileShoppingSection
-              count={1}
+              count={group.items.length}
               isReadOnly={isReadOnly}
-              items={[firstPurchaseItem]}
-              label="냉장"
+              items={group.items}
+              key={group.category}
+              label={group.category}
               onToggleCheck={onToggleCheck}
               onToggleExclude={onToggleExclude}
               updatingItem={updatingItem}
             />
-          ) : null}
-
-          {otherPurchaseItems.length > 0 ? (
-            <MobileShoppingSection
-              count={otherPurchaseItems.length}
-              isReadOnly={isReadOnly}
-              items={otherPurchaseItems}
-              label="채소"
-              onToggleCheck={onToggleCheck}
-              onToggleExclude={onToggleExclude}
-              updatingItem={updatingItem}
-            />
-          ) : null}
+          ))}
 
           {purchaseItems.length === 0 ? (
             <div className="py-8 text-center text-[15px] font-bold text-[var(--text-2)]">
@@ -1300,32 +1267,28 @@ function MobileShoppingDetailScreen({
             </div>
           ) : null}
 
-          {excludedItems.length > 0 ? (
-            <MobileShoppingSection
-              count={excludedItems.length}
-              isReadOnly={isReadOnly}
-              items={excludedItems}
-              label="팬트리에 이미 있어 제외"
-              onToggleCheck={onToggleCheck}
-              onToggleExclude={onToggleExclude}
-              updatingItem={updatingItem}
-            />
+          {excludedGroups.length > 0 ? (
+            <section className="mt-6 rounded-[var(--radius-card)] bg-[var(--brand-soft)] p-3">
+              <h3 className="mb-3 text-[14px] font-extrabold leading-[1.3] text-[var(--brand)]">
+                팬트리에 있는 재료 · {excludedItems.length}
+              </h3>
+              {excludedGroups.map((group) => (
+                <MobileShoppingSection
+                  count={group.items.length}
+                  isReadOnly={isReadOnly}
+                  items={group.items}
+                  key={group.category}
+                  label={group.category}
+                  onToggleCheck={onToggleCheck}
+                  onToggleExclude={onToggleExclude}
+                  updatingItem={updatingItem}
+                  variant="pantry"
+                />
+              ))}
+            </section>
           ) : null}
         </div>
       </main>
-
-      {!isReadOnly ? (
-        <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 py-4">
-          <button
-            className="flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)]"
-            disabled={isCompleting}
-            onClick={onComplete}
-            type="button"
-          >
-            {isCompleting ? "완료 중..." : "장보기 완료"}
-          </button>
-        </div>
-      ) : null}
 
         <Wave1MobileBottomTab
           ariaLabel="장보기 상세 화면 하단 내비게이션"
@@ -1344,18 +1307,24 @@ function MobileShoppingDetailScreen({
 }
 
 function MobileShoppingAppBar({
+  isCompleting,
+  isReadOnly,
   isSharing,
   onBack,
+  onComplete,
   onShare,
   title,
 }: {
+  isCompleting: boolean;
+  isReadOnly: boolean;
   isSharing: boolean;
   onBack: () => void;
+  onComplete: () => void;
   onShare: () => void;
   title: string;
 }) {
   return (
-    <header className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)]">
+    <header className="fixed inset-x-0 top-0 z-30 border-b border-[var(--line-strong)] bg-[var(--surface)]">
       <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
         <button
           aria-label="뒤로 가기"
@@ -1367,18 +1336,30 @@ function MobileShoppingAppBar({
             ‹
           </span>
         </button>
-        <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-extrabold leading-[1.3]">
+        <h1 className="min-w-0 flex-1 truncate text-left text-[18px] font-extrabold leading-[1.3]">
           {title}
         </h1>
-        <button
-          aria-label="공유(텍스트)"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-fill)] text-[var(--text-2)] disabled:opacity-50"
-          disabled={isSharing}
-          onClick={onShare}
-          type="button"
-        >
-          <MobileShareIcon />
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            aria-label="공유(텍스트)"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-fill)] text-[var(--text-2)] disabled:opacity-50"
+            disabled={isSharing}
+            onClick={onShare}
+            type="button"
+          >
+            <MobileShareIcon />
+          </button>
+          {!isReadOnly ? (
+            <button
+              className="flex h-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] px-3 text-[13px] font-extrabold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)] disabled:text-[var(--text-4)]"
+              disabled={isCompleting}
+              onClick={onComplete}
+              type="button"
+            >
+              {isCompleting ? "완료 중" : "장보기 완료"}
+            </button>
+          ) : null}
+        </div>
       </div>
     </header>
   );
@@ -1411,6 +1392,7 @@ function MobileShoppingSection({
   onToggleCheck,
   onToggleExclude,
   updatingItem,
+  variant = "purchase",
 }: {
   count: number;
   isReadOnly: boolean;
@@ -1423,13 +1405,26 @@ function MobileShoppingSection({
     currentChecked: boolean,
   ) => void;
   updatingItem: UpdateState | null;
+  variant?: "purchase" | "pantry";
 }) {
+  const isPantry = variant === "pantry";
+
   return (
-    <section className="mb-4">
-      <h3 className="mb-2 text-[12px] font-extrabold leading-[1.3] text-[var(--text-3)]">
+    <section className={isPantry ? "mb-3 last:mb-0" : "mb-4"}>
+      <h3
+        className={[
+          "mb-2 text-[12px] font-extrabold leading-[1.3]",
+          isPantry ? "text-[var(--brand)]" : "text-[var(--text-3)]",
+        ].join(" ")}
+      >
         {label} · {count}
       </h3>
-      <div className="overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)]">
+      <div
+        className={[
+          "overflow-hidden rounded-[var(--radius-control)] border bg-[var(--surface)]",
+          isPantry ? "border-[var(--brand-border)]" : "border-[var(--line-strong)]",
+        ].join(" ")}
+      >
         {items.map((item) => (
           <MobileShoppingItemRow
             isReadOnly={isReadOnly}
@@ -1465,15 +1460,30 @@ function MobileShoppingItemRow({
   const itemName = item.display_text.replace(/\s+\d+.*$/, "");
   const amountText = formatAmountText(item);
 
+  const canToggleCheck = !isReadOnly && !item.is_pantry_excluded && !isUpdating;
+
   return (
-    <div className="relative flex min-h-[65px] items-center gap-3 border-b border-[var(--surface-subtle)] px-4 py-2.5 last:border-b-0">
+    <div
+      className={[
+        "relative flex min-h-[65px] items-center gap-3 border-b border-[var(--surface-subtle)] px-4 py-2.5 last:border-b-0",
+        canToggleCheck ? "cursor-pointer active:bg-[var(--surface-fill)]" : "",
+      ].join(" ")}
+      onClick={() => {
+        if (canToggleCheck) {
+          onToggleCheck(item.id, item.is_checked);
+        }
+      }}
+    >
       {!isReadOnly && !item.is_pantry_excluded ? (
         <button
           aria-checked={item.is_checked}
           aria-label={`${item.display_text} 구매 완료 표시`}
           className="flex h-8 w-8 shrink-0 items-center justify-center disabled:opacity-50"
           disabled={isUpdating}
-          onClick={() => onToggleCheck(item.id, item.is_checked)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleCheck(item.id, item.is_checked);
+          }}
           role="checkbox"
           type="button"
         >
@@ -1509,7 +1519,7 @@ function MobileShoppingItemRow({
           {itemName}
         </p>
         <p className="mt-[2px] truncate text-[11px] font-semibold leading-[1.3] text-[var(--text-3)]">
-          {amountText} · 1끼에 사용
+          {amountText}
         </p>
       </div>
 
@@ -1519,15 +1529,13 @@ function MobileShoppingItemRow({
             item.is_pantry_excluded ? "되살리기" : "이미있음"
           }`}
           className={[
-            "flex h-[30px] w-[64px] shrink-0 items-center justify-center rounded-[var(--radius-control)] border bg-[var(--surface)] px-0 text-[11px] font-extrabold disabled:opacity-50",
-            item.is_pantry_excluded
-              ? "border-[var(--brand)] text-[var(--brand)]"
-              : "border-[var(--line-strong)] text-[var(--text-2)]",
+            "flex h-8 w-[76px] shrink-0 items-center justify-center rounded-full border border-[var(--brand)] bg-[var(--surface)] px-0 text-[12px] font-extrabold text-[var(--brand)] disabled:opacity-50",
           ].join(" ")}
           disabled={isUpdating}
-          onClick={() =>
-            onToggleExclude(item.id, item.is_pantry_excluded, item.is_checked)
-          }
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleExclude(item.id, item.is_pantry_excluded, item.is_checked);
+          }}
           type="button"
         >
           {item.is_pantry_excluded ? "되살리기" : "이미있음"}
@@ -1573,6 +1581,135 @@ interface ShoppingItemCardProps {
     currentExcluded: boolean,
     currentChecked: boolean,
   ) => void;
+}
+
+interface ShoppingItemCategoryGroup {
+  category: string;
+  items: ShoppingListItemSummary[];
+  sortIndex: number;
+}
+
+const SHOPPING_CATEGORY_ORDER = [
+  "채소",
+  "과일",
+  "육류",
+  "해산물",
+  "유제품",
+  "곡류",
+  "양념",
+  "기타",
+] as const;
+
+const SHOPPING_CATEGORY_INDEX: Map<string, number> = new Map(
+  SHOPPING_CATEGORY_ORDER.map((category, index) => [category, index]),
+);
+
+function normalizeShoppingCategory(rawCategory: string | null | undefined) {
+  const category = rawCategory?.trim() ?? "";
+
+  if (/채소|버섯|나물/.test(category)) return "채소";
+  if (/과일/.test(category)) return "과일";
+  if (/육류|축산|닭|돼지|소고기|쇠고기|계란|달걀/.test(category)) return "육류";
+  if (/해산|수산|생선|어패|해조/.test(category)) return "해산물";
+  if (/유제품|유가공|우유|치즈|버터|크림/.test(category)) return "유제품";
+  if (/곡류|쌀|밀|두류|서류|전분|견과|종실|콩류/.test(category)) return "곡류";
+  if (/조미|양념|소스|장류|유지|식용유|소금|설탕|식초/.test(category)) {
+    return "양념";
+  }
+
+  return category || "기타";
+}
+
+function inferShoppingCategoryFromName(displayText: string) {
+  if (/양파|대파|파|마늘|고추|배추|무|당근|감자|버섯|상추|깻잎|호박|오이|토마토/.test(displayText)) {
+    return "채소";
+  }
+  if (/사과|배|딸기|바나나|레몬|라임|오렌지|귤/.test(displayText)) return "과일";
+  if (/소고기|쇠고기|돼지고기|닭고기|베이컨|햄|계란|달걀/.test(displayText)) return "육류";
+  if (/새우|오징어|조개|멸치|다시마|미역|김|생선/.test(displayText)) return "해산물";
+  if (/우유|치즈|버터|크림|요거트|요구르트/.test(displayText)) return "유제품";
+  if (/쌀|밥|면|밀가루|전분|빵|콩|두부|땅콩/.test(displayText)) return "곡류";
+  if (/간장|된장|고추장|소금|설탕|식초|고춧가루|후추|기름|오일|소스|참기름/.test(displayText)) {
+    return "양념";
+  }
+  return "기타";
+}
+
+function getShoppingItemCategory(item: ShoppingListItemSummary) {
+  const normalized = normalizeShoppingCategory(item.category);
+  return normalized === "기타"
+    ? inferShoppingCategoryFromName(item.display_text)
+    : normalized;
+}
+
+function groupShoppingItemsByCategory(items: ShoppingListItemSummary[]) {
+  const groups = new Map<string, ShoppingItemCategoryGroup>();
+
+  items.forEach((item) => {
+    const category = getShoppingItemCategory(item);
+    const existing = groups.get(category);
+    if (existing) {
+      existing.items.push(item);
+      return;
+    }
+
+    groups.set(category, {
+      category,
+      items: [item],
+      sortIndex: SHOPPING_CATEGORY_INDEX.get(category) ?? SHOPPING_CATEGORY_ORDER.length,
+    });
+  });
+
+  return [...groups.values()].sort((left, right) => {
+    const byIndex = left.sortIndex - right.sortIndex;
+    if (byIndex !== 0) return byIndex;
+    return left.category.localeCompare(right.category, "ko");
+  });
+}
+
+function ShoppingItemCategoryGroups({
+  className,
+  isReadOnly,
+  items,
+  onToggleCheck,
+  onToggleExclude,
+  updatingItem,
+}: {
+  className?: string;
+  isReadOnly: boolean;
+  items: ShoppingListItemSummary[];
+  onToggleCheck: (itemId: string, currentChecked: boolean) => void;
+  onToggleExclude: (
+    itemId: string,
+    currentExcluded: boolean,
+    currentChecked: boolean,
+  ) => void;
+  updatingItem: UpdateState | null;
+}) {
+  return (
+    <div className={["web-shopping-category-list", className ?? ""].join(" ")}>
+      {groupShoppingItemsByCategory(items).map((group) => (
+        <section className="web-shopping-category-section" key={group.category}>
+          <h3 className="web-shopping-category-heading">
+            {group.category}
+            <span>{group.items.length}개</span>
+          </h3>
+          <div className="web-shopping-item-grid">
+            {group.items.map((item) => (
+              <ShoppingItemCard
+                isReadOnly={isReadOnly}
+                isUpdating={updatingItem?.itemId === item.id}
+                item={item}
+                key={item.id}
+                onToggleCheck={onToggleCheck}
+                onToggleExclude={onToggleExclude}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
 }
 
 function PurchaseSelectAllControl({
@@ -1633,6 +1770,7 @@ function ShoppingItemCard({
     .join(" + ");
 
   const showCheckButton = !isReadOnly && !item.is_pantry_excluded;
+  const canToggleCheck = showCheckButton && !isUpdating;
   const toggleLabel = item.is_pantry_excluded ? "되살리기" : "이미있음";
 
   return (
@@ -1641,7 +1779,13 @@ function ShoppingItemCard({
         "web-shopping-item-card",
         item.is_checked ? "web-shopping-item-card-checked" : "",
         item.is_pantry_excluded ? "web-shopping-item-card-excluded" : "",
+        canToggleCheck ? "web-shopping-item-card-clickable" : "",
       ].join(" ")}
+      onClick={() => {
+        if (canToggleCheck) {
+          onToggleCheck(item.id, item.is_checked);
+        }
+      }}
     >
       {showCheckButton ? (
         <button
@@ -1649,7 +1793,10 @@ function ShoppingItemCard({
           aria-label={`${item.display_text} 구매 완료 표시`}
           className="web-shopping-check"
           disabled={isUpdating}
-          onClick={() => onToggleCheck(item.id, item.is_checked)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleCheck(item.id, item.is_checked);
+          }}
           role="checkbox"
           type="button"
         >
@@ -1675,9 +1822,10 @@ function ShoppingItemCard({
           aria-label={`${item.display_text} ${toggleLabel}`}
           className="web-shopping-exclude"
           disabled={isUpdating}
-          onClick={() =>
-            onToggleExclude(item.id, item.is_pantry_excluded, item.is_checked)
-          }
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleExclude(item.id, item.is_pantry_excluded, item.is_checked);
+          }}
           type="button"
         >
           {toggleLabel}
@@ -1695,28 +1843,22 @@ function formatAmountText(item: ShoppingListItemSummary): string {
   return item.amounts_json.map((a) => `${a.amount}${a.unit}`).join(" + ");
 }
 
-function formatDateIsoDot(dateString: string): string {
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) {
-    return "예정";
+function formatShoppingDisplayTitle(detail: ShoppingListDetail): string {
+  const createdDate = new Date(detail.created_at);
+  if (Number.isNaN(createdDate.getTime())) {
+    return detail.title;
   }
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}`;
-}
 
-function formatDateRange(start: string, end: string): string {
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  const startMonth = startDate.getMonth() + 1;
-  const startDay = startDate.getDate();
-  const endMonth = endDate.getMonth() + 1;
-  const endDay = endDate.getDate();
+  const month = createdDate.getMonth() + 1;
+  const day = createdDate.getDate();
+  const koreanDate = `${month}월 ${day}일`;
+  const slashDate = `${month}/${day}`;
 
-  if (startMonth === endMonth) {
-    return `${startMonth}월 ${startDay}일 ~ ${endDay}일`;
+  if (detail.title.includes(koreanDate) || detail.title.includes(slashDate)) {
+    return detail.title;
   }
-  return `${startMonth}월 ${startDay}일 ~ ${endMonth}월 ${endDay}일`;
+
+  return `${koreanDate} · ${detail.title}`;
 }
 
 function formatDate(dateString: string): string {

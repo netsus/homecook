@@ -47,6 +47,11 @@ interface RecipeRow {
   thumbnail_url: string | null;
 }
 
+interface IngredientRow {
+  id: string;
+  category: string | null;
+}
+
 interface ShoppingListItemRow {
   id: string;
   ingredient_id: string;
@@ -83,6 +88,11 @@ interface RecipesSelectQuery {
   then: ArrayResult<RecipeRow>["then"];
 }
 
+interface IngredientsSelectQuery {
+  in(column: string, values: string[]): IngredientsSelectQuery;
+  then: ArrayResult<IngredientRow>["then"];
+}
+
 interface ShoppingListItemsSelectQuery {
   eq(column: string, value: string): ShoppingListItemsSelectQuery;
   order(column: string, options: QueryOrderOption): ShoppingListItemsSelectQuery;
@@ -101,6 +111,10 @@ interface RecipesTable {
   select(columns: string): RecipesSelectQuery;
 }
 
+interface IngredientsTable {
+  select(columns: string): IngredientsSelectQuery;
+}
+
 interface ShoppingListItemsTable {
   select(columns: string): ShoppingListItemsSelectQuery;
 }
@@ -109,6 +123,7 @@ interface ShoppingListDetailDbClient {
   from(table: "shopping_lists"): ShoppingListsTable;
   from(table: "shopping_list_recipes"): ShoppingListRecipesTable;
   from(table: "recipes"): RecipesTable;
+  from(table: "ingredients"): IngredientsTable;
   from(table: "shopping_list_items"): ShoppingListItemsTable;
 }
 
@@ -141,10 +156,14 @@ function normalizeAmountsJson(value: unknown): ShoppingListItemSummary["amounts_
     .filter((entry): entry is { amount: number; unit: string } => entry !== null);
 }
 
-function buildItem(item: ShoppingListItemRow): ShoppingListItemSummary {
+function buildItem(
+  item: ShoppingListItemRow,
+  categoryByIngredientId: Map<string, string | null> = new Map(),
+): ShoppingListItemSummary {
   return {
     id: item.id,
     ingredient_id: item.ingredient_id,
+    category: categoryByIngredientId.get(item.ingredient_id) ?? null,
     display_text: item.display_text,
     amounts_json: normalizeAmountsJson(item.amounts_json),
     is_checked: item.is_checked,
@@ -239,6 +258,22 @@ export async function GET(_request: Request, context: RouteContext) {
     return fail("INTERNAL_ERROR", "장보기 상세를 불러오지 못했어요.", 500);
   }
 
+  const ingredientIds = [
+    ...new Set(itemsResult.data.map((item) => item.ingredient_id)),
+  ];
+  const categoryByIngredientId = new Map<string, string | null>();
+
+  if (ingredientIds.length > 0) {
+    const ingredientsResult = await dbClient
+      .from("ingredients")
+      .select("id, category")
+      .in("id", ingredientIds);
+
+    ingredientsResult.data?.forEach((ingredient) => {
+      categoryByIngredientId.set(ingredient.id, ingredient.category);
+    });
+  }
+
   return ok({
     id: listResult.data.id,
     title: listResult.data.title,
@@ -257,6 +292,6 @@ export async function GET(_request: Request, context: RouteContext) {
         planned_servings_total: recipe.planned_servings_total,
       }))
       .sort((left, right) => left.recipe_id.localeCompare(right.recipe_id)),
-    items: itemsResult.data.map(buildItem),
+    items: itemsResult.data.map((item) => buildItem(item, categoryByIngredientId)),
   } satisfies ShoppingListDetail);
 }

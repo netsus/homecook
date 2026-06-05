@@ -174,6 +174,15 @@ describe("10a shopping detail backend", () => {
         error: null,
       },
     ]);
+    const ingredientsQuery = createArraySelectQuery([
+      {
+        data: [
+          { id: "ing-1", category: "채소" },
+          { id: "ing-2", category: "양념" },
+        ],
+        error: null,
+      },
+    ]);
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -191,6 +200,9 @@ describe("10a shopping detail backend", () => {
         }
         if (table === "shopping_list_items") {
           return { select: vi.fn(() => itemsQuery) };
+        }
+        if (table === "ingredients") {
+          return { select: vi.fn(() => ingredientsQuery) };
         }
 
         throw new Error(`unexpected table: ${table}`);
@@ -237,6 +249,7 @@ describe("10a shopping detail backend", () => {
           {
             id: "item-1",
             ingredient_id: "ing-1",
+            category: "채소",
             display_text: "양파 1개",
             amounts_json: [{ amount: 1, unit: "개" }],
             is_checked: false,
@@ -247,6 +260,7 @@ describe("10a shopping detail backend", () => {
           {
             id: "item-2",
             ingredient_id: "ing-2",
+            category: "양념",
             display_text: "소금 1작은술",
             amounts_json: [{ amount: 1, unit: "작은술" }],
             is_checked: false,
@@ -310,6 +324,82 @@ describe("10a shopping detail backend", () => {
 
     expect(response.status).toBe(200);
     expect(body.data.updated_at).toBe("2026-04-25T09:00:00.000Z");
+  });
+
+  it("returns detail without categories when ingredient category lookup fails", async () => {
+    const listQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: "550e8400-e29b-41d4-a716-446655440001",
+          user_id: "user-1",
+          title: "4/25 장보기",
+          date_range_start: "2026-04-25",
+          date_range_end: "2026-04-27",
+          is_completed: false,
+          completed_at: null,
+          created_at: "2026-04-25T09:00:00.000Z",
+          updated_at: "2026-04-25T09:10:00.000Z",
+        },
+        error: null,
+      },
+    ]);
+    const listRecipesQuery = createArraySelectQuery([{ data: [], error: null }]);
+    const itemsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: "item-1",
+            ingredient_id: "ing-1",
+            display_text: "양파 1개",
+            amounts_json: [{ amount: 1, unit: "개" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 0,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const ingredientsQuery = createArraySelectQuery([
+      {
+        data: null,
+        error: { message: "category lookup unavailable" },
+      },
+    ]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "shopping_lists") {
+          return { select: vi.fn(() => listQuery) };
+        }
+        if (table === "shopping_list_recipes") {
+          return { select: vi.fn(() => listRecipesQuery) };
+        }
+        if (table === "shopping_list_items") {
+          return { select: vi.fn(() => itemsQuery) };
+        }
+        if (table === "ingredients") {
+          return { select: vi.fn(() => ingredientsQuery) };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importListDetailRoute();
+    const response = await GET(new Request("http://localhost:3000/api/v1/shopping/lists/550e8400-e29b-41d4-a716-446655440001"), {
+      params: Promise.resolve({
+        list_id: "550e8400-e29b-41d4-a716-446655440001",
+      }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items[0].category).toBeNull();
   });
 
   it("returns 403 when shopping detail list owner mismatches", async () => {

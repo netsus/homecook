@@ -34,6 +34,11 @@ interface RecipeRow {
   thumbnail_url: string | null;
 }
 
+interface MealPlanColumnRow {
+  id: string;
+  name: string;
+}
+
 type ArrayQueryResult<T> = PromiseLike<{
   data: T[] | null;
   error: QueryError | null;
@@ -51,6 +56,12 @@ interface RecipesSelectQuery {
   then: ArrayQueryResult<RecipeRow>["then"];
 }
 
+interface MealPlanColumnsSelectQuery {
+  eq(column: string, value: string): MealPlanColumnsSelectQuery;
+  in(column: string, values: string[]): MealPlanColumnsSelectQuery;
+  then: ArrayQueryResult<MealPlanColumnRow>["then"];
+}
+
 interface MealsTable {
   select(columns: string): MealsSelectQuery;
 }
@@ -59,9 +70,14 @@ interface RecipesTable {
   select(columns: string): RecipesSelectQuery;
 }
 
+interface MealPlanColumnsTable {
+  select(columns: string): MealPlanColumnsSelectQuery;
+}
+
 interface ShoppingPreviewDbClient {
   from(table: "meals"): MealsTable;
   from(table: "recipes"): RecipesTable;
+  from(table: "meal_plan_columns"): MealPlanColumnsTable;
 }
 
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
@@ -106,7 +122,9 @@ export async function GET() {
 
   const eligibleMeals = mealsResult.data.filter(isMealEligibleForShopping);
   const recipeIds = [...new Set(eligibleMeals.map((meal) => meal.recipe_id))];
+  const columnIds = [...new Set(eligibleMeals.map((meal) => meal.column_id))];
   const recipeMap = new Map<string, RecipeRow>();
+  const columnNameMap = new Map<string, string>();
 
   if (recipeIds.length > 0) {
     const recipesResult = await dbClient
@@ -121,6 +139,20 @@ export async function GET() {
     recipesResult.data.forEach((recipe) => {
       recipeMap.set(recipe.id, recipe);
     });
+  }
+
+  if (columnIds.length > 0) {
+    const columnsResult = await dbClient
+      .from("meal_plan_columns")
+      .select("id, name")
+      .eq("user_id", user.id)
+      .in("id", columnIds);
+
+    if (!columnsResult.error && columnsResult.data) {
+      columnsResult.data.forEach((column) => {
+        columnNameMap.set(column.id, column.name);
+      });
+    }
   }
 
   const recipeGroups = new Map<
@@ -157,6 +189,7 @@ export async function GET() {
     eligible_meals: eligibleMeals.map((meal) => ({
       id: meal.id,
       column_id: meal.column_id,
+      column_name: columnNameMap.get(meal.column_id) ?? null,
       plan_date: meal.plan_date,
       recipe_id: meal.recipe_id,
       recipe_name: recipeMap.get(meal.recipe_id)?.title ?? "",

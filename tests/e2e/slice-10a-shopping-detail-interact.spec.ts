@@ -220,7 +220,7 @@ test.describe("slice 10a: shopping detail interact", () => {
 
       await expect(page.getByText("팬트리에 이미 있어서")).toBeVisible();
       await expect(page.getByText("장볼 재료가 없어요")).toBeVisible();
-      await expect(page.getByText(/팬트리 제외 항목 \(1개\)/)).toBeVisible();
+      await expect(page.getByText(/팬트리에 있는 재료 \(1개\)/)).toBeVisible();
     });
   });
 
@@ -235,13 +235,13 @@ test.describe("slice 10a: shopping detail interact", () => {
 
       // Check title and date range
       await expect(page.getByText("4월 12일 장보기")).toBeVisible();
-      await expect(page.getByText("4월 12일 ~ 20일")).toBeVisible();
+      await expect(page.getByText("4월 12일 ~ 20일")).toHaveCount(0);
 
       // Check purchase section
       await expect(page.getByText(/구매할 재료 \(2개\)/)).toBeVisible();
 
       // Check excluded section
-      await expect(page.getByText(/팬트리 제외 항목 \(1개\)/)).toBeVisible();
+      await expect(page.getByText(/팬트리에 있는 재료 \(1개\)/)).toBeVisible();
     });
 
     test("should toggle item check status", async ({ page }) => {

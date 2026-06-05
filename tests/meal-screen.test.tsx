@@ -25,6 +25,7 @@ const readE2EAuthOverride = vi.fn();
 const fetchMeals = vi.fn();
 const deleteMeal = vi.fn();
 const updateMealServings = vi.fn();
+const createShoppingList = vi.fn();
 
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => readE2EAuthOverride(),
@@ -35,6 +36,12 @@ vi.mock("@/lib/api/meal", () => ({
   deleteMeal: (...args: unknown[]) => deleteMeal(...args),
   updateMealServings: (...args: unknown[]) => updateMealServings(...args),
   isMealApiError: (error: unknown) =>
+    Boolean(error) && typeof error === "object" && "status" in (error as Record<string, unknown>),
+}));
+
+vi.mock("@/lib/api/shopping", () => ({
+  createShoppingList: (body: unknown) => createShoppingList(body),
+  isShoppingApiError: (error: unknown) =>
     Boolean(error) && typeof error === "object" && "status" in (error as Record<string, unknown>),
 }));
 
@@ -95,6 +102,7 @@ describe("MealScreen", () => {
     fetchMeals.mockReset();
     deleteMeal.mockReset();
     updateMealServings.mockReset();
+    createShoppingList.mockReset();
   });
 
   afterEach(() => {
@@ -267,5 +275,33 @@ describe("MealScreen", () => {
     expect(deleteBtn.className).toContain("absolute");
     expect(deleteBtn.className).toContain("right-3");
     expect(deleteBtn.className).toContain("top-3");
+  });
+
+  it("creates a shopping list directly for the selected meal", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({
+      items: [createMealItem()],
+    });
+    createShoppingList.mockResolvedValue({
+      id: "list-1",
+      title: "6/5 장보기",
+      is_completed: false,
+      created_at: "2026-06-05T00:00:00.000Z",
+    });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    const card = await screen.findByLabelText("김치찌개 식사 카드");
+    await user.click(within(card).getByRole("button", { name: "장보기" }));
+
+    await waitFor(() => {
+      expect(createShoppingList).toHaveBeenCalledWith({
+        meal_configs: [{ meal_id: "meal-1", shopping_servings: 2 }],
+      });
+    });
+    expect(mockRouterPush).toHaveBeenCalledWith(
+      "/shopping/lists/list-1?returnTo=%2Fplanner%2F2026-04-18%2Fcolumn-breakfast%3Fslot%3D%25EC%2595%2584%25EC%25B9%25A8",
+    );
   });
 });
