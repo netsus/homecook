@@ -216,6 +216,8 @@ const MOCK_ACTIVE_SHOPPING_DETAIL = {
   date_range_end: "2026-04-29",
   is_completed: false,
   completed_at: null,
+  created_at: "2026-04-23T00:00:00Z",
+  updated_at: "2026-04-23T00:00:00Z",
   items: [
     {
       id: "shopping-item-2",
@@ -921,8 +923,9 @@ describe("MypageScreen", () => {
     });
     expect(screen.getByTestId("shopping-detail-embedded")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "4/23 장보기" })).toBeTruthy();
-    expect(screen.getByText("진행률")).toBeTruthy();
-    expect(screen.getByText("0 / 1 항목 (0%)")).toBeTruthy();
+    expect(screen.getByText("장보기 진행 중")).toBeTruthy();
+    expect(screen.getByText("0 / 1 항목")).toBeTruthy();
+    expect(screen.getByText("0%")).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: "감자 2개 구매 완료 표시" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "양파 1개 되살리기" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "장보기 완료" })).toBeTruthy();
