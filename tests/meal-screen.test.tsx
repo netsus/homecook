@@ -304,4 +304,35 @@ describe("MealScreen", () => {
       "/shopping/lists/list-1?returnTo=%2Fplanner%2F2026-04-18%2Fcolumn-breakfast%3Fslot%3D%25EC%2595%2584%25EC%25B9%25A8",
     );
   });
+
+  it("shows the all-pantry completion modal instead of opening a missing shopping list", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({
+      items: [createMealItem()],
+    });
+    createShoppingList.mockResolvedValue({
+      id: null,
+      title: "4/18 장보기",
+      is_completed: true,
+      completed_at: "2026-04-18T00:00:00.000Z",
+      completed_without_list: true,
+      meals_updated: 1,
+      pantry_item_count: 4,
+      created_at: "2026-04-18T00:00:00.000Z",
+    });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    const card = await screen.findByLabelText("김치찌개 식사 카드");
+    await user.click(within(card).getByRole("button", { name: "장보기" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "살 재료가 없어요" });
+    expect(dialog).toBeTruthy();
+    expect(
+      screen.getByText("선택한 끼니의 재료가 모두 팬트리에 있어 장보기 완료로 바꿨어요."),
+    ).toBeTruthy();
+    expect(screen.getByText("1개 끼니 · 4개 재료")).toBeTruthy();
+    expect(mockRouterPush).not.toHaveBeenCalledWith(expect.stringContaining("/shopping/lists/"));
+  });
 });

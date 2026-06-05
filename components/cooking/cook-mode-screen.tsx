@@ -31,6 +31,7 @@ import {
 } from "@/components/web";
 import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { formatKoreaCompactDate } from "@/lib/korean-date";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useCookModeStore } from "@/stores/cook-mode-store";
@@ -43,6 +44,27 @@ const WEB_NAV_ITEMS = [
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
 ] as const;
+
+const INTERNAL_URL_BASE = "http://homecook.local";
+
+function getMealContextLabelFromReturnHref(returnHref: string) {
+  try {
+    const url = new URL(returnHref, INTERNAL_URL_BASE);
+    const match = url.pathname.match(/^\/planner\/(\d{4}-\d{2}-\d{2})\/[^/]+$/);
+    if (!match) {
+      return null;
+    }
+
+    const planDate = match[1]!;
+    const slot = url.searchParams.get("slot")?.trim();
+
+    return slot
+      ? `${formatKoreaCompactDate(planDate)} ${slot}`
+      : formatKoreaCompactDate(planDate);
+  } catch {
+    return null;
+  }
+}
 
 export interface CookModeScreenProps {
   sessionId: string;
@@ -345,6 +367,7 @@ export function CookModeScreen({
   if (!visibleData) return null;
 
   const { recipe } = visibleData;
+  const mealContextLabel = getMealContextLabelFromReturnHref(appReturn.href);
 
   if (isMobileViewport) {
     return (
@@ -354,6 +377,7 @@ export function CookModeScreen({
           completeButtonTestId="complete-button"
           contentTestId="cook-mode-content"
           controlsDisabled={screenState !== "ready"}
+          mealContextLabel={mealContextLabel}
           onCancel={handleCancelClick}
           onComplete={handleCompleteClick}
           recipe={recipe}
@@ -427,14 +451,25 @@ export function CookModeScreen({
         completeButtonTestId="complete-button"
         contentTestId="cook-mode-content"
         controlsDisabled={screenState !== "ready"}
+        mealContextLabel={mealContextLabel}
         onCancel={handleCancelClick}
-        onComplete={handleConsumedConfirm}
+        onComplete={handleCompleteClick}
         recipe={recipe}
         screenTestId="cook-mode-screen"
         servingsTestId="cook-mode-servings"
         titleTestId="cook-mode-title"
         variant="planner"
       />
+
+      {showConsumedSheet ? (
+        <ConsumedIngredientSheet
+          ingredients={recipe.ingredients}
+          onClose={() => setShowConsumedSheet(false)}
+          onConfirm={handleConsumedConfirm}
+          onSkip={handleConsumedSkip}
+          recipeTitle={recipe.title}
+        />
+      ) : null}
 
       {cancelConfirm ? (
         <PlannerCookCancelDialog

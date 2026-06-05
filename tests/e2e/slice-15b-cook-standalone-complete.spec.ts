@@ -8,10 +8,6 @@ import {
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 
-function isDesktopViewport(page: Page) {
-  return (page.viewportSize()?.width ?? 1280) >= 1024;
-}
-
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   await page.addInitScript(
     ({ key, state }) => {
@@ -172,19 +168,12 @@ test.describe("15b standalone cook mode", () => {
     const ingredients = page.getByTestId("ingredient-item");
     await expect(ingredients).toHaveCount(2);
 
-    if (isDesktopViewport(page)) {
-      await page.getByTestId("consumed-check-ing-2").click();
-      await page.getByTestId("standalone-complete-button").click();
-    } else {
-      await page.getByTestId("standalone-complete-button").click();
+    await page.getByTestId("standalone-complete-button").click();
 
-      await expect(
-        page.getByTestId("consumed-ingredient-sheet"),
-      ).toBeVisible();
+    await expect(page.getByTestId("consumed-ingredient-sheet")).toBeVisible();
 
-      await page.getByTestId("consumed-check-ing-1").click();
-      await page.getByTestId("consumed-confirm-button").click();
-    }
+    await page.getByTestId("consumed-check-ing-1").click();
+    await page.getByTestId("consumed-confirm-button").click();
 
     // Navigates to recipe detail
     await page.waitForURL(new RegExp(`${RECIPE_PATH}(\\?.*)?$`));
@@ -251,18 +240,10 @@ test.describe("15b standalone cook mode", () => {
     await page.goto(`/cooking/recipes/${RECIPE_ID}/cook-mode?servings=2`);
     await page.waitForSelector('[data-testid="standalone-complete-button"]');
 
-    if (isDesktopViewport(page)) {
-      await page.getByTestId("consumed-check-ing-1").click();
-      await page.getByTestId("consumed-check-ing-2").click();
-      await page.getByTestId("standalone-complete-button").click();
-    } else {
-      await page.getByTestId("standalone-complete-button").click();
-      await expect(
-        page.getByTestId("consumed-ingredient-sheet"),
-      ).toBeVisible();
+    await page.getByTestId("standalone-complete-button").click();
+    await expect(page.getByTestId("consumed-ingredient-sheet")).toBeVisible();
 
-      await page.getByTestId("consumed-skip-button").click();
-    }
+    await page.getByTestId("consumed-skip-button").click();
 
     await page.waitForURL(new RegExp(`${RECIPE_PATH}(\\?.*)?$`));
   });

@@ -20,6 +20,7 @@ type MobileCookModeVariant = "planner" | "standalone";
 interface MobileCookModeViewProps {
   recipe: CookingModeRecipe;
   variant: MobileCookModeVariant;
+  mealContextLabel?: string | null;
   screenTestId: string;
   contentTestId: string;
   titleTestId: string;
@@ -83,6 +84,7 @@ const METHOD_ALIASES: Record<string, keyof typeof METHOD_VISUALS> = {
 export function MobileCookModeView({
   recipe,
   variant,
+  mealContextLabel,
   screenTestId,
   contentTestId,
   titleTestId,
@@ -93,8 +95,8 @@ export function MobileCookModeView({
   onCancel,
   onComplete,
 }: MobileCookModeViewProps) {
-  const eyebrow =
-    variant === "standalone" ? "요리 모드 · 독립 요리" : "요리 모드 · 4/23 점심";
+  const contextLabel =
+    variant === "standalone" ? "독립 요리" : mealContextLabel ?? "플래너 요리";
   return (
     <div
       className="relative min-h-dvh overflow-hidden bg-[var(--foreground)] text-[var(--text-inverse)]"
@@ -112,7 +114,7 @@ export function MobileCookModeView({
           </button>
           <div className="min-w-0 flex-1 px-3 text-center">
             <p className="mb-0.5 text-[11px] font-medium leading-[1.3] text-[var(--text-inverse-65)]">
-              {eyebrow}
+              요리모드
             </p>
             <h1
               className="truncate text-[17px] font-bold leading-[1.12] text-[var(--text-inverse-95)]"
@@ -124,7 +126,7 @@ export function MobileCookModeView({
               className="text-[13px] font-medium leading-[1.2] text-[var(--text-inverse)]"
               data-testid={servingsTestId}
             >
-              {recipe.cooking_servings}인분
+              {contextLabel} · {recipe.cooking_servings}인분
             </p>
           </div>
           <div aria-hidden="true" className="h-9 w-9" />
@@ -200,31 +202,35 @@ function MobileStepList({
               </li>
             ) : null}
             <li
-              className="rounded-[var(--radius-panel)] p-5 text-[var(--foreground)]"
+              className="rounded-[var(--radius-panel)] border border-[var(--surface-alpha-18)] bg-[var(--surface)] p-5 text-[var(--foreground)] shadow-[0_10px_28px_var(--foreground-alpha-16)]"
               data-testid="step-item"
               style={{
-                background: method.bg,
-                borderLeft: `5px solid ${method.border}`,
+                borderTop: `4px solid ${method.border}`,
               }}
             >
-              <div className="mb-2.5 flex items-center gap-2">
+              <div className="mb-3 flex items-center gap-2">
                 <span
-                  className="rounded-full px-2.5 py-[3px] text-[11px] font-bold leading-[1.2] text-[var(--text-inverse)]"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-[15px] font-extrabold leading-none text-[var(--text-inverse)]"
                   style={{ background: method.border }}
                 >
-                  STEP {step.step_number}
+                  {step.step_number}
                 </span>
                 <span
-                  className="rounded-full bg-[var(--surface)] px-2 py-[3px] text-[11px] font-bold leading-[1.2]"
-                  style={{ color: method.text }}
+                  className="rounded-full px-2.5 py-[5px] text-[12px] font-extrabold leading-none"
+                  style={{ background: method.bg, color: method.text }}
                 >
                   {method.label}
                 </span>
               </div>
-              <h2 className="mb-2 text-[18px] font-bold leading-[1.3]">
-                {title}
-              </h2>
-              <p className="text-[15px] font-medium leading-[1.6] text-[var(--foreground)]">
+              {title ? (
+                <h2
+                  className="sr-only"
+                  style={{ color: method.text }}
+                >
+                  {title}
+                </h2>
+              ) : null}
+              <p className="text-[17px] font-semibold leading-[1.65] text-[var(--foreground)]">
                 {stripMatchingSectionPrefix(
                   step.instruction,
                   step.component_label,

@@ -15,6 +15,7 @@ import { WebButton, WebShell, WebTopNav } from "@/components/web";
 interface CookModeDesktopViewProps {
   recipe: CookingModeRecipe;
   variant: "planner" | "standalone";
+  mealContextLabel?: string | null;
   screenTestId: string;
   contentTestId: string;
   titleTestId: string;
@@ -23,7 +24,7 @@ interface CookModeDesktopViewProps {
   completeButtonTestId: string;
   controlsDisabled: boolean;
   onCancel: () => void;
-  onComplete: (consumedIds: string[]) => void;
+  onComplete: () => void;
 }
 
 const WEB_NAV_ITEMS = [
@@ -36,6 +37,7 @@ const WEB_NAV_ITEMS = [
 export function CookModeDesktopView({
   recipe,
   variant,
+  mealContextLabel,
   screenTestId,
   contentTestId,
   titleTestId,
@@ -46,14 +48,6 @@ export function CookModeDesktopView({
   onCancel,
   onComplete,
 }: CookModeDesktopViewProps) {
-  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(
-    () => new Set(recipe.ingredients.map((ingredient) => ingredient.ingredient_id)),
-  );
-  const ingredientIds = React.useMemo(
-    () => recipe.ingredients.map((ingredient) => ingredient.ingredient_id),
-    [recipe.ingredients],
-  );
-  const selectedCount = ingredientIds.filter((id) => selectedIds.has(id)).length;
   const cancelLabel = "취소";
   const breadcrumb =
     variant === "planner"
@@ -63,27 +57,6 @@ export function CookModeDesktopView({
     variant === "planner"
       ? "web-cook-mode-hero web-cook-mode-hero-planner"
       : "web-cook-mode-hero web-cook-mode-hero-standalone";
-
-  React.useEffect(() => {
-    setSelectedIds(new Set(ingredientIds));
-  }, [ingredientIds]);
-
-  const handleToggleIngredient = React.useCallback((ingredientId: string) => {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (next.has(ingredientId)) {
-        next.delete(ingredientId);
-      } else {
-        next.add(ingredientId);
-      }
-
-      return next;
-    });
-  }, []);
-
-  const handleComplete = React.useCallback(() => {
-    onComplete(ingredientIds.filter((id) => selectedIds.has(id)));
-  }, [ingredientIds, onComplete, selectedIds]);
 
   return (
     <WebShell className="web-cooking-shell" wide>
@@ -105,20 +78,17 @@ export function CookModeDesktopView({
         </nav>
 
         <section className={heroClassName}>
+          <h1 className="web-cook-mode-page-title">요리모드</h1>
           <div className="web-cook-mode-hero-meta">
-            {variant === "planner" ? (
-              <span className="web-cook-status-pill web-cook-status-done">
-                장보기 완료
-              </span>
-            ) : null}
+            {mealContextLabel ? <span>{mealContextLabel}</span> : null}
             <span>
-              {variant === "planner" ? "플래너 끼니" : "독립 요리"} ·{" "}
+              {variant === "planner" ? "플래너 요리" : "독립 요리"} ·{" "}
               <span data-testid={servingsTestId}>{recipe.cooking_servings}인분</span>
             </span>
           </div>
-          <h1 data-testid={titleTestId}>{recipe.title}</h1>
+          <h2 data-testid={titleTestId}>{recipe.title}</h2>
           <p className="web-cook-mode-summary">
-            만들기 {recipe.steps.length}개 · 소진된 재료 {recipe.ingredients.length}개
+            만들기 {recipe.steps.length}개 · 필요한 재료 {recipe.ingredients.length}개
           </p>
           {variant === "standalone" ? (
             <p className="web-cook-standalone-notice">
@@ -128,35 +98,16 @@ export function CookModeDesktopView({
         </section>
 
         <div className="web-cook-mode-layout" data-testid={contentTestId}>
-          <section
-            aria-labelledby={`${screenTestId}-steps-heading`}
-            className="web-cook-step-panel"
-          >
-            <h2 id={`${screenTestId}-steps-heading`}>만들기</h2>
-            <StepList steps={recipe.steps} />
-          </section>
-
           <aside className="web-cook-checklist-panel" data-testid="cook-mode-action-rail">
-            <h2 id={`${screenTestId}-ingredients-heading`}>소진된 재료</h2>
-            <p className="web-cook-checklist-helper">
-              체크된 재료는 팬트리에서 자동으로 빠져요.
-            </p>
-            <IngredientChecklist
-              controlsDisabled={controlsDisabled}
-              onToggle={handleToggleIngredient}
-              recipe={recipe}
-              selectedIds={selectedIds}
-            />
-            <p className="web-cook-checklist-summary">
-              {recipe.ingredients.length}개 중 {selectedCount}개 선택
-            </p>
+            <h2 id={`${screenTestId}-ingredients-heading`}>필요한 재료</h2>
+            <IngredientSummary recipe={recipe} />
             <WebButton
               data-testid={completeButtonTestId}
               disabled={controlsDisabled}
               fullWidth
-              onClick={handleComplete}
+              onClick={onComplete}
             >
-              ✓ 요리 완료 ({selectedCount}개 소진)
+              요리 완료
             </WebButton>
             <WebButton
               data-testid={cancelButtonTestId}
@@ -168,22 +119,24 @@ export function CookModeDesktopView({
               {cancelLabel}
             </WebButton>
           </aside>
+
+          <section
+            aria-labelledby={`${screenTestId}-steps-heading`}
+            className="web-cook-step-panel"
+          >
+            <h2 id={`${screenTestId}-steps-heading`}>만들기</h2>
+            <StepList steps={recipe.steps} />
+          </section>
         </div>
       </main>
     </WebShell>
   );
 }
 
-function IngredientChecklist({
-  controlsDisabled,
-  onToggle,
+function IngredientSummary({
   recipe,
-  selectedIds,
 }: {
-  controlsDisabled: boolean;
-  onToggle: (ingredientId: string) => void;
   recipe: CookingModeRecipe;
-  selectedIds: Set<string>;
 }) {
   if (recipe.ingredients.length === 0) {
     return (
@@ -199,7 +152,6 @@ function IngredientChecklist({
       data-testid="ingredient-list"
     >
       {recipe.ingredients.map((ingredient, idx) => {
-        const selected = selectedIds.has(ingredient.ingredient_id);
         const sectionLabel = normalizeRecipeSectionLabel(
           ingredient.component_label,
         );
@@ -218,29 +170,14 @@ function IngredientChecklist({
               </li>
             ) : null}
             <li data-testid="ingredient-item">
-              <button
-                aria-pressed={selected}
-                className={
-                  selected
-                    ? "web-cook-checklist-item web-cook-checklist-item-selected"
-                    : "web-cook-checklist-item"
-                }
-                data-testid={`consumed-check-${ingredient.ingredient_id}`}
-                disabled={controlsDisabled}
-                onClick={() => onToggle(ingredient.ingredient_id)}
-                type="button"
-              >
-                <span className="web-cook-checkmark" aria-hidden="true">
-                  {selected ? "✓" : ""}
-                </span>
+              <div className="web-cook-checklist-item">
                 <span className="web-cook-check-name">
                   {ingredient.standard_name}
                 </span>
                 <span className="web-cook-check-amount">
-                  {formatIngredientAmount(ingredient)}
+                  {formatIngredientAmountOnly(ingredient)}
                 </span>
-                <span className="web-cook-check-owned">보유</span>
-              </button>
+              </div>
             </li>
           </React.Fragment>
         );
@@ -310,20 +247,22 @@ function StepList({ steps }: { steps: CookingModeStep[] }) {
   );
 }
 
-function formatIngredientAmount(
+function formatIngredientAmountOnly(
   ingredient: CookingModeRecipe["ingredients"][number],
 ) {
+  if (ingredient.ingredient_type === "TO_TASTE") {
+    return "적당량";
+  }
+
   if (ingredient.display_text) {
-    return (
+    const normalized =
       stripMatchingSectionPrefix(
         ingredient.display_text,
         ingredient.component_label,
-      ) ?? ingredient.display_text
-    );
-  }
+      ) ?? ingredient.display_text;
+    const withoutName = normalized.replace(ingredient.standard_name, "").trim();
 
-  if (ingredient.ingredient_type === "TO_TASTE") {
-    return "적당량";
+    return withoutName || normalized;
   }
 
   if (ingredient.amount === null) {

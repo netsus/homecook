@@ -173,7 +173,7 @@ test.describe("Slice 15a cook planner complete", () => {
       );
     } else {
       await expect(page.getByTestId("step-item").first()).toHaveCSS(
-        "border-left-color",
+        "border-top-color",
         "rgba(255, 149, 0, 0.26)",
       );
       await expect(page.getByText("볶기").first()).toHaveCSS(
@@ -190,8 +190,12 @@ test.describe("Slice 15a cook planner complete", () => {
     await page.goto("/cooking/sessions/session-abc/cook-mode");
 
     await expect(page.getByTestId("ingredient-list")).toBeVisible();
-    await expect(page.getByText("양파 1개")).toBeVisible();
-    await expect(page.getByText("김치 200g")).toBeVisible();
+    await expect(
+      page.getByTestId("ingredient-item").filter({ hasText: /양파\s*1개/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("ingredient-item").filter({ hasText: /김치\s*200g/ }),
+    ).toBeVisible();
     await expect(page.getByTestId("step-list")).toBeVisible();
     await expect(page.getByText("양파를 썰어주세요.")).toBeVisible();
     await expect(page.getByText("김치를 넣고 끓여주세요.")).toBeVisible();
@@ -199,7 +203,9 @@ test.describe("Slice 15a cook planner complete", () => {
 
     if (!isDesktopViewport(page)) {
       await expect(page.getByTestId("mobile-ingredient-summary")).toBeVisible();
-      await expect(page.getByTestId("cook-mode-servings")).toHaveText("2인분");
+      await expect(page.getByTestId("cook-mode-servings")).toContainText(
+        "2인분",
+      );
 
       const sectionOrder = await page
         .locator('[data-testid="mobile-ingredient-summary"], [data-testid="step-list"]')
@@ -237,23 +243,15 @@ test.describe("Slice 15a cook planner complete", () => {
 
     await expect(page.getByTestId("complete-button")).toBeVisible();
 
-    if (isDesktopViewport(page)) {
-      await expect(page.getByTestId("consumed-check-ing-1")).toBeVisible();
-      await page.getByTestId("consumed-check-ing-2").click();
-      await page.getByTestId("complete-button").click();
-    } else {
-      await page.getByTestId("complete-button").click();
+    await page.getByTestId("complete-button").click();
 
-      await expect(
-        page.getByTestId("consumed-ingredient-sheet"),
-      ).toBeVisible();
-      await expect(
-        page.getByText(/소진(한 재료를 체크해주세요|된 재료를 확인해주세요)/),
-      ).toBeVisible();
+    await expect(page.getByTestId("consumed-ingredient-sheet")).toBeVisible();
+    await expect(
+      page.getByText(/소진(한 재료를 체크해주세요|된 재료를 확인해주세요)/),
+    ).toBeVisible();
 
-      await page.getByTestId("consumed-check-ing-1").click();
-      await page.getByTestId("consumed-confirm-button").click();
-    }
+    await page.getByTestId("consumed-check-ing-1").click();
+    await page.getByTestId("consumed-confirm-button").click();
 
     await expect(page).toHaveURL(/\/planner/);
   });
@@ -267,18 +265,10 @@ test.describe("Slice 15a cook planner complete", () => {
 
     await page.goto("/cooking/sessions/session-abc/cook-mode");
 
-    if (isDesktopViewport(page)) {
-      await page.getByTestId("consumed-check-ing-1").click();
-      await page.getByTestId("consumed-check-ing-2").click();
-      await page.getByTestId("complete-button").click();
-    } else {
-      await page.getByTestId("complete-button").click();
+    await page.getByTestId("complete-button").click();
 
-      await expect(
-        page.getByTestId("consumed-ingredient-sheet"),
-      ).toBeVisible();
-      await page.getByTestId("consumed-skip-button").click();
-    }
+    await expect(page.getByTestId("consumed-ingredient-sheet")).toBeVisible();
+    await page.getByTestId("consumed-skip-button").click();
 
     await expect(page).toHaveURL(/\/planner/);
   });

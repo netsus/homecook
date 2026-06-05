@@ -42,9 +42,10 @@ export function ConsumedIngredientSheet({
   }, [onClose]);
 
   useEffect(() => {
-    if (!isMobileViewport) return;
-    setChecked(new Set(ingredients.map((ingredient) => ingredient.ingredient_id)));
-  }, [ingredients, isMobileViewport]);
+    setChecked(
+      new Set(ingredients.map((ingredient) => ingredient.ingredient_id)),
+    );
+  }, [ingredients]);
 
   const toggleIngredient = useCallback((id: string) => {
     setChecked((prev) => {
@@ -67,11 +68,7 @@ export function ConsumedIngredientSheet({
       <AppBottomSheet
         ariaLabelledBy="consumed-sheet-title"
         closeButtonRef={closeButtonRef}
-        description={
-          recipeTitle
-            ? `체크된 재료는 팬트리에서 자동으로 빠져요. 요리: ${recipeTitle}`
-            : "체크된 재료는 팬트리에서 자동으로 빠져요."
-        }
+        description="체크된 재료는 팬트리에서 자동으로 빠져요."
         descriptionClassName="mt-1 text-[13px] font-normal leading-[1.5] text-[var(--wave1-text-2)]"
         footer={
           <AppModalFooterActions
@@ -84,44 +81,58 @@ export function ConsumedIngredientSheet({
           />
         }
         onClose={onClose}
+        headerSlot={
+          recipeTitle ? (
+            <p
+              className="truncate rounded-full bg-[var(--wave1-surface-fill)] px-3 py-1.5 text-[12px] font-semibold text-[var(--wave1-text-2)]"
+              data-testid="consumed-sheet-recipe-title"
+            >
+              {recipeTitle}
+            </p>
+          ) : null
+        }
+        headerSlotClassName="mt-2"
         testId="consumed-ingredient-sheet"
         title="소진된 재료를 확인해주세요"
       >
-        <div data-testid="consumed-ingredient-list">
+        <div
+          className="grid grid-cols-2 gap-2"
+          data-testid="consumed-ingredient-list"
+        >
           {ingredients.map((ingredient) => {
             const isChecked = checked.has(ingredient.ingredient_id);
 
             return (
-            <button
-              className="mb-1.5 flex w-full cursor-pointer items-center gap-3 rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-[var(--surface)] px-3.5 py-3 text-left last:mb-0"
-              data-testid={`consumed-check-${ingredient.ingredient_id}`}
-              key={ingredient.ingredient_id}
-              onClick={() => toggleIngredient(ingredient.ingredient_id)}
-              type="button"
-            >
-              <span
-                aria-hidden="true"
-                className={[
-                  "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[4px] border-[1.5px]",
-                  isChecked
-                    ? "border-[var(--wave1-mint-contrast)] bg-[var(--wave1-mint-contrast)]"
-                    : "border-[var(--wave1-border)] bg-[var(--surface)]",
-                ].join(" ")}
+              <button
+                className="flex min-h-[58px] w-full cursor-pointer items-center gap-2 rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-[var(--surface)] px-3 py-2.5 text-left"
+                data-testid={`consumed-check-${ingredient.ingredient_id}`}
+                key={ingredient.ingredient_id}
+                onClick={() => toggleIngredient(ingredient.ingredient_id)}
+                type="button"
               >
-                {isChecked ? <CheckIcon /> : null}
-              </span>
-              <span
-                className="min-w-0 flex-1"
-                data-testid="consumed-ingredient-item"
-              >
-                <span className="block text-[14px] font-semibold leading-[1.35] text-[var(--wave1-ink)]">
-                  {ingredient.standard_name}
+                <span
+                  aria-hidden="true"
+                  className={[
+                    "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[4px] border-[1.5px]",
+                    isChecked
+                      ? "border-[var(--wave1-mint-contrast)] bg-[var(--wave1-mint-contrast)]"
+                      : "border-[var(--wave1-border)] bg-[var(--surface)]",
+                  ].join(" ")}
+                >
+                  {isChecked ? <CheckIcon /> : null}
                 </span>
-                <span className="block text-[12px] font-normal leading-[1.35] text-[var(--wave1-text-2)]">
-                  {formatIngredientAmount(ingredient)}
+                <span
+                  className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5"
+                  data-testid="consumed-ingredient-item"
+                >
+                  <span className="truncate text-[14px] font-semibold leading-[1.35] text-[var(--wave1-ink)]">
+                    {ingredient.standard_name}
+                  </span>
+                  <span className="shrink-0 text-right text-[12px] font-semibold leading-[1.35] text-[var(--wave1-text-2)]">
+                    {formatIngredientAmountOnly(ingredient)}
+                  </span>
                 </span>
-              </span>
-            </button>
+              </button>
             );
           })}
         </div>
@@ -200,7 +211,7 @@ export function ConsumedIngredientSheet({
                 {ing.standard_name}
               </span>
               <span className="min-w-0 max-w-[44%] break-words text-right text-xs text-[var(--muted)]">
-                {ing.display_text ?? ""}
+                {formatIngredientAmountOnly(ing)}
               </span>
             </label>
           ))}
@@ -229,13 +240,20 @@ export function ConsumedIngredientSheet({
   );
 }
 
-function formatIngredientAmount(ingredient: CookingModeIngredient) {
-  if (ingredient.display_text) {
-    return ingredient.display_text;
-  }
-
+function formatIngredientAmountOnly(ingredient: CookingModeIngredient) {
   if (ingredient.ingredient_type === "TO_TASTE") {
     return "적당량";
+  }
+
+  if (ingredient.display_text) {
+    const normalized = ingredient.display_text
+      .replace(/^\[[^\]]+\]\s*/, "")
+      .trim();
+    const withoutName = normalized
+      .replace(ingredient.standard_name, "")
+      .trim();
+
+    return withoutName || normalized;
   }
 
   if (ingredient.amount === null) {
