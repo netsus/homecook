@@ -16,6 +16,7 @@ import { MealAddPickerFlow } from "@/components/planner/meal-add-picker-flow";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
+import { AllPantryCompletionModal } from "@/components/shopping/all-pantry-completion-modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   WebButton,
@@ -46,6 +47,10 @@ import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { MealListItemData } from "@/types/meal";
+import type {
+  ShoppingListAllPantryCompletionSummary,
+  ShoppingListCreateData,
+} from "@/types/shopping";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ScreenState = "loading" | "ready" | "empty" | "error";
@@ -478,6 +483,12 @@ function getAppMealStatusClass(status: MealListItemData["status"]) {
   }
 
   return "bg-[var(--planner-status-registered-soft)] text-[var(--planner-status-registered-strong)]";
+}
+
+function isAllPantryCompletion(
+  result: ShoppingListCreateData,
+): result is ShoppingListAllPantryCompletionSummary {
+  return "completed_without_list" in result && result.completed_without_list === true;
 }
 
 function MealWebProfileButton() {
@@ -1064,6 +1075,8 @@ export function MealScreen({
   const [mealAddSheetOpen, setMealAddSheetOpen] = useState(false);
   const [mealAddPickerMode, setMealAddPickerMode] =
     useState<MealAddPickerMode | null>(null);
+  const [allPantryCompletion, setAllPantryCompletion] =
+    useState<ShoppingListAllPantryCompletionSummary | null>(null);
 
   // ── Auth setup (identical pattern to PlannerWeekScreen) ──────────────────
   useEffect(() => {
@@ -1294,6 +1307,12 @@ export function MealScreen({
         ],
       });
 
+      if (isAllPantryCompletion(list)) {
+        setAllPantryCompletion(list);
+        await loadMeals();
+        return;
+      }
+
       router.push(
         buildReturnHref(`/shopping/lists/${list.id}`, {
           returnTo: buildNextPath(planDate, columnId, slotName),
@@ -1377,6 +1396,15 @@ export function MealScreen({
     setMealAddPickerMode(null);
     setMealAddSheetOpen(false);
     await loadMeals();
+  }
+
+  function handleAllPantryCompletionClose() {
+    setAllPantryCompletion(null);
+  }
+
+  function handleAllPantryCompletionGoPlanner() {
+    setAllPantryCompletion(null);
+    router.push("/planner");
   }
 
   // ── Computed values ───────────────────────────────────────────────────────
@@ -1598,6 +1626,14 @@ export function MealScreen({
           onComplete={handleMealAddComplete}
           planDate={planDate}
           slotName={slotName}
+        />
+      ) : null}
+
+      {allPantryCompletion ? (
+        <AllPantryCompletionModal
+          completion={allPantryCompletion}
+          onClose={handleAllPantryCompletionClose}
+          onGoPlanner={handleAllPantryCompletionGoPlanner}
         />
       ) : null}
 
