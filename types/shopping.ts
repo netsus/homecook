@@ -3,6 +3,7 @@ import type { ApiResponse } from "@/types/api";
 export interface ShoppingPreviewMeal {
   id: string;
   column_id: string;
+  column_name?: string | null;
   plan_date: string;
   recipe_id: string;
   recipe_name: string;
@@ -81,6 +82,7 @@ export interface ShoppingListRecipeSummary {
 export interface ShoppingListItemSummary {
   id: string;
   ingredient_id: string;
+  category?: string | null;
   display_text: string;
   amounts_json: Array<{ amount: number; unit: string }>;
   is_checked: boolean;

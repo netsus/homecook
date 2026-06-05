@@ -28,7 +28,6 @@ import type {
   ShoppingListDetail,
   ShoppingListItemSummary,
   ShoppingPreviewData,
-  ShoppingPreviewMeal,
 } from "@/types/shopping";
 
 export interface ShoppingFlowScreenProps {
@@ -36,10 +35,12 @@ export interface ShoppingFlowScreenProps {
 }
 
 interface MealConfig {
+  selection_id: string;
   recipe_id: string;
   meal_ids: string[];
   meals: Array<{
     column_id: string;
+    column_name?: string | null;
     id: string;
     plan_date: string;
     planned_servings: number;
@@ -60,36 +61,16 @@ const SHOPPING_FLOW_RETURN_PATH = "/shopping/flow";
 const KOREAN_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-function groupMealsByRecipe(meals: ShoppingPreviewMeal[]): MealConfig[] {
-  const grouped = new Map<string, MealConfig>();
-
-  meals.forEach((meal) => {
-    const existing = grouped.get(meal.recipe_id);
-
-    if (existing) {
-      existing.meal_ids.push(meal.id);
-      existing.meals.push({
-        column_id: meal.column_id,
-        id: meal.id,
-        plan_date: meal.plan_date,
-        planned_servings: meal.planned_servings,
-        created_at: meal.created_at,
-      });
-      existing.planned_servings_total += meal.planned_servings;
-      existing.shopping_servings += meal.planned_servings;
-      existing.meal_count += 1;
-      if (meal.created_at < existing.created_at) {
-        existing.created_at = meal.created_at;
-      }
-      return;
-    }
-
-    grouped.set(meal.recipe_id, {
+function buildMealConfigs(data: ShoppingPreviewData): MealConfig[] {
+  return data.eligible_meals
+    .map((meal) => ({
+      selection_id: meal.id,
       recipe_id: meal.recipe_id,
       meal_ids: [meal.id],
       meals: [
         {
           column_id: meal.column_id,
+          column_name: meal.column_name ?? null,
           id: meal.id,
           plan_date: meal.plan_date,
           planned_servings: meal.planned_servings,
@@ -104,116 +85,8 @@ function groupMealsByRecipe(meals: ShoppingPreviewMeal[]): MealConfig[] {
       meal_count: 1,
       plan_date: meal.plan_date,
       created_at: meal.created_at,
-    });
-  });
-
-  return [...grouped.values()].sort(compareMealConfigs);
-}
-
-function buildMealConfigs(data: ShoppingPreviewData): MealConfig[] {
-  const eligibleMealMap = new Map(
-    data.eligible_meals.map((meal) => [
-      meal.id,
-      {
-        id: meal.id,
-        column_id: meal.column_id,
-        plan_date: meal.plan_date,
-        planned_servings: meal.planned_servings,
-        created_at: meal.created_at,
-      },
-    ]),
-  );
-
-  if (Array.isArray(data.recipes) && data.recipes.length > 0) {
-    return data.recipes.map((recipe) => {
-      const meals = recipe.meal_ids
-        .map((mealId) => eligibleMealMap.get(mealId))
-        .filter((meal): meal is NonNullable<typeof meal> => meal !== undefined);
-      const createdAt =
-        [...meals].sort((left, right) =>
-          left.created_at.localeCompare(right.created_at),
-        )[0]?.created_at ?? "";
-      const primaryMeal =
-        [...meals].sort((left, right) => {
-          const byPlanDate = left.plan_date.localeCompare(right.plan_date);
-          if (byPlanDate !== 0) return byPlanDate;
-          return left.created_at.localeCompare(right.created_at);
-        })[0] ?? null;
-
-      return {
-        recipe_id: recipe.recipe_id,
-        meal_ids: recipe.meal_ids,
-        meals,
-        shopping_servings: recipe.shopping_servings,
-        isSelected: recipe.is_selected,
-        recipe_name: recipe.recipe_name,
-        recipe_thumbnail: recipe.recipe_thumbnail,
-        planned_servings_total: recipe.planned_servings_total,
-        meal_count: recipe.meal_ids.length,
-        plan_date: primaryMeal?.plan_date ?? "",
-        created_at: createdAt,
-      };
-    }).sort(compareMealConfigs);
-  }
-
-  return groupMealsByRecipe(data.eligible_meals);
-}
-
-function selectMealIdsForShoppingServings(
-  meals: MealConfig["meals"],
-  fallbackMealIds: string[],
-  shoppingServings: number,
-) {
-  if (meals.length === 0) {
-    return fallbackMealIds;
-  }
-
-  const totalServings = meals.reduce(
-    (total, meal) => total + meal.planned_servings,
-    0,
-  );
-
-  if (shoppingServings >= totalServings) {
-    return meals.map((meal) => meal.id);
-  }
-
-  const sortedMeals = [...meals].sort((left, right) => {
-    const byCreatedAt = left.created_at.localeCompare(right.created_at);
-    if (byCreatedAt !== 0) {
-      return byCreatedAt;
-    }
-
-    return left.id.localeCompare(right.id);
-  });
-  const reachable = new Map<number, MealConfig["meals"]>([[0, []]]);
-
-  sortedMeals.forEach((meal) => {
-    const snapshots = [...reachable.entries()];
-
-    snapshots.forEach(([servings, selectedMeals]) => {
-      const nextServings = servings + meal.planned_servings;
-
-      if (nextServings > shoppingServings || reachable.has(nextServings)) {
-        return;
-      }
-
-      reachable.set(nextServings, [...selectedMeals, meal]);
-    });
-  });
-
-  const bestServings = [...reachable.keys()]
-    .filter((servings) => servings > 0)
-    .sort((left, right) => right - left)[0];
-
-  if (bestServings) {
-    return (reachable.get(bestServings) ?? []).map((meal) => meal.id);
-  }
-
-  const smallestMeal = sortedMeals.reduce((best, meal) =>
-    meal.planned_servings < best.planned_servings ? meal : best,
-  );
-
-  return [smallestMeal.id];
+    }))
+    .sort(compareMealConfigs);
 }
 
 function shouldUseInlineReview() {
@@ -361,15 +234,35 @@ function compareMealConfigs(left: MealConfig, right: MealConfig) {
   const byName = left.recipe_name.localeCompare(right.recipe_name, "ko");
   if (byName !== 0) return byName;
 
-  return left.recipe_id.localeCompare(right.recipe_id);
+  const byRecipeId = left.recipe_id.localeCompare(right.recipe_id);
+  if (byRecipeId !== 0) return byRecipeId;
+
+  return left.selection_id.localeCompare(right.selection_id);
 }
 
 function buildMealHref(config: MealConfig) {
   const meal = getPrimaryMeal(config);
   if (!meal?.plan_date || !meal.column_id) return "/planner";
-  return buildReturnHref(`/planner/${meal.plan_date}/${meal.column_id}`, {
+  const slotQuery = meal.column_name
+    ? `?slot=${encodeURIComponent(meal.column_name)}`
+    : "";
+  return buildReturnHref(`/planner/${meal.plan_date}/${meal.column_id}${slotQuery}`, {
     returnTo: SHOPPING_FLOW_RETURN_PATH,
   });
+}
+
+function inferColumnName(columnId: string) {
+  const normalized = columnId.toLowerCase();
+  if (normalized.includes("breakfast")) return "아침";
+  if (normalized.includes("lunch")) return "점심";
+  if (normalized.includes("dinner")) return "저녁";
+  return "끼니";
+}
+
+function getMealSlotLabel(config: MealConfig) {
+  const meal = getPrimaryMeal(config);
+  if (!meal) return "끼니";
+  return meal.column_name?.trim() || inferColumnName(meal.column_id);
 }
 
 const recipeVisualMeta: Record<string, { bg: string; emoji: string; meal: string }> = {
@@ -449,10 +342,10 @@ export function ShoppingFlowScreen({
     }
   }, [initialAuthenticated, loadPreview]);
 
-  const handleToggleSelection = useCallback((recipeId: string) => {
+  const handleToggleSelection = useCallback((selectionId: string) => {
     setMealConfigs((prev) =>
       prev.map((config) =>
-        config.recipe_id === recipeId
+        config.selection_id === selectionId
           ? { ...config, isSelected: !config.isSelected }
           : config
       )
@@ -482,13 +375,8 @@ export function ShoppingFlowScreen({
 
     try {
       const body = {
-        recipes: selectedConfigs.map((config) => ({
-          recipe_id: config.recipe_id,
-          meal_ids: selectMealIdsForShoppingServings(
-            config.meals,
-            config.meal_ids,
-            config.shopping_servings,
-          ),
+        meal_configs: selectedConfigs.map((config) => ({
+          meal_id: config.meal_ids[0],
           shopping_servings: config.shopping_servings,
         })),
       };
@@ -766,7 +654,7 @@ export function ShoppingFlowScreen({
             className="shopping-flow-blue-state"
             tone="empty"
             title="장보기 대상이 없어요"
-            description="플래너에 식사를 먼저 등록해 주세요. 등록 완료 전이거나 이미 장보기·요리 흐름에 들어간 식사는 제외돼요."
+            description="플래너에 식사를 먼저 등록해 주세요."
             actionLabel="플래너로 돌아가기"
             onAction={handleBack}
           />
@@ -876,15 +764,9 @@ export function ShoppingFlowScreen({
           <div>
             <p className="web-menu-add-eyebrow">Shopping</p>
             <h1>장보기 준비</h1>
-            <p>
-              식사 등록 완료이면서 아직 장보기 리스트에 없는 식사입니다.
-              같은 레시피는 합산 계획 인분으로 묶어요.
-            </p>
+            <p>같은 재료는 장보기 목록에서 자동으로 합산돼요.</p>
           </div>
           <div className="web-shopping-flow-tools" aria-label="장보기 보조 메뉴">
-            <span>
-              {selectedCount}개 선택 · 총 {selectedServings}인분
-            </span>
             <button onClick={() => push("/mypage?restore=shopping-history-tab")} type="button">
               지난 장보기
             </button>
@@ -898,11 +780,9 @@ export function ShoppingFlowScreen({
           <section className="web-shopping-flow-main" aria-labelledby="shopping-flow-meals-title">
             <div className="web-shopping-section-head">
               <div>
-                <h2 id="shopping-flow-meals-title">장볼 끼니</h2>
-                <p>대상 식사와 합산 인분을 확인하세요.</p>
+                <h2 id="shopping-flow-meals-title">어떤 끼니의 재료를 살까요?</h2>
               </div>
               <div className="web-shopping-section-actions">
-                <span>{mealConfigs.length}개 묶음</span>
                 <button disabled={isAllSelected} onClick={handleSelectAll} type="button">
                   전체 선택
                 </button>
@@ -919,7 +799,7 @@ export function ShoppingFlowScreen({
                     {group.items.map((config) => (
                       <RecipeCard
                         config={config}
-                        key={config.recipe_id}
+                        key={config.selection_id}
                         onToggle={handleToggleSelection}
                       />
                     ))}
@@ -930,9 +810,9 @@ export function ShoppingFlowScreen({
           </section>
 
           <aside className="web-shopping-summary" aria-label="장보기 요약">
-            <h2>선택한 레시피</h2>
-            <strong>{selectedCount}</strong>
-            <p>총 {selectedServings}인분을 장보기 목록으로 만들어요.</p>
+            <h2>선택한 식사</h2>
+            <strong>{selectedCount}개 · {selectedServings}인분</strong>
+            <p>장보기 목록으로 만들어요.</p>
             <WebButton
               data-testid="shopping-create-button"
               disabled={isCreateDisabled}
@@ -1048,7 +928,7 @@ function MobileSelectScreen({
   onClearAll: () => void;
   onCreate: () => void;
   onSelectAll: () => void;
-  onToggle: (recipeId: string) => void;
+  onToggle: (selectionId: string) => void;
 }) {
   return (
     <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface-fill)] lg:hidden">
@@ -1056,14 +936,11 @@ function MobileSelectScreen({
 
       <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
         <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5">
-          <p className="text-[12px] font-extrabold leading-[1.3] text-[var(--brand)]">
-            STEP 1 / 2
-          </p>
-          <h2 className="mt-1 text-[20px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+          <h2 className="text-[20px] font-extrabold leading-[1.3] text-[var(--foreground)]">
             어떤 끼니의 재료를 살까요?
           </h2>
           <p className="mt-3 text-[13px] font-medium leading-[1.5] text-[var(--text-3)]">
-            선택한 끼니의 재료를 자동으로 모아드려요
+            같은 재료는 장보기 목록에서 자동으로 합산돼요.
           </p>
           <div className="mt-4 flex gap-2">
             <button
@@ -1098,7 +975,7 @@ function MobileSelectScreen({
                 {group.items.map((config) => (
                   <MobileSelectRow
                     config={config}
-                    key={config.recipe_id}
+                    key={config.selection_id}
                     onToggle={onToggle}
                   />
                 ))}
@@ -1132,16 +1009,16 @@ function MobileSelectRow({
   onToggle,
 }: {
   config: MealConfig;
-  onToggle: (recipeId: string) => void;
+  onToggle: (selectionId: string) => void;
 }) {
   const visual = getRecipeVisual(config);
-  const isAggregated = config.meal_count > 1;
+  const slotLabel = getMealSlotLabel(config);
 
   return (
     <div
       className={`flex min-h-[56px] cursor-pointer items-center gap-3 px-4 py-2.5 ${config.isSelected ? "" : "opacity-45"}`}
-      data-testid={`shopping-mobile-recipe-row-${config.recipe_id}`}
-      onClick={() => onToggle(config.recipe_id)}
+      data-testid={`shopping-mobile-recipe-row-${config.selection_id}`}
+      onClick={() => onToggle(config.selection_id)}
     >
       <button
         aria-label={
@@ -1152,7 +1029,7 @@ function MobileSelectRow({
         className="flex h-8 w-8 shrink-0 items-center justify-center"
         onClick={(event) => {
           event.stopPropagation();
-          onToggle(config.recipe_id);
+          onToggle(config.selection_id);
         }}
         type="button"
       >
@@ -1185,26 +1062,14 @@ function MobileSelectRow({
       </div>
       <div className="min-w-0 flex-1">
         <Link
-          aria-label={
-            isAggregated
-              ? `${config.recipe_name} 대표 끼니로 이동`
-              : undefined
-          }
-          className="block truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]"
+          className="inline-block max-w-full truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)] underline-offset-4 hover:text-[var(--brand)] hover:underline"
           href={buildMealHref(config)}
           onClick={(event) => event.stopPropagation()}
-          title={isAggregated ? "합산된 레시피의 가장 이른 끼니로 이동" : undefined}
         >
           {config.recipe_name}
         </Link>
         <p className="mt-[2px] truncate text-[11px] font-bold leading-[1.3] text-[var(--text-3)]">
-          {isAggregated ? (
-            <>
-              <span className="text-[var(--brand)]">합산</span>
-              <span> · 대표 끼니로 이동 · </span>
-            </>
-          ) : null}
-          {config.shopping_servings}인분
+          {slotLabel} · {config.shopping_servings}인분
         </p>
       </div>
     </div>
@@ -1380,7 +1245,7 @@ function MobileReviewItem({
           {label}
         </p>
         <p className="mt-1 truncate text-[11px] font-medium leading-[1.3] text-[var(--text-3)]">
-          {amountText(item)} · 1끼에 사용
+          {amountText(item)}
         </p>
       </div>
 
@@ -1403,12 +1268,12 @@ function MobileReviewItem({
 
 interface RecipeCardProps {
   config: MealConfig;
-  onToggle: (recipeId: string) => void;
+  onToggle: (selectionId: string) => void;
 }
 
 function RecipeCard({ config, onToggle }: RecipeCardProps) {
   const visual = getRecipeVisual(config);
-  const isAggregated = config.meal_count > 1;
+  const slotLabel = getMealSlotLabel(config);
 
   return (
     <article
@@ -1416,8 +1281,8 @@ function RecipeCard({ config, onToggle }: RecipeCardProps) {
         "web-shopping-recipe-card",
         config.isSelected ? "web-shopping-recipe-card-selected" : "",
       ].join(" ")}
-      data-testid={`shopping-recipe-card-${config.recipe_id}`}
-      onClick={() => onToggle(config.recipe_id)}
+      data-testid={`shopping-recipe-card-${config.selection_id}`}
+      onClick={() => onToggle(config.selection_id)}
     >
       <button
         aria-label={
@@ -1428,7 +1293,7 @@ function RecipeCard({ config, onToggle }: RecipeCardProps) {
         className="web-shopping-recipe-toggle"
         onClick={(event) => {
           event.stopPropagation();
-          onToggle(config.recipe_id);
+          onToggle(config.selection_id);
         }}
         type="button"
       >
@@ -1451,15 +1316,9 @@ function RecipeCard({ config, onToggle }: RecipeCardProps) {
         <div className="web-shopping-recipe-title-row">
           <h3>
             <Link
-              aria-label={
-                isAggregated
-                  ? `${config.recipe_name} 대표 끼니로 이동`
-                  : undefined
-              }
               className="web-shopping-recipe-title-link"
               href={buildMealHref(config)}
               onClick={(event) => event.stopPropagation()}
-              title={isAggregated ? "합산된 레시피의 가장 이른 끼니로 이동" : undefined}
             >
               {config.recipe_name}
             </Link>
@@ -1467,16 +1326,8 @@ function RecipeCard({ config, onToggle }: RecipeCardProps) {
         </div>
 
         <div className="web-shopping-recipe-meta">
-          <span
-            className={
-              isAggregated ? "web-shopping-recipe-meta-aggregate" : undefined
-            }
-          >
-            {isAggregated
-              ? `합산 ${config.shopping_servings}인분`
-              : `${config.shopping_servings}인분`}
-          </span>
-          {isAggregated ? <span>대표 끼니로 이동</span> : null}
+          <span>{slotLabel}</span>
+          <span>{config.shopping_servings}인분</span>
         </div>
       </div>
     </article>

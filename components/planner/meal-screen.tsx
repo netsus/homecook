@@ -39,6 +39,7 @@ import {
   isMealApiError,
   updateMealServings,
 } from "@/lib/api/meal";
+import { createShoppingList, isShoppingApiError } from "@/lib/api/shopping";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { formatKoreaCompactDate, formatKoreaDate } from "@/lib/korean-date";
 import { buildReturnHref } from "@/lib/navigation/return-context";
@@ -749,7 +750,7 @@ function MealWebView({
   meals: MealListItemData[];
   onAddMeal: () => void;
   onBack: () => void;
-  onCreateShopping: () => void;
+  onCreateShopping: (meal: MealListItemData) => void;
   onDelete: (meal: MealListItemData) => void;
   onRecipeClick: (meal: MealListItemData) => void;
   onRetry: () => void;
@@ -828,7 +829,7 @@ function MealWebView({
                     isPending={pendingMealIds.has(meal.id)}
                     key={meal.id}
                     meal={meal}
-                    onCreateShopping={onCreateShopping}
+                    onCreateShopping={() => onCreateShopping(meal)}
                     onDelete={() => onDelete(meal)}
                     onRecipeClick={() => onRecipeClick(meal)}
                     onStartCook={() => onStartCook(meal)}
@@ -1263,6 +1264,50 @@ export function MealScreen({
     }
   }
 
+  async function createShoppingForMeal(meal: MealListItemData) {
+    if (meal.status !== "registered") {
+      setMealActionError(
+        meal.id,
+        "이미 장보기나 요리 흐름에 들어간 식사는 새 장보기 목록으로 만들 수 없어요.",
+      );
+      return;
+    }
+
+    addPending(meal.id);
+    clearConflictError(meal.id);
+
+    try {
+      const list = await createShoppingList({
+        meal_configs: [
+          {
+            meal_id: meal.id,
+            shopping_servings: meal.planned_servings,
+          },
+        ],
+      });
+
+      router.push(
+        buildReturnHref(`/shopping/lists/${list.id}`, {
+          returnTo: buildNextPath(planDate, columnId, slotName),
+        }),
+      );
+    } catch (error) {
+      if (isShoppingApiError(error) && error.status === 401) {
+        setAuthState("unauthorized");
+        return;
+      }
+
+      setMealActionError(
+        meal.id,
+        isShoppingApiError(error) && error.status === 409
+          ? "이미 다른 장보기 리스트에 포함된 식사예요."
+          : "장보기 목록을 만들지 못했어요. 다시 시도해 주세요.",
+      );
+    } finally {
+      removePending(meal.id);
+    }
+  }
+
   // ── Interaction handlers ──────────────────────────────────────────────────
   function handleStepperTap(meal: MealListItemData, delta: number) {
     const newServings = meal.planned_servings + delta;
@@ -1408,7 +1453,7 @@ export function MealScreen({
             meals={meals}
             onAddMeal={() => router.push(addMealHref)}
             onBack={navigateToPlanner}
-            onCreateShopping={() => router.push("/shopping/flow")}
+            onCreateShopping={(meal) => void createShoppingForMeal(meal)}
             onDelete={(meal) => handleDeleteTap(meal.id)}
             onRecipeClick={(meal) => router.push(`/recipe/${meal.recipe_id}`)}
             onRetry={() => void loadMeals()}
@@ -1492,7 +1537,7 @@ export function MealScreen({
                       conflictError={conflictErrors[meal.id] ?? null}
                       isPending={pendingMealIds.has(meal.id)}
                       meal={meal}
-                      onCreateShopping={() => router.push("/shopping/flow")}
+                      onCreateShopping={() => void createShoppingForMeal(meal)}
                       onDelete={() => handleDeleteTap(meal.id)}
                       onRecipeClick={() => router.push(`/recipe/${meal.recipe_id}`)}
                       onStartCook={() => void startMealCooking(meal)}

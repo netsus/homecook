@@ -7053,7 +7053,7 @@ button {
 
   .web-shopping-flow-tools {
     display: flex;
-    max-width: 420px;
+    max-width: 300px;
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
@@ -7087,7 +7087,7 @@ button {
   .web-shopping-flow-layout,
   .web-shopping-detail-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-columns: minmax(0, 1fr) 380px;
     gap: 28px;
     align-items: start;
   }
@@ -7289,13 +7289,21 @@ button {
   }
 
   .web-shopping-recipe-title-link {
-    display: block;
-    width: 100%;
+    display: inline-block;
+    width: auto;
     max-width: 100%;
     overflow: hidden;
     color: inherit;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+
+  .web-shopping-recipe-title-link:hover,
+  .web-shopping-recipe-title-link:focus-visible {
+    color: var(--web-brand-accessible);
+    text-decoration: underline;
   }
 
   .web-shopping-recipe-title-row span,
@@ -7382,7 +7390,7 @@ button {
 
   .web-shopping-summary strong {
     color: var(--web-text-1);
-    font-size: 40px;
+    font-size: 32px;
     font-weight: 900;
     line-height: 1;
   }
@@ -7435,9 +7443,35 @@ button {
     gap: 16px;
   }
 
+  .web-shopping-progress-count {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0;
+  }
+
+  .web-shopping-progress-count em {
+    color: var(--web-brand);
+    font-size: 32px;
+    font-style: normal;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .web-shopping-progress-title-row {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .web-shopping-progress-title-row span:last-child {
+    color: var(--web-text-2);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
   .web-shopping-progress-track {
     display: block;
-    height: 8px;
+    height: 12px;
     overflow: hidden;
     border-radius: var(--web-r-pill);
     background: var(--web-divider);
@@ -7469,14 +7503,24 @@ button {
 
   .web-shopping-item-card {
     display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-columns: 28px minmax(0, 1fr) 76px;
     min-height: 76px;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-md);
     background: var(--web-surface);
     padding: 12px;
+  }
+
+  .web-shopping-item-card-clickable {
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .web-shopping-item-card-clickable:hover {
+    border-color: rgba(0, 161, 255, 0.32);
+    background: var(--web-brand-wash);
   }
 
   .web-shopping-item-card-checked .web-shopping-item-copy strong {
@@ -7516,6 +7560,10 @@ button {
     opacity: 0.35;
   }
 
+  .web-shopping-check {
+    align-self: center;
+  }
+
   .web-shopping-check-static {
     color: var(--web-brand);
   }
@@ -7543,13 +7591,14 @@ button {
 
   .web-shopping-exclude {
     display: inline-flex;
+    width: 76px;
     height: 32px;
     align-items: center;
     justify-content: center;
     border: 1px solid var(--web-brand);
     border-radius: var(--web-r-pill);
     color: var(--web-brand-accessible);
-    padding: 0 12px;
+    padding: 0;
     font-size: 12px;
     font-weight: 800;
     white-space: nowrap;
@@ -7562,6 +7611,38 @@ button {
   .web-shopping-excluded-list {
     display: grid;
     gap: 8px;
+  }
+
+  .web-shopping-detail-rail .web-shopping-item-grid,
+  .web-shopping-excluded-list .web-shopping-item-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .web-shopping-category-list {
+    display: grid;
+    gap: 16px;
+  }
+
+  .web-shopping-category-section {
+    display: grid;
+    gap: 10px;
+  }
+
+  .web-shopping-category-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0;
+    color: var(--web-text-1);
+    font-size: 14px;
+    font-weight: 900;
+  }
+
+  .web-shopping-category-heading span {
+    color: var(--web-text-3);
+    font-size: 12px;
+    font-weight: 800;
   }
 
   .web-leftovers-screen {
