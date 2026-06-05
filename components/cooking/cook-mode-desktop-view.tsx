@@ -57,7 +57,7 @@ export function CookModeDesktopView({
   const cancelLabel = "취소";
   const breadcrumb =
     variant === "planner"
-      ? { current: "플래너 요리모드", href: "/cooking/ready", parent: "요리 준비" }
+      ? { current: "플래너 요리모드", href: "/planner", parent: "플래너" }
       : { current: "독립 요리모드", href: `/recipe/${recipe.id}`, parent: "레시피" };
   const heroClassName =
     variant === "planner"

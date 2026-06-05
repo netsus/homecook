@@ -317,7 +317,6 @@ PLANNER_WEEK (식단 플래너)
 > **정책 변경 (v1.3.4)**: MEAL_SCREEN에서 `shopping_done` 상태 개별 식사에 `[요리하기]` 단축 경로를 제공한다.
 >
 > 요리 진입 경로:
-> - **플래너 상단 [요리하기]** → `COOK_READY_LIST` → `COOK_MODE` (일괄/레시피 그룹 요리)
 > - **MEAL_SCREEN 개별 식사 [요리하기]** → `COOK_MODE` (단일 식사 단축 경로, `shopping_done`만 대상) `v1.3.4 추가`
 > - **레시피 상세 [요리하기]** → `COOK_MODE` (독립 요리, planner 무관)
 >
@@ -515,78 +514,9 @@ SHOPPING_DETAIL (장보기 리스트 상세)로 자동 이동
 
 - 로그인 상태
 - PLANNER_WEEK에 `status='shopping_done'` 식사가 1개 이상 존재
-- 플래너 상단 [요리하기] 버튼 클릭
+- `MEAL_SCREEN`에서 `shopping_done` 상태 개별 식사의 [요리하기] 버튼 클릭
 
 ### 플로우
-
-```
-PLANNER_WEEK → [요리하기]
-  │
-  ▼
-COOK_READY_LIST (요리하기 준비 리스트)
-  │ 범위: 오늘 ~ 마지막 등록일
-  │ 대상: status='shopping_done' 식사만
-  │ 레시피별 인분 합산 → 리스트 구성
-  │
-  │ 레시피 카드 리스트:
-  │   레시피명 + 합산 인분 + [요리하기]
-  │
-  └─ 레시피 카드에서 [요리하기] 클릭
-       │
-       │ cooking_sessions 생성 (레시피 1개 단위)
-       │ 해당 레시피의 shopping_done meals
-       │   → cooking_session_meals INSERT (스냅샷)
-       │
-       ▼
-     COOK_MODE (요리모드 — 전체화면)
-       │
-       ├─ (좌) 재료 화면
-       │    조리 인분 (읽기 전용)
-       │    재료 전체 목록 + 수량/단위
-       │    component_label 소제목(있는 경우)
-       │
-       ├─ (우) 과정 화면
-       │    스텝 카드 리스트
-       │    카드: 스텝번호 + 조리방법(색상) + 재료/양 + 불세기 + 시간
-       │    component_label 소제목(있는 경우)
-       │
-       ├─ [취소]
-       │    → cooking_sessions.status = 'cancelled'
-       │    → 상태 변경 없이 COOK_READY_LIST 복귀
-       │
-       └─ [요리 완료]
-            │
-            ▼
-          소진 재료 체크리스트 팝업
-            │ (기본 체크 해제)
-            │ 체크한 재료 = 팬트리에서 제거
-            │
-            ▼
-          ┌─────────────────────────────────────────┐
-          │ cooking_session_meals.is_cooked = true │
-          │ cooking_sessions.status = 'completed'  │
-          │                                         │
-          │ 해당 meal_id들:                          │
-          │   meals.status → 'cook_done'            │
-          │   meals.cooked_at = now()               │
-          │                                         │
-          │ leftover_dishes INSERT                  │
-          │ pantry_items DELETE (체크된 재료)         │
-          │ recipes.cook_count += 1                 │
-          └─────────────────────────────────────────┘
-            │
-            ▼
-          COOK_READY_LIST 복귀
-          (완료된 레시피는 리스트에서 사라짐)
-            │
-            ▼
-          [리스트가 비면] PLANNER_WEEK 복귀
-          [남은 레시피 있으면] 다음 레시피 선택 가능
-```
-
-### ⑤-b. MEAL_SCREEN 개별 식사 요리 단축 경로 `v1.3.4 추가`
-
-> MEAL_SCREEN에서 `shopping_done` 상태인 개별 식사를 직접 요리하는 단축 경로
 
 ```
 MEAL_SCREEN → 개별 식사 [요리하기] (shopping_done만)
@@ -597,6 +527,16 @@ MEAL_SCREEN → 개별 식사 [요리하기] (shopping_done만)
   ▼
 COOK_MODE (요리모드 — 전체화면)
   │
+  ├─ (좌) 재료 화면
+  │    조리 인분 (읽기 전용)
+  │    재료 전체 목록 + 수량/단위
+  │    component_label 소제목(있는 경우)
+  │
+  ├─ (우) 과정 화면
+  │    스텝 카드 리스트
+  │    카드: 스텝번호 + 조리방법(색상) + 재료/양 + 불세기 + 시간
+  │    component_label 소제목(있는 경우)
+  │
   ├─ [취소]
   │    → cooking_sessions.status = 'cancelled'
   │    → 상태 변경 없이 MEAL_SCREEN 복귀
@@ -605,6 +545,8 @@ COOK_MODE (요리모드 — 전체화면)
        │
        ▼
      소진 재료 체크리스트 팝업
+       │ (기본 체크 해제)
+       │ 체크한 재료 = 팬트리에서 제거
        │
        ▼
      ┌─────────────────────────────────────────┐
@@ -631,15 +573,10 @@ COOK_MODE (요리모드 — 전체화면)
 
 ### 종료 조건
 
-- 레시피별 요리 완료 → 세션 completed → COOK_READY_LIST 복귀
-- 모든 레시피 완료 시 PLANNER_WEEK 복귀
-- 또는 일부만 완료 후 이탈 (미완료 meals는 `shopping_done` 유지)
-- 또는 취소 → 세션 cancelled → COOK_READY_LIST 복귀
 - MEAL_SCREEN 개별 요리: 완료 → MEAL_SCREEN 복귀 / 취소 → MEAL_SCREEN 복귀 `v1.3.4 추가`
 
 ### 관련 화면
 
-`PLANNER_WEEK` → `COOK_READY_LIST` → `COOK_MODE` → `COOK_READY_LIST` → `PLANNER_WEEK`
 `MEAL_SCREEN` → `COOK_MODE` → `MEAL_SCREEN` `v1.3.4 추가`
 
 ### 데이터 변화
@@ -647,7 +584,7 @@ COOK_MODE (요리모드 — 전체화면)
 | 시점            | 테이블                | 변화                                              |
 | --------------- | --------------------- | ------------------------------------------------- |
 | [요리하기] 클릭 | cooking_sessions      | INSERT (레시피 1개 단위, status='in_progress')    |
-| [요리하기] 클릭 | cooking_session_meals | INSERT (해당 레시피의 shopping_done meals 스냅샷) |
+| [요리하기] 클릭 | cooking_session_meals | INSERT (선택 meal 1건 스냅샷)                    |
 | 요리 완료       | cooking_session_meals | UPDATE is_cooked=true                             |
 | 요리 완료       | cooking_sessions      | UPDATE status='completed'                         |
 | 요리 완료       | meals                 | UPDATE status → 'cook_done', cooked_at            |
@@ -656,7 +593,7 @@ COOK_MODE (요리모드 — 전체화면)
 | 요리 완료       | recipes               | UPDATE cook_count += 1                            |
 | 취소            | cooking_sessions      | UPDATE status='cancelled'                         |
 
-> 위 데이터 변화는 COOK_READY_LIST 경유와 MEAL_SCREEN 개별 경유 모두 동일하다. 차이는 세션에 포함되는 meal 수(일괄 vs 1건)뿐이다. `v1.3.4 참고`
+> 위 데이터 변화는 MEAL_SCREEN 개별 식사 요리 경유를 기준으로 한다. 세션에는 선택 meal 1건만 포함된다. `v1.3.4 참고`
 
 ---
 
@@ -832,7 +769,7 @@ COOK_MODE (요리모드 — 전체화면)
 
 | 항목            | ⑤ 플래너 요리                  | ⑧ 독립 요리          |
 | --------------- | ------------------------------ | -------------------- |
-| 진입            | PLANNER_WEEK → COOK_READY_LIST | RECIPE_DETAIL        |
+| 진입            | MEAL_SCREEN                    | RECIPE_DETAIL        |
 | 요리 세션       | cooking_sessions 생성          | 생성 안 함           |
 | 식사 상태 전이  | meals.status → 'cook_done'     | 변경 없음            |
 | 남은요리 저장   | O                              | O                    |
@@ -1222,7 +1159,6 @@ MYPAGE → SETTINGS
 | YT_IMPORT               | ⑨ 유튜브 등록                                 |
 | SHOPPING_FLOW           | ④ 장보기                                      |
 | SHOPPING_DETAIL         | ④ 장보기, ⑪ 저장/관리(기록 재열람)            |
-| COOK_READY_LIST         | ⑤ 요리하기                                    |
 | COOK_MODE               | ⑤ 요리하기, ⑧ 독립 요리                       |
 | LEFTOVERS               | ⑥ 남은요리                                    |
 | ATE_LIST                | ⑥ 남은요리                                    |

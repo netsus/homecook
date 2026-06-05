@@ -1,7 +1,6 @@
 import type {
   CookingModeIngredient,
   CookingModeStep,
-  CookingReadyRecipe,
   CookingStandaloneCompleteBody,
   CookingSessionCompleteBody,
   CookingSessionCreateBody,
@@ -10,19 +9,6 @@ import {
   normalizeRecipeSectionLabel,
   stripMatchingSectionPrefix,
 } from "@/lib/recipe-section-labels";
-
-export interface CookingReadyMealRow {
-  id: string;
-  recipe_id: string;
-  plan_date: string;
-  planned_servings: number;
-}
-
-export interface CookingRecipeSummaryRow {
-  id: string;
-  title: string;
-  thumbnail_url: string | null;
-}
 
 export interface CookingSessionCreateMealRow {
   id: string;
@@ -249,38 +235,6 @@ export function parseCookingStandaloneCompleteBody(
     },
     fields: [],
   };
-}
-
-export function buildReadyRecipes({
-  meals,
-  recipes,
-}: {
-  meals: CookingReadyMealRow[];
-  recipes: CookingRecipeSummaryRow[];
-}): CookingReadyRecipe[] {
-  const recipeMap = new Map(recipes.map((recipe) => [recipe.id, recipe]));
-  const grouped = new Map<string, CookingReadyRecipe>();
-
-  meals.forEach((meal) => {
-    const recipe = recipeMap.get(meal.recipe_id);
-    const existing = grouped.get(meal.recipe_id);
-
-    if (existing) {
-      existing.meal_ids.push(meal.id);
-      existing.total_servings += meal.planned_servings;
-      return;
-    }
-
-    grouped.set(meal.recipe_id, {
-      recipe_id: meal.recipe_id,
-      recipe_title: recipe?.title ?? "",
-      recipe_thumbnail_url: recipe?.thumbnail_url ?? null,
-      meal_ids: [meal.id],
-      total_servings: meal.planned_servings,
-    });
-  });
-
-  return [...grouped.values()];
 }
 
 export function scaleAmount({

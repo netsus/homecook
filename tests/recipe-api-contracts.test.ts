@@ -32,6 +32,7 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
 interface QueryResult<T> {
   data: T;
   error: { message: string } | null;
+  count?: number | null;
 }
 
 function createAwaitableQuery<T>(result: QueryResult<T>) {
@@ -761,6 +762,90 @@ describe("recipe API contracts", () => {
     });
     expect(viewCountRpcQuery.maybeSingle).toHaveBeenCalled();
     expect(body.data.view_count).toBe(11);
+  });
+
+  it("uses actual planner meal count for recipe detail plan_count", async () => {
+    const recipeReadQuery = createQuery({
+      data: {
+        id: "recipe-1",
+        title: "김치찌개",
+        description: null,
+        thumbnail_url: null,
+        base_servings: 2,
+        tags: ["한식"],
+        source_type: "system",
+        view_count: 10,
+        like_count: 0,
+        save_count: 0,
+        plan_count: 0,
+        cook_count: 0,
+      },
+      error: null,
+    });
+    const viewCountRpcQuery = createQuery({
+      data: {
+        id: "recipe-1",
+        view_count: 11,
+      },
+      error: null,
+    });
+    const sourceQuery = createQuery({
+      data: null,
+      error: null,
+    });
+    const ingredientsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+    const stepsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+    const mealsCountQuery = createQuery({
+      data: null,
+      error: null,
+      count: 3,
+    });
+    const recipesTable = {
+      select: vi.fn(() => recipeReadQuery),
+    };
+    const mealsTable = {
+      select: vi.fn(() => mealsCountQuery),
+    };
+    const rpc = vi.fn(() => viewCountRpcQuery);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: null },
+        })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc,
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return recipesTable;
+        if (table === "recipe_sources") return sourceQuery;
+        if (table === "recipe_ingredients") return ingredientsQuery;
+        if (table === "recipe_steps") return stepsQuery;
+        if (table === "meals") return mealsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/[id]/route");
+    const response = await GET(new Request("http://localhost:3000/api/v1/recipes/recipe-1"), {
+      params: Promise.resolve({ id: "recipe-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mealsTable.select).toHaveBeenCalledWith("id", {
+      count: "exact",
+      head: true,
+    });
+    expect(mealsCountQuery.eq).toHaveBeenCalledWith("recipe_id", "recipe-1");
+    expect(body.data.plan_count).toBe(3);
   });
 
   it("falls back to a direct recipe update when the view-count RPC is unavailable", async () => {

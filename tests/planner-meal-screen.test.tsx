@@ -493,6 +493,7 @@ describe("MealScreen", () => {
     const list = await screen.findByTestId("web-meal-list");
     const summary = screen.getByTestId("web-meal-summary");
 
+    expect(screen.getByRole("heading", { name: "4월 18일 아침 식사" })).toBeTruthy();
     expect(within(summary).getByRole("heading", { name: "4월 18일 아침" })).toBeTruthy();
     expect(within(summary).getByText("음식")).toBeTruthy();
     expect(within(summary).getByText("2개")).toBeTruthy();

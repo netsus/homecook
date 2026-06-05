@@ -3,7 +3,6 @@ import { expect, test, type Page } from "@playwright/test";
 
 import {
   COOK_MODE_VISUAL_PATH,
-  COOK_READY_VISUAL_PATH,
   ATE_LIST_VISUAL_PATH,
   installAccountLibraryVisualRoutes,
   installCookingVisualRoutes,
@@ -568,26 +567,12 @@ test.describe("QA accessibility smoke", () => {
     });
   });
 
-  test("cooking desktop ready, notice, and cook modes are axe-clean", async ({
+  test("cooking desktop cook modes are axe-clean", async ({
     page,
   }) => {
     test.skip(isMobileViewport(page), "desktop-only cooking parity smoke");
     await setE2EAuthOverride(page);
     await installCookingVisualRoutes(page);
-
-    await page.goto(COOK_READY_VISUAL_PATH);
-    await expect(page.getByRole("heading", { name: "요리 준비" })).toBeVisible();
-    await expectNoAxeViolations(page, {
-      allowPrototypeDesktopColorContrast: true,
-    });
-
-    await page.getByRole("button", { name: "요리모드 안내" }).click();
-    await expect(
-      page.getByRole("dialog", { name: "데스크탑 요리모드" }),
-    ).toBeVisible();
-    await expectNoAxeViolations(page, {
-      allowPrototypeDesktopColorContrast: true,
-    });
 
     await page.goto(COOK_MODE_VISUAL_PATH);
     await expect(page.getByTestId("cook-mode-title")).toBeVisible();

@@ -165,6 +165,23 @@ export async function GET(request: Request, context: RouteContext) {
     const ingredients = normalizeRecipeIngredients(ingredientsResult.data);
     const steps = normalizeRecipeSteps(stepsResult.data);
     let viewCount = recipeResult.data.view_count + (serviceClient ? 1 : 0);
+    let planCount = recipeResult.data.plan_count;
+
+    try {
+      const planCountResult = await dbClient
+        .from("meals")
+        .select("id", { count: "exact", head: true })
+        .eq("recipe_id", id) as {
+          count?: number | null;
+          error?: unknown;
+        };
+
+      if (!planCountResult.error && typeof planCountResult.count === "number") {
+        planCount = planCountResult.count;
+      }
+    } catch {
+      planCount = recipeResult.data.plan_count;
+    }
 
     if (serviceClient) {
       const viewCountResult = await serviceClient
@@ -204,7 +221,7 @@ export async function GET(request: Request, context: RouteContext) {
       view_count: viewCount,
       like_count: recipeResult.data.like_count,
       save_count: recipeResult.data.save_count,
-      plan_count: recipeResult.data.plan_count,
+      plan_count: planCount,
       cook_count: recipeResult.data.cook_count,
       ingredients,
       steps,

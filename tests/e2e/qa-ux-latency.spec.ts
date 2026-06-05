@@ -25,7 +25,6 @@ import {
   installPlannerWeekRoutes,
   installRecipeDetailRoutes,
   COOK_MODE_VISUAL_PATH,
-  COOK_READY_VISUAL_PATH,
   ATE_LIST_VISUAL_PATH,
   LEFTOVERS_VISUAL_PATH,
   MEAL_VISUAL_PATH,
@@ -231,13 +230,6 @@ test.describe("UX Latency Timing Harness", () => {
         contentSelector:
           "[data-testid='shopping-detail-mobile'], [data-testid='shopping-detail-embedded']",
         install: installPantryShoppingVisualRoutes,
-      },
-      {
-        id: "COOKING_READY",
-        path: COOK_READY_VISUAL_PATH,
-        contentSelector:
-          "[data-testid='cook-ready-list-screen']",
-        install: installCookingVisualRoutes,
       },
       {
         id: "COOK_MODE",

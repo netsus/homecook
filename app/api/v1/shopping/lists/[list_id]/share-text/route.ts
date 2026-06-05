@@ -5,6 +5,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import { groupShoppingItemsByCategory } from "@/lib/shopping-categories";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { ShoppingShareTextData } from "@/types/shopping";
 
@@ -29,6 +30,7 @@ interface ShoppingListRow {
 interface ShoppingListShareItemRow {
   id: string;
   display_text: string;
+  ingredients?: { category: string | null } | null;
   is_checked: boolean;
   is_pantry_excluded: boolean;
   sort_order: number;
@@ -94,9 +96,23 @@ function buildShoppingShareText(list: ShoppingListRow, items: ShoppingListShareI
     return header;
   }
 
-  return `${header}\n\n${items
-    .map((item) => `${item.is_checked ? "☑" : "☐"} ${item.display_text}`)
-    .join("\n")}`;
+  const groups = groupShoppingItemsByCategory(
+    items.map((item) => ({
+      ...item,
+      category: item.ingredients?.category ?? null,
+    })),
+  );
+
+  const body = groups
+    .map((group) => {
+      const lines = group.items.map(
+        (item) => `${item.is_checked ? "☑" : "☐"} ${item.display_text}`,
+      );
+      return [`[${group.category}]`, ...lines].join("\n");
+    })
+    .join("\n\n");
+
+  return `${header}\n\n${body}`;
 }
 
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
@@ -148,7 +164,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const itemsResult = await dbClient
     .from("shopping_list_items")
-    .select("id, display_text, is_checked, is_pantry_excluded, sort_order")
+    .select("id, display_text, is_checked, is_pantry_excluded, sort_order, ingredients(category)")
     .eq("shopping_list_id", listId)
     .eq("is_pantry_excluded", false)
     .order("sort_order", { ascending: true })

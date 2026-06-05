@@ -45,7 +45,6 @@ export const LOGIN_VISUAL_PATH = "/login";
 export const RECIPEBOOK_DETAIL_VISUAL_BOOK_ID = "book-custom";
 export const RECIPEBOOK_DETAIL_VISUAL_PATH =
   `/mypage/recipe-books/${RECIPEBOOK_DETAIL_VISUAL_BOOK_ID}?type=custom&name=${encodeURIComponent("주말 파티")}`;
-export const COOK_READY_VISUAL_PATH = "/cooking/ready";
 export const COOK_MODE_VISUAL_SESSION_ID = "session-visual";
 export const COOK_MODE_VISUAL_PATH =
   `/cooking/sessions/${COOK_MODE_VISUAL_SESSION_ID}/cook-mode`;
@@ -1470,53 +1469,6 @@ export async function installLeftoversVisualRoutes(
 }
 
 export async function installCookingVisualRoutes(page: Page) {
-  await page.route("**/api/v1/cooking/ready", async (route) => {
-    if (route.request().method() !== "GET") {
-      await route.continue();
-      return;
-    }
-
-    await route.fulfill({
-      json: {
-        success: true,
-        data: {
-          date_range: { start: "2026-05-12", end: "2026-05-16" },
-          recipes: [
-            {
-              meal_ids: ["meal-cook-1"],
-              recipe_id: "recipe-kimchi-rice",
-              recipe_thumbnail_url: null,
-              recipe_title: "김치볶음밥",
-              total_servings: 1,
-            },
-            {
-              meal_ids: ["meal-cook-2", "meal-cook-3"],
-              recipe_id: "recipe-soondubu",
-              recipe_thumbnail_url: null,
-              recipe_title: "순두부찌개",
-              total_servings: 2,
-            },
-            {
-              meal_ids: ["meal-cook-4"],
-              recipe_id: "recipe-bibimbap",
-              recipe_thumbnail_url: null,
-              recipe_title: "비빔밥",
-              total_servings: 2,
-            },
-            {
-              meal_ids: ["meal-cook-5"],
-              recipe_id: "recipe-seafood",
-              recipe_thumbnail_url: null,
-              recipe_title: "애호박 새우젓 볶음",
-              total_servings: 2,
-            },
-          ],
-        },
-        error: null,
-      },
-    });
-  });
-
   await page.route("**/api/v1/cooking/sessions", async (route) => {
     if (route.request().method() !== "POST") {
       await route.continue();

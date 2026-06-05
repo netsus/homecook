@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
@@ -53,7 +54,7 @@ export function CookModeScreen({
   initialAuthenticated = false,
 }: CookModeScreenProps) {
   const router = useRouter();
-  const appReturn = useAppReturn({ fallback: "/cooking/ready" });
+  const appReturn = useAppReturn({ fallback: "/planner" });
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
@@ -278,9 +279,9 @@ export function CookModeScreen({
       >
         <div className="flex flex-1 items-center justify-center p-4">
           <ContentState
-            actionLabel="요리 준비 리스트로"
+            actionLabel="플래너로 돌아가기"
             description="요리 세션을 찾을 수 없어요."
-            onAction={() => router.push("/cooking/ready")}
+            onAction={() => router.push("/planner")}
             title="세션을 찾을 수 없어요"
             tone="error"
           />
@@ -301,8 +302,8 @@ export function CookModeScreen({
             actionLabel="다시 시도"
             description={errorMessage ?? "잠시 후 다시 시도해주세요."}
             onAction={handleRetry}
-            secondaryActionLabel="요리 준비 리스트로"
-            onSecondaryAction={() => router.push("/cooking/ready")}
+            secondaryActionLabel="플래너로 돌아가기"
+            onSecondaryAction={() => router.push("/planner")}
             title="문제가 생겼어요"
             tone="error"
           />
@@ -392,7 +393,7 @@ export function CookModeScreen({
                 요리를 취소할까요?
               </h3>
               <p className="mt-1 text-sm text-[var(--muted)]">
-                취소하면 요리 준비 리스트로 돌아갑니다.
+                취소하면 이전 끼니 화면으로 돌아갑니다.
               </p>
               <div className="mt-4 flex gap-3">
                 <button
@@ -459,7 +460,7 @@ function PlannerCookModeDesktopState({
       />
       <main className="web-cook-mode-screen" data-testid="cook-mode-screen">
         <nav aria-label="현재 위치" className="web-cook-breadcrumb">
-          <a href="/cooking/ready">요리 준비</a>
+          <Link href="/planner">플래너</Link>
           <span aria-hidden="true">/</span>
           <strong>플래너 요리모드</strong>
         </nav>
@@ -521,7 +522,7 @@ function PlannerCookCancelDialog({
         </WebDialogHeader>
         <WebDialogBody>
           <p className="text-sm text-[var(--muted)]">
-            취소하면 요리 준비 리스트로 돌아갑니다.
+            취소하면 이전 끼니 화면으로 돌아갑니다.
           </p>
         </WebDialogBody>
         <WebDialogFooter>

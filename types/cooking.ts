@@ -2,24 +2,6 @@ import type { ApiResponse } from "@/types/api";
 
 export type CookingSessionStatus = "in_progress" | "completed" | "cancelled";
 
-export interface CookingReadyDateRange {
-  start: string;
-  end: string;
-}
-
-export interface CookingReadyRecipe {
-  recipe_id: string;
-  recipe_title: string;
-  recipe_thumbnail_url: string | null;
-  meal_ids: string[];
-  total_servings: number;
-}
-
-export interface CookingReadyData {
-  date_range: CookingReadyDateRange;
-  recipes: CookingReadyRecipe[];
-}
-
 export interface CookingSessionCreateBody {
   recipe_id?: string;
   meal_ids?: string[];
@@ -114,7 +96,6 @@ export interface CookingStandaloneCookModeData {
   recipe: CookingModeRecipe;
 }
 
-export type CookingReadyResponse = ApiResponse<CookingReadyData>;
 export type CookingSessionCreateResponse = ApiResponse<CookingSessionCreateData>;
 export type CookingSessionCancelResponse = ApiResponse<CookingSessionCancelData>;
 export type CookingSessionCompleteResponse = ApiResponse<CookingSessionCompleteData>;

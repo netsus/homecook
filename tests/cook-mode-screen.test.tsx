@@ -307,7 +307,7 @@ describe("CookModeScreen", () => {
     });
   });
 
-  it("does not bounce back to ready when a previous session left completed state behind", async () => {
+  it("does not bounce back to planner when a previous session left completed state behind", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(
       buildCookModeData({ session_id: "session-new" }),
@@ -328,7 +328,7 @@ describe("CookModeScreen", () => {
     await waitFor(() => {
       expect(fetchCookMode).toHaveBeenCalledWith("session-new");
     });
-    expect(mockRouterPush).not.toHaveBeenCalledWith("/cooking/ready");
+    expect(mockRouterPush).not.toHaveBeenCalledWith("/planner");
 
     await waitFor(() => {
       expect(screen.getByTestId("cook-mode-title")).toBeTruthy();
@@ -587,7 +587,7 @@ describe("CookModeScreen", () => {
     });
   });
 
-  it("navigates to /cooking/ready after successful completion", async () => {
+  it("navigates to planner fallback after successful completion", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
     completeCookingSession.mockResolvedValue({
@@ -610,7 +610,7 @@ describe("CookModeScreen", () => {
     await user.click(screen.getByTestId("complete-button"));
 
     await waitFor(() => {
-      expect(mockRouterPush).toHaveBeenCalledWith("/cooking/ready");
+      expect(mockRouterPush).toHaveBeenCalledWith("/planner");
     });
   });
 
@@ -679,7 +679,7 @@ describe("CookModeScreen", () => {
     });
 
     await waitFor(() => {
-      expect(mockRouterPush).toHaveBeenCalledWith("/cooking/ready");
+      expect(mockRouterPush).toHaveBeenCalledWith("/planner");
     });
   });
 
@@ -768,7 +768,7 @@ describe("CookModeScreen", () => {
     });
 
     expect(screen.getByText("이미 취소된 세션입니다.")).toBeTruthy();
-    expect(screen.getByText("요리 준비 리스트로")).toBeTruthy();
+    expect(screen.getByText("플래너로 돌아가기")).toBeTruthy();
     // Should NOT navigate away
     expect(mockRouterPush).not.toHaveBeenCalled();
   });

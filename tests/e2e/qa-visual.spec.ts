@@ -5,7 +5,6 @@ import { expect, test, type Page } from "@playwright/test";
 
 import {
   COOK_MODE_VISUAL_PATH,
-  COOK_READY_VISUAL_PATH,
   ATE_LIST_VISUAL_PATH,
   installAccountLibraryVisualRoutes,
   installCookingVisualRoutes,
@@ -74,7 +73,6 @@ const PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2400;
 const ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
 const MYPAGE_SAVED_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 5200;
 const COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 3200;
-const COOKING_MODAL_VISUAL_MAX_DIFF_PIXELS = 480;
 const LEFTOVERS_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
 const FIXED_HOME_VISUAL_NOW = "2026-06-01T10:30:00.000Z";
 
@@ -677,31 +675,12 @@ test.describe("QA visual regression", () => {
     );
   });
 
-  test("cooking desktop ready and cook modes match the visual baseline", async ({
+  test("cooking desktop cook modes match the visual baseline", async ({
     page,
   }) => {
     test.skip(isMobileViewport(page), "desktop-only cooking parity baseline");
     await setE2EAuthOverride(page);
     await installCookingVisualRoutes(page);
-
-    await page.goto(COOK_READY_VISUAL_PATH);
-    await expect(page.getByRole("heading", { name: "요리 준비" })).toBeVisible();
-    await expect(page.getByTestId("cook-ready-recipe-list")).toBeVisible();
-    await stabilizeVisualSnapshot(page);
-    await expect(page).toHaveScreenshot("qa-cook-ready-list.png", {
-      animations: "disabled",
-      fullPage: true,
-      maxDiffPixels: COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
-    });
-
-    await page.getByRole("button", { name: "요리모드 안내" }).click();
-    const noticeDialog = page.getByRole("dialog", { name: "데스크탑 요리모드" });
-    await expect(noticeDialog).toBeVisible();
-    await stabilizeVisualSnapshot(page);
-    await expect(noticeDialog).toHaveScreenshot("qa-cook-notice-modal.png", {
-      animations: "disabled",
-      maxDiffPixels: COOKING_MODAL_VISUAL_MAX_DIFF_PIXELS,
-    });
 
     await page.goto(COOK_MODE_VISUAL_PATH);
     await expect(page.getByTestId("cook-mode-title")).toHaveText("김치볶음밥");
