@@ -1,7 +1,6 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
-  CookingReadyData,
   CookingSessionCancelData,
   CookingSessionCompleteData,
   CookingSessionCookModeData,
@@ -70,10 +69,6 @@ export function isCookingApiError(
   error: unknown,
 ): error is CookingApiError {
   return error instanceof Error && "status" in error && "code" in error;
-}
-
-export async function fetchCookingReady(): Promise<CookingReadyData> {
-  return requestCooking<CookingReadyData>("/api/v1/cooking/ready");
 }
 
 export async function createCookingSession(body: {

@@ -145,21 +145,6 @@ async function mockCancelRoute(page: Page) {
   });
 }
 
-async function mockCookingReadyRoute(page: Page) {
-  await page.route("**/api/v1/cooking/ready", async (route) => {
-    await route.fulfill({
-      json: {
-        success: true,
-        data: {
-          date_range: { start: "2026-04-27", end: "2026-05-03" },
-          recipes: [],
-        },
-        error: null,
-      },
-    });
-  });
-}
-
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 test.describe("Slice 15a cook planner complete", () => {
@@ -241,13 +226,12 @@ test.describe("Slice 15a cook planner complete", () => {
     }
   });
 
-  test("complete flow: selects consumed ingredients and navigates to ready", async ({
+  test("complete flow: selects consumed ingredients and returns to planner", async ({
     page,
   }) => {
     await setAuthOverride(page, "authenticated");
     await mockCookModeRoute(page);
     await mockCompleteRoute(page);
-    await mockCookingReadyRoute(page);
 
     await page.goto("/cooking/sessions/session-abc/cook-mode");
 
@@ -271,16 +255,15 @@ test.describe("Slice 15a cook planner complete", () => {
       await page.getByTestId("consumed-confirm-button").click();
     }
 
-    await expect(page).toHaveURL(/\/cooking\/ready/);
+    await expect(page).toHaveURL(/\/planner/);
   });
 
-  test("empty consumed ingredients navigates to ready", async ({
+  test("empty consumed ingredients returns to planner", async ({
     page,
   }) => {
     await setAuthOverride(page, "authenticated");
     await mockCookModeRoute(page);
     await mockCompleteRoute(page);
-    await mockCookingReadyRoute(page);
 
     await page.goto("/cooking/sessions/session-abc/cook-mode");
 
@@ -297,16 +280,15 @@ test.describe("Slice 15a cook planner complete", () => {
       await page.getByTestId("consumed-skip-button").click();
     }
 
-    await expect(page).toHaveURL(/\/cooking\/ready/);
+    await expect(page).toHaveURL(/\/planner/);
   });
 
-  test("cancel flow: opens confirm, clicks yes, navigates to ready", async ({
+  test("cancel flow: opens confirm, clicks yes, returns to planner", async ({
     page,
   }) => {
     await setAuthOverride(page, "authenticated");
     await mockCookModeRoute(page);
     await mockCancelRoute(page);
-    await mockCookingReadyRoute(page);
 
     await page.goto("/cooking/sessions/session-abc/cook-mode");
 
@@ -319,7 +301,7 @@ test.describe("Slice 15a cook planner complete", () => {
 
     await page.getByTestId("cancel-confirm-yes").click();
 
-    await expect(page).toHaveURL(/\/cooking\/ready/);
+    await expect(page).toHaveURL(/\/planner/);
   });
 
   test("guest user sees login gate", async ({ page }) => {

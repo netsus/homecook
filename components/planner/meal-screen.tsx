@@ -770,6 +770,9 @@ function MealWebView({
   const summaryTitle = slotName
     ? `${formatDateLong(planDate)} ${slotName}`
     : formatDateLong(planDate);
+  const pageTitle = slotName
+    ? `${formatDateLong(planDate)} ${slotName} 식사`
+    : `${formatDateLong(planDate)} 식사`;
 
   return (
     <WebShell className="web-meal" wide>
@@ -792,6 +795,11 @@ function MealWebView({
           <span className="web-breadcrumb-sep">/</span>
           <span className="web-breadcrumb-current">{breadcrumbCurrent}</span>
         </nav>
+
+        <div className="web-meal-page-head">
+          <p>끼니 화면</p>
+          <h1>{pageTitle}</h1>
+        </div>
 
         {isLoading ? (
           <MealWebLoadingSkeleton planDate={planDate} slotName={slotName} />

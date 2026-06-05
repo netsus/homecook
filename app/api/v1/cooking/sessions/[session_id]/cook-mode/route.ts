@@ -168,7 +168,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   if (sessionResult.data.status !== "in_progress") {
     return fail(
       "CONFLICT",
-      "이미 종료된 요리 세션이에요. 요리 준비 리스트에서 다시 시작해 주세요.",
+      "이미 종료된 요리 세션이에요. 끼니 화면에서 다시 시작해 주세요.",
       409,
     );
   }

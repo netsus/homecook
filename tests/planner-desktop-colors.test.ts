@@ -108,4 +108,17 @@ describe("planner desktop colors", () => {
       "color: var(--web-brand-accessible);",
     );
   });
+
+  it("keeps desktop meal titles readable without overflowing card height", () => {
+    expect(ruleBody(".web-meal-title-button")).toContain("-webkit-line-clamp: 2;");
+    expect(ruleBody(".web-meal-title-button")).toContain("line-clamp: 2;");
+    expect(ruleBody(".web-meal-title-button")).toContain("overflow-wrap: anywhere;");
+    expect(ruleBody(".web-meal-title-button")).toContain("max-height: calc(1.3em * 2);");
+  });
+
+  it("uses the same wide web container outside login surfaces", () => {
+    expect(ruleBody(".web-shell:not(.web-login-shell) .web-container")).toContain(
+      "max-width: var(--web-content-wide);",
+    );
+  });
 });

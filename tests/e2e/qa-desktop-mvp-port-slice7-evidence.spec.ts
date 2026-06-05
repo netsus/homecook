@@ -5,7 +5,6 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 
 import {
   COOK_MODE_VISUAL_PATH,
-  COOK_READY_VISUAL_PATH,
   installCookingVisualRoutes,
   setE2EAuthOverride,
   STANDALONE_COOK_MODE_VISUAL_PATH,
@@ -93,17 +92,6 @@ test("capture Slice 7 desktop cooking prototype-port evidence", async ({ browser
     await capture(
       browser,
       viewportName,
-      `cook-ready-list-${width}.png`,
-      COOK_READY_VISUAL_PATH,
-      async (page) => {
-        await expect(page.getByRole("heading", { name: "요리 준비" })).toBeVisible();
-        await expect(page.getByTestId("cook-ready-recipe-list")).toBeVisible();
-      },
-    );
-
-    await capture(
-      browser,
-      viewportName,
       `cook-mode-planner-${width}.png`,
       COOK_MODE_VISUAL_PATH,
       async (page) => {
@@ -126,17 +114,4 @@ test("capture Slice 7 desktop cooking prototype-port evidence", async ({ browser
     );
   }
 
-  await capture(
-    browser,
-    "desktop1280",
-    "cook-notice-modal-1280.png",
-    COOK_READY_VISUAL_PATH,
-    async (page) => {
-      await page.getByRole("button", { name: "요리모드 안내" }).click();
-      await expect(
-        page.getByRole("dialog", { name: "데스크탑 요리모드" }),
-      ).toBeVisible();
-    },
-    { fullPage: false },
-  );
 });

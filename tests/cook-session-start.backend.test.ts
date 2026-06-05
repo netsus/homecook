@@ -100,10 +100,6 @@ function createInsertSelectQuery<T>(results: Array<QueryResult<T[]>>) {
   return query;
 }
 
-async function importReadyRoute() {
-  return import("@/app/api/v1/cooking/ready/route");
-}
-
 async function importSessionsRoute() {
   return import("@/app/api/v1/cooking/sessions/route");
 }
@@ -150,101 +146,6 @@ describe("14 cook session start backend", () => {
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
-  });
-
-  it("GET /cooking/ready returns 401 when the user is not authenticated", async () => {
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: null } })),
-      },
-      from: vi.fn(),
-    });
-
-    const { GET } = await importReadyRoute();
-    const response = await GET();
-    const body = await response.json();
-
-    expect(response.status).toBe(401);
-    expect(body).toMatchObject({
-      success: false,
-      data: null,
-      error: { code: "UNAUTHORIZED" },
-    });
-  });
-
-  it("GET /cooking/ready groups shopping_done meals by recipe for the current user", async () => {
-    vi.setSystemTime(new Date("2026-04-29T03:00:00.000Z"));
-
-    const mealsQuery = createArraySelectQuery([
-      {
-        data: [
-          {
-            id: mealId1,
-            recipe_id: recipeId,
-            plan_date: "2026-04-29",
-            planned_servings: 2,
-          },
-          {
-            id: mealId2,
-            recipe_id: recipeId,
-            plan_date: "2026-05-01",
-            planned_servings: 3,
-          },
-        ],
-        error: null,
-      },
-    ]);
-    const recipesQuery = createArraySelectQuery([
-      {
-        data: [
-          {
-            id: recipeId,
-            title: "김치찌개",
-            thumbnail_url: "https://example.com/kimchi.jpg",
-          },
-        ],
-        error: null,
-      },
-    ]);
-
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
-      },
-      from: vi.fn((table: string) => {
-        if (table === "meals") return { select: vi.fn(() => mealsQuery) };
-        if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
-        throw new Error(`unexpected table: ${table}`);
-      }),
-    });
-
-    const { GET } = await importReadyRoute();
-    const response = await GET();
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(body).toEqual({
-      success: true,
-      data: {
-        date_range: {
-          start: "2026-04-29",
-          end: "2026-05-01",
-        },
-        recipes: [
-          {
-            recipe_id: recipeId,
-            recipe_title: "김치찌개",
-            recipe_thumbnail_url: "https://example.com/kimchi.jpg",
-            meal_ids: [mealId1, mealId2],
-            total_servings: 5,
-          },
-        ],
-      },
-      error: null,
-    });
-    expect(mealsQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
-    expect(mealsQuery.eq).toHaveBeenCalledWith("status", "shopping_done");
-    expect(mealsQuery.gte).toHaveBeenCalledWith("plan_date", "2026-04-29");
   });
 
   it("POST /cooking/sessions creates a session and snapshot meals without mutating meal status", async () => {

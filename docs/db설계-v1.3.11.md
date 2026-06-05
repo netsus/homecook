@@ -782,7 +782,7 @@ CHECK (planned_servings_total>0)
 > **Flow 기준**
 >
 > - cooking_session 1개 = 레시피 1개
-> - `COOK_READY_LIST`에서 특정 레시피 [요리하기] 클릭 시 세션 생성
+> - `MEAL_SCREEN`에서 `shopping_done` 상태의 개별 식사 [요리하기] 클릭 시 세션 생성
 > - 대상 `shopping_done` meals를 세션 생성 시점에 스냅샷 고정
 
 ## 7-1. cooking_sessions

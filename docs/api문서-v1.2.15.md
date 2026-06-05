@@ -1673,39 +1673,11 @@ GET /shopping/lists/{list_id}/share-text
 
 ---
 
-## 9. 요리하기 (COOK_READY_LIST, COOK_MODE)
+## 9. 요리하기 (COOK_MODE)
 
-> 화면: `COOK_READY_LIST`, `COOK_MODE`, `MEAL_SCREEN`(개별 식사 단축) / Flow: ⑤ 요리하기(플래너 경유), ⑤-b 개별 식사 단축, ⑧ 독립 요리
+> 화면: `COOK_MODE`, `MEAL_SCREEN`(개별 식사 단축) / Flow: ⑤ 요리하기(플래너 경유), ⑤-b 개별 식사 단축, ⑧ 독립 요리
 
-### 9-1. 요리하기 준비 리스트 조회
-
-```
-GET /cooking/ready
-```
-
-🔒 로그인 필수
-
-**응답 (200)**
-
-```json
-{
-  "date_range": {
-    "start": "2026-03-01",
-    "end": "2026-03-07"
-  },
-  "recipes": [
-    {
-      "recipe_id": "uuid",
-      "recipe_title": "김치찌개",
-      "recipe_thumbnail_url": "https://...",
-      "meal_ids": ["uuid", "uuid"],
-      "total_servings": 4
-    }
-  ]
-}
-```
-
-### 9-2. 요리 세션 생성 (레시피별 [요리하기] 클릭)
+### 9-1. 요리 세션 생성 (MEAL_SCREEN 개별 식사 [요리하기] 클릭)
 
 ```
 POST /cooking/sessions
@@ -1737,7 +1709,6 @@ POST /cooking/sessions
 >
 > | 호출자 | meal_ids 패턴 | 설명 |
 > | --- | --- | --- |
-> | `COOK_READY_LIST` | 동일 레시피의 `shopping_done` meals 복수 | 일괄/레시피 그룹 요리 (기존) |
 > | `MEAL_SCREEN` | 선택된 `shopping_done` meal 1건 | 개별 식사 요리 단축 경로 `v1.2.5 추가` |
 >
 > `MEAL_SCREEN`에서 호출할 때도 서버 검증 규칙은 동일하게 적용된다:
@@ -2655,8 +2626,7 @@ GET /api/v1/admin/audit-logs
 | **8-4b** | **PATCH**  | **/shopping/lists/{id}/items/reorder** | **SHOPPING_DETAIL**      | **🔒** | **신규**                         |
 | 8-5      | POST       | /shopping/lists/{id}/complete          | SHOPPING_DETAIL          | 🔒     | 검증 규칙 + null/[] 구분         |
 | 8-6      | GET        | /shopping/lists/{id}/share-text        | SHOPPING_DETAIL          | 🔒     | 제외 항목 미포함 명시            |
-| 9-1      | GET        | /cooking/ready                         | COOK_READY_LIST          | 🔒     |                                  |
-| 9-2      | POST       | /cooking/sessions                      | COOK_READY_LIST / MEAL_SCREEN | 🔒 | MEAL_SCREEN 단축 호출 추가 (v1.2.5) |
+| 9-1      | POST       | /cooking/sessions                      | MEAL_SCREEN              | 🔒     | MEAL_SCREEN 단축 호출 추가 (v1.2.5) |
 | 9-3      | GET        | /cooking/sessions/{id}/cook-mode       | COOK_MODE                | 🔒     |                                  |
 | 9-3b     | GET        | /recipes/{id}/cook-mode                | COOK_MODE                | 🔓     |                                  |
 | 9-4      | POST       | /cooking/sessions/{id}/complete        | COOK_MODE                | 🔒     |                                  |
