@@ -1226,9 +1226,6 @@ function MobileShoppingDetailScreen({
           <span className="absolute h-px w-px opacity-0">
             {isReadOnly ? "구매한 재료" : "구매할 재료"} ({purchaseItems.length}개)
           </span>
-          <span className="absolute h-px w-px opacity-0">
-            {formatDateRange(detail.date_range_start, detail.date_range_end)}
-          </span>
           {isReadOnly && detail.completed_at ? (
             <span className="absolute h-px w-px opacity-0">
               ✓ 완료됨 ({formatDate(detail.completed_at)})
@@ -1862,20 +1859,6 @@ function formatShoppingDisplayTitle(detail: ShoppingListDetail): string {
   }
 
   return `${koreanDate} · ${detail.title}`;
-}
-
-function formatDateRange(start: string, end: string): string {
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  const startMonth = startDate.getMonth() + 1;
-  const startDay = startDate.getDate();
-  const endMonth = endDate.getMonth() + 1;
-  const endDay = endDate.getDate();
-
-  if (startMonth === endMonth) {
-    return `${startMonth}월 ${startDay}일 ~ ${endDay}일`;
-  }
-  return `${startMonth}월 ${startDay}일 ~ ${endMonth}월 ${endDay}일`;
 }
 
 function formatDate(dateString: string): string {
