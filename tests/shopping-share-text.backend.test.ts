@@ -149,13 +149,15 @@ describe("10b shopping share text backend", () => {
           {
             id: "550e8400-e29b-41d4-a716-446655440111",
             display_text: "양파 2개 + 200g",
+            ingredients: { category: "채소" },
             is_checked: true,
             is_pantry_excluded: false,
             sort_order: 10,
           },
           {
             id: "550e8400-e29b-41d4-a716-446655440222",
-            display_text: "김치 400g",
+            display_text: "큐민 1작은술",
+            ingredients: { category: "양념" },
             is_checked: false,
             is_pantry_excluded: false,
             sort_order: 20,
@@ -199,7 +201,7 @@ describe("10b shopping share text backend", () => {
     expect(body).toEqual({
       success: true,
       data: {
-        text: "📋 4/25 장보기\n\n☑ 양파 2개 + 200g\n☐ 김치 400g",
+        text: "📋 4/25 장보기\n\n[채소]\n☑ 양파 2개 + 200g\n\n[양념]\n☐ 큐민 1작은술",
       },
       error: null,
     });
@@ -234,6 +236,7 @@ describe("10b shopping share text backend", () => {
           {
             id: "550e8400-e29b-41d4-a716-446655440111",
             display_text: "양파 2개",
+            ingredients: { category: "채소" },
             is_checked: false,
             is_pantry_excluded: false,
             sort_order: 10,
@@ -246,6 +249,7 @@ describe("10b shopping share text backend", () => {
           {
             id: "550e8400-e29b-41d4-a716-446655440111",
             display_text: "양파 2개",
+            ingredients: { category: "채소" },
             is_checked: false,
             is_pantry_excluded: false,
             sort_order: 10,
