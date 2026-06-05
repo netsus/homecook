@@ -4143,6 +4143,527 @@ describe("20 youtube real import backend", () => {
     });
   });
 
+  it("POST /api/v1/recipes/youtube/extract suppresses non-cooking author comment step notes without hardcoding sample text", async () => {
+    mockAuth();
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: kimchiIngredientId, standard_name: "김치" },
+        { id: saltIngredientId, standard_name: "소금" },
+        { id: waterIngredientId, standard_name: "물" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440216",
+          code: "boil",
+          label: "끓이기",
+          color_key: "blue",
+          is_system: true,
+        },
+      ],
+    });
+    const authorProvider: YoutubeAuthorCommentProvider = {
+      name: "fixture-comments",
+      fetchAuthorComments: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-comments",
+        comments: [
+          {
+            text: [
+              "재료",
+              "김치 500g",
+              "소금 약간",
+              "물 2컵",
+              "만드는 법",
+              "(1) 김치를 한입 크기로 썰어주세요.",
+              "(2) 냄비에 물을 넣고 끓여주세요.",
+              "3. 엑스트라버진 올리브오일은 오프라인 구매 추천",
+              "4. 더 많은 제품 태그는 프로필 링크에서 확인하세요 ^^",
+            ].join("\n"),
+            authorChannelId: "channel-incomplete123",
+          },
+        ],
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeAuthorCommentProvider(authorProvider, () =>
+      postYoutubeExtract(incompleteUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description", "comment"],
+        blocking_issues: [],
+        steps: [
+          { instruction: "김치를 한입 크기로 썰어주세요.", is_incomplete: false },
+          { instruction: "냄비에 물을 넣고 끓여주세요.", is_incomplete: false },
+        ],
+      },
+      error: null,
+    });
+    expect(JSON.stringify(body.data.steps)).not.toContain("오프라인");
+    expect(JSON.stringify(body.data.steps)).not.toContain("프로필 링크");
+    expect(JSON.stringify(body.data.steps)).not.toContain("(1)");
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      llm_extractor: {
+        parser_quality: {
+          step_quality_flags: expect.arrayContaining([
+            "non_cooking_product_note",
+            "social_cta",
+          ]),
+          suppressed_step_count: 2,
+        },
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract keeps casual but valid cooking steps when Gemini is unavailable", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "false");
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: kimchiIngredientId, standard_name: "김치" },
+        { id: waterIngredientId, standard_name: "물" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: "550e8400-e29b-41d4-a716-446655440216",
+          code: "boil",
+          label: "끓이기",
+          color_key: "blue",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440217",
+          code: "mix",
+          label: "섞기",
+          color_key: "green",
+          is_system: true,
+        },
+      ],
+    });
+    const authorProvider: YoutubeAuthorCommentProvider = {
+      name: "fixture-comments",
+      fetchAuthorComments: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-comments",
+        comments: [
+          {
+            text: [
+              "재료",
+              "김치 500g",
+              "물 1컵",
+              "만드는 법",
+              "1. 그냥 약불에서 천천히 끓여주세요.",
+              "2. 이거를 잘 섞어주세요.",
+            ].join("\n"),
+            authorChannelId: "channel-incomplete123",
+          },
+        ],
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeAuthorCommentProvider(authorProvider, () =>
+      postYoutubeExtract(incompleteUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        steps: [
+          { instruction: "그냥 약불에서 천천히 끓여주세요.", is_incomplete: false },
+          { instruction: "이거를 잘 섞어주세요.", is_incomplete: false },
+        ],
+      },
+      error: null,
+    });
+    expect(body.data.blocking_issues).not.toContain("steps");
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      llm_extractor: {
+        parser_quality: {
+          reasons: expect.not.arrayContaining(["conversational_step_fragments"]),
+          step_quality_flags: expect.not.arrayContaining(["conversational_filler"]),
+        },
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract keeps valid cooking steps with laughter suffixes when Gemini is unavailable", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "false");
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: kimchiIngredientId, standard_name: "김치" },
+        { id: waterIngredientId, standard_name: "물" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440216",
+          code: "boil",
+          label: "끓이기",
+          color_key: "blue",
+          is_system: true,
+        },
+      ],
+    });
+    const authorProvider: YoutubeAuthorCommentProvider = {
+      name: "fixture-comments",
+      fetchAuthorComments: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-comments",
+        comments: [
+          {
+            text: [
+              "재료",
+              "김치 500g",
+              "물 2컵",
+              "만드는 법",
+              "1. 김치를 썰고 ㅎㅎ",
+              "2. 냄비에 물을 넣으면 돼요 ㅋㅋ",
+            ].join("\n"),
+            authorChannelId: "channel-incomplete123",
+          },
+        ],
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeAuthorCommentProvider(authorProvider, () =>
+      postYoutubeExtract(incompleteUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        steps: [
+          { instruction: "김치를 썰고 ㅎㅎ", is_incomplete: false },
+          { instruction: "냄비에 물을 넣으면 돼요 ㅋㅋ", is_incomplete: false },
+        ],
+      },
+      error: null,
+    });
+    expect(body.data.blocking_issues).not.toContain("steps");
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      llm_extractor: {
+        attempted: true,
+        status: "disabled",
+        reason: "gemini_disabled",
+        parser_quality: {
+          reasons: expect.arrayContaining(["conversational_step_fragments"]),
+          step_quality_flags: expect.arrayContaining(["conversational_filler"]),
+        },
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract keeps valid cooking steps with family or product words when Gemini is unavailable", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "false");
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: kimchiIngredientId, standard_name: "김치" },
+        { id: waterIngredientId, standard_name: "물" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: "550e8400-e29b-41d4-a716-446655440216",
+          code: "boil",
+          label: "끓이기",
+          color_key: "blue",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440217",
+          code: "stir_fry",
+          label: "볶기",
+          color_key: "red",
+          is_system: true,
+        },
+      ],
+    });
+    const authorProvider: YoutubeAuthorCommentProvider = {
+      name: "fixture-comments",
+      fetchAuthorComments: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-comments",
+        comments: [
+          {
+            text: [
+              "재료",
+              "김치 500g",
+              "물 2컵",
+              "만드는 법",
+              "1. 받은 제품으로 김치를 볶아요.",
+              "2. 아이도 먹기 좋게 물을 넣고 끓여요.",
+            ].join("\n"),
+            authorChannelId: "channel-incomplete123",
+          },
+        ],
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeAuthorCommentProvider(authorProvider, () =>
+      postYoutubeExtract(incompleteUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        steps: [
+          { instruction: "받은 제품으로 김치를 볶아요.", is_incomplete: false },
+          { instruction: "아이도 먹기 좋게 물을 넣고 끓여요.", is_incomplete: false },
+        ],
+      },
+      error: null,
+    });
+    expect(body.data.blocking_issues).not.toContain("steps");
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      llm_extractor: {
+        attempted: true,
+        status: "disabled",
+        parser_quality: {
+          reasons: expect.arrayContaining(["conversational_step_fragments"]),
+        },
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract keeps short garnish steps instead of treating them as fragments", async () => {
+    mockAuth();
+
+    const { dbClient } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: kimchiIngredientId, standard_name: "김치" },
+        { id: saltIngredientId, standard_name: "소금" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+      ],
+    });
+    const authorProvider: YoutubeAuthorCommentProvider = {
+      name: "fixture-comments",
+      fetchAuthorComments: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-comments",
+        comments: [
+          {
+            text: [
+              "재료",
+              "김치 500g",
+              "소금 약간",
+              "만드는 법",
+              "1. 김치를 한입 크기로 썰어주세요.",
+              "2. 통깨 솔솔",
+            ].join("\n"),
+            authorChannelId: "channel-incomplete123",
+          },
+        ],
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeAuthorCommentProvider(authorProvider, () =>
+      postYoutubeExtract(incompleteUrl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body.data.steps.map((step: { instruction: string }) => step.instruction)).toEqual([
+      "김치를 한입 크기로 썰어주세요.",
+      "통깨 솔솔",
+    ]);
+    expect(body.data.blocking_issues).toEqual([]);
+  });
+
+  it("POST /api/v1/recipes/youtube/extract triggers Gemini for non-empty but low-quality comment steps", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: kimchiIngredientId, standard_name: "김치" },
+        { id: saltIngredientId, standard_name: "소금" },
+        { id: waterIngredientId, standard_name: "물" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440216",
+          code: "boil",
+          label: "끓이기",
+          color_key: "blue",
+          is_system: true,
+        },
+      ],
+    });
+    const authorProvider: YoutubeAuthorCommentProvider = {
+      name: "fixture-comments",
+      fetchAuthorComments: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-comments",
+        comments: [
+          {
+            text: [
+              "재료",
+              "김치 500g",
+              "소금 약간",
+              "물 2컵",
+              "만드는 법",
+              "1. 김치를 썰고 ㅎㅎ",
+              "2. 냄비에 넣으면 돼요 ㅋㅋ",
+              "3. 제품 태그는 프로필 링크 확인",
+            ].join("\n"),
+            authorChannelId: "channel-incomplete123",
+          },
+        ],
+      })),
+    };
+    const llmExtractor: YoutubeRecipeLlmExtractor = {
+      name: "gemini_structured_extractor",
+      fetchStructuredRecipe: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "gemini",
+        model: "gemini-3.1-flash-lite",
+        fallbackModel: "gemini-2.5-flash-lite",
+        inputTokens: 120,
+        outputTokens: 70,
+        resultJson: {
+          recipes: [
+            {
+              title: "김치찌개",
+              confidence: 0.86,
+              ingredients: [
+                {
+                  name: "김치",
+                  amount: "500",
+                  unit: "g",
+                  raw_text: "김치 500g",
+                  evidence_refs: [{ source: "comment", line_index: 1 }],
+                },
+                {
+                  name: "소금",
+                  amount: null,
+                  unit: null,
+                  raw_text: "소금 약간",
+                  evidence_refs: [{ source: "comment", line_index: 2 }],
+                },
+                {
+                  name: "물",
+                  amount: "2",
+                  unit: "컵",
+                  raw_text: "물 2컵",
+                  evidence_refs: [{ source: "comment", line_index: 3 }],
+                },
+              ],
+              steps: [
+                {
+                  instruction: "김치를 한입 크기로 썰어요.",
+                  raw_text: "김치를 썰고 ㅎㅎ",
+                  evidence_refs: [{ source: "comment", line_index: 5 }],
+                },
+                {
+                  instruction: "냄비에 물과 김치를 넣고 끓여요.",
+                  raw_text: "냄비에 넣으면 돼요 ㅋㅋ",
+                  evidence_refs: [{ source: "comment", line_index: 6 }],
+                },
+              ],
+              warnings: [],
+            },
+          ],
+        },
+      })),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeAuthorCommentProvider(authorProvider, () =>
+      withYoutubeRecipeLlmExtractor(llmExtractor, () => postYoutubeExtract(incompleteUrl)),
+    );
+
+    expect(response.status).toBe(200);
+    expect(llmExtractor.fetchStructuredRecipe).toHaveBeenCalledTimes(1);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        extraction_methods: ["description", "comment"],
+        steps: [
+          { instruction: "김치를 한입 크기로 썰어요." },
+          { instruction: "냄비에 물과 김치를 넣고 끓여요." },
+        ],
+      },
+      error: null,
+    });
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_meta_json: Record<string, unknown>;
+      source_providers: string[];
+    };
+    expect(insertedSession.source_providers).toContain("gemini_structured_extractor");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      llm_extractor: {
+        status: "used",
+        parser_quality: {
+          low_quality: true,
+          reasons: expect.arrayContaining(["conversational_step_fragments"]),
+          step_quality_flags: expect.arrayContaining(["conversational_filler"]),
+        },
+      },
+    });
+  });
+
   it("POST /api/v1/recipes/youtube/extract keeps partial drafts when author comments are promotional", async () => {
     mockAuth();
 
