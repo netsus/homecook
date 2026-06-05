@@ -1,6 +1,6 @@
 # YouTube Live Extraction Validation Plan
 
-Status: draft for execution planning
+Status: implemented guardrails, live provider run remains environment-dependent
 Change type: docs-governance first, followed by product-backend and optional contract-evolution
 Created: 2026-06-05
 
@@ -174,6 +174,30 @@ Validator rules:
 - `public_improvement_claim=true` is allowed only when the validator derives both `verified_live=true` and `ui_verified=true`.
 
 ## Execution Phases
+
+### Implemented Guardrails
+
+Implemented commands:
+
+```bash
+pnpm youtube:smoke:live -- --set recipio-12
+pnpm youtube:smoke:ui -- --report <live-smoke-report.json>
+pnpm youtube:smoke:validate -- <report.json>
+```
+
+Implemented files:
+
+| File | Role |
+| --- | --- |
+| `scripts/validate-youtube-live-extraction-report.mjs` | Recomputes `verified_live` / `ui_verified`, rejects fixture/test/parity/mock provenance, rejects reference-answer fields in live rows, and checks live extractor source imports. |
+| `scripts/youtube-live-smoke.mjs` | URL-only live smoke wrapper. It passes only YouTube URLs into the existing real app-route smoke and validates the resulting report. |
+| `scripts/youtube-live-smoke-recipio-12-urls.json` | URL-only 12-video corpus. It intentionally contains no titles, expected ingredients, expected steps, Recipio URLs, or scores. |
+| `scripts/youtube-smoke-ui.mjs` | Builds a separate `ui_capture` report from DOM-count evidence collected during the live browser smoke. |
+| `scripts/youtube-real-app-route-smoke.mjs` | Existing real browser smoke, now with live manifest fields, fixture-provider environment guard, persisted session provenance export, and minimal UI count evidence. |
+
+Important limitation:
+
+- `youtube:smoke:ui` currently verifies the minimal DOM count evidence captured by the live browser smoke. The app does not yet expose a stable route that reopens an existing `youtube_extraction_sessions` draft by session ID alone, so the verifier does not independently reconstruct the review screen from only a session URL.
 
 ### Phase 1. Governance And Naming Guard
 

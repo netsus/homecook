@@ -16,6 +16,9 @@ const ROOT = process.cwd();
 const DEFAULT_PORT_START = 3200;
 const TEST_EMAIL = "youtube-real-smoke@homecook.local";
 const TEST_PASSWORD = "homecook-youtube-real-smoke";
+const REPORT_SCHEMA = "youtube-live-extraction-report-v1";
+const SMOKE_SCRIPT_PATH = "scripts/youtube-real-app-route-smoke.mjs";
+const UI_VERIFIER_SCRIPT_PATH = "scripts/youtube-smoke-ui.mjs";
 const RUN_DATE = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Seoul",
   year: "numeric",
@@ -244,6 +247,7 @@ function parseArgs(argv) {
     baseUrl: null,
     keepServer: false,
     limit: 7,
+    fullScreenshots: false,
     noServer: false,
     port: null,
     urls: [],
@@ -294,6 +298,11 @@ function parseArgs(argv) {
       continue;
     }
 
+    if (token === "--full-screenshots") {
+      args.fullScreenshots = true;
+      continue;
+    }
+
     if (token === "--help" || token === "-h") {
       printHelp();
       process.exit(0);
@@ -319,9 +328,10 @@ function printHelp() {
       "  node scripts/youtube-real-app-route-smoke.mjs --limit 9",
       "  node scripts/youtube-real-app-route-smoke.mjs --url https://www.youtube.com/watch?v=lTCplQtiGw8",
       "  node scripts/youtube-real-app-route-smoke.mjs --base-url http://127.0.0.1:3200 --no-server",
+      "  node scripts/youtube-real-app-route-smoke.mjs --full-screenshots",
       "",
       "This smoke uses real Supabase Auth, real app routes, real YouTube provider calls,",
-      "DB verification through service role, and cleanup of generated recipes/sessions.",
+      "DB verification through service role, minimal UI count evidence, and cleanup of generated recipes/sessions.",
     ].join("\n") + "\n",
   );
 }
@@ -424,7 +434,21 @@ function mergeEnv(fileEnv) {
       "1",
     HOMECOOK_ENABLE_QA_FIXTURES: "0",
     NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES: "0",
+    HOMECOOK_YOUTUBE_FIXTURE_PROVIDER:
+      process.env.HOMECOOK_YOUTUBE_FIXTURE_PROVIDER ??
+      fileEnv.HOMECOOK_YOUTUBE_FIXTURE_PROVIDER ??
+      "0",
   };
+}
+
+function assertLiveSmokeEnvironment(env) {
+  if (env.NODE_ENV === "test") {
+    throw new Error("Live YouTube smoke cannot run with NODE_ENV=test.");
+  }
+
+  if (env.HOMECOOK_YOUTUBE_FIXTURE_PROVIDER !== "0") {
+    throw new Error("Live YouTube smoke requires HOMECOOK_YOUTUBE_FIXTURE_PROVIDER=0.");
+  }
 }
 
 function requireEnv(env, key) {
@@ -698,7 +722,7 @@ function sanitizeFileName(value) {
   return value.replace(/[^a-zA-Z0-9._-]+/gu, "-");
 }
 
-async function runCase({ adminClient, artifactDir, baseUrl, browser, cookies, sample, startedAtIso }) {
+async function runCase({ adminClient, artifactDir, baseUrl, browser, cookies, sample, startedAtIso, fullScreenshots }) {
   const context = await browser.newContext({
     baseURL: baseUrl,
     locale: "ko-KR",
@@ -713,15 +737,26 @@ async function runCase({ adminClient, artifactDir, baseUrl, browser, cookies, sa
       recipeDeleted: false,
       sessionDeleted: false,
     },
+    blocking_issues: [],
     db: null,
     errors: [],
     extract: null,
+    extracted_counts: {
+      candidates: 0,
+      ingredients: 0,
+      steps: 0,
+    },
     methods: [],
+    provider_names: [],
     register: null,
     registerEnabled: false,
     registerRequirements: null,
     reviewReached: false,
     screenshot: null,
+    session_ids: [],
+    source_providers: [],
+    ui_evidence: null,
+    ui_evidence_path: null,
     validate: null,
   };
 
@@ -747,7 +782,7 @@ async function runCase({ adminClient, artifactDir, baseUrl, browser, cookies, sa
 
     if (!result.validate.ok || result.validate.body?.success === false) {
       result.errors.push(`validate failed: ${result.validate.status}`);
-      await captureCaseScreenshot(page, artifactDir, sample, result, "validate-failed");
+      await captureCaseEvidence(page, artifactDir, sample, result, "validate-failed", { fullScreenshots });
       return result;
     }
 
@@ -762,12 +797,14 @@ async function runCase({ adminClient, artifactDir, baseUrl, browser, cookies, sa
       result.errors.push(
         `extract failed: ${result.extract.status} ${result.extract.body?.error?.code ?? ""}`.trim(),
       );
-      await captureCaseScreenshot(page, artifactDir, sample, result, "extract-failed");
+      await captureCaseEvidence(page, artifactDir, sample, result, "extract-failed", { fullScreenshots });
       return result;
     }
 
     result.extractionId = result.extract.body?.data?.extraction_id ?? null;
     result.methods = result.extract.body?.data?.extraction_methods ?? [];
+    result.blocking_issues = readStringArray(result.extract.body?.data?.blocking_issues);
+    result.extracted_counts = countExtractedData(result.extract.body?.data);
 
     await Promise.race([
       page.getByTestId("extraction-method-chips").waitFor({ state: "visible", timeout: 30_000 }),
@@ -778,7 +815,7 @@ async function runCase({ adminClient, artifactDir, baseUrl, browser, cookies, sa
 
     if (!result.reviewReached) {
       result.errors.push("review screen not reached");
-      await captureCaseScreenshot(page, artifactDir, sample, result, "review-not-reached");
+      await captureCaseEvidence(page, artifactDir, sample, result, "review-not-reached", { fullScreenshots });
       return result;
     }
 
@@ -789,7 +826,7 @@ async function runCase({ adminClient, artifactDir, baseUrl, browser, cookies, sa
 
     const registerButton = page.getByRole("button", { name: /^등록$/u }).first();
     result.registerEnabled = await registerButton.isEnabled().catch(() => false);
-    await captureCaseScreenshot(page, artifactDir, sample, result, "review");
+    await captureCaseEvidence(page, artifactDir, sample, result, "review", { fullScreenshots });
 
     if (result.registerEnabled) {
       result.register = await waitForApiResponse(
@@ -802,12 +839,12 @@ async function runCase({ adminClient, artifactDir, baseUrl, browser, cookies, sa
       if (result.register.ok && result.register.body?.success !== false) {
         result.recipeId = result.register.body?.data?.recipe_id ?? null;
         await page.getByText("레시피가 등록됐어요").waitFor({ state: "visible", timeout: 30_000 });
-        await captureCaseScreenshot(page, artifactDir, sample, result, "complete");
+        await captureCaseEvidence(page, artifactDir, sample, result, "complete", { fullScreenshots });
       } else {
         result.errors.push(
           `register failed: ${result.register.status} ${result.register.body?.error?.code ?? ""}`.trim(),
         );
-        await captureCaseScreenshot(page, artifactDir, sample, result, "register-failed");
+        await captureCaseEvidence(page, artifactDir, sample, result, "register-failed", { fullScreenshots });
       }
     }
 
@@ -817,9 +854,10 @@ async function runCase({ adminClient, artifactDir, baseUrl, browser, cookies, sa
       sample,
       startedAtIso,
     });
+    finalizeResultProvenance(result);
   } catch (error) {
     result.errors.push(error instanceof Error ? error.message : String(error));
-    await captureCaseScreenshot(page, artifactDir, sample, result, "error").catch(() => {});
+    await captureCaseEvidence(page, artifactDir, sample, result, "error", { fullScreenshots }).catch(() => {});
   } finally {
     await context.close();
   }
@@ -827,13 +865,244 @@ async function runCase({ adminClient, artifactDir, baseUrl, browser, cookies, sa
   return result;
 }
 
-async function captureCaseScreenshot(page, artifactDir, sample, result, state) {
-  const screenshotPath = path.join(
+function readStringArray(value) {
+  return Array.isArray(value)
+    ? value.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim())
+    : [];
+}
+
+function countExtractedData(data) {
+  return {
+    candidates: Array.isArray(data?.recipe_candidates) ? data.recipe_candidates.length : 0,
+    ingredients: Array.isArray(data?.ingredients) ? data.ingredients.length : 0,
+    steps: Array.isArray(data?.steps) ? data.steps.length : 0,
+  };
+}
+
+function parseVisibleCounts(text) {
+  const ingredientMatch = text.match(/재료\s*\((\d+)개\)/u);
+  const stepMatch = text.match(/만들기\s*\((\d+)단계\)/u);
+  const candidateMatch = text.match(/요리\s*후보\s*(\d+)개/u);
+
+  return {
+    candidates: candidateMatch ? Number(candidateMatch[1]) : 0,
+    ingredients: ingredientMatch ? Number(ingredientMatch[1]) : null,
+    steps: stepMatch ? Number(stepMatch[1]) : null,
+  };
+}
+
+function redactSensitiveText(value) {
+  return String(value)
+    .replace(/AIza[0-9A-Za-z_-]{20,}/gu, "[REDACTED_API_KEY]")
+    .replace(/(api[_-]?key|token|secret|authorization)\s*[:=]\s*\S+/giu, "$1=[REDACTED]")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function buildUiTextSnippets(text) {
+  const lines = text
+    .split(/\r?\n/u)
+    .map((line) => redactSensitiveText(line))
+    .filter(Boolean);
+  const keepPatterns = [
+    /추출 결과/u,
+    /재료\s*\(\d+개\)/u,
+    /만들기\s*\(\d+단계\)/u,
+    /요리\s*후보\s*\d+개/u,
+    /등록하려면/u,
+    /찾지 못했어요/u,
+    /조리 과정을 직접 입력/u,
+  ];
+
+  return lines
+    .filter((line) => keepPatterns.some((pattern) => pattern.test(line)))
+    .slice(0, 12);
+}
+
+async function captureCaseEvidence(page, artifactDir, sample, result, state, options = {}) {
+  const bodyText = await page.locator("body").innerText({ timeout: 1000 }).catch(() => "");
+  const evidence = {
+    captured_at: new Date().toISOString(),
+    extraction_counts: result.extracted_counts,
+    session_id: result.extractionId ?? null,
+    state,
+    text_snippets: buildUiTextSnippets(bodyText),
+    visible_counts: parseVisibleCounts(bodyText),
+  };
+  const evidencePath = path.join(
     artifactDir,
-    `${sanitizeFileName(sample.id)}-${state}.png`,
+    `${sanitizeFileName(sample.id)}-${state}.ui-evidence.json`,
   );
-  await page.screenshot({ fullPage: true, path: screenshotPath });
-  result.screenshot = screenshotPath;
+  await writeFile(evidencePath, JSON.stringify(evidence, null, 2) + "\n");
+  result.ui_evidence = evidence;
+  result.ui_evidence_path = evidencePath;
+
+  if (options.fullScreenshots || process.env.YOUTUBE_SMOKE_FULL_SCREENSHOTS === "1") {
+    const screenshotPath = path.join(
+      artifactDir,
+      `${sanitizeFileName(sample.id)}-${state}.png`,
+    );
+    await page.screenshot({ fullPage: false, path: screenshotPath });
+    result.screenshot = screenshotPath;
+  }
+}
+
+function uniqueStrings(values) {
+  return [...new Set(values.filter((value) => typeof value === "string" && value.trim()).map((value) => value.trim()))];
+}
+
+function collectProviderNamesFromMeta(meta, output = []) {
+  if (!meta || typeof meta !== "object") {
+    return output;
+  }
+
+  for (const [key, value] of Object.entries(meta)) {
+    if (key === "source_providers" || key === "provider_names") {
+      output.push(...readStringArray(value));
+      continue;
+    }
+
+    if (/(^|_)provider(_|$)/iu.test(key) && typeof value === "string" && value.trim()) {
+      output.push(value.trim());
+      continue;
+    }
+
+    if (value && typeof value === "object") {
+      collectProviderNamesFromMeta(value, output);
+    }
+  }
+
+  return output;
+}
+
+function summarizeProviderMeta(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const allowedKeys = [
+    "attempted",
+    "cache_hit",
+    "confidence",
+    "enabled",
+    "error_code",
+    "model",
+    "provider",
+    "status",
+    "timeout_ms",
+    "used",
+    "used_fallback",
+  ];
+  const summary = {};
+
+  for (const key of allowedKeys) {
+    const item = value[key];
+    if (
+      typeof item === "string" ||
+      typeof item === "number" ||
+      typeof item === "boolean" ||
+      item === null
+    ) {
+      summary[key] = item;
+    }
+  }
+
+  return Object.keys(summary).length > 0 ? summary : null;
+}
+
+function summarizeExtractionMeta(meta) {
+  if (!meta || typeof meta !== "object") {
+    return {
+      provider_names: [],
+      source_providers: [],
+      transcript_provider: null,
+    };
+  }
+
+  const sourceProviders = readStringArray(meta.source_providers);
+  const providerNames = uniqueStrings([
+    ...sourceProviders,
+    ...collectProviderNamesFromMeta(meta),
+  ]);
+  const summary = {
+    provider_names: providerNames,
+    source_providers: sourceProviders,
+    transcript_provider: typeof meta.transcript_provider === "string" ? meta.transcript_provider : null,
+  };
+
+  for (const key of [
+    "author_comment",
+    "comment_fallback",
+    "gemini_structured_extractor",
+    "llm_extractor",
+    "transcript",
+    "visual_quantity_extractor",
+    "visual_recipe_extractor",
+  ]) {
+    const providerSummary = summarizeProviderMeta(meta[key]);
+    if (providerSummary) {
+      summary[key] = providerSummary;
+    }
+  }
+
+  return summary;
+}
+
+function finalizeResultProvenance(result) {
+  const sessionExport = result.db?.sessionExport ?? null;
+  const sessionIds = uniqueStrings([
+    ...readStringArray(result.session_ids),
+    result.extractionId,
+    sessionExport?.id,
+  ].filter(Boolean));
+  const sourceProviders = uniqueStrings([
+    ...readStringArray(result.source_providers),
+    ...readStringArray(result.db?.sessionSourceProviders),
+    ...readStringArray(sessionExport?.source_providers),
+    ...readStringArray(sessionExport?.extraction_meta_summary?.source_providers),
+  ]);
+  const providerNames = uniqueStrings([
+    ...readStringArray(result.provider_names),
+    ...sourceProviders,
+    ...readStringArray(sessionExport?.extraction_meta_summary?.provider_names),
+  ]);
+
+  result.session_ids = sessionIds;
+  result.source_providers = sourceProviders;
+  result.provider_names = providerNames;
+
+  if (result.ui_evidence) {
+    result.ui_evidence.extraction_counts = result.extracted_counts;
+    result.ui_evidence.session_id = result.extractionId ?? sessionExport?.id ?? null;
+  }
+
+  return result;
+}
+
+function normalizeResultForReport(result) {
+  const rest = { ...result };
+  const inputVideoId = rest.videoId;
+  delete rest.note;
+  delete rest.videoId;
+  const normalized = finalizeResultProvenance({
+    ...rest,
+    blocking_issues: readStringArray(result.blocking_issues),
+    errors: readStringArray(result.errors),
+    extracted_counts: result.extracted_counts ?? countExtractedData(result.extract?.body?.data),
+    input: {
+      youtube_url: result.url,
+    },
+    ui_evidence: result.ui_evidence ? { ...result.ui_evidence } : null,
+  });
+  const sessionExport = normalized.db?.sessionExport ?? null;
+
+  normalized.title = sessionExport?.title ?? normalized.extract?.body?.data?.title ?? null;
+  normalized.youtube_url = sessionExport?.youtube_url ?? normalized.url;
+  normalized.youtube_video_id =
+    sessionExport?.youtube_video_id ?? normalized.extract?.body?.data?.youtube_video_id ?? null;
+  normalized.videoId = normalized.youtube_video_id ?? inputVideoId ?? null;
+
+  return normalized;
 }
 
 async function verifyDbState(adminClient, { extractionId, recipeId, sample, startedAtIso }) {
@@ -845,6 +1114,7 @@ async function verifyDbState(adminClient, { extractionId, recipeId, sample, star
     sessionMethods: [],
     sessionRawSourceHasCaptionTranscript: false,
     sessionRecipeId: null,
+    sessionExport: null,
     sessionSourceProviders: [],
     sessionStatus: null,
     sessionTranscriptProvider: null,
@@ -871,7 +1141,7 @@ async function verifyDbState(adminClient, { extractionId, recipeId, sample, star
   if (resolvedExtractionId) {
     const sessionResult = await adminClient
       .from("youtube_extraction_sessions")
-      .select("id, status, recipe_id, extraction_methods, source_providers, extraction_meta_json, raw_source_text")
+      .select("id, status, recipe_id, youtube_url, youtube_video_id, draft_json, extraction_methods, source_providers, extraction_meta_json, raw_source_text")
       .eq("id", resolvedExtractionId)
       .maybeSingle();
 
@@ -887,6 +1157,19 @@ async function verifyDbState(adminClient, { extractionId, recipeId, sample, star
         sessionResult.data.extraction_meta_json?.transcript_provider ?? null;
       db.sessionRawSourceHasCaptionTranscript =
         sessionResult.data.raw_source_text?.includes("--- caption transcript ---") ?? false;
+      db.sessionExport = {
+        extraction_meta_summary: summarizeExtractionMeta(sessionResult.data.extraction_meta_json),
+        extraction_methods: sessionResult.data.extraction_methods ?? [],
+        id: sessionResult.data.id,
+        recipe_id: sessionResult.data.recipe_id,
+        source_providers: sessionResult.data.source_providers ?? [],
+        status: sessionResult.data.status,
+        title: typeof sessionResult.data.draft_json?.title === "string"
+          ? sessionResult.data.draft_json.title
+          : null,
+        youtube_url: sessionResult.data.youtube_url ?? null,
+        youtube_video_id: sessionResult.data.youtube_video_id ?? null,
+      };
     }
   }
 
@@ -1028,18 +1311,47 @@ function hashValue(value) {
 }
 
 async function writeReports({ artifactDir, baseUrl, cleanup, env, results, runId, startedAtIso, user }) {
-  const summary = summarize(results);
+  const normalizedResults = results.map(normalizeResultForReport);
+  const summary = summarize(normalizedResults);
+  const providerNames = uniqueStrings(normalizedResults.flatMap((result) => result.provider_names));
+  const sessionIds = uniqueStrings(normalizedResults.flatMap((result) => result.session_ids));
   const jsonReport = {
     artifactDir,
     baseUrl,
     cleanup,
+    evidence_origin: "live_provider",
     environment: {
       supabaseProject: new URL(requireEnv(env, "NEXT_PUBLIC_SUPABASE_URL")).hostname.split(".")[0],
       testAccount: TEST_EMAIL,
       testUserIdHash: hashValue(user.id),
     },
-    results,
+    provider_names: providerNames,
+    report_schema: REPORT_SCHEMA,
+    report_validation: {
+      artifact_producer_path: SMOKE_SCRIPT_PATH,
+      command: env.YOUTUBE_LIVE_SMOKE_COMMAND ?? "pnpm smoke:youtube-real-app-route",
+      environment: {
+        homecook_enable_qa_fixtures: env.HOMECOOK_ENABLE_QA_FIXTURES ?? "0",
+        homecook_youtube_fixture_provider: env.HOMECOOK_YOUTUBE_FIXTURE_PROVIDER ?? null,
+        next_public_homecook_enable_qa_fixtures: env.NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES ?? "0",
+        node_env: env.NODE_ENV ?? "unset",
+        youtube_api_key_present: Boolean(env.YOUTUBE_API_KEY),
+      },
+      evidence_origin: "live_provider",
+      extraction_input_policy: "url_only",
+      extractor_entrypoint: SMOKE_SCRIPT_PATH,
+      extractor_corpus_path: env.YOUTUBE_LIVE_EXTRACTOR_CORPUS_PATH ?? null,
+      evaluator_entrypoint: null,
+      public_improvement_claim: false,
+      run_mode: "live_smoke",
+      ui_verifier_entrypoint: UI_VERIFIER_SCRIPT_PATH,
+      ui_verified: false,
+      verified_live: false,
+    },
+    results: normalizedResults,
     runId,
+    run_mode: "live_smoke",
+    session_ids: sessionIds,
     startedAt: startedAtIso,
     summary,
   };
@@ -1059,7 +1371,7 @@ async function writeReports({ artifactDir, baseUrl, cleanup, env, results, runId
     baseUrl,
     cleanup,
     jsonPath,
-    results,
+    results: normalizedResults,
     runId,
     startedAtIso,
     summary,
@@ -1083,12 +1395,13 @@ function buildMarkdownReport({ artifactDir, baseUrl, cleanup, jsonPath, results,
     `- Run id: \`${runId}\``,
     `- Started at: \`${startedAtIso}\``,
     `- App URL: \`${baseUrl}\``,
-    "- Mode: Playwright Chromium, real Supabase Auth session, real app route calls, real YouTube provider calls",
+    "- Mode: `live_smoke` / Playwright Chromium, real Supabase Auth session, real app route calls, real YouTube provider calls",
     "- Auth override/API mocks: not used",
     "- DB verification: Supabase service role",
     "- Cleanup: generated recipe/session rows deleted after verification; persistent test auth account retained",
+    "- UI evidence: minimal DOM counts and short snippets only; full screenshots require `--full-screenshots`",
     `- Raw artifact: \`${jsonPath}\``,
-    `- Screenshot dir: \`${artifactDir}\``,
+    `- Artifact dir: \`${artifactDir}\``,
     "",
     "## Summary",
     "",
@@ -1132,7 +1445,7 @@ function buildMarkdownReport({ artifactDir, baseUrl, cleanup, jsonPath, results,
       const notes = [
         result.registerRequirements ? `requirements: ${oneLine(result.registerRequirements)}` : null,
         result.errors.length > 0 ? `errors: ${result.errors.map(oneLine).join("; ")}` : null,
-      ].filter(Boolean).join("<br>") || result.note;
+      ].filter(Boolean).join("<br>") || "-";
 
       return `| ${index + 1} | ${result.bucket} | \`${result.videoId}\` | ${methods} | ${result.reviewReached ? "yes" : "no"} | ${register} | ${db} | ${cleanupState} | ${notes} |`;
     }),
@@ -1166,6 +1479,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const envFile = await readEnvFile(path.join(ROOT, ".env.local"));
   const env = mergeEnv(envFile);
+  assertLiveSmokeEnvironment(env);
   const supabaseUrl = requireEnv(env, "NEXT_PUBLIC_SUPABASE_URL");
   const serviceRoleKey = requireEnv(env, "SUPABASE_SERVICE_ROLE_KEY");
   requireEnv(env, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
@@ -1217,6 +1531,7 @@ async function main() {
         baseUrl,
         browser,
         cookies: auth.cookies,
+        fullScreenshots: args.fullScreenshots,
         sample,
         startedAtIso,
       });
