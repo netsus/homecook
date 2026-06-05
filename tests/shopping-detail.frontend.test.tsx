@@ -90,6 +90,7 @@ describe("ShoppingDetailScreen", () => {
       {
         id: "item-1",
         ingredient_id: "ing-1",
+        category: "채소",
         display_text: "양파 2개",
         amounts_json: [{ amount: 2, unit: "개" }],
         is_checked: false,
@@ -100,6 +101,7 @@ describe("ShoppingDetailScreen", () => {
       {
         id: "item-2",
         ingredient_id: "ing-2",
+        category: "양념",
         display_text: "간장 2큰술",
         amounts_json: [{ amount: 2, unit: "큰술" }],
         is_checked: false,
@@ -133,9 +135,12 @@ describe("ShoppingDetailScreen", () => {
       expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
     });
 
-    expect(screen.getByText("생성 4월 12일 · 4월 12일 ~ 20일")).toBeTruthy();
+    expect(screen.queryByText("생성 4월 12일 · 4월 12일 ~ 20일")).toBeNull();
+    expect(screen.getByText("0 / 1 항목")).toBeTruthy();
     expect(screen.getByText(/구매할 재료 \(1개\)/)).toBeTruthy();
-    expect(screen.getByText(/팬트리 제외 항목 \(1개\)/)).toBeTruthy();
+    expect(screen.getByText(/팬트리에 있는 재료 \(1개\)/)).toBeTruthy();
+    expect(screen.getByText("채소")).toBeTruthy();
+    expect(screen.getByText("양념")).toBeTruthy();
   });
 
   it("renders empty state when all items are excluded", async () => {
@@ -145,6 +150,7 @@ describe("ShoppingDetailScreen", () => {
         {
           id: "item-1",
           ingredient_id: "ing-1",
+          category: "채소",
           display_text: "양파 2개",
           amounts_json: [{ amount: 2, unit: "개" }],
           is_checked: false,
@@ -275,6 +281,35 @@ describe("ShoppingDetailScreen", () => {
     });
   });
 
+  it("toggles item check status when clicking the item card", async () => {
+    vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+    vi.spyOn(shoppingApi, "updateShoppingListItem").mockResolvedValue({
+      ...mockListDetail.items[0],
+      is_checked: true,
+    });
+
+    const user = userEvent.setup();
+
+    render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+    });
+
+    const itemCard = screen.getByText("양파").closest("article");
+    expect(itemCard).toBeTruthy();
+
+    await user.click(itemCard as HTMLElement);
+
+    await waitFor(() => {
+      expect(shoppingApi.updateShoppingListItem).toHaveBeenCalledWith(
+        "list-1",
+        "item-1",
+        { is_checked: true },
+      );
+    });
+  });
+
   it("toggles item exclude status and enforces exclude→uncheck rule", async () => {
     vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
     vi.spyOn(shoppingApi, "updateShoppingListItem").mockResolvedValue({
@@ -302,7 +337,7 @@ describe("ShoppingDetailScreen", () => {
       );
     });
     await waitFor(() => {
-      expect(screen.getByText(/팬트리 제외 항목 \(2개\)/)).toBeTruthy();
+      expect(screen.getByText(/팬트리에 있는 재료 \(2개\)/)).toBeTruthy();
     });
   });
 
@@ -312,7 +347,7 @@ describe("ShoppingDetailScreen", () => {
     render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/팬트리 제외 항목 \(1개\)/)).toBeTruthy();
+      expect(screen.getByText(/팬트리에 있는 재료 \(1개\)/)).toBeTruthy();
     });
 
     const restoreButton = screen.getByRole("button", { name: /간장.*되살리기/ });
@@ -477,6 +512,7 @@ describe("ShoppingDetailScreen", () => {
           {
             id: "item-1",
             ingredient_id: "ing-1",
+            category: "채소",
             display_text: "양파 2개",
             amounts_json: [{ amount: 2, unit: "개" }],
             is_checked: false,

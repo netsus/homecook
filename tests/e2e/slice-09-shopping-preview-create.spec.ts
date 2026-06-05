@@ -13,6 +13,7 @@ function isMobileViewport(page: Page) {
 interface ShoppingPreviewMeal {
   id: string;
   column_id: string;
+  column_name?: string | null;
   plan_date: string;
   recipe_id: string;
   recipe_name: string;
@@ -51,6 +52,7 @@ function buildPreviewMeal(
   return {
     id: "meal-1",
     column_id: "column-breakfast",
+    column_name: "아침",
     plan_date: "2026-04-26",
     recipe_id: "recipe-1",
     recipe_name: "김치찌개",
@@ -252,13 +254,13 @@ test.describe("slice 09: shopping preview and list creation", () => {
       await expect(page.getByText("김치찌개")).toBeVisible();
       const recipeEntry = page
         .locator(
-          '[data-testid="shopping-recipe-card-recipe-1"], [data-testid="shopping-mobile-recipe-row-recipe-1"]',
+          '[data-testid="shopping-recipe-card-meal-1"], [data-testid="shopping-mobile-recipe-row-meal-1"]',
         )
         .filter({ hasText: "김치찌개" });
       await expect(recipeEntry.getByText("2인분")).toBeVisible();
       await expect(page.getByRole("link", { name: "김치찌개" })).toHaveAttribute(
         "href",
-        "/planner/2026-04-26/column-breakfast?returnTo=%2Fshopping%2Fflow",
+        "/planner/2026-04-26/column-breakfast?slot=%EC%95%84%EC%B9%A8&returnTo=%2Fshopping%2Fflow",
       );
       await expect(page.getByText("장보기 기준 인분")).toHaveCount(0);
       await expect(page.getByLabel("인분 늘리기")).toHaveCount(0);
@@ -266,16 +268,20 @@ test.describe("slice 09: shopping preview and list creation", () => {
       await expect(page.getByText("장보기 목록 만들기")).toBeEnabled();
     });
 
-    test("should group duplicate recipes with an aggregate serving tag", async ({ page }) => {
+    test("should keep duplicate recipes separated by meal", async ({ page }) => {
       await setAuthOverride(page, "authenticated");
       await installShoppingPreviewRoute(page, [
         buildPreviewMeal({
           id: "meal-1",
+          column_id: "column-breakfast",
+          column_name: "아침",
           recipe_name: "김치찌개",
           planned_servings: 2,
         }),
         buildPreviewMeal({
           id: "meal-2",
+          column_id: "column-dinner",
+          column_name: "저녁",
           recipe_name: "김치찌개",
           planned_servings: 3,
         }),
@@ -283,14 +289,11 @@ test.describe("slice 09: shopping preview and list creation", () => {
 
       await page.goto(SHOPPING_FLOW_URL);
 
-      await expect(page.getByText("김치찌개")).toBeVisible();
-      const recipeEntry = page
-        .locator(
-          '[data-testid="shopping-recipe-card-recipe-1"], [data-testid="shopping-mobile-recipe-row-recipe-1"]',
-        )
-        .filter({ hasText: "김치찌개" });
-      await expect(recipeEntry.getByText(/합산.*5인분/)).toBeVisible();
-      await expect(recipeEntry.getByText("대표 끼니로 이동")).toBeVisible();
+      await expect(page.getByRole("link", { name: "김치찌개" })).toHaveCount(2);
+      await expect(page.getByText("아침")).toBeVisible();
+      await expect(page.getByText("저녁")).toBeVisible();
+      await expect(page.getByText("대표 끼니로 이동")).toHaveCount(0);
+      await expect(page.getByText("합산 5인분")).toHaveCount(0);
       await expect(page.getByText("합산 계획 5인분")).toHaveCount(0);
       await expect(page.getByText("대상 식사 2개")).toHaveCount(0);
     });
@@ -356,10 +359,9 @@ test.describe("slice 09: shopping preview and list creation", () => {
 
       // Verify request body
       expect(requestBody).toEqual({
-        recipes: [
+        meal_configs: [
           {
-            recipe_id: "recipe-1",
-            meal_ids: ["meal-1"],
+            meal_id: "meal-1",
             shopping_servings: 2,
           },
         ],
@@ -405,10 +407,9 @@ test.describe("slice 09: shopping preview and list creation", () => {
 
       // Should only submit meal-1
       expect(requestBody).toEqual({
-        recipes: [
+        meal_configs: [
           {
-            recipe_id: "recipe-1",
-            meal_ids: ["meal-1"],
+            meal_id: "meal-1",
             shopping_servings: 2,
           },
         ],
@@ -452,14 +453,13 @@ test.describe("slice 09: shopping preview and list creation", () => {
       await page.getByText("장보기 목록 만들기").click();
 
       expect(requestBody).toEqual({
-        recipes: [
-            {
-              recipe_id: "recipe-1",
-              meal_ids: ["meal-1"],
-              shopping_servings: 2,
-            },
-          ],
-        });
+        meal_configs: [
+          {
+            meal_id: "meal-1",
+            shopping_servings: 2,
+          },
+        ],
+      });
     });
 
     test("should show creating state", async ({ page }) => {

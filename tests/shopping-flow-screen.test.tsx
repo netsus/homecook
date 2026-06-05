@@ -165,7 +165,8 @@ describe("shopping flow screen", () => {
         expect(screen.getByText("장보기 대상이 없어요")).toBeTruthy();
       });
 
-      expect(screen.getByText(/이미 장보기·요리 흐름에 들어간 식사는 제외/)).toBeTruthy();
+      expect(screen.getByText("플래너에 식사를 먼저 등록해 주세요.")).toBeTruthy();
+      expect(screen.queryByText(/이미 장보기·요리 흐름에 들어간 식사는 제외/)).toBeNull();
       expect(screen.getByText("플래너로 돌아가기")).toBeTruthy();
       expect(screen.getByTestId("shopping-flow-state-shell").className).toContain(
         "bg-[var(--wave1-surface)]",
@@ -299,8 +300,9 @@ describe("shopping flow screen", () => {
       expect(screen.getAllByText("장보기 목록 만들기")).toHaveLength(1);
       expect((screen.getByRole("button", { name: "전체 해제" }) as HTMLButtonElement).disabled).toBe(false);
       expect((screen.getByRole("button", { name: "전체 선택" }) as HTMLButtonElement).disabled).toBe(true);
-      expect(screen.getByText("2개 선택 · 총 6인분")).toBeTruthy();
-      expect(screen.getByText("총 6인분을 장보기 목록으로 만들어요.")).toBeTruthy();
+      expect(screen.queryByText("2개 선택 · 총 6인분")).toBeNull();
+      expect(screen.getByText("2개 · 6인분")).toBeTruthy();
+      expect(screen.getByText("장보기 목록으로 만들어요.")).toBeTruthy();
       expect(screen.queryByText("진행할 장보기")).toBeNull();
       expect(screen.queryByRole("navigation", { name: "장보기 경로" })).toBeNull();
       expect(screen.queryByText(/^#\d+$/)).not.toBeTruthy();
@@ -310,17 +312,19 @@ describe("shopping flow screen", () => {
       );
     });
 
-    it("should group duplicate recipe meals and explain what each serving value means", async () => {
+    it("should keep duplicate recipe meals separated by registered meal", async () => {
       fetchShoppingPreview.mockResolvedValue(
         createPreviewData([
           {
             id: "meal-1",
+            column_id: "column-breakfast",
             recipe_id: "recipe-1",
             recipe_name: "김치찌개",
             planned_servings: 3,
           },
           {
             id: "meal-2",
+            column_id: "column-dinner",
             recipe_id: "recipe-1",
             recipe_name: "김치찌개",
             planned_servings: 3,
@@ -331,20 +335,21 @@ describe("shopping flow screen", () => {
       render(<ShoppingFlowScreen initialAuthenticated={true} />);
 
       await waitFor(() => {
-        expect(screen.getByText("김치찌개")).toBeTruthy();
+        expect(screen.getAllByText("김치찌개")).toHaveLength(2);
       });
 
-      expect(screen.getAllByText("김치찌개")).toHaveLength(1);
+      expect(screen.getAllByText("김치찌개")).toHaveLength(2);
       expect(screen.queryByText("식사 등록 완료")).toBeNull();
       expect(screen.queryByText("대상 식사 2개")).toBeNull();
       expect(screen.queryByText("합산 계획 6인분")).toBeNull();
-      expect(screen.getByText("합산 6인분")).toBeTruthy();
-      expect(screen.getByText("대표 끼니로 이동")).toBeTruthy();
+      expect(screen.queryByText("합산 6인분")).toBeNull();
+      expect(screen.getByText("아침")).toBeTruthy();
+      expect(screen.getByText("저녁")).toBeTruthy();
       expect(screen.queryByText("장보기 기준 인분")).toBeNull();
       expect(screen.queryByLabelText("6인분")).toBeNull();
       expect(screen.queryByLabelText("인분 늘리기")).toBeNull();
       expect(
-        screen.getByText(/같은 레시피는 합산 계획 인분으로 묶어요/)
+        screen.getByText(/같은 재료는 장보기 목록에서 자동으로 합산돼요/)
       ).toBeTruthy();
     });
 
@@ -411,11 +416,11 @@ describe("shopping flow screen", () => {
         expect(screen.getByText("김치찌개")).toBeTruthy();
       });
 
-      await userEvent.click(screen.getByTestId("shopping-recipe-card-recipe-1"));
+      await userEvent.click(screen.getByTestId("shopping-recipe-card-meal-1"));
       expect(screen.getByLabelText("김치찌개 선택")).toBeTruthy();
       expect((screen.getByText("장보기 목록 만들기") as HTMLButtonElement).disabled).toBe(true);
 
-      await userEvent.click(screen.getByTestId("shopping-recipe-card-recipe-1"));
+      await userEvent.click(screen.getByTestId("shopping-recipe-card-meal-1"));
       expect(screen.getByLabelText("김치찌개 선택 해제")).toBeTruthy();
       expect((screen.getByText("장보기 목록 만들기") as HTMLButtonElement).disabled).toBe(false);
     });
@@ -630,10 +635,9 @@ describe("shopping flow screen", () => {
 
       await waitFor(() => {
         expect(createShoppingList).toHaveBeenCalledWith({
-          recipes: [
+          meal_configs: [
             {
-              recipe_id: "recipe-1",
-              meal_ids: ["meal-1"],
+              meal_id: "meal-1",
               shopping_servings: 2,
             },
           ],
@@ -757,10 +761,9 @@ describe("shopping flow screen", () => {
 
       await waitFor(() => {
         expect(createShoppingList).toHaveBeenCalledWith({
-          recipes: [
+          meal_configs: [
             {
-              recipe_id: "recipe-1",
-              meal_ids: ["meal-1"],
+              meal_id: "meal-1",
               shopping_servings: 2,
             },
           ],
@@ -768,7 +771,7 @@ describe("shopping flow screen", () => {
       });
     });
 
-    it("should submit all grouped meals with the server-provided planned total servings", async () => {
+    it("should submit duplicate recipe meals as separate meal configs", async () => {
       fetchShoppingPreview.mockResolvedValue(
         createPreviewData([
           {
@@ -796,36 +799,41 @@ describe("shopping flow screen", () => {
       render(<ShoppingFlowScreen initialAuthenticated={true} />);
 
       await waitFor(() => {
-        expect(screen.getByText("합산 13인분")).toBeTruthy();
+        expect(screen.getAllByText("김치찌개")).toHaveLength(2);
       });
 
       await userEvent.click(screen.getByText("장보기 목록 만들기"));
 
       await waitFor(() => {
         expect(createShoppingList).toHaveBeenCalledWith({
-          recipes: [
+          meal_configs: [
             {
-              recipe_id: "recipe-1",
-              meal_ids: ["meal-1", "meal-2"],
-              shopping_servings: 13,
+              meal_id: "meal-1",
+              shopping_servings: 5,
+            },
+            {
+              meal_id: "meal-2",
+              shopping_servings: 8,
             },
           ],
         });
       });
     });
 
-    it("should remove meal/status copy from mobile rows and mark aggregated recipes distinctly", async () => {
+    it("should remove meal/status copy from mobile rows and show meal slot", async () => {
       setMatchMedia(true);
       fetchShoppingPreview.mockResolvedValue(
         createPreviewData([
           {
             id: "meal-1",
+            column_id: "column-breakfast",
             recipe_id: "recipe-1",
             recipe_name: "김치찌개",
             planned_servings: 2,
           },
           {
             id: "meal-2",
+            column_id: "column-dinner",
             recipe_id: "recipe-1",
             recipe_name: "김치찌개",
             planned_servings: 2,
@@ -836,15 +844,14 @@ describe("shopping flow screen", () => {
       render(<ShoppingFlowScreen initialAuthenticated={true} />);
 
       await waitFor(() => {
-        expect(screen.getByText("김치찌개")).toBeTruthy();
+        expect(screen.getAllByText("김치찌개")).toHaveLength(2);
       });
 
       expect(screen.getByRole("heading", { name: "장보기 준비" })).toBeTruthy();
       expect(screen.queryByText(/식사/)).toBeNull();
       expect(screen.queryByText(/장보기 대기/)).toBeNull();
-      const aggregateBadge = screen.getByText("합산");
-      expect(aggregateBadge.className).toContain("text-[var(--brand)]");
-      expect(screen.getByText("4인분")).toBeTruthy();
+      expect(screen.getByText("아침 · 2인분")).toBeTruthy();
+      expect(screen.getByText("저녁 · 2인분")).toBeTruthy();
     });
 
     it("should toggle mobile meal selection when clicking the row", async () => {
@@ -866,7 +873,7 @@ describe("shopping flow screen", () => {
         expect(screen.getByText("김치찌개")).toBeTruthy();
       });
 
-      await userEvent.click(screen.getByTestId("shopping-mobile-recipe-row-recipe-1"));
+      await userEvent.click(screen.getByTestId("shopping-mobile-recipe-row-meal-1"));
       expect(screen.getByLabelText("김치찌개 선택")).toBeTruthy();
       expect((screen.getByText("장보기 목록 만들기") as HTMLButtonElement).disabled).toBe(true);
     });

@@ -301,6 +301,12 @@ describe("shopping stage2 backend", () => {
         error: null,
       },
     ]);
+    const columnsQuery = createArraySelectQuery([
+      {
+        data: [{ id: "column-breakfast", name: "아침" }],
+        error: null,
+      },
+    ]);
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -312,6 +318,9 @@ describe("shopping stage2 backend", () => {
         }
         if (table === "recipes") {
           return { select: vi.fn(() => recipesQuery) };
+        }
+        if (table === "meal_plan_columns") {
+          return { select: vi.fn(() => columnsQuery) };
         }
 
         throw new Error(`unexpected table: ${table}`);
@@ -333,6 +342,7 @@ describe("shopping stage2 backend", () => {
             recipe_name: "김치찌개",
             recipe_thumbnail: "https://example.com/kimchi.jpg",
             column_id: "column-breakfast",
+            column_name: "아침",
             plan_date: "2026-04-25",
             planned_servings: 2,
             created_at: "2026-04-25T00:00:00.000Z",
