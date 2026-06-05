@@ -804,6 +804,156 @@ describe("shopping stage2 backend", () => {
     expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
   });
 
+  it("marks selected meals shopping_done without creating a list when every needed ingredient is already in pantry", async () => {
+    const mealId = "550e8400-e29b-41d4-a716-446655440111";
+    const recipeId = "recipe-all-pantry";
+    const mealsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: mealId,
+            user_id: "user-1",
+            recipe_id: recipeId,
+            plan_date: "2026-04-25",
+            column_id: "column-dinner",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+            leftover_dish_id: null,
+            shopping_list_id: null,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const shoppingListInsertQuery = createInsertMaybeSingleQuery([
+      {
+        data: {
+          id: "shopping-list-should-not-exist",
+          title: "4/25 장보기",
+          is_completed: false,
+          created_at: "2026-04-25T09:00:00.000Z",
+        },
+        error: null,
+      },
+    ]);
+    const shoppingListsInsert = vi.fn(() => shoppingListInsertQuery);
+    const shoppingListRecipesInsert = vi.fn(() =>
+      createAwaitInsertQuery([{ data: [], error: null }]),
+    );
+    const shoppingListItemsInsert = vi.fn(() =>
+      createAwaitInsertQuery([{ data: [], error: null }]),
+    );
+    const recipeRowsQuery = createArraySelectQuery([
+      {
+        data: [{ id: recipeId, base_servings: 2 }],
+        error: null,
+      },
+    ]);
+    const recipeIngredientsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            recipe_id: recipeId,
+            ingredient_id: "ing-onion",
+            amount: 1,
+            unit: "개",
+            ingredient_type: "QUANT",
+            display_text: "양파 1개",
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const ingredientsQuery = createArraySelectQuery([
+      {
+        data: [{ id: "ing-onion", standard_name: "양파" }],
+        error: null,
+      },
+    ]);
+    const pantryQuery = createArraySelectQuery([
+      {
+        data: [{ ingredient_id: "ing-onion" }],
+        error: null,
+      },
+    ]);
+    const mealsDoneUpdateQuery = createMealsUpdateQuery([
+      {
+        data: [],
+        error: null,
+      },
+    ]);
+    const mealsUpdate = vi.fn(() => mealsDoneUpdateQuery);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "meals") {
+          return {
+            select: vi.fn(() => mealsQuery),
+            update: mealsUpdate,
+          };
+        }
+        if (table === "shopping_lists") {
+          return { insert: shoppingListsInsert };
+        }
+        if (table === "shopping_list_recipes") {
+          return { insert: shoppingListRecipesInsert };
+        }
+        if (table === "recipes") {
+          return { select: vi.fn(() => recipeRowsQuery) };
+        }
+        if (table === "recipe_ingredients") {
+          return { select: vi.fn(() => recipeIngredientsQuery) };
+        }
+        if (table === "ingredients") {
+          return { select: vi.fn(() => ingredientsQuery) };
+        }
+        if (table === "pantry_items") {
+          return { select: vi.fn(() => pantryQuery) };
+        }
+        if (table === "shopping_list_items") {
+          return { insert: shoppingListItemsInsert };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importListsRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/shopping/lists", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          meal_configs: [{ meal_id: mealId, shopping_servings: 2 }],
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: expect.objectContaining({
+        id: null,
+        is_completed: true,
+        completed_without_list: true,
+        meals_updated: 1,
+        pantry_item_count: 1,
+      }),
+      error: null,
+    });
+    expect(shoppingListsInsert).not.toHaveBeenCalled();
+    expect(shoppingListRecipesInsert).not.toHaveBeenCalled();
+    expect(shoppingListItemsInsert).not.toHaveBeenCalled();
+    expect(mealsUpdate).toHaveBeenCalledWith({ status: "shopping_done" });
+    expect(mealsDoneUpdateQuery.in).toHaveBeenCalledWith("id", [mealId]);
+    expect(mealsDoneUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+  });
+
   it("creates one recipe-level shopping row and scales duplicate recipe meals from base servings", async () => {
     const firstMealId = "550e8400-e29b-41d4-a716-446655440011";
     const secondMealId = "550e8400-e29b-41d4-a716-446655440012";

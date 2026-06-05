@@ -558,6 +558,7 @@ export function ShoppingDetailScreen({
 
   const purchaseItems = listDetail.items.filter((item) => !item.is_pantry_excluded);
   const excludedItems = listDetail.items.filter((item) => item.is_pantry_excluded);
+  const pantryAddedCount = listDetail.items.filter((item) => item.added_to_pantry).length;
   const isEmpty = purchaseItems.length === 0;
   const isReadOnly = listDetail.is_completed;
 
@@ -633,17 +634,8 @@ export function ShoppingDetailScreen({
         ) : null}
 
         {isReadOnly ? (
-          <WebCard className="web-shopping-lock">
+          <WebCard className="web-shopping-lock web-shopping-lock-complete">
             <strong>완료된 장보기 기록은 수정할 수 없어요</strong>
-            {listDetail.completed_at ? (
-              <span>
-                완료 {formatDate(listDetail.completed_at)}
-                <span className="sr-only">
-                  {" "}
-                  ✓ 완료됨 ({formatDate(listDetail.completed_at)})
-                </span>
-              </span>
-            ) : null}
           </WebCard>
         ) : (
           <WebCard className="web-shopping-progress">
@@ -716,6 +708,9 @@ export function ShoppingDetailScreen({
               <WebCard className="web-shopping-rail-card">
                 <h2>읽기 전용</h2>
                 <p>완료된 장보기 기록은 체크와 제외 상태를 바꿀 수 없어요.</p>
+                <p className="web-shopping-rail-note-success">
+                  {pantryAddedCount}개 재료 팬트리 반영 완료
+                </p>
                 <WebButton
                   onClick={handleBack}
                   variant="secondary"
@@ -819,17 +814,8 @@ export function ShoppingDetailScreen({
         ) : null}
 
         {isReadOnly ? (
-          <WebCard className="web-shopping-lock">
+          <WebCard className="web-shopping-lock web-shopping-lock-complete">
             <strong>완료된 장보기 기록은 수정할 수 없어요</strong>
-            {listDetail.completed_at ? (
-              <span>
-                완료 {formatDate(listDetail.completed_at)}
-                <span className="sr-only">
-                  {" "}
-                  ✓ 완료됨 ({formatDate(listDetail.completed_at)})
-                </span>
-              </span>
-            ) : null}
           </WebCard>
         ) : (
           <WebCard className="web-shopping-progress">
@@ -902,6 +888,9 @@ export function ShoppingDetailScreen({
               <WebCard className="web-shopping-rail-card">
                 <h2>읽기 전용</h2>
                 <p>완료된 장보기 기록은 체크와 제외 상태를 바꿀 수 없어요.</p>
+                <p className="web-shopping-rail-note-success">
+                  {pantryAddedCount}개 재료 팬트리 반영 완료
+                </p>
                 <WebButton
                   onClick={() => router.push("/planner")}
                   variant="secondary"
@@ -1072,27 +1061,64 @@ function ShoppingDetailSkeleton({
     <div
       aria-busy="true"
       aria-label="장보기 상세를 불러오는 중"
-      className="min-h-screen bg-[var(--wave1-surface)]"
       data-testid="shopping-detail-skeleton"
     >
-      <WebShell>
+      <WebShell className="web-shopping-shell" wide>
         <WebTopNav activeId={navActiveId} items={WEB_NAV_ITEMS} />
-        <main className="mx-auto max-w-5xl px-5 py-8">
-          <div className="mb-6 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-5">
-            <div className="h-4 w-40 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
-            <div className="mt-4 h-8 w-64 animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-subtle)]" />
-            <div className="mt-3 h-4 w-80 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
-          </div>
-          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="space-y-3">
-              {[1, 2, 3, 4].map((index) => (
-                <div
-                  className="h-20 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)]"
-                  key={index}
-                />
-              ))}
+        <main className="web-screen web-shopping-detail-screen">
+          <nav aria-hidden="true" className="web-breadcrumb">
+            <span className="h-4 w-20 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
+            <span className="web-breadcrumb-sep">/</span>
+            <span className="h-4 w-12 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
+          </nav>
+          <header className="web-shopping-detail-head">
+            <div>
+              <div className="h-3 w-32 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
+              <div className="mt-4 h-9 w-64 animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-subtle)]" />
             </div>
-            <aside className="space-y-3">
+            <div className="h-10 w-24 animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-subtle)]" />
+          </header>
+
+          <WebCard className="web-shopping-progress">
+            <div>
+              <div className="web-shopping-progress-title-row">
+                <span className="h-5 w-32 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
+                <span className="h-4 w-20 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
+              </div>
+              <strong className="web-shopping-progress-count">
+                <em className="h-8 w-16 animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-subtle)]" />
+              </strong>
+            </div>
+            <span className="web-shopping-progress-track">
+              <span className="animate-pulse" style={{ width: "45%" }} />
+            </span>
+          </WebCard>
+
+          <div className="web-shopping-detail-layout">
+            <section className="web-shopping-purchase-section">
+              <div className="web-shopping-section-head">
+                <div>
+                  <div className="h-6 w-24 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
+                  <div className="mt-2 h-4 w-16 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
+                </div>
+              </div>
+              <div className="web-shopping-category-list">
+                {[1, 2, 3].map((index) => (
+                  <section className="web-shopping-category-section" key={index}>
+                    <div className="h-5 w-24 animate-pulse rounded-full bg-[var(--surface-subtle)]" />
+                    <div className="web-shopping-item-grid">
+                      {[1, 2].map((itemIndex) => (
+                        <div
+                          className="h-20 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)]"
+                          key={itemIndex}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            </section>
+            <aside className="web-shopping-detail-rail">
               {[1, 2].map((index) => (
                 <div
                   className="h-28 animate-pulse rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)]"
@@ -1179,10 +1205,15 @@ function MobileShoppingDetailScreen({
           <div className="mt-4 flex items-end justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[12px] font-semibold leading-[1.3] text-[var(--text-3)]">
-                {isReadOnly ? "방금 완료" : `사야 할 재료 ${remainingCount}개`}
+                {isReadOnly ? `${purchaseItems.length}개 구매` : `사야 할 재료 ${remainingCount}개`}
               </p>
               <div className="mt-1 flex min-w-0 items-baseline gap-2">
-                <h2 className="text-[20px] font-extrabold leading-[1.12] text-[var(--foreground)]">
+                <h2
+                  className={[
+                    "text-[20px] font-extrabold leading-[1.12]",
+                    isReadOnly ? "text-[var(--success-strong)]" : "text-[var(--foreground)]",
+                  ].join(" ")}
+                >
                   {isReadOnly ? "장보기 완료" : "장보기 진행 중"}
                 </h2>
                 {!isReadOnly ? (
@@ -1217,7 +1248,7 @@ function MobileShoppingDetailScreen({
           <MobileToast message={completeToast.message} type={completeToast.type} />
         ) : null}
         {isReadOnly ? (
-          <p className="mx-4 mt-3 rounded-[var(--radius-control)] bg-[var(--brand-soft)] px-4 py-3 text-[13px] font-bold text-[var(--brand)]">
+          <p className="mx-4 mt-3 rounded-[var(--radius-control)] bg-[var(--success-soft)] px-4 py-3 text-[13px] font-bold text-[var(--success-strong)]">
             완료된 장보기 기록은 수정할 수 없어요
           </p>
         ) : null}
@@ -1226,11 +1257,6 @@ function MobileShoppingDetailScreen({
           <span className="absolute h-px w-px opacity-0">
             {isReadOnly ? "구매한 재료" : "구매할 재료"} ({purchaseItems.length}개)
           </span>
-          {isReadOnly && detail.completed_at ? (
-            <span className="absolute h-px w-px opacity-0">
-              ✓ 완료됨 ({formatDate(detail.completed_at)})
-            </span>
-          ) : null}
           <span className="absolute h-px w-px opacity-0">
             팬트리에 있는 재료 ({excludedItems.length}개)
           </span>
@@ -1506,7 +1532,9 @@ function MobileShoppingItemRow({
           className={[
             "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[var(--radius-badge)] border text-[12px]",
             item.is_checked || item.is_pantry_excluded
-              ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand)]"
+              ? isReadOnly
+                ? "border-[var(--success)] bg-[var(--success-soft)] text-[var(--success)]"
+                : "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand)]"
               : "border-[var(--line-strong)] text-transparent",
           ].join(" ")}
         >
@@ -1514,11 +1542,11 @@ function MobileShoppingItemRow({
         </span>
       )}
 
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
         <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
           {itemName}
         </p>
-        <p className="mt-[2px] truncate text-[11px] font-semibold leading-[1.3] text-[var(--text-3)]">
+        <p className="shrink-0 max-w-[120px] truncate text-right text-[11px] font-semibold leading-[1.3] text-[var(--text-3)]">
           {amountText}
         </p>
       </div>
@@ -1540,10 +1568,6 @@ function MobileShoppingItemRow({
         >
           {item.is_pantry_excluded ? "되살리기" : "이미있음"}
         </button>
-      ) : item.added_to_pantry ? (
-        <span className="shrink-0 text-[11px] font-bold text-[var(--text-3)]">
-          팬트리 반영 완료
-        </span>
       ) : null}
     </div>
   );
@@ -1777,6 +1801,7 @@ function ShoppingItemCard({
     <article
       className={[
         "web-shopping-item-card",
+        isReadOnly ? "web-shopping-item-card-readonly" : "",
         item.is_checked ? "web-shopping-item-card-checked" : "",
         item.is_pantry_excluded ? "web-shopping-item-card-excluded" : "",
         canToggleCheck ? "web-shopping-item-card-clickable" : "",
@@ -1805,14 +1830,24 @@ function ShoppingItemCard({
       ) : (
         <div
           aria-hidden="true"
-          className="web-shopping-check web-shopping-check-static rounded-[var(--radius-badge)]"
+          className={[
+            "web-shopping-check web-shopping-check-static rounded-[var(--radius-badge)]",
+            isReadOnly && (item.is_checked || item.is_pantry_excluded)
+              ? "web-shopping-check-complete"
+              : "",
+          ].join(" ")}
           data-testid={`shopping-readonly-status-${item.id}`}
         >
           {item.is_checked || item.is_pantry_excluded ? "✓" : ""}
         </div>
       )}
 
-      <div className="web-shopping-item-copy">
+      <div
+        className={[
+          "web-shopping-item-copy",
+          isReadOnly ? "web-shopping-item-copy-inline" : "",
+        ].join(" ")}
+      >
         <strong>{item.display_text.replace(/\s+\d+.*$/, "")}</strong>
         <small>{amountText}</small>
       </div>
@@ -1832,9 +1867,6 @@ function ShoppingItemCard({
         </button>
       ) : null}
 
-      {isReadOnly && item.added_to_pantry ? (
-        <span className="web-shopping-added">팬트리 반영 완료</span>
-      ) : null}
     </article>
   );
 }
@@ -1851,19 +1883,5 @@ function formatShoppingDisplayTitle(detail: ShoppingListDetail): string {
 
   const month = createdDate.getMonth() + 1;
   const day = createdDate.getDate();
-  const koreanDate = `${month}월 ${day}일`;
-  const slashDate = `${month}/${day}`;
-
-  if (detail.title.includes(koreanDate) || detail.title.includes(slashDate)) {
-    return detail.title;
-  }
-
-  return `${koreanDate} · ${detail.title}`;
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  return `${month}월 ${day}일`;
+  return `${month}월 ${day}일 장보기`;
 }

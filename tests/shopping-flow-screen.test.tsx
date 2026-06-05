@@ -647,6 +647,60 @@ describe("shopping flow screen", () => {
       expect(mockPush).toHaveBeenCalledWith("/shopping/lists/list-1");
     });
 
+    it("should show an 안내 modal instead of navigating when all needed ingredients are already in pantry", async () => {
+      fetchShoppingPreview.mockResolvedValue(
+        createPreviewData([
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_name: "김치찌개",
+            planned_servings: 2,
+          },
+          {
+            id: "meal-2",
+            recipe_id: "recipe-2",
+            recipe_name: "달걀찜",
+            planned_servings: 1,
+          },
+        ])
+      );
+
+      createShoppingList.mockResolvedValue({
+        id: null,
+        title: "6월 5일 장보기",
+        is_completed: true,
+        completed_without_list: true,
+        completed_at: "2026-06-05T09:00:00.000Z",
+        created_at: "2026-06-05T09:00:00.000Z",
+        meals_updated: 2,
+        pantry_item_count: 3,
+      });
+
+      const user = userEvent.setup();
+
+      render(<ShoppingFlowScreen initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("김치찌개")).toBeTruthy();
+      });
+
+      await user.click(screen.getByText("장보기 목록 만들기"));
+
+      await waitFor(() => {
+        expect(screen.getByRole("dialog", { name: "살 재료가 없어요" })).toBeTruthy();
+      });
+
+      expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining("/shopping/lists/"));
+      expect(
+        screen.getByText("선택한 끼니의 재료가 모두 팬트리에 있어 장보기 완료로 바꿨어요."),
+      ).toBeTruthy();
+      expect(screen.getByText("2개 끼니 · 3개 재료")).toBeTruthy();
+
+      await user.click(screen.getByRole("button", { name: "플래너로 돌아가기" }));
+
+      expect(mockPush).toHaveBeenCalledWith("/planner");
+    });
+
     it("should show creating state while creating list", async () => {
       fetchShoppingPreview.mockResolvedValue(
         createPreviewData([
