@@ -6407,6 +6407,558 @@ describe("20 youtube real import backend", () => {
     });
   });
 
+  it("POST /api/v1/recipes/youtube/extract enriches amountless visual OCR ingredients with visual quantity extraction", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
+    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_RECIPE_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_RECIPE_CONTRACT_ALIGNED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: "550e8400-e29b-41d4-a716-446655440301", standard_name: "애호박" },
+        { id: "550e8400-e29b-41d4-a716-446655440302", standard_name: "가지" },
+        { id: "550e8400-e29b-41d4-a716-446655440303", standard_name: "토마토" },
+        { id: onionIngredientId, standard_name: "양파" },
+        { id: "550e8400-e29b-41d4-a716-446655440304", standard_name: "토마토 소스" },
+        { id: "550e8400-e29b-41d4-a716-446655440307", standard_name: "후추" },
+        { id: "550e8400-e29b-41d4-a716-446655440310", standard_name: "소금" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440219",
+          code: "stir_fry",
+          label: "볶기",
+          color_key: "orange",
+          is_system: true,
+        },
+      ],
+    });
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: "팬에 채소를 올리고 약불로 익혀요.",
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+    const llmExtractor: YoutubeRecipeLlmExtractor = {
+      name: "gemini_structured_extractor",
+      fetchStructuredRecipe: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "gemini",
+        model: "gemini-3.1-flash-lite",
+        fallbackModel: "gemini-2.5-flash-lite",
+        resultJson: {
+          recipes: [
+            {
+              title: "노오븐 라따뚜이",
+              confidence: 0.72,
+              ingredients: [
+                {
+                  name: "애호박",
+                  amount: null,
+                  unit: null,
+                  raw_text: "팬에 채소를 올려요.",
+                  evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                },
+              ],
+              steps: [
+                {
+                  instruction: "팬에 채소를 올려요.",
+                  raw_text: "팬에 채소를 올려요.",
+                  evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                },
+              ],
+              warnings: ["자막만으로는 재료 수량이 부족해요."],
+            },
+          ],
+        },
+      })),
+    };
+    const visualRecipeExtractor: YoutubeVisualRecipeExtractor = {
+      name: "visual_recipe_extractor",
+      fetchVisualRecipe: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "gemini",
+        model: "gemini-3.1-flash-lite",
+        inputTokens: 200,
+        outputTokens: 100,
+        resultJson: {
+          visual_source_lines: [
+            { line_index: 0, text: "화면 자막: 애호박", start_ms: 1_000, end_ms: 2_000 },
+            { line_index: 1, text: "화면 자막: 가지", start_ms: 2_000, end_ms: 3_000 },
+            { line_index: 2, text: "화면 자막: 토마토", start_ms: 3_000, end_ms: 4_000 },
+            { line_index: 3, text: "화면 자막: 양파", start_ms: 4_000, end_ms: 5_000 },
+            { line_index: 4, text: "화면 자막: 토마토 소스", start_ms: 5_000, end_ms: 6_000 },
+            { line_index: 5, text: "화면 자막: 후추", start_ms: 6_000, end_ms: 7_000 },
+            { line_index: 6, text: "화면 자막: 소금", start_ms: 7_000, end_ms: 8_000 },
+            { line_index: 7, text: "화면 자막: 채소를 얇게 썬다.", start_ms: 8_000, end_ms: 9_000 },
+            { line_index: 8, text: "화면 자막: 팬에 양파를 볶는다.", start_ms: 9_000, end_ms: 10_000 },
+            { line_index: 9, text: "화면 자막: 토마토 소스를 넣고 간한다.", start_ms: 10_000, end_ms: 11_000 },
+            { line_index: 10, text: "화면 자막: 채소를 나란히 올린다.", start_ms: 11_000, end_ms: 12_000 },
+            { line_index: 11, text: "화면 자막: 약불에서 익힌다.", start_ms: 12_000, end_ms: 13_000 },
+          ],
+          recipes: [
+            {
+              title: "노오븐 라따뚜이",
+              confidence: 0.9,
+              ingredients: [
+                { name: "애호박", amount: null, unit: null, raw_text: "애호박", evidence_refs: [{ source: "visual", line_index: 0 }] },
+                { name: "가지", amount: null, unit: null, raw_text: "가지", evidence_refs: [{ source: "visual", line_index: 1 }] },
+                { name: "토마토", amount: null, unit: null, raw_text: "토마토", evidence_refs: [{ source: "visual", line_index: 2 }] },
+                { name: "양파", amount: null, unit: null, raw_text: "양파", evidence_refs: [{ source: "visual", line_index: 3 }] },
+                { name: "토마토 소스", amount: null, unit: null, raw_text: "토마토 소스", evidence_refs: [{ source: "visual", line_index: 4 }] },
+                { name: "후추", amount: null, unit: null, raw_text: "후추", evidence_refs: [{ source: "visual", line_index: 5 }] },
+                { name: "소금", amount: null, unit: null, raw_text: "소금", evidence_refs: [{ source: "visual", line_index: 6 }] },
+              ],
+              steps: [
+                { instruction: "채소를 얇게 썰어요.", raw_text: "채소를 얇게 썬다.", evidence_refs: [{ source: "visual", line_index: 7 }] },
+                { instruction: "팬에 양파를 볶아요.", raw_text: "팬에 양파를 볶는다.", evidence_refs: [{ source: "visual", line_index: 8 }] },
+                { instruction: "토마토 소스를 넣고 간해요.", raw_text: "토마토 소스를 넣고 간한다.", evidence_refs: [{ source: "visual", line_index: 9 }] },
+                { instruction: "채소를 나란히 올려요.", raw_text: "채소를 나란히 올린다.", evidence_refs: [{ source: "visual", line_index: 10 }] },
+                { instruction: "약불에서 익혀요.", raw_text: "약불에서 익힌다.", evidence_refs: [{ source: "visual", line_index: 11 }] },
+              ],
+              warnings: [],
+            },
+          ],
+        },
+      })),
+    };
+    const visualQuantityExtractor: YoutubeVisualQuantityExtractor = {
+      name: "visual_quantity_extractor",
+      fetchVisualQuantities: vi.fn(async (context) => {
+        expect(context.ingredients).toEqual([
+          expect.objectContaining({ standard_name: "애호박", amount: null, quantity_source: "unknown" }),
+          expect.objectContaining({ standard_name: "가지", amount: null, quantity_source: "unknown" }),
+          expect.objectContaining({ standard_name: "토마토", amount: null, quantity_source: "unknown" }),
+          expect.objectContaining({ standard_name: "양파", amount: null, quantity_source: "unknown" }),
+          expect.objectContaining({ standard_name: "토마토 소스", amount: null, quantity_source: "unknown" }),
+          expect.objectContaining({ standard_name: "후추", amount: null, quantity_source: "unknown" }),
+          expect.objectContaining({ standard_name: "소금", amount: null, quantity_source: "unknown" }),
+        ]);
+
+        return {
+          status: "available" as const,
+          providerName: "gemini",
+          model: "gemini-3.1-flash-lite",
+          inputTokens: 80,
+          outputTokens: 40,
+          resultJson: {
+            ingredient_quantities: [
+              {
+                draft_ingredient_id: context.ingredients[0]?.draft_ingredient_id,
+                standard_name: "애호박",
+                amount: 1,
+                unit: "개",
+                ingredient_type: "QUANT",
+                display_text: "애호박 1개",
+                quantity_source: "visual_explicit",
+                quantity_confidence: 0.86,
+                quantity_raw_text: "애호박 1개",
+                quantity_evidence_refs: [{ source_method: "visual", snippet: "애호박 1개" }],
+              },
+              {
+                draft_ingredient_id: context.ingredients[1]?.draft_ingredient_id,
+                standard_name: "가지",
+                amount: 1,
+                unit: "개",
+                ingredient_type: "QUANT",
+                display_text: "가지 1개",
+                quantity_source: "visual_explicit",
+                quantity_confidence: 0.86,
+                quantity_raw_text: "가지 1개",
+                quantity_evidence_refs: [{ source_method: "visual", snippet: "가지 1개" }],
+              },
+              {
+                draft_ingredient_id: context.ingredients[2]?.draft_ingredient_id,
+                standard_name: "토마토",
+                amount: 2,
+                unit: "개",
+                ingredient_type: "QUANT",
+                display_text: "토마토 2개",
+                quantity_source: "visual_explicit",
+                quantity_confidence: 0.86,
+                quantity_raw_text: "토마토 2개",
+                quantity_evidence_refs: [{ source_method: "visual", snippet: "토마토 2개" }],
+              },
+              {
+                draft_ingredient_id: context.ingredients[3]?.draft_ingredient_id,
+                standard_name: "양파",
+                amount: null,
+                unit: null,
+                ingredient_type: "TO_TASTE",
+                display_text: "양파",
+                quantity_source: "visual_explicit",
+                quantity_confidence: 0.75,
+                quantity_raw_text: "양파",
+                quantity_evidence_refs: [{ source_method: "visual", snippet: "양파" }],
+              },
+            ],
+          },
+        };
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      withYoutubeRecipeLlmExtractor(llmExtractor, () =>
+        withYoutubeVisualRecipeExtractor(visualRecipeExtractor, () =>
+          withYoutubeVisualQuantityExtractor(visualQuantityExtractor, () => postYoutubeExtract(transcriptFallbackUrl)),
+        ),
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(visualRecipeExtractor.fetchVisualRecipe).toHaveBeenCalledTimes(1);
+    expect(visualQuantityExtractor.fetchVisualQuantities).toHaveBeenCalledTimes(1);
+    expect(body.data.ingredients).toEqual([
+      expect.objectContaining({
+        standard_name: "애호박",
+        amount: 1,
+        unit: "개",
+        quantity_source: "visual_explicit",
+        quantity_review_required: true,
+      }),
+      expect.objectContaining({
+        standard_name: "가지",
+        amount: 1,
+        unit: "개",
+        quantity_source: "visual_explicit",
+        quantity_review_required: true,
+      }),
+      expect.objectContaining({
+        standard_name: "토마토",
+        amount: 2,
+        unit: "개",
+        quantity_source: "visual_explicit",
+        quantity_review_required: true,
+      }),
+      expect.objectContaining({
+        standard_name: "양파",
+        amount: 0.5,
+        unit: "개",
+        quantity_source: "recipe_inferred",
+        quantity_review_required: true,
+      }),
+      expect.objectContaining({
+        standard_name: "토마토 소스",
+        amount: 200,
+        unit: "g",
+        quantity_source: "recipe_inferred",
+        quantity_review_required: true,
+      }),
+      expect.objectContaining({
+        standard_name: "후추",
+        amount: 0.25,
+        unit: "작은술",
+        quantity_source: "recipe_inferred",
+        quantity_review_required: true,
+      }),
+      expect.objectContaining({
+        standard_name: "소금",
+        amount: 0.25,
+        unit: "작은술",
+        quantity_source: "recipe_inferred",
+        quantity_review_required: true,
+      }),
+    ]);
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      source_providers: string[];
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.source_providers).toContain("visual_recipe_extractor");
+    expect(insertedSession.source_providers).toContain("visual_quantity_extractor");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      visual_quantity_extractor: {
+        attempted: true,
+        status: "used",
+        trigger_reason: "quantity_gap",
+        enriched_count: 7,
+        review_required_count: 7,
+      },
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/extract asks Gemini for review-only inferred quantities when explicit visual text is missing", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
+    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_QUANTITY_PROVIDER", "gemini");
+    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_QUANTITY_MODEL", "gemini-3.1-flash-lite");
+    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_RECIPE_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_RECIPE_CONTRACT_ALIGNED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: "550e8400-e29b-41d4-a716-446655440301", standard_name: "애호박" },
+        { id: "550e8400-e29b-41d4-a716-446655440302", standard_name: "가지" },
+        { id: "550e8400-e29b-41d4-a716-446655440303", standard_name: "토마토" },
+        { id: onionIngredientId, standard_name: "양파" },
+        { id: "550e8400-e29b-41d4-a716-446655440304", standard_name: "토마토 소스" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440219",
+          code: "stir_fry",
+          label: "볶기",
+          color_key: "orange",
+          is_system: true,
+        },
+      ],
+    });
+    const videoProvider: YoutubeVideoProvider = {
+      name: "fixture-video",
+      fetchVideo: vi.fn(async (videoId) => ({
+        video: {
+          videoId,
+          title: "노오븐 라따뚜이",
+          channel: "맛있는이유",
+          channelId: `channel-${videoId}`,
+          thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+          description: "",
+          tags: ["recipe", "라따뚜이", "레시피"],
+          categoryId: "26",
+          duration: "PT1M",
+          captionFlag: "true",
+        },
+      })),
+    };
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: "팬에 채소를 올리고 약불로 익혀요.",
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+    const llmExtractor: YoutubeRecipeLlmExtractor = {
+      name: "gemini_structured_extractor",
+      fetchStructuredRecipe: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "gemini",
+        model: "gemini-3.1-flash-lite",
+        fallbackModel: "gemini-2.5-flash-lite",
+        resultJson: {
+          recipes: [
+            {
+              title: "노오븐 라따뚜이",
+              confidence: 0.72,
+              ingredients: [
+                {
+                  name: "애호박",
+                  amount: null,
+                  unit: null,
+                  raw_text: "팬에 채소를 올려요.",
+                  evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                },
+              ],
+              steps: [
+                {
+                  instruction: "팬에 채소를 올려요.",
+                  raw_text: "팬에 채소를 올려요.",
+                  evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                },
+              ],
+              warnings: ["자막만으로는 재료 수량이 부족해요."],
+            },
+          ],
+        },
+      })),
+    };
+    const visualRecipeExtractor: YoutubeVisualRecipeExtractor = {
+      name: "visual_recipe_extractor",
+      fetchVisualRecipe: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "gemini",
+        model: "gemini-3.1-flash-lite",
+        inputTokens: 200,
+        outputTokens: 100,
+        resultJson: {
+          visual_source_lines: [
+            { line_index: 0, text: "화면 자막: 애호박", start_ms: 1_000, end_ms: 2_000 },
+            { line_index: 1, text: "화면 자막: 가지", start_ms: 2_000, end_ms: 3_000 },
+            { line_index: 2, text: "화면 자막: 토마토", start_ms: 3_000, end_ms: 4_000 },
+            { line_index: 3, text: "화면 자막: 양파", start_ms: 4_000, end_ms: 5_000 },
+            { line_index: 4, text: "화면 자막: 토마토 소스", start_ms: 5_000, end_ms: 6_000 },
+            { line_index: 5, text: "화면 자막: 채소를 얇게 썬다.", start_ms: 6_000, end_ms: 7_000 },
+            { line_index: 6, text: "화면 자막: 팬에 양파를 볶는다.", start_ms: 7_000, end_ms: 8_000 },
+            { line_index: 7, text: "화면 자막: 토마토 소스를 넣는다.", start_ms: 8_000, end_ms: 9_000 },
+            { line_index: 8, text: "화면 자막: 채소를 나란히 올린다.", start_ms: 9_000, end_ms: 10_000 },
+            { line_index: 9, text: "화면 자막: 약불에서 익힌다.", start_ms: 10_000, end_ms: 11_000 },
+          ],
+          recipes: [
+            {
+              title: "노오븐 라따뚜이",
+              confidence: 0.9,
+              ingredients: [
+                { name: "애호박", amount: null, unit: null, raw_text: "애호박", evidence_refs: [{ source: "visual", line_index: 0 }] },
+                { name: "가지", amount: null, unit: null, raw_text: "가지", evidence_refs: [{ source: "visual", line_index: 1 }] },
+                { name: "토마토", amount: null, unit: null, raw_text: "토마토", evidence_refs: [{ source: "visual", line_index: 2 }] },
+                { name: "양파", amount: null, unit: null, raw_text: "양파", evidence_refs: [{ source: "visual", line_index: 3 }] },
+                { name: "토마토 소스", amount: null, unit: null, raw_text: "토마토 소스", evidence_refs: [{ source: "visual", line_index: 4 }] },
+              ],
+              steps: [
+                { instruction: "채소를 얇게 썰어요.", raw_text: "채소를 얇게 썬다.", evidence_refs: [{ source: "visual", line_index: 5 }] },
+                { instruction: "팬에 양파를 볶아요.", raw_text: "팬에 양파를 볶는다.", evidence_refs: [{ source: "visual", line_index: 6 }] },
+                { instruction: "토마토 소스를 넣어요.", raw_text: "토마토 소스를 넣는다.", evidence_refs: [{ source: "visual", line_index: 7 }] },
+                { instruction: "채소를 나란히 올려요.", raw_text: "채소를 나란히 올린다.", evidence_refs: [{ source: "visual", line_index: 8 }] },
+                { instruction: "약불에서 익혀요.", raw_text: "약불에서 익힌다.", evidence_refs: [{ source: "visual", line_index: 9 }] },
+              ],
+              warnings: [],
+            },
+          ],
+        },
+      })),
+    };
+    let visualQuantityPrompt = "";
+    const fetchMock = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as {
+        contents?: Array<{ parts?: Array<{ text?: string }> }>;
+      };
+      visualQuantityPrompt = body.contents?.[0]?.parts?.find((part) => typeof part.text === "string")?.text ?? "";
+
+      const makeInferred = (
+        standard_name: string,
+        amount: number,
+        unit: string,
+        frame_ts_ms: number,
+        snippet: string,
+        ingredient_type: "QUANT" | "TO_TASTE" = "QUANT",
+      ) => ({
+        draft_ingredient_id: null,
+        standard_name,
+        amount,
+        unit,
+        ingredient_type,
+        display_text: `${standard_name} ${amount}${unit}`,
+        quantity_source: "recipe_inferred",
+        quantity_confidence: 0.48,
+        quantity_raw_text: `${standard_name} 수량은 영상 흐름과 재료 역할 기준 추정`,
+        quantity_evidence_refs: [
+          {
+            source_method: "visual",
+            source_provider: "gemini_visual_quantity",
+            frame_ts_ms,
+            snippet,
+          },
+        ],
+      });
+
+      return new Response(JSON.stringify({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    ingredient_quantities: [
+                      makeInferred("애호박", 1, "개", 1_000, "화면에 애호박 한 개가 얇게 썰려 있음"),
+                      makeInferred("가지", 1, "개", 2_000, "화면에 가지 한 개가 얇게 썰려 있음"),
+                      makeInferred("토마토", 2, "개", 3_000, "화면에 토마토 두 개 분량의 둥근 슬라이스가 보임"),
+                      makeInferred("양파", 0.5, "개", 4_000, "양파를 볶는 장면만 있어 라따뚜이 소스 베이스 기준으로 반 개 추정", "TO_TASTE"),
+                      makeInferred("토마토 소스", 200, "g", 8_000, "토마토 소스를 팬 바닥에 펴는 장면 기준으로 얇은 베이스 분량 추정"),
+                      makeInferred("오일", 1, "큰술", 6_000, "팬에 재료를 볶기 전 오일을 두르는 흐름 기준 추정"),
+                      makeInferred("다진고기", 150, "g", 7_000, "양파와 함께 볶는 다진고기 베이스 분량 기준 추정"),
+                      makeInferred("후추", 0.25, "작은술", 8_000, "간을 하는 장면 기준으로 소량 시즈닝 추정"),
+                      makeInferred("치즈", 30, "g", 16_000, "마무리 토핑으로 흩뿌리는 장면 기준 추정"),
+                      makeInferred("올리브 오일", 1, "큰술", 16_000, "완성 직전 마무리 오일을 두르는 흐름 기준 추정"),
+                      makeInferred("소금", 0.25, "작은술", 8_000, "간을 하는 장면 기준으로 소량 시즈닝 추정"),
+                    ],
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+        usageMetadata: {
+          promptTokenCount: 42,
+          candidatesTokenCount: 24,
+        },
+      }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+    const { response, body } = await withYoutubeVideoProvider(videoProvider, () =>
+      withYoutubeTranscriptProvider(transcriptProvider, () =>
+        withYoutubeRecipeLlmExtractor(llmExtractor, () =>
+          withYoutubeVisualRecipeExtractor(visualRecipeExtractor, () => postYoutubeExtract(transcriptFallbackUrl)),
+        ),
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(visualQuantityPrompt).toContain("Fill every remaining missing draft ingredient quantity with the best conservative estimate");
+    expect(visualQuantityPrompt).toContain("Infer oil, sauce, cheese, meat, seasoning, and garnish quantities");
+    expect(visualQuantityPrompt).toContain("recipe_inferred");
+    expect(visualQuantityPrompt).toContain("confidence <= 0.65");
+    expect(body.data.ingredients).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        standard_name: "애호박",
+        amount: 1,
+        unit: "개",
+        quantity_source: "recipe_inferred",
+        quantity_confidence: 0.48,
+        quantity_review_required: true,
+      }),
+      expect.objectContaining({
+        standard_name: "가지",
+        amount: 1,
+        unit: "개",
+        quantity_source: "recipe_inferred",
+        quantity_review_required: true,
+      }),
+      expect.objectContaining({ standard_name: "토마토", amount: 2, unit: "개", quantity_source: "recipe_inferred" }),
+      expect.objectContaining({ standard_name: "양파", amount: 0.5, unit: "개", quantity_source: "recipe_inferred" }),
+      expect.objectContaining({ standard_name: "토마토 소스", amount: 200, unit: "g", quantity_source: "recipe_inferred" }),
+      expect.objectContaining({ standard_name: "오일", amount: 1, unit: "큰술", quantity_source: "recipe_inferred" }),
+      expect.objectContaining({ standard_name: "다진고기", amount: 150, unit: "g", quantity_source: "recipe_inferred" }),
+      expect.objectContaining({ standard_name: "후추", amount: 0.25, unit: "작은술", quantity_source: "recipe_inferred" }),
+      expect.objectContaining({ standard_name: "치즈", amount: 30, unit: "g", quantity_source: "recipe_inferred" }),
+      expect.objectContaining({ standard_name: "올리브 오일", amount: 1, unit: "큰술", quantity_source: "recipe_inferred" }),
+      expect.objectContaining({ standard_name: "소금", amount: 0.25, unit: "작은술", quantity_source: "recipe_inferred" }),
+    ]));
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      source_providers: string[];
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.source_providers).toContain("visual_quantity_extractor");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      visual_quantity_extractor: {
+        attempted: true,
+        status: "used",
+        enriched_count: 11,
+        review_required_count: 11,
+      },
+    });
+  });
+
   it("POST /api/v1/recipes/youtube/extract reuses visual quantity cache before calling the provider", async () => {
     mockAuth();
     vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
