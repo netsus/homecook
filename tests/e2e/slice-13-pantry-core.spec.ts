@@ -203,37 +203,13 @@ test.describe("PANTRY screen", () => {
     await page.goto("/pantry");
 
     await expect(page.getByRole("heading", { name: /팬트리/ }).first()).toBeVisible();
-    await expect(page.getByText(/3\s*(?:개 재료|\/\s*29개)/)).toBeVisible();
+    await expect(page.getByText(/3\s*개/).first()).toBeVisible();
     await expect(page.getByText(/양파/)).toBeVisible();
     await expect(page.getByText(/마늘/)).toBeVisible();
     await expect(page.getByText(/돼지고기/)).toBeVisible();
   });
 
-  test("hides an owned pantry card when toggled missing while missing items are hidden", async ({
-    page,
-  }) => {
-    await setAuthOverride(page, "authenticated");
-    await installPantryRoutes(page);
-    await page.goto("/pantry");
-
-    if (isMobileViewport(page)) {
-      await expect(page.getByText(/양파/)).toBeVisible();
-      await expect(page.getByRole("checkbox", { name: "없는 재료도 표시" })).toHaveCount(0);
-      return;
-    }
-
-    await expect(page.getByRole("switch", { name: "양파 보유 해제" })).toBeVisible();
-    await expect(page.getByRole("checkbox", { name: "없는 재료도 표시" })).not.toBeChecked();
-
-    await page.getByRole("switch", { name: "양파 보유 해제" }).click();
-
-    await expect(page.getByText("양파를 미보유로 바꿨어요")).toBeVisible();
-    await expect(page.getByRole("checkbox", { name: "없는 재료도 표시" })).not.toBeChecked();
-    await expect(page.getByRole("switch", { name: "양파 보유 해제" })).toHaveCount(0);
-    await expect(page.getByRole("switch", { name: "양파 보유로 변경" })).toHaveCount(0);
-  });
-
-  test("keeps pantry card order stable while toggling ownership with missing items visible", async ({
+  test("shows only owned pantry items without missing ingredient toggles", async ({
     page,
   }) => {
     await setAuthOverride(page, "authenticated");
@@ -241,34 +217,29 @@ test.describe("PANTRY screen", () => {
     await page.goto("/pantry");
 
     await expect(page.getByText(/양파/)).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: "없는 재료도 표시" })).toHaveCount(0);
+    await expect(page.getByRole("switch")).toHaveCount(0);
+    await expect(page.getByText("대파")).toHaveCount(0);
+  });
+
+  test("selects all visible pantry items in edit mode", async ({
+    page,
+  }) => {
+    await setAuthOverride(page, "authenticated");
+    await installPantryRoutes(page);
+    await page.goto("/pantry");
+
+    await expect(page.getByText(/양파/)).toBeVisible();
+    await page.getByRole("button", { name: /편집/ }).first().click();
+    await page.getByRole("checkbox", { name: "전체선택" }).click();
+
     if (isMobileViewport(page)) {
-      await expect(page.getByRole("checkbox", { name: "없는 재료도 표시" })).toHaveCount(0);
+      await expect(page.getByText("3개 선택됨")).toBeVisible();
+      await expect(page.getByRole("button", { name: "제거하기" })).toBeVisible();
       return;
     }
 
-    await page.getByRole("checkbox", { name: "없는 재료도 표시" }).click();
-    await expect(page.getByRole("switch", { name: "대파 보유로 변경" })).toBeVisible();
-
-    const gridSwitches = page.locator(".web-pantry-grid [role='switch']");
-    const getIngredientOrder = () =>
-      gridSwitches.evaluateAll((nodes) =>
-        nodes.map((node) =>
-          node
-            .getAttribute("aria-label")
-            ?.replace(/ 보유(?: 해제|로 변경)$/, ""),
-        ),
-      );
-
-    const initialOrder = await getIngredientOrder();
-    await page.getByRole("switch", { name: "양파 보유 해제" }).click();
-
-    await expect(page.getByRole("switch", { name: "양파 보유로 변경" })).toBeVisible();
-    await expect.poll(getIngredientOrder).toEqual(initialOrder);
-
-    await page.getByRole("switch", { name: "양파 보유로 변경" }).click();
-
-    await expect(page.getByRole("switch", { name: "양파 보유 해제" })).toBeVisible();
-    await expect.poll(getIngredientOrder).toEqual(initialOrder);
+    await expect(page.getByRole("button", { name: "삭제 (3)" })).toBeVisible();
   });
 
   test("shows empty state when no items exist", async ({ page }) => {
@@ -303,14 +274,16 @@ test.describe("PANTRY screen", () => {
     await expect(page.getByText("1개 선택됨")).toBeVisible();
 
     // Click delete
-    await page.getByRole("button", { name: /제거하기/ }).click();
+    if (isMobileViewport(page)) {
+      await page.getByRole("button", { name: "제거하기" }).click();
+    } else {
+      await page.getByRole("button", { name: "삭제 (1)" }).click();
+    }
 
     // Confirm delete
     await expect(page.getByText("재료를 삭제할까요?")).toBeVisible();
 
-    const confirmButtons = page.getByRole("button", { name: /삭제/ });
-    const deleteConfirmButton = confirmButtons.filter({ hasText: /^\s*삭제\s*\(1\)\s*$/ });
-    await deleteConfirmButton.click();
+    await page.getByRole("button", { name: "삭제 (1)" }).last().click();
 
     // Should show success toast
     await expect(page.getByText(/재료가 삭제됐어요/)).toBeVisible();
@@ -333,7 +306,7 @@ test.describe("PANTRY screen", () => {
     await page.getByRole("button", { name: "팬트리에 추가 (1)" }).click();
 
     await expect(page.getByText("1개 재료가 팬트리에 추가됐어요")).toBeVisible();
-    await expect(page.getByText(/4\s*(?:개 재료|\/\s*29개)/)).toBeVisible();
+    await expect(page.getByText(/4\s*개/).first()).toBeVisible();
     await expect(page.getByText(/대파/)).toBeVisible();
   });
 
@@ -362,7 +335,7 @@ test.describe("PANTRY screen", () => {
     await page.getByRole("button", { name: "2개 팬트리에 추가" }).click();
 
     await expect(page.getByText("2개 재료를 팬트리에 추가했어요")).toBeVisible();
-    await expect(page.getByText(/5\s*(?:개 재료|\/\s*29개)/)).toBeVisible();
+    await expect(page.getByText(/5\s*개/).first()).toBeVisible();
     await expect(page.getByText(/간장/)).toBeVisible();
   });
 

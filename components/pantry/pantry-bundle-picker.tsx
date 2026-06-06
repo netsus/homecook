@@ -329,14 +329,13 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
         aria-labelledby="bundle-picker-title-a11y"
         className="web-bundle-dialog"
       >
-        <span className="sr-only" id="bundle-picker-title-a11y">
-          묶음으로 재료 추가
-        </span>
         <WebDialogHeader>
           <div>
-            <WebDialogTitle>번들로 한꺼번에 추가</WebDialogTitle>
+            <WebDialogTitle id="bundle-picker-title-a11y">
+              묶음으로 재료 추가
+            </WebDialogTitle>
             <p className="web-modal-copy">
-              자주 쓰는 재료를 묶음으로 한 번에 추가해요
+              자주 함께 쓰는 재료를 한 번에 추가해요
             </p>
           </div>
           <button
@@ -366,10 +365,10 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
           ) : null}
 
           {sheetState === "empty" ? (
-            <div className="web-modal-panel">
+            <div className="web-bundle-empty">
               <p className="web-modal-option-title">등록된 묶음이 없어요</p>
               <p className="web-modal-copy">
-                묶음이 준비되면 여기서 한번에 추가할 수 있어요
+                묶음이 준비되면 여기서 한 번에 추가할 수 있어요
               </p>
             </div>
           ) : null}

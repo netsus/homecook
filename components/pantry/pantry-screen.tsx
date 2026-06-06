@@ -7,15 +7,24 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
 import { PantryAddSheet } from "@/components/pantry/pantry-add-sheet";
 import { PantryBundlePicker } from "@/components/pantry/pantry-bundle-picker";
 import { PantryMobileScreen } from "@/components/pantry/pantry-mobile-screen";
+import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
+import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
+import { AppBottomSheet } from "@/components/shared/app-overlay";
 import { ContentState } from "@/components/shared/content-state";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   WebButton,
   WebCard,
+  WebDialog,
+  WebDialogBody,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebModal,
   WebShell,
   WebSkeleton,
   WebTabButton,
@@ -25,17 +34,19 @@ import {
 } from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
-  addPantryItems,
   deletePantryItems,
-  fetchIngredients,
   fetchPantryList,
   isPantryApiError,
 } from "@/lib/api/pantry";
-import { getIngredientCategoryEmoji } from "@/lib/ingredient-categories";
+import { createMealSafe } from "@/lib/api/meal";
+import { fetchPlannerColumns } from "@/lib/api/planner";
+import { getIngredientCategoryEmoji, INGREDIENT_CATEGORY_LABELS } from "@/lib/ingredient-categories";
+import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { PantryItem } from "@/types/pantry";
-import type { IngredientItem } from "@/types/recipe";
+import type { PlannerColumnData } from "@/types/planner";
+import type { PantryMatchRecipeItem } from "@/types/recipe";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
@@ -69,31 +80,32 @@ export function PantryScreen({
   );
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [items, setItems] = useState<PantryItem[]>([]);
-  const [ingredientCatalog, setIngredientCatalog] = useState<IngredientItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [showMissingItems, setShowMissingItems] = useState(false);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [togglingIngredientIds, setTogglingIngredientIds] = useState<Set<string>>(new Set());
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [showBundlePicker, setShowBundlePicker] = useState(false);
+  const [showPantryRecommendations, setShowPantryRecommendations] = useState(false);
+  const [plannerAddTarget, setPlannerAddTarget] = useState<PantryMatchRecipeItem | null>(null);
+  const [isPlannerAddSheetOpen, setIsPlannerAddSheetOpen] = useState(false);
+  const [plannerAddSheetState, setPlannerAddSheetState] =
+    useState<PlannerAddSheetState>("loading-columns");
+  const [plannerColumns, setPlannerColumns] = useState<PlannerColumnData[]>([]);
+  const [selectedPlanDate, setSelectedPlanDate] = useState("");
+  const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
+  const [plannerServings, setPlannerServings] = useState(2);
+  const [plannerAddError, setPlannerAddError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobileViewport = useIsMobileViewport();
 
-  const allDisplayItems = useMemo(() => {
-    if (!showMissingItems) {
-      return items.map(toOwnedDisplayItem);
-    }
-
-    return buildPantryDisplayItems({
-      catalogItems: ingredientCatalog,
-      ownedItems: items,
-    });
-  }, [ingredientCatalog, items, showMissingItems]);
+  const allDisplayItems = useMemo(
+    () => items.map(toOwnedDisplayItem).sort(comparePantryDisplayItems),
+    [items],
+  );
 
   const searchedItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim();
@@ -108,10 +120,8 @@ export function PantryScreen({
   }, [allDisplayItems, searchQuery]);
 
   const categories = useMemo(() => {
-    const categorySet = new Set<string>();
-    searchedItems.forEach((item) => categorySet.add(item.category));
-    return Array.from(categorySet).sort();
-  }, [searchedItems]);
+    return [...INGREDIENT_CATEGORY_LABELS];
+  }, []);
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -127,6 +137,32 @@ export function PantryScreen({
     if (!activeCategory) return searchedItems;
     return searchedItems.filter((item) => item.category === activeCategory);
   }, [searchedItems, activeCategory]);
+
+  const selectableIngredientIds = useMemo(
+    () => displayItems.map((item) => item.ingredient_id),
+    [displayItems],
+  );
+  const isAllVisibleSelected =
+    selectableIngredientIds.length > 0 &&
+    selectableIngredientIds.every((ingredientId) => selectedIds.has(ingredientId));
+
+  const buildSelectableDates = useCallback((): string[] => {
+    const dates: string[] = [];
+    const base = new Date();
+
+    for (let i = 0; i < 14; i += 1) {
+      const d = new Date(base);
+      d.setDate(d.getDate() + i);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      dates.push(`${y}-${m}-${day}`);
+    }
+
+    return dates;
+  }, []);
+
+  const selectableDates = useMemo(() => buildSelectableDates(), [buildSelectableDates]);
 
   const mobileDisplayItems = useMemo(
     () =>
@@ -179,15 +215,6 @@ export function PantryScreen({
     [],
   );
 
-  const loadIngredientCatalog = useCallback(async () => {
-    try {
-      const result = await fetchIngredients();
-      setIngredientCatalog((prev) => mergeIngredientCatalog(prev, result.items));
-    } catch {
-      // The owned pantry list is still usable if the ingredient catalog fails.
-    }
-  }, []);
-
   const handleSearch = useCallback(
     (value: string) => {
       setSearchQuery(value);
@@ -206,17 +233,6 @@ export function PantryScreen({
     [],
   );
 
-  const handleShowMissingItemsChange = useCallback(
-    (checked: boolean) => {
-      setShowMissingItems(checked);
-
-      if (checked) {
-        void loadIngredientCatalog();
-      }
-    },
-    [loadIngredientCatalog],
-  );
-
   const handleSelectToggle = useCallback((ingredientId: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -227,6 +243,28 @@ export function PantryScreen({
       }
       return next;
     });
+  }, []);
+
+  const handleSelectAllVisibleToggle = useCallback(() => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+
+      if (
+        selectableIngredientIds.length > 0 &&
+        selectableIngredientIds.every((ingredientId) => next.has(ingredientId))
+      ) {
+        selectableIngredientIds.forEach((ingredientId) => next.delete(ingredientId));
+        return next;
+      }
+
+      selectableIngredientIds.forEach((ingredientId) => next.add(ingredientId));
+      return next;
+    });
+  }, [selectableIngredientIds]);
+
+  const handleRequestSingleDelete = useCallback((ingredientId: string) => {
+    setSelectedIds(new Set([ingredientId]));
+    setShowDeleteConfirm(true);
   }, []);
 
   const handleExitSelectMode = useCallback(() => {
@@ -272,71 +310,100 @@ export function PantryScreen({
     [showToast, loadItems],
   );
 
-  const handleStockToggle = useCallback(
-    async (displayItem: PantryDisplayItem) => {
-      const ingredientId = displayItem.ingredient_id;
+  const loadPlannerColumns = useCallback(async () => {
+    setPlannerAddSheetState("loading-columns");
+    setPlannerAddError(null);
 
-      if (togglingIngredientIds.has(ingredientId)) {
-        return;
-      }
-
-      setTogglingIngredientIds((prev) => new Set(prev).add(ingredientId));
-      setIngredientCatalog((prev) =>
-        mergeIngredientCatalog(prev, [toIngredientItem(displayItem)]),
-      );
-
-      try {
-        if (displayItem.isOwned) {
-          setItems((prev) => prev.filter((item) => item.ingredient_id !== ingredientId));
-          setSelectedIds((prev) => {
-            const next = new Set(prev);
-            next.delete(ingredientId);
-            return next;
-          });
-
-          await deletePantryItems([ingredientId]);
-          showToast(
-            `${formatIngredientObject(displayItem.standard_name)} 미보유로 바꿨어요`,
-            "success",
-          );
-          return;
+    try {
+      const data = await fetchPlannerColumns();
+      setPlannerColumns(data.columns);
+      setSelectedPlanColumnId((current) => {
+        if (current && data.columns.some((column) => column.id === current)) {
+          return current;
         }
 
-        const optimisticItem = toPantryItem(displayItem);
-        setItems((prev) => mergePantryItems(prev, [optimisticItem]));
-
-        const result = await addPantryItems([ingredientId]);
-        if (result.items.length > 0) {
-          setItems((prev) =>
-            mergePantryItems(
-              prev.filter((item) => item.ingredient_id !== ingredientId),
-              result.items,
-            ),
-          );
-        } else {
-          void loadItems();
-        }
-        showToast(
-          `${formatIngredientObject(displayItem.standard_name)} 보유로 바꿨어요`,
-          "success",
+        return (
+          data.columns.find((column) => column.name === "저녁")?.id ??
+          data.columns[0]?.id ??
+          ""
         );
-      } catch {
-        if (displayItem.isOwned) {
-          setItems((prev) => mergePantryItems(prev, [toPantryItem(displayItem)]));
-        } else {
-          setItems((prev) => prev.filter((item) => item.ingredient_id !== ingredientId));
-        }
-        showToast("보유 상태를 바꾸지 못했어요. 다시 시도해 주세요", "error");
-      } finally {
-        setTogglingIngredientIds((prev) => {
-          const next = new Set(prev);
-          next.delete(ingredientId);
-          return next;
-        });
-      }
+      });
+      setPlannerAddSheetState("ready");
+    } catch {
+      setPlannerAddSheetState("error");
+      setPlannerAddError("플래너 슬롯을 불러오지 못했어요.");
+    }
+  }, []);
+
+  const openPlannerAddSheetForRecommendation = useCallback(
+    async (recipe: PantryMatchRecipeItem) => {
+      setPlannerAddTarget(recipe);
+      setIsPlannerAddSheetOpen(true);
+      setPlannerAddError(null);
+      setSelectedPlanDate(selectableDates[0] ?? "");
+      setPlannerServings(2);
+
+      await loadPlannerColumns();
     },
-    [loadItems, showToast, togglingIngredientIds],
+    [loadPlannerColumns, selectableDates],
   );
+
+  const closePlannerAddSheet = useCallback(() => {
+    if (plannerAddSheetState === "submitting") {
+      return;
+    }
+
+    setIsPlannerAddSheetOpen(false);
+    setPlannerAddError(null);
+    setPlannerAddTarget(null);
+  }, [plannerAddSheetState]);
+
+  const handlePlannerAddSubmit = useCallback(async () => {
+    if (
+      !plannerAddTarget ||
+      !selectedPlanColumnId ||
+      !selectedPlanDate ||
+      plannerAddSheetState !== "ready"
+    ) {
+      return;
+    }
+
+    setPlannerAddSheetState("submitting");
+    setPlannerAddError(null);
+
+    const response = await createMealSafe({
+      recipe_id: plannerAddTarget.id,
+      plan_date: selectedPlanDate,
+      column_id: selectedPlanColumnId,
+      planned_servings: plannerServings,
+    });
+
+    if (!response.success) {
+      setPlannerAddError(response.error?.message ?? "플래너 추가에 실패했어요. 다시 시도해주세요.");
+      setPlannerAddSheetState("ready");
+      return;
+    }
+
+    const [, planMonth, planDay] = selectedPlanDate.split("-").map(Number);
+    const dateLabel = `${planMonth}월 ${planDay}일`;
+    const columnName =
+      plannerColumns.find((column) => column.id === selectedPlanColumnId)?.name ??
+      "선택한 끼니";
+
+    setIsPlannerAddSheetOpen(false);
+    setPlannerAddTarget(null);
+    setShowPantryRecommendations(false);
+    setPlannerAddSheetState("ready");
+    showToast(`${dateLabel} ${columnName}에 추가됐어요`, "success");
+  }, [
+    plannerAddSheetState,
+    plannerAddTarget,
+    plannerColumns,
+    plannerServings,
+    selectedPlanColumnId,
+    selectedPlanDate,
+    showToast,
+  ]);
 
   // Auth check effect
   useEffect(() => {
@@ -530,7 +597,7 @@ export function PantryScreen({
                 취소
               </button>
               <button
-                className="flex min-h-[var(--control-height-md)] flex-1 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-deep)] text-sm font-semibold text-[var(--surface)] disabled:opacity-50"
+                className="flex min-h-[var(--control-height-md)] flex-1 items-center justify-center rounded-[var(--radius-md)] bg-[var(--danger)] text-sm font-semibold text-[var(--text-inverse)] disabled:opacity-50"
                 disabled={isDeleting}
                 onClick={() => void handleDeleteConfirm()}
                 type="button"
@@ -548,7 +615,7 @@ export function PantryScreen({
           className={`fixed left-1/2 top-16 z-50 -translate-x-1/2 rounded-[var(--radius-md)] px-4 py-2.5 text-sm font-medium shadow-lg transition-opacity ${
             toast.tone === "success"
               ? "bg-[var(--brand)] text-[var(--surface)]"
-              : "bg-[var(--brand-deep)] text-[var(--surface)]"
+              : "bg-[var(--danger)] text-[var(--text-inverse)]"
           }`}
         >
           {toast.message}
@@ -571,6 +638,92 @@ export function PantryScreen({
           onClose={() => setShowBundlePicker(false)}
         />
       )}
+
+      {showPantryRecommendations ? (
+        isMobileViewport ? (
+          <AppBottomSheet
+            ariaLabelledBy="pantry-recommendation-title-mobile"
+            bodyClassName="px-4 pb-[calc(20px+env(safe-area-inset-bottom))]"
+            description="팬트리에 있는 재료로 만들기 쉬운 레시피를 골라보세요."
+            onClose={() => setShowPantryRecommendations(false)}
+            panelClassName="max-w-[520px]"
+            title="팬트리 추천"
+          >
+            <PantryMatchPicker
+              isCreating={false}
+              onClose={() => setShowPantryRecommendations(false)}
+              onRecipeSelect={(recipe) => void openPlannerAddSheetForRecommendation(recipe)}
+              onServingsCancel={() => undefined}
+              onServingsConfirm={() => undefined}
+              presentation="sheet"
+              selectedRecipe={null}
+            />
+          </AppBottomSheet>
+        ) : (
+          <WebModal onBackdropClick={() => setShowPantryRecommendations(false)}>
+            <WebDialog aria-labelledby="pantry-recommendation-title-desktop" size="wide">
+              <WebDialogHeader>
+                <div>
+                  <WebDialogTitle id="pantry-recommendation-title-desktop">
+                    팬트리 추천
+                  </WebDialogTitle>
+                  <p className="web-modal-copy">
+                    팬트리에 있는 재료로 만들기 쉬운 레시피를 골라보세요.
+                  </p>
+                </div>
+                <button
+                  aria-label="닫기"
+                  className="web-modal-close"
+                  onClick={() => setShowPantryRecommendations(false)}
+                  type="button"
+                >
+                  ×
+                </button>
+              </WebDialogHeader>
+              <WebDialogBody>
+                <PantryMatchPicker
+                  isCreating={false}
+                  onClose={() => setShowPantryRecommendations(false)}
+                  onRecipeSelect={(recipe) => void openPlannerAddSheetForRecommendation(recipe)}
+                  onServingsCancel={() => undefined}
+                  onServingsConfirm={() => undefined}
+                  presentation="web"
+                  selectedRecipe={null}
+                />
+              </WebDialogBody>
+            </WebDialog>
+          </WebModal>
+        )
+      ) : null}
+
+      <PlannerAddSheet
+        columns={plannerColumns}
+        errorMessage={plannerAddError}
+        isOpen={isPlannerAddSheetOpen}
+        onChangeServings={setPlannerServings}
+        onClose={closePlannerAddSheet}
+        onRetryLoad={loadPlannerColumns}
+        onSelectColumn={setSelectedPlanColumnId}
+        onSelectDate={setSelectedPlanDate}
+        onSubmit={handlePlannerAddSubmit}
+        recipePreview={
+          plannerAddTarget
+            ? {
+                background: "var(--brand-soft)",
+                emoji: "🧊",
+                imageSrc: resolveRecipeImage(plannerAddTarget),
+                meta: "팬트리 추천 · 기본 2인분",
+                title: plannerAddTarget.title,
+              }
+            : undefined
+        }
+        selectableDates={selectableDates}
+        selectedColumnId={selectedPlanColumnId}
+        selectedDate={selectedPlanDate}
+        servings={plannerServings}
+        sheetState={plannerAddSheetState}
+        variant="recipe-detail"
+      />
     </>
   );
 
@@ -587,12 +740,16 @@ export function PantryScreen({
           onExitSelectMode={handleExitSelectMode}
           onOpenAddSheet={() => setShowAddSheet(true)}
           onOpenBundlePicker={() => setShowBundlePicker(true)}
+          onOpenRecommendations={() => setShowPantryRecommendations(true)}
           onRequestDelete={() => setShowDeleteConfirm(true)}
+          onRequestSingleDelete={handleRequestSingleDelete}
           onSearchChange={handleSearch}
+          onSelectAllToggle={handleSelectAllVisibleToggle}
           onSelectToggle={handleSelectToggle}
           onStartSelectMode={() => setIsSelectMode(true)}
           searchQuery={searchQuery}
           selectedIds={selectedIds}
+          isAllVisibleSelected={isAllVisibleSelected}
         />
         {overlayNodes}
       </>
@@ -607,13 +764,19 @@ export function PantryScreen({
           <header className="web-pantry-head">
             <div>
               <p className="web-menu-add-eyebrow">Pantry</p>
-              <h1>나의 팬트리</h1>
+              <h1>나의 팬트리 {items.length}개</h1>
               <p>
-                갖고 있는 재료를 정리하면 장보기에서 이미 있는 재료를
-                자동으로 제외해요.
+                팬트리에 있는 재료는 장보기에서 자동 제외돼요.
               </p>
             </div>
             <div className="web-pantry-actions">
+              <WebButton
+                aria-label="팬트리 추천"
+                onClick={() => setShowPantryRecommendations(true)}
+                variant="secondary"
+              >
+                팬트리 추천
+              </WebButton>
               <WebButton
                 aria-label="묶음으로 추가"
                 onClick={() => setShowBundlePicker(true)}
@@ -654,7 +817,7 @@ export function PantryScreen({
 
             <WebToolbar className="web-pantry-toolbar">
               <label className="web-picker-search web-pantry-search">
-                <span aria-hidden="true">⌕</span>
+                <SearchGlyph className="h-5 w-5" />
                 <input
                   aria-label="팬트리 재료 검색"
                   onChange={(event) => handleSearch(event.target.value)}
@@ -676,16 +839,6 @@ export function PantryScreen({
               </label>
 
               <div className="web-pantry-toolbar-actions">
-                <label className="web-pantry-stock-toggle">
-                  <input
-                    checked={showMissingItems}
-                    onChange={(event) =>
-                      handleShowMissingItemsChange(event.target.checked)
-                    }
-                    type="checkbox"
-                  />
-                  <span>없는 재료도 표시</span>
-                </label>
                 <span className="web-pantry-count" aria-live="polite">
                   {displayItems.length}개 표시
                   <span className="sr-only">
@@ -698,17 +851,28 @@ export function PantryScreen({
                 </span>
                 {isSelectMode ? (
                   <>
+                    <button
+                      aria-checked={isAllVisibleSelected}
+                      className="web-pantry-select-all"
+                      disabled={selectableIngredientIds.length === 0}
+                      onClick={handleSelectAllVisibleToggle}
+                      role="checkbox"
+                      type="button"
+                    >
+                      <span aria-hidden="true">{isAllVisibleSelected ? "✓" : ""}</span>
+                      전체선택
+                    </button>
                     <WebButton onClick={handleExitSelectMode} variant="tertiary">
                       취소
                     </WebButton>
-                    <WebButton
-                      aria-label={`선택한 재료 ${selectedIds.size}개 제거하기`}
+                    <button
+                      className="web-pantry-danger-button"
                       disabled={selectedIds.size === 0}
                       onClick={() => setShowDeleteConfirm(true)}
-                      variant="secondary"
+                      type="button"
                     >
                       삭제 ({selectedIds.size})
-                    </WebButton>
+                    </button>
                   </>
                 ) : (
                   <WebButton
@@ -751,38 +915,8 @@ export function PantryScreen({
               <div className="web-pantry-grid">
                 {displayItems.map((item) => {
                   const isSelected = selectedIds.has(item.ingredient_id);
-                  const isToggling = togglingIngredientIds.has(item.ingredient_id);
-
-                  return (
-                    <button
-                      aria-checked={isSelectMode ? isSelected : item.isOwned}
-                      aria-label={
-                        isSelectMode
-                          ? `${item.standard_name} 선택`
-                          : item.isOwned
-                            ? `${item.standard_name} 보유 해제`
-                            : `${item.standard_name} 보유로 변경`
-                      }
-                      className={[
-                        "web-pantry-card",
-                        isSelectMode ? "web-pantry-card-selectable" : "web-pantry-card-toggle",
-                        isSelected ? "web-pantry-card-selected" : "",
-                        item.isOwned ? "" : "web-pantry-card-missing",
-                        isToggling ? "web-pantry-card-pending" : "",
-                      ].join(" ")}
-                      disabled={isToggling}
-                      key={item.ingredient_id}
-                      onClick={() => {
-                        if (isSelectMode) {
-                          handleSelectToggle(item.ingredient_id);
-                          return;
-                        }
-
-                        void handleStockToggle(item);
-                      }}
-                      role={isSelectMode ? "checkbox" : "switch"}
-                      type="button"
-                    >
+                  const cardContent = (
+                    <>
                       {isSelectMode ? (
                         <span className="web-pantry-check" aria-hidden="true">
                           {isSelected ? "✓" : ""}
@@ -793,15 +927,33 @@ export function PantryScreen({
                       </span>
                       <strong>{item.standard_name}</strong>
                       <small>{item.category}</small>
-                      <span
-                        className={[
-                          "web-pantry-badge",
-                          item.isOwned ? "" : "web-pantry-badge-missing",
-                        ].join(" ")}
-                      >
-                        {isToggling ? "저장 중" : item.isOwned ? "보유" : "미보유"}
-                      </span>
+                    </>
+                  );
+
+                  return isSelectMode ? (
+                    <button
+                      aria-checked={isSelected}
+                      aria-label={`${item.standard_name} 선택`}
+                      className={[
+                        "web-pantry-card",
+                        "web-pantry-card-selectable",
+                        isSelected ? "web-pantry-card-selected" : "",
+                      ].join(" ")}
+                      key={item.ingredient_id}
+                      onClick={() => handleSelectToggle(item.ingredient_id)}
+                      role="checkbox"
+                      type="button"
+                    >
+                      {cardContent}
                     </button>
+                  ) : (
+                    <article
+                      aria-label={`${item.standard_name} 재료`}
+                      className="web-pantry-card"
+                      key={item.ingredient_id}
+                    >
+                      {cardContent}
+                    </article>
                   );
                 })}
               </div>
@@ -825,66 +977,6 @@ function toOwnedDisplayItem(item: PantryItem): PantryDisplayItem {
   };
 }
 
-function toIngredientItem(item: PantryDisplayItem): IngredientItem {
-  return {
-    category: item.category,
-    id: item.ingredient_id,
-    standard_name: item.standard_name,
-  };
-}
-
-function toPantryItem(item: PantryDisplayItem): PantryItem {
-  return {
-    category: item.category,
-    created_at: item.created_at ?? new Date().toISOString(),
-    id: item.isOwned ? item.id : `optimistic-${item.ingredient_id}`,
-    ingredient_id: item.ingredient_id,
-    standard_name: item.standard_name,
-  };
-}
-
-function formatIngredientObject(name: string) {
-  const trimmedName = name.trim();
-  const lastCharCode = trimmedName.charCodeAt(trimmedName.length - 1);
-  const isHangulSyllable = lastCharCode >= 0xac00 && lastCharCode <= 0xd7a3;
-  const hasFinalConsonant = isHangulSyllable && (lastCharCode - 0xac00) % 28 !== 0;
-  return `${name}${hasFinalConsonant ? "을" : "를"}`;
-}
-
-function buildPantryDisplayItems({
-  catalogItems,
-  ownedItems,
-}: {
-  catalogItems: IngredientItem[];
-  ownedItems: PantryItem[];
-}) {
-  const ownedByIngredientId = new Map(
-    ownedItems.map((item) => [item.ingredient_id, item]),
-  );
-  const displayByIngredientId = new Map<string, PantryDisplayItem>();
-
-  for (const catalogItem of catalogItems) {
-    const ownedItem = ownedByIngredientId.get(catalogItem.id);
-
-    displayByIngredientId.set(catalogItem.id, {
-      category: catalogItem.category,
-      created_at: ownedItem?.created_at ?? null,
-      id: ownedItem?.id ?? `missing-${catalogItem.id}`,
-      ingredient_id: catalogItem.id,
-      isOwned: Boolean(ownedItem),
-      standard_name: catalogItem.standard_name,
-    });
-  }
-
-  for (const ownedItem of ownedItems) {
-    if (!displayByIngredientId.has(ownedItem.ingredient_id)) {
-      displayByIngredientId.set(ownedItem.ingredient_id, toOwnedDisplayItem(ownedItem));
-    }
-  }
-
-  return Array.from(displayByIngredientId.values()).sort(comparePantryDisplayItems);
-}
-
 function comparePantryDisplayItems(
   left: PantryDisplayItem,
   right: PantryDisplayItem,
@@ -897,63 +989,65 @@ function comparePantryDisplayItems(
   return left.standard_name.localeCompare(right.standard_name, "ko");
 }
 
-function mergeIngredientCatalog(
-  currentItems: IngredientItem[],
-  incomingItems: IngredientItem[],
-) {
-  const merged = new Map(currentItems.map((item) => [item.id, item]));
-
-  for (const item of incomingItems) {
-    merged.set(item.id, item);
-  }
-
-  return Array.from(merged.values()).sort((left, right) =>
-    left.standard_name.localeCompare(right.standard_name, "ko"),
+function SearchGlyph({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.3"
+      viewBox="0 0 24 24"
+    >
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m16.5 16.5 4 4" />
+    </svg>
   );
-}
-
-function mergePantryItems(currentItems: PantryItem[], incomingItems: PantryItem[]) {
-  const merged = new Map(currentItems.map((item) => [item.ingredient_id, item]));
-
-  for (const item of incomingItems) {
-    merged.set(item.ingredient_id, item);
-  }
-
-  return Array.from(merged.values()).sort((left, right) => {
-    const createdAtCompare = right.created_at.localeCompare(left.created_at);
-    if (createdAtCompare !== 0) {
-      return createdAtCompare;
-    }
-
-    return left.id.localeCompare(right.id);
-  });
 }
 
 function PantryLoadingSkeleton() {
   return (
-    <div className="space-y-3">
-      <div className="px-1">
-        <Skeleton height={24} rounded="md" width={120} />
+    <div
+      className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden"
+      data-testid="pantry-mobile-skeleton"
+    >
+      <div className="flex h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4">
+        <Skeleton height={22} rounded="md" width={72} />
+      </div>
+      <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 pb-5 pt-4">
+        <Skeleton height={16} rounded="md" width={108} />
         <div className="mt-2">
-          <Skeleton height={14} rounded="md" width={100} />
+          <Skeleton height={34} rounded="md" width={72} />
         </div>
-      </div>
-      <Skeleton className="w-full" height={40} rounded="lg" />
-      <div className="flex gap-2">
-        <Skeleton height={32} rounded="full" width={56} />
-        <Skeleton height={32} rounded="full" width={56} />
-        <Skeleton height={32} rounded="full" width={64} />
-        <Skeleton height={32} rounded="full" width={56} />
-      </div>
-      <div className="flex gap-2">
-        <Skeleton className="flex-1" height={44} rounded="md" />
-        <Skeleton className="flex-1" height={44} rounded="md" />
-      </div>
-      <div className="space-y-2">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton className="w-full" height={60} key={i} rounded="lg" />
-        ))}
-      </div>
+        <div className="mt-3">
+          <Skeleton height={16} rounded="md" width={260} />
+        </div>
+        <div className="mt-4">
+          <Skeleton className="w-full" height={44} rounded="full" />
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Skeleton className="col-span-2 w-full" height={40} rounded="md" />
+          <Skeleton className="w-full" height={40} rounded="md" />
+          <Skeleton className="w-full" height={40} rounded="md" />
+        </div>
+      </section>
+      <section className="border-b border-[var(--line-strong)] px-4 pt-3">
+        <div className="flex gap-3">
+          {[52, 48, 48, 60, 48].map((width, index) => (
+            <Skeleton height={28} key={index} rounded="md" width={width} />
+          ))}
+        </div>
+      </section>
+      <main className="space-y-3 px-4 pb-4 pt-[26px]">
+        <Skeleton height={16} rounded="md" width={54} />
+        <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton className="w-full" height={61} key={i} rounded="md" />
+          ))}
+        </div>
+      </main>
     </div>
   );
 }

@@ -3,10 +3,7 @@
 import React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  getPantryEmoji,
-  WAVE1_PANTRY_CATEGORY_ORDER,
-} from "@/components/pantry/pantry-mobile-visuals";
+import { getPantryEmoji } from "@/components/pantry/pantry-mobile-visuals";
 import {
   AppBottomSheet,
   AppModalFooterActions,
@@ -25,6 +22,7 @@ import {
   WebTabs,
 } from "@/components/web";
 import { addPantryItems, fetchIngredients } from "@/lib/api/pantry";
+import { INGREDIENT_CATEGORY_LABELS } from "@/lib/ingredient-categories";
 import type { IngredientItem } from "@/types/recipe";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -56,10 +54,8 @@ export function PantryAddSheet({
   const isMobileViewport = useIsMobileViewport();
 
   const categories = useMemo(() => {
-    const categorySet = new Set<string>();
-    ingredients.forEach((item) => categorySet.add(item.category));
-    return Array.from(categorySet).sort();
-  }, [ingredients]);
+    return [...INGREDIENT_CATEGORY_LABELS];
+  }, []);
 
   const visibleIngredients = useMemo(() => {
     return ingredients.filter((ingredient) => {
@@ -78,6 +74,10 @@ export function PantryAddSheet({
   const selectedIngredients = useMemo(
     () => ingredients.filter((ingredient) => selectedIds.has(ingredient.id)),
     [ingredients, selectedIds],
+  );
+  const visibleIngredientGroups = useMemo(
+    () => groupIngredientsByCategory(visibleIngredients),
+    [visibleIngredients],
   );
 
   const loadIngredients = useCallback(async (query?: string) => {
@@ -212,14 +212,23 @@ export function PantryAddSheet({
         }
         headerSlot={
           <>
-            <input
-              aria-label="재료명 검색"
-              className="h-[38px] w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[14px] font-medium text-[var(--foreground)] placeholder:text-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="재료 검색"
-              type="text"
-              value={searchQuery}
-            />
+            <div className="relative">
+              <span
+                aria-hidden="true"
+                className="absolute left-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center text-[var(--text-3)]"
+                data-testid="pantry-add-mobile-search-icon"
+              >
+                <SearchGlyph className="h-5 w-5" />
+              </span>
+              <input
+                aria-label="재료명 검색"
+                className="h-[38px] w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] pl-10 pr-3 text-[14px] font-medium text-[var(--foreground)] placeholder:text-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
+                onChange={(e) => handleSearch(e.target.value)}
+                placeholder="재료 검색"
+                type="text"
+                value={searchQuery}
+              />
+            </div>
 
             <div className="scrollbar-hide mt-3 flex gap-1.5 overflow-x-auto" role="tablist">
               <MobileCategoryChip
@@ -227,7 +236,7 @@ export function PantryAddSheet({
                 label="전체"
                 onClick={() => handleCategoryChange(null)}
               />
-              {WAVE1_PANTRY_CATEGORY_ORDER.map((category) => (
+              {categories.map((category) => (
                 <MobileCategoryChip
                   active={activeCategory === category}
                   key={category}
@@ -236,6 +245,24 @@ export function PantryAddSheet({
                 />
               ))}
             </div>
+            {selectedIngredients.length > 0 ? (
+              <div
+                className="scrollbar-hide mt-3 flex gap-1.5 overflow-x-auto"
+                data-testid="pantry-add-selected-ingredients"
+              >
+                {selectedIngredients.map((ingredient) => (
+                  <button
+                    aria-label={`${ingredient.standard_name} 선택 해제`}
+                    className="shrink-0 rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-[12px] font-extrabold text-[var(--brand)]"
+                    key={ingredient.id}
+                    onClick={() => removeSelectedIngredient(ingredient.id)}
+                    type="button"
+                  >
+                    {ingredient.standard_name} ×
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </>
         }
         onClose={onClose}
@@ -265,63 +292,72 @@ export function PantryAddSheet({
             검색 결과가 없어요
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {visibleIngredients.map((ingredient) => {
-              const isExisting = existingSet.current.has(ingredient.id);
-              const isChecked = selectedIds.has(ingredient.id);
+          <div className="space-y-4">
+            {visibleIngredientGroups.map((group) => (
+              <section key={group.category}>
+                <h3 className="mb-2 px-0.5 text-[13px] font-extrabold text-[var(--text-2)]">
+                  {group.category}
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {group.items.map((ingredient) => {
+                    const isExisting = existingSet.current.has(ingredient.id);
+                    const isChecked = selectedIds.has(ingredient.id);
 
-              return (
-                <button
-                  aria-checked={isChecked}
-                  aria-label={
-                    isExisting
-                      ? `${ingredient.standard_name} 보유중`
-                      : ingredient.standard_name
-                  }
-                  className={[
-                    "flex min-h-[54px] items-center gap-2 rounded-[var(--radius-card)] border px-3 text-left disabled:opacity-60",
-                    isExisting
-                      ? "border-[var(--line-strong)] bg-[var(--surface-fill)] opacity-60 grayscale"
-                      : isChecked
-                        ? "border-[var(--brand)] bg-[var(--brand-soft)]"
-                        : "border-[var(--line-strong)] bg-[var(--surface)]",
-                  ].join(" ")}
-                  data-owned={isExisting ? "true" : undefined}
-                  disabled={isExisting}
-                  key={ingredient.id}
-                  onClick={() => handleToggle(ingredient.id)}
-                  role="checkbox"
-                  type="button"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={[
-                      "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[18px]",
-                      isExisting ? "opacity-70" : "",
-                    ].join(" ")}
-                  >
-                    {getPantryEmoji(ingredient.standard_name, ingredient.category)}
-                  </span>
-                  <span
-                    className={[
-                      "min-w-0 flex-1 truncate text-[13px] font-extrabold",
-                      isExisting ? "text-[var(--text-3)]" : "text-[var(--foreground)]",
-                    ].join(" ")}
-                  >
-                    {ingredient.standard_name}
-                  </span>
-                  {isExisting ? (
-                    <span className="shrink-0 rounded-full bg-[var(--surface)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--text-2)]">
-                      보유중
-                    </span>
-                  ) : isChecked ? (
-                    <span className="shrink-0 text-[15px] font-extrabold text-[var(--brand)]">
-                      ✓
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
+                    return (
+                      <button
+                        aria-checked={isChecked}
+                        aria-label={
+                          isExisting
+                            ? `${ingredient.standard_name} 보유중`
+                            : ingredient.standard_name
+                        }
+                        className={[
+                          "flex min-h-[54px] items-center gap-2 rounded-[var(--radius-card)] border px-3 text-left disabled:opacity-60",
+                          isExisting
+                            ? "border-[var(--line-strong)] bg-[var(--surface-fill)] opacity-60 grayscale"
+                            : isChecked
+                              ? "border-[var(--brand)] bg-[var(--brand-soft)]"
+                              : "border-[var(--line-strong)] bg-[var(--surface)]",
+                        ].join(" ")}
+                        data-owned={isExisting ? "true" : undefined}
+                        disabled={isExisting}
+                        key={ingredient.id}
+                        onClick={() => handleToggle(ingredient.id)}
+                        role="checkbox"
+                        type="button"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={[
+                            "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[18px]",
+                            isExisting ? "opacity-70" : "",
+                          ].join(" ")}
+                        >
+                          {getPantryEmoji(ingredient.standard_name, ingredient.category)}
+                        </span>
+                        <span
+                          className={[
+                            "min-w-0 flex-1 truncate text-[13px] font-extrabold",
+                            isExisting ? "text-[var(--text-3)]" : "text-[var(--foreground)]",
+                          ].join(" ")}
+                        >
+                          {ingredient.standard_name}
+                        </span>
+                        {isExisting ? (
+                          <span className="shrink-0 rounded-full bg-[var(--surface)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--text-2)]">
+                            보유중
+                          </span>
+                        ) : isChecked ? (
+                          <span className="shrink-0 text-[15px] font-extrabold text-[var(--brand)]">
+                            ✓
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
         )}
       </AppBottomSheet>
@@ -335,12 +371,9 @@ export function PantryAddSheet({
         className="web-pantry-add-dialog"
         size="wide"
       >
-        <span className="sr-only" id="pantry-add-sheet-title-a11y">
-          재료 추가
-        </span>
         <WebDialogHeader>
           <div>
-            <WebDialogTitle>팬트리에 재료 추가</WebDialogTitle>
+            <WebDialogTitle id="pantry-add-sheet-title-a11y">재료 추가</WebDialogTitle>
             <p className="web-modal-copy">
               팬트리에 추가할 재료를 검색하세요
             </p>
@@ -358,7 +391,7 @@ export function PantryAddSheet({
 
         <WebDialogBody>
           <label className="web-picker-search">
-            <span aria-hidden="true">⌕</span>
+            <SearchGlyph className="h-5 w-5" />
             <input
               aria-label="재료명 검색"
               onChange={(event) => handleSearch(event.target.value)}
@@ -499,7 +532,7 @@ export function PantryAddSheet({
             {isAdding
               ? "추가 중..."
               : selectedIds.size > 0
-                ? `+ ${selectedIds.size}개 추가`
+                ? `팬트리에 추가 (${selectedIds.size})`
                 : "재료 선택"}
           </WebButton>
         </WebDialogFooter>
@@ -521,10 +554,10 @@ function MobileCategoryChip({
     <button
       aria-selected={active}
       className={[
-        "h-[31px] shrink-0 rounded-full border px-3 text-[12px] font-extrabold leading-none",
+        "h-9 shrink-0 border-b-2 px-2 text-[13px] font-extrabold leading-none",
         active
-          ? "border-[var(--brand)] bg-[var(--surface)] text-[var(--brand)]"
-          : "border-[var(--line-strong)] bg-[var(--surface)] text-[var(--text-2)]",
+          ? "border-[var(--brand)] text-[var(--brand)]"
+          : "border-transparent text-[var(--text-3)]",
       ].join(" ")}
       onClick={onClick}
       role="tab"
@@ -532,5 +565,45 @@ function MobileCategoryChip({
     >
       {label}
     </button>
+  );
+}
+
+function groupIngredientsByCategory(items: IngredientItem[]) {
+  const groups = new Map<string, IngredientItem[]>();
+
+  for (const item of items) {
+    const current = groups.get(item.category) ?? [];
+    current.push(item);
+    groups.set(item.category, current);
+  }
+
+  const knownCategories = INGREDIENT_CATEGORY_LABELS.filter((category) =>
+    groups.has(category),
+  );
+  const extraCategories = Array.from(groups.keys())
+    .filter((category) => !(INGREDIENT_CATEGORY_LABELS as readonly string[]).includes(category))
+    .sort((left, right) => left.localeCompare(right, "ko"));
+
+  return [...knownCategories, ...extraCategories].map((category) => ({
+    category,
+    items: groups.get(category) ?? [],
+  }));
+}
+
+function SearchGlyph({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.3"
+      viewBox="0 0 24 24"
+    >
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m16.5 16.5 4 4" />
+    </svg>
   );
 }

@@ -6,13 +6,20 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PantryScreen } from "@/components/pantry/pantry-screen";
-import { getIngredientCategoryEmoji, INGREDIENT_CATEGORIES } from "@/lib/ingredient-categories";
+import {
+  getIngredientCategoryEmoji,
+  INGREDIENT_CATEGORIES,
+  INGREDIENT_CATEGORY_LABELS,
+} from "@/lib/ingredient-categories";
 
 const mockFetchPantryList = vi.fn();
 const mockDeletePantryItems = vi.fn();
 const mockAddPantryItems = vi.fn();
 const mockFetchPantryBundles = vi.fn();
 const mockFetchIngredients = vi.fn();
+const mockFetchPantryMatchRecipes = vi.fn();
+const mockFetchPlannerColumns = vi.fn();
+const mockCreateMealSafe = vi.fn();
 const VEGETABLE_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "vegetable")!.label;
 const MEAT_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "meat")!.label;
 const SEASONING_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "seasoning")!.label;
@@ -44,6 +51,18 @@ vi.mock("@/lib/supabase/env", () => ({
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => null,
   withE2EAuthOverrideHeaders: (init?: RequestInit) => init ?? {},
+}));
+
+vi.mock("@/lib/api/recipe", () => ({
+  fetchPantryMatchRecipes: (...args: unknown[]) => mockFetchPantryMatchRecipes(...args),
+}));
+
+vi.mock("@/lib/api/planner", () => ({
+  fetchPlannerColumns: (...args: unknown[]) => mockFetchPlannerColumns(...args),
+}));
+
+vi.mock("@/lib/api/meal", () => ({
+  createMealSafe: (...args: unknown[]) => mockCreateMealSafe(...args),
 }));
 
 vi.mock("next/link", () => ({
@@ -116,10 +135,44 @@ describe("PantryScreen", () => {
     mockAddPantryItems.mockReset();
     mockFetchPantryBundles.mockReset();
     mockFetchIngredients.mockReset();
+    mockFetchPantryMatchRecipes.mockReset();
+    mockFetchPlannerColumns.mockReset();
+    mockCreateMealSafe.mockReset();
 
     mockFetchPantryList.mockResolvedValue({ items: MOCK_ITEMS });
     mockFetchIngredients.mockResolvedValue({ items: [] });
     mockFetchPantryBundles.mockResolvedValue({ bundles: [] });
+    mockFetchPantryMatchRecipes.mockResolvedValue({
+      success: true,
+      data: {
+        items: [
+          {
+            id: "recipe-1",
+            title: "두부조림",
+            thumbnail_url: null,
+            matched_ingredients: 2,
+            total_ingredients: 4,
+            match_score: 0.5,
+            missing_ingredients: [
+              { id: "ing-1", standard_name: "간장" },
+              { id: "ing-2", standard_name: "고춧가루" },
+            ],
+          },
+        ],
+      },
+      error: null,
+    });
+    mockFetchPlannerColumns.mockResolvedValue({
+      columns: [
+        { id: "breakfast", name: "아침", display_order: 1 },
+        { id: "dinner", name: "저녁", display_order: 2 },
+      ],
+    });
+    mockCreateMealSafe.mockResolvedValue({
+      success: true,
+      data: { meal_id: "meal-1" },
+      error: null,
+    });
   });
 
   it("shows the unauthorized gate when not authenticated", () => {
@@ -151,7 +204,7 @@ describe("PantryScreen", () => {
     expect(await screen.findByText("양파", { exact: false })).toBeTruthy();
     expect(screen.getByText("마늘", { exact: false })).toBeTruthy();
     expect(screen.getByText(/돼지고기/)).toBeTruthy();
-    expect(screen.getByText("3개 재료")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "나의 팬트리 3개" })).toBeTruthy();
     expect(screen.queryByText("3개 재료 보유 중")).toBeNull();
   });
 
@@ -223,7 +276,7 @@ describe("PantryScreen", () => {
 
     expect(screen.getByRole("button", { name: "취소" })).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: /제거하기/ }),
+      screen.getByRole("button", { name: "삭제 (0)" }),
     ).toBeTruthy();
   });
 
@@ -239,7 +292,7 @@ describe("PantryScreen", () => {
 
     expect(screen.getByText("1개 선택됨")).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: /제거하기/ }));
+    await user.click(screen.getByRole("button", { name: "삭제 (1)" }));
 
     expect(
       screen.getByText("재료를 삭제할까요?"),
@@ -257,11 +310,9 @@ describe("PantryScreen", () => {
     await user.click(screen.getAllByRole("button", { name: "편집" })[0]!);
 
     await user.click(screen.getByRole("checkbox", { name: "양파 선택" }));
-    await user.click(screen.getByRole("button", { name: /제거하기/ }));
-    const confirmButtons = screen.getAllByRole("button", { name: /삭제/ });
-    const confirmDeleteButton = confirmButtons.find(
-      (btn) => btn.textContent?.trim() === "삭제 (1)",
-    )!;
+    await user.click(screen.getByRole("button", { name: "삭제 (1)" }));
+    const confirmButtons = screen.getAllByRole("button", { name: "삭제 (1)" });
+    const confirmDeleteButton = confirmButtons[confirmButtons.length - 1]!;
     await user.click(confirmDeleteButton);
 
     await waitFor(() => {
@@ -508,10 +559,24 @@ describe("PantryScreen", () => {
     await screen.findByText("양파", { exact: false });
 
     expect(screen.getByRole("tab", { name: "전체" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: VEGETABLE_CATEGORY })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: SEASONING_CATEGORY })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: MEAT_CATEGORY })).toBeTruthy();
+    INGREDIENT_CATEGORY_LABELS.forEach((category) => {
+      expect(screen.getByRole("tab", { name: category })).toBeTruthy();
+    });
     expect(screen.getByText(getIngredientCategoryEmoji(VEGETABLE_CATEGORY))).toBeTruthy();
+  });
+
+  it("uses the canonical DB category rail and only owned count on mobile", async () => {
+    installMatchMedia(true);
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    expect(screen.getByText("냉장고에 있는 재료")).toBeTruthy();
+    expect(screen.queryByText(/29개/)).toBeNull();
+    INGREDIENT_CATEGORY_LABELS.forEach((category) => {
+      expect(screen.getByRole("tab", { name: category })).toBeTruthy();
+    });
   });
 
   it("filters items by category without collapsing the category tabs", async () => {
@@ -526,85 +591,49 @@ describe("PantryScreen", () => {
     expect(screen.queryByText("마늘", { exact: false })).toBeNull();
     expect(screen.queryByText(/돼지고기/)).toBeNull();
     expect(screen.getByRole("tab", { name: "전체" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: VEGETABLE_CATEGORY })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: SEASONING_CATEGORY })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: MEAT_CATEGORY })).toBeTruthy();
+    INGREDIENT_CATEGORY_LABELS.forEach((category) => {
+      expect(screen.getByRole("tab", { name: category })).toBeTruthy();
+    });
     expect(mockFetchPantryList).toHaveBeenCalledTimes(1);
   });
 
-  it("hides an owned desktop pantry card when toggled missing while missing items are hidden", async () => {
-    mockDeletePantryItems.mockResolvedValue({ removed: 1 });
-    mockFetchIngredients.mockResolvedValue({
-      items: MOCK_ITEMS.map((item) => ({
-        category: item.category,
-        id: item.ingredient_id,
-        standard_name: item.standard_name,
-      })),
-    });
+  it("selects and clears every pantry item from the desktop select-all checkbox", async () => {
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getAllByRole("button", { name: "편집" })[0]!);
+
+    const selectAll = screen.getByRole("checkbox", { name: "전체선택" });
+    expect(selectAll.getAttribute("aria-checked")).toBe("false");
+
+    await user.click(selectAll);
+    expect(selectAll.getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("button", { name: "삭제 (3)" })).toBeTruthy();
+
+    await user.click(selectAll);
+    expect(selectAll.getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByRole("button", { name: "삭제 (0)" })).toBeTruthy();
+  });
+
+  it("selects every mobile pantry item without duplicating selected count text", async () => {
+    installMatchMedia(true);
 
     render(<PantryScreen initialAuthenticated />);
 
     await screen.findByText("양파", { exact: false });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("switch", { name: "양파 보유 해제" }));
+    await user.click(screen.getByRole("button", { name: "팬트리 편집" }));
+    await user.click(screen.getByRole("checkbox", { name: "전체선택" }));
 
-    await waitFor(() => {
-      expect(mockDeletePantryItems).toHaveBeenCalledWith(["i1"]);
-    });
-    expect(mockFetchIngredients).not.toHaveBeenCalled();
-    expect(screen.getByText("양파를 미보유로 바꿨어요")).toBeTruthy();
-    expect(
-      (screen.getByRole("checkbox", { name: "없는 재료도 표시" }) as HTMLInputElement)
-        .checked,
-    ).toBe(false);
-    expect(screen.queryByRole("switch", { name: "양파 보유로 변경" })).toBeNull();
-    expect(screen.queryByRole("switch", { name: "양파 보유 해제" })).toBeNull();
+    expect(screen.getByText("3개 선택됨")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "제거하기" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /제거하기 \(/ })).toBeNull();
   });
 
-  it("rolls back missing display when an owned desktop pantry toggle fails", async () => {
-    mockDeletePantryItems.mockRejectedValue(new Error("delete failed"));
-
-    render(<PantryScreen initialAuthenticated />);
-
-    await screen.findByText("양파", { exact: false });
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("switch", { name: "양파 보유 해제" }));
-
-    await waitFor(() => {
-      expect(mockDeletePantryItems).toHaveBeenCalledWith(["i1"]);
-    });
-    await waitFor(() => {
-      expect(screen.getByText("보유 상태를 바꾸지 못했어요. 다시 시도해 주세요")).toBeTruthy();
-    });
-    expect(
-      (screen.getByRole("checkbox", { name: "없는 재료도 표시" }) as HTMLInputElement)
-        .checked,
-    ).toBe(false);
-    expect(mockFetchIngredients).not.toHaveBeenCalled();
-    expect(
-      screen
-        .getByRole("switch", { name: "양파 보유 해제" })
-        .getAttribute("aria-checked"),
-    ).toBe("true");
-  });
-
-  it("keeps the desktop pantry card order stable while toggling ownership with missing items visible", async () => {
-    let resolveDelete!: (value: { removed: number }) => void;
-    let resolveAdd!: (value: { added: number; items: typeof MOCK_ITEMS }) => void;
-    mockDeletePantryItems.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveDelete = resolve;
-        }),
-    );
-    mockAddPantryItems.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveAdd = resolve;
-        }),
-    );
+  it("shows only owned pantry items without missing ingredient toggles on desktop", async () => {
     mockFetchIngredients.mockResolvedValue({
       items: [
         ...MOCK_ITEMS.map((item) => ({
@@ -620,77 +649,25 @@ describe("PantryScreen", () => {
 
     await screen.findByText("양파", { exact: false });
 
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("checkbox", { name: "없는 재료도 표시" }));
-
-    await screen.findByRole("switch", { name: "대파 보유로 변경" });
-    expect(mockFetchIngredients).toHaveBeenCalledTimes(1);
-
-    const getIngredientOrder = () =>
-      screen
-        .getAllByRole("switch")
-        .map((card) =>
-          card
-            .getAttribute("aria-label")
-            ?.replace(/ 보유(?: 해제|로 변경)$/, ""),
-        );
-
-    const initialOrder = getIngredientOrder();
-
-    await user.click(screen.getByRole("switch", { name: "양파 보유 해제" }));
-
-    expect(
-      screen
-        .getByRole("switch", { name: "양파 보유로 변경" })
-        .getAttribute("aria-checked"),
-    ).toBe("false");
-    expect(getIngredientOrder()).toEqual(initialOrder);
-    resolveDelete({ removed: 1 });
-
-    await waitFor(() => {
-      expect(mockDeletePantryItems).toHaveBeenCalledWith(["i1"]);
-    });
-    expect(mockFetchIngredients).toHaveBeenCalledTimes(1);
-    expect(getIngredientOrder()).toEqual(initialOrder);
-
-    await user.click(screen.getByRole("switch", { name: "양파 보유로 변경" }));
-
-    expect(
-      screen
-        .getByRole("switch", { name: "양파 보유 해제" })
-        .getAttribute("aria-checked"),
-    ).toBe("true");
-    expect(getIngredientOrder()).toEqual(initialOrder);
-    resolveAdd({ added: 1, items: [MOCK_ITEMS[0]] });
-
-    await waitFor(() => {
-      expect(mockAddPantryItems).toHaveBeenCalledWith(["i1"]);
-    });
-    expect(mockFetchIngredients).toHaveBeenCalledTimes(1);
-    expect(getIngredientOrder()).toEqual(initialOrder);
+    expect(screen.getByRole("article", { name: "양파 재료" })).toBeTruthy();
+    expect(screen.queryByRole("checkbox", { name: "없는 재료도 표시" })).toBeNull();
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(screen.queryByText("대파")).toBeNull();
+    expect(mockFetchIngredients).not.toHaveBeenCalled();
   });
 
-  it("shows missing ingredients from the ingredient catalog when enabled", async () => {
-    mockFetchIngredients.mockResolvedValue({
-      items: [
-        ...MOCK_ITEMS.map((item) => ({
-          category: item.category,
-          id: item.ingredient_id,
-          standard_name: item.standard_name,
-        })),
-        { id: "i4", standard_name: "대파", category: "채소" },
-      ],
-    });
+  it("opens delete confirmation from a mobile single-item delete action", async () => {
+    installMatchMedia(true);
 
     render(<PantryScreen initialAuthenticated />);
 
     await screen.findByText("양파", { exact: false });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("checkbox", { name: "없는 재료도 표시" }));
+    await user.click(screen.getByRole("button", { name: "양파 삭제" }));
 
-    expect(await screen.findByRole("switch", { name: "대파 보유로 변경" })).toBeTruthy();
-    expect(screen.getByText("미보유")).toBeTruthy();
+    expect(screen.getByText("재료를 삭제할까요?")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "삭제 (1)" })).toBeTruthy();
   });
 
   it("shows the search input with a searchbox role", async () => {
@@ -742,6 +719,81 @@ describe("PantryScreen", () => {
     expect(within(dialog).getByRole("checkbox", { name: "대파" })).toBeTruthy();
     expect(within(dialog).queryByRole("checkbox", { name: "간장" })).toBeNull();
     expect(mockFetchIngredients).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows mobile add sheet search icon, canonical tabs, selected chips, and category sections", async () => {
+    installMatchMedia(true);
+    mockFetchIngredients.mockResolvedValue({
+      items: [
+        { id: "i4", standard_name: "대파", category: "채소" },
+        { id: "i10", standard_name: "간장", category: "양념" },
+        { id: "i30", standard_name: "우유", category: "유제품" },
+      ],
+    });
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /재료 추가/ }));
+    const dialog = await screen.findByRole("dialog", { name: "재료 추가" });
+
+    expect(within(dialog).getByTestId("pantry-add-mobile-search-icon")).toBeTruthy();
+    INGREDIENT_CATEGORY_LABELS.forEach((category) => {
+      expect(within(dialog).getByRole("tab", { name: category })).toBeTruthy();
+    });
+    expect(within(dialog).getByRole("heading", { name: "채소" })).toBeTruthy();
+    expect(within(dialog).getByRole("heading", { name: "양념" })).toBeTruthy();
+    expect(within(dialog).getByRole("heading", { name: "유제품" })).toBeTruthy();
+
+    await user.click(within(dialog).getByRole("checkbox", { name: "대파" }));
+    const selectedChip = within(dialog).getByRole("button", { name: "대파 선택 해제" });
+    expect(selectedChip).toBeTruthy();
+
+    await user.click(selectedChip);
+    expect(within(dialog).queryByRole("button", { name: "대파 선택 해제" })).toBeNull();
+  });
+
+  it("uses the same empty bundle picker title and centered copy on desktop and app", async () => {
+    mockFetchPantryBundles.mockResolvedValue({ bundles: [] });
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "묶음으로 추가" }));
+    const desktopDialog = await screen.findByRole("dialog", { name: "묶음으로 재료 추가" });
+
+    expect(within(desktopDialog).getByRole("heading", { name: "묶음으로 재료 추가" })).toBeTruthy();
+    expect(within(desktopDialog).getByText("등록된 묶음이 없어요")).toBeTruthy();
+    expect(within(desktopDialog).getByText("묶음이 준비되면 여기서 한 번에 추가할 수 있어요")).toBeTruthy();
+  });
+
+  it("opens pantry recipe recommendations and adds a selected recipe to planner", async () => {
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "팬트리 추천" }));
+
+    expect(await screen.findByText("두부조림")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "두부조림 선택" }));
+
+    expect(await screen.findByRole("dialog", { name: "플래너에 추가" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /저녁에 추가/ }));
+
+    await waitFor(() => {
+      expect(mockCreateMealSafe).toHaveBeenCalledWith({
+        recipe_id: "recipe-1",
+        plan_date: expect.any(String),
+        column_id: "dinner",
+        planned_servings: 2,
+      });
+    });
+    expect(await screen.findByText(/저녁에 추가됐어요/)).toBeTruthy();
   });
 
   it("shows add sheet load error state and retries", async () => {

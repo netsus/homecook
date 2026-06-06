@@ -1,27 +1,5 @@
 import { getIngredientCategoryEmoji } from "@/lib/ingredient-categories";
 
-export const WAVE1_PANTRY_REFERENCE_TOTAL = 29;
-
-/**
- * Wave1 pantry UI groups. These are display-only groupings that do NOT map 1:1
- * to the legacy 7 ingredient categories (`채소`, `육류`, `해산물`, `양념`,
- * `유제품`, `곡류`, `기타`).
- *
- * Mapping notes:
- *  - "주식" ≈ 곡류 + subset of 기타 (쌀, 밀가루, 국수 등)
- *  - "단백질" ≈ 육류 + 해산물 + subset of 기타 (두부, 계란 등)
- *  - "채소" = 채소 (1:1)
- *  - "양념" = 양념 (1:1)
- *
- * The canonical 7-category source is `lib/ingredient-categories.ts`.
- */
-export const WAVE1_PANTRY_CATEGORY_ORDER = [
-  "주식",
-  "채소",
-  "단백질",
-  "양념",
-];
-
 const PANTRY_EMOJI: Record<string, string> = {
   감자: "🥔",
   간장: "🫙",
@@ -98,15 +76,4 @@ export function getBundleEmoji(name: string) {
     name.includes(keyword),
   );
   return match?.[1] ?? "📦";
-}
-
-export function sortWave1PantryCategories(categories: string[]) {
-  const known = WAVE1_PANTRY_CATEGORY_ORDER.filter((category) =>
-    categories.includes(category),
-  );
-  const unknown = categories
-    .filter((category) => !WAVE1_PANTRY_CATEGORY_ORDER.includes(category))
-    .sort((a, b) => a.localeCompare(b, "ko"));
-
-  return [...known, ...unknown];
 }
