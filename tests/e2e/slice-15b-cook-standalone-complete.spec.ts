@@ -176,7 +176,7 @@ test.describe("15b standalone cook mode", () => {
       const amountBoard = page.getByTestId("cook-mode-current-amount-board");
       await expect(amountBoard).toBeVisible();
       await expect(amountBoard).toContainText("양파");
-      await expect(amountBoard).toContainText("김치");
+      await expect(amountBoard).not.toContainText("김치");
     }
 
     await page.getByTestId("standalone-complete-button").click();

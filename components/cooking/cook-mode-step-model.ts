@@ -134,6 +134,39 @@ function buildUsageNote(usage: IngredientUsageRecord) {
   return null;
 }
 
+function normalizeMentionText(value: string) {
+  return value.toLowerCase().replace(/\s+/g, "");
+}
+
+function instructionMentionsIngredient(
+  instruction: string,
+  ingredient: CookingModeIngredient,
+) {
+  const normalizedInstruction = normalizeMentionText(instruction);
+  const normalizedName = normalizeMentionText(ingredient.standard_name);
+
+  return (
+    normalizedName.length > 0 && normalizedInstruction.includes(normalizedName)
+  );
+}
+
+function getInstructionMentionedIngredientUsages(
+  recipe: CookingModeRecipe,
+  step: CookingModeStep,
+) {
+  const instruction =
+    stripMatchingSectionPrefix(step.instruction, step.component_label) ??
+    step.instruction;
+
+  return recipe.ingredients
+    .filter((ingredient) => instructionMentionsIngredient(instruction, ingredient))
+    .map((ingredient) => ({
+      ingredient,
+      amountLabel: formatIngredientAmountOnly(ingredient),
+      note: null,
+    }));
+}
+
 export function getStepIngredientUsages(
   recipe: CookingModeRecipe,
   step: CookingModeStep,
@@ -169,11 +202,7 @@ export function getStepIngredientUsages(
     return usages;
   }
 
-  return recipe.ingredients.map((ingredient) => ({
-    ingredient,
-    amountLabel: formatIngredientAmountOnly(ingredient),
-    note: null,
-  }));
+  return getInstructionMentionedIngredientUsages(recipe, step);
 }
 
 export function buildCookModeStepModel(

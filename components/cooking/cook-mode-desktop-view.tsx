@@ -126,9 +126,10 @@ export function CookModeDesktopView({
           data-testid={contentTestId}
         >
           <header className="web-cook-prototype-top">
-            <div className="web-cook-prototype-brand">HOMECOOK</div>
             <div className="web-cook-prototype-title">
-              <b data-testid={titleTestId}>{recipe.title}</b>
+              <b data-testid={titleTestId} title={recipe.title}>
+                {recipe.title}
+              </b>
               <span>
                 {summaryParts.map((part, index) => (
                   <React.Fragment key={`${part}-${index}`}>
@@ -197,9 +198,6 @@ export function CookModeDesktopView({
                     >
                       {methodVisual.label}
                     </span>
-                    <span className="web-cook-prototype-step-total">
-                      {totalSteps}단계 중
-                    </span>
                   </div>
                 </div>
 
@@ -218,7 +216,9 @@ export function CookModeDesktopView({
                     <span>{stepModel.heatLabel}</span>
                     <span>{stepModel.durationLabel}</span>
                   </div>
-                  <CurrentAmountBoard usages={stepModel.ingredientUsages} />
+                  {stepModel.ingredientUsages.length > 0 ? (
+                    <CurrentAmountBoard usages={stepModel.ingredientUsages} />
+                  ) : null}
                 </div>
 
                 <div className="web-cook-prototype-controls">
