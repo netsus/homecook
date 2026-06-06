@@ -42,6 +42,7 @@ interface PlannerAddSheetProps {
   onChangeServings: (value: number) => void;
   onSubmit: () => void;
   onRetryLoad: () => void;
+  defaultConfirmLabel?: string;
   variant?: "default" | "recipe-detail";
   recipePreview?: {
     title: string;
@@ -82,6 +83,7 @@ export function PlannerAddSheet({
   onChangeServings,
   onSubmit,
   onRetryLoad,
+  defaultConfirmLabel = "플래너에 추가",
   recipePreview,
   variant = "default",
 }: PlannerAddSheetProps) {
@@ -592,7 +594,7 @@ export function PlannerAddSheet({
               <ModalFooterActions
                 cancelDisabled={isSubmitting}
                 confirmDisabled={!canSubmit || isSubmitting}
-                confirmLabel={isSubmitting ? "추가 중…" : "플래너에 추가"}
+                confirmLabel={isSubmitting ? "추가 중…" : defaultConfirmLabel}
                 onCancel={onClose}
                 onConfirm={onSubmit}
               />

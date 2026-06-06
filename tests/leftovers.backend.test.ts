@@ -51,6 +51,16 @@ interface SourceMealRow {
   meal_plan_columns: { name: string | null } | null;
 }
 
+interface OriginMealDetail {
+  planned_servings: number;
+  meal_plan_columns: { name: string | null } | null;
+}
+
+interface OriginMealRow {
+  session_id: string | null;
+  meals: OriginMealDetail | OriginMealDetail[] | null;
+}
+
 interface RecipeRow {
   id: string;
   title: string;
@@ -121,19 +131,23 @@ function createLeftoverListDb({
   leftovers,
   recipes,
   sourceMeals = [],
+  originMeals = [],
 }: {
   leftovers: LeftoverRow[];
   recipes: RecipeRow[];
   sourceMeals?: SourceMealRow[];
+  originMeals?: OriginMealRow[];
 }) {
   const leftoversQuery = createThenableQuery([{ data: leftovers, error: null }]);
   const recipesQuery = createThenableQuery([{ data: recipes, error: null }]);
   const sourceMealsQuery = createThenableQuery([{ data: sourceMeals, error: null }]);
+  const originMealsQuery = createThenableQuery([{ data: originMeals, error: null }]);
 
   return {
     leftoversQuery,
     recipesQuery,
     sourceMealsQuery,
+    originMealsQuery,
     db: {
       from: vi.fn((table: string) => {
         if (table === "leftover_dishes") {
@@ -146,6 +160,10 @@ function createLeftoverListDb({
 
         if (table === "meals") {
           return { select: vi.fn(() => sourceMealsQuery) };
+        }
+
+        if (table === "cooking_session_meals") {
+          return { select: vi.fn(() => originMealsQuery) };
         }
 
         throw new Error(`unexpected table: ${table}`);
@@ -342,6 +360,90 @@ describe("GET /api/v1/leftovers", () => {
         ],
       },
       error: null,
+    });
+  });
+
+  it("falls back to the original cooked planner meal when no re-added meal exists", async () => {
+    const { db, originMealsQuery } = createLeftoverListDb({
+      leftovers: [
+        {
+          id: leftoverId,
+          user_id: "user-1",
+          recipe_id: recipeId,
+          status: "leftover",
+          cooked_at: "2026-04-28T10:00:00.000Z",
+          eaten_at: null,
+          auto_hide_at: null,
+          cooking_servings: 3,
+        },
+      ],
+      recipes: [
+        { id: recipeId, title: "김치찌개", thumbnail_url: "https://example.com/kimchi.png" },
+      ],
+      originMeals: [
+        {
+          session_id: leftoverId,
+          meals: {
+            planned_servings: 2,
+            meal_plan_columns: { name: "저녁" },
+          },
+        },
+      ],
+    });
+    setupAuthenticatedDb(db);
+
+    const { GET } = await importListRoute();
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/leftovers"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(originMealsQuery.in).toHaveBeenCalledWith("session_id", [leftoverId]);
+    expect(body.data.items[0]).toMatchObject({
+      id: leftoverId,
+      source_meal_label: "저녁",
+      source_planned_servings: 2,
+    });
+  });
+
+  it("accepts array-shaped original meal joins for source meal fallback", async () => {
+    const { db } = createLeftoverListDb({
+      leftovers: [
+        {
+          id: leftoverId,
+          user_id: "user-1",
+          recipe_id: recipeId,
+          status: "leftover",
+          cooked_at: "2026-04-28T10:00:00.000Z",
+          eaten_at: null,
+          auto_hide_at: null,
+          cooking_servings: 3,
+        },
+      ],
+      recipes: [
+        { id: recipeId, title: "김치찌개", thumbnail_url: "https://example.com/kimchi.png" },
+      ],
+      originMeals: [
+        {
+          session_id: leftoverId,
+          meals: [
+            {
+              planned_servings: 4,
+              meal_plan_columns: { name: "점심" },
+            },
+          ],
+        },
+      ],
+    });
+    setupAuthenticatedDb(db);
+
+    const { GET } = await importListRoute();
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/leftovers"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items[0]).toMatchObject({
+      source_meal_label: "점심",
+      source_planned_servings: 4,
     });
   });
 

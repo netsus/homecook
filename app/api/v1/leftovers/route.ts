@@ -13,6 +13,7 @@ import {
   normalizeLeftoverStatus,
   toLeftoverListItem,
   type LeftoverDishRow,
+  type LeftoverOriginMealRow,
   type LeftoverRecipeRow,
   type LeftoverSourceMealRow,
 } from "@/lib/server/leftovers";
@@ -52,6 +53,12 @@ interface SourceMealSelectQuery {
   then: ArrayQueryResult<LeftoverSourceMealRow>["then"];
 }
 
+interface OriginMealSelectQuery {
+  in(column: string, values: string[]): OriginMealSelectQuery;
+  order(column: string, options: QueryOrderOption): OriginMealSelectQuery;
+  then: ArrayQueryResult<LeftoverOriginMealRow>["then"];
+}
+
 interface LeftoverDishesTable {
   select(columns: string): LeftoverSelectQuery;
 }
@@ -64,10 +71,15 @@ interface MealsTable {
   select(columns: string): SourceMealSelectQuery;
 }
 
+interface CookingSessionMealsTable {
+  select(columns: string): OriginMealSelectQuery;
+}
+
 interface LeftoversDbClient {
   from(table: "leftover_dishes"): LeftoverDishesTable;
   from(table: "recipes"): RecipesTable;
   from(table: "meals"): MealsTable;
+  from(table: "cooking_session_meals"): CookingSessionMealsTable;
 }
 
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
@@ -172,6 +184,35 @@ export async function GET(request: NextRequest) {
         if (meal.leftover_dish_id && !sourceMealMap.has(meal.leftover_dish_id)) {
           sourceMealMap.set(meal.leftover_dish_id, meal);
         }
+      });
+    }
+
+    const originMealsResult = await dbClient
+      .from("cooking_session_meals")
+      .select("session_id, meals(planned_servings, meal_plan_columns(name))")
+      .in("session_id", leftoverIds)
+      .order("cooked_at", { ascending: false })
+      .order("id", { ascending: false });
+
+    if (!originMealsResult.error && originMealsResult.data) {
+      originMealsResult.data.forEach((originMeal) => {
+        const originSourceMeal = Array.isArray(originMeal.meals)
+          ? originMeal.meals[0]
+          : originMeal.meals;
+
+        if (
+          !originMeal.session_id ||
+          sourceMealMap.has(originMeal.session_id) ||
+          !originSourceMeal
+        ) {
+          return;
+        }
+
+        sourceMealMap.set(originMeal.session_id, {
+          leftover_dish_id: originMeal.session_id,
+          planned_servings: originSourceMeal.planned_servings,
+          meal_plan_columns: originSourceMeal.meal_plan_columns,
+        });
       });
     }
   }

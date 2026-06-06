@@ -47,6 +47,8 @@
   --success-soft: rgba(26, 174, 57, 0.12);
   --success-border: rgba(26, 174, 57, 0.26);
   --success-strong: #0f7a2a;
+  --feedback-success-soft: rgba(26, 174, 57, 0.08);
+  --feedback-success-border: rgba(26, 174, 57, 0.18);
   --warning:    #ff9500;
   --warning-soft: rgba(255, 149, 0, 0.12);
   --warning-border: rgba(255, 149, 0, 0.26);
@@ -55,6 +57,8 @@
   --danger-soft: rgba(255, 59, 48, 0.10);
   --danger-border: rgba(255, 59, 48, 0.26);
   --danger-strong: #b62620;
+  --feedback-danger-soft: rgba(255, 59, 48, 0.07);
+  --feedback-danger-border: rgba(255, 59, 48, 0.18);
   --like-active: #ff4f5a;
   --olive:      #00A1FF;
   --muted:      #6b7280;
@@ -6755,13 +6759,20 @@ button {
     gap: 4px;
   }
 
-  .web-mypage-leftover-copy strong {
+  .web-mypage-leftover-copy strong,
+  .web-mypage-leftover-title {
+    display: block;
     overflow: hidden;
     color: var(--web-text-1);
     font-size: 15px;
     font-weight: 800;
+    text-decoration: none;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .web-mypage-leftover-title:hover {
+    color: var(--web-brand-accessible);
   }
 
   .web-mypage-leftover-copy span {
@@ -8417,11 +8428,20 @@ button {
   }
 
   .web-leftover-title {
+    display: -webkit-box;
+    overflow: hidden;
     min-width: 0;
     color: var(--web-text-1);
     font-size: 16px;
     font-weight: 800;
     line-height: 1.35;
+    text-decoration: none;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .web-leftover-title:hover {
+    color: var(--web-brand-accessible);
   }
 
   .web-leftover-tag {
@@ -8461,14 +8481,14 @@ button {
   }
 
   .web-leftover-feedback-status {
-    border-color: rgba(26, 174, 57, 0.18);
-    background: rgba(26, 174, 57, 0.08);
+    border-color: var(--feedback-success-border);
+    background: var(--feedback-success-soft);
     color: var(--web-success);
   }
 
   .web-leftover-feedback-error {
-    border-color: rgba(255, 59, 48, 0.18);
-    background: rgba(255, 59, 48, 0.07);
+    border-color: var(--feedback-danger-border);
+    background: var(--feedback-danger-soft);
     color: var(--web-error);
   }
 
@@ -8519,13 +8539,19 @@ button {
   }
 
   .web-ate-title {
+    display: block;
     overflow: hidden;
     color: var(--web-text-1);
     font-size: 15px;
     font-weight: 800;
     line-height: 1.35;
+    text-decoration: none;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .web-ate-title:hover {
+    color: var(--web-brand-accessible);
   }
 
   .web-ate-meta {

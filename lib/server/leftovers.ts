@@ -31,6 +31,16 @@ export interface LeftoverSourceMealRow {
   meal_plan_columns: { name: string | null } | null;
 }
 
+export interface LeftoverOriginMealDetail {
+  planned_servings: number;
+  meal_plan_columns: { name: string | null } | null;
+}
+
+export interface LeftoverOriginMealRow {
+  session_id: string | null;
+  meals: LeftoverOriginMealDetail | LeftoverOriginMealDetail[] | null;
+}
+
 export function isUuid(value: string) {
   return UUID_PATTERN.test(value);
 }
