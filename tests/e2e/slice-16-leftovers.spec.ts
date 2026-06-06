@@ -10,6 +10,9 @@ interface LeftoverItem {
   status: "leftover" | "eaten";
   cooked_at: string;
   eaten_at: string | null;
+  cooking_servings: number;
+  source_meal_label: string | null;
+  source_planned_servings: number | null;
 }
 
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
@@ -35,6 +38,9 @@ function makeLeftoverItems(): LeftoverItem[] {
       status: "leftover",
       cooked_at: "2026-04-28T10:00:00.000Z",
       eaten_at: null,
+      cooking_servings: 2,
+      source_meal_label: "저녁",
+      source_planned_servings: 2,
     },
     {
       id: "ld-2",
@@ -44,6 +50,9 @@ function makeLeftoverItems(): LeftoverItem[] {
       status: "leftover",
       cooked_at: "2026-04-27T10:00:00.000Z",
       eaten_at: null,
+      cooking_servings: 1,
+      source_meal_label: "점심",
+      source_planned_servings: 1,
     },
   ];
 }
@@ -58,6 +67,9 @@ function makeEatenItems(): LeftoverItem[] {
       status: "eaten",
       cooked_at: "2026-04-20T10:00:00.000Z",
       eaten_at: "2026-04-28T12:00:00.000Z",
+      cooking_servings: 2,
+      source_meal_label: "저녁",
+      source_planned_servings: 2,
     },
   ];
 }
@@ -204,7 +216,7 @@ test.describe("LEFTOVERS screen", () => {
     await expect(
       page
         .getByRole("button", {
-          name: /플래너에 추가/,
+          name: isMobileViewport(page) ? /날짜 끼니에 추가/ : /플래너에 추가/,
         })
         .first(),
     ).toBeVisible();
@@ -259,7 +271,11 @@ test.describe("LEFTOVERS screen", () => {
     await installLeftoverRoutes(page);
     await page.goto("/leftovers");
 
-    await expect(page.getByRole("heading", { name: "남은 요리", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: isMobileViewport(page) ? "남은 요리" : /남은 요리 \d+개/,
+      }),
+    ).toBeVisible();
     const ateLink = page.getByText("다먹은 요리");
     await expect(ateLink).toBeVisible();
     const ateHref = await ateLink.getAttribute("href");
@@ -282,7 +298,7 @@ test.describe("ATE_LIST screen", () => {
       }),
     ).toBeVisible();
     await expect(
-      page.getByText(isMobileViewport(page) ? "4/20 요리" : "4월 28일"),
+      page.getByText(isMobileViewport(page) ? "4/28 다먹음" : "4월 28일"),
     ).toBeVisible();
     await expect(page.getByText("다먹음으로 기록")).toHaveCount(0);
     if (isMobileViewport(page)) {

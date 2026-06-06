@@ -92,6 +92,10 @@ type MypageTab =
 const TOAST_DURATION_MS = 3000;
 const SHOPPING_PAGE_SIZE = 10;
 const SAVED_RECIPES_PAGE_SIZE = 12;
+const LEFTOVERS_DESCRIPTION =
+  "요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.";
+const EATEN_DESCRIPTION =
+  "다먹은 음식 기록을 확인하고, 필요하면 남은 요리로 다시 옮길 수 있어요.";
 const MYPAGE_ACCOUNT_HREF = "/mypage?tab=account";
 const SETTINGS_FROM_ACCOUNT_HREF = buildReturnHref("/settings", {
   returnTo: MYPAGE_ACCOUNT_HREF,
@@ -1237,8 +1241,8 @@ export function MypageScreen({
           ) : null}
           {activeTab === "leftovers" ? (
             <LeftoverTabContent
-              description="남겨둔 음식을 확인하고 플래너에 다시 올릴 항목을 고릅니다."
-              emptyDescription="요리를 완료하면 남은 요리로 관리할 수 있어요."
+              description={LEFTOVERS_DESCRIPTION}
+              emptyDescription="요리를 완료하면 여기에 저장돼요"
               emptyTitle="남은 요리가 없어요"
               items={leftoverItems}
               mutatingId={leftoverMutatingId}
@@ -1252,7 +1256,7 @@ export function MypageScreen({
           ) : null}
           {activeTab === "eaten" ? (
             <LeftoverTabContent
-              description="다먹은 요리를 확인하고 필요할 때 다시 만들 레시피로 이동합니다."
+              description={EATEN_DESCRIPTION}
               emptyDescription="남은 요리를 다 먹음 처리하면 여기에 모여요."
               emptyTitle="다먹은 요리가 없어요"
               items={eatenItems}
@@ -2575,7 +2579,7 @@ function LeftoverTabContent({
     return (
       <div className="web-mypage-subsurface" data-testid="leftover-tab-loading">
         <div className="web-mypage-section-head">
-          <h2>{title}</h2>
+          <h2>{title} {items.length}개</h2>
           <p>{description}</p>
         </div>
         <div className="web-mypage-leftover-grid">
@@ -2597,7 +2601,7 @@ function LeftoverTabContent({
     return (
       <div className="web-mypage-subsurface" data-testid="leftover-tab-error">
         <div className="web-mypage-section-head">
-          <h2>{title}</h2>
+          <h2>{title} {items.length}개</h2>
           <p>{description}</p>
         </div>
         <WebCard className="web-mypage-saved-state">
@@ -2615,7 +2619,7 @@ function LeftoverTabContent({
     return (
       <div className="web-mypage-subsurface" data-testid="leftover-tab-empty">
         <div className="web-mypage-section-head">
-          <h2>{title}</h2>
+          <h2>{title} 0개</h2>
           <p>{description}</p>
         </div>
         <WebCard className="web-mypage-saved-state">
@@ -2629,7 +2633,7 @@ function LeftoverTabContent({
   return (
     <div className="web-mypage-subsurface" data-testid="leftover-tab">
       <div className="web-mypage-section-head">
-        <h2>{title}</h2>
+        <h2>{title} {items.length}개</h2>
         <p>{description}</p>
       </div>
       <div className="web-mypage-leftover-grid">
@@ -2681,7 +2685,12 @@ function LeftoverTabCard({
         </span>
       )}
       <span className="web-mypage-leftover-copy">
-        <strong>{item.recipe_title}</strong>
+        <Link
+          className="web-mypage-leftover-title"
+          href={buildMypageLeftoverRecipeHref(item.recipe_id, tabKind)}
+        >
+          {item.recipe_title}
+        </Link>
         <span>{formatLeftoverTabMeta(item)}</span>
       </span>
       <span className="web-mypage-leftover-actions">
@@ -2751,7 +2760,7 @@ function getMobileSurfaceForTab(tab: MypageTab): MypageMobileSurface {
 }
 
 function formatLeftoverTabMeta(item: LeftoverListItemData) {
-  const mealLabel = item.source_meal_label?.trim() || "끼니 미상";
+  const mealLabel = item.source_meal_label?.trim() || "연결 끼니 없음";
   const servings =
     item.source_planned_servings ?? item.cooking_servings;
   const servingsLabel =

@@ -42,6 +42,9 @@ type ScreenState = "loading" | "ready" | "empty" | "error";
 type FeedbackTone = "error" | "status";
 
 const FEEDBACK_AUTO_DISMISS_MS = 4000;
+const LEFTOVERS_DESCRIPTION =
+  "요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.";
+const LEFTOVER_PLANNER_ADD_LABEL = "날짜 끼니에 추가";
 const WEB_NAV_ITEMS = [
   { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
@@ -69,10 +72,23 @@ function formatLeftoverMeta(item: LeftoverListItemData) {
   return `${sourceLabel} · ${item.cooking_servings}인분`;
 }
 
-function getFallbackEmoji(title: string) {
-  if (title.includes("밥")) return "🍚";
-  if (title.includes("찌개")) return "🍲";
-  return "🍽️";
+function LeftoverImageIcon({ className }: { className: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+    >
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+      <path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
+    </svg>
+  );
 }
 
 function LeftoverCard({
@@ -105,31 +121,25 @@ function LeftoverCard({
             unoptimized
           />
         ) : (
-          <div className="web-leftover-thumb-placeholder">
-            <svg
-              aria-hidden="true"
-              className="h-7 w-7"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.8"
-              viewBox="0 0 24 24"
-            >
-              <path d="M5 12h14" />
-              <path d="M12 5v14" />
-              <path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
-            </svg>
-            <span className="text-xs font-semibold">남은 요리</span>
+          <div
+            className="web-leftover-thumb-placeholder"
+            data-testid="leftover-image-placeholder"
+          >
+            <LeftoverImageIcon className="h-7 w-7" />
+            <span className="text-xs font-semibold">사진 없음</span>
           </div>
         )}
       </div>
 
       <div className="web-leftover-body">
         <div className="web-leftover-head">
-          <p className="web-leftover-title">
+          <Link
+            className="web-leftover-title"
+            href={`/recipe/${item.recipe_id}`}
+            prefetch={false}
+          >
             {item.recipe_title}
-          </p>
+          </Link>
           <span className="web-leftover-tag">남은 요리</span>
         </div>
         <p className="web-leftover-meta">
@@ -210,7 +220,7 @@ export function LeftoversScreen({
   const buildSelectableDates = useCallback(() => {
     const dates: string[] = [];
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 14; i++) {
       const d = new Date();
       d.setDate(d.getDate() + i);
       const y = d.getFullYear();
@@ -471,6 +481,7 @@ export function LeftoversScreen({
       selectedDate={selectedPlanDate}
       servings={plannerServings}
       sheetState={plannerAddSheetState}
+      defaultConfirmLabel={LEFTOVER_PLANNER_ADD_LABEL}
     />
   );
   const leftoversSelfHref = buildReturnHref("/leftovers", {
@@ -575,8 +586,8 @@ export function LeftoversScreen({
               다먹은 요리
             </Link>
           }
-          description="요리한 뒤 남은 음식을 메모해 두면 다음 끼니로 빠르게 옮길 수 있어요."
-          title="남은 요리"
+          description={LEFTOVERS_DESCRIPTION}
+          title={`남은 요리 ${items.length}개`}
         />
 
         {authState === "checking" ? (
@@ -654,10 +665,10 @@ export function LeftoversScreen({
         <WebEmptyState
           action={
             <Link className="web-button web-button-tertiary" href={appReturn.href}>
-              플래너로 돌아가기
+              이전 화면으로 돌아가기
             </Link>
           }
-          description="요리모드 완료 후 남은 음식이 여기에 기록됩니다."
+          description="요리를 완료하면 여기에 저장돼요"
           icon={<span aria-hidden="true">□</span>}
           title="남은 요리가 없어요"
         />
@@ -731,7 +742,7 @@ function LeftoversMobileView({
           남은 요리 {items.length}개
         </h2>
         <p className="mt-1 text-[12px] font-medium leading-[1.35] text-[var(--text-3)]">
-          요리한 끼니를 다시 플래너에 올리거나 다 먹은 것으로 정리할 수 있어요.
+          {LEFTOVERS_DESCRIPTION}
         </p>
       </section>
 
@@ -847,37 +858,40 @@ function MobileLeftoverCard({
     >
       <div className="flex items-center gap-3">
         <MobileDishThumb
-          emoji={getFallbackEmoji(item.recipe_title)}
           src={item.recipe_thumbnail_url}
         />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-extrabold leading-[1.35] text-[var(--foreground)]">
+          <Link
+            className="block truncate text-[14px] font-extrabold leading-[1.35] text-[var(--foreground)]"
+            href={`/recipe/${item.recipe_id}`}
+            prefetch={false}
+          >
             {item.recipe_title}
-          </p>
+          </Link>
           <p className="mt-0.5 truncate text-[12px] font-medium leading-[1.35] text-[var(--text-3)]">
             {formatShortDate(item.cooked_at)} 요리 · {formatLeftoverMeta(item)}
           </p>
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-[106px_minmax(0,1fr)] gap-2">
+      <div className="mt-3 grid grid-cols-[minmax(0,1fr)_82px] gap-2">
         <button
-          className="flex h-10 min-w-0 items-center justify-center gap-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-2 text-center text-[12px] font-extrabold leading-none text-[var(--text-2)] disabled:opacity-60"
+          className="flex h-9 min-w-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-2 text-center text-[11px] font-extrabold leading-none text-[var(--brand)] disabled:opacity-60"
           data-testid="planner-add-button"
           disabled={anyMutating}
           onClick={() => onPlannerAdd(item)}
           type="button"
         >
-          <span className="whitespace-nowrap">플래너에 추가</span>
+          <span className="whitespace-nowrap">{LEFTOVER_PLANNER_ADD_LABEL}</span>
         </button>
         <button
-          className="flex h-10 min-w-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-2 text-center text-[13px] font-extrabold leading-none text-[var(--text-inverse)] disabled:opacity-60"
+          className="flex h-9 min-w-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-2 text-center text-[12px] font-extrabold leading-none text-[var(--text-2)] disabled:opacity-60"
           data-testid="eat-button"
           disabled={anyMutating}
           onClick={() => onEat(item.id)}
           type="button"
         >
-          {isEating ? "처리 중..." : "✓ 다먹음"}
+          {isEating ? "처리 중..." : "다먹음"}
         </button>
       </div>
     </article>
@@ -885,10 +899,8 @@ function MobileLeftoverCard({
 }
 
 function MobileDishThumb({
-  emoji,
   src,
 }: {
-  emoji: string;
   src: string | null;
 }) {
   if (src) {
@@ -905,8 +917,11 @@ function MobileDishThumb({
   }
 
   return (
-    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--danger-soft)] text-[24px]">
-      <span aria-hidden="true">{emoji}</span>
+    <div
+      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[var(--text-3)]"
+      data-testid="leftover-image-placeholder"
+    >
+      <LeftoverImageIcon className="h-6 w-6" />
     </div>
   );
 }
@@ -919,10 +934,10 @@ function MobileFeedback({
   return (
     <div
       className={[
-        "mx-4 mt-2 rounded-[var(--radius-control)] px-4 py-3 text-center text-[13px] font-extrabold",
+        "mx-4 mt-2 rounded-[var(--radius-control)] border px-4 py-3 text-center text-[13px] font-extrabold",
         feedback.tone === "error"
-          ? "bg-[var(--danger-soft)] text-[var(--danger)]"
-          : "bg-[var(--success-soft)] text-[var(--success-strong)]",
+          ? "border-[rgba(255,59,48,0.18)] bg-[rgba(255,59,48,0.07)] text-[var(--danger)]"
+          : "border-[rgba(26,174,57,0.18)] bg-[rgba(26,174,57,0.08)] text-[var(--success-strong)]",
       ].join(" ")}
       data-testid="feedback-toast"
       role="alert"

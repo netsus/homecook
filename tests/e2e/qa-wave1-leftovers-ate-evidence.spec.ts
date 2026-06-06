@@ -25,6 +25,9 @@ const leftoverItems = [
     status: "leftover",
     cooked_at: "2026-04-20T10:00:00.000Z",
     eaten_at: null,
+    cooking_servings: 2,
+    source_meal_label: "저녁",
+    source_planned_servings: 2,
   },
   {
     id: "ld-2",
@@ -34,6 +37,9 @@ const leftoverItems = [
     status: "leftover",
     cooked_at: "2026-04-21T10:00:00.000Z",
     eaten_at: null,
+    cooking_servings: 1,
+    source_meal_label: "점심",
+    source_planned_servings: 1,
   },
 ];
 
@@ -46,6 +52,9 @@ const eatenItems = [
     status: "eaten",
     cooked_at: "2026-04-20T10:00:00.000Z",
     eaten_at: "2026-04-22T12:00:00.000Z",
+    cooking_servings: 2,
+    source_meal_label: "저녁",
+    source_planned_servings: 2,
   },
 ];
 
@@ -168,7 +177,7 @@ test("capture Wave1 leftovers and ate-list authority evidence", async ({
   await capture(browser, viewports.narrow, "/leftovers", "leftovers-narrow.png", async (page) => {
     await expect(page.getByRole("heading", { name: "남은 요리" })).toBeVisible();
     await expect(page.getByText("김치볶음밥")).toBeVisible();
-    await expect(page.getByRole("button", { name: /플래너에 추가/ }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /날짜 끼니에 추가/ }).first()).toBeVisible();
   });
 
   await capture(browser, viewports.mobile, "/leftovers/ate", "ate-list-default.png", async (page) => {

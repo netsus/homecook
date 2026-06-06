@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,6 +11,11 @@ import * as leftoversApi from "@/lib/api/leftovers";
 import * as mealApi from "@/lib/api/meal";
 import * as plannerApi from "@/lib/api/planner";
 import type { LeftoverListItemData } from "@/types/leftover";
+
+const LEFTOVERS_DESCRIPTION =
+  "요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.";
+const EATEN_DESCRIPTION =
+  "다먹은 음식 기록을 확인하고, 필요하면 남은 요리로 다시 옮길 수 있어요.";
 
 const navigationMocks = vi.hoisted(() => ({
   searchParams: vi.fn(() => new URLSearchParams()),
@@ -197,6 +202,8 @@ describe("LeftoversScreen", () => {
     });
 
     expect(screen.getByText("된장찌개")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "남은 요리 2개" })).toBeTruthy();
+    expect(screen.getByText(LEFTOVERS_DESCRIPTION)).toBeTruthy();
     expect(screen.getAllByTestId("leftover-card")).toHaveLength(2);
     expect(screen.getAllByTestId("eat-button")).toHaveLength(2);
     expect(screen.getAllByTestId("planner-add-button")).toHaveLength(2);
@@ -211,6 +218,9 @@ describe("LeftoversScreen", () => {
       2,
     );
     expect(screen.getAllByRole("link", { name: "요리하기" })).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "김치찌개" }).getAttribute("href")).toBe(
+      "/recipe/recipe-1",
+    );
   });
 
   it("formats leftover timestamps with the Korea calendar day", async () => {
@@ -241,7 +251,7 @@ describe("LeftoversScreen", () => {
     });
 
     expect(
-      screen.getByText("요리모드 완료 후 남은 음식이 여기에 기록됩니다."),
+      screen.getByText("요리를 완료하면 여기에 저장돼요"),
     ).toBeTruthy();
   });
 
@@ -368,6 +378,9 @@ describe("LeftoversScreen", () => {
     await waitFor(() => {
       expect(screen.getByText("날짜와 끼니를 선택해 주세요")).toBeTruthy();
     });
+
+    const dateGroup = screen.getByRole("group", { name: "날짜 선택" });
+    expect(within(dateGroup).getAllByRole("button")).toHaveLength(14);
   });
 
   it("submits planner add with leftover_dish_id", async () => {
@@ -411,7 +424,7 @@ describe("LeftoversScreen", () => {
     // Click the confirm button inside the dialog
     const dialog = screen.getByRole("dialog");
     const confirmButtons = Array.from(dialog.querySelectorAll("button")).filter(
-      (btn) => btn.textContent === "플래너에 추가",
+      (btn) => btn.textContent === "날짜 끼니에 추가",
     );
     await user.click(confirmButtons[0]);
 
@@ -434,7 +447,9 @@ describe("LeftoversScreen", () => {
     render(<LeftoversScreen initialAuthenticated={true} />);
 
     const plannerAddButton = (await screen.findAllByTestId("planner-add-button"))[0];
-    expect(plannerAddButton.textContent?.trim()).toBe("플래너에 추가");
+    expect(plannerAddButton.textContent?.trim()).toBe("날짜 끼니에 추가");
+    expect(screen.getByText(LEFTOVERS_DESCRIPTION)).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "다먹음" })).toHaveLength(2);
   });
 
   it("has link to ate-list page", async () => {
@@ -555,8 +570,48 @@ describe("AteListScreen", () => {
     expect(
       screen.getByRole("link", { name: "김치찌개 레시피 보기" }),
     ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "김치찌개" }).getAttribute("href")).toBe(
+      "/recipe/recipe-1",
+    );
     expect(screen.getByText(/4월 22일/)).toBeTruthy();
+    expect(screen.getByText(/저녁/)).toBeTruthy();
     expect(screen.queryByText(/다먹음/)).toBeNull();
+  });
+
+  it("renders the mobile eaten-list summary and eaten date", async () => {
+    installMatchMedia(true);
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
+      items: EATEN_ITEMS,
+    });
+
+    render(<AteListScreen initialAuthenticated={true} />);
+
+    expect(await screen.findByText("다먹은 요리 1개")).toBeTruthy();
+    expect(screen.getByText(EATEN_DESCRIPTION)).toBeTruthy();
+    expect(screen.getByText(/4\/22 다먹음/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "김치찌개" }).getAttribute("href")).toBe(
+      "/recipe/recipe-1",
+    );
+  });
+
+  it("keeps long mobile eaten recipe titles from resizing the card", async () => {
+    installMatchMedia(true);
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
+      items: [
+        {
+          ...EATEN_ITEMS[0],
+          recipe_title:
+            "아주 긴 레시피 이름이 들어가도 카드 높이를 과하게 늘리지 않는 김치찌개",
+        },
+      ],
+    });
+
+    render(<AteListScreen initialAuthenticated={true} />);
+
+    const titleLink = await screen.findByRole("link", {
+      name: "아주 긴 레시피 이름이 들어가도 카드 높이를 과하게 늘리지 않는 김치찌개",
+    });
+    expect(titleLink.className).toContain("truncate");
   });
 
   it("formats eaten timestamps with the Korea calendar day", async () => {

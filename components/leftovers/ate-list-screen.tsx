@@ -36,6 +36,8 @@ type ScreenState = "loading" | "ready" | "empty" | "error";
 type FeedbackTone = "error" | "status";
 
 const FEEDBACK_AUTO_DISMISS_MS = 4000;
+const EATEN_DESCRIPTION =
+  "다먹은 음식 기록을 확인하고, 필요하면 남은 요리로 다시 옮길 수 있어요.";
 const WEB_NAV_ITEMS = [
   { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
@@ -65,10 +67,23 @@ function formatLeftoverMeta(item: LeftoverListItemData) {
   return `${sourceLabel} · ${item.cooking_servings}인분`;
 }
 
-function getFallbackEmoji(title: string) {
-  if (title.includes("밥")) return "🍚";
-  if (title.includes("찌개")) return "🍲";
-  return "🍽️";
+function LeftoverImageIcon({ className }: { className: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+    >
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+      <path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
+    </svg>
+  );
 }
 
 function AteListCard({
@@ -97,27 +112,23 @@ function AteListCard({
             width={72}
           />
         ) : (
-          <div className="web-ate-thumb-placeholder">
-            <svg
-              aria-hidden="true"
-              className="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.8"
-              viewBox="0 0 24 24"
-            >
-              <path d="M5 12h14" />
-              <path d="M12 5v14" />
-              <path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
-            </svg>
+          <div
+            className="web-ate-thumb-placeholder"
+            data-testid="leftover-image-placeholder"
+          >
+            <LeftoverImageIcon className="h-6 w-6" />
           </div>
         )}
       </div>
 
       <div className="web-ate-body">
-        <p className="web-ate-title">{item.recipe_title}</p>
+        <Link
+          className="web-ate-title"
+          href={`/recipe/${item.recipe_id}`}
+          prefetch={false}
+        >
+          {item.recipe_title}
+        </Link>
         <p className="web-ate-meta">
           {item.eaten_at ? `${formatEatenAt(item.eaten_at)} · ` : null}
           {formatLeftoverMeta(item)}
@@ -410,7 +421,7 @@ export function AteListScreen({
               남은 요리
             </Link>
           }
-          description="요리모드를 완료했거나 '다 먹었어요'를 누른 끼니가 기록됩니다."
+          description={EATEN_DESCRIPTION}
           title="다먹은 요리"
         />
 
@@ -551,6 +562,15 @@ function AteListMobileView({
 
       {feedback ? <MobileFeedback feedback={feedback} /> : null}
 
+      <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-4 py-3">
+        <h2 className="text-[18px] font-extrabold leading-[1.35] text-[var(--foreground)]">
+          다먹은 요리 {items.length}개
+        </h2>
+        <p className="mt-1 text-[12px] font-medium leading-[1.35] text-[var(--text-3)]">
+          {EATEN_DESCRIPTION}
+        </p>
+      </section>
+
       {screenState === "loading" ? (
         <div className="space-y-3 p-4" data-testid="ate-list-loading">
           {[1, 2].map((index) => (
@@ -655,21 +675,27 @@ function MobileAteCard({
     >
       <div className="flex items-center gap-3">
         <MobileDishThumb
-          emoji={getFallbackEmoji(item.recipe_title)}
           src={item.recipe_thumbnail_url}
         />
         <div className="min-w-0 flex-1">
-          <p className="break-keep text-[14px] font-extrabold leading-[1.25] text-[var(--foreground)]">
+          <Link
+            className="block truncate text-[14px] font-extrabold leading-[1.25] text-[var(--foreground)]"
+            href={`/recipe/${item.recipe_id}`}
+            prefetch={false}
+          >
             {item.recipe_title}
-          </p>
+          </Link>
           <p className="mt-0.5 text-[12px] font-medium leading-[1.25] text-[var(--text-3)]">
-            {formatShortDate(item.cooked_at)} 요리 · {formatLeftoverMeta(item)}
+            {item.eaten_at
+              ? `${formatShortDate(item.eaten_at)} 다먹음`
+              : `${formatShortDate(item.cooked_at)} 요리`}{" "}
+            · {formatLeftoverMeta(item)}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
             aria-label="남은 요리로 복귀"
-            className="h-9 w-[96px] whitespace-nowrap rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-2 text-[11px] font-bold text-[var(--text-2)] disabled:opacity-60"
+            className="h-8 w-[82px] whitespace-nowrap rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-2 text-[11px] font-bold text-[var(--text-2)] disabled:opacity-60"
             data-testid="uneat-button"
             disabled={anyMutating}
             onClick={() => onUneat(item.id)}
@@ -684,10 +710,8 @@ function MobileAteCard({
 }
 
 function MobileDishThumb({
-  emoji,
   src,
 }: {
-  emoji: string;
   src: string | null;
 }) {
   if (src) {
@@ -704,8 +728,11 @@ function MobileDishThumb({
   }
 
   return (
-    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--danger-border)] text-[24px]">
-      <span aria-hidden="true">{emoji}</span>
+    <div
+      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[var(--text-3)]"
+      data-testid="leftover-image-placeholder"
+    >
+      <LeftoverImageIcon className="h-6 w-6" />
     </div>
   );
 }
@@ -718,10 +745,10 @@ function MobileFeedback({
   return (
     <div
       className={[
-        "mx-4 mt-2 rounded-[var(--radius-control)] px-4 py-3 text-center text-[13px] font-extrabold",
+        "mx-4 mt-2 rounded-[var(--radius-control)] border px-4 py-3 text-center text-[13px] font-extrabold",
         feedback.tone === "error"
-          ? "bg-[var(--danger-soft)] text-[var(--danger)]"
-          : "bg-[var(--success-soft)] text-[var(--success-strong)]",
+          ? "border-[rgba(255,59,48,0.18)] bg-[rgba(255,59,48,0.07)] text-[var(--danger)]"
+          : "border-[rgba(26,174,57,0.18)] bg-[rgba(26,174,57,0.08)] text-[var(--success-strong)]",
       ].join(" ")}
       data-testid="feedback-toast"
       role="alert"
