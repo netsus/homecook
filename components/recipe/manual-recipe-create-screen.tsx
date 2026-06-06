@@ -16,6 +16,7 @@ import { createManualRecipe, uploadRecipeImage } from "@/lib/api/manual-recipe";
 import { createMealSafe } from "@/lib/api/meal";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
+import { compressRecipeImageFile } from "@/lib/recipe-image-compression";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 import {
   WebButton,
@@ -441,7 +442,7 @@ function StepInlineComposer({
 
   return (
     <div
-      className="mb-28 mt-3 scroll-mb-[160px] rounded-[var(--radius-md)] border border-dashed border-[var(--line)] bg-[var(--surface)] p-3 md:mb-0"
+      className="mb-4 mt-3 scroll-mb-[120px] rounded-[var(--radius-md)] border border-dashed border-[var(--line)] bg-[var(--surface)] p-3 md:mb-0"
       data-testid="manual-step-composer"
     >
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -819,7 +820,19 @@ export function ManualRecipeCreateScreen({
     setUploadedStoragePath(null);
     setImagePreviewUrl(nextPreviewUrl);
 
-    const result = await uploadRecipeImage(file);
+    const uploadFile = await compressRecipeImageFile(file);
+
+    if (!isMountedRef.current) {
+      revokePreviewUrl(nextPreviewUrl);
+      return;
+    }
+
+    if (uploadRequestIdRef.current !== requestId) {
+      revokePreviewUrl(nextPreviewUrl);
+      return;
+    }
+
+    const result = await uploadRecipeImage(uploadFile);
 
     if (!isMountedRef.current) {
       revokePreviewUrl(nextPreviewUrl);
@@ -1256,8 +1269,19 @@ export function ManualRecipeCreateScreen({
         isSaving={isSaving}
         isUploading={isUploading}
       />
-      <div className="mb-[96px] min-h-0 flex-1 scroll-pb-[120px] overflow-y-auto pb-[120px] md:mb-0 md:px-4 md:pb-6 md:scroll-pb-6">
+      <div className="min-h-0 flex-1 scroll-pb-[96px] overflow-y-auto pb-[88px] md:px-4 md:pb-6 md:scroll-pb-6">
         <div className="mx-auto max-w-2xl space-y-2 md:space-y-6 md:py-4">
+          {planDate || slotName ? (
+            <div className="bg-[var(--surface)] px-4 pt-4 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
+              <span
+                className="inline-flex min-h-8 items-center rounded-full bg-[var(--brand-soft)] px-3 text-[13px] font-bold text-[var(--brand-deep)]"
+                data-testid="manual-mobile-target-tag"
+              >
+                {targetLabel}
+              </span>
+            </div>
+          ) : null}
+
           {/* Basic Info */}
           <section className="bg-[var(--surface)] px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
             <h2 className="mb-3 text-[16px] font-bold leading-[1.3] text-[var(--foreground)]">

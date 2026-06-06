@@ -454,7 +454,7 @@ export function HomeScreen() {
           } as React.CSSProperties
         }
       >
-        <div className="mx-auto flex min-h-screen max-w-[430px] flex-col bg-[var(--surface)] pb-[calc(86px+env(safe-area-inset-bottom))] shadow-[0_0_0_1px_var(--foreground-alpha-04)]">
+        <div className="flex min-h-screen w-full flex-col bg-[var(--surface)] pb-[calc(86px+env(safe-area-inset-bottom))]">
           <HomeAppBar />
 
           <div className="pb-[100px]">

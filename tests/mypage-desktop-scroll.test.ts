@@ -18,6 +18,8 @@ describe("mypage desktop scroll stability", () => {
     expect(ruleBody(".web-mypage-screen")).toContain(
       "height: calc(100vh - var(--web-nav-h));",
     );
+    expect(ruleBody(".web-mypage-screen")).toContain("width: 100%;");
+    expect(ruleBody(".web-mypage-screen")).not.toContain("max-width: 1180px;");
     expect(ruleBody(".web-mypage-shell .web-page")).toContain("overflow: hidden;");
     expect(ruleBody(".web-mypage-shell .web-container-wide")).toContain(
       "overflow: hidden;",

@@ -6093,10 +6093,9 @@ button {
   .web-mypage-screen {
     display: flex;
     height: calc(100vh - var(--web-nav-h));
+    width: 100%;
     min-height: 0;
     flex-direction: column;
-    max-width: 1180px;
-    margin: 0 auto;
     padding: 32px 0 0;
   }
 
