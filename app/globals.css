@@ -461,18 +461,21 @@
 }
 
 .cook-mode-theme-toggle {
-  display: inline-flex;
+  position: relative;
+  display: grid;
+  width: 104px;
   height: 36px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: center;
-  gap: 6px;
   border-radius: var(--radius-full);
   border: 1px solid var(--line);
-  padding: 3px 8px 3px 3px;
+  padding: 3px;
   font: inherit;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1;
+  overflow: hidden;
   transition:
     background 0.15s ease,
     border-color 0.15s ease,
@@ -480,8 +483,7 @@
 }
 
 .cook-mode-theme-toggle-mobile {
-  width: 64px;
-  justify-content: flex-start;
+  width: 100px;
 }
 
 .cook-mode-theme-toggle-light {
@@ -493,41 +495,51 @@
 .cook-mode-theme-toggle-dark {
   border-color: rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.08);
-  color: var(--text-inverse);
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .cook-mode-theme-toggle-knob {
-  display: inline-flex;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / 2);
   border-radius: var(--radius-full);
   background: var(--brand);
-  color: var(--text-inverse);
+  box-shadow: 0 4px 12px rgba(0, 161, 255, 0.24);
+  transition: transform 0.18s ease;
+}
+
+.cook-mode-theme-toggle-dark .cook-mode-theme-toggle-knob {
+  transform: translateX(100%);
 }
 
 .cook-mode-theme-toggle-label {
-  min-width: 22px;
+  position: relative;
+  z-index: 1;
   text-align: center;
   white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.cook-mode-theme-toggle-label-active {
+  color: var(--text-inverse);
 }
 
 .cook-mobile-prototype {
-  --cook-mobile-bg: #f6fbff;
+  --cook-mobile-bg:
+    radial-gradient(circle at 18% 0%, rgba(232, 245, 255, 0.42), transparent 34%),
+    linear-gradient(180deg, #005b91 0%, #0087d7 48%, #003a5c 100%);
   --cook-mobile-fg: #212529;
-  --cook-mobile-hero-bg:
-    radial-gradient(circle at 18% 0%, rgba(0, 161, 255, 0.22), transparent 36%),
-    linear-gradient(180deg, #005b91 0%, #00a1ff 58%, transparent 100%);
+  --cook-mobile-hero-bg: transparent;
   --cook-mobile-header-control-bg: rgba(255, 255, 255, 0.12);
-  --cook-mobile-header-status-bg: rgba(255, 255, 255, 0.14);
+  --cook-mobile-header-status-bg: rgba(232, 245, 255, 0.13);
   --cook-mobile-header-text: var(--text-inverse);
   --cook-mobile-header-muted: rgba(255, 255, 255, 0.72);
   --cook-mobile-header-status-text: rgba(255, 255, 255, 0.84);
-  --cook-mobile-step-bg: var(--surface);
-  --cook-mobile-step-border: rgba(255, 255, 255, 0.16);
-  --cook-mobile-panel-bg: var(--surface);
+  --cook-mobile-step-bg: #f9fbf8;
+  --cook-mobile-step-border: rgba(255, 255, 255, 0.12);
+  --cook-mobile-panel-bg: #f9fbf8;
   --cook-mobile-panel-strong: #212529;
   --cook-mobile-panel-muted: #495057;
   --cook-mobile-panel-subtle: #f3faff;
@@ -544,16 +556,16 @@
   --cook-mobile-dark-panel: #101820;
   --cook-mobile-dark-note: #95a6b4;
 
-  background-color: var(--cook-mobile-bg);
+  background: var(--cook-mobile-bg);
   color: var(--cook-mobile-fg);
 }
 
 .cook-mobile-prototype[data-cook-theme="dark"] {
-  --cook-mobile-bg: #080c10;
+  --cook-mobile-bg:
+    radial-gradient(circle at 18% 0%, rgba(0, 161, 255, 0.3), transparent 34%),
+    linear-gradient(180deg, #07111a 0%, #0087d7 48%, #05070a 100%);
   --cook-mobile-fg: #f5f8fb;
-  --cook-mobile-hero-bg:
-    radial-gradient(circle at 18% 0%, rgba(0, 161, 255, 0.32), transparent 36%),
-    linear-gradient(180deg, #07111a 0%, #0a1620 70%, transparent 100%);
+  --cook-mobile-hero-bg: transparent;
   --cook-mobile-step-bg: var(--cook-mobile-dark-card);
   --cook-mobile-step-border: rgba(139, 210, 255, 0.22);
   --cook-mobile-panel-bg: var(--cook-mobile-dark-card);
@@ -5209,8 +5221,8 @@ button {
   }
 
   .web-cook-mode-theme-toggle {
-    width: auto;
-    min-width: 82px;
+    width: 108px;
+    min-width: 108px;
     flex: 0 0 auto;
     border-color: var(--web-line);
     background: var(--web-surface);
@@ -5600,9 +5612,10 @@ button {
 
   .web-cook-prototype-title b {
     display: block;
+    max-width: min(100%, 620px);
     overflow: hidden;
     color: var(--web-text-1);
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 900;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -5735,17 +5748,6 @@ button {
     white-space: nowrap;
   }
 
-  .web-cook-prototype-note {
-    margin: 14px 0 0;
-    border-radius: 16px;
-    background: var(--web-brand-wash);
-    color: var(--web-text-2);
-    padding: 13px;
-    font-size: 13px;
-    font-weight: 800;
-    line-height: 1.45;
-  }
-
   .web-cook-prototype-focus {
     display: grid;
     min-height: 588px;
@@ -5755,12 +5757,20 @@ button {
       linear-gradient(180deg, var(--web-surface) 0%, rgba(0, 161, 255, 0.06) 100%);
   }
 
+  .web-cook-prototype-step-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+
   .web-cook-prototype-count {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
-    margin-bottom: 18px;
+    margin-bottom: 0;
   }
 
   .web-cook-prototype-count strong {
@@ -5791,11 +5801,16 @@ button {
     color: var(--web-text-inverse);
   }
 
+  .web-cook-prototype-step-nav {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
   .web-cook-prototype-copy {
-    align-self: center;
-    border: 1px solid transparent;
+    align-self: start;
     border-radius: 18px;
-    padding: 4px;
+    padding: 0;
   }
 
   .web-cook-prototype-copy h2 {
@@ -5885,7 +5900,7 @@ button {
 
   .web-cook-prototype-controls {
     display: grid;
-    grid-template-columns: 62px 62px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
     margin-top: 24px;
   }
@@ -5901,6 +5916,14 @@ button {
     background: var(--web-bg-alt);
     color: var(--web-text-1);
     font-size: 22px;
+  }
+
+  .web-cook-prototype-step-nav .web-cook-prototype-arrow {
+    width: 54px;
+    min-height: 54px;
+    border: 0;
+    border-radius: 15px;
+    font-weight: 900;
   }
 
   .web-cook-prototype-complete {
@@ -5987,7 +6010,6 @@ button {
   .web-cooking-shell-dark .web-cook-prototype-ingredient-active,
   .web-cooking-shell-dark .web-cook-prototype-timeline-row-active,
   .web-cooking-shell-dark .web-cook-prototype-amount,
-  .web-cooking-shell-dark .web-cook-prototype-note,
   .web-cooking-shell-dark .web-cook-prototype-status {
     background: rgba(0, 161, 255, 0.16);
   }

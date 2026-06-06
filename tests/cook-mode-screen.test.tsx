@@ -574,6 +574,120 @@ describe("CookModeScreen", () => {
     ).toBe("false");
   });
 
+  it("filters structured step usages to the current component", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(
+      buildCookModeData({
+        recipe: {
+          ...buildCookModeData().recipe,
+          title: "딸기 우유 푸딩과 딸기 콩포트를 같이 만드는 아주 긴 레시피",
+          ingredients: [
+            buildIngredient({
+              ingredient_id: "ing-pudding-strawberry",
+              standard_name: "딸기",
+              amount: 270,
+              unit: "g",
+              display_text: "딸기 우유 푸딩 딸기 270g",
+              component_label: "딸기 우유 푸딩",
+            }),
+            buildIngredient({
+              ingredient_id: "ing-pudding-sugar",
+              standard_name: "설탕",
+              amount: 75,
+              unit: "g",
+              display_text: "딸기 우유 푸딩 설탕 75g",
+              component_label: "딸기 우유 푸딩",
+            }),
+            buildIngredient({
+              ingredient_id: "ing-pudding-salt",
+              standard_name: "소금",
+              amount: 1,
+              unit: "g",
+              display_text: "딸기 우유 푸딩 소금 1g",
+              component_label: "딸기 우유 푸딩",
+            }),
+            buildIngredient({
+              ingredient_id: "ing-pudding-starch",
+              standard_name: "옥수수전분",
+              amount: 60,
+              unit: "g",
+              display_text: "딸기 우유 푸딩 옥수수전분 60g",
+              component_label: "딸기 우유 푸딩",
+            }),
+            buildIngredient({
+              ingredient_id: "ing-compote-strawberry",
+              standard_name: "딸기",
+              amount: 230,
+              unit: "g",
+              display_text: "딸기 콩포트 딸기 230g",
+              component_label: "딸기 콩포트",
+            }),
+            buildIngredient({
+              ingredient_id: "ing-compote-sugar",
+              standard_name: "설탕",
+              amount: 45,
+              unit: "g",
+              display_text: "딸기 콩포트 설탕 45g",
+              component_label: "딸기 콩포트",
+            }),
+            buildIngredient({
+              ingredient_id: "ing-compote-starch",
+              standard_name: "옥수수전분",
+              amount: 3,
+              unit: "g",
+              display_text: "딸기 콩포트 옥수수전분 3g",
+              component_label: "딸기 콩포트",
+            }),
+          ],
+          steps: [
+            buildStep({
+              step_number: 1,
+              instruction:
+                "설탕과 소금, 옥수수전분을 넣고 완전히 섞은 다음 중약불에 올려 끓여 주세요.",
+              component_label: "딸기 우유 푸딩",
+              cooking_method: { code: "boil", label: "끓이기", color_key: "red" },
+              ingredients_used: [
+                { ingredient_id: "ing-pudding-strawberry", amount: 270, unit: "g" },
+                { ingredient_id: "ing-pudding-sugar", amount: 75, unit: "g" },
+                { ingredient_id: "ing-pudding-salt", amount: 1, unit: "g" },
+                { ingredient_id: "ing-pudding-starch", amount: 60, unit: "g" },
+                { ingredient_id: "ing-compote-strawberry", amount: 230, unit: "g" },
+                { ingredient_id: "ing-compote-sugar", amount: 45, unit: "g" },
+                { ingredient_id: "ing-compote-starch", amount: 3, unit: "g" },
+              ],
+            }),
+          ],
+        },
+      }),
+    );
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const amountBoard = await screen.findByTestId(
+      "cook-mode-current-amount-board",
+    );
+    const ingredientList = screen.getByTestId("ingredient-list");
+
+    expect(
+      within(amountBoard).getByText(
+        (_, node) => node?.textContent === "4개",
+      ),
+    ).toBeTruthy();
+    expect(within(amountBoard).getByText("270g")).toBeTruthy();
+    expect(within(amountBoard).getByText("75g")).toBeTruthy();
+    expect(within(amountBoard).getByText("1g")).toBeTruthy();
+    expect(within(amountBoard).getByText("60g")).toBeTruthy();
+    expect(within(amountBoard).queryByText("230g")).toBeNull();
+    expect(within(amountBoard).queryByText("45g")).toBeNull();
+    expect(within(amountBoard).queryByText("3g")).toBeNull();
+    expect(
+      within(ingredientList)
+        .getByTestId("cook-mode-ingredient-ing-compote-sugar")
+        .getAttribute("data-active"),
+    ).toBe("false");
+  });
+
   it("renders the mobile prototype as a current-step card, amount board, and step rail", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
@@ -625,7 +739,7 @@ describe("CookModeScreen", () => {
     ).toBe("step");
   });
 
-  it("defaults mobile cook mode to a white background and toggles black from the top switch", async () => {
+  it("defaults mobile cook mode to a light background and toggles dark from the top switch", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
@@ -638,6 +752,10 @@ describe("CookModeScreen", () => {
 
     expect(screenRoot.getAttribute("data-cook-theme")).toBe("light");
     expect(themeToggle.getAttribute("aria-checked")).toBe("false");
+    expect(within(themeToggle).getByText("라이트")).toBeTruthy();
+    expect(within(themeToggle).getByText("다크")).toBeTruthy();
+    expect(within(themeToggle).queryByText("흰색")).toBeNull();
+    expect(within(themeToggle).queryByText("블랙")).toBeNull();
 
     fireEvent.click(themeToggle);
 
@@ -645,7 +763,7 @@ describe("CookModeScreen", () => {
     expect(themeToggle.getAttribute("aria-checked")).toBe("true");
   });
 
-  it("defaults desktop cook mode to a white background and toggles black from the top switch", async () => {
+  it("defaults desktop cook mode to a light background and toggles dark from the top switch", async () => {
     installMatchMedia(false);
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
@@ -658,6 +776,10 @@ describe("CookModeScreen", () => {
 
     expect(screenRoot.getAttribute("data-cook-theme")).toBe("light");
     expect(themeToggle.getAttribute("aria-checked")).toBe("false");
+    expect(within(themeToggle).getByText("라이트")).toBeTruthy();
+    expect(within(themeToggle).getByText("다크")).toBeTruthy();
+    expect(within(themeToggle).queryByText("흰색")).toBeNull();
+    expect(within(themeToggle).queryByText("블랙")).toBeNull();
 
     fireEvent.click(themeToggle);
 
@@ -786,7 +908,7 @@ describe("CookModeScreen", () => {
       )
       ?.getAttribute("style");
 
-    expect(stepItemStyle).toContain("var(--cook-stir)");
+    expect(stepItemStyle).toBeNull();
     expect(methodBadgeStyle).toContain("var(--cook-stir)");
   });
 
@@ -1097,7 +1219,7 @@ describe("CookModeScreen", () => {
     expect(screen.queryByTestId("tab-ingredients")).not.toBeTruthy();
   });
 
-  it("keeps cancel available and complete inside the desktop focus controls", async () => {
+  it("keeps cancel and complete available while desktop step navigation moves to the step header", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
 
@@ -1111,12 +1233,29 @@ describe("CookModeScreen", () => {
     const cancelButton = screen.getByTestId("cancel-button");
     const completeButton = screen.getByTestId("complete-button");
     const focusStep = screen.getByTestId("cook-mode-current-step");
+    const stepNav = screen.getByTestId("cook-mode-step-nav");
 
     expect(cancelButton.textContent).toBe("취소");
     expect(focusStep.contains(completeButton)).toBe(true);
-    expect(focusStep.contains(screen.getByTestId("cook-mode-next-step"))).toBe(
-      true,
-    );
+    expect(within(stepNav).getByTestId("cook-mode-prev-step")).toBeTruthy();
+    expect(within(stepNav).getByTestId("cook-mode-next-step")).toBeTruthy();
+    expect(stepNav.contains(completeButton)).toBe(false);
+  });
+
+  it("removes the desktop ingredient helper note and method-colored copy border", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(buildPrototypeCookModeData());
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const focusStep = await screen.findByTestId("cook-mode-current-step");
+    const stepCopy = screen.getByTestId("step-item");
+
+    expect(screen.queryByText(/총량은 왼쪽에서 고정/)).toBeNull();
+    expect(stepCopy.className).toContain("web-cook-prototype-copy");
+    expect(stepCopy.getAttribute("style") ?? "").not.toContain("border-color");
+    expect(focusStep.contains(stepCopy)).toBe(true);
   });
 
   it("keeps component labels in the desktop current step and timeline", async () => {

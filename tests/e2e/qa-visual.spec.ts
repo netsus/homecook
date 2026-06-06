@@ -535,7 +535,7 @@ test.describe("QA visual regression", () => {
 
     await page.goto(SHOPPING_DETAIL_VISUAL_PATH);
     await expect(
-      page.getByRole("heading", { name: "이번 주 장보기" }),
+      page.getByRole("heading", { name: "5월 18일 장보기" }),
     ).toBeVisible();
     await stabilizeVisualSnapshot(page);
     await expect(page).toHaveScreenshot("qa-shopping-detail-active.png", {
@@ -559,7 +559,7 @@ test.describe("QA visual regression", () => {
 
     await page.goto(SHOPPING_DETAIL_COMPLETED_VISUAL_PATH);
     await expect(
-      page.getByRole("heading", { name: "지난 주 장보기" }),
+      page.getByRole("heading", { name: "5월 18일 장보기" }),
     ).toBeVisible();
     await stabilizeVisualSnapshot(page);
     await expect(page).toHaveScreenshot("qa-shopping-detail-complete.png", {
@@ -696,7 +696,8 @@ test.describe("QA visual regression", () => {
     await expect(page.getByTestId("standalone-cook-mode-title")).toHaveText(
       "김치볶음밥",
     );
-    await expect(page.getByText(/플래너 끼니와 연결되지 않아요/)).toBeVisible();
+    await expect(page.getByTestId("ingredient-list")).toBeVisible();
+    await expect(page.getByTestId("step-list")).toBeVisible();
     await stabilizeVisualSnapshot(page);
     await expect(page).toHaveScreenshot("qa-cook-mode-standalone.png", {
       animations: "disabled",

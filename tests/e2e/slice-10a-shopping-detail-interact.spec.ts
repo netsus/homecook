@@ -373,8 +373,10 @@ test.describe("slice 10a: shopping detail interact", () => {
       await expect(
         page.getByText("완료된 장보기 기록은 수정할 수 없어요")
       ).toBeVisible();
-      await expect(page.getByText(/✓ 완료됨 \(4월 13일\)/)).toBeVisible();
       await expect(page.getByText(/구매한 재료 \(2개\)/)).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "장보기 완료" }),
+      ).not.toBeVisible();
     });
 
     test("should not show action buttons in read-only mode", async ({ page }) => {

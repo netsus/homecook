@@ -138,6 +138,19 @@ function normalizeMentionText(value: string) {
   return value.toLowerCase().replace(/\s+/g, "");
 }
 
+function normalizeComponentLabelForMatch(value: string | null | undefined) {
+  const label = normalizeRecipeSectionLabel(value);
+
+  return label ? normalizeMentionText(label) : "";
+}
+
+function getStepInstruction(step: CookingModeStep) {
+  return (
+    stripMatchingSectionPrefix(step.instruction, step.component_label) ??
+    step.instruction
+  );
+}
+
 function instructionMentionsIngredient(
   instruction: string,
   ingredient: CookingModeIngredient,
@@ -150,15 +163,62 @@ function instructionMentionsIngredient(
   );
 }
 
+function ingredientMatchesStepComponent(
+  step: CookingModeStep,
+  ingredient: CookingModeIngredient,
+) {
+  const stepLabel = normalizeComponentLabelForMatch(step.component_label);
+
+  if (!stepLabel) {
+    return true;
+  }
+
+  return (
+    normalizeComponentLabelForMatch(ingredient.component_label) === stepLabel
+  );
+}
+
+function scopeIngredientsToStepComponent(
+  recipe: CookingModeRecipe,
+  step: CookingModeStep,
+) {
+  const stepLabel = normalizeComponentLabelForMatch(step.component_label);
+
+  if (!stepLabel) {
+    return recipe.ingredients;
+  }
+
+  const scopedIngredients = recipe.ingredients.filter((ingredient) =>
+    ingredientMatchesStepComponent(step, ingredient),
+  );
+
+  return scopedIngredients.length > 0 ? scopedIngredients : recipe.ingredients;
+}
+
+function scopeUsagesToStepComponent(
+  usages: CookModeIngredientUsage[],
+  step: CookingModeStep,
+) {
+  const stepLabel = normalizeComponentLabelForMatch(step.component_label);
+
+  if (!stepLabel) {
+    return usages;
+  }
+
+  const scopedUsages = usages.filter((usage) =>
+    ingredientMatchesStepComponent(step, usage.ingredient),
+  );
+
+  return scopedUsages.length > 0 ? scopedUsages : usages;
+}
+
 function getInstructionMentionedIngredientUsages(
   recipe: CookingModeRecipe,
   step: CookingModeStep,
 ) {
-  const instruction =
-    stripMatchingSectionPrefix(step.instruction, step.component_label) ??
-    step.instruction;
+  const instruction = getStepInstruction(step);
 
-  return recipe.ingredients
+  return scopeIngredientsToStepComponent(recipe, step)
     .filter((ingredient) => instructionMentionsIngredient(instruction, ingredient))
     .map((ingredient) => ({
       ingredient,
@@ -199,7 +259,7 @@ export function getStepIngredientUsages(
     .filter((usage): usage is CookModeIngredientUsage => usage !== null);
 
   if (usages.length > 0) {
-    return usages;
+    return scopeUsagesToStepComponent(usages, step);
   }
 
   return getInstructionMentionedIngredientUsages(recipe, step);
@@ -213,9 +273,7 @@ export function buildCookModeStepModel(
 
   return {
     title: getCookModeStepTitle(step),
-    instruction:
-      stripMatchingSectionPrefix(step.instruction, step.component_label) ??
-      step.instruction,
+    instruction: getStepInstruction(step),
     heatLabel: formatHeatLevel(step.heat_level),
     durationLabel: formatDuration(step),
     ingredientUsages,

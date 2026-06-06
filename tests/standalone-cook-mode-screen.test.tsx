@@ -448,7 +448,7 @@ describe("StandaloneCookModeScreen", () => {
       )
       ?.getAttribute("style");
 
-    expect(stepItemStyle).toContain("var(--cook-stir)");
+    expect(stepItemStyle).toBeNull();
     expect(methodBadgeStyle).toContain("var(--cook-stir)");
   });
 
@@ -697,7 +697,7 @@ describe("StandaloneCookModeScreen", () => {
     ).toBeNull();
   });
 
-  it("defaults standalone mobile cook mode to white and toggles black from the top switch", async () => {
+  it("defaults standalone mobile cook mode to light and toggles dark from the top switch", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchStandaloneCookMode.mockResolvedValue(buildStandaloneCookModeData());
@@ -710,6 +710,10 @@ describe("StandaloneCookModeScreen", () => {
 
     expect(screenRoot.getAttribute("data-cook-theme")).toBe("light");
     expect(themeToggle.getAttribute("aria-checked")).toBe("false");
+    expect(within(themeToggle).getByText("라이트")).toBeTruthy();
+    expect(within(themeToggle).getByText("다크")).toBeTruthy();
+    expect(within(themeToggle).queryByText("흰색")).toBeNull();
+    expect(within(themeToggle).queryByText("블랙")).toBeNull();
 
     fireEvent.click(themeToggle);
 
@@ -717,7 +721,7 @@ describe("StandaloneCookModeScreen", () => {
     expect(themeToggle.getAttribute("aria-checked")).toBe("true");
   });
 
-  it("defaults standalone desktop cook mode to white and toggles black from the top switch", async () => {
+  it("defaults standalone desktop cook mode to light and toggles dark from the top switch", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchStandaloneCookMode.mockResolvedValue(buildStandaloneCookModeData());
 
@@ -729,6 +733,10 @@ describe("StandaloneCookModeScreen", () => {
 
     expect(screenRoot.getAttribute("data-cook-theme")).toBe("light");
     expect(themeToggle.getAttribute("aria-checked")).toBe("false");
+    expect(within(themeToggle).getByText("라이트")).toBeTruthy();
+    expect(within(themeToggle).getByText("다크")).toBeTruthy();
+    expect(within(themeToggle).queryByText("흰색")).toBeNull();
+    expect(within(themeToggle).queryByText("블랙")).toBeNull();
 
     fireEvent.click(themeToggle);
 
