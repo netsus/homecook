@@ -137,6 +137,89 @@ function buildStandaloneCookModeData(
   };
 }
 
+function buildPrototypeStandaloneCookModeData(
+  overrides: Partial<CookingStandaloneCookModeData> = {},
+): CookingStandaloneCookModeData {
+  return buildStandaloneCookModeData({
+    recipe: {
+      id: "recipe-1",
+      title: "제육볶음",
+      cooking_servings: 2,
+      ingredients: [
+        buildIngredient({
+          ingredient_id: "ing-pork",
+          standard_name: "돼지고기",
+          amount: 300,
+          unit: "g",
+          display_text: "돼지고기 300g",
+        }),
+        buildIngredient({
+          ingredient_id: "ing-sauce",
+          standard_name: "양념장",
+          amount: 3,
+          unit: "큰술",
+          display_text: "양념장 3큰술",
+        }),
+        buildIngredient({
+          ingredient_id: "ing-onion",
+          standard_name: "양파",
+          amount: 1,
+          unit: "개",
+          display_text: "양파 1개",
+        }),
+      ],
+      steps: [
+        buildStep({
+          step_number: 1,
+          instruction: "고기와 양념장을 골고루 버무려 주세요.",
+          component_label: "고기 재우기",
+          cooking_method: { code: "mix", label: "무치기", color_key: "green" },
+          duration_seconds: 180,
+          duration_text: "3분",
+          ingredients_used: [
+            {
+              ingredient_id: "ing-pork",
+              amount: 300,
+              unit: "g",
+              cut_size: "한입 크기",
+            },
+            {
+              ingredient_id: "ing-sauce",
+              amount: 3,
+              unit: "큰술",
+              cut_size: "골고루",
+            },
+          ],
+        }),
+        buildStep({
+          step_number: 2,
+          instruction: "팬을 달군 뒤 양파와 고기를 센불에 볶아주세요.",
+          component_label: "센불 볶기",
+          cooking_method: { code: "stir_fry", label: "볶기", color_key: "orange" },
+          heat_level: "high",
+          duration_seconds: 300,
+          duration_text: "5분",
+          ingredients_used: [
+            {
+              ingredient_id: "ing-onion",
+              amount: 1,
+              unit: "개",
+              cut_size: "채썰기",
+            },
+            {
+              ingredient_id: "ing-pork",
+              amount: 300,
+              unit: "g",
+              cut_size: "같이 볶기",
+            },
+          ],
+        }),
+      ],
+    },
+    ...overrides,
+  });
+}
+
 async function importScreen() {
   const mod = await import("@/components/cooking/standalone-cook-mode-screen");
   return mod.StandaloneCookModeScreen;
@@ -195,7 +278,7 @@ describe("StandaloneCookModeScreen", () => {
     expect(screen.queryByTestId("standalone-cook-mode-tabs")).not.toBeTruthy();
     expect(screen.getAllByTestId("ingredient-item")).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "요리모드" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "필요한 재료" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "꺼내둘 재료" })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "소진된 재료" })).toBeNull();
     expect(screen.queryByText("차감할 재료")).toBeNull();
   });
@@ -358,7 +441,12 @@ describe("StandaloneCookModeScreen", () => {
     });
 
     const stepItemStyle = screen.getByTestId("step-item").getAttribute("style");
-    const methodBadgeStyle = screen.getByText("볶기").getAttribute("style");
+    const methodBadgeStyle = screen
+      .getAllByText("볶기")
+      .find((element) =>
+        element.getAttribute("style")?.includes("var(--cook-stir)"),
+      )
+      ?.getAttribute("style");
 
     expect(stepItemStyle).toContain("var(--cook-stir)");
     expect(methodBadgeStyle).toContain("var(--cook-stir)");
@@ -510,39 +598,10 @@ describe("StandaloneCookModeScreen", () => {
     });
   });
 
-  it("renders standalone cook mode as one scroll view without tab or timer controls", async () => {
+  it("renders standalone cook mode as the prototype current-step board without tabs or timer controls", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchStandaloneCookMode.mockResolvedValue(
-      buildStandaloneCookModeData({
-        recipe: {
-          ...buildStandaloneCookModeData().recipe,
-          ingredients: [
-            buildIngredient({
-              ingredient_id: "ing-bread-flour",
-              standard_name: "강력분",
-              component_label: "빵 반죽",
-            }),
-            buildIngredient({
-              ingredient_id: "ing-yolk",
-              standard_name: "달걀노른자",
-              component_label: "커스터드 크림",
-            }),
-          ],
-          steps: [
-            buildStep({
-              duration_seconds: 600,
-              duration_text: null,
-              heat_level: "medium",
-              component_label: "빵 반죽",
-            }),
-            buildStep({
-              step_number: 2,
-              instruction: "커스터드를 만들어 주세요.",
-              component_label: "커스터드 크림",
-            }),
-          ],
-        },
-      }),
+      buildPrototypeStandaloneCookModeData(),
     );
 
     const Screen = await importScreen();
@@ -555,19 +614,31 @@ describe("StandaloneCookModeScreen", () => {
     expect(screen.getByTestId("ingredient-list")).toBeTruthy();
     expect(screen.getByTestId("step-list")).toBeTruthy();
     expect(
-      within(screen.getByTestId("standalone-cook-mode-content")).getAllByText(
-        "빵 반죽",
-      ).length,
-    ).toBeGreaterThanOrEqual(1);
+      screen.getByTestId("cook-mode-current-step-title").textContent,
+    ).toContain("고기 재우기");
     expect(
-      within(screen.getByTestId("standalone-cook-mode-content")).getAllByText(
-        "커스터드 크림",
-      ).length,
-    ).toBeGreaterThanOrEqual(1);
+      screen.getByTestId("cook-mode-current-step-copy").textContent,
+    ).toContain("고기와 양념장을 골고루 버무려 주세요.");
+    expect(
+      within(screen.getByTestId("cook-mode-current-amount-board")).getByText(
+        "돼지고기",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByTestId("cook-mode-prev-step")).toBeTruthy();
+    expect(screen.getByTestId("cook-mode-next-step")).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId("cook-mode-next-step"));
+
+    expect(
+      screen.getByTestId("cook-mode-current-step-title").textContent,
+    ).toContain("센불 볶기");
+    expect(
+      screen.getByTestId("cook-mode-timeline-step-2").getAttribute("aria-current"),
+    ).toBe("step");
     expect(screen.queryByTestId("tab-steps")).not.toBeTruthy();
     expect(screen.queryByTestId("tab-ingredients")).not.toBeTruthy();
     expect(screen.queryByText("10분")).not.toBeTruthy();
-    expect(screen.queryByText(/타이머|메모|일시정지|이전|다음/)).not.toBeTruthy();
+    expect(screen.queryByText(/타이머|메모|일시정지/)).not.toBeTruthy();
   });
 
   it("displays servings as read-only (no stepper UI)", async () => {
