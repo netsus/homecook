@@ -430,6 +430,46 @@ describe("CookModeScreen", () => {
     expect(screen.getByText("적당량")).toBeTruthy();
   });
 
+  it("defaults mobile cook mode to a white background and toggles black from the top switch", async () => {
+    installMatchMedia(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(buildCookModeData());
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const themeToggle = await screen.findByTestId("cook-mode-theme-toggle");
+    const screenRoot = screen.getByTestId("cook-mode-screen");
+
+    expect(screenRoot.getAttribute("data-cook-theme")).toBe("light");
+    expect(themeToggle.getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(themeToggle);
+
+    expect(screenRoot.getAttribute("data-cook-theme")).toBe("dark");
+    expect(themeToggle.getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("defaults desktop cook mode to a white background and toggles black from the top switch", async () => {
+    installMatchMedia(false);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(buildCookModeData());
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const themeToggle = await screen.findByTestId("cook-mode-theme-toggle");
+    const screenRoot = screen.getByTestId("cook-mode-screen");
+
+    expect(screenRoot.getAttribute("data-cook-theme")).toBe("light");
+    expect(themeToggle.getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(themeToggle);
+
+    expect(screenRoot.getAttribute("data-cook-theme")).toBe("dark");
+    expect(themeToggle.getAttribute("aria-checked")).toBe("true");
+  });
+
   it("removes the duplicated STEP label from mobile cooking cards", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
