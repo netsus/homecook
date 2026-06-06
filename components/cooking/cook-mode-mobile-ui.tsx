@@ -6,17 +6,13 @@ import {
   CookModeThemeToggle,
   type CookModeColorTheme,
 } from "@/components/cooking/cook-mode-theme-toggle";
-import { cn } from "@/components/web/utils";
-import type {
-  CookingModeIngredient,
-  CookingModeRecipe,
-  CookingModeStep,
-} from "@/types/cooking";
 import {
-  normalizeRecipeSectionLabel,
-  shouldShowSectionHeading,
-  stripMatchingSectionPrefix,
-} from "@/lib/recipe-section-labels";
+  buildCookModeStepModel,
+  type CookModeIngredientUsage,
+} from "@/components/cooking/cook-mode-step-model";
+import { cn } from "@/components/web/utils";
+import { getCookingMethodVisual } from "@/lib/cooking-method-colors";
+import type { CookingModeRecipe } from "@/types/cooking";
 
 export { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 
@@ -39,55 +35,6 @@ interface MobileCookModeViewProps {
   onColorThemeToggle: () => void;
 }
 
-interface MethodVisual {
-  bg: string;
-  border: string;
-  label: string;
-  text: string;
-}
-
-const METHOD_VISUALS = {
-  blanch: {
-    bg: "var(--accent-green-soft)",
-    border: "var(--cook-blanch-border)",
-    label: "데치기",
-    text: "var(--cook-blanch-text)",
-  },
-  boil: { bg: "var(--danger-soft)", border: "var(--danger)", label: "끓이기", text: "var(--danger-strong)" },
-  fry: { bg: "var(--warning-soft)", border: "var(--warning-border)", label: "튀기기", text: "var(--warning-strong)" },
-  mix: { bg: "var(--success-soft)", border: "var(--success-border)", label: "무치기", text: "var(--success-strong)" },
-  prep: { bg: "var(--surface-subtle)", border: "var(--text-4)", label: "준비", text: "var(--text-2)" },
-  roast: { bg: "var(--cook-roast-bg)", border: "var(--cook-roast-border)", label: "굽기", text: "var(--cook-roast-text)" },
-  steam: { bg: "var(--cook-steam-bg)", border: "var(--cook-steam-border)", label: "찌기", text: "var(--cook-steam-text)" },
-  stirfry: { bg: "var(--warning-soft)", border: "var(--warning-border)", label: "볶기", text: "var(--warning-strong)" },
-} as const satisfies Record<string, MethodVisual>;
-
-const METHOD_ALIASES: Record<string, keyof typeof METHOD_VISUALS> = {
-  bake: "fry",
-  blanch: "blanch",
-  blue: "steam",
-  lime: "blanch",
-  boil: "boil",
-  brown: "roast",
-  deep_fry: "fry",
-  fry: "fry",
-  gray: "prep",
-  green: "mix",
-  grill: "roast",
-  mix: "mix",
-  orange: "stirfry",
-  other: "prep",
-  prep: "prep",
-  raw: "mix",
-  red: "boil",
-  roast: "roast",
-  steam: "steam",
-  stir_fry: "stirfry",
-  stirfry: "stirfry",
-  unassigned: "prep",
-  yellow: "fry",
-};
-
 export function MobileCookModeView({
   recipe,
   variant,
@@ -104,124 +51,179 @@ export function MobileCookModeView({
   onComplete,
   onColorThemeToggle,
 }: MobileCookModeViewProps) {
+  const [currentStepIndex, setCurrentStepIndex] = React.useState(0);
   const contextLabel =
     variant === "standalone" ? "독립 요리" : mealContextLabel ?? "플래너 요리";
-  const isDarkTheme = colorTheme === "dark";
+  const steps = recipe.steps;
+  const totalSteps = steps.length;
+  const currentStep = steps[currentStepIndex] ?? null;
+  const stepModel = currentStep
+    ? buildCookModeStepModel(recipe, currentStep)
+    : null;
+  const methodVisual = getCookingMethodVisual(currentStep?.cooking_method);
+
+  React.useEffect(() => {
+    setCurrentStepIndex((index) => {
+      if (totalSteps === 0) return 0;
+
+      return Math.min(index, totalSteps - 1);
+    });
+  }, [totalSteps]);
+
+  const moveStep = React.useCallback(
+    (delta: number) => {
+      setCurrentStepIndex((index) =>
+        Math.max(0, Math.min(totalSteps - 1, index + delta)),
+      );
+    },
+    [totalSteps],
+  );
+
+  const selectStep = React.useCallback((index: number) => {
+    setCurrentStepIndex(index);
+  }, []);
 
   return (
     <div
-      className={cn(
-        "relative min-h-dvh overflow-hidden transition-colors duration-150",
-        isDarkTheme
-          ? "bg-[var(--foreground)] text-[var(--text-inverse)]"
-          : "bg-[var(--wave1-surface)] text-[var(--foreground)]",
-      )}
+      className="cook-mobile-prototype relative min-h-dvh overflow-hidden transition-colors duration-150"
       data-cook-theme={colorTheme}
       data-testid={screenTestId}
     >
-      <div className="flex min-h-dvh flex-col pb-[118px]">
-        <header className="flex items-center justify-between px-4 pb-[14px] pt-[52px]">
-          <button
-            aria-label="뒤로"
-            className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-full transition-colors",
-              isDarkTheme
-                ? "bg-[var(--surface-alpha-10)] text-[var(--text-inverse)]"
-                : "border border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)] shadow-[0_2px_8px_var(--shadow-color-soft)]",
-            )}
-            onClick={onCancel}
-            type="button"
-          >
-            <ChevronLeftIcon />
-          </button>
-          <div className="min-w-0 flex-1 px-3 text-center">
-            <p
-              className={cn(
-                "mb-0.5 text-[11px] font-medium leading-[1.3]",
-                isDarkTheme
-                  ? "text-[var(--text-inverse-65)]"
-                  : "text-[var(--brand)]",
-              )}
+      <div
+        aria-hidden="true"
+        className="cook-mobile-prototype-backdrop pointer-events-none absolute inset-x-0 top-0 h-[260px]"
+      />
+
+      <div className="relative flex min-h-dvh flex-col pb-[116px]">
+        <header className="px-4 pb-[14px] pt-[calc(22px+env(safe-area-inset-top))]">
+          <div className="mb-[18px] flex items-center justify-between gap-2">
+            <button
+              aria-label="취소"
+              className="cook-mobile-icon-button inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border-0"
+              data-testid={cancelButtonTestId}
+              disabled={controlsDisabled}
+              onClick={onCancel}
+              type="button"
             >
-              요리모드
-            </p>
-            <h1
-              className={cn(
-                "truncate text-[17px] font-bold leading-[1.12]",
-                isDarkTheme
-                  ? "text-[var(--text-inverse-95)]"
-                  : "text-[var(--foreground)]",
-              )}
-              data-testid={titleTestId}
-            >
-              {recipe.title}
-            </h1>
-            <p
-              className={cn(
-                "text-[13px] font-medium leading-[1.2]",
-                isDarkTheme
-                  ? "text-[var(--text-inverse)]"
-                  : "text-[var(--text-2)]",
-              )}
-              data-testid={servingsTestId}
-            >
-              {contextLabel} · {recipe.cooking_servings}인분
-            </p>
+              <ChevronLeftIcon />
+            </button>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="cook-mobile-status inline-flex min-h-9 items-center gap-2 rounded-full px-3 text-[12px] font-extrabold leading-none">
+                <span className="cook-mobile-status-dot h-2 w-2 rounded-full" />
+                화면 켜짐
+              </span>
+              <CookModeThemeToggle
+                onToggle={onColorThemeToggle}
+                theme={colorTheme}
+                variant="mobile"
+              />
+            </div>
           </div>
-          <CookModeThemeToggle
-            onToggle={onColorThemeToggle}
-            theme={colorTheme}
-            variant="mobile"
-          />
+
+          <h1
+            className="cook-mobile-hero-title line-clamp-2 max-w-[320px] text-[24px] font-extrabold leading-[1.08]"
+            data-testid={titleTestId}
+          >
+            {recipe.title}
+          </h1>
+          <p
+            className="cook-mobile-hero-subtitle mt-2 text-[14px] font-extrabold leading-[1.25]"
+            data-testid={servingsTestId}
+          >
+            요리모드 · {recipe.cooking_servings}인분 · {contextLabel}
+          </p>
         </header>
 
         <main
           className="min-h-0 flex-1 overflow-y-auto px-4 pb-4"
           data-testid={contentTestId}
         >
-          <MobileIngredientSummary
-            colorTheme={colorTheme}
-            ingredients={recipe.ingredients}
-          />
-          <MobileStepList
-            colorTheme={colorTheme}
-            recipeTitle={recipe.title}
-            steps={recipe.steps}
-          />
+          {currentStep && stepModel ? (
+            <>
+              <CurrentStepStage
+                currentStepIndex={currentStepIndex}
+                methodColor={methodVisual.color}
+                methodLabel={methodVisual.label}
+                model={stepModel}
+                totalSteps={totalSteps}
+              />
+              <MobileAmountBoard usages={stepModel.ingredientUsages} />
+              <nav aria-label="단계 이동" data-testid="step-list">
+                <div
+                  className="mt-3 grid gap-2"
+                  data-testid="cook-mode-step-rail"
+                  style={{
+                    gridTemplateColumns: `repeat(${Math.max(totalSteps, 1)}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {steps.map((step, index) => {
+                    const isActive = index === currentStepIndex;
+
+                    return (
+                      <button
+                        aria-current={isActive ? "step" : undefined}
+                        aria-label={`${step.step_number}단계`}
+                        className={cn(
+                          "min-h-[38px] rounded-[13px] border text-[13px] font-extrabold leading-none transition-colors",
+                          isActive
+                            ? "cook-mobile-step-dot-active border-transparent"
+                            : "cook-mobile-step-dot-idle",
+                        )}
+                        data-testid={`cook-mode-step-dot-${step.step_number}`}
+                        key={step.step_number}
+                        onClick={() => selectStep(index)}
+                        type="button"
+                      >
+                        {step.step_number}
+                      </button>
+                    );
+                  })}
+                </div>
+              </nav>
+            </>
+          ) : (
+            <p
+              className="cook-mobile-empty rounded-[22px] border p-8 text-center text-sm font-bold"
+            >
+              등록된 만들기가 없어요.
+            </p>
+          )}
         </main>
       </div>
 
-      <div
-        className={cn(
-          "fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] px-4 pb-[calc(18px+env(safe-area-inset-bottom))] pt-3",
-          isDarkTheme
-            ? "bg-[linear-gradient(180deg,transparent,var(--overlay-50))]"
-            : "border-t border-[var(--line)] bg-[var(--surface-alpha-96)] shadow-[0_-10px_30px_var(--shadow-color-soft)]",
-        )}
-      >
-        <div className="flex items-center gap-2">
+      <div className="cook-mobile-bottom-bar fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] px-4 pb-[calc(18px+env(safe-area-inset-bottom))] pt-4">
+        <div className="grid grid-cols-[52px_minmax(0,1fr)_76px] gap-2.5">
           <button
-            className={cn(
-              "flex h-14 shrink-0 items-center justify-center rounded-[var(--radius-card)] px-4 text-[14px] font-medium disabled:opacity-60",
-              isDarkTheme
-                ? "border border-[var(--surface-alpha-10)] bg-[var(--surface-alpha-08)] text-[var(--text-inverse-82)]"
-                : "border border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)]",
-            )}
-            data-testid={cancelButtonTestId}
-            disabled={controlsDisabled}
-            onClick={onCancel}
+            aria-label="이전 단계"
+            className="cook-mobile-bottom-arrow min-h-14 rounded-2xl border-0 text-[22px] font-extrabold disabled:opacity-40"
+            data-testid="cook-mode-prev-step"
+            disabled={controlsDisabled || currentStepIndex <= 0}
+            onClick={() => moveStep(-1)}
             type="button"
           >
-            나가기
+            ‹
           </button>
           <button
-            className="flex h-14 min-w-0 flex-1 items-center justify-center rounded-[var(--radius-card)] border-0 bg-[var(--brand)] px-4 text-[16px] font-bold leading-none text-[var(--text-inverse)] disabled:opacity-60"
+            className="cook-mobile-next-button min-h-14 rounded-2xl border-0 px-4 text-[17px] font-extrabold leading-none disabled:opacity-60"
+            data-testid="cook-mode-next-step"
+            disabled={
+              controlsDisabled ||
+              totalSteps === 0 ||
+              currentStepIndex >= totalSteps - 1
+            }
+            onClick={() => moveStep(1)}
+            type="button"
+          >
+            {currentStepIndex >= totalSteps - 1 ? "마지막 단계" : "다음 단계"}
+          </button>
+          <button
+            className="cook-mobile-complete-button min-h-14 rounded-2xl border-0 px-3 text-[14px] font-extrabold leading-none disabled:opacity-60"
             data-testid={completeButtonTestId}
             disabled={controlsDisabled}
             onClick={onComplete}
             type="button"
           >
-            요리 완료
+            완료
           </button>
         </div>
       </div>
@@ -229,262 +231,111 @@ export function MobileCookModeView({
   );
 }
 
-function MobileStepList({
-  colorTheme,
-  recipeTitle,
-  steps,
+function CurrentStepStage({
+  currentStepIndex,
+  methodColor,
+  methodLabel,
+  model,
+  totalSteps,
 }: {
-  colorTheme: CookModeColorTheme;
-  recipeTitle: string;
-  steps: CookingModeStep[];
+  currentStepIndex: number;
+  methodColor: string;
+  methodLabel: string;
+  model: ReturnType<typeof buildCookModeStepModel>;
+  totalSteps: number;
 }) {
-  const isDarkTheme = colorTheme === "dark";
-
-  if (steps.length === 0) {
-    return (
-      <p
-        className={cn(
-          "py-8 text-center text-sm font-medium",
-          isDarkTheme ? "text-[var(--text-inverse-70)]" : "text-[var(--text-3)]",
-        )}
-      >
-        등록된 만들기가 없어요.
-      </p>
-    );
-  }
-
-  return (
-    <ol className="flex flex-col gap-3" data-testid="step-list">
-      {steps.map((step, idx) => {
-        const method = getMethodVisual(step);
-        const title = getMobileStepTitle(recipeTitle, step);
-        const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
-        const previousLabel = idx > 0 ? steps[idx - 1]?.component_label : null;
-        const showSectionHeading = shouldShowSectionHeading(
-          sectionLabel,
-          previousLabel,
-        );
-
-        return (
-          <React.Fragment key={step.step_number}>
-            {showSectionHeading ? (
-              <li
-                className={cn(
-                  "list-none px-1 pt-1 text-[13px] font-bold leading-[1.3]",
-                  isDarkTheme
-                    ? "text-[var(--text-inverse-78)]"
-                    : "text-[var(--brand)]",
-                )}
-              >
-                {sectionLabel}
-              </li>
-            ) : null}
-            <li
-              className={cn(
-                "rounded-[var(--radius-panel)] border bg-[var(--surface)] p-5 text-[var(--foreground)]",
-                isDarkTheme
-                  ? "border-[var(--surface-alpha-18)] shadow-[0_10px_28px_var(--foreground-alpha-16)]"
-                  : "border-[var(--line)] shadow-[0_8px_24px_var(--shadow-color-soft)]",
-              )}
-              data-testid="step-item"
-              style={{
-                borderTop: `4px solid ${method.border}`,
-              }}
-            >
-              <div className="mb-3 flex items-center gap-2">
-                <span
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-[15px] font-extrabold leading-none text-[var(--text-inverse)]"
-                  style={{ background: method.border }}
-                >
-                  {step.step_number}
-                </span>
-                <span
-                  className="rounded-full px-2.5 py-[5px] text-[12px] font-extrabold leading-none"
-                  style={{ background: method.bg, color: method.text }}
-                >
-                  {method.label}
-                </span>
-              </div>
-              {title ? (
-                <h2
-                  className="sr-only"
-                  style={{ color: method.text }}
-                >
-                  {title}
-                </h2>
-              ) : null}
-              <p className="text-[17px] font-semibold leading-[1.65] text-[var(--foreground)]">
-                {stripMatchingSectionPrefix(
-                  step.instruction,
-                  step.component_label,
-                ) ?? step.instruction}
-              </p>
-            </li>
-          </React.Fragment>
-        );
-      })}
-    </ol>
-  );
-}
-
-function MobileIngredientSummary({
-  colorTheme,
-  ingredients,
-}: {
-  colorTheme: CookModeColorTheme;
-  ingredients: CookingModeIngredient[];
-}) {
-  const isDarkTheme = colorTheme === "dark";
-
-  if (ingredients.length === 0) {
-    return null;
-  }
-
   return (
     <section
-      aria-labelledby="mobile-ingredients-heading"
-      className={cn(
-        "mb-3 rounded-[var(--radius-card)] px-3 py-3",
-        isDarkTheme
-          ? "bg-[var(--surface-alpha-08)]"
-          : "border border-[var(--line)] bg-[var(--surface)] shadow-[0_8px_24px_var(--shadow-color-soft)]",
-      )}
-      data-testid="mobile-ingredient-summary"
+      aria-label="현재 조리 단계"
+      className="cook-mobile-current-step min-h-[298px] rounded-[24px] border p-5"
+      data-testid="cook-mode-current-step"
+      style={{ borderTopColor: methodColor, borderTopWidth: 4 }}
     >
-      <h2
-        className={cn(
-          "mb-2 text-[12px] font-semibold leading-[1.2]",
-          isDarkTheme ? "text-[var(--text-inverse-68)]" : "text-[var(--text-2)]",
-        )}
-        id="mobile-ingredients-heading"
-      >
-        재료
-      </h2>
-      <ul
-        className="flex flex-wrap gap-x-2 gap-y-1.5"
-        data-testid="ingredient-list"
-      >
-        {ingredients.map((ingredient, idx) => {
-          const amountLabel = formatIngredientAmount(ingredient);
-          const displayText = ingredient.display_text
-            ? stripMatchingSectionPrefix(
-                ingredient.display_text,
-                ingredient.component_label,
-              )
-            : null;
-          const usesDisplayText =
-            typeof displayText === "string" &&
-            displayText.includes(ingredient.standard_name);
-          const sectionLabel = normalizeRecipeSectionLabel(
-            ingredient.component_label,
-          );
-          const previousLabel =
-            idx > 0 ? ingredients[idx - 1]?.component_label : null;
-          const showSectionHeading = shouldShowSectionHeading(
-            sectionLabel,
-            previousLabel,
-          );
+      <div className="mb-[18px] flex items-center justify-between gap-3">
+        <span
+          className="cook-mobile-muted-text inline-flex items-center gap-2 text-[13px] font-extrabold"
+        >
+          <strong
+            className="cook-mobile-counter inline-flex h-[30px] min-w-[38px] items-center justify-center rounded-full px-3 text-[14px]"
+            data-testid="cook-mode-counter"
+          >
+            {currentStepIndex + 1}
+          </strong>
+          <span>{totalSteps}단계 중</span>
+        </span>
+        <span
+          className="cook-mobile-method-pill rounded-full px-3 py-2 text-[13px] font-extrabold leading-none"
+          style={{ backgroundColor: methodColor }}
+        >
+          {methodLabel}
+        </span>
+      </div>
 
-          return (
-            <React.Fragment key={`${ingredient.ingredient_id}-${idx}`}>
-              {showSectionHeading ? (
-                <li
-                  className={cn(
-                    "basis-full pt-1 text-[12px] font-bold leading-[1.3]",
-                    isDarkTheme
-                      ? "text-[var(--text-inverse-72)]"
-                      : "text-[var(--brand)]",
-                  )}
-                >
-                  {sectionLabel}
-                </li>
-              ) : null}
-              <li
-                className={cn(
-                  "inline-flex min-h-7 items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] font-medium leading-[1.25]",
-                  isDarkTheme
-                    ? "bg-[var(--surface-alpha-11)] text-[var(--text-inverse-88)]"
-                    : "bg-[var(--surface-fill)] text-[var(--foreground)]",
-                )}
-                data-testid="ingredient-item"
-              >
-                <span>
-                  {usesDisplayText ? displayText : ingredient.standard_name}
-                </span>
-                {!usesDisplayText && amountLabel ? (
-                  <span
-                    className={
-                      isDarkTheme
-                        ? "text-[var(--text-inverse-70)]"
-                        : "text-[var(--text-3)]"
-                    }
-                  >
-                    {amountLabel}
-                  </span>
-                ) : null}
-              </li>
-            </React.Fragment>
-          );
-        })}
-      </ul>
+      <h2
+        className="cook-mobile-primary-text mb-4 text-[21px] font-extrabold leading-[1.18]"
+        data-testid="cook-mode-current-step-title"
+      >
+        {model.title}
+      </h2>
+      <p
+        className="cook-mobile-primary-text min-h-[116px] text-[28px] font-extrabold leading-[1.32] [word-break:keep-all]"
+        data-testid="cook-mode-current-step-copy"
+      >
+        {model.instruction}
+      </p>
+      <div className="mt-[18px] flex flex-wrap gap-2">
+        <span
+          className="cook-mobile-meta-pill rounded-xl px-3 py-2 text-[13px] font-extrabold"
+        >
+          {model.heatLabel}
+        </span>
+        <span
+          className="cook-mobile-meta-pill rounded-xl px-3 py-2 text-[13px] font-extrabold"
+        >
+          {model.durationLabel}
+        </span>
+      </div>
     </section>
   );
 }
 
-function getMethodVisual(step: CookingModeStep): MethodVisual {
-  const key =
-    step.cooking_method.color_key ||
-    step.cooking_method.code ||
-    step.cooking_method.label;
-  const normalized = key?.toLowerCase().replace(/\s+/g, "_") ?? "prep";
-  const methodKey = METHOD_ALIASES[normalized] ?? "prep";
-  const visual = METHOD_VISUALS[methodKey];
-
-  return {
-    ...visual,
-    label: step.cooking_method.label || visual.label,
-  };
-}
-
-function getMobileStepTitle(recipeTitle: string, step: CookingModeStep) {
-  const plannerTitles = ["재료 손질", "버무리기"];
-  const standaloneTitles = [
-    "양념장 만들기",
-    "고기 재우기",
-    "센불 볶기",
-    "채소 넣기",
-  ];
-
-  if (recipeTitle.includes("닭가슴살")) {
-    return plannerTitles[step.step_number - 1] ?? `${step.step_number}단계`;
-  }
-
-  if (recipeTitle.includes("제육")) {
-    return standaloneTitles[step.step_number - 1] ?? `${step.step_number}단계`;
-  }
-
-  return `${step.step_number}단계`;
-}
-
-function formatIngredientAmount(ingredient: CookingModeIngredient) {
-  if (ingredient.display_text) {
-    return (
-      stripMatchingSectionPrefix(
-        ingredient.display_text,
-        ingredient.component_label,
-      ) ?? ingredient.display_text
-    );
-  }
-
-  if (ingredient.ingredient_type === "TO_TASTE") {
-    return "적당량";
-  }
-
-  if (ingredient.amount === null) {
-    return "";
-  }
-
-  return `${ingredient.amount}${ingredient.unit ?? ""}`;
+function MobileAmountBoard({ usages }: { usages: CookModeIngredientUsage[] }) {
+  return (
+    <section
+      aria-label="이번 단계 재료량"
+      className="cook-mobile-amount-board mt-3 rounded-[22px] p-[15px]"
+      data-testid="cook-mode-current-amount-board"
+    >
+      <div className="cook-mobile-amount-head mb-2.5 flex items-center justify-between text-[13px] font-extrabold">
+        <span>이번에 쓸 양</span>
+        <span>{usages.length}개</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2.5">
+        {usages.map((usage) => (
+          <div
+            className="cook-mobile-amount-card min-h-[94px] rounded-[18px] p-3"
+            key={usage.ingredient.ingredient_id}
+          >
+            <b
+              className="cook-mobile-amount-name mb-2 block text-[14px] font-bold"
+            >
+              {usage.ingredient.standard_name}
+            </b>
+            <strong className="cook-mobile-amount-value block text-[27px] font-extrabold leading-none">
+              {usage.amountLabel || "-"}
+            </strong>
+            {usage.note ? (
+              <small
+                className="cook-mobile-amount-note mt-1.5 block text-[12px] font-extrabold"
+              >
+                {usage.note}
+              </small>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function ChevronLeftIcon() {

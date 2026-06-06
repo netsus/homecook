@@ -190,32 +190,54 @@ async function installCookModeRoutes(page: Page) {
 }
 
 async function expectCompactCookMode(page: Page) {
-  await expect(page.getByTestId("mobile-ingredient-summary")).toBeVisible();
+  await expect(page.getByTestId("cook-mode-current-step")).toBeVisible();
+  await expect(page.getByTestId("cook-mode-current-amount-board")).toBeVisible();
   await expect(page.getByTestId("cook-mode-servings")).toContainText("3인분");
   await expect(page.getByTestId("step-list")).toBeVisible();
+  await expect(page.getByTestId("cook-mode-step-rail")).toBeVisible();
 
   const order = await page
-    .locator('[data-testid="mobile-ingredient-summary"], [data-testid="step-list"]')
+    .locator(
+      [
+        '[data-testid="cook-mode-current-step"]',
+        '[data-testid="cook-mode-current-amount-board"]',
+        '[data-testid="step-list"]',
+      ].join(", "),
+    )
     .evaluateAll((elements) =>
       elements.map((element) => element.getAttribute("data-testid")),
     );
-  expect(order).toEqual(["mobile-ingredient-summary", "step-list"]);
+  expect(order).toEqual([
+    "cook-mode-current-step",
+    "cook-mode-current-amount-board",
+    "step-list",
+  ]);
 
-  const gap = await page.evaluate(() => {
-    const ingredients = document
-      .querySelector('[data-testid="mobile-ingredient-summary"]')
+  const gaps = await page.evaluate(() => {
+    const step = document
+      .querySelector('[data-testid="cook-mode-current-step"]')
+      ?.getBoundingClientRect();
+    const amountBoard = document
+      .querySelector('[data-testid="cook-mode-current-amount-board"]')
       ?.getBoundingClientRect();
     const steps = document
       .querySelector('[data-testid="step-list"]')
       ?.getBoundingClientRect();
 
-    if (!ingredients || !steps) {
-      return Number.POSITIVE_INFINITY;
+    if (!step || !amountBoard || !steps) {
+      return {
+        stepToAmount: Number.POSITIVE_INFINITY,
+        amountToSteps: Number.POSITIVE_INFINITY,
+      };
     }
 
-    return steps.top - ingredients.bottom;
+    return {
+      stepToAmount: amountBoard.top - step.bottom,
+      amountToSteps: steps.top - amountBoard.bottom,
+    };
   });
-  expect(gap).toBeLessThanOrEqual(16);
+  expect(gaps.stepToAmount).toBeLessThanOrEqual(24);
+  expect(gaps.amountToSteps).toBeLessThanOrEqual(24);
 }
 
 test("capture design polish slice6 authority evidence", async ({ browser }) => {

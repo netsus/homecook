@@ -1,20 +1,23 @@
 "use client";
 
-import Link from "next/link";
 import React from "react";
 
 import {
   CookModeThemeToggle,
   type CookModeColorTheme,
 } from "@/components/cooking/cook-mode-theme-toggle";
-import type { CookingModeRecipe, CookingModeStep } from "@/types/cooking";
-import { getCookingMethodColor } from "@/lib/cooking-method-colors";
+import {
+  buildCookModeStepModel,
+  formatIngredientAmountOnly,
+  type CookModeIngredientUsage,
+} from "@/components/cooking/cook-mode-step-model";
+import type { CookingModeIngredient, CookingModeRecipe } from "@/types/cooking";
+import { getCookingMethodVisual } from "@/lib/cooking-method-colors";
 import {
   normalizeRecipeSectionLabel,
   shouldShowSectionHeading,
-  stripMatchingSectionPrefix,
 } from "@/lib/recipe-section-labels";
-import { WebButton, WebShell, WebTopNav } from "@/components/web";
+import { WebShell, WebTopNav } from "@/components/web";
 import { cn } from "@/components/web/utils";
 
 interface CookModeDesktopViewProps {
@@ -57,15 +60,41 @@ export function CookModeDesktopView({
   onComplete,
   onColorThemeToggle,
 }: CookModeDesktopViewProps) {
-  const cancelLabel = "취소";
-  const breadcrumb =
-    variant === "planner"
-      ? { current: "플래너 요리모드", href: "/planner", parent: "플래너" }
-      : { current: "독립 요리모드", href: `/recipe/${recipe.id}`, parent: "레시피" };
-  const heroClassName =
-    variant === "planner"
-      ? "web-cook-mode-hero web-cook-mode-hero-planner"
-      : "web-cook-mode-hero web-cook-mode-hero-standalone";
+  const [currentStepIndex, setCurrentStepIndex] = React.useState(0);
+  const steps = recipe.steps;
+  const totalSteps = steps.length;
+  const currentStep = steps[currentStepIndex] ?? null;
+  const stepModel = currentStep
+    ? buildCookModeStepModel(recipe, currentStep)
+    : null;
+  const methodVisual = getCookingMethodVisual(currentStep?.cooking_method);
+  const contextLabel = variant === "planner" ? "플래너 요리" : "독립 요리";
+  const summaryParts = [
+    "요리모드",
+    `${recipe.cooking_servings}인분`,
+    mealContextLabel ?? contextLabel,
+  ];
+
+  React.useEffect(() => {
+    setCurrentStepIndex((index) => {
+      if (totalSteps === 0) return 0;
+
+      return Math.min(index, totalSteps - 1);
+    });
+  }, [totalSteps]);
+
+  const moveStep = React.useCallback(
+    (delta: number) => {
+      setCurrentStepIndex((index) =>
+        Math.max(0, Math.min(totalSteps - 1, index + delta)),
+      );
+    },
+    [totalSteps],
+  );
+
+  const selectStep = React.useCallback((index: number) => {
+    setCurrentStepIndex(index);
+  }, []);
 
   return (
     <WebShell
@@ -86,123 +115,230 @@ export function CookModeDesktopView({
       />
 
       <main
-        className="web-cook-mode-screen"
+        className="web-cook-mode-screen web-cook-mode-prototype-screen"
         data-cook-theme={colorTheme}
         data-testid={screenTestId}
       >
-        <div className="web-cook-mode-topbar">
-          <nav aria-label="현재 위치" className="web-cook-breadcrumb">
-            <Link href={breadcrumb.href}>{breadcrumb.parent}</Link>
-            <span aria-hidden="true">/</span>
-            <strong>{breadcrumb.current}</strong>
-          </nav>
-          <CookModeThemeToggle
-            onToggle={onColorThemeToggle}
-            theme={colorTheme}
-            variant="desktop"
-          />
-        </div>
+        <h1 className="sr-only">요리모드</h1>
 
-        <section className={heroClassName}>
-          <h1 className="web-cook-mode-page-title">요리모드</h1>
-          <div className="web-cook-mode-hero-meta">
-            {mealContextLabel ? <span>{mealContextLabel}</span> : null}
-            <span>
-              {variant === "planner" ? "플래너 요리" : "독립 요리"} ·{" "}
-              <span data-testid={servingsTestId}>{recipe.cooking_servings}인분</span>
-            </span>
+        <div
+          className="web-cook-prototype-board"
+          data-testid={contentTestId}
+        >
+          <header className="web-cook-prototype-top">
+            <div className="web-cook-prototype-brand">HOMECOOK</div>
+            <div className="web-cook-prototype-title">
+              <b data-testid={titleTestId}>{recipe.title}</b>
+              <span>
+                {summaryParts.map((part, index) => (
+                  <React.Fragment key={`${part}-${index}`}>
+                    {index > 0 ? " · " : null}
+                    <span
+                      data-testid={
+                        part === `${recipe.cooking_servings}인분`
+                          ? servingsTestId
+                          : undefined
+                      }
+                    >
+                      {part}
+                    </span>
+                  </React.Fragment>
+                ))}
+              </span>
+            </div>
+            <div className="web-cook-prototype-actions">
+              <span className="web-cook-prototype-status">화면 켜짐</span>
+              <CookModeThemeToggle
+                onToggle={onColorThemeToggle}
+                theme={colorTheme}
+                variant="desktop"
+              />
+              <button
+                className="web-cook-prototype-cancel"
+                data-testid={cancelButtonTestId}
+                disabled={controlsDisabled}
+                onClick={onCancel}
+                type="button"
+              >
+                취소
+              </button>
+            </div>
+          </header>
+
+          <div className="web-cook-prototype-grid">
+            <aside
+              className="web-cook-prototype-panel"
+              data-testid="cook-mode-action-rail"
+            >
+              <h2>꺼내둘 재료</h2>
+              <IngredientBoard
+                activeIngredientIds={stepModel?.activeIngredientIds ?? new Set()}
+                ingredients={recipe.ingredients}
+              />
+              <p className="web-cook-prototype-note">
+                총량은 왼쪽에서 고정하고, 지금 넣을 양은 가운데에서 크게 봅니다.
+              </p>
+            </aside>
+
+            {currentStep && stepModel ? (
+              <section
+                aria-label="현재 조리 단계"
+                className="web-cook-prototype-panel web-cook-prototype-focus"
+                data-testid="cook-mode-current-step"
+              >
+                <div>
+                  <div className="web-cook-prototype-count">
+                    <strong data-testid="cook-mode-counter">
+                      {currentStepIndex + 1}
+                    </strong>
+                    <span
+                      className="web-cook-prototype-method"
+                      style={{ backgroundColor: methodVisual.color }}
+                    >
+                      {methodVisual.label}
+                    </span>
+                    <span className="web-cook-prototype-step-total">
+                      {totalSteps}단계 중
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  className="web-cook-prototype-copy"
+                  data-testid="step-item"
+                  style={{ borderColor: methodVisual.color }}
+                >
+                  <h2 data-testid="cook-mode-current-step-title">
+                    {stepModel.title}
+                  </h2>
+                  <p data-testid="cook-mode-current-step-copy">
+                    {stepModel.instruction}
+                  </p>
+                  <div className="web-cook-prototype-meta-row">
+                    <span>{stepModel.heatLabel}</span>
+                    <span>{stepModel.durationLabel}</span>
+                  </div>
+                  <CurrentAmountBoard usages={stepModel.ingredientUsages} />
+                </div>
+
+                <div className="web-cook-prototype-controls">
+                  <button
+                    aria-label="이전 단계"
+                    className="web-cook-prototype-arrow"
+                    data-testid="cook-mode-prev-step"
+                    disabled={controlsDisabled || currentStepIndex <= 0}
+                    onClick={() => moveStep(-1)}
+                    type="button"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    aria-label="다음 단계"
+                    className="web-cook-prototype-arrow"
+                    data-testid="cook-mode-next-step"
+                    disabled={controlsDisabled || totalSteps === 0}
+                    onClick={() => moveStep(1)}
+                    type="button"
+                  >
+                    ›
+                  </button>
+                  <button
+                    className="web-cook-prototype-complete"
+                    data-testid={completeButtonTestId}
+                    disabled={controlsDisabled}
+                    onClick={onComplete}
+                    type="button"
+                  >
+                    요리 완료
+                  </button>
+                </div>
+              </section>
+            ) : (
+              <section className="web-cook-prototype-panel web-cook-prototype-focus">
+                <p className="web-cook-prototype-empty">
+                  등록된 만들기가 없어요.
+                </p>
+              </section>
+            )}
+
+            <aside className="web-cook-prototype-panel">
+              <h2>조리 순서</h2>
+              <ol className="web-cook-prototype-timeline" data-testid="step-list">
+                {steps.map((step, index) => {
+                  const isActive = index === currentStepIndex;
+
+                  return (
+                    <li key={step.step_number}>
+                      <button
+                        aria-current={isActive ? "step" : undefined}
+                        className={cn(
+                          "web-cook-prototype-timeline-row",
+                          isActive && "web-cook-prototype-timeline-row-active",
+                        )}
+                        data-testid={`cook-mode-timeline-step-${step.step_number}`}
+                        onClick={() => selectStep(index)}
+                        type="button"
+                      >
+                        <strong>{step.step_number}</strong>
+                        <span>{getTimelineTitle(step)}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </aside>
           </div>
-          <h2 data-testid={titleTestId}>{recipe.title}</h2>
-          <p className="web-cook-mode-summary">
-            만들기 {recipe.steps.length}개 · 필요한 재료 {recipe.ingredients.length}개
-          </p>
-          {variant === "standalone" ? (
-            <p className="web-cook-standalone-notice">
-              이 요리는 플래너 끼니와 연결되지 않아요. 팬트리 재료 소진만 진행합니다.
-            </p>
-          ) : null}
-        </section>
-
-        <div className="web-cook-mode-layout" data-testid={contentTestId}>
-          <aside className="web-cook-checklist-panel" data-testid="cook-mode-action-rail">
-            <h2 id={`${screenTestId}-ingredients-heading`}>필요한 재료</h2>
-            <IngredientSummary recipe={recipe} />
-            <WebButton
-              data-testid={completeButtonTestId}
-              disabled={controlsDisabled}
-              fullWidth
-              onClick={onComplete}
-            >
-              요리 완료
-            </WebButton>
-            <WebButton
-              data-testid={cancelButtonTestId}
-              disabled={controlsDisabled}
-              fullWidth
-              onClick={onCancel}
-              variant="ghost"
-            >
-              {cancelLabel}
-            </WebButton>
-          </aside>
-
-          <section
-            aria-labelledby={`${screenTestId}-steps-heading`}
-            className="web-cook-step-panel"
-          >
-            <h2 id={`${screenTestId}-steps-heading`}>만들기</h2>
-            <StepList steps={recipe.steps} />
-          </section>
         </div>
       </main>
     </WebShell>
   );
 }
 
-function IngredientSummary({
-  recipe,
+function IngredientBoard({
+  activeIngredientIds,
+  ingredients,
 }: {
-  recipe: CookingModeRecipe;
+  activeIngredientIds: Set<string>;
+  ingredients: CookingModeIngredient[];
 }) {
-  if (recipe.ingredients.length === 0) {
+  if (ingredients.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-[var(--muted)]">
-        등록된 재료가 없어요.
-      </p>
+      <p className="web-cook-prototype-empty">등록된 재료가 없어요.</p>
     );
   }
 
   return (
-    <ul
-      className="web-cook-checklist"
-      data-testid="ingredient-list"
-    >
-      {recipe.ingredients.map((ingredient, idx) => {
+    <ul className="web-cook-prototype-ingredients" data-testid="ingredient-list">
+      {ingredients.map((ingredient, idx) => {
         const sectionLabel = normalizeRecipeSectionLabel(
           ingredient.component_label,
         );
         const previousLabel =
-          idx > 0 ? recipe.ingredients[idx - 1]?.component_label : null;
+          idx > 0 ? ingredients[idx - 1]?.component_label : null;
         const showSectionHeading = shouldShowSectionHeading(
           sectionLabel,
           previousLabel,
         );
+        const isActive = activeIngredientIds.has(ingredient.ingredient_id);
 
         return (
           <React.Fragment key={`${ingredient.ingredient_id}-${idx}`}>
             {showSectionHeading ? (
-              <li className="px-1 pt-2 text-[13px] font-bold text-[var(--brand)] first:pt-0">
+              <li className="web-cook-prototype-section-label">
                 {sectionLabel}
               </li>
             ) : null}
             <li data-testid="ingredient-item">
-              <div className="web-cook-checklist-item">
-                <span className="web-cook-check-name">
-                  {ingredient.standard_name}
-                </span>
-                <span className="web-cook-check-amount">
-                  {formatIngredientAmountOnly(ingredient)}
-                </span>
+              <div
+                className={cn(
+                  "web-cook-prototype-ingredient",
+                  isActive && "web-cook-prototype-ingredient-active",
+                )}
+                data-active={isActive ? "true" : "false"}
+                data-testid={`cook-mode-ingredient-${ingredient.ingredient_id}`}
+              >
+                <b>{ingredient.standard_name}</b>
+                <span>{formatIngredientAmountOnly(ingredient) || "-"}</span>
               </div>
             </li>
           </React.Fragment>
@@ -212,106 +348,39 @@ function IngredientSummary({
   );
 }
 
-function StepList({ steps }: { steps: CookingModeStep[] }) {
-  if (steps.length === 0) {
-    return (
-      <p className="py-8 text-center text-sm text-[var(--muted)]">
-        등록된 만들기가 없어요.
-      </p>
-    );
-  }
-
+function CurrentAmountBoard({
+  usages,
+}: {
+  usages: CookModeIngredientUsage[];
+}) {
   return (
-    <ol className="web-cook-step-list" data-testid="step-list">
-      {steps.map((step, idx) => {
-        const methodColor = getCookingMethodColor(step.cooking_method.color_key);
-        const heat = formatHeatLevel(step.heat_level);
-        const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
-        const previousLabel = idx > 0 ? steps[idx - 1]?.component_label : null;
-        const showSectionHeading = shouldShowSectionHeading(
-          sectionLabel,
-          previousLabel,
-        );
-
-        return (
-          <React.Fragment key={step.step_number}>
-            {showSectionHeading ? (
-              <li className="list-none px-1 pt-2 text-[13px] font-bold text-[var(--brand)] first:pt-0">
-                {sectionLabel}
-              </li>
-            ) : null}
-            <li
-              className="web-cook-step-item"
-              data-testid="step-item"
-              style={{ borderLeft: `4px solid ${methodColor}` }}
-            >
-              <div className="web-cook-step-copy">
-                <div className="web-cook-step-meta">
-                  {step.cooking_method.label ? (
-                    <span
-                      className="web-cook-method-pill"
-                      style={{ backgroundColor: methodColor }}
-                    >
-                      {step.cooking_method.label}
-                    </span>
-                  ) : null}
-                  {heat ? <span className="web-cook-heat-pill">{heat}</span> : null}
-                </div>
-                <p>
-                  {stripMatchingSectionPrefix(
-                    step.instruction,
-                    step.component_label,
-                  ) ?? step.instruction}
-                </p>
-              </div>
-              <span className="web-cook-step-number">단계 {step.step_number}</span>
-            </li>
-          </React.Fragment>
-        );
-      })}
-    </ol>
+    <section
+      aria-label="이번 단계 재료량"
+      className="web-cook-prototype-amount-board"
+      data-testid="cook-mode-current-amount-board"
+    >
+      <div className="web-cook-prototype-amount-head">
+        <span>이번에 쓸 양</span>
+        <span>{usages.length}개</span>
+      </div>
+      <div className="web-cook-prototype-amounts">
+        {usages.map((usage) => (
+          <div
+            className="web-cook-prototype-amount"
+            key={usage.ingredient.ingredient_id}
+          >
+            <b>{usage.ingredient.standard_name}</b>
+            <strong>{usage.amountLabel || "-"}</strong>
+            {usage.note ? <small>{usage.note}</small> : null}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
-function formatIngredientAmountOnly(
-  ingredient: CookingModeRecipe["ingredients"][number],
-) {
-  if (ingredient.ingredient_type === "TO_TASTE") {
-    return "적당량";
-  }
+function getTimelineTitle(step: CookingModeRecipe["steps"][number]) {
+  const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
 
-  if (ingredient.display_text) {
-    const normalized =
-      stripMatchingSectionPrefix(
-        ingredient.display_text,
-        ingredient.component_label,
-      ) ?? ingredient.display_text;
-    const withoutName = normalized.replace(ingredient.standard_name, "").trim();
-
-    return withoutName || normalized;
-  }
-
-  if (ingredient.amount === null) {
-    return "";
-  }
-
-  return `${ingredient.amount}${ingredient.unit ?? ""}`;
-}
-
-function formatHeatLevel(heat: string | null): string | null {
-  if (!heat) return null;
-  switch (heat) {
-    case "high":
-      return "강불";
-    case "medium_high":
-      return "중강불";
-    case "medium":
-      return "중불";
-    case "medium_low":
-      return "중약불";
-    case "low":
-      return "약불";
-    default:
-      return heat;
-  }
+  return sectionLabel || step.cooking_method.label || `${step.step_number}단계`;
 }

@@ -514,6 +514,179 @@
   white-space: nowrap;
 }
 
+.cook-mobile-prototype {
+  --cook-mobile-bg: #f6fbff;
+  --cook-mobile-fg: #212529;
+  --cook-mobile-hero-bg:
+    radial-gradient(circle at 18% 0%, rgba(0, 161, 255, 0.22), transparent 36%),
+    linear-gradient(180deg, #005b91 0%, #00a1ff 58%, transparent 100%);
+  --cook-mobile-header-control-bg: rgba(255, 255, 255, 0.12);
+  --cook-mobile-header-status-bg: rgba(255, 255, 255, 0.14);
+  --cook-mobile-header-text: var(--text-inverse);
+  --cook-mobile-header-muted: rgba(255, 255, 255, 0.72);
+  --cook-mobile-header-status-text: rgba(255, 255, 255, 0.84);
+  --cook-mobile-step-bg: var(--surface);
+  --cook-mobile-step-border: rgba(255, 255, 255, 0.16);
+  --cook-mobile-panel-bg: var(--surface);
+  --cook-mobile-panel-strong: #212529;
+  --cook-mobile-panel-muted: #495057;
+  --cook-mobile-panel-subtle: #f3faff;
+  --cook-mobile-blue-strong: #005b91;
+  --cook-mobile-blue-action: #0087d7;
+  --cook-mobile-blue-soft: #d9f0ff;
+  --cook-mobile-blue-panel: #007fd0;
+  --cook-mobile-blue-border: rgba(0, 161, 255, 0.18);
+  --cook-mobile-blue-shadow: rgba(0, 161, 255, 0.08);
+  --cook-mobile-empty-border: #8bd2ff;
+  --cook-mobile-bottom-bg:
+    linear-gradient(180deg, transparent, rgba(5, 7, 10, 0.96) 22%);
+  --cook-mobile-dark-card: #111923;
+  --cook-mobile-dark-panel: #101820;
+  --cook-mobile-dark-note: #95a6b4;
+
+  background-color: var(--cook-mobile-bg);
+  color: var(--cook-mobile-fg);
+}
+
+.cook-mobile-prototype[data-cook-theme="dark"] {
+  --cook-mobile-bg: #080c10;
+  --cook-mobile-fg: #f5f8fb;
+  --cook-mobile-hero-bg:
+    radial-gradient(circle at 18% 0%, rgba(0, 161, 255, 0.32), transparent 36%),
+    linear-gradient(180deg, #07111a 0%, #0a1620 70%, transparent 100%);
+  --cook-mobile-step-bg: var(--cook-mobile-dark-card);
+  --cook-mobile-step-border: rgba(139, 210, 255, 0.22);
+  --cook-mobile-panel-bg: var(--cook-mobile-dark-card);
+  --cook-mobile-panel-strong: #f5f8fb;
+  --cook-mobile-panel-muted: #c9d5df;
+  --cook-mobile-panel-subtle: var(--cook-mobile-dark-panel);
+  --cook-mobile-empty-border: rgba(139, 210, 255, 0.22);
+  --cook-mobile-blue-panel: #0a1620;
+}
+
+.cook-mobile-prototype-backdrop {
+  background: var(--cook-mobile-hero-bg);
+}
+
+.cook-mobile-icon-button,
+.cook-mobile-bottom-arrow {
+  background: var(--cook-mobile-header-control-bg);
+  color: var(--text-inverse);
+}
+
+.cook-mobile-status {
+  background: var(--cook-mobile-header-status-bg);
+  color: var(--cook-mobile-header-status-text);
+}
+
+.cook-mobile-status-dot {
+  background: var(--brand);
+  box-shadow: 0 0 0 4px var(--brand-shadow-color);
+}
+
+.cook-mobile-hero-title,
+.cook-mobile-method-pill,
+.cook-mobile-next-button {
+  color: var(--text-inverse);
+}
+
+.cook-mobile-hero-subtitle {
+  color: var(--cook-mobile-header-muted);
+}
+
+.cook-mobile-step-dot-active {
+  background: var(--cook-mobile-blue-soft);
+  color: var(--cook-mobile-blue-strong);
+}
+
+.cook-mobile-step-dot-idle {
+  border-color: var(--cook-mobile-blue-border);
+  background: var(--surface);
+  color: var(--cook-mobile-blue-panel);
+  box-shadow: 0 4px 16px var(--cook-mobile-blue-shadow);
+}
+
+.cook-mobile-prototype[data-cook-theme="dark"] .cook-mobile-step-dot-idle {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.74);
+  box-shadow: none;
+}
+
+.cook-mobile-empty,
+.cook-mobile-current-step {
+  border-color: var(--cook-mobile-step-border);
+  background: var(--cook-mobile-step-bg);
+  color: var(--cook-mobile-panel-strong);
+}
+
+.cook-mobile-empty {
+  border-color: var(--cook-mobile-empty-border);
+  color: var(--cook-mobile-panel-muted);
+}
+
+.cook-mobile-current-step {
+  box-shadow: 0 22px 36px var(--shadow-color-heavy);
+}
+
+.cook-mobile-muted-text,
+.cook-mobile-meta-pill,
+.cook-mobile-amount-name {
+  color: var(--cook-mobile-panel-muted);
+}
+
+.cook-mobile-primary-text,
+.cook-mobile-amount-card {
+  color: var(--cook-mobile-panel-strong);
+}
+
+.cook-mobile-counter {
+  background: var(--cook-mobile-blue-strong);
+  color: var(--text-inverse);
+}
+
+.cook-mobile-meta-pill {
+  background: var(--cook-mobile-panel-subtle);
+}
+
+.cook-mobile-bottom-bar {
+  background: var(--cook-mobile-bottom-bg);
+}
+
+.cook-mobile-next-button {
+  background: var(--brand);
+}
+
+.cook-mobile-complete-button,
+.cook-mobile-amount-card {
+  background: var(--surface);
+}
+
+.cook-mobile-complete-button,
+.cook-mobile-amount-value {
+  color: var(--cook-mobile-blue-action);
+}
+
+.cook-mobile-amount-board {
+  background: var(--cook-mobile-blue-panel);
+}
+
+.cook-mobile-amount-head {
+  color: var(--text-inverse-78);
+}
+
+.cook-mobile-prototype[data-cook-theme="dark"] .cook-mobile-amount-card {
+  background: var(--cook-mobile-dark-card);
+}
+
+.cook-mobile-amount-note {
+  color: var(--text-3);
+}
+
+.cook-mobile-prototype[data-cook-theme="dark"] .cook-mobile-amount-note {
+  color: var(--cook-mobile-dark-note);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -5393,6 +5566,451 @@ button {
 
   .web-cook-checklist-panel .web-button + .web-button {
     margin-top: 10px;
+  }
+
+  .web-cook-mode-prototype-screen {
+    padding: 28px 0 80px;
+  }
+
+  .web-cook-prototype-board {
+    min-height: min(740px, calc(100vh - var(--web-nav-h) - 70px));
+    overflow: hidden;
+    border: 1px solid var(--web-line);
+    border-radius: 20px;
+    background:
+      linear-gradient(90deg, rgba(0, 161, 255, 0.1), transparent 38%),
+      var(--web-bg-alt);
+    box-shadow: var(--web-shadow-card);
+  }
+
+  .web-cook-prototype-top {
+    display: grid;
+    min-height: 74px;
+    grid-template-columns: 180px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 18px;
+    border-bottom: 1px solid var(--web-line);
+    padding: 0 28px;
+  }
+
+  .web-cook-prototype-brand {
+    color: var(--web-brand);
+    font-size: 19px;
+    font-weight: 900;
+    letter-spacing: 0;
+  }
+
+  .web-cook-prototype-title {
+    min-width: 0;
+    text-align: center;
+  }
+
+  .web-cook-prototype-title b {
+    display: block;
+    overflow: hidden;
+    color: var(--web-text-1);
+    font-size: 18px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .web-cook-prototype-title > span {
+    display: block;
+    margin-top: 4px;
+    color: var(--web-text-3);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .web-cook-prototype-title > span span {
+    display: inline;
+    margin-top: 0;
+  }
+
+  .web-cook-prototype-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .web-cook-prototype-status,
+  .web-cook-prototype-cancel {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    border-radius: var(--web-r-pill);
+    font-size: 13px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .web-cook-prototype-status {
+    gap: 8px;
+    background: var(--web-brand-wash);
+    color: var(--web-brand-accessible);
+    padding: 0 13px;
+  }
+
+  .web-cook-prototype-status::before {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--web-r-pill);
+    background: var(--web-brand);
+    box-shadow: 0 0 0 4px rgba(0, 161, 255, 0.16);
+    content: "";
+  }
+
+  .web-cook-prototype-cancel {
+    border: 1px solid var(--web-line);
+    background: var(--web-surface);
+    color: var(--web-text-2);
+    padding: 0 14px;
+  }
+
+  .web-cook-prototype-grid {
+    display: grid;
+    grid-template-columns: 250px minmax(360px, 1fr) 250px;
+    gap: 20px;
+    padding: 22px;
+  }
+
+  .web-cook-prototype-panel {
+    min-width: 0;
+    border: 1px solid var(--web-line);
+    border-radius: 20px;
+    background: var(--web-surface);
+    padding: 18px;
+  }
+
+  .web-cook-prototype-panel h2 {
+    margin: 0 0 15px;
+    color: var(--web-text-1);
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 0;
+  }
+
+  .web-cook-prototype-ingredients,
+  .web-cook-prototype-timeline {
+    display: grid;
+    gap: 9px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .web-cook-prototype-section-label {
+    margin-top: 3px;
+    color: var(--web-brand-accessible);
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .web-cook-prototype-ingredient {
+    display: flex;
+    min-height: 54px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid var(--web-line);
+    border-radius: 14px;
+    background: var(--web-bg-alt);
+    padding: 11px 12px;
+  }
+
+  .web-cook-prototype-ingredient-active {
+    border-color: var(--web-brand);
+    background: var(--web-brand-wash);
+  }
+
+  .web-cook-prototype-ingredient b {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--web-text-1);
+    font-size: 14px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .web-cook-prototype-ingredient span {
+    color: var(--web-brand-accessible);
+    font-size: 17px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .web-cook-prototype-note {
+    margin: 14px 0 0;
+    border-radius: 16px;
+    background: var(--web-brand-wash);
+    color: var(--web-text-2);
+    padding: 13px;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.45;
+  }
+
+  .web-cook-prototype-focus {
+    display: grid;
+    min-height: 588px;
+    grid-template-rows: auto 1fr auto;
+    border-color: rgba(0, 161, 255, 0.34);
+    background:
+      linear-gradient(180deg, var(--web-surface) 0%, rgba(0, 161, 255, 0.06) 100%);
+  }
+
+  .web-cook-prototype-count {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .web-cook-prototype-count strong {
+    display: inline-flex;
+    width: 54px;
+    height: 54px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 18px;
+    background: var(--web-brand-accessible);
+    color: var(--web-text-inverse);
+    font-size: 20px;
+    font-weight: 900;
+  }
+
+  .web-cook-prototype-method,
+  .web-cook-prototype-step-total {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    border-radius: var(--web-r-pill);
+    padding: 0 13px;
+    font-size: 14px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .web-cook-prototype-method {
+    color: var(--web-text-inverse);
+  }
+
+  .web-cook-prototype-step-total {
+    background: var(--web-bg-alt);
+    color: var(--web-text-3);
+  }
+
+  .web-cook-prototype-copy {
+    align-self: center;
+    border: 1px solid transparent;
+    border-radius: 18px;
+    padding: 4px;
+  }
+
+  .web-cook-prototype-copy h2 {
+    margin: 0 0 18px;
+    color: var(--web-text-1);
+    font-size: 30px;
+    font-weight: 900;
+  }
+
+  .web-cook-prototype-copy p {
+    margin: 0;
+    overflow-wrap: break-word;
+    color: var(--web-text-1);
+    font-size: clamp(30px, 3vw, 38px);
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 1.24;
+    word-break: keep-all;
+  }
+
+  .web-cook-prototype-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .web-cook-prototype-meta-row span {
+    border-radius: 12px;
+    background: var(--web-bg-alt);
+    color: var(--web-text-3);
+    padding: 9px 11px;
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  .web-cook-prototype-amount-board {
+    margin-top: 26px;
+  }
+
+  .web-cook-prototype-amount-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    color: var(--web-text-3);
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  .web-cook-prototype-amounts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .web-cook-prototype-amount {
+    min-height: 94px;
+    border-radius: 18px;
+    background: var(--web-brand-wash);
+    padding: 16px;
+  }
+
+  .web-cook-prototype-amount b {
+    display: block;
+    color: var(--web-text-2);
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  .web-cook-prototype-amount strong {
+    display: block;
+    margin-top: 8px;
+    color: var(--web-brand-accessible);
+    font-size: 30px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .web-cook-prototype-amount small {
+    display: block;
+    margin-top: 7px;
+    color: var(--web-text-3);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .web-cook-prototype-controls {
+    display: grid;
+    grid-template-columns: 62px 62px minmax(0, 1fr);
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  .web-cook-prototype-controls button {
+    min-height: 54px;
+    border: 0;
+    border-radius: 15px;
+    font-weight: 900;
+  }
+
+  .web-cook-prototype-arrow {
+    background: var(--web-bg-alt);
+    color: var(--web-text-1);
+    font-size: 22px;
+  }
+
+  .web-cook-prototype-complete {
+    background: var(--web-brand);
+    color: var(--web-text-inverse);
+    font-size: 16px;
+  }
+
+  .web-cook-prototype-timeline-row {
+    display: flex;
+    width: 100%;
+    min-height: 58px;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--web-line);
+    border-radius: 15px;
+    background: var(--web-bg-alt);
+    padding: 10px;
+    color: var(--web-text-2);
+    text-align: left;
+  }
+
+  .web-cook-prototype-timeline-row-active {
+    border-color: var(--web-brand);
+    background: var(--web-brand-wash);
+  }
+
+  .web-cook-prototype-timeline-row strong {
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--web-surface);
+    color: var(--web-text-1);
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  .web-cook-prototype-timeline-row-active strong {
+    background: var(--web-brand);
+    color: var(--web-text-inverse);
+  }
+
+  .web-cook-prototype-timeline-row span {
+    min-width: 0;
+    color: var(--web-text-2);
+    font-size: 13px;
+    font-weight: 850;
+    line-height: 1.3;
+  }
+
+  .web-cook-prototype-empty {
+    margin: 0;
+    color: var(--web-text-3);
+    font-size: 14px;
+    font-weight: 800;
+    text-align: center;
+  }
+
+  .web-cooking-shell-dark .web-cook-prototype-board {
+    background:
+      linear-gradient(90deg, rgba(0, 161, 255, 0.12), transparent 38%),
+      #090d12;
+  }
+
+  .web-cooking-shell-dark .web-cook-prototype-panel {
+    background: #111923;
+  }
+
+  .web-cooking-shell-dark .web-cook-prototype-ingredient,
+  .web-cooking-shell-dark .web-cook-prototype-timeline-row,
+  .web-cooking-shell-dark .web-cook-prototype-arrow,
+  .web-cooking-shell-dark .web-cook-prototype-step-total,
+  .web-cooking-shell-dark .web-cook-prototype-meta-row span {
+    background: #101820;
+  }
+
+  .web-cooking-shell-dark .web-cook-prototype-ingredient-active,
+  .web-cooking-shell-dark .web-cook-prototype-timeline-row-active,
+  .web-cooking-shell-dark .web-cook-prototype-amount,
+  .web-cooking-shell-dark .web-cook-prototype-note,
+  .web-cooking-shell-dark .web-cook-prototype-status {
+    background: rgba(0, 161, 255, 0.16);
+  }
+
+  @media (max-width: 1180px) {
+    .web-cook-prototype-board {
+      overflow-x: auto;
+    }
+
+    .web-cook-prototype-top,
+    .web-cook-prototype-grid {
+      min-width: 960px;
+    }
   }
 
   .web-cook-dialog-close {

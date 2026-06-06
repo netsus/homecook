@@ -172,64 +172,50 @@ test.describe("Slice 15a cook planner complete", () => {
         "rgb(255, 140, 66)",
       );
     } else {
-      await expect(page.getByTestId("step-item").first()).toHaveCSS(
-        "border-top-color",
-        "rgba(255, 149, 0, 0.26)",
+      await expect(page.getByTestId("cook-mode-current-step")).toBeVisible();
+      await expect(page.getByTestId("cook-mode-current-step-title")).toHaveText(
+        "볶기",
+      );
+      await expect(page.getByTestId("cook-mode-current-step-copy")).toHaveText(
+        "양파를 썰어주세요.",
       );
       await expect(page.getByText("볶기").first()).toHaveCSS(
-        "color",
-        "rgb(177, 95, 0)",
+        "background-color",
+        "rgb(255, 140, 66)",
       );
     }
   });
 
-  test("ingredients and steps show together in one scroll view", async ({ page }) => {
+  test("current step, amount board, and step navigation show together", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockCookModeRoute(page);
 
     await page.goto("/cooking/sessions/session-abc/cook-mode");
 
-    await expect(page.getByTestId("ingredient-list")).toBeVisible();
-    await expect(
-      page.getByTestId("ingredient-item").filter({ hasText: /양파\s*1개/ }),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("ingredient-item").filter({ hasText: /김치\s*200g/ }),
-    ).toBeVisible();
+    await expect(page.getByTestId("cook-mode-current-step")).toBeVisible();
+    await expect(page.getByTestId("cook-mode-current-amount-board")).toBeVisible();
     await expect(page.getByTestId("step-list")).toBeVisible();
     await expect(page.getByText("양파를 썰어주세요.")).toBeVisible();
-    await expect(page.getByText("김치를 넣고 끓여주세요.")).toBeVisible();
     await expect(page.getByTestId("tab-steps")).toHaveCount(0);
 
-    if (!isDesktopViewport(page)) {
-      await expect(page.getByTestId("mobile-ingredient-summary")).toBeVisible();
+    if (isDesktopViewport(page)) {
+      await expect(page.getByTestId("ingredient-list")).toBeVisible();
+      await expect(
+        page.getByTestId("ingredient-item").filter({ hasText: /양파\s*1개/ }),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId("ingredient-item").filter({ hasText: /김치\s*200g/ }),
+      ).toBeVisible();
+      await page.getByTestId("cook-mode-timeline-step-2").click();
+    } else {
+      await expect(page.getByTestId("cook-mode-step-rail")).toBeVisible();
       await expect(page.getByTestId("cook-mode-servings")).toContainText(
         "2인분",
       );
-
-      const sectionOrder = await page
-        .locator('[data-testid="mobile-ingredient-summary"], [data-testid="step-list"]')
-        .evaluateAll((elements) =>
-          elements.map((element) => element.getAttribute("data-testid")),
-        );
-      expect(sectionOrder).toEqual(["mobile-ingredient-summary", "step-list"]);
-
-      const gap = await page.evaluate(() => {
-        const ingredients = document
-          .querySelector('[data-testid="mobile-ingredient-summary"]')
-          ?.getBoundingClientRect();
-        const steps = document
-          .querySelector('[data-testid="step-list"]')
-          ?.getBoundingClientRect();
-
-        if (!ingredients || !steps) {
-          return Number.POSITIVE_INFINITY;
-        }
-
-        return steps.top - ingredients.bottom;
-      });
-      expect(gap).toBeLessThanOrEqual(16);
+      await page.getByTestId("cook-mode-next-step").click();
     }
+
+    await expect(page.getByText("김치를 넣고 끓여주세요.")).toBeVisible();
   });
 
   test("complete flow: selects consumed ingredients and returns to planner", async ({
@@ -304,17 +290,19 @@ test.describe("Slice 15a cook planner complete", () => {
     ).toBeVisible();
   });
 
-  test("cook mode has no tab, timer, or prev/next controls", async ({ page }) => {
+  test("cook mode has step controls without tab, timer, or memo controls", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockCookModeRoute(page);
 
     await page.goto("/cooking/sessions/session-abc/cook-mode");
 
-    await expect(page.getByTestId("ingredient-list")).toBeVisible();
+    await expect(page.getByTestId("cook-mode-current-step")).toBeVisible();
     await expect(page.getByTestId("step-list")).toBeVisible();
+    await expect(page.getByTestId("cook-mode-prev-step")).toBeVisible();
+    await expect(page.getByTestId("cook-mode-next-step")).toBeVisible();
     await expect(page.getByTestId("tab-steps")).toHaveCount(0);
     await expect(page.getByText("10분")).toHaveCount(0);
-    await expect(page.getByText(/타이머|메모|일시정지|이전|다음/)).toHaveCount(0);
+    await expect(page.getByText(/타이머|메모|일시정지/)).toHaveCount(0);
   });
 
   test("bottom cancel and complete controls stay visible", async ({ page }) => {
