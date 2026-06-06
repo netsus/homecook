@@ -4325,6 +4325,11 @@ button {
     padding: 0 14px;
   }
 
+  .web-picker-search > svg {
+    flex: 0 0 auto;
+    color: var(--web-text-3);
+  }
+
   .web-picker-search input {
     min-width: 0;
     flex: 1;
@@ -6088,10 +6093,9 @@ button {
   .web-mypage-screen {
     display: flex;
     height: calc(100vh - var(--web-nav-h));
+    width: 100%;
     min-height: 0;
     flex-direction: column;
-    max-width: 1180px;
-    margin: 0 auto;
     padding: 32px 0 0;
   }
 
@@ -7325,6 +7329,56 @@ button {
     font-weight: 700;
   }
 
+  .web-pantry-select-all {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-pill);
+    background: var(--web-surface);
+    color: var(--web-text-2);
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .web-pantry-select-all > span {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-xs);
+    color: var(--web-brand);
+    font-size: 11px;
+    font-weight: 900;
+  }
+
+  .web-pantry-select-all[aria-checked="true"] > span {
+    border-color: var(--web-brand);
+    background: var(--web-brand);
+    color: white;
+  }
+
+  .web-pantry-select-all:disabled,
+  .web-pantry-danger-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .web-pantry-danger-button {
+    min-height: 36px;
+    border: 0;
+    border-radius: var(--web-r-pill);
+    background: var(--web-error);
+    color: #ffffff;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
   .web-pantry-grid {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -7357,6 +7411,10 @@ button {
     cursor: pointer;
   }
 
+  .web-pantry-card-selectable {
+    padding-right: 42px;
+  }
+
   .web-pantry-card:not(:disabled):hover {
     border-color: rgba(0, 0, 0, 0.14);
     box-shadow: var(--web-shadow-card);
@@ -7380,8 +7438,8 @@ button {
 
   .web-pantry-check {
     position: absolute;
-    top: 12px;
-    left: 12px;
+    top: 10px;
+    right: 10px;
     display: inline-flex;
     width: 24px;
     height: 24px;
@@ -7513,6 +7571,19 @@ button {
 
   .web-bundle-body {
     padding: 12px 0;
+  }
+
+  .web-bundle-empty {
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    padding: 42px 20px;
+    text-align: center;
+  }
+
+  .web-bundle-empty .web-modal-option-title,
+  .web-bundle-empty .web-modal-copy {
+    margin: 0;
   }
 
   .web-bundle-list {

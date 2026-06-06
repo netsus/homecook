@@ -1,19 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
-import {
-  getPantryEmoji,
-  sortWave1PantryCategories,
-  WAVE1_PANTRY_CATEGORY_ORDER,
-  WAVE1_PANTRY_REFERENCE_TOTAL,
-} from "@/components/pantry/pantry-mobile-visuals";
+import { getPantryEmoji } from "@/components/pantry/pantry-mobile-visuals";
+import { INGREDIENT_CATEGORY_LABELS } from "@/lib/ingredient-categories";
 import type { PantryItem } from "@/types/pantry";
 
 interface PantryMobileScreenProps {
   activeCategory: string | null;
   displayItems: PantryItem[];
+  isAllVisibleSelected: boolean;
   isSelectMode: boolean;
   items: PantryItem[];
   searchQuery: string;
@@ -23,8 +20,11 @@ interface PantryMobileScreenProps {
   onExitSelectMode: () => void;
   onOpenAddSheet: () => void;
   onOpenBundlePicker: () => void;
+  onOpenRecommendations: () => void;
   onRequestDelete: () => void;
+  onRequestSingleDelete: (ingredientId: string) => void;
   onSearchChange: (value: string) => void;
+  onSelectAllToggle: () => void;
   onSelectToggle: (ingredientId: string) => void;
   onStartSelectMode: () => void;
 }
@@ -32,6 +32,7 @@ interface PantryMobileScreenProps {
 export function PantryMobileScreen({
   activeCategory,
   displayItems,
+  isAllVisibleSelected,
   isSelectMode,
   items,
   searchQuery,
@@ -41,11 +42,16 @@ export function PantryMobileScreen({
   onExitSelectMode,
   onOpenAddSheet,
   onOpenBundlePicker,
+  onOpenRecommendations,
   onRequestDelete,
+  onRequestSingleDelete,
   onSearchChange,
+  onSelectAllToggle,
   onSelectToggle,
   onStartSelectMode,
 }: PantryMobileScreenProps) {
+  const [swipedIngredientId, setSwipedIngredientId] = useState<string | null>(null);
+  const pointerStartXRef = useRef<number | null>(null);
   const isEmpty = items.length === 0 && !searchQuery && !activeCategory;
   const isSearchEmpty = displayItems.length === 0 && (searchQuery || activeCategory);
   const sectionGroups = groupPantryItems(displayItems);
@@ -81,9 +87,12 @@ export function PantryMobileScreen({
             {items.length}
           </span>
           <span className="text-[16px] font-bold leading-none text-[var(--text-3)]">
-            / {WAVE1_PANTRY_REFERENCE_TOTAL}개
+            개
           </span>
         </div>
+        <p className="-mt-3 mb-4 text-[13px] font-medium leading-[1.45] text-[var(--text-3)]">
+          팬트리에 있는 재료는 장보기에서 자동 제외돼요.
+        </p>
 
         <div className="relative mb-3">
           <SearchIcon className="absolute left-[17px] top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[var(--text-3)]" />
@@ -110,7 +119,14 @@ export function PantryMobileScreen({
 
         <div className="grid grid-cols-2 gap-2">
           <button
-            className="h-10 rounded-[var(--radius-control)] border-0 bg-[var(--brand)] text-[13px] font-extrabold text-[var(--text-inverse)]"
+            className="col-span-2 h-10 rounded-[var(--radius-control)] border-0 bg-[var(--brand)] text-[13px] font-extrabold text-[var(--text-inverse)]"
+            onClick={onOpenRecommendations}
+            type="button"
+          >
+            팬트리 추천
+          </button>
+          <button
+            className="h-10 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[13px] font-extrabold text-[var(--text-2)]"
             onClick={onOpenAddSheet}
             type="button"
           >
@@ -127,7 +143,7 @@ export function PantryMobileScreen({
         </div>
       </section>
 
-      <section className="px-4 pt-3">
+      <section className="sticky top-0 z-20 border-b border-[var(--line-strong)] bg-[var(--surface-fill)] px-4 pt-3">
         <div className="scrollbar-hide flex gap-1.5 overflow-x-auto pb-1" role="tablist">
           <CategoryChip
             active={!activeCategory}
@@ -143,6 +159,31 @@ export function PantryMobileScreen({
             />
           ))}
         </div>
+        {isSelectMode ? (
+          <div className="flex justify-end py-2">
+            <button
+              aria-checked={isAllVisibleSelected}
+              className="inline-flex h-8 items-center gap-2 text-[12px] font-extrabold text-[var(--text-2)] disabled:opacity-50"
+              disabled={displayItems.length === 0}
+              onClick={onSelectAllToggle}
+              role="checkbox"
+              type="button"
+            >
+              <span
+                aria-hidden="true"
+                className={[
+                  "flex h-[18px] w-[18px] items-center justify-center rounded-[4px] border text-[11px] font-black",
+                  isAllVisibleSelected
+                    ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
+                    : "border-[var(--line-strong)] bg-[var(--surface)] text-transparent",
+                ].join(" ")}
+              >
+                ✓
+              </span>
+              전체선택
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <main className="px-4 pb-4 pt-[26px]">
@@ -150,6 +191,7 @@ export function PantryMobileScreen({
           <MobileEmptyState
             onOpenAddSheet={onOpenAddSheet}
             onOpenBundlePicker={onOpenBundlePicker}
+            onOpenRecommendations={onOpenRecommendations}
           />
         ) : isSearchEmpty ? (
           <MobileSearchEmptyState
@@ -169,48 +211,94 @@ export function PantryMobileScreen({
                     const selected = selectedIds.has(item.ingredient_id);
 
                     return (
-                      <button
-                        aria-checked={isSelectMode ? selected : undefined}
-                        aria-label={
-                          isSelectMode ? `${item.standard_name} 선택` : undefined
-                        }
-                        className={[
-                          "flex min-h-[61px] w-full items-center px-4 text-left",
-                          index > 0 ? "border-t border-[var(--surface-subtle)]" : "",
-                          isSelectMode ? "cursor-pointer" : "cursor-default",
-                        ].join(" ")}
-                        key={item.id}
-                        onClick={
-                          isSelectMode
-                            ? () => onSelectToggle(item.ingredient_id)
-                            : undefined
-                        }
-                        role={isSelectMode ? "checkbox" : undefined}
-                        type="button"
-                      >
-                        {isSelectMode && (
+                      <div className="relative overflow-hidden" key={item.id}>
+                        {!isSelectMode ? (
+                          <button
+                            aria-label={`${item.standard_name} 삭제`}
+                            className="absolute inset-y-0 right-0 flex w-[76px] items-center justify-center bg-[var(--danger)] text-[13px] font-extrabold text-[var(--text-inverse)]"
+                            onClick={() => onRequestSingleDelete(item.ingredient_id)}
+                            type="button"
+                          >
+                            삭제
+                          </button>
+                        ) : null}
+                        <button
+                          aria-checked={isSelectMode ? selected : undefined}
+                          aria-label={
+                            isSelectMode ? `${item.standard_name} 선택` : undefined
+                          }
+                          className={[
+                            "relative flex min-h-[61px] w-full items-center bg-[var(--surface)] px-4 text-left transition-transform duration-150",
+                            index > 0 ? "border-t border-[var(--surface-subtle)]" : "",
+                            isSelectMode ? "cursor-pointer" : "cursor-default",
+                          ].join(" ")}
+                          onClick={
+                            isSelectMode
+                              ? () => onSelectToggle(item.ingredient_id)
+                              : undefined
+                          }
+                          onPointerDown={
+                            isSelectMode
+                              ? undefined
+                              : (event) => {
+                                  pointerStartXRef.current = event.clientX;
+                                }
+                          }
+                          onPointerUp={
+                            isSelectMode
+                              ? undefined
+                              : (event) => {
+                                  const startX = pointerStartXRef.current;
+                                  pointerStartXRef.current = null;
+
+                                  if (startX === null) {
+                                    return;
+                                  }
+
+                                  const deltaX = event.clientX - startX;
+
+                                  if (deltaX < -44) {
+                                    setSwipedIngredientId(item.ingredient_id);
+                                    return;
+                                  }
+
+                                  if (deltaX > 20 || swipedIngredientId !== item.ingredient_id) {
+                                    setSwipedIngredientId(null);
+                                  }
+                                }
+                          }
+                          role={isSelectMode ? "checkbox" : undefined}
+                          style={
+                            !isSelectMode && swipedIngredientId === item.ingredient_id
+                              ? { transform: "translateX(-76px)" }
+                              : undefined
+                          }
+                          type="button"
+                        >
+                          {isSelectMode && (
+                            <span
+                              aria-hidden="true"
+                              className={[
+                                "mr-2 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border text-[13px] font-bold",
+                                selected
+                                  ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
+                                  : "border-[var(--line-strong)] bg-[var(--surface)] text-transparent",
+                              ].join(" ")}
+                            >
+                              ✓
+                            </span>
+                          )}
                           <span
                             aria-hidden="true"
-                            className={[
-                              "mr-2 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border text-[13px] font-bold",
-                              selected
-                                ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
-                                : "border-[var(--line-strong)] bg-[var(--surface)] text-transparent",
-                            ].join(" ")}
+                            className="mr-3 flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[var(--radius-card)] bg-[var(--surface-fill)] text-[20px]"
                           >
-                            ✓
+                            {getPantryEmoji(item.standard_name, item.category)}
                           </span>
-                        )}
-                        <span
-                          aria-hidden="true"
-                          className="mr-3 flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[var(--radius-card)] bg-[var(--surface-fill)] text-[20px]"
-                        >
-                          {getPantryEmoji(item.standard_name, item.category)}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-[15px] font-extrabold leading-[1.35] text-[var(--foreground)]">
-                          {item.standard_name}
-                        </span>
-                      </button>
+                          <span className="min-w-0 flex-1 truncate text-[15px] font-extrabold leading-[1.35] text-[var(--foreground)]">
+                            {item.standard_name}
+                          </span>
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -233,7 +321,7 @@ export function PantryMobileScreen({
             onClick={onRequestDelete}
             type="button"
           >
-            제거하기 ({selectedIds.size})
+            제거하기
           </button>
         </div>
       )}
@@ -256,10 +344,10 @@ function CategoryChip({
     <button
       aria-selected={active}
       className={[
-        "h-[31px] shrink-0 rounded-full border px-3 text-[12px] font-extrabold leading-none",
+        "h-9 shrink-0 border-b-2 px-2 text-[13px] font-extrabold leading-none",
         active
-          ? "border-[var(--brand)] bg-[var(--surface)] text-[var(--brand)]"
-          : "border-[var(--line-strong)] bg-[var(--surface)] text-[var(--text-2)]",
+          ? "border-[var(--brand)] text-[var(--brand)]"
+          : "border-transparent text-[var(--text-3)]",
       ].join(" ")}
       onClick={onClick}
       role="tab"
@@ -273,9 +361,11 @@ function CategoryChip({
 function MobileEmptyState({
   onOpenAddSheet,
   onOpenBundlePicker,
+  onOpenRecommendations,
 }: {
   onOpenAddSheet: () => void;
   onOpenBundlePicker: () => void;
+  onOpenRecommendations: () => void;
 }) {
   return (
     <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] px-6 py-10 text-center">
@@ -287,7 +377,14 @@ function MobileEmptyState({
       </p>
       <div className="mt-5 grid grid-cols-2 gap-2">
         <button
-          className="h-10 rounded-[var(--radius-control)] bg-[var(--brand)] text-[13px] font-extrabold text-[var(--text-inverse)]"
+          className="col-span-2 h-10 rounded-[var(--radius-control)] border-0 bg-[var(--brand)] text-[13px] font-extrabold text-[var(--text-inverse)]"
+          onClick={onOpenRecommendations}
+          type="button"
+        >
+          팬트리 추천
+        </button>
+        <button
+          className="h-10 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[13px] font-extrabold text-[var(--text-2)]"
           onClick={onOpenAddSheet}
           type="button"
         >
@@ -344,7 +441,14 @@ function groupPantryItems(items: PantryItem[]) {
     groups.set(item.category, current);
   });
 
-  const categories = sortWave1PantryCategories(Array.from(groups.keys()));
+  const knownCategories = INGREDIENT_CATEGORY_LABELS.filter((category) =>
+    groups.has(category),
+  );
+  const extraCategories = Array.from(groups.keys())
+    .filter((category) => !(INGREDIENT_CATEGORY_LABELS as readonly string[]).includes(category))
+    .sort((left, right) => left.localeCompare(right, "ko"));
+  const categories = [...knownCategories, ...extraCategories];
+
   return categories.map((category) => ({
     category,
     items: groups.get(category) ?? [],
@@ -353,8 +457,14 @@ function groupPantryItems(items: PantryItem[]) {
 
 function getCategoryRail(items: PantryItem[]) {
   const categories = new Set(items.map((item) => item.category));
-  WAVE1_PANTRY_CATEGORY_ORDER.forEach((category) => categories.add(category));
-  return sortWave1PantryCategories(Array.from(categories));
+  INGREDIENT_CATEGORY_LABELS.forEach((category) => categories.add(category));
+
+  return [
+    ...INGREDIENT_CATEGORY_LABELS,
+    ...Array.from(categories)
+      .filter((category) => !(INGREDIENT_CATEGORY_LABELS as readonly string[]).includes(category))
+      .sort((left, right) => left.localeCompare(right, "ko")),
+  ];
 }
 
 function SearchIcon({ className }: { className?: string }) {

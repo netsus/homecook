@@ -9,6 +9,7 @@ import { ManualRecipeCreateScreen } from "@/components/recipe/manual-recipe-crea
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import { fetchIngredients } from "@/lib/api/ingredients";
 import { createManualRecipe, uploadRecipeImage, type RecipeImageUploadData } from "@/lib/api/manual-recipe";
+import { compressRecipeImageFile } from "@/lib/recipe-image-compression";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import type { ApiResponse } from "@/types/api";
 
@@ -33,6 +34,10 @@ vi.mock("@/lib/api/ingredients", () => ({
 vi.mock("@/lib/api/manual-recipe", () => ({
   createManualRecipe: vi.fn(),
   uploadRecipeImage: vi.fn(),
+}));
+
+vi.mock("@/lib/recipe-image-compression", () => ({
+  compressRecipeImageFile: vi.fn(async (file: File) => file),
 }));
 
 vi.mock("@/lib/api/meal", () => ({
@@ -83,6 +88,8 @@ describe("ManualRecipeCreateScreen", () => {
     vi.mocked(fetchIngredients).mockReset();
     vi.mocked(createManualRecipe).mockReset();
     vi.mocked(uploadRecipeImage).mockReset();
+    vi.mocked(compressRecipeImageFile).mockReset();
+    vi.mocked(compressRecipeImageFile).mockImplementation(async (file: File) => file);
     Object.defineProperty(URL, "createObjectURL", {
       configurable: true,
       value: vi.fn(() => "blob:manual-recipe-preview"),
@@ -221,6 +228,22 @@ describe("ManualRecipeCreateScreen", () => {
     const composer = await screen.findByTestId("manual-step-composer");
     const methodRail = composer.querySelector("[aria-label='조리방법 선택']");
     expect(methodRail?.className).toContain("scrollbar-hide");
+  });
+
+  it("shows the target date and meal tag in the mobile header area", () => {
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    const targetTag = screen.getByTestId("manual-mobile-target-tag");
+    expect(targetTag.textContent).toContain("4월 18일");
+    expect(targetTag.textContent).toContain("아침");
+  });
+
+  it("does not leave oversized blank space under the mobile step composer", async () => {
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    const composer = await screen.findByTestId("manual-step-composer");
+    expect(composer.className).not.toContain("mb-28");
+    expect(composer.className).toContain("mb-4");
   });
 
   it("shows inline validation instead of the bottom save requirements box after invalid save", async () => {
@@ -382,6 +405,36 @@ describe("ManualRecipeCreateScreen", () => {
     });
     expect(screen.getByTestId("manual-image-remove-button")).toBeTruthy();
     expect(screen.queryByTestId("manual-image-uploading-indicator")).toBeNull();
+  });
+
+  it("compresses the selected image before uploading it", async () => {
+    const compressedFile = new File(["small"], "photo-compressed.jpg", {
+      type: "image/jpeg",
+    });
+    vi.mocked(compressRecipeImageFile).mockResolvedValue(compressedFile);
+    vi.mocked(uploadRecipeImage).mockResolvedValue({
+      success: true,
+      data: {
+        thumbnail_url: "https://cdn.test/compressed.jpg",
+        storage_path: "recipe-images/user/compressed.jpg",
+      },
+      error: null,
+    });
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    const originalFile = new File([new Uint8Array(2 * 1024 * 1024)], "photo.jpg", {
+      type: "image/jpeg",
+    });
+
+    await user.upload(fileInput, originalFile);
+
+    await waitFor(() => {
+      expect(compressRecipeImageFile).toHaveBeenCalledWith(originalFile);
+    });
+    expect(uploadRecipeImage).toHaveBeenCalledWith(compressedFile);
   });
 
   it("keeps the latest image when an older upload resolves last", async () => {

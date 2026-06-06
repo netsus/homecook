@@ -141,6 +141,15 @@ describe("home screen", () => {
     expect(ruleBody(".home-mobile-discovery-kicker")).toContain("font-weight: 600;");
   });
 
+  it("lets the mobile HOME view use the shared full app width", () => {
+    const { container } = render(<HomeScreen />);
+    const hasNarrowHomeFrame = Array.from(container.querySelectorAll("div")).some((element) =>
+      element.className.toString().includes("max-w-[430px]"),
+    );
+
+    expect(hasNarrowHomeFrame).toBe(false);
+  });
+
   it("adds left breathing room to web recipe card titles and metrics", () => {
     expect(ruleBody(".web-recipe-card-body")).toContain("padding: 12px 12px 8px;");
   });
