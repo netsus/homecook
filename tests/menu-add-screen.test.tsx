@@ -1147,7 +1147,7 @@ describe("MenuAddScreen", () => {
 
   // ─── Slice 27b: YouTube Source Fallback Frontend Tests ─────────────────────
 
-  it("renders extraction_methods as Korean labels with caption chip when transcript used", async () => {
+  it("does not render extraction method chips when transcript was used", async () => {
     installMatchMedia(true);
     vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValueOnce({
       success: true,
@@ -1209,14 +1209,11 @@ describe("MenuAddScreen", () => {
     );
     await user.click(screen.getByRole("button", { name: "가져오기" }));
 
-    const chips = await screen.findByTestId("extraction-method-chips");
-    expect(within(chips).getByText("설명란")).toBeTruthy();
-    expect(within(chips).getByText("자막")).toBeTruthy();
-    expect(within(chips).queryByText("description")).toBeNull();
-    expect(within(chips).queryByText("caption")).toBeNull();
+    expect(await screen.findByDisplayValue("김치찌개 자막 보충 레시피")).toBeTruthy();
+    expect(screen.queryByTestId("extraction-method-chips")).toBeNull();
   });
 
-  it("renders comment extraction method as Korean label", async () => {
+  it("does not render extraction method chips when author comments were used", async () => {
     installMatchMedia(true);
     vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValueOnce({
       success: true,
@@ -1278,12 +1275,11 @@ describe("MenuAddScreen", () => {
     );
     await user.click(screen.getByRole("button", { name: "가져오기" }));
 
-    const chips = await screen.findByTestId("extraction-method-chips");
-    expect(within(chips).getByText("작성자 댓글")).toBeTruthy();
-    expect(within(chips).queryByText("comment")).toBeNull();
+    expect(await screen.findByDisplayValue("작성자 댓글 보충 레시피")).toBeTruthy();
+    expect(screen.queryByTestId("extraction-method-chips")).toBeNull();
   });
 
-  it("renders extraction_methods as Korean labels without caption chip for description-only", async () => {
+  it("does not render extraction method chips for description-only extraction", async () => {
     installMatchMedia(true);
 
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
@@ -1296,9 +1292,8 @@ describe("MenuAddScreen", () => {
     );
     await user.click(screen.getByRole("button", { name: "가져오기" }));
 
-    const chips = await screen.findByTestId("extraction-method-chips");
-    expect(within(chips).getByText("설명란")).toBeTruthy();
-    expect(within(chips).queryByText("자막")).toBeNull();
+    expect(await screen.findByDisplayValue("백종원 김치찌개")).toBeTruthy();
+    expect(screen.queryByTestId("extraction-method-chips")).toBeNull();
   });
 
   it("shows partial draft guidance when ingredients exist but steps are empty, keeps register disabled, and allows step add", async () => {
@@ -1356,10 +1351,7 @@ describe("MenuAddScreen", () => {
     expect(registerButton).toBeInstanceOf(HTMLButtonElement);
     expect((registerButton as HTMLButtonElement).disabled).toBe(true);
 
-    // extraction_methods should show 설명란 only (no 자막)
-    const chips = screen.getByTestId("extraction-method-chips");
-    expect(within(chips).getByText("설명란")).toBeTruthy();
-    expect(within(chips).queryByText("자막")).toBeNull();
+    expect(screen.queryByTestId("extraction-method-chips")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
 
