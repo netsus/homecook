@@ -747,8 +747,8 @@ function MobileFeedback({
       className={[
         "mx-4 mt-2 rounded-[var(--radius-control)] border px-4 py-3 text-center text-[13px] font-extrabold",
         feedback.tone === "error"
-          ? "border-[rgba(255,59,48,0.18)] bg-[rgba(255,59,48,0.07)] text-[var(--danger)]"
-          : "border-[rgba(26,174,57,0.18)] bg-[rgba(26,174,57,0.08)] text-[var(--success-strong)]",
+          ? "border-[var(--feedback-danger-border)] bg-[var(--feedback-danger-soft)] text-[var(--danger)]"
+          : "border-[var(--feedback-success-border)] bg-[var(--feedback-success-soft)] text-[var(--success-strong)]",
       ].join(" ")}
       data-testid="feedback-toast"
       role="alert"
