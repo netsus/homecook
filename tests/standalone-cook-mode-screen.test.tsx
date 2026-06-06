@@ -626,6 +626,45 @@ describe("StandaloneCookModeScreen", () => {
     ).toBeNull();
   });
 
+  it("defaults standalone mobile cook mode to white and toggles black from the top switch", async () => {
+    installMatchMedia(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchStandaloneCookMode.mockResolvedValue(buildStandaloneCookModeData());
+
+    const Screen = await importScreen();
+    render(<Screen recipeId="recipe-1" servings={2} />);
+
+    const themeToggle = await screen.findByTestId("cook-mode-theme-toggle");
+    const screenRoot = screen.getByTestId("standalone-cook-mode-screen");
+
+    expect(screenRoot.getAttribute("data-cook-theme")).toBe("light");
+    expect(themeToggle.getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(themeToggle);
+
+    expect(screenRoot.getAttribute("data-cook-theme")).toBe("dark");
+    expect(themeToggle.getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("defaults standalone desktop cook mode to white and toggles black from the top switch", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchStandaloneCookMode.mockResolvedValue(buildStandaloneCookModeData());
+
+    const Screen = await importScreen();
+    render(<Screen recipeId="recipe-1" servings={2} />);
+
+    const themeToggle = await screen.findByTestId("cook-mode-theme-toggle");
+    const screenRoot = screen.getByTestId("standalone-cook-mode-screen");
+
+    expect(screenRoot.getAttribute("data-cook-theme")).toBe("light");
+    expect(themeToggle.getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(themeToggle);
+
+    expect(screenRoot.getAttribute("data-cook-theme")).toBe("dark");
+    expect(themeToggle.getAttribute("aria-checked")).toBe("true");
+  });
+
   it("uses a desktop web shell for standalone cook loading states", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchStandaloneCookMode.mockReturnValue(new Promise(() => {}));

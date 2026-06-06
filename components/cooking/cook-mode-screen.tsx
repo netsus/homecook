@@ -7,6 +7,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { CookModeDesktopView } from "@/components/cooking/cook-mode-desktop-view";
+import type { CookModeColorTheme } from "@/components/cooking/cook-mode-theme-toggle";
 import { ConsumedIngredientSheet } from "@/components/cooking/consumed-ingredient-sheet";
 import {
   MobileCookModeView,
@@ -82,6 +83,7 @@ export function CookModeScreen({
   );
   const [showConsumedSheet, setShowConsumedSheet] = useState(false);
   const [cancelConfirm, setCancelConfirm] = useState(false);
+  const [colorTheme, setColorTheme] = useState<CookModeColorTheme>("light");
   const isMobileViewport = useIsMobileViewport();
   const completePendingRef = useRef(false);
   const cancelPendingRef = useRef(false);
@@ -217,6 +219,10 @@ export function CookModeScreen({
   const handleRetry = useCallback(() => {
     void loadCookMode(sessionId).catch(() => {});
   }, [loadCookMode, sessionId]);
+
+  const handleColorThemeToggle = useCallback(() => {
+    setColorTheme((current) => (current === "dark" ? "light" : "dark"));
+  }, []);
 
   useUserScreenWakeLock(
     authState === "authenticated" && visibleScreenState === "ready",
@@ -374,11 +380,13 @@ export function CookModeScreen({
       <>
         <MobileCookModeView
           cancelButtonTestId="cancel-button"
+          colorTheme={colorTheme}
           completeButtonTestId="complete-button"
           contentTestId="cook-mode-content"
           controlsDisabled={screenState !== "ready"}
           mealContextLabel={mealContextLabel}
           onCancel={handleCancelClick}
+          onColorThemeToggle={handleColorThemeToggle}
           onComplete={handleCompleteClick}
           recipe={recipe}
           screenTestId="cook-mode-screen"
@@ -448,11 +456,13 @@ export function CookModeScreen({
     <>
       <CookModeDesktopView
         cancelButtonTestId="cancel-button"
+        colorTheme={colorTheme}
         completeButtonTestId="complete-button"
         contentTestId="cook-mode-content"
         controlsDisabled={screenState !== "ready"}
         mealContextLabel={mealContextLabel}
         onCancel={handleCancelClick}
+        onColorThemeToggle={handleColorThemeToggle}
         onComplete={handleCompleteClick}
         recipe={recipe}
         screenTestId="cook-mode-screen"

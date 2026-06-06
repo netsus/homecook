@@ -460,6 +460,60 @@
   --font-weight-semibold: 500;
 }
 
+.cook-mode-theme-toggle {
+  display: inline-flex;
+  height: 36px;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--line);
+  padding: 3px 8px 3px 3px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.cook-mode-theme-toggle-mobile {
+  width: 64px;
+  justify-content: flex-start;
+}
+
+.cook-mode-theme-toggle-light {
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: 0 2px 8px var(--shadow-color-soft);
+}
+
+.cook-mode-theme-toggle-dark {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-inverse);
+}
+
+.cook-mode-theme-toggle-knob {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--brand);
+  color: var(--text-inverse);
+}
+
+.cook-mode-theme-toggle-label {
+  min-width: 22px;
+  text-align: center;
+  white-space: nowrap;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -4765,6 +4819,27 @@ button {
     --radius-xl: var(--web-r-lg);
   }
 
+  .web-cooking-shell-dark {
+    --web-bg: #080c10;
+    --web-bg-alt: #101820;
+    --web-surface: #111923;
+    --web-image-placeholder: #0f1720;
+    --web-text-1: #f5f8fb;
+    --web-text-2: #c9d5df;
+    --web-text-3: #95a6b4;
+    --web-text-4: #4b5b68;
+    --web-line: rgba(139, 210, 255, 0.22);
+    --web-line-strong: rgba(139, 210, 255, 0.34);
+    --web-divider: rgba(139, 210, 255, 0.12);
+    --web-shadow-card: rgba(0, 0, 0, 0.34) 0 2px 8px 0;
+    --web-shadow-float: rgba(0, 0, 0, 0.42) 0 12px 34px 0;
+  }
+
+  .web-cooking-shell-dark .web-topnav {
+    border-bottom-color: var(--web-line);
+    background: rgba(8, 12, 16, 0.96);
+  }
+
   .web-pantry-screen,
   .web-shopping-flow-screen,
   .web-shopping-detail-screen {
@@ -4928,10 +5003,18 @@ button {
     padding: 40px 0 96px;
   }
 
+  .web-cook-mode-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
   .web-cook-breadcrumb {
     display: flex;
     align-items: center;
     gap: 12px;
+    min-width: 0;
     color: var(--web-text-3);
     font-size: 13px;
     font-weight: 500;
@@ -4950,6 +5033,16 @@ button {
   .web-cook-breadcrumb strong {
     color: var(--web-text-1);
     font-weight: 800;
+  }
+
+  .web-cook-mode-theme-toggle {
+    width: auto;
+    min-width: 82px;
+    flex: 0 0 auto;
+    border-color: var(--web-line);
+    background: var(--web-surface);
+    color: var(--web-text-1);
+    box-shadow: var(--web-shadow-card);
   }
 
   .web-cook-notice-trigger {

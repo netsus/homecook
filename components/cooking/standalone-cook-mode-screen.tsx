@@ -5,6 +5,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { CookModeDesktopView } from "@/components/cooking/cook-mode-desktop-view";
+import type { CookModeColorTheme } from "@/components/cooking/cook-mode-theme-toggle";
 import { ConsumedIngredientSheet } from "@/components/cooking/consumed-ingredient-sheet";
 import {
   MobileCookModeView,
@@ -54,6 +55,7 @@ export function StandaloneCookModeScreen({
   const [authState, setAuthState] = useState<AuthState>("checking");
   const [showConsumedSheet, setShowConsumedSheet] = useState(false);
   const [showLoginGate, setShowLoginGate] = useState(false);
+  const [colorTheme, setColorTheme] = useState<CookModeColorTheme>("light");
   const isMobileViewport = useIsMobileViewport();
   const completePendingRef = useRef(false);
 
@@ -170,6 +172,10 @@ export function StandaloneCookModeScreen({
   const handleRetry = useCallback(() => {
     void loadStandaloneCookMode(recipeId, servings);
   }, [loadStandaloneCookMode, recipeId, servings]);
+
+  const handleColorThemeToggle = useCallback(() => {
+    setColorTheme((current) => (current === "dark" ? "light" : "dark"));
+  }, []);
 
   const returnPath = buildReturnHref(
     `/cooking/recipes/${recipeId}/cook-mode?servings=${servings}`,
@@ -422,10 +428,12 @@ export function StandaloneCookModeScreen({
       <>
         <MobileCookModeView
           cancelButtonTestId="standalone-cancel-button"
+          colorTheme={colorTheme}
           completeButtonTestId="standalone-complete-button"
           contentTestId="standalone-cook-mode-content"
           controlsDisabled={screenState !== "ready"}
           onCancel={handleCancelClick}
+          onColorThemeToggle={handleColorThemeToggle}
           onComplete={handleCompleteClick}
           recipe={recipe}
           screenTestId="standalone-cook-mode-screen"
@@ -451,10 +459,12 @@ export function StandaloneCookModeScreen({
     <>
       <CookModeDesktopView
         cancelButtonTestId="standalone-cancel-button"
+        colorTheme={colorTheme}
         completeButtonTestId="standalone-complete-button"
         contentTestId="standalone-cook-mode-content"
         controlsDisabled={screenState !== "ready"}
         onCancel={handleCancelClick}
+        onColorThemeToggle={handleColorThemeToggle}
         onComplete={handleCompleteClick}
         recipe={recipe}
         screenTestId="standalone-cook-mode-screen"

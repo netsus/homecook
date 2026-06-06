@@ -3,6 +3,10 @@
 import Link from "next/link";
 import React from "react";
 
+import {
+  CookModeThemeToggle,
+  type CookModeColorTheme,
+} from "@/components/cooking/cook-mode-theme-toggle";
 import type { CookingModeRecipe, CookingModeStep } from "@/types/cooking";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import {
@@ -11,6 +15,7 @@ import {
   stripMatchingSectionPrefix,
 } from "@/lib/recipe-section-labels";
 import { WebButton, WebShell, WebTopNav } from "@/components/web";
+import { cn } from "@/components/web/utils";
 
 interface CookModeDesktopViewProps {
   recipe: CookingModeRecipe;
@@ -23,8 +28,10 @@ interface CookModeDesktopViewProps {
   cancelButtonTestId: string;
   completeButtonTestId: string;
   controlsDisabled: boolean;
+  colorTheme: CookModeColorTheme;
   onCancel: () => void;
   onComplete: () => void;
+  onColorThemeToggle: () => void;
 }
 
 const WEB_NAV_ITEMS = [
@@ -45,8 +52,10 @@ export function CookModeDesktopView({
   cancelButtonTestId,
   completeButtonTestId,
   controlsDisabled,
+  colorTheme,
   onCancel,
   onComplete,
+  onColorThemeToggle,
 }: CookModeDesktopViewProps) {
   const cancelLabel = "취소";
   const breadcrumb =
@@ -59,7 +68,13 @@ export function CookModeDesktopView({
       : "web-cook-mode-hero web-cook-mode-hero-standalone";
 
   return (
-    <WebShell className="web-cooking-shell" wide>
+    <WebShell
+      className={cn(
+        "web-cooking-shell",
+        colorTheme === "dark" && "web-cooking-shell-dark",
+      )}
+      wide
+    >
       <WebTopNav
         activeId={variant === "planner" ? "planner" : undefined}
         items={WEB_NAV_ITEMS}
@@ -70,12 +85,23 @@ export function CookModeDesktopView({
         }
       />
 
-      <main className="web-cook-mode-screen" data-testid={screenTestId}>
-        <nav aria-label="현재 위치" className="web-cook-breadcrumb">
-          <Link href={breadcrumb.href}>{breadcrumb.parent}</Link>
-          <span aria-hidden="true">/</span>
-          <strong>{breadcrumb.current}</strong>
-        </nav>
+      <main
+        className="web-cook-mode-screen"
+        data-cook-theme={colorTheme}
+        data-testid={screenTestId}
+      >
+        <div className="web-cook-mode-topbar">
+          <nav aria-label="현재 위치" className="web-cook-breadcrumb">
+            <Link href={breadcrumb.href}>{breadcrumb.parent}</Link>
+            <span aria-hidden="true">/</span>
+            <strong>{breadcrumb.current}</strong>
+          </nav>
+          <CookModeThemeToggle
+            onToggle={onColorThemeToggle}
+            theme={colorTheme}
+            variant="desktop"
+          />
+        </div>
 
         <section className={heroClassName}>
           <h1 className="web-cook-mode-page-title">요리모드</h1>
