@@ -1,0 +1,1209 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>COOK_MODE vNext Vision</title>
+    <style>
+      :root {
+        --ink: #212529;
+        --soft-ink: #495057;
+        --muted: #868e96;
+        --line: #8bd2ff;
+        --paper: #f6fbff;
+        --surface: #ffffff;
+        --brand: #00a1ff;
+        --brand-dark: #0087d7;
+        --brand-soft: #e8f5ff;
+        --brand-tint: #f3faff;
+        --brand-warm: #d9f0ff;
+        --brand-ink: #005b91;
+        --charcoal: #005b91;
+        --charcoal-2: #007fd0;
+        --charcoal-3: #00a1ff;
+        --cream: #f3faff;
+        --card-surface: #f9fbf8;
+        --chip-bg: #f3faff;
+        --desktop-board-base: #f6fbff;
+        --desktop-frame-bg: #111111;
+        --frame-rail: #0f1214;
+        --ingredient-border: #e7e9e4;
+        --ingredient-bg: #fbfcfa;
+        --phone-glow: rgba(232, 245, 255, 0.42);
+        --phone-bottom: #003a5c;
+        --phone-bottom-overlay: rgba(17, 21, 23, 0.96);
+        --control-soft: #eff1ed;
+        --timeline-step-bg: #eef0ec;
+        --summary-bg: #f3f0e8;
+        --shadow: 0 18px 60px rgba(0, 161, 255, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          linear-gradient(90deg, rgba(32, 33, 36, 0.04) 1px, transparent 1px),
+          linear-gradient(180deg, rgba(32, 33, 36, 0.04) 1px, transparent 1px),
+          var(--paper);
+        background-size: 28px 28px;
+        color: var(--ink);
+        font-family: "Avenir Next", "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+        letter-spacing: 0;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .page {
+        min-height: 100vh;
+        padding: 34px clamp(18px, 3vw, 42px) 42px;
+      }
+
+      .brief {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 24px;
+        align-items: end;
+        max-width: 1420px;
+        margin: 0 auto 24px;
+      }
+
+      .brief h1 {
+        margin: 0;
+        font-size: 32px;
+        line-height: 1.12;
+      }
+
+      .brief p {
+        max-width: 780px;
+        margin: 10px 0 0;
+        color: var(--soft-ink);
+        font-size: 16px;
+        line-height: 1.55;
+      }
+
+      .legend {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .legend span {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--surface);
+        padding: 8px 12px;
+        color: var(--soft-ink);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .showcase {
+        display: grid;
+        grid-template-columns: minmax(360px, 430px) minmax(720px, 1fr);
+        gap: 26px;
+        align-items: start;
+        max-width: 1420px;
+        margin: 0 auto;
+      }
+
+      .showcase > * {
+        min-width: 0;
+      }
+
+      .comparison-set {
+        max-width: 1420px;
+        margin: 0 auto 42px;
+      }
+
+      .comparison-set .showcase {
+        margin: 0;
+      }
+
+      .compare-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 14px;
+      }
+
+      .compare-heading h2 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.2;
+      }
+
+      .compare-heading p {
+        max-width: 680px;
+        margin: 6px 0 0;
+        color: var(--soft-ink);
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.45;
+      }
+
+      .theme-black {
+        --ink: #f5f8fb;
+        --soft-ink: #c9d5df;
+        --muted: #95a6b4;
+        --line: rgba(139, 210, 255, 0.32);
+        --paper: #080c10;
+        --surface: #111923;
+        --brand-soft: rgba(0, 161, 255, 0.16);
+        --brand-tint: rgba(0, 161, 255, 0.08);
+        --brand-warm: rgba(0, 161, 255, 0.26);
+        --brand-ink: #07111a;
+        --charcoal: #005b91;
+        --charcoal-2: #0a1620;
+        --card-surface: #111923;
+        --chip-bg: rgba(255, 255, 255, 0.07);
+        --desktop-board-base: #090d12;
+        --desktop-frame-bg: #05070a;
+        --frame-rail: #05070a;
+        --ingredient-border: rgba(139, 210, 255, 0.22);
+        --ingredient-bg: #0e151d;
+        --phone-glow: rgba(0, 161, 255, 0.3);
+        --phone-bottom: #05070a;
+        --phone-bottom-overlay: rgba(5, 7, 10, 0.96);
+        --control-soft: #17222d;
+        --timeline-step-bg: #17222d;
+        --summary-bg: #101820;
+        --shadow: 0 18px 60px rgba(0, 0, 0, 0.34);
+      }
+
+      .theme-black .legend span,
+      .theme-black .panel,
+      .theme-black .step-stage,
+      .theme-black .amount-card,
+      .theme-black .desktop-amount,
+      .theme-black .timeline-row,
+      .theme-black .ingredient-row {
+        color: var(--ink);
+      }
+
+      .theme-black .compare-heading h2,
+      .theme-black .caption {
+        color: #212529;
+      }
+
+      .theme-black .compare-heading p,
+      .theme-black .caption small {
+        color: #495057;
+      }
+
+      .caption {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        color: var(--soft-ink);
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .caption small {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .phone-frame {
+        width: min(100%, 390px);
+        margin: 0 auto;
+        border: 10px solid var(--frame-rail);
+        border-radius: 38px;
+        background: var(--frame-rail);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .phone-screen {
+        position: relative;
+        height: 824px;
+        overflow: hidden;
+        border-radius: 28px;
+        background:
+          radial-gradient(circle at 18% 0%, var(--phone-glow), transparent 34%),
+          linear-gradient(180deg, var(--brand-ink) 0%, var(--brand-dark) 48%, var(--phone-bottom) 100%);
+        color: #f9fbf8;
+      }
+
+      .phone-top {
+        padding: 26px 18px 14px;
+      }
+
+      .status-row,
+      .desktop-top,
+      .step-meta,
+      .amount-head,
+      .timeline-row,
+      .ingredient-row {
+        display: flex;
+        align-items: center;
+      }
+
+      .status-row {
+        justify-content: space-between;
+        margin-bottom: 18px;
+      }
+
+      .icon-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border: 0;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.09);
+        color: #fff;
+        cursor: pointer;
+      }
+
+      .wake {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        border-radius: 999px;
+        background: rgba(232, 245, 255, 0.13);
+        padding: 8px 11px;
+        color: rgba(249, 251, 248, 0.84);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .wake::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--brand);
+        box-shadow: 0 0 0 4px rgba(0, 161, 255, 0.18);
+      }
+
+      .recipe-title {
+        margin: 0;
+        max-width: 320px;
+        font-size: 24px;
+        line-height: 1.08;
+        font-weight: 900;
+      }
+
+      .recipe-sub {
+        margin: 7px 0 0;
+        color: rgba(249, 251, 248, 0.66);
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .phone-main {
+        padding: 0 18px;
+      }
+
+      .step-stage {
+        min-height: 298px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 24px;
+        background: var(--card-surface);
+        color: var(--ink);
+        padding: 20px;
+        box-shadow: 0 22px 36px rgba(0, 0, 0, 0.2);
+      }
+
+      .step-meta {
+        justify-content: space-between;
+        margin-bottom: 18px;
+      }
+
+      .step-index {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--soft-ink);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .step-index strong {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 38px;
+        height: 30px;
+        border-radius: 999px;
+        background: var(--charcoal);
+        color: #fff;
+        font-size: 14px;
+      }
+
+      .method-pill {
+        border-radius: 999px;
+        padding: 8px 11px;
+        background: var(--brand-soft);
+        color: var(--brand-dark);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .step-stage h2 {
+        margin: 0 0 16px;
+        font-size: 21px;
+        line-height: 1.18;
+      }
+
+      .step-copy {
+        margin: 0;
+        min-height: 116px;
+        font-size: 28px;
+        line-height: 1.32;
+        font-weight: 900;
+        word-break: keep-all;
+      }
+
+      .heat-time {
+        display: flex;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .heat-time span {
+        border-radius: 12px;
+        background: var(--chip-bg);
+        padding: 9px 11px;
+        color: var(--soft-ink);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .amount-board {
+        margin-top: 12px;
+        border-radius: 22px;
+        background: var(--charcoal-2);
+        padding: 15px;
+      }
+
+      .amount-head {
+        justify-content: space-between;
+        margin-bottom: 10px;
+        color: rgba(249, 251, 248, 0.72);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .amount-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 9px;
+      }
+
+      .amount-card {
+        min-height: 94px;
+        border-radius: 18px;
+        background: var(--card-surface);
+        padding: 12px;
+        color: var(--ink);
+      }
+
+      .amount-card b {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--soft-ink);
+        font-size: 14px;
+      }
+
+      .amount-card strong {
+        display: block;
+        color: var(--brand-dark);
+        font-size: 27px;
+        line-height: 1;
+      }
+
+      .amount-card small {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .step-rail {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .step-dot {
+        min-height: 38px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.72);
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .step-dot.active {
+        border-color: transparent;
+        background: var(--brand-warm);
+        color: var(--brand-ink);
+      }
+
+      .phone-bottom {
+        position: absolute;
+        inset-inline: 0;
+        bottom: 0;
+        padding: 14px 18px 20px;
+        background: linear-gradient(180deg, transparent, var(--phone-bottom-overlay) 22%);
+      }
+
+      .bottom-actions {
+        display: grid;
+        grid-template-columns: 52px 1fr 76px;
+        gap: 9px;
+      }
+
+      .bottom-actions button {
+        min-height: 56px;
+        border: 0;
+        border-radius: 16px;
+        cursor: pointer;
+        font-weight: 900;
+      }
+
+      .prev-next {
+        background: rgba(255, 255, 255, 0.11);
+        color: #fff;
+        font-size: 21px;
+      }
+
+      .next-action {
+        background: var(--brand);
+        color: #fff;
+        font-size: 17px;
+      }
+
+      .done-action {
+        background: var(--card-surface);
+        color: var(--brand-dark);
+        font-size: 14px;
+      }
+
+      .desktop-frame {
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: var(--desktop-frame-bg);
+        padding: 10px;
+        box-shadow: var(--shadow);
+      }
+
+      .desktop-board {
+        min-height: 736px;
+        border-radius: 20px;
+        overflow: hidden;
+        background:
+          linear-gradient(90deg, rgba(0, 161, 255, 0.1), transparent 38%),
+          var(--desktop-board-base);
+      }
+
+      .desktop-top {
+        justify-content: space-between;
+        height: 74px;
+        border-bottom: 1px solid var(--line);
+        padding: 0 28px;
+      }
+
+      .brand-mark {
+        color: var(--brand);
+        font-size: 19px;
+        font-weight: 1000;
+      }
+
+      .desktop-title {
+        text-align: center;
+      }
+
+      .desktop-title b {
+        display: block;
+        font-size: 18px;
+      }
+
+      .desktop-title span {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .desktop-status {
+        border-radius: 999px;
+        background: var(--brand-soft);
+        padding: 9px 13px;
+        color: var(--brand-dark);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .desktop-grid {
+        display: grid;
+        grid-template-columns: 240px minmax(330px, 1fr) 240px;
+        gap: 20px;
+        padding: 22px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--surface);
+        padding: 18px;
+      }
+
+      .panel h2 {
+        margin: 0 0 15px;
+        font-size: 16px;
+      }
+
+      .ingredient-list {
+        display: grid;
+        gap: 9px;
+      }
+
+      .ingredient-row {
+        justify-content: space-between;
+        min-height: 54px;
+        border: 1px solid var(--ingredient-border);
+        border-radius: 14px;
+        background: var(--ingredient-bg);
+        padding: 11px 12px;
+      }
+
+      .ingredient-row.active {
+        border-color: var(--brand);
+        background: var(--brand-soft);
+      }
+
+      .ingredient-row b {
+        font-size: 14px;
+      }
+
+      .ingredient-row span {
+        color: var(--brand-dark);
+        font-size: 17px;
+        font-weight: 1000;
+      }
+
+      .focus-panel {
+        display: grid;
+        min-height: 588px;
+        grid-template-rows: auto 1fr auto;
+        border-color: rgba(0, 161, 255, 0.34);
+        background:
+          linear-gradient(180deg, var(--surface) 0%, var(--brand-tint) 100%);
+      }
+
+      .desktop-step-count {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+
+      .desktop-step-count strong {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 54px;
+        height: 54px;
+        border-radius: 18px;
+        background: var(--charcoal);
+        color: #fff;
+        font-size: 20px;
+      }
+
+      .desktop-step-count span {
+        border-radius: 999px;
+        background: var(--brand-soft);
+        padding: 9px 13px;
+        color: var(--brand-dark);
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .desktop-copy {
+        align-self: center;
+      }
+
+      .desktop-copy h2 {
+        margin: 0 0 18px;
+        font-size: 30px;
+      }
+
+      .desktop-copy p {
+        margin: 0;
+        max-width: 100%;
+        overflow-wrap: break-word;
+        font-size: 38px;
+        line-height: 1.24;
+        font-weight: 1000;
+        word-break: keep-all;
+      }
+
+      .desktop-amounts {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 26px;
+      }
+
+      .desktop-amount {
+        border-radius: 18px;
+        background: var(--brand-soft);
+        padding: 16px;
+      }
+
+      .desktop-amount b {
+        color: var(--soft-ink);
+        font-size: 15px;
+      }
+
+      .desktop-amount strong {
+        display: block;
+        margin-top: 8px;
+        color: var(--brand-dark);
+        font-size: 30px;
+        line-height: 1;
+      }
+
+      .desktop-controls {
+        display: grid;
+        grid-template-columns: 62px 62px 1fr;
+        gap: 10px;
+        margin-top: 24px;
+      }
+
+      .desktop-controls button {
+        min-height: 54px;
+        border: 0;
+        border-radius: 15px;
+        cursor: pointer;
+        font-weight: 900;
+      }
+
+      .desktop-controls .arrow {
+        background: var(--control-soft);
+        color: var(--ink);
+        font-size: 22px;
+      }
+
+      .desktop-controls .complete {
+        background: var(--brand);
+        color: #fff;
+        font-size: 16px;
+      }
+
+      .timeline {
+        display: grid;
+        gap: 10px;
+      }
+
+      .timeline-row {
+        gap: 10px;
+        min-height: 58px;
+        border: 1px solid var(--ingredient-border);
+        border-radius: 15px;
+        background: var(--ingredient-bg);
+        padding: 10px;
+        cursor: pointer;
+      }
+
+      .timeline-row.active {
+        border-color: var(--brand);
+        background: var(--brand-soft);
+      }
+
+      .timeline-row strong {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: var(--timeline-step-bg);
+        font-size: 13px;
+      }
+
+      .timeline-row.active strong {
+        background: var(--brand);
+        color: #fff;
+      }
+
+      .timeline-row span {
+        min-width: 0;
+        color: var(--soft-ink);
+        font-size: 13px;
+        font-weight: 850;
+        line-height: 1.3;
+      }
+
+      .summary-note {
+        margin-top: 14px;
+        border-radius: 16px;
+        background: var(--summary-bg);
+        padding: 13px;
+        color: var(--soft-ink);
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.45;
+      }
+
+      @media (max-width: 1180px) {
+        .showcase {
+          grid-template-columns: 1fr;
+        }
+
+        .desktop-frame {
+          max-width: 100%;
+          overflow-x: auto;
+        }
+
+        .desktop-board {
+          min-width: 960px;
+        }
+
+        .brief {
+          grid-template-columns: 1fr;
+        }
+
+        .legend {
+          justify-content: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="brief" aria-labelledby="page-title">
+        <div>
+          <h1 id="page-title">COOK_MODE vNext — 조리대 모드</h1>
+          <p>
+            앱은 단계별 큰글씨 큐 카드로, 웹은 멀리서도 읽히는 조리 보드로 나눈 초안입니다.
+            현재 단계에서 쓸 재료와 양을 instruction 바로 아래가 아니라 별도 보드로 크게 보여주는 방향입니다.
+          </p>
+        </div>
+        <div class="legend" aria-label="설계 원칙">
+          <span>스크롤 최소화</span>
+          <span>현재 단계 우선</span>
+          <span>필요량 확대</span>
+          <span>완료 계약 유지</span>
+        </div>
+      </section>
+
+      <section class="comparison-set theme-blue" aria-label="파란 배경 요리모드 비교안">
+        <div class="compare-heading">
+          <div>
+            <h2>파란 브랜드 배경안</h2>
+            <p>현재 앱 런타임 브랜드색 #00A1FF를 배경과 CTA에 적극 적용한 버전입니다.</p>
+          </div>
+        </div>
+
+        <div class="showcase" aria-label="파란 배경 앱과 웹 요리모드 초안">
+          <div>
+            <div class="caption">
+              <span>앱 화면 초안</span>
+              <small>390 x 844 기준</small>
+            </div>
+            <div class="phone-frame">
+              <div class="phone-screen">
+                <div class="phone-top">
+                  <div class="status-row">
+                    <button class="icon-button" type="button" aria-label="나가기">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M15 18 9 12l6-6" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                    </button>
+                    <span class="wake">화면 켜짐</span>
+                  </div>
+                  <h2 class="recipe-title">돼지고기 김치찌개</h2>
+                  <p class="recipe-sub">요리모드 · 3인분 · 플래너 요리</p>
+                </div>
+
+                <div class="phone-main">
+                  <section class="step-stage" aria-label="현재 조리 단계">
+                    <div class="step-meta">
+                      <span class="step-index"><strong id="app-step-number">1</strong><span id="app-step-label">4단계 중</span></span>
+                      <span class="method-pill" id="app-method">준비</span>
+                    </div>
+                    <h2 id="app-step-title">재료 손질</h2>
+                    <p class="step-copy" id="app-copy">김치와 양파를 한입 크기로 썰어주세요.</p>
+                    <div class="heat-time">
+                      <span id="app-heat">불 없음</span>
+                      <span id="app-time">2분</span>
+                    </div>
+                  </section>
+
+                  <section class="amount-board" aria-label="이번 단계 재료량">
+                    <div class="amount-head">
+                      <span>이번에 쓸 양</span>
+                      <span id="app-amount-count">2개</span>
+                    </div>
+                    <div class="amount-grid" id="app-amounts"></div>
+                  </section>
+
+                  <nav class="step-rail" aria-label="단계 이동" id="app-rail"></nav>
+                </div>
+
+                <div class="phone-bottom">
+                  <div class="bottom-actions">
+                    <button class="prev-next" type="button" id="app-prev" aria-label="이전 단계">‹</button>
+                    <button class="next-action" type="button" id="app-next">다음 단계</button>
+                    <button class="done-action" type="button">완료</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="caption">
+              <span>웹 화면 초안</span>
+              <small>1280 이상 기준</small>
+            </div>
+            <div class="desktop-frame">
+              <div class="desktop-board">
+                <header class="desktop-top">
+                  <div class="brand-mark">HOMECOOK</div>
+                  <div class="desktop-title">
+                    <b>돼지고기 김치찌개</b>
+                    <span>요리모드 · 3인분 · 플래너 요리</span>
+                  </div>
+                  <div class="desktop-status">화면 켜짐</div>
+                </header>
+
+                <div class="desktop-grid">
+                  <aside class="panel">
+                    <h2>꺼내둘 재료</h2>
+                    <div class="ingredient-list" id="web-ingredients"></div>
+                    <p class="summary-note">
+                      총량은 왼쪽에서 고정하고, 지금 넣을 양은 가운데에서 다시 크게 봅니다.
+                    </p>
+                  </aside>
+
+                  <section class="panel focus-panel" aria-label="현재 조리 단계">
+                    <div>
+                      <div class="desktop-step-count">
+                        <strong id="web-step-number">1</strong>
+                        <span id="web-method">준비</span>
+                      </div>
+                    </div>
+                    <div class="desktop-copy">
+                      <h2 id="web-step-title">재료 손질</h2>
+                      <p id="web-copy">김치와 양파를 한입 크기로 썰어주세요.</p>
+                      <div class="desktop-amounts" id="web-amounts"></div>
+                    </div>
+                    <div class="desktop-controls">
+                      <button class="arrow" type="button" id="web-prev" aria-label="이전 단계">‹</button>
+                      <button class="arrow" type="button" id="web-next" aria-label="다음 단계">›</button>
+                      <button class="complete" type="button">요리 완료</button>
+                    </div>
+                  </section>
+
+                  <aside class="panel">
+                    <h2>조리 순서</h2>
+                    <div class="timeline" id="web-timeline"></div>
+                  </aside>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="comparison-set theme-black" aria-label="검은 배경 요리모드 비교안">
+        <div class="compare-heading">
+          <div>
+            <h2>블랙 조리대 배경안</h2>
+            <p>원래 앱처럼 어두운 조리대 느낌을 살리고, 행동/선택/수량 강조는 현재 파란 브랜드색으로 유지한 버전입니다.</p>
+          </div>
+        </div>
+
+        <div class="showcase" aria-label="검은 배경 앱과 웹 요리모드 초안">
+          <div>
+            <div class="caption">
+              <span>앱 화면 초안</span>
+              <small>390 x 844 기준</small>
+            </div>
+            <div class="phone-frame">
+              <div class="phone-screen">
+                <div class="phone-top">
+                  <div class="status-row">
+                    <button class="icon-button" type="button" aria-label="나가기">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M15 18 9 12l6-6" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                    </button>
+                    <span class="wake">화면 켜짐</span>
+                  </div>
+                  <h2 class="recipe-title">돼지고기 김치찌개</h2>
+                  <p class="recipe-sub">요리모드 · 3인분 · 플래너 요리</p>
+                </div>
+
+                <div class="phone-main">
+                  <section class="step-stage" aria-label="현재 조리 단계">
+                    <div class="step-meta">
+                      <span class="step-index"><strong>1</strong><span>4단계 중</span></span>
+                      <span class="method-pill">준비</span>
+                    </div>
+                    <h2>재료 손질</h2>
+                    <p class="step-copy">김치와 양파를 한입 크기로 썰어주세요.</p>
+                    <div class="heat-time">
+                      <span>불 없음</span>
+                      <span>2분</span>
+                    </div>
+                  </section>
+
+                  <section class="amount-board" aria-label="이번 단계 재료량">
+                    <div class="amount-head">
+                      <span>이번에 쓸 양</span>
+                      <span>2개</span>
+                    </div>
+                    <div class="amount-grid">
+                      <div class="amount-card"><b>배추김치</b><strong>300g</strong><small>한입 크기</small></div>
+                      <div class="amount-card"><b>양파</b><strong>1/2개</strong><small>채썰기</small></div>
+                    </div>
+                  </section>
+
+                  <nav class="step-rail" aria-label="단계 이동">
+                    <button class="step-dot active" type="button">1</button>
+                    <button class="step-dot" type="button">2</button>
+                    <button class="step-dot" type="button">3</button>
+                    <button class="step-dot" type="button">4</button>
+                  </nav>
+                </div>
+
+                <div class="phone-bottom">
+                  <div class="bottom-actions">
+                    <button class="prev-next" type="button" aria-label="이전 단계">‹</button>
+                    <button class="next-action" type="button">다음 단계</button>
+                    <button class="done-action" type="button">완료</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="caption">
+              <span>웹 화면 초안</span>
+              <small>1280 이상 기준</small>
+            </div>
+            <div class="desktop-frame">
+              <div class="desktop-board">
+                <header class="desktop-top">
+                  <div class="brand-mark">HOMECOOK</div>
+                  <div class="desktop-title">
+                    <b>돼지고기 김치찌개</b>
+                    <span>요리모드 · 3인분 · 플래너 요리</span>
+                  </div>
+                  <div class="desktop-status">화면 켜짐</div>
+                </header>
+
+                <div class="desktop-grid">
+                  <aside class="panel">
+                    <h2>꺼내둘 재료</h2>
+                    <div class="ingredient-list">
+                      <div class="ingredient-row active"><b>배추김치</b><span>300g</span></div>
+                      <div class="ingredient-row"><b>돼지고기</b><span>250g</span></div>
+                      <div class="ingredient-row active"><b>양파</b><span>1/2개</span></div>
+                      <div class="ingredient-row"><b>물</b><span>650ml</span></div>
+                      <div class="ingredient-row"><b>고춧가루</b><span>1큰술</span></div>
+                      <div class="ingredient-row"><b>두부</b><span>1/2모</span></div>
+                      <div class="ingredient-row"><b>대파</b><span>1대</span></div>
+                    </div>
+                    <p class="summary-note">
+                      총량은 왼쪽에서 고정하고, 지금 넣을 양은 가운데에서 다시 크게 봅니다.
+                    </p>
+                  </aside>
+
+                  <section class="panel focus-panel" aria-label="현재 조리 단계">
+                    <div>
+                      <div class="desktop-step-count">
+                        <strong>1</strong>
+                        <span>준비</span>
+                      </div>
+                    </div>
+                    <div class="desktop-copy">
+                      <h2>재료 손질</h2>
+                      <p>김치와 양파를 한입 크기로 썰어주세요.</p>
+                      <div class="desktop-amounts">
+                        <div class="desktop-amount"><b>배추김치</b><strong>300g</strong></div>
+                        <div class="desktop-amount"><b>양파</b><strong>1/2개</strong></div>
+                      </div>
+                    </div>
+                    <div class="desktop-controls">
+                      <button class="arrow" type="button" aria-label="이전 단계">‹</button>
+                      <button class="arrow" type="button" aria-label="다음 단계">›</button>
+                      <button class="complete" type="button">요리 완료</button>
+                    </div>
+                  </section>
+
+                  <aside class="panel">
+                    <h2>조리 순서</h2>
+                    <div class="timeline">
+                      <button class="timeline-row active" type="button"><strong>1</strong><span>재료 손질</span></button>
+                      <button class="timeline-row" type="button"><strong>2</strong><span>고기 볶기</span></button>
+                      <button class="timeline-row" type="button"><strong>3</strong><span>국물 내기</span></button>
+                      <button class="timeline-row" type="button"><strong>4</strong><span>간 맞추기</span></button>
+                    </div>
+                  </aside>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const steps = [
+        {
+          method: "준비",
+          title: "재료 손질",
+          copy: "김치와 양파를 한입 크기로 썰어주세요.",
+          heat: "불 없음",
+          time: "2분",
+          ingredients: [
+            ["배추김치", "300g", "한입 크기"],
+            ["양파", "1/2개", "채썰기"],
+          ],
+        },
+        {
+          method: "볶기",
+          title: "고기 볶기",
+          copy: "냄비에 고기와 김치를 넣고 중불에서 충분히 볶아주세요.",
+          heat: "중불",
+          time: "5분",
+          ingredients: [
+            ["돼지고기", "250g", "먼저 넣기"],
+            ["배추김치", "300g", "같이 볶기"],
+          ],
+        },
+        {
+          method: "끓이기",
+          title: "국물 내기",
+          copy: "물을 붓고 끓어오르면 양념을 넣어주세요.",
+          heat: "강불",
+          time: "12분",
+          ingredients: [
+            ["물", "650ml", "한 번에"],
+            ["고춧가루", "1큰술", "끓을 때"],
+          ],
+        },
+        {
+          method: "마무리",
+          title: "간 맞추기",
+          copy: "두부와 대파를 넣고 3분 더 끓인 뒤 간을 맞춰주세요.",
+          heat: "중약불",
+          time: "3분",
+          ingredients: [
+            ["두부", "1/2모", "마지막"],
+            ["대파", "1대", "마지막"],
+          ],
+        },
+      ];
+
+      const allIngredients = [
+        ["배추김치", "300g"],
+        ["돼지고기", "250g"],
+        ["양파", "1/2개"],
+        ["물", "650ml"],
+        ["고춧가루", "1큰술"],
+        ["두부", "1/2모"],
+        ["대파", "1대"],
+      ];
+
+      let current = 0;
+
+      const $ = (id) => document.getElementById(id);
+
+      function amountCard([name, amount, note]) {
+        return `<div class="amount-card"><b>${name}</b><strong>${amount}</strong><small>${note}</small></div>`;
+      }
+
+      function desktopAmount([name, amount]) {
+        return `<div class="desktop-amount"><b>${name}</b><strong>${amount}</strong></div>`;
+      }
+
+      function renderStatic() {
+        $("web-ingredients").innerHTML = allIngredients
+          .map(([name, amount]) => `<div class="ingredient-row" data-name="${name}"><b>${name}</b><span>${amount}</span></div>`)
+          .join("");
+
+        $("app-rail").innerHTML = steps
+          .map((_, index) => `<button class="step-dot" type="button" data-step="${index}" aria-label="${index + 1}단계">${index + 1}</button>`)
+          .join("");
+
+        $("web-timeline").innerHTML = steps
+          .map((step, index) => `<button class="timeline-row" type="button" data-step="${index}"><strong>${index + 1}</strong><span>${step.title}</span></button>`)
+          .join("");
+
+        document.querySelectorAll("[data-step]").forEach((button) => {
+          button.addEventListener("click", () => {
+            current = Number(button.dataset.step);
+            render();
+          });
+        });
+      }
+
+      function render() {
+        const step = steps[current];
+        $("app-step-number").textContent = current + 1;
+        $("app-step-label").textContent = `${steps.length}단계 중`;
+        $("app-method").textContent = step.method;
+        $("app-step-title").textContent = step.title;
+        $("app-copy").textContent = step.copy;
+        $("app-heat").textContent = step.heat;
+        $("app-time").textContent = step.time;
+        $("app-amount-count").textContent = `${step.ingredients.length}개`;
+        $("app-amounts").innerHTML = step.ingredients.map(amountCard).join("");
+        $("app-next").textContent = current === steps.length - 1 ? "마지막 단계" : "다음 단계";
+
+        $("web-step-number").textContent = current + 1;
+        $("web-method").textContent = step.method;
+        $("web-step-title").textContent = step.title;
+        $("web-copy").textContent = step.copy;
+        $("web-amounts").innerHTML = step.ingredients.map(desktopAmount).join("");
+
+        document.querySelectorAll(".step-dot, .timeline-row").forEach((button) => {
+          button.classList.toggle("active", Number(button.dataset.step) === current);
+        });
+
+        document.querySelectorAll(".ingredient-row").forEach((row) => {
+          row.classList.toggle(
+            "active",
+            step.ingredients.some(([name]) => name === row.dataset.name),
+          );
+        });
+      }
+
+      function move(delta) {
+        current = Math.max(0, Math.min(steps.length - 1, current + delta));
+        render();
+      }
+
+      renderStatic();
+      render();
+      $("app-prev").addEventListener("click", () => move(-1));
+      $("app-next").addEventListener("click", () => move(1));
+      $("web-prev").addEventListener("click", () => move(-1));
+      $("web-next").addEventListener("click", () => move(1));
+    </script>
+  </body>
+</html>

@@ -53,7 +53,7 @@
    - 파일: `components/home/ingredient-filter-modal.tsx`
 
 6. **재료로 검색 버튼 색상**
-   - HOME 카테고리 필터 바의 `재료로 검색` 버튼이 `var(--brand)` (현재 `#0F766E`)를 사용한다. 사용자가 `#007A76` → `#2AC1BC` 또는 기존 mint 역할 토큰 전환을 요청했다.
+   - HOME 카테고리 필터 바의 `재료로 검색` 버튼은 `var(--brand)`를 사용한다. 현재 앱 런타임 기준 `var(--brand)`는 `app/globals.css`의 파란색 `#00A1FF`다.
    - `var(--brand)`는 이미 역할 토큰이므로, 개별 버튼의 하드코딩 색상을 바꾸는 것이 아니라 역할 토큰을 계속 사용하되, 시각적 구분이 필요하면 `var(--wave1-mint-contrast)` 또는 `var(--brand-primary)` 등 기존 토큰으로 대체한다.
    - 파일: `components/home/home-screen.tsx` (DiscoveryFilterBar 내부)
 

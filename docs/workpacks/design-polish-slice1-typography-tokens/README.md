@@ -107,7 +107,7 @@ N/A — 이 슬라이스에 백엔드 변경 없음. FE-only visual/token cleanu
 - **앱 표면만 변경**: 웹 `--web-*` 토큰과 1024px 미디어 블록 내 스타일은 건드리지 않는다.
 - **Jua 미복원**: 브랜드 폰트 Jua는 의도적으로 제거된 상태이며 복원하지 않는다.
 - **`--olive` 직접 참조 금지**: `var(--olive)`, `text-olive`, `bg-olive` 등의 직접 사용을 `var(--brand)` / `var(--brand-primary)` 등 역할 토큰으로 교체한다. globals.css의 `--olive: var(--brand-primary)` alias 자체는 호환성을 위해 당분간 유지할 수 있으나, 컴포넌트 코드에서의 직접 참조를 제거하는 것이 목표다.
-- **역할 토큰 사용 원칙**: 컴포넌트에서 직접 hex 색상(`#0F766E` 등)을 사용하지 않고, `var(--brand)`, `var(--brand-primary)`, `var(--text-2)` 등 역할 토큰을 사용한다.
+- **역할 토큰 사용 원칙**: 컴포넌트에서 직접 hex 색상(`#00A1FF` 등)을 사용하지 않고, `var(--brand)`, `var(--brand-primary)`, `var(--text-2)` 등 역할 토큰을 사용한다.
 - **font-weight 기준**:
   - 화면 제목 (text-xl, text-2xl): `700` 이하
   - 소제목 (text-lg): `600~700`
