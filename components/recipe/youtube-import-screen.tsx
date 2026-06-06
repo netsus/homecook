@@ -831,6 +831,7 @@ function ReviewIngredientRow({
     ingredient.quantity_review_required === true &&
     ingredient.quantity_user_confirmed !== true;
   const quantitySourceLabel = getQuantitySourceLabel(ingredient);
+  const isInferredQuantity = ingredient.quantity_source === "recipe_inferred";
   const quantityEvidenceSnippet = getQuantityEvidenceSnippet(ingredient);
   const hasValidQuantitySuggestion =
     ingredient.ingredient_type === "TO_TASTE" ||
@@ -887,22 +888,32 @@ function ReviewIngredientRow({
             </span>
           ) : null}
         </div>
-        <input
-          aria-label={`${ingredientName} 수량`}
-          className="h-9 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-right text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
-          inputMode="decimal"
-          min={0}
-          onChange={(event) => {
-            const value = event.target.value;
-            onUpdateIngredient(ingredient.tempId, {
-              amount: value === "" ? 0 : Number(value),
-              unit: ingredient.unit ?? "g",
-              ...getQuantityEditPatch(ingredient),
-            });
-          }}
-          type="number"
-          value={ingredient.amount ?? 0}
-        />
+        <div className="flex min-w-0 flex-col items-stretch gap-1">
+          <input
+            aria-label={`${ingredientName} 수량`}
+            className="h-9 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-right text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
+            inputMode="decimal"
+            min={0}
+            onChange={(event) => {
+              const value = event.target.value;
+              onUpdateIngredient(ingredient.tempId, {
+                amount: value === "" ? 0 : Number(value),
+                unit: ingredient.unit ?? "g",
+                ...getQuantityEditPatch(ingredient),
+              });
+            }}
+            type="number"
+            value={ingredient.amount ?? 0}
+          />
+          {isInferredQuantity ? (
+            <span
+              className="self-end rounded-full bg-[var(--warning-soft)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--warning)]"
+              data-testid={`quantity-estimate-badge-${ingredient.tempId}`}
+            >
+              추정
+            </span>
+          ) : null}
+        </div>
         <div
           aria-label={`${ingredientName} 단위`}
           className="flex shrink-0 gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-0.5"
