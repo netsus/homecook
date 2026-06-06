@@ -4198,7 +4198,8 @@ function getVisualQuantityExtractionConfig() {
 
 function getVisualRecipeExtractionConfig() {
   const explicitVisualRecipeEnabled = process.env.YOUTUBE_RECIPE_VISUAL_RECIPE_ENABLED;
-  const contractAligned = process.env.YOUTUBE_RECIPE_VISUAL_RECIPE_CONTRACT_ALIGNED === "true";
+  const contractAlignedEnv = process.env.YOUTUBE_RECIPE_VISUAL_RECIPE_CONTRACT_ALIGNED?.trim().toLowerCase();
+  const contractAligned = contractAlignedEnv !== "false" && contractAlignedEnv !== "0";
   const enabled = explicitVisualRecipeEnabled === "true"
     || (
       explicitVisualRecipeEnabled === undefined
