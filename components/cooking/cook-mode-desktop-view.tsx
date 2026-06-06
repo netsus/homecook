@@ -168,6 +168,7 @@ export function CookModeDesktopView({
 
           <div className="web-cook-prototype-grid">
             <aside
+              aria-label="꺼내둘 재료"
               className="web-cook-prototype-panel"
               data-testid="cook-mode-action-rail"
             >
@@ -266,7 +267,7 @@ export function CookModeDesktopView({
               </section>
             )}
 
-            <aside className="web-cook-prototype-panel">
+            <aside aria-label="조리 순서" className="web-cook-prototype-panel">
               <h2>조리 순서</h2>
               <ol className="web-cook-prototype-timeline" data-testid="step-list">
                 {steps.map((step, index) => {

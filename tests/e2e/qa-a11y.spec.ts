@@ -486,7 +486,7 @@ test.describe("QA accessibility smoke", () => {
 
     await page.goto(SHOPPING_DETAIL_VISUAL_PATH);
     await expect(
-      page.getByRole("heading", { name: "이번 주 장보기" }),
+      page.getByRole("heading", { name: "5월 18일 장보기" }),
     ).toBeVisible();
     await expectDesktopMypageNavLabel(page);
     await expectNoAxeViolations(page, {
@@ -503,7 +503,7 @@ test.describe("QA accessibility smoke", () => {
 
     await page.goto(SHOPPING_DETAIL_COMPLETED_VISUAL_PATH);
     await expect(
-      page.getByRole("heading", { name: "지난 주 장보기" }),
+      page.getByRole("heading", { name: "5월 18일 장보기" }),
     ).toBeVisible();
     await expectDesktopMypageNavLabel(page);
     await expectNoAxeViolations(page, {

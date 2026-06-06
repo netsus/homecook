@@ -196,7 +196,9 @@ test.describe("slice 12a: shopping complete", () => {
       await page.goto(SHOPPING_DETAIL_URL);
 
       await expect(page.getByText("4월 12일 장보기")).toBeVisible();
-      await expect(page.getByText(/완료됨/)).toBeVisible();
+      await expect(
+        page.getByText("완료된 장보기 기록은 수정할 수 없어요"),
+      ).toBeVisible();
       await expect(page.getByRole("button", { name: "장보기 완료" })).not.toBeVisible();
     });
   });
@@ -245,8 +247,10 @@ test.describe("slice 12a: shopping complete", () => {
       // Button should disappear
       await expect(page.getByRole("button", { name: "장보기 완료" })).not.toBeVisible();
 
-      // Should show completed badge
-      await expect(page.getByText(/완료됨/)).toBeVisible();
+      // Should show read-only completed notice.
+      await expect(
+        page.getByText("완료된 장보기 기록은 수정할 수 없어요"),
+      ).toBeVisible();
     });
 
     test("keeps the completed meal visible in planner without a status badge", async ({ page }) => {
