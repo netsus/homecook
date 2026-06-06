@@ -886,6 +886,37 @@ describe("MenuAddScreen", () => {
     });
   });
 
+  it("shows 추정 next to an inferred YouTube ingredient quantity", async () => {
+    installMatchMedia(true);
+    mockVisualQuantityExtract({
+      quantity_source: "recipe_inferred",
+      quantity_confidence: 0.48,
+      quantity_raw_text: "영상 흐름과 재료 역할 기준 두부 300g 추정",
+      quantity_evidence_refs: [
+        {
+          source_method: "visual",
+          source_provider: "gemini",
+          frame_ts_ms: 12000,
+          snippet: "영상에서 두부 한 모를 사용하는 흐름",
+          locator_hash: "hash-tofu-inferred",
+        },
+      ],
+    });
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+    await user.type(
+      screen.getByLabelText("유튜브 URL"),
+      "https://www.youtube.com/watch?v=visual12345",
+    );
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    expect((await screen.findByTestId("quantity-source-yt-ing-0")).textContent).toContain("추정");
+    expect((await screen.findByTestId("quantity-estimate-badge-yt-ing-0")).textContent).toBe("추정");
+  });
+
   it("sends edited_quantity when a review-required quantity is changed", async () => {
     installMatchMedia(true);
     mockVisualQuantityExtract();

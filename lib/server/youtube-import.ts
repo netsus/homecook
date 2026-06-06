@@ -4938,21 +4938,27 @@ function buildVisualQuantityPrompt(context: YoutubeVisualQuantityExtractorContex
     .join("\n");
 
   return [
-    "You extract only on-screen quantity text for cooking ingredients from a public YouTube video.",
+    "You extract or infer review-only cooking ingredient quantities from a public YouTube video.",
     "Return only JSON that matches the response schema.",
     "Rules:",
-    "- Use visual on-screen text only. Do not use audio, guesses, comments, product ads, or external recipe data.",
+    "- Use the video, visible cooking actions, visible ingredient names, and the draft recipe context. Do not use comments, product ads, external recipe data, or recipe lookup.",
     "- Return rows for provided draft ingredients and any additional cooking ingredients with clearly visible on-screen quantity text.",
     "- For additional ingredients, set draft_ingredient_id to null and use the visible ingredient name as standard_name.",
-    "- Prefer exact on-screen amounts and units. If evidence is not visible, omit that ingredient.",
-    "- Include sauce, sweetener, oil, garnish, and finishing seasoning rows when they have visible quantities.",
+    "- Prefer exact on-screen amounts and units when available.",
+    "- Fill every remaining missing draft ingredient quantity with the best conservative estimate instead of leaving it blank.",
+    "- Estimate priority: visible count/measure, visible portion/container/action, then dish context plus ingredient role and base serving assumptions.",
+    "- Infer oil, sauce, cheese, meat, seasoning, and garnish quantities when exact visual quantity text is missing; mark them as review-only recipe_inferred.",
     "- quantity_source must be visual_explicit when visible text directly shows the quantity.",
+    "- For inferred rows, set quantity_source to recipe_inferred, ingredient_type to QUANT, include amount and unit, set quantity_confidence <= 0.65, and describe the visible clue or recipe-context assumption in quantity_raw_text and quantity_evidence_refs[].snippet.",
+    "- Use confidence <= 0.65 for every recipe_inferred row; use lower confidence such as 0.35-0.5 when the estimate is based mostly on ingredient role or dish context.",
+    "- Omit the row only when the ingredient is not part of the dish or no meaningful unit can be chosen.",
     "- quantity_evidence_refs[].source_method must be visual exactly.",
     "- ingredient_type must be QUANT for measured quantities or TO_TASTE only when no amount/unit is visible.",
+    "- Return TO_TASTE only when visible text explicitly says a to-taste quantity such as 약간, 조금, 적당량, or 취향껏.",
     "- visual_explicit requires a visible on-screen text snippet and a timestamp.",
     "- unit_normalized is allowed only when raw visible text supports the conversion.",
     "- ingredient_default is allowed only when visible count evidence supports a known cooking default.",
-    "- recipe_inferred is review-only and must include the visible clue that caused the inference.",
+    "- recipe_inferred is review-only and must include the clue or assumption that caused the inference.",
     "- Do not mention API keys, raw provider responses, or unrelated video details.",
     "",
     `Video title: ${context.title}`,
@@ -5699,7 +5705,11 @@ function normalizeLlmIngredient(
   const ingredientType = amount === null || !normalizedUnit ? "TO_TASTE" : "QUANT";
   const rawText = normalizeLlmOptionalText(item.raw_text) || evidenceRefs[0].text;
   const displayText = rawText || [name, amount, normalizedUnit].filter(Boolean).join(" ");
-  const quantitySource = options.ingredientQuantitySource;
+  const requestedQuantitySource = options.ingredientQuantitySource;
+  const hasExplicitQuantityEvidence = ingredientType === "QUANT" || hasToTasteQuantityText(rawText);
+  const quantitySource = requestedQuantitySource === "visual_explicit" && !hasExplicitQuantityEvidence
+    ? undefined
+    : requestedQuantitySource;
 
   return {
     ingredient: {
@@ -5723,7 +5733,7 @@ function normalizeLlmIngredient(
             snippet: rawText,
           })
         : undefined,
-      quantityReviewRequired: options.ingredientQuantityReviewRequired,
+      quantityReviewRequired: quantitySource ? options.ingredientQuantityReviewRequired : undefined,
     },
     evidenceRefs,
   };
@@ -7288,9 +7298,17 @@ function normalizeVisualQuantitySuggestion(item: unknown): VisualQuantitySuggest
     standardName,
     amount,
   );
-  const ingredientType = item.ingredient_type === "TO_TASTE" || amount === null || !unit
-    ? "TO_TASTE"
-    : "QUANT";
+  if (quantitySource === "visual_explicit" && amount === null && !hasToTasteQuantityText(evidenceRawText)) {
+    return null;
+  }
+  if (quantitySource === "recipe_inferred" && (amount === null || !unit)) {
+    return null;
+  }
+  const ingredientType = quantitySource === "recipe_inferred"
+    ? "QUANT"
+    : item.ingredient_type === "TO_TASTE" || amount === null || !unit
+      ? "TO_TASTE"
+      : "QUANT";
   if (ingredientType === "QUANT" && (amount === null || !unit)) {
     return null;
   }
@@ -7342,14 +7360,115 @@ function normalizeVisualIngredientKey(name: string) {
 }
 
 function isAppendableVisualQuantitySuggestion(suggestion: VisualQuantitySuggestion) {
-  return (
+  if (suggestion.ingredientType !== "QUANT" || suggestion.amount === null || !suggestion.unit) {
+    return false;
+  }
+
+  if (
     suggestion.quantitySource === "visual_explicit"
     || suggestion.quantitySource === "unit_normalized"
-  )
-    && suggestion.ingredientType === "QUANT"
-    && suggestion.amount !== null
-    && !!suggestion.unit
-    && (suggestion.quantityConfidence ?? 0.7) >= 0.55;
+  ) {
+    return (suggestion.quantityConfidence ?? 0.7) >= 0.55;
+  }
+
+  return suggestion.quantitySource === "recipe_inferred"
+    && (suggestion.quantityConfidence ?? 0.4) >= 0.3;
+}
+
+function inferRecipeInferredFallbackQuantity(ingredient: YoutubeExtractedIngredient): {
+  amount: number;
+  unit: string;
+  confidence: number;
+  reason: string;
+} | null {
+  const key = normalizeVisualIngredientKey(ingredient.standard_name);
+  if (!key) {
+    return null;
+  }
+
+  if (/후추|후춧가루|흑후추/u.test(key)) {
+    return { amount: 0.25, unit: "작은술", confidence: 0.28, reason: "seasoning_default" };
+  }
+  if (/소금|맛소금/u.test(key)) {
+    return { amount: 0.25, unit: "작은술", confidence: 0.28, reason: "seasoning_default" };
+  }
+  if (/올리브오일|오일|기름|식용유/u.test(key)) {
+    return { amount: 1, unit: "큰술", confidence: 0.32, reason: "oil_default" };
+  }
+  if (/토마토소스/u.test(key)) {
+    return { amount: 200, unit: "g", confidence: 0.32, reason: "sauce_base_default" };
+  }
+  if (/소스/u.test(key)) {
+    return { amount: 2, unit: "큰술", confidence: 0.3, reason: "sauce_default" };
+  }
+  if (/다진고기|간고기|다짐육/u.test(key)) {
+    return { amount: 100, unit: "g", confidence: 0.3, reason: "meat_base_default" };
+  }
+  if (/치즈/u.test(key)) {
+    return { amount: 50, unit: "g", confidence: 0.3, reason: "cheese_default" };
+  }
+  if (/양파/u.test(key)) {
+    return { amount: 0.5, unit: "개", confidence: 0.3, reason: "vegetable_base_default" };
+  }
+  if (/애호박|가지/u.test(key)) {
+    return { amount: 1, unit: "개", confidence: 0.32, reason: "vegetable_count_default" };
+  }
+  if (/토마토/u.test(key)) {
+    return { amount: 2, unit: "개", confidence: 0.32, reason: "vegetable_count_default" };
+  }
+
+  return null;
+}
+
+function applyRecipeInferredFallbackQuantities(ingredients: YoutubeExtractedIngredient[]) {
+  let enrichedCount = 0;
+  const enrichedIngredients = ingredients.map((ingredient) => {
+    if (!hasVisualQuantityGap(ingredient)) {
+      return ingredient;
+    }
+
+    const fallback = inferRecipeInferredFallbackQuantity(ingredient);
+    if (!fallback) {
+      return ingredient;
+    }
+
+    enrichedCount += 1;
+    const evidenceSnippet = collapseWhitespace(
+      ingredient.quantity_raw_text
+      ?? ingredient.raw_text
+      ?? ingredient.display_text
+      ?? ingredient.standard_name,
+    ) || ingredient.standard_name;
+    const displayText = `${ingredient.standard_name} ${fallback.amount}${fallback.unit}`;
+
+    return {
+      ...ingredient,
+      amount: fallback.amount,
+      unit: fallback.unit,
+      ingredient_type: "QUANT" as const,
+      display_text: displayText,
+      scalable: true,
+      quantity_source: "recipe_inferred" as const,
+      quantity_confidence: fallback.confidence,
+      quantity_raw_text: `${evidenceSnippet} (${fallback.reason})`,
+      quantity_evidence_refs: [
+        {
+          source_method: "visual" as const,
+          source_provider: `${VISUAL_QUANTITY_EXTRACTOR_PROVIDER}_fallback`,
+          line_index: null,
+          start_ms: null,
+          end_ms: null,
+          frame_ts_ms: null,
+          snippet: evidenceSnippet,
+          locator_hash: null,
+        },
+      ],
+      quantity_review_required: true,
+      quantity_user_confirmed: false,
+    };
+  });
+
+  return { ingredients: enrichedIngredients, enrichedCount };
 }
 
 function collectAppendableVisualSuggestionNames(
@@ -7522,12 +7641,15 @@ function applyVisualQuantitySuggestions(
     };
   });
 
+  const fallbackResult = applyRecipeInferredFallbackQuantities(enrichedIngredients);
+  const totalEnrichedCount = enrichedCount + fallbackResult.enrichedCount;
+
   if (!appendMissing) {
-    return { ingredients: enrichedIngredients, enrichedCount, appendedCount: 0 };
+    return { ingredients: fallbackResult.ingredients, enrichedCount: totalEnrichedCount, appendedCount: 0 };
   }
 
   const appendResult = appendVisualQuantitySuggestions({
-    ingredients: enrichedIngredients,
+    ingredients: fallbackResult.ingredients,
     suggestions,
     usedSuggestionIndexes,
     matchesByName,
@@ -7535,7 +7657,7 @@ function applyVisualQuantitySuggestions(
 
   return {
     ingredients: appendResult.ingredients,
-    enrichedCount: enrichedCount + appendResult.appendedCount,
+    enrichedCount: totalEnrichedCount + appendResult.appendedCount,
     appendedCount: appendResult.appendedCount,
   };
 }
