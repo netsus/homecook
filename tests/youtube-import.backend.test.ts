@@ -6169,7 +6169,6 @@ describe("20 youtube real import backend", () => {
     vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
     vi.stubEnv("YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED", "true");
     vi.stubEnv("YOUTUBE_RECIPE_VISUAL_RECIPE_ENABLED", "true");
-    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_RECIPE_CONTRACT_ALIGNED", "true");
     vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
 
     const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({

@@ -718,7 +718,7 @@ describe("YouTube Recipio parity replay contract", () => {
     }
   });
 
-  it("reports contract_blocked for sparse visual cases until visual recipe contract alignment is explicit", async () => {
+  it("reports contract_blocked for sparse visual cases when visual recipe contract alignment is explicitly disabled", async () => {
     const report = await runParitySuite({ contractAligned: false });
 
     expect(report.status).toBe("contract_blocked");
