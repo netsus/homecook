@@ -271,10 +271,8 @@ test.describe("Slice 27b: YouTube Source Fallback", () => {
     await expect(page.locator("[data-testid='partial-draft-guidance']")).toBeVisible();
     await expect(page.locator("text=조리 과정을 직접 입력해주세요")).toBeVisible();
 
-    // extraction_methods should show 설명란 only (no 자막)
-    await expect(page.locator("[data-testid='extraction-method-description']")).toBeVisible();
-    await expect(page.locator("[data-testid='extraction-method-description']")).toHaveText("설명란");
-    await expect(page.locator("[data-testid='extraction-method-caption']")).toHaveCount(0);
+    await expect(page.locator("[data-testid='extraction-method-chips']")).toHaveCount(0);
+    await expect(page.locator("[data-testid^='extraction-method-']")).toHaveCount(0);
 
     // Register button should be disabled
     const registerButton = page.locator('button:has-text("등록")');
@@ -317,11 +315,8 @@ test.describe("Slice 27b: YouTube Source Fallback", () => {
 
     await navigateToReview(page);
 
-    // extraction_methods should show both Korean labels
-    await expect(page.locator("[data-testid='extraction-method-description']")).toBeVisible();
-    await expect(page.locator("[data-testid='extraction-method-description']")).toHaveText("설명란");
-    await expect(page.locator("[data-testid='extraction-method-caption']")).toBeVisible();
-    await expect(page.locator("[data-testid='extraction-method-caption']")).toHaveText("자막");
+    await expect(page.locator("[data-testid='extraction-method-chips']")).toHaveCount(0);
+    await expect(page.locator("[data-testid^='extraction-method-']")).toHaveCount(0);
 
     // No partial draft guidance (steps are present)
     await expect(page.locator("[data-testid='partial-draft-guidance']")).toHaveCount(0);

@@ -667,17 +667,6 @@ const EXTRACTION_STAGES = [
   { key: "transcript", label: "자막/스크립트 보조 확인" },
 ] as const;
 
-const EXTRACTION_METHOD_LABELS: Record<string, string> = {
-  asr: "음성 자막",
-  author_comment: "작성자 댓글",
-  caption: "자막",
-  comment: "작성자 댓글",
-  description: "설명란",
-  estimation: "추정",
-  manual: "직접 입력",
-  ocr: "화면 텍스트",
-};
-
 interface ExtractionProgressStepProps {
   videoTitle: string;
   elapsedMs: number;
@@ -774,7 +763,6 @@ interface ReviewStepProps {
   onServingsChange: (servings: number) => void;
   thumbnailUrl: string | null;
   tags: string[];
-  extractionMethods: string[];
   classificationStatus: YoutubeRecipeClassificationStatus | null;
   classificationReasons: string[];
   draftWarnings: string[];
@@ -1157,7 +1145,6 @@ function ReviewStep({
   onServingsChange,
   thumbnailUrl,
   tags,
-  extractionMethods,
   classificationStatus,
   classificationReasons,
   draftWarnings,
@@ -1191,21 +1178,6 @@ function ReviewStep({
   return (
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-8">
       <p className="pt-4 text-base text-[var(--text-2)]">추출 결과를 확인해주세요</p>
-
-      {/* Extraction method pills */}
-      {extractionMethods.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2" data-testid="extraction-method-chips">
-          {extractionMethods.map((method) => (
-            <span
-              key={method}
-              className="rounded-full bg-[var(--brand)] px-2.5 py-0.5 text-xs font-semibold text-[var(--text-inverse)]"
-              data-testid={`extraction-method-${method}`}
-            >
-              {EXTRACTION_METHOD_LABELS[method] ?? method}
-            </span>
-          ))}
-        </div>
-      )}
 
       {thumbnailUrl ? (
         <div
@@ -2342,7 +2314,6 @@ export function YoutubeImportScreen({
   const [extractionId, setExtractionId] = useState("");
   const [title, setTitle] = useState("");
   const [baseServings, setBaseServings] = useState(1);
-  const [extractionMethods, setExtractionMethods] = useState<string[]>([]);
   const [parentExtractionId, setParentExtractionId] = useState<string | null>(null);
   const [recipeCandidates, setRecipeCandidates] = useState<YoutubeRecipeCandidate[]>([]);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
@@ -2506,7 +2477,6 @@ export function YoutubeImportScreen({
     setExtractionId(data.extraction_id);
     setTitle(data.title);
     setBaseServings(data.base_servings ?? 1);
-    setExtractionMethods(data.extraction_methods ?? []);
     setDraftThumbnailUrl(data.thumbnail_url ?? null);
     setDraftTags(data.tags ?? []);
     setDraftWarnings(data.draft_warnings ?? []);
@@ -3202,7 +3172,6 @@ export function YoutubeImportScreen({
             onServingsChange={setBaseServings}
             thumbnailUrl={draftThumbnailUrl}
             tags={draftTags}
-            extractionMethods={extractionMethods}
             classificationStatus={classificationStatus}
             classificationReasons={classificationReasons}
             draftWarnings={draftWarnings}
@@ -3488,7 +3457,6 @@ export function YoutubeImportScreen({
             onServingsChange={setBaseServings}
             thumbnailUrl={draftThumbnailUrl}
             tags={draftTags}
-            extractionMethods={extractionMethods}
             classificationStatus={classificationStatus}
             classificationReasons={classificationReasons}
             draftWarnings={draftWarnings}

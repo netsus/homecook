@@ -347,13 +347,8 @@ test.describe("Slice 19: YouTube Import", () => {
     await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 15000 });
     await expect(page.locator(".yt-mobile-import-shell")).toHaveCSS("overflow-y", "auto");
 
-    // Verify extraction methods pills
-    await expect(page.locator("[data-testid='extraction-method-description']")).toHaveText(
-      "설명란",
-    );
-    await expect(page.locator("[data-testid='extraction-method-ocr']")).toHaveText(
-      "화면 텍스트",
-    );
+    await expect(page.locator("[data-testid='extraction-method-chips']")).toHaveCount(0);
+    await expect(page.locator("[data-testid^='extraction-method-']")).toHaveCount(0);
 
     // Verify extracted data
     await expect(page.locator('input[value="백종원 김치찌개"]')).toBeVisible();

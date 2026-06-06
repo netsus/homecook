@@ -334,9 +334,8 @@ test.describe("Slice 27: YouTube Import Quality Uplift", () => {
     // Step 2 → Step 3: review
     await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 15000 });
 
-    // Verify extraction method pill (Korean label)
-    await expect(page.locator("[data-testid='extraction-method-description']")).toBeVisible();
-    await expect(page.locator("[data-testid='extraction-method-description']")).toHaveText("설명란");
+    await expect(page.locator("[data-testid='extraction-method-chips']")).toHaveCount(0);
+    await expect(page.locator("[data-testid^='extraction-method-']")).toHaveCount(0);
 
     // Verify extracted data
     await expect(page.locator('input[value="백종원 김치찌개"]')).toBeVisible();
