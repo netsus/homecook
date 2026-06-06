@@ -121,7 +121,7 @@ export function MobileCookModeView({
           </div>
 
           <h1
-            className="cook-mobile-hero-title line-clamp-1 max-w-[280px] text-[20px] font-extrabold leading-[1.08]"
+            className="cook-mobile-hero-title line-clamp-1 max-w-full text-[21px] font-extrabold leading-[1.08]"
             data-testid={titleTestId}
             title={recipe.title}
           >

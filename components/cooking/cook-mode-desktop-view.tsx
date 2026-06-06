@@ -176,9 +176,6 @@ export function CookModeDesktopView({
                 activeIngredientIds={stepModel?.activeIngredientIds ?? new Set()}
                 ingredients={recipe.ingredients}
               />
-              <p className="web-cook-prototype-note">
-                총량은 왼쪽에서 고정하고, 지금 넣을 양은 가운데에서 크게 봅니다.
-              </p>
             </aside>
 
             {currentStep && stepModel ? (
@@ -187,7 +184,7 @@ export function CookModeDesktopView({
                 className="web-cook-prototype-panel web-cook-prototype-focus"
                 data-testid="cook-mode-current-step"
               >
-                <div>
+                <div className="web-cook-prototype-step-head">
                   <div className="web-cook-prototype-count">
                     <strong data-testid="cook-mode-counter">
                       {currentStepIndex + 1}
@@ -199,12 +196,40 @@ export function CookModeDesktopView({
                       {methodVisual.label}
                     </span>
                   </div>
+                  <div
+                    className="web-cook-prototype-step-nav"
+                    data-testid="cook-mode-step-nav"
+                  >
+                    <button
+                      aria-label="이전 단계"
+                      className="web-cook-prototype-arrow"
+                      data-testid="cook-mode-prev-step"
+                      disabled={controlsDisabled || currentStepIndex <= 0}
+                      onClick={() => moveStep(-1)}
+                      type="button"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      aria-label="다음 단계"
+                      className="web-cook-prototype-arrow"
+                      data-testid="cook-mode-next-step"
+                      disabled={
+                        controlsDisabled ||
+                        totalSteps === 0 ||
+                        currentStepIndex >= totalSteps - 1
+                      }
+                      onClick={() => moveStep(1)}
+                      type="button"
+                    >
+                      ›
+                    </button>
+                  </div>
                 </div>
 
                 <div
                   className="web-cook-prototype-copy"
                   data-testid="step-item"
-                  style={{ borderColor: methodVisual.color }}
                 >
                   <h2 data-testid="cook-mode-current-step-title">
                     {stepModel.title}
@@ -222,26 +247,6 @@ export function CookModeDesktopView({
                 </div>
 
                 <div className="web-cook-prototype-controls">
-                  <button
-                    aria-label="이전 단계"
-                    className="web-cook-prototype-arrow"
-                    data-testid="cook-mode-prev-step"
-                    disabled={controlsDisabled || currentStepIndex <= 0}
-                    onClick={() => moveStep(-1)}
-                    type="button"
-                  >
-                    ‹
-                  </button>
-                  <button
-                    aria-label="다음 단계"
-                    className="web-cook-prototype-arrow"
-                    data-testid="cook-mode-next-step"
-                    disabled={controlsDisabled || totalSteps === 0}
-                    onClick={() => moveStep(1)}
-                    type="button"
-                  >
-                    ›
-                  </button>
                   <button
                     className="web-cook-prototype-complete"
                     data-testid={completeButtonTestId}

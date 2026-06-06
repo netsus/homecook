@@ -163,10 +163,6 @@ test.describe("Slice 15a cook planner complete", () => {
     );
 
     if (isDesktopViewport(page)) {
-      await expect(page.getByTestId("step-item").first()).toHaveCSS(
-        "border-left-color",
-        "rgb(255, 140, 66)",
-      );
       await expect(page.getByText("볶기").first()).toHaveCSS(
         "background-color",
         "rgb(255, 140, 66)",
