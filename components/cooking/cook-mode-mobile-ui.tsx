@@ -121,8 +121,9 @@ export function MobileCookModeView({
           </div>
 
           <h1
-            className="cook-mobile-hero-title line-clamp-2 max-w-[320px] text-[24px] font-extrabold leading-[1.08]"
+            className="cook-mobile-hero-title line-clamp-1 max-w-[280px] text-[20px] font-extrabold leading-[1.08]"
             data-testid={titleTestId}
+            title={recipe.title}
           >
             {recipe.title}
           </h1>
@@ -145,9 +146,10 @@ export function MobileCookModeView({
                 methodColor={methodVisual.color}
                 methodLabel={methodVisual.label}
                 model={stepModel}
-                totalSteps={totalSteps}
               />
-              <MobileAmountBoard usages={stepModel.ingredientUsages} />
+              {stepModel.ingredientUsages.length > 0 ? (
+                <MobileAmountBoard usages={stepModel.ingredientUsages} />
+              ) : null}
               <nav aria-label="단계 이동" data-testid="step-list">
                 <div
                   className="mt-3 grid gap-2"
@@ -236,13 +238,11 @@ function CurrentStepStage({
   methodColor,
   methodLabel,
   model,
-  totalSteps,
 }: {
   currentStepIndex: number;
   methodColor: string;
   methodLabel: string;
   model: ReturnType<typeof buildCookModeStepModel>;
-  totalSteps: number;
 }) {
   return (
     <section
@@ -261,7 +261,6 @@ function CurrentStepStage({
           >
             {currentStepIndex + 1}
           </strong>
-          <span>{totalSteps}단계 중</span>
         </span>
         <span
           className="cook-mobile-method-pill rounded-full px-3 py-2 text-[13px] font-extrabold leading-none"

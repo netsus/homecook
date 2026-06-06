@@ -471,6 +471,7 @@ describe("CookModeScreen", () => {
 
     expect(screen.getByRole("heading", { name: "꺼내둘 재료" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "조리 순서" })).toBeTruthy();
+    expect(screen.getAllByText("HOMECOOK")).toHaveLength(1);
     expect(
       within(focusStep).getByTestId("cook-mode-counter").textContent,
     ).toContain("1");
@@ -513,6 +514,66 @@ describe("CookModeScreen", () => {
     expect(screen.queryByTestId("cook-mode-tabs")).not.toBeTruthy();
   });
 
+  it("shows only ingredients mentioned by the current instruction when step usage data is empty", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(
+      buildCookModeData({
+        recipe: {
+          ...buildCookModeData().recipe,
+          ingredients: [
+            buildIngredient({
+              ingredient_id: "ing-onion",
+              standard_name: "양파",
+              display_text: "양파 1개",
+            }),
+            buildIngredient({
+              ingredient_id: "ing-kimchi",
+              standard_name: "김치",
+              display_text: "김치 200g",
+            }),
+            buildIngredient({
+              ingredient_id: "ing-salt",
+              standard_name: "소금",
+              amount: null,
+              unit: null,
+              display_text: "소금 약간",
+              ingredient_type: "TO_TASTE",
+            }),
+          ],
+          steps: [
+            buildStep({
+              step_number: 1,
+              instruction: "김치를 냄비에 넣고 중불에서 볶아주세요.",
+              ingredients_used: [],
+            }),
+          ],
+        },
+      }),
+    );
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const amountBoard = await screen.findByTestId(
+      "cook-mode-current-amount-board",
+    );
+    const ingredientList = screen.getByTestId("ingredient-list");
+
+    expect(within(amountBoard).getByText("김치")).toBeTruthy();
+    expect(within(amountBoard).queryByText("양파")).toBeNull();
+    expect(within(amountBoard).queryByText("소금")).toBeNull();
+    expect(
+      within(ingredientList)
+        .getByTestId("cook-mode-ingredient-ing-kimchi")
+        .getAttribute("data-active"),
+    ).toBe("true");
+    expect(
+      within(ingredientList)
+        .getByTestId("cook-mode-ingredient-ing-onion")
+        .getAttribute("data-active"),
+    ).toBe("false");
+  });
+
   it("renders the mobile prototype as a current-step card, amount board, and step rail", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
@@ -533,7 +594,7 @@ describe("CookModeScreen", () => {
       "3인분",
     );
     expect(screen.getByTestId("cook-mode-counter").textContent).toContain("1");
-    expect(screen.getByText("3단계 중")).toBeTruthy();
+    expect(screen.queryByText("3단계 중")).toBeNull();
     expect(
       screen.getByTestId("cook-mode-current-step-title").textContent,
     ).toContain("재료 손질");
