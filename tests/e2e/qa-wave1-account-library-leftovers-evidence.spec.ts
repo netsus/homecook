@@ -276,7 +276,7 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     viewports.mobile,
     "/mypage",
     async (page) => {
-      await expect(page.getByTestId("mypage-settings-link")).toBeVisible();
+      await expect(page.getByTestId("mypage-profile-edit-button")).toBeVisible();
       await expect(page.getByText("남은 요리")).toBeVisible();
       await expect(page.getByText("다먹은 요리")).toBeVisible();
     },
@@ -288,7 +288,7 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     viewports.narrow,
     "/mypage",
     async (page) => {
-      await expect(page.getByTestId("mypage-settings-link")).toBeVisible();
+      await expect(page.getByTestId("mypage-profile-edit-button")).toBeVisible();
       await expect(page.getByText("남은 요리")).toBeVisible();
       await expect(page.getByText("다먹은 요리")).toBeVisible();
     },

@@ -13,20 +13,19 @@ function ruleBody(selector: string) {
 }
 
 describe("mypage desktop scroll stability", () => {
-  it("keeps tab content scrolling inside a stable desktop viewport", () => {
+  it("lets the full desktop page scroll instead of trapping tab content", () => {
     expect(ruleBody(".web-mypage-screen")).toContain("display: flex;");
     expect(ruleBody(".web-mypage-screen")).toContain(
-      "height: calc(100vh - var(--web-nav-h));",
+      "min-height: calc(100vh - var(--web-nav-h));",
     );
     expect(ruleBody(".web-mypage-screen")).toContain("width: 100%;");
     expect(ruleBody(".web-mypage-screen")).not.toContain("max-width: 1180px;");
-    expect(ruleBody(".web-mypage-shell .web-page")).toContain("overflow: hidden;");
+    expect(ruleBody(".web-mypage-shell .web-page")).toContain("overflow: visible;");
     expect(ruleBody(".web-mypage-shell .web-container-wide")).toContain(
-      "overflow: hidden;",
+      "overflow: visible;",
     );
-    expect(ruleBody(".web-mypage-panel")).toContain("overflow-y: scroll;");
-    expect(ruleBody(".web-mypage-panel")).toContain(
-      "scrollbar-gutter: stable both-edges;",
-    );
+    expect(ruleBody(".web-mypage-panel")).toContain("overflow: visible;");
+    expect(ruleBody(".web-mypage-panel")).not.toContain("overflow-y: scroll;");
+    expect(ruleBody(".web-mypage-panel")).not.toContain("scrollbar-gutter:");
   });
 });

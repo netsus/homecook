@@ -57,6 +57,18 @@ describe("return context navigation helpers", () => {
     ).toBe("/planner");
   });
 
+  it("normalizes the removed mypage account tab to preferences", () => {
+    expect(sanitizeInternalPath("/mypage?tab=account")).toBe(
+      "/mypage?tab=preferences",
+    );
+    expect(
+      resolveReturnHref(
+        new URLSearchParams({ returnTo: "/mypage?tab=account" }),
+        "/mypage?tab=preferences",
+      ),
+    ).toBe("/mypage?tab=preferences");
+  });
+
   it("maps mypage return context to the initial recipebook surface", () => {
     expect(
       resolveMypageRestoreState(

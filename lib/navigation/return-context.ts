@@ -56,6 +56,10 @@ export function sanitizeInternalPath(
       return fallbackPath;
     }
 
+    if (url.pathname === "/mypage" && url.searchParams.get("tab") === "account") {
+      url.searchParams.set("tab", "preferences");
+    }
+
     return `${url.pathname}${url.search}${url.hash}`;
   } catch {
     return fallbackPath;

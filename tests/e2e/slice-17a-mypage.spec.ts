@@ -300,13 +300,14 @@ test.describe("MYPAGE screen", () => {
     }
     await expect(page.getByLabel("설정", { exact: true })).toHaveCount(0);
 
-    if (!isMobileViewport(page)) {
-      await page.getByRole("tab", { name: "계정 관리" }).click();
-    }
-    await expect(page.getByTestId("mypage-settings-link")).toHaveAttribute(
-      "href",
-      "/settings?returnTo=%2Fmypage%3Ftab%3Daccount",
-    );
+    await expect(page.getByRole("tab", { name: "계정 관리" })).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "알림 설정" })).toHaveCount(0);
+
+    await page.getByTestId("mypage-profile-edit-button").click();
+    await expect(
+      page.getByRole("dialog").getByRole("heading", { name: "닉네임 변경" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "취소" }).click();
 
     await openRecipebookSurface(page);
     await expect(page.getByText("내가 추가한 레시피")).toBeVisible();
@@ -511,7 +512,7 @@ test.describe("MYPAGE screen", () => {
     } else {
       await expect(page.getByRole("tablist")).toBeVisible();
       await expect(page.getByRole("tab", { name: "저장한 레시피" })).toHaveAttribute("aria-selected", "true");
-      await expect(page.getByRole("tab", { name: "계정 관리" })).toHaveAttribute("aria-selected", "false");
+      await expect(page.getByRole("tab", { name: "환경설정" })).toHaveAttribute("aria-selected", "false");
     }
   });
 

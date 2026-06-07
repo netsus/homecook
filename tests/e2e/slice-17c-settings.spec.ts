@@ -288,9 +288,9 @@ test.describe("SETTINGS screen", () => {
     if (isMobileViewport(page)) {
       await expect(page.getByLabel("뒤로가기")).toBeVisible();
       await expect(page.getByText("화면 켜둠")).toBeVisible();
-      await expect(page.getByText("음성 안내")).toBeVisible();
-      await expect(page.getByText("타이머 끝나면 다음 단계 자동")).toBeVisible();
       await expect(page.getByText("플래너 끼니 컬럼")).toBeVisible();
+      await expect(page.getByText("음성 안내")).toHaveCount(0);
+      await expect(page.getByText("타이머 끝나면 다음 단계 자동")).toHaveCount(0);
     } else {
       await expect(page.getByRole("link", { name: /마이페이지/ }).first()).toBeVisible();
       await expect(page.getByText("요리모드 화면 꺼짐 방지")).toBeVisible();
@@ -500,7 +500,7 @@ test.describe("SETTINGS screen", () => {
     await page.waitForURL("/mypage");
   });
 
-  test("MYPAGE settings row opens /settings", async ({ page }) => {
+  test("MYPAGE environment settings opens in the right surface", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     // Install routes for both mypage and settings
     await installSettingsRoutes(page);
@@ -519,13 +519,17 @@ test.describe("SETTINGS screen", () => {
 
     await page.goto("/mypage");
     await expect(page.getByLabel("설정", { exact: true })).toHaveCount(0);
-    if (!isMobileViewport(page)) {
-      await page.getByRole("tab", { name: "계정 관리" }).click();
+    if (isMobileViewport(page)) {
+      await page.getByRole("link", { name: /환경설정/ }).click();
+      await page.waitForURL("**/settings**");
+      await expect(page.getByRole("heading", { name: "설정" })).toBeVisible();
+      return;
     }
-    await page.getByTestId("mypage-settings-link").click();
 
-    await page.waitForURL("**/settings**");
-    await expect(page.getByRole("heading", { name: "설정" })).toBeVisible();
+    await page.getByRole("tab", { name: "환경설정" }).click();
+    await expect(page.getByTestId("mypage-preferences-tab")).toBeVisible();
+    await expect(page.getByText("요리모드 화면 켜둠")).toBeVisible();
+    await expect(page.getByText("회원탈퇴")).toBeVisible();
   });
 });
 
@@ -622,7 +626,7 @@ test.describe("SETTINGS planner column management", () => {
     await expect(page.getByTestId("column-list")).toBeVisible();
     const addButton = page.getByTestId("add-column-button");
     await expect(addButton).toBeDisabled();
-    await expect(page.getByText(/최소 2개, 최대 5개/)).toBeVisible();
+    await expect(page.getByText(/최소 1개, 최대 5개/)).toBeVisible();
   });
 
   test("disables delete button when only 1 column exists", async ({ page }) => {

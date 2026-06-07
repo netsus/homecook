@@ -12,6 +12,10 @@ const mockFetchRecipeBooks = vi.fn();
 const mockCreateRecipeBook = vi.fn();
 const mockRenameRecipeBook = vi.fn();
 const mockDeleteRecipeBook = vi.fn();
+const mockUpdateNickname = vi.fn();
+const mockUpdateSettings = vi.fn();
+const mockLogout = vi.fn();
+const mockDeleteAccount = vi.fn();
 const mockFetchShoppingHistory = vi.fn();
 const mockFetchShoppingListDetail = vi.fn();
 const mockUpdateShoppingListItem = vi.fn();
@@ -24,6 +28,10 @@ const mockEatLeftover = vi.fn();
 const mockUneatLeftover = vi.fn();
 const mockCreateMeal = vi.fn();
 const mockFetchPlanner = vi.fn();
+const mockFetchPlannerColumns = vi.fn();
+const mockCreatePlannerColumn = vi.fn();
+const mockUpdatePlannerColumn = vi.fn();
+const mockDeletePlannerColumn = vi.fn();
 const originalScrollTo = window.scrollTo;
 
 vi.mock("@/lib/api/mypage", () => ({
@@ -33,6 +41,10 @@ vi.mock("@/lib/api/mypage", () => ({
   renameRecipeBook: (...args: unknown[]) => mockRenameRecipeBook(...args),
   deleteRecipeBook: (...args: unknown[]) => mockDeleteRecipeBook(...args),
   fetchShoppingHistory: (...args: unknown[]) => mockFetchShoppingHistory(...args),
+  updateNickname: (...args: unknown[]) => mockUpdateNickname(...args),
+  updateSettings: (...args: unknown[]) => mockUpdateSettings(...args),
+  logout: (...args: unknown[]) => mockLogout(...args),
+  deleteAccount: (...args: unknown[]) => mockDeleteAccount(...args),
   isMypageApiError: (error: unknown) => error instanceof Error && "status" in error,
 }));
 
@@ -55,6 +67,15 @@ vi.mock("@/lib/api/meal", () => ({
 
 vi.mock("@/lib/api/planner", () => ({
   fetchPlanner: (...args: unknown[]) => mockFetchPlanner(...args),
+  fetchPlannerColumns: (...args: unknown[]) => mockFetchPlannerColumns(...args),
+  createPlannerColumn: (...args: unknown[]) => mockCreatePlannerColumn(...args),
+  updatePlannerColumn: (...args: unknown[]) => mockUpdatePlannerColumn(...args),
+  deletePlannerColumn: (...args: unknown[]) => mockDeletePlannerColumn(...args),
+  createDefaultPlannerRange: () => ({
+    startDate: "2026-05-04",
+    endDate: "2026-05-10",
+  }),
+  isPlannerApiError: (error: unknown) => error instanceof Error && "status" in error,
 }));
 
 vi.mock("@/lib/api/shopping", () => ({
@@ -94,6 +115,7 @@ vi.mock("@/lib/auth/e2e-auth-override", () => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: vi.fn(),
+    replace: vi.fn(),
   }),
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -344,6 +366,10 @@ describe("MypageScreen", () => {
     mockCreateRecipeBook.mockReset();
     mockRenameRecipeBook.mockReset();
     mockDeleteRecipeBook.mockReset();
+    mockUpdateNickname.mockReset();
+    mockUpdateSettings.mockReset();
+    mockLogout.mockReset();
+    mockDeleteAccount.mockReset();
     mockFetchShoppingHistory.mockReset();
     mockFetchShoppingListDetail.mockReset();
     mockUpdateShoppingListItem.mockReset();
@@ -356,6 +382,10 @@ describe("MypageScreen", () => {
     mockUneatLeftover.mockReset();
     mockCreateMeal.mockReset();
     mockFetchPlanner.mockReset();
+    mockFetchPlannerColumns.mockReset();
+    mockCreatePlannerColumn.mockReset();
+    mockUpdatePlannerColumn.mockReset();
+    mockDeletePlannerColumn.mockReset();
 
     mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
     mockFetchRecipeBooks.mockResolvedValue(MOCK_BOOKS);
@@ -373,11 +403,40 @@ describe("MypageScreen", () => {
     mockEatLeftover.mockResolvedValue({ id: "leftover-1", status: "eaten" });
     mockUneatLeftover.mockResolvedValue({ id: "eaten-1", status: "leftover" });
     mockCreateMeal.mockResolvedValue({ id: "meal-1" });
+    mockUpdateNickname.mockResolvedValue({
+      ...MOCK_PROFILE,
+      nickname: "새집밥러",
+    });
+    mockUpdateSettings.mockResolvedValue({
+      settings: { screen_wake_lock: true },
+    });
+    mockLogout.mockResolvedValue({ logged_out: true });
+    mockDeleteAccount.mockResolvedValue({ deleted: true });
     mockFetchPlanner.mockResolvedValue({
       columns: [
         { id: "column-dinner", name: "저녁", sort_order: 0 },
       ],
-      meals: [],
+      meals: [
+        {
+          id: "meal-1",
+          recipe_id: "recipe-1",
+          recipe_title: "김치찌개",
+          recipe_thumbnail_url: null,
+          plan_date: "2026-05-04",
+          column_id: "column-dinner",
+          planned_servings: 2,
+          status: "registered",
+          is_leftover: false,
+          shopping_list_id: null,
+        },
+      ],
+    });
+    mockFetchPlannerColumns.mockResolvedValue({
+      columns: [
+        { id: "column-breakfast", name: "아침", sort_order: 0 },
+        { id: "column-lunch", name: "점심", sort_order: 1 },
+        { id: "column-dinner", name: "저녁", sort_order: 2 },
+      ],
     });
   });
 
@@ -434,24 +493,35 @@ describe("MypageScreen", () => {
     expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
   });
 
-  it("uses a visible settings row instead of an icon-only profile gear", async () => {
+  it("opens nickname editing from the profile and removes account-only tabs", async () => {
     render(<MypageScreen initialAuthenticated />);
 
     await screen.findByText("집밥러");
 
     expect(screen.queryByLabelText("설정")).toBeNull();
+    expect(screen.queryByRole("tab", { name: "계정 관리" })).toBeNull();
+    expect(screen.queryByRole("tab", { name: "알림 설정" })).toBeNull();
+    expect(screen.getByRole("tab", { name: "환경설정" })).toBeTruthy();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: "계정 관리" }));
+    await user.click(screen.getByTestId("mypage-profile-edit-button"));
 
-    const settingsLink = screen.getByTestId("mypage-settings-link");
-    expect(settingsLink?.getAttribute("href")).toContain("/settings");
-    expect(settingsLink?.getAttribute("href")).toContain(
-      "returnTo=%2Fmypage%3Ftab%3Daccount",
-    );
-    expect(screen.getByTestId("mypage-profile").textContent).not.toContain(
-      "회원탈퇴",
-    );
+    expect(screen.getByTestId("nickname-sheet-backdrop")).toBeTruthy();
+    expect(screen.getByDisplayValue("집밥러")).toBeTruthy();
+  });
+
+  it("uses the same actual-data stat labels on desktop", async () => {
+    render(<MypageScreen initialAuthenticated />);
+
+    await screen.findByText("집밥러");
+
+    const stats = screen.getByLabelText("마이페이지 통계");
+    expect(within(stats).getByText("저장한 레시피")).toBeTruthy();
+    expect(within(stats).getByText("요리완료")).toBeTruthy();
+    expect(within(stats).getByText("플래너 등록")).toBeTruthy();
+    expect(within(stats).getByText("5")).toBeTruthy();
+    expect(within(stats).getByText("2")).toBeTruthy();
+    expect(within(stats).getByText("1")).toBeTruthy();
   });
 
   it("shows real saved recipe links instead of prototype-only saved cards", async () => {
@@ -470,29 +540,55 @@ describe("MypageScreen", () => {
     expect(screen.queryByText("소고기 미역국")).toBeNull();
   });
 
-  it("opens the account tab from the tab query parameter", async () => {
-    window.history.pushState({}, "", "/mypage?tab=account");
+  it("opens the preferences tab from the tab query parameter", async () => {
+    window.history.pushState({}, "", "/mypage?tab=preferences");
 
     render(<MypageScreen initialAuthenticated />);
 
-    expect(await screen.findByTestId("mypage-account-tab")).toBeTruthy();
+    expect(await screen.findByTestId("mypage-preferences-tab")).toBeTruthy();
     expect(screen.queryByText("저장된 된장찌개")).toBeNull();
   });
 
-  it("toggles notification switches locally", async () => {
+  it("shows supported settings inline instead of notification-only settings", async () => {
     render(<MypageScreen initialAuthenticated />);
     const user = userEvent.setup();
 
     await screen.findByText("집밥러");
-    await user.click(screen.getByRole("tab", { name: "알림 설정" }));
+    await user.click(screen.getByRole("tab", { name: "환경설정" }));
 
-    const switches = screen.getAllByRole("switch");
-    expect(switches).toHaveLength(4);
-    expect(switches[0].getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByTestId("mypage-preferences-tab")).toBeTruthy();
+    expect(screen.getByText("요리모드 화면 켜둠")).toBeTruthy();
+    expect(screen.getByText("끼니 편집")).toBeTruthy();
+    expect(screen.getByText("로그아웃")).toBeTruthy();
+    expect(screen.getByText("회원탈퇴")).toBeTruthy();
+    expect(screen.queryByText("푸시 알림")).toBeNull();
+    expect(screen.queryByText("계량 단위")).toBeNull();
+    expect(screen.queryByText("앱 테마")).toBeNull();
+    expect(screen.getByText(/최소 1개, 최대 5개/)).toBeTruthy();
+    expect(screen.getByText(/식사가 있는 끼니는 삭제할 수 없어요/)).toBeTruthy();
+  });
 
-    await user.click(switches[0]);
+  it("uses the unified mobile profile edit, saved recipes entry, and stats", async () => {
+    installMatchMedia(true);
 
-    expect(switches[0].getAttribute("aria-checked")).toBe("false");
+    render(<MypageScreen initialAuthenticated />);
+
+    expect(await screen.findByText("집밥러")).toBeTruthy();
+    expect(screen.getAllByText("저장한 레시피").length).toBeGreaterThan(0);
+    expect(screen.getByText("요리완료")).toBeTruthy();
+    expect(screen.getByText("플래너 등록")).toBeTruthy();
+    expect(screen.queryByText("연속")).toBeNull();
+    expect(screen.queryByText("계정 관리")).toBeNull();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("mypage-profile-edit-button"));
+    expect(screen.getByTestId("nickname-sheet-backdrop")).toBeTruthy();
+
+    await user.click(screen.getByText("취소"));
+    await user.click(screen.getByRole("button", { name: /저장한 레시피/ }));
+
+    expect(screen.getByTestId("saved-recipes-surface")).toBeTruthy();
+    expect(await screen.findByText("저장된 된장찌개")).toBeTruthy();
   });
 
   it("displays system books with correct recipe counts", async () => {
@@ -796,14 +892,14 @@ describe("MypageScreen", () => {
     const shoppingTab = screen.getByRole("tab", { name: "장보기 기록" });
     const leftoversTab = screen.getByRole("tab", { name: "남은 요리" });
     const eatenTab = screen.getByRole("tab", { name: "다먹은 요리" });
-    const accountTab = screen.getByRole("tab", { name: "계정 관리" });
+    const preferencesTab = screen.getByRole("tab", { name: "환경설정" });
 
     expect(savedTab.getAttribute("aria-selected")).toBe("true");
     expect(recipebooksTab.getAttribute("aria-selected")).toBe("false");
     expect(shoppingTab.getAttribute("aria-selected")).toBe("false");
     expect(leftoversTab.getAttribute("aria-selected")).toBe("false");
     expect(eatenTab.getAttribute("aria-selected")).toBe("false");
-    expect(accountTab.getAttribute("aria-selected")).toBe("false");
+    expect(preferencesTab.getAttribute("aria-selected")).toBe("false");
   });
 
   it("does not duplicate library navigation rows under saved recipes on desktop", async () => {
