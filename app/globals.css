@@ -6092,21 +6092,20 @@ button {
 
   .web-mypage-screen {
     display: flex;
-    height: calc(100vh - var(--web-nav-h));
+    min-height: calc(100vh - var(--web-nav-h));
     width: 100%;
-    min-height: 0;
     flex-direction: column;
-    padding: 32px 0 0;
+    padding: 32px 0 96px;
   }
 
   .web-mypage-shell .web-page {
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
+    overflow: visible;
   }
 
   .web-mypage-shell .web-container-wide {
-    height: calc(100vh - var(--web-nav-h));
-    overflow: hidden;
+    min-height: calc(100vh - var(--web-nav-h));
+    overflow: visible;
   }
 
   .web-mypage-profile {
@@ -6124,6 +6123,15 @@ button {
     display: flex;
     align-items: center;
     gap: 16px;
+  }
+
+  .web-mypage-profile-edit {
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
   }
 
   .web-mypage-avatar {
@@ -6221,14 +6229,12 @@ button {
   }
 
   .web-mypage-panel {
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 0 0 auto;
     width: min(1120px, 100%);
     margin: 0 auto;
+    overflow: visible;
     overflow-x: hidden;
-    overflow-y: scroll;
-    padding: 34px 20px 80px;
-    scrollbar-gutter: stable both-edges;
+    padding: 34px 20px 0;
   }
 
   .web-mypage-section-head h2,
@@ -6361,6 +6367,10 @@ button {
     margin: 0 auto;
   }
 
+  .web-mypage-preferences-head {
+    margin-top: 18px;
+  }
+
   .web-mypage-notification-surface {
     max-width: 1080px;
   }
@@ -6405,6 +6415,37 @@ button {
     align-items: center;
     gap: 14px;
     padding: 18px 0;
+  }
+
+  button.web-mypage-settings-row {
+    border: 0;
+    background: transparent;
+  }
+
+  .web-mypage-column-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .web-mypage-column-input {
+    min-width: 220px;
+    height: 38px;
+    flex: 1 1 220px;
+    border: 1px solid var(--web-border);
+    border-radius: var(--web-r-sm);
+    background: var(--web-surface);
+    color: var(--web-text-1);
+    padding: 0 12px;
+    font-size: 14px;
+    font-weight: 700;
+    outline: none;
+  }
+
+  .web-mypage-column-input:focus {
+    border-color: var(--web-brand);
+    box-shadow: 0 0 0 3px rgba(45, 150, 255, 0.14);
   }
 
   .web-mypage-settings-row + .web-mypage-settings-row,

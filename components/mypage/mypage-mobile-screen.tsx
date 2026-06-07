@@ -7,10 +7,16 @@ import React from "react";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import type { UserProfileData } from "@/lib/api/mypage";
 import { buildReturnHref } from "@/lib/navigation/return-context";
-import type { RecipeBookSummary } from "@/types/recipe";
+import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
 import type { ShoppingListHistoryItem } from "@/types/shopping";
 
-export type MypageMobileSurface = "home" | "recipebook" | "shopping";
+export type MypageMobileSurface = "home" | "saved" | "recipebook" | "shopping";
+
+interface MypageStatItem {
+  color: string;
+  label: string;
+  value: number;
+}
 
 interface MypageMobileScreenProps {
   books: RecipeBookSummary[];
@@ -28,11 +34,15 @@ interface MypageMobileScreenProps {
   renameInputRef: React.RefObject<HTMLInputElement | null>;
   renameValue: string;
   renamingBookId: string | null;
+  savedRecipeCount: number;
+  savedRecipes: RecipeBookRecipeItem[];
+  savedRecipesState: "idle" | "loading" | "ready" | "empty" | "error";
   scrollSentinelRef: React.RefObject<HTMLDivElement | null>;
   shoppingHasNext: boolean;
   shoppingItems: ShoppingListHistoryItem[];
   shoppingLoaded: boolean;
   showCreateInput: boolean;
+  stats: MypageStatItem[];
   surface: MypageMobileSurface;
   systemBooks: RecipeBookSummary[];
   onCancelCreate: () => void;
@@ -44,9 +54,11 @@ interface MypageMobileScreenProps {
   onCreateNameChange: (value: string) => void;
   onMenuClose: () => void;
   onMenuOpen: (id: string) => void;
+  onOpenNicknameSheet: () => void;
   onRenameStart: (book: RecipeBookSummary) => void;
   onRenameValueChange: (value: string) => void;
   onRequestDelete: (book: RecipeBookSummary) => void;
+  onRetrySavedRecipes: () => void;
   onShowCreateInput: () => void;
   onSurfaceChange: (surface: MypageMobileSurface) => void;
 }
@@ -67,11 +79,15 @@ export function MypageMobileScreen({
   renameInputRef,
   renameValue,
   renamingBookId,
+  savedRecipeCount,
+  savedRecipes,
+  savedRecipesState,
   scrollSentinelRef,
   shoppingHasNext,
   shoppingItems,
   shoppingLoaded,
   showCreateInput,
+  stats,
   surface,
   systemBooks,
   onCancelCreate,
@@ -83,14 +99,18 @@ export function MypageMobileScreen({
   onCreateNameChange,
   onMenuClose,
   onMenuOpen,
+  onOpenNicknameSheet,
   onRenameStart,
   onRenameValueChange,
   onRequestDelete,
+  onRetrySavedRecipes,
   onShowCreateInput,
   onSurfaceChange,
 }: MypageMobileScreenProps) {
   const title =
-    surface === "recipebook"
+    surface === "saved"
+      ? "저장한 레시피"
+      : surface === "recipebook"
       ? "레시피북"
       : surface === "shopping"
         ? "장보기 기록"
@@ -107,9 +127,19 @@ export function MypageMobileScreen({
         <MobileHomeSurface
           books={books}
           profile={profile}
+          savedRecipeCount={savedRecipeCount}
           shoppingItems={shoppingItems}
           shoppingLoaded={shoppingLoaded}
+          stats={stats}
+          onOpenNicknameSheet={onOpenNicknameSheet}
           onSurfaceChange={onSurfaceChange}
+        />
+      ) : surface === "saved" ? (
+        <MobileSavedRecipesSurface
+          count={savedRecipeCount}
+          recipes={savedRecipes}
+          state={savedRecipesState}
+          onRetry={onRetrySavedRecipes}
         />
       ) : surface === "recipebook" ? (
         <MobileRecipebookSurface
@@ -199,22 +229,34 @@ function MobileAppBar({
 function MobileHomeSurface({
   books,
   profile,
+  savedRecipeCount,
   shoppingItems,
   shoppingLoaded,
+  stats,
+  onOpenNicknameSheet,
   onSurfaceChange,
 }: {
   books: RecipeBookSummary[];
   profile: UserProfileData | null;
+  savedRecipeCount: number;
   shoppingItems: ShoppingListHistoryItem[];
   shoppingLoaded: boolean;
+  stats: MypageStatItem[];
+  onOpenNicknameSheet: () => void;
   onSurfaceChange: (surface: MypageMobileSurface) => void;
 }) {
   const nickname = profile?.nickname ?? "사용자";
   const fallbackInitial = nickname.charAt(0) || "?";
-  const recipeBookCount = Math.max(5, books.length);
-  const shoppingCount = shoppingLoaded ? Math.max(12, shoppingItems.length) : 12;
+  const recipeBookCount = books.length;
+  const shoppingCount = shoppingLoaded ? shoppingItems.length : 0;
 
   const menuRows = [
+    {
+      detail: `${savedRecipeCount}개`,
+      icon: "bookmark",
+      label: "저장한 레시피",
+      onClick: () => onSurfaceChange("saved"),
+    },
     {
       detail: `${recipeBookCount}개`,
       icon: "book",
@@ -254,13 +296,6 @@ function MobileHomeSurface({
       }),
       label: "환경설정",
     },
-    {
-      icon: "user",
-      href: buildReturnHref("/settings?view=account", {
-        returnTo: "/mypage?tab=account",
-      }),
-      label: "계정 관리",
-    },
   ];
 
   return (
@@ -296,25 +331,25 @@ function MobileHomeSurface({
               🍳 집밥 러너 · 레벨 5
             </p>
           </div>
-          <Link
+          <button
             className="flex h-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-3 text-[12px] font-bold text-[var(--text-2)]"
-            data-testid="mypage-settings-link"
-            href={buildReturnHref("/settings", {
-              returnTo: "/mypage?tab=account",
-            })}
+            data-testid="mypage-profile-edit-button"
+            onClick={onOpenNicknameSheet}
+            type="button"
           >
             편집
-          </Link>
+          </button>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <MobileStatCard color="var(--brand)" label="요리 완료" value="24" />
-          <MobileStatCard
-            color="var(--warning-border)"
-            label="레시피북"
-            value={String(recipeBookCount)}
-          />
-          <MobileStatCard color="var(--danger)" label="연속" value="7" />
+          {stats.map((item) => (
+            <MobileStatCard
+              color={item.color}
+              key={item.label}
+              label={item.label}
+              value={String(item.value)}
+            />
+          ))}
         </div>
       </section>
 
@@ -398,6 +433,99 @@ function MobileStatCard({
   );
 }
 
+function MobileSavedRecipesSurface({
+  count,
+  recipes,
+  state,
+  onRetry,
+}: {
+  count: number;
+  recipes: RecipeBookRecipeItem[];
+  state: "idle" | "loading" | "ready" | "empty" | "error";
+  onRetry: () => void;
+}) {
+  return (
+    <main className="px-4 py-4" data-testid="saved-recipes-surface">
+      <div className="mb-3">
+        <h2 className="text-[17px] font-extrabold text-[var(--foreground)]">
+          저장한 레시피
+        </h2>
+        <p className="mt-1 text-[12px] font-medium text-[var(--text-3)]">
+          {count}개의 레시피를 저장했어요.
+        </p>
+      </div>
+
+      {state === "idle" || state === "loading" ? (
+        <div className="space-y-2" data-testid="saved-recipes-loading">
+          {[0, 1, 2].map((index) => (
+            <div
+              className="h-[74px] rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
+              key={index}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {state === "error" ? (
+        <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
+          <strong className="text-[14px] text-[var(--foreground)]">
+            저장한 레시피를 불러오지 못했어요
+          </strong>
+          <button
+            className="mt-3 h-9 rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-[13px] font-extrabold text-[var(--text-inverse)]"
+            onClick={onRetry}
+            type="button"
+          >
+            다시 시도
+          </button>
+        </div>
+      ) : null}
+
+      {state === "empty" || (state === "ready" && recipes.length === 0) ? (
+        <div
+          className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4"
+          data-testid="saved-recipes-empty"
+        >
+          <strong className="text-[14px] text-[var(--foreground)]">
+            아직 저장한 레시피가 없어요
+          </strong>
+          <p className="mt-1 text-[12px] font-medium text-[var(--text-3)]">
+            마음에 드는 레시피를 저장하면 여기에 모아 보여드려요.
+          </p>
+        </div>
+      ) : null}
+
+      {state === "ready" && recipes.length > 0 ? (
+        <div className="space-y-2" role="list">
+          {recipes.map((recipe) => (
+            <Link
+              className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] px-4 py-[14px]"
+              href={buildReturnHref(`/recipe/${recipe.recipe_id}`, {
+                returnTo: "/mypage?tab=saved",
+              })}
+              key={recipe.recipe_id}
+              role="listitem"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[var(--brand)]">
+                <MenuLineIcon name="bookmark" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[14px] font-extrabold leading-[1.35] text-[var(--foreground)]">
+                  {recipe.title}
+                </span>
+                <span className="mt-0.5 block truncate text-[11px] font-medium leading-[1.35] text-[var(--text-3)]">
+                  {formatMobileSavedRecipeMeta(recipe)}
+                </span>
+              </span>
+              <ChevronRightIcon />
+            </Link>
+          ))}
+        </div>
+      ) : null}
+    </main>
+  );
+}
+
 function MenuLineIcon({ name }: { name: string }) {
   const commonProps = {
     "aria-hidden": true,
@@ -416,6 +544,14 @@ function MenuLineIcon({ name }: { name: string }) {
         <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4Z" />
         <path d="M5 4v19" />
         <path d="M8 18h11" />
+      </svg>
+    );
+  }
+
+  if (name === "bookmark") {
+    return (
+      <svg {...commonProps}>
+        <path d="M6 4.75A2.75 2.75 0 0 1 8.75 2h6.5A2.75 2.75 0 0 1 18 4.75v16l-6-3.2-6 3.2v-16Z" />
       </svg>
     );
   }
@@ -979,6 +1115,16 @@ function buildBookDetailHref(book: RecipeBookSummary) {
 
 function formatRecipeCount(count: number) {
   return `${Number.isFinite(count) ? count : 0}개`;
+}
+
+function formatMobileSavedRecipeMeta(recipe: RecipeBookRecipeItem) {
+  return [
+    recipe.tags?.slice(0, 2).join(" · ") || null,
+    recipe.total_duration_text ?? null,
+    typeof recipe.base_servings === "number" ? `${recipe.base_servings}인분` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function formatShortDate(dateStr: string): string {

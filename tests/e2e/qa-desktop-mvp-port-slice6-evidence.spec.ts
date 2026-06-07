@@ -170,22 +170,11 @@ test("capture Slice 6 desktop prototype-port evidence", async ({ browser }) => {
   await capture(
     browser,
     "desktop1280",
-    "mypage-account-1280.png",
+    "mypage-preferences-1280.png",
     MYPAGE_VISUAL_PATH,
     async (page) => {
-      await page.getByRole("tab", { name: "계정 관리" }).click();
-      await expect(page.getByRole("heading", { name: "계정 관리" })).toBeVisible();
-    },
-  );
-
-  await capture(
-    browser,
-    "desktop1280",
-    "mypage-notifications-1280.png",
-    MYPAGE_VISUAL_PATH,
-    async (page) => {
-      await page.getByRole("tab", { name: "알림 설정" }).click();
-      await expect(page.getByRole("heading", { name: "알림 설정" })).toBeVisible();
+      await page.getByRole("tab", { name: "환경설정" }).click();
+      await expect(page.getByRole("heading", { name: "환경설정" })).toBeVisible();
     },
   );
 

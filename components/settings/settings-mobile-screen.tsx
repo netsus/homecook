@@ -155,7 +155,9 @@ export function SettingsMobileScreen({
           onColumnAddInputChange={onColumnAddInputChange}
           onColumnsEditModeChange={onColumnsEditModeChange}
           onDeleteColumnTarget={onDeleteColumnTarget}
+          onOpenDeleteDialog={onOpenDeleteDialog}
           onOpenColumnAddSheet={onOpenColumnAddSheet}
+          onOpenLogoutDialog={onOpenLogoutDialog}
           onRenameColumnTarget={onRenameColumnTarget}
           onRetryColumns={onRetryColumns}
           onToggleWakeLock={onToggleWakeLock}
@@ -289,7 +291,9 @@ function SettingsSurface({
   onColumnAddInputChange,
   onColumnsEditModeChange,
   onDeleteColumnTarget,
+  onOpenDeleteDialog,
   onOpenColumnAddSheet,
+  onOpenLogoutDialog,
   onRenameColumnTarget,
   onRetryColumns,
   onToggleWakeLock,
@@ -304,7 +308,9 @@ function SettingsSurface({
   onColumnAddInputChange: (value: string) => void;
   onColumnsEditModeChange: (editing: boolean) => void;
   onDeleteColumnTarget: (column: PlannerColumnData) => void;
+  onOpenDeleteDialog: () => void;
   onOpenColumnAddSheet: () => void;
+  onOpenLogoutDialog: () => void;
   onRenameColumnTarget: (column: PlannerColumnData) => void;
   onRetryColumns: () => void;
   onToggleWakeLock: () => void;
@@ -321,17 +327,6 @@ function SettingsSurface({
             description="요리 중 화면이 꺼지지 않아요"
             label="화면 켜둠"
             onClick={onToggleWakeLock}
-          />
-          <SettingToggleRow
-            checked={false}
-            description="단계 음성을 읽어줘요 (베타)"
-            disabled
-            label="음성 안내"
-          />
-          <SettingToggleRow
-            checked={false}
-            disabled
-            label="타이머 끝나면 다음 단계 자동"
           />
         </div>
       </section>
@@ -448,11 +443,35 @@ function SettingsSurface({
             </div>
 
             <p className="mt-2 text-[12px] font-medium text-[var(--text-3)]">
-              최소 2개, 최대 5개의 끼니를 등록할 수 있어요. 현재{" "}
+              최소 1개, 최대 5개의 끼니를 사용할 수 있어요. 식사가 있는 끼니는 삭제할 수 없어요. 현재{" "}
               {plannerColumns.length}/5개
             </p>
           </>
         )}
+      </section>
+
+      <section className="px-4 pt-4">
+        <h2 className="mb-2 text-[16px] font-bold text-[var(--foreground)]">
+          계정
+        </h2>
+        <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]">
+          <button
+            className="flex min-h-[54px] w-full items-center justify-between border-b border-[var(--surface-subtle)] px-4 text-left text-[15px] font-bold text-[var(--foreground)]"
+            onClick={onOpenLogoutDialog}
+            type="button"
+          >
+            로그아웃
+            <span className="text-[18px] text-[var(--text-4)]">›</span>
+          </button>
+          <button
+            className="flex min-h-[54px] w-full items-center justify-between px-4 text-left text-[15px] font-bold text-[var(--danger)]"
+            onClick={onOpenDeleteDialog}
+            type="button"
+          >
+            회원탈퇴
+            <span className="text-[18px] text-[var(--danger)]">›</span>
+          </button>
+        </div>
       </section>
 
       <div className="mt-2 grid grid-cols-[78px_minmax(0,1fr)] gap-2 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 py-3">

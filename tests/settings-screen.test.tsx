@@ -321,7 +321,7 @@ describe("SettingsScreen", () => {
     expect(screen.getByText("회원탈퇴")).toBeTruthy();
   });
 
-  it("links the desktop breadcrumb back to the mypage account tab", async () => {
+  it("links the desktop breadcrumb back to the mypage preferences tab", async () => {
     mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
     render(<SettingsScreen initialAuthenticated={true} />);
 
@@ -332,10 +332,10 @@ describe("SettingsScreen", () => {
     const breadcrumb = screen.getByRole("navigation", { name: "설정 경로" });
     expect(
       within(breadcrumb).getByRole("link", { name: /마이페이지/ }).getAttribute("href"),
-    ).toBe("/mypage?tab=account");
+    ).toBe("/mypage?tab=preferences");
   });
 
-  it("preserves the account tab return target from the settings URL", async () => {
+  it("normalizes an old account tab return target to preferences", async () => {
     navigationMocks.searchParams.mockReturnValue(
       new URLSearchParams({ returnTo: "/mypage?tab=account" }),
     );
@@ -349,7 +349,7 @@ describe("SettingsScreen", () => {
     const breadcrumb = screen.getByRole("navigation", { name: "설정 경로" });
     expect(
       within(breadcrumb).getByRole("link", { name: /마이페이지/ }).getAttribute("href"),
-    ).toBe("/mypage?tab=account");
+    ).toBe("/mypage?tab=preferences");
   });
 
   // --- Wake lock toggle ---

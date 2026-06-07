@@ -59,7 +59,7 @@ const WEB_NAV_ITEMS = [
   { id: "mypage", href: "/mypage", label: "마이페이지" },
 ] as const;
 
-const MYPAGE_ACCOUNT_HREF = "/mypage?tab=account";
+const MYPAGE_PREFERENCES_HREF = "/mypage?tab=preferences";
 
 export interface SettingsScreenProps {
   initialAuthenticated?: boolean;
@@ -70,7 +70,7 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   const router = useRouter();
   const isMobileViewport = useIsMobileViewport();
-  const appReturn = useAppReturn({ fallback: MYPAGE_ACCOUNT_HREF });
+  const appReturn = useAppReturn({ fallback: MYPAGE_PREFERENCES_HREF });
   const [mobileSurface, setMobileSurface] =
     useState<SettingsMobileSurface>("settings");
 
@@ -592,7 +592,7 @@ export function SettingsScreen({
 
         <div className="web-settings-header">
           <h1>설정</h1>
-          <p>알림 · 단위 · 테마를 한곳에서 관리합니다.</p>
+          <p>요리모드 화면 켜둠, 끼니 편집, 계정 상태를 관리합니다.</p>
         </div>
 
         {errorMessage ? (
@@ -684,8 +684,8 @@ export function SettingsScreen({
                 ) : null}
               </div>
               <p className="web-settings-help">
-                최소 2개, 최대 5개의 끼니를 등록할 수 있어요.
-                기본 끼니(아침/점심/저녁)는 삭제할 수 없어요.
+                최소 1개, 최대 5개의 끼니를 사용할 수 있어요.
+                식사가 있는 끼니는 삭제할 수 없어요.
                 컬럼을 추가하면 플래너 그리드에도 같은 순서로 표시됩니다.
               </p>
             </>
@@ -693,11 +693,11 @@ export function SettingsScreen({
         </section>
 
         <section className="web-settings-section">
-          <h2>알림</h2>
+          <h2>요리 모드</h2>
           <WebCard className="web-settings-row-card">
             <div>
-              <strong>푸시 알림</strong>
-              <span>끼니 요리 시간, 장보기 리마인드</span>
+              <strong>요리모드 화면 켜둠</strong>
+              <span>요리 중 레시피를 보는 동안 화면이 꺼지지 않아요.</span>
               <span className="visually-hidden">요리모드 화면 꺼짐 방지</span>
             </div>
             <button
@@ -714,35 +714,6 @@ export function SettingsScreen({
             >
               <span />
             </button>
-          </WebCard>
-        </section>
-
-        <section className="web-settings-section">
-          <h2>단위</h2>
-          <WebCard className="web-settings-row-card">
-            <div>
-              <strong>계량 단위</strong>
-              <span>미터법 (g, ml) 또는 컵·큰술 표기</span>
-            </div>
-            <div className="web-settings-segmented">
-              <button className="active" type="button">미터법</button>
-              <button type="button">컵·큰술</button>
-            </div>
-          </WebCard>
-        </section>
-
-        <section className="web-settings-section">
-          <h2>테마</h2>
-          <WebCard className="web-settings-row-card">
-            <div>
-              <strong>앱 테마</strong>
-              <span>시스템 설정 따라가기를 권장합니다</span>
-            </div>
-            <div className="web-settings-segmented web-settings-segmented-3">
-              <button className="active" type="button">라이트</button>
-              <button type="button">다크</button>
-              <button type="button">시스템</button>
-            </div>
           </WebCard>
         </section>
 
@@ -1019,7 +990,7 @@ function SettingsDesktopLoadingShell() {
         data-testid="settings-loading"
       >
         <nav aria-label="설정 경로" className="web-breadcrumb">
-          <Link className="web-breadcrumb-link" href={MYPAGE_ACCOUNT_HREF}>
+          <Link className="web-breadcrumb-link" href={MYPAGE_PREFERENCES_HREF}>
             ‹ 마이페이지
           </Link>
           <span className="web-breadcrumb-sep">/</span>
@@ -1028,7 +999,7 @@ function SettingsDesktopLoadingShell() {
 
         <div className="web-settings-header">
           <h1>설정</h1>
-          <p>알림 · 단위 · 테마를 한곳에서 관리합니다.</p>
+          <p>요리모드 화면 켜둠, 끼니 편집, 계정 상태를 관리합니다.</p>
         </div>
 
         <section className="web-settings-section" aria-label="끼니 관리 로딩">
@@ -1050,7 +1021,7 @@ function SettingsDesktopLoadingShell() {
           </WebCard>
         </section>
 
-        {["알림", "단위", "테마", "계정"].map((title, index) => (
+        {["요리 모드", "계정"].map((title, index) => (
           <section
             aria-label={`${title} 로딩`}
             className="web-settings-section"
@@ -1059,12 +1030,12 @@ function SettingsDesktopLoadingShell() {
             <h2>{title}</h2>
             <WebCard
               className={
-                index === 3
+                index === 1
                   ? "web-settings-account-card"
                   : "web-settings-row-card"
               }
             >
-              {index === 3 ? (
+              {index === 1 ? (
                 <>
                   {[0, 1, 2].map((row) => (
                     <div className="web-settings-account-row" key={row}>
@@ -1099,7 +1070,7 @@ function SettingsProfilePill({ nickname }: { nickname?: string }) {
     <Link
       aria-label={`${nickname ?? "내"} 마이페이지`}
       className="web-mypage-top-profile"
-      href={MYPAGE_ACCOUNT_HREF}
+      href={MYPAGE_PREFERENCES_HREF}
     >
       <span aria-hidden="true">{nickname?.slice(0, 1).toUpperCase() ?? "?"}</span>
     </Link>

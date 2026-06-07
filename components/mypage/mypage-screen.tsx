@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import React from "react";
+import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -46,12 +47,16 @@ import {
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
   createRecipeBook,
+  deleteAccount,
   deleteRecipeBook,
   fetchRecipeBooks,
   fetchShoppingHistory,
   fetchUserProfile,
   isMypageApiError,
+  logout,
   renameRecipeBook,
+  updateNickname,
+  updateSettings,
   type UserProfileData,
 } from "@/lib/api/mypage";
 import {
@@ -61,7 +66,15 @@ import {
   uneatLeftover,
 } from "@/lib/api/leftovers";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
-import { fetchPlanner } from "@/lib/api/planner";
+import {
+  createDefaultPlannerRange,
+  createPlannerColumn,
+  deletePlannerColumn,
+  fetchPlanner,
+  fetchPlannerColumns,
+  isPlannerApiError,
+  updatePlannerColumn,
+} from "@/lib/api/planner";
 import { fetchRecipeBookRecipes } from "@/lib/api/recipe";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import {
@@ -85,8 +98,7 @@ type LeftoverTabState = "idle" | "loading" | "ready" | "empty" | "error";
 type RecipeBookDetailState = "idle" | "loading" | "ready" | "empty" | "error";
 type MypageTab =
   | MypageRestoreTab
-  | "account"
-  | "notifications"
+  | "preferences"
   | "help";
 
 const TOAST_DURATION_MS = 3000;
@@ -96,10 +108,6 @@ const LEFTOVERS_DESCRIPTION =
   "요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.";
 const EATEN_DESCRIPTION =
   "다먹은 음식 기록을 확인하고, 필요하면 남은 요리로 다시 옮길 수 있어요.";
-const MYPAGE_ACCOUNT_HREF = "/mypage?tab=account";
-const SETTINGS_FROM_ACCOUNT_HREF = buildReturnHref("/settings", {
-  returnTo: MYPAGE_ACCOUNT_HREF,
-});
 const MYPAGE_SAVED_RECIPES_HREF = "/mypage?tab=saved";
 const MYPAGE_SHOPPING_HREF = "/mypage?tab=shopping";
 
@@ -175,6 +183,7 @@ export function MypageScreen({
   initialAuthenticated = false,
   initialMobileSurface = "home",
 }: MypageScreenProps) {
+  const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
@@ -186,6 +195,18 @@ export function MypageScreen({
 
   // Profile
   const [profile, setProfile] = useState<UserProfileData | null>(null);
+  const [showNicknameSheet, setShowNicknameSheet] = useState(false);
+  const [nicknameInput, setNicknameInput] = useState("");
+  const [nicknameError, setNicknameError] = useState<string | null>(null);
+  const [isSavingNickname, setIsSavingNickname] = useState(false);
+  const [isUpdatingWakeLock, setIsUpdatingWakeLock] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showAccountDeleteDialog, setShowAccountDeleteDialog] = useState(false);
+  const [accountDeleteError, setAccountDeleteError] = useState<string | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [plannerRegistrationCount, setPlannerRegistrationCount] = useState(0);
 
   // Recipe books
   const [books, setBooks] = useState<RecipeBookSummary[]>([]);
@@ -227,6 +248,24 @@ export function MypageScreen({
   const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
   const [plannerServings, setPlannerServings] = useState(1);
   const [plannerAddError, setPlannerAddError] = useState<string | null>(null);
+
+  // Preferences
+  const [mealColumns, setMealColumns] = useState<PlannerColumnData[]>([]);
+  const [mealColumnsLoading, setMealColumnsLoading] = useState(false);
+  const [mealColumnsLoaded, setMealColumnsLoaded] = useState(false);
+  const [mealColumnsError, setMealColumnsError] = useState<string | null>(null);
+  const [mealColumnsEditMode, setMealColumnsEditMode] = useState(false);
+  const [mealColumnAddInput, setMealColumnAddInput] = useState("");
+  const [isAddingMealColumn, setIsAddingMealColumn] = useState(false);
+  const [mealColumnAddError, setMealColumnAddError] = useState<string | null>(null);
+  const [renamingMealColumnId, setRenamingMealColumnId] = useState<string | null>(null);
+  const [mealColumnRenameInput, setMealColumnRenameInput] = useState("");
+  const [isRenamingMealColumn, setIsRenamingMealColumn] = useState(false);
+  const [mealColumnRenameError, setMealColumnRenameError] = useState<string | null>(null);
+  const [deleteMealColumnTarget, setDeleteMealColumnTarget] =
+    useState<PlannerColumnData | null>(null);
+  const [isDeletingMealColumn, setIsDeletingMealColumn] = useState(false);
+  const [deleteMealColumnError, setDeleteMealColumnError] = useState<string | null>(null);
 
   // CRUD states
   const [menuOpenBookId, setMenuOpenBookId] = useState<string | null>(null);
@@ -351,17 +390,45 @@ export function MypageScreen({
     }
   }, []);
 
+  const loadMypageStats = useCallback(async () => {
+    const plannerRange = createDefaultPlannerRange();
+
+    const [plannerResult, leftoverResult, eatenResult] = await Promise.allSettled([
+      fetchPlanner(plannerRange.startDate, plannerRange.endDate),
+      fetchLeftovers("leftover"),
+      fetchLeftovers("eaten"),
+    ]);
+
+    if (plannerResult.status === "fulfilled") {
+      setPlannerRegistrationCount(plannerResult.value.meals.length);
+    }
+
+    if (leftoverResult.status === "fulfilled") {
+      setLeftoverItems(leftoverResult.value.items);
+      setLeftoverState(leftoverResult.value.items.length > 0 ? "ready" : "empty");
+    }
+
+    if (eatenResult.status === "fulfilled") {
+      setEatenItems(eatenResult.value.items);
+      setEatenState(eatenResult.value.items.length > 0 ? "ready" : "empty");
+    }
+  }, []);
+
   const loadInitialData = useCallback(async () => {
     setViewState("loading");
     try {
-      const [profileOk, booksOk] = await Promise.all([loadProfile(), loadRecipeBooks()]);
+      const [profileOk, booksOk] = await Promise.all([
+        loadProfile(),
+        loadRecipeBooks(),
+        loadMypageStats().then(() => true),
+      ]);
       if (profileOk && booksOk) {
         setViewState("ready");
       }
     } catch {
       setViewState("error");
     }
-  }, [loadProfile, loadRecipeBooks]);
+  }, [loadProfile, loadMypageStats, loadRecipeBooks]);
 
   const loadShoppingHistory = useCallback(async (cursor?: string) => {
     try {
@@ -405,6 +472,31 @@ export function MypageScreen({
         return;
       }
       setState("error");
+    }
+  }, []);
+
+  const loadMealColumns = useCallback(async () => {
+    setMealColumnsLoading(true);
+    setMealColumnsError(null);
+
+    try {
+      const result = await fetchPlannerColumns();
+      setMealColumns(
+        [...result.columns].sort((a, b) => a.sort_order - b.sort_order),
+      );
+      setMealColumnsLoaded(true);
+    } catch (error) {
+      if (isPlannerApiError(error) && error.status === 401) {
+        setAuthState("unauthorized");
+        return;
+      }
+      setMealColumnsError(
+        isPlannerApiError(error)
+          ? error.message
+          : "끼니 컬럼을 불러오지 못했어요",
+      );
+    } finally {
+      setMealColumnsLoading(false);
     }
   }, []);
 
@@ -501,6 +593,189 @@ export function MypageScreen({
   }, [shoppingCursor, isLoadingMore, loadShoppingHistory]);
 
   // --- CRUD handlers ---
+
+  const openNicknameSheet = useCallback(() => {
+    setNicknameInput(profile?.nickname ?? "");
+    setNicknameError(null);
+    setShowNicknameSheet(true);
+  }, [profile]);
+
+  const handleSaveNickname = useCallback(async () => {
+    const trimmed = nicknameInput.trim();
+    if (trimmed.length < 2 || trimmed.length > 30) return;
+
+    setNicknameError(null);
+    setIsSavingNickname(true);
+
+    try {
+      const result = await updateNickname(trimmed);
+      setProfile(result);
+      setShowNicknameSheet(false);
+      showToast("닉네임을 변경했어요", "success");
+    } catch (error) {
+      setNicknameError(
+        isMypageApiError(error)
+          ? error.message
+          : "닉네임 변경에 실패했어요",
+      );
+    } finally {
+      setIsSavingNickname(false);
+    }
+  }, [nicknameInput, showToast]);
+
+  const handleToggleWakeLock = useCallback(async () => {
+    if (!profile || isUpdatingWakeLock) return;
+
+    const previous = profile.settings.screen_wake_lock;
+    const next = !previous;
+    setIsUpdatingWakeLock(true);
+    setProfile({
+      ...profile,
+      settings: { ...profile.settings, screen_wake_lock: next },
+    });
+
+    try {
+      const result = await updateSettings({ screen_wake_lock: next });
+      setProfile((current) =>
+        current ? { ...current, settings: result.settings } : current,
+      );
+      showToast("환경설정을 저장했어요", "success");
+    } catch (error) {
+      setProfile((current) =>
+        current
+          ? {
+              ...current,
+              settings: { ...current.settings, screen_wake_lock: previous },
+            }
+          : current,
+      );
+      showToast(
+        isMypageApiError(error)
+          ? error.message
+          : "환경설정 변경에 실패했어요",
+        "error",
+      );
+    } finally {
+      setIsUpdatingWakeLock(false);
+    }
+  }, [isUpdatingWakeLock, profile, showToast]);
+
+  const handleLogout = useCallback(async () => {
+    setLogoutError(null);
+    setIsLoggingOut(true);
+
+    try {
+      await logout();
+      router.replace("/");
+    } catch (error) {
+      setLogoutError(
+        isMypageApiError(error) ? error.message : "로그아웃에 실패했어요",
+      );
+      setIsLoggingOut(false);
+    }
+  }, [router]);
+
+  const handleDeleteAccount = useCallback(async () => {
+    setAccountDeleteError(null);
+    setIsDeletingAccount(true);
+
+    try {
+      await deleteAccount();
+      await logout();
+      router.replace("/");
+    } catch (error) {
+      setAccountDeleteError(
+        isMypageApiError(error) ? error.message : "회원탈퇴에 실패했어요",
+      );
+      setIsDeletingAccount(false);
+    }
+  }, [router]);
+
+  const handleAddMealColumn = useCallback(async () => {
+    const trimmed = mealColumnAddInput.trim();
+    if (trimmed.length < 1 || trimmed.length > 30) return;
+
+    setMealColumnAddError(null);
+    setIsAddingMealColumn(true);
+
+    try {
+      const result = await createPlannerColumn(trimmed);
+      setMealColumns((current) =>
+        [...current, result.column].sort((a, b) => a.sort_order - b.sort_order),
+      );
+      setMealColumnAddInput("");
+      showToast("끼니를 추가했어요", "success");
+    } catch (error) {
+      setMealColumnAddError(
+        isPlannerApiError(error)
+          ? error.message
+          : "끼니를 추가하지 못했어요",
+      );
+    } finally {
+      setIsAddingMealColumn(false);
+    }
+  }, [mealColumnAddInput, showToast]);
+
+  const startRenameMealColumn = useCallback((column: PlannerColumnData) => {
+    setRenamingMealColumnId(column.id);
+    setMealColumnRenameInput(column.name);
+    setMealColumnRenameError(null);
+  }, []);
+
+  const handleRenameMealColumn = useCallback(async () => {
+    if (!renamingMealColumnId) return;
+    const trimmed = mealColumnRenameInput.trim();
+    if (trimmed.length < 1 || trimmed.length > 30) return;
+
+    setMealColumnRenameError(null);
+    setIsRenamingMealColumn(true);
+
+    try {
+      const result = await updatePlannerColumn(renamingMealColumnId, trimmed);
+      setMealColumns((current) =>
+        current.map((column) =>
+          column.id === result.column.id ? result.column : column,
+        ),
+      );
+      setRenamingMealColumnId(null);
+      setMealColumnRenameInput("");
+      showToast("끼니 이름을 변경했어요", "success");
+    } catch (error) {
+      setMealColumnRenameError(
+        isPlannerApiError(error)
+          ? error.message
+          : "끼니 이름을 변경하지 못했어요",
+      );
+    } finally {
+      setIsRenamingMealColumn(false);
+    }
+  }, [mealColumnRenameInput, renamingMealColumnId, showToast]);
+
+  const handleDeleteMealColumn = useCallback(async () => {
+    if (!deleteMealColumnTarget) return;
+
+    setDeleteMealColumnError(null);
+    setIsDeletingMealColumn(true);
+
+    try {
+      await deletePlannerColumn(deleteMealColumnTarget.id);
+      setMealColumns((current) =>
+        current
+          .filter((column) => column.id !== deleteMealColumnTarget.id)
+          .map((column, index) => ({ ...column, sort_order: index })),
+      );
+      setDeleteMealColumnTarget(null);
+      showToast("끼니를 삭제했어요", "success");
+    } catch (error) {
+      setDeleteMealColumnError(
+        isPlannerApiError(error)
+          ? error.message
+          : "끼니를 삭제하지 못했어요",
+      );
+    } finally {
+      setIsDeletingMealColumn(false);
+    }
+  }, [deleteMealColumnTarget, showToast]);
 
   const handleCreateBook = useCallback(async () => {
     const trimmed = createName.trim();
@@ -773,10 +1048,60 @@ export function MypageScreen({
     }
   }, [activeTab, authState, eatenState, leftoverState, loadLeftoverTab]);
 
+  useEffect(() => {
+    if (
+      authState !== "authenticated" ||
+      activeTab !== "preferences" ||
+      mealColumnsLoaded ||
+      mealColumnsLoading
+    ) {
+      return;
+    }
+
+    void loadMealColumns();
+  }, [
+    activeTab,
+    authState,
+    loadMealColumns,
+    mealColumnsLoaded,
+    mealColumnsLoading,
+  ]);
+
   const savedBook = books.find((book) => book.book_type === "saved") ?? null;
   const savedRecipeCount =
     savedBook?.recipe_count ??
     books.reduce((sum, book) => sum + book.recipe_count, 0);
+  const cookedDishCount = leftoverItems.length + eatenItems.length;
+  const nicknameSaveDisabled =
+    nicknameInput.trim().length < 2 ||
+    nicknameInput.trim().length > 30 ||
+    isSavingNickname;
+  const mealColumnAddDisabled =
+    mealColumnAddInput.trim().length < 1 ||
+    mealColumnAddInput.trim().length > 30 ||
+    mealColumns.length >= 5 ||
+    isAddingMealColumn;
+  const mealColumnRenameDisabled =
+    mealColumnRenameInput.trim().length < 1 ||
+    mealColumnRenameInput.trim().length > 30 ||
+    isRenamingMealColumn;
+  const mypageStats = [
+    {
+      color: "var(--brand)",
+      label: "저장한 레시피",
+      value: savedRecipeCount,
+    },
+    {
+      color: "var(--success)",
+      label: "요리완료",
+      value: cookedDishCount,
+    },
+    {
+      color: "var(--warning-border)",
+      label: "플래너 등록",
+      value: plannerRegistrationCount,
+    },
+  ];
 
   // Load actual saved recipes for the desktop saved tab.
   useEffect(() => {
@@ -983,11 +1308,15 @@ export function MypageScreen({
           renameInputRef={renameInputRef}
           renameValue={renameValue}
           renamingBookId={renamingBookId}
+          savedRecipeCount={savedRecipeCount}
+          savedRecipes={savedRecipes}
+          savedRecipesState={savedRecipesState}
           scrollSentinelRef={scrollSentinelRef}
           shoppingHasNext={shoppingHasNext}
           shoppingItems={shoppingItems}
           shoppingLoaded={shoppingLoaded}
           showCreateInput={showCreateInput}
+          stats={mypageStats}
           surface={mobileSurface}
           systemBooks={systemBooks}
           onCancelCreate={() => {
@@ -1015,9 +1344,18 @@ export function MypageScreen({
             setDeleteTarget(book);
             setMenuOpenBookId(null);
           }}
+          onOpenNicknameSheet={openNicknameSheet}
+          onRetrySavedRecipes={() => {
+            if (savedBook) {
+              void loadSavedRecipes(savedBook.id);
+            }
+          }}
           onShowCreateInput={() => setShowCreateInput(true)}
           onSurfaceChange={(surface) => {
             setMobileSurface(surface);
+            if (surface === "saved") {
+              setActiveTab("saved");
+            }
             if (surface === "shopping") {
               setActiveTab("shopping");
             }
@@ -1039,6 +1377,25 @@ export function MypageScreen({
             {toast.message}
           </div>
         ) : null}
+
+        {showNicknameSheet ? (
+          <NicknameEditSheet
+            errorMessage={nicknameError}
+            isSaving={isSavingNickname}
+            mobile
+            nicknameInput={nicknameInput}
+            onClose={() => {
+              setShowNicknameSheet(false);
+              setNicknameError(null);
+            }}
+            onInputChange={(value) => {
+              setNicknameInput(value);
+              setNicknameError(null);
+            }}
+            onSave={() => void handleSaveNickname()}
+            saveDisabled={nicknameSaveDisabled}
+          />
+        ) : null}
       </>
     );
   }
@@ -1052,7 +1409,13 @@ export function MypageScreen({
       />
       <div className="web-mypage-screen">
         <WebCard className="web-mypage-profile" data-testid="mypage-profile">
-          <div className="web-mypage-profile-main">
+          <button
+            aria-label={`닉네임 변경, 현재 닉네임: ${profile?.nickname ?? ""}`}
+            className="web-mypage-profile-main web-mypage-profile-edit"
+            data-testid="mypage-profile-edit-button"
+            onClick={openNicknameSheet}
+            type="button"
+          >
             {profile?.profile_image_url ? (
               <Image
                 alt={`${profile.nickname} 프로필`}
@@ -1075,20 +1438,14 @@ export function MypageScreen({
               <h1>{profile?.nickname ?? ""}</h1>
               <p>{SOCIAL_PROVIDER_LABELS[profile?.social_provider ?? ""] ?? ""}</p>
             </div>
-          </div>
+          </button>
           <div className="web-mypage-stats" aria-label="마이페이지 통계">
-            <div>
-              <strong>{savedRecipeCount}</strong>
-              <span>저장한 레시피</span>
-            </div>
-            <div>
-              <strong>26</strong>
-              <span>다먹은 요리</span>
-            </div>
-            <div>
-              <strong>14</strong>
-              <span>플래너 등록</span>
-            </div>
+            {mypageStats.map((item) => (
+              <div key={item.label}>
+                <strong style={{ color: item.color }}>{item.value}</strong>
+                <span>{item.label}</span>
+              </div>
+            ))}
           </div>
         </WebCard>
 
@@ -1129,18 +1486,11 @@ export function MypageScreen({
             <CheckIcon /> 다먹은 요리
           </WebTabButton>
           <WebTabButton
-            active={activeTab === "account"}
-            aria-label="계정 관리"
-            onClick={() => switchDesktopTab("account")}
+            active={activeTab === "preferences"}
+            aria-label="환경설정"
+            onClick={() => switchDesktopTab("preferences")}
           >
-            <UserIcon /> 계정 관리
-          </WebTabButton>
-          <WebTabButton
-            active={activeTab === "notifications"}
-            aria-label="알림 설정"
-            onClick={() => switchDesktopTab("notifications")}
-          >
-            <BellIcon /> 알림 설정
+            <SettingsIcon /> 환경설정
           </WebTabButton>
           <WebTabButton
             active={activeTab === "help"}
@@ -1164,10 +1514,82 @@ export function MypageScreen({
               }}
             />
           ) : null}
-          {activeTab === "account" ? (
-            <MyPageAccountSurface profile={profile} />
+          {activeTab === "preferences" ? (
+            <MyPagePreferencesSurface
+              accountDeleteError={accountDeleteError}
+              deleteMealColumnError={deleteMealColumnError}
+              deleteMealColumnTarget={deleteMealColumnTarget}
+              isAddingMealColumn={isAddingMealColumn}
+              isDeletingAccount={isDeletingAccount}
+              isDeletingMealColumn={isDeletingMealColumn}
+              isLoggingOut={isLoggingOut}
+              isRenamingMealColumn={isRenamingMealColumn}
+              isUpdatingWakeLock={isUpdatingWakeLock}
+              logoutError={logoutError}
+              mealColumnAddDisabled={mealColumnAddDisabled}
+              mealColumnAddError={mealColumnAddError}
+              mealColumnAddInput={mealColumnAddInput}
+              mealColumnRenameDisabled={mealColumnRenameDisabled}
+              mealColumnRenameError={mealColumnRenameError}
+              mealColumnRenameInput={mealColumnRenameInput}
+              mealColumns={mealColumns}
+              mealColumnsEditMode={mealColumnsEditMode}
+              mealColumnsError={mealColumnsError}
+              mealColumnsLoading={mealColumnsLoading}
+              profile={profile}
+              renamingMealColumnId={renamingMealColumnId}
+              showAccountDeleteDialog={showAccountDeleteDialog}
+              showLogoutDialog={showLogoutDialog}
+              onAddMealColumn={() => void handleAddMealColumn()}
+              onCancelRenameMealColumn={() => {
+                setRenamingMealColumnId(null);
+                setMealColumnRenameInput("");
+                setMealColumnRenameError(null);
+              }}
+              onCloseAccountDeleteDialog={() => {
+                setShowAccountDeleteDialog(false);
+                setAccountDeleteError(null);
+              }}
+              onCloseDeleteMealColumnDialog={() => {
+                setDeleteMealColumnTarget(null);
+                setDeleteMealColumnError(null);
+              }}
+              onCloseLogoutDialog={() => {
+                setShowLogoutDialog(false);
+                setLogoutError(null);
+              }}
+              onConfirmAccountDelete={() => void handleDeleteAccount()}
+              onConfirmDeleteMealColumn={() => void handleDeleteMealColumn()}
+              onConfirmLogout={() => void handleLogout()}
+              onMealColumnAddInputChange={(value) => {
+                setMealColumnAddInput(value);
+                setMealColumnAddError(null);
+              }}
+              onMealColumnRenameInputChange={(value) => {
+                setMealColumnRenameInput(value);
+                setMealColumnRenameError(null);
+              }}
+              onRenameMealColumn={() => void handleRenameMealColumn()}
+              onRequestDeleteMealColumn={(column) => {
+                setDeleteMealColumnError(null);
+                setDeleteMealColumnTarget(column);
+              }}
+              onRetryMealColumns={() => void loadMealColumns()}
+              onShowAccountDeleteDialog={() => {
+                setAccountDeleteError(null);
+                setShowAccountDeleteDialog(true);
+              }}
+              onShowLogoutDialog={() => {
+                setLogoutError(null);
+                setShowLogoutDialog(true);
+              }}
+              onStartRenameMealColumn={startRenameMealColumn}
+              onToggleMealColumnsEditMode={() =>
+                setMealColumnsEditMode((current) => !current)
+              }
+              onToggleWakeLock={() => void handleToggleWakeLock()}
+            />
           ) : null}
-          {activeTab === "notifications" ? <MyPageNotificationSurface /> : null}
           {activeTab === "help" ? <MyPageHelpSurface /> : null}
           {activeTab === "recipebooks" ? (
             <RecipeBookTabContent
@@ -1272,6 +1694,24 @@ export function MypageScreen({
       </div>
 
       {plannerAddSheet}
+
+      {showNicknameSheet ? (
+        <NicknameEditSheet
+          errorMessage={nicknameError}
+          isSaving={isSavingNickname}
+          nicknameInput={nicknameInput}
+          onClose={() => {
+            setShowNicknameSheet(false);
+            setNicknameError(null);
+          }}
+          onInputChange={(value) => {
+            setNicknameInput(value);
+            setNicknameError(null);
+          }}
+          onSave={() => void handleSaveNickname()}
+          saveDisabled={nicknameSaveDisabled}
+        />
+      ) : null}
 
       {toast ? (
         <div
@@ -1413,34 +1853,248 @@ function SavedRecipeGrid({
   );
 }
 
-function MyPageAccountSurface({ profile }: { profile: UserProfileData | null }) {
+function MyPagePreferencesSurface({
+  accountDeleteError,
+  deleteMealColumnError,
+  deleteMealColumnTarget,
+  isAddingMealColumn,
+  isDeletingAccount,
+  isDeletingMealColumn,
+  isLoggingOut,
+  isRenamingMealColumn,
+  isUpdatingWakeLock,
+  logoutError,
+  mealColumnAddDisabled,
+  mealColumnAddError,
+  mealColumnAddInput,
+  mealColumnRenameDisabled,
+  mealColumnRenameError,
+  mealColumnRenameInput,
+  mealColumns,
+  mealColumnsEditMode,
+  mealColumnsError,
+  mealColumnsLoading,
+  profile,
+  renamingMealColumnId,
+  showAccountDeleteDialog,
+  showLogoutDialog,
+  onAddMealColumn,
+  onCancelRenameMealColumn,
+  onCloseAccountDeleteDialog,
+  onCloseDeleteMealColumnDialog,
+  onCloseLogoutDialog,
+  onConfirmAccountDelete,
+  onConfirmDeleteMealColumn,
+  onConfirmLogout,
+  onMealColumnAddInputChange,
+  onMealColumnRenameInputChange,
+  onRenameMealColumn,
+  onRequestDeleteMealColumn,
+  onRetryMealColumns,
+  onShowAccountDeleteDialog,
+  onShowLogoutDialog,
+  onStartRenameMealColumn,
+  onToggleMealColumnsEditMode,
+  onToggleWakeLock,
+}: {
+  accountDeleteError: string | null;
+  deleteMealColumnError: string | null;
+  deleteMealColumnTarget: PlannerColumnData | null;
+  isAddingMealColumn: boolean;
+  isDeletingAccount: boolean;
+  isDeletingMealColumn: boolean;
+  isLoggingOut: boolean;
+  isRenamingMealColumn: boolean;
+  isUpdatingWakeLock: boolean;
+  logoutError: string | null;
+  mealColumnAddDisabled: boolean;
+  mealColumnAddError: string | null;
+  mealColumnAddInput: string;
+  mealColumnRenameDisabled: boolean;
+  mealColumnRenameError: string | null;
+  mealColumnRenameInput: string;
+  mealColumns: PlannerColumnData[];
+  mealColumnsEditMode: boolean;
+  mealColumnsError: string | null;
+  mealColumnsLoading: boolean;
+  profile: UserProfileData | null;
+  renamingMealColumnId: string | null;
+  showAccountDeleteDialog: boolean;
+  showLogoutDialog: boolean;
+  onAddMealColumn: () => void;
+  onCancelRenameMealColumn: () => void;
+  onCloseAccountDeleteDialog: () => void;
+  onCloseDeleteMealColumnDialog: () => void;
+  onCloseLogoutDialog: () => void;
+  onConfirmAccountDelete: () => void;
+  onConfirmDeleteMealColumn: () => void;
+  onConfirmLogout: () => void;
+  onMealColumnAddInputChange: (value: string) => void;
+  onMealColumnRenameInputChange: (value: string) => void;
+  onRenameMealColumn: () => void;
+  onRequestDeleteMealColumn: (column: PlannerColumnData) => void;
+  onRetryMealColumns: () => void;
+  onShowAccountDeleteDialog: () => void;
+  onShowLogoutDialog: () => void;
+  onStartRenameMealColumn: (column: PlannerColumnData) => void;
+  onToggleMealColumnsEditMode: () => void;
+  onToggleWakeLock: () => void;
+}) {
   return (
-    <div className="web-mypage-subsurface" data-testid="mypage-account-tab">
+    <div className="web-mypage-subsurface" data-testid="mypage-preferences-tab">
       <div className="web-mypage-section-head">
-        <h2>계정 관리</h2>
-        <p>프로필, 로그인 상태, 환경설정을 관리합니다.</p>
+        <h2>환경설정</h2>
+        <p>요리 중 화면 켜둠, 끼니 편집, 로그인 상태를 관리합니다.</p>
+      </div>
+
+      <WebCard className="web-mypage-toggle-card">
+        <PreferenceSwitchRow
+          checked={profile?.settings.screen_wake_lock ?? false}
+          description="요리모드에서 레시피를 보는 동안 화면이 꺼지지 않게 유지합니다."
+          disabled={isUpdatingWakeLock}
+          onToggle={onToggleWakeLock}
+          title="요리모드 화면 켜둠"
+        />
+      </WebCard>
+
+      <div className="web-mypage-section-head web-mypage-preferences-head">
+        <h2>끼니 편집</h2>
+        <p>
+          최소 1개, 최대 5개의 끼니를 사용할 수 있어요. 식사가 있는 끼니는 삭제할 수 없어요.
+        </p>
+      </div>
+      <WebCard className="web-settings-column-card">
+        {mealColumnsLoading ? (
+          <div className="web-settings-column-list" data-testid="columns-loading">
+            {[0, 1, 2].map((index) => (
+              <div className="web-settings-column-row" key={index}>
+                <WebSkeleton height={18} width={120} />
+              </div>
+            ))}
+          </div>
+        ) : mealColumnsError ? (
+          <div className="web-mypage-saved-state" data-testid="columns-error">
+            <div>
+              <h3>끼니 컬럼을 불러오지 못했어요</h3>
+              <p>{mealColumnsError}</p>
+            </div>
+            <WebButton onClick={onRetryMealColumns} size="sm" variant="secondary">
+              다시 시도
+            </WebButton>
+          </div>
+        ) : (
+          <div className="web-settings-column-list" data-testid="column-list">
+            {mealColumns.map((column) => {
+              const isRenaming = renamingMealColumnId === column.id;
+
+              return (
+                <div
+                  className="web-settings-column-row"
+                  data-testid={`column-item-${column.id}`}
+                  key={column.id}
+                >
+                  {isRenaming ? (
+                    <>
+                      <input
+                        aria-label={`${column.name} 새 이름`}
+                        className="web-mypage-column-input"
+                        maxLength={30}
+                        onChange={(event) =>
+                          onMealColumnRenameInputChange(event.target.value)
+                        }
+                        value={mealColumnRenameInput}
+                      />
+                      <WebButton
+                        disabled={mealColumnRenameDisabled}
+                        onClick={onRenameMealColumn}
+                        size="sm"
+                        variant="primary"
+                      >
+                        {isRenamingMealColumn ? "저장 중..." : "저장"}
+                      </WebButton>
+                      <WebButton
+                        onClick={onCancelRenameMealColumn}
+                        size="sm"
+                        variant="ghost"
+                      >
+                        취소
+                      </WebButton>
+                    </>
+                  ) : (
+                    <>
+                      <strong>{column.name}</strong>
+                      <button
+                        aria-label={`${column.name} 이름 변경`}
+                        className="web-settings-icon-button"
+                        data-testid={`rename-column-${column.id}`}
+                        onClick={() => onStartRenameMealColumn(column)}
+                        type="button"
+                      >
+                        <PencilIcon />
+                      </button>
+                      {mealColumnsEditMode ? (
+                        <button
+                          aria-label={`${column.name} 삭제`}
+                          className="web-settings-icon-button web-settings-icon-danger"
+                          data-testid={`delete-column-${column.id}`}
+                          disabled={mealColumns.length <= 1}
+                          onClick={() => onRequestDeleteMealColumn(column)}
+                          type="button"
+                        >
+                          <TrashIcon />
+                        </button>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </WebCard>
+
+      {mealColumnRenameError ? (
+        <p className="web-form-error" data-testid="rename-column-error">
+          {mealColumnRenameError}
+        </p>
+      ) : null}
+
+      <div className="web-mypage-column-actions">
+        <input
+          aria-label="새 끼니 이름"
+          className="web-mypage-column-input"
+          maxLength={30}
+          onChange={(event) => onMealColumnAddInputChange(event.target.value)}
+          placeholder="새 끼니 이름"
+          value={mealColumnAddInput}
+        />
+        <WebButton
+          data-testid="add-column-button"
+          disabled={mealColumnAddDisabled}
+          onClick={onAddMealColumn}
+          variant="secondary"
+        >
+          {isAddingMealColumn ? "추가 중..." : "끼니 추가"}
+        </WebButton>
+        <WebButton onClick={onToggleMealColumnsEditMode} variant="ghost">
+          {mealColumnsEditMode ? "완료" : "삭제 편집"}
+        </WebButton>
+      </div>
+      {mealColumnAddError ? (
+        <p className="web-form-error" data-testid="add-column-error">
+          {mealColumnAddError}
+        </p>
+      ) : null}
+
+      <div className="web-mypage-section-head web-mypage-preferences-head">
+        <h2>계정</h2>
+        <p>로그인 상태를 정리하거나 서비스를 탈퇴할 수 있어요.</p>
       </div>
       <WebCard className="web-mypage-account-card">
-        <div className="web-mypage-account-profile">
-          <span className="web-mypage-account-avatar">
-            {profile?.nickname?.slice(0, 1).toUpperCase() ?? "?"}
-          </span>
-          <span>
-            <strong>{profile?.nickname ?? ""}</strong>
-            <em>{SOCIAL_PROVIDER_LABELS[profile?.social_provider ?? ""] ?? ""}</em>
-          </span>
-          <Link
-            className="web-button web-button-secondary web-button-sm"
-            href={SETTINGS_FROM_ACCOUNT_HREF}
-          >
-            닉네임 변경
-          </Link>
-        </div>
-      </WebCard>
-      <WebCard className="web-mypage-account-card">
-        <Link
+        <button
           className="web-mypage-settings-row"
-          href={SETTINGS_FROM_ACCOUNT_HREF}
+          onClick={onShowLogoutDialog}
+          type="button"
         >
           <span className="web-mypage-row-icon"><LogoutIcon /></span>
           <span className="web-mypage-row-copy">
@@ -1448,82 +2102,219 @@ function MyPageAccountSurface({ profile }: { profile: UserProfileData | null }) 
             <span>현재 로그인한 계정에서 나갑니다.</span>
           </span>
           <ChevronRightIcon />
-        </Link>
-        <Link
+        </button>
+        <button
           className="web-mypage-settings-row"
-          data-testid="mypage-settings-link"
-          href={SETTINGS_FROM_ACCOUNT_HREF}
+          onClick={onShowAccountDeleteDialog}
+          type="button"
         >
-          <span className="web-mypage-row-icon"><SettingsIcon /></span>
+          <span className="web-mypage-row-icon"><TrashIcon /></span>
           <span className="web-mypage-row-copy">
-            <strong>환경설정</strong>
-            <span>끼니, 알림, 단위와 테마를 한 곳에서 관리합니다.</span>
+            <strong>회원탈퇴</strong>
+            <span>개인 기록이 삭제되며 되돌릴 수 없어요.</span>
           </span>
           <ChevronRightIcon />
-        </Link>
+        </button>
       </WebCard>
-      <WebCard className="web-mypage-danger-card">
-        <div>
-          <h3>계정 삭제</h3>
-          <p>레시피북, 플래너, 장보기, 팬트리 기록이 삭제됩니다. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요.</p>
-        </div>
-        <Link className="web-mypage-danger-button" href={SETTINGS_FROM_ACCOUNT_HREF}>
-          계정 삭제하기
-        </Link>
-      </WebCard>
+
+      {showLogoutDialog ? (
+        <MyPageConfirmDialog
+          confirmLabel={isLoggingOut ? "로그아웃 중..." : "로그아웃"}
+          errorMessage={logoutError}
+          onCancel={onCloseLogoutDialog}
+          onConfirm={onConfirmLogout}
+          title="로그아웃 할까요?"
+        />
+      ) : null}
+
+      {showAccountDeleteDialog ? (
+        <MyPageConfirmDialog
+          confirmLabel={isDeletingAccount ? "탈퇴 중..." : "회원탈퇴"}
+          destructive
+          description="레시피북, 플래너, 장보기, 팬트리 기록이 삭제됩니다. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요."
+          errorMessage={accountDeleteError}
+          onCancel={onCloseAccountDeleteDialog}
+          onConfirm={onConfirmAccountDelete}
+          title="정말 탈퇴하시겠어요?"
+        />
+      ) : null}
+
+      {deleteMealColumnTarget ? (
+        <MyPageConfirmDialog
+          confirmLabel={isDeletingMealColumn ? "삭제 중..." : "삭제하기"}
+          destructive
+          description={`"${deleteMealColumnTarget.name}" 끼니를 삭제할까요? 식사가 있으면 삭제되지 않아요.`}
+          errorMessage={deleteMealColumnError}
+          onCancel={onCloseDeleteMealColumnDialog}
+          onConfirm={onConfirmDeleteMealColumn}
+          title="끼니 삭제"
+        />
+      ) : null}
     </div>
   );
 }
 
-function MyPageNotificationSurface() {
-  const [settings, setSettings] = useState({
-    cookTime: true,
-    shoppingReminder: true,
-    plannerSummary: false,
-    weeklyReport: true,
-  });
-  const toggle = (key: keyof typeof settings) => {
-    setSettings((current) => ({ ...current, [key]: !current[key] }));
-  };
+function MyPageConfirmDialog({
+  confirmLabel,
+  description,
+  destructive = false,
+  errorMessage,
+  onCancel,
+  onConfirm,
+  title,
+}: {
+  confirmLabel: string;
+  description?: string;
+  destructive?: boolean;
+  errorMessage: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+  title: string;
+}) {
+  return (
+    <WebModal onBackdropClick={onCancel}>
+      <WebDialog aria-labelledby="mypage-confirm-title" size="narrow">
+        <WebDialogHeader>
+          <WebDialogTitle id="mypage-confirm-title">{title}</WebDialogTitle>
+        </WebDialogHeader>
+        <WebDialogBody>
+          {description ? <p className="web-form-help">{description}</p> : null}
+          {errorMessage ? (
+            <p className="web-form-error" data-testid="mypage-confirm-error">
+              {errorMessage}
+            </p>
+          ) : null}
+        </WebDialogBody>
+        <WebDialogFooter>
+          <WebButton onClick={onCancel} variant="ghost">
+            취소
+          </WebButton>
+          <WebButton
+            className={destructive ? "web-mypage-danger-button" : undefined}
+            onClick={onConfirm}
+            variant={destructive ? "ghost" : "primary"}
+          >
+            {confirmLabel}
+          </WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
+  );
+}
+
+function NicknameEditSheet({
+  errorMessage,
+  isSaving,
+  mobile = false,
+  nicknameInput,
+  onClose,
+  onInputChange,
+  onSave,
+  saveDisabled,
+}: {
+  errorMessage: string | null;
+  isSaving: boolean;
+  mobile?: boolean;
+  nicknameInput: string;
+  onClose: () => void;
+  onInputChange: (value: string) => void;
+  onSave: () => void;
+  saveDisabled: boolean;
+}) {
+  if (mobile) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)]"
+        data-testid="nickname-sheet-backdrop"
+        onClick={onClose}
+      >
+        <div
+          aria-modal="true"
+          className="w-full rounded-t-[var(--radius-sheet)] bg-[var(--surface)] px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-4"
+          onClick={(event) => event.stopPropagation()}
+          role="dialog"
+        >
+          <h2 className="text-[18px] font-extrabold text-[var(--foreground)]">
+            닉네임 변경
+          </h2>
+          <input
+            aria-label="새 닉네임"
+            className="mt-4 h-[38px] w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[14px] font-medium text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--brand)]"
+            maxLength={30}
+            onChange={(event) => onInputChange(event.target.value)}
+            type="text"
+            value={nicknameInput}
+          />
+          <p className="mt-2 text-[12px] font-medium text-[var(--text-3)]">
+            2~30자로 입력해 주세요
+          </p>
+          {errorMessage ? (
+            <p
+              className="mt-2 text-[12px] font-bold text-[var(--danger)]"
+              data-testid="nickname-error"
+            >
+              {errorMessage}
+            </p>
+          ) : null}
+          <div className="mt-4 grid grid-cols-[78px_minmax(0,1fr)] gap-2">
+            <button
+              className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[16px] font-extrabold text-[var(--foreground)]"
+              onClick={onClose}
+              type="button"
+            >
+              취소
+            </button>
+            <button
+              className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-extrabold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)]"
+              disabled={saveDisabled}
+              onClick={onSave}
+              type="button"
+            >
+              {isSaving ? "저장 중..." : "저장"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className="web-mypage-subsurface web-mypage-notification-surface"
-      data-testid="mypage-notification-tab"
-    >
-      <div className="web-mypage-section-head">
-        <h2>알림 설정</h2>
-        <p>중요한 요리와 장보기 알림만 받을 수 있어요.</p>
-      </div>
-      <WebCard className="web-mypage-toggle-card">
-        <ToggleRow
-          checked={settings.cookTime}
-          description="설정한 요리 시간이 다가오면 알려드려요."
-          onToggle={() => toggle("cookTime")}
-          title="요리 시간 알림"
-        />
-        <ToggleRow
-          checked={settings.shoppingReminder}
-          description="장보기 예정일 전날 준비할 항목을 알려드려요."
-          onToggle={() => toggle("shoppingReminder")}
-          title="장보기 리마인드"
-        />
-        <ToggleRow
-          checked={settings.plannerSummary}
-          description="이번 주 플래너 요약을 하루 전에 보내드려요."
-          onToggle={() => toggle("plannerSummary")}
-          title="플래너 요약"
-        />
-      </WebCard>
-      <WebCard className="web-mypage-toggle-card">
-        <ToggleRow
-          checked={settings.weeklyReport}
-          description="저장한 레시피와 장보기 변화를 주간 리포트로 받아요."
-          onToggle={() => toggle("weeklyReport")}
-          title="주간 리포트"
-        />
-      </WebCard>
-    </div>
+    <WebModal data-testid="nickname-sheet-backdrop" onBackdropClick={onClose}>
+      <WebDialog aria-labelledby="mypage-nickname-title" size="narrow">
+        <WebDialogHeader>
+          <WebDialogTitle id="mypage-nickname-title">닉네임 변경</WebDialogTitle>
+        </WebDialogHeader>
+        <WebDialogBody>
+          <label className="web-form-label" htmlFor="mypage-nickname-input">
+            새 닉네임
+          </label>
+          <input
+            aria-describedby="mypage-nickname-help"
+            className="web-form-input"
+            id="mypage-nickname-input"
+            maxLength={30}
+            onChange={(event) => onInputChange(event.target.value)}
+            value={nicknameInput}
+          />
+          <p className="web-form-help" id="mypage-nickname-help">
+            2~30자로 입력해 주세요
+          </p>
+          {errorMessage ? (
+            <p className="web-form-error" data-testid="nickname-error">
+              {errorMessage}
+            </p>
+          ) : null}
+        </WebDialogBody>
+        <WebDialogFooter>
+          <WebButton onClick={onClose} variant="ghost">
+            취소
+          </WebButton>
+          <WebButton disabled={saveDisabled} onClick={onSave} variant="primary">
+            {isSaving ? "저장 중..." : "저장"}
+          </WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
   );
 }
 
@@ -1561,14 +2352,16 @@ function MyPageHelpSurface() {
   );
 }
 
-function ToggleRow({
+function PreferenceSwitchRow({
   checked = false,
   description,
+  disabled = false,
   onToggle,
   title,
 }: {
   checked?: boolean;
   description: string;
+  disabled?: boolean;
   onToggle: () => void;
   title: string;
 }) {
@@ -1577,6 +2370,7 @@ function ToggleRow({
       aria-checked={checked}
       aria-label={title}
       className="web-mypage-toggle-row"
+      disabled={disabled}
       onClick={onToggle}
       role="switch"
       type="button"
@@ -1596,6 +2390,9 @@ function ToggleRow({
 }
 
 function getMypageMobileSurfaceTitle(surface: MypageMobileSurface) {
+  if (surface === "saved") {
+    return "저장한 레시피";
+  }
   if (surface === "recipebook") {
     return "레시피북";
   }
@@ -2743,8 +3540,7 @@ function getMypageTabFromQuery(value: string | null): MypageTab | null {
     value === "shopping" ||
     value === "leftovers" ||
     value === "eaten" ||
-    value === "account" ||
-    value === "notifications" ||
+    value === "preferences" ||
     value === "help"
   ) {
     return value;
@@ -2756,6 +3552,7 @@ function getMypageTabFromQuery(value: string | null): MypageTab | null {
 function getMobileSurfaceForTab(tab: MypageTab): MypageMobileSurface {
   if (tab === "recipebooks") return "recipebook";
   if (tab === "shopping") return "shopping";
+  if (tab === "saved") return "saved";
   return "home";
 }
 
@@ -2822,20 +3619,19 @@ function BookmarkIcon() {
   );
 }
 
-function UserIcon() {
+function PencilIcon() {
   return (
     <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
-      <path d="M20 21a8 8 0 1 0-16 0" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
     </svg>
   );
 }
 
-function BellIcon() {
+function TrashIcon() {
   return (
     <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
-      <path d="M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
-      <path d="M10 21h4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
     </svg>
   );
 }
