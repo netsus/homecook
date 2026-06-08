@@ -116,15 +116,28 @@ export function validatePlannerColumnName(name: string) {
   return [];
 }
 
+function isRequestRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
 export async function readPlannerColumnName(request: Request) {
-  let body: { name?: unknown };
+  let body: unknown;
 
   try {
-    body = (await request.json()) as { name?: unknown };
+    body = await request.json();
   } catch {
     return {
       response: fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [
         { field: "body", reason: "invalid_json" },
+      ]),
+      name: null,
+    };
+  }
+
+  if (!isRequestRecord(body)) {
+    return {
+      response: fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [
+        { field: "body", reason: "invalid_object" },
       ]),
       name: null,
     };
@@ -143,6 +156,67 @@ export async function readPlannerColumnName(request: Request) {
   return {
     response: null,
     name,
+  };
+}
+
+export async function readPlannerColumnPatch(request: Request) {
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return {
+      response: fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [
+        { field: "body", reason: "invalid_json" },
+      ]),
+      patch: null,
+    };
+  }
+
+  if (!isRequestRecord(body)) {
+    return {
+      response: fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [
+        { field: "body", reason: "invalid_object" },
+      ]),
+      patch: null,
+    };
+  }
+
+  const patch: { name?: string; sort_order?: number } = {};
+  const fields: Array<{ field: string; reason: string }> = [];
+
+  if ("name" in body) {
+    const name = normalizePlannerColumnName(body.name);
+    fields.push(...validatePlannerColumnName(name));
+    patch.name = name;
+  }
+
+  if ("sort_order" in body) {
+    if (
+      typeof body.sort_order !== "number" ||
+      !Number.isInteger(body.sort_order) ||
+      body.sort_order < 0
+    ) {
+      fields.push({ field: "sort_order", reason: "invalid_integer" });
+    } else {
+      patch.sort_order = body.sort_order;
+    }
+  }
+
+  if (!("name" in patch) && !("sort_order" in patch)) {
+    fields.push({ field: "body", reason: "no_changes" });
+  }
+
+  if (fields.length > 0) {
+    return {
+      response: fail("VALIDATION_ERROR", "끼니 정보를 확인해주세요.", 422, fields),
+      patch: null,
+    };
+  }
+
+  return {
+    response: null,
+    patch,
   };
 }
 

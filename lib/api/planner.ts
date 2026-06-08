@@ -136,13 +136,25 @@ export async function createPlannerColumn(name: string) {
   });
 }
 
-export async function updatePlannerColumn(columnId: string, name: string) {
+export type PlannerColumnUpdateInput =
+  | string
+  | {
+      name?: string;
+      sort_order?: number;
+    };
+
+export async function updatePlannerColumn(
+  columnId: string,
+  updates: PlannerColumnUpdateInput,
+) {
+  const body = typeof updates === "string" ? { name: updates } : updates;
+
   return requestPlanner<PlannerColumnMutationData>(
     `/api/v1/planner/columns/${columnId}`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(body),
     },
   );
 }
