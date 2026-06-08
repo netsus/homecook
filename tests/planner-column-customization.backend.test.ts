@@ -449,6 +449,43 @@ describe("planner column customization backend", () => {
     });
   });
 
+  it("moves an owned column by sort order and compacts the remaining order", async () => {
+    const dbClient = createMemoryPlannerColumnsClient({
+      columns: [
+        createColumn(COLUMN_IDS.breakfast, "아침", 0),
+        createColumn(COLUMN_IDS.lunch, "점심", 1),
+        createColumn(COLUMN_IDS.dinner, "저녁", 2),
+      ],
+    });
+    createRouteHandlerClient.mockResolvedValue(dbClient);
+
+    const { PATCH } = await importMemberRoute();
+    const response = await PATCH(
+      createJsonRequest(`http://localhost:3000/api/v1/planner/columns/${COLUMN_IDS.dinner}`, {
+        sort_order: 0,
+      }),
+      routeContext(COLUMN_IDS.dinner),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.column).toMatchObject({
+      id: COLUMN_IDS.dinner,
+      name: "저녁",
+      sort_order: 0,
+    });
+    expect(dbClient.state.columns
+      .map((column) => ({
+        id: column.id,
+        sort_order: column.sort_order,
+      }))
+      .sort((a, b) => a.sort_order - b.sort_order)).toEqual([
+      { id: COLUMN_IDS.dinner, sort_order: 0 },
+      { id: COLUMN_IDS.breakfast, sort_order: 1 },
+      { id: COLUMN_IDS.lunch, sort_order: 2 },
+    ]);
+  });
+
   it("returns 422 when renaming a column with an invalid name", async () => {
     const dbClient = createMemoryPlannerColumnsClient({
       columns: [

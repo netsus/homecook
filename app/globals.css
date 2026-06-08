@@ -6337,6 +6337,25 @@ button {
     color: var(--web-text-2);
   }
 
+  .web-settings-account-avatar {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border-radius: var(--web-r-pill);
+    object-fit: cover;
+  }
+
+  .web-settings-account-avatar-fallback {
+    background: linear-gradient(135deg, #8fd4ff 0%, #43b9ff 100%);
+    color: var(--web-text-inverse);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
   .web-mypage-row-copy {
     display: grid;
     flex: 1;
@@ -6422,17 +6441,31 @@ button {
     background: transparent;
   }
 
-  .web-mypage-column-actions {
-    display: flex;
-    flex-wrap: wrap;
+  .web-mypage-column-actions,
+  .web-settings-column-add {
+    display: grid;
     gap: 8px;
     align-items: center;
+    margin-top: 12px;
+  }
+
+  .web-mypage-column-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .web-settings-column-add {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .web-settings-column-card > .web-mypage-column-actions,
+  .web-settings-column-card > .web-settings-column-add {
+    margin: 0 16px 16px;
   }
 
   .web-mypage-column-input {
-    min-width: 220px;
+    min-width: 0;
+    width: 100%;
     height: 38px;
-    flex: 1 1 220px;
     border: 1px solid var(--web-border);
     border-radius: var(--web-r-sm);
     background: var(--web-surface);
@@ -6485,9 +6518,11 @@ button {
 
   .web-mypage-danger-card p,
   .web-settings-danger-card span {
+    display: block;
     margin: 8px 0 0;
     color: var(--web-text-2);
     font-size: 13px;
+    line-height: 1.6;
   }
 
   .web-mypage-danger-button,
@@ -7082,25 +7117,106 @@ button {
   }
 
   .web-settings-toast {
-    margin-bottom: 24px;
+    position: fixed;
+    left: 50%;
+    bottom: max(28px, env(safe-area-inset-bottom));
+    z-index: 70;
+    width: min(520px, calc(100vw - 32px));
+    transform: translateX(-50%);
     border-radius: var(--web-r-sm);
-    background: rgba(255, 59, 48, 0.08);
-    color: var(--web-error);
     padding: 12px 16px;
     font-size: 14px;
     font-weight: 700;
+    box-shadow: 0 18px 44px rgba(12, 18, 28, 0.18);
+  }
+
+  .web-settings-toast-success {
+    border: 1px solid rgba(45, 150, 255, 0.24);
+    background: var(--web-brand-wash);
+    color: var(--web-brand-accessible);
+  }
+
+  .web-settings-toast-danger {
+    border: 1px solid rgba(255, 59, 48, 0.24);
+    background: rgba(255, 59, 48, 0.08);
+    color: var(--web-error);
   }
 
   .web-settings-section {
-    margin-top: 80px;
+    margin-top: 18px;
   }
 
   .web-settings-section:first-of-type {
     margin-top: 0;
   }
 
+  .web-settings-bordered-section {
+    border: 1px solid var(--web-line-strong);
+    border-radius: var(--web-r-md);
+    background: var(--web-surface);
+    padding: 20px;
+  }
+
+  .web-settings-bordered-section > .web-mypage-section-head:first-child,
+  .web-settings-bordered-section > .web-settings-section-title:first-child {
+    margin-top: 0;
+  }
+
+  .web-settings-bordered-section > .web-card,
+  .web-settings-bordered-section > .web-settings-column-card {
+    margin-top: 12px;
+  }
+
   .web-settings-section-title h2 {
     margin-bottom: 8px;
+  }
+
+  .web-settings-section-title-action {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .web-settings-section-title-action > div {
+    min-width: 0;
+  }
+
+  .web-settings-column-description-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .web-settings-column-description-row p {
+    min-width: 0;
+    margin: 0;
+  }
+
+  .web-settings-delete-toggle {
+    flex: 0 0 auto;
+    color: var(--web-error);
+  }
+
+  .web-settings-delete-button {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border: 1px solid var(--web-error);
+    border-radius: var(--web-r-sm);
+    background: rgba(255, 59, 48, 0.07);
+    color: var(--web-error);
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .web-settings-delete-button:hover {
+    background: rgba(255, 59, 48, 0.11);
   }
 
   .web-settings-section-title p,
@@ -7118,20 +7234,51 @@ button {
 
   .web-settings-column-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+    grid-template-columns: 1fr;
     gap: 10px;
     padding: 16px;
   }
 
   .web-settings-column-row {
-    display: flex;
-    min-height: 44px;
-    align-items: center;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    min-height: 48px;
+    align-items: start;
     gap: 10px;
+    border-radius: var(--web-r-sm);
+  }
+
+  .web-settings-column-row-dragging {
+    opacity: 0.58;
+  }
+
+  .web-settings-column-field {
+    display: flex;
+    min-width: 0;
+    min-height: 48px;
+    align-items: center;
+    gap: 8px;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-sm);
     background: var(--web-bg-alt);
-    padding: 0 12px;
+    padding: 0 12px 0 8px;
+  }
+
+  .web-settings-drag-handle {
+    display: inline-flex;
+    width: 34px;
+    height: 48px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--web-r-xs);
+    color: var(--web-text-4);
+    cursor: grab;
+  }
+
+  .web-settings-drag-handle:hover {
+    background: var(--web-surface);
+    color: var(--web-brand-accessible);
   }
 
   .web-settings-row-card {
@@ -7146,31 +7293,62 @@ button {
     border-top: 1px solid var(--web-divider);
   }
 
-  .web-settings-drag {
-    color: var(--web-divider);
-    font-size: 13px;
-  }
-
-  .web-settings-column-row strong {
-    flex: 1;
+  .web-settings-column-name {
+    min-width: 0;
+    overflow: hidden;
     color: var(--web-text-1);
     font-size: 15px;
     font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .web-settings-default-badge {
-    border-radius: var(--web-r-pill);
-    background: var(--web-bg-alt);
+  .web-settings-column-buttons {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .web-settings-reorder-buttons {
+    display: grid;
+    gap: 4px;
+  }
+
+  .web-settings-reorder-button {
+    display: inline-flex;
+    width: 28px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-xs);
+    background: var(--web-surface);
     color: var(--web-text-3);
-    padding: 4px 10px;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
+    line-height: 0;
+    padding: 0;
   }
 
-  .web-settings-column-actions {
-    display: flex;
-    gap: 8px;
+  .web-settings-reorder-icon {
+    display: block;
+    width: 12px;
+    height: 12px;
+  }
+
+  .web-settings-reorder-button:disabled {
+    color: var(--web-text-5);
+    opacity: 0.5;
+  }
+
+  .web-settings-edit-toggle {
     margin-top: 12px;
+  }
+
+  .web-settings-limit-message {
+    margin-top: 12px;
+    font-weight: 700;
   }
 
   .web-settings-row-card {

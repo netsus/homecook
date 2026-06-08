@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -33,7 +34,6 @@ import {
   fetchUserProfile,
   isMypageApiError,
   logout,
-  updateNickname,
   updateSettings,
   type UserProfileData,
 } from "@/lib/api/mypage";
@@ -51,6 +51,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
+type FeedbackTone = "success" | "danger";
 
 const WEB_NAV_ITEMS = [
   { id: "home", href: "/", label: "홈" },
@@ -60,6 +61,7 @@ const WEB_NAV_ITEMS = [
 ] as const;
 
 const MYPAGE_PREFERENCES_HREF = "/mypage?tab=preferences";
+const SETTINGS_FEEDBACK_DURATION_MS = 3000;
 
 export interface SettingsScreenProps {
   initialAuthenticated?: boolean;
@@ -71,8 +73,7 @@ export function SettingsScreen({
   const router = useRouter();
   const isMobileViewport = useIsMobileViewport();
   const appReturn = useAppReturn({ fallback: MYPAGE_PREFERENCES_HREF });
-  const [mobileSurface, setMobileSurface] =
-    useState<SettingsMobileSurface>("settings");
+  const mobileSurface: SettingsMobileSurface = "settings";
 
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
@@ -80,11 +81,10 @@ export function SettingsScreen({
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const [showNicknameSheet, setShowNicknameSheet] = useState(false);
-  const [nicknameInput, setNicknameInput] = useState("");
-  const [isSavingNickname, setIsSavingNickname] = useState(false);
-  const [nicknameError, setNicknameError] = useState<string | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<{
+    message: string;
+    tone: FeedbackTone;
+  } | null>(null);
 
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -98,7 +98,6 @@ export function SettingsScreen({
   const [columnsLoading, setColumnsLoading] = useState(true);
   const [columnsError, setColumnsError] = useState<string | null>(null);
 
-  const [showColumnAddSheet, setShowColumnAddSheet] = useState(false);
   const [columnAddInput, setColumnAddInput] = useState("");
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [columnAddError, setColumnAddError] = useState<string | null>(null);
@@ -112,10 +111,12 @@ export function SettingsScreen({
   const [isDeletingColumn, setIsDeletingColumn] = useState(false);
   const [deleteColumnError, setDeleteColumnError] = useState<string | null>(null);
   const [columnsEditMode, setColumnsEditMode] = useState(false);
+  const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
 
   const loadProfile = useCallback(async () => {
     setViewState("loading");
     setErrorMessage(null);
+    setFeedbackMessage(null);
     try {
       const result = await fetchUserProfile();
       setProfile(result);
@@ -135,10 +136,14 @@ export function SettingsScreen({
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    setMobileSurface(params.get("view") === "account" ? "account" : "settings");
-  }, []);
+    if (!feedbackMessage) return;
+
+    const timer = window.setTimeout(() => {
+      setFeedbackMessage(null);
+    }, SETTINGS_FEEDBACK_DURATION_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [feedbackMessage]);
 
   useEffect(() => {
     const e2eAuthOverride = readE2EAuthOverride();
@@ -208,7 +213,7 @@ export function SettingsScreen({
         return;
       }
       setColumnsError(
-        isPlannerApiError(error) ? error.message : "끼니 컬럼을 불러오지 못했어요",
+        isPlannerApiError(error) ? error.message : "끼니를 불러오지 못했어요",
       );
     } finally {
       setColumnsLoading(false);
@@ -226,6 +231,7 @@ export function SettingsScreen({
 
     const prev = profile.settings.screen_wake_lock;
     setErrorMessage(null);
+    setFeedbackMessage(null);
     setProfile({
       ...profile,
       settings: { ...profile.settings, screen_wake_lock: !prev },
@@ -234,38 +240,18 @@ export function SettingsScreen({
     try {
       const result = await updateSettings({ screen_wake_lock: !prev });
       setProfile((p) => (p ? { ...p, settings: result.settings } : p));
+      setFeedbackMessage({ message: "설정을 저장했어요.", tone: "success" });
     } catch (error) {
       setProfile((p) =>
         p ? { ...p, settings: { ...p.settings, screen_wake_lock: prev } } : p,
       );
       if (isMypageApiError(error)) {
-        setErrorMessage(error.message);
+        setFeedbackMessage({ message: error.message, tone: "danger" });
       } else {
-        setErrorMessage("설정 변경에 실패했어요");
+        setFeedbackMessage({ message: "설정 변경에 실패했어요.", tone: "danger" });
       }
     }
   }, [profile]);
-
-  const handleSaveNickname = useCallback(async () => {
-    const trimmed = nicknameInput.trim();
-    if (trimmed.length < 2 || trimmed.length > 30) return;
-
-    setNicknameError(null);
-    setIsSavingNickname(true);
-    try {
-      const result = await updateNickname(trimmed);
-      setProfile(result);
-      setShowNicknameSheet(false);
-    } catch (error) {
-      if (isMypageApiError(error)) {
-        setNicknameError(error.message);
-      } else {
-        setNicknameError("닉네임 변경에 실패했어요");
-      }
-    } finally {
-      setIsSavingNickname(false);
-    }
-  }, [nicknameInput]);
 
   const handleLogout = useCallback(async () => {
     setLogoutError(null);
@@ -307,30 +293,25 @@ export function SettingsScreen({
     router.replace("/");
   }, [router]);
 
-  const openNicknameSheet = useCallback(() => {
-    setNicknameInput(profile?.nickname ?? "");
-    setNicknameError(null);
-    setShowNicknameSheet(true);
-  }, [profile]);
-
   const handleAddColumn = useCallback(async () => {
     const trimmed = columnAddInput.trim();
     if (trimmed.length < 1 || trimmed.length > 30) return;
 
     setColumnAddError(null);
+    setFeedbackMessage(null);
     setIsAddingColumn(true);
     try {
       const result = await createPlannerColumn(trimmed);
       setPlannerColumns((prev) =>
         [...prev, result.column].sort((a, b) => a.sort_order - b.sort_order),
       );
-      setShowColumnAddSheet(false);
       setColumnAddInput("");
+      setFeedbackMessage({ message: "끼니를 추가했어요.", tone: "success" });
     } catch (error) {
       if (isPlannerApiError(error)) {
         setColumnAddError(error.message);
       } else {
-        setColumnAddError("끼니 컬럼을 추가하지 못했어요");
+        setColumnAddError("끼니를 추가하지 못했어요");
       }
     } finally {
       setIsAddingColumn(false);
@@ -343,6 +324,7 @@ export function SettingsScreen({
     if (trimmed.length < 1 || trimmed.length > 30) return;
 
     setColumnRenameError(null);
+    setFeedbackMessage(null);
     setIsRenamingColumn(true);
     try {
       const result = await updatePlannerColumn(renameTarget.id, trimmed);
@@ -350,6 +332,7 @@ export function SettingsScreen({
         prev.map((col) => (col.id === result.column.id ? result.column : col)),
       );
       setRenameTarget(null);
+      setFeedbackMessage({ message: "끼니 이름을 변경했어요.", tone: "success" });
     } catch (error) {
       if (isPlannerApiError(error)) {
         setColumnRenameError(error.message);
@@ -365,6 +348,7 @@ export function SettingsScreen({
     if (!deleteColumnTarget) return;
 
     setDeleteColumnError(null);
+    setFeedbackMessage(null);
     setIsDeletingColumn(true);
     try {
       await deletePlannerColumn(deleteColumnTarget.id);
@@ -375,11 +359,12 @@ export function SettingsScreen({
       );
       setDeleteColumnTarget(null);
       setColumnsEditMode(false);
+      setFeedbackMessage({ message: "끼니를 삭제했어요.", tone: "danger" });
     } catch (error) {
       if (isPlannerApiError(error)) {
         setDeleteColumnError(error.message);
       } else {
-        setDeleteColumnError("끼니 컬럼을 삭제하지 못했어요");
+        setDeleteColumnError("끼니를 삭제하지 못했어요");
       }
     } finally {
       setIsDeletingColumn(false);
@@ -392,6 +377,43 @@ export function SettingsScreen({
     setRenameTarget(column);
   }, []);
 
+  const handleMoveColumn = useCallback(async (columnId: string, targetIndex: number) => {
+    const reorderResult = reorderPlannerColumns(plannerColumns, columnId, targetIndex);
+
+    if (!reorderResult) return;
+
+    const { nextColumns, nextIndex, previousColumns } = reorderResult;
+
+    setPlannerColumns(nextColumns);
+    setFeedbackMessage(null);
+
+    try {
+      await updatePlannerColumn(columnId, { sort_order: nextIndex });
+      setFeedbackMessage({ message: "끼니 순서를 저장했어요.", tone: "success" });
+    } catch (error) {
+      setPlannerColumns(previousColumns);
+      if (isPlannerApiError(error)) {
+        setFeedbackMessage({ message: error.message, tone: "danger" });
+      } else {
+        setFeedbackMessage({ message: "끼니 순서를 저장하지 못했어요.", tone: "danger" });
+      }
+    }
+  }, [plannerColumns]);
+
+  const handleDropColumn = useCallback((targetColumnId: string) => {
+    if (!draggingColumnId || draggingColumnId === targetColumnId) {
+      setDraggingColumnId(null);
+      return;
+    }
+
+    const targetIndex = plannerColumns.findIndex((column) => column.id === targetColumnId);
+    setDraggingColumnId(null);
+
+    if (targetIndex >= 0) {
+      void handleMoveColumn(draggingColumnId, targetIndex);
+    }
+  }, [draggingColumnId, handleMoveColumn, plannerColumns]);
+
   const columnAddValid =
     columnAddInput.trim().length >= 1 && columnAddInput.trim().length <= 30;
   const columnAddSaveDisabled = !columnAddValid || isAddingColumn;
@@ -399,14 +421,11 @@ export function SettingsScreen({
   const columnRenameValid =
     columnRenameInput.trim().length >= 1 && columnRenameInput.trim().length <= 30;
   const columnRenameSaveDisabled = !columnRenameValid || isRenamingColumn;
-
-  const nicknameValid =
-    nicknameInput.trim().length >= 2 && nicknameInput.trim().length <= 30;
-  const nicknameSaveDisabled = !nicknameValid || isSavingNickname;
+  const readyToast = feedbackMessage;
 
   if (authState === "checking") {
     if (isMobileViewport) {
-      return <SettingsMobileLoadingShell surface={mobileSurface} />;
+      return <SettingsMobileLoadingShell />;
     }
 
     return <SettingsDesktopLoadingShell />;
@@ -447,7 +466,7 @@ export function SettingsScreen({
 
   if (viewState === "loading") {
     if (isMobileViewport) {
-      return <SettingsMobileLoadingShell surface={mobileSurface} />;
+      return <SettingsMobileLoadingShell />;
     }
 
     return <SettingsDesktopLoadingShell />;
@@ -489,29 +508,20 @@ export function SettingsScreen({
         deleteColumnTarget={deleteColumnTarget}
         deleteError={deleteError}
         errorMessage={errorMessage}
+        feedbackMessage={feedbackMessage}
         isAddingColumn={isAddingColumn}
         isDeleting={isDeleting}
         isDeletingColumn={isDeletingColumn}
         isLoggingOut={isLoggingOut}
         isRenamingColumn={isRenamingColumn}
-        isSavingNickname={isSavingNickname}
         logoutError={logoutError}
-        nicknameError={nicknameError}
-        nicknameInput={nicknameInput}
-        nicknameSaveDisabled={nicknameSaveDisabled}
         plannerColumns={plannerColumns}
         profile={profile}
         renameTarget={renameTarget}
-        showColumnAddSheet={showColumnAddSheet}
         showDeleteDialog={showDeleteDialog}
         showLogoutDialog={showLogoutDialog}
-        showNicknameSheet={showNicknameSheet}
         surface={mobileSurface}
         onAddColumn={() => void handleAddColumn()}
-        onCloseColumnAddSheet={() => {
-          setShowColumnAddSheet(false);
-          setColumnAddError(null);
-        }}
         onCloseDeleteColumnDialog={() => {
           setDeleteColumnTarget(null);
           setDeleteColumnError(null);
@@ -523,10 +533,6 @@ export function SettingsScreen({
         onCloseLogoutDialog={() => {
           setShowLogoutDialog(false);
           setLogoutError(null);
-        }}
-        onCloseNicknameSheet={() => {
-          setShowNicknameSheet(false);
-          setNicknameError(null);
         }}
         onCloseRenameColumnSheet={() => {
           setRenameTarget(null);
@@ -548,10 +554,7 @@ export function SettingsScreen({
           setDeleteColumnError(null);
           setDeleteColumnTarget(column);
         }}
-        onOpenColumnAddSheet={() => {
-          setColumnAddError(null);
-          setShowColumnAddSheet(true);
-        }}
+        onMoveColumn={(columnId, targetIndex) => void handleMoveColumn(columnId, targetIndex)}
         onOpenDeleteDialog={() => {
           setDeleteError(null);
           setShowDeleteDialog(true);
@@ -560,16 +563,10 @@ export function SettingsScreen({
           setLogoutError(null);
           setShowLogoutDialog(true);
         }}
-        onOpenNicknameSheet={openNicknameSheet}
         onRenameColumn={() => void handleRenameColumn()}
         onRenameColumnTarget={openColumnRenameSheet}
         onRetryColumns={() => void loadColumns()}
-        onSaveNickname={() => void handleSaveNickname()}
         onToggleWakeLock={() => void handleToggleWakeLock()}
-        onNicknameInputChange={(value) => {
-          setNicknameInput(value);
-          setNicknameError(null);
-        }}
       />
     );
   }
@@ -587,28 +584,49 @@ export function SettingsScreen({
             ‹ 마이페이지
           </Link>
           <span className="web-breadcrumb-sep">/</span>
-          <span className="web-breadcrumb-current">설정</span>
+          <span className="web-breadcrumb-current">환경설정</span>
         </nav>
 
         <div className="web-settings-header">
-          <h1>설정</h1>
-          <p>요리모드 화면 켜둠, 끼니 편집, 계정 상태를 관리합니다.</p>
+          <h1>환경설정</h1>
+          <p>끼니 관리, 요리모드 화면 켜둠, 계정 상태를 관리해요.</p>
         </div>
 
-        {errorMessage ? (
+        {readyToast ? (
           <div
-            className="web-settings-toast"
+            className={[
+              "web-settings-toast",
+              readyToast.tone === "success"
+                ? "web-settings-toast-success"
+                : "web-settings-toast-danger",
+            ].join(" ")}
             data-testid="settings-error-toast"
             role="status"
           >
-            {errorMessage}
+            {readyToast.message}
           </div>
         ) : null}
 
-        <section className="web-settings-section" data-testid="column-management-section">
+        <section
+          className="web-settings-section web-settings-bordered-section"
+          data-testid="column-management-section"
+        >
           <div className="web-settings-section-title">
             <h2>끼니 관리</h2>
-            <p>플래너에 표시되는 식사 시간대를 관리합니다.</p>
+            <div className="web-settings-column-description-row">
+              <p>
+                끼니는 최대 5개까지 사용할 수 있어요. 드래그해서 바꾼 순서는 플래너에 그대로 표시돼요.
+              </p>
+              {!columnsLoading && !columnsError ? (
+                <WebButton
+                  className="web-settings-delete-button"
+                  onClick={() => setColumnsEditMode((current) => !current)}
+                  variant="tertiary"
+                >
+                  {columnsEditMode ? "완료" : "끼니 삭제"}
+                </WebButton>
+              ) : null}
+            </div>
           </div>
           {columnsLoading ? (
             <WebCard className="web-settings-list" data-testid="columns-loading">
@@ -627,82 +645,142 @@ export function SettingsScreen({
             <>
               <WebCard className="web-settings-column-card">
                 <div className="web-settings-column-list" data-testid="column-list">
-                  {plannerColumns.map((column) => (
+                  {plannerColumns.map((column, index) => (
                     <div
-                      className="web-settings-column-row"
+                      className={[
+                        "web-settings-column-row",
+                        draggingColumnId === column.id
+                          ? "web-settings-column-row-dragging"
+                          : "",
+                      ].join(" ")}
                       data-testid={`column-item-${column.id}`}
+                      draggable
                       key={column.id}
+                      onDragEnd={() => setDraggingColumnId(null)}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDragStart={(event) => {
+                        event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData("text/plain", column.id);
+                        setDraggingColumnId(column.id);
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        handleDropColumn(column.id);
+                      }}
                     >
-                      <span aria-hidden="true" className="web-settings-drag">::</span>
-                      <strong>{column.name}</strong>
-                      <span className="web-settings-default-badge">기본</span>
                       <button
-                        aria-label={`${column.name} 이름 변경`}
-                        className="web-settings-icon-button"
-                        data-testid={`rename-column-${column.id}`}
-                        onClick={() => openColumnRenameSheet(column)}
+                        aria-label={`${column.name} 순서 드래그`}
+                        className="web-settings-drag-handle"
+                        data-testid={`column-drag-${column.id}`}
                         type="button"
                       >
-                        <PencilIcon />
+                        <DragHandleIcon />
                       </button>
-                      {columnsEditMode ? (
+                      <div className="web-settings-column-field" data-testid={`column-name-${column.id}`}>
+                        <strong className="web-settings-column-name" title={column.name}>
+                          {column.name}
+                        </strong>
+                      </div>
+                      <span className="web-settings-column-buttons">
+                        <span className="web-settings-reorder-buttons">
+                          <button
+                            aria-label={`${column.name} 위로 이동`}
+                            className="web-settings-reorder-button"
+                            disabled={index === 0}
+                            onClick={() => void handleMoveColumn(column.id, index - 1)}
+                            type="button"
+                          >
+                            <ReorderArrowIcon direction="up" />
+                          </button>
+                          <button
+                            aria-label={`${column.name} 아래로 이동`}
+                            className="web-settings-reorder-button"
+                            disabled={index === plannerColumns.length - 1}
+                            onClick={() => void handleMoveColumn(column.id, index + 1)}
+                            type="button"
+                          >
+                            <ReorderArrowIcon direction="down" />
+                          </button>
+                        </span>
                         <button
-                          aria-label={`${column.name} 삭제`}
-                          className="web-settings-icon-button web-settings-icon-danger"
-                          data-testid={`delete-column-${column.id}`}
-                          disabled={plannerColumns.length <= 1}
-                          onClick={() => setDeleteColumnTarget(column)}
+                          aria-label={`${column.name} 이름 변경`}
+                          className="web-settings-icon-button"
+                          data-testid={`rename-column-${column.id}`}
+                          onClick={() => openColumnRenameSheet(column)}
                           type="button"
                         >
-                          <TrashIcon />
+                          <PencilIcon />
                         </button>
-                      ) : null}
+                        {columnsEditMode ? (
+                          <button
+                            aria-label={`${column.name} 끼니 삭제`}
+                            className="web-settings-icon-button web-settings-icon-danger"
+                            data-testid={`delete-column-${column.id}`}
+                            disabled={plannerColumns.length <= 1}
+                            onClick={() => setDeleteColumnTarget(column)}
+                            type="button"
+                          >
+                            <TrashIcon />
+                          </button>
+                        ) : null}
+                      </span>
                     </div>
                   ))}
                 </div>
-              </WebCard>
-              <div className="web-settings-column-actions">
-                <WebButton
-                  data-testid="add-column-button"
-                  disabled={plannerColumns.length >= 5}
-                  onClick={() => {
-                    setColumnAddInput("");
-                    setColumnAddError(null);
-                    setShowColumnAddSheet(true);
-                  }}
-                  variant="tertiary"
-                >
-                  + 끼니 추가
-                </WebButton>
-                {!columnsLoading && !columnsError ? (
-                  <WebButton
-                    onClick={() => setColumnsEditMode((current) => !current)}
-                    variant="ghost"
+                {plannerColumns.length < 5 ? (
+                  <form
+                    className="web-settings-column-add"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void handleAddColumn();
+                    }}
                   >
-                    {columnsEditMode ? "완료" : "편집"}
-                  </WebButton>
+                    <input
+                      aria-label="새 끼니 이름"
+                      className="web-mypage-column-input web-mypage-column-input-prominent"
+                      data-testid="add-column-input"
+                      maxLength={30}
+                      onChange={(event) => {
+                        setColumnAddInput(event.target.value);
+                        setColumnAddError(null);
+                      }}
+                      placeholder="새 끼니 이름"
+                      type="text"
+                      value={columnAddInput}
+                    />
+                    <WebButton
+                      data-testid="add-column-button"
+                      disabled={columnAddSaveDisabled}
+                      type="submit"
+                      variant="tertiary"
+                    >
+                      {isAddingColumn ? "추가 중..." : "끼니 추가"}
+                    </WebButton>
+                  </form>
                 ) : null}
-              </div>
-              <p className="web-settings-help">
-                최소 1개, 최대 5개의 끼니를 사용할 수 있어요.
-                식사가 있는 끼니는 삭제할 수 없어요.
-                컬럼을 추가하면 플래너 그리드에도 같은 순서로 표시됩니다.
-              </p>
+              </WebCard>
+              {columnAddError ? (
+                <p className="web-form-error" data-testid="add-column-error">
+                  {columnAddError}
+                </p>
+              ) : null}
             </>
           )}
         </section>
 
-        <section className="web-settings-section">
+        <section
+          className="web-settings-section web-settings-bordered-section"
+          data-testid="settings-cook-mode-section"
+        >
           <h2>요리 모드</h2>
           <WebCard className="web-settings-row-card">
             <div>
               <strong>요리모드 화면 켜둠</strong>
               <span>요리 중 레시피를 보는 동안 화면이 꺼지지 않아요.</span>
-              <span className="visually-hidden">요리모드 화면 꺼짐 방지</span>
             </div>
             <button
               aria-checked={profile?.settings.screen_wake_lock ?? false}
-              aria-label="요리모드 화면 꺼짐 방지"
+              aria-label="요리모드 화면 켜둠"
               className={
                 profile?.settings.screen_wake_lock
                   ? "web-switch web-switch-on"
@@ -717,31 +795,19 @@ export function SettingsScreen({
           </WebCard>
         </section>
 
-        <section className="web-settings-section">
+        <section
+          className="web-settings-section web-settings-bordered-section"
+          data-testid="settings-account-section"
+        >
           <h2>계정</h2>
           <WebCard className="web-settings-account-card">
             <div className="web-settings-account-row">
-              <span className="web-settings-account-icon"><UserMiniIcon /></span>
+              <SettingsAccountAvatar profile={profile} />
               <span>
                 <strong>{profile?.nickname ?? ""}</strong>
                 <em>{profile?.social_provider === "kakao" ? "카카오 로그인" : "소셜 로그인"}</em>
               </span>
             </div>
-            <button
-              aria-label={`닉네임 변경, 현재 닉네임: ${profile?.nickname ?? ""}`}
-              className="web-settings-account-row web-settings-account-action"
-              data-testid="nickname-row"
-              onClick={openNicknameSheet}
-              type="button"
-            >
-              <span className="web-settings-account-icon"><PencilIcon /></span>
-              <span>
-                <strong>닉네임 변경</strong>
-                <span className="visually-hidden">닉네임</span>
-                <em>마이페이지와 댓글에 표시되는 이름</em>
-              </span>
-              <ChevronRightIcon />
-            </button>
             <button
               className="web-settings-account-row web-settings-account-action"
               onClick={() => setShowLogoutDialog(true)}
@@ -750,19 +816,22 @@ export function SettingsScreen({
               <span className="web-settings-account-icon"><LogoutMiniIcon /></span>
               <span>
                 <strong>로그아웃</strong>
-                <em>현재 로그인한 계정에서 나갑니다.</em>
+                <em>현재 로그인한 계정에서 나가요.</em>
               </span>
               <ChevronRightIcon />
             </button>
           </WebCard>
         </section>
 
-        <section className="web-settings-section web-settings-danger-section">
+        <section
+          className="web-settings-section web-settings-bordered-section web-settings-danger-section"
+          data-testid="settings-danger-section"
+        >
           <h2>위험 영역</h2>
           <WebCard className="web-settings-danger-card">
             <div>
               <strong>계정 삭제</strong>
-              <span>레시피북, 플래너, 장보기, 팬트리 기록이 영구적으로 삭제됩니다.</span>
+              <span>레시피북, 플래너, 장보기, 팬트리 기록이 영구적으로 삭제돼요.</span>
             </div>
             <WebButton
               className="web-settings-danger-button"
@@ -770,27 +839,9 @@ export function SettingsScreen({
             >
               계정 삭제하기
             </WebButton>
-            <button className="visually-hidden" onClick={() => setShowDeleteDialog(true)} type="button">
-              회원탈퇴
-            </button>
           </WebCard>
         </section>
       </main>
-
-      {showNicknameSheet ? (
-        <NicknameEditSheet
-          errorMessage={nicknameError}
-          isSaving={isSavingNickname}
-          nicknameInput={nicknameInput}
-          onClose={() => setShowNicknameSheet(false)}
-          onInputChange={(v) => {
-            setNicknameInput(v);
-            setNicknameError(null);
-          }}
-          onSave={() => void handleSaveNickname()}
-          saveDisabled={nicknameSaveDisabled}
-        />
-      ) : null}
 
       {showLogoutDialog ? (
         <ConfirmDialog
@@ -811,7 +862,7 @@ export function SettingsScreen({
         <ConfirmDialog
           confirmLabel={isDeleting ? "삭제 중..." : "계정 삭제"}
           confirmTone="danger"
-          description="계정을 삭제하면 레시피북, 플래너, 장보기, 팬트리 기록은 삭제되며 되돌릴 수 없어요. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요."
+          description="계정을 삭제하면 레시피북, 플래너, 장보기, 팬트리 기록은 삭제돼요. 되돌릴 수 없어요. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요."
           disabled={isDeleting}
           errorMessage={deleteError}
           onCancel={() => {
@@ -820,23 +871,6 @@ export function SettingsScreen({
           }}
           onConfirm={() => void handleDeleteAccount()}
           title="정말 계정을 삭제할까요?"
-        />
-      ) : null}
-
-      {showColumnAddSheet ? (
-        <ColumnNameSheet
-          errorMessage={columnAddError}
-          inputValue={columnAddInput}
-          isSaving={isAddingColumn}
-          onClose={() => setShowColumnAddSheet(false)}
-          onInputChange={(v) => {
-            setColumnAddInput(v);
-            setColumnAddError(null);
-          }}
-          onSave={() => void handleAddColumn()}
-          saveDisabled={columnAddSaveDisabled}
-          testIdPrefix="add-column"
-          title="끼니 컬럼 추가"
         />
       ) : null}
 
@@ -862,9 +896,9 @@ export function SettingsScreen({
 
       {deleteColumnTarget ? (
         <ConfirmDialog
-          confirmLabel={isDeletingColumn ? "삭제 중..." : "삭제하기"}
+          confirmLabel={isDeletingColumn ? "삭제 중..." : "끼니 삭제"}
           confirmTone="danger"
-          description={`"${deleteColumnTarget.name}" 컬럼을 삭제할까요?`}
+          description={`"${deleteColumnTarget.name}" 끼니를 삭제할까요? 식사가 있으면 삭제되지 않아요.`}
           disabled={isDeletingColumn}
           errorMessage={deleteColumnError}
           onCancel={() => {
@@ -872,7 +906,7 @@ export function SettingsScreen({
             setDeleteColumnError(null);
           }}
           onConfirm={() => void handleDeleteColumn()}
-          title="끼니 컬럼 삭제"
+          title="끼니 삭제"
         />
       ) : null}
     </WebShell>
@@ -902,20 +936,16 @@ function SettingsAppBar() {
         </svg>
       </button>
       <h1 className="flex-1 text-center text-xl font-extrabold text-[var(--foreground)]">
-        설정
+        환경설정
       </h1>
       <div className="h-[var(--control-height-md)] w-11 shrink-0" />
     </div>
   );
 }
 
-function SettingsMobileLoadingShell({
-  surface,
-}: {
-  surface: SettingsMobileSurface;
-}) {
+function SettingsMobileLoadingShell() {
   const appReturn = useAppReturn({ fallback: "/mypage" });
-  const title = surface === "account" ? "계정 관리" : "설정";
+  const title = "환경설정";
 
   return (
     <div
@@ -994,26 +1024,24 @@ function SettingsDesktopLoadingShell() {
             ‹ 마이페이지
           </Link>
           <span className="web-breadcrumb-sep">/</span>
-          <span className="web-breadcrumb-current">설정</span>
+          <span className="web-breadcrumb-current">환경설정</span>
         </nav>
 
         <div className="web-settings-header">
-          <h1>설정</h1>
-          <p>요리모드 화면 켜둠, 끼니 편집, 계정 상태를 관리합니다.</p>
+          <h1>환경설정</h1>
+          <p>끼니 관리, 요리모드 화면 켜둠, 계정 상태를 관리해요.</p>
         </div>
 
         <section className="web-settings-section" aria-label="끼니 관리 로딩">
           <div className="web-settings-section-title">
             <h2>끼니 관리</h2>
-            <p>플래너에 표시되는 식사 시간대를 관리합니다.</p>
+            <p>플래너에 표시되는 식사 시간대를 관리해요.</p>
           </div>
           <WebCard className="web-settings-column-card">
             <div className="web-settings-column-list">
               {[112, 96, 104].map((width, index) => (
                 <div className="web-settings-column-row" key={index}>
-                  <WebSkeleton height={12} width={16} />
                   <WebSkeleton height={18} width={width} />
-                  <WebSkeleton height={24} width={54} />
                   <WebSkeleton height={34} width={34} />
                 </div>
               ))}
@@ -1077,6 +1105,101 @@ function SettingsProfilePill({ nickname }: { nickname?: string }) {
   );
 }
 
+function SettingsAccountAvatar({ profile }: { profile: UserProfileData | null }) {
+  const fallbackInitial = profile?.nickname?.slice(0, 1).toUpperCase() ?? "?";
+
+  if (profile?.profile_image_url) {
+    return (
+      <Image
+        alt=""
+        className="web-settings-account-avatar"
+        data-testid="settings-account-profile-image"
+        height={36}
+        src={profile.profile_image_url}
+        unoptimized
+        width={36}
+      />
+    );
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className="web-settings-account-avatar web-settings-account-avatar-fallback"
+      data-testid="settings-account-profile-fallback"
+    >
+      {fallbackInitial}
+    </span>
+  );
+}
+
+interface PlannerColumnReorderResult {
+  nextColumns: PlannerColumnData[];
+  nextIndex: number;
+  previousColumns: PlannerColumnData[];
+}
+
+function reorderPlannerColumns(
+  columns: PlannerColumnData[],
+  columnId: string,
+  targetIndex: number,
+): PlannerColumnReorderResult | null {
+  const previousColumns = [...columns].sort((a, b) => a.sort_order - b.sort_order);
+  const currentIndex = previousColumns.findIndex((column) => column.id === columnId);
+
+  if (currentIndex < 0 || previousColumns.length <= 1) {
+    return null;
+  }
+
+  const nextIndex = Math.max(0, Math.min(targetIndex, previousColumns.length - 1));
+
+  if (nextIndex === currentIndex) {
+    return null;
+  }
+
+  const movedColumns = [...previousColumns];
+  const [movedColumn] = movedColumns.splice(currentIndex, 1);
+
+  if (!movedColumn) {
+    return null;
+  }
+
+  movedColumns.splice(nextIndex, 0, movedColumn);
+
+  return {
+    nextColumns: movedColumns.map((column, index) => ({
+      ...column,
+      sort_order: index,
+    })),
+    nextIndex,
+    previousColumns,
+  };
+}
+
+function DragHandleIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+      <path d="M8 7h.01M8 12h.01M8 17h.01M16 7h.01M16 12h.01M16 17h.01" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
+    </svg>
+  );
+}
+
+function ReorderArrowIcon({ direction }: { direction: "up" | "down" }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className="web-settings-reorder-icon"
+      fill="none"
+      viewBox="0 0 12 12"
+    >
+      <path
+        d={direction === "up" ? "M6 3.25 3.25 6h5.5L6 3.25Z" : "M6 8.75 3.25 6h5.5L6 8.75Z"}
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 function PencilIcon() {
   return (
     <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
@@ -1094,15 +1217,6 @@ function TrashIcon() {
   );
 }
 
-function UserMiniIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
-      <path d="M20 21a8 8 0 1 0-16 0" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.8" />
-    </svg>
-  );
-}
-
 function LogoutMiniIcon() {
   return (
     <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
@@ -1116,73 +1230,6 @@ function ChevronRightIcon() {
     <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
       <path d="m9 5 7 7-7 7" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
     </svg>
-  );
-}
-
-interface NicknameEditSheetProps {
-  nicknameInput: string;
-  onInputChange: (value: string) => void;
-  onSave: () => void;
-  onClose: () => void;
-  saveDisabled: boolean;
-  isSaving: boolean;
-  errorMessage: string | null;
-}
-
-function NicknameEditSheet({
-  nicknameInput,
-  onInputChange,
-  onSave,
-  onClose,
-  saveDisabled,
-  isSaving,
-  errorMessage,
-}: NicknameEditSheetProps) {
-  const inputHelpId = "settings-nickname-help";
-  const inputErrorId = "settings-nickname-error";
-
-  return (
-    <WebModal data-testid="nickname-sheet-backdrop" onBackdropClick={onClose}>
-      <WebDialog aria-labelledby="settings-nickname-title" size="narrow">
-        <WebDialogHeader>
-          <WebDialogTitle id="settings-nickname-title">
-            닉네임 변경
-          </WebDialogTitle>
-          <WebIconButton aria-label="닫기" onClick={onClose}>
-            ×
-          </WebIconButton>
-        </WebDialogHeader>
-        <WebDialogBody>
-          <label className="web-form-label" htmlFor="settings-nickname-input">
-            새 닉네임
-          </label>
-          <input
-            aria-describedby={errorMessage ? `${inputHelpId} ${inputErrorId}` : inputHelpId}
-            autoFocus
-            className="web-form-input"
-            id="settings-nickname-input"
-            maxLength={30}
-            onChange={(e) => onInputChange(e.target.value)}
-            type="text"
-            value={nicknameInput}
-          />
-          <p className="web-form-help" id={inputHelpId}>
-            한글·영문·숫자 2-30자
-          </p>
-          {errorMessage ? (
-            <p className="web-form-error" data-testid="nickname-error" id={inputErrorId}>
-              {errorMessage}
-            </p>
-          ) : null}
-        </WebDialogBody>
-        <WebDialogFooter>
-          <WebButton onClick={onClose} variant="tertiary">취소</WebButton>
-          <WebButton disabled={saveDisabled} onClick={onSave}>
-            {isSaving ? "변경 중..." : "변경하기"}
-          </WebButton>
-        </WebDialogFooter>
-      </WebDialog>
-    </WebModal>
   );
 }
 
@@ -1237,7 +1284,7 @@ function ConfirmDialog({
               {confirmTone === "danger" ? "!" : "↪"}
             </span>
             <p className="web-confirm-copy">
-              {description ?? "현재 로그인한 계정에서 나갑니다."}
+              {description ?? "현재 로그인한 계정에서 나가요."}
             </p>
           </div>
           {errorMessage ? (

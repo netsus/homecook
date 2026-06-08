@@ -1,4 +1,6 @@
 import { fail, ok } from "@/lib/api/response";
+import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
+import { isQaFixtureModeEnabled } from "@/lib/mock/recipes";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -60,6 +62,10 @@ function isRequestRecord(value: unknown): value is UserSettingsRequestBody {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
+function readQaFixtureAuth(request: Request) {
+  return readE2EAuthOverrideHeader(request.headers);
+}
+
 export async function PATCH(request: Request) {
   let body: UserSettingsRequestBody;
 
@@ -84,6 +90,18 @@ export async function PATCH(request: Request) {
     return fail("VALIDATION_ERROR", "설정 값을 확인해주세요.", 422, [
       { field: "screen_wake_lock", reason: "boolean" },
     ]);
+  }
+
+  if (isQaFixtureModeEnabled()) {
+    if (readQaFixtureAuth(request) !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    return ok<UserSettingsData>({
+      settings: {
+        screen_wake_lock: body.screen_wake_lock === true,
+      },
+    });
   }
 
   const routeClient = await createRouteHandlerClient();

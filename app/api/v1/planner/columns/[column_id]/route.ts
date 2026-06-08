@@ -14,7 +14,7 @@ import {
   isUuid,
   listOwnedPlannerColumns,
   PLANNER_COLUMN_MIN_COUNT,
-  readPlannerColumnName,
+  readPlannerColumnPatch,
   sortPlannerColumnRows,
   toPlannerColumnData,
 } from "../shared";
@@ -44,19 +44,13 @@ export async function PATCH(request: Request, context: RouteContext) {
       return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
     }
 
-    const parsedBody = await readPlannerColumnName(request);
+    const parsedBody = await readPlannerColumnPatch(request);
 
     if (parsedBody.response) {
       return parsedBody.response;
     }
 
-    if (!parsedBody.name) {
-      return fail("VALIDATION_ERROR", "끼니 이름을 확인해주세요.", 422, [
-        { field: "name", reason: "required" },
-      ]);
-    }
-
-    const updateResult = updateQaFixturePlannerColumn(columnId, { name: parsedBody.name });
+    const updateResult = updateQaFixturePlannerColumn(columnId, parsedBody.patch ?? {});
 
     if (!updateResult.ok) {
       return fail(updateResult.code, updateResult.message, updateResult.status);
@@ -77,16 +71,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail("INTERNAL_ERROR", "끼니 컬럼을 수정하지 못했어요.", 500);
   }
 
-  const parsedBody = await readPlannerColumnName(request);
+  const parsedBody = await readPlannerColumnPatch(request);
 
   if (parsedBody.response) {
     return parsedBody.response;
-  }
-
-  if (!parsedBody.name) {
-    return fail("VALIDATION_ERROR", "끼니 이름을 확인해주세요.", 422, [
-      { field: "name", reason: "required" },
-    ]);
   }
 
   try {
@@ -102,30 +90,159 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const columns = await listOwnedPlannerColumns(auth.dbClient, auth.user.id);
 
-    if (hasDuplicateColumnName({
+    const patch = parsedBody.patch ?? {};
+
+    if (typeof patch.name === "string" && hasDuplicateColumnName({
       columns,
-      name: parsedBody.name,
+      name: patch.name,
       exceptColumnId: columnId,
     })) {
       return fail("COLUMN_NAME_DUPLICATE", "이미 있는 끼니 이름이에요.", 409);
     }
 
-    const updateResult = await auth.dbClient
+    let updatedColumn = targetColumn;
+
+    if (typeof patch.name === "string") {
+      const updateResult = await auth.dbClient
+        .from("meal_plan_columns")
+        .update({ name: patch.name })
+        .eq("id", columnId)
+        .select("id, user_id, name, sort_order, created_at")
+        .maybeSingle();
+
+      if (updateResult.error || !updateResult.data) {
+        return fail("INTERNAL_ERROR", "끼니 컬럼을 수정하지 못했어요.", 500);
+      }
+
+      updatedColumn = updateResult.data;
+    }
+
+    if (typeof patch.sort_order === "number") {
+      const reorderResult = await reorderPlannerColumn({
+        columnId,
+        columns: columns.map((column) =>
+          column.id === updatedColumn.id ? updatedColumn : column,
+        ),
+        dbClient: auth.dbClient,
+        nextSortOrder: patch.sort_order,
+      });
+
+      if (reorderResult.response) {
+        return reorderResult.response;
+      }
+
+      updatedColumn = reorderResult.column;
+    }
+
+    return ok({
+      column: toPlannerColumnData(updatedColumn),
+    } satisfies PlannerColumnMutationData);
+  } catch {
+    return fail("INTERNAL_ERROR", "끼니 컬럼을 수정하지 못했어요.", 500);
+  }
+}
+
+async function reorderPlannerColumn({
+  columnId,
+  columns,
+  dbClient,
+  nextSortOrder,
+}: {
+  columnId: string;
+  columns: Awaited<ReturnType<typeof listOwnedPlannerColumns>>;
+  dbClient: Parameters<typeof findPlannerColumnById>[0];
+  nextSortOrder: number;
+}): Promise<{
+  column: NonNullable<Awaited<ReturnType<typeof findPlannerColumnById>>>;
+  response: null | Response;
+}> {
+  const orderedColumns = sortPlannerColumnRows(columns);
+  const currentIndex = orderedColumns.findIndex((column) => column.id === columnId);
+
+  if (currentIndex === -1) {
+    return {
+      column: orderedColumns[0]!,
+      response: fail("RESOURCE_NOT_FOUND", "끼니 컬럼을 찾을 수 없어요.", 404),
+    };
+  }
+
+  const targetIndex = Math.max(0, Math.min(nextSortOrder, orderedColumns.length - 1));
+  const [movedColumn] = orderedColumns.splice(currentIndex, 1);
+
+  if (!movedColumn) {
+    return {
+      column: orderedColumns[0]!,
+      response: fail("RESOURCE_NOT_FOUND", "끼니 컬럼을 찾을 수 없어요.", 404),
+    };
+  }
+
+  orderedColumns.splice(targetIndex, 0, movedColumn);
+
+  const originalColumns = sortPlannerColumnRows(columns);
+  const tempOffset = orderedColumns.length + 100;
+
+  for (const [index, column] of orderedColumns.entries()) {
+    if (column.sort_order === index) {
+      continue;
+    }
+
+    const tempResult = await dbClient
       .from("meal_plan_columns")
-      .update({ name: parsedBody.name })
-      .eq("id", columnId)
+      .update({ sort_order: tempOffset + index })
+      .eq("id", column.id);
+
+    if (tempResult.error) {
+      await restorePlannerColumnSortOrders({ dbClient, originalColumns });
+
+      return {
+        column: movedColumn,
+        response: fail("INTERNAL_ERROR", "끼니 컬럼 순서를 저장하지 못했어요.", 500),
+      };
+    }
+  }
+
+  for (const [index, column] of orderedColumns.entries()) {
+    if (column.sort_order === index) {
+      continue;
+    }
+
+    const updateResult = await dbClient
+      .from("meal_plan_columns")
+      .update({ sort_order: index })
+      .eq("id", column.id)
       .select("id, user_id, name, sort_order, created_at")
       .maybeSingle();
 
     if (updateResult.error || !updateResult.data) {
-      return fail("INTERNAL_ERROR", "끼니 컬럼을 수정하지 못했어요.", 500);
+      await restorePlannerColumnSortOrders({ dbClient, originalColumns });
+
+      return {
+        column: movedColumn,
+        response: fail("INTERNAL_ERROR", "끼니 컬럼 순서를 저장하지 못했어요.", 500),
+      };
     }
 
-    return ok({
-      column: toPlannerColumnData(updateResult.data),
-    } satisfies PlannerColumnMutationData);
-  } catch {
-    return fail("INTERNAL_ERROR", "끼니 컬럼을 수정하지 못했어요.", 500);
+    orderedColumns[index] = updateResult.data;
+  }
+
+  return {
+    column: orderedColumns.find((column) => column.id === columnId) ?? movedColumn,
+    response: null,
+  };
+}
+
+async function restorePlannerColumnSortOrders({
+  dbClient,
+  originalColumns,
+}: {
+  dbClient: Parameters<typeof findPlannerColumnById>[0];
+  originalColumns: Awaited<ReturnType<typeof listOwnedPlannerColumns>>;
+}) {
+  for (const column of originalColumns) {
+    await dbClient
+      .from("meal_plan_columns")
+      .update({ sort_order: column.sort_order })
+      .eq("id", column.id);
   }
 }
 
