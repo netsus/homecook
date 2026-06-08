@@ -249,6 +249,7 @@ describe("recipe API contracts", () => {
           id: "550e8400-e29b-41d4-a716-446655440010",
           standard_name: "양파",
           category: "채소",
+          category_code: "root_stem",
         },
       ],
       error: null,
@@ -282,14 +283,125 @@ describe("recipe API contracts", () => {
             id: "550e8400-e29b-41d4-a716-446655440010",
             standard_name: "양파",
             category: "채소",
+            category_group_code: "vegetable_mushroom",
+            category_code: "root_stem",
+            category_label: "뿌리/줄기채소",
           },
         ],
       },
     });
+    expect(ingredientsQuery.select).toHaveBeenCalledWith("id, standard_name, category, category_code");
     expect(ingredientsQuery.eq).toHaveBeenCalledWith("category", "채소");
     expect(ingredientsQuery.ilike).toHaveBeenCalledWith("standard_name", "%양파%");
+    expect(synonymsQuery.select).toHaveBeenCalledWith(
+      "ingredient_id, ingredients!inner(id, standard_name, category, category_code)",
+    );
     expect(synonymsQuery.eq).toHaveBeenCalledWith("ingredients.category", "채소");
     expect(synonymsQuery.ilike).toHaveBeenCalledWith("synonym", "%양파%");
+  });
+
+  it("filters ingredient list by v2 category code without applying the v1 category query", async () => {
+    const ingredientsQuery = createQuery({
+      data: [
+        {
+          id: "550e8400-e29b-41d4-a716-446655440010",
+          standard_name: "양파",
+          category: "채소",
+          category_code: "root_stem",
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440020",
+          standard_name: "딸기",
+          category: "과일",
+          category_code: "fruit",
+        },
+      ],
+      error: null,
+    });
+    const synonymsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsQuery;
+        if (table === "ingredient_synonyms") return synonymsQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/ingredients/route");
+    const response = await GET(
+      new NextRequest(
+        "http://localhost:3000/api/v1/ingredients?category=%EC%B1%84%EC%86%8C&category_code=fruit",
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items).toEqual([
+      {
+        id: "550e8400-e29b-41d4-a716-446655440020",
+        standard_name: "딸기",
+        category: "과일",
+        category_group_code: "fruit_nut",
+        category_code: "fruit",
+        category_label: "과일",
+      },
+    ]);
+    expect(ingredientsQuery.eq).not.toHaveBeenCalledWith("category", "채소");
+    expect(synonymsQuery.eq).not.toHaveBeenCalledWith("ingredients.category", "채소");
+  });
+
+  it("filters ingredient list by v2 group code with v1 fallback metadata", async () => {
+    const ingredientsQuery = createQuery({
+      data: [
+        {
+          id: "550e8400-e29b-41d4-a716-446655440020",
+          standard_name: "딸기",
+          category: "과일",
+          category_code: null,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440030",
+          standard_name: "소금",
+          category: "양념",
+          category_code: null,
+        },
+      ],
+      error: null,
+    });
+    const synonymsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsQuery;
+        if (table === "ingredient_synonyms") return synonymsQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/ingredients/route");
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/ingredients?category_group_code=fruit_nut"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items).toEqual([
+      {
+        id: "550e8400-e29b-41d4-a716-446655440020",
+        standard_name: "딸기",
+        category: "과일",
+        category_group_code: "fruit_nut",
+        category_code: null,
+        category_label: "과일",
+      },
+    ]);
   });
 
   it("returns an empty ingredient list for non-canonical category labels", async () => {
@@ -301,6 +413,28 @@ describe("recipe API contracts", () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({
+      success: true,
+      data: { items: [] },
+      error: null,
+    });
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+  });
+
+  it("returns an empty ingredient list for unknown v2 taxonomy codes", async () => {
+    const { GET } = await import("@/app/api/v1/ingredients/route");
+
+    const [categoryCodeResponse, groupCodeResponse] = await Promise.all([
+      GET(new NextRequest("http://localhost:3000/api/v1/ingredients?category_code=unknown")),
+      GET(new NextRequest("http://localhost:3000/api/v1/ingredients?category_group_code=unknown")),
+    ]);
+
+    await expect(categoryCodeResponse.json()).resolves.toEqual({
+      success: true,
+      data: { items: [] },
+      error: null,
+    });
+    await expect(groupCodeResponse.json()).resolves.toEqual({
       success: true,
       data: { items: [] },
       error: null,
@@ -324,11 +458,17 @@ describe("recipe API contracts", () => {
         id: "550e8400-e29b-41d4-a716-446655440010",
         standard_name: "양파",
         category: "채소",
+        category_group_code: "vegetable_mushroom",
+        category_code: null,
+        category_label: "채소",
       },
       {
         id: "550e8400-e29b-41d4-a716-446655440011",
         standard_name: "대파",
         category: "채소",
+        category_group_code: "vegetable_mushroom",
+        category_code: null,
+        category_label: "채소",
       },
     ]);
     expect(createRouteHandlerClient).not.toHaveBeenCalled();
@@ -341,6 +481,7 @@ describe("recipe API contracts", () => {
           id: "550e8400-e29b-41d4-a716-446655440010",
           standard_name: "양파",
           category: "채소",
+          category_code: null,
         },
       ],
       error: null,
@@ -353,6 +494,7 @@ describe("recipe API contracts", () => {
             id: "550e8400-e29b-41d4-a716-446655440010",
             standard_name: "양파",
             category: "채소",
+            category_code: null,
           },
         },
         {
@@ -361,6 +503,7 @@ describe("recipe API contracts", () => {
             id: "550e8400-e29b-41d4-a716-446655440011",
             standard_name: "대파",
             category: "채소",
+            category_code: "root_stem",
           },
         },
       ],
@@ -387,11 +530,17 @@ describe("recipe API contracts", () => {
         id: "550e8400-e29b-41d4-a716-446655440010",
         standard_name: "양파",
         category: "채소",
+        category_group_code: "vegetable_mushroom",
+        category_code: null,
+        category_label: "채소",
       },
       {
         id: "550e8400-e29b-41d4-a716-446655440011",
         standard_name: "대파",
         category: "채소",
+        category_group_code: "vegetable_mushroom",
+        category_code: "root_stem",
+        category_label: "뿌리/줄기채소",
       },
     ]);
   });
@@ -403,6 +552,7 @@ describe("recipe API contracts", () => {
           id: "550e8400-e29b-41d4-a716-446655440010",
           standard_name: "양파",
           category: "채소",
+          category_code: null,
         },
       ],
       error: null,
@@ -432,6 +582,9 @@ describe("recipe API contracts", () => {
         id: "550e8400-e29b-41d4-a716-446655440010",
         standard_name: "양파",
         category: "채소",
+        category_group_code: "vegetable_mushroom",
+        category_code: null,
+        category_label: "채소",
       },
     ]);
   });

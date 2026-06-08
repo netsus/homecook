@@ -9,38 +9,38 @@
 
 - [x] 공식 문서 5종과 `CURRENT_SOURCE_OF_TRUTH`가 재료 8대분류/21소분류를 같은 이름과 개수로 설명한다 <!-- omo:id=accept-official-doc-ingredient-count;stage=2;scope=shared;review=3,6 -->
 - [x] 공식 문서 5종과 `CURRENT_SOURCE_OF_TRUTH`가 조리법 6그룹/20대표 method를 같은 이름과 개수로 설명한다 <!-- omo:id=accept-official-doc-cooking-count;stage=2;scope=shared;review=3,6 -->
-- [ ] v1 category label 8종(`채소`, `과일`, `육류`, `해산물`, `양념`, `유제품`, `곡류`, `기타`)이 migration 동안 계속 API/filter/validation에서 동작한다 <!-- omo:id=accept-v1-label-compat;stage=2;scope=backend;review=3,6 -->
-- [ ] `GET /ingredients` 응답 확장은 additive-only이며 `{ success, data, error }` envelope를 유지한다 <!-- omo:id=accept-ingredients-additive-api;stage=2;scope=backend;review=3,6 -->
-- [ ] `GET /cooking-methods` 응답 확장은 additive-only이며 기존 `{ id, code, label, color_key, is_system }` 소비자를 깨지 않는다 <!-- omo:id=accept-cooking-additive-api;stage=2;scope=backend;review=3,6 -->
+- [x] v1 category label 8종(`채소`, `과일`, `육류`, `해산물`, `양념`, `유제품`, `곡류`, `기타`)이 migration 동안 계속 API/filter/validation에서 동작한다 <!-- omo:id=accept-v1-label-compat;stage=2;scope=backend;review=3,6 -->
+- [x] `GET /ingredients` 응답 확장은 additive-only이며 `{ success, data, error }` envelope를 유지한다 <!-- omo:id=accept-ingredients-additive-api;stage=2;scope=backend;review=3,6 -->
+- [x] `GET /cooking-methods` 응답 확장은 additive-only이며 기존 `{ id, code, label, color_key, is_system }` 소비자를 깨지 않는다 <!-- omo:id=accept-cooking-additive-api;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 taxonomy source와 프론트 선택지/표시 타입이 같은 source에서 파생된다 <!-- omo:id=accept-backend-frontend-taxonomy-source;stage=4;scope=shared;review=6 -->
 
 ## Ingredient Taxonomy
 
-- [ ] 재료 taxonomy group은 8개다: `곡류/면/떡`, `채소/버섯`, `과일/견과`, `단백질`, `해산물`, `유제품/대체유`, `양념/조미`, `가공/기타` <!-- omo:id=accept-ingredient-groups-8;stage=2;scope=shared;review=3,6 -->
-- [ ] 재료 taxonomy subcategory는 21개다 <!-- omo:id=accept-ingredient-subcategories-21;stage=2;scope=shared;review=3,6 -->
-- [ ] `딸기`, `사과`, `바나나`, `레몬` 같은 명확한 과일 row는 `과일/견과 > 과일`로 매핑된다 <!-- omo:id=accept-fruit-row-mapping;stage=2;scope=backend;review=3,6 -->
-- [ ] 애매한 row는 자동 재분류하지 않고 review 후보 또는 fallback category로 남긴다 <!-- omo:id=accept-ambiguous-ingredient-review;stage=2;scope=backend;review=3,6 -->
-- [ ] existing `ingredients.category` v1 label 값은 migration 동안 제거되지 않는다 <!-- omo:id=accept-ingredients-category-retained;stage=2;scope=backend;review=3,6 -->
+- [x] 재료 taxonomy group은 8개다: `곡류/면/떡`, `채소/버섯`, `과일/견과`, `단백질`, `해산물`, `유제품/대체유`, `양념/조미`, `가공/기타` <!-- omo:id=accept-ingredient-groups-8;stage=2;scope=shared;review=3,6 -->
+- [x] 재료 taxonomy subcategory는 21개다 <!-- omo:id=accept-ingredient-subcategories-21;stage=2;scope=shared;review=3,6 -->
+- [x] `딸기`, `사과`, `바나나`, `레몬` 같은 명확한 과일 row는 `과일/견과 > 과일`로 매핑된다 <!-- omo:id=accept-fruit-row-mapping;stage=2;scope=backend;review=3,6 -->
+- [x] 애매한 row는 자동 재분류하지 않고 review 후보 또는 fallback category로 남긴다 <!-- omo:id=accept-ambiguous-ingredient-review;stage=2;scope=backend;review=3,6 -->
+- [x] existing `ingredients.category` v1 label 값은 migration 동안 제거되지 않는다 <!-- omo:id=accept-ingredients-category-retained;stage=2;scope=backend;review=3,6 -->
 
 ## Cooking Method Taxonomy
 
-- [ ] 조리법 group은 6개다: `준비/손질`, `전처리`, `물/수분 조리`, `팬/기름 조리`, `혼합/조림`, `기기 조리` <!-- omo:id=accept-cooking-groups-6;stage=2;scope=shared;review=3,6 -->
-- [ ] 대표 method는 20개다 <!-- omo:id=accept-cooking-methods-20;stage=2;scope=shared;review=3,6 -->
-- [ ] `씻기`는 canonical method seed/source에 포함되지 않는다 <!-- omo:id=accept-washing-excluded;stage=2;scope=shared;review=3,6 -->
-- [ ] `에어프라이어`는 canonical method seed/source에 포함된다 <!-- omo:id=accept-airfryer-included;stage=2;scope=shared;review=3,6 -->
-- [ ] `채썰기`, `재우기`, `핏물빼기`, `중탕`, `압력솥` 같은 표현은 synonym 또는 자유 step text 후보로만 처리된다 <!-- omo:id=accept-low-frequency-method-synonyms;stage=2;scope=shared;review=3,6 -->
-- [ ] `cooking_methods.label`은 taxonomy code 저장소로 과적재하지 않는다 <!-- omo:id=accept-cooking-label-non-overload;stage=2;scope=backend;review=3,6 -->
+- [x] 조리법 group은 6개다: `준비/손질`, `전처리`, `물/수분 조리`, `팬/기름 조리`, `혼합/조림`, `기기 조리` <!-- omo:id=accept-cooking-groups-6;stage=2;scope=shared;review=3,6 -->
+- [x] 대표 method는 20개다 <!-- omo:id=accept-cooking-methods-20;stage=2;scope=shared;review=3,6 -->
+- [x] `씻기`는 canonical method seed/source에 포함되지 않는다 <!-- omo:id=accept-washing-excluded;stage=2;scope=shared;review=3,6 -->
+- [x] `에어프라이어`는 canonical method seed/source에 포함된다 <!-- omo:id=accept-airfryer-included;stage=2;scope=shared;review=3,6 -->
+- [x] `채썰기`, `재우기`, `핏물빼기`, `중탕`, `압력솥` 같은 표현은 synonym 또는 자유 step text 후보로만 처리된다 <!-- omo:id=accept-low-frequency-method-synonyms;stage=2;scope=shared;review=3,6 -->
+- [x] `cooking_methods.label`은 taxonomy code 저장소로 과적재하지 않는다 <!-- omo:id=accept-cooking-label-non-overload;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
 
-- [ ] `meals.status` 전이는 변경되지 않는다 <!-- omo:id=accept-no-meal-status-change;stage=2;scope=shared;review=3,6 -->
-- [ ] 장보기 완료 후 read-only 정책은 변경되지 않는다 <!-- omo:id=accept-shopping-read-only-unchanged;stage=2;scope=shared;review=3,6 -->
-- [ ] taxonomy seed/migration은 재실행해도 중복 row나 잘못된 덮어쓰기를 만들지 않는다 <!-- omo:id=accept-taxonomy-idempotency;stage=2;scope=backend;review=3,6 -->
-- [ ] 외부 재료 데이터는 staging/review/approved seed gate 없이 production에 들어가지 않는다 <!-- omo:id=accept-external-ingest-gate-preserved;stage=2;scope=backend;review=3,6 -->
+- [x] `meals.status` 전이는 변경되지 않는다 <!-- omo:id=accept-no-meal-status-change;stage=2;scope=shared;review=3,6 -->
+- [x] 장보기 완료 후 read-only 정책은 변경되지 않는다 <!-- omo:id=accept-shopping-read-only-unchanged;stage=2;scope=shared;review=3,6 -->
+- [x] taxonomy seed/migration은 재실행해도 중복 row나 잘못된 덮어쓰기를 만들지 않는다 <!-- omo:id=accept-taxonomy-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] 외부 재료 데이터는 staging/review/approved seed gate 없이 production에 들어가지 않는다 <!-- omo:id=accept-external-ingest-gate-preserved;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 
-- [ ] 알 수 없는 v2 category code는 validation error 또는 빈 결과로 안전하게 처리된다 <!-- omo:id=accept-unknown-category-code;stage=2;scope=backend;review=3,6 -->
+- [x] 알 수 없는 v2 category code는 validation error 또는 빈 결과로 안전하게 처리된다 <!-- omo:id=accept-unknown-category-code;stage=2;scope=backend;review=3,6 -->
 - [ ] inactive category/method 입력은 422 validation error로 처리된다 <!-- omo:id=accept-inactive-taxonomy-validation;stage=2;scope=backend;review=3,6 -->
 - [ ] synonym이 여러 method에 매칭되면 자동 승격하지 않고 review 후보로 남긴다 <!-- omo:id=accept-ambiguous-synonym-review;stage=2;scope=backend;review=3,6 -->
 - [ ] loading 상태가 기존 화면에서 유지된다 <!-- omo:id=accept-loading-preserved;stage=4;scope=frontend;review=5,6 -->
@@ -50,8 +50,8 @@
 
 ## Data Setup / Preconditions
 
-- [ ] v2 ingredient taxonomy fixture 또는 seed source가 8대분류/21소분류와 일치한다 <!-- omo:id=accept-ingredient-fixture-source;stage=2;scope=shared;review=3,6 -->
-- [ ] v2 cooking taxonomy fixture 또는 seed source가 6그룹/20대표 method와 일치한다 <!-- omo:id=accept-cooking-fixture-source;stage=2;scope=shared;review=3,6 -->
+- [x] v2 ingredient taxonomy fixture 또는 seed source가 8대분류/21소분류와 일치한다 <!-- omo:id=accept-ingredient-fixture-source;stage=2;scope=shared;review=3,6 -->
+- [x] v2 cooking taxonomy fixture 또는 seed source가 6그룹/20대표 method와 일치한다 <!-- omo:id=accept-cooking-fixture-source;stage=2;scope=shared;review=3,6 -->
 - [ ] real DB smoke에서 `ingredients`, `ingredient_synonyms`, `cooking_methods`가 존재한다 <!-- omo:id=accept-real-db-base-tables;stage=2;scope=backend;review=3,6 -->
 - [ ] 신규 taxonomy table/column migration을 선택하면 RLS/service boundary와 rollback safety가 문서화된다 <!-- omo:id=accept-taxonomy-migration-boundary;stage=2;scope=backend;review=3,6 -->
 
@@ -70,12 +70,12 @@
 
 ### Vitest
 
-- [ ] ingredient taxonomy source가 8대분류/21소분류를 정확히 제공하는지 테스트 <!-- omo:id=accept-vitest-ingredient-taxonomy-count;stage=2;scope=shared;review=3,6 -->
-- [ ] cooking taxonomy source가 6그룹/20대표 method를 정확히 제공하는지 테스트 <!-- omo:id=accept-vitest-cooking-taxonomy-count;stage=2;scope=shared;review=3,6 -->
-- [ ] v1 label 8종 category query/validation regression test <!-- omo:id=accept-vitest-v1-label-regression;stage=2;scope=backend;review=3,6 -->
-- [ ] fruit-like ingredient row reclassification test <!-- omo:id=accept-vitest-fruit-reclassification;stage=2;scope=backend;review=3,6 -->
-- [ ] `씻기` excluded / `에어프라이어` included regression test <!-- omo:id=accept-vitest-cooking-specifics;stage=2;scope=shared;review=3,6 -->
-- [ ] API additive-only response shape regression test <!-- omo:id=accept-vitest-additive-api-shape;stage=2;scope=backend;review=3,6 -->
+- [x] ingredient taxonomy source가 8대분류/21소분류를 정확히 제공하는지 테스트 <!-- omo:id=accept-vitest-ingredient-taxonomy-count;stage=2;scope=shared;review=3,6 -->
+- [x] cooking taxonomy source가 6그룹/20대표 method를 정확히 제공하는지 테스트 <!-- omo:id=accept-vitest-cooking-taxonomy-count;stage=2;scope=shared;review=3,6 -->
+- [x] v1 label 8종 category query/validation regression test <!-- omo:id=accept-vitest-v1-label-regression;stage=2;scope=backend;review=3,6 -->
+- [x] fruit-like ingredient row reclassification test <!-- omo:id=accept-vitest-fruit-reclassification;stage=2;scope=backend;review=3,6 -->
+- [x] `씻기` excluded / `에어프라이어` included regression test <!-- omo:id=accept-vitest-cooking-specifics;stage=2;scope=shared;review=3,6 -->
+- [x] API additive-only response shape regression test <!-- omo:id=accept-vitest-additive-api-shape;stage=2;scope=backend;review=3,6 -->
 - [ ] frontend consumer가 hardcoded taxonomy list 대신 shared source를 쓰는 component test <!-- omo:id=accept-vitest-frontend-shared-source;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright

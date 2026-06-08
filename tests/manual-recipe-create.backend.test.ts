@@ -182,6 +182,7 @@ describe("18 manual recipe create backend", () => {
           code: "stir_fry",
           label: "볶기",
           color_key: "orange",
+          category_code: "pan_oil",
           is_system: true,
         },
       ],
@@ -209,13 +210,16 @@ describe("18 manual recipe create backend", () => {
             code: "stir_fry",
             label: "볶기",
             color_key: "orange",
+            category_code: "pan_oil",
+            category_label: "팬/기름 조리",
             is_system: true,
+            synonyms: ["팬에 볶기"],
           },
         ],
       },
       error: null,
     });
-    expect(cookingMethodsTable.select).toHaveBeenCalledWith("id, code, label, color_key, is_system");
+    expect(cookingMethodsTable.select).toHaveBeenCalledWith("id, code, label, color_key, category_code, is_system");
     expect(cookingMethodsTable.__query.order).toHaveBeenCalledWith("display_order", { ascending: true });
     expect(cookingMethodsTable.__query.order).toHaveBeenCalledWith("created_at", { ascending: true });
   });

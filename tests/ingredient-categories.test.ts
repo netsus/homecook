@@ -3,12 +3,21 @@ import { describe, expect, it } from "vitest";
 
 import {
   ALL_INGREDIENT_CATEGORY,
+  getFallbackIngredientSubcategoryCode,
   getIngredientCategoryByLabel,
   getIngredientCategoryEmoji,
+  getIngredientCategoryGroupByCode,
+  getIngredientGroupCodesForLegacyCategory,
+  getIngredientSubcategoryByCode,
+  getIngredientTaxonomyMetadata,
   INGREDIENT_CATEGORIES,
+  INGREDIENT_CATEGORY_GROUPS,
   INGREDIENT_CATEGORY_LABELS,
   INGREDIENT_CATEGORY_OPTIONS,
+  INGREDIENT_SUBCATEGORIES,
   isValidIngredientCategory,
+  isValidIngredientCategoryGroupCode,
+  isValidIngredientSubcategoryCode,
   normalizeIngredientCategoryLabel,
 } from "@/lib/ingredient-categories";
 
@@ -68,5 +77,76 @@ describe("ingredient category shared source", () => {
     expect(migration).toContain("딸기");
     expect(migration).toContain("사과");
     expect(migration).toContain("바나나");
+  });
+
+  it("defines taxonomy v2 as 8 groups and 21 subcategories without dropping v1 labels", () => {
+    expect(INGREDIENT_CATEGORY_GROUPS.map((group) => group.label)).toEqual([
+      "곡류/면/떡",
+      "채소/버섯",
+      "과일/견과",
+      "단백질",
+      "해산물",
+      "유제품/대체유",
+      "양념/조미",
+      "가공/기타",
+    ]);
+    expect(INGREDIENT_CATEGORY_GROUPS).toHaveLength(8);
+    expect(INGREDIENT_SUBCATEGORIES).toHaveLength(21);
+    expect(INGREDIENT_CATEGORY_LABELS).toHaveLength(8);
+
+    expect(getIngredientCategoryGroupByCode("protein")?.label).toBe("단백질");
+    expect(getIngredientSubcategoryByCode("fruit")?.legacy_category).toBe("과일");
+    expect(getIngredientSubcategoryByCode("egg")).toMatchObject({
+      group_code: "protein",
+      legacy_category: "기타",
+    });
+    expect(isValidIngredientCategoryGroupCode("fruit_nut")).toBe(true);
+    expect(isValidIngredientCategoryGroupCode("snack")).toBe(false);
+    expect(isValidIngredientSubcategoryCode("air_fryer")).toBe(false);
+  });
+
+  it("maps v1 labels to safe taxonomy fallback metadata without pretending precision", () => {
+    expect(getFallbackIngredientSubcategoryCode(" 과일 ")).toBe("fruit");
+    expect(getIngredientGroupCodesForLegacyCategory("기타")).toEqual([
+      "protein",
+      "processed_other",
+    ]);
+    expect(getIngredientTaxonomyMetadata({
+      category: "채소",
+      categoryCode: null,
+    })).toEqual({
+      category_group_code: "vegetable_mushroom",
+      category_group_label: "채소/버섯",
+      category_code: null,
+      category_label: "채소",
+    });
+    expect(getIngredientTaxonomyMetadata({
+      category: "채소",
+      categoryCode: "root_stem",
+    })).toEqual({
+      category_group_code: "vegetable_mushroom",
+      category_group_label: "채소/버섯",
+      category_code: "root_stem",
+      category_label: "뿌리/줄기채소",
+    });
+  });
+
+  it("ships an idempotent additive taxonomy v2 migration", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20260609110000_taxonomy_v2_additive.sql",
+      "utf8",
+    );
+
+    expect(migration).toContain("create table if not exists public.ingredient_category_groups");
+    expect(migration).toContain("create table if not exists public.ingredient_categories");
+    expect(migration).toContain("add column if not exists category_code");
+    expect(migration).toContain("'fruit_nut', '과일/견과'");
+    expect(migration).toContain("'protein', '단백질'");
+    expect(migration).toContain("'egg', 'protein', '달걀', '기타'");
+    expect(migration).toContain("('딸기', '과일', 'fruit')");
+    expect(migration).toContain("('사과', '과일', 'fruit')");
+    expect(migration).toContain("('바나나', '과일', 'fruit')");
+    expect(migration).toContain("('레몬', '과일', 'fruit')");
+    expect(migration).toContain("on conflict (code) do update");
   });
 });

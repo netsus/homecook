@@ -7,6 +7,10 @@ export async function fetchIngredients(query?: IngredientListQuery): Promise<Api
     const params = new URLSearchParams();
     if (query?.q) params.append("q", query.q);
     if (query?.category) params.append("category", query.category);
+    if (query?.category_code) params.append("category_code", query.category_code);
+    if (query?.category_group_code) {
+      params.append("category_group_code", query.category_group_code);
+    }
 
     const queryString = params.toString();
     const url = `/api/v1/ingredients${queryString ? `?${queryString}` : ""}`;

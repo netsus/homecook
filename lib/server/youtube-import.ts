@@ -4,7 +4,11 @@ import type { User } from "@supabase/supabase-js";
 
 import { fail, ok } from "@/lib/api/response";
 import { isYoutubeImportEnabled } from "@/lib/feature-flags";
-import { isValidIngredientCategory } from "@/lib/ingredient-categories";
+import {
+  getLegacyCategoryForIngredientSubcategoryCode,
+  isValidIngredientCategory,
+  isValidIngredientSubcategoryCode,
+} from "@/lib/ingredient-categories";
 import {
   adaptCandidateToFlatDraft,
   parseYoutubeRecipeDescription,
@@ -505,6 +509,7 @@ interface YoutubeIngredientRegistrationRpcData {
   ingredient_id: string;
   standard_name: string;
   category: IngredientCategory;
+  category_code?: string | null;
   default_unit: string | null;
   synonym_status: YoutubeIngredientRegistrationSynonymStatus;
   warnings: string[] | null;
@@ -516,6 +521,7 @@ interface YoutubeIngredientRegistrationRpcClient {
     args: {
       p_standard_name: string;
       p_category: IngredientCategory;
+      p_category_code: string | null;
       p_default_unit: string | null;
       p_synonym: string | null;
     },
@@ -545,6 +551,7 @@ interface ParsedYoutubeIngredientRegistration {
   draftIngredientId: string;
   standardName: string;
   category: IngredientCategory;
+  categoryCode: string | null;
   defaultUnit: string | null;
   synonym: string | null;
 }
@@ -9530,6 +9537,13 @@ function parseYoutubeIngredientRegistrationBody(rawBody: unknown) {
     fields.push({ field: "category", reason: "invalid_enum" });
   }
 
+  const categoryCode = typeof rawBody.category_code === "string"
+    ? rawBody.category_code.trim()
+    : "";
+  if (categoryCode && !isValidIngredientSubcategoryCode(categoryCode)) {
+    fields.push({ field: "category_code", reason: "invalid_enum" });
+  }
+
   const defaultUnit = normalizeNullableString(rawBody.default_unit);
   if (defaultUnit !== null) {
     if (defaultUnit.length > 20) {
@@ -9548,12 +9562,16 @@ function parseYoutubeIngredientRegistrationBody(rawBody: unknown) {
     }
   }
 
+  const legacyCategoryFromCode = categoryCode
+    ? getLegacyCategoryForIngredientSubcategoryCode(categoryCode)
+    : null;
   const parsed = fields.length === 0
     ? ({
         extractionId,
         draftIngredientId,
         standardName,
-        category: category as IngredientCategory,
+        category: legacyCategoryFromCode ?? (category as IngredientCategory),
+        categoryCode: categoryCode || null,
         defaultUnit: defaultUnit === "" ? null : defaultUnit,
         synonym,
       } satisfies ParsedYoutubeIngredientRegistration)
@@ -10181,6 +10199,7 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
   const registrationResult = await dbClient.rpc("register_youtube_ingredient", {
     p_standard_name: parsed.standardName,
     p_category: parsed.category,
+    p_category_code: parsed.categoryCode,
     p_default_unit: parsed.defaultUnit,
     p_synonym: parsed.synonym,
   });
@@ -10189,14 +10208,20 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
     return fail("INTERNAL_ERROR", "재료를 등록하지 못했어요.", 500);
   }
 
+  const ingredient: YoutubeIngredientRegistrationData["ingredient"] = {
+    ingredient_id: registrationResult.data.ingredient_id,
+    standard_name: registrationResult.data.standard_name,
+    category: registrationResult.data.category,
+    default_unit: registrationResult.data.default_unit,
+    resolution_status: "resolved",
+  };
+  const categoryCode = registrationResult.data.category_code ?? parsed.categoryCode;
+  if (categoryCode) {
+    ingredient.category_code = categoryCode;
+  }
+
   const data: YoutubeIngredientRegistrationData = {
-    ingredient: {
-      ingredient_id: registrationResult.data.ingredient_id,
-      standard_name: registrationResult.data.standard_name,
-      category: registrationResult.data.category,
-      default_unit: registrationResult.data.default_unit,
-      resolution_status: "resolved",
-    },
+    ingredient,
     synonym_status: registrationResult.data.synonym_status,
     warnings: registrationResult.data.warnings ?? [],
   };
