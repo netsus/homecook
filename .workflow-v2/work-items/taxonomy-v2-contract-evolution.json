@@ -66,8 +66,11 @@
       "ingredient-taxonomy-count-8-21",
       "cooking-taxonomy-count-6-20",
       "washing-excluded-airfryer-included",
-      "v1-label-compatibility-plan",
-      "official-doc-sync-plan"
+      "v1-label-compatibility",
+      "api-additive-only-evidence",
+      "idempotent-taxonomy-migration",
+      "fruit-reclassification-evidence",
+      "official-doc-sync"
     ]
   },
   "status": {
@@ -80,7 +83,7 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 2 official docs sync for taxonomy v2 contract-evolution completed and locally verified: ingredient 8 groups / 21 subcategories, cooking 6 groups / 20 canonical methods, v1 8 label compatibility preserved. Additive DB/API implementation remains pending.",
+  "notes": "Stage 2 additive DB/API/shared-source implementation is in progress on feature/taxonomy-v2-implementation. Local evidence added for ingredient 8 groups / 21 subcategories, cooking 6 groups / 20 canonical methods, v1 label compatibility, additive GET /ingredients and GET /cooking-methods shapes, fruit reclassification, and washing-excluded/airfryer-included regressions. Frontend Stage 4 consumer sweep remains pending.",
   "out_of_scope": [
     "Immediate removal of v1 category labels",
     "Breaking GET /ingredients category query",

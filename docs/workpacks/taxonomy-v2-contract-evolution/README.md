@@ -230,13 +230,13 @@
 > Stage 2/3에서는 공식 문서, DB/API 계약, seed/migration, backend 테스트를 닫고, Stage 4~6에서는 화면 소비 경로와 visual/UX fallout을 닫는다.
 
 - [x] 공식 문서 5종과 `CURRENT_SOURCE_OF_TRUTH`에 v2 taxonomy count와 v1 compatibility를 동기화 <!-- omo:id=delivery-official-doc-sync;stage=2;scope=shared;review=3,6 -->
-- [ ] 재료 8대분류/21소분류 seed 또는 shared source를 정의 <!-- omo:id=delivery-ingredient-taxonomy-source;stage=2;scope=shared;review=3,6 -->
-- [ ] 조리법 6그룹/20대표 method seed 또는 shared source를 정의 <!-- omo:id=delivery-cooking-taxonomy-source;stage=2;scope=shared;review=3,6 -->
-- [ ] `씻기` excluded canonical, `에어프라이어` included canonical 규칙을 테스트로 고정 <!-- omo:id=delivery-cooking-specific-regression;stage=2;scope=shared;review=3,6 -->
-- [ ] v1 category label 8종 query/validation 호환을 테스트로 고정 <!-- omo:id=delivery-v1-label-compat-tests;stage=2;scope=backend;review=3,6 -->
-- [ ] additive DB migration이 idempotent하고 기존 `ingredients.category`를 유지 <!-- omo:id=delivery-idempotent-db-migration;stage=2;scope=backend;review=3,6 -->
-- [ ] 기존 과일류 row가 `과일/견과 > 과일`로 매핑되는 재분류 검증 <!-- omo:id=delivery-fruit-reclassification;stage=2;scope=backend;review=3,6 -->
-- [ ] `GET /ingredients`와 `GET /cooking-methods`의 additive-only 응답 계약 검증 <!-- omo:id=delivery-api-additive-contract;stage=2;scope=backend;review=3,6 -->
+- [x] 재료 8대분류/21소분류 seed 또는 shared source를 정의 <!-- omo:id=delivery-ingredient-taxonomy-source;stage=2;scope=shared;review=3,6 -->
+- [x] 조리법 6그룹/20대표 method seed 또는 shared source를 정의 <!-- omo:id=delivery-cooking-taxonomy-source;stage=2;scope=shared;review=3,6 -->
+- [x] `씻기` excluded canonical, `에어프라이어` included canonical 규칙을 테스트로 고정 <!-- omo:id=delivery-cooking-specific-regression;stage=2;scope=shared;review=3,6 -->
+- [x] v1 category label 8종 query/validation 호환을 테스트로 고정 <!-- omo:id=delivery-v1-label-compat-tests;stage=2;scope=backend;review=3,6 -->
+- [x] additive DB migration이 idempotent하고 기존 `ingredients.category`를 유지 <!-- omo:id=delivery-idempotent-db-migration;stage=2;scope=backend;review=3,6 -->
+- [x] 기존 과일류 row가 `과일/견과 > 과일`로 매핑되는 재분류 검증 <!-- omo:id=delivery-fruit-reclassification;stage=2;scope=backend;review=3,6 -->
+- [x] `GET /ingredients`와 `GET /cooking-methods`의 additive-only 응답 계약 검증 <!-- omo:id=delivery-api-additive-contract;stage=2;scope=backend;review=3,6 -->
 - [ ] HOME/PANTRY/직접등록/YT_IMPORT category selector가 같은 taxonomy source를 소비 <!-- omo:id=delivery-frontend-ingredient-consumers;stage=4;scope=frontend;review=5,6 -->
 - [ ] RECIPE_DETAIL/COOK_MODE/YT_IMPORT cooking method 표시가 같은 taxonomy source를 소비 <!-- omo:id=delivery-frontend-cooking-consumers;stage=4;scope=frontend;review=5,6 -->
 - [ ] `loading / empty / error / read-only / unauthorized` 상태가 기존 화면에서 유지 <!-- omo:id=delivery-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->

@@ -10,16 +10,17 @@
 -- richer smoke dataset still lives in the service-role seeder script so a
 -- tester can target a specific authenticated user account on demand.
 
-insert into public.ingredients (id, standard_name, category, default_unit)
+insert into public.ingredients (id, standard_name, category, category_code, default_unit)
 values
-  ('550e8400-e29b-41d4-a716-446655440010', '양파', '채소', '개'),
-  ('550e8400-e29b-41d4-a716-446655440011', '대파', '채소', '대'),
-  ('550e8400-e29b-41d4-a716-446655440012', '소고기', '육류', 'g'),
-  ('550e8400-e29b-41d4-a716-446655440013', '김치', '기타', 'g'),
-  ('550e8400-e29b-41d4-a716-446655440014', '돼지고기', '육류', 'g'),
-  ('550e8400-e29b-41d4-a716-446655440015', '소금', '양념', null)
+  ('550e8400-e29b-41d4-a716-446655440010', '양파', '채소', 'root_stem', '개'),
+  ('550e8400-e29b-41d4-a716-446655440011', '대파', '채소', 'root_stem', '대'),
+  ('550e8400-e29b-41d4-a716-446655440012', '소고기', '육류', 'pork_beef_lamb', 'g'),
+  ('550e8400-e29b-41d4-a716-446655440013', '김치', '기타', 'kimchi_pickle_can', 'g'),
+  ('550e8400-e29b-41d4-a716-446655440014', '돼지고기', '육류', 'pork_beef_lamb', 'g'),
+  ('550e8400-e29b-41d4-a716-446655440015', '소금', '양념', 'spice_herb', null)
 on conflict (standard_name) do update set
   category = excluded.category,
+  category_code = excluded.category_code,
   default_unit = excluded.default_unit;
 
 insert into public.ingredient_synonyms (id, ingredient_id, synonym)

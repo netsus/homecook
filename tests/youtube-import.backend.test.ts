@@ -467,6 +467,7 @@ interface YoutubeIngredientRegistrationRpcData {
   ingredient_id: string;
   standard_name: string;
   category: string;
+  category_code?: string | null;
   default_unit: string | null;
   synonym_status:
     | "attached"
@@ -8095,8 +8096,62 @@ describe("20 youtube real import backend", () => {
     expect(rpc).toHaveBeenCalledWith("register_youtube_ingredient", {
       p_standard_name: "연겨자 소스",
       p_category: "양념",
+      p_category_code: null,
       p_default_unit: "g",
       p_synonym: "soy sauce",
+    });
+  });
+
+  it("POST /api/v1/recipes/youtube/ingredient-registration accepts v2 category code additively", async () => {
+    mockAuth();
+
+    const { dbClient, rpc } = createIngredientRegistrationDbClient({
+      rpcResult: {
+        data: {
+          ingredient_id: mustardIngredientId,
+          standard_name: "연겨자",
+          category: "양념",
+          category_code: "paste_sauce",
+          default_unit: null,
+          synonym_status: "skipped_same_as_standard",
+          warnings: [],
+        },
+        error: null,
+      },
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importIngredientRegistrationRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/ingredient-registration", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(buildIngredientRegistrationBody({
+        category: "채소",
+        category_code: "paste_sauce",
+      })),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        ingredient: {
+          ingredient_id: mustardIngredientId,
+          standard_name: "연겨자",
+          category: "양념",
+          category_code: "paste_sauce",
+          resolution_status: "resolved",
+        },
+      },
+      error: null,
+    });
+    expect(rpc).toHaveBeenCalledWith("register_youtube_ingredient", {
+      p_standard_name: "연겨자",
+      p_category: "양념",
+      p_category_code: "paste_sauce",
+      p_default_unit: null,
+      p_synonym: "연겨자",
     });
   });
 

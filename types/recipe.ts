@@ -46,6 +46,9 @@ export interface CookingMethodItem {
   label: string;
   color_key: string;
   is_system: boolean;
+  category_code?: string | null;
+  category_label?: string | null;
+  synonyms?: string[];
 }
 
 export interface CookingMethodListData {
@@ -56,11 +59,16 @@ export interface IngredientItem {
   id: string;
   standard_name: string;
   category: string;
+  category_group_code?: string | null;
+  category_code?: string | null;
+  category_label?: string | null;
 }
 
 export interface IngredientListQuery {
   q?: string;
   category?: string;
+  category_code?: string;
+  category_group_code?: string;
 }
 
 export interface IngredientListData {
@@ -360,6 +368,7 @@ export interface YoutubeIngredientRegistrationBody {
   draft_ingredient_id: string;
   standard_name: string;
   category: IngredientCategory;
+  category_code?: string | null;
   default_unit?: string | null;
   synonym?: string | null;
 }
@@ -369,6 +378,7 @@ export interface YoutubeIngredientRegistrationData {
     ingredient_id: string;
     standard_name: string;
     category: IngredientCategory;
+    category_code?: string | null;
     default_unit: string | null;
     resolution_status: "resolved";
   };

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-09T02:46:45+09:00",
+  "updated_at": "2026-06-09T03:27:14+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1396,7 +1396,7 @@
     {
       "id": "taxonomy-v2-contract-evolution",
       "preset": "vertical-slice-strict",
-      "branch": "docs/taxonomy-v2-official-contract",
+      "branch": "feature/taxonomy-v2-implementation",
       "pr_path": null,
       "lifecycle": "in_progress",
       "approval_state": "codex_approved",
@@ -1406,7 +1406,7 @@
         "pnpm validate:workflow-v2",
         "git diff --check"
       ],
-      "notes": "Official docs sync completed and locally verified for taxonomy v2: ingredient 8 groups / 21 subcategories and cooking 6 groups / 20 canonical methods are reflected in CURRENT_SOURCE_OF_TRUTH. Additive DB/API/shared-source implementation remains pending."
+      "notes": "Stage 2 additive DB/API/shared-source implementation is in progress locally: taxonomy sources, migration, v2 API fields, v1 compatibility, fruit reclassification, and cooking regressions have targeted Vitest evidence. Frontend Stage 4 consumer sweep remains pending."
     },
     {
       "id": "27b-youtube-source-fallback",
