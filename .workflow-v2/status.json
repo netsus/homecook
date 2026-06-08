@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-30T02:05:00+09:00",
+  "updated_at": "2026-06-08T19:25:00+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1514,6 +1514,21 @@
         "git diff --check"
       ],
       "notes": "Stage 1 contract-evolution docs for YouTube visual quantity enrichment. Visual quantity extractor as an optional enrichment stage after public text path. Implementation starts only after this docs PR merges."
+    },
+    {
+      "id": "recipebook-diary-port",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/recipebook-diary-port",
+      "pr_path": null,
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:workpack -- --slice recipebook-diary-port",
+        "pnpm validate:workflow-v2",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs lock for FE-only recipebook diary port. API/DB changes and full page-turn reader are out of scope pending contract-evolution."
     }
   ]
 }

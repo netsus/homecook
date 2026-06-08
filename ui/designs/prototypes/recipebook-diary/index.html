@@ -1,0 +1,2150 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Recipebook Diary Prototype</title>
+    <style>
+      :root {
+        --ink: #252321;
+        --ink-2: #4f4a45;
+        --muted: #827970;
+        --line: #ded6cc;
+        --line-strong: #bfb2a3;
+        --paper: #fffdf8;
+        --paper-warm: #fbf3e6;
+        --paper-cool: #f3f8f5;
+        --surface: #ffffff;
+        --surface-soft: #f8f4ed;
+        --coral: #ed7470;
+        --coral-deep: #c84c48;
+        --sage: #4e8b71;
+        --sage-soft: #dfeee7;
+        --denim: #416e9b;
+        --denim-soft: #e2edf6;
+        --plum: #6d5578;
+        --sun: #f0b458;
+        --charcoal: #252321;
+        --shadow: 0 22px 70px rgba(53, 38, 24, 0.16);
+        --shadow-soft: 0 12px 34px rgba(53, 38, 24, 0.11);
+        --radius: 8px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        background:
+          linear-gradient(90deg, rgba(37, 35, 33, 0.035) 1px, transparent 1px),
+          linear-gradient(180deg, rgba(37, 35, 33, 0.035) 1px, transparent 1px),
+          linear-gradient(135deg, #fffdf8 0%, #f4f8f5 47%, #fff5ef 100%);
+        background-size: 32px 32px, 32px 32px, auto;
+        color: var(--ink);
+        font-family:
+          "Avenir Next", "Pretendard", "Apple SD Gothic Neo", "Segoe UI",
+          sans-serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .page {
+        width: min(100%, 1510px);
+        margin: 0 auto;
+        padding: 24px clamp(14px, 3vw, 38px) 42px;
+      }
+
+      .brief {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .brief h1 {
+        margin: 0;
+        color: var(--charcoal);
+        font-size: clamp(24px, 3vw, 38px);
+        line-height: 1.12;
+      }
+
+      .brief p {
+        max-width: 820px;
+        margin: 8px 0 0;
+        color: var(--ink-2);
+        font-size: 15px;
+        line-height: 1.65;
+      }
+
+      .brief-tags {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .tag {
+        display: inline-flex;
+        min-height: 32px;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        padding: 0 12px;
+        color: var(--ink-2);
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .prototype-layout {
+        display: grid;
+        gap: 22px;
+        align-items: start;
+      }
+
+      .stage {
+        border: 1px solid rgba(191, 178, 163, 0.78);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .stage-header {
+        display: flex;
+        min-height: 48px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 253, 248, 0.8);
+        padding: 0 16px;
+      }
+
+      .stage-header strong {
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .stage-header span {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .web-shell {
+        background:
+          linear-gradient(90deg, rgba(237, 116, 112, 0.07) 1px, transparent 1px),
+          var(--paper);
+        background-size: 34px 34px;
+      }
+
+      .web-topbar {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 20px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.9);
+        padding: 14px 22px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 900;
+      }
+
+      .brand-mark {
+        display: inline-grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: var(--radius);
+        background: var(--coral);
+        color: #fff;
+        font-size: 17px;
+        font-weight: 900;
+      }
+
+      .web-search {
+        display: flex;
+        min-width: 0;
+        height: 42px;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #fff;
+        padding: 0 13px;
+      }
+
+      .web-search svg {
+        width: 17px;
+        color: var(--muted);
+      }
+
+      .web-search input {
+        min-width: 0;
+        flex: 1;
+        border: 0;
+        outline: 0;
+        color: var(--ink);
+        font-size: 14px;
+      }
+
+      .profile-pill {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fff;
+        padding: 5px 12px 5px 5px;
+      }
+
+      .avatar {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--plum);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .profile-pill span {
+        color: var(--ink-2);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .web-main {
+        display: grid;
+        gap: 20px;
+        padding: 24px;
+      }
+
+      .web-screen {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.78);
+        box-shadow: 0 12px 34px rgba(53, 38, 24, 0.08);
+        overflow: hidden;
+      }
+
+      .web-screen-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 16px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 253, 248, 0.82);
+        padding: 20px 22px 18px;
+      }
+
+      .web-screen-head h2 {
+        margin: 0;
+        color: var(--ink);
+        font-size: clamp(24px, 2.5vw, 34px);
+        line-height: 1.12;
+      }
+
+      .web-screen-head p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .side-title {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .side-title h2 {
+        margin: 0;
+        color: var(--ink);
+        font-size: 22px;
+        line-height: 1.15;
+      }
+
+      .icon-button {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #fff;
+        color: var(--ink);
+      }
+
+      .icon-button svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+
+      .chip {
+        min-height: 44px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fff;
+        padding: 0 13px;
+        color: var(--ink-2);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .chip.is-active {
+        border-color: var(--coral);
+        background: #fff0ed;
+        color: var(--coral-deep);
+      }
+
+      .book-stack {
+        display: grid;
+        gap: 12px;
+      }
+
+      .web-bookshelf-body {
+        padding: 22px;
+      }
+
+      .web-book-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .web-shelf-book {
+        position: relative;
+        display: grid;
+        min-height: 318px;
+        align-content: start;
+        overflow: hidden;
+        border: 1px solid rgba(37, 35, 33, 0.12);
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 14px 32px rgba(53, 38, 24, 0.1);
+        text-align: left;
+      }
+
+      .web-shelf-book.is-active,
+      .web-shelf-book:hover {
+        border-color: var(--coral);
+        transform: translateY(-2px);
+      }
+
+      .web-shelf-cover {
+        position: relative;
+        display: block;
+        min-height: 220px;
+        background:
+          linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 28px, transparent 28px),
+          var(--book-color, var(--sage));
+      }
+
+      .web-shelf-cover::before {
+        position: absolute;
+        inset: 24px 24px auto 52px;
+        height: 118px;
+        border: 4px solid rgba(255, 255, 255, 0.78);
+        border-radius: 8px;
+        background-image: var(--book-image);
+        background-position: center;
+        background-size: cover;
+        content: "";
+      }
+
+      .web-shelf-cover span {
+        position: absolute;
+        right: 16px;
+        bottom: 16px;
+        display: inline-flex;
+        min-height: 30px;
+        align-items: center;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 0 10px;
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .web-shelf-copy {
+        min-width: 0;
+        padding: 14px 15px 16px;
+      }
+
+      .web-shelf-copy strong {
+        display: -webkit-box;
+        min-height: 38px;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        color: var(--ink);
+        font-size: 17px;
+        line-height: 1.18;
+      }
+
+      .web-shelf-copy span {
+        display: block;
+        overflow: hidden;
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .book-row {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        border: 1px solid transparent;
+        border-radius: var(--radius);
+        background: transparent;
+        padding: 8px;
+        text-align: left;
+      }
+
+      .book-row.is-active,
+      .book-row:hover {
+        border-color: var(--line);
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .mini-book {
+        position: relative;
+        width: 54px;
+        height: 70px;
+        overflow: hidden;
+        border: 1px solid rgba(37, 35, 33, 0.14);
+        border-radius: 6px 8px 8px 6px;
+        background: var(--book-color, var(--sage));
+        box-shadow: 0 9px 18px rgba(53, 38, 24, 0.15);
+      }
+
+      .mini-book::before {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 11px;
+        background: rgba(0, 0, 0, 0.18);
+        content: "";
+      }
+
+      .mini-book::after {
+        position: absolute;
+        inset: 8px 8px auto 16px;
+        height: 28px;
+        border-radius: 5px;
+        background-image: var(--book-image);
+        background-position: center;
+        background-size: cover;
+        content: "";
+      }
+
+      .book-copy {
+        min-width: 0;
+      }
+
+      .book-copy strong,
+      .book-copy span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .book-copy strong {
+        color: var(--ink);
+        font-size: 14px;
+        line-height: 1.3;
+      }
+
+      .book-copy span {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .book-count {
+        color: var(--coral-deep);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .web-reader {
+        min-width: 0;
+        padding: 22px;
+      }
+
+      .web-reader-screen {
+        display: grid;
+        grid-template-columns: minmax(260px, 330px) minmax(0, 1fr);
+        gap: 22px;
+        padding: 22px;
+      }
+
+      .reader-toc-panel {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.2)),
+          var(--paper-warm);
+        padding: 18px;
+      }
+
+      .reader-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .reader-header h2 {
+        margin: 0;
+        color: var(--ink);
+        font-size: clamp(24px, 3vw, 34px);
+        line-height: 1.14;
+      }
+
+      .reader-header p {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .segmented {
+        display: flex;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #fff;
+      }
+
+      .segmented button {
+        min-width: 44px;
+        min-height: 44px;
+        border: 0;
+        background: transparent;
+        padding: 0 14px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .segmented button.is-active {
+        background: var(--charcoal);
+        color: #fff;
+      }
+
+      .reader-content {
+        display: grid;
+        gap: 18px;
+      }
+
+      .open-book {
+        display: grid;
+        min-height: 542px;
+        border: 1px solid var(--line-strong);
+        border-radius: 10px;
+        background: #fffaf1;
+        box-shadow: var(--shadow-soft);
+        overflow: hidden;
+      }
+
+      .book-page {
+        min-width: 0;
+        padding: 24px;
+      }
+
+      .book-page.left {
+        border-right: 1px solid rgba(191, 178, 163, 0.52);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.18)),
+          var(--paper-warm);
+      }
+
+      .book-page.right {
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.22)),
+          #fffdf8;
+      }
+
+      .book-cover-large {
+        position: relative;
+        display: grid;
+        min-height: 250px;
+        align-content: end;
+        overflow: hidden;
+        border: 1px solid rgba(37, 35, 33, 0.18);
+        border-radius: 8px;
+        background:
+          linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 24px, transparent 24px),
+          var(--book-color, var(--sage));
+        padding: 24px 18px 20px 38px;
+        color: #fff;
+      }
+
+      .book-cover-large::before {
+        position: absolute;
+        inset: 17px 17px auto 42px;
+        height: 110px;
+        border: 4px solid rgba(255, 255, 255, 0.72);
+        border-radius: 8px;
+        background-image: var(--book-image);
+        background-position: center;
+        background-size: cover;
+        content: "";
+      }
+
+      .book-cover-large strong {
+        position: relative;
+        display: block;
+        font-size: 28px;
+        line-height: 1.1;
+        text-wrap: balance;
+      }
+
+      .book-cover-large span {
+        position: relative;
+        display: block;
+        margin-top: 10px;
+        font-size: 13px;
+        font-weight: 800;
+        opacity: 0.86;
+      }
+
+      .toc {
+        margin-top: 18px;
+      }
+
+      .toc h3,
+      .recipe-page h3,
+      .list-mode h3 {
+        margin: 0;
+        color: var(--ink);
+        font-size: 15px;
+        line-height: 1.25;
+      }
+
+      .toc ol {
+        display: grid;
+        gap: 9px;
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .toc li {
+        display: block;
+      }
+
+      .toc-button {
+        display: grid;
+        grid-template-columns: 32px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        min-height: 44px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--ink-2);
+        font-size: 13px;
+        text-align: left;
+      }
+
+      .toc-button:hover,
+      .toc-button.is-active {
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .toc b {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        border-radius: 50%;
+        background: #fff;
+        color: var(--coral-deep);
+        font-size: 12px;
+      }
+
+      .toc span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .toc em {
+        color: var(--muted);
+        font-size: 12px;
+        font-style: normal;
+        font-weight: 800;
+      }
+
+      .recipe-page {
+        display: grid;
+        grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 14px;
+        height: 100%;
+      }
+
+      .recipe-hero {
+        position: relative;
+        grid-row: 1 / span 2;
+        min-height: 220px;
+        overflow: hidden;
+        border-radius: 8px;
+        background: var(--denim-soft);
+      }
+
+      .recipe-hero img {
+        width: 100%;
+        height: 100%;
+        min-height: 220px;
+        object-fit: cover;
+      }
+
+      .page-number {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        display: inline-flex;
+        height: 28px;
+        align-items: center;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 0 10px;
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .recipe-title-row {
+        display: flex;
+        min-width: 0;
+        align-items: start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .recipe-title-row h3 {
+        font-size: 24px;
+        line-height: 1.16;
+      }
+
+      .bookmark-ribbon {
+        display: inline-flex;
+        min-width: 42px;
+        height: 34px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px 8px 4px 4px;
+        background: var(--coral);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .meta-line {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 9px;
+      }
+
+      .meta-line span,
+      .recipe-pill {
+        display: inline-flex;
+        min-height: 26px;
+        align-items: center;
+        border-radius: 999px;
+        background: var(--sage-soft);
+        padding: 0 9px;
+        color: var(--sage);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .recipe-columns {
+        display: grid;
+        grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+        align-content: start;
+        gap: 14px;
+        min-height: 0;
+      }
+
+      .note-section {
+        min-width: 0;
+      }
+
+      .note-section h4 {
+        margin: 0 0 8px;
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .note-section ul,
+      .note-section ol {
+        display: grid;
+        gap: 7px;
+        margin: 0;
+        padding-left: 17px;
+        color: var(--ink-2);
+        font-size: 13px;
+        line-height: 1.42;
+      }
+
+      .page-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.82);
+        padding: 10px 12px;
+      }
+
+      .page-dots {
+        display: flex;
+        gap: 7px;
+      }
+
+      .page-dot {
+        min-width: 48px;
+        height: 44px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fff;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .page-dot.is-active {
+        border-color: var(--coral);
+        background: var(--coral);
+        color: #fff;
+      }
+
+      .reader-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .reader-actions button,
+      .primary-button,
+      .secondary-button {
+        min-height: 44px;
+        border-radius: var(--radius);
+        padding: 0 13px;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .primary-button {
+        border: 1px solid var(--coral);
+        background: var(--coral);
+        color: #fff;
+      }
+
+      .secondary-button {
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink-2);
+      }
+
+      .list-mode {
+        display: none;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        padding: 16px;
+      }
+
+      .reader-content.is-list .open-book,
+      .reader-content.is-list .page-controls {
+        display: none;
+      }
+
+      .reader-content.is-list .list-mode {
+        display: block;
+      }
+
+      .recipe-list {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .recipe-card {
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+      }
+
+      .recipe-card img {
+        width: 100%;
+        height: 112px;
+        object-fit: cover;
+      }
+
+      .recipe-card div {
+        padding: 11px;
+      }
+
+      .recipe-card strong,
+      .recipe-card span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .recipe-card strong {
+        color: var(--ink);
+        font-size: 14px;
+      }
+
+      .recipe-card span {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .mobile-stage-body {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(330px, 390px));
+        gap: 18px;
+        justify-content: center;
+        align-items: start;
+        padding: 22px 14px 24px;
+        background:
+          linear-gradient(90deg, rgba(65, 110, 155, 0.07) 1px, transparent 1px),
+          var(--paper-cool);
+        background-size: 28px 28px;
+      }
+
+      .phone {
+        width: min(100%, 390px);
+        border: 9px solid #252321;
+        border-radius: 34px;
+        background: #252321;
+        box-shadow: 0 30px 80px rgba(36, 31, 27, 0.28);
+        overflow: hidden;
+      }
+
+      .phone-screen {
+        min-height: 740px;
+        overflow: hidden;
+        border-radius: 24px;
+        background: var(--paper);
+      }
+
+      .app-bar {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        display: flex;
+        min-height: 54px;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 253, 248, 0.96);
+        padding: 0 16px;
+      }
+
+      .app-bar h2 {
+        margin: 0;
+        color: var(--coral-deep);
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      .app-icon {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        place-items: center;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--ink);
+      }
+
+      .app-icon svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .mobile-surface {
+        padding: 16px 14px 94px;
+      }
+
+      .mobile-profile {
+        display: grid;
+        grid-template-columns: 48px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 11px;
+        margin-bottom: 14px;
+      }
+
+      .mobile-profile .avatar {
+        width: 48px;
+        height: 48px;
+        background: var(--sage);
+      }
+
+      .mobile-profile strong,
+      .mobile-profile span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .mobile-profile strong {
+        color: var(--ink);
+        font-size: 17px;
+        line-height: 1.2;
+      }
+
+      .mobile-profile span {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .small-button {
+        min-width: 44px;
+        min-height: 44px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #fff;
+        padding: 0 10px;
+        color: var(--ink-2);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .mobile-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+
+      .mobile-tabs button {
+        min-height: 44px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #fff;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .mobile-tabs button.is-active {
+        border-color: var(--charcoal);
+        background: var(--charcoal);
+        color: #fff;
+      }
+
+      .mobile-books {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .mobile-book-card {
+        position: relative;
+        min-height: 214px;
+        overflow: hidden;
+        border: 1px solid rgba(37, 35, 33, 0.14);
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 10px 24px rgba(53, 38, 24, 0.09);
+        text-align: left;
+      }
+
+      .mobile-book-cover {
+        position: relative;
+        display: block;
+        height: 144px;
+        overflow: hidden;
+        border-radius: 7px 7px 0 0;
+        background:
+          linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 18px, transparent 18px),
+          var(--book-color, var(--sage));
+      }
+
+      .mobile-book-cover img {
+        position: absolute;
+        inset: 16px 15px auto 33px;
+        width: calc(100% - 48px);
+        height: 78px;
+        border: 3px solid rgba(255, 255, 255, 0.75);
+        border-radius: 7px;
+        object-fit: cover;
+      }
+
+      .mobile-book-cover span {
+        position: absolute;
+        right: 10px;
+        bottom: 9px;
+        display: inline-flex;
+        min-height: 25px;
+        align-items: center;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.86);
+        padding: 0 8px;
+        color: var(--ink);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .mobile-book-card strong,
+      .mobile-book-card em {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .mobile-book-card strong {
+        display: -webkit-box;
+        min-height: 35px;
+        padding: 10px 11px 0;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        color: var(--ink);
+        font-size: 14px;
+        line-height: 1.25;
+      }
+
+      .mobile-book-card em {
+        padding: 4px 11px 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-style: normal;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .mobile-add {
+        display: grid;
+        min-height: 214px;
+        place-items: center;
+        border: 1px dashed var(--line-strong);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.58);
+        color: var(--ink-2);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .bottom-tab {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        border-top: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.96);
+      }
+
+      .bottom-tab span {
+        display: grid;
+        min-height: 62px;
+        place-items: center;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .bottom-tab span.is-active {
+        color: var(--coral-deep);
+      }
+
+      .phone-screen.with-tab {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+      }
+
+      .mobile-reader-cover {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 12px;
+        align-items: end;
+        margin-bottom: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 12px;
+      }
+
+      .mobile-reader-cover .mini-book {
+        width: 76px;
+        height: 96px;
+      }
+
+      .mobile-reader-cover h3 {
+        margin: 0;
+        color: var(--ink);
+        font-size: 20px;
+        line-height: 1.16;
+      }
+
+      .mobile-reader-cover p {
+        margin: 7px 0 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1.35;
+      }
+
+      .mobile-page-strip {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        margin: 0 -14px 12px;
+        padding: 0 14px 4px;
+        scrollbar-width: thin;
+      }
+
+      .mobile-page-strip button {
+        min-width: 92px;
+        min-height: 44px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #fff;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .mobile-page-strip button.is-active {
+        border-color: var(--coral);
+        background: #fff0ed;
+        color: var(--coral-deep);
+      }
+
+      .mobile-recipe-page {
+        overflow: hidden;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: #fffaf1;
+        box-shadow: 0 12px 28px rgba(53, 38, 24, 0.12);
+      }
+
+      .mobile-recipe-page img {
+        display: block;
+        width: 100%;
+        height: 164px;
+        object-fit: cover;
+      }
+
+      .mobile-recipe-copy {
+        padding: 14px;
+      }
+
+      .mobile-recipe-copy h3 {
+        margin: 0;
+        color: var(--ink);
+        font-size: 22px;
+        line-height: 1.12;
+      }
+
+      .mobile-recipe-copy .meta-line {
+        margin-bottom: 12px;
+      }
+
+      .mobile-note {
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+      }
+
+      .mobile-note + .mobile-note {
+        margin-top: 12px;
+      }
+
+      .mobile-note h4 {
+        margin: 0 0 8px;
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .mobile-note ul {
+        display: grid;
+        gap: 7px;
+        margin: 0;
+        padding-left: 17px;
+        color: var(--ink-2);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .mobile-reader-actions {
+        position: sticky;
+        bottom: 0;
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) 44px;
+        gap: 8px;
+        border-top: 1px solid var(--line);
+        background: rgba(255, 253, 248, 0.96);
+        padding: 10px 14px 14px;
+      }
+
+      .mobile-reader-actions button {
+        min-height: 44px;
+        border-radius: var(--radius);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .mobile-reader-actions .primary-button {
+        font-size: 14px;
+      }
+
+      .mobile-reader-actions .icon-button {
+        width: auto;
+        height: 44px;
+      }
+
+      .design-notes {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .note {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.76);
+        padding: 14px;
+      }
+
+      .note strong {
+        display: block;
+        color: var(--ink);
+        font-size: 14px;
+      }
+
+      .note p {
+        margin: 6px 0 0;
+        color: var(--ink-2);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      @media (max-width: 1180px) {
+        .prototype-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .web-book-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .mobile-stage-body {
+          grid-template-columns: repeat(2, minmax(300px, 390px));
+          justify-content: center;
+          align-items: start;
+        }
+      }
+
+      @media (max-width: 980px) {
+        .recipe-page {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto;
+        }
+
+        .recipe-hero {
+          grid-row: auto;
+          max-height: 420px;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .page {
+          padding-inline: 12px;
+        }
+
+        .brief {
+          grid-template-columns: 1fr;
+        }
+
+        .brief-tags {
+          justify-content: flex-start;
+        }
+
+        .web-topbar,
+        .web-main,
+        .web-screen-head,
+        .web-reader-screen,
+        .open-book,
+        .recipe-columns,
+        .reader-header,
+        .design-notes {
+          grid-template-columns: 1fr;
+        }
+
+        .web-shell {
+          min-height: auto;
+        }
+
+        .web-book-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .recipe-list {
+          grid-template-columns: 1fr;
+        }
+
+        .mobile-stage-body {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="brief" aria-labelledby="prototype-title">
+        <div>
+          <h1 id="prototype-title">레시피북 다이어리 프로토타입</h1>
+          <p>
+            레시피북은 책장처럼 고르고, 상세는 펼친 책처럼 읽되, 목록 보기와
+            빠른 액션은 그대로 남기는 방향의 웹/앱 UI 초안입니다.
+          </p>
+        </div>
+        <div class="brief-tags" aria-label="디자인 원칙">
+          <span class="tag">책장형 탐색</span>
+          <span class="tag">목록 보기 유지</span>
+          <span class="tag">모바일 우선</span>
+        </div>
+      </section>
+
+      <section class="prototype-layout" aria-label="웹과 앱 프로토타입">
+        <article class="stage">
+          <div class="stage-header">
+            <strong>Web</strong>
+            <span>책장 + 펼친 페이지 + 목록 전환</span>
+          </div>
+
+          <div class="web-shell">
+            <header class="web-topbar">
+              <div class="brand">
+                <span class="brand-mark">ㅈ</span>
+                <span>집밥</span>
+              </div>
+              <label class="web-search">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M10.5 18a7.5 7.5 0 1 1 5.27-12.84A7.5 7.5 0 0 1 10.5 18Zm5.7-1.8 3.3 3.3"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-width="2"
+                  />
+                </svg>
+                <input value="두부, 찌개, 주말 한상" aria-label="레시피북 검색" />
+              </label>
+              <div class="profile-pill">
+                <span class="avatar">수</span>
+                <span>수진의 주방</span>
+              </div>
+            </header>
+
+            <div class="web-main">
+              <section class="web-screen" aria-labelledby="web-bookshelf-title">
+                <header class="web-screen-head">
+                  <div>
+                    <h2 id="web-bookshelf-title">책장 화면</h2>
+                    <p>레시피북을 실제 책처럼 고르고, 새 책을 만드는 관리 화면입니다.</p>
+                  </div>
+                  <button class="primary-button">새 레시피북</button>
+                </header>
+                <div class="web-bookshelf-body">
+                  <div class="chip-row" aria-label="레시피북 필터">
+                    <button class="chip is-active">전체</button>
+                    <button class="chip">직접 만든</button>
+                    <button class="chip">저장</button>
+                    <button class="chip">좋아요</button>
+                  </div>
+                  <div class="web-book-grid" id="webBookShelfGrid" role="list"></div>
+                </div>
+              </section>
+
+              <section class="web-screen" aria-labelledby="web-reader-title">
+                <header class="web-screen-head">
+                  <div>
+                    <h2 id="web-reader-title">레시피북 리더</h2>
+                    <p>책 안으로 들어오면 왼쪽 목차, 오른쪽 레시피로 넓게 읽습니다.</p>
+                  </div>
+                  <div class="segmented" aria-label="상세 보기 방식">
+                    <button class="is-active" data-mode="book">책</button>
+                    <button data-mode="list">목록</button>
+                  </div>
+                </header>
+
+                <div class="web-reader-screen">
+                  <aside class="reader-toc-panel">
+                    <div class="book-cover-large" id="largeCover">
+                      <strong id="largeCoverTitle">주말 한상 노트</strong>
+                      <span id="largeCoverMeta">주말 식탁</span>
+                    </div>
+                    <div class="toc">
+                      <h3>목차</h3>
+                      <ol id="tocList"></ol>
+                    </div>
+                  </aside>
+
+                  <section class="web-reader">
+                    <header class="reader-header">
+                      <div>
+                        <h2 id="webBookTitle">주말 한상 노트</h2>
+                        <p id="webBookMeta">18개 레시피 · 마지막 기록 6월 7일</p>
+                      </div>
+                    </header>
+
+                    <div class="reader-content" id="readerContent">
+                      <div class="open-book">
+                        <section class="book-page right">
+                          <article class="recipe-page">
+                            <div class="recipe-hero">
+                              <img id="webRecipeImage" alt="" />
+                              <span class="page-number" id="webPageNumber">12쪽</span>
+                            </div>
+                            <div class="recipe-title-row">
+                              <div>
+                                <h3 id="webRecipeTitle">고등어 무조림</h3>
+                                <div class="meta-line" id="webRecipeMeta"></div>
+                              </div>
+                              <span class="bookmark-ribbon" id="webRecipeBadge">저장</span>
+                            </div>
+                            <div class="recipe-columns">
+                              <section class="note-section">
+                                <h4>재료</h4>
+                                <ul id="webIngredientList"></ul>
+                              </section>
+                              <section class="note-section">
+                                <h4>기록</h4>
+                                <ol id="webStepList"></ol>
+                              </section>
+                            </div>
+                          </article>
+                        </section>
+                      </div>
+
+                      <div class="page-controls">
+                        <div class="page-dots" id="pageDots" aria-label="페이지 선택"></div>
+                        <div class="reader-actions">
+                          <button class="secondary-button">플래너에 추가</button>
+                          <button class="primary-button">요리하기</button>
+                        </div>
+                      </div>
+
+                      <div class="list-mode">
+                        <h3>레시피 목록</h3>
+                        <div class="recipe-list" id="recipeList"></div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </section>
+            </div>
+          </div>
+        </article>
+
+        <article class="stage">
+          <div class="stage-header">
+            <strong>App</strong>
+            <span>목록 화면 + 책 상세 화면</span>
+          </div>
+
+          <div class="mobile-stage-body">
+            <div class="phone" aria-label="앱 레시피북 목록">
+              <div class="phone-screen with-tab">
+                <header class="app-bar">
+                  <h2>레시피북</h2>
+                  <button class="app-icon" aria-label="검색">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M10.5 18a7.5 7.5 0 1 1 5.27-12.84A7.5 7.5 0 0 1 10.5 18Zm5.7-1.8 3.3 3.3"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-width="2"
+                      />
+                    </svg>
+                  </button>
+                </header>
+                <section class="mobile-surface">
+                  <div class="mobile-profile">
+                    <span class="avatar">수</span>
+                    <div>
+                      <strong>수진의 레시피북</strong>
+                      <span>책 6권 · 저장 42개 · 직접 등록 9개</span>
+                    </div>
+                    <button class="small-button">편집</button>
+                  </div>
+                  <div class="mobile-tabs" aria-label="레시피북 탭">
+                    <button class="is-active">책장</button>
+                    <button>최근</button>
+                    <button>목록</button>
+                  </div>
+                  <div class="mobile-books" id="mobileBookGrid"></div>
+                </section>
+                <nav class="bottom-tab" aria-label="하단 탭">
+                  <span>홈</span>
+                  <span>플래너</span>
+                  <span>팬트리</span>
+                  <span class="is-active">마이</span>
+                </nav>
+              </div>
+            </div>
+
+            <div class="phone" aria-label="앱 레시피북 상세">
+              <div class="phone-screen">
+                <header class="app-bar">
+                  <button class="app-icon" aria-label="뒤로">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="m15 6-6 6 6 6"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                      />
+                    </svg>
+                  </button>
+                  <h2 id="mobileBookTitle">주말 한상 노트</h2>
+                  <button class="app-icon" aria-label="옵션">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M12 8.2v.1M12 12v.1M12 15.8v.1"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-width="3"
+                      />
+                    </svg>
+                  </button>
+                </header>
+                <section class="mobile-surface">
+                  <div class="mobile-reader-cover">
+                    <span class="mini-book" id="mobileMiniBook"></span>
+                    <div>
+                      <h3 id="mobileReaderTitle">주말 한상 노트</h3>
+                      <p id="mobileReaderMeta">18개 레시피 · 직접 만든 책</p>
+                      <span class="recipe-pill" id="mobileReaderPill">이번 주 3번 열람</span>
+                    </div>
+                  </div>
+                  <div class="mobile-page-strip" id="mobilePageStrip"></div>
+                  <article class="mobile-recipe-page">
+                    <img id="mobileRecipeImage" alt="" />
+                    <div class="mobile-recipe-copy">
+                      <h3 id="mobileRecipeTitle">고등어 무조림</h3>
+                      <div class="meta-line" id="mobileRecipeMeta"></div>
+                      <section class="mobile-note">
+                        <h4>재료</h4>
+                        <ul id="mobileIngredientList"></ul>
+                      </section>
+                      <section class="mobile-note">
+                        <h4>오늘의 기록</h4>
+                        <ul id="mobileStepList"></ul>
+                      </section>
+                    </div>
+                  </article>
+                </section>
+                <div class="mobile-reader-actions">
+                  <button class="icon-button" aria-label="저장">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M6 4h12v16l-6-3-6 3V4Z"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                      />
+                    </svg>
+                  </button>
+                  <button class="primary-button">요리하기</button>
+                  <button class="icon-button" aria-label="플래너에 추가">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M7 4v3M17 4v3M5 10h14M6 6h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-width="2"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="design-notes" aria-label="디자인 판단">
+        <article class="note">
+          <strong>책 느낌은 표지와 페이지에 집중</strong>
+          <p>
+            레시피북 목록은 책 표지로 감정을 만들고, 상세에서는 펼친 페이지
+            레이아웃만 사용합니다. 실제 조작은 탭, 검색, 목록으로 익숙하게
+            유지합니다.
+          </p>
+        </article>
+        <article class="note">
+          <strong>모바일은 두 단계로 단순화</strong>
+          <p>
+            앱에서는 책장 화면과 책 상세 화면을 나눴습니다. 상세 안에서는
+            가로 페이지 스트립만 지역 스크롤로 제한해 전체 화면 흔들림을
+            피합니다.
+          </p>
+        </article>
+        <article class="note">
+          <strong>실서비스 연결은 기존 계약 유지</strong>
+          <p>
+            기존 레시피북 API의 책 목록, 레시피 목록, 레시피 상세 이동을 그대로
+            소비할 수 있게 설계했습니다. 커버 이미지는 첫 레시피 썸네일로
+            시작할 수 있습니다.
+          </p>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const books = [
+        {
+          id: "weekend",
+          title: "주말 한상 노트",
+          subtitle: "주말 식탁",
+          type: "custom",
+          count: 18,
+          last: "6월 7일",
+          color: "#4e8b71",
+          image:
+            "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80",
+          recipes: [
+            {
+              title: "고등어 무조림",
+              page: "12쪽",
+              image:
+                "https://images.unsplash.com/photo-1534939561126-855b8675edd7?auto=format&fit=crop&w=900&q=80",
+              meta: ["35분", "2인분", "매콤한 한식"],
+              badge: "저장",
+              ingredients: ["고등어 1마리", "무 1/3개", "대파 1대", "고춧가루 2큰술"],
+              steps: [
+                "무를 먼저 익혀 국물 맛을 잡는다.",
+                "양념장은 미리 섞어 고등어 위에 고르게 올린다.",
+                "마지막 5분은 뚜껑을 열어 농도를 맞춘다.",
+              ],
+            },
+            {
+              title: "두부 버섯전골",
+              page: "18쪽",
+              image:
+                "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80",
+              meta: ["28분", "3인분", "따뜻한 국물"],
+              badge: "저장",
+              ingredients: ["두부 1모", "표고버섯 5개", "애호박 1/2개", "국간장 1큰술"],
+              steps: [
+                "버섯은 넓게 썰어 향을 살린다.",
+                "두부는 마지막에 넣어 모양이 흐트러지지 않게 한다.",
+                "싱거우면 국간장보다 소금으로 마무리한다.",
+              ],
+            },
+            {
+              title: "부추 달걀말이",
+              page: "22쪽",
+              image:
+                "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=900&q=80",
+              meta: ["15분", "2인분", "도시락"],
+              badge: "직접",
+              ingredients: ["달걀 4개", "부추 한 줌", "소금 약간", "식용유 1작은술"],
+              steps: [
+                "달걀물은 체에 한 번 내려 식감을 부드럽게 한다.",
+                "팬 온도를 낮게 유지하면 색이 밝게 나온다.",
+                "한 김 식힌 뒤 썰면 단면이 단정하다.",
+              ],
+            },
+          ],
+        },
+        {
+          id: "saved",
+          title: "저장한 레시피",
+          subtitle: "저장 모음",
+          type: "saved",
+          count: 42,
+          last: "6월 6일",
+          color: "#416e9b",
+          image:
+            "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=80",
+          recipes: [
+            {
+              title: "새우 아보카도 샐러드",
+              page: "04쪽",
+              image:
+                "https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?auto=format&fit=crop&w=900&q=80",
+              meta: ["12분", "1인분", "가벼운 점심"],
+              badge: "저장",
+              ingredients: ["새우 8마리", "아보카도 1개", "루꼴라 한 줌", "레몬즙 1큰술"],
+              steps: [
+                "새우는 물기를 제거한 뒤 짧게 굽는다.",
+                "아보카도는 먹기 직전에 썰어 갈변을 막는다.",
+                "드레싱은 따로 두면 다음 날도 산뜻하다.",
+              ],
+            },
+            {
+              title: "토마토 달걀볶음",
+              page: "09쪽",
+              image:
+                "https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=900&q=80",
+              meta: ["10분", "2인분", "아침"],
+              badge: "저장",
+              ingredients: ["토마토 2개", "달걀 3개", "쪽파 조금", "굴소스 1작은술"],
+              steps: [
+                "달걀은 먼저 부드럽게 익혀 따로 둔다.",
+                "토마토는 센 불에서 짧게 볶는다.",
+                "마지막에 달걀을 합쳐 촉촉함을 남긴다.",
+              ],
+            },
+          ],
+        },
+        {
+          id: "my-added",
+          title: "내가 추가한 레시피",
+          subtitle: "내 레시피",
+          type: "my_added",
+          count: 9,
+          last: "6월 5일",
+          color: "#6d5578",
+          image:
+            "https://images.unsplash.com/photo-1495546968767-f0573cca821e?auto=format&fit=crop&w=900&q=80",
+          recipes: [
+            {
+              title: "엄마표 김치볶음밥",
+              page: "01쪽",
+              image:
+                "https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=900&q=80",
+              meta: ["18분", "2인분", "직접 등록"],
+              badge: "직접",
+              ingredients: ["밥 2공기", "김치 1컵", "대파 1/2대", "참기름 1큰술"],
+              steps: [
+                "김치는 잘게 썰고 국물은 조금 남긴다.",
+                "대파 기름을 내고 김치를 충분히 볶는다.",
+                "밥을 넣은 뒤 눌려가며 고슬하게 마무리한다.",
+              ],
+            },
+          ],
+        },
+        {
+          id: "liked",
+          title: "좋아요한 레시피",
+          subtitle: "좋아요 모음",
+          type: "liked",
+          count: 25,
+          last: "6월 4일",
+          color: "#ed7470",
+          image:
+            "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=900&q=80",
+          recipes: [
+            {
+              title: "딸기 요거트 볼",
+              page: "07쪽",
+              image:
+                "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=900&q=80",
+              meta: ["8분", "1인분", "디저트"],
+              badge: "좋아요",
+              ingredients: ["그릭요거트 1컵", "딸기 6개", "그래놀라 3큰술", "꿀 1작은술"],
+              steps: [
+                "요거트는 차갑게 준비한다.",
+                "딸기는 반으로 잘라 수분을 털어낸다.",
+                "그래놀라는 먹기 직전에 올린다.",
+              ],
+            },
+          ],
+        },
+        {
+          id: "season",
+          title: "제철 채소 기록",
+          subtitle: "제철 채소",
+          type: "custom",
+          count: 14,
+          last: "6월 2일",
+          color: "#f0b458",
+          image:
+            "https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?auto=format&fit=crop&w=900&q=80",
+          recipes: [
+            {
+              title: "가지 된장구이",
+              page: "03쪽",
+              image:
+                "https://images.unsplash.com/photo-1464454709131-ffd692591ee5?auto=format&fit=crop&w=900&q=80",
+              meta: ["20분", "2인분", "제철"],
+              badge: "저장",
+              ingredients: ["가지 2개", "된장 1큰술", "올리고당 1작은술", "쪽파 조금"],
+              steps: [
+                "가지는 칼집을 얕게 넣어 양념이 스며들게 한다.",
+                "된장 양념은 얇게 바른다.",
+                "마지막에 쪽파를 올려 향을 더한다.",
+              ],
+            },
+          ],
+        },
+      ];
+
+      let activeBook = books[0];
+      let activePageIndex = 0;
+
+      const $ = (selector) => document.querySelector(selector);
+      const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+
+      function setBookVariables(element, book) {
+        element.style.setProperty("--book-color", book.color);
+        element.style.setProperty("--book-image", `url(${book.image})`);
+      }
+
+      function renderBookStack() {
+        const stack = $("#webBookShelfGrid");
+        stack.innerHTML = books
+          .map(
+            (book) => `
+              <button class="web-shelf-book ${book.id === activeBook.id ? "is-active" : ""}" data-book="${book.id}" role="listitem">
+                <span class="web-shelf-cover" style="--book-color: ${book.color}; --book-image: url(${book.image})">
+                  <span>${book.count}개</span>
+                </span>
+                <span class="web-shelf-copy">
+                  <strong>${book.title}</strong>
+                  <span>${book.subtitle} · 마지막 기록 ${book.last}</span>
+                </span>
+              </button>
+            `,
+          )
+          .join("");
+
+        stack.querySelectorAll("[data-book]").forEach((button) => {
+          button.addEventListener("click", () => {
+            selectBook(button.dataset.book);
+          });
+        });
+      }
+
+      function renderMobileBooks() {
+        const grid = $("#mobileBookGrid");
+        grid.innerHTML = books
+          .slice(0, 5)
+          .map(
+            (book) => `
+              <button class="mobile-book-card" data-book="${book.id}">
+                <span class="mobile-book-cover" style="--book-color: ${book.color}">
+                  <img src="${book.image}" alt="" />
+                  <span>${book.count}개</span>
+                </span>
+                <strong>${book.title}</strong>
+                <em>${book.type === "custom" ? "내 책" : book.subtitle}</em>
+              </button>
+            `,
+          )
+          .join("");
+        grid.insertAdjacentHTML("beforeend", '<button class="mobile-add">새 레시피북</button>');
+
+        grid.querySelectorAll("[data-book]").forEach((button) => {
+          button.addEventListener("click", () => {
+            selectBook(button.dataset.book);
+          });
+        });
+      }
+
+      function renderToc() {
+        $("#tocList").innerHTML = activeBook.recipes
+          .map(
+            (recipe, index) => `
+              <li>
+                <button class="toc-button ${index === activePageIndex ? "is-active" : ""}" data-page="${index}">
+                  <b>${String(index + 1).padStart(2, "0")}</b>
+                  <span>${recipe.title}</span>
+                  <em>${recipe.page}</em>
+                </button>
+              </li>
+            `,
+          )
+          .join("");
+
+        $("#tocList").querySelectorAll("[data-page]").forEach((button) => {
+          button.addEventListener("click", () => {
+            selectPage(Number(button.dataset.page));
+          });
+        });
+      }
+
+      function renderDots() {
+        $("#pageDots").innerHTML = activeBook.recipes
+          .map(
+            (recipe, index) => `
+              <button class="page-dot ${index === activePageIndex ? "is-active" : ""}" data-page="${index}">
+                ${recipe.page}
+              </button>
+            `,
+          )
+          .join("");
+
+        $("#pageDots").querySelectorAll("[data-page]").forEach((button) => {
+          button.addEventListener("click", () => {
+            selectPage(Number(button.dataset.page));
+          });
+        });
+      }
+
+      function renderMobileStrip() {
+        $("#mobilePageStrip").innerHTML = activeBook.recipes
+          .map(
+            (recipe, index) => `
+              <button class="${index === activePageIndex ? "is-active" : ""}" data-page="${index}">
+                ${recipe.page}
+              </button>
+            `,
+          )
+          .join("");
+
+        $("#mobilePageStrip").querySelectorAll("[data-page]").forEach((button) => {
+          button.addEventListener("click", () => {
+            selectPage(Number(button.dataset.page));
+          });
+        });
+      }
+
+      function renderRecipeList() {
+        $("#recipeList").innerHTML = activeBook.recipes
+          .map(
+            (recipe, index) => `
+              <article class="recipe-card">
+                <img src="${recipe.image}" alt="" />
+                <div>
+                  <strong>${recipe.title}</strong>
+                  <span>${recipe.meta.join(" · ")}</span>
+                </div>
+              </article>
+            `,
+          )
+          .join("");
+      }
+
+      function renderRecipe() {
+        const recipe = activeBook.recipes[activePageIndex] ?? activeBook.recipes[0];
+        $("#webRecipeTitle").textContent = recipe.title;
+        $("#webRecipeImage").src = recipe.image;
+        $("#webRecipeImage").alt = `${recipe.title} 이미지`;
+        $("#webPageNumber").textContent = recipe.page;
+        $("#webRecipeBadge").textContent = recipe.badge;
+        $("#webRecipeMeta").innerHTML = recipe.meta.map((item) => `<span>${item}</span>`).join("");
+        $("#webIngredientList").innerHTML = recipe.ingredients.map((item) => `<li>${item}</li>`).join("");
+        $("#webStepList").innerHTML = recipe.steps.map((item) => `<li>${item}</li>`).join("");
+
+        $("#mobileRecipeTitle").textContent = recipe.title;
+        $("#mobileRecipeImage").src = recipe.image;
+        $("#mobileRecipeImage").alt = `${recipe.title} 이미지`;
+        $("#mobileRecipeMeta").innerHTML = recipe.meta.map((item) => `<span>${item}</span>`).join("");
+        $("#mobileIngredientList").innerHTML = recipe.ingredients
+          .map((item) => `<li>${item}</li>`)
+          .join("");
+        $("#mobileStepList").innerHTML = recipe.steps.map((item) => `<li>${item}</li>`).join("");
+      }
+
+      function renderBook() {
+        $("#webBookTitle").textContent = activeBook.title;
+        $("#webBookMeta").textContent = `${activeBook.count}개 레시피 · 마지막 기록 ${activeBook.last}`;
+        $("#largeCoverTitle").textContent = activeBook.title;
+        $("#largeCoverMeta").textContent = activeBook.subtitle;
+        $("#mobileBookTitle").textContent = activeBook.title;
+        $("#mobileReaderTitle").textContent = activeBook.title;
+        $("#mobileReaderMeta").textContent = `${activeBook.count}개 레시피 · ${
+          activeBook.type === "custom" ? "직접 만든 책" : activeBook.subtitle
+        }`;
+        $("#mobileReaderPill").textContent = `마지막 기록 ${activeBook.last}`;
+        setBookVariables($("#largeCover"), activeBook);
+        setBookVariables($("#mobileMiniBook"), activeBook);
+        renderBookStack();
+        renderToc();
+        renderDots();
+        renderMobileBooks();
+        renderMobileStrip();
+        renderRecipeList();
+        renderRecipe();
+      }
+
+      function selectBook(bookId) {
+        activeBook = books.find((book) => book.id === bookId) ?? books[0];
+        activePageIndex = 0;
+        renderBook();
+      }
+
+      function selectPage(index) {
+        activePageIndex = Math.max(0, Math.min(index, activeBook.recipes.length - 1));
+        renderToc();
+        renderDots();
+        renderMobileStrip();
+        renderRecipe();
+      }
+
+      $$(".segmented [data-mode]").forEach((button) => {
+        button.addEventListener("click", () => {
+          $$(".segmented [data-mode]").forEach((item) => item.classList.remove("is-active"));
+          button.classList.add("is-active");
+          $("#readerContent").classList.toggle("is-list", button.dataset.mode === "list");
+        });
+      });
+
+      renderBook();
+    </script>
+  </body>
+</html>

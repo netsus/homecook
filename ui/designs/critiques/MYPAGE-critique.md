@@ -98,3 +98,34 @@
 | 이름 변경 인라인 vs 모달 | 인라인 텍스트 필드 권장 (마이너 #2). 컨텍스트 유지가 모바일에서 중요. |
 | 커스텀 레시피북 10개 이상 | 허용 범위. 리스트 화면이므로 스크롤로 충분히 대응 가능. 검색/필터는 이 시점에서 과도한 기능이다. |
 | 프로필 이미지 fallback | 이니셜 아바타(--brand-soft 배경 + --brand 텍스트)는 충분히 친근한 디자인. Stage 4에서 Baemin 스타일 일러스트 아바타로 교체 가능하나 Stage 1 blocker 아님. |
+
+---
+
+## 2026-06-08 recipebook-diary-port QA 추가 검토
+
+> 검토 대상: `ui/designs/MYPAGE.md`의 recipebook diary 추가 기준
+> 근거: `ui/designs/prototypes/recipebook-diary/index.html`, `ui/designs/evidence/recipebook-diary-prototype/*.png`
+> 판정: 조건부 통과. Stage 4 구현 시 아래 blocker를 반드시 닫아야 한다.
+
+### 통과 근거
+
+- 책장형 레시피북 목록은 서비스 컨셉인 기록/다이어리 감성과 잘 맞는다.
+- 기존 `17a`의 레시피북 CRUD와 route behavior를 유지하므로 API/DB 리스크가 낮다.
+- 책 형태를 card/grid 위에 얹는 방식이면 모바일 사용성도 유지 가능하다.
+
+### 주요 리스크
+
+| 리스크 | 설명 | Stage 4 방어선 |
+| --- | --- | --- |
+| 액션 discoverability 저하 | 책 표지 visual이 강해지면 생성/수정/삭제 action이 장식에 묻힐 수 있다. | 커스텀 책 action menu는 항상 44px 이상, hover/focus/pressed 상태를 명확히 둔다. |
+| 모바일 텍스트 겹침 | 2열 책장 grid에서 긴 책 이름과 recipe_count가 겹칠 수 있다. | 320px screenshot에서 title 2줄, count/action row 분리 확인. |
+| 책 효과 과잉 | 실제 책처럼 보이게 하려다 그림자/질감/animation이 과해질 수 있다. | surface/border/shadow 중심의 restrained diary feel로 제한. |
+| route affordance 약화 | 책이 장식처럼 보이면 상세 진입 가능한 대상인지 불명확하다. | card cursor/focus/tap state와 title/action label로 진입 가능성을 표현. |
+
+### Stage 4 Blockers
+
+- [ ] 320px에서 책 제목/count/action이 겹치거나 잘린다.
+- [ ] 커스텀 책 수정/삭제 메뉴가 touch target 44px 미만이다.
+- [ ] 시스템 책 불변성 정책이 UI에서 우회 가능하다.
+- [ ] 책장 hover/focus 상태가 layout shift를 만든다.
+- [ ] screen reader가 책 이름과 레시피 수를 읽지 못한다.

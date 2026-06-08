@@ -1,0 +1,128 @@
+{
+  "slice_id": "recipebook-diary-port",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "anchor_extension": false,
+  "anchor_screens": [],
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-new-api",
+      "no-db-change",
+      "no-hidden-recipe-detail-view-count-fetch",
+      "existing-recipebook-type-policy",
+      "existing-remove-unlike-policy"
+    ],
+    "verify_commands": [],
+    "required_test_targets": [],
+    "notes": "FE-only diary port. Existing recipe book APIs are consumed without contract changes."
+  },
+  "frontend": {
+    "branch": "feature/fe-recipebook-diary-port",
+    "stage": 4,
+    "required_routes": [
+      "/mypage",
+      "/mypage/recipe-books/[book_id]",
+      "/recipe/[id]"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "unauthorized",
+      "read-only",
+      "action-error"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workpack -- --slice recipebook-diary-port",
+      "pnpm validate:workflow-v2",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/mypage-screen.test.tsx",
+      "tests/recipe-book-detail-screen.test.tsx",
+      "tests/e2e/slice-17a-mypage.spec.ts",
+      "tests/e2e/slice-17b-recipebook-detail.spec.ts"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "desktop-1440-screenshot",
+      "mobile-390-screenshot",
+      "mobile-320-screenshot",
+      "design-authority-report",
+      "exploratory-qa-report"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "MYPAGE",
+        "RECIPEBOOK_DETAIL"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/prototypes/recipebook-diary/index.html",
+      "critic_required": true,
+      "critic_artifact": [
+        "ui/designs/critiques/MYPAGE-critique.md",
+        "ui/designs/critiques/RECIPEBOOK_DETAIL-critique.md"
+      ],
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "desktop-1440",
+        "mobile-default-390",
+        "mobile-narrow-320",
+        "no-horizontal-overflow",
+        "tap-target-min-44",
+        "no-hidden-recipe-detail-view-count-fetch"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/RECIPEBOOK_DIARY_PORT-authority.md"
+      ],
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/recipebook-diary-prototype/desktop-1440.png",
+        "ui/designs/evidence/recipebook-diary-prototype/mobile-390.png",
+        "ui/designs/evidence/recipebook-diary-prototype/mobile-320.png"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "stage1_verify_commands": [
+    "pnpm validate:workpack -- --slice recipebook-diary-port",
+    "pnpm validate:workflow-v2",
+    "git diff --check"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "new-api-or-db-contract-introduced",
+    "hidden-recipe-detail-view-count-fetch",
+    "desktop-recipe-area-cramped",
+    "mobile-horizontal-overflow",
+    "touch-target-under-44",
+    "book-effect-only-navigation",
+    "existing-crud-remove-unlike-regression",
+    "authority-report-blocker"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  },
+  "stage_owners": {
+    "stage_1": "claude",
+    "stage_2": "N/A",
+    "stage_3": "N/A",
+    "stage_4": "claude",
+    "stage_5": "codex",
+    "stage_6": "codex",
+    "authority_precheck": "codex",
+    "final_authority_gate": "codex"
+  },
+  "notes": "Stage 1 locks a docs-aligned diary/book direction for recipe books. Full page-turn reader and read-only recipe detail preview data path require future contract-evolution before implementation."
+}

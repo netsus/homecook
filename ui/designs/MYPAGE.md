@@ -670,3 +670,54 @@
 - [ ] 이름 변경 시 인라인 텍스트 필드 vs 별도 모달 — 사용성 트레이드오프
 - [ ] 커스텀 레시피북이 10개 이상일 때 리스트 길이와 탐색성
 - [ ] 프로필 이미지 fallback(이니셜 아바타) 디자인이 Baemin vocabulary와 조화하는지
+
+---
+
+## 2026-06-08 recipebook-diary-port 추가 기준
+
+> 슬라이스: `recipebook-diary-port`
+> 성격: API/DB 변경 없는 FE-only diary/book visual port
+> 관련 prototype/evidence: `ui/designs/prototypes/recipebook-diary/index.html`, `ui/designs/evidence/recipebook-diary-prototype/*.png`
+
+### 적용 방향
+
+`MYPAGE`의 레시피북 탭은 기존 카드 목록을 "작은 책들이 꽂힌 책장"처럼 느끼게 개선한다. 단, 책 형태는 감성 표현이고 기능 구조는 `17a` 계약을 유지한다.
+
+- 시스템 책과 커스텀 책은 모두 stable book cover/card dimension을 가진다.
+- 각 책은 이름, book type, recipe_count를 명확히 보여준다.
+- 긴 책 이름은 2줄까지 허용하고 이후 말줄임 처리한다.
+- 커스텀 책의 생성/이름 변경/삭제 액션은 기존처럼 발견 가능해야 한다.
+- 시스템 책에는 수정/삭제 메뉴를 노출하지 않는다.
+- 책장형 레이아웃은 shelf-style visual grid를 쓸 수 있지만, mobile 320에서 가로 overflow를 만들면 안 된다.
+- 책장 visual은 그림자/두께/책등 표현 정도로 제한하고, 과한 page-turn animation이나 장식은 쓰지 않는다.
+
+### 웹/앱 반응형 기준
+
+| Viewport | 기준 |
+| --- | --- |
+| desktop/tablet wide | 2~4열 book cover grid 또는 shelf-style rows. 각 책의 title/count/action 영역이 고정 높이를 유지한다. |
+| mobile 390 | 2열 book cover grid를 우선 검토. 액션이 좁으면 card 하단 action row로 내린다. |
+| mobile 320 | 1~2열 중 text fit과 tap target을 우선한다. 2열에서 title/action이 겹치면 1열로 전환한다. |
+
+### 상태 기준
+
+- `loading`: 책 표지 skeleton과 섹션 skeleton을 사용한다.
+- `empty`: 시스템 책은 유지되고, 커스텀 책이 없을 때만 "새 레시피북 만들기" CTA를 강조한다.
+- `error`: 기존 retry CTA 유지.
+- `unauthorized`: 기존 login gate와 return-to-action 유지.
+- `read-only`: 시스템 책/liked/my_added 정책을 copy와 disabled action으로 명확히 표현한다.
+
+### 구현 금지
+
+- 새 API/DB 필드 추가 금지.
+- recipebook type 확장 금지.
+- 책 클릭 시 새로운 reader route로 보내지 않는다.
+- 레시피 상세 preview를 위해 `GET /api/v1/recipes/{id}`를 자동 호출하지 않는다.
+
+### Stage 4 QA Blockers
+
+- 320px에서 책 제목, count, 액션이 겹친다.
+- 책 모양 때문에 생성/수정/삭제 액션이 숨거나 찾기 어렵다.
+- grid hover/focus 상태가 layout shift를 만든다.
+- screen reader가 책 이름과 레시피 수를 읽지 못한다.
+- 책장 표현이 `RECIPEBOOK_DETAIL` 진입 affordance를 약하게 만든다.
