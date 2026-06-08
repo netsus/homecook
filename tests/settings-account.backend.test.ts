@@ -118,6 +118,7 @@ describe("17c settings/account backend", () => {
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
     createServiceRoleClient.mockReturnValue(null);
+    delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
 
   it("PATCH /users/me/settings merges screen wake lock into existing settings", async () => {
@@ -436,7 +437,9 @@ describe("17c settings/account backend", () => {
     const routeClient = setupAuthedClient({ from: vi.fn() });
 
     const { POST } = await importLogoutRoute();
-    const response = await POST();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/auth/logout", { method: "POST" }),
+    );
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -457,7 +460,9 @@ describe("17c settings/account backend", () => {
     });
 
     const { POST } = await importLogoutRoute();
-    const response = await POST();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/auth/logout", { method: "POST" }),
+    );
     const body = await response.json();
 
     expect(response.status).toBe(401);
@@ -466,5 +471,108 @@ describe("17c settings/account backend", () => {
       data: null,
       error: { code: "UNAUTHORIZED" },
     });
+  });
+
+  it("QA fixture auth lets the settings screen fetch account data without Supabase", async () => {
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES = "1";
+
+    const usersMeRoute = await importUsersMeRoute();
+    const settingsRoute = await importUserSettingsRoute();
+    const logoutRoute = await importLogoutRoute();
+    const authHeaders = { "x-homecook-e2e-auth": "authenticated" };
+
+    const profileResponse = await usersMeRoute.GET(
+      new Request("http://localhost:3000/api/v1/users/me", {
+        headers: authHeaders,
+      }),
+    );
+    const settingsResponse = await settingsRoute.PATCH(
+      new Request("http://localhost:3000/api/v1/users/me/settings", {
+        method: "PATCH",
+        headers: {
+          ...authHeaders,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ screen_wake_lock: true }),
+      }),
+    );
+    const logoutResponse = await logoutRoute.POST(
+      new Request("http://localhost:3000/api/v1/auth/logout", {
+        method: "POST",
+        headers: authHeaders,
+      }),
+    );
+
+    await expect(profileResponse.json()).resolves.toMatchObject({
+      success: true,
+      data: {
+        nickname: "집밥러",
+        settings: { screen_wake_lock: false },
+      },
+    });
+    await expect(settingsResponse.json()).resolves.toEqual({
+      success: true,
+      data: { settings: { screen_wake_lock: true } },
+      error: null,
+    });
+    await expect(logoutResponse.json()).resolves.toEqual({
+      success: true,
+      data: { logged_out: true },
+      error: null,
+    });
+
+    expect(profileResponse.status).toBe(200);
+    expect(settingsResponse.status).toBe(200);
+    expect(logoutResponse.status).toBe(200);
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
+  });
+
+  it("QA fixture account endpoints still reject guest overrides", async () => {
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES = "1";
+
+    const usersMeRoute = await importUsersMeRoute();
+    const settingsRoute = await importUserSettingsRoute();
+    const logoutRoute = await importLogoutRoute();
+    const guestHeaders = { "x-homecook-e2e-auth": "guest" };
+
+    const profileResponse = await usersMeRoute.GET(
+      new Request("http://localhost:3000/api/v1/users/me", {
+        headers: guestHeaders,
+      }),
+    );
+    const settingsResponse = await settingsRoute.PATCH(
+      new Request("http://localhost:3000/api/v1/users/me/settings", {
+        method: "PATCH",
+        headers: {
+          ...guestHeaders,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ screen_wake_lock: true }),
+      }),
+    );
+    const logoutResponse = await logoutRoute.POST(
+      new Request("http://localhost:3000/api/v1/auth/logout", {
+        method: "POST",
+        headers: guestHeaders,
+      }),
+    );
+
+    await expect(profileResponse.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "UNAUTHORIZED" },
+    });
+    await expect(settingsResponse.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "UNAUTHORIZED" },
+    });
+    await expect(logoutResponse.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "UNAUTHORIZED" },
+    });
+
+    expect(profileResponse.status).toBe(401);
+    expect(settingsResponse.status).toBe(401);
+    expect(logoutResponse.status).toBe(401);
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
   });
 });

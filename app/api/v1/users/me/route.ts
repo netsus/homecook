@@ -1,4 +1,6 @@
 import { fail, ok } from "@/lib/api/response";
+import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
+import { isQaFixtureModeEnabled } from "@/lib/mock/recipes";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -87,6 +89,29 @@ function toUserProfileData(row: UserProfileRow): UserProfileData {
   };
 }
 
+function createQaFixtureUserProfile({
+  nickname = "집밥러",
+  screenWakeLock = false,
+}: {
+  nickname?: string;
+  screenWakeLock?: boolean;
+} = {}): UserProfileData {
+  return {
+    id: "qa-user-1",
+    nickname,
+    email: "qa-user@example.com",
+    profile_image_url: null,
+    social_provider: "google",
+    settings: {
+      screen_wake_lock: screenWakeLock,
+    },
+  };
+}
+
+function readQaFixtureAuth(request: Request) {
+  return readE2EAuthOverrideHeader(request.headers);
+}
+
 function normalizeNickname(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -133,7 +158,15 @@ async function createAuthedUsersMeDbClient(fallbackMessage: string) {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (isQaFixtureModeEnabled()) {
+    if (readQaFixtureAuth(request) !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    return ok(createQaFixtureUserProfile());
+  }
+
   const { response, dbClient, user } =
     await createAuthedUsersMeDbClient("내 정보를 불러오지 못했어요.");
 
@@ -183,6 +216,14 @@ export async function PATCH(request: Request) {
     ]);
   }
 
+  if (isQaFixtureModeEnabled()) {
+    if (readQaFixtureAuth(request) !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    return ok(createQaFixtureUserProfile({ nickname }));
+  }
+
   const { response, dbClient, user } =
     await createAuthedUsersMeDbClient("닉네임을 저장하지 못했어요.");
 
@@ -208,6 +249,14 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (isQaFixtureModeEnabled()) {
+    if (readQaFixtureAuth(request) !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    return ok<UserDeleteData>({ deleted: true });
+  }
+
   const routeClient = await createRouteHandlerClient();
   const authResult = await routeClient.auth.getUser();
   const user = authResult.data.user;

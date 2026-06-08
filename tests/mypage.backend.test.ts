@@ -150,7 +150,7 @@ describe("17a mypage backend", () => {
     });
 
     const { GET } = await importUsersMeRoute();
-    const response = await GET();
+    const response = await GET(new Request("http://localhost:3000/api/v1/users/me"));
     const body = await response.json();
 
     expect(response.status).toBe(200);
