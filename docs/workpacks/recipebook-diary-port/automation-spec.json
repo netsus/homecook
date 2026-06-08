@@ -70,10 +70,7 @@
       "generator_required": true,
       "generator_artifact": "ui/designs/prototypes/recipebook-diary/index.html",
       "critic_required": true,
-      "critic_artifact": [
-        "ui/designs/critiques/MYPAGE-critique.md",
-        "ui/designs/critiques/RECIPEBOOK_DETAIL-critique.md"
-      ],
+      "critic_artifact": "ui/designs/critiques/RECIPEBOOK_DETAIL-critique.md",
       "authority_required": true,
       "stage4_evidence_requirements": [
         "desktop-1440",
