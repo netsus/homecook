@@ -5932,6 +5932,33 @@ function buildLlmMultiRecipeExtraction(
   };
 }
 
+function isUsableTextMultiRecipeCandidate(candidate: YoutubeRawRecipeCandidate) {
+  const parsedCandidate = adaptFlatDraftRecipe(candidate.draft);
+  const usableIngredientCount = parsedCandidate.ingredients
+    .filter((ingredient) => !isNoisyParsedIngredientName(ingredient.name))
+    .length;
+  const usableStepCount = parsedCandidate.steps
+    .filter((step) =>
+      hasLlmCookingAction(step)
+      && !isConversationalParsedStep(step)
+      && !hasBrokenCaptionStepNoise(step),
+    )
+    .length;
+
+  return parsedCandidate.ingredients.length > 0
+    && parsedCandidate.steps.length > 0
+    && usableIngredientCount > 0
+    && usableStepCount > 0;
+}
+
+function shouldUseTextMultiRecipeExtraction(extraction: SelectedMultiRecipeExtraction | null) {
+  if (!extraction) {
+    return false;
+  }
+
+  return extraction.candidates.filter(isUsableTextMultiRecipeCandidate).length >= 2;
+}
+
 function buildLlmSingleRecipe(
   candidate: YoutubeRawRecipeCandidate | null,
   fallbackRecipe: ParsedRecipeDescription,
@@ -5957,7 +5984,9 @@ function isNoisyParsedIngredientName(name: string) {
     || /[?？.!。]/u.test(normalized)
     || /(?:습니다|주세요|합니다|됩니다|먹으면|넣어|섞어|썰어|올려|둘러)/u.test(normalized)
     || CONVERSATIONAL_CAPTION_FRAGMENT_RE.test(`${normalized} `)
-    || /(?:^|\s)(?:좀|그냥|약간|많이|조금|언제)(?:\s|$)/u.test(normalized);
+    || /(?:^|\s)(?:좀|그냥|약간|많이|조금|언제)(?:\s|$)/u.test(normalized)
+    || /(?:^|\s)(?:어느\s*정|적당량|빨리)(?:\s|$)/u.test(normalized)
+    || /(?:성분|있어가지고|나빠져|투수로|마문)/u.test(normalized);
 }
 
 function isConversationalParsedStep(step: string) {
@@ -6782,11 +6811,20 @@ function isVisualRecipeCandidateBetter(
 
   const ingredientGain = visualRecipe.ingredients.length - currentRecipe.ingredients.length;
   const stepGain = visualRecipe.steps.length - currentRecipe.steps.length;
+  const hasMaterialIngredientGain =
+    visualRecipe.ingredients.length >= VISUAL_RECIPE_SPARSE_TEXT_MIN_INGREDIENTS
+    && visualRecipe.steps.length > 0
+    && visualRecipe.steps.length >= currentRecipe.steps.length
+    && ingredientGain >= 3;
+  const hasMaterialStepGain =
+    visualRecipe.steps.length >= VISUAL_RECIPE_SPARSE_TEXT_MIN_STEPS
+    && visualRecipe.ingredients.length > 0
+    && visualRecipe.ingredients.length >= currentRecipe.ingredients.length
+    && stepGain >= 2;
 
   return (
-    visualRecipe.ingredients.length >= VISUAL_RECIPE_SPARSE_TEXT_MIN_INGREDIENTS
-    && visualRecipe.steps.length >= VISUAL_RECIPE_SPARSE_TEXT_MIN_STEPS
-    && (ingredientGain >= 2 || stepGain >= 2)
+    hasMaterialIngredientGain
+    || hasMaterialStepGain
   );
 }
 
@@ -8824,6 +8862,9 @@ export async function handleYoutubeExtract(request: Request) {
     transcriptText: transcriptFallback.rawTranscriptText,
     transcriptSegments: transcriptFallback.rawTranscriptSegments,
   });
+  const usableDeterministicMultiRecipeExtraction = shouldUseTextMultiRecipeExtraction(deterministicMultiRecipeExtraction)
+    ? deterministicMultiRecipeExtraction
+    : null;
   const llmFallback = await resolveLlmStructuredFallback({
     video,
     parsedRecipe: transcriptFallback.recipe,
@@ -8831,7 +8872,7 @@ export async function handleYoutubeExtract(request: Request) {
     dbClient,
     userId: user.id,
     sourceBlocks,
-    multiRecipeExtraction: deterministicMultiRecipeExtraction,
+    multiRecipeExtraction: usableDeterministicMultiRecipeExtraction,
   });
   const visualRecipeFallback = await resolveVisualRecipeFallback({
     video,
@@ -8840,10 +8881,10 @@ export async function handleYoutubeExtract(request: Request) {
     dbClient,
     userId: user.id,
     sourceBlocks,
-    multiRecipeExtraction: deterministicMultiRecipeExtraction ?? llmFallback.multiRecipeExtraction,
+    multiRecipeExtraction: usableDeterministicMultiRecipeExtraction ?? llmFallback.multiRecipeExtraction,
   });
   const finalParsedRecipe = visualRecipeFallback.recipe;
-  const multiRecipeExtraction = deterministicMultiRecipeExtraction
+  const multiRecipeExtraction = usableDeterministicMultiRecipeExtraction
     ?? llmFallback.multiRecipeExtraction
     ?? visualRecipeFallback.multiRecipeExtraction;
   if (llmFallback.usedLlm && !transcriptFallback.rawTranscriptText && transcriptFallback.availableTranscriptText) {

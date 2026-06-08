@@ -3316,6 +3316,229 @@ describe("20 youtube real import backend", () => {
     ]);
   });
 
+  it("POST /api/v1/recipes/youtube/extract falls back to visual OCR when caption multi-recipe candidates are noisy", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
+    vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
+    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_RECIPE_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+
+    const noisyTranscriptLines = [
+      "첫 번째 요리 다시마 고추다대기",
+      "재료",
+      "기 빨리",
+      "이거는 뭐 타게",
+      "만드는 법",
+      "1. 이거 뭐 투수로 나온 거 좀 넣구요",
+      "2. 잠시 마문 좀 넣고요",
+      "두 번째 요리 다대기",
+      "재료",
+      "모든 좋은 성분들이 나빠져",
+      "역의 집에 있어가지고 녹",
+      "만드는 법",
+      "1. 모든 좋은 성분들이 나빠져 넣어",
+      "2. 적당량 넣어줍니다 저는요 살 올리고당",
+    ];
+    const videoProvider: YoutubeVideoProvider = {
+      name: "fixture-video",
+      fetchVideo: vi.fn(async (videoId) => ({
+        video: {
+          videoId,
+          title: "다시마 고추다대기",
+          channel: "주부나라",
+          channelId: `channel-${videoId}`,
+          thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+          description: "",
+          tags: ["recipe", "다시마", "고추다대기"],
+          categoryId: "26",
+          duration: "PT8M",
+          captionFlag: "true",
+        },
+      })),
+    };
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: noisyTranscriptLines.join("\n"),
+        transcriptSegments: noisyTranscriptLines.map((text, lineIndex) => ({
+          source: "caption" as const,
+          lineIndex,
+          text,
+          startMs: lineIndex * 5_000,
+          durationMs: 4_000,
+          language: "ko",
+          trackKind: "auto",
+        })),
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+    const llmExtractor: YoutubeRecipeLlmExtractor = {
+      name: "gemini_structured_extractor",
+      fetchStructuredRecipe: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "gemini",
+        model: "gemini-3.1-flash-lite",
+        fallbackModel: "gemini-2.5-flash-lite",
+        resultJson: {
+          recipes: [
+            {
+              title: "다시마 고추다대기",
+              confidence: 0.7,
+              ingredients: [
+                {
+                  name: "다시마",
+                  amount: null,
+                  unit: null,
+                  raw_text: "다시마가 일단 주인공이니까 다시마 같이 많아야 된다고 해요",
+                  evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                },
+              ],
+              steps: [
+                {
+                  instruction: "다시마를 불려 준비해요.",
+                  raw_text: "다시마를 물에 불려요.",
+                  evidence_refs: [{ source: "caption", line_index: 0, start_ms: null, end_ms: null }],
+                },
+              ],
+              warnings: ["자막 오인식이 많아 화면 확인이 필요해요."],
+            },
+          ],
+        },
+      })),
+    };
+    const visualRecipeExtractor: YoutubeVisualRecipeExtractor = {
+      name: "visual_recipe_extractor",
+      fetchVisualRecipe: vi.fn(async (
+        context: Parameters<YoutubeVisualRecipeExtractor["fetchVisualRecipe"]>[0],
+      ) => {
+        expect(context.sourceBlocks.some((block) => block.source === "caption")).toBe(true);
+
+        return {
+          status: "available" as const,
+          providerName: "gemini",
+          model: "gemini-3.1-flash-lite",
+          inputTokens: 180,
+          outputTokens: 90,
+          resultJson: {
+            visual_source_lines: [
+              { line_index: 0, text: "화면 자막: 다시마, 멸치, 마늘, 청양고추", start_ms: 30_000, end_ms: 35_000 },
+              { line_index: 1, text: "화면 자막: 간장, 고춧가루, 올리고당, 식용유", start_ms: 350_000, end_ms: 360_000 },
+              { line_index: 2, text: "화면 자막: 다시마를 불리고 잘게 다진다.", start_ms: 40_000, end_ms: 50_000 },
+              { line_index: 3, text: "화면 자막: 멸치와 다시마를 볶다가 고추와 양념을 넣는다.", start_ms: 300_000, end_ms: 360_000 },
+            ],
+            recipes: [
+              {
+                title: "다시마 고추다대기",
+                confidence: 0.88,
+                ingredients: [
+                  { name: "다시마", amount: null, unit: null, raw_text: "다시마", evidence_refs: [{ source: "visual", line_index: 0 }] },
+                  { name: "멸치", amount: null, unit: null, raw_text: "멸치", evidence_refs: [{ source: "visual", line_index: 0 }] },
+                  { name: "마늘", amount: null, unit: null, raw_text: "마늘", evidence_refs: [{ source: "visual", line_index: 0 }] },
+                  { name: "청양고추", amount: null, unit: null, raw_text: "청양고추", evidence_refs: [{ source: "visual", line_index: 0 }] },
+                  { name: "간장", amount: null, unit: null, raw_text: "간장", evidence_refs: [{ source: "visual", line_index: 1 }] },
+                  { name: "고춧가루", amount: null, unit: null, raw_text: "고춧가루", evidence_refs: [{ source: "visual", line_index: 1 }] },
+                  { name: "올리고당", amount: null, unit: null, raw_text: "올리고당", evidence_refs: [{ source: "visual", line_index: 1 }] },
+                  { name: "식용유", amount: null, unit: null, raw_text: "식용유", evidence_refs: [{ source: "visual", line_index: 1 }] },
+                ],
+                steps: [
+                  { instruction: "다시마를 불리고 잘게 다져요.", raw_text: "다시마를 불리고 잘게 다진다.", evidence_refs: [{ source: "visual", line_index: 2 }] },
+                  { instruction: "멸치와 다시마를 볶다가 고추와 양념을 넣어 끓여요.", raw_text: "멸치와 다시마를 볶다가 고추와 양념을 넣는다.", evidence_refs: [{ source: "visual", line_index: 3 }] },
+                ],
+                warnings: [],
+              },
+            ],
+          },
+        };
+      }),
+    };
+    const { dbClient, sessionsTable, candidatesTable } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: "550e8400-e29b-41d4-a716-446655440401", standard_name: "다시마" },
+        { id: "550e8400-e29b-41d4-a716-446655440402", standard_name: "멸치" },
+        { id: "550e8400-e29b-41d4-a716-446655440403", standard_name: "마늘" },
+        { id: "550e8400-e29b-41d4-a716-446655440404", standard_name: "청양고추" },
+        { id: "550e8400-e29b-41d4-a716-446655440405", standard_name: "간장" },
+        { id: "550e8400-e29b-41d4-a716-446655440406", standard_name: "고춧가루" },
+        { id: "550e8400-e29b-41d4-a716-446655440407", standard_name: "올리고당" },
+        { id: "550e8400-e29b-41d4-a716-446655440408", standard_name: "식용유" },
+      ],
+      cookingMethodLookupRows: [
+        {
+          id: prepMethodId,
+          code: "prep",
+          label: "손질",
+          color_key: "gray",
+          is_system: true,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440219",
+          code: "stir_fry",
+          label: "볶기",
+          color_key: "orange",
+          is_system: true,
+        },
+      ],
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      withYoutubeVideoProvider(videoProvider, () =>
+        withYoutubeRecipeLlmExtractor(llmExtractor, () =>
+          withYoutubeVisualRecipeExtractor(visualRecipeExtractor, () => postYoutubeExtract(transcriptFallbackUrl)),
+        ),
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(llmExtractor.fetchStructuredRecipe).toHaveBeenCalledTimes(1);
+    expect(visualRecipeExtractor.fetchVisualRecipe).toHaveBeenCalledTimes(1);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        title: "다시마 고추다대기",
+        blocking_issues: [],
+        ingredients: [
+          expect.objectContaining({ standard_name: "다시마", resolution_status: "resolved" }),
+          expect.objectContaining({ standard_name: "멸치", resolution_status: "resolved" }),
+          expect.objectContaining({ standard_name: "마늘", resolution_status: "resolved" }),
+          expect.objectContaining({ standard_name: "청양고추", resolution_status: "resolved" }),
+          expect.objectContaining({ standard_name: "간장", resolution_status: "resolved" }),
+          expect.objectContaining({ standard_name: "고춧가루", resolution_status: "resolved" }),
+          expect.objectContaining({ standard_name: "올리고당", resolution_status: "resolved" }),
+          expect.objectContaining({ standard_name: "식용유", resolution_status: "resolved" }),
+        ],
+        steps: [
+          { instruction: "다시마를 불리고 잘게 다져요." },
+          { instruction: "멸치와 다시마를 볶다가 고추와 양념을 넣어 끓여요." },
+        ],
+      },
+      error: null,
+    });
+    expect(body.data.multi_recipe_status).toBeUndefined();
+    expect(body.data.recipe_candidates).toBeUndefined();
+    expect(candidatesTable.insert).not.toHaveBeenCalled();
+
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      session_kind: string;
+      source_providers: string[];
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(insertedSession.session_kind).toBe("single");
+    expect(insertedSession.source_providers).toContain("visual_recipe_extractor");
+    expect(insertedSession.extraction_meta_json).toMatchObject({
+      description_parser_selection_outcome: "no_structured_recipe",
+      visual_recipe_extractor: {
+        attempted: true,
+        status: "used",
+        trigger_reason: "sparse_text_recipe",
+        recipe_count: 1,
+      },
+    });
+  });
+
   it("POST /api/v1/recipes/youtube/extract returns multi-recipe candidates from conversational caption transcript", async () => {
     mockAuth();
 
