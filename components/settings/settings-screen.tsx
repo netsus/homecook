@@ -1331,10 +1331,10 @@ function ColumnNameSheet({
           aria-describedby={errorMessage ? `${inputHelpId} ${inputErrorId}` : inputHelpId}
           aria-label={title}
           autoFocus
-          className={`w-full rounded-[var(--radius-sm)] border-b-2 bg-[var(--surface-fill)] px-4 py-3 text-base text-[var(--foreground)] outline-none ${
+          className={`w-full rounded-[var(--radius-sm)] border bg-[var(--surface-fill)] px-4 py-3 text-base font-semibold text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--brand)] ${
             errorMessage
               ? "border-[var(--danger)]"
-              : "border-transparent focus:border-[var(--brand)]"
+              : "border-[var(--line-strong)] focus:border-[var(--brand)]"
           }`}
           data-testid={`${testIdPrefix}-input`}
           maxLength={30}

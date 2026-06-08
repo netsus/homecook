@@ -67,7 +67,6 @@ import {
 } from "@/lib/api/leftovers";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
 import {
-  createDefaultPlannerRange,
   createPlannerColumn,
   deletePlannerColumn,
   fetchPlanner,
@@ -104,6 +103,11 @@ type MypageTab =
 const TOAST_DURATION_MS = 3000;
 const SHOPPING_PAGE_SIZE = 10;
 const SAVED_RECIPES_PAGE_SIZE = 12;
+const RECIPE_BOOK_COVER_PAGE_SIZE = 1;
+const LIFETIME_PLANNER_STATS_RANGE = {
+  startDate: "1900-01-01",
+  endDate: "9999-12-31",
+} as const;
 const LEFTOVERS_DESCRIPTION =
   "요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.";
 const EATEN_DESCRIPTION =
@@ -206,10 +210,15 @@ export function MypageScreen({
   const [showAccountDeleteDialog, setShowAccountDeleteDialog] = useState(false);
   const [accountDeleteError, setAccountDeleteError] = useState<string | null>(null);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [plannerRegistrationCount, setPlannerRegistrationCount] = useState(0);
+  const [lifetimeMealStats, setLifetimeMealStats] = useState({
+    cookDone: 0,
+    shoppingDone: 0,
+    total: 0,
+  });
 
   // Recipe books
   const [books, setBooks] = useState<RecipeBookSummary[]>([]);
+  const [bookCoverImages, setBookCoverImages] = useState<Record<string, string | null>>({});
   const [savedRecipes, setSavedRecipes] = useState<RecipeBookRecipeItem[]>([]);
   const [savedRecipesState, setSavedRecipesState] =
     useState<SavedRecipesState>("idle");
@@ -286,6 +295,7 @@ export function MypageScreen({
   const renameInputRef = useRef<HTMLInputElement | null>(null);
   const createInputRef = useRef<HTMLInputElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const bookCoverLoadingIdsRef = useRef<Set<string>>(new Set());
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectablePlannerDates = useMemo(() => {
@@ -391,16 +401,31 @@ export function MypageScreen({
   }, []);
 
   const loadMypageStats = useCallback(async () => {
-    const plannerRange = createDefaultPlannerRange();
-
     const [plannerResult, leftoverResult, eatenResult] = await Promise.allSettled([
-      fetchPlanner(plannerRange.startDate, plannerRange.endDate),
+      fetchPlanner(
+        LIFETIME_PLANNER_STATS_RANGE.startDate,
+        LIFETIME_PLANNER_STATS_RANGE.endDate,
+      ),
       fetchLeftovers("leftover"),
       fetchLeftovers("eaten"),
     ]);
 
     if (plannerResult.status === "fulfilled") {
-      setPlannerRegistrationCount(plannerResult.value.meals.length);
+      setLifetimeMealStats(
+        plannerResult.value.meals.reduce(
+          (stats, meal) => {
+            if (meal.status === "shopping_done") {
+              stats.shoppingDone += 1;
+            }
+            if (meal.status === "cook_done") {
+              stats.cookDone += 1;
+            }
+            stats.total += 1;
+            return stats;
+          },
+          { cookDone: 0, shoppingDone: 0, total: 0 },
+        ),
+      );
     }
 
     if (leftoverResult.status === "fulfilled") {
@@ -1071,7 +1096,6 @@ export function MypageScreen({
   const savedRecipeCount =
     savedBook?.recipe_count ??
     books.reduce((sum, book) => sum + book.recipe_count, 0);
-  const cookedDishCount = leftoverItems.length + eatenItems.length;
   const nicknameSaveDisabled =
     nicknameInput.trim().length < 2 ||
     nicknameInput.trim().length > 30 ||
@@ -1087,25 +1111,27 @@ export function MypageScreen({
     isRenamingMealColumn;
   const mypageStats = [
     {
-      color: "var(--brand)",
-      label: "저장한 레시피",
-      value: savedRecipeCount,
-    },
-    {
-      color: "var(--success)",
-      label: "요리완료",
-      value: cookedDishCount,
-    },
-    {
-      color: "var(--warning-border)",
+      color: "var(--planner-status-registered-strong)",
       label: "플래너 등록",
-      value: plannerRegistrationCount,
+      value: lifetimeMealStats.total,
+    },
+    {
+      color: "var(--planner-status-shopping)",
+      label: "장보기 완료",
+      value: lifetimeMealStats.shoppingDone,
+    },
+    {
+      color: "var(--planner-status-cooked)",
+      label: "요리 완료",
+      value: lifetimeMealStats.cookDone,
     },
   ];
 
-  // Load actual saved recipes for the desktop saved tab.
   useEffect(() => {
-    if (authState !== "authenticated" || activeTab !== "saved") return;
+    const shouldLoadSavedRecipes =
+      activeTab === "saved" || (isMobileViewport && mobileSurface === "home");
+
+    if (authState !== "authenticated" || !shouldLoadSavedRecipes) return;
 
     if (!savedBook || savedRecipeCount === 0) {
       setSavedRecipes([]);
@@ -1128,12 +1154,81 @@ export function MypageScreen({
   }, [
     activeTab,
     authState,
+    isMobileViewport,
     loadSavedRecipes,
+    mobileSurface,
     savedBook,
     savedRecipeCount,
     savedRecipesBookId,
     savedRecipesState,
   ]);
+
+  useEffect(() => {
+    if (authState !== "authenticated" || !isMobileViewport || books.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+    const candidates = books.filter(
+      (book) =>
+        book.recipe_count > 0 &&
+        !(book.id in bookCoverImages) &&
+        !bookCoverLoadingIdsRef.current.has(book.id),
+    );
+
+    if (candidates.length === 0) {
+      return;
+    }
+
+    candidates.forEach((book) => {
+      bookCoverLoadingIdsRef.current.add(book.id);
+    });
+
+    void Promise.all(
+      candidates.map(async (book): Promise<[string, string | null]> => {
+        const result = await fetchRecipeBookRecipes(book.id, {
+          limit: RECIPE_BOOK_COVER_PAGE_SIZE,
+        });
+        const firstRecipe = result.success ? result.data?.items[0] : null;
+
+        return [
+          book.id,
+          firstRecipe
+            ? firstRecipe.thumbnail_url ?? getFallbackRecipeImage(firstRecipe.title)
+            : null,
+        ];
+      }),
+    )
+      .then((entries) => {
+        if (cancelled) {
+          return;
+        }
+
+        setBookCoverImages((current) => ({
+          ...current,
+          ...Object.fromEntries(entries),
+        }));
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setBookCoverImages((current) => ({
+          ...current,
+          ...Object.fromEntries(candidates.map((book) => [book.id, null])),
+        }));
+      })
+      .finally(() => {
+        candidates.forEach((book) => {
+          bookCoverLoadingIdsRef.current.delete(book.id);
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authState, bookCoverImages, books, isMobileViewport]);
 
   // Infinite scroll observer for shopping tab
   useEffect(() => {
@@ -1298,6 +1393,7 @@ export function MypageScreen({
           createName={createName}
           customBooks={customBooks}
           deleteTarget={deleteTarget}
+          bookCoverImages={bookCoverImages}
           isCreating={isCreating}
           isDeleting={isDeleting}
           isLoadingMore={isLoadingMore}
@@ -1353,9 +1449,6 @@ export function MypageScreen({
           onShowCreateInput={() => setShowCreateInput(true)}
           onSurfaceChange={(surface) => {
             setMobileSurface(surface);
-            if (surface === "saved") {
-              setActiveTab("saved");
-            }
             if (surface === "shopping") {
               setActiveTab("shopping");
             }
@@ -1997,7 +2090,7 @@ function MyPagePreferencesSurface({
                     <>
                       <input
                         aria-label={`${column.name} 새 이름`}
-                        className="web-mypage-column-input"
+                        className="web-mypage-column-input web-mypage-column-input-prominent"
                         maxLength={30}
                         onChange={(event) =>
                           onMealColumnRenameInputChange(event.target.value)
@@ -2062,7 +2155,7 @@ function MyPagePreferencesSurface({
       <div className="web-mypage-column-actions">
         <input
           aria-label="새 끼니 이름"
-          className="web-mypage-column-input"
+          className="web-mypage-column-input web-mypage-column-input-prominent"
           maxLength={30}
           onChange={(event) => onMealColumnAddInputChange(event.target.value)}
           placeholder="새 끼니 이름"
@@ -2390,9 +2483,6 @@ function PreferenceSwitchRow({
 }
 
 function getMypageMobileSurfaceTitle(surface: MypageMobileSurface) {
-  if (surface === "saved") {
-    return "저장한 레시피";
-  }
   if (surface === "recipebook") {
     return "레시피북";
   }
@@ -3552,7 +3642,6 @@ function getMypageTabFromQuery(value: string | null): MypageTab | null {
 function getMobileSurfaceForTab(tab: MypageTab): MypageMobileSurface {
   if (tab === "recipebooks") return "recipebook";
   if (tab === "shopping") return "shopping";
-  if (tab === "saved") return "saved";
   return "home";
 }
 
