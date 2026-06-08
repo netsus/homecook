@@ -69,16 +69,16 @@ slice 27 YouTube 기능 개선 전에, 현재 MVP의 모든 ingredient category 
 | 양념/조미 | 장류/소스, 향신료/허브, 기름/식초/당류/육수 |
 | 가공/기타 | 김치/절임/통조림, 냉동/간편식/음료/기타 |
 
-조리법은 레시피 단계에서 실제로 자주 쓰는 행동 중심으로 6개 그룹, 20개 대표 method로 줄인다. `채썰기`, `재우기`, `핏물빼기`, `지지기`, `중탕`, `압력솥`, `간보기`, `토핑`, `담기`, `식히기`, `숙성`처럼 빈도가 낮거나 다른 method의 표현으로 흡수 가능한 값은 canonical method가 아니라 synonym/step text 후보로 둔다.
+조리법은 레시피 단계에서 실제로 자주 쓰는 행동 중심으로 6개 그룹, 20개 대표 method로 줄인다. `씻기`, `채썰기`, `재우기`, `핏물빼기`, `지지기`, `중탕`, `압력솥`, `간보기`, `토핑`, `담기`, `식히기`, `숙성`처럼 빈도가 낮거나 다른 method의 표현으로 흡수 가능한 값은 canonical method가 아니라 synonym/step text 후보로 둔다.
 
 | 그룹 | 대표 method 후보 |
 | --- | --- |
-| 준비/손질 | 씻기, 썰기, 다지기 |
+| 준비/손질 | 썰기, 다지기 |
 | 전처리 | 해동, 밑간, 절이기 |
 | 물/수분 조리 | 끓이기, 삶기, 데치기, 찌기 |
 | 팬/기름 조리 | 볶기, 굽기, 부치기, 튀기기 |
 | 혼합/조림 | 섞기, 무치기, 조리기, 졸이기 |
-| 기기 조리 | 전자레인지, 오븐굽기 |
+| 기기 조리 | 전자레인지, 오븐굽기, 에어프라이어 |
 
 후속 DB 후보는 `ingredient_category_groups`, `ingredient_categories`, `cooking_method_categories`, `cooking_method_synonyms`를 새로 검토하되, v1 호환을 위해 기존 `ingredients.category`와 `GET /ingredients?category=` label 계약은 migration 동안 유지한다. `cooking_methods.label varchar(5)` 완화는 method label 확장이 실제로 필요하다는 검증이 생긴 뒤 별도 승인으로 처리한다.
 
