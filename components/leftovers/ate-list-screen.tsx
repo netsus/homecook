@@ -290,19 +290,16 @@ export function AteListScreen({
 
       try {
         await uneatLeftover(leftoverId);
-        setItems((current) => current.filter((item) => item.id !== leftoverId));
+        const nextItems = items.filter((item) => item.id !== leftoverId);
+        setItems(nextItems);
+
+        if (nextItems.length === 0) {
+          setScreenState("empty");
+        }
+
         setFeedback({
           message: "남은 요리로 복귀됐어요",
           tone: "status",
-        });
-
-        // Check if list is now empty
-        setItems((current) => {
-          if (current.length === 0) {
-            setScreenState("empty");
-          }
-
-          return current;
         });
       } catch (error) {
         if (isLeftoverApiError(error) && error.status === 401) {
@@ -321,7 +318,7 @@ export function AteListScreen({
         setUneatingId(null);
       }
     },
-    [uneatingId],
+    [items, uneatingId],
   );
   const ateListSelfHref = buildReturnHref("/leftovers/ate", {
     returnSurface: "mypage.eaten-list",
@@ -514,7 +511,7 @@ export function AteListScreen({
           {items.map((item) => (
             <AteListCard
               key={item.id}
-              anyMutating={uneatingId !== null}
+              anyMutating={uneatingId === item.id}
               isUneating={uneatingId === item.id}
               item={item}
               onUneat={handleUneat}
@@ -614,7 +611,7 @@ function AteListMobileView({
         <div className="space-y-[10px] p-4" data-testid="ate-item-list">
           {items.map((item) => (
             <MobileAteCard
-              anyMutating={uneatingId !== null}
+              anyMutating={uneatingId === item.id}
               isUneating={uneatingId === item.id}
               item={item}
               key={item.id}
@@ -685,17 +682,17 @@ function MobileAteCard({
           >
             {item.recipe_title}
           </Link>
-          <p className="mt-0.5 text-[12px] font-medium leading-[1.25] text-[var(--text-3)]">
-            {item.eaten_at
-              ? `${formatShortDate(item.eaten_at)} 다먹음`
-              : `${formatShortDate(item.cooked_at)} 요리`}{" "}
-            · {formatLeftoverMeta(item)}
-          </p>
+          <div className="mt-0.5 space-y-0.5 text-[12px] font-medium leading-[1.25] text-[var(--text-3)]">
+            <p>{formatShortDate(item.cooked_at)} 요리 · {formatLeftoverMeta(item)}</p>
+            {item.eaten_at ? (
+              <p>{formatShortDate(item.eaten_at)} 다먹음</p>
+            ) : null}
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
             aria-label="남은 요리로 복귀"
-            className="h-8 w-[82px] whitespace-nowrap rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-2 text-[11px] font-bold text-[var(--text-2)] disabled:opacity-60"
+            className="flex h-8 w-[82px] items-center justify-center whitespace-nowrap rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-2 text-[11px] font-extrabold text-[var(--brand)] disabled:opacity-60"
             data-testid="uneat-button"
             disabled={anyMutating}
             onClick={() => onUneat(item.id)}
@@ -748,7 +745,7 @@ function MobileFeedback({
         "mx-4 mt-2 rounded-[var(--radius-control)] border px-4 py-3 text-center text-[13px] font-extrabold",
         feedback.tone === "error"
           ? "border-[var(--feedback-danger-border)] bg-[var(--feedback-danger-soft)] text-[var(--danger)]"
-          : "border-[var(--feedback-success-border)] bg-[var(--feedback-success-soft)] text-[var(--success-strong)]",
+          : "border-[var(--brand-border)] bg-[var(--brand-soft)] text-[var(--brand)]",
       ].join(" ")}
       data-testid="feedback-toast"
       role="alert"

@@ -217,7 +217,7 @@ describe("LeftoversScreen", () => {
     expect(screen.getAllByRole("button", { name: "플래너에 추가" })).toHaveLength(
       2,
     );
-    expect(screen.getAllByRole("link", { name: "요리하기" })).toHaveLength(2);
+    expect(screen.queryAllByRole("link", { name: "요리하기" })).toHaveLength(0);
     expect(screen.getByRole("link", { name: "김치찌개" }).getAttribute("href")).toBe(
       "/recipe/recipe-1",
     );
@@ -272,7 +272,7 @@ describe("LeftoversScreen", () => {
   });
 
   it("removes item from list after eat action", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
+    const fetchSpy = vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
       items: LEFTOVER_ITEMS,
     });
     vi.spyOn(leftoversApi, "eatLeftover").mockResolvedValue({
@@ -298,6 +298,8 @@ describe("LeftoversScreen", () => {
 
     expect(screen.getAllByTestId("leftover-card")).toHaveLength(1);
     expect(screen.queryByText("김치찌개")).toBeNull();
+    expect(screen.getByText("된장찌개")).toBeTruthy();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("shows error feedback when eat fails", async () => {
@@ -447,9 +449,32 @@ describe("LeftoversScreen", () => {
     render(<LeftoversScreen initialAuthenticated={true} />);
 
     const plannerAddButton = (await screen.findAllByTestId("planner-add-button"))[0];
-    expect(plannerAddButton.textContent?.trim()).toBe("날짜 끼니에 추가");
+    expect(plannerAddButton.textContent?.trim()).toBe("플래너에 추가");
     expect(screen.getByText(LEFTOVERS_DESCRIPTION)).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "다먹음" })).toHaveLength(2);
+  });
+
+  it("uses brand-colored mobile feedback after eating a leftover", async () => {
+    installMatchMedia(true);
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
+      items: LEFTOVER_ITEMS,
+    });
+    vi.spyOn(leftoversApi, "eatLeftover").mockResolvedValue({
+      id: "ld-1",
+      status: "eaten",
+      eaten_at: "2026-04-29T00:00:00.000Z",
+      auto_hide_at: "2026-05-29T00:00:00.000Z",
+    });
+
+    render(<LeftoversScreen initialAuthenticated={true} />);
+
+    const user = userEvent.setup();
+    await user.click((await screen.findAllByTestId("eat-button"))[0]);
+
+    const toast = await screen.findByTestId("feedback-toast");
+    expect(toast.className).toContain("bg-[var(--brand-soft)]");
+    expect(toast.className).toContain("text-[var(--brand)]");
+    expect(toast.className).not.toContain("success");
   });
 
   it("has link to ate-list page", async () => {
@@ -589,9 +614,26 @@ describe("AteListScreen", () => {
     expect(await screen.findByText("다먹은 요리 1개")).toBeTruthy();
     expect(screen.getByText(EATEN_DESCRIPTION)).toBeTruthy();
     expect(screen.getByText(/4\/22 다먹음/)).toBeTruthy();
+    expect(screen.getByText(/4\/18 요리/)).toBeTruthy();
+    expect(screen.getByText(/저녁 · 2인분/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "김치찌개" }).getAttribute("href")).toBe(
       "/recipe/recipe-1",
     );
+  });
+
+  it("styles the mobile restore button like the web action button", async () => {
+    installMatchMedia(true);
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
+      items: EATEN_ITEMS,
+    });
+
+    render(<AteListScreen initialAuthenticated={true} />);
+
+    const restoreButton = await screen.findByTestId("uneat-button");
+    expect(restoreButton.textContent?.trim()).toBe("남은 요리로");
+    expect(restoreButton.className).toContain("border-[var(--brand)]");
+    expect(restoreButton.className).toContain("bg-[var(--surface)]");
+    expect(restoreButton.className).toContain("text-[var(--brand)]");
   });
 
   it("keeps long mobile eaten recipe titles from resizing the card", async () => {
@@ -687,7 +729,7 @@ describe("AteListScreen", () => {
   });
 
   it("removes item from list after uneat action", async () => {
-    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
+    const fetchSpy = vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
       items: EATEN_ITEMS,
     });
     vi.spyOn(leftoversApi, "uneatLeftover").mockResolvedValue({
@@ -709,6 +751,32 @@ describe("AteListScreen", () => {
     await waitFor(() => {
       expect(screen.getByText("남은 요리로 복귀됐어요")).toBeTruthy();
     });
+
+    expect(screen.queryByText("김치찌개")).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses brand-colored mobile feedback after restoring an eaten item", async () => {
+    installMatchMedia(true);
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
+      items: EATEN_ITEMS,
+    });
+    vi.spyOn(leftoversApi, "uneatLeftover").mockResolvedValue({
+      id: "ld-3",
+      status: "leftover",
+      eaten_at: null,
+      auto_hide_at: null,
+    });
+
+    render(<AteListScreen initialAuthenticated={true} />);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId("uneat-button"));
+
+    const toast = await screen.findByTestId("feedback-toast");
+    expect(toast.className).toContain("bg-[var(--brand-soft)]");
+    expect(toast.className).toContain("text-[var(--brand)]");
+    expect(toast.className).not.toContain("success");
   });
 
   it("shows error feedback when uneat fails", async () => {

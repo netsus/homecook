@@ -216,7 +216,7 @@ test.describe("LEFTOVERS screen", () => {
     await expect(
       page
         .getByRole("button", {
-          name: isMobileViewport(page) ? /날짜 끼니에 추가/ : /플래너에 추가/,
+          name: /플래너에 추가/,
         })
         .first(),
     ).toBeVisible();
@@ -271,11 +271,10 @@ test.describe("LEFTOVERS screen", () => {
     await installLeftoverRoutes(page);
     await page.goto("/leftovers");
 
-    await expect(
-      page.getByRole("heading", {
-        name: isMobileViewport(page) ? "남은 요리" : /남은 요리 \d+개/,
-      }),
-    ).toBeVisible();
+    const heading = isMobileViewport(page)
+      ? page.getByRole("heading", { exact: true, name: "남은 요리" })
+      : page.getByRole("heading", { name: /남은 요리 \d+개/ });
+    await expect(heading).toBeVisible();
     const ateLink = page.getByText("다먹은 요리");
     await expect(ateLink).toBeVisible();
     const ateHref = await ateLink.getAttribute("href");
@@ -300,6 +299,10 @@ test.describe("ATE_LIST screen", () => {
     await expect(
       page.getByText(isMobileViewport(page) ? "4/28 다먹음" : "4월 28일"),
     ).toBeVisible();
+    if (isMobileViewport(page)) {
+      await expect(page.getByText(/4\/20 요리/)).toBeVisible();
+      await expect(page.getByText(/저녁 · 2인분/)).toBeVisible();
+    }
     await expect(page.getByText("다먹음으로 기록")).toHaveCount(0);
     if (isMobileViewport(page)) {
       await expect(page.getByText("다시 만들기")).toHaveCount(0);

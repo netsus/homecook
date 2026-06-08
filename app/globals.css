@@ -8793,9 +8793,9 @@ button {
   }
 
   .web-leftover-feedback-status {
-    border-color: var(--feedback-success-border);
-    background: var(--feedback-success-soft);
-    color: var(--web-success);
+    border-color: rgba(45, 150, 255, 0.24);
+    background: var(--web-brand-wash);
+    color: var(--web-brand-accessible);
   }
 
   .web-leftover-feedback-error {
