@@ -7,8 +7,8 @@
 
 ## Happy Path
 
-- [ ] 공식 문서 5종과 `CURRENT_SOURCE_OF_TRUTH`가 재료 8대분류/21소분류를 같은 이름과 개수로 설명한다 <!-- omo:id=accept-official-doc-ingredient-count;stage=2;scope=shared;review=3,6 -->
-- [ ] 공식 문서 5종과 `CURRENT_SOURCE_OF_TRUTH`가 조리법 6그룹/20대표 method를 같은 이름과 개수로 설명한다 <!-- omo:id=accept-official-doc-cooking-count;stage=2;scope=shared;review=3,6 -->
+- [x] 공식 문서 5종과 `CURRENT_SOURCE_OF_TRUTH`가 재료 8대분류/21소분류를 같은 이름과 개수로 설명한다 <!-- omo:id=accept-official-doc-ingredient-count;stage=2;scope=shared;review=3,6 -->
+- [x] 공식 문서 5종과 `CURRENT_SOURCE_OF_TRUTH`가 조리법 6그룹/20대표 method를 같은 이름과 개수로 설명한다 <!-- omo:id=accept-official-doc-cooking-count;stage=2;scope=shared;review=3,6 -->
 - [ ] v1 category label 8종(`채소`, `과일`, `육류`, `해산물`, `양념`, `유제품`, `곡류`, `기타`)이 migration 동안 계속 API/filter/validation에서 동작한다 <!-- omo:id=accept-v1-label-compat;stage=2;scope=backend;review=3,6 -->
 - [ ] `GET /ingredients` 응답 확장은 additive-only이며 `{ success, data, error }` envelope를 유지한다 <!-- omo:id=accept-ingredients-additive-api;stage=2;scope=backend;review=3,6 -->
 - [ ] `GET /cooking-methods` 응답 확장은 additive-only이며 기존 `{ id, code, label, color_key, is_system }` 소비자를 깨지 않는다 <!-- omo:id=accept-cooking-additive-api;stage=2;scope=backend;review=3,6 -->

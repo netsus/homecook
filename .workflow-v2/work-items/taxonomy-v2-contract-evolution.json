@@ -21,11 +21,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.5.md",
-      "docs/화면정의서-v1.5.12.md",
-      "docs/유저flow맵-v1.3.12.md",
-      "docs/db설계-v1.3.11.md",
-      "docs/api문서-v1.2.15.md"
+      "docs/요구사항기준선-v1.7.6.md",
+      "docs/화면정의서-v1.5.13.md",
+      "docs/유저flow맵-v1.3.13.md",
+      "docs/db설계-v1.3.12.md",
+      "docs/api문서-v1.2.16.md"
     ],
     "governing_docs": [
       "docs/workpacks/taxonomy-v2-contract-evolution/README.md",
@@ -72,15 +72,15 @@
   },
   "status": {
     "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs lock for taxonomy v2 contract-evolution. The plan intentionally keeps v1 category label compatibility and defers official docs version bump plus additive DB/API implementation to follow-up stages.",
+  "notes": "Stage 2 official docs sync for taxonomy v2 contract-evolution completed and locally verified: ingredient 8 groups / 21 subcategories, cooking 6 groups / 20 canonical methods, v1 8 label compatibility preserved. Additive DB/API implementation remains pending.",
   "out_of_scope": [
     "Immediate removal of v1 category labels",
     "Breaking GET /ingredients category query",
