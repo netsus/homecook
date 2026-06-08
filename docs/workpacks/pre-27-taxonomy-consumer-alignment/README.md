@@ -2,7 +2,7 @@
 
 ## Goal
 
-slice 27 YouTube 기능 개선 전에, 현재 MVP의 모든 ingredient category / cooking method 소비자를 같은 기준 source에 정렬한다. ingredient 쪽은 legacy 7종 카테고리를 단일 shared mapping source로 수렴시키고, cooking 쪽은 분산된 색상/fallback helper를 하나로 통합한다. 이 정렬이 끝나면 slice 27이 taxonomy 임시 분기 없이 시작할 수 있다.
+slice 27 YouTube 기능 개선 전에, 현재 MVP의 모든 ingredient category / cooking method 소비자를 같은 기준 source에 정렬한다. ingredient 쪽은 당시 legacy 7종 카테고리를 단일 shared mapping source로 수렴시키고, cooking 쪽은 분산된 색상/fallback helper를 하나로 통합한다. 2026-06-08 follow-up에서 active ingredient category set은 `과일` 포함 8종으로 확장됐으며, 신규 DB registry table 없이 같은 shared mapping source를 계속 사용한다.
 
 ## Branches
 
@@ -23,12 +23,12 @@ slice 27 YouTube 기능 개선 전에, 현재 MVP의 모든 ingredient category 
 
 - `lib/ingredient-categories.ts`를 canonical shared mapping source로 확장
   - `code`, `label` (=legacy label), `display_order`, `is_active` 속성 포함
-  - legacy 7 카테고리: `채소`, `육류`, `해산물`, `양념`, `유제품`, `곡류`, `기타`
+  - 현재 v1 canonical 8 카테고리: `채소`, `과일`, `육류`, `해산물`, `양념`, `유제품`, `곡류`, `기타`
 - `types/recipe.ts`의 `IngredientCategory` union이 shared source에서 파생하도록 전환
 - `lib/server/youtube-import.ts`의 hardcoded `INGREDIENT_CATEGORIES` 검증을 shared source 참조로 교체
 - `app/api/v1/ingredients/route.ts`의 category query를 shared source 기준으로 정렬
 - `app/api/v1/pantry/route.ts`의 category filter를 shared source 기준으로 정렬
-- `components/pantry/pantry-mobile-visuals.ts`의 `WAVE1_PANTRY_CATEGORY_ORDER` (`주식`, `단백질`, `과일`)가 legacy 7-category와 충돌하지 않도록 명시적 mapping/fallback 처리
+- `components/pantry/pantry-mobile-visuals.ts`의 `WAVE1_PANTRY_CATEGORY_ORDER` (`주식`, `단백질`, `과일`)가 canonical 8-category와 충돌하지 않도록 명시적 mapping/fallback 처리
 - `components/home/ingredient-filter-modal.tsx`의 `INGREDIENT_CATEGORY_OPTIONS` 소비를 shared source 기준으로 전환
 - `components/recipe/recipe-ingredient-add-modal.tsx`의 hardcoded category emoji map을 shared source 또는 공용 helper로 전환
 - `components/pantry/pantry-screen.tsx`의 desktop `CATEGORY_VISUAL` map을 공용 helper로 전환
@@ -62,7 +62,7 @@ slice 27 YouTube 기능 개선 전에, 현재 MVP의 모든 ingredient category 
 - legacy `ingredients.category` string field 제거 또는 FK 전환
 - legacy `color_key` string field 제거 또는 FK 전환
 - `GET /cooking-methods` 응답 필드 추가 (additive field 검토는 후보로만 기록)
-- ingredient category 확장 (7종 이상 추가)
+- `ingredient_categories` DB registry table/FK 전환
 - slice 27 YouTube 기능 개선 구현
 - 디자인 리디자인 또는 신규 UI 화면 추가
 
@@ -104,8 +104,8 @@ function isValidIngredientCategory(label: string): boolean;
 ```
 
 **API 계약 유지**:
-- `GET /ingredients?category=채소` — legacy label 기반 query 유지
-- `GET /pantry?category=채소` — legacy label 기반 filter 유지
+- `GET /ingredients?category=채소` / `GET /ingredients?category=과일` — category label 기반 query 유지
+- `GET /pantry?category=채소` / `GET /pantry?category=과일` — category label 기반 filter 유지
 - `POST /recipes/youtube/ingredient-registration` — category validation을 shared source 기준으로 수행
 - 응답 형식: `{ success, data, error }` 래퍼 유지
 - error: `{ code, message, fields[] }` 구조 유지
@@ -151,7 +151,7 @@ function getCookingMethodColor(colorKey?: string | null): string;
 - Anchor screen dependency: `HOME`, `RECIPE_DETAIL` (읽기 소비만, 레이아웃/구조 변경 없음)
 - Visual artifact: N/A (기존 확정 UI의 helper/source 참조만 변경, 시각적 변경 최소)
 - Authority status: `not-required`
-- Notes: 기존 confirmed 화면의 import 참조만 변경하는 low-risk refactor. 시각적 출력은 기존 color/emoji/label과 동일해야 함. pantry mobile의 `주식/단백질/과일` 그룹명은 UI display 용도로 유지 가능하나, legacy 7-category와의 mapping 관계를 shared source에 명시해야 함.
+- Notes: 기존 confirmed 화면의 import 참조만 변경하는 low-risk refactor. pantry mobile의 `주식/단백질/과일` 그룹명은 UI display 용도로 유지 가능하나, category canonical label과의 mapping 관계를 shared source에 명시해야 함.
 
 ## Design Status
 
@@ -205,14 +205,14 @@ function getCookingMethodColor(colorKey?: string | null): string;
 
 ## Key Rules
 
-1. **Freeze 동안 v1 canonical ingredient category는 legacy 7종**: `채소`, `육류`, `해산물`, `양념`, `유제품`, `곡류`, `기타`
+1. **현재 v1 canonical ingredient category는 `과일` 포함 8종**: `채소`, `과일`, `육류`, `해산물`, `양념`, `유제품`, `곡류`, `기타`
 2. **신규 DB registry table 미도입**: 코드/seed 기반 shared mapping source로 시작, DB table은 slice 27 이후 필요 증거 시 검토
 3. **`cooking_methods.label varchar(5)` 비과적재**: taxonomy 코드/분류 의미를 label에 싣지 않음
 4. **cooking method category는 optional additive metadata**: v1 contract의 필수 축으로 승격하지 않음
 5. **`GET /cooking-methods` v1 shape 유지**: 기존 소비자를 깨지 않는 additive-only 원칙
 6. **외부 데이터 production 직적재 금지**: staging-only gate를 거쳐야 함
 7. **시각적 출력 불변**: shared source/helper 전환 후에도 기존과 동일한 category label, cooking method color, emoji가 출력되어야 함
-8. **pantry mobile의 `주식/단백질/과일` 그룹**: UI display 용도 유지 가능, legacy 7-category와의 mapping 관계를 shared source에 명시
+8. **pantry mobile의 `주식/단백질/과일` 그룹**: UI display 용도 유지 가능, canonical category와의 mapping 관계를 shared source에 명시
 
 ## Contract Evolution Candidates (Optional)
 
@@ -226,7 +226,7 @@ function getCookingMethodColor(colorKey?: string | null): string;
 ## Primary User Path
 
 1. 사용자가 HOME에서 재료 필터를 열고 `채소` 카테고리를 선택한다 → `GET /ingredients?category=채소`로 재료 목록 표시 (shared source 기준 label 사용)
-2. PANTRY에서 카테고리별 재료를 조회한다 → mobile은 Wave1 그룹명 (`주식`, `단백질` 등), desktop은 legacy 7-category 기준 표시 (모두 shared source에서 파생)
+2. PANTRY에서 카테고리별 재료를 조회한다 → mobile은 Wave1 그룹명 (`주식`, `단백질` 등), desktop은 canonical category 기준 표시 (모두 shared source에서 파생)
 3. MANUAL_RECIPE_CREATE에서 재료를 추가하고 조리방법을 선택한다 → category chip은 shared source, method color는 shared helper 사용
 4. YT_IMPORT에서 추출된 재료의 category를 확인/수정한다 → category 선택지가 shared source에서 파생
 5. RECIPE_DETAIL에서 조리 단계의 method badge 색상이 표시된다 → shared helper 사용
@@ -247,7 +247,7 @@ function getCookingMethodColor(colorKey?: string | null): string;
 - [x] recipe ingredient add modal의 category emoji를 공용 helper로 전환 <!-- omo:id=delivery-ingredient-add-modal;stage=4;scope=frontend;review=5,6 -->
 - [x] pantry-screen desktop의 CATEGORY_VISUAL을 공용 helper로 전환 <!-- omo:id=delivery-pantry-desktop-visual;stage=4;scope=frontend;review=5,6 -->
 - [x] pantry-add-sheet의 category 소비를 shared source 기준으로 정렬 <!-- omo:id=delivery-pantry-add-sheet;stage=4;scope=frontend;review=5,6 -->
-- [x] pantry-mobile-visuals의 Wave1 그룹과 legacy 7-category mapping 명시 <!-- omo:id=delivery-pantry-mobile-mapping;stage=4;scope=frontend;review=5,6 -->
+- [x] pantry-mobile-visuals의 Wave1 그룹과 canonical 8-category mapping 명시 <!-- omo:id=delivery-pantry-mobile-mapping;stage=4;scope=frontend;review=5,6 -->
 - [x] youtube-import-screen의 INGREDIENT_CATEGORY_CHOICES를 shared source에서 파생 <!-- omo:id=delivery-yt-import-screen-category;stage=4;scope=frontend;review=5,6 -->
 
 ### Track B: Cooking

@@ -95,6 +95,9 @@ export function inferLegacyCategoryFromDataGoKrNutritionRow(
   if (/육류|축산|닭고기|돼지고기|소고기|쇠고기|난류|달걀|계란/.test(categoryText)) {
     return "육류";
   }
+  if (/과일|과실|딸기|사과|배|바나나|감귤|귤|오렌지|레몬|라임|포도|복숭아/.test(categoryText)) {
+    return "과일";
+  }
   if (/우유|유제품|유가공|치즈|버터|크림/.test(categoryText)) return "유제품";
   if (/곡류|쌀|현미|보리|밀|두류|서류|감자|고구마|전분|견과|종실|콩류/.test(categoryText)) {
     return "곡류";
