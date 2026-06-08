@@ -6,7 +6,7 @@
 
 ## Branches
 
-- 문서: `docs/taxonomy-v2-contract-evolution`
+- 문서: `docs/taxonomy-v2-official-contract`
 - 백엔드/DB: `feature/be-taxonomy-v2-contract-evolution`
 - 프론트엔드: `feature/fe-taxonomy-v2-contract-evolution`
 
@@ -83,7 +83,7 @@
 
 ### Official Docs To Update
 
-이 slice가 Stage 2 구현으로 넘어가기 전, 아래 공식 문서와 `CURRENT_SOURCE_OF_TRUTH`를 같은 PR에서 갱신한다.
+이 slice가 Stage 2 구현으로 넘어가기 전, 아래 공식 문서와 `CURRENT_SOURCE_OF_TRUTH`를 같은 PR에서 갱신한다. 2026-06-09 기준 공식 문서 갱신은 완료됐고, 후속 구현은 additive DB/API migration과 shared taxonomy source부터 진행한다.
 
 | 문서 | 필요한 변경 |
 | --- | --- |
@@ -102,7 +102,8 @@
   - stable `code`, `group_code`, 사용자 표시 `label`, legacy `category` mapping, `display_order`, `is_active`
 - `ingredients`
   - migration 동안 `category` 문자열 유지
-  - 새 컬럼은 `category_code` 또는 `subcategory_code` 중 하나로 결정하되, v1 label과 역매핑 가능해야 한다
+  - 새 컬럼은 `category_code`로 결정하고 `ingredient_categories.code`를 참조한다
+  - v1 label과 역매핑 가능해야 한다
 - `cooking_method_categories`
   - stable `code`, 사용자 표시 `label`, `display_order`, `is_active`
 - `cooking_methods`
@@ -170,11 +171,11 @@
 - `docs/workpacks/28-external-ingredient-data-ingest-gate/README.md`
 - `.omx/plans/ingredient-cooking-taxonomy-ralplan-final-20260525.md`
 - `.omx/plans/ingredient-cooking-taxonomy-expansion-20260525.md`
-- `docs/요구사항기준선-v1.7.5.md`
-- `docs/화면정의서-v1.5.12.md`
-- `docs/유저flow맵-v1.3.12.md`
-- `docs/db설계-v1.3.11.md`
-- `docs/api문서-v1.2.15.md`
+- `docs/요구사항기준선-v1.7.6.md`
+- `docs/화면정의서-v1.5.13.md`
+- `docs/유저flow맵-v1.3.13.md`
+- `docs/db설계-v1.3.12.md`
+- `docs/api문서-v1.2.16.md`
 
 ## QA / Test Data Plan
 
@@ -212,7 +213,7 @@
 
 | # | 현재 계약 | 제안 계약 | 기대 사용자 가치 | 영향 문서 | 승인 상태 |
 | --- | --- | --- | --- | --- | --- |
-| CE-1 | `ingredients.category` v1 label string | v1 label 유지 + v2 `category_code` 또는 `subcategory_code` additive | 필터/자동매칭 정확도 개선, label 변경 내성 | 요구사항, DB, API, Flow, 화면 | 사용자 방향 승인, 공식 문서 갱신 필요 |
+| CE-1 | `ingredients.category` v1 label string | v1 label 유지 + v2 `category_code` additive | 필터/자동매칭 정확도 개선, label 변경 내성 | 요구사항, DB, API, Flow, 화면 | 공식 문서 반영 완료, 구현 필요 |
 | CE-2 | `GET /ingredients` v1 label 중심 | `category_group_code`, `category_code`, `category_label` additive | HOME/PANTRY/YT_IMPORT에서 같은 분류 source 소비 | API, 화면, Flow | 사용자 방향 승인, 세부 field명 확정 필요 |
 | CE-3 | `cooking_methods`에 category 없음 | `cooking_method_categories` + `cooking_methods.category_code` additive | 조리법 선택/표시 일관성 개선 | DB, API, 화면 | 사용자 방향 승인, 구현 전 공식 문서 필요 |
 | CE-4 | synonym은 재료 중심 | `cooking_method_synonyms` 추가 | YouTube/직접등록 step 표현 매칭률 개선 | DB, API, 요구사항 | 사용자 방향 승인, 운영 seed 기준 필요 |
@@ -228,7 +229,7 @@
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 > Stage 2/3에서는 공식 문서, DB/API 계약, seed/migration, backend 테스트를 닫고, Stage 4~6에서는 화면 소비 경로와 visual/UX fallout을 닫는다.
 
-- [ ] 공식 문서 5종과 `CURRENT_SOURCE_OF_TRUTH`에 v2 taxonomy count와 v1 compatibility를 동기화 <!-- omo:id=delivery-official-doc-sync;stage=2;scope=shared;review=3,6 -->
+- [x] 공식 문서 5종과 `CURRENT_SOURCE_OF_TRUTH`에 v2 taxonomy count와 v1 compatibility를 동기화 <!-- omo:id=delivery-official-doc-sync;stage=2;scope=shared;review=3,6 -->
 - [ ] 재료 8대분류/21소분류 seed 또는 shared source를 정의 <!-- omo:id=delivery-ingredient-taxonomy-source;stage=2;scope=shared;review=3,6 -->
 - [ ] 조리법 6그룹/20대표 method seed 또는 shared source를 정의 <!-- omo:id=delivery-cooking-taxonomy-source;stage=2;scope=shared;review=3,6 -->
 - [ ] `씻기` excluded canonical, `에어프라이어` included canonical 규칙을 테스트로 고정 <!-- omo:id=delivery-cooking-specific-regression;stage=2;scope=shared;review=3,6 -->

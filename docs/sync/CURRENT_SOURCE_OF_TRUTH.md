@@ -1,17 +1,34 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.5.md`
-- `docs/화면정의서-v1.5.12.md`
-- `docs/유저flow맵-v1.3.12.md`
-- `docs/db설계-v1.3.11.md`
-- `docs/api문서-v1.2.15.md`
+- `docs/요구사항기준선-v1.7.6.md`
+- `docs/화면정의서-v1.5.13.md`
+- `docs/유저flow맵-v1.3.13.md`
+- `docs/db설계-v1.3.12.md`
+- `docs/api문서-v1.2.16.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## v1.7.5 / v1.5.12 / v1.3.12 / DB v1.3.11 / API v1.2.15 → v1.7.6 / v1.5.13 / v1.3.13 / DB v1.3.12 / API v1.2.16 변경 이력 (2026-06-09)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.6 | 재료 taxonomy v2 목표를 8대분류/21소분류로, 조리방법 taxonomy v2 목표를 6그룹/20대표 method로 확정. v1 category label 8종 호환 유지 |
+| 화면정의서 v1.5.13 | HOME/PANTRY/직접등록/YT_IMPORT/상세/요리모드의 v2 표시 기준과 v1 label fallback, `씻기` 제외/`에어프라이어` 포함 표시 기준 추가 |
+| 유저플로우 v1.3.13 | 재료 등록·검색·필터와 조리방법 선택·검수 흐름에 v2 mapping과 migration fallback 추가 |
+| DB v1.3.12 | `ingredient_category_groups`, `ingredient_categories`, `ingredients.category_code`, `cooking_method_categories`, `cooking_methods.category_code`, `cooking_method_synonyms` additive migration target 추가 |
+| API v1.2.16 | `GET /ingredients`, `POST /recipes/youtube/ingredient-registration`, `GET /cooking-methods`에 v2 optional field 계약 추가. 기존 endpoint 수와 v1 query/body/응답 shape 호환 유지 |
+
+> 이 변경은 `docs/workpacks/taxonomy-v2-contract-evolution` contract-evolution이다.
+> 계획대로 진행하면 전체 재료 카테고리는 사용자-facing 대분류 8개, 내부 소분류 21개가 된다.
+> 조리방법은 6그룹, 20대표 method가 된다.
+> `씻기`는 canonical method에서 제외하고, `에어프라이어`는 canonical method에 포함한다.
+> v2 taxonomy는 additive migration으로 시작한다. `ingredients.category`, `GET /ingredients?category=<v1 label>`, YouTube ingredient registration의 v1 `category` body는 migration 동안 유지한다.
+> 운영 DB 재분류는 idempotent migration과 review 가능한 mapping 근거가 있을 때만 수행하며, 외부 데이터 production 직적재는 계속 금지한다.
 
 ## Ingredient Fruit Category Addendum (2026-06-08)
 
