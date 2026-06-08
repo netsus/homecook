@@ -46,6 +46,8 @@ const supplementalYoutubeDictionaryMigrationPath =
   "supabase/migrations/20260528042000_29_recipio_youtube_parity_dictionary_seed.sql";
 const authorCommentAppRouteMigrationPath =
   "supabase/migrations/20260529043000_29_author_comment_app_route_dictionary_seed.sql";
+const kelpChiliPasteDictionaryMigrationPath =
+  "supabase/migrations/20260609090000_youtube_kelp_chili_paste_dictionary_seed.sql";
 const dictionaryReportPath = join(
   process.cwd(),
   "tests/fixtures/youtube-corpus/reports/dictionary-resolution-v1.json",
@@ -413,6 +415,71 @@ describe("YouTube dictionary resolution scoring", () => {
       "따뜻한 우유",
     ]));
     expect(synonymTuples).not.toEqual(expect.arrayContaining([["계란", "달걀"]]));
+  });
+
+  it("resolves ingredients from the kelp chili paste live extraction seed", async () => {
+    const migration = readFileSync(kelpChiliPasteDictionaryMigrationPath, "utf8");
+    const ingredientTuples = extractTuples(
+      extractValueBody(migration, "insert into public.ingredients"),
+    );
+    const allowedCategories = new Set<string>(INGREDIENT_CATEGORY_LABELS);
+    const seed = parseIngredientSeeds([
+      ...slice21MigrationPaths,
+      slice26MigrationPath,
+      slice27MigrationPath,
+      slice27GoalMigrationPath,
+      slice27GoalEggMigrationPath,
+      slice27GoalMultiRecipeMigrationPath,
+      supplementalYoutubeDictionaryMigrationPath,
+      authorCommentAppRouteMigrationPath,
+      kelpChiliPasteDictionaryMigrationPath,
+    ]);
+    const report = await scoreYoutubeDictionaryResolutionFixtures(
+      [
+        {
+          id: "kelp-chili-paste-live-extract-2026-06-09",
+          category: "weak",
+          source: "real-description",
+          description: "다시마 고추다대기 live extraction에서 Gemini가 복구했지만 DB 사전에서 막힌 실제 재료",
+          expected_ingredients: [
+            { name: "다시마", amount: 100, unit: "g", type: "QUANT" },
+            { name: "멸치", amount: 30, unit: "g", type: "QUANT" },
+            { name: "고추", amount: 100, unit: "g", type: "QUANT" },
+          ],
+          expected_steps: [],
+          metadata: { video_category: "recipe", has_component_structure: false, multi_recipe: false },
+        },
+      ],
+      {
+        dictionaryVersion: "kelp-chili-paste-live-extract-seed",
+        corpusVersion: "kelp-chili-paste-live-extract",
+        runId: "kelp-chili-paste-dictionary-regression",
+        timestamp: "2026-06-09T00:00:00.000Z",
+        dbClient: createDictionaryDb({
+          ingredients: seed.ingredientRows,
+          synonyms: seed.synonymRows,
+        }),
+      },
+    );
+
+    expect(migration).toContain("on conflict (standard_name) do nothing");
+    expect(migration).toContain("on conflict (ingredient_id, synonym) do nothing");
+    expect(migration).toContain("lower(trim(v.synonym))");
+    expect(migration).not.toMatch(/\bcreate\s+(table|index|policy|function|type)\b/i);
+    expect(migration).not.toMatch(/on conflict \(standard_name\) do update/i);
+    expect(ingredientTuples.every(([, category]) => allowedCategories.has(category))).toBe(true);
+    expect(ingredientTuples.map(([standardName]) => standardName)).toEqual(
+      expect.arrayContaining(["다시마", "멸치", "고추"]),
+    );
+    expect(report.aggregate.ingredient_resolution_rate).toBe(1);
+    expect(report.aggregate.unresolved_count).toBe(0);
+    expect(report.per_fixture[0].ingredients).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "다시마", standard_names: ["다시마"] }),
+        expect.objectContaining({ name: "멸치", standard_names: ["멸치"] }),
+        expect.objectContaining({ name: "고추", standard_names: ["고추"] }),
+      ]),
+    );
   });
 
   it("keeps the author-comment app-route seed DML-only and covers blocked smoke ingredients", async () => {
