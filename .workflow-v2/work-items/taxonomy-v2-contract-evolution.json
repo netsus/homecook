@@ -1,0 +1,93 @@
+{
+  "id": "taxonomy-v2-contract-evolution",
+  "title": "Taxonomy v2 contract evolution",
+  "summary": "재료 8대분류/21소분류와 조리법 6그룹/20대표 method로 확장하기 위한 공식 문서, DB/API, frontend consumer migration 계약을 잠근다. v1 category label 8종은 migration 동안 유지하고, `씻기`는 canonical method에서 제외하며 `에어프라이어`는 canonical method에 포함한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "현재 v1 taxonomy 소비 경로를 깨지 않고 재료/조리법 v2 taxonomy로 단계 전환할 수 있도록 공식 문서 갱신 범위, additive DB/API 계약, 회귀 테스트, UI 소비 경로를 한 slice로 고정한다.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "pre-27-taxonomy-consumer-alignment",
+    "28-external-ingredient-data-ingest-gate",
+    "27-youtube-import-quality-uplift"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.5.md",
+      "docs/화면정의서-v1.5.12.md",
+      "docs/유저flow맵-v1.3.12.md",
+      "docs/db설계-v1.3.11.md",
+      "docs/api문서-v1.2.15.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/taxonomy-v2-contract-evolution/README.md",
+      "docs/workpacks/taxonomy-v2-contract-evolution/acceptance.md",
+      "docs/workpacks/taxonomy-v2-contract-evolution/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/workpacks/pre-27-taxonomy-consumer-alignment/README.md",
+      "docs/workpacks/28-external-ingredient-data-ingest-gate/README.md",
+      ".omx/plans/ingredient-cooking-taxonomy-ralplan-final-20260525.md",
+      ".omx/plans/ingredient-cooking-taxonomy-expansion-20260525.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:workpack -- --slice taxonomy-v2-contract-evolution",
+      "pnpm validate:workflow-v2",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:workpack -- --slice taxonomy-v2-contract-evolution",
+      "pnpm validate:workflow-v2"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "ingredient-taxonomy-count-8-21",
+      "cooking-taxonomy-count-6-20",
+      "washing-excluded-airfryer-included",
+      "v1-label-compatibility-plan",
+      "official-doc-sync-plan"
+    ]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Stage 1 docs lock for taxonomy v2 contract-evolution. The plan intentionally keeps v1 category label compatibility and defers official docs version bump plus additive DB/API implementation to follow-up stages.",
+  "out_of_scope": [
+    "Immediate removal of v1 category labels",
+    "Breaking GET /ingredients category query",
+    "Breaking GET /cooking-methods response shape",
+    "Production direct-load of external ingredient data",
+    "Admin taxonomy management UI",
+    "Unapproved bulk production reclassification"
+  ],
+  "open_questions": []
+}

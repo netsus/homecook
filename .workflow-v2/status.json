@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-08T19:25:00+09:00",
+  "updated_at": "2026-06-09T02:14:33+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1392,6 +1392,21 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "taxonomy-v2-contract-evolution",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/taxonomy-v2-contract-evolution",
+      "pr_path": null,
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:workpack -- --slice taxonomy-v2-contract-evolution",
+        "pnpm validate:workflow-v2",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs lock for taxonomy v2 contract-evolution. Target taxonomy is ingredient 8 groups / 21 subcategories and cooking 6 groups / 20 canonical methods, with v1 8 label compatibility preserved during migration."
     },
     {
       "id": "27b-youtube-source-fallback",

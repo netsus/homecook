@@ -1,0 +1,117 @@
+{
+  "slice_id": "taxonomy-v2-contract-evolution",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "conditional-auto",
+  "contract_evolution_required": true,
+  "backend": {
+    "required_endpoints": [
+      "GET /ingredients",
+      "GET /pantry",
+      "GET /cooking-methods",
+      "POST /recipes",
+      "POST /recipes/youtube/ingredient-registration",
+      "POST /recipes/youtube/register"
+    ],
+    "invariants": [
+      "official-docs-first",
+      "ingredient-8-groups-21-subcategories",
+      "cooking-6-groups-20-methods",
+      "v1-8-category-label-compat",
+      "ingredients-category-string-retained-during-migration",
+      "api-additive-only",
+      "cooking-methods-v1-shape-compat",
+      "washing-not-canonical-method",
+      "airfryer-canonical-method",
+      "idempotent-taxonomy-migration",
+      "external-data-staging-review-gate",
+      "api-envelope-compat"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice taxonomy-v2-contract-evolution",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/ingredient-categories.test.ts",
+      "tests/cooking-method-colors.test.ts",
+      "tests/pantry-core.backend.test.ts",
+      "tests/youtube-import.backend.test.ts",
+      "tests/manual-recipe-create.backend.test.ts"
+    ],
+    "artifact_assertions": [
+      "official-doc-source-of-truth-synced",
+      "ingredient-taxonomy-count-8-21",
+      "cooking-taxonomy-count-6-20",
+      "washing-excluded-airfryer-included",
+      "v1-label-compatibility",
+      "fruit-reclassification-evidence",
+      "api-additive-only-evidence"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/",
+      "/pantry",
+      "/recipes/new/manual",
+      "/recipes/new/youtube",
+      "/recipes/[id]",
+      "/cook"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome"
+    ],
+    "artifact_assertions": [
+      "frontend-consumes-shared-taxonomy-source",
+      "v1-label-fallback-renders",
+      "washing-not-visible-as-canonical-choice",
+      "airfryer-visible-as-canonical-choice",
+      "visual-output-regression-free"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [
+        "HOME",
+        "RECIPE_DETAIL"
+      ],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "official-docs-not-synced",
+    "ingredient-count-mismatch",
+    "cooking-method-count-mismatch",
+    "washing-present-in-canonical-methods",
+    "airfryer-missing-from-canonical-methods",
+    "v1-label-query-broken",
+    "non-idempotent-taxonomy-migration"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
