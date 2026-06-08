@@ -13,6 +13,20 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 
+## Ingredient Fruit Category Addendum (2026-06-08)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.5 | 재료 카테고리 v1 canonical을 기존 7종에서 `과일` 포함 8종으로 확장 |
+| 화면정의서 v1.5.12 | HOME/PANTRY/YT_IMPORT/직접등록 재료 category 선택지에 `과일` 추가 |
+| 유저플로우 v1.3.12 | YouTube/직접등록/팬트리/HOME 흐름의 재료 category 확인 기준을 8종으로 갱신 |
+| DB v1.3.11 | `ingredients.category` 허용 설명에 `과일` 추가, 기존 과일 seed/운영 row는 `과일`로 재분류 |
+| API v1.2.15 | `GET /ingredients?category=`와 YouTube ingredient registration category 계약에 `과일` 추가 |
+
+> 이 변경은 사용자 승인 요청(2026-06-08)에 따른 category expansion follow-up이다.
+> 신규 `ingredient_categories` DB table/FK 전환은 계속 scope 밖이며, 기존 `ingredients.category` 문자열과 shared mapping source를 유지한다.
+> 기존 DB에 `딸기`, `생딸기`, `사과`, `바나나`, `레몬`, `라임`, `오렌지`, `귤`, `배`, `키위`, `복숭아`, `포도`, `블루베리`, `망고`가 있으면 `과일`로 재분류한다.
+
 ## v1.7.4 / v1.5.11 / v1.3.11 / DB v1.3.10 / API v1.2.14 → v1.7.5 / v1.5.12 / v1.3.12 / DB v1.3.11 / API v1.2.15 변경 이력 (2026-06-02)
 
 | 문서 | 변경 내용 |

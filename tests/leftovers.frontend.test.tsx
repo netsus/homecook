@@ -449,7 +449,8 @@ describe("LeftoversScreen", () => {
     render(<LeftoversScreen initialAuthenticated={true} />);
 
     const plannerAddButton = (await screen.findAllByTestId("planner-add-button"))[0];
-    expect(plannerAddButton.textContent?.trim()).toBe("플래너에 추가");
+    expect(plannerAddButton.textContent?.trim()).toBe("추가");
+    expect(plannerAddButton.getAttribute("aria-label")).toBe("플래너에 추가");
     expect(screen.getByText(LEFTOVERS_DESCRIPTION)).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "다먹음" })).toHaveLength(2);
   });
@@ -593,8 +594,8 @@ describe("AteListScreen", () => {
     expect(screen.getByRole("button", { name: "되돌리기" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "다시 만들기" })).toBeTruthy();
     expect(
-      screen.getByRole("link", { name: "김치찌개 레시피 보기" }),
-    ).toBeTruthy();
+      screen.queryByRole("link", { name: "김치찌개 레시피 보기" }),
+    ).toBeNull();
     expect(screen.getByRole("link", { name: "김치찌개" }).getAttribute("href")).toBe(
       "/recipe/recipe-1",
     );
@@ -613,9 +614,9 @@ describe("AteListScreen", () => {
 
     expect(await screen.findByText("다먹은 요리 1개")).toBeTruthy();
     expect(screen.getByText(EATEN_DESCRIPTION)).toBeTruthy();
-    expect(screen.getByText(/4\/22 다먹음/)).toBeTruthy();
-    expect(screen.getByText(/4\/18 요리/)).toBeTruthy();
-    expect(screen.getByText(/저녁 · 2인분/)).toBeTruthy();
+    expect(screen.getByText("4/18 · 저녁 · 2인분 · 4/22 다먹음")).toBeTruthy();
+    expect(screen.queryByText(/4\/18 요리/)).toBeNull();
+    expect(screen.queryByText(/^4\/22 다먹음$/)).toBeNull();
     expect(screen.getByRole("link", { name: "김치찌개" }).getAttribute("href")).toBe(
       "/recipe/recipe-1",
     );
@@ -631,6 +632,7 @@ describe("AteListScreen", () => {
 
     const restoreButton = await screen.findByTestId("uneat-button");
     expect(restoreButton.textContent?.trim()).toBe("남은 요리로");
+    expect(restoreButton.className).toContain("px-3");
     expect(restoreButton.className).toContain("border-[var(--brand)]");
     expect(restoreButton.className).toContain("bg-[var(--surface)]");
     expect(restoreButton.className).toContain("text-[var(--brand)]");

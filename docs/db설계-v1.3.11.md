@@ -58,7 +58,7 @@
 
 | # | 변경 내용 | 조치 |
 | --- | --- | --- |
-| A | slice27 전 재료 카테고리 계약 freeze | `ingredients.category`는 legacy 7종 문자열을 v1 canonical로 유지 |
+| A | 재료 카테고리 계약 유지 | `ingredients.category`는 `과일` 포함 v1 canonical 8종 문자열을 유지 |
 | B | 신규 ingredient taxonomy의 역할 명확화 | DB registry/FK 전환 없이 additive shadow metadata / shared mapping source로만 해석 |
 | C | 조리방법 category 범위 잠금 | `cooking_methods.label varchar(5)`는 표시 라벨 유지, taxonomy 코드/분류 저장소로 사용 금지 |
 | D | 외부 데이터 ingest 안전장치 | 식약처/농식품올바로 등은 production 직적재 금지, staging/review/approved seed gate 필요 |
@@ -93,7 +93,7 @@
 | A | HOME `최신순` 정렬 추가 | `recipes.created_at DESC, id DESC` 정렬 인덱스 추가 |
 | B | 남은요리 카드에서 요리 인분 표시 필요 | `leftover_dishes.cooking_servings` 추가 |
 | C | 남은요리 카드에서 최신 연결 끼니 정보를 표시 | `meals.leftover_dish_id` 기반 조회 정책과 인덱스 추가 |
-| D | 장보기 기록 다시열기에서 완료 시각 표시 | 기존 `shopping_lists.completed_at`을 `/shopping/lists` 목록 응답에도 사용 |
+| D | 장보기 기록 카드 재열람에서 완료 시각 표시 | 기존 `shopping_lists.completed_at`을 `/shopping/lists` 목록 응답에도 사용 |
 | E | 레시피북 상세에서 조회수/시간/인분/태그 표시 | 기존 `recipes.view_count/base_servings/tags`와 `recipe_steps.duration_seconds` 합산 사용 |
 
 ---
@@ -213,7 +213,7 @@ WHERE deleted_atISNULLAND emailISNOTNULL;
 | --- | --- | --- | --- |
 | id | uuid | PK |  |
 | standard_name | varchar(100) | NOT NULL, UNIQUE | 정규화된 재료명 |
-| category | varchar(50) | NOT NULL | freeze 기간 v1 canonical: 채소 / 육류 / 해산물 / 양념 / 유제품 / 곡류 / 기타 |
+| category | varchar(50) | NOT NULL | v1 canonical: 채소 / 과일 / 육류 / 해산물 / 양념 / 유제품 / 곡류 / 기타 |
 | default_unit | varchar(20) | nullable | 기본 단위 (g, ml, 개 등) |
 | created_at | timestamptz | NOT NULL |  |
 
@@ -524,7 +524,7 @@ INDEX youtube_visual_extraction_events_user_day_idx ON youtube_visual_extraction
 | 파라미터 | 타입 | 설명 |
 | --- | --- | --- |
 | p_standard_name | text | trim/collapse 후 표준 재료명 |
-| p_category | text | freeze 기간 v1 canonical 카테고리 7종 |
+| p_category | text | v1 canonical 카테고리 8종(`채소`, `과일`, `육류`, `해산물`, `양념`, `유제품`, `곡류`, `기타`) |
 | p_default_unit | text nullable | 기본 단위 |
 | p_synonym | text nullable | optional synonym |
 

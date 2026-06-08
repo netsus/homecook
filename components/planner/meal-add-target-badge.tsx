@@ -6,6 +6,17 @@ export interface MealAddTargetBadgeProps {
   /** Visual surface the badge renders on. */
   tone?: "app" | "web";
   className?: string;
+  testId?: string;
+}
+
+/** `YYYY-MM-DD` + slot -> meal-add target label used across planner entry surfaces. */
+export function formatMealAddTargetLabel(planDate: string, slotName: string) {
+  if (!planDate && !slotName) return "플래너";
+
+  const [, m, d] = planDate.split("-").map(Number);
+  const dateLabel = Number.isFinite(m) && Number.isFinite(d) ? `${m}/${d}` : "날짜 미지정";
+
+  return slotName ? `${dateLabel} ${slotName}` : dateLabel;
 }
 
 /**
@@ -17,6 +28,7 @@ export function MealAddTargetBadge({
   label,
   tone = "app",
   className,
+  testId = "meal-add-target-badge",
 }: MealAddTargetBadgeProps) {
   if (!label) return null;
 
@@ -32,7 +44,7 @@ export function MealAddTargetBadge({
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-[var(--radius-chip)] bg-[var(--brand-soft)] px-3 py-1.5 text-[13px] font-bold text-[var(--brand)] ${className ?? ""}`.trim()}
-      data-testid="meal-add-target-badge"
+      data-testid={testId}
     >
       <CalendarGlyph />
       {label}

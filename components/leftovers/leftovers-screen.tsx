@@ -867,13 +867,14 @@ function MobileLeftoverCard({
 
       <div className="mt-3 grid grid-cols-[minmax(0,1fr)_82px] gap-2">
         <button
+          aria-label={LEFTOVER_LIST_PLANNER_ADD_LABEL}
           className="flex h-9 min-w-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-2 text-center text-[11px] font-extrabold leading-none text-[var(--brand)] disabled:opacity-60"
           data-testid="planner-add-button"
           disabled={anyMutating}
           onClick={() => onPlannerAdd(item)}
           type="button"
         >
-          <span className="whitespace-nowrap">{LEFTOVER_LIST_PLANNER_ADD_LABEL}</span>
+          <span className="whitespace-nowrap">추가</span>
         </button>
         <button
           className="flex h-9 min-w-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-2 text-center text-[12px] font-extrabold leading-none text-[var(--text-2)] disabled:opacity-60"

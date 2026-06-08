@@ -29,7 +29,7 @@
 > v1.3.8 → v1.3.9 변경: Admin Foundation 내부 운영자 플로우 추가
 >
 > v1.3.7 → v1.3.8 변경: slice27 선행 taxonomy contract lock
-> - YouTube/직접등록/팬트리/HOME 흐름의 재료 카테고리는 freeze 기간 동안 legacy 7종 label을 유지
+> - YouTube/직접등록/팬트리/HOME 흐름의 재료 카테고리는 `과일` 포함 v1 canonical 8종 label을 유지
 > - 신규 ingredient taxonomy는 기존 flow를 대체하지 않고 shared mapping source / additive shadow metadata로만 해석
 > - 조리방법 category는 optional additive metadata이며, 사용자 flow는 기존 label/color_key 기반 선택/표시를 유지
 > - 외부 데이터는 production 직적재 없이 staging/review/approved seed gate를 거친 뒤에만 flow에 노출
@@ -55,7 +55,7 @@
 > v1.3.2 → v1.3.3 변경: Wave1 prototype parity contract decisions
 > - HOME `좋아요순` 노출을 `최신순`으로 교체하고 기본 `조회수순`은 유지
 > - 저장 flow는 여러 `saved/custom` 레시피북 multi-select 저장을 지원
-> - 장보기 기록 flow는 완료된 리스트를 `다시열기`로 read-only 재열람
+> - 장보기 기록 flow는 완료된 리스트를 기록 카드 탭으로 read-only 재열람
 > - 남은요리/다먹은 목록과 레시피북 상세의 카드 메타를 prototype 기준으로 확장
 > - LoginGateModal visual은 prototype, return-to-action behavior는 MVP 유지
 >
@@ -93,7 +93,7 @@
 |---|----------|----------|------|
 | 1 | HOME 정렬을 `조회수순/최신순/저장순/플래너등록순`으로 변경 | ① 탐색 | ✅ |
 | 2 | 레시피 저장 모달에서 여러 레시피북 동시 저장 허용 | ⑪ 레시피 저장/관리 | ✅ |
-| 3 | 장보기 완료 기록을 `다시열기`로 read-only 재열람 | ④ 장보기, ⑪ 저장/관리 | ✅ |
+| 3 | 장보기 완료 기록을 기록 카드 탭으로 read-only 재열람 | ④ 장보기, ⑪ 저장/관리 | ✅ |
 | 4 | 남은요리/다먹은 목록 카드 메타 확장 | ⑥ 남은요리 관리 | ✅ |
 | 5 | 레시피북 상세 카드 메타 확장 | ⑪ 레시피 저장/관리 | ✅ |
 
@@ -844,7 +844,7 @@ Step 3) 결과 검수/수정
   │ │            → GET /ingredients 검색 → 기존 표준 재료 선택 → row resolved
   │ │
   │ │         [새 재료로 등록]
-  │ │            → 표준명/legacy 7종 카테고리/동의어 확인
+  │ │            → 표준명/v1 canonical 8종 카테고리/동의어 확인
   │ │            → POST /recipes/youtube/ingredient-registration
   │ │            → 서버: 소유권 + draft_ingredient_id 검증
   │ │            → RPC register_youtube_ingredient
@@ -944,7 +944,7 @@ Meal 생성 (status='registered') → MEAL_SCREEN 복귀
 | 후보 child 등록 시 | youtube_extraction_candidates | UPDATE status='registered', recipe_id |
 | 플래너 추가 | meals | INSERT (status='registered') |
 
-> 재료 카테고리는 freeze 기간 동안 legacy 7종 label을 유지한다. 외부 데이터 raw row는 이 flow에서 production ingredient로 자동 승격되지 않으며, 별도 staging/review/approved seed gate를 거친 뒤에만 검색/매칭 대상이 된다.
+> 재료 카테고리는 `과일`을 포함한 v1 canonical 8종 label을 유지한다. 외부 데이터 raw row는 이 flow에서 production ingredient로 자동 승격되지 않으며, 별도 staging/review/approved seed gate를 거친 뒤에만 검색/매칭 대상이 된다.
 
 ---
 
@@ -1058,7 +1058,7 @@ MYPAGE → 장보기 기록 탭
   └─ 저장된 장보기 리스트 (최신순)
        │
        ├─ 완료 시각 표시
-       ├─ 완료된 리스트 [다시열기]
+       ├─ 완료된 리스트 카드 탭
        │
        ▼
      SHOPPING_DETAIL

@@ -8,6 +8,10 @@ type Wave1MobileBottomTabId = "home" | "planner" | "pantry" | "mypage";
 interface Wave1MobileBottomTabProps {
   currentTab: Wave1MobileBottomTabId;
   ariaLabel: string;
+  onTabClick?: (
+    tabId: Wave1MobileBottomTabId,
+    event: React.MouseEvent<HTMLAnchorElement>,
+  ) => void;
 }
 
 const items: Array<{
@@ -40,6 +44,7 @@ const items: Array<{
 export function Wave1MobileBottomTab({
   ariaLabel,
   currentTab,
+  onTabClick,
 }: Wave1MobileBottomTabProps) {
   return (
     <nav
@@ -64,6 +69,7 @@ export function Wave1MobileBottomTab({
               ].join(" ")}
               href={item.href}
               key={item.id}
+              onClick={(event) => onTabClick?.(item.id, event)}
             >
               {item.icon(active)}
               <span>{item.label}</span>

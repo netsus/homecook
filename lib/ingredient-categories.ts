@@ -10,12 +10,13 @@ export interface IngredientCategoryEntry {
 
 export const INGREDIENT_CATEGORIES = [
   { code: "vegetable", label: "채소", display_order: 10, is_active: true, emoji: "🥬" },
-  { code: "meat", label: "육류", display_order: 20, is_active: true, emoji: "🥩" },
-  { code: "seafood", label: "해산물", display_order: 30, is_active: true, emoji: "🐟" },
-  { code: "seasoning", label: "양념", display_order: 40, is_active: true, emoji: "🧂" },
-  { code: "dairy", label: "유제품", display_order: 50, is_active: true, emoji: "🥛" },
-  { code: "grain", label: "곡류", display_order: 60, is_active: true, emoji: "🌾" },
-  { code: "other", label: "기타", display_order: 70, is_active: true, emoji: "🥄" },
+  { code: "fruit", label: "과일", display_order: 20, is_active: true, emoji: "🍓" },
+  { code: "meat", label: "육류", display_order: 30, is_active: true, emoji: "🥩" },
+  { code: "seafood", label: "해산물", display_order: 40, is_active: true, emoji: "🐟" },
+  { code: "seasoning", label: "양념", display_order: 50, is_active: true, emoji: "🧂" },
+  { code: "dairy", label: "유제품", display_order: 60, is_active: true, emoji: "🥛" },
+  { code: "grain", label: "곡류", display_order: 70, is_active: true, emoji: "🌾" },
+  { code: "other", label: "기타", display_order: 80, is_active: true, emoji: "🥄" },
 ] as const satisfies readonly IngredientCategoryEntry[];
 
 export type IngredientCategory = (typeof INGREDIENT_CATEGORIES)[number]["label"];

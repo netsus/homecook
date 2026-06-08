@@ -492,6 +492,55 @@ describe("planner week screen", () => {
     expect(within(summary).queryByText("레시피 검색")).toBeNull();
   });
 
+  it("labels the app stat cards as weekly summary without repeating the planned-food count", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-registered",
+            recipe_id: "recipe-registered",
+            recipe_title: "된장찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+          },
+          {
+            id: "meal-shopping",
+            recipe_id: "recipe-shopping",
+            recipe_title: "카레",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-lunch",
+            planned_servings: 2,
+            status: "shopping_done",
+            is_leftover: false,
+          },
+          {
+            id: "meal-cooked",
+            recipe_id: "recipe-cooked",
+            recipe_title: "불고기",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-dinner",
+            planned_servings: 2,
+            status: "cook_done",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    render(<PlannerWeekScreen />);
+
+    expect(await screen.findByRole("heading", { name: "플래너" })).toBeTruthy();
+    expect(screen.getByText("이번 주 요약")).toBeTruthy();
+    expect(screen.queryByText(/음식 계획 중/)).toBeNull();
+  });
+
   it("opens the Wave1 meal-add sheet and opens picker options as modal sheets without leaving the planner", async () => {
     const user = userEvent.setup();
 

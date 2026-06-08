@@ -5,6 +5,7 @@ import Link from "next/link";
 import React from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import { buildShoppingHistoryCalendarMonths } from "@/components/mypage/shopping-history-calendar";
 import type { UserProfileData } from "@/lib/api/mypage";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
@@ -129,6 +130,7 @@ export function MypageMobileScreen({
     <div className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden">
       <MobileAppBar
         onBack={surface === "home" ? undefined : () => onSurfaceChange("home")}
+        titleTone={surface === "shopping" ? "default" : "brand"}
         title={title}
       />
 
@@ -190,6 +192,12 @@ export function MypageMobileScreen({
       <Wave1MobileBottomTab
         ariaLabel="마이페이지 하단 탭"
         currentTab="mypage"
+        onTabClick={(tabId, event) => {
+          if (tabId === "mypage" && surface !== "home") {
+            event.preventDefault();
+            onSurfaceChange("home");
+          }
+        }}
       />
     </div>
   );
@@ -198,9 +206,11 @@ export function MypageMobileScreen({
 function MobileAppBar({
   onBack,
   title,
+  titleTone = "brand",
 }: {
   onBack?: () => void;
   title: string;
+  titleTone?: "brand" | "default";
 }) {
   return (
     <div
@@ -222,7 +232,8 @@ function MobileAppBar({
       ) : null}
       <h1
         className={[
-          "truncate text-[18px] font-bold leading-none text-[var(--brand)]",
+          "truncate text-[18px] font-bold leading-none",
+          titleTone === "default" ? "text-[var(--foreground)]" : "text-[var(--brand)]",
           onBack ? "text-center" : "",
         ].join(" ")}
       >
@@ -434,7 +445,7 @@ function MobileStatCard({
   return (
     <div className="rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-2 py-3 text-center">
       <div
-        className="text-[28px] font-[800] leading-[1.1]"
+        className="text-[28px] font-semibold leading-[1.1]"
         style={{ color }}
       >
         {value}
@@ -1116,11 +1127,7 @@ function MobileShoppingSurface({
 
   return (
     <main className="px-4 py-4" data-testid="shopping-tab">
-      <div className="space-y-2" role="list">
-        {items.map((item) => (
-          <MobileShoppingCard item={item} key={item.id} />
-        ))}
-      </div>
+      <MobileShoppingCalendar items={items} />
       {isLoadingMore ? (
         <div className="py-4 text-center text-[13px] font-bold text-[var(--text-3)]">
           불러오는 중...
@@ -1131,12 +1138,61 @@ function MobileShoppingSurface({
   );
 }
 
-function MobileShoppingCard({ item }: { item: ShoppingListHistoryItem }) {
-  const completed = item.is_completed;
+function MobileShoppingCalendar({ items }: { items: ShoppingListHistoryItem[] }) {
+  const months = buildShoppingHistoryCalendarMonths(items);
 
   return (
+    <div className="space-y-4">
+      {months.map((month) => (
+        <section
+          className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
+          key={month.monthKey}
+        >
+          <h2 className="px-1 text-[15px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+            {month.title}
+          </h2>
+          <div
+            aria-hidden="true"
+            className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-[var(--text-3)]"
+          >
+            {["일", "월", "화", "수", "목", "금", "토"].map((weekday) => (
+              <span key={weekday}>{weekday}</span>
+            ))}
+          </div>
+          <div className="mt-1 grid grid-cols-7 gap-1">
+            {month.days.map((day) => (
+              <div
+                className={[
+                  "min-h-[58px] rounded-[var(--radius-control)] border p-1",
+                  day.dayNumber === null
+                    ? "border-transparent bg-transparent"
+                    : "border-[var(--surface-subtle)] bg-[var(--surface-fill)]",
+                ].join(" ")}
+                key={day.dateKey}
+              >
+                {day.dayNumber !== null ? (
+                  <span className="block text-[11px] font-bold leading-none text-[var(--text-2)]">
+                    {day.dayNumber}
+                  </span>
+                ) : null}
+                <div className="mt-1 space-y-1" role="list">
+                  {day.items.map((item) => (
+                    <MobileShoppingCard item={item} key={item.id} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function MobileShoppingCard({ item }: { item: ShoppingListHistoryItem }) {
+  return (
     <Link
-      className="flex min-h-[68px] items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] px-4 py-[14px]"
+      className="block rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] p-1.5 shadow-[0_1px_4px_var(--overlay-10)]"
       data-testid={`shopping-card-${item.id}`}
       href={buildReturnHref(`/shopping/lists/${item.id}`, {
         restore: "shopping-history-tab",
@@ -1145,28 +1201,33 @@ function MobileShoppingCard({ item }: { item: ShoppingListHistoryItem }) {
       })}
       role="listitem"
     >
-      <span
-        aria-hidden="true"
-        className={[
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[18px]",
-          completed
-            ? "bg-[var(--brand-soft)] text-[var(--brand)]"
-            : "bg-[var(--surface-fill)] text-[var(--text-2)]",
-        ].join(" ")}
-      >
-        {completed ? "✓" : "🛒"}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[14px] font-extrabold leading-[1.35] text-[var(--foreground)]">
+      <span className="block min-w-0">
+        <span className="block truncate text-[10px] font-extrabold leading-[1.25] text-[var(--foreground)]">
           {item.title}
-        </p>
-        <p className="mt-0.5 truncate text-[11px] font-medium leading-[1.35] text-[var(--text-3)]">
-          {item.item_count}개 재료 · {completed ? "다시열기" : "진행 중"}
+        </span>
+        <span className="mt-0.5 block truncate text-[9px] font-medium leading-[1.25] text-[var(--text-3)]">
+          {item.item_count}개
           {item.completed_at ? ` · ${formatShortDate(item.completed_at)} 완료` : ""}
-        </p>
-      </div>
-      <ChevronRightIcon />
+        </span>
+        <MobileShoppingStatusTag item={item} />
+      </span>
     </Link>
+  );
+}
+
+function MobileShoppingStatusTag({ item }: { item: ShoppingListHistoryItem }) {
+  return (
+    <span
+      className={[
+        "mt-1 inline-flex max-w-full items-center rounded-full px-1.5 py-0.5 text-[8px] font-extrabold leading-none",
+        item.is_completed
+          ? "bg-[var(--planner-status-cooked-soft)] text-[var(--planner-status-cooked)]"
+          : "bg-[var(--planner-status-shopping-soft)] text-[var(--planner-status-shopping)]",
+      ].join(" ")}
+      data-testid={`shopping-status-${item.id}`}
+    >
+      {item.is_completed ? "완료" : "진행중"}
+    </span>
   );
 }
 

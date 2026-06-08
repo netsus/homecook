@@ -9,14 +9,14 @@
 
 ### Track A: Ingredient Category Normalization
 
-- [x] `lib/ingredient-categories.ts`에 canonical 7 category entry가 `code`, `label`, `display_order`, `is_active`로 정의되어 있다 <!-- omo:id=accept-ingredient-shared-source;stage=2;scope=shared;review=3,6 -->
-- [x] `IngredientCategory` type union이 shared source에서 파생되어 hardcoded 7종 리터럴을 직접 선언하지 않는다 <!-- omo:id=accept-ingredient-type-derived;stage=2;scope=shared;review=3,6 -->
+- [x] `lib/ingredient-categories.ts`에 `과일` 포함 canonical 8 category entry가 `code`, `label`, `display_order`, `is_active`로 정의되어 있다 <!-- omo:id=accept-ingredient-shared-source;stage=2;scope=shared;review=3,6 -->
+- [x] `IngredientCategory` type union이 shared source에서 파생되어 hardcoded category 리터럴을 직접 선언하지 않는다 <!-- omo:id=accept-ingredient-type-derived;stage=2;scope=shared;review=3,6 -->
 - [x] `GET /ingredients?category=채소` 호출 시 legacy label 기반 query가 정상 동작한다 <!-- omo:id=accept-ingredients-api-category-query;stage=2;scope=backend;review=3,6 -->
 - [x] `GET /pantry?category=채소` 호출 시 category filter가 정상 동작한다 <!-- omo:id=accept-pantry-api-category-filter;stage=2;scope=backend;review=3,6 -->
 - [x] `POST /recipes/youtube/ingredient-registration` 호출 시 category validation이 shared source 기준으로 수행된다 <!-- omo:id=accept-yt-registration-category-validation;stage=2;scope=backend;review=3,6 -->
 - [x] HOME ingredient filter modal에서 category 선택 시 shared source 기준 label/순서가 표시된다 <!-- omo:id=accept-home-filter-shared-source;stage=4;scope=frontend;review=5,6 -->
 - [x] recipe ingredient add modal에서 category chip과 emoji가 shared source/helper에서 파생된다 <!-- omo:id=accept-ingredient-add-modal-shared;stage=4;scope=frontend;review=5,6 -->
-- [x] PANTRY mobile에서 Wave1 그룹명(`주식`, `단백질`)이 legacy 7-category와 mapping되어 표시된다 <!-- omo:id=accept-pantry-mobile-wave1-mapping;stage=4;scope=frontend;review=5,6 -->
+- [x] PANTRY mobile에서 Wave1 그룹명(`주식`, `단백질`)이 canonical 8-category와 mapping되어 표시된다 <!-- omo:id=accept-pantry-mobile-wave1-mapping;stage=4;scope=frontend;review=5,6 -->
 - [x] PANTRY desktop에서 category visual(emoji)이 공용 helper에서 파생된다 <!-- omo:id=accept-pantry-desktop-visual-shared;stage=4;scope=frontend;review=5,6 -->
 - [x] pantry-add-sheet에서 category 소비가 shared source 기준이다 <!-- omo:id=accept-pantry-add-sheet-shared;stage=4;scope=frontend;review=5,6 -->
 - [x] YT_IMPORT 검수 화면에서 category 선택지가 shared source에서 파생된다 <!-- omo:id=accept-yt-import-category-choices;stage=4;scope=frontend;review=5,6 -->
@@ -39,7 +39,7 @@
 - [x] 기존 상태 전이가 변경 없이 유지된다 (이 슬라이스에서 상태 전이 변경 없음) <!-- omo:id=accept-no-state-transition-change;stage=2;scope=shared;review=3,6 -->
 - [x] 기존 read-only 정책이 유지된다 <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
 - [x] 기존 API 멱등성이 유지된다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
-- [x] `ingredients.category`는 legacy 7종 문자열 값만 허용한다 <!-- omo:id=accept-category-enum-freeze;stage=2;scope=shared;review=3,6 -->
+- [x] `ingredients.category`는 `과일` 포함 v1 canonical 8종 문자열 값을 허용한다 <!-- omo:id=accept-category-enum-freeze;stage=2;scope=shared;review=3,6 -->
 - [x] `cooking_methods.label`에 taxonomy 코드/분류 의미를 싣지 않는다 <!-- omo:id=accept-label-non-overload;stage=2;scope=shared;review=3,6 -->
 
 ## Error / Data Integrity
@@ -53,10 +53,10 @@
 
 ## Data Setup / Preconditions
 
-- [x] fixture / mock에서 ingredient category가 shared source의 7종과 일치한다 <!-- omo:id=accept-fixture-category-match;stage=2;scope=shared;review=3,6 -->
+- [x] fixture / mock에서 ingredient category가 shared source의 canonical set과 일치한다 <!-- omo:id=accept-fixture-category-match;stage=2;scope=shared;review=3,6 -->
 - [x] fixture / mock에서 cooking method color_key가 shared helper의 매핑과 일치한다 <!-- omo:id=accept-fixture-cooking-color-match;stage=2;scope=shared;review=3,6 -->
 - [x] real DB smoke에 `ingredients` / `cooking_methods` / `ingredient_synonyms` 테이블이 존재한다 <!-- omo:id=accept-real-db-tables-exist;stage=2;scope=shared;review=3,6 -->
-- [x] 기존 seed 데이터의 ingredient category 값이 legacy 7종 중 하나이다 <!-- omo:id=accept-seed-category-compliance;stage=2;scope=shared;review=3,6 -->
+- [x] 기존 seed 데이터의 ingredient category 값이 `과일` 포함 v1 canonical 8종 중 하나이다 <!-- omo:id=accept-seed-category-compliance;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
@@ -76,7 +76,7 @@
 
 ### Vitest
 
-- [x] `lib/ingredient-categories.ts` shared source의 7 category 정합성 단위 테스트 <!-- omo:id=accept-vitest-ingredient-source;stage=2;scope=shared;review=3,6 -->
+- [x] `lib/ingredient-categories.ts` shared source의 canonical category 정합성 단위 테스트 <!-- omo:id=accept-vitest-ingredient-source;stage=2;scope=shared;review=3,6 -->
 - [x] `lib/cooking-method-colors.ts` shared helper의 color_key 매핑 단위 테스트 <!-- omo:id=accept-vitest-cooking-helper;stage=2;scope=shared;review=3,6 -->
 - [x] `IngredientCategory` type이 shared source에서 파생되는지 타입 테스트 <!-- omo:id=accept-vitest-type-derive;stage=2;scope=shared;review=3,6 -->
 - [x] YouTube ingredient registration의 category validation이 shared source 기준인지 테스트 <!-- omo:id=accept-vitest-yt-registration-validation;stage=2;scope=backend;review=3,6 -->

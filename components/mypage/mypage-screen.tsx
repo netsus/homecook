@@ -19,6 +19,7 @@ import {
   MypageMobileScreen,
   type MypageMobileSurface,
 } from "@/components/mypage/mypage-mobile-screen";
+import { buildShoppingHistoryCalendarMonths } from "@/components/mypage/shopping-history-calendar";
 import {
   PlannerAddSheet,
   type PlannerAddSheetState,
@@ -3603,15 +3604,10 @@ function ShoppingHistoryTabContent({
         <h2>장보기 기록</h2>
         <p>진행 중이거나 완료한 장보기 목록을 확인합니다.</p>
       </div>
-      <div aria-live="polite" className="web-mypage-shopping-list">
-        {items.map((item) => (
-          <ShoppingHistoryCard
-            item={item}
-            key={item.id}
-            onOpen={() => onOpenDetail(item)}
-          />
-        ))}
-      </div>
+      <ShoppingHistoryCalendar
+        items={items}
+        onOpenDetail={onOpenDetail}
+      />
       {isLoadingMore ? (
         <div className="flex justify-center py-4">
           <Skeleton className="h-5 w-32" />
@@ -3624,7 +3620,59 @@ function ShoppingHistoryTabContent({
   );
 }
 
-// ─── Shopping History Card ───────────────────────────────────────────────────
+// ─── Shopping History Calendar ───────────────────────────────────────────────
+
+function ShoppingHistoryCalendar({
+  items,
+  onOpenDetail,
+}: {
+  items: ShoppingListHistoryItem[];
+  onOpenDetail: (item: ShoppingListHistoryItem) => void;
+}) {
+  const months = buildShoppingHistoryCalendarMonths(items);
+
+  return (
+    <div aria-live="polite" className="web-mypage-shopping-calendar">
+      {months.map((month) => (
+        <section className="web-mypage-shopping-month" key={month.monthKey}>
+          <h3>{month.title}</h3>
+          <div
+            aria-hidden="true"
+            className="web-mypage-shopping-weekdays"
+          >
+            {["일", "월", "화", "수", "목", "금", "토"].map((weekday) => (
+              <span key={weekday}>{weekday}</span>
+            ))}
+          </div>
+          <div className="web-mypage-shopping-calendar-grid">
+            {month.days.map((day) => (
+              <div
+                className={[
+                  "web-mypage-shopping-day",
+                  day.dayNumber === null ? "web-mypage-shopping-day-empty" : "",
+                ].join(" ")}
+                key={day.dateKey}
+              >
+                {day.dayNumber !== null ? (
+                  <span className="web-mypage-shopping-day-number">
+                    {day.dayNumber}
+                  </span>
+                ) : null}
+                {day.items.map((item) => (
+                  <ShoppingHistoryCard
+                    item={item}
+                    key={item.id}
+                    onOpen={() => onOpenDetail(item)}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
 
 function ShoppingHistoryCard({
   item,
@@ -3650,20 +3698,26 @@ function ShoppingHistoryCard({
       </p>
       {item.completed_at ? (
         <p className="mt-1 text-sm text-[var(--text-3)]">
-          {formatShortDate(item.completed_at)} 완료 · 다시열기
+          {formatShortDate(item.completed_at)} 완료
         </p>
       ) : null}
-      <span
-        className={[
-          "web-mypage-shopping-status",
-          item.is_completed
-            ? "web-mypage-shopping-status-complete"
-            : "web-mypage-shopping-status-active",
-        ].join(" ")}
-      >
-        {item.is_completed ? "✓ 완료" : "진행 중"}
-      </span>
+      <ShoppingHistoryStatusTag item={item} />
     </button>
+  );
+}
+
+function ShoppingHistoryStatusTag({ item }: { item: ShoppingListHistoryItem }) {
+  return (
+    <span
+      className={[
+        "web-mypage-shopping-status",
+        item.is_completed
+          ? "web-mypage-shopping-status-complete"
+          : "web-mypage-shopping-status-active",
+      ].join(" ")}
+    >
+      {item.is_completed ? "✓ 완료" : "진행 중"}
+    </span>
   );
 }
 
@@ -3869,12 +3923,6 @@ function LeftoverTabCard({
             {isMutating ? "처리 중..." : "남은 요리로"}
           </WebButton>
         )}
-        <Link
-          className="web-button web-button-tertiary web-button-sm"
-          href={buildMypageLeftoverRecipeHref(item.recipe_id, tabKind)}
-        >
-          레시피 보기
-        </Link>
       </span>
     </WebCard>
   );

@@ -657,6 +657,8 @@ describe("MypageScreen", () => {
     expect(screen.getByText("장보기 완료")).toBeTruthy();
     expect(screen.getByText("플래너 등록")).toBeTruthy();
     expect(screen.getByText("4").className).toContain("text-[28px]");
+    expect(screen.getByText("4").className).toContain("font-semibold");
+    expect(screen.getByText("4").className).not.toContain("font-[800]");
     expect(screen.queryByText("연속")).toBeNull();
     expect(screen.queryByText("계정 관리")).toBeNull();
     expect(screen.queryByRole("button", { name: /저장한 레시피/ })).toBeNull();
@@ -954,12 +956,57 @@ describe("MypageScreen", () => {
     const user = userEvent.setup();
     await openShoppingSurface(user);
 
+    expect(await screen.findByText("2026년 4월")).toBeTruthy();
     expect(await screen.findByText("4/30 장보기")).toBeTruthy();
     expect(screen.getByText("4/23 장보기")).toBeTruthy();
     expect(screen.getByText("✓ 완료")).toBeTruthy();
-    expect(screen.getByText("5/1 완료 · 다시열기")).toBeTruthy();
+    expect(screen.getByText("5/1 완료")).toBeTruthy();
+    expect(screen.queryByText(/다시열기/)).toBeNull();
     expect(screen.getByText("진행 중")).toBeTruthy();
     expect(screen.getByText(/12개 항목/)).toBeTruthy();
+    expect(screen.getByText("30")).toBeTruthy();
+    expect(screen.getByText("23")).toBeTruthy();
+  });
+
+  it("shows mobile shopping history as a monthly calendar with colored status tags", async () => {
+    installMatchMedia(true);
+
+    render(<MypageScreen initialAuthenticated />);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /장보기 기록/ }));
+
+    const heading = await screen.findByRole("heading", { name: "장보기 기록" });
+    expect(heading.className).toContain("text-[var(--foreground)]");
+    expect(heading.className).not.toContain("text-[var(--brand)]");
+    expect(screen.getByText("2026년 4월")).toBeTruthy();
+    expect(screen.getByTestId("shopping-card-list-1").textContent).not.toContain("다시열기");
+    expect(screen.getByTestId("shopping-status-list-1").className).toContain(
+      "bg-[var(--planner-status-cooked-soft)]",
+    );
+    expect(screen.getByTestId("shopping-status-list-2").className).toContain(
+      "bg-[var(--planner-status-shopping-soft)]",
+    );
+  });
+
+  it("returns the mobile mypage internal surface to the first screen when tapping the My bottom tab", async () => {
+    installMatchMedia(true);
+
+    render(
+      <MypageScreen
+        initialAuthenticated
+        initialActiveTab="shopping"
+        initialMobileSurface="shopping"
+      />,
+    );
+
+    expect(await screen.findByRole("heading", { name: "장보기 기록" })).toBeTruthy();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("link", { name: "마이" }));
+
+    expect(await screen.findByRole("heading", { name: "마이페이지" })).toBeTruthy();
+    expect(screen.getByTestId("mobile-saved-recipes-rail")).toBeTruthy();
   });
 
   it("shows empty shopping history state with planner link", async () => {
@@ -1174,9 +1221,7 @@ describe("MypageScreen", () => {
     expect(screen.getByTestId("leftover-card-leftover-1")).toBeTruthy();
     expect(screen.getByRole("button", { name: "플래너에 추가" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "다먹음" })).toBeTruthy();
-    const leftoverRecipeLink = screen.getByRole("link", { name: "레시피 보기" });
-    expect(leftoverRecipeLink.getAttribute("href")).toContain("/recipe/recipe-leftover-1?");
-    expect(leftoverRecipeLink.getAttribute("href")).toContain("restore=leftovers-tab");
+    expect(screen.queryByRole("link", { name: "레시피 보기" })).toBeNull();
     expect(screen.queryByRole("link", { name: "남은 요리 전체 관리" })).toBeNull();
 
     await user.click(screen.getByRole("tab", { name: "다먹은 요리" }));
@@ -1188,9 +1233,7 @@ describe("MypageScreen", () => {
     ).toBe("true");
     expect(screen.getByTestId("leftover-card-eaten-1")).toBeTruthy();
     expect(screen.getByRole("button", { name: "남은 요리로" })).toBeTruthy();
-    const eatenRecipeLink = screen.getByRole("link", { name: "레시피 보기" });
-    expect(eatenRecipeLink.getAttribute("href")).toContain("/recipe/recipe-eaten-1?");
-    expect(eatenRecipeLink.getAttribute("href")).toContain("restore=eaten-list-tab");
+    expect(screen.queryByRole("link", { name: "레시피 보기" })).toBeNull();
     expect(screen.queryByRole("link", { name: "다먹은 요리 전체 관리" })).toBeNull();
   });
 

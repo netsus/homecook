@@ -19,7 +19,7 @@
 > v1.2.7 → v1.2.8: MVP 1 계약 위험 잠금. 실제 route/화면/테스트 소비자가 없는 `POST /auth/refresh`를 제거하고, 세션 갱신은 Supabase SDK / `@supabase/ssr` 세션 관리에 위임
 > v1.2.8 → v1.2.9: MVP 1 계약 위험 잠금 CR-002. 웹에서 직접 소비하지 않는 `POST /auth/login`, `PATCH /auth/profile`을 public API 계약에서 제거. 로그인은 Supabase OAuth callback, 신규/기존 사용자 bootstrap은 callback 및 `PATCH /users/me` 계열로 정리
 > v1.2.9 → v1.2.10: RC-MO-06 회원 탈퇴 정책 확정. `DELETE /users/me`는 사용자 개인 데이터를 삭제하고, 사용자가 직접 등록한 레시피는 작성자 정보 없이 보존한다. 엔드포인트 수 변경 없음
-> v1.2.10 → v1.2.11: slice27 선행 taxonomy contract lock. `GET /ingredients?category=`와 YouTube ingredient registration은 legacy 7종 category label을 유지하고, cooking method category는 optional additive metadata로만 취급한다. 엔드포인트 수 변경 없음
+> v1.2.10 → v1.2.11: slice27 선행 taxonomy contract lock. `GET /ingredients?category=`와 YouTube ingredient registration은 당시 legacy 7종 category label을 유지하고, cooking method category는 optional additive metadata로만 취급한다. 2026-06-08 follow-up에서 ingredient category label은 `과일` 포함 8종으로 확장한다. 엔드포인트 수 변경 없음
 > v1.2.11 → v1.2.12: Admin Foundation 읽기 전용 엔드포인트 3종 추가. `GET /api/v1/admin/users`, `GET /api/v1/admin/operational-events`, `GET /api/v1/admin/audit-logs`. `createServiceRoleClient()` 필수, 감사 로그 기록, PII 최소화. 엔드포인트 수 55 → 58
 > 2026-05-28 addendum: 레시피오형 quick import 중복 확인 `GET /api/v1/recipes/youtube/recipio/check` 추가. 기존 validate/extract/register 계약 재사용, DB 변경 없음. 엔드포인트 수 58 → 59
 > v1.2.12 → v1.2.13: YouTube section label persistence. `component_label` nullable field를 extract/register/detail/cook-mode ingredient/step 계약에 추가. `POST /recipes` manual body는 6-4 참조에서 분리하고 `component_label` 비허용을 명시. 엔드포인트 수 변경 없음
@@ -120,7 +120,7 @@ type YoutubeQuantityConfirmationStatus =
 
 | # | 변경 내용 | 조치 |
 | --- | --- | --- |
-| TAXONOMY-1 | 재료 category query/validation은 freeze 기간 동안 legacy 7종 label을 유지 | `GET /ingredients?category=<legacy label>`, `POST /recipes/youtube/ingredient-registration.category` 계약 명시 |
+| TAXONOMY-1 | 재료 category query/validation은 `과일` 포함 v1 canonical 8종 label을 유지 | `GET /ingredients?category=<category label>`, `POST /recipes/youtube/ingredient-registration.category` 계약 명시 |
 | TAXONOMY-2 | 신규 ingredient taxonomy는 API field replacement가 아님 | `category_code` 같은 additive field는 사용자 승인 전 미도입 |
 | TAXONOMY-3 | `GET /cooking-methods` v1 shape 유지 | category는 optional additive metadata 후보이며 현재 응답 필수 필드 아님 |
 | TAXONOMY-4 | 외부 데이터는 production API로 직수입하지 않음 | 식약처/농식품올바로 raw import API는 이번 계약 범위 밖, staging/review/approved seed gate 필요 |
@@ -440,7 +440,7 @@ GET /ingredients
 | 구분  | 필드     | 타입    | 설명                          |
 | ----- | -------- | ------- | ----------------------------- |
 | Query | q        | string? | 재료명 검색 (표준명 + 동의어) |
-| Query | category | string? | legacy 7종 카테고리 label 필터 (`채소` / `육류` / `해산물` / `양념` / `유제품` / `곡류` / `기타`) |
+| Query | category | string? | v1 canonical 8종 카테고리 label 필터 (`채소` / `과일` / `육류` / `해산물` / `양념` / `유제품` / `곡류` / `기타`) |
 
 **응답 (200)**
 
@@ -1099,14 +1099,14 @@ POST /api/v1/recipes/youtube/ingredient-registration
 
 🔒 로그인 필수 / Feature flag guard
 
-검수 단계에서 `unresolved` 또는 `needs_review` 재료가 기존 검색으로 해결되지 않을 때, 사용자가 확인한 표준명/legacy 7종 카테고리로 새 재료를 등록하거나 이미 존재하는 표준 재료를 재사용한다. 성공 시 서버는 `draft_json`을 수정하지 않고, 클라이언트가 반환값으로 현재 row를 `resolved`로 바꾼다.
+검수 단계에서 `unresolved` 또는 `needs_review` 재료가 기존 검색으로 해결되지 않을 때, 사용자가 확인한 표준명/v1 canonical 8종 카테고리로 새 재료를 등록하거나 이미 존재하는 표준 재료를 재사용한다. 성공 시 서버는 `draft_json`을 수정하지 않고, 클라이언트가 반환값으로 현재 row를 `resolved`로 바꾼다.
 
 | 구분 | 필드 | 타입 | 설명 |
 | --- | --- | --- | --- |
 | Body | extraction_id | string | 추출 세션 ID |
 | Body | draft_ingredient_id | string | extract 응답의 재료 row 안정 식별자 |
 | Body | standard_name | string | 사용자가 확인한 표준 재료명 |
-| Body | category | string | freeze 기간 v1 canonical: `채소` / `육류` / `해산물` / `양념` / `유제품` / `곡류` / `기타` |
+| Body | category | string | v1 canonical: `채소` / `과일` / `육류` / `해산물` / `양념` / `유제품` / `곡류` / `기타` |
 | Body | default_unit | string? | 기본 단위. 없으면 null |
 | Body | synonym | string? | 원문명을 동의어로 저장할 때 사용. 없으면 null |
 
@@ -1116,7 +1116,7 @@ POST /api/v1/recipes/youtube/ingredient-registration
 - session status는 `draft`여야 하며, 만료(`expires_at < now`)면 410
 - `draft_ingredient_id`는 session `draft_json.ingredients[]` 안의 `unresolved` 또는 `needs_review` row여야 함
 - `standard_name`: trim 후 1~100자, 제어문자 금지, 내부 연속 공백 collapse
-- `category`: freeze 기간 v1 canonical 카테고리 7종 중 하나
+- `category`: v1 canonical 카테고리 8종(`채소`, `과일`, `육류`, `해산물`, `양념`, `유제품`, `곡류`, `기타`) 중 하나
 - `default_unit`: null 또는 20자 이하 문자열
 - `synonym`: trim 후 저장, 영어는 lower-case
 
@@ -2271,7 +2271,7 @@ GET /shopping/lists
 }
 ```
 
-> `completed_at`은 `is_completed=true`인 항목에서 필수이며, `is_completed=false`인 항목에서는 `null`이다. 마이페이지는 이 값을 사용해 완료 기록을 `다시열기` read-only 카드로 표시할 수 있다.
+> `completed_at`은 `is_completed=true`인 항목에서 필수이며, `is_completed=false`인 항목에서는 `null`이다. 마이페이지는 이 값을 사용해 완료 기록을 read-only 카드로 표시하고 카드 탭으로 상세를 재열람할 수 있다.
 
 ---
 
