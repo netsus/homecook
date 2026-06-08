@@ -7,6 +7,7 @@ import type { UserProfileData } from "@/lib/api/mypage";
 import type { PlannerColumnData } from "@/types/planner";
 
 export type SettingsMobileSurface = "settings" | "account";
+type SettingsFeedbackTone = "success" | "danger";
 
 interface SettingsMobileScreenProps {
   columnAddError: string | null;
@@ -22,30 +23,23 @@ interface SettingsMobileScreenProps {
   deleteColumnTarget: PlannerColumnData | null;
   deleteError: string | null;
   errorMessage: string | null;
+  feedbackMessage: { message: string; tone: SettingsFeedbackTone } | null;
   logoutError: string | null;
   isAddingColumn: boolean;
   isDeleting: boolean;
   isDeletingColumn: boolean;
   isLoggingOut: boolean;
   isRenamingColumn: boolean;
-  isSavingNickname: boolean;
-  nicknameError: string | null;
-  nicknameInput: string;
-  nicknameSaveDisabled: boolean;
   plannerColumns: PlannerColumnData[];
   profile: UserProfileData | null;
   renameTarget: PlannerColumnData | null;
-  showColumnAddSheet: boolean;
   showDeleteDialog: boolean;
   showLogoutDialog: boolean;
-  showNicknameSheet: boolean;
   surface: SettingsMobileSurface;
   onAddColumn: () => void;
-  onCloseColumnAddSheet: () => void;
   onCloseDeleteColumnDialog: () => void;
   onCloseDeleteDialog: () => void;
   onCloseLogoutDialog: () => void;
-  onCloseNicknameSheet: () => void;
   onCloseRenameColumnSheet: () => void;
   onColumnsEditModeChange: (editing: boolean) => void;
   onColumnAddInputChange: (value: string) => void;
@@ -54,16 +48,13 @@ interface SettingsMobileScreenProps {
   onConfirmDeleteColumn: () => void;
   onConfirmLogout: () => void;
   onDeleteColumnTarget: (column: PlannerColumnData) => void;
-  onOpenColumnAddSheet: () => void;
+  onMoveColumn: (columnId: string, targetIndex: number) => void;
   onOpenDeleteDialog: () => void;
   onOpenLogoutDialog: () => void;
-  onOpenNicknameSheet: () => void;
   onRenameColumn: () => void;
   onRenameColumnTarget: (column: PlannerColumnData) => void;
   onRetryColumns: () => void;
-  onSaveNickname: () => void;
   onToggleWakeLock: () => void;
-  onNicknameInputChange: (value: string) => void;
 }
 
 export function SettingsMobileScreen({
@@ -80,30 +71,22 @@ export function SettingsMobileScreen({
   deleteColumnTarget,
   deleteError,
   errorMessage,
+  feedbackMessage,
   logoutError,
   isAddingColumn,
   isDeleting,
   isDeletingColumn,
   isLoggingOut,
   isRenamingColumn,
-  isSavingNickname,
-  nicknameError,
-  nicknameInput,
-  nicknameSaveDisabled,
   plannerColumns,
   profile,
   renameTarget,
-  showColumnAddSheet,
   showDeleteDialog,
   showLogoutDialog,
-  showNicknameSheet,
-  surface,
   onAddColumn,
-  onCloseColumnAddSheet,
   onCloseDeleteColumnDialog,
   onCloseDeleteDialog,
   onCloseLogoutDialog,
-  onCloseNicknameSheet,
   onCloseRenameColumnSheet,
   onColumnsEditModeChange,
   onColumnAddInputChange,
@@ -112,19 +95,19 @@ export function SettingsMobileScreen({
   onConfirmDeleteColumn,
   onConfirmLogout,
   onDeleteColumnTarget,
-  onOpenColumnAddSheet,
+  onMoveColumn,
   onOpenDeleteDialog,
   onOpenLogoutDialog,
-  onOpenNicknameSheet,
   onRenameColumn,
   onRenameColumnTarget,
   onRetryColumns,
-  onSaveNickname,
   onToggleWakeLock,
-  onNicknameInputChange,
 }: SettingsMobileScreenProps) {
-  const title = surface === "account" ? "계정 관리" : "설정";
+  const title = "환경설정";
   const appReturn = useAppReturn({ fallback: "/mypage" });
+  const readyToast = feedbackMessage ?? (
+    errorMessage ? { message: errorMessage, tone: "danger" as const } : null
+  );
 
   return (
     <div className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(24px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden">
@@ -133,56 +116,42 @@ export function SettingsMobileScreen({
         title={title}
       />
 
-      {errorMessage ? (
+      {readyToast ? (
         <div
-          className="mx-4 mt-2 rounded-[var(--radius-control)] bg-[var(--danger)] px-4 py-3 text-center text-[13px] font-extrabold text-[var(--text-inverse)]"
+          className={[
+            "pointer-events-none fixed left-1/2 top-[calc(var(--control-height-xl)+12px+env(safe-area-inset-top))] z-50 w-[calc(100vw-40px)] max-w-[360px] -translate-x-1/2 rounded-full px-4 py-3 text-center text-[13px] font-extrabold shadow-[0_12px_24px_var(--overlay-20)]",
+            readyToast.tone === "danger"
+              ? "bg-[var(--danger)] text-[var(--text-inverse)]"
+              : "bg-[var(--brand)] text-[var(--text-inverse)]",
+          ].join(" ")}
           data-testid="settings-error-toast"
           role="status"
         >
-          {errorMessage}
+          {readyToast.message}
         </div>
       ) : null}
 
-      {surface === "settings" ? (
-        <SettingsSurface
-          columnAddInput={columnAddInput}
-          columnsEditMode={columnsEditMode}
-          columnsError={columnsError}
-          columnsLoading={columnsLoading}
-          plannerColumns={plannerColumns}
-          profile={profile}
-          onAddColumn={onAddColumn}
-          onColumnAddInputChange={onColumnAddInputChange}
-          onColumnsEditModeChange={onColumnsEditModeChange}
-          onDeleteColumnTarget={onDeleteColumnTarget}
-          onOpenDeleteDialog={onOpenDeleteDialog}
-          onOpenColumnAddSheet={onOpenColumnAddSheet}
-          onOpenLogoutDialog={onOpenLogoutDialog}
-          onOpenNicknameSheet={onOpenNicknameSheet}
-          onRenameColumnTarget={onRenameColumnTarget}
-          onRetryColumns={onRetryColumns}
-          onToggleWakeLock={onToggleWakeLock}
-        />
-      ) : (
-        <AccountSurface
-          profile={profile}
-          onOpenNicknameSheet={onOpenNicknameSheet}
-          onOpenDeleteDialog={onOpenDeleteDialog}
-          onOpenLogoutDialog={onOpenLogoutDialog}
-        />
-      )}
-
-      {showNicknameSheet ? (
-        <MobileNicknameSheet
-          errorMessage={nicknameError}
-          isSaving={isSavingNickname}
-          nicknameInput={nicknameInput}
-          onClose={onCloseNicknameSheet}
-          onInputChange={onNicknameInputChange}
-          onSave={onSaveNickname}
-          saveDisabled={nicknameSaveDisabled}
-        />
-      ) : null}
+      <SettingsSurface
+        columnAddError={columnAddError}
+        columnAddInput={columnAddInput}
+        columnAddSaveDisabled={columnAddSaveDisabled}
+        columnsEditMode={columnsEditMode}
+        columnsError={columnsError}
+        columnsLoading={columnsLoading}
+        isAddingColumn={isAddingColumn}
+        plannerColumns={plannerColumns}
+        profile={profile}
+        onAddColumn={onAddColumn}
+        onColumnAddInputChange={onColumnAddInputChange}
+        onColumnsEditModeChange={onColumnsEditModeChange}
+        onDeleteColumnTarget={onDeleteColumnTarget}
+        onMoveColumn={onMoveColumn}
+        onOpenDeleteDialog={onOpenDeleteDialog}
+        onOpenLogoutDialog={onOpenLogoutDialog}
+        onRenameColumnTarget={onRenameColumnTarget}
+        onRetryColumns={onRetryColumns}
+        onToggleWakeLock={onToggleWakeLock}
+      />
 
       {showLogoutDialog ? (
         <MobileConfirmSheet
@@ -200,27 +169,13 @@ export function SettingsMobileScreen({
         <MobileConfirmSheet
           confirmLabel={isDeleting ? "삭제 중..." : "계정 삭제"}
           destructive
-          description="계정을 삭제하면 레시피북, 플래너, 장보기, 팬트리 기록은 삭제되며 되돌릴 수 없어요. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요."
+          description="계정을 삭제하면 레시피북, 플래너, 장보기, 팬트리 기록은 삭제돼요. 되돌릴 수 없어요. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요."
           disabled={isDeleting}
           errorMessage={deleteError}
           extraWarning="삭제 후 같은 소셜 계정으로 다시 로그인해도 이전 개인 기록은 복구되지 않아요."
           onCancel={onCloseDeleteDialog}
           onConfirm={onConfirmDelete}
           title="정말 계정을 삭제할까요?"
-        />
-      ) : null}
-
-      {showColumnAddSheet ? (
-        <MobileColumnNameSheet
-          errorMessage={columnAddError}
-          inputValue={columnAddInput}
-          isSaving={isAddingColumn}
-          onClose={onCloseColumnAddSheet}
-          onInputChange={onColumnAddInputChange}
-          onSave={onAddColumn}
-          saveDisabled={columnAddSaveDisabled}
-          testIdPrefix="add-column"
-          title="끼니 컬럼 추가"
         />
       ) : null}
 
@@ -240,14 +195,14 @@ export function SettingsMobileScreen({
 
       {deleteColumnTarget ? (
         <MobileConfirmSheet
-          confirmLabel={isDeletingColumn ? "삭제 중..." : "삭제하기"}
+          confirmLabel={isDeletingColumn ? "삭제 중..." : "끼니 삭제"}
           destructive
-          description={`"${deleteColumnTarget.name}" 컬럼을 삭제할까요?`}
+          description={`"${deleteColumnTarget.name}" 끼니를 삭제할까요? 식사가 있으면 삭제되지 않아요.`}
           disabled={isDeletingColumn}
           errorMessage={deleteColumnError}
           onCancel={onCloseDeleteColumnDialog}
           onConfirm={onConfirmDeleteColumn}
-          title="끼니 컬럼 삭제"
+          title="끼니 삭제"
         />
       ) : null}
     </div>
@@ -282,59 +237,79 @@ function MobileAppBar({
 }
 
 function SettingsSurface({
+  columnAddError,
   columnAddInput,
+  columnAddSaveDisabled,
   columnsEditMode,
   columnsError,
   columnsLoading,
+  isAddingColumn,
   plannerColumns,
   profile,
   onAddColumn,
   onColumnAddInputChange,
   onColumnsEditModeChange,
   onDeleteColumnTarget,
+  onMoveColumn,
   onOpenDeleteDialog,
-  onOpenColumnAddSheet,
   onOpenLogoutDialog,
-  onOpenNicknameSheet,
   onRenameColumnTarget,
   onRetryColumns,
   onToggleWakeLock,
 }: {
+  columnAddError: string | null;
   columnAddInput: string;
+  columnAddSaveDisabled: boolean;
   columnsEditMode: boolean;
   columnsError: string | null;
   columnsLoading: boolean;
+  isAddingColumn: boolean;
   plannerColumns: PlannerColumnData[];
   profile: UserProfileData | null;
   onAddColumn: () => void;
   onColumnAddInputChange: (value: string) => void;
   onColumnsEditModeChange: (editing: boolean) => void;
   onDeleteColumnTarget: (column: PlannerColumnData) => void;
+  onMoveColumn: (columnId: string, targetIndex: number) => void;
   onOpenDeleteDialog: () => void;
-  onOpenColumnAddSheet: () => void;
   onOpenLogoutDialog: () => void;
-  onOpenNicknameSheet: () => void;
   onRenameColumnTarget: (column: PlannerColumnData) => void;
   onRetryColumns: () => void;
   onToggleWakeLock: () => void;
 }) {
+  const [draggingColumnId, setDraggingColumnId] = React.useState<string | null>(null);
+
+  const handleDropColumn = React.useCallback((targetColumnId: string) => {
+    if (!draggingColumnId || draggingColumnId === targetColumnId) {
+      setDraggingColumnId(null);
+      return;
+    }
+
+    const targetIndex = plannerColumns.findIndex((column) => column.id === targetColumnId);
+    setDraggingColumnId(null);
+
+    if (targetIndex >= 0) {
+      onMoveColumn(draggingColumnId, targetIndex);
+    }
+  }, [draggingColumnId, onMoveColumn, plannerColumns]);
+
   return (
-    <main className="pb-[calc(28px+env(safe-area-inset-bottom))]">
+    <main className="space-y-3 px-4 pb-[calc(28px+env(safe-area-inset-bottom))] pt-4">
       <section
-        className="border-b border-[var(--surface-subtle)] bg-[var(--surface)] px-4 pb-4 pt-5"
+        className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4"
         data-testid="column-management-section"
       >
         <div className="mb-2 flex items-center justify-between gap-3">
-          <h2 className="text-[16px] font-extrabold text-[var(--foreground)]">
+          <h2 className="text-[18px] font-extrabold text-[var(--foreground)]">
             끼니 관리
           </h2>
           {!columnsLoading && !columnsError ? (
             <button
-              className="h-8 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[12px] font-bold text-[var(--text-2)]"
+              className="web-settings-delete-button h-8 rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--feedback-danger-soft)] px-3 text-[12px] font-extrabold text-[var(--danger)]"
               onClick={() => onColumnsEditModeChange(!columnsEditMode)}
               type="button"
             >
-              {columnsEditMode ? "완료" : "편집"}
+              {columnsEditMode ? "완료" : "끼니 삭제"}
             </button>
           ) : null}
         </div>
@@ -369,81 +344,137 @@ function SettingsSurface({
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-2" data-testid="column-list">
-              {plannerColumns.map((column) => (
+            <div className="grid grid-cols-1 gap-2" data-testid="column-list">
+              {plannerColumns.map((column, index) => (
                 <div
-                  className={
-                    columnsEditMode
-                      ? "settings-column-chip grid grid-cols-[minmax(0,1fr)_36px] gap-2"
-                      : "settings-column-chip grid grid-cols-1"
-                  }
+                  className={[
+                    "settings-column-row grid grid-cols-[32px_minmax(0,1fr)_auto] items-start gap-2 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] p-2",
+                    draggingColumnId === column.id ? "opacity-60" : "",
+                  ].join(" ")}
                   data-testid={`column-item-${column.id}`}
+                  draggable
                   key={column.id}
+                  onDragEnd={() => setDraggingColumnId(null)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDragStart={(event) => {
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("text/plain", column.id);
+                    setDraggingColumnId(column.id);
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    handleDropColumn(column.id);
+                  }}
                 >
                   <button
-                    className="h-10 truncate rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 text-left text-[14px] font-extrabold text-[var(--foreground)]"
-                    data-testid={`rename-column-${column.id}`}
-                    onClick={() => onRenameColumnTarget(column)}
+                    aria-label={`${column.name} 순서 드래그`}
+                    className="flex h-10 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[var(--text-3)]"
+                    data-testid={`column-drag-${column.id}`}
                     type="button"
                   >
-                    {column.name}
+                    <MobileDragHandleIcon />
                   </button>
-                  {columnsEditMode ? (
+                  <div
+                    className="flex min-h-10 min-w-0 items-center rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface)] px-3"
+                    data-testid={`column-name-${column.id}`}
+                  >
+                    <strong className="min-w-0 truncate text-[14px] font-extrabold text-[var(--foreground)]">
+                      {column.name}
+                    </strong>
+                  </div>
+                  <div className="flex shrink-0 items-start gap-1">
+                    <div className="grid gap-1">
+                      <button
+                        aria-label={`${column.name} 위로 이동`}
+                        className="web-settings-reorder-button flex h-[18px] w-7 items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] p-0 text-[var(--text-3)] disabled:opacity-35"
+                        disabled={index === 0}
+                        onClick={() => onMoveColumn(column.id, index - 1)}
+                        type="button"
+                      >
+                        <MobileReorderArrowIcon direction="up" />
+                      </button>
+                      <button
+                        aria-label={`${column.name} 아래로 이동`}
+                        className="web-settings-reorder-button flex h-[18px] w-7 items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] p-0 text-[var(--text-3)] disabled:opacity-35"
+                        disabled={index === plannerColumns.length - 1}
+                        onClick={() => onMoveColumn(column.id, index + 1)}
+                        type="button"
+                      >
+                        <MobileReorderArrowIcon direction="down" />
+                      </button>
+                    </div>
                     <button
-                      aria-label={`${column.name} 삭제`}
-                      className="flex h-10 items-center justify-center rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--surface)] text-[16px] font-bold text-[var(--danger)] disabled:border-[var(--line-strong)] disabled:text-[var(--text-4)]"
-                      data-testid={`delete-column-${column.id}`}
-                      disabled={plannerColumns.length <= 1}
-                      onClick={() => onDeleteColumnTarget(column)}
+                      aria-label={`${column.name} 이름 변경`}
+                      className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[var(--brand)]"
+                      data-testid={`rename-column-${column.id}`}
+                      onClick={() => onRenameColumnTarget(column)}
                       type="button"
                     >
-                      ×
+                      <MobilePencilIcon />
                     </button>
-                  ) : null}
+                    {columnsEditMode ? (
+                      <button
+                        aria-label={`${column.name} 끼니 삭제`}
+                        className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--surface)] text-[var(--danger)] disabled:border-[var(--line-strong)] disabled:text-[var(--text-4)]"
+                        data-testid={`delete-column-${column.id}`}
+                        disabled={plannerColumns.length <= 1}
+                        onClick={() => onDeleteColumnTarget(column)}
+                        type="button"
+                      >
+                        <MobileTrashIcon />
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-3 grid grid-cols-1 gap-2 min-[390px]:grid-cols-[minmax(0,1fr)_132px]">
-              <input
-                aria-label="새 끼니 이름"
-                className="h-10 min-w-0 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 text-[14px] font-bold text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)] focus:ring-2 focus:ring-[var(--brand)]"
-                maxLength={30}
-                onChange={(event) => onColumnAddInputChange(event.target.value)}
-                placeholder="새 끼니 이름"
-                type="text"
-                value={columnAddInput}
-              />
-              <button
-                className="h-10 whitespace-nowrap rounded-[var(--radius-control)] bg-[var(--brand)] px-3 text-[12px] font-extrabold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)]"
-                data-testid="add-column-button"
-                disabled={plannerColumns.length >= 5}
-                onClick={() => {
-                  if (columnAddInput.trim()) {
-                    onAddColumn();
-                    return;
-                  }
-                  onOpenColumnAddSheet();
+            {plannerColumns.length < 5 ? (
+              <form
+                className="mt-3 grid grid-cols-1 gap-2 min-[390px]:grid-cols-[minmax(0,1fr)_104px]"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  onAddColumn();
                 }}
-                type="button"
               >
-                {plannerColumns.length >= 5 ? "최대 5개" : "+ 끼니 컬럼 추가"}
-              </button>
-            </div>
+                <input
+                  aria-label="새 끼니 이름"
+                  className="h-10 min-w-0 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 text-[14px] font-bold text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)] focus:ring-2 focus:ring-[var(--brand)]"
+                  data-testid="add-column-input"
+                  maxLength={30}
+                  onChange={(event) => onColumnAddInputChange(event.target.value)}
+                  placeholder="새 끼니 이름"
+                  type="text"
+                  value={columnAddInput}
+                />
+                <button
+                  className="h-10 whitespace-nowrap rounded-[var(--radius-control)] bg-[var(--brand)] px-3 text-[12px] font-extrabold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)]"
+                  data-testid="add-column-button"
+                  disabled={columnAddSaveDisabled}
+                  type="submit"
+                >
+                  {isAddingColumn ? "추가 중..." : "끼니 추가"}
+                </button>
+              </form>
+            ) : null}
+            {columnAddError ? (
+              <p className="mt-2 text-[12px] font-bold text-[var(--danger)]" data-testid="add-column-error">
+                {columnAddError}
+              </p>
+            ) : null}
 
             <p className="mt-2 text-[12px] font-medium text-[var(--text-3)]">
-              최소 1개, 최대 5개의 끼니를 사용할 수 있어요. 식사가 있는 끼니는 삭제할 수 없어요. 현재{" "}
-              {plannerColumns.length}/5개
+              끼니는 최대 5개까지 사용할 수 있어요. 드래그해서 바꾼 순서는 플래너에 그대로 표시돼요.
             </p>
           </>
         )}
       </section>
 
-      <section className="border-b border-[var(--surface-subtle)] bg-[var(--surface)] px-4 pb-2 pt-5">
-        <h2 className="mb-2.5 text-[16px] font-extrabold text-[var(--foreground)]">
+      <section className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
+        <h2 className="mb-2.5 text-[18px] font-extrabold text-[var(--foreground)]">
           요리 모드
         </h2>
-        <div className="divide-y divide-[var(--surface-subtle)]">
+        <div>
           <SettingToggleRow
             checked={profile?.settings.screen_wake_lock ?? false}
             description="요리 중 레시피를 보는 동안 화면이 꺼지지 않아요."
@@ -453,8 +484,8 @@ function SettingsSurface({
         </div>
       </section>
 
-      <section className="border-b border-[var(--surface-subtle)] bg-[var(--surface)] px-4 pb-4 pt-5">
-        <h2 className="mb-2 text-[16px] font-extrabold text-[var(--foreground)]">
+      <section className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
+        <h2 className="mb-2 text-[18px] font-extrabold text-[var(--foreground)]">
           계정
         </h2>
         <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]">
@@ -472,35 +503,31 @@ function SettingsSurface({
             </span>
           </div>
           <button
-            className="flex min-h-[54px] w-full items-center justify-between border-b border-[var(--surface-subtle)] px-4 text-left text-[15px] font-bold text-[var(--foreground)]"
-            data-testid="nickname-row"
-            onClick={onOpenNicknameSheet}
-            type="button"
-          >
-            닉네임 변경
-            <span className="text-[18px] text-[var(--text-4)]">›</span>
-          </button>
-          <button
             className="flex min-h-[54px] w-full items-center justify-between px-4 text-left text-[15px] font-bold text-[var(--foreground)]"
             onClick={onOpenLogoutDialog}
             type="button"
           >
-            로그아웃
+            <span className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-fill)] text-[var(--text-3)]">
+                <MobileLogoutIcon />
+              </span>
+              로그아웃
+            </span>
             <span className="text-[18px] text-[var(--text-4)]">›</span>
           </button>
         </div>
       </section>
 
-      <section className="bg-[var(--surface)] px-4 pb-4 pt-5">
-        <h2 className="mb-2 text-[16px] font-extrabold text-[var(--foreground)]">
+      <section className="rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--feedback-danger-soft)] p-4">
+        <h2 className="mb-2 text-[18px] font-extrabold text-[var(--foreground)]">
           위험 영역
         </h2>
-        <div className="rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--feedback-danger-soft)] p-4">
-          <strong className="block text-[15px] font-extrabold text-[var(--foreground)]">
+        <div>
+          <strong className="block text-[15px] font-extrabold text-[var(--danger)]">
             계정 삭제
           </strong>
           <p className="mt-1 text-[12px] font-medium leading-[1.45] text-[var(--text-3)]">
-            레시피북, 플래너, 장보기, 팬트리 기록이 영구적으로 삭제됩니다.
+            레시피북, 플래너, 장보기, 팬트리 기록이 영구적으로 삭제돼요.
           </p>
           <button
             className="mt-3 h-10 rounded-[var(--radius-control)] bg-[var(--danger)] px-4 text-[13px] font-extrabold text-[var(--text-inverse)]"
@@ -570,144 +597,82 @@ function formatProviderLabel(provider?: UserProfileData["social_provider"]) {
   return "소셜 로그인";
 }
 
-function AccountSurface({
-  profile,
-  onOpenNicknameSheet,
-  onOpenDeleteDialog,
-  onOpenLogoutDialog,
-}: {
-  profile: UserProfileData | null;
-  onOpenNicknameSheet: () => void;
-  onOpenDeleteDialog: () => void;
-  onOpenLogoutDialog: () => void;
-}) {
-  const fields = [
-    ["닉네임", profile?.nickname ?? "집밥러버"],
-    ["이메일", profile?.email ?? "이메일 없음"],
-    ["로그인 방식", formatProviderLabel(profile?.social_provider)],
-  ];
-
+function MobilePencilIcon() {
   return (
-    <main className="px-4 py-4">
-      <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]">
-        {fields.map(([label, value], index) => (
-          <div
-            className={[
-              "flex min-h-[var(--control-height-lg)] w-full items-center px-4 text-left",
-              index < fields.length - 1 ? "border-b border-[var(--surface-subtle)]" : "",
-            ].join(" ")}
-            key={label}
-          >
-            <span
-              className="shrink-0 text-[13px] font-bold text-[var(--text-3)]"
-              style={{ width: "clamp(92px, 26vw, 100px)" }}
-            >
-              {label}
-            </span>
-            <span
-              className="min-w-0 flex-1 truncate font-semibold text-[var(--foreground)]"
-              style={{ fontSize: "clamp(13px, 3.6vw, 14px)" }}
-            >
-              {value}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-3 space-y-3">
-        <button
-          className="h-[var(--control-height-lg)] w-full rounded-[var(--radius-control)] bg-[var(--brand)] text-[15px] font-bold text-[var(--text-inverse)]"
-          data-testid="nickname-row"
-          onClick={onOpenNicknameSheet}
-          type="button"
-        >
-          닉네임 변경
-        </button>
-        <button
-          className="h-[var(--control-height-lg)] w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[15px] font-bold text-[var(--foreground)]"
-          onClick={onOpenLogoutDialog}
-          type="button"
-        >
-          로그아웃
-        </button>
-        <button
-          className="h-[var(--control-height-lg)] w-full rounded-[var(--radius-control)] bg-transparent text-[14px] font-bold text-[var(--danger)]"
-          onClick={onOpenDeleteDialog}
-          type="button"
-        >
-          회원탈퇴
-        </button>
-      </div>
-    </main>
+    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+      <path
+        d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
   );
 }
 
-function MobileNicknameSheet({
-  errorMessage,
-  isSaving,
-  nicknameInput,
-  onClose,
-  onInputChange,
-  onSave,
-  saveDisabled,
-}: {
-  errorMessage: string | null;
-  isSaving: boolean;
-  nicknameInput: string;
-  onClose: () => void;
-  onInputChange: (value: string) => void;
-  onSave: () => void;
-  saveDisabled: boolean;
-}) {
+function MobileDragHandleIcon() {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)]"
-      data-testid="nickname-sheet-backdrop"
-      onClick={onClose}
+    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+      <path
+        d="M8 7h.01M8 12h.01M8 17h.01M16 7h.01M16 12h.01M16 17h.01"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="3"
+      />
+    </svg>
+  );
+}
+
+function MobileReorderArrowIcon({ direction }: { direction: "up" | "down" }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className="web-settings-reorder-icon h-3 w-3"
+      fill="none"
+      viewBox="0 0 12 12"
     >
-      <div
-        aria-modal="true"
-        className="w-full rounded-t-[var(--radius-sheet)] bg-[var(--surface)] px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-4"
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-      >
-        <h2 className="text-[18px] font-extrabold text-[var(--foreground)]">
-          닉네임 변경
-        </h2>
-        <input
-          className="mt-4 h-[38px] w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[14px] font-medium text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--brand)]"
-          maxLength={12}
-          onChange={(event) => onInputChange(event.target.value)}
-          type="text"
-          value={nicknameInput}
-        />
-        <p className="mt-2 text-[12px] font-medium text-[var(--text-3)]">
-          {nicknameInput.length}/12자
-        </p>
-        {errorMessage ? (
-          <p className="mt-2 text-[12px] font-bold text-[var(--danger)]" data-testid="nickname-error">
-            {errorMessage}
-          </p>
-        ) : null}
-        <div className="mt-4 grid grid-cols-[78px_minmax(0,1fr)] gap-2">
-          <button
-            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[16px] font-extrabold text-[var(--foreground)]"
-            onClick={onClose}
-            type="button"
-          >
-            취소
-          </button>
-          <button
-            className="h-[var(--control-height-lg)] rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-extrabold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)]"
-            disabled={saveDisabled}
-            onClick={onSave}
-            type="button"
-          >
-            {isSaving ? "저장 중..." : "저장"}
-          </button>
-        </div>
-      </div>
-    </div>
+      <path
+        d={direction === "up" ? "M6 3.25 3.25 6h5.5L6 3.25Z" : "M6 8.75 3.25 6h5.5L6 8.75Z"}
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function MobileLogoutIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+      <path
+        d="M10 17 15 12l-5-5M15 12H3M21 4v16"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.9"
+      />
+    </svg>
+  );
+}
+
+function MobileTrashIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+      <path
+        d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.9"
+      />
+    </svg>
   );
 }
 

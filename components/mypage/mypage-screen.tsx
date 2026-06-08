@@ -121,6 +121,56 @@ function buildMypageSavedRecipeHref(recipeId: string) {
   });
 }
 
+interface PlannerColumnReorderResult {
+  nextColumns: PlannerColumnData[];
+  nextIndex: number;
+  previousColumns: PlannerColumnData[];
+}
+
+function reorderPlannerColumns(
+  columns: PlannerColumnData[],
+  columnId: string,
+  targetIndex: number,
+): PlannerColumnReorderResult | null {
+  const previousColumns = [...columns].sort((a, b) => a.sort_order - b.sort_order);
+  const currentIndex = previousColumns.findIndex((column) => column.id === columnId);
+
+  if (currentIndex < 0 || previousColumns.length <= 1) {
+    return null;
+  }
+
+  const nextIndex = Math.max(0, Math.min(targetIndex, previousColumns.length - 1));
+
+  if (nextIndex === currentIndex) {
+    return null;
+  }
+
+  const movedColumns = [...previousColumns];
+  const [movedColumn] = movedColumns.splice(currentIndex, 1);
+
+  if (!movedColumn) {
+    return null;
+  }
+
+  movedColumns.splice(nextIndex, 0, movedColumn);
+
+  return {
+    nextColumns: movedColumns.map((column, index) => ({
+      ...column,
+      sort_order: index,
+    })),
+    nextIndex,
+    previousColumns,
+  };
+}
+
+function formatProviderLabel(provider?: UserProfileData["social_provider"]) {
+  if (provider === "kakao") return "카카오 로그인";
+  if (provider === "naver") return "네이버 로그인";
+  if (provider === "google") return "Google 로그인";
+  return "소셜 로그인";
+}
+
 function buildMypageRecipeBookDetailHref(book: RecipeBookSummary) {
   const params = new URLSearchParams({
     type: book.book_type,
@@ -518,7 +568,7 @@ export function MypageScreen({
       setMealColumnsError(
         isPlannerApiError(error)
           ? error.message
-          : "끼니 컬럼을 불러오지 못했어요",
+          : "끼니를 불러오지 못했어요",
       );
     } finally {
       setMealColumnsLoading(false);
@@ -710,7 +760,7 @@ export function MypageScreen({
       router.replace("/");
     } catch (error) {
       setAccountDeleteError(
-        isMypageApiError(error) ? error.message : "회원탈퇴에 실패했어요",
+        isMypageApiError(error) ? error.message : "계정 삭제에 실패했어요",
       );
       setIsDeletingAccount(false);
     }
@@ -790,7 +840,7 @@ export function MypageScreen({
           .map((column, index) => ({ ...column, sort_order: index })),
       );
       setDeleteMealColumnTarget(null);
-      showToast("끼니를 삭제했어요", "success");
+      showToast("끼니를 삭제했어요", "error");
     } catch (error) {
       setDeleteMealColumnError(
         isPlannerApiError(error)
@@ -801,6 +851,29 @@ export function MypageScreen({
       setIsDeletingMealColumn(false);
     }
   }, [deleteMealColumnTarget, showToast]);
+
+  const handleMoveMealColumn = useCallback(async (columnId: string, targetIndex: number) => {
+    const reorderResult = reorderPlannerColumns(mealColumns, columnId, targetIndex);
+
+    if (!reorderResult) return;
+
+    const { nextColumns, nextIndex, previousColumns } = reorderResult;
+
+    setMealColumns(nextColumns);
+
+    try {
+      await updatePlannerColumn(columnId, { sort_order: nextIndex });
+      showToast("끼니 순서를 저장했어요", "success");
+    } catch (error) {
+      setMealColumns(previousColumns);
+      showToast(
+        isPlannerApiError(error)
+          ? error.message
+          : "끼니 순서를 저장하지 못했어요",
+        "error",
+      );
+    }
+  }, [mealColumns, showToast]);
 
   const handleCreateBook = useCallback(async () => {
     const trimmed = createName.trim();
@@ -1460,9 +1533,9 @@ export function MypageScreen({
 
         {toast ? (
           <div
-            className={`fixed inset-x-4 bottom-24 z-50 mx-auto max-w-md rounded-[var(--radius-card)] px-4 py-3 text-center text-sm font-bold shadow-lg ${
+            className={`pointer-events-none fixed left-1/2 top-[calc(var(--control-height-xl)+12px+env(safe-area-inset-top))] z-50 w-[calc(100vw-40px)] max-w-[360px] -translate-x-1/2 rounded-full px-4 py-3 text-center text-[13px] font-extrabold shadow-[0_12px_24px_var(--overlay-20)] ${
               toast.tone === "success"
-                ? "bg-[var(--brand-contrast)] text-[var(--text-inverse)]"
+                ? "bg-[var(--brand)] text-[var(--text-inverse)]"
                 : "bg-[var(--danger)] text-[var(--text-inverse)]"
             }`}
             role="status"
@@ -1662,6 +1735,9 @@ export function MypageScreen({
                 setMealColumnRenameInput(value);
                 setMealColumnRenameError(null);
               }}
+              onMoveMealColumn={(columnId, targetIndex) =>
+                void handleMoveMealColumn(columnId, targetIndex)
+              }
               onRenameMealColumn={() => void handleRenameMealColumn()}
               onRequestDeleteMealColumn={(column) => {
                 setDeleteMealColumnError(null);
@@ -1836,6 +1912,34 @@ function WebProfilePill({ profile }: { profile: UserProfileData | null }) {
   );
 }
 
+function MyPageSettingsAccountAvatar({ profile }: { profile: UserProfileData | null }) {
+  const fallbackInitial = profile?.nickname?.slice(0, 1).toUpperCase() ?? "?";
+
+  if (profile?.profile_image_url) {
+    return (
+      <Image
+        alt=""
+        className="web-settings-account-avatar"
+        data-testid="settings-account-profile-image"
+        height={36}
+        src={profile.profile_image_url}
+        unoptimized
+        width={36}
+      />
+    );
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className="web-settings-account-avatar web-settings-account-avatar-fallback"
+      data-testid="settings-account-profile-fallback"
+    >
+      {fallbackInitial}
+    </span>
+  );
+}
+
 function SavedRecipesSurface({
   savedRecipes,
   savedRecipeCount,
@@ -1981,6 +2085,7 @@ function MyPagePreferencesSurface({
   onConfirmLogout,
   onMealColumnAddInputChange,
   onMealColumnRenameInputChange,
+  onMoveMealColumn,
   onRenameMealColumn,
   onRequestDeleteMealColumn,
   onRetryMealColumns,
@@ -2024,6 +2129,7 @@ function MyPagePreferencesSurface({
   onConfirmLogout: () => void;
   onMealColumnAddInputChange: (value: string) => void;
   onMealColumnRenameInputChange: (value: string) => void;
+  onMoveMealColumn: (columnId: string, targetIndex: number) => void;
   onRenameMealColumn: () => void;
   onRequestDeleteMealColumn: (column: PlannerColumnData) => void;
   onRetryMealColumns: () => void;
@@ -2033,182 +2139,275 @@ function MyPagePreferencesSurface({
   onToggleMealColumnsEditMode: () => void;
   onToggleWakeLock: () => void;
 }) {
+  const renamingMealColumn =
+    mealColumns.find((column) => column.id === renamingMealColumnId) ?? null;
+  const [draggingMealColumnId, setDraggingMealColumnId] = useState<string | null>(null);
+
+  const handleDropMealColumn = useCallback((targetColumnId: string) => {
+    if (!draggingMealColumnId || draggingMealColumnId === targetColumnId) {
+      setDraggingMealColumnId(null);
+      return;
+    }
+
+    const targetIndex = mealColumns.findIndex((column) => column.id === targetColumnId);
+    setDraggingMealColumnId(null);
+
+    if (targetIndex >= 0) {
+      onMoveMealColumn(draggingMealColumnId, targetIndex);
+    }
+  }, [draggingMealColumnId, mealColumns, onMoveMealColumn]);
+
   return (
     <div className="web-mypage-subsurface" data-testid="mypage-preferences-tab">
       <div className="web-mypage-section-head">
         <h2>환경설정</h2>
-        <p>요리 중 화면 켜둠, 끼니 편집, 로그인 상태를 관리합니다.</p>
+        <p>끼니 관리, 요리모드 화면 켜둠, 계정 상태를 관리해요.</p>
       </div>
 
-      <WebCard className="web-mypage-toggle-card">
-        <PreferenceSwitchRow
-          checked={profile?.settings.screen_wake_lock ?? false}
-          description="요리모드에서 레시피를 보는 동안 화면이 꺼지지 않게 유지합니다."
-          disabled={isUpdatingWakeLock}
-          onToggle={onToggleWakeLock}
-          title="요리모드 화면 켜둠"
-        />
-      </WebCard>
-
-      <div className="web-mypage-section-head web-mypage-preferences-head">
-        <h2>끼니 편집</h2>
-        <p>
-          최소 1개, 최대 5개의 끼니를 사용할 수 있어요. 식사가 있는 끼니는 삭제할 수 없어요.
-        </p>
-      </div>
-      <WebCard className="web-settings-column-card">
-        {mealColumnsLoading ? (
-          <div className="web-settings-column-list" data-testid="columns-loading">
-            {[0, 1, 2].map((index) => (
-              <div className="web-settings-column-row" key={index}>
-                <WebSkeleton height={18} width={120} />
-              </div>
-            ))}
+      <section
+        className="web-settings-bordered-section"
+        data-testid="mypage-meal-column-section"
+      >
+        <div className="web-mypage-section-head web-mypage-preferences-head">
+          <h2>끼니 관리</h2>
+          <div className="web-settings-column-description-row">
+            <p>
+              끼니는 최대 5개까지 사용할 수 있어요. 드래그해서 바꾼 순서는 플래너에 그대로 표시돼요.
+            </p>
+            {!mealColumnsLoading && !mealColumnsError ? (
+              <WebButton
+                className="web-settings-delete-button"
+                onClick={onToggleMealColumnsEditMode}
+                variant="tertiary"
+              >
+                {mealColumnsEditMode ? "완료" : "끼니 삭제"}
+              </WebButton>
+            ) : null}
           </div>
-        ) : mealColumnsError ? (
-          <div className="web-mypage-saved-state" data-testid="columns-error">
-            <div>
-              <h3>끼니 컬럼을 불러오지 못했어요</h3>
-              <p>{mealColumnsError}</p>
+        </div>
+        <WebCard className="web-settings-column-card">
+          {mealColumnsLoading ? (
+            <div className="web-settings-column-list" data-testid="columns-loading">
+              {[0, 1, 2].map((index) => (
+                <div className="web-settings-column-row" key={index}>
+                  <WebSkeleton height={18} width={120} />
+                </div>
+              ))}
             </div>
-            <WebButton onClick={onRetryMealColumns} size="sm" variant="secondary">
-              다시 시도
-            </WebButton>
-          </div>
-        ) : (
-          <div className="web-settings-column-list" data-testid="column-list">
-            {mealColumns.map((column) => {
-              const isRenaming = renamingMealColumnId === column.id;
-
-              return (
+          ) : mealColumnsError ? (
+            <div className="web-mypage-saved-state" data-testid="columns-error">
+              <div>
+                <h3>끼니를 불러오지 못했어요</h3>
+                <p>{mealColumnsError}</p>
+              </div>
+              <WebButton onClick={onRetryMealColumns} size="sm" variant="secondary">
+                다시 시도
+              </WebButton>
+            </div>
+          ) : (
+            <>
+            <div className="web-settings-column-list" data-testid="column-list">
+              {mealColumns.map((column, index) => (
                 <div
-                  className="web-settings-column-row"
+                  className={[
+                    "web-settings-column-row",
+                    draggingMealColumnId === column.id
+                      ? "web-settings-column-row-dragging"
+                      : "",
+                  ].join(" ")}
                   data-testid={`column-item-${column.id}`}
+                  draggable
                   key={column.id}
+                  onDragEnd={() => setDraggingMealColumnId(null)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDragStart={(event) => {
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("text/plain", column.id);
+                    setDraggingMealColumnId(column.id);
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    handleDropMealColumn(column.id);
+                  }}
                 >
-                  {isRenaming ? (
-                    <>
-                      <input
-                        aria-label={`${column.name} 새 이름`}
-                        className="web-mypage-column-input web-mypage-column-input-prominent"
-                        maxLength={30}
-                        onChange={(event) =>
-                          onMealColumnRenameInputChange(event.target.value)
-                        }
-                        value={mealColumnRenameInput}
-                      />
-                      <WebButton
-                        disabled={mealColumnRenameDisabled}
-                        onClick={onRenameMealColumn}
-                        size="sm"
-                        variant="primary"
-                      >
-                        {isRenamingMealColumn ? "저장 중..." : "저장"}
-                      </WebButton>
-                      <WebButton
-                        onClick={onCancelRenameMealColumn}
-                        size="sm"
-                        variant="ghost"
-                      >
-                        취소
-                      </WebButton>
-                    </>
-                  ) : (
-                    <>
-                      <strong>{column.name}</strong>
+                  <button
+                    aria-label={`${column.name} 순서 드래그`}
+                    className="web-settings-drag-handle"
+                    data-testid={`column-drag-${column.id}`}
+                    type="button"
+                  >
+                    <DragHandleIcon />
+                  </button>
+                  <div className="web-settings-column-field" data-testid={`column-name-${column.id}`}>
+                    <strong className="web-settings-column-name" title={column.name}>
+                      {column.name}
+                    </strong>
+                  </div>
+                  <span className="web-settings-column-buttons">
+                    <span className="web-settings-reorder-buttons">
                       <button
-                        aria-label={`${column.name} 이름 변경`}
-                        className="web-settings-icon-button"
-                        data-testid={`rename-column-${column.id}`}
-                        onClick={() => onStartRenameMealColumn(column)}
+                        aria-label={`${column.name} 위로 이동`}
+                        className="web-settings-reorder-button"
+                        disabled={index === 0}
+                        onClick={() => onMoveMealColumn(column.id, index - 1)}
                         type="button"
                       >
-                        <PencilIcon />
+                        <MypageReorderArrowIcon direction="up" />
                       </button>
-                      {mealColumnsEditMode ? (
-                        <button
-                          aria-label={`${column.name} 삭제`}
-                          className="web-settings-icon-button web-settings-icon-danger"
-                          data-testid={`delete-column-${column.id}`}
-                          disabled={mealColumns.length <= 1}
-                          onClick={() => onRequestDeleteMealColumn(column)}
-                          type="button"
-                        >
-                          <TrashIcon />
-                        </button>
-                      ) : null}
-                    </>
-                  )}
+                      <button
+                        aria-label={`${column.name} 아래로 이동`}
+                        className="web-settings-reorder-button"
+                        disabled={index === mealColumns.length - 1}
+                        onClick={() => onMoveMealColumn(column.id, index + 1)}
+                        type="button"
+                      >
+                        <MypageReorderArrowIcon direction="down" />
+                      </button>
+                    </span>
+                    <button
+                      aria-label={`${column.name} 이름 변경`}
+                      className="web-settings-icon-button"
+                      data-testid={`rename-column-${column.id}`}
+                      onClick={() => onStartRenameMealColumn(column)}
+                      type="button"
+                    >
+                      <PencilIcon />
+                    </button>
+                    {mealColumnsEditMode ? (
+                      <button
+                        aria-label={`${column.name} 끼니 삭제`}
+                        className="web-settings-icon-button web-settings-icon-danger"
+                        data-testid={`delete-column-${column.id}`}
+                        disabled={mealColumns.length <= 1}
+                        onClick={() => onRequestDeleteMealColumn(column)}
+                        type="button"
+                      >
+                        <TrashIcon />
+                      </button>
+                    ) : null}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </WebCard>
+              ))}
+            </div>
+            {mealColumns.length < 5 ? (
+              <form
+                className="web-mypage-column-actions"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  onAddMealColumn();
+                }}
+              >
+                <input
+                  aria-label="새 끼니 이름"
+                  className="web-mypage-column-input web-mypage-column-input-prominent"
+                  maxLength={30}
+                  onChange={(event) => onMealColumnAddInputChange(event.target.value)}
+                  placeholder="새 끼니 이름"
+                  value={mealColumnAddInput}
+                />
+                <WebButton
+                  data-testid="add-column-button"
+                  disabled={mealColumnAddDisabled}
+                  type="submit"
+                  variant="secondary"
+                >
+                  {isAddingMealColumn ? "추가 중..." : "끼니 추가"}
+                </WebButton>
+              </form>
+            ) : null}
+            </>
+          )}
+        </WebCard>
 
-      {mealColumnRenameError ? (
-        <p className="web-form-error" data-testid="rename-column-error">
-          {mealColumnRenameError}
-        </p>
-      ) : null}
+        {mealColumnAddError ? (
+          <p className="web-form-error" data-testid="add-column-error">
+            {mealColumnAddError}
+          </p>
+        ) : null}
+      </section>
 
-      <div className="web-mypage-column-actions">
-        <input
-          aria-label="새 끼니 이름"
-          className="web-mypage-column-input web-mypage-column-input-prominent"
-          maxLength={30}
-          onChange={(event) => onMealColumnAddInputChange(event.target.value)}
-          placeholder="새 끼니 이름"
-          value={mealColumnAddInput}
+      {renamingMealColumn ? (
+        <MealColumnRenameDialog
+          column={renamingMealColumn}
+          errorMessage={mealColumnRenameError}
+          inputValue={mealColumnRenameInput}
+          isSaving={isRenamingMealColumn}
+          onCancel={onCancelRenameMealColumn}
+          onInputChange={onMealColumnRenameInputChange}
+          onSave={onRenameMealColumn}
+          saveDisabled={mealColumnRenameDisabled}
         />
-        <WebButton
-          data-testid="add-column-button"
-          disabled={mealColumnAddDisabled}
-          onClick={onAddMealColumn}
-          variant="secondary"
-        >
-          {isAddingMealColumn ? "추가 중..." : "끼니 추가"}
-        </WebButton>
-        <WebButton onClick={onToggleMealColumnsEditMode} variant="ghost">
-          {mealColumnsEditMode ? "완료" : "삭제 편집"}
-        </WebButton>
-      </div>
-      {mealColumnAddError ? (
-        <p className="web-form-error" data-testid="add-column-error">
-          {mealColumnAddError}
-        </p>
       ) : null}
 
-      <div className="web-mypage-section-head web-mypage-preferences-head">
-        <h2>계정</h2>
-        <p>로그인 상태를 정리하거나 서비스를 탈퇴할 수 있어요.</p>
-      </div>
-      <WebCard className="web-mypage-account-card">
-        <button
-          className="web-mypage-settings-row"
-          onClick={onShowLogoutDialog}
-          type="button"
-        >
-          <span className="web-mypage-row-icon"><LogoutIcon /></span>
-          <span className="web-mypage-row-copy">
-            <strong>로그아웃</strong>
-            <span>현재 로그인한 계정에서 나갑니다.</span>
-          </span>
-          <ChevronRightIcon />
-        </button>
-        <button
-          className="web-mypage-settings-row"
-          onClick={onShowAccountDeleteDialog}
-          type="button"
-        >
-          <span className="web-mypage-row-icon"><TrashIcon /></span>
-          <span className="web-mypage-row-copy">
-            <strong>회원탈퇴</strong>
-            <span>개인 기록이 삭제되며 되돌릴 수 없어요.</span>
-          </span>
-          <ChevronRightIcon />
-        </button>
-      </WebCard>
+      <section
+        className="web-settings-bordered-section"
+        data-testid="mypage-cook-mode-section"
+      >
+        <div className="web-mypage-section-head web-mypage-preferences-head">
+          <h2>요리 모드</h2>
+        </div>
+        <WebCard className="web-mypage-toggle-card">
+          <PreferenceSwitchRow
+            checked={profile?.settings.screen_wake_lock ?? false}
+            description="요리 중 레시피를 보는 동안 화면이 꺼지지 않아요."
+            disabled={isUpdatingWakeLock}
+            onToggle={onToggleWakeLock}
+            title="요리모드 화면 켜둠"
+          />
+        </WebCard>
+      </section>
+
+      <section
+        className="web-settings-bordered-section"
+        data-testid="mypage-account-section"
+      >
+        <div className="web-mypage-section-head web-mypage-preferences-head">
+          <h2>계정</h2>
+          <p>로그인 상태를 정리해요.</p>
+        </div>
+        <WebCard className="web-mypage-account-card">
+          <div className="web-mypage-settings-row">
+            <MyPageSettingsAccountAvatar profile={profile} />
+            <span className="web-mypage-row-copy">
+              <strong>{profile?.nickname ?? ""}</strong>
+              <span>{formatProviderLabel(profile?.social_provider)}</span>
+            </span>
+          </div>
+          <button
+            className="web-mypage-settings-row"
+            onClick={onShowLogoutDialog}
+            type="button"
+          >
+              <span className="web-mypage-row-icon"><LogoutIcon /></span>
+              <span className="web-mypage-row-copy">
+                <strong>로그아웃</strong>
+                <span>현재 로그인한 계정에서 나가요.</span>
+              </span>
+            <ChevronRightIcon />
+          </button>
+        </WebCard>
+      </section>
+
+      <section
+        className="web-settings-bordered-section"
+        data-testid="mypage-danger-section"
+      >
+        <div className="web-mypage-section-head web-mypage-preferences-head">
+          <h2>위험 영역</h2>
+        </div>
+        <WebCard className="web-settings-danger-card">
+          <div>
+            <strong>계정 삭제</strong>
+            <span>레시피북, 플래너, 장보기, 팬트리 기록이 영구적으로 삭제돼요.</span>
+          </div>
+          <WebButton
+            className="web-settings-danger-button"
+            onClick={onShowAccountDeleteDialog}
+          >
+            계정 삭제하기
+          </WebButton>
+        </WebCard>
+      </section>
 
       {showLogoutDialog ? (
         <MyPageConfirmDialog
@@ -2222,19 +2421,19 @@ function MyPagePreferencesSurface({
 
       {showAccountDeleteDialog ? (
         <MyPageConfirmDialog
-          confirmLabel={isDeletingAccount ? "탈퇴 중..." : "회원탈퇴"}
+          confirmLabel={isDeletingAccount ? "삭제 중..." : "계정 삭제"}
           destructive
-          description="레시피북, 플래너, 장보기, 팬트리 기록이 삭제됩니다. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요."
+          description="계정을 삭제하면 레시피북, 플래너, 장보기, 팬트리 기록은 삭제돼요. 되돌릴 수 없어요. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요."
           errorMessage={accountDeleteError}
           onCancel={onCloseAccountDeleteDialog}
           onConfirm={onConfirmAccountDelete}
-          title="정말 탈퇴하시겠어요?"
+          title="정말 계정을 삭제할까요?"
         />
       ) : null}
 
       {deleteMealColumnTarget ? (
         <MyPageConfirmDialog
-          confirmLabel={isDeletingMealColumn ? "삭제 중..." : "삭제하기"}
+          confirmLabel={isDeletingMealColumn ? "삭제 중..." : "끼니 삭제"}
           destructive
           description={`"${deleteMealColumnTarget.name}" 끼니를 삭제할까요? 식사가 있으면 삭제되지 않아요.`}
           errorMessage={deleteMealColumnError}
@@ -2244,6 +2443,66 @@ function MyPagePreferencesSurface({
         />
       ) : null}
     </div>
+  );
+}
+
+function MealColumnRenameDialog({
+  column,
+  errorMessage,
+  inputValue,
+  isSaving,
+  onCancel,
+  onInputChange,
+  onSave,
+  saveDisabled,
+}: {
+  column: PlannerColumnData;
+  errorMessage: string | null;
+  inputValue: string;
+  isSaving: boolean;
+  onCancel: () => void;
+  onInputChange: (value: string) => void;
+  onSave: () => void;
+  saveDisabled: boolean;
+}) {
+  return (
+    <WebModal onBackdropClick={onCancel}>
+      <WebDialog aria-labelledby="meal-column-rename-title" size="narrow">
+        <WebDialogHeader>
+          <WebDialogTitle id="meal-column-rename-title">
+            끼니 이름 변경
+          </WebDialogTitle>
+        </WebDialogHeader>
+        <WebDialogBody>
+          <label className="web-form-label" htmlFor="meal-column-rename-input">
+            끼니 이름
+          </label>
+          <input
+            aria-label={`${column.name} 새 이름`}
+            autoFocus
+            className="web-mypage-column-input web-mypage-column-input-prominent"
+            id="meal-column-rename-input"
+            maxLength={30}
+            onChange={(event) => onInputChange(event.target.value)}
+            value={inputValue}
+          />
+          <p className="web-form-help">1~30자로 입력해 주세요.</p>
+          {errorMessage ? (
+            <p className="web-form-error" data-testid="rename-column-error">
+              {errorMessage}
+            </p>
+          ) : null}
+        </WebDialogBody>
+        <WebDialogFooter>
+          <WebButton onClick={onCancel} variant="ghost">
+            취소
+          </WebButton>
+          <WebButton disabled={saveDisabled} onClick={onSave}>
+            {isSaving ? "저장 중..." : "저장"}
+          </WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
   );
 }
 
@@ -3774,6 +4033,30 @@ function LogoutIcon() {
   return (
     <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
       <path d="M10 17 15 12l-5-5M15 12H3M21 4v16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
+function DragHandleIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+      <path d="M8 7h.01M8 12h.01M8 17h.01M16 7h.01M16 12h.01M16 17h.01" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
+    </svg>
+  );
+}
+
+function MypageReorderArrowIcon({ direction }: { direction: "up" | "down" }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className="web-settings-reorder-icon"
+      fill="none"
+      viewBox="0 0 12 12"
+    >
+      <path
+        d={direction === "up" ? "M6 3.25 3.25 6h5.5L6 3.25Z" : "M6 8.75 3.25 6h5.5L6 8.75Z"}
+        fill="currentColor"
+      />
     </svg>
   );
 }

@@ -58,6 +58,7 @@ async function installColumnRoutes(
     createError?: { code: string; message: string; status: number };
     renameError?: { code: string; message: string; status: number };
     deleteError?: { code: string; message: string; status: number };
+    patchBodies?: unknown[];
   },
 ) {
   const columns = options?.columns ?? makeDefaultColumns();
@@ -104,16 +105,33 @@ async function installColumnRoutes(
     const columnId = url.split("/planner/columns/")[1]?.split("?")[0];
 
     if (route.request().method() === "PATCH") {
+      const body = route.request().postDataJSON() as {
+        name?: string;
+        sort_order?: number;
+      };
+      options?.patchBodies?.push(body);
+
       if (options?.renameError) {
         await route.fulfill({
           status: options.renameError.status,
           json: { success: false, data: null, error: { code: options.renameError.code, message: options.renameError.message, fields: [] } },
         });
       } else {
-        const body = route.request().postDataJSON() as { name: string };
         const col = columns.find((c) => c.id === columnId);
         if (col) {
-          col.name = body.name.trim();
+          if (typeof body.name === "string") {
+            col.name = body.name.trim();
+          }
+          if (typeof body.sort_order === "number") {
+            const ordered = [...columns].sort((a, b) => a.sort_order - b.sort_order);
+            const fromIndex = ordered.findIndex((c) => c.id === columnId);
+            const toIndex = Math.max(0, Math.min(body.sort_order, ordered.length - 1));
+            const [moved] = ordered.splice(fromIndex, 1);
+            if (moved) {
+              ordered.splice(toIndex, 0, moved);
+              ordered.forEach((c, i) => { c.sort_order = i; });
+            }
+          }
           await route.fulfill({
             json: { success: true, data: { column: { ...col } }, error: null },
           });
@@ -256,9 +274,7 @@ async function installSettingsRoutes(
 }
 
 function accountDeleteTrigger(page: Page) {
-  return isMobileViewport(page)
-    ? page.getByText(/회원탈퇴|계정 삭제하기/)
-    : page.getByRole("button", { name: "계정 삭제하기" });
+  return page.getByRole("button", { name: "계정 삭제하기" });
 }
 
 async function openAccountDeleteDialog(page: Page) {
@@ -282,7 +298,7 @@ test.describe("SETTINGS screen", () => {
     await installColumnRoutes(page);
     await page.goto("/settings");
 
-    await expect(page.getByRole("heading", { name: "설정" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "환경설정" })).toBeVisible();
     if (isMobileViewport(page)) {
       await expect(page.getByLabel("뒤로가기")).toBeVisible();
       await expect(page.getByText("요리모드 화면 켜둠")).toBeVisible();
@@ -291,8 +307,10 @@ test.describe("SETTINGS screen", () => {
       await expect(page.getByText("타이머 끝나면 다음 단계 자동")).toHaveCount(0);
     } else {
       await expect(page.getByRole("link", { name: /마이페이지/ }).first()).toBeVisible();
-      await expect(page.getByText("요리모드 화면 꺼짐 방지")).toBeVisible();
-      await expect(page.getByTestId("nickname-row")).toBeVisible();
+      await expect(
+        page.getByRole("switch", { name: "요리모드 화면 켜둠" }),
+      ).toBeVisible();
+      await expect(page.getByTestId("nickname-row")).toHaveCount(0);
       await expect(page.getByText("집밥러")).toBeVisible();
       await expect(page.getByText("로그아웃")).toBeVisible();
       await expect(page.getByRole("button", { name: "계정 삭제하기" })).toBeVisible();
@@ -319,7 +337,7 @@ test.describe("SETTINGS screen", () => {
     await page.goto("/settings");
 
     const toggle = page.getByRole("switch", {
-      name: isMobileViewport(page) ? "요리모드 화면 켜둠" : "요리모드 화면 꺼짐 방지",
+      name: "요리모드 화면 켜둠",
     });
     await expect(toggle).toBeVisible();
     await expect(toggle).toHaveAttribute("aria-checked", "false");
@@ -335,7 +353,7 @@ test.describe("SETTINGS screen", () => {
     await page.goto("/settings");
 
     const toggle = page.getByRole("switch", {
-      name: isMobileViewport(page) ? "요리모드 화면 켜둠" : "요리모드 화면 꺼짐 방지",
+      name: "요리모드 화면 켜둠",
     });
     await expect(toggle).toHaveAttribute("aria-checked", "false");
 
@@ -345,26 +363,16 @@ test.describe("SETTINGS screen", () => {
     await expect(toggle).toHaveAttribute("aria-checked", "false");
   });
 
-  test("opens nickname edit sheet and saves", async ({ page }) => {
+  test("does not expose nickname editing on settings routes", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page);
     await installColumnRoutes(page);
     await page.goto(isMobileViewport(page) ? "/settings?view=account" : "/settings");
 
     await expect(page.getByText("집밥러")).toBeVisible();
-    await page.getByTestId("nickname-row").click();
-
-    await expect(
-      page.getByRole("dialog").getByRole("heading", { name: "닉네임 변경" }),
-    ).toBeVisible();
-
-    const input = page.getByRole("textbox");
-    await input.fill("새집밥러");
-    await page.getByRole("button", {
-      name: isMobileViewport(page) ? "저장" : "변경하기",
-    }).click();
-
-    await expect(page.getByText("새집밥러")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "환경설정" })).toBeVisible();
+    await expect(page.getByTestId("nickname-row")).toHaveCount(0);
+    await expect(page.getByText("닉네임 변경")).toHaveCount(0);
   });
 
   test("logout confirm triggers API and navigates home", async ({ page }) => {
@@ -514,14 +522,16 @@ test.describe("SETTINGS screen", () => {
     if (isMobileViewport(page)) {
       await page.getByRole("link", { name: /환경설정/ }).click();
       await page.waitForURL("**/settings**");
-      await expect(page.getByRole("heading", { name: "설정" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "환경설정" })).toBeVisible();
       return;
     }
 
     await page.getByRole("tab", { name: "환경설정" }).click();
     await expect(page.getByTestId("mypage-preferences-tab")).toBeVisible();
-    await expect(page.getByText("요리모드 화면 켜둠")).toBeVisible();
-    await expect(page.getByText("회원탈퇴")).toBeVisible();
+    await expect(
+      page.getByRole("switch", { name: "요리모드 화면 켜둠" }),
+    ).toBeVisible();
+    await expect(page.getByText("계정 삭제하기")).toBeVisible();
   });
 });
 
@@ -533,7 +543,7 @@ test.describe("SETTINGS planner column management", () => {
     await page.goto("/settings");
 
     await expect(page.getByTestId("column-management-section")).toBeVisible();
-    await expect(page.getByText("끼니 관리")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "끼니 관리" })).toBeVisible();
 
     const list = page.getByTestId("column-list");
     await expect(list).toBeVisible();
@@ -549,16 +559,26 @@ test.describe("SETTINGS planner column management", () => {
     await page.goto("/settings");
 
     await expect(page.getByTestId("column-list")).toBeVisible();
-    await page.getByTestId("add-column-button").click();
-
-    await expect(page.getByRole("heading", { name: "끼니 컬럼 추가" })).toBeVisible();
-
+    if (!isMobileViewport(page)) {
+      await expect.poll(async () =>
+        page.getByTestId("add-column-input").evaluate((element) =>
+          element.closest(".web-settings-column-card") !== null,
+        ),
+      ).toBe(true);
+    }
     const input = page.getByTestId("add-column-input");
     await input.fill("간식");
-    await page.getByTestId("add-column-save").click();
+    await page.getByTestId("add-column-button").click();
 
-    await expect(page.getByTestId("add-column-sheet-backdrop")).not.toBeVisible();
     await expect(page.getByTestId("column-list").getByText("간식")).toBeVisible();
+    const addToast = page.getByTestId("settings-error-toast");
+    await expect(addToast).toContainText("끼니를 추가했어요.");
+    const addToastClass = await addToast.getAttribute("class");
+    if (isMobileViewport(page)) {
+      expect(addToastClass).toContain("top-");
+      expect(addToastClass).not.toContain("bottom-");
+      expect(addToastClass).toContain("pointer-events-none");
+    }
   });
 
   test("renames a column", async ({ page }) => {
@@ -588,15 +608,36 @@ test.describe("SETTINGS planner column management", () => {
     await page.goto("/settings");
 
     await expect(page.getByTestId("column-list")).toBeVisible();
-    await page.getByRole("button", { name: "편집" }).click();
+    await page.getByRole("button", { name: "끼니 삭제" }).click();
     await page.getByTestId("delete-column-col-3").click();
 
-    await expect(page.getByText("끼니 컬럼 삭제")).toBeVisible();
-    await expect(page.getByText('"저녁" 컬럼을 삭제할까요?')).toBeVisible();
-    await page.getByRole("alertdialog").getByRole("button", { name: "삭제하기" }).click();
+    await expect(
+      page.getByRole("alertdialog").getByRole("heading", { name: "끼니 삭제" }),
+    ).toBeVisible();
+    await expect(page.getByText('"저녁" 끼니를 삭제할까요?')).toBeVisible();
+    await page.getByRole("alertdialog").getByRole("button", { name: "끼니 삭제" }).click();
 
-    await expect(page.getByText("끼니 컬럼 삭제")).not.toBeVisible();
+    await expect(page.getByRole("alertdialog")).not.toBeVisible();
     await expect(page.getByTestId("column-list").getByText("저녁")).not.toBeVisible();
+    const deleteToast = page.getByTestId("settings-error-toast");
+    await expect(deleteToast).toContainText("끼니를 삭제했어요.");
+    const deleteToastClass = await deleteToast.getAttribute("class");
+    expect(deleteToastClass).toMatch(/web-settings-toast-danger|bg-\[var\(--danger\)\]/);
+  });
+
+  test("moves a column order and saves the new sort order", async ({ page }) => {
+    const patchBodies: unknown[] = [];
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page);
+    await installColumnRoutes(page, { patchBodies });
+    await page.goto("/settings");
+
+    await expect(page.getByTestId("column-list")).toBeVisible();
+    await page.getByRole("button", { name: "저녁 위로 이동" }).click();
+
+    const rows = page.getByTestId("column-list").getByTestId(/^column-item-/);
+    await expect(rows.nth(1)).toContainText("저녁");
+    expect(patchBodies).toContainEqual({ sort_order: 1 });
   });
 
   test("shows add limit message when 5 columns exist", async ({ page }) => {
@@ -614,9 +655,14 @@ test.describe("SETTINGS planner column management", () => {
     await page.goto("/settings");
 
     await expect(page.getByTestId("column-list")).toBeVisible();
-    const addButton = page.getByTestId("add-column-button");
-    await expect(addButton).toBeDisabled();
-    await expect(page.getByText(/최소 1개, 최대 5개/)).toBeVisible();
+    await expect(page.getByTestId("add-column-input")).not.toBeVisible();
+    await expect(page.getByTestId("add-column-button")).not.toBeVisible();
+    await expect(
+      page.getByText(
+        "끼니는 최대 5개까지 사용할 수 있어요. 드래그해서 바꾼 순서는 플래너에 그대로 표시돼요.",
+      ),
+    ).toBeVisible();
+    await expect(page.getByText("끼니는 최대 5개까지 사용할 수 있어요.", { exact: true })).toHaveCount(0);
   });
 
   test("disables delete button when only 1 column exists", async ({ page }) => {
@@ -628,7 +674,7 @@ test.describe("SETTINGS planner column management", () => {
     await page.goto("/settings");
 
     await expect(page.getByTestId("column-list")).toBeVisible();
-    await page.getByRole("button", { name: "편집" }).click();
+    await page.getByRole("button", { name: "끼니 삭제" }).click();
     await expect(page.getByTestId("delete-column-col-1")).toBeDisabled();
   });
 
@@ -641,13 +687,11 @@ test.describe("SETTINGS planner column management", () => {
     await page.goto("/settings");
 
     await expect(page.getByTestId("column-list")).toBeVisible();
-    await page.getByTestId("add-column-button").click();
-
     const input = page.getByTestId("add-column-input");
     await input.fill("야식");
-    await page.getByTestId("add-column-save").click();
+    await page.getByTestId("add-column-button").click();
 
-    await expect(page.getByTestId("add-column-sheet-error")).toContainText("최대 5개");
+    await expect(page.getByTestId("add-column-error")).toContainText("최대 5개");
   });
 
   test("shows error when column add returns COLUMN_NAME_DUPLICATE", async ({ page }) => {
@@ -659,13 +703,11 @@ test.describe("SETTINGS planner column management", () => {
     await page.goto("/settings");
 
     await expect(page.getByTestId("column-list")).toBeVisible();
-    await page.getByTestId("add-column-button").click();
-
     const input = page.getByTestId("add-column-input");
     await input.fill("아침");
-    await page.getByTestId("add-column-save").click();
+    await page.getByTestId("add-column-button").click();
 
-    await expect(page.getByTestId("add-column-sheet-error")).toContainText("이미 있는 끼니 이름");
+    await expect(page.getByTestId("add-column-error")).toContainText("이미 있는 끼니 이름");
   });
 
   test("shows error when column delete returns COLUMN_HAS_MEALS", async ({ page }) => {
@@ -677,11 +719,13 @@ test.describe("SETTINGS planner column management", () => {
     await page.goto("/settings");
 
     await expect(page.getByTestId("column-list")).toBeVisible();
-    await page.getByRole("button", { name: "편집" }).click();
+    await page.getByRole("button", { name: "끼니 삭제" }).click();
     await page.getByTestId("delete-column-col-3").click();
 
-    await expect(page.getByText("끼니 컬럼 삭제")).toBeVisible();
-    await page.getByRole("alertdialog").getByRole("button", { name: "삭제하기" }).click();
+    await expect(
+      page.getByRole("alertdialog").getByRole("heading", { name: "끼니 삭제" }),
+    ).toBeVisible();
+    await page.getByRole("alertdialog").getByRole("button", { name: "끼니 삭제" }).click();
 
     await expect(page.getByTestId("dialog-error")).toContainText("식사가 등록된 컬럼은 삭제할 수 없어요");
   });

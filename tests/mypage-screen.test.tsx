@@ -594,19 +594,47 @@ describe("MypageScreen", () => {
 
     expect(screen.getByTestId("mypage-preferences-tab")).toBeTruthy();
     expect(screen.getByText("요리모드 화면 켜둠")).toBeTruthy();
-    expect(screen.getByText("끼니 편집")).toBeTruthy();
+    expect(screen.getByText("끼니 관리")).toBeTruthy();
     expect(screen.getByText("로그아웃")).toBeTruthy();
-    expect(screen.getByText("회원탈퇴")).toBeTruthy();
+    expect(screen.getByText("계정 삭제하기")).toBeTruthy();
+    expect(screen.queryByText("회원탈퇴")).toBeNull();
     expect(screen.queryByText("푸시 알림")).toBeNull();
     expect(screen.queryByText("계량 단위")).toBeNull();
     expect(screen.queryByText("앱 테마")).toBeNull();
-    expect(screen.getByText(/최소 1개, 최대 5개/)).toBeTruthy();
-    expect(screen.getByText(/식사가 있는 끼니는 삭제할 수 없어요/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        "끼니는 최대 5개까지 사용할 수 있어요. 드래그해서 바꾼 순서는 플래너에 그대로 표시돼요.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/최소 1개/)).toBeNull();
+    expect(screen.queryByText(/식사가 있는 끼니는 삭제할 수 없어요/)).toBeNull();
+    expect(screen.getByRole("button", { name: "끼니 삭제" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "끼니 삭제" }).className).toContain(
+      "web-settings-delete-button",
+    );
+    expect(screen.queryByRole("button", { name: "편집" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "끼니 삭제" }).closest(".web-settings-column-description-row"),
+    ).toBeTruthy();
+    expect(screen.getByTestId("settings-account-profile-image")).toBeTruthy();
+    expect(screen.getByTestId("mypage-meal-column-section").className).toContain(
+      "web-settings-bordered-section",
+    );
+    expect(screen.getByTestId("mypage-cook-mode-section").className).toContain(
+      "web-settings-bordered-section",
+    );
+    expect(screen.getByTestId("mypage-account-section").className).toContain(
+      "web-settings-bordered-section",
+    );
+    expect(screen.getByTestId("mypage-danger-section").className).toContain(
+      "web-settings-bordered-section",
+    );
 
     const addInput = screen.getByLabelText("새 끼니 이름");
     expect(addInput.className).toContain("web-mypage-column-input-prominent");
 
     await user.click(screen.getByTestId("rename-column-column-breakfast"));
+    expect(screen.getByRole("dialog", { name: "끼니 이름 변경" })).toBeTruthy();
     const renameInput = screen.getByLabelText("아침 새 이름");
     expect(renameInput.className).toContain("web-mypage-column-input-prominent");
   });

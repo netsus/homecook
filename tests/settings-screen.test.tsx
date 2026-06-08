@@ -13,6 +13,7 @@ const mockUpdateSettings = vi.fn();
 const mockUpdateNickname = vi.fn();
 const mockDeleteAccount = vi.fn();
 const mockLogout = vi.fn();
+const mockUpdatePlannerColumn = vi.fn();
 
 vi.mock("@/lib/api/mypage", () => ({
   fetchUserProfile: (...args: unknown[]) => mockFetchUserProfile(...args),
@@ -41,6 +42,23 @@ vi.mock("@/lib/supabase/env", () => ({
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => null,
   withE2EAuthOverrideHeaders: (init?: RequestInit) => init ?? {},
+}));
+
+vi.mock("@/lib/api/planner", () => ({
+  fetchPlannerColumns: vi.fn(async () => ({
+    columns: [
+      { id: "col-1", name: "아침", sort_order: 0 },
+      { id: "col-2", name: "점심", sort_order: 1 },
+      { id: "col-3", name: "저녁", sort_order: 2 },
+    ],
+  })),
+  createPlannerColumn: vi.fn(async (name: string) => ({
+    column: { id: "col-new", name, sort_order: 3 },
+  })),
+  updatePlannerColumn: (...args: unknown[]) => mockUpdatePlannerColumn(...args),
+  deletePlannerColumn: vi.fn(async () => ({ deleted: true })),
+  isPlannerApiError: (error: unknown) =>
+    error instanceof Error && "status" in error,
 }));
 
 const mockRouterReplace = vi.fn();
@@ -124,6 +142,7 @@ const SETTINGS_MOBILE_BASE_PROPS = {
   deleteColumnTarget: null,
   deleteError: null,
   errorMessage: null,
+  feedbackMessage: null,
   isAddingColumn: false,
   isDeleting: false,
   isDeletingColumn: false,
@@ -156,6 +175,7 @@ const SETTINGS_MOBILE_BASE_PROPS = {
   onConfirmDeleteColumn: vi.fn(),
   onConfirmLogout: vi.fn(),
   onDeleteColumnTarget: vi.fn(),
+  onMoveColumn: vi.fn(),
   onOpenColumnAddSheet: vi.fn(),
   onOpenDeleteDialog: vi.fn(),
   onOpenLogoutDialog: vi.fn(),
@@ -192,6 +212,18 @@ describe("SettingsScreen", () => {
     mockUpdateNickname.mockReset();
     mockDeleteAccount.mockReset();
     mockLogout.mockReset();
+    mockUpdatePlannerColumn.mockReset();
+    mockUpdatePlannerColumn.mockImplementation(
+      async (columnId: string, updates: { name?: string; sort_order?: number } | string) => ({
+        column: {
+          id: columnId,
+          name: typeof updates === "string" ? updates : `끼니-${columnId}`,
+          sort_order: typeof updates === "object" && typeof updates.sort_order === "number"
+            ? updates.sort_order
+            : 0,
+        },
+      }),
+    );
     mockRouterReplace.mockReset();
     mockRouterPush.mockReset();
     navigationMocks.searchParams.mockReset();
@@ -208,13 +240,13 @@ describe("SettingsScreen", () => {
   it("does not render bottom tabs on the mobile push settings shell", () => {
     render(<SettingsMobileScreen {...SETTINGS_MOBILE_BASE_PROPS} />);
 
-    expect(screen.getByRole("heading", { name: "설정" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "환경설정" })).toBeTruthy();
     expect(
       screen.queryByRole("navigation", { name: "설정 하단 탭" }),
     ).toBeNull();
   });
 
-  it("does not render bottom tabs on the mobile account push shell", () => {
+  it("keeps the mobile account query on the same settings shell", () => {
     render(
       <SettingsMobileScreen
         {...SETTINGS_MOBILE_BASE_PROPS}
@@ -222,7 +254,7 @@ describe("SettingsScreen", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "계정 관리" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "환경설정" })).toBeTruthy();
     expect(
       screen.queryByRole("navigation", { name: "설정 하단 탭" }),
     ).toBeNull();
@@ -244,10 +276,112 @@ describe("SettingsScreen", () => {
     expect(screen.getByRole("heading", { name: "계정" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "위험 영역" })).toBeTruthy();
     expect(screen.getByTestId("column-item-col-1").className).toContain(
-      "settings-column-chip",
+      "settings-column-row",
     );
+    expect(screen.queryByText("닉네임 변경")).toBeNull();
     expect(screen.queryByRole("button", { name: "저장" })).toBeNull();
     expect(screen.queryByRole("button", { name: "취소" })).toBeNull();
+    expect(screen.getByRole("button", { name: "끼니 삭제" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "끼니 삭제" }).className).toContain(
+      "web-settings-delete-button",
+    );
+    expect(screen.queryByRole("button", { name: "편집" })).toBeNull();
+    expect(
+      screen.queryByText(/식사가 있는 끼니는 삭제할 수 없어요/),
+    ).toBeNull();
+    expect(
+      screen.getByText(/드래그해서 바꾼 순서는 플래너에 그대로 표시돼요/),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "점심 위로 이동" }).className).toContain(
+      "web-settings-reorder-button",
+    );
+    expect(
+      screen.getByRole("button", { name: "점심 위로 이동" }).querySelector("svg"),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "점심 위로 이동" }).textContent).toBe("");
+    expect(screen.getByRole("button", { name: "아침 아래로 이동" }).className).toContain(
+      "web-settings-reorder-button",
+    );
+    expect(screen.getByText("계정 삭제").className).toContain("text-[var(--danger)]");
+  });
+
+  it("renders the mobile settings notification as a floating toast", () => {
+    render(
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        feedbackMessage={{ message: "설정을 저장했어요.", tone: "success" }}
+      />,
+    );
+
+    const toast = screen.getByTestId("settings-error-toast");
+    expect(toast.className).toContain("fixed");
+    expect(toast.className).toContain("z-50");
+    expect(toast.className).toContain("top-");
+    expect(toast.className).not.toContain("bottom-");
+    expect(toast.className).toContain("pointer-events-none");
+    expect(toast.className).toContain("bg-[var(--brand)]");
+  });
+
+  it("keeps meal edit and delete controls outside the meal name field", () => {
+    render(
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        columnsEditMode
+        plannerColumns={[
+          { id: "col-1", name: "아침", sort_order: 0 },
+          { id: "col-2", name: "점심", sort_order: 1 },
+        ]}
+      />,
+    );
+
+    const mealName = screen.getByTestId("column-name-col-1");
+    expect(within(mealName).queryByRole("button")).toBeNull();
+    expect(screen.getByRole("button", { name: "아침 이름 변경" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "아침 끼니 삭제" })).toBeTruthy();
+  });
+
+  it("hides the meal add form when five meals already exist", () => {
+    render(
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        plannerColumns={[
+          { id: "col-1", name: "아침", sort_order: 0 },
+          { id: "col-2", name: "점심", sort_order: 1 },
+          { id: "col-3", name: "저녁", sort_order: 2 },
+          { id: "col-4", name: "간식", sort_order: 3 },
+          { id: "col-5", name: "야식", sort_order: 4 },
+        ]}
+      />,
+    );
+
+    expect(screen.queryByTestId("add-column-input")).toBeNull();
+    expect(screen.queryByTestId("add-column-button")).toBeNull();
+    expect(
+      screen.queryByText("끼니는 최대 5개까지 사용할 수 있어요.", { exact: true }),
+    ).toBeNull();
+    expect(
+      screen.getByText(
+        "끼니는 최대 5개까지 사용할 수 있어요. 드래그해서 바꾼 순서는 플래너에 그대로 표시돼요.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("moves meals with accessible reorder controls", () => {
+    const onMoveColumn = vi.fn();
+    render(
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        onMoveColumn={onMoveColumn}
+        plannerColumns={[
+          { id: "col-1", name: "아침", sort_order: 0 },
+          { id: "col-2", name: "점심", sort_order: 1 },
+        ]}
+      />,
+    );
+
+    screen.getByRole("button", { name: "점심 위로 이동" }).click();
+
+    expect(onMoveColumn).toHaveBeenCalledWith("col-2", 0);
   });
 
   it("mobile loading back button navigates to /mypage", async () => {
@@ -269,7 +403,7 @@ describe("SettingsScreen", () => {
   it("shows loading skeleton initially", () => {
     mockFetchUserProfile.mockReturnValue(new Promise(() => {}));
     render(<SettingsScreen initialAuthenticated={true} />);
-    expect(screen.getByRole("heading", { name: "설정" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "환경설정" })).toBeTruthy();
     expect(screen.getByTestId("settings-loading")).toBeTruthy();
   });
 
@@ -292,7 +426,7 @@ describe("SettingsScreen", () => {
     render(<SettingsScreen initialAuthenticated={true} />);
 
     expect(screen.getByTestId("settings-mobile-loading")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "설정" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "환경설정" })).toBeTruthy();
   });
 
   // --- Login gate ---
@@ -330,17 +464,46 @@ describe("SettingsScreen", () => {
   // --- Settings items rendering ---
 
   it("renders settings items after loading", async () => {
-    mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
+    mockFetchUserProfile.mockResolvedValue({
+      ...MOCK_PROFILE,
+      profile_image_url: "https://example.com/profile.png",
+    });
     render(<SettingsScreen initialAuthenticated={true} />);
 
     await waitFor(() => {
-      expect(screen.getByText("요리모드 화면 꺼짐 방지")).toBeTruthy();
+      expect(screen.getByText("요리모드 화면 켜둠")).toBeTruthy();
     });
 
-    expect(screen.getByText("닉네임")).toBeTruthy();
     expect(screen.getByText("집밥러")).toBeTruthy();
     expect(screen.getByText("로그아웃")).toBeTruthy();
-    expect(screen.getByText("회원탈퇴")).toBeTruthy();
+    expect(screen.getByText("계정 삭제하기")).toBeTruthy();
+    expect(screen.queryByText("닉네임 변경")).toBeNull();
+    expect(screen.getByTestId("settings-account-profile-image")).toBeTruthy();
+    expect(screen.getByTestId("column-management-section").className).toContain(
+      "web-settings-bordered-section",
+    );
+    expect(screen.getByTestId("settings-cook-mode-section").className).toContain(
+      "web-settings-bordered-section",
+    );
+    expect(screen.getByTestId("settings-account-section").className).toContain(
+      "web-settings-bordered-section",
+    );
+    expect(screen.getByTestId("settings-danger-section").className).toContain(
+      "web-settings-bordered-section",
+    );
+    expect(screen.getByRole("button", { name: "끼니 삭제" }).className).toContain(
+      "web-settings-delete-button",
+    );
+    expect(
+      screen.getByRole("button", { name: "끼니 삭제" }).closest(".web-settings-column-description-row"),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "끼니 삭제" })
+        .closest(".web-settings-column-description-row")?.textContent,
+    ).toContain(
+      "끼니는 최대 5개까지 사용할 수 있어요. 드래그해서 바꾼 순서는 플래너에 그대로 표시돼요.",
+    );
   });
 
   it("links the desktop breadcrumb back to the mypage preferences tab", async () => {
@@ -348,7 +511,7 @@ describe("SettingsScreen", () => {
     render(<SettingsScreen initialAuthenticated={true} />);
 
     await waitFor(() => {
-      expect(screen.getByText("요리모드 화면 꺼짐 방지")).toBeTruthy();
+      expect(screen.getByText("요리모드 화면 켜둠")).toBeTruthy();
     });
 
     const breadcrumb = screen.getByRole("navigation", { name: "설정 경로" });
@@ -365,7 +528,7 @@ describe("SettingsScreen", () => {
     render(<SettingsScreen initialAuthenticated={true} />);
 
     await waitFor(() => {
-      expect(screen.getByText("요리모드 화면 꺼짐 방지")).toBeTruthy();
+      expect(screen.getByText("요리모드 화면 켜둠")).toBeTruthy();
     });
 
     const breadcrumb = screen.getByRole("navigation", { name: "설정 경로" });
@@ -384,7 +547,7 @@ describe("SettingsScreen", () => {
     const user = userEvent.setup();
 
     await waitFor(() => {
-      expect(screen.getByText("요리모드 화면 꺼짐 방지")).toBeTruthy();
+      expect(screen.getByText("요리모드 화면 켜둠")).toBeTruthy();
     });
 
     const toggle = screen.getByRole("switch");
@@ -392,6 +555,50 @@ describe("SettingsScreen", () => {
 
     expect(mockUpdateSettings).toHaveBeenCalledWith({ screen_wake_lock: true });
   });
+
+  it("shows a saved notification on mobile after changing wake lock", async () => {
+    installMatchMedia(true);
+    mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
+    mockUpdateSettings.mockResolvedValue({ settings: { screen_wake_lock: true } });
+
+    render(<SettingsScreen initialAuthenticated={true} />);
+    const user = userEvent.setup();
+
+    await waitFor(() => {
+      expect(screen.getByRole("switch")).toBeTruthy();
+    });
+
+    await user.click(screen.getByRole("switch"));
+
+    await waitFor(() => {
+      expect(screen.getByText("설정을 저장했어요.")).toBeTruthy();
+    });
+  });
+
+  it("dismisses the mobile settings notification automatically", async () => {
+    installMatchMedia(true);
+    mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
+    mockUpdateSettings.mockResolvedValue({ settings: { screen_wake_lock: true } });
+    const user = userEvent.setup();
+
+    render(<SettingsScreen initialAuthenticated={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("switch")).toBeTruthy();
+    });
+
+    await user.click(screen.getByRole("switch"));
+
+    await waitFor(() => {
+      expect(screen.getByText("설정을 저장했어요.")).toBeTruthy();
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 3200));
+
+    await waitFor(() => {
+      expect(screen.queryByText("설정을 저장했어요.")).toBeNull();
+    });
+  }, 8000);
 
   it("shows error when settings toggle fails, reverts, and clears error on retry success", async () => {
     mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
@@ -425,110 +632,19 @@ describe("SettingsScreen", () => {
     });
   });
 
-  // --- Nickname sheet ---
+  // --- Account surface alignment ---
 
-  it("opens nickname edit sheet and validates input", async () => {
+  it("does not expose nickname editing from settings routes", async () => {
     mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
     render(<SettingsScreen initialAuthenticated={true} />);
-    const user = userEvent.setup();
 
     await waitFor(() => {
-      expect(screen.getByText("닉네임")).toBeTruthy();
+      expect(screen.getByText("집밥러")).toBeTruthy();
     });
 
-    await user.click(screen.getByTestId("nickname-row"));
-
-    await waitFor(() => {
-      expect(screen.getByRole("dialog", { name: "닉네임 변경" })).toBeTruthy();
-    });
-
-    const input = screen.getByRole("textbox");
-    expect(input).toBe(document.activeElement);
-    await user.clear(input);
-    await user.type(input, "집");
-
-    const saveButton = screen.getByText("변경하기");
-    expect(saveButton.closest("button")?.disabled).toBe(true);
-  });
-
-  it("exposes nickname row label and closes the nickname sheet from the backdrop", async () => {
-    mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
-    render(<SettingsScreen initialAuthenticated={true} />);
-    const user = userEvent.setup();
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("닉네임 변경, 현재 닉네임: 집밥러")).toBeTruthy();
-    });
-
-    await user.click(screen.getByLabelText("닉네임 변경, 현재 닉네임: 집밥러"));
-
-    await waitFor(() => {
-      expect(screen.getByRole("dialog", { name: "닉네임 변경" })).toBeTruthy();
-    });
-
-    await user.click(screen.getByTestId("nickname-sheet-backdrop"));
-
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "닉네임 변경" })).toBeNull();
-    });
-  });
-
-  it("saves nickname successfully and updates display", async () => {
-    mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
-    mockUpdateNickname.mockResolvedValue({
-      ...MOCK_PROFILE,
-      nickname: "새집밥러",
-    });
-
-    render(<SettingsScreen initialAuthenticated={true} />);
-    const user = userEvent.setup();
-
-    await waitFor(() => {
-      expect(screen.getByText("닉네임")).toBeTruthy();
-    });
-
-    await user.click(screen.getByTestId("nickname-row"));
-
-    const input = screen.getByRole("textbox");
-    await user.clear(input);
-    await user.type(input, "새집밥러");
-
-    await user.click(screen.getByText("변경하기"));
-
-    expect(mockUpdateNickname).toHaveBeenCalledWith("새집밥러");
-
-    await waitFor(() => {
-      expect(screen.getByText("새집밥러")).toBeTruthy();
-    });
-  });
-
-  it("shows visible error in nickname sheet when save fails", async () => {
-    mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
-    const apiError = new Error("사용할 수 없는 닉네임이에요.");
-    Object.assign(apiError, { status: 422, code: "VALIDATION_ERROR", fields: [] });
-    mockUpdateNickname.mockRejectedValue(apiError);
-
-    render(<SettingsScreen initialAuthenticated={true} />);
-    const user = userEvent.setup();
-
-    await waitFor(() => {
-      expect(screen.getByText("닉네임")).toBeTruthy();
-    });
-
-    await user.click(screen.getByTestId("nickname-row"));
-
-    const input = screen.getByRole("textbox");
-    await user.clear(input);
-    await user.type(input, "새집밥러");
-    await user.click(screen.getByText("변경하기"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("nickname-error")).toBeTruthy();
-      expect(screen.getByText("사용할 수 없는 닉네임이에요.")).toBeTruthy();
-    });
-
-    // Sheet should still be open
-    expect(screen.getByRole("dialog", { name: "닉네임 변경" })).toBeTruthy();
+    expect(screen.queryByTestId("nickname-row")).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "닉네임 변경" })).toBeNull();
+    expect(screen.queryByText("닉네임 변경")).toBeNull();
   });
 
   // --- Delete account ---
@@ -539,16 +655,16 @@ describe("SettingsScreen", () => {
     const user = userEvent.setup();
 
     await waitFor(() => {
-      expect(screen.getByText("회원탈퇴")).toBeTruthy();
+      expect(screen.getByText("계정 삭제하기")).toBeTruthy();
     });
 
-    await user.click(screen.getByText("회원탈퇴"));
+    await user.click(screen.getByText("계정 삭제하기"));
 
     await waitFor(() => {
       expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
       expect(
         screen.getByText(
-          "계정을 삭제하면 레시피북, 플래너, 장보기, 팬트리 기록은 삭제되며 되돌릴 수 없어요. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요.",
+          "계정을 삭제하면 레시피북, 플래너, 장보기, 팬트리 기록은 삭제돼요. 되돌릴 수 없어요. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요.",
         ),
       ).toBeTruthy();
     });
@@ -569,10 +685,10 @@ describe("SettingsScreen", () => {
     const user = userEvent.setup();
 
     await waitFor(() => {
-      expect(screen.getByText("회원탈퇴")).toBeTruthy();
+      expect(screen.getByText("계정 삭제하기")).toBeTruthy();
     });
 
-    await user.click(screen.getByText("회원탈퇴"));
+    await user.click(screen.getByText("계정 삭제하기"));
 
     await waitFor(() => {
       expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
@@ -597,10 +713,10 @@ describe("SettingsScreen", () => {
     const user = userEvent.setup();
 
     await waitFor(() => {
-      expect(screen.getByText("회원탈퇴")).toBeTruthy();
+      expect(screen.getByText("계정 삭제하기")).toBeTruthy();
     });
 
-    await user.click(screen.getByText("회원탈퇴"));
+    await user.click(screen.getByText("계정 삭제하기"));
 
     await waitFor(() => {
       expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
@@ -629,10 +745,10 @@ describe("SettingsScreen", () => {
     const user = userEvent.setup();
 
     await waitFor(() => {
-      expect(screen.getByText("회원탈퇴")).toBeTruthy();
+      expect(screen.getByText("계정 삭제하기")).toBeTruthy();
     });
 
-    await user.click(screen.getByText("회원탈퇴"));
+    await user.click(screen.getByText("계정 삭제하기"));
 
     await waitFor(() => {
       expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
