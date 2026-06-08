@@ -1097,7 +1097,7 @@ export function PlannerWeekScreen({
             {formatMobileWeekRangeLabel(rangeStartDate, rangeEndDate)}
           </p>
           <p className="mb-3 text-[13px] font-semibold leading-[1.35] text-[var(--text-3)]">
-            {mealStats.total}개 음식 계획 중
+            이번 주 요약
           </p>
           <div className="grid grid-cols-3 gap-2">
             <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-cooked-soft)] p-3">

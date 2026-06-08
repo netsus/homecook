@@ -161,7 +161,8 @@ test.describe("Slice 05 planner week core", () => {
       page.getByRole("heading", { name: isMobile ? "플래너" : "주간 플래너" }),
     ).toBeVisible();
     if (isMobile) {
-      await expect(page.locator(':visible:has-text("음식 계획 중")').first()).toBeVisible();
+      await expect(page.locator(':visible:has-text("이번 주 요약")').first()).toBeVisible();
+      await expect(page.locator(':visible:has-text("음식 계획 중")')).toHaveCount(0);
     }
     await expect(page.getByText("현재 범위", { exact: true }).filter({ visible: true })).toHaveCount(0);
     await expect(page.getByText("화면 상태")).toHaveCount(0);

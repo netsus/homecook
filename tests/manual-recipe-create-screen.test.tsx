@@ -234,8 +234,9 @@ describe("ManualRecipeCreateScreen", () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 
     const targetTag = screen.getByTestId("manual-mobile-target-tag");
-    expect(targetTag.textContent).toContain("4월 18일");
-    expect(targetTag.textContent).toContain("아침");
+    expect(targetTag.textContent?.trim()).toBe("4/18 아침");
+    expect(targetTag.className).toContain("rounded-[var(--radius-chip)]");
+    expect(targetTag.className).not.toContain("brand-deep");
   });
 
   it("does not leave oversized blank space under the mobile step composer", async () => {

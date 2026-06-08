@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import {
+  MealAddTargetBadge,
+  formatMealAddTargetLabel,
+} from "@/components/planner/meal-add-target-badge";
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
 import { Button } from "@/components/ui/button";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
@@ -53,17 +57,7 @@ const WEB_NAV_ITEMS = [
 ] as const;
 
 function formatTargetLabel(planDate: string, slotName: string) {
-  if (!planDate && !slotName) return "플래너";
-
-  const dateLabel = planDate
-    ? new Intl.DateTimeFormat("ko-KR", {
-        month: "long",
-        day: "numeric",
-        weekday: "short",
-      }).format(new Date(`${planDate}T00:00:00`))
-    : "날짜 미지정";
-
-  return slotName ? `${dateLabel} · ${slotName}` : dateLabel;
+  return formatMealAddTargetLabel(planDate, slotName);
 }
 
 // Temporary ingredient type for UI state (before save)
@@ -1273,12 +1267,11 @@ export function ManualRecipeCreateScreen({
         <div className="mx-auto max-w-2xl space-y-2 md:space-y-6 md:py-4">
           {planDate || slotName ? (
             <div className="bg-[var(--surface)] px-4 pt-4 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
-              <span
-                className="inline-flex min-h-8 items-center rounded-full bg-[var(--brand-soft)] px-3 text-[13px] font-bold text-[var(--brand-deep)]"
-                data-testid="manual-mobile-target-tag"
-              >
-                {targetLabel}
-              </span>
+              <MealAddTargetBadge
+                className="min-h-8"
+                label={targetLabel}
+                testId="manual-mobile-target-tag"
+              />
             </div>
           ) : null}
 

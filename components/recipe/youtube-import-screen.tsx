@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
+import { formatMealAddTargetLabel } from "@/components/planner/meal-add-target-badge";
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
 import { Button } from "@/components/ui/button";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
@@ -413,14 +414,7 @@ const YOUTUBE_STEP_LABELS = [
 ] as const;
 
 function formatTargetLabel(planDate: string, slotName: string) {
-  if (!planDate && !slotName) return "플래너";
-
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(planDate);
-  const dateLabel = match
-    ? `${Number(match[2])}/${Number(match[3])}`
-    : planDate || "날짜 미지정";
-
-  return slotName ? `${dateLabel} ${slotName}` : dateLabel;
+  return formatMealAddTargetLabel(planDate, slotName);
 }
 
 function getYoutubeStepIndex(step: Step) {

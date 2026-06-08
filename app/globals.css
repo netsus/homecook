@@ -6996,12 +6996,70 @@ button {
     justify-content: flex-end;
   }
 
-  .web-mypage-shopping-card {
-    display: block;
+  .web-mypage-shopping-calendar {
+    display: grid;
+    gap: 18px;
+  }
+
+  .web-mypage-shopping-month {
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-lg);
+    background: var(--web-surface-muted);
+    padding: 16px;
+  }
+
+  .web-mypage-shopping-month h3 {
+    margin: 0 0 12px;
+    color: var(--web-text-1);
+    font-size: 18px;
+    font-weight: 800;
+  }
+
+  .web-mypage-shopping-weekdays,
+  .web-mypage-shopping-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .web-mypage-shopping-weekdays {
+    margin-bottom: 8px;
+    color: var(--web-text-3);
+    font-size: 12px;
+    font-weight: 800;
+    text-align: center;
+  }
+
+  .web-mypage-shopping-day {
+    min-height: 112px;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-md);
     background: var(--web-surface);
-    padding: 18px 20px;
+    padding: 8px;
+  }
+
+  .web-mypage-shopping-day-empty {
+    border-color: transparent;
+    background: transparent;
+  }
+
+  .web-mypage-shopping-day-number {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--web-text-2);
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .web-mypage-shopping-card {
+    display: block;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-sm);
+    background: var(--web-surface);
+    padding: 10px;
+    text-align: left;
+    box-shadow: 0 6px 16px rgba(34, 29, 24, 0.06);
   }
 
   .web-mypage-shopping-status {

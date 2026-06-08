@@ -153,15 +153,6 @@ function AteListCard({
           다시 만들기
         </Link>
       </div>
-
-      <Link
-        aria-label={`${item.recipe_title} 레시피 보기`}
-        className="web-ate-link"
-        href={`/recipe/${item.recipe_id}`}
-        prefetch={false}
-      >
-        <span aria-hidden="true">&gt;</span>
-      </Link>
     </article>
   );
 }
@@ -682,17 +673,15 @@ function MobileAteCard({
           >
             {item.recipe_title}
           </Link>
-          <div className="mt-0.5 space-y-0.5 text-[12px] font-medium leading-[1.25] text-[var(--text-3)]">
-            <p>{formatShortDate(item.cooked_at)} 요리 · {formatLeftoverMeta(item)}</p>
-            {item.eaten_at ? (
-              <p>{formatShortDate(item.eaten_at)} 다먹음</p>
-            ) : null}
-          </div>
+          <p className="mt-0.5 truncate text-[12px] font-medium leading-[1.25] text-[var(--text-3)]">
+            {formatShortDate(item.cooked_at)} · {formatLeftoverMeta(item)}
+            {item.eaten_at ? ` · ${formatShortDate(item.eaten_at)} 다먹음` : ""}
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
             aria-label="남은 요리로 복귀"
-            className="flex h-8 w-[82px] items-center justify-center whitespace-nowrap rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-2 text-[11px] font-extrabold text-[var(--brand)] disabled:opacity-60"
+            className="flex h-8 w-[88px] items-center justify-center whitespace-nowrap rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-3 text-[11px] font-extrabold text-[var(--brand)] disabled:opacity-60"
             data-testid="uneat-button"
             disabled={anyMutating}
             onClick={() => onUneat(item.id)}

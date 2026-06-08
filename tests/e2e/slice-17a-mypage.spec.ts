@@ -334,9 +334,13 @@ test.describe("MYPAGE screen", () => {
 
     await expect(page.getByText("4/30 장보기")).toBeVisible();
     await expect(page.getByText("4/23 장보기")).toBeVisible();
-    await expect(page.getByText("다시열기")).toBeVisible();
+    await expect(page.getByText("다시열기")).toHaveCount(0);
     await expect(page.getByText("4/30 완료")).toBeVisible();
-    await expect(page.getByTestId("shopping-card-list-2").getByText("진행 중")).toBeVisible();
+    await expect(
+      page
+        .getByTestId("shopping-card-list-2")
+        .getByText(isMobileViewport(page) ? "진행중" : "진행 중"),
+    ).toBeVisible();
   });
 
   test("navigates to shopping detail when clicking a shopping history item", async ({ page }) => {
