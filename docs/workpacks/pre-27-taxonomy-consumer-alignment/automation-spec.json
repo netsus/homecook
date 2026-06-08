@@ -13,9 +13,9 @@
     ],
     "invariants": [
       "no-new-api-endpoint",
-      "no-rpc-change",
-      "no-schema-ddl-change",
-      "legacy-7-category-freeze",
+      "existing-rpc-category-validation-compat",
+      "no-new-table-schema-ddl-change",
+      "canonical-8-category-label-compat",
       "category-query-label-compat",
       "cooking-methods-v1-shape-compat",
       "label-varchar5-non-overload",

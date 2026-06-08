@@ -14,9 +14,9 @@ slice 27 YouTube 기능 개선 전에, 현재 MVP의 모든 ingredient category 
 - 화면: HOME (ingredient filter), PANTRY (add/filter/display), MANUAL_RECIPE_CREATE (ingredient/method picker), YT_IMPORT (ingredient registration/review), RECIPE_DETAIL (ingredient/step rendering), COOK_MODE (mobile/desktop)
 - API: `GET /ingredients` (category query), `GET /cooking-methods`, `POST /recipes/youtube/ingredient-registration` (category validation), `GET /pantry` (category filter)
 - 상태 전이: 없음 (기존 상태 전이 변경 없음)
-- DB 영향: `ingredients` (category 읽기), `cooking_methods` (color_key 읽기), `ingredient_synonyms` (읽기)
+- DB 영향: `ingredients` (category 읽기 및 2026-06-08 follow-up 과일 재분류), `cooking_methods` (color_key 읽기), `ingredient_synonyms` (읽기), `register_youtube_ingredient` RPC (8종 category validation)
 - Schema Change:
-  - [x] 없음 (읽기 전용)
+  - [x] 신규 테이블/컬럼 없음
   - [ ] 있음
 
 ### Track A: Ingredient Category Normalization
@@ -28,12 +28,59 @@ slice 27 YouTube 기능 개선 전에, 현재 MVP의 모든 ingredient category 
 - `lib/server/youtube-import.ts`의 hardcoded `INGREDIENT_CATEGORIES` 검증을 shared source 참조로 교체
 - `app/api/v1/ingredients/route.ts`의 category query를 shared source 기준으로 정렬
 - `app/api/v1/pantry/route.ts`의 category filter를 shared source 기준으로 정렬
-- `components/pantry/pantry-mobile-visuals.ts`의 `WAVE1_PANTRY_CATEGORY_ORDER` (`주식`, `단백질`, `과일`)가 canonical 8-category와 충돌하지 않도록 명시적 mapping/fallback 처리
+- `components/pantry/pantry-mobile-visuals.ts`의 Wave1-only display group (`주식`, `단백질`)과 canonical `과일` category가 충돌하지 않도록 명시적 mapping/fallback 처리
 - `components/home/ingredient-filter-modal.tsx`의 `INGREDIENT_CATEGORY_OPTIONS` 소비를 shared source 기준으로 전환
 - `components/recipe/recipe-ingredient-add-modal.tsx`의 hardcoded category emoji map을 shared source 또는 공용 helper로 전환
 - `components/pantry/pantry-screen.tsx`의 desktop `CATEGORY_VISUAL` map을 공용 helper로 전환
 - `components/pantry/pantry-add-sheet.tsx`의 category 소비를 shared source 기준으로 정렬
 - `components/recipe/youtube-import-screen.tsx`의 `INGREDIENT_CATEGORY_CHOICES`를 shared source에서 파생
+
+### Category Outcome
+
+계획대로 진행한 현재 v1 canonical category label은 아래 8종이다. DB/API/프론트 선택지는 label을 계속 사용하고, `code`는 shared source 내부의 안정 식별자로만 쓴다.
+
+| code | label |
+| --- | --- |
+| `vegetable` | `채소` |
+| `fruit` | `과일` |
+| `meat` | `육류` |
+| `seafood` | `해산물` |
+| `seasoning` | `양념` |
+| `dairy` | `유제품` |
+| `grain` | `곡류` |
+| `other` | `기타` |
+
+`주식`, `단백질`은 pantry mobile의 Wave1 display group/fallback 용도일 뿐 v1 canonical category가 아니다. 현재 API query와 YouTube ingredient registration validation은 위 8종 label만 허용한다.
+
+### Future Taxonomy Candidate
+
+아래 목록은 현재 v1 계약이 아니라 후속 contract-evolution 후보이다. 실제 적용 전에는 별도 workpack에서 공식 문서, DB/API 계약, migration, 회귀 테스트를 먼저 잠근다.
+
+재료는 대분류 8개를 유지하고, 소분류는 UI/검색/자동매칭에서 자주 쓸 축만 남겨 21개로 줄인다.
+
+| 대분류 | 소분류 후보 |
+| --- | --- |
+| 곡류/면/떡 | 밥/쌀, 면/파스타, 빵/떡/시리얼 |
+| 채소/버섯 | 잎/나물채소, 뿌리/줄기채소, 열매채소/버섯 |
+| 과일/견과 | 과일, 견과/씨앗/건과일 |
+| 단백질 | 돼지/소/양, 닭/오리, 달걀, 두부/콩류 |
+| 해산물 | 생선/갑각/조개, 해조/건어물/어묵 |
+| 유제품/대체유 | 우유/요거트/크림, 치즈/버터/대체유 |
+| 양념/조미 | 장류/소스, 향신료/허브, 기름/식초/당류/육수 |
+| 가공/기타 | 김치/절임/통조림, 냉동/간편식/음료/기타 |
+
+조리법은 레시피 단계에서 실제로 자주 쓰는 행동 중심으로 6개 그룹, 20개 대표 method로 줄인다. `채썰기`, `재우기`, `핏물빼기`, `지지기`, `중탕`, `압력솥`, `간보기`, `토핑`, `담기`, `식히기`, `숙성`처럼 빈도가 낮거나 다른 method의 표현으로 흡수 가능한 값은 canonical method가 아니라 synonym/step text 후보로 둔다.
+
+| 그룹 | 대표 method 후보 |
+| --- | --- |
+| 준비/손질 | 씻기, 썰기, 다지기 |
+| 전처리 | 해동, 밑간, 절이기 |
+| 물/수분 조리 | 끓이기, 삶기, 데치기, 찌기 |
+| 팬/기름 조리 | 볶기, 굽기, 부치기, 튀기기 |
+| 혼합/조림 | 섞기, 무치기, 조리기, 졸이기 |
+| 기기 조리 | 전자레인지, 오븐굽기 |
+
+후속 DB 후보는 `ingredient_category_groups`, `ingredient_categories`, `cooking_method_categories`, `cooking_method_synonyms`를 새로 검토하되, v1 호환을 위해 기존 `ingredients.category`와 `GET /ingredients?category=` label 계약은 migration 동안 유지한다. `cooking_methods.label varchar(5)` 완화는 method label 확장이 실제로 필요하다는 검증이 생긴 뒤 별도 승인으로 처리한다.
 
 ### Track B: Cooking Method Presentation Normalization
 
@@ -54,7 +101,7 @@ slice 27 YouTube 기능 개선 전에, 현재 MVP의 모든 ingredient category 
 
 ## Out of Scope
 
-- `ingredient_categories` 같은 신규 DB registry table 생성
+- `ingredient_categories` 같은 신규 DB registry table 생성 또는 FK 전환
 - `cooking_method_categories` full master table + FK cutover
 - `cooking_methods.label varchar(5)` 확장 또는 taxonomy 코드 과적재
 - 식약처 / 농식품올바로 등 외부 데이터 ingestion staging table 신설
@@ -62,7 +109,6 @@ slice 27 YouTube 기능 개선 전에, 현재 MVP의 모든 ingredient category 
 - legacy `ingredients.category` string field 제거 또는 FK 전환
 - legacy `color_key` string field 제거 또는 FK 전환
 - `GET /cooking-methods` 응답 필드 추가 (additive field 검토는 후보로만 기록)
-- `ingredient_categories` DB registry table/FK 전환
 - slice 27 YouTube 기능 개선 구현
 - 디자인 리디자인 또는 신규 UI 화면 추가
 
@@ -93,7 +139,7 @@ interface IngredientCategoryEntry {
   is_active: boolean;
 }
 
-// canonical 7 categories
+// canonical 8 categories
 const INGREDIENT_CATEGORIES: IngredientCategoryEntry[];
 
 // helper: legacy label -> entry
@@ -110,6 +156,7 @@ function isValidIngredientCategory(label: string): boolean;
 - 응답 형식: `{ success, data, error }` 래퍼 유지
 - error: `{ code, message, fields[] }` 구조 유지
 
+**RPC 계약**: 기존 `register_youtube_ingredient` RPC를 유지하되 category validation은 현재 v1 canonical 8종과 일치해야 함
 **권한**: 기존 API 권한 정책 변경 없음
 **상태 전이**: 없음
 **멱등성**: 기존 API 멱등성 정책 변경 없음
@@ -166,9 +213,11 @@ function getCookingMethodColor(colorKey?: string | null): string;
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
 - `docs/workpacks/README.md`
-- `docs/요구사항기준선-v1.7.0.md`
-- `docs/api문서-v1.2.10.md`
-- `docs/db설계-v1.3.6.md`
+- `docs/요구사항기준선-v1.7.5.md`
+- `docs/화면정의서-v1.5.12.md`
+- `docs/유저flow맵-v1.3.12.md`
+- `docs/api문서-v1.2.15.md`
+- `docs/db설계-v1.3.11.md`
 - `.omx/plans/ingredient-cooking-taxonomy-ralplan-final-20260525.md`
 - `.omx/plans/ingredient-cooking-taxonomy-expansion-20260525.md`
 

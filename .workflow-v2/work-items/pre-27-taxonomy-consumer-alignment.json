@@ -1,7 +1,7 @@
 {
   "id": "pre-27-taxonomy-consumer-alignment",
   "title": "Pre-slice-27 ingredient category and cooking method consumer alignment",
-  "summary": "slice 27 YouTube 기능 개선 전에 현재 MVP의 모든 ingredient category / cooking method 소비자를 같은 기준 shared source/helper에 정렬한다. ingredient는 legacy 7종 카테고리를 단일 shared mapping source로 수렴시키고, cooking은 분산된 색상/fallback helper를 하나로 통합한다.",
+  "summary": "slice 27 YouTube 기능 개선 전에 현재 MVP의 모든 ingredient category / cooking method 소비자를 같은 기준 shared source/helper에 정렬한다. ingredient는 2026-06-08 follow-up 기준 `과일` 포함 v1 canonical 8종 카테고리를 단일 shared mapping source로 수렴시키고, cooking은 분산된 색상/fallback helper를 하나로 통합한다.",
   "project_profile": "homecook",
   "change_type": "product",
   "surface": "fullstack",
@@ -164,14 +164,14 @@
   },
   "notes": "Merged via PR #591, PR #592, and PR #593. Ingredient category consumers now delegate to shared source (lib/ingredient-categories.ts): recipe-ingredient-add-modal emoji, pantry-screen CATEGORY_VISUAL, pantry-mobile-visuals fallback emoji, youtube-import-screen category choices. Cooking method consumers align to shared helper (lib/cooking-method-colors.ts): recipe-detail-screen local color/tint maps removed, cook-mode-mobile-ui lime alias added, and Codex preserved existing recipe-detail red/yellow tint weights in the shared helper. Stage 5 was absorbed into Stage 6 as a low-risk lightweight design check: no new screen, no redesign, visual/a11y core passed. Claude Stage 1/3/4 artifacts captured; Codex Stage 2 and Stage 6 completed. Verification passed: backend/shared targeted Vitest, pnpm verify:backend, frontend targeted Vitest, pnpm verify:frontend:pr, HOME filter E2E, PANTRY category E2E, COOK_MODE method color E2E, workflow/workpack validators, closeout-sync validator, PR #593 current-head checks. Manual-only live YouTube Data API scenario remains unchecked by design. Local Supabase reset smoke was blocked by Docker image layer no-space. closeout_phase=completed closeout_recovery=local_docker_no_space closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #591,GitHub PR #592,GitHub PR #593,Claude Stage 1/3/4 artifacts,tests/ingredient-categories.test.ts,tests/cooking-method-colors.test.ts,tests/recipe-api-contracts.test.ts,tests/pantry-core.backend.test.ts,tests/youtube-dictionary-resolution.test.ts,tests/youtube-import.backend.test.ts,tests/home-screen.test.tsx,tests/recipe-ingredient-add-modal.test.tsx,tests/pantry-screen.test.tsx,tests/recipe-detail-screen.test.tsx,tests/e2e/slice-02-discovery-filter.spec.ts,tests/e2e/slice-13-pantry-core.spec.ts,tests/e2e/slice-15a-cook-planner-complete.spec.ts,pnpm verify:backend,pnpm verify:frontend:pr",
   "out_of_scope": [
-    "ingredient_categories DB registry table",
+    "ingredient_categories DB registry table or FK cutover",
     "cooking_method_categories full master table",
     "cooking_methods.label varchar(5) expansion",
     "External data ingestion staging tables",
     "Production bulk ingest procedures",
     "Legacy category/color_key field removal or FK migration",
     "GET /cooking-methods response field additions",
-    "Ingredient category expansion beyond 7",
+    "Ingredient category expansion beyond the current v1 canonical 8 labels",
     "Slice 27 YouTube feature improvements",
     "UI redesign or new screen creation"
   ],
