@@ -149,8 +149,8 @@
   --app-back-button-hover-bg: var(--surface-fill);
   --planner-add: var(--text-3);
   --planner-add-soft: transparent;
-  --planner-status-cooked: #F5C542;
-  --planner-status-cooked-soft: rgba(245, 197, 66, 0.18);
+  --planner-status-cooked: #E94B5F;
+  --planner-status-cooked-soft: rgba(233, 75, 95, 0.14);
   --planner-status-shopping: #21C36B;
   --planner-status-shopping-soft: rgba(33, 195, 107, 0.12);
   --planner-status-registered: #00A1FF;
@@ -6443,6 +6443,16 @@ button {
     outline: none;
   }
 
+  .web-mypage-column-input-prominent {
+    border-color: var(--web-line-strong);
+    background: var(--web-bg-alt);
+    box-shadow: inset 0 0 0 1px rgba(12, 18, 28, 0.03);
+  }
+
+  .web-mypage-column-input-prominent::placeholder {
+    color: var(--web-text-3);
+  }
+
   .web-mypage-column-input:focus {
     border-color: var(--web-brand);
     box-shadow: 0 0 0 3px rgba(45, 150, 255, 0.14);
@@ -7108,9 +7118,22 @@ button {
 
   .web-settings-column-list {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+    gap: 10px;
+    padding: 16px;
   }
 
-  .web-settings-column-row,
+  .web-settings-column-row {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-sm);
+    background: var(--web-bg-alt);
+    padding: 0 12px;
+  }
+
   .web-settings-row-card {
     display: flex;
     min-height: 56px;
@@ -7119,7 +7142,6 @@ button {
     padding: 0 20px;
   }
 
-  .web-settings-column-row + .web-settings-column-row,
   .web-settings-account-row + .web-settings-account-row {
     border-top: 1px solid var(--web-divider);
   }

@@ -228,6 +228,28 @@ describe("SettingsScreen", () => {
     ).toBeNull();
   });
 
+  it("uses the web settings structure on mobile without inert save buttons", () => {
+    render(
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        plannerColumns={[
+          { id: "col-1", name: "아침", sort_order: 0 },
+          { id: "col-2", name: "점심", sort_order: 1 },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "끼니 관리" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "요리 모드" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "계정" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "위험 영역" })).toBeTruthy();
+    expect(screen.getByTestId("column-item-col-1").className).toContain(
+      "settings-column-chip",
+    );
+    expect(screen.queryByRole("button", { name: "저장" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "취소" })).toBeNull();
+  });
+
   it("mobile loading back button navigates to /mypage", async () => {
     installMatchMedia(true);
     mockFetchUserProfile.mockReturnValue(new Promise(() => {}));

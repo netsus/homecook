@@ -29,8 +29,8 @@ describe("planner app colors", () => {
   });
 
   it("matches app planner status tokens to the desktop web palette", () => {
-    expect(tokenValue("--planner-status-cooked")).toBe("#F5C542");
-    expect(tokenValue("--planner-status-cooked-soft")).toBe("rgba(245, 197, 66, 0.18)");
+    expect(tokenValue("--planner-status-cooked")).toBe("#E94B5F");
+    expect(tokenValue("--planner-status-cooked-soft")).toBe("rgba(233, 75, 95, 0.14)");
     expect(tokenValue("--planner-status-shopping")).toBe("#21C36B");
     expect(tokenValue("--planner-status-shopping-soft")).toBe("rgba(33, 195, 107, 0.12)");
     expect(tokenValue("--planner-status-registered")).toBe("#00A1FF");

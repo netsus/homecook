@@ -49,6 +49,79 @@ const books = [
   },
 ];
 
+const recipeCover =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%2300A1FF'/%3E%3Ccircle cx='86' cy='92' r='42' fill='%23FFFFFF' opacity='.86'/%3E%3Crect x='132' y='64' width='98' height='72' rx='18' fill='%23FFFFFF' opacity='.72'/%3E%3C/svg%3E";
+
+const recipeItems = [
+  {
+    added_at: "2026-05-04T09:00:00.000Z",
+    recipe_id: "recipe-saved-1",
+    tags: ["한식", "찌개"],
+    thumbnail_url: recipeCover,
+    title: "된장찌개",
+  },
+  {
+    added_at: "2026-05-03T09:00:00.000Z",
+    recipe_id: "recipe-saved-2",
+    tags: ["반찬"],
+    thumbnail_url: recipeCover,
+    title: "두부조림",
+  },
+];
+
+const plannerColumns = [
+  { id: "breakfast", name: "아침", sort_order: 0 },
+  { id: "lunch", name: "점심", sort_order: 1 },
+  { id: "dinner", name: "저녁", sort_order: 2 },
+];
+
+const plannerMeals = [
+  {
+    id: "meal-1",
+    recipe_id: "recipe-1",
+    recipe_thumbnail_url: null,
+    recipe_title: "된장찌개",
+    plan_date: "2026-05-04",
+    column_id: "dinner",
+    planned_servings: 2,
+    status: "registered",
+    is_leftover: false,
+  },
+  {
+    id: "meal-2",
+    recipe_id: "recipe-2",
+    recipe_thumbnail_url: null,
+    recipe_title: "두부조림",
+    plan_date: "2026-05-05",
+    column_id: "dinner",
+    planned_servings: 2,
+    status: "registered",
+    is_leftover: false,
+  },
+  {
+    id: "meal-3",
+    recipe_id: "recipe-3",
+    recipe_thumbnail_url: null,
+    recipe_title: "김치볶음밥",
+    plan_date: "2026-05-06",
+    column_id: "lunch",
+    planned_servings: 1,
+    status: "shopping_done",
+    is_leftover: false,
+  },
+  {
+    id: "meal-4",
+    recipe_id: "recipe-4",
+    recipe_thumbnail_url: null,
+    recipe_title: "감자조림",
+    plan_date: "2026-05-07",
+    column_id: "dinner",
+    planned_servings: 2,
+    status: "cook_done",
+    is_leftover: false,
+  },
+];
+
 const shoppingHistory = [
   {
     id: "list-current",
@@ -134,6 +207,37 @@ async function installRoutes(page: Page) {
     await route.fulfill({
       json: { success: true, data: { books }, error: null },
     });
+  });
+
+  await page.route("**/api/v1/recipe-books/*/recipes**", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          has_next: false,
+          items: recipeItems,
+          next_cursor: null,
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/planner**", async (route) => {
+    const url = new URL(route.request().url());
+
+    if (url.pathname === "/api/v1/planner") {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: { columns: plannerColumns, meals: plannerMeals },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    await route.continue();
   });
 
   await page.route("**/api/v1/shopping/lists**", async (route) => {

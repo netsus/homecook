@@ -257,7 +257,7 @@ async function installSettingsRoutes(
 
 function accountDeleteTrigger(page: Page) {
   return isMobileViewport(page)
-    ? page.getByText("회원탈퇴")
+    ? page.getByText(/회원탈퇴|계정 삭제하기/)
     : page.getByRole("button", { name: "계정 삭제하기" });
 }
 
@@ -265,15 +265,13 @@ async function openAccountDeleteDialog(page: Page) {
   await expect(accountDeleteTrigger(page)).toBeVisible();
   await accountDeleteTrigger(page).click();
   await expect(
-    page.getByText(
-      isMobileViewport(page) ? "정말 탈퇴하시겠어요?" : "정말 계정을 삭제할까요?",
-    ),
+    page.getByText("정말 계정을 삭제할까요?"),
   ).toBeVisible();
 }
 
 function accountDeleteConfirmButton(page: Page) {
   return page.getByRole("alertdialog").getByRole("button", {
-    name: isMobileViewport(page) ? "탈퇴하기" : "계정 삭제",
+    name: "계정 삭제",
   });
 }
 
@@ -287,8 +285,8 @@ test.describe("SETTINGS screen", () => {
     await expect(page.getByRole("heading", { name: "설정" })).toBeVisible();
     if (isMobileViewport(page)) {
       await expect(page.getByLabel("뒤로가기")).toBeVisible();
-      await expect(page.getByText("화면 켜둠")).toBeVisible();
-      await expect(page.getByText("플래너 끼니 컬럼")).toBeVisible();
+      await expect(page.getByText("요리모드 화면 켜둠")).toBeVisible();
+      await expect(page.getByText("끼니 관리")).toBeVisible();
       await expect(page.getByText("음성 안내")).toHaveCount(0);
       await expect(page.getByText("타이머 끝나면 다음 단계 자동")).toHaveCount(0);
     } else {
@@ -321,7 +319,7 @@ test.describe("SETTINGS screen", () => {
     await page.goto("/settings");
 
     const toggle = page.getByRole("switch", {
-      name: isMobileViewport(page) ? "화면 켜둠" : "요리모드 화면 꺼짐 방지",
+      name: isMobileViewport(page) ? "요리모드 화면 켜둠" : "요리모드 화면 꺼짐 방지",
     });
     await expect(toggle).toBeVisible();
     await expect(toggle).toHaveAttribute("aria-checked", "false");
@@ -337,7 +335,7 @@ test.describe("SETTINGS screen", () => {
     await page.goto("/settings");
 
     const toggle = page.getByRole("switch", {
-      name: isMobileViewport(page) ? "화면 켜둠" : "요리모드 화면 꺼짐 방지",
+      name: isMobileViewport(page) ? "요리모드 화면 켜둠" : "요리모드 화면 꺼짐 방지",
     });
     await expect(toggle).toHaveAttribute("aria-checked", "false");
 
@@ -430,9 +428,7 @@ test.describe("SETTINGS screen", () => {
     await expect(page.getByTestId("dialog-error")).toBeVisible();
     await expect(page.getByText("탈퇴에 실패했어요.")).toBeVisible();
     await expect(
-      page.getByText(
-        isMobileViewport(page) ? "정말 탈퇴하시겠어요?" : "정말 계정을 삭제할까요?",
-      ),
+      page.getByText("정말 계정을 삭제할까요?"),
     ).toBeVisible();
     await expect(page).toHaveURL(/\/settings(?:\?view=account)?$/);
   });
@@ -447,9 +443,7 @@ test.describe("SETTINGS screen", () => {
     await page.getByText("취소").click();
 
     await expect(
-      page.getByText(
-        isMobileViewport(page) ? "정말 탈퇴하시겠어요?" : "정말 계정을 삭제할까요?",
-      ),
+      page.getByText("정말 계정을 삭제할까요?"),
     ).not.toBeVisible();
   });
 
@@ -467,9 +461,7 @@ test.describe("SETTINGS screen", () => {
 
     // Dialog should still be open, not navigated
     await expect(
-      page.getByText(
-        isMobileViewport(page) ? "정말 탈퇴하시겠어요?" : "정말 계정을 삭제할까요?",
-      ),
+      page.getByText("정말 계정을 삭제할까요?"),
     ).toBeVisible();
   });
 
@@ -541,9 +533,7 @@ test.describe("SETTINGS planner column management", () => {
     await page.goto("/settings");
 
     await expect(page.getByTestId("column-management-section")).toBeVisible();
-    await expect(
-      page.getByText(isMobileViewport(page) ? "플래너 끼니 컬럼" : "끼니 관리"),
-    ).toBeVisible();
+    await expect(page.getByText("끼니 관리")).toBeVisible();
 
     const list = page.getByTestId("column-list");
     await expect(list).toBeVisible();

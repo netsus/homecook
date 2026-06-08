@@ -10,7 +10,7 @@ import { buildReturnHref } from "@/lib/navigation/return-context";
 import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
 import type { ShoppingListHistoryItem } from "@/types/shopping";
 
-export type MypageMobileSurface = "home" | "saved" | "recipebook" | "shopping";
+export type MypageMobileSurface = "home" | "recipebook" | "shopping";
 
 interface MypageStatItem {
   color: string;
@@ -20,6 +20,7 @@ interface MypageStatItem {
 
 interface MypageMobileScreenProps {
   books: RecipeBookSummary[];
+  bookCoverImages: Record<string, string | null>;
   createInputRef: React.RefObject<HTMLInputElement | null>;
   createName: string;
   customBooks: RecipeBookSummary[];
@@ -63,8 +64,18 @@ interface MypageMobileScreenProps {
   onSurfaceChange: (surface: MypageMobileSurface) => void;
 }
 
+const MOBILE_RECIPE_FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1547592180-85f173990554?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1583224944844-5b268c057b72?w=900&h=675&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?w=900&h=675&fit=crop&q=80",
+] as const;
+
 export function MypageMobileScreen({
   books,
+  bookCoverImages,
   createInputRef,
   createName,
   customBooks,
@@ -108,9 +119,7 @@ export function MypageMobileScreen({
   onSurfaceChange,
 }: MypageMobileScreenProps) {
   const title =
-    surface === "saved"
-      ? "저장한 레시피"
-      : surface === "recipebook"
+    surface === "recipebook"
       ? "레시피북"
       : surface === "shopping"
         ? "장보기 기록"
@@ -128,21 +137,18 @@ export function MypageMobileScreen({
           books={books}
           profile={profile}
           savedRecipeCount={savedRecipeCount}
+          savedRecipes={savedRecipes}
+          savedRecipesState={savedRecipesState}
           shoppingItems={shoppingItems}
           shoppingLoaded={shoppingLoaded}
           stats={stats}
           onOpenNicknameSheet={onOpenNicknameSheet}
+          onRetrySavedRecipes={onRetrySavedRecipes}
           onSurfaceChange={onSurfaceChange}
-        />
-      ) : surface === "saved" ? (
-        <MobileSavedRecipesSurface
-          count={savedRecipeCount}
-          recipes={savedRecipes}
-          state={savedRecipesState}
-          onRetry={onRetrySavedRecipes}
         />
       ) : surface === "recipebook" ? (
         <MobileRecipebookSurface
+          bookCoverImages={bookCoverImages}
           createInputRef={createInputRef}
           createName={createName}
           customBooks={customBooks}
@@ -230,19 +236,25 @@ function MobileHomeSurface({
   books,
   profile,
   savedRecipeCount,
+  savedRecipes,
+  savedRecipesState,
   shoppingItems,
   shoppingLoaded,
   stats,
   onOpenNicknameSheet,
+  onRetrySavedRecipes,
   onSurfaceChange,
 }: {
   books: RecipeBookSummary[];
   profile: UserProfileData | null;
   savedRecipeCount: number;
+  savedRecipes: RecipeBookRecipeItem[];
+  savedRecipesState: "idle" | "loading" | "ready" | "empty" | "error";
   shoppingItems: ShoppingListHistoryItem[];
   shoppingLoaded: boolean;
   stats: MypageStatItem[];
   onOpenNicknameSheet: () => void;
+  onRetrySavedRecipes: () => void;
   onSurfaceChange: (surface: MypageMobileSurface) => void;
 }) {
   const nickname = profile?.nickname ?? "사용자";
@@ -251,12 +263,6 @@ function MobileHomeSurface({
   const shoppingCount = shoppingLoaded ? shoppingItems.length : 0;
 
   const menuRows = [
-    {
-      detail: `${savedRecipeCount}개`,
-      icon: "bookmark",
-      label: "저장한 레시피",
-      onClick: () => onSurfaceChange("saved"),
-    },
     {
       detail: `${recipeBookCount}개`,
       icon: "book",
@@ -353,6 +359,13 @@ function MobileHomeSurface({
         </div>
       </section>
 
+      <MobileSavedRecipesRail
+        count={savedRecipeCount}
+        recipes={savedRecipes}
+        state={savedRecipesState}
+        onRetry={onRetrySavedRecipes}
+      />
+
       <section className="p-4">
         <div
           className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
@@ -370,7 +383,7 @@ function MobileHomeSurface({
                   aria-hidden="true"
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[var(--text-2)]"
                 >
-                  <MenuLineIcon name={row.icon} />
+                  <MypageMenuIcon name={row.icon} />
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-[var(--foreground)]">
                   {row.label}
@@ -421,7 +434,7 @@ function MobileStatCard({
   return (
     <div className="rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-2 py-3 text-center">
       <div
-        className="text-[22px] font-extrabold leading-none"
+        className="text-[28px] font-[800] leading-[1.1]"
         style={{ color }}
       >
         {value}
@@ -433,7 +446,7 @@ function MobileStatCard({
   );
 }
 
-function MobileSavedRecipesSurface({
+function MobileSavedRecipesRail({
   count,
   recipes,
   state,
@@ -444,22 +457,30 @@ function MobileSavedRecipesSurface({
   state: "idle" | "loading" | "ready" | "empty" | "error";
   onRetry: () => void;
 }) {
+  const visibleRecipes = recipes.slice(0, 8);
+
   return (
-    <main className="px-4 py-4" data-testid="saved-recipes-surface">
-      <div className="mb-3">
-        <h2 className="text-[17px] font-extrabold text-[var(--foreground)]">
+    <section
+      className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-4"
+      data-testid="mobile-saved-recipes-rail"
+    >
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <h2 className="text-[16px] font-extrabold leading-none text-[var(--foreground)]">
           저장한 레시피
         </h2>
-        <p className="mt-1 text-[12px] font-medium text-[var(--text-3)]">
-          {count}개의 레시피를 저장했어요.
+        <p className="shrink-0 text-[12px] font-bold leading-none text-[var(--text-3)]">
+          {count}개
         </p>
       </div>
 
       {state === "idle" || state === "loading" ? (
-        <div className="space-y-2" data-testid="saved-recipes-loading">
+        <div
+          className="-mx-5 flex gap-3 overflow-x-auto px-5"
+          data-testid="saved-recipes-loading"
+        >
           {[0, 1, 2].map((index) => (
             <div
-              className="h-[74px] rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
+              className="h-[136px] w-[148px] shrink-0 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)]"
               key={index}
             />
           ))}
@@ -467,7 +488,7 @@ function MobileSavedRecipesSurface({
       ) : null}
 
       {state === "error" ? (
-        <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
+        <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] p-4">
           <strong className="text-[14px] text-[var(--foreground)]">
             저장한 레시피를 불러오지 못했어요
           </strong>
@@ -483,7 +504,7 @@ function MobileSavedRecipesSurface({
 
       {state === "empty" || (state === "ready" && recipes.length === 0) ? (
         <div
-          className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4"
+          className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] p-4"
           data-testid="saved-recipes-empty"
         >
           <strong className="text-[14px] text-[var(--foreground)]">
@@ -495,55 +516,77 @@ function MobileSavedRecipesSurface({
         </div>
       ) : null}
 
-      {state === "ready" && recipes.length > 0 ? (
-        <div className="space-y-2" role="list">
-          {recipes.map((recipe) => (
-            <Link
-              className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] px-4 py-[14px]"
-              href={buildReturnHref(`/recipe/${recipe.recipe_id}`, {
-                returnTo: "/mypage?tab=saved",
-              })}
-              key={recipe.recipe_id}
-              role="listitem"
-            >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[var(--brand)]">
-                <MenuLineIcon name="bookmark" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-extrabold leading-[1.35] text-[var(--foreground)]">
-                  {recipe.title}
+      {state === "ready" && visibleRecipes.length > 0 ? (
+        <div className="-mx-5 flex gap-3 overflow-x-auto px-5" role="list">
+          {visibleRecipes.map((recipe) => {
+            const imageSrc =
+              recipe.thumbnail_url ?? getMobileFallbackRecipeImage(recipe.title);
+
+            return (
+              <Link
+                className="w-[148px] shrink-0 overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)]"
+                href={buildReturnHref(`/recipe/${recipe.recipe_id}`, {
+                  returnTo: "/mypage?tab=saved",
+                })}
+                key={recipe.recipe_id}
+                role="listitem"
+              >
+                <span className="block h-[86px] w-full overflow-hidden bg-[var(--brand-soft)]">
+                  <Image
+                    alt=""
+                    className="h-full w-full object-cover"
+                    data-testid={`mobile-saved-recipe-image-${recipe.recipe_id}`}
+                    height={86}
+                    src={imageSrc}
+                    unoptimized
+                    width={148}
+                  />
                 </span>
-                <span className="mt-0.5 block truncate text-[11px] font-medium leading-[1.35] text-[var(--text-3)]">
-                  {formatMobileSavedRecipeMeta(recipe)}
+                <span className="block px-3 py-2">
+                  <span className="line-clamp-2 min-h-[34px] text-[13px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+                    {recipe.title}
+                  </span>
+                  <span className="mt-1 block truncate text-[11px] font-medium leading-[1.35] text-[var(--text-3)]">
+                    {formatMobileSavedRecipeMeta(recipe)}
+                  </span>
                 </span>
-              </span>
-              <ChevronRightIcon />
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       ) : null}
-    </main>
+    </section>
   );
 }
 
-function MenuLineIcon({ name }: { name: string }) {
+function getMobileFallbackRecipeImage(title: string) {
+  const seed = Array.from(title).reduce(
+    (sum, char) => sum + char.charCodeAt(0),
+    0,
+  );
+
+  return MOBILE_RECIPE_FALLBACK_IMAGES[
+    seed % MOBILE_RECIPE_FALLBACK_IMAGES.length
+  ];
+}
+
+function MypageMenuIcon({ name }: { name: string }) {
   const commonProps = {
     "aria-hidden": true,
-    className: "h-[15px] w-[15px]",
+    className: "h-[18px] w-[18px]",
     fill: "none",
     stroke: "currentColor",
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
-    strokeWidth: 2,
+    strokeWidth: 1.8,
     viewBox: "0 0 24 24",
   };
 
   if (name === "book") {
     return (
       <svg {...commonProps}>
-        <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4Z" />
-        <path d="M5 4v19" />
-        <path d="M8 18h11" />
+        <path d="M6 4h9a3 3 0 0 1 3 3v13H8a2 2 0 0 1-2-2V4Z" strokeLinejoin="round" />
+        <path d="M8 18h10" />
       </svg>
     );
   }
@@ -559,8 +602,9 @@ function MenuLineIcon({ name }: { name: string }) {
   if (name === "cart") {
     return (
       <svg {...commonProps}>
-        <path d="M6 6h15l-2 8H8L6 3H3" />
-        <path d="M9 20h.01M18 20h.01" />
+        <path d="M3 4h2l2.2 10.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 1.9-1.4L20 8H6" />
+        <circle cx="9" cy="20" r="1" fill="currentColor" stroke="none" />
+        <circle cx="18" cy="20" r="1" fill="currentColor" stroke="none" />
       </svg>
     );
   }
@@ -568,17 +612,16 @@ function MenuLineIcon({ name }: { name: string }) {
   if (name === "box") {
     return (
       <svg {...commonProps}>
-        <path d="M21 8 12 3 3 8l9 5 9-5Z" />
-        <path d="M3 8v8l9 5 9-5V8" />
-        <path d="M12 13v8" />
+        <path d="M8 3h8l1 4H7l1-4ZM7 7h10v13H7V7Z" strokeLinejoin="round" />
+        <path d="M10 11h4M10 15h4" />
       </svg>
     );
   }
 
   if (name === "check") {
     return (
-      <svg {...commonProps}>
-        <path d="M20 6 9 17l-5-5" />
+      <svg {...commonProps} strokeWidth={1.9}>
+        <path d="m5 12 4 4L19 6" />
       </svg>
     );
   }
@@ -586,8 +629,8 @@ function MenuLineIcon({ name }: { name: string }) {
   if (name === "settings") {
     return (
       <svg {...commonProps}>
-        <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" />
-        <path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12" />
+        <circle cx="12" cy="12" r="3.2" />
+        <path d="M19.4 15a1.75 1.75 0 0 0 .35 1.93l.05.05a2.1 2.1 0 1 1-2.97 2.97l-.05-.05a1.75 1.75 0 0 0-1.93-.35 1.75 1.75 0 0 0-1.05 1.6V21.3a2.1 2.1 0 1 1-4.2 0v-.07a1.75 1.75 0 0 0-1.05-1.6 1.75 1.75 0 0 0-1.93.35l-.05.05a2.1 2.1 0 1 1-2.97-2.97l.05-.05A1.75 1.75 0 0 0 4.6 15a1.75 1.75 0 0 0-1.6-1.05H2.9a2.1 2.1 0 1 1 0-4.2h.07A1.75 1.75 0 0 0 4.6 8.7a1.75 1.75 0 0 0-.35-1.93l-.05-.05a2.1 2.1 0 1 1 2.97-2.97l.05.05A1.75 1.75 0 0 0 9.15 4.15 1.75 1.75 0 0 0 10.2 2.55V2.5a2.1 2.1 0 1 1 4.2 0v.07a1.75 1.75 0 0 0 1.05 1.6 1.75 1.75 0 0 0 1.93-.35l.05-.05a2.1 2.1 0 1 1 2.97 2.97l-.05.05A1.75 1.75 0 0 0 19.4 8.7a1.75 1.75 0 0 0 1.6 1.05h.1a2.1 2.1 0 1 1 0 4.2h-.07A1.75 1.75 0 0 0 19.4 15Z" />
       </svg>
     );
   }
@@ -609,6 +652,7 @@ function MenuLineIcon({ name }: { name: string }) {
 }
 
 function MobileRecipebookSurface({
+  bookCoverImages,
   createInputRef,
   createName,
   customBooks,
@@ -637,6 +681,7 @@ function MobileRecipebookSurface({
   onRequestDelete,
   onShowCreateInput,
 }: {
+  bookCoverImages: Record<string, string | null>;
   createInputRef: React.RefObject<HTMLInputElement | null>;
   createName: string;
   customBooks: RecipeBookSummary[];
@@ -674,6 +719,7 @@ function MobileRecipebookSurface({
           book.book_type === "custom" ? (
             <MobileCustomBookCard
               book={book}
+              coverImageSrc={bookCoverImages[book.id] ?? null}
               isMenuOpen={menuOpenBookId === book.id}
               isRenaming={renamingBookId === book.id}
               isRenamingLoading={isRenaming}
@@ -690,7 +736,11 @@ function MobileRecipebookSurface({
               renameValue={renameValue}
             />
           ) : (
-            <MobileSystemBookCard book={book} key={book.id} />
+            <MobileSystemBookCard
+              book={book}
+              coverImageSrc={bookCoverImages[book.id] ?? null}
+              key={book.id}
+            />
           ),
         )}
       </div>
@@ -750,7 +800,13 @@ function MobileRecipebookSurface({
   );
 }
 
-function MobileSystemBookCard({ book }: { book: RecipeBookSummary }) {
+function MobileSystemBookCard({
+  book,
+  coverImageSrc,
+}: {
+  book: RecipeBookSummary;
+  coverImageSrc: string | null;
+}) {
   const visual = getBookVisual(book);
 
   return (
@@ -760,7 +816,11 @@ function MobileSystemBookCard({ book }: { book: RecipeBookSummary }) {
       href={buildBookDetailHref(book)}
       role="listitem"
     >
-      <BookIconBox emoji={visual.emoji} />
+      <BookCoverThumb
+        bookId={book.id}
+        fallbackLabel={visual.emoji}
+        imageSrc={coverImageSrc}
+      />
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <span className="min-w-0 truncate text-[14px] font-extrabold leading-[1.35] text-[var(--foreground)]">
@@ -778,6 +838,7 @@ function MobileSystemBookCard({ book }: { book: RecipeBookSummary }) {
 
 interface MobileCustomBookCardProps {
   book: RecipeBookSummary;
+  coverImageSrc: string | null;
   isMenuOpen: boolean;
   isRenaming: boolean;
   isRenamingLoading: boolean;
@@ -795,6 +856,7 @@ interface MobileCustomBookCardProps {
 
 function MobileCustomBookCard({
   book,
+  coverImageSrc,
   isMenuOpen,
   isRenaming,
   isRenamingLoading,
@@ -851,7 +913,11 @@ function MobileCustomBookCard({
   return (
     <div className="relative" role="listitem">
       <div className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] px-4 py-[14px]">
-        <BookIconBox emoji={visual.emoji} />
+        <BookCoverThumb
+          bookId={book.id}
+          fallbackLabel={visual.emoji}
+          imageSrc={coverImageSrc}
+        />
         <Link
           className="min-w-0 flex-1"
           href={buildBookDetailHref(book)}
@@ -908,13 +974,33 @@ function MobileCustomBookCard({
   );
 }
 
-function BookIconBox({ emoji }: { emoji: string }) {
+function BookCoverThumb({
+  bookId,
+  fallbackLabel,
+  imageSrc,
+}: {
+  bookId: string;
+  fallbackLabel: string;
+  imageSrc: string | null;
+}) {
   return (
     <span
       aria-hidden="true"
-      className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand-soft)] text-[20px]"
+      className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--brand-soft)] text-[20px]"
     >
-      {emoji}
+      {imageSrc ? (
+        <Image
+          alt=""
+          className="h-full w-full object-cover"
+          data-testid={`mobile-book-cover-${bookId}`}
+          height={44}
+          src={imageSrc}
+          unoptimized
+          width={44}
+        />
+      ) : (
+        fallbackLabel
+      )}
     </span>
   );
 }

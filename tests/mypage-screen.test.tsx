@@ -429,6 +429,42 @@ describe("MypageScreen", () => {
           is_leftover: false,
           shopping_list_id: null,
         },
+        {
+          id: "meal-2",
+          recipe_id: "recipe-2",
+          recipe_title: "비빔밥",
+          recipe_thumbnail_url: null,
+          plan_date: "2026-05-05",
+          column_id: "column-dinner",
+          planned_servings: 1,
+          status: "shopping_done",
+          is_leftover: false,
+          shopping_list_id: "shopping-1",
+        },
+        {
+          id: "meal-3",
+          recipe_id: "recipe-3",
+          recipe_title: "된장찌개",
+          recipe_thumbnail_url: null,
+          plan_date: "2026-05-06",
+          column_id: "column-dinner",
+          planned_servings: 2,
+          status: "cook_done",
+          is_leftover: false,
+          shopping_list_id: "shopping-1",
+        },
+        {
+          id: "meal-4",
+          recipe_id: "recipe-4",
+          recipe_title: "계란말이",
+          recipe_thumbnail_url: null,
+          plan_date: "2026-05-07",
+          column_id: "column-dinner",
+          planned_servings: 2,
+          status: "registered",
+          is_leftover: false,
+          shopping_list_id: null,
+        },
       ],
     });
     mockFetchPlannerColumns.mockResolvedValue({
@@ -510,18 +546,18 @@ describe("MypageScreen", () => {
     expect(screen.getByDisplayValue("집밥러")).toBeTruthy();
   });
 
-  it("uses the same actual-data stat labels on desktop", async () => {
+  it("uses cumulative planner status stat labels on desktop", async () => {
     render(<MypageScreen initialAuthenticated />);
 
     await screen.findByText("집밥러");
 
     const stats = screen.getByLabelText("마이페이지 통계");
-    expect(within(stats).getByText("저장한 레시피")).toBeTruthy();
-    expect(within(stats).getByText("요리완료")).toBeTruthy();
     expect(within(stats).getByText("플래너 등록")).toBeTruthy();
-    expect(within(stats).getByText("5")).toBeTruthy();
-    expect(within(stats).getByText("2")).toBeTruthy();
-    expect(within(stats).getByText("1")).toBeTruthy();
+    expect(within(stats).getByText("장보기 완료")).toBeTruthy();
+    expect(within(stats).getByText("요리 완료")).toBeTruthy();
+    expect(within(stats).getByText("4")).toBeTruthy();
+    expect(within(stats).getAllByText("1")).toHaveLength(2);
+    expect(mockFetchPlanner).toHaveBeenCalledWith("1900-01-01", "9999-12-31");
   });
 
   it("shows real saved recipe links instead of prototype-only saved cards", async () => {
@@ -566,29 +602,62 @@ describe("MypageScreen", () => {
     expect(screen.queryByText("앱 테마")).toBeNull();
     expect(screen.getByText(/최소 1개, 최대 5개/)).toBeTruthy();
     expect(screen.getByText(/식사가 있는 끼니는 삭제할 수 없어요/)).toBeTruthy();
+
+    const addInput = screen.getByLabelText("새 끼니 이름");
+    expect(addInput.className).toContain("web-mypage-column-input-prominent");
+
+    await user.click(screen.getByTestId("rename-column-column-breakfast"));
+    const renameInput = screen.getByLabelText("아침 새 이름");
+    expect(renameInput.className).toContain("web-mypage-column-input-prominent");
   });
 
-  it("uses the unified mobile profile edit, saved recipes entry, and stats", async () => {
+  it("uses mobile profile edit, a saved recipe rail, and cumulative stats", async () => {
     installMatchMedia(true);
 
     render(<MypageScreen initialAuthenticated />);
 
     expect(await screen.findByText("집밥러")).toBeTruthy();
-    expect(screen.getAllByText("저장한 레시피").length).toBeGreaterThan(0);
-    expect(screen.getByText("요리완료")).toBeTruthy();
+    expect(screen.getByTestId("mobile-saved-recipes-rail")).toBeTruthy();
+    expect(await screen.findByText("저장된 된장찌개")).toBeTruthy();
+    expect(await screen.findByText("저장된 김치볶음밥")).toBeTruthy();
+    expect(
+      screen
+        .getByTestId("mobile-saved-recipe-image-recipe-saved-2")
+        .getAttribute("src"),
+    ).toContain("images.unsplash.com");
+    expect(screen.getByText("요리 완료")).toBeTruthy();
+    expect(screen.getByText("장보기 완료")).toBeTruthy();
     expect(screen.getByText("플래너 등록")).toBeTruthy();
+    expect(screen.getByText("4").className).toContain("text-[28px]");
     expect(screen.queryByText("연속")).toBeNull();
     expect(screen.queryByText("계정 관리")).toBeNull();
+    expect(screen.queryByRole("button", { name: /저장한 레시피/ })).toBeNull();
 
     const user = userEvent.setup();
     await user.click(screen.getByTestId("mypage-profile-edit-button"));
     expect(screen.getByTestId("nickname-sheet-backdrop")).toBeTruthy();
 
     await user.click(screen.getByText("취소"));
-    await user.click(screen.getByRole("button", { name: /저장한 레시피/ }));
+  });
 
-    expect(screen.getByTestId("saved-recipes-surface")).toBeTruthy();
-    expect(await screen.findByText("저장된 된장찌개")).toBeTruthy();
+  it("uses first recipe images as mobile recipebook covers", async () => {
+    installMatchMedia(true);
+
+    render(<MypageScreen initialAuthenticated />);
+
+    expect(await screen.findByText("집밥러")).toBeTruthy();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /^레시피북/ }));
+
+    await waitFor(() => {
+      expect(mockFetchRecipeBookRecipes).toHaveBeenCalledWith("book-my", {
+        limit: 1,
+      });
+    });
+
+    const cover = await screen.findByTestId("mobile-book-cover-book-my");
+    expect(cover.getAttribute("src")).toContain("saved-1.jpg");
   });
 
   it("displays system books with correct recipe counts", async () => {
