@@ -1,10 +1,49 @@
 {
   "slice_id": "H4-planner-week-v2-direction",
-  "execution_mode": "design-decision",
+  "execution_mode": "manual",
   "risk_class": "high",
   "merge_policy": "manual",
-  "backend": null,
-  "frontend": null,
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/planner"
+    ],
+    "required_states": [],
+    "verify_commands": [],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "design-decision-artifact",
+      "user-approval-record"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": [
+        "PLANNER_WEEK"
+      ],
+      "required_screens": [
+        "PLANNER_WEEK"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/PLANNER_WEEK-v2-decision.md",
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow",
+        "scroll-state"
+      ],
+      "authority_report_paths": []
+    }
+  },
   "design_decision": {
     "target_screen": "PLANNER_WEEK",
     "decision_type": "interaction-model",
@@ -20,6 +59,10 @@
   },
   "external_smokes": [],
   "blocked_conditions": [],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 0
+  },
   "stage1_artifacts": [
     "docs/workpacks/H4-planner-week-v2-direction/README.md",
     "docs/workpacks/H4-planner-week-v2-direction/acceptance.md",

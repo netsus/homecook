@@ -1,4 +1,5 @@
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -11,7 +12,24 @@ import {
   resolveStageAutomationConfig,
 } from "../scripts/lib/omo-automation-spec.mjs";
 
+const repoRoot = process.cwd();
+
 describe("OMO automation spec", () => {
+  it("validates a single automation spec through the standalone CLI", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["scripts/validate-automation-spec.mjs", "--slice", "taxonomy-v2-contract-evolution"],
+      {
+        cwd: repoRoot,
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).not.toContain("SyntaxError");
+    expect(result.stdout).toContain("automation-spec validation passed");
+  });
+
   it("normalizes frontend design authority settings", () => {
     const spec = normalizeAutomationSpec({
       slice_id: "06-recipe-to-planner",
