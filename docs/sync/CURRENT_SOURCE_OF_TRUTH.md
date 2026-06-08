@@ -151,6 +151,7 @@
 
 > 이 변경은 `pre-27-taxonomy-consumer-alignment` Phase 1 Contract Lock 보강이다.
 > slice27 YouTube 개선 전까지 “현재 MVP 소비 경로는 legacy 7 category + shared mapping/helper를 사용한다”는 계약을 공식 문서 5종에 고정한다.
+> 2026-06-08 Ingredient Fruit Category Addendum이 category count만 `과일` 포함 8종으로 supersede한다. shared mapping/helper, 신규 DB registry table 제외, 외부 데이터 staging-only 원칙은 그대로 유지한다.
 > 식약처/농식품올바로 등 외부 데이터 ingestion runtime은 이 변경의 범위 밖이며, production 직적재는 금지된다.
 
 ## v1.6.9 / v1.5.6 / v1.3.6 / DB v1.3.5 / API v1.2.9 → v1.7.0 / v1.5.7 / v1.3.7 / DB v1.3.6 / API v1.2.10 변경 이력 (2026-05-24)

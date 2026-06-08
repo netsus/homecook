@@ -40,10 +40,9 @@ const PANTRY_EMOJI: Record<string, string> = {
   후추: "🧂",
 };
 
-// Wave1-only display groups that are NOT in the canonical 7 categories.
-// For legacy 7 categories, `getIngredientCategoryEmoji()` is authoritative.
+// Wave1-only display groups that are NOT in the canonical 8 categories.
+// For canonical categories, `getIngredientCategoryEmoji()` is authoritative.
 const WAVE1_ONLY_EMOJI: Record<string, string> = {
-  과일: "🍎",
   단백질: "🥚",
   주식: "🍚",
 };
