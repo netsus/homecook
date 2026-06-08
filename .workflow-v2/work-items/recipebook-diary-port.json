@@ -1,0 +1,100 @@
+{
+  "id": "recipebook-diary-port",
+  "title": "Recipebook diary port planning",
+  "summary": "레시피북을 다이어리/책장처럼 느끼게 하는 FE-only 화면 포팅 계획. MYPAGE 책장형 레시피북 목록과 RECIPEBOOK_DETAIL desktop 목차 rail + recipe area split을 잠그며, full page-turn reader는 view_count 없는 read-only data path가 공식화될 때까지 contract-evolution 후보로 분리한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "API/DB 변경 없이 기존 레시피북 목록/상세 관리 흐름을 유지하면서 레시피북을 사용자가 직접 만든 작은 책/다이어리처럼 느끼도록 후속 FE 구현 범위와 검증 기준을 고정한다.",
+  "owners": {
+    "claude": "stage1/stage4",
+    "codex": "stage5/stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "17a-mypage-overview-history",
+    "17b-recipebook-detail-remove",
+    "17c-settings-account",
+    "wave1-port-account-library-leftovers",
+    "mvp2-polish-mypage-return-loading",
+    "ux-latency-resolution"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.5.md",
+      "docs/화면정의서-v1.5.12.md",
+      "docs/유저flow맵-v1.3.12.md",
+      "docs/db설계-v1.3.11.md",
+      "docs/api문서-v1.2.15.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/recipebook-diary-port/README.md",
+      "docs/workpacks/recipebook-diary-port/acceptance.md",
+      "docs/workpacks/recipebook-diary-port/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/product-design-authority.md",
+      "ui/designs/MYPAGE.md",
+      "ui/designs/RECIPEBOOK_DETAIL.md",
+      "ui/designs/critiques/MYPAGE-critique.md",
+      "ui/designs/critiques/RECIPEBOOK_DETAIL-critique.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:workpack -- --slice recipebook-diary-port",
+      "pnpm validate:workflow-v2",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:workpack -- --slice recipebook-diary-port",
+      "pnpm validate:workflow-v2"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "desktop-1440-screenshot",
+      "mobile-390-screenshot",
+      "mobile-320-screenshot",
+      "design-authority-report",
+      "exploratory-qa-report"
+    ]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Stage 1 docs lock. This work item intentionally avoids API/DB changes; full recipebook page-turn reader remains future contract-evolution because current recipe detail 조회 path increments view_count.",
+  "out_of_scope": [
+    "API/DB/auth/state-transition contract changes",
+    "Full page-turn reader",
+    "Read-only recipe detail preview endpoint",
+    "Hidden GET /api/v1/recipes/{id} preview calls",
+    "Recipebook type expansion",
+    "Recipe save/like policy changes",
+    "Level/rank system implementation"
+  ],
+  "open_questions": []
+}
