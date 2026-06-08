@@ -97,6 +97,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `27-youtube-import-quality-uplift` | merged | YouTube 설명란 파서 추출 품질 + import readiness >= 0.80 달성. 결정론 파서 규칙/사전 시딩/50건 corpus evidence + fixture-backed full-flow E2E (LLM 없음) |
 | `27b-youtube-source-fallback` | merged | YouTube 설명란에서 재료만 추출된 영상에 caption/transcript fallback으로 조리 과정 보충 + 부분 추출 draft UX (LLM 없음) |
 | `28-external-ingredient-data-ingest-gate` | merged | 식약처/농식품올바로 등 외부 재료 데이터를 production 직적재 없이 file batch -> staging/review -> approved seed artifact 경로로만 유입 |
+| `taxonomy-v2-contract-evolution` | docs | 재료 8대분류/21소분류와 조리법 6그룹/20대표 method로 확장하는 v2 taxonomy 계약을 v1 label 호환, additive DB/API, migration/reclassification, frontend consumer sweep 기준으로 잠금 |
 | `29-youtube-author-comment-fallback` | merged | YouTube 설명란이 비어 있거나 부족한 영상에서 영상 작성자 top-level 댓글만 보조 source로 사용해 레시피 draft 보강. 일반 댓글/reply/LLM 없음 |
 | `31-recipe-media-tags` | in-progress | YouTube 등록 레시피 썸네일 영속화, 직접 등록 이미지 업로드, YouTube/직접 등록 공용 서버 태그 자동 생성 |
 | `32-youtube-visual-quantity-enrichment` | in-progress | YouTube 공개 텍스트 추출 이후 화면 속 수량 텍스트 기반 보강, quantity review fields, register confirmation contract, visual cache/events |
