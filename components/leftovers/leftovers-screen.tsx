@@ -44,7 +44,8 @@ type FeedbackTone = "error" | "status";
 const FEEDBACK_AUTO_DISMISS_MS = 4000;
 const LEFTOVERS_DESCRIPTION =
   "요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.";
-const LEFTOVER_PLANNER_ADD_LABEL = "날짜 끼니에 추가";
+const LEFTOVER_LIST_PLANNER_ADD_LABEL = "플래너에 추가";
+const LEFTOVER_PLANNER_ADD_CONFIRM_LABEL = "날짜 끼니에 추가";
 const WEB_NAV_ITEMS = [
   { id: "home", href: "/", label: "홈" },
   { id: "planner", href: "/planner", label: "플래너" },
@@ -156,13 +157,6 @@ function LeftoverCard({
           >
             플래너에 추가
           </WebButton>
-          <Link
-            className="web-button web-button-tertiary web-button-sm"
-            href={`/recipe/${item.recipe_id}`}
-            prefetch={false}
-          >
-            요리하기
-          </Link>
           <WebButton
             data-testid="eat-button"
             disabled={anyMutating}
@@ -334,17 +328,14 @@ export function LeftoversScreen({
 
       try {
         await eatLeftover(leftoverId);
-        setItems((current) => current.filter((item) => item.id !== leftoverId));
+        const nextItems = items.filter((item) => item.id !== leftoverId);
+        setItems(nextItems);
+
+        if (nextItems.length === 0) {
+          setScreenState("empty");
+        }
+
         setFeedback({ message: "다먹음 처리됐어요", tone: "status" });
-
-        // Check if list is now empty
-        setItems((current) => {
-          if (current.length === 0) {
-            setScreenState("empty");
-          }
-
-          return current;
-        });
       } catch (error) {
         if (isLeftoverApiError(error) && error.status === 401) {
           setAuthState("unauthorized");
@@ -362,7 +353,7 @@ export function LeftoversScreen({
         setEatingId(null);
       }
     },
-    [eatingId],
+    [eatingId, items],
   );
 
   // Planner-add flow
@@ -481,7 +472,7 @@ export function LeftoversScreen({
       selectedDate={selectedPlanDate}
       servings={plannerServings}
       sheetState={plannerAddSheetState}
-      defaultConfirmLabel={LEFTOVER_PLANNER_ADD_LABEL}
+      defaultConfirmLabel={LEFTOVER_PLANNER_ADD_CONFIRM_LABEL}
     />
   );
   const leftoversSelfHref = buildReturnHref("/leftovers", {
@@ -682,7 +673,7 @@ export function LeftoversScreen({
           {items.map((item) => (
             <LeftoverCard
               key={item.id}
-              anyMutating={eatingId !== null}
+              anyMutating={eatingId === item.id}
               isEating={eatingId === item.id}
               item={item}
               onEat={handleEat}
@@ -789,7 +780,7 @@ function LeftoversMobileView({
         <div className="space-y-[10px] p-4" data-testid="leftover-list">
           {items.map((item) => (
             <MobileLeftoverCard
-              anyMutating={eatingId !== null}
+              anyMutating={eatingId === item.id}
               isEating={eatingId === item.id}
               item={item}
               key={item.id}
@@ -882,7 +873,7 @@ function MobileLeftoverCard({
           onClick={() => onPlannerAdd(item)}
           type="button"
         >
-          <span className="whitespace-nowrap">{LEFTOVER_PLANNER_ADD_LABEL}</span>
+          <span className="whitespace-nowrap">{LEFTOVER_LIST_PLANNER_ADD_LABEL}</span>
         </button>
         <button
           className="flex h-9 min-w-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-2 text-center text-[12px] font-extrabold leading-none text-[var(--text-2)] disabled:opacity-60"
@@ -937,7 +928,7 @@ function MobileFeedback({
         "mx-4 mt-2 rounded-[var(--radius-control)] border px-4 py-3 text-center text-[13px] font-extrabold",
         feedback.tone === "error"
           ? "border-[var(--feedback-danger-border)] bg-[var(--feedback-danger-soft)] text-[var(--danger)]"
-          : "border-[var(--feedback-success-border)] bg-[var(--feedback-success-soft)] text-[var(--success-strong)]",
+          : "border-[var(--brand-border)] bg-[var(--brand-soft)] text-[var(--brand)]",
       ].join(" ")}
       data-testid="feedback-toast"
       role="alert"
