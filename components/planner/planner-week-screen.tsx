@@ -145,16 +145,28 @@ function getPlannerMealStatusClass(status: PlannerMealData["status"]) {
   return "registered";
 }
 
-function getMobilePlannerMealStatusClass(status: PlannerMealData["status"]) {
+function getPlannerMealStatusAriaLabel(status: PlannerMealData["status"]) {
   if (status === "shopping_done") {
-    return "border border-[var(--planner-status-shopping)] bg-[var(--planner-status-shopping-soft)]";
+    return "장보기 완료";
   }
 
   if (status === "cook_done") {
-    return "border border-[var(--planner-status-cooked)] bg-[var(--planner-status-cooked-soft)]";
+    return "요리 완료";
   }
 
-  return "border border-[var(--planner-status-registered)] bg-[var(--planner-status-registered-soft)]";
+  return "식사 등록 완료";
+}
+
+function getMobilePlannerMealStatusIndicatorClass(status: PlannerMealData["status"]) {
+  if (status === "shopping_done") {
+    return "border-[var(--planner-status-shopping)] bg-[var(--planner-status-shopping)]";
+  }
+
+  if (status === "cook_done") {
+    return "border-[var(--planner-status-cooked)] bg-[var(--planner-status-cooked)]";
+  }
+
+  return "border-[var(--planner-status-registered)] bg-[var(--planner-status-registered)]";
 }
 
 function WebProfileButton() {
@@ -496,7 +508,14 @@ function PlannerWeekWebView({
                                     {meal.recipe_title}
                                   </span>
                                   <span className="web-planner-meal-meta">
-                                    {meal.planned_servings}인분
+                                    <span>{meal.planned_servings}인분</span>
+                                    <span
+                                      aria-label={getPlannerMealStatusAriaLabel(meal.status)}
+                                      className={[
+                                        "web-planner-meal-status",
+                                        `web-planner-meal-status-${getPlannerMealStatusClass(meal.status)}`,
+                                      ].join(" ")}
+                                    />
                                   </span>
                                 </span>
                               </Link>
@@ -1379,8 +1398,7 @@ export function PlannerWeekScreen({
                                 {visibleMeals.map((meal, mealIndex) => (
                                   <span
                                     className={[
-                                      "relative flex h-[46px] min-w-0 items-center overflow-hidden rounded-[var(--radius-control)] text-[var(--foreground)]",
-                                      getMobilePlannerMealStatusClass(meal.status),
+                                      "relative flex h-[46px] min-w-0 items-center overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] text-[var(--foreground)]",
                                     ].join(" ")}
                                     data-testid={`planner-mobile-meal-${meal.id}`}
                                     key={`${meal.id}-${mealIndex}`}
@@ -1410,8 +1428,17 @@ export function PlannerWeekScreen({
                                           남은 요리
                                         </span>
                                       ) : null}
-                                      <span className="mt-px block text-[10px] text-[var(--text-3)]">
-                                        {meal.planned_servings}인분
+                                      <span className="mt-px flex min-w-0 items-center gap-1">
+                                        <span className="truncate text-[10px] text-[var(--text-3)]">
+                                          {meal.planned_servings}인분
+                                        </span>
+                                        <span
+                                          aria-label={getPlannerMealStatusAriaLabel(meal.status)}
+                                          className={[
+                                            "inline-flex h-2 w-[18px] shrink-0 rounded-full border",
+                                            getMobilePlannerMealStatusIndicatorClass(meal.status),
+                                          ].join(" ")}
+                                        />
                                       </span>
                                     </span>
                                     {mealIndex === 1 && slotMeals.length > 2 ? (

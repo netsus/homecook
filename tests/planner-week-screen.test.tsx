@@ -298,9 +298,8 @@ describe("planner week screen", () => {
     expect(screen.getByRole("button", { name: "다음 주" })).toBeTruthy();
     expect(screen.getByText("김치찌개")).toBeTruthy();
     expect(screen.getByText("샐러드")).toBeTruthy();
-    // Wave1: status badges removed; status data preserved in meal objects
-    expect(screen.queryByLabelText("식사 등록 완료")).toBeNull();
-    expect(screen.queryByLabelText("장보기 완료")).toBeNull();
+    expect(screen.getByLabelText("식사 등록 완료")).toBeTruthy();
+    expect(screen.getByLabelText("장보기 완료")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "컬럼 추가" })).toBeNull();
   });
 
@@ -404,7 +403,7 @@ describe("planner week screen", () => {
     expect(screen.queryByTestId("planner-first-meal-chooser")).toBeNull();
   });
 
-  it("keeps desktop meal card meta to servings without duplicate status text", async () => {
+  it("shows desktop meal status as a color-only indicator instead of a colored side rail", async () => {
     setDesktopViewport(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(
@@ -430,7 +429,11 @@ describe("planner week screen", () => {
     await screen.findAllByText("된장찌개");
 
     const meta = container.querySelector(".web-planner-meal-meta");
-    expect(meta?.textContent).toBe("2인분");
+    expect(meta).not.toBeNull();
+    expect(within(meta as HTMLElement).getByText("2인분")).toBeTruthy();
+    expect(within(meta as HTMLElement).queryByText("등록")).toBeNull();
+    expect(within(meta as HTMLElement).getByLabelText("식사 등록 완료")).toBeTruthy();
+    expect(meta?.querySelector(".web-planner-meal-status-registered")).toBeTruthy();
     expect(screen.queryByText("2인분 · 등록")).toBeNull();
   });
 
@@ -779,8 +782,8 @@ describe("planner week screen", () => {
     expect(dinnerButton.className).toContain("border-[var(--line-strong)]");
     expect(dinnerButton.className).toContain("bg-transparent");
     expect(dinnerButton.className).toContain("text-[var(--text-3)]");
-    // Wave1: status badge removed — no "등록" text
     expect(within(breakfastRow as HTMLElement).queryByText("등록")).toBeNull();
+    expect(within(breakfastRow as HTMLElement).getByLabelText("식사 등록 완료")).toBeTruthy();
     expect(dinnerButton.textContent?.replace(/\s+/g, " ").trim()).toBe("+");
   });
 
@@ -1214,7 +1217,7 @@ describe("planner week screen", () => {
     expect(slotAreaText).not.toMatch(/[\u{1F300}-\u{1F9FF}]/u);
   });
 
-  it("does not render status badges on filled meal slots (Wave1 STATUS_META removal)", async () => {
+  it("renders color-only meal status indicators on filled meal slots", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(
       createPlannerData({
@@ -1248,25 +1251,28 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
-    // Check meal slot rows specifically — no status badge text inside the slot rows
+    // Check meal slot rows specifically — state is shown as a compact badge, not a full-card color wash.
     const breakfastRow = within(firstDayCard).getByText("된장찌개").closest("a");
     const dinnerRow = within(firstDayCard).getByText("파스타").closest("a");
 
     expect(breakfastRow).not.toBeNull();
     expect(dinnerRow).not.toBeNull();
     expect(screen.getByTestId("planner-mobile-meal-meal-1").className).toContain(
+      "bg-[var(--surface-fill)]",
+    );
+    expect(screen.getByTestId("planner-mobile-meal-meal-1").className).not.toContain(
       "bg-[var(--planner-status-registered-soft)]",
     );
     expect(screen.getByTestId("planner-mobile-meal-meal-2").className).toContain(
+      "bg-[var(--surface-fill)]",
+    );
+    expect(screen.getByTestId("planner-mobile-meal-meal-2").className).not.toContain(
       "bg-[var(--planner-status-shopping-soft)]",
     );
-    // No status badge labels within meal slot rows
     expect(within(breakfastRow as HTMLElement).queryByText("등록")).toBeNull();
-    expect(within(dinnerRow as HTMLElement).queryByText("장보기 완료")).toBeNull();
-    // No aria labels for status badges
-    expect(screen.queryByLabelText("식사 등록 완료")).toBeNull();
-    expect(screen.queryByLabelText("장보기 완료")).toBeNull();
-    expect(screen.queryByLabelText("요리 완료")).toBeNull();
+    expect(within(dinnerRow as HTMLElement).queryByText("장보기")).toBeNull();
+    expect(within(breakfastRow as HTMLElement).getByLabelText("식사 등록 완료")).toBeTruthy();
+    expect(within(dinnerRow as HTMLElement).getByLabelText("장보기 완료")).toBeTruthy();
   });
 
   it("shows '+' button on filled slots and quieter add CTAs on empty slots (Wave1)", async () => {

@@ -2290,9 +2290,9 @@ button {
     align-items: stretch;
     flex-direction: column;
     gap: 2px;
-    border-left: 3px solid var(--planner-status-registered);
+    border: 1px solid var(--web-line);
     border-radius: var(--web-r-sm);
-    background: var(--web-bg-alt);
+    background: var(--web-surface);
     padding: 6px;
     color: var(--web-text-1);
   }
@@ -2302,15 +2302,15 @@ button {
   }
 
   .web-planner-meal-registered {
-    border-left-color: var(--planner-status-registered);
+    border-color: var(--web-line);
   }
 
   .web-planner-meal-shopped {
-    border-left-color: var(--planner-status-shopping);
+    border-color: var(--web-line);
   }
 
   .web-planner-meal-cooked {
-    border-left-color: var(--planner-status-cooked);
+    border-color: var(--web-line);
   }
 
   .web-planner-meal-thumb {
@@ -2343,6 +2343,38 @@ button {
     color: var(--web-text-3);
     font-size: 12px;
     font-weight: 600;
+  }
+
+  .web-planner-meal-meta {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .web-planner-meal-status {
+    display: inline-flex;
+    width: 18px;
+    height: 7px;
+    flex: 0 0 auto;
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: var(--web-r-pill);
+  }
+
+  .web-planner-meal-status-registered {
+    border-color: var(--planner-status-registered);
+    background: var(--planner-status-registered);
+  }
+
+  .web-planner-meal-status-shopped {
+    border-color: var(--planner-status-shopping);
+    background: var(--planner-status-shopping);
+  }
+
+  .web-planner-meal-status-cooked {
+    border-color: var(--planner-status-cooked);
+    background: var(--planner-status-cooked);
   }
 
   .web-planner-add {
