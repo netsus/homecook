@@ -2455,6 +2455,7 @@ function MyPagePreferencesSurface({
       {showLogoutDialog ? (
         <MyPageConfirmDialog
           confirmLabel={isLoggingOut ? "로그아웃 중..." : "로그아웃"}
+          description="다시 로그인해야 식단·팬트리가 동기화돼요."
           errorMessage={logoutError}
           onCancel={onCloseLogoutDialog}
           onConfirm={onConfirmLogout}

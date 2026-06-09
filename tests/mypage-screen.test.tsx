@@ -651,6 +651,23 @@ describe("MypageScreen", () => {
     expect(renameInput.className).toContain("web-mypage-column-input-prominent");
   });
 
+  it("shows the app-matched logout description in the web confirmation dialog", async () => {
+    render(<MypageScreen initialAuthenticated />);
+    const user = userEvent.setup();
+
+    await screen.findByText("집밥러");
+    await user.click(screen.getByRole("tab", { name: "환경설정" }));
+    await user.click(screen.getByRole("button", { name: /로그아웃/ }));
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "로그아웃 할까요?",
+    });
+
+    expect(
+      within(dialog).getByText("다시 로그인해야 식단·팬트리가 동기화돼요."),
+    ).toBeTruthy();
+  });
+
   it("uses mobile profile edit, a saved recipe rail, and cumulative stats", async () => {
     installMatchMedia(true);
 
