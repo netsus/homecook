@@ -1932,7 +1932,8 @@ button {
   }
 
   .web-planner-screen,
-  .web-meal-screen {
+  .web-meal-screen,
+  .web-menu-add-screen {
     padding-top: 40px;
   }
 

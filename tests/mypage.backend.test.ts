@@ -329,11 +329,11 @@ describe("17a mypage backend", () => {
           {
             id: "list-1",
             title: "4/30 장보기",
-            date_range_start: "2026-04-30",
-            date_range_end: "2026-05-06",
+            date_range_start: "2026-06-07",
+            date_range_end: "2026-06-14",
             is_completed: true,
             completed_at: "2026-04-30T10:30:00Z",
-            created_at: "2026-04-30T00:00:00Z",
+            created_at: "2026-06-07T00:00:00Z",
           },
           {
             id: "list-2",
@@ -375,16 +375,16 @@ describe("17a mypage backend", () => {
       items: [
         {
           id: "list-1",
-          title: "4월 30일 ~ 5월 6일 끼니",
-          date_range_start: "2026-04-30",
-          date_range_end: "2026-05-06",
+          title: "6/7~14",
+          date_range_start: "2026-06-07",
+          date_range_end: "2026-06-14",
           is_completed: true,
           completed_at: "2026-04-30T10:30:00Z",
           item_count: 1,
-          created_at: "2026-04-30T00:00:00Z",
+          created_at: "2026-06-07T00:00:00Z",
         },
       ],
-      next_cursor: "2026-04-30T00:00:00Z|list-1",
+      next_cursor: "2026-06-07T00:00:00Z|list-1",
       has_next: true,
     });
     expect(shoppingListsTable.__query.eq).toHaveBeenCalledWith("user_id", "user-1");
