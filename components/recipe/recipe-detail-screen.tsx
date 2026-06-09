@@ -1075,7 +1075,7 @@ export function RecipeDetailScreen({
                   <li
                     className="rounded-[var(--radius-card)] bg-[var(--panel)] p-4 shadow-[var(--shadow-1)]"
                     style={{
-                      borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method?.color_key)}`,
+                      borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method)}`,
                     }}
                   >
                 <div className="flex items-start justify-between gap-3">
@@ -1084,10 +1084,10 @@ export function RecipeDetailScreen({
                       className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold"
                       style={{
                         backgroundColor: getCookingMethodTint(
-                          step.cooking_method?.color_key,
+                          step.cooking_method,
                         ),
                         color: resolveCookingMethodDark(
-                          step.cooking_method?.color_key,
+                          step.cooking_method,
                         ),
                       }}
                     >
@@ -1097,10 +1097,10 @@ export function RecipeDetailScreen({
                       className="rounded px-2 py-0.5 text-[11px] font-bold"
                       style={{
                         backgroundColor: getCookingMethodTint(
-                          step.cooking_method?.color_key,
+                          step.cooking_method,
                         ),
                         color: resolveCookingMethodDark(
-                          step.cooking_method?.color_key,
+                          step.cooking_method,
                         ),
                       }}
                     >
@@ -1432,10 +1432,10 @@ export function RecipeDetailScreen({
                       className="inline-flex h-7 w-7 items-center justify-center rounded-full pt-px text-[13px] font-bold leading-[1]"
                       style={{
                         backgroundColor: getCookingMethodTint(
-                          step.cooking_method?.color_key,
+                          step.cooking_method,
                         ),
                         color: resolveCookingMethodDark(
-                          step.cooking_method?.color_key,
+                          step.cooking_method,
                         ),
                       }}
                     >
@@ -1446,10 +1446,10 @@ export function RecipeDetailScreen({
                       className="rounded-full px-2 py-0.5 text-[12px] font-bold"
                       style={{
                         backgroundColor: getCookingMethodTint(
-                          step.cooking_method?.color_key,
+                          step.cooking_method,
                         ),
                         color: resolveCookingMethodDark(
-                          step.cooking_method?.color_key,
+                          step.cooking_method,
                         ),
                       }}
                       title={getStepCookingMethodAssistiveLabel(step.cooking_method)}
@@ -1843,10 +1843,10 @@ function RecipeDetailWebView({
                             className="web-step-num"
                             style={{
                               backgroundColor: getCookingMethodTint(
-                                step.cooking_method?.color_key,
+                                step.cooking_method,
                               ),
                               color: resolveCookingMethodDark(
-                                step.cooking_method?.color_key,
+                                step.cooking_method,
                               ),
                             }}
                           >
@@ -1859,10 +1859,10 @@ function RecipeDetailWebView({
                                 className="web-step-method"
                                 style={{
                                   backgroundColor: getCookingMethodTint(
-                                    step.cooking_method?.color_key,
+                                    step.cooking_method,
                                   ),
                                   color: resolveCookingMethodDark(
-                                    step.cooking_method?.color_key,
+                                    step.cooking_method,
                                   ),
                                 }}
                                 title={getStepCookingMethodAssistiveLabel(step.cooking_method)}
@@ -2279,8 +2279,8 @@ function RecipePhotoLightbox({
   );
 }
 
-function resolveCookingMethodDark(colorKey?: string | null) {
-  const base = getCookingMethodColor(colorKey);
+function resolveCookingMethodDark(input?: Parameters<typeof getCookingMethodColor>[0]) {
+  const base = getCookingMethodColor(input);
   return `color-mix(in srgb, ${base} 52%, var(--foreground))`;
 }
 

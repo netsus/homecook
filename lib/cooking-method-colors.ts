@@ -3,45 +3,50 @@ const COOKING_METHOD_COLORS: Record<string, string> = {
   red: "var(--cook-boil)",
   brown: "var(--cook-grill)",
   blue: "var(--cook-steam)",
-  yellow: "var(--cook-fry)",
+  yellow: "var(--cook-deep-fry)",
   lime: "var(--cook-blanch)",
   green: "var(--cook-mix)",
   gray: "var(--cook-etc)",
   unassigned: "var(--cook-etc)",
-  slice: "var(--cook-etc)",
-  mince: "var(--cook-etc)",
-  thaw: "var(--cook-etc)",
-  pre_season: "var(--cook-mix)",
-  pickle: "var(--cook-mix)",
+  slice: "var(--cook-slice)",
+  mince: "var(--cook-mince)",
+  thaw: "var(--cook-thaw)",
+  pre_season: "var(--cook-pre-season)",
+  pickle: "var(--cook-pickle)",
   stir_fry: "var(--cook-stir)",
   boil: "var(--cook-boil)",
-  parboil: "var(--cook-boil)",
+  parboil: "var(--cook-parboil)",
   grill: "var(--cook-grill)",
   steam: "var(--cook-steam)",
-  pan_fry: "var(--cook-fry)",
-  deep_fry: "var(--cook-fry)",
-  fry: "var(--cook-fry)",
-  bake: "var(--cook-fry)",
-  oven_bake: "var(--cook-grill)",
-  air_fryer: "var(--cook-fry)",
-  microwave: "var(--cook-etc)",
+  pan_fry: "var(--cook-pan-fry)",
+  deep_fry: "var(--cook-deep-fry)",
+  fry: "var(--cook-deep-fry)",
+  bake: "var(--cook-oven-bake)",
+  oven_bake: "var(--cook-oven-bake)",
+  air_fryer: "var(--cook-air-fryer)",
+  microwave: "var(--cook-microwave)",
   blanch: "var(--cook-blanch)",
   mix: "var(--cook-mix)",
-  toss: "var(--cook-mix)",
-  braise: "var(--cook-boil)",
-  reduce: "var(--cook-boil)",
+  toss: "var(--cook-toss)",
+  braise: "var(--cook-braise)",
+  reduce: "var(--cook-reduce)",
   raw: "var(--cook-mix)",
-  prep: "var(--cook-etc)",
+  prep: "var(--cook-slice)",
   other: "var(--cook-etc)",
 };
 
 const COOKING_METHOD_TINT_WEIGHTS: Record<string, number> = {
   red: 14,
   boil: 14,
+  reduce: 14,
+  steam: 14,
+  thaw: 14,
   yellow: 18,
   deep_fry: 18,
   fry: 18,
+  air_fryer: 18,
   bake: 18,
+  oven_bake: 18,
 };
 
 function createCookingMethodTint(color: string, weight = 16) {
@@ -54,7 +59,24 @@ interface CookingMethodVisualInput {
   color_key?: string | null;
 }
 
-export function getCookingMethodColor(colorKey?: string | null): string {
+type CookingMethodColorInput = string | CookingMethodVisualInput | null | undefined;
+
+function normalizeColorKey(value?: string | null) {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : null;
+}
+
+function resolveCookingMethodColorKey(input?: CookingMethodColorInput) {
+  if (typeof input === "string") {
+    return normalizeColorKey(input);
+  }
+
+  return normalizeColorKey(input?.code) ?? normalizeColorKey(input?.color_key);
+}
+
+export function getCookingMethodColor(input?: CookingMethodColorInput): string {
+  const colorKey = resolveCookingMethodColorKey(input);
+
   if (!colorKey) {
     return "var(--cook-etc)";
   }
@@ -62,17 +84,16 @@ export function getCookingMethodColor(colorKey?: string | null): string {
   return COOKING_METHOD_COLORS[colorKey] ?? "var(--cook-etc)";
 }
 
-export function getCookingMethodTint(colorKey?: string | null): string {
+export function getCookingMethodTint(input?: CookingMethodColorInput): string {
+  const colorKey = resolveCookingMethodColorKey(input);
   const tintWeight = colorKey ? COOKING_METHOD_TINT_WEIGHTS[colorKey] : undefined;
-  return createCookingMethodTint(getCookingMethodColor(colorKey), tintWeight);
+  return createCookingMethodTint(getCookingMethodColor(input), tintWeight);
 }
 
 export function getCookingMethodVisual(method?: CookingMethodVisualInput | null) {
-  const colorKey = method?.color_key ?? method?.code ?? null;
-
   return {
     label: method?.label?.trim() || "기타",
-    color: getCookingMethodColor(colorKey),
-    tint: getCookingMethodTint(colorKey),
+    color: getCookingMethodColor(method),
+    tint: getCookingMethodTint(method),
   };
 }

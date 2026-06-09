@@ -199,13 +199,27 @@
   --wave1-font-brand: var(--font-body);
 
   /* ── 요리모드 조리방법 색상 ── */
+  --cook-slice:  #64748B;
+  --cook-mince:  #7C3AED;
+  --cook-thaw:   #0EA5E9;
+  --cook-pre-season: #9A5B13;
+  --cook-pickle: #2F9E44;
   --cook-stir:   #FF8C42;
   --cook-boil:   #E8453C;
+  --cook-parboil: #F97316;
   --cook-grill:  #8B5E3C;
   --cook-steam:  #4A90D9;
-  --cook-fry:    #F5C518;
+  --cook-pan-fry: #D97706;
+  --cook-deep-fry: #D9A441;
+  --cook-fry:    var(--cook-deep-fry);
   --cook-blanch: #7BC67E;
   --cook-mix:    #2ea67a;
+  --cook-toss:   #10B981;
+  --cook-braise: #B45309;
+  --cook-reduce: #BE123C;
+  --cook-microwave: #6366F1;
+  --cook-oven-bake: #A16207;
+  --cook-air-fryer: #C2410C;
   --cook-etc:    #AAAAAA;
   --cook-boil-bg: var(--danger-soft);
   --cook-boil-border: var(--danger);
