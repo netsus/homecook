@@ -8193,8 +8193,8 @@ button {
 
   .web-pantry-grid {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
     padding: 14px;
   }
 
@@ -8205,13 +8205,14 @@ button {
   .web-pantry-card {
     position: relative;
     display: grid;
-    min-height: 118px;
-    align-content: start;
-    gap: 5px;
+    grid-template-columns: 56px minmax(0, 1fr);
+    min-height: 84px;
+    align-items: center;
+    gap: 12px;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-md);
     background: var(--web-surface);
-    padding: 10px;
+    padding: 12px;
     color: var(--web-text-1);
     text-align: left;
     transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
@@ -8228,7 +8229,7 @@ button {
   }
 
   .web-pantry-card-selectable {
-    padding-right: 42px;
+    padding-right: 44px;
   }
 
   .web-pantry-card:not(:disabled):hover {
@@ -8254,8 +8255,8 @@ button {
 
   .web-pantry-check {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 50%;
+    right: 12px;
     display: inline-flex;
     width: 24px;
     height: 24px;
@@ -8267,6 +8268,7 @@ button {
     color: var(--web-brand);
     font-size: 12px;
     font-weight: 900;
+    transform: translateY(-50%);
   }
 
   .web-pantry-card-selected .web-pantry-check {
@@ -8277,20 +8279,29 @@ button {
 
   .web-pantry-emoji {
     display: flex;
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
     align-items: center;
     justify-content: center;
+    border: 1px solid rgba(20, 32, 54, 0.08);
     border-radius: var(--web-r-sm);
     background: var(--web-image-placeholder);
-    font-size: 24px;
+    font-size: 28px;
+  }
+
+  .web-pantry-card-copy {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
   }
 
   .web-pantry-card strong {
+    min-width: 0;
     overflow: hidden;
     color: var(--web-text-1);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 800;
+    line-height: 1.25;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -8299,6 +8310,7 @@ button {
     color: var(--web-text-3);
     font-size: 12px;
     font-weight: 700;
+    line-height: 1.2;
   }
 
   .web-pantry-badge {

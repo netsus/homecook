@@ -974,7 +974,13 @@ export function PantryScreen({
                             <span className="web-pantry-emoji" aria-hidden="true">
                               {getIngredientCategoryEmoji(item.category)}
                             </span>
-                            <strong>{item.standard_name}</strong>
+                            <span
+                              className="web-pantry-card-copy"
+                              data-testid={`web-pantry-card-copy-${item.ingredient_id}`}
+                            >
+                              <strong>{item.standard_name}</strong>
+                              <small>보유 중</small>
+                            </span>
                           </>
                         );
 
@@ -1149,7 +1155,7 @@ function PantryDesktopLoadingShell() {
           </WebToolbar>
           <div className="web-pantry-grid">
             {Array.from({ length: 10 }).map((_, index) => (
-              <WebSkeleton height={166} key={index} />
+              <WebSkeleton height={84} key={index} />
             ))}
           </div>
         </WebCard>
