@@ -338,7 +338,10 @@ describe("CookModeScreen", () => {
     expect(screen.getByText("김치찌개")).toBeTruthy();
     expect(screen.getByText("2인분")).toBeTruthy();
     expect(screen.getByText("4/18 아침")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "꺼내둘 재료" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "전체 재료" })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "전체 조리순서" }),
+    ).toBeTruthy();
     const firstIngredient = screen.getAllByTestId("ingredient-item")[0]!;
     expect(within(firstIngredient).getByText("양파")).toBeTruthy();
     expect(within(firstIngredient).getByText("1개")).toBeTruthy();
@@ -457,64 +460,44 @@ describe("CookModeScreen", () => {
     });
   });
 
-  it("renders the desktop prototype board with current-step focus and timeline navigation", async () => {
+  it("renders the desktop whole-board with all ingredients and all steps", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildPrototypeCookModeData());
 
     const CookModeScreen = await importCookModeScreen();
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
-    const focusStep = await screen.findByTestId("cook-mode-current-step");
-    const amountBoard = screen.getByTestId("cook-mode-current-amount-board");
-    const timeline = screen.getByTestId("step-list");
+    const wholeBoard = await screen.findByTestId("cook-mode-whole-board");
     const ingredientList = screen.getByTestId("ingredient-list");
+    const stepList = screen.getByTestId("step-list");
 
-    expect(screen.getByRole("heading", { name: "꺼내둘 재료" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "조리 순서" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "전체 재료" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "전체 조리순서" })).toBeTruthy();
     expect(screen.getAllByText("HOMECOOK")).toHaveLength(1);
+    expect(within(ingredientList).getByText("배추김치")).toBeTruthy();
+    expect(within(ingredientList).getByText("300g")).toBeTruthy();
+    expect(within(ingredientList).getByText("돼지고기")).toBeTruthy();
+    expect(within(ingredientList).getByText("250g")).toBeTruthy();
+    expect(within(stepList).getByText("재료 손질")).toBeTruthy();
+    expect(within(stepList).getByText("고기 볶기")).toBeTruthy();
+    expect(within(stepList).getByText("국물 내기")).toBeTruthy();
+    expect(within(stepList).getByTestId("cook-mode-step-number-1")).toBeTruthy();
+    expect(within(stepList).getByTestId("cook-mode-step-number-2")).toBeTruthy();
+    expect(within(stepList).getByTestId("cook-mode-step-number-3")).toBeTruthy();
+    expect(within(stepList).getByText("김치와 양파를 한입 크기로 썰어주세요.")).toBeTruthy();
     expect(
-      within(focusStep).getByTestId("cook-mode-counter").textContent,
-    ).toContain("1");
-    expect(
-      within(focusStep).getByTestId("cook-mode-current-step-title").textContent,
-    ).toContain("재료 손질");
-    expect(
-      within(focusStep).getByTestId("cook-mode-current-step-copy").textContent,
-    ).toContain("김치와 양파를 한입 크기로 썰어주세요.");
-    expect(within(amountBoard).getByText("이번에 쓸 양")).toBeTruthy();
-    expect(within(amountBoard).getByText("2개")).toBeTruthy();
-    expect(within(amountBoard).getByText("배추김치")).toBeTruthy();
-    expect(within(amountBoard).getByText("300g")).toBeTruthy();
-    expect(
-      within(ingredientList)
-        .getByTestId("cook-mode-ingredient-ing-kimchi")
-        .getAttribute("data-active"),
-    ).toBe("true");
-    expect(
-      within(ingredientList)
-        .getByTestId("cook-mode-ingredient-ing-pork")
-        .getAttribute("data-active"),
-    ).toBe("false");
-    expect(within(timeline).queryByText(/STEP/i)).toBeNull();
-
-    fireEvent.click(screen.getByTestId("cook-mode-timeline-step-2"));
-
-    expect(
-      screen.getByTestId("cook-mode-current-step-copy").textContent,
-    ).toContain("냄비에 고기와 김치를 넣고 중불에서 충분히 볶아주세요.");
-    expect(
-      screen.getByTestId("cook-mode-timeline-step-2").getAttribute("aria-current"),
-    ).toBe("step");
-    expect(
-      within(ingredientList)
-        .getByTestId("cook-mode-ingredient-ing-pork")
-        .getAttribute("data-active"),
-    ).toBe("true");
+      within(stepList).getByText("냄비에 고기와 김치를 넣고 중불에서 충분히 볶아주세요."),
+    ).toBeTruthy();
+    expect(within(wholeBoard).queryByText(/STEP/i)).toBeNull();
+    expect(screen.queryByTestId("cook-mode-current-step")).toBeNull();
+    expect(screen.queryByTestId("cook-mode-current-amount-board")).toBeNull();
+    expect(screen.queryByTestId("cook-mode-prev-step")).toBeNull();
+    expect(screen.queryByTestId("cook-mode-next-step")).toBeNull();
     expect(screen.queryByText("10분")).not.toBeTruthy();
     expect(screen.queryByTestId("cook-mode-tabs")).not.toBeTruthy();
   });
 
-  it("shows only ingredients mentioned by the current instruction when step usage data is empty", async () => {
+  it("shows all ingredients even when step usage data is empty", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(
       buildCookModeData({
@@ -554,27 +537,16 @@ describe("CookModeScreen", () => {
     const CookModeScreen = await importCookModeScreen();
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
-    const amountBoard = await screen.findByTestId(
-      "cook-mode-current-amount-board",
-    );
-    const ingredientList = screen.getByTestId("ingredient-list");
+    const ingredientList = await screen.findByTestId("ingredient-list");
 
-    expect(within(amountBoard).getByText("김치")).toBeTruthy();
-    expect(within(amountBoard).queryByText("양파")).toBeNull();
-    expect(within(amountBoard).queryByText("소금")).toBeNull();
-    expect(
-      within(ingredientList)
-        .getByTestId("cook-mode-ingredient-ing-kimchi")
-        .getAttribute("data-active"),
-    ).toBe("true");
-    expect(
-      within(ingredientList)
-        .getByTestId("cook-mode-ingredient-ing-onion")
-        .getAttribute("data-active"),
-    ).toBe("false");
+    expect(within(ingredientList).getByText("김치")).toBeTruthy();
+    expect(within(ingredientList).getByText("양파")).toBeTruthy();
+    expect(within(ingredientList).getByText("소금")).toBeTruthy();
+    expect(within(ingredientList).getByText("적당량")).toBeTruthy();
+    expect(screen.queryByTestId("cook-mode-current-amount-board")).toBeNull();
   });
 
-  it("filters structured step usages to the current component", async () => {
+  it("keeps component sections while showing the full ingredient board", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(
       buildCookModeData({
@@ -664,31 +636,23 @@ describe("CookModeScreen", () => {
     const CookModeScreen = await importCookModeScreen();
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
-    const amountBoard = await screen.findByTestId(
-      "cook-mode-current-amount-board",
-    );
-    const ingredientList = screen.getByTestId("ingredient-list");
+    const ingredientList = await screen.findByTestId("ingredient-list");
+    const stepList = screen.getByTestId("step-list");
 
-    expect(
-      within(amountBoard).getByText(
-        (_, node) => node?.textContent === "4개",
-      ),
-    ).toBeTruthy();
-    expect(within(amountBoard).getByText("270g")).toBeTruthy();
-    expect(within(amountBoard).getByText("75g")).toBeTruthy();
-    expect(within(amountBoard).getByText("1g")).toBeTruthy();
-    expect(within(amountBoard).getByText("60g")).toBeTruthy();
-    expect(within(amountBoard).queryByText("230g")).toBeNull();
-    expect(within(amountBoard).queryByText("45g")).toBeNull();
-    expect(within(amountBoard).queryByText("3g")).toBeNull();
-    expect(
-      within(ingredientList)
-        .getByTestId("cook-mode-ingredient-ing-compote-sugar")
-        .getAttribute("data-active"),
-    ).toBe("false");
+    expect(within(ingredientList).getByText("딸기 우유 푸딩")).toBeTruthy();
+    expect(within(ingredientList).getByText("딸기 콩포트")).toBeTruthy();
+    expect(within(ingredientList).getByText("270g")).toBeTruthy();
+    expect(within(ingredientList).getByText("75g")).toBeTruthy();
+    expect(within(ingredientList).getByText("1g")).toBeTruthy();
+    expect(within(ingredientList).getByText("60g")).toBeTruthy();
+    expect(within(ingredientList).getByText("230g")).toBeTruthy();
+    expect(within(ingredientList).getByText("45g")).toBeTruthy();
+    expect(within(ingredientList).getByText("3g")).toBeTruthy();
+    expect(within(stepList).getByText("딸기 우유 푸딩")).toBeTruthy();
+    expect(screen.queryByTestId("cook-mode-current-amount-board")).toBeNull();
   });
 
-  it("renders the mobile prototype as a current-step card, amount board, and step rail", async () => {
+  it("renders the mobile prototype as a whole-board without step navigation", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildPrototypeCookModeData());
@@ -696,50 +660,31 @@ describe("CookModeScreen", () => {
     const CookModeScreen = await importCookModeScreen();
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
-    const currentStep = await screen.findByTestId("cook-mode-current-step");
-    const amountBoard = screen.getByTestId("cook-mode-current-amount-board");
-    const stepRail = screen.getByTestId("cook-mode-step-rail");
+    const wholeBoard = await screen.findByTestId("cook-mode-whole-board");
+    const ingredientList = screen.getByTestId("ingredient-list");
+    const stepList = screen.getByTestId("step-list");
 
     expect(screen.queryByTestId("mobile-ingredient-summary")).toBeNull();
-    expect(screen.getByTestId("cook-mode-content").firstElementChild).toBe(
-      currentStep,
-    );
+    expect(screen.getByTestId("cook-mode-content").firstElementChild).toBe(wholeBoard);
     expect(screen.getByTestId("cook-mode-servings").textContent).toContain(
       "3인분",
     );
-    expect(screen.getByTestId("cook-mode-counter").textContent).toContain("1");
     expect(screen.queryByText("3단계 중")).toBeNull();
+    expect(within(ingredientList).getByText("배추김치")).toBeTruthy();
+    expect(within(ingredientList).getByText("300g")).toBeTruthy();
+    expect(within(stepList).getByText("재료 손질")).toBeTruthy();
+    expect(within(stepList).getByText("고기 볶기")).toBeTruthy();
+    expect(within(stepList).getByText("국물 내기")).toBeTruthy();
+    expect(within(stepList).getByText("김치와 양파를 한입 크기로 썰어주세요.")).toBeTruthy();
     expect(
-      screen.getByTestId("cook-mode-current-step-title").textContent,
-    ).toContain("재료 손질");
-    expect(
-      screen.getByTestId("cook-mode-current-step-copy").textContent,
-    ).toContain("김치와 양파를 한입 크기로 썰어주세요.");
-    expect(within(amountBoard).getByText("이번에 쓸 양")).toBeTruthy();
-    expect(within(amountBoard).getByText("배추김치")).toBeTruthy();
-    expect(within(amountBoard).getByText("한입 크기")).toBeTruthy();
-    expect(
-      within(stepRail)
-        .getByTestId("cook-mode-step-dot-1")
-        .getAttribute("aria-current"),
-    ).toBe("step");
-
-    fireEvent.click(screen.getByTestId("cook-mode-next-step"));
-
-    expect(screen.getByTestId("cook-mode-counter").textContent).toContain("2");
-    expect(
-      screen.getByTestId("cook-mode-current-step-title").textContent,
-    ).toContain("고기 볶기");
-    expect(
-      screen.getByTestId("cook-mode-current-step-copy").textContent,
-    ).toContain("냄비에 고기와 김치를 넣고 중불에서 충분히 볶아주세요.");
-    expect(within(amountBoard).getByText("돼지고기")).toBeTruthy();
-    expect(
-      screen.getByTestId("cook-mode-step-dot-2").getAttribute("aria-current"),
-    ).toBe("step");
+      within(stepList).getByText("냄비에 고기와 김치를 넣고 중불에서 충분히 볶아주세요."),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("cook-mode-current-step")).toBeNull();
+    expect(screen.queryByTestId("cook-mode-current-amount-board")).toBeNull();
+    expect(screen.queryByTestId("cook-mode-next-step")).toBeNull();
   });
 
-  it("defaults mobile cook mode to a light background and toggles dark from the top switch", async () => {
+  it("defaults mobile cook mode to the service dark cooking board", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
@@ -747,23 +692,13 @@ describe("CookModeScreen", () => {
     const CookModeScreen = await importCookModeScreen();
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
-    const themeToggle = await screen.findByTestId("cook-mode-theme-toggle");
+    await screen.findByTestId("cook-mode-whole-board");
     const screenRoot = screen.getByTestId("cook-mode-screen");
-
-    expect(screenRoot.getAttribute("data-cook-theme")).toBe("light");
-    expect(themeToggle.getAttribute("aria-checked")).toBe("false");
-    expect(within(themeToggle).getByText("라이트")).toBeTruthy();
-    expect(within(themeToggle).getByText("다크")).toBeTruthy();
-    expect(within(themeToggle).queryByText("흰색")).toBeNull();
-    expect(within(themeToggle).queryByText("블랙")).toBeNull();
-
-    fireEvent.click(themeToggle);
-
     expect(screenRoot.getAttribute("data-cook-theme")).toBe("dark");
-    expect(themeToggle.getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByTestId("cook-mode-theme-toggle")).toBeNull();
   });
 
-  it("defaults desktop cook mode to a light background and toggles dark from the top switch", async () => {
+  it("defaults desktop cook mode to the service dark cooking board", async () => {
     installMatchMedia(false);
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
@@ -771,23 +706,13 @@ describe("CookModeScreen", () => {
     const CookModeScreen = await importCookModeScreen();
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
-    const themeToggle = await screen.findByTestId("cook-mode-theme-toggle");
+    await screen.findByTestId("cook-mode-whole-board");
     const screenRoot = screen.getByTestId("cook-mode-screen");
-
-    expect(screenRoot.getAttribute("data-cook-theme")).toBe("light");
-    expect(themeToggle.getAttribute("aria-checked")).toBe("false");
-    expect(within(themeToggle).getByText("라이트")).toBeTruthy();
-    expect(within(themeToggle).getByText("다크")).toBeTruthy();
-    expect(within(themeToggle).queryByText("흰색")).toBeNull();
-    expect(within(themeToggle).queryByText("블랙")).toBeNull();
-
-    fireEvent.click(themeToggle);
-
     expect(screenRoot.getAttribute("data-cook-theme")).toBe("dark");
-    expect(themeToggle.getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByTestId("cook-mode-theme-toggle")).toBeNull();
   });
 
-  it("uses numeric mobile step dots without the duplicated STEP label", async () => {
+  it("uses numeric mobile step number boxes without the duplicated STEP label", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildPrototypeCookModeData());
@@ -795,15 +720,15 @@ describe("CookModeScreen", () => {
     const CookModeScreen = await importCookModeScreen();
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
-    const stepRail = await screen.findByTestId("cook-mode-step-rail");
+    const stepList = await screen.findByTestId("step-list");
 
-    expect(within(stepRail).queryByText(/STEP/i)).toBeNull();
-    expect(within(stepRail).getByText("1")).toBeTruthy();
-    expect(within(stepRail).getByText("2")).toBeTruthy();
-    expect(within(stepRail).getByText("3")).toBeTruthy();
+    expect(within(stepList).queryByText(/STEP/i)).toBeNull();
+    expect(within(stepList).getByTestId("cook-mode-step-number-1")).toBeTruthy();
+    expect(within(stepList).getByTestId("cook-mode-step-number-2")).toBeTruthy();
+    expect(within(stepList).getByTestId("cook-mode-step-number-3")).toBeTruthy();
   });
 
-  it("keeps component labels as mobile current-step titles", async () => {
+  it("keeps component labels as mobile whole-board section headings", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(
@@ -856,22 +781,14 @@ describe("CookModeScreen", () => {
     const CookModeScreen = await importCookModeScreen();
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
-    await screen.findByTestId("cook-mode-current-step");
+    const ingredientList = await screen.findByTestId("ingredient-list");
+    const stepList = screen.getByTestId("step-list");
 
-    expect(
-      screen.getByTestId("cook-mode-current-step-title").textContent,
-    ).toContain("빵 반죽");
-    expect(
-      within(screen.getByTestId("cook-mode-current-amount-board")).getByText(
-        "강력분",
-      ),
-    ).toBeTruthy();
-
-    fireEvent.click(screen.getByTestId("cook-mode-step-dot-2"));
-
-    expect(
-      screen.getByTestId("cook-mode-current-step-title").textContent,
-    ).toContain("커스터드 크림");
+    expect(within(ingredientList).getByText("빵 반죽")).toBeTruthy();
+    expect(within(ingredientList).getByText("커스터드 크림")).toBeTruthy();
+    expect(within(stepList).getByText("빵 반죽")).toBeTruthy();
+    expect(within(stepList).getByText("커스터드 크림")).toBeTruthy();
+    expect(within(ingredientList).getByText("강력분")).toBeTruthy();
   });
 
   it("uses cooking method color keys from recipe data on step cards", async () => {
@@ -912,7 +829,7 @@ describe("CookModeScreen", () => {
     expect(methodBadgeStyle).toContain("var(--cook-stir)");
   });
 
-  it("shows desktop ingredients in the left rail and opens the consumed ingredient sheet on complete", async () => {
+  it("shows desktop ingredients before steps and opens the consumed ingredient sheet on complete", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
 
@@ -926,11 +843,11 @@ describe("CookModeScreen", () => {
     const content = screen.getByTestId("cook-mode-content");
     const orderedSections = Array.from(
       content.querySelectorAll(
-        '[data-testid="cook-mode-action-rail"], [data-testid="step-list"]',
+        '[data-testid="ingredient-list"], [data-testid="step-list"]',
       ),
     ).map((element) => element.getAttribute("data-testid"));
 
-    expect(orderedSections).toEqual(["cook-mode-action-rail", "step-list"]);
+    expect(orderedSections).toEqual(["ingredient-list", "step-list"]);
     expect(screen.queryByTestId("consumed-check-ing-1")).toBeNull();
     expect(screen.queryByTestId("consumed-ingredient-sheet")).toBeNull();
 
@@ -1199,7 +1116,7 @@ describe("CookModeScreen", () => {
     expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
-  it("renders step navigation without timer, memo, or tab controls", async () => {
+  it("renders the whole-board without step navigation, timer, memo, or tab controls", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildPrototypeCookModeData());
 
@@ -1212,14 +1129,16 @@ describe("CookModeScreen", () => {
 
     expect(screen.getByTestId("ingredient-list")).toBeTruthy();
     expect(screen.getByTestId("step-list")).toBeTruthy();
-    expect(screen.getByTestId("cook-mode-prev-step")).toBeTruthy();
-    expect(screen.getByTestId("cook-mode-next-step")).toBeTruthy();
+    expect(screen.queryByTestId("cook-mode-prev-step")).toBeNull();
+    expect(screen.queryByTestId("cook-mode-next-step")).toBeNull();
+    expect(screen.queryByTestId("cook-mode-current-step")).toBeNull();
+    expect(screen.queryByTestId("cook-mode-current-amount-board")).toBeNull();
     expect(screen.queryByText(/타이머|메모|일시정지/)).not.toBeTruthy();
     expect(screen.queryByTestId("tab-steps")).not.toBeTruthy();
     expect(screen.queryByTestId("tab-ingredients")).not.toBeTruthy();
   });
 
-  it("keeps cancel and complete available while desktop step navigation moves to the step header", async () => {
+  it("keeps desktop cancel and complete available in the whole-board header", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
 
@@ -1232,33 +1151,31 @@ describe("CookModeScreen", () => {
 
     const cancelButton = screen.getByTestId("cancel-button");
     const completeButton = screen.getByTestId("complete-button");
-    const focusStep = screen.getByTestId("cook-mode-current-step");
-    const stepNav = screen.getByTestId("cook-mode-step-nav");
+    const content = screen.getByTestId("cook-mode-content");
 
     expect(cancelButton.textContent).toBe("취소");
-    expect(focusStep.contains(completeButton)).toBe(true);
-    expect(within(stepNav).getByTestId("cook-mode-prev-step")).toBeTruthy();
-    expect(within(stepNav).getByTestId("cook-mode-next-step")).toBeTruthy();
-    expect(stepNav.contains(completeButton)).toBe(false);
+    expect(completeButton.textContent).toBe("요리 완료");
+    expect(content.contains(cancelButton)).toBe(true);
+    expect(content.contains(completeButton)).toBe(true);
+    expect(screen.queryByTestId("cook-mode-step-nav")).toBeNull();
   });
 
-  it("removes the desktop ingredient helper note and method-colored copy border", async () => {
+  it("removes per-step ingredient helper notes and method-colored copy borders", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildPrototypeCookModeData());
 
     const CookModeScreen = await importCookModeScreen();
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
-    const focusStep = await screen.findByTestId("cook-mode-current-step");
-    const stepCopy = screen.getByTestId("step-item");
+    const stepCopy = (await screen.findAllByTestId("step-item"))[0]!;
 
     expect(screen.queryByText(/총량은 왼쪽에서 고정/)).toBeNull();
-    expect(stepCopy.className).toContain("web-cook-prototype-copy");
+    expect(stepCopy.className).toContain("cook-whole-step");
     expect(stepCopy.getAttribute("style") ?? "").not.toContain("border-color");
-    expect(focusStep.contains(stepCopy)).toBe(true);
+    expect(screen.queryByTestId("cook-mode-current-amount-board")).toBeNull();
   });
 
-  it("keeps component labels in the desktop current step and timeline", async () => {
+  it("keeps component labels in the desktop whole-board sections", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(
       buildCookModeData({
@@ -1301,23 +1218,17 @@ describe("CookModeScreen", () => {
     const CookModeScreen = await importCookModeScreen();
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
-    await screen.findByTestId("cook-mode-current-step");
+    const ingredientList = await screen.findByTestId("ingredient-list");
     const stepList = screen.getByTestId("step-list");
 
-    expect(
-      screen.getByTestId("cook-mode-current-step-title").textContent,
-    ).toContain("빵 반죽");
+    expect(within(ingredientList).getByText("빵 반죽")).toBeTruthy();
+    expect(within(ingredientList).getByText("커스터드 크림")).toBeTruthy();
     expect(within(stepList).getByText("빵 반죽")).toBeTruthy();
     expect(within(stepList).getByText("커스터드 크림")).toBeTruthy();
-
-    fireEvent.click(screen.getByTestId("cook-mode-timeline-step-2"));
-
-    expect(
-      screen.getByTestId("cook-mode-current-step-title").textContent,
-    ).toContain("커스터드 크림");
+    expect(screen.queryByTestId("cook-mode-timeline-step-2")).toBeNull();
   });
 
-  it("keeps mobile cancel at the top and step controls in the fixed bottom bar", async () => {
+  it("keeps mobile cancel and complete in the fixed bottom bar without step controls", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
@@ -1331,13 +1242,13 @@ describe("CookModeScreen", () => {
 
     const cancelButton = screen.getByTestId("cancel-button");
     const completeButton = screen.getByTestId("complete-button");
-    const nextButton = screen.getByTestId("cook-mode-next-step");
-    const fixedBottomBar = nextButton.closest(".fixed");
+    const fixedBottomBar = completeButton.closest(".fixed");
 
-    expect(cancelButton.getAttribute("aria-label")).toBe("취소");
+    expect(cancelButton.textContent).toBe("취소");
     expect(fixedBottomBar).not.toBeNull();
-    expect(fixedBottomBar?.contains(nextButton)).toBe(true);
+    expect(fixedBottomBar?.contains(cancelButton)).toBe(true);
     expect(fixedBottomBar?.contains(completeButton)).toBe(true);
+    expect(screen.queryByTestId("cook-mode-next-step")).toBeNull();
   });
 
   it("uses compact two-column mobile consumed ingredient cards without duplicate names", async () => {

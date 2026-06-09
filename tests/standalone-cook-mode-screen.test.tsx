@@ -278,7 +278,10 @@ describe("StandaloneCookModeScreen", () => {
     expect(screen.queryByTestId("standalone-cook-mode-tabs")).not.toBeTruthy();
     expect(screen.getAllByTestId("ingredient-item")).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "요리모드" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "꺼내둘 재료" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "전체 재료" })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "전체 조리순서" }),
+    ).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "소진된 재료" })).toBeNull();
     expect(screen.queryByText("차감할 재료")).toBeNull();
   });
@@ -600,7 +603,7 @@ describe("StandaloneCookModeScreen", () => {
     });
   });
 
-  it("renders standalone cook mode as the prototype current-step board without tabs or timer controls", async () => {
+  it("renders standalone cook mode as a whole-board without tabs or step controls", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchStandaloneCookMode.mockResolvedValue(
       buildPrototypeStandaloneCookModeData(),
@@ -615,28 +618,19 @@ describe("StandaloneCookModeScreen", () => {
 
     expect(screen.getByTestId("ingredient-list")).toBeTruthy();
     expect(screen.getByTestId("step-list")).toBeTruthy();
+    expect(screen.getByText("고기 재우기")).toBeTruthy();
+    expect(screen.getByText("센불 볶기")).toBeTruthy();
     expect(
-      screen.getByTestId("cook-mode-current-step-title").textContent,
-    ).toContain("고기 재우기");
-    expect(
-      screen.getByTestId("cook-mode-current-step-copy").textContent,
-    ).toContain("고기와 양념장을 골고루 버무려 주세요.");
-    expect(
-      within(screen.getByTestId("cook-mode-current-amount-board")).getByText(
-        "돼지고기",
-      ),
+      screen.getByText("고기와 양념장을 골고루 버무려 주세요."),
     ).toBeTruthy();
-    expect(screen.getByTestId("cook-mode-prev-step")).toBeTruthy();
-    expect(screen.getByTestId("cook-mode-next-step")).toBeTruthy();
-
-    fireEvent.click(screen.getByTestId("cook-mode-next-step"));
-
     expect(
-      screen.getByTestId("cook-mode-current-step-title").textContent,
-    ).toContain("센불 볶기");
-    expect(
-      screen.getByTestId("cook-mode-timeline-step-2").getAttribute("aria-current"),
-    ).toBe("step");
+      screen.getByText("팬을 달군 뒤 양파와 고기를 센불에 볶아주세요."),
+    ).toBeTruthy();
+    expect(within(screen.getByTestId("ingredient-list")).getByText("돼지고기")).toBeTruthy();
+    expect(screen.queryByTestId("cook-mode-current-step")).toBeNull();
+    expect(screen.queryByTestId("cook-mode-current-amount-board")).toBeNull();
+    expect(screen.queryByTestId("cook-mode-prev-step")).toBeNull();
+    expect(screen.queryByTestId("cook-mode-next-step")).toBeNull();
     expect(screen.queryByTestId("tab-steps")).not.toBeTruthy();
     expect(screen.queryByTestId("tab-ingredients")).not.toBeTruthy();
     expect(screen.queryByText("10분")).not.toBeTruthy();
@@ -699,7 +693,7 @@ describe("StandaloneCookModeScreen", () => {
     ).toBeNull();
   });
 
-  it("defaults standalone mobile cook mode to light and toggles dark from the top switch", async () => {
+  it("defaults standalone mobile cook mode to the service dark cooking board", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchStandaloneCookMode.mockResolvedValue(buildStandaloneCookModeData());
@@ -707,43 +701,23 @@ describe("StandaloneCookModeScreen", () => {
     const Screen = await importScreen();
     render(<Screen recipeId="recipe-1" servings={2} />);
 
-    const themeToggle = await screen.findByTestId("cook-mode-theme-toggle");
+    await screen.findByTestId("cook-mode-whole-board");
     const screenRoot = screen.getByTestId("standalone-cook-mode-screen");
-
-    expect(screenRoot.getAttribute("data-cook-theme")).toBe("light");
-    expect(themeToggle.getAttribute("aria-checked")).toBe("false");
-    expect(within(themeToggle).getByText("라이트")).toBeTruthy();
-    expect(within(themeToggle).getByText("다크")).toBeTruthy();
-    expect(within(themeToggle).queryByText("흰색")).toBeNull();
-    expect(within(themeToggle).queryByText("블랙")).toBeNull();
-
-    fireEvent.click(themeToggle);
-
     expect(screenRoot.getAttribute("data-cook-theme")).toBe("dark");
-    expect(themeToggle.getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByTestId("cook-mode-theme-toggle")).toBeNull();
   });
 
-  it("defaults standalone desktop cook mode to light and toggles dark from the top switch", async () => {
+  it("defaults standalone desktop cook mode to the service dark cooking board", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchStandaloneCookMode.mockResolvedValue(buildStandaloneCookModeData());
 
     const Screen = await importScreen();
     render(<Screen recipeId="recipe-1" servings={2} />);
 
-    const themeToggle = await screen.findByTestId("cook-mode-theme-toggle");
+    await screen.findByTestId("cook-mode-whole-board");
     const screenRoot = screen.getByTestId("standalone-cook-mode-screen");
-
-    expect(screenRoot.getAttribute("data-cook-theme")).toBe("light");
-    expect(themeToggle.getAttribute("aria-checked")).toBe("false");
-    expect(within(themeToggle).getByText("라이트")).toBeTruthy();
-    expect(within(themeToggle).getByText("다크")).toBeTruthy();
-    expect(within(themeToggle).queryByText("흰색")).toBeNull();
-    expect(within(themeToggle).queryByText("블랙")).toBeNull();
-
-    fireEvent.click(themeToggle);
-
     expect(screenRoot.getAttribute("data-cook-theme")).toBe("dark");
-    expect(themeToggle.getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByTestId("cook-mode-theme-toggle")).toBeNull();
   });
 
   it("uses a desktop web shell for standalone cook loading states", async () => {

@@ -30,6 +30,14 @@ const wakeLockUserActivationEvents = [
   "keydown",
 ] as const;
 
+export type ScreenWakeLockStatus =
+  | "off"
+  | "unsupported"
+  | "waiting"
+  | "requesting"
+  | "active"
+  | "failed";
+
 function canRequestWakeLock() {
   return (
     typeof navigator !== "undefined" &&
@@ -40,6 +48,9 @@ function canRequestWakeLock() {
 }
 
 export function useScreenWakeLock(enabled: boolean) {
+  const [status, setStatus] = useState<ScreenWakeLockStatus>(
+    enabled ? "waiting" : "off",
+  );
   const activeRef = useRef<{
     sentinel: ScreenWakeLockSentinel;
     handleRelease: () => void;
@@ -47,22 +58,37 @@ export function useScreenWakeLock(enabled: boolean) {
   const requestingRef = useRef(false);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setStatus("off");
+      return;
+    }
 
     let disposed = false;
 
     async function requestWakeLock() {
-      if (!enabled || requestingRef.current || !canRequestWakeLock()) return;
+      if (!enabled || requestingRef.current) return;
+
+      if (!canRequestWakeLock()) {
+        const hasWakeLockApi =
+          typeof navigator !== "undefined" &&
+          Boolean((navigator as NavigatorWithWakeLock).wakeLock?.request);
+        setStatus(hasWakeLockApi ? "waiting" : "unsupported");
+        return;
+      }
 
       const current = activeRef.current?.sentinel;
       if (current && current.released !== true) return;
 
       requestingRef.current = true;
+      setStatus("requesting");
       try {
         const wakeLock = (navigator as NavigatorWithWakeLock).wakeLock;
         const sentinel = await wakeLock?.request("screen");
 
-        if (!sentinel) return;
+        if (!sentinel) {
+          setStatus("unsupported");
+          return;
+        }
 
         if (disposed) {
           void sentinel.release().catch(() => {});
@@ -72,13 +98,16 @@ export function useScreenWakeLock(enabled: boolean) {
         const handleRelease = () => {
           if (activeRef.current?.sentinel === sentinel) {
             activeRef.current = null;
+            setStatus("waiting");
           }
         };
 
         sentinel.addEventListener?.("release", handleRelease);
         activeRef.current = { sentinel, handleRelease };
+        setStatus("active");
       } catch {
         activeRef.current = null;
+        setStatus("failed");
       } finally {
         requestingRef.current = false;
       }
@@ -130,6 +159,8 @@ export function useScreenWakeLock(enabled: boolean) {
       }
     };
   }, [enabled]);
+
+  return status;
 }
 
 export function useUserScreenWakeLock(enabled: boolean) {
@@ -160,5 +191,11 @@ export function useUserScreenWakeLock(enabled: boolean) {
     };
   }, [enabled]);
 
-  useScreenWakeLock(enabled && screenWakeLockEnabled);
+  const status = useScreenWakeLock(enabled && screenWakeLockEnabled);
+
+  return {
+    enabled: screenWakeLockEnabled,
+    status,
+    isActive: status === "active",
+  };
 }

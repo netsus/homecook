@@ -18,9 +18,9 @@
 
 ## 2. Source Of Truth
 
-- 요구사항: [요구사항기준선-v1.7.6.md](../../../요구사항기준선-v1.7.6.md)
-- 화면 정의: [화면정의서-v1.5.13.md](../../../화면정의서-v1.5.13.md)
-- 유저 flow: [유저flow맵-v1.3.13.md](../../../유저flow맵-v1.3.13.md)
+- 요구사항: [요구사항기준선-v1.7.7.md](../../../요구사항기준선-v1.7.7.md)
+- 화면 정의: [화면정의서-v1.5.14.md](../../../화면정의서-v1.5.14.md)
+- 유저 flow: [유저flow맵-v1.3.14.md](../../../유저flow맵-v1.3.14.md)
 - DB/Schema: [db설계-v1.3.12.md](../../../db설계-v1.3.12.md)
 - API 문서: [api문서-v1.2.16.md](../../../api문서-v1.2.16.md)
 - 현재 운영 규칙: [AGENTS.md](../../../AGENTS.md), [agent-workflow-overview.md](../agent-workflow-overview.md), [slice-workflow.md](../slice-workflow.md)

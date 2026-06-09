@@ -1,0 +1,47 @@
+{
+  "slice": "cook-mode-whole-board",
+  "change_type": "product-frontend",
+  "contract_evolution": {
+    "approved_by_user": true,
+    "official_docs": [
+      "docs/요구사항기준선-v1.7.7.md",
+      "docs/화면정의서-v1.5.14.md",
+      "docs/유저flow맵-v1.3.14.md",
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md"
+    ],
+    "api_changed": false,
+    "db_changed": false
+  },
+  "frontend": {
+    "screens": [
+      "/cooking/sessions/[session_id]/cook-mode",
+      "/cooking/recipes/[recipe_id]/cook-mode"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk-ui-change",
+      "anchor_screens": [],
+      "required_screens": ["COOK_MODE"],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile session whole-board screenshot",
+        "desktop session whole-board screenshot",
+        "standalone whole-board screenshot"
+      ],
+      "authority_report_paths": []
+    }
+  },
+  "tests": {
+    "vitest": [
+      "tests/cook-mode-screen.test.tsx",
+      "tests/standalone-cook-mode-screen.test.tsx"
+    ],
+    "playwright": [
+      "tests/e2e/slice-15a-cook-planner-complete.spec.ts",
+      "tests/e2e/slice-15b-cook-standalone-complete.spec.ts"
+    ]
+  }
+}
