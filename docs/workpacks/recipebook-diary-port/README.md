@@ -14,7 +14,7 @@
 
 - 화면:
   - `MYPAGE`: 레시피북 목록을 작은 책/책장 형태로 표현하되 기존 생성/수정/삭제/상세 진입 흐름 유지
-  - `RECIPEBOOK_DETAIL`: 웹에서 왼쪽 목차/책 정보 rail + 오른쪽 레시피 목록/관리 영역으로 분리
+  - `RECIPEBOOK_DETAIL`: 웹에서 프로토타입처럼 왼쪽 목차 패널과 오른쪽 레시피북 리더를 분리하고, 리더 안에서 `책`/`목록` 전환과 단일 레시피 책 페이지를 제공
   - `RECIPEBOOK_DETAIL`: 모바일에서 상단 목차 + 섹션/카드형 목록으로 다이어리 감성 유지
 - 라우트:
   - 기존 `/mypage` 유지
@@ -73,8 +73,9 @@
 - `MYPAGE`의 레시피북 목록은 작은 책 표지/책등이 모인 bookshelf 형태로 바꾼다.
 - 각 책은 이름, 타입, 레시피 수, 주요 액션을 읽기 쉽게 제공한다.
 - 책 형태는 감성 요소지만 CRUD와 상세 진입을 가리지 않는다.
-- `RECIPEBOOK_DETAIL` 웹은 프로토타입처럼 좁은 책 화면 안에 모든 것을 넣지 않는다.
-- 웹 상세는 왼쪽 목차/책 정보 rail과 오른쪽 레시피 목록/관리 영역을 분리한다.
+- `RECIPEBOOK_DETAIL` 웹은 책장 화면과 상세 화면을 분리하되, 상세 화면 자체는 프로토타입의 열린 책뷰를 핵심 은유로 유지한다.
+- 웹 상세는 왼쪽 목차 패널, 오른쪽 레시피북 리더 헤더, `책`/`목록` segmented control, 단일 레시피 책 페이지, 하단 페이지 선택 버튼을 프로토타입 구조와 맞춘다.
+- `책` 모드는 한 번에 한 레시피 페이지를 보여주고, `목록` 모드는 기존 카드 목록을 펼쳐 관리/탐색 효율을 유지한다.
 - 모바일 상세는 표지/요약, 섹션, 레시피 카드 목록을 위아래 흐름으로 배치한다.
 - 레시피 상세 내용은 기존 `RECIPE_DETAIL` 화면에서 본다.
 
@@ -107,7 +108,7 @@
 - 보호 액션:
   - 레시피북 생성/수정/삭제, 제거/좋아요 해제는 기존 로그인 게이트와 권한 정책 유지
 - 반응형:
-  - 웹 넓은 화면에서는 `RECIPEBOOK_DETAIL`을 목차 rail + 레시피 영역으로 분리
+  - 웹 넓은 화면에서는 `RECIPEBOOK_DETAIL`을 왼쪽 목차 패널 + 오른쪽 단일 책 페이지 리더 구조로 표시
   - 모바일에서는 desktop split을 강제로 축소하지 않고 세로 카드 흐름 사용
   - 320px에서 텍스트, 아이콘 버튼, book cover label이 넘치지 않아야 한다
 
@@ -123,7 +124,7 @@
   - `ui/designs/MYPAGE.md`
   - `ui/designs/RECIPEBOOK_DETAIL.md`
 - Authority status: `required`
-- Notes: prototype은 방향 evidence이며 그대로 복제하는 target이 아니다. QA에서 확인한 웹 recipe area 협소 문제를 반영해 실제 서비스 적용은 shelf route와 detail route를 분리한다.
+- Notes: prototype은 이번 상세 리더의 구조 target이다. 실제 서비스 적용에서는 기존 HOMECOOK 상단 내비게이션, API 데이터 범위, 관리 액션, 브랜드 색상 토큰을 유지한다.
 
 ## Design Status
 
@@ -167,7 +168,7 @@
 - seed/reset: 신규 seed 없음
 - bootstrap: 기존 회원별 시스템 레시피북 생성 흐름 유지
 - blocker 조건:
-  - 웹 1440에서 오른쪽 recipe area가 목록 읽기에 부족할 정도로 좁다
+  - 웹 1440에서 오른쪽 단일 책 페이지가 읽기에 부족할 정도로 좁다
   - desktop split이 모바일에서 그대로 축소되어 가로 overflow 또는 작은 tap target을 만든다
   - 책/다이어리 효과 때문에 생성/수정/삭제/제거 액션이 숨는다
   - 레시피 항목 preview를 위해 `GET /api/v1/recipes/{id}`가 자동 호출된다
@@ -198,7 +199,7 @@
 7. 책 형태는 affordance를 해치면 안 된다. 액션은 익숙한 아이콘/버튼과 tooltip/label을 유지한다.
 8. 모바일에서 가로 스크롤 없는 세로 흐름을 우선한다.
 9. 320px에서도 제목, count, action, card metadata가 겹치지 않는다.
-10. page-turn/book effect는 보조 감성 요소일 뿐 유일한 navigation이 되면 안 된다.
+10. 열린 책 효과는 웹 상세의 핵심 시각 은유지만, page-turn effect는 유일한 navigation이 되면 안 된다.
 
 ## Contract Evolution Candidates
 
@@ -212,16 +213,17 @@
 1. 사용자가 `MYPAGE`에 들어간다.
 2. 레시피북 탭에서 시스템/커스텀 책을 작은 책장 형태로 스캔한다.
 3. 커스텀 책을 생성/수정/삭제하거나, 책 하나를 선택한다.
-4. `/mypage/recipe-books/{book_id}`에서 왼쪽 목차/책 정보와 오른쪽 레시피 목록을 본다.
-5. 레시피 카드를 선택하면 기존 `RECIPE_DETAIL`로 이동한다.
-6. 필요하면 기존 정책대로 저장 책에서 제거하거나 liked 책에서 좋아요를 해제한다.
+4. `/mypage/recipe-books/{book_id}`에서 왼쪽 목차 패널과 오른쪽 단일 레시피 책 페이지가 분리된 리더 화면을 본다.
+5. 웹에서는 목차/페이지 버튼으로 책 페이지를 바꾸거나, `목록`으로 기존 카드 목록을 펼친다.
+6. 레시피 카드 또는 상세 보기 액션을 선택하면 기존 `RECIPE_DETAIL`로 이동한다.
+7. 필요하면 기존 정책대로 저장 책에서 제거하거나 liked 책에서 좋아요를 해제한다.
 
 ## Delivery Checklist
 
 - [ ] Stage 1 workpack README/acceptance/automation-spec 생성 <!-- omo:id=recipebook-diary-stage1-docs;stage=1;scope=docs;review=5,6 -->
 - [ ] `docs/workpacks/README.md`와 `.workflow-v2` 항목 등록 <!-- omo:id=recipebook-diary-roadmap-workflow;stage=1;scope=docs;review=5,6 -->
 - [ ] `MYPAGE` 책장형 레시피북 목록 UI 연결 <!-- omo:id=recipebook-diary-mypage-bookshelf;stage=4;scope=frontend;review=5,6 -->
-- [ ] `RECIPEBOOK_DETAIL` desktop 목차 rail + recipe area split 구현 <!-- omo:id=recipebook-diary-detail-desktop-split;stage=4;scope=frontend;review=5,6 -->
+- [ ] `RECIPEBOOK_DETAIL` desktop 열린 책 상세 구조 구현 <!-- omo:id=recipebook-diary-detail-desktop-split;stage=4;scope=frontend;review=5,6 -->
 - [ ] `RECIPEBOOK_DETAIL` mobile cover/summary + list card flow 구현 <!-- omo:id=recipebook-diary-detail-mobile-flow;stage=4;scope=frontend;review=5,6 -->
 - [ ] 기존 CRUD/remove/unlike/route behavior 회귀 없음 확인 <!-- omo:id=recipebook-diary-existing-behavior;stage=4;scope=frontend;review=5,6 -->
 - [ ] hidden `GET /recipes/{id}` preview 호출 없음 테스트로 확인 <!-- omo:id=recipebook-diary-no-view-count-preview;stage=4;scope=frontend;review=5,6 -->

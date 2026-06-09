@@ -3,7 +3,7 @@
 > slice: `recipebook-diary-port`
 > stage: 4/5 implementation evidence
 > reviewer: Codex
-> date: 2026-06-09
+> date: 2026-06-10
 
 ## Design Status
 
@@ -12,14 +12,15 @@
 레시피북 다이어리화 1차 포팅은 API/DB 변경 없이 기존 `MYPAGE`와
 `RECIPEBOOK_DETAIL` 화면 위에 적용했다. 전체 페이지 넘김 reader는
 `GET /api/v1/recipes/{id}` 조회수 증가 계약 때문에 이번 범위에서 제외하고,
-책장형 목록과 목차형 상세만 서비스 코드에 반영했다.
+책장형 목록과 기존 API 기반 열린 책 상세를 서비스 코드에 반영했다.
 
 ## Changes Summary
 
 - `MYPAGE` 레시피북 탭은 시스템/커스텀 레시피북을 작은 책 형태 카드로 보여준다.
 - 웹 책장에서는 커스텀 레시피북의 `이름 변경` / `삭제` 액션을 카드 하단에 노출해 관리 기능이 숨지 않게 했다.
 - `MYPAGE` 책 카드는 좁은 inline 상세를 열지 않고 기존 `/mypage/recipe-books/{book_id}` 상세 화면으로 이동한다.
-- `RECIPEBOOK_DETAIL` 웹은 왼쪽 목차/책 정보 rail과 오른쪽 레시피 목록을 분리해 1440px에서 목록 영역이 좁아지지 않게 했다.
+- `RECIPEBOOK_DETAIL` 웹은 프로토타입처럼 왼쪽 목차 패널과 오른쪽 레시피북 리더를 분리하고, 리더 안에 `책`/`목록` segmented control, 단일 레시피 책 페이지, 하단 페이지 선택 버튼을 배치했다.
+- `책` 모드는 한 번에 한 레시피 페이지를 보여주고, `목록` 모드는 기존 카드 목록을 펼쳐 탐색/관리 효율을 유지한다.
 - `RECIPEBOOK_DETAIL` 모바일은 상단 title-only 요약 대신 목차를 먼저 보여주고, 각 목차 항목은 해당 레시피 카드 anchor로 이동한다.
 - 모바일 목차는 navigation landmark로 노출하며, anchor 이동 시 sticky app bar가 카드 상단을 가리지 않도록 scroll margin을 둔다.
 - 모바일 상세 상단 뒤로가기/옵션 버튼과 목차 항목은 44px 이상 터치 타겟을 유지한다.
@@ -42,23 +43,20 @@
 
 ## Verification
 
-- `pnpm exec vitest run tests/mypage-screen.test.tsx tests/recipe-book-detail-screen.test.tsx` - passed, 67 tests.
-- `pnpm test:product` - passed, 79 files / 945 tests.
-- `pnpm typecheck` - passed.
 - `pnpm lint` - passed.
+- `pnpm typecheck` - passed.
+- `pnpm test -- tests/mypage-screen.test.tsx tests/recipe-book-detail-screen.test.tsx tests/theme-token-usage.test.ts` - passed, 175 files / 1884 tests.
+- `pnpm exec playwright test tests/e2e/slice-17b-recipebook-detail.spec.ts --project=desktop-chrome --project=mobile-chrome` - passed, 28 tests.
+- `pnpm exec playwright test tests/e2e/qa-recipebook-diary-port-evidence.spec.ts --project=desktop-chrome` - passed, generated/refreshed 5 evidence screenshots with prototype-aligned desktop reader frame, single recipe book page, page selector, horizontal overflow, mobile tap-target, navigation landmark, and sticky-header-safe anchor scroll checks.
 - `pnpm build` - passed.
-- `pnpm validate:workpack -- --slice recipebook-diary-port` - passed.
-- `pnpm validate:workflow-v2` - passed.
-- `pnpm validate:authority-evidence-presence` - passed.
-- `pnpm exec playwright test tests/e2e/qa-recipebook-diary-port-evidence.spec.ts --project=desktop-chrome` - passed, generated/refreshed 4 evidence screenshots with horizontal overflow, mobile tap-target, navigation landmark, and sticky-header-safe anchor scroll checks.
-- `pnpm exec playwright test tests/e2e/slice-17a-mypage.spec.ts tests/e2e/slice-17b-recipebook-detail.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small` - passed, 81 tests.
 - `git diff --check` - passed.
+- Claude review loop - `Verdict: OK`.
 
 ## Scorecard
 
 | Dimension | Score | Notes |
 | --- | --- | --- |
-| Web Information Architecture | 5/5 | 책장과 상세 split을 분리해 상세 레시피 영역이 충분히 넓다. |
+| Web Information Architecture | 5/5 | 책장 화면과 상세 화면을 분리하고, 상세는 프로토타입 구조대로 왼쪽 목차 패널과 오른쪽 단일 레시피 책 페이지 리더로 구성했다. |
 | Mobile UX | 4/5 | 목차 우선 구조, navigation landmark, sticky-header-safe anchor 이동, 44px 터치 타겟을 확인했다. 하단 탭은 기존 앱 패턴대로 고정 overlay를 유지한다. |
 | Interaction Clarity | 5/5 | 상세 이동, 커스텀 이름 변경, 삭제 액션이 카드/상세에서 모두 발견 가능하다. |
 | Contract Safety | 5/5 | API/DB/레시피 상세 hidden fetch 없이 기존 계약 안에서만 변경했다. |

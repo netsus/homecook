@@ -274,12 +274,16 @@ function isMobileViewport(page: Page) {
 async function openRecipebookSurface(page: Page) {
   if (isMobileViewport(page)) {
     await page.getByRole("button", { name: /레시피북/ }).click();
-    await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "레시피북", exact: true }),
+    ).toBeVisible();
     return;
   }
 
   await page.getByRole("tab", { name: "레시피북" }).click();
-  await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "레시피북", exact: true }),
+  ).toBeVisible();
 }
 
 async function openShoppingSurface(page: Page) {
