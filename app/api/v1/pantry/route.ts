@@ -79,7 +79,11 @@ interface PantryDbClient {
 }
 
 const PANTRY_SELECT =
+  "id, ingredient_id, created_at, ingredients!inner(standard_name, category, category_code)";
+const PANTRY_SELECT_LEGACY =
   "id, ingredient_id, created_at, ingredients!inner(standard_name, category)";
+const INGREDIENT_SELECT = "id, standard_name, category, category_code";
+const INGREDIENT_SELECT_LEGACY = "id, standard_name, category";
 
 interface PantryAuthSuccess {
   dbClient: PantryDbClient & UserBootstrapDbClient;
@@ -139,6 +143,50 @@ function invalidIngredientIdsResponse() {
   ]);
 }
 
+function isSchemaCacheMiss(error: QueryError | null | undefined) {
+  return /category_code|schema cache|column .* does not exist/i.test(
+    error?.message ?? "",
+  );
+}
+
+function getPantrySelect(includeTaxonomyColumn: boolean) {
+  return includeTaxonomyColumn ? PANTRY_SELECT : PANTRY_SELECT_LEGACY;
+}
+
+function getIngredientSelect(includeTaxonomyColumn: boolean) {
+  return includeTaxonomyColumn ? INGREDIENT_SELECT : INGREDIENT_SELECT_LEGACY;
+}
+
+function buildPantryItemsQuery({
+  auth,
+  category,
+  includeTaxonomyColumn,
+  q,
+}: {
+  auth: PantryAuthSuccess;
+  category?: string;
+  includeTaxonomyColumn: boolean;
+  q?: string;
+}) {
+  let query = auth.dbClient
+    .from("pantry_items")
+    .select(getPantrySelect(includeTaxonomyColumn)) as PantryItemsSelectQuery;
+
+  query = query.eq("user_id", auth.user.id);
+
+  if (q) {
+    query = query.ilike("ingredients.standard_name", `%${q}%`);
+  }
+
+  if (category) {
+    query = query.eq("ingredients.category", category);
+  }
+
+  return query
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: true });
+}
+
 export async function GET(request: NextRequest) {
   const auth = await getAuthenticatedDb("팬트리 목록을 불러오지 못했어요.");
 
@@ -156,23 +204,21 @@ export async function GET(request: NextRequest) {
     return ok({ items: [] });
   }
 
-  let query = auth.dbClient
-    .from("pantry_items")
-    .select(PANTRY_SELECT) as PantryItemsSelectQuery;
+  let result = await buildPantryItemsQuery({
+    auth,
+    category,
+    includeTaxonomyColumn: true,
+    q,
+  });
 
-  query = query.eq("user_id", auth.user.id);
-
-  if (q) {
-    query = query.ilike("ingredients.standard_name", `%${q}%`);
+  if (isSchemaCacheMiss(result.error)) {
+    result = await buildPantryItemsQuery({
+      auth,
+      category,
+      includeTaxonomyColumn: false,
+      q,
+    });
   }
-
-  if (category) {
-    query = query.eq("ingredients.category", category);
-  }
-
-  const result = await query
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: true });
 
   if (result.error || !result.data) {
     return fail("INTERNAL_ERROR", "팬트리 목록을 불러오지 못했어요.", 500);
@@ -195,10 +241,19 @@ export async function POST(request: Request) {
     return invalidIngredientIdsResponse();
   }
 
-  const ingredientsResult = await auth.dbClient
+  let includeTaxonomyColumn = true;
+  let ingredientsResult = await auth.dbClient
     .from("ingredients")
-    .select("id, standard_name, category")
+    .select(getIngredientSelect(includeTaxonomyColumn))
     .in("id", ingredientIds);
+
+  if (isSchemaCacheMiss(ingredientsResult.error)) {
+    includeTaxonomyColumn = false;
+    ingredientsResult = await auth.dbClient
+      .from("ingredients")
+      .select(getIngredientSelect(includeTaxonomyColumn))
+      .in("id", ingredientIds);
+  }
 
   if (ingredientsResult.error || !ingredientsResult.data) {
     return fail("INTERNAL_ERROR", "팬트리에 재료를 추가하지 못했어요.", 500);
@@ -236,7 +291,7 @@ export async function POST(request: Request) {
       user_id: auth.user.id,
       ingredient_id: ingredientId,
     })))
-    .select(PANTRY_SELECT);
+    .select(getPantrySelect(includeTaxonomyColumn));
 
   if (insertResult.error || !insertResult.data) {
     return fail("INTERNAL_ERROR", "팬트리에 재료를 추가하지 못했어요.", 500);

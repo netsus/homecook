@@ -296,3 +296,84 @@ export function getCookingMethodSynonyms(methodCode: string | null | undefined) 
     .filter((synonym) => synonym.method_code === methodCode.trim() && synonym.is_active)
     .map((synonym) => synonym.synonym);
 }
+
+export function getCookingMethodCategoryLabel({
+  methodCode,
+  categoryCode,
+  categoryLabel,
+}: {
+  methodCode: string | null | undefined;
+  categoryCode?: string | null;
+  categoryLabel?: string | null;
+}) {
+  const explicitCategory = getCookingMethodCategoryByCode(categoryCode);
+  if (explicitCategory?.is_active) {
+    return explicitCategory.label;
+  }
+
+  if (categoryLabel?.trim()) {
+    return categoryLabel.trim();
+  }
+
+  return getCookingMethodTaxonomyMetadata({
+    methodCode,
+    categoryCode,
+  }).category_label ?? "기타";
+}
+
+export function getCookingMethodAssistiveLabel({
+  methodCode,
+  methodLabel,
+  categoryCode,
+  categoryLabel,
+}: {
+  methodCode: string | null | undefined;
+  methodLabel: string | null | undefined;
+  categoryCode?: string | null;
+  categoryLabel?: string | null;
+}) {
+  return `${getCookingMethodCategoryLabel({
+    methodCode,
+    categoryCode,
+    categoryLabel,
+  })} · ${methodLabel?.trim() || "만들기"}`;
+}
+
+export function groupCookingMethodsByCategory<
+  T extends {
+    code?: string | null;
+    category_code?: string | null;
+    category_label?: string | null;
+  },
+>(methods: T[]) {
+  const orderByLabel = new Map<string, number>(
+    COOKING_METHOD_CATEGORIES.map((category) => [
+      category.label,
+      category.display_order,
+    ]),
+  );
+  const groups = new Map<string, T[]>();
+
+  for (const method of methods) {
+    const label = getCookingMethodCategoryLabel({
+      methodCode: method.code,
+      categoryCode: method.category_code,
+      categoryLabel: method.category_label,
+    });
+    const current = groups.get(label) ?? [];
+    current.push(method);
+    groups.set(label, current);
+  }
+
+  return Array.from(groups.entries())
+    .map(([label, items]) => ({ label, items }))
+    .sort((left, right) => {
+      const leftOrder = orderByLabel.get(left.label) ?? Number.MAX_SAFE_INTEGER;
+      const rightOrder = orderByLabel.get(right.label) ?? Number.MAX_SAFE_INTEGER;
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+
+      return left.label.localeCompare(right.label, "ko");
+    });
+}

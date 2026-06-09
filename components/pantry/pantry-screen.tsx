@@ -40,7 +40,13 @@ import {
 } from "@/lib/api/pantry";
 import { createMealSafe } from "@/lib/api/meal";
 import { fetchPlannerColumns } from "@/lib/api/planner";
-import { getIngredientCategoryEmoji, INGREDIENT_CATEGORY_LABELS } from "@/lib/ingredient-categories";
+import {
+  getIngredientCategoryEmoji,
+  getIngredientGroupDisplayLabel,
+  getIngredientGroupFilterValue,
+  INGREDIENT_CATEGORY_GROUP_OPTIONS,
+  ingredientMatchesCategoryGroup,
+} from "@/lib/ingredient-categories";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -52,6 +58,9 @@ type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
 type PantryDisplayItem = {
   category: string;
+  category_group_code?: string | null;
+  category_code?: string | null;
+  category_label?: string | null;
   created_at: string | null;
   id: string;
   ingredient_id: string;
@@ -120,14 +129,19 @@ export function PantryScreen({
   }, [allDisplayItems, searchQuery]);
 
   const categories = useMemo(() => {
-    return [...INGREDIENT_CATEGORY_LABELS];
+    return INGREDIENT_CATEGORY_GROUP_OPTIONS.filter(
+      (category) => category.category_group_code,
+    );
   }, []);
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>();
 
     for (const item of searchedItems) {
-      counts.set(item.category, (counts.get(item.category) ?? 0) + 1);
+      const groupCode = item.category_group_code;
+      if (groupCode) {
+        counts.set(groupCode, (counts.get(groupCode) ?? 0) + 1);
+      }
     }
 
     return counts;
@@ -135,7 +149,9 @@ export function PantryScreen({
 
   const displayItems = useMemo(() => {
     if (!activeCategory) return searchedItems;
-    return searchedItems.filter((item) => item.category === activeCategory);
+    return searchedItems.filter((item) =>
+      ingredientMatchesCategoryGroup(item, activeCategory),
+    );
   }, [searchedItems, activeCategory]);
 
   const selectableIngredientIds = useMemo(
@@ -170,6 +186,9 @@ export function PantryScreen({
         .filter((item) => item.isOwned)
         .map((item) => ({
           category: item.category,
+          category_group_code: item.category_group_code,
+          category_code: item.category_code,
+          category_label: item.category_label,
           created_at: item.created_at ?? "",
           id: item.id,
           ingredient_id: item.ingredient_id,
@@ -804,13 +823,13 @@ export function PantryScreen({
               </WebTabButton>
               {categories.map((category) => (
                 <WebTabButton
-                  active={activeCategory === category}
-                  aria-label={category}
-                  key={category}
-                  onClick={() => handleCategoryChange(category)}
+                  active={activeCategory === category.value}
+                  aria-label={category.label}
+                  key={category.value}
+                  onClick={() => handleCategoryChange(category.value)}
                 >
-                  {category}{" "}
-                  <span>{categoryCounts.get(category) ?? 0}</span>
+                  {category.label}{" "}
+                  <span>{categoryCounts.get(category.value) ?? 0}</span>
                 </WebTabButton>
               ))}
             </WebTabs>
@@ -926,7 +945,7 @@ export function PantryScreen({
                         {getIngredientCategoryEmoji(item.category)}
                       </span>
                       <strong>{item.standard_name}</strong>
-                      <small>{item.category}</small>
+                      <small>{getIngredientGroupDisplayLabel(item)}</small>
                     </>
                   );
 
@@ -969,6 +988,14 @@ export function PantryScreen({
 function toOwnedDisplayItem(item: PantryItem): PantryDisplayItem {
   return {
     category: item.category,
+    category_group_code:
+      item.category_group_code ??
+      getIngredientGroupFilterValue({
+        category: item.category,
+        categoryCode: item.category_code,
+      }),
+    category_code: item.category_code,
+    category_label: item.category_label,
     created_at: item.created_at,
     id: item.id,
     ingredient_id: item.ingredient_id,

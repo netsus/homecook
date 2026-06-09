@@ -131,6 +131,14 @@
 - v1 label과 v2 code가 동시에 존재하는 기간에는 v2 code가 내부 정렬/검색/자동매칭 기준이고, v1 label은 public 호환과 fallback 기준이다.
 - migration은 idempotent해야 하며 기존 사용자 생성 재료를 잘못 덮어쓰지 않아야 한다.
 
+### Migration Boundary / Rollback Safety
+
+- taxonomy v2 registry tables는 사용자 소유 row가 아니라 공개 기준 데이터다. 화면은 직접 table write를 하지 않고 API 응답 또는 shared source를 소비한다.
+- Stage 2 migration은 additive-only다. `ingredients.category`와 기존 `cooking_methods` 기본 응답 필드는 유지하고, 새 column/table은 nullable 또는 seed registry로만 추가한다.
+- migration은 `create table if not exists`, `add column if not exists`, `on conflict do update`를 사용해 재실행 가능해야 한다.
+- rollback은 기존 v1 field 소비 코드로 되돌려도 데이터가 깨지지 않는 방식으로 한다. 즉시 drop 대신 새 table/column을 남겨도 기존 public contract는 유지된다.
+- production smoke는 Supabase linked project에 migration 적용 후 registry count와 fruit-like row 매핑을 확인한다.
+
 ### Error Cases
 
 | 상황 | 기대 처리 |
@@ -196,6 +204,17 @@
   - `씻기`가 canonical method seed에 포함됨
   - external ingest gate 없이 production direct-load 경로가 생김
 
+## Stage 4 Evidence / QA Handoff
+
+2026-06-09 기준 Stage 4 frontend consumer alignment는 기존 화면 구조를 유지하고 taxonomy source 소비 경로를 맞추는 범위로 진행했다.
+
+- HOME ingredient filter, PANTRY category rail/sheet, 직접등록 ingredient modal, YT_IMPORT single/bulk ingredient registration이 `INGREDIENT_CATEGORY_GROUP_OPTIONS`와 소분류 source를 소비한다.
+- 직접등록과 YT_IMPORT 조리법 선택은 `groupCookingMethodsByCategory`로 6그룹 taxonomy 순서를 표시한다.
+- RECIPE_DETAIL/COOK_MODE 조리법 pill은 표시 텍스트를 유지하고, 보조 label(`aria-label`, `title`)을 `getCookingMethodCategoryLabel`에서 파생한다.
+- 새로 발견한 UI fallout: YT_IMPORT 미등록 재료 모달은 21개 소분류가 노출되며 높이가 화면을 넘었다. 모달 자체에 명시 height/scroll을 부여해 등록 버튼 접근성을 복구했다.
+- Supabase remote smoke: `ingredient_category_groups=8`, `ingredient_categories=21`, `cooking_method_categories=6`, `cooking_methods=23`(legacy 포함), `cooking_method_synonyms=18`, `딸기/바나나/사과 -> 과일/견과 > 과일`.
+- production URL은 Vercel auth로 보호되어 앱 API smoke는 브라우저에서 직접 완료하지 못했다. DB/API 계약은 Supabase REST smoke와 로컬/Playwright verification으로 대체했다.
+
 ## Key Rules
 
 1. v2 taxonomy는 v1 label 계약의 replacement가 아니라 additive migration이다.
@@ -237,7 +256,7 @@
 - [x] additive DB migration이 idempotent하고 기존 `ingredients.category`를 유지 <!-- omo:id=delivery-idempotent-db-migration;stage=2;scope=backend;review=3,6 -->
 - [x] 기존 과일류 row가 `과일/견과 > 과일`로 매핑되는 재분류 검증 <!-- omo:id=delivery-fruit-reclassification;stage=2;scope=backend;review=3,6 -->
 - [x] `GET /ingredients`와 `GET /cooking-methods`의 additive-only 응답 계약 검증 <!-- omo:id=delivery-api-additive-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] HOME/PANTRY/직접등록/YT_IMPORT category selector가 같은 taxonomy source를 소비 <!-- omo:id=delivery-frontend-ingredient-consumers;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL/COOK_MODE/YT_IMPORT cooking method 표시가 같은 taxonomy source를 소비 <!-- omo:id=delivery-frontend-cooking-consumers;stage=4;scope=frontend;review=5,6 -->
-- [ ] `loading / empty / error / read-only / unauthorized` 상태가 기존 화면에서 유지 <!-- omo:id=delivery-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] migration과 UI fallout에 대한 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] HOME/PANTRY/직접등록/YT_IMPORT category selector가 같은 taxonomy source를 소비 <!-- omo:id=delivery-frontend-ingredient-consumers;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL/COOK_MODE/YT_IMPORT cooking method 표시가 같은 taxonomy source를 소비 <!-- omo:id=delivery-frontend-cooking-consumers;stage=4;scope=frontend;review=5,6 -->
+- [x] `loading / empty / error / read-only / unauthorized` 상태가 기존 화면에서 유지 <!-- omo:id=delivery-state-ui-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] migration과 UI fallout에 대한 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->

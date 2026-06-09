@@ -1,3 +1,4 @@
+import { getIngredientTaxonomyMetadata } from "@/lib/ingredient-categories";
 import type {
   PantryBundle,
   PantryBundleIngredient,
@@ -7,6 +8,7 @@ import type {
 interface IngredientJoinRow {
   standard_name?: string | null;
   category?: string | null;
+  category_code?: string | null;
 }
 
 export interface PantryItemJoinedRow {
@@ -20,6 +22,7 @@ export interface IngredientRow {
   id: string;
   standard_name: string;
   category: string;
+  category_code?: string | null;
 }
 
 export interface PantryIngredientRow {
@@ -59,12 +62,19 @@ export function normalizeIngredientIds(value: unknown) {
 
 export function toPantryItem(row: PantryItemJoinedRow): PantryItem {
   const ingredient = firstJoin(row.ingredients) ?? {};
+  const taxonomy = getIngredientTaxonomyMetadata({
+    category: ingredient.category,
+    categoryCode: ingredient.category_code,
+  });
 
   return {
     id: row.id,
     ingredient_id: row.ingredient_id,
     standard_name: ingredient.standard_name ?? "",
     category: ingredient.category ?? "",
+    category_group_code: taxonomy.category_group_code,
+    category_code: taxonomy.category_code,
+    category_label: taxonomy.category_label,
     created_at: row.created_at,
   };
 }

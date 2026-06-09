@@ -3777,6 +3777,22 @@ button {
     gap: 8px;
   }
 
+  .web-modal-chip-rail {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .web-modal-chip-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .web-modal-chip-rail > * {
+    flex: 0 0 auto;
+  }
+
   .web-planner-date-grid {
     display: flex;
     overflow-x: auto;

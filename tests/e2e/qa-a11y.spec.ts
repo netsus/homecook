@@ -532,6 +532,14 @@ test.describe("QA accessibility smoke", () => {
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });
+    await page.getByTestId("mypage-profile-edit-button").click();
+    await expect(page.getByRole("dialog", { name: "닉네임 변경" })).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+    await page.getByRole("button", { name: "취소" }).click();
+    await expect(page.getByRole("dialog", { name: "닉네임 변경" })).toHaveCount(0);
+
     const recipebookTab = page.getByRole("tab", { name: /레시피북/ });
     await expectReadableTouchTarget(recipebookTab);
 
@@ -556,12 +564,6 @@ test.describe("QA accessibility smoke", () => {
 
     await page.goto(SETTINGS_VISUAL_PATH);
     await expect(page.getByRole("heading", { name: "설정" })).toBeVisible();
-    await expectNoAxeViolations(page, {
-      allowPrototypeDesktopColorContrast: true,
-    });
-
-    await page.getByTestId("nickname-row").click();
-    await expect(page.getByRole("dialog", { name: "닉네임 변경" })).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });

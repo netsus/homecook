@@ -28,7 +28,7 @@ import {
 import { fetchJson } from "@/lib/api/fetch-json";
 import {
   ALL_INGREDIENT_CATEGORY,
-  INGREDIENT_CATEGORY_OPTIONS,
+  INGREDIENT_CATEGORY_GROUP_OPTIONS,
 } from "@/lib/ingredient-categories";
 import type { IngredientItem, IngredientListData } from "@/types/recipe";
 
@@ -50,7 +50,7 @@ function buildIngredientQueryString(query: string, category: string) {
   }
 
   if (category !== ALL_INGREDIENT_CATEGORY) {
-    params.set("category", category);
+    params.set("category_group_code", category);
   }
 
   const queryString = params.toString();
@@ -294,14 +294,14 @@ export function IngredientFilterModal({
               />
             </label>
 
-            <div className="web-modal-chip-grid mt-4">
-              {INGREDIENT_CATEGORY_OPTIONS.map((category) => (
+            <div className="web-modal-chip-rail mt-4">
+              {INGREDIENT_CATEGORY_GROUP_OPTIONS.map((category) => (
                 <WebChip
-                  active={activeCategory === category}
-                  key={category}
-                  onClick={() => setActiveCategory(category)}
+                  active={activeCategory === category.value}
+                  key={category.value}
+                  onClick={() => setActiveCategory(category.value)}
                 >
-                  {category}
+                  {category.label}
                 </WebChip>
               ))}
             </div>
@@ -425,9 +425,9 @@ export function IngredientFilterModal({
           <div className="mt-3 md:mt-4 md:flex-wrap md:overflow-visible md:pb-0">
             <SelectionChipRail
               ariaLabel="카테고리 선택"
-              chips={INGREDIENT_CATEGORY_OPTIONS.map((cat) => ({
-                value: cat,
-                label: cat,
+              chips={INGREDIENT_CATEGORY_GROUP_OPTIONS.map((cat) => ({
+                value: cat.value,
+                label: cat.label,
               }))}
               onSelect={setActiveCategory}
               selectedValue={activeCategory}

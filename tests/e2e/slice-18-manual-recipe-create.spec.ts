@@ -18,6 +18,7 @@ interface IngredientItem {
   id: string;
   standard_name: string;
   category: string;
+  category_group_code?: string;
 }
 
 interface ManualRecipeCreateData {
@@ -745,9 +746,9 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     ]);
 
     const ingredients = [
-      { id: "ing-1", standard_name: "양파", category: "채소" },
-      { id: "ing-2", standard_name: "돼지고기", category: "육류" },
-      { id: "ing-3", standard_name: "두부", category: "기타" },
+      { id: "ing-1", standard_name: "양파", category: "채소", category_group_code: "vegetable_mushroom" },
+      { id: "ing-2", standard_name: "돼지고기", category: "육류", category_group_code: "protein" },
+      { id: "ing-3", standard_name: "두부", category: "기타", category_group_code: "protein" },
     ];
     const ingredientRequests: string[] = [];
 
@@ -759,7 +760,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
 
       const requestUrl = new URL(route.request().url());
       const query = requestUrl.searchParams.get("q")?.trim() ?? "";
-      const category = requestUrl.searchParams.get("category");
+      const categoryGroupCode = requestUrl.searchParams.get("category_group_code");
       ingredientRequests.push(requestUrl.search);
 
       await route.fulfill({
@@ -770,7 +771,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
               const matchesQuery =
                 query.length === 0 || ingredient.standard_name.includes(query);
               const matchesCategory =
-                !category || ingredient.category === category;
+                !categoryGroupCode || ingredient.category_group_code === categoryGroupCode;
 
               return matchesQuery && matchesCategory;
             }),
@@ -786,10 +787,10 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await expect(ingredientModal.getByText("돼지고기", { exact: true })).toBeVisible();
     expect(ingredientRequests[0]).toBe("");
 
-    await ingredientModal.getByRole("button", { name: "육류" }).click();
+    await ingredientModal.getByRole("button", { name: "단백질" }).click();
     await expect(ingredientModal.getByText("돼지고기", { exact: true })).toBeVisible();
     await expect(ingredientModal.getByText("양파", { exact: true })).toHaveCount(0);
-    expect(ingredientRequests).toContain("?category=%EC%9C%A1%EB%A5%98");
+    expect(ingredientRequests).toContain("?category_group_code=protein");
 
     await searchIngredient(page, "양파");
     await expect(ingredientModal.getByText("검색 결과가 없어요")).toBeVisible();
@@ -927,11 +928,11 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     ]);
 
     const ingredients = [
-      { id: "ing-1", standard_name: "양파", category: "채소" },
-      { id: "ing-2", standard_name: "대파", category: "채소" },
-      { id: "ing-3", standard_name: "감자", category: "채소" },
-      { id: "ing-4", standard_name: "당근", category: "채소" },
-      { id: "ing-5", standard_name: "돼지고기", category: "육류" },
+      { id: "ing-1", standard_name: "양파", category: "채소", category_group_code: "vegetable_mushroom" },
+      { id: "ing-2", standard_name: "대파", category: "채소", category_group_code: "vegetable_mushroom" },
+      { id: "ing-3", standard_name: "감자", category: "채소", category_group_code: "vegetable_mushroom" },
+      { id: "ing-4", standard_name: "당근", category: "채소", category_group_code: "vegetable_mushroom" },
+      { id: "ing-5", standard_name: "돼지고기", category: "육류", category_group_code: "protein" },
     ];
 
     await page.route("**/api/v1/ingredients*", async (route) => {
@@ -941,8 +942,8 @@ test.describe("Slice 18: Manual Recipe Create", () => {
       }
 
       const requestUrl = new URL(route.request().url());
-      const category = requestUrl.searchParams.get("category");
-      if (category) {
+      const categoryGroupCode = requestUrl.searchParams.get("category_group_code");
+      if (categoryGroupCode) {
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
 
@@ -951,7 +952,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
           success: true,
           data: {
             items: ingredients.filter(
-              (ingredient) => !category || ingredient.category === category,
+              (ingredient) => !categoryGroupCode || ingredient.category_group_code === categoryGroupCode,
             ),
           },
           error: null,
@@ -962,7 +963,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await page.goto(MANUAL_RECIPE_CREATE_URL);
     const dialog = await openIngredientDialog(page);
     await expect(dialog.getByText("양파", { exact: true })).toBeVisible();
-    await dialog.getByRole("button", { name: "육류" }).click();
+    await dialog.getByRole("button", { name: "단백질" }).click();
     await expect(dialog.getByText("돼지고기", { exact: true })).toBeVisible();
     await expect(dialog.getByRole("button", { name: "선택한 재료 0개 추가" })).toBeDisabled();
     await expect(dialog.getByRole("button", { name: "닫기" })).toBeVisible();

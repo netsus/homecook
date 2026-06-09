@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { formatMealAddTargetLabel } from "@/components/planner/meal-add-target-badge";
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
@@ -32,13 +32,19 @@ import type {
 } from "@/lib/api/youtube-import";
 import { createMealSafe } from "@/lib/api/meal";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
-import { INGREDIENT_CATEGORY_LABELS } from "@/lib/ingredient-categories";
+import { groupCookingMethodsByCategory } from "@/lib/cooking-method-taxonomy";
+import {
+  getDefaultIngredientSubcategoryOption,
+  getIngredientSubcategoryOption,
+  getIngredientSubcategoryOptionsByGroup,
+  type IngredientSubcategoryCode,
+  type IngredientSubcategoryOption,
+} from "@/lib/ingredient-categories";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 import { stripMatchingSectionPrefix } from "@/lib/recipe-section-labels";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import type {
   CookingMethodItem,
-  IngredientCategory,
   ManualRecipeIngredientInput,
   ManualRecipeStepInput,
   YoutubeIngredientCandidate,
@@ -1556,6 +1562,10 @@ function StepAddModal({
   const [instruction, setInstruction] = useState(initialStep?.instruction ?? "");
   const [durationText, setDurationText] = useState(initialStep?.duration_text ?? "");
   const isEditing = Boolean(initialStep);
+  const cookingMethodGroups = useMemo(
+    () => groupCookingMethodsByCategory(cookingMethods),
+    [cookingMethods],
+  );
 
   const handleAdd = () => {
     if (!selectedMethod || !instruction.trim()) return;
@@ -1577,7 +1587,7 @@ function StepAddModal({
     >
       <div
         aria-modal="true"
-        className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]"
+        className="max-h-[calc(100dvh-1rem)] w-full max-w-md overflow-y-auto rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:max-h-[calc(100dvh-3rem)] sm:rounded-[var(--radius-sheet)]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
@@ -1586,29 +1596,38 @@ function StepAddModal({
           <div className="text-sm font-semibold text-[var(--text-2)]">스텝 번호: {nextStepNumber}</div>
           <div>
             <div className="mb-2 text-sm font-semibold text-[var(--text-2)]">조리방법 선택</div>
-            <div className="grid grid-cols-2 gap-2">
-              {cookingMethods.map((method) => {
-                const color = getCookingMethodColor(method.color_key);
-                const isSelected = selectedMethod?.id === method.id;
+            <div className="space-y-3">
+              {cookingMethodGroups.map((group) => (
+                <div key={group.label}>
+                  <p className="mb-1 text-xs font-bold text-[var(--text-3)]">
+                    {group.label}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {group.items.map((method) => {
+                      const color = getCookingMethodColor(method.color_key);
+                      const isSelected = selectedMethod?.id === method.id;
 
-                return (
-                  <button
-                    key={method.id}
-                    className="rounded-[var(--radius-sm)] border px-3 py-2 text-sm font-semibold"
-                    onClick={() => setSelectedMethod(method)}
-                    style={{
-                      backgroundColor: isSelected
-                        ? color
-                        : `color-mix(in srgb, ${color} 12%, transparent)`,
-                      borderColor: color,
-                      color: isSelected ? "var(--text-inverse)" : "var(--foreground)",
-                    }}
-                    type="button"
-                  >
-                    {method.label}
-                  </button>
-                );
-              })}
+                      return (
+                        <button
+                          key={method.id}
+                          className="rounded-[var(--radius-sm)] border px-3 py-2 text-sm font-semibold"
+                          onClick={() => setSelectedMethod(method)}
+                          style={{
+                            backgroundColor: isSelected
+                              ? color
+                              : `color-mix(in srgb, ${color} 12%, transparent)`,
+                            borderColor: color,
+                            color: isSelected ? "var(--text-inverse)" : "var(--foreground)",
+                          }}
+                          type="button"
+                        >
+                          {method.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
           <div>
@@ -1644,7 +1663,62 @@ function StepAddModal({
 
 // ─── Ingredient Register Modal ──────────────────────────────────────────────
 
-const INGREDIENT_CATEGORY_CHOICES = INGREDIENT_CATEGORY_LABELS;
+const INGREDIENT_SUBCATEGORY_GROUPS = getIngredientSubcategoryOptionsByGroup();
+const DEFAULT_INGREDIENT_SUBCATEGORY =
+  getDefaultIngredientSubcategoryOption("양념");
+
+function IngredientSubcategoryPicker({
+  disabled = false,
+  onSelect,
+  selectedCode,
+  size = "md",
+}: {
+  disabled?: boolean;
+  onSelect: (option: IngredientSubcategoryOption) => void;
+  selectedCode: string;
+  size?: "sm" | "md";
+}) {
+  const buttonSizeClass =
+    size === "sm" ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm";
+  const groupTitleClass =
+    size === "sm" ? "text-[11px]" : "text-xs";
+
+  return (
+    <div className="mt-2 space-y-3">
+      {INGREDIENT_SUBCATEGORY_GROUPS.map(({ group, options }) => (
+        <div key={group.code}>
+          <p className={`${groupTitleClass} font-bold text-[var(--text-3)]`}>
+            {group.label}
+          </p>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {options.map((option) => {
+              const isSelected = selectedCode === option.value;
+
+              return (
+                <button
+                  aria-pressed={isSelected}
+                  className={[
+                    "rounded-[var(--radius-full)] border font-semibold transition",
+                    buttonSizeClass,
+                    isSelected
+                      ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
+                      : "border-[var(--line)] bg-[var(--surface-fill)] text-[var(--foreground)]",
+                  ].join(" ")}
+                  disabled={disabled}
+                  key={option.value}
+                  onClick={() => onSelect(option)}
+                  type="button"
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 interface IngredientRegisterModalProps {
   ingredient: TempIngredient;
@@ -1665,11 +1739,15 @@ function IngredientRegisterModal({
 }: IngredientRegisterModalProps) {
   const initialName = ingredient.standard_name || ingredient.raw_text || "";
   const [standardName, setStandardName] = useState(initialName);
-  const [category, setCategory] = useState<IngredientCategory>("양념");
+  const [categoryCode, setCategoryCode] = useState<IngredientSubcategoryCode>(
+    DEFAULT_INGREDIENT_SUBCATEGORY.value,
+  );
   const [defaultUnit, setDefaultUnit] = useState("");
   const [synonym, setSynonym] = useState(initialName);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const selectedCategory =
+    getIngredientSubcategoryOption(categoryCode) ?? DEFAULT_INGREDIENT_SUBCATEGORY;
 
   const canSubmit = standardName.trim().length > 0 && !isSubmitting;
 
@@ -1689,7 +1767,8 @@ function IngredientRegisterModal({
       extraction_id: extractionId,
       draft_ingredient_id: ingredient.draft_ingredient_id,
       standard_name: standardName.trim(),
-      category,
+      category: selectedCategory.legacy_category,
+      category_code: selectedCategory.value,
       default_unit: defaultUnit.trim() || null,
       synonym: synonym.trim() || null,
     });
@@ -1731,6 +1810,11 @@ function IngredientRegisterModal({
         role="dialog"
         aria-labelledby="ingredient-register-title"
         data-testid="ingredient-register-modal"
+        style={{
+          height: "calc(100vh - 1rem)",
+          maxHeight: "calc(100vh - 1rem)",
+          overflowY: "auto",
+        }}
       >
         <ModalHeader title="새 재료 등록" titleId="ingredient-register-title" onClose={handleClose} />
 
@@ -1752,24 +1836,11 @@ function IngredientRegisterModal({
           {/* Category */}
           <div>
             <label className="text-sm font-semibold text-[var(--text-2)]">카테고리</label>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {INGREDIENT_CATEGORY_CHOICES.map((cat) => (
-                <button
-                  aria-pressed={category === cat}
-                  className={[
-                    "rounded-[var(--radius-full)] border px-3 py-1.5 text-sm font-semibold transition",
-                    category === cat
-                      ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
-                      : "border-[var(--line)] bg-[var(--surface-fill)] text-[var(--foreground)]",
-                  ].join(" ")}
-                  key={cat}
-                  onClick={() => setCategory(cat)}
-                  type="button"
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
+            <IngredientSubcategoryPicker
+              disabled={isSubmitting}
+              onSelect={(option) => setCategoryCode(option.value)}
+              selectedCode={categoryCode}
+            />
           </div>
 
           {/* Default unit (optional) */}
@@ -1832,7 +1903,7 @@ interface BulkRowState {
   rawText: string;
   draftIngredientId: string;
   standardName: string;
-  category: IngredientCategory;
+  categoryCode: IngredientSubcategoryCode;
   defaultUnit: string;
   synonym: string;
   skipped: boolean;
@@ -1874,7 +1945,7 @@ function BulkIngredientRegistrationSheet({
       rawText: ing.raw_text ?? "",
       draftIngredientId: ing.draft_ingredient_id!,
       standardName: ing.standard_name || ing.raw_text || "",
-      category: "양념" as IngredientCategory,
+      categoryCode: DEFAULT_INGREDIENT_SUBCATEGORY.value,
       defaultUnit: "",
       synonym: ing.standard_name || ing.raw_text || "",
       skipped: false,
@@ -1928,7 +1999,10 @@ function BulkIngredientRegistrationSheet({
         extraction_id: extractionId,
         draft_ingredient_id: r.draftIngredientId,
         standard_name: r.standardName.trim(),
-        category: r.category,
+        category:
+          (getIngredientSubcategoryOption(r.categoryCode) ??
+            DEFAULT_INGREDIENT_SUBCATEGORY).legacy_category,
+        category_code: r.categoryCode,
         default_unit: r.defaultUnit.trim() || null,
         synonym: r.synonym.trim() || null,
       },
@@ -2103,25 +2177,14 @@ function BulkIngredientRegistrationSheet({
                       <label className="text-xs font-semibold text-[var(--text-2)]">
                         카테고리
                       </label>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {INGREDIENT_CATEGORY_CHOICES.map((cat) => (
-                          <button
-                            aria-pressed={row.category === cat}
-                            className={[
-                              "rounded-[var(--radius-full)] border px-2 py-1 text-xs font-semibold transition",
-                              row.category === cat
-                                ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
-                                : "border-[var(--line)] bg-[var(--surface-fill)] text-[var(--foreground)]",
-                            ].join(" ")}
-                            key={cat}
-                            onClick={() => updateRow(row.tempId, { category: cat })}
-                            type="button"
-                            disabled={isSubmitting}
-                          >
-                            {cat}
-                          </button>
-                        ))}
-                      </div>
+                      <IngredientSubcategoryPicker
+                        disabled={isSubmitting}
+                        onSelect={(option) =>
+                          updateRow(row.tempId, { categoryCode: option.value })
+                        }
+                        selectedCode={row.categoryCode}
+                        size="sm"
+                      />
                     </div>
                   </div>
                 )}

@@ -14,6 +14,7 @@ vi.mock("@/lib/api/ingredients", () => ({
 }));
 
 const VEGETABLE_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "vegetable")!.label;
+const VEGETABLE_GROUP_LABEL = "채소/버섯";
 
 function installMatchMedia(matchesDesktop = false) {
   Object.defineProperty(window, "matchMedia", {
@@ -173,7 +174,7 @@ describe("RecipeIngredientAddModal", () => {
     expect(await screen.findByRole("checkbox", { name: "양파" })).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: "두부" })).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: VEGETABLE_CATEGORY }));
+    await user.click(screen.getByRole("button", { name: VEGETABLE_GROUP_LABEL }));
 
     expect(screen.getByTestId("ingredient-list-region")).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: "양파" })).toBeTruthy();

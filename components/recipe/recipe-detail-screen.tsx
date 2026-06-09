@@ -37,6 +37,7 @@ import {
 } from "@/lib/api/recipe-save";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
 import { getCookingMethodColor, getCookingMethodTint } from "@/lib/cooking-method-colors";
+import { getCookingMethodAssistiveLabel } from "@/lib/cooking-method-taxonomy";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { fetchPlanner } from "@/lib/api/planner";
@@ -68,6 +69,17 @@ type LikeRequestState = "idle" | "pending";
 type FeedbackTone = "error" | "status";
 type SaveModalState = "idle" | "loading" | "ready" | "error";
 type RecipeDetailTab = "ingredients" | "steps" | "reviews";
+
+function getStepCookingMethodAssistiveLabel(
+  method: RecipeDetail["steps"][number]["cooking_method"],
+) {
+  return getCookingMethodAssistiveLabel({
+    methodCode: method?.code,
+    methodLabel: method?.label,
+    categoryCode: method?.category_code,
+    categoryLabel: method?.category_label,
+  });
+}
 
 const FEEDBACK_AUTO_DISMISS_MS = 4000;
 
@@ -1430,6 +1442,7 @@ export function RecipeDetailScreen({
                       {step.step_number}
                     </span>
                     <span
+                      aria-label={getStepCookingMethodAssistiveLabel(step.cooking_method)}
                       className="rounded-full px-2 py-0.5 text-[12px] font-bold"
                       style={{
                         backgroundColor: getCookingMethodTint(
@@ -1439,6 +1452,7 @@ export function RecipeDetailScreen({
                           step.cooking_method?.color_key,
                         ),
                       }}
+                      title={getStepCookingMethodAssistiveLabel(step.cooking_method)}
                     >
                       {step.cooking_method?.label ?? "만들기"}
                     </span>
@@ -1841,6 +1855,7 @@ function RecipeDetailWebView({
                           <div className="web-step-body">
                             <div className="web-step-meta">
                               <span
+                                aria-label={getStepCookingMethodAssistiveLabel(step.cooking_method)}
                                 className="web-step-method"
                                 style={{
                                   backgroundColor: getCookingMethodTint(
@@ -1850,6 +1865,7 @@ function RecipeDetailWebView({
                                     step.cooking_method?.color_key,
                                   ),
                                 }}
+                                title={getStepCookingMethodAssistiveLabel(step.cooking_method)}
                               >
                                 {step.cooking_method?.label ?? "만들기"}
                               </span>

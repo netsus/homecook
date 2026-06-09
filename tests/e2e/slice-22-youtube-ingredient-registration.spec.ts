@@ -37,6 +37,7 @@ test.describe("Slice 22: YouTube ingredient registration", () => {
       draft_ingredient_id: "draft-mustard",
       standard_name: "연겨자",
       category: "양념",
+      category_code: "paste_sauce",
       default_unit: null,
       synonym: "연겨자",
     });

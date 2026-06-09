@@ -106,7 +106,12 @@ export async function fetchPantryBundles() {
   return requestPantry<PantryBundleListData>("/api/v1/pantry/bundles");
 }
 
-export async function fetchIngredients(params?: { q?: string; category?: string }) {
+export async function fetchIngredients(params?: {
+  q?: string;
+  category?: string;
+  category_code?: string;
+  category_group_code?: string;
+}) {
   const searchParams = new URLSearchParams();
 
   if (params?.q) {
@@ -115,6 +120,12 @@ export async function fetchIngredients(params?: { q?: string; category?: string 
 
   if (params?.category) {
     searchParams.set("category", params.category);
+  }
+  if (params?.category_code) {
+    searchParams.set("category_code", params.category_code);
+  }
+  if (params?.category_group_code) {
+    searchParams.set("category_group_code", params.category_group_code);
   }
 
   const queryString = searchParams.toString();

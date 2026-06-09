@@ -9,7 +9,7 @@ import { PantryScreen } from "@/components/pantry/pantry-screen";
 import {
   getIngredientCategoryEmoji,
   INGREDIENT_CATEGORIES,
-  INGREDIENT_CATEGORY_LABELS,
+  INGREDIENT_CATEGORY_GROUP_OPTIONS,
 } from "@/lib/ingredient-categories";
 
 const mockFetchPantryList = vi.fn();
@@ -23,6 +23,10 @@ const mockCreateMealSafe = vi.fn();
 const VEGETABLE_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "vegetable")!.label;
 const MEAT_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "meat")!.label;
 const SEASONING_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "seasoning")!.label;
+const VEGETABLE_GROUP_LABEL = "채소/버섯";
+const PANTRY_CATEGORY_GROUP_LABELS = INGREDIENT_CATEGORY_GROUP_OPTIONS
+  .filter((category) => category.category_group_code)
+  .map((category) => category.label);
 
 vi.mock("@/lib/api/pantry", () => ({
   fetchPantryList: (...args: unknown[]) => mockFetchPantryList(...args),
@@ -559,7 +563,7 @@ describe("PantryScreen", () => {
     await screen.findByText("양파", { exact: false });
 
     expect(screen.getByRole("tab", { name: "전체" })).toBeTruthy();
-    INGREDIENT_CATEGORY_LABELS.forEach((category) => {
+    PANTRY_CATEGORY_GROUP_LABELS.forEach((category) => {
       expect(screen.getByRole("tab", { name: category })).toBeTruthy();
     });
     expect(screen.getByText(getIngredientCategoryEmoji(VEGETABLE_CATEGORY))).toBeTruthy();
@@ -574,7 +578,7 @@ describe("PantryScreen", () => {
 
     expect(screen.getByText("냉장고에 있는 재료")).toBeTruthy();
     expect(screen.queryByText(/29개/)).toBeNull();
-    INGREDIENT_CATEGORY_LABELS.forEach((category) => {
+    PANTRY_CATEGORY_GROUP_LABELS.forEach((category) => {
       expect(screen.getByRole("tab", { name: category })).toBeTruthy();
     });
   });
@@ -585,13 +589,13 @@ describe("PantryScreen", () => {
     await screen.findByText("양파", { exact: false });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: VEGETABLE_CATEGORY }));
+    await user.click(screen.getByRole("tab", { name: VEGETABLE_GROUP_LABEL }));
 
     expect(screen.getByText("양파", { exact: false })).toBeTruthy();
     expect(screen.queryByText("마늘", { exact: false })).toBeNull();
     expect(screen.queryByText(/돼지고기/)).toBeNull();
     expect(screen.getByRole("tab", { name: "전체" })).toBeTruthy();
-    INGREDIENT_CATEGORY_LABELS.forEach((category) => {
+    PANTRY_CATEGORY_GROUP_LABELS.forEach((category) => {
       expect(screen.getByRole("tab", { name: category })).toBeTruthy();
     });
     expect(mockFetchPantryList).toHaveBeenCalledTimes(1);
@@ -713,7 +717,7 @@ describe("PantryScreen", () => {
     expect(within(dialog).getByRole("checkbox", { name: "대파" })).toBeTruthy();
     expect(within(dialog).getByRole("checkbox", { name: "간장" })).toBeTruthy();
 
-    await user.click(within(dialog).getByRole("tab", { name: "채소" }));
+    await user.click(within(dialog).getByRole("tab", { name: VEGETABLE_GROUP_LABEL }));
 
     expect(within(dialog).getByTestId("pantry-add-list-region")).toBeTruthy();
     expect(within(dialog).getByRole("checkbox", { name: "대파" })).toBeTruthy();
@@ -740,12 +744,12 @@ describe("PantryScreen", () => {
     const dialog = await screen.findByRole("dialog", { name: "재료 추가" });
 
     expect(within(dialog).getByTestId("pantry-add-mobile-search-icon")).toBeTruthy();
-    INGREDIENT_CATEGORY_LABELS.forEach((category) => {
+    PANTRY_CATEGORY_GROUP_LABELS.forEach((category) => {
       expect(within(dialog).getByRole("tab", { name: category })).toBeTruthy();
     });
-    expect(within(dialog).getByRole("heading", { name: "채소" })).toBeTruthy();
-    expect(within(dialog).getByRole("heading", { name: "양념" })).toBeTruthy();
-    expect(within(dialog).getByRole("heading", { name: "유제품" })).toBeTruthy();
+    expect(within(dialog).getByRole("heading", { name: "채소/버섯" })).toBeTruthy();
+    expect(within(dialog).getByRole("heading", { name: "양념/조미" })).toBeTruthy();
+    expect(within(dialog).getByRole("heading", { name: "유제품/대체유" })).toBeTruthy();
 
     await user.click(within(dialog).getByRole("checkbox", { name: "대파" }));
     const selectedChip = within(dialog).getByRole("button", { name: "대파 선택 해제" });

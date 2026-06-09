@@ -300,8 +300,10 @@ test.describe("ATE_LIST screen", () => {
       page.getByText(isMobileViewport(page) ? "4/28 다먹음" : "4월 28일"),
     ).toBeVisible();
     if (isMobileViewport(page)) {
-      await expect(page.getByText(/4\/20 요리/)).toBeVisible();
-      await expect(page.getByText(/저녁 · 2인분/)).toBeVisible();
+      await expect(page.getByTestId("ate-list-mobile-meta").first()).toContainText(
+        "4/20 · 저녁 · 2인분 · 4/28 다먹음",
+      );
+      await expect(page.getByText(/4\/20 요리/)).toHaveCount(0);
     }
     await expect(page.getByText("다먹음으로 기록")).toHaveCount(0);
     if (isMobileViewport(page)) {

@@ -632,7 +632,7 @@ describe("AteListScreen", () => {
 
     const restoreButton = await screen.findByTestId("uneat-button");
     expect(restoreButton.textContent?.trim()).toBe("남은 요리로");
-    expect(restoreButton.className).toContain("px-3");
+    expect(restoreButton.className).toContain("px-4");
     expect(restoreButton.className).toContain("border-[var(--brand)]");
     expect(restoreButton.className).toContain("bg-[var(--surface)]");
     expect(restoreButton.className).toContain("text-[var(--brand)]");

@@ -12,6 +12,7 @@ import {
 } from "@/components/cooking/cook-mode-step-model";
 import { cn } from "@/components/web/utils";
 import { getCookingMethodVisual } from "@/lib/cooking-method-colors";
+import { getCookingMethodAssistiveLabel } from "@/lib/cooking-method-taxonomy";
 import type { CookingModeRecipe } from "@/types/cooking";
 
 export { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
@@ -61,6 +62,12 @@ export function MobileCookModeView({
     ? buildCookModeStepModel(recipe, currentStep)
     : null;
   const methodVisual = getCookingMethodVisual(currentStep?.cooking_method);
+  const methodAssistiveLabel = getCookingMethodAssistiveLabel({
+    methodCode: currentStep?.cooking_method.code,
+    methodLabel: currentStep?.cooking_method.label,
+    categoryCode: currentStep?.cooking_method.category_code,
+    categoryLabel: currentStep?.cooking_method.category_label,
+  });
 
   React.useEffect(() => {
     setCurrentStepIndex((index) => {
@@ -141,11 +148,12 @@ export function MobileCookModeView({
         >
           {currentStep && stepModel ? (
             <>
-              <CurrentStepStage
-                currentStepIndex={currentStepIndex}
-                methodColor={methodVisual.color}
-                methodLabel={methodVisual.label}
-                model={stepModel}
+            <CurrentStepStage
+              currentStepIndex={currentStepIndex}
+              methodAssistiveLabel={methodAssistiveLabel}
+              methodColor={methodVisual.color}
+              methodLabel={methodVisual.label}
+              model={stepModel}
               />
               {stepModel.ingredientUsages.length > 0 ? (
                 <MobileAmountBoard usages={stepModel.ingredientUsages} />
@@ -235,11 +243,13 @@ export function MobileCookModeView({
 
 function CurrentStepStage({
   currentStepIndex,
+  methodAssistiveLabel,
   methodColor,
   methodLabel,
   model,
 }: {
   currentStepIndex: number;
+  methodAssistiveLabel: string;
   methodColor: string;
   methodLabel: string;
   model: ReturnType<typeof buildCookModeStepModel>;
@@ -263,8 +273,10 @@ function CurrentStepStage({
           </strong>
         </span>
         <span
+          aria-label={methodAssistiveLabel}
           className="cook-mobile-method-pill rounded-full px-3 py-2 text-[13px] font-extrabold leading-none"
           style={{ backgroundColor: methodColor }}
+          title={methodAssistiveLabel}
         >
           {methodLabel}
         </span>

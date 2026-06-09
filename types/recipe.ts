@@ -108,6 +108,8 @@ export interface RecipeStep {
     code: string;
     label: string;
     color_key: string;
+    category_code?: string | null;
+    category_label?: string | null;
   } | null;
   ingredients_used: Array<{
     ingredient_id: string;

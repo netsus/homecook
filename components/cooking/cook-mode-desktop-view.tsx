@@ -13,6 +13,7 @@ import {
 } from "@/components/cooking/cook-mode-step-model";
 import type { CookingModeIngredient, CookingModeRecipe } from "@/types/cooking";
 import { getCookingMethodVisual } from "@/lib/cooking-method-colors";
+import { getCookingMethodAssistiveLabel } from "@/lib/cooking-method-taxonomy";
 import {
   normalizeRecipeSectionLabel,
   shouldShowSectionHeading,
@@ -68,6 +69,12 @@ export function CookModeDesktopView({
     ? buildCookModeStepModel(recipe, currentStep)
     : null;
   const methodVisual = getCookingMethodVisual(currentStep?.cooking_method);
+  const methodAssistiveLabel = getCookingMethodAssistiveLabel({
+    methodCode: currentStep?.cooking_method.code,
+    methodLabel: currentStep?.cooking_method.label,
+    categoryCode: currentStep?.cooking_method.category_code,
+    categoryLabel: currentStep?.cooking_method.category_label,
+  });
   const contextLabel = variant === "planner" ? "플래너 요리" : "독립 요리";
   const summaryParts = [
     "요리모드",
@@ -191,8 +198,10 @@ export function CookModeDesktopView({
                       {currentStepIndex + 1}
                     </strong>
                     <span
+                      aria-label={methodAssistiveLabel}
                       className="web-cook-prototype-method"
                       style={{ backgroundColor: methodVisual.color }}
+                      title={methodAssistiveLabel}
                     >
                       {methodVisual.label}
                     </span>

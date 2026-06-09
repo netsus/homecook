@@ -4,7 +4,11 @@ import React, { useRef, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { getPantryEmoji } from "@/components/pantry/pantry-mobile-visuals";
-import { INGREDIENT_CATEGORY_LABELS } from "@/lib/ingredient-categories";
+import {
+  getIngredientCategoryGroupLabel,
+  getIngredientGroupDisplayLabel,
+  INGREDIENT_CATEGORY_GROUP_OPTIONS,
+} from "@/lib/ingredient-categories";
 import type { PantryItem } from "@/types/pantry";
 
 interface PantryMobileScreenProps {
@@ -55,7 +59,7 @@ export function PantryMobileScreen({
   const isEmpty = items.length === 0 && !searchQuery && !activeCategory;
   const isSearchEmpty = displayItems.length === 0 && (searchQuery || activeCategory);
   const sectionGroups = groupPantryItems(displayItems);
-  const categoryRail = getCategoryRail(items);
+  const categoryRail = getCategoryRail();
 
   return (
     <div className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden">
@@ -152,10 +156,10 @@ export function PantryMobileScreen({
           />
           {categoryRail.map((category) => (
             <CategoryChip
-              active={activeCategory === category}
-              key={category}
-              label={category}
-              onClick={() => onCategoryChange(category)}
+              active={activeCategory === category.value}
+              key={category.value}
+              label={category.label}
+              onClick={() => onCategoryChange(category.value)}
             />
           ))}
         </div>
@@ -195,7 +199,7 @@ export function PantryMobileScreen({
           />
         ) : isSearchEmpty ? (
           <MobileSearchEmptyState
-            activeCategory={activeCategory}
+            activeCategoryLabel={getIngredientCategoryGroupLabel(activeCategory)}
             onClearSearch={onClearSearch}
             searchQuery={searchQuery}
           />
@@ -404,11 +408,11 @@ function MobileEmptyState({
 }
 
 function MobileSearchEmptyState({
-  activeCategory,
+  activeCategoryLabel,
   onClearSearch,
   searchQuery,
 }: {
-  activeCategory: string | null;
+  activeCategoryLabel: string | null;
   onClearSearch: () => void;
   searchQuery: string;
 }) {
@@ -417,7 +421,7 @@ function MobileSearchEmptyState({
       <p className="text-[15px] font-bold text-[var(--text-3)]">
         {searchQuery
           ? `"${searchQuery}"에 해당하는 재료가 없어요`
-          : `${activeCategory ?? "선택한"} 재료가 없어요`}
+          : `${activeCategoryLabel ?? "선택한"} 재료가 없어요`}
       </p>
       {searchQuery && (
         <button
@@ -436,16 +440,19 @@ function groupPantryItems(items: PantryItem[]) {
   const groups = new Map<string, PantryItem[]>();
 
   items.forEach((item) => {
-    const current = groups.get(item.category) ?? [];
+    const category = getIngredientGroupDisplayLabel(item);
+    const current = groups.get(category) ?? [];
     current.push(item);
-    groups.set(item.category, current);
+    groups.set(category, current);
   });
 
-  const knownCategories = INGREDIENT_CATEGORY_LABELS.filter((category) =>
-    groups.has(category),
-  );
+  const knownCategories = INGREDIENT_CATEGORY_GROUP_OPTIONS
+    .filter((category) => category.category_group_code)
+    .map((category) => category.label)
+    .filter((category) => groups.has(category));
+  const knownCategorySet = new Set<string>(knownCategories);
   const extraCategories = Array.from(groups.keys())
-    .filter((category) => !(INGREDIENT_CATEGORY_LABELS as readonly string[]).includes(category))
+    .filter((category) => !knownCategorySet.has(category))
     .sort((left, right) => left.localeCompare(right, "ko"));
   const categories = [...knownCategories, ...extraCategories];
 
@@ -455,16 +462,10 @@ function groupPantryItems(items: PantryItem[]) {
   }));
 }
 
-function getCategoryRail(items: PantryItem[]) {
-  const categories = new Set(items.map((item) => item.category));
-  INGREDIENT_CATEGORY_LABELS.forEach((category) => categories.add(category));
-
-  return [
-    ...INGREDIENT_CATEGORY_LABELS,
-    ...Array.from(categories)
-      .filter((category) => !(INGREDIENT_CATEGORY_LABELS as readonly string[]).includes(category))
-      .sort((left, right) => left.localeCompare(right, "ko")),
-  ];
+function getCategoryRail() {
+  return INGREDIENT_CATEGORY_GROUP_OPTIONS.filter(
+    (category) => category.category_group_code,
+  );
 }
 
 function SearchIcon({ className }: { className?: string }) {

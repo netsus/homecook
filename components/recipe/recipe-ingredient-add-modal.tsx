@@ -24,7 +24,8 @@ import {
 import { fetchIngredients } from "@/lib/api/ingredients";
 import {
   ALL_INGREDIENT_CATEGORY,
-  INGREDIENT_CATEGORY_OPTIONS,
+  INGREDIENT_CATEGORY_GROUP_OPTIONS,
+  ingredientMatchesCategoryGroup,
 } from "@/lib/ingredient-categories";
 import type {
   IngredientItem,
@@ -141,7 +142,7 @@ export function RecipeIngredientAddModal({
 
       const response = await fetchIngredients({
         q: debouncedQuery.trim() || undefined,
-        category: requestCategory,
+        category_group_code: requestCategory,
       });
 
       if (isStale) {
@@ -176,7 +177,7 @@ export function RecipeIngredientAddModal({
     return ingredients.filter((ingredient) => {
       const matchesCategory =
         activeCategory === ALL_INGREDIENT_CATEGORY ||
-        ingredient.category === activeCategory;
+        ingredientMatchesCategoryGroup(ingredient, activeCategory);
 
       return matchesCategory;
     });
@@ -239,14 +240,14 @@ export function RecipeIngredientAddModal({
               />
             </label>
 
-            <div className="web-modal-chip-grid mt-4">
-              {INGREDIENT_CATEGORY_OPTIONS.map((category) => (
+            <div className="web-modal-chip-rail mt-4">
+              {INGREDIENT_CATEGORY_GROUP_OPTIONS.map((category) => (
                 <WebChip
-                  active={activeCategory === category}
-                  key={category}
-                  onClick={() => setActiveCategory(category)}
+                  active={activeCategory === category.value}
+                  key={category.value}
+                  onClick={() => setActiveCategory(category.value)}
                 >
-                  {category}
+                  {category.label}
                 </WebChip>
               ))}
             </div>
@@ -362,13 +363,13 @@ export function RecipeIngredientAddModal({
             />
           </label>
           <div className="mt-3 md:mt-4 md:flex-wrap md:overflow-visible md:pb-0">
-            <SelectionChipRail
-              ariaLabel="카테고리 선택"
-              chips={INGREDIENT_CATEGORY_OPTIONS.map((category) => ({
-                value: category,
-                label: category,
-              }))}
-              onSelect={setActiveCategory}
+              <SelectionChipRail
+                ariaLabel="카테고리 선택"
+                chips={INGREDIENT_CATEGORY_GROUP_OPTIONS.map((category) => ({
+                  value: category.value,
+                  label: category.label,
+                }))}
+                onSelect={setActiveCategory}
               selectedValue={activeCategory}
             />
           </div>
