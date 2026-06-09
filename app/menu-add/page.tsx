@@ -1,4 +1,11 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+
+import { MenuAddScreen } from "@/components/planner/menu-add-screen";
+import { resolveNextPath } from "@/lib/auth/callback";
+import { readE2EAuthOverrideCookie } from "@/lib/auth/e2e-auth-override";
+import { hasSupabasePublicEnv } from "@/lib/supabase/env";
+import { getServerAuthUser } from "@/lib/supabase/server";
 
 interface MenuAddPageProps {
   searchParams: Promise<{
@@ -9,83 +16,53 @@ interface MenuAddPageProps {
     returnTo?: string;
     slot?: string;
     source?: string;
-    youtubeUrl?: string;
   }>;
 }
 
-type MenuAddSearchParams = Awaited<MenuAddPageProps["searchParams"]>;
-
-function appendOptionalParam(
-  params: URLSearchParams,
-  key: string,
-  value: string | undefined,
-) {
-  if (value) {
-    params.set(key, value);
-  }
-}
-
-function buildDirectMealAddPath(
-  target: "manual" | "youtube",
-  {
-    columnId,
-    date,
-    restore,
-    returnSurface,
-    returnTo,
-    slot,
-    youtubeUrl,
-  }: MenuAddSearchParams,
-) {
-  const params = new URLSearchParams();
-
-  appendOptionalParam(params, "date", date);
-  appendOptionalParam(params, "columnId", columnId);
-  appendOptionalParam(params, "slot", slot);
-  appendOptionalParam(params, "returnTo", returnTo);
-  appendOptionalParam(params, "returnSurface", returnSurface);
-  appendOptionalParam(params, "restore", restore);
-
-  if (target === "youtube") {
-    appendOptionalParam(params, "youtubeUrl", youtubeUrl);
-  }
-
-  const queryString = params.toString();
-  return queryString
-    ? `/menu/add/${target}?${queryString}`
-    : `/menu/add/${target}`;
-}
-
-function buildPlannerMealAddModalPath({
-  columnId,
-  date,
-  slot,
-  source,
-  ...remainingParams
-}: MenuAddSearchParams) {
-  if (source === "manual" || source === "youtube") {
-    return buildDirectMealAddPath(source, {
-      columnId,
-      date,
-      slot,
-      source,
-      ...remainingParams,
-    });
-  }
-
-  const plannerParams = new URLSearchParams({
-    restore: "meal-add-modal",
-    returnSurface: "planner.meal-add-modal",
-  });
-
-  if (date) plannerParams.set("date", date);
-  if (columnId) plannerParams.set("columnId", columnId);
-  if (slot) plannerParams.set("slot", slot);
-  if (source) plannerParams.set("source", source);
-
-  return `/planner?${plannerParams.toString()}`;
-}
-
 export default async function MenuAddPage({ searchParams }: MenuAddPageProps) {
-  redirect(buildPlannerMealAddModalPath(await searchParams));
+  const { date, columnId, restore, returnSurface, returnTo, slot, source } =
+    await searchParams;
+  const cookieStore = await cookies();
+  const authOverride = readE2EAuthOverrideCookie(cookieStore);
+  const user =
+    hasSupabasePublicEnv() && authOverride !== "authenticated"
+      ? await getServerAuthUser()
+      : null;
+  const initialAuthenticated =
+    authOverride === "authenticated"
+      ? true
+      : authOverride === "guest"
+        ? false
+        : Boolean(user);
+
+  if (hasSupabasePublicEnv() && !initialAuthenticated) {
+    const menuAddParams = new URLSearchParams();
+    if (date) menuAddParams.set("date", date);
+    if (columnId) menuAddParams.set("columnId", columnId);
+    if (slot) menuAddParams.set("slot", slot);
+    if (source) menuAddParams.set("source", source);
+    if (returnTo) menuAddParams.set("returnTo", returnTo);
+    if (returnSurface) menuAddParams.set("returnSurface", returnSurface);
+    if (restore) menuAddParams.set("restore", restore);
+    const queryString = menuAddParams.toString();
+    const returnPath = resolveNextPath(
+      queryString ? `/menu-add?${queryString}` : "/menu-add",
+    );
+    redirect(`/login?next=${encodeURIComponent(returnPath)}`);
+  }
+
+  return (
+    <main className="relative min-h-screen">
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 -z-10 bg-[var(--background)]"
+      />
+      <MenuAddScreen
+        columnId={columnId ?? ""}
+        initialSource={source ?? ""}
+        planDate={date ?? ""}
+        slotName={slot ?? ""}
+      />
+    </main>
+  );
 }

@@ -94,7 +94,7 @@ async function submitRecipeSearch(page: Page) {
 async function openMobileSearchPicker(page: Page) {
   if (!isMobileViewport(page)) return;
 
-  await visibleByTestId(page, "meal-add-option-search").click();
+  await visibleByTestId(page, "menu-add-option-search").click();
   await expect(page.getByRole("heading", { name: "검색으로 추가" })).toBeVisible();
 }
 
@@ -181,8 +181,7 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     await page.waitForURL(/\/login/);
     const currentUrl = page.url();
     expect(currentUrl).toContain("/login?next=");
-    expect(decodeURIComponent(currentUrl)).toContain("/planner");
-    expect(decodeURIComponent(currentUrl)).toContain("meal-add-modal");
+    expect(decodeURIComponent(currentUrl)).toContain("/menu-add");
   });
 
   // ── Search flow ────────────────────────────────────────────────────────────
@@ -192,13 +191,13 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     await page.goto(MENU_ADD_URL);
 
     await expect(page.getByRole("heading", { name: "식사 추가" })).toBeVisible();
-    await expect(visibleByTestId(page, "meal-add-option-youtube")).toBeEnabled();
-    await expect(visibleByTestId(page, "meal-add-option-recipebook")).toBeEnabled();
-    await expect(visibleByTestId(page, "meal-add-option-leftover")).toBeEnabled();
-    await expect(visibleByTestId(page, "meal-add-option-pantry")).toBeEnabled();
+    await expect(visibleButtonText(page, "유튜브")).toBeEnabled();
+    await expect(visibleButtonText(page, "레시피북")).toBeEnabled();
+    await expect(visibleButtonText(page, "남은 요리")).toBeEnabled();
+    await expect(visibleButtonText(page, "팬트리")).toBeEnabled();
 
     if (isMobileViewport(page)) {
-      await visibleByTestId(page, "meal-add-option-search").click();
+      await visibleByTestId(page, "menu-add-option-search").click();
       await expect(visibleSearchInput(page)).toBeVisible();
       await expect(page.getByTestId("recipe-search-submit-icon").filter({ visible: true })).toHaveClass(/h-5/);
       await expect(page.getByTestId("recipe-search-submit-icon").filter({ visible: true })).not.toHaveClass(/rotate-\[-12deg\]/);
@@ -262,8 +261,7 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     }
 
     await visibleButtonText(page, "취소").click();
-    await expect(page.getByRole("dialog", { name: "계획 인분 입력" })).not.toBeVisible();
-    await expect(page.getByRole("heading", { name: "검색으로 추가" })).toBeVisible();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
   });
 
   // ── Meal creation ──────────────────────────────────────────────────────────
@@ -314,13 +312,9 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
 
     await page.waitForURL(/\/login/);
     const returnToAction = parseLoginReturnToAction(page.url());
-    expect(returnToAction.pathname).toBe("/planner");
+    expect(returnToAction.pathname).toBe("/menu-add");
     expect(returnToAction.searchParams.get("date")).toBe(PLAN_DATE);
     expect(returnToAction.searchParams.get("columnId")).toBe(COLUMN_ID);
     expect(returnToAction.searchParams.get("slot")).toBe(SLOT_NAME);
-    expect(returnToAction.searchParams.get("restore")).toBe("meal-add-modal");
-    expect(returnToAction.searchParams.get("returnSurface")).toBe(
-      "planner.meal-add-modal",
-    );
   });
 });

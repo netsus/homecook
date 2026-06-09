@@ -1107,11 +1107,11 @@ test.describe("Slice 19: YouTube Import", () => {
   });
 });
 
-test.describe("Slice 19: YouTube Import planner deep link", () => {
-  test("legacy source link opens the new import screen with final register action visible @smoke-core", async ({
+test.describe("Slice 19: YouTube Import desktop embedded", () => {
+  test("embedded review keeps the final register action visible @smoke-core", async ({
     page,
   }, testInfo) => {
-    test.skip(testInfo.project.name !== "desktop-chrome", "desktop planner source deep link");
+    test.skip(testInfo.project.name !== "desktop-chrome", "desktop embedded flow");
 
     await setAuthOverride(page, "authenticated");
     await installCookingMethodsRoute(page);
@@ -1121,21 +1121,19 @@ test.describe("Slice 19: YouTube Import planner deep link", () => {
     await installRegisterRoute(page);
 
     await page.goto(YOUTUBE_IMPORT_EMBEDDED_URL);
-    await expect(page).toHaveURL(/\/menu\/add\/youtube/);
-    await expect(
-      page.getByRole("heading", { name: YOUTUBE_IMPORT_SCREEN_HEADING }),
-    ).toBeVisible();
+    const embeddedImport = page.getByTestId("youtube-import-embedded");
+    await expect(embeddedImport).toBeVisible();
 
-    await page
+    await embeddedImport
       .locator('input[type="url"]')
       .fill("https://www.youtube.com/watch?v=recipe12345");
-    await page.getByRole("button", { name: "가져오기" }).click();
+    await embeddedImport.getByRole("button", { name: "가져오기" }).click();
 
     await expect(
-      page.getByRole("heading", { name: "추출 결과를 확인해주세요" }),
+      embeddedImport.getByRole("heading", { name: "추출 결과를 확인해주세요" }),
     ).toBeVisible({ timeout: 10000 });
 
-    const registerButton = page.getByRole("button", {
+    const registerButton = embeddedImport.getByRole("button", {
       name: "등록",
       exact: true,
     });
@@ -1143,7 +1141,7 @@ test.describe("Slice 19: YouTube Import planner deep link", () => {
     await expect(registerButton).toBeEnabled();
 
     await registerButton.click();
-    await expect(page.getByText("레시피가 등록됐어요")).toBeVisible({
+    await expect(embeddedImport.getByText("레시피가 등록됐어요")).toBeVisible({
       timeout: 5000,
     });
   });
