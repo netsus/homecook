@@ -2566,20 +2566,20 @@ describe("OMO-lite stage runner", () => {
           checks_run: ["pnpm lint"],
           next_route: "open_pr",
           claimed_scope: {
-            files: ["components/planner/menu-add-screen.tsx"],
+            files: ["components/planner/meal-add-options-sheet.tsx"],
             endpoints: [],
-            routes: ["/menu-add"],
+            routes: ["/planner"],
             states: ["loading", "empty", "error", "unauthorized"],
             invariants: [],
           },
-          changed_files: ["components/planner/menu-add-screen.tsx"],
+          changed_files: ["components/planner/meal-add-options-sheet.tsx"],
           tests_touched: ["tests/e2e/slice-08b-meal-add-books-pantry.spec.ts"],
           artifacts_written: [".artifacts/example.log"],
           checklist_updates: [
             {
               id: "delivery-ui-connection",
               status: "checked",
-              evidence_refs: ["components/planner/menu-add-screen.tsx"],
+              evidence_refs: ["components/planner/meal-add-options-sheet.tsx"],
             },
             {
               id: "delivery-test-split",
