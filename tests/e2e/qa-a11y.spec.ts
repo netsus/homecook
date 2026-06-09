@@ -374,12 +374,12 @@ test.describe("QA accessibility smoke", () => {
     });
   });
 
-  test("menu add redirect modal is axe-clean", async ({ page }) => {
+  test("menu add desktop slice screens are axe-clean", async ({ page }) => {
+    test.skip(isMobileViewport(page), "desktop-only menu add parity smoke");
     await setE2EAuthOverride(page);
     await installMenuAddVisualRoutes(page);
 
     await page.goto(MENU_ADD_VISUAL_PATH);
-    await expect(page).toHaveURL(/\/planner\?/);
     await expect(
       page.getByRole("heading", { name: "식사 추가" }),
     ).toBeVisible();
@@ -387,15 +387,16 @@ test.describe("QA accessibility smoke", () => {
       allowPrototypeDesktopColorContrast: true,
     });
 
-    await page.getByTestId("meal-add-option-recipebook").click();
-    await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
+    await page.locator('[data-testid="menu-add-option-recipebook"]:visible').click();
+    await expect(
+      page.getByRole("button", { name: /평일 저녁 빠른요리/ }),
+    ).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });
 
-    await page.goto(MENU_ADD_VISUAL_PATH);
-    await page.getByTestId("meal-add-option-pantry").click();
-    await expect(page.getByRole("heading", { name: "팬트리 기반 추천" })).toBeVisible();
+    await page.goto(`${MENU_ADD_VISUAL_PATH}&source=pantry`);
+    await expect(page.getByRole("heading", { name: "팬트리 추천" })).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });
