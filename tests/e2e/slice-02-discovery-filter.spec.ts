@@ -169,7 +169,7 @@ test.describe("Slice 02 discovery filter flow", () => {
     await page.goto("/");
 
     await openIngredientFilter(page);
-    await page.getByRole("button", { name: "육류" }).click();
+    await page.getByRole("button", { name: "단백질" }).click();
     await page
       .getByRole("dialog", { name: "재료로 검색" })
       .getByText("소고기", { exact: true })
