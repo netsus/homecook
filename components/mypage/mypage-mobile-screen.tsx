@@ -735,11 +735,74 @@ function MobileRecipebookSurface({
   onRequestDelete: (book: RecipeBookSummary) => void;
   onShowCreateInput: () => void;
 }) {
-  const allBooks = [...systemBooks, ...customBooks];
+  const allBooks = [...customBooks, ...systemBooks];
 
   return (
-    <main className="px-4 py-4" data-testid="recipebook-tab">
-      <div className="space-y-2" role="list">
+    <main
+      className="mobile-recipebooks-diary-screen px-4 pb-8 pt-4"
+      data-testid="recipebook-tab"
+    >
+      <section className="mobile-recipebooks-diary-hero rounded-[28px] p-4">
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="mobile-recipebooks-diary-eyebrow text-[11px] font-black">
+              Recipe books
+            </p>
+            <h2 className="mt-1 text-[24px] font-black leading-[1.08] text-[var(--foreground)]">
+              나의 레시피북
+            </h2>
+          </div>
+          <button
+            aria-label="새 레시피북 만들기"
+            className="mobile-recipebooks-diary-add-button grid h-11 w-11 shrink-0 place-items-center rounded-full text-[22px] font-black leading-none"
+            onClick={onShowCreateInput}
+            type="button"
+          >
+            +
+          </button>
+        </div>
+        <div className="mobile-recipebooks-tabs mt-4 grid grid-cols-3 rounded-full p-1 text-center text-[12px] font-black text-[var(--text-3)]">
+          <span className="mobile-recipebooks-tab-active rounded-full py-2">책장</span>
+          <span className="py-2">최근</span>
+          <span className="py-2">목록</span>
+        </div>
+      </section>
+
+      {showCreateInput ? (
+        <div className="mobile-recipebooks-create mt-3 flex min-h-[58px] items-center gap-2 rounded-[22px] px-4 py-3">
+          <input
+            ref={createInputRef}
+            className="min-w-0 flex-1 bg-transparent text-[14px] font-bold text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)]"
+            disabled={isCreating}
+            maxLength={50}
+            onChange={(event) => onCreateNameChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void onCreateBook();
+              if (event.key === "Escape") onCancelCreate();
+            }}
+            placeholder="레시피북 이름"
+            type="text"
+            value={createName}
+          />
+          <button
+            className="mobile-recipebooks-create-action shrink-0 text-[13px] font-extrabold disabled:opacity-50"
+            disabled={isCreating || !createName.trim()}
+            onClick={() => void onCreateBook()}
+            type="button"
+          >
+            {isCreating ? "만드는 중..." : "완료"}
+          </button>
+          <button
+            className="shrink-0 text-[13px] font-bold text-[var(--text-3)]"
+            onClick={onCancelCreate}
+            type="button"
+          >
+            취소
+          </button>
+        </div>
+      ) : null}
+
+      <div className="mt-4 grid grid-cols-2 gap-3" role="list">
         {allBooks.map((book) =>
           book.book_type === "custom" ? (
             <MobileCustomBookCard
@@ -770,49 +833,6 @@ function MobileRecipebookSurface({
         )}
       </div>
 
-      {showCreateInput ? (
-        <div className="mt-2 flex min-h-[58px] items-center gap-2 rounded-[var(--radius-card)] border-2 border-[var(--brand)] bg-[var(--surface)] px-4 py-3">
-          <input
-            ref={createInputRef}
-            className="min-w-0 flex-1 bg-transparent text-[14px] font-bold text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)]"
-            disabled={isCreating}
-            maxLength={50}
-            onChange={(event) => onCreateNameChange(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") void onCreateBook();
-              if (event.key === "Escape") onCancelCreate();
-            }}
-            placeholder="레시피북 이름"
-            type="text"
-            value={createName}
-          />
-          <button
-            className="shrink-0 text-[13px] font-extrabold text-[var(--brand)] disabled:opacity-50"
-            disabled={isCreating || !createName.trim()}
-            onClick={() => void onCreateBook()}
-            type="button"
-          >
-            {isCreating ? "만드는 중..." : "완료"}
-          </button>
-          <button
-            className="shrink-0 text-[13px] font-bold text-[var(--text-3)]"
-            onClick={onCancelCreate}
-            type="button"
-          >
-            취소
-          </button>
-        </div>
-      ) : null}
-
-      <button
-        aria-label="새 레시피북 만들기"
-        className="mt-3 flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-card)] border border-dashed border-[var(--line-strong)] bg-transparent text-[13px] font-extrabold text-[var(--text-3)]"
-        onClick={onShowCreateInput}
-        type="button"
-      >
-        + 새 레시피북 만들기
-      </button>
-
       {deleteTarget ? (
         <MobileDeleteConfirmDialog
           bookName={deleteTarget.name}
@@ -832,31 +852,23 @@ function MobileSystemBookCard({
   book: RecipeBookSummary;
   coverImageSrc: string | null;
 }) {
-  const visual = getBookVisual(book);
-
   return (
     <Link
-      className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] px-4 py-[14px]"
+      className={`mobile-recipebook-book-card relative grid overflow-hidden rounded-[18px_10px_10px_18px] p-0 text-left ${getBookToneClasses(book)}`}
       data-testid={`system-book-${book.book_type}`}
       href={buildBookDetailHref(book)}
       role="listitem"
     >
       <BookCoverThumb
-        bookId={book.id}
-        fallbackLabel={visual.emoji}
+        book={book}
         imageSrc={coverImageSrc}
       />
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <span className="min-w-0 truncate text-[14px] font-extrabold leading-[1.35] text-[var(--foreground)]">
-            {book.name}
-          </span>
-          <RecipeCountBadge count={book.recipe_count} />
-        </div>
-        <div className="mt-0.5 text-[11px] font-medium leading-[1.35] text-[var(--text-3)]">
-          {visual.kindLabel}
-        </div>
+      <div className="mobile-recipebook-book-copy grid gap-1 px-3 pb-10 pt-3">
+        <strong className="line-clamp-2 text-[14px] font-black leading-[1.2] text-[var(--foreground)]">
+          {book.name}
+        </strong>
       </div>
+      <RecipeCountBadge count={book.recipe_count} />
     </Link>
   );
 }
@@ -895,72 +907,66 @@ function MobileCustomBookCard({
   onRenameValueChange,
   onRequestDelete,
 }: MobileCustomBookCardProps) {
-  const visual = getBookVisual(book);
-
-  if (isRenaming) {
-    return (
-      <div
-        className="flex min-h-[72px] items-center gap-2 rounded-[var(--radius-card)] border-2 border-[var(--brand)] bg-[var(--surface)] px-4 py-3"
-        role="listitem"
-      >
-        <input
-          ref={renameInputRef}
-          className="min-w-0 flex-1 bg-transparent text-[14px] font-extrabold text-[var(--foreground)] outline-none"
-          disabled={isRenamingLoading}
-          maxLength={50}
-          onChange={(event) => onRenameValueChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") void onConfirmRename();
-            if (event.key === "Escape") onCancelRename();
-          }}
-          type="text"
-          value={renameValue}
-        />
-        <button
-          className="shrink-0 text-[13px] font-extrabold text-[var(--brand)] disabled:opacity-50"
-          disabled={isRenamingLoading || !renameValue.trim()}
-          onClick={() => void onConfirmRename()}
-          type="button"
-        >
-          {isRenamingLoading ? "저장 중..." : "완료"}
-        </button>
-        <button
-          className="shrink-0 text-[13px] font-bold text-[var(--text-3)]"
-          onClick={onCancelRename}
-          type="button"
-        >
-          취소
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="relative" role="listitem">
-      <div className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] px-4 py-[14px]">
+      <div
+        className={`mobile-recipebook-book-card relative grid overflow-hidden rounded-[18px_10px_10px_18px] p-0 text-left ${getBookToneClasses(book)}`}
+        data-testid={`custom-book-${book.id}`}
+      >
         <BookCoverThumb
-          bookId={book.id}
-          fallbackLabel={visual.emoji}
+          book={book}
           imageSrc={coverImageSrc}
         />
-        <Link
-          className="min-w-0 flex-1"
-          href={buildBookDetailHref(book)}
-        >
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <span className="min-w-0 truncate text-[14px] font-extrabold leading-[1.35] text-[var(--foreground)]">
+        <div className="mobile-recipebook-book-copy grid gap-1 px-3 pb-10 pt-3">
+          {isRenaming ? (
+            <>
+              <input
+                ref={renameInputRef}
+                className="mobile-recipebook-rename-input min-w-0 rounded-[12px] px-2.5 py-2 text-[13px] font-extrabold text-[var(--foreground)] outline-none"
+                disabled={isRenamingLoading}
+                maxLength={50}
+                onChange={(event) => onRenameValueChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") void onConfirmRename();
+                  if (event.key === "Escape") onCancelRename();
+                }}
+                type="text"
+                value={renameValue}
+              />
+              <div className="flex gap-1.5">
+                <button
+                  className="mobile-recipebook-rename-save h-8 rounded-full px-3 text-[11px] font-black disabled:opacity-50"
+                  disabled={isRenamingLoading || !renameValue.trim()}
+                  onClick={() => void onConfirmRename()}
+                  type="button"
+                >
+                  {isRenamingLoading ? "저장 중" : "완료"}
+                </button>
+                <button
+                  className="mobile-recipebook-rename-cancel h-8 rounded-full px-3 text-[11px] font-black text-[var(--text-3)]"
+                  onClick={onCancelRename}
+                  type="button"
+                >
+                  취소
+                </button>
+              </div>
+            </>
+          ) : (
+            <Link
+              className="min-w-0"
+              href={buildBookDetailHref(book)}
+            >
+              <strong className="line-clamp-2 text-[14px] font-black leading-[1.2] text-[var(--foreground)]">
               {book.name}
-            </span>
-            <RecipeCountBadge count={book.recipe_count} />
-          </div>
-          <div className="mt-0.5 text-[11px] font-medium leading-[1.35] text-[var(--text-3)]">
-            {visual.kindLabel}
-          </div>
-        </Link>
+              </strong>
+            </Link>
+          )}
+        </div>
+        <RecipeCountBadge count={book.recipe_count} />
         <button
           aria-haspopup="menu"
           aria-label={`${book.name} 옵션 메뉴`}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-[18px] font-bold leading-none text-[var(--text-4)]"
+          className="mobile-recipebook-menu-button absolute right-2 top-2 z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 text-[18px] font-bold leading-none text-[var(--text-4)]"
           onClick={(event) => {
             event.preventDefault();
             onMenuOpen();
@@ -1000,32 +1006,28 @@ function MobileCustomBookCard({
 }
 
 function BookCoverThumb({
-  bookId,
-  fallbackLabel,
+  book,
   imageSrc,
 }: {
-  bookId: string;
-  fallbackLabel: string;
+  book: RecipeBookSummary;
   imageSrc: string | null;
 }) {
+  const coverImageSrc = imageSrc ?? getMobileFallbackBookCover(book);
+
   return (
     <span
       aria-hidden="true"
-      className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--brand-soft)] text-[20px]"
+      className="block px-4 pb-3 pl-7 pt-5"
     >
-      {imageSrc ? (
-        <Image
-          alt=""
-          className="h-full w-full object-cover"
-          data-testid={`mobile-book-cover-${bookId}`}
-          height={44}
-          src={imageSrc}
-          unoptimized
-          width={44}
-        />
-      ) : (
-        fallbackLabel
-      )}
+      <Image
+        alt=""
+        className="mobile-recipebook-cover-image aspect-[1.05] w-full rounded-[14px] object-cover"
+        data-testid={`mobile-book-cover-${book.id}`}
+        height={160}
+        src={coverImageSrc}
+        unoptimized
+        width={180}
+      />
     </span>
   );
 }
@@ -1034,9 +1036,9 @@ function RecipeCountBadge({ count }: { count: number }) {
   return (
     <span
       aria-label={`레시피 ${formatRecipeCount(count)}`}
-      className="shrink-0 rounded bg-[var(--brand-soft)] px-1.5 py-0.5 text-[10px] font-extrabold leading-[1.25] text-[var(--brand)]"
+      className="mobile-recipebook-count-badge absolute bottom-2 right-2 shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black leading-[1.25] text-[var(--foreground)]"
     >
-      {formatRecipeCount(count)} 레시피
+      {formatRecipeCount(count)}
     </span>
   );
 }
@@ -1485,20 +1487,35 @@ function MobileShoppingStatusLegend() {
   );
 }
 
-function getBookVisual(book: RecipeBookSummary) {
-  if (book.book_type === "saved") {
-    return { emoji: "🔖", kindLabel: "저장" };
+function getBookToneClasses(book: RecipeBookSummary) {
+  if (book.book_type === "custom") {
+    return "mobile-recipebook-book-card-sage";
   }
-  if (book.book_type === "my_added") {
-    return { emoji: "✏️", kindLabel: "내 책" };
+  if (book.book_type === "saved") {
+    return "mobile-recipebook-book-card-sky";
   }
   if (book.book_type === "liked") {
-    return { emoji: "❤️", kindLabel: "좋아요" };
+    return "mobile-recipebook-book-card-coral";
   }
-  if (book.name.includes("주말") || book.name.includes("한 상")) {
-    return { emoji: "🍽️", kindLabel: "내 책" };
+  if (book.book_type === "my_added") {
+    return "mobile-recipebook-book-card-lavender";
   }
-  return { emoji: "🍳", kindLabel: "내 책" };
+
+  return "mobile-recipebook-book-card-sand";
+}
+
+function getMobileFallbackBookCover(book: RecipeBookSummary) {
+  if (book.book_type === "liked") {
+    return "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=360&h=320&fit=crop&q=80";
+  }
+  if (book.book_type === "my_added") {
+    return "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=360&h=320&fit=crop&q=80";
+  }
+  if (book.book_type === "custom") {
+    return "https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=360&h=320&fit=crop&q=80";
+  }
+
+  return "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=360&h=320&fit=crop&q=80";
 }
 
 function buildBookDetailHref(book: RecipeBookSummary) {

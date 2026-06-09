@@ -277,6 +277,7 @@ export function MypageScreen({
   // Recipe books
   const [books, setBooks] = useState<RecipeBookSummary[]>([]);
   const [bookCoverImages, setBookCoverImages] = useState<Record<string, string | null>>({});
+  const [bookCoverUpdatedAt, setBookCoverUpdatedAt] = useState<Record<string, string | null>>({});
   const [savedRecipes, setSavedRecipes] = useState<RecipeBookRecipeItem[]>([]);
   const [savedRecipesState, setSavedRecipesState] =
     useState<SavedRecipesState>("idle");
@@ -347,6 +348,7 @@ export function MypageScreen({
   const renameInputRef = useRef<HTMLInputElement | null>(null);
   const createInputRef = useRef<HTMLInputElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const bookCoverLoadedIdsRef = useRef<Set<string>>(new Set());
   const bookCoverLoadingIdsRef = useRef<Set<string>>(new Set());
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mobileReturnToRef = useRef<string | null>(
@@ -1247,15 +1249,29 @@ export function MypageScreen({
   ]);
 
   useEffect(() => {
-    if (authState !== "authenticated" || !isMobileViewport || books.length === 0) {
+    if (authState !== "authenticated" || books.length === 0) {
       return;
     }
 
     let cancelled = false;
+    const currentBookIds = new Set(books.map((book) => book.id));
+
+    for (const bookId of bookCoverLoadedIdsRef.current) {
+      if (!currentBookIds.has(bookId)) {
+        bookCoverLoadedIdsRef.current.delete(bookId);
+      }
+    }
+
+    for (const bookId of bookCoverLoadingIdsRef.current) {
+      if (!currentBookIds.has(bookId)) {
+        bookCoverLoadingIdsRef.current.delete(bookId);
+      }
+    }
+
     const candidates = books.filter(
       (book) =>
         book.recipe_count > 0 &&
-        !(book.id in bookCoverImages) &&
+        !bookCoverLoadedIdsRef.current.has(book.id) &&
         !bookCoverLoadingIdsRef.current.has(book.id),
     );
 
@@ -1268,7 +1284,7 @@ export function MypageScreen({
     });
 
     void Promise.all(
-      candidates.map(async (book): Promise<[string, string | null]> => {
+      candidates.map(async (book): Promise<[string, string | null, string | null]> => {
         const result = await fetchRecipeBookRecipes(book.id, {
           limit: RECIPE_BOOK_COVER_PAGE_SIZE,
         });
@@ -1279,6 +1295,7 @@ export function MypageScreen({
           firstRecipe
             ? firstRecipe.thumbnail_url ?? getFallbackRecipeImage(firstRecipe.title)
             : null,
+          firstRecipe?.added_at ?? null,
         ];
       }),
     )
@@ -1287,9 +1304,16 @@ export function MypageScreen({
           return;
         }
 
+        entries.forEach(([bookId]) => {
+          bookCoverLoadedIdsRef.current.add(bookId);
+        });
         setBookCoverImages((current) => ({
           ...current,
-          ...Object.fromEntries(entries),
+          ...Object.fromEntries(entries.map(([bookId, imageSrc]) => [bookId, imageSrc])),
+        }));
+        setBookCoverUpdatedAt((current) => ({
+          ...current,
+          ...Object.fromEntries(entries.map(([bookId, , updatedAt]) => [bookId, updatedAt])),
         }));
       })
       .catch(() => {
@@ -1297,7 +1321,14 @@ export function MypageScreen({
           return;
         }
 
+        candidates.forEach((book) => {
+          bookCoverLoadedIdsRef.current.add(book.id);
+        });
         setBookCoverImages((current) => ({
+          ...current,
+          ...Object.fromEntries(candidates.map((book) => [book.id, null])),
+        }));
+        setBookCoverUpdatedAt((current) => ({
           ...current,
           ...Object.fromEntries(candidates.map((book) => [book.id, null])),
         }));
@@ -1311,7 +1342,7 @@ export function MypageScreen({
     return () => {
       cancelled = true;
     };
-  }, [authState, bookCoverImages, books, isMobileViewport]);
+  }, [authState, books]);
 
   // Infinite scroll observer for shopping tab
   useEffect(() => {
@@ -1787,6 +1818,8 @@ export function MypageScreen({
               onConfirmRename={handleRenameBook}
               onCreateBook={handleCreateBook}
               onCreateNameChange={setCreateName}
+              bookCoverImages={bookCoverImages}
+              bookCoverUpdatedAt={bookCoverUpdatedAt}
               onOpenBookDetail={(book) =>
                 router.push(buildMypageRecipeBookDetailHref(book))
               }
@@ -3037,6 +3070,8 @@ interface RecipeBookTabContentProps {
   showCreateInput: boolean;
   createName: string;
   isCreating: boolean;
+  bookCoverImages: Record<string, string | null>;
+  bookCoverUpdatedAt: Record<string, string | null>;
   menuRef: React.RefObject<HTMLDivElement | null>;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
   createInputRef: React.RefObject<HTMLInputElement | null>;
@@ -3067,6 +3102,8 @@ function RecipeBookTabContent({
   showCreateInput,
   createName,
   isCreating,
+  bookCoverImages,
+  bookCoverUpdatedAt,
   menuRef,
   renameInputRef,
   createInputRef,
@@ -3089,26 +3126,14 @@ function RecipeBookTabContent({
       <div className="web-recipebooks-header">
         <div>
           <h2>레시피북</h2>
-          <p>자동 분류된 시스템 북 3개와 커스텀 북을 한곳에서 관리합니다.</p>
+          <p>내가 만든 북과 시스템 북을 책장처럼 관리합니다.</p>
         </div>
-        <WebButton onClick={onShowCreateInput}>+ 새 레시피북</WebButton>
+        <WebButton aria-label="새 레시피북 만들기" onClick={onShowCreateInput}>
+          + 새 레시피북
+        </WebButton>
       </div>
 
       <div className="web-recipebooks-section-head">
-        <h3>자동 분류</h3>
-      </div>
-      <div className="web-recipebooks-grid">
-        {systemBooks.map((book) => (
-          <SystemBookCard
-            book={book}
-            key={book.id}
-            onOpen={() => onOpenBookDetail(book)}
-          />
-        ))}
-      </div>
-
-      {/* Custom books section */}
-      <div className="web-recipebooks-section-head web-recipebooks-section-head-spaced">
         <h3>커스텀</h3>
       </div>
 
@@ -3121,6 +3146,7 @@ function RecipeBookTabContent({
           {customBooks.map((book) => (
             <CustomBookCard
               book={book}
+              coverImageSrc={getBookCoverImage(book, bookCoverImages)}
               isMenuOpen={menuOpenBookId === book.id}
               isRenaming={renamingBookId === book.id}
               isRenamingLoading={isRenaming}
@@ -3140,7 +3166,6 @@ function RecipeBookTabContent({
         </div>
       )}
 
-      {/* Create input */}
       {showCreateInput ? (
         <div className="web-recipebooks-create">
           <input
@@ -3173,17 +3198,21 @@ function RecipeBookTabContent({
         </div>
       ) : null}
 
-      {/* Create CTA */}
-      <button
-        aria-label="새 레시피북 만들기"
-        className="web-recipebooks-add"
-        onClick={onShowCreateInput}
-        type="button"
-      >
-        + 새 레시피북
-      </button>
+      <div className="web-recipebooks-section-head web-recipebooks-section-head-spaced">
+        <h3>시스템</h3>
+      </div>
+      <div className="web-recipebooks-grid">
+        {systemBooks.map((book) => (
+          <SystemBookCard
+            book={book}
+            coverImageSrc={getBookCoverImage(book, bookCoverImages)}
+            key={book.id}
+            lastUpdatedLabel={formatBookLastUpdated(bookCoverUpdatedAt[book.id])}
+            onOpen={() => onOpenBookDetail(book)}
+          />
+        ))}
+      </div>
 
-      {/* Delete confirm dialog */}
       {deleteTarget ? (
         <DeleteConfirmDialog
           bookName={deleteTarget.name}
@@ -3204,46 +3233,56 @@ function formatRecipeCount(count: number) {
 
 function SystemBookCard({
   book,
+  coverImageSrc,
+  lastUpdatedLabel,
   onOpen,
 }: {
   book: RecipeBookSummary;
+  coverImageSrc: string;
+  lastUpdatedLabel: string;
   onOpen: () => void;
 }) {
   return (
     <button
-      className="web-recipebook-book-card"
+      className={`web-recipebook-book-card web-recipebook-book-card-${getBookTone(book)}`}
       data-testid={`system-book-${book.book_type}`}
       aria-label={`${book.name} 상세 보기`}
       onClick={onOpen}
       type="button"
     >
-      <BookThumbCollage book={book} />
+      <BookCoverThumb book={book} imageSrc={coverImageSrc} />
       <span className="web-recipebook-book-copy">
         <strong>{book.name}</strong>
-        <span>{formatRecipeCount(book.recipe_count)} 레시피 · {book.book_type === "custom" ? "커스텀" : book.name.replace(" 레시피", "")}</span>
+        <span>{lastUpdatedLabel}</span>
       </span>
       <span
         aria-label={`레시피 ${formatRecipeCount(book.recipe_count)}`}
         className="web-recipebook-book-count"
       >
-        ›
+        {formatRecipeCount(book.recipe_count)}
       </span>
     </button>
   );
 }
 
-function BookThumbCollage({ book }: { book: RecipeBookSummary }) {
-  const images = getBookPreviewImages(book);
+function BookCoverThumb({
+  book,
+  imageSrc,
+}: {
+  book: RecipeBookSummary;
+  imageSrc: string;
+}) {
+  const safeImageSrc = imageSrc.replace(/"/g, "%22");
 
   return (
-    <span className="web-recipebook-collage" aria-hidden="true">
-      {images.map((src) => (
-        <span
-          className="web-recipebook-collage-cell"
-          key={src}
-          style={{ backgroundImage: `url(${src})` }}
-        />
-      ))}
+    <span
+      className={`web-recipebook-cover-thumb web-recipebook-cover-thumb-${getBookTone(book)}`}
+      aria-hidden="true"
+    >
+      <span
+        className="web-recipebook-cover-thumb-image"
+        style={{ backgroundImage: `url("${safeImageSrc}")` }}
+      />
     </span>
   );
 }
@@ -3252,6 +3291,7 @@ function BookThumbCollage({ book }: { book: RecipeBookSummary }) {
 
 interface CustomBookCardProps {
   book: RecipeBookSummary;
+  coverImageSrc: string;
   isMenuOpen: boolean;
   isRenaming: boolean;
   isRenamingLoading: boolean;
@@ -3269,6 +3309,7 @@ interface CustomBookCardProps {
 
 function CustomBookCard({
   book,
+  coverImageSrc,
   isMenuOpen,
   isRenaming,
   isRenamingLoading,
@@ -3283,54 +3324,59 @@ function CustomBookCard({
   onRenameValueChange,
   onRequestDelete,
 }: CustomBookCardProps) {
-  if (isRenaming) {
-    return (
-      <div
-        className="flex items-center gap-2 rounded-[var(--radius-lg)] border-2 border-[var(--brand)] bg-[var(--surface)] p-3 shadow-[var(--shadow-1)] max-[360px]:p-2.5"
-      >
-        <input
-          ref={renameInputRef}
-          className="min-w-0 flex-1 bg-transparent text-base font-semibold text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)]"
-          disabled={isRenamingLoading}
-          maxLength={50}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void onConfirmRename();
-            if (e.key === "Escape") onCancelRename();
-          }}
-          onChange={(e) => onRenameValueChange(e.target.value)}
-          type="text"
-          value={renameValue}
-        />
-        <button
-          className="shrink-0 text-sm font-bold text-[var(--brand)] disabled:opacity-50"
-          disabled={isRenamingLoading || !renameValue.trim()}
-          onClick={() => void onConfirmRename()}
-          type="button"
-        >
-          {isRenamingLoading ? "저장 중..." : "완료"}
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="relative">
-      <div className="web-recipebook-book-card web-recipebook-book-card-static">
-        <BookThumbCollage book={book} />
-        <button
-          aria-label={`${book.name} 상세 보기`}
-          className="web-recipebook-book-copy"
-          data-testid={`custom-book-${book.id}`}
-          onClick={onOpen}
-          type="button"
-        >
-          <strong>{book.name}</strong>
-          <span>{formatRecipeCount(book.recipe_count)} 레시피 · 커스텀</span>
-          <em>커스텀</em>
-        </button>
+      <div
+        className={`web-recipebook-book-card web-recipebook-book-card-static web-recipebook-book-card-${getBookTone(book)}`}
+        data-testid={`custom-book-${book.id}`}
+      >
+        <BookCoverThumb book={book} imageSrc={coverImageSrc} />
+        {isRenaming ? (
+          <div className="web-recipebook-book-copy web-recipebook-rename-copy">
+            <input
+              ref={renameInputRef}
+              className="web-recipebook-rename-input"
+              disabled={isRenamingLoading}
+              maxLength={50}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void onConfirmRename();
+                if (e.key === "Escape") onCancelRename();
+              }}
+              onChange={(e) => onRenameValueChange(e.target.value)}
+              type="text"
+              value={renameValue}
+            />
+            <span className="web-recipebook-rename-actions">
+              <button
+                disabled={isRenamingLoading || !renameValue.trim()}
+                onClick={() => void onConfirmRename()}
+                type="button"
+              >
+                {isRenamingLoading ? "저장 중..." : "완료"}
+              </button>
+              <button
+                disabled={isRenamingLoading}
+                onClick={onCancelRename}
+                type="button"
+              >
+                취소
+              </button>
+            </span>
+          </div>
+        ) : (
+          <button
+            aria-label={`${book.name} 상세 보기`}
+            className="web-recipebook-book-copy"
+            onClick={onOpen}
+            type="button"
+          >
+            <strong>{book.name}</strong>
+            <span>{formatRecipeCount(book.recipe_count)} 레시피</span>
+          </button>
+        )}
         <span
           aria-label={`레시피 ${formatRecipeCount(book.recipe_count)}`}
-          className="visually-hidden"
+          className="web-recipebook-book-count"
         >
           {formatRecipeCount(book.recipe_count)}
         </span>
@@ -3356,24 +3402,6 @@ function CustomBookCard({
           </svg>
         </button>
       </div>
-      <div className="web-recipebook-card-actions" aria-label={`${book.name} 관리`}>
-        <button
-          className="web-recipebook-card-action"
-          onClick={onRenameStart}
-          type="button"
-        >
-          이름 변경
-        </button>
-        <button
-          className="web-recipebook-card-action web-recipebook-card-action-danger"
-          onClick={onRequestDelete}
-          type="button"
-        >
-          삭제
-        </button>
-      </div>
-
-      {/* Context menu */}
       {isMenuOpen ? (
         <div
           ref={menuRef}
@@ -4202,7 +4230,33 @@ function getFallbackRecipeImage(title: string) {
   return WEB_RECIPE_FALLBACK_IMAGES[seed % WEB_RECIPE_FALLBACK_IMAGES.length];
 }
 
-function getBookPreviewImages(book: RecipeBookSummary) {
+type RecipeBookTone = "sage" | "sky" | "lavender" | "coral" | "sand";
+
+function getBookTone(book: RecipeBookSummary): RecipeBookTone {
+  if (book.book_type === "custom") {
+    return "sage";
+  }
+  if (book.book_type === "saved") {
+    return "sky";
+  }
+  if (book.book_type === "liked") {
+    return "coral";
+  }
+  if (book.book_type === "my_added") {
+    return "lavender";
+  }
+
+  return "sand";
+}
+
+function getBookCoverImage(
+  book: RecipeBookSummary,
+  bookCoverImages: Record<string, string | null>,
+) {
+  return bookCoverImages[book.id] ?? getFallbackBookCoverImage(book);
+}
+
+function getFallbackBookCoverImage(book: RecipeBookSummary) {
   const offset =
     book.book_type === "saved"
       ? 1
@@ -4212,12 +4266,20 @@ function getBookPreviewImages(book: RecipeBookSummary) {
           ? 3
           : 0;
 
-  return [0, 1, 2, 3].map(
-    (step) =>
-      WEB_RECIPE_FALLBACK_IMAGES[
-        (offset + step) % WEB_RECIPE_FALLBACK_IMAGES.length
-      ],
-  );
+  return WEB_RECIPE_FALLBACK_IMAGES[offset % WEB_RECIPE_FALLBACK_IMAGES.length];
+}
+
+function formatBookLastUpdated(updatedAt?: string | null) {
+  if (!updatedAt) {
+    return "마지막 기록 없음";
+  }
+
+  const date = new Date(updatedAt);
+  if (Number.isNaN(date.getTime())) {
+    return "마지막 기록 없음";
+  }
+
+  return `마지막 기록 ${date.getMonth() + 1}월 ${date.getDate()}일`;
 }
 
 function formatShortDate(dateStr: string): string {
