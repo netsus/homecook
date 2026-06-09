@@ -12,7 +12,7 @@
 - [x] v1 category label 8종(`채소`, `과일`, `육류`, `해산물`, `양념`, `유제품`, `곡류`, `기타`)이 migration 동안 계속 API/filter/validation에서 동작한다 <!-- omo:id=accept-v1-label-compat;stage=2;scope=backend;review=3,6 -->
 - [x] `GET /ingredients` 응답 확장은 additive-only이며 `{ success, data, error }` envelope를 유지한다 <!-- omo:id=accept-ingredients-additive-api;stage=2;scope=backend;review=3,6 -->
 - [x] `GET /cooking-methods` 응답 확장은 additive-only이며 기존 `{ id, code, label, color_key, is_system }` 소비자를 깨지 않는다 <!-- omo:id=accept-cooking-additive-api;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 taxonomy source와 프론트 선택지/표시 타입이 같은 source에서 파생된다 <!-- omo:id=accept-backend-frontend-taxonomy-source;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 taxonomy source와 프론트 선택지/표시 타입이 같은 source에서 파생된다 <!-- omo:id=accept-backend-frontend-taxonomy-source;stage=4;scope=shared;review=6 -->
 
 ## Ingredient Taxonomy
 
@@ -43,17 +43,17 @@
 - [x] 알 수 없는 v2 category code는 validation error 또는 빈 결과로 안전하게 처리된다 <!-- omo:id=accept-unknown-category-code;stage=2;scope=backend;review=3,6 -->
 - [ ] inactive category/method 입력은 422 validation error로 처리된다 <!-- omo:id=accept-inactive-taxonomy-validation;stage=2;scope=backend;review=3,6 -->
 - [ ] synonym이 여러 method에 매칭되면 자동 승격하지 않고 review 후보로 남긴다 <!-- omo:id=accept-ambiguous-synonym-review;stage=2;scope=backend;review=3,6 -->
-- [ ] loading 상태가 기존 화면에서 유지된다 <!-- omo:id=accept-loading-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태가 기존 화면에서 유지된다 <!-- omo:id=accept-empty-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 기존 화면에서 유지된다 <!-- omo:id=accept-error-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 기존 화면에서 유지된다 <!-- omo:id=accept-unauthorized-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 기존 화면에서 유지된다 <!-- omo:id=accept-loading-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태가 기존 화면에서 유지된다 <!-- omo:id=accept-empty-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 기존 화면에서 유지된다 <!-- omo:id=accept-error-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 기존 화면에서 유지된다 <!-- omo:id=accept-unauthorized-preserved;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Setup / Preconditions
 
 - [x] v2 ingredient taxonomy fixture 또는 seed source가 8대분류/21소분류와 일치한다 <!-- omo:id=accept-ingredient-fixture-source;stage=2;scope=shared;review=3,6 -->
 - [x] v2 cooking taxonomy fixture 또는 seed source가 6그룹/20대표 method와 일치한다 <!-- omo:id=accept-cooking-fixture-source;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에서 `ingredients`, `ingredient_synonyms`, `cooking_methods`가 존재한다 <!-- omo:id=accept-real-db-base-tables;stage=2;scope=backend;review=3,6 -->
-- [ ] 신규 taxonomy table/column migration을 선택하면 RLS/service boundary와 rollback safety가 문서화된다 <!-- omo:id=accept-taxonomy-migration-boundary;stage=2;scope=backend;review=3,6 -->
+- [x] real DB smoke에서 `ingredients`, `ingredient_synonyms`, `cooking_methods`가 존재한다 <!-- omo:id=accept-real-db-base-tables;stage=2;scope=backend;review=3,6 -->
+- [x] 신규 taxonomy table/column migration을 선택하면 RLS/service boundary와 rollback safety가 문서화된다 <!-- omo:id=accept-taxonomy-migration-boundary;stage=2;scope=backend;review=3,6 -->
 
 ## Manual QA
 
@@ -76,14 +76,14 @@
 - [x] fruit-like ingredient row reclassification test <!-- omo:id=accept-vitest-fruit-reclassification;stage=2;scope=backend;review=3,6 -->
 - [x] `씻기` excluded / `에어프라이어` included regression test <!-- omo:id=accept-vitest-cooking-specifics;stage=2;scope=shared;review=3,6 -->
 - [x] API additive-only response shape regression test <!-- omo:id=accept-vitest-additive-api-shape;stage=2;scope=backend;review=3,6 -->
-- [ ] frontend consumer가 hardcoded taxonomy list 대신 shared source를 쓰는 component test <!-- omo:id=accept-vitest-frontend-shared-source;stage=4;scope=frontend;review=5,6 -->
+- [x] frontend consumer가 hardcoded taxonomy list 대신 shared source를 쓰는 component test <!-- omo:id=accept-vitest-frontend-shared-source;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright
 
-- [ ] HOME/PANTRY category filter flow가 v1/v2 mixed data에서 깨지지 않는다 <!-- omo:id=accept-playwright-category-filter;stage=4;scope=frontend;review=5,6 -->
-- [ ] 직접등록 category/method 선택 flow가 v2 source를 표시한다 <!-- omo:id=accept-playwright-manual-taxonomy;stage=4;scope=frontend;review=5,6 -->
-- [ ] YT_IMPORT review flow에서 category/method fallback이 동작한다 <!-- omo:id=accept-playwright-youtube-taxonomy;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL/COOK_MODE 기존 recipe rendering이 taxonomy migration 후에도 깨지지 않는다 <!-- omo:id=accept-playwright-detail-cook-rendering;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME/PANTRY category filter flow가 v1/v2 mixed data에서 깨지지 않는다 <!-- omo:id=accept-playwright-category-filter;stage=4;scope=frontend;review=5,6 -->
+- [x] 직접등록 category/method 선택 flow가 v2 source를 표시한다 <!-- omo:id=accept-playwright-manual-taxonomy;stage=4;scope=frontend;review=5,6 -->
+- [x] YT_IMPORT review flow에서 category/method fallback이 동작한다 <!-- omo:id=accept-playwright-youtube-taxonomy;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL/COOK_MODE 기존 recipe rendering이 taxonomy migration 후에도 깨지지 않는다 <!-- omo:id=accept-playwright-detail-cook-rendering;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 
