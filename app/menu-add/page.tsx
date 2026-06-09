@@ -1,11 +1,4 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-
-import { MenuAddScreen } from "@/components/planner/menu-add-screen";
-import { resolveNextPath } from "@/lib/auth/callback";
-import { readE2EAuthOverrideCookie } from "@/lib/auth/e2e-auth-override";
-import { hasSupabasePublicEnv } from "@/lib/supabase/env";
-import { getServerAuthUser } from "@/lib/supabase/server";
 
 interface MenuAddPageProps {
   searchParams: Promise<{
@@ -16,54 +9,83 @@ interface MenuAddPageProps {
     returnTo?: string;
     slot?: string;
     source?: string;
+    youtubeUrl?: string;
   }>;
 }
 
-export default async function MenuAddPage({ searchParams }: MenuAddPageProps) {
-  const { date, columnId, restore, returnSurface, returnTo, slot, source } =
-    await searchParams;
-  const cookieStore = await cookies();
-  const authOverride = readE2EAuthOverrideCookie(cookieStore);
-  const user =
-    hasSupabasePublicEnv() && authOverride !== "authenticated"
-      ? await getServerAuthUser()
-      : null;
-  const initialAuthenticated =
-    authOverride === "authenticated"
-      ? true
-      : authOverride === "guest"
-        ? false
-        : Boolean(user);
+type MenuAddSearchParams = Awaited<MenuAddPageProps["searchParams"]>;
 
-  if (hasSupabasePublicEnv() && !initialAuthenticated) {
-    const queryParts: string[] = [];
-    if (date) queryParts.push(`date=${encodeURIComponent(date)}`);
-    if (columnId) queryParts.push(`columnId=${encodeURIComponent(columnId)}`);
-    if (slot) queryParts.push(`slot=${encodeURIComponent(slot)}`);
-    if (source) queryParts.push(`source=${encodeURIComponent(source)}`);
-    if (returnTo) queryParts.push(`returnTo=${encodeURIComponent(returnTo)}`);
-    if (returnSurface) {
-      queryParts.push(`returnSurface=${encodeURIComponent(returnSurface)}`);
-    }
-    if (restore) queryParts.push(`restore=${encodeURIComponent(restore)}`);
-    const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
-    const returnPath = resolveNextPath(`/menu-add${queryString}`);
-    redirect(`/login?next=${encodeURIComponent(returnPath)}`);
+function appendOptionalParam(
+  params: URLSearchParams,
+  key: string,
+  value: string | undefined,
+) {
+  if (value) {
+    params.set(key, value);
+  }
+}
+
+function buildDirectMealAddPath(
+  target: "manual" | "youtube",
+  {
+    columnId,
+    date,
+    restore,
+    returnSurface,
+    returnTo,
+    slot,
+    youtubeUrl,
+  }: MenuAddSearchParams,
+) {
+  const params = new URLSearchParams();
+
+  appendOptionalParam(params, "date", date);
+  appendOptionalParam(params, "columnId", columnId);
+  appendOptionalParam(params, "slot", slot);
+  appendOptionalParam(params, "returnTo", returnTo);
+  appendOptionalParam(params, "returnSurface", returnSurface);
+  appendOptionalParam(params, "restore", restore);
+
+  if (target === "youtube") {
+    appendOptionalParam(params, "youtubeUrl", youtubeUrl);
   }
 
-  return (
-    <main className="relative min-h-screen">
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 -z-10 bg-[var(--background)]"
-      />
-      <MenuAddScreen
-        columnId={columnId ?? ""}
-        initialAuthenticated={initialAuthenticated}
-        initialSource={source ?? ""}
-        planDate={date ?? ""}
-        slotName={slot ?? ""}
-      />
-    </main>
-  );
+  const queryString = params.toString();
+  return queryString
+    ? `/menu/add/${target}?${queryString}`
+    : `/menu/add/${target}`;
+}
+
+function buildPlannerMealAddModalPath({
+  columnId,
+  date,
+  slot,
+  source,
+  ...remainingParams
+}: MenuAddSearchParams) {
+  if (source === "manual" || source === "youtube") {
+    return buildDirectMealAddPath(source, {
+      columnId,
+      date,
+      slot,
+      source,
+      ...remainingParams,
+    });
+  }
+
+  const plannerParams = new URLSearchParams({
+    restore: "meal-add-modal",
+    returnSurface: "planner.meal-add-modal",
+  });
+
+  if (date) plannerParams.set("date", date);
+  if (columnId) plannerParams.set("columnId", columnId);
+  if (slot) plannerParams.set("slot", slot);
+  if (source) plannerParams.set("source", source);
+
+  return `/planner?${plannerParams.toString()}`;
+}
+
+export default async function MenuAddPage({ searchParams }: MenuAddPageProps) {
+  redirect(buildPlannerMealAddModalPath(await searchParams));
 }

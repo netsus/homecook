@@ -23,4 +23,12 @@ describe("pantry desktop density", () => {
     expect(ruleBody(".web-pantry-emoji")).toContain("width: 48px;");
     expect(ruleBody(".web-pantry-emoji")).toContain("height: 48px;");
   });
+
+  it("keeps input focus states aligned to the blue brand ring across app and web", () => {
+    expect(globalsCss).toContain("input:focus-visible,");
+    expect(globalsCss).toContain("textarea:focus-visible,");
+    expect(globalsCss).toContain("select:focus-visible");
+    expect(globalsCss).toContain("border-color: var(--brand);");
+    expect(globalsCss).toContain("border-color: var(--web-brand);");
+  });
 });

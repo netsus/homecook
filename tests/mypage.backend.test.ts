@@ -322,7 +322,7 @@ describe("17a mypage backend", () => {
     });
   });
 
-  it("GET /shopping/lists returns owned shopping history with item counts and cursor pagination", async () => {
+  it("GET /shopping/lists returns owned shopping history with purchase counts, meal-period titles, and cursor pagination", async () => {
     const shoppingListsTable = createTable([
       {
         data: [
@@ -351,9 +351,9 @@ describe("17a mypage backend", () => {
     const shoppingListItemsTable = createTable([
       {
         data: [
-          { shopping_list_id: "list-1" },
-          { shopping_list_id: "list-1" },
-          { shopping_list_id: "list-2" },
+          { shopping_list_id: "list-1", is_pantry_excluded: false },
+          { shopping_list_id: "list-1", is_pantry_excluded: true },
+          { shopping_list_id: "list-2", is_pantry_excluded: false },
         ],
         error: null,
       },
@@ -375,12 +375,12 @@ describe("17a mypage backend", () => {
       items: [
         {
           id: "list-1",
-          title: "4/30 장보기",
+          title: "4월 30일 ~ 5월 6일 끼니",
           date_range_start: "2026-04-30",
           date_range_end: "2026-05-06",
           is_completed: true,
           completed_at: "2026-04-30T10:30:00Z",
-          item_count: 2,
+          item_count: 1,
           created_at: "2026-04-30T00:00:00Z",
         },
       ],
@@ -388,6 +388,9 @@ describe("17a mypage backend", () => {
       has_next: true,
     });
     expect(shoppingListsTable.__query.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(shoppingListItemsTable.select).toHaveBeenCalledWith(
+      "shopping_list_id, is_pantry_excluded",
+    );
     expect(shoppingListItemsTable.__query.in).toHaveBeenCalledWith("shopping_list_id", ["list-1", "list-2"]);
   });
 });

@@ -45,6 +45,15 @@ type MealAddSheetState = {
   slotName: string;
 } | null;
 
+function isMealAddPickerMode(value: string | null): value is MealAddPickerMode {
+  return (
+    value === "search" ||
+    value === "recipebook" ||
+    value === "pantry" ||
+    value === "leftover"
+  );
+}
+
 export interface PlannerWeekScreenProps {
   initialAuthenticated?: boolean;
 }
@@ -134,6 +143,18 @@ function getPlannerMealStatusClass(status: PlannerMealData["status"]) {
   }
 
   return "registered";
+}
+
+function getMobilePlannerMealStatusClass(status: PlannerMealData["status"]) {
+  if (status === "shopping_done") {
+    return "border border-[var(--planner-status-shopping)] bg-[var(--planner-status-shopping-soft)]";
+  }
+
+  if (status === "cook_done") {
+    return "border border-[var(--planner-status-cooked)] bg-[var(--planner-status-cooked-soft)]";
+  }
+
+  return "border border-[var(--planner-status-registered)] bg-[var(--planner-status-registered-soft)]";
 }
 
 function WebProfileButton() {
@@ -296,17 +317,17 @@ function PlannerWeekWebView({
             <section className="web-planner-side-section">
               <p className="web-planner-side-label">이번 주 요약</p>
               <div className="web-planner-stat-list">
-                <div className="web-planner-stat web-planner-stat-success">
-                  <span><i className="web-planner-dot web-planner-dot-cooked" />요리 완료</span>
-                  <strong>{mealStats.cookDone}개</strong>
-                </div>
-                <div className="web-planner-stat web-planner-stat-warning">
-                  <span><i className="web-planner-dot web-planner-dot-shopped" />장본 끼니</span>
-                  <strong>{mealStats.shoppingDone}개</strong>
-                </div>
                 <div className="web-planner-stat web-planner-stat-registered">
                   <span><i className="web-planner-dot web-planner-dot-registered" />등록</span>
                   <strong>{mealStats.registered}개</strong>
+                </div>
+                <div className="web-planner-stat web-planner-stat-warning">
+                  <span><i className="web-planner-dot web-planner-dot-shopped" />장보기</span>
+                  <strong>{mealStats.shoppingDone}개</strong>
+                </div>
+                <div className="web-planner-stat web-planner-stat-success">
+                  <span><i className="web-planner-dot web-planner-dot-cooked" />요리 완료</span>
+                  <strong>{mealStats.cookDone}개</strong>
                 </div>
               </div>
             </section>
@@ -894,9 +915,11 @@ export function PlannerWeekScreen({
   // separate inline gate here.
   useEffect(() => {
     if (authState === "unauthorized") {
-      router.replace(`/login?next=${encodeURIComponent("/planner")}`);
+      const queryString = searchParams.toString();
+      const nextPath = queryString ? `/planner?${queryString}` : "/planner";
+      router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
     }
-  }, [authState, router]);
+  }, [authState, router, searchParams]);
 
   useEffect(() => {
     if (
@@ -916,6 +939,8 @@ export function PlannerWeekScreen({
       dateKey,
       slotName: searchParams.get("slot") ?? "",
     });
+    const source = searchParams.get("source");
+    setMealAddPickerMode(isMealAddPickerMode(source) ? source : null);
   }, [searchParams]);
 
   const plannerBodyMotionStyle = {
@@ -1088,7 +1113,7 @@ export function PlannerWeekScreen({
           style={{ borderBottomWidth: "0.5px" }}
         >
           <h1 className="text-[18px] font-bold leading-none text-[var(--brand)]">
-            플래너
+            주간 플래너
           </h1>
         </div>
 
@@ -1096,26 +1121,11 @@ export function PlannerWeekScreen({
           <p className="mb-1 text-[20px] font-bold leading-[1.25] text-[var(--foreground)]">
             {formatMobileWeekRangeLabel(rangeStartDate, rangeEndDate)}
           </p>
-          <p className="mb-3 text-[13px] font-semibold leading-[1.35] text-[var(--text-3)]">
-            이번 주 요약
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-cooked-soft)] p-3">
-              <p className="text-[11px] font-semibold text-[var(--planner-status-cooked)]">
-                요리 완료
-              </p>
-              <p className="mt-0.5 text-[20px] font-bold leading-none text-[var(--planner-status-cooked)]">
-                {mealStats.cookDone}개
-              </p>
-            </div>
-            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-shopping-soft)] p-3">
-              <p className="text-[11px] font-semibold text-[var(--planner-status-shopping)]">
-                장보기 완료
-              </p>
-              <p className="mt-0.5 text-[20px] font-bold leading-none text-[var(--planner-status-shopping)]">
-                {mealStats.shoppingDone}개
-              </p>
-            </div>
+          <div className="mt-3">
+            <p className="mb-2 text-[13px] font-extrabold leading-[1.35] text-[var(--foreground)]">
+              이번 주 요약
+            </p>
+            <div className="grid grid-cols-3 gap-2">
             <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-registered-soft)] p-3">
               <p className="text-[11px] font-semibold text-[var(--planner-status-registered)]">
                 등록
@@ -1124,32 +1134,34 @@ export function PlannerWeekScreen({
                 {mealStats.registered}개
               </p>
             </div>
+            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-shopping-soft)] p-3">
+              <p className="text-[11px] font-semibold text-[var(--planner-status-shopping)]">
+                장보기
+              </p>
+              <p className="mt-0.5 text-[20px] font-bold leading-none text-[var(--planner-status-shopping)]">
+                {mealStats.shoppingDone}개
+              </p>
+            </div>
+            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-cooked-soft)] p-3">
+              <p className="text-[11px] font-semibold text-[var(--planner-status-cooked)]">
+                요리 완료
+              </p>
+              <p className="mt-0.5 text-[20px] font-bold leading-none text-[var(--planner-status-cooked)]">
+                {mealStats.cookDone}개
+              </p>
+            </div>
+            </div>
           </div>
           {shoppingListLinks.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {shoppingListLinks.map((shoppingList) => (
-                <Link
-                  aria-label={`${shoppingList.title} 보기`}
-                  className="inline-flex min-h-9 items-center justify-center rounded-full border border-[var(--brand)] bg-[var(--brand-soft)] px-3 text-[12px] font-bold text-[var(--brand)]"
-                  href={`/shopping/lists/${shoppingList.id}`}
-                  key={shoppingList.id}
-                  style={{ color: "var(--brand)" }}
-                >
-                  {shoppingList.title} 보기
-                  <span
-                    aria-hidden="true"
-                    className={[
-                      "ml-2 rounded-full px-2 py-0.5 text-[10px]",
-                      shoppingList.status === "completed"
-                        ? "bg-[var(--planner-status-cooked-soft)] text-[var(--planner-status-cooked)]"
-                        : "bg-[var(--surface)] text-[var(--brand)]",
-                    ].join(" ")}
-                  >
-                    {shoppingList.status === "completed" ? "✓ 완료" : "진행 중"}
-                  </span>
-                </Link>
-              ))}
-            </div>
+            <Link
+              className="mt-3 flex min-h-10 items-center justify-between rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 text-[13px] font-bold text-[var(--foreground)]"
+              href="/mypage?restore=shopping-history-tab"
+            >
+              <span>이번 주 장보기 목록 {shoppingListLinks.length}개</span>
+              <span className="text-[12px] font-extrabold text-[var(--brand)]">
+                기록 보기
+              </span>
+            </Link>
           ) : null}
         </section>
 
@@ -1362,7 +1374,11 @@ export function PlannerWeekScreen({
                               >
                                 {visibleMeals.map((meal, mealIndex) => (
                                   <span
-                                    className="relative flex h-[46px] min-w-0 items-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[var(--foreground)]"
+                                    className={[
+                                      "relative flex h-[46px] min-w-0 items-center overflow-hidden rounded-[var(--radius-control)] text-[var(--foreground)]",
+                                      getMobilePlannerMealStatusClass(meal.status),
+                                    ].join(" ")}
+                                    data-testid={`planner-mobile-meal-${meal.id}`}
                                     key={`${meal.id}-${mealIndex}`}
                                   >
                                     {meal.recipe_thumbnail_url ? (
@@ -1439,29 +1455,6 @@ export function PlannerWeekScreen({
           장보기
         </Link>
 
-        {mealAddSheet && !mealAddPickerMode ? (
-          <MealAddOptionsSheet
-            onClose={closeMealAddSheet}
-            onPickerSelect={openMealAddPicker}
-            routeHrefFor={(mode) => getMealAddHref(mode)}
-            targetLabel={`${formatCompactDateLabel(mealAddSheet.dateKey)} ${mealAddSheet.slotName}`}
-            testId="planner-meal-add-sheet"
-            title="식사 추가"
-          />
-        ) : null}
-
-        {mealAddSheet && mealAddPickerMode ? (
-          <MealAddPickerFlow
-            columnId={mealAddSheet.columnId}
-            entryMode={mealAddPickerMode}
-            key={`${mealAddSheet.dateKey}-${mealAddSheet.columnId}-${mealAddPickerMode}`}
-            onClose={closeMealAddPicker}
-            onComplete={handleMealAddComplete}
-            planDate={mealAddSheet.dateKey}
-            slotName={mealAddSheet.slotName}
-          />
-        ) : null}
-
           <Wave1MobileBottomTab ariaLabel="플래너 하단 탭" currentTab="planner" />
         </div>
       ) : null}
@@ -1491,6 +1484,29 @@ export function PlannerWeekScreen({
             todayKey={todayKey}
           />
         </div>
+      ) : null}
+
+      {mealAddSheet && !mealAddPickerMode ? (
+        <MealAddOptionsSheet
+          onClose={closeMealAddSheet}
+          onPickerSelect={openMealAddPicker}
+          routeHrefFor={(mode) => getMealAddHref(mode)}
+          targetLabel={`${formatCompactDateLabel(mealAddSheet.dateKey)} ${mealAddSheet.slotName}`}
+          testId="planner-meal-add-sheet"
+          title="식사 추가"
+        />
+      ) : null}
+
+      {mealAddSheet && mealAddPickerMode ? (
+        <MealAddPickerFlow
+          columnId={mealAddSheet.columnId}
+          entryMode={mealAddPickerMode}
+          key={`${mealAddSheet.dateKey}-${mealAddSheet.columnId}-${mealAddPickerMode}`}
+          onClose={closeMealAddPicker}
+          onComplete={handleMealAddComplete}
+          planDate={mealAddSheet.dateKey}
+          slotName={mealAddSheet.slotName}
+        />
       ) : null}
     </>
   );

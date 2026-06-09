@@ -7,29 +7,21 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
-import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
 import { AllPantryCompletionModal } from "@/components/shopping/all-pantry-completion-modal";
-import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
 import {
   WebButton,
   WebShell,
   WebTopNav,
 } from "@/components/web";
 import {
-  completeShoppingList,
   createShoppingList,
-  fetchShoppingListDetail,
-  fetchShoppingShareText,
   fetchShoppingPreview,
   isShoppingApiError,
-  updateShoppingListItem,
 } from "@/lib/api/shopping";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import type {
   ShoppingListAllPantryCompletionSummary,
   ShoppingListCreateData,
-  ShoppingListDetail,
-  ShoppingListItemSummary,
   ShoppingPreviewData,
 } from "@/types/shopping";
 
@@ -59,7 +51,7 @@ interface MealConfig {
   created_at: string;
 }
 
-type ViewState = "loading" | "empty" | "error" | "ready" | "creating" | "review";
+type ViewState = "loading" | "empty" | "error" | "ready" | "creating";
 const SHOPPING_FLOW_RETURN_PATH = "/shopping/flow";
 const KOREAN_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -90,24 +82,6 @@ function buildMealConfigs(data: ShoppingPreviewData): MealConfig[] {
       created_at: meal.created_at,
     }))
     .sort(compareMealConfigs);
-}
-
-function shouldUseInlineReview() {
-  return (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia(APP_VIEW_MEDIA_QUERY).matches
-  );
-}
-
-function formatDateDot(dateString: string) {
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) {
-    return "예정";
-  }
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}.${month}.${day}`;
 }
 
 function parseDateOnly(dateString: string) {
@@ -292,10 +266,6 @@ function getRecipeVisual(config: MealConfig) {
   );
 }
 
-function amountText(item: ShoppingListItemSummary) {
-  return item.amounts_json.map((amount) => `${amount.amount}${amount.unit}`).join(" + ");
-}
-
 function isAllPantryCompletion(
   result: ShoppingListCreateData,
 ): result is ShoppingListAllPantryCompletionSummary {
@@ -308,14 +278,8 @@ export function ShoppingFlowScreen({
   const { push } = useRouter();
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [mealConfigs, setMealConfigs] = useState<MealConfig[]>([]);
-  const [reviewDetail, setReviewDetail] = useState<ShoppingListDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
-  const [isSharing, setIsSharing] = useState(false);
-  const [isCompleting, setIsCompleting] = useState(false);
   const isMobileViewport = useIsMobileViewport();
-  const [showPantryPopup, setShowPantryPopup] = useState(false);
-  const [reviewToast, setReviewToast] = useState<string | null>(null);
   const [allPantryCompletion, setAllPantryCompletion] =
     useState<ShoppingListAllPantryCompletionSummary | null>(null);
 
@@ -364,18 +328,6 @@ export function ShoppingFlowScreen({
     );
   }, []);
 
-  const handleSelectAll = useCallback(() => {
-    setMealConfigs((prev) =>
-      prev.map((config) => ({ ...config, isSelected: true })),
-    );
-  }, []);
-
-  const handleClearAll = useCallback(() => {
-    setMealConfigs((prev) =>
-      prev.map((config) => ({ ...config, isSelected: false })),
-    );
-  }, []);
-
   const handleCreateList = useCallback(async () => {
     const selectedConfigs = mealConfigs.filter((config) => config.isSelected);
 
@@ -402,18 +354,7 @@ export function ShoppingFlowScreen({
         return;
       }
 
-      if (!shouldUseInlineReview()) {
-        push(`/shopping/lists/${result.id}`);
-        return;
-      }
-
-      try {
-        const detail = await fetchShoppingListDetail(result.id);
-        setReviewDetail(detail);
-        setViewState("review");
-      } catch {
-        push(`/shopping/lists/${result.id}`);
-      }
+      push(`/shopping/lists/${result.id}`);
     } catch (error) {
       if (isShoppingApiError(error)) {
         if (error.status === 401) {
@@ -440,13 +381,12 @@ export function ShoppingFlowScreen({
     void loadPreview();
   }, [loadPreview]);
 
-  const handleReviewBack = useCallback(() => {
-    if (viewState === "review") {
-      setViewState("ready");
-      return;
-    }
-    handleBack();
-  }, [handleBack, viewState]);
+  const handleToggleAllSelection = useCallback(() => {
+    setMealConfigs((prev) => {
+      const nextSelected = !(prev.length > 0 && prev.every((config) => config.isSelected));
+      return prev.map((config) => ({ ...config, isSelected: nextSelected }));
+    });
+  }, []);
 
   const handleAllPantryClose = useCallback(() => {
     setAllPantryCompletion(null);
@@ -457,199 +397,6 @@ export function ShoppingFlowScreen({
     setAllPantryCompletion(null);
     push("/planner");
   }, [push]);
-
-  const handleReviewCheck = useCallback(
-    async (itemId: string, currentChecked: boolean) => {
-      if (!reviewDetail || reviewDetail.is_completed) {
-        return;
-      }
-
-      const nextChecked = !currentChecked;
-      setUpdatingItemId(itemId);
-      setReviewDetail((prev) =>
-        prev
-          ? {
-              ...prev,
-              items: prev.items.map((item) =>
-                item.id === itemId ? { ...item, is_checked: nextChecked } : item,
-              ),
-            }
-          : prev,
-      );
-
-      try {
-        const updated = await updateShoppingListItem(reviewDetail.id, itemId, {
-          is_checked: nextChecked,
-        });
-        setReviewDetail((prev) =>
-          prev
-            ? {
-                ...prev,
-                items: prev.items.map((item) =>
-                  item.id === itemId ? updated : item,
-                ),
-              }
-            : prev,
-        );
-      } catch {
-        setReviewDetail((prev) =>
-          prev
-            ? {
-                ...prev,
-                items: prev.items.map((item) =>
-                  item.id === itemId ? { ...item, is_checked: currentChecked } : item,
-                ),
-              }
-            : prev,
-        );
-        setReviewToast("구매 상태를 바꾸지 못했어요.");
-      } finally {
-        setUpdatingItemId(null);
-      }
-    },
-    [reviewDetail],
-  );
-
-  const handleReviewExclude = useCallback(
-    async (
-      itemId: string,
-      currentExcluded: boolean,
-      currentChecked: boolean,
-    ) => {
-      if (!reviewDetail || reviewDetail.is_completed) {
-        return;
-      }
-
-      const nextExcluded = !currentExcluded;
-      setUpdatingItemId(itemId);
-      setReviewDetail((prev) =>
-        prev
-          ? {
-              ...prev,
-              items: prev.items.map((item) =>
-                item.id === itemId
-                  ? {
-                      ...item,
-                      is_checked: nextExcluded ? false : item.is_checked,
-                      is_pantry_excluded: nextExcluded,
-                    }
-                  : item,
-              ),
-            }
-          : prev,
-      );
-
-      try {
-        const updated = await updateShoppingListItem(reviewDetail.id, itemId, {
-          is_pantry_excluded: nextExcluded,
-        });
-        setReviewDetail((prev) =>
-          prev
-            ? {
-                ...prev,
-                items: prev.items.map((item) =>
-                  item.id === itemId ? updated : item,
-                ),
-              }
-            : prev,
-        );
-      } catch {
-        setReviewDetail((prev) =>
-          prev
-            ? {
-                ...prev,
-                items: prev.items.map((item) =>
-                  item.id === itemId
-                    ? {
-                        ...item,
-                        is_checked: currentChecked,
-                        is_pantry_excluded: currentExcluded,
-                      }
-                    : item,
-                ),
-              }
-            : prev,
-        );
-        setReviewToast("팬트리 제외 상태를 바꾸지 못했어요.");
-      } finally {
-        setUpdatingItemId(null);
-      }
-    },
-    [reviewDetail],
-  );
-
-  const handleReviewShare = useCallback(async () => {
-    if (!reviewDetail) {
-      return;
-    }
-
-    setIsSharing(true);
-    setReviewToast(null);
-    try {
-      const { text } = await fetchShoppingShareText(reviewDetail.id);
-      if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({ text });
-        setReviewToast("공유되었습니다.");
-      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-        setReviewToast("복사되었습니다.");
-      } else {
-        setReviewToast("이 환경에서는 공유할 수 없어요.");
-      }
-    } catch {
-      setReviewToast("공유 텍스트를 만들지 못했어요.");
-    } finally {
-      setIsSharing(false);
-    }
-  }, [reviewDetail]);
-
-  const handleReviewComplete = useCallback(() => {
-    if (!reviewDetail || reviewDetail.is_completed) {
-      return;
-    }
-    setShowPantryPopup(true);
-  }, [reviewDetail]);
-
-  const handleReviewPantryConfirm = useCallback(
-    async (selectedItemIds: string[] | undefined) => {
-      if (!reviewDetail || reviewDetail.is_completed) {
-        return;
-      }
-
-      setShowPantryPopup(false);
-      setIsCompleting(true);
-      setReviewToast(null);
-
-      try {
-        const result = await completeShoppingList(
-          reviewDetail.id,
-          selectedItemIds === undefined
-            ? { add_to_pantry_item_ids: null }
-            : { add_to_pantry_item_ids: selectedItemIds },
-        );
-        setReviewDetail((prev) =>
-          prev
-            ? {
-                ...prev,
-                completed_at: new Date().toISOString(),
-                is_completed: true,
-                items: prev.items.map((item) =>
-                  result.pantry_added_item_ids.includes(item.id)
-                    ? { ...item, added_to_pantry: true }
-                    : item,
-                ),
-              }
-            : prev,
-        );
-        setReviewToast("장보기를 완료했어요.");
-      } catch {
-        setReviewToast("장보기를 완료하지 못했어요.");
-      } finally {
-        setIsCompleting(false);
-      }
-    },
-    [reviewDetail],
-  );
 
   // Loading state
   if (viewState === "loading") {
@@ -732,32 +479,6 @@ export function ShoppingFlowScreen({
     );
   }
 
-  if (viewState === "review" && reviewDetail) {
-    return (
-      <>
-        <MobileReviewScreen
-          detail={reviewDetail}
-          isCompleting={isCompleting}
-          isSharing={isSharing}
-          onBack={handleReviewBack}
-          onComplete={handleReviewComplete}
-          onShare={handleReviewShare}
-          onToggleCheck={handleReviewCheck}
-          onToggleExclude={handleReviewExclude}
-          toast={reviewToast}
-          updatingItemId={updatingItemId}
-        />
-        {showPantryPopup ? (
-          <PantryReflectionPopup
-            items={reviewDetail.items}
-            onCancel={() => setShowPantryPopup(false)}
-            onConfirm={handleReviewPantryConfirm}
-          />
-        ) : null}
-      </>
-    );
-  }
-
   // Ready state
   const selectedCount = mealConfigs.filter((config) => config.isSelected).length;
   const selectedServings = mealConfigs.reduce(
@@ -775,10 +496,11 @@ export function ShoppingFlowScreen({
           isAllSelected={isAllSelected}
           isCreateDisabled={isCreateDisabled}
           onBack={handleBack}
-          onClearAll={handleClearAll}
           onCreate={handleCreateList}
-          onSelectAll={handleSelectAll}
+          onToggleAll={handleToggleAllSelection}
           onToggle={handleToggleSelection}
+          selectedCount={selectedCount}
+          selectedServings={selectedServings}
         />
         {allPantryCompletion ? (
           <AllPantryCompletionModal
@@ -821,12 +543,11 @@ export function ShoppingFlowScreen({
                 <h2 id="shopping-flow-meals-title">어떤 끼니의 재료를 살까요?</h2>
               </div>
               <div className="web-shopping-section-actions">
-                <button disabled={isAllSelected} onClick={handleSelectAll} type="button">
-                  전체 선택
-                </button>
-                <button disabled={isCreateDisabled} onClick={handleClearAll} type="button">
-                  전체 해제
-                </button>
+                <ShoppingSelectAllControl
+                  checked={isAllSelected}
+                  disabled={mealConfigs.length === 0}
+                  onClick={handleToggleAllSelection}
+                />
               </div>
             </div>
             <div className="web-shopping-date-list">
@@ -961,19 +682,21 @@ function MobileSelectScreen({
   isAllSelected,
   isCreateDisabled,
   onBack,
-  onClearAll,
   onCreate,
-  onSelectAll,
+  onToggleAll,
   onToggle,
+  selectedCount,
+  selectedServings,
 }: {
   configs: MealConfig[];
   isAllSelected: boolean;
   isCreateDisabled: boolean;
   onBack: () => void;
-  onClearAll: () => void;
   onCreate: () => void;
-  onSelectAll: () => void;
+  onToggleAll: () => void;
   onToggle: (selectionId: string) => void;
+  selectedCount: number;
+  selectedServings: number;
 }) {
   return (
     <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface-fill)] lg:hidden">
@@ -987,23 +710,15 @@ function MobileSelectScreen({
           <p className="mt-3 text-[13px] font-medium leading-[1.5] text-[var(--text-3)]">
             같은 재료는 장보기 목록에서 자동으로 합산돼요.
           </p>
-          <div className="mt-4 flex gap-2">
-            <button
-              className="h-9 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[13px] font-bold text-[var(--brand)] disabled:text-[var(--text-4)]"
-              disabled={isAllSelected}
-              onClick={onSelectAll}
-              type="button"
-            >
-              전체 선택
-            </button>
-            <button
-              className="h-9 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[13px] font-bold text-[var(--text-2)] disabled:text-[var(--text-4)]"
-              disabled={isCreateDisabled}
-              onClick={onClearAll}
-              type="button"
-            >
-              전체 해제
-            </button>
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <ShoppingSelectAllControl
+              checked={isAllSelected}
+              disabled={configs.length === 0}
+              onClick={onToggleAll}
+            />
+            <p className="shrink-0 text-[13px] font-extrabold text-[var(--foreground)]">
+              {selectedCount}개 · {selectedServings}인분
+            </p>
           </div>
         </section>
 
@@ -1046,6 +761,31 @@ function MobileSelectScreen({
         currentTab="planner"
       />
     </div>
+  );
+}
+
+function ShoppingSelectAllControl({
+  checked,
+  disabled,
+  onClick,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-checked={checked}
+      aria-label="전체 선택"
+      className="shopping-select-all-control"
+      disabled={disabled}
+      onClick={onClick}
+      role="checkbox"
+      type="button"
+    >
+      <span aria-hidden="true">{checked ? "✓" : ""}</span>
+      전체 선택
+    </button>
   );
 }
 
@@ -1117,194 +857,6 @@ function MobileSelectRow({
           {slotLabel} · {config.shopping_servings}인분
         </p>
       </div>
-    </div>
-  );
-}
-
-function MobileReviewScreen({
-  detail,
-  isCompleting,
-  isSharing,
-  onBack,
-  onComplete,
-  onShare,
-  onToggleCheck,
-  onToggleExclude,
-  toast,
-  updatingItemId,
-}: {
-  detail: ShoppingListDetail;
-  isCompleting: boolean;
-  isSharing: boolean;
-  onBack: () => void;
-  onComplete: () => void;
-  onShare: () => void;
-  onToggleCheck: (itemId: string, currentChecked: boolean) => void;
-  onToggleExclude: (
-    itemId: string,
-    currentExcluded: boolean,
-    currentChecked: boolean,
-  ) => void;
-  toast: string | null;
-  updatingItemId: string | null;
-}) {
-  const purchaseItems = detail.items.filter((item) => !item.is_pantry_excluded);
-  const excludedItems = detail.items.filter((item) => item.is_pantry_excluded);
-  const checkedCount = purchaseItems.filter((item) => item.is_checked).length;
-  const progress = purchaseItems.length
-    ? Math.round((checkedCount / purchaseItems.length) * 100)
-    : 100;
-
-  return (
-    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface-fill)] lg:hidden">
-      <MobileAppBar onBack={onBack} />
-
-      <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
-        <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[12px] font-extrabold leading-[1.3] text-[var(--brand)]">
-                STEP 2 / 2
-              </p>
-              <h2 className="mt-1 truncate text-[20px] font-extrabold leading-[1.3] text-[var(--foreground)]">
-                {formatDateDot(detail.created_at)} · 장보기 목록
-              </h2>
-              <p className="mt-2 text-[12px] font-medium leading-[1.4] text-[var(--text-3)]">
-                {purchaseItems.length}개 구매 예정 · {excludedItems.length}개 팬트리 제외
-              </p>
-            </div>
-            <div className="shrink-0 text-[32px] font-extrabold leading-none text-[var(--brand)]">
-              {progress}%
-            </div>
-          </div>
-          <div className="mt-3 h-1 rounded-full bg-[var(--surface-subtle)]">
-            <div
-              className="h-full rounded-full bg-[var(--brand)]"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </section>
-
-        {toast ? (
-          <div
-            className="mx-4 mt-3 rounded-[var(--radius-control)] bg-[var(--brand-soft)] px-4 py-3 text-[13px] font-bold text-[var(--brand)]"
-            role="status"
-          >
-            {toast}
-          </div>
-        ) : null}
-
-        <section className="px-4 py-5">
-          <h3 className="text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
-            장볼 재료 목록
-          </h3>
-          <p className="mt-3 text-[12px] font-bold leading-[1.3] text-[var(--text-3)]">
-            메인 · {purchaseItems.length}
-          </p>
-
-          <div className="mt-3 overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)]">
-            {purchaseItems.map((item) => (
-              <MobileReviewItem
-                isUpdating={updatingItemId === item.id}
-                item={item}
-                key={item.id}
-                onToggleCheck={onToggleCheck}
-                onToggleExclude={onToggleExclude}
-              />
-            ))}
-          </div>
-        </section>
-      </main>
-
-      <div className="fixed inset-x-0 bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mx-auto max-w-[430px] px-4">
-        <div className="grid grid-cols-[1fr_86px] gap-2">
-          <button
-            className="flex h-[var(--control-height-lg)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-[var(--text-inverse)] shadow-[0_10px_26px_var(--brand-shadow-color-soft)] disabled:bg-[var(--line-strong)] disabled:shadow-none"
-            disabled={isCompleting || detail.is_completed}
-            onClick={onComplete}
-            type="button"
-          >
-            {detail.is_completed ? "완료됨" : isCompleting ? "완료 중..." : "장보기 완료"}
-          </button>
-          <button
-            className="flex h-[var(--control-height-lg)] items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[15px] font-bold text-[var(--foreground)] shadow-[0_10px_26px_var(--shadow-color-soft)] disabled:opacity-50 disabled:shadow-none"
-            disabled={isSharing}
-            onClick={onShare}
-            type="button"
-          >
-            {isSharing ? "공유 중" : "공유"}
-          </button>
-        </div>
-      </div>
-      <Wave1MobileBottomTab
-        ariaLabel="장보기 목록 리뷰 화면 하단 내비게이션"
-        currentTab="planner"
-      />
-    </div>
-  );
-}
-
-function MobileReviewItem({
-  isUpdating,
-  item,
-  onToggleCheck,
-  onToggleExclude,
-}: {
-  isUpdating: boolean;
-  item: ShoppingListItemSummary;
-  onToggleCheck: (itemId: string, currentChecked: boolean) => void;
-  onToggleExclude: (
-    itemId: string,
-    currentExcluded: boolean,
-    currentChecked: boolean,
-  ) => void;
-}) {
-  const label = item.display_text.replace(/\s+\d+.*$/, "");
-
-  return (
-    <div className="flex min-h-[64px] items-center gap-3 border-b border-[var(--surface-subtle)] px-4 py-2.5 last:border-b-0">
-      <button
-        aria-checked={item.is_checked}
-        aria-label={`${item.display_text} 구매 완료 표시`}
-        className="flex h-8 w-8 shrink-0 items-center justify-center disabled:opacity-50"
-        disabled={isUpdating}
-        onClick={() => onToggleCheck(item.id, item.is_checked)}
-        role="checkbox"
-        type="button"
-      >
-        <span
-          aria-hidden="true"
-          className={[
-            "flex h-[22px] w-[22px] items-center justify-center rounded-full border text-[12px] text-[var(--text-inverse)]",
-            item.is_checked
-              ? "border-[var(--brand)] bg-[var(--brand)]"
-              : "border-[var(--line-strong)] bg-[var(--surface)]",
-          ].join(" ")}
-        >
-          {item.is_checked ? "✓" : ""}
-        </span>
-      </button>
-
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
-          {label}
-        </p>
-        <p className="mt-1 truncate text-[11px] font-medium leading-[1.3] text-[var(--text-3)]">
-          {amountText(item)}
-        </p>
-      </div>
-
-      <button
-        aria-label={`${item.display_text} 이미있음`}
-        className="flex h-[30px] shrink-0 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[11px] font-extrabold text-[var(--text-2)] disabled:opacity-50"
-        disabled={isUpdating}
-        onClick={() =>
-          onToggleExclude(item.id, item.is_pantry_excluded, item.is_checked)
-        }
-        type="button"
-      >
-        이미있음
-      </button>
     </div>
   );
 }

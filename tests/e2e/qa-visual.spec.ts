@@ -67,7 +67,6 @@ const PLANNER_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
 const MEAL_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
 const MEAL_CONFIRM_MODAL_VISUAL_MAX_DIFF_PIXELS = 80;
 const MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2200;
-const MENU_ADD_MODAL_VISUAL_MAX_DIFF_PIXELS = 120;
 const LOGIN_GATE_MODAL_VISUAL_MAX_DIFF_PIXELS = 1200;
 const PANTRY_SHOPPING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2400;
 const ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
@@ -344,70 +343,22 @@ test.describe("QA visual regression", () => {
     );
   });
 
-  test("menu add desktop pickers match the visual baseline", async ({
+  test("menu add route opens the planner meal-add modal", async ({
     page,
   }) => {
-    test.skip(isMobileViewport(page), "desktop-only menu add parity baseline");
     await setE2EAuthOverride(page);
     await installMenuAddVisualRoutes(page);
 
     await page.goto(MENU_ADD_VISUAL_PATH);
+    await expect(page).toHaveURL(/\/planner\?/);
     await expect(
       page.getByRole("heading", { name: "식사 추가" }),
     ).toBeVisible();
-    await expect(page.getByText("김치볶음밥")).toBeVisible();
-
-    await stabilizeVisualSnapshot(page);
-    await expect(page).toHaveScreenshot("qa-menu-add-search.png", {
-      animations: "disabled",
-      fullPage: true,
-      maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
-    });
-
-    await page.getByRole("button", { name: "김치볶음밥 선택" }).click();
-    const servingsDialog = page.getByRole("dialog", {
-      name: "계획 인분 입력",
-    });
-    await expect(servingsDialog).toBeVisible();
-    await stabilizeVisualSnapshot(page);
-    await expect(servingsDialog).toHaveScreenshot(
-      "qa-menu-add-servings-modal.png",
-      {
-        animations: "disabled",
-        maxDiffPixels: MENU_ADD_MODAL_VISUAL_MAX_DIFF_PIXELS,
-      },
-    );
-    await servingsDialog.getByRole("button", { name: "취소" }).click();
-
-    await page.locator('[data-testid="menu-add-option-recipebook"]:visible').click();
-    await expect(
-      page.getByRole("button", { name: /평일 저녁 빠른요리/ }),
-    ).toBeVisible();
-    await stabilizeVisualSnapshot(page);
-    await expect(page).toHaveScreenshot("qa-menu-add-recipebook.png", {
-      animations: "disabled",
-      fullPage: true,
-      maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
-    });
-
-    await page.getByRole("button", { name: /평일 저녁 빠른요리/ }).click();
-    await expect(page.getByRole("button", { name: /감자 수제비/ })).toBeVisible();
-    await stabilizeVisualSnapshot(page);
-    await expect(page).toHaveScreenshot("qa-menu-add-recipebook-detail.png", {
-      animations: "disabled",
-      fullPage: true,
-      maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
-    });
-
-    await page.goto(`${MENU_ADD_VISUAL_PATH}&source=pantry`);
-    await expect(page.getByRole("heading", { name: "팬트리 추천" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /연어 스테이크/ })).toBeVisible();
-    await stabilizeVisualSnapshot(page);
-    await expect(page).toHaveScreenshot("qa-menu-add-pantry.png", {
-      animations: "disabled",
-      fullPage: true,
-      maxDiffPixels: MENU_ADD_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
-    });
+    await expect(page.getByTestId("planner-meal-add-sheet")).toBeVisible();
+    await expect(page.getByTestId("meal-add-option-search")).toBeVisible();
+    await expect(page.getByTestId("meal-add-option-recipebook")).toBeVisible();
+    await expect(page.getByTestId("meal-add-option-pantry")).toBeVisible();
+    await expect(page.getByTestId("meal-add-option-youtube")).toBeVisible();
   });
 
   test("manual recipe desktop screen and ingredient modal match the visual baseline", async ({

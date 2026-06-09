@@ -5,7 +5,11 @@ import Link from "next/link";
 import React from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
-import { buildShoppingHistoryCalendarMonths } from "@/components/mypage/shopping-history-calendar";
+import {
+  buildShoppingHistoryCalendarMonths,
+  formatShoppingHistoryDateTime,
+  formatShoppingHistoryMealRange,
+} from "@/components/mypage/shopping-history-calendar";
 import type { UserProfileData } from "@/lib/api/mypage";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
@@ -1190,6 +1194,8 @@ function MobileShoppingCalendar({ items }: { items: ShoppingListHistoryItem[] })
 }
 
 function MobileShoppingCard({ item }: { item: ShoppingListHistoryItem }) {
+  const mealRange = formatShoppingHistoryMealRange(item);
+
   return (
     <Link
       className="block rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] p-1.5 shadow-[0_1px_4px_var(--overlay-10)]"
@@ -1202,13 +1208,35 @@ function MobileShoppingCard({ item }: { item: ShoppingListHistoryItem }) {
       role="listitem"
     >
       <span className="block min-w-0">
-        <span className="block truncate text-[10px] font-extrabold leading-[1.25] text-[var(--foreground)]">
+        <span className="block text-[10px] font-extrabold leading-[1.25] text-[var(--foreground)]">
           {item.title}
         </span>
-        <span className="mt-0.5 block truncate text-[9px] font-medium leading-[1.25] text-[var(--text-3)]">
-          {item.item_count}개
-          {item.completed_at ? ` · ${formatShortDate(item.completed_at)} 완료` : ""}
-        </span>
+        <dl className="mt-1 grid gap-0.5 text-[8px] leading-[1.2]">
+          <div>
+            <dt className="inline font-bold text-[var(--text-3)]">생성일 </dt>
+            <dd className="inline font-semibold text-[var(--foreground)]">
+              {formatShoppingHistoryDateTime(item.created_at)}
+            </dd>
+          </div>
+          <div>
+            <dt className="inline font-bold text-[var(--text-3)]">완료일 </dt>
+            <dd className="inline font-semibold text-[var(--foreground)]">
+              {formatShoppingHistoryDateTime(item.completed_at)}
+            </dd>
+          </div>
+          <div>
+            <dt className="inline font-bold text-[var(--text-3)]">구매 재료 </dt>
+            <dd className="inline font-semibold text-[var(--foreground)]">
+              {item.item_count}개
+            </dd>
+          </div>
+          <div>
+            <dt className="inline font-bold text-[var(--text-3)]">끼니 범위 </dt>
+            <dd className="inline font-semibold text-[var(--foreground)]">
+              {mealRange}
+            </dd>
+          </div>
+        </dl>
         <MobileShoppingStatusTag item={item} />
       </span>
     </Link>
@@ -1272,15 +1300,6 @@ function formatMobileSavedRecipeMeta(recipe: RecipeBookRecipeItem) {
   ]
     .filter(Boolean)
     .join(" · ");
-}
-
-function formatShortDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
 function BackIcon() {

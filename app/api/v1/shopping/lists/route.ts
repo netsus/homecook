@@ -80,6 +80,7 @@ interface ShoppingListHistoryRow {
 
 interface ShoppingListItemCountRow {
   shopping_list_id: string;
+  is_pantry_excluded: boolean;
 }
 
 type ArrayQueryResult<T> = PromiseLike<{
@@ -329,6 +330,27 @@ function buildShoppingMealSelection({
   });
 
   return { shoppingMeals, splitMeals };
+}
+
+function formatHistoryDateLabel(dateKey: string) {
+  const [, month, day] = dateKey.split("-").map(Number);
+
+  if (!month || !day) {
+    return dateKey;
+  }
+
+  return `${month}월 ${day}일`;
+}
+
+function buildShoppingHistoryTitle(row: ShoppingListHistoryRow) {
+  const startLabel = formatHistoryDateLabel(row.date_range_start);
+  const endLabel = formatHistoryDateLabel(row.date_range_end);
+  const mealRange =
+    row.date_range_start === row.date_range_end
+      ? startLabel
+      : `${startLabel} ~ ${endLabel}`;
+
+  return `${mealRange} 끼니`;
 }
 
 export async function POST(request: Request) {
@@ -818,7 +840,7 @@ export async function GET(request: Request) {
   const listIds = rowsWithExtra.map((row) => row.id);
   const itemsResult = await dbClient
     .from("shopping_list_items")
-    .select("shopping_list_id")
+    .select("shopping_list_id, is_pantry_excluded")
     .in("shopping_list_id", listIds);
 
   if (itemsResult.error || !itemsResult.data) {
@@ -828,6 +850,10 @@ export async function GET(request: Request) {
   const itemCountByListId = new Map<string, number>();
 
   itemsResult.data.forEach((item) => {
+    if (item.is_pantry_excluded) {
+      return;
+    }
+
     itemCountByListId.set(
       item.shopping_list_id,
       (itemCountByListId.get(item.shopping_list_id) ?? 0) + 1,
@@ -837,7 +863,7 @@ export async function GET(request: Request) {
   return ok({
     items: rows.map((row) => ({
       id: row.id,
-      title: row.title,
+      title: buildShoppingHistoryTitle(row),
       date_range_start: row.date_range_start,
       date_range_end: row.date_range_end,
       is_completed: row.is_completed,

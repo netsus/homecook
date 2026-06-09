@@ -19,7 +19,11 @@ import {
   MypageMobileScreen,
   type MypageMobileSurface,
 } from "@/components/mypage/mypage-mobile-screen";
-import { buildShoppingHistoryCalendarMonths } from "@/components/mypage/shopping-history-calendar";
+import {
+  buildShoppingHistoryCalendarMonths,
+  formatShoppingHistoryDateTime,
+  formatShoppingHistoryMealRange,
+} from "@/components/mypage/shopping-history-calendar";
 import {
   PlannerAddSheet,
   type PlannerAddSheetState,
@@ -3681,7 +3685,7 @@ function ShoppingHistoryCard({
   item: ShoppingListHistoryItem;
   onOpen: () => void;
 }) {
-  const dateRange = `${formatShortDate(item.date_range_start)} ~ ${formatShortDate(item.date_range_end)}`;
+  const dateRange = formatShoppingHistoryMealRange(item);
 
   return (
     <button
@@ -3693,14 +3697,32 @@ function ShoppingHistoryCard({
       <p className="text-base font-semibold text-[var(--foreground)]">
         {item.title}
       </p>
-      <p className="mt-1 text-sm text-[var(--text-3)]">
-        {dateRange} &middot; {item.item_count}개 항목
-      </p>
-      {item.completed_at ? (
-        <p className="mt-1 text-sm text-[var(--text-3)]">
-          {formatShortDate(item.completed_at)} 완료
-        </p>
-      ) : null}
+      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-left text-sm">
+        <div>
+          <dt className="text-[12px] font-bold text-[var(--text-3)]">생성일</dt>
+          <dd className="mt-0.5 font-semibold text-[var(--foreground)]">
+            {formatShoppingHistoryDateTime(item.created_at)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[12px] font-bold text-[var(--text-3)]">완료일</dt>
+          <dd className="mt-0.5 font-semibold text-[var(--foreground)]">
+            {formatShoppingHistoryDateTime(item.completed_at)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[12px] font-bold text-[var(--text-3)]">구매 재료</dt>
+          <dd className="mt-0.5 font-semibold text-[var(--foreground)]">
+            {item.item_count}개
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[12px] font-bold text-[var(--text-3)]">끼니 범위</dt>
+          <dd className="mt-0.5 font-semibold text-[var(--foreground)]">
+            {dateRange}
+          </dd>
+        </div>
+      </dl>
       <ShoppingHistoryStatusTag item={item} />
     </button>
   );

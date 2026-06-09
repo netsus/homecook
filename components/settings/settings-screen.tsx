@@ -847,6 +847,7 @@ export function SettingsScreen({
         <ConfirmDialog
           confirmLabel={isLoggingOut ? "로그아웃 중..." : "로그아웃"}
           confirmTone="brand"
+          description="다시 로그인해야 식단·팬트리가 동기화돼요."
           disabled={isLoggingOut}
           errorMessage={logoutError}
           onCancel={() => {

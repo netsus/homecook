@@ -440,7 +440,7 @@ describe("LeftoversScreen", () => {
     });
   });
 
-  it("renders the mobile planner-add action without a broken leading icon", async () => {
+  it("keeps the mobile planner-add label while constraining the button width", async () => {
     installMatchMedia(true);
     vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
       items: LEFTOVER_ITEMS,
@@ -449,8 +449,9 @@ describe("LeftoversScreen", () => {
     render(<LeftoversScreen initialAuthenticated={true} />);
 
     const plannerAddButton = (await screen.findAllByTestId("planner-add-button"))[0];
-    expect(plannerAddButton.textContent?.trim()).toBe("추가");
+    expect(plannerAddButton.textContent?.trim()).toBe("플래너에 추가");
     expect(plannerAddButton.getAttribute("aria-label")).toBe("플래너에 추가");
+    expect(plannerAddButton.className).toContain("w-[112px]");
     expect(screen.getByText(LEFTOVERS_DESCRIPTION)).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "다먹음" })).toHaveLength(2);
   });

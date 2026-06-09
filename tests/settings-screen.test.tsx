@@ -305,6 +305,21 @@ describe("SettingsScreen", () => {
     expect(screen.getByText("계정 삭제").className).toContain("text-[var(--danger)]");
   });
 
+  it("renders the mobile settings account profile image when it is available", () => {
+    render(
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        profile={{
+          ...MOCK_PROFILE,
+          profile_image_url: "https://example.com/profile.png",
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId("settings-mobile-account-profile-image")).toBeTruthy();
+    expect(screen.queryByTestId("settings-mobile-account-profile-fallback")).toBeNull();
+  });
+
   it("renders the mobile settings notification as a floating toast", () => {
     render(
       <SettingsMobileScreen
@@ -785,6 +800,7 @@ describe("SettingsScreen", () => {
     await waitFor(() => {
       expect(screen.getByText("로그아웃 할까요?")).toBeTruthy();
     });
+    expect(screen.getByText("다시 로그인해야 식단·팬트리가 동기화돼요.")).toBeTruthy();
 
     await user.click(within(screen.getByRole("alertdialog")).getByText("로그아웃"));
 

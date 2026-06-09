@@ -298,8 +298,9 @@ describe("shopping flow screen", () => {
         "/planner/2026-04-26/column-breakfast?returnTo=%2Fshopping%2Fflow",
       );
       expect(screen.getAllByText("장보기 목록 만들기")).toHaveLength(1);
-      expect((screen.getByRole("button", { name: "전체 해제" }) as HTMLButtonElement).disabled).toBe(false);
-      expect((screen.getByRole("button", { name: "전체 선택" }) as HTMLButtonElement).disabled).toBe(true);
+      const selectAllControl = screen.getByRole("checkbox", { name: "전체 선택" });
+      expect((selectAllControl as HTMLButtonElement).disabled).toBe(false);
+      expect(selectAllControl.getAttribute("aria-checked")).toBe("true");
       expect(screen.queryByText("2개 선택 · 총 6인분")).toBeNull();
       expect(screen.getByText("2개 · 6인분")).toBeTruthy();
       expect(screen.getByText("장보기 목록으로 만들어요.")).toBeTruthy();
@@ -567,16 +568,53 @@ describe("shopping flow screen", () => {
       expect(screen.queryByLabelText("인분 늘리기")).toBeNull();
       expect(screen.queryByLabelText("인분 줄이기")).toBeNull();
 
-      await userEvent.click(screen.getByRole("button", { name: "전체 해제" }));
+      const allToggle = screen.getByRole("checkbox", { name: "전체 선택" });
+      expect(allToggle.getAttribute("aria-checked")).toBe("true");
+
+      await userEvent.click(allToggle);
       expect(screen.getByLabelText("김치찌개 선택")).toBeTruthy();
       expect((screen.getByText("장보기 목록 만들기") as HTMLButtonElement).disabled).toBe(true);
-      expect((screen.getByRole("button", { name: "전체 해제" }) as HTMLButtonElement).disabled).toBe(true);
-      expect((screen.getByRole("button", { name: "전체 선택" }) as HTMLButtonElement).disabled).toBe(false);
+      expect(allToggle.getAttribute("aria-checked")).toBe("false");
 
-      await userEvent.click(screen.getByRole("button", { name: "전체 선택" }));
+      await userEvent.click(allToggle);
       expect(screen.getByLabelText("김치찌개 선택 해제")).toBeTruthy();
       expect((screen.getByText("장보기 목록 만들기") as HTMLButtonElement).disabled).toBe(false);
-      expect((screen.getByRole("button", { name: "전체 선택" }) as HTMLButtonElement).disabled).toBe(true);
+      expect(allToggle.getAttribute("aria-checked")).toBe("true");
+    });
+
+    it("shows selected meal count and servings on the app shopping preparation screen", async () => {
+      setMatchMedia(true);
+      fetchShoppingPreview.mockResolvedValue(
+        createPreviewData([
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_name: "김치찌개",
+            planned_servings: 2,
+          },
+          {
+            id: "meal-2",
+            recipe_id: "recipe-2",
+            recipe_name: "달걀찜",
+            planned_servings: 1,
+          },
+        ]),
+      );
+
+      render(<ShoppingFlowScreen initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("김치찌개")).toBeTruthy();
+      });
+
+      expect(screen.getByText("2개 · 3인분")).toBeTruthy();
+      const allToggle = screen.getByRole("checkbox", { name: "전체 선택" });
+      expect(allToggle.getAttribute("aria-checked")).toBe("true");
+
+      await userEvent.click(allToggle);
+
+      expect(screen.getByText("0개 · 0인분")).toBeTruthy();
+      expect(allToggle.getAttribute("aria-checked")).toBe("false");
     });
 
     it("should disable create button when no meals selected", async () => {
@@ -645,6 +683,41 @@ describe("shopping flow screen", () => {
       });
 
       expect(mockPush).toHaveBeenCalledWith("/shopping/lists/list-1");
+    });
+
+    it("should navigate to the improved detail screen after app shopping list creation", async () => {
+      setMatchMedia(true);
+      fetchShoppingPreview.mockResolvedValue(
+        createPreviewData([
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_name: "김치찌개",
+            planned_servings: 2,
+          },
+        ]),
+      );
+
+      createShoppingList.mockResolvedValue({
+        id: "list-1",
+        title: "장보기 목록",
+        is_completed: false,
+        created_at: "2026-04-26T00:00:00.000Z",
+      });
+      fetchShoppingListDetail.mockResolvedValue(createShoppingDetail());
+
+      render(<ShoppingFlowScreen initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("김치찌개")).toBeTruthy();
+      });
+
+      await userEvent.click(screen.getByText("장보기 목록 만들기"));
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith("/shopping/lists/list-1");
+      });
+      expect(fetchShoppingListDetail).not.toHaveBeenCalled();
     });
 
     it("should show an 안내 modal instead of navigating when all needed ingredients are already in pantry", async () => {
@@ -966,22 +1039,11 @@ describe("shopping flow screen", () => {
       await userEvent.click(screen.getByText("장보기 목록 만들기"));
 
       await waitFor(() => {
-        expect(screen.getByText("STEP 2 / 2")).toBeTruthy();
+        expect(mockPush).toHaveBeenCalledWith("/shopping/lists/list-1");
       });
 
-      await userEvent.click(screen.getByRole("button", { name: "양파 2개 이미있음" }));
-
-      await waitFor(() => {
-        expect(
-          screen.getByText("팬트리 제외 상태를 바꾸지 못했어요.")
-        ).toBeTruthy();
-      });
-
-      expect(
-        screen
-          .getByRole("checkbox", { name: "양파 2개 구매 완료 표시" })
-          .getAttribute("aria-checked")
-      ).toBe("true");
+      expect(fetchShoppingListDetail).not.toHaveBeenCalled();
+      expect(updateShoppingListItem).not.toHaveBeenCalled();
     });
   });
 
