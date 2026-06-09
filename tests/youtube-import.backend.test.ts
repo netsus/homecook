@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import fixtureData from "@/qa/fixtures/slices-01-05.json";
+import { CANONICAL_COOKING_METHODS } from "@/lib/cooking-method-taxonomy";
 import type {
   YoutubeAuthorCommentProvider,
   YoutubeRecipeLlmExtractor,
@@ -501,6 +502,7 @@ const draftIngredientId = "550e8400-e29b-41d4-a716-446655441301";
 const saltDraftIngredientId = "550e8400-e29b-41d4-a716-446655441302";
 const mustardIngredientId = "550e8400-e29b-41d4-a716-446655441401";
 const recipeUrl = "https://www.youtube.com/watch?v=recipe12345";
+const cookingTaxonomyUrl = "https://www.youtube.com/watch?v=taxonomy123";
 const nonRecipeUrl = "https://youtu.be/nonrecipe123";
 const uncertainUrl = "https://www.youtube.com/watch?v=uncertain123";
 const incompleteUrl = "https://www.youtube.com/watch?v=incomplete123";
@@ -606,8 +608,62 @@ const bakingComponentDescription = [
   "제품 정보와 BGM은 더보기 링크를 확인해주세요.",
   "#베이킹 #타르트",
 ].join("\n");
+const cookingTaxonomyDescription = [
+  "새 조리법 테스트 레시피",
+  "",
+  "재료",
+  "새우 100g",
+  "마늘 2쪽",
+  "두부 1모",
+  "달걀 2개",
+  "고등어 1마리",
+  "감자 1개",
+  "면 1인분",
+  "채소 100g",
+  "반죽 1개",
+  "부침가루 50g",
+  "",
+  "만드는 법",
+  "1. 냉동 새우는 찬물에 해동해주세요.",
+  "2. 마늘은 곱게 다져주세요.",
+  "3. 두부는 한입 크기로 썰어주세요.",
+  "4. 달걀물을 팬에 얇게 부쳐주세요.",
+  "5. 고등어는 에어프라이어에 180도로 구워주세요.",
+  "6. 감자는 전자레인지에 3분 돌려주세요.",
+  "7. 남은 소스는 약불에서 졸여주세요.",
+  "8. 면은 끓는 물에 삶아요.",
+  "9. 채소는 찜기에 쪄요.",
+  "10. 반죽은 오븐에 구워주세요.",
+  "11. 부침가루는 물에 섞어주세요.",
+].join("\n");
 const ORIGINAL_YOUTUBE_IMPORT_FLAG = process.env.HOMECOOK_ENABLE_YOUTUBE_IMPORT;
 const ORIGINAL_PUBLIC_YOUTUBE_IMPORT_FLAG = process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT;
+
+function buildCookingTaxonomyMethodLookupRows() {
+  return [
+    ...CANONICAL_COOKING_METHODS.map((method) => ({
+      id: `method-${method.code}`,
+      code: method.code,
+      label: method.label,
+      color_key: method.color_key,
+      is_system: method.is_system,
+    })),
+    {
+      id: prepMethodId,
+      code: "prep",
+      label: "손질",
+      color_key: "gray",
+      is_system: true,
+    },
+    {
+      id: newMethodId,
+      code: "auto_salt",
+      label: "절이기",
+      color_key: "unassigned",
+      is_system: false,
+    },
+  ];
+}
 
 function restoreYoutubeImportEnv() {
   vi.unstubAllEnvs();
@@ -1980,34 +2036,7 @@ describe("20 youtube real import backend", () => {
       },
       insertResult: { data: null, error: { message: "should not insert" } },
       lookupRows: [
-        {
-          id: prepMethodId,
-          code: "prep",
-          label: "손질",
-          color_key: "gray",
-          is_system: true,
-        },
-        {
-          id: newMethodId,
-          code: "auto_salt",
-          label: "절이기",
-          color_key: "unassigned",
-          is_system: false,
-        },
-        {
-          id: mixMethodId,
-          code: "mix",
-          label: "무치기",
-          color_key: "green",
-          is_system: true,
-        },
-        {
-          id: grillMethodId,
-          code: "grill",
-          label: "굽기",
-          color_key: "brown",
-          is_system: true,
-        },
+        ...buildCookingTaxonomyMethodLookupRows(),
       ],
     });
     const sessionsTable = createYoutubeSessionsTable({});
@@ -2076,22 +2105,22 @@ describe("20 youtube real import backend", () => {
         is_incomplete: false,
         missing_fields: [],
         cooking_method: {
-          code: "prep",
-          label: "손질",
+          code: "slice",
+          label: "썰기",
         },
       },
       {
         step_number: 2,
         instruction: "그리고 소금에 버무려 10분간 절여준다",
         cooking_method: {
-          code: "auto_salt",
+          code: "pickle",
           label: "절이기",
         },
       },
     ]);
     expect(body.data.steps.map((step: { cooking_method: { code: string } }) =>
       step.cooking_method.code,
-    )).toEqual(["prep", "auto_salt", "prep", "mix", "grill"]);
+    )).toEqual(["slice", "pickle", "slice", "toss", "grill"]);
     expect(new Set(body.data.steps.map((step: { cooking_method: { code: string } }) =>
       step.cooking_method.code,
     )).size).toBeGreaterThan(1);
@@ -2428,6 +2457,133 @@ describe("20 youtube real import backend", () => {
       "후추",
       "밥",
     ]);
+  });
+
+  it("POST /api/v1/recipes/youtube/extract maps step text to taxonomy v2 cooking methods", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({
+        items: [
+          {
+            snippet: {
+              title: "새 조리법 테스트 레시피",
+              channelTitle: "집밥 채널",
+              description: cookingTaxonomyDescription,
+              tags: ["레시피", "조리법"],
+              categoryId: "26",
+              thumbnails: {
+                high: { url: "https://i.ytimg.com/vi/taxonomy123/hqdefault.jpg" },
+              },
+            },
+            contentDetails: {
+              duration: "PT2M",
+              caption: "false",
+            },
+          },
+        ],
+      })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ingredientsTable = createLookupTable({
+      data: [
+        { id: "ing-shrimp", standard_name: "새우" },
+        { id: "ing-garlic", standard_name: "마늘" },
+        { id: "ing-tofu", standard_name: "두부" },
+        { id: "ing-egg", standard_name: "달걀" },
+        { id: "ing-mackerel", standard_name: "고등어" },
+        { id: "ing-potato", standard_name: "감자" },
+        { id: "ing-noodle", standard_name: "면" },
+        { id: "ing-noodle-display", standard_name: "면 1인분" },
+        { id: "ing-vegetable", standard_name: "채소" },
+        { id: "ing-vegetable-display", standard_name: "채소 100g" },
+        { id: "ing-batter", standard_name: "반죽" },
+        { id: "ing-batter-display", standard_name: "반죽 1개" },
+        { id: "ing-pancake-mix", standard_name: "부침가루" },
+        { id: "ing-sauce", standard_name: "소스" },
+        { id: "ing-leftover-sauce", standard_name: "남은 소스" },
+      ],
+      error: null,
+    });
+    const ingredientSynonymsTable = createEmptyIngredientSynonymsTable();
+    const cookingMethodsTable = createCookingMethodsTable({
+      existingResult: {
+        data: {
+          id: newMethodId,
+          code: "auto_salt",
+          label: "절이기",
+          color_key: "unassigned",
+          is_system: false,
+        },
+        error: null,
+      },
+      insertResult: { data: null, error: { message: "should not insert" } },
+      lookupRows: buildCookingTaxonomyMethodLookupRows(),
+    });
+    const sessionsTable = createYoutubeSessionsTable({});
+    const dbClient = {
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsTable;
+        if (table === "ingredient_synonyms") return ingredientSynonymsTable;
+        if (table === "cooking_methods") return cookingMethodsTable;
+        if (table === "youtube_extraction_sessions") return sessionsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    };
+
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importExtractRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/extract", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: cookingTaxonomyUrl }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        title: "새 조리법 테스트 레시피",
+        blocking_issues: [],
+      },
+      error: null,
+    });
+    expect(body.data.steps.map((step: { cooking_method: { code: string } }) =>
+      step.cooking_method.code,
+    )).toEqual([
+      "thaw",
+      "mince",
+      "slice",
+      "pan_fry",
+      "air_fryer",
+      "microwave",
+      "reduce",
+      "parboil",
+      "steam",
+      "oven_bake",
+      "mix",
+    ]);
+    expect(body.data.steps.map((step: { cooking_method: { label: string } }) =>
+      step.cooking_method.label,
+    )).toEqual([
+      "해동",
+      "다지기",
+      "썰기",
+      "부치기",
+      "에어프라이어",
+      "전자레인지",
+      "졸이기",
+      "삶기",
+      "찌기",
+      "오븐굽기",
+      "섞기",
+    ]);
+    expect(body.data.new_cooking_methods).toEqual([]);
+    expect(cookingMethodsTable.insert).not.toHaveBeenCalled();
   });
 
   it("POST /api/v1/recipes/youtube/extract parses multi-component baking descriptions with v2 parser diagnostics", async () => {

@@ -5,6 +5,11 @@ import type { User } from "@supabase/supabase-js";
 import { fail, ok } from "@/lib/api/response";
 import { isYoutubeImportEnabled } from "@/lib/feature-flags";
 import {
+  COOKING_METHOD_SYNONYMS,
+  type CanonicalCookingMethodCode,
+  type CookingMethodSynonymEntry,
+} from "@/lib/cooking-method-taxonomy";
+import {
   getLegacyCategoryForIngredientSubcategoryCode,
   isValidIngredientCategory,
   isValidIngredientSubcategoryCode,
@@ -608,17 +613,14 @@ const NEW_COOKING_METHOD = {
   label: "절이기",
   color_key: "unassigned",
 } as const;
-const DEFAULT_STEP_METHOD_CODE = "prep";
-type SystemStepMethodCode =
-  | "prep"
-  | "mix"
-  | "grill"
-  | "stir_fry"
-  | "boil"
-  | "deep_fry"
-  | "steam"
-  | "blanch";
-type StepMethodCode = SystemStepMethodCode | typeof NEW_COOKING_METHOD.code;
+const LEGACY_DEFAULT_STEP_METHOD_CODE = "prep";
+type LegacyStepMethodCode = typeof LEGACY_DEFAULT_STEP_METHOD_CODE | typeof NEW_COOKING_METHOD.code;
+type StepMethodCode = CanonicalCookingMethodCode | LegacyStepMethodCode;
+type StepMethodCandidates = readonly [StepMethodCode, ...StepMethodCode[]];
+const DEFAULT_STEP_METHOD_CODES = [
+  "slice",
+  LEGACY_DEFAULT_STEP_METHOD_CODE,
+] as const satisfies StepMethodCandidates;
 
 type DescriptionSection = "ingredients" | "steps";
 type YoutubeDescriptionParserVersion = "legacy" | "v2" | "shadow";
@@ -8167,7 +8169,7 @@ async function ensureGeneratedCookingMethod(dbClient: DbClient) {
   };
 }
 
-async function findCookingMethodsByCode(dbClient: DbClient, codes: StepMethodCode[]) {
+async function findCookingMethodsByCode(dbClient: DbClient, codes: readonly StepMethodCode[]) {
   const uniqueCodes = [...new Set(codes)];
 
   if (uniqueCodes.length === 0) {
@@ -8205,49 +8207,172 @@ async function findCookingMethodsByCode(dbClient: DbClient, codes: StepMethodCod
   };
 }
 
-function inferStepCookingMethodCode(instruction: string): StepMethodCode {
+function uniqueStepMethodCodes(codes: readonly StepMethodCode[]) {
+  return [...new Set(codes)];
+}
+
+function withLegacyCookingMethodFallbacks(primaryCode: StepMethodCode): StepMethodCandidates {
+  const fallbackByCode: Partial<Record<StepMethodCode, StepMethodCode[]>> = {
+    slice: [LEGACY_DEFAULT_STEP_METHOD_CODE],
+    mince: [LEGACY_DEFAULT_STEP_METHOD_CODE],
+    thaw: [LEGACY_DEFAULT_STEP_METHOD_CODE],
+    pre_season: [LEGACY_DEFAULT_STEP_METHOD_CODE],
+    pickle: [NEW_COOKING_METHOD.code, LEGACY_DEFAULT_STEP_METHOD_CODE],
+    parboil: ["boil"],
+    pan_fry: ["grill", "deep_fry"],
+    toss: ["mix"],
+    braise: ["boil"],
+    reduce: ["boil"],
+    microwave: [LEGACY_DEFAULT_STEP_METHOD_CODE],
+    oven_bake: ["grill"],
+    air_fryer: ["grill", "deep_fry"],
+  };
+  const candidates = uniqueStepMethodCodes([
+    primaryCode,
+    ...(fallbackByCode[primaryCode] ?? []),
+    ...DEFAULT_STEP_METHOD_CODES,
+  ]);
+
+  return [
+    primaryCode,
+    ...candidates.filter((code) => code !== primaryCode),
+  ];
+}
+
+function normalizeStepMethodText(instruction: string) {
+  return instruction.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function matchesCookingMethodSynonym(
+  normalized: string,
+  synonym: CookingMethodSynonymEntry,
+) {
+  const synonymText = synonym.synonym.toLowerCase().trim();
+
+  if (!synonymText) {
+    return false;
+  }
+
+  if (synonym.match_kind === "exact") {
+    return normalized === synonymText;
+  }
+
+  if (synonym.match_kind === "regex") {
+    try {
+      return new RegExp(synonymText, "u").test(normalized);
+    } catch {
+      return false;
+    }
+  }
+
+  return normalized.includes(synonymText);
+}
+
+function inferCookingMethodCodeFromSynonyms(normalized: string): CanonicalCookingMethodCode | null {
+  const synonym = COOKING_METHOD_SYNONYMS.find((candidate) =>
+    candidate.is_active && matchesCookingMethodSynonym(normalized, candidate),
+  );
+
+  return synonym?.method_code ?? null;
+}
+
+function inferStepCookingMethodCodes(instruction: string): StepMethodCandidates {
   const normalized = instruction.toLowerCase();
 
-  if (/(절여(?:준다|주세요|요|둔다|두|놓)|절이(?:고|기|면|세요|다)|절인다|재워|재우|숙성)/u.test(normalized)) {
-    return NEW_COOKING_METHOD.code;
+  if (/(에어\s*프라이어|에어프라이어|air\s*fryer)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("air_fryer");
   }
 
-  if (/(굽|구워|구우|토스트|바삭하게|노릇)/u.test(normalized)) {
-    return "grill";
+  if (/(전자\s*레인지|전자렌지|전자레인지|렌지에|레인지에|microwave)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("microwave");
   }
 
-  if (/(볶)/u.test(normalized)) {
-    return "stir_fry";
+  if (/(오븐|oven)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("oven_bake");
   }
 
-  if (/(끓|삶|졸|조려|조리듯)/u.test(normalized)) {
-    return "boil";
+  if (/(튀김|튀겨|튀기|튀긴|deep\s*fry)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("deep_fry");
   }
 
-  if (/(튀)/u.test(normalized)) {
-    return "deep_fry";
+  if (/(부쳐|부치|전을\s*부|전\s*부쳐|팬에\s*얇게|pan\s*fry)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("pan_fry");
   }
 
-  if (/(찐|쪄|찌기|찐다)/u.test(normalized)) {
-    return "steam";
+  if (/(볶|볶아|볶음|stir\s*fry)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("stir_fry");
   }
 
-  if (/(데쳐|데치|헹궈|헹구)/u.test(normalized)) {
-    return "blanch";
+  if (/(찜기|찐|쪄|찌기|찐다|쪄요|steam)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("steam");
   }
 
-  if (/(버무|섞|비벼|비비|무쳐|무치|풀어|맞춰|발라|올려|뿌려|갈아\s*넣)/u.test(normalized)) {
-    return "mix";
+  if (/(데쳐|데치|블랜칭|살짝\s*삶|헹궈|헹구)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("blanch");
   }
 
-  return DEFAULT_STEP_METHOD_CODE;
+  if (/(졸|끓여\s*줄|끓여줄|줄여|reduce)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("reduce");
+  }
+
+  if (/(조려|조림|조리듯|brais)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("braise");
+  }
+
+  if (/(삶|삶아|삶으|boil\s+in)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("parboil");
+  }
+
+  if (/(끓|끓여|끓이|boil)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("boil");
+  }
+
+  if (/(굽|구워|구우|토스트|바삭하게|노릇|grill|toast)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("grill");
+  }
+
+  if (/(절여(?:준다|주세요|요|둔다|두|놓)|절이(?:고|기|면|세요|다)|절인다|pickle)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("pickle");
+  }
+
+  if (/(재워|재우|밑간|숙성|마리네이드|marinat)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("pre_season");
+  }
+
+  if (/(해동|녹여|thaw)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("thaw");
+  }
+
+  if (/(버무|무쳐|무치|toss)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("toss");
+  }
+
+  if (/(섞|비벼|비비|풀어|맞춰|발라|올려|뿌려|갈아\s*넣|mix)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("mix");
+  }
+
+  if (/(다져|다지|다진|mince)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("mince");
+  }
+
+  if (/(썰|잘라|자르|채썰|포를\s*떠|필러|slice|cut)/u.test(normalized)) {
+    return withLegacyCookingMethodFallbacks("slice");
+  }
+
+  const synonymCode = inferCookingMethodCodeFromSynonyms(normalizeStepMethodText(instruction));
+  if (synonymCode) {
+    return withLegacyCookingMethodFallbacks(synonymCode);
+  }
+
+  return DEFAULT_STEP_METHOD_CODES;
 }
 
 async function resolveCookingMethodsForSteps(dbClient: DbClient, parsedSteps: string[]) {
-  const inferredCodes: StepMethodCode[] = parsedSteps.length > 0
-    ? parsedSteps.map(inferStepCookingMethodCode)
-    : [DEFAULT_STEP_METHOD_CODE];
-  const lookup = await findCookingMethodsByCode(dbClient, inferredCodes);
+  const inferredCodeCandidates: StepMethodCandidates[] = parsedSteps.length > 0
+    ? parsedSteps.map(inferStepCookingMethodCodes)
+    : [DEFAULT_STEP_METHOD_CODES];
+  const lookupCodes = uniqueStepMethodCodes(inferredCodeCandidates.flat());
+  const lookup = await findCookingMethodsByCode(dbClient, lookupCodes);
 
   if (lookup.error) {
     return {
@@ -8258,10 +8383,14 @@ async function resolveCookingMethodsForSteps(dbClient: DbClient, parsedSteps: st
     };
   }
 
-  const missingInferredMethod = inferredCodes.some((code) => !lookup.methodsByCode.has(code));
-  let fallbackMethod = lookup.methodsByCode.get(DEFAULT_STEP_METHOD_CODE)
+  const findAvailableMethod = (codes: readonly StepMethodCode[]) =>
+    codes.map((code) => lookup.methodsByCode.get(code)).find(Boolean) ?? null;
+  const missingInferredMethod = inferredCodeCandidates.some((candidates) =>
+    !findAvailableMethod(candidates),
+  );
+  let fallbackMethod = findAvailableMethod(DEFAULT_STEP_METHOD_CODES)
     ?? lookup.methodsByCode.get(NEW_COOKING_METHOD.code)
-    ?? inferredCodes.map((code) => lookup.methodsByCode.get(code)).find(Boolean)
+    ?? lookupCodes.map((code) => lookup.methodsByCode.get(code)).find(Boolean)
     ?? null;
   const newCookingMethods: YoutubeExtractedCookingMethod[] = [];
 
@@ -8287,8 +8416,8 @@ async function resolveCookingMethodsForSteps(dbClient: DbClient, parsedSteps: st
 
   return {
     error: null,
-    methods: inferredCodes.map((code) =>
-      lookup.methodsByCode.get(code) ?? fallbackMethod,
+    methods: inferredCodeCandidates.map((candidates) =>
+      findAvailableMethod(candidates) ?? fallbackMethod,
     ).filter((method): method is YoutubeExtractedCookingMethod => method !== null),
     fallbackMethod,
     newCookingMethods,
