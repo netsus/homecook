@@ -332,25 +332,38 @@ function buildShoppingMealSelection({
   return { shoppingMeals, splitMeals };
 }
 
-function formatHistoryDateLabel(dateKey: string) {
+function formatHistoryCompactDateLabel(dateKey: string) {
   const [, month, day] = dateKey.split("-").map(Number);
 
   if (!month || !day) {
     return dateKey;
   }
 
-  return `${month}월 ${day}일`;
+  return `${month}/${day}`;
 }
 
 function buildShoppingHistoryTitle(row: ShoppingListHistoryRow) {
-  const startLabel = formatHistoryDateLabel(row.date_range_start);
-  const endLabel = formatHistoryDateLabel(row.date_range_end);
-  const mealRange =
-    row.date_range_start === row.date_range_end
-      ? startLabel
-      : `${startLabel} ~ ${endLabel}`;
+  const [, startMonth, startDay] = row.date_range_start.split("-").map(Number);
+  const [, endMonth, endDay] = row.date_range_end.split("-").map(Number);
 
-  return `${mealRange} 끼니`;
+  if (!startMonth || !startDay || !endMonth || !endDay) {
+    return row.date_range_start === row.date_range_end
+      ? formatHistoryCompactDateLabel(row.date_range_start)
+      : [
+          formatHistoryCompactDateLabel(row.date_range_start),
+          formatHistoryCompactDateLabel(row.date_range_end),
+        ].join("~");
+  }
+
+  if (row.date_range_start === row.date_range_end) {
+    return `${startMonth}/${startDay}`;
+  }
+
+  if (startMonth === endMonth) {
+    return `${startMonth}/${startDay}~${endDay}`;
+  }
+
+  return `${startMonth}/${startDay}~${endMonth}/${endDay}`;
 }
 
 export async function POST(request: Request) {
