@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>COOK_MODE Whole Board Vision</title>
+    <style>
+      :root {
+        --ink: #f7f9fb;
+        --ink-soft: #cbd5df;
+        --muted: #8f9daa;
+        --line: rgba(255, 255, 255, 0.16);
+        --line-strong: rgba(255, 255, 255, 0.26);
+        --surface: #111923;
+        --surface-2: #101820;
+        --surface-3: #111923;
+        --board: #111923;
+        --brand: #00a1ff;
+        --brand-deep: #0087d7;
+        --brand-soft: rgba(0, 161, 255, 0.13);
+        --amount: var(--brand);
+        --amount-soft: var(--brand-soft);
+        --prep: #8ea0ad;
+        --fry: #ff8c42;
+        --boil: #e8453c;
+        --simmer: #4a90d9;
+        --season: #2ea67a;
+        --radius-control: 10px;
+        --radius-card: 12px;
+        --radius-panel: 14px;
+        --radius-shell: 28px;
+        --shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        background:
+          linear-gradient(90deg, rgba(11, 16, 22, 0.045) 1px, transparent 1px),
+          linear-gradient(180deg, rgba(11, 16, 22, 0.045) 1px, transparent 1px),
+          #f6f9fb;
+        background-size: 28px 28px;
+        color: #20252b;
+        font-family: "Avenir Next", "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+        letter-spacing: 0;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .page {
+        width: min(100%, 1360px);
+        margin: 0 auto;
+        padding: 30px clamp(16px, 3vw, 42px) 46px;
+      }
+
+      .brief {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 22px;
+        align-items: end;
+        margin-bottom: 22px;
+      }
+
+      .brief h1 {
+        margin: 0;
+        color: #1f252b;
+        font-size: 32px;
+        font-weight: 900;
+        line-height: 1.12;
+      }
+
+      .brief p {
+        max-width: 820px;
+        margin: 10px 0 0;
+        color: #4a5561;
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.5;
+      }
+
+      .badges {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .badges span {
+        border: 1px solid #cbd7e2;
+        border-radius: 999px;
+        background: #ffffff;
+        padding: 8px 12px;
+        color: #43505c;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .showcase {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 42px;
+        align-items: stretch;
+      }
+
+      .mobile-wrap {
+        width: min(100%, 430px);
+        margin: 0 auto;
+      }
+
+      .desktop-wrap {
+        width: min(100%, 1280px);
+        margin: 0 auto;
+      }
+
+      .caption {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin: 0 0 10px;
+        color: #3b4652;
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .caption small {
+        color: #73808d;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .phone-frame {
+        width: min(100%, 390px);
+        margin: 0 auto;
+        overflow: hidden;
+        border: 10px solid #05080c;
+        border-radius: 34px;
+        background: var(--board);
+        box-shadow: var(--shadow);
+      }
+
+      .phone-screen {
+        min-height: 824px;
+        background: #111923;
+        color: var(--ink);
+        padding: 20px 16px 18px;
+      }
+
+      .phone-top {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: start;
+        margin-bottom: 13px;
+      }
+
+      .icon-button,
+      .desktop-icon-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 42px;
+        height: 42px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--ink);
+        font-size: 22px;
+        font-weight: 900;
+      }
+
+      .title-block h2,
+      .desktop-title h2 {
+        margin: 0;
+        color: var(--ink);
+        font-size: 22px;
+        font-weight: 900;
+        line-height: 1.12;
+      }
+
+      .title-block p,
+      .desktop-title p {
+        margin: 6px 0 0;
+        color: var(--ink-soft);
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.25;
+      }
+
+      .wake-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 0 10px;
+        color: var(--ink-soft);
+        font-size: 11px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .wake-pill::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #30d979;
+        box-shadow: 0 0 0 4px rgba(48, 217, 121, 0.12);
+      }
+
+      .mobile-board {
+        display: grid;
+        gap: 10px;
+      }
+
+      .mobile-section,
+      .desktop-panel {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-panel);
+        background: rgba(255, 255, 255, 0.065);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      }
+
+      .mobile-section {
+        padding: 12px;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 9px;
+      }
+
+      .section-head h3 {
+        margin: 0;
+        color: var(--ink);
+        font-size: 15px;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .section-head span {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .ingredient-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+      }
+
+      .ingredient-tile {
+        min-height: 55px;
+        border: 1px solid rgba(0, 161, 255, 0.28);
+        border-radius: var(--radius-card);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 161, 255, 0.055)),
+          rgba(255, 255, 255, 0.04);
+        padding: 9px 10px;
+      }
+
+      .ingredient-tile b {
+        display: block;
+        overflow: hidden;
+        color: var(--ink-soft);
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1.1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .ingredient-tile strong {
+        display: block;
+        margin-top: 5px;
+        color: var(--amount);
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1;
+        text-shadow: 0 0 18px rgba(0, 161, 255, 0.25);
+      }
+
+      .step-list {
+        display: grid;
+        gap: 7px;
+      }
+
+      .step-row {
+        display: grid;
+        grid-template-columns: 30px minmax(0, 1fr);
+        gap: 9px;
+        align-items: center;
+        min-height: 69px;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: var(--radius-card);
+        background: rgba(255, 255, 255, 0.055);
+        padding: 8px;
+      }
+
+      .step-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: var(--radius-control);
+        background: var(--brand);
+        border: 1px solid rgba(0, 161, 255, 0.2);
+        color: #ffffff;
+        font-size: 16px;
+        font-weight: 900;
+      }
+
+      .step-main {
+        min-width: 0;
+      }
+
+      .step-line {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+
+      .method {
+        display: inline-flex;
+        align-items: center;
+        min-height: 22px;
+        border-radius: 999px;
+        padding: 0 8px;
+        color: #10151b;
+        font-size: 11px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .method.prep {
+        background: var(--prep);
+      }
+
+      .method.fry {
+        background: var(--fry);
+      }
+
+      .method.boil {
+        background: var(--boil);
+        color: #ffffff;
+      }
+
+      .method.simmer {
+        background: var(--simmer);
+        color: #ffffff;
+      }
+
+      .method.season {
+        background: var(--season);
+        color: #ffffff;
+      }
+
+      .step-line b {
+        color: var(--ink);
+        font-size: 15px;
+        font-weight: 900;
+        line-height: 1.18;
+        word-break: keep-all;
+      }
+
+      .phone-actions {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 9px;
+        margin-top: 10px;
+      }
+
+      .secondary-button,
+      .primary-button {
+        min-height: 52px;
+        border: 0;
+        border-radius: var(--radius-card);
+        font-size: 15px;
+        font-weight: 900;
+      }
+
+      .secondary-button {
+        background: rgba(255, 255, 255, 0.09);
+        color: var(--ink);
+      }
+
+      .primary-button {
+        background: var(--brand);
+        color: #ffffff;
+        box-shadow: 0 12px 24px rgba(0, 161, 255, 0.26);
+      }
+
+      .desktop-frame {
+        overflow: hidden;
+        border: 10px solid #05080c;
+        border-radius: var(--radius-shell);
+        background: var(--board);
+        box-shadow: var(--shadow);
+      }
+
+      .desktop-board {
+        min-height: 760px;
+        background: #111923;
+        color: var(--ink);
+        padding: 26px;
+      }
+
+      .desktop-top {
+        display: grid;
+        grid-template-columns: 48px minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .desktop-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .desktop-grid {
+        display: grid;
+        grid-template-columns: minmax(260px, 0.82fr) minmax(0, 1.35fr);
+        gap: 16px;
+      }
+
+      .desktop-panel {
+        padding: 18px;
+      }
+
+      .desktop-panel .section-head h3 {
+        font-size: 18px;
+      }
+
+      .desktop-ingredients {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .desktop-ingredients .ingredient-tile {
+        min-height: 79px;
+        padding: 13px;
+      }
+
+      .desktop-ingredients .ingredient-tile b {
+        font-size: 14px;
+      }
+
+      .desktop-ingredients .ingredient-tile strong {
+        font-size: 30px;
+      }
+
+      .desktop-steps {
+        display: grid;
+        gap: 10px;
+      }
+
+      .desktop-steps .step-row {
+        grid-template-columns: 40px minmax(0, 1fr);
+        min-height: 88px;
+        padding: 11px;
+      }
+
+      .desktop-steps .step-number {
+        width: 40px;
+        height: 40px;
+        font-size: 22px;
+      }
+
+      .desktop-steps .step-line b {
+        font-size: 22px;
+        line-height: 1.15;
+      }
+
+      .desktop-steps .method {
+        min-height: 26px;
+        padding: 0 10px;
+        font-size: 12px;
+      }
+
+      .desktop-bottom {
+        display: grid;
+        grid-template-columns: 110px 180px;
+        justify-content: end;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      @media (max-width: 760px) {
+        .brief {
+          grid-template-columns: 1fr;
+        }
+
+        .badges {
+          justify-content: flex-start;
+        }
+      }
+
+      @media (max-width: 460px) {
+        .page {
+          padding: 20px 14px 34px;
+        }
+
+        .brief h1 {
+          font-size: 27px;
+        }
+
+        .brief p {
+          font-size: 14px;
+        }
+
+        .caption {
+          margin-top: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="brief" aria-label="초안 설명">
+        <div>
+          <h1>COOK_MODE Whole Board - 한 장 조리 보드</h1>
+          <p>
+            전체 재료와 전체 조리 순서를 같은 화면에 고정해 두는 초안입니다.
+            기본 레시피는 한 화면, 긴 레시피는 보드 스크롤로 보는 방식입니다.
+          </p>
+        </div>
+        <div class="badges" aria-label="디자인 기준">
+          <span>전체 재료</span>
+          <span>전체 단계</span>
+          <span>이전/다음 없음</span>
+          <span>긴 레시피 스크롤</span>
+          <span>브랜드 파랑 수량</span>
+        </div>
+      </section>
+
+      <section class="showcase" aria-label="앱과 웹 초안">
+        <div class="mobile-wrap">
+          <p class="caption">앱 화면 초안 <small>390 x 844 기준</small></p>
+          <article class="phone-frame" data-shot="mobile-board">
+            <div class="phone-screen">
+              <header class="phone-top">
+                <button class="icon-button" aria-label="취소" type="button">‹</button>
+                <div class="title-block">
+                  <h2>돼지고기 김치찌개</h2>
+                  <p>요리모드 · 3인분 · 6월 12일 저녁</p>
+                </div>
+                <span class="wake-pill">화면 안 꺼짐</span>
+              </header>
+
+              <div class="mobile-board">
+                <section class="mobile-section" aria-label="전체 재료">
+                  <div class="section-head">
+                    <h3>전체 재료</h3>
+                  </div>
+                  <div class="ingredient-grid">
+                    <div class="ingredient-tile">
+                      <b>배추김치</b>
+                      <strong>300g</strong>
+                    </div>
+                    <div class="ingredient-tile">
+                      <b>돼지고기</b>
+                      <strong>250g</strong>
+                    </div>
+                    <div class="ingredient-tile">
+                      <b>양파</b>
+                      <strong>1/2개</strong>
+                    </div>
+                    <div class="ingredient-tile">
+                      <b>두부</b>
+                      <strong>1/2모</strong>
+                    </div>
+                    <div class="ingredient-tile">
+                      <b>물</b>
+                      <strong>650ml</strong>
+                    </div>
+                    <div class="ingredient-tile">
+                      <b>고춧가루</b>
+                      <strong>1큰술</strong>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="mobile-section" aria-label="전체 조리 순서">
+                  <div class="section-head">
+                    <h3>전체 조리 순서</h3>
+                  </div>
+                  <div class="step-list">
+                    <article class="step-row">
+                      <div class="step-number">1</div>
+                      <div class="step-main">
+                        <div class="step-line">
+                          <span class="method prep">준비</span>
+                          <b>김치와 양파를 한입 크기로 썰기</b>
+                        </div>
+                      </div>
+                    </article>
+                    <article class="step-row">
+                      <div class="step-number">2</div>
+                      <div class="step-main">
+                        <div class="step-line">
+                          <span class="method fry">볶기</span>
+                          <b>고기와 김치를 냄비에서 볶기</b>
+                        </div>
+                      </div>
+                    </article>
+                    <article class="step-row">
+                      <div class="step-number">3</div>
+                      <div class="step-main">
+                        <div class="step-line">
+                          <span class="method boil">끓이기</span>
+                          <b>물과 고춧가루를 넣고 끓이기</b>
+                        </div>
+                      </div>
+                    </article>
+                    <article class="step-row">
+                      <div class="step-number">4</div>
+                      <div class="step-main">
+                        <div class="step-line">
+                          <span class="method simmer">졸이기</span>
+                          <b>두부 넣고 국물 배게 끓이기</b>
+                        </div>
+                      </div>
+                    </article>
+                    <article class="step-row">
+                      <div class="step-number">5</div>
+                      <div class="step-main">
+                        <div class="step-line">
+                          <span class="method season">간</span>
+                          <b>간 보고 김칫국물로 맞추기</b>
+                        </div>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+              </div>
+
+              <div class="phone-actions">
+                <button class="secondary-button" type="button">취소</button>
+                <button class="primary-button" type="button">요리 완료</button>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="desktop-wrap">
+          <p class="caption">웹/태블릿 화면 초안 <small>1280 이상 기준</small></p>
+          <article class="desktop-frame" data-shot="desktop-board">
+            <div class="desktop-board">
+              <header class="desktop-top">
+                <button class="desktop-icon-button" aria-label="취소" type="button">‹</button>
+                <div class="desktop-title">
+                  <h2>돼지고기 김치찌개</h2>
+                  <p>요리모드 · 3인분 · 6월 12일 저녁</p>
+                </div>
+                <div class="desktop-actions">
+                  <span class="wake-pill">화면 안 꺼짐</span>
+                </div>
+              </header>
+
+              <div class="desktop-grid">
+                <section class="desktop-panel" aria-label="전체 재료">
+                  <div class="section-head">
+                    <h3>전체 재료</h3>
+                  </div>
+                  <div class="desktop-ingredients">
+                    <div class="ingredient-tile">
+                      <b>배추김치</b>
+                      <strong>300g</strong>
+                    </div>
+                    <div class="ingredient-tile">
+                      <b>돼지고기</b>
+                      <strong>250g</strong>
+                    </div>
+                    <div class="ingredient-tile">
+                      <b>양파</b>
+                      <strong>1/2개</strong>
+                    </div>
+                    <div class="ingredient-tile">
+                      <b>두부</b>
+                      <strong>1/2모</strong>
+                    </div>
+                    <div class="ingredient-tile">
+                      <b>물</b>
+                      <strong>650ml</strong>
+                    </div>
+                    <div class="ingredient-tile">
+                      <b>고춧가루</b>
+                      <strong>1큰술</strong>
+                    </div>
+                    <div class="ingredient-tile">
+                      <b>대파</b>
+                      <strong>1대</strong>
+                    </div>
+                    <div class="ingredient-tile">
+                      <b>다진 마늘</b>
+                      <strong>1큰술</strong>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="desktop-panel" aria-label="전체 조리 순서">
+                  <div class="section-head">
+                    <h3>전체 조리 순서</h3>
+                  </div>
+                  <div class="desktop-steps">
+                    <article class="step-row">
+                      <div class="step-number">1</div>
+                      <div class="step-main">
+                        <div class="step-line">
+                          <span class="method prep">준비</span>
+                          <b>김치와 양파를 한입 크기로 썰기</b>
+                        </div>
+                      </div>
+                    </article>
+                    <article class="step-row">
+                      <div class="step-number">2</div>
+                      <div class="step-main">
+                        <div class="step-line">
+                          <span class="method fry">볶기</span>
+                          <b>고기와 김치를 냄비에서 충분히 볶기</b>
+                        </div>
+                      </div>
+                    </article>
+                    <article class="step-row">
+                      <div class="step-number">3</div>
+                      <div class="step-main">
+                        <div class="step-line">
+                          <span class="method boil">끓이기</span>
+                          <b>물, 고춧가루, 마늘을 넣고 끓이기</b>
+                        </div>
+                      </div>
+                    </article>
+                    <article class="step-row">
+                      <div class="step-number">4</div>
+                      <div class="step-main">
+                        <div class="step-line">
+                          <span class="method simmer">졸이기</span>
+                          <b>두부와 대파 넣고 국물 배게 끓이기</b>
+                        </div>
+                      </div>
+                    </article>
+                    <article class="step-row">
+                      <div class="step-number">5</div>
+                      <div class="step-main">
+                        <div class="step-line">
+                          <span class="method season">간</span>
+                          <b>간을 보고 부족하면 김칫국물로 맞추기</b>
+                        </div>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+              </div>
+
+              <div class="desktop-bottom">
+                <button class="secondary-button" type="button">취소</button>
+                <button class="primary-button" type="button">요리 완료</button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
