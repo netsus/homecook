@@ -514,7 +514,18 @@ export function RecipeBookDetailScreen({
           </div>
           {renderDesktopBookActions()}
         </div>
-        {children}
+        <div className="web-recipebook-detail-layout">
+          <DesktopRecipeBookRail
+            bookName={currentBookName}
+            bookType={bookType}
+            hasNext={hasNext}
+            items={items}
+            recipeCount={recipeCount}
+          />
+          <section className="web-recipebook-detail-main" aria-label="레시피 목록">
+            {children}
+          </section>
+        </div>
         {toast ? (
           <div
             className={`fixed inset-x-4 bottom-20 z-50 mx-auto max-w-md rounded-[var(--radius-lg)] px-4 py-3 text-center text-sm font-semibold shadow-lg ${
@@ -771,6 +782,57 @@ export function RecipeBookDetailScreen({
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
+
+function DesktopRecipeBookRail({
+  bookName,
+  bookType,
+  hasNext,
+  items,
+  recipeCount,
+}: {
+  bookName: string;
+  bookType: RecipeBookType;
+  hasNext: boolean;
+  items: RecipeBookRecipeItem[];
+  recipeCount: number | null;
+}) {
+  return (
+    <aside
+      className="web-recipebook-detail-rail"
+      data-testid="recipebook-detail-toc"
+    >
+      <div className={`web-recipebook-detail-cover web-recipebook-detail-cover-${bookType}`}>
+        <span className="web-recipebook-detail-cover-mark" aria-hidden="true">
+          {getBookEmoji(bookType, bookName)}
+        </span>
+        <strong>{bookName}</strong>
+        <span>{recipeCount === null ? "불러오는 중" : `${recipeCount}개 레시피`}</span>
+      </div>
+      <nav className="web-recipebook-toc" aria-label={`${bookName} 목차`}>
+        <h2>목차</h2>
+        {items.length > 0 ? (
+          <ol>
+            {items.map((item, index) => (
+              <li key={item.recipe_id}>
+                <a href={`#recipebook-recipe-${item.recipe_id}`}>
+                  <b>{String(index + 1).padStart(2, "0")}</b>
+                  <span>{item.title}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p>레시피가 담기면 목차가 표시돼요.</p>
+        )}
+        {hasNext ? (
+          <p className="web-recipebook-toc-more">
+            아래로 스크롤하면 더 많은 레시피를 이어서 불러와요.
+          </p>
+        ) : null}
+      </nav>
+    </aside>
+  );
+}
 
 function RecipeBookProfilePill() {
   return (
@@ -1192,10 +1254,10 @@ function MobileRecipeBookDetailView({
         onMenuToggle={onMenuToggle}
         onRenameStart={onRenameStart}
       />
-      <MobileRecipeBookSummary
+      <MobileRecipeBookToc
         bookName={bookName}
         bookType={bookType}
-        count={items.length}
+        items={items}
       />
 
       <div
@@ -1278,7 +1340,7 @@ function MobileRecipeBookAppBar({
     >
       <Link
         aria-label="뒤로 가기"
-        className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start text-[var(--foreground)]"
+        className="absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-[var(--foreground)]"
         href={backHref}
       >
         <svg
@@ -1294,17 +1356,17 @@ function MobileRecipeBookAppBar({
           <path d="m15 18-6-6 6-6" />
         </svg>
       </Link>
-      <h1 className="max-w-[190px] truncate text-center text-[18px] font-extrabold leading-none text-[var(--foreground)] min-[390px]:max-w-[230px]">
-        {bookName}
+      <h1 className="max-w-[190px] truncate text-center text-[18px] font-extrabold leading-none text-[var(--brand)] min-[390px]:max-w-[230px]">
+        목차
       </h1>
       {canManageBook ? (
-        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+        <div className="absolute right-2 top-1/2 -translate-y-1/2">
           <button
             aria-controls="recipebook-detail-book-menu"
             aria-expanded={isMenuOpen}
             aria-haspopup="menu"
             aria-label={`${bookName} 옵션 메뉴`}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)] text-[18px] font-bold leading-none text-[var(--text-3)]"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface)] text-[18px] font-bold leading-none text-[var(--text-3)]"
             onClick={onMenuToggle}
             type="button"
           >
@@ -1341,37 +1403,54 @@ function MobileRecipeBookAppBar({
   );
 }
 
-function MobileRecipeBookSummary({
+function MobileRecipeBookToc({
   bookName,
   bookType,
-  count,
+  items,
 }: {
   bookName: string;
   bookType: RecipeBookType;
-  count: number;
+  items: RecipeBookRecipeItem[];
 }) {
   return (
     <section
-      className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5"
+      className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-4 py-4"
       data-testid="recipebook-detail-header"
     >
-      <div className="flex items-center gap-[14px]">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-card)] bg-[var(--success-soft)] text-[26px]">
-          <span aria-hidden="true">{getBookEmoji(bookType, bookName)}</span>
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <h2 className="truncate text-[17px] font-extrabold leading-[1.3] text-[var(--foreground)]">
-              {bookName}
+      <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3 shadow-[var(--shadow-1)]">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-[16px] font-extrabold leading-[1.25] text-[var(--foreground)]">
+              목차
             </h2>
-            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-extrabold leading-[1.2] text-[var(--text-3)] bg-[var(--surface-fill)]">
-              {BOOK_BADGE_LABEL[bookType]}
-            </span>
+            <p className="mt-0.5 truncate text-[12px] font-bold leading-[1.3] text-[var(--text-3)]">
+              {bookName} · {items.length}개 레시피
+            </p>
           </div>
-          <p className="mt-0.5 text-[12px] font-medium leading-[1.3] text-[var(--text-3)]">
-            {count}개 레시피
-          </p>
+          <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-extrabold leading-[1.2] text-[var(--brand)] bg-[var(--brand-soft)]">
+            {BOOK_BADGE_LABEL[bookType]}
+          </span>
         </div>
+        <nav className="grid gap-1.5" aria-label={`${bookName} 목차`}>
+          {items.slice(0, 5).map((item, index) => (
+            <a
+              className="grid min-h-[44px] grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-2 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface-fill)] px-2.5 text-[12px] font-extrabold text-[var(--text-2)]"
+              href={`#recipebook-recipe-${item.recipe_id}`}
+              key={item.recipe_id}
+            >
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--brand-soft)] text-[11px] text-[var(--brand)]">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="truncate">{item.title}</span>
+              <span className="text-[11px] text-[var(--text-3)]">보기</span>
+            </a>
+          ))}
+          {items.length > 5 ? (
+            <p className="px-1 pt-1 text-[11px] font-bold text-[var(--text-3)]">
+              아래 목록에서 {items.length - 5}개 레시피를 더 볼 수 있어요.
+            </p>
+          ) : null}
+        </nav>
       </div>
     </section>
   );
@@ -1387,8 +1466,9 @@ function MobileRecipeBookRecipeCard({
 }: RecipeItemCardProps) {
   return (
     <article
-      className="flex min-h-[82px] items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
+      className="flex min-h-[82px] scroll-mt-16 items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
       data-testid={`recipe-item-${item.recipe_id}`}
+      id={`recipebook-recipe-${item.recipe_id}`}
       role="listitem"
     >
       <Link
@@ -1665,6 +1745,7 @@ function RecipeItemCard({
     <div
       className="web-recipebook-detail-card"
       data-testid={`recipe-item-${item.recipe_id}`}
+      id={`recipebook-recipe-${item.recipe_id}`}
       role="listitem"
     >
       <Link href={recipeHref}>

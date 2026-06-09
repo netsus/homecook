@@ -7,7 +7,7 @@
 ## Branches
 
 - 백엔드: N/A (FE-only design/docs lock)
-- 프론트엔드: `feature/fe-recipebook-diary-port`
+- 프론트엔드: `feature/recipebook-diary-service`
 - Stage 1 문서 브랜치: `docs/recipebook-diary-port`
 
 ## In Scope
@@ -15,7 +15,7 @@
 - 화면:
   - `MYPAGE`: 레시피북 목록을 작은 책/책장 형태로 표현하되 기존 생성/수정/삭제/상세 진입 흐름 유지
   - `RECIPEBOOK_DETAIL`: 웹에서 왼쪽 목차/책 정보 rail + 오른쪽 레시피 목록/관리 영역으로 분리
-  - `RECIPEBOOK_DETAIL`: 모바일에서 표지/요약 + 섹션/카드형 목록으로 다이어리 감성 유지
+  - `RECIPEBOOK_DETAIL`: 모바일에서 상단 목차 + 섹션/카드형 목록으로 다이어리 감성 유지
 - 라우트:
   - 기존 `/mypage` 유지
   - 기존 `/mypage/recipe-books/{book_id}` 유지

@@ -110,7 +110,6 @@ type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
 type SavedRecipesState = "idle" | "loading" | "ready" | "empty" | "error";
 type LeftoverTabState = "idle" | "loading" | "ready" | "empty" | "error";
-type RecipeBookDetailState = "idle" | "loading" | "ready" | "empty" | "error";
 type MypageTab =
   | MypageRestoreTab
   | "preferences"
@@ -193,17 +192,10 @@ function buildMypageRecipeBookDetailHref(book: RecipeBookSummary) {
     name: book.name,
   });
 
-  return `/mypage/recipe-books/${book.id}?${params.toString()}`;
-}
-
-function buildMypageRecipeBookRecipeHref(
-  recipeId: string,
-  book: RecipeBookSummary,
-) {
-  return buildReturnHref(`/recipe/${recipeId}`, {
+  return buildReturnHref(`/mypage/recipe-books/${book.id}?${params.toString()}`, {
     restore: "recipebook-tab",
     returnSurface: "mypage.recipebooks",
-    returnTo: buildMypageRecipeBookDetailHref(book),
+    returnTo: "/mypage",
   });
 }
 
@@ -289,13 +281,6 @@ export function MypageScreen({
   const [savedRecipesState, setSavedRecipesState] =
     useState<SavedRecipesState>("idle");
   const [savedRecipesBookId, setSavedRecipesBookId] = useState<string | null>(null);
-  const [selectedRecipeBook, setSelectedRecipeBook] =
-    useState<RecipeBookSummary | null>(null);
-  const [recipeBookDetailRecipes, setRecipeBookDetailRecipes] = useState<
-    RecipeBookRecipeItem[]
-  >([]);
-  const [recipeBookDetailState, setRecipeBookDetailState] =
-    useState<RecipeBookDetailState>("idle");
 
   // Shopping history
   const [shoppingItems, setShoppingItems] = useState<ShoppingListHistoryItem[]>([]);
@@ -435,11 +420,6 @@ export function MypageScreen({
     }
 
     setActiveTab(tab);
-    if (tab !== "recipebooks") {
-      setSelectedRecipeBook(null);
-      setRecipeBookDetailRecipes([]);
-      setRecipeBookDetailState("idle");
-    }
     if (tab !== "shopping") {
       setSelectedShoppingItem(null);
     }
@@ -639,24 +619,6 @@ export function MypageScreen({
     setSavedRecipes(result.data.items);
     setSavedRecipesBookId(bookId);
     setSavedRecipesState(result.data.items.length === 0 ? "empty" : "ready");
-  }, []);
-
-  const openRecipeBookDetail = useCallback(async (book: RecipeBookSummary) => {
-    setSelectedRecipeBook(book);
-    setRecipeBookDetailRecipes([]);
-    setRecipeBookDetailState("loading");
-
-    const result = await fetchRecipeBookRecipes(book.id, {
-      limit: SAVED_RECIPES_PAGE_SIZE,
-    });
-
-    if (!result.success || !result.data) {
-      setRecipeBookDetailState("error");
-      return;
-    }
-
-    setRecipeBookDetailRecipes(result.data.items);
-    setRecipeBookDetailState(result.data.items.length > 0 ? "ready" : "empty");
   }, []);
 
   const openShoppingDetail = useCallback((item: ShoppingListHistoryItem) => {
@@ -1807,8 +1769,6 @@ export function MypageScreen({
               createName={createName}
               customBooks={customBooks}
               deleteTarget={deleteTarget}
-              detailRecipes={recipeBookDetailRecipes}
-              detailState={recipeBookDetailState}
               isCreating={isCreating}
               isDeleting={isDeleting}
               isRenaming={isRenaming}
@@ -1827,17 +1787,9 @@ export function MypageScreen({
               onConfirmRename={handleRenameBook}
               onCreateBook={handleCreateBook}
               onCreateNameChange={setCreateName}
-              onOpenBookDetail={(book) => void openRecipeBookDetail(book)}
-              onCloseBookDetail={() => {
-                setSelectedRecipeBook(null);
-                setRecipeBookDetailRecipes([]);
-                setRecipeBookDetailState("idle");
-              }}
-              onRetryBookDetail={() => {
-                if (selectedRecipeBook) {
-                  void openRecipeBookDetail(selectedRecipeBook);
-                }
-              }}
+              onOpenBookDetail={(book) =>
+                router.push(buildMypageRecipeBookDetailHref(book))
+              }
               onMenuOpen={(id) => setMenuOpenBookId(id)}
               onRenameStart={(book) => {
                 setRenamingBookId(book.id);
@@ -1853,7 +1805,6 @@ export function MypageScreen({
               renameInputRef={renameInputRef}
               renameValue={renameValue}
               renamingBookId={renamingBookId}
-              selectedBook={selectedRecipeBook}
               showCreateInput={showCreateInput}
               systemBooks={systemBooks}
             />
@@ -3077,8 +3028,6 @@ function MypageDesktopLoadingShell() {
 interface RecipeBookTabContentProps {
   systemBooks: RecipeBookSummary[];
   customBooks: RecipeBookSummary[];
-  detailRecipes: RecipeBookRecipeItem[];
-  detailState: RecipeBookDetailState;
   menuOpenBookId: string | null;
   renamingBookId: string | null;
   renameValue: string;
@@ -3091,10 +3040,7 @@ interface RecipeBookTabContentProps {
   menuRef: React.RefObject<HTMLDivElement | null>;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
   createInputRef: React.RefObject<HTMLInputElement | null>;
-  selectedBook: RecipeBookSummary | null;
-  onCloseBookDetail: () => void;
   onOpenBookDetail: (book: RecipeBookSummary) => void;
-  onRetryBookDetail: () => void;
   onMenuOpen: (id: string) => void;
   onRenameStart: (book: RecipeBookSummary) => void;
   onCancelRename: () => void;
@@ -3112,8 +3058,6 @@ interface RecipeBookTabContentProps {
 function RecipeBookTabContent({
   systemBooks,
   customBooks,
-  detailRecipes,
-  detailState,
   menuOpenBookId,
   renamingBookId,
   renameValue,
@@ -3126,10 +3070,7 @@ function RecipeBookTabContent({
   menuRef,
   renameInputRef,
   createInputRef,
-  selectedBook,
-  onCloseBookDetail,
   onOpenBookDetail,
-  onRetryBookDetail,
   onMenuOpen,
   onRenameStart,
   onCancelRename,
@@ -3143,18 +3084,6 @@ function RecipeBookTabContent({
   onCreateNameChange,
   onCreateBook,
 }: RecipeBookTabContentProps) {
-  if (selectedBook) {
-    return (
-      <RecipeBookInlineDetail
-        book={selectedBook}
-        recipes={detailRecipes}
-        state={detailState}
-        onBack={onCloseBookDetail}
-        onRetry={onRetryBookDetail}
-      />
-    );
-  }
-
   return (
     <div className="web-recipebooks-screen" data-testid="recipebook-tab">
       <div className="web-recipebooks-header">
@@ -3284,6 +3213,7 @@ function SystemBookCard({
     <button
       className="web-recipebook-book-card"
       data-testid={`system-book-${book.book_type}`}
+      aria-label={`${book.name} 상세 보기`}
       onClick={onOpen}
       type="button"
     >
@@ -3315,91 +3245,6 @@ function BookThumbCollage({ book }: { book: RecipeBookSummary }) {
         />
       ))}
     </span>
-  );
-}
-
-function RecipeBookInlineDetail({
-  book,
-  recipes,
-  state,
-  onBack,
-  onRetry,
-}: {
-  book: RecipeBookSummary;
-  recipes: RecipeBookRecipeItem[];
-  state: RecipeBookDetailState;
-  onBack: () => void;
-  onRetry: () => void;
-}) {
-  return (
-    <div className="web-mypage-subsurface web-mypage-inline-detail">
-      <div className="web-mypage-inline-head">
-        <div>
-          <WebButton onClick={onBack} size="sm" variant="tertiary">
-            목록으로
-          </WebButton>
-          <h2>{book.name}</h2>
-          <p>{formatRecipeCount(book.recipe_count)} 레시피를 확인합니다.</p>
-        </div>
-        {book.book_type === "custom" ? (
-          <span className="web-mypage-inline-badge">커스텀</span>
-        ) : null}
-      </div>
-
-      {state === "loading" || state === "idle" ? (
-        <div className="web-mypage-recipe-grid" data-testid="recipebook-detail-loading">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div className="web-recipe-card" key={index}>
-              <WebSkeleton className="web-recipe-card-thumb" />
-              <div className="web-recipe-card-body">
-                <WebSkeleton height={18} width="72%" />
-                <div className="mt-2">
-                  <WebSkeleton height={14} width="48%" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      {state === "error" ? (
-        <WebCard className="web-mypage-saved-state">
-          <div>
-            <h3>레시피북을 불러오지 못했어요</h3>
-            <p>잠시 후 다시 시도해 주세요.</p>
-          </div>
-          <WebButton onClick={onRetry} size="sm" variant="secondary">
-            다시 시도
-          </WebButton>
-        </WebCard>
-      ) : null}
-
-      {state === "empty" ? (
-        <WebCard className="web-mypage-saved-state">
-          <div>
-            <h3>아직 담긴 레시피가 없어요</h3>
-            <p>레시피를 저장하면 이곳에 모아 보여드려요.</p>
-          </div>
-        </WebCard>
-      ) : null}
-
-      {state === "ready" ? (
-        <div className="web-mypage-recipe-grid" role="list">
-          {recipes.map((recipe) => (
-            <div key={recipe.recipe_id} role="listitem">
-              <Link href={buildMypageRecipeBookRecipeHref(recipe.recipe_id, book)}>
-                <WebRecipeCard
-                  alt={recipe.title}
-                  imageSrc={recipe.thumbnail_url ?? getFallbackRecipeImage(recipe.title)}
-                  meta={formatSavedRecipeMeta(recipe)}
-                  title={recipe.title}
-                />
-              </Link>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
   );
 }
 
@@ -3473,7 +3318,9 @@ function CustomBookCard({
       <div className="web-recipebook-book-card web-recipebook-book-card-static">
         <BookThumbCollage book={book} />
         <button
+          aria-label={`${book.name} 상세 보기`}
           className="web-recipebook-book-copy"
+          data-testid={`custom-book-${book.id}`}
           onClick={onOpen}
           type="button"
         >
@@ -3507,6 +3354,22 @@ function CustomBookCard({
             <circle cx="10" cy="10" r="1.5" />
             <circle cx="10" cy="16" r="1.5" />
           </svg>
+        </button>
+      </div>
+      <div className="web-recipebook-card-actions" aria-label={`${book.name} 관리`}>
+        <button
+          className="web-recipebook-card-action"
+          onClick={onRenameStart}
+          type="button"
+        >
+          이름 변경
+        </button>
+        <button
+          className="web-recipebook-card-action web-recipebook-card-action-danger"
+          onClick={onRequestDelete}
+          type="button"
+        >
+          삭제
         </button>
       </div>
 

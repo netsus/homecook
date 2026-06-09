@@ -7014,20 +7014,23 @@ button {
 
   .web-recipebooks-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 260px));
+    gap: 16px;
+    justify-content: start;
   }
 
   .web-recipebook-book-card {
-    display: flex;
+    position: relative;
+    display: grid;
     width: 100%;
-    min-height: 106px;
-    align-items: center;
-    gap: 18px;
+    min-height: 288px;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-items: stretch;
+    overflow: hidden;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-md);
     background: var(--web-surface);
-    padding: 16px;
+    padding: 0;
     text-align: left;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
@@ -7043,17 +7046,31 @@ button {
 
   .web-recipebook-collage {
     display: grid;
-    width: 80px;
-    height: 80px;
-    flex: 0 0 auto;
+    position: relative;
+    width: 100%;
+    min-height: 174px;
     grid-template-columns: repeat(2, 1fr);
-    gap: 2px;
+    gap: 3px;
     overflow: hidden;
-    border-radius: var(--web-r-sm);
-    background: var(--web-image-placeholder);
+    border-radius: 0;
+    background:
+      linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 24px, transparent 24px),
+      var(--web-brand);
+    padding: 24px 18px 18px 42px;
+  }
+
+  .web-recipebook-collage::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 24px;
+    background: rgba(0, 0, 0, 0.14);
+    content: "";
   }
 
   .web-recipebook-collage-cell {
+    min-height: 60px;
+    border: 3px solid rgba(255, 255, 255, 0.76);
+    border-radius: var(--web-r-xs);
     background-position: center;
     background-size: cover;
   }
@@ -7061,8 +7078,8 @@ button {
   .web-recipebook-book-copy {
     display: grid;
     min-width: 0;
-    flex: 1;
     gap: 4px;
+    padding: 14px 14px 16px;
     text-align: left;
   }
 
@@ -7089,8 +7106,47 @@ button {
   }
 
   .web-recipebook-book-count {
-    color: var(--web-text-4);
-    font-size: 24px;
+    position: absolute;
+    right: 12px;
+    top: 136px;
+    display: inline-flex;
+    min-height: 30px;
+    align-items: center;
+    border-radius: var(--web-r-pill);
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--web-text-1);
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .web-recipebook-card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .web-recipebook-card-action {
+    min-height: 38px;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-sm);
+    background: var(--web-surface);
+    color: var(--web-text-2);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .web-recipebook-card-action:hover {
+    border-color: var(--web-brand);
+    background: var(--web-brand-wash);
+    color: var(--web-brand-accessible);
+  }
+
+  .web-recipebook-card-action-danger:hover {
+    border-color: color-mix(in srgb, var(--danger) 36%, var(--web-line));
+    background: var(--danger-soft);
+    color: var(--danger);
   }
 
   .web-recipebook-menu-button,
@@ -7616,9 +7672,19 @@ button {
     padding: 32px 0 80px;
   }
 
+  .web-recipebook-detail-screen > .web-breadcrumb {
+    display: flex !important;
+    margin-top: 0;
+    margin-bottom: 18px;
+  }
+
+  .web-recipebook-detail-screen > .web-breadcrumb + .web-recipebook-detail-head {
+    margin-top: 0;
+  }
+
   .web-recipebook-detail-head {
-    margin-top: 64px;
-    margin-bottom: 72px;
+    margin-top: 48px;
+    margin-bottom: 28px;
   }
 
   .web-recipebook-detail-actions {
@@ -7634,10 +7700,174 @@ button {
     right: 0;
   }
 
+  .web-recipebook-detail-layout {
+    display: grid;
+    grid-template-columns: minmax(250px, 320px) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .web-recipebook-detail-rail {
+    position: sticky;
+    top: 92px;
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-md);
+    background: color-mix(in srgb, var(--web-brand-wash) 28%, var(--web-surface));
+    padding: 16px;
+    box-shadow: var(--web-shadow-card);
+  }
+
+  .web-recipebook-detail-cover {
+    position: relative;
+    display: grid;
+    min-height: 196px;
+    align-content: end;
+    overflow: hidden;
+    border-radius: var(--web-r-sm);
+    background:
+      linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 26px, transparent 26px),
+      var(--web-brand);
+    padding: 22px 18px 18px 42px;
+    color: var(--text-inverse);
+  }
+
+  .web-recipebook-detail-cover::before {
+    position: absolute;
+    inset: 18px 18px auto 46px;
+    height: 82px;
+    border: 4px solid rgba(255, 255, 255, 0.7);
+    border-radius: var(--web-r-xs);
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0)),
+      color-mix(in srgb, var(--web-brand) 36%, white);
+    content: "";
+  }
+
+  .web-recipebook-detail-cover-custom,
+  .web-recipebook-detail-cover-my_added {
+    background:
+      linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 26px, transparent 26px),
+      #3f8a78;
+  }
+
+  .web-recipebook-detail-cover-liked {
+    background:
+      linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 26px, transparent 26px),
+      #e87d67;
+  }
+
+  .web-recipebook-detail-cover-mark {
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: var(--web-r-pill);
+    background: rgba(255, 255, 255, 0.9);
+    font-size: 18px;
+  }
+
+  .web-recipebook-detail-cover strong {
+    position: relative;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1.16;
+  }
+
+  .web-recipebook-detail-cover span:last-child {
+    position: relative;
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 800;
+    opacity: 0.9;
+  }
+
+  .web-recipebook-toc {
+    display: grid;
+    gap: 10px;
+  }
+
+  .web-recipebook-toc h2 {
+    margin: 0;
+    color: var(--web-text-1);
+    font-size: 15px;
+    font-weight: 900;
+  }
+
+  .web-recipebook-toc ol {
+    display: grid;
+    gap: 7px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .web-recipebook-toc a {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+    min-height: 42px;
+    border-radius: var(--web-r-sm);
+    background: rgba(255, 255, 255, 0.72);
+    padding: 0 10px;
+    color: var(--web-text-2);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .web-recipebook-toc a:hover {
+    color: var(--web-brand-accessible);
+    background: var(--web-brand-wash);
+  }
+
+  .web-recipebook-toc b {
+    display: grid;
+    width: 26px;
+    height: 26px;
+    place-items: center;
+    border-radius: var(--web-r-pill);
+    background: var(--web-brand-wash);
+    color: var(--web-brand-accessible);
+    font-size: 11px;
+  }
+
+  .web-recipebook-toc span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .web-recipebook-toc p {
+    margin: 0;
+    color: var(--web-text-3);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
+  .web-recipebook-toc-more {
+    border-top: 1px solid var(--web-line);
+    padding-top: 10px;
+  }
+
+  .web-recipebook-detail-main {
+    min-width: 0;
+  }
+
   .web-recipebook-detail-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 32px 24px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px 18px;
   }
 
   .web-recipebook-detail-grid-loading {
@@ -7676,6 +7906,7 @@ button {
 
   .web-recipebook-detail-card {
     position: relative;
+    scroll-margin-top: 104px;
   }
 
   .web-recipebook-detail-remove {
@@ -9551,6 +9782,15 @@ button {
     .web-recipe-layout {
       grid-template-columns: minmax(0, 1fr) 300px;
       gap: 28px;
+    }
+
+    .web-recipebook-detail-layout {
+      grid-template-columns: minmax(236px, 280px) minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .web-recipebook-detail-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 }

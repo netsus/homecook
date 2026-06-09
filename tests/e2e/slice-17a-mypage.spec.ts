@@ -405,15 +405,13 @@ test.describe("MYPAGE screen", () => {
 
     await openRecipebookSurface(page);
     await page.getByTestId("system-book-saved").click();
-    if (isMobileViewport(page)) {
-      await page.waitForURL(/\/mypage\/recipe-books\/book-saved/);
-      await expect(page.getByTestId("recipebook-detail-header")).toBeVisible();
-      await page.getByLabel("뒤로 가기").first().click();
-      await page.waitForURL(/\/mypage\?.*restore=recipebook-tab/);
-    } else {
-      await expect(page.getByRole("heading", { name: "저장한 레시피" })).toBeVisible();
-      await page.getByRole("button", { name: "목록으로" }).click();
-    }
+    await page.waitForURL(/\/mypage\/recipe-books\/book-saved/);
+    await expect(page.getByTestId("recipebook-detail-header")).toBeVisible();
+    await page
+      .locator('[aria-label="뒤로 가기"]:visible')
+      .first()
+      .click();
+    await page.waitForURL(/\/mypage\?.*restore=recipebook-tab/);
 
     await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
     await expect(page.getByTestId("system-book-saved").getByText("저장한 레시피")).toBeVisible();
@@ -516,7 +514,10 @@ test.describe("MYPAGE screen", () => {
     await expect(page.getByTestId("delete-confirm-dialog")).toBeVisible();
     await expect(page.getByText("레시피북을 삭제할까요?")).toBeVisible();
 
-    await page.getByRole("button", { name: "삭제" }).click();
+    await page
+      .getByTestId("delete-confirm-dialog")
+      .getByRole("button", { name: "삭제" })
+      .click();
 
     await expect(page.getByText("삭제했어요")).toBeVisible();
   });

@@ -19,7 +19,7 @@
     "notes": "FE-only diary port. Existing recipe book APIs are consumed without contract changes."
   },
   "frontend": {
-    "branch": "feature/fe-recipebook-diary-port",
+    "branch": "feature/recipebook-diary-service",
     "stage": 4,
     "required_routes": [
       "/mypage",

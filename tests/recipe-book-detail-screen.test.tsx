@@ -231,11 +231,43 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    expect(await screen.findByText("된장찌개")).toBeTruthy();
-    expect(screen.getByText("김치볶음밥")).toBeTruthy();
-    expect(screen.getByText("한식 · 찌개")).toBeTruthy();
+    expect(await screen.findByTestId("recipe-item-recipe-1")).toBeTruthy();
+    expect(screen.getByTestId("recipe-item-recipe-2")).toBeTruthy();
+    expect(within(screen.getByTestId("recipe-item-recipe-1")).getByText("한식 · 찌개")).toBeTruthy();
     expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
+
+    const toc = screen.getByTestId("recipebook-detail-toc");
+    expect(within(toc).getByRole("heading", { name: "목차" })).toBeTruthy();
+    const firstTocLink = within(toc).getByRole("link", { name: /된장찌개/ });
+    expect(firstTocLink.getAttribute("href")).toBe("#recipebook-recipe-recipe-1");
+    expect(screen.getByTestId("recipe-item-recipe-1").id).toBe(
+      "recipebook-recipe-recipe-1",
+    );
+  });
+
+  it("shows a mobile table of contents before the recipe list", async () => {
+    installMatchMedia(true);
+
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-1"
+        bookName="저장한 레시피"
+        bookType="saved"
+        initialAuthenticated
+      />,
+    );
+
+    expect(await screen.findByTestId("recipe-item-recipe-1")).toBeTruthy();
+
+    expect(screen.getAllByRole("heading", { name: "목차" }).length).toBeGreaterThan(0);
+    const toc = screen.getByTestId("recipebook-detail-header");
+    expect(within(toc).getByText("저장한 레시피 · 2개 레시피")).toBeTruthy();
+    const firstTocLink = within(toc).getByRole("link", { name: /된장찌개/ });
+    expect(firstTocLink.getAttribute("href")).toBe("#recipebook-recipe-recipe-1");
+    expect(screen.getByTestId("recipe-item-recipe-1").id).toBe(
+      "recipebook-recipe-recipe-1",
+    );
   });
 
   it("shows no book-level rename/delete menu for system books", async () => {
@@ -248,7 +280,7 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    await screen.findByText("된장찌개");
+    await screen.findByTestId("recipe-item-recipe-1");
 
     expect(screen.queryByLabelText("저장한 레시피 옵션 메뉴")).toBeNull();
   });
@@ -263,7 +295,7 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    await screen.findByText("된장찌개");
+    await screen.findByTestId("recipe-item-recipe-1");
 
     const user = userEvent.setup();
     await user.click(screen.getByLabelText("주말 파티 옵션 메뉴"));
@@ -295,7 +327,7 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    await screen.findByText("된장찌개");
+    await screen.findByTestId("recipe-item-recipe-1");
 
     const user = userEvent.setup();
     await user.click(screen.getByLabelText("주말 파티 옵션 메뉴"));
@@ -322,7 +354,7 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    await screen.findByText("된장찌개");
+    await screen.findByTestId("recipe-item-recipe-1");
 
     const card1 = screen.getByTestId("recipe-item-recipe-1");
     const link = card1.querySelector("a");
@@ -407,7 +439,7 @@ describe("RecipeBookDetailScreen", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "다시 시도" }));
 
-    expect(await screen.findByText("된장찌개")).toBeTruthy();
+    expect(await screen.findByTestId("recipe-item-recipe-1")).toBeTruthy();
   });
 
   it("shows a not found error instead of the empty state for missing books", async () => {
@@ -516,15 +548,19 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    expect(await screen.findByText("된장찌개")).toBeTruthy();
+    expect(await screen.findByTestId("recipe-item-recipe-1")).toBeTruthy();
     await waitFor(() => {
       expect(triggerIntersection).toBeTruthy();
     });
 
     triggerIntersection?.();
 
-    expect(await screen.findByText("비빔국수")).toBeTruthy();
-    expect(screen.getAllByText("김치볶음밥")).toHaveLength(1);
+    expect(await screen.findByTestId("recipe-item-recipe-3")).toBeTruthy();
+    expect(
+      within(screen.getByTestId("recipebook-detail-list")).getAllByText(
+        "김치볶음밥",
+      ),
+    ).toHaveLength(1);
     expect(mockFetchRecipeBookRecipes).toHaveBeenLastCalledWith("book-1", {
       cursor: "cursor-1",
       limit: 20,
@@ -543,7 +579,7 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    await screen.findByText("된장찌개");
+    await screen.findByTestId("recipe-item-recipe-1");
 
     const removeButtons = screen.getAllByRole("button", { name: /제거/ });
     expect(removeButtons.length).toBe(2);
@@ -559,7 +595,7 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    await screen.findByText("된장찌개");
+    await screen.findByTestId("recipe-item-recipe-1");
 
     const removeButtons = screen.getAllByRole("button", {
       name: /좋아요 해제/,
@@ -577,7 +613,7 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    await screen.findByText("된장찌개");
+    await screen.findByTestId("recipe-item-recipe-1");
 
     const removeButtons = screen.queryAllByRole("button", {
       name: /제거|좋아요 해제/,
@@ -603,7 +639,7 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    await screen.findByText("된장찌개");
+    await screen.findByTestId("recipe-item-recipe-1");
 
     const user = userEvent.setup();
     const removeBtn = screen.getByLabelText("된장찌개 제거");
@@ -640,7 +676,7 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    await screen.findByText("된장찌개");
+    await screen.findByTestId("recipe-item-recipe-1");
 
     const user = userEvent.setup();
     const removeBtn = screen.getByLabelText("된장찌개 좋아요 해제");
@@ -667,7 +703,7 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    await screen.findByText("된장찌개");
+    await screen.findByTestId("recipe-item-recipe-1");
 
     const user = userEvent.setup();
     const removeBtn = screen.getByLabelText("된장찌개 제거");
@@ -675,7 +711,7 @@ describe("RecipeBookDetailScreen", () => {
 
     // Wait for rollback
     await waitFor(() => {
-      expect(screen.getByText("된장찌개")).toBeTruthy();
+      expect(screen.getByTestId("recipe-item-recipe-1")).toBeTruthy();
     });
 
     expect(screen.getByText("서버 오류")).toBeTruthy();
@@ -714,7 +750,7 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    await screen.findByText("된장찌개");
+    await screen.findByTestId("recipe-item-recipe-1");
 
     const user = userEvent.setup();
     await user.click(screen.getByLabelText("된장찌개 제거"));
@@ -736,7 +772,7 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    await screen.findByText("된장찌개");
+    await screen.findByTestId("recipe-item-recipe-1");
 
     const header = screen.getByTestId("recipebook-detail-header");
     expect(header).toBeTruthy();
@@ -763,7 +799,7 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    await screen.findByText("된장찌개");
+    await screen.findByTestId("recipe-item-recipe-1");
 
     const backLink = screen.getByLabelText("뒤로 가기");
     expect(backLink.getAttribute("href")).toBe(
@@ -789,7 +825,7 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    await screen.findByText("된장찌개");
+    await screen.findByTestId("recipe-item-recipe-1");
 
     const backLink = screen.getByLabelText("뒤로 가기");
     expect(backLink.getAttribute("href")).toBe("/mypage");
