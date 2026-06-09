@@ -495,7 +495,7 @@ test.describe("QA visual regression", () => {
       name: "재료 추가",
     });
     await expect(addDialog).toBeVisible();
-    await expect(addDialog.getByText("팬트리에 재료 추가")).toBeVisible();
+    await expect(addDialog.getByText("팬트리에 추가할 재료를 검색하세요")).toBeVisible();
     await stabilizeVisualSnapshot(page);
     await expect(addDialog).toHaveScreenshot("qa-pantry-add-modal.png", {
       animations: "disabled",
@@ -507,7 +507,7 @@ test.describe("QA visual regression", () => {
       name: "묶음으로 재료 추가",
     });
     await expect(bundleDialog).toBeVisible();
-    await expect(bundleDialog.getByText("번들로 한꺼번에 추가")).toBeVisible();
+    await expect(bundleDialog.getByText("자주 함께 쓰는 재료를 한 번에 추가해요")).toBeVisible();
     await bundleDialog.getByRole("button", { name: /국물 요리 세트/ }).click();
     await stabilizeVisualSnapshot(page);
     await expect(bundleDialog).toHaveScreenshot("qa-pantry-bundle-modal.png", {
@@ -598,6 +598,15 @@ test.describe("QA visual regression", () => {
       maxDiffPixels: MYPAGE_SAVED_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
     });
 
+    await page.getByTestId("mypage-profile-edit-button").click();
+    const nicknameDialog = page.getByRole("dialog", { name: "닉네임 변경" });
+    await expect(nicknameDialog).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(nicknameDialog).toHaveScreenshot("qa-settings-nickname-modal.png", {
+      animations: "disabled",
+    });
+    await nicknameDialog.getByRole("button", { name: "취소" }).click();
+
     await page.getByRole("tab", { name: /레시피북/ }).click();
     await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
     await stabilizeVisualSnapshot(page);
@@ -645,15 +654,6 @@ test.describe("QA visual regression", () => {
       maxDiffPixels: ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
     });
 
-    await page.getByTestId("nickname-row").click();
-    const nicknameDialog = page.getByRole("dialog", { name: "닉네임 변경" });
-    await expect(nicknameDialog).toBeVisible();
-    await stabilizeVisualSnapshot(page);
-    await expect(nicknameDialog).toHaveScreenshot("qa-settings-nickname-modal.png", {
-      animations: "disabled",
-    });
-
-    await nicknameDialog.getByRole("button", { name: "닫기" }).click();
     await page.getByRole("button", { name: "로그아웃" }).click();
     const logoutDialog = page.getByRole("alertdialog", { name: "로그아웃 할까요?" });
     await expect(logoutDialog).toBeVisible();
