@@ -6,9 +6,12 @@ import {
   COOKING_METHOD_CATEGORIES,
   COOKING_METHOD_SYNONYMS,
   getCanonicalCookingMethodByCode,
+  getCookingMethodAssistiveLabel,
   getCookingMethodCategoryByCode,
+  getCookingMethodCategoryLabel,
   getCookingMethodSynonyms,
   getCookingMethodTaxonomyMetadata,
+  groupCookingMethodsByCategory,
   isCanonicalCookingMethodCode,
   isValidCookingMethodCategoryCode,
 } from "@/lib/cooking-method-taxonomy";
@@ -64,6 +67,55 @@ describe("cooking method taxonomy v2", () => {
       category_label: "물/수분 조리",
     });
     expect(getCookingMethodSynonyms("air_fryer")).toContain("에어프라이어에");
+  });
+
+  it("groups frontend method choices by v2 category with legacy fallback", () => {
+    const groups = groupCookingMethodsByCategory([
+      {
+        id: "method-air",
+        code: "air_fryer",
+        label: "에어프라이어",
+        color_key: "yellow",
+        category_code: "appliance",
+        is_system: true,
+      },
+      {
+        id: "method-stir",
+        code: "stir_fry",
+        label: "볶기",
+        color_key: "orange",
+        category_code: "pan_oil",
+        is_system: true,
+      },
+      {
+        id: "method-custom",
+        code: "auto_custom",
+        label: "사용자",
+        color_key: "gray",
+        is_system: false,
+      },
+    ]);
+
+    expect(groups.map((group) => group.label)).toEqual([
+      "팬/기름 조리",
+      "기기 조리",
+      "기타",
+    ]);
+    expect(groups.find((group) => group.label === "기기 조리")?.items[0]?.label).toBe(
+      "에어프라이어",
+    );
+    expect(getCookingMethodCategoryLabel({
+      methodCode: "air_fryer",
+      categoryCode: null,
+    })).toBe("기기 조리");
+    expect(getCookingMethodAssistiveLabel({
+      methodCode: "stir_fry",
+      methodLabel: "볶기",
+    })).toBe("팬/기름 조리 · 볶기");
+    expect(getCookingMethodAssistiveLabel({
+      methodCode: "unknown",
+      methodLabel: "",
+    })).toBe("기타 · 만들기");
   });
 
   it("ships a migration that widens labels and seeds the canonical taxonomy", () => {

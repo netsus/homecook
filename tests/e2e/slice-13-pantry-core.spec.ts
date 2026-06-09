@@ -362,9 +362,9 @@ test.describe("PANTRY screen", () => {
     await expect(page.getByText(/양파/)).toBeVisible();
 
     // Click a category chip
-    await page.getByRole("tab", { name: "채소" }).click();
+    await page.getByRole("tab", { name: "채소/버섯" }).click();
 
-    // Should refetch with category filter
+    // Should apply the local category filter
     await expect(page.getByText(/양파/)).toBeVisible();
     await expect(page.getByText(/마늘/)).toBeHidden();
   });

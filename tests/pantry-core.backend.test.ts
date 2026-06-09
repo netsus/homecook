@@ -167,13 +167,13 @@ describe("13 pantry core backend", () => {
               id: "pantry-2",
               ingredient_id: "ing-tofu",
               created_at: "2026-04-28T09:00:00Z",
-              ingredients: { standard_name: "두부", category: "단백질" },
+              ingredients: { standard_name: "두부", category: "단백질", category_code: null },
             },
             {
               id: "pantry-1",
               ingredient_id: "ing-onion",
               created_at: "2026-04-27T09:00:00Z",
-              ingredients: { standard_name: "양파", category: "채소" },
+              ingredients: { standard_name: "양파", category: "채소", category_code: "root_stem" },
             },
           ],
           error: null,
@@ -207,6 +207,9 @@ describe("13 pantry core backend", () => {
             ingredient_id: "ing-tofu",
             standard_name: "두부",
             category: "단백질",
+            category_group_code: "protein",
+            category_code: null,
+            category_label: "단백질",
             created_at: "2026-04-28T09:00:00Z",
           },
           {
@@ -214,6 +217,9 @@ describe("13 pantry core backend", () => {
             ingredient_id: "ing-onion",
             standard_name: "양파",
             category: "채소",
+            category_group_code: "vegetable_mushroom",
+            category_code: "root_stem",
+            category_label: "뿌리/줄기채소",
             created_at: "2026-04-27T09:00:00Z",
           },
         ],
@@ -224,6 +230,58 @@ describe("13 pantry core backend", () => {
     expect(selectQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
     expect(selectQuery.ilike).toHaveBeenCalledWith("ingredients.standard_name", "%양%");
     expect(selectQuery.eq).toHaveBeenCalledWith("ingredients.category", "채소");
+  });
+
+  it("GET /pantry retries with the legacy select when category_code is not in the schema cache", async () => {
+    const pantryItemsTable = createTable({
+      selectResults: [
+        {
+          data: null,
+          error: { message: "Could not find column category_code in the schema cache" },
+        },
+        {
+          data: [
+            {
+              id: "pantry-legacy",
+              ingredient_id: "ing-tofu",
+              created_at: "2026-04-28T09:00:00Z",
+              ingredients: { standard_name: "두부", category: "단백질" },
+            },
+          ],
+          error: null,
+        },
+      ],
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "pantry_items") return pantryItemsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importPantryRoute();
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/pantry"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items[0]).toMatchObject({
+      ingredient_id: "ing-tofu",
+      category_group_code: "protein",
+      category_code: null,
+      category_label: "단백질",
+    });
+    expect(pantryItemsTable.select).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("category_code"),
+    );
+    expect(pantryItemsTable.select).toHaveBeenNthCalledWith(
+      2,
+      expect.not.stringContaining("category_code"),
+    );
   });
 
   it("GET /pantry returns an empty list for non-canonical category labels after auth", async () => {
@@ -260,8 +318,8 @@ describe("13 pantry core backend", () => {
       selectResults: [
         {
           data: [
-            { id: "ing-onion", standard_name: "양파", category: "채소" },
-            { id: "ing-tofu", standard_name: "두부", category: "단백질" },
+            { id: "ing-onion", standard_name: "양파", category: "채소", category_code: "root_stem" },
+            { id: "ing-tofu", standard_name: "두부", category: "단백질", category_code: null },
           ],
           error: null,
         },
@@ -281,7 +339,7 @@ describe("13 pantry core backend", () => {
               id: "pantry-tofu",
               ingredient_id: "ing-tofu",
               created_at: "2026-04-28T10:00:00Z",
-              ingredients: { standard_name: "두부", category: "단백질" },
+              ingredients: { standard_name: "두부", category: "단백질", category_code: null },
             },
           ],
           error: null,
@@ -321,6 +379,9 @@ describe("13 pantry core backend", () => {
             ingredient_id: "ing-tofu",
             standard_name: "두부",
             category: "단백질",
+            category_group_code: "protein",
+            category_code: null,
+            category_label: "단백질",
             created_at: "2026-04-28T10:00:00Z",
           },
         ],
@@ -333,6 +394,84 @@ describe("13 pantry core backend", () => {
         ingredient_id: "ing-tofu",
       },
     ]);
+  });
+
+  it("POST /pantry keeps adding ingredients with legacy selects when category_code is not in the schema cache", async () => {
+    const ingredientsTable = createTable({
+      selectResults: [
+        {
+          data: null,
+          error: { message: "Could not find column category_code in the schema cache" },
+        },
+        {
+          data: [
+            { id: "ing-tofu", standard_name: "두부", category: "단백질" },
+          ],
+          error: null,
+        },
+      ],
+    });
+    const pantryItemsTable = createTable({
+      selectResults: [
+        {
+          data: [],
+          error: null,
+        },
+      ],
+      insertResults: [
+        {
+          data: [
+            {
+              id: "pantry-tofu",
+              ingredient_id: "ing-tofu",
+              created_at: "2026-04-28T10:00:00Z",
+              ingredients: { standard_name: "두부", category: "단백질" },
+            },
+          ],
+          error: null,
+        },
+      ],
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsTable;
+        if (table === "pantry_items") return pantryItemsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importPantryRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/pantry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ingredient_ids: ["ing-tofu"] }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body.data.items[0]).toMatchObject({
+      ingredient_id: "ing-tofu",
+      category_group_code: "protein",
+      category_code: null,
+      category_label: "단백질",
+    });
+    expect(ingredientsTable.select).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("category_code"),
+    );
+    expect(ingredientsTable.select).toHaveBeenNthCalledWith(
+      2,
+      expect.not.stringContaining("category_code"),
+    );
+    expect(pantryItemsTable.insert).toHaveBeenCalledTimes(1);
+    const insertQuery = pantryItemsTable.insert.mock.results[0]?.value;
+    expect(insertQuery.select).toHaveBeenCalledWith(
+      expect.not.stringContaining("category_code"),
+    );
   });
 
   it("POST /pantry returns 422 for empty ingredient_ids", async () => {

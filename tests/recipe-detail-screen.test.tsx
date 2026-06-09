@@ -1249,6 +1249,8 @@ describe("recipe detail screen", () => {
     const number = screen.getByText(String(MOCK_RECIPE_DETAIL.steps[0]!.step_number));
 
     expect(stepCard?.getAttribute("style") ?? "").not.toContain("border-left");
+    expect(method.getAttribute("aria-label")).toBe("팬/기름 조리 · 볶기");
+    expect(method.getAttribute("title")).toBe("팬/기름 조리 · 볶기");
     expect(method.getAttribute("style") ?? "").toContain("background-color");
     expect(method.className).toContain("rounded-full");
     expect(number.className).toContain("leading-[1]");

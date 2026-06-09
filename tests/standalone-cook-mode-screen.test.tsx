@@ -441,14 +441,16 @@ describe("StandaloneCookModeScreen", () => {
     });
 
     const stepItemStyle = screen.getByTestId("step-item").getAttribute("style");
-    const methodBadgeStyle = screen
+    const methodBadge = screen
       .getAllByText("볶기")
       .find((element) =>
         element.getAttribute("style")?.includes("var(--cook-stir)"),
-      )
-      ?.getAttribute("style");
+      );
+    const methodBadgeStyle = methodBadge?.getAttribute("style");
 
     expect(stepItemStyle).toBeNull();
+    expect(methodBadge?.getAttribute("aria-label")).toBe("팬/기름 조리 · 볶기");
+    expect(methodBadge?.getAttribute("title")).toBe("팬/기름 조리 · 볶기");
     expect(methodBadgeStyle).toContain("var(--cook-stir)");
   });
 

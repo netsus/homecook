@@ -56,6 +56,35 @@ test.describe("Slice 25: YouTube bulk ingredient registration", () => {
 
     // Verify all 5 ingredient registrations were called
     expect(captured.ingredientRegistrationBodies).toHaveLength(5);
+    expect(captured.ingredientRegistrationBodies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          draft_ingredient_id: "draft-doenjang",
+          category: "양념",
+          category_code: "paste_sauce",
+        }),
+        expect.objectContaining({
+          draft_ingredient_id: "draft-gochugaru",
+          category: "양념",
+          category_code: "paste_sauce",
+        }),
+        expect.objectContaining({
+          draft_ingredient_id: "draft-tofu",
+          category: "양념",
+          category_code: "paste_sauce",
+        }),
+        expect.objectContaining({
+          draft_ingredient_id: "draft-zucchini",
+          category: "양념",
+          category_code: "paste_sauce",
+        }),
+        expect.objectContaining({
+          draft_ingredient_id: "draft-onion",
+          category: "양념",
+          category_code: "paste_sauce",
+        }),
+      ]),
+    );
     expect(captured.recipeRegistrationBody).toMatchObject({
       extraction_id: "ext-bulk-test",
       ingredients: expect.arrayContaining([
@@ -72,7 +101,7 @@ test.describe("Slice 25: YouTube bulk ingredient registration", () => {
     page,
   }) => {
     await setYoutubeIngredientRegistrationAuth(page);
-    await installBulkIngredientRoutes(page);
+    const captured = await installBulkIngredientRoutes(page);
 
     await openBulkReview(page);
 
@@ -88,6 +117,10 @@ test.describe("Slice 25: YouTube bulk ingredient registration", () => {
 
     // Modal should close
     await expect(dialog).not.toBeVisible();
+    expect(captured.ingredientRegistrationBodies[0]).toMatchObject({
+      category: "양념",
+      category_code: "paste_sauce",
+    });
 
     // Resolution label should be gone for that ingredient
     // (this just verifies the single flow didn't break — partial check)

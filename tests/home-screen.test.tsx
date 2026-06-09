@@ -13,7 +13,10 @@ import {
   getMockRecipeThemes,
   MOCK_RECIPE_CARD,
 } from "@/lib/mock/recipes";
-import { INGREDIENT_CATEGORIES } from "@/lib/ingredient-categories";
+import {
+  INGREDIENT_CATEGORIES,
+  INGREDIENT_CATEGORY_GROUP_OPTIONS,
+} from "@/lib/ingredient-categories";
 import { PENDING_ACTION_KEY } from "@/lib/auth/pending-action";
 import { formatCount } from "@/lib/recipe";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
@@ -24,6 +27,9 @@ const GREEN_ONION_ID = "550e8400-e29b-41d4-a716-446655440011";
 const BEEF_ID = "550e8400-e29b-41d4-a716-446655440012";
 const VEGETABLE_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "vegetable")!.label;
 const MEAT_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "meat")!.label;
+const VEGETABLE_GROUP = INGREDIENT_CATEGORY_GROUP_OPTIONS.find(
+  ({ value }) => value === "vegetable_mushroom",
+)!;
 const globalsCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 
 const INGREDIENT_ITEMS = [
@@ -79,11 +85,14 @@ describe("home screen", () => {
       if (input.startsWith("/api/v1/ingredients")) {
         const url = new URL(input, "http://localhost:3000");
         const query = url.searchParams.get("q")?.trim() ?? "";
-        const category = url.searchParams.get("category");
+        const categoryGroupCode = url.searchParams.get("category_group_code");
 
         return Promise.resolve({
           items: INGREDIENT_ITEMS.filter((ingredient) => {
-            const matchesCategory = !category || ingredient.category === category;
+            const matchesCategory =
+              !categoryGroupCode ||
+              (categoryGroupCode === VEGETABLE_GROUP.value &&
+                ingredient.category === VEGETABLE_CATEGORY);
             const matchesQuery =
               query.length === 0 || ingredient.standard_name.includes(query);
 
@@ -281,7 +290,7 @@ describe("home screen", () => {
     expect(onionOption?.className).toContain("text-[15px]");
     expect(onionOption?.className).toContain("text-center");
 
-    await user.click(screen.getByRole("button", { name: VEGETABLE_CATEGORY }));
+    await user.click(screen.getByRole("button", { name: VEGETABLE_GROUP.label }));
     await user.type(screen.getByPlaceholderText("재료명으로 검색"), "파");
 
     await waitFor(() => {
@@ -295,7 +304,7 @@ describe("home screen", () => {
 
           return (
             url.searchParams.get("q") === "파" &&
-            url.searchParams.get("category") === VEGETABLE_CATEGORY
+            url.searchParams.get("category_group_code") === VEGETABLE_GROUP.value
           );
         }),
       ).toBe(true);

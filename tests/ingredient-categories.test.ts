@@ -7,14 +7,21 @@ import {
   getIngredientCategoryByLabel,
   getIngredientCategoryEmoji,
   getIngredientCategoryGroupByCode,
+  getIngredientCategoryGroupFilterOption,
+  getIngredientGroupDisplayLabel,
   getIngredientGroupCodesForLegacyCategory,
+  getIngredientGroupFilterValue,
   getIngredientSubcategoryByCode,
+  getIngredientSubcategoryOption,
+  getIngredientSubcategoryOptionsByGroup,
   getIngredientTaxonomyMetadata,
   INGREDIENT_CATEGORIES,
   INGREDIENT_CATEGORY_GROUPS,
+  INGREDIENT_CATEGORY_GROUP_OPTIONS,
   INGREDIENT_CATEGORY_LABELS,
   INGREDIENT_CATEGORY_OPTIONS,
   INGREDIENT_SUBCATEGORIES,
+  ingredientMatchesCategoryGroup,
   isValidIngredientCategory,
   isValidIngredientCategoryGroupCode,
   isValidIngredientSubcategoryCode,
@@ -103,6 +110,55 @@ describe("ingredient category shared source", () => {
     expect(isValidIngredientCategoryGroupCode("fruit_nut")).toBe(true);
     expect(isValidIngredientCategoryGroupCode("snack")).toBe(false);
     expect(isValidIngredientSubcategoryCode("air_fryer")).toBe(false);
+  });
+
+  it("derives v2 frontend filter and subcategory picker options from the shared source", () => {
+    expect(INGREDIENT_CATEGORY_GROUP_OPTIONS.map((option) => option.label)).toEqual([
+      ALL_INGREDIENT_CATEGORY,
+      "곡류/면/떡",
+      "채소/버섯",
+      "과일/견과",
+      "단백질",
+      "해산물",
+      "유제품/대체유",
+      "양념/조미",
+      "가공/기타",
+    ]);
+    expect(getIngredientCategoryGroupFilterOption("fruit_nut")).toMatchObject({
+      label: "과일/견과",
+      category_group_code: "fruit_nut",
+    });
+    expect(getIngredientSubcategoryOption("paste_sauce")).toMatchObject({
+      label: "장류/소스",
+      legacy_category: "양념",
+      group_label: "양념/조미",
+    });
+    expect(getIngredientSubcategoryOptionsByGroup()).toHaveLength(8);
+  });
+
+  it("matches v2 group filters while falling back from legacy labels safely", () => {
+    expect(getIngredientGroupFilterValue({
+      category: "채소",
+      category_code: "root_stem",
+    })).toBe("vegetable_mushroom");
+    expect(getIngredientGroupDisplayLabel({
+      category: "과일",
+      category_group_code: "fruit_nut",
+    })).toBe("과일/견과");
+    expect(ingredientMatchesCategoryGroup({
+      category: "과일",
+      category_code: "fruit",
+    }, "fruit_nut")).toBe(true);
+    expect(ingredientMatchesCategoryGroup({
+      category: "과일",
+      category_code: "fruit",
+    }, "vegetable_mushroom")).toBe(false);
+    expect(ingredientMatchesCategoryGroup({
+      category: "양념",
+    }, "seasoning_condiment")).toBe(true);
+    expect(ingredientMatchesCategoryGroup({
+      category: "단백질",
+    }, "protein")).toBe(true);
   });
 
   it("maps v1 labels to safe taxonomy fallback metadata without pretending precision", () => {
