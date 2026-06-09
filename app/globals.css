@@ -7299,18 +7299,98 @@ button {
     gap: 18px;
   }
 
-  .web-mypage-shopping-month {
+  .web-mypage-shopping-selected-day,
+  .web-mypage-shopping-months {
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-lg);
     background: var(--web-surface-muted);
     padding: 16px;
   }
 
-  .web-mypage-shopping-month h3 {
-    margin: 0 0 12px;
+  .web-mypage-shopping-selected-head,
+  .web-mypage-shopping-calendar-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .web-mypage-shopping-selected-head h3,
+  .web-mypage-shopping-calendar-head h3 {
+    margin: 0;
     color: var(--web-text-1);
-    font-size: 18px;
-    font-weight: 800;
+    font-size: 19px;
+    font-weight: 850;
+  }
+
+  .web-mypage-shopping-selected-head p,
+  .web-mypage-shopping-calendar-head p {
+    margin: 4px 0 0;
+    color: var(--web-text-3);
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .web-mypage-shopping-selected-head > span {
+    flex: 0 0 auto;
+    color: var(--web-text-3);
+    font-size: 14px;
+    font-weight: 850;
+  }
+
+  .web-mypage-shopping-selected-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .web-mypage-shopping-month {
+    margin-top: 18px;
+  }
+
+  .web-mypage-shopping-month-nav {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .web-mypage-shopping-month-nav h3 {
+    margin: 0;
+    color: var(--web-text-1);
+    font-size: 17px;
+    font-weight: 850;
+    text-align: center;
+  }
+
+  .web-mypage-shopping-month-button {
+    display: inline-flex;
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-pill);
+    background: var(--web-surface);
+    color: var(--web-text-1);
+    font-size: 24px;
+    font-weight: 850;
+    line-height: 1;
+    transition:
+      border-color 140ms ease,
+      background 140ms ease;
+  }
+
+  .web-mypage-shopping-month-button:hover:not(:disabled) {
+    border-color: var(--web-brand);
+    background: var(--web-brand-wash);
+  }
+
+  .web-mypage-shopping-month-button:disabled {
+    cursor: default;
+    opacity: 0.32;
   }
 
   .web-mypage-shopping-weekdays,
@@ -7323,17 +7403,36 @@ button {
   .web-mypage-shopping-weekdays {
     margin-bottom: 8px;
     color: var(--web-text-3);
-    font-size: 12px;
-    font-weight: 800;
+    font-size: 13px;
+    font-weight: 850;
     text-align: center;
   }
 
   .web-mypage-shopping-day {
-    min-height: 112px;
+    min-height: 62px;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-md);
     background: var(--web-surface);
     padding: 8px;
+    text-align: left;
+  }
+
+  .web-mypage-shopping-day-button {
+    cursor: pointer;
+    transition:
+      border-color 140ms ease,
+      background 140ms ease,
+      box-shadow 140ms ease;
+  }
+
+  .web-mypage-shopping-day-button:hover {
+    border-color: var(--web-brand);
+    box-shadow: 0 8px 18px rgba(34, 29, 24, 0.08);
+  }
+
+  .web-mypage-shopping-day-selected {
+    border-color: var(--web-brand);
+    background: var(--web-brand-wash);
   }
 
   .web-mypage-shopping-day-empty {
@@ -7345,30 +7444,114 @@ button {
     display: block;
     margin-bottom: 6px;
     color: var(--web-text-2);
-    font-size: 13px;
-    font-weight: 800;
+    font-size: 14px;
+    font-weight: 850;
     line-height: 1;
   }
 
+  .web-mypage-shopping-day-markers {
+    display: flex;
+    min-height: 16px;
+    align-items: center;
+    gap: 5px;
+    margin-top: 14px;
+  }
+
+  .web-mypage-shopping-day-markers em {
+    color: var(--web-text-2);
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 850;
+    line-height: 1;
+  }
+
+  .web-mypage-shopping-marker {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+  }
+
+  .web-mypage-shopping-marker-active {
+    background: var(--planner-status-registered);
+  }
+
+  .web-mypage-shopping-marker-complete {
+    background: var(--planner-status-shopping);
+  }
+
+  .web-mypage-shopping-legend {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+    color: var(--web-text-3);
+    font-size: 12px;
+    font-weight: 850;
+  }
+
+  .web-mypage-shopping-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
   .web-mypage-shopping-card {
-    display: block;
+    display: grid;
+    gap: 9px;
+    width: 100%;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-sm);
     background: var(--web-surface);
-    padding: 10px;
+    padding: 13px;
     text-align: left;
     box-shadow: 0 6px 16px rgba(34, 29, 24, 0.06);
+  }
+
+  .web-mypage-shopping-card-title {
+    margin: 0;
+    color: var(--web-text-1);
+    font-size: 17px;
+    font-weight: 850;
+    line-height: 1.3;
+  }
+
+  .web-mypage-shopping-card-meta {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+  }
+
+  .web-mypage-shopping-card-meta div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .web-mypage-shopping-card-meta dt {
+    color: var(--web-text-3);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .web-mypage-shopping-card-meta dd {
+    margin: 0;
+    color: var(--web-text-1);
+    font-size: 13px;
+    font-weight: 800;
+    text-align: right;
   }
 
   .web-mypage-shopping-status {
     display: inline-flex;
     min-height: 24px;
     align-items: center;
-    margin-top: 10px;
+    justify-self: start;
+    margin-bottom: 8px;
     border-radius: var(--web-r-pill);
     padding: 0 9px;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 850;
     line-height: 1;
   }
 

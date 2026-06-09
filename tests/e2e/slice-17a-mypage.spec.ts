@@ -63,6 +63,16 @@ function makeMockShoppingHistory() {
       item_count: 8,
       created_at: "2026-04-23T00:00:00Z",
     },
+    {
+      id: "list-3",
+      title: "3/18 장보기",
+      date_range_start: "2026-03-18",
+      date_range_end: "2026-03-24",
+      is_completed: true,
+      completed_at: "2026-03-18T10:00:00Z",
+      item_count: 10,
+      created_at: "2026-03-18T00:00:00Z",
+    },
   ];
 }
 
@@ -333,13 +343,31 @@ test.describe("MYPAGE screen", () => {
     await openShoppingSurface(page);
 
     await expect(page.getByText("4/30 장보기")).toBeVisible();
-    await expect(page.getByText("4/23 장보기")).toBeVisible();
     await expect(page.getByText("다시열기")).toHaveCount(0);
-    await expect(page.getByText("4/30 완료")).toBeVisible();
+    await expect(page.getByText("완료 4/30")).toBeVisible();
+    const calendar = page.getByTestId("shopping-history-calendar");
+    await expect(calendar.getByText("장보기 달력")).toBeVisible();
+    await expect(calendar.getByText("2026년 3월")).toHaveCount(0);
     await expect(
-      page
-        .getByTestId("shopping-card-list-2")
-        .getByText(isMobileViewport(page) ? "진행중" : "진행 중"),
+      calendar.getByRole("button", {
+        name: "4월 30일 만든 장보기 1개, 완료 1개",
+      }),
+    ).toBeVisible();
+    await calendar.getByRole("button", { name: "이전 달" }).click();
+    await expect(calendar.getByText("2026년 3월")).toBeVisible();
+    await expect(calendar.getByText("2026년 4월")).toHaveCount(0);
+    await expect(page.getByText("3/18 장보기")).toBeVisible();
+    await calendar.getByRole("button", { name: "다음 달" }).click();
+    await expect(calendar.getByText("2026년 4월")).toBeVisible();
+    await calendar
+      .getByRole("button", {
+        name: "4월 23일 만든 장보기 1개, 진행 중 1개",
+      })
+      .click();
+
+    await expect(page.getByText("4/23 장보기")).toBeVisible();
+    await expect(
+      page.getByTestId("shopping-card-list-2").getByText("진행 중"),
     ).toBeVisible();
   });
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildShoppingHistoryCalendarMonths,
-  formatShoppingHistoryDateTime,
+  formatShoppingHistoryCompletionDate,
   formatShoppingHistoryMealRange,
 } from "@/components/mypage/shopping-history-calendar";
 import type { ShoppingListHistoryItem } from "@/types/shopping";
@@ -18,7 +18,7 @@ function createHistoryItem(
     id: "list-1",
     is_completed: false,
     item_count: 3,
-    title: "4월 30일 ~ 5월 6일 끼니",
+    title: "4/30~5/6",
     ...overrides,
   };
 }
@@ -34,10 +34,34 @@ describe("shopping history calendar", () => {
     expect(createdDay?.items).toEqual([item]);
   });
 
-  it("formats created, completed, and meal-range labels in the same display style", () => {
-    expect(formatShoppingHistoryDateTime("2026-04-30T15:10:00Z")).toBe(
-      "2026. 5. 1. 00:10",
+  it("shows newer months before older months when history spans many months", () => {
+    const months = buildShoppingHistoryCalendarMonths([
+      createHistoryItem({
+        id: "list-april",
+        created_at: "2026-04-23T00:00:00Z",
+      }),
+      createHistoryItem({
+        id: "list-june",
+        created_at: "2026-06-03T00:00:00Z",
+      }),
+      createHistoryItem({
+        id: "list-may",
+        created_at: "2026-05-01T00:00:00Z",
+      }),
+    ]);
+
+    expect(months.map((month) => month.monthKey)).toEqual([
+      "2026-06",
+      "2026-05",
+      "2026-04",
+    ]);
+  });
+
+  it("formats completed dates and meal-range labels in compact display styles", () => {
+    expect(formatShoppingHistoryCompletionDate("2026-04-30T15:10:00Z")).toBe(
+      "5/1",
     );
+    expect(formatShoppingHistoryCompletionDate(null)).toBe("미완료");
     expect(formatShoppingHistoryMealRange(createHistoryItem({}))).toBe(
       "4월 30일 ~ 5월 6일",
     );

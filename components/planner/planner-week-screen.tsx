@@ -1154,12 +1154,16 @@ export function PlannerWeekScreen({
           </div>
           {shoppingListLinks.length > 0 ? (
             <Link
-              className="mt-3 flex min-h-10 items-center justify-between rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 text-[13px] font-bold text-[var(--foreground)]"
-              href="/mypage?restore=shopping-history-tab"
+              className="mt-3 flex min-h-10 items-center justify-between rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 text-[14px] font-bold text-[var(--foreground)]"
+              href={buildReturnHref("/mypage", {
+                restore: "shopping-history-tab",
+                returnSurface: "planner.week",
+                returnTo: "/planner",
+              })}
             >
-              <span>이번 주 장보기 목록 {shoppingListLinks.length}개</span>
-              <span className="text-[12px] font-extrabold text-[var(--brand)]">
-                기록 보기
+              <span>이번 주 장보기 기록 {shoppingListLinks.length}개</span>
+              <span className="text-[13px] font-extrabold text-[var(--brand)]">
+                캘린더 보기
               </span>
             </Link>
           ) : null}

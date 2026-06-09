@@ -58,7 +58,7 @@ export function getShoppingHistoryCreatedDateKey(item: ShoppingListHistoryItem) 
   return getKoreaDateTimeParts(item.created_at)?.dateKey ?? item.created_at.slice(0, 10);
 }
 
-export function formatShoppingHistoryDateTime(value: string | null) {
+export function formatShoppingHistoryCompletionDate(value: string | null) {
   if (!value) {
     return "미완료";
   }
@@ -69,7 +69,7 @@ export function formatShoppingHistoryDateTime(value: string | null) {
     return value;
   }
 
-  return `${parts.year}. ${Number(parts.month)}. ${Number(parts.day)}. ${parts.hour}:${parts.minute}`;
+  return `${Number(parts.month)}/${Number(parts.day)}`;
 }
 
 function formatDateOnlyLabel(dateKey: string) {
@@ -154,4 +154,88 @@ export function buildShoppingHistoryCalendarMonths(
       monthKey,
       title: formatMonthTitle(monthKey),
     }));
+}
+
+export function getLatestShoppingHistoryDateKey(
+  months: ShoppingHistoryCalendarMonth[],
+) {
+  for (const month of months) {
+    const dateKey = getLatestShoppingHistoryDateKeyInMonth(month);
+    if (dateKey) return dateKey;
+  }
+
+  return "";
+}
+
+export function getLatestShoppingHistoryDateKeyInMonth(
+  month: ShoppingHistoryCalendarMonth | null | undefined,
+) {
+  if (!month) return "";
+
+  for (const day of [...month.days].reverse()) {
+    if (day.items.length > 0) {
+      return day.dateKey;
+    }
+  }
+
+  return "";
+}
+
+export function getShoppingHistoryMonthIndexForDateKey(
+  months: ShoppingHistoryCalendarMonth[],
+  dateKey: string,
+) {
+  if (!dateKey) return -1;
+
+  const monthKey = dateKey.slice(0, 7);
+  return months.findIndex((month) => month.monthKey === monthKey);
+}
+
+export function findShoppingHistoryDay(
+  months: ShoppingHistoryCalendarMonth[],
+  dateKey: string,
+) {
+  if (!dateKey) return null;
+
+  for (const month of months) {
+    const day = month.days.find(
+      (candidate) => candidate.dateKey === dateKey && candidate.items.length > 0,
+    );
+
+    if (day) return day;
+  }
+
+  return null;
+}
+
+export function sortShoppingHistoryItemsForDisplay(
+  items: ShoppingListHistoryItem[],
+) {
+  return [...items].sort((left, right) => {
+    const byCreatedAt = right.created_at.localeCompare(left.created_at);
+    if (byCreatedAt !== 0) return byCreatedAt;
+
+    return right.id.localeCompare(left.id);
+  });
+}
+
+export function formatShoppingDateKeyLong(dateKey: string) {
+  const [, month, day] = dateKey.split("-").map(Number);
+
+  if (!month || !day) {
+    return dateKey;
+  }
+
+  return `${month}월 ${day}일`;
+}
+
+export function buildShoppingDayAriaLabel(day: ShoppingHistoryCalendarDay) {
+  const completedCount = day.items.filter((item) => item.is_completed).length;
+  const activeCount = day.items.length - completedCount;
+  const statusParts = [
+    activeCount > 0 ? `진행 중 ${activeCount}개` : "",
+    completedCount > 0 ? `완료 ${completedCount}개` : "",
+  ].filter(Boolean);
+
+  return `${formatShoppingDateKeyLong(day.dateKey)} 만든 장보기 ${day.items.length}개, ${statusParts.join(", ")}`;
 }

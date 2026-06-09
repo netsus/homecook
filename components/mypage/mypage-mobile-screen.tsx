@@ -7,8 +7,16 @@ import React from "react";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import {
   buildShoppingHistoryCalendarMonths,
-  formatShoppingHistoryDateTime,
+  buildShoppingDayAriaLabel,
+  findShoppingHistoryDay,
+  formatShoppingDateKeyLong,
+  formatShoppingHistoryCompletionDate,
   formatShoppingHistoryMealRange,
+  getLatestShoppingHistoryDateKey,
+  getLatestShoppingHistoryDateKeyInMonth,
+  getShoppingHistoryMonthIndexForDateKey,
+  sortShoppingHistoryItemsForDisplay,
+  type ShoppingHistoryCalendarDay,
 } from "@/components/mypage/shopping-history-calendar";
 import type { UserProfileData } from "@/lib/api/mypage";
 import { buildReturnHref } from "@/lib/navigation/return-context";
@@ -66,6 +74,7 @@ interface MypageMobileScreenProps {
   onRequestDelete: (book: RecipeBookSummary) => void;
   onRetrySavedRecipes: () => void;
   onShowCreateInput: () => void;
+  onSurfaceBack: () => void;
   onSurfaceChange: (surface: MypageMobileSurface) => void;
 }
 
@@ -121,6 +130,7 @@ export function MypageMobileScreen({
   onRequestDelete,
   onRetrySavedRecipes,
   onShowCreateInput,
+  onSurfaceBack,
   onSurfaceChange,
 }: MypageMobileScreenProps) {
   const title =
@@ -133,7 +143,7 @@ export function MypageMobileScreen({
   return (
     <div className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden">
       <MobileAppBar
-        onBack={surface === "home" ? undefined : () => onSurfaceChange("home")}
+        onBack={surface === "home" ? undefined : onSurfaceBack}
         titleTone={surface === "shopping" ? "default" : "brand"}
         title={title}
       />
@@ -1143,62 +1153,263 @@ function MobileShoppingSurface({
 }
 
 function MobileShoppingCalendar({ items }: { items: ShoppingListHistoryItem[] }) {
-  const months = buildShoppingHistoryCalendarMonths(items);
+  const months = React.useMemo(
+    () => buildShoppingHistoryCalendarMonths(items),
+    [items],
+  );
+  const defaultDateKey = React.useMemo(
+    () => getLatestShoppingHistoryDateKey(months),
+    [months],
+  );
+  const defaultMonthIndex = React.useMemo(
+    () => getShoppingHistoryMonthIndexForDateKey(months, defaultDateKey),
+    [defaultDateKey, months],
+  );
+  const [selectedDateKey, setSelectedDateKey] = React.useState(
+    defaultDateKey,
+  );
+  const [visibleMonthIndex, setVisibleMonthIndex] =
+    React.useState(defaultMonthIndex);
+  const safeVisibleMonthIndex =
+    months.length === 0
+      ? -1
+      : Math.min(Math.max(visibleMonthIndex, 0), months.length - 1);
+  const visibleMonth =
+    safeVisibleMonthIndex >= 0 ? months[safeVisibleMonthIndex] : null;
+  const selectedMonthIndex = React.useMemo(
+    () => getShoppingHistoryMonthIndexForDateKey(months, selectedDateKey),
+    [months, selectedDateKey],
+  );
+
+  React.useEffect(() => {
+    if (!defaultDateKey) return;
+
+    if (
+      !selectedDateKey ||
+      !findShoppingHistoryDay(months, selectedDateKey)?.items.length
+    ) {
+      setSelectedDateKey(defaultDateKey);
+      setVisibleMonthIndex(defaultMonthIndex);
+    }
+  }, [defaultDateKey, defaultMonthIndex, months, selectedDateKey]);
+
+  React.useEffect(() => {
+    if (safeVisibleMonthIndex >= 0 && safeVisibleMonthIndex !== visibleMonthIndex) {
+      setVisibleMonthIndex(safeVisibleMonthIndex);
+    }
+  }, [safeVisibleMonthIndex, visibleMonthIndex]);
+
+  React.useEffect(() => {
+    if (selectedMonthIndex >= 0 && selectedMonthIndex !== safeVisibleMonthIndex) {
+      setVisibleMonthIndex(selectedMonthIndex);
+    }
+  }, [safeVisibleMonthIndex, selectedMonthIndex]);
+
+  const handleMonthChange = React.useCallback(
+    (nextIndex: number) => {
+      const nextMonth = months[nextIndex];
+      if (!nextMonth) return;
+
+      const nextDateKey = getLatestShoppingHistoryDateKeyInMonth(nextMonth);
+      setVisibleMonthIndex(nextIndex);
+      if (nextDateKey) {
+        setSelectedDateKey(nextDateKey);
+      }
+    },
+    [months],
+  );
+
+  const selectedDay =
+    findShoppingHistoryDay(months, selectedDateKey) ??
+    findShoppingHistoryDay(months, defaultDateKey);
 
   return (
     <div className="space-y-4">
-      {months.map((month) => (
-        <section
-          className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
-          key={month.monthKey}
-        >
-          <h2 className="px-1 text-[15px] font-extrabold leading-[1.3] text-[var(--foreground)]">
-            {month.title}
-          </h2>
-          <div
-            aria-hidden="true"
-            className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-[var(--text-3)]"
-          >
-            {["일", "월", "화", "수", "목", "금", "토"].map((weekday) => (
-              <span key={weekday}>{weekday}</span>
-            ))}
+      {selectedDay ? (
+        <MobileShoppingSelectedDayPanel day={selectedDay} />
+      ) : null}
+
+      <section
+        className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
+        data-testid="shopping-history-calendar"
+      >
+        <div className="flex items-start justify-between gap-3 px-1">
+          <div className="min-w-0">
+            <h2 className="min-w-0 text-[16px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+              장보기 달력
+            </h2>
+            <p className="mt-1 text-[12px] font-semibold leading-[1.35] text-[var(--text-3)]">
+              달력은 목록을 만든 날짜 기준이에요.
+            </p>
           </div>
-          <div className="mt-1 grid grid-cols-7 gap-1">
-            {month.days.map((day) => (
-              <div
-                className={[
-                  "min-h-[58px] rounded-[var(--radius-control)] border p-1",
-                  day.dayNumber === null
-                    ? "border-transparent bg-transparent"
-                    : "border-[var(--surface-subtle)] bg-[var(--surface-fill)]",
-                ].join(" ")}
-                key={day.dateKey}
+          <MobileShoppingStatusLegend />
+        </div>
+
+        {visibleMonth ? (
+          <section className="mt-4" key={visibleMonth.monthKey}>
+            <div className="grid grid-cols-[34px_minmax(0,1fr)_34px] items-center gap-2">
+              <button
+                aria-label="이전 달"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface-fill)] text-[20px] font-bold leading-none text-[var(--foreground)] disabled:cursor-default disabled:opacity-30"
+                disabled={safeVisibleMonthIndex >= months.length - 1}
+                onClick={() => handleMonthChange(safeVisibleMonthIndex + 1)}
+                type="button"
               >
-                {day.dayNumber !== null ? (
-                  <span className="block text-[11px] font-bold leading-none text-[var(--text-2)]">
-                    {day.dayNumber}
-                  </span>
-                ) : null}
-                <div className="mt-1 space-y-1" role="list">
-                  {day.items.map((item) => (
-                    <MobileShoppingCard item={item} key={item.id} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ))}
+                ‹
+              </button>
+              <h3 className="min-w-0 text-center text-[15px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+                {visibleMonth.title}
+            </h3>
+              <button
+                aria-label="다음 달"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface-fill)] text-[20px] font-bold leading-none text-[var(--foreground)] disabled:cursor-default disabled:opacity-30"
+                disabled={safeVisibleMonthIndex <= 0}
+                onClick={() => handleMonthChange(safeVisibleMonthIndex - 1)}
+                type="button"
+              >
+                ›
+              </button>
+            </div>
+            <div
+              aria-hidden="true"
+              className="mt-3 grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-[var(--text-3)]"
+            >
+              {["일", "월", "화", "수", "목", "금", "토"].map((weekday) => (
+                <span key={weekday}>{weekday}</span>
+              ))}
+            </div>
+            <div className="mt-1 grid grid-cols-7 gap-1">
+              {visibleMonth.days.map((day) => (
+                <MobileShoppingDayCell
+                  day={day}
+                  isSelected={day.dateKey === selectedDay?.dateKey}
+                  key={day.dateKey}
+                  onSelect={setSelectedDateKey}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+      </section>
     </div>
   );
 }
 
+function MobileShoppingDayCell({
+  day,
+  isSelected,
+  onSelect,
+}: {
+  day: ShoppingHistoryCalendarDay;
+  isSelected: boolean;
+  onSelect: (dateKey: string) => void;
+}) {
+  if (day.dayNumber === null) {
+    return (
+      <div
+        aria-hidden="true"
+        className="min-h-[46px] rounded-[var(--radius-control)] border border-transparent bg-transparent"
+      />
+    );
+  }
+
+  const hasItems = day.items.length > 0;
+  const completedCount = day.items.filter((item) => item.is_completed).length;
+  const activeCount = day.items.length - completedCount;
+
+  if (!hasItems) {
+    return (
+      <div className="min-h-[46px] rounded-[var(--radius-control)] border border-[var(--surface-subtle)] bg-[var(--surface-fill)] p-1 text-left">
+        <span className="block text-[12px] font-bold leading-none text-[var(--text-3)]">
+          {day.dayNumber}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      aria-label={buildShoppingDayAriaLabel(day)}
+      className={[
+        "min-h-[46px] rounded-[var(--radius-control)] border p-1 text-left transition-colors",
+        isSelected
+          ? "border-[var(--brand)] bg-[var(--brand-soft)]"
+          : "border-[var(--surface-subtle)] bg-[var(--surface-fill)]",
+      ].join(" ")}
+      onClick={() => onSelect(day.dateKey)}
+      type="button"
+    >
+      <span className="block text-[12px] font-extrabold leading-none text-[var(--foreground)]">
+        {day.dayNumber}
+      </span>
+      <span className="mt-2 flex min-h-[12px] items-center gap-1">
+        {activeCount > 0 ? (
+          <span
+            aria-hidden="true"
+            className="h-2 w-2 rounded-full bg-[var(--planner-status-registered)]"
+          />
+        ) : null}
+        {completedCount > 0 ? (
+          <span
+            aria-hidden="true"
+            className="h-2 w-2 rounded-full bg-[var(--planner-status-shopping)]"
+          />
+        ) : null}
+        {day.items.length > 1 ? (
+          <span className="text-[10px] font-extrabold leading-none text-[var(--text-2)]">
+            {day.items.length}
+          </span>
+        ) : null}
+      </span>
+    </button>
+  );
+}
+
+function MobileShoppingSelectedDayPanel({
+  day,
+}: {
+  day: ShoppingHistoryCalendarDay;
+}) {
+  const sortedItems = sortShoppingHistoryItemsForDisplay(day.items);
+
+  return (
+    <section
+      className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
+      data-testid="shopping-selected-day-panel"
+    >
+      <div className="flex items-end justify-between gap-3 px-1">
+        <div className="min-w-0">
+          <h2 className="text-[16px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+            {formatShoppingDateKeyLong(day.dateKey)} 만든 장보기
+          </h2>
+          <p className="mt-1 text-[12px] font-semibold leading-[1.35] text-[var(--text-3)]">
+            끼니 범위와 완료일을 따로 확인하세요.
+          </p>
+        </div>
+        <span className="shrink-0 text-[13px] font-extrabold text-[var(--text-3)]">
+          {sortedItems.length}개
+        </span>
+      </div>
+      <div className="mt-3 space-y-2">
+        {sortedItems.map((item) => (
+          <MobileShoppingCard item={item} key={item.id} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function MobileShoppingCard({ item }: { item: ShoppingListHistoryItem }) {
-  const mealRange = formatShoppingHistoryMealRange(item);
+  const isCompleted = item.is_completed;
 
   return (
     <Link
-      className="block rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] p-1.5 shadow-[0_1px_4px_var(--overlay-10)]"
+      className={[
+        "block rounded-[var(--radius-control)] border bg-[var(--surface)] px-3 py-3 shadow-[0_1px_4px_var(--overlay-10)]",
+        isCompleted
+          ? "border-[var(--planner-status-shopping)]"
+          : "border-[var(--planner-status-registered)]",
+      ].join(" ")}
       data-testid={`shopping-card-${item.id}`}
       href={buildReturnHref(`/shopping/lists/${item.id}`, {
         restore: "shopping-history-tab",
@@ -1207,55 +1418,70 @@ function MobileShoppingCard({ item }: { item: ShoppingListHistoryItem }) {
       })}
       role="listitem"
     >
-      <span className="block min-w-0">
-        <span className="block text-[10px] font-extrabold leading-[1.25] text-[var(--foreground)]">
-          {item.title}
+      <span className="flex min-w-0 items-start justify-between gap-3">
+        <span className="min-w-0">
+          <span
+            className={[
+              "inline-flex h-6 items-center rounded-full px-2 text-[12px] font-extrabold leading-none",
+              isCompleted
+                ? "bg-[var(--planner-status-shopping-soft)] text-[var(--planner-status-shopping)]"
+                : "bg-[var(--planner-status-registered-soft)] text-[var(--planner-status-registered-strong)]",
+            ].join(" ")}
+          >
+            {item.completed_at
+              ? `완료 ${formatShoppingHistoryCompletionDate(item.completed_at)}`
+              : "진행 중"}
+          </span>
+          <strong className="mt-2 block truncate text-[15px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+            {item.title}
+          </strong>
         </span>
-        <dl className="mt-1 grid gap-0.5 text-[8px] leading-[1.2]">
-          <div>
-            <dt className="inline font-bold text-[var(--text-3)]">생성일 </dt>
-            <dd className="inline font-semibold text-[var(--foreground)]">
-              {formatShoppingHistoryDateTime(item.created_at)}
-            </dd>
-          </div>
-          <div>
-            <dt className="inline font-bold text-[var(--text-3)]">완료일 </dt>
-            <dd className="inline font-semibold text-[var(--foreground)]">
-              {formatShoppingHistoryDateTime(item.completed_at)}
-            </dd>
-          </div>
-          <div>
-            <dt className="inline font-bold text-[var(--text-3)]">구매 재료 </dt>
-            <dd className="inline font-semibold text-[var(--foreground)]">
-              {item.item_count}개
-            </dd>
-          </div>
-          <div>
-            <dt className="inline font-bold text-[var(--text-3)]">끼니 범위 </dt>
-            <dd className="inline font-semibold text-[var(--foreground)]">
-              {mealRange}
-            </dd>
-          </div>
-        </dl>
-        <MobileShoppingStatusTag item={item} />
+        <span
+          aria-hidden="true"
+          className="shrink-0 text-[22px] leading-none text-[var(--text-4)]"
+        >
+          ›
+        </span>
       </span>
+      <dl className="mt-3 grid gap-1.5 text-[12px] font-semibold leading-[1.35]">
+        <div className="flex items-start justify-between gap-2">
+          <dt className="shrink-0 text-[var(--text-3)]">끼니 범위</dt>
+          <dd className="min-w-0 text-right text-[var(--foreground)]">
+            {formatShoppingHistoryMealRange(item)}
+          </dd>
+        </div>
+        <div className="flex items-start justify-between gap-2">
+          <dt className="shrink-0 text-[var(--text-3)]">재료</dt>
+          <dd className="min-w-0 text-right text-[var(--foreground)]">
+            재료 {item.item_count}개
+          </dd>
+        </div>
+      </dl>
     </Link>
   );
 }
 
-function MobileShoppingStatusTag({ item }: { item: ShoppingListHistoryItem }) {
+function MobileShoppingStatusLegend() {
   return (
-    <span
-      className={[
-        "mt-1 inline-flex max-w-full items-center rounded-full px-1.5 py-0.5 text-[8px] font-extrabold leading-none",
-        item.is_completed
-          ? "bg-[var(--planner-status-cooked-soft)] text-[var(--planner-status-cooked)]"
-          : "bg-[var(--planner-status-shopping-soft)] text-[var(--planner-status-shopping)]",
-      ].join(" ")}
-      data-testid={`shopping-status-${item.id}`}
+    <div
+      className="flex shrink-0 items-center gap-2 text-[10px] font-bold leading-none text-[var(--text-3)]"
+      data-testid="shopping-status-legend"
     >
-      {item.is_completed ? "완료" : "진행중"}
-    </span>
+      <span className="inline-flex items-center gap-1">
+        <span
+          aria-hidden="true"
+          className="h-2 w-2 rounded-full border-2 border-[var(--planner-status-registered)]"
+        />
+        진행중
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <span
+          aria-hidden="true"
+          className="h-2 w-2 rounded-full border-2 border-[var(--planner-status-shopping)]"
+        />
+        완료
+      </span>
+    </div>
   );
 }
 
