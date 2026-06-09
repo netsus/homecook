@@ -175,7 +175,7 @@ const MOCK_SHOPPING_HISTORY = {
   items: [
     {
       id: "list-1",
-      title: "4/30 장보기",
+      title: "4월 30일 ~ 5월 6일 끼니",
       date_range_start: "2026-04-30",
       date_range_end: "2026-05-06",
       is_completed: true,
@@ -185,7 +185,7 @@ const MOCK_SHOPPING_HISTORY = {
     },
     {
       id: "list-2",
-      title: "4/23 장보기",
+      title: "4월 23일 ~ 4월 29일 끼니",
       date_range_start: "2026-04-23",
       date_range_end: "2026-04-29",
       is_completed: false,
@@ -957,13 +957,17 @@ describe("MypageScreen", () => {
     await openShoppingSurface(user);
 
     expect(await screen.findByText("2026년 4월")).toBeTruthy();
-    expect(await screen.findByText("4/30 장보기")).toBeTruthy();
-    expect(screen.getByText("4/23 장보기")).toBeTruthy();
+    expect(await screen.findByText("4월 30일 ~ 5월 6일 끼니")).toBeTruthy();
+    expect(screen.getByText("4월 23일 ~ 4월 29일 끼니")).toBeTruthy();
     expect(screen.getByText("✓ 완료")).toBeTruthy();
-    expect(screen.getByText("5/1 완료")).toBeTruthy();
+    expect(screen.getAllByText("완료일")).toHaveLength(2);
+    expect(screen.getByText("2026. 5. 1. 18:30")).toBeTruthy();
     expect(screen.queryByText(/다시열기/)).toBeNull();
     expect(screen.getByText("진행 중")).toBeTruthy();
-    expect(screen.getByText(/12개 항목/)).toBeTruthy();
+    expect(screen.getAllByText("구매 재료")).toHaveLength(2);
+    expect(screen.getByText("12개")).toBeTruthy();
+    expect(screen.getAllByText("끼니 범위")).toHaveLength(2);
+    expect(screen.getByText("4월 30일 ~ 5월 6일")).toBeTruthy();
     expect(screen.getByText("30")).toBeTruthy();
     expect(screen.getByText("23")).toBeTruthy();
   });
@@ -981,6 +985,9 @@ describe("MypageScreen", () => {
     expect(heading.className).not.toContain("text-[var(--brand)]");
     expect(screen.getByText("2026년 4월")).toBeTruthy();
     expect(screen.getByTestId("shopping-card-list-1").textContent).not.toContain("다시열기");
+    expect(screen.getByTestId("shopping-card-list-1").textContent).toContain("생성일");
+    expect(screen.getByTestId("shopping-card-list-1").textContent).toContain("구매 재료");
+    expect(screen.getByTestId("shopping-card-list-1").textContent).toContain("끼니 범위");
     expect(screen.getByTestId("shopping-status-list-1").className).toContain(
       "bg-[var(--planner-status-cooked-soft)]",
     );
@@ -1143,7 +1150,7 @@ describe("MypageScreen", () => {
     );
 
     expect(await screen.findByTestId("shopping-tab")).toBeTruthy();
-    expect(await screen.findByText("4/30 장보기")).toBeTruthy();
+    expect(await screen.findByText("4월 30일 ~ 5월 6일 끼니")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "저장한 레시피" })).toBeNull();
   });
 
@@ -1250,7 +1257,7 @@ describe("MypageScreen", () => {
 
     render(<MypageScreen initialAuthenticated />);
 
-    expect(await screen.findByText("4/30 장보기")).toBeTruthy();
+    expect(await screen.findByText("4월 30일 ~ 5월 6일 끼니")).toBeTruthy();
     expect(
       screen
         .getByRole("tab", { name: "장보기 기록" })

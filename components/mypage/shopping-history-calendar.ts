@@ -1,5 +1,7 @@
 import type { ShoppingListHistoryItem } from "@/types/shopping";
 
+const KOREA_TIME_ZONE = "Asia/Seoul";
+
 export interface ShoppingHistoryCalendarDay {
   dateKey: string;
   dayNumber: number | null;
@@ -12,8 +14,81 @@ export interface ShoppingHistoryCalendarMonth {
   title: string;
 }
 
-function getCreatedDateKey(item: ShoppingListHistoryItem) {
-  return item.created_at.slice(0, 10);
+function getKoreaDateTimeParts(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const parts = new Intl.DateTimeFormat("ko-KR", {
+    day: "numeric",
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    month: "numeric",
+    timeZone: KOREA_TIME_ZONE,
+    year: "numeric",
+  }).formatToParts(date);
+
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+
+  const year = getPart("year");
+  const month = getPart("month");
+  const day = getPart("day");
+  const hour = getPart("hour");
+  const minute = getPart("minute");
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return {
+    dateKey: `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`,
+    day,
+    hour,
+    minute,
+    month,
+    year,
+  };
+}
+
+export function getShoppingHistoryCreatedDateKey(item: ShoppingListHistoryItem) {
+  return getKoreaDateTimeParts(item.created_at)?.dateKey ?? item.created_at.slice(0, 10);
+}
+
+export function formatShoppingHistoryDateTime(value: string | null) {
+  if (!value) {
+    return "미완료";
+  }
+
+  const parts = getKoreaDateTimeParts(value);
+
+  if (!parts) {
+    return value;
+  }
+
+  return `${parts.year}. ${Number(parts.month)}. ${Number(parts.day)}. ${parts.hour}:${parts.minute}`;
+}
+
+function formatDateOnlyLabel(dateKey: string) {
+  const [month, day] = dateKey.split("-").slice(1).map(Number);
+
+  if (!month || !day) {
+    return dateKey;
+  }
+
+  return `${month}월 ${day}일`;
+}
+
+export function formatShoppingHistoryMealRange(item: ShoppingListHistoryItem) {
+  const startLabel = formatDateOnlyLabel(item.date_range_start);
+  const endLabel = formatDateOnlyLabel(item.date_range_end);
+
+  return item.date_range_start === item.date_range_end
+    ? startLabel
+    : `${startLabel} ~ ${endLabel}`;
 }
 
 function getMonthKey(dateKey: string) {
@@ -66,7 +141,7 @@ export function buildShoppingHistoryCalendarMonths(
   const monthKeys = new Set<string>();
 
   items.forEach((item) => {
-    const dateKey = getCreatedDateKey(item);
+    const dateKey = getShoppingHistoryCreatedDateKey(item);
     const current = itemsByDate.get(dateKey) ?? [];
     itemsByDate.set(dateKey, [...current, item]);
     monthKeys.add(getMonthKey(dateKey));
