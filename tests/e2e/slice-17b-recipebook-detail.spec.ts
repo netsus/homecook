@@ -142,6 +142,10 @@ function recipeItem(page: Page, recipeId: string) {
   return page.getByTestId(`recipe-item-${recipeId}`);
 }
 
+function isDesktopViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 0) >= 1024;
+}
+
 test.describe("RECIPEBOOK_DETAIL screen", () => {
   test("shows error when recipebook does not exist", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
@@ -179,10 +183,28 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await expect(visibleText(page, "저장한 레시피")).toBeVisible();
 
     await expect(recipeItem(page, "recipe-1")).toBeVisible();
-    await expect(recipeItem(page, "recipe-2")).toBeVisible();
-
-    // Remove buttons visible for saved type
     await expect(page.getByLabel("된장찌개 제거")).toBeVisible();
+
+    if (isDesktopViewport(page)) {
+      await expect(page.getByTestId("recipebook-open-book")).toBeVisible();
+      await expect(page.getByTestId("recipebook-detail-toc")).toBeVisible();
+      await expect(
+        page.getByTestId("recipebook-detail-toc").getByRole("button", {
+          name: /김치볶음밥/,
+        }),
+      ).toBeVisible();
+
+      // Book mode shows one page at a time; list mode exposes all cards.
+      await page.getByRole("button", { name: "목록" }).click();
+      await expect(recipeItem(page, "recipe-2")).toBeVisible();
+    } else {
+      await page
+        .getByRole("navigation", { name: /목차/ })
+        .getByRole("button", { name: /김치볶음밥/ })
+        .click();
+      await expect(recipeItem(page, "recipe-2")).toBeVisible();
+    }
+
     await expect(page.getByLabel("김치볶음밥 제거")).toBeVisible();
     await expect(page.getByLabel("저장한 레시피 옵션 메뉴")).toHaveCount(0);
   });
@@ -295,8 +317,24 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await expect(recipeItem(page, "recipe-1")).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
 
-    await expect(recipeItem(page, "recipe-3")).toBeVisible();
-    await expect(recipeItem(page, "recipe-2")).toHaveCount(1);
+    if (isDesktopViewport(page)) {
+      await page.getByRole("button", { name: "목록" }).click();
+    }
+
+    if (isDesktopViewport(page)) {
+      await expect(recipeItem(page, "recipe-3")).toBeVisible();
+      await expect(recipeItem(page, "recipe-2")).toHaveCount(1);
+    } else {
+      const mobileToc = page.getByRole("navigation", { name: /목차/ });
+      await expect(
+        mobileToc.getByRole("button", { name: /비빔국수/ }),
+      ).toBeVisible();
+      await expect(
+        mobileToc.getByRole("button", { name: /김치볶음밥/ }),
+      ).toHaveCount(1);
+      await mobileToc.getByRole("button", { name: /비빔국수/ }).click();
+      await expect(recipeItem(page, "recipe-3")).toBeVisible();
+    }
   });
 
   test("removes item from saved book with optimistic UI", async ({
@@ -308,6 +346,9 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
 
     await expect(recipeItem(page, "recipe-1")).toBeVisible();
     await page.getByLabel("된장찌개 제거").click();
+    const dialog = page.getByRole("alertdialog", { name: "레시피를 제거할까요?" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "제거", exact: true }).click();
 
     // Optimistic: item gone
     await expect(recipeItem(page, "recipe-1")).toHaveCount(0);
@@ -353,8 +394,17 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
 
     await expect(recipeItem(page, "recipe-1")).toBeVisible();
     await page.getByLabel("된장찌개 제거").click();
+    const dialog = page.getByRole("alertdialog", { name: "레시피를 제거할까요?" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "제거", exact: true }).click();
 
     await expect(page.getByText("제거에 실패했어요.")).toBeVisible();
+    if (!isDesktopViewport(page)) {
+      await page
+        .getByRole("navigation", { name: /목차/ })
+        .getByRole("button", { name: /된장찌개/ })
+        .click();
+    }
     await expect(recipeItem(page, "recipe-1")).toBeVisible();
   });
 
@@ -366,6 +416,9 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
 
     await expect(recipeItem(page, "recipe-1")).toBeVisible();
     await page.getByLabel("된장찌개 제거").click();
+    const dialog = page.getByRole("alertdialog", { name: "레시피를 제거할까요?" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "제거", exact: true }).click();
 
     await expect(
       page.getByText("아직 이 레시피북에 레시피가 없어요"),
@@ -389,8 +442,11 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
 
     await expect(recipeItem(page, "recipe-1")).toBeVisible();
 
-    const recipeCard = page.getByTestId("recipe-item-recipe-1");
-    const link = recipeCard.locator("a[href^='/recipe/recipe-1']");
+    const link = isDesktopViewport(page)
+      ? page.getByRole("link", { name: "플래너에 추가" }).first()
+      : page
+          .getByTestId("recipe-item-recipe-1")
+          .getByRole("link", { name: "플래너에 추가" });
     await expect(link).toBeVisible();
   });
 

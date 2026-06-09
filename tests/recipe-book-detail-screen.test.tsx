@@ -190,7 +190,8 @@ describe("RecipeBookDetailScreen", () => {
     const skeleton = screen.getByTestId("recipebook-detail-skeleton");
     expect(skeleton.closest(".web-recipebook-detail-shell")).toBeTruthy();
     expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
-    expect(screen.getByText("레시피를 불러오는 중")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "레시피북 리더" })).toBeTruthy();
+    expect(screen.getByText("불러오는 중")).toBeTruthy();
   });
 
   it("uses the mobile loading shell and preserves mypage tab return context", () => {
@@ -232,18 +233,35 @@ describe("RecipeBookDetailScreen", () => {
     );
 
     expect(await screen.findByTestId("recipe-item-recipe-1")).toBeTruthy();
-    expect(screen.getByTestId("recipe-item-recipe-2")).toBeTruthy();
-    expect(within(screen.getByTestId("recipe-item-recipe-1")).getByText("한식 · 찌개")).toBeTruthy();
+    expect(
+      within(screen.getByTestId("recipe-item-recipe-1")).getByRole("heading", {
+        name: "재료",
+      }),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId("recipe-item-recipe-1")).getByRole("heading", {
+        name: "만들기",
+      }),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId("recipe-item-recipe-1")).queryByText(/시간 미정/),
+    ).toBeNull();
     expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
 
+    const user = userEvent.setup();
     const toc = screen.getByTestId("recipebook-detail-toc");
+    expect(toc.closest(".web-recipebook-detail-layout")).toBeTruthy();
+    expect(
+      screen.getByTestId("recipebook-detail-list").closest(".web-recipebook-detail-main"),
+    ).toBeTruthy();
     expect(within(toc).getByRole("heading", { name: "목차" })).toBeTruthy();
-    const firstTocLink = within(toc).getByRole("link", { name: /된장찌개/ });
-    expect(firstTocLink.getAttribute("href")).toBe("#recipebook-recipe-recipe-1");
+    expect(within(toc).getByRole("button", { name: /된장찌개/ })).toBeTruthy();
     expect(screen.getByTestId("recipe-item-recipe-1").id).toBe(
       "recipebook-recipe-recipe-1",
     );
+    await user.click(within(toc).getByRole("button", { name: /김치볶음밥/ }));
+    expect(await screen.findByTestId("recipe-item-recipe-2")).toBeTruthy();
   });
 
   it("shows a mobile table of contents before the recipe list", async () => {
@@ -262,9 +280,12 @@ describe("RecipeBookDetailScreen", () => {
 
     expect(screen.getAllByRole("heading", { name: "목차" }).length).toBeGreaterThan(0);
     const toc = screen.getByTestId("recipebook-detail-header");
-    expect(within(toc).getByText("저장한 레시피 · 2개 레시피")).toBeTruthy();
-    const firstTocLink = within(toc).getByRole("link", { name: /된장찌개/ });
-    expect(firstTocLink.getAttribute("href")).toBe("#recipebook-recipe-recipe-1");
+    expect(
+      within(toc).getByRole("heading", { name: "저장한 레시피" }),
+    ).toBeTruthy();
+    expect(within(toc).getByText("2개 레시피")).toBeTruthy();
+    const firstTocButton = within(toc).getByRole("button", { name: /된장찌개/ });
+    expect(firstTocButton.getAttribute("aria-current")).toBe("page");
     expect(screen.getByTestId("recipe-item-recipe-1").id).toBe(
       "recipebook-recipe-recipe-1",
     );
@@ -385,7 +406,9 @@ describe("RecipeBookDetailScreen", () => {
       await screen.findByText("아직 이 레시피북에 레시피가 없어요"),
     ).toBeTruthy();
     expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
-    expect(screen.getByText("대표 0개 레시피 · 전체 0개")).toBeTruthy();
+    expect(
+      screen.getByText("저장한 레시피 · 왼쪽 목차와 오른쪽 책 페이지로 레시피를 읽어요."),
+    ).toBeTruthy();
     expect(
       screen
         .getByText("아직 이 레시피북에 레시피가 없어요")
@@ -407,10 +430,12 @@ describe("RecipeBookDetailScreen", () => {
 
     expect(await screen.findByText("아직 이 레시피북에 레시피가 없어요")).toBeTruthy();
     expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "이름 변경" })).toBeTruthy();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "새 레시피북 옵션 메뉴" }));
+    expect(screen.getByRole("menuitem", { name: "이름 변경" })).toBeTruthy();
     expect(
       screen
-        .getByRole("heading", { name: "새 레시피북" })
+        .getByText("새 레시피북 · 왼쪽 목차와 오른쪽 책 페이지로 레시피를 읽어요.")
         .closest(".web-recipebook-detail-shell"),
     ).toBeTruthy();
   });
@@ -555,6 +580,8 @@ describe("RecipeBookDetailScreen", () => {
 
     triggerIntersection?.();
 
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "목록" }));
     expect(await screen.findByTestId("recipe-item-recipe-3")).toBeTruthy();
     expect(
       within(screen.getByTestId("recipebook-detail-list")).getAllByText(
@@ -581,8 +608,11 @@ describe("RecipeBookDetailScreen", () => {
 
     await screen.findByTestId("recipe-item-recipe-1");
 
-    const removeButtons = screen.getAllByRole("button", { name: /제거/ });
-    expect(removeButtons.length).toBe(2);
+    expect(screen.getByRole("button", { name: "된장찌개 제거" })).toBeTruthy();
+    const user = userEvent.setup();
+    const pageDots = screen.getByRole("group", { name: "페이지 선택" });
+    await user.click(within(pageDots).getByRole("button", { name: "02쪽" }));
+    expect(screen.getByRole("button", { name: "김치볶음밥 제거" })).toBeTruthy();
   });
 
   it("shows remove button for liked books with label '좋아요 해제'", async () => {
@@ -597,10 +627,11 @@ describe("RecipeBookDetailScreen", () => {
 
     await screen.findByTestId("recipe-item-recipe-1");
 
-    const removeButtons = screen.getAllByRole("button", {
-      name: /좋아요 해제/,
-    });
-    expect(removeButtons.length).toBe(2);
+    expect(screen.getByRole("button", { name: "된장찌개 좋아요 해제" })).toBeTruthy();
+    const user = userEvent.setup();
+    const pageDots = screen.getByRole("group", { name: "페이지 선택" });
+    await user.click(within(pageDots).getByRole("button", { name: "02쪽" }));
+    expect(screen.getByRole("button", { name: "김치볶음밥 좋아요 해제" })).toBeTruthy();
   });
 
   it("hides remove button for my_added books", async () => {
@@ -644,10 +675,12 @@ describe("RecipeBookDetailScreen", () => {
     const user = userEvent.setup();
     const removeBtn = screen.getByLabelText("된장찌개 제거");
     await user.click(removeBtn);
+    expect(screen.getByRole("alertdialog", { name: "레시피를 제거할까요?" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "제거" }));
 
-    // Optimistic: item removed immediately
+    // Optimistic: item removed after confirming
     await waitFor(() => {
-      expect(screen.queryByText("된장찌개")).toBeNull();
+      expect(screen.queryByTestId("recipe-item-recipe-1")).toBeNull();
     });
 
     // Toast shows
@@ -681,6 +714,8 @@ describe("RecipeBookDetailScreen", () => {
     const user = userEvent.setup();
     const removeBtn = screen.getByLabelText("된장찌개 좋아요 해제");
     await user.click(removeBtn);
+    expect(screen.getByRole("alertdialog", { name: "레시피를 제거할까요?" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "좋아요 해제" }));
 
     await waitFor(() => {
       expect(screen.getByText("좋아요를 해제했어요")).toBeTruthy();
@@ -708,6 +743,8 @@ describe("RecipeBookDetailScreen", () => {
     const user = userEvent.setup();
     const removeBtn = screen.getByLabelText("된장찌개 제거");
     await user.click(removeBtn);
+    expect(screen.getByRole("alertdialog", { name: "레시피를 제거할까요?" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "제거" }));
 
     // Wait for rollback
     await waitFor(() => {
@@ -754,6 +791,8 @@ describe("RecipeBookDetailScreen", () => {
 
     const user = userEvent.setup();
     await user.click(screen.getByLabelText("된장찌개 제거"));
+    expect(screen.getByRole("alertdialog", { name: "레시피를 제거할까요?" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "제거" }));
 
     expect(
       await screen.findByText("아직 이 레시피북에 레시피가 없어요"),
