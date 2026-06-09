@@ -867,6 +867,42 @@ describe("planner week screen", () => {
     );
   });
 
+  it("links mobile weekly shopping history back to the planner context", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-shopping-list",
+            recipe_id: "recipe-shopping-list",
+            recipe_title: "카레",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-lunch",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+            shopping_list_id: "shopping-list-1",
+            shopping_list_title: "3/24 장보기",
+          },
+        ],
+      }),
+    );
+
+    render(<PlannerWeekScreen />);
+
+    const historyLink = await screen.findByRole("link", {
+      name: /이번 주 장보기 기록 1개.*캘린더 보기/,
+    });
+    const href = historyLink.getAttribute("href") ?? "";
+    const url = new URL(href, "http://homecook.local");
+
+    expect(url.pathname).toBe("/mypage");
+    expect(url.searchParams.get("returnTo")).toBe("/planner");
+    expect(url.searchParams.get("returnSurface")).toBe("planner.week");
+    expect(url.searchParams.get("restore")).toBe("shopping-history-tab");
+  });
+
   it("marks leftover meals with an explicit leftover chip", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(
