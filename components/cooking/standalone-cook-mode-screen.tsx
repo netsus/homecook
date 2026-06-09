@@ -5,7 +5,6 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { CookModeDesktopView } from "@/components/cooking/cook-mode-desktop-view";
-import type { CookModeColorTheme } from "@/components/cooking/cook-mode-theme-toggle";
 import { ConsumedIngredientSheet } from "@/components/cooking/consumed-ingredient-sheet";
 import {
   MobileCookModeView,
@@ -55,7 +54,7 @@ export function StandaloneCookModeScreen({
   const [authState, setAuthState] = useState<AuthState>("checking");
   const [showConsumedSheet, setShowConsumedSheet] = useState(false);
   const [showLoginGate, setShowLoginGate] = useState(false);
-  const [colorTheme, setColorTheme] = useState<CookModeColorTheme>("light");
+  const colorTheme = "dark";
   const isMobileViewport = useIsMobileViewport();
   const completePendingRef = useRef(false);
 
@@ -173,10 +172,6 @@ export function StandaloneCookModeScreen({
     void loadStandaloneCookMode(recipeId, servings);
   }, [loadStandaloneCookMode, recipeId, servings]);
 
-  const handleColorThemeToggle = useCallback(() => {
-    setColorTheme((current) => (current === "dark" ? "light" : "dark"));
-  }, []);
-
   const returnPath = buildReturnHref(
     `/cooking/recipes/${recipeId}/cook-mode?servings=${servings}`,
     {
@@ -185,7 +180,7 @@ export function StandaloneCookModeScreen({
     },
   );
 
-  useUserScreenWakeLock(
+  const wakeLock = useUserScreenWakeLock(
     authState === "authenticated" && screenState === "ready",
   );
 
@@ -433,13 +428,13 @@ export function StandaloneCookModeScreen({
           contentTestId="standalone-cook-mode-content"
           controlsDisabled={screenState !== "ready"}
           onCancel={handleCancelClick}
-          onColorThemeToggle={handleColorThemeToggle}
           onComplete={handleCompleteClick}
           recipe={recipe}
           screenTestId="standalone-cook-mode-screen"
           servingsTestId="standalone-cook-mode-servings"
           titleTestId="standalone-cook-mode-title"
           variant="standalone"
+          wakeLockStatus={wakeLock.status}
         />
 
         {showConsumedSheet ? (
@@ -464,13 +459,13 @@ export function StandaloneCookModeScreen({
         contentTestId="standalone-cook-mode-content"
         controlsDisabled={screenState !== "ready"}
         onCancel={handleCancelClick}
-        onColorThemeToggle={handleColorThemeToggle}
         onComplete={handleCompleteClick}
         recipe={recipe}
         screenTestId="standalone-cook-mode-screen"
         servingsTestId="standalone-cook-mode-servings"
         titleTestId="standalone-cook-mode-title"
         variant="standalone"
+        wakeLockStatus={wakeLock.status}
       />
 
       {showConsumedSheet ? (

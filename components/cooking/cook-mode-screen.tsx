@@ -7,7 +7,6 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { CookModeDesktopView } from "@/components/cooking/cook-mode-desktop-view";
-import type { CookModeColorTheme } from "@/components/cooking/cook-mode-theme-toggle";
 import { ConsumedIngredientSheet } from "@/components/cooking/consumed-ingredient-sheet";
 import {
   MobileCookModeView,
@@ -83,7 +82,7 @@ export function CookModeScreen({
   );
   const [showConsumedSheet, setShowConsumedSheet] = useState(false);
   const [cancelConfirm, setCancelConfirm] = useState(false);
-  const [colorTheme, setColorTheme] = useState<CookModeColorTheme>("light");
+  const colorTheme = "dark";
   const isMobileViewport = useIsMobileViewport();
   const completePendingRef = useRef(false);
   const cancelPendingRef = useRef(false);
@@ -220,11 +219,7 @@ export function CookModeScreen({
     void loadCookMode(sessionId).catch(() => {});
   }, [loadCookMode, sessionId]);
 
-  const handleColorThemeToggle = useCallback(() => {
-    setColorTheme((current) => (current === "dark" ? "light" : "dark"));
-  }, []);
-
-  useUserScreenWakeLock(
+  const wakeLock = useUserScreenWakeLock(
     authState === "authenticated" && visibleScreenState === "ready",
   );
 
@@ -386,13 +381,13 @@ export function CookModeScreen({
           controlsDisabled={screenState !== "ready"}
           mealContextLabel={mealContextLabel}
           onCancel={handleCancelClick}
-          onColorThemeToggle={handleColorThemeToggle}
           onComplete={handleCompleteClick}
           recipe={recipe}
           screenTestId="cook-mode-screen"
           servingsTestId="cook-mode-servings"
           titleTestId="cook-mode-title"
           variant="planner"
+          wakeLockStatus={wakeLock.status}
         />
 
         {showConsumedSheet ? (
@@ -462,13 +457,13 @@ export function CookModeScreen({
         controlsDisabled={screenState !== "ready"}
         mealContextLabel={mealContextLabel}
         onCancel={handleCancelClick}
-        onColorThemeToggle={handleColorThemeToggle}
         onComplete={handleCompleteClick}
         recipe={recipe}
         screenTestId="cook-mode-screen"
         servingsTestId="cook-mode-servings"
         titleTestId="cook-mode-title"
         variant="planner"
+        wakeLockStatus={wakeLock.status}
       />
 
       {showConsumedSheet ? (

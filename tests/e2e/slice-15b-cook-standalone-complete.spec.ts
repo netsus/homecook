@@ -8,10 +8,6 @@ import {
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 
-function isDesktopViewport(page: Page) {
-  return (page.viewportSize()?.width ?? 1280) >= 1024;
-}
-
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   await page.addInitScript(
     ({ key, state }) => {
@@ -167,17 +163,13 @@ test.describe("15b standalone cook mode", () => {
       /2(인분|단계)/,
     );
 
-    // Verify ingredients are shown in the layout for this viewport
-    if (isDesktopViewport(page)) {
-      await expect(page.getByTestId("ingredient-list")).toBeVisible();
-      const ingredients = page.getByTestId("ingredient-item");
-      await expect(ingredients).toHaveCount(2);
-    } else {
-      const amountBoard = page.getByTestId("cook-mode-current-amount-board");
-      await expect(amountBoard).toBeVisible();
-      await expect(amountBoard).toContainText("양파");
-      await expect(amountBoard).not.toContainText("김치");
-    }
+    await expect(page.getByTestId("cook-mode-whole-board")).toBeVisible();
+    await expect(page.getByTestId("ingredient-list")).toBeVisible();
+    await expect(page.getByTestId("step-list")).toBeVisible();
+    const ingredients = page.getByTestId("ingredient-item");
+    await expect(ingredients).toHaveCount(2);
+    await expect(page.getByText("양파를 썰어주세요.")).toBeVisible();
+    await expect(page.getByText("김치를 넣고 끓여주세요.")).toBeVisible();
 
     await page.getByTestId("standalone-complete-button").click();
 
@@ -214,13 +206,8 @@ test.describe("15b standalone cook mode", () => {
     await page.waitForSelector('[data-testid="standalone-cook-mode-title"]');
 
     // Unauthenticated user can still view the cook mode data
-    if (isDesktopViewport(page)) {
-      await expect(page.getByTestId("ingredient-list")).toBeVisible();
-    } else {
-      await expect(
-        page.getByTestId("cook-mode-current-amount-board"),
-      ).toBeVisible();
-    }
+    await expect(page.getByTestId("ingredient-list")).toBeVisible();
+    await expect(page.getByTestId("step-list")).toBeVisible();
 
     // Click complete button
     await page.getByTestId("standalone-complete-button").click();
@@ -231,7 +218,7 @@ test.describe("15b standalone cook mode", () => {
     ).toBeVisible();
   });
 
-  test("standalone cook mode uses current-step board without tab controls", async ({
+  test("standalone cook mode uses whole-board without tab or step controls", async ({
     page,
   }) => {
     await setAuthOverride(page, "authenticated");
@@ -240,11 +227,13 @@ test.describe("15b standalone cook mode", () => {
     await page.goto(`/cooking/recipes/${RECIPE_ID}/cook-mode?servings=2`);
     await page.waitForSelector('[data-testid="standalone-cook-mode-content"]');
 
-    await expect(page.getByTestId("cook-mode-current-step")).toBeVisible();
-    await expect(page.getByTestId("cook-mode-current-amount-board")).toBeVisible();
+    await expect(page.getByTestId("cook-mode-whole-board")).toBeVisible();
+    await expect(page.getByTestId("ingredient-list")).toBeVisible();
     await expect(page.getByTestId("step-list")).toBeVisible();
-    await expect(page.getByTestId("cook-mode-prev-step")).toBeVisible();
-    await expect(page.getByTestId("cook-mode-next-step")).toBeVisible();
+    await expect(page.getByTestId("cook-mode-prev-step")).toHaveCount(0);
+    await expect(page.getByTestId("cook-mode-next-step")).toHaveCount(0);
+    await expect(page.getByTestId("cook-mode-current-step")).toHaveCount(0);
+    await expect(page.getByTestId("cook-mode-current-amount-board")).toHaveCount(0);
     await expect(page.getByTestId("tab-steps")).toHaveCount(0);
     await expect(page.getByText("10분")).toHaveCount(0);
     await expect(page.getByText(/타이머|메모|일시정지/)).toHaveCount(0);

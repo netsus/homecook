@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { useIsMobileViewport } from "@/components/cooking/cook-mode-mobile-ui";
+import { formatIngredientAmountOnly } from "@/components/cooking/cook-mode-step-model";
 import {
   AppBottomSheet,
   AppModalFooterActions,
@@ -238,29 +239,6 @@ export function ConsumedIngredientSheet({
       </div>
     </div>
   );
-}
-
-function formatIngredientAmountOnly(ingredient: CookingModeIngredient) {
-  if (ingredient.ingredient_type === "TO_TASTE") {
-    return "적당량";
-  }
-
-  if (ingredient.display_text) {
-    const normalized = ingredient.display_text
-      .replace(/^\[[^\]]+\]\s*/, "")
-      .trim();
-    const withoutName = normalized
-      .replace(ingredient.standard_name, "")
-      .trim();
-
-    return withoutName || normalized;
-  }
-
-  if (ingredient.amount === null) {
-    return "";
-  }
-
-  return `${ingredient.amount}${ingredient.unit ?? ""}`;
 }
 
 function CheckIcon() {
