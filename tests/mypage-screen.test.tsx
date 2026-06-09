@@ -918,7 +918,7 @@ describe("MypageScreen", () => {
     expect(dialog.textContent).toContain("주말 파티");
 
     mockFetchRecipeBooks.mockResolvedValue(updatedBooks);
-    await user.click(screen.getByRole("button", { name: "삭제" }));
+    await user.click(within(dialog).getByRole("button", { name: "삭제" }));
 
     await waitFor(() => {
       expect(mockDeleteRecipeBook).toHaveBeenCalledWith("book-custom");
@@ -1219,7 +1219,7 @@ describe("MypageScreen", () => {
     expect(avatar.textContent).toBe("집");
   });
 
-  it("opens system book cards inline below the mypage tabs", async () => {
+  it("opens system book cards as dedicated recipebook detail routes", async () => {
     render(<MypageScreen initialAuthenticated />);
 
     const user = await openRecipebookSurface();
@@ -1230,19 +1230,37 @@ describe("MypageScreen", () => {
     await user.click(myAddedCard);
 
     await waitFor(() => {
-      expect(mockFetchRecipeBookRecipes).toHaveBeenCalledWith("book-my", {
-        limit: 12,
-      });
+      expect(mockRouterPush).toHaveBeenCalledWith(
+        expect.stringContaining("/mypage/recipe-books/book-my?"),
+      );
     });
-    expect(await screen.findByRole("heading", { name: "내가 추가한 레시피" })).toBeTruthy();
-    expect(screen.getByText("저장된 된장찌개")).toBeTruthy();
-    const recipeLink = screen.getByRole("link", { name: /저장된 된장찌개/ });
-    expect(recipeLink.getAttribute("href")).toContain("/recipe/recipe-saved-1?");
-    expect(recipeLink.getAttribute("href")).toContain(
-      "returnTo=%2Fmypage%2Frecipe-books%2Fbook-my",
+    const href = mockRouterPush.mock.calls[0]?.[0] as string;
+    const destination = new URL(href, "http://localhost");
+    expect(destination.pathname).toBe("/mypage/recipe-books/book-my");
+    expect(destination.searchParams.get("name")).toBe("내가 추가한 레시피");
+    expect(destination.searchParams.get("type")).toBe("my_added");
+    expect(destination.searchParams.get("returnSurface")).toBe(
+      "mypage.recipebooks",
     );
-    expect(recipeLink.getAttribute("href")).toContain("type%3Dmy_added");
-    expect(recipeLink.getAttribute("href")).toContain("restore=recipebook-tab");
+    expect(destination.searchParams.get("restore")).toBe("recipebook-tab");
+    expect(destination.searchParams.get("returnTo")).toBe("/mypage");
+    expect(
+      mockFetchRecipeBookRecipes.mock.calls.some(
+        ([bookId, options]) => {
+          if (
+            bookId !== "book-my" ||
+            typeof options !== "object" ||
+            options === null ||
+            !("limit" in options)
+          ) {
+            return false;
+          }
+
+          return (options as { limit?: number }).limit === 12;
+        },
+      ),
+    ).toBe(false);
+    expect(screen.queryByText("저장된 된장찌개")).toBeNull();
     expect(screen.queryByRole("navigation", { name: "레시피북 경로" })).toBeNull();
   });
 
@@ -1259,7 +1277,7 @@ describe("MypageScreen", () => {
     expect(screen.queryByRole("heading", { name: "저장한 레시피" })).toBeNull();
   });
 
-  it("keeps recipebook management inside the tab system without a breadcrumb back button", async () => {
+  it("keeps the recipebook tab as a bookshelf without an inline detail breadcrumb", async () => {
     render(
       <MypageScreen
         initialActiveTab="recipebooks"
@@ -1267,14 +1285,13 @@ describe("MypageScreen", () => {
         initialMobileSurface="recipebook"
       />,
     );
-    const user = userEvent.setup();
 
     await screen.findByTestId("recipebook-tab");
     expect(screen.queryByRole("navigation", { name: "레시피북 경로" })).toBeNull();
 
-    await user.click(screen.getByRole("tab", { name: "저장한 레시피" }));
-    expect(await screen.findByText("저장된 된장찌개")).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "레시피북" })).toBeNull();
+    expect(screen.getByTestId("system-book-saved")).toBeTruthy();
+    expect(screen.queryByText("저장된 된장찌개")).toBeNull();
+    expect(screen.getByRole("heading", { name: "레시피북" })).toBeTruthy();
   });
 
   it("can render directly into the shopping return surface", async () => {

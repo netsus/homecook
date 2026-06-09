@@ -138,6 +138,10 @@ function visibleText(page: Page, text: string) {
   return page.getByText(text).filter({ visible: true }).first();
 }
 
+function recipeItem(page: Page, recipeId: string) {
+  return page.getByTestId(`recipe-item-${recipeId}`);
+}
+
 test.describe("RECIPEBOOK_DETAIL screen", () => {
   test("shows error when recipebook does not exist", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
@@ -174,8 +178,8 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     ).toBeVisible();
     await expect(visibleText(page, "저장한 레시피")).toBeVisible();
 
-    await expect(page.getByText("된장찌개")).toBeVisible();
-    await expect(page.getByText("김치볶음밥")).toBeVisible();
+    await expect(recipeItem(page, "recipe-1")).toBeVisible();
+    await expect(recipeItem(page, "recipe-2")).toBeVisible();
 
     // Remove buttons visible for saved type
     await expect(page.getByLabel("된장찌개 제거")).toBeVisible();
@@ -189,7 +193,7 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await installBookActionRoutes(page);
     await page.goto(detailUrlForBook("book-custom", "custom", "주말 파티"));
 
-    await expect(page.getByText("된장찌개")).toBeVisible();
+    await expect(recipeItem(page, "recipe-1")).toBeVisible();
     await page.getByLabel("주말 파티 옵션 메뉴").click();
     await page.getByRole("menuitem", { name: "이름 변경" }).click();
 
@@ -207,7 +211,7 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await installBookActionRoutes(page);
     await page.goto(detailUrlForBook("book-custom", "custom", "주말 파티"));
 
-    await expect(page.getByText("된장찌개")).toBeVisible();
+    await expect(recipeItem(page, "recipe-1")).toBeVisible();
     await page.getByLabel("주말 파티 옵션 메뉴").click();
     await page.getByRole("menuitem", { name: "삭제" }).click();
 
@@ -223,7 +227,7 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await installDetailRoutes(page);
     await page.goto(detailUrl("liked", "좋아요한 레시피"));
 
-    await expect(page.getByText("된장찌개")).toBeVisible();
+    await expect(recipeItem(page, "recipe-1")).toBeVisible();
     await expect(page.getByLabel("된장찌개 좋아요 해제")).toBeVisible();
   });
 
@@ -232,7 +236,7 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await installDetailRoutes(page);
     await page.goto(detailUrl("my_added", "내가 추가한 레시피"));
 
-    await expect(page.getByText("된장찌개")).toBeVisible();
+    await expect(recipeItem(page, "recipe-1")).toBeVisible();
 
     // No remove button at all
     const removeButtons = page.getByRole("button", {
@@ -288,11 +292,11 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
 
     await page.goto(detailUrl("saved", "저장한 레시피"));
 
-    await expect(page.getByText("된장찌개")).toBeVisible();
+    await expect(recipeItem(page, "recipe-1")).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
 
-    await expect(page.getByText("비빔국수")).toBeVisible();
-    await expect(page.getByText("김치볶음밥")).toHaveCount(1);
+    await expect(recipeItem(page, "recipe-3")).toBeVisible();
+    await expect(recipeItem(page, "recipe-2")).toHaveCount(1);
   });
 
   test("removes item from saved book with optimistic UI", async ({
@@ -302,15 +306,15 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await installDetailRoutes(page);
     await page.goto(detailUrl("saved", "저장한 레시피"));
 
-    await expect(page.getByText("된장찌개")).toBeVisible();
+    await expect(recipeItem(page, "recipe-1")).toBeVisible();
     await page.getByLabel("된장찌개 제거").click();
 
     // Optimistic: item gone
-    await expect(page.getByText("된장찌개")).not.toBeVisible();
+    await expect(recipeItem(page, "recipe-1")).toHaveCount(0);
     // Toast shows
     await expect(page.getByText("레시피를 제거했어요")).toBeVisible();
     // Other item still there
-    await expect(page.getByText("김치볶음밥")).toBeVisible();
+    await expect(recipeItem(page, "recipe-2")).toBeVisible();
   });
 
   test("restores optimistic UI and shows error when remove fails", async ({ page }) => {
@@ -347,11 +351,11 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
 
     await page.goto(detailUrl("saved", "저장한 레시피"));
 
-    await expect(page.getByText("된장찌개")).toBeVisible();
+    await expect(recipeItem(page, "recipe-1")).toBeVisible();
     await page.getByLabel("된장찌개 제거").click();
 
     await expect(page.getByText("제거에 실패했어요.")).toBeVisible();
-    await expect(page.getByText("된장찌개")).toBeVisible();
+    await expect(recipeItem(page, "recipe-1")).toBeVisible();
   });
 
   test("shows empty state after removing all items", async ({ page }) => {
@@ -360,7 +364,7 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await installDetailRoutes(page, { items: singleItem });
     await page.goto(detailUrl("saved", "저장한 레시피"));
 
-    await expect(page.getByText("된장찌개")).toBeVisible();
+    await expect(recipeItem(page, "recipe-1")).toBeVisible();
     await page.getByLabel("된장찌개 제거").click();
 
     await expect(
@@ -383,7 +387,7 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await installDetailRoutes(page);
     await page.goto(detailUrl("saved", "저장한 레시피"));
 
-    await expect(page.getByText("된장찌개")).toBeVisible();
+    await expect(recipeItem(page, "recipe-1")).toBeVisible();
 
     const recipeCard = page.getByTestId("recipe-item-recipe-1");
     const link = recipeCard.locator("a[href^='/recipe/recipe-1']");
