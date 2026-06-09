@@ -357,7 +357,7 @@ function StepList({ steps, showValidationError, onRemove }: StepListProps) {
           key={step.tempId}
           className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] p-4"
           style={{
-            borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method?.color_key)}`,
+            borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method)}`,
           }}
         >
           <div className="flex items-start justify-between gap-2">
@@ -370,7 +370,7 @@ function StepList({ steps, showValidationError, onRemove }: StepListProps) {
                   <span
                     className="rounded-full px-2.5 py-0.5 text-xs font-semibold text-[var(--text-inverse)]"
                     style={{
-                      backgroundColor: getCookingMethodColor(step.cooking_method.color_key),
+                      backgroundColor: getCookingMethodColor(step.cooking_method),
                     }}
                   >
                     {step.cooking_method.label}
@@ -465,7 +465,7 @@ function StepInlineComposer({
               </p>
               <div className="flex gap-2">
                 {group.items.map((method) => {
-                  const color = getCookingMethodColor(method.color_key);
+                  const color = getCookingMethodColor(method);
                   const isSelected = selectedMethod?.id === method.id;
 
                   return (

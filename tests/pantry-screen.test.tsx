@@ -230,6 +230,8 @@ describe("PantryScreen", () => {
     expect(within(seasoningSection).getByText("마늘")).toBeTruthy();
     expect(within(proteinSection).getByText("돼지고기")).toBeTruthy();
     expect(screen.getByTestId("web-pantry-card-i1").textContent).not.toContain("채소/버섯");
+    expect(screen.getByTestId("web-pantry-card-copy-i1")).toBeTruthy();
+    expect(screen.getByTestId("web-pantry-card-i1").textContent).toContain("보유 중");
   });
 
   it("uses the theme color for the mobile pantry screen title", async () => {

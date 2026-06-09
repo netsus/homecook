@@ -15,13 +15,18 @@ function ruleBody(selector: string) {
 describe("pantry desktop density", () => {
   it("keeps pantry ingredient cards compact enough for large catalogs", () => {
     expect(ruleBody(".web-pantry-grid")).toContain(
-      "grid-template-columns: repeat(6, minmax(0, 1fr));",
+      "grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));",
     );
-    expect(ruleBody(".web-pantry-grid")).toContain("gap: 10px;");
-    expect(ruleBody(".web-pantry-card")).toContain("min-height: 118px;");
-    expect(ruleBody(".web-pantry-card")).toContain("padding: 10px;");
-    expect(ruleBody(".web-pantry-emoji")).toContain("width: 48px;");
-    expect(ruleBody(".web-pantry-emoji")).toContain("height: 48px;");
+    expect(ruleBody(".web-pantry-grid")).toContain("gap: 12px;");
+    expect(ruleBody(".web-pantry-card")).toContain(
+      "grid-template-columns: 56px minmax(0, 1fr);",
+    );
+    expect(ruleBody(".web-pantry-card")).toContain("min-height: 84px;");
+    expect(ruleBody(".web-pantry-card")).toContain("align-items: center;");
+    expect(ruleBody(".web-pantry-card")).toContain("padding: 12px;");
+    expect(ruleBody(".web-pantry-emoji")).toContain("width: 56px;");
+    expect(ruleBody(".web-pantry-emoji")).toContain("height: 56px;");
+    expect(ruleBody(".web-pantry-card-copy")).toContain("min-width: 0;");
   });
 
   it("keeps input focus states aligned to the blue brand ring across app and web", () => {

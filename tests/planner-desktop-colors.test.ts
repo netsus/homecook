@@ -32,16 +32,21 @@ describe("planner desktop colors", () => {
       "color: var(--planner-status-registered);",
     );
     expect(ruleBody(".web-planner-meal")).toContain(
-      "border-left: 3px solid var(--planner-status-registered);",
+      "border: 1px solid var(--web-line);",
     );
-    expect(ruleBody(".web-planner-meal-registered")).toContain(
-      "border-left-color: var(--planner-status-registered);",
+    expect(ruleBody(".web-planner-meal-status")).toContain(
+      "border: 1px solid transparent;",
     );
-    expect(ruleBody(".web-planner-meal-shopped")).toContain(
-      "border-left-color: var(--planner-status-shopping);",
+    expect(ruleBody(".web-planner-meal-status")).toContain("width: 18px;");
+    expect(ruleBody(".web-planner-meal-status")).toContain("height: 7px;");
+    expect(ruleBody(".web-planner-meal-status-registered")).toContain(
+      "background: var(--planner-status-registered);",
     );
-    expect(ruleBody(".web-planner-meal-cooked")).toContain(
-      "border-left-color: var(--planner-status-cooked);",
+    expect(ruleBody(".web-planner-meal-status-shopped")).toContain(
+      "background: var(--planner-status-shopping);",
+    );
+    expect(ruleBody(".web-planner-meal-status-cooked")).toContain(
+      "background: var(--planner-status-cooked);",
     );
     expect(ruleBody(".web-planner-dot-registered")).toContain(
       "background: var(--planner-status-registered);",

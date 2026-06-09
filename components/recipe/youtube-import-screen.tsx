@@ -1077,7 +1077,7 @@ function ReviewCookingStepRow({
                 className="rounded-full px-2.5 py-0.5 text-xs font-semibold text-[var(--text-inverse)]"
                 style={{
                   backgroundColor: getCookingMethodColor(
-                    step.cooking_method.color_key,
+                    step.cooking_method,
                   ),
                 }}
               >
@@ -1604,7 +1604,7 @@ function StepAddModal({
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {group.items.map((method) => {
-                      const color = getCookingMethodColor(method.color_key);
+                      const color = getCookingMethodColor(method);
                       const isSelected = selectedMethod?.id === method.id;
 
                       return (

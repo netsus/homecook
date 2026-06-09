@@ -148,7 +148,7 @@ async function expectPlannerWeekDays(page: Page) {
 }
 
 test.describe("Slice 05 planner week core", () => {
-  test("authenticated user sees dynamic column day cards (Wave1 mobile shell, no emoji, no status badges) @smoke-core", async ({ page }) => {
+  test("authenticated user sees dynamic column day cards with color-only status indicators @smoke-core", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockPlannerRoutes(page);
 
@@ -177,10 +177,9 @@ test.describe("Slice 05 planner week core", () => {
     await expect(visibleText(page, "김치찌개")).toBeVisible();
     await expect(visibleText(page, "샐러드")).toBeVisible();
     await expect(visibleText(page, "과일볼")).toBeVisible();
-    // Wave1: status badges removed
-    await expect(page.getByLabel("식사 등록 완료")).toHaveCount(0);
-    await expect(page.getByLabel("장보기 완료")).toHaveCount(0);
-    await expect(page.getByLabel("요리 완료")).toHaveCount(0);
+    await expect(page.getByLabel("식사 등록 완료").filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByLabel("장보기 완료").filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByLabel("요리 완료").filter({ visible: true }).first()).toBeVisible();
     // Wave1 mobile uses a floating shopping CTA; desktop uses the prototype top action label.
     const shoppingLink = isMobile
       ? page.getByRole("link", { name: "장보기", exact: true })
