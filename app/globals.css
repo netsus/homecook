@@ -732,6 +732,23 @@ textarea {
   font: inherit;
 }
 
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+@media (min-width: 1024px) {
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    border-color: var(--web-brand);
+    box-shadow: 0 0 0 3px rgba(0, 161, 255, 0.14);
+  }
+}
+
 button {
   cursor: pointer;
 }
@@ -1790,8 +1807,7 @@ button {
   }
 
   .web-planner-screen,
-  .web-meal-screen,
-  .web-menu-add-screen {
+  .web-meal-screen {
     padding-top: 40px;
   }
 
@@ -7694,11 +7710,47 @@ button {
     font-weight: 800;
   }
 
+  .web-pantry-category-list {
+    display: grid;
+    gap: 18px;
+    padding: 14px;
+  }
+
+  .web-pantry-category-section {
+    display: grid;
+    gap: 10px;
+  }
+
+  .web-pantry-category-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 2px;
+  }
+
+  .web-pantry-category-head h2 {
+    color: var(--web-text-1);
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 0;
+  }
+
+  .web-pantry-category-head span {
+    color: var(--web-text-3);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
   .web-pantry-grid {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 10px;
     padding: 14px;
+  }
+
+  .web-pantry-category-section .web-pantry-grid {
+    padding: 0;
   }
 
   .web-pantry-card {

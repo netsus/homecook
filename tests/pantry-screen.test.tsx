@@ -212,6 +212,26 @@ describe("PantryScreen", () => {
     expect(screen.queryByText("3개 재료 보유 중")).toBeNull();
   });
 
+  it("groups the desktop all pantry tab by category and omits category text inside ingredient cards", async () => {
+    render(<PantryScreen initialAuthenticated />);
+
+    const vegetableSection = await screen.findByTestId(
+      "web-pantry-category-section-vegetable_mushroom",
+    );
+    const seasoningSection = screen.getByTestId(
+      "web-pantry-category-section-seasoning_condiment",
+    );
+    const proteinSection = screen.getByTestId(
+      "web-pantry-category-section-protein",
+    );
+
+    expect(within(vegetableSection).getByRole("heading", { name: "채소/버섯" })).toBeTruthy();
+    expect(within(vegetableSection).getByText("양파")).toBeTruthy();
+    expect(within(seasoningSection).getByText("마늘")).toBeTruthy();
+    expect(within(proteinSection).getByText("돼지고기")).toBeTruthy();
+    expect(screen.getByTestId("web-pantry-card-i1").textContent).not.toContain("채소/버섯");
+  });
+
   it("uses the theme color for the mobile pantry screen title", async () => {
     installMatchMedia(true);
 

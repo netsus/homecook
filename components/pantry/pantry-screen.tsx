@@ -42,7 +42,6 @@ import { createMealSafe } from "@/lib/api/meal";
 import { fetchPlannerColumns } from "@/lib/api/planner";
 import {
   getIngredientCategoryEmoji,
-  getIngredientGroupDisplayLabel,
   getIngredientGroupFilterValue,
   INGREDIENT_CATEGORY_GROUP_OPTIONS,
   ingredientMatchesCategoryGroup,
@@ -153,6 +152,26 @@ export function PantryScreen({
       ingredientMatchesCategoryGroup(item, activeCategory),
     );
   }, [searchedItems, activeCategory]);
+
+  const displayItemGroups = useMemo(() => {
+    const groupOptions = activeCategory
+      ? categories.filter((category) => category.value === activeCategory)
+      : categories;
+
+    return groupOptions
+      .map((category) => {
+        const groupItems = displayItems.filter((item) =>
+          ingredientMatchesCategoryGroup(item, category.value),
+        );
+
+        return {
+          key: category.value,
+          label: category.label,
+          items: groupItems,
+        };
+      })
+      .filter((group) => group.items.length > 0);
+  }, [activeCategory, categories, displayItems]);
 
   const selectableIngredientIds = useMemo(
     () => displayItems.map((item) => item.ingredient_id),
@@ -931,50 +950,65 @@ export function PantryScreen({
                 ) : null}
               </div>
             ) : (
-              <div className="web-pantry-grid">
-                {displayItems.map((item) => {
-                  const isSelected = selectedIds.has(item.ingredient_id);
-                  const cardContent = (
-                    <>
-                      {isSelectMode ? (
-                        <span className="web-pantry-check" aria-hidden="true">
-                          {isSelected ? "✓" : ""}
-                        </span>
-                      ) : null}
-                      <span className="web-pantry-emoji" aria-hidden="true">
-                        {getIngredientCategoryEmoji(item.category)}
-                      </span>
-                      <strong>{item.standard_name}</strong>
-                      <small>{getIngredientGroupDisplayLabel(item)}</small>
-                    </>
-                  );
+              <div className="web-pantry-category-list">
+                {displayItemGroups.map((group) => (
+                  <section
+                    className="web-pantry-category-section"
+                    data-testid={`web-pantry-category-section-${group.key}`}
+                    key={group.key}
+                  >
+                    <div className="web-pantry-category-head">
+                      <h2>{group.label}</h2>
+                      <span>{group.items.length}개</span>
+                    </div>
+                    <div className="web-pantry-grid">
+                      {group.items.map((item) => {
+                        const isSelected = selectedIds.has(item.ingredient_id);
+                        const cardContent = (
+                          <>
+                            {isSelectMode ? (
+                              <span className="web-pantry-check" aria-hidden="true">
+                                {isSelected ? "✓" : ""}
+                              </span>
+                            ) : null}
+                            <span className="web-pantry-emoji" aria-hidden="true">
+                              {getIngredientCategoryEmoji(item.category)}
+                            </span>
+                            <strong>{item.standard_name}</strong>
+                          </>
+                        );
 
-                  return isSelectMode ? (
-                    <button
-                      aria-checked={isSelected}
-                      aria-label={`${item.standard_name} 선택`}
-                      className={[
-                        "web-pantry-card",
-                        "web-pantry-card-selectable",
-                        isSelected ? "web-pantry-card-selected" : "",
-                      ].join(" ")}
-                      key={item.ingredient_id}
-                      onClick={() => handleSelectToggle(item.ingredient_id)}
-                      role="checkbox"
-                      type="button"
-                    >
-                      {cardContent}
-                    </button>
-                  ) : (
-                    <article
-                      aria-label={`${item.standard_name} 재료`}
-                      className="web-pantry-card"
-                      key={item.ingredient_id}
-                    >
-                      {cardContent}
-                    </article>
-                  );
-                })}
+                        return isSelectMode ? (
+                          <button
+                            aria-checked={isSelected}
+                            aria-label={`${item.standard_name} 선택`}
+                            className={[
+                              "web-pantry-card",
+                              "web-pantry-card-selectable",
+                              isSelected ? "web-pantry-card-selected" : "",
+                            ].join(" ")}
+                            data-testid={`web-pantry-card-${item.ingredient_id}`}
+                            key={item.ingredient_id}
+                            onClick={() => handleSelectToggle(item.ingredient_id)}
+                            role="checkbox"
+                            type="button"
+                          >
+                            {cardContent}
+                          </button>
+                        ) : (
+                          <article
+                            aria-label={`${item.standard_name} 재료`}
+                            className="web-pantry-card"
+                            data-testid={`web-pantry-card-${item.ingredient_id}`}
+                            key={item.ingredient_id}
+                          >
+                            {cardContent}
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
               </div>
             )}
           </WebCard>

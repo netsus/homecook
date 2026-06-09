@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import React from "react";
 
 import { useAppReturn } from "@/components/shared/use-app-return";
@@ -490,9 +491,24 @@ function SettingsSurface({
         </h2>
         <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]">
           <div className="flex min-h-[60px] w-full items-center gap-3 border-b border-[var(--surface-subtle)] px-4 text-left">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] text-[14px] font-extrabold text-[var(--brand)]">
-              {(profile?.nickname ?? "집밥러").slice(0, 1)}
-            </span>
+            {profile?.profile_image_url ? (
+              <Image
+                alt=""
+                className="h-9 w-9 shrink-0 rounded-full object-cover"
+                data-testid="settings-mobile-account-profile-image"
+                height={36}
+                src={profile.profile_image_url}
+                unoptimized
+                width={36}
+              />
+            ) : (
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] text-[14px] font-extrabold text-[var(--brand)]"
+                data-testid="settings-mobile-account-profile-fallback"
+              >
+                {(profile?.nickname ?? "집밥러").slice(0, 1)}
+              </span>
+            )}
             <span className="min-w-0 flex-1">
               <strong className="block truncate text-[15px] font-extrabold text-[var(--foreground)]">
                 {profile?.nickname ?? "집밥러버"}

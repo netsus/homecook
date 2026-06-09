@@ -203,6 +203,8 @@ describe("ingredient category shared source", () => {
     expect(migration).toContain("('사과', '과일', 'fruit')");
     expect(migration).toContain("('바나나', '과일', 'fruit')");
     expect(migration).toContain("('레몬', '과일', 'fruit')");
+    expect(migration).toContain("('견과류', '과일', 'nut_seed_dried_fruit')");
+    expect(migration).toContain("('아몬드가루', '과일', 'nut_seed_dried_fruit')");
     expect(migration).toContain("on conflict (code) do update");
   });
 });

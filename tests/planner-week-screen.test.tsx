@@ -282,7 +282,7 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    expect((await screen.findByRole("heading", { name: "플래너" })).className).toContain(
+    expect((await screen.findByRole("heading", { name: "주간 플래너" })).className).toContain(
       "text-[var(--brand)]",
     );
     expect(screen.getAllByText("아침").length).toBeGreaterThan(0);
@@ -310,7 +310,7 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    expect(await screen.findByRole("heading", { name: "플래너" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
 
     const shoppingLink = screen.getByRole("link", { name: "장보기" }) as HTMLAnchorElement;
     const bottomTabs = screen.getByRole("navigation", { name: "플래너 하단 탭" });
@@ -333,7 +333,7 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    expect(await screen.findByRole("heading", { name: "플래너" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
 
     const weekShell = screen.getByTestId("planner-week-shell");
     const currentWeekButton = within(weekShell).getByRole("button", {
@@ -485,9 +485,12 @@ describe("planner week screen", () => {
 
     expect(within(summary).getByText("이번 주 요약")).toBeTruthy();
     expect(within(summary).queryByText("등록된 끼니")).toBeNull();
-    expect(within(summary).getByText("요리 완료")).toBeTruthy();
-    expect(within(summary).getByText("장본 끼니")).toBeTruthy();
     expect(within(summary).getByText("등록")).toBeTruthy();
+    expect(within(summary).getByText("장보기")).toBeTruthy();
+    expect(within(summary).getByText("요리 완료")).toBeTruthy();
+    expect(
+      within(summary).getAllByText(/등록|장보기|요리 완료/).map((node) => node.textContent),
+    ).toEqual(["등록", "장보기", "요리 완료"]);
     expect(within(summary).queryByText("빠른 추가")).toBeNull();
     expect(within(summary).queryByText("레시피 검색")).toBeNull();
   });
@@ -536,7 +539,7 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    expect(await screen.findByRole("heading", { name: "플래너" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
     expect(screen.getByText("이번 주 요약")).toBeTruthy();
     expect(screen.queryByText(/음식 계획 중/)).toBeNull();
   });
@@ -549,7 +552,7 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    await screen.findByRole("heading", { name: "플래너" });
+    await screen.findByRole("heading", { name: "주간 플래너" });
     await user.click(screen.getByRole("button", { name: "3/24 아침 식사 추가" }));
 
     const sheet = screen.getByTestId("planner-meal-add-sheet");
@@ -655,7 +658,7 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    await screen.findByRole("heading", { name: "플래너" });
+    await screen.findByRole("heading", { name: "주간 플래너" });
     await user.click(screen.getByRole("button", { name: "3/24 아침 식사 추가" }));
     await user.click(
       within(screen.getByTestId("planner-meal-add-sheet")).getByTestId(
@@ -825,11 +828,16 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    const cookedLabel = await screen.findByText("요리 완료");
-    const shoppingLabel = screen.getByText("장보기 완료");
-    const registeredLabel = screen.getByText("등록");
+    const registeredLabel = await screen.findByText("등록");
+    const shoppingLabel = screen
+      .getAllByText("장보기")
+      .find((node) =>
+        node.className.includes("text-[var(--planner-status-shopping)]"),
+      );
+    const cookedLabel = screen.getByText("요리 완료");
     const cookedCard = cookedLabel.closest("div");
-    const shoppingCard = shoppingLabel.closest("div");
+    expect(shoppingLabel).toBeTruthy();
+    const shoppingCard = shoppingLabel?.closest("div");
     const registeredCard = registeredLabel.closest("div");
 
     expect(cookedCard?.className).toContain(
@@ -842,10 +850,10 @@ describe("planner week screen", () => {
     expect(shoppingCard?.className).toContain(
       "bg-[var(--planner-status-shopping-soft)]",
     );
-    expect(shoppingLabel.className).toContain(
+    expect(shoppingLabel?.className).toContain(
       "text-[var(--planner-status-shopping)]",
     );
-    expect(shoppingLabel.nextElementSibling?.className).toContain(
+    expect(shoppingLabel?.nextElementSibling?.className).toContain(
       "text-[var(--planner-status-shopping)]",
     );
     expect(registeredCard?.className).toContain(
@@ -1118,7 +1126,7 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    await screen.findByRole("heading", { name: "플래너" });
+    await screen.findByRole("heading", { name: "주간 플래너" });
     await user.click(screen.getByRole("button", { name: "3/26 목 식단으로 이동" }));
 
     expect(scrollIntoView).toHaveBeenCalledWith({
@@ -1210,6 +1218,12 @@ describe("planner week screen", () => {
 
     expect(breakfastRow).not.toBeNull();
     expect(dinnerRow).not.toBeNull();
+    expect(screen.getByTestId("planner-mobile-meal-meal-1").className).toContain(
+      "bg-[var(--planner-status-registered-soft)]",
+    );
+    expect(screen.getByTestId("planner-mobile-meal-meal-2").className).toContain(
+      "bg-[var(--planner-status-shopping-soft)]",
+    );
     // No status badge labels within meal slot rows
     expect(within(breakfastRow as HTMLElement).queryByText("등록")).toBeNull();
     expect(within(dinnerRow as HTMLElement).queryByText("장보기 완료")).toBeNull();
