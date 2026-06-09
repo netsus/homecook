@@ -61,6 +61,10 @@ export const INGREDIENT_CATEGORY_GROUPS = [
 export type IngredientCategoryGroupCode =
   (typeof INGREDIENT_CATEGORY_GROUPS)[number]["code"];
 
+export type IngredientCategoryGroupFilterValue =
+  | typeof ALL_INGREDIENT_CATEGORY
+  | IngredientCategoryGroupCode;
+
 export const INGREDIENT_SUBCATEGORIES = [
   {
     code: "rice_meal",
@@ -235,6 +239,20 @@ export const INGREDIENT_SUBCATEGORIES = [
 export type IngredientSubcategoryCode =
   (typeof INGREDIENT_SUBCATEGORIES)[number]["code"];
 
+export interface IngredientCategoryGroupFilterOption {
+  value: IngredientCategoryGroupFilterValue;
+  label: string;
+  category_group_code: IngredientCategoryGroupCode | null;
+}
+
+export interface IngredientSubcategoryOption {
+  value: IngredientSubcategoryCode;
+  label: string;
+  group_code: IngredientCategoryGroupCode;
+  group_label: string;
+  legacy_category: IngredientCategory;
+}
+
 export interface IngredientTaxonomyMetadata {
   category_group_code: IngredientCategoryGroupCode | null;
   category_group_label: string | null;
@@ -377,6 +395,150 @@ export function getIngredientSubcategoryCodesForGroup(
     .map((category) => category.code);
 }
 
+export const INGREDIENT_CATEGORY_GROUP_OPTIONS = [
+  {
+    value: ALL_INGREDIENT_CATEGORY,
+    label: ALL_INGREDIENT_CATEGORY,
+    category_group_code: null,
+  },
+  ...INGREDIENT_CATEGORY_GROUPS
+    .filter((group) => group.is_active)
+    .map((group) => ({
+      value: group.code,
+      label: group.label,
+      category_group_code: group.code,
+    })),
+] as const satisfies readonly IngredientCategoryGroupFilterOption[];
+
+export const INGREDIENT_SUBCATEGORY_OPTIONS = INGREDIENT_SUBCATEGORIES
+  .filter((category) => category.is_active)
+  .map((category) => ({
+    value: category.code,
+    label: category.label,
+    group_code: category.group_code,
+    group_label: getIngredientCategoryGroupByCode(category.group_code)!.label,
+    legacy_category: category.legacy_category as IngredientCategory,
+  })) as IngredientSubcategoryOption[];
+
+export function getIngredientCategoryGroupLabel(
+  groupCode: string | null | undefined,
+) {
+  return getIngredientCategoryGroupByCode(groupCode)?.label ?? null;
+}
+
+export function getIngredientCategoryGroupFilterOption(
+  value: string | null | undefined,
+) {
+  return INGREDIENT_CATEGORY_GROUP_OPTIONS.find((option) => option.value === value);
+}
+
+export function getIngredientSubcategoryOption(
+  code: string | null | undefined,
+) {
+  return INGREDIENT_SUBCATEGORY_OPTIONS.find((option) => option.value === code);
+}
+
+export function getIngredientSubcategoryOptionsByGroup() {
+  return INGREDIENT_CATEGORY_GROUPS
+    .filter((group) => group.is_active)
+    .map((group) => ({
+      group,
+      options: INGREDIENT_SUBCATEGORY_OPTIONS.filter(
+        (option) => option.group_code === group.code,
+      ),
+    }));
+}
+
+export function getDefaultIngredientSubcategoryOption(
+  legacyCategory: string | null | undefined,
+) {
+  const fallbackCode = getFallbackIngredientSubcategoryCode(legacyCategory);
+  return getIngredientSubcategoryOption(fallbackCode) ?? getIngredientSubcategoryOption("paste_sauce")!;
+}
+
+export function getIngredientGroupFilterValue({
+  category,
+  categoryGroupCode,
+  category_group_code,
+  categoryCode,
+  category_code,
+}: {
+  category: string | null | undefined;
+  categoryGroupCode?: string | null;
+  category_group_code?: string | null;
+  categoryCode?: string | null;
+  category_code?: string | null;
+}): IngredientCategoryGroupCode | null {
+  const explicitGroup = getIngredientCategoryGroupByCode(
+    categoryGroupCode ?? category_group_code,
+  );
+  if (explicitGroup?.is_active) {
+    return explicitGroup.code;
+  }
+
+  const subcategory = getIngredientSubcategoryByCode(categoryCode ?? category_code);
+  const subcategoryGroup = getIngredientCategoryGroupByCode(subcategory?.group_code);
+  if (subcategory?.is_active && subcategoryGroup?.is_active) {
+    return subcategoryGroup.code;
+  }
+
+  const groupByLabel = INGREDIENT_CATEGORY_GROUPS.find(
+    (group) => group.label === category?.trim() && group.is_active,
+  );
+  if (groupByLabel) {
+    return groupByLabel.code;
+  }
+
+  const fallbackCode = getFallbackIngredientSubcategoryCode(category);
+  const fallbackSubcategory = getIngredientSubcategoryByCode(fallbackCode);
+  const fallbackGroup = getIngredientCategoryGroupByCode(fallbackSubcategory?.group_code);
+
+  return fallbackGroup?.is_active ? fallbackGroup.code : null;
+}
+
+export function getIngredientGroupDisplayLabel({
+  category,
+  categoryGroupCode,
+  category_group_code,
+  categoryCode,
+  category_code,
+}: {
+  category: string | null | undefined;
+  categoryGroupCode?: string | null;
+  category_group_code?: string | null;
+  categoryCode?: string | null;
+  category_code?: string | null;
+}) {
+  const groupCode = getIngredientGroupFilterValue({
+    category,
+    categoryGroupCode,
+    category_group_code,
+    categoryCode,
+    category_code,
+  });
+
+  return getIngredientCategoryGroupLabel(groupCode) ?? normalizeIngredientCategoryLabel(category);
+}
+
+export function ingredientMatchesCategoryGroup(
+  ingredient: {
+    category?: string | null;
+    category_group_code?: string | null;
+    category_code?: string | null;
+  },
+  groupCode: string | null | undefined,
+) {
+  if (!groupCode || groupCode === ALL_INGREDIENT_CATEGORY) {
+    return true;
+  }
+
+  return getIngredientGroupFilterValue({
+    category: ingredient.category,
+    categoryGroupCode: ingredient.category_group_code,
+    categoryCode: ingredient.category_code,
+  }) === groupCode;
+}
+
 export function getLegacyCategoriesForIngredientGroup(
   groupCode: string | null | undefined,
 ): IngredientCategory[] {
@@ -413,12 +575,15 @@ export function getIngredientTaxonomyMetadata({
   const fallbackCode = getFallbackIngredientSubcategoryCode(category);
   const fallbackSubcategory = getIngredientSubcategoryByCode(fallbackCode);
   const fallbackGroup = getIngredientCategoryGroupByCode(fallbackSubcategory?.group_code);
+  const groupByLabel = INGREDIENT_CATEGORY_GROUPS.find(
+    (group) => group.label === category?.trim() && group.is_active,
+  );
   const legacyCategory = getIngredientCategoryByLabel(category)?.label ?? null;
 
   return {
-    category_group_code: fallbackGroup?.code ?? null,
-    category_group_label: fallbackGroup?.label ?? null,
+    category_group_code: groupByLabel?.code ?? fallbackGroup?.code ?? null,
+    category_group_label: groupByLabel?.label ?? fallbackGroup?.label ?? null,
     category_code: null,
-    category_label: legacyCategory,
+    category_label: legacyCategory ?? groupByLabel?.label ?? null,
   };
 }

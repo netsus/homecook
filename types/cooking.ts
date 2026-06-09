@@ -55,6 +55,8 @@ export interface CookingMethodSummary {
   code: string;
   label: string;
   color_key: string;
+  category_code?: string | null;
+  category_label?: string | null;
 }
 
 export interface CookingModeIngredient {

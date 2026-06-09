@@ -22,7 +22,11 @@ import {
   WebTabs,
 } from "@/components/web";
 import { addPantryItems, fetchIngredients } from "@/lib/api/pantry";
-import { INGREDIENT_CATEGORY_LABELS } from "@/lib/ingredient-categories";
+import {
+  getIngredientGroupDisplayLabel,
+  INGREDIENT_CATEGORY_GROUP_OPTIONS,
+  ingredientMatchesCategoryGroup,
+} from "@/lib/ingredient-categories";
 import type { IngredientItem } from "@/types/recipe";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -54,13 +58,15 @@ export function PantryAddSheet({
   const isMobileViewport = useIsMobileViewport();
 
   const categories = useMemo(() => {
-    return [...INGREDIENT_CATEGORY_LABELS];
+    return INGREDIENT_CATEGORY_GROUP_OPTIONS.filter(
+      (category) => category.category_group_code,
+    );
   }, []);
 
   const visibleIngredients = useMemo(() => {
     return ingredients.filter((ingredient) => {
       const matchesCategory =
-        !activeCategory || ingredient.category === activeCategory;
+        !activeCategory || ingredientMatchesCategoryGroup(ingredient, activeCategory);
 
       return matchesCategory;
     });
@@ -238,10 +244,10 @@ export function PantryAddSheet({
               />
               {categories.map((category) => (
                 <MobileCategoryChip
-                  active={activeCategory === category}
-                  key={category}
-                  label={category}
-                  onClick={() => handleCategoryChange(category)}
+                  active={activeCategory === category.value}
+                  key={category.value}
+                  label={category.label}
+                  onClick={() => handleCategoryChange(category.value)}
                 />
               ))}
             </div>
@@ -410,15 +416,15 @@ export function PantryAddSheet({
             </WebTabButton>
             {categories.map((category) => (
               <WebTabButton
-                active={activeCategory === category}
-                key={category}
+                active={activeCategory === category.value}
+                key={category.value}
                 onClick={() =>
                   handleCategoryChange(
-                    activeCategory === category ? null : category,
+                    activeCategory === category.value ? null : category.value,
                   )
                 }
               >
-                {category}
+                {category.label}
               </WebTabButton>
             ))}
           </WebTabs>
@@ -502,7 +508,9 @@ export function PantryAddSheet({
                         )}
                       </span>
                       <strong>{ingredient.standard_name}</strong>
-                      <small>{isExisting ? "보유중" : ingredient.category}</small>
+                      <small>
+                        {isExisting ? "보유중" : getIngredientGroupDisplayLabel(ingredient)}
+                      </small>
                     </button>
                   );
                 })}
@@ -572,16 +580,19 @@ function groupIngredientsByCategory(items: IngredientItem[]) {
   const groups = new Map<string, IngredientItem[]>();
 
   for (const item of items) {
-    const current = groups.get(item.category) ?? [];
+    const category = getIngredientGroupDisplayLabel(item);
+    const current = groups.get(category) ?? [];
     current.push(item);
-    groups.set(item.category, current);
+    groups.set(category, current);
   }
 
-  const knownCategories = INGREDIENT_CATEGORY_LABELS.filter((category) =>
-    groups.has(category),
-  );
+  const knownCategories = INGREDIENT_CATEGORY_GROUP_OPTIONS
+    .filter((category) => category.category_group_code)
+    .map((category) => category.label)
+    .filter((category) => groups.has(category));
+  const knownCategorySet = new Set<string>(knownCategories);
   const extraCategories = Array.from(groups.keys())
-    .filter((category) => !(INGREDIENT_CATEGORY_LABELS as readonly string[]).includes(category))
+    .filter((category) => !knownCategorySet.has(category))
     .sort((left, right) => left.localeCompare(right, "ko"));
 
   return [...knownCategories, ...extraCategories].map((category) => ({

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import {
@@ -20,6 +20,7 @@ import { createManualRecipe, uploadRecipeImage } from "@/lib/api/manual-recipe";
 import { createMealSafe } from "@/lib/api/meal";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
+import { groupCookingMethodsByCategory } from "@/lib/cooking-method-taxonomy";
 import { compressRecipeImageFile } from "@/lib/recipe-image-compression";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 import {
@@ -414,6 +415,10 @@ function StepInlineComposer({
 
   const selectedMethod =
     cookingMethods.find((method) => method.id === selectedMethodId) ?? null;
+  const cookingMethodGroups = useMemo(
+    () => groupCookingMethodsByCategory(cookingMethods),
+    [cookingMethods],
+  );
 
   const handleAdd = () => {
     if (!instruction.trim()) return;
@@ -452,33 +457,42 @@ function StepInlineComposer({
         className="-mx-1 overflow-x-auto px-1 pb-1 scrollbar-hide"
         role="group"
       >
-        <div className="flex w-max gap-2">
-          {cookingMethods.map((method) => {
-            const color = getCookingMethodColor(method.color_key);
-            const isSelected = selectedMethod?.id === method.id;
+        <div className="flex w-max gap-3">
+          {cookingMethodGroups.map((group) => (
+            <div className="shrink-0" key={group.label}>
+              <p className="mb-1 px-1 text-[11px] font-bold text-[var(--text-3)]">
+                {group.label}
+              </p>
+              <div className="flex gap-2">
+                {group.items.map((method) => {
+                  const color = getCookingMethodColor(method.color_key);
+                  const isSelected = selectedMethod?.id === method.id;
 
-            return (
-              <button
-                key={method.id}
-                aria-pressed={isSelected}
-                className="h-9 shrink-0 rounded-full border px-3 text-[13px] font-semibold transition"
-                onClick={() => {
-                  setSelectedMethodId(method.id);
-                  setMethodError(null);
-                }}
-                style={{
-                  backgroundColor: isSelected
-                    ? color
-                    : `color-mix(in srgb, ${color} 14%, transparent)`,
-                  borderColor: color,
-                  color: isSelected ? "var(--text-inverse)" : "var(--foreground)",
-                }}
-                type="button"
-              >
-                {method.label}
-              </button>
-            );
-          })}
+                  return (
+                    <button
+                      key={method.id}
+                      aria-pressed={isSelected}
+                      className="h-9 shrink-0 rounded-full border px-3 text-[13px] font-semibold transition"
+                      onClick={() => {
+                        setSelectedMethodId(method.id);
+                        setMethodError(null);
+                      }}
+                      style={{
+                        backgroundColor: isSelected
+                          ? color
+                          : `color-mix(in srgb, ${color} 14%, transparent)`,
+                        borderColor: color,
+                        color: isSelected ? "var(--text-inverse)" : "var(--foreground)",
+                      }}
+                      type="button"
+                    >
+                      {method.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
       <label className="mt-2 block">

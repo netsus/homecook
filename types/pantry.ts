@@ -5,6 +5,9 @@ export interface PantryItem {
   ingredient_id: string;
   standard_name: string;
   category: string;
+  category_group_code?: string | null;
+  category_code?: string | null;
+  category_label?: string | null;
   created_at: string;
 }
 

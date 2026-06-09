@@ -661,7 +661,7 @@ function MobileAteCard({
       className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
       data-testid="ate-list-card"
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         <MobileDishThumb
           src={item.recipe_thumbnail_url}
         />
@@ -673,22 +673,25 @@ function MobileAteCard({
           >
             {item.recipe_title}
           </Link>
-          <p className="mt-0.5 truncate text-[12px] font-medium leading-[1.25] text-[var(--text-3)]">
+          <p
+            className="mt-0.5 whitespace-nowrap text-[11px] font-medium leading-[1.35] text-[var(--text-3)]"
+            data-testid="ate-list-mobile-meta"
+          >
             {formatShortDate(item.cooked_at)} · {formatLeftoverMeta(item)}
             {item.eaten_at ? ` · ${formatShortDate(item.eaten_at)} 다먹음` : ""}
           </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            aria-label="남은 요리로 복귀"
-            className="flex h-8 w-[88px] items-center justify-center whitespace-nowrap rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-3 text-[11px] font-extrabold text-[var(--brand)] disabled:opacity-60"
-            data-testid="uneat-button"
-            disabled={anyMutating}
-            onClick={() => onUneat(item.id)}
-            type="button"
-          >
-            {isUneating ? "처리 중..." : "남은 요리로"}
-          </button>
+          <div className="mt-2 flex justify-end">
+            <button
+              aria-label="남은 요리로 복귀"
+              className="flex h-9 min-w-[94px] items-center justify-center whitespace-nowrap rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-4 text-[11px] font-extrabold text-[var(--brand)] disabled:opacity-60"
+              data-testid="uneat-button"
+              disabled={anyMutating}
+              onClick={() => onUneat(item.id)}
+              type="button"
+            >
+              {isUneating ? "처리 중..." : "남은 요리로"}
+            </button>
+          </div>
         </div>
       </div>
     </article>
