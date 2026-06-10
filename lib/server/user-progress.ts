@@ -4,6 +4,7 @@ import type {
   UserProgressEventType,
   UserProgressLevelData,
 } from "@/types/user-progress";
+import type { UserGamificationDbClient } from "@/lib/server/user-gamification";
 
 interface QueryError {
   code?: string;
@@ -257,6 +258,24 @@ export async function awardUserProgressEvent(
         error: summaryResult.error ?? { message: "missing progress summary result" },
         summary: null,
       };
+    }
+
+    try {
+      const { projectUserGamificationAfterProgressEvent } = await import(
+        "@/lib/server/user-gamification"
+      );
+
+      await projectUserGamificationAfterProgressEvent(
+        dbClient as unknown as UserGamificationDbClient,
+        {
+          userId: input.userId,
+          progressEventId: insertResult.data.id,
+          awardInput: input,
+          progress: toUserProgressData(summaryResult.data),
+        },
+      );
+    } catch {
+      // Gamification projection is secondary; the canonical progress award remains authoritative.
     }
 
     return {

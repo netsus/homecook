@@ -11,21 +11,22 @@
 - [ ] 로그인 사용자가 MYPAGE에서 level progress, 대표 배지, active quest, tutorial quest를 함께 확인한다 <!-- omo:id=accept-mypage-gamification-surface;stage=4;scope=frontend;review=5,6 -->
 - [ ] 배지 안내 modal/popover가 열리고 닫히며 배지/퀘스트 기준을 집밥 서비스 톤으로 설명한다 <!-- omo:id=accept-badge-guide-modal;stage=4;scope=frontend;review=5,6 -->
 - [ ] XP source action 성공 후 unseen notification이 있으면 XP toast가 표시된다 <!-- omo:id=accept-xp-toast-after-action;stage=4;scope=frontend;review=5,6 -->
-- [ ] quest 조건 충족 시 completed_recent 또는 earned badge 상태가 다음 조회에 반영된다 <!-- omo:id=accept-quest-badge-completion;stage=2;scope=shared;review=3,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] quest 조건 충족 시 completed_recent 또는 earned badge 상태가 다음 조회에 반영된다 <!-- omo:id=accept-quest-badge-completion;stage=2;scope=shared;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 
-- [ ] 공식 contract-evolution PR이 merge된 후에만 신규 API/DB 구현이 시작된다 <!-- omo:id=accept-contract-evolution-first;stage=2;scope=shared;review=3,6 -->
-- [ ] `GET /api/v1/users/me`는 profile/settings-only 계약을 유지한다 <!-- omo:id=accept-users-me-profile-only;stage=2;scope=backend;review=3,6 -->
-- [ ] 33a progress response에 badge/quest/toast/tutorial field를 추가하지 않는다 <!-- omo:id=accept-progress-response-unchanged;stage=2;scope=backend;review=3,6 -->
-- [ ] badge award는 같은 badge/source 조건에서 중복 생성되지 않는다 <!-- omo:id=accept-badge-idempotency;stage=2;scope=backend;review=3,6 -->
-- [ ] quest completion/progress projection은 같은 ledger를 여러 번 평가해도 같은 결과다 <!-- omo:id=accept-quest-idempotency;stage=2;scope=backend;review=3,6 -->
-- [ ] notification seen 처리는 중복 호출에도 성공하거나 안전하게 무시된다 <!-- omo:id=accept-notification-seen-idempotent;stage=2;scope=backend;review=3,6 -->
-- [ ] tutorial quest dismiss는 XP, level, badge award를 변경하지 않는다 <!-- omo:id=accept-tutorial-dismiss-policy;stage=2;scope=backend;review=3,6 -->
-- [ ] gamification projection 실패가 원래 source action 실패로 전파되지 않는다 <!-- omo:id=accept-source-action-isolation;stage=2;scope=backend;review=3,6 -->
-- [ ] leaderboard, competitive rank, pressure streak, season reset, loot reward가 UI/API/DB에 들어가지 않는다 <!-- omo:id=accept-no-competitive-scope;stage=4;scope=shared;review=5,6 -->
+- [x] 공식 contract-evolution PR이 merge된 후에만 신규 API/DB 구현이 시작된다 <!-- omo:id=accept-contract-evolution-first;stage=2;scope=shared;review=3,6 -->
+- [x] `GET /api/v1/users/me`는 profile/settings-only 계약을 유지한다 <!-- omo:id=accept-users-me-profile-only;stage=2;scope=backend;review=3,6 -->
+- [x] 33a progress response에 badge/quest/toast/tutorial field를 추가하지 않는다 <!-- omo:id=accept-progress-response-unchanged;stage=2;scope=backend;review=3,6 -->
+- [x] badge award는 같은 badge/source 조건에서 중복 생성되지 않는다 <!-- omo:id=accept-badge-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] quest completion/progress projection은 같은 ledger를 여러 번 평가해도 같은 결과다 <!-- omo:id=accept-quest-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] notification seen 처리는 중복 호출에도 성공하거나 안전하게 무시된다 <!-- omo:id=accept-notification-seen-idempotent;stage=2;scope=backend;review=3,6 -->
+- [x] tutorial quest dismiss는 XP, level, badge award를 변경하지 않는다 <!-- omo:id=accept-tutorial-dismiss-policy;stage=2;scope=backend;review=3,6 -->
+- [x] gamification projection 실패가 원래 source action 실패로 전파되지 않는다 <!-- omo:id=accept-source-action-isolation;stage=2;scope=backend;review=3,6 -->
+- [x] leaderboard, competitive rank, pressure streak, season reset, loot reward가 API/DB에 들어가지 않는다 <!-- omo:id=accept-no-competitive-backend-scope;stage=2;scope=backend;review=3,6 -->
+- [ ] leaderboard, competitive rank, pressure streak, season reset, loot reward가 UI에 들어가지 않는다 <!-- omo:id=accept-no-competitive-ui-scope;stage=4;scope=frontend;review=5,6 -->
 
 ## Error / Permission
 
@@ -35,24 +36,24 @@
 - [ ] read-only 상태가 있다 <!-- omo:id=accept-read-only;stage=4;scope=frontend;review=5,6 -->
 - [ ] unauthorized 처리 흐름이 있다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
 - [ ] gamification API 실패는 MYPAGE core와 33b progress 전체 실패로 전파되지 않는다 <!-- omo:id=accept-gamification-soft-fail;stage=4;scope=frontend;review=5,6 -->
-- [ ] seen/dismiss endpoint는 타인 리소스 접근을 거부하거나 정보 노출 없이 무시한다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] seen/dismiss endpoint는 타인 리소스 접근을 거부하거나 정보 노출 없이 무시한다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
 - [ ] badge guide modal은 keyboard close/focus 흐름을 가진다 <!-- omo:id=accept-modal-accessibility;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
-- [ ] `user_progress_events`와 `user_progress_summary`가 XP/level truth로 유지된다 <!-- omo:id=accept-progress-truth;stage=2;scope=backend;review=3,6 -->
-- [ ] `operational_events`를 badge/quest/XP truth로 사용하지 않는다 <!-- omo:id=accept-no-operational-events-truth;stage=2;scope=backend;review=3,6 -->
-- [ ] badge/quest/notification row는 인증 사용자 scope로만 조회/수정된다 <!-- omo:id=accept-user-scoped-data;stage=2;scope=backend;review=3,6 -->
-- [ ] source event 하나가 XP toast를 중복 생성/표시하지 않는다 <!-- omo:id=accept-toast-dedupe;stage=2;scope=shared;review=3,6 -->
+- [x] `user_progress_events`와 `user_progress_summary`가 XP/level truth로 유지된다 <!-- omo:id=accept-progress-truth;stage=2;scope=backend;review=3,6 -->
+- [x] `operational_events`를 badge/quest/XP truth로 사용하지 않는다 <!-- omo:id=accept-no-operational-events-truth;stage=2;scope=backend;review=3,6 -->
+- [x] badge/quest/notification row는 인증 사용자 scope로만 조회/수정된다 <!-- omo:id=accept-user-scoped-data;stage=2;scope=backend;review=3,6 -->
+- [x] source event 하나가 XP toast를 중복 생성/표시하지 않는다 <!-- omo:id=accept-toast-dedupe;stage=2;scope=shared;review=3,6 -->
 - [ ] legacy/backfill 데이터는 lower-bound로 표현되며 삭제된 활동 복원을 주장하지 않는다 <!-- omo:id=accept-legacy-lower-bound-copy;stage=4;scope=frontend;review=5,6 -->
-- [ ] invalid notification id, invalid quest key, malformed body를 안전하게 처리한다 <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
+- [x] invalid notification id, invalid quest key, malformed body를 안전하게 처리한다 <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
 
-- [ ] fixture / mock에서 0 XP, badge earned, active quest, completed quest, unseen notification, API failure baseline이 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 필요한 신규 table, unique constraint, seed/cleanup 경로가 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=backend;review=3,6 -->
-- [ ] source action 4종 중 최소 2종을 실제 route로 수행해 projection과 notification 생성을 검증한다 <!-- omo:id=accept-real-source-action-smoke;stage=2;scope=backend;review=3,6 -->
-- [ ] 신규 회원 bootstrap row 없이 tutorial quest가 조회 시 안전하게 파생된다 <!-- omo:id=accept-no-bootstrap-row-required;stage=2;scope=backend;review=3,6 -->
+- [x] fixture / mock에서 0 XP, badge earned, active quest, completed quest, unseen notification, API failure baseline이 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 신규 table, unique constraint, seed/cleanup 경로가 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=backend;review=3,6 -->
+- [x] source action 4종 중 최소 2종을 route/projection test로 수행해 projection과 notification 생성을 검증한다 <!-- omo:id=accept-real-source-action-smoke;stage=2;scope=backend;review=3,6 -->
+- [x] 신규 회원 bootstrap row 없이 tutorial quest가 조회 시 안전하게 파생된다 <!-- omo:id=accept-no-bootstrap-row-required;stage=2;scope=backend;review=3,6 -->
 
 ## Manual QA
 
@@ -68,9 +69,9 @@
 
 ### Vitest
 
-- [ ] badge/quest definition과 projection 조건이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-definition-projection;stage=2;scope=backend;review=3,6 -->
-- [ ] badge award / quest completion / notification dedupe idempotency가 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-idempotency;stage=2;scope=backend;review=3,6 -->
-- [ ] gamification route success/error/owner guard가 route test로 고정되어 있다 <!-- omo:id=accept-vitest-route;stage=2;scope=backend;review=3,6 -->
+- [x] badge/quest definition과 projection 조건이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-definition-projection;stage=2;scope=backend;review=3,6 -->
+- [x] badge award / quest completion / notification dedupe idempotency가 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] gamification route success/error/owner guard가 route test로 고정되어 있다 <!-- omo:id=accept-vitest-route;stage=2;scope=backend;review=3,6 -->
 - [ ] MYPAGE gamification card, badge guide modal, XP toast 상태가 component test로 고정되어 있다 <!-- omo:id=accept-vitest-component;stage=4;scope=frontend;review=5,6 -->
 - [ ] API client 타입과 error envelope 처리가 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-api-client;stage=4;scope=frontend;review=5,6 -->
 

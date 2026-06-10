@@ -73,7 +73,7 @@
 
 ### Contract Evolution Status
 
-33c는 신규 public API와 DB table이 필요하므로 Stage 2 전에 별도 `contract-evolution` docs PR이 필요하다. 이 workpack은 `docs/요구사항기준선-v1.7.8.md`, `docs/화면정의서-v1.5.15.md`, `docs/유저flow맵-v1.3.15.md`, `docs/db설계-v1.3.13.md`, `docs/api문서-v1.2.17.md` 기준으로 재잠금한다. 백엔드 구현은 이 contract-evolution PR이 main에 merge된 뒤 시작한다.
+33c는 신규 public API와 DB table이 필요하므로 Stage 2 전에 별도 `contract-evolution` docs PR이 필요했다. PR #724가 main에 merge되어 이 workpack은 `docs/요구사항기준선-v1.7.8.md`, `docs/화면정의서-v1.5.15.md`, `docs/유저flow맵-v1.3.15.md`, `docs/db설계-v1.3.13.md`, `docs/api문서-v1.2.17.md` 기준으로 재잠금되었다. 백엔드 Stage 2 구현은 `feature/be-33c-badges-quests-toasts-tutorial`에서 진행한다.
 
 ### Proposed Read Endpoint
 
@@ -287,16 +287,38 @@ POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss
 > 33c는 contract-evolution 이후 Stage 2/4 구현을 시작한다.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 각 체크박스 끝에 `omo` metadata를 유지한다.
 
-- [ ] 공식 contract-evolution PR merge 확인 <!-- omo:id=delivery-contract-evolution-merged;stage=2;scope=shared;review=3,6 -->
-- [ ] gamification DB schema와 unique constraint 구현 <!-- omo:id=delivery-gamification-schema;stage=2;scope=backend;review=3,6 -->
-- [ ] gamification read/seen/dismiss endpoint 구현 <!-- omo:id=delivery-gamification-api;stage=2;scope=backend;review=3,6 -->
-- [ ] badge/quest/tutorial definition과 projection 정책 구현 <!-- omo:id=delivery-gamification-projection;stage=2;scope=backend;review=3,6 -->
-- [ ] source action과 gamification projection 실패 격리 확인 <!-- omo:id=delivery-source-action-isolation;stage=2;scope=backend;review=3,6 -->
-- [ ] API adapter/type 연결 <!-- omo:id=delivery-api-adapter-types;stage=4;scope=shared;review=5,6 -->
+- [x] 공식 contract-evolution PR merge 확인 <!-- omo:id=delivery-contract-evolution-merged;stage=2;scope=shared;review=3,6 -->
+- [x] gamification DB schema와 unique constraint 구현 <!-- omo:id=delivery-gamification-schema;stage=2;scope=backend;review=3,6 -->
+- [x] gamification read/seen/dismiss endpoint 구현 <!-- omo:id=delivery-gamification-api;stage=2;scope=backend;review=3,6 -->
+- [x] badge/quest/tutorial definition과 projection 정책 구현 <!-- omo:id=delivery-gamification-projection;stage=2;scope=backend;review=3,6 -->
+- [x] source action과 gamification projection 실패 격리 확인 <!-- omo:id=delivery-source-action-isolation;stage=2;scope=backend;review=3,6 -->
+- [ ] API adapter/type 연결 <!-- omo:id=delivery-api-adapter-types;stage=4;scope=frontend;review=5,6 -->
 - [ ] MYPAGE badge/quest/tutorial UI 연결 <!-- omo:id=delivery-mypage-gamification-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 배지 안내 modal/popover 구현 <!-- omo:id=delivery-badge-guide-modal;stage=4;scope=frontend;review=5,6 -->
 - [ ] source action 후 XP toast/notification refresh 연결 <!-- omo:id=delivery-xp-toast-refresh;stage=4;scope=frontend;review=5,6 -->
 - [ ] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 320px/390px/desktop visual evidence 확보 <!-- omo:id=delivery-visual-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Vitest/Playwright 자동화와 real DB smoke 경로 구분 <!-- omo:id=delivery-test-smoke-split;stage=4;scope=shared;review=5,6 -->
+- [ ] Vitest/Playwright 자동화와 real DB smoke 경로 구분 <!-- omo:id=delivery-test-smoke-split;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+
+## Stage 2 Backend Evidence
+
+- branch: `feature/be-33c-badges-quests-toasts-tutorial`
+- migration: `supabase/migrations/20260610183000_33c_user_gamification.sql`
+- server modules/routes:
+  - `types/user-gamification.ts`
+  - `lib/server/user-gamification.ts`
+  - `app/api/v1/users/me/gamification/route.ts`
+  - `app/api/v1/users/me/gamification/notifications/seen/route.ts`
+  - `app/api/v1/users/me/gamification/tutorial-quests/[quest_key]/dismiss/route.ts`
+- tests:
+  - `tests/user-gamification-definitions.test.ts`
+  - `tests/user-gamification-events.test.ts`
+  - `tests/user-gamification-route.test.ts`
+  - `tests/user-gamification-source-action-smoke.test.ts`
+- local evidence:
+  - `pnpm exec -- vitest run tests/user-gamification-definitions.test.ts tests/user-gamification-events.test.ts tests/user-gamification-route.test.ts tests/user-gamification-source-action-smoke.test.ts`
+  - `pnpm exec -- vitest run tests/user-progress-events.test.ts tests/user-progress-route.test.ts tests/recipe-save-route.test.ts tests/recipe-books-route.test.ts tests/shopping-complete.backend.test.ts tests/cook-planner-complete.backend.test.ts tests/cook-standalone-complete.backend.test.ts tests/user-gamification-definitions.test.ts tests/user-gamification-events.test.ts tests/user-gamification-route.test.ts tests/user-gamification-source-action-smoke.test.ts`
+  - `pnpm exec -- vitest run tests/mypage.backend.test.ts tests/settings-account.backend.test.ts tests/user-progress-route.test.ts tests/user-gamification-route.test.ts`
+  - `pnpm typecheck`
+  - `pnpm verify:backend`
