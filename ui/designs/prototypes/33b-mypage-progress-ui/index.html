@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>33b MYPAGE Progress Prototype</title>
+    <style>
+      :root {
+        --bg: #f7f4ee;
+        --surface: #fffaf1;
+        --ink: #1f2933;
+        --muted: #6b7280;
+        --line: #eadfca;
+        --brand: #ff7a1a;
+        --brand-soft: #fff0df;
+        --olive: #59735f;
+        --shadow: 0 8px 24px rgba(53, 39, 18, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      .frame {
+        width: min(390px, 100vw);
+        min-height: 100vh;
+        margin: 0 auto;
+        background: #fffdf8;
+        border-inline: 1px solid var(--line);
+      }
+
+      .profile {
+        padding: 18px 16px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .profile-row {
+        display: grid;
+        grid-template-columns: 48px minmax(0, 1fr) 44px;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .avatar {
+        display: grid;
+        width: 48px;
+        height: 48px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--brand-soft);
+        color: var(--brand);
+        font-weight: 800;
+      }
+
+      .name {
+        margin: 0;
+        overflow: hidden;
+        font-size: 18px;
+        font-weight: 800;
+        line-height: 1.2;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .provider {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .settings {
+        width: 44px;
+        height: 44px;
+        border: 0;
+        border-radius: 12px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 20px;
+      }
+
+      .progress-card {
+        margin-top: 14px;
+        padding: 13px 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .progress-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .level {
+        font-size: 17px;
+        font-weight: 850;
+      }
+
+      .percent {
+        color: var(--olive);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .copy {
+        margin: 5px 0 9px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      .bar {
+        position: relative;
+        height: 7px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #eee4d4;
+      }
+
+      .bar > span {
+        display: block;
+        width: 13%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--brand), #ffc15d);
+      }
+
+      .meta {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        height: 48px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .tab {
+        display: grid;
+        place-items: center;
+        border-bottom: 2px solid transparent;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .tab.active {
+        border-color: var(--brand);
+        color: var(--ink);
+      }
+
+      .list {
+        padding: 16px;
+      }
+
+      .book {
+        display: flex;
+        min-height: 54px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fff;
+      }
+
+      .book strong {
+        font-size: 15px;
+      }
+
+      .book span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 340px) {
+        .profile {
+          padding-inline: 12px;
+        }
+
+        .profile-row {
+          grid-template-columns: 44px minmax(0, 1fr) 40px;
+          gap: 10px;
+        }
+
+        .avatar,
+        .settings {
+          width: 40px;
+          height: 40px;
+        }
+
+        .name {
+          font-size: 16px;
+        }
+
+        .progress-card {
+          padding: 12px;
+        }
+
+        .level {
+          font-size: 16px;
+        }
+
+        .copy {
+          font-size: 12.5px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="frame">
+      <section class="profile" aria-label="마이페이지 프로필">
+        <div class="profile-row">
+          <div class="avatar" aria-hidden="true">집</div>
+          <div>
+            <h1 class="name">집밥러</h1>
+            <div class="provider">카카오 로그인</div>
+          </div>
+          <button class="settings" aria-label="설정">⚙</button>
+        </div>
+
+        <section class="progress-card" aria-label="집밥 성장 기록">
+          <div class="progress-head">
+            <div class="level">Lv.6</div>
+            <div class="percent">13%</div>
+          </div>
+          <p class="copy">다음 레벨까지 130 XP</p>
+          <div
+            class="bar"
+            role="progressbar"
+            aria-label="Lv.6, 다음 레벨까지 130 XP, 진행률 13%"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="13"
+          >
+            <span></span>
+          </div>
+          <div class="meta">누적 520 XP</div>
+        </section>
+      </section>
+
+      <nav class="tabs" aria-label="마이페이지 탭">
+        <div class="tab active">레시피북</div>
+        <div class="tab">장보기 기록</div>
+      </nav>
+
+      <section class="list" aria-label="나의 레시피북">
+        <article class="book">
+          <strong>저장한 레시피</strong>
+          <span>8</span>
+        </article>
+        <article class="book">
+          <strong>내가 추가한 레시피</strong>
+          <span>12</span>
+        </article>
+        <article class="book">
+          <strong>좋아요한 레시피</strong>
+          <span>25</span>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

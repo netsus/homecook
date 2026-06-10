@@ -1549,9 +1549,9 @@
       "id": "33a-user-progress-foundation",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-33a-user-progress-foundation",
-      "pr_path": null,
-      "lifecycle": "in_progress",
-      "approval_state": "codex_approved",
+      "pr_path": "https://github.com/netsus/homecook/pull/719",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm vitest run tests/user-progress-level.test.ts tests/user-progress-events.test.ts tests/user-progress-route.test.ts",
@@ -1560,7 +1560,25 @@
         "pnpm validate:workpack -- --slice 33a-user-progress-foundation",
         "git diff --check"
       ],
-      "notes": "Stage 2 backend implementation passed local backend verification with dummy Supabase public env for security e2e. 33b/33c remain planned follow-up slices for UI/prototype and gamification."
+      "notes": "Merged via PR #719 on 2026-06-10. Backend progress ledger/read model, canonical event writers, survivor-only backfill/reconcile, and GET /users/me/progress are available for 33b/33c follow-up slices."
+    },
+    {
+      "id": "33b-mypage-progress-ui",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/33b-mypage-progress-ui",
+      "pr_path": null,
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm vitest run tests/mypage-progress-card.test.tsx tests/user-progress-api-client.test.ts",
+        "pnpm verify:frontend",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 33b-mypage-progress-ui",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs/prototype lock for FE-only MYPAGE compact progress UI. 33a is merged; implementation starts only after this docs PR merges."
     }
   ]
 }
