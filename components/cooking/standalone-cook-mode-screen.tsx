@@ -25,6 +25,7 @@ import {
 } from "@/components/web";
 import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -135,6 +136,7 @@ export function StandaloneCookModeScreen({
       try {
         setShowConsumedSheet(false);
         await complete(consumedIds);
+        notifyGamificationSourceAction();
       } catch (error) {
         if (isCookingApiError(error) && error.status === 401) {
           setAuthState("unauthorized");
@@ -154,6 +156,7 @@ export function StandaloneCookModeScreen({
     try {
       setShowConsumedSheet(false);
       await complete([]);
+      notifyGamificationSourceAction();
     } catch (error) {
       if (isCookingApiError(error) && error.status === 401) {
         setAuthState("unauthorized");

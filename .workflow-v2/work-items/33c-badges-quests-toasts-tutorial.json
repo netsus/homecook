@@ -63,21 +63,23 @@
   },
   "verification": {
     "required_checks": [
-      "pnpm exec -- vitest run tests/user-gamification-definitions.test.ts tests/user-gamification-events.test.ts tests/user-gamification-route.test.ts tests/user-gamification-source-action-smoke.test.ts",
-      "pnpm exec -- vitest run tests/user-progress-events.test.ts tests/user-progress-route.test.ts tests/recipe-save-route.test.ts tests/recipe-books-route.test.ts tests/shopping-complete.backend.test.ts tests/cook-planner-complete.backend.test.ts tests/cook-standalone-complete.backend.test.ts tests/user-gamification-definitions.test.ts tests/user-gamification-events.test.ts tests/user-gamification-route.test.ts tests/user-gamification-source-action-smoke.test.ts",
-      "pnpm exec -- vitest run tests/mypage.backend.test.ts tests/settings-account.backend.test.ts tests/user-progress-route.test.ts tests/user-gamification-route.test.ts",
+      "pnpm exec -- vitest run tests/user-gamification-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/gamification-toast-provider.test.tsx tests/mypage-screen.test.tsx tests/mypage-progress-card.test.tsx",
       "pnpm typecheck",
-      "pnpm verify:backend",
-      "pnpm validate:source-of-truth-sync",
+      "pnpm lint",
+      "pnpm exec -- vitest run tests/recipe-card.test.tsx tests/recipe-detail-screen.test.tsx tests/shopping-detail.frontend.test.tsx tests/cook-mode-screen.test.tsx tests/standalone-cook-mode-screen.test.tsx tests/mypage-screen.test.tsx tests/user-gamification-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/gamification-toast-provider.test.tsx",
+      "pnpm exec playwright test tests/e2e/slice-33c-gamification.spec.ts",
+      "pnpm verify:frontend:pr",
       "pnpm validate:workflow-v2",
       "pnpm validate:workpack -- --slice 33c-badges-quests-toasts-tutorial",
       "git diff --check"
     ],
     "verify_commands": [
-      "pnpm exec -- vitest run tests/user-gamification-definitions.test.ts tests/user-gamification-events.test.ts tests/user-gamification-route.test.ts tests/user-gamification-source-action-smoke.test.ts",
-      "pnpm exec -- vitest run tests/mypage.backend.test.ts tests/settings-account.backend.test.ts tests/user-progress-route.test.ts tests/user-gamification-route.test.ts",
+      "pnpm exec -- vitest run tests/user-gamification-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/gamification-toast-provider.test.tsx tests/mypage-screen.test.tsx tests/mypage-progress-card.test.tsx",
       "pnpm typecheck",
-      "pnpm verify:backend",
+      "pnpm lint",
+      "pnpm exec -- vitest run tests/recipe-card.test.tsx tests/recipe-detail-screen.test.tsx tests/shopping-detail.frontend.test.tsx tests/cook-mode-screen.test.tsx tests/standalone-cook-mode-screen.test.tsx tests/mypage-screen.test.tsx tests/user-gamification-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/gamification-toast-provider.test.tsx",
+      "pnpm exec playwright test tests/e2e/slice-33c-gamification.spec.ts",
+      "pnpm verify:frontend:pr",
       "pnpm validate:workflow-v2",
       "pnpm validate:workpack -- --slice 33c-badges-quests-toasts-tutorial"
     ],
@@ -91,7 +93,7 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
+    "lifecycle": "ready_for_review",
     "approval_state": "codex_approved",
     "verification_status": "passed",
     "evaluation_status": "not_started",
@@ -101,7 +103,7 @@
     "blocked_reason_code": null
   },
   "closeout": null,
-  "notes": "Stage 1 docs PR #723 and contract-evolution PR #724 are merged. Stage 2 backend implementation is in progress on feature/be-33c-badges-quests-toasts-tutorial with gamification tables, read/seen/dismiss routes, server badge/quest definitions, projection after 33a events, and targeted Vitest/typecheck evidence. closeout_phase=collecting",
+  "notes": "Stage 1 docs PR #723, contract-evolution PR #724, and Stage 2 backend PR #725 are merged. Stage 4 frontend fallback is complete on feature/fe-33c-badges-quests-toasts-tutorial after Claude CLI repo-task prompts hung with no output/no edits. Requested Claude resume session c2d15736 returned No conversation found; same-prompt one-off Claude final review returned Verdict: OK. Stage 5 authority report passed with Design Status confirmed. Frontend PR #726 is published for current-head CI and merge gate. Local targeted Vitest, typecheck, lint, source-action regression tests, 33c Playwright evidence, exploratory QA/eval score 100, workflow/workpack validators, diff check, and pnpm verify:frontend:pr pass are the current closeout evidence. closeout_phase=collecting stage4_fallback=codex",
   "out_of_scope": [
     "Leaderboard",
     "Competitive rank",

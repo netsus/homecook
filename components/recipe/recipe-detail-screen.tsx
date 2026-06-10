@@ -36,6 +36,7 @@ import {
   saveRecipeToBooks,
 } from "@/lib/api/recipe-save";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
+import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import { getCookingMethodColor, getCookingMethodTint } from "@/lib/cooking-method-colors";
 import { getCookingMethodAssistiveLabel } from "@/lib/cooking-method-taxonomy";
 import { resolveRecipeImage } from "@/lib/recipe-image";
@@ -614,6 +615,9 @@ export function RecipeDetailScreen({
             : "레시피를 저장했어요.",
         tone: "status",
       });
+      if (newBookIds.length > 0) {
+        notifyGamificationSourceAction();
+      }
     } catch (error) {
       setSaveSubmitError(
         error instanceof Error ? error.message : "레시피를 저장하지 못했어요.",

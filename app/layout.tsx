@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GamificationToastProvider } from "@/components/gamification/gamification-toast-provider";
 import { QaFixtureToolbar } from "@/components/layout/qa-fixture-toolbar";
 import "./globals.css";
 
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="ko">
       <body>
         {children}
+        <GamificationToastProvider />
         <QaFixtureToolbar />
       </body>
     </html>

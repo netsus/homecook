@@ -20,6 +20,10 @@ import {
   type MypageMobileSurface,
 } from "@/components/mypage/mypage-mobile-screen";
 import {
+  MypageGamificationCard,
+  type MypageGamificationState,
+} from "@/components/mypage/mypage-gamification-card";
+import {
   MypageProgressCard,
   type MypageProgressState,
 } from "@/components/mypage/mypage-progress-card";
@@ -78,7 +82,12 @@ import {
   updateSettings,
   type UserProfileData,
 } from "@/lib/api/mypage";
+import {
+  dismissUserGamificationTutorialQuest,
+  fetchUserGamification,
+} from "@/lib/api/user-gamification";
 import { fetchUserProgress } from "@/lib/api/user-progress";
+import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import {
   eatLeftover,
   fetchLeftovers,
@@ -116,6 +125,7 @@ import type {
 } from "@/types/leftover";
 import type { PlannerColumnData } from "@/types/planner";
 import type { ShoppingListHistoryItem } from "@/types/shopping";
+import type { UserGamificationData } from "@/types/user-gamification";
 import type { UserProgressData } from "@/types/user-progress";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
@@ -275,6 +285,10 @@ export function MypageScreen({
   const [userProgress, setUserProgress] = useState<UserProgressData | null>(null);
   const [progressState, setProgressState] =
     useState<MypageProgressState>("idle");
+  const [userGamification, setUserGamification] =
+    useState<UserGamificationData | null>(null);
+  const [gamificationState, setGamificationState] =
+    useState<MypageGamificationState>("idle");
 
   // Recipe books
   const [books, setBooks] = useState<RecipeBookSummary[]>([]);
@@ -552,10 +566,38 @@ export function MypageScreen({
     }
   }, []);
 
+  const loadUserGamification = useCallback(async () => {
+    setGamificationState("loading");
+
+    try {
+      const result = await fetchUserGamification();
+      setUserGamification(result);
+      const hasSurfaceContent =
+        result.featured_badges.length > 0 ||
+        result.badges.earned.length > 0 ||
+        result.quests.active.length > 0 ||
+        result.quests.completed_recent.length > 0 ||
+        result.tutorial.active_steps.length > 0;
+      setGamificationState(hasSurfaceContent ? "ready" : "empty");
+      return true;
+    } catch (error) {
+      setUserGamification(null);
+      if (isMypageApiError(error) && error.status === 401) {
+        setAuthState("unauthorized");
+        setGamificationState("error");
+        return false;
+      }
+      setGamificationState("error");
+      return false;
+    }
+  }, []);
+
   const loadInitialData = useCallback(async () => {
     setViewState("loading");
     setUserProgress(null);
+    setUserGamification(null);
     setProgressState("loading");
+    setGamificationState("loading");
     try {
       const [profileOk, booksOk] = await Promise.all([
         loadProfile(),
@@ -565,12 +607,20 @@ export function MypageScreen({
       if (profileOk && booksOk) {
         setViewState("ready");
         void loadUserProgress();
+        void loadUserGamification();
       }
     } catch {
       setProgressState("error");
+      setGamificationState("error");
       setViewState("error");
     }
-  }, [loadProfile, loadMypageStats, loadRecipeBooks, loadUserProgress]);
+  }, [
+    loadProfile,
+    loadMypageStats,
+    loadRecipeBooks,
+    loadUserGamification,
+    loadUserProgress,
+  ]);
 
   const loadShoppingHistory = useCallback(async (cursor?: string) => {
     try {
@@ -931,6 +981,8 @@ export function MypageScreen({
     try {
       await createRecipeBook(trimmed);
       await loadRecipeBooks();
+      notifyGamificationSourceAction();
+      void loadUserGamification();
       setShowCreateInput(false);
       setCreateName("");
       showToast("레시피북을 만들었어요", "success");
@@ -943,7 +995,19 @@ export function MypageScreen({
     } finally {
       setIsCreating(false);
     }
-  }, [createName, loadRecipeBooks, showToast]);
+  }, [createName, loadRecipeBooks, loadUserGamification, showToast]);
+
+  const handleDismissTutorialQuest = useCallback(
+    async (questKey: string) => {
+      try {
+        await dismissUserGamificationTutorialQuest(questKey);
+        void loadUserGamification();
+      } catch {
+        showToast("튜토리얼 퀘스트 상태를 저장하지 못했어요", "error");
+      }
+    },
+    [loadUserGamification, showToast],
+  );
 
   const handleRenameBook = useCallback(async () => {
     if (!renamingBookId) return;
@@ -1681,6 +1745,8 @@ export function MypageScreen({
           menuOpenBookId={menuOpenBookId}
           menuRef={menuRef}
           profile={profile}
+          gamification={userGamification}
+          gamificationState={gamificationState}
           progress={userProgress}
           progressState={progressState}
           renameInputRef={renameInputRef}
@@ -1721,6 +1787,7 @@ export function MypageScreen({
           onConfirmRename={handleRenameBook}
           onCreateBook={handleCreateBook}
           onCreateNameChange={setCreateName}
+          onDismissTutorialQuest={handleDismissTutorialQuest}
           onMenuClose={() => setMenuOpenBookId(null)}
           onMenuOpen={(id) => setMenuOpenBookId(id)}
           onRenameStart={(book) => {
@@ -1823,6 +1890,12 @@ export function MypageScreen({
             className="web-mypage-progress"
             progress={userProgress}
             state={progressState}
+          />
+          <MypageGamificationCard
+            data={userGamification}
+            state={gamificationState}
+            variant="desktop"
+            onDismissTutorialQuest={handleDismissTutorialQuest}
           />
           <div className="web-mypage-stats" aria-label="마이페이지 통계">
             {mypageStats.map((item) => (

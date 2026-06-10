@@ -21,6 +21,7 @@ import {
   isShoppingApiError,
   updateShoppingListItem,
 } from "@/lib/api/shopping";
+import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import { groupShoppingItemsByCategory } from "@/lib/shopping-categories";
 import type { ShoppingListDetail, ShoppingListItemSummary } from "@/types/shopping";
 
@@ -467,6 +468,7 @@ export function ShoppingDetailScreen({
             type: "success",
             message: `장보기를 완료했어요 (${mealsText}${pantryText})`,
           });
+          notifyGamificationSourceAction();
           onCompleted?.();
           setTimeout(() => setCompleteToast(null), 3000);
         }

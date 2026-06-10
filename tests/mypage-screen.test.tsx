@@ -9,6 +9,8 @@ import { MypageScreen } from "@/components/mypage/mypage-screen";
 
 const mockFetchUserProfile = vi.fn();
 const mockFetchUserProgress = vi.fn();
+const mockFetchUserGamification = vi.fn();
+const mockDismissUserGamificationTutorialQuest = vi.fn();
 const mockFetchRecipeBooks = vi.fn();
 const mockCreateRecipeBook = vi.fn();
 const mockRenameRecipeBook = vi.fn();
@@ -56,6 +58,12 @@ vi.mock("@/lib/api/mypage", () => ({
 
 vi.mock("@/lib/api/user-progress", () => ({
   fetchUserProgress: (...args: unknown[]) => mockFetchUserProgress(...args),
+}));
+
+vi.mock("@/lib/api/user-gamification", () => ({
+  dismissUserGamificationTutorialQuest: (...args: unknown[]) =>
+    mockDismissUserGamificationTutorialQuest(...args),
+  fetchUserGamification: (...args: unknown[]) => mockFetchUserGamification(...args),
 }));
 
 vi.mock("@/lib/api/recipe", () => ({
@@ -192,6 +200,46 @@ const MOCK_PROGRESS = {
     custom_book_created: 1,
   },
   last_updated_at: "2026-06-10T00:00:00.000Z",
+};
+
+const MOCK_GAMIFICATION = {
+  level: {
+    current_level: 6,
+    total_xp: 830,
+    xp_to_next_level: 170,
+    progress_percent: 82,
+  },
+  featured_badges: [
+    {
+      badge_key: "first_cook_done",
+      label: "첫 집밥 완성",
+      description: "첫 요리 완료를 기록했어요.",
+      earned_at: "2026-06-10T12:00:00.000Z",
+      is_new: false,
+    },
+  ],
+  badges: { earned: [], locked: [] },
+  quests: {
+    active: [
+      {
+        quest_key: "cook_three_meals",
+        quest_type: "standard",
+        status: "active",
+        title: "요리 루틴 3번 완성",
+        description: "요리 완료를 3번 기록해 보세요.",
+        progress_current: 1,
+        progress_target: 3,
+        progress_percent: 33,
+        completed_at: null,
+        dismissed_at: null,
+        is_new: false,
+      },
+    ],
+    completed_recent: [],
+  },
+  tutorial: { active_steps: [] },
+  notifications: { unseen: [] },
+  last_updated_at: "2026-06-10T12:00:00.000Z",
 };
 
 const MOCK_BOOKS = {
@@ -459,6 +507,8 @@ describe("MypageScreen", () => {
     installMatchMedia(false);
     mockFetchUserProfile.mockReset();
     mockFetchUserProgress.mockReset();
+    mockFetchUserGamification.mockReset();
+    mockDismissUserGamificationTutorialQuest.mockReset();
     mockFetchRecipeBooks.mockReset();
     mockCreateRecipeBook.mockReset();
     mockRenameRecipeBook.mockReset();
@@ -488,6 +538,11 @@ describe("MypageScreen", () => {
 
     mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
     mockFetchUserProgress.mockResolvedValue(MOCK_PROGRESS);
+    mockFetchUserGamification.mockResolvedValue(MOCK_GAMIFICATION);
+    mockDismissUserGamificationTutorialQuest.mockResolvedValue({
+      quest_key: "first_shopping_done",
+      status: "dismissed",
+    });
     mockFetchRecipeBooks.mockResolvedValue(MOCK_BOOKS);
     mockFetchShoppingHistory.mockResolvedValue(MOCK_SHOPPING_HISTORY);
     mockFetchShoppingListDetail.mockImplementation((listId: string) =>
@@ -624,6 +679,9 @@ describe("MypageScreen", () => {
     expect(await screen.findByText("집밥러")).toBeTruthy();
     expect(screen.getByText("카카오 로그인")).toBeTruthy();
     expect(screen.getByTestId("mypage-profile")).toBeTruthy();
+    expect(await screen.findByTestId("mypage-gamification-card")).toBeTruthy();
+    expect(screen.getByText("첫 집밥 완성")).toBeTruthy();
+    expect(screen.getByText("요리 루틴 3번 완성")).toBeTruthy();
 
     expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "레시피북" })).toBeTruthy();

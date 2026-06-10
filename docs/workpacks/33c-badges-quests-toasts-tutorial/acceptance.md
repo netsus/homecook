@@ -8,12 +8,12 @@
 
 ## Happy Path
 
-- [ ] 로그인 사용자가 MYPAGE에서 level progress, 대표 배지, active quest, tutorial quest를 함께 확인한다 <!-- omo:id=accept-mypage-gamification-surface;stage=4;scope=frontend;review=5,6 -->
-- [ ] 배지 안내 modal/popover가 열리고 닫히며 배지/퀘스트 기준을 집밥 서비스 톤으로 설명한다 <!-- omo:id=accept-badge-guide-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] XP source action 성공 후 unseen notification이 있으면 XP toast가 표시된다 <!-- omo:id=accept-xp-toast-after-action;stage=4;scope=frontend;review=5,6 -->
+- [x] 로그인 사용자가 MYPAGE에서 level progress, 대표 배지, active quest, tutorial quest를 함께 확인한다 <!-- omo:id=accept-mypage-gamification-surface;stage=4;scope=frontend;review=5,6 -->
+- [x] 배지 안내 modal/popover가 열리고 닫히며 배지/퀘스트 기준을 집밥 서비스 톤으로 설명한다 <!-- omo:id=accept-badge-guide-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] XP source action 성공 후 unseen notification이 있으면 XP toast가 표시된다 <!-- omo:id=accept-xp-toast-after-action;stage=4;scope=frontend;review=5,6 -->
 - [x] quest 조건 충족 시 completed_recent 또는 earned badge 상태가 다음 조회에 반영된다 <!-- omo:id=accept-quest-badge-completion;stage=2;scope=shared;review=3,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 
@@ -26,18 +26,18 @@
 - [x] tutorial quest dismiss는 XP, level, badge award를 변경하지 않는다 <!-- omo:id=accept-tutorial-dismiss-policy;stage=2;scope=backend;review=3,6 -->
 - [x] gamification projection 실패가 원래 source action 실패로 전파되지 않는다 <!-- omo:id=accept-source-action-isolation;stage=2;scope=backend;review=3,6 -->
 - [x] leaderboard, competitive rank, pressure streak, season reset, loot reward가 API/DB에 들어가지 않는다 <!-- omo:id=accept-no-competitive-backend-scope;stage=2;scope=backend;review=3,6 -->
-- [ ] leaderboard, competitive rank, pressure streak, season reset, loot reward가 UI에 들어가지 않는다 <!-- omo:id=accept-no-competitive-ui-scope;stage=4;scope=frontend;review=5,6 -->
+- [x] leaderboard, competitive rank, pressure streak, season reset, loot reward가 UI에 들어가지 않는다 <!-- omo:id=accept-no-competitive-ui-scope;stage=4;scope=frontend;review=5,6 -->
 
 ## Error / Permission
 
-- [ ] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 있다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] read-only 상태가 있다 <!-- omo:id=accept-read-only;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 있다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] gamification API 실패는 MYPAGE core와 33b progress 전체 실패로 전파되지 않는다 <!-- omo:id=accept-gamification-soft-fail;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] read-only 상태가 있다 <!-- omo:id=accept-read-only;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 있다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] gamification API 실패는 MYPAGE core와 33b progress 전체 실패로 전파되지 않는다 <!-- omo:id=accept-gamification-soft-fail;stage=4;scope=frontend;review=5,6 -->
 - [x] seen/dismiss endpoint는 타인 리소스 접근을 거부하거나 정보 노출 없이 무시한다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] badge guide modal은 keyboard close/focus 흐름을 가진다 <!-- omo:id=accept-modal-accessibility;stage=4;scope=frontend;review=5,6 -->
+- [x] badge guide modal은 keyboard close/focus 흐름을 가진다 <!-- omo:id=accept-modal-accessibility;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
@@ -45,7 +45,7 @@
 - [x] `operational_events`를 badge/quest/XP truth로 사용하지 않는다 <!-- omo:id=accept-no-operational-events-truth;stage=2;scope=backend;review=3,6 -->
 - [x] badge/quest/notification row는 인증 사용자 scope로만 조회/수정된다 <!-- omo:id=accept-user-scoped-data;stage=2;scope=backend;review=3,6 -->
 - [x] source event 하나가 XP toast를 중복 생성/표시하지 않는다 <!-- omo:id=accept-toast-dedupe;stage=2;scope=shared;review=3,6 -->
-- [ ] legacy/backfill 데이터는 lower-bound로 표현되며 삭제된 활동 복원을 주장하지 않는다 <!-- omo:id=accept-legacy-lower-bound-copy;stage=4;scope=frontend;review=5,6 -->
+- [x] legacy/backfill 데이터는 lower-bound로 표현되며 삭제된 활동 복원을 주장하지 않는다 <!-- omo:id=accept-legacy-lower-bound-copy;stage=4;scope=frontend;review=5,6 -->
 - [x] invalid notification id, invalid quest key, malformed body를 안전하게 처리한다 <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
@@ -72,15 +72,15 @@
 - [x] badge/quest definition과 projection 조건이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-definition-projection;stage=2;scope=backend;review=3,6 -->
 - [x] badge award / quest completion / notification dedupe idempotency가 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-idempotency;stage=2;scope=backend;review=3,6 -->
 - [x] gamification route success/error/owner guard가 route test로 고정되어 있다 <!-- omo:id=accept-vitest-route;stage=2;scope=backend;review=3,6 -->
-- [ ] MYPAGE gamification card, badge guide modal, XP toast 상태가 component test로 고정되어 있다 <!-- omo:id=accept-vitest-component;stage=4;scope=frontend;review=5,6 -->
-- [ ] API client 타입과 error envelope 처리가 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-api-client;stage=4;scope=frontend;review=5,6 -->
+- [x] MYPAGE gamification card, badge guide modal, XP toast 상태가 component test로 고정되어 있다 <!-- omo:id=accept-vitest-component;stage=4;scope=frontend;review=5,6 -->
+- [x] API client 타입과 error envelope 처리가 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-api-client;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright
 
-- [ ] MYPAGE badge/quest/tutorial surface의 loading/empty/error/read-only/unauthorized 흐름이 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-mypage-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] badge guide modal open/close keyboard flow가 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-badge-guide;stage=4;scope=frontend;review=5,6 -->
-- [ ] source action 후 XP toast가 표시되고 seen 처리되는 흐름이 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-xp-toast;stage=4;scope=frontend;review=5,6 -->
-- [ ] 320px/390px/desktop visual evidence가 Stage 4 PR에 첨부되어 있다 <!-- omo:id=accept-playwright-visual-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] MYPAGE badge/quest/tutorial surface의 loading/empty/error/read-only/unauthorized 흐름이 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-mypage-states;stage=4;scope=frontend;review=5,6 -->
+- [x] badge guide modal open/close keyboard flow가 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-badge-guide;stage=4;scope=frontend;review=5,6 -->
+- [x] source action 후 XP toast가 표시되고 seen 처리되는 흐름이 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-xp-toast;stage=4;scope=frontend;review=5,6 -->
+- [x] 320px/390px/desktop visual evidence가 Stage 4 PR에 첨부되어 있다 <!-- omo:id=accept-playwright-visual-evidence;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 
