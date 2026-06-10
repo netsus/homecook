@@ -10,6 +10,14 @@
 - 백엔드: `feature/be-33c-badges-quests-toasts-tutorial`
 - 프론트엔드: `feature/fe-33c-badges-quests-toasts-tutorial`
 
+## Current Status
+
+- Stage 1 docs/prototype PR #723: merged.
+- Contract-evolution PR #724: merged.
+- Stage 2 backend PR #725: merged.
+- Stage 4/5/6 frontend/authority/merge PR #726: merged on 2026-06-10T16:57:35Z, merge commit `b97deddc5049c6a6386ccf3e13171c7bf214da5c`.
+- Post-merge deployment observation: the deployed MYPAGE can show the gamification fallback copy `성장 정보를 잠시 불러오지 못했어요` while the base MYPAGE and 33b progress remain usable. Local read-only DB inspection confirmed the configured `.env.local` Supabase project has `user_progress_events`, `user_progress_summary`, `user_badge_awards`, `user_quest_progress`, and `user_progress_notifications`. The remaining production check is whether the Vercel deployment environment has `SUPABASE_SERVICE_ROLE_KEY` configured against the same migrated Supabase project; 33c gamification read performs server-side badge/quest/notification projection and needs service-role write authority.
+
 ## In Scope
 
 - 화면:
@@ -197,7 +205,7 @@ POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss
     - `ui/designs/evidence/33c-badges-quests-toasts-tutorial/desktop-1440.png`
     - `ui/designs/evidence/33c-badges-quests-toasts-tutorial/xp-toast.png`
     - `ui/designs/evidence/33c-badges-quests-toasts-tutorial/badge-guide-modal.png`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Notes:
   - 참고 이미지는 구조 참고만 한다. 등급/배지의 광택, 전투형 톤, stage card, 보상 상자형 CTA는 집밥 서비스 톤에 맞춰 낮춘다.
   - MYPAGE 첫 화면 밀도를 해치지 않도록 compact progress 아래 “대표 배지 + 현재 퀘스트 1~2개”를 우선 배치한다.
@@ -366,3 +374,13 @@ POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss
   - `pnpm qa:explore -- --slice 33c-badges-quests-toasts-tutorial`
   - `pnpm qa:eval -- --checklist .artifacts/qa/33c-badges-quests-toasts-tutorial/2026-06-10T16-40-35-511Z/exploratory-checklist.json --report .artifacts/qa/33c-badges-quests-toasts-tutorial/2026-06-10T16-40-35-511Z/exploratory-report.json` (score 100)
   - Claude final review: `Verdict: OK` from one-off CLI call after requested resume session was unavailable
+
+## Stage 6 Closeout
+
+- Frontend PR: #726.
+- Merge state: merged to `master` on 2026-06-10T16:57:35Z.
+- Merge commit: `b97deddc5049c6a6386ccf3e13171c7bf214da5c`.
+- CI at merge: `build`, `quality`, `policy`, `smoke`, `accessibility`, `visual`, `lighthouse`, `security-smoke`, Vercel, GitGuardian, and PR Governance passed; `full-regression` skipped by QA scope.
+- Design authority: `ui/designs/authority/MYPAGE_GAMIFICATION-authority.md` passed with mobile 390px, mobile 320px, desktop 1440px, XP toast, and badge guide modal evidence.
+- QA evidence: exploratory QA/eval score 100 from `.artifacts/qa/33c-badges-quests-toasts-tutorial/2026-06-10T16-40-35-511Z`.
+- Deployment follow-up: production-like Vercel/Supabase service-role and migration smoke remains Manual Only because it requires external deployment environment authority.

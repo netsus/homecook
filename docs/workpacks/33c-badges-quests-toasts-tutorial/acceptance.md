@@ -85,3 +85,4 @@
 ### Manual Only
 
 - [ ] 운영 데이터에서 실제 장기 사용자 badge/quest 분포가 과하거나 압박적이지 않은지 출시 전 제품 판단으로 확인한다
+- [ ] 배포 환경에서 `SUPABASE_SERVICE_ROLE_KEY`가 설정되어 있고 33a/33c migration이 적용된 같은 Supabase project를 바라보는지 확인한 뒤 MYPAGE gamification fallback이 사라지는지 smoke 확인한다
