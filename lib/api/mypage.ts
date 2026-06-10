@@ -1,6 +1,7 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
+  RecipeBookCoverColorKey,
   RecipeBookCreateData,
   RecipeBookDeleteData,
   RecipeBookListData,
@@ -97,12 +98,23 @@ export async function createRecipeBook(name: string) {
   });
 }
 
-export async function renameRecipeBook(bookId: string, name: string) {
+export async function updateRecipeBook(
+  bookId: string,
+  updates: {
+    name?: string;
+    cover_color_key?: RecipeBookCoverColorKey | null;
+    cover_image_url?: string | null;
+  },
+) {
   return requestMypage<RecipeBookUpdateData>(`/api/v1/recipe-books/${bookId}`, {
     method: "PATCH",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(updates),
   });
+}
+
+export async function renameRecipeBook(bookId: string, name: string) {
+  return updateRecipeBook(bookId, { name });
 }
 
 export async function deleteRecipeBook(bookId: string) {

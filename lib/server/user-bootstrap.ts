@@ -73,6 +73,8 @@ interface RecipeBookRow {
   name: string;
   book_type: string;
   sort_order: number;
+  cover_color_key?: string | null;
+  cover_image_url?: string | null;
 }
 
 interface RecipeBooksSelectQuery {
@@ -93,6 +95,8 @@ interface RecipeBooksTable {
     user_id: string;
     name: string;
     book_type: "my_added" | "saved" | "liked";
+    cover_color_key?: string | null;
+    cover_image_url?: string | null;
     sort_order: number;
     created_at: string;
     updated_at: string;
@@ -137,9 +141,9 @@ export const USER_BOOTSTRAP_VERSION = 3;
 
 const USER_BOOTSTRAP_VERSION_KEY = "user_bootstrap_version";
 const DEFAULT_RECIPE_BOOKS = [
-  { name: "내가 추가한 레시피", book_type: "my_added" as const, sort_order: 0 },
-  { name: "저장한 레시피", book_type: "saved" as const, sort_order: 1 },
-  { name: "좋아요한 레시피", book_type: "liked" as const, sort_order: 2 },
+  { name: "내가 추가한 레시피", book_type: "my_added" as const, cover_color_key: "lavender", sort_order: 0 },
+  { name: "저장한 레시피", book_type: "saved" as const, cover_color_key: "sky", sort_order: 1 },
+  { name: "좋아요한 레시피", book_type: "liked" as const, cover_color_key: "coral", sort_order: 2 },
 ];
 const DEFAULT_PLANNER_COLUMNS = DEFAULT_PLANNER_COLUMN_NAMES.map((name, sort_order) => ({
   name,
@@ -229,7 +233,7 @@ async function readUserRow(dbClient: UserBootstrapDbClient, userId: string) {
 async function listRecipeBooks(dbClient: UserBootstrapDbClient, userId: string) {
   const result = await dbClient
     .from("recipe_books")
-    .select("id, name, book_type, sort_order")
+    .select("id, name, book_type, sort_order, cover_color_key, cover_image_url")
     .eq("user_id", userId)
     .order("sort_order", { ascending: true })
     .order("id", { ascending: true });
@@ -350,11 +354,13 @@ export async function ensureUserBootstrapState(
         user_id: userId,
         name: defaultBook.name,
         book_type: defaultBook.book_type,
+        cover_color_key: defaultBook.cover_color_key,
+        cover_image_url: null,
         sort_order: currentBooks.length === 0 ? defaultBook.sort_order : nextBookSortOrder,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
-      .select("id, name, book_type, sort_order")
+      .select("id, name, book_type, sort_order, cover_color_key, cover_image_url")
       .maybeSingle();
 
     if (!isDuplicateKeyConflict(createResult.error) && (createResult.error || !createResult.data)) {

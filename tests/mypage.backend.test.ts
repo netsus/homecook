@@ -211,10 +211,10 @@ describe("17a mypage backend", () => {
 
     expect(response.status).toBe(200);
     expect(body.data.books).toEqual([
-      { id: "book-my", name: "내가 추가한 레시피", book_type: "my_added", recipe_count: 1, sort_order: 0 },
-      { id: "book-saved", name: "저장한 레시피", book_type: "saved", recipe_count: 2, sort_order: 1 },
-      { id: "book-liked", name: "좋아요한 레시피", book_type: "liked", recipe_count: 2, sort_order: 2 },
-      { id: "book-custom", name: "주말 파티", book_type: "custom", recipe_count: 1, sort_order: 3 },
+      { id: "book-my", name: "내가 추가한 레시피", book_type: "my_added", recipe_count: 1, cover_color_key: null, cover_image_url: null, sort_order: 0 },
+      { id: "book-saved", name: "저장한 레시피", book_type: "saved", recipe_count: 2, cover_color_key: null, cover_image_url: null, sort_order: 1 },
+      { id: "book-liked", name: "좋아요한 레시피", book_type: "liked", recipe_count: 2, cover_color_key: null, cover_image_url: null, sort_order: 2 },
+      { id: "book-custom", name: "주말 파티", book_type: "custom", recipe_count: 1, cover_color_key: null, cover_image_url: null, sort_order: 3 },
     ]);
   });
 
@@ -268,6 +268,74 @@ describe("17a mypage backend", () => {
       recipe_count: 2,
     });
     expect(recipeBookItemsTable.__query.eq).toHaveBeenCalledWith("book_id", "550e8400-e29b-41d4-a716-446655440001");
+  });
+
+  it("PATCH /recipe-books/{book_id} updates custom cover color and image without renaming", async () => {
+    const recipeBooksTable = createTable([
+      {
+        data: {
+          id: "550e8400-e29b-41d4-a716-446655440001",
+          user_id: "user-1",
+          book_type: "custom",
+        },
+        error: null,
+      },
+      {
+        data: {
+          id: "550e8400-e29b-41d4-a716-446655440001",
+          name: "주말 파티",
+          book_type: "custom",
+          sort_order: 3,
+          cover_color_key: "coral",
+          cover_image_url: "https://example.com/new-cover.jpg",
+          created_at: "2026-04-01T00:00:00Z",
+          updated_at: "2026-04-30T00:00:00Z",
+        },
+        error: null,
+      },
+    ]);
+    const recipeBookItemsTable = createTable([
+      {
+        data: [{ book_id: "550e8400-e29b-41d4-a716-446655440001" }],
+        error: null,
+      },
+    ]);
+    setupAuthedClient({
+      from: vi.fn((table: string) => {
+        if (table === "recipe_books") return recipeBooksTable;
+        if (table === "recipe_book_items") return recipeBookItemsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { PATCH } = await importRecipeBookDetailRoute();
+    const response = await PATCH(
+      new Request("http://localhost:3000/api/v1/recipe-books/550e8400-e29b-41d4-a716-446655440001", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          cover_color_key: "coral",
+          cover_image_url: "https://example.com/new-cover.jpg",
+        }),
+      }),
+      createBookContext("550e8400-e29b-41d4-a716-446655440001"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data).toMatchObject({
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      name: "주말 파티",
+      book_type: "custom",
+      recipe_count: 1,
+      cover_color_key: "coral",
+      cover_image_url: "https://example.com/new-cover.jpg",
+    });
+    expect(recipeBooksTable.update).toHaveBeenCalledWith({
+      cover_color_key: "coral",
+      cover_image_url: "https://example.com/new-cover.jpg",
+      updated_at: expect.any(String),
+    });
   });
 
   it("DELETE /recipe-books/{book_id} rejects system books and deletes custom books", async () => {

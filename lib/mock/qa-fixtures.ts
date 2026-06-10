@@ -4,6 +4,7 @@ import type {
   IngredientItem,
   IngredientListData,
   RecipeBookCreateData,
+  RecipeBookCoverColorKey,
   RecipeBookListData,
   RecipeBookSummary,
   RecipeDetail,
@@ -27,6 +28,20 @@ import type {
 } from "@/types/planner";
 
 type DateAnchor = "start" | "mid" | "end";
+
+const RECIPE_BOOK_COVER_COLORS = [
+  "sage",
+  "sky",
+  "coral",
+  "lavender",
+  "sand",
+] as const satisfies readonly RecipeBookCoverColorKey[];
+
+function getFixtureCoverColorKey(sortOrder: number): RecipeBookCoverColorKey {
+  return RECIPE_BOOK_COVER_COLORS[
+    Math.abs(sortOrder) % RECIPE_BOOK_COVER_COLORS.length
+  ] ?? "sage";
+}
 
 interface FixtureBookState extends RecipeBookSummary {
   book_type: "saved" | "custom";
@@ -84,6 +99,8 @@ function toRecipeBookSummary(value: (typeof fixtureData.fixture.books)[number]):
     book_type: value.bookType as "saved" | "custom",
     recipe_count: value.recipeCount,
     sort_order: value.sortOrder,
+    cover_color_key: getFixtureCoverColorKey(value.sortOrder),
+    cover_image_url: null,
   };
 }
 
@@ -420,6 +437,8 @@ export function createQaFixtureRecipeBook(name: string) {
     book_type: "custom",
     recipe_count: 0,
     sort_order: state.nextBookSortOrder,
+    cover_color_key: getFixtureCoverColorKey(state.nextBookSortOrder),
+    cover_image_url: null,
   };
 
   state.nextBookSortOrder += 1;
@@ -431,6 +450,8 @@ export function createQaFixtureRecipeBook(name: string) {
     book_type: "custom",
     recipe_count: 0,
     sort_order: createdBook.sort_order,
+    cover_color_key: createdBook.cover_color_key,
+    cover_image_url: createdBook.cover_image_url,
     created_at: now,
     updated_at: now,
   } satisfies RecipeBookCreateData;

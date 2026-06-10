@@ -4,6 +4,7 @@ import type {
   PantryMatchListData,
   RecipeBookDeleteData,
   RecipeBookListData,
+  RecipeBookReaderRecipeData,
   RecipeBookRecipeListData,
   RecipeListData,
   RecipeListQuery,
@@ -78,6 +79,24 @@ export async function fetchRecipeBookRecipes(
       success: false,
       data: null,
       error: toFetchError(error, "레시피북 레시피를 불러오지 못했어요."),
+    };
+  }
+}
+
+export async function fetchRecipeBookRecipeDetail(
+  bookId: string,
+  recipeId: string,
+): Promise<ApiResponse<RecipeBookReaderRecipeData>> {
+  try {
+    const data = await fetchJson<RecipeBookReaderRecipeData>(
+      `/api/v1/recipe-books/${bookId}/recipes/${recipeId}`,
+    );
+    return { success: true, data, error: null };
+  } catch (error) {
+    return {
+      success: false,
+      data: null,
+      error: toFetchError(error, "레시피북 레시피 상세를 불러오지 못했어요."),
     };
   }
 }
