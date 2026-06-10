@@ -54,6 +54,48 @@ function makeMockProgress() {
   };
 }
 
+function makeMockGamification() {
+  return {
+    level: {
+      current_level: 6,
+      total_xp: 520,
+      xp_to_next_level: 130,
+      progress_percent: 13,
+    },
+    featured_badges: [
+      {
+        badge_key: "first_cook_done",
+        label: "첫 집밥 완성",
+        description: "첫 요리 완료를 기록했어요.",
+        earned_at: "2026-06-10T00:00:00.000Z",
+        is_new: false,
+      },
+    ],
+    badges: { earned: [], locked: [] },
+    quests: {
+      active: [
+        {
+          quest_key: "cook_three_meals",
+          quest_type: "standard",
+          status: "active",
+          title: "요리 루틴 3번 완성",
+          description: "요리 완료를 3번 기록해 보세요.",
+          progress_current: 1,
+          progress_target: 3,
+          progress_percent: 33,
+          completed_at: null,
+          dismissed_at: null,
+          is_new: false,
+        },
+      ],
+      completed_recent: [],
+    },
+    tutorial: { active_steps: [] },
+    notifications: { unseen: [] },
+    last_updated_at: "2026-06-10T00:00:00.000Z",
+  };
+}
+
 function makeMockBooks() {
   return [
     { id: "book-my", name: "내가 추가한 레시피", book_type: "my_added", recipe_count: 3, sort_order: 0 },
@@ -159,6 +201,7 @@ async function installMypageRoutes(
     profile?: ReturnType<typeof makeMockProfile>;
     progress?: ReturnType<typeof makeMockProgress>;
     progressError?: boolean;
+    gamification?: ReturnType<typeof makeMockGamification>;
     recipeItems?: ReturnType<typeof makeMockRecipeItems>;
     shoppingDetail?: ReturnType<typeof makeMockShoppingDetail>;
   },
@@ -167,6 +210,7 @@ async function installMypageRoutes(
   const shoppingHistory = options?.shoppingHistory ?? makeMockShoppingHistory();
   const profile = options?.profile ?? makeMockProfile();
   const progress = options?.progress ?? makeMockProgress();
+  const gamification = options?.gamification ?? makeMockGamification();
   const recipeItems = options?.recipeItems ?? makeMockRecipeItems();
   const shoppingDetail = options?.shoppingDetail ?? makeMockShoppingDetail();
 
@@ -193,6 +237,22 @@ async function installMypageRoutes(
         data: progress,
         error: null,
       },
+    });
+  });
+
+  await page.route("**/api/v1/users/me/gamification", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: gamification,
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/users/me/gamification/notifications/seen", async (route) => {
+    await route.fulfill({
+      json: { success: true, data: { seen_notification_ids: [] }, error: null },
     });
   });
 

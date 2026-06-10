@@ -189,12 +189,13 @@ POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss
 - Visual artifact:
   - `ui/designs/MYPAGE_GAMIFICATION.md`
   - `ui/designs/critiques/MYPAGE_GAMIFICATION-critique.md`
+  - `ui/designs/authority/MYPAGE_GAMIFICATION-authority.md`
   - `ui/designs/prototypes/33c-badges-quests-toasts-tutorial/index.html`
-  - Stage 4 evidence 예정:
+  - Stage 4 evidence:
     - `ui/designs/evidence/33c-badges-quests-toasts-tutorial/mobile-390.png`
     - `ui/designs/evidence/33c-badges-quests-toasts-tutorial/mobile-320.png`
     - `ui/designs/evidence/33c-badges-quests-toasts-tutorial/desktop-1440.png`
-    - `ui/designs/evidence/33c-badges-quests-toasts-tutorial/toast.png`
+    - `ui/designs/evidence/33c-badges-quests-toasts-tutorial/xp-toast.png`
     - `ui/designs/evidence/33c-badges-quests-toasts-tutorial/badge-guide-modal.png`
 - Authority status: `required`
 - Notes:
@@ -203,9 +204,9 @@ POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1에서 설계/프로토타입 기준만 잠금
+- [ ] 임시 UI (temporary) — Stage 1에서 설계/프로토타입 기준만 잠금
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과
 - [ ] N/A — BE-only 슬라이스
 
 ## Source Links
@@ -292,14 +293,14 @@ POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss
 - [x] gamification read/seen/dismiss endpoint 구현 <!-- omo:id=delivery-gamification-api;stage=2;scope=backend;review=3,6 -->
 - [x] badge/quest/tutorial definition과 projection 정책 구현 <!-- omo:id=delivery-gamification-projection;stage=2;scope=backend;review=3,6 -->
 - [x] source action과 gamification projection 실패 격리 확인 <!-- omo:id=delivery-source-action-isolation;stage=2;scope=backend;review=3,6 -->
-- [ ] API adapter/type 연결 <!-- omo:id=delivery-api-adapter-types;stage=4;scope=frontend;review=5,6 -->
-- [ ] MYPAGE badge/quest/tutorial UI 연결 <!-- omo:id=delivery-mypage-gamification-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 배지 안내 modal/popover 구현 <!-- omo:id=delivery-badge-guide-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] source action 후 XP toast/notification refresh 연결 <!-- omo:id=delivery-xp-toast-refresh;stage=4;scope=frontend;review=5,6 -->
-- [ ] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 320px/390px/desktop visual evidence 확보 <!-- omo:id=delivery-visual-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Vitest/Playwright 자동화와 real DB smoke 경로 구분 <!-- omo:id=delivery-test-smoke-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] API adapter/type 연결 <!-- omo:id=delivery-api-adapter-types;stage=4;scope=frontend;review=5,6 -->
+- [x] MYPAGE badge/quest/tutorial UI 연결 <!-- omo:id=delivery-mypage-gamification-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 배지 안내 modal/popover 구현 <!-- omo:id=delivery-badge-guide-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] source action 후 XP toast/notification refresh 연결 <!-- omo:id=delivery-xp-toast-refresh;stage=4;scope=frontend;review=5,6 -->
+- [x] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 320px/390px/desktop visual evidence 확보 <!-- omo:id=delivery-visual-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest/Playwright 자동화와 real DB smoke 경로 구분 <!-- omo:id=delivery-test-smoke-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 
 ## Stage 2 Backend Evidence
 
@@ -322,3 +323,46 @@ POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss
   - `pnpm exec -- vitest run tests/mypage.backend.test.ts tests/settings-account.backend.test.ts tests/user-progress-route.test.ts tests/user-gamification-route.test.ts`
   - `pnpm typecheck`
   - `pnpm verify:backend`
+
+## Stage 4 Frontend Evidence
+
+- branch: `feature/fe-33c-badges-quests-toasts-tutorial`
+- implementation note: Stage 4 public owner is Claude, but Claude CLI repo-task prompts hung with no output/no edits after successful ping checks on 2026-06-11T01:08:40+09:00. Codex completed the frontend fallback in the dedicated FE worktree. The requested `--resume c2d15736-d4d8-430f-9028-debee1c90df6` session later returned `No conversation found`, so Codex ran a same-prompt one-off Claude final review; Claude returned `Verdict: OK` with no merge blocker.
+- client modules/components:
+  - `lib/api/user-gamification.ts`
+  - `lib/gamification-events.ts`
+  - `components/gamification/gamification-toast-provider.tsx`
+  - `components/mypage/mypage-gamification-card.tsx`
+  - `components/mypage/mypage-screen.tsx`
+  - `components/mypage/mypage-mobile-screen.tsx`
+  - `app/layout.tsx`
+- source action refresh hooks:
+  - `components/home/use-home-recipe-save-flow.ts`
+  - `components/recipe/recipe-detail-screen.tsx`
+  - `components/shopping/shopping-detail-screen.tsx`
+  - `components/cooking/cook-mode-screen.tsx`
+  - `components/cooking/standalone-cook-mode-screen.tsx`
+- tests:
+  - `tests/user-gamification-api-client.test.ts`
+  - `tests/mypage-gamification-card.test.tsx`
+  - `tests/gamification-toast-provider.test.tsx`
+  - `tests/mypage-screen.test.tsx`
+  - `tests/e2e/slice-33c-gamification.spec.ts`
+- visual evidence:
+  - `ui/designs/evidence/33c-badges-quests-toasts-tutorial/mobile-390.png`
+  - `ui/designs/evidence/33c-badges-quests-toasts-tutorial/mobile-320.png`
+  - `ui/designs/evidence/33c-badges-quests-toasts-tutorial/desktop-1440.png`
+  - `ui/designs/evidence/33c-badges-quests-toasts-tutorial/xp-toast.png`
+  - `ui/designs/evidence/33c-badges-quests-toasts-tutorial/badge-guide-modal.png`
+  - `ui/designs/authority/MYPAGE_GAMIFICATION-authority.md`
+- local evidence:
+  - `pnpm exec -- vitest run tests/user-gamification-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/gamification-toast-provider.test.tsx tests/mypage-screen.test.tsx tests/mypage-progress-card.test.tsx`
+  - `pnpm typecheck`
+  - `pnpm lint`
+  - `pnpm exec -- vitest run tests/recipe-card.test.tsx tests/recipe-detail-screen.test.tsx tests/shopping-detail.frontend.test.tsx tests/cook-mode-screen.test.tsx tests/standalone-cook-mode-screen.test.tsx tests/mypage-screen.test.tsx tests/user-gamification-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/gamification-toast-provider.test.tsx`
+  - `pnpm exec playwright test tests/e2e/slice-33c-gamification.spec.ts`
+  - `pnpm exec playwright test tests/e2e/slice-17a-mypage.spec.ts --grep '@smoke-core'`
+  - `pnpm verify:frontend:pr`
+  - `pnpm qa:explore -- --slice 33c-badges-quests-toasts-tutorial`
+  - `pnpm qa:eval -- --checklist .artifacts/qa/33c-badges-quests-toasts-tutorial/2026-06-10T16-40-35-511Z/exploratory-checklist.json --report .artifacts/qa/33c-badges-quests-toasts-tutorial/2026-06-10T16-40-35-511Z/exploratory-report.json` (score 100)
+  - Claude final review: `Verdict: OK` from one-off CLI call after requested resume session was unavailable

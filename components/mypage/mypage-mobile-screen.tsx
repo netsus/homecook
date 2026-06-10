@@ -6,6 +6,10 @@ import React from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import {
+  MypageGamificationCard,
+  type MypageGamificationState,
+} from "@/components/mypage/mypage-gamification-card";
+import {
   MypageProgressCard,
   type MypageProgressState,
 } from "@/components/mypage/mypage-progress-card";
@@ -26,6 +30,7 @@ import type { UserProfileData } from "@/lib/api/mypage";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
 import type { ShoppingListHistoryItem } from "@/types/shopping";
+import type { UserGamificationData } from "@/types/user-gamification";
 import type { UserProgressData } from "@/types/user-progress";
 
 export type MypageMobileSurface = "home" | "recipebook" | "shopping";
@@ -51,6 +56,8 @@ interface MypageMobileScreenProps {
   menuOpenBookId: string | null;
   menuRef: React.RefObject<HTMLDivElement | null>;
   profile: UserProfileData | null;
+  gamification: UserGamificationData | null;
+  gamificationState: MypageGamificationState;
   progress: UserProgressData | null;
   progressState: MypageProgressState;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
@@ -76,6 +83,7 @@ interface MypageMobileScreenProps {
   onConfirmRename: () => void;
   onCreateBook: () => void;
   onCreateNameChange: (value: string) => void;
+  onDismissTutorialQuest: (questKey: string) => void;
   onMenuClose: () => void;
   onMenuOpen: (id: string) => void;
   onOpenNicknameSheet: () => void;
@@ -118,6 +126,8 @@ export function MypageMobileScreen({
   menuOpenBookId,
   menuRef,
   profile,
+  gamification,
+  gamificationState,
   progress,
   progressState,
   renameInputRef,
@@ -143,6 +153,7 @@ export function MypageMobileScreen({
   onConfirmRename,
   onCreateBook,
   onCreateNameChange,
+  onDismissTutorialQuest,
   onMenuClose,
   onMenuOpen,
   onOpenNicknameSheet,
@@ -179,6 +190,8 @@ export function MypageMobileScreen({
       {surface === "home" ? (
         <MobileHomeSurface
           books={books}
+          gamification={gamification}
+          gamificationState={gamificationState}
           profile={profile}
           progress={progress}
           progressState={progressState}
@@ -189,6 +202,7 @@ export function MypageMobileScreen({
           shoppingLoaded={shoppingLoaded}
           stats={stats}
           onOpenNicknameSheet={onOpenNicknameSheet}
+          onDismissTutorialQuest={onDismissTutorialQuest}
           onRetrySavedRecipes={onRetrySavedRecipes}
           onSurfaceChange={onSurfaceChange}
         />
@@ -294,6 +308,8 @@ function MobileAppBar({
 
 function MobileHomeSurface({
   books,
+  gamification,
+  gamificationState,
   profile,
   progress,
   progressState,
@@ -304,10 +320,13 @@ function MobileHomeSurface({
   shoppingLoaded,
   stats,
   onOpenNicknameSheet,
+  onDismissTutorialQuest,
   onRetrySavedRecipes,
   onSurfaceChange,
 }: {
   books: RecipeBookSummary[];
+  gamification: UserGamificationData | null;
+  gamificationState: MypageGamificationState;
   profile: UserProfileData | null;
   progress: UserProgressData | null;
   progressState: MypageProgressState;
@@ -317,6 +336,7 @@ function MobileHomeSurface({
   shoppingItems: ShoppingListHistoryItem[];
   shoppingLoaded: boolean;
   stats: MypageStatItem[];
+  onDismissTutorialQuest: (questKey: string) => void;
   onOpenNicknameSheet: () => void;
   onRetrySavedRecipes: () => void;
   onSurfaceChange: (surface: MypageMobileSurface) => void;
@@ -430,6 +450,14 @@ function MobileHomeSurface({
             />
           ))}
         </div>
+
+        <MypageGamificationCard
+          className="mt-3"
+          data={gamification}
+          state={gamificationState}
+          variant="mobile"
+          onDismissTutorialQuest={onDismissTutorialQuest}
+        />
       </section>
 
       <MobileSavedRecipesRail

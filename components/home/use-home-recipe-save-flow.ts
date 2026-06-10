@@ -8,6 +8,7 @@ import {
   removeRecipeFromBook,
   saveRecipeToBooks,
 } from "@/lib/api/recipe-save";
+import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import type {
   RecipeBookSummary,
   RecipeCardItem,
@@ -272,6 +273,9 @@ export function useHomeRecipeSaveFlow({
         };
       });
       onRecipeSaved(recipeId, nextSaveCount, nextSavedBookIds);
+      if (newBookIds.length > 0) {
+        notifyGamificationSourceAction();
+      }
       setIsSaveModalOpen(false);
       setSaveTargetRecipe(null);
       setSaveModalState("idle");
