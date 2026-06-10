@@ -2333,6 +2333,55 @@ GET /shopping/lists
 
 ---
 
+
+### 12-9. 사용자 진도 조회 `user-progress 예정`
+
+```
+GET /users/me/progress
+```
+
+🔒 로그인 필수
+
+**응답 (200)**
+
+```json
+{
+  "success": true,
+  "data": {
+    "level": {
+      "current_level": 3,
+      "total_xp": 420,
+      "current_level_start_xp": 300,
+      "next_level_start_xp": 600,
+      "xp_into_current_level": 120,
+      "xp_to_next_level": 180,
+      "progress_ratio": 0.4,
+      "progress_percent": 40
+    },
+    "event_counts": {
+      "cooking_completed": 8,
+      "shopping_completed": 5,
+      "recipe_saved_distinct_ever": 23,
+      "custom_book_created": 2
+    },
+    "last_updated_at": "2026-06-10T12:34:56.000Z"
+  },
+  "error": null
+}
+```
+
+**에러**
+
+| 코드 | 조건 |
+| --- | --- |
+| 401 | 비로그인 |
+| 500 | progress module 내부 실패 (33b에서 soft-fail) |
+
+> `GET /users/me`는 프로필/설정-only 계약을 유지한다. progress 필드를 `/users/me`에 섞지 않는다.
+> `featured_badges`, `active_quests`, `toast`, `tutorial`, `badge_inventory`, `timeline`은 33a response에 포함하지 않는다.
+> `event_counts.recipe_saved_distinct_ever`는 ledger 기준 distinct-ever 카운트이며, 현재 membership 수나 `recipes.save_count`가 아니다.
+
+---
 ## 13. 설정 (SETTINGS)
 
 > 화면: `SETTINGS`
@@ -2712,6 +2761,7 @@ GET /api/v1/admin/audit-logs
 | 12-6     | GET        | /recipe-books/{id}/recipes             | RECIPEBOOK_DETAIL        | 🔒     |                                  |
 | 12-7     | DELETE     | /recipe-books/{id}/recipes/{id}        | RECIPEBOOK_DETAIL        | 🔒     | 카운트 갱신 명시                 |
 | 12-8     | GET        | /shopping/lists                        | MYPAGE (장보기 기록)     | 🔒     |                                  |
+| 12-9     | GET        | /users/me/progress                     | MYPAGE                   | 🔒     | v1.2.17 user-progress 예정        |
 | 13-1     | PATCH      | /users/me/settings                     | SETTINGS                 | 🔒     |                                  |
 | 13-2     | PATCH      | /users/me                              | SETTINGS                 | 🔒     |                                  |
 | 13-3     | DELETE     | /users/me                              | SETTINGS                 | 🔒     |                                  |
@@ -2720,6 +2770,7 @@ GET /api/v1/admin/audit-logs
 | 15-2     | GET        | /api/v1/admin/operational-events       | ADMIN_EVENTS             | 🔐     | v1.2.12 신규                     |
 | 15-3     | GET        | /api/v1/admin/audit-logs               | ADMIN_AUDIT_LOGS         | 🔐     | v1.2.12 신규                     |
 
+> **v1.2.17 총계**: 62개 (user-progress `GET /users/me/progress` endpoint 1개 추가 예정)
 > **v1.2.16 총계**: 61개 (taxonomy v2 additive contract, 신규 endpoint 없음)
 > **v1.2.15 총계**: 61개 (YouTube visual quantity enrichment contract, 신규 endpoint 없음)
 > **v1.2.14 총계**: 61개 (`POST /recipes/images` 이미지 업로드 endpoint 1개 추가, thumbnail_url/tags field 계약 보강)
