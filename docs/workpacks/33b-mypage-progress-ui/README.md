@@ -192,7 +192,7 @@
 > Stage 6 merge 시점에는 In Scope인데도 남아 있는 unchecked 항목이 없어야 하며, `N/A` 또는 후속 분리는 README/PR 본문에 근거를 남긴다.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
 
-- [x] Stage 1 design/prototype artifact 잠금 <!-- omo:id=delivery-stage1-design-prototype;stage=1;scope=frontend;review=5,6 -->
+- [x] Stage 1 design/prototype artifact 잠금 <!-- omo:id=delivery-stage1-design-prototype;stage=4;scope=frontend;review=5,6 -->
 - [x] progress API adapter/type 연결 <!-- omo:id=delivery-progress-api-adapter;stage=4;scope=frontend;review=5,6 -->
 - [x] MYPAGE 모바일 하드코딩 레벨 subtitle 제거 <!-- omo:id=delivery-mobile-hardcoded-level-removal;stage=4;scope=frontend;review=5,6 -->
 - [x] MYPAGE 데스크톱 progress 계약 확인 및 필요 시 동일 적용 <!-- omo:id=delivery-desktop-progress-contract;stage=4;scope=frontend;review=5,6 -->

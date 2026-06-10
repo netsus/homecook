@@ -9,7 +9,7 @@
 
 - [x] 로그인한 사용자가 MYPAGE에서 실제 progress 기반 level/progress bar를 본다 <!-- omo:id=accept-happy-path-progress-visible;stage=4;scope=frontend;review=5,6 -->
 - [x] `GET /api/v1/users/me/progress` 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-progress-api-envelope;stage=4;scope=frontend;review=5,6 -->
-- [x] 백엔드 progress contract와 프론트 타입이 일치한다 <!-- omo:id=accept-progress-types-match;stage=4;scope=shared;review=5,6 -->
+- [x] 백엔드 progress contract와 프론트 타입이 일치한다 <!-- omo:id=accept-progress-types-match;stage=4;scope=shared;review=6 -->
 - [x] 기존 MYPAGE profile/recipebook/shopping history 흐름이 유지된다 <!-- omo:id=accept-mypage-core-preserved;stage=4;scope=frontend;review=5,6 -->
 - [x] 하드코딩된 `집밥 러너`/`레벨 5` subtitle이 사용자 화면과 소스에서 제거된다 <!-- omo:id=accept-hardcoded-level-removed;stage=4;scope=frontend;review=5,6 -->
 
@@ -18,7 +18,7 @@
 - [x] progress UI는 조회 전용이며 편집 액션이 없다 <!-- omo:id=accept-progress-read-only;stage=4;scope=frontend;review=5,6 -->
 - [x] 중복 렌더/재조회에도 progress 표시가 꼬이지 않는다 <!-- omo:id=accept-progress-idempotent-read;stage=4;scope=frontend;review=5,6 -->
 - [x] 클라이언트가 XP/level을 계산하지 않고 서버 응답 필드를 표시한다 <!-- omo:id=accept-server-authority-progress;stage=4;scope=frontend;review=5,6 -->
-- [x] `GET /api/v1/users/me`에 progress field를 추가하지 않는다 <!-- omo:id=accept-users-me-profile-only;stage=4;scope=shared;review=5,6 -->
+- [x] `GET /api/v1/users/me`에 progress field를 추가하지 않는다 <!-- omo:id=accept-users-me-profile-only;stage=4;scope=shared;review=6 -->
 - [x] badge/quest/toast/tutorial UI가 33b에 노출되지 않는다 <!-- omo:id=accept-33c-scope-excluded;stage=4;scope=frontend;review=5,6 -->
 
 ## Error / Permission
@@ -32,15 +32,15 @@
 
 ## Data Integrity
 
-- [x] 타인 progress를 조회할 수 없다는 backend contract를 프론트가 우회하지 않는다 <!-- omo:id=accept-progress-owner-guard;stage=4;scope=shared;review=5,6 -->
+- [x] 타인 progress를 조회할 수 없다는 backend contract를 프론트가 우회하지 않는다 <!-- omo:id=accept-progress-owner-guard;stage=4;scope=shared;review=6 -->
 - [x] invalid progress response는 안전한 fallback 또는 error state로 처리된다 <!-- omo:id=accept-progress-invalid-response;stage=4;scope=frontend;review=5,6 -->
 - [x] progress bar width와 표시 문구가 서버 파생 필드와 일치한다 <!-- omo:id=accept-progress-derived-fields;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Setup / Preconditions
 
 - [x] progress success/zero/failure fixture가 준비되어 있다 <!-- omo:id=accept-progress-fixture-baseline;stage=4;scope=frontend;review=5,6 -->
-- [x] real DB smoke에서 33a progress endpoint 준비 여부를 확인한다 <!-- omo:id=accept-progress-real-db-ready;stage=4;scope=shared;review=5,6 -->
-- [x] 신규 bootstrap/system row가 필요 없음을 명시한다 <!-- omo:id=accept-progress-bootstrap-na;stage=4;scope=shared;review=5,6 -->
+- [x] real DB smoke에서 33a progress endpoint 준비 여부를 확인한다 <!-- omo:id=accept-progress-real-db-ready;stage=4;scope=shared;review=6 -->
+- [x] 신규 bootstrap/system row가 필요 없음을 명시한다 <!-- omo:id=accept-progress-bootstrap-na;stage=4;scope=shared;review=6 -->
 
 ## Visual / Design
 
