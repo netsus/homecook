@@ -1583,18 +1583,23 @@
     {
       "id": "33c-badges-quests-toasts-tutorial",
       "preset": "vertical-slice-strict",
-      "branch": "docs/33c-gamification-contract-evolution",
+      "branch": "feature/be-33c-badges-quests-toasts-tutorial",
       "pr_path": null,
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
+        "pnpm exec -- vitest run tests/user-gamification-definitions.test.ts tests/user-gamification-events.test.ts tests/user-gamification-route.test.ts tests/user-gamification-source-action-smoke.test.ts",
+        "pnpm exec -- vitest run tests/user-progress-events.test.ts tests/user-progress-route.test.ts tests/recipe-save-route.test.ts tests/recipe-books-route.test.ts tests/shopping-complete.backend.test.ts tests/cook-planner-complete.backend.test.ts tests/cook-standalone-complete.backend.test.ts tests/user-gamification-definitions.test.ts tests/user-gamification-events.test.ts tests/user-gamification-route.test.ts tests/user-gamification-source-action-smoke.test.ts",
+        "pnpm exec -- vitest run tests/mypage.backend.test.ts tests/settings-account.backend.test.ts tests/user-progress-route.test.ts tests/user-gamification-route.test.ts",
+        "pnpm typecheck",
+        "pnpm verify:backend",
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
         "pnpm validate:workpack -- --slice 33c-badges-quests-toasts-tutorial",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs lock for badges, quests, XP toast, and tutorial quests. This contract-evolution branch updates official docs to v1.7.8/v1.5.15/v1.3.15/v1.3.13/v1.2.17; Stage 2 starts only after this PR merges. closeout_phase=collecting"
+      "notes": "Stage 1 docs PR #723 and contract-evolution PR #724 are merged. Stage 2 backend implementation is in progress: user_gamification migration, server badge/quest constants, projection after 33a canonical events, GET/seen/dismiss routes, and targeted Vitest/typecheck evidence. closeout_phase=collecting"
     }
   ]
 }
