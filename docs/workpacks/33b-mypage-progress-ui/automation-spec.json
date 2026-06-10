@@ -1,0 +1,103 @@
+{
+  "slice_id": "33b-mypage-progress-ui",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-new-backend-contract",
+      "users-me-remains-profile-only",
+      "progress-endpoint-consumed-only"
+    ],
+    "verify_commands": [],
+    "required_test_targets": [],
+    "schema_changes": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/mypage"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "required_endpoints": [
+      "GET /api/v1/users/me/progress"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/mypage-progress-card.test.tsx tests/user-progress-api-client.test.ts",
+      "pnpm verify:frontend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 33b-mypage-progress-ui",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "progress-soft-fail",
+      "hardcoded-level-removed",
+      "mobile-390-no-overflow",
+      "mobile-320-no-overflow",
+      "server-authority-progress-display"
+    ],
+    "touched_components": [
+      "components/mypage/mypage-mobile-screen.tsx",
+      "components/mypage/mypage-screen.tsx",
+      "components/mypage/mypage-progress-card.tsx"
+    ],
+    "new_files": [
+      "lib/api/user-progress.ts",
+      "components/mypage/mypage-progress-card.tsx"
+    ],
+    "test_files": [
+      "tests/mypage-progress-card.test.tsx",
+      "tests/user-progress-api-client.test.ts"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "MYPAGE"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/MYPAGE_PROGRESS.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/MYPAGE_PROGRESS-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-390",
+        "mobile-320",
+        "desktop-1440"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/MYPAGE_PROGRESS-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "user-progress-route-smoke",
+    "mypage-progress-soft-fail-browser-smoke"
+  ],
+  "blocked_conditions": [
+    "33a-progress-route-missing",
+    "official-doc-conflict",
+    "users-me-progress-field-requested",
+    "progress-fetch-breaks-mypage-core",
+    "client-side-xp-level-calculation",
+    "hardcoded-level-subtitle-remains",
+    "mobile-320-overflow-or-overlap",
+    "badge-quest-toast-tutorial-added-to-33b"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}

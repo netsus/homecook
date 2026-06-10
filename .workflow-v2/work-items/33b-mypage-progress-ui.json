@@ -1,0 +1,108 @@
+{
+  "id": "33b-mypage-progress-ui",
+  "title": "MYPAGE compact progress UI",
+  "summary": "MYPAGE 하드코딩 레벨 subtitle을 제거하고 GET /users/me/progress 기반 compact level/progress UI로 교체한다. Progress fetch는 soft-fail이며 390px/320px visual evidence를 필수로 남긴다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 마이페이지에서 자신의 집밥 활동이 실제 XP/레벨로 쌓이는 느낌을 작고 안정적인 UI로 확인하게 한다.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6,orchestration",
+    "workers": []
+  },
+  "dependencies": [
+    "33a-user-progress-foundation",
+    "17a-mypage-overview-history"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.7.md",
+      "docs/화면정의서-v1.5.14.md",
+      "docs/유저flow맵-v1.3.14.md",
+      "docs/db설계-v1.3.12.md",
+      "docs/api문서-v1.2.16.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/33b-mypage-progress-ui/README.md",
+      "docs/workpacks/33b-mypage-progress-ui/acceptance.md",
+      "docs/workpacks/33b-mypage-progress-ui/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "ui/designs/MYPAGE_PROGRESS.md",
+      "ui/designs/critiques/MYPAGE_PROGRESS-critique.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "user-progress-route-smoke",
+      "mypage-progress-soft-fail-browser-smoke"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm vitest run tests/mypage-progress-card.test.tsx tests/user-progress-api-client.test.ts",
+      "pnpm verify:frontend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 33b-mypage-progress-ui",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 33b-mypage-progress-ui"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "progress-soft-fail",
+      "hardcoded-level-removed",
+      "mobile-390-no-overflow",
+      "mobile-320-no-overflow",
+      "server-authority-progress-display"
+    ]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 docs/prototype lock for FE-only MYPAGE compact progress UI. 33c owns badges, quests, XP toast, tutorial, and guide modal.",
+  "out_of_scope": [
+    "Badges",
+    "Quests",
+    "XP toast",
+    "Tutorial",
+    "Badge guide modal",
+    "Timeline",
+    "Leaderboard",
+    "Competitive rank",
+    "Pressure streak",
+    "Season reset",
+    "Loot rewards",
+    "Schema changes",
+    "GET /users/me progress field changes"
+  ],
+  "open_questions": []
+}
