@@ -1352,7 +1352,7 @@
       "id": "27-youtube-import-quality-uplift",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-27-youtube-import-quality-uplift",
-      "pr_path": null,
+      "pr_path": "https://github.com/netsus/homecook/pull/722",
       "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "pending",
@@ -1535,9 +1535,9 @@
       "preset": "vertical-slice-strict",
       "branch": "docs/recipebook-diary-port",
       "pr_path": null,
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "ready_for_review",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:workpack -- --slice recipebook-diary-port",
         "pnpm validate:workflow-v2",
@@ -1565,7 +1565,7 @@
     {
       "id": "33b-mypage-progress-ui",
       "preset": "vertical-slice-strict",
-      "branch": "docs/33b-mypage-progress-ui",
+      "branch": "feature/fe-33b-mypage-progress-ui",
       "pr_path": null,
       "lifecycle": "in_progress",
       "approval_state": "not_started",
@@ -1578,7 +1578,7 @@
         "pnpm validate:workpack -- --slice 33b-mypage-progress-ui",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs/prototype lock for FE-only MYPAGE compact progress UI. 33a is merged; implementation starts only after this docs PR merges."
+      "notes": "Stage 4 FE implementation ready for PR review on feature/fe-33b-mypage-progress-ui. Progress adapter, mobile inline bar, desktop compact card, soft-fail UI, MYPAGE targeted E2E, visual evidence, local route smoke, exploratory QA, verify:frontend:pr, and Claude final review passed. Full verify:frontend has unrelated broader regression failures tracked outside 33b."
     }
   ]
 }
