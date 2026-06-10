@@ -1548,11 +1548,11 @@
     {
       "id": "33a-user-progress-foundation",
       "preset": "vertical-slice-strict",
-      "branch": "docs/33a-user-progress-foundation",
+      "branch": "feature/be-33a-user-progress-foundation",
       "pr_path": null,
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm vitest run tests/user-progress-level.test.ts tests/user-progress-events.test.ts tests/user-progress-route.test.ts",
         "pnpm validate:source-of-truth-sync",
@@ -1560,7 +1560,7 @@
         "pnpm validate:workpack -- --slice 33a-user-progress-foundation",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs lock for backend-only user progress foundation. Implementation starts only after this docs PR merges; 33b/33c remain planned follow-up slices for UI/prototype and gamification."
+      "notes": "Stage 2 backend implementation passed local backend verification with dummy Supabase public env for security e2e. 33b/33c remain planned follow-up slices for UI/prototype and gamification."
     }
   ]
 }

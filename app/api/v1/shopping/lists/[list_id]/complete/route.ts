@@ -5,6 +5,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { ShoppingListCompleteData } from "@/types/shopping";
 
@@ -180,7 +181,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    ShoppingCompleteDbClient & UserBootstrapDbClient;
+    ShoppingCompleteDbClient & UserBootstrapDbClient & UserProgressDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -207,6 +208,8 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("FORBIDDEN", "내 장보기 리스트만 완료할 수 있어요.", 403);
   }
 
+  let completedAtForProgress: string | null = null;
+
   if (!listResult.data.is_completed) {
     const completedAt = new Date().toISOString();
     const listUpdateResult = await dbClient
@@ -223,6 +226,8 @@ export async function POST(request: Request, context: RouteContext) {
     if (listUpdateResult.error || !listUpdateResult.data) {
       return fail("INTERNAL_ERROR", "장보기를 완료하지 못했어요.", 500);
     }
+
+    completedAtForProgress = listUpdateResult.data.completed_at ?? completedAt;
   }
 
   const mealsUpdateResult = await dbClient
@@ -327,6 +332,20 @@ export async function POST(request: Request, context: RouteContext) {
       if (itemsUpdateResult.error || !itemsUpdateResult.data) {
         return fail("INTERNAL_ERROR", "팬트리 반영 상태를 저장하지 못했어요.", 500);
       }
+    }
+  }
+
+  if (completedAtForProgress) {
+    try {
+      await awardUserProgressEvent(dbClient, {
+        userId: user.id,
+        eventType: "shopping_completed",
+        sourceTable: "shopping_lists",
+        sourceId: listId,
+        occurredAt: completedAtForProgress,
+      });
+    } catch {
+      // Progress is a secondary reward ledger; shopping completion remains authoritative.
     }
   }
 

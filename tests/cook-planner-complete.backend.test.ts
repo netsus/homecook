@@ -13,6 +13,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 
   return fallbackMessage;
 });
+const awardUserProgressEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
@@ -23,6 +24,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/user-progress", () => ({
+  awardUserProgressEvent,
 }));
 
 const sessionId = "550e8400-e29b-41d4-a716-446655440301";
@@ -58,9 +63,16 @@ describe("15a cook planner complete backend", () => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
+    awardUserProgressEvent.mockReset();
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    awardUserProgressEvent.mockResolvedValue({
+      awarded: false,
+      duplicate: false,
+      error: null,
+      summary: null,
+    });
   });
 
   it("POST /cooking/sessions/{id}/complete returns 401 when the user is not authenticated", async () => {
@@ -146,6 +158,48 @@ describe("15a cook planner complete backend", () => {
       p_session_id: sessionId,
       p_user_id: "user-1",
       p_consumed_ingredient_ids: [ingredientId1, ingredientId2],
+    });
+    expect(awardUserProgressEvent).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user-1",
+      eventType: "cooking_completed",
+      sourceTable: "leftover_dishes",
+      sourceId: leftoverDishId,
+    });
+  });
+
+  it("POST /cooking/sessions/{id}/complete stays successful when progress writer fails", async () => {
+    awardUserProgressEvent.mockRejectedValue(new Error("progress unavailable"));
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      rpc: vi.fn(async () => ({
+        data: {
+          session_id: sessionId,
+          status: "completed",
+          meals_updated: 1,
+          leftover_dish_id: leftoverDishId,
+          pantry_removed: 0,
+          cook_count: 1,
+        },
+        error: null,
+      })),
+    });
+
+    const { POST } = await importCompleteRoute();
+    const response = await POST(createJsonRequest({ consumed_ingredient_ids: [] }), createSessionContext());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        session_id: sessionId,
+        status: "completed",
+        leftover_dish_id: leftoverDishId,
+      },
+      error: null,
     });
   });
 

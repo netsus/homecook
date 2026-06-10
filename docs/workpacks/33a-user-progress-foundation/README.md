@@ -232,12 +232,12 @@ pnpm vitest run tests/recipe-save-route.test.ts tests/shopping-complete-route.te
 > 33a는 BE-only slice이므로 Stage 4~6은 N/A이며, Stage 3 review와 merge 시점에 backend closeout을 닫는다.
 > 구현 증거 없이 checkbox를 미리 닫지 않는다.
 
-- [ ] backend contract와 response type 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3 -->
-- [ ] `user_progress_events` / `user_progress_summary` migration 작성 <!-- omo:id=delivery-schema-migration;stage=2;scope=backend;review=3 -->
-- [ ] server-authority XP curve와 level 계산 유틸 작성 <!-- omo:id=delivery-level-calculator;stage=2;scope=backend;review=3 -->
-- [ ] canonical event writer 4종 연결 <!-- omo:id=delivery-event-writers;stage=2;scope=backend;review=3 -->
-- [ ] idempotency/duplicate award guard 테스트 <!-- omo:id=delivery-idempotency-tests;stage=2;scope=backend;review=3 -->
-- [ ] `GET /api/v1/users/me/progress` route handler 구현 <!-- omo:id=delivery-progress-route;stage=2;scope=backend;review=3 -->
+- [x] backend contract와 response type 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3 -->
+- [x] `user_progress_events` / `user_progress_summary` migration 작성 <!-- omo:id=delivery-schema-migration;stage=2;scope=backend;review=3 -->
+- [x] server-authority XP curve와 level 계산 유틸 작성 <!-- omo:id=delivery-level-calculator;stage=2;scope=backend;review=3 -->
+- [x] canonical event writer 4종 연결 <!-- omo:id=delivery-event-writers;stage=2;scope=backend;review=3 -->
+- [x] idempotency/duplicate award guard 테스트 <!-- omo:id=delivery-idempotency-tests;stage=2;scope=backend;review=3 -->
+- [x] `GET /api/v1/users/me/progress` route handler 구현 <!-- omo:id=delivery-progress-route;stage=2;scope=backend;review=3 -->
 - [ ] backfill/reconcile 경로와 lower-bound 문구 고정 <!-- omo:id=delivery-backfill-reconcile;stage=2;scope=backend;review=3 -->
 - [ ] owner/auth/RLS/security boundary 검증 <!-- omo:id=delivery-security-boundary;stage=2;scope=backend;review=3 -->
 - [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3 -->

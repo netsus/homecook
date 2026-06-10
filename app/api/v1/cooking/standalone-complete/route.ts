@@ -6,6 +6,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
 import {
   createRouteHandlerClient,
   createServiceRoleClient,
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    StandaloneCompleteDbClient & UserBootstrapDbClient;
+    StandaloneCompleteDbClient & UserBootstrapDbClient & UserProgressDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -121,6 +122,17 @@ export async function POST(request: Request) {
 
   if (isRpcErrorData(completeResult.data)) {
     return failForRpcError(completeResult.data);
+  }
+
+  try {
+    await awardUserProgressEvent(dbClient, {
+      userId: user.id,
+      eventType: "cooking_completed",
+      sourceTable: "leftover_dishes",
+      sourceId: completeResult.data.leftover_dish_id,
+    });
+  } catch {
+    // Progress is a secondary reward ledger; standalone cooking completion remains authoritative.
   }
 
   return ok<CookingStandaloneCompleteData>(completeResult.data);

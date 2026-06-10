@@ -11,6 +11,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 
   return fallbackMessage;
 });
+const awardUserProgressEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
@@ -21,6 +22,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/user-progress", () => ({
+  awardUserProgressEvent,
 }));
 
 interface QueryError {
@@ -196,9 +201,16 @@ describe("POST /api/v1/recipes/[id]/save", () => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
+    awardUserProgressEvent.mockReset();
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    awardUserProgressEvent.mockResolvedValue({
+      awarded: false,
+      duplicate: false,
+      error: null,
+      summary: null,
+    });
     delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
 
@@ -448,6 +460,16 @@ describe("POST /api/v1/recipes/[id]/save", () => {
           },
           error: null,
         },
+        {
+          data: [
+            {
+              id: bookId,
+              user_id: "user-1",
+              book_type: "saved",
+            },
+          ],
+          error: null,
+        },
       ],
     });
     const recipeBookItemsTable = createRecipeBookItemsTable({
@@ -508,6 +530,7 @@ describe("POST /api/v1/recipes/[id]/save", () => {
       error: null,
     });
     expect(recipeBookItemsTable.insert).not.toHaveBeenCalled();
+    expect(awardUserProgressEvent).not.toHaveBeenCalled();
   });
 
   it("multi-saves into selected books and reports already-saved books without failing", async () => {
@@ -530,6 +553,13 @@ describe("POST /api/v1/recipes/[id]/save", () => {
     });
     const recipeBooksTable = createRecipeBooksTable({
       selectResults: [
+        {
+          data: [
+            { id: firstBookId, user_id: "user-1", book_type: "saved" },
+            { id: secondBookId, user_id: "user-1", book_type: "custom" },
+          ],
+          error: null,
+        },
         {
           data: [
             { id: firstBookId, user_id: "user-1", book_type: "saved" },
@@ -612,6 +642,94 @@ describe("POST /api/v1/recipes/[id]/save", () => {
     expect(recipesTable.update).toHaveBeenCalledWith({
       save_count: 5,
     });
+    expect(awardUserProgressEvent).not.toHaveBeenCalled();
+  });
+
+  it("does not award recipe_saved when the user already had another savable membership", async () => {
+    const savedBookId = "550e8400-e29b-41d4-a716-446655440012";
+    const customBookId = "550e8400-e29b-41d4-a716-446655440013";
+    const recipeId = "550e8400-e29b-41d4-a716-446655440026";
+    const recipesTable = createRecipesTable({
+      selectResults: [
+        {
+          data: { id: "recipe-1", save_count: 1 },
+          error: null,
+        },
+      ],
+      updateResults: [
+        {
+          data: { id: "recipe-1", save_count: 2 },
+          error: null,
+        },
+      ],
+    });
+    const recipeBooksTable = createRecipeBooksTable({
+      selectResults: [
+        {
+          data: [{ id: customBookId, user_id: "user-1", book_type: "custom" }],
+          error: null,
+        },
+        {
+          data: [
+            { id: savedBookId, user_id: "user-1", book_type: "saved" },
+            { id: customBookId, user_id: "user-1", book_type: "custom" },
+          ],
+          error: null,
+        },
+      ],
+    });
+    const recipeBookItemsTable = createRecipeBookItemsTable({
+      selectResults: [
+        {
+          data: [{ id: "existing-saved-item", book_id: savedBookId }],
+          error: null,
+        },
+        {
+          data: [
+            { id: "existing-saved-item", book_id: savedBookId },
+            { id: "new-custom-item", book_id: customBookId },
+          ],
+          error: null,
+        },
+      ],
+      insertResults: [
+        {
+          data: { id: "new-custom-item" },
+          error: null,
+        },
+      ],
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return recipesTable;
+        if (table === "recipe_books") return recipeBooksTable;
+        if (table === "recipe_book_items") return recipeBookItemsTable;
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/recipe-1/save", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ book_ids: [customBookId] }),
+    }), {
+      params: Promise.resolve({ id: recipeId }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.created_book_ids).toEqual([customBookId]);
+    expect(awardUserProgressEvent).not.toHaveBeenCalled();
   });
 
   it("returns 404 in fixture mode when save route injects missing recipe fault", async () => {
@@ -815,6 +933,16 @@ describe("POST /api/v1/recipes/[id]/save", () => {
           },
           error: null,
         },
+        {
+          data: [
+            {
+              id: bookId,
+              user_id: "user-1",
+              book_type: "custom",
+            },
+          ],
+          error: null,
+        },
       ],
     });
     const recipeBookItemsTable = createRecipeBookItemsTable({
@@ -889,6 +1017,105 @@ describe("POST /api/v1/recipes/[id]/save", () => {
     expect(recipesTable.update).toHaveBeenCalledWith({
       save_count: 4,
     });
+    expect(awardUserProgressEvent).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user-1",
+      eventType: "recipe_saved",
+      sourceTable: "recipe_book_items",
+      sourceId: "item-1",
+      recipeId,
+    });
+  });
+
+  it("keeps recipe save successful when progress writer fails", async () => {
+    awardUserProgressEvent.mockRejectedValue(new Error("progress unavailable"));
+
+    const bookId = "550e8400-e29b-41d4-a716-446655440014";
+    const recipeId = "550e8400-e29b-41d4-a716-446655440028";
+    const recipesTable = createRecipesTable({
+      selectResults: [
+        {
+          data: { id: "recipe-1", save_count: 0 },
+          error: null,
+        },
+      ],
+      updateResults: [
+        {
+          data: { id: "recipe-1", save_count: 1 },
+          error: null,
+        },
+      ],
+    });
+    const recipeBooksTable = createRecipeBooksTable({
+      selectResults: [
+        {
+          data: {
+            id: bookId,
+            user_id: "user-1",
+            book_type: "saved",
+          },
+          error: null,
+        },
+        {
+          data: [
+            {
+              id: bookId,
+              user_id: "user-1",
+              book_type: "saved",
+            },
+          ],
+          error: null,
+        },
+      ],
+    });
+    const recipeBookItemsTable = createRecipeBookItemsTable({
+      selectResults: [
+        {
+          data: [],
+          error: null,
+        },
+        {
+          data: [{ id: "item-1", book_id: bookId }],
+          error: null,
+        },
+      ],
+      insertResults: [
+        {
+          data: { id: "item-1" },
+          error: null,
+        },
+      ],
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return recipesTable;
+        if (table === "recipe_books") return recipeBooksTable;
+        if (table === "recipe_book_items") return recipeBookItemsTable;
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/recipe-1/save", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ book_ids: [bookId] }),
+    }), {
+      params: Promise.resolve({ id: recipeId }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data.created_book_ids).toEqual([bookId]);
   });
 
   it("returns schema guidance when bootstrap fails before saving", async () => {
@@ -1011,10 +1238,24 @@ describe("POST /api/v1/recipes/[id]/save", () => {
           },
           error: null,
         },
+        {
+          data: [
+            {
+              id: "550e8400-e29b-41d4-a716-446655440010",
+              user_id: "user-1",
+              book_type: "saved",
+            },
+          ],
+          error: null,
+        },
       ],
     });
     const recipeBookItemsTable = createRecipeBookItemsTable({
       selectResults: [
+        {
+          data: [],
+          error: null,
+        },
         {
           data: [
             { id: "existing-1" },

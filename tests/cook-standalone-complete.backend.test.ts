@@ -13,6 +13,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 
   return fallbackMessage;
 });
+const awardUserProgressEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
@@ -23,6 +24,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/user-progress", () => ({
+  awardUserProgressEvent,
 }));
 
 interface QueryError {
@@ -104,9 +109,16 @@ describe("15b cook standalone complete backend", () => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
+    awardUserProgressEvent.mockReset();
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    awardUserProgressEvent.mockResolvedValue({
+      awarded: false,
+      duplicate: false,
+      error: null,
+      summary: null,
+    });
   });
 
   it("GET /recipes/{id}/cook-mode returns scaled recipe data without requiring authentication", async () => {
@@ -377,6 +389,51 @@ describe("15b cook standalone complete backend", () => {
       p_user_id: "user-1",
       p_cooking_servings: 4,
       p_consumed_ingredient_ids: [ingredientId1, ingredientId2],
+    });
+    expect(awardUserProgressEvent).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user-1",
+      eventType: "cooking_completed",
+      sourceTable: "leftover_dishes",
+      sourceId: leftoverDishId,
+    });
+  });
+
+  it("POST /cooking/standalone-complete stays successful when progress writer fails", async () => {
+    awardUserProgressEvent.mockRejectedValue(new Error("progress unavailable"));
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      rpc: vi.fn(async () => ({
+        data: {
+          leftover_dish_id: leftoverDishId,
+          pantry_removed: 0,
+          cook_count: 1,
+        },
+        error: null,
+      })),
+    });
+
+    const { POST } = await importStandaloneCompleteRoute();
+    const response = await POST(
+      createJsonRequest({
+        recipe_id: recipeId,
+        cooking_servings: 2,
+        consumed_ingredient_ids: [],
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        leftover_dish_id: leftoverDishId,
+        pantry_removed: 0,
+        cook_count: 1,
+      },
+      error: null,
     });
   });
 

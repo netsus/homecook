@@ -11,6 +11,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 
   return fallbackMessage;
 });
+const awardUserProgressEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
@@ -21,6 +22,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/user-progress", () => ({
+  awardUserProgressEvent,
 }));
 
 interface QueryError {
@@ -124,9 +129,16 @@ describe("/api/v1/recipe-books", () => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
+    awardUserProgressEvent.mockReset();
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    awardUserProgressEvent.mockResolvedValue({
+      awarded: false,
+      duplicate: false,
+      error: null,
+      summary: null,
+    });
     delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
 
@@ -501,6 +513,69 @@ describe("/api/v1/recipe-books", () => {
       book_type: "custom",
       sort_order: 4,
     });
+    expect(awardUserProgressEvent).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user-1",
+      eventType: "custom_book_created",
+      sourceTable: "recipe_books",
+      sourceId: "book-new",
+      occurredAt: "2026-03-27T10:00:00Z",
+    });
+  });
+
+  it("POST keeps custom book creation successful when progress writer fails", async () => {
+    awardUserProgressEvent.mockRejectedValue(new Error("progress unavailable"));
+
+    const recipeBooksTable = createRecipeBooksTable({
+      selectResults: [
+        {
+          data: [],
+          error: null,
+        },
+      ],
+      insertResults: [
+        {
+          data: {
+            id: "book-new",
+            name: "평일 도시락",
+            book_type: "custom",
+            recipe_count: 0,
+            sort_order: 0,
+            created_at: "2026-03-27T10:00:00Z",
+            updated_at: "2026-03-27T10:00:00Z",
+          },
+          error: null,
+        },
+      ],
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: {
+            user: { id: "user-1" },
+          },
+        })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "recipe_books") return recipeBooksTable;
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipe-books", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ name: "평일 도시락" }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body.success).toBe(true);
+    expect(body.data.id).toBe("book-new");
   });
 
   it("POST returns 500 in fixture mode when recipe book create fault is injected", async () => {
