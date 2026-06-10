@@ -20,6 +20,10 @@ import {
   type MypageMobileSurface,
 } from "@/components/mypage/mypage-mobile-screen";
 import {
+  MypageProgressCard,
+  type MypageProgressState,
+} from "@/components/mypage/mypage-progress-card";
+import {
   buildShoppingHistoryCalendarMonths,
   buildShoppingDayAriaLabel,
   findShoppingHistoryDay,
@@ -74,6 +78,7 @@ import {
   updateSettings,
   type UserProfileData,
 } from "@/lib/api/mypage";
+import { fetchUserProgress } from "@/lib/api/user-progress";
 import {
   eatLeftover,
   fetchLeftovers,
@@ -111,6 +116,7 @@ import type {
 } from "@/types/leftover";
 import type { PlannerColumnData } from "@/types/planner";
 import type { ShoppingListHistoryItem } from "@/types/shopping";
+import type { UserProgressData } from "@/types/user-progress";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
@@ -266,6 +272,9 @@ export function MypageScreen({
     shoppingDone: 0,
     total: 0,
   });
+  const [userProgress, setUserProgress] = useState<UserProgressData | null>(null);
+  const [progressState, setProgressState] =
+    useState<MypageProgressState>("idle");
 
   // Recipe books
   const [books, setBooks] = useState<RecipeBookSummary[]>([]);
@@ -523,8 +532,30 @@ export function MypageScreen({
     }
   }, []);
 
+  const loadUserProgress = useCallback(async () => {
+    setProgressState("loading");
+
+    try {
+      const result = await fetchUserProgress();
+      setUserProgress(result);
+      setProgressState("ready");
+      return true;
+    } catch (error) {
+      setUserProgress(null);
+      if (isMypageApiError(error) && error.status === 401) {
+        setAuthState("unauthorized");
+        setProgressState("error");
+        return false;
+      }
+      setProgressState("error");
+      return false;
+    }
+  }, []);
+
   const loadInitialData = useCallback(async () => {
     setViewState("loading");
+    setUserProgress(null);
+    setProgressState("loading");
     try {
       const [profileOk, booksOk] = await Promise.all([
         loadProfile(),
@@ -533,11 +564,13 @@ export function MypageScreen({
       ]);
       if (profileOk && booksOk) {
         setViewState("ready");
+        void loadUserProgress();
       }
     } catch {
+      setProgressState("error");
       setViewState("error");
     }
-  }, [loadProfile, loadMypageStats, loadRecipeBooks]);
+  }, [loadProfile, loadMypageStats, loadRecipeBooks, loadUserProgress]);
 
   const loadShoppingHistory = useCallback(async (cursor?: string) => {
     try {
@@ -1648,6 +1681,8 @@ export function MypageScreen({
           menuOpenBookId={menuOpenBookId}
           menuRef={menuRef}
           profile={profile}
+          progress={userProgress}
+          progressState={progressState}
           renameInputRef={renameInputRef}
           renameValue={renameValue}
           renamingBookId={renamingBookId}
@@ -1784,6 +1819,11 @@ export function MypageScreen({
               <p>{SOCIAL_PROVIDER_LABELS[profile?.social_provider ?? ""] ?? ""}</p>
             </div>
           </button>
+          <MypageProgressCard
+            className="web-mypage-progress"
+            progress={userProgress}
+            state={progressState}
+          />
           <div className="web-mypage-stats" aria-label="마이페이지 통계">
             {mypageStats.map((item) => (
               <div key={item.label}>
