@@ -32,6 +32,28 @@ function makeMockProfile() {
   };
 }
 
+function makeMockProgress() {
+  return {
+    level: {
+      current_level: 6,
+      total_xp: 520,
+      current_level_start_xp: 500,
+      next_level_start_xp: 650,
+      xp_into_current_level: 20,
+      xp_to_next_level: 130,
+      progress_ratio: 0.1333,
+      progress_percent: 13,
+    },
+    event_counts: {
+      cooking_completed: 3,
+      shopping_completed: 2,
+      recipe_saved_distinct_ever: 7,
+      custom_book_created: 1,
+    },
+    last_updated_at: "2026-06-10T00:00:00.000Z",
+  };
+}
+
 function makeMockBooks() {
   return [
     { id: "book-my", name: "내가 추가한 레시피", book_type: "my_added", recipe_count: 3, sort_order: 0 },
@@ -135,6 +157,8 @@ async function installMypageRoutes(
     books?: ReturnType<typeof makeMockBooks>;
     shoppingHistory?: ReturnType<typeof makeMockShoppingHistory>;
     profile?: ReturnType<typeof makeMockProfile>;
+    progress?: ReturnType<typeof makeMockProgress>;
+    progressError?: boolean;
     recipeItems?: ReturnType<typeof makeMockRecipeItems>;
     shoppingDetail?: ReturnType<typeof makeMockShoppingDetail>;
   },
@@ -142,8 +166,35 @@ async function installMypageRoutes(
   const books = options?.books ?? makeMockBooks();
   const shoppingHistory = options?.shoppingHistory ?? makeMockShoppingHistory();
   const profile = options?.profile ?? makeMockProfile();
+  const progress = options?.progress ?? makeMockProgress();
   const recipeItems = options?.recipeItems ?? makeMockRecipeItems();
   const shoppingDetail = options?.shoppingDetail ?? makeMockShoppingDetail();
+
+  await page.route("**/api/v1/users/me/progress", async (route) => {
+    if (options?.progressError) {
+      await route.fulfill({
+        status: 500,
+        json: {
+          success: false,
+          data: null,
+          error: {
+            code: "INTERNAL_ERROR",
+            message: "진도 정보를 불러오지 못했어요.",
+            fields: [],
+          },
+        },
+      });
+      return;
+    }
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: progress,
+        error: null,
+      },
+    });
+  });
 
   await page.route("**/api/v1/users/me", async (route) => {
     await route.fulfill({
@@ -307,8 +358,14 @@ test.describe("MYPAGE screen", () => {
 
     await expect(page.getByTestId("mypage-profile")).toBeVisible();
     await expect(page.getByText("집밥러")).toBeVisible();
+    await expect(page.getByTestId("mypage-progress-card")).toBeVisible();
+    await expect(page.getByText("Lv.6")).toBeVisible();
+    await expect(page.getByText("다음 레벨까지 130 XP")).toBeVisible();
+    await expect(page.getByText("집밥 러너 · 레벨 5")).toHaveCount(0);
     if (isMobileViewport(page)) {
-      await expect(page.getByText("집밥 러너 · 레벨 5")).toBeVisible();
+      await expect(page.getByText("Lv.6")).toBeVisible();
+      await expect(page.getByText("다음 레벨까지 130 XP")).toBeVisible();
+      await expect(page.getByText("13%")).toBeVisible();
     } else {
       await expect(page.getByText("카카오 로그인")).toBeVisible();
     }
@@ -328,6 +385,26 @@ test.describe("MYPAGE screen", () => {
     await expect(page.getByTestId("system-book-saved").getByText("저장한 레시피")).toBeVisible();
     await expect(page.getByText("좋아요한 레시피")).toBeVisible();
     await expect(page.getByText("주말 파티")).toBeVisible();
+  });
+
+  test("keeps MYPAGE usable when the progress endpoint fails", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installMypageRoutes(page, { progressError: true });
+    await page.goto("/mypage");
+
+    await expect(page.getByTestId("mypage-profile")).toBeVisible();
+    await expect(page.getByText("집밥러")).toBeVisible();
+    await expect(page.getByTestId("mypage-progress-error")).toContainText(
+      "성장 기록을 잠시 불러오지 못했어요",
+    );
+    await expect(
+      page.getByRole("heading", { name: "데이터를 불러오지 못했어요" }),
+    ).toHaveCount(0);
+    if (isMobileViewport(page)) {
+      await expect(page.getByRole("button", { name: /레시피북/ })).toBeVisible();
+    } else {
+      await expect(page.getByRole("tab", { name: "레시피북" })).toBeVisible();
+    }
   });
 
   test("shows login gate for unauthenticated users", async ({ page }) => {

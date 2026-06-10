@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MypageScreen } from "@/components/mypage/mypage-screen";
 
 const mockFetchUserProfile = vi.fn();
+const mockFetchUserProgress = vi.fn();
 const mockFetchRecipeBooks = vi.fn();
 const mockCreateRecipeBook = vi.fn();
 const mockRenameRecipeBook = vi.fn();
@@ -51,6 +52,10 @@ vi.mock("@/lib/api/mypage", () => ({
   logout: (...args: unknown[]) => mockLogout(...args),
   deleteAccount: (...args: unknown[]) => mockDeleteAccount(...args),
   isMypageApiError: (error: unknown) => error instanceof Error && "status" in error,
+}));
+
+vi.mock("@/lib/api/user-progress", () => ({
+  fetchUserProgress: (...args: unknown[]) => mockFetchUserProgress(...args),
 }));
 
 vi.mock("@/lib/api/recipe", () => ({
@@ -167,6 +172,26 @@ const MOCK_PROFILE = {
   profile_image_url: "https://example.com/profile.png",
   social_provider: "kakao" as const,
   settings: { screen_wake_lock: false },
+};
+
+const MOCK_PROGRESS = {
+  level: {
+    current_level: 6,
+    total_xp: 520,
+    current_level_start_xp: 500,
+    next_level_start_xp: 650,
+    xp_into_current_level: 20,
+    xp_to_next_level: 130,
+    progress_ratio: 0.1333,
+    progress_percent: 13,
+  },
+  event_counts: {
+    cooking_completed: 3,
+    shopping_completed: 2,
+    recipe_saved_distinct_ever: 7,
+    custom_book_created: 1,
+  },
+  last_updated_at: "2026-06-10T00:00:00.000Z",
 };
 
 const MOCK_BOOKS = {
@@ -433,6 +458,7 @@ describe("MypageScreen", () => {
     });
     installMatchMedia(false);
     mockFetchUserProfile.mockReset();
+    mockFetchUserProgress.mockReset();
     mockFetchRecipeBooks.mockReset();
     mockCreateRecipeBook.mockReset();
     mockRenameRecipeBook.mockReset();
@@ -461,6 +487,7 @@ describe("MypageScreen", () => {
     mockDeletePlannerColumn.mockReset();
 
     mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
+    mockFetchUserProgress.mockResolvedValue(MOCK_PROGRESS);
     mockFetchRecipeBooks.mockResolvedValue(MOCK_BOOKS);
     mockFetchShoppingHistory.mockResolvedValue(MOCK_SHOPPING_HISTORY);
     mockFetchShoppingListDetail.mockImplementation((listId: string) =>
@@ -609,6 +636,50 @@ describe("MypageScreen", () => {
     expect(screen.getByTestId("system-book-saved").textContent).toContain("저장한 레시피");
     expect(screen.getByTestId("system-book-liked").textContent).toContain("좋아요한 레시피");
     expect(screen.getByText("주말 파티")).toBeTruthy();
+  });
+
+  it("shows server-backed progress on desktop without hardcoded level copy", async () => {
+    render(<MypageScreen initialAuthenticated />);
+
+    await screen.findByText("집밥러");
+
+    expect(mockFetchUserProgress).toHaveBeenCalledTimes(1);
+    expect(await screen.findByTestId("mypage-progress-card")).toBeTruthy();
+    expect(screen.getByText("Lv.6")).toBeTruthy();
+    expect(screen.getByText("13%")).toBeTruthy();
+    expect(screen.getByText("다음 레벨까지 130 XP")).toBeTruthy();
+    expect(screen.getByText("누적 520 XP")).toBeTruthy();
+    expect(screen.queryByText(/집밥 러너/)).toBeNull();
+    expect(screen.queryByText(/레벨 5/)).toBeNull();
+  });
+
+  it("replaces the mobile hardcoded level subtitle with progress", async () => {
+    installMatchMedia(true);
+
+    render(<MypageScreen initialAuthenticated />);
+
+    await screen.findByText("집밥러");
+
+    expect(await screen.findByTestId("mypage-progress-card")).toBeTruthy();
+    expect(screen.getByText("Lv.6")).toBeTruthy();
+    expect(screen.getByText("다음 레벨까지 130 XP")).toBeTruthy();
+    expect(screen.queryByText("🍳 집밥 러너 · 레벨 5")).toBeNull();
+  });
+
+  it("keeps core MYPAGE usable when only progress fetch fails", async () => {
+    mockFetchUserProgress.mockRejectedValueOnce(new Error("progress unavailable"));
+
+    render(<MypageScreen initialAuthenticated />);
+
+    expect(await screen.findByText("집밥러")).toBeTruthy();
+    expect(screen.getByTestId("mypage-profile")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
+    expect((await screen.findByTestId("mypage-progress-error")).textContent).toContain(
+      "성장 기록을 잠시 불러오지 못했어요",
+    );
+    expect(
+      screen.queryByRole("heading", { name: "데이터를 불러오지 못했어요" }),
+    ).toBeNull();
   });
 
   it("resets desktop scroll position when opening the recipebook surface", async () => {

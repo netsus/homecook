@@ -14,6 +14,8 @@
 
 - 화면:
   - `MYPAGE` 프로필/account 영역의 compact progress UI
+  - 모바일 프로필 텍스트 영역 안의 inline level/progress bar
+  - 데스크톱 profile card 안의 compact progress card
   - 모바일 `components/mypage/mypage-mobile-screen.tsx`
   - 데스크톱 `components/mypage/mypage-screen.tsx`에 동일 계약 적용 여부 확인
 - API:
@@ -102,13 +104,13 @@
 - Authority status: `required`
 - Notes:
   - 게임형 참고 이미지는 톤 참고만 한다.
-  - UI는 MYPAGE 프로필 영역 안의 compact card/bar로 제한한다.
+  - UI는 MYPAGE 프로필 영역 안의 compact card/bar로 제한한다. 모바일은 첫 화면 밀도를 유지하기 위해 프로필 텍스트 영역 안의 inline bar로 표시한다.
   - 33c에서 배지/퀘스트가 붙을 수 있는 시각적 여지는 남기되, 33b에서는 CTA/모달/토스트를 넣지 않는다.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
 - [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
@@ -135,12 +137,13 @@
 ## QA / Test Data Plan
 
 - fixture baseline / auth override / fault injection
-  - MYPAGE 테스트 fixture에 progress success, zero-progress, progress-fetch-failure를 추가한다.
+  - MYPAGE 테스트 fixture에 progress success, zero-progress, progress-fetch-failure를 추가했다.
   - auth override는 기존 MYPAGE 테스트 패턴을 따른다.
   - fault injection은 progress endpoint만 실패시키고 profile/recipebook/shopping history는 성공하는 케이스를 둔다.
 - real DB smoke 경로
-  - 33a migration과 route가 있는 local Supabase 또는 demo 환경에서 `GET /api/v1/users/me/progress`를 조회한다.
-  - Stage 4에서는 MYPAGE가 progress API 실패에도 렌더되는지 브라우저에서 확인한다.
+  - 33a route/level/event 테스트로 progress contract를 재확인했다.
+  - local Supabase + local Next route smoke에서 `GET /api/v1/users/me/progress`의 unauthenticated 401 envelope를 확인했다.
+  - Stage 4에서는 MYPAGE가 progress API 실패에도 렌더되는지 브라우저에서 확인했다.
 - seed / reset 명령
   - 신규 seed 없음.
   - 33a의 survivor-only backfill/reconcile 또는 기존 progress fixture를 사용한다.
@@ -189,13 +192,13 @@
 > Stage 6 merge 시점에는 In Scope인데도 남아 있는 unchecked 항목이 없어야 하며, `N/A` 또는 후속 분리는 README/PR 본문에 근거를 남긴다.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
 
-- [ ] Stage 1 design/prototype artifact 잠금 <!-- omo:id=delivery-stage1-design-prototype;stage=1;scope=frontend;review=5,6 -->
-- [ ] progress API adapter/type 연결 <!-- omo:id=delivery-progress-api-adapter;stage=4;scope=frontend;review=5,6 -->
-- [ ] MYPAGE 모바일 하드코딩 레벨 subtitle 제거 <!-- omo:id=delivery-mobile-hardcoded-level-removal;stage=4;scope=frontend;review=5,6 -->
-- [ ] MYPAGE 데스크톱 progress 계약 확인 및 필요 시 동일 적용 <!-- omo:id=delivery-desktop-progress-contract;stage=4;scope=frontend;review=5,6 -->
-- [ ] compact progress card UI 연결 <!-- omo:id=delivery-progress-card-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=delivery-progress-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] progress soft-fail이 MYPAGE 전체 error로 전파되지 않음 <!-- omo:id=delivery-progress-soft-fail;stage=4;scope=frontend;review=5,6 -->
-- [ ] 클라이언트 XP/level 계산 없음 <!-- omo:id=delivery-server-authority-display;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390px/320px visual evidence 확보 <!-- omo:id=delivery-mobile-visual-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] Stage 1 design/prototype artifact 잠금 <!-- omo:id=delivery-stage1-design-prototype;stage=4;scope=frontend;review=5,6 -->
+- [x] progress API adapter/type 연결 <!-- omo:id=delivery-progress-api-adapter;stage=4;scope=frontend;review=5,6 -->
+- [x] MYPAGE 모바일 하드코딩 레벨 subtitle 제거 <!-- omo:id=delivery-mobile-hardcoded-level-removal;stage=4;scope=frontend;review=5,6 -->
+- [x] MYPAGE 데스크톱 progress 계약 확인 및 필요 시 동일 적용 <!-- omo:id=delivery-desktop-progress-contract;stage=4;scope=frontend;review=5,6 -->
+- [x] compact progress card UI 연결 <!-- omo:id=delivery-progress-card-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=delivery-progress-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] progress soft-fail이 MYPAGE 전체 error로 전파되지 않음 <!-- omo:id=delivery-progress-soft-fail;stage=4;scope=frontend;review=5,6 -->
+- [x] 클라이언트 XP/level 계산 없음 <!-- omo:id=delivery-server-authority-display;stage=4;scope=frontend;review=5,6 -->
+- [x] 390px/320px visual evidence 확보 <!-- omo:id=delivery-mobile-visual-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->

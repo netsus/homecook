@@ -50,7 +50,7 @@ function createMypageApiError({
   return error;
 }
 
-async function requestMypage<T>(input: string, init?: RequestInit): Promise<T> {
+export async function requestMypage<T>(input: string, init?: RequestInit): Promise<T> {
   const response = await fetch(input, withE2EAuthOverrideHeaders(init));
 
   let payload: ApiResponse<T> | null = null;

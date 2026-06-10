@@ -6,6 +6,10 @@ import React from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import {
+  MypageProgressCard,
+  type MypageProgressState,
+} from "@/components/mypage/mypage-progress-card";
+import {
   buildShoppingHistoryCalendarMonths,
   buildShoppingDayAriaLabel,
   findShoppingHistoryDay,
@@ -22,6 +26,7 @@ import type { UserProfileData } from "@/lib/api/mypage";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
 import type { ShoppingListHistoryItem } from "@/types/shopping";
+import type { UserProgressData } from "@/types/user-progress";
 
 export type MypageMobileSurface = "home" | "recipebook" | "shopping";
 
@@ -46,6 +51,8 @@ interface MypageMobileScreenProps {
   menuOpenBookId: string | null;
   menuRef: React.RefObject<HTMLDivElement | null>;
   profile: UserProfileData | null;
+  progress: UserProgressData | null;
+  progressState: MypageProgressState;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
   renameValue: string;
   renamingBookId: string | null;
@@ -90,6 +97,12 @@ const MOBILE_RECIPE_FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?w=900&h=675&fit=crop&q=80",
 ] as const;
 
+const MOBILE_PROVIDER_LABELS: Record<UserProfileData["social_provider"], string> = {
+  google: "Google 로그인",
+  kakao: "카카오 로그인",
+  naver: "네이버 로그인",
+};
+
 export function MypageMobileScreen({
   books,
   bookCoverImages,
@@ -105,6 +118,8 @@ export function MypageMobileScreen({
   menuOpenBookId,
   menuRef,
   profile,
+  progress,
+  progressState,
   renameInputRef,
   renameValue,
   renamingBookId,
@@ -165,6 +180,8 @@ export function MypageMobileScreen({
         <MobileHomeSurface
           books={books}
           profile={profile}
+          progress={progress}
+          progressState={progressState}
           savedRecipeCount={savedRecipeCount}
           savedRecipes={savedRecipes}
           savedRecipesState={savedRecipesState}
@@ -278,6 +295,8 @@ function MobileAppBar({
 function MobileHomeSurface({
   books,
   profile,
+  progress,
+  progressState,
   savedRecipeCount,
   savedRecipes,
   savedRecipesState,
@@ -290,6 +309,8 @@ function MobileHomeSurface({
 }: {
   books: RecipeBookSummary[];
   profile: UserProfileData | null;
+  progress: UserProgressData | null;
+  progressState: MypageProgressState;
   savedRecipeCount: number;
   savedRecipes: RecipeBookRecipeItem[];
   savedRecipesState: "idle" | "loading" | "ready" | "empty" | "error";
@@ -301,6 +322,9 @@ function MobileHomeSurface({
   onSurfaceChange: (surface: MypageMobileSurface) => void;
 }) {
   const nickname = profile?.nickname ?? "사용자";
+  const providerLabel = profile
+    ? MOBILE_PROVIDER_LABELS[profile.social_provider]
+    : "소셜 로그인";
   const fallbackInitial = nickname.charAt(0) || "?";
   const recipeBookCount = books.length;
   const shoppingCount = shoppingLoaded ? shoppingItems.length : 0;
@@ -353,7 +377,7 @@ function MobileHomeSurface({
         className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5"
         data-testid="mypage-profile"
       >
-        <div className="mb-[18px] flex items-center gap-[14px]">
+        <div className="mb-3 flex items-center gap-[14px]">
           {profile?.profile_image_url ? (
             <Image
               alt={`${nickname} 프로필`}
@@ -377,8 +401,14 @@ function MobileHomeSurface({
               {nickname}
             </p>
             <p className="mt-0.5 truncate text-[13px] font-medium leading-[1.35] text-[var(--text-3)]">
-              🍳 집밥 러너 · 레벨 5
+              {providerLabel}
             </p>
+            <MypageProgressCard
+              className="mt-2"
+              progress={progress}
+              state={progressState}
+              variant="inline"
+            />
           </div>
           <button
             className="flex h-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-3 text-[12px] font-bold text-[var(--text-2)]"

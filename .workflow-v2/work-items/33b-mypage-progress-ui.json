@@ -78,9 +78,9 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "ready_for_review",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
@@ -88,7 +88,7 @@
     "blocked_reason_code": null
   },
   "closeout": null,
-  "notes": "Stage 1 docs/prototype lock for FE-only MYPAGE compact progress UI. 33c owns badges, quests, XP toast, tutorial, and guide modal.",
+  "notes": "Stage 4 FE implementation is ready for PR review on feature/fe-33b-mypage-progress-ui. 33c owns badges, quests, XP toast, tutorial, and guide modal. Current 33b implementation consumes only GET /users/me/progress and keeps MYPAGE progress failure soft-failed. verify:frontend:pr and Claude final review passed; full verify:frontend has unrelated broader regression failures outside 33b.",
   "out_of_scope": [
     "Badges",
     "Quests",
