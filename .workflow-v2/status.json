@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-09T03:27:14+09:00",
+  "updated_at": "2026-06-10T19:20:00+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1544,6 +1544,23 @@
         "git diff --check"
       ],
       "notes": "Stage 1 docs lock for FE-only recipebook diary port. API/DB changes and full page-turn reader are out of scope pending contract-evolution."
+    },
+    {
+      "id": "33a-user-progress-foundation",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/33a-user-progress-foundation",
+      "pr_path": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm vitest run tests/user-progress-level.test.ts tests/user-progress-events.test.ts tests/user-progress-route.test.ts",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 33a-user-progress-foundation",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs lock for backend-only user progress foundation. Implementation starts only after this docs PR merges; 33b/33c remain planned follow-up slices for UI/prototype and gamification."
     }
   ]
 }

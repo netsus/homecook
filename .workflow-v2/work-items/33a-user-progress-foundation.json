@@ -1,0 +1,106 @@
+{
+  "id": "33a-user-progress-foundation",
+  "title": "User progress foundation",
+  "summary": "사용자 활동을 XP와 레벨로 계산하기 위한 전용 progress ledger/read model, canonical event writer 4종, survivor-only backfill/reconcile, GET /users/me/progress backend contract를 구현한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "배지/퀘스트/마이페이지 progress UI보다 먼저, 기존 집밥 활동을 서버 기준 XP/레벨로 안전하게 적립하고 조회할 수 있는 foundation을 만든다.",
+  "owners": {
+    "claude": "stage1,stage3",
+    "codex": "stage2",
+    "workers": []
+  },
+  "dependencies": [
+    "04-recipe-save",
+    "12a-shopping-complete",
+    "15a-cook-planner-complete",
+    "15b-cook-standalone-complete",
+    "16-leftovers",
+    "17a-mypage-overview-history"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.7.md",
+      "docs/화면정의서-v1.5.14.md",
+      "docs/유저flow맵-v1.3.14.md",
+      "docs/db설계-v1.3.12.md",
+      "docs/api문서-v1.2.16.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/33a-user-progress-foundation/README.md",
+      "docs/workpacks/33a-user-progress-foundation/acceptance.md",
+      "docs/workpacks/33a-user-progress-foundation/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "user-progress-real-db-smoke"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 0
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm vitest run tests/user-progress-level.test.ts tests/user-progress-events.test.ts tests/user-progress-route.test.ts",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 33a-user-progress-foundation",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/user-progress-level.test.ts tests/user-progress-events.test.ts tests/user-progress-route.test.ts",
+      "pnpm validate:workflow-v2"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "progress-ledger-idempotency",
+      "summary-projection-reconcile",
+      "progress-route-envelope",
+      "users-me-profile-only",
+      "survivor-only-backfill"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 docs lock for the backend-only user progress foundation. 33a intentionally excludes badges, quests, XP toasts, tutorial, timeline, public backfill API, and MYPAGE UI; those are reserved for 33b/33c.",
+  "out_of_scope": [
+    "MYPAGE progress UI",
+    "Progress bar UI",
+    "Hardcoded subtitle removal implementation",
+    "Badges",
+    "Quests",
+    "XP toast",
+    "Tutorial",
+    "Timeline",
+    "Public backfill API",
+    "Leaderboard",
+    "Competitive rank",
+    "Pressure streak",
+    "Season reset",
+    "Loot rewards"
+  ],
+  "open_questions": []
+}
