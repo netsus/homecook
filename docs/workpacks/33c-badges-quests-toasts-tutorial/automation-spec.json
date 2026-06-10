@@ -1,0 +1,159 @@
+{
+  "slice_id": "33c-badges-quests-toasts-tutorial",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "conditional-auto",
+  "contract_evolution_required": true,
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/users/me/gamification",
+      "POST /api/v1/users/me/gamification/notifications/seen",
+      "POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss"
+    ],
+    "invariants": [
+      "contract-evolution-before-implementation",
+      "users-me-remains-profile-only",
+      "progress-response-remains-33a-shape",
+      "server-authority-xp-level-badge-quest",
+      "no-operational-events-as-reward-truth",
+      "canonical-progress-events-remain-xp-sources",
+      "badge-award-idempotent",
+      "quest-projection-idempotent",
+      "notification-seen-idempotent",
+      "tutorial-dismiss-does-not-change-xp",
+      "gamification-failure-does-not-break-source-action",
+      "owner-authorization",
+      "no-leaderboard-competitive-rank-pressure-streak-season-reset-loot"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/user-gamification-definitions.test.ts tests/user-gamification-events.test.ts tests/user-gamification-route.test.ts",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 33c-badges-quests-toasts-tutorial",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/user-gamification-definitions.test.ts",
+      "tests/user-gamification-events.test.ts",
+      "tests/user-gamification-route.test.ts",
+      "tests/user-gamification-source-action-smoke.test.ts"
+    ],
+    "schema_changes": [
+      "supabase/migrations/<timestamp>_user_gamification.sql"
+    ],
+    "required_tables": [
+      "user_badge_awards",
+      "user_quest_progress",
+      "user_progress_notifications"
+    ],
+    "source_events": [
+      "cooking_completed",
+      "shopping_completed",
+      "recipe_saved",
+      "custom_book_created"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/mypage"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "required_endpoints": [
+      "GET /api/v1/users/me/progress",
+      "GET /api/v1/users/me/gamification",
+      "POST /api/v1/users/me/gamification/notifications/seen",
+      "POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/mypage-gamification.test.tsx tests/user-gamification-api-client.test.ts tests/xp-toast-provider.test.tsx",
+      "pnpm verify:frontend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 33c-badges-quests-toasts-tutorial",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "mypage-badge-quest-surface",
+      "badge-guide-modal-accessible",
+      "xp-toast-after-source-action",
+      "gamification-soft-fail",
+      "mobile-390-no-overflow",
+      "mobile-320-no-overflow",
+      "desktop-1440-no-overflow"
+    ],
+    "touched_components": [
+      "components/mypage/mypage-mobile-screen.tsx",
+      "components/mypage/mypage-screen.tsx",
+      "components/mypage/mypage-progress-card.tsx",
+      "components/mypage/mypage-gamification-card.tsx",
+      "components/mypage/badge-guide-modal.tsx",
+      "components/progress/xp-toast-provider.tsx"
+    ],
+    "new_files": [
+      "lib/api/user-gamification.ts",
+      "components/mypage/mypage-gamification-card.tsx",
+      "components/mypage/badge-guide-modal.tsx",
+      "components/progress/xp-toast-provider.tsx"
+    ],
+    "test_files": [
+      "tests/mypage-gamification.test.tsx",
+      "tests/user-gamification-api-client.test.ts",
+      "tests/xp-toast-provider.test.tsx",
+      "tests/e2e/mypage-gamification.spec.ts"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "MYPAGE"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/MYPAGE_GAMIFICATION.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/MYPAGE_GAMIFICATION-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-390",
+        "mobile-320",
+        "desktop-1440",
+        "xp-toast",
+        "badge-guide-modal"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/MYPAGE_GAMIFICATION-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "user-gamification-real-db-smoke",
+    "source-action-xp-toast-browser-smoke",
+    "mypage-gamification-soft-fail-browser-smoke"
+  ],
+  "blocked_conditions": [
+    "contract-evolution-not-merged",
+    "official-doc-conflict",
+    "users-me-progress-or-gamification-field-requested",
+    "progress-response-shape-changed",
+    "source-action-fails-because-gamification-fails",
+    "client-side-xp-level-badge-quest-calculation",
+    "operational-events-used-as-reward-truth",
+    "duplicate-badge-or-toast",
+    "mobile-320-overflow-or-overlap",
+    "leaderboard-competitive-rank-pressure-streak-season-reset-loot-added"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

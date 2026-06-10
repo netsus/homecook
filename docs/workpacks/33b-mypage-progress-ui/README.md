@@ -101,7 +101,7 @@
     - `ui/designs/evidence/33b-mypage-progress-ui/mobile-390.png`
     - `ui/designs/evidence/33b-mypage-progress-ui/mobile-320.png`
     - `ui/designs/evidence/33b-mypage-progress-ui/desktop-1440.png`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Notes:
   - 게임형 참고 이미지는 톤 참고만 한다.
   - UI는 MYPAGE 프로필 영역 안의 compact card/bar로 제한한다. 모바일은 첫 화면 밀도를 유지하기 위해 프로필 텍스트 영역 안의 inline bar로 표시한다.
@@ -110,8 +110,8 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 > Design Status 전이: `temporary` (Stage 1 기본값)

@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>33c MYPAGE Gamification Prototype</title>
+    <style>
+      :root {
+        --bg: #f5f7f3;
+        --surface: #ffffff;
+        --line: #dde4d8;
+        --text: #2d2924;
+        --muted: #667064;
+        --brand: #d86f5a;
+        --brand-soft: #fbe4db;
+        --green: #5f8b62;
+        --green-soft: #e8f1e6;
+        --blue: #537f9a;
+        --blue-soft: #e4eef4;
+        --gold: #c4933e;
+        --gold-soft: #f9ebc9;
+        --shadow: 0 16px 48px rgba(49, 35, 22, 0.16);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .page {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: minmax(320px, 430px) minmax(520px, 760px);
+        gap: 28px;
+        padding: 28px;
+        align-items: start;
+        justify-content: center;
+      }
+
+      .phone,
+      .desktop {
+        background: #fbfcfa;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .phone {
+        width: min(100%, 390px);
+        min-height: 780px;
+        border-radius: 28px;
+        overflow: hidden;
+      }
+
+      .desktop {
+        border-radius: 18px;
+        min-height: 690px;
+        padding: 22px;
+      }
+
+      .appbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 18px 10px;
+      }
+
+      .title {
+        font-size: 20px;
+        font-weight: 760;
+        letter-spacing: 0;
+      }
+
+      .icon-btn {
+        width: 34px;
+        height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .content {
+        padding: 0 16px 92px;
+      }
+
+      .profile {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--surface);
+        padding: 16px;
+      }
+
+      .profile-top {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, var(--green), var(--brand));
+        display: grid;
+        place-items: center;
+        color: white;
+        font-weight: 800;
+      }
+
+      .name {
+        font-size: 17px;
+        font-weight: 760;
+      }
+
+      .sub {
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 3px;
+      }
+
+      .progress {
+        margin-top: 14px;
+      }
+
+      .progress-label {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .bar {
+        height: 8px;
+        border-radius: 999px;
+        background: #e8eee3;
+        overflow: hidden;
+        margin-top: 7px;
+      }
+
+      .fill {
+        height: 100%;
+        width: 68%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--brand), var(--green));
+      }
+
+      .badges {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .badge-list {
+        display: flex;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .badge {
+        min-width: 0;
+        flex: 1;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 8px 6px;
+        background: white;
+        text-align: center;
+      }
+
+      .badge-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 10px;
+        margin: 0 auto 5px;
+        background: var(--gold-soft);
+        border: 1px solid #e3c878;
+        display: grid;
+        place-items: center;
+        color: #8b6524;
+        font-size: 16px;
+        font-weight: 900;
+      }
+
+      .badge span {
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .quest-panel {
+        margin-top: 12px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #ffffff;
+        overflow: hidden;
+      }
+
+      .quest-row {
+        padding: 12px;
+      }
+
+      .quest-row + .quest-row {
+        border-top: 1px solid var(--line);
+      }
+
+      .quest-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .quest-title {
+        font-size: 14px;
+        font-weight: 760;
+      }
+
+      .chip {
+        border-radius: 999px;
+        padding: 4px 8px;
+        background: var(--green-soft);
+        color: var(--green);
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .quest-copy {
+        margin: 5px 0 8px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .quest-progress {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .mini-bar {
+        height: 6px;
+        border-radius: 999px;
+        background: #e8eee3;
+        overflow: hidden;
+      }
+
+      .mini-fill {
+        height: 100%;
+        width: 50%;
+        background: var(--green);
+        border-radius: inherit;
+      }
+
+      .count {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .menu {
+        margin-top: 14px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .menu-row {
+        border: 1px solid var(--line);
+        background: white;
+        border-radius: 12px;
+        padding: 13px 14px;
+        font-size: 14px;
+        color: var(--text);
+      }
+
+      .tabs {
+        position: absolute;
+        inset: auto 0 0;
+      }
+
+      .phone-shell {
+        position: relative;
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        transform: translateX(-50%);
+        width: min(360px, calc(100vw - 28px));
+        border: 1px solid #e8c882;
+        border-radius: 16px;
+        background: #fff8df;
+        color: #4a3717;
+        box-shadow: var(--shadow);
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        opacity: 0;
+        pointer-events: none;
+        transition: 180ms ease;
+      }
+
+      .toast.show {
+        opacity: 1;
+        bottom: 34px;
+      }
+
+      .toast-mark {
+        width: 32px;
+        height: 32px;
+        border-radius: 12px;
+        background: var(--gold-soft);
+        display: grid;
+        place-items: center;
+        font-weight: 900;
+      }
+
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(28, 24, 20, 0.38);
+        display: none;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 18px;
+      }
+
+      .modal-backdrop.open {
+        display: flex;
+      }
+
+      .modal {
+        width: min(460px, 100%);
+        border-radius: 20px;
+        background: #fffdf8;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+        padding: 18px;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .modal-title {
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .guide-list {
+        margin: 14px 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+
+      .guide-list li {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: white;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .desktop-grid {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 18px;
+      }
+
+      .desktop .profile {
+        position: sticky;
+        top: 22px;
+      }
+
+      .desktop-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .desktop-card {
+        border: 1px solid var(--line);
+        background: #ffffff;
+        border-radius: 14px;
+        min-height: 96px;
+        padding: 16px;
+      }
+
+      @media (max-width: 860px) {
+        .page {
+          grid-template-columns: 1fr;
+          padding: 14px;
+        }
+
+        .desktop {
+          display: none;
+        }
+      }
+
+      @media (max-width: 340px) {
+        .content {
+          padding-inline: 12px;
+        }
+
+        .badge {
+          padding-inline: 4px;
+        }
+
+        .quest-title {
+          font-size: 13px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="phone phone-shell" aria-label="mobile mypage">
+        <div class="appbar">
+          <div class="title">마이페이지</div>
+          <button class="icon-btn" type="button" aria-label="설정">S</button>
+        </div>
+        <div class="content">
+          <section class="profile">
+            <div class="profile-top">
+              <div class="avatar" aria-hidden="true">H</div>
+              <div>
+                <div class="name">하루집밥</div>
+                <div class="sub">집밥 러너 · Lv.6</div>
+              </div>
+            </div>
+            <div class="progress">
+              <div class="progress-label">
+                <span>다음 레벨까지 170 XP</span>
+                <span>830 / 1,000</span>
+              </div>
+              <div class="bar"><div class="fill"></div></div>
+            </div>
+            <div class="badges">
+              <div class="badge-list">
+                <div class="badge">
+                  <div class="badge-icon">1</div>
+                  <span>첫 집밥</span>
+                </div>
+                <div class="badge">
+                  <div class="badge-icon">2</div>
+                  <span>장보기 완료</span>
+                </div>
+                <div class="badge">
+                  <div class="badge-icon">3</div>
+                  <span>저장 시작</span>
+                </div>
+              </div>
+              <button class="icon-btn" id="openGuide" type="button" aria-label="배지 안내 열기">?</button>
+            </div>
+            <div class="quest-panel">
+              <div class="quest-row">
+                <div class="quest-head">
+                  <div class="quest-title">이번 주 집밥 2번 완성</div>
+                  <span class="chip">진행 중</span>
+                </div>
+                <p class="quest-copy">요리 완료를 기록하면 자동으로 채워져요.</p>
+                <div class="quest-progress">
+                  <div class="mini-bar"><div class="mini-fill"></div></div>
+                  <span class="count">1 / 2</span>
+                </div>
+              </div>
+              <div class="quest-row">
+                <div class="quest-head">
+                  <div class="quest-title">첫 장보기 마무리</div>
+                  <span class="chip">튜토리얼</span>
+                </div>
+                <p class="quest-copy">플래너 식사의 장보기를 완료해 보세요.</p>
+                <div class="quest-progress">
+                  <div class="mini-bar"><div class="mini-fill" style="width: 0"></div></div>
+                  <span class="count">0 / 1</span>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class="menu" aria-label="mypage menu">
+            <div class="menu-row">내 레시피북</div>
+            <div class="menu-row">장보기 기록</div>
+            <div class="menu-row">남은요리</div>
+          </section>
+        </div>
+      </section>
+
+      <section class="desktop" aria-label="desktop mypage">
+        <div class="desktop-grid">
+          <section class="profile">
+            <div class="profile-top">
+              <div class="avatar" aria-hidden="true">H</div>
+              <div>
+                <div class="name">하루집밥</div>
+                <div class="sub">집밥 러너 · Lv.6</div>
+              </div>
+            </div>
+            <div class="progress">
+              <div class="progress-label">
+                <span>다음 레벨까지 170 XP</span>
+                <span>83%</span>
+              </div>
+              <div class="bar"><div class="fill"></div></div>
+            </div>
+            <div class="badges">
+              <div class="badge-list">
+                <div class="badge">
+                  <div class="badge-icon">1</div>
+                  <span>첫 집밥</span>
+                </div>
+                <div class="badge">
+                  <div class="badge-icon">2</div>
+                  <span>장보기</span>
+                </div>
+                <div class="badge">
+                  <div class="badge-icon">3</div>
+                  <span>저장</span>
+                </div>
+              </div>
+              <button class="icon-btn" id="openGuideDesktop" type="button" aria-label="배지 안내 열기">?</button>
+            </div>
+            <div class="quest-panel">
+              <div class="quest-row">
+                <div class="quest-head">
+                  <div class="quest-title">이번 주 집밥 2번 완성</div>
+                  <span class="chip">1 / 2</span>
+                </div>
+                <p class="quest-copy">요리 완료를 기록하면 자동 반영돼요.</p>
+                <div class="mini-bar"><div class="mini-fill"></div></div>
+              </div>
+            </div>
+          </section>
+          <section class="desktop-list">
+            <div class="desktop-card">레시피북 목록</div>
+            <div class="desktop-card">장보기 기록</div>
+            <div class="desktop-card">남은요리</div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <div class="toast-mark">+</div>
+      <div>
+        <strong>요리 완료 +80 XP</strong>
+        <div class="sub">이번 주 집밥 퀘스트가 1칸 채워졌어요.</div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="guide" role="presentation">
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+        <div class="modal-header">
+          <div class="modal-title" id="guideTitle">배지와 퀘스트</div>
+          <button class="icon-btn" id="closeGuide" type="button" aria-label="닫기">X</button>
+        </div>
+        <ul class="guide-list">
+          <li>레시피 저장, 장보기 완료, 요리 완료, 커스텀 책 생성이 XP에 반영돼요.</li>
+          <li>배지는 조건을 만족하면 자동으로 열리고, 같은 배지는 중복으로 쌓이지 않아요.</li>
+          <li>랭킹이나 실패 패널티 없이 내 집밥 기록만 차분히 보여줘요.</li>
+        </ul>
+      </section>
+    </div>
+
+    <script>
+      const guide = document.getElementById("guide");
+      const toast = document.getElementById("toast");
+      const openButtons = [
+        document.getElementById("openGuide"),
+        document.getElementById("openGuideDesktop"),
+      ];
+      const closeGuide = document.getElementById("closeGuide");
+
+      function openGuide() {
+        guide.classList.add("open");
+        closeGuide.focus();
+      }
+
+      function hideGuide() {
+        guide.classList.remove("open");
+      }
+
+      openButtons.forEach((button) => button.addEventListener("click", openGuide));
+      closeGuide.addEventListener("click", hideGuide);
+      guide.addEventListener("click", (event) => {
+        if (event.target === guide) hideGuide();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") hideGuide();
+      });
+
+      setTimeout(() => toast.classList.add("show"), 700);
+      setTimeout(() => toast.classList.remove("show"), 5200);
+    </script>
+  </body>
+</html>
