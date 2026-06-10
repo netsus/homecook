@@ -42,10 +42,16 @@
 
 ## Data Setup / Preconditions
 
-- [ ] fixture에서 0 XP, XP 보유, duplicate source, legacy backfill case가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3 -->
-- [ ] real DB smoke에서 progress tables, indexes, constraints가 존재한다 <!-- omo:id=accept-real-db-schema;stage=2;scope=backend;review=3 -->
-- [ ] source action 4종 중 최소 2종을 real route로 수행해 ledger/projection 증가를 확인한다 <!-- omo:id=accept-real-route-smoke;stage=2;scope=backend;review=3 -->
-- [ ] recipe book bootstrap system books가 XP 대상에서 제외되는지 확인한다 <!-- omo:id=accept-bootstrap-exclusion;stage=2;scope=backend;review=3 -->
+- [x] fixture에서 0 XP, XP 보유, duplicate source, legacy backfill case가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3 -->
+- [x] real DB smoke에서 progress tables, indexes, constraints가 존재한다 <!-- omo:id=accept-real-db-schema;stage=2;scope=backend;review=3 -->
+- [x] source action 4종 중 최소 2종을 real route로 수행해 ledger/projection 증가를 확인한다 <!-- omo:id=accept-real-route-smoke;stage=2;scope=backend;review=3 -->
+- [x] recipe book bootstrap system books가 XP 대상에서 제외되는지 확인한다 <!-- omo:id=accept-bootstrap-exclusion;stage=2;scope=backend;review=3 -->
+
+Evidence:
+- Fixture baseline is covered by `tests/user-progress-level.test.ts`, `tests/user-progress-events.test.ts`, `tests/user-progress-route.test.ts`, and route integration tests for duplicate/no-award paths.
+- Local Supabase schema smoke applied `supabase/migrations/20260610120000_33a_user_progress_foundation.sql` with `psql` after `supabase migration up --local` hit unrelated local migration-history drift. The smoke confirmed `user_progress_events`, `user_progress_summary`, `user_progress_events_source_unique`, `user_progress_events_xp_delta_positive`, `user_progress_events_user_created_idx`, and RLS.
+- Local real route smoke called `POST /api/v1/recipe-books` and `POST /api/v1/recipes/{id}/save`, then `GET /api/v1/users/me/progress`; ledger contained `custom_book_created` and `recipe_saved`, and progress returned 30 XP / level 1.
+- Bootstrap system books were created during the real route smoke path, but only the explicit custom book creation and recipe save source actions produced progress events.
 
 ## Manual QA
 

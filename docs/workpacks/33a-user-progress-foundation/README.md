@@ -238,7 +238,14 @@ pnpm vitest run tests/recipe-save-route.test.ts tests/shopping-complete-route.te
 - [x] canonical event writer 4종 연결 <!-- omo:id=delivery-event-writers;stage=2;scope=backend;review=3 -->
 - [x] idempotency/duplicate award guard 테스트 <!-- omo:id=delivery-idempotency-tests;stage=2;scope=backend;review=3 -->
 - [x] `GET /api/v1/users/me/progress` route handler 구현 <!-- omo:id=delivery-progress-route;stage=2;scope=backend;review=3 -->
-- [ ] backfill/reconcile 경로와 lower-bound 문구 고정 <!-- omo:id=delivery-backfill-reconcile;stage=2;scope=backend;review=3 -->
-- [ ] owner/auth/RLS/security boundary 검증 <!-- omo:id=delivery-security-boundary;stage=2;scope=backend;review=3 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3 -->
-- [ ] 33b/33c handoff notes 갱신 <!-- omo:id=delivery-followup-handoff;stage=2;scope=shared;review=3 -->
+- [x] backfill/reconcile 경로와 lower-bound 문구 고정 <!-- omo:id=delivery-backfill-reconcile;stage=2;scope=backend;review=3 -->
+- [x] owner/auth/RLS/security boundary 검증 <!-- omo:id=delivery-security-boundary;stage=2;scope=backend;review=3 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3 -->
+- [x] 33b/33c handoff notes 갱신 <!-- omo:id=delivery-followup-handoff;stage=2;scope=shared;review=3 -->
+
+Stage 2 evidence:
+- lower-bound backfill/reconcile behavior is locked by `buildLowerBoundUserProgressBackfillEvents` and `readUserProgress` missing-summary reconciliation tests.
+- owner/auth/RLS boundary is locked by the progress route unauthorized test, migration RLS assertions, and `pnpm test:e2e:security`.
+- fixture path is Vitest-backed; real DB smoke was run on local Supabase. `supabase migration up --local` was blocked by unrelated local migration-history drift, so `supabase/migrations/20260610120000_33a_user_progress_foundation.sql` was applied directly with `psql` for this smoke only.
+- local Supabase schema smoke confirmed progress tables, unique/positive constraints, index, and RLS. Real route smoke used `POST /api/v1/recipe-books`, `POST /api/v1/recipes/{id}/save`, and `GET /api/v1/users/me/progress`; result: `custom_book_created` + `recipe_saved`, 30 XP, level 1.
+- 33b consumes only `GET /api/v1/users/me/progress`; 33c must add badge/quest/toast/tutorial contracts separately and must not overload the 33a response.
