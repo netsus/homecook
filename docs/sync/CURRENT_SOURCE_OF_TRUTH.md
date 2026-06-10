@@ -1,17 +1,33 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.7.md`
-- `docs/화면정의서-v1.5.14.md`
-- `docs/유저flow맵-v1.3.14.md`
-- `docs/db설계-v1.3.12.md`
-- `docs/api문서-v1.2.16.md`
+- `docs/요구사항기준선-v1.7.8.md`
+- `docs/화면정의서-v1.5.15.md`
+- `docs/유저flow맵-v1.3.15.md`
+- `docs/db설계-v1.3.13.md`
+- `docs/api문서-v1.2.17.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## User Progress Gamification Contract-Evolution `33c-gamification`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.8 | §2-16-a 사용자 성장/배지/퀘스트 정책 추가: 33a canonical XP source 유지, badge/quest/tutorial/notification server authority, XP toast failure isolation, competitive/pressure/loot 제외 |
+| 화면정의서 v1.5.15 | §19 MYPAGE §1-b 사용자 성장/배지/퀘스트 표시 추가: 대표 배지 row, badge guide modal/bottom sheet, active quest, tutorial quest, XP toast 위치/상태/금지사항 |
+| 유저플로우 v1.3.15 | §⑪-b gamification 확인/XP toast 흐름 추가: MYPAGE surface, source action 후 notification refresh, soft-fail/seen 처리 |
+| DB v1.3.13 | §11-2c~e 테이블 3종 추가: `user_badge_awards`, `user_quest_progress`, `user_progress_notifications`. unique/idempotency/seen 인덱스 추가. 테이블 수 28→31 |
+| API v1.2.17 | §12-10~12 `GET /users/me/gamification`, `POST /users/me/gamification/notifications/seen`, `POST /users/me/gamification/tutorial-quests/{quest_key}/dismiss` 추가. 엔드포인트 수 63→66 |
+
+> 이 변경은 `33c-badges-quests-toasts-tutorial` Stage 2/4 구현의 선행 contract-evolution이다.
+> `GET /users/me`는 프로필/설정-only 계약을 유지한다. `GET /users/me/progress`는 33a response shape를 유지하며 badge/quest/toast/tutorial field를 포함하지 않는다.
+> 33c는 33a의 4개 canonical event만 XP source로 사용한다. 새 XP source, 경쟁 랭킹, pressure streak, season reset, loot-box/random reward는 포함하지 않는다.
+> badge/quest/notification projection 실패는 원래 source action 성공을 실패로 바꾸지 않는다.
+> 구현(Stage 2)은 이 contract-evolution이 main에 merge된 후에 시작한다.
 
 ## User Progress Foundation Contract-Evolution `user-progress 예정`
 

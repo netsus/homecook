@@ -20,9 +20,9 @@
   - 앱 shell 단위 XP toast/notification surface
   - XP source action 완료 후 notification refresh hook: 레시피 저장, 커스텀 책 생성, 장보기 완료, 요리 완료
 - API:
-  - `GET /api/v1/users/me/gamification` 신규 후보
-  - `POST /api/v1/users/me/gamification/notifications/seen` 신규 후보
-  - `POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss` 신규 후보
+  - `GET /api/v1/users/me/gamification`
+  - `POST /api/v1/users/me/gamification/notifications/seen`
+  - `POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss`
   - `GET /api/v1/users/me/progress`는 계속 33a 계약 그대로 소비
   - `GET /api/v1/users/me`는 profile/settings-only 유지
 - 상태 전이:
@@ -32,9 +32,9 @@
   - XP toast/notification은 source action 성공 후 표시 대상이 되며 seen 처리 호출은 멱등
   - tutorial quest dismiss는 사용자의 숨김 선택만 기록하고 XP/level을 바꾸지 않음
 - DB 영향:
-  - 신규 후보: `user_badge_awards`
-  - 신규 후보: `user_quest_progress`
-  - 신규 후보: `user_progress_notifications`
+  - 신규: `user_badge_awards`
+  - 신규: `user_quest_progress`
+  - 신규: `user_progress_notifications`
   - badge/quest definition은 MVP에서 서버 코드 상수로 시작하고, 운영 중 조정이 필요해지면 별도 definition table을 후속 후보로 분리
   - 기존 `user_progress_events`, `user_progress_summary`를 reward truth로 사용
 - Schema Change:
@@ -71,9 +71,9 @@
 
 ## Backend First Contract
 
-### Contract Evolution Required
+### Contract Evolution Status
 
-33c는 신규 public API와 DB table이 필요하므로 Stage 2 전에 별도 `contract-evolution` docs PR이 필요하다. 이 workpack은 구현 방향과 acceptance를 잠그지만, 공식 문서(`요구사항`, `화면정의서`, `유저flow`, `DB`, `API`)에 33c 계약을 반영하기 전에는 백엔드 구현을 시작하지 않는다.
+33c는 신규 public API와 DB table이 필요하므로 Stage 2 전에 별도 `contract-evolution` docs PR이 필요하다. 이 workpack은 `docs/요구사항기준선-v1.7.8.md`, `docs/화면정의서-v1.5.15.md`, `docs/유저flow맵-v1.3.15.md`, `docs/db설계-v1.3.13.md`, `docs/api문서-v1.2.17.md` 기준으로 재잠금한다. 백엔드 구현은 이 contract-evolution PR이 main에 merge된 뒤 시작한다.
 
 ### Proposed Read Endpoint
 
@@ -214,11 +214,11 @@ POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss
 - `docs/workpacks/README.md`
 - `docs/workpacks/33a-user-progress-foundation/README.md`
 - `docs/workpacks/33b-mypage-progress-ui/README.md`
-- `docs/요구사항기준선-v1.7.7.md`
-- `docs/화면정의서-v1.5.14.md`
-- `docs/유저flow맵-v1.3.14.md`
-- `docs/db설계-v1.3.12.md`
-- `docs/api문서-v1.2.16.md`
+- `docs/요구사항기준선-v1.7.8.md`
+- `docs/화면정의서-v1.5.15.md`
+- `docs/유저flow맵-v1.3.15.md`
+- `docs/db설계-v1.3.13.md`
+- `docs/api문서-v1.2.17.md`
 - `docs/design/design-tokens.md`
 - `docs/design/mobile-ux-rules.md`
 - `docs/engineering/product-design-authority.md`
@@ -269,10 +269,10 @@ POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss
 
 | 항목 | 현재 계약 | 제안 계약 | 기대 사용자 가치 | 영향 문서 | 승인 상태 |
 | --- | --- | --- | --- | --- | --- |
-| gamification read model | 33a에는 level/event_counts만 있음 | badge/quest/tutorial/notification 전용 read endpoint 추가 | 성장 시스템을 한 번에 조회 | 요구사항, 화면정의, 유저flow, DB, API | 필요 |
-| badge/quest state tables | 33a에는 progress ledger/summary만 있음 | `user_badge_awards`, `user_quest_progress`, `user_progress_notifications` 추가 | 중복 unlock 방지와 seen 상태 유지 | DB, API | 필요 |
-| notification seen/dismiss | 현재 없음 | seen/dismiss idempotent endpoint 추가 | toast 반복 표시 방지, tutorial UX 제어 | API, 유저flow | 필요 |
-| source action notification refresh | source route 응답 변경 없음 | source action 성공 후 FE가 gamification refresh를 호출 | 행동 직후 XP feedback 제공 | 화면정의, 유저flow | 필요 |
+| gamification read model | 33a에는 level/event_counts만 있음 | badge/quest/tutorial/notification 전용 read endpoint 추가 | 성장 시스템을 한 번에 조회 | 요구사항, 화면정의, 유저flow, DB, API | v1.7.8/v1.5.15/v1.3.15/v1.3.13/v1.2.17 반영 |
+| badge/quest state tables | 33a에는 progress ledger/summary만 있음 | `user_badge_awards`, `user_quest_progress`, `user_progress_notifications` 추가 | 중복 unlock 방지와 seen 상태 유지 | DB, API | v1.3.13/v1.2.17 반영 |
+| notification seen/dismiss | 현재 없음 | seen/dismiss idempotent endpoint 추가 | toast 반복 표시 방지, tutorial UX 제어 | API, 유저flow | v1.3.15/v1.2.17 반영 |
+| source action notification refresh | source route 응답 변경 없음 | source action 성공 후 FE가 gamification refresh를 호출 | 행동 직후 XP feedback 제공 | 화면정의, 유저flow | v1.5.15/v1.3.15 반영 |
 
 ## Primary User Path
 

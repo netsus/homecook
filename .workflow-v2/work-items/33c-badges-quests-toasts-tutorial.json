@@ -25,11 +25,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.7.md",
-      "docs/화면정의서-v1.5.14.md",
-      "docs/유저flow맵-v1.3.14.md",
-      "docs/db설계-v1.3.12.md",
-      "docs/api문서-v1.2.16.md"
+      "docs/요구사항기준선-v1.7.8.md",
+      "docs/화면정의서-v1.5.15.md",
+      "docs/유저flow맵-v1.3.15.md",
+      "docs/db설계-v1.3.13.md",
+      "docs/api문서-v1.2.17.md"
     ],
     "governing_docs": [
       "docs/workpacks/33c-badges-quests-toasts-tutorial/README.md",
@@ -89,10 +89,10 @@
     "evaluation_round": 0,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
-    "blocked_reason_code": "contract_evolution_required"
+    "blocked_reason_code": null
   },
   "closeout": null,
-  "notes": "Stage 1 docs branch locks 33c scope and explicitly requires official contract-evolution before Stage 2. closeout_phase=collecting",
+  "notes": "Stage 1 docs branch locks 33c scope. Official contract-evolution is captured by v1.7.8/v1.5.15/v1.3.15/v1.3.13/v1.2.17 and Stage 2 can begin after this docs PR is merged. closeout_phase=collecting",
   "out_of_scope": [
     "Leaderboard",
     "Competitive rank",
@@ -106,7 +106,5 @@
     "33a progress response shape changes",
     "Operational events as reward truth"
   ],
-  "open_questions": [
-    "contract-evolution PR must choose final endpoint names, exact table columns, and whether badge/quest definitions remain code constants or become DB definition tables."
-  ]
+  "open_questions": []
 }
