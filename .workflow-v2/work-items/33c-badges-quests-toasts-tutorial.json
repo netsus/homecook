@@ -93,17 +93,85 @@
     ]
   },
   "status": {
-    "lifecycle": "ready_for_review",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": ".artifacts/qa/33c-badges-quests-toasts-tutorial/2026-06-10T16-40-35-511Z/eval-result.json",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "closeout": null,
-  "notes": "Stage 1 docs PR #723, contract-evolution PR #724, and Stage 2 backend PR #725 are merged. Stage 4 frontend fallback is complete on feature/fe-33c-badges-quests-toasts-tutorial after Claude CLI repo-task prompts hung with no output/no edits. Requested Claude resume session c2d15736 returned No conversation found; same-prompt one-off Claude final review returned Verdict: OK. Stage 5 authority report passed with Design Status confirmed. Frontend PR #726 is published for current-head CI and merge gate. Local targeted Vitest, typecheck, lint, source-action regression tests, 33c Playwright evidence, exploratory QA/eval score 100, workflow/workpack validators, diff check, and pnpm verify:frontend:pr pass are the current closeout evidence. closeout_phase=collecting stage4_fallback=codex",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/MYPAGE_GAMIFICATION-authority.md"
+      ],
+      "actual_verification_refs": [
+        "PR #723 Stage 1 docs/prototype",
+        "PR #724 contract-evolution",
+        "PR #725 Stage 2 backend",
+        "PR #726 Stage 4/5/6 frontend",
+        "pnpm verify:frontend:pr",
+        "pnpm exec playwright test tests/e2e/slice-33c-gamification.spec.ts",
+        "pnpm qa:eval -- --checklist .artifacts/qa/33c-badges-quests-toasts-tutorial/2026-06-10T16-40-35-511Z/exploratory-checklist.json --report .artifacts/qa/33c-badges-quests-toasts-tutorial/2026-06-10T16-40-35-511Z/exploratory-report.json",
+        "ui/designs/evidence/33c-badges-quests-toasts-tutorial/mobile-390.png",
+        "ui/designs/evidence/33c-badges-quests-toasts-tutorial/mobile-320.png",
+        "ui/designs/evidence/33c-badges-quests-toasts-tutorial/desktop-1440.png",
+        "ui/designs/evidence/33c-badges-quests-toasts-tutorial/xp-toast.png",
+        "ui/designs/evidence/33c-badges-quests-toasts-tutorial/badge-guide-modal.png",
+        "pnpm validate:workpack -- --slice 33c-badges-quests-toasts-tutorial",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:closeout-sync",
+        "pnpm validate:authority-evidence-presence"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "75e65e93024c5ec04317551cd2fa21f50ec7fdb2",
+      "merge_commit_sha": "b97deddc5049c6a6386ccf3e13171c7bf214da5c",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 2,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-06-10T16:57:35Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 1,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 1,
+      "latest_reason_code": "post_merge_bookkeeping_sync",
+      "evidence_sources": [
+        "GitHub PR/CI",
+        "git history",
+        "PR #726 body",
+        "docs/workpacks/33c-badges-quests-toasts-tutorial/README.md"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-06-11T00:00:00Z",
+      "status_synced_at": "2026-06-11T00:00:00Z",
+      "pr_body_synced_at": "2026-06-10T16:57:35Z"
+    }
+  },
+  "notes": "Merged via PR #726 on 2026-06-10T16:57:35Z after Stage 1 docs PR #723, contract-evolution PR #724, Stage 2 backend PR #725, Codex Stage 4 fallback, Stage 5 authority, and Stage 6 merge gate. Requested Claude resume session c2d15736 returned No conversation found; same-prompt one-off Claude final review returned Verdict: OK. Current-head CI passed at merge. Local targeted Vitest, typecheck, lint, source-action regression tests, 33c Playwright evidence, exploratory QA/eval score 100, workflow/workpack validators, diff check, and pnpm verify:frontend:pr passed. Production Vercel/Supabase service-role/migration smoke remains Manual Only follow-up after deployed MYPAGE showed gamification fallback while base progress stayed usable. closeout_phase=completed closeout_recovery=ci_resync:2 closeout_repair=codex:2|claude:0|manual_decision:1|human_escalation:0|post_merge_stale:1|sources:GitHub PR/CI,git history,PR #726 body,docs/workpacks/33c-badges-quests-toasts-tutorial/README.md last_recovery_at=2026-06-10T16:57:35Z stage4_fallback=codex",
   "out_of_scope": [
     "Leaderboard",
     "Competitive rank",
