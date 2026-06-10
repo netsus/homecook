@@ -1,0 +1,112 @@
+{
+  "id": "33c-badges-quests-toasts-tutorial",
+  "title": "Badges, quests, XP toast, and tutorial quests",
+  "summary": "33a progress ledger와 33b MYPAGE compact progress UI를 기반으로 badge, quest, tutorial quest, XP notification 경험을 설계하고 구현한다. 경쟁형 랭킹/압박형 streak 없이 집밥 루틴을 쌓는 성장 UX로 제한한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 저장, 장보기, 요리 완료 같은 실제 집밥 행동이 배지와 퀘스트로 쌓이는 것을 보고 다음 행동을 자연스럽게 이해하게 한다.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6,orchestration",
+    "workers": []
+  },
+  "dependencies": [
+    "33a-user-progress-foundation",
+    "33b-mypage-progress-ui",
+    "17a-mypage-overview-history",
+    "04-recipe-save",
+    "12a-shopping-complete",
+    "15a-cook-planner-complete",
+    "15b-cook-standalone-complete"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.7.md",
+      "docs/화면정의서-v1.5.14.md",
+      "docs/유저flow맵-v1.3.14.md",
+      "docs/db설계-v1.3.12.md",
+      "docs/api문서-v1.2.16.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/33c-badges-quests-toasts-tutorial/README.md",
+      "docs/workpacks/33c-badges-quests-toasts-tutorial/acceptance.md",
+      "docs/workpacks/33c-badges-quests-toasts-tutorial/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "ui/designs/MYPAGE_GAMIFICATION.md",
+      "ui/designs/critiques/MYPAGE_GAMIFICATION-critique.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "user-gamification-real-db-smoke",
+      "source-action-xp-toast-browser-smoke",
+      "mypage-gamification-soft-fail-browser-smoke"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "contract_evolution_required": true,
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 33c-badges-quests-toasts-tutorial",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 33c-badges-quests-toasts-tutorial"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "contract-evolution-required",
+      "mypage-gamification-design-artifact",
+      "badge-guide-modal-prototype",
+      "xp-toast-prototype",
+      "no-competitive-gamification-scope"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": "contract_evolution_required"
+  },
+  "closeout": null,
+  "notes": "Stage 1 docs branch locks 33c scope and explicitly requires official contract-evolution before Stage 2. closeout_phase=collecting",
+  "out_of_scope": [
+    "Leaderboard",
+    "Competitive rank",
+    "Pressure streak",
+    "Season reset",
+    "XP decay",
+    "Loot rewards",
+    "Public badge profile",
+    "Admin badge editor",
+    "GET /users/me progress/gamification fields",
+    "33a progress response shape changes",
+    "Operational events as reward truth"
+  ],
+  "open_questions": [
+    "contract-evolution PR must choose final endpoint names, exact table columns, and whether badge/quest definitions remain code constants or become DB definition tables."
+  ]
+}
