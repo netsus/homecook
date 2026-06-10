@@ -12,6 +12,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { RecipeBookType, RecipeSaveData, SaveableRecipeBookType } from "@/types/recipe";
 
@@ -285,7 +286,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    RecipeSaveDbClient & UserBootstrapDbClient;
+    RecipeSaveDbClient & UserBootstrapDbClient & UserProgressDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -325,16 +326,28 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("CONFLICT", "저장 가능한 레시피북이 아니에요.", 409);
   }
 
+  const saveableBooksResult = await dbClient
+    .from("recipe_books")
+    .select("id, user_id, book_type")
+    .eq("user_id", user.id)
+    .in("book_type", ["saved", "custom"]);
+
+  if (saveableBooksResult.error || !saveableBooksResult.data) {
+    return fail("INTERNAL_ERROR", "레시피를 저장하지 못했어요.", 500);
+  }
+
+  const saveableBookIds = saveableBooksResult.data.map((book) => book.id);
   const existingItemsResult = await dbClient
     .from("recipe_book_items")
     .select("id, book_id")
     .eq("recipe_id", id)
-    .in("book_id", bookIds);
+    .in("book_id", saveableBookIds);
 
   if (existingItemsResult.error || !existingItemsResult.data) {
     return fail("INTERNAL_ERROR", "레시피를 저장하지 못했어요.", 500);
   }
 
+  const hadSavableMembershipBefore = existingItemsResult.data.length > 0;
   const existingBookIds = new Set(
     existingItemsResult.data
       .map((item) => item.book_id)
@@ -413,6 +426,20 @@ export async function POST(request: Request, context: RouteContext) {
     created_book_ids: createdBookIds,
     already_saved_book_ids: alreadySavedBookIds,
   };
+
+  if (!hadSavableMembershipBefore && insertedItemIds[0]) {
+    try {
+      await awardUserProgressEvent(dbClient, {
+        userId: user.id,
+        eventType: "recipe_saved",
+        sourceTable: "recipe_book_items",
+        sourceId: insertedItemIds[0],
+        recipeId: id,
+      });
+    } catch {
+      // Progress is a secondary reward ledger; recipe save success remains authoritative.
+    }
+  }
 
   return ok(responseData);
 }

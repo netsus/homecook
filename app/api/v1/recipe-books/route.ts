@@ -12,6 +12,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type {
   RecipeBookCreateBody,
@@ -217,7 +218,7 @@ async function createAuthedRecipeBookDbClient(fallbackMessage: string) {
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    RecipeBookDbClient & UserBootstrapDbClient;
+    RecipeBookDbClient & UserBootstrapDbClient & UserProgressDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -427,6 +428,18 @@ export async function POST(request: Request) {
     created_at: createResult.data.created_at,
     updated_at: createResult.data.updated_at,
   };
+
+  try {
+    await awardUserProgressEvent(auth.dbClient as RecipeBookDbClient & UserProgressDbClient, {
+      userId: auth.user.id,
+      eventType: "custom_book_created",
+      sourceTable: "recipe_books",
+      sourceId: createResult.data.id,
+      occurredAt: createResult.data.created_at,
+    });
+  } catch {
+    // Progress is a secondary reward ledger; custom book creation remains authoritative.
+  }
 
   return ok(responseData, { status: 201 });
 }

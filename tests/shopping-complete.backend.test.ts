@@ -13,6 +13,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 
   return fallbackMessage;
 });
+const awardUserProgressEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
@@ -23,6 +24,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/user-progress", () => ({
+  awardUserProgressEvent,
 }));
 
 interface QueryError {
@@ -152,9 +157,16 @@ describe("12a shopping complete backend", () => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
+    awardUserProgressEvent.mockReset();
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    awardUserProgressEvent.mockResolvedValue({
+      awarded: false,
+      duplicate: false,
+      error: null,
+      summary: null,
+    });
   });
 
   it("returns 401 when completion is requested without authentication", async () => {
@@ -279,6 +291,85 @@ describe("12a shopping complete backend", () => {
       data: { completed: true, meals_updated: 2, pantry_added: 0, pantry_added_item_ids: [] },
       error: null,
     });
+    expect(awardUserProgressEvent).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user-1",
+      eventType: "shopping_completed",
+      sourceTable: "shopping_lists",
+      sourceId: listId,
+      occurredAt: "2026-04-27T11:20:00.000Z",
+    });
+  });
+
+  it("keeps shopping completion successful when progress writer fails", async () => {
+    awardUserProgressEvent.mockRejectedValue(new Error("progress unavailable"));
+
+    const listQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: listId,
+          user_id: "user-1",
+          is_completed: false,
+          completed_at: null,
+        },
+        error: null,
+      },
+    ]);
+    const listUpdateQuery = createUpdateMaybeSingleQuery([
+      {
+        data: {
+          id: listId,
+          is_completed: true,
+          completed_at: "2026-04-27T11:20:00.000Z",
+        },
+        error: null,
+      },
+    ]);
+    const mealsUpdateQuery = createArrayUpdateQuery([
+      {
+        data: [],
+        error: null,
+      },
+    ]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "shopping_lists") {
+          return {
+            select: vi.fn(() => listQuery),
+            update: vi.fn(() => listUpdateQuery),
+          };
+        }
+        if (table === "meals") {
+          return {
+            update: vi.fn(() => mealsUpdateQuery),
+          };
+        }
+        if (table === "shopping_list_items") {
+          return {
+            update: vi.fn(),
+          };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importCompleteRoute();
+    const response = await POST(
+      createCompleteRequest(listId, { add_to_pantry_item_ids: [] }),
+      createContext(),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: { completed: true, meals_updated: 0, pantry_added: 0, pantry_added_item_ids: [] },
+      error: null,
+    });
   });
 
   it("returns 200 with no meal changes when the completed list has no registered meals", async () => {
@@ -349,6 +440,7 @@ describe("12a shopping complete backend", () => {
       data: { completed: true, meals_updated: 0, pantry_added: 0, pantry_added_item_ids: [] },
       error: null,
     });
+    expect(awardUserProgressEvent).not.toHaveBeenCalled();
   });
 
   it("recovers registered meal transitions when the list was already marked complete", async () => {

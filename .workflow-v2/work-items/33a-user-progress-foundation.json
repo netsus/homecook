@@ -75,9 +75,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "in_progress",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
@@ -85,7 +85,7 @@
     "blocked_reason_code": null
   },
   "closeout": null,
-  "notes": "Stage 1 docs lock for the backend-only user progress foundation. 33a intentionally excludes badges, quests, XP toasts, tutorial, timeline, public backfill API, and MYPAGE UI; those are reserved for 33b/33c.",
+  "notes": "Stage 2 backend implementation passed local backend verification with dummy Supabase public env for security e2e. 33a intentionally excludes badges, quests, XP toasts, tutorial, timeline, public backfill API, and MYPAGE UI; those are reserved for 33b/33c.",
   "out_of_scope": [
     "MYPAGE progress UI",
     "Progress bar UI",

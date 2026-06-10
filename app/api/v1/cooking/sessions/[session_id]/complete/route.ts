@@ -9,6 +9,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type {
   CookingSessionCompleteBody,
@@ -106,7 +107,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    CookingCompleteDbClient & UserBootstrapDbClient;
+    CookingCompleteDbClient & UserBootstrapDbClient & UserProgressDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -131,6 +132,17 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (isRpcErrorData(completeResult.data)) {
     return failForRpcError(completeResult.data);
+  }
+
+  try {
+    await awardUserProgressEvent(dbClient, {
+      userId: user.id,
+      eventType: "cooking_completed",
+      sourceTable: "leftover_dishes",
+      sourceId: completeResult.data.leftover_dish_id,
+    });
+  } catch {
+    // Progress is a secondary reward ledger; cooking completion remains authoritative.
   }
 
   return ok<CookingSessionCompleteData>(completeResult.data);
