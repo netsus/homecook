@@ -21,7 +21,7 @@
 | 화면정의서 v1.5.14 | §19 MYPAGE §1-a 사용자 진도 표시(compact) 추가: progress subtitle/bar, soft-fail, 하드코딩 레벨 문구 제거, compact-only 제약 |
 | 유저플로우 v1.3.14 | §⑪-a 사용자 진도 확인 서브플로우 추가: MYPAGE 계정 섹션 내 progress compact display, XP source events, 에러 처리, 화면↔여정 매핑 갱신 |
 | DB v1.3.12 | §11-2 사용자 진도 테이블 2종 추가: `user_progress_events`(전용 ledger), `user_progress_summary`(projection/read model). canonical event map, backfill policy, 인덱스 추가. 테이블 수 26→28 |
-| API v1.2.16 | §12-9 `GET /users/me/progress` 추가. `GET /users/me`는 profile/settings-only 유지. 33a response shape 확정. 33a non-fields(badge/quest/toast/timeline) 명시. 엔드포인트 수 v1.2.17 예정: 61→62 (1개 추가) |
+| API v1.2.16 | §12-9 `GET /users/me/progress` 추가. `GET /users/me`는 profile/settings-only 유지. 33a response shape 확정. 33a non-fields(badge/quest/toast/timeline) 명시. 엔드포인트 수 v1.2.17 예정: 62→63 (1개 추가) |
 
 > 이 변경은 `33a-user-progress-foundation`, `33b-mypage-progress-ui`, `33c-badges-quests-toasts-tutorial` 3개 slice의 선행 contract-evolution이다.
 > `GET /users/me`는 프로필/설정-only 계약을 유지한다. progress 필드를 `/users/me`에 섞지 않는다.
@@ -29,6 +29,20 @@
 > legacy backfill은 surviving rows 기준 lower-bound이다. 삭제된 활동은 복원됐다고 주장하지 않는다.
 > 33a에 badge, quest, toast, tutorial, timeline, public backfill API는 포함하지 않는다.
 > 구현(Stage 2)은 이 contract-evolution이 main에 merge된 후에 시작한다.
+
+## Recipebook Diary Addendum (2026-06-10)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.7 | 레시피북 리더에서 소유 레시피북의 재료/만들기를 읽기 전용으로 표시하고, 리더 상세 조회는 `view_count`를 증가시키지 않는 기준 추가 |
+| 화면정의서 v1.5.14 | 마이페이지 레시피북 책장/인라인 상세, 커스텀 책 색상/커버 이미지 변경, 모바일 목차 중심 상세 기준 추가 |
+| 유저플로우 v1.3.14 | 레시피북 리더가 목차 선택 후 재료/만들기를 표시하는 흐름으로 갱신 |
+| DB v1.3.12 | `recipe_books.cover_color_key`, `recipe_books.cover_image_url` additive metadata 추가 |
+| API v1.2.16 | `GET /recipe-books/{book_id}/recipes/{recipe_id}` read-only 리더 상세 endpoint와 레시피북 커버 메타데이터 필드 추가 |
+
+> 이 변경은 사용자 승인(2026-06-10)에 따른 레시피북 다이어리/리더 contract-evolution이다.
+> 레시피북 리더 상세 조회는 `GET /recipes/{id}`를 대체 호출하지 않으며 조회수를 증가시키지 않는다.
+> 커버 메타데이터는 UI 표시용이며 저장 가능한 레시피북 타입과 권한 정책을 변경하지 않는다.
 
 ## v1.7.6 / v1.5.13 / v1.3.13 → v1.7.7 / v1.5.14 / v1.3.14 변경 이력 (2026-06-09)
 

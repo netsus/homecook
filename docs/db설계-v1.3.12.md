@@ -1034,6 +1034,8 @@ CHECK (cooking_servings>0)
 | user_id | uuid | FK → users |  |
 | name | varchar(50) | NOT NULL | 레시피북 이름 |
 | book_type | enum | NOT NULL | `my_added` / `saved` / `liked` / `custom` |
+| cover_color_key | varchar(20) | NULL | 레시피북 커버 색상. `sage` / `sky` / `coral` / `lavender` / `sand` |
+| cover_image_url | text | NULL | 사용자가 지정한 커버 이미지 URL |
 | sort_order | int | NOT NULL, DEFAULT 0 | 표시 순서 |
 | created_at | timestamptz | NOT NULL |  |
 | updated_at | timestamptz | NOT NULL |  |
@@ -1043,6 +1045,14 @@ CHECK (cooking_servings>0)
 > - 시스템 레시피북도 **실제 row로 존재**
 > - `id`는 시스템/커스텀 모두 uuid
 > - 구분은 오직 `book_type`으로만 수행
+> - 커버 색상/이미지는 레시피북 다이어리 UI 전용 메타데이터이며 레시피 저장 정책에는 영향을 주지 않는다.
+
+### CHECK
+
+```
+CHECK (cover_color_key IS NULL OR cover_color_key IN ('sage','sky','coral','lavender','sand'))
+CHECK (cover_image_url IS NULL OR char_length(cover_image_url) <= 2048)
+```
 
 ### 회원가입 시 자동 생성
 

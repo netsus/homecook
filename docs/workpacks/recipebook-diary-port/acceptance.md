@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> README의 `Contract Evolution Candidates`는 사용자 승인과 공식 문서 갱신 전까지 acceptance 범위에 포함하지 않는다.
+> README의 `Contract Evolution Candidates` 중 레시피북 리더용 read-only 상세 조회와 page reader는 2026-06-10 사용자 요청으로 승인되어 acceptance 범위에 포함한다.
 > acceptance는 living closeout 문서다. 체크는 테스트, exploratory QA, real DB smoke, 실제 브라우저 확인처럼 evidence가 생긴 뒤에만 한다.
 > Stage 6 merge 시점에는 `Manual Only`를 제외한 In Scope acceptance 항목이 모두 체크되어 있어야 한다.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 `Manual Only`를 제외한 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
@@ -10,18 +10,19 @@
 - [ ] `MYPAGE` 레시피북 목록이 책장/책 표지 형태로 표시된다 <!-- omo:id=accept-mypage-bookshelf;stage=4;scope=frontend;review=5,6 -->
 - [ ] 레시피북 생성/수정/삭제와 상세 진입은 기존 `17a` 동작을 유지한다 <!-- omo:id=accept-mypage-crud-preserved;stage=4;scope=frontend;review=5,6 -->
 - [ ] `RECIPEBOOK_DETAIL` desktop은 왼쪽 목차/책 정보 rail과 오른쪽 레시피 영역이 분리되어 있다 <!-- omo:id=accept-detail-desktop-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] `RECIPEBOOK_DETAIL` mobile은 표지/요약 + 섹션/레시피 카드 흐름으로 표시된다 <!-- omo:id=accept-detail-mobile-flow;stage=4;scope=frontend;review=5,6 -->
+- [ ] `RECIPEBOOK_DETAIL` mobile은 레시피북 이름 앱바, 목차 중심 상단, 단일 레시피 카드 흐름으로 표시된다 <!-- omo:id=accept-detail-mobile-flow;stage=4;scope=frontend;review=5,6 -->
+- [ ] `RECIPEBOOK_DETAIL` desktop/mobile 리더는 재료와 만들기를 표시한다 <!-- omo:id=accept-detail-reader-ingredients-steps;stage=4;scope=frontend;review=5,6 -->
 - [ ] 레시피 카드 클릭은 기존 `RECIPE_DETAIL`로 이동한다 <!-- omo:id=accept-recipe-click-detail-route;stage=4;scope=frontend;review=5,6 -->
 - [ ] 저장 책 제거와 liked 책 좋아요 해제는 기존 `17b` 동작을 유지한다 <!-- omo:id=accept-remove-unlike-preserved;stage=4;scope=frontend;review=5,6 -->
 
 ## Contract Preservation
 
-- [ ] 새 API endpoint가 추가되지 않는다 <!-- omo:id=accept-no-new-api;stage=4;scope=shared;review=5,6 -->
-- [ ] DB schema, seed, enum, recipebook type이 변경되지 않는다 <!-- omo:id=accept-no-db-change;stage=4;scope=shared;review=5,6 -->
+- [ ] `GET /api/v1/recipe-books/{book_id}/recipes/{recipe_id}`가 레시피북 리더용 read-only 상세 source로 공식 문서와 일치한다 <!-- omo:id=accept-reader-detail-api;stage=4;scope=shared;review=5,6 -->
+- [ ] `recipe_books` 커버 메타데이터 additive migration이 공식 DB 문서와 일치한다 <!-- omo:id=accept-recipebook-cover-metadata-db;stage=4;scope=shared;review=5,6 -->
 - [ ] 삭제된 `DELETE /recipes/{id}/save` endpoint를 되살리지 않는다 <!-- omo:id=accept-no-deleted-endpoint-revival;stage=4;scope=shared;review=5,6 -->
 - [ ] `GET /api/v1/recipe-books/{book_id}/recipes`가 레시피북 상세 목록 source로 유지된다 <!-- omo:id=accept-recipebook-list-source;stage=4;scope=frontend;review=5,6 -->
 - [ ] 책 안 preview 목적으로 `GET /api/v1/recipes/{id}`를 자동 호출하지 않는다 <!-- omo:id=accept-no-hidden-view-count-fetch;stage=4;scope=frontend;review=5,6 -->
-- [ ] full page-turn reader는 공식 계약 변경 전까지 구현하지 않는다 <!-- omo:id=accept-full-reader-out-of-scope;stage=4;scope=frontend;review=5,6 -->
+- [ ] 리더 상세 조회는 `view_count`를 증가시키지 않는다 <!-- omo:id=accept-reader-no-view-count;stage=4;scope=backend;review=5,6 -->
 
 ## State / Policy
 
