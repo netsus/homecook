@@ -403,6 +403,7 @@ export type RecipeLikeResponse = ApiResponse<RecipeLikeData>;
 
 export type RecipeBookType = "my_added" | "saved" | "liked" | "custom";
 export type SaveableRecipeBookType = Extract<RecipeBookType, "saved" | "custom">;
+export type RecipeBookCoverColorKey = "sage" | "sky" | "lavender" | "coral" | "sand";
 
 export interface RecipeBookSummary {
   id: string;
@@ -410,6 +411,8 @@ export interface RecipeBookSummary {
   book_type: RecipeBookType;
   recipe_count: number;
   sort_order: number;
+  cover_color_key?: RecipeBookCoverColorKey | null;
+  cover_image_url?: string | null;
 }
 
 export interface RecipeBookListData {
@@ -418,6 +421,8 @@ export interface RecipeBookListData {
 
 export interface RecipeBookCreateBody {
   name: string;
+  cover_color_key?: RecipeBookCoverColorKey | null;
+  cover_image_url?: string | null;
 }
 
 export interface RecipeBookCreateData {
@@ -426,12 +431,16 @@ export interface RecipeBookCreateData {
   book_type: "custom";
   recipe_count: number;
   sort_order: number;
+  cover_color_key?: RecipeBookCoverColorKey | null;
+  cover_image_url?: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface RecipeBookUpdateBody {
-  name: string;
+  name?: string;
+  cover_color_key?: RecipeBookCoverColorKey | null;
+  cover_image_url?: string | null;
 }
 
 export type RecipeBookUpdateData = RecipeBookCreateData;
@@ -456,6 +465,11 @@ export interface RecipeBookRecipeListData {
   items: RecipeBookRecipeItem[];
   next_cursor: string | null;
   has_next: boolean;
+}
+
+export interface RecipeBookReaderRecipeData extends RecipeBookRecipeItem {
+  ingredients: RecipeIngredient[];
+  steps: RecipeStep[];
 }
 
 export interface PantryMatchMissingIngredient {
@@ -493,6 +507,7 @@ export type RecipeBookListResponse = ApiResponse<RecipeBookListData>;
 export type RecipeBookCreateResponse = ApiResponse<RecipeBookCreateData>;
 export type RecipeBookUpdateResponse = ApiResponse<RecipeBookUpdateData>;
 export type RecipeBookDeleteResponse = ApiResponse<RecipeBookDeleteData>;
+export type RecipeBookReaderRecipeResponse = ApiResponse<RecipeBookReaderRecipeData>;
 export type RecipeSaveResponse = ApiResponse<RecipeSaveData>;
 
 export interface RecipeDetail {

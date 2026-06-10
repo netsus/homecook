@@ -275,6 +275,14 @@
     background: #fff6e9;
   }
 
+  .mobile-recipebooks-diary-root {
+    background: #fff6e9;
+  }
+
+  .mobile-recipebooks-diary-root .mobile-recipebooks-diary-screen-fit {
+    min-height: auto;
+  }
+
   .mobile-recipebooks-diary-hero,
   .mobile-recipebook-detail-toc-card {
     border: 1px solid #ead4b7;
@@ -290,7 +298,8 @@
   .mobile-recipebooks-tab-active,
   .mobile-recipebook-rename-save,
   .mobile-recipebook-detail-page-button-active,
-  .mobile-recipebook-detail-cook-button {
+  .mobile-recipebook-detail-cook-button,
+  .mobile-recipebook-detail-calendar-button {
     background: #00a1ff;
     color: white;
   }
@@ -302,7 +311,8 @@
   .mobile-recipebooks-tabs,
   .mobile-recipebook-rename-cancel,
   .mobile-recipebook-detail-page-button,
-  .mobile-recipebook-detail-planner-button {
+  .mobile-recipebook-detail-planner-button,
+  .mobile-recipebook-detail-save-button {
     background: white;
   }
 
@@ -315,15 +325,33 @@
   .mobile-recipebooks-create-action,
   .mobile-recipebook-detail-badge,
   .mobile-recipebook-detail-meta-badge,
-  .mobile-recipebook-detail-planner-button {
+  .mobile-recipebook-detail-planner-button,
+  .mobile-recipebook-detail-save-button {
     color: #007fc9;
   }
 
+  .mobile-recipebooks-book-grid {
+    grid-template-columns: repeat(2, minmax(0, min(158px, calc((100vw - 44px) / 2))));
+    justify-content: center;
+    align-items: start;
+  }
+
+  .mobile-recipebooks-book-grid-wide {
+    grid-template-columns: repeat(2, minmax(0, min(174px, calc((100vw - 42px) / 2))));
+    gap: 10px;
+  }
+
   .mobile-recipebook-book-card {
-    min-height: 218px;
+    height: 266px;
+    grid-template-rows: auto minmax(0, 1fr);
     box-shadow:
-      inset 9px 0 0 rgba(0, 0, 0, 0.1),
-      0 12px 24px rgba(90, 62, 32, 0.12);
+      inset 10px 0 0 rgba(0, 0, 0, 0.08),
+      0 14px 28px rgba(93, 61, 27, 0.12);
+  }
+
+  .mobile-recipebook-book-card-web-ratio {
+    height: 266px;
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
   .mobile-recipebook-book-card-sage {
@@ -347,7 +375,9 @@
   }
 
   .mobile-recipebook-book-copy {
+    min-height: 104px;
     background: rgba(255, 255, 255, 0.4);
+    padding: 14px 14px 48px;
   }
 
   .mobile-recipebook-rename-input {
@@ -366,6 +396,56 @@
   .mobile-recipebook-cover-image {
     border: 3px solid rgba(255, 255, 255, 0.8);
     box-shadow: 0 8px 16px rgba(53, 38, 24, 0.16);
+  }
+
+  .mobile-recipebook-cover-frame {
+    padding: 22px 18px 16px 38px;
+  }
+
+  .mobile-recipebook-cover-thumb {
+    position: relative;
+    width: 100%;
+    min-height: 162px;
+    overflow: hidden;
+  }
+
+  .mobile-recipebook-cover-thumb::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 24px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent),
+      rgba(0, 0, 0, 0.12);
+    content: "";
+  }
+
+  .mobile-recipebook-cover-thumb::after {
+    position: absolute;
+    right: 16px;
+    bottom: 14px;
+    left: 38px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.44);
+    box-shadow: 0 -18px 0 rgba(255, 255, 255, 0.18);
+    content: "";
+  }
+
+  .mobile-recipebook-cover-thumb-image {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1.18 / 1;
+    border-radius: 12px;
+  }
+
+  .mobile-recipebook-toc-scroll {
+    scrollbar-width: none;
+  }
+
+  .mobile-recipebook-toc-scroll::-webkit-scrollbar {
+    display: none;
   }
 
   .mobile-recipebook-count-badge,
@@ -389,18 +469,136 @@
     background: rgba(0, 161, 255, 0.12);
   }
 
+  .mobile-toc-card {
+    display: grid;
+    margin-bottom: 14px;
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .mobile-toc-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .mobile-toc-head strong {
+    margin: 0;
+    color: var(--foreground);
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.2;
+  }
+
+  .mobile-toc-head span {
+    overflow: hidden;
+    color: var(--text-3);
+    font-size: 12px;
+    font-weight: 800;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-toc-list {
+    display: grid;
+    max-height: 146px;
+    gap: 7px;
+    overflow-y: auto;
+  }
+
+  .mobile-toc-list button {
+    display: grid;
+    min-height: 44px;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #ead4b7;
+    border-radius: 8px;
+    background: #fff;
+    padding: 0 10px;
+    color: var(--text-2);
+    font-size: 12px;
+    font-weight: 900;
+    text-align: left;
+  }
+
+  .mobile-toc-list button.is-active {
+    border-color: #00a1ff;
+    background: rgba(0, 161, 255, 0.12);
+    color: #007fc9;
+  }
+
+  .mobile-toc-index {
+    display: grid;
+    width: 26px;
+    height: 26px;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(0, 161, 255, 0.12);
+    color: #007fc9;
+    font-size: 11px;
+    font-weight: 900;
+  }
+
+  .mobile-toc-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-toc-page {
+    color: var(--text-3);
+    font-size: 11px;
+    font-weight: 900;
+  }
+
   .mobile-recipebook-detail-page-button {
     border: 1px solid #ead4b7;
+  }
+
+  .mobile-recipebook-loading-toc-item {
+    border-color: #ead4b7;
+    background: white;
   }
 
   .mobile-recipebook-detail-page-button-active {
     border-color: #00a1ff;
   }
 
+  .mobile-recipebook-detail-mode-toggle {
+    border: 1px solid #ead4b7;
+    background: rgba(255, 255, 255, 0.72);
+  }
+
+  .mobile-recipebook-detail-mode-toggle button {
+    min-height: 36px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: #7b6f61;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .mobile-recipebook-detail-mode-toggle button.is-active {
+    background: #00a1ff;
+    color: white;
+    box-shadow: 0 6px 14px rgba(0, 161, 255, 0.18);
+  }
+
   .mobile-recipebook-page-card {
     border: 1px solid #ead4b7;
     background: #fffdf8;
     box-shadow: 0 14px 30px rgba(90, 62, 32, 0.1);
+  }
+
+  .mobile-recipebook-list-card {
+    border: 1px solid #ead4b7;
+    background: rgba(255, 253, 248, 0.94);
+    box-shadow: 0 10px 22px rgba(90, 62, 32, 0.08);
   }
 
   .mobile-recipebook-detail-note-warm {
@@ -411,8 +609,71 @@
     background: #eef8ff;
   }
 
-  .mobile-recipebook-detail-planner-button {
+  .mobile-recipebook-note-list,
+  .web-recipebook-note-list {
+    display: grid;
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .mobile-recipebook-note-list {
+    gap: 7px;
+    color: var(--text-2);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .web-recipebook-note-list {
+    gap: 8px;
+  }
+
+  .mobile-recipebook-note-row,
+  .web-recipebook-note-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+  }
+
+  .mobile-recipebook-note-dot,
+  .web-recipebook-note-dot {
+    width: 5px;
+    height: 5px;
+    margin-top: 0.55em;
+    border-radius: 999px;
+    background: #00a1ff;
+  }
+
+  .mobile-recipebook-step-number,
+  .web-recipebook-step-number {
+    display: grid;
+    width: 20px;
+    height: 20px;
+    place-items: center;
+    border-radius: 999px;
+    background: rgba(0, 161, 255, 0.12);
+    color: #007fc9;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .mobile-recipebook-detail-planner-button,
+  .mobile-recipebook-detail-save-button {
     border: 1px solid #00a1ff;
+  }
+
+  .mobile-recipebook-detail-calendar-button {
+    box-shadow: 0 8px 18px rgba(0, 161, 255, 0.2);
+  }
+
+  .mobile-recipebook-recipe-remove-icon {
+    border: 1px solid rgba(255, 59, 48, 0.24);
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--danger-strong);
+    box-shadow: 0 8px 18px rgba(190, 38, 32, 0.14);
   }
 }
 
@@ -6730,6 +6991,10 @@ button {
     padding: 34px 20px 0;
   }
 
+  .web-mypage-panel-recipebooks {
+    width: min(1360px, 100%);
+  }
+
   .web-mypage-section-head h2,
   .web-recipebooks-header h2,
   .web-recipebook-detail-head h1,
@@ -7120,10 +7385,15 @@ button {
     padding-top: 10px;
   }
 
-  .web-mypage-saved,
-  .web-recipebooks-screen {
+  .web-mypage-saved {
     width: 100%;
     max-width: 1080px;
+    margin: 0 auto;
+  }
+
+  .web-recipebooks-screen {
+    width: 100%;
+    max-width: 1320px;
     margin: 0 auto;
   }
 
@@ -7176,7 +7446,7 @@ button {
     position: relative;
     display: grid;
     width: 100%;
-    min-height: 266px;
+    height: 266px;
     grid-template-rows: auto minmax(0, 1fr);
     align-items: stretch;
     overflow: hidden;
@@ -7909,9 +8179,9 @@ button {
 
   .web-recipebook-detail-layout {
     display: grid;
-    grid-template-columns: minmax(260px, 330px) minmax(0, 1fr);
+    grid-template-columns: minmax(230px, 280px) minmax(740px, 1fr);
     gap: 22px;
-    max-width: 1280px;
+    max-width: 100%;
     margin: 0 auto;
     border: 1px solid var(--web-line);
     border-radius: 12px;
@@ -8153,8 +8423,9 @@ button {
   }
 
   .web-recipebook-recipe-page {
+    position: relative;
     display: grid;
-    grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1fr);
+    grid-template-columns: minmax(250px, 0.72fr) minmax(460px, 1.28fr);
     grid-template-rows: auto minmax(0, 1fr);
     gap: 14px;
     height: 100%;
@@ -8218,6 +8489,27 @@ button {
     line-height: 1.16;
   }
 
+  .web-recipebook-recipe-remove-icon {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 4;
+    display: inline-grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border: 1px solid rgba(255, 59, 48, 0.34);
+    border-radius: var(--web-r-pill);
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--danger-strong);
+    box-shadow: 0 10px 22px rgba(190, 38, 32, 0.14);
+  }
+
+  .web-recipebook-recipe-remove-icon:hover:not(:disabled) {
+    border-color: rgba(255, 59, 48, 0.52);
+    background: rgba(255, 59, 48, 0.07);
+  }
+
   .web-recipebook-reader-trash-button {
     display: inline-flex;
     width: 40px;
@@ -8251,7 +8543,7 @@ button {
 
   .web-recipebook-recipe-columns {
     display: grid;
-    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+    grid-template-columns: minmax(180px, 0.65fr) minmax(320px, 1.35fr);
     align-content: start;
     gap: 14px;
     min-height: 0;
@@ -8277,6 +8569,7 @@ button {
     color: var(--web-text-2);
     font-size: 13px;
     line-height: 1.42;
+    overflow-wrap: anywhere;
   }
 
   .web-recipebook-note-empty {
@@ -8296,6 +8589,79 @@ button {
     height: 1px;
     overflow: hidden;
     clip: rect(0 0 0 0);
+  }
+
+  .web-recipebook-reader-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .web-recipebooks-inline-detail {
+    margin-top: 28px;
+  }
+
+  .web-book-color-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .web-book-color-swatch {
+    min-height: 64px;
+    border: 1px solid rgba(46, 42, 36, 0.18);
+    border-radius: 14px;
+    color: var(--web-text-1);
+    font-size: 13px;
+    font-weight: 800;
+    box-shadow: inset 8px 0 0 rgba(0, 0, 0, 0.08);
+  }
+
+  .web-book-color-swatch[aria-pressed="true"] {
+    outline: 3px solid rgba(0, 161, 255, 0.35);
+    outline-offset: 2px;
+  }
+
+  .web-recipebook-book-card-sage {
+    background: #b7d5b8;
+  }
+
+  .web-recipebook-book-card-sky {
+    background: #bfe9ff;
+  }
+
+  .web-recipebook-book-card-coral {
+    background: #f6b59d;
+  }
+
+  .web-recipebook-book-card-lavender {
+    background: #d8c4ef;
+  }
+
+  .web-recipebook-book-card-sand {
+    background: #ead08b;
+  }
+
+  .web-recipebook-cover-input {
+    min-height: 44px;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-sm);
+    background: var(--web-surface);
+    padding: 0 12px;
+    color: var(--web-text-1);
+    outline: none;
+  }
+
+  .web-recipebook-cover-input:focus {
+    border-color: var(--web-brand);
+  }
+
+  .web-recipebook-cover-clear-button {
+    color: var(--danger-strong);
+  }
+
+  .web-recipebook-management-modal {
+    z-index: 420;
   }
 
   .web-recipebook-page-controls {
@@ -8335,11 +8701,13 @@ button {
 
   .web-recipebook-reader-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
   }
 
   .web-recipebook-primary-button,
-  .web-recipebook-secondary-button {
+  .web-recipebook-secondary-button,
+  .web-recipebook-danger-button {
     display: inline-flex;
     min-height: 44px;
     align-items: center;
@@ -8360,6 +8728,12 @@ button {
     border: 1px solid var(--web-line);
     background: #fff;
     color: var(--web-text-2);
+  }
+
+  .web-recipebook-danger-button {
+    border: 1px solid rgba(255, 59, 48, 0.24);
+    background: rgba(255, 59, 48, 0.07);
+    color: var(--danger-strong);
   }
 
   .web-recipebook-list-mode {
@@ -10299,7 +10673,7 @@ button {
     }
 
     .web-recipebook-detail-layout {
-      grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+      grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
       gap: 18px;
       padding: 18px;
     }
@@ -10313,7 +10687,7 @@ button {
     }
 
     .web-recipebook-recipe-page {
-      grid-template-columns: minmax(240px, 0.9fr) minmax(280px, 1fr);
+      grid-template-columns: minmax(220px, 0.75fr) minmax(320px, 1.25fr);
     }
 
     .web-recipebook-detail-grid {
@@ -10400,5 +10774,150 @@ button {
   .app-shell.wave1-mypage-shell > nav,
   .app-shell.wave1-leftovers-shell > nav {
     display: none;
+  }
+
+  .web-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 420;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    background: var(--overlay-40);
+    backdrop-filter: blur(1px);
+  }
+
+  .web-dialog {
+    display: flex;
+    width: min(520px, calc(100vw - 32px));
+    max-height: calc(100dvh - 48px);
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: 0 18px 42px var(--shadow-color-heavy);
+  }
+
+  .web-dialog-narrow,
+  .web-dialog-wide {
+    width: min(520px, calc(100vw - 32px));
+  }
+
+  .web-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line-muted);
+    padding: 18px 18px 14px;
+  }
+
+  .web-dialog-title {
+    margin: 0;
+    color: var(--foreground);
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 0;
+  }
+
+  .web-dialog-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px;
+  }
+
+  .web-dialog-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    border-top: 1px solid var(--line-muted);
+    padding: 14px 18px 18px;
+  }
+
+  .web-button {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-control);
+    background: var(--surface);
+    color: var(--foreground);
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  .web-button-primary {
+    border-color: var(--brand);
+    background: var(--brand);
+    color: var(--text-inverse);
+  }
+
+  .web-button-tertiary,
+  .web-button-ghost {
+    background: var(--surface);
+    color: var(--text-3);
+  }
+
+  .web-icon-button {
+    display: inline-grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border: 1px solid var(--line-muted);
+    border-radius: 999px;
+    background: var(--surface-fill);
+    color: var(--text-2);
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .web-book-color-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .web-book-color-swatch {
+    min-height: 64px;
+    border: 1px solid rgba(46, 42, 36, 0.18);
+    border-radius: 14px;
+    color: var(--foreground);
+    font-size: 13px;
+    font-weight: 900;
+    box-shadow: inset 8px 0 0 rgba(0, 0, 0, 0.08);
+  }
+
+  .web-book-color-swatch[aria-pressed="true"] {
+    outline: 3px solid rgba(0, 161, 255, 0.35);
+    outline-offset: 2px;
+  }
+
+  .web-recipebook-cover-input {
+    min-height: 44px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-control);
+    background: var(--surface-fill);
+    padding: 0 12px;
+    color: var(--foreground);
+    outline: none;
+  }
+
+  .web-recipebook-cover-clear-button {
+    color: var(--danger-strong);
+  }
+
+  .web-recipebook-management-modal {
+    align-items: flex-end;
+    padding: 16px 16px calc(94px + env(safe-area-inset-bottom));
+  }
+
+  .web-recipebook-management-modal .web-dialog {
+    width: min(520px, calc(100vw - 32px));
+    max-height: calc(100dvh - 126px);
   }
 }

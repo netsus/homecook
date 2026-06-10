@@ -2,7 +2,7 @@
 
 ## Goal
 
-레시피북을 단순 저장 목록이 아니라 사용자가 직접 만든 레시피 다이어리처럼 느끼도록 `MYPAGE`와 `RECIPEBOOK_DETAIL`의 화면 구조와 디자인 기준을 잠근다. 이번 슬라이스는 API/DB 변경 없이 기존 `17a`/`17b` 계약 위에서 적용 가능한 1차 포팅 범위를 정하고, 전체 페이지 넘김형 리더는 별도 contract-evolution 후보로 분리한다.
+레시피북을 단순 저장 목록이 아니라 사용자가 직접 만든 레시피 다이어리처럼 느끼도록 `MYPAGE`와 `RECIPEBOOK_DETAIL`의 화면 구조와 디자인 기준을 잠근다. 이번 후속 작업은 승인된 contract-evolution에 따라 레시피북 리더용 읽기 전용 상세 조회를 추가하고, 책 안에서 재료와 만들기까지 볼 수 있게 한다.
 
 ## Branches
 
@@ -15,7 +15,7 @@
 - 화면:
   - `MYPAGE`: 레시피북 목록을 작은 책/책장 형태로 표현하되 기존 생성/수정/삭제/상세 진입 흐름 유지
   - `RECIPEBOOK_DETAIL`: 웹에서 프로토타입처럼 왼쪽 목차 패널과 오른쪽 레시피북 리더를 분리하고, 리더 안에서 `책`/`목록` 전환과 단일 레시피 책 페이지를 제공
-  - `RECIPEBOOK_DETAIL`: 모바일에서 상단 목차 + 섹션/카드형 목록으로 다이어리 감성 유지
+  - `RECIPEBOOK_DETAIL`: 모바일에서 레시피북 이름 앱바 + 목차 중심 상단 + 단일 레시피 카드 흐름으로 다이어리 감성 유지
 - 라우트:
   - 기존 `/mypage` 유지
   - 기존 `/mypage/recipe-books/{book_id}` 유지
@@ -26,21 +26,21 @@
   - 기존 `PATCH /api/v1/recipe-books/{book_id}`
   - 기존 `DELETE /api/v1/recipe-books/{book_id}`
   - 기존 `GET /api/v1/recipe-books/{book_id}/recipes`
+  - 신규 `GET /api/v1/recipe-books/{book_id}/recipes/{recipe_id}`: 레시피북 리더용 read-only 상세 조회
   - 기존 레시피 제거/좋아요 해제 mutation은 `17b` 계약 유지
 - 상태 전이: 없음. 저장/좋아요/제거/권한 정책은 기존 슬라이스 계약 유지
-- DB 영향: 없음. 기존 `recipe_books`, `recipe_book_items`, `recipes` 조회/관계만 소비
+- DB 영향: `recipe_books.cover_color_key`, `recipe_books.cover_image_url` additive metadata 추가. 기존 `recipe_book_items`, `recipes` 조회/관계와 저장 정책은 유지
 - Schema Change:
-  - [x] 없음 (읽기 전용)
+  - [x] `recipe_books` 커버 색상/이미지 메타데이터 additive column 추가
 
 ## Out of Scope
 
 - API request/response/error 구조 변경
-- DB 스키마, seed, status enum, recipebook type 변경
+- status enum, recipebook type 변경
 - 저장 가능한 레시피북 타입 확장 (`saved`, `custom`만 유지)
 - 삭제된 `DELETE /recipes/{id}/save` endpoint 복원
-- 책 페이지를 넘기며 `RECIPE_DETAIL` 전체 내용을 보여주는 full reader
 - `GET /api/v1/recipes/{id}`를 숨은 preview source로 사용하는 구현
-- view_count가 증가하지 않는 read-only recipe detail/preview endpoint 추가
+- 레시피북 리더용 상세 조회 외의 preview endpoint 추가
 - 레시피 저장/좋아요 정책 변경
 - 직접 레시피 등록, 유튜브 가져오기, 식단 플래너 연동 정책 변경
 - 레벨/등급 시스템 구현
@@ -76,21 +76,22 @@
 - `RECIPEBOOK_DETAIL` 웹은 책장 화면과 상세 화면을 분리하되, 상세 화면 자체는 프로토타입의 열린 책뷰를 핵심 은유로 유지한다.
 - 웹 상세는 왼쪽 목차 패널, 오른쪽 레시피북 리더 헤더, `책`/`목록` segmented control, 단일 레시피 책 페이지, 하단 페이지 선택 버튼을 프로토타입 구조와 맞춘다.
 - `책` 모드는 한 번에 한 레시피 페이지를 보여주고, `목록` 모드는 기존 카드 목록을 펼쳐 관리/탐색 효율을 유지한다.
-- 모바일 상세는 표지/요약, 섹션, 레시피 카드 목록을 위아래 흐름으로 배치한다.
-- 레시피 상세 내용은 기존 `RECIPE_DETAIL` 화면에서 본다.
+- 모바일 상세는 앱바에 레시피북 이름을 표시하고, 앱바 아래 공간을 목차 중심으로 사용한다.
+- 레시피북 리더 안에서는 `GET /api/v1/recipe-books/{book_id}/recipes/{recipe_id}`로 재료와 만들기를 읽기 전용으로 표시한다.
+- 리더용 상세 조회는 `GET /api/v1/recipes/{id}`를 사용하지 않으며 `view_count`를 증가시키지 않는다.
 
 ### Track 2: Future Contract Evolution
 
-진짜 책처럼 페이지를 넘기며 각 레시피의 상세 내용을 보는 full reader는 사용자 가치가 있지만 이번 범위가 아니다.
-
-현재 `GET /api/v1/recipes/{id}`는 상세 조회 의미가 있고 `view_count` 증가와 연결되어 있으므로, 레시피북 안에서 미리보기처럼 반복 호출하면 조회수 의미가 오염될 수 있다. full reader를 도입하려면 view_count를 증가시키지 않는 read-only reader data path를 공식 문서/API/DB 영향 검토와 함께 먼저 승인해야 한다.
+진짜 책처럼 페이지를 넘기며 각 레시피의 상세 내용을 보는 reader는 승인되었다. 구현은 `GET /api/v1/recipes/{id}`를 재사용하지 않고, `view_count`를 증가시키지 않는 레시피북 소속 검증 전용 endpoint로 제한한다. 물리적인 page-turn 애니메이션은 탐색 보조 효과일 뿐 필수 경로가 아니다.
 
 ## Backend First Contract
 
-- Backend 변경 없음.
+- Backend 변경 있음: 레시피북 리더용 read-only 상세 조회 추가.
 - 기존 응답 래퍼 `{ success, data, error }` 소비 방식 유지.
-- `GET /api/v1/recipe-books`는 `MYPAGE` 책장 목록 source다.
+- `GET /api/v1/recipe-books`는 `MYPAGE` 책장 목록 source이며 커버 색상/이미지 메타데이터를 포함한다.
 - `GET /api/v1/recipe-books/{book_id}/recipes`는 `RECIPEBOOK_DETAIL` 목록 source다.
+- `GET /api/v1/recipe-books/{book_id}/recipes/{recipe_id}`는 `RECIPEBOOK_DETAIL`의 재료/만들기 source이며, 요청자의 레시피북 소속을 검증하고 `view_count`를 증가시키지 않는다.
+- `POST/PATCH /api/v1/recipe-books`는 커스텀 레시피북의 `cover_color_key`, `cover_image_url`을 선택적으로 저장한다.
 - saved/custom 제거와 liked unlike 분기는 `17b` 서버 계약을 유지한다.
 - 권한/소유자 검증은 기존 API가 담당한다.
 - 프론트는 unauthorized/error/empty/loading 상태를 기존 API 결과에 맞춰 표시한다.
@@ -191,8 +192,8 @@
 ## Key Rules
 
 1. 공식 문서에 없는 API/status/field/endpoint를 추가하지 않는다.
-2. `GET /api/v1/recipe-books/{book_id}/recipes`를 상세 목록의 유일한 data source로 둔다.
-3. full reader preview를 위해 `GET /api/v1/recipes/{id}`를 숨겨서 호출하지 않는다.
+2. `GET /api/v1/recipe-books/{book_id}/recipes`를 상세 목록 source로 둔다.
+3. 리더 상세는 `GET /api/v1/recipe-books/{book_id}/recipes/{recipe_id}`만 사용하고, `GET /api/v1/recipes/{id}`를 숨겨서 호출하지 않는다.
 4. 레시피 항목 클릭은 기존 `RECIPE_DETAIL`로 이동한다.
 5. saved/custom 제거와 liked unlike 정책은 `17b` 그대로 유지한다.
 6. `my_added` 책 제거 불가 정책을 완화하지 않는다.
@@ -205,8 +206,8 @@
 
 | 후보 | 현재 계약 | 제안 계약 | 기대 사용자 가치 | 영향 문서 | 승인 상태 |
 | --- | --- | --- | --- | --- | --- |
-| Read-only recipebook reader data path | `RECIPEBOOK_DETAIL`은 `GET /recipe-books/{book_id}/recipes` 목록을 보여주고, 상세 내용은 `RECIPE_DETAIL`에서 조회한다. `GET /recipes/{id}`는 조회수 증가 의미가 있다. | view_count를 증가시키지 않는 recipebook reader/preview 전용 data path를 공식화한다. | 책 안에서 페이지를 넘기며 레시피 상세를 읽는 진짜 레시피북 경험 제공 | 요구사항, 화면정의서, 유저플로우, API, DB 영향 검토 | 미승인 |
-| Page-turn full reader | 현재 레시피북 상세는 목록/관리 화면이다. | 사용자가 책 페이지를 넘기듯 레시피 상세 내용을 탐색하는 reader mode를 추가한다. | 다이어리/레시피북 컨셉 강화, 장기 사용 감성 강화 | 요구사항, 화면정의서, 유저플로우, API | 미승인 |
+| Read-only recipebook reader data path | `RECIPEBOOK_DETAIL`은 `GET /recipe-books/{book_id}/recipes` 목록을 보여주고, 상세 내용은 `RECIPE_DETAIL`에서 조회한다. `GET /recipes/{id}`는 조회수 증가 의미가 있다. | view_count를 증가시키지 않는 recipebook reader/preview 전용 data path를 공식화한다. | 책 안에서 페이지를 넘기며 레시피 상세를 읽는 진짜 레시피북 경험 제공 | 요구사항, 화면정의서, 유저플로우, API, DB 영향 검토 | 승인됨 |
+| Page-turn full reader | 현재 레시피북 상세는 목록/관리 화면이다. | 사용자가 책 페이지를 넘기듯 레시피 상세 내용을 탐색하는 reader mode를 추가한다. | 다이어리/레시피북 컨셉 강화, 장기 사용 감성 강화 | 요구사항, 화면정의서, 유저플로우, API | 승인됨 |
 
 ## Primary User Path
 

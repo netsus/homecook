@@ -2159,6 +2159,8 @@ GET /recipe-books
       "name": "내가 추가한 레시피",
       "book_type": "my_added",
       "recipe_count": 12,
+      "cover_color_key": "lavender",
+      "cover_image_url": null,
       "sort_order": 0
     },
     {
@@ -2166,6 +2168,8 @@ GET /recipe-books
       "name": "저장한 레시피",
       "book_type": "saved",
       "recipe_count": 8,
+      "cover_color_key": "sky",
+      "cover_image_url": null,
       "sort_order": 1
     },
     {
@@ -2173,6 +2177,8 @@ GET /recipe-books
       "name": "좋아요한 레시피",
       "book_type": "liked",
       "recipe_count": 25,
+      "cover_color_key": "coral",
+      "cover_image_url": null,
       "sort_order": 2
     },
     {
@@ -2180,6 +2186,8 @@ GET /recipe-books
       "name": "주말 파티",
       "book_type": "custom",
       "recipe_count": 5,
+      "cover_color_key": "sand",
+      "cover_image_url": "https://...",
       "sort_order": 3
     }
   ]
@@ -2187,6 +2195,7 @@ GET /recipe-books
 ```
 
 > **v1.2 변경**: 모든 recipe_books의 `id`는 **uuid로 통일**. 시스템/커스텀 구분은 `book_type`으로만 한다.
+> **2026-06-10 addendum**: `cover_color_key`, `cover_image_url`은 레시피북 다이어리 커버 표시용 메타데이터이다. 저장/권한 정책에는 영향을 주지 않는다.
 
 > **시스템 레시피북 = 가상 책 정책**
 >
@@ -2208,6 +2217,8 @@ POST /recipe-books
 | 구분 | 필드 | 타입   | 설명          |
 | ---- | ---- | ------ | ------------- |
 | Body | name | string | 레시피북 이름 |
+| Body | cover_color_key | string? | `sage` / `sky` / `coral` / `lavender` / `sand`. 생략 시 sort_order 기준 순환 배정 |
+| Body | cover_image_url | string? | 커버 이미지 URL. 빈 값은 `null` |
 
 **응답 (201)**: 생성된 book 객체 (book_type = ‘custom’)
 
@@ -2222,8 +2233,10 @@ PATCH /recipe-books/{book_id}
 | 구분 | 필드 | 타입    | 설명        |
 | ---- | ---- | ------- | ----------- |
 | Body | name | string? | 변경할 이름 |
+| Body | cover_color_key | string? | 변경할 커버 색상 |
+| Body | cover_image_url | string? | 변경할 커버 이미지 URL. 빈 값은 `null` |
 
-> 시스템 레시피북(my_added/saved/liked) 이름 변경 불가 → 403
+> 시스템 레시피북(my_added/saved/liked) 수정 불가 → 403
 
 ### 12-5. 레시피북 삭제
 
@@ -2273,6 +2286,66 @@ GET /recipe-books/{book_id}/recipes
 > 서버는 `book_type`에 따라 조회 소스 분기 (12-2 가상 책 정책 참조)
 > `total_duration_seconds`는 해당 레시피 step의 `duration_seconds` 합산값이다. 합산 가능한 값이 없으면 `null`.
 > `total_duration_text`는 `total_duration_seconds`를 화면 표시용으로 변환한 값이며, 값이 없으면 `null`.
+
+### 12-6b. 레시피북 리더용 레시피 상세 조회 `2026-06-10 addendum`
+
+```
+GET /recipe-books/{book_id}/recipes/{recipe_id}
+```
+
+🔒 로그인 필수
+
+> `RECIPEBOOK_DETAIL`의 책 리더 안에서 재료와 만들기를 보여주기 위한 읽기 전용 조회이다. 기존 `GET /recipes/{id}`처럼 레시피 상세 화면 진입 의미가 아니므로 `view_count`를 증가시키지 않는다.
+
+**권한/소스 정책**
+
+- `book_id`는 요청 사용자 소유 레시피북이어야 한다.
+- `liked`: 요청 사용자의 `recipe_likes`에 포함된 레시피만 조회 가능
+- `my_added`: 요청 사용자가 직접 등록/유튜브 등록한 레시피만 조회 가능
+- `saved` / `custom`: 해당 `recipe_book_items`에 포함된 레시피만 조회 가능
+
+**응답 (200)**
+
+```json
+{
+  "recipe_id": "uuid",
+  "title": "김치찌개",
+  "thumbnail_url": "https://...",
+  "tags": ["한식", "찌개"],
+  "view_count": 1520,
+  "total_duration_seconds": 1200,
+  "total_duration_text": "20분",
+  "base_servings": 2,
+  "added_at": "2026-03-01T10:00:00Z",
+  "ingredients": [
+    {
+      "id": "uuid",
+      "ingredient_id": "uuid",
+      "standard_name": "김치",
+      "amount": 200,
+      "unit": "g",
+      "ingredient_type": "QUANT",
+      "display_text": "김치 200g",
+      "component_label": null,
+      "scalable": true,
+      "sort_order": 0
+    }
+  ],
+  "steps": [
+    {
+      "id": "uuid",
+      "step_number": 1,
+      "instruction": "김치를 먹기 좋은 크기로 썬다.",
+      "component_label": null,
+      "cooking_method": null,
+      "ingredients_used": [],
+      "heat_level": null,
+      "duration_seconds": null,
+      "duration_text": null
+    }
+  ]
+}
+```
 
 ### 12-7. 레시피북에서 레시피 제거 `v1.2 역할 확대`
 
@@ -2703,7 +2776,7 @@ GET /api/v1/admin/audit-logs
 
 ---
 
-## 엔드포인트 전체 목록 (61개) `v1.2.16`
+## 엔드포인트 전체 목록 (62개) `v1.2.16`
 
 | #        | Method     | Path                                   | 화면                     | 인증   | v1.2 변경                        |
 | -------- | ---------- | -------------------------------------- | ------------------------ | ------ | -------------------------------- |
@@ -2759,6 +2832,7 @@ GET /api/v1/admin/audit-logs
 | 12-4     | PATCH      | /recipe-books/{id}                     | MYPAGE                   | 🔒     |                                  |
 | 12-5     | DELETE     | /recipe-books/{id}                     | MYPAGE                   | 🔒     |                                  |
 | 12-6     | GET        | /recipe-books/{id}/recipes             | RECIPEBOOK_DETAIL        | 🔒     |                                  |
+| 12-6b    | GET        | /recipe-books/{book_id}/recipes/{recipe_id} | RECIPEBOOK_DETAIL        | 🔒     | 리더용 read-only 상세, 조회수 증가 없음 |
 | 12-7     | DELETE     | /recipe-books/{id}/recipes/{id}        | RECIPEBOOK_DETAIL        | 🔒     | 카운트 갱신 명시                 |
 | 12-8     | GET        | /shopping/lists                        | MYPAGE (장보기 기록)     | 🔒     |                                  |
 | 12-9     | GET        | /users/me/progress                     | MYPAGE                   | 🔒     | v1.2.17 user-progress 예정        |
@@ -2770,8 +2844,8 @@ GET /api/v1/admin/audit-logs
 | 15-2     | GET        | /api/v1/admin/operational-events       | ADMIN_EVENTS             | 🔐     | v1.2.12 신규                     |
 | 15-3     | GET        | /api/v1/admin/audit-logs               | ADMIN_AUDIT_LOGS         | 🔐     | v1.2.12 신규                     |
 
-> **v1.2.17 총계**: 62개 (user-progress `GET /users/me/progress` endpoint 1개 추가 예정)
-> **v1.2.16 총계**: 61개 (taxonomy v2 additive contract, 신규 endpoint 없음)
+> **v1.2.17 총계**: 63개 (user-progress `GET /users/me/progress` endpoint 1개 추가 예정)
+> **v1.2.16 총계**: 62개 (2026-06-10 addendum: 레시피북 리더용 read-only 상세 endpoint 1개 추가)
 > **v1.2.15 총계**: 61개 (YouTube visual quantity enrichment contract, 신규 endpoint 없음)
 > **v1.2.14 총계**: 61개 (`POST /recipes/images` 이미지 업로드 endpoint 1개 추가, thumbnail_url/tags field 계약 보강)
 > **v1.2.13 총계**: 60개 (2026-05-30 다중 후보 초안 endpoint 1개 추가)

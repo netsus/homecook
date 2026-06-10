@@ -8,6 +8,11 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import {
+  PlannerAddSheet,
+  type PlannerAddSheetState,
+} from "@/components/recipe/planner-add-sheet";
+import { SaveModal } from "@/components/recipe/save-modal";
 import { ContentState } from "@/components/shared/content-state";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
@@ -23,59 +28,50 @@ import {
   WebModal,
   WebRecipeCard,
   WebShell,
-  WebTopNav,
 } from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { createMeal, isMealApiError } from "@/lib/api/meal";
 import { deleteRecipeBook, renameRecipeBook } from "@/lib/api/mypage";
+import { fetchPlanner } from "@/lib/api/planner";
 import {
+  fetchRecipeBookRecipeDetail,
   fetchRecipeBookRecipes,
   removeRecipeBookRecipe,
 } from "@/lib/api/recipe";
+import {
+  createCustomRecipeBook,
+  fetchSaveableRecipeBooks,
+  removeRecipeFromBook,
+  saveRecipeToBooks,
+} from "@/lib/api/recipe-save";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
-import type { RecipeBookRecipeItem, RecipeBookType } from "@/types/recipe";
+import type {
+  RecipeBookReaderRecipeData,
+  RecipeBookRecipeItem,
+  RecipeBookSummary,
+  RecipeBookType,
+  RecipeIngredient,
+} from "@/types/recipe";
+import type { PlannerColumnData } from "@/types/planner";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "empty" | "error" | "ready";
+type ReaderDetailState =
+  | { status: "loading" }
+  | { status: "ready"; data: RecipeBookReaderRecipeData }
+  | { status: "error"; message: string };
+type SaveModalState = "idle" | "loading" | "ready" | "error";
 
 const TOAST_DURATION_MS = 3000;
 const PAGE_SIZE = 20;
-
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
 
 const REMOVE_LABEL: Record<string, string> = {
   liked: "좋아요 해제",
   saved: "제거",
   custom: "제거",
 };
-
-const BOOK_BADGE_LABEL: Record<RecipeBookType, string> = {
-  custom: "내 책",
-  liked: "좋아요",
-  my_added: "내 레시피",
-  saved: "저장",
-};
-
-const INTERNAL_URL_BASE = "http://homecook.local";
-
-function resolveMypageBreadcrumbHref(href: string) {
-  try {
-    const url = new URL(href, INTERNAL_URL_BASE);
-    if (url.origin === INTERNAL_URL_BASE && url.pathname === "/mypage") {
-      return `${url.pathname}${url.search}${url.hash}`;
-    }
-  } catch {
-    return "/mypage";
-  }
-
-  return "/mypage";
-}
 
 function buildRecipeBookDetailHref({
   bookId,
@@ -94,10 +90,30 @@ function buildRecipeBookDetailHref({
   return `/mypage/recipe-books/${bookId}?${params.toString()}`;
 }
 
+function normalizeServings(servings?: number | null) {
+  if (typeof servings !== "number" || !Number.isFinite(servings)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.floor(servings));
+}
+
+function getRecipeBookItemServings(
+  item: RecipeBookRecipeItem,
+  readerDetailState?: ReaderDetailState,
+) {
+  if (readerDetailState?.status === "ready") {
+    return normalizeServings(readerDetailState.data.base_servings);
+  }
+
+  return normalizeServings(item.base_servings);
+}
+
 export interface RecipeBookDetailScreenProps {
   bookId: string;
   bookName: string;
   bookType: RecipeBookType;
+  embedded?: boolean;
   initialAuthenticated?: boolean;
 }
 
@@ -105,21 +121,21 @@ export function RecipeBookDetailScreen({
   bookId,
   bookName,
   bookType,
+  embedded = false,
   initialAuthenticated = false,
 }: RecipeBookDetailScreenProps) {
   const router = useRouter();
   const isMobileViewport = useIsMobileViewport();
   const appReturn = useAppReturn({ fallback: "/mypage" });
-  const mypageBreadcrumbHref = useMemo(
-    () => resolveMypageBreadcrumbHref(appReturn.href),
-    [appReturn.href],
-  );
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
   const [currentBookName, setCurrentBookName] = useState(bookName);
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [items, setItems] = useState<RecipeBookRecipeItem[]>([]);
+  const [readerDetailsById, setReaderDetailsById] = useState<
+    Record<string, ReaderDetailState>
+  >({});
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasNext, setHasNext] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -140,11 +156,54 @@ export function RecipeBookDetailScreen({
   const [activeDesktopRecipeId, setActiveDesktopRecipeId] = useState<string | null>(
     null,
   );
+  const [saveTarget, setSaveTarget] = useState<RecipeBookRecipeItem | null>(null);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [saveModalState, setSaveModalState] = useState<SaveModalState>("idle");
+  const [saveBooks, setSaveBooks] = useState<RecipeBookSummary[]>([]);
+  const [selectedSaveBookIds, setSelectedSaveBookIds] = useState<string[]>([]);
+  const [newSaveBookName, setNewSaveBookName] = useState("");
+  const [saveLoadError, setSaveLoadError] = useState<string | null>(null);
+  const [saveSubmitError, setSaveSubmitError] = useState<string | null>(null);
+  const [isCreatingBook, setIsCreatingBook] = useState(false);
+  const [isSavingRecipe, setIsSavingRecipe] = useState(false);
+  const [plannerTarget, setPlannerTarget] = useState<RecipeBookRecipeItem | null>(null);
+  const [isPlannerAddSheetOpen, setIsPlannerAddSheetOpen] = useState(false);
+  const [plannerAddSheetState, setPlannerAddSheetState] =
+    useState<PlannerAddSheetState>("loading-columns");
+  const [plannerColumns, setPlannerColumns] = useState<PlannerColumnData[]>([]);
+  const [selectedPlanDate, setSelectedPlanDate] = useState("");
+  const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
+  const [plannerServings, setPlannerServings] = useState(1);
+  const [plannerAddError, setPlannerAddError] = useState<string | null>(null);
 
   const scrollSentinelRef = useRef<HTMLDivElement | null>(null);
+  const requestedReaderRecipeIdsRef = useRef<Set<string>>(new Set());
+  const lastBookNamePropRef = useRef(bookName);
   const canManageBook = bookType === "custom";
+  const knownSavedBookIds = useMemo(() => {
+    if (bookType === "saved" || bookType === "custom") {
+      return [bookId];
+    }
 
-  const buildRecipeReturnHref = useCallback(
+    return [];
+  }, [bookId, bookType]);
+  const selectablePlannerDates = useMemo(() => {
+    const dates: string[] = [];
+    const today = new Date();
+
+    for (let i = 0; i < 14; i += 1) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      dates.push(`${year}-${month}-${day}`);
+    }
+
+    return dates;
+  }, []);
+
+  const buildRecipeDetailReturnHref = useCallback(
     (recipeId: string) =>
       buildReturnHref(`/recipe/${recipeId}`, {
         restore: "recipebook-tab",
@@ -157,6 +216,20 @@ export function RecipeBookDetailScreen({
       }),
     [bookId, bookType, currentBookName],
   );
+  const buildRecipeCookHref = useCallback(
+    (item: RecipeBookRecipeItem, readerDetailState?: ReaderDetailState) =>
+      buildReturnHref(
+        `/cooking/recipes/${item.recipe_id}/cook-mode?servings=${getRecipeBookItemServings(
+          item,
+          readerDetailState,
+        )}`,
+        {
+          returnSurface: "recipe.detail",
+          returnTo: buildRecipeDetailReturnHref(item.recipe_id),
+        },
+      ),
+    [buildRecipeDetailReturnHref],
+  );
 
   const showToast = useCallback(
     (message: string, tone: "success" | "error") => {
@@ -165,6 +238,290 @@ export function RecipeBookDetailScreen({
     },
     [],
   );
+
+  useEffect(() => {
+    if (lastBookNamePropRef.current === bookName) {
+      return;
+    }
+
+    lastBookNamePropRef.current = bookName;
+    setCurrentBookName(bookName);
+    if (!bookRenameOpen) {
+      setBookRenameValue(bookName);
+    }
+  }, [bookName, bookRenameOpen]);
+
+  const closeSaveModal = useCallback(() => {
+    if (isSavingRecipe || isCreatingBook) {
+      return;
+    }
+
+    setIsSaveModalOpen(false);
+    setSaveTarget(null);
+    setSaveModalState("idle");
+    setSaveLoadError(null);
+    setSaveSubmitError(null);
+    setNewSaveBookName("");
+  }, [isCreatingBook, isSavingRecipe]);
+
+  const loadSaveBooks = useCallback(async () => {
+    setSaveModalState("loading");
+    setSaveLoadError(null);
+    setSaveSubmitError(null);
+
+    try {
+      const books = await fetchSaveableRecipeBooks();
+      const availableBookIds = new Set(books.map((book) => book.id));
+      const retainedKnownSavedBookIds = knownSavedBookIds.filter((savedBookId) =>
+        availableBookIds.has(savedBookId),
+      );
+
+      setSaveBooks(books);
+      setSelectedSaveBookIds((currentBookIds) => {
+        const retained = currentBookIds.filter((bookId) => availableBookIds.has(bookId));
+
+        if (retained.length > 0) {
+          return retained;
+        }
+
+        if (retainedKnownSavedBookIds.length > 0) {
+          return retainedKnownSavedBookIds;
+        }
+
+        return books[0] ? [books[0].id] : [];
+      });
+      setSaveModalState("ready");
+    } catch (error) {
+      setSaveLoadError(
+        error instanceof Error
+          ? error.message
+          : "레시피북 목록을 불러오지 못했어요.",
+      );
+      setSaveModalState("error");
+    }
+  }, [knownSavedBookIds]);
+
+  const openSaveModal = useCallback(
+    async (item: RecipeBookRecipeItem) => {
+      if (authState !== "authenticated") {
+        return;
+      }
+
+      setSaveTarget(item);
+      setIsSaveModalOpen(true);
+      await loadSaveBooks();
+    },
+    [authState, loadSaveBooks],
+  );
+
+  const handleCreateSaveBook = useCallback(async () => {
+    const normalizedName = newSaveBookName.trim();
+
+    if (!normalizedName) {
+      setSaveSubmitError("레시피북 이름을 입력해 주세요.");
+      return;
+    }
+
+    if (normalizedName.length > 50) {
+      setSaveSubmitError("레시피북 이름은 50자를 넘길 수 없어요.");
+      return;
+    }
+
+    setIsCreatingBook(true);
+    setSaveSubmitError(null);
+
+    try {
+      const createdBook = await createCustomRecipeBook(normalizedName);
+      setSaveBooks((currentBooks) => {
+        const nextBooks = currentBooks.some((book) => book.id === createdBook.id)
+          ? currentBooks
+          : [...currentBooks, createdBook];
+
+        return [...nextBooks].sort((left, right) => {
+          if (left.sort_order === right.sort_order) {
+            return left.id.localeCompare(right.id);
+          }
+
+          return left.sort_order - right.sort_order;
+        });
+      });
+      setSelectedSaveBookIds((currentBookIds) =>
+        currentBookIds.includes(createdBook.id)
+          ? currentBookIds
+          : [...currentBookIds, createdBook.id],
+      );
+      setNewSaveBookName("");
+      setSaveModalState("ready");
+    } catch (error) {
+      setSaveSubmitError(
+        error instanceof Error ? error.message : "레시피북을 만들지 못했어요.",
+      );
+    } finally {
+      setIsCreatingBook(false);
+    }
+  }, [newSaveBookName]);
+
+  const handleSaveRecipe = useCallback(async () => {
+    if (!saveTarget || isSavingRecipe) {
+      return;
+    }
+
+    const newBookIds = selectedSaveBookIds.filter(
+      (selectedBookId) => !knownSavedBookIds.includes(selectedBookId),
+    );
+    const removedBookIds = knownSavedBookIds.filter(
+      (savedBookId) => !selectedSaveBookIds.includes(savedBookId),
+    );
+
+    if (newBookIds.length === 0 && removedBookIds.length === 0) {
+      return;
+    }
+
+    setIsSavingRecipe(true);
+    setSaveSubmitError(null);
+
+    try {
+      if (newBookIds.length > 0) {
+        await saveRecipeToBooks(saveTarget.recipe_id, newBookIds);
+      }
+
+      await Promise.all(
+        removedBookIds.map((removedBookId) =>
+          removeRecipeFromBook(removedBookId, saveTarget.recipe_id),
+        ),
+      );
+
+      if (removedBookIds.includes(bookId)) {
+        setItems((currentItems) =>
+          currentItems.filter((item) => item.recipe_id !== saveTarget.recipe_id),
+        );
+        setViewState((currentState) =>
+          items.length <= 1 ? "empty" : currentState,
+        );
+      }
+
+      setIsSaveModalOpen(false);
+      setSaveModalState("idle");
+      setSaveTarget(null);
+      showToast("레시피북 저장을 변경했어요", "success");
+    } catch (error) {
+      setSaveSubmitError(
+        error instanceof Error ? error.message : "레시피를 저장하지 못했어요.",
+      );
+    } finally {
+      setIsSavingRecipe(false);
+    }
+  }, [
+    bookId,
+    isSavingRecipe,
+    items.length,
+    knownSavedBookIds,
+    saveTarget,
+    selectedSaveBookIds,
+    showToast,
+  ]);
+
+  const loadPlannerColumns = useCallback(async () => {
+    setPlannerAddSheetState("loading-columns");
+    setPlannerAddError(null);
+
+    try {
+      const today = selectablePlannerDates[0] ?? "";
+      const data = await fetchPlanner(today, today);
+      setPlannerColumns(data.columns);
+      setSelectedPlanColumnId((current) => {
+        if (current && data.columns.some((column) => column.id === current)) {
+          return current;
+        }
+
+        return (
+          data.columns.find((column) => column.name === "저녁")?.id
+          ?? data.columns[0]?.id
+          ?? ""
+        );
+      });
+      setPlannerAddSheetState("ready");
+    } catch {
+      setPlannerAddSheetState("error");
+      setPlannerAddError("플래너 슬롯을 불러오지 못했어요.");
+    }
+  }, [selectablePlannerDates]);
+
+  const openPlannerAddSheet = useCallback(
+    async (item: RecipeBookRecipeItem) => {
+      if (authState !== "authenticated") {
+        return;
+      }
+
+      setPlannerTarget(item);
+      setIsPlannerAddSheetOpen(true);
+      setPlannerAddError(null);
+      setSelectedPlanDate(selectablePlannerDates[0] ?? "");
+      setPlannerServings(item.base_servings ?? 1);
+
+      await loadPlannerColumns();
+    },
+    [authState, loadPlannerColumns, selectablePlannerDates],
+  );
+
+  const closePlannerAddSheet = useCallback(() => {
+    if (plannerAddSheetState === "submitting") {
+      return;
+    }
+
+    setIsPlannerAddSheetOpen(false);
+    setPlannerTarget(null);
+    setPlannerAddError(null);
+  }, [plannerAddSheetState]);
+
+  const handlePlannerAddSubmit = useCallback(async () => {
+    if (
+      !plannerTarget ||
+      !selectedPlanColumnId ||
+      !selectedPlanDate ||
+      plannerAddSheetState !== "ready"
+    ) {
+      return;
+    }
+
+    setPlannerAddSheetState("submitting");
+    setPlannerAddError(null);
+
+    try {
+      await createMeal({
+        recipe_id: plannerTarget.recipe_id,
+        plan_date: selectedPlanDate,
+        column_id: selectedPlanColumnId,
+        planned_servings: plannerServings,
+      });
+
+      setIsPlannerAddSheetOpen(false);
+      const [, month, day] = selectedPlanDate.split("-").map(Number);
+      const columnName =
+        plannerColumns.find((column) => column.id === selectedPlanColumnId)?.name
+        ?? "선택한 끼니";
+      showToast(`${month}월 ${day}일 ${columnName}에 추가됐어요`, "success");
+      setPlannerTarget(null);
+    } catch (error) {
+      const message =
+        isMealApiError(error) && error.status === 403
+          ? "내 플래너 슬롯에만 추가할 수 있어요."
+          : error instanceof Error
+            ? error.message
+            : "플래너 추가에 실패했어요.";
+
+      setPlannerAddError(message);
+      setPlannerAddSheetState("ready");
+    }
+  }, [
+    plannerAddSheetState,
+    plannerColumns,
+    plannerServings,
+    plannerTarget,
+    selectedPlanColumnId,
+    selectedPlanDate,
+    showToast,
+  ]);
 
   const loadRecipes = useCallback(
     async (nextCursor?: string) => {
@@ -189,6 +546,8 @@ export function RecipeBookDetailScreen({
         if (nextCursor) {
           setItems((prev) => mergeUniqueRecipeItems(prev, result.data!.items));
         } else {
+          requestedReaderRecipeIdsRef.current.clear();
+          setReaderDetailsById({});
           setItems(result.data.items);
         }
 
@@ -393,6 +752,73 @@ export function RecipeBookDetailScreen({
       />
     ) : null;
 
+  const renderReaderActionModals = () => (
+    <>
+      <SaveModal
+        alreadySavedBookIds={knownSavedBookIds}
+        books={saveBooks}
+        isCreatingBook={isCreatingBook}
+        isOpen={isSaveModalOpen}
+        isSavingRecipe={isSavingRecipe}
+        loadErrorMessage={saveLoadError}
+        newBookName={newSaveBookName}
+        onClose={closeSaveModal}
+        onCreateBook={() => {
+          void handleCreateSaveBook();
+        }}
+        onNewBookNameChange={setNewSaveBookName}
+        onRetry={() => {
+          void loadSaveBooks();
+        }}
+        onSaveRecipe={() => {
+          void handleSaveRecipe();
+        }}
+        onSelectBook={(targetBookId) => {
+          setSelectedSaveBookIds((currentBookIds) =>
+            currentBookIds.includes(targetBookId)
+              ? currentBookIds.filter((currentBookId) => currentBookId !== targetBookId)
+              : [...currentBookIds, targetBookId],
+          );
+        }}
+        saveErrorMessage={saveSubmitError}
+        selectedBookIds={selectedSaveBookIds}
+        viewState={saveModalState === "idle" ? "loading" : saveModalState}
+      />
+      <PlannerAddSheet
+        columns={plannerColumns}
+        errorMessage={plannerAddError}
+        isOpen={isPlannerAddSheetOpen}
+        onChangeServings={setPlannerServings}
+        onClose={closePlannerAddSheet}
+        onRetryLoad={() => {
+          void loadPlannerColumns();
+        }}
+        onSelectColumn={setSelectedPlanColumnId}
+        onSelectDate={setSelectedPlanDate}
+        onSubmit={() => {
+          void handlePlannerAddSubmit();
+        }}
+        recipePreview={
+          plannerTarget
+            ? {
+                background: getRecipeThumbColor(plannerTarget.title),
+                emoji: "🍽",
+                imageSrc: plannerTarget.thumbnail_url ?? undefined,
+                meta: `${plannerServings}인분`,
+                title: plannerTarget.title,
+              }
+            : undefined
+        }
+        selectableDates={selectablePlannerDates}
+        selectedColumnId={selectedPlanColumnId}
+        selectedDate={selectedPlanDate}
+        servings={plannerServings}
+        sheetState={plannerAddSheetState}
+        variant="recipe-detail"
+      />
+    </>
+  );
+
   // Auth check
   useEffect(() => {
     const e2eAuthOverride = readE2EAuthOverride();
@@ -490,6 +916,52 @@ export function RecipeBookDetailScreen({
     });
   }, [items]);
 
+  useEffect(() => {
+    if (authState !== "authenticated" || viewState !== "ready") return;
+
+    const recipeIdsToLoad = items
+      .map((item) => item.recipe_id)
+      .filter((recipeId) => !requestedReaderRecipeIdsRef.current.has(recipeId));
+
+    if (recipeIdsToLoad.length === 0) return;
+
+    recipeIdsToLoad.forEach((recipeId) => {
+      requestedReaderRecipeIdsRef.current.add(recipeId);
+    });
+
+    let cancelled = false;
+
+    setReaderDetailsById((current) => {
+      const next = { ...current };
+      recipeIdsToLoad.forEach((recipeId) => {
+        next[recipeId] = { status: "loading" };
+      });
+      return next;
+    });
+
+    recipeIdsToLoad.forEach((recipeId) => {
+      void fetchRecipeBookRecipeDetail(bookId, recipeId).then((result) => {
+        if (cancelled) return;
+
+        setReaderDetailsById((current) => ({
+          ...current,
+          [recipeId]:
+            result.success && result.data
+              ? { status: "ready", data: result.data }
+              : {
+                  status: "error",
+                  message:
+                    result.error?.message ?? "레시피 상세를 불러오지 못했어요.",
+                },
+        }));
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authState, bookId, items, viewState]);
+
   const canRemove = bookType !== "my_added";
   const removeLabel = REMOVE_LABEL[bookType] ?? "제거";
 
@@ -527,25 +999,9 @@ export function RecipeBookDetailScreen({
   const renderDesktopFrame = (
     children: React.ReactNode,
     recipeCount: number | null = items.length,
-  ) => (
-    <WebShell className="web-recipebook-detail-shell" wide>
-      <WebTopNav
-        activeId="mypage"
-        items={WEB_NAV_ITEMS}
-        rightSlot={<RecipeBookProfilePill />}
-      />
+  ) => {
+    const frame = (
       <div className="web-recipebook-detail-screen">
-        <nav aria-label="레시피북 상세 경로" className="web-breadcrumb">
-          <Link
-            aria-label="뒤로 가기"
-            className="web-breadcrumb-link"
-            href={mypageBreadcrumbHref}
-          >
-            ‹ 마이페이지
-          </Link>
-          <span className="web-breadcrumb-sep">/</span>
-          <span className="web-breadcrumb-current">{currentBookName}</span>
-        </nav>
         <div className="web-recipebook-detail-head" data-testid="recipebook-detail-header">
           <div>
             <h1>레시피북 리더</h1>
@@ -594,9 +1050,20 @@ export function RecipeBookDetailScreen({
         ) : null}
         {renderBookDeleteDialog()}
         {renderRecipeRemoveDialog()}
+        {renderReaderActionModals()}
       </div>
-    </WebShell>
-  );
+    );
+
+    if (embedded) {
+      return frame;
+    }
+
+    return (
+      <WebShell className="web-recipebook-detail-shell" wide>
+        {frame}
+      </WebShell>
+    );
+  };
 
   // --- Render states ---
 
@@ -764,35 +1231,41 @@ export function RecipeBookDetailScreen({
 
   if (isMobileViewport) {
     return (
-      <MobileRecipeBookDetailView
-        backHref={appReturn.href}
-        bookMenuOpen={bookMenuOpen}
-        bookName={currentBookName}
-        bookRenameOpen={bookRenameOpen}
-        bookRenameValue={bookRenameValue}
-        bookType={bookType}
-        canManageBook={canManageBook}
-        canRemove={canRemove}
-        errorMessage={bookActionError}
-        hasNext={hasNext}
-        isLoadingMore={isLoadingMore}
-        isSaving={isBookActionSaving}
-        items={items}
-        buildRecipeHref={buildRecipeReturnHref}
-        onDeleteRequest={handleBookDeleteRequest}
-        onMenuToggle={() => setBookMenuOpen((current) => !current)}
-        onRemove={handleRemoveRequest}
-        onRenameCancel={handleBookRenameCancel}
-        onRenameConfirm={() => void handleBookRename()}
-        onRenameStart={handleBookRenameStart}
-        onRenameValueChange={setBookRenameValue}
-        removeLabel={removeLabel}
-        removingId={removingId}
-        renderBookDeleteDialog={renderBookDeleteDialog}
-        renderRecipeRemoveDialog={renderRecipeRemoveDialog}
-        scrollSentinelRef={scrollSentinelRef}
-        toast={toast}
-      />
+      <>
+        <MobileRecipeBookDetailView
+          backHref={appReturn.href}
+          bookMenuOpen={bookMenuOpen}
+          bookName={currentBookName}
+          bookRenameOpen={bookRenameOpen}
+          bookRenameValue={bookRenameValue}
+          canManageBook={canManageBook}
+          canRemove={canRemove}
+          errorMessage={bookActionError}
+          hasNext={hasNext}
+          isLoadingMore={isLoadingMore}
+          isSaving={isBookActionSaving}
+          items={items}
+          readerDetailsById={readerDetailsById}
+          buildRecipeCookHref={buildRecipeCookHref}
+          buildRecipeHref={buildRecipeDetailReturnHref}
+          onDeleteRequest={handleBookDeleteRequest}
+          onMenuToggle={() => setBookMenuOpen((current) => !current)}
+          onPlannerAdd={(item) => void openPlannerAddSheet(item)}
+          onRemove={handleRemoveRequest}
+          onRenameCancel={handleBookRenameCancel}
+          onRenameConfirm={() => void handleBookRename()}
+          onRenameStart={handleBookRenameStart}
+          onRenameValueChange={setBookRenameValue}
+          onSave={(item) => void openSaveModal(item)}
+          removeLabel={removeLabel}
+          removingId={removingId}
+          renderBookDeleteDialog={renderBookDeleteDialog}
+          renderRecipeRemoveDialog={renderRecipeRemoveDialog}
+          scrollSentinelRef={scrollSentinelRef}
+          toast={toast}
+        />
+        {renderReaderActionModals()}
+      </>
     );
   }
 
@@ -820,12 +1293,16 @@ export function RecipeBookDetailScreen({
       activeIndex={activeDesktopIndex}
       activeItem={activeDesktopItem}
       bookName={currentBookName}
-      buildRecipeHref={buildRecipeReturnHref}
+      buildRecipeCookHref={buildRecipeCookHref}
+      buildRecipeHref={buildRecipeDetailReturnHref}
       canRemove={canRemove}
       items={items}
+      readerDetailsById={readerDetailsById}
       mode={desktopReaderMode}
       onModeChange={setDesktopReaderMode}
+      onPlannerAdd={(item) => void openPlannerAddSheet(item)}
       onRemove={handleRemoveRequest}
+      onSave={(item) => void openSaveModal(item)}
       onSelectRecipe={setActiveDesktopRecipeId}
       removeLabel={removeLabel}
       removingId={removingId}
@@ -915,18 +1392,6 @@ function DesktopRecipeBookRail({
         ) : null}
       </nav>
     </aside>
-  );
-}
-
-function RecipeBookProfilePill() {
-  return (
-    <Link
-      aria-label="마이페이지로 이동"
-      className="web-mypage-top-profile"
-      href="/mypage"
-    >
-      <span aria-hidden="true">JY</span>
-    </Link>
   );
 }
 
@@ -1379,12 +1844,12 @@ function RecipeRemoveConfirmDialog({
 
 function MobileRecipeBookDetailView({
   backHref,
+  buildRecipeCookHref,
   buildRecipeHref,
   bookMenuOpen,
   bookName,
   bookRenameOpen,
   bookRenameValue,
-  bookType,
   canManageBook,
   canRemove,
   errorMessage,
@@ -1392,13 +1857,16 @@ function MobileRecipeBookDetailView({
   isLoadingMore,
   isSaving,
   items,
+  readerDetailsById,
   onDeleteRequest,
   onMenuToggle,
+  onPlannerAdd,
   onRemove,
   onRenameCancel,
   onRenameConfirm,
   onRenameStart,
   onRenameValueChange,
+  onSave,
   removeLabel,
   removingId,
   renderBookDeleteDialog,
@@ -1407,12 +1875,15 @@ function MobileRecipeBookDetailView({
   toast,
 }: {
   backHref: string;
+  buildRecipeCookHref: (
+    item: RecipeBookRecipeItem,
+    readerDetailState?: ReaderDetailState,
+  ) => string;
   buildRecipeHref: (recipeId: string) => string;
   bookMenuOpen: boolean;
   bookName: string;
   bookRenameOpen: boolean;
   bookRenameValue: string;
-  bookType: RecipeBookType;
   canManageBook: boolean;
   canRemove: boolean;
   errorMessage: string | null;
@@ -1420,13 +1891,16 @@ function MobileRecipeBookDetailView({
   isLoadingMore: boolean;
   isSaving: boolean;
   items: RecipeBookRecipeItem[];
+  readerDetailsById: Record<string, ReaderDetailState>;
   onDeleteRequest: () => void;
   onMenuToggle: () => void;
+  onPlannerAdd: (item: RecipeBookRecipeItem) => void;
   onRemove: (recipeId: string) => void;
   onRenameCancel: () => void;
   onRenameConfirm: () => void;
   onRenameStart: () => void;
   onRenameValueChange: (value: string) => void;
+  onSave: (item: RecipeBookRecipeItem) => void;
   removeLabel: string;
   removingId: string | null;
   renderBookDeleteDialog: () => React.ReactNode;
@@ -1435,12 +1909,16 @@ function MobileRecipeBookDetailView({
   toast: { message: string; tone: "success" | "error" } | null;
 }) {
   const [activeRecipeId, setActiveRecipeId] = useState(items[0]?.recipe_id ?? null);
+  const [readerMode, setReaderMode] = useState<"book" | "list">("book");
   const activeIndex = Math.max(
     0,
     items.findIndex((item) => item.recipe_id === activeRecipeId),
   );
   const activeItem = items[activeIndex] ?? items[0];
-  const activeRecipeHref = activeItem ? buildRecipeHref(activeItem.recipe_id) : null;
+  const activeReaderDetailState = activeItem
+    ? readerDetailsById[activeItem.recipe_id]
+    : undefined;
+  const visibleItems = readerMode === "list" ? items : activeItem ? [activeItem] : [];
 
   useEffect(() => {
     if (!items.some((item) => item.recipe_id === activeRecipeId)) {
@@ -1462,31 +1940,60 @@ function MobileRecipeBookDetailView({
         onMenuToggle={onMenuToggle}
         onRenameStart={onRenameStart}
       />
+      <div className="flex justify-end px-4 pt-3">
+        <MobileRecipeBookModeToggle
+          mode={readerMode}
+          onModeChange={setReaderMode}
+        />
+      </div>
       <MobileRecipeBookToc
         activeRecipeId={activeItem?.recipe_id ?? null}
         bookName={bookName}
-        bookType={bookType}
         items={items}
         onSelectRecipe={setActiveRecipeId}
       />
 
       <div
         aria-live="polite"
-        className="p-4"
+        className="p-4 pb-[calc(128px+env(safe-area-inset-bottom))]"
         data-testid="recipebook-detail-list"
         role="list"
       >
-        {activeItem ? (
-          <MobileRecipeBookRecipeCard
-            canRemove={canRemove}
-            item={activeItem}
-            onRemove={() => onRemove(activeItem.recipe_id)}
-            pageNumber={activeIndex + 1}
-            recipeHref={activeRecipeHref ?? buildRecipeHref(activeItem.recipe_id)}
-            removeLabel={removeLabel}
-            removing={removingId === activeItem.recipe_id}
-          />
-        ) : null}
+        <div className={readerMode === "list" ? "grid gap-4" : undefined}>
+          {visibleItems.map((item) => {
+            const itemIndex = Math.max(
+              0,
+              items.findIndex((candidate) => candidate.recipe_id === item.recipe_id),
+            );
+            const readerDetailState =
+              item.recipe_id === activeItem?.recipe_id
+                ? activeReaderDetailState
+                : readerDetailsById[item.recipe_id];
+
+            return readerMode === "list" ? (
+              <MobileRecipeBookListCard
+                item={item}
+                key={item.recipe_id}
+                pageNumber={itemIndex + 1}
+                recipeHref={buildRecipeHref(item.recipe_id)}
+              />
+            ) : (
+              <MobileRecipeBookRecipeCard
+                canRemove={canRemove}
+                item={item}
+                key={item.recipe_id}
+                onPlannerAdd={() => onPlannerAdd(item)}
+                onRemove={() => onRemove(item.recipe_id)}
+                onSave={() => onSave(item)}
+                pageNumber={itemIndex + 1}
+                recipeHref={buildRecipeCookHref(item, readerDetailState)}
+                readerDetailState={readerDetailState}
+                removeLabel={removeLabel}
+                removing={removingId === item.recipe_id}
+              />
+            );
+          })}
+        </div>
       </div>
       {isLoadingMore ? (
         <div className="flex justify-center py-4">
@@ -1568,7 +2075,7 @@ function MobileRecipeBookAppBar({
         </svg>
       </Link>
       <h1 className="max-w-[190px] truncate text-center text-[18px] font-extrabold leading-none text-[var(--brand)] min-[390px]:max-w-[230px]">
-        목차
+        {bookName}
       </h1>
       {canManageBook ? (
         <div className="absolute right-2 top-1/2 -translate-y-1/2">
@@ -1614,71 +2121,81 @@ function MobileRecipeBookAppBar({
   );
 }
 
+function MobileRecipeBookModeToggle({
+  mode,
+  onModeChange,
+}: {
+  mode: "book" | "list";
+  onModeChange: (mode: "book" | "list") => void;
+}) {
+  return (
+    <div
+      aria-label="상세 보기 방식"
+      className="mobile-recipebook-detail-mode-toggle grid w-[132px] grid-cols-2 rounded-[16px] p-1"
+      role="group"
+    >
+      <button
+        className={mode === "book" ? "is-active" : undefined}
+        onClick={() => onModeChange("book")}
+        type="button"
+      >
+        책
+      </button>
+      <button
+        className={mode === "list" ? "is-active" : undefined}
+        onClick={() => onModeChange("list")}
+        type="button"
+      >
+        목록
+      </button>
+    </div>
+  );
+}
+
 function MobileRecipeBookToc({
   activeRecipeId,
   bookName,
-  bookType,
   items,
   onSelectRecipe,
 }: {
   activeRecipeId: string | null;
   bookName: string;
-  bookType: RecipeBookType;
   items: RecipeBookRecipeItem[];
   onSelectRecipe: (recipeId: string) => void;
 }) {
-  const coverItem = items[0];
-  const coverImageSrc = coverItem
-    ? coverItem.thumbnail_url ?? getFallbackRecipeImage(coverItem.title)
-    : getFallbackRecipeImage(bookName);
-
   return (
     <section
       className="px-4 pb-2 pt-4"
       data-testid="recipebook-detail-header"
     >
-      <div className="mobile-recipebook-detail-toc-card rounded-[24px] p-3">
-        <div className="grid grid-cols-[92px_minmax(0,1fr)] gap-3">
-          <div className="mobile-recipebook-detail-cover relative overflow-hidden rounded-[18px_10px_10px_18px] p-3 pl-5">
-            <span
-              aria-hidden="true"
-              className="mobile-recipebook-detail-cover-image block aspect-[0.9] rounded-[12px] bg-cover bg-center"
-              style={{ backgroundImage: `url("${coverImageSrc.replace(/"/g, "%22")}")` }}
-            />
-          </div>
-          <div className="min-w-0">
-            <h2 className="line-clamp-2 text-[19px] font-black leading-[1.18] text-[var(--foreground)]">
-              {bookName}
-            </h2>
-            <p className="mt-2 text-[12px] font-extrabold leading-[1.35] text-[var(--text-3)]">
-              {items.length}개 레시피
-            </p>
-            <span className="mobile-recipebook-detail-badge mt-3 inline-flex rounded-full px-2.5 py-1 text-[11px] font-black leading-none">
-              {BOOK_BADGE_LABEL[bookType]}
-            </span>
-          </div>
+      <div className="mobile-toc-card mobile-recipebook-detail-toc-card">
+        <div className="mobile-toc-head">
+          <strong>목차</strong>
+          <span>{bookName} · {items.length}개 레시피</span>
         </div>
         <nav
-          className="mt-4 flex gap-2 overflow-x-auto pb-1"
+          className="mobile-toc-list mobile-recipebook-toc-scroll"
           aria-label={`${bookName} 목차`}
         >
           {items.map((item, index) => (
             <button
               aria-current={item.recipe_id === activeRecipeId ? "page" : undefined}
               className={[
-                "grid min-w-[94px] max-w-[118px] gap-1 rounded-[16px] border px-3 py-2 text-left text-[11px] font-extrabold leading-[1.25]",
+                "mobile-toc-row",
                 item.recipe_id === activeRecipeId
-                  ? "mobile-recipebook-detail-page-button-active"
-                  : "mobile-recipebook-detail-page-button text-[var(--text-2)]",
+                  ? "is-active mobile-recipebook-detail-page-button-active"
+                  : "mobile-recipebook-detail-page-button",
               ].join(" ")}
+              data-testid={`recipebook-mobile-toc-card-${item.recipe_id}`}
               key={item.recipe_id}
               onClick={() => onSelectRecipe(item.recipe_id)}
               type="button"
             >
-              <span className="text-[10px] opacity-80">
+              <span className="mobile-toc-index">
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <span className="line-clamp-2">{item.title}</span>
+              <span className="mobile-toc-title">{item.title}</span>
+              <span className="mobile-toc-page">{index + 1}쪽</span>
             </button>
           ))}
         </nav>
@@ -1690,19 +2207,21 @@ function MobileRecipeBookToc({
 function MobileRecipeBookRecipeCard({
   canRemove,
   item,
+  onPlannerAdd,
   pageNumber,
   recipeHref,
+  readerDetailState,
   onRemove,
+  onSave,
   removeLabel,
   removing,
-}: RecipeItemCardProps) {
+}: RecipeItemCardProps & {
+  readerDetailState?: ReaderDetailState;
+}) {
   const imageSrc = item.thumbnail_url ?? getFallbackRecipeImage(item.title);
   const metaItems = [
-    item.total_duration_text ?? null,
     typeof item.base_servings === "number" ? `${item.base_servings}인분` : null,
-    typeof item.view_count === "number"
-      ? `조회 ${formatRecipeBookMetric(item.view_count)}`
-      : null,
+    ...item.tags,
   ].filter((metaItem): metaItem is string => Boolean(metaItem));
 
   return (
@@ -1715,7 +2234,7 @@ function MobileRecipeBookRecipeCard({
       <div className="relative">
         <Image
           alt={item.title}
-          className="h-[190px] w-full object-cover"
+          className="h-[168px] w-full object-cover"
           height={476}
           src={imageSrc}
           unoptimized
@@ -1727,12 +2246,12 @@ function MobileRecipeBookRecipeCard({
         {canRemove ? (
           <button
             aria-label={`${item.title} ${removeLabel}`}
-            className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-[var(--danger)] text-[var(--text-inverse)] shadow-[0_8px_18px_var(--danger-soft)] disabled:opacity-60"
+            className="mobile-recipebook-recipe-remove-icon absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full disabled:opacity-60"
             disabled={removing}
             onClick={onRemove}
             type="button"
           >
-            {removing ? "..." : <TrashIcon />}
+            <RecipeBookTrashIcon />
           </button>
         ) : null}
       </div>
@@ -1751,47 +2270,102 @@ function MobileRecipeBookRecipeCard({
               </span>
             ))}
           </div>
-          {item.tags.length > 0 ? (
-            <p className="mt-3 text-[12px] font-bold leading-[1.4] text-[var(--text-3)]">
-              {item.tags.join(" · ")}
-            </p>
-          ) : null}
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div
+          className="mobile-recipebook-note-stack grid grid-cols-1 gap-3"
+          data-testid={`mobile-recipebook-note-stack-${item.recipe_id}`}
+        >
           <section className="mobile-recipebook-detail-note-warm rounded-[18px] p-3">
             <h3 className="text-[12px] font-black text-[var(--foreground)]">
               재료
             </h3>
-            <p className="mt-2 text-[12px] font-bold leading-[1.42] text-[var(--text-3)]">
-              상세에서 확인할 수 있어요.
-            </p>
+            <ReaderIngredientsContent
+              detailState={readerDetailState}
+              mobile
+            />
           </section>
           <section className="mobile-recipebook-detail-note-cool rounded-[18px] p-3">
             <h3 className="text-[12px] font-black text-[var(--foreground)]">
               만들기
             </h3>
-            <p className="mt-2 text-[12px] font-bold leading-[1.42] text-[var(--text-3)]">
-              상세에서 확인할 수 있어요.
-            </p>
+            <ReaderStepsContent
+              detailState={readerDetailState}
+              mobile
+            />
           </section>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          {/* TODO(recipebook-diary): replace this detail-route fallback with a
-             direct planner-add action once the reader has the planner-add contract. */}
-          <Link
-            className="mobile-recipebook-detail-planner-button flex h-12 items-center justify-center rounded-[16px] text-[13px] font-black"
-            href={recipeHref}
+        <div className="grid grid-cols-[52px_minmax(0,1fr)_52px] gap-2">
+          <button
+            aria-label="저장하기"
+            className="mobile-recipebook-detail-save-button flex h-11 items-center justify-center rounded-[16px] text-[13px] font-black"
+            onClick={onSave}
+            type="button"
           >
-            플래너에 추가
-          </Link>
+            <BookmarkIcon />
+            <span className="sr-only">저장하기</span>
+          </button>
           <Link
-            className="mobile-recipebook-detail-cook-button flex h-12 items-center justify-center rounded-[16px] text-[13px] font-black"
+            className="mobile-recipebook-detail-cook-button flex h-11 items-center justify-center rounded-[16px] text-[13px] font-black"
             href={recipeHref}
           >
             요리하기
           </Link>
+          <button
+            aria-label="플래너에 추가"
+            className="mobile-recipebook-detail-calendar-button flex h-11 items-center justify-center rounded-[16px] text-[13px] font-black"
+            onClick={onPlannerAdd}
+            type="button"
+          >
+            <CalendarIcon />
+            <span className="sr-only">플래너에 추가</span>
+          </button>
         </div>
       </div>
+    </article>
+  );
+}
+
+function MobileRecipeBookListCard({
+  item,
+  pageNumber,
+  recipeHref,
+}: Pick<RecipeItemCardProps, "item" | "pageNumber" | "recipeHref">) {
+  const imageSrc = item.thumbnail_url ?? getFallbackRecipeImage(item.title);
+  const metaItems = [
+    item.tags.length > 0 ? item.tags.join(" · ") : null,
+    item.total_duration_text ?? null,
+    typeof item.base_servings === "number" ? `${item.base_servings}인분` : null,
+  ].filter((metaItem): metaItem is string => Boolean(metaItem));
+
+  return (
+    <article
+      className="mobile-recipebook-list-card rounded-[22px]"
+      data-testid={`recipebook-mobile-list-card-${item.recipe_id}`}
+      role="listitem"
+    >
+      <Link className="grid grid-cols-[86px_minmax(0,1fr)] gap-3 p-3" href={recipeHref}>
+        <Image
+          alt={item.title}
+          className="h-[86px] w-[86px] rounded-[16px] object-cover"
+          height={172}
+          src={imageSrc}
+          unoptimized
+          width={172}
+        />
+        <div className="grid min-w-0 content-center gap-2">
+          <span className="mobile-recipebook-detail-page-number inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-black text-[var(--foreground)]">
+            {String(pageNumber ?? 1).padStart(2, "0")}쪽
+          </span>
+          <h2 className="line-clamp-2 text-[17px] font-black leading-[1.18] text-[var(--foreground)]">
+            {item.title}
+          </h2>
+          {metaItems.length > 0 ? (
+            <p className="line-clamp-1 text-[12px] font-bold text-[var(--text-3)]">
+              {metaItems.join(" · ")}
+            </p>
+          ) : null}
+        </div>
+      </Link>
     </article>
   );
 }
@@ -1922,29 +2496,53 @@ function RecipeBookDetailSkeleton({
           onMenuToggle={() => {}}
           onRenameStart={() => {}}
         />
-        <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5">
-          <div className="flex items-center gap-[14px]">
-            <Skeleton className="h-14 w-14 shrink-0 rounded-[var(--radius-card)]" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Skeleton className="h-5 w-36" />
-              <Skeleton className="h-4 w-20" />
+        <section className="px-4 pb-2 pt-4">
+          <div className="mobile-recipebook-detail-toc-card rounded-[24px] p-3">
+            <div className="flex items-end justify-between gap-3 px-1">
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-5 w-24" />
+              </div>
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+            <div className="mt-3 flex gap-2 overflow-hidden pb-1">
+              {[1, 2, 3].map((i) => (
+                <div
+                  className="mobile-recipebook-loading-toc-item grid min-w-[94px] gap-2 rounded-[16px] border px-3 py-2"
+                  key={i}
+                >
+                  <Skeleton className="h-3 w-7" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))}
             </div>
           </div>
         </section>
-        <div className="space-y-[10px] p-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              className="flex min-h-[82px] items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
-              key={i}
-            >
-              <Skeleton className="h-14 w-14 shrink-0 rounded-[var(--radius-control)]" />
-              <div className="min-w-0 flex-1 space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-28" />
-                <Skeleton className="h-3 w-36" />
+        <div className="p-4">
+          <div className="mobile-recipebook-page-card overflow-hidden rounded-[26px]">
+            <Skeleton className="h-[168px] w-full rounded-none" />
+            <div className="grid gap-4 p-4">
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-4 w-28" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="mobile-recipebook-detail-note-warm rounded-[18px] p-3">
+                  <Skeleton className="h-4 w-10" />
+                  <ReaderSectionSkeleton mobile />
+                </div>
+                <div className="mobile-recipebook-detail-note-cool rounded-[18px] p-3">
+                  <Skeleton className="h-4 w-12" />
+                  <ReaderSectionSkeleton mobile />
+                </div>
+              </div>
+              <div className="grid grid-cols-[52px_minmax(0,1fr)_52px] gap-2">
+                <Skeleton className="h-11 rounded-[16px]" />
+                <Skeleton className="h-11 rounded-[16px]" />
+                <Skeleton className="h-11 rounded-[16px]" />
               </div>
             </div>
-          ))}
+          </div>
         </div>
         <Wave1MobileBottomTab
           ariaLabel="레시피북 상세 하단 탭"
@@ -1982,7 +2580,9 @@ interface RecipeItemCardProps {
   recipeHref: string;
   removeLabel: string;
   removing: boolean;
+  onPlannerAdd?: () => void;
   onRemove: () => void;
+  onSave?: () => void;
 }
 
 function RecipeItemCard({
@@ -2036,34 +2636,46 @@ function DesktopRecipeBookReader({
   activeItem,
   bookName,
   buildRecipeHref,
+  buildRecipeCookHref,
   canRemove,
   children,
   items,
   mode,
   onModeChange,
+  onPlannerAdd,
   onRemove,
+  onSave,
   onSelectRecipe,
+  readerDetailsById,
   removeLabel,
   removingId,
 }: {
   activeIndex: number;
   activeItem: RecipeBookRecipeItem;
   bookName: string;
+  buildRecipeCookHref: (
+    item: RecipeBookRecipeItem,
+    readerDetailState?: ReaderDetailState,
+  ) => string;
   buildRecipeHref: (recipeId: string) => string;
   canRemove: boolean;
   children?: React.ReactNode;
   items: RecipeBookRecipeItem[];
   mode: "book" | "list";
   onModeChange: (mode: "book" | "list") => void;
+  onPlannerAdd: (item: RecipeBookRecipeItem) => void;
   onRemove: (recipeId: string) => void;
+  onSave: (item: RecipeBookRecipeItem) => void;
   onSelectRecipe: (recipeId: string) => void;
+  readerDetailsById: Record<string, ReaderDetailState>;
   removeLabel: string;
   removingId: string | null;
 }) {
-  const activeRecipeHref = buildRecipeHref(activeItem.recipe_id);
-  // TODO(recipebook-diary): replace this detail-route fallback with a direct
-  // planner-add action once the reader has the planner-add contract.
-  const plannerAddHref = activeRecipeHref;
+  const activeReaderDetailState = readerDetailsById[activeItem.recipe_id];
+  const activeRecipeCookHref = buildRecipeCookHref(
+    activeItem,
+    activeReaderDetailState,
+  );
 
   return (
     <div className="web-recipebook-reader">
@@ -2110,8 +2722,11 @@ function DesktopRecipeBookReader({
                 canRemove={canRemove}
                 item={activeItem}
                 onRemove={() => onRemove(activeItem.recipe_id)}
+                onPlannerAdd={() => onPlannerAdd(activeItem)}
+                onSave={() => onSave(activeItem)}
                 pageNumber={activeIndex + 1}
-                recipeHref={activeRecipeHref}
+                readerDetailState={activeReaderDetailState}
+                recipeHref={activeRecipeCookHref}
                 removeLabel={removeLabel}
                 removing={removingId === activeItem.recipe_id}
               />
@@ -2119,6 +2734,7 @@ function DesktopRecipeBookReader({
           </div>
         ) : null}
 
+        {mode === "book" ? (
         <div className="web-recipebook-page-controls">
           <div
             aria-label="페이지 선택"
@@ -2140,20 +2756,29 @@ function DesktopRecipeBookReader({
             ))}
           </div>
           <div className="web-recipebook-reader-actions">
-            <Link
+            <button
               className="web-recipebook-secondary-button"
-              href={plannerAddHref}
+              onClick={() => onSave(activeItem)}
+              type="button"
+            >
+              저장하기
+            </button>
+            <button
+              className="web-recipebook-secondary-button"
+              onClick={() => onPlannerAdd(activeItem)}
+              type="button"
             >
               플래너에 추가
-            </Link>
+            </button>
             <Link
               className="web-recipebook-primary-button"
-              href={activeRecipeHref}
+              href={activeRecipeCookHref}
             >
               요리하기
             </Link>
           </div>
         </div>
+        ) : null}
 
         {mode === "list" ? (
           <div className="web-recipebook-list-mode">
@@ -2182,23 +2807,34 @@ function DesktopRecipeBookReader({
 }
 
 function DesktopRecipeBookRecipePage({
-  item,
   canRemove,
+  item,
+  onRemove,
+  onPlannerAdd,
   pageNumber,
+  readerDetailState,
   recipeHref,
   removeLabel,
   removing,
-  onRemove,
-}: RecipeItemCardProps) {
+  onSave,
+}: Pick<
+  RecipeItemCardProps,
+  | "canRemove"
+  | "item"
+  | "onPlannerAdd"
+  | "onRemove"
+  | "onSave"
+  | "pageNumber"
+  | "recipeHref"
+  | "removeLabel"
+  | "removing"
+> & {
+  readerDetailState?: ReaderDetailState;
+}) {
   const pageLabel = pageNumber ?? 1;
-  const servings =
-    typeof item.base_servings === "number" ? `${item.base_servings}인분` : null;
-  const viewCount =
-    typeof item.view_count === "number" ? formatRecipeBookMetric(item.view_count) : "0";
   const metaItems = [
-    item.total_duration_text ?? null,
-    servings,
-    `조회 ${viewCount}`,
+    typeof item.base_servings === "number" ? `${item.base_servings}인분` : null,
+    ...item.tags,
   ].filter((metaItem): metaItem is string => Boolean(metaItem));
   const recipeImageUrl = item.thumbnail_url ?? getFallbackRecipeImage(item.title);
   const safeRecipeImageUrl = recipeImageUrl.replace(/"/g, "%22");
@@ -2210,6 +2846,17 @@ function DesktopRecipeBookRecipePage({
       id={`recipebook-recipe-${item.recipe_id}`}
       role="listitem"
     >
+      {canRemove ? (
+        <button
+          aria-label={`${item.title} ${removeLabel}`}
+          className="web-recipebook-recipe-remove-icon"
+          disabled={removing}
+          onClick={onRemove}
+          type="button"
+        >
+          <RecipeBookTrashIcon />
+        </button>
+      ) : null}
       <div className="web-recipebook-recipe-hero">
         <span
           aria-label={item.title}
@@ -2234,56 +2881,226 @@ function DesktopRecipeBookRecipePage({
               ))}
             </div>
           </div>
-          {canRemove ? (
-            <button
-              aria-label={`${item.title} ${removeLabel}`}
-              className="web-recipebook-reader-trash-button"
-              disabled={removing}
-              onClick={onRemove}
-              type="button"
-            >
-              {removing ? "..." : <TrashIcon />}
-            </button>
-          ) : null}
         </div>
         <div className="web-recipebook-recipe-columns">
           <section className="web-recipebook-note-section">
             <h3>재료</h3>
-            <p className="web-recipebook-note-empty">
-              레시피 상세에서 확인할 수 있어요.
-            </p>
+            <ReaderIngredientsContent detailState={readerDetailState} />
           </section>
           <section className="web-recipebook-note-section">
             <h3>만들기</h3>
-            <p className="web-recipebook-note-empty">
-              레시피 상세에서 확인할 수 있어요.
-            </p>
+            <ReaderStepsContent detailState={readerDetailState} />
           </section>
         </div>
-        <Link className="web-recipebook-reader-card-link" href={recipeHref}>
-          플래너에 추가
-        </Link>
+        <div className="web-recipebook-reader-card-actions">
+          <button
+            className="web-recipebook-reader-card-link"
+            onClick={onSave}
+            type="button"
+          >
+            저장하기
+          </button>
+          <button
+            className="web-recipebook-reader-card-link"
+            onClick={onPlannerAdd}
+            type="button"
+          >
+            플래너에 추가
+          </button>
+          <Link className="web-recipebook-reader-card-link" href={recipeHref}>
+            요리하기
+          </Link>
+        </div>
       </div>
     </article>
   );
 }
 
-function formatRecipeBookMetric(value: number) {
-  return new Intl.NumberFormat("ko-KR", {
-    notation: value >= 1000 ? "compact" : "standard",
-    maximumFractionDigits: 1,
-  }).format(value);
+function ReaderIngredientsContent({
+  detailState,
+  mobile = false,
+}: {
+  detailState?: ReaderDetailState;
+  mobile?: boolean;
+}) {
+  if (!detailState || detailState.status === "loading") {
+    return <ReaderSectionSkeleton mobile={mobile} />;
+  }
+
+  if (detailState.status === "error") {
+    return (
+      <p className={mobile ? "mt-2 text-[12px] font-bold leading-[1.42] text-[var(--danger)]" : "web-recipebook-note-empty"}>
+        {detailState.message}
+      </p>
+    );
+  }
+
+  if (detailState.data.ingredients.length === 0) {
+    return (
+      <p className={mobile ? "mt-2 text-[12px] font-bold leading-[1.42] text-[var(--text-3)]" : "web-recipebook-note-empty"}>
+        작성된 재료가 없어요.
+      </p>
+    );
+  }
+
+  return (
+    <ul className={mobile ? "mobile-recipebook-note-list" : "web-recipebook-note-list"}>
+      {detailState.data.ingredients.slice(0, mobile ? 4 : 8).map((ingredient) => (
+        <li
+          className={mobile ? "mobile-recipebook-note-row" : "web-recipebook-note-row"}
+          data-testid={`reader-ingredient-${ingredient.id}`}
+          key={ingredient.id}
+        >
+          <span
+            aria-hidden="true"
+            className={mobile ? "mobile-recipebook-note-dot" : "web-recipebook-note-dot"}
+            data-testid={`reader-ingredient-marker-${ingredient.id}`}
+          />
+          <span>{formatIngredientLine(ingredient)}</span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
-function TrashIcon() {
+function ReaderStepsContent({
+  detailState,
+  mobile = false,
+}: {
+  detailState?: ReaderDetailState;
+  mobile?: boolean;
+}) {
+  if (!detailState || detailState.status === "loading") {
+    return <ReaderSectionSkeleton mobile={mobile} />;
+  }
+
+  if (detailState.status === "error") {
+    return (
+      <p className={mobile ? "mt-2 text-[12px] font-bold leading-[1.42] text-[var(--danger)]" : "web-recipebook-note-empty"}>
+        {detailState.message}
+      </p>
+    );
+  }
+
+  if (detailState.data.steps.length === 0) {
+    return (
+      <p className={mobile ? "mt-2 text-[12px] font-bold leading-[1.42] text-[var(--text-3)]" : "web-recipebook-note-empty"}>
+        작성된 만들기가 없어요.
+      </p>
+    );
+  }
+
   return (
-    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+    <ol className={mobile ? "mobile-recipebook-note-list" : "web-recipebook-note-list"}>
+      {detailState.data.steps.slice(0, mobile ? 3 : 6).map((step, index) => (
+        <li
+          className={mobile ? "mobile-recipebook-note-row" : "web-recipebook-note-row"}
+          data-testid={`reader-step-${step.id}`}
+          key={step.id}
+        >
+          <span
+            className={
+              mobile ? "mobile-recipebook-step-number" : "web-recipebook-step-number"
+            }
+          >
+            {step.step_number ?? index + 1}
+          </span>
+          <span>{step.instruction}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ReaderSectionSkeleton({ mobile }: { mobile: boolean }) {
+  if (mobile) {
+    return (
+      <div className="mt-2 grid gap-1.5">
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-11/12" />
+        <Skeleton className="h-3 w-8/12" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-2">
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-11/12" />
+      <Skeleton className="h-4 w-8/12" />
+    </div>
+  );
+}
+
+function formatIngredientLine(ingredient: RecipeIngredient) {
+  if (ingredient.display_text) {
+    return ingredient.display_text;
+  }
+
+  if (ingredient.ingredient_type === "TO_TASTE") {
+    return `${ingredient.standard_name} 적당량`;
+  }
+
+  const amount = typeof ingredient.amount === "number" ? ingredient.amount : null;
+  const quantity = amount === null ? "" : `${amount}${ingredient.unit ?? ""}`;
+
+  return [ingredient.standard_name, quantity].filter(Boolean).join(" ");
+}
+
+function BookmarkIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="15"
+      viewBox="0 0 24 24"
+      width="15"
+    >
       <path
-        d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14"
+        d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5v16l-6-3.5-6 3.5v-16Z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path
+        d="M7 2.5v3M17 2.5v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
         stroke="currentColor"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth="1.9"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function RecipeBookTrashIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path
+        d="M3.75 6.25h16.5M9.25 6.25V4.4c0-.88.72-1.6 1.6-1.6h2.3c.88 0 1.6.72 1.6 1.6v1.85M18.25 6.25l-.72 13.1a2 2 0 0 1-2 1.9H8.47a2 2 0 0 1-2-1.9L5.75 6.25M10 10.25v6.25M14 10.25v6.25"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
       />
     </svg>
   );

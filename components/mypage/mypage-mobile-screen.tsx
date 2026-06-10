@@ -34,6 +34,7 @@ interface MypageStatItem {
 interface MypageMobileScreenProps {
   books: RecipeBookSummary[];
   bookCoverImages: Record<string, string | null>;
+  bookCoverUpdatedAt: Record<string, string | null>;
   createInputRef: React.RefObject<HTMLInputElement | null>;
   createName: string;
   customBooks: RecipeBookSummary[];
@@ -61,6 +62,8 @@ interface MypageMobileScreenProps {
   systemBooks: RecipeBookSummary[];
   onCancelCreate: () => void;
   onCancelRename: () => void;
+  onChangeColor: (book: RecipeBookSummary) => void;
+  onChangeCoverImage: (book: RecipeBookSummary) => void;
   onCloseDeleteDialog: () => void;
   onConfirmDelete: () => void;
   onConfirmRename: () => void;
@@ -90,6 +93,7 @@ const MOBILE_RECIPE_FALLBACK_IMAGES = [
 export function MypageMobileScreen({
   books,
   bookCoverImages,
+  bookCoverUpdatedAt,
   createInputRef,
   createName,
   customBooks,
@@ -117,6 +121,8 @@ export function MypageMobileScreen({
   systemBooks,
   onCancelCreate,
   onCancelRename,
+  onChangeColor,
+  onChangeCoverImage,
   onCloseDeleteDialog,
   onConfirmDelete,
   onConfirmRename,
@@ -141,7 +147,14 @@ export function MypageMobileScreen({
         : "마이페이지";
 
   return (
-    <div className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden">
+    <div
+      className={[
+        "min-h-dvh pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden",
+        surface === "recipebook"
+          ? "mobile-recipebooks-diary-root"
+          : "bg-[var(--surface-fill)]",
+      ].join(" ")}
+    >
       <MobileAppBar
         onBack={surface === "home" ? undefined : onSurfaceBack}
         titleTone={surface === "shopping" ? "default" : "brand"}
@@ -165,6 +178,7 @@ export function MypageMobileScreen({
       ) : surface === "recipebook" ? (
         <MobileRecipebookSurface
           bookCoverImages={bookCoverImages}
+          bookCoverUpdatedAt={bookCoverUpdatedAt}
           createInputRef={createInputRef}
           createName={createName}
           customBooks={customBooks}
@@ -174,13 +188,17 @@ export function MypageMobileScreen({
           isRenaming={isRenaming}
           menuOpenBookId={menuOpenBookId}
           menuRef={menuRef}
+          profile={profile}
           renameInputRef={renameInputRef}
           renameValue={renameValue}
           renamingBookId={renamingBookId}
+          savedRecipeCount={savedRecipeCount}
           showCreateInput={showCreateInput}
           systemBooks={systemBooks}
           onCancelCreate={onCancelCreate}
           onCancelRename={onCancelRename}
+          onChangeColor={onChangeColor}
+          onChangeCoverImage={onChangeCoverImage}
           onCloseDeleteDialog={onCloseDeleteDialog}
           onConfirmDelete={onConfirmDelete}
           onConfirmRename={onConfirmRename}
@@ -678,6 +696,7 @@ function MypageMenuIcon({ name }: { name: string }) {
 
 function MobileRecipebookSurface({
   bookCoverImages,
+  bookCoverUpdatedAt,
   createInputRef,
   createName,
   customBooks,
@@ -687,13 +706,17 @@ function MobileRecipebookSurface({
   isRenaming,
   menuOpenBookId,
   menuRef,
+  profile,
   renameInputRef,
   renameValue,
   renamingBookId,
+  savedRecipeCount,
   showCreateInput,
   systemBooks,
   onCancelCreate,
   onCancelRename,
+  onChangeColor,
+  onChangeCoverImage,
   onCloseDeleteDialog,
   onConfirmDelete,
   onConfirmRename,
@@ -707,6 +730,7 @@ function MobileRecipebookSurface({
   onShowCreateInput,
 }: {
   bookCoverImages: Record<string, string | null>;
+  bookCoverUpdatedAt: Record<string, string | null>;
   createInputRef: React.RefObject<HTMLInputElement | null>;
   createName: string;
   customBooks: RecipeBookSummary[];
@@ -716,13 +740,17 @@ function MobileRecipebookSurface({
   isRenaming: boolean;
   menuOpenBookId: string | null;
   menuRef: React.RefObject<HTMLDivElement | null>;
+  profile: UserProfileData | null;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
   renameValue: string;
   renamingBookId: string | null;
+  savedRecipeCount: number;
   showCreateInput: boolean;
   systemBooks: RecipeBookSummary[];
   onCancelCreate: () => void;
   onCancelRename: () => void;
+  onChangeColor: (book: RecipeBookSummary) => void;
+  onChangeCoverImage: (book: RecipeBookSummary) => void;
   onCloseDeleteDialog: () => void;
   onConfirmDelete: () => void;
   onConfirmRename: () => void;
@@ -736,21 +764,46 @@ function MobileRecipebookSurface({
   onShowCreateInput: () => void;
 }) {
   const allBooks = [...customBooks, ...systemBooks];
+  const nickname = profile?.nickname ?? "사용자";
+  const fallbackInitial = nickname.charAt(0) || "?";
 
   return (
     <main
-      className="mobile-recipebooks-diary-screen px-4 pb-8 pt-4"
+      className="mobile-recipebooks-diary-screen mobile-recipebooks-diary-screen-fit px-4 pb-8 pt-4"
       data-testid="recipebook-tab"
     >
       <section className="mobile-recipebooks-diary-hero rounded-[28px] p-4">
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <p className="mobile-recipebooks-diary-eyebrow text-[11px] font-black">
-              Recipe books
-            </p>
-            <h2 className="mt-1 text-[24px] font-black leading-[1.08] text-[var(--foreground)]">
-              나의 레시피북
-            </h2>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            {profile?.profile_image_url ? (
+              <Image
+                alt={`${nickname} 프로필`}
+                className="h-12 w-12 shrink-0 rounded-full object-cover"
+                height={48}
+                src={profile.profile_image_url}
+                unoptimized
+                width={48}
+              />
+            ) : (
+              <div
+                aria-label={`${nickname} 프로필`}
+                className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[var(--brand)] to-[var(--brand-deep)] text-[18px] font-black text-[var(--text-inverse)]"
+                role="img"
+              >
+                {fallbackInitial}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="mobile-recipebooks-diary-eyebrow text-[11px] font-black">
+                Recipe books
+              </p>
+              <h2 className="mt-1 text-[24px] font-black leading-[1.08] text-[var(--foreground)]">
+                나의 레시피북
+              </h2>
+              <p className="mt-1 text-[12px] font-extrabold leading-[1.35] text-[var(--text-3)]">
+                책 {allBooks.length}권 · 저장 {savedRecipeCount}개
+              </p>
+            </div>
           </div>
           <button
             aria-label="새 레시피북 만들기"
@@ -760,11 +813,6 @@ function MobileRecipebookSurface({
           >
             +
           </button>
-        </div>
-        <div className="mobile-recipebooks-tabs mt-4 grid grid-cols-3 rounded-full p-1 text-center text-[12px] font-black text-[var(--text-3)]">
-          <span className="mobile-recipebooks-tab-active rounded-full py-2">책장</span>
-          <span className="py-2">최근</span>
-          <span className="py-2">목록</span>
         </div>
       </section>
 
@@ -802,9 +850,25 @@ function MobileRecipebookSurface({
         </div>
       ) : null}
 
-      <div className="mt-4 grid grid-cols-2 gap-3" role="list">
-        {allBooks.map((book) =>
-          book.book_type === "custom" ? (
+      {customBooks.length > 0 ? (
+        <section
+          className="mt-4"
+          data-testid="mobile-custom-books-section"
+        >
+          <div className="mobile-recipebooks-section-head flex items-end justify-between px-1">
+            <h3 className="text-[16px] font-black leading-none text-[var(--foreground)]">
+              커스텀
+            </h3>
+            <span className="text-[11px] font-extrabold text-[var(--text-3)]">
+              {customBooks.length}권
+            </span>
+          </div>
+          <div
+            className="mobile-recipebooks-book-grid mobile-recipebooks-book-grid-wide mt-3 grid"
+            data-testid="mobile-custom-books-grid"
+            role="list"
+          >
+            {customBooks.map((book) => (
             <MobileCustomBookCard
               book={book}
               coverImageSrc={bookCoverImages[book.id] ?? null}
@@ -812,8 +876,11 @@ function MobileRecipebookSurface({
               isRenaming={renamingBookId === book.id}
               isRenamingLoading={isRenaming}
               key={book.id}
+              lastUpdatedLabel={formatBookLastUpdated(bookCoverUpdatedAt[book.id])}
               menuRef={menuRef}
               onCancelRename={onCancelRename}
+              onChangeColor={() => onChangeColor(book)}
+              onChangeCoverImage={() => onChangeCoverImage(book)}
               onConfirmRename={onConfirmRename}
               onMenuClose={onMenuClose}
               onMenuOpen={() => onMenuOpen(book.id)}
@@ -823,15 +890,37 @@ function MobileRecipebookSurface({
               renameInputRef={renameInputRef}
               renameValue={renameValue}
             />
-          ) : (
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section
+        className="mt-5"
+        data-testid="mobile-system-books-section"
+      >
+        <div className="mobile-recipebooks-section-head flex items-end justify-between px-1">
+          <h3 className="text-[16px] font-black leading-none text-[var(--foreground)]">
+            시스템
+          </h3>
+          <span className="text-[11px] font-extrabold text-[var(--text-3)]">
+            {systemBooks.length}권
+          </span>
+        </div>
+        <div
+          className="mobile-recipebooks-book-grid mobile-recipebooks-book-grid-wide mt-3 grid"
+          data-testid="mobile-system-books-grid"
+          role="list"
+        >
+          {systemBooks.map((book) => (
             <MobileSystemBookCard
               book={book}
               coverImageSrc={bookCoverImages[book.id] ?? null}
               key={book.id}
             />
-          ),
-        )}
-      </div>
+          ))}
+        </div>
+      </section>
 
       {deleteTarget ? (
         <MobileDeleteConfirmDialog
@@ -854,7 +943,7 @@ function MobileSystemBookCard({
 }) {
   return (
     <Link
-      className={`mobile-recipebook-book-card relative grid overflow-hidden rounded-[18px_10px_10px_18px] p-0 text-left ${getBookToneClasses(book)}`}
+      className={`mobile-recipebook-book-card mobile-recipebook-book-card-web-ratio relative grid overflow-hidden rounded-[18px_10px_10px_18px] p-0 text-left ${getBookToneClasses(book)}`}
       data-testid={`system-book-${book.book_type}`}
       href={buildBookDetailHref(book)}
       role="listitem"
@@ -863,7 +952,7 @@ function MobileSystemBookCard({
         book={book}
         imageSrc={coverImageSrc}
       />
-      <div className="mobile-recipebook-book-copy grid gap-1 px-3 pb-10 pt-3">
+      <div className="mobile-recipebook-book-copy grid gap-1">
         <strong className="line-clamp-2 text-[14px] font-black leading-[1.2] text-[var(--foreground)]">
           {book.name}
         </strong>
@@ -879,10 +968,13 @@ interface MobileCustomBookCardProps {
   isMenuOpen: boolean;
   isRenaming: boolean;
   isRenamingLoading: boolean;
+  lastUpdatedLabel: string;
   menuRef: React.RefObject<HTMLDivElement | null>;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
   renameValue: string;
   onCancelRename: () => void;
+  onChangeColor: () => void;
+  onChangeCoverImage: () => void;
   onConfirmRename: () => void;
   onMenuClose: () => void;
   onMenuOpen: () => void;
@@ -897,10 +989,13 @@ function MobileCustomBookCard({
   isMenuOpen,
   isRenaming,
   isRenamingLoading,
+  lastUpdatedLabel,
   menuRef,
   renameInputRef,
   renameValue,
   onCancelRename,
+  onChangeColor,
+  onChangeCoverImage,
   onConfirmRename,
   onMenuOpen,
   onRenameStart,
@@ -910,14 +1005,14 @@ function MobileCustomBookCard({
   return (
     <div className="relative" role="listitem">
       <div
-        className={`mobile-recipebook-book-card relative grid overflow-hidden rounded-[18px_10px_10px_18px] p-0 text-left ${getBookToneClasses(book)}`}
+        className={`mobile-recipebook-book-card mobile-recipebook-book-card-web-ratio relative grid overflow-hidden rounded-[18px_10px_10px_18px] p-0 text-left ${getBookToneClasses(book)}`}
         data-testid={`custom-book-${book.id}`}
       >
         <BookCoverThumb
           book={book}
           imageSrc={coverImageSrc}
         />
-        <div className="mobile-recipebook-book-copy grid gap-1 px-3 pb-10 pt-3">
+        <div className="mobile-recipebook-book-copy grid gap-1">
           {isRenaming ? (
             <>
               <input
@@ -959,10 +1054,12 @@ function MobileCustomBookCard({
               <strong className="line-clamp-2 text-[14px] font-black leading-[1.2] text-[var(--foreground)]">
               {book.name}
               </strong>
+              <span className="mt-1 block text-[11px] font-extrabold text-[var(--text-3)]">
+                {lastUpdatedLabel}
+              </span>
             </Link>
           )}
         </div>
-        <RecipeCountBadge count={book.recipe_count} />
         <button
           aria-haspopup="menu"
           aria-label={`${book.name} 옵션 메뉴`}
@@ -992,6 +1089,22 @@ function MobileCustomBookCard({
             이름 변경
           </button>
           <button
+            className="flex w-full items-center border-t border-[var(--surface-subtle)] px-3 py-2.5 text-left text-[13px] font-bold text-[var(--foreground)]"
+            onClick={onChangeColor}
+            role="menuitem"
+            type="button"
+          >
+            색상 변경
+          </button>
+          <button
+            className="flex w-full items-center border-t border-[var(--surface-subtle)] px-3 py-2.5 text-left text-[13px] font-bold text-[var(--foreground)]"
+            onClick={onChangeCoverImage}
+            role="menuitem"
+            type="button"
+          >
+            커버 이미지 변경
+          </button>
+          <button
             className="flex w-full items-center border-t border-[var(--surface-subtle)] px-3 py-2.5 text-left text-[13px] font-bold text-[var(--danger)]"
             onClick={onRequestDelete}
             role="menuitem"
@@ -1012,16 +1125,16 @@ function BookCoverThumb({
   book: RecipeBookSummary;
   imageSrc: string | null;
 }) {
-  const coverImageSrc = imageSrc ?? getMobileFallbackBookCover(book);
+  const coverImageSrc = book.cover_image_url ?? imageSrc ?? getMobileFallbackBookCover(book);
 
   return (
     <span
       aria-hidden="true"
-      className="block px-4 pb-3 pl-7 pt-5"
+      className="mobile-recipebook-cover-frame mobile-recipebook-cover-thumb block"
     >
       <Image
         alt=""
-        className="mobile-recipebook-cover-image aspect-[1.05] w-full rounded-[14px] object-cover"
+        className="mobile-recipebook-cover-image mobile-recipebook-cover-thumb-image object-cover"
         data-testid={`mobile-book-cover-${book.id}`}
         height={160}
         src={coverImageSrc}
@@ -1488,8 +1601,12 @@ function MobileShoppingStatusLegend() {
 }
 
 function getBookToneClasses(book: RecipeBookSummary) {
+  if (isMobileBookTone(book.cover_color_key)) {
+    return `mobile-recipebook-book-card-${book.cover_color_key}`;
+  }
+
   if (book.book_type === "custom") {
-    return "mobile-recipebook-book-card-sage";
+    return `mobile-recipebook-book-card-${getMobileCustomBookTone(book)}`;
   }
   if (book.book_type === "saved") {
     return "mobile-recipebook-book-card-sky";
@@ -1502,6 +1619,25 @@ function getBookToneClasses(book: RecipeBookSummary) {
   }
 
   return "mobile-recipebook-book-card-sand";
+}
+
+const MOBILE_RECIPE_BOOK_TONES = [
+  "sage",
+  "sky",
+  "coral",
+  "lavender",
+  "sand",
+] as const;
+
+function isMobileBookTone(value: unknown): value is (typeof MOBILE_RECIPE_BOOK_TONES)[number] {
+  return typeof value === "string"
+    && MOBILE_RECIPE_BOOK_TONES.includes(value as (typeof MOBILE_RECIPE_BOOK_TONES)[number]);
+}
+
+function getMobileCustomBookTone(book: RecipeBookSummary) {
+  return MOBILE_RECIPE_BOOK_TONES[
+    Math.abs(book.sort_order) % MOBILE_RECIPE_BOOK_TONES.length
+  ] ?? "sage";
 }
 
 function getMobileFallbackBookCover(book: RecipeBookSummary) {
@@ -1533,6 +1669,19 @@ function buildBookDetailHref(book: RecipeBookSummary) {
 
 function formatRecipeCount(count: number) {
   return `${Number.isFinite(count) ? count : 0}개`;
+}
+
+function formatBookLastUpdated(updatedAt?: string | null) {
+  if (!updatedAt) {
+    return "마지막 기록 없음";
+  }
+
+  const date = new Date(updatedAt);
+  if (Number.isNaN(date.getTime())) {
+    return "마지막 기록 없음";
+  }
+
+  return `마지막 기록 ${date.getMonth() + 1}월 ${date.getDate()}일`;
 }
 
 function formatMobileSavedRecipeMeta(recipe: RecipeBookRecipeItem) {

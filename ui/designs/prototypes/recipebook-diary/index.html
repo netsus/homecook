@@ -13,17 +13,24 @@
         --line-strong: #bfb2a3;
         --paper: #fffdf8;
         --paper-warm: #fbf3e6;
-        --paper-cool: #f3f8f5;
+        --paper-cool: #f1f9ff;
         --surface: #ffffff;
         --surface-soft: #f8f4ed;
-        --coral: #ed7470;
-        --coral-deep: #c84c48;
-        --sage: #4e8b71;
-        --sage-soft: #dfeee7;
-        --denim: #416e9b;
-        --denim-soft: #e2edf6;
-        --plum: #6d5578;
-        --sun: #f0b458;
+        --brand: #00a1ff;
+        --brand-deep: #0087d7;
+        --brand-fill: #00a1ff;
+        --brand-ink: #006ead;
+        --brand-line: #8bd2ff;
+        --brand-soft: rgba(0, 161, 255, 0.08);
+        --brand-soft-solid: #eaf7ff;
+        --coral: #e87d67;
+        --coral-deep: #c75d44;
+        --sage: #3f8a78;
+        --sage-soft: #e9f5ee;
+        --denim: #007fc8;
+        --denim-soft: var(--brand-soft-solid);
+        --plum: #566174;
+        --sun: #e5ad4f;
         --charcoal: #252321;
         --shadow: 0 22px 70px rgba(53, 38, 24, 0.16);
         --shadow-soft: 0 12px 34px rgba(53, 38, 24, 0.11);
@@ -44,7 +51,7 @@
         background:
           linear-gradient(90deg, rgba(37, 35, 33, 0.035) 1px, transparent 1px),
           linear-gradient(180deg, rgba(37, 35, 33, 0.035) 1px, transparent 1px),
-          linear-gradient(135deg, #fffdf8 0%, #f4f8f5 47%, #fff5ef 100%);
+          linear-gradient(135deg, #fffdf8 0%, #f1f9ff 47%, #fff8f2 100%);
         background-size: 32px 32px, 32px 32px, auto;
         color: var(--ink);
         font-family:
@@ -150,7 +157,7 @@
 
       .web-shell {
         background:
-          linear-gradient(90deg, rgba(237, 116, 112, 0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 161, 255, 0.07) 1px, transparent 1px),
           var(--paper);
         background-size: 34px 34px;
       }
@@ -178,7 +185,7 @@
         height: 34px;
         place-items: center;
         border-radius: var(--radius);
-        background: var(--coral);
+        background: var(--brand-fill);
         color: #fff;
         font-size: 17px;
         font-weight: 900;
@@ -226,7 +233,7 @@
         height: 32px;
         place-items: center;
         border-radius: 50%;
-        background: var(--plum);
+        background: var(--brand-fill);
         color: #fff;
         font-size: 13px;
         font-weight: 900;
@@ -326,9 +333,9 @@
       }
 
       .chip.is-active {
-        border-color: var(--coral);
-        background: #fff0ed;
-        color: var(--coral-deep);
+        border-color: var(--brand-line);
+        background: var(--brand-soft-solid);
+        color: var(--brand-ink);
       }
 
       .book-stack {
@@ -349,7 +356,7 @@
       .web-shelf-book {
         position: relative;
         display: grid;
-        min-height: 318px;
+        min-height: 366px;
         align-content: start;
         overflow: hidden;
         border: 1px solid rgba(37, 35, 33, 0.12);
@@ -359,9 +366,18 @@
         text-align: left;
       }
 
+      .web-shelf-select {
+        display: grid;
+        min-width: 0;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        text-align: left;
+      }
+
       .web-shelf-book.is-active,
       .web-shelf-book:hover {
-        border-color: var(--coral);
+        border-color: var(--brand-line);
         transform: translateY(-2px);
       }
 
@@ -426,6 +442,39 @@
         font-weight: 800;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      .web-shelf-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: auto;
+        border-top: 1px solid var(--line);
+        padding: 10px;
+      }
+
+      .shelf-action {
+        min-width: 0;
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #fff;
+        color: var(--ink-2);
+        font-size: 12px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .shelf-action:hover {
+        border-color: var(--brand-line);
+        background: var(--brand-soft-solid);
+        color: var(--brand-ink);
+      }
+
+      .shelf-action.is-danger:hover {
+        border-color: rgba(232, 125, 103, 0.36);
+        background: #fff5f2;
+        color: var(--coral-deep);
       }
 
       .book-row {
@@ -503,7 +552,7 @@
       }
 
       .book-count {
-        color: var(--coral-deep);
+        color: var(--brand-ink);
         font-size: 12px;
         font-weight: 900;
       }
@@ -572,7 +621,7 @@
       }
 
       .segmented button.is-active {
-        background: var(--charcoal);
+        background: var(--brand-fill);
         color: #fff;
       }
 
@@ -705,7 +754,7 @@
         place-items: center;
         border-radius: 50%;
         background: #fff;
-        color: var(--coral-deep);
+        color: var(--brand-ink);
         font-size: 12px;
       }
 
@@ -781,7 +830,7 @@
         align-items: center;
         justify-content: center;
         border-radius: 8px 8px 4px 4px;
-        background: var(--coral);
+        background: var(--brand-fill);
         color: #fff;
         font-size: 12px;
         font-weight: 900;
@@ -800,9 +849,9 @@
         min-height: 26px;
         align-items: center;
         border-radius: 999px;
-        background: var(--sage-soft);
+        background: var(--brand-soft-solid);
         padding: 0 9px;
-        color: var(--sage);
+        color: var(--brand-ink);
         font-size: 12px;
         font-weight: 900;
       }
@@ -865,8 +914,8 @@
       }
 
       .page-dot.is-active {
-        border-color: var(--coral);
-        background: var(--coral);
+        border-color: var(--brand-fill);
+        background: var(--brand-fill);
         color: #fff;
       }
 
@@ -886,8 +935,8 @@
       }
 
       .primary-button {
-        border: 1px solid var(--coral);
-        background: var(--coral);
+        border: 1px solid var(--brand-fill);
+        background: var(--brand-fill);
         color: #fff;
       }
 
@@ -967,7 +1016,7 @@
         align-items: start;
         padding: 22px 14px 24px;
         background:
-          linear-gradient(90deg, rgba(65, 110, 155, 0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 161, 255, 0.06) 1px, transparent 1px),
           var(--paper-cool);
         background-size: 28px 28px;
       }
@@ -1003,7 +1052,7 @@
 
       .app-bar h2 {
         margin: 0;
-        color: var(--coral-deep);
+        color: var(--brand-ink);
         font-size: 18px;
         font-weight: 900;
       }
@@ -1039,7 +1088,7 @@
       .mobile-profile .avatar {
         width: 48px;
         height: 48px;
-        background: var(--sage);
+        background: var(--brand-fill);
       }
 
       .mobile-profile strong,
@@ -1093,8 +1142,8 @@
       }
 
       .mobile-tabs button.is-active {
-        border-color: var(--charcoal);
-        background: var(--charcoal);
+        border-color: var(--brand-fill);
+        background: var(--brand-fill);
         color: #fff;
       }
 
@@ -1207,7 +1256,7 @@
       }
 
       .bottom-tab span.is-active {
-        color: var(--coral-deep);
+        color: var(--brand-ink);
       }
 
       .phone-screen.with-tab {
@@ -1215,11 +1264,8 @@
         grid-template-rows: auto minmax(0, 1fr) auto;
       }
 
-      .mobile-reader-cover {
+      .mobile-toc-card {
         display: grid;
-        grid-template-columns: 86px minmax(0, 1fr);
-        gap: 12px;
-        align-items: end;
         margin-bottom: 14px;
         border: 1px solid var(--line);
         border-radius: 8px;
@@ -1227,50 +1273,78 @@
         padding: 12px;
       }
 
-      .mobile-reader-cover .mini-book {
-        width: 76px;
-        height: 96px;
+      .mobile-toc-head {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
       }
 
-      .mobile-reader-cover h3 {
+      .mobile-toc-head strong {
         margin: 0;
         color: var(--ink);
-        font-size: 20px;
-        line-height: 1.16;
+        font-size: 18px;
+        line-height: 1.2;
       }
 
-      .mobile-reader-cover p {
-        margin: 7px 0 10px;
+      .mobile-toc-head span {
+        overflow: hidden;
         color: var(--muted);
         font-size: 12px;
         font-weight: 800;
-        line-height: 1.35;
+        text-align: right;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
-      .mobile-page-strip {
-        display: flex;
+      .mobile-toc-list {
+        display: grid;
+        gap: 7px;
+      }
+
+      .mobile-toc-list button {
+        display: grid;
+        grid-template-columns: 30px minmax(0, 1fr) auto;
+        align-items: center;
         gap: 8px;
-        overflow-x: auto;
-        margin: 0 -14px 12px;
-        padding: 0 14px 4px;
-        scrollbar-width: thin;
-      }
-
-      .mobile-page-strip button {
-        min-width: 92px;
         min-height: 44px;
         border: 1px solid var(--line);
         border-radius: var(--radius);
         background: #fff;
-        color: var(--muted);
+        padding: 0 10px;
+        color: var(--ink-2);
         font-size: 12px;
         font-weight: 900;
+        text-align: left;
       }
 
-      .mobile-page-strip button.is-active {
-        border-color: var(--coral);
-        background: #fff0ed;
-        color: var(--coral-deep);
+      .mobile-toc-list button.is-active {
+        border-color: var(--brand-line);
+        background: var(--brand-soft-solid);
+        color: var(--brand-ink);
+      }
+
+      .mobile-toc-index {
+        display: grid;
+        width: 26px;
+        height: 26px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--brand-soft-solid);
+        color: var(--brand-ink);
+        font-size: 11px;
+      }
+
+      .mobile-toc-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .mobile-toc-page {
+        color: var(--muted);
+        font-size: 11px;
       }
 
       .mobile-recipe-page {
@@ -1664,7 +1738,7 @@
                       />
                     </svg>
                   </button>
-                  <h2 id="mobileBookTitle">주말 한상 노트</h2>
+                  <h2>목차</h2>
                   <button class="app-icon" aria-label="옵션">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path
@@ -1678,15 +1752,13 @@
                   </button>
                 </header>
                 <section class="mobile-surface">
-                  <div class="mobile-reader-cover">
-                    <span class="mini-book" id="mobileMiniBook"></span>
-                    <div>
-                      <h3 id="mobileReaderTitle">주말 한상 노트</h3>
-                      <p id="mobileReaderMeta">18개 레시피 · 직접 만든 책</p>
-                      <span class="recipe-pill" id="mobileReaderPill">이번 주 3번 열람</span>
+                  <div class="mobile-toc-card">
+                    <div class="mobile-toc-head">
+                      <strong>목차</strong>
+                      <span id="mobileTocMeta">주말 한상 노트 · 18개 레시피</span>
                     </div>
+                    <div class="mobile-toc-list" id="mobileTocList"></div>
                   </div>
-                  <div class="mobile-page-strip" id="mobilePageStrip"></div>
                   <article class="mobile-recipe-page">
                     <img id="mobileRecipeImage" alt="" />
                     <div class="mobile-recipe-copy">
@@ -1747,16 +1819,16 @@
           <strong>모바일은 두 단계로 단순화</strong>
           <p>
             앱에서는 책장 화면과 책 상세 화면을 나눴습니다. 상세 안에서는
-            가로 페이지 스트립만 지역 스크롤로 제한해 전체 화면 흔들림을
-            피합니다.
+            상단에 목차를 먼저 보여주고, 선택한 레시피 내용을 바로 아래에서
+            읽게 해 전체 흐름을 단순하게 유지합니다.
           </p>
         </article>
         <article class="note">
           <strong>실서비스 연결은 기존 계약 유지</strong>
           <p>
             기존 레시피북 API의 책 목록, 레시피 목록, 레시피 상세 이동을 그대로
-            소비할 수 있게 설계했습니다. 커버 이미지는 첫 레시피 썸네일로
-            시작할 수 있습니다.
+            소비할 수 있게 설계했습니다. 웹 책장의 이름 변경과 삭제는 실제
+            구현에서 모달과 API로 연결하면 됩니다.
           </p>
         </article>
       </section>
@@ -1771,7 +1843,7 @@
           type: "custom",
           count: 18,
           last: "6월 7일",
-          color: "#4e8b71",
+          color: "#3f8a78",
           image:
             "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80",
           recipes: [
@@ -1826,7 +1898,7 @@
           type: "saved",
           count: 42,
           last: "6월 6일",
-          color: "#416e9b",
+          color: "#00A1FF",
           image:
             "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=80",
           recipes: [
@@ -1867,7 +1939,7 @@
           type: "my_added",
           count: 9,
           last: "6월 5일",
-          color: "#6d5578",
+          color: "#566174",
           image:
             "https://images.unsplash.com/photo-1495546968767-f0573cca821e?auto=format&fit=crop&w=900&q=80",
           recipes: [
@@ -1894,7 +1966,7 @@
           type: "liked",
           count: 25,
           last: "6월 4일",
-          color: "#ed7470",
+          color: "#e87d67",
           image:
             "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=900&q=80",
           recipes: [
@@ -1921,7 +1993,7 @@
           type: "custom",
           count: 14,
           last: "6월 2일",
-          color: "#f0b458",
+          color: "#e5ad4f",
           image:
             "https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?auto=format&fit=crop&w=900&q=80",
           recipes: [
@@ -1948,6 +2020,17 @@
 
       const $ = (selector) => document.querySelector(selector);
       const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+      const escapeHTML = (value) =>
+        String(value).replace(/[&<>"']/g, (character) => {
+          const entities = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+          return entities[character];
+        });
 
       function setBookVariables(element, book) {
         element.style.setProperty("--book-color", book.color);
@@ -1959,15 +2042,21 @@
         stack.innerHTML = books
           .map(
             (book) => `
-              <button class="web-shelf-book ${book.id === activeBook.id ? "is-active" : ""}" data-book="${book.id}" role="listitem">
-                <span class="web-shelf-cover" style="--book-color: ${book.color}; --book-image: url(${book.image})">
-                  <span>${book.count}개</span>
-                </span>
-                <span class="web-shelf-copy">
-                  <strong>${book.title}</strong>
-                  <span>${book.subtitle} · 마지막 기록 ${book.last}</span>
-                </span>
-              </button>
+              <article class="web-shelf-book ${book.id === activeBook.id ? "is-active" : ""}" role="listitem">
+                <button class="web-shelf-select" data-book="${book.id}" type="button">
+                  <span class="web-shelf-cover" style="--book-color: ${book.color}; --book-image: url(${book.image})">
+                    <span>${book.count}개</span>
+                  </span>
+                  <span class="web-shelf-copy">
+                    <strong>${escapeHTML(book.title)}</strong>
+                    <span>${escapeHTML(book.subtitle)} · 마지막 기록 ${book.last}</span>
+                  </span>
+                </button>
+                <div class="web-shelf-actions" aria-label="${escapeHTML(book.title)} 관리">
+                  <button class="shelf-action" data-rename-book="${book.id}" type="button">이름 변경</button>
+                  <button class="shelf-action is-danger" data-delete-book="${book.id}" type="button">삭제</button>
+                </div>
+              </article>
             `,
           )
           .join("");
@@ -1975,6 +2064,18 @@
         stack.querySelectorAll("[data-book]").forEach((button) => {
           button.addEventListener("click", () => {
             selectBook(button.dataset.book);
+          });
+        });
+
+        stack.querySelectorAll("[data-rename-book]").forEach((button) => {
+          button.addEventListener("click", () => {
+            renameBook(button.dataset.renameBook);
+          });
+        });
+
+        stack.querySelectorAll("[data-delete-book]").forEach((button) => {
+          button.addEventListener("click", () => {
+            deleteBook(button.dataset.deleteBook);
           });
         });
       }
@@ -1990,8 +2091,8 @@
                   <img src="${book.image}" alt="" />
                   <span>${book.count}개</span>
                 </span>
-                <strong>${book.title}</strong>
-                <em>${book.type === "custom" ? "내 책" : book.subtitle}</em>
+                <strong>${escapeHTML(book.title)}</strong>
+                <em>${book.type === "custom" ? "내 책" : escapeHTML(book.subtitle)}</em>
               </button>
             `,
           )
@@ -2045,18 +2146,21 @@
         });
       }
 
-      function renderMobileStrip() {
-        $("#mobilePageStrip").innerHTML = activeBook.recipes
+      function renderMobileToc() {
+        $("#mobileTocMeta").textContent = `${activeBook.title} · ${activeBook.count}개 레시피`;
+        $("#mobileTocList").innerHTML = activeBook.recipes
           .map(
             (recipe, index) => `
               <button class="${index === activePageIndex ? "is-active" : ""}" data-page="${index}">
-                ${recipe.page}
+                <span class="mobile-toc-index">${String(index + 1).padStart(2, "0")}</span>
+                <span class="mobile-toc-title">${escapeHTML(recipe.title)}</span>
+                <span class="mobile-toc-page">${recipe.page}</span>
               </button>
             `,
           )
           .join("");
 
-        $("#mobilePageStrip").querySelectorAll("[data-page]").forEach((button) => {
+        $("#mobileTocList").querySelectorAll("[data-page]").forEach((button) => {
           button.addEventListener("click", () => {
             selectPage(Number(button.dataset.page));
           });
@@ -2105,19 +2209,12 @@
         $("#webBookMeta").textContent = `${activeBook.count}개 레시피 · 마지막 기록 ${activeBook.last}`;
         $("#largeCoverTitle").textContent = activeBook.title;
         $("#largeCoverMeta").textContent = activeBook.subtitle;
-        $("#mobileBookTitle").textContent = activeBook.title;
-        $("#mobileReaderTitle").textContent = activeBook.title;
-        $("#mobileReaderMeta").textContent = `${activeBook.count}개 레시피 · ${
-          activeBook.type === "custom" ? "직접 만든 책" : activeBook.subtitle
-        }`;
-        $("#mobileReaderPill").textContent = `마지막 기록 ${activeBook.last}`;
         setBookVariables($("#largeCover"), activeBook);
-        setBookVariables($("#mobileMiniBook"), activeBook);
         renderBookStack();
         renderToc();
         renderDots();
         renderMobileBooks();
-        renderMobileStrip();
+        renderMobileToc();
         renderRecipeList();
         renderRecipe();
       }
@@ -2128,11 +2225,50 @@
         renderBook();
       }
 
+      function renameBook(bookId) {
+        const book = books.find((item) => item.id === bookId);
+        if (!book) return;
+
+        const nextTitle = window.prompt("새 레시피북 이름을 입력하세요.", book.title);
+        const normalizedTitle = nextTitle?.trim();
+        if (!normalizedTitle) return;
+
+        book.title = normalizedTitle.slice(0, 24);
+        if (activeBook.id === book.id) {
+          activeBook = book;
+        }
+        renderBook();
+      }
+
+      function deleteBook(bookId) {
+        if (books.length <= 1) {
+          window.alert("마지막 레시피북은 삭제할 수 없어요.");
+          return;
+        }
+
+        const bookIndex = books.findIndex((book) => book.id === bookId);
+        if (bookIndex < 0) return;
+
+        const book = books[bookIndex];
+        const shouldDelete = window.confirm(`'${book.title}' 레시피북을 삭제할까요?`);
+        if (!shouldDelete) return;
+
+        const isActiveBook = activeBook.id === bookId;
+        books.splice(bookIndex, 1);
+
+        if (isActiveBook) {
+          activeBook = books[Math.min(bookIndex, books.length - 1)] ?? books[0];
+          activePageIndex = 0;
+        }
+
+        renderBook();
+      }
+
       function selectPage(index) {
         activePageIndex = Math.max(0, Math.min(index, activeBook.recipes.length - 1));
         renderToc();
         renderDots();
-        renderMobileStrip();
+        renderMobileToc();
         renderRecipe();
       }
 

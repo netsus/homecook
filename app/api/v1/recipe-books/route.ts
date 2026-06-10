@@ -15,6 +15,7 @@ import {
 import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type {
+  RecipeBookCoverColorKey,
   RecipeBookCreateBody,
   RecipeBookCreateData,
   RecipeBookListData,
@@ -34,6 +35,8 @@ interface RecipeBookRow {
   name: string;
   book_type: RecipeBookType;
   sort_order: number;
+  cover_color_key?: RecipeBookCoverColorKey | null;
+  cover_image_url?: string | null;
 }
 
 interface RecipeBookItemRow {
@@ -57,6 +60,8 @@ interface RecipeBookCreateRow {
   name: string;
   book_type: "custom";
   sort_order: number;
+  cover_color_key?: RecipeBookCoverColorKey | null;
+  cover_image_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -113,6 +118,8 @@ interface RecipeBooksTable {
     user_id: string;
     name: string;
     book_type: "custom";
+    cover_color_key: RecipeBookCoverColorKey;
+    cover_image_url: string | null;
     sort_order: number;
   }): RecipeBooksInsertQuery;
 }
@@ -138,6 +145,56 @@ interface RecipeBookDbClient {
 
 function normalizeBookName(name: unknown) {
   return typeof name === "string" ? name.trim() : "";
+}
+
+const RECIPE_BOOK_COVER_COLORS = [
+  "sage",
+  "sky",
+  "coral",
+  "lavender",
+  "sand",
+] as const satisfies readonly RecipeBookCoverColorKey[];
+
+function isRecipeBookCoverColorKey(value: unknown): value is RecipeBookCoverColorKey {
+  return typeof value === "string"
+    && RECIPE_BOOK_COVER_COLORS.includes(value as RecipeBookCoverColorKey);
+}
+
+function getDefaultCoverColorKey(sortOrder: number): RecipeBookCoverColorKey {
+  return RECIPE_BOOK_COVER_COLORS[
+    Math.abs(sortOrder) % RECIPE_BOOK_COVER_COLORS.length
+  ] ?? "sage";
+}
+
+function normalizeOptionalCoverImageUrl(value: unknown) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.length > 2048) {
+    return undefined;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return undefined;
+    }
+  } catch {
+    return undefined;
+  }
+
+  return trimmed;
 }
 
 function getCurrentMaxSortOrder(rows: RecipeBookSortOrderRow[] | null) {
@@ -177,6 +234,8 @@ function toRecipeBookListData({
           likedCount: likes.length,
           myAddedCount: userRecipes.length,
         }),
+        cover_color_key: book.cover_color_key ?? null,
+        cover_image_url: book.cover_image_url ?? null,
         sort_order: book.sort_order,
       })),
   };
@@ -282,7 +341,7 @@ export async function GET(request: Request) {
 
   const booksQuery = dbClient
     .from("recipe_books")
-    .select("id, name, book_type, sort_order") as RecipeBooksSelectQuery;
+    .select("id, name, book_type, sort_order, cover_color_key, cover_image_url") as RecipeBooksSelectQuery;
   const booksResult = await booksQuery
     .eq("user_id", user.id)
     .order("sort_order", { ascending: true })
@@ -364,6 +423,8 @@ export async function POST(request: Request) {
   }
 
   const normalizedName = normalizeBookName(body.name);
+  const requestedCoverColorKey = body.cover_color_key;
+  const requestedCoverImageUrl = normalizeOptionalCoverImageUrl(body.cover_image_url);
 
   if (!normalizedName) {
     return fail("VALIDATION_ERROR", "레시피북 이름을 입력해주세요.", 422, [
@@ -374,6 +435,22 @@ export async function POST(request: Request) {
   if (normalizedName.length > 50) {
     return fail("VALIDATION_ERROR", "레시피북 이름은 50자를 넘길 수 없어요.", 422, [
       { field: "name", reason: "max_length" },
+    ]);
+  }
+
+  if (
+    requestedCoverColorKey !== undefined
+    && requestedCoverColorKey !== null
+    && !isRecipeBookCoverColorKey(requestedCoverColorKey)
+  ) {
+    return fail("VALIDATION_ERROR", "레시피북 색상을 확인해주세요.", 422, [
+      { field: "cover_color_key", reason: "invalid_enum" },
+    ]);
+  }
+
+  if (requestedCoverImageUrl === undefined) {
+    return fail("VALIDATION_ERROR", "커버 이미지 주소를 확인해주세요.", 422, [
+      { field: "cover_image_url", reason: "invalid_url" },
     ]);
   }
 
@@ -404,15 +481,18 @@ export async function POST(request: Request) {
   }
 
   const nextSortOrder = getCurrentMaxSortOrder(latestSortResult.data) + 1;
+  const coverColorKey = requestedCoverColorKey ?? getDefaultCoverColorKey(nextSortOrder);
   const createResult = await auth.dbClient
     .from("recipe_books")
     .insert({
       user_id: auth.user.id,
       name: normalizedName,
       book_type: "custom",
+      cover_color_key: coverColorKey,
+      cover_image_url: requestedCoverImageUrl,
       sort_order: nextSortOrder,
     })
-    .select("id, name, book_type, sort_order, created_at, updated_at")
+    .select("id, name, book_type, sort_order, cover_color_key, cover_image_url, created_at, updated_at")
     .maybeSingle();
 
   if (createResult.error || !createResult.data) {
@@ -425,6 +505,8 @@ export async function POST(request: Request) {
     book_type: "custom",
     recipe_count: 0,
     sort_order: createResult.data.sort_order,
+    cover_color_key: createResult.data.cover_color_key ?? coverColorKey,
+    cover_image_url: createResult.data.cover_image_url ?? null,
     created_at: createResult.data.created_at,
     updated_at: createResult.data.updated_at,
   };
