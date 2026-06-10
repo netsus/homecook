@@ -1,6 +1,6 @@
 # Acceptance Checklist: 33c-badges-quests-toasts-tutorial
 
-> README의 `Contract Evolution Required`는 Stage 2 전 별도 공식 문서 PR로 먼저 닫아야 한다.
+> README의 33c contract-evolution 항목은 Stage 2 전 공식 문서 PR merge로 먼저 닫아야 한다.
 > acceptance는 living closeout 문서다. 체크는 테스트, exploratory QA, real DB smoke, 실제 브라우저 확인처럼 evidence가 생긴 뒤에만 한다.
 > Stage 6 merge 시점에는 `Manual Only`를 제외한 In Scope acceptance 항목이 모두 체크되어 있어야 한다.
 > `Manual Only`에 남는 항목은 외부 서비스, live OAuth, 운영 승인처럼 자동화할 수 없는 것만 허용한다.

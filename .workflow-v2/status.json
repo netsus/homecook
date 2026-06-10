@@ -1583,7 +1583,7 @@
     {
       "id": "33c-badges-quests-toasts-tutorial",
       "preset": "vertical-slice-strict",
-      "branch": "docs/33c-badges-quests-toasts-tutorial",
+      "branch": "docs/33c-gamification-contract-evolution",
       "pr_path": null,
       "lifecycle": "planned",
       "approval_state": "not_started",
@@ -1594,7 +1594,7 @@
         "pnpm validate:workpack -- --slice 33c-badges-quests-toasts-tutorial",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs lock for badges, quests, XP toast, and tutorial quests. This slice is docs-gated and requires a separate official contract-evolution PR before Stage 2 implementation. closeout_phase=collecting"
+      "notes": "Stage 1 docs lock for badges, quests, XP toast, and tutorial quests. This contract-evolution branch updates official docs to v1.7.8/v1.5.15/v1.3.15/v1.3.13/v1.2.17; Stage 2 starts only after this PR merges. closeout_phase=collecting"
     }
   ]
 }
