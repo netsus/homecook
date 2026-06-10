@@ -155,6 +155,9 @@ ingredients ─< ingredient_synonyms
 ingredient_bundles ─< ingredient_bundle_items ──> ingredients
 cooking_methods (독립 마스터 테이블)
 
+auth.users ─── user_progress_events (1:N, user_id FK)
+       └─── user_progress_summary (1:1, user_id FK)
+
 auth.users ─── admin_members (1:1, user_id FK)
 auth.users ─<  admin_audit_logs (1:N, actor_admin_user_id FK)
 operational_events (독립 운영 이벤트 테이블, FK 없음)
@@ -1079,6 +1082,62 @@ CHECK (cooking_servings>0)
 
 ---
 
+
+# 11-2. 사용자 진도 (User Progress) `user-progress 예정`
+
+> `operational_events`는 시스템 운영 로그이며, 사용자 보상 truth로 재사용하지 않는다.
+> 사용자 진도는 전용 ledger/read model을 사용한다.
+
+## 11-2a. user_progress_events (전용 ledger)
+
+| 컬럼 | 타입 | 제약 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK | |
+| user_id | uuid | FK → users, NOT NULL | |
+| event_type | text | NOT NULL | `cooking_completed` / `shopping_completed` / `recipe_saved` / `custom_book_created` |
+| source_key | text | NOT NULL | 멱등성 키. 형식: `{event_type}:{source_id}` 또는 `recipe_saved:{user_id}:{recipe_id}` |
+| source_table | text | NOT NULL | source of truth 테이블명 (예: `leftover_dishes`, `shopping_lists`, `recipe_book_items`, `recipe_books`) |
+| source_id | uuid | NOT NULL | source 테이블의 PK |
+| xp_delta | integer | NOT NULL, CHECK (xp_delta > 0) | 이 이벤트로 획득한 XP |
+| occurred_at | timestamptz | NOT NULL | source row의 발생 시각 |
+| created_at | timestamptz | NOT NULL, DEFAULT now() | ledger 기록 시각 |
+
+- **UNIQUE**: `(user_id, event_type, source_key)` — 중복 award 방지
+- **인덱스**: `(user_id, created_at DESC)` — 사용자별 이벤트 이력
+
+### Canonical Event Map
+
+| event_type | source of truth | award moment | idempotency key | exclusions |
+| --- | --- | --- | --- | --- |
+| `cooking_completed` | `leftover_dishes.id` | planner/standalone cooking completion이 leftover_dishes row를 확정한 직후 | `cooking_completed:{leftover_dish_id}` | `cooking_sessions.status` 단독, `meals.status` 단독 기준 award 금지 |
+| `shopping_completed` | `shopping_lists.is_completed=true` and `completed_at IS NOT NULL` | 미완료 list가 완료로 전환된 직후 | `shopping_completed:{shopping_list_id}` | 이미 완료된 retry 재적립 금지 |
+| `recipe_saved` | user+recipe saved/custom membership transition `0 → ≥1` | 저장 성공 후 최초 savable membership이 생긴 직후 | `recipe_saved:{user_id}:{recipe_id}` | `liked`, `my_added`, 추가 saved/custom membership, duplicate insert, ledger 존재 후 unsave/resave 재적립 제외 |
+| `custom_book_created` | `recipe_books.book_type='custom'` | custom book INSERT 성공 직후 | `custom_book_created:{recipe_book_id}` | `my_added`/`saved`/`liked` bootstrap system books 제외 |
+
+### Backfill Policy
+
+- legacy backfill은 surviving rows 기준 lower-bound이다.
+- 삭제된 custom book, 저장 해제된 recipe membership, 삭제된 과거 활동은 복원됐다고 주장하지 않는다.
+- 33a 배포 이후 live writer로 기록되는 신규 활동부터 forward-accurate하다.
+
+## 11-2b. user_progress_summary (projection/read model)
+
+| 컬럼 | 타입 | 제약 | 설명 |
+| --- | --- | --- | --- |
+| user_id | uuid | PK, FK → users | |
+| total_xp | integer | NOT NULL, DEFAULT 0 | 누적 총 XP |
+| current_level | integer | NOT NULL, DEFAULT 1 | 현재 레벨 |
+| event_counts | jsonb | NOT NULL, DEFAULT '{}' | `{ cooking_completed, shopping_completed, recipe_saved_distinct_ever, custom_book_created }` |
+| last_event_at | timestamptz | NULL | 마지막 XP 이벤트 발생 시각 |
+| last_updated_at | timestamptz | NOT NULL, DEFAULT now() | projection 갱신 시각 |
+
+- XP curve와 level 계산은 server authority이다. 클라이언트에 XP curve 공식을 복제하지 않는다.
+- `event_counts.recipe_saved_distinct_ever`는 ledger 기준 distinct-ever이며, 현재 membership 수나 `recipes.save_count`가 아니다.
+- 33a는 season reset, streak multiplier, XP decay, leaderboard, 대표 배지 선택을 포함하지 않는다.
+
+
+---
+
 # 12. Admin Foundation `v1.3.8 신규`
 
 ## 12-1. admin_members
@@ -1316,6 +1375,8 @@ CHECK (cooking_servings>0)
 | cooking_methods | `(code)` | 조리방법 조회 |
 | youtube_extraction_candidates | `(extraction_session_id)` | 다중 요리 후보 조회 |
 | youtube_extraction_candidates | `(child_extraction_session_id)` | 선택 후보 child 세션 역조회 |
+| user_progress_events | `(user_id, event_type, source_key)` UNIQUE | 중복 award 방지 `user-progress 예정` |
+| user_progress_events | `(user_id, created_at DESC)` | 사용자별 이벤트 이력 `user-progress 예정` |
 | admin_members | `(user_id)` UNIQUE | 관리자 조회 `v1.3.8` |
 | operational_events | `(event_type)` | 이벤트 유형별 조회 `v1.3.8` |
 | operational_events | `(severity)` | 심각도별 조회 `v1.3.8` |
@@ -1337,7 +1398,7 @@ CHECK (cooking_servings>0)
 
 ---
 
-# 17. 전체 테이블 목록 (26개)
+# 17. 전체 테이블 목록 (28개)
 
 | # | 테이블 | 구분 |
 | --- | --- | --- |
@@ -1363,10 +1424,12 @@ CHECK (cooking_servings>0)
 | 20 | recipe_books | 레시피북 |
 | 21 | recipe_book_items | 레시피북 |
 | 22 | recipe_likes | 좋아요 |
-| 23 | admin_members | Admin Foundation `v1.3.8` |
-| 24 | operational_events | Admin Foundation `v1.3.8` |
-| 25 | admin_audit_logs | Admin Foundation `v1.3.8` |
-| 26 | youtube_extraction_candidates | YouTube 다중 후보 `2026-05-30` |
+| 23 | user_progress_events | 사용자 진도 `user-progress 예정` |
+| 24 | user_progress_summary | 사용자 진도 `user-progress 예정` |
+| 25 | admin_members | Admin Foundation `v1.3.8` |
+| 26 | operational_events | Admin Foundation `v1.3.8` |
+| 27 | admin_audit_logs | Admin Foundation `v1.3.8` |
+| 28 | youtube_extraction_candidates | YouTube 다중 후보 `2026-05-30` |
 
 ---
 

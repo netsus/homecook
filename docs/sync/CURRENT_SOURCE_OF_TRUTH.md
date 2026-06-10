@@ -13,6 +13,23 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 
+## User Progress Foundation Contract-Evolution `user-progress 예정`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.7 | §2-16 사용자 진도 추적 정책 추가: 4개 canonical event, 전용 ledger/read model, `GET /users/me/progress` 전용 API, soft-fail, survivor-only backfill, leaderboard/streak/loot 제외 |
+| 화면정의서 v1.5.14 | §19 MYPAGE §1-a 사용자 진도 표시(compact) 추가: progress subtitle/bar, soft-fail, 하드코딩 레벨 문구 제거, compact-only 제약 |
+| 유저플로우 v1.3.14 | §⑪-a 사용자 진도 확인 서브플로우 추가: MYPAGE 계정 섹션 내 progress compact display, XP source events, 에러 처리, 화면↔여정 매핑 갱신 |
+| DB v1.3.12 | §11-2 사용자 진도 테이블 2종 추가: `user_progress_events`(전용 ledger), `user_progress_summary`(projection/read model). canonical event map, backfill policy, 인덱스 추가. 테이블 수 26→28 |
+| API v1.2.16 | §12-9 `GET /users/me/progress` 추가. `GET /users/me`는 profile/settings-only 유지. 33a response shape 확정. 33a non-fields(badge/quest/toast/timeline) 명시. 엔드포인트 수 v1.2.17 예정: 61→62 (1개 추가) |
+
+> 이 변경은 `33a-user-progress-foundation`, `33b-mypage-progress-ui`, `33c-badges-quests-toasts-tutorial` 3개 slice의 선행 contract-evolution이다.
+> `GET /users/me`는 프로필/설정-only 계약을 유지한다. progress 필드를 `/users/me`에 섞지 않는다.
+> `operational_events`는 운영 로그이며, 사용자 보상 truth로 재사용하지 않는다.
+> legacy backfill은 surviving rows 기준 lower-bound이다. 삭제된 활동은 복원됐다고 주장하지 않는다.
+> 33a에 badge, quest, toast, tutorial, timeline, public backfill API는 포함하지 않는다.
+> 구현(Stage 2)은 이 contract-evolution이 main에 merge된 후에 시작한다.
+
 ## v1.7.6 / v1.5.13 / v1.3.13 → v1.7.7 / v1.5.14 / v1.3.14 변경 이력 (2026-06-09)
 
 | 문서 | 변경 내용 |

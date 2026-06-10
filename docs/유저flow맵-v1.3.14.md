@@ -1116,6 +1116,53 @@ MYPAGE → SETTINGS
 
 ---
 
+## ⑪-a 사용자 진도 확인 (User Progress) `user-progress 예정`
+
+> MYPAGE 계정 섹션 내 compact progress display — ⑪ 저장/관리 여정의 확장
+
+### 사전 조건
+
+- 로그인 완료 상태
+- `GET /users/me/progress` 호출 가능 (별도 fetch, MYPAGE fatal init에 연동하지 않음)
+
+### 플로우
+
+```
+MYPAGE (Bottom Tab) → 계정 섹션
+  └─ 진도 표시 (compact subtitle + progress bar)
+       ├─ 현재 레벨 + 레벨 타이틀
+       ├─ 진행도 바 (progress_percent)
+       └─ 다음 레벨까지 남은 XP (xp_to_next_level)
+
+[XP source events]
+  ├─ 요리 완료 (leftover_dishes 확정) → cooking_completed XP
+  ├─ 장보기 완료 (shopping_lists 완료 전환) → shopping_completed XP
+  ├─ 레시피 저장 (saved/custom membership 0→≥1) → recipe_saved XP
+  └─ 커스텀 레시피북 생성 → custom_book_created XP
+```
+
+### 에러 처리
+
+- progress API 실패 (5xx/network) → progress 영역만 soft-fail, MYPAGE 나머지 정상 표시
+- 401 → 기존 auth gate (fatal)
+- 0 XP 사용자 → 안정적 level 1 응답
+
+### 종료 조건
+
+- MYPAGE 진입 시 progress compact UI가 렌더링되면 종료
+
+### 관련 화면
+
+`MYPAGE` (계정 섹션 내 progress subtitle/bar)
+
+### 33a/33b/33c 범위
+
+- 33a: `GET /users/me/progress` backend + ledger/projection (UI 없음)
+- 33b: MYPAGE compact progress UI (badge/quest/toast 없음)
+- 33c: 배지, 퀘스트, XP toast, 튜토리얼 퀘스트
+
+---
+
 ## ⑫ 내부 운영 관리 (Admin Foundation)
 
 > 내부 운영자 전용 플로우 — 일반 사용자에게는 노출되지 않음
@@ -1188,7 +1235,7 @@ MYPAGE → SETTINGS
 | ATE_LIST                | ⑥ 남은요리                                    |
 | PANTRY                  | ⑦ 팬트리                                      |
 | PANTRY_BUNDLE_PICKER    | ⑦ 팬트리                                      |
-| MYPAGE                  | ⑪ 저장/관리                                   |
+| MYPAGE                  | ⑪ 저장/관리, ⑪-a 사용자 진도                   |
 | SETTINGS                | ⑪ 저장/관리                                   |
 | RECIPEBOOK_DETAIL       | ⑪ 저장/관리                                   |
 | ADMIN_DASHBOARD         | ⑫ 내부 운영 관리                               |
