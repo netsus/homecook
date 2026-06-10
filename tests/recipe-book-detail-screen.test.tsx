@@ -8,9 +8,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RecipeBookDetailScreen } from "@/components/recipebook/recipebook-detail-screen";
 
 const mockFetchRecipeBookRecipes = vi.fn();
+const mockFetchRecipeBookRecipeDetail = vi.fn();
 const mockRemoveRecipeBookRecipe = vi.fn();
 const mockRenameRecipeBook = vi.fn();
 const mockDeleteRecipeBook = vi.fn();
+const mockFetchSaveableRecipeBooks = vi.fn();
+const mockCreateCustomRecipeBook = vi.fn();
+const mockSaveRecipeToBooks = vi.fn();
+const mockRemoveRecipeFromBook = vi.fn();
+const mockFetchPlanner = vi.fn();
+const mockCreateMeal = vi.fn();
 const mockRouterReplace = vi.fn();
 const navigationMocks = vi.hoisted(() => ({
   searchParams: vi.fn(() => new URLSearchParams()),
@@ -19,6 +26,8 @@ const navigationMocks = vi.hoisted(() => ({
 vi.mock("@/lib/api/recipe", () => ({
   fetchRecipeBookRecipes: (...args: unknown[]) =>
     mockFetchRecipeBookRecipes(...args),
+  fetchRecipeBookRecipeDetail: (...args: unknown[]) =>
+    mockFetchRecipeBookRecipeDetail(...args),
   removeRecipeBookRecipe: (...args: unknown[]) =>
     mockRemoveRecipeBookRecipe(...args),
 }));
@@ -26,6 +35,25 @@ vi.mock("@/lib/api/recipe", () => ({
 vi.mock("@/lib/api/mypage", () => ({
   renameRecipeBook: (...args: unknown[]) => mockRenameRecipeBook(...args),
   deleteRecipeBook: (...args: unknown[]) => mockDeleteRecipeBook(...args),
+}));
+
+vi.mock("@/lib/api/recipe-save", () => ({
+  fetchSaveableRecipeBooks: (...args: unknown[]) =>
+    mockFetchSaveableRecipeBooks(...args),
+  createCustomRecipeBook: (...args: unknown[]) =>
+    mockCreateCustomRecipeBook(...args),
+  saveRecipeToBooks: (...args: unknown[]) => mockSaveRecipeToBooks(...args),
+  removeRecipeFromBook: (...args: unknown[]) =>
+    mockRemoveRecipeFromBook(...args),
+}));
+
+vi.mock("@/lib/api/planner", () => ({
+  fetchPlanner: (...args: unknown[]) => mockFetchPlanner(...args),
+}));
+
+vi.mock("@/lib/api/meal", () => ({
+  createMeal: (...args: unknown[]) => mockCreateMeal(...args),
+  isMealApiError: (error: unknown) => error instanceof Error && "status" in error,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -97,6 +125,7 @@ const MOCK_ITEMS = {
         title: "된장찌개",
         thumbnail_url: "https://example.com/img1.jpg",
         tags: ["한식", "찌개"],
+        base_servings: 2,
         added_at: "2026-04-30T09:00:00.000Z",
       },
       {
@@ -104,6 +133,7 @@ const MOCK_ITEMS = {
         title: "김치볶음밥",
         thumbnail_url: null,
         tags: ["한식"],
+        base_servings: 1,
         added_at: "2026-04-29T09:00:00.000Z",
       },
     ],
@@ -123,6 +153,85 @@ const MOCK_EMPTY = {
   error: null,
 };
 
+const MOCK_READER_DETAILS = {
+  "recipe-1": {
+    recipe_id: "recipe-1",
+    title: "된장찌개",
+    thumbnail_url: "https://example.com/img1.jpg",
+    tags: ["한식", "찌개"],
+    view_count: 12,
+    total_duration_seconds: 1500,
+    total_duration_text: "25분",
+    base_servings: 2,
+    added_at: "2026-04-30T09:00:00.000Z",
+    ingredients: [
+      {
+        id: "ingredient-1",
+        ingredient_id: "tofu",
+        standard_name: "두부",
+        amount: 1,
+        unit: "모",
+        ingredient_type: "QUANT" as const,
+        display_text: "두부 1모",
+        component_label: null,
+        scalable: true,
+        sort_order: 0,
+      },
+    ],
+    steps: [
+      {
+        id: "step-1",
+        step_number: 1,
+        instruction: "냄비에 물과 된장을 넣고 끓인다.",
+        component_label: null,
+        cooking_method: null,
+        ingredients_used: [],
+        heat_level: null,
+        duration_seconds: 90,
+        duration_text: "1분 30초",
+      },
+    ],
+  },
+  "recipe-2": {
+    recipe_id: "recipe-2",
+    title: "김치볶음밥",
+    thumbnail_url: null,
+    tags: ["한식"],
+    view_count: 8,
+    total_duration_seconds: 900,
+    total_duration_text: "15분",
+    base_servings: 1,
+    added_at: "2026-04-29T09:00:00.000Z",
+    ingredients: [
+      {
+        id: "ingredient-2",
+        ingredient_id: "kimchi",
+        standard_name: "김치",
+        amount: 200,
+        unit: "g",
+        ingredient_type: "QUANT" as const,
+        display_text: "김치 200g",
+        component_label: null,
+        scalable: true,
+        sort_order: 0,
+      },
+    ],
+    steps: [
+      {
+        id: "step-2",
+        step_number: 1,
+        instruction: "밥과 김치를 센 불에 볶는다.",
+        component_label: null,
+        cooking_method: null,
+        ingredients_used: [],
+        heat_level: "강",
+        duration_seconds: 180,
+        duration_text: "3분",
+      },
+    ],
+  },
+};
+
 describe("RecipeBookDetailScreen", () => {
   let originalIntersectionObserver: typeof globalThis.IntersectionObserver | undefined;
   let triggerIntersection: (() => void) | null = null;
@@ -138,13 +247,28 @@ describe("RecipeBookDetailScreen", () => {
     installMatchMedia(false);
     originalIntersectionObserver = globalThis.IntersectionObserver;
     mockFetchRecipeBookRecipes.mockReset();
+    mockFetchRecipeBookRecipeDetail.mockReset();
     mockRemoveRecipeBookRecipe.mockReset();
     mockRenameRecipeBook.mockReset();
     mockDeleteRecipeBook.mockReset();
+    mockFetchSaveableRecipeBooks.mockReset();
+    mockCreateCustomRecipeBook.mockReset();
+    mockSaveRecipeToBooks.mockReset();
+    mockRemoveRecipeFromBook.mockReset();
+    mockFetchPlanner.mockReset();
+    mockCreateMeal.mockReset();
     mockRouterReplace.mockReset();
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     mockFetchRecipeBookRecipes.mockResolvedValue(MOCK_ITEMS);
+    mockFetchRecipeBookRecipeDetail.mockImplementation(
+      (_bookId: string, recipeId: keyof typeof MOCK_READER_DETAILS) =>
+        Promise.resolve({
+          success: true,
+          data: MOCK_READER_DETAILS[recipeId] ?? MOCK_READER_DETAILS["recipe-1"],
+          error: null,
+        }),
+    );
     mockRenameRecipeBook.mockResolvedValue({
       id: "book-custom",
       name: "주말 모임",
@@ -153,6 +277,36 @@ describe("RecipeBookDetailScreen", () => {
       sort_order: 3,
     });
     mockDeleteRecipeBook.mockResolvedValue({ deleted: true });
+    mockFetchSaveableRecipeBooks.mockResolvedValue([
+      {
+        id: "book-saved",
+        name: "저장한 레시피",
+        book_type: "saved",
+        recipe_count: 2,
+        sort_order: 1,
+      },
+      {
+        id: "book-custom",
+        name: "주말 파티",
+        book_type: "custom",
+        recipe_count: 1,
+        sort_order: 3,
+      },
+    ]);
+    mockCreateCustomRecipeBook.mockResolvedValue({
+      id: "book-new",
+      name: "새 레시피북",
+      book_type: "custom",
+      recipe_count: 0,
+      sort_order: 4,
+    });
+    mockSaveRecipeToBooks.mockResolvedValue({ saved_book_ids: ["book-custom"] });
+    mockRemoveRecipeFromBook.mockResolvedValue({ removed: true });
+    mockFetchPlanner.mockResolvedValue({
+      columns: [{ id: "column-dinner", name: "저녁", sort_order: 0 }],
+      meals: [],
+    });
+    mockCreateMeal.mockResolvedValue({ id: "meal-1" });
   });
 
   // ─── Auth / Gate ────────────────────────────────────────────────────────────
@@ -233,6 +387,8 @@ describe("RecipeBookDetailScreen", () => {
     );
 
     expect(await screen.findByTestId("recipe-item-recipe-1")).toBeTruthy();
+    expect(await screen.findByText("두부 1모")).toBeTruthy();
+    expect(await screen.findByText("냄비에 물과 된장을 넣고 끓인다.")).toBeTruthy();
     expect(
       within(screen.getByTestId("recipe-item-recipe-1")).getByRole("heading", {
         name: "재료",
@@ -246,6 +402,12 @@ describe("RecipeBookDetailScreen", () => {
     expect(
       within(screen.getByTestId("recipe-item-recipe-1")).queryByText(/시간 미정/),
     ).toBeNull();
+    expect(
+      within(screen.getByTestId("recipe-item-recipe-1")).queryByText(
+        /레시피 상세에서 확인할 수 있어요/,
+      ),
+    ).toBeNull();
+    expect(mockFetchRecipeBookRecipeDetail).toHaveBeenCalledWith("book-1", "recipe-1");
     expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
 
@@ -278,17 +440,75 @@ describe("RecipeBookDetailScreen", () => {
 
     expect(await screen.findByTestId("recipe-item-recipe-1")).toBeTruthy();
 
-    expect(screen.getAllByRole("heading", { name: "목차" }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
     const toc = screen.getByTestId("recipebook-detail-header");
-    expect(
-      within(toc).getByRole("heading", { name: "저장한 레시피" }),
-    ).toBeTruthy();
-    expect(within(toc).getByText("2개 레시피")).toBeTruthy();
+    expect(within(toc).getByText("목차")).toBeTruthy();
+    expect(within(toc).queryByRole("heading", { name: "저장한 레시피" })).toBeNull();
+    expect(within(toc).queryByText("Page list")).toBeNull();
+    expect(within(toc).getByText("저장한 레시피 · 2개 레시피")).toBeTruthy();
     const firstTocButton = within(toc).getByRole("button", { name: /된장찌개/ });
     expect(firstTocButton.getAttribute("aria-current")).toBe("page");
+    expect(firstTocButton.className).toContain("mobile-toc-row");
     expect(screen.getByTestId("recipe-item-recipe-1").id).toBe(
       "recipebook-recipe-recipe-1",
     );
+    const card = screen.getByTestId("recipe-item-recipe-1");
+    expect(await within(card).findByText("두부 1모")).toBeTruthy();
+    const noteStack = within(card).getByTestId(
+      "mobile-recipebook-note-stack-recipe-1",
+    );
+    expect(noteStack.className).toContain("grid-cols-1");
+    expect(noteStack.className).not.toContain("grid-cols-2");
+    const ingredientRow = within(card).getByTestId(
+      "reader-ingredient-ingredient-1",
+    );
+    expect(
+      within(ingredientRow).getByTestId("reader-ingredient-marker-ingredient-1"),
+    ).toBeTruthy();
+    const stepRow = within(card).getByTestId("reader-step-step-1");
+    expect(within(stepRow).getByText("1")).toBeTruthy();
+    expect(within(stepRow).getByText("냄비에 물과 된장을 넣고 끓인다.")).toBeTruthy();
+    expect(within(card).getByText("2인분").className).toContain(
+      "mobile-recipebook-detail-meta-badge",
+    );
+    expect(within(card).getByText("한식").className).toContain(
+      "mobile-recipebook-detail-meta-badge",
+    );
+    expect(within(card).getByText("찌개").className).toContain(
+      "mobile-recipebook-detail-meta-badge",
+    );
+    expect(within(card).queryByText(/조회/)).toBeNull();
+    expect(within(card).queryByText("25분")).toBeNull();
+    expect(screen.getByTestId("recipebook-detail-list").className).toContain(
+      "pb-[calc(128px+env(safe-area-inset-bottom))]",
+    );
+    expect(within(card).getByRole("button", { name: "저장하기" })).toBeTruthy();
+    expect(within(card).getByRole("link", { name: "요리하기" })).toBeTruthy();
+    expect(within(card).getByRole("button", { name: "플래너에 추가" })).toBeTruthy();
+    expect(
+      within(card).getByRole("button", { name: "된장찌개 제거" }).className,
+    ).toContain("mobile-recipebook-recipe-remove-icon");
+
+    expect(within(toc).queryByRole("button", { name: "책" })).toBeNull();
+    expect(
+      within(screen.getByTestId("recipebook-detail-mobile")).getByRole("group", {
+        name: "상세 보기 방식",
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("recipebook-mobile-toc-card-recipe-1").className,
+    ).toContain("mobile-toc-row");
+
+    await userEvent.click(screen.getByRole("button", { name: "목록" }));
+    const listCard = await screen.findByTestId("recipebook-mobile-list-card-recipe-2");
+    expect(within(listCard).getByRole("heading", { name: "김치볶음밥" })).toBeTruthy();
+    expect(within(listCard).queryByRole("heading", { name: "재료" })).toBeNull();
+    expect(within(listCard).queryByRole("heading", { name: "만들기" })).toBeNull();
+    expect(within(listCard).queryByText("김치 200g")).toBeNull();
+    expect(screen.queryByRole("button", { name: "된장찌개 제거" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "책" }));
+    expect(screen.queryByTestId("recipe-item-recipe-2")).toBeNull();
   });
 
   it("shows no book-level rename/delete menu for system books", async () => {
@@ -304,6 +524,48 @@ describe("RecipeBookDetailScreen", () => {
     await screen.findByTestId("recipe-item-recipe-1");
 
     expect(screen.queryByLabelText("저장한 레시피 옵션 메뉴")).toBeNull();
+  });
+
+  it("opens the save modal directly from a reader recipe card", async () => {
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-saved"
+        bookName="저장한 레시피"
+        bookType="saved"
+        initialAuthenticated
+      />,
+    );
+
+    const card = await screen.findByTestId("recipe-item-recipe-1");
+    const user = userEvent.setup();
+
+    await user.click(within(card).getByRole("button", { name: "저장하기" }));
+
+    expect(
+      await screen.findByRole("dialog", { name: "레시피 저장" }),
+    ).toBeTruthy();
+    expect(mockFetchSaveableRecipeBooks).toHaveBeenCalled();
+  });
+
+  it("opens the planner modal directly from a reader recipe card", async () => {
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-saved"
+        bookName="저장한 레시피"
+        bookType="saved"
+        initialAuthenticated
+      />,
+    );
+
+    const card = await screen.findByTestId("recipe-item-recipe-1");
+    const user = userEvent.setup();
+
+    await user.click(within(card).getByRole("button", { name: "플래너에 추가" }));
+
+    expect(
+      await screen.findByRole("dialog", { name: "플래너에 추가" }),
+    ).toBeTruthy();
+    expect(mockFetchPlanner).toHaveBeenCalled();
   });
 
   it("renames a custom book from the book-level menu", async () => {
@@ -365,7 +627,7 @@ describe("RecipeBookDetailScreen", () => {
     });
   });
 
-  it("links recipe cards to RECIPE_DETAIL with the current book as the return target", async () => {
+  it("links recipe cook actions to standalone cook mode and returns through recipe detail", async () => {
     render(
       <RecipeBookDetailScreen
         bookId="book-my"
@@ -378,14 +640,24 @@ describe("RecipeBookDetailScreen", () => {
     await screen.findByTestId("recipe-item-recipe-1");
 
     const card1 = screen.getByTestId("recipe-item-recipe-1");
-    const link = card1.querySelector("a");
+    const link = within(card1).getByRole("link", { name: "요리하기" });
+    const href = link?.getAttribute("href") ?? "";
     expect(link).toBeTruthy();
-    expect(link?.getAttribute("href")).toContain("/recipe/recipe-1?");
-    expect(link?.getAttribute("href")).toContain(
-      "returnTo=%2Fmypage%2Frecipe-books%2Fbook-my",
+    expect(href).toContain(
+      "/cooking/recipes/recipe-1/cook-mode?servings=2",
     );
-    expect(link?.getAttribute("href")).toContain("type%3Dmy_added");
-    expect(link?.getAttribute("href")).toContain("restore=recipebook-tab");
+    const cookUrl = new URL(href, "https://homecook.test");
+    expect(cookUrl.searchParams.get("returnSurface")).toBe("recipe.detail");
+    const recipeReturnUrl = new URL(
+      cookUrl.searchParams.get("returnTo") ?? "",
+      "https://homecook.test",
+    );
+    expect(recipeReturnUrl.pathname).toBe("/recipe/recipe-1");
+    expect(recipeReturnUrl.searchParams.get("returnTo")).toContain(
+      "/mypage/recipe-books/book-my",
+    );
+    expect(recipeReturnUrl.searchParams.get("returnTo")).toContain("type=my_added");
+    expect(recipeReturnUrl.searchParams.get("restore")).toBe("recipebook-tab");
   });
 
   // ─── Empty ──────────────────────────────────────────────────────────────────
@@ -608,11 +880,15 @@ describe("RecipeBookDetailScreen", () => {
 
     await screen.findByTestId("recipe-item-recipe-1");
 
-    expect(screen.getByRole("button", { name: "된장찌개 제거" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "된장찌개 제거" }).className).toContain(
+      "web-recipebook-recipe-remove-icon",
+    );
     const user = userEvent.setup();
     const pageDots = screen.getByRole("group", { name: "페이지 선택" });
     await user.click(within(pageDots).getByRole("button", { name: "02쪽" }));
-    expect(screen.getByRole("button", { name: "김치볶음밥 제거" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "김치볶음밥 제거" }).className).toContain(
+      "web-recipebook-recipe-remove-icon",
+    );
   });
 
   it("shows remove button for liked books with label '좋아요 해제'", async () => {
@@ -627,11 +903,15 @@ describe("RecipeBookDetailScreen", () => {
 
     await screen.findByTestId("recipe-item-recipe-1");
 
-    expect(screen.getByRole("button", { name: "된장찌개 좋아요 해제" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "된장찌개 좋아요 해제" }).className,
+    ).toContain("web-recipebook-recipe-remove-icon");
     const user = userEvent.setup();
     const pageDots = screen.getByRole("group", { name: "페이지 선택" });
     await user.click(within(pageDots).getByRole("button", { name: "02쪽" }));
-    expect(screen.getByRole("button", { name: "김치볶음밥 좋아요 해제" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "김치볶음밥 좋아요 해제" }).className,
+    ).toContain("web-recipebook-recipe-remove-icon");
   });
 
   it("hides remove button for my_added books", async () => {
@@ -799,9 +1079,9 @@ describe("RecipeBookDetailScreen", () => {
     ).toBeTruthy();
   });
 
-  // ─── Header / Back link ─────────────────────────────────────────────────────
+  // ─── Header / Web navigation ───────────────────────────────────────────────
 
-  it("shows header with book name and back link to mypage", async () => {
+  it("shows the desktop reader header without the removed top navigation", async () => {
     render(
       <RecipeBookDetailScreen
         bookId="book-1"
@@ -815,12 +1095,13 @@ describe("RecipeBookDetailScreen", () => {
 
     const header = screen.getByTestId("recipebook-detail-header");
     expect(header).toBeTruthy();
-
-    const backLink = screen.getByLabelText("뒤로 가기");
-    expect(backLink.getAttribute("href")).toBe("/mypage");
+    expect(within(header).getByRole("heading", { name: "레시피북 리더" })).toBeTruthy();
+    expect(within(header).getByText(/저장한 레시피/)).toBeTruthy();
+    expect(screen.queryByLabelText("뒤로 가기")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "레시피북 경로" })).toBeNull();
   });
 
-  it("preserves mypage recipebook return context in the desktop breadcrumb", async () => {
+  it("does not render the old desktop breadcrumb even with mypage return context", async () => {
     navigationMocks.searchParams.mockReturnValue(
       new URLSearchParams({
         restore: "recipebook-tab",
@@ -840,13 +1121,11 @@ describe("RecipeBookDetailScreen", () => {
 
     await screen.findByTestId("recipe-item-recipe-1");
 
-    const backLink = screen.getByLabelText("뒤로 가기");
-    expect(backLink.getAttribute("href")).toBe(
-      "/mypage?returnSurface=mypage.recipebooks&restore=recipebook-tab",
-    );
+    expect(screen.queryByLabelText("뒤로 가기")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "레시피북 경로" })).toBeNull();
   });
 
-  it("ignores stale return context in the desktop mypage breadcrumb", async () => {
+  it("keeps stale return context out of the removed desktop breadcrumb", async () => {
     navigationMocks.searchParams.mockReturnValue(
       new URLSearchParams({
         restore: "recipebook-tab",
@@ -866,7 +1145,7 @@ describe("RecipeBookDetailScreen", () => {
 
     await screen.findByTestId("recipe-item-recipe-1");
 
-    const backLink = screen.getByLabelText("뒤로 가기");
-    expect(backLink.getAttribute("href")).toBe("/mypage");
+    expect(screen.queryByLabelText("뒤로 가기")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "레시피북 경로" })).toBeNull();
   });
 });

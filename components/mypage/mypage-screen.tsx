@@ -36,6 +36,7 @@ import {
   PlannerAddSheet,
   type PlannerAddSheetState,
 } from "@/components/recipe/planner-add-sheet";
+import { RecipeBookDetailScreen } from "@/components/recipebook/recipebook-detail-screen";
 import { ShoppingDetailScreen } from "@/components/shopping/shopping-detail-screen";
 import { ContentState } from "@/components/shared/content-state";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
@@ -68,6 +69,7 @@ import {
   isMypageApiError,
   logout,
   renameRecipeBook,
+  updateRecipeBook,
   updateNickname,
   updateSettings,
   type UserProfileData,
@@ -98,7 +100,11 @@ import {
 } from "@/lib/navigation/mypage-return-state";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
-import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
+import type {
+  RecipeBookCoverColorKey,
+  RecipeBookRecipeItem,
+  RecipeBookSummary,
+} from "@/types/recipe";
 import type {
   LeftoverDishStatus,
   LeftoverListItemData,
@@ -186,19 +192,6 @@ function formatProviderLabel(provider?: UserProfileData["social_provider"]) {
   return "소셜 로그인";
 }
 
-function buildMypageRecipeBookDetailHref(book: RecipeBookSummary) {
-  const params = new URLSearchParams({
-    type: book.book_type,
-    name: book.name,
-  });
-
-  return buildReturnHref(`/mypage/recipe-books/${book.id}?${params.toString()}`, {
-    restore: "recipebook-tab",
-    returnSurface: "mypage.recipebooks",
-    returnTo: "/mypage",
-  });
-}
-
 function buildMypageLeftoverRecipeHref(
   recipeId: string,
   tabKind: LeftoverDishStatus,
@@ -282,6 +275,8 @@ export function MypageScreen({
   const [savedRecipesState, setSavedRecipesState] =
     useState<SavedRecipesState>("idle");
   const [savedRecipesBookId, setSavedRecipesBookId] = useState<string | null>(null);
+  const [selectedRecipeBook, setSelectedRecipeBook] =
+    useState<RecipeBookSummary | null>(null);
 
   // Shopping history
   const [shoppingItems, setShoppingItems] = useState<ShoppingListHistoryItem[]>([]);
@@ -339,6 +334,11 @@ export function MypageScreen({
   const [isCreating, setIsCreating] = useState(false);
   const [createName, setCreateName] = useState("");
   const [showCreateInput, setShowCreateInput] = useState(false);
+  const [colorTarget, setColorTarget] = useState<RecipeBookSummary | null>(null);
+  const [coverImageTarget, setCoverImageTarget] = useState<RecipeBookSummary | null>(null);
+  const [coverImageValue, setCoverImageValue] = useState("");
+  const [isUpdatingBookCover, setIsUpdatingBookCover] = useState(false);
+  const [bookCoverError, setBookCoverError] = useState<string | null>(null);
 
   // Toast
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
@@ -415,6 +415,10 @@ export function MypageScreen({
   }, []);
 
   const switchDesktopTab = useCallback((tab: MypageTab) => {
+    if (tab !== "recipebooks") {
+      setSelectedRecipeBook(null);
+    }
+
     if (tab === "shopping" && activeTab === "shopping" && selectedShoppingItem) {
       setSelectedShoppingItem(null);
       window.scrollTo(0, 0);
@@ -914,8 +918,13 @@ export function MypageScreen({
     if (!trimmed) return;
     setIsRenaming(true);
     try {
-      await renameRecipeBook(renamingBookId, trimmed);
+      const updatedBook = await renameRecipeBook(renamingBookId, trimmed);
       await loadRecipeBooks();
+      setSelectedRecipeBook((currentBook) =>
+        currentBook?.id === updatedBook.id
+          ? { ...currentBook, ...updatedBook }
+          : currentBook,
+      );
       setRenamingBookId(null);
       setRenameValue("");
       showToast("이름을 변경했어요", "success");
@@ -932,6 +941,9 @@ export function MypageScreen({
     try {
       await deleteRecipeBook(deleteTarget.id);
       await loadRecipeBooks();
+      if (selectedRecipeBook?.id === deleteTarget.id) {
+        setSelectedRecipeBook(null);
+      }
       setDeleteTarget(null);
       showToast("삭제했어요", "success");
     } catch {
@@ -939,7 +951,95 @@ export function MypageScreen({
     } finally {
       setIsDeleting(false);
     }
-  }, [deleteTarget, loadRecipeBooks, showToast]);
+  }, [deleteTarget, loadRecipeBooks, selectedRecipeBook?.id, showToast]);
+
+  const applyUpdatedBook = useCallback((updatedBook: RecipeBookSummary) => {
+    setBooks((currentBooks) =>
+      currentBooks.map((book) =>
+        book.id === updatedBook.id
+          ? {
+              ...book,
+              ...updatedBook,
+              recipe_count: updatedBook.recipe_count ?? book.recipe_count,
+            }
+          : book,
+      ),
+    );
+    setSelectedRecipeBook((currentBook) =>
+      currentBook?.id === updatedBook.id
+        ? { ...currentBook, ...updatedBook }
+        : currentBook,
+    );
+    setBookCoverImages((currentImages) => {
+      const nextImages = { ...currentImages };
+
+      if (updatedBook.cover_image_url) {
+        nextImages[updatedBook.id] = updatedBook.cover_image_url;
+        bookCoverLoadedIdsRef.current.add(updatedBook.id);
+      } else if (updatedBook.cover_image_url === null) {
+        delete nextImages[updatedBook.id];
+        bookCoverLoadedIdsRef.current.delete(updatedBook.id);
+      }
+
+      return nextImages;
+    });
+  }, []);
+
+  const handleBookColorUpdate = useCallback(async (colorKey: RecipeBookCoverColorKey) => {
+    if (!colorTarget || isUpdatingBookCover) return;
+
+    setIsUpdatingBookCover(true);
+    setBookCoverError(null);
+
+    try {
+      const updatedBook = await updateRecipeBook(colorTarget.id, {
+        cover_color_key: colorKey,
+      });
+      applyUpdatedBook(updatedBook);
+      setColorTarget(null);
+      showToast("레시피북 색상을 변경했어요", "success");
+    } catch (error) {
+      setBookCoverError(
+        isMypageApiError(error) ? error.message : "색상 변경에 실패했어요",
+      );
+    } finally {
+      setIsUpdatingBookCover(false);
+    }
+  }, [applyUpdatedBook, colorTarget, isUpdatingBookCover, showToast]);
+
+  const handleBookCoverImageUpdate = useCallback(async (nextImageUrl?: string | null) => {
+    if (!coverImageTarget || isUpdatingBookCover) return;
+
+    setIsUpdatingBookCover(true);
+    setBookCoverError(null);
+
+    try {
+      const normalizedImageUrl =
+        nextImageUrl === undefined ? coverImageValue.trim() || null : nextImageUrl;
+      const updatedBook = await updateRecipeBook(coverImageTarget.id, {
+        cover_image_url: normalizedImageUrl,
+      });
+      applyUpdatedBook(updatedBook);
+      setCoverImageTarget(null);
+      setCoverImageValue("");
+      showToast(
+        normalizedImageUrl ? "커버 이미지를 변경했어요" : "커버 이미지를 삭제했어요",
+        "success",
+      );
+    } catch (error) {
+      setBookCoverError(
+        isMypageApiError(error) ? error.message : "커버 이미지 변경에 실패했어요",
+      );
+    } finally {
+      setIsUpdatingBookCover(false);
+    }
+  }, [
+    applyUpdatedBook,
+    coverImageTarget,
+    coverImageValue,
+    isUpdatingBookCover,
+    showToast,
+  ]);
 
   const loadPlannerColumns = useCallback(async () => {
     setPlannerAddSheetState("loading-columns");
@@ -1270,6 +1370,7 @@ export function MypageScreen({
 
     const candidates = books.filter(
       (book) =>
+        !book.cover_image_url &&
         book.recipe_count > 0 &&
         !bookCoverLoadedIdsRef.current.has(book.id) &&
         !bookCoverLoadingIdsRef.current.has(book.id),
@@ -1416,6 +1517,37 @@ export function MypageScreen({
       variant="recipe-detail"
     />
   );
+  const bookCoverDialogs = (
+    <>
+      {colorTarget ? (
+        <BookColorDialog
+          currentColor={getBookTone(colorTarget)}
+          disabled={isUpdatingBookCover}
+          errorMessage={bookCoverError}
+          onCancel={() => {
+            setColorTarget(null);
+            setBookCoverError(null);
+          }}
+          onSelectColor={(colorKey) => void handleBookColorUpdate(colorKey)}
+        />
+      ) : null}
+      {coverImageTarget ? (
+        <BookCoverImageDialog
+          disabled={isUpdatingBookCover}
+          errorMessage={bookCoverError}
+          imageUrl={coverImageValue}
+          onCancel={() => {
+            setCoverImageTarget(null);
+            setCoverImageValue("");
+            setBookCoverError(null);
+          }}
+          onChangeImageUrl={setCoverImageValue}
+          onClearImage={() => void handleBookCoverImageUpdate(null)}
+          onConfirm={() => void handleBookCoverImageUpdate()}
+        />
+      ) : null}
+    </>
+  );
 
   // --- Render states ---
 
@@ -1508,6 +1640,7 @@ export function MypageScreen({
           customBooks={customBooks}
           deleteTarget={deleteTarget}
           bookCoverImages={bookCoverImages}
+          bookCoverUpdatedAt={bookCoverUpdatedAt}
           isCreating={isCreating}
           isDeleting={isDeleting}
           isLoadingMore={isLoadingMore}
@@ -1536,6 +1669,17 @@ export function MypageScreen({
           onCancelRename={() => {
             setRenamingBookId(null);
             setRenameValue("");
+          }}
+          onChangeColor={(book) => {
+            setColorTarget(book);
+            setBookCoverError(null);
+            setMenuOpenBookId(null);
+          }}
+          onChangeCoverImage={(book) => {
+            setCoverImageTarget(book);
+            setCoverImageValue(book.cover_image_url ?? bookCoverImages[book.id] ?? "");
+            setBookCoverError(null);
+            setMenuOpenBookId(null);
           }}
           onCloseDeleteDialog={() => setDeleteTarget(null)}
           onConfirmDelete={handleDeleteBook}
@@ -1596,6 +1740,7 @@ export function MypageScreen({
             saveDisabled={nicknameSaveDisabled}
           />
         ) : null}
+        {bookCoverDialogs}
       </>
     );
   }
@@ -1701,7 +1846,14 @@ export function MypageScreen({
           </WebTabButton>
         </WebTabs>
 
-        <section className="web-mypage-panel" role="tabpanel">
+        <section
+          className={
+            activeTab === "recipebooks"
+              ? "web-mypage-panel web-mypage-panel-recipebooks"
+              : "web-mypage-panel"
+          }
+          role="tabpanel"
+        >
           {activeTab === "saved" ? (
             <SavedRecipesSurface
               savedRecipes={savedRecipes}
@@ -1813,6 +1965,17 @@ export function MypageScreen({
                 setRenamingBookId(null);
                 setRenameValue("");
               }}
+              onChangeColor={(book) => {
+                setColorTarget(book);
+                setBookCoverError(null);
+                setMenuOpenBookId(null);
+              }}
+              onChangeCoverImage={(book) => {
+                setCoverImageTarget(book);
+                setCoverImageValue(book.cover_image_url ?? bookCoverImages[book.id] ?? "");
+                setBookCoverError(null);
+                setMenuOpenBookId(null);
+              }}
               onCloseDeleteDialog={() => setDeleteTarget(null)}
               onConfirmDelete={handleDeleteBook}
               onConfirmRename={handleRenameBook}
@@ -1820,9 +1983,8 @@ export function MypageScreen({
               onCreateNameChange={setCreateName}
               bookCoverImages={bookCoverImages}
               bookCoverUpdatedAt={bookCoverUpdatedAt}
-              onOpenBookDetail={(book) =>
-                router.push(buildMypageRecipeBookDetailHref(book))
-              }
+              selectedBook={selectedRecipeBook}
+              onOpenBookDetail={(book) => setSelectedRecipeBook(book)}
               onMenuOpen={(id) => setMenuOpenBookId(id)}
               onRenameStart={(book) => {
                 setRenamingBookId(book.id);
@@ -1890,6 +2052,7 @@ export function MypageScreen({
       </div>
 
       {plannerAddSheet}
+      {bookCoverDialogs}
 
       {showNicknameSheet ? (
         <NicknameEditSheet
@@ -2935,19 +3098,39 @@ function MypageListLoadingBody({ kind }: { kind: "recipebook" | "shopping" }) {
   }
 
   return (
-    <section className="p-4">
-      <div className="space-y-[10px]">
-        {Array.from({ length: 5 }, (_, index) => (
+    <section className="mobile-recipebooks-diary-screen px-4 pb-8 pt-4">
+      <div
+        className="mobile-recipebooks-diary-hero rounded-[28px] p-4"
+        data-testid="recipebook-mobile-loading-hero"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-6 w-36" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+          </div>
+          <Skeleton className="h-11 w-11 shrink-0 rounded-full" />
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        {Array.from({ length: 4 }, (_, index) => (
           <div
-            className="flex min-h-[82px] items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
+            className="mobile-recipebook-book-card mobile-recipebook-book-card-sand relative grid overflow-hidden rounded-[18px_10px_10px_18px] p-0"
+            data-testid={`recipebook-mobile-loading-book-${index + 1}`}
             key={index}
           >
-            <Skeleton className="h-14 w-14 shrink-0 rounded-[var(--radius-control)]" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-24" />
+            <span className="block px-4 pb-3 pl-7 pt-5">
+              <Skeleton className="aspect-[1.05] w-full rounded-[14px]" />
+            </span>
+            <div className="mobile-recipebook-book-copy grid gap-2 px-3 pb-10 pt-3">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-16" />
             </div>
-            <Skeleton className="h-7 w-14 rounded-full" />
+            <Skeleton className="absolute bottom-2 right-2 h-6 w-12 rounded-full" />
           </div>
         ))}
       </div>
@@ -3072,10 +3255,13 @@ interface RecipeBookTabContentProps {
   isCreating: boolean;
   bookCoverImages: Record<string, string | null>;
   bookCoverUpdatedAt: Record<string, string | null>;
+  selectedBook: RecipeBookSummary | null;
   menuRef: React.RefObject<HTMLDivElement | null>;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
   createInputRef: React.RefObject<HTMLInputElement | null>;
   onOpenBookDetail: (book: RecipeBookSummary) => void;
+  onChangeColor: (book: RecipeBookSummary) => void;
+  onChangeCoverImage: (book: RecipeBookSummary) => void;
   onMenuOpen: (id: string) => void;
   onRenameStart: (book: RecipeBookSummary) => void;
   onCancelRename: () => void;
@@ -3104,10 +3290,13 @@ function RecipeBookTabContent({
   isCreating,
   bookCoverImages,
   bookCoverUpdatedAt,
+  selectedBook,
   menuRef,
   renameInputRef,
   createInputRef,
   onOpenBookDetail,
+  onChangeColor,
+  onChangeCoverImage,
   onMenuOpen,
   onRenameStart,
   onCancelRename,
@@ -3121,6 +3310,18 @@ function RecipeBookTabContent({
   onCreateNameChange,
   onCreateBook,
 }: RecipeBookTabContentProps) {
+  const inlineDetailRef = useRef<HTMLElement | null>(null);
+  const selectedBookId = selectedBook?.id ?? null;
+
+  useEffect(() => {
+    if (!selectedBookId) return;
+
+    inlineDetailRef.current?.scrollIntoView?.({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [selectedBookId]);
+
   return (
     <div className="web-recipebooks-screen" data-testid="recipebook-tab">
       <div className="web-recipebooks-header">
@@ -3151,8 +3352,11 @@ function RecipeBookTabContent({
               isRenaming={renamingBookId === book.id}
               isRenamingLoading={isRenaming}
               key={book.id}
+              lastUpdatedLabel={formatBookLastUpdated(bookCoverUpdatedAt[book.id])}
               menuRef={menuRef}
               onCancelRename={onCancelRename}
+              onChangeColor={() => onChangeColor(book)}
+              onChangeCoverImage={() => onChangeCoverImage(book)}
               onConfirmRename={onConfirmRename}
               onOpen={() => onOpenBookDetail(book)}
               onMenuOpen={() => onMenuOpen(book.id)}
@@ -3221,6 +3425,22 @@ function RecipeBookTabContent({
           onConfirm={onConfirmDelete}
         />
       ) : null}
+      {selectedBook ? (
+        <section
+          aria-label={`${selectedBook.name} 레시피북 상세`}
+          className="web-recipebooks-inline-detail"
+          data-testid="recipebook-inline-detail"
+          ref={inlineDetailRef}
+        >
+          <RecipeBookDetailScreen
+            bookId={selectedBook.id}
+            bookName={selectedBook.name}
+            bookType={selectedBook.book_type}
+            embedded
+            initialAuthenticated={true}
+          />
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -3281,6 +3501,7 @@ function BookCoverThumb({
     >
       <span
         className="web-recipebook-cover-thumb-image"
+        data-testid={`book-cover-image-${book.id}`}
         style={{ backgroundImage: `url("${safeImageSrc}")` }}
       />
     </span>
@@ -3295,10 +3516,13 @@ interface CustomBookCardProps {
   isMenuOpen: boolean;
   isRenaming: boolean;
   isRenamingLoading: boolean;
+  lastUpdatedLabel: string;
   renameValue: string;
   menuRef: React.RefObject<HTMLDivElement | null>;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
   onMenuOpen: () => void;
+  onChangeColor: () => void;
+  onChangeCoverImage: () => void;
   onOpen: () => void;
   onRenameStart: () => void;
   onCancelRename: () => void;
@@ -3313,10 +3537,13 @@ function CustomBookCard({
   isMenuOpen,
   isRenaming,
   isRenamingLoading,
+  lastUpdatedLabel,
   renameValue,
   menuRef,
   renameInputRef,
   onMenuOpen,
+  onChangeColor,
+  onChangeCoverImage,
   onOpen,
   onRenameStart,
   onCancelRename,
@@ -3371,15 +3598,9 @@ function CustomBookCard({
             type="button"
           >
             <strong>{book.name}</strong>
-            <span>{formatRecipeCount(book.recipe_count)} 레시피</span>
+            <span>{lastUpdatedLabel}</span>
           </button>
         )}
-        <span
-          aria-label={`레시피 ${formatRecipeCount(book.recipe_count)}`}
-          className="web-recipebook-book-count"
-        >
-          {formatRecipeCount(book.recipe_count)}
-        </span>
         <button
           aria-haspopup="menu"
           aria-label={`${book.name} 옵션 메뉴`}
@@ -3415,6 +3636,22 @@ function CustomBookCard({
             type="button"
           >
             이름 변경
+          </button>
+          <button
+            className="flex w-full items-center border-t border-[var(--line)] px-4 py-3 text-base font-medium text-[var(--foreground)] hover:bg-[var(--surface-fill)]"
+            onClick={onChangeColor}
+            role="menuitem"
+            type="button"
+          >
+            색상 변경
+          </button>
+          <button
+            className="flex w-full items-center border-t border-[var(--line)] px-4 py-3 text-base font-medium text-[var(--foreground)] hover:bg-[var(--surface-fill)]"
+            onClick={onChangeCoverImage}
+            role="menuitem"
+            type="button"
+          >
+            커버 이미지 변경
           </button>
           <div className="border-t border-[var(--line)]" />
           <button
@@ -3482,6 +3719,139 @@ function DeleteConfirmDialog({
             onClick={() => void onConfirm()}
           >
             {isDeleting ? "삭제 중..." : "삭제"}
+          </WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
+  );
+}
+
+function BookColorDialog({
+  currentColor,
+  disabled,
+  errorMessage,
+  onCancel,
+  onSelectColor,
+}: {
+  currentColor: RecipeBookTone;
+  disabled: boolean;
+  errorMessage: string | null;
+  onCancel: () => void;
+  onSelectColor: (colorKey: RecipeBookCoverColorKey) => void;
+}) {
+  return (
+    <WebModal
+      className="web-recipebook-management-modal"
+      data-testid="book-color-dialog"
+      onBackdropClick={onCancel}
+    >
+      <WebDialog
+        aria-labelledby="book-color-title"
+        className="web-confirm-dialog"
+        role="dialog"
+        size="narrow"
+      >
+        <WebDialogHeader>
+          <WebDialogTitle id="book-color-title">색상 변경</WebDialogTitle>
+          <WebIconButton aria-label="닫기" disabled={disabled} onClick={onCancel}>
+            ×
+          </WebIconButton>
+        </WebDialogHeader>
+        <WebDialogBody>
+          <div className="web-book-color-grid" role="group" aria-label="레시피북 색상">
+            {RECIPE_BOOK_TONES.map((tone) => (
+              <button
+                aria-pressed={tone === currentColor}
+                className={`web-book-color-swatch web-recipebook-book-card-${tone} mobile-recipebook-book-card-${tone}`}
+                disabled={disabled}
+                key={tone}
+                onClick={() => onSelectColor(tone)}
+                type="button"
+              >
+                <span>{getBookToneLabel(tone)}</span>
+              </button>
+            ))}
+          </div>
+          {errorMessage ? (
+            <p className="mt-3 text-sm font-semibold text-[var(--danger)]" role="alert">
+              {errorMessage}
+            </p>
+          ) : null}
+        </WebDialogBody>
+      </WebDialog>
+    </WebModal>
+  );
+}
+
+function BookCoverImageDialog({
+  disabled,
+  errorMessage,
+  imageUrl,
+  onCancel,
+  onChangeImageUrl,
+  onClearImage,
+  onConfirm,
+}: {
+  disabled: boolean;
+  errorMessage: string | null;
+  imageUrl: string;
+  onCancel: () => void;
+  onChangeImageUrl: (value: string) => void;
+  onClearImage: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <WebModal
+      className="web-recipebook-management-modal"
+      data-testid="book-cover-image-dialog"
+      onBackdropClick={onCancel}
+    >
+      <WebDialog
+        aria-labelledby="book-cover-image-title"
+        className="web-confirm-dialog"
+        role="dialog"
+        size="narrow"
+      >
+        <WebDialogHeader>
+          <WebDialogTitle id="book-cover-image-title">
+            커버 이미지 변경
+          </WebDialogTitle>
+          <WebIconButton aria-label="닫기" disabled={disabled} onClick={onCancel}>
+            ×
+          </WebIconButton>
+        </WebDialogHeader>
+        <WebDialogBody>
+          <label className="grid gap-2 text-sm font-bold text-[var(--foreground)]">
+            이미지 URL
+            <input
+              className="web-recipebook-cover-input"
+              disabled={disabled}
+              onChange={(event) => onChangeImageUrl(event.target.value)}
+              placeholder="https://..."
+              type="url"
+              value={imageUrl}
+            />
+          </label>
+          {errorMessage ? (
+            <p className="mt-3 text-sm font-semibold text-[var(--danger)]" role="alert">
+              {errorMessage}
+            </p>
+          ) : null}
+        </WebDialogBody>
+        <WebDialogFooter>
+          <WebButton
+            className="web-recipebook-cover-clear-button"
+            disabled={disabled}
+            onClick={onClearImage}
+            variant="tertiary"
+          >
+            커버 이미지 삭제
+          </WebButton>
+          <WebButton disabled={disabled} onClick={onCancel} variant="tertiary">
+            취소
+          </WebButton>
+          <WebButton disabled={disabled} onClick={onConfirm}>
+            {disabled ? "저장 중..." : "저장"}
           </WebButton>
         </WebDialogFooter>
       </WebDialog>
@@ -4231,10 +4601,35 @@ function getFallbackRecipeImage(title: string) {
 }
 
 type RecipeBookTone = "sage" | "sky" | "lavender" | "coral" | "sand";
+const RECIPE_BOOK_TONES = [
+  "sage",
+  "sky",
+  "coral",
+  "lavender",
+  "sand",
+] as const satisfies readonly RecipeBookTone[];
+
+function isRecipeBookTone(value: unknown): value is RecipeBookTone {
+  return typeof value === "string" && RECIPE_BOOK_TONES.includes(value as RecipeBookTone);
+}
+
+function getBookToneLabel(tone: RecipeBookTone) {
+  if (tone === "sage") return "그린";
+  if (tone === "sky") return "스카이";
+  if (tone === "coral") return "코랄";
+  if (tone === "lavender") return "라벤더";
+  return "샌드";
+}
 
 function getBookTone(book: RecipeBookSummary): RecipeBookTone {
+  if (isRecipeBookTone(book.cover_color_key)) {
+    return book.cover_color_key;
+  }
+
   if (book.book_type === "custom") {
-    return "sage";
+    return RECIPE_BOOK_TONES[
+      Math.abs(book.sort_order) % RECIPE_BOOK_TONES.length
+    ] ?? "sage";
   }
   if (book.book_type === "saved") {
     return "sky";
@@ -4253,7 +4648,7 @@ function getBookCoverImage(
   book: RecipeBookSummary,
   bookCoverImages: Record<string, string | null>,
 ) {
-  return bookCoverImages[book.id] ?? getFallbackBookCoverImage(book);
+  return book.cover_image_url ?? bookCoverImages[book.id] ?? getFallbackBookCoverImage(book);
 }
 
 function getFallbackBookCoverImage(book: RecipeBookSummary) {
