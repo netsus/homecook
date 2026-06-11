@@ -87,17 +87,81 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "closeout": null,
-  "notes": "Stage 1 docs prepared on docs/34b-growth-backend-model. 34b consumes the merged 34a contract (v1.7.9 / v1.5.16 / v1.3.16 / v1.3.14 / v1.2.18) without changing it. Stage 2 backend implementation starts only after this docs PR merges and the internal 1.5 docs gate passes. Toast stack UI, MYPAGE profile integration, and badge/grade SVG/CSS assets are reserved for 34c/34d.",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "PR #731 current-head GitHub checks",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm test",
+        "pnpm build",
+        "pnpm test:e2e:security",
+        "pnpm exec playwright test tests/e2e/slice-33c-gamification.spec.ts --project=desktop-chrome --project=mobile-chrome",
+        "pnpm exec supabase db reset --local --yes",
+        "growth-model-real-db-smoke",
+        "growth-backfill-no-toast-dry-run-smoke",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 34b-growth-backend-model",
+        "git diff --check"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "aed1a82538137beb68ab563502e4af4a4a0a4aab",
+      "merge_commit_sha": "8c66ff9796172cd375340ecc91f6d439a147a2c2",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-06-11T20:51:23+09:00"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 1,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 1,
+      "latest_reason_code": "post_merge_bookkeeping_sync",
+      "evidence_sources": [
+        "GitHub PR/CI",
+        "git history",
+        "PR #731 body",
+        "docs/workpacks/34b-growth-backend-model/README.md"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-06-11T20:51:23+09:00",
+      "status_synced_at": "2026-06-11T20:51:23+09:00",
+      "pr_body_synced_at": "2026-06-11T20:51:23+09:00"
+    }
+  },
+  "notes": "Merged via PR #731 on 2026-06-11 after current-head checks passed. 34b consumed the merged 34a contract (v1.7.9 / v1.5.16 / v1.3.16 / v1.3.14 / v1.2.18) without changing it, and implemented planner_registered XP, first/repeat XP policy, non-XP activity ledger, level curve v2/grade, notification priority/archive, and backfill no-toast behavior. merge_commit=8c66ff9796172cd375340ecc91f6d439a147a2c2. Toast stack UI, MYPAGE profile integration, and badge/grade SVG/CSS assets remain reserved for 34c/34d. closeout_phase=completed closeout_recovery=manual_patch:1 closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR/CI,git history,PR #731 body,docs/workpacks/34b-growth-backend-model/README.md last_recovery_at=2026-06-11T20:51:23+09:00",
   "out_of_scope": [
     "Toast stack UI rendering (34c)",
     "MYPAGE profile visual integration (34d)",

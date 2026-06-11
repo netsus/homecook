@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-11T15:05:05+09:00",
+  "updated_at": "2026-06-11T20:51:23+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1620,10 +1620,11 @@
     {
       "id": "34b-growth-backend-model",
       "preset": "vertical-slice-strict",
-      "branch": "docs/34b-growth-backend-model",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/be-34b-growth-backend-model",
+      "pr_path": "https://github.com/netsus/homecook/pull/731",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm vitest run tests/user-progress-xp-policy-v2.test.ts tests/user-progress-level-v2.test.ts tests/planner-registered-events.test.ts tests/user-growth-activity-events.test.ts tests/user-gamification-archive-route.test.ts tests/user-gamification-notification-priority.test.ts tests/user-progress-backfill-recompute.test.ts",
         "pnpm vitest run tests/user-progress-events.test.ts tests/user-progress-level.test.ts tests/user-progress-route.test.ts tests/user-gamification-events.test.ts tests/user-gamification-route.test.ts tests/user-gamification-source-action-smoke.test.ts",
@@ -1632,7 +1633,25 @@
         "pnpm validate:workpack -- --slice 34b-growth-backend-model",
         "git diff --check"
       ],
-      "notes": "Stage 1 workpack/acceptance/automation-spec prepared on docs/34b-growth-backend-model from the merged 34a contract. Stage 2 backend implementation (feature/be-34b-growth-backend-model) starts after this docs PR merges and the internal 1.5 docs gate passes."
+      "notes": "Merged via PR #731 on 2026-06-11 after current-head checks passed. Implements the 34a backend growth model v2 contract: planner_registered XP, first/repeat XP policy, non-XP activity ledger, level curve v2/grade, notification priority/archive, and backfill no-toast behavior. merge_commit=8c66ff9796172cd375340ecc91f6d439a147a2c2 closeout_phase=completed closeout_recovery=manual_patch:1 closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR/CI,git history,PR #731 body,docs/workpacks/34b-growth-backend-model/README.md last_recovery_at=2026-06-11T20:51:23+09:00"
+    },
+    {
+      "id": "34c-growth-notification-ui",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/34c-growth-notification-ui",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm vitest run tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx tests/user-gamification-api-client.test.ts tests/mypage-gamification-card.test.tsx",
+        "pnpm exec playwright test tests/e2e/slice-34c-growth-notification.spec.ts tests/e2e/slice-33c-gamification.spec.ts",
+        "pnpm verify:frontend:pr",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 34c-growth-notification-ui",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 workpack/acceptance/automation-spec prepared on docs/34c-growth-notification-ui against the merged 34b backend contract (PR #731). FE-only slice: priority toast stack, archive surface, shopping copy. Stage 4 frontend implementation (feature/fe-34c-growth-notification-ui) starts after this docs PR merges and the internal 1.5 docs gate passes."
     }
   ]
 }

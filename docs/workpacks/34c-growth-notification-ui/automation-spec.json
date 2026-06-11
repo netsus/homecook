@@ -1,0 +1,150 @@
+{
+  "slice_id": "34c-growth-notification-ui",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/users/me/gamification",
+      "GET /api/v1/users/me/gamification/archive",
+      "POST /api/v1/users/me/gamification/notifications/seen"
+    ],
+    "invariants": [
+      "consume-34b-contract-only-no-backend-change",
+      "no-new-endpoints-or-response-shape-change",
+      "users-me-remains-profile-only",
+      "progress-response-remains-progress-only"
+    ],
+    "verify_commands": [],
+    "required_test_targets": [],
+    "schema_changes": [],
+    "required_tables": [],
+    "source_events": [
+      "cooking_completed",
+      "shopping_completed",
+      "recipe_saved",
+      "custom_book_created",
+      "planner_registered"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/mypage",
+      "/shopping"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized",
+      "toast-queued",
+      "toast-visible-max-mobile-2",
+      "toast-visible-max-desktop-3",
+      "toast-collapsed",
+      "archive-pagination"
+    ],
+    "required_endpoints": [
+      "GET /api/v1/users/me/gamification",
+      "GET /api/v1/users/me/gamification/archive",
+      "POST /api/v1/users/me/gamification/notifications/seen"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx tests/user-gamification-api-client.test.ts tests/mypage-gamification-card.test.tsx",
+      "pnpm exec playwright test tests/e2e/slice-34c-growth-notification.spec.ts tests/e2e/slice-33c-gamification.spec.ts",
+      "pnpm verify:frontend:pr",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 34c-growth-notification-ui",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "priority-unseen-server-order-consumed",
+      "toast-visible-max-mobile-2-desktop-3",
+      "levelup-emphasis-over-xp",
+      "group-key-cohesion",
+      "seen-rendered-or-collapsed-only",
+      "no-backfill-toast-burst",
+      "archive-live-only-pagination",
+      "silent-not-exposed",
+      "shopping-copy-exact",
+      "list-vs-bundle-copy-separated",
+      "mobile-320-no-overflow",
+      "33bc-ui-regression-safe"
+    ],
+    "touched_components": [
+      "components/gamification/gamification-toast-provider.tsx",
+      "components/mypage/mypage-gamification-card.tsx",
+      "components/mypage/mypage-screen.tsx",
+      "components/mypage/mypage-mobile-screen.tsx",
+      "components/shopping/shopping-flow-screen.tsx",
+      "lib/gamification-events.ts",
+      "lib/api/user-gamification.ts"
+    ],
+    "new_files": [
+      "components/gamification/growth-toast-stack.tsx",
+      "components/mypage/growth-archive-surface.tsx",
+      "tests/growth-toast-stack.test.tsx",
+      "tests/gamification-archive-surface.test.tsx",
+      "tests/e2e/slice-34c-growth-notification.spec.ts"
+    ],
+    "test_files": [
+      "tests/growth-toast-stack.test.tsx",
+      "tests/gamification-archive-surface.test.tsx",
+      "tests/user-gamification-api-client.test.ts",
+      "tests/mypage-gamification-card.test.tsx",
+      "tests/e2e/slice-34c-growth-notification.spec.ts"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "MYPAGE",
+        "SHOPPING_FLOW"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/MYPAGE_GAMIFICATION.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/MYPAGE_GAMIFICATION-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-390",
+        "mobile-320",
+        "desktop-1440",
+        "toast-stack-mobile",
+        "toast-stack-desktop",
+        "toast-levelup",
+        "archive-surface",
+        "archive-empty",
+        "archive-pagination",
+        "shopping-copy"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/GROWTH_NOTIFICATION_UI-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "client-side-priority-recompute-or-reorder",
+    "unrendered-notification-marked-seen",
+    "seen-failure-breaks-source-action",
+    "backfill-or-legacy-toast-burst",
+    "silent-notification-exposed",
+    "shopping-list-and-meal-bundle-copy-merged",
+    "mypage-profile-header-integration-scope-creep",
+    "backend-contract-or-schema-changed",
+    "mobile-320-toast-covers-tab-or-cta",
+    "33b-33c-ui-regression",
+    "leaderboard-competitive-rank-pressure-streak-season-reset-loot-added"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}
