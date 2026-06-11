@@ -115,7 +115,7 @@ No backend work.
   - Design critic: `ui/designs/critiques/MYPAGE_GROWTH_PROFILE-critique.md`
   - Stage 4 evidence target: `ui/designs/evidence/34d-mypage-growth-profile-assets/`
   - Authority report target: `ui/designs/authority/MYPAGE_GROWTH_PROFILE-authority.md`
-- Authority status: `required`
+- Authority status: `reviewed`
 
 ## Design Status
 
@@ -213,7 +213,7 @@ BRANCH_NAME=feature/fe-34d-mypage-growth-profile-assets PR_IS_DRAFT=false pnpm v
 - [x] 320/390/1440 screenshot evidence + authority report <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] exploratory QA/eval evidence <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=6 -->
 
-Stage 6 closeout projection is intentionally deferred until the source PR merge is confirmed.
+Stage 6 closeout projection completed after PR #737 merge.
 
 ## Implementation Evidence
 
@@ -221,12 +221,14 @@ Stage 6 closeout projection is intentionally deferred until the source PR merge 
 - `GrowthBadgeIcon` implements `plate`, `shield`, `ribbon`, `bookmark`, `pot`, `leaf`, `bowl` with distinct SVG silhouettes.
 - `MypageBadgeGuideDialog` shows earned badges and locked badge hints without reward claim or competitive rank CTA.
 - `MypageGamificationCard` remains as a secondary quest/guide surface below the profile area on mobile.
+- Source PR #737 merged on 2026-06-11T14:54:00Z as `0dfde41c74dea702c4d12dd2c255e63bffa3d035`.
 - Verification passed:
   - `pnpm vitest run tests/mypage-growth-profile.test.tsx tests/mypage-gamification-card.test.tsx tests/mypage-screen.test.tsx tests/user-gamification-api-client.test.ts`
   - `pnpm exec playwright test tests/e2e/slice-34d-mypage-growth-profile.spec.ts tests/e2e/slice-33c-gamification.spec.ts`
   - `CI=1 pnpm verify:frontend:pr`
   - `pnpm qa:eval -- --checklist .artifacts/qa/34d-mypage-growth-profile-assets/2026-06-11T14-26-06-569Z/exploratory-checklist.json --report .artifacts/qa/34d-mypage-growth-profile-assets/2026-06-11T14-26-06-569Z/exploratory-report.json --fail-under 90`
   - authority/evidence validators
+- GitHub PR #737 current-head checks passed on `019744958900d47606975c2f3070d971b0f82325`: build, quality, policy, security-smoke, QA changes/accessibility/lighthouse/smoke/visual, PR governance, Vercel, GitGuardian. `full-regression` was path-filter skipped.
 - `CI=1 pnpm verify:frontend:pr` completed with exit 0. During smoke, existing slice-06 and slice-10a mobile-chrome checks were reported as flaky and passed after retry.
 
 ## Contract Evolution Candidates

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-11T23:37:10+09:00",
+  "updated_at": "2026-06-11T23:55:18+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1660,8 +1660,8 @@
       "id": "34d-mypage-growth-profile-assets",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-34d-mypage-growth-profile-assets",
-      "lifecycle": "in_progress",
-      "approval_state": "codex_approved",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm vitest run tests/mypage-growth-profile.test.tsx tests/mypage-gamification-card.test.tsx tests/mypage-screen.test.tsx tests/user-gamification-api-client.test.ts",
@@ -1674,7 +1674,7 @@
         "pnpm validate:workpack -- --slice 34d-mypage-growth-profile-assets",
         "git diff --check"
       ],
-      "notes": "Stage 4 FE-only implementation is in progress on feature/fe-34d-mypage-growth-profile-assets after Stage 1 docs merged. Claude is rate-limited, so Codex owns implementation/review fallback per user instruction. Local verification passed: targeted Vitest, targeted 34d/33c Playwright, CI=1 pnpm verify:frontend:pr, exploratory QA/eval score 97, workflow/workpack validators, authority/evidence validators, and diff check. CI=1 pnpm verify:frontend:pr completed with exit 0; smoke reported existing slice-06 and slice-10a mobile-chrome checks as flaky before retry pass. Stage 2/3 N/A. Manual-only production smoke remains follow-up."
+      "notes": "Merged via PR #737 on 2026-06-11T14:54:00Z. FE-only slice consumes the merged 34b/34c contracts with no backend/schema/API change: MYPAGE profile-integrated grade/level/XP/featured badges, SVG/CSS badge shape family, shared badge guide locked hints, and progress/gamification soft-fail isolation. Current-head GitHub checks passed before merge: build, quality, policy, security-smoke, QA changes/accessibility/lighthouse/smoke/visual, PR governance, Vercel, GitGuardian; full-regression was path-filter skipped. Local verification passed: targeted Vitest, targeted 34d/33c Playwright, slice-17a MYPAGE smoke, CI=1 pnpm verify:frontend:pr, exploratory QA/eval 97, workflow/workpack/closeout validators, PR-ready validator, authority/evidence validators, theme-token regression, and diff check. Claude review was unavailable due token limit, so Codex self-review and CI repair proceeded per user instruction. Manual-only production Vercel/Supabase source-action smoke remains follow-up. closeout_phase=completed closeout_recovery=manual_patch:2|ci_resync:2 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR/CI,git history,PR #737 body,docs/workpacks/34d-mypage-growth-profile-assets/README.md last_recovery_at=2026-06-11T14:54:00Z stage4_fallback=codex"
     }
   ]
 }
