@@ -1,0 +1,124 @@
+{
+  "slice_id": "34b-growth-backend-model",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/users/me/progress",
+      "GET /api/v1/users/me/gamification",
+      "GET /api/v1/users/me/gamification/archive",
+      "POST /api/v1/users/me/gamification/notifications/seen"
+    ],
+    "invariants": [
+      "official-docs-consumed-not-changed",
+      "users-me-remains-profile-only",
+      "progress-response-remains-progress-only",
+      "user-progress-events-remain-xp-ledger",
+      "user-growth-activity-events-non-xp-ledger",
+      "xp-first-repeat-split-per-policy-table",
+      "planner-registered-first-repeat-kst-cap",
+      "first-xp-does-not-consume-repeat-cap",
+      "cap-exceeded-creates-no-ledger-row-or-notification",
+      "level-curve-v2-with-grade-bands",
+      "v2-recompute-never-decreases-level",
+      "ledger-xp-delta-append-only-no-rescoring",
+      "level-up-notification-live-write-only-once-per-level",
+      "notification-priority-level-up-badge-quest-xp",
+      "backfill-creates-no-toast-or-archive-notifications",
+      "archive-live-non-silent-only-cursor-pagination",
+      "shopping-list-count-and-meal-bundle-count-separated",
+      "projection-failure-does-not-break-source-action",
+      "owner-authorization",
+      "rls-or-service-role-boundary",
+      "no-operational-events-as-reward-truth",
+      "no-public-backfill-api",
+      "no-leaderboard-competitive-rank-pressure-streak-season-reset-loot"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/user-progress-xp-policy-v2.test.ts tests/user-progress-level-v2.test.ts tests/planner-registered-events.test.ts tests/user-growth-activity-events.test.ts tests/user-gamification-archive-route.test.ts tests/user-gamification-notification-priority.test.ts tests/user-progress-backfill-recompute.test.ts",
+      "pnpm vitest run tests/user-progress-events.test.ts tests/user-progress-level.test.ts tests/user-progress-route.test.ts tests/user-gamification-events.test.ts tests/user-gamification-route.test.ts tests/user-gamification-source-action-smoke.test.ts",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 34b-growth-backend-model",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/user-progress-xp-policy-v2.test.ts",
+      "tests/user-progress-level-v2.test.ts",
+      "tests/planner-registered-events.test.ts",
+      "tests/user-growth-activity-events.test.ts",
+      "tests/user-gamification-archive-route.test.ts",
+      "tests/user-gamification-notification-priority.test.ts",
+      "tests/user-progress-backfill-recompute.test.ts"
+    ],
+    "schema_changes": [
+      "supabase/migrations/<timestamp>_34b_growth_backend_model.sql"
+    ],
+    "required_tables": [
+      "user_progress_events",
+      "user_progress_summary",
+      "user_growth_activity_events",
+      "user_badge_awards",
+      "user_quest_progress",
+      "user_progress_notifications"
+    ],
+    "source_events": [
+      "cooking_completed",
+      "shopping_completed",
+      "recipe_saved",
+      "custom_book_created",
+      "planner_registered"
+    ],
+    "activity_events": [
+      "shopping_bundle_prepared",
+      "pantry_item_added",
+      "leftover_eaten",
+      "meal_add_path_used",
+      "recipebook_created",
+      "recipebook_recipe_added",
+      "recipebook_recipe_removed"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [],
+    "playwright_projects": [],
+    "artifact_assertions": [],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "growth-model-real-db-smoke",
+    "growth-backfill-no-toast-dry-run-smoke"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "users-me-progress-or-gamification-boundary-broken",
+    "planner-xp-first-repeat-or-cap-missing",
+    "retroactive-ledger-rescoring-attempted",
+    "backfill-notification-or-archive-row-created",
+    "level-up-notification-from-backfill",
+    "shopping-list-and-meal-bundle-counts-merged",
+    "source-action-fails-because-projection-fails",
+    "client-side-xp-level-grade-badge-quest-calculation",
+    "operational-events-used-as-reward-truth",
+    "public-backfill-api-requested",
+    "leaderboard-competitive-rank-pressure-streak-season-reset-loot-added"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 0
+  }
+}
