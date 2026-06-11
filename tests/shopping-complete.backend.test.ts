@@ -14,6 +14,8 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
   return fallbackMessage;
 });
 const awardUserProgressEvent = vi.fn();
+const recordUserGrowthActivityEvent = vi.fn();
+const buildShoppingBundlePreparedSourceKey = vi.fn(() => "shopping_bundle_prepared:test-key");
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
@@ -28,6 +30,11 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
 
 vi.mock("@/lib/server/user-progress", () => ({
   awardUserProgressEvent,
+}));
+
+vi.mock("@/lib/server/user-growth-activity", () => ({
+  buildShoppingBundlePreparedSourceKey,
+  recordUserGrowthActivityEvent,
 }));
 
 interface QueryError {
@@ -158,6 +165,8 @@ describe("12a shopping complete backend", () => {
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     awardUserProgressEvent.mockReset();
+    buildShoppingBundlePreparedSourceKey.mockClear();
+    recordUserGrowthActivityEvent.mockReset();
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
@@ -167,6 +176,7 @@ describe("12a shopping complete backend", () => {
       error: null,
       summary: null,
     });
+    recordUserGrowthActivityEvent.mockResolvedValue({ recorded: true, duplicate: false, error: null });
   });
 
   it("returns 401 when completion is requested without authentication", async () => {
@@ -296,6 +306,24 @@ describe("12a shopping complete backend", () => {
       eventType: "shopping_completed",
       sourceTable: "shopping_lists",
       sourceId: listId,
+      occurredAt: "2026-04-27T11:20:00.000Z",
+    });
+    expect(buildShoppingBundlePreparedSourceKey).toHaveBeenCalledWith({
+      actionKind: "shopping_list",
+      mealIds: ["meal-1", "meal-2"],
+    });
+    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user-1",
+      activityType: "shopping_bundle_prepared",
+      category: "shopping",
+      sourceKey: "shopping_bundle_prepared:test-key",
+      sourceTable: "shopping_lists",
+      sourceId: listId,
+      sourceMeta: {
+        action_kind: "shopping_list",
+        meal_ids: ["meal-1", "meal-2"],
+        shopping_list_id: listId,
+      },
       occurredAt: "2026-04-27T11:20:00.000Z",
     });
   });

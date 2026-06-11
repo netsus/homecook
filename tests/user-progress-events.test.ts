@@ -54,19 +54,21 @@ describe("user progress event writer", () => {
   it("inserts an idempotent ledger row and rebuilds the summary projection", async () => {
     const progressEventsTable = {
       insert: vi.fn(() => createMaybeSingleQuery({ data: { id: "event-1" }, error: null })),
-      select: vi.fn(() =>
-        createArraySelectQuery({
+      select: vi
+        .fn()
+        .mockReturnValueOnce(createArraySelectQuery({ data: [], error: null }))
+        .mockReturnValueOnce(createArraySelectQuery({
           data: [
             {
               event_type: "shopping_completed",
               source_key: "shopping_completed:550e8400-e29b-41d4-a716-446655440001",
               xp_delta: USER_PROGRESS_XP_AWARDS.shopping_completed,
               occurred_at: "2026-06-10T10:00:00.000Z",
+              source_meta_json: { xp_kind: "first", level_curve_version: "v2" },
             },
           ],
           error: null,
-        }),
-      ),
+        })),
     };
     const progressSummaryTable = {
       upsert: vi.fn(() => createMaybeSingleQuery({
@@ -79,6 +81,8 @@ describe("user progress event writer", () => {
             shopping_completed: 1,
             recipe_saved_distinct_ever: 0,
             custom_book_created: 0,
+            planner_registered_first: 0,
+            planner_registered_repeat: 0,
           },
           last_event_at: "2026-06-10T10:00:00.000Z",
           last_updated_at: "2026-06-10T10:01:00.000Z",
@@ -111,6 +115,10 @@ describe("user progress event writer", () => {
       source_id: "550e8400-e29b-41d4-a716-446655440001",
       xp_delta: USER_PROGRESS_XP_AWARDS.shopping_completed,
       occurred_at: "2026-06-10T10:00:00.000Z",
+      source_meta_json: {
+        xp_kind: "first",
+        level_curve_version: "v2",
+      },
     });
     expect(progressSummaryTable.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -131,7 +139,7 @@ describe("user progress event writer", () => {
           error: { code: "23505", message: "duplicate key value violates unique constraint" },
         }),
       ),
-      select: vi.fn(),
+      select: vi.fn(() => createArraySelectQuery({ data: [], error: null })),
     };
     const progressSummaryTable = {
       upsert: vi.fn(),
@@ -154,6 +162,48 @@ describe("user progress event writer", () => {
     });
 
     expect(result).toEqual({ awarded: false, duplicate: true, error: null, summary: null });
+    expect(progressEventsTable.insert).toHaveBeenCalled();
+    expect(progressSummaryTable.upsert).not.toHaveBeenCalled();
+  });
+
+  it("does not award the same planner meal again after it created the first planner event", async () => {
+    const progressEventsTable = {
+      insert: vi.fn(),
+      select: vi.fn(() =>
+        createArraySelectQuery({
+          data: [
+            {
+              event_type: "planner_registered",
+              source_id: "550e8400-e29b-41d4-a716-446655440901",
+              source_key: "planner_registered:first:user-1",
+              xp_delta: 25,
+              occurred_at: "2026-06-10T10:00:00.000Z",
+              source_meta_json: { xp_kind: "first", level_curve_version: "v2" },
+            },
+          ],
+          error: null,
+        }),
+      ),
+    };
+    const progressSummaryTable = { upsert: vi.fn() };
+    const dbClient = {
+      from: vi.fn((table: string) => {
+        if (table === "user_progress_events") return progressEventsTable;
+        if (table === "user_progress_summary") return progressSummaryTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    };
+
+    const result = await awardUserProgressEvent(dbClient as unknown as UserProgressDbClient, {
+      userId: "user-1",
+      eventType: "planner_registered",
+      sourceTable: "meals",
+      sourceId: "550e8400-e29b-41d4-a716-446655440901",
+      occurredAt: "2026-06-10T10:00:00.000Z",
+    });
+
+    expect(result).toEqual({ awarded: false, duplicate: true, error: null, summary: null });
+    expect(progressEventsTable.insert).not.toHaveBeenCalled();
     expect(progressSummaryTable.upsert).not.toHaveBeenCalled();
   });
 
@@ -183,6 +233,8 @@ describe("user progress event writer", () => {
             shopping_completed: 0,
             recipe_saved_distinct_ever: 0,
             custom_book_created: 0,
+            planner_registered_first: 0,
+            planner_registered_repeat: 0,
           },
           last_event_at: null,
           last_updated_at: "2026-06-10T12:00:00.000Z",
@@ -217,6 +269,8 @@ describe("user progress event writer", () => {
           shopping_completed: 0,
           recipe_saved_distinct_ever: 0,
           custom_book_created: 0,
+          planner_registered_first: 0,
+          planner_registered_repeat: 0,
         },
         last_updated_at: "2026-06-10T12:00:00.000Z",
       },

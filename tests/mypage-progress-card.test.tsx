@@ -23,6 +23,8 @@ const MOCK_PROGRESS: UserProgressData = {
     shopping_completed: 2,
     recipe_saved_distinct_ever: 7,
     custom_book_created: 1,
+    planner_registered_first: 1,
+    planner_registered_repeat: 4,
   },
   last_updated_at: "2026-06-10T00:00:00.000Z",
 };
@@ -43,6 +45,8 @@ const ZERO_PROGRESS: UserProgressData = {
     shopping_completed: 0,
     recipe_saved_distinct_ever: 0,
     custom_book_created: 0,
+    planner_registered_first: 0,
+    planner_registered_repeat: 0,
   },
   last_updated_at: "2026-06-10T00:00:00.000Z",
 };

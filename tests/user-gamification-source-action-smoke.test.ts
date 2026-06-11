@@ -27,22 +27,25 @@ function createArrayQuery<T>(data: T[]) {
 
 describe("source action gamification smoke", () => {
   it("keeps canonical source actions successful when the 33c outbox is unavailable", async () => {
+    const progressEventsTable = {
+      insert: vi.fn(() => createMaybeSingleQuery({ id: "event-1" })),
+      select: vi
+        .fn()
+        .mockReturnValueOnce(createArrayQuery([]))
+        .mockReturnValueOnce(createArrayQuery([
+          {
+            event_type: "recipe_saved",
+            source_key: "recipe_saved:user-1:550e8400-e29b-41d4-a716-446655440010",
+            xp_delta: USER_PROGRESS_XP_AWARDS.recipe_saved,
+            occurred_at: "2026-06-10T12:00:00.000Z",
+            source_meta_json: { xp_kind: "first", level_curve_version: "v2" },
+          },
+        ])),
+    };
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "user_progress_events") {
-          return {
-            insert: vi.fn(() => createMaybeSingleQuery({ id: "event-1" })),
-            select: vi.fn(() =>
-              createArrayQuery([
-                {
-                  event_type: "recipe_saved",
-                  source_key: "recipe_saved:user-1:550e8400-e29b-41d4-a716-446655440010",
-                  xp_delta: USER_PROGRESS_XP_AWARDS.recipe_saved,
-                  occurred_at: "2026-06-10T12:00:00.000Z",
-                },
-              ]),
-            ),
-          };
+          return progressEventsTable;
         }
 
         if (table === "user_progress_summary") {
@@ -57,6 +60,8 @@ describe("source action gamification smoke", () => {
                   shopping_completed: 0,
                   recipe_saved_distinct_ever: 1,
                   custom_book_created: 0,
+                  planner_registered_first: 0,
+                  planner_registered_repeat: 0,
                 },
                 last_event_at: "2026-06-10T12:00:00.000Z",
                 last_updated_at: "2026-06-10T12:00:01.000Z",

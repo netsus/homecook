@@ -15,11 +15,20 @@ const MOCK_GAMIFICATION: UserGamificationData = {
     xp_to_next_level: 170,
     progress_percent: 82,
   },
+  grade: {
+    grade_key: "homecook_runner",
+    label: "집밥 러너",
+    level_min: 4,
+    level_max: 7,
+  },
   featured_badges: [
     {
       badge_key: "first_cook_done",
       label: "첫 집밥 완성",
       description: "첫 요리 완료를 기록했어요.",
+      category: "cooking",
+      shape_key: "pot",
+      locked_hint: null,
       earned_at: "2026-06-10T12:00:00.000Z",
       is_new: true,
     },
@@ -63,7 +72,7 @@ const MOCK_GAMIFICATION: UserGamificationData = {
       },
     ],
   },
-  notifications: { unseen: [] },
+  notifications: { unseen: [], priority_unseen: [], archive_preview: [] },
   last_updated_at: "2026-06-10T12:00:00.000Z",
 };
 

@@ -12,6 +12,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
   return fallbackMessage;
 });
 const awardUserProgressEvent = vi.fn();
+const recordUserGrowthActivityEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
@@ -26,6 +27,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
 
 vi.mock("@/lib/server/user-progress", () => ({
   awardUserProgressEvent,
+}));
+
+vi.mock("@/lib/server/user-growth-activity", () => ({
+  recordUserGrowthActivityEvent,
 }));
 
 interface QueryError {
@@ -130,6 +135,7 @@ describe("/api/v1/recipe-books", () => {
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     awardUserProgressEvent.mockReset();
+    recordUserGrowthActivityEvent.mockReset();
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
@@ -139,6 +145,7 @@ describe("/api/v1/recipe-books", () => {
       error: null,
       summary: null,
     });
+    recordUserGrowthActivityEvent.mockResolvedValue({ recorded: true, duplicate: false, error: null });
     delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
 
@@ -540,6 +547,16 @@ describe("/api/v1/recipe-books", () => {
       eventType: "custom_book_created",
       sourceTable: "recipe_books",
       sourceId: "book-new",
+      occurredAt: "2026-03-27T10:00:00Z",
+    });
+    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user-1",
+      activityType: "recipebook_created",
+      category: "recipebook",
+      sourceKey: "recipebook_created:book-new",
+      sourceTable: "recipe_books",
+      sourceId: "book-new",
+      sourceMeta: { book_type: "custom" },
       occurredAt: "2026-03-27T10:00:00Z",
     });
   });
