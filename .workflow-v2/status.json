@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-11T20:39:44+09:00",
+  "updated_at": "2026-06-11T20:51:23+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1633,7 +1633,7 @@
         "pnpm validate:workpack -- --slice 34b-growth-backend-model",
         "git diff --check"
       ],
-      "notes": "Merged via PR #731 on 2026-06-11 after current-head checks passed. Implements the 34a backend growth model v2 contract: planner_registered XP, first/repeat XP policy, non-XP activity ledger, level curve v2/grade, notification priority/archive, and backfill no-toast behavior. merge_commit=8c66ff9796172cd375340ecc91f6d439a147a2c2"
+      "notes": "Merged via PR #731 on 2026-06-11 after current-head checks passed. Implements the 34a backend growth model v2 contract: planner_registered XP, first/repeat XP policy, non-XP activity ledger, level curve v2/grade, notification priority/archive, and backfill no-toast behavior. merge_commit=8c66ff9796172cd375340ecc91f6d439a147a2c2 closeout_phase=completed closeout_recovery=manual_patch:1 closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR/CI,git history,PR #731 body,docs/workpacks/34b-growth-backend-model/README.md last_recovery_at=2026-06-11T20:51:23+09:00"
     },
     {
       "id": "34c-growth-notification-ui",
