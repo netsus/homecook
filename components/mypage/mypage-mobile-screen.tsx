@@ -10,8 +10,8 @@ import {
   type MypageGamificationState,
 } from "@/components/mypage/mypage-gamification-card";
 import { GrowthArchiveSurface } from "@/components/mypage/growth-archive-surface";
+import { MypageGrowthProfile } from "@/components/mypage/mypage-growth-profile";
 import {
-  MypageProgressCard,
   type MypageProgressState,
 } from "@/components/mypage/mypage-progress-card";
 import {
@@ -429,12 +429,6 @@ function MobileHomeSurface({
             <p className="mt-0.5 truncate text-[13px] font-medium leading-[1.35] text-[var(--text-3)]">
               {providerLabel}
             </p>
-            <MypageProgressCard
-              className="mt-2"
-              progress={progress}
-              state={progressState}
-              variant="inline"
-            />
           </div>
           <button
             className="flex h-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-3 text-[12px] font-bold text-[var(--text-2)]"
@@ -445,6 +439,15 @@ function MobileHomeSurface({
             편집
           </button>
         </div>
+
+        <MypageGrowthProfile
+          className="mb-3"
+          gamification={gamification}
+          gamificationState={gamificationState}
+          progress={progress}
+          progressState={progressState}
+          variant="mobile"
+        />
 
         <div className="grid grid-cols-3 gap-2">
           {stats.map((item) => (
@@ -457,14 +460,6 @@ function MobileHomeSurface({
           ))}
         </div>
 
-        <MypageGamificationCard
-          className="mt-3"
-          data={gamification}
-          state={gamificationState}
-          variant="mobile"
-          onDismissTutorialQuest={onDismissTutorialQuest}
-        />
-        <GrowthArchiveSurface className="mt-3" enabled={archiveEnabled} />
       </section>
 
       <MobileSavedRecipesRail
@@ -473,6 +468,17 @@ function MobileHomeSurface({
         state={savedRecipesState}
         onRetry={onRetrySavedRecipes}
       />
+
+      <MypageGamificationCard
+        className="mx-4 mt-3"
+        data={gamification}
+        showFeaturedBadges={false}
+        state={gamificationState}
+        variant="mobile"
+        onDismissTutorialQuest={onDismissTutorialQuest}
+      />
+
+      <GrowthArchiveSurface className="mx-4 mt-3" enabled={archiveEnabled} />
 
       <section className="p-4">
         <div

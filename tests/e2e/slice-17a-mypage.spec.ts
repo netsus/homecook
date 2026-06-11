@@ -418,14 +418,16 @@ test.describe("MYPAGE screen", () => {
 
     await expect(page.getByTestId("mypage-profile")).toBeVisible();
     await expect(page.getByText("집밥러")).toBeVisible();
-    await expect(page.getByTestId("mypage-progress-card")).toBeVisible();
+    await expect(page.getByTestId("mypage-growth-profile")).toBeVisible();
     await expect(page.getByText("Lv.6")).toBeVisible();
     await expect(page.getByText("다음 레벨까지 130 XP")).toBeVisible();
     await expect(page.getByText("집밥 러너 · 레벨 5")).toHaveCount(0);
     if (isMobileViewport(page)) {
       await expect(page.getByText("Lv.6")).toBeVisible();
       await expect(page.getByText("다음 레벨까지 130 XP")).toBeVisible();
-      await expect(page.getByText("13%")).toBeVisible();
+      await expect(page.getByRole("progressbar", {
+        name: "Lv.6, 다음 레벨까지 130 XP, 진행률 13%",
+      })).toBeVisible();
     } else {
       await expect(page.getByText("카카오 로그인")).toBeVisible();
     }
@@ -454,8 +456,8 @@ test.describe("MYPAGE screen", () => {
 
     await expect(page.getByTestId("mypage-profile")).toBeVisible();
     await expect(page.getByText("집밥러")).toBeVisible();
-    await expect(page.getByTestId("mypage-progress-error")).toContainText(
-      "성장 기록을 잠시 불러오지 못했어요",
+    await expect(page.getByTestId("mypage-growth-progress-error")).toContainText(
+      "XP를 잠시 불러오지 못했어요",
     );
     await expect(
       page.getByRole("heading", { name: "데이터를 불러오지 못했어요" }),

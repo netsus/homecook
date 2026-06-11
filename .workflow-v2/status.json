@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-11T20:51:23+09:00",
+  "updated_at": "2026-06-11T23:37:10+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1659,22 +1659,22 @@
     {
       "id": "34d-mypage-growth-profile-assets",
       "preset": "vertical-slice-strict",
-      "branch": "docs/34d-mypage-growth-profile-assets",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-34d-mypage-growth-profile-assets",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm vitest run tests/mypage-growth-profile.test.tsx tests/mypage-gamification-card.test.tsx tests/mypage-screen.test.tsx tests/user-gamification-api-client.test.ts",
         "pnpm exec playwright test tests/e2e/slice-34d-mypage-growth-profile.spec.ts tests/e2e/slice-33c-gamification.spec.ts",
         "CI=1 pnpm verify:frontend:pr",
         "pnpm qa:explore -- --slice 34d-mypage-growth-profile-assets --base-url http://127.0.0.1:3100",
-        "pnpm qa:eval -- --checklist <artifact>/exploratory-checklist.json --report <artifact>/exploratory-report.json --fail-under 90",
+        "pnpm qa:eval -- --checklist .artifacts/qa/34d-mypage-growth-profile-assets/2026-06-11T14-26-06-569Z/exploratory-checklist.json --report .artifacts/qa/34d-mypage-growth-profile-assets/2026-06-11T14-26-06-569Z/exploratory-report.json --fail-under 90",
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
         "pnpm validate:workpack -- --slice 34d-mypage-growth-profile-assets",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs in progress on docs/34d-mypage-growth-profile-assets. FE-only MYPAGE profile growth integration slice. Claude is rate-limited, so Codex owns Stage 1/4 fallback per user instruction. Stage 2/3 N/A."
+      "notes": "Stage 4 FE-only implementation is in progress on feature/fe-34d-mypage-growth-profile-assets after Stage 1 docs merged. Claude is rate-limited, so Codex owns implementation/review fallback per user instruction. Local verification passed: targeted Vitest, targeted 34d/33c Playwright, CI=1 pnpm verify:frontend:pr, exploratory QA/eval score 97, workflow/workpack validators, authority/evidence validators, and diff check. CI=1 pnpm verify:frontend:pr completed with exit 0; smoke reported existing slice-06 and slice-10a mobile-chrome checks as flaky before retry pass. Stage 2/3 N/A. Manual-only production smoke remains follow-up."
     }
   ]
 }

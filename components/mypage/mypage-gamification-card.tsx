@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 
+import { GrowthBadgeIcon } from "@/components/mypage/growth-badge-icon";
+import { MypageBadgeGuideDialog } from "@/components/mypage/mypage-badge-guide-dialog";
 import type {
   UserGamificationBadgeData,
   UserGamificationData,
@@ -19,18 +21,10 @@ interface MypageGamificationCardProps {
   className?: string;
   data: UserGamificationData | null;
   onDismissTutorialQuest?: (questKey: string) => void;
+  showFeaturedBadges?: boolean;
   state: MypageGamificationState;
   variant?: "mobile" | "desktop";
 }
-
-// 화면정의서 v1.5.16 growth-leveling-v2: 첫 경험치 기준 표시. 반복 경험치는 더 낮다.
-const XP_ACTIONS = [
-  ["레시피 저장", "첫 +15 XP"],
-  ["레시피북 생성", "첫 +25 XP"],
-  ["장보기 완료", "첫 +40 XP"],
-  ["요리 완료", "첫 +60 XP"],
-  ["플래너 등록", "첫 +25 XP"],
-] as const;
 
 function clampPercent(value: number) {
   if (!Number.isFinite(value)) return 0;
@@ -60,9 +54,13 @@ function BadgePill({ badge }: { badge: UserGamificationBadgeData }) {
       <div className="flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] px-2.5 py-2">
         <span
           aria-hidden="true"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--warning-soft)] text-[15px]"
+          className="shrink-0"
         >
-          {badge.is_new ? "★" : "✓"}
+          <GrowthBadgeIcon
+            isNew={badge.is_new}
+            shapeKey={badge.shape_key}
+            size="sm"
+          />
         </span>
         <span className="min-w-0">
           <span className="block truncate text-[12px] font-extrabold leading-[1.25] text-[var(--foreground)]">
@@ -137,110 +135,11 @@ function QuestRow({
   );
 }
 
-function GuideDialog({
-  badges,
-  onClose,
-}: {
-  badges: UserGamificationBadgeData[];
-  onClose: () => void;
-}) {
-  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    closeButtonRef.current?.focus();
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      } else if (event.key === "Tab") {
-        event.preventDefault();
-        closeButtonRef.current?.focus();
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-[90] flex items-end justify-center bg-[var(--overlay-40)] px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-10 md:items-center md:pb-10"
-      data-testid="mypage-badge-guide-overlay"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <section
-        aria-labelledby="badge-guide-title"
-        aria-modal="true"
-        className="w-full max-w-[420px] rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_20px_60px_var(--overlay-30)]"
-        role="dialog"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2
-              className="text-[17px] font-extrabold leading-[1.3] text-[var(--foreground)]"
-              id="badge-guide-title"
-            >
-              성장 시스템 안내
-            </h2>
-            <p className="mt-1 text-[12px] font-semibold leading-[1.45] text-[var(--text-2)]">
-              활동을 기록하면 배지와 퀘스트가 자동으로 쌓여요.
-            </p>
-          </div>
-          <button
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[18px] font-extrabold text-[var(--text-2)]"
-            onClick={onClose}
-            ref={closeButtonRef}
-            type="button"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="mt-4 grid gap-2">
-          {XP_ACTIONS.map(([label, xp]) => (
-            <div
-              className="flex min-h-10 items-center justify-between rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-3 text-[12px] font-bold"
-              key={label}
-            >
-              <span>{label}</span>
-              <strong className="text-[var(--brand)]">{xp}</strong>
-            </div>
-          ))}
-        </div>
-
-        <p className="mt-2 text-[11px] font-semibold leading-[1.45] text-[var(--text-3)]">
-          첫 경험치 기준이에요. 같은 활동을 반복하면 경험치가 조금 더 작게 쌓여요.
-        </p>
-
-        <div className="mt-4 rounded-[var(--radius-md)] bg-[var(--surface-fill)] p-3">
-          <p className="text-[12px] font-extrabold text-[var(--foreground)]">
-            대표 배지
-          </p>
-          <p className="mt-1 text-[11px] font-semibold leading-[1.4] text-[var(--text-2)]">
-            {badges.length > 0
-              ? badges.map((badge) => badge.label).join(" · ")
-              : "첫 저장, 첫 장보기, 첫 요리에서 배지가 시작돼요."}
-          </p>
-        </div>
-
-        <p className="mt-4 text-[11px] font-semibold leading-[1.45] text-[var(--text-3)]">
-          순위, 압박형 연속 출석, 랜덤 보상은 쓰지 않아요. 집밥 루틴을 조용히
-          기록하는 용도예요.
-        </p>
-      </section>
-    </div>
-  );
-}
-
 export function MypageGamificationCard({
   className,
   data,
   onDismissTutorialQuest,
+  showFeaturedBadges = true,
   state,
   variant = "mobile",
 }: MypageGamificationCardProps) {
@@ -338,11 +237,13 @@ export function MypageGamificationCard({
           </div>
         ) : (
           <>
-            <ul className="mt-3 grid grid-cols-2 gap-2 min-[360px]:grid-cols-3">
-              {badges.map((badge) => (
-                <BadgePill badge={badge} key={badge.badge_key} />
-              ))}
-            </ul>
+            {showFeaturedBadges && badges.length > 0 ? (
+              <ul className="mt-3 grid grid-cols-2 gap-2 min-[360px]:grid-cols-3">
+                {badges.map((badge) => (
+                  <BadgePill badge={badge} key={badge.badge_key} />
+                ))}
+              </ul>
+            ) : null}
             {quest ? (
               <div className="mt-3">
                 <QuestRow
@@ -356,7 +257,10 @@ export function MypageGamificationCard({
       </section>
 
       {guideOpen ? (
-        <GuideDialog badges={badges} onClose={() => setGuideOpen(false)} />
+        <MypageBadgeGuideDialog
+          data={data}
+          onClose={() => setGuideOpen(false)}
+        />
       ) : null}
     </>
   );

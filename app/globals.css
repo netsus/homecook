@@ -122,6 +122,20 @@
   --accent-gold: #ffd166;
   --accent-meat-soft: #ffe7e2;
   --accent-rice-soft: #fff0ec;
+  --growth-badge-plate-fg: #3f7f74;
+  --growth-badge-plate-bg: #e9f5f0;
+  --growth-badge-shield-fg: #5969b2;
+  --growth-badge-shield-bg: #eef1ff;
+  --growth-badge-ribbon-fg: #b56473;
+  --growth-badge-ribbon-bg: #fff0f2;
+  --growth-badge-bookmark-fg: #9a6a2f;
+  --growth-badge-bookmark-bg: #fff3df;
+  --growth-badge-pot-fg: #4d738f;
+  --growth-badge-pot-bg: #eaf5fb;
+  --growth-badge-leaf-fg: #4f8f46;
+  --growth-badge-leaf-bg: #edf7e9;
+  --growth-badge-bowl-fg: #8a5d44;
+  --growth-badge-bowl-bg: #f8eee8;
   --shadow:     0px 2px 8px rgba(0, 0, 0, 0.08);
   --shadow-1:   0 1px 3px rgba(0, 0, 0, 0.04);
   --shadow-2:   0 2px 8px rgba(0, 0, 0, 0.08);
@@ -6863,12 +6877,13 @@ button {
   }
 
   .web-mypage-profile {
-    display: flex;
+    display: grid;
     flex: 0 0 auto;
+    grid-template-columns: minmax(240px, 0.85fr) minmax(300px, 1fr) minmax(260px, 0.85fr) minmax(220px, auto);
+    gap: 18px;
     min-height: 140px;
     align-items: center;
-    justify-content: space-between;
-    padding: 36px 28px;
+    padding: 28px;
   }
 
   .web-mypage-profile-main,
@@ -6886,6 +6901,15 @@ button {
     padding: 0;
     text-align: left;
     cursor: pointer;
+  }
+
+  .web-mypage-progress {
+    min-width: 0;
+  }
+
+  .web-mypage-gamification,
+  .web-mypage-growth-archive {
+    min-width: 0;
   }
 
   .web-mypage-avatar {
@@ -6949,6 +6973,16 @@ button {
     margin-top: 4px;
     color: var(--web-text-3);
     font-size: 12px;
+  }
+
+  @media (max-width: 1240px) {
+    .web-mypage-profile {
+      grid-template-columns: minmax(240px, 1fr) minmax(300px, 1fr);
+    }
+
+    .web-mypage-stats {
+      grid-column: 1 / -1;
+    }
   }
 
   .web-mypage-top-profile {

@@ -120,6 +120,23 @@ async function setAuthOverride(page: Page) {
   );
 }
 
+async function setGuestOverride(page: Page) {
+  await page.context().addCookies([
+    {
+      name: E2E_AUTH_OVERRIDE_COOKIE,
+      sameSite: "Lax",
+      url: BASE_URL,
+      value: "guest",
+    },
+  ]);
+  await page.addInitScript(
+    ({ key, state }: { key: string; state: string }) => {
+      window.localStorage.setItem(key, state);
+    },
+    { key: E2E_AUTH_OVERRIDE_KEY, state: "guest" },
+  );
+}
+
 async function stabilize(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addStyleTag({
@@ -156,12 +173,36 @@ async function installRoutes(
   },
 ) {
   await page.route("**/api/v1/users/me/progress", async (route) => {
+    if (options?.authenticated === false) {
+      await route.fulfill({
+        status: 401,
+        json: {
+          success: false,
+          data: null,
+          error: { code: "UNAUTHORIZED", message: "login required", fields: [] },
+        },
+      });
+      return;
+    }
+
     await route.fulfill({ json: { success: true, data: progress, error: null } });
   });
 
   await page.route(
     (url) => url.pathname === "/api/v1/users/me/gamification",
     async (route) => {
+      if (options?.authenticated === false) {
+        await route.fulfill({
+          status: 401,
+          json: {
+            success: false,
+            data: null,
+            error: { code: "UNAUTHORIZED", message: "login required", fields: [] },
+          },
+        });
+        return;
+      }
+
       if (options?.gamificationDelayMs) {
         await new Promise((resolve) => setTimeout(resolve, options.gamificationDelayMs));
       }
@@ -251,6 +292,18 @@ async function installRoutes(
   });
 
   await page.route((url) => url.pathname === "/api/v1/users/me", async (route) => {
+    if (options?.authenticated === false) {
+      await route.fulfill({
+        status: 401,
+        json: {
+          success: false,
+          data: null,
+          error: { code: "UNAUTHORIZED", message: "login required", fields: [] },
+        },
+      });
+      return;
+    }
+
     await route.fulfill({ json: { success: true, data: profile, error: null } });
   });
 
@@ -343,14 +396,17 @@ test.describe("33c gamification frontend @smoke-core", () => {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "mobile-390.png"),
     });
-    await mobile390.page.getByRole("button", { name: "안내" }).click();
-    await expect(mobile390.page.getByRole("dialog", { name: "성장 시스템 안내" })).toBeVisible();
+    await mobile390.page
+      .getByTestId("mypage-gamification-card")
+      .getByRole("button", { name: "안내" })
+      .click();
+    await expect(mobile390.page.getByRole("dialog", { name: "배지 안내" })).toBeVisible();
     await mobile390.page.screenshot({
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "badge-guide-modal.png"),
     });
     await mobile390.page.keyboard.press("Escape");
-    await expect(mobile390.page.getByRole("dialog", { name: "성장 시스템 안내" })).toBeHidden();
+    await expect(mobile390.page.getByRole("dialog", { name: "배지 안내" })).toBeHidden();
     await expect(mobile390.page.getByRole("button", { name: /claim/i })).toHaveCount(0);
     await mobile390.context.close();
 
@@ -390,7 +446,7 @@ test.describe("33c gamification frontend @smoke-core", () => {
     await toastPage.context.close();
 
     const softFail = await openMypage(browser, { width: 390, height: 844 }, { gamificationError: true });
-    await expect(softFail.page.getByTestId("mypage-progress-card")).toBeVisible();
+    await expect(softFail.page.getByTestId("mypage-growth-profile")).toBeVisible();
     await expect(softFail.page.getByTestId("mypage-gamification-error")).toBeVisible();
     await softFail.context.close();
   });
@@ -419,6 +475,7 @@ test.describe("33c gamification frontend @smoke-core", () => {
       viewport: { width: 390, height: 844 },
     });
     const page = await context.newPage();
+    await setGuestOverride(page);
     await installRoutes(page, { authenticated: false });
     await page.goto("/mypage", { waitUntil: "networkidle" });
     await stabilize(page);

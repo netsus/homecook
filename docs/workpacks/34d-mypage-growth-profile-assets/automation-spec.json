@@ -45,7 +45,7 @@
       "pnpm exec playwright test tests/e2e/slice-34d-mypage-growth-profile.spec.ts tests/e2e/slice-33c-gamification.spec.ts",
       "CI=1 pnpm verify:frontend:pr",
       "pnpm qa:explore -- --slice 34d-mypage-growth-profile-assets --base-url http://127.0.0.1:3100",
-      "pnpm qa:eval -- --checklist <artifact>/exploratory-checklist.json --report <artifact>/exploratory-report.json --fail-under 90",
+      "pnpm qa:eval -- --checklist .artifacts/qa/34d-mypage-growth-profile-assets/2026-06-11T14-26-06-569Z/exploratory-checklist.json --report .artifacts/qa/34d-mypage-growth-profile-assets/2026-06-11T14-26-06-569Z/exploratory-report.json --fail-under 90",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "pnpm validate:workpack -- --slice 34d-mypage-growth-profile-assets",
@@ -105,6 +105,15 @@
         "locked-badge-hints",
         "soft-fail-progress",
         "soft-fail-gamification"
+      ],
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/34d-mypage-growth-profile-assets/mobile-390.png",
+        "ui/designs/evidence/34d-mypage-growth-profile-assets/mobile-320.png",
+        "ui/designs/evidence/34d-mypage-growth-profile-assets/desktop-1440.png",
+        "ui/designs/evidence/34d-mypage-growth-profile-assets/badge-shapes.png",
+        "ui/designs/evidence/34d-mypage-growth-profile-assets/locked-badge-hints.png",
+        "ui/designs/evidence/34d-mypage-growth-profile-assets/soft-fail-progress.png",
+        "ui/designs/evidence/34d-mypage-growth-profile-assets/soft-fail-gamification.png"
       ],
       "authority_report_paths": [
         "ui/designs/authority/MYPAGE_GROWTH_PROFILE-authority.md"

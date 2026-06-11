@@ -24,8 +24,8 @@ import {
   type MypageGamificationState,
 } from "@/components/mypage/mypage-gamification-card";
 import { GrowthArchiveSurface } from "@/components/mypage/growth-archive-surface";
+import { MypageGrowthProfile } from "@/components/mypage/mypage-growth-profile";
 import {
-  MypageProgressCard,
   type MypageProgressState,
 } from "@/components/mypage/mypage-progress-card";
 import {
@@ -1888,13 +1888,17 @@ export function MypageScreen({
               <p>{SOCIAL_PROVIDER_LABELS[profile?.social_provider ?? ""] ?? ""}</p>
             </div>
           </button>
-          <MypageProgressCard
+          <MypageGrowthProfile
             className="web-mypage-progress"
+            gamification={userGamification}
+            gamificationState={gamificationState}
             progress={userProgress}
-            state={progressState}
+            progressState={progressState}
+            variant="desktop"
           />
           <MypageGamificationCard
             data={userGamification}
+            showFeaturedBadges={false}
             state={gamificationState}
             variant="desktop"
             onDismissTutorialQuest={handleDismissTutorialQuest}
