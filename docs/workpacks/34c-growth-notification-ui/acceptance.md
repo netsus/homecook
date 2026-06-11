@@ -46,7 +46,7 @@
 
 ## Data Setup / Preconditions
 
-- [x] fixture에 priority 1~4 unseen, group_key 묶음, silent/archive_only, 전부 seen, empty archive, cursor 2페이지, API 실패, 401 baseline이 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=4;scope=shared;review=5,6 -->
+- [x] fixture에 priority 1~4 unseen, group_key 묶음, silent/archive_only, 전부 seen, empty archive, cursor 2페이지, API 실패, 401 baseline이 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=4;scope=frontend;review=5,6 -->
 - [x] source action 5종 성공 mock이 준비되어 refresh trigger를 검증할 수 있다 <!-- omo:id=accept-source-action-mocks;stage=4;scope=frontend;review=5,6 -->
 - [x] real DB smoke 경로(`pnpm dev:local-supabase`)에서 플래너 등록→toast→보관함 흐름을 확인할 수 있다 <!-- omo:id=accept-real-db-ready;stage=4;scope=shared;review=6 -->
 
