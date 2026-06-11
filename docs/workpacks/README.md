@@ -128,8 +128,8 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `33b-mypage-progress-ui` | merged | MYPAGE 하드코딩 레벨 subtitle을 실제 `GET /users/me/progress` 기반 compact progress UI로 교체. progress soft-fail. 390px/320px evidence 확보 |
 | `33c-badges-quests-toasts-tutorial` | merged | 33a ledger/progress 기반 배지, 퀘스트, XP toast, 튜토리얼 퀘스트 experience 설계 및 구현. leaderboard/competitive rank/pressure streak 제외. 운영 배포 환경의 service-role/migration smoke는 Manual Only follow-up |
 | `34a-growth-model-contract-evolution` | merged | 33c 이후 성장/레벨링 v2 공식 계약 잠금. `planner_registered` XP source, non-XP activity ledger, 레벨 곡선 v2, 등급명, toast stack, archive, MYPAGE profile integration, badge shape/image concept 원칙 |
-| `34b-growth-backend-model` | in-progress | 34a 계약 기반 backend model 구현. XP writer v2, `user_growth_activity_events`, level curve v2/grade, backfill no-toast, notification priority/archive server logic |
-| `34c-growth-notification-ui` | planned | priority toast stack, `level_up`/badge/quest/XP UI, archive client/surface, 장보기 안내 문구 적용 |
+| `34b-growth-backend-model` | merged | 34a 계약 기반 backend model 구현. XP writer v2, `user_growth_activity_events`, level curve v2/grade, backfill no-toast, notification priority/archive server logic |
+| `34c-growth-notification-ui` | docs | priority toast stack, `level_up`/badge/quest/XP UI, archive client/surface, 장보기 안내 문구 적용 |
 | `34d-mypage-growth-profile-assets` | planned | MYPAGE 프로필 영역 안에 등급/레벨/XP/대표 배지 통합, 잠긴 배지 hint, badge/grade concept image artifact와 SVG/CSS production component 검토 |
 
 ## Design Decision Gates

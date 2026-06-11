@@ -1,0 +1,110 @@
+{
+  "id": "34c-growth-notification-ui",
+  "title": "Growth notification UI",
+  "summary": "34b가 적재한 성장 notification을 priority toast stack(mobile 2/desktop 3), level_up 강조, group_key 묶음, rendered/collapsed-only seen 처리, MYPAGE 최근 성장 기록/보관함 surface, 장보기 안내 문구로 사용자에게 보여주는 FE-only slice. backend contract는 소비만 한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "여러 성장 알림이 동시에 발생해도 서버 우선순위대로 유실 없이 보이고, 놓친 알림은 보관함에서 다시 볼 수 있으며, 장보기 성장 카운트 기준이 문구로 혼동되지 않게 한다.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "34a-growth-model-contract-evolution",
+    "34b-growth-backend-model",
+    "33b-mypage-progress-ui",
+    "33c-badges-quests-toasts-tutorial"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.9.md",
+      "docs/화면정의서-v1.5.16.md",
+      "docs/유저flow맵-v1.3.16.md",
+      "docs/db설계-v1.3.14.md",
+      "docs/api문서-v1.2.18.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/34c-growth-notification-ui/README.md",
+      "docs/workpacks/34c-growth-notification-ui/acceptance.md",
+      "docs/workpacks/34c-growth-notification-ui/automation-spec.json",
+      "docs/workpacks/34b-growth-backend-model/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm vitest run tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx tests/user-gamification-api-client.test.ts tests/mypage-gamification-card.test.tsx",
+      "pnpm exec playwright test tests/e2e/slice-34c-growth-notification.spec.ts tests/e2e/slice-33c-gamification.spec.ts",
+      "pnpm verify:frontend:pr",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 34c-growth-notification-ui",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx tests/user-gamification-api-client.test.ts tests/mypage-gamification-card.test.tsx",
+      "pnpm validate:workflow-v2"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "priority-unseen-server-order-consumed",
+      "toast-visible-max-mobile-2-desktop-3",
+      "levelup-emphasis-over-xp",
+      "seen-rendered-or-collapsed-only",
+      "no-backfill-toast-burst",
+      "archive-live-only-pagination",
+      "shopping-copy-exact-and-list-bundle-separated",
+      "33bc-ui-regression-safe"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 docs prepared on docs/34c-growth-notification-ui. FE-only slice consuming the merged 34b backend contract (PR #731) — no backend/schema change. Stage 4 frontend implementation (feature/fe-34c-growth-notification-ui) starts after this docs PR merges and the internal 1.5 docs gate passes. Design authority is required (high-risk shell toast layer + new MYPAGE archive surface); ui/designs/MYPAGE_GAMIFICATION.md must be updated in Stage 4 to resolve the stale 'max 2 toasts' note against the official mobile-2/desktop-3 contract. MYPAGE profile header integration and badge/grade assets are reserved for 34d.",
+  "out_of_scope": [
+    "MYPAGE profile header integration (34d)",
+    "Badge/grade image concepts and SVG/CSS production components (34d)",
+    "New badge/quest definitions",
+    "Backend public contract or schema changes",
+    "Bundle-based shopping quest count public field (contract evolution candidate)",
+    "Historical/backfill notification creation or synthesis",
+    "Leaderboard",
+    "Competitive rank",
+    "Pressure streak",
+    "Season reset",
+    "XP decay",
+    "Loot/random rewards",
+    "Push/OS notifications"
+  ],
+  "open_questions": []
+}
