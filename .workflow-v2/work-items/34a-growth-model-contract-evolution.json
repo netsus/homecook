@@ -1,0 +1,90 @@
+{
+  "id": "34a-growth-model-contract-evolution",
+  "title": "Growth Leveling v2 Contract Evolution",
+  "summary": "33a/33b/33c 이후 성장/레벨링 후속 구현 전에 planner_registered XP source, non-XP activity ledger, level curve v2, grade, toast stack, archive, MYPAGE profile integration 계약을 공식 문서 5종에 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "docs-only",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "34b/34c/34d 구현 전에 공식 source-of-truth가 XP source, activity ledger, 알림/보관함, MYPAGE 성장 UI 방향을 같은 기준으로 설명하도록 한다.",
+  "owners": {
+    "claude": "stage1-contract-owner-review",
+    "codex": "orchestration-docs-application-review-ship",
+    "workers": []
+  },
+  "dependencies": [
+    "33a-user-progress-foundation",
+    "33b-mypage-progress-ui",
+    "33c-badges-quests-toasts-tutorial"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.9.md",
+      "docs/화면정의서-v1.5.16.md",
+      "docs/유저flow맵-v1.3.16.md",
+      "docs/db설계-v1.3.14.md",
+      "docs/api문서-v1.2.18.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/34a-growth-model-contract-evolution/README.md",
+      "docs/workpacks/34a-growth-model-contract-evolution/acceptance.md",
+      "docs/workpacks/34a-growth-model-contract-evolution/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 0
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 34a-growth-model-contract-evolution",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 34a-growth-model-contract-evolution",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "official-docs-vnext",
+      "source-of-truth-sync",
+      "roadmap-34-series",
+      "workpack-acceptance-automation-spec"
+    ]
+  },
+  "status": {
+    "lifecycle": "ready_for_review",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Docs-only contract-evolution ready for PR. Local source-of-truth, workflow-v2, workpack, and diff checks passed. Claude opus4.8 one-off review returned Verdict: OK; requested resume session daf4b849-9bee-44f4-b2f5-92111db03c19 was already in use by VS Code Claude Code, and direct resume attempts produced 0-byte output before timeout.",
+  "out_of_scope": [
+    "backend migration or writer implementation",
+    "frontend toast stack or MYPAGE implementation",
+    "generated image runtime assets",
+    "leaderboard, pressure streak, season reset, XP decay, loot/random reward"
+  ],
+  "open_questions": [
+    "34d 시작 전 배지/등급 concept image prompt pack과 product sign-off가 필요하다."
+  ]
+}

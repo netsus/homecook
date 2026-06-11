@@ -1,17 +1,35 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.8.md`
-- `docs/화면정의서-v1.5.15.md`
-- `docs/유저flow맵-v1.3.15.md`
-- `docs/db설계-v1.3.13.md`
-- `docs/api문서-v1.2.17.md`
+- `docs/요구사항기준선-v1.7.9.md`
+- `docs/화면정의서-v1.5.16.md`
+- `docs/유저flow맵-v1.3.16.md`
+- `docs/db설계-v1.3.14.md`
+- `docs/api문서-v1.2.18.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Growth Leveling Follow-up Contract-Evolution `34a-growth-model-contract-evolution`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.9 | §2-16 성장/레벨링 v2 정책 추가: `planner_registered` XP source, 첫/반복 XP 분리와 cap, non-XP activity ledger, level curve v2, 등급명, 알림 우선순위, backfill no-toast, 장보기 list/bundle count 분리 |
+| 화면정의서 v1.5.16 | §19 MYPAGE 성장 UI를 프로필 영역 통합 방향으로 갱신, toast stack/archive preview/locked badge hint/badge shape/장보기 안내 문구 추가 |
+| 유저플로우 v1.3.16 | ⑪-a/⑪-b에 플래너 등록 XP, non-XP activity, priority toast stack, archive 조회, 장보기 리스트 기준/끼니 묶음 기준 분리 흐름 추가 |
+| DB v1.3.14 | `user_progress_events` 확장, `user_growth_activity_events` 추가, `user_progress_summary.level_curve_version`, notification priority/channel/group/archive 필드 추가. 테이블 수 31→32 |
+| API v1.2.18 | `GET /users/me/gamification` additive 확장, `GET /users/me/gamification/archive` 추가. `GET /users/me`와 `GET /users/me/progress` 경계 유지. 엔드포인트 수 66→67 |
+
+> 이 변경은 `34a-growth-model-contract-evolution` contract-evolution이다.
+> 33c의 “새 XP source 없음 / XP 배점 변경 없음” 제약은 34 시리즈 범위에서 명시적으로 대체된다.
+> `GET /users/me`는 계속 profile/settings-only 계약을 유지한다. `GET /users/me/progress`는 progress-only 계약을 유지하며 badge/quest/toast/archive field를 포함하지 않는다.
+> `user_growth_activity_events`는 XP를 주지 않는 배지/퀘스트/최근 성장 기록용 activity ledger이며, `user_progress_events`는 XP 지급 ledger로 유지한다.
+> historical/backfill recompute는 기존 유저 레벨/상태 반영만 수행하고 toast/notification/archive row를 만들지 않는다.
+> 경쟁 랭킹, 전체 순위, pressure streak, season reset, XP decay, loot-box/random reward는 계속 scope 밖이다.
+> 구현 Stage 2/4는 이 contract-evolution이 main에 merge된 후에 시작한다.
 
 ## User Progress Gamification Contract-Evolution `33c-gamification`
 

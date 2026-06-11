@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-11T01:08:40+09:00",
+  "updated_at": "2026-06-11T10:38:41+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1600,6 +1600,22 @@
         "git diff --check"
       ],
       "notes": "Merged via PR #726 on 2026-06-10T16:57:35Z after Stage 1 docs PR #723, contract-evolution PR #724, Stage 2 backend PR #725, Codex Stage 4 fallback, Stage 5 authority, and Stage 6 merge gate. Requested Claude resume session c2d15736 returned No conversation found; same-prompt one-off Claude final review returned Verdict: OK. Current-head CI passed at merge. Local targeted Vitest, typecheck, lint, source-action regression tests, 33c Playwright evidence, exploratory QA/eval score 100, workflow/workpack validators, diff check, and pnpm verify:frontend:pr passed. Production Vercel/Supabase service-role/migration smoke remains Manual Only follow-up after deployed MYPAGE showed gamification fallback while base progress stayed usable. closeout_phase=completed closeout_recovery=ci_resync:2 closeout_repair=codex:2|claude:0|manual_decision:1|human_escalation:0|post_merge_stale:1|sources:GitHub PR/CI,git history,PR #726 body,docs/workpacks/33c-badges-quests-toasts-tutorial/README.md last_recovery_at=2026-06-10T16:57:35Z stage4_fallback=codex"
+    },
+    {
+      "id": "34a-growth-model-contract-evolution",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/34a-growth-model-contract-evolution",
+      "pr_path": null,
+      "lifecycle": "ready_for_review",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 34a-growth-model-contract-evolution",
+        "git diff --check"
+      ],
+      "notes": "34a growth-leveling-v2 contract-evolution docs PR ready. Local validators and Claude opus4.8 review passed. 34b/34c/34d implementation waits for this merge."
     }
   ]
 }
