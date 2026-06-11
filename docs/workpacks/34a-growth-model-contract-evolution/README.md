@@ -141,10 +141,11 @@
 - Visual artifact:
   - 34a: N/A, 공식 계약 잠금
   - 34d 예정: badge/grade concept images, MYPAGE profile screenshots 320/390/1440, level-up/toast/archive screenshots
-- Authority status: `not-required` for 34a, `required` for 34d
+- Authority status: `not-required`
 - Notes:
   - 참고 이미지는 구조 참고만 한다. 전투형/랭킹형/loot tone은 적용하지 않는다.
   - 생성형 이미지는 concept artifact이고 앱 runtime은 SVG/CSS 컴포넌트다.
+  - 34d implementation에서는 Design Authority가 `required`이다.
 
 ## Design Status
 
@@ -220,11 +221,22 @@
 
 > 이 체크리스트는 34a docs PR 동안 닫는 항목과 34b~34d로 넘기는 항목을 구분한다.
 
-- [ ] 공식 문서 5종 새 버전 생성 및 동기화 <!-- omo:id=delivery-official-docs-vnext;stage=2;scope=shared;review=3,6 -->
-- [ ] `CURRENT_SOURCE_OF_TRUTH`를 v1.7.9/v1.5.16/v1.3.16/v1.3.14/v1.2.18로 갱신 <!-- omo:id=delivery-source-of-truth-sync;stage=2;scope=shared;review=3,6 -->
-- [ ] 34a/34b/34c/34d roadmap 항목 추가 <!-- omo:id=delivery-roadmap-34-series;stage=2;scope=shared;review=3,6 -->
-- [ ] XP source와 activity ledger 책임 분리 문서화 <!-- omo:id=delivery-xp-activity-separation;stage=2;scope=backend;review=3,6 -->
-- [ ] planner_registered 첫/반복/cap/backfill 정책 문서화 <!-- omo:id=delivery-planner-xp-policy;stage=2;scope=backend;review=3,6 -->
-- [ ] notification priority/toast stack/archive live-only 정책 문서화 <!-- omo:id=delivery-notification-archive-contract;stage=2;scope=shared;review=3,6 -->
-- [ ] MYPAGE profile integration과 badge visual 방향 문서화 <!-- omo:id=delivery-mypage-profile-visual-contract;stage=2;scope=frontend;review=3,6 -->
-- [ ] 후속 구현은 34a merge 이후 34b/34c/34d로 분리한다고 명시 <!-- omo:id=delivery-followup-slice-boundary;stage=2;scope=shared;review=3,6 -->
+- [x] 공식 문서 5종 새 버전 생성 및 동기화 <!-- omo:id=delivery-official-docs-vnext;stage=2;scope=shared;review=3,6 -->
+- [x] `CURRENT_SOURCE_OF_TRUTH`를 v1.7.9/v1.5.16/v1.3.16/v1.3.14/v1.2.18로 갱신 <!-- omo:id=delivery-source-of-truth-sync;stage=2;scope=shared;review=3,6 -->
+- [x] 34a/34b/34c/34d roadmap 항목 추가 <!-- omo:id=delivery-roadmap-34-series;stage=2;scope=shared;review=3,6 -->
+- [x] XP source와 activity ledger 책임 분리 문서화 <!-- omo:id=delivery-xp-activity-separation;stage=2;scope=backend;review=3,6 -->
+- [x] planner_registered 첫/반복/cap/backfill 정책 문서화 <!-- omo:id=delivery-planner-xp-policy;stage=2;scope=backend;review=3,6 -->
+- [x] notification priority/toast stack/archive live-only 정책 문서화 <!-- omo:id=delivery-notification-archive-contract;stage=2;scope=shared;review=3,6 -->
+- [x] MYPAGE profile integration과 badge visual 방향 문서화 <!-- omo:id=delivery-mypage-profile-visual-contract;stage=2;scope=shared;review=3,6 -->
+- [x] 후속 구현은 34a merge 이후 34b/34c/34d로 분리한다고 명시 <!-- omo:id=delivery-followup-slice-boundary;stage=2;scope=shared;review=3,6 -->
+
+
+## Closeout
+
+- PR: [#728](https://github.com/netsus/homecook/pull/728)
+- Merge commit: `5862becda67940a8d13dd8e8749323f234d94023`
+- Merged at: 2026-06-11T01:46:14Z
+- Local verification: `pnpm validate:source-of-truth-sync`, `pnpm validate:workflow-v2`, `pnpm validate:workpack -- --slice 34a-growth-model-contract-evolution`, `git diff --check`
+- Review: Claude `claude-opus-4-8` one-off review returned `Verdict: OK`
+- PR checks: `quality`, `build`, `policy`, `changes`, `labeler`, `template-check`, `GitGuardian Security Checks`, `Vercel`, `Vercel Preview Comments` passed; docs-only QA jobs skipped
+- Follow-up: 34b/34c/34d implementation starts from this merged contract
