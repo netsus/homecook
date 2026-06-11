@@ -12,6 +12,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 
   return fallbackMessage;
 });
+const recordUserGrowthActivityEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
@@ -22,6 +23,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/user-growth-activity", () => ({
+  recordUserGrowthActivityEvent,
 }));
 
 interface QueryError {
@@ -236,8 +241,10 @@ describe("GET /api/v1/leftovers", () => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
+    recordUserGrowthActivityEvent.mockReset();
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    recordUserGrowthActivityEvent.mockResolvedValue({ recorded: true, duplicate: false, error: null });
     createServiceRoleClient.mockReturnValue(null);
   });
 
@@ -477,8 +484,10 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
+    recordUserGrowthActivityEvent.mockReset();
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    recordUserGrowthActivityEvent.mockResolvedValue({ recorded: true, duplicate: false, error: null });
     createServiceRoleClient.mockReturnValue(null);
     vi.useFakeTimers();
     vi.setSystemTime(new Date(nowIso));
@@ -549,6 +558,15 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
       },
       error: null,
     });
+    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(db, {
+      userId: "user-1",
+      activityType: "leftover_eaten",
+      category: "leftovers",
+      sourceKey: `leftover_eaten:${leftoverId}`,
+      sourceTable: "leftover_dishes",
+      sourceId: leftoverId,
+      occurredAt: nowIso,
+    });
   });
 
   it("returns the same result without updating when the dish is already eaten", async () => {
@@ -575,6 +593,7 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
 
     expect(response.status).toBe(200);
     expect(update).not.toHaveBeenCalled();
+    expect(recordUserGrowthActivityEvent).not.toHaveBeenCalled();
     expect(body.data).toEqual({
       id: leftoverId,
       status: "eaten",

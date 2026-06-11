@@ -12,6 +12,10 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import {
+  recordUserGrowthActivityEvent,
+  type UserGrowthActivityDbClient,
+} from "@/lib/server/user-growth-activity";
 import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { RecipeBookType, RecipeSaveData, SaveableRecipeBookType } from "@/types/recipe";
@@ -286,7 +290,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    RecipeSaveDbClient & UserBootstrapDbClient & UserProgressDbClient;
+    RecipeSaveDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -438,6 +442,30 @@ export async function POST(request: Request, context: RouteContext) {
       });
     } catch {
       // Progress is a secondary reward ledger; recipe save success remains authoritative.
+    }
+  }
+
+  if (insertedItemIds.length > 0) {
+    try {
+      await Promise.all(insertedItemIds.map((itemId, index) => {
+        const bookId = createdBookIds[index];
+
+        return recordUserGrowthActivityEvent(dbClient, {
+          userId: user.id,
+          activityType: "recipebook_recipe_added",
+          category: "recipebook",
+          sourceKey: `recipebook_recipe_added:${itemId}`,
+          sourceTable: "recipe_book_items",
+          sourceId: itemId,
+          sourceMeta: {
+            book_id: bookId,
+            recipe_id: id,
+            distinct_book_recipe_key: `${bookId}:${id}`,
+          },
+        });
+      }));
+    } catch {
+      // Activity history is secondary; recipe save success remains authoritative.
     }
   }
 

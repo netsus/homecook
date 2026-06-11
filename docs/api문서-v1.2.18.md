@@ -8,7 +8,7 @@
 
 > 기준 문서: 요구사항 기준선 v1.7.9 / 화면정의서 v1.5.16 / DB 설계 v1.3.14 / 유저 Flow맵 v1.3.16
 > 작성: 킴실장
-> v1.2.17 → v1.2.18: 34a growth-leveling-v2 contract-evolution. `planner_registered` XP source, `user_growth_activity_events`, level curve v2/grade, gamification priority notifications, archive endpoint, badge shape/locked hint, MYPAGE profile integration contract 추가
+> v1.2.17 → v1.2.18: 34a growth-leveling-v2 contract-evolution. `planner_registered` XP source, `POST /meals.source_path` activity metadata, `user_growth_activity_events`, level curve v2/grade, gamification priority notifications, archive endpoint, badge shape/locked hint, MYPAGE profile integration contract 추가
 > v1.1 → v1.2: 채실장 2차 리뷰 A1~A4 + 장보기 구현 아이디어 반영
 > v1.2 → v1.2.1: 채실장 3차 리뷰 P0 4건 + P1 3건 (예시 수정 + 정책 문구 추가, 엔드포인트 변경 없음)
 > v1.2.1 → v1.2.2: `PLANNER_WEEK` 끼니 컬럼 CRUD 제거, 4끼 고정 슬롯 정책 반영
@@ -665,6 +665,7 @@ POST /meals
 | Body | column_id        | uuid  | 끼니 컬럼 ID         |
 | Body | planned_servings | int   | 계획 인분 (1 이상)   |
 | Body | leftover_dish_id | uuid? | 남은요리에서 추가 시 |
+| Body | source_path      | enum? | 식사 추가 경로 metadata. `search` / `recipebook` / `pantry` / `leftover` / `youtube` / `manual` |
 
 **응답 (201)**
 
@@ -682,6 +683,7 @@ POST /meals
 ```
 
 > `leftover_dish_id`가 있으면 서버에서 `is_leftover=true` 자동 세팅
+> `source_path`는 성장 activity `meal_add_path_used` 기록용 optional metadata다. 알 수 없거나 누락된 값은 meal 생성 실패로 처리하지 않고 activity row만 만들지 않는다.
 
 ---
 

@@ -5,6 +5,11 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import {
+  buildShoppingBundlePreparedSourceKey,
+  recordUserGrowthActivityEvent,
+  type UserGrowthActivityDbClient,
+} from "@/lib/server/user-growth-activity";
 import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { ShoppingListCompleteData } from "@/types/shopping";
@@ -181,7 +186,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    ShoppingCompleteDbClient & UserBootstrapDbClient & UserProgressDbClient;
+    ShoppingCompleteDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -346,6 +351,32 @@ export async function POST(request: Request, context: RouteContext) {
       });
     } catch {
       // Progress is a secondary reward ledger; shopping completion remains authoritative.
+    }
+
+    const mealIds = mealsUpdateResult.data.map((meal) => meal.id);
+
+    if (mealIds.length > 0) {
+      try {
+        await recordUserGrowthActivityEvent(dbClient, {
+          userId: user.id,
+          activityType: "shopping_bundle_prepared",
+          category: "shopping",
+          sourceKey: buildShoppingBundlePreparedSourceKey({
+            actionKind: "shopping_list",
+            mealIds,
+          }),
+          sourceTable: "shopping_lists",
+          sourceId: listId,
+          sourceMeta: {
+            action_kind: "shopping_list",
+            meal_ids: mealIds,
+            shopping_list_id: listId,
+          },
+          occurredAt: completedAtForProgress,
+        });
+      } catch {
+        // Activity history is secondary; shopping completion remains authoritative.
+      }
     }
   }
 

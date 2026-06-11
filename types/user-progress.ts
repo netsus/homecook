@@ -2,7 +2,17 @@ export type UserProgressEventType =
   | "cooking_completed"
   | "shopping_completed"
   | "recipe_saved"
-  | "custom_book_created";
+  | "custom_book_created"
+  | "planner_registered";
+
+export type UserProgressLevelCurveVersion = "v1" | "v2";
+
+export interface UserProgressGradeData {
+  grade_key: string;
+  label: string;
+  level_min: number;
+  level_max: number | null;
+}
 
 export interface UserProgressLevelData {
   current_level: number;
@@ -20,6 +30,8 @@ export interface UserProgressEventCounts {
   shopping_completed: number;
   recipe_saved_distinct_ever: number;
   custom_book_created: number;
+  planner_registered_first: number;
+  planner_registered_repeat: number;
 }
 
 export interface UserProgressData {

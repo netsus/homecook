@@ -7,6 +7,11 @@ import {
   type UserProgressDbClient,
   USER_PROGRESS_XP_AWARDS,
 } from "@/lib/server/user-progress";
+import {
+  projectUserGamificationAfterProgressEvent,
+  type UserGamificationDbClient,
+} from "@/lib/server/user-gamification";
+import type { UserProgressData } from "@/types/user-progress";
 
 interface QueryError {
   code?: string;
@@ -49,23 +54,177 @@ function createArrayQuery<T>(result: QueryResult<T[]>) {
   return query;
 }
 
+function createProgressData(currentLevel: number): UserProgressData {
+  return {
+    level: {
+      current_level: currentLevel,
+      total_xp: 0,
+      current_level_start_xp: 0,
+      next_level_start_xp: 100,
+      xp_into_current_level: 0,
+      xp_to_next_level: 100,
+      progress_ratio: 0,
+      progress_percent: 0,
+    },
+    event_counts: {
+      cooking_completed: 0,
+      shopping_completed: 0,
+      recipe_saved_distinct_ever: 0,
+      custom_book_created: 0,
+      planner_registered_first: 0,
+      planner_registered_repeat: 0,
+    },
+    last_updated_at: "2026-06-10T10:01:00.000Z",
+  };
+}
+
+function createGamificationProjectionDb() {
+  const badgeAwardsTable = {
+    insert: vi.fn(() => createMaybeSingleQuery({ data: null, error: null })),
+  };
+  const questProgressTable = {
+    select: vi.fn(() => createArrayQuery({ data: [], error: null })),
+    upsert: vi.fn((values) =>
+      createUpsertQuery({
+        data: { ...values, seen_at: null },
+        error: null,
+      }),
+    ),
+  };
+  const notificationsTable = {
+    insert: vi.fn((row: Record<string, unknown>) => {
+      void row;
+      return createMaybeSingleQuery({ data: { id: "notification-1" }, error: null });
+    }),
+  };
+  const dbClient = {
+    from: vi.fn((table: string) => {
+      if (table === "user_badge_awards") return badgeAwardsTable;
+      if (table === "user_quest_progress") return questProgressTable;
+      if (table === "user_progress_notifications") return notificationsTable;
+      throw new Error(`unexpected table: ${table}`);
+    }),
+  };
+
+  return { dbClient, notificationsTable };
+}
+
 describe("user gamification event projection", () => {
+  it("creates one level-up notification when a live XP event crosses a level boundary", async () => {
+    const { dbClient, notificationsTable } = createGamificationProjectionDb();
+
+    const result = await projectUserGamificationAfterProgressEvent(
+      dbClient as unknown as UserGamificationDbClient,
+      {
+        userId: "user-1",
+        progressEventId: "progress-event-level-2",
+        awardInput: {
+          userId: "user-1",
+          eventType: "cooking_completed",
+          sourceTable: "leftover_dishes",
+          sourceId: "leftover-1",
+          occurredAt: "2026-06-10T10:00:00.000Z",
+        },
+        xpDelta: 60,
+        previousLevel: 1,
+        progress: createProgressData(2),
+      },
+    );
+
+    const notificationRows = notificationsTable.insert.mock.calls.map(([row]) => row);
+    const levelUpRows = notificationRows.filter((row) => row.notification_type === "level_up");
+
+    expect(result.error).toBeNull();
+    expect(levelUpRows).toEqual([
+      expect.objectContaining({
+        notification_key: "level-up:user-1:2",
+        notification_type: "level_up",
+        priority: 1,
+        group_key: "progress-event:progress-event-level-2",
+        payload_json: expect.objectContaining({
+          previous_level: 1,
+          current_level: 2,
+        }),
+      }),
+    ]);
+  });
+
+  it("does not create a level-up notification when the live XP event stays on the same level", async () => {
+    const { dbClient, notificationsTable } = createGamificationProjectionDb();
+
+    const result = await projectUserGamificationAfterProgressEvent(
+      dbClient as unknown as UserGamificationDbClient,
+      {
+        userId: "user-1",
+        progressEventId: "progress-event-same-level",
+        awardInput: {
+          userId: "user-1",
+          eventType: "recipe_saved",
+          sourceTable: "recipe_book_items",
+          sourceId: "recipe-book-item-1",
+          recipeId: "recipe-1",
+          occurredAt: "2026-06-10T10:00:00.000Z",
+        },
+        xpDelta: 8,
+        previousLevel: 2,
+        progress: createProgressData(2),
+      },
+    );
+
+    const notificationRows = notificationsTable.insert.mock.calls.map(([row]) => row);
+
+    expect(result.error).toBeNull();
+    expect(notificationRows.some((row) => row.notification_type === "level_up")).toBe(false);
+  });
+
+  it("creates only the final level-up notification when one live XP event jumps multiple levels", async () => {
+    const { dbClient, notificationsTable } = createGamificationProjectionDb();
+
+    const result = await projectUserGamificationAfterProgressEvent(
+      dbClient as unknown as UserGamificationDbClient,
+      {
+        userId: "user-1",
+        progressEventId: "progress-event-level-4",
+        awardInput: {
+          userId: "user-1",
+          eventType: "shopping_completed",
+          sourceTable: "shopping_lists",
+          sourceId: "shopping-list-1",
+          occurredAt: "2026-06-10T10:00:00.000Z",
+        },
+        xpDelta: 200,
+        previousLevel: 1,
+        progress: createProgressData(4),
+      },
+    );
+
+    const levelUpKeys = notificationsTable.insert.mock.calls
+      .map(([row]) => row)
+      .filter((row) => row.notification_type === "level_up")
+      .map((row) => row.notification_key);
+
+    expect(result.error).toBeNull();
+    expect(levelUpKeys).toEqual(["level-up:user-1:4"]);
+  });
+
   it("creates XP, badge, and quest projections after a canonical progress event", async () => {
     const progressEventsTable = {
       insert: vi.fn(() => createMaybeSingleQuery({ data: { id: "progress-event-1" }, error: null })),
-      select: vi.fn(() =>
-        createArrayQuery({
+      select: vi
+        .fn()
+        .mockReturnValueOnce(createArrayQuery({ data: [], error: null }))
+        .mockReturnValueOnce(createArrayQuery({
           data: [
             {
               event_type: "shopping_completed",
               source_key: "shopping_completed:550e8400-e29b-41d4-a716-446655440001",
               xp_delta: USER_PROGRESS_XP_AWARDS.shopping_completed,
               occurred_at: "2026-06-10T10:00:00.000Z",
+              source_meta_json: { xp_kind: "first", level_curve_version: "v2" },
             },
           ],
           error: null,
-        }),
-      ),
+        })),
     };
     const progressSummaryTable = {
       upsert: vi.fn(() =>
@@ -79,6 +238,8 @@ describe("user gamification event projection", () => {
               shopping_completed: 1,
               recipe_saved_distinct_ever: 0,
               custom_book_created: 0,
+              planner_registered_first: 0,
+              planner_registered_repeat: 0,
             },
             last_event_at: "2026-06-10T10:00:00.000Z",
             last_updated_at: "2026-06-10T10:01:00.000Z",
@@ -179,19 +340,21 @@ describe("user gamification event projection", () => {
   it("projects a recipe save source event into XP, badge, and tutorial quest notifications", async () => {
     const progressEventsTable = {
       insert: vi.fn(() => createMaybeSingleQuery({ data: { id: "progress-event-2" }, error: null })),
-      select: vi.fn(() =>
-        createArrayQuery({
+      select: vi
+        .fn()
+        .mockReturnValueOnce(createArrayQuery({ data: [], error: null }))
+        .mockReturnValueOnce(createArrayQuery({
           data: [
             {
               event_type: "recipe_saved",
               source_key: "recipe_saved:user-1:550e8400-e29b-41d4-a716-446655440010",
               xp_delta: USER_PROGRESS_XP_AWARDS.recipe_saved,
               occurred_at: "2026-06-10T11:00:00.000Z",
+              source_meta_json: { xp_kind: "first", level_curve_version: "v2" },
             },
           ],
           error: null,
-        }),
-      ),
+        })),
     };
     const progressSummaryTable = {
       upsert: vi.fn(() =>
@@ -205,6 +368,8 @@ describe("user gamification event projection", () => {
               shopping_completed: 0,
               recipe_saved_distinct_ever: 1,
               custom_book_created: 0,
+              planner_registered_first: 0,
+              planner_registered_repeat: 0,
             },
             last_event_at: "2026-06-10T11:00:00.000Z",
             last_updated_at: "2026-06-10T11:01:00.000Z",

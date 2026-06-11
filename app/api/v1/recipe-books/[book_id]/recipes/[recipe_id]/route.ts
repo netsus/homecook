@@ -15,6 +15,10 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import {
+  recordUserGrowthActivityEvent,
+  type UserGrowthActivityDbClient,
+} from "@/lib/server/user-growth-activity";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type {
   RecipeBookDeleteData,
@@ -188,6 +192,9 @@ interface RecipeBookRecipeRemoveDbClient {
   from(table: "recipe_ingredients"): RecipeIngredientsTable;
   from(table: "recipe_steps"): RecipeStepsTable;
 }
+
+type RecipeBookRecipeRemoveAuthedDbClient =
+  RecipeBookRecipeRemoveDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
 
 const UUID_PATTERN
   = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -511,10 +518,12 @@ async function updateRecipeCount({
 
 async function removeLikedRecipe({
   dbClient,
+  bookId,
   recipeId,
   userId,
 }: {
-  dbClient: RecipeBookRecipeRemoveDbClient;
+  dbClient: RecipeBookRecipeRemoveAuthedDbClient;
+  bookId: string;
   recipeId: string;
   userId: string;
 }) {
@@ -562,6 +571,15 @@ async function removeLikedRecipe({
     return fail("INTERNAL_ERROR", "좋아요 수를 갱신하지 못했어요.", 500);
   }
 
+  await recordRecipebookRecipeRemoved({
+    dbClient,
+    userId,
+    bookId,
+    recipeId,
+    sourceTable: "recipe_likes",
+    sourceId: deleteResult.data.id,
+  });
+
   return ok({ deleted: true } satisfies RecipeBookDeleteData);
 }
 
@@ -569,10 +587,12 @@ async function removeSavedOrCustomRecipe({
   dbClient,
   bookId,
   recipeId,
+  userId,
 }: {
-  dbClient: RecipeBookRecipeRemoveDbClient;
+  dbClient: RecipeBookRecipeRemoveAuthedDbClient;
   bookId: string;
   recipeId: string;
+  userId: string;
 }) {
   const itemResult = await dbClient
     .from("recipe_book_items")
@@ -618,7 +638,53 @@ async function removeSavedOrCustomRecipe({
     return fail("INTERNAL_ERROR", "저장 수를 갱신하지 못했어요.", 500);
   }
 
+  await recordRecipebookRecipeRemoved({
+    dbClient,
+    userId,
+    bookId,
+    recipeId,
+    sourceTable: "recipe_book_items",
+    sourceId: deleteResult.data.id,
+  });
+
   return ok({ deleted: true } satisfies RecipeBookDeleteData);
+}
+
+async function recordRecipebookRecipeRemoved({
+  dbClient,
+  userId,
+  bookId,
+  recipeId,
+  sourceTable,
+  sourceId,
+}: {
+  dbClient: RecipeBookRecipeRemoveAuthedDbClient;
+  userId: string;
+  bookId: string;
+  recipeId: string;
+  sourceTable: "recipe_book_items" | "recipe_likes";
+  sourceId: string;
+}) {
+  const removedAtMs = Date.now();
+
+  try {
+    await recordUserGrowthActivityEvent(dbClient, {
+      userId,
+      activityType: "recipebook_recipe_removed",
+      category: "recipebook",
+      sourceKey: `recipebook_recipe_removed:${userId}:${bookId}:${recipeId}:${removedAtMs}`,
+      sourceTable,
+      sourceId,
+      sourceMeta: {
+        book_id: bookId,
+        recipe_id: recipeId,
+        removed_item_id: sourceId,
+      },
+      occurredAt: new Date(removedAtMs).toISOString(),
+    });
+  } catch {
+    // Activity history is secondary; recipebook mutation remains authoritative.
+  }
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
@@ -637,7 +703,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    RecipeBookRecipeRemoveDbClient & UserBootstrapDbClient;
+    RecipeBookRecipeRemoveAuthedDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -667,6 +733,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   if (bookResult.data.book_type === "liked") {
     return removeLikedRecipe({
       dbClient,
+      bookId,
       recipeId,
       userId: user.id,
     });
@@ -676,5 +743,6 @@ export async function DELETE(_request: Request, context: RouteContext) {
     dbClient,
     bookId,
     recipeId,
+    userId: user.id,
   });
 }

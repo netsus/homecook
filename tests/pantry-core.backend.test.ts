@@ -12,6 +12,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 
   return fallbackMessage;
 });
+const recordUserGrowthActivityEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
@@ -22,6 +23,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/user-growth-activity", () => ({
+  recordUserGrowthActivityEvent,
 }));
 
 interface QueryError {
@@ -131,9 +136,11 @@ describe("13 pantry core backend", () => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
+    recordUserGrowthActivityEvent.mockReset();
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    recordUserGrowthActivityEvent.mockResolvedValue({ recorded: true, duplicate: false, error: null });
   });
 
   it("GET /pantry returns 401 when the user is not authenticated", async () => {
@@ -394,6 +401,16 @@ describe("13 pantry core backend", () => {
         ingredient_id: "ing-tofu",
       },
     ]);
+    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user-1",
+      activityType: "pantry_item_added",
+      category: "pantry",
+      sourceKey: "pantry_item_added:pantry-tofu",
+      sourceTable: "pantry_items",
+      sourceId: "pantry-tofu",
+      sourceMeta: { ingredient_id: "ing-tofu" },
+      occurredAt: "2026-04-28T10:00:00Z",
+    });
   });
 
   it("POST /pantry keeps adding ingredients with legacy selects when category_code is not in the schema cache", async () => {

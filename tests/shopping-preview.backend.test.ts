@@ -6,6 +6,7 @@ import {
   parseShoppingMealConfigs,
   parseShoppingRecipeConfigs,
 } from "@/lib/server/shopping";
+import { buildShoppingBundlePreparedSourceKey } from "@/lib/server/user-growth-activity";
 import { createShoppingList, fetchShoppingPreview, isShoppingApiError } from "@/lib/api/shopping";
 
 const createRouteHandlerClient = vi.fn();
@@ -884,6 +885,9 @@ describe("shopping stage2 backend", () => {
       },
     ]);
     const mealsUpdate = vi.fn(() => mealsDoneUpdateQuery);
+    const activityInsert = vi.fn(() =>
+      createInsertMaybeSingleQuery([{ data: { id: "activity-1" }, error: null }]),
+    );
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -916,6 +920,9 @@ describe("shopping stage2 backend", () => {
         }
         if (table === "shopping_list_items") {
           return { insert: shoppingListItemsInsert };
+        }
+        if (table === "user_growth_activity_events") {
+          return { insert: activityInsert };
         }
 
         throw new Error(`unexpected table: ${table}`);
@@ -952,6 +959,23 @@ describe("shopping stage2 backend", () => {
     expect(mealsUpdate).toHaveBeenCalledWith({ status: "shopping_done" });
     expect(mealsDoneUpdateQuery.in).toHaveBeenCalledWith("id", [mealId]);
     expect(mealsDoneUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(activityInsert).toHaveBeenCalledWith({
+      user_id: "user-1",
+      activity_type: "shopping_bundle_prepared",
+      category: "shopping",
+      source_key: buildShoppingBundlePreparedSourceKey({
+        actionKind: "completed_without_list",
+        mealIds: [mealId],
+      }),
+      source_table: "meals",
+      source_id: mealId,
+      source_meta_json: {
+        action_kind: "completed_without_list",
+        meal_ids: [mealId],
+        pantry_item_count: 1,
+      },
+      occurred_at: expect.any(String),
+    });
   });
 
   it("creates one recipe-level shopping row and scales duplicate recipe meals from base servings", async () => {

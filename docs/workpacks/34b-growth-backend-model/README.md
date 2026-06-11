@@ -349,17 +349,28 @@ pnpm verify:backend
 > 구현 증거 없이 checkbox를 미리 닫지 않는다.
 > `automation-spec.json`을 함께 쓰는 슬라이스이므로 `Manual Only`를 제외한 각 체크박스 끝에 `omo` metadata를 유지한다.
 
-- [ ] additive migration 작성 (`user_growth_activity_events`, `source_meta_json`, `level_curve_version`, notification priority/channel/toast_eligible/group_key, `planner_registered`/`level_up` 허용값) <!-- omo:id=delivery-additive-migration;stage=2;scope=backend;review=3,6 -->
-- [ ] XP policy v2 서버 상수와 first/repeat/cap 로직 구현 <!-- omo:id=delivery-xp-policy-v2;stage=2;scope=backend;review=3,6 -->
-- [ ] `planner_registered` writer를 `POST /api/v1/meals` 성공 경로에 연결 <!-- omo:id=delivery-planner-registered-writer;stage=2;scope=backend;review=3,6 -->
-- [ ] non-XP activity writer 7종 연결 <!-- omo:id=delivery-activity-ledger-writers;stage=2;scope=backend;review=3,6 -->
-- [ ] level curve v2 + grade band 서버 유틸과 `level_curve_version` 전환 구현 <!-- omo:id=delivery-level-curve-v2-grade;stage=2;scope=backend;review=3,6 -->
-- [ ] `level_up` notification 생성 규칙과 priority/delivery_channel/toast_eligible/group_key projection 구현 <!-- omo:id=delivery-levelup-notification-priority;stage=2;scope=backend;review=3,6 -->
-- [ ] `GET /api/v1/users/me/gamification/archive` route 구현 (cursor pagination, silent 제외) <!-- omo:id=delivery-archive-route;stage=2;scope=backend;review=3,6 -->
-- [ ] progress/gamification additive response 확장 (planner counts, grade, badge metadata, priority_unseen, archive_preview) <!-- omo:id=delivery-additive-responses;stage=2;scope=backend;review=3,6 -->
-- [ ] backfill/recompute internal 경로 구현 (deterministic order, no-toast, dry-run) <!-- omo:id=delivery-backfill-recompute-no-toast;stage=2;scope=backend;review=3,6 -->
-- [ ] owner/auth/RLS/security boundary 검증 <!-- omo:id=delivery-security-boundary;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 (`types/user-progress.ts`, `types/user-gamification.ts` additive 확장) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] 상태 전이 / 멱등성 / cap 경계 테스트 작성 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=backend;review=3,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] 34c/34d handoff notes 갱신 (additive response 소비 가이드) <!-- omo:id=delivery-followup-handoff;stage=2;scope=shared;review=3,6 -->
+- [x] additive migration 작성 (`user_growth_activity_events`, `source_meta_json`, `level_curve_version`, notification priority/channel/toast_eligible/group_key, `planner_registered`/`level_up` 허용값) <!-- omo:id=delivery-additive-migration;stage=2;scope=backend;review=3,6 -->
+- [x] XP policy v2 서버 상수와 first/repeat/cap 로직 구현 <!-- omo:id=delivery-xp-policy-v2;stage=2;scope=backend;review=3,6 -->
+- [x] `planner_registered` writer를 `POST /api/v1/meals` 성공 경로에 연결 <!-- omo:id=delivery-planner-registered-writer;stage=2;scope=backend;review=3,6 -->
+- [x] non-XP activity writer 7종 연결 <!-- omo:id=delivery-activity-ledger-writers;stage=2;scope=backend;review=3,6 -->
+- [x] level curve v2 + grade band 서버 유틸과 `level_curve_version` 전환 구현 <!-- omo:id=delivery-level-curve-v2-grade;stage=2;scope=backend;review=3,6 -->
+- [x] `level_up` notification 생성 규칙과 priority/delivery_channel/toast_eligible/group_key projection 구현 <!-- omo:id=delivery-levelup-notification-priority;stage=2;scope=backend;review=3,6 -->
+- [x] `GET /api/v1/users/me/gamification/archive` route 구현 (cursor pagination, silent 제외) <!-- omo:id=delivery-archive-route;stage=2;scope=backend;review=3,6 -->
+- [x] progress/gamification additive response 확장 (planner counts, grade, badge metadata, priority_unseen, archive_preview) <!-- omo:id=delivery-additive-responses;stage=2;scope=backend;review=3,6 -->
+- [x] backfill/recompute internal 경로 구현 (deterministic order, no-toast, dry-run) <!-- omo:id=delivery-backfill-recompute-no-toast;stage=2;scope=backend;review=3,6 -->
+- [x] owner/auth/RLS/security boundary 검증 <!-- omo:id=delivery-security-boundary;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 (`types/user-progress.ts`, `types/user-gamification.ts` additive 확장) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 멱등성 / cap 경계 테스트 작성 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=backend;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] 34c/34d handoff notes 갱신 (additive response 소비 가이드) <!-- omo:id=delivery-followup-handoff;stage=2;scope=shared;review=3,6 -->
+
+## Stage 2 Closeout / Handoff Notes
+
+- 34c는 `GET /api/v1/users/me/gamification`의 `notifications.priority_unseen`을 서버 정렬 그대로 소비해 toast stack을 렌더링한다. 클라이언트에서 priority를 재계산하지 않는다.
+- 34c archive surface는 `GET /api/v1/users/me/gamification/archive`를 사용하고, `delivery_channel='silent'` row가 제외된다는 서버 계약을 전제로 한다.
+- 34d MYPAGE profile 통합은 `grade`, badge `category` / `shape_key` / `locked_hint`, 기존 `featured_badges` shape를 함께 소비한다.
+- 장보기 quest count는 public API 필드로 추가하지 않았다. 서버 내부 기준은 `shopping_completed` XP/list count, `shopping_bundle_prepared` activity count, `source_meta_json.meal_ids` distinct covered meal count로 분리한다.
+- local Supabase schema smoke: `pnpm exec supabase db reset --local --yes`로 clean DB에 전체 migration을 재적용했고, `20260611152000_34b_growth_backend_model`, `user_growth_activity_events.source_id NOT NULL`, `source_meta_json`, notification `priority`/`delivery_channel` constraints, priority/archive indexes, RLS select-own policy를 `psql`로 확인했다.
+- local priority backfill smoke: rollback transaction 안에서 legacy-style `xp_awarded`/`badge_unlocked`/`quest_completed` notification row에 migration UPDATE를 적용해 priority `4/2/3` 매핑을 확인했다.
+- dry-run no-toast evidence: `tests/user-progress-backfill-recompute.test.ts`에서 `would_insert_notifications=0`과 `level_curve_version='v2'`를 고정한다.
+- Stage 2 local verification evidence: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e:security`, `pnpm exec playwright test tests/e2e/slice-33c-gamification.spec.ts --project=desktop-chrome --project=mobile-chrome`, `pnpm validate:source-of-truth-sync`, `pnpm validate:workflow-v2`, `pnpm validate:workpack -- --slice 34b-growth-backend-model`, `git diff --check` 통과.

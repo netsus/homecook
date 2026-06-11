@@ -12,6 +12,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 
   return fallbackMessage;
 });
+const recordUserGrowthActivityEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
@@ -22,6 +23,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/user-growth-activity", () => ({
+  recordUserGrowthActivityEvent,
 }));
 
 interface QueryError {
@@ -110,8 +115,10 @@ describe("17b recipebook detail backend", () => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
+    recordUserGrowthActivityEvent.mockReset();
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    recordUserGrowthActivityEvent.mockResolvedValue({ recorded: true, duplicate: false, error: null });
     createServiceRoleClient.mockReturnValue(null);
     delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
@@ -302,6 +309,22 @@ describe("17b recipebook detail backend", () => {
     expect(recipeBookItemsTable.__query.eq).toHaveBeenCalledWith("book_id", BOOK_ID);
     expect(recipeBookItemsTable.__query.eq).toHaveBeenCalledWith("recipe_id", RECIPE_ID);
     expect(recipesTable.update).toHaveBeenCalledWith({ save_count: 1 });
+    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      userId: "user-1",
+      activityType: "recipebook_recipe_removed",
+      category: "recipebook",
+      sourceKey: expect.stringMatching(
+        new RegExp(`^recipebook_recipe_removed:user-1:${BOOK_ID}:${RECIPE_ID}:\\d+$`),
+      ),
+      sourceTable: "recipe_book_items",
+      sourceId: "item-1",
+      sourceMeta: {
+        book_id: BOOK_ID,
+        recipe_id: RECIPE_ID,
+        removed_item_id: "item-1",
+      },
+      occurredAt: expect.any(String),
+    }));
   });
 
   it("DELETE /recipe-books/{book_id}/recipes/{recipe_id} unlikes liked books and syncs like_count", async () => {
