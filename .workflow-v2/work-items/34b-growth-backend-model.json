@@ -1,0 +1,116 @@
+{
+  "id": "34b-growth-backend-model",
+  "title": "Growth backend model v2",
+  "summary": "34a 계약 기준으로 planner_registered XP source, 첫/반복 XP 분리와 KST cap, non-XP activity ledger, level curve v2/grade, level_up priority notification, archive endpoint, backfill no-toast recompute를 backend model로 구현한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "34c/34d UI보다 먼저, 성장/레벨링 v2 계약(XP policy v2, activity ledger, level curve v2, notification priority/archive)을 서버 단일 권한 모델로 안전하게 적립·조회할 수 있게 한다.",
+  "owners": {
+    "claude": "stage1,stage3",
+    "codex": "stage2",
+    "workers": []
+  },
+  "dependencies": [
+    "34a-growth-model-contract-evolution",
+    "33a-user-progress-foundation",
+    "33b-mypage-progress-ui",
+    "33c-badges-quests-toasts-tutorial",
+    "05-planner-week-core",
+    "08a-meal-add-search-core",
+    "08b-meal-add-books-pantry",
+    "12a-shopping-complete",
+    "12b-shopping-pantry-reflect",
+    "13-pantry-core",
+    "16-leftovers",
+    "17b-recipebook-detail-remove"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.9.md",
+      "docs/화면정의서-v1.5.16.md",
+      "docs/유저flow맵-v1.3.16.md",
+      "docs/db설계-v1.3.14.md",
+      "docs/api문서-v1.2.18.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/34b-growth-backend-model/README.md",
+      "docs/workpacks/34b-growth-backend-model/acceptance.md",
+      "docs/workpacks/34b-growth-backend-model/automation-spec.json",
+      "docs/workpacks/34a-growth-model-contract-evolution/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "growth-model-real-db-smoke",
+      "growth-backfill-no-toast-dry-run-smoke"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 0
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm vitest run tests/user-progress-xp-policy-v2.test.ts tests/user-progress-level-v2.test.ts tests/planner-registered-events.test.ts tests/user-growth-activity-events.test.ts tests/user-gamification-archive-route.test.ts tests/user-gamification-notification-priority.test.ts tests/user-progress-backfill-recompute.test.ts",
+      "pnpm vitest run tests/user-progress-events.test.ts tests/user-progress-level.test.ts tests/user-progress-route.test.ts tests/user-gamification-events.test.ts tests/user-gamification-route.test.ts tests/user-gamification-source-action-smoke.test.ts",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 34b-growth-backend-model",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/user-progress-xp-policy-v2.test.ts tests/user-progress-level-v2.test.ts tests/planner-registered-events.test.ts tests/user-growth-activity-events.test.ts tests/user-gamification-archive-route.test.ts tests/user-gamification-notification-priority.test.ts tests/user-progress-backfill-recompute.test.ts",
+      "pnpm validate:workflow-v2"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "planner-registered-first-repeat-kst-cap",
+      "xp-policy-v2-first-repeat-split",
+      "level-curve-v2-grade-bands",
+      "activity-ledger-idempotency",
+      "level-up-notification-priority",
+      "archive-cursor-pagination-live-only",
+      "backfill-no-toast",
+      "users-me-and-progress-boundary-preserved"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "Stage 1 docs prepared on docs/34b-growth-backend-model. 34b consumes the merged 34a contract (v1.7.9 / v1.5.16 / v1.3.16 / v1.3.14 / v1.2.18) without changing it. Stage 2 backend implementation starts only after this docs PR merges and the internal 1.5 docs gate passes. Toast stack UI, MYPAGE profile integration, and badge/grade SVG/CSS assets are reserved for 34c/34d.",
+  "out_of_scope": [
+    "Toast stack UI rendering (34c)",
+    "MYPAGE profile visual integration (34d)",
+    "Badge/grade SVG/CSS production components (34d)",
+    "Generated image runtime assets",
+    "New badge/quest definition expansion",
+    "Public backfill API",
+    "Leaderboard",
+    "Competitive rank",
+    "Pressure streak",
+    "Season reset",
+    "XP decay",
+    "Loot/random rewards"
+  ],
+  "open_questions": []
+}
