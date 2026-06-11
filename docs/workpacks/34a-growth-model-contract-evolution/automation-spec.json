@@ -1,0 +1,128 @@
+{
+  "slice_id": "34a-growth-model-contract-evolution",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "conditional-auto",
+  "change_type": "contract-evolution",
+  "contract_evolution_required": true,
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/users/me/gamification",
+      "GET /api/v1/users/me/gamification/archive",
+      "POST /api/v1/users/me/gamification/notifications/seen"
+    ],
+    "invariants": [
+      "official-docs-before-implementation",
+      "users-me-remains-profile-only",
+      "progress-response-remains-progress-only",
+      "user-progress-events-remain-xp-ledger",
+      "user-growth-activity-events-non-xp-ledger",
+      "planner-registered-first-repeat-cap-policy-documented",
+      "backfill-creates-no-toast-or-archive-notifications",
+      "shopping-list-count-and-meal-bundle-count-separated",
+      "server-authority-xp-level-grade-badge-quest-notification",
+      "no-operational-events-as-reward-truth",
+      "no-leaderboard-competitive-rank-pressure-streak-season-reset-loot"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 34a-growth-model-contract-evolution",
+      "git diff --check"
+    ],
+    "required_test_targets": [],
+    "schema_changes": [
+      "future 34b additive migration for user_growth_activity_events",
+      "future 34b additive migration for user_progress_events.source_meta_json",
+      "future 34b additive migration for user_progress_summary.level_curve_version",
+      "future 34b additive migration for user_progress_notifications priority/archive fields"
+    ],
+    "required_tables": [
+      "user_progress_events",
+      "user_progress_summary",
+      "user_growth_activity_events",
+      "user_badge_awards",
+      "user_quest_progress",
+      "user_progress_notifications"
+    ],
+    "source_events": [
+      "cooking_completed",
+      "shopping_completed",
+      "recipe_saved",
+      "custom_book_created",
+      "planner_registered"
+    ],
+    "activity_events": [
+      "shopping_bundle_prepared",
+      "pantry_item_added",
+      "leftover_eaten",
+      "meal_add_path_used",
+      "recipebook_created",
+      "recipebook_recipe_added",
+      "recipebook_recipe_removed"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/mypage"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "required_endpoints": [
+      "GET /api/v1/users/me/progress",
+      "GET /api/v1/users/me/gamification",
+      "GET /api/v1/users/me/gamification/archive",
+      "POST /api/v1/users/me/gamification/notifications/seen"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 34a-growth-model-contract-evolution",
+      "git diff --check"
+    ],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "mypage-profile-integration-contract",
+      "toast-stack-priority-contract",
+      "archive-live-only-contract",
+      "shopping-copy-contract",
+      "badge-shape-and-locked-hint-contract"
+    ],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [
+        "MYPAGE"
+      ],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "source-of-truth-not-updated",
+    "users-me-progress-or-gamification-field-requested",
+    "progress-response-shape-changed-to-include-gamification",
+    "backfill-notification-burst-allowed",
+    "planner-xp-cap-missing",
+    "shopping-list-and-meal-bundle-counts-merged",
+    "client-side-xp-level-grade-badge-quest-calculation",
+    "operational-events-used-as-reward-truth",
+    "leaderboard-competitive-rank-pressure-streak-season-reset-loot-added"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 0
+  }
+}
