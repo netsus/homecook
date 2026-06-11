@@ -13,6 +13,10 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import {
+  recordUserGrowthActivityEvent,
+  type UserGrowthActivityDbClient,
+} from "@/lib/server/user-growth-activity";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { LeftoverMutationData } from "@/types/leftover";
 
@@ -56,6 +60,9 @@ interface LeftoverMutationDbClient {
   from(table: "leftover_dishes"): LeftoverDishesTable;
 }
 
+type LeftoverMutationAuthedDbClient =
+  LeftoverMutationDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
+
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
   const authResult = await routeClient.auth.getUser();
   return authResult.data.user;
@@ -92,7 +99,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    LeftoverMutationDbClient & UserBootstrapDbClient;
+    LeftoverMutationAuthedDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -138,6 +145,20 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (updateResult.error || !updateResult.data) {
     return fail("INTERNAL_ERROR", "남은 요리를 다먹음 처리하지 못했어요.", 500);
+  }
+
+  try {
+    await recordUserGrowthActivityEvent(dbClient, {
+      userId: user.id,
+      activityType: "leftover_eaten",
+      category: "leftovers",
+      sourceKey: `leftover_eaten:${leftoverId}`,
+      sourceTable: "leftover_dishes",
+      sourceId: leftoverId,
+      occurredAt: eatenAt,
+    });
+  } catch {
+    // Activity history is secondary; leftover mutation remains authoritative.
   }
 
   return ok(toLeftoverMutationData(updateResult.data));

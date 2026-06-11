@@ -15,6 +15,14 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import {
+  buildMealAddPathSourceKey,
+  MEAL_ADD_PATHS,
+  recordUserGrowthActivityEvent,
+  type MealAddPath,
+  type UserGrowthActivityDbClient,
+} from "@/lib/server/user-growth-activity";
+import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { MealCreateBody, MealCreateData, MealListData, MealListItemData } from "@/types/meal";
 import type { MealStatus } from "@/types/planner";
@@ -189,6 +197,15 @@ function normalizeOptionalUuid(value: unknown) {
   return normalized.length > 0 ? normalized : null;
 }
 
+function normalizeMealAddPath(value: unknown): MealAddPath | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return MEAL_ADD_PATHS.has(normalized as MealAddPath) ? normalized as MealAddPath : null;
+}
+
 function parseMealListQuery(request: NextRequest) {
   const planDate = request.nextUrl.searchParams.get("plan_date")?.trim() ?? "";
   const columnId = request.nextUrl.searchParams.get("column_id")?.trim() ?? "";
@@ -318,7 +335,8 @@ export async function GET(request: NextRequest) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as MealsDbClient & UserBootstrapDbClient;
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+    MealsDbClient & UserBootstrapDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -456,7 +474,8 @@ export async function POST(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as MealsDbClient & UserBootstrapDbClient;
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+    MealsDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -534,6 +553,38 @@ export async function POST(request: Request) {
 
   if (insertResult.error || !insertResult.data) {
     return fail("INTERNAL_ERROR", "식사를 추가하지 못했어요.", 500);
+  }
+
+  const occurredAt = new Date().toISOString();
+
+  try {
+    await awardUserProgressEvent(dbClient, {
+      userId: user.id,
+      eventType: "planner_registered",
+      sourceTable: "meals",
+      sourceId: insertResult.data.id,
+      occurredAt,
+    });
+  } catch {
+    // Growth projection is secondary; meal creation remains the source action.
+  }
+
+  const sourcePath = normalizeMealAddPath(body.source_path);
+  if (sourcePath) {
+    try {
+      await recordUserGrowthActivityEvent(dbClient, {
+        userId: user.id,
+        activityType: "meal_add_path_used",
+        category: "planner",
+        sourceKey: buildMealAddPathSourceKey(user.id, sourcePath),
+        sourceTable: "meals",
+        sourceId: insertResult.data.id,
+        sourceMeta: { source_path: sourcePath },
+        occurredAt,
+      });
+    } catch {
+      // Activity history is secondary; meal creation remains the source action.
+    }
   }
 
   return ok(toMealCreateData(insertResult.data), { status: 201 });

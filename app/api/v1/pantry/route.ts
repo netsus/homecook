@@ -18,6 +18,10 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import {
+  recordUserGrowthActivityEvent,
+  type UserGrowthActivityDbClient,
+} from "@/lib/server/user-growth-activity";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { PantryMutationBody } from "@/types/pantry";
 
@@ -86,7 +90,7 @@ const INGREDIENT_SELECT = "id, standard_name, category, category_code";
 const INGREDIENT_SELECT_LEGACY = "id, standard_name, category";
 
 interface PantryAuthSuccess {
-  dbClient: PantryDbClient & UserBootstrapDbClient;
+  dbClient: PantryDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
   user: { id: string };
 }
 
@@ -108,7 +112,7 @@ async function getAuthenticatedDb(
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    PantryDbClient & UserBootstrapDbClient;
+    PantryDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -298,6 +302,23 @@ export async function POST(request: Request) {
   }
 
   const items = toPantryItems(insertResult.data);
+
+  try {
+    await Promise.all(items.map((item) =>
+      recordUserGrowthActivityEvent(auth.dbClient, {
+        userId: auth.user.id,
+        activityType: "pantry_item_added",
+        category: "pantry",
+        sourceKey: `pantry_item_added:${item.id}`,
+        sourceTable: "pantry_items",
+        sourceId: item.id,
+        sourceMeta: { ingredient_id: item.ingredient_id },
+        occurredAt: item.created_at,
+      }),
+    ));
+  } catch {
+    // Activity history is secondary; pantry mutation remains authoritative.
+  }
 
   return ok({ added: items.length, items }, { status: 201 });
 }

@@ -21,6 +21,7 @@ export interface MealCreateBody {
   column_id?: string;
   planned_servings?: number;
   leftover_dish_id?: string | null;
+  source_path?: "search" | "recipebook" | "pantry" | "leftover" | "youtube" | "manual" | null;
 }
 
 export interface MealCreateData {

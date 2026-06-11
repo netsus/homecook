@@ -13,6 +13,11 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import {
+  buildShoppingBundlePreparedSourceKey,
+  recordUserGrowthActivityEvent,
+  type UserGrowthActivityDbClient,
+} from "@/lib/server/user-growth-activity";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type {
   ShoppingListAllPantryCompletionSummary,
@@ -392,7 +397,7 @@ export async function POST(request: Request) {
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    ShoppingCreateDbClient & UserBootstrapDbClient;
+    ShoppingCreateDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -670,6 +675,32 @@ export async function POST(request: Request) {
     }
 
     const completedAt = new Date().toISOString();
+    const mealIds = shoppingMeals.map((meal) => meal.id).sort();
+    const representativeMealId = mealIds[0];
+
+    if (representativeMealId) {
+      try {
+        await recordUserGrowthActivityEvent(dbClient, {
+          userId: user.id,
+          activityType: "shopping_bundle_prepared",
+          category: "shopping",
+          sourceKey: buildShoppingBundlePreparedSourceKey({
+            actionKind: "completed_without_list",
+            mealIds,
+          }),
+          sourceTable: "meals",
+          sourceId: representativeMealId,
+          sourceMeta: {
+            action_kind: "completed_without_list",
+            meal_ids: mealIds,
+            pantry_item_count: aggregatedIngredients.length,
+          },
+          occurredAt: completedAt,
+        });
+      } catch {
+        // Activity history is secondary; pantry-only shopping completion remains authoritative.
+      }
+    }
 
     return ok({
       id: null,
