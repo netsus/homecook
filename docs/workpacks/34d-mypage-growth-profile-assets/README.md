@@ -213,7 +213,7 @@ BRANCH_NAME=feature/fe-34d-mypage-growth-profile-assets PR_IS_DRAFT=false pnpm v
 - [x] 320/390/1440 screenshot evidence + authority report <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] exploratory QA/eval evidence <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=6 -->
 
-Stage 6 closeout projection completed after PR #737 merge.
+Stage 6 docs-side closeout projection completed after PR #737 merge.
 
 ## Implementation Evidence
 
