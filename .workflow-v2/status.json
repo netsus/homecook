@@ -1638,20 +1638,22 @@
     {
       "id": "34c-growth-notification-ui",
       "preset": "vertical-slice-strict",
-      "branch": "docs/34c-growth-notification-ui",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-34c-growth-notification-ui",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
-        "pnpm vitest run tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx tests/user-gamification-api-client.test.ts tests/mypage-gamification-card.test.tsx",
+        "pnpm vitest run tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx tests/user-gamification-api-client.test.ts tests/meal-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/shopping-flow-screen.test.tsx",
         "pnpm exec playwright test tests/e2e/slice-34c-growth-notification.spec.ts tests/e2e/slice-33c-gamification.spec.ts",
-        "pnpm verify:frontend:pr",
+        "CI=1 pnpm verify:frontend:pr",
+        "pnpm qa:explore -- --slice 34c-growth-notification-ui --base-url http://127.0.0.1:3100",
+        "pnpm qa:eval -- --checklist .artifacts/qa/34c-growth-notification-ui/2026-06-11T12-47-06-582Z/exploratory-checklist.json --report .artifacts/qa/34c-growth-notification-ui/2026-06-11T12-47-06-582Z/exploratory-report.json --fail-under 90",
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
         "pnpm validate:workpack -- --slice 34c-growth-notification-ui",
         "git diff --check"
       ],
-      "notes": "Stage 1 workpack/acceptance/automation-spec prepared on docs/34c-growth-notification-ui against the merged 34b backend contract (PR #731). FE-only slice: priority toast stack, archive surface, shopping copy. Stage 4 frontend implementation (feature/fe-34c-growth-notification-ui) starts after this docs PR merges and the internal 1.5 docs gate passes."
+      "notes": "Stage 4 frontend implementation is complete locally. FE-only slice: priority toast stack, archive surface, shopping copy, planner registration refresh trigger. Verification passed: targeted Vitest, targeted 34c/33c Playwright, CI=1 pnpm verify:frontend:pr, exploratory QA/eval 97, workflow/workpack validators, and diff check. CI=1 pnpm verify:frontend was attempted; lint/typecheck/product/build/Lighthouse passed, then full regression stopped on unrelated existing slice-09/slice-12a/slice-17b failures reproduced outside 34c paths. Claude review was rate-limited on session daf4b849-9bee-44f4-b2f5-92111db03c19 until 2026-06-12 01:20 KST; Codex self-review continued per user instruction."
     }
   ]
 }

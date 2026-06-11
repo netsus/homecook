@@ -304,6 +304,9 @@ describe("shopping flow screen", () => {
       expect(screen.queryByText("2개 선택 · 총 6인분")).toBeNull();
       expect(screen.getByText("2개 · 6인분")).toBeTruthy();
       expect(screen.getByText("장보기 목록으로 만들어요.")).toBeTruthy();
+      expect(screen.getByTestId("shopping-multi-meal-hint").textContent).toBe(
+        "여러 끼니를 한번에 장보기할 수 있어요",
+      );
       expect(screen.queryByText("진행할 장보기")).toBeNull();
       expect(screen.queryByRole("navigation", { name: "장보기 경로" })).toBeNull();
       expect(screen.queryByText(/^#\d+$/)).not.toBeTruthy();

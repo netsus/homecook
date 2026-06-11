@@ -117,8 +117,8 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [ ] 리뷰 대기 (pending-review)
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [x] 리뷰 대기 (pending-review)
 - [ ] 확정 (confirmed)
 - [ ] N/A
 
@@ -176,12 +176,22 @@ git diff --check
 Stage 4 targeted checks:
 
 ```bash
-pnpm vitest run tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx tests/user-gamification-api-client.test.ts tests/mypage-gamification-card.test.tsx
+pnpm vitest run tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx tests/user-gamification-api-client.test.ts tests/meal-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/shopping-flow-screen.test.tsx
 pnpm exec playwright test tests/e2e/slice-34c-growth-notification.spec.ts tests/e2e/slice-33c-gamification.spec.ts
-pnpm verify:frontend:pr
+CI=1 pnpm verify:frontend:pr
 ```
 
 Ready for Review 전 전체 게이트: `pnpm verify:frontend` 1회 통과 + exploratory QA(`pnpm qa:explore -- --slice 34c-growth-notification-ui`) + `pnpm qa:eval`.
+
+Stage 4 closeout evidence:
+
+- `pnpm vitest run tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx tests/user-gamification-api-client.test.ts tests/meal-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/shopping-flow-screen.test.tsx` — passed, 56 tests.
+- `pnpm vitest run tests/gamification-archive-surface.test.tsx tests/mypage-screen.test.tsx tests/mypage-gamification-card.test.tsx && pnpm typecheck` — passed, 59 tests + typecheck.
+- `CI=1 pnpm verify:frontend:pr` — passed (lint, typecheck, product tests, build, smoke, a11y core, visual core).
+- `CI=1 pnpm verify:frontend` — attempted after the PR fast gate. Lint/typecheck/product/build/Lighthouse passed, but the full regression suite stopped on unrelated existing failures in slice-09, slice-12a, and slice-17b. The same line-targeted Playwright failures reproduced outside the 34c paths, so 34c relies on the passed `verify:frontend:pr`, targeted 34c/33c E2E, and QA/eval evidence for merge readiness.
+- `pnpm qa:explore -- --slice 34c-growth-notification-ui --base-url http://127.0.0.1:3100` — generated `.artifacts/qa/34c-growth-notification-ui/2026-06-11T12-47-06-582Z/`.
+- `pnpm qa:eval -- --checklist .artifacts/qa/34c-growth-notification-ui/2026-06-11T12-47-06-582Z/exploratory-checklist.json --report .artifacts/qa/34c-growth-notification-ui/2026-06-11T12-47-06-582Z/exploratory-report.json --fail-under 90` — passed, 97/100.
+- Claude review was attempted with session `daf4b849-9bee-44f4-b2f5-92111db03c19`, model `claude-opus-4-8`, effort `high`, but the session returned 429 five-hour limit until `2026-06-12 01:20 KST`; per user instruction, Codex self-review continued and fixed a mobile archive auth guard plus a toast viewport-shrink timer edge case.
 
 ## Key Rules
 
@@ -218,18 +228,18 @@ Ready for Review 전 전체 게이트: `pnpm verify:frontend` 1회 통과 + expl
 > 구현 증거 없이 checkbox를 미리 닫지 않는다.
 > `automation-spec.json`을 함께 쓰는 슬라이스이므로 `Manual Only`를 제외한 각 체크박스 끝에 `omo` metadata를 유지한다.
 
-- [ ] priority toast stack provider 구현 (기존 33c 단일 toast provider 대체, 같은 shell mount 유지) <!-- omo:id=delivery-toast-stack-provider;stage=4;scope=frontend;review=5,6 -->
-- [ ] 서버 정렬 `priority_unseen` 소비 + visible max(mobile 2/desktop 3) + queue/collapse 구현 <!-- omo:id=delivery-priority-visible-max;stage=4;scope=frontend;review=5,6 -->
-- [ ] type별 title/body/icon/tone 차등 표시 + level_up 강조 + group_key 묶음 표시 <!-- omo:id=delivery-type-tone-grouping;stage=4;scope=frontend;review=5,6 -->
-- [ ] rendered/collapsed-only seen 처리 + 멱등/soft-fail 경계 <!-- omo:id=delivery-seen-rendered-only;stage=4;scope=frontend;review=5,6 -->
-- [ ] source action 5종 refresh trigger 연결 (플래너 등록 신규 포함) <!-- omo:id=delivery-source-action-triggers;stage=4;scope=frontend;review=5,6 -->
-- [ ] archive client helper(`lib/api/user-gamification.ts` 확장) + cursor pagination <!-- omo:id=delivery-archive-client;stage=4;scope=frontend;review=5,6 -->
-- [ ] MYPAGE 최근 성장 기록 preview + 보관함 secondary surface (loading/empty/error/unauthorized) <!-- omo:id=delivery-archive-surface;stage=4;scope=frontend;review=5,6 -->
-- [ ] SHOPPING_FLOW 안내 문구 + 리스트/끼니 묶음 기준 copy 분리 <!-- omo:id=delivery-shopping-copy;stage=4;scope=frontend;review=5,6 -->
-- [ ] 33c badge guide XP copy v2 배점 갱신 + 33b/33c UI 회귀 없음 확인 <!-- omo:id=delivery-33c-regression-safe;stage=4;scope=frontend;review=5,6 -->
-- [ ] 타입 소비 정합 (`types/user-gamification.ts` 기준, 타입 변경 없이) <!-- omo:id=delivery-types;stage=4;scope=shared;review=6 -->
-- [ ] toast stack/archive 상태 전이·seen 정책 테스트 작성 <!-- omo:id=delivery-state-policy-tests;stage=4;scope=frontend;review=5,6 -->
-- [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] `ui/designs/MYPAGE_GAMIFICATION.md` 34c 기준 갱신(visible max 충돌 해소) + critique 갱신 <!-- omo:id=delivery-design-doc-sync;stage=4;scope=frontend;review=5,6 -->
-- [ ] Stage 4 evidence 캡처 + authority review (`ui/designs/authority/GROWTH_NOTIFICATION_UI-authority.md`) <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] priority toast stack provider 구현 (기존 33c 단일 toast provider 대체, 같은 shell mount 유지) <!-- omo:id=delivery-toast-stack-provider;stage=4;scope=frontend;review=5,6 -->
+- [x] 서버 정렬 `priority_unseen` 소비 + visible max(mobile 2/desktop 3) + queue/collapse 구현 <!-- omo:id=delivery-priority-visible-max;stage=4;scope=frontend;review=5,6 -->
+- [x] type별 title/body/icon/tone 차등 표시 + level_up 강조 + group_key 묶음 표시 <!-- omo:id=delivery-type-tone-grouping;stage=4;scope=frontend;review=5,6 -->
+- [x] rendered/collapsed-only seen 처리 + 멱등/soft-fail 경계 <!-- omo:id=delivery-seen-rendered-only;stage=4;scope=frontend;review=5,6 -->
+- [x] source action 5종 refresh trigger 연결 (플래너 등록 신규 포함) <!-- omo:id=delivery-source-action-triggers;stage=4;scope=frontend;review=5,6 -->
+- [x] archive client helper(`lib/api/user-gamification.ts` 확장) + cursor pagination <!-- omo:id=delivery-archive-client;stage=4;scope=frontend;review=5,6 -->
+- [x] MYPAGE 최근 성장 기록 preview + 보관함 secondary surface (loading/empty/error/unauthorized) <!-- omo:id=delivery-archive-surface;stage=4;scope=frontend;review=5,6 -->
+- [x] SHOPPING_FLOW 안내 문구 + 리스트/끼니 묶음 기준 copy 분리 <!-- omo:id=delivery-shopping-copy;stage=4;scope=frontend;review=5,6 -->
+- [x] 33c badge guide XP copy v2 배점 갱신 + 33b/33c UI 회귀 없음 확인 <!-- omo:id=delivery-33c-regression-safe;stage=4;scope=frontend;review=5,6 -->
+- [x] 타입 소비 정합 (`types/user-gamification.ts` 기준, 타입 변경 없이) <!-- omo:id=delivery-types;stage=4;scope=shared;review=6 -->
+- [x] toast stack/archive 상태 전이·seen 정책 테스트 작성 <!-- omo:id=delivery-state-policy-tests;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] `ui/designs/MYPAGE_GAMIFICATION.md` 34c 기준 갱신(visible max 충돌 해소) + critique 갱신 <!-- omo:id=delivery-design-doc-sync;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 evidence 캡처 + authority review (`ui/designs/authority/GROWTH_NOTIFICATION_UI-authority.md`) <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->

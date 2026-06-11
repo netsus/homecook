@@ -1,4 +1,5 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
+import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import type { ApiResponse } from "@/types/api";
 import type { MealCreateBody, MealCreateData, MealListData, MealMutationData } from "@/types/meal";
 
@@ -59,6 +60,11 @@ export async function createMeal(body: MealCreateBody): Promise<MealCreateData> 
       message: payload?.error?.message ?? "요청을 처리하지 못했어요.",
     });
   }
+
+  // planner_registered is one of the 34c source action triggers.
+  // All planner meal-add paths pass through createMeal, and refresh failure must not
+  // affect the successful meal creation result.
+  notifyGamificationSourceAction();
 
   return payload.data;
 }

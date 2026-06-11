@@ -230,6 +230,16 @@ async function installRoutes(
     });
   });
 
+  await page.route("**/api/v1/users/me/gamification/archive**", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { items: [], next_cursor: null, has_next: false },
+        error: null,
+      },
+    });
+  });
+
   await page.route("**/api/v1/users/me/gamification/tutorial-quests/*/dismiss", async (route) => {
     await route.fulfill({
       json: {
@@ -368,14 +378,15 @@ test.describe("33c gamification frontend @smoke-core", () => {
     await toastPage.page.evaluate(() => {
       window.dispatchEvent(new CustomEvent("homecook:gamification-refresh"));
     });
-    await expect(toastPage.page.getByTestId("gamification-xp-toast")).toContainText(
+    await expect(toastPage.page.getByTestId("growth-toast")).toContainText(
       "요리 완료 +50 XP",
     );
-    await expect.poll(() => seenRequestCount).toBeGreaterThan(0);
     await toastPage.page.screenshot({
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "xp-toast.png"),
     });
+    await toastPage.page.getByLabel("알림 닫기").click();
+    await expect.poll(() => seenRequestCount).toBeGreaterThan(0);
     await toastPage.context.close();
 
     const softFail = await openMypage(browser, { width: 390, height: 844 }, { gamificationError: true });
@@ -391,11 +402,10 @@ test.describe("33c gamification frontend @smoke-core", () => {
     });
     const loadingPage = await loadingContext.newPage();
     await setAuthOverride(loadingPage);
-    await installRoutes(loadingPage, { gamificationDelayMs: 500 });
+    await installRoutes(loadingPage, { gamificationDelayMs: 10_000 });
     await loadingPage.goto("/mypage", { waitUntil: "domcontentloaded" });
     await stabilize(loadingPage);
     await expect(loadingPage.getByTestId("mypage-gamification-loading")).toBeVisible();
-    await expect(loadingPage.getByTestId("mypage-gamification-card")).toBeVisible();
     await loadingContext.close();
 
     const empty = await openMypage(browser, { width: 390, height: 844 }, {

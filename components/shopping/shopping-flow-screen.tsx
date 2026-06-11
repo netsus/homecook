@@ -525,6 +525,9 @@ export function ShoppingFlowScreen({
             <p className="web-menu-add-eyebrow">Shopping</p>
             <h1>장보기 준비</h1>
             <p>같은 재료는 장보기 목록에서 자동으로 합산돼요.</p>
+            <p data-testid="shopping-multi-meal-hint">
+              여러 끼니를 한번에 장보기할 수 있어요
+            </p>
           </div>
           <div className="web-shopping-flow-tools" aria-label="장보기 보조 메뉴">
             <button onClick={() => push("/mypage?restore=shopping-history-tab")} type="button">
@@ -709,6 +712,12 @@ function MobileSelectScreen({
           </h2>
           <p className="mt-3 text-[13px] font-medium leading-[1.5] text-[var(--text-3)]">
             같은 재료는 장보기 목록에서 자동으로 합산돼요.
+          </p>
+          <p
+            className="mt-1 text-[13px] font-semibold leading-[1.5] text-[var(--text-2)]"
+            data-testid="shopping-multi-meal-hint"
+          >
+            여러 끼니를 한번에 장보기할 수 있어요
           </p>
           <div className="mt-4 flex items-center justify-between gap-3">
             <ShoppingSelectAllControl

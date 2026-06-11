@@ -23,6 +23,7 @@ import {
   MypageGamificationCard,
   type MypageGamificationState,
 } from "@/components/mypage/mypage-gamification-card";
+import { GrowthArchiveSurface } from "@/components/mypage/growth-archive-surface";
 import {
   MypageProgressCard,
   type MypageProgressState,
@@ -1731,6 +1732,7 @@ export function MypageScreen({
     return (
       <>
         <MypageMobileScreen
+          archiveEnabled={authState === "authenticated"}
           books={books}
           createInputRef={createInputRef}
           createName={createName}
@@ -1896,6 +1898,10 @@ export function MypageScreen({
             state={gamificationState}
             variant="desktop"
             onDismissTutorialQuest={handleDismissTutorialQuest}
+          />
+          <GrowthArchiveSurface
+            className="web-mypage-growth-archive"
+            enabled={authState === "authenticated"}
           />
           <div className="web-mypage-stats" aria-label="마이페이지 통계">
             {mypageStats.map((item) => (

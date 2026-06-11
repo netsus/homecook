@@ -23,11 +23,13 @@ interface MypageGamificationCardProps {
   variant?: "mobile" | "desktop";
 }
 
+// 화면정의서 v1.5.16 growth-leveling-v2: 첫 경험치 기준 표시. 반복 경험치는 더 낮다.
 const XP_ACTIONS = [
-  ["레시피 저장", "+10 XP"],
-  ["레시피북 생성", "+20 XP"],
-  ["장보기 완료", "+30 XP"],
-  ["요리 완료", "+50 XP"],
+  ["레시피 저장", "첫 +15 XP"],
+  ["레시피북 생성", "첫 +25 XP"],
+  ["장보기 완료", "첫 +40 XP"],
+  ["요리 완료", "첫 +60 XP"],
+  ["플래너 등록", "첫 +25 XP"],
 ] as const;
 
 function clampPercent(value: number) {
@@ -210,6 +212,10 @@ function GuideDialog({
             </div>
           ))}
         </div>
+
+        <p className="mt-2 text-[11px] font-semibold leading-[1.45] text-[var(--text-3)]">
+          첫 경험치 기준이에요. 같은 활동을 반복하면 경험치가 조금 더 작게 쌓여요.
+        </p>
 
         <div className="mt-4 rounded-[var(--radius-md)] bg-[var(--surface-fill)] p-3">
           <p className="text-[12px] font-extrabold text-[var(--foreground)]">
