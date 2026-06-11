@@ -1,0 +1,115 @@
+{
+  "id": "34d-mypage-growth-profile-assets",
+  "title": "MYPAGE growth profile assets",
+  "summary": "34b/34c 성장 계약을 소비해 MYPAGE 프로필 영역 안에 등급/레벨/XP/대표 배지를 통합하고, badge/grade visual을 생성 이미지 concept 기반 SVG/CSS 컴포넌트로 적용하는 FE-only slice.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 MYPAGE 첫 화면에서 별도 게임식 카드 없이 자신의 집밥 등급, 레벨, XP 진행도, 대표 배지를 프로필 정보의 일부로 자연스럽게 확인하게 한다.",
+  "owners": {
+    "claude": "stage1,stage4 unavailable due token limit",
+    "codex": "stage1 docs fallback, stage4 frontend implementation, stage5 design review, stage6 closeout",
+    "workers": []
+  },
+  "dependencies": [
+    "34a-growth-model-contract-evolution",
+    "34b-growth-backend-model",
+    "34c-growth-notification-ui",
+    "33b-mypage-progress-ui",
+    "33c-badges-quests-toasts-tutorial"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.9.md",
+      "docs/화면정의서-v1.5.16.md",
+      "docs/유저flow맵-v1.3.16.md",
+      "docs/db설계-v1.3.14.md",
+      "docs/api문서-v1.2.18.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/34d-mypage-growth-profile-assets/README.md",
+      "docs/workpacks/34d-mypage-growth-profile-assets/acceptance.md",
+      "docs/workpacks/34d-mypage-growth-profile-assets/automation-spec.json",
+      "docs/workpacks/34b-growth-backend-model/README.md",
+      "docs/workpacks/34c-growth-notification-ui/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "ui/designs/MYPAGE_GROWTH_PROFILE.md",
+      "ui/designs/critiques/MYPAGE_GROWTH_PROFILE-critique.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm vitest run tests/mypage-growth-profile.test.tsx tests/mypage-gamification-card.test.tsx tests/mypage-screen.test.tsx tests/user-gamification-api-client.test.ts",
+      "pnpm exec playwright test tests/e2e/slice-34d-mypage-growth-profile.spec.ts tests/e2e/slice-33c-gamification.spec.ts",
+      "CI=1 pnpm verify:frontend:pr",
+      "pnpm qa:explore -- --slice 34d-mypage-growth-profile-assets --base-url http://127.0.0.1:3100",
+      "pnpm qa:eval -- --checklist <artifact>/exploratory-checklist.json --report <artifact>/exploratory-report.json --fail-under 90",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 34d-mypage-growth-profile-assets",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/mypage-growth-profile.test.tsx tests/mypage-gamification-card.test.tsx tests/mypage-screen.test.tsx tests/user-gamification-api-client.test.ts",
+      "pnpm validate:workflow-v2"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "profile-integrated-grade-level-xp-badges",
+      "badge-shape-variety-svg-css",
+      "locked-hints-secondary-only",
+      "mobile-320-no-overflow",
+      "progress-gamification-soft-fail-isolated",
+      "33b-33c-34c-regression-safe"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Backend public contract or schema changes",
+    "New badge or quest definition expansion",
+    "User-selectable featured badge API",
+    "GET /users/me progress or gamification field mixing",
+    "Leaderboard",
+    "Competitive rank",
+    "Pressure streak",
+    "Season reset",
+    "XP decay",
+    "Loot/random rewards",
+    "Reward claim CTA",
+    "Top-level growth page",
+    "Historical/backfill archive rows"
+  ],
+  "open_questions": [
+    "Should user-selectable featured badges become a future contract-evolution candidate after 34d validates passive featured_badges display?"
+  ],
+  "notes": "Stage 1 docs prepared by Codex because Claude is rate-limited and the user asked Codex to orchestrate. Stage 2/3 are N/A. Stage 4 is FE-only implementation on feature/fe-34d-mypage-growth-profile-assets after docs merge."
+}
