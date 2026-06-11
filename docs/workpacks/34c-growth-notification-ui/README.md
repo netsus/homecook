@@ -101,25 +101,25 @@
 - UI risk: `high-risk` (공통 shell notification layer 동작 변경 + MYPAGE 신규 secondary surface. 33c와 동일 클래스)
 - Anchor screen dependency: 없음 — toast stack은 anchor 화면 위 overlay일 뿐 `HOME`/`RECIPE_DETAIL`/`PLANNER_WEEK`의 CTA/스크롤/정보 구조/모달 구조를 변경하지 않는다. anchor 화면 내부 구조를 건드리게 되면 그 시점에 anchor-extension으로 재분류한다
 - Visual artifact:
-  - `ui/designs/MYPAGE_GAMIFICATION.md` — 재사용 + **34c 기준 갱신 필요**: 기존 문서의 "toast 최대 2개" 기술은 33c 당시 기준이며, 공식 계약(화면정의서 v1.5.16 §19 1-b)은 **mobile 2 / desktop 3**이다. Stage 4에서 toast stack/collapse/archive surface 내용을 현재 화면 기준으로 갱신한다
-  - `ui/designs/critiques/MYPAGE_GAMIFICATION-critique.md` — 갱신분 re-critique
-  - authority report: `ui/designs/authority/GROWTH_NOTIFICATION_UI-authority.md` (Stage 4 후 작성)
+  - `ui/designs/MYPAGE_GAMIFICATION.md` — 34c 기준으로 갱신 완료. 공식 계약(화면정의서 v1.5.16 §19 1-b)의 **mobile 2 / desktop 3** toast stack/collapse/archive surface 내용을 반영했다
+  - `ui/designs/critiques/MYPAGE_GAMIFICATION-critique.md` — 34c 갱신분 re-critique 완료
+  - authority report: `ui/designs/authority/GROWTH_NOTIFICATION_UI-authority.md`
 - Stage 4 evidence 계획 (`ui/designs/evidence/34c-growth-notification-ui/`):
   - `mobile-390.png`, `mobile-320.png`, `desktop-1440.png` (MYPAGE archive surface 포함)
   - `toast-stack-mobile.png` (mobile 2개 visible + queue/collapse 상태), `toast-stack-desktop.png` (3개 visible)
   - `toast-levelup.png` (level_up 강조 톤 vs xp_awarded 비교가 드러나게)
   - `archive-surface.png`, `archive-empty.png`, `archive-pagination.png`
   - `shopping-copy.png` (SHOPPING_FLOW 안내 문구 surface)
-- Authority status: `required` (Stage 4 완료 후 authority review. unresolved blocker 있으면 `confirmed` 금지)
+- Authority status: `reviewed`
 - Notes:
   - mobile-ux-rules Rule 5: 320px sentinel에서 toast가 하단 탭/CTA를 가리거나 잘리면 blocker
   - 경쟁/압박/loot 톤 금지. level_up 강조는 celebratory하되 보상 상자형 연출 금지
 
 ## Design Status
 
-- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [x] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [ ] 임시 UI (temporary)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed)
 - [ ] N/A
 
 ## Source Links

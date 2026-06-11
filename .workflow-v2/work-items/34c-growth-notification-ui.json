@@ -82,17 +82,91 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "passed",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "evaluation_round": 1,
+    "last_evaluator_result": ".artifacts/qa/34c-growth-notification-ui/2026-06-11T12-47-06-582Z/eval-result.json",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "closeout": null,
-  "notes": "Stage 4 frontend implementation is complete locally on feature/fe-34c-growth-notification-ui. FE-only slice consumes the merged 34b backend contract (PR #731) with no backend/schema change. Verification passed: targeted Vitest, targeted 34c/33c Playwright, CI=1 pnpm verify:frontend:pr, exploratory QA/eval 97, workflow/workpack validators, and diff check. CI=1 pnpm verify:frontend was attempted; lint/typecheck/product/build/Lighthouse passed, then full regression stopped on unrelated existing slice-09/slice-12a/slice-17b failures reproduced with line-targeted Playwright outside 34c paths. Claude review on session daf4b849-9bee-44f4-b2f5-92111db03c19 was rate-limited until 2026-06-12 01:20 KST, so Codex self-review proceeded per user instruction and fixed viewport-shrink toast timer cleanup plus mobile archive auth guard. MYPAGE profile header integration and badge/grade assets remain reserved for 34d.",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/authority/GROWTH_NOTIFICATION_UI-authority.md"
+      ],
+      "actual_verification_refs": [
+        "PR #733 Stage 4/5/6 frontend",
+        "CI=1 pnpm verify:frontend:pr",
+        "pnpm vitest run tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx tests/user-gamification-api-client.test.ts tests/meal-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/shopping-flow-screen.test.tsx",
+        "pnpm vitest run tests/theme-token-usage.test.ts tests/growth-toast-stack.test.tsx",
+        "pnpm exec playwright test tests/e2e/slice-34c-growth-notification.spec.ts tests/e2e/slice-33c-gamification.spec.ts",
+        "pnpm qa:eval -- --checklist .artifacts/qa/34c-growth-notification-ui/2026-06-11T12-47-06-582Z/exploratory-checklist.json --report .artifacts/qa/34c-growth-notification-ui/2026-06-11T12-47-06-582Z/exploratory-report.json --fail-under 90",
+        "ui/designs/evidence/34c-growth-notification-ui/mobile-390.png",
+        "ui/designs/evidence/34c-growth-notification-ui/mobile-320.png",
+        "ui/designs/evidence/34c-growth-notification-ui/desktop-1440.png",
+        "ui/designs/evidence/34c-growth-notification-ui/toast-stack-mobile.png",
+        "ui/designs/evidence/34c-growth-notification-ui/toast-stack-desktop.png",
+        "ui/designs/evidence/34c-growth-notification-ui/toast-levelup.png",
+        "ui/designs/evidence/34c-growth-notification-ui/archive-surface.png",
+        "ui/designs/evidence/34c-growth-notification-ui/archive-empty.png",
+        "ui/designs/evidence/34c-growth-notification-ui/archive-pagination.png",
+        "ui/designs/evidence/34c-growth-notification-ui/shopping-copy.png",
+        "pnpm validate:workpack -- --slice 34c-growth-notification-ui",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:closeout-sync",
+        "pnpm validate:authority-evidence-presence",
+        "pnpm validate:exploratory-qa-evidence",
+        "pnpm validate:pr-ready"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "266bbc9e1f3bfc653e24095ebdf3c7c3b8856a46",
+      "merge_commit_sha": "57338f1618cb05054c05c6b6a9ea8d0a61db877f",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 2,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-06-11T13:25:11Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 1,
+      "latest_reason_code": "post_merge_bookkeeping_sync",
+      "evidence_sources": [
+        "GitHub PR/CI",
+        "git history",
+        "PR #733 body",
+        "docs/workpacks/34c-growth-notification-ui/README.md"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-06-11T13:25:11Z",
+      "status_synced_at": "2026-06-11T13:25:11Z",
+      "pr_body_synced_at": "2026-06-11T13:25:11Z"
+    }
+  },
+  "notes": "Merged via PR #733 on 2026-06-11T13:25:11Z after Codex Stage 4 fallback, Codex Stage 5/6 self-review, current-head GitHub checks, and squash merge. FE-only slice consumes the merged 34b backend contract (PR #731) with no backend/schema change. Verification passed: targeted Vitest, targeted 34c/33c Playwright, CI=1 pnpm verify:frontend:pr, exploratory QA/eval 97, workflow/workpack/closeout validators, PR-ready validator, authority/evidence validators, theme-token regression, and diff check. CI=1 pnpm verify:frontend was attempted; lint/typecheck/product/build/Lighthouse passed, then full regression stopped on unrelated existing slice-09/slice-12a/slice-17b failures reproduced with line-targeted Playwright outside 34c paths. Claude review on session daf4b849-9bee-44f4-b2f5-92111db03c19 was rate-limited until 2026-06-12 01:20 KST, so Codex self-review proceeded per user instruction and fixed viewport-shrink toast timer cleanup plus mobile archive auth guard. MYPAGE profile header integration and badge/grade assets remain reserved for 34d. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:2 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR/CI,git history,PR #733 body,docs/workpacks/34c-growth-notification-ui/README.md last_recovery_at=2026-06-11T13:25:11Z stage4_fallback=codex",
   "out_of_scope": [
     "MYPAGE profile header integration (34d)",
     "Badge/grade image concepts and SVG/CSS production components (34d)",

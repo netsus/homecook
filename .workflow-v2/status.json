@@ -1639,8 +1639,9 @@
       "id": "34c-growth-notification-ui",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-34c-growth-notification-ui",
-      "lifecycle": "in_progress",
-      "approval_state": "codex_approved",
+      "pr_path": "https://github.com/netsus/homecook/pull/733",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm vitest run tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx tests/user-gamification-api-client.test.ts tests/meal-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/shopping-flow-screen.test.tsx",
@@ -1653,7 +1654,7 @@
         "pnpm validate:workpack -- --slice 34c-growth-notification-ui",
         "git diff --check"
       ],
-      "notes": "Stage 4 frontend implementation is complete locally. FE-only slice: priority toast stack, archive surface, shopping copy, planner registration refresh trigger. Verification passed: targeted Vitest, targeted 34c/33c Playwright, CI=1 pnpm verify:frontend:pr, exploratory QA/eval 97, workflow/workpack validators, and diff check. CI=1 pnpm verify:frontend was attempted; lint/typecheck/product/build/Lighthouse passed, then full regression stopped on unrelated existing slice-09/slice-12a/slice-17b failures reproduced outside 34c paths. Claude review was rate-limited on session daf4b849-9bee-44f4-b2f5-92111db03c19 until 2026-06-12 01:20 KST; Codex self-review continued per user instruction."
+      "notes": "Merged via PR #733 on 2026-06-11T13:25:11Z. FE-only slice consumes the merged 34b backend contract: priority toast stack, archive surface, shopping copy, planner registration refresh trigger, and 33c regression-safe UI evidence. Current-head GitHub checks passed before merge; full-regression was path-filter skipped in CI. Local verification passed: targeted Vitest, targeted 34c/33c Playwright, CI=1 pnpm verify:frontend:pr, exploratory QA/eval 97, workflow/workpack/closeout validators, PR-ready validator, authority/evidence validators, theme-token regression, and diff check. CI=1 pnpm verify:frontend was attempted locally; lint/typecheck/product/build/Lighthouse passed, then full regression stopped on unrelated existing slice-09/slice-12a/slice-17b failures reproduced outside 34c paths. Claude review was rate-limited on session daf4b849-9bee-44f4-b2f5-92111db03c19 until 2026-06-12 01:20 KST; Codex self-review continued per user instruction. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:2 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR/CI,git history,PR #733 body,docs/workpacks/34c-growth-notification-ui/README.md last_recovery_at=2026-06-11T13:25:11Z stage4_fallback=codex"
     }
   ]
 }
