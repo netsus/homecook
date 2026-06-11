@@ -122,7 +122,7 @@ function selectToastSource(data: {
 
 function toneClass(tone: ToastTone) {
   if (tone === "level-up") {
-    return "border-transparent bg-[var(--brand)] text-[var(--on-brand,#fff)] shadow-[0_20px_56px_var(--overlay-30)]";
+    return "border-transparent bg-[var(--brand)] text-[var(--text-inverse)] shadow-[0_20px_56px_var(--overlay-30)]";
   }
   if (tone === "badge") {
     return "border-[var(--warning)] bg-[var(--surface)] text-[var(--foreground)] shadow-[0_16px_44px_var(--overlay-20)]";
