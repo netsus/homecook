@@ -19,13 +19,13 @@ const SIZE_CLASS: Record<NonNullable<GrowthBadgeIconProps["size"]>, string> = {
 };
 
 const SHAPE_TONE: Record<UserGamificationBadgeShapeKey, string> = {
-  plate: "text-[#3f7f74] bg-[#e9f5f0]",
-  shield: "text-[#5969b2] bg-[#eef1ff]",
-  ribbon: "text-[#b56473] bg-[#fff0f2]",
-  bookmark: "text-[#9a6a2f] bg-[#fff3df]",
-  pot: "text-[#4d738f] bg-[#eaf5fb]",
-  leaf: "text-[#4f8f46] bg-[#edf7e9]",
-  bowl: "text-[#8a5d44] bg-[#f8eee8]",
+  plate: "text-[var(--growth-badge-plate-fg)] bg-[var(--growth-badge-plate-bg)]",
+  shield: "text-[var(--growth-badge-shield-fg)] bg-[var(--growth-badge-shield-bg)]",
+  ribbon: "text-[var(--growth-badge-ribbon-fg)] bg-[var(--growth-badge-ribbon-bg)]",
+  bookmark: "text-[var(--growth-badge-bookmark-fg)] bg-[var(--growth-badge-bookmark-bg)]",
+  pot: "text-[var(--growth-badge-pot-fg)] bg-[var(--growth-badge-pot-bg)]",
+  leaf: "text-[var(--growth-badge-leaf-fg)] bg-[var(--growth-badge-leaf-bg)]",
+  bowl: "text-[var(--growth-badge-bowl-fg)] bg-[var(--growth-badge-bowl-bg)]",
 };
 
 function normalizeShapeKey(shapeKey: GrowthBadgeIconProps["shapeKey"]) {
