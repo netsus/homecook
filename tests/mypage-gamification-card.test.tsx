@@ -106,7 +106,7 @@ describe("MypageGamificationCard", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "안내" }));
-    expect(screen.getByRole("dialog", { name: "성장 시스템 안내" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "배지 안내" })).toBeTruthy();
     expect(screen.getByText("첫 +60 XP")).toBeTruthy();
     expect(screen.getByText("플래너 등록")).toBeTruthy();
     expect(screen.getByText(/순위, 압박형 연속 출석/)).toBeTruthy();
@@ -117,7 +117,7 @@ describe("MypageGamificationCard", () => {
     expect(document.activeElement).toBe(closeButton);
 
     await user.click(closeButton);
-    expect(screen.queryByRole("dialog", { name: "성장 시스템 안내" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "배지 안내" })).toBeNull();
   });
 
   it("closes the badge guide dialog with Escape", async () => {
@@ -131,10 +131,10 @@ describe("MypageGamificationCard", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "안내" }));
-    expect(screen.getByRole("dialog", { name: "성장 시스템 안내" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "배지 안내" })).toBeTruthy();
 
     await user.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog", { name: "성장 시스템 안내" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "배지 안내" })).toBeNull();
   });
 
   it("calls dismiss for tutorial quests without a reward claim button", async () => {

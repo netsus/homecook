@@ -6863,12 +6863,13 @@ button {
   }
 
   .web-mypage-profile {
-    display: flex;
+    display: grid;
     flex: 0 0 auto;
+    grid-template-columns: minmax(240px, 0.85fr) minmax(300px, 1fr) minmax(260px, 0.85fr) minmax(220px, auto);
+    gap: 18px;
     min-height: 140px;
     align-items: center;
-    justify-content: space-between;
-    padding: 36px 28px;
+    padding: 28px;
   }
 
   .web-mypage-profile-main,
@@ -6886,6 +6887,15 @@ button {
     padding: 0;
     text-align: left;
     cursor: pointer;
+  }
+
+  .web-mypage-progress {
+    min-width: 0;
+  }
+
+  .web-mypage-gamification,
+  .web-mypage-growth-archive {
+    min-width: 0;
   }
 
   .web-mypage-avatar {
@@ -6949,6 +6959,16 @@ button {
     margin-top: 4px;
     color: var(--web-text-3);
     font-size: 12px;
+  }
+
+  @media (max-width: 1240px) {
+    .web-mypage-profile {
+      grid-template-columns: minmax(240px, 1fr) minmax(300px, 1fr);
+    }
+
+    .web-mypage-stats {
+      grid-column: 1 / -1;
+    }
   }
 
   .web-mypage-top-profile {

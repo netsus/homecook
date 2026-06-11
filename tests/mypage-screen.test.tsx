@@ -209,11 +209,20 @@ const MOCK_GAMIFICATION = {
     xp_to_next_level: 170,
     progress_percent: 82,
   },
+  grade: {
+    grade_key: "homecook_runner",
+    label: "집밥 러너",
+    level_min: 4,
+    level_max: 7,
+  },
   featured_badges: [
     {
       badge_key: "first_cook_done",
       label: "첫 집밥 완성",
       description: "첫 요리 완료를 기록했어요.",
+      category: "cooking",
+      shape_key: "pot",
+      locked_hint: null,
       earned_at: "2026-06-10T12:00:00.000Z",
       is_new: false,
     },
@@ -238,7 +247,7 @@ const MOCK_GAMIFICATION = {
     completed_recent: [],
   },
   tutorial: { active_steps: [] },
-  notifications: { unseen: [] },
+  notifications: { unseen: [], priority_unseen: [], archive_preview: [] },
   last_updated_at: "2026-06-10T12:00:00.000Z",
 };
 
@@ -696,31 +705,30 @@ describe("MypageScreen", () => {
     expect(screen.getByText("주말 파티")).toBeTruthy();
   });
 
-  it("shows server-backed progress on desktop without hardcoded level copy", async () => {
+  it("shows server-backed growth profile on desktop without hardcoded level copy", async () => {
     render(<MypageScreen initialAuthenticated />);
 
     await screen.findByText("집밥러");
 
     expect(mockFetchUserProgress).toHaveBeenCalledTimes(1);
-    expect(await screen.findByTestId("mypage-progress-card")).toBeTruthy();
-    expect(screen.getByText("Lv.6")).toBeTruthy();
-    expect(screen.getByText("13%")).toBeTruthy();
+    expect(await screen.findByTestId("mypage-growth-profile")).toBeTruthy();
+    expect(screen.getByText("집밥 러너 · Lv.6")).toBeTruthy();
     expect(screen.getByText("다음 레벨까지 130 XP")).toBeTruthy();
-    expect(screen.getByText("누적 520 XP")).toBeTruthy();
-    expect(screen.queryByText(/집밥 러너/)).toBeNull();
+    expect(screen.getByTestId("mypage-growth-progress-fill").style.width).toBe("13%");
     expect(screen.queryByText(/레벨 5/)).toBeNull();
   });
 
-  it("replaces the mobile hardcoded level subtitle with progress", async () => {
+  it("integrates mobile grade, progress, and featured badges into the profile", async () => {
     installMatchMedia(true);
 
     render(<MypageScreen initialAuthenticated />);
 
     await screen.findByText("집밥러");
 
-    expect(await screen.findByTestId("mypage-progress-card")).toBeTruthy();
-    expect(screen.getByText("Lv.6")).toBeTruthy();
+    expect(await screen.findByTestId("mypage-growth-profile")).toBeTruthy();
+    expect(screen.getByText("집밥 러너 · Lv.6")).toBeTruthy();
     expect(screen.getByText("다음 레벨까지 130 XP")).toBeTruthy();
+    expect(screen.getByText("첫 집밥 완성")).toBeTruthy();
     expect(screen.queryByText("🍳 집밥 러너 · 레벨 5")).toBeNull();
   });
 
@@ -732,8 +740,8 @@ describe("MypageScreen", () => {
     expect(await screen.findByText("집밥러")).toBeTruthy();
     expect(screen.getByTestId("mypage-profile")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
-    expect((await screen.findByTestId("mypage-progress-error")).textContent).toContain(
-      "성장 기록을 잠시 불러오지 못했어요",
+    expect((await screen.findByTestId("mypage-growth-progress-error")).textContent).toContain(
+      "XP를 잠시 불러오지 못했어요",
     );
     expect(
       screen.queryByRole("heading", { name: "데이터를 불러오지 못했어요" }),
