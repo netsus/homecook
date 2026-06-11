@@ -2,6 +2,7 @@ import type {
   UserProgressData,
   UserProgressEventCounts,
   UserProgressEventType,
+  UserProgressGradeData,
   UserProgressLevelData,
 } from "@/types/user-progress";
 import type { UserGamificationDbClient } from "@/lib/server/user-gamification";
@@ -11,17 +12,20 @@ interface QueryError {
   message: string;
 }
 
-interface UserProgressEventRow {
+export interface UserProgressEventRow {
   event_type: UserProgressEventType;
+  source_id?: string | null;
   source_key: string;
   xp_delta: number;
   occurred_at: string;
+  source_meta_json?: unknown;
 }
 
 interface UserProgressSummaryRow {
   user_id: string;
   total_xp: number;
   current_level: number;
+  level_curve_version?: "v1" | "v2";
   event_counts: unknown;
   last_event_at: string | null;
   last_updated_at: string;
@@ -35,6 +39,7 @@ interface UserProgressEventInsert {
   source_id: string;
   xp_delta: number;
   occurred_at: string;
+  source_meta_json: Record<string, unknown>;
 }
 
 type MaybeSingleResult<T> = PromiseLike<{
@@ -100,7 +105,7 @@ type RecipeSavedAwardInput = {
 type GenericAwardInput = {
   userId: string;
   eventType: Exclude<UserProgressEventType, "recipe_saved">;
-  sourceTable: "leftover_dishes" | "shopping_lists" | "recipe_books";
+  sourceTable: "leftover_dishes" | "shopping_lists" | "recipe_books" | "meals";
   sourceId: string;
   occurredAt?: string;
 };
@@ -114,11 +119,22 @@ export interface UserProgressAwardResult {
   summary: UserProgressData | null;
 }
 
+export const USER_PROGRESS_LEVEL_CURVE_VERSION = "v2" as const;
+
+export const USER_PROGRESS_XP_POLICY: Record<UserProgressEventType, { first: number; repeat: number }> = {
+  recipe_saved: { first: 15, repeat: 8 },
+  custom_book_created: { first: 25, repeat: 10 },
+  shopping_completed: { first: 40, repeat: 25 },
+  cooking_completed: { first: 60, repeat: 45 },
+  planner_registered: { first: 25, repeat: 5 },
+};
+
 export const USER_PROGRESS_XP_AWARDS: Record<UserProgressEventType, number> = {
-  cooking_completed: 50,
-  shopping_completed: 30,
-  recipe_saved: 10,
-  custom_book_created: 20,
+  cooking_completed: USER_PROGRESS_XP_POLICY.cooking_completed.first,
+  shopping_completed: USER_PROGRESS_XP_POLICY.shopping_completed.first,
+  recipe_saved: USER_PROGRESS_XP_POLICY.recipe_saved.first,
+  custom_book_created: USER_PROGRESS_XP_POLICY.custom_book_created.first,
+  planner_registered: USER_PROGRESS_XP_POLICY.planner_registered.first,
 };
 
 const ZERO_EVENT_COUNTS: UserProgressEventCounts = {
@@ -126,7 +142,32 @@ const ZERO_EVENT_COUNTS: UserProgressEventCounts = {
   shopping_completed: 0,
   recipe_saved_distinct_ever: 0,
   custom_book_created: 0,
+  planner_registered_first: 0,
+  planner_registered_repeat: 0,
 };
+
+const FIRST_XP_EVENT_TYPES = new Set<UserProgressEventType>([
+  "recipe_saved",
+  "custom_book_created",
+  "shopping_completed",
+  "cooking_completed",
+  "planner_registered",
+]);
+
+const REPEAT_CAPS: Partial<Record<UserProgressEventType, { daily?: number; weekly?: number }>> = {
+  custom_book_created: { daily: 2 },
+  planner_registered: { daily: 3, weekly: 12 },
+};
+
+const GRADE_BANDS: UserProgressGradeData[] = [
+  { grade_key: "sprout_homecook", label: "새싹 집밥러", level_min: 1, level_max: 3 },
+  { grade_key: "homecook_runner", label: "집밥 러너", level_min: 4, level_max: 7 },
+  { grade_key: "kitchen_explorer", label: "주방 탐험가", level_min: 8, level_max: 12 },
+  { grade_key: "table_maker", label: "한상 메이커", level_min: 13, level_max: 20 },
+  { grade_key: "homecook_artisan", label: "집밥 장인", level_min: 21, level_max: 34 },
+  { grade_key: "table_curator", label: "식탁 큐레이터", level_min: 35, level_max: 49 },
+  { grade_key: "homecook_master", label: "집밥 명장", level_min: 50, level_max: null },
+];
 
 export function calculateUserProgressLevel(totalXp: number): UserProgressLevelData {
   const normalizedTotalXp = Math.max(0, Math.floor(totalXp));
@@ -157,11 +198,27 @@ export function calculateUserProgressLevel(totalXp: number): UserProgressLevelDa
   };
 }
 
+export function levelStartXp(level: number) {
+  const normalizedLevel = Math.max(1, Math.floor(level));
+  return Math.max(0, 40 * (normalizedLevel - 1) ** 2 + 60 * (normalizedLevel - 1));
+}
+
 function getLevelStartXp(level: number) {
-  return Math.max(0, (100 * (level - 1) * level) / 2);
+  return levelStartXp(level);
+}
+
+export function getUserProgressGrade(level: number): UserProgressGradeData {
+  const normalizedLevel = Math.max(1, Math.floor(level));
+  return GRADE_BANDS.find((band) =>
+    normalizedLevel >= band.level_min && (band.level_max === null || normalizedLevel <= band.level_max)
+  ) ?? GRADE_BANDS[0];
 }
 
 export function buildProgressSourceKey(input: UserProgressAwardInput) {
+  if (input.eventType === "planner_registered") {
+    return `planner_registered:${input.sourceId}`;
+  }
+
   if (input.eventType === "recipe_saved") {
     return `recipe_saved:${input.userId}:${input.recipeId}`;
   }
@@ -169,15 +226,32 @@ export function buildProgressSourceKey(input: UserProgressAwardInput) {
   return `${input.eventType}:${input.sourceId}`;
 }
 
-export function buildUserProgressEventInsert(input: UserProgressAwardInput): UserProgressEventInsert {
+export function buildUserProgressEventInsert(
+  input: UserProgressAwardInput,
+  options: { existingEvents?: UserProgressEventRow[]; backfill?: boolean } = {},
+): UserProgressEventInsert {
+  const occurredAt = input.occurredAt ?? new Date().toISOString();
+  const existingEvents = options.existingEvents ?? [];
+  const xpKind = getXpKind(input.eventType, existingEvents);
+  const sourceKey = input.eventType === "planner_registered" && xpKind === "first"
+    ? `planner_registered:first:${input.userId}`
+    : buildProgressSourceKey(input);
+  const sourceMeta = buildSourceMetaJson({
+    eventType: input.eventType,
+    occurredAt,
+    xpKind,
+    backfill: options.backfill === true,
+  });
+
   return {
     user_id: input.userId,
     event_type: input.eventType,
-    source_key: buildProgressSourceKey(input),
+    source_key: sourceKey,
     source_table: input.sourceTable,
     source_id: input.sourceId,
-    xp_delta: USER_PROGRESS_XP_AWARDS[input.eventType],
-    occurred_at: input.occurredAt ?? new Date().toISOString(),
+    xp_delta: USER_PROGRESS_XP_POLICY[input.eventType][xpKind],
+    occurred_at: occurredAt,
+    source_meta_json: sourceMeta,
   };
 }
 
@@ -206,6 +280,13 @@ export function buildUserProgressSummary({
       eventCounts.shopping_completed += 1;
     } else if (event.event_type === "custom_book_created") {
       eventCounts.custom_book_created += 1;
+    } else if (event.event_type === "planner_registered") {
+      const sourceMeta = normalizeSourceMeta(event.source_meta_json);
+      if (sourceMeta.xp_kind === "repeat") {
+        eventCounts.planner_registered_repeat += 1;
+      } else {
+        eventCounts.planner_registered_first += 1;
+      }
     }
 
     if (!lastEventAt || new Date(event.occurred_at).getTime() > new Date(lastEventAt).getTime()) {
@@ -219,6 +300,7 @@ export function buildUserProgressSummary({
     user_id: userId,
     total_xp: totalXp,
     current_level: calculateUserProgressLevel(totalXp).current_level,
+    level_curve_version: USER_PROGRESS_LEVEL_CURVE_VERSION,
     event_counts: eventCounts,
     last_event_at: lastEventAt,
     last_updated_at: now,
@@ -230,9 +312,39 @@ export async function awardUserProgressEvent(
   input: UserProgressAwardInput,
 ): Promise<UserProgressAwardResult> {
   try {
+    const existingEventsResult = await dbClient
+      .from("user_progress_events")
+      .select("event_type, source_id, source_key, xp_delta, occurred_at, source_meta_json")
+      .eq("user_id", input.userId);
+
+    if (existingEventsResult.error || !existingEventsResult.data) {
+      return {
+        awarded: false,
+        duplicate: false,
+        error: existingEventsResult.error ?? { message: "missing progress events result" },
+        summary: null,
+      };
+    }
+
+    const eventInsert = buildUserProgressEventInsert(input, {
+      existingEvents: existingEventsResult.data,
+    });
+
+    if (isDuplicateSource(input, eventInsert.source_key, existingEventsResult.data)) {
+      return { awarded: false, duplicate: true, error: null, summary: null };
+    }
+
+    if (isUserProgressRepeatCapExceeded(input.eventType, eventInsert.source_meta_json, existingEventsResult.data)) {
+      return { awarded: false, duplicate: false, error: null, summary: null };
+    }
+
+    const previousLevel = calculateUserProgressLevel(
+      existingEventsResult.data.reduce((sum, event) => sum + Math.max(0, Math.floor(event.xp_delta)), 0),
+    ).current_level;
+
     const insertResult = await dbClient
       .from("user_progress_events")
-      .insert(buildUserProgressEventInsert(input))
+      .insert(eventInsert)
       .select("id")
       .maybeSingle();
 
@@ -271,6 +383,8 @@ export async function awardUserProgressEvent(
           userId: input.userId,
           progressEventId: insertResult.data.id,
           awardInput: input,
+          xpDelta: eventInsert.xp_delta,
+          previousLevel,
           progress: toUserProgressData(summaryResult.data),
         },
       );
@@ -301,7 +415,7 @@ export async function readUserProgress(
   try {
     const summaryResult = await dbClient
       .from("user_progress_summary")
-      .select("user_id, total_xp, current_level, event_counts, last_event_at, last_updated_at")
+      .select("user_id, total_xp, current_level, level_curve_version, event_counts, last_event_at, last_updated_at")
       .eq("user_id", userId)
       .maybeSingle();
 
@@ -337,7 +451,7 @@ export async function recalculateUserProgressSummary(
 ): Promise<{ data: UserProgressSummaryRow | null; error: QueryError | null }> {
   const eventsResult = await dbClient
     .from("user_progress_events")
-    .select("event_type, source_key, xp_delta, occurred_at")
+    .select("event_type, source_id, source_key, xp_delta, occurred_at, source_meta_json")
     .eq("user_id", userId);
 
   if (eventsResult.error || !eventsResult.data) {
@@ -355,7 +469,7 @@ export async function recalculateUserProgressSummary(
   const upsertResult = await dbClient
     .from("user_progress_summary")
     .upsert(summary, { onConflict: "user_id" })
-    .select("user_id, total_xp, current_level, event_counts, last_event_at, last_updated_at")
+    .select("user_id, total_xp, current_level, level_curve_version, event_counts, last_event_at, last_updated_at")
     .maybeSingle();
 
   if (upsertResult.error || !upsertResult.data) {
@@ -437,7 +551,156 @@ function normalizeEventCounts(value: unknown): UserProgressEventCounts {
     shopping_completed: normalizeCount(record.shopping_completed),
     recipe_saved_distinct_ever: normalizeCount(record.recipe_saved_distinct_ever),
     custom_book_created: normalizeCount(record.custom_book_created),
+    planner_registered_first: normalizeCount(record.planner_registered_first),
+    planner_registered_repeat: normalizeCount(record.planner_registered_repeat),
   };
+}
+
+function getXpKind(eventType: UserProgressEventType, existingEvents: UserProgressEventRow[]) {
+  return FIRST_XP_EVENT_TYPES.has(eventType)
+    && !existingEvents.some((event) => event.event_type === eventType)
+    ? "first"
+    : "repeat";
+}
+
+function buildSourceMetaJson({
+  eventType,
+  occurredAt,
+  xpKind,
+  backfill,
+}: {
+  eventType: UserProgressEventType;
+  occurredAt: string;
+  xpKind: "first" | "repeat";
+  backfill: boolean;
+}) {
+  const meta: Record<string, unknown> = {
+    xp_kind: xpKind,
+    level_curve_version: USER_PROGRESS_LEVEL_CURVE_VERSION,
+  };
+
+  if (backfill) {
+    meta.backfill = true;
+  }
+
+  if (xpKind === "repeat" && REPEAT_CAPS[eventType]) {
+    meta.cap_day_key = getKstDateKey(occurredAt);
+    meta.cap_week_key = getKstIsoWeekKey(occurredAt);
+  }
+
+  return meta;
+}
+
+function isDuplicateSource(
+  input: UserProgressAwardInput,
+  sourceKey: string,
+  existingEvents: UserProgressEventRow[],
+) {
+  if (existingEvents.some((event) => event.event_type === input.eventType && event.source_key === sourceKey)) {
+    return true;
+  }
+
+  if (input.eventType === "recipe_saved") {
+    const recipeSourceKey = `recipe_saved:${input.userId}:${input.recipeId}`;
+    return existingEvents.some((event) =>
+      event.event_type === "recipe_saved" && event.source_key === recipeSourceKey
+    );
+  }
+
+  if (input.eventType === "planner_registered") {
+    const repeatSourceKey = `planner_registered:${input.sourceId}`;
+    return existingEvents.some((event) =>
+      event.event_type === "planner_registered"
+        && (event.source_id === input.sourceId || event.source_key === repeatSourceKey)
+    );
+  }
+
+  return false;
+}
+
+export function isUserProgressRepeatCapExceeded(
+  eventType: UserProgressEventType,
+  sourceMetaJson: unknown,
+  existingEvents: UserProgressEventRow[],
+) {
+  const sourceMeta = normalizeSourceMeta(sourceMetaJson);
+  if (sourceMeta.xp_kind !== "repeat") {
+    return false;
+  }
+
+  const caps = REPEAT_CAPS[eventType];
+  if (!caps) {
+    return false;
+  }
+
+  const repeatEvents = existingEvents.filter((event) => {
+    if (event.event_type !== eventType) {
+      return false;
+    }
+
+    return normalizeSourceMeta(event.source_meta_json).xp_kind === "repeat";
+  });
+
+  if (caps.daily && sourceMeta.cap_day_key) {
+    const dailyCount = repeatEvents.filter((event) =>
+      normalizeSourceMeta(event.source_meta_json).cap_day_key === sourceMeta.cap_day_key
+        || getKstDateKey(event.occurred_at) === sourceMeta.cap_day_key
+    ).length;
+    if (dailyCount >= caps.daily) {
+      return true;
+    }
+  }
+
+  if (caps.weekly && sourceMeta.cap_week_key) {
+    const weeklyCount = repeatEvents.filter((event) =>
+      normalizeSourceMeta(event.source_meta_json).cap_week_key === sourceMeta.cap_week_key
+        || getKstIsoWeekKey(event.occurred_at) === sourceMeta.cap_week_key
+    ).length;
+    if (weeklyCount >= caps.weekly) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function normalizeSourceMeta(value: unknown): {
+  xp_kind?: "first" | "repeat";
+  cap_day_key?: string;
+  cap_week_key?: string;
+} {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const record = value as Record<string, unknown>;
+  const xpKind = record.xp_kind === "repeat" || record.xp_kind === "first"
+    ? record.xp_kind
+    : undefined;
+
+  return {
+    xp_kind: xpKind,
+    cap_day_key: typeof record.cap_day_key === "string" ? record.cap_day_key : undefined,
+    cap_week_key: typeof record.cap_week_key === "string" ? record.cap_week_key : undefined,
+  };
+}
+
+function getKstDate(isoString: string) {
+  return new Date(new Date(isoString).getTime() + 9 * 60 * 60 * 1000);
+}
+
+function getKstDateKey(isoString: string) {
+  return getKstDate(isoString).toISOString().slice(0, 10);
+}
+
+function getKstIsoWeekKey(isoString: string) {
+  const date = getKstDate(isoString);
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const year = date.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(year, 0, 1));
+  const week = Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${year}-W${String(week).padStart(2, "0")}`;
 }
 
 function normalizeCount(value: unknown) {

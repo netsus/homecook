@@ -1,11 +1,14 @@
 import {
+  getUserProgressGrade,
   readUserProgress,
   type UserProgressAwardInput,
   type UserProgressDbClient,
-  USER_PROGRESS_XP_AWARDS,
 } from "@/lib/server/user-progress";
 import type {
+  UserGamificationArchiveData,
+  UserGamificationBadgeCategory,
   UserGamificationData,
+  UserGamificationNotificationDeliveryChannel,
   UserGamificationNotificationData,
   UserGamificationNotificationType,
   UserGamificationQuestData,
@@ -33,7 +36,13 @@ interface UserBadgeDefinition {
   description: string;
   metric: MetricKey;
   target: number;
+  category: UserGamificationBadgeCategory;
+  shape_key: UserGamificationBadgeDataShapeKey;
+  locked_hint: string;
 }
+
+type UserGamificationBadgeDataShapeKey =
+  import("@/types/user-gamification").UserGamificationBadgeShapeKey;
 
 interface UserQuestDefinition {
   quest_key: string;
@@ -66,6 +75,10 @@ export interface UserQuestProgressRow {
 export interface UserProgressNotificationRow {
   id: string;
   notification_type: UserGamificationNotificationType;
+  priority?: number | null;
+  delivery_channel?: UserGamificationNotificationDeliveryChannel | null;
+  toast_eligible?: boolean | null;
+  group_key?: string | null;
   payload_json: unknown;
   created_at: string;
   seen_at: string | null;
@@ -98,6 +111,10 @@ interface UserProgressNotificationInsert {
   notification_type: UserGamificationNotificationType;
   source_event_id: string | null;
   payload_json: Record<string, unknown>;
+  priority: number;
+  delivery_channel: UserGamificationNotificationDeliveryChannel;
+  toast_eligible: boolean;
+  group_key: string | null;
   created_at: string;
 }
 
@@ -140,6 +157,9 @@ interface QuestProgressSelectQuery {
 interface NotificationSelectQuery {
   eq(column: string, value: string): NotificationSelectQuery;
   is(column: string, value: null): NotificationSelectQuery;
+  in(column: string, values: string[]): NotificationSelectQuery;
+  lt(column: string, value: string): NotificationSelectQuery;
+  or(expression: string): NotificationSelectQuery;
   order(column: string, options: { ascending: boolean }): NotificationSelectQuery;
   limit(count: number): NotificationSelectQuery;
   then: ArrayResult<UserProgressNotificationRow>["then"];
@@ -176,6 +196,60 @@ export interface UserGamificationDbClient {
   from(table: "user_progress_notifications"): NotificationsTable;
 }
 
+export const USER_NOTIFICATION_PRIORITIES: Record<UserGamificationNotificationType, number> = {
+  level_up: 1,
+  badge_unlocked: 2,
+  quest_completed: 3,
+  xp_awarded: 4,
+};
+
+export const USER_BADGE_METADATA: Record<string, {
+  category: UserGamificationBadgeCategory;
+  shape_key: UserGamificationBadgeDataShapeKey;
+  locked_hint: string;
+}> = {
+  first_recipe_saved: {
+    category: "recipe",
+    shape_key: "bookmark",
+    locked_hint: "레시피를 하나 저장해 보세요.",
+  },
+  recipe_collector: {
+    category: "recipe",
+    shape_key: "ribbon",
+    locked_hint: "레시피 5개를 저장해 보세요.",
+  },
+  first_shopping_done: {
+    category: "shopping",
+    shape_key: "leaf",
+    locked_hint: "장보기 리스트를 완료해 보세요.",
+  },
+  shopping_rhythm: {
+    category: "shopping",
+    shape_key: "shield",
+    locked_hint: "장보기 완료를 3번 기록해 보세요.",
+  },
+  first_cook_done: {
+    category: "cooking",
+    shape_key: "pot",
+    locked_hint: "요리 완료를 한 번 기록해 보세요.",
+  },
+  kitchen_routine_starter: {
+    category: "cooking",
+    shape_key: "bowl",
+    locked_hint: "요리 완료를 3번 기록해 보세요.",
+  },
+  first_custom_book_created: {
+    category: "recipebook",
+    shape_key: "plate",
+    locked_hint: "나만의 레시피북을 만들어 보세요.",
+  },
+  level_5_homecook: {
+    category: "cooking",
+    shape_key: "shield",
+    locked_hint: "레벨 5에 도달해 보세요.",
+  },
+};
+
 export const USER_BADGE_DEFINITIONS: UserBadgeDefinition[] = [
   {
     badge_key: "first_recipe_saved",
@@ -183,6 +257,7 @@ export const USER_BADGE_DEFINITIONS: UserBadgeDefinition[] = [
     description: "처음으로 다시 보고 싶은 레시피를 저장했어요.",
     metric: "recipe_saved_distinct_ever",
     target: 1,
+    ...USER_BADGE_METADATA.first_recipe_saved,
   },
   {
     badge_key: "first_shopping_done",
@@ -190,6 +265,7 @@ export const USER_BADGE_DEFINITIONS: UserBadgeDefinition[] = [
     description: "첫 장보기 리스트를 끝까지 완료했어요.",
     metric: "shopping_completed",
     target: 1,
+    ...USER_BADGE_METADATA.first_shopping_done,
   },
   {
     badge_key: "first_cook_done",
@@ -197,6 +273,7 @@ export const USER_BADGE_DEFINITIONS: UserBadgeDefinition[] = [
     description: "첫 요리 완료를 기록했어요.",
     metric: "cooking_completed",
     target: 1,
+    ...USER_BADGE_METADATA.first_cook_done,
   },
   {
     badge_key: "first_custom_book_created",
@@ -204,6 +281,7 @@ export const USER_BADGE_DEFINITIONS: UserBadgeDefinition[] = [
     description: "직접 레시피북을 만들어 집밥 기록을 정리했어요.",
     metric: "custom_book_created",
     target: 1,
+    ...USER_BADGE_METADATA.first_custom_book_created,
   },
   {
     badge_key: "recipe_collector",
@@ -211,6 +289,7 @@ export const USER_BADGE_DEFINITIONS: UserBadgeDefinition[] = [
     description: "레시피 5개를 저장해 다음 식사를 준비했어요.",
     metric: "recipe_saved_distinct_ever",
     target: 5,
+    ...USER_BADGE_METADATA.recipe_collector,
   },
   {
     badge_key: "kitchen_routine_starter",
@@ -218,6 +297,7 @@ export const USER_BADGE_DEFINITIONS: UserBadgeDefinition[] = [
     description: "요리 완료를 3번 기록했어요.",
     metric: "cooking_completed",
     target: 3,
+    ...USER_BADGE_METADATA.kitchen_routine_starter,
   },
   {
     badge_key: "shopping_rhythm",
@@ -225,6 +305,7 @@ export const USER_BADGE_DEFINITIONS: UserBadgeDefinition[] = [
     description: "장보기 완료를 3번 기록했어요.",
     metric: "shopping_completed",
     target: 3,
+    ...USER_BADGE_METADATA.shopping_rhythm,
   },
   {
     badge_key: "level_5_homecook",
@@ -232,6 +313,7 @@ export const USER_BADGE_DEFINITIONS: UserBadgeDefinition[] = [
     description: "레벨 5에 도달했어요.",
     metric: "current_level",
     target: 5,
+    ...USER_BADGE_METADATA.level_5_homecook,
   },
 ];
 
@@ -291,7 +373,18 @@ const SOURCE_EVENT_LABELS: Record<UserProgressEventType, string> = {
   shopping_completed: "장보기 완료",
   recipe_saved: "레시피 저장",
   custom_book_created: "레시피북 생성",
+  planner_registered: "플래너 등록",
 };
+
+const SOURCE_EVENT_CATEGORIES: Record<UserProgressEventType, UserGamificationBadgeCategory> = {
+  cooking_completed: "cooking",
+  shopping_completed: "shopping",
+  recipe_saved: "recipe",
+  custom_book_created: "recipebook",
+  planner_registered: "planner",
+};
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function readUserGamification(
   dbClient: UserGamificationDbClient & UserProgressDbClient,
@@ -319,7 +412,7 @@ export async function readUserGamification(
     const [badgesResult, questsResult, notificationsResult] = await Promise.all([
       readBadgeAwardRows(dbClient, userId),
       readQuestProgressRows(dbClient, userId),
-      readUnseenNotificationRows(dbClient, userId),
+      readNotificationRows(dbClient, userId),
     ]);
 
     const error = badgesResult.error ?? questsResult.error ?? notificationsResult.error;
@@ -348,11 +441,14 @@ export async function projectUserGamificationAfterProgressEvent(
     userId: string;
     progressEventId: string;
     awardInput: UserProgressAwardInput;
+    xpDelta: number;
+    previousLevel: number;
     progress: UserProgressData;
   },
 ): Promise<{ error: QueryError | null }> {
   try {
     const now = input.awardInput.occurredAt ?? new Date().toISOString();
+    const groupKey = `progress-event:${input.progressEventId}`;
     const notificationResult = await insertProgressNotification(dbClient, {
       userId: input.userId,
       notificationKey: `xp-toast:${input.progressEventId}`,
@@ -361,13 +457,34 @@ export async function projectUserGamificationAfterProgressEvent(
       payload: {
         event_type: input.awardInput.eventType,
         label: SOURCE_EVENT_LABELS[input.awardInput.eventType],
-        xp_delta: USER_PROGRESS_XP_AWARDS[input.awardInput.eventType],
+        xp_delta: input.xpDelta,
       },
+      groupKey,
       now,
     });
 
     if (notificationResult.error) {
       return { error: notificationResult.error };
+    }
+
+    if (input.previousLevel < input.progress.level.current_level) {
+      const levelUpResult = await insertProgressNotification(dbClient, {
+        userId: input.userId,
+        notificationKey: `level-up:${input.userId}:${input.progress.level.current_level}`,
+        notificationType: "level_up",
+        sourceEventId: input.progressEventId,
+        payload: {
+          previous_level: input.previousLevel,
+          current_level: input.progress.level.current_level,
+          grade: getUserProgressGrade(input.progress.level.current_level),
+        },
+        groupKey,
+        now,
+      });
+
+      if (levelUpResult.error) {
+        return { error: levelUpResult.error };
+      }
     }
 
     return reconcileUserGamification(dbClient, {
@@ -529,6 +646,16 @@ export function buildUserGamificationData({
   const activeTutorialSteps = questData
     .filter((quest) => quest.quest_type === "tutorial" && quest.status === "active")
     .slice(0, 3);
+  const notificationData = notificationRows
+    .map(toNotificationData)
+    .filter((notification) => notification.delivery_channel !== "silent");
+  const unseen = notificationData.filter((notification) => !notification.seen_at);
+  const priorityUnseen = unseen
+    .filter((notification) => notification.toast_eligible)
+    .sort(compareNotificationPriority);
+  const archivePreview = notificationData
+    .sort(compareNotificationArchive)
+    .slice(0, 5);
 
   return {
     level: {
@@ -537,6 +664,7 @@ export function buildUserGamificationData({
       xp_to_next_level: progress.level.xp_to_next_level,
       progress_percent: progress.level.progress_percent,
     },
+    grade: getUserProgressGrade(progress.level.current_level),
     featured_badges: earned.slice(0, 3),
     badges: {
       earned,
@@ -550,12 +678,59 @@ export function buildUserGamificationData({
       active_steps: activeTutorialSteps,
     },
     notifications: {
-      unseen: notificationRows
-        .filter((row) => !row.seen_at)
-        .map(toNotificationData),
+      unseen,
+      priority_unseen: priorityUnseen,
+      archive_preview: archivePreview,
     },
     last_updated_at: progress.last_updated_at,
   };
+}
+
+export async function readUserGamificationArchive(
+  dbClient: UserGamificationDbClient,
+  userId: string,
+  options: { limit: number; cursor: string | null },
+): Promise<{ data: UserGamificationArchiveData | null; error: QueryError | null }> {
+  try {
+    const cursor = options.cursor ? decodeArchiveCursor(options.cursor) : null;
+    const pageSize = options.limit + 1;
+    let query = dbClient
+      .from("user_progress_notifications")
+      .select("id, notification_type, priority, delivery_channel, toast_eligible, group_key, payload_json, created_at, seen_at")
+      .eq("user_id", userId)
+      .in("delivery_channel", ["toast", "archive_only"])
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(pageSize);
+
+    if (cursor) {
+      query = query.or(`created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`);
+    }
+
+    const result = await query;
+
+    if (result.error || !result.data) {
+      return {
+        data: null,
+        error: result.error ?? { message: "missing gamification archive result" },
+      };
+    }
+
+    const rows = result.data.slice(0, options.limit);
+    const hasNext = result.data.length > options.limit;
+    const last = rows.at(-1);
+
+    return {
+      data: {
+        items: rows.map(toNotificationData),
+        next_cursor: hasNext && last ? encodeArchiveCursor(last) : null,
+        has_next: hasNext,
+      },
+      error: null,
+    };
+  } catch (error) {
+    return { data: null, error: toQueryError(error, "unknown gamification archive failure") };
+  }
 }
 
 async function reconcileUserGamification(
@@ -605,6 +780,7 @@ async function reconcileUserGamification(
           label: definition.label,
           description: definition.description,
         },
+        groupKey: input.sourceEventId ? `progress-event:${input.sourceEventId}` : null,
         now,
       });
 
@@ -662,6 +838,7 @@ async function reconcileUserGamification(
           title: definition.title,
           description: definition.description,
         },
+        groupKey: input.sourceEventId ? `progress-event:${input.sourceEventId}` : null,
         now,
       });
 
@@ -698,19 +875,41 @@ async function readQuestProgressRows(
   return result;
 }
 
-async function readUnseenNotificationRows(
+async function readNotificationRows(
   dbClient: UserGamificationDbClient,
   userId: string,
 ): Promise<{ data: UserProgressNotificationRow[] | null; error: QueryError | null }> {
-  const result = await dbClient
-    .from("user_progress_notifications")
-    .select("id, notification_type, payload_json, created_at, seen_at")
-    .eq("user_id", userId)
-    .is("seen_at", null)
-    .order("created_at", { ascending: false })
-    .limit(5);
+  const [unseenResult, archiveResult] = await Promise.all([
+    dbClient
+      .from("user_progress_notifications")
+      .select("id, notification_type, priority, delivery_channel, toast_eligible, group_key, payload_json, created_at, seen_at")
+      .eq("user_id", userId)
+      .in("delivery_channel", ["toast", "archive_only"])
+      .is("seen_at", null)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(5),
+    dbClient
+      .from("user_progress_notifications")
+      .select("id, notification_type, priority, delivery_channel, toast_eligible, group_key, payload_json, created_at, seen_at")
+      .eq("user_id", userId)
+      .in("delivery_channel", ["toast", "archive_only"])
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(5),
+  ]);
 
-  return result;
+  const error = unseenResult.error ?? archiveResult.error;
+  if (error) {
+    return { data: null, error };
+  }
+
+  const rowsById = new Map<string, UserProgressNotificationRow>();
+  for (const row of [...(unseenResult.data ?? []), ...(archiveResult.data ?? [])]) {
+    rowsById.set(row.id, row);
+  }
+
+  return { data: [...rowsById.values()], error: null };
 }
 
 async function insertBadgeAward(
@@ -756,6 +955,7 @@ async function insertProgressNotification(
     notificationType: UserGamificationNotificationType;
     sourceEventId: string | null;
     payload: Record<string, unknown>;
+    groupKey?: string | null;
     now: string;
   },
 ): Promise<{ created: boolean; error: QueryError | null }> {
@@ -767,6 +967,10 @@ async function insertProgressNotification(
       notification_type: input.notificationType,
       source_event_id: input.sourceEventId,
       payload_json: input.payload,
+      priority: USER_NOTIFICATION_PRIORITIES[input.notificationType],
+      delivery_channel: "toast",
+      toast_eligible: true,
+      group_key: input.groupKey ?? null,
       created_at: input.now,
     })
     .select("id")
@@ -791,6 +995,9 @@ function toEarnedBadgeData(definition: UserBadgeDefinition, row: UserBadgeAwardR
     badge_key: definition.badge_key,
     label: definition.label,
     description: definition.description,
+    category: definition.category,
+    shape_key: definition.shape_key,
+    locked_hint: null,
     earned_at: row.earned_at,
     is_new: !row.seen_at,
   };
@@ -804,6 +1011,9 @@ function toLockedBadgeData(definition: UserBadgeDefinition, progress: UserProgre
     badge_key: definition.badge_key,
     label: definition.label,
     description: definition.description,
+    category: definition.category,
+    shape_key: definition.shape_key,
+    locked_hint: definition.locked_hint,
     earned_at: null,
     is_new: false,
     progress_current: progressCurrent,
@@ -836,12 +1046,23 @@ function toQuestData(
   };
 }
 
-function toNotificationData(row: UserProgressNotificationRow): UserGamificationNotificationData {
+export function toNotificationData(row: UserProgressNotificationRow): UserGamificationNotificationData {
+  const payload = normalizePayload(row.payload_json);
+  const presentation = buildNotificationPresentation(row.notification_type, payload);
+
   return {
     id: row.id,
     notification_type: row.notification_type,
-    payload: normalizePayload(row.payload_json),
+    priority: normalizeNotificationPriority(row),
+    delivery_channel: normalizeDeliveryChannel(row.delivery_channel),
+    toast_eligible: row.toast_eligible !== false,
+    group_key: row.group_key ?? null,
+    title: presentation.title,
+    body: presentation.body,
+    category: presentation.category,
+    payload,
     created_at: row.created_at,
+    seen_at: row.seen_at,
   };
 }
 
@@ -861,6 +1082,23 @@ function compareActiveQuests(left: UserGamificationQuestData, right: UserGamific
 function compareCompletedQuests(left: UserGamificationQuestData, right: UserGamificationQuestData) {
   return new Date(right.completed_at ?? 0).getTime() - new Date(left.completed_at ?? 0).getTime()
     || left.quest_key.localeCompare(right.quest_key);
+}
+
+function compareNotificationPriority(
+  left: UserGamificationNotificationData,
+  right: UserGamificationNotificationData,
+) {
+  return left.priority - right.priority
+    || new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+    || right.id.localeCompare(left.id);
+}
+
+function compareNotificationArchive(
+  left: UserGamificationNotificationData,
+  right: UserGamificationNotificationData,
+) {
+  return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+    || right.id.localeCompare(left.id);
 }
 
 function getMetricValue(progress: UserProgressData, metric: MetricKey) {
@@ -885,6 +1123,100 @@ function normalizePayload(value: unknown): Record<string, unknown> {
   }
 
   return value as Record<string, unknown>;
+}
+
+function normalizeNotificationPriority(row: UserProgressNotificationRow) {
+  return typeof row.priority === "number" && Number.isFinite(row.priority)
+    ? row.priority
+    : USER_NOTIFICATION_PRIORITIES[row.notification_type];
+}
+
+function normalizeDeliveryChannel(
+  value: UserGamificationNotificationDeliveryChannel | null | undefined,
+): UserGamificationNotificationDeliveryChannel {
+  if (value === "archive_only" || value === "silent") {
+    return value;
+  }
+
+  return "toast";
+}
+
+function encodeArchiveCursor(row: UserProgressNotificationRow) {
+  return Buffer.from(`${row.created_at}|${row.id}`, "utf8").toString("base64url");
+}
+
+export function decodeArchiveCursor(value: string) {
+  try {
+    const decoded = Buffer.from(value, "base64url").toString("utf8");
+    const [createdAt, id, ...rest] = decoded.split("|");
+    if (
+      !createdAt
+      || !id
+      || rest.length > 0
+      || Number.isNaN(new Date(createdAt).getTime())
+      || !UUID_PATTERN.test(id)
+    ) {
+      return null;
+    }
+
+    return { createdAt, id };
+  } catch {
+    return null;
+  }
+}
+
+function buildNotificationPresentation(
+  notificationType: UserGamificationNotificationType,
+  payload: Record<string, unknown>,
+): {
+  title: string;
+  body: string;
+  category: UserGamificationBadgeCategory;
+} {
+  if (notificationType === "level_up") {
+    const currentLevel = typeof payload.current_level === "number"
+      ? payload.current_level
+      : typeof payload.level === "number"
+        ? payload.level
+        : null;
+    const grade = normalizePayload(payload.grade);
+    const gradeLabel = typeof grade.label === "string" ? grade.label : null;
+
+    return {
+      title: currentLevel ? `레벨 ${currentLevel} 달성` : "레벨업",
+      body: gradeLabel ? `${gradeLabel}가 되었어요.` : "새로운 레벨에 도달했어요.",
+      category: "cooking",
+    };
+  }
+
+  if (notificationType === "badge_unlocked") {
+    const badgeKey = typeof payload.badge_key === "string" ? payload.badge_key : "";
+    const badgeMetadata = USER_BADGE_METADATA[badgeKey];
+
+    return {
+      title: typeof payload.label === "string" ? payload.label : "배지 획득",
+      body: typeof payload.description === "string" ? payload.description : "새 배지를 획득했어요.",
+      category: badgeMetadata?.category ?? "recipe",
+    };
+  }
+
+  if (notificationType === "quest_completed") {
+    return {
+      title: typeof payload.title === "string" ? payload.title : "퀘스트 달성",
+      body: typeof payload.description === "string" ? payload.description : "퀘스트를 완료했어요.",
+      category: "planner",
+    };
+  }
+
+  const eventType = typeof payload.event_type === "string" ? payload.event_type : "";
+  const xpDelta = typeof payload.xp_delta === "number" ? payload.xp_delta : null;
+  const label = typeof payload.label === "string" ? payload.label : "경험치 획득";
+
+  return {
+    title: label,
+    body: xpDelta ? `${xpDelta} XP를 얻었어요.` : "경험치를 얻었어요.",
+    category: SOURCE_EVENT_CATEGORIES[eventType as UserProgressEventType] ?? "recipe",
+  };
 }
 
 function isDuplicateInsert(error: QueryError | null | undefined) {
