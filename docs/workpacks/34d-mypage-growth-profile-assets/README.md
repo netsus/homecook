@@ -212,7 +212,8 @@ BRANCH_NAME=feature/fe-34d-mypage-growth-profile-assets PR_IS_DRAFT=false pnpm v
 - [x] progress/gamification soft-fail isolation 유지 <!-- omo:id=delivery-soft-fail;stage=4;scope=frontend;review=5,6 -->
 - [x] 320/390/1440 screenshot evidence + authority report <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] exploratory QA/eval evidence <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=6 -->
-- [ ] Stage 6 closeout projection <!-- omo:id=delivery-stage6-closeout;stage=4;scope=frontend;review=6 -->
+
+Stage 6 closeout projection is intentionally deferred until the source PR merge is confirmed.
 
 ## Implementation Evidence
 

@@ -42,7 +42,7 @@
 - [x] MYPAGE 34d E2E가 mobile/desktop에서 profile integration과 badge guide를 검증한다 <!-- omo:id=accept-e2e;stage=4;scope=frontend;review=5,6 -->
 - [x] 33b/33c/34c regression path가 깨지지 않는다 <!-- omo:id=accept-regression;stage=4;scope=frontend;review=5,6 -->
 
-## Manual Only
+### Manual Only
 
 - [ ] production Vercel/Supabase에서 source action 후 profile header grade/badge state가 조용히 갱신되는지 확인한다
 - [ ] 제품/디자인 최종 판단으로 badge/grade concept tone이 집밥 서비스에 적합한지 확인한다
