@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   dismissUserGamificationTutorialQuest,
   fetchUserGamification,
+  fetchUserGamificationArchive,
   markUserGamificationNotificationsSeen,
 } from "@/lib/api/user-gamification";
 
@@ -79,6 +80,46 @@ describe("user gamification API client", () => {
           notification_ids: ["550e8400-e29b-41d4-a716-446655440001"],
         }),
       },
+    );
+  });
+
+  it("reads the archive with default query and no cursor", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: vi.fn(async () => ({
+        success: true,
+        data: { items: [], next_cursor: null, has_next: false },
+        error: null,
+      })),
+    });
+
+    await expect(fetchUserGamificationArchive()).resolves.toEqual({
+      items: [],
+      next_cursor: null,
+      has_next: false,
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/users/me/gamification/archive",
+      {},
+    );
+  });
+
+  it("passes limit and cursor to the archive query", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: vi.fn(async () => ({
+        success: true,
+        data: { items: [], next_cursor: null, has_next: false },
+        error: null,
+      })),
+    });
+
+    await fetchUserGamificationArchive({ limit: 20, cursor: "abc123" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/users/me/gamification/archive?limit=20&cursor=abc123",
+      {},
     );
   });
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-33c gamification UI는 MYPAGE의 기존 프로필/progress 영역을 확장해 “집밥 기록이 쌓이는 느낌”을 만든다. 참고 게임 이미지는 badge/rank/progress 구조만 참고하고, 시각 톤은 집밥 서비스의 차분한 카드, 작은 배지, 짧은 안내 문구로 낮춘다.
+33c gamification UI는 MYPAGE의 기존 프로필/progress 영역을 확장해 “집밥 기록이 쌓이는 느낌”을 만든다. 34c는 이 구조 위에 priority toast stack과 최근 성장 기록 archive surface를 추가한다. 참고 게임 이미지는 badge/rank/progress 구조만 참고하고, 시각 톤은 집밥 서비스의 차분한 카드, 작은 배지, 짧은 안내 문구로 낮춘다.
 
 ## Scope
 
@@ -10,7 +10,9 @@
 - 현재 퀘스트 1~2개 요약
 - 튜토리얼 퀘스트 1개
 - 배지/성장 시스템 안내 modal 또는 bottom sheet
-- source action 이후 XP toast
+- source action 이후 priority toast stack
+- MYPAGE 최근 성장 기록 archive surface
+- SHOPPING_FLOW 장보기 묶음 안내 문구
 - mobile 320/390px, desktop 1440px 대응
 
 ## Layout
@@ -27,7 +29,11 @@
    - current quest 1개를 기본 노출
    - tutorial quest가 있으면 quest panel의 첫 row로 표시
    - “전체 보기”는 33c MVP에서는 modal expansion 정도로 제한하고 별도 full page는 만들지 않는다
-5. Existing MYPAGE menu/content
+5. Recent growth archive
+   - 최신 live non-silent notification 목록
+   - loading / empty / error를 MYPAGE core와 분리
+   - 더 보기 버튼으로 cursor pagination
+6. Existing MYPAGE menu/content
 
 320px에서는 badge label이 두 줄로 늘어나는 것을 허용하지 않는다. badge는 icon + 짧은 label, quest는 title + progress line + small progress bar만 표시한다.
 
@@ -66,7 +72,7 @@ Desktop MYPAGE profile card 안에서 progress 아래에 badge strip과 quest su
 - Desktop: modal/popover anchored from guide button.
 - Content sections:
   - 시스템 요약: “활동을 기록하면 배지와 퀘스트가 자동으로 쌓여요.”
-  - XP source: 4개 canonical actions only.
+  - XP source: 5개 canonical actions only (레시피 저장, 레시피북 생성, 장보기 완료, 요리 완료, 플래너 등록).
   - Exclusions: ranking, pressure streak 없음.
   - Badge examples: earned/locked small list.
 - Accessibility:
@@ -75,22 +81,39 @@ Desktop MYPAGE profile card 안에서 progress 아래에 badge strip과 quest su
   - focus trap
   - ESC/backdrop close
 
-### XP Toast
+### Priority Toast Stack
 
 - Position: mobile bottom safe area above tab bar, desktop lower-right.
 - Duration: short, user can ignore.
 - Content:
-  - action label
-  - `+N XP`
-  - optional badge/quest line
+  - server `title`
+  - server `body`
+  - type chip/tone for `level_up`, `badge_unlocked`, `quest_completed`, `xp_awarded`
 - It must not block source action success UI.
-- It must not stack more than 2 toasts; later items collapse into the latest summary.
+- It consumes `notifications.priority_unseen` in server order. The client does not recompute or reorder priority.
+- Visible cap: mobile 2 toasts, desktop 3 toasts.
+- Later items remain queued behind a collapsed `+N개의 새 소식 확인` summary.
+- `level_up` has the strongest visual tone. `badge_unlocked`, `quest_completed`, and `xp_awarded` remain calmer.
+- Same `group_key` notifications keep server order and show a small “같은 활동” chip when the group has multiple items.
+- `silent` notifications are never exposed.
+
+### Recent Growth Archive
+
+- Surface lives below the existing MYPAGE gamification card, not inside the profile header. 34d owns profile-header integration.
+- Structure:
+  - compact heading: “최근 성장 기록”
+  - notification type chip
+  - ISO date
+  - title/body
+  - optional “더 보기” button when `has_next=true`
+- Read-only: no claim, delete, or reward CTA.
+- Soft-fail: archive error does not block profile/progress/badge/quest surfaces.
 
 ## States
 
-- `loading`: skeleton for badge strip and quest panel only.
-- `empty`: first-use tutorial quest and first badge copy.
-- `error`: soft-fail inline message, “성장 정보를 잠시 불러오지 못했어요.”
+- `loading`: skeleton for badge strip, quest panel, and archive list independently.
+- `empty`: first-use tutorial quest, first badge copy, and archive empty copy.
+- `error`: soft-fail inline message, “성장 정보를 잠시 불러오지 못했어요.” / “성장 기록을 잠시 불러오지 못했어요.”
 - `read-only`: no claim/reward button. only guide/dismiss/seen actions.
 - `unauthorized`: MYPAGE auth gate owns this state.
 
@@ -108,10 +131,15 @@ Static prototype path:
 
 - `ui/designs/prototypes/33c-badges-quests-toasts-tutorial/index.html`
 
-Stage 4 evidence required:
+34c Stage 4 evidence required:
 
-- `ui/designs/evidence/33c-badges-quests-toasts-tutorial/mobile-390.png`
-- `ui/designs/evidence/33c-badges-quests-toasts-tutorial/mobile-320.png`
-- `ui/designs/evidence/33c-badges-quests-toasts-tutorial/desktop-1440.png`
-- `ui/designs/evidence/33c-badges-quests-toasts-tutorial/toast.png`
-- `ui/designs/evidence/33c-badges-quests-toasts-tutorial/badge-guide-modal.png`
+- `ui/designs/evidence/34c-growth-notification-ui/mobile-390.png`
+- `ui/designs/evidence/34c-growth-notification-ui/mobile-320.png`
+- `ui/designs/evidence/34c-growth-notification-ui/desktop-1440.png`
+- `ui/designs/evidence/34c-growth-notification-ui/toast-stack-mobile.png`
+- `ui/designs/evidence/34c-growth-notification-ui/toast-stack-desktop.png`
+- `ui/designs/evidence/34c-growth-notification-ui/toast-levelup.png`
+- `ui/designs/evidence/34c-growth-notification-ui/archive-surface.png`
+- `ui/designs/evidence/34c-growth-notification-ui/archive-empty.png`
+- `ui/designs/evidence/34c-growth-notification-ui/archive-pagination.png`
+- `ui/designs/evidence/34c-growth-notification-ui/shopping-copy.png`

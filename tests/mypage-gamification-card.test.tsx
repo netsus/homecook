@@ -107,7 +107,8 @@ describe("MypageGamificationCard", () => {
 
     await user.click(screen.getByRole("button", { name: "안내" }));
     expect(screen.getByRole("dialog", { name: "성장 시스템 안내" })).toBeTruthy();
-    expect(screen.getByText("+50 XP")).toBeTruthy();
+    expect(screen.getByText("첫 +60 XP")).toBeTruthy();
+    expect(screen.getByText("플래너 등록")).toBeTruthy();
     expect(screen.getByText(/순위, 압박형 연속 출석/)).toBeTruthy();
 
     const closeButton = screen.getByRole("button", { name: "×" });

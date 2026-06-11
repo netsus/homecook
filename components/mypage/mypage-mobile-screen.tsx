@@ -9,6 +9,7 @@ import {
   MypageGamificationCard,
   type MypageGamificationState,
 } from "@/components/mypage/mypage-gamification-card";
+import { GrowthArchiveSurface } from "@/components/mypage/growth-archive-surface";
 import {
   MypageProgressCard,
   type MypageProgressState,
@@ -43,6 +44,7 @@ interface MypageStatItem {
 
 interface MypageMobileScreenProps {
   books: RecipeBookSummary[];
+  archiveEnabled?: boolean;
   bookCoverImages: Record<string, string | null>;
   bookCoverUpdatedAt: Record<string, string | null>;
   createInputRef: React.RefObject<HTMLInputElement | null>;
@@ -113,6 +115,7 @@ const MOBILE_PROVIDER_LABELS: Record<UserProfileData["social_provider"], string>
 
 export function MypageMobileScreen({
   books,
+  archiveEnabled = true,
   bookCoverImages,
   bookCoverUpdatedAt,
   createInputRef,
@@ -189,6 +192,7 @@ export function MypageMobileScreen({
 
       {surface === "home" ? (
         <MobileHomeSurface
+          archiveEnabled={archiveEnabled}
           books={books}
           gamification={gamification}
           gamificationState={gamificationState}
@@ -307,6 +311,7 @@ function MobileAppBar({
 }
 
 function MobileHomeSurface({
+  archiveEnabled,
   books,
   gamification,
   gamificationState,
@@ -324,6 +329,7 @@ function MobileHomeSurface({
   onRetrySavedRecipes,
   onSurfaceChange,
 }: {
+  archiveEnabled: boolean;
   books: RecipeBookSummary[];
   gamification: UserGamificationData | null;
   gamificationState: MypageGamificationState;
@@ -458,6 +464,7 @@ function MobileHomeSurface({
           variant="mobile"
           onDismissTutorialQuest={onDismissTutorialQuest}
         />
+        <GrowthArchiveSurface className="mt-3" enabled={archiveEnabled} />
       </section>
 
       <MobileSavedRecipesRail

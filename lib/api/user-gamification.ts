@@ -1,5 +1,6 @@
 import { requestMypage } from "@/lib/api/mypage";
 import type {
+  UserGamificationArchiveData,
   UserGamificationData,
   UserGamificationSeenData,
   UserGamificationTutorialDismissData,
@@ -7,6 +8,26 @@ import type {
 
 export async function fetchUserGamification() {
   return requestMypage<UserGamificationData>("/api/v1/users/me/gamification");
+}
+
+export async function fetchUserGamificationArchive(
+  options: { limit?: number; cursor?: string | null } = {},
+) {
+  const params = new URLSearchParams();
+
+  if (typeof options.limit === "number" && Number.isFinite(options.limit)) {
+    params.set("limit", String(options.limit));
+  }
+
+  if (options.cursor) {
+    params.set("cursor", options.cursor);
+  }
+
+  const query = params.toString();
+
+  return requestMypage<UserGamificationArchiveData>(
+    `/api/v1/users/me/gamification/archive${query ? `?${query}` : ""}`,
+  );
 }
 
 export async function markUserGamificationNotificationsSeen(
