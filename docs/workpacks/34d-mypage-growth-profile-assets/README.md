@@ -119,9 +119,9 @@ No backend work.
 
 ## Design Status
 
-- [x] 임시 UI (temporary)
+- [ ] 임시 UI (temporary)
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed)
 - [ ] N/A
 
 ## QA / Test Data Plan
@@ -144,7 +144,7 @@ No backend work.
   - `soft-fail-gamification.png`
 - Exploratory QA:
   - `pnpm qa:explore -- --slice 34d-mypage-growth-profile-assets --base-url http://127.0.0.1:3100`
-  - `pnpm qa:eval -- --checklist <artifact>/exploratory-checklist.json --report <artifact>/exploratory-report.json --fail-under 90`
+  - `pnpm qa:eval -- --checklist .artifacts/qa/34d-mypage-growth-profile-assets/2026-06-11T14-26-06-569Z/exploratory-checklist.json --report .artifacts/qa/34d-mypage-growth-profile-assets/2026-06-11T14-26-06-569Z/exploratory-report.json --fail-under 90`
 - Manual Only:
   - production Vercel/Supabase live source-action smoke: source action 후 profile header grade/badge state가 조용히 갱신되는지 확인
 
@@ -166,7 +166,7 @@ pnpm vitest run tests/mypage-growth-profile.test.tsx tests/mypage-gamification-c
 pnpm exec playwright test tests/e2e/slice-34d-mypage-growth-profile.spec.ts tests/e2e/slice-33c-gamification.spec.ts
 CI=1 pnpm verify:frontend:pr
 pnpm qa:explore -- --slice 34d-mypage-growth-profile-assets --base-url http://127.0.0.1:3100
-pnpm qa:eval -- --checklist <artifact>/exploratory-checklist.json --report <artifact>/exploratory-report.json --fail-under 90
+pnpm qa:eval -- --checklist .artifacts/qa/34d-mypage-growth-profile-assets/2026-06-11T14-26-06-569Z/exploratory-checklist.json --report .artifacts/qa/34d-mypage-growth-profile-assets/2026-06-11T14-26-06-569Z/exploratory-report.json --fail-under 90
 pnpm validate:source-of-truth-sync
 pnpm validate:workflow-v2
 pnpm validate:workpack -- --slice 34d-mypage-growth-profile-assets
@@ -204,15 +204,29 @@ BRANCH_NAME=feature/fe-34d-mypage-growth-profile-assets PR_IS_DRAFT=false pnpm v
 
 > 이 체크리스트는 Stage 4~6 동안 계속 갱신하는 living closeout 문서다.
 
-- [ ] Stage 1 docs/acceptance/automation/work-item 잠금 <!-- omo:id=delivery-stage1-docs;stage=4;scope=frontend;review=6 -->
-- [ ] Codex image generation concept artifact 기록 <!-- omo:id=delivery-concept-image;stage=4;scope=frontend;review=5,6 -->
-- [ ] MYPAGE profile growth summary mobile/desktop 구현 <!-- omo:id=delivery-profile-summary;stage=4;scope=frontend;review=5,6 -->
-- [ ] badge SVG/CSS shape component family 구현 <!-- omo:id=delivery-badge-shapes;stage=4;scope=frontend;review=5,6 -->
-- [ ] locked badge hint guide 표시 <!-- omo:id=delivery-locked-hints;stage=4;scope=frontend;review=5,6 -->
-- [ ] progress/gamification soft-fail isolation 유지 <!-- omo:id=delivery-soft-fail;stage=4;scope=frontend;review=5,6 -->
-- [ ] 320/390/1440 screenshot evidence + authority report <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] exploratory QA/eval evidence <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=6 -->
+- [x] Stage 1 docs/acceptance/automation/work-item 잠금 <!-- omo:id=delivery-stage1-docs;stage=4;scope=frontend;review=6 -->
+- [x] Codex image generation concept artifact 기록 <!-- omo:id=delivery-concept-image;stage=4;scope=frontend;review=5,6 -->
+- [x] MYPAGE profile growth summary mobile/desktop 구현 <!-- omo:id=delivery-profile-summary;stage=4;scope=frontend;review=5,6 -->
+- [x] badge SVG/CSS shape component family 구현 <!-- omo:id=delivery-badge-shapes;stage=4;scope=frontend;review=5,6 -->
+- [x] locked badge hint guide 표시 <!-- omo:id=delivery-locked-hints;stage=4;scope=frontend;review=5,6 -->
+- [x] progress/gamification soft-fail isolation 유지 <!-- omo:id=delivery-soft-fail;stage=4;scope=frontend;review=5,6 -->
+- [x] 320/390/1440 screenshot evidence + authority report <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] exploratory QA/eval evidence <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=6 -->
 - [ ] Stage 6 closeout projection <!-- omo:id=delivery-stage6-closeout;stage=4;scope=frontend;review=6 -->
+
+## Implementation Evidence
+
+- `MypageGrowthProfile` integrates server `grade.label`, progress API level/XP, and representative badges inside the profile area.
+- `GrowthBadgeIcon` implements `plate`, `shield`, `ribbon`, `bookmark`, `pot`, `leaf`, `bowl` with distinct SVG silhouettes.
+- `MypageBadgeGuideDialog` shows earned badges and locked badge hints without reward claim or competitive rank CTA.
+- `MypageGamificationCard` remains as a secondary quest/guide surface below the profile area on mobile.
+- Verification passed:
+  - `pnpm vitest run tests/mypage-growth-profile.test.tsx tests/mypage-gamification-card.test.tsx tests/mypage-screen.test.tsx tests/user-gamification-api-client.test.ts`
+  - `pnpm exec playwright test tests/e2e/slice-34d-mypage-growth-profile.spec.ts tests/e2e/slice-33c-gamification.spec.ts`
+  - `CI=1 pnpm verify:frontend:pr`
+  - `pnpm qa:eval -- --checklist .artifacts/qa/34d-mypage-growth-profile-assets/2026-06-11T14-26-06-569Z/exploratory-checklist.json --report .artifacts/qa/34d-mypage-growth-profile-assets/2026-06-11T14-26-06-569Z/exploratory-report.json --fail-under 90`
+  - authority/evidence validators
+- `CI=1 pnpm verify:frontend:pr` completed with exit 0. During smoke, existing slice-06 and slice-10a mobile-chrome checks were reported as flaky and passed after retry.
 
 ## Contract Evolution Candidates
 
