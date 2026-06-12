@@ -131,6 +131,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `34b-growth-backend-model` | merged | 34a 계약 기반 backend model 구현. XP writer v2, `user_growth_activity_events`, level curve v2/grade, backfill no-toast, notification priority/archive server logic |
 | `34c-growth-notification-ui` | merged | priority toast stack, `level_up`/badge/quest/XP UI, archive client/surface, 장보기 안내 문구 적용 |
 | `34d-mypage-growth-profile-assets` | merged | MYPAGE 프로필 영역 안에 등급/레벨/XP/대표 배지 통합, 잠긴 배지 hint, badge/grade concept image artifact와 SVG/CSS production component 검토 |
+| `34e-growth-profile-visual-polish` | docs | 34d 후속 polish: MYPAGE 성장 프로필을 실제 통합 header로 재구성하고 desktop blank-card regression, badge emblem 품질, `집밥 러너` no-footwear visual을 수정 |
 
 ## Design Decision Gates
 

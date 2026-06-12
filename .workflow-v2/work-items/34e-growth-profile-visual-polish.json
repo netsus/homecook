@@ -1,0 +1,114 @@
+{
+  "id": "34e-growth-profile-visual-polish",
+  "title": "Growth profile visual polish",
+  "summary": "34d 성장 프로필을 production-quality 통합 header로 보정하고, desktop blank-card regression, badge emblem 품질, hygienic runner grade visual을 닫는 FE-only follow-up slice.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 MYPAGE 첫 화면에서 프로필, 등급/레벨/XP, 대표 배지, 진행 중 퀘스트를 한 덩어리로 이해하고, 최근 성장 기록은 별도 보조 영역에서 확인하게 한다.",
+  "owners": {
+    "claude": "stage1,stage4 unavailable due token limit",
+    "codex": "stage1 docs fallback, stage4 frontend implementation, stage5 design review, stage6 closeout",
+    "workers": []
+  },
+  "dependencies": [
+    "34a-growth-model-contract-evolution",
+    "34b-growth-backend-model",
+    "34c-growth-notification-ui",
+    "34d-mypage-growth-profile-assets"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.9.md",
+      "docs/화면정의서-v1.5.16.md",
+      "docs/유저flow맵-v1.3.16.md",
+      "docs/db설계-v1.3.14.md",
+      "docs/api문서-v1.2.18.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/34e-growth-profile-visual-polish/README.md",
+      "docs/workpacks/34e-growth-profile-visual-polish/acceptance.md",
+      "docs/workpacks/34e-growth-profile-visual-polish/automation-spec.json",
+      "docs/workpacks/34d-mypage-growth-profile-assets/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "ui/designs/MYPAGE_GROWTH_PROFILE.md",
+      "ui/designs/MYPAGE_GROWTH_PROFILE_POLISH.md",
+      "ui/designs/critiques/MYPAGE_GROWTH_PROFILE_POLISH-critique.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm vitest run tests/mypage-growth-profile.test.tsx tests/mypage-gamification-card.test.tsx tests/mypage-screen.test.tsx tests/user-gamification-api-client.test.ts",
+      "pnpm exec playwright test tests/e2e/slice-34e-growth-profile-visual-polish.spec.ts tests/e2e/slice-34d-mypage-growth-profile.spec.ts tests/e2e/slice-33c-gamification.spec.ts",
+      "CI=1 pnpm verify:frontend:pr",
+      "pnpm qa:explore -- --slice 34e-growth-profile-visual-polish --base-url http://127.0.0.1:3100",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 34e-growth-profile-visual-polish",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/mypage-growth-profile.test.tsx tests/mypage-screen.test.tsx",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 34e-growth-profile-visual-polish"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "integrated-profile-header",
+      "archive-secondary-surface",
+      "desktop-no-empty-profile-card",
+      "badge-emblem-quality",
+      "runner-grade-no-footwear",
+      "mobile-320-no-overflow",
+      "progress-gamification-archive-soft-fail-isolated",
+      "33c-34d-regression-safe"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Backend public contract or schema changes",
+    "XP or grade calculation changes",
+    "New badge or quest definition expansion",
+    "User-selectable featured badge API",
+    "Growth archive server contract changes",
+    "Leaderboard",
+    "Competitive rank",
+    "Pressure streak",
+    "Season reset",
+    "XP decay",
+    "Loot/random rewards",
+    "Reward claim CTA",
+    "Top-level growth page"
+  ],
+  "open_questions": [
+    "Should user-selectable featured badges become a future contract-evolution candidate after visual polish is stable?"
+  ],
+  "notes": "Stage 1 docs prepared by Codex because Claude is rate-limited and the user asked Codex to orchestrate. The slice explicitly fixes production desktop layout evidence supplied by the user. Concept v2 replaces the problematic shoe-in-bowl runner with a no-footwear, no-sprout bowl/motion/timer visual, and differentiates artisan from a plain pot using craft seal/tool/steam cues."
+}

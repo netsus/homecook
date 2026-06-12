@@ -1,0 +1,157 @@
+{
+  "slice_id": "34e-growth-profile-visual-polish",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/users/me/progress",
+      "GET /api/v1/users/me/gamification",
+      "GET /api/v1/users/me/gamification/archive"
+    ],
+    "invariants": [
+      "consume-34b-34c-34d-contract-only-no-backend-change",
+      "no-new-endpoints-or-response-shape-change",
+      "client-does-not-calculate-grade-xp-badge-quest",
+      "archive-failure-does-not-break-profile-header"
+    ],
+    "verify_commands": [],
+    "required_test_targets": [],
+    "schema_changes": [],
+    "required_tables": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/mypage"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized",
+      "integrated-profile-header",
+      "archive-secondary-surface",
+      "badge-emblem-family",
+      "runner-grade-no-footwear",
+      "runner-grade-no-sprout",
+      "artisan-grade-craft-seal",
+      "progress-soft-fail",
+      "gamification-soft-fail",
+      "archive-soft-fail"
+    ],
+    "required_endpoints": [
+      "GET /api/v1/users/me/progress",
+      "GET /api/v1/users/me/gamification",
+      "GET /api/v1/users/me/gamification/archive"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/mypage-growth-profile.test.tsx tests/mypage-gamification-card.test.tsx tests/mypage-screen.test.tsx tests/user-gamification-api-client.test.ts",
+      "pnpm exec playwright test tests/e2e/slice-34e-growth-profile-visual-polish.spec.ts tests/e2e/slice-34d-mypage-growth-profile.spec.ts tests/e2e/slice-33c-gamification.spec.ts",
+      "CI=1 pnpm verify:frontend:pr",
+      "pnpm qa:explore -- --slice 34e-growth-profile-visual-polish --base-url http://127.0.0.1:3100",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 34e-growth-profile-visual-polish",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "profile-identity-grade-level-xp-badges-quest-integrated",
+      "archive-separated-from-profile-header",
+      "desktop-no-empty-profile-card",
+      "badge-emblems-not-flat-pictograms",
+      "runner-grade-no-footwear-or-food-hygiene-violation",
+      "runner-grade-distinct-from-sprout-grade",
+      "artisan-grade-not-plain-pot",
+      "mobile-320-no-overflow",
+      "progress-gamification-archive-soft-fail-isolated",
+      "33c-34d-regression-safe"
+    ],
+    "touched_components": [
+      "components/mypage/mypage-screen.tsx",
+      "components/mypage/mypage-mobile-screen.tsx",
+      "components/mypage/mypage-growth-profile.tsx",
+      "components/mypage/mypage-gamification-card.tsx",
+      "components/mypage/mypage-badge-guide-dialog.tsx",
+      "components/mypage/growth-badge-icon.tsx",
+      "components/mypage/growth-archive-surface.tsx",
+      "app/globals.css"
+    ],
+    "new_files": [
+      "components/mypage/growth-grade-mark.tsx",
+      "tests/e2e/slice-34e-growth-profile-visual-polish.spec.ts"
+    ],
+    "test_files": [
+      "tests/mypage-growth-profile.test.tsx",
+      "tests/mypage-gamification-card.test.tsx",
+      "tests/mypage-screen.test.tsx",
+      "tests/user-gamification-api-client.test.ts",
+      "tests/e2e/slice-34e-growth-profile-visual-polish.spec.ts",
+      "tests/e2e/slice-34d-mypage-growth-profile.spec.ts",
+      "tests/e2e/slice-33c-gamification.spec.ts"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "MYPAGE"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/MYPAGE_GROWTH_PROFILE_POLISH.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/MYPAGE_GROWTH_PROFILE_POLISH-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-390",
+        "mobile-320",
+        "desktop-1440",
+        "desktop-1920",
+        "badge-guide-polished",
+        "runner-grade-no-footwear",
+        "soft-fail-progress",
+        "soft-fail-gamification",
+        "soft-fail-archive"
+      ],
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/34e-growth-profile-visual-polish/mobile-390.png",
+        "ui/designs/evidence/34e-growth-profile-visual-polish/mobile-320.png",
+        "ui/designs/evidence/34e-growth-profile-visual-polish/desktop-1440.png",
+        "ui/designs/evidence/34e-growth-profile-visual-polish/desktop-1920.png",
+        "ui/designs/evidence/34e-growth-profile-visual-polish/badge-guide-polished.png",
+        "ui/designs/evidence/34e-growth-profile-visual-polish/runner-grade-no-footwear.png",
+        "ui/designs/evidence/34e-growth-profile-visual-polish/soft-fail-progress.png",
+        "ui/designs/evidence/34e-growth-profile-visual-polish/soft-fail-gamification.png",
+        "ui/designs/evidence/34e-growth-profile-visual-polish/soft-fail-archive.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/MYPAGE_GROWTH_PROFILE_POLISH-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "client-side-grade-or-xp-calculation",
+    "backend-contract-or-schema-changed",
+    "growth-archive-inside-profile-header-or-controlling-header-height",
+    "large-empty-profile-card-on-desktop",
+    "profile-growth-quest-rendered-as-separated-bottom-mini-cards",
+    "runner-grade-uses-shoe-foot-footwear-or-unsanitary-food-visual",
+    "runner-grade-main-motif-uses-sprout",
+    "artisan-grade-is-plain-pot-only",
+    "badge-shapes-only-differ-by-color-or-remain-tiny-pictograms",
+    "reward-claim-loot-competitive-rank-added",
+    "profile-header-overlaps-on-320px",
+    "progress-gamification-or-archive-fetch-failure-breaks-mypage-core",
+    "33c-toast-archive-regression",
+    "34d-badge-guide-regression"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}
