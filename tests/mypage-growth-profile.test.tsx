@@ -5,6 +5,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { GrowthGradeMark } from "@/components/mypage/growth-grade-mark";
 import { MypageGrowthProfile } from "@/components/mypage/mypage-growth-profile";
 import type { UserGamificationData } from "@/types/user-gamification";
 import type { UserProgressData } from "@/types/user-progress";
@@ -106,7 +107,24 @@ const MOCK_GAMIFICATION: UserGamificationData = {
       },
     ],
   },
-  quests: { active: [], completed_recent: [] },
+  quests: {
+    active: [
+      {
+        quest_key: "shopping_three_lists",
+        quest_type: "standard",
+        status: "active",
+        title: "장보기 3회",
+        description: "리스트를 만들고 장보기를 완료해요.",
+        progress_current: 2,
+        progress_target: 3,
+        progress_percent: 67,
+        completed_at: null,
+        dismissed_at: null,
+        is_new: false,
+      },
+    ],
+    completed_recent: [],
+  },
   tutorial: { active_steps: [] },
   notifications: { unseen: [], priority_unseen: [], archive_preview: [] },
   last_updated_at: "2026-06-11T00:00:00.000Z",
@@ -117,7 +135,7 @@ describe("MypageGrowthProfile", () => {
     cleanup();
   });
 
-  it("renders server grade, progress, and only three mobile featured badges", async () => {
+  it("renders server grade, progress, and four mobile featured badges", async () => {
     const user = userEvent.setup();
 
     render(
@@ -138,8 +156,8 @@ describe("MypageGrowthProfile", () => {
     })).toBeTruthy();
 
     const badgeRow = screen.getByTestId("mypage-growth-featured-badges");
-    expect(within(badgeRow).getAllByRole("button")).toHaveLength(3);
-    expect(within(badgeRow).queryByText("나만의 책")).toBeNull();
+    expect(within(badgeRow).getAllByRole("button")).toHaveLength(4);
+    expect(within(badgeRow).getByText("나만의 책")).toBeTruthy();
 
     await user.click(within(badgeRow).getByRole("button", { name: /첫 저장/ }));
     expect(screen.getByRole("dialog", { name: "배지 안내" })).toBeTruthy();
@@ -182,5 +200,68 @@ describe("MypageGrowthProfile", () => {
     expect(screen.getByTestId("mypage-growth-gamification-error").textContent).toContain(
       "배지 정보를 잠시 불러오지 못했어요",
     );
+  });
+
+  it("combines profile identity, growth, badges, and quest summary in one header", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MypageGrowthProfile
+        gamification={MOCK_GAMIFICATION}
+        gamificationState="ready"
+        onEditProfile={() => undefined}
+        profile={{
+          id: "user-1",
+          nickname: "김집밥",
+          email: "user@example.com",
+          profile_image_url: null,
+          social_provider: "kakao",
+          settings: { screen_wake_lock: false },
+        }}
+        providerLabel="카카오 로그인"
+        progress={MOCK_PROGRESS}
+        progressState="ready"
+        variant="desktop"
+      />,
+    );
+
+    const header = screen.getByTestId("mypage-growth-profile");
+    expect(within(header).getByText("김집밥")).toBeTruthy();
+    expect(within(header).getByText("카카오 로그인")).toBeTruthy();
+    expect(within(header).getByText("서버 등급명 · Lv.9")).toBeTruthy();
+    expect(within(header).getByTestId("mypage-gamification-card")).toBeTruthy();
+    expect(within(header).getByTestId("mypage-growth-quest-summary").textContent).toContain(
+      "장보기 3회",
+    );
+    expect(within(header).getByText("2/3")).toBeTruthy();
+
+    await user.click(within(header).getByRole("button", { name: "안내" }));
+    expect(screen.getByRole("dialog", { name: "배지 안내" })).toBeTruthy();
+  });
+});
+
+describe("GrowthGradeMark", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("keeps runner distinct from sprout and artisan distinct from a plain pot", () => {
+    render(
+      <>
+        <GrowthGradeMark gradeKey="sprout_homecook" />
+        <GrowthGradeMark gradeKey="homecook_runner" />
+        <GrowthGradeMark gradeKey="homecook_artisan" />
+      </>,
+    );
+
+    expect(
+      screen.getByTestId("growth-grade-mark-sprout_homecook").getAttribute("data-grade-motif"),
+    ).toBe("sprout-soil");
+    expect(
+      screen.getByTestId("growth-grade-mark-homecook_runner").getAttribute("data-grade-motif"),
+    ).toBe("bowl-motion-timer");
+    expect(
+      screen.getByTestId("growth-grade-mark-homecook_artisan").getAttribute("data-grade-motif"),
+    ).toBe("seal-tool-steam");
   });
 });

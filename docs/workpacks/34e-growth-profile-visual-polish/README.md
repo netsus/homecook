@@ -132,9 +132,9 @@ No backend work.
 
 ## Design Status
 
-- [x] 임시 UI (temporary)
+- [ ] 임시 UI (temporary)
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed) — Codex fallback authority pass, blocker 0 / major 0
 - [ ] N/A
 
 ## QA / Test Data Plan
@@ -226,16 +226,46 @@ BRANCH_NAME=feature/fe-34e-growth-profile-visual-polish PR_IS_DRAFT=false pnpm v
 > 이 체크리스트는 Stage 4~6 동안 계속 갱신하는 living closeout 문서다.
 
 - [x] Stage 1 docs/acceptance/automation/work-item 잠금 <!-- omo:id=delivery-stage1-docs;stage=4;scope=frontend;review=6 -->
-- [x] no-footwear concept image artifact 기록 <!-- omo:id=delivery-concept-image;stage=4;scope=frontend;review=5,6 -->
-- [ ] integrated profile header mobile/desktop 구현 <!-- omo:id=delivery-integrated-header;stage=4;scope=frontend;review=5,6 -->
-- [ ] archive를 profile header 밖 secondary surface로 분리 <!-- omo:id=delivery-archive-separated;stage=4;scope=frontend;review=5,6 -->
-- [ ] desktop blank-card regression 수정 <!-- omo:id=delivery-desktop-blank-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] badge emblem visual polish 구현 <!-- omo:id=delivery-badge-emblems;stage=4;scope=frontend;review=5,6 -->
-- [ ] hygienic runner grade visual 구현 <!-- omo:id=delivery-runner-hygiene;stage=4;scope=frontend;review=5,6 -->
-- [ ] artisan grade visual 차별화 구현 <!-- omo:id=delivery-artisan-grade;stage=4;scope=frontend;review=5,6 -->
-- [ ] soft-fail isolation 유지 <!-- omo:id=delivery-soft-fail;stage=4;scope=frontend;review=5,6 -->
-- [ ] 320/390/1440/1920 screenshot evidence + authority report <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] exploratory QA/eval evidence <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=6 -->
+- [x] collectible/no-footwear concept image artifact 기록 <!-- omo:id=delivery-concept-image;stage=4;scope=frontend;review=5,6 -->
+- [x] integrated profile header mobile/desktop 구현 <!-- omo:id=delivery-integrated-header;stage=4;scope=frontend;review=5,6 -->
+- [x] archive를 profile header 밖 secondary surface로 분리 <!-- omo:id=delivery-archive-separated;stage=4;scope=frontend;review=5,6 -->
+- [x] desktop blank-card regression 수정 <!-- omo:id=delivery-desktop-blank-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] badge emblem visual polish 구현 <!-- omo:id=delivery-badge-emblems;stage=4;scope=frontend;review=5,6 -->
+- [x] hygienic runner grade visual 구현 <!-- omo:id=delivery-runner-hygiene;stage=4;scope=frontend;review=5,6 -->
+- [x] artisan grade visual 차별화 구현 <!-- omo:id=delivery-artisan-grade;stage=4;scope=frontend;review=5,6 -->
+- [x] soft-fail isolation 유지 <!-- omo:id=delivery-soft-fail;stage=4;scope=frontend;review=5,6 -->
+- [x] 320/390/1440/1920 screenshot evidence + authority report <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] exploratory QA/eval evidence <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=6 -->
+
+## Implementation Evidence
+
+- `MypageGrowthProfile` now owns identity, server `grade.label`, level/XP progress, representative badges, and active quest summary inside one profile header.
+- `GrowthArchiveSurface` is rendered outside the profile header, so archive list height cannot stretch the profile card.
+- `GrowthGradeMark` separates all 7 grade motifs. `homecook_runner` uses clean bowl/motion/timer treatment with no footwear or sprout, and `homecook_artisan` uses seal/tool/steam treatment instead of a plain pot.
+- `GrowthBadgeIcon` keeps the 7 shape families but adds rim/depth/symbol layers so guide and representative badges read as collectible emblems.
+- Codex image generation concept v2 is recorded at `ui/designs/evidence/34e-growth-profile-visual-polish/profile-growth-concept-v2-collectible-grades.png`.
+- Authority report: `ui/designs/authority/MYPAGE_GROWTH_PROFILE_POLISH-authority.md`, verdict `pass`, blocker 0 / major 0.
+- Screenshot evidence:
+  - `ui/designs/evidence/34e-growth-profile-visual-polish/mobile-390.png`
+  - `ui/designs/evidence/34e-growth-profile-visual-polish/mobile-320.png`
+  - `ui/designs/evidence/34e-growth-profile-visual-polish/desktop-1440.png`
+  - `ui/designs/evidence/34e-growth-profile-visual-polish/desktop-1920.png`
+  - `ui/designs/evidence/34e-growth-profile-visual-polish/badge-guide-polished.png`
+  - `ui/designs/evidence/34e-growth-profile-visual-polish/runner-grade-no-footwear.png`
+  - `ui/designs/evidence/34e-growth-profile-visual-polish/soft-fail-progress.png`
+  - `ui/designs/evidence/34e-growth-profile-visual-polish/soft-fail-gamification.png`
+  - `ui/designs/evidence/34e-growth-profile-visual-polish/soft-fail-archive.png`
+- Verification passed:
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm vitest run tests/mypage-growth-profile.test.tsx tests/mypage-gamification-card.test.tsx tests/mypage-screen.test.tsx tests/user-gamification-api-client.test.ts`
+  - `pnpm exec playwright test tests/e2e/slice-34e-growth-profile-visual-polish.spec.ts tests/e2e/slice-34d-mypage-growth-profile.spec.ts tests/e2e/slice-33c-gamification.spec.ts`
+  - `CI=1 pnpm verify:frontend:pr`
+  - `pnpm qa:eval -- --checklist .artifacts/qa/34e-growth-profile-visual-polish/2026-06-12T07-22-29-606Z/exploratory-checklist.json --report .artifacts/qa/34e-growth-profile-visual-polish/2026-06-12T07-22-29-606Z/exploratory-report.json --fail-under 90` — score 98
+  - `pnpm validate:source-of-truth-sync`
+  - `pnpm validate:workflow-v2`
+  - `pnpm validate:workpack -- --slice 34e-growth-profile-visual-polish`
+  - `git diff --check`
+- Local note: the final `verify:frontend:pr` exited 0. An unrelated `slice-05` mobile-ios-small guest planner smoke retried once and then passed.
 
 ## Contract Evolution Candidates
 

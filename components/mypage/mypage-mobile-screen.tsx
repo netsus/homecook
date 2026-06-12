@@ -5,10 +5,7 @@ import Link from "next/link";
 import React from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
-import {
-  MypageGamificationCard,
-  type MypageGamificationState,
-} from "@/components/mypage/mypage-gamification-card";
+import type { MypageGamificationState } from "@/components/mypage/mypage-gamification-card";
 import { GrowthArchiveSurface } from "@/components/mypage/growth-archive-surface";
 import { MypageGrowthProfile } from "@/components/mypage/mypage-growth-profile";
 import {
@@ -347,11 +344,9 @@ function MobileHomeSurface({
   onRetrySavedRecipes: () => void;
   onSurfaceChange: (surface: MypageMobileSurface) => void;
 }) {
-  const nickname = profile?.nickname ?? "사용자";
   const providerLabel = profile
     ? MOBILE_PROVIDER_LABELS[profile.social_provider]
     : "소셜 로그인";
-  const fallbackInitial = nickname.charAt(0) || "?";
   const recipeBookCount = books.length;
   const shoppingCount = shoppingLoaded ? shoppingItems.length : 0;
 
@@ -403,47 +398,14 @@ function MobileHomeSurface({
         className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5"
         data-testid="mypage-profile"
       >
-        <div className="mb-3 flex items-center gap-[14px]">
-          {profile?.profile_image_url ? (
-            <Image
-              alt={`${nickname} 프로필`}
-              className="h-16 w-16 shrink-0 rounded-full object-cover"
-              height={64}
-              src={profile.profile_image_url}
-              unoptimized
-              width={64}
-            />
-          ) : (
-            <div
-              aria-label="프로필 이니셜"
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--brand)] to-[var(--brand-deep)] text-[24px] font-extrabold text-[var(--text-inverse)]"
-              data-testid="profile-fallback-avatar"
-            >
-              {fallbackInitial}
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[18px] font-extrabold leading-[1.25] text-[var(--foreground)]">
-              {nickname}
-            </p>
-            <p className="mt-0.5 truncate text-[13px] font-medium leading-[1.35] text-[var(--text-3)]">
-              {providerLabel}
-            </p>
-          </div>
-          <button
-            className="flex h-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-3 text-[12px] font-bold text-[var(--text-2)]"
-            data-testid="mypage-profile-edit-button"
-            onClick={onOpenNicknameSheet}
-            type="button"
-          >
-            편집
-          </button>
-        </div>
-
         <MypageGrowthProfile
-          className="mb-3"
+          className="mb-3 border-[var(--line-strong)]"
           gamification={gamification}
           gamificationState={gamificationState}
+          onDismissTutorialQuest={onDismissTutorialQuest}
+          onEditProfile={onOpenNicknameSheet}
+          profile={profile}
+          providerLabel={providerLabel}
           progress={progress}
           progressState={progressState}
           variant="mobile"
@@ -467,15 +429,6 @@ function MobileHomeSurface({
         recipes={savedRecipes}
         state={savedRecipesState}
         onRetry={onRetrySavedRecipes}
-      />
-
-      <MypageGamificationCard
-        className="mx-4 mt-3"
-        data={gamification}
-        showFeaturedBadges={false}
-        state={gamificationState}
-        variant="mobile"
-        onDismissTutorialQuest={onDismissTutorialQuest}
       />
 
       <GrowthArchiveSurface className="mx-4 mt-3" enabled={archiveEnabled} />

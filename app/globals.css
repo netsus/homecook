@@ -6877,13 +6877,18 @@ button {
   }
 
   .web-mypage-profile {
-    display: grid;
+    display: block;
     flex: 0 0 auto;
-    grid-template-columns: minmax(240px, 0.85fr) minmax(300px, 1fr) minmax(260px, 0.85fr) minmax(220px, auto);
-    gap: 18px;
-    min-height: 140px;
-    align-items: center;
-    padding: 28px;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .web-mypage-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+    align-items: start;
+    gap: 24px;
   }
 
   .web-mypage-profile-main,
@@ -6949,6 +6954,8 @@ button {
     display: grid;
     grid-template-columns: repeat(3, minmax(88px, 1fr));
     align-items: center;
+    border-top: 1px solid var(--web-divider);
+    padding: 18px 24px;
     text-align: center;
   }
 
@@ -6976,12 +6983,8 @@ button {
   }
 
   @media (max-width: 1240px) {
-    .web-mypage-profile {
-      grid-template-columns: minmax(240px, 1fr) minmax(300px, 1fr);
-    }
-
-    .web-mypage-stats {
-      grid-column: 1 / -1;
+    .web-mypage-overview {
+      grid-template-columns: 1fr;
     }
   }
 

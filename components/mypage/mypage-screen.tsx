@@ -19,10 +19,7 @@ import {
   MypageMobileScreen,
   type MypageMobileSurface,
 } from "@/components/mypage/mypage-mobile-screen";
-import {
-  MypageGamificationCard,
-  type MypageGamificationState,
-} from "@/components/mypage/mypage-gamification-card";
+import type { MypageGamificationState } from "@/components/mypage/mypage-gamification-card";
 import { GrowthArchiveSurface } from "@/components/mypage/growth-archive-surface";
 import { MypageGrowthProfile } from "@/components/mypage/mypage-growth-profile";
 import {
@@ -1857,65 +1854,33 @@ export function MypageScreen({
         rightSlot={<WebProfilePill profile={profile} />}
       />
       <div className="web-mypage-screen">
-        <WebCard className="web-mypage-profile" data-testid="mypage-profile">
-          <button
-            aria-label={`닉네임 변경, 현재 닉네임: ${profile?.nickname ?? ""}`}
-            className="web-mypage-profile-main web-mypage-profile-edit"
-            data-testid="mypage-profile-edit-button"
-            onClick={openNicknameSheet}
-            type="button"
-          >
-            {profile?.profile_image_url ? (
-              <Image
-                alt={`${profile.nickname} 프로필`}
-                className="web-mypage-avatar"
-                height={64}
-                src={profile.profile_image_url}
-                unoptimized
-                width={64}
-              />
-            ) : (
-              <div
-                aria-label="프로필 이니셜"
-                className="web-mypage-avatar web-mypage-avatar-fallback"
-                data-testid="profile-fallback-avatar"
-              >
-                {profile?.nickname?.slice(0, 1).toUpperCase() ?? "?"}
-              </div>
-            )}
-            <div className="web-mypage-profile-copy">
-              <h1>{profile?.nickname ?? ""}</h1>
-              <p>{SOCIAL_PROVIDER_LABELS[profile?.social_provider ?? ""] ?? ""}</p>
+        <div className="web-mypage-overview">
+          <WebCard className="web-mypage-profile" data-testid="mypage-profile">
+            <MypageGrowthProfile
+              gamification={userGamification}
+              gamificationState={gamificationState}
+              onDismissTutorialQuest={handleDismissTutorialQuest}
+              onEditProfile={openNicknameSheet}
+              profile={profile}
+              providerLabel={SOCIAL_PROVIDER_LABELS[profile?.social_provider ?? ""] ?? ""}
+              progress={userProgress}
+              progressState={progressState}
+              variant="desktop"
+            />
+            <div className="web-mypage-stats" aria-label="마이페이지 통계">
+              {mypageStats.map((item) => (
+                <div key={item.label}>
+                  <strong style={{ color: item.color }}>{item.value}</strong>
+                  <span>{item.label}</span>
+                </div>
+              ))}
             </div>
-          </button>
-          <MypageGrowthProfile
-            className="web-mypage-progress"
-            gamification={userGamification}
-            gamificationState={gamificationState}
-            progress={userProgress}
-            progressState={progressState}
-            variant="desktop"
-          />
-          <MypageGamificationCard
-            data={userGamification}
-            showFeaturedBadges={false}
-            state={gamificationState}
-            variant="desktop"
-            onDismissTutorialQuest={handleDismissTutorialQuest}
-          />
+          </WebCard>
           <GrowthArchiveSurface
             className="web-mypage-growth-archive"
             enabled={authState === "authenticated"}
           />
-          <div className="web-mypage-stats" aria-label="마이페이지 통계">
-            {mypageStats.map((item) => (
-              <div key={item.label}>
-                <strong style={{ color: item.color }}>{item.value}</strong>
-                <span>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </WebCard>
+        </div>
 
         <WebTabs className="web-mypage-tabs" data-testid="mypage-tabbar" role="tablist">
           <WebTabButton
