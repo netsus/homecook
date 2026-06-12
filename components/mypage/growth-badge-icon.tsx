@@ -13,9 +13,9 @@ interface GrowthBadgeIconProps {
 }
 
 const SIZE_CLASS: Record<NonNullable<GrowthBadgeIconProps["size"]>, string> = {
-  sm: "h-7 w-7",
-  md: "h-9 w-9",
-  lg: "h-11 w-11",
+  sm: "h-9 w-9",
+  md: "h-11 w-11",
+  lg: "h-14 w-14",
 };
 
 const SHAPE_TONE: Record<UserGamificationBadgeShapeKey, string> = {
@@ -47,21 +47,30 @@ function normalizeShapeKey(shapeKey: GrowthBadgeIconProps["shapeKey"]) {
 function BadgeShape({ shapeKey }: { shapeKey: UserGamificationBadgeShapeKey }) {
   if (shapeKey === "shield") {
     return (
-      <path d="M24 7 38 12v10c0 9-5.5 15.5-14 19-8.5-3.5-14-10-14-19V12l14-5Z" />
+      <>
+        <path d="M24 7 38 12v10c0 9-5.5 15.5-14 19-8.5-3.5-14-10-14-19V12l14-5Z" />
+        <path d="M24 15 27 21l6 .8-4.5 4.2 1.1 6-5.6-3-5.6 3 1.1-6-4.5-4.2 6-.8 3-6Z" fill="var(--surface)" />
+      </>
     );
   }
 
   if (shapeKey === "ribbon") {
     return (
       <>
-        <path d="M15 7h18v22H15z" />
-        <path d="M15 29h18l-5 12-4-5-4 5-5-12Z" />
+        <circle cx="24" cy="18" r="12" />
+        <path d="M15 27h18l-5 14-4-5-4 5-5-14Z" />
+        <circle cx="24" cy="18" fill="var(--surface)" r="5.5" />
       </>
     );
   }
 
   if (shapeKey === "bookmark") {
-    return <path d="M15 7h18v34l-9-6-9 6V7Z" />;
+    return (
+      <>
+        <path d="M15 7h18v34l-9-6-9 6V7Z" />
+        <path d="M22 14h4v16h-4z" fill="var(--surface)" />
+      </>
+    );
   }
 
   if (shapeKey === "pot") {
@@ -70,6 +79,13 @@ function BadgeShape({ shapeKey }: { shapeKey: UserGamificationBadgeShapeKey }) {
         <path d="M14 21h20l-2 15H16l-2-15Z" />
         <path d="M17 17h14v4H17z" />
         <path d="M10 25c0-3 2-5 5-5v5h-5ZM38 25h-5v-5c3 0 5 2 5 5Z" />
+        <path
+          d="M20 12c-2-2-1-4 1-6M27 12c2-2 1-4-1-6"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="2"
+        />
       </>
     );
   }
@@ -94,6 +110,13 @@ function BadgeShape({ shapeKey }: { shapeKey: UserGamificationBadgeShapeKey }) {
       <>
         <path d="M9 22h30c-1 11-7 17-15 17S10 33 9 22Z" />
         <path d="M13 18c2-5 7-8 11-8s9 3 11 8H13Z" />
+        <path
+          d="M17 27h14"
+          fill="none"
+          stroke="var(--surface)"
+          strokeLinecap="round"
+          strokeWidth="2.4"
+        />
       </>
     );
   }
@@ -104,7 +127,7 @@ function BadgeShape({ shapeKey }: { shapeKey: UserGamificationBadgeShapeKey }) {
       <ellipse
         cx="24"
         cy="24"
-        fill="none"
+        fill="var(--surface)"
         rx="10"
         ry="7"
         stroke="currentColor"
@@ -127,7 +150,8 @@ export function GrowthBadgeIcon({
     <span
       aria-hidden="true"
       className={[
-        "relative inline-flex shrink-0 items-center justify-center rounded-[var(--radius-control)]",
+        "relative inline-flex shrink-0 items-center justify-center rounded-full shadow-[inset_0_0_0_1px_rgba(255,255,255,0.72),0_3px_9px_rgba(37,31,20,0.12)]",
+        "before:absolute before:inset-1 before:rounded-full before:border before:border-[var(--line)] before:content-['']",
         SIZE_CLASS[size],
         earned ? SHAPE_TONE[normalizedShapeKey] : "bg-[var(--surface-fill)] text-[var(--text-3)]",
         className ?? "",
@@ -135,7 +159,7 @@ export function GrowthBadgeIcon({
       data-testid={`growth-badge-shape-${normalizedShapeKey}`}
     >
       <svg
-        className="h-[72%] w-[72%]"
+        className="relative z-[1] h-[72%] w-[72%]"
         fill="currentColor"
         viewBox="0 0 48 48"
       >

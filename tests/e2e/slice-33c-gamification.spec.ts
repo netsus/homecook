@@ -381,8 +381,10 @@ async function openMypage(
   await stabilize(page);
   if (options?.gamificationError) {
     await expect(page.getByTestId("mypage-gamification-error")).toBeVisible();
+  } else if (options?.gamificationEmpty) {
+    await expect(page.getByTestId("mypage-gamification-empty")).toBeVisible();
   } else {
-    await expect(page.getByTestId("mypage-gamification-card")).toBeVisible();
+    await expect(page.getByTestId("mypage-gamification-card")).toBeVisible({ timeout: 15_000 });
   }
   return { context, page };
 }

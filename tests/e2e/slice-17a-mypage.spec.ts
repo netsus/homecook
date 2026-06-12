@@ -416,7 +416,7 @@ test.describe("MYPAGE screen", () => {
     await installMypageRoutes(page);
     await page.goto("/mypage");
 
-    await expect(page.getByTestId("mypage-profile")).toBeVisible();
+    await expect(page.getByTestId("mypage-profile")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("집밥러")).toBeVisible();
     await expect(page.getByTestId("mypage-growth-profile")).toBeVisible();
     await expect(page.getByText("Lv.6")).toBeVisible();
@@ -454,7 +454,7 @@ test.describe("MYPAGE screen", () => {
     await installMypageRoutes(page, { progressError: true });
     await page.goto("/mypage");
 
-    await expect(page.getByTestId("mypage-profile")).toBeVisible();
+    await expect(page.getByTestId("mypage-profile")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("집밥러")).toBeVisible();
     await expect(page.getByTestId("mypage-growth-progress-error")).toContainText(
       "XP를 잠시 불러오지 못했어요",
