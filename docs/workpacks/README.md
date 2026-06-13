@@ -132,8 +132,9 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `34c-growth-notification-ui` | merged | priority toast stack, `level_up`/badge/quest/XP UI, archive client/surface, 장보기 안내 문구 적용 |
 | `34d-mypage-growth-profile-assets` | merged | MYPAGE 프로필 영역 안에 등급/레벨/XP/대표 배지 통합, 잠긴 배지 hint, badge/grade concept image artifact와 SVG/CSS production component 검토 |
 | `34e-growth-profile-visual-polish` | in-progress | 34d 후속 polish: MYPAGE 성장 프로필을 실제 통합 header로 재구성하고 desktop blank-card regression, badge emblem 품질, `집밥 러너` no-footwear visual을 수정 |
-| `35a-growth-achievement-album-contract-evolution` | docs | 퀘스트를 튜토리얼 전용으로 축소하고, Clay→Titanium 등급/업적 앨범/stamp 수집/MYPAGE modal button entry 계약을 공식화 |
-| `35b-growth-achievement-album-backend` | in-progress | 35a 계약 기반 `user_achievement_awards`, 업적 앨범 projection, tutorial category, grade fields, silent backfill backend 구현 |
+| `35a-growth-achievement-album-contract-evolution` | merged | 퀘스트를 튜토리얼 전용으로 축소하고, Clay→Titanium 등급/업적 앨범/stamp 수집/MYPAGE modal button entry 계약을 공식화 |
+| `35b-growth-achievement-album-backend` | merged | 35a 계약 기반 `user_achievement_awards`, 업적 앨범 projection, tutorial category, grade fields, silent backfill backend 구현 |
+| `35c-mypage-achievement-album-ui` | docs | MYPAGE profile header 안에 성장 상태를 통합하고 등급/업적/튜토리얼/알림을 modal/bottom sheet로 제공 |
 
 ## Design Decision Gates
 
