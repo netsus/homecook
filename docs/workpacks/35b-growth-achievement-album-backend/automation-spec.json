@@ -35,7 +35,7 @@
       "tests/user-achievement-backfill.test.ts"
     ],
     "schema_changes": [
-      "supabase/migrations/20260613_35b_growth_achievement_awards.sql"
+      "supabase/migrations/20260613220000_35b_growth_achievement_awards.sql"
     ],
     "required_tables": [
       "user_progress_events",

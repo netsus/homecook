@@ -26,7 +26,7 @@
   - `user_badge_awards`, `user_quest_progress`, `user_progress_notifications`
 - Schema Change:
   - [ ] 없음 (읽기 전용)
-  - [x] 있음 → `supabase/migrations/20260613_35b_growth_achievement_awards.sql` 생성 필요
+  - [x] 있음 → `supabase/migrations/20260613220000_35b_growth_achievement_awards.sql` 생성 필요
 
 ## Out of Scope
 
@@ -154,13 +154,13 @@
 
 ## Delivery Checklist
 
-- [ ] `user_achievement_awards` additive migration 작성 <!-- omo:id=delivery-achievement-awards-migration;stage=2;scope=backend;review=3,6 -->
-- [ ] achievement definition과 category/track threshold를 서버 상수로 구현 <!-- omo:id=delivery-achievement-definitions;stage=2;scope=backend;review=3,6 -->
-- [ ] achievement count projection과 earned/active/locked status 계산 구현 <!-- omo:id=delivery-achievement-projection;stage=2;scope=backend;review=3,6 -->
-- [ ] `GET /users/me/gamification` additive fields 구현 <!-- omo:id=delivery-gamification-achievement-fields;stage=2;scope=backend;review=3,6 -->
-- [ ] tutorial category summary와 dismiss 호환 정책 유지 <!-- omo:id=delivery-tutorial-category-compat;stage=2;scope=backend;review=3,6 -->
-- [ ] notification priority에 `achievement_unlocked` 포함 <!-- omo:id=delivery-achievement-notification-priority;stage=2;scope=backend;review=3,6 -->
-- [ ] silent backfill/reconcile helper가 notification row를 만들지 않음 <!-- omo:id=delivery-silent-achievement-backfill;stage=2;scope=backend;review=3,6 -->
-- [ ] `GET /users/me/progress` response shape 불변 확인 <!-- omo:id=delivery-progress-boundary;stage=2;scope=backend;review=3,6 -->
-- [ ] targeted Vitest와 backend verification 실행 <!-- omo:id=delivery-backend-verification;stage=2;scope=backend;review=3,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=backend;review=3,6 -->
+- [x] `user_achievement_awards` additive migration 작성 <!-- omo:id=delivery-achievement-awards-migration;stage=2;scope=backend;review=3,6 -->
+- [x] achievement definition과 category/track threshold를 서버 상수로 구현 <!-- omo:id=delivery-achievement-definitions;stage=2;scope=backend;review=3,6 -->
+- [x] achievement count projection과 earned/active/locked status 계산 구현 <!-- omo:id=delivery-achievement-projection;stage=2;scope=backend;review=3,6 -->
+- [x] `GET /users/me/gamification` additive fields 구현 <!-- omo:id=delivery-gamification-achievement-fields;stage=2;scope=backend;review=3,6 -->
+- [x] tutorial category summary와 dismiss 호환 정책 유지 <!-- omo:id=delivery-tutorial-category-compat;stage=2;scope=backend;review=3,6 -->
+- [x] notification priority에 `achievement_unlocked` 포함 <!-- omo:id=delivery-achievement-notification-priority;stage=2;scope=backend;review=3,6 -->
+- [x] silent backfill/reconcile helper가 notification row를 만들지 않음 <!-- omo:id=delivery-silent-achievement-backfill;stage=2;scope=backend;review=3,6 -->
+- [x] `GET /users/me/progress` response shape 불변 확인 <!-- omo:id=delivery-progress-boundary;stage=2;scope=backend;review=3,6 -->
+- [x] targeted Vitest와 backend verification 실행 <!-- omo:id=delivery-backend-verification;stage=2;scope=backend;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=backend;review=3,6 -->

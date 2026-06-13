@@ -55,16 +55,16 @@
   },
   "verification": {
     "required_checks": [
-      "pnpm vitest run tests/user-achievement-album-policy.test.ts tests/user-achievement-awards.test.ts tests/user-gamification-route.test.ts tests/user-gamification-notification-priority.test.ts tests/user-achievement-backfill.test.ts",
-      "CI=1 pnpm verify:backend:pr",
+      "pnpm vitest run tests/user-achievement-album-policy.test.ts tests/user-achievement-awards.test.ts tests/user-achievement-backfill.test.ts tests/user-gamification-definitions.test.ts tests/user-gamification-notification-priority.test.ts tests/user-progress-level-v2.test.ts tests/user-growth-activity-events.test.ts tests/user-gamification-events.test.ts tests/user-gamification-route.test.ts tests/user-gamification-api-client.test.ts tests/mypage-growth-profile.test.tsx tests/mypage-gamification-card.test.tsx tests/mypage-screen.test.tsx tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx",
+      "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "pnpm validate:workpack -- --slice 35b-growth-achievement-album-backend",
       "git diff --check"
     ],
     "verify_commands": [
-      "pnpm vitest run tests/user-achievement-album-policy.test.ts tests/user-achievement-awards.test.ts tests/user-gamification-route.test.ts tests/user-gamification-notification-priority.test.ts tests/user-achievement-backfill.test.ts",
-      "CI=1 pnpm verify:backend:pr",
+      "pnpm vitest run tests/user-achievement-album-policy.test.ts tests/user-achievement-awards.test.ts tests/user-achievement-backfill.test.ts tests/user-gamification-definitions.test.ts tests/user-gamification-notification-priority.test.ts tests/user-progress-level-v2.test.ts tests/user-growth-activity-events.test.ts tests/user-gamification-events.test.ts tests/user-gamification-route.test.ts tests/user-gamification-api-client.test.ts tests/mypage-growth-profile.test.tsx tests/mypage-gamification-card.test.tsx tests/mypage-screen.test.tsx tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx",
+      "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "pnpm validate:workpack -- --slice 35b-growth-achievement-album-backend",
@@ -81,9 +81,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "ready_for_review",
     "approval_state": "codex_approved",
-    "verification_status": "pending",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
@@ -104,5 +104,5 @@
     "Reward claim CTA"
   ],
   "open_questions": [],
-  "notes": "35b workpack is created as a prerequisite repair because 35a locked the follow-up backend branch name but the dedicated 35b workpack was not present on master."
+  "notes": "35b backend implementation is ready for PR review on feature/be-35b-growth-achievement-album-backend. It implements user_achievement_awards, achievement_album projection, tutorial-only active steps as the quest bridge, Clay-to-Titanium grade image fields, achievement_unlocked notification priority, recipe_registered non-XP activity projection, and silent read-time reconciliation/backfill without toast fan-out. Local verification passed: targeted Vitest set, pnpm verify:backend, validate:source-of-truth-sync, validate:workflow-v2, validate:workpack -- --slice 35b-growth-achievement-album-backend, git diff --check. CI=1 pnpm verify:backend:pr is not a package script, so pnpm verify:backend is the backend gate used for this branch."
 }
