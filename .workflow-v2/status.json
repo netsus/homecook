@@ -1714,7 +1714,7 @@
       "id": "35b-growth-achievement-album-backend",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-35b-growth-achievement-album-backend",
-      "lifecycle": "ready_for_review",
+      "lifecycle": "merged",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -1725,7 +1725,26 @@
         "pnpm validate:workpack -- --slice 35b-growth-achievement-album-backend",
         "git diff --check"
       ],
-      "notes": "35b backend implementation is ready for PR review on feature/be-35b-growth-achievement-album-backend. Scope: user_achievement_awards migration, achievement definitions/projection, tutorial category, Clay-to-Titanium grade image fields, achievement_unlocked notification priority, recipe_registered activity projection, and silent backfill without notification fan-out. Local verification passed: targeted Vitest set, pnpm verify:backend, validate:source-of-truth-sync, validate:workflow-v2, validate:workpack -- --slice 35b-growth-achievement-album-backend, git diff --check. CI=1 pnpm verify:backend:pr is not a package script, so the branch uses the repository's current pnpm verify:backend backend gate."
+      "notes": "Merged via PR #743. Scope: user_achievement_awards migration, achievement definitions/projection, tutorial category, Clay-to-Titanium grade image fields, achievement_unlocked notification priority, recipe_registered activity projection, and silent backfill without notification fan-out. Local verification passed: targeted Vitest set, pnpm verify:backend, validate:source-of-truth-sync, validate:workflow-v2, validate:workpack -- --slice 35b-growth-achievement-album-backend, git diff --check. Operating DB migration 20260613220000 was applied on 2026-06-14 KST and verified by Supabase migration history plus linked DB schema checks."
+    },
+    {
+      "id": "35c-mypage-achievement-album-ui",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/35c-mypage-achievement-album-ui",
+      "lifecycle": "planned",
+      "approval_state": "codex_approved",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm vitest run tests/mypage-achievement-album.test.tsx tests/mypage-growth-profile.test.tsx tests/user-gamification-api-client.test.ts",
+        "pnpm exec playwright test tests/e2e/slice-35c-mypage-achievement-album.spec.ts tests/e2e/slice-33c-gamification.spec.ts",
+        "CI=1 pnpm verify:frontend:pr",
+        "pnpm qa:explore -- --slice 35c-mypage-achievement-album-ui --base-url http://127.0.0.1:3100",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 35c-mypage-achievement-album-ui",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs branch opened by Codex per user instruction. Scope: MYPAGE profile header growth integration, grade modal, achievement album modal, tutorial modal, notification archive modal, responsive 320/390/desktop evidence, and soft-fail isolation. Backend/API/schema changes are out of scope."
     }
   ]
 }

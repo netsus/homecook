@@ -58,5 +58,5 @@
 
 ### Manual Only
 
-- [ ] 운영 DB에 migration 적용
+- [x] 운영 DB에 migration 적용
 - [ ] 운영 기존 유저 backfill 실행과 spot check
