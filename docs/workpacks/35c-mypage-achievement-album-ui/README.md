@@ -93,8 +93,8 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
 - [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과
 - [ ] N/A — BE-only 슬라이스
 
@@ -150,14 +150,14 @@
 
 ## Delivery Checklist
 
-- [ ] 35c workpack/acceptance/automation-spec 작성 <!-- omo:id=delivery-stage1-docs;stage=1;scope=docs;review=1 -->
-- [ ] 기존 MYPAGE 성장 profile/header 구조 분석 <!-- omo:id=delivery-existing-ui-map;stage=4;scope=frontend;review=5,6 -->
-- [ ] `GET /users/me/gamification` achievement_album 표시 연결 <!-- omo:id=delivery-achievement-album-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] profile header 안에 grade/level/XP/action buttons 통합 <!-- omo:id=delivery-profile-header-integration;stage=4;scope=frontend;review=5,6 -->
-- [ ] 등급 modal/bottom sheet 구현 <!-- omo:id=delivery-grade-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] 업적 앨범 modal/bottom sheet 구현 <!-- omo:id=delivery-achievement-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] 튜토리얼 modal/bottom sheet 구현 <!-- omo:id=delivery-tutorial-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] 알림 archive modal/bottom sheet 구현 <!-- omo:id=delivery-notification-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] loading / empty / error / read-only / unauthorized 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] Vitest와 Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] 320/390/1440/1920 및 modal evidence 캡처 <!-- omo:id=delivery-design-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] 35c workpack/acceptance/automation-spec 작성 <!-- omo:id=delivery-stage1-docs;stage=2;scope=shared;review=3 -->
+- [x] 기존 MYPAGE 성장 profile/header 구조 분석 <!-- omo:id=delivery-existing-ui-map;stage=4;scope=frontend;review=5,6 -->
+- [x] `GET /users/me/gamification` achievement_album 표시 연결 <!-- omo:id=delivery-achievement-album-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] profile header 안에 grade/level/XP/action buttons 통합 <!-- omo:id=delivery-profile-header-integration;stage=4;scope=frontend;review=5,6 -->
+- [x] 등급 modal/bottom sheet 구현 <!-- omo:id=delivery-grade-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] 업적 앨범 modal/bottom sheet 구현 <!-- omo:id=delivery-achievement-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] 튜토리얼 modal/bottom sheet 구현 <!-- omo:id=delivery-tutorial-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] 알림 archive modal/bottom sheet 구현 <!-- omo:id=delivery-notification-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] loading / empty / error / read-only / unauthorized 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest와 Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 320/390/1440/1920 및 modal evidence 캡처 <!-- omo:id=delivery-design-evidence;stage=4;scope=frontend;review=5,6 -->

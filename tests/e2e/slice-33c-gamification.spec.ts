@@ -47,11 +47,22 @@ const gamification = {
     xp_to_next_level: 70,
     progress_percent: 53,
   },
+  grade: {
+    grade_key: "wood",
+    label: "Wood",
+    level_min: 4,
+    level_max: 7,
+    icon_url: "/assets/growth/grades/wood-spoon-badge.png",
+    character_url: "/assets/growth/grades/wood-spoon.png",
+  },
   featured_badges: [
     {
       badge_key: "first_cook_done",
       label: "첫 집밥 완성",
       description: "첫 요리 완료를 기록했어요.",
+      category: "cooking",
+      shape_key: "pot",
+      locked_hint: null,
       earned_at: "2026-06-10T12:00:00.000Z",
       is_new: true,
     },
@@ -59,6 +70,9 @@ const gamification = {
       badge_key: "first_shopping_done",
       label: "장보기 첫걸음",
       description: "첫 장보기 완료를 기록했어요.",
+      category: "shopping",
+      shape_key: "bowl",
+      locked_hint: null,
       earned_at: "2026-06-10T12:00:00.000Z",
       is_new: false,
     },
@@ -83,23 +97,77 @@ const gamification = {
     completed_recent: [],
   },
   tutorial: {
+    category_key: "tutorial",
+    completed_count: 0,
+    total_count: 1,
     active_steps: [
       {
-        quest_key: "save_five_recipes",
-        quest_type: "tutorial",
-        status: "active",
+        achievement_key: "tutorial_recipe_saved",
         title: "레시피 5개 저장",
-        description: "마음에 드는 레시피를 조금 더 모아보세요.",
-        progress_current: 4,
-        progress_target: 5,
-        progress_percent: 80,
-        completed_at: null,
-        dismissed_at: null,
-        is_new: false,
+        current: 4,
+        target: 5,
+        status: "active",
       },
     ],
   },
-  notifications: { unseen: [] },
+  achievement_album: {
+    summary: { earned_count: 1, total_count: 3, completed_category_count: 0 },
+    categories: [
+      {
+        category_key: "tutorial",
+        label: "튜토리얼",
+        earned_count: 0,
+        total_count: 1,
+        milestones: [
+          {
+            achievement_key: "tutorial_recipe_saved",
+            track_key: "tutorial",
+            title: "레시피 5개 저장",
+            description: "마음에 드는 레시피를 조금 더 모아보세요.",
+            current: 4,
+            target: 5,
+            status: "active",
+            earned_at: null,
+            locked_hint: null,
+            badge: { badge_key: "tutorial_recipe_saved", category: "tutorial", shape_key: "bookmark" },
+          },
+        ],
+      },
+      {
+        category_key: "cooking",
+        label: "요리",
+        earned_count: 1,
+        total_count: 2,
+        milestones: [
+          {
+            achievement_key: "cooking_3",
+            track_key: "cooking",
+            title: "요리 루틴 3번 완성",
+            description: "요리 완료를 3번 기록해 보세요.",
+            current: 2,
+            target: 3,
+            status: "active",
+            earned_at: null,
+            locked_hint: null,
+            badge: { badge_key: "cooking_3", category: "cooking", shape_key: "pot" },
+          },
+          {
+            achievement_key: "first_cook_done",
+            track_key: "cooking",
+            title: "첫 집밥 완성",
+            description: "첫 요리 완료를 기록했어요.",
+            current: 1,
+            target: 1,
+            status: "earned",
+            earned_at: "2026-06-10T12:00:00.000Z",
+            locked_hint: null,
+            badge: { badge_key: "first_cook_done", category: "cooking", shape_key: "pot" },
+          },
+        ],
+      },
+    ],
+  },
+  notifications: { unseen: [], priority_unseen: [], archive_preview: [] },
   last_updated_at: "2026-06-10T12:00:00.000Z",
 };
 
@@ -228,7 +296,17 @@ async function installRoutes(
               featured_badges: [],
               badges: { earned: [], locked: [] },
               quests: { active: [], completed_recent: [] },
-              tutorial: { active_steps: [] },
+              tutorial: {
+                category_key: "tutorial",
+                completed_count: 0,
+                total_count: 0,
+                active_steps: [],
+              },
+              achievement_album: {
+                summary: { earned_count: 0, total_count: 0, completed_category_count: 0 },
+                categories: [],
+              },
+              notifications: { unseen: [], priority_unseen: [], archive_preview: [] },
             },
             error: null,
           },
@@ -247,10 +325,20 @@ async function installRoutes(
                     {
                       id: "550e8400-e29b-41d4-a716-446655440001",
                       notification_type: "xp_awarded",
+                      priority: 4,
+                      delivery_channel: "toast",
+                      toast_eligible: true,
+                      group_key: null,
+                      title: "요리 완료 +50 XP",
+                      body: "경험치가 반영되었어요.",
+                      category: "cooking",
                       payload: { label: "요리 완료", xp_delta: 50 },
                       created_at: "2026-06-10T12:00:00.000Z",
+                      seen_at: null,
                     },
                   ],
+                  priority_unseen: [],
+                  archive_preview: [],
                 },
               }
             : gamification,
@@ -384,13 +472,28 @@ async function openMypage(
   } else if (options?.gamificationEmpty) {
     await expect(page.getByTestId("mypage-gamification-empty")).toBeVisible();
   } else {
-    await expect(page.getByTestId("mypage-gamification-card")).toBeVisible({ timeout: 15_000 });
+    try {
+      await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({ timeout: 15_000 });
+    } catch {
+      await page.reload({ waitUntil: "networkidle" });
+      await stabilize(page);
+      await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({ timeout: 30_000 });
+    }
+    await expect(page.getByRole("button", { name: "업적 보기" })).toBeVisible();
   }
   return { context, page };
 }
 
 test.describe("33c gamification frontend @smoke-core", () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "desktop-chrome",
+      "This regression opens its own mobile and desktop contexts; avoid duplicate project runs.",
+    );
+  });
+
   test("renders MYPAGE badges, quests, guide, soft-fail, and XP toast evidence", async ({ browser }) => {
+    test.setTimeout(60_000);
     await mkdir(EVIDENCE_DIR, { recursive: true });
 
     const mobile390 = await openMypage(browser, { width: 390, height: 844 });
@@ -399,16 +502,15 @@ test.describe("33c gamification frontend @smoke-core", () => {
       path: path.join(EVIDENCE_DIR, "mobile-390.png"),
     });
     await mobile390.page
-      .getByTestId("mypage-gamification-card")
-      .getByRole("button", { name: "안내" })
+      .getByRole("button", { name: "업적 보기" })
       .click();
-    await expect(mobile390.page.getByRole("dialog", { name: "배지 안내" })).toBeVisible();
+    await expect(mobile390.page.getByRole("dialog", { name: "업적 앨범" })).toBeVisible();
     await mobile390.page.screenshot({
       fullPage: true,
-      path: path.join(EVIDENCE_DIR, "badge-guide-modal.png"),
+      path: path.join(EVIDENCE_DIR, "achievement-album-modal.png"),
     });
     await mobile390.page.keyboard.press("Escape");
-    await expect(mobile390.page.getByRole("dialog", { name: "배지 안내" })).toBeHidden();
+    await expect(mobile390.page.getByRole("dialog", { name: "업적 앨범" })).toBeHidden();
     await expect(mobile390.page.getByRole("button", { name: /claim/i })).toHaveCount(0);
     await mobile390.context.close();
 

@@ -781,9 +781,9 @@ describe("MypageScreen", () => {
     await screen.findByText("집밥러");
 
     const stats = screen.getByLabelText("마이페이지 통계");
-    expect(within(stats).getByText("플래너 등록")).toBeTruthy();
-    expect(within(stats).getByText("장보기 완료")).toBeTruthy();
-    expect(within(stats).getByText("요리 완료")).toBeTruthy();
+    expect(within(stats).getByText("플래너 기록")).toBeTruthy();
+    expect(within(stats).getByText("장보기 기록")).toBeTruthy();
+    expect(within(stats).getByText("요리기록")).toBeTruthy();
     expect(within(stats).getByText("4")).toBeTruthy();
     expect(within(stats).getAllByText("1")).toHaveLength(2);
     expect(mockFetchPlanner).toHaveBeenCalledWith("1900-01-01", "9999-12-31");
@@ -899,12 +899,13 @@ describe("MypageScreen", () => {
         .getByTestId("mobile-saved-recipe-image-recipe-saved-2")
         .getAttribute("src"),
     ).toContain("images.unsplash.com");
-    expect(screen.getByText("요리 완료")).toBeTruthy();
-    expect(screen.getByText("장보기 완료")).toBeTruthy();
-    expect(screen.getByText("플래너 등록")).toBeTruthy();
-    expect(screen.getByText("4").className).toContain("text-[28px]");
-    expect(screen.getByText("4").className).toContain("font-semibold");
-    expect(screen.getByText("4").className).not.toContain("font-[800]");
+    const stats = screen.getByLabelText("마이페이지 통계");
+    expect(within(stats).getByText("요리기록")).toBeTruthy();
+    expect(within(stats).getByText("장보기 기록")).toBeTruthy();
+    expect(within(stats).getByText("플래너 기록")).toBeTruthy();
+    expect(within(stats).getByText("4").className).toContain("text-[16px]");
+    expect(within(stats).getByText("4").className).toContain("font-extrabold");
+    expect(within(stats).getByText("4").className).not.toContain("text-[28px]");
     expect(screen.queryByText("연속")).toBeNull();
     expect(screen.queryByText("계정 관리")).toBeNull();
     expect(screen.queryByRole("button", { name: /저장한 레시피/ })).toBeNull();

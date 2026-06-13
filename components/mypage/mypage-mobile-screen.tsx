@@ -408,19 +408,13 @@ function MobileHomeSurface({
           providerLabel={providerLabel}
           progress={progress}
           progressState={progressState}
+          recordStats={{
+            cooking: stats.find((item) => item.label === "요리 완료")?.value ?? 0,
+            planner: stats.find((item) => item.label === "플래너 등록")?.value ?? 0,
+            shopping: stats.find((item) => item.label === "장보기 완료")?.value ?? 0,
+          }}
           variant="mobile"
         />
-
-        <div className="grid grid-cols-3 gap-2">
-          {stats.map((item) => (
-            <MobileStatCard
-              color={item.color}
-              key={item.label}
-              label={item.label}
-              value={String(item.value)}
-            />
-          ))}
-        </div>
 
       </section>
 
@@ -486,30 +480,6 @@ function MobileHomeSurface({
         </div>
       </section>
     </>
-  );
-}
-
-function MobileStatCard({
-  color,
-  label,
-  value,
-}: {
-  color: string;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-2 py-3 text-center">
-      <div
-        className="text-[28px] font-semibold leading-[1.1]"
-        style={{ color }}
-      >
-        {value}
-      </div>
-      <div className="mt-1 text-[12px] font-medium leading-[1.25] text-[var(--text-3)]">
-        {label}
-      </div>
-    </div>
   );
 }
 

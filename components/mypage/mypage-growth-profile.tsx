@@ -5,7 +5,10 @@ import React, { useMemo, useState } from "react";
 
 import { GrowthBadgeIcon } from "@/components/mypage/growth-badge-icon";
 import { GrowthGradeMark } from "@/components/mypage/growth-grade-mark";
-import { MypageBadgeGuideDialog } from "@/components/mypage/mypage-badge-guide-dialog";
+import {
+  MypageGrowthDetailDialog,
+  type MypageGrowthPanel,
+} from "@/components/mypage/mypage-growth-detail-dialog";
 import type { MypageGamificationState } from "@/components/mypage/mypage-gamification-card";
 import type { MypageProgressState } from "@/components/mypage/mypage-progress-card";
 import type { UserProfileData } from "@/lib/api/mypage";
@@ -27,6 +30,11 @@ interface MypageGrowthProfileProps {
   providerLabel?: string | null;
   progress: UserProgressData | null;
   progressState: MypageProgressState;
+  recordStats?: {
+    cooking: number;
+    planner: number;
+    shopping: number;
+  };
   variant?: "mobile" | "desktop";
 }
 
@@ -65,6 +73,77 @@ function clampPercent(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function ActionIcon({ panel }: { panel: MypageGrowthPanel }) {
+  if (panel === "grade") {
+    return (
+      <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="4.5" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M8.5 12.5 7 21l5-3 5 3-1.5-8.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      </svg>
+    );
+  }
+
+  if (panel === "achievement") {
+    return (
+      <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+        <path d="M12 3 14.7 8.7 21 9.5l-4.6 4.4 1.2 6.1L12 17l-5.6 3 1.2-6.1L3 9.5l6.3-.8L12 3Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+      </svg>
+    );
+  }
+
+  if (panel === "tutorial") {
+    return (
+      <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+        <path d="M5 5.5h6.5c1.4 0 2.5 1.1 2.5 2.5v10.5c0-1.4-1.1-2.5-2.5-2.5H5V5.5Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+        <path d="M14 8c0-1.4 1.1-2.5 2.5-2.5H19v11h-2.5c-1.4 0-2.5.9-2.5 2.3" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path d="M6.5 10.5a5.5 5.5 0 0 1 11 0v3.7l1.7 2.5H4.8l1.7-2.5v-3.7Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+      <path d="M10 19h4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function RecordStatsRow({
+  stats,
+}: {
+  stats: NonNullable<MypageGrowthProfileProps["recordStats"]>;
+}) {
+  const items = [
+    { label: "요리기록", value: stats.cooking },
+    { label: "플래너 기록", value: stats.planner },
+    { label: "장보기 기록", value: stats.shopping },
+  ];
+
+  return (
+    <div
+      aria-label="마이페이지 통계"
+      className="grid grid-cols-3 overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]"
+    >
+      {items.map((item, index) => (
+        <div
+          className={[
+            "min-w-0 px-2 py-2 text-center",
+            index > 0 ? "border-l border-[var(--line)]" : "",
+          ].join(" ")}
+          key={item.label}
+        >
+          <strong className="block truncate text-[16px] font-extrabold leading-[1.15] text-[var(--foreground)]">
+            {formatXp(item.value)}
+          </strong>
+          <span className="mt-1 block truncate text-[10px] font-bold leading-[1.2] text-[var(--text-3)]">
+            {item.label}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function getQuestKeyForAchievement(achievementKey: string) {
   const mapping: Record<string, string> = {
     tutorial_recipe_saved: "first_recipe_saved",
@@ -79,18 +158,34 @@ function getQuestKeyForAchievement(achievementKey: string) {
 }
 
 function tutorialStepToQuest(step: UserGamificationTutorialStepData): UserGamificationQuestData {
-  const percent = step.target > 0
-    ? clampPercent((Math.max(0, step.current) / step.target) * 100)
-    : 0;
+  const legacyStep = step as UserGamificationTutorialStepData & {
+    description?: string;
+    progress_current?: number;
+    progress_percent?: number;
+    progress_target?: number;
+    quest_key?: string;
+  };
+  const current = Number.isFinite(step.current)
+    ? step.current
+    : legacyStep.progress_current ?? 0;
+  const target = Number.isFinite(step.target)
+    ? step.target
+    : legacyStep.progress_target ?? 1;
+  const percent = Number.isFinite(legacyStep.progress_percent)
+    ? clampPercent(legacyStep.progress_percent ?? 0)
+    : target > 0
+      ? clampPercent((Math.max(0, current) / target) * 100)
+      : 0;
+  const achievementKey = step.achievement_key ?? legacyStep.quest_key ?? "tutorial";
 
   return {
-    quest_key: getQuestKeyForAchievement(step.achievement_key),
+    quest_key: getQuestKeyForAchievement(achievementKey),
     quest_type: "tutorial",
     status: step.status === "earned" ? "completed" : "active",
     title: step.title,
-    description: "",
-    progress_current: step.current,
-    progress_target: step.target,
+    description: legacyStep.description ?? "",
+    progress_current: current,
+    progress_target: target,
     progress_percent: percent,
     completed_at: null,
     dismissed_at: null,
@@ -163,9 +258,10 @@ export function MypageGrowthProfile({
   providerLabel,
   progress,
   progressState,
+  recordStats,
   variant = "mobile",
 }: MypageGrowthProfileProps) {
-  const [guideOpen, setGuideOpen] = useState(false);
+  const [activePanel, setActivePanel] = useState<MypageGrowthPanel | null>(null);
   const hasProgress = progressState === "ready" && isValidProgress(progress);
   const hasGamification = isDisplayableGamification(gamification, gamificationState);
   const visibleBadges = useMemo(
@@ -227,6 +323,33 @@ export function MypageGrowthProfile({
       ? "첫 집밥 기록을 시작해 보세요"
       : `다음 레벨까지 ${formatXp(progress.level.xp_to_next_level)} XP`
     : null;
+  const actionButtons = hasGamification ? (
+    <div
+      aria-label="성장 상세 메뉴"
+      className={[
+        "grid gap-2",
+        isDesktop ? "grid-cols-4" : "grid-cols-4 max-[360px]:grid-cols-2",
+      ].join(" ")}
+    >
+      {[
+        ["grade", "등급", "등급 보기"],
+        ["achievement", "업적", "업적 보기"],
+        ["tutorial", "튜토리얼", "튜토리얼 보기"],
+        ["notifications", "알림", "알림 보기"],
+      ].map(([panel, label, ariaLabel]) => (
+        <button
+          aria-label={ariaLabel}
+          className="flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-2 py-2 text-[11px] font-extrabold text-[var(--text-2)]"
+          key={panel}
+          onClick={() => setActivePanel(panel as MypageGrowthPanel)}
+          type="button"
+        >
+          <ActionIcon panel={panel as MypageGrowthPanel} />
+          <span className="truncate">{label}</span>
+        </button>
+      ))}
+    </div>
+  ) : null;
 
   const progressBar = hasProgress ? (
     <div
@@ -260,7 +383,7 @@ export function MypageGrowthProfile({
               "flex w-full min-w-0 flex-col items-center justify-start gap-1 rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-2 py-2 text-center",
               isDesktop ? "min-h-[86px]" : "min-h-[78px]",
             ].join(" ")}
-            onClick={() => setGuideOpen(true)}
+            onClick={() => setActivePanel("achievement")}
             type="button"
           >
             <GrowthBadgeIcon
@@ -314,10 +437,10 @@ export function MypageGrowthProfile({
         </div>
         <button
           className="flex h-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface)] px-3 text-[11px] font-extrabold text-[var(--text-2)]"
-          onClick={() => setGuideOpen(true)}
+          onClick={() => setActivePanel(quest?.quest_type === "tutorial" ? "tutorial" : "achievement")}
           type="button"
         >
-          안내
+          보기
         </button>
       </div>
       {quest ? (
@@ -434,37 +557,35 @@ export function MypageGrowthProfile({
                         </p>
                       ) : null}
                     </div>
-                    {hasGamification ? (
-                      <button
-                        className="shrink-0 rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-3 py-1.5 text-[11px] font-extrabold text-[var(--text-2)]"
-                        onClick={() => setGuideOpen(true)}
-                        type="button"
-                      >
-                        배지 안내
-                      </button>
-                    ) : null}
                   </div>
                   {progressBar ? <div className="mt-3">{progressBar}</div> : null}
+                  {recordStats ? (
+                    <div className="mt-3">
+                      <RecordStatsRow stats={recordStats} />
+                    </div>
+                  ) : null}
+                  {actionButtons ? <div className="mt-3">{actionButtons}</div> : null}
                 </div>
               </div>
 
               <div className="mt-4">
                 {badgeRow}
               </div>
+
+              {gamificationSummary ? (
+                <div className="mt-3">
+                  {gamificationSummary}
+                </div>
+              ) : null}
             </div>
           </div>
-
-          {gamificationSummary ? (
-            <div className="border-t border-[var(--line)] px-4 py-4 md:px-6">
-              {gamificationSummary}
-            </div>
-          ) : null}
         </section>
 
-        {guideOpen ? (
-          <MypageBadgeGuideDialog
+        {activePanel ? (
+          <MypageGrowthDetailDialog
             data={gamification}
-            onClose={() => setGuideOpen(false)}
+            onClose={() => setActivePanel(null)}
+            panel={activePanel}
           />
         ) : null}
       </>
@@ -503,28 +624,26 @@ export function MypageGrowthProfile({
               </p>
             ) : null}
           </div>
-          {hasGamification ? (
-            <button
-              className="shrink-0 rounded-full bg-[var(--surface-fill)] px-2.5 py-1 text-[10px] font-extrabold text-[var(--text-2)]"
-              onClick={() => setGuideOpen(true)}
-              type="button"
-            >
-              배지 안내
-            </button>
-          ) : null}
         </div>
 
         {progressBar ? <div className="mt-2">{progressBar}</div> : null}
+        {recordStats ? (
+          <div className="mt-3">
+            <RecordStatsRow stats={recordStats} />
+          </div>
+        ) : null}
+        {actionButtons ? <div className="mt-3">{actionButtons}</div> : null}
 
         <div className="mt-2">
           {badgeRow}
         </div>
       </div>
 
-      {guideOpen ? (
-        <MypageBadgeGuideDialog
+      {activePanel ? (
+        <MypageGrowthDetailDialog
           data={gamification}
-          onClose={() => setGuideOpen(false)}
+          onClose={() => setActivePanel(null)}
+          panel={activePanel}
         />
       ) : null}
     </>

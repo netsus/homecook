@@ -317,7 +317,7 @@ test.describe("34e growth profile visual polish @smoke-core", () => {
     });
 
     await mobile390.page.getByTestId("mypage-growth-featured-badges").getByRole("button").first().click();
-    await expect(mobile390.page.getByRole("dialog", { name: "배지 안내" })).toBeVisible();
+    await expect(mobile390.page.getByRole("dialog", { name: "업적 앨범" })).toBeVisible();
     await mobile390.page.screenshot({
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "badge-guide-polished.png"),
