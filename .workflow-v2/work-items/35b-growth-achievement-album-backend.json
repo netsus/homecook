@@ -1,0 +1,108 @@
+{
+  "id": "35b-growth-achievement-album-backend",
+  "title": "Growth achievement album backend",
+  "summary": "35a 계약을 기반으로 user_achievement_awards, achievement album projection, tutorial category, grade label/image fields, silent backfill backend를 구현한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "서버가 업적 앨범과 튜토리얼 카테고리 상태를 단일 authority로 계산하고, 35c MYPAGE UI가 소비할 gamification response를 제공한다.",
+  "owners": {
+    "claude": "stage1/stage3 normally, unavailable unless explicitly resumed",
+    "codex": "stage1 fallback, stage2 implementation, self-review per user instruction",
+    "workers": []
+  },
+  "dependencies": [
+    "33a-user-progress-foundation",
+    "33b-mypage-progress-ui",
+    "33c-badges-quests-toasts-tutorial",
+    "34a-growth-model-contract-evolution",
+    "34b-growth-backend-model",
+    "34c-growth-notification-ui",
+    "34d-mypage-growth-profile-assets",
+    "35a-growth-achievement-album-contract-evolution"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.10.md",
+      "docs/db설계-v1.3.15.md",
+      "docs/api문서-v1.2.19.md",
+      "docs/유저flow맵-v1.3.17.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/35b-growth-achievement-album-backend/README.md",
+      "docs/workpacks/35b-growth-achievement-album-backend/acceptance.md",
+      "docs/workpacks/35b-growth-achievement-album-backend/automation-spec.json",
+      "docs/workpacks/35a-growth-achievement-album-contract-evolution/README.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:local-supabase-db-push-check-user-achievement-awards"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "docs": 3,
+      "backend": 3,
+      "frontend": 0
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm vitest run tests/user-achievement-album-policy.test.ts tests/user-achievement-awards.test.ts tests/user-gamification-route.test.ts tests/user-gamification-notification-priority.test.ts tests/user-achievement-backfill.test.ts",
+      "CI=1 pnpm verify:backend:pr",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 35b-growth-achievement-album-backend",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/user-achievement-album-policy.test.ts tests/user-achievement-awards.test.ts tests/user-gamification-route.test.ts tests/user-gamification-notification-priority.test.ts tests/user-achievement-backfill.test.ts",
+      "CI=1 pnpm verify:backend:pr",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 35b-growth-achievement-album-backend",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "user-achievement-awards-schema",
+      "achievement-album-projection",
+      "tutorial-category-summary",
+      "grade-clay-to-titanium-response",
+      "no-achievement-xp",
+      "silent-backfill-no-notifications"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Frontend implementation",
+    "Grade asset runtime optimization",
+    "Achievement definition admin editor",
+    "User-selectable featured badge API",
+    "Leaderboard",
+    "Competitive rank",
+    "Pressure streak",
+    "Season reset",
+    "XP decay",
+    "Loot/random rewards",
+    "Reward claim CTA"
+  ],
+  "open_questions": [],
+  "notes": "35b workpack is created as a prerequisite repair because 35a locked the follow-up backend branch name but the dedicated 35b workpack was not present on master."
+}

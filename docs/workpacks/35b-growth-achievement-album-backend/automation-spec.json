@@ -1,0 +1,99 @@
+{
+  "slice_id": "35b-growth-achievement-album-backend",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/users/me/gamification",
+      "GET /api/v1/users/me/gamification/archive",
+      "POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss"
+    ],
+    "invariants": [
+      "progress-api-remains-progress-only",
+      "gamification-api-gets-additive-achievement-album-fields",
+      "achievements-do-not-grant-extra-xp",
+      "tutorial-is-achievement-category",
+      "standard-quest-expansion-stops",
+      "silent-backfill-no-toast-no-archive",
+      "achievement-unlock-idempotent",
+      "server-authority-for-grade-and-achievements"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/user-achievement-album-policy.test.ts tests/user-achievement-awards.test.ts tests/user-gamification-route.test.ts tests/user-gamification-notification-priority.test.ts tests/user-achievement-backfill.test.ts",
+      "CI=1 pnpm verify:backend:pr",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 35b-growth-achievement-album-backend",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/user-achievement-album-policy.test.ts",
+      "tests/user-achievement-awards.test.ts",
+      "tests/user-gamification-route.test.ts",
+      "tests/user-gamification-notification-priority.test.ts",
+      "tests/user-achievement-backfill.test.ts"
+    ],
+    "schema_changes": [
+      "supabase/migrations/20260613_35b_growth_achievement_awards.sql"
+    ],
+    "required_tables": [
+      "user_progress_events",
+      "user_growth_activity_events",
+      "user_progress_summary",
+      "user_badge_awards",
+      "user_quest_progress",
+      "user_progress_notifications",
+      "user_achievement_awards"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "required_endpoints": [
+      "GET /api/v1/users/me/gamification",
+      "GET /api/v1/users/me/gamification/archive",
+      "POST /api/v1/users/me/gamification/tutorial-quests/{quest_key}/dismiss"
+    ],
+    "verify_commands": [
+      "35c-target:pnpm vitest run tests/mypage-achievement-album.test.tsx tests/mypage-growth-profile.test.tsx tests/user-gamification-api-client.test.ts"
+    ],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "be-only-no-ui-change"
+    ],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "evidence_artifact_refs": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "manual:local-supabase-db-push-check-user-achievement-awards"
+  ],
+  "blocked_conditions": [
+    "achievement-unlock-grants-extra-xp",
+    "standard-quests-continue-expanding",
+    "client-calculates-achievement-unlock-or-grade",
+    "progress-api-response-gets-gamification-fields",
+    "legacy-backfill-creates-toast-or-archive-rows",
+    "shopping-list-count-and-meal-bundle-count-are-mixed",
+    "pantry-delete-readd-counts-as-repeat-achievement-progress",
+    "automatic-leftover-eaten-counts-as-manual-cleanup",
+    "leaderboard-or-competitive-rank-added",
+    "loot-or-reward-claim-added"
+  ],
+  "max_fix_rounds": {
+    "docs": 3,
+    "backend": 3,
+    "frontend": 0
+  }
+}
