@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-11T23:37:10+09:00",
+  "updated_at": "2026-06-13T21:59:26+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1709,6 +1709,23 @@
         "git diff --check"
       ],
       "notes": "Stage 1 docs branch opened by Codex per user instruction while Claude is token-limited. Scope: Clay-to-Titanium grade contract, tutorial-only quest policy, tutorial as achievement category, category-based achievement album, achievement award schema target, silent backfill, and MYPAGE modal button entry contract. Runtime implementation is out of scope."
+    },
+    {
+      "id": "35b-growth-achievement-album-backend",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/35b-growth-achievement-album-backend",
+      "lifecycle": "planned",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm vitest run tests/user-achievement-album-policy.test.ts tests/user-achievement-awards.test.ts tests/user-gamification-route.test.ts tests/user-gamification-notification-priority.test.ts tests/user-achievement-backfill.test.ts",
+        "CI=1 pnpm verify:backend:pr",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 35b-growth-achievement-album-backend",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs branch opened by Codex as a prerequisite repair because 35a already locked the 35b backend follow-up but the dedicated 35b workpack was not present on master. Scope: user_achievement_awards migration, achievement definitions/projection, tutorial category, grade response fields, notification priority, and silent backfill backend. Local docs verification passed: validate:source-of-truth-sync, validate:workflow-v2, validate:workpack -- --slice 35b-growth-achievement-album-backend, git diff --check."
     }
   ]
 }
