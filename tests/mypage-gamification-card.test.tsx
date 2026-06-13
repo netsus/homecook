@@ -56,21 +56,22 @@ const MOCK_GAMIFICATION: UserGamificationData = {
     completed_recent: [],
   },
   tutorial: {
+    category_key: "tutorial",
+    completed_count: 0,
+    total_count: 7,
     active_steps: [
       {
-        quest_key: "first_shopping_done",
-        quest_type: "tutorial",
+        achievement_key: "tutorial_shopping_list_complete",
         status: "active",
         title: "첫 장보기 완료",
-        description: "장보기 목록을 완료해 보세요.",
-        progress_current: 0,
-        progress_target: 1,
-        progress_percent: 0,
-        completed_at: null,
-        dismissed_at: null,
-        is_new: false,
+        current: 0,
+        target: 1,
       },
     ],
+  },
+  achievement_album: {
+    summary: { earned_count: 0, total_count: 0, completed_category_count: 0 },
+    categories: [],
   },
   notifications: { unseen: [], priority_unseen: [], archive_preview: [] },
   last_updated_at: "2026-06-10T12:00:00.000Z",
@@ -166,7 +167,12 @@ describe("MypageGamificationCard", () => {
           ...MOCK_GAMIFICATION,
           featured_badges: [],
           quests: { active: [], completed_recent: [] },
-          tutorial: { active_steps: [] },
+          tutorial: {
+            category_key: "tutorial",
+            completed_count: 0,
+            total_count: 7,
+            active_steps: [],
+          },
         }}
         state="empty"
       />,

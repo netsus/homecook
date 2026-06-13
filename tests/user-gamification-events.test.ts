@@ -78,7 +78,29 @@ function createProgressData(currentLevel: number): UserProgressData {
   };
 }
 
+function createAchievementAwardsTable() {
+  return {
+    select: vi.fn(() => createArrayQuery({ data: [], error: null })),
+    insert: vi.fn((row) =>
+      createMaybeSingleQuery({
+        data: {
+          achievement_key: row.achievement_key,
+          category_key: row.category_key,
+          track_key: row.track_key,
+          target_value: row.target_value,
+          achieved_value: row.achieved_value,
+          badge_key: row.badge_key,
+          earned_at: row.earned_at,
+          seen_at: null,
+        },
+        error: null,
+      }),
+    ),
+  };
+}
+
 function createGamificationProjectionDb() {
+  const achievementAwardsTable = createAchievementAwardsTable();
   const badgeAwardsTable = {
     insert: vi.fn(() => createMaybeSingleQuery({ data: null, error: null })),
   };
@@ -99,6 +121,7 @@ function createGamificationProjectionDb() {
   };
   const dbClient = {
     from: vi.fn((table: string) => {
+      if (table === "user_achievement_awards") return achievementAwardsTable;
       if (table === "user_badge_awards") return badgeAwardsTable;
       if (table === "user_quest_progress") return questProgressTable;
       if (table === "user_progress_notifications") return notificationsTable;
@@ -260,6 +283,7 @@ describe("user gamification event projection", () => {
         }),
       ),
     };
+    const achievementAwardsTable = createAchievementAwardsTable();
     const questProgressTable = {
       select: vi.fn(() => createArrayQuery({ data: [], error: null })),
       upsert: vi.fn(() =>
@@ -286,6 +310,7 @@ describe("user gamification event projection", () => {
       from: vi.fn((table: string) => {
         if (table === "user_progress_events") return progressEventsTable;
         if (table === "user_progress_summary") return progressSummaryTable;
+        if (table === "user_achievement_awards") return achievementAwardsTable;
         if (table === "user_badge_awards") return badgeAwardsTable;
         if (table === "user_quest_progress") return questProgressTable;
         if (table === "user_progress_notifications") return notificationsTable;
@@ -409,6 +434,7 @@ describe("user gamification event projection", () => {
         }),
       ),
     };
+    const achievementAwardsTable = createAchievementAwardsTable();
     const notificationsTable = {
       insert: vi.fn(() => createMaybeSingleQuery({ data: { id: "notification-2" }, error: null })),
     };
@@ -416,6 +442,7 @@ describe("user gamification event projection", () => {
       from: vi.fn((table: string) => {
         if (table === "user_progress_events") return progressEventsTable;
         if (table === "user_progress_summary") return progressSummaryTable;
+        if (table === "user_achievement_awards") return achievementAwardsTable;
         if (table === "user_badge_awards") return badgeAwardsTable;
         if (table === "user_quest_progress") return questProgressTable;
         if (table === "user_progress_notifications") return notificationsTable;

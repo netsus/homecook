@@ -1,5 +1,6 @@
 export type UserGamificationNotificationType =
   | "xp_awarded"
+  | "achievement_unlocked"
   | "badge_unlocked"
   | "quest_completed"
   | "level_up";
@@ -10,6 +11,7 @@ export type UserGamificationNotificationDeliveryChannel =
   | "silent";
 
 export type UserGamificationBadgeCategory =
+  | "tutorial"
   | "recipe"
   | "planner"
   | "shopping"
@@ -43,6 +45,8 @@ export interface UserGamificationGradeData {
   label: string;
   level_min: number;
   level_max: number | null;
+  icon_url?: string;
+  character_url?: string;
 }
 
 export interface UserGamificationBadgeData {
@@ -73,6 +77,52 @@ export interface UserGamificationQuestData {
   is_new: boolean;
 }
 
+export type UserGamificationAchievementStatus = "earned" | "active" | "locked";
+
+export interface UserGamificationAchievementBadgeData {
+  badge_key: string;
+  shape_key: UserGamificationBadgeShapeKey;
+  category: UserGamificationBadgeCategory;
+}
+
+export interface UserGamificationAchievementMilestoneData {
+  achievement_key: string;
+  track_key: string | null;
+  title: string;
+  description: string;
+  current: number;
+  target: number;
+  status: UserGamificationAchievementStatus;
+  earned_at: string | null;
+  locked_hint: string | null;
+  badge: UserGamificationAchievementBadgeData;
+}
+
+export interface UserGamificationAchievementCategoryData {
+  category_key: UserGamificationBadgeCategory;
+  label: string;
+  earned_count: number;
+  total_count: number;
+  milestones: UserGamificationAchievementMilestoneData[];
+}
+
+export interface UserGamificationAchievementAlbumData {
+  summary: {
+    earned_count: number;
+    total_count: number;
+    completed_category_count: number;
+  };
+  categories: UserGamificationAchievementCategoryData[];
+}
+
+export interface UserGamificationTutorialStepData {
+  achievement_key: string;
+  title: string;
+  current: number;
+  target: number;
+  status: UserGamificationAchievementStatus;
+}
+
 export interface UserGamificationNotificationData {
   id: string;
   notification_type: UserGamificationNotificationType;
@@ -101,8 +151,12 @@ export interface UserGamificationData {
     completed_recent: UserGamificationQuestData[];
   };
   tutorial: {
-    active_steps: UserGamificationQuestData[];
+    category_key: "tutorial";
+    completed_count: number;
+    total_count: number;
+    active_steps: UserGamificationTutorialStepData[];
   };
+  achievement_album: UserGamificationAchievementAlbumData;
   notifications: {
     unseen: UserGamificationNotificationData[];
     priority_unseen: UserGamificationNotificationData[];

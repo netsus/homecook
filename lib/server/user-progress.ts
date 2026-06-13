@@ -160,13 +160,62 @@ const REPEAT_CAPS: Partial<Record<UserProgressEventType, { daily?: number; weekl
 };
 
 const GRADE_BANDS: UserProgressGradeData[] = [
-  { grade_key: "sprout_homecook", label: "새싹 집밥러", level_min: 1, level_max: 3 },
-  { grade_key: "homecook_runner", label: "집밥 러너", level_min: 4, level_max: 7 },
-  { grade_key: "kitchen_explorer", label: "주방 탐험가", level_min: 8, level_max: 12 },
-  { grade_key: "table_maker", label: "한상 메이커", level_min: 13, level_max: 20 },
-  { grade_key: "homecook_artisan", label: "집밥 장인", level_min: 21, level_max: 34 },
-  { grade_key: "table_curator", label: "식탁 큐레이터", level_min: 35, level_max: 49 },
-  { grade_key: "homecook_master", label: "집밥 명장", level_min: 50, level_max: null },
+  {
+    grade_key: "clay",
+    label: "Clay",
+    level_min: 1,
+    level_max: 3,
+    icon_url: "/assets/growth/grades/clay-spoon-badge.png",
+    character_url: "/assets/growth/grades/clay-spoon.png",
+  },
+  {
+    grade_key: "wood",
+    label: "Wood",
+    level_min: 4,
+    level_max: 7,
+    icon_url: "/assets/growth/grades/wood-spoon-badge.png",
+    character_url: "/assets/growth/grades/wood-spoon.png",
+  },
+  {
+    grade_key: "steel",
+    label: "Steel",
+    level_min: 8,
+    level_max: 12,
+    icon_url: "/assets/growth/grades/steel-spoon-badge.png",
+    character_url: "/assets/growth/grades/steel-spoon.png",
+  },
+  {
+    grade_key: "silver",
+    label: "Silver",
+    level_min: 13,
+    level_max: 20,
+    icon_url: "/assets/growth/grades/silver-spoon-badge.png",
+    character_url: "/assets/growth/grades/silver-spoon.png",
+  },
+  {
+    grade_key: "gold",
+    label: "Gold",
+    level_min: 21,
+    level_max: 34,
+    icon_url: "/assets/growth/grades/gold-spoon-badge.png",
+    character_url: "/assets/growth/grades/gold-spoon.png",
+  },
+  {
+    grade_key: "diamond",
+    label: "Diamond",
+    level_min: 35,
+    level_max: 49,
+    icon_url: "/assets/growth/grades/diamond-spoon-badge.png",
+    character_url: "/assets/growth/grades/diamond-spoon.png",
+  },
+  {
+    grade_key: "titanium",
+    label: "Titanium",
+    level_min: 50,
+    level_max: null,
+    icon_url: "/assets/growth/grades/titanium-spoon-badge.png",
+    character_url: "/assets/growth/grades/titanium-spoon.png",
+  },
 ];
 
 export function calculateUserProgressLevel(totalXp: number): UserProgressLevelData {

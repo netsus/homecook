@@ -46,11 +46,11 @@ describe("user gamification definitions", () => {
     ]);
     expect(USER_QUEST_DEFINITIONS.map((quest) => quest.quest_key)).toEqual([
       "first_recipe_saved",
+      "first_planner_registered",
+      "first_shopping_list_created",
       "first_shopping_done",
       "first_cook_done",
-      "save_five_recipes",
-      "cook_three_meals",
-      "complete_three_shopping_lists",
+      "first_custom_book_created",
     ]);
 
     const serialized = JSON.stringify({ USER_BADGE_DEFINITIONS, USER_QUEST_DEFINITIONS });
@@ -62,6 +62,14 @@ describe("user gamification definitions", () => {
       progress: buildProgress(),
       badgeRows: [],
       questRows: [],
+      achievementRows: [],
+      activityRows: [],
+      achievementCounts: {
+        pantry_distinct_ingredients: 0,
+        leftover_eaten_manual: 0,
+        recipe_registered: 0,
+        shopping_list_created: 0,
+      },
       notificationRows: [],
     });
 
@@ -78,10 +86,8 @@ describe("user gamification definitions", () => {
       progress_current: 0,
       progress_target: 1,
     });
-    expect(data.tutorial.active_steps.map((step) => step.quest_key)).toEqual([
-      "first_recipe_saved",
-      "first_shopping_done",
-      "first_cook_done",
+    expect(data.tutorial.active_steps.map((step) => step.achievement_key)).toEqual([
+      "tutorial_recipe_saved",
     ]);
   });
 
@@ -116,28 +122,25 @@ describe("user gamification definitions", () => {
       ],
       questRows: [
         {
-          quest_key: "cook_three_meals",
-          quest_type: "standard",
+          quest_key: "first_recipe_saved",
+          quest_type: "tutorial",
           status: "completed",
-          progress_current: 3,
-          progress_target: 3,
+          progress_current: 4,
+          progress_target: 1,
           completed_at: "2026-06-10T12:00:00.000Z",
           dismissed_at: null,
           seen_at: null,
           updated_at: "2026-06-10T12:00:00.000Z",
         },
-        {
-          quest_key: "save_five_recipes",
-          quest_type: "standard",
-          status: "active",
-          progress_current: 4,
-          progress_target: 5,
-          completed_at: null,
-          dismissed_at: null,
-          seen_at: null,
-          updated_at: "2026-06-10T12:00:00.000Z",
-        },
       ],
+      achievementRows: [],
+      activityRows: [],
+      achievementCounts: {
+        pantry_distinct_ingredients: 0,
+        leftover_eaten_manual: 0,
+        recipe_registered: 0,
+        shopping_list_created: 0,
+      },
       notificationRows: [
         {
           id: "550e8400-e29b-41d4-a716-446655440001",
@@ -165,16 +168,22 @@ describe("user gamification definitions", () => {
         is_new: true,
       },
     ]);
-    expect(data.quests.active[0]).toEqual(expect.objectContaining({
-      quest_key: "save_five_recipes",
-      progress_current: 4,
-      progress_target: 5,
-      progress_percent: 80,
-    }));
-    expect(data.quests.active).toHaveLength(2);
-    expect(data.quests.completed_recent).toEqual([
-      expect.objectContaining({ quest_key: "cook_three_meals", status: "completed" }),
-    ]);
+    expect(data.quests.active).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        quest_key: "first_planner_registered",
+        progress_current: 0,
+        progress_target: 1,
+        progress_percent: 0,
+      }),
+      expect.objectContaining({
+        quest_key: "first_shopping_list_created",
+        progress_current: 0,
+        progress_target: 1,
+        progress_percent: 0,
+      }),
+    ]));
+    expect(data.quests.active).toHaveLength(3);
+    expect(data.quests.completed_recent).toEqual([]);
     expect(data.notifications.unseen).toEqual([
       {
         id: "550e8400-e29b-41d4-a716-446655440001",

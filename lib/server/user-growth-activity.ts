@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
 
+import type { UserGamificationDbClient } from "@/lib/server/user-gamification";
+import type { UserProgressDbClient } from "@/lib/server/user-progress";
+
 interface QueryError {
   code?: string;
   message: string;
@@ -19,6 +22,7 @@ export type UserGrowthActivityType =
   | "pantry_item_added"
   | "leftover_eaten"
   | "meal_add_path_used"
+  | "recipe_registered"
   | "recipebook_created"
   | "recipebook_recipe_added"
   | "recipebook_recipe_removed";
@@ -149,6 +153,23 @@ export async function recordUserGrowthActivityEvent(
         duplicate: false,
         error: result.error ?? { message: "missing growth activity insert result" },
       };
+    }
+
+    try {
+      const { projectUserGamificationAfterActivityEvent } = await import(
+        "@/lib/server/user-gamification"
+      );
+
+      await projectUserGamificationAfterActivityEvent(
+        dbClient as unknown as UserGamificationDbClient & UserProgressDbClient,
+        {
+          userId: input.userId,
+          activityId: result.data.id,
+          occurredAt: input.occurredAt,
+        },
+      );
+    } catch {
+      // Achievement projection is secondary; the activity ledger remains authoritative.
     }
 
     return { recorded: true, duplicate: false, error: null };

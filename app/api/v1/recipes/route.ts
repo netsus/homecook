@@ -17,6 +17,10 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import {
+  recordUserGrowthActivityEvent,
+  type UserGrowthActivityDbClient,
+} from "@/lib/server/user-growth-activity";
 import { generateRecipeTags, parseRecipeImagePublicUrl } from "@/lib/server/recipe-media";
 import {
   readRecipeCardUserStatuses,
@@ -710,7 +714,8 @@ export async function POST(request: Request) {
     }
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as ManualRecipeDbClient & UserBootstrapDbClient;
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+    ManualRecipeDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -793,6 +798,20 @@ export async function POST(request: Request) {
 
   if (stepInsertResult.error) {
     return fail("INTERNAL_ERROR", "레시피 만들기를 등록하지 못했어요.", 500);
+  }
+
+  try {
+    await recordUserGrowthActivityEvent(dbClient, {
+      userId: user.id,
+      activityType: "recipe_registered",
+      category: "recipe",
+      sourceKey: `recipe_registered:${recipeResult.data.id}`,
+      sourceTable: "recipes",
+      sourceId: recipeResult.data.id,
+      sourceMeta: { source_type: "manual" },
+    });
+  } catch {
+    // Activity history is secondary; manual recipe creation remains authoritative.
   }
 
   return ok(toManualRecipeCreateData(recipeResult.data), { status: 201 });

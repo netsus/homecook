@@ -12,6 +12,8 @@ export interface UserProgressGradeData {
   label: string;
   level_min: number;
   level_max: number | null;
+  icon_url?: string;
+  character_url?: string;
 }
 
 export interface UserProgressLevelData {

@@ -13,6 +13,7 @@ import type {
   UserGamificationBadgeData,
   UserGamificationData,
   UserGamificationQuestData,
+  UserGamificationTutorialStepData,
 } from "@/types/user-gamification";
 import type { UserProgressData } from "@/types/user-progress";
 
@@ -64,11 +65,48 @@ function clampPercent(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function getQuestKeyForAchievement(achievementKey: string) {
+  const mapping: Record<string, string> = {
+    tutorial_recipe_saved: "first_recipe_saved",
+    tutorial_planner_registered: "first_planner_registered",
+    tutorial_shopping_list_create: "first_shopping_list_created",
+    tutorial_shopping_list_complete: "first_shopping_done",
+    tutorial_cooking_complete: "first_cook_done",
+    tutorial_recipebook_created: "first_custom_book_created",
+  };
+
+  return mapping[achievementKey] ?? achievementKey;
+}
+
+function tutorialStepToQuest(step: UserGamificationTutorialStepData): UserGamificationQuestData {
+  const percent = step.target > 0
+    ? clampPercent((Math.max(0, step.current) / step.target) * 100)
+    : 0;
+
+  return {
+    quest_key: getQuestKeyForAchievement(step.achievement_key),
+    quest_type: "tutorial",
+    status: step.status === "earned" ? "completed" : "active",
+    title: step.title,
+    description: "",
+    progress_current: step.current,
+    progress_target: step.target,
+    progress_percent: percent,
+    completed_at: null,
+    dismissed_at: null,
+    is_new: false,
+  };
+}
+
 function pickQuest(data: UserGamificationData | null): UserGamificationQuestData | null {
   if (!data) return null;
 
+  const tutorialStep = data.tutorial.active_steps.find((quest) => quest.status === "active");
+  if (tutorialStep) {
+    return tutorialStepToQuest(tutorialStep);
+  }
+
   return (
-    data.tutorial.active_steps.find((quest) => quest.status === "active") ??
     data.quests.active[0] ??
     data.quests.completed_recent[0] ??
     null
