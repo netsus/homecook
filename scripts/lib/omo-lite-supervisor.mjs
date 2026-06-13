@@ -320,8 +320,8 @@ function productStageSpec(stage, slice, subphase = null) {
         `docs/workpacks/${slice}/README.md`,
         `docs/workpacks/${slice}/acceptance.md`,
         `docs/workpacks/${slice}/automation-spec.json`,
-        "docs/api문서-v1.2.18.md",
-        "docs/db설계-v1.3.14.md",
+        "docs/api문서-v1.2.19.md",
+        "docs/db설계-v1.3.15.md",
       ],
       deliverables: [
         `branch feature/be-${slice}`,
