@@ -1699,7 +1699,7 @@
       "id": "35a-growth-achievement-album-contract-evolution",
       "preset": "vertical-slice-strict",
       "branch": "docs/35a-growth-achievement-album-contract-evolution",
-      "lifecycle": "merged",
+      "lifecycle": "planned",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -1708,7 +1708,7 @@
         "pnpm validate:workpack -- --slice 35a-growth-achievement-album-contract-evolution",
         "git diff --check"
       ],
-      "notes": "Merged via PR #741. Scope: Clay-to-Titanium grade contract, tutorial-only quest policy, tutorial as achievement category, category-based achievement album, achievement award schema target, silent backfill, and MYPAGE modal button entry contract. Runtime implementation is out of scope."
+      "notes": "Stage 1 docs branch opened by Codex per user instruction while Claude is token-limited. Scope: Clay-to-Titanium grade contract, tutorial-only quest policy, tutorial as achievement category, category-based achievement album, achievement award schema target, silent backfill, and MYPAGE modal button entry contract. Runtime implementation is out of scope."
     },
     {
       "id": "35b-growth-achievement-album-backend",
