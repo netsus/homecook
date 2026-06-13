@@ -109,7 +109,7 @@ function milestone(
   };
 }
 
-function buildGamification() {
+function buildGamification(archivePreview = notifications) {
   const featured = [
     {
       badge_key: "tutorial_recipe_saved",
@@ -197,7 +197,7 @@ function buildGamification() {
     notifications: {
       unseen: [],
       priority_unseen: [],
-      archive_preview: notifications,
+      archive_preview: archivePreview,
     },
     last_updated_at: "2026-06-14T10:15:00.000Z",
   };
@@ -244,16 +244,65 @@ async function stabilize(page: Page) {
   });
 }
 
-async function installRoutes(page: Page) {
+async function installRoutes(
+  page: Page,
+  options: {
+    archiveError?: boolean;
+    gamificationError?: boolean;
+    progressError?: boolean;
+  } = {},
+) {
   await page.route("**/api/v1/users/me/progress", async (route) => {
+    if (options.progressError) {
+      await route.fulfill({
+        status: 500,
+        json: {
+          success: false,
+          data: null,
+          error: { code: "INTERNAL_ERROR", message: "failed", fields: [] },
+        },
+      });
+      return;
+    }
+
     await route.fulfill({ json: { success: true, data: progress, error: null } });
   });
 
   await page.route((url) => url.pathname === "/api/v1/users/me/gamification", async (route) => {
-    await route.fulfill({ json: { success: true, data: buildGamification(), error: null } });
+    if (options.gamificationError) {
+      await route.fulfill({
+        status: 500,
+        json: {
+          success: false,
+          data: null,
+          error: { code: "INTERNAL_ERROR", message: "failed", fields: [] },
+        },
+      });
+      return;
+    }
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: buildGamification(options.archiveError ? [] : notifications),
+        error: null,
+      },
+    });
   });
 
   await page.route("**/api/v1/users/me/gamification/archive**", async (route) => {
+    if (options.archiveError) {
+      await route.fulfill({
+        status: 500,
+        json: {
+          success: false,
+          data: null,
+          error: { code: "INTERNAL_ERROR", message: "failed", fields: [] },
+        },
+      });
+      return;
+    }
+
     await route.fulfill({
       json: {
         success: true,
@@ -329,11 +378,12 @@ async function installRoutes(page: Page) {
 async function openMypage(
   browser: Browser,
   viewport: { width: number; height: number },
+  options?: Parameters<typeof installRoutes>[1],
 ) {
   const context = await browser.newContext({ deviceScaleFactor: 1, viewport });
   const page = await context.newPage();
   await setAuthOverride(page);
-  await installRoutes(page);
+  await installRoutes(page, options);
   await page.goto("/mypage", { waitUntil: "networkidle" });
   await stabilize(page);
   await expect(page.getByTestId("mypage-growth-profile")).toBeVisible();
@@ -382,7 +432,10 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     await notificationDialog.getByRole("tab", { name: "업적" }).click();
     await expect(notificationDialog.getByText("업적 달성!")).toBeVisible();
     await expect(notificationDialog.getByText("+120 XP 반영")).toHaveCount(0);
-    await mobile.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-notification-modal.png") });
+    await mobile.page.screenshot({
+      fullPage: true,
+      path: path.join(EVIDENCE_DIR, "mobile-notification-archive-modal.png"),
+    });
     await mobile.context.close();
 
     const mobile320 = await openMypage(browser, { width: 320, height: 568 });
@@ -403,5 +456,24 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     await expect(wideDesktop.page.getByTestId("mypage-growth-profile")).toContainText("Diamond · Lv.46");
     await wideDesktop.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "desktop-1920-profile.png") });
     await wideDesktop.context.close();
+
+    const progressSoftFail = await openMypage(browser, { width: 390, height: 844 }, { progressError: true });
+    await expect(progressSoftFail.page.getByTestId("mypage-growth-progress-error")).toBeVisible();
+    await progressSoftFail.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "soft-fail-progress.png") });
+    await progressSoftFail.context.close();
+
+    const gamificationSoftFail = await openMypage(browser, { width: 390, height: 844 }, { gamificationError: true });
+    await expect(gamificationSoftFail.page.getByTestId("mypage-growth-gamification-error")).toBeVisible();
+    await gamificationSoftFail.page.screenshot({
+      fullPage: true,
+      path: path.join(EVIDENCE_DIR, "soft-fail-gamification.png"),
+    });
+    await gamificationSoftFail.context.close();
+
+    const archiveSoftFail = await openMypage(browser, { width: 390, height: 844 }, { archiveError: true });
+    await archiveSoftFail.page.getByRole("button", { name: "알림 보기" }).click();
+    await expect(archiveSoftFail.page.getByTestId("mypage-notification-archive-error")).toBeVisible();
+    await archiveSoftFail.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "soft-fail-archive.png") });
+    await archiveSoftFail.context.close();
   });
 });

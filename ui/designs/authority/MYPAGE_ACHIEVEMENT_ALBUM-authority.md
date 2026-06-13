@@ -21,7 +21,10 @@ verdict: pass
 > - grade modal: `ui/designs/evidence/35c-mypage-achievement-album-ui/mobile-grade-modal.png`
 > - achievement album modal: `ui/designs/evidence/35c-mypage-achievement-album-ui/mobile-achievement-modal.png`
 > - tutorial modal: `ui/designs/evidence/35c-mypage-achievement-album-ui/mobile-tutorial-modal.png`
-> - notification archive modal: `ui/designs/evidence/35c-mypage-achievement-album-ui/mobile-notification-modal.png`
+> - notification archive modal: `ui/designs/evidence/35c-mypage-achievement-album-ui/mobile-notification-archive-modal.png`
+> - soft-fail progress: `ui/designs/evidence/35c-mypage-achievement-album-ui/soft-fail-progress.png`
+> - soft-fail gamification: `ui/designs/evidence/35c-mypage-achievement-album-ui/soft-fail-gamification.png`
+> - soft-fail archive: `ui/designs/evidence/35c-mypage-achievement-album-ui/soft-fail-archive.png`
 
 ## Scorecard
 

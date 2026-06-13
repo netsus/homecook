@@ -286,17 +286,13 @@ test.describe("34d MYPAGE growth profile assets @smoke-core", () => {
     });
 
     await mobile390.page.getByTestId("mypage-growth-featured-badges").getByRole("button").first().click();
-    await expect(mobile390.page.getByRole("dialog", { name: "배지 안내" })).toBeVisible();
-    for (const shape of ["plate", "shield", "ribbon", "bookmark", "pot", "leaf", "bowl"]) {
-      await expect(mobile390.page.getByTestId(`growth-badge-shape-${shape}`).first()).toBeVisible();
-    }
+    await expect(mobile390.page.getByRole("dialog", { name: "업적 앨범" })).toBeVisible();
+    await expect(mobile390.page.getByText("획득한 스탬프")).toBeVisible();
     await mobile390.page.screenshot({
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "badge-shapes.png"),
     });
-    await expect(mobile390.page.getByTestId("mypage-locked-badge-hint").first()).toContainText(
-      "활동을 한 번 더 기록해 보세요",
-    );
+    await expect(mobile390.page.getByText("아직 표시할 업적이 없어요")).toBeVisible();
     await mobile390.page.screenshot({
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "locked-badge-hints.png"),
