@@ -169,8 +169,7 @@ describe("MypageGrowthProfile", () => {
     expect(within(badgeRow).getByText("나만의 책")).toBeTruthy();
 
     await user.click(within(badgeRow).getByRole("button", { name: /첫 저장/ }));
-    expect(screen.getByRole("dialog", { name: "배지 안내" })).toBeTruthy();
-    expect(screen.getByText("장보기 완료를 한 번 더 기록해 보세요.")).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "업적 앨범" })).toBeTruthy();
   });
 
   it("keeps grade and badges when progress fails softly", () => {
@@ -244,8 +243,8 @@ describe("MypageGrowthProfile", () => {
     );
     expect(within(header).getByText("2/3")).toBeTruthy();
 
-    await user.click(within(header).getByRole("button", { name: "안내" }));
-    expect(screen.getByRole("dialog", { name: "배지 안내" })).toBeTruthy();
+    await user.click(within(header).getByRole("button", { name: "보기" }));
+    expect(screen.getByRole("dialog", { name: "업적 앨범" })).toBeTruthy();
   });
 });
 

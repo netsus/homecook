@@ -17,6 +17,34 @@ const SIZE_CLASS: Record<GrowthGradeMarkSize, string> = {
 };
 
 const GRADE_META = {
+  clay: {
+    motif: "clay-spoon",
+    tone: "from-[var(--growth-badge-bowl-bg)] to-[var(--surface)] text-[var(--growth-badge-bowl-fg)]",
+  },
+  wood: {
+    motif: "wood-spoon",
+    tone: "from-[var(--growth-badge-ribbon-bg)] to-[var(--surface)] text-[var(--growth-badge-ribbon-fg)]",
+  },
+  steel: {
+    motif: "steel-spoon",
+    tone: "from-[var(--growth-badge-shield-bg)] to-[var(--surface)] text-[var(--growth-badge-shield-fg)]",
+  },
+  silver: {
+    motif: "silver-spoon",
+    tone: "from-[var(--surface-subtle)] to-[var(--surface)] text-[var(--text-2)]",
+  },
+  gold: {
+    motif: "gold-spoon",
+    tone: "from-[var(--growth-badge-bookmark-bg)] to-[var(--surface)] text-[var(--growth-badge-bookmark-fg)]",
+  },
+  diamond: {
+    motif: "diamond-spoon",
+    tone: "from-[var(--growth-badge-plate-bg)] to-[var(--surface)] text-[var(--growth-badge-plate-fg)]",
+  },
+  titanium: {
+    motif: "titanium-spoon",
+    tone: "from-[var(--growth-badge-pot-bg)] to-[var(--surface)] text-[var(--growth-badge-pot-fg)]",
+  },
   sprout_homecook: {
     motif: "sprout-soil",
     tone: "from-[var(--growth-badge-leaf-bg)] to-[var(--surface)] text-[var(--growth-badge-leaf-fg)]",
@@ -54,10 +82,39 @@ function normalizeGradeKey(gradeKey: string | null | undefined): KnownGradeKey {
     return gradeKey as KnownGradeKey;
   }
 
-  return "sprout_homecook";
+  return "clay";
 }
 
 function GradeSymbol({ gradeKey }: { gradeKey: KnownGradeKey }) {
+  if (
+    gradeKey === "clay" ||
+    gradeKey === "wood" ||
+    gradeKey === "steel" ||
+    gradeKey === "silver" ||
+    gradeKey === "gold" ||
+    gradeKey === "diamond" ||
+    gradeKey === "titanium"
+  ) {
+    return (
+      <>
+        <path d="M18 10c2.2-2 9.8-2 12 0 2.4 2.2 2.2 10.6-.2 15.2L27 31v8h-6v-8l-2.8-5.8C15.8 20.6 15.6 12.2 18 10Z" />
+        <path
+          d="M20 33h8"
+          fill="none"
+          stroke="var(--surface)"
+          strokeLinecap="round"
+          strokeWidth="2.3"
+        />
+        {gradeKey === "diamond" || gradeKey === "titanium" ? (
+          <path d="M24 5 27 10h-6l3-5ZM12 22l5 2-4 4-1-6ZM36 22l-5 2 4 4 1-6Z" />
+        ) : null}
+        {gradeKey === "gold" || gradeKey === "titanium" ? (
+          <path d="M18 8c2-3 10-3 12 0" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.6" />
+        ) : null}
+      </>
+    );
+  }
+
   if (gradeKey === "homecook_runner") {
     return (
       <>

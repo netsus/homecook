@@ -1865,16 +1865,13 @@ export function MypageScreen({
               providerLabel={SOCIAL_PROVIDER_LABELS[profile?.social_provider ?? ""] ?? ""}
               progress={userProgress}
               progressState={progressState}
+              recordStats={{
+                cooking: lifetimeMealStats.cookDone,
+                planner: lifetimeMealStats.total,
+                shopping: lifetimeMealStats.shoppingDone,
+              }}
               variant="desktop"
             />
-            <div className="web-mypage-stats" aria-label="마이페이지 통계">
-              {mypageStats.map((item) => (
-                <div key={item.label}>
-                  <strong style={{ color: item.color }}>{item.value}</strong>
-                  <span>{item.label}</span>
-                </div>
-              ))}
-            </div>
           </WebCard>
           <GrowthArchiveSurface
             className="web-mypage-growth-archive"
