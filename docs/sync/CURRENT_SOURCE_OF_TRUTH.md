@@ -1,17 +1,34 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.9.md`
-- `docs/화면정의서-v1.5.16.md`
-- `docs/유저flow맵-v1.3.16.md`
-- `docs/db설계-v1.3.14.md`
-- `docs/api문서-v1.2.18.md`
+- `docs/요구사항기준선-v1.7.10.md`
+- `docs/화면정의서-v1.5.17.md`
+- `docs/유저flow맵-v1.3.17.md`
+- `docs/db설계-v1.3.15.md`
+- `docs/api문서-v1.2.19.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Growth Achievement Album Contract-Evolution `35a-growth-achievement-album-contract-evolution`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.10 | §2-16 성장/업적 앨범 정책 추가: 퀘스트를 튜토리얼 전용으로 축소, tutorial category, category별 achievement threshold, achievement no-XP, `Clay`→`Titanium` 등급명 |
+| 화면정의서 v1.5.17 | §19 MYPAGE 성장 UI를 profile header 내부 action button 구조로 갱신. 등급/업적/튜토리얼/알림 modal/bottom sheet, stamp grid, spoon grade asset 기준 추가 |
+| 유저플로우 v1.3.17 | ⑪-b에 튜토리얼 업적 플로우, 업적 앨범 확인 플로우, notification priority 확장, silent backfill 흐름 추가 |
+| DB v1.3.15 | `user_achievement_awards` additive table target 추가. `user_quest_progress`는 tutorial 호환 surface로 축소. notification type에 `achievement_unlocked` 추가. 테이블 수 32→33 |
+| API v1.2.19 | `GET /users/me/gamification`에 `achievement_album`, tutorial category summary, spoon grade image fields additive 확장. 신규 endpoint 없음. 엔드포인트 수 67 유지 |
+
+> 이 변경은 `35a-growth-achievement-album-contract-evolution` contract-evolution이다.
+> 퀘스트는 신규/초기 사용자 튜토리얼 surface로 축소하고, 장기 목표는 업적 앨범으로 전환한다.
+> 업적 달성은 XP를 추가 지급하지 않는다. XP source와 cap은 34b 성장 backend model 계약을 유지한다.
+> 기존 `quests` API field는 호환성을 위해 유지하되 standard quest expansion은 중단한다.
+> 기존 유저 backfill은 achievement state만 조용히 반영하고 historical toast/archive row를 만들지 않는다.
+> 구현 Stage 2/4는 이 contract-evolution이 main에 merge된 후 35b/35c로 분리해 시작한다.
 
 ## Growth Leveling Follow-up Contract-Evolution `34a-growth-model-contract-evolution`
 

@@ -1,0 +1,108 @@
+{
+  "id": "35a-growth-achievement-album-contract-evolution",
+  "title": "Growth achievement album contract evolution",
+  "summary": "퀘스트를 튜토리얼 전용으로 축소하고, 장기 목표를 카테고리별 업적 앨범/stamp 수집 구조로 전환하는 공식 계약을 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "MYPAGE 성장 경험을 Clay→Titanium 등급, 튜토리얼 업적 카테고리, 업적 앨범, 버튼 진입형 modal/sheet 구조로 재정의한다.",
+  "owners": {
+    "claude": "stage1 unavailable due token limit",
+    "codex": "stage1 docs fallback and contract lock",
+    "workers": []
+  },
+  "dependencies": [
+    "33a-user-progress-foundation",
+    "33b-mypage-progress-ui",
+    "33c-badges-quests-toasts-tutorial",
+    "34a-growth-model-contract-evolution",
+    "34b-growth-backend-model",
+    "34c-growth-notification-ui",
+    "34d-mypage-growth-profile-assets"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.10.md",
+      "docs/화면정의서-v1.5.17.md",
+      "docs/유저flow맵-v1.3.17.md",
+      "docs/db설계-v1.3.15.md",
+      "docs/api문서-v1.2.19.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/35a-growth-achievement-album-contract-evolution/README.md",
+      "docs/workpacks/35a-growth-achievement-album-contract-evolution/acceptance.md",
+      "docs/workpacks/35a-growth-achievement-album-contract-evolution/automation-spec.json",
+      "ui/designs/MYPAGE_ACHIEVEMENT_ALBUM.md",
+      "ui/designs/critiques/MYPAGE_ACHIEVEMENT_ALBUM-critique.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "docs": 4,
+      "backend": 0,
+      "frontend": 0
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 35a-growth-achievement-album-contract-evolution",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 35a-growth-achievement-album-contract-evolution",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "official-docs-versioned",
+      "tutorial-only-quest-policy",
+      "tutorial-achievement-category",
+      "achievement-thresholds-locked",
+      "spoon-grade-contract",
+      "achievement-awards-schema-target",
+      "mypage-modal-button-entry-contract",
+      "silent-backfill-contract"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Backend implementation",
+    "DB migration execution",
+    "Frontend implementation",
+    "Achievement definition admin editor",
+    "User-selectable featured badge API",
+    "Leaderboard",
+    "Competitive rank",
+    "Pressure streak",
+    "Season reset",
+    "XP decay",
+    "Loot/random rewards",
+    "Reward claim CTA"
+  ],
+  "open_questions": [
+    "35c에서 grade character 이미지를 header에 작게 쓸지, grade modal 안에서만 크게 보여줄지 최종 visual QA에서 결정한다."
+  ],
+  "notes": "Stage 1 docs prepared by Codex because Claude is rate-limited and the user asked Codex to proceed. 35a intentionally stops before runtime implementation."
+}

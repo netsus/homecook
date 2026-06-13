@@ -1694,6 +1694,21 @@
         "git diff --check"
       ],
       "notes": "Stage 1 docs branch opened by Codex per user instruction while Claude is token-limited. Scope: integrated MYPAGE growth profile header, archive separation, desktop blank-card regression fix, badge emblem polish, no-footwear/no-sprout runner grade visual, and artisan grade differentiation beyond a plain pot. Backend/API/schema changes are out of scope."
+    },
+    {
+      "id": "35a-growth-achievement-album-contract-evolution",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/35a-growth-achievement-album-contract-evolution",
+      "lifecycle": "planned",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 35a-growth-achievement-album-contract-evolution",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs branch opened by Codex per user instruction while Claude is token-limited. Scope: Clay-to-Titanium grade contract, tutorial-only quest policy, tutorial as achievement category, category-based achievement album, achievement award schema target, silent backfill, and MYPAGE modal button entry contract. Runtime implementation is out of scope."
     }
   ]
 }
