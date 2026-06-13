@@ -125,7 +125,16 @@ const MOCK_GAMIFICATION: UserGamificationData = {
     ],
     completed_recent: [],
   },
-  tutorial: { active_steps: [] },
+  tutorial: {
+    category_key: "tutorial",
+    completed_count: 0,
+    total_count: 7,
+    active_steps: [],
+  },
+  achievement_album: {
+    summary: { earned_count: 0, total_count: 0, completed_category_count: 0 },
+    categories: [],
+  },
   notifications: { unseen: [], priority_unseen: [], archive_preview: [] },
   last_updated_at: "2026-06-11T00:00:00.000Z",
 };

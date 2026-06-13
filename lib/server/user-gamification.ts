@@ -8,6 +8,7 @@ import type {
   UserGamificationArchiveData,
   UserGamificationBadgeCategory,
   UserGamificationData,
+  UserGamificationAchievementStatus,
   UserGamificationNotificationDeliveryChannel,
   UserGamificationNotificationData,
   UserGamificationNotificationType,
@@ -29,6 +30,18 @@ interface QueryError {
 }
 
 type MetricKey = keyof UserProgressEventCounts | "current_level";
+type AchievementMetricKey =
+  | "recipe_saved"
+  | "recipe_registered"
+  | "planner_registered"
+  | "shopping_list_created"
+  | "shopping_completed"
+  | "cooking_completed"
+  | "pantry_distinct_ingredients"
+  | "leftover_eaten_manual"
+  | "custom_book_created"
+  | "tutorial_complete";
+type QuestMetricKey = Exclude<AchievementMetricKey, "tutorial_complete">;
 
 interface UserBadgeDefinition {
   badge_key: string;
@@ -49,8 +62,26 @@ interface UserQuestDefinition {
   quest_type: UserGamificationQuestType;
   title: string;
   description: string;
-  metric: MetricKey;
+  metric: QuestMetricKey;
   target: number;
+}
+
+interface UserAchievementCategoryDefinition {
+  category_key: UserGamificationBadgeCategory;
+  label: string;
+}
+
+interface UserAchievementDefinition {
+  achievement_key: string;
+  category_key: UserGamificationBadgeCategory;
+  track_key: string | null;
+  title: string;
+  description: string;
+  metric: AchievementMetricKey;
+  target: number;
+  badge_key: string;
+  shape_key: UserGamificationBadgeDataShapeKey;
+  locked_hint: string;
 }
 
 export interface UserBadgeAwardRow {
@@ -72,6 +103,33 @@ export interface UserQuestProgressRow {
   updated_at: string;
 }
 
+export interface UserAchievementAwardRow {
+  achievement_key: string;
+  category_key: UserGamificationBadgeCategory;
+  track_key: string | null;
+  target_value: number;
+  achieved_value: number;
+  badge_key: string | null;
+  earned_at: string;
+  seen_at: string | null;
+}
+
+export interface UserGrowthActivityEventRow {
+  id: string;
+  activity_type: string;
+  category: string;
+  source_id: string;
+  source_meta_json: unknown;
+  occurred_at: string;
+}
+
+export interface UserAchievementCounts {
+  pantry_distinct_ingredients: number;
+  leftover_eaten_manual: number;
+  recipe_registered: number;
+  shopping_list_created: number;
+}
+
 export interface UserProgressNotificationRow {
   id: string;
   notification_type: UserGamificationNotificationType;
@@ -88,6 +146,20 @@ interface UserBadgeAwardInsert {
   user_id: string;
   badge_key: string;
   source_event_id: string | null;
+  idempotency_key: string;
+  earned_at: string;
+}
+
+interface UserAchievementAwardInsert {
+  user_id: string;
+  achievement_key: string;
+  category_key: UserGamificationBadgeCategory;
+  track_key: string | null;
+  target_value: number;
+  achieved_value: number;
+  badge_key: string;
+  source_event_id: string | null;
+  source_activity_id: string | null;
   idempotency_key: string;
   earned_at: string;
 }
@@ -149,9 +221,29 @@ interface BadgeAwardsSelectQuery {
   then: ArrayResult<UserBadgeAwardRow>["then"];
 }
 
+interface AchievementAwardsSelectQuery {
+  eq(column: string, value: string): AchievementAwardsSelectQuery;
+  then: ArrayResult<UserAchievementAwardRow>["then"];
+}
+
 interface QuestProgressSelectQuery {
   eq(column: string, value: string): QuestProgressSelectQuery;
   then: ArrayResult<UserQuestProgressRow>["then"];
+}
+
+interface GrowthActivitySelectQuery {
+  eq(column: string, value: string): GrowthActivitySelectQuery;
+  then: ArrayResult<UserGrowthActivityEventRow>["then"];
+}
+
+interface CountFilterQuery {
+  eq(column: string, value: string | boolean): CountFilterQuery;
+  in(column: string, values: string[]): CountFilterQuery;
+  then: PromiseLike<{
+    data: null;
+    error: QueryError | null;
+    count: number | null;
+  }>["then"];
 }
 
 interface NotificationSelectQuery {
@@ -176,12 +268,25 @@ interface BadgeAwardsTable {
   select(columns: string): BadgeAwardsSelectQuery;
 }
 
+interface AchievementAwardsTable {
+  insert(values: UserAchievementAwardInsert): InsertQuery<UserAchievementAwardRow>;
+  select(columns: string): AchievementAwardsSelectQuery;
+}
+
 interface QuestProgressTable {
   select(columns: string): QuestProgressSelectQuery;
   upsert(
     values: UserQuestProgressUpsert,
     options: { onConflict: "user_id,quest_key" },
   ): UpsertQuery<UserQuestProgressRow>;
+}
+
+interface GrowthActivityTable {
+  select(columns: string): GrowthActivitySelectQuery;
+}
+
+interface CountTable {
+  select(columns: string, options: { count: "exact"; head: true }): CountFilterQuery;
 }
 
 interface NotificationsTable {
@@ -192,12 +297,17 @@ interface NotificationsTable {
 
 export interface UserGamificationDbClient {
   from(table: "user_badge_awards"): BadgeAwardsTable;
+  from(table: "user_achievement_awards"): AchievementAwardsTable;
   from(table: "user_quest_progress"): QuestProgressTable;
   from(table: "user_progress_notifications"): NotificationsTable;
+  from(table: "user_growth_activity_events"): GrowthActivityTable;
+  from(table: "shopping_lists"): CountTable;
+  from(table: "recipes"): CountTable;
 }
 
 export const USER_NOTIFICATION_PRIORITIES: Record<UserGamificationNotificationType, number> = {
   level_up: 1,
+  achievement_unlocked: 2,
   badge_unlocked: 2,
   quest_completed: 3,
   xp_awarded: 4,
@@ -317,13 +427,237 @@ export const USER_BADGE_DEFINITIONS: UserBadgeDefinition[] = [
   },
 ];
 
+export const USER_ACHIEVEMENT_CATEGORIES: UserAchievementCategoryDefinition[] = [
+  { category_key: "tutorial", label: "튜토리얼" },
+  { category_key: "recipe", label: "레시피" },
+  { category_key: "planner", label: "플래너" },
+  { category_key: "shopping", label: "장보기" },
+  { category_key: "cooking", label: "요리" },
+  { category_key: "pantry", label: "팬트리" },
+  { category_key: "leftovers", label: "남은요리" },
+  { category_key: "recipebook", label: "레시피북" },
+];
+
+const TUTORIAL_BASE_ACHIEVEMENT_KEYS = [
+  "tutorial_recipe_saved",
+  "tutorial_planner_registered",
+  "tutorial_shopping_list_create",
+  "tutorial_shopping_list_complete",
+  "tutorial_cooking_complete",
+  "tutorial_recipebook_created",
+] as const;
+
+const DEFAULT_ACHIEVEMENT_COUNTS: UserAchievementCounts = {
+  pantry_distinct_ingredients: 0,
+  leftover_eaten_manual: 0,
+  recipe_registered: 0,
+  shopping_list_created: 0,
+};
+
+function createThresholdAchievements(input: {
+  categoryKey: UserGamificationBadgeCategory;
+  trackKey: string;
+  metric: AchievementMetricKey;
+  titlePrefix: string;
+  description: string;
+  thresholds: number[];
+  shapeKey: UserGamificationBadgeDataShapeKey;
+  lockedHint: string;
+}): UserAchievementDefinition[] {
+  return input.thresholds.map((target) => ({
+    achievement_key: `${input.trackKey}_${target}`,
+    category_key: input.categoryKey,
+    track_key: input.trackKey,
+    title: `${input.titlePrefix} ${target}`,
+    description: input.description,
+    metric: input.metric,
+    target,
+    badge_key: `${input.trackKey}_${target}`,
+    shape_key: input.shapeKey,
+    locked_hint: input.lockedHint,
+  }));
+}
+
+export const USER_ACHIEVEMENT_DEFINITIONS: UserAchievementDefinition[] = [
+  {
+    achievement_key: "tutorial_recipe_saved",
+    category_key: "tutorial",
+    track_key: "tutorial",
+    title: "첫 레시피 저장",
+    description: "마음에 드는 레시피를 처음 저장했어요.",
+    metric: "recipe_saved",
+    target: 1,
+    badge_key: "tutorial_recipe_saved",
+    shape_key: "bookmark",
+    locked_hint: "마음에 드는 레시피를 저장해 보세요.",
+  },
+  {
+    achievement_key: "tutorial_planner_registered",
+    category_key: "tutorial",
+    track_key: "tutorial",
+    title: "첫 식단 등록",
+    description: "플래너에 첫 끼니를 등록했어요.",
+    metric: "planner_registered",
+    target: 1,
+    badge_key: "tutorial_planner_registered",
+    shape_key: "shield",
+    locked_hint: "플래너에 끼니를 하나 등록해 보세요.",
+  },
+  {
+    achievement_key: "tutorial_shopping_list_create",
+    category_key: "tutorial",
+    track_key: "tutorial",
+    title: "첫 장보기 목록 만들기",
+    description: "처음으로 장보기 목록을 만들었어요.",
+    metric: "shopping_list_created",
+    target: 1,
+    badge_key: "tutorial_shopping_list_create",
+    shape_key: "leaf",
+    locked_hint: "레시피 1개 이상으로 장보기 목록을 만들어 보세요.",
+  },
+  {
+    achievement_key: "tutorial_shopping_list_complete",
+    category_key: "tutorial",
+    track_key: "tutorial",
+    title: "첫 장보기 완료",
+    description: "첫 장보기 목록을 끝까지 완료했어요.",
+    metric: "shopping_completed",
+    target: 1,
+    badge_key: "tutorial_shopping_list_complete",
+    shape_key: "leaf",
+    locked_hint: "장보기 목록을 완료해 보세요.",
+  },
+  {
+    achievement_key: "tutorial_cooking_complete",
+    category_key: "tutorial",
+    track_key: "tutorial",
+    title: "첫 집밥 완료",
+    description: "첫 요리 완료를 기록했어요.",
+    metric: "cooking_completed",
+    target: 1,
+    badge_key: "tutorial_cooking_complete",
+    shape_key: "pot",
+    locked_hint: "요리 완료를 기록해 보세요.",
+  },
+  {
+    achievement_key: "tutorial_recipebook_created",
+    category_key: "tutorial",
+    track_key: "tutorial",
+    title: "첫 레시피북 생성",
+    description: "나만의 레시피북을 처음 만들었어요.",
+    metric: "custom_book_created",
+    target: 1,
+    badge_key: "tutorial_recipebook_created",
+    shape_key: "plate",
+    locked_hint: "나만의 레시피북을 만들어 보세요.",
+  },
+  {
+    achievement_key: "tutorial_complete",
+    category_key: "tutorial",
+    track_key: "tutorial_complete",
+    title: "튜토리얼 완료",
+    description: "집밥의 기본 흐름을 모두 경험했어요.",
+    metric: "tutorial_complete",
+    target: TUTORIAL_BASE_ACHIEVEMENT_KEYS.length,
+    badge_key: "tutorial_complete",
+    shape_key: "ribbon",
+    locked_hint: "튜토리얼 업적 6개를 모두 채워 보세요.",
+  },
+  ...createThresholdAchievements({
+    categoryKey: "recipe",
+    trackKey: "recipe_saved",
+    metric: "recipe_saved",
+    titlePrefix: "레시피 보관",
+    description: "저장한 레시피와 내가 등록한 레시피를 꾸준히 모았어요.",
+    thresholds: [1, 5, 20, 50, 100, 300, 1000],
+    shapeKey: "bookmark",
+    lockedHint: "저장하거나 직접 등록한 레시피 수를 늘려 보세요.",
+  }),
+  ...createThresholdAchievements({
+    categoryKey: "recipe",
+    trackKey: "recipe_registered",
+    metric: "recipe_registered",
+    titlePrefix: "레시피 등록",
+    description: "직접 만들거나 유튜브로 가져온 레시피를 기록했어요.",
+    thresholds: [1, 3, 10, 30, 100, 300, 600, 1000],
+    shapeKey: "ribbon",
+    lockedHint: "직접 등록 또는 유튜브 등록으로 레시피를 추가해 보세요.",
+  }),
+  ...createThresholdAchievements({
+    categoryKey: "planner",
+    trackKey: "planner_registered",
+    metric: "planner_registered",
+    titlePrefix: "플래너 등록",
+    description: "끼니를 플래너에 꾸준히 등록했어요.",
+    thresholds: [1, 3, 10, 30, 100, 300, 1000, 3000],
+    shapeKey: "shield",
+    lockedHint: "플래너에 끼니를 등록해 보세요.",
+  }),
+  ...createThresholdAchievements({
+    categoryKey: "shopping",
+    trackKey: "shopping_completed",
+    metric: "shopping_completed",
+    titlePrefix: "장보기 완료",
+    description: "장보기 목록을 끝까지 완료했어요.",
+    thresholds: [1, 3, 10, 30, 100, 300, 700, 1000],
+    shapeKey: "leaf",
+    lockedHint: "장보기 목록을 완료해 보세요.",
+  }),
+  ...createThresholdAchievements({
+    categoryKey: "cooking",
+    trackKey: "cooking_completed",
+    metric: "cooking_completed",
+    titlePrefix: "요리 완료",
+    description: "집밥 완료 기록을 꾸준히 남겼어요.",
+    thresholds: [1, 3, 10, 30, 100, 300, 1000, 3000],
+    shapeKey: "pot",
+    lockedHint: "요리 완료를 기록해 보세요.",
+  }),
+  ...createThresholdAchievements({
+    categoryKey: "pantry",
+    trackKey: "pantry_distinct",
+    metric: "pantry_distinct_ingredients",
+    titlePrefix: "팬트리 재료",
+    description: "팬트리에 서로 다른 재료를 채웠어요.",
+    thresholds: [1, 10, 30, 50, 100, 200, 500],
+    shapeKey: "plate",
+    lockedHint: "팬트리에 새로운 재료를 추가해 보세요.",
+  }),
+  ...createThresholdAchievements({
+    categoryKey: "leftovers",
+    trackKey: "leftover_eaten",
+    metric: "leftover_eaten_manual",
+    titlePrefix: "남은요리 정리",
+    description: "남은요리를 직접 다먹음 처리했어요.",
+    thresholds: [1, 3, 10, 30, 100, 300, 1000],
+    shapeKey: "bowl",
+    lockedHint: "남은요리를 직접 다먹음 처리해 보세요.",
+  }),
+];
+
 export const USER_QUEST_DEFINITIONS: UserQuestDefinition[] = [
   {
     quest_key: "first_recipe_saved",
     quest_type: "tutorial",
     title: "마음에 드는 레시피 저장하기",
     description: "다시 만들고 싶은 레시피를 하나 저장해보세요.",
-    metric: "recipe_saved_distinct_ever",
+    metric: "recipe_saved",
+    target: 1,
+  },
+  {
+    quest_key: "first_planner_registered",
+    quest_type: "tutorial",
+    title: "플래너에 끼니 등록하기",
+    description: "오늘 먹을 끼니를 플래너에 하나 등록해보세요.",
+    metric: "planner_registered",
+    target: 1,
+  },
+  {
+    quest_key: "first_shopping_list_created",
+    quest_type: "tutorial",
+    title: "첫 장보기 목록 만들기",
+    description: "여러 끼니를 한번에 장보기할 수 있어요.",
+    metric: "shopping_list_created",
     target: 1,
   },
   {
@@ -343,28 +677,12 @@ export const USER_QUEST_DEFINITIONS: UserQuestDefinition[] = [
     target: 1,
   },
   {
-    quest_key: "save_five_recipes",
-    quest_type: "standard",
-    title: "이번 주 후보 모으기",
-    description: "저장한 레시피 5개로 다음 식사를 준비해요.",
-    metric: "recipe_saved_distinct_ever",
-    target: 5,
-  },
-  {
-    quest_key: "cook_three_meals",
-    quest_type: "standard",
-    title: "집밥 루틴 만들기",
-    description: "요리 완료를 3번 기록해 루틴을 시작해요.",
-    metric: "cooking_completed",
-    target: 3,
-  },
-  {
-    quest_key: "complete_three_shopping_lists",
-    quest_type: "standard",
-    title: "장보기 리듬 잡기",
-    description: "장보기 완료 3번으로 준비 흐름을 만들어보세요.",
-    metric: "shopping_completed",
-    target: 3,
+    quest_key: "first_custom_book_created",
+    quest_type: "tutorial",
+    title: "나만의 레시피북 생성하기",
+    description: "직접 쓸 레시피북을 하나 만들어보세요.",
+    metric: "custom_book_created",
+    target: 1,
   },
 ];
 
@@ -400,22 +718,42 @@ export async function readUserGamification(
       };
     }
 
+    const [activityRowsResult, achievementCountsResult] = await Promise.all([
+      readGrowthActivityRows(dbClient, userId),
+      readAchievementCounts(dbClient, userId),
+    ]);
+
+    const contextError = activityRowsResult.error ?? achievementCountsResult.error;
+
+    if (contextError) {
+      return { data: null, error: contextError };
+    }
+
+    const activityRows = activityRowsResult.data ?? [];
+    const achievementCounts = mergeAchievementCounts(
+      achievementCountsResult.data ?? DEFAULT_ACHIEVEMENT_COUNTS,
+      deriveAchievementCountsFromActivityRows(activityRows),
+    );
+
     const reconcileResult = await reconcileUserGamification(dbClient, {
       userId,
       progress: progressResult.data,
+      achievementCounts,
+      notificationMode: "silent",
     });
 
     if (reconcileResult.error) {
       return { data: null, error: reconcileResult.error };
     }
 
-    const [badgesResult, questsResult, notificationsResult] = await Promise.all([
+    const [badgesResult, questsResult, achievementsResult, notificationsResult] = await Promise.all([
       readBadgeAwardRows(dbClient, userId),
       readQuestProgressRows(dbClient, userId),
+      readAchievementAwardRows(dbClient, userId),
       readNotificationRows(dbClient, userId),
     ]);
 
-    const error = badgesResult.error ?? questsResult.error ?? notificationsResult.error;
+    const error = badgesResult.error ?? questsResult.error ?? achievementsResult.error ?? notificationsResult.error;
 
     if (error) {
       return { data: null, error };
@@ -426,6 +764,9 @@ export async function readUserGamification(
         progress: progressResult.data,
         badgeRows: badgesResult.data ?? [],
         questRows: questsResult.data ?? [],
+        achievementRows: achievementsResult.data ?? [],
+        activityRows,
+        achievementCounts,
         notificationRows: notificationsResult.data ?? [],
       }),
       error: null,
@@ -491,10 +832,56 @@ export async function projectUserGamificationAfterProgressEvent(
       userId: input.userId,
       progress: input.progress,
       sourceEventId: input.progressEventId,
+      notificationMode: "live",
       now,
     });
   } catch (error) {
     return { error: toQueryError(error, "unknown gamification projection failure") };
+  }
+}
+
+export async function projectUserGamificationAfterActivityEvent(
+  dbClient: UserGamificationDbClient & UserProgressDbClient,
+  input: {
+    userId: string;
+    activityId: string;
+    occurredAt?: string;
+  },
+): Promise<{ error: QueryError | null }> {
+  try {
+    const progressResult = await readUserProgress(dbClient, input.userId);
+
+    if (progressResult.error || !progressResult.data) {
+      return {
+        error: progressResult.error ?? { message: "missing user progress result" },
+      };
+    }
+
+    const [activityRowsResult, achievementCountsResult] = await Promise.all([
+      readGrowthActivityRows(dbClient, input.userId),
+      readAchievementCounts(dbClient, input.userId),
+    ]);
+    const error = activityRowsResult.error ?? achievementCountsResult.error;
+
+    if (error) {
+      return { error };
+    }
+
+    const achievementCounts = mergeAchievementCounts(
+      achievementCountsResult.data ?? DEFAULT_ACHIEVEMENT_COUNTS,
+      deriveAchievementCountsFromActivityRows(activityRowsResult.data ?? []),
+    );
+
+    return reconcileUserGamification(dbClient, {
+      userId: input.userId,
+      progress: progressResult.data,
+      sourceActivityId: input.activityId,
+      achievementCounts,
+      notificationMode: "live",
+      now: input.occurredAt ?? new Date().toISOString(),
+    });
+  } catch (error) {
+    return { error: toQueryError(error, "unknown gamification activity projection failure") };
   }
 }
 
@@ -562,13 +949,22 @@ export async function dismissUserGamificationTutorialQuest(
     }
 
     const now = new Date().toISOString();
-    const progressCurrent = getMetricValue(progressResult.data, definition.metric);
-    const questRowsResult = await readQuestProgressRows(dbClient, userId);
+    const [activityRowsResult, achievementCountsResult, questRowsResult] = await Promise.all([
+      readGrowthActivityRows(dbClient, userId),
+      readAchievementCounts(dbClient, userId),
+      readQuestProgressRows(dbClient, userId),
+    ]);
+    const contextError = activityRowsResult.error ?? achievementCountsResult.error ?? questRowsResult.error;
 
-    if (questRowsResult.error) {
-      return { data: null, error: questRowsResult.error };
+    if (contextError) {
+      return { data: null, error: contextError };
     }
 
+    const achievementCounts = mergeAchievementCounts(
+      achievementCountsResult.data ?? DEFAULT_ACHIEVEMENT_COUNTS,
+      deriveAchievementCountsFromActivityRows(activityRowsResult.data ?? []),
+    );
+    const progressCurrent = getQuestMetricValue(progressResult.data, achievementCounts, definition.metric);
     const existing = (questRowsResult.data ?? []).find((row) => row.quest_key === questKey);
     const upsertResult = await dbClient
       .from("user_quest_progress")
@@ -613,13 +1009,23 @@ export function buildUserGamificationData({
   progress,
   badgeRows,
   questRows,
+  achievementRows = [],
+  activityRows = [],
+  achievementCounts = DEFAULT_ACHIEVEMENT_COUNTS,
   notificationRows,
 }: {
   progress: UserProgressData;
   badgeRows: UserBadgeAwardRow[];
   questRows: UserQuestProgressRow[];
+  achievementRows?: UserAchievementAwardRow[];
+  activityRows?: UserGrowthActivityEventRow[];
+  achievementCounts?: UserAchievementCounts;
   notificationRows: UserProgressNotificationRow[];
 }): UserGamificationData {
+  const mergedAchievementCounts = mergeAchievementCounts(
+    achievementCounts,
+    deriveAchievementCountsFromActivityRows(activityRows),
+  );
   const badgeRowsByKey = new Map(badgeRows.map((row) => [row.badge_key, row]));
   const earned = USER_BADGE_DEFINITIONS
     .map((definition) => {
@@ -633,19 +1039,41 @@ export function buildUserGamificationData({
     .map((definition) => toLockedBadgeData(definition, progress));
   const questRowsByKey = new Map(questRows.map((row) => [row.quest_key, row]));
   const questData = USER_QUEST_DEFINITIONS.map((definition) =>
-    toQuestData(definition, questRowsByKey.get(definition.quest_key), progress),
+    toQuestData(definition, questRowsByKey.get(definition.quest_key), progress, mergedAchievementCounts),
   );
   const activeQuests = questData
-    .filter((quest) => quest.quest_type === "standard" && quest.status === "active")
+    .filter((quest) => quest.quest_type === "tutorial" && quest.status === "active")
     .sort(compareActiveQuests)
-    .slice(0, 2);
+    .slice(0, 3);
   const completedRecent = questData
     .filter((quest) => quest.quest_type === "standard" && quest.status === "completed")
     .sort(compareCompletedQuests)
     .slice(0, 3);
-  const activeTutorialSteps = questData
-    .filter((quest) => quest.quest_type === "tutorial" && quest.status === "active")
-    .slice(0, 3);
+  const achievementAlbum = buildAchievementAlbumData({
+    progress,
+    achievementRows,
+    achievementCounts: mergedAchievementCounts,
+  });
+  const tutorialCategory = achievementAlbum.categories.find(
+    (category) => category.category_key === "tutorial",
+  );
+  const dismissedAchievementKeys = new Set(
+    questRows
+      .filter((row) => row.status === "dismissed")
+      .map((row) => getTutorialAchievementKeyForQuest(row.quest_key))
+      .filter((key): key is string => Boolean(key)),
+  );
+  const activeTutorialSteps = (tutorialCategory?.milestones ?? [])
+    .filter((milestone) =>
+      milestone.status === "active" && !dismissedAchievementKeys.has(milestone.achievement_key)
+    )
+    .map((milestone) => ({
+      achievement_key: milestone.achievement_key,
+      title: milestone.title,
+      current: milestone.current,
+      target: milestone.target,
+      status: milestone.status,
+    }));
   const notificationData = notificationRows
     .map(toNotificationData)
     .filter((notification) => notification.delivery_channel !== "silent");
@@ -675,14 +1103,100 @@ export function buildUserGamificationData({
       completed_recent: completedRecent,
     },
     tutorial: {
+      category_key: "tutorial",
+      completed_count: tutorialCategory?.earned_count ?? 0,
+      total_count: tutorialCategory?.total_count ?? 0,
       active_steps: activeTutorialSteps,
     },
+    achievement_album: achievementAlbum,
     notifications: {
       unseen,
       priority_unseen: priorityUnseen,
       archive_preview: archivePreview,
     },
     last_updated_at: progress.last_updated_at,
+  };
+}
+
+function buildAchievementAlbumData({
+  progress,
+  achievementRows,
+  achievementCounts,
+}: {
+  progress: UserProgressData;
+  achievementRows: UserAchievementAwardRow[];
+  achievementCounts: UserAchievementCounts;
+}) {
+  const rowsByKey = new Map(achievementRows.map((row) => [row.achievement_key, row]));
+  const activatedTracks = new Set<string>();
+  const milestones = USER_ACHIEVEMENT_DEFINITIONS.map((definition) => {
+    const row = rowsByKey.get(definition.achievement_key);
+    const current = getAchievementMetricValue(progress, achievementCounts, rowsByKey, definition);
+    const trackKey = definition.track_key ?? definition.category_key;
+    const activationKey = `${definition.category_key}:${trackKey}`;
+    let status: UserGamificationAchievementStatus = "locked";
+
+    if (row) {
+      status = "earned";
+    } else if (
+      definition.achievement_key !== "tutorial_complete" &&
+      !activatedTracks.has(activationKey)
+    ) {
+      status = "active";
+      activatedTracks.add(activationKey);
+    } else if (definition.achievement_key === "tutorial_complete" && current >= definition.target) {
+      status = "active";
+    }
+
+    if (row) {
+      activatedTracks.add(activationKey);
+    }
+
+    return {
+      achievement_key: definition.achievement_key,
+      track_key: definition.track_key,
+      title: definition.title,
+      description: definition.description,
+      current,
+      target: definition.target,
+      status,
+      earned_at: row?.earned_at ?? null,
+      locked_hint: status === "earned" ? null : definition.locked_hint,
+      badge: {
+        badge_key: definition.badge_key,
+        shape_key: definition.shape_key,
+        category: definition.category_key,
+      },
+    };
+  });
+
+  const categories = USER_ACHIEVEMENT_CATEGORIES.map((category) => {
+    const categoryMilestones = milestones.filter(
+      (milestone) => milestone.badge.category === category.category_key,
+    );
+    const earnedCount = categoryMilestones.filter((milestone) => milestone.status === "earned").length;
+
+    return {
+      category_key: category.category_key,
+      label: category.label,
+      earned_count: earnedCount,
+      total_count: categoryMilestones.length,
+      milestones: categoryMilestones,
+    };
+  });
+  const earnedCount = categories.reduce((sum, category) => sum + category.earned_count, 0);
+  const totalCount = categories.reduce((sum, category) => sum + category.total_count, 0);
+  const completedCategoryCount = categories.filter(
+    (category) => category.total_count > 0 && category.earned_count === category.total_count,
+  ).length;
+
+  return {
+    summary: {
+      earned_count: earnedCount,
+      total_count: totalCount,
+      completed_category_count: completedCategoryCount,
+    },
+    categories,
   };
 }
 
@@ -739,17 +1253,87 @@ async function reconcileUserGamification(
     userId: string;
     progress: UserProgressData;
     sourceEventId?: string;
+    sourceActivityId?: string;
+    achievementCounts?: UserAchievementCounts;
+    notificationMode?: "live" | "silent";
     now?: string;
   },
 ): Promise<{ error: QueryError | null }> {
   const now = input.now ?? new Date().toISOString();
-  const questRowsResult = await readQuestProgressRows(dbClient, input.userId);
+  const notificationMode = input.notificationMode ?? "live";
+  const achievementCounts = input.achievementCounts ?? DEFAULT_ACHIEVEMENT_COUNTS;
+  const [achievementRowsResult, questRowsResult] = await Promise.all([
+    readAchievementAwardRows(dbClient, input.userId),
+    readQuestProgressRows(dbClient, input.userId),
+  ]);
 
-  if (questRowsResult.error) {
-    return { error: questRowsResult.error };
+  const readError = achievementRowsResult.error ?? questRowsResult.error;
+
+  if (readError) {
+    return { error: readError };
   }
 
+  const existingAchievementRows = new Map(
+    (achievementRowsResult.data ?? []).map((row) => [row.achievement_key, row]),
+  );
   const existingQuestRows = new Map((questRowsResult.data ?? []).map((row) => [row.quest_key, row]));
+
+  for (const definition of USER_ACHIEVEMENT_DEFINITIONS) {
+    const progressCurrent = getAchievementMetricValue(
+      input.progress,
+      achievementCounts,
+      existingAchievementRows,
+      definition,
+    );
+
+    if (progressCurrent < definition.target) {
+      continue;
+    }
+
+    const achievementResult = await insertAchievementAward(dbClient, {
+      userId: input.userId,
+      definition,
+      achievedValue: progressCurrent,
+      sourceEventId: input.sourceEventId ?? null,
+      sourceActivityId: input.sourceActivityId ?? null,
+      now,
+    });
+
+    if (achievementResult.error) {
+      return { error: achievementResult.error };
+    }
+
+    if (achievementResult.row) {
+      existingAchievementRows.set(definition.achievement_key, achievementResult.row);
+    }
+
+    if (notificationMode === "live" && achievementResult.created) {
+      const notificationResult = await insertProgressNotification(dbClient, {
+        userId: input.userId,
+        notificationKey: `achievement:${definition.achievement_key}:${input.userId}`,
+        notificationType: "achievement_unlocked",
+        sourceEventId: input.sourceEventId ?? null,
+        payload: {
+          achievement_key: definition.achievement_key,
+          category_key: definition.category_key,
+          track_key: definition.track_key,
+          title: definition.title,
+          description: definition.description,
+          badge_key: definition.badge_key,
+        },
+        groupKey: input.sourceEventId
+          ? `progress-event:${input.sourceEventId}`
+          : input.sourceActivityId
+            ? `growth-activity:${input.sourceActivityId}`
+            : null,
+        now,
+      });
+
+      if (notificationResult.error) {
+        return { error: notificationResult.error };
+      }
+    }
+  }
 
   for (const definition of USER_BADGE_DEFINITIONS) {
     const progressCurrent = getMetricValue(input.progress, definition.metric);
@@ -769,7 +1353,7 @@ async function reconcileUserGamification(
       return { error: badgeResult.error };
     }
 
-    if (badgeResult.created) {
+    if (notificationMode === "live" && badgeResult.created) {
       const notificationResult = await insertProgressNotification(dbClient, {
         userId: input.userId,
         notificationKey: `badge:${definition.badge_key}:${input.userId}`,
@@ -792,7 +1376,7 @@ async function reconcileUserGamification(
 
   for (const definition of USER_QUEST_DEFINITIONS) {
     const existing = existingQuestRows.get(definition.quest_key);
-    const progressCurrent = getMetricValue(input.progress, definition.metric);
+    const progressCurrent = getQuestMetricValue(input.progress, achievementCounts, definition.metric);
     const completed = progressCurrent >= definition.target;
     const dismissedAt = existing?.dismissed_at ?? null;
     const status: UserGamificationQuestStatus = dismissedAt
@@ -827,7 +1411,7 @@ async function reconcileUserGamification(
       };
     }
 
-    if (status === "completed" && existing?.status !== "completed") {
+    if (notificationMode === "live" && status === "completed" && existing?.status !== "completed") {
       const notificationResult = await insertProgressNotification(dbClient, {
         userId: input.userId,
         notificationKey: `quest:${definition.quest_key}:${input.userId}`,
@@ -875,6 +1459,61 @@ async function readQuestProgressRows(
   return result;
 }
 
+async function readAchievementAwardRows(
+  dbClient: UserGamificationDbClient,
+  userId: string,
+): Promise<{ data: UserAchievementAwardRow[] | null; error: QueryError | null }> {
+  const result = await dbClient
+    .from("user_achievement_awards")
+    .select("achievement_key, category_key, track_key, target_value, achieved_value, badge_key, earned_at, seen_at")
+    .eq("user_id", userId);
+
+  return result;
+}
+
+async function readGrowthActivityRows(
+  dbClient: UserGamificationDbClient,
+  userId: string,
+): Promise<{ data: UserGrowthActivityEventRow[] | null; error: QueryError | null }> {
+  const result = await dbClient
+    .from("user_growth_activity_events")
+    .select("id, activity_type, category, source_id, source_meta_json, occurred_at")
+    .eq("user_id", userId);
+
+  return result;
+}
+
+async function readAchievementCounts(
+  dbClient: UserGamificationDbClient,
+  userId: string,
+): Promise<{ data: UserAchievementCounts | null; error: QueryError | null }> {
+  const [shoppingListResult, recipeResult] = await Promise.all([
+    dbClient
+      .from("shopping_lists")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+    dbClient
+      .from("recipes")
+      .select("id", { count: "exact", head: true })
+      .eq("created_by", userId)
+      .in("source_type", ["manual", "youtube"]),
+  ]);
+
+  const error = shoppingListResult.error ?? recipeResult.error;
+  if (error) {
+    return { data: null, error };
+  }
+
+  return {
+    data: {
+      ...DEFAULT_ACHIEVEMENT_COUNTS,
+      shopping_list_created: shoppingListResult.count ?? 0,
+      recipe_registered: recipeResult.count ?? 0,
+    },
+    error: null,
+  };
+}
+
 async function readNotificationRows(
   dbClient: UserGamificationDbClient,
   userId: string,
@@ -910,6 +1549,50 @@ async function readNotificationRows(
   }
 
   return { data: [...rowsById.values()], error: null };
+}
+
+async function insertAchievementAward(
+  dbClient: UserGamificationDbClient,
+  input: {
+    userId: string;
+    definition: UserAchievementDefinition;
+    achievedValue: number;
+    sourceEventId: string | null;
+    sourceActivityId: string | null;
+    now: string;
+  },
+): Promise<{ created: boolean; row: UserAchievementAwardRow | null; error: QueryError | null }> {
+  const result = await dbClient
+    .from("user_achievement_awards")
+    .insert({
+      user_id: input.userId,
+      achievement_key: input.definition.achievement_key,
+      category_key: input.definition.category_key,
+      track_key: input.definition.track_key,
+      target_value: input.definition.target,
+      achieved_value: input.achievedValue,
+      badge_key: input.definition.badge_key,
+      source_event_id: input.sourceEventId,
+      source_activity_id: input.sourceActivityId,
+      idempotency_key: `achievement:${input.definition.achievement_key}:${input.userId}`,
+      earned_at: input.now,
+    })
+    .select("achievement_key, category_key, track_key, target_value, achieved_value, badge_key, earned_at, seen_at")
+    .maybeSingle();
+
+  if (isDuplicateInsert(result.error)) {
+    return { created: false, row: null, error: null };
+  }
+
+  if (result.error || !result.data) {
+    return {
+      created: false,
+      row: null,
+      error: result.error ?? { message: "missing achievement award insert result" },
+    };
+  }
+
+  return { created: true, row: result.data, error: null };
 }
 
 async function insertBadgeAward(
@@ -1026,8 +1709,13 @@ function toQuestData(
   definition: UserQuestDefinition,
   row: UserQuestProgressRow | undefined,
   progress: UserProgressData,
+  achievementCounts: UserAchievementCounts,
 ): UserGamificationQuestData {
-  const progressCurrent = row?.progress_current ?? getMetricValue(progress, definition.metric);
+  const progressCurrent = row?.progress_current ?? getQuestMetricValue(
+    progress,
+    achievementCounts,
+    definition.metric,
+  );
   const completed = progressCurrent >= definition.target;
   const status = row?.status ?? (completed ? "completed" : "active");
 
@@ -1107,6 +1795,151 @@ function getMetricValue(progress: UserProgressData, metric: MetricKey) {
   }
 
   return progress.event_counts[metric];
+}
+
+function getQuestMetricValue(
+  progress: UserProgressData,
+  counts: UserAchievementCounts,
+  metric: QuestMetricKey,
+) {
+  if (metric === "recipe_saved") {
+    return progress.event_counts.recipe_saved_distinct_ever;
+  }
+
+  if (metric === "recipe_registered") {
+    return counts.recipe_registered;
+  }
+
+  if (metric === "planner_registered") {
+    return progress.event_counts.planner_registered_first + progress.event_counts.planner_registered_repeat;
+  }
+
+  if (metric === "shopping_list_created") {
+    return counts.shopping_list_created;
+  }
+
+  if (metric === "shopping_completed") {
+    return progress.event_counts.shopping_completed;
+  }
+
+  if (metric === "cooking_completed") {
+    return progress.event_counts.cooking_completed;
+  }
+
+  if (metric === "pantry_distinct_ingredients") {
+    return counts.pantry_distinct_ingredients;
+  }
+
+  if (metric === "leftover_eaten_manual") {
+    return counts.leftover_eaten_manual;
+  }
+
+  return progress.event_counts.custom_book_created;
+}
+
+function getAchievementMetricValue(
+  progress: UserProgressData,
+  counts: UserAchievementCounts,
+  achievementRowsByKey: Map<string, UserAchievementAwardRow>,
+  definition: UserAchievementDefinition,
+) {
+  if (definition.metric === "recipe_saved") {
+    return progress.event_counts.recipe_saved_distinct_ever;
+  }
+
+  if (definition.metric === "recipe_registered") {
+    return counts.recipe_registered;
+  }
+
+  if (definition.metric === "planner_registered") {
+    return progress.event_counts.planner_registered_first + progress.event_counts.planner_registered_repeat;
+  }
+
+  if (definition.metric === "shopping_list_created") {
+    return counts.shopping_list_created;
+  }
+
+  if (definition.metric === "shopping_completed") {
+    return progress.event_counts.shopping_completed;
+  }
+
+  if (definition.metric === "cooking_completed") {
+    return progress.event_counts.cooking_completed;
+  }
+
+  if (definition.metric === "pantry_distinct_ingredients") {
+    return counts.pantry_distinct_ingredients;
+  }
+
+  if (definition.metric === "leftover_eaten_manual") {
+    return counts.leftover_eaten_manual;
+  }
+
+  if (definition.metric === "custom_book_created") {
+    return progress.event_counts.custom_book_created;
+  }
+
+  return TUTORIAL_BASE_ACHIEVEMENT_KEYS.filter((key) => achievementRowsByKey.has(key)).length;
+}
+
+function deriveAchievementCountsFromActivityRows(rows: UserGrowthActivityEventRow[]): UserAchievementCounts {
+  const pantryIngredientKeys = new Set<string>();
+  let leftoverEatenManual = 0;
+  let recipeRegistered = 0;
+
+  for (const row of rows) {
+    const sourceMeta = normalizePayload(row.source_meta_json);
+
+    if (row.activity_type === "pantry_item_added") {
+      const ingredientId = typeof sourceMeta.ingredient_id === "string"
+        ? sourceMeta.ingredient_id
+        : row.source_id;
+      pantryIngredientKeys.add(ingredientId);
+    }
+
+    if (row.activity_type === "leftover_eaten" && sourceMeta.auto_eaten !== true) {
+      leftoverEatenManual += 1;
+    }
+
+    if (row.activity_type === "recipe_registered") {
+      recipeRegistered += 1;
+    }
+  }
+
+  return {
+    pantry_distinct_ingredients: pantryIngredientKeys.size,
+    leftover_eaten_manual: leftoverEatenManual,
+    recipe_registered: recipeRegistered,
+    shopping_list_created: 0,
+  };
+}
+
+function mergeAchievementCounts(
+  primary: UserAchievementCounts,
+  secondary: UserAchievementCounts,
+): UserAchievementCounts {
+  return {
+    pantry_distinct_ingredients: Math.max(
+      primary.pantry_distinct_ingredients,
+      secondary.pantry_distinct_ingredients,
+    ),
+    leftover_eaten_manual: Math.max(primary.leftover_eaten_manual, secondary.leftover_eaten_manual),
+    recipe_registered: Math.max(primary.recipe_registered, secondary.recipe_registered),
+    shopping_list_created: Math.max(primary.shopping_list_created, secondary.shopping_list_created),
+  };
+}
+
+function getTutorialAchievementKeyForQuest(questKey: string) {
+  const mapping: Record<string, string> = {
+    first_recipe_saved: "tutorial_recipe_saved",
+    first_planner_registered: "tutorial_planner_registered",
+    first_shopping_list_created: "tutorial_shopping_list_create",
+    first_shopping_done: "tutorial_shopping_list_complete",
+    first_cook_done: "tutorial_cooking_complete",
+    first_custom_book_created: "tutorial_recipebook_created",
+  };
+
+  return mapping[questKey] ?? null;
 }
 
 function calculateProgressPercent(current: number, target: number) {
@@ -1197,6 +2030,21 @@ function buildNotificationPresentation(
       title: typeof payload.label === "string" ? payload.label : "배지 획득",
       body: typeof payload.description === "string" ? payload.description : "새 배지를 획득했어요.",
       category: badgeMetadata?.category ?? "recipe",
+    };
+  }
+
+  if (notificationType === "achievement_unlocked") {
+    const achievementKey = typeof payload.achievement_key === "string" ? payload.achievement_key : "";
+    const definition = USER_ACHIEVEMENT_DEFINITIONS.find(
+      (achievement) => achievement.achievement_key === achievementKey,
+    );
+
+    return {
+      title: typeof payload.title === "string" ? payload.title : definition?.title ?? "업적 달성",
+      body: typeof payload.description === "string"
+        ? payload.description
+        : definition?.description ?? "새 업적을 달성했어요.",
+      category: definition?.category_key ?? "tutorial",
     };
   }
 

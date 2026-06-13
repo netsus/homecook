@@ -27,6 +27,10 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import {
+  recordUserGrowthActivityEvent,
+  type UserGrowthActivityDbClient,
+} from "@/lib/server/user-growth-activity";
 import { extractHashTagsFromText, generateRecipeTags } from "@/lib/server/recipe-media";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import {
@@ -10374,7 +10378,8 @@ export async function handleYoutubeRegister(request: Request) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, fields);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as DbClient & UserBootstrapDbClient;
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+    DbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -10472,6 +10477,7 @@ export async function handleYoutubeRegister(request: Request) {
   };
 
   const session = sessionResult.data;
+  const registeredAt = new Date().toISOString();
   if (
     session?.session_kind === "candidate_child" &&
     session.parent_extraction_session_id &&
@@ -10480,8 +10486,23 @@ export async function handleYoutubeRegister(request: Request) {
     await updateExtractionCandidate(dbClient, session.parent_extraction_session_id, session.parent_candidate_id, {
       status: "registered",
       recipe_id: data.recipe_id,
-      registered_at: new Date().toISOString(),
+      registered_at: registeredAt,
     });
+  }
+
+  try {
+    await recordUserGrowthActivityEvent(dbClient, {
+      userId: user.id,
+      activityType: "recipe_registered",
+      category: "recipe",
+      sourceKey: `recipe_registered:${data.recipe_id}`,
+      sourceTable: "recipes",
+      sourceId: data.recipe_id,
+      sourceMeta: { source_type: "youtube", extraction_id: parsed.extractionId },
+      occurredAt: registeredAt,
+    });
+  } catch {
+    // Activity history is secondary; YouTube recipe registration remains authoritative.
   }
 
   return ok(data, { status: 201 });

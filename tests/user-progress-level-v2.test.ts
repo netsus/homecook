@@ -32,19 +32,19 @@ describe("user progress level curve v2", () => {
 
   it("derives grade labels at every boundary", () => {
     expect(getUserProgressGrade(1)).toMatchObject({
-      grade_key: "sprout_homecook",
-      label: "새싹 집밥러",
+      grade_key: "clay",
+      label: "Clay",
       level_min: 1,
       level_max: 3,
     });
-    expect(getUserProgressGrade(4).grade_key).toBe("homecook_runner");
-    expect(getUserProgressGrade(8).grade_key).toBe("kitchen_explorer");
-    expect(getUserProgressGrade(13).grade_key).toBe("table_maker");
-    expect(getUserProgressGrade(21).grade_key).toBe("homecook_artisan");
-    expect(getUserProgressGrade(35).grade_key).toBe("table_curator");
+    expect(getUserProgressGrade(4).grade_key).toBe("wood");
+    expect(getUserProgressGrade(8).grade_key).toBe("steel");
+    expect(getUserProgressGrade(13).grade_key).toBe("silver");
+    expect(getUserProgressGrade(21).grade_key).toBe("gold");
+    expect(getUserProgressGrade(35).grade_key).toBe("diamond");
     expect(getUserProgressGrade(50)).toMatchObject({
-      grade_key: "homecook_master",
-      label: "집밥 명장",
+      grade_key: "titanium",
+      label: "Titanium",
       level_min: 50,
       level_max: null,
     });

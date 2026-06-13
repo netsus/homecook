@@ -5,6 +5,7 @@ import {
   readUserGamification,
   toNotificationData,
   USER_BADGE_METADATA,
+  USER_NOTIFICATION_PRIORITIES,
 } from "@/lib/server/user-gamification";
 import type { UserGamificationDbClient } from "@/lib/server/user-gamification";
 import type { UserProgressDbClient } from "@/lib/server/user-progress";
@@ -36,10 +37,28 @@ function createArrayQuery<T>(result: QueryResult<T[]>) {
 
 function createMaybeSingleQuery<T>(result: QueryResult<T>) {
   return {
+    select: vi.fn(() => ({
+      maybeSingle: vi.fn(async () => result),
+    })),
     eq: vi.fn(() => ({
       maybeSingle: vi.fn(async () => result),
     })),
   };
+}
+
+function createCountQuery(count: number) {
+  const query = {
+    eq: vi.fn(() => query),
+    in: vi.fn(() => query),
+    then(
+      onFulfilled?: (value: { data: null; error: null; count: number }) => unknown,
+      onRejected?: (reason: unknown) => unknown,
+    ) {
+      return Promise.resolve({ data: null, error: null, count }).then(onFulfilled, onRejected);
+    },
+  };
+
+  return query;
 }
 
 function createUpsertQuery<T>(result: QueryResult<T>) {
@@ -51,6 +70,16 @@ function createUpsertQuery<T>(result: QueryResult<T>) {
 }
 
 describe("user gamification notification priority", () => {
+  it("keeps achievement unlocked at the same priority as badge unlocked", () => {
+    expect(USER_NOTIFICATION_PRIORITIES).toMatchObject({
+      level_up: 1,
+      achievement_unlocked: 2,
+      badge_unlocked: 2,
+      quest_completed: 3,
+      xp_awarded: 4,
+    });
+  });
+
   it("keeps server-side priority and additive notification metadata", () => {
     expect(toNotificationData({
       id: "n1",
@@ -103,6 +132,14 @@ describe("user gamification notification priority", () => {
       },
       badgeRows: [],
       questRows: [],
+      achievementRows: [],
+      activityRows: [],
+      achievementCounts: {
+        pantry_distinct_ingredients: 0,
+        leftover_eaten_manual: 0,
+        recipe_registered: 0,
+        shopping_list_created: 0,
+      },
       notificationRows: [
         {
           id: "xp",
@@ -151,7 +188,7 @@ describe("user gamification notification priority", () => {
       ],
     });
 
-    expect(data.grade).toMatchObject({ grade_key: "kitchen_explorer", label: "주방 탐험가" });
+    expect(data.grade).toMatchObject({ grade_key: "steel", label: "Steel" });
     expect(data.badges.locked[0]).toMatchObject({
       category: USER_BADGE_METADATA.first_recipe_saved.category,
       shape_key: USER_BADGE_METADATA.first_recipe_saved.shape_key,
@@ -242,6 +279,21 @@ describe("user gamification notification priority", () => {
             select: notificationSelect,
             insert: vi.fn(),
           };
+        }
+        if (tableName === "user_achievement_awards") {
+          return {
+            select: vi.fn(() => createArrayQuery({ data: [], error: null })),
+            insert: vi.fn(() => createMaybeSingleQuery({ data: null, error: { message: "duplicate key" } })),
+          };
+        }
+        if (tableName === "user_growth_activity_events") {
+          return { select: vi.fn(() => createArrayQuery({ data: [], error: null })) };
+        }
+        if (tableName === "shopping_lists") {
+          return { select: vi.fn(() => createCountQuery(0)) };
+        }
+        if (tableName === "recipes") {
+          return { select: vi.fn(() => createCountQuery(0)) };
         }
         throw new Error(`unexpected table: ${tableName}`);
       }),

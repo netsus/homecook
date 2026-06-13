@@ -31,6 +31,7 @@ interface ToastView {
 
 const TONE_BY_TYPE: Record<UserGamificationNotificationType, ToastTone> = {
   level_up: "level-up",
+  achievement_unlocked: "badge",
   badge_unlocked: "badge",
   quest_completed: "quest",
   xp_awarded: "xp",
@@ -63,7 +64,10 @@ function toToastView(
         toNumber(payload.current_level) || toNumber(payload.level);
       title = title || (level ? `레벨 ${level} 달성` : "레벨업");
       body = body || "새로운 레벨에 도달했어요.";
-    } else if (notification.notification_type === "badge_unlocked") {
+    } else if (
+      notification.notification_type === "badge_unlocked" ||
+      notification.notification_type === "achievement_unlocked"
+    ) {
       title = title || `새 배지: ${toText(payload.label) || "집밥 배지"}`;
       body = body || "마이페이지에서 확인할 수 있어요.";
     } else if (notification.notification_type === "quest_completed") {
