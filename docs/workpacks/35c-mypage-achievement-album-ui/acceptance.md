@@ -42,7 +42,7 @@
 
 - [x] `tests/mypage-achievement-album.test.tsx`가 profile header, modal, achievement state를 고정한다 <!-- omo:id=accept-vitest-achievement-album;stage=4;scope=frontend;review=5,6 -->
 - [x] `tests/mypage-growth-profile.test.tsx` 기존 성장 profile regression이 통과한다 <!-- omo:id=accept-vitest-growth-profile;stage=4;scope=frontend;review=5,6 -->
-- [x] `tests/user-gamification-api-client.test.ts` additive fields와 archive 소비가 통과한다 <!-- omo:id=accept-vitest-api-client;stage=4;scope=shared;review=5,6 -->
+- [x] `tests/user-gamification-api-client.test.ts` additive fields와 archive 소비가 통과한다 <!-- omo:id=accept-vitest-api-client;stage=4;scope=shared;review=6 -->
 
 ### Playwright
 

@@ -150,7 +150,7 @@
 
 ## Delivery Checklist
 
-- [x] 35c workpack/acceptance/automation-spec 작성 <!-- omo:id=delivery-stage1-docs;stage=1;scope=docs;review=1 -->
+- [x] 35c workpack/acceptance/automation-spec 작성 <!-- omo:id=delivery-stage1-docs;stage=2;scope=shared;review=3 -->
 - [x] 기존 MYPAGE 성장 profile/header 구조 분석 <!-- omo:id=delivery-existing-ui-map;stage=4;scope=frontend;review=5,6 -->
 - [x] `GET /users/me/gamification` achievement_album 표시 연결 <!-- omo:id=delivery-achievement-album-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] profile header 안에 grade/level/XP/action buttons 통합 <!-- omo:id=delivery-profile-header-integration;stage=4;scope=frontend;review=5,6 -->
