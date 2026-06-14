@@ -6,7 +6,6 @@ import React from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import type { MypageGamificationState } from "@/components/mypage/mypage-gamification-card";
-import { GrowthArchiveSurface } from "@/components/mypage/growth-archive-surface";
 import { MypageGrowthProfile } from "@/components/mypage/mypage-growth-profile";
 import {
   type MypageProgressState,
@@ -112,7 +111,6 @@ const MOBILE_PROVIDER_LABELS: Record<UserProfileData["social_provider"], string>
 
 export function MypageMobileScreen({
   books,
-  archiveEnabled = true,
   bookCoverImages,
   bookCoverUpdatedAt,
   createInputRef,
@@ -189,7 +187,6 @@ export function MypageMobileScreen({
 
       {surface === "home" ? (
         <MobileHomeSurface
-          archiveEnabled={archiveEnabled}
           books={books}
           gamification={gamification}
           gamificationState={gamificationState}
@@ -308,7 +305,6 @@ function MobileAppBar({
 }
 
 function MobileHomeSurface({
-  archiveEnabled,
   books,
   gamification,
   gamificationState,
@@ -326,7 +322,6 @@ function MobileHomeSurface({
   onRetrySavedRecipes,
   onSurfaceChange,
 }: {
-  archiveEnabled: boolean;
   books: RecipeBookSummary[];
   gamification: UserGamificationData | null;
   gamificationState: MypageGamificationState;
@@ -424,8 +419,6 @@ function MobileHomeSurface({
         state={savedRecipesState}
         onRetry={onRetrySavedRecipes}
       />
-
-      <GrowthArchiveSurface className="mx-4 mt-3" enabled={archiveEnabled} />
 
       <section className="p-4">
         <div

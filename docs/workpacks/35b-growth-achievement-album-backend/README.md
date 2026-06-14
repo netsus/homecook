@@ -111,7 +111,7 @@
 
 - Fixture baseline:
   - 신규 사용자: XP 0, achievement 0, tutorial 첫 단계 active
-  - tutorial mid-state: 3/6 earned, completion locked
+  - tutorial mid-state: 3/7 earned, completion locked
   - tutorial complete: 6/6 earned + completion earned
   - rich user: Diamond grade, category별 earned/active/locked 섞임
   - legacy/backfill user: achievement state만 반영, notification 없음
@@ -140,6 +140,8 @@
 8. 장보기 list 완료 수와 여러 끼니 묶음 기준 count를 섞지 않는다.
 9. 팬트리 distinct count는 삭제/재추가 반복 악용을 막는다.
 10. 자동 다먹음 처리된 남은요리는 achievement count에서 제외한다.
+11. 같은 grade band 안에서 level만 오른 `level_up` 알림은 grade label을 말하지 않는다.
+12. 장기 업적 milestone은 tutorial의 첫 1회 달성 업적과 중복되는 `target=1` 항목을 만들지 않는다.
 
 ## Contract Evolution Candidates
 

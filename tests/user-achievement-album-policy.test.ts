@@ -130,22 +130,12 @@ describe("user achievement album policy", () => {
       questRows: [],
       achievementRows: [
         {
-          achievement_key: "recipe_saved_1",
+          achievement_key: "recipe_saved_5",
           category_key: "recipe",
           track_key: "recipe_saved",
-          target_value: 1,
+          target_value: 5,
           achieved_value: 5,
-          badge_key: "recipe_saved_1",
-          earned_at: NOW,
-          seen_at: null,
-        },
-        {
-          achievement_key: "recipe_registered_1",
-          category_key: "recipe",
-          track_key: "recipe_registered",
-          target_value: 1,
-          achieved_value: 2,
-          badge_key: "recipe_registered_1",
+          badge_key: "recipe_saved_5",
           earned_at: NOW,
           seen_at: null,
         },
@@ -173,18 +163,18 @@ describe("user achievement album policy", () => {
     expect(recipeCategory?.milestones).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          achievement_key: "recipe_saved_1",
+          achievement_key: "recipe_saved_5",
           track_key: "recipe_saved",
           current: 5,
-          target: 1,
+          target: 5,
           status: "earned",
         }),
         expect.objectContaining({
-          achievement_key: "recipe_registered_1",
+          achievement_key: "recipe_registered_3",
           track_key: "recipe_registered",
           current: 2,
-          target: 1,
-          status: "earned",
+          target: 3,
+          status: "active",
         }),
       ]),
     );
@@ -200,12 +190,54 @@ describe("user achievement album policy", () => {
     expect(shoppingCategory?.milestones).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          achievement_key: "shopping_completed_1",
+          achievement_key: "shopping_completed_3",
           current: 1,
-          target: 1,
+          target: 3,
+          status: "active",
         }),
       ]),
     );
+  });
+
+  it("keeps long-term achievement thresholds beyond tutorial one-shot milestones and progressively harder", () => {
+    const definitionsByTrack = USER_ACHIEVEMENT_DEFINITIONS
+      .filter((definition) => definition.category_key !== "tutorial")
+      .reduce<Map<string, number[]>>((tracks, definition) => {
+        const trackKey = definition.track_key ?? definition.category_key;
+        tracks.set(trackKey, [...(tracks.get(trackKey) ?? []), definition.target]);
+        return tracks;
+      }, new Map());
+
+    expect(definitionsByTrack.get("shopping_completed")).toEqual([
+      3,
+      10,
+      30,
+      100,
+      300,
+      700,
+      1300,
+    ]);
+    expect(definitionsByTrack.get("pantry_distinct")).toEqual([
+      10,
+      30,
+      60,
+      120,
+      250,
+      600,
+    ]);
+
+    for (const [trackKey, thresholds] of definitionsByTrack) {
+      expect(thresholds[0], `${trackKey} should not duplicate tutorial one-shot milestones`).toBeGreaterThan(1);
+      const deltas = thresholds.slice(1).map((target, index) => target - thresholds[index]);
+      const hasProgressivelyHarderDeltas = deltas.every(
+        (delta, index) => index === 0 || delta > deltas[index - 1],
+      );
+
+      expect(
+        hasProgressivelyHarderDeltas,
+        `${trackKey} deltas should strictly increase: ${deltas.join(" / ")}`,
+      ).toBe(true);
+    }
   });
 
   it("adds the additive achievement award migration with idempotency and notification constraints", async () => {

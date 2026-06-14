@@ -278,14 +278,15 @@ test.describe("34d MYPAGE growth profile assets @smoke-core", () => {
     await mkdir(EVIDENCE_DIR, { recursive: true });
 
     const mobile390 = await openMypage(browser, { width: 390, height: 844 });
-    await expect(mobile390.page.getByText("주방 탐험가 · Lv.9")).toBeVisible();
-    await expect(mobile390.page.getByTestId("mypage-growth-featured-badges").getByRole("button")).toHaveCount(4);
+    await expect(mobile390.page.getByTestId("mypage-profile-grade-row")).toContainText("주방 탐험가");
+    await expect(mobile390.page.getByTestId("mypage-profile-grade-row")).toContainText("Lv.9");
+    await expect(mobile390.page.getByTestId("mypage-growth-featured-badges")).toHaveCount(0);
     await mobile390.page.screenshot({
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "mobile-390.png"),
     });
 
-    await mobile390.page.getByTestId("mypage-growth-featured-badges").getByRole("button").first().click();
+    await mobile390.page.getByRole("button", { name: "업적 보기" }).click();
     await expect(mobile390.page.getByRole("dialog", { name: "업적 앨범" })).toBeVisible();
     await expect(mobile390.page.getByText("획득한 스탬프")).toBeVisible();
     await mobile390.page.screenshot({
@@ -312,7 +313,8 @@ test.describe("34d MYPAGE growth profile assets @smoke-core", () => {
     await mobile320.context.close();
 
     const desktop = await openMypage(browser, { width: 1440, height: 960 });
-    await expect(desktop.page.getByTestId("mypage-profile")).toContainText("주방 탐험가 · Lv.9");
+    await expect(desktop.page.getByTestId("mypage-profile-grade-row")).toContainText("주방 탐험가");
+    await expect(desktop.page.getByTestId("mypage-profile-grade-row")).toContainText("Lv.9");
     await desktop.page.screenshot({
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "desktop-1440.png"),

@@ -2538,7 +2538,7 @@ GET /users/me/gamification
     "achievement_album": {
       "summary": {
         "earned_count": 12,
-        "total_count": 55,
+        "total_count": 53,
         "completed_category_count": 1
       },
       "categories": [
@@ -2594,6 +2594,8 @@ GET /users/me/gamification
 - 업적 달성은 XP를 추가 지급하지 않는다. XP는 `user_progress_events` 기반 progress API가 authority다.
 - `notifications.unseen`은 XP toast 또는 badge/quest new 상태 표시용이다.
 - `notifications.priority_unseen`은 서버 우선순위 정렬 결과다. 우선순위는 `level_up > achievement_unlocked/badge_unlocked > quest_completed > xp_awarded`이다.
+- `level_up` 알림은 level band가 바뀐 경우에만 등급명을 말한다. 같은 등급 안에서 레벨만 오른 경우 body는 `"레벨이 올랐어요."`처럼 등급명을 포함하지 않는다.
+- 장기 업적 milestone은 튜토리얼의 첫 1회 달성 업적과 중복되지 않도록 `target=1`을 사용하지 않는다.
 - `notifications.archive_preview`는 live non-silent notification 최신 5개 preview다. Historical/backfill recompute 결과는 포함하지 않는다.
 
 **에러**

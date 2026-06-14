@@ -1,9 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 
-import { GrowthBadgeIcon } from "@/components/mypage/growth-badge-icon";
 import { GrowthGradeMark } from "@/components/mypage/growth-grade-mark";
 import {
   MypageGrowthDetailDialog,
@@ -13,10 +12,7 @@ import type { MypageGamificationState } from "@/components/mypage/mypage-gamific
 import type { MypageProgressState } from "@/components/mypage/mypage-progress-card";
 import type { UserProfileData } from "@/lib/api/mypage";
 import type {
-  UserGamificationBadgeData,
   UserGamificationData,
-  UserGamificationQuestData,
-  UserGamificationTutorialStepData,
 } from "@/types/user-gamification";
 import type { UserProgressData } from "@/types/user-progress";
 
@@ -64,15 +60,6 @@ function isDisplayableGamification(
   return Boolean(gamification) && (state === "ready" || state === "empty");
 }
 
-function pickFeaturedBadges(badges: UserGamificationBadgeData[]) {
-  return badges.slice(0, 4);
-}
-
-function clampPercent(value: number) {
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(100, Math.round(value)));
-}
-
 function ActionIcon({ panel }: { panel: MypageGrowthPanel }) {
   if (panel === "grade") {
     return (
@@ -91,19 +78,86 @@ function ActionIcon({ panel }: { panel: MypageGrowthPanel }) {
     );
   }
 
-  if (panel === "tutorial") {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path d="M6.5 10.5a5.5 5.5 0 0 1 11 0v3.7l1.7 2.5H4.8l1.7-2.5v-3.7Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+      <path d="M10 19h4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+type RecordStatKind = "cooking" | "planner" | "shopping";
+
+const RECORD_STAT_ICON_STROKE_WIDTH = "1.45";
+
+function RecordStatIcon({ kind }: { kind: RecordStatKind }) {
+  if (kind === "cooking") {
     return (
-      <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
-        <path d="M5 5.5h6.5c1.4 0 2.5 1.1 2.5 2.5v10.5c0-1.4-1.1-2.5-2.5-2.5H5V5.5Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
-        <path d="M14 8c0-1.4 1.1-2.5 2.5-2.5H19v11h-2.5c-1.4 0-2.5.9-2.5 2.3" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+      <svg
+        aria-hidden="true"
+        className="h-11 w-11 max-[480px]:h-9 max-[480px]:w-9"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={RECORD_STAT_ICON_STROKE_WIDTH}
+        viewBox="0 0 32 32"
+      >
+        <path
+          d="M13.6 8.6c0-1 .8-1.8 1.8-1.8h1.2c1 0 1.8.8 1.8 1.8v.5"
+        />
+        <path
+          d="M9.4 12.6c1.1-2.2 3.7-3.5 6.6-3.5s5.5 1.3 6.6 3.5"
+        />
+        <path
+          d="M8.5 13.2h15v9.5a2.9 2.9 0 0 1-2.9 2.9h-9.2a2.9 2.9 0 0 1-2.9-2.9v-9.5Z"
+        />
+        <path
+          d="M8.5 16H5.8a1.7 1.7 0 0 0 0 3.4h2.7M23.5 16h2.7a1.7 1.7 0 0 1 0 3.4h-2.7"
+        />
+      </svg>
+    );
+  }
+
+  if (kind === "planner") {
+    return (
+      <svg
+        aria-hidden="true"
+        className="h-11 w-11 max-[480px]:h-9 max-[480px]:w-9"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={RECORD_STAT_ICON_STROKE_WIDTH}
+        viewBox="0 0 32 32"
+      >
+        <rect
+          height="19.4"
+          rx="3"
+          width="20.4"
+          x="5.8"
+          y="8"
+        />
+        <path
+          d="M11 5.7v5M21 5.7v5M5.8 13.9h20.4M10.8 18.1h1.7M15.2 18.1h1.7M19.6 18.1h1.7M10.8 22.2h1.7M15.2 22.2h1.7M19.6 22.2h1.7"
+        />
       </svg>
     );
   }
 
   return (
-    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
-      <path d="M6.5 10.5a5.5 5.5 0 0 1 11 0v3.7l1.7 2.5H4.8l1.7-2.5v-3.7Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
-      <path d="M10 19h4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    <svg
+      aria-hidden="true"
+      className="h-11 w-11 max-[480px]:h-9 max-[480px]:w-9"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={RECORD_STAT_ICON_STROKE_WIDTH}
+      viewBox="0 0 32 32"
+    >
+      <path d="M6.6 14.5h18.8l-1.9 10.7h-15l-1.9-10.7Z" />
+      <path d="M4.5 14.5h23M10.7 14.5C11.6 10.3 13.5 8.3 16 8.3s4.4 2 5.3 6.2M11.6 18.1v4M16 18.1v4M20.4 18.1v4" />
     </svg>
   );
 }
@@ -114,9 +168,9 @@ function RecordStatsRow({
   stats: NonNullable<MypageGrowthProfileProps["recordStats"]>;
 }) {
   const items = [
-    { label: "요리기록", value: stats.cooking },
-    { label: "플래너 기록", value: stats.planner },
-    { label: "장보기 기록", value: stats.shopping },
+    { kind: "cooking", label: "요리기록", value: stats.cooking },
+    { kind: "planner", label: "플래너기록", value: stats.planner },
+    { kind: "shopping", label: "장보기기록", value: stats.shopping },
   ];
 
   return (
@@ -126,85 +180,38 @@ function RecordStatsRow({
     >
       {items.map((item, index) => (
         <div
+          aria-label={`${item.label} ${formatXp(item.value)}회`}
           className={[
-            "min-w-0 px-2 py-2 text-center",
-            index > 0 ? "border-l border-[var(--line)]" : "",
+            "relative flex min-w-0 items-center justify-center gap-3 px-2 py-4 text-left max-[480px]:gap-1 max-[480px]:px-1 max-[480px]:py-3 max-[360px]:text-center",
           ].join(" ")}
           key={item.label}
         >
-          <strong className="block truncate text-[16px] font-extrabold leading-[1.15] text-[var(--foreground)]">
-            {formatXp(item.value)}
-          </strong>
-          <span className="mt-1 block truncate text-[10px] font-bold leading-[1.2] text-[var(--text-3)]">
-            {item.label}
+          {index > 0 ? (
+            <span
+              aria-hidden="true"
+              className="absolute bottom-4 left-0 top-4 w-px bg-[var(--line)]"
+            />
+          ) : null}
+          <span
+            className="flex h-12 w-12 shrink-0 items-center justify-center text-[var(--foreground)] max-[480px]:h-10 max-[480px]:w-10"
+            data-testid={`record-stat-${item.kind}-icon`}
+          >
+            <RecordStatIcon kind={item.kind as RecordStatKind} />
+          </span>
+          <span
+            className="grid min-w-0 gap-0.5"
+            data-testid={`record-stat-${item.kind}-copy`}
+          >
+            <span className="block truncate text-[11px] font-bold leading-[1.2] text-[var(--text-3)] max-[480px]:text-[9px]">
+              {item.label}
+            </span>
+            <strong className="block truncate text-[22px] font-extrabold leading-[1.08] text-[var(--foreground)] max-[480px]:text-[20px] max-[360px]:text-[18px]">
+              {formatXp(item.value)}
+            </strong>
           </span>
         </div>
       ))}
     </div>
-  );
-}
-
-function getQuestKeyForAchievement(achievementKey: string) {
-  const mapping: Record<string, string> = {
-    tutorial_recipe_saved: "first_recipe_saved",
-    tutorial_planner_registered: "first_planner_registered",
-    tutorial_shopping_list_create: "first_shopping_list_created",
-    tutorial_shopping_list_complete: "first_shopping_done",
-    tutorial_cooking_complete: "first_cook_done",
-    tutorial_recipebook_created: "first_custom_book_created",
-  };
-
-  return mapping[achievementKey] ?? achievementKey;
-}
-
-function tutorialStepToQuest(step: UserGamificationTutorialStepData): UserGamificationQuestData {
-  const legacyStep = step as UserGamificationTutorialStepData & {
-    description?: string;
-    progress_current?: number;
-    progress_percent?: number;
-    progress_target?: number;
-    quest_key?: string;
-  };
-  const current = Number.isFinite(step.current)
-    ? step.current
-    : legacyStep.progress_current ?? 0;
-  const target = Number.isFinite(step.target)
-    ? step.target
-    : legacyStep.progress_target ?? 1;
-  const percent = Number.isFinite(legacyStep.progress_percent)
-    ? clampPercent(legacyStep.progress_percent ?? 0)
-    : target > 0
-      ? clampPercent((Math.max(0, current) / target) * 100)
-      : 0;
-  const achievementKey = step.achievement_key ?? legacyStep.quest_key ?? "tutorial";
-
-  return {
-    quest_key: getQuestKeyForAchievement(achievementKey),
-    quest_type: "tutorial",
-    status: step.status === "earned" ? "completed" : "active",
-    title: step.title,
-    description: legacyStep.description ?? "",
-    progress_current: current,
-    progress_target: target,
-    progress_percent: percent,
-    completed_at: null,
-    dismissed_at: null,
-    is_new: false,
-  };
-}
-
-function pickQuest(data: UserGamificationData | null): UserGamificationQuestData | null {
-  if (!data) return null;
-
-  const tutorialStep = data.tutorial.active_steps.find((quest) => quest.status === "active");
-  if (tutorialStep) {
-    return tutorialStepToQuest(tutorialStep);
-  }
-
-  return (
-    data.quests.active[0] ??
-    data.quests.completed_recent[0] ??
-    null
   );
 }
 
@@ -215,7 +222,7 @@ function ProfileAvatar({
   profile: UserProfileData | null;
   variant: "mobile" | "desktop";
 }) {
-  const pixelSize = variant === "desktop" ? 76 : 68;
+  const pixelSize = variant === "desktop" ? 72 : 52;
   const fallbackInitial = (profile?.nickname?.slice(0, 1) || "?").toUpperCase();
 
   if (profile?.profile_image_url) {
@@ -238,7 +245,7 @@ function ProfileAvatar({
       className="flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--brand)] to-[var(--brand-deep)] font-extrabold text-[var(--text-inverse)] shadow-[0_3px_10px_rgba(37,31,20,0.12)]"
       data-testid="profile-fallback-avatar"
       style={{
-        fontSize: variant === "desktop" ? 28 : 24,
+        fontSize: variant === "desktop" ? 28 : 22,
         height: pixelSize,
         width: pixelSize,
       }}
@@ -248,14 +255,60 @@ function ProfileAvatar({
   );
 }
 
+function ProfileGradeAsset({
+  grade,
+  gradeKey,
+  size,
+}: {
+  grade: UserGamificationData["grade"] | null;
+  gradeKey: string | null;
+  size: "sm" | "md" | "lg";
+}) {
+  const pixelSize = size === "lg" ? 54 : size === "md" ? 46 : 34;
+  const normalizedGradeKey = gradeKey ?? "clay";
+
+  if (grade?.icon_url) {
+    return (
+      <span
+        aria-hidden="true"
+        className="relative inline-flex shrink-0 items-center justify-center"
+        data-testid={`mypage-profile-grade-image-${normalizedGradeKey}`}
+        style={{ height: pixelSize, width: pixelSize }}
+      >
+        <Image
+          alt=""
+          className="object-contain"
+          fill
+          sizes={`${pixelSize}px`}
+          src={grade.icon_url}
+          unoptimized
+        />
+      </span>
+    );
+  }
+
+  return <GrowthGradeMark gradeKey={gradeKey} size={size} />;
+}
+
+function getLevelXpMeter(progress: UserProgressData) {
+  const level = progress.level;
+  const levelTotal = level.next_level_start_xp - level.current_level_start_xp;
+  const total = Number.isFinite(levelTotal) && levelTotal > 0
+    ? levelTotal
+    : level.xp_into_current_level + level.xp_to_next_level;
+
+  return {
+    current: Math.max(0, Math.min(level.xp_into_current_level, total)),
+    total,
+  };
+}
+
 export function MypageGrowthProfile({
   className,
   gamification,
   gamificationState,
-  onDismissTutorialQuest,
   onEditProfile,
   profile,
-  providerLabel,
   progress,
   progressState,
   recordStats,
@@ -264,10 +317,6 @@ export function MypageGrowthProfile({
   const [activePanel, setActivePanel] = useState<MypageGrowthPanel | null>(null);
   const hasProgress = progressState === "ready" && isValidProgress(progress);
   const hasGamification = isDisplayableGamification(gamification, gamificationState);
-  const visibleBadges = useMemo(
-    () => pickFeaturedBadges(hasGamification ? gamification.featured_badges : []),
-    [gamification, hasGamification],
-  );
   const isDesktop = variant === "desktop";
   const hasIntegratedProfile = profile !== undefined;
   const loading =
@@ -290,18 +339,26 @@ export function MypageGrowthProfile({
         data-testid="mypage-growth-profile-loading"
         role="status"
       >
-        <div className="h-4 w-32 rounded-full bg-[var(--surface-subtle)]" />
-        <div className="mt-2 h-2 rounded-full bg-[var(--surface-subtle)]" />
-        <div className="mt-3 grid grid-cols-4 gap-2">
-          {[0, 1, 2, 3].map((index) => (
+        <div className="flex items-start gap-3">
+          <div className="h-14 w-14 shrink-0 rounded-full bg-[var(--surface-subtle)]" />
+          <div className="min-w-0 flex-1">
+            <div className="h-5 w-28 rounded-full bg-[var(--surface-subtle)]" />
+            <div className="mt-2 h-4 w-36 rounded-full bg-[var(--surface-subtle)]" />
+          </div>
+        </div>
+        <div className="mt-4 h-3 w-36 rounded-full bg-[var(--surface-subtle)]" />
+        <div className="mt-2 h-4 rounded-full bg-[var(--surface-subtle)]" />
+        <div className="ml-auto mt-1 h-3 w-24 rounded-full bg-[var(--surface-subtle)]" />
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {[0, 1, 2].map((index) => (
             <div
-              className="h-14 rounded-[var(--radius-md)] bg-[var(--surface-subtle)]"
+              className="h-10 rounded-[var(--radius-md)] bg-[var(--surface-subtle)]"
               key={index}
             />
           ))}
         </div>
         <div
-          className="mt-3 h-16 rounded-[var(--radius-md)] bg-[var(--surface-subtle)]"
+          className="mt-3 h-20 rounded-[var(--radius-md)] bg-[var(--surface-subtle)]"
           data-testid="mypage-gamification-loading"
         />
       </div>
@@ -311,184 +368,84 @@ export function MypageGrowthProfile({
   const levelLabel = hasProgress ? `Lv.${progress.level.current_level}` : null;
   const gradeLabel = hasGamification ? gamification.grade?.label ?? null : null;
   const gradeKey = hasGamification ? gamification.grade?.grade_key ?? null : null;
-  const quest = hasGamification ? pickQuest(gamification) : null;
-  const gamificationLoading =
-    gamificationState === "loading" || gamificationState === "idle";
-  const gamificationEmpty = hasGamification && visibleBadges.length === 0 && !quest;
   const headline =
     gradeLabel && levelLabel
       ? `${gradeLabel} · ${levelLabel}`
       : gradeLabel ?? levelLabel ?? "집밥 성장";
   const progressCopy = hasProgress
-    ? progress.level.total_xp === 0
-      ? "첫 집밥 기록을 시작해 보세요"
-      : `다음 레벨까지 ${formatXp(progress.level.xp_to_next_level)} XP`
+    ? `다음 레벨까지 ${formatXp(progress.level.xp_to_next_level)} XP`
     : null;
+  const levelXpMeter = hasProgress ? getLevelXpMeter(progress) : null;
   const actionButtons = hasGamification ? (
     <div
       aria-label="성장 상세 메뉴"
+      data-testid="mypage-profile-action-bar"
       className={[
-        "grid gap-2",
-        isDesktop ? "grid-cols-4" : "grid-cols-4 max-[360px]:grid-cols-2",
+        "grid shrink-0 gap-1.5 max-[360px]:gap-1",
+        isDesktop ? "grid-cols-3" : "w-full grid-cols-3",
       ].join(" ")}
     >
       {[
         ["grade", "등급", "등급 보기"],
         ["achievement", "업적", "업적 보기"],
-        ["tutorial", "튜토리얼", "튜토리얼 보기"],
         ["notifications", "알림", "알림 보기"],
       ].map(([panel, label, ariaLabel]) => (
         <button
           aria-label={ariaLabel}
-          className="flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-2 py-2 text-[11px] font-extrabold text-[var(--text-2)]"
+          className={[
+            "flex min-w-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] font-extrabold leading-none text-[var(--text-2)]",
+            isDesktop
+              ? "min-h-10 gap-1 px-3 py-2 text-[12px]"
+              : "min-h-10 flex-col gap-0.5 px-0.5 py-1.5 text-[10px] max-[360px]:text-[9px]",
+          ].join(" ")}
           key={panel}
           onClick={() => setActivePanel(panel as MypageGrowthPanel)}
           type="button"
         >
           <ActionIcon panel={panel as MypageGrowthPanel} />
-          <span className="truncate">{label}</span>
+          <span className={isDesktop ? "max-w-full truncate" : "whitespace-nowrap"}>{label}</span>
         </button>
       ))}
     </div>
   ) : null;
+  const topActionButtons = isDesktop ? actionButtons : null;
+  const mobileActionButtons = isDesktop ? null : actionButtons;
 
   const progressBar = hasProgress ? (
-    <div
-      aria-label={`${levelLabel}, ${progressCopy}, 진행률 ${progress.level.progress_percent}%`}
-      aria-valuemax={100}
-      aria-valuemin={0}
-      aria-valuenow={progress.level.progress_percent}
-      className="h-2 overflow-hidden rounded-full bg-[var(--surface-subtle)]"
-      role="progressbar"
-    >
+    <div>
       <div
-        className="h-full rounded-full bg-[var(--brand)]"
-        data-testid="mypage-growth-progress-fill"
-        style={{ width: `${progress.level.progress_percent}%` }}
-      />
+        aria-label={`${levelLabel}, ${progressCopy}, 진행률 ${progress.level.progress_percent}%`}
+        aria-valuemax={100}
+        aria-valuemin={0}
+        aria-valuenow={progress.level.progress_percent}
+        className="relative h-4 overflow-hidden rounded-full bg-[var(--surface-subtle)]"
+        data-testid="mypage-growth-progress-meter"
+        role="progressbar"
+      >
+        <div
+          className="h-full rounded-full bg-[var(--brand)]"
+          data-testid="mypage-growth-progress-fill"
+          style={{ width: `${progress.level.progress_percent}%` }}
+        />
+        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold leading-none text-[var(--text-inverse)] drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+          {progress.level.progress_percent}%
+        </span>
+      </div>
+      {levelXpMeter ? (
+        <p className="mt-1 text-right text-[11px] font-extrabold leading-[1.2] text-[var(--text-2)]">
+          {formatXp(levelXpMeter.current)} / {formatXp(levelXpMeter.total)} XP
+        </p>
+      ) : null}
     </div>
   ) : null;
 
-  const badgeRow = visibleBadges.length > 0 ? (
-    <ul
-      className={[
-        "grid gap-2",
-        isDesktop ? "grid-cols-4" : "grid-cols-4 max-[360px]:grid-cols-2",
-      ].join(" ")}
-      data-testid="mypage-growth-featured-badges"
-    >
-      {visibleBadges.map((badge) => (
-        <li className="min-w-0" key={badge.badge_key}>
-          <button
-            className={[
-              "flex w-full min-w-0 flex-col items-center justify-start gap-1 rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-2 py-2 text-center",
-              isDesktop ? "min-h-[86px]" : "min-h-[78px]",
-            ].join(" ")}
-            onClick={() => setActivePanel("achievement")}
-            type="button"
-          >
-            <GrowthBadgeIcon
-              isNew={badge.is_new}
-              shapeKey={badge.shape_key}
-              size={isDesktop ? "md" : "sm"}
-            />
-            <span className="line-clamp-2 min-w-0 text-[10px] font-extrabold leading-[1.15] text-[var(--foreground)]">
-              {badge.label}
-            </span>
-          </button>
-        </li>
-      ))}
-    </ul>
-  ) : hasGamification ? (
-    <p className="text-[11px] font-semibold leading-[1.35] text-[var(--text-3)]">
-      첫 배지는 첫 집밥 기록에서 시작돼요.
-    </p>
-  ) : gamificationState === "error" && !hasIntegratedProfile ? (
+  const gamificationError = gamificationState === "error" ? (
     <p
       className="text-[11px] font-semibold leading-[1.35] text-[var(--text-3)]"
       data-testid="mypage-growth-gamification-error"
     >
       배지 정보를 잠시 불러오지 못했어요
     </p>
-  ) : null;
-
-  const questPercent = quest ? clampPercent(quest.progress_percent) : 0;
-  const gamificationSummary = gamificationLoading ? (
-    <section
-      aria-label="배지와 퀘스트를 불러오는 중"
-      className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] p-3"
-      data-testid="mypage-gamification-loading"
-    >
-      <div className="h-4 w-28 rounded-full bg-[var(--surface-subtle)]" />
-      <div className="mt-3 h-10 rounded-[var(--radius-md)] bg-[var(--surface-subtle)]" />
-    </section>
-  ) : hasGamification ? (
-    <section
-      className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] p-3"
-      data-testid={gamificationEmpty ? "mypage-gamification-empty" : "mypage-gamification-card"}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0" data-testid="mypage-growth-quest-summary">
-          <p className="text-[12px] font-extrabold leading-[1.25] text-[var(--foreground)]">
-            {quest ? quest.title : "나의 배지"}
-          </p>
-          <p className="mt-1 text-[11px] font-semibold leading-[1.35] text-[var(--text-2)]">
-            {quest ? quest.description : "집밥 활동으로 배지를 모아보세요."}
-          </p>
-        </div>
-        <button
-          className="flex h-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface)] px-3 text-[11px] font-extrabold text-[var(--text-2)]"
-          onClick={() => setActivePanel(quest?.quest_type === "tutorial" ? "tutorial" : "achievement")}
-          type="button"
-        >
-          보기
-        </button>
-      </div>
-      {quest ? (
-        <div className="mt-3 flex items-center gap-2">
-          <div
-            aria-label={`${quest.title} 진행률 ${questPercent}%`}
-            aria-valuemax={100}
-            aria-valuemin={0}
-            aria-valuenow={questPercent}
-            className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--surface-subtle)]"
-            role="progressbar"
-          >
-            <div
-              className="h-full rounded-full bg-[var(--brand)]"
-              style={{ width: `${questPercent}%` }}
-            />
-          </div>
-          <span className="shrink-0 text-[11px] font-extrabold text-[var(--text-2)]">
-            {quest.progress_current}/{quest.progress_target}
-          </span>
-          {quest.quest_type === "tutorial" && onDismissTutorialQuest ? (
-            <button
-              className="shrink-0 rounded-full bg-[var(--surface)] px-2 py-1 text-[10px] font-extrabold text-[var(--text-3)]"
-              onClick={() => onDismissTutorialQuest(quest.quest_key)}
-              type="button"
-            >
-              나중에
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-    </section>
-  ) : gamificationState === "error" ? (
-    <section
-      className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] p-3"
-      data-testid="mypage-gamification-error"
-    >
-      <p
-        className="text-[12px] font-extrabold text-[var(--foreground)]"
-        data-testid="mypage-growth-gamification-error"
-      >
-        배지 정보를 잠시 불러오지 못했어요
-      </p>
-      <p className="mt-1 text-[11px] font-semibold text-[var(--text-3)]">
-        마이페이지와 기본 성장 기록은 그대로 사용할 수 있어요.
-      </p>
-    </section>
   ) : null;
 
   if (hasIntegratedProfile) {
@@ -506,76 +463,92 @@ export function MypageGrowthProfile({
         >
           <div
             className={[
-              "grid gap-4 p-4",
-              isDesktop ? "grid-cols-[minmax(220px,0.72fr)_minmax(0,1fr)] p-6" : "",
+              "grid gap-3 p-4",
+              isDesktop ? "p-6" : "",
             ].join(" ")}
           >
-            <button
-              aria-label={`닉네임 변경, 현재 닉네임: ${nickname}`}
-              className="flex min-w-0 items-center gap-3 border-0 bg-transparent p-0 text-left"
-              data-testid="mypage-profile-edit-button"
-              onClick={onEditProfile}
-              type="button"
+            <div
+              className={[
+                "min-w-0",
+                isDesktop ? "grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3" : "",
+              ].join(" ")}
             >
-              <ProfileAvatar
-                profile={profile ?? null}
-                variant={variant}
-              />
-              <span className="min-w-0">
-                <span className="block truncate text-[20px] font-extrabold leading-[1.2] text-[var(--foreground)]">
-                  {nickname}
-                </span>
-                <span className="mt-1 block truncate text-[13px] font-semibold leading-[1.3] text-[var(--text-3)]">
-                  {providerLabel ?? ""}
-                </span>
-              </span>
-            </button>
+              <div className="flex min-w-0 items-center gap-2 max-[360px]:gap-1.5">
+                <button
+                  aria-label={`닉네임 변경, 현재 닉네임: ${nickname}`}
+                  className="flex min-w-0 items-center gap-3 border-0 bg-transparent p-0 text-left"
+                  data-testid="mypage-profile-edit-button"
+                  onClick={onEditProfile}
+                  type="button"
+                >
+                  <ProfileAvatar
+                    profile={profile ?? null}
+                    variant={variant}
+                  />
+                  <span className="min-w-0" data-testid="mypage-profile-identity">
+                    <span className="block truncate text-[20px] font-extrabold leading-[1.2] text-[var(--foreground)] max-[360px]:text-[18px]">
+                      {nickname}
+                    </span>
+                  </span>
+                </button>
+
+                {gradeLabel || levelLabel ? (
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className="h-12 w-px shrink-0 bg-[var(--line)]"
+                      data-testid="mypage-profile-grade-divider"
+                    />
+                    <span
+                      className={[
+                        "flex min-w-0 items-center font-extrabold leading-[1.2] text-[var(--text-2)]",
+                        isDesktop ? "gap-2 text-[13px]" : "gap-1.5 text-[12px] max-[360px]:text-[11px]",
+                      ].join(" ")}
+                      data-testid="mypage-profile-grade-row"
+                    >
+                      <ProfileGradeAsset
+                        grade={hasGamification ? gamification.grade : null}
+                        gradeKey={gradeKey}
+                        size="md"
+                      />
+                      <span className="grid min-w-0 gap-6">
+                        {gradeLabel ? <span className="truncate">{gradeLabel}</span> : null}
+                        {levelLabel ? (
+                          <span className="shrink-0 text-[var(--brand)]">{levelLabel}</span>
+                        ) : null}
+                      </span>
+                    </span>
+                  </>
+                ) : null}
+              </div>
+
+              {topActionButtons}
+            </div>
 
             <div className="min-w-0">
-              <div className="flex min-w-0 items-start gap-3">
-                <GrowthGradeMark
-                  gradeKey={gradeKey}
-                  size={isDesktop ? "lg" : "md"}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex min-w-0 items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-[18px] font-extrabold leading-[1.25] text-[var(--foreground)]">
-                        {headline}
-                      </p>
-                      {hasProgress ? (
-                        <p className="mt-1 truncate text-[12px] font-semibold leading-[1.35] text-[var(--text-2)]">
-                          <span>{formatXp(progress.level.total_xp)} XP</span>
-                          <span aria-hidden="true"> · </span>
-                          <span>{progressCopy}</span>
-                        </p>
-                      ) : progressState === "error" ? (
-                        <p
-                          className="mt-1 text-[12px] font-semibold leading-[1.35] text-[var(--text-3)]"
-                          data-testid="mypage-growth-progress-error"
-                        >
-                          XP를 잠시 불러오지 못했어요
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                  {progressBar ? <div className="mt-3">{progressBar}</div> : null}
-                  {recordStats ? (
-                    <div className="mt-3">
-                      <RecordStatsRow stats={recordStats} />
-                    </div>
-                  ) : null}
-                  {actionButtons ? <div className="mt-3">{actionButtons}</div> : null}
-                </div>
-              </div>
-
-              <div className="mt-4">
-                {badgeRow}
-              </div>
-
-              {gamificationSummary ? (
+              {hasProgress ? (
+                <p className="truncate text-[12px] font-extrabold leading-[1.35] text-[var(--text-2)]">
+                  {progressCopy}
+                </p>
+              ) : progressState === "error" ? (
+                <p
+                  className="text-[12px] font-semibold leading-[1.35] text-[var(--text-3)]"
+                  data-testid="mypage-growth-progress-error"
+                >
+                  XP를 잠시 불러오지 못했어요
+                </p>
+              ) : null}
+              {progressBar ? <div className="mt-2">{progressBar}</div> : null}
+              {mobileActionButtons ? <div className="mt-3">{mobileActionButtons}</div> : null}
+              {recordStats ? (
                 <div className="mt-3">
-                  {gamificationSummary}
+                  <RecordStatsRow stats={recordStats} />
+                </div>
+              ) : null}
+
+              {gamificationError ? (
+                <div className="mt-2">
+                  {gamificationError}
                 </div>
               ) : null}
             </div>
@@ -607,7 +580,11 @@ export function MypageGrowthProfile({
         <div className="flex min-w-0 items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
-              <GrowthGradeMark gradeKey={gradeKey} size="sm" />
+              <ProfileGradeAsset
+                grade={hasGamification ? gamification.grade : null}
+                gradeKey={gradeKey}
+                size="sm"
+              />
               <p className="truncate text-[12px] font-extrabold leading-[1.25] text-[var(--foreground)]">
                 {headline}
               </p>
@@ -628,16 +605,13 @@ export function MypageGrowthProfile({
         </div>
 
         {progressBar ? <div className="mt-2">{progressBar}</div> : null}
+        {mobileActionButtons ? <div className="mt-3">{mobileActionButtons}</div> : null}
         {recordStats ? (
           <div className="mt-3">
             <RecordStatsRow stats={recordStats} />
           </div>
         ) : null}
-        {actionButtons ? <div className="mt-3">{actionButtons}</div> : null}
-
-        <div className="mt-2">
-          {badgeRow}
-        </div>
+        {gamificationError ? <div className="mt-2">{gamificationError}</div> : null}
       </div>
 
       {activePanel ? (

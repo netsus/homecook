@@ -50,8 +50,8 @@ const notifications = [
     delivery_channel: "archive_only",
     toast_eligible: false,
     group_key: null,
-    title: "레벨업!",
-    body: "Diamond · Lv.46 달성",
+    title: "레벨 46 달성",
+    body: "레벨이 올랐어요.",
     category: "cooking",
     payload: {},
     created_at: "2026-06-14T10:15:00.000Z",
@@ -122,7 +122,7 @@ function buildGamification(archivePreview = notifications) {
       is_new: false,
     },
     {
-      badge_key: "cooking_100",
+      badge_key: "cooking_completed_100",
       label: "요리 100회",
       description: "요리 완료를 100번 기록했어요.",
       category: "cooking",
@@ -154,7 +154,7 @@ function buildGamification(archivePreview = notifications) {
     tutorial: {
       category_key: "tutorial",
       completed_count: 1,
-      total_count: 6,
+      total_count: 7,
       active_steps: [
         {
           achievement_key: "tutorial_planner_registered",
@@ -166,20 +166,21 @@ function buildGamification(archivePreview = notifications) {
       ],
     },
     achievement_album: {
-      summary: { earned_count: 2, total_count: 5, completed_category_count: 0 },
+      summary: { earned_count: 2, total_count: 9, completed_category_count: 0 },
       categories: [
         {
           category_key: "tutorial",
           label: "튜토리얼",
           earned_count: 1,
-          total_count: 6,
+          total_count: 7,
           milestones: [
             milestone("tutorial_recipe_saved", "첫 레시피 저장하기", "earned", 1, 1, "bookmark"),
             milestone("tutorial_planner_registered", "첫 식단 등록하기", "active", 3, 5, "ribbon"),
-            milestone("tutorial_shopping_complete", "첫 장보기 완료하기", "locked", 0, 1, "bowl"),
-            milestone("tutorial_shopping_create", "첫 장보기 목록 만들기", "locked", 0, 1, "leaf"),
+            milestone("tutorial_shopping_list_complete", "첫 장보기 완료하기", "locked", 0, 1, "bowl"),
+            milestone("tutorial_shopping_list_create", "첫 장보기 목록 만들기", "locked", 0, 1, "leaf"),
             milestone("tutorial_cooking_complete", "첫 집밥 완료하기", "locked", 0, 1, "pot"),
             milestone("tutorial_recipebook_created", "첫 레시피북 만들기", "locked", 0, 1, "plate"),
+            milestone("tutorial_complete", "튜토리얼 완료", "locked", 1, 6, "ribbon"),
           ],
         },
         {
@@ -188,8 +189,8 @@ function buildGamification(archivePreview = notifications) {
           earned_count: 1,
           total_count: 2,
           milestones: [
-            milestone("cooking_100", "요리 100회", "earned", 100, 100, "pot"),
-            milestone("cooking_300", "요리 300회", "active", 120, 300, "plate"),
+            milestone("cooking_completed_100", "요리 100회", "earned", 100, 100, "pot"),
+            milestone("cooking_completed_300", "요리 300회", "active", 120, 300, "plate"),
           ],
         },
       ],
@@ -391,44 +392,62 @@ async function openMypage(
 }
 
 test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
-  test("opens grade, achievement, tutorial, and notification panels from the integrated profile", async ({ browser }) => {
+  test("opens grade, achievement, and notification panels from the integrated profile", async ({ browser }) => {
     await mkdir(EVIDENCE_DIR, { recursive: true });
 
     const mobile = await openMypage(browser, { width: 390, height: 844 });
-    await expect(
-      mobile.page.getByTestId("mypage-growth-profile").getByText("Diamond · Lv.46"),
-    ).toBeVisible();
+    await expect(mobile.page.getByTestId("mypage-profile-grade-row").getByText("Diamond")).toBeVisible();
+    await expect(mobile.page.getByTestId("mypage-profile-grade-row").getByText("Lv.46")).toBeVisible();
+    await expect(mobile.page.getByTestId("growth-archive-surface")).toHaveCount(0);
     await expect(mobile.page.getByRole("button", { name: "등급 보기" })).toBeVisible();
     await expect(mobile.page.getByRole("button", { name: "업적 보기" })).toBeVisible();
-    await expect(mobile.page.getByRole("button", { name: "튜토리얼 보기" })).toBeVisible();
+    await expect(mobile.page.getByRole("button", { name: "튜토리얼 보기" })).toHaveCount(0);
     await expect(mobile.page.getByRole("button", { name: "알림 보기" })).toBeVisible();
+    await expect(mobile.page.getByText("760 / 4,000 XP")).toBeVisible();
+    await expect(mobile.page.getByTestId("mypage-growth-featured-badges")).toHaveCount(0);
     await mobile.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-390-profile.png") });
 
     await mobile.page.getByRole("button", { name: "등급 보기" }).click();
     await expect(mobile.page.getByRole("dialog", { name: "전체 등급" })).toBeVisible();
     await expect(mobile.page.getByText("현재 등급")).toBeVisible();
     await expect(mobile.page.getByText("Titanium")).toBeVisible();
+    await mobile.page.waitForFunction(() =>
+      Array.from(document.querySelectorAll('[data-testid^="grade-panel-grade-image-"]'))
+        .slice(0, 5)
+        .every((image) => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0),
+    );
     await mobile.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-grade-modal.png") });
     await mobile.page.getByRole("button", { name: "닫기" }).click();
 
     await mobile.page.getByRole("button", { name: "업적 보기" }).click();
     await expect(mobile.page.getByRole("dialog", { name: "업적 앨범" })).toBeVisible();
-    await expect(mobile.page.getByTestId("achievement-stamp-tutorial_planner_registered")).toContainText("3 / 5");
-    await mobile.page.getByRole("tab", { name: "요리" }).click();
-    await expect(mobile.page.getByText("요리 300회", { exact: true })).toBeVisible();
+    await expect(mobile.page.getByRole("tab", { name: "튜토리얼" })).toBeVisible();
+    await expect(mobile.page.getByRole("tab", { name: "식단·장보기·요리" })).toBeVisible();
+    await expect(mobile.page.getByRole("tab", { exact: true, name: "요리" })).toHaveCount(0);
+    await expect(mobile.page.getByTestId("achievement-track-tutorial")).toContainText("3 / 5");
+    await expect(mobile.page.getByTestId("achievement-track-tutorial")).toContainText("완료");
+    await expect(mobile.page.getByTestId("achievement-badge-row-tutorial").locator("> *")).toHaveCount(7);
+    await mobile.page.screenshot({
+      fullPage: true,
+      path: path.join(EVIDENCE_DIR, "mobile-achievement-tutorial-category.png"),
+    });
+    await mobile.page.getByRole("tab", { name: "식단·장보기·요리" }).click();
+    await expect(mobile.page.getByTestId("achievement-track-cooking")).toContainText("100회");
+    await expect(mobile.page.getByTestId("achievement-track-cooking")).toContainText("300회");
+    await expect(mobile.page.getByTestId("growth-badge-image-cooking_completed_100")).toHaveAttribute(
+      "src",
+      "/assets/growth/achievement-icons-v3-4/cooking_completed_100.png",
+    );
+    await expect(mobile.page.getByTestId("growth-badge-image-cooking_completed_300")).toBeVisible();
+    await expect(mobile.page.getByTestId("achievement-stamp-cooking_completed_300")).toHaveCount(0);
     await mobile.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-achievement-modal.png") });
-    await mobile.page.getByRole("button", { name: "닫기" }).click();
-
-    await mobile.page.getByRole("button", { name: "튜토리얼 보기" }).click();
-    await expect(mobile.page.getByRole("dialog", { name: "튜토리얼 퀘스트" })).toBeVisible();
-    await expect(mobile.page.getByText("1 / 6")).toBeVisible();
-    await mobile.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-tutorial-modal.png") });
     await mobile.page.getByRole("button", { name: "닫기" }).click();
 
     await mobile.page.getByRole("button", { name: "알림 보기" }).click();
     const notificationDialog = mobile.page.getByRole("dialog", { name: "알림 기록" });
     await expect(notificationDialog).toBeVisible();
-    await expect(notificationDialog.getByText("레벨업!")).toBeVisible();
+    await expect(notificationDialog.getByText("레벨 46 달성")).toBeVisible();
+    await expect(notificationDialog.getByText("레벨이 올랐어요.")).toBeVisible();
     await notificationDialog.getByRole("tab", { name: "업적" }).click();
     await expect(notificationDialog.getByText("업적 달성!")).toBeVisible();
     await expect(notificationDialog.getByText("+120 XP 반영")).toHaveCount(0);
@@ -449,11 +468,13 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     const desktop = await openMypage(browser, { width: 1440, height: 960 });
     await expect(desktop.page.getByLabel("마이페이지 통계")).toContainText("요리기록");
     await expect(desktop.page.getByRole("button", { name: "알림 보기" })).toBeVisible();
+    await expect(desktop.page.getByTestId("growth-archive-surface")).toHaveCount(0);
     await desktop.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "desktop-1440-profile.png") });
     await desktop.context.close();
 
     const wideDesktop = await openMypage(browser, { width: 1920, height: 1080 });
-    await expect(wideDesktop.page.getByTestId("mypage-growth-profile")).toContainText("Diamond · Lv.46");
+    await expect(wideDesktop.page.getByTestId("mypage-profile-grade-row")).toContainText("Diamond");
+    await expect(wideDesktop.page.getByTestId("mypage-profile-grade-row")).toContainText("Lv.46");
     await wideDesktop.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "desktop-1920-profile.png") });
     await wideDesktop.context.close();
 

@@ -78,6 +78,8 @@
   --surface-subtle: #eef0f2;
   --surface-rgb: 255, 255, 255;
   --surface-alpha-60: rgba(var(--surface-rgb), 0.60);
+  --surface-alpha-55: rgba(var(--surface-rgb), 0.55);
+  --surface-alpha-46: rgba(var(--surface-rgb), 0.46);
   --surface-alpha-70: rgba(var(--surface-rgb), 0.70);
   --surface-alpha-80: rgba(var(--surface-rgb), 0.80);
   --surface-alpha-08: rgba(var(--surface-rgb), 0.08);
@@ -123,19 +125,60 @@
   --accent-meat-soft: #ffe7e2;
   --accent-rice-soft: #fff0ec;
   --growth-badge-plate-fg: #3f7f74;
+  --growth-badge-plate-highlight: #fff8d7;
   --growth-badge-plate-bg: #e9f5f0;
+  --growth-badge-plate-edge: #e6b34e;
   --growth-badge-shield-fg: #5969b2;
+  --growth-badge-shield-highlight: #ecfff4;
   --growth-badge-shield-bg: #eef1ff;
+  --growth-badge-shield-edge: #42a66f;
   --growth-badge-ribbon-fg: #b56473;
+  --growth-badge-ribbon-highlight: #fff7e8;
   --growth-badge-ribbon-bg: #fff0f2;
+  --growth-badge-ribbon-edge: #e3913c;
   --growth-badge-bookmark-fg: #9a6a2f;
+  --growth-badge-bookmark-highlight: #fff9e5;
   --growth-badge-bookmark-bg: #fff3df;
+  --growth-badge-bookmark-edge: #d99b29;
   --growth-badge-pot-fg: #4d738f;
+  --growth-badge-pot-highlight: #eef8ff;
   --growth-badge-pot-bg: #eaf5fb;
+  --growth-badge-pot-edge: #4c94c6;
   --growth-badge-leaf-fg: #4f8f46;
+  --growth-badge-leaf-highlight: #efffed;
   --growth-badge-leaf-bg: #edf7e9;
+  --growth-badge-leaf-edge: #69aa42;
   --growth-badge-bowl-fg: #8a5d44;
+  --growth-badge-bowl-highlight: #f9f4ff;
   --growth-badge-bowl-bg: #f8eee8;
+  --growth-badge-bowl-edge: #8f71c9;
+  --growth-badge-ring-soft: rgba(255, 255, 255, 0.82);
+  --growth-badge-ring-gold: rgba(255, 215, 128, 0.62);
+  --growth-badge-ring-blue: rgba(120, 210, 255, 0.58);
+  --growth-badge-tier-0-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 18px rgba(37, 31, 20, 0.14);
+  --growth-badge-tier-1-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 10px 22px rgba(37, 31, 20, 0.18);
+  --growth-badge-tier-2-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 12px 26px rgba(197, 132, 22, 0.24);
+  --growth-badge-tier-3-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 14px 32px rgba(60, 132, 185, 0.28);
+  --growth-badge-locked-shadow: inset 0 2px 10px rgba(37, 31, 20, 0.08);
+  --growth-badge-icon-drop-shadow: 0 1px 0 rgba(255, 255, 255, 0.62);
+  --growth-badge-new-shadow: 0 4px 10px rgba(37, 31, 20, 0.18);
+  --growth-toast-level-border: #f0ba42;
+  --growth-toast-level-bg: linear-gradient(135deg, #fff8e5 0%, #ffffff 52%, #fff3cf 100%);
+  --growth-toast-level-shadow: 0 18px 44px rgba(197, 132, 22, 0.22);
+  --growth-toast-badge-border: #84c99b;
+  --growth-toast-badge-bg: linear-gradient(135deg, #f0fff5 0%, #ffffff 54%, #e9fff0 100%);
+  --growth-toast-badge-shadow: 0 16px 40px rgba(74, 145, 93, 0.18);
+  --growth-toast-quest-border: #8fc9ff;
+  --growth-toast-quest-bg: linear-gradient(135deg, #eff8ff 0%, #ffffff 54%, #e7f4ff 100%);
+  --growth-toast-quest-shadow: 0 16px 40px rgba(65, 139, 206, 0.18);
+  --growth-toast-xp-border: #d3d9e4;
+  --growth-toast-xp-bg: linear-gradient(135deg, #f7fbff 0%, #ffffff 55%, #f1f5fb 100%);
+  --growth-toast-xp-shadow: 0 16px 40px rgba(54, 65, 82, 0.16);
+  --growth-toast-rank-1-bg: #f3bc27;
+  --growth-toast-rank-2-bg: #41b950;
+  --growth-toast-rank-muted-bg: #778393;
+  --growth-toast-rank-shadow: 0 6px 14px rgba(37, 31, 20, 0.18);
+  --growth-toast-icon-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 7px 16px rgba(37, 31, 20, 0.14);
   --shadow:     0px 2px 8px rgba(0, 0, 0, 0.08);
   --shadow-1:   0 1px 3px rgba(0, 0, 0, 0.04);
   --shadow-2:   0 2px 8px rgba(0, 0, 0, 0.08);
@@ -6886,9 +6929,9 @@ button {
 
   .web-mypage-overview {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
-    gap: 24px;
+    gap: 0;
   }
 
   .web-mypage-profile-main,
@@ -6912,8 +6955,7 @@ button {
     min-width: 0;
   }
 
-  .web-mypage-gamification,
-  .web-mypage-growth-archive {
+  .web-mypage-gamification {
     min-width: 0;
   }
 

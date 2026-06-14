@@ -7,7 +7,7 @@
 - [x] MYPAGE profile header 안에서 등급, 레벨, XP, 주요 기록, 상세 버튼이 한 덩어리로 보인다 <!-- omo:id=accept-profile-header-integrated;stage=4;scope=frontend;review=5,6 -->
 - [x] `등급` 버튼이 7단계 Clay→Titanium 목록과 현재 등급 highlight를 연다 <!-- omo:id=accept-grade-modal;stage=4;scope=frontend;review=5,6 -->
 - [x] `업적` 버튼이 category tab, stamp grid, earned/active/locked 상태를 연다 <!-- omo:id=accept-achievement-modal;stage=4;scope=frontend;review=5,6 -->
-- [x] `튜토리얼` 버튼이 6개 튜토리얼 단계와 전체 완료 stamp 상태를 연다 <!-- omo:id=accept-tutorial-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] 업적 앨범의 `튜토리얼` 카테고리가 6개 튜토리얼 단계와 전체 완료 stamp 상태를 연다 <!-- omo:id=accept-tutorial-modal;stage=4;scope=frontend;review=5,6 -->
 - [x] `알림` 버튼이 archive filter와 최신순 성장 기록을 연다 <!-- omo:id=accept-notification-modal;stage=4;scope=frontend;review=5,6 -->
 
 ## State / Policy
@@ -53,7 +53,7 @@
 
 - [x] mobile 320/390 screenshot evidence가 남는다 <!-- omo:id=accept-evidence-mobile;stage=4;scope=frontend;review=5,6 -->
 - [x] desktop 1440/1920 screenshot evidence가 남는다 <!-- omo:id=accept-evidence-desktop;stage=4;scope=frontend;review=5,6 -->
-- [x] grade/achievement/tutorial/notification modal screenshot evidence가 남는다 <!-- omo:id=accept-evidence-modals;stage=4;scope=frontend;review=5,6 -->
+- [x] grade/achievement/tutorial category/notification screenshot evidence가 남는다 <!-- omo:id=accept-evidence-modals;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 

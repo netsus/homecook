@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -126,22 +127,29 @@ function selectToastSource(data: {
 
 function toneClass(tone: ToastTone) {
   if (tone === "level-up") {
-    return "border-transparent bg-[var(--brand)] text-[var(--text-inverse)] shadow-[0_20px_56px_var(--overlay-30)]";
+    return "growth-toast-card-level-up border-[var(--growth-toast-level-border)] [background:var(--growth-toast-level-bg)] text-[var(--foreground)] shadow-[var(--growth-toast-level-shadow)]";
   }
   if (tone === "badge") {
-    return "border-[var(--warning)] bg-[var(--surface)] text-[var(--foreground)] shadow-[0_16px_44px_var(--overlay-20)]";
+    return "growth-toast-card-badge border-[var(--growth-toast-badge-border)] [background:var(--growth-toast-badge-bg)] text-[var(--foreground)] shadow-[var(--growth-toast-badge-shadow)]";
   }
   if (tone === "quest") {
-    return "border-[var(--success)] bg-[var(--surface)] text-[var(--foreground)] shadow-[0_16px_40px_var(--overlay-20)]";
+    return "growth-toast-card-quest border-[var(--growth-toast-quest-border)] [background:var(--growth-toast-quest-bg)] text-[var(--foreground)] shadow-[var(--growth-toast-quest-shadow)]";
   }
-  return "border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)] shadow-[0_16px_40px_var(--overlay-20)]";
+  return "growth-toast-card-xp border-[var(--growth-toast-xp-border)] [background:var(--growth-toast-xp-bg)] text-[var(--foreground)] shadow-[var(--growth-toast-xp-shadow)]";
 }
 
-function toneIcon(tone: ToastTone) {
-  if (tone === "level-up") return "LV";
-  if (tone === "badge") return "BD";
-  if (tone === "quest") return "Q";
-  return "XP";
+function toneImage(tone: ToastTone) {
+  if (tone === "level-up") return "/assets/growth/grades/gold-spoon-badge.png";
+  if (tone === "badge") return "/assets/growth/grades/wood-spoon-badge.png";
+  if (tone === "quest") return "/assets/growth/grades/silver-spoon-badge.png";
+  return "/assets/growth/grades/diamond-spoon-badge.png";
+}
+
+function rankClass(index: number) {
+  if (index === 0) return "bg-[var(--growth-toast-rank-1-bg)] text-[var(--text-inverse)]";
+  if (index === 1) return "bg-[var(--growth-toast-rank-2-bg)] text-[var(--text-inverse)]";
+  if (index === 2) return "bg-[var(--brand)] text-[var(--text-inverse)]";
+  return "bg-[var(--growth-toast-rank-muted-bg)] text-[var(--text-inverse)]";
 }
 
 export function GrowthToastStack() {
@@ -274,11 +282,11 @@ export function GrowthToastStack() {
       className="pointer-events-none fixed inset-x-4 bottom-[calc(90px+env(safe-area-inset-bottom))] z-[80] mx-auto flex max-w-[360px] flex-col gap-2 md:inset-x-auto md:right-6 md:bottom-6 md:w-[340px]"
       data-testid="growth-toast-stack"
     >
-      {visible.map((view) => (
+      {visible.map((view, index) => (
         <div
           key={view.id}
           className={[
-            "pointer-events-auto rounded-[var(--radius-card)] border px-4 py-3",
+            "pointer-events-auto relative rounded-[var(--radius-card)] border px-3 py-3 pl-4",
             toneClass(view.tone),
           ].join(" ")}
           data-testid="growth-toast"
@@ -288,12 +296,30 @@ export function GrowthToastStack() {
           data-tone={view.tone}
           role={view.tone === "level-up" ? "alert" : "status"}
         >
-          <div className="flex items-start gap-2">
+          <span
+            aria-hidden="true"
+            className={[
+              "absolute -left-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-[11px] font-extrabold leading-none shadow-[var(--growth-toast-rank-shadow)]",
+              rankClass(index),
+            ].join(" ")}
+            data-testid="growth-toast-priority-rank"
+          >
+            {index + 1}
+          </span>
+          <div className="flex items-center gap-3">
             <span
               aria-hidden="true"
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-current/10 text-[10px] font-extrabold leading-none"
+              className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[14px] border border-[var(--surface-alpha-70)] bg-[var(--surface-alpha-70)] shadow-[var(--growth-toast-icon-shadow)]"
             >
-              {toneIcon(view.tone)}
+              <Image
+                alt=""
+                className="h-full w-full scale-[1.08] object-contain"
+                data-testid="growth-toast-visual-icon"
+                height={44}
+                src={toneImage(view.tone)}
+                unoptimized
+                width={44}
+              />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-extrabold leading-[1.35]">
@@ -313,7 +339,7 @@ export function GrowthToastStack() {
             </div>
             <button
               aria-label="알림 닫기"
-              className="shrink-0 rounded-full px-1.5 text-[14px] font-extrabold opacity-70"
+              className="self-start shrink-0 rounded-full px-1.5 text-[14px] font-extrabold text-[var(--text-2)] opacity-70"
               onClick={() => dismiss(view.id)}
               type="button"
             >

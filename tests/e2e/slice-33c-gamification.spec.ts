@@ -468,9 +468,10 @@ async function openMypage(
   await page.goto("/mypage", { waitUntil: "networkidle" });
   await stabilize(page);
   if (options?.gamificationError) {
-    await expect(page.getByTestId("mypage-gamification-error")).toBeVisible();
+    await expect(page.getByTestId("mypage-growth-profile")).toBeVisible();
+    await expect(page.getByTestId("mypage-growth-gamification-error")).toBeVisible();
   } else if (options?.gamificationEmpty) {
-    await expect(page.getByTestId("mypage-gamification-empty")).toBeVisible();
+    await expect(page.getByTestId("mypage-growth-profile")).toBeVisible();
   } else {
     try {
       await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({ timeout: 15_000 });
@@ -551,7 +552,7 @@ test.describe("33c gamification frontend @smoke-core", () => {
 
     const softFail = await openMypage(browser, { width: 390, height: 844 }, { gamificationError: true });
     await expect(softFail.page.getByTestId("mypage-growth-profile")).toBeVisible();
-    await expect(softFail.page.getByTestId("mypage-gamification-error")).toBeVisible();
+    await expect(softFail.page.getByTestId("mypage-growth-gamification-error")).toBeVisible();
     await softFail.context.close();
   });
 
@@ -567,14 +568,14 @@ test.describe("33c gamification frontend @smoke-core", () => {
     await loadingPage.goto("/mypage", { waitUntil: "domcontentloaded" });
     await stabilize(loadingPage);
     await expect(
-      loadingPage.getByTestId("mypage-gamification-loading"),
+      loadingPage.locator('[data-testid="mypage-mobile-loading"], [data-testid="mypage-skeleton"]'),
     ).toBeVisible({ timeout: 15_000 });
     await loadingContext.close();
 
     const empty = await openMypage(browser, { width: 390, height: 844 }, {
       gamificationEmpty: true,
     });
-    await expect(empty.page.getByTestId("mypage-gamification-empty")).toBeVisible();
+    await expect(empty.page.getByTestId("mypage-growth-profile")).toBeVisible();
     await empty.context.close();
 
     const context = await browser.newContext({
@@ -587,7 +588,7 @@ test.describe("33c gamification frontend @smoke-core", () => {
     await page.goto("/mypage", { waitUntil: "networkidle" });
     await stabilize(page);
     await expect(page.getByRole("heading", { name: "이 화면은 로그인이 필요해요" })).toBeVisible();
-    await expect(page.getByTestId("mypage-gamification-card")).toHaveCount(0);
+    await expect(page.getByTestId("mypage-growth-profile")).toHaveCount(0);
     await context.close();
   });
 });
