@@ -309,7 +309,9 @@ test.describe("Slice 29: YouTube Author Comment Fallback", () => {
 
     await page.goto(YOUTUBE_IMPORT_URL);
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=loadingcm29");
-    await page.click('button:has-text("가져오기")');
+    const fetchButton = page.getByRole("button", { name: "가져오기" });
+    await expect(fetchButton).toBeEnabled();
+    await fetchButton.click();
 
     await expect(page.locator("text=설명란 분석")).toBeVisible();
     await expect(page.locator("text=잠시만 기다려주세요")).toBeVisible();

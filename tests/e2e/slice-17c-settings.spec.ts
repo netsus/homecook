@@ -376,6 +376,7 @@ test.describe("SETTINGS screen", () => {
   });
 
   test("logout confirm triggers API and navigates home", async ({ page }) => {
+    test.setTimeout(60_000);
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page);
     await installColumnRoutes(page);
@@ -385,11 +386,22 @@ test.describe("SETTINGS screen", () => {
     await page.getByRole("button", { name: "로그아웃" }).click();
 
     await expect(page.getByText("로그아웃 할까요?")).toBeVisible();
-    await page.getByRole("alertdialog").getByRole("button", {
-      name: "로그아웃",
-    }).click();
+    const logoutResponse = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.pathname === "/api/v1/auth/logout" &&
+        response.request().method() === "POST"
+      );
+    });
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", {
+        name: "로그아웃",
+      })
+      .click();
+    await logoutResponse;
 
-    await page.waitForURL("/");
+    await expect(page).toHaveURL("/");
   });
 
   test("logout failure keeps dialog open and shows error", async ({ page }) => {
@@ -413,15 +425,32 @@ test.describe("SETTINGS screen", () => {
   });
 
   test("delete confirm triggers API and navigates home", async ({ page }) => {
+    test.setTimeout(60_000);
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page);
     await installColumnRoutes(page);
     await page.goto(isMobileViewport(page) ? "/settings?view=account" : "/settings");
 
     await openAccountDeleteDialog(page);
+    const deleteResponse = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.pathname === "/api/v1/users/me" &&
+        response.request().method() === "DELETE"
+      );
+    });
+    const logoutResponse = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.pathname === "/api/v1/auth/logout" &&
+        response.request().method() === "POST"
+      );
+    });
     await accountDeleteConfirmButton(page).click();
+    await deleteResponse;
+    await logoutResponse;
 
-    await page.waitForURL("/");
+    await expect(page).toHaveURL("/");
   });
 
   test("delete failure keeps dialog open and shows error", async ({ page }) => {

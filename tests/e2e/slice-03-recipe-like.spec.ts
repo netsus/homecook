@@ -1,6 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
+const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
+const E2E_APP_ORIGIN =
+  process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 const RECIPE_ID = "mock-kimchi-jjigae";
 const RECIPE_PATH = `/recipe/${RECIPE_ID}`;
 const PENDING_ACTION_KEY = "homecook.pending-recipe-action";
@@ -67,6 +70,14 @@ function buildRecipeDetail({
 }
 
 async function installAuthenticatedSession(page: Page) {
+  await page.context().addCookies([
+    {
+      name: E2E_AUTH_OVERRIDE_COOKIE,
+      sameSite: "Lax",
+      url: E2E_APP_ORIGIN,
+      value: "authenticated",
+    },
+  ]);
   await page.addInitScript((storageKey) => {
     window.localStorage.setItem(storageKey, "authenticated");
   }, E2E_AUTH_OVERRIDE_KEY);

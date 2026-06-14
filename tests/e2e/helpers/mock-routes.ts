@@ -68,6 +68,100 @@ const ACCOUNT_VISUAL_PROFILE = {
   social_provider: "kakao",
 } as const;
 
+const ACCOUNT_VISUAL_PROGRESS = {
+  level: {
+    current_level: 6,
+    total_xp: 520,
+    current_level_start_xp: 500,
+    next_level_start_xp: 650,
+    xp_into_current_level: 20,
+    xp_to_next_level: 130,
+    progress_ratio: 0.1333,
+    progress_percent: 13,
+  },
+  event_counts: {
+    cooking_completed: 5,
+    shopping_completed: 3,
+    recipe_saved_distinct_ever: 9,
+    custom_book_created: 2,
+    planner_registered_first: 1,
+    planner_registered_repeat: 4,
+  },
+  last_updated_at: "2026-06-12T00:00:00.000Z",
+} as const;
+
+const ACCOUNT_VISUAL_GAMIFICATION = {
+  level: {
+    current_level: 6,
+    total_xp: 520,
+    xp_to_next_level: 130,
+    progress_percent: 13,
+  },
+  grade: {
+    grade_key: "homecook_runner",
+    label: "집밥 러너",
+    level_min: 4,
+    level_max: 7,
+  },
+  featured_badges: [
+    {
+      badge_key: "first_cook_done",
+      label: "첫 집밥 완성",
+      description: "첫 요리 완료를 기록했어요.",
+      category: "cooking",
+      shape_key: "pot",
+      locked_hint: null,
+      earned_at: "2026-06-12T00:00:00.000Z",
+      is_new: false,
+    },
+    {
+      badge_key: "first_shopping_done",
+      label: "첫 장보기 완료",
+      description: "첫 장보기 완료를 기록했어요.",
+      category: "shopping",
+      shape_key: "bowl",
+      locked_hint: null,
+      earned_at: "2026-06-12T00:00:00.000Z",
+      is_new: false,
+    },
+  ],
+  badges: { earned: [], locked: [] },
+  quests: {
+    active: [
+      {
+        quest_key: "shopping_three_lists",
+        quest_type: "standard",
+        status: "active",
+        title: "장보기 3회",
+        description: "리스트를 만들고 장보기를 완료해요.",
+        progress_current: 2,
+        progress_target: 3,
+        progress_percent: 67,
+        completed_at: null,
+        dismissed_at: null,
+        is_new: false,
+      },
+    ],
+    completed_recent: [],
+  },
+  tutorial: {
+    category_key: "tutorial",
+    completed_count: 0,
+    total_count: 0,
+    active_steps: [],
+  },
+  achievement_album: {
+    summary: {
+      earned_count: 2,
+      total_count: 2,
+      completed_category_count: 0,
+    },
+    categories: [],
+  },
+  notifications: { unseen: [], priority_unseen: [], archive_preview: [] },
+  last_updated_at: "2026-06-12T00:00:00.000Z",
+} as const;
+
 const ACCOUNT_VISUAL_BOOKS = [
   {
     book_type: "my_added",
@@ -569,9 +663,19 @@ export async function setE2EAuthOverride(
   await page.addInitScript(
     ({ key, state }) => {
       window.localStorage.setItem(key, state);
+      document.cookie = `${key}=${state}; path=/; SameSite=Lax`;
     },
     { key: E2E_AUTH_OVERRIDE_KEY, state: value },
   );
+  if (page.url().startsWith(E2E_APP_ORIGIN)) {
+    await page.evaluate(
+      ({ key, state }) => {
+        window.localStorage.setItem(key, state);
+        document.cookie = `${key}=${state}; path=/; SameSite=Lax`;
+      },
+      { key: E2E_AUTH_OVERRIDE_KEY, state: value },
+    );
+  }
 }
 
 function shiftDateKey(dateKey: string, dayDelta: number) {
@@ -719,7 +823,7 @@ export async function installDiscoveryRoutes(page: Page) {
     });
   });
 
-  await page.route("**/api/v1/recipes?**", async (route) => {
+  await page.route((url) => url.pathname === "/api/v1/recipes", async (route) => {
     const requestUrl = new URL(route.request().url());
 
     await route.fulfill({
@@ -1835,6 +1939,26 @@ export async function installPantryShoppingVisualRoutes(page: Page) {
 }
 
 export async function installAccountLibraryVisualRoutes(page: Page) {
+  await page.route("**/api/v1/users/me/progress", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: ACCOUNT_VISUAL_PROGRESS,
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/users/me/gamification", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: ACCOUNT_VISUAL_GAMIFICATION,
+        error: null,
+      },
+    });
+  });
+
   await page.route("**/api/v1/users/me/settings", async (route) => {
     await route.fulfill({
       json: {

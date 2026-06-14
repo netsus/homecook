@@ -23,7 +23,8 @@ async function searchIngredient(page: Page, query: string) {
 
 async function selectIngredient(dialog: Locator, name: string) {
   const checkbox = dialog.getByRole("checkbox", { name, exact: true });
-  await dialog.locator("label").filter({ hasText: name }).first().click();
+  await checkbox.focus();
+  await checkbox.press("Space");
   await expect(checkbox).toBeChecked();
 }
 

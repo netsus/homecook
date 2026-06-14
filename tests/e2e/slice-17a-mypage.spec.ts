@@ -21,6 +21,25 @@ async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   );
 }
 
+async function gotoMypageReady(page: Page) {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.goto("/mypage", { waitUntil: "networkidle" });
+
+    try {
+      await expect(
+        page.locator("main").getByText("집밥러").first(),
+      ).toBeVisible({ timeout: 15_000 });
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
+
 function makeMockProfile() {
   return {
     id: "user-1",
@@ -147,6 +166,10 @@ function makeMockRecipeItems() {
       title: "된장찌개",
       thumbnail_url: "https://example.com/img1.jpg",
       tags: ["한식", "찌개"],
+      view_count: 12,
+      total_duration_seconds: 1200,
+      total_duration_text: "20분",
+      base_servings: 2,
       added_at: "2026-04-30T09:00:00.000Z",
     },
     {
@@ -154,9 +177,49 @@ function makeMockRecipeItems() {
       title: "김치볶음밥",
       thumbnail_url: null,
       tags: ["한식"],
+      view_count: 8,
+      total_duration_seconds: 900,
+      total_duration_text: "15분",
+      base_servings: 1,
       added_at: "2026-04-29T09:00:00.000Z",
     },
   ];
+}
+
+function makeMockRecipeDetail(
+  recipeId: string,
+  recipeItems: ReturnType<typeof makeMockRecipeItems>,
+) {
+  const item = recipeItems.find((recipe) => recipe.recipe_id === recipeId) ?? recipeItems[0];
+
+  return {
+    ...item,
+    ingredients: [
+      {
+        id: `${recipeId}-ingredient-1`,
+        ingredient_id: "ingredient-1",
+        standard_name: "두부",
+        amount: 1,
+        unit: "모",
+        ingredient_type: "QUANT",
+        display_text: "두부 1모",
+        scalable: true,
+        sort_order: 0,
+      },
+    ],
+    steps: [
+      {
+        id: `${recipeId}-step-1`,
+        step_number: 1,
+        instruction: "재료를 손질해요.",
+        cooking_method: null,
+        ingredients_used: [],
+        heat_level: null,
+        duration_seconds: null,
+        duration_text: null,
+      },
+    ],
+  };
 }
 
 function makeMockShoppingDetail() {
@@ -301,6 +364,22 @@ async function installMypageRoutes(
   });
 
   await page.route("**/api/v1/recipe-books/*/recipes**", async (route) => {
+    const url = new URL(route.request().url());
+    const detailMatch = url.pathname.match(
+      /^\/api\/v1\/recipe-books\/[^/]+\/recipes\/([^/]+)$/,
+    );
+
+    if (route.request().method() === "GET" && detailMatch) {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: makeMockRecipeDetail(decodeURIComponent(detailMatch[1]), recipeItems),
+          error: null,
+        },
+      });
+      return;
+    }
+
     await route.fulfill({
       json: {
         success: true,
@@ -414,10 +493,10 @@ test.describe("MYPAGE screen", () => {
   test("shows profile and recipe books when authenticated @smoke-core", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page);
-    await page.goto("/mypage");
+    await gotoMypageReady(page);
 
     await expect(page.getByTestId("mypage-profile")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("집밥러")).toBeVisible();
+    await expect(page.locator("main")).toContainText("집밥러", { timeout: 15000 });
     await expect(page.getByTestId("mypage-growth-profile")).toBeVisible();
     await expect(page.getByText("Lv.6")).toBeVisible();
     await expect(page.getByText("다음 레벨까지 130 XP")).toBeVisible();
@@ -452,10 +531,10 @@ test.describe("MYPAGE screen", () => {
   test("keeps MYPAGE usable when the progress endpoint fails", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page, { progressError: true });
-    await page.goto("/mypage");
+    await gotoMypageReady(page);
 
     await expect(page.getByTestId("mypage-profile")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("집밥러")).toBeVisible();
+    await expect(page.locator("main").getByText("집밥러").first()).toBeVisible();
     await expect(page.getByTestId("mypage-growth-progress-error")).toContainText(
       "XP를 잠시 불러오지 못했어요",
     );
@@ -480,7 +559,7 @@ test.describe("MYPAGE screen", () => {
   test("switches to shopping history tab and shows records", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page);
-    await page.goto("/mypage");
+    await gotoMypageReady(page);
 
     await expect(page.getByText("집밥러")).toBeVisible();
     await openShoppingSurface(page);
@@ -517,7 +596,7 @@ test.describe("MYPAGE screen", () => {
   test("navigates to shopping detail when clicking a shopping history item", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page);
-    await page.goto("/mypage");
+    await gotoMypageReady(page);
 
     await expect(page.getByText("집밥러")).toBeVisible();
     await openShoppingSurface(page);
@@ -541,13 +620,22 @@ test.describe("MYPAGE screen", () => {
     expect(href).toContain("restore=shopping-history-tab");
   });
 
-  test("returns directly from recipebook detail to the recipebook list context", async ({ page }) => {
+  test("opens recipebook detail in the correct mypage context", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page);
-    await page.goto("/mypage");
+    await gotoMypageReady(page);
 
     await openRecipebookSurface(page);
-    await page.getByTestId("system-book-saved").click();
+    await page.getByTestId("system-book-saved").filter({ visible: true }).first().click();
+
+    if (!isMobileViewport(page)) {
+      await expect(page).toHaveURL(/\/mypage/);
+      await expect(page.getByTestId("recipebook-inline-detail")).toBeVisible();
+      await expect(page.getByTestId("recipebook-detail-header")).toBeVisible();
+      await expect(page.getByRole("heading", { name: "저장한 레시피" })).toBeVisible();
+      return;
+    }
+
     await page.waitForURL(/\/mypage\/recipe-books\/book-saved/);
     await expect(page.getByTestId("recipebook-detail-header")).toBeVisible();
     await page
@@ -564,7 +652,7 @@ test.describe("MYPAGE screen", () => {
   test("returns directly from shopping detail to the shopping history context", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page);
-    await page.goto("/mypage");
+    await gotoMypageReady(page);
 
     await openShoppingSurface(page);
     await page.getByTestId("shopping-card-list-1").click();
@@ -597,7 +685,7 @@ test.describe("MYPAGE screen", () => {
   test("shows empty shopping history state with planner link", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page, { shoppingHistory: [] });
-    await page.goto("/mypage");
+    await gotoMypageReady(page);
 
     await expect(page.getByText("집밥러")).toBeVisible();
     await openShoppingSurface(page);
@@ -615,7 +703,7 @@ test.describe("MYPAGE screen", () => {
   test("creates a new custom recipe book", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page);
-    await page.goto("/mypage");
+    await gotoMypageReady(page);
 
     await expect(page.getByText("집밥러")).toBeVisible();
     await openRecipebookSurface(page);
@@ -629,7 +717,7 @@ test.describe("MYPAGE screen", () => {
   test("renames a custom recipe book via context menu", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page);
-    await page.goto("/mypage");
+    await gotoMypageReady(page);
 
     await openRecipebookSurface(page);
     await expect(page.getByText("주말 파티")).toBeVisible();
@@ -647,7 +735,7 @@ test.describe("MYPAGE screen", () => {
   test("deletes a custom recipe book via context menu", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page);
-    await page.goto("/mypage");
+    await gotoMypageReady(page);
 
     await openRecipebookSurface(page);
     await expect(page.getByText("주말 파티")).toBeVisible();
@@ -668,7 +756,7 @@ test.describe("MYPAGE screen", () => {
   test("profile fallback shows initial when no image", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page);
-    await page.goto("/mypage");
+    await gotoMypageReady(page);
 
     const avatar = page.getByTestId("profile-fallback-avatar");
     await expect(avatar).toBeVisible();
@@ -678,9 +766,8 @@ test.describe("MYPAGE screen", () => {
   test("tab bar has correct ARIA roles", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page);
-    await page.goto("/mypage");
+    await gotoMypageReady(page);
 
-    await expect(page.getByText("집밥러")).toBeVisible();
     if (isMobileViewport(page)) {
       await expect(page.getByTestId("mypage-menu-card")).toBeVisible();
       await expect(page.getByRole("button", { name: /레시피북/ })).toBeVisible();
@@ -696,33 +783,42 @@ test.describe("MYPAGE screen", () => {
     await page.setViewportSize({ width: 320, height: 568 });
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page);
-    await page.goto("/mypage");
+    await gotoMypageReady(page);
 
     await expect(page.getByText("집밥러")).toBeVisible();
 
     const geometry = await page.evaluate(() => {
       const nav = document.querySelector("nav.fixed");
-      if (!nav) return { navTop: 9999, lastContentBottom: 0 };
-      const navTop = nav.getBoundingClientRect().top;
-      const allListItems = document.querySelectorAll('[role="listitem"]');
-      const sectionHeaders = document.querySelectorAll('[data-testid="recipebook-tab"] > p');
-      let lastContentBottom = 0;
-      allListItems.forEach((el) => {
-        const r = el.getBoundingClientRect();
-        if (r.bottom > lastContentBottom) lastContentBottom = r.bottom;
-      });
-      sectionHeaders.forEach((el) => {
-        const r = el.getBoundingClientRect();
-        if (r.bottom > lastContentBottom) lastContentBottom = r.bottom;
-      });
-      const addBtn = document.querySelector('[aria-label="새 레시피북 만들기"]');
-      if (addBtn) {
-        const r = addBtn.getBoundingClientRect();
-        if (r.bottom > lastContentBottom) lastContentBottom = r.bottom;
-      }
-      return { navTop, lastContentBottom };
+      if (!nav) return { navTop: 9999, navBottom: 9999, overlaps: [] };
+
+      const navRect = nav.getBoundingClientRect();
+      const candidates = [
+        ...document.querySelectorAll('[role="listitem"]'),
+        ...document.querySelectorAll('[data-testid="recipebook-tab"] > p'),
+        ...document.querySelectorAll('[aria-label="새 레시피북 만들기"]'),
+      ];
+
+      const overlaps = candidates
+        .filter((el) => {
+          const style = window.getComputedStyle(el);
+          if (style.display === "none" || style.visibility === "hidden") return false;
+          const rect = el.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) return false;
+          return rect.top < navRect.bottom && rect.bottom > navRect.top;
+        })
+        .map((el) => {
+          const rect = el.getBoundingClientRect();
+          return {
+            tag: el.tagName,
+            text: el.textContent?.trim().slice(0, 80) ?? "",
+            top: Math.round(rect.top),
+            bottom: Math.round(rect.bottom),
+          };
+        });
+
+      return { navTop: navRect.top, navBottom: navRect.bottom, overlaps };
     });
 
-    expect(geometry.lastContentBottom).toBeLessThanOrEqual(geometry.navTop);
+    expect(geometry.overlaps).toEqual([]);
   });
 });

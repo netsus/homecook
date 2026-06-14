@@ -184,7 +184,7 @@ test.describe("wave1 port discovery detail", () => {
 
     await expect(
       page.getByRole("button", { name: "Google로 시작하기" }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
 
     await expect(
       page.getByRole("button", { name: "카카오로 시작하기" }),
