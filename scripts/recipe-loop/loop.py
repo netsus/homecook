@@ -1,0 +1,477 @@
+"""유튜브 레시피 추출 강화 루프 오케스트레이터.
+
+한 ITER 흐름 (데모 노트북 구조를 레시피 과제로 이식):
+  1 계획(Claude)  → 2 구현(Codex, recipe-extraction-lab만 수정)
+  → 3 확정검증(추출 실행 + 스키마/하드코딩 점검)
+  → 4 채점(결정적 + AI 의미)  → 5 판정(코드)
+  → 6 진단(Claude, train 케이스 상세 + validation 집계만)  → 7 재시도
+
+격리 원칙:
+  - 구현/진단 프롬프트에 validation/holdout 정답을 절대 넣지 않는다.
+  - 모듈 코드에 validation/holdout 정답 문구가 하드코딩되면 확정검증 FAIL.
+  - validation은 집계 점수만 루프에 노출, holdout은 루프 중 미채점.
+
+노트북(recipe_extract_loop.ipynb)이 이 모듈의 run_loop()/run_iteration()을 호출한다.
+무거운 작업(추출/채점)은 scripts/recipe-loop/*.mjs 를 subprocess로 재사용한다.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import subprocess
+import sys
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+
+def find_project_root(start: Path | None = None) -> Path:
+    current = (start or Path.cwd()).resolve()
+    for candidate in (current, *current.parents):
+        if (candidate / "package.json").exists() and (candidate / ".git").exists():
+            return candidate
+    raise RuntimeError("homecook 프로젝트 루트를 찾지 못했습니다.")
+
+
+PROJECT_ROOT = find_project_root()
+DATA_ROOT = PROJECT_ROOT / "notebooks" / "recipe_loop_data"
+RUN_ROOT = PROJECT_ROOT / "notebooks" / "recipe_loop_runs"
+MODULE_DIR = PROJECT_ROOT / "lib" / "server" / "recipe-extraction-lab"
+KST = timezone(timedelta(hours=9), name="KST")
+
+
+# ---- 설정 ---------------------------------------------------------------
+
+@dataclass
+class LoopConfig:
+    max_iter: int = 3
+    train_split: str = "train"
+    val_split: str = "validation"
+    # 추출/AI 의미채점에 쓰는 Gemini 모델
+    model: str = "gemini-2.5-flash"
+    # 계획/진단 담당 Claude 모델 (CLI --model 별칭). 추론 비중이 커서 opus 기본.
+    claude_model: str = "opus"
+    # 구현 담당 Codex 모델·추론강도 (CLI -c 오버라이드로 명시 고정 → 재현성)
+    codex_model: str = "gpt-5.4"
+    codex_effort: str = "xhigh"
+    # 판정 임계값 (M3 기준선: 결정 F1 0.899 / 분량 0.787 / 단계 0.813, AI 의미 ~3.5)
+    det_f1_min: float = 0.92
+    det_amount_min: float = 0.85
+    det_step_min: float = 0.85
+    det_recipe_count_min: float = 0.95
+    ai_case_min: float = 4.0
+    ai_avg_min: float = 4.3
+
+    @property
+    def claude_cmd(self) -> tuple[str, ...]:
+        return ("claude", "-p", "--permission-mode", "plan", "--model", self.claude_model)
+
+    @property
+    def codex_cmd(self) -> tuple[str, ...]:
+        return ("codex", "exec", "--sandbox", "workspace-write",
+                "-c", f"model={self.codex_model}",
+                "-c", f"model_reasoning_effort={self.codex_effort}")
+
+
+def kst_now() -> datetime:
+    return datetime.now(KST)
+
+
+def kst_stamp() -> str:
+    return kst_now().strftime("%Y-%m-%d %H:%M:%S KST")
+
+
+# ---- 공통 유틸 ----------------------------------------------------------
+
+def run_node(script: str, *args: str) -> subprocess.CompletedProcess:
+    cmd = ["node", f"scripts/recipe-loop/{script}", *args]
+    return subprocess.run(cmd, cwd=str(PROJECT_ROOT), text=True, capture_output=True)
+
+
+def run_agent(cmd: tuple[str, ...], prompt: str, log_path: Path, cwd: Path | None = None) -> str:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    chunks: list[str] = []
+    with log_path.open("w", encoding="utf-8") as log:
+        proc = subprocess.Popen(
+            [*cmd, prompt],
+            cwd=str(cwd or PROJECT_ROOT),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            env=os.environ.copy(),
+        )
+        for line in proc.stdout:  # type: ignore[union-attr]
+            print(line, end="")
+            log.write(line)
+            chunks.append(line)
+        proc.wait()
+        if proc.returncode != 0:
+            raise RuntimeError(f"agent command failed rc={proc.returncode}: {' '.join(cmd[:2])}")
+    return "".join(chunks)
+
+
+def read_json(path: Path, default=None):
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception:
+        return default if default is not None else {}
+
+
+def write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def stage(msg: str) -> None:
+    print("\n" + "=" * 80)
+    print(f"[{kst_stamp()}] {msg}")
+    print("=" * 80)
+
+
+# ---- 격리 점검 ----------------------------------------------------------
+
+def module_source() -> str:
+    return "\n".join(p.read_text(encoding="utf-8") for p in MODULE_DIR.glob("*.mjs"))
+
+
+def forbidden_strings(splits: list[str]) -> list[str]:
+    """validation/holdout 정답에서 하드코딩 탐지에 쓸 고유 문구(만들기 instruction)."""
+    values: list[str] = []
+    for split in splits:
+        for golden_path in (DATA_ROOT / split).glob("*/golden.json"):
+            golden = read_json(golden_path)
+            for recipe in golden.get("recipes", []):
+                for step in recipe.get("steps", []):
+                    text = step.get("instruction") if isinstance(step, dict) else step
+                    if text and len(text) >= 12:
+                        values.append(text)
+    return values
+
+
+def check_no_hardcoded_answers() -> tuple[bool, dict]:
+    code = module_source()
+    hits = [s for s in forbidden_strings(["validation", "holdout"]) if s in code]
+    return (len(hits) == 0, {
+        "hit_count": len(hits),
+        "redacted_hits": ["protected answer text redacted"] if hits else [],
+    })
+
+
+# ---- 스테이지 ------------------------------------------------------------
+
+def build_plan_prompt(cfg: LoopConfig, baseline_summary: str, weak_cases: str, feedback: str, first: bool) -> str:
+    header = (
+        "너는 유튜브 레시피 추출 강화 루프의 계획 담당자다.\n"
+        "구현 대상은 lib/server/recipe-extraction-lab/ (extract.mjs, prompt.mjs) 뿐이다.\n"
+        "이 모듈은 영상 소스(설명란/자막/댓글) + Gemini 영상 분석으로 {재료, 만들기}를 추출한다.\n"
+    )
+    if first:
+        body = (
+            f"현재 기준선 점수:\n{baseline_summary}\n\n"
+            f"train 약점 케이스(상세):\n{weak_cases}\n\n"
+            "가장 점수를 끌어올릴 수 있는 1~2가지 개선에 집중한 짧은 계획을 작성하라.\n"
+        )
+    else:
+        body = (
+            f"직전 반복 피드백:\n{feedback}\n\n"
+            "이번 반복에서 바꿀 점만 짧게 작성하라(전체 재설계 금지).\n"
+        )
+    return header + "\n" + body + (
+        "\n출력은 마크다운 세 문단: 1) 이번에 바꿀 점 2) 유지할 점 3) 구현자 주의사항.\n"
+        "validation/holdout 정답은 알 수 없다고 가정하라.\n"
+    )
+
+
+def build_implement_prompt(plan_text: str, feedback: str) -> str:
+    return (
+        "너는 구현 담당 Codex다. lib/server/recipe-extraction-lab/ 아래 extract.mjs, prompt.mjs만 수정하라.\n"
+        "다른 파일은 만들거나 수정하지 마라. 외부 패키지 추가 금지.\n"
+        "모듈은 extractRecipeFromSources(input, deps)를 export하며 반환 형식을 유지해야 한다.\n\n"
+        f"계획:\n{plan_text}\n\n"
+        f"직전 피드백:\n{feedback or '없음'}\n\n"
+        "구현 지침:\n"
+        "- validation/holdout 테스트 문장을 알 수 없다고 가정하라. 특정 영상 정답을 코드에 하드코딩하지 마라.\n"
+        "- 범용 추출 품질(다중 레시피 누락 방지, 분량 추정, 재료 투입 순서)을 높이는 방향으로 프롬프트/후처리를 개선하라.\n"
+    )
+
+
+def build_diagnosis_prompt(det_summary: str, ai_summary: str, val_summary: str, train_cases: str) -> str:
+    return (
+        "너는 실패 원인 분석 담당 Claude다. 아래 정보만 보고 다음 수정 방향을 제시하라.\n"
+        "validation 케이스의 입력·정답·출력은 제공되지 않으며(집계만), 추측하지 마라.\n\n"
+        f"train 결정적 채점:\n{det_summary}\n\n"
+        f"train AI 의미 채점:\n{ai_summary}\n\n"
+        f"validation 집계(참고):\n{val_summary}\n\n"
+        f"train 케이스별 약점:\n{train_cases}\n\n"
+        "출력은 마크다운: 1) 실패 원인 가설 2) 다음 반복 수정 방향 3) 구현자에게 줄 짧은 피드백.\n"
+    )
+
+
+def grade_summaries(cfg: LoopConfig, out_tag: str) -> dict:
+    """결정적/AI 집계 + train 약점 케이스 텍스트를 모은다."""
+    det = read_json(DATA_ROOT / cfg.train_split / f"_grade_summary.{out_tag}.json")
+    ai = read_json(DATA_ROOT / cfg.train_split / f"_semantic_summary.{out_tag}.json")
+    val_det = read_json(DATA_ROOT / cfg.val_split / f"_grade_summary.{out_tag}.json")
+    val_ai = read_json(DATA_ROOT / cfg.val_split / f"_semantic_summary.{out_tag}.json")
+    return {"det": det, "ai": ai, "val": val_det, "val_det": val_det, "val_ai": val_ai}
+
+
+def split_expected_count(split: str) -> int:
+    manifest = read_json(DATA_ROOT / "manifest.json", {})
+    if isinstance(manifest.get(split), list):
+        return len(manifest[split])
+    split_dir = DATA_ROOT / split
+    return len([p for p in split_dir.iterdir() if p.is_dir()]) if split_dir.exists() else 0
+
+
+def deterministic_validation_success(cfg: LoopConfig, aggregate: dict) -> tuple[bool, dict]:
+    checks = {
+        "summary_success": aggregate.get("success") is True,
+        "ingredientF1": (aggregate.get("ingredientF1") or 0) >= cfg.det_f1_min,
+        "amountMatchRate": (aggregate.get("amountMatchRate") or 0) >= cfg.det_amount_min,
+        "stepCoverage": (aggregate.get("stepCoverage") or 0) >= cfg.det_step_min,
+        "recipeCountMatchRate": (aggregate.get("recipeCountMatchRate") or 0) >= cfg.det_recipe_count_min,
+        "missing_result_count": (aggregate.get("missing_result_count") or 0) == 0,
+        "missing_golden_count": (aggregate.get("missing_golden_count") or 0) == 0,
+        "unapproved_golden_count": (aggregate.get("unapproved_golden_count") or 0) == 0,
+        "expected_count_mismatch": aggregate.get("expected_count_mismatch") is False,
+    }
+    return all(checks.values()), checks
+
+
+def semantic_validation_success(aggregate: dict) -> tuple[bool, dict]:
+    checks = {
+        "summary_success": aggregate.get("success") is True,
+        "provider_error_count": (aggregate.get("provider_error_count") or 0) == 0,
+        "parse_error_count": (aggregate.get("parse_error_count") or 0) == 0,
+        "empty_case_count": (aggregate.get("empty_case_count") or 0) == 0,
+        "expected_count_mismatch": aggregate.get("expected_count_mismatch") is False,
+    }
+    return all(checks.values()), checks
+
+
+def decide(cfg: LoopConfig, summaries: dict, gate_inputs: dict) -> dict:
+    train_det = summaries["det"].get("aggregate", {})
+    train_ai = summaries["ai"].get("aggregate", {})
+    val_det = summaries["val_det"].get("aggregate", {})
+    val_ai = summaries["val_ai"].get("aggregate", {})
+    det_success, det_checks = deterministic_validation_success(cfg, val_det)
+    sem_success, sem_checks = semantic_validation_success(val_ai)
+    subprocess_health = gate_inputs.get("subprocess_health", {})
+    leakage_guard = gate_inputs.get("leakage_guard", {})
+    checks = {
+        "deterministic_validation": det_success,
+        "semantic_validation": sem_success,
+        "subprocess_health": subprocess_health.get("success") is True,
+        "leakage_guard": leakage_guard.get("success") is True,
+    }
+    legacy_train_checks = {
+        "ingredientF1": (train_det.get("ingredientF1") or 0) >= cfg.det_f1_min,
+        "amountMatchRate": (train_det.get("amountMatchRate") or 0) >= cfg.det_amount_min,
+        "stepCoverage": (train_det.get("stepCoverage") or 0) >= cfg.det_step_min,
+        "recipeCountMatchRate": (train_det.get("recipeCountMatchRate") or 0) >= cfg.det_recipe_count_min,
+        "ai_min_case": (train_ai.get("minCaseScore") or 0) >= cfg.ai_case_min,
+        "ai_average": (train_ai.get("averageScore") or 0) >= cfg.ai_avg_min,
+    }
+    return {
+        "run_mode": "offline_snapshot_eval",
+        "gate_mode": "local_hardening",
+        "strict_blind_available": False,
+        "strict_blind_unavailable_reason": "same OS user and same checkout can read repo-local golden files",
+        "passed": all(checks.values()),
+        "checks": checks,
+        "gate_details": {
+            "deterministic_validation": det_checks,
+            "semantic_validation": sem_checks,
+            "subprocess_health": subprocess_health,
+            "leakage_guard": leakage_guard,
+        },
+        "train_diagnostic_checks": legacy_train_checks,
+        "det_aggregate": train_det,
+        "ai_aggregate": train_ai,
+        "val_aggregate": val_det,
+        "val_semantic_aggregate": val_ai,
+    }
+
+
+# ---- 케이스 요약 (진단/계획용 텍스트) -----------------------------------
+
+def weak_train_cases_text(cfg: LoopConfig, out_tag: str, limit: int = 4) -> str:
+    summary = read_json(DATA_ROOT / cfg.train_split / f"_grade_summary.{out_tag}.json")
+    rows = summary.get("perVideo", [])
+    rows = sorted(rows, key=lambda r: (r.get("ingredientF1") or 0) + (r.get("stepCoverage") or 0))[:limit]
+    lines = []
+    for r in rows:
+        vid = r.get("videoId")
+        golden = read_json(DATA_ROOT / cfg.train_split / vid / "golden.json")
+        title = " / ".join(rec.get("title", "") for rec in golden.get("recipes", []))
+        lines.append(
+            f"- {vid} ({title}): 재료F1 {r.get('ingredientF1')}, 분량 {r.get('amountMatchRate')}, "
+            f"단계 {r.get('stepCoverage')}, 레시피 {r.get('recipesMatched')}/{r.get('recipeCountGolden')}"
+            + ("" if r.get("recipeCountMatch") else f" (예측 {r.get('recipeCountPredicted')})")
+        )
+    return "\n".join(lines)
+
+
+def fmt_det(agg: dict) -> str:
+    return (f"재료F1 {agg.get('ingredientF1')}, 분량 {agg.get('amountMatchRate')}, "
+            f"단계 {agg.get('stepCoverage')}, 레시피개수일치 {agg.get('recipeCountMatchRate')} "
+            f"(누락 {agg.get('recipesMissedTotal')}/초과 {agg.get('recipesExtraTotal')})")
+
+
+def fmt_ai(agg: dict) -> str:
+    return f"평균 {agg.get('averageScore')}, 최저 case {agg.get('minCaseScore')}"
+
+
+# ---- 한 ITER ------------------------------------------------------------
+
+def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
+                  do_plan: bool = True, do_implement: bool = True) -> dict:
+    iter_dir = run_dir / f"iteration-{iteration:02d}"
+    iter_dir.mkdir(parents=True, exist_ok=True)
+    out_tag = f"iter{iteration:02d}"
+
+    # baseline 집계를 계획 입력으로
+    base = grade_summaries(cfg, "baseline")
+    baseline_summary = "train: " + fmt_det(base["det"].get("aggregate", {}))
+
+    if do_plan:
+        stage(f"[ITER {iteration}] 1. 계획 (Claude)")
+        prompt = build_plan_prompt(cfg, baseline_summary,
+                                   weak_train_cases_text(cfg, "baseline"),
+                                   feedback, first=(iteration == 1))
+        try:
+            plan_text = run_agent(cfg.claude_cmd, prompt, iter_dir / "01_plan.md")
+        except RuntimeError as error:
+            result = {"iteration": iteration, "passed": False, "iteration_status": "agent_failed", "stage": "plan", "error": str(error)}
+            write_text(iter_dir / "05_decision.json", json.dumps(result, ensure_ascii=False, indent=2))
+            return result
+    else:
+        plan_text = "(계획 생략 - 스모크 모드)"
+
+    if do_implement:
+        stage(f"[ITER {iteration}] 2. 구현 (Codex, recipe-extraction-lab만)")
+        prompt = build_implement_prompt(plan_text, feedback)
+        try:
+            run_agent(cfg.codex_cmd + ("--cd", str(MODULE_DIR)),
+                      prompt, iter_dir / "02_implementation.log", cwd=MODULE_DIR)
+        except RuntimeError as error:
+            result = {"iteration": iteration, "passed": False, "iteration_status": "agent_failed", "stage": "implement", "error": str(error)}
+            write_text(iter_dir / "05_decision.json", json.dumps(result, ensure_ascii=False, indent=2))
+            return result
+
+    stage(f"[ITER {iteration}] 3. 확정 검증 (추출 실행 + 하드코딩/스키마 점검)")
+    no_hardcode, hardcode_report = check_no_hardcoded_answers()
+    ext_train = run_node("run-extraction.mjs", "--split", cfg.train_split, "--out-tag", out_tag, "--model", cfg.model)
+    ext_val = run_node("run-extraction.mjs", "--split", cfg.val_split, "--out-tag", out_tag, "--model", cfg.model)
+    print(ext_train.stdout[-800:])
+    write_text(iter_dir / "03_verify.json", json.dumps({
+        "no_hardcoded_answers": no_hardcode, "hardcode_scan": hardcode_report,
+        "train_extraction_rc": ext_train.returncode, "val_extraction_rc": ext_val.returncode,
+    }, ensure_ascii=False, indent=2))
+
+    stage(f"[ITER {iteration}] 4. 채점 (결정적 + AI 의미)")
+    train_expected = str(split_expected_count(cfg.train_split))
+    val_expected = str(split_expected_count(cfg.val_split))
+    train_det_grade = run_node("grade-extraction.mjs", "--split", cfg.train_split, "--out-tag", out_tag, "--expected-count", train_expected)
+    val_det_grade = run_node("grade-extraction.mjs", "--split", cfg.val_split, "--out-tag", out_tag, "--expected-count", val_expected)
+    train_sem_grade = run_node("grade-semantic.mjs", "--split", cfg.train_split, "--out-tag", out_tag, "--model", cfg.model, "--expected-count", train_expected)
+    val_sem_grade = run_node("grade-semantic.mjs", "--split", cfg.val_split, "--out-tag", out_tag, "--model", cfg.model, "--expected-count", val_expected)
+
+    stage(f"[ITER {iteration}] 5. 판정 (코드)")
+    summaries = grade_summaries(cfg, out_tag)
+    subprocess_health = {
+        "success": ext_val.returncode == 0 and val_det_grade.returncode == 0 and val_sem_grade.returncode == 0,
+        "validation_extraction_rc": ext_val.returncode,
+        "validation_deterministic_grader_rc": val_det_grade.returncode,
+        "validation_semantic_grader_rc": val_sem_grade.returncode,
+        "train_extraction_rc": ext_train.returncode,
+        "train_deterministic_grader_rc": train_det_grade.returncode,
+        "train_semantic_grader_rc": train_sem_grade.returncode,
+        "train_failures_are_diagnostic_only": True,
+    }
+    leakage_guard = {
+        "success": no_hardcode,
+        "module_hardcode_scan": hardcode_report,
+        "output_redaction_scan": {"success": True, "scope": "deferred_to_phase_6"},
+    }
+    decision = decide(cfg, summaries, {"subprocess_health": subprocess_health, "leakage_guard": leakage_guard})
+    write_text(iter_dir / "05_decision.json", json.dumps(decision, ensure_ascii=False, indent=2))
+    print(json.dumps(decision["checks"], ensure_ascii=False, indent=2))
+
+    if decision["passed"]:
+        return {"iteration": iteration, "passed": True, "decision": decision, "out_tag": out_tag}
+
+    stage(f"[ITER {iteration}] 6. 진단 (Claude, train 상세 + validation 집계만)")
+    diag_prompt = build_diagnosis_prompt(
+        fmt_det(summaries["det"].get("aggregate", {})),
+        fmt_ai(summaries["ai"].get("aggregate", {})),
+        fmt_det(summaries["val"].get("aggregate", {})),
+        weak_train_cases_text(cfg, out_tag),
+    )
+    diagnosis = run_agent(cfg.claude_cmd, diag_prompt, iter_dir / "06_diagnosis.md")
+    next_feedback = (
+        f"## 직전 판정\n{json.dumps(decision['checks'], ensure_ascii=False)}\n\n"
+        f"## train 집계\n{fmt_det(summaries['det'].get('aggregate', {}))} | AI {fmt_ai(summaries['ai'].get('aggregate', {}))}\n\n"
+        f"## Claude 진단\n{diagnosis}"
+    )
+    write_text(iter_dir / "feedback_for_next_iter.md", next_feedback)
+    return {"iteration": iteration, "passed": False, "decision": decision, "feedback": next_feedback, "out_tag": out_tag}
+
+
+def run_loop(cfg: LoopConfig | None = None) -> dict:
+    cfg = cfg or LoopConfig()
+    RUN_ROOT.mkdir(parents=True, exist_ok=True)
+    run_dir = RUN_ROOT / kst_now().strftime("%Y%m%d-%H%M%S")
+    run_dir.mkdir(parents=True, exist_ok=False)
+    print(f"실행 폴더: {run_dir}")
+
+    feedback = ""
+    for iteration in range(1, cfg.max_iter + 1):
+        result = run_iteration(cfg, run_dir, iteration, feedback)
+        if result["passed"]:
+            stage(f"통과 (ITER {iteration}). 루프 종료.")
+            return {"run_dir": str(run_dir), "status": "passed", "iterations": iteration}
+        if "feedback" not in result:
+            return {"run_dir": str(run_dir), "status": result.get("iteration_status", "failed"), "iterations": iteration}
+        feedback = result["feedback"]
+
+    stage(f"{cfg.max_iter}회 내 미통과. 루프 종료.")
+    return {"run_dir": str(run_dir), "status": "max-iter", "iterations": cfg.max_iter}
+
+
+if __name__ == "__main__":
+    if "--smoke-wiring" in sys.argv:
+        # 쿼터/구현 없이 배선만 점검: baseline 추출(캐시) 기준으로 채점→판정→진단 경로 실행.
+        cfg = LoopConfig(max_iter=1)
+        run_dir = RUN_ROOT / ("smoke-" + kst_now().strftime("%Y%m%d-%H%M%S"))
+        run_dir.mkdir(parents=True, exist_ok=True)
+        no_hardcode, hardcode_report = check_no_hardcoded_answers()
+        print(f"하드코딩 점검: {'OK' if no_hardcode else 'FAIL ' + str(hardcode_report)}")
+        summaries = grade_summaries(cfg, "baseline")
+        decision = decide(cfg, summaries, {
+            "subprocess_health": {"success": True, "smoke_wiring_only": True},
+            "leakage_guard": {
+                "success": no_hardcode,
+                "module_hardcode_scan": hardcode_report,
+                "output_redaction_scan": {"success": True, "scope": "deferred_to_phase_6"},
+            },
+        })
+        print("판정 checks:", json.dumps(decision["checks"], ensure_ascii=False))
+        print("약점 케이스:\n" + weak_train_cases_text(cfg, "baseline"))
+    elif "--one-iter" in sys.argv:
+        # 실제 1 ITER 스모크: 계획→구현(Codex)→검증(추출)→채점→판정→진단.
+        cfg = LoopConfig(max_iter=1)
+        RUN_ROOT.mkdir(parents=True, exist_ok=True)
+        run_dir = RUN_ROOT / ("oneiter-" + kst_now().strftime("%Y%m%d-%H%M%S"))
+        run_dir.mkdir(parents=True, exist_ok=True)
+        result = run_iteration(cfg, run_dir, 1, feedback="")
+        print("\n=== 1 ITER 결과 ===")
+        print("passed:", result["passed"])
+        print(json.dumps(result["decision"]["checks"], ensure_ascii=False, indent=2))
+        print("run_dir:", run_dir)
+    else:
+        print(json.dumps(run_loop(), ensure_ascii=False, indent=2))
