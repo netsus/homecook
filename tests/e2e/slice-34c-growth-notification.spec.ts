@@ -70,7 +70,11 @@ const priorityNotifications: NotificationFixture[] = [
     title: "레벨 7 달성",
     body: "새 등급 집밥 러너에 도달했어요.",
     category: "cooking",
-    payload: { current_level: 7 },
+    payload: {
+      current_level: 7,
+      previous_grade: { grade_key: "sprout_homecook", label: "성장 씨앗" },
+      grade: { grade_key: "homecook_runner", label: "집밥 러너" },
+    },
     created_at: "2026-06-11T10:04:00.000Z",
     seen_at: null,
   },

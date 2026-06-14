@@ -109,10 +109,176 @@ describe("GrowthToastStack", () => {
     // level_up이 가장 강한 tone
     expect(toasts[0].getAttribute("data-tone")).toBe("level-up");
     expect(toasts[0].className).toContain("growth-toast-card-level-up");
-    expect(within(toasts[0]).getByTestId("growth-toast-visual-icon")).toBeTruthy();
+    expect(
+      within(toasts[0]).getByTestId("growth-toast-visual").getAttribute("data-visual-kind"),
+    ).toBe("level");
     expect(within(toasts[0]).getByTestId("growth-toast-priority-rank").textContent).toBe("1");
     expect(within(toasts[1]).getByTestId("growth-toast-priority-rank").textContent).toBe("2");
     expect(within(toasts[2]).getByTestId("growth-toast-priority-rank").textContent).toBe("3");
+  });
+
+  it("uses a grade acquisition visual only when level-up crosses into a new grade", async () => {
+    setDesktop(true);
+    mockFetchUserGamification.mockResolvedValue({
+      notifications: {
+        unseen: [],
+        priority_unseen: [
+          makeNotification({
+            id: "n-grade",
+            notification_type: "level_up",
+            priority: 1,
+            title: "레벨 8 달성",
+            body: "Steel 등급이 되었어요.",
+            payload: {
+              previous_level: 7,
+              current_level: 8,
+              previous_grade: { grade_key: "wood", label: "Wood" },
+              grade: {
+                grade_key: "steel",
+                label: "Steel",
+                icon_url: "/assets/growth/grades/steel-spoon-badge.png",
+              },
+            },
+          }),
+          makeNotification({
+            id: "n-level",
+            notification_type: "level_up",
+            priority: 1,
+            title: "레벨 9 달성",
+            body: "레벨이 올랐어요.",
+            payload: {
+              previous_level: 8,
+              current_level: 9,
+              previous_grade: { grade_key: "steel", label: "Steel" },
+              grade: { grade_key: "steel", label: "Steel" },
+            },
+          }),
+        ],
+      },
+    });
+
+    render(<GrowthToastStack />);
+    dispatchRefresh();
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("growth-toast")).toHaveLength(2);
+    });
+
+    const [gradeToast, levelToast] = screen.getAllByTestId("growth-toast");
+    expect(gradeToast.getAttribute("data-tone")).toBe("grade-up");
+    expect(gradeToast.getAttribute("role")).toBe("alert");
+    expect(gradeToast.className).toContain("growth-toast-card-grade-up");
+    expect(
+      within(gradeToast).getByTestId("growth-toast-visual").getAttribute("data-visual-kind"),
+    ).toBe("grade");
+    expect(
+      within(gradeToast)
+        .getByTestId("growth-toast-visual-icon")
+        .getAttribute("src"),
+    ).toContain("/assets/growth/grades/steel-spoon-badge.png");
+
+    expect(levelToast.getAttribute("data-tone")).toBe("level-up");
+    expect(
+      within(levelToast).getByTestId("growth-toast-visual").getAttribute("data-visual-kind"),
+    ).toBe("level");
+    expect(within(levelToast).queryByTestId("growth-toast-visual-icon")).toBeNull();
+  });
+
+  it("uses content-specific visuals for XP, achievement, badge, and quest toasts", async () => {
+    setDesktop(true);
+    mockFetchUserGamification
+      .mockResolvedValueOnce({
+        notifications: {
+          unseen: [],
+          priority_unseen: [
+            makeNotification({
+              id: "n-xp",
+              notification_type: "xp_awarded",
+              priority: 4,
+              category: "shopping",
+              title: "장보기 완료",
+              body: "40 XP를 얻었어요.",
+              payload: {
+                event_type: "shopping_completed",
+                label: "장보기 완료",
+                xp_delta: 40,
+              },
+            }),
+            makeNotification({
+              id: "n-achievement",
+              notification_type: "achievement_unlocked",
+              priority: 2,
+              title: "장보기 700회",
+              body: "꾸준한 장보기 업적을 달성했어요.",
+              payload: {
+                achievement_key: "shopping_completed_700",
+                badge_key: "shopping_completed_700",
+              },
+            }),
+            makeNotification({
+              id: "n-badge",
+              notification_type: "badge_unlocked",
+              priority: 2,
+              category: "recipe",
+              title: "첫 레시피 저장",
+              body: "레시피 배지를 획득했어요.",
+              payload: { badge_key: "tutorial_recipe_saved" },
+            }),
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        notifications: {
+          unseen: [],
+          priority_unseen: [
+            makeNotification({
+              id: "n-quest",
+              notification_type: "quest_completed",
+              priority: 3,
+              title: "튜토리얼 완료",
+              body: "튜토리얼을 마쳤어요.",
+              payload: { quest_key: "tutorial_complete" },
+            }),
+          ],
+        },
+      });
+
+    const { unmount } = render(<GrowthToastStack />);
+    dispatchRefresh();
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("growth-toast")).toHaveLength(3);
+    });
+
+    const [xpToast, achievementToast, badgeToast] = screen.getAllByTestId("growth-toast");
+    expect(xpToast.getAttribute("data-tone")).toBe("xp");
+    expect(
+      within(xpToast).getByTestId("growth-toast-visual-icon").getAttribute("src"),
+    ).toContain("/assets/growth/achievement-icons-v3-4/shopping_completed_3.png");
+
+    expect(achievementToast.getAttribute("data-tone")).toBe("achievement");
+    expect(
+      within(achievementToast).getByTestId("growth-toast-visual-icon").getAttribute("src"),
+    ).toContain("/assets/growth/achievement-icons-v3-4/shopping_completed_700.png");
+
+    expect(badgeToast.getAttribute("data-tone")).toBe("badge");
+    expect(
+      within(badgeToast).getByTestId("growth-toast-visual-icon").getAttribute("src"),
+    ).toContain("/assets/growth/achievement-icons-v3-4/tutorial_recipe_saved.png");
+
+    unmount();
+    render(<GrowthToastStack />);
+    dispatchRefresh();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("growth-toast")).toBeTruthy();
+    });
+
+    const questToast = screen.getByTestId("growth-toast");
+    expect(questToast.getAttribute("data-tone")).toBe("quest");
+    expect(
+      within(questToast).getByTestId("growth-toast-visual-icon").getAttribute("src"),
+    ).toContain("/assets/growth/achievement-icons-v3-4/tutorial_complete.png");
   });
 
   it("caps visible toasts at 2 on mobile and queues the rest as a collapsed summary", async () => {
