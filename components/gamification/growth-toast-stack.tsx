@@ -8,7 +8,9 @@ import {
   markUserGamificationNotificationsSeen,
 } from "@/lib/api/user-gamification";
 import { HOMECOOK_GAMIFICATION_REFRESH_EVENT } from "@/lib/gamification-events";
+import achievementIconManifest from "@/public/assets/growth/achievement-icons-v3-4/manifest.json";
 import type {
+  UserGamificationBadgeCategory,
   UserGamificationNotificationData,
   UserGamificationNotificationType,
 } from "@/types/user-gamification";
@@ -19,23 +21,80 @@ const DESKTOP_VISIBLE_MAX = 3;
 const DESKTOP_MEDIA_QUERY = "(min-width: 768px)";
 const TOAST_DURATION_MS = 3600;
 
-type ToastTone = "level-up" | "badge" | "quest" | "xp";
+type ToastTone = "grade-up" | "level-up" | "achievement" | "badge" | "quest" | "xp";
+type ToastVisual =
+  | {
+      kind: "grade" | "achievement" | "badge" | "quest" | "xp";
+      src: string;
+    }
+  | {
+      kind: "level";
+      label: string;
+    };
 
 interface ToastView {
   id: string;
   type: UserGamificationNotificationType;
   tone: ToastTone;
+  visual: ToastVisual;
   title: string;
   body: string;
   groupKey: string | null;
 }
 
-const TONE_BY_TYPE: Record<UserGamificationNotificationType, ToastTone> = {
-  level_up: "level-up",
-  achievement_unlocked: "badge",
+const TONE_BY_TYPE: Omit<Record<UserGamificationNotificationType, ToastTone>, "level_up"> = {
+  achievement_unlocked: "achievement",
   badge_unlocked: "badge",
   quest_completed: "quest",
   xp_awarded: "xp",
+};
+
+const LEGACY_GRADE_KEY_ALIASES: Record<string, string> = {
+  homecook_artisan: "gold",
+  homecook_master: "titanium",
+  homecook_runner: "wood",
+  kitchen_explorer: "steel",
+  sprout_homecook: "clay",
+  table_curator: "diamond",
+  table_maker: "silver",
+};
+
+const GRADE_KEYS = new Set([
+  "clay",
+  "wood",
+  "steel",
+  "silver",
+  "gold",
+  "diamond",
+  "titanium",
+]);
+
+const ACHIEVEMENT_ICON_SRC_BY_KEY = new Map(
+  (
+    achievementIconManifest as Array<{
+      achievement_key: string;
+      src: string;
+    }>
+  ).map((icon) => [icon.achievement_key, icon.src]),
+);
+
+const XP_ICON_BY_EVENT_TYPE: Record<string, string> = {
+  cooking_completed: "/assets/growth/achievement-icons-v3-4/cooking_completed_3.png",
+  custom_book_created: "/assets/growth/achievement-icons-v3-4/tutorial_recipebook_created.png",
+  planner_registered: "/assets/growth/achievement-icons-v3-4/planner_registered_3.png",
+  recipe_saved: "/assets/growth/achievement-icons-v3-4/recipe_saved_5.png",
+  shopping_completed: "/assets/growth/achievement-icons-v3-4/shopping_completed_3.png",
+};
+
+const XP_ICON_BY_CATEGORY: Record<UserGamificationBadgeCategory, string> = {
+  cooking: "/assets/growth/achievement-icons-v3-4/cooking_completed_3.png",
+  leftovers: "/assets/growth/achievement-icons-v3-4/leftover_eaten_3.png",
+  pantry: "/assets/growth/achievement-icons-v3-4/pantry_distinct_10.png",
+  planner: "/assets/growth/achievement-icons-v3-4/planner_registered_3.png",
+  recipe: "/assets/growth/achievement-icons-v3-4/recipe_saved_5.png",
+  recipebook: "/assets/growth/achievement-icons-v3-4/tutorial_recipebook_created.png",
+  shopping: "/assets/growth/achievement-icons-v3-4/shopping_completed_3.png",
+  tutorial: "/assets/growth/achievement-icons-v3-4/tutorial_complete.png",
 };
 
 function toText(value: unknown) {
@@ -46,13 +105,104 @@ function toNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function normalizeGradeKey(gradeKey: string) {
+  const normalized = LEGACY_GRADE_KEY_ALIASES[gradeKey] ?? gradeKey;
+  return GRADE_KEYS.has(normalized) ? normalized : "clay";
+}
+
+function isGradeUpgrade(payload: Record<string, unknown>) {
+  const grade = toRecord(payload.grade);
+  const previousGrade = toRecord(payload.previous_grade);
+  const gradeKey = toText(grade.grade_key);
+  const previousGradeKey = toText(previousGrade.grade_key);
+
+  return Boolean(gradeKey && (!previousGradeKey || gradeKey !== previousGradeKey));
+}
+
+function gradeIconSrc(payload: Record<string, unknown>) {
+  const grade = toRecord(payload.grade);
+  const explicitIcon = toText(grade.icon_url);
+  if (explicitIcon) return explicitIcon;
+
+  const gradeKey = normalizeGradeKey(toText(grade.grade_key));
+  return `/assets/growth/grades/${gradeKey}-spoon-badge.png`;
+}
+
+function getLevelLabel(payload: Record<string, unknown>) {
+  const level = toNumber(payload.current_level) || toNumber(payload.level);
+  return level ? `Lv.${level}` : "Lv";
+}
+
+function achievementIconSrc(...keys: string[]) {
+  for (const key of keys) {
+    if (!key) continue;
+    const src = ACHIEVEMENT_ICON_SRC_BY_KEY.get(key);
+    if (src) return src;
+  }
+  return "";
+}
+
+function getToastTone(
+  notificationType: UserGamificationNotificationType,
+  payload: Record<string, unknown>,
+): ToastTone {
+  if (notificationType === "level_up") {
+    return isGradeUpgrade(payload) ? "grade-up" : "level-up";
+  }
+  return TONE_BY_TYPE[notificationType] ?? "xp";
+}
+
+function getToastVisual(
+  notification: UserGamificationNotificationData,
+  payload: Record<string, unknown>,
+  tone: ToastTone,
+): ToastVisual {
+  if (tone === "grade-up") {
+    return { kind: "grade", src: gradeIconSrc(payload) };
+  }
+  if (tone === "level-up") {
+    return { kind: "level", label: getLevelLabel(payload) };
+  }
+  if (tone === "achievement") {
+    const src =
+      achievementIconSrc(
+        toText(payload.achievement_key),
+        toText(payload.badge_key),
+      ) || XP_ICON_BY_CATEGORY[notification.category];
+    return { kind: "achievement", src };
+  }
+  if (tone === "badge") {
+    const src =
+      achievementIconSrc(toText(payload.badge_key), toText(payload.achievement_key)) ||
+      XP_ICON_BY_CATEGORY[notification.category];
+    return { kind: "badge", src };
+  }
+  if (tone === "quest") {
+    const src =
+      achievementIconSrc(toText(payload.quest_key), toText(payload.achievement_key)) ||
+      XP_ICON_BY_CATEGORY.tutorial;
+    return { kind: "quest", src };
+  }
+
+  const src =
+    XP_ICON_BY_EVENT_TYPE[toText(payload.event_type)] ||
+    XP_ICON_BY_CATEGORY[notification.category];
+  return { kind: "xp", src };
+}
+
 // Prefer server title/body. Fallback text is only for incomplete fixture rows.
 // The client does not recalculate priority, so input order is preserved.
 function toToastView(
   notification: UserGamificationNotificationData,
 ): ToastView {
   const payload = notification.payload ?? {};
-  const tone = TONE_BY_TYPE[notification.notification_type] ?? "xp";
+  const tone = getToastTone(notification.notification_type, payload);
   const serverTitle = toText(notification.title);
   const serverBody = toText(notification.body);
 
@@ -86,6 +236,7 @@ function toToastView(
     id: notification.id,
     type: notification.notification_type,
     tone,
+    visual: getToastVisual(notification, payload, tone),
     title,
     body,
     groupKey: notification.group_key ?? null,
@@ -126,8 +277,14 @@ function selectToastSource(data: {
 }
 
 function toneClass(tone: ToastTone) {
+  if (tone === "grade-up") {
+    return "growth-toast-card-grade-up border-[var(--growth-toast-grade-border)] [background:var(--growth-toast-grade-bg)] text-[var(--foreground)] shadow-[var(--growth-toast-grade-shadow)]";
+  }
   if (tone === "level-up") {
     return "growth-toast-card-level-up border-[var(--growth-toast-level-border)] [background:var(--growth-toast-level-bg)] text-[var(--foreground)] shadow-[var(--growth-toast-level-shadow)]";
+  }
+  if (tone === "achievement") {
+    return "growth-toast-card-achievement border-[var(--growth-toast-achievement-border)] [background:var(--growth-toast-achievement-bg)] text-[var(--foreground)] shadow-[var(--growth-toast-achievement-shadow)]";
   }
   if (tone === "badge") {
     return "growth-toast-card-badge border-[var(--growth-toast-badge-border)] [background:var(--growth-toast-badge-bg)] text-[var(--foreground)] shadow-[var(--growth-toast-badge-shadow)]";
@@ -138,11 +295,30 @@ function toneClass(tone: ToastTone) {
   return "growth-toast-card-xp border-[var(--growth-toast-xp-border)] [background:var(--growth-toast-xp-bg)] text-[var(--foreground)] shadow-[var(--growth-toast-xp-shadow)]";
 }
 
-function toneImage(tone: ToastTone) {
-  if (tone === "level-up") return "/assets/growth/grades/gold-spoon-badge.png";
-  if (tone === "badge") return "/assets/growth/grades/wood-spoon-badge.png";
-  if (tone === "quest") return "/assets/growth/grades/silver-spoon-badge.png";
-  return "/assets/growth/grades/diamond-spoon-badge.png";
+function visualClass(tone: ToastTone) {
+  if (tone === "grade-up") {
+    return "border-[var(--growth-toast-grade-icon-border)] bg-[var(--growth-toast-grade-icon-bg)] text-[var(--growth-toast-grade-icon-text)]";
+  }
+  if (tone === "level-up") {
+    return "border-[var(--growth-toast-level-icon-border)] bg-[var(--growth-toast-level-icon-bg)] text-[var(--growth-toast-level-icon-text)]";
+  }
+  if (tone === "achievement") {
+    return "border-[var(--growth-toast-achievement-icon-border)] bg-[var(--growth-toast-achievement-icon-bg)] text-[var(--growth-toast-achievement-icon-text)]";
+  }
+  if (tone === "badge") {
+    return "border-[var(--growth-toast-badge-icon-border)] bg-[var(--growth-toast-badge-icon-bg)] text-[var(--growth-toast-badge-icon-text)]";
+  }
+  if (tone === "quest") {
+    return "border-[var(--growth-toast-quest-icon-border)] bg-[var(--growth-toast-quest-icon-bg)] text-[var(--growth-toast-quest-icon-text)]";
+  }
+  return "border-[var(--growth-toast-xp-icon-border)] bg-[var(--growth-toast-xp-icon-bg)] text-[var(--growth-toast-xp-icon-text)]";
+}
+
+function visualImageClass(tone: ToastTone) {
+  if (tone === "grade-up") return "scale-[1.18]";
+  if (tone === "achievement" || tone === "badge") return "scale-[1.08]";
+  if (tone === "quest") return "scale-[1.02]";
+  return "scale-[0.96]";
 }
 
 function rankClass(index: number) {
@@ -150,6 +326,45 @@ function rankClass(index: number) {
   if (index === 1) return "bg-[var(--growth-toast-rank-2-bg)] text-[var(--text-inverse)]";
   if (index === 2) return "bg-[var(--brand)] text-[var(--text-inverse)]";
   return "bg-[var(--growth-toast-rank-muted-bg)] text-[var(--text-inverse)]";
+}
+
+function GrowthToastVisual({ tone, visual }: { tone: ToastTone; visual: ToastVisual }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={[
+        "relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[14px] border shadow-[var(--growth-toast-icon-shadow)]",
+        visualClass(tone),
+      ].join(" ")}
+      data-testid="growth-toast-visual"
+      data-visual-kind={visual.kind}
+    >
+      {visual.kind === "level" ? (
+        <>
+          <span className="absolute inset-[5px] rounded-full border border-[var(--surface-alpha-70)] bg-[var(--surface-alpha-55)]" />
+          <span
+            className="relative text-[12px] font-black leading-none"
+            data-testid="growth-toast-level-medal"
+          >
+            {visual.label}
+          </span>
+        </>
+      ) : (
+        <Image
+          alt=""
+          className={[
+            "h-full w-full object-contain drop-shadow-[var(--growth-toast-visual-drop-shadow)]",
+            visualImageClass(tone),
+          ].join(" ")}
+          data-testid="growth-toast-visual-icon"
+          height={44}
+          src={visual.src}
+          unoptimized
+          width={44}
+        />
+      )}
+    </span>
+  );
 }
 
 export function GrowthToastStack() {
@@ -294,7 +509,7 @@ export function GrowthToastStack() {
           data-notification-id={view.id}
           data-notification-type={view.type}
           data-tone={view.tone}
-          role={view.tone === "level-up" ? "alert" : "status"}
+          role={view.tone === "level-up" || view.tone === "grade-up" ? "alert" : "status"}
         >
           <span
             aria-hidden="true"
@@ -307,20 +522,7 @@ export function GrowthToastStack() {
             {index + 1}
           </span>
           <div className="flex items-center gap-3">
-            <span
-              aria-hidden="true"
-              className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[14px] border border-[var(--surface-alpha-70)] bg-[var(--surface-alpha-70)] shadow-[var(--growth-toast-icon-shadow)]"
-            >
-              <Image
-                alt=""
-                className="h-full w-full scale-[1.08] object-contain"
-                data-testid="growth-toast-visual-icon"
-                height={44}
-                src={toneImage(view.tone)}
-                unoptimized
-                width={44}
-              />
-            </span>
+            <GrowthToastVisual tone={view.tone} visual={view.visual} />
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-extrabold leading-[1.35]">
                 {view.title}
