@@ -19,10 +19,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -52,6 +55,24 @@ IMPLEMENTATION_WRITEBACK_ALLOWLIST = [
     Path("lib/server/recipe-extraction-lab/extract.mjs"),
     Path("lib/server/recipe-extraction-lab/prompt.mjs"),
 ]
+IMPLEMENTATION_WORKSPACE_FORBIDDEN_PATHS = [
+    Path(".git"),
+    Path("notebooks/recipe_loop_data/train"),
+    Path("notebooks/recipe_loop_data/validation"),
+    Path("notebooks/recipe_loop_data/holdout"),
+    Path("notebooks/recipe_loop_data/cache"),
+]
+IMPLEMENTATION_FORBIDDEN_ACCESS_PATHS = [
+    PROJECT_ROOT / ".git",
+    DATA_ROOT / "validation",
+    DATA_ROOT / "holdout",
+    DATA_ROOT / "cache",
+    DATA_ROOT / "REVIEW_validation.md",
+    DATA_ROOT / "REVIEW_holdout.md",
+    DATA_ROOT / "semantic_calibration.json",
+    RUN_ROOT,
+]
+DISCORD_COMPLETION_SCRIPT = Path.home() / ".codex" / "skills" / "discord-completion-notifications" / "scripts" / "send-discord-completion.sh"
 
 
 # ---- 설정 ---------------------------------------------------------------
@@ -159,10 +180,463 @@ def write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def display_path(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(PROJECT_ROOT.resolve()))
+    except ValueError:
+        return str(path)
+
+
 def stage(msg: str) -> None:
     print("\n" + "=" * 80)
     print(f"[{kst_stamp()}] {msg}")
     print("=" * 80)
+
+
+def implementation_forbidden_path_markers() -> list[str]:
+    markers: set[str] = set()
+    for path in IMPLEMENTATION_FORBIDDEN_ACCESS_PATHS:
+        markers.add(str(path.resolve()))
+        markers.add(display_path(path))
+    return sorted((marker for marker in markers if marker), key=len, reverse=True)
+
+
+def validate_implementation_access_guard_environment() -> dict:
+    checks = {
+        "repo_git_exists": (PROJECT_ROOT / ".git").exists(),
+        "validation_dir_exists": (DATA_ROOT / "validation").is_dir(),
+        "holdout_dir_exists": (DATA_ROOT / "holdout").is_dir(),
+    }
+    return {
+        "success": all(checks.values()),
+        "repo_root": str(PROJECT_ROOT.resolve()),
+        "checks": checks,
+        "reason": "ok" if all(checks.values()) else "repo_root_precheck_failed",
+    }
+
+
+def fs_usage_command() -> list[str]:
+    command = ["fs_usage", "-w", "-f", "pathname"]
+    if os.geteuid() == 0:
+        return command
+    return ["sudo", "-n", *command]
+
+
+def redact_forbidden_paths(text: str, markers: list[str] | None = None) -> str:
+    redacted = text
+    for marker in markers or implementation_forbidden_path_markers():
+        redacted = redacted.replace(marker, "[FORBIDDEN_PATH]")
+    return redacted
+
+
+def parse_fs_usage_process(line: str) -> dict:
+    """Extract the trailing fs_usage process token, usually `ProcessName.12345`."""
+    matches = list(re.finditer(r"(?P<process>[A-Za-z0-9_.:+-]+)\.(?P<pid>\d+)(?=\s*$|\s)", line))
+    if not matches:
+        return {}
+    match = matches[-1]
+    try:
+        pid = int(match.group("pid"))
+    except ValueError:
+        return {}
+    return {"process_name": match.group("process"), "pid": pid}
+
+
+def process_snapshot() -> dict[int, dict]:
+    proc = subprocess.run(["ps", "-axo", "pid=,ppid=,comm="],
+                          text=True, capture_output=True)
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.strip() or "ps snapshot failed")
+    snapshot: dict[int, dict] = {}
+    for line in proc.stdout.splitlines():
+        parts = line.strip().split(None, 2)
+        if len(parts) < 2:
+            continue
+        try:
+            pid = int(parts[0])
+            ppid = int(parts[1])
+        except ValueError:
+            continue
+        snapshot[pid] = {
+            "pid": pid,
+            "ppid": ppid,
+            "command": parts[2] if len(parts) > 2 else "",
+        }
+    return snapshot
+
+
+class ProcessTreeSampler:
+    def __init__(self, root_pid: int, interval_seconds: float = 0.2):
+        self.root_pid = root_pid
+        self.interval_seconds = interval_seconds
+        self.pids: set[int] = {root_pid}
+        self.processes: dict[int, dict] = {}
+        self.error: str | None = None
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._run, name="recipe-loop-pid-sampler", daemon=True)
+
+    def start(self) -> None:
+        self._sample_once()
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        self._thread.join(timeout=1)
+        self._sample_once()
+
+    def _run(self) -> None:
+        while not self._stop.wait(self.interval_seconds):
+            self._sample_once()
+
+    def _sample_once(self) -> None:
+        try:
+            snapshot = process_snapshot()
+        except RuntimeError as error:
+            self.error = str(error)
+            return
+        changed = True
+        while changed:
+            changed = False
+            for pid, info in snapshot.items():
+                if pid in self.pids:
+                    self.processes[pid] = info
+                if info["ppid"] in self.pids and pid not in self.pids:
+                    self.pids.add(pid)
+                    self.processes[pid] = info
+                    changed = True
+
+    def summary(self) -> dict:
+        return {
+            "root_pid": self.root_pid,
+            "success": self.error is None and self.root_pid in self.pids,
+            "reason": "ok" if self.error is None and self.root_pid in self.pids else "pid_subtree_reconstruction_failed",
+            "error": self.error,
+            "pids": sorted(self.pids),
+            "processes": [
+                self.processes[pid]
+                for pid in sorted(self.processes)
+                if pid in self.pids
+            ],
+        }
+
+
+def process_name_by_pid(pid_subtree: dict | None) -> dict[int, str]:
+    names: dict[int, str] = {}
+    if not isinstance(pid_subtree, dict):
+        return names
+    for process in pid_subtree.get("processes", []) or []:
+        try:
+            pid = int(process.get("pid"))
+        except (TypeError, ValueError):
+            continue
+        command = str(process.get("command") or "")
+        names[pid] = Path(command).name if command else ""
+    return names
+
+
+def scan_fs_usage_log_for_forbidden_access(log_path: Path, markers: list[str] | None = None,
+                                           allowed_pids: set[int] | None = None,
+                                           pid_subtree: dict | None = None) -> dict:
+    markers = markers or implementation_forbidden_path_markers()
+    hits = []
+    ignored_forbidden_line_count = 0
+    unattributed_forbidden_line_count = 0
+    names_by_pid = process_name_by_pid(pid_subtree)
+    if not log_path.exists():
+        return {
+            "success": False,
+            "hit_count": 0,
+            "reason": "fs_usage_log_missing",
+            "log_path": display_path(log_path),
+            "hits": [],
+        }
+    with log_path.open("r", encoding="utf-8", errors="replace") as log:
+        for line_number, line in enumerate(log, start=1):
+            if not any(marker in line for marker in markers):
+                continue
+            process = parse_fs_usage_process(line)
+            pid = process.get("pid")
+            if pid is None:
+                unattributed_forbidden_line_count += 1
+            if allowed_pids is not None and pid not in allowed_pids:
+                ignored_forbidden_line_count += 1
+                continue
+            hits.append({
+                "line": line_number,
+                "process_pid": pid,
+                "process_name": process.get("process_name") or names_by_pid.get(pid, ""),
+                "summary": redact_forbidden_paths(line.strip(), markers)[:500],
+            })
+    return {
+        "success": len(hits) == 0,
+        "hit_count": len(hits),
+        "log_path": display_path(log_path),
+        "hits": hits,
+        "ignored_forbidden_line_count": ignored_forbidden_line_count,
+        "unattributed_forbidden_line_count": unattributed_forbidden_line_count,
+        "redacted_hits": ["forbidden path redacted"] if hits else [],
+    }
+
+
+def start_fs_usage_audit(log_path: Path) -> dict:
+    environment = validate_implementation_access_guard_environment()
+    if not environment["success"]:
+        return {
+            "success": False,
+            "started": False,
+            "reason": environment["reason"],
+            "environment": environment,
+            "log_path": display_path(log_path),
+        }
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    command = fs_usage_command()
+    try:
+        log_file = log_path.open("w", encoding="utf-8")
+    except OSError as error:
+        return {
+            "success": False,
+            "started": False,
+            "reason": "fs_usage_log_create_failed",
+            "error": str(error),
+            "command": command,
+            "log_path": display_path(log_path),
+        }
+    try:
+        proc = subprocess.Popen(
+            command,
+            cwd=str(PROJECT_ROOT),
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+    except OSError as error:
+        log_file.close()
+        return {
+            "success": False,
+            "started": False,
+            "reason": "fs_usage_start_failed",
+            "error": str(error),
+            "command": command,
+            "log_path": display_path(log_path),
+        }
+    time.sleep(0.5)
+    if proc.poll() is not None:
+        log_file.close()
+        error_text = ""
+        try:
+            error_text = log_path.read_text(encoding="utf-8", errors="replace")[-2000:]
+        except OSError:
+            pass
+        return {
+            "success": False,
+            "started": False,
+            "reason": "fs_usage_exited_before_implementation",
+            "returncode": proc.returncode,
+            "error": error_text.strip(),
+            "command": command,
+            "log_path": display_path(log_path),
+        }
+    return {
+        "success": True,
+        "started": True,
+        "process": proc,
+        "log_file": log_file,
+        "command": command,
+        "log_path": display_path(log_path),
+    }
+
+
+def stop_fs_usage_audit(handle: dict) -> dict:
+    proc = handle.get("process")
+    log_file = handle.get("log_file")
+    if proc and proc.poll() is None:
+        proc.terminate()
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=2)
+    if log_file:
+        log_file.close()
+    return {
+        "returncode": proc.returncode if proc else None,
+        "log_path": handle.get("log_path"),
+    }
+
+
+def implementation_access_guard_payload(status: str, reason: str, log_path: Path, hit_log_path: Path,
+                                        **details) -> dict:
+    return {
+        "stage": "implementation_access_guard",
+        "access_guard_status": status,
+        "passed": status == "ok",
+        "continues_iteration": True,
+        "reason": reason,
+        "log_path": display_path(log_path),
+        "hit_log_path": display_path(hit_log_path),
+        **details,
+    }
+
+
+def write_implementation_access_guard_artifacts(payload: dict, guard_path: Path, hit_log_path: Path,
+                                                hits: list[dict]) -> None:
+    write_text(hit_log_path, json.dumps({
+        "schemaVersion": 1,
+        "stage": "implementation_access_guard",
+        "hit_count": len(hits),
+        "hits": hits,
+    }, ensure_ascii=False, indent=2))
+    write_text(guard_path, json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def send_implementation_access_guard_alert(payload: dict) -> dict:
+    status = payload.get("access_guard_status")
+    if status not in {"warning", "monitoring_unavailable"}:
+        return {"sent": False, "reason": "not_required"}
+    if not DISCORD_COMPLETION_SCRIPT.exists():
+        return {"sent": False, "reason": "discord_sender_missing"}
+    representative = payload.get("representative_hit") or {}
+    process = representative.get("process_name") or "unknown-process"
+    pid = representative.get("process_pid") or "unknown-pid"
+    sample = str(representative.get("summary") or payload.get("reason") or "")[:180]
+    hit_count = payload.get("hit_count", 0)
+    if status == "warning":
+        headline = "구현 Codex 접근 감시 경고: 금지 경로 접근 의심이 감지되었습니다."
+    else:
+        headline = "구현 Codex 접근 감시 경고: 접근 감시가 불완전합니다."
+    summary = (
+        f"{headline} ITER는 계속 진행합니다. "
+        f"status={status}; hit_count={hit_count}; process={process}/{pid}; "
+        f"sample={sample}; audit={payload.get('log_path')}; hits={payload.get('hit_log_path')}"
+    )
+    proc = subprocess.run([str(DISCORD_COMPLETION_SCRIPT), "--summary", summary],
+                          cwd=str(PROJECT_ROOT), text=True, capture_output=True)
+    return {
+        "sent": proc.returncode == 0,
+        "returncode": proc.returncode,
+        "stdout": proc.stdout.strip()[-500:],
+        "stderr": proc.stderr.strip()[-500:],
+    }
+
+
+def run_implementation_agent(cmd: tuple[str, ...], prompt: str, log_path: Path,
+                             cwd: Path) -> tuple[str, dict, str | None]:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    chunks: list[str] = []
+    sampler: ProcessTreeSampler | None = None
+    with log_path.open("w", encoding="utf-8") as log:
+        proc = subprocess.Popen(
+            [*cmd, prompt],
+            cwd=str(cwd),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            env=os.environ.copy(),
+        )
+        sampler = ProcessTreeSampler(proc.pid)
+        sampler.start()
+        try:
+            for line in proc.stdout:  # type: ignore[union-attr]
+                print(line, end="")
+                log.write(line)
+                chunks.append(line)
+            proc.wait()
+        finally:
+            sampler.stop()
+        agent_error = None
+        if proc.returncode != 0:
+            agent_error = f"agent command failed rc={proc.returncode}: {' '.join(cmd[:2])}"
+    return "".join(chunks), sampler.summary(), agent_error
+
+
+def run_implementation_agent_with_access_guard(cfg: LoopConfig, prompt: str, iter_dir: Path,
+                                               impl_workspace: Path) -> dict:
+    log_path = iter_dir / "02_fs_audit.log"
+    guard_path = iter_dir / "02_implementation_access_guard.json"
+    hit_log_path = iter_dir / "02_fs_audit_hits.json"
+    audit = start_fs_usage_audit(log_path)
+    output = ""
+    pid_subtree: dict | None = None
+    fs_usage_stop: dict | None = None
+    agent_error: str | None = None
+    hits: list[dict] = []
+    scan: dict | None = None
+
+    try:
+        output, pid_subtree, agent_error = run_implementation_agent(
+            cfg.codex_cmd + ("--cd", str(impl_workspace)),
+            prompt,
+            iter_dir / "02_implementation.log",
+            cwd=impl_workspace,
+        )
+    except OSError as error:
+        agent_error = str(error)
+    finally:
+        if audit.get("success"):
+            fs_usage_stop = stop_fs_usage_audit(audit)
+
+    if not audit.get("success"):
+        payload = implementation_access_guard_payload(
+            "monitoring_unavailable",
+            audit.get("reason", "fs_usage_unavailable"),
+            log_path,
+            hit_log_path,
+            fs_usage=audit,
+        )
+    elif not pid_subtree or not pid_subtree.get("success"):
+        payload = implementation_access_guard_payload(
+            "monitoring_unavailable",
+            "pid_subtree_reconstruction_failed",
+            log_path,
+            hit_log_path,
+            fs_usage={
+                "command": audit.get("command"),
+                "stop": fs_usage_stop,
+            },
+            pid_subtree=pid_subtree,
+        )
+    else:
+        allowed_pids = set(pid_subtree.get("pids", []))
+        scan = scan_fs_usage_log_for_forbidden_access(
+            log_path,
+            allowed_pids=allowed_pids,
+            pid_subtree=pid_subtree,
+        )
+        hits = scan.get("hits", [])
+        status = "ok" if scan["success"] else "warning"
+        payload = implementation_access_guard_payload(
+            status,
+            "ok" if scan["success"] else "forbidden_golden_path_access_suspected",
+            log_path,
+            hit_log_path,
+            hit_count=scan["hit_count"],
+            representative_hit=hits[0] if hits else None,
+            fs_usage={
+                "command": audit.get("command"),
+                "stop": fs_usage_stop,
+            },
+            pid_subtree={
+                "root_pid": pid_subtree.get("root_pid"),
+                "pids": pid_subtree.get("pids"),
+                "processes": pid_subtree.get("processes"),
+            },
+            forbidden_access_scan={
+                "success": scan["success"],
+                "hit_count": scan["hit_count"],
+                "ignored_forbidden_line_count": scan["ignored_forbidden_line_count"],
+                "unattributed_forbidden_line_count": scan["unattributed_forbidden_line_count"],
+                "log_path": scan["log_path"],
+            },
+        )
+
+    notification = send_implementation_access_guard_alert(payload)
+    if notification.get("sent") or notification.get("reason") != "not_required":
+        payload["notification"] = notification
+    write_implementation_access_guard_artifacts(payload, guard_path, hit_log_path, hits)
+    if agent_error:
+        return {"output": output, "access_guard": payload, "agent_error": agent_error}
+    return {"output": output, "access_guard": payload}
 
 
 def create_codex_implementation_workspace() -> Path:
@@ -387,13 +861,6 @@ def holdout_marker_path() -> Path:
     return DATA_ROOT / "holdout_consumed.json"
 
 
-def display_path(path: Path) -> str:
-    try:
-        return str(path.relative_to(PROJECT_ROOT))
-    except ValueError:
-        return str(path)
-
-
 def holdout_consumption_status() -> dict:
     marker = holdout_marker_path()
     if not marker.exists():
@@ -515,13 +982,24 @@ def build_plan_prompt(cfg: LoopConfig, baseline_summary: str, weak_cases: str, f
 
 def build_implement_prompt(plan_text: str, feedback: str) -> str:
     return (
+        "You are running in an allowlist implementation workspace.\n"
+        "Do not access, request, infer from, or reference validation/holdout golden/evaluation data.\n"
+        "Train is public diagnostic data, but raw train files are not present in this workspace.\n"
+        "Forbidden paths include notebooks/recipe_loop_data/validation, notebooks/recipe_loop_data/holdout,\n"
+        "their absolute path equivalents, caches, prior run artifacts, judge outputs, decision logs that may\n"
+        "contain protected answer fragments, and the source repository .git directory.\n"
+        "Only modify lib/server/recipe-extraction-lab/extract.mjs and prompt.mjs.\n"
+        "If you need information outside the allowlist workspace, stop and explain the missing non-golden contract\n"
+        "instead of reading external files.\n\n"
         "너는 구현 담당 Codex다. lib/server/recipe-extraction-lab/ 아래 extract.mjs, prompt.mjs만 수정하라.\n"
         "다른 파일은 만들거나 수정하지 마라. 외부 패키지 추가 금지.\n"
         "모듈은 extractRecipeFromSources(input, deps)를 export하며 반환 형식을 유지해야 한다.\n\n"
         f"계획:\n{plan_text}\n\n"
         f"직전 피드백:\n{feedback or '없음'}\n\n"
         "구현 지침:\n"
-        "- validation/holdout 테스트 문장을 알 수 없다고 가정하라. 특정 영상 정답을 코드에 하드코딩하지 마라.\n"
+        "- train은 학습용 공개 진단 데이터지만, 이 allowlist workspace에는 제공되지 않는다.\n"
+        "- validation/holdout 정답, cache, 과거 run 산출물, judge output, decision log는 읽거나 요청하지 마라.\n"
+        "- 특정 영상 정답을 코드에 하드코딩하지 마라.\n"
         "- 범용 추출 품질(다중 레시피 누락 방지, 분량 추정, 재료 투입 순서)을 높이는 방향으로 프롬프트/후처리를 개선하라.\n"
     )
 
@@ -616,6 +1094,10 @@ def decide(cfg: LoopConfig, summaries: dict, gate_inputs: dict) -> dict:
     sem_success, sem_checks = semantic_validation_success(cfg, val_ai)
     subprocess_health = gate_inputs.get("subprocess_health", {})
     leakage_guard = gate_inputs.get("leakage_guard", {})
+    implementation_access_guard = gate_inputs.get("implementation_access_guard", {
+        "access_guard_status": "not_run",
+        "continues_iteration": True,
+    })
     checks = {
         "deterministic_validation": det_success,
         "semantic_validation": sem_success,
@@ -643,6 +1125,7 @@ def decide(cfg: LoopConfig, summaries: dict, gate_inputs: dict) -> dict:
             "subprocess_health": subprocess_health,
             "leakage_guard": leakage_guard,
         },
+        "implementation_access_guard": implementation_access_guard,
         "train_diagnostic_checks": legacy_train_checks,
         "det_aggregate": train_det,
         "ai_aggregate": train_ai,
@@ -706,13 +1189,29 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
     else:
         plan_text = "(계획 생략 - 스모크 모드)"
 
+    implementation_access_guard = {
+        "access_guard_status": "not_run",
+        "continues_iteration": True,
+        "reason": "implementation_skipped",
+    }
     if do_implement:
         stage(f"[ITER {iteration}] 2. 구현 (Codex, recipe-extraction-lab만)")
         prompt = build_implement_prompt(plan_text, feedback)
         impl_workspace = create_codex_implementation_workspace()
         try:
-            run_agent(cfg.codex_cmd + ("--cd", str(impl_workspace)),
-                      prompt, iter_dir / "02_implementation.log", cwd=impl_workspace)
+            implementation_result = run_implementation_agent_with_access_guard(cfg, prompt, iter_dir, impl_workspace)
+            implementation_access_guard = implementation_result["access_guard"]
+            if implementation_result.get("agent_error"):
+                result = {
+                    "iteration": iteration,
+                    "passed": False,
+                    "iteration_status": "agent_failed",
+                    "stage": "implement",
+                    "error": implementation_result["agent_error"],
+                    "implementation_access_guard": implementation_access_guard,
+                }
+                write_text(iter_dir / "05_decision.json", json.dumps(result, ensure_ascii=False, indent=2))
+                return result
             written = sync_implementation_workspace_back(impl_workspace)
             write_text(iter_dir / "02_implementation_workspace.json", json.dumps({
                 "workspace": str(impl_workspace),
@@ -720,13 +1219,18 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
                 "writeback": written,
                 "forbidden_paths_present": any(
                     (impl_workspace / forbidden).exists()
-                    for forbidden in [".git", "notebooks/recipe_loop_data/train",
-                                      "notebooks/recipe_loop_data/validation",
-                                      "notebooks/recipe_loop_data/holdout"]
+                    for forbidden in IMPLEMENTATION_WORKSPACE_FORBIDDEN_PATHS
                 ),
             }, ensure_ascii=False, indent=2))
         except RuntimeError as error:
-            result = {"iteration": iteration, "passed": False, "iteration_status": "agent_failed", "stage": "implement", "error": str(error)}
+            result = {
+                "iteration": iteration,
+                "passed": False,
+                "iteration_status": "agent_failed",
+                "stage": "implement",
+                "error": str(error),
+                "implementation_access_guard": implementation_access_guard,
+            }
             write_text(iter_dir / "05_decision.json", json.dumps(result, ensure_ascii=False, indent=2))
             return result
         finally:
@@ -792,7 +1296,11 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
         "module_hardcode_scan": hardcode_report,
         "output_redaction_scan": output_scan_before_decision,
     }
-    decision = decide(cfg, summaries, {"subprocess_health": subprocess_health, "leakage_guard": leakage_guard})
+    decision = decide(cfg, summaries, {
+        "subprocess_health": subprocess_health,
+        "leakage_guard": leakage_guard,
+        "implementation_access_guard": implementation_access_guard,
+    })
     decision_text = json.dumps(decision, ensure_ascii=False, indent=2)
     decision_scan = scan_texts_for_protected_answers([{"scope": "05_decision_payload", "text": decision_text}])
     if not decision_scan["success"]:
@@ -802,7 +1310,11 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
             "module_hardcode_scan": hardcode_report,
             "output_redaction_scan": output_scan,
         }
-        decision = decide(cfg, summaries, {"subprocess_health": subprocess_health, "leakage_guard": leakage_guard})
+        decision = decide(cfg, summaries, {
+            "subprocess_health": subprocess_health,
+            "leakage_guard": leakage_guard,
+            "implementation_access_guard": implementation_access_guard,
+        })
         decision_text = json.dumps(decision, ensure_ascii=False, indent=2)
     else:
         output_scan = merge_redaction_scans([output_scan_before_decision, decision_scan])
@@ -811,7 +1323,11 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
             "module_hardcode_scan": hardcode_report,
             "output_redaction_scan": output_scan,
         }
-        decision = decide(cfg, summaries, {"subprocess_health": subprocess_health, "leakage_guard": leakage_guard})
+        decision = decide(cfg, summaries, {
+            "subprocess_health": subprocess_health,
+            "leakage_guard": leakage_guard,
+            "implementation_access_guard": implementation_access_guard,
+        })
         decision_text = json.dumps(decision, ensure_ascii=False, indent=2)
     write_text(iter_dir / "05_decision.json", decision_text)
     print(json.dumps(decision["checks"], ensure_ascii=False, indent=2))
