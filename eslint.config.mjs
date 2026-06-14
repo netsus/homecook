@@ -17,6 +17,8 @@ const eslintConfig = [
       "**/.next/**",
       ".worktrees/**",
       "**/.worktrees/**",
+      ".venv-jupyter/**",
+      "**/.venv-jupyter/**",
       ".agents/**",
       "**/.agents/**",
       ".artifacts/**",
