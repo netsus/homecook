@@ -346,13 +346,71 @@ def assert_holdout_not_consumed() -> None:
         raise RuntimeError(f"holdout already consumed: {status.get('marker_path')}")
 
 
+GATE_AXES = ["deterministic_validation", "semantic_validation", "subprocess_health", "leakage_guard"]
+
+
+def load_validation_decision(decision_path: str | None) -> dict:
+    """holdout 소비를 인가하는 validation decision(05_decision.json)을 읽어 통과 여부를 확인한다.
+
+    실제 loop가 만든 run artifact 경로(<RUN_ROOT>/<run>/iteration-*/05_decision.json)인지,
+    decision 구조를 갖췄는지, 4축 게이트(GATE_AXES)가 모두 true인지까지 확인한다.
+    같은 운영자가 파일을 만들 수 있으므로 위조를 막는 tamper-proof 장치는 아니며,
+    stale·cross-run·부분 파일을 실수로 인가해 1회뿐인 holdout을 소비하는 것을 막는 무결성 검사다.
+    """
+    if not decision_path:
+        return {"path": None, "passed": False, "reason": "no validation decision provided"}
+    path = Path(decision_path)
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
+    resolved = path.resolve()
+    run_root = RUN_ROOT.resolve()
+    is_run_artifact = (
+        resolved.name == "05_decision.json"
+        and resolved.parent.name.startswith("iteration-")
+        and run_root in resolved.parents
+    )
+    if not is_run_artifact:
+        return {"path": display_path(path), "passed": False,
+                "reason": "decision path is not a loop run artifact (<run>/iteration-*/05_decision.json)"}
+    if not resolved.exists():
+        return {"path": display_path(path), "passed": False, "reason": "validation decision not found"}
+    decision = read_json(resolved, {})
+    if not isinstance(decision, dict):
+        return {"path": display_path(path), "passed": False, "reason": "file is not a decision object"}
+    checks = decision.get("checks")
+    if decision.get("gate_mode") != "local_hardening" or not isinstance(checks, dict):
+        return {"path": display_path(path), "passed": False, "reason": "file is not a local-hardening decision"}
+    failed_axes = [axis for axis in GATE_AXES if checks.get(axis) is not True]
+    if decision.get("passed") is not True or failed_axes:
+        return {"path": display_path(path), "passed": False,
+                "reason": "validation decision did not pass all gate axes", "failed_axes": failed_axes}
+    return {"path": display_path(path), "passed": True, "checked_axes": GATE_AXES}
+
+
+def git_commit() -> str | None:
+    try:
+        proc = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(PROJECT_ROOT), text=True, capture_output=True)
+        return proc.stdout.strip() if proc.returncode == 0 else None
+    except Exception:
+        return None
+
+
 def write_holdout_consumed_marker(out_tag: str, result: dict, dry_run: bool = False) -> dict:
     marker = holdout_marker_path()
     payload = {
         "schemaVersion": 1,
-        "consumed_at": kst_now().isoformat(),
+        "run_id": result.get("run_id", out_tag),
         "out_tag": out_tag,
+        "git_commit": git_commit(),
+        "started_at": result.get("started_at"),
+        "completed_at": result.get("completed_at"),
+        "consumed_at": kst_now().isoformat(),
         "dry_run": dry_run,
+        "status": result.get("status"),
+        "validation_decision_path": result.get("validation_decision_path"),
+        "validation_passed": result.get("validation_passed"),
+        "holdout_summary_path": result.get("holdout_summary_path"),
+        "holdout_semantic_summary_path": result.get("holdout_semantic_summary_path"),
         "success": result.get("success") is True,
         "result": result,
     }
@@ -752,18 +810,32 @@ def cli_arg_value(name: str, default: str | None = None) -> str | None:
     return sys.argv[idx + 1]
 
 
-def run_holdout_final(cfg: LoopConfig | None = None, out_tag: str | None = None, dry_run: bool = False) -> dict:
+def run_holdout_final(cfg: LoopConfig | None = None, out_tag: str | None = None, dry_run: bool = False,
+                      validation_decision_path: str | None = None) -> dict:
     cfg = cfg or LoopConfig(max_iter=1)
     out_tag = out_tag or ("holdout-final-" + kst_now().strftime("%Y%m%d-%H%M%S"))
+    started_at = kst_now().isoformat()
+    validation = load_validation_decision(validation_decision_path)
     if not dry_run:
+        if not validation["passed"]:
+            raise RuntimeError(
+                "holdout requires a passing validation decision (decision.passed === true): "
+                f"{json.dumps(validation, ensure_ascii=False)}"
+            )
         assert_holdout_not_consumed()
     expected = str(split_expected_count("holdout"))
     if dry_run:
         result = {
-            "success": True,
+            "success": validation["passed"] and not holdout_consumption_status().get("consumed"),
             "dry_run": True,
+            "run_id": out_tag,
+            "status": "preview",
+            "started_at": started_at,
+            "completed_at": kst_now().isoformat(),
             "out_tag": out_tag,
             "expected_count": expected,
+            "validation_decision_path": validation["path"],
+            "validation_passed": validation["passed"],
             "holdout_status_before": holdout_consumption_status(),
         }
         return write_holdout_consumed_marker(out_tag, result, dry_run=True)
@@ -785,11 +857,20 @@ def run_holdout_final(cfg: LoopConfig | None = None, out_tag: str | None = None,
             {"scope": "holdout_semantic_stderr", "text": sem.stderr},
         ]),
     ])
+    success = ext.returncode == 0 and det.returncode == 0 and sem.returncode == 0 and redaction_scan["success"]
     result = {
-        "success": ext.returncode == 0 and det.returncode == 0 and sem.returncode == 0 and redaction_scan["success"],
+        "success": success,
         "dry_run": False,
+        "run_id": out_tag,
+        "status": "passed" if success else "failed",
+        "started_at": started_at,
+        "completed_at": kst_now().isoformat(),
         "out_tag": out_tag,
         "expected_count": expected,
+        "validation_decision_path": validation["path"],
+        "validation_passed": validation["passed"],
+        "holdout_summary_path": display_path(DATA_ROOT / "holdout" / f"_grade_summary.{out_tag}.json"),
+        "holdout_semantic_summary_path": display_path(DATA_ROOT / "holdout" / f"_semantic_summary.{out_tag}.json"),
         "returncodes": {
             "extraction": ext.returncode,
             "deterministic": det.returncode,
@@ -843,7 +924,11 @@ if __name__ == "__main__":
         print(json.dumps(holdout_consumption_status(), ensure_ascii=False, indent=2))
     elif "--run-holdout-final" in sys.argv:
         try:
-            marker = run_holdout_final(out_tag=cli_arg_value("out-tag"), dry_run="--dry-run" in sys.argv)
+            marker = run_holdout_final(
+                out_tag=cli_arg_value("out-tag"),
+                dry_run="--dry-run" in sys.argv,
+                validation_decision_path=cli_arg_value("validation-decision"),
+            )
             print(json.dumps(marker, ensure_ascii=False, indent=2))
         except RuntimeError as error:
             print(str(error), file=sys.stderr)

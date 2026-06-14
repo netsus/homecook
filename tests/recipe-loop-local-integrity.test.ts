@@ -536,6 +536,86 @@ print(json.dumps({
     expect(report.raw_leaked).toBe(false);
   });
 
+  it("only authorizes the holdout from a genuine passing run-artifact decision", () => {
+    const result = runLoopPython(`
+import json
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
+loop.DATA_ROOT.mkdir(parents=True, exist_ok=True)
+loop.RUN_ROOT = root / "notebooks" / "recipe_loop_runs"
+
+ALL_PASS = {axis: True for axis in loop.GATE_AXES}
+ONE_FAIL = {**ALL_PASS, "deterministic_validation": False}
+
+def decision_file(run, passed, axes):
+    d = loop.RUN_ROOT / run / "iteration-01"
+    d.mkdir(parents=True, exist_ok=True)
+    p = d / "05_decision.json"
+    p.write_text(json.dumps({
+        "run_mode": "offline_snapshot_eval",
+        "gate_mode": "local_hardening",
+        "passed": passed,
+        "checks": axes,
+    }), encoding="utf-8")
+    return p
+
+def refused(**kwargs):
+    try:
+        loop.run_holdout_final(dry_run=False, **kwargs)
+        return False
+    except RuntimeError:
+        return True
+
+refused_no_decision = refused(out_tag="t1", validation_decision_path=None)
+
+# passed:true but outside the run-artifact path → refused (path guard)
+fake = root / "fake_decision.json"
+fake.write_text(json.dumps({"gate_mode": "local_hardening", "passed": True, "checks": ALL_PASS}), encoding="utf-8")
+refused_fake_path = refused(out_tag="t2", validation_decision_path=str(fake))
+
+# real-artifact path but malformed decision shape → refused (shape guard)
+malformed_path = loop.RUN_ROOT / "run-malformed" / "iteration-01" / "05_decision.json"
+malformed_path.parent.mkdir(parents=True, exist_ok=True)
+malformed_path.write_text(json.dumps([{"passed": True}]), encoding="utf-8")
+malformed = loop.load_validation_decision(str(malformed_path))
+
+# real-artifact shape but one gate axis failed → refused (axis check)
+fail_path = decision_file("run-fail", False, ONE_FAIL)
+refused_failed_axis = refused(out_tag="t3", validation_decision_path=str(fail_path))
+
+marker_after_refusal = loop.holdout_marker_path().exists()
+
+# genuine passing run-artifact decision → dry-run preview authorized
+pass_path = decision_file("run-pass", True, ALL_PASS)
+preview = loop.run_holdout_final(out_tag="t4", dry_run=True, validation_decision_path=str(pass_path))
+
+print(json.dumps({
+    "refused_no_decision": refused_no_decision,
+    "refused_fake_path": refused_fake_path,
+    "malformed_passed": malformed["passed"],
+    "malformed_reason": malformed["reason"],
+    "refused_failed_axis": refused_failed_axis,
+    "marker_after_refusal": marker_after_refusal,
+    "preview_validation_passed": preview["validation_passed"],
+    "preview_decision_path": preview["validation_decision_path"],
+    "marker_after_dry": loop.holdout_marker_path().exists(),
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.refused_no_decision).toBe(true);
+    expect(report.refused_fake_path).toBe(true);
+    expect(report.malformed_passed).toBe(false);
+    expect(report.malformed_reason).toBe("file is not a decision object");
+    expect(report.refused_failed_axis).toBe(true);
+    expect(report.marker_after_refusal).toBe(false);
+    expect(report.preview_validation_passed).toBe(true);
+    expect(report.preview_decision_path).toContain("05_decision.json");
+    expect(report.marker_after_dry).toBe(false);
+  });
+
   it("builds protected answer fingerprints beyond step instructions and redacts scan hits", () => {
     const result = runLoopPython(`
 fragments = loop.protected_answer_fragments(["validation"])
