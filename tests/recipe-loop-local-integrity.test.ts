@@ -156,6 +156,94 @@ describe("recipe-loop local integrity gates", () => {
     });
   });
 
+  it("hardens known deterministic scorer loopholes", () => {
+    writeJson(path.join(splitCase(workdir, "name-false-positive"), "golden.json"), {
+      schemaVersion: 1,
+      videoId: "name-false-positive",
+      reviewStatus: "approved",
+      recipes: [
+        {
+          title: "이름 오탐",
+          ingredients: [{ name: "고추장", amount: "1", unit: "큰술" }],
+          steps: [{ order: 1, instruction: "고추장을 넣는다" }],
+        },
+      ],
+    });
+    writeJson(path.join(splitCase(workdir, "name-false-positive"), "runs/latest/result.json"), {
+      recipes: [
+        {
+          title: "이름 오탐",
+          ingredients: [{ name: "고추", amount: "1", unit: "큰술" }],
+          steps: ["고추장을 넣는다"],
+        },
+      ],
+    });
+    writeJson(path.join(splitCase(workdir, "amount-missing"), "golden.json"), {
+      schemaVersion: 1,
+      videoId: "amount-missing",
+      reviewStatus: "approved",
+      recipes: [
+        {
+          title: "분량 누락",
+          ingredients: [{ name: "간장", amount: "2", unit: "큰술" }],
+          steps: [{ order: 1, instruction: "간장을 넣는다" }],
+        },
+      ],
+    });
+    writeJson(path.join(splitCase(workdir, "amount-missing"), "runs/latest/result.json"), {
+      recipes: [
+        {
+          title: "분량 누락",
+          ingredients: [{ name: "간장", amount: null, unit: "큰술" }],
+          steps: ["간장을 넣는다"],
+        },
+      ],
+    });
+    writeJson(path.join(splitCase(workdir, "one-bag-step"), "golden.json"), {
+      schemaVersion: 1,
+      videoId: "one-bag-step",
+      reviewStatus: "approved",
+      recipes: [
+        {
+          title: "한 번에 넣기",
+          ingredients: [{ name: "양파", amount: "1", unit: "개" }],
+          steps: [
+            { order: 1, instruction: "양파를 먼저 볶는다" },
+            { order: 2, instruction: "고기를 넣고 익힌다" },
+            { order: 3, instruction: "간장을 넣어 조린다" },
+          ],
+        },
+      ],
+    });
+    writeJson(path.join(splitCase(workdir, "one-bag-step"), "runs/latest/result.json"), {
+      recipes: [
+        {
+          title: "한 번에 넣기",
+          ingredients: [{ name: "양파", amount: "1", unit: "개" }],
+          steps: ["양파와 고기와 간장을 한 번에 넣고 볶아 익히고 조린다"],
+        },
+      ],
+    });
+
+    const result = spawnSync(
+      "node",
+      [gradeExtractionScript, "--split", "validation", "--out-tag", "latest", "--expected-count", "3"],
+      { cwd: workdir, encoding: "utf8" },
+    );
+
+    expect(result.status).toBe(0);
+    const summary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_grade_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    const rows = Object.fromEntries(summary.perVideo.map((row: { videoId: string }) => [row.videoId, row]));
+    expect(rows["name-false-positive"]).toMatchObject({ ingredientRecall: 0, ingredientF1: 0 });
+    expect(rows["amount-missing"]).toMatchObject({ ingredientRecall: 1, amountMatchRate: 0 });
+    expect(rows["one-bag-step"].stepCoverage).toBeLessThan(1);
+  });
+
   it("records semantic missing artifacts without calling the provider", () => {
     writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), approvedGolden());
 
@@ -217,6 +305,72 @@ describe("recipe-loop local integrity gates", () => {
     });
   });
 
+  it("applies semantic judge provider separation and calibrated thresholds", () => {
+    writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), approvedGolden());
+    writeJson(path.join(splitCase(workdir, "case-a"), "runs/latest/result.json"), {
+      ...matchingResult(),
+      __semanticJudge: {
+        cases: [
+          {
+            title: "테스트 레시피",
+            ingredient_score: 2,
+            step_score: 2,
+            reason: "fixture low score",
+          },
+        ],
+      },
+    });
+    writeJson(path.join(workdir, "notebooks/recipe_loop_data/semantic_calibration.json"), {
+      schemaVersion: 1,
+      thresholds: { minCaseScore: 3, averageScore: 3 },
+      samples: [
+        {
+          id: "fixture-low",
+          split: "train",
+          videoId: "case-a",
+          humanCaseScore: 2,
+          judgeCaseScore: 2,
+          verdict: "aligned",
+        },
+      ],
+    });
+
+    const result = spawnSync(
+      "node",
+      [
+        gradeSemanticScript,
+        "--split",
+        "validation",
+        "--out-tag",
+        "latest",
+        "--expected-count",
+        "1",
+        "--judge-provider",
+        "fixture",
+        "--judge-model",
+        "fixture-local",
+        "--calibration",
+        "notebooks/recipe_loop_data/semantic_calibration.json",
+      ],
+      { cwd: workdir, encoding: "utf8" },
+    );
+
+    expect(result.status).toBe(1);
+    const summary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    expect(summary.aggregate).toMatchObject({
+      success: false,
+      judge_provider: "fixture",
+      judge_model: "fixture-local",
+      threshold_success: false,
+      calibration: { sample_count: 1 },
+    });
+  });
+
   it("keeps every decision gate axis fail-closed", () => {
     const result = runLoopPython(`
 cfg = loop.LoopConfig()
@@ -265,6 +419,29 @@ print(json.dumps(cases))
       expect(cases[axis].passed).toBe(false);
       expect(cases[axis].checks[axis]).toBe(false);
     }
+  });
+
+  it("fails semantic validation when calibrated score thresholds are not met", () => {
+    const result = runLoopPython(`
+cfg = loop.LoopConfig()
+aggregate = {
+    "success": True,
+    "provider_error_count": 0,
+    "parse_error_count": 0,
+    "empty_case_count": 0,
+    "expected_count_mismatch": False,
+    "threshold_success": False,
+    "averageScore": 4,
+    "minCaseScore": 2,
+}
+ok, checks = loop.semantic_validation_success(cfg, aggregate)
+print(json.dumps({"ok": ok, "checks": checks}))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.ok).toBe(false);
+    expect(report.checks.threshold_success).toBe(false);
   });
 
   it("fails the loop decision when protected answers appear in decision or log outputs", () => {
@@ -318,6 +495,44 @@ print(json.dumps({
     );
     expect(report.payload.decision.passed).toBe(false);
     expect(report.payload.decision.checks.leakage_guard).toBe(false);
+    expect(report.raw_leaked).toBe(false);
+  });
+
+  it("tracks holdout one-time consumption and scans nested run artifacts without raw leaks", () => {
+    const result = runLoopPython(`
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+fragments = loop.protected_answer_fragments(["validation"])
+target = fragments[0]["value"]
+loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
+loop.DATA_ROOT.mkdir(parents=True, exist_ok=True)
+status_before = loop.holdout_consumption_status()
+loop.write_holdout_consumed_marker("final-smoke", {"success": False, "reason": "unit"}, dry_run=False)
+status_after = loop.holdout_consumption_status()
+blocked = False
+try:
+    loop.assert_holdout_not_consumed()
+except RuntimeError:
+    blocked = True
+artifact_dir = root / "run-artifacts" / "iteration-01" / "nested"
+artifact_dir.mkdir(parents=True, exist_ok=True)
+(artifact_dir / "agent.log").write_text(target, encoding="utf-8")
+scan = loop.scan_directory_for_protected_answers(root / "run-artifacts", fragments)
+print(json.dumps({
+    "status_before": status_before,
+    "status_after": status_after,
+    "blocked": blocked,
+    "scan": scan,
+    "raw_leaked": target in json.dumps(scan, ensure_ascii=False),
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.status_before.consumed).toBe(false);
+    expect(report.status_after).toMatchObject({ consumed: true, out_tag: "final-smoke" });
+    expect(report.blocked).toBe(true);
+    expect(report.scan.success).toBe(false);
     expect(report.raw_leaked).toBe(false);
   });
 

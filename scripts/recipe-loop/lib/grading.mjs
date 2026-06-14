@@ -16,24 +16,30 @@ export function canonicalIngredientName(name) {
   return norm(n);
 }
 
-// 두 재료명이 같은 재료를 가리키는지 (정규화 일치 또는 포함관계).
-function namesMatch(a, b) {
+// 두 재료명이 같은 재료를 가리키는지. 기본은 정규화 exact match만 허용한다.
+// 포함관계는 nameAliases에 명시된 별칭이 관여할 때만 제한적으로 허용한다.
+function namesMatch(a, b, { allowAliasSubstring = false } = {}) {
   const ca = canonicalIngredientName(a);
   const cb = canonicalIngredientName(b);
   if (!ca || !cb) return false;
   if (ca === cb) return true;
-  if (ca.length >= 2 && cb.length >= 2 && (ca.includes(cb) || cb.includes(ca))) return true;
+  const shorter = ca.length <= cb.length ? ca : cb;
+  const longer = ca.length > cb.length ? ca : cb;
+  if (allowAliasSubstring && shorter.length >= 2 && longer.length >= 3 && longer.includes(shorter)) return true;
   return false;
 }
 
 function allNames(ing) {
-  return [ing.name, ...(ing.nameAliases ?? [])].filter(Boolean);
+  return [
+    ...(ing.name ? [{ value: ing.name, alias: false }] : []),
+    ...(ing.nameAliases ?? []).filter(Boolean).map((value) => ({ value, alias: true })),
+  ];
 }
 
 function ingredientMatches(goldenIng, predIng) {
   for (const gn of allNames(goldenIng)) {
     for (const pn of allNames(predIng)) {
-      if (namesMatch(gn, pn)) return true;
+      if (namesMatch(gn.value, pn.value, { allowAliasSubstring: gn.alias || pn.alias })) return true;
     }
   }
   return false;
@@ -67,19 +73,26 @@ function parseAmountValue(amount) {
 }
 
 // 분량이 "충분히 가깝다"고 볼지: 단위 일치 + 수치 비율 0.5~2배 이내(시각추정은 더 관대).
-function amountClose(goldenIng, predIng) {
+function compareAmount(goldenIng, predIng) {
   const gUnit = canonicalUnit(goldenIng.unit);
   const pUnit = canonicalUnit(predIng.unit);
   const gVal = parseAmountValue(goldenIng.amount);
   const pVal = parseAmountValue(predIng.amount);
-  if (gVal === null || gVal === undefined || pVal === null || pVal === undefined) return null; // 비교 불가
-  if (gUnit !== pUnit) return false;
-  if (gVal === 0 || pVal === 0) return gVal === pVal;
+  if (gVal === null || gVal === undefined) {
+    return { scored: false, provided: pVal !== null && pVal !== undefined, matched: null };
+  }
+  if (pVal === null || pVal === undefined) {
+    return { scored: true, provided: false, matched: false, reason: "missing_pred_amount" };
+  }
+  if (gUnit !== pUnit) return { scored: true, provided: true, matched: false, reason: "unit_mismatch" };
+  if (gVal === 0 || pVal === 0) {
+    return { scored: true, provided: true, matched: gVal === pVal };
+  }
   const ratio = gVal / pVal;
   const tolerant = goldenIng.amountBasis === "visual-estimate" || predIng.amountBasis === "visual-estimate";
   const lo = tolerant ? 0.34 : 0.5;
   const hi = tolerant ? 3 : 2;
-  return ratio >= lo && ratio <= hi;
+  return { scored: true, provided: true, matched: ratio >= lo && ratio <= hi };
 }
 
 // 단계 커버리지: golden step의 핵심 토큰(2글자+ 명사 추정)이 예측 step들에 등장하는 비율.
@@ -92,15 +105,40 @@ function stepTokens(text) {
   const raw = String(text).toLowerCase().match(/[가-힣a-z0-9]{2,}/g) ?? [];
   return raw.filter((t) => !STEP_STOPWORDS.has(t));
 }
+
+function stepTokenSet(step) {
+  return new Set(stepTokens(stepText(step)).flatMap((t) => [t, t.slice(0, 2)]));
+}
+
+function stepSimilarity(goldenStep, predStep) {
+  const tokens = stepTokens(stepText(goldenStep));
+  if (tokens.length === 0) return 1;
+  const predTokens = stepTokenSet(predStep);
+  const hit = tokens.filter((t) => predTokens.has(t) || predTokens.has(t.slice(0, 2))).length;
+  return hit / tokens.length;
+}
+
 function stepCoverage(goldenSteps, predSteps) {
   if (goldenSteps.length === 0) return { covered: 0, total: 0, ratio: 1 };
-  const predTokens = new Set(predSteps.flatMap((s) => stepTokens(stepText(s)).flatMap((t) => [t, t.slice(0, 2)])));
   let covered = 0;
+  const usedPred = new Set();
   for (const gsRaw of goldenSteps) {
     const tokens = stepTokens(stepText(gsRaw));
     if (tokens.length === 0) { covered += 1; continue; }
-    const hit = tokens.filter((t) => predTokens.has(t) || predTokens.has(t.slice(0, 2))).length;
-    if (hit / tokens.length >= 0.4) covered += 1;
+    let bestIdx = -1;
+    let bestScore = 0;
+    predSteps.forEach((predStep, idx) => {
+      if (usedPred.has(idx)) return;
+      const score = stepSimilarity(gsRaw, predStep);
+      if (score > bestScore) {
+        bestScore = score;
+        bestIdx = idx;
+      }
+    });
+    if (bestIdx >= 0 && bestScore >= 0.4) {
+      usedPred.add(bestIdx);
+      covered += 1;
+    }
   }
   return { covered, total: goldenSteps.length, ratio: covered / goldenSteps.length };
 }
@@ -161,7 +199,7 @@ function titleSimilarity(a, b) {
 
 function scoreRecipePair(golden, pred) {
   if (!pred) {
-    return { matched: false, ingredientF1: 0, ingredientPrecision: 0, ingredientRecall: 0, amountMatchRate: 0, amountComparable: 0, stepCoverage: 0, goldenIngredients: golden.ingredients.length };
+    return { matched: false, ingredientF1: 0, ingredientPrecision: 0, ingredientRecall: 0, amountMatchRate: 0, amountCoverage: 0, amountComparable: 0, stepCoverage: 0, goldenIngredients: golden.ingredients.length };
   }
   let tp = 0;
   const matchedGolden = [];
@@ -174,12 +212,13 @@ function scoreRecipePair(golden, pred) {
   const recall = golden.ingredients.length ? tp / golden.ingredients.length : 0;
   const f1 = precision + recall ? (2 * precision * recall) / (precision + recall) : 0;
 
-  let amountComparable = 0, amountHit = 0;
+  let amountComparable = 0, amountProvided = 0, amountHit = 0;
   for (const { g, p } of matchedGolden) {
-    const close = amountClose(g, p);
-    if (close === null) continue;
+    const comparison = compareAmount(g, p);
+    if (!comparison.scored) continue;
     amountComparable += 1;
-    if (close) amountHit += 1;
+    if (comparison.provided) amountProvided += 1;
+    if (comparison.matched) amountHit += 1;
   }
   const cov = stepCoverage(golden.steps, pred.steps);
 
@@ -189,6 +228,7 @@ function scoreRecipePair(golden, pred) {
     ingredientPrecision: precision,
     ingredientRecall: recall,
     amountMatchRate: amountComparable ? amountHit / amountComparable : null,
+    amountCoverage: amountComparable ? amountProvided / amountComparable : null,
     amountComparable,
     stepCoverage: cov.ratio,
     goldenIngredients: golden.ingredients.length,
@@ -221,12 +261,14 @@ export function gradeDeterministic(result, golden) {
     ingredientPrecision: round(wavg("ingredientPrecision")),
     ingredientRecall: round(wavg("ingredientRecall")),
     amountMatchRate: avgAmount === null || avgAmount === undefined ? null : round(avgAmount),
+    amountCoverage: round(wavg("amountCoverage")),
     stepCoverage: round(wavg("stepCoverage")),
     perRecipe: recipeScores.map((r) => ({
       title: r.title,
       matched: r.matched,
       ingredientF1: round(r.ingredientF1),
       amountMatchRate: r.amountMatchRate === null || r.amountMatchRate === undefined ? null : round(r.amountMatchRate),
+      amountCoverage: r.amountCoverage === null || r.amountCoverage === undefined ? null : round(r.amountCoverage),
       stepCoverage: round(r.stepCoverage),
     })),
   };
