@@ -42,7 +42,7 @@
       "toast-visible-max-mobile-2",
       "toast-visible-max-desktop-3",
       "toast-collapsed",
-      "archive-pagination"
+      "archive-modal"
     ],
     "required_endpoints": [
       "GET /api/v1/users/me/gamification",
@@ -125,9 +125,8 @@
         "toast-stack-mobile",
         "toast-stack-desktop",
         "toast-levelup",
-        "archive-surface",
+        "archive-modal",
         "archive-empty",
-        "archive-pagination",
         "shopping-copy"
       ],
       "authority_report_paths": [

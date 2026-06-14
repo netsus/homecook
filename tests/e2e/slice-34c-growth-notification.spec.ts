@@ -433,7 +433,7 @@ async function openMypage(
     await stabilize(page);
 
     try {
-      await expect(page.getByTestId("mypage-gamification-card")).toBeVisible({
+      await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({
         timeout: 15_000,
       });
       return { context, page };
@@ -464,7 +464,7 @@ test.describe("34c growth notification UI @smoke-core", () => {
 
     await page.goto("/mypage", { waitUntil: "networkidle" });
     await stabilize(page);
-    await expect(page.getByTestId("mypage-gamification-card")).toBeVisible();
+    await expect(page.getByTestId("mypage-growth-profile")).toBeVisible();
     await showToastStack(page);
 
     const visibleMax = (page.viewportSize()?.width ?? 0) >= 768 ? 3 : 2;
@@ -488,18 +488,19 @@ test.describe("34c growth notification UI @smoke-core", () => {
     expect(seenRequests.at(-1)).toEqual([priorityNotifications[0].id]);
   });
 
-  test("shows archive pagination while excluding silent rows", async ({ page }) => {
+  test("opens the notification archive from the profile while excluding silent rows", async ({ page }) => {
     await setAuthOverride(page);
     await installGrowthRoutes(page);
 
     await page.goto("/mypage", { waitUntil: "networkidle" });
     await stabilize(page);
 
-    await expect(page.getByTestId("growth-archive-surface")).toBeVisible();
-    await expect(page.getByText("레벨 7 달성")).toBeVisible();
-    await expect(page.getByText("숨김 처리된 내부 알림")).toHaveCount(0);
-    await page.getByTestId("growth-archive-load-more").click();
-    await expect(page.getByText("퀘스트 달성: 장보기 리스트")).toBeVisible();
+    await expect(page.getByTestId("growth-archive-surface")).toHaveCount(0);
+    await page.getByRole("button", { name: "알림 보기" }).click();
+    const dialog = page.getByRole("dialog", { name: "알림 기록" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText("레벨 7 달성")).toBeVisible();
+    await expect(dialog.getByText("숨김 처리된 내부 알림")).toHaveCount(0);
   });
 
   test("renders exact shopping multi-meal guidance copy", async ({ page }) => {
@@ -541,19 +542,19 @@ test.describe("34c growth notification UI @smoke-core", () => {
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "desktop-1440.png"),
     });
-    await desktop.page.getByTestId("growth-archive-surface").screenshot({
-      path: path.join(EVIDENCE_DIR, "archive-surface.png"),
-    });
-    await desktop.page.getByTestId("growth-archive-load-more").click();
-    await expect(desktop.page.getByText("퀘스트 달성: 장보기 리스트")).toBeVisible();
-    await desktop.page.getByTestId("growth-archive-surface").screenshot({
-      path: path.join(EVIDENCE_DIR, "archive-pagination.png"),
+    await desktop.page.getByRole("button", { name: "알림 보기" }).click();
+    const desktopArchive = desktop.page.getByRole("dialog", { name: "알림 기록" });
+    await expect(desktopArchive).toBeVisible();
+    await desktopArchive.screenshot({
+      path: path.join(EVIDENCE_DIR, "archive-modal.png"),
     });
     await desktop.context.close();
 
     const archiveEmpty = await openMypage(browser, { width: 390, height: 844 }, { archiveEmpty: true });
-    await expect(archiveEmpty.page.getByTestId("growth-archive-empty")).toBeVisible();
-    await archiveEmpty.page.getByTestId("growth-archive-surface").screenshot({
+    await archiveEmpty.page.getByRole("button", { name: "알림 보기" }).click();
+    const emptyArchive = archiveEmpty.page.getByRole("dialog", { name: "알림 기록" });
+    await expect(emptyArchive.getByText("아직 표시할 알림 기록이 없어요.")).toBeVisible();
+    await emptyArchive.screenshot({
       path: path.join(EVIDENCE_DIR, "archive-empty.png"),
     });
     await archiveEmpty.context.close();

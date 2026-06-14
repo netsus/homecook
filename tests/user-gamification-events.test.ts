@@ -167,6 +167,8 @@ describe("user gamification event projection", () => {
         payload_json: expect.objectContaining({
           previous_level: 1,
           current_level: 2,
+          previous_grade: expect.objectContaining({ grade_key: "clay" }),
+          grade: expect.objectContaining({ grade_key: "clay" }),
         }),
       }),
     ]);

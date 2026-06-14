@@ -139,7 +139,6 @@ Static prototype path:
 - `ui/designs/evidence/34c-growth-notification-ui/toast-stack-mobile.png`
 - `ui/designs/evidence/34c-growth-notification-ui/toast-stack-desktop.png`
 - `ui/designs/evidence/34c-growth-notification-ui/toast-levelup.png`
-- `ui/designs/evidence/34c-growth-notification-ui/archive-surface.png`
+- `ui/designs/evidence/34c-growth-notification-ui/archive-modal.png`
 - `ui/designs/evidence/34c-growth-notification-ui/archive-empty.png`
-- `ui/designs/evidence/34c-growth-notification-ui/archive-pagination.png`
 - `ui/designs/evidence/34c-growth-notification-ui/shopping-copy.png`

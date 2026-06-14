@@ -4,7 +4,8 @@
 
 - `tests/mypage-achievement-album.test.tsx`
   - profile header integration
-  - grade / achievement / tutorial / notification modal behavior
+  - grade / achievement / notification modal behavior
+  - tutorial category behavior inside the achievement album
   - new user `Clay · Lv.1` state
   - archive modal soft-fail isolation
 - `tests/mypage-growth-profile.test.tsx`
@@ -19,7 +20,7 @@
 - `tests/e2e/slice-35c-mypage-achievement-album.spec.ts`
   - mobile 320/390 profile layout
   - desktop 1440/1920 profile layout
-  - grade, achievement, tutorial, notification panels
+  - grade, achievement, achievement tutorial category, notification panels
 - `tests/e2e/slice-33c-gamification.spec.ts`
   - 33c badge/quest/toast/loading/empty/unauthorized regression on the new integrated profile surface
 
@@ -32,9 +33,9 @@
 - `ui/designs/evidence/35c-mypage-achievement-album-ui/desktop-1440-profile.png`
 - `ui/designs/evidence/35c-mypage-achievement-album-ui/desktop-1920-profile.png`
 - `ui/designs/evidence/35c-mypage-achievement-album-ui/mobile-grade-modal.png`
+- `ui/designs/evidence/35c-mypage-achievement-album-ui/mobile-achievement-tutorial-category.png`
 - `ui/designs/evidence/35c-mypage-achievement-album-ui/mobile-achievement-modal.png`
-- `ui/designs/evidence/35c-mypage-achievement-album-ui/mobile-tutorial-modal.png`
-- `ui/designs/evidence/35c-mypage-achievement-album-ui/mobile-notification-modal.png`
+- `ui/designs/evidence/35c-mypage-achievement-album-ui/mobile-notification-archive-modal.png`
 
 ## Required Closeout Commands
 

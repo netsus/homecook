@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -686,11 +686,14 @@ describe("MypageScreen", () => {
     render(<MypageScreen initialAuthenticated />);
 
     expect(await screen.findByText("집밥러")).toBeTruthy();
-    expect(screen.getByText("카카오 로그인")).toBeTruthy();
     expect(screen.getByTestId("mypage-profile")).toBeTruthy();
-    expect(await screen.findByTestId("mypage-gamification-card")).toBeTruthy();
-    expect(screen.getByText("첫 집밥 완성")).toBeTruthy();
-    expect(screen.getByText("요리 루틴 3번 완성")).toBeTruthy();
+    expect(await screen.findByTestId("mypage-growth-profile")).toBeTruthy();
+    const actionBar = screen.getByTestId("mypage-profile-action-bar");
+    expect(within(actionBar).getByRole("button", { name: "등급 보기" })).toBeTruthy();
+    expect(within(actionBar).getByRole("button", { name: "업적 보기" })).toBeTruthy();
+    expect(within(actionBar).getByRole("button", { name: "알림 보기" })).toBeTruthy();
+    expect(screen.queryByText("첫 집밥 완성")).toBeNull();
+    expect(screen.queryByText("요리 루틴 3번 완성")).toBeNull();
 
     expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "레시피북" })).toBeTruthy();
@@ -712,13 +715,15 @@ describe("MypageScreen", () => {
 
     expect(mockFetchUserProgress).toHaveBeenCalledTimes(1);
     expect(await screen.findByTestId("mypage-growth-profile")).toBeTruthy();
-    expect(screen.getByText("집밥 러너 · Lv.6")).toBeTruthy();
+    const gradeRow = screen.getByTestId("mypage-profile-grade-row");
+    expect(within(gradeRow).getByText("집밥 러너")).toBeTruthy();
+    expect(within(gradeRow).getByText("Lv.6")).toBeTruthy();
     expect(screen.getByText("다음 레벨까지 130 XP")).toBeTruthy();
     expect(screen.getByTestId("mypage-growth-progress-fill").style.width).toBe("13%");
     expect(screen.queryByText(/레벨 5/)).toBeNull();
   });
 
-  it("integrates mobile grade, progress, and featured badges into the profile", async () => {
+  it("integrates mobile grade, progress, and detail buttons into the profile", async () => {
     installMatchMedia(true);
 
     render(<MypageScreen initialAuthenticated />);
@@ -726,10 +731,50 @@ describe("MypageScreen", () => {
     await screen.findByText("집밥러");
 
     expect(await screen.findByTestId("mypage-growth-profile")).toBeTruthy();
-    expect(screen.getByText("집밥 러너 · Lv.6")).toBeTruthy();
+    const gradeRow = screen.getByTestId("mypage-profile-grade-row");
+    expect(within(gradeRow).getByText("집밥 러너")).toBeTruthy();
+    expect(within(gradeRow).getByText("Lv.6")).toBeTruthy();
     expect(screen.getByText("다음 레벨까지 130 XP")).toBeTruthy();
-    expect(screen.getByText("첫 집밥 완성")).toBeTruthy();
+    const actionBar = screen.getByTestId("mypage-profile-action-bar");
+    expect(within(actionBar).getByRole("button", { name: "등급 보기" })).toBeTruthy();
+    expect(within(actionBar).getByRole("button", { name: "업적 보기" })).toBeTruthy();
+    expect(within(actionBar).getByRole("button", { name: "알림 보기" })).toBeTruthy();
+    expect(screen.queryByText("첫 집밥 완성")).toBeNull();
     expect(screen.queryByText("🍳 집밥 러너 · 레벨 5")).toBeNull();
+  });
+
+  it("keeps the mobile loading shell until growth profile data is ready", async () => {
+    installMatchMedia(true);
+    let resolveProgress!: (value: unknown) => void;
+    let resolveGamification!: (value: unknown) => void;
+    mockFetchUserProgress.mockReturnValue(
+      new Promise((resolve) => {
+        resolveProgress = resolve;
+      }),
+    );
+    mockFetchUserGamification.mockReturnValue(
+      new Promise((resolve) => {
+        resolveGamification = resolve;
+      }),
+    );
+
+    render(<MypageScreen initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(mockFetchUserProgress).toHaveBeenCalledTimes(1);
+      expect(mockFetchUserGamification).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByTestId("mypage-mobile-loading")).toBeTruthy();
+    expect(screen.queryByTestId("mypage-growth-profile")).toBeNull();
+
+    await act(async () => {
+      resolveProgress(MOCK_PROGRESS);
+      resolveGamification(MOCK_GAMIFICATION);
+    });
+
+    expect(await screen.findByTestId("mypage-growth-profile")).toBeTruthy();
+    expect(screen.queryByTestId("mypage-mobile-loading")).toBeNull();
+    expect(screen.queryByTestId("mypage-growth-profile-loading")).toBeNull();
   });
 
   it("keeps core MYPAGE usable when only progress fetch fails", async () => {
@@ -781,12 +826,21 @@ describe("MypageScreen", () => {
     await screen.findByText("집밥러");
 
     const stats = screen.getByLabelText("마이페이지 통계");
-    expect(within(stats).getByText("플래너 기록")).toBeTruthy();
-    expect(within(stats).getByText("장보기 기록")).toBeTruthy();
+    expect(within(stats).getByText("플래너기록")).toBeTruthy();
+    expect(within(stats).getByText("장보기기록")).toBeTruthy();
     expect(within(stats).getByText("요리기록")).toBeTruthy();
     expect(within(stats).getByText("4")).toBeTruthy();
     expect(within(stats).getAllByText("1")).toHaveLength(2);
     expect(mockFetchPlanner).toHaveBeenCalledWith("1900-01-01", "9999-12-31");
+  });
+
+  it("removes the legacy desktop growth archive surface because the notification button owns archive access", async () => {
+    render(<MypageScreen initialAuthenticated />);
+
+    await screen.findByText("집밥러");
+
+    expect(screen.queryByTestId("growth-archive-surface")).toBeNull();
+    expect(screen.getByRole("button", { name: "알림 보기" })).toBeTruthy();
   });
 
   it("shows real saved recipe links instead of prototype-only saved cards", async () => {
@@ -901,11 +955,22 @@ describe("MypageScreen", () => {
     ).toContain("images.unsplash.com");
     const stats = screen.getByLabelText("마이페이지 통계");
     expect(within(stats).getByText("요리기록")).toBeTruthy();
-    expect(within(stats).getByText("장보기 기록")).toBeTruthy();
-    expect(within(stats).getByText("플래너 기록")).toBeTruthy();
-    expect(within(stats).getByText("4").className).toContain("text-[16px]");
-    expect(within(stats).getByText("4").className).toContain("font-extrabold");
-    expect(within(stats).getByText("4").className).not.toContain("text-[28px]");
+    expect(within(stats).getByText("장보기기록")).toBeTruthy();
+    expect(within(stats).getByText("플래너기록")).toBeTruthy();
+    expect(
+      screen.getByTestId("record-stat-cooking-copy").textContent,
+    ).toMatch(/^요리기록1$/);
+    expect(
+      screen.getByTestId("record-stat-planner-copy").textContent,
+    ).toMatch(/^플래너기록4$/);
+    const plannerValue = within(screen.getByTestId("record-stat-planner-copy")).getByText("4");
+    expect(plannerValue.className).toContain("text-[22px]");
+    expect(plannerValue.className).toContain("max-[480px]:text-[20px]");
+    expect(plannerValue.className).toContain("font-extrabold");
+    expect(plannerValue.className).not.toContain("block truncate text-[20px]");
+    expect(screen.getByTestId("record-stat-planner-icon").className).toContain(
+      "max-[480px]:w-10",
+    );
     expect(screen.queryByText("연속")).toBeNull();
     expect(screen.queryByText("계정 관리")).toBeNull();
     expect(screen.queryByRole("button", { name: /저장한 레시피/ })).toBeNull();
@@ -915,6 +980,17 @@ describe("MypageScreen", () => {
     expect(screen.getByTestId("nickname-sheet-backdrop")).toBeTruthy();
 
     await user.click(screen.getByText("취소"));
+  });
+
+  it("removes the legacy mobile growth archive surface because the notification button owns archive access", async () => {
+    installMatchMedia(true);
+
+    render(<MypageScreen initialAuthenticated />);
+
+    await screen.findByText("집밥러");
+
+    expect(screen.queryByTestId("growth-archive-surface")).toBeNull();
+    expect(screen.getByRole("button", { name: "알림 보기" })).toBeTruthy();
   });
 
   it("uses first recipe images as mobile recipebook covers", async () => {
@@ -1113,9 +1189,16 @@ describe("MypageScreen", () => {
     mockFetchUserProfile.mockReturnValue(new Promise(() => {}));
     mockFetchRecipeBooks.mockReturnValue(new Promise(() => {}));
 
-    render(<MypageScreen initialAuthenticated />);
+    const { container } = render(<MypageScreen initialAuthenticated />);
 
-    expect(screen.getByTestId("mypage-skeleton")).toBeTruthy();
+    const skeleton = screen.getByTestId("mypage-skeleton");
+    expect(within(skeleton).getByTestId("mypage-loading-growth-profile")).toBeTruthy();
+    expect(within(skeleton).getAllByTestId("mypage-loading-growth-action")).toHaveLength(3);
+    expect(within(skeleton).getByTestId("mypage-loading-progress-meter")).toBeTruthy();
+    expect(within(skeleton).queryByTestId("mypage-legacy-loading-list")).toBeNull();
+    expect(container.querySelector(".web-mypage-loading-tabs")).toBeNull();
+    expect(container.querySelector(".web-mypage-panel")).toBeNull();
+    expect(container.querySelectorAll('[data-testid="mypage-loading-growth-profile"]')).toHaveLength(1);
     expect(screen.getByRole("link", { name: "마이페이지" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "팬트리" })).toBeTruthy();
   });
@@ -1128,6 +1211,9 @@ describe("MypageScreen", () => {
     render(<MypageScreen initialAuthenticated />);
 
     expect(screen.getByTestId("mypage-mobile-loading")).toBeTruthy();
+    expect(screen.getByTestId("mypage-mobile-loading-growth-profile")).toBeTruthy();
+    expect(screen.getAllByTestId("mypage-mobile-loading-growth-action")).toHaveLength(3);
+    expect(screen.getByTestId("mypage-mobile-loading-progress-meter")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "마이페이지" }).className).toContain(
       "text-[var(--brand)]",
     );

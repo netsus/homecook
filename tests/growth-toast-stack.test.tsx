@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GrowthToastStack } from "@/components/gamification/growth-toast-stack";
@@ -108,6 +108,11 @@ describe("GrowthToastStack", () => {
     expect(toasts[2].getAttribute("data-notification-type")).toBe("xp_awarded");
     // level_up이 가장 강한 tone
     expect(toasts[0].getAttribute("data-tone")).toBe("level-up");
+    expect(toasts[0].className).toContain("growth-toast-card-level-up");
+    expect(within(toasts[0]).getByTestId("growth-toast-visual-icon")).toBeTruthy();
+    expect(within(toasts[0]).getByTestId("growth-toast-priority-rank").textContent).toBe("1");
+    expect(within(toasts[1]).getByTestId("growth-toast-priority-rank").textContent).toBe("2");
+    expect(within(toasts[2]).getByTestId("growth-toast-priority-rank").textContent).toBe("3");
   });
 
   it("caps visible toasts at 2 on mobile and queues the rest as a collapsed summary", async () => {

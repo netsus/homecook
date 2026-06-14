@@ -1,0 +1,214 @@
+[
+  {
+    "achievement_key": "tutorial_recipe_saved",
+    "src": "/assets/growth/achievement-icons-v3-4/tutorial_recipe_saved.png"
+  },
+  {
+    "achievement_key": "tutorial_planner_registered",
+    "src": "/assets/growth/achievement-icons-v3-4/tutorial_planner_registered.png"
+  },
+  {
+    "achievement_key": "tutorial_shopping_list_create",
+    "src": "/assets/growth/achievement-icons-v3-4/tutorial_shopping_list_create.png"
+  },
+  {
+    "achievement_key": "tutorial_shopping_list_complete",
+    "src": "/assets/growth/achievement-icons-v3-4/tutorial_shopping_list_complete.png"
+  },
+  {
+    "achievement_key": "tutorial_cooking_complete",
+    "src": "/assets/growth/achievement-icons-v3-4/tutorial_cooking_complete.png"
+  },
+  {
+    "achievement_key": "tutorial_recipebook_created",
+    "src": "/assets/growth/achievement-icons-v3-4/tutorial_recipebook_created.png"
+  },
+  {
+    "achievement_key": "tutorial_complete",
+    "src": "/assets/growth/achievement-icons-v3-4/tutorial_complete.png"
+  },
+  {
+    "achievement_key": "recipe_saved_5",
+    "src": "/assets/growth/achievement-icons-v3-4/recipe_saved_5.png"
+  },
+  {
+    "achievement_key": "recipe_saved_20",
+    "src": "/assets/growth/achievement-icons-v3-4/recipe_saved_20.png"
+  },
+  {
+    "achievement_key": "recipe_saved_50",
+    "src": "/assets/growth/achievement-icons-v3-4/recipe_saved_50.png"
+  },
+  {
+    "achievement_key": "recipe_saved_100",
+    "src": "/assets/growth/achievement-icons-v3-4/recipe_saved_100.png"
+  },
+  {
+    "achievement_key": "recipe_saved_300",
+    "src": "/assets/growth/achievement-icons-v3-4/recipe_saved_300.png"
+  },
+  {
+    "achievement_key": "recipe_saved_1000",
+    "src": "/assets/growth/achievement-icons-v3-4/recipe_saved_1000.png"
+  },
+  {
+    "achievement_key": "recipe_registered_3",
+    "src": "/assets/growth/achievement-icons-v3-4/recipe_registered_3.png"
+  },
+  {
+    "achievement_key": "recipe_registered_10",
+    "src": "/assets/growth/achievement-icons-v3-4/recipe_registered_10.png"
+  },
+  {
+    "achievement_key": "recipe_registered_30",
+    "src": "/assets/growth/achievement-icons-v3-4/recipe_registered_30.png"
+  },
+  {
+    "achievement_key": "recipe_registered_100",
+    "src": "/assets/growth/achievement-icons-v3-4/recipe_registered_100.png"
+  },
+  {
+    "achievement_key": "recipe_registered_300",
+    "src": "/assets/growth/achievement-icons-v3-4/recipe_registered_300.png"
+  },
+  {
+    "achievement_key": "recipe_registered_600",
+    "src": "/assets/growth/achievement-icons-v3-4/recipe_registered_600.png"
+  },
+  {
+    "achievement_key": "recipe_registered_1000",
+    "src": "/assets/growth/achievement-icons-v3-4/recipe_registered_1000.png"
+  },
+  {
+    "achievement_key": "planner_registered_3",
+    "src": "/assets/growth/achievement-icons-v3-4/planner_registered_3.png"
+  },
+  {
+    "achievement_key": "planner_registered_10",
+    "src": "/assets/growth/achievement-icons-v3-4/planner_registered_10.png"
+  },
+  {
+    "achievement_key": "planner_registered_30",
+    "src": "/assets/growth/achievement-icons-v3-4/planner_registered_30.png"
+  },
+  {
+    "achievement_key": "planner_registered_100",
+    "src": "/assets/growth/achievement-icons-v3-4/planner_registered_100.png"
+  },
+  {
+    "achievement_key": "planner_registered_300",
+    "src": "/assets/growth/achievement-icons-v3-4/planner_registered_300.png"
+  },
+  {
+    "achievement_key": "planner_registered_1000",
+    "src": "/assets/growth/achievement-icons-v3-4/planner_registered_1000.png"
+  },
+  {
+    "achievement_key": "planner_registered_3000",
+    "src": "/assets/growth/achievement-icons-v3-4/planner_registered_3000.png"
+  },
+  {
+    "achievement_key": "shopping_completed_3",
+    "src": "/assets/growth/achievement-icons-v3-4/shopping_completed_3.png"
+  },
+  {
+    "achievement_key": "shopping_completed_10",
+    "src": "/assets/growth/achievement-icons-v3-4/shopping_completed_10.png"
+  },
+  {
+    "achievement_key": "shopping_completed_30",
+    "src": "/assets/growth/achievement-icons-v3-4/shopping_completed_30.png"
+  },
+  {
+    "achievement_key": "shopping_completed_100",
+    "src": "/assets/growth/achievement-icons-v3-4/shopping_completed_100.png"
+  },
+  {
+    "achievement_key": "shopping_completed_300",
+    "src": "/assets/growth/achievement-icons-v3-4/shopping_completed_300.png"
+  },
+  {
+    "achievement_key": "shopping_completed_700",
+    "src": "/assets/growth/achievement-icons-v3-4/shopping_completed_700.png"
+  },
+  {
+    "achievement_key": "shopping_completed_1300",
+    "src": "/assets/growth/achievement-icons-v3-4/shopping_completed_1300.png"
+  },
+  {
+    "achievement_key": "cooking_completed_3",
+    "src": "/assets/growth/achievement-icons-v3-4/cooking_completed_3.png"
+  },
+  {
+    "achievement_key": "cooking_completed_10",
+    "src": "/assets/growth/achievement-icons-v3-4/cooking_completed_10.png"
+  },
+  {
+    "achievement_key": "cooking_completed_30",
+    "src": "/assets/growth/achievement-icons-v3-4/cooking_completed_30.png"
+  },
+  {
+    "achievement_key": "cooking_completed_100",
+    "src": "/assets/growth/achievement-icons-v3-4/cooking_completed_100.png"
+  },
+  {
+    "achievement_key": "cooking_completed_300",
+    "src": "/assets/growth/achievement-icons-v3-4/cooking_completed_300.png"
+  },
+  {
+    "achievement_key": "cooking_completed_1000",
+    "src": "/assets/growth/achievement-icons-v3-4/cooking_completed_1000.png"
+  },
+  {
+    "achievement_key": "cooking_completed_3000",
+    "src": "/assets/growth/achievement-icons-v3-4/cooking_completed_3000.png"
+  },
+  {
+    "achievement_key": "pantry_distinct_10",
+    "src": "/assets/growth/achievement-icons-v3-4/pantry_distinct_10.png"
+  },
+  {
+    "achievement_key": "pantry_distinct_30",
+    "src": "/assets/growth/achievement-icons-v3-4/pantry_distinct_30.png"
+  },
+  {
+    "achievement_key": "pantry_distinct_60",
+    "src": "/assets/growth/achievement-icons-v3-4/pantry_distinct_60.png"
+  },
+  {
+    "achievement_key": "pantry_distinct_120",
+    "src": "/assets/growth/achievement-icons-v3-4/pantry_distinct_120.png"
+  },
+  {
+    "achievement_key": "pantry_distinct_250",
+    "src": "/assets/growth/achievement-icons-v3-4/pantry_distinct_250.png"
+  },
+  {
+    "achievement_key": "pantry_distinct_600",
+    "src": "/assets/growth/achievement-icons-v3-4/pantry_distinct_600.png"
+  },
+  {
+    "achievement_key": "leftover_eaten_3",
+    "src": "/assets/growth/achievement-icons-v3-4/leftover_eaten_3.png"
+  },
+  {
+    "achievement_key": "leftover_eaten_10",
+    "src": "/assets/growth/achievement-icons-v3-4/leftover_eaten_10.png"
+  },
+  {
+    "achievement_key": "leftover_eaten_30",
+    "src": "/assets/growth/achievement-icons-v3-4/leftover_eaten_30.png"
+  },
+  {
+    "achievement_key": "leftover_eaten_100",
+    "src": "/assets/growth/achievement-icons-v3-4/leftover_eaten_100.png"
+  },
+  {
+    "achievement_key": "leftover_eaten_300",
+    "src": "/assets/growth/achievement-icons-v3-4/leftover_eaten_300.png"
+  },
+  {
+    "achievement_key": "leftover_eaten_1000",
+    "src": "/assets/growth/achievement-icons-v3-4/leftover_eaten_1000.png"
+  }
+]

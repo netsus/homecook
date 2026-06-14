@@ -2,7 +2,6 @@
 
 import React from "react";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { GrowthGradeMark } from "@/components/mypage/growth-grade-mark";
@@ -144,9 +143,7 @@ describe("MypageGrowthProfile", () => {
     cleanup();
   });
 
-  it("renders server grade, progress, and four mobile featured badges", async () => {
-    const user = userEvent.setup();
-
+  it("renders server grade and progress without showing featured badges on MYPAGE", () => {
     render(
       <MypageGrowthProfile
         gamification={MOCK_GAMIFICATION}
@@ -163,16 +160,11 @@ describe("MypageGrowthProfile", () => {
     expect(screen.getByRole("progressbar", {
       name: "Lv.9, 다음 레벨까지 210 XP, 진행률 40%",
     })).toBeTruthy();
-
-    const badgeRow = screen.getByTestId("mypage-growth-featured-badges");
-    expect(within(badgeRow).getAllByRole("button")).toHaveLength(4);
-    expect(within(badgeRow).getByText("나만의 책")).toBeTruthy();
-
-    await user.click(within(badgeRow).getByRole("button", { name: /첫 저장/ }));
-    expect(screen.getByRole("dialog", { name: "업적 앨범" })).toBeTruthy();
+    expect(screen.queryByTestId("mypage-growth-featured-badges")).toBeNull();
+    expect(screen.queryByText("나만의 책")).toBeNull();
   });
 
-  it("keeps grade and badges when progress fails softly", () => {
+  it("keeps grade when progress fails softly without exposing badge rows", () => {
     render(
       <MypageGrowthProfile
         gamification={MOCK_GAMIFICATION}
@@ -184,7 +176,8 @@ describe("MypageGrowthProfile", () => {
     );
 
     expect(screen.getByText("서버 등급명")).toBeTruthy();
-    expect(screen.getByText("첫 저장")).toBeTruthy();
+    expect(screen.queryByText("첫 저장")).toBeNull();
+    expect(screen.queryByTestId("mypage-growth-featured-badges")).toBeNull();
     expect(screen.queryByRole("progressbar")).toBeNull();
     expect(screen.getByTestId("mypage-growth-progress-error").textContent).toContain(
       "XP를 잠시 불러오지 못했어요",
@@ -210,9 +203,7 @@ describe("MypageGrowthProfile", () => {
     );
   });
 
-  it("combines profile identity, growth, badges, and quest summary in one header", async () => {
-    const user = userEvent.setup();
-
+  it("combines profile identity, growth, and detail actions in one header", () => {
     render(
       <MypageGrowthProfile
         gamification={MOCK_GAMIFICATION}
@@ -235,16 +226,15 @@ describe("MypageGrowthProfile", () => {
 
     const header = screen.getByTestId("mypage-growth-profile");
     expect(within(header).getByText("김집밥")).toBeTruthy();
-    expect(within(header).getByText("카카오 로그인")).toBeTruthy();
-    expect(within(header).getByText("서버 등급명 · Lv.9")).toBeTruthy();
-    expect(within(header).getByTestId("mypage-gamification-card")).toBeTruthy();
-    expect(within(header).getByTestId("mypage-growth-quest-summary").textContent).toContain(
-      "장보기 3회",
-    );
-    expect(within(header).getByText("2/3")).toBeTruthy();
-
-    await user.click(within(header).getByRole("button", { name: "보기" }));
-    expect(screen.getByRole("dialog", { name: "업적 앨범" })).toBeTruthy();
+    const gradeRow = within(header).getByTestId("mypage-profile-grade-row");
+    expect(within(gradeRow).getByText("서버 등급명")).toBeTruthy();
+    expect(within(gradeRow).getByText("Lv.9")).toBeTruthy();
+    expect(within(header).queryByTestId("mypage-gamification-card")).toBeNull();
+    expect(within(header).queryByTestId("mypage-growth-quest-summary")).toBeNull();
+    expect(within(header).getByRole("button", { name: "등급 보기" })).toBeTruthy();
+    expect(within(header).getByRole("button", { name: "업적 보기" })).toBeTruthy();
+    expect(within(header).getByRole("button", { name: "알림 보기" })).toBeTruthy();
+    expect(within(header).queryByRole("button", { name: "튜토리얼 보기" })).toBeNull();
   });
 });
 

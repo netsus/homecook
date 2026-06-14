@@ -20,7 +20,6 @@ import {
   type MypageMobileSurface,
 } from "@/components/mypage/mypage-mobile-screen";
 import type { MypageGamificationState } from "@/components/mypage/mypage-gamification-card";
-import { GrowthArchiveSurface } from "@/components/mypage/growth-archive-surface";
 import { MypageGrowthProfile } from "@/components/mypage/mypage-growth-profile";
 import {
   type MypageProgressState,
@@ -603,9 +602,11 @@ export function MypageScreen({
         loadMypageStats().then(() => true),
       ]);
       if (profileOk && booksOk) {
+        await Promise.all([
+          loadUserProgress(),
+          loadUserGamification(),
+        ]);
         setViewState("ready");
-        void loadUserProgress();
-        void loadUserGamification();
       }
     } catch {
       setProgressState("error");
@@ -1874,10 +1875,6 @@ export function MypageScreen({
               variant="desktop"
             />
           </WebCard>
-          <GrowthArchiveSurface
-            className="web-mypage-growth-archive"
-            enabled={authState === "authenticated"}
-          />
         </div>
 
         <WebTabs className="web-mypage-tabs" data-testid="mypage-tabbar" role="tablist">
@@ -3082,14 +3079,44 @@ function MypageLoadingSkeleton({
 
   return (
     <div className="pb-32" data-testid="mypage-skeleton">
-      {/* Profile skeleton */}
-      <div className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-4 max-[360px]:gap-2 max-[360px]:py-2.5">
-        <Skeleton className="h-[var(--control-height-lg)] w-12 rounded-full max-[360px]:h-10 max-[360px]:w-10" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-5 w-24" />
-          <Skeleton className="h-4 w-20" />
+      <section
+        className="m-4 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4"
+        data-testid="mypage-loading-growth-profile"
+      >
+        <div className="flex items-start gap-3">
+          <Skeleton className="h-14 w-14 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-5 w-28" />
+            <Skeleton className="h-4 w-36" />
+          </div>
         </div>
-      </div>
+        <div className="mt-4">
+          <Skeleton className="h-3 w-36" />
+          <Skeleton
+            className="mt-2 h-4 w-full rounded-full"
+            data-testid="mypage-loading-progress-meter"
+          />
+          <Skeleton className="ml-auto mt-1 h-3 w-24" />
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-1.5">
+          {[1, 2, 3].map((index) => (
+            <Skeleton
+              className="h-10 rounded-[var(--radius-md)]"
+              data-testid="mypage-loading-growth-action"
+              key={index}
+            />
+          ))}
+        </div>
+        <div className="mt-3 grid grid-cols-3 overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)]">
+          {[1, 2, 3].map((index) => (
+            <div className="px-2 py-2.5" key={index}>
+              <Skeleton className="mx-auto h-8 w-8 rounded-full" />
+              <Skeleton className="mx-auto mt-2 h-4 w-8" />
+              <Skeleton className="mx-auto mt-1 h-3 w-12" />
+            </div>
+          ))}
+        </div>
+      </section>
       {/* Tab bar skeleton */}
       <div className="flex border-b border-[var(--line)] bg-[var(--surface)]">
         <div className="flex-1 py-3 text-center text-sm font-bold text-[var(--brand)] max-[360px]:py-2">
@@ -3137,24 +3164,43 @@ function MypageHomeLoadingBody() {
   return (
     <>
       <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5">
-        <div className="mb-[18px] flex items-center gap-[14px]">
-          <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
-          <div className="min-w-0 flex-1 space-y-2">
-            <Skeleton className="h-5 w-24" />
-            <Skeleton className="h-4 w-32" />
-          </div>
-          <Skeleton className="h-8 w-14 rounded-[var(--radius-control)]" />
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {[1, 2, 3].map((index) => (
-            <div
-              className="rounded-[var(--radius-control)] bg-[var(--surface-fill)] px-2 py-3"
-              key={index}
-            >
-              <Skeleton className="mx-auto h-6 w-8" />
-              <Skeleton className="mx-auto mt-2 h-3 w-12" />
+        <div
+          className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4"
+          data-testid="mypage-mobile-loading-growth-profile"
+        >
+          <div className="flex items-start gap-3">
+            <Skeleton className="h-[52px] w-[52px] shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-5 w-28" />
+              <Skeleton className="h-4 w-36" />
             </div>
-          ))}
+          </div>
+          <div className="mt-4">
+            <Skeleton className="h-3 w-36" />
+            <Skeleton
+              className="mt-2 h-4 w-full rounded-full"
+              data-testid="mypage-mobile-loading-progress-meter"
+            />
+            <Skeleton className="ml-auto mt-1 h-3 w-24" />
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-1.5">
+            {[1, 2, 3].map((index) => (
+              <Skeleton
+                className="h-10 rounded-[var(--radius-md)]"
+                data-testid="mypage-mobile-loading-growth-action"
+                key={index}
+              />
+            ))}
+          </div>
+          <div className="mt-3 grid grid-cols-3 overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)]">
+            {[1, 2, 3].map((index) => (
+              <div className="px-2 py-2.5" key={index}>
+                <Skeleton className="mx-auto h-8 w-8 rounded-full" />
+                <Skeleton className="mx-auto mt-2 h-4 w-8" />
+                <Skeleton className="mx-auto mt-1 h-3 w-12" />
+              </div>
+            ))}
+          </div>
         </div>
       </section>
       <section className="p-4">
@@ -3283,44 +3329,47 @@ function MypageDesktopLoadingShell() {
       <div className="web-mypage-screen" data-testid="mypage-skeleton">
         <h1 className="sr-only">마이페이지</h1>
         <WebCard className="web-mypage-profile">
-          <div className="web-mypage-profile-main">
-            <WebSkeleton height={64} width={64} style={{ borderRadius: "50%" }} />
-            <div className="web-mypage-profile-copy">
-              <WebSkeleton height={28} width={128} />
-              <WebSkeleton height={18} width={220} />
-            </div>
-          </div>
-          <div className="web-mypage-stats" aria-hidden="true">
-            {[1, 2, 3].map((item) => (
-              <div className="web-mypage-stat" key={item}>
-                <WebSkeleton height={28} width={48} />
-                <WebSkeleton height={14} width={72} />
+          <div
+            className="grid gap-4"
+            data-testid="mypage-loading-growth-profile"
+          >
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <WebSkeleton height={72} width={72} style={{ borderRadius: "50%" }} />
+                <div className="grid min-w-0 gap-2">
+                  <WebSkeleton height={28} width={128} />
+                  <WebSkeleton height={18} width={180} />
+                </div>
               </div>
-            ))}
-          </div>
-        </WebCard>
-
-        <div className="web-mypage-loading-tabs">
-          {[120, 100, 100, 84].map((width, index) => (
-            <WebSkeleton height={48} key={index} width={width} />
-          ))}
-        </div>
-
-        <WebCard className="web-mypage-panel">
-          <div className="web-mypage-section-head">
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3].map((item) => (
+                  <div data-testid="mypage-loading-growth-action" key={item}>
+                    <WebSkeleton height={40} width={74} />
+                  </div>
+                ))}
+              </div>
+            </div>
             <div>
-              <WebSkeleton height={26} width={156} />
-              <div className="mt-2">
-                <WebSkeleton height={16} width={260} />
+              <WebSkeleton height={16} width={180} />
+              <div className="mt-2" data-testid="mypage-loading-progress-meter">
+                <WebSkeleton height={16} width="100%" />
+              </div>
+              <div className="mt-1 flex justify-end">
+                <WebSkeleton height={14} width={100} />
               </div>
             </div>
-          </div>
-          <div className="web-mypage-loading-grid">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <WebSkeleton height={220} key={index} />
-            ))}
+            <div className="web-mypage-stats" aria-hidden="true">
+              {[1, 2, 3].map((item) => (
+                <div className="web-mypage-stat" key={item}>
+                  <WebSkeleton height={32} width={32} style={{ borderRadius: "50%" }} />
+                  <WebSkeleton height={28} width={48} />
+                  <WebSkeleton height={14} width={72} />
+                </div>
+              ))}
+            </div>
           </div>
         </WebCard>
+
       </div>
     </WebShell>
   );

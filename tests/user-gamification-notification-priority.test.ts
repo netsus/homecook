@@ -107,6 +107,50 @@ describe("user gamification notification priority", () => {
     });
   });
 
+  it("does not mention grade when a level-up stays inside the same grade band", () => {
+    expect(toNotificationData({
+      id: "n-level-same-grade",
+      notification_type: "level_up",
+      priority: 1,
+      delivery_channel: "toast",
+      toast_eligible: true,
+      group_key: "progress-event:e1",
+      payload_json: {
+        previous_level: 4,
+        current_level: 5,
+        previous_grade: { grade_key: "wood", label: "Wood" },
+        grade: { grade_key: "wood", label: "Wood" },
+      },
+      created_at: "2026-06-10T10:00:00.000Z",
+      seen_at: null,
+    })).toMatchObject({
+      title: "레벨 5 달성",
+      body: "레벨이 올랐어요.",
+    });
+  });
+
+  it("mentions grade when a level-up enters a new grade band", () => {
+    expect(toNotificationData({
+      id: "n-level-new-grade",
+      notification_type: "level_up",
+      priority: 1,
+      delivery_channel: "toast",
+      toast_eligible: true,
+      group_key: "progress-event:e2",
+      payload_json: {
+        previous_level: 7,
+        current_level: 8,
+        previous_grade: { grade_key: "wood", label: "Wood" },
+        grade: { grade_key: "steel", label: "Steel" },
+      },
+      created_at: "2026-06-10T10:00:00.000Z",
+      seen_at: null,
+    })).toMatchObject({
+      title: "레벨 8 달성",
+      body: "Steel 등급이 되었어요.",
+    });
+  });
+
   it("adds grade, badge shape metadata, locked hints, priority unseen, and archive preview", () => {
     const data = buildUserGamificationData({
       progress: {

@@ -2,7 +2,7 @@
 
 ## Goal
 
-35a/35b에서 잠근 성장/업적 앨범 계약을 MYPAGE production UI로 연결한다. 사용자는 프로필 header 안에서 현재 등급, 레벨, XP, 주요 기록, 상세 진입 버튼을 한 덩어리로 보고, 등급/업적/튜토리얼/알림은 modal 또는 bottom sheet로 확인한다.
+35a/35b에서 잠근 성장/업적 앨범 계약을 MYPAGE production UI로 연결한다. 사용자는 프로필 header 안에서 현재 등급, 레벨, XP, 주요 기록, 상세 진입 버튼을 한 덩어리로 보고, 등급/업적/알림은 modal 또는 bottom sheet로 확인한다. 튜토리얼은 업적 앨범의 `튜토리얼` 카테고리 안에서 확인한다.
 
 이 slice는 FE-only다. 서버가 계산한 `GET /api/v1/users/me/gamification` projection을 표시하며, 클라이언트에서 achievement unlock, badge unlock, XP, grade를 계산하지 않는다.
 
@@ -17,7 +17,6 @@
   - `MYPAGE` profile header 성장 통합
   - 등급 modal/bottom sheet
   - 업적 앨범 modal/bottom sheet
-  - 튜토리얼 modal/bottom sheet
   - 알림 archive modal/bottom sheet
 - API:
   - `GET /api/v1/users/me/progress`
@@ -67,6 +66,7 @@
 - 모든 응답은 기존 `{ success, data, error }` envelope를 소비한다.
 - `GET /users/me/progress`는 progress-only로 유지되며 badge/achievement/tutorial/archive field를 읽지 않는다.
 - `GET /users/me/gamification`의 `grade`, `tutorial`, `achievement_album`, `notifications`를 표시한다.
+- 튜토리얼은 별도 프로필 버튼이 아니라 `achievement_album`의 `tutorial` 카테고리로 표시한다.
 - `GET /users/me/gamification/archive` 실패는 알림 modal 내부 error로만 격리한다.
 - UI는 서버 projection의 `earned / active / locked` 상태를 그대로 표시한다.
 
@@ -113,7 +113,7 @@
 ## QA / Test Data Plan
 
 - 신규 사용자: `Clay · Lv.1`, XP 0, 첫 튜토리얼 active, achievement 0 earned
-- 중간 사용자: tutorial 3/6, 업적 category별 earned/active/locked 혼합
+- 중간 사용자: tutorial 3/7, 업적 category별 earned/active/locked 혼합
 - 풍부한 사용자: Diamond grade, category tabs, archive list, notification priority 표시
 - soft-fail:
   - progress fetch failure
@@ -126,26 +126,32 @@
   - `desktop-1920.png`
   - `grade-modal.png`
   - `achievement-album-modal.png`
-  - `tutorial-modal.png`
-  - `notification-archive-modal.png`
+- `mobile-achievement-tutorial-category.png`
+- `notification-archive-modal.png`
 
 ## Key Rules
 
 1. 프로필 header 안에 성장 정보를 통합한다.
-2. 등급/업적/튜토리얼/알림 상세는 버튼으로 열린다.
-3. 업적은 XP reward가 아니다.
-4. 퀘스트는 튜토리얼 전용 surface다.
-5. 클라이언트는 achievement unlock, XP, grade를 계산하지 않는다.
-6. 잠긴 업적 hint는 짧고 압박 없는 문구만 쓴다.
-7. leaderboard, rank, streak penalty, loot, reward claim은 금지한다.
-8. 모바일 320px에서 텍스트가 잘리거나 버튼 안에서 넘치면 실패다.
+2. 등급/업적/알림 상세는 버튼으로 열린다.
+3. 튜토리얼은 업적 앨범 안의 카테고리로 확인한다.
+4. 업적은 XP reward가 아니다.
+5. 퀘스트는 튜토리얼 전용 surface다.
+6. 업적 앨범은 같은 누적 `track_key`를 하나의 card로 묶고 milestone badge를 가로 배열한다.
+7. 클라이언트는 achievement unlock, XP, grade를 계산하지 않는다.
+8. 잠긴 업적 hint는 짧고 압박 없는 문구만 쓴다.
+9. leaderboard, rank, streak penalty, loot, reward claim은 금지한다.
+10. 모바일 320px에서 텍스트가 잘리거나 버튼 안에서 넘치면 실패다.
+11. MYPAGE 진입 loading은 현재 profile header 구조와 맞춘 단일 skeleton만 사용하고, mobile home은 성장 데이터 준비 후 한 번에 전환한다.
+12. 업적 앨범 track card는 desktop/mobile 모두 한 줄에 하나씩 배치하고, 가로 스크롤은 card 내부 milestone badge row에만 허용한다.
+13. 새로 획득한 milestone badge는 `NEW` chip을 표시하고, 잠긴 milestone은 lock state로 표시한다.
+14. 장기 업적 track은 tutorial 첫 1회 달성 badge와 겹치는 `1회` milestone을 표시하지 않는다.
 
 ## Primary User Path
 
 1. 사용자가 MYPAGE에 진입한다.
-2. 프로필 header에서 등급/레벨/XP/요리·플래너·장보기 기록과 네 개의 상세 버튼을 본다.
-3. 사용자가 `업적`을 눌러 category tab과 stamp grid를 확인한다.
-4. 사용자가 `튜토리얼`을 눌러 onboarding 진행 상태를 확인한다.
+2. 프로필 header에서 등급/레벨/XP/요리·플래너·장보기 기록과 세 개의 상세 버튼을 본다.
+3. 사용자가 `업적`을 눌러 묶인 category tab과 track별 badge row를 확인한다.
+4. 사용자가 업적 앨범의 `튜토리얼` 카테고리에서 onboarding 진행 상태를 확인한다.
 5. 사용자가 `알림`을 눌러 성장 기록 archive를 확인한다.
 
 ## Delivery Checklist
@@ -156,7 +162,7 @@
 - [x] profile header 안에 grade/level/XP/action buttons 통합 <!-- omo:id=delivery-profile-header-integration;stage=4;scope=frontend;review=5,6 -->
 - [x] 등급 modal/bottom sheet 구현 <!-- omo:id=delivery-grade-modal;stage=4;scope=frontend;review=5,6 -->
 - [x] 업적 앨범 modal/bottom sheet 구현 <!-- omo:id=delivery-achievement-modal;stage=4;scope=frontend;review=5,6 -->
-- [x] 튜토리얼 modal/bottom sheet 구현 <!-- omo:id=delivery-tutorial-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] 튜토리얼 카테고리를 업적 앨범 안에 통합 <!-- omo:id=delivery-tutorial-modal;stage=4;scope=frontend;review=5,6 -->
 - [x] 알림 archive modal/bottom sheet 구현 <!-- omo:id=delivery-notification-modal;stage=4;scope=frontend;review=5,6 -->
 - [x] loading / empty / error / read-only / unauthorized 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] Vitest와 Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->

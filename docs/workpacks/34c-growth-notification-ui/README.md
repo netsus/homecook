@@ -105,10 +105,10 @@
   - `ui/designs/critiques/MYPAGE_GAMIFICATION-critique.md` — 34c 갱신분 re-critique 완료
   - authority report: `ui/designs/authority/GROWTH_NOTIFICATION_UI-authority.md`
 - Stage 4 evidence 계획 (`ui/designs/evidence/34c-growth-notification-ui/`):
-  - `mobile-390.png`, `mobile-320.png`, `desktop-1440.png` (MYPAGE archive surface 포함)
+  - `mobile-390.png`, `mobile-320.png`, `desktop-1440.png` (35c profile integration 이후 archive modal 포함)
   - `toast-stack-mobile.png` (mobile 2개 visible + queue/collapse 상태), `toast-stack-desktop.png` (3개 visible)
   - `toast-levelup.png` (level_up 강조 톤 vs xp_awarded 비교가 드러나게)
-  - `archive-surface.png`, `archive-empty.png`, `archive-pagination.png`
+  - `archive-modal.png`, `archive-empty.png`
   - `shopping-copy.png` (SHOPPING_FLOW 안내 문구 surface)
 - Authority status: `reviewed`
 - Notes:

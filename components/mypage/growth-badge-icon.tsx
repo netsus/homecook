@@ -1,32 +1,52 @@
 "use client";
 
+import Image from "next/image";
 import React from "react";
 
+import achievementIconManifest from "@/public/assets/growth/achievement-icons-v3-4/manifest.json";
 import type { UserGamificationBadgeShapeKey } from "@/types/user-gamification";
 
 interface GrowthBadgeIconProps {
+  badgeKey?: string | null;
   className?: string;
   earned?: boolean;
   isNew?: boolean;
   shapeKey?: UserGamificationBadgeShapeKey | string | null;
   size?: "sm" | "md" | "lg";
+  tier?: number;
 }
 
 const SIZE_CLASS: Record<NonNullable<GrowthBadgeIconProps["size"]>, string> = {
-  sm: "h-9 w-9",
-  md: "h-11 w-11",
-  lg: "h-14 w-14",
+  sm: "h-11 w-11",
+  md: "h-14 w-14",
+  lg: "h-[72px] w-[72px]",
 };
 
 const SHAPE_TONE: Record<UserGamificationBadgeShapeKey, string> = {
-  plate: "text-[var(--growth-badge-plate-fg)] bg-[var(--growth-badge-plate-bg)]",
-  shield: "text-[var(--growth-badge-shield-fg)] bg-[var(--growth-badge-shield-bg)]",
-  ribbon: "text-[var(--growth-badge-ribbon-fg)] bg-[var(--growth-badge-ribbon-bg)]",
-  bookmark: "text-[var(--growth-badge-bookmark-fg)] bg-[var(--growth-badge-bookmark-bg)]",
-  pot: "text-[var(--growth-badge-pot-fg)] bg-[var(--growth-badge-pot-bg)]",
-  leaf: "text-[var(--growth-badge-leaf-fg)] bg-[var(--growth-badge-leaf-bg)]",
-  bowl: "text-[var(--growth-badge-bowl-fg)] bg-[var(--growth-badge-bowl-bg)]",
+  plate: "text-[var(--growth-badge-plate-fg)] bg-[radial-gradient(circle_at_36%_30%,var(--growth-badge-plate-highlight)_0%,var(--growth-badge-plate-bg)_48%,var(--growth-badge-plate-edge)_100%)]",
+  shield: "text-[var(--growth-badge-shield-fg)] bg-[radial-gradient(circle_at_36%_30%,var(--growth-badge-shield-highlight)_0%,var(--growth-badge-shield-bg)_48%,var(--growth-badge-shield-edge)_100%)]",
+  ribbon: "text-[var(--growth-badge-ribbon-fg)] bg-[radial-gradient(circle_at_36%_30%,var(--growth-badge-ribbon-highlight)_0%,var(--growth-badge-ribbon-bg)_48%,var(--growth-badge-ribbon-edge)_100%)]",
+  bookmark: "text-[var(--growth-badge-bookmark-fg)] bg-[radial-gradient(circle_at_36%_30%,var(--growth-badge-bookmark-highlight)_0%,var(--growth-badge-bookmark-bg)_48%,var(--growth-badge-bookmark-edge)_100%)]",
+  pot: "text-[var(--growth-badge-pot-fg)] bg-[radial-gradient(circle_at_36%_30%,var(--growth-badge-pot-highlight)_0%,var(--growth-badge-pot-bg)_48%,var(--growth-badge-pot-edge)_100%)]",
+  leaf: "text-[var(--growth-badge-leaf-fg)] bg-[radial-gradient(circle_at_36%_30%,var(--growth-badge-leaf-highlight)_0%,var(--growth-badge-leaf-bg)_48%,var(--growth-badge-leaf-edge)_100%)]",
+  bowl: "text-[var(--growth-badge-bowl-fg)] bg-[radial-gradient(circle_at_36%_30%,var(--growth-badge-bowl-highlight)_0%,var(--growth-badge-bowl-bg)_48%,var(--growth-badge-bowl-edge)_100%)]",
 };
+
+const TIER_CLASS = [
+  "shadow-[var(--growth-badge-tier-0-shadow)]",
+  "ring-1 ring-[var(--growth-badge-ring-soft)] shadow-[var(--growth-badge-tier-1-shadow)]",
+  "ring-2 ring-[var(--growth-badge-ring-gold)] shadow-[var(--growth-badge-tier-2-shadow)]",
+  "ring-2 ring-[var(--growth-badge-ring-blue)] shadow-[var(--growth-badge-tier-3-shadow)]",
+];
+
+const ACHIEVEMENT_ICON_SRC_BY_KEY = new Map(
+  (
+    achievementIconManifest as Array<{
+      achievement_key: string;
+      src: string;
+    }>
+  ).map((icon) => [icon.achievement_key, icon.src]),
+);
 
 function normalizeShapeKey(shapeKey: GrowthBadgeIconProps["shapeKey"]) {
   if (
@@ -138,35 +158,61 @@ function BadgeShape({ shapeKey }: { shapeKey: UserGamificationBadgeShapeKey }) {
 }
 
 export function GrowthBadgeIcon({
+  badgeKey,
   className,
   earned = true,
   isNew = false,
   shapeKey,
   size = "md",
+  tier = 0,
 }: GrowthBadgeIconProps) {
   const normalizedShapeKey = normalizeShapeKey(shapeKey);
+  const tierClass = TIER_CLASS[Math.min(TIER_CLASS.length - 1, Math.max(0, Math.floor(tier / 2)))];
+  const achievementIconSrc = badgeKey ? ACHIEVEMENT_ICON_SRC_BY_KEY.get(badgeKey) : null;
 
   return (
     <span
       aria-hidden="true"
       className={[
-        "relative inline-flex shrink-0 items-center justify-center rounded-full shadow-[inset_0_0_0_1px_rgba(255,255,255,0.72),0_3px_9px_rgba(37,31,20,0.12)]",
-        "before:absolute before:inset-1 before:rounded-full before:border before:border-[var(--line)] before:content-['']",
+        "relative isolate inline-flex shrink-0 items-center justify-center overflow-visible rounded-full border-2 border-[var(--surface-alpha-90)]",
+        "before:absolute before:inset-[5px] before:rounded-full before:border before:border-[var(--surface-alpha-60)] before:content-['']",
+        "after:absolute after:left-3 after:top-2 after:h-2 after:w-8 after:rotate-[-12deg] after:rounded-full after:bg-[var(--surface-alpha-55)] after:content-['']",
         SIZE_CLASS[size],
-        earned ? SHAPE_TONE[normalizedShapeKey] : "bg-[var(--surface-fill)] text-[var(--text-3)]",
+        earned
+          ? `${SHAPE_TONE[normalizedShapeKey]} ${tierClass}`
+          : "border-dashed border-[var(--line-strong)] bg-[var(--surface-fill)] text-[var(--text-3)] grayscale shadow-[var(--growth-badge-locked-shadow)]",
         className ?? "",
       ].join(" ")}
       data-testid={`growth-badge-shape-${normalizedShapeKey}`}
     >
-      <svg
-        className="relative z-[1] h-[72%] w-[72%]"
-        fill="currentColor"
-        viewBox="0 0 48 48"
-      >
-        <BadgeShape shapeKey={normalizedShapeKey} />
-      </svg>
+      {achievementIconSrc ? (
+        <Image
+          alt=""
+          className="relative z-[1] h-[64%] w-[64%] object-contain drop-shadow-[var(--growth-badge-icon-drop-shadow)]"
+          data-testid={`growth-badge-image-${badgeKey}`}
+          draggable={false}
+          height={48}
+          sizes="48px"
+          src={achievementIconSrc}
+          unoptimized
+          width={48}
+        />
+      ) : (
+        <svg
+          className="relative z-[1] h-[56%] w-[56%] drop-shadow-[var(--growth-badge-icon-drop-shadow)]"
+          fill="currentColor"
+          viewBox="0 0 48 48"
+        >
+          <BadgeShape shapeKey={normalizedShapeKey} />
+        </svg>
+      )}
       {isNew ? (
-        <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-[var(--surface)] bg-[var(--danger)]" />
+        <span
+          className="absolute -right-1 -top-1 z-[3] rounded-full bg-[var(--brand)] px-1.5 py-0.5 text-[8px] font-extrabold leading-none text-[var(--text-inverse)] shadow-[var(--growth-badge-new-shadow)]"
+          data-testid="growth-badge-new-label"
+        >
+          NEW
+        </span>
       ) : null}
     </span>
   );

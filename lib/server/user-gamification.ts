@@ -569,7 +569,7 @@ export const USER_ACHIEVEMENT_DEFINITIONS: UserAchievementDefinition[] = [
     metric: "recipe_saved",
     titlePrefix: "레시피 보관",
     description: "저장한 레시피와 내가 등록한 레시피를 꾸준히 모았어요.",
-    thresholds: [1, 5, 20, 50, 100, 300, 1000],
+    thresholds: [5, 20, 50, 100, 300, 1000],
     shapeKey: "bookmark",
     lockedHint: "저장하거나 직접 등록한 레시피 수를 늘려 보세요.",
   }),
@@ -579,7 +579,7 @@ export const USER_ACHIEVEMENT_DEFINITIONS: UserAchievementDefinition[] = [
     metric: "recipe_registered",
     titlePrefix: "레시피 등록",
     description: "직접 만들거나 유튜브로 가져온 레시피를 기록했어요.",
-    thresholds: [1, 3, 10, 30, 100, 300, 600, 1000],
+    thresholds: [3, 10, 30, 100, 300, 600, 1000],
     shapeKey: "ribbon",
     lockedHint: "직접 등록 또는 유튜브 등록으로 레시피를 추가해 보세요.",
   }),
@@ -589,7 +589,7 @@ export const USER_ACHIEVEMENT_DEFINITIONS: UserAchievementDefinition[] = [
     metric: "planner_registered",
     titlePrefix: "플래너 등록",
     description: "끼니를 플래너에 꾸준히 등록했어요.",
-    thresholds: [1, 3, 10, 30, 100, 300, 1000, 3000],
+    thresholds: [3, 10, 30, 100, 300, 1000, 3000],
     shapeKey: "shield",
     lockedHint: "플래너에 끼니를 등록해 보세요.",
   }),
@@ -599,7 +599,7 @@ export const USER_ACHIEVEMENT_DEFINITIONS: UserAchievementDefinition[] = [
     metric: "shopping_completed",
     titlePrefix: "장보기 완료",
     description: "장보기 목록을 끝까지 완료했어요.",
-    thresholds: [1, 3, 10, 30, 100, 300, 700, 1000],
+    thresholds: [3, 10, 30, 100, 300, 700, 1300],
     shapeKey: "leaf",
     lockedHint: "장보기 목록을 완료해 보세요.",
   }),
@@ -609,7 +609,7 @@ export const USER_ACHIEVEMENT_DEFINITIONS: UserAchievementDefinition[] = [
     metric: "cooking_completed",
     titlePrefix: "요리 완료",
     description: "집밥 완료 기록을 꾸준히 남겼어요.",
-    thresholds: [1, 3, 10, 30, 100, 300, 1000, 3000],
+    thresholds: [3, 10, 30, 100, 300, 1000, 3000],
     shapeKey: "pot",
     lockedHint: "요리 완료를 기록해 보세요.",
   }),
@@ -619,7 +619,7 @@ export const USER_ACHIEVEMENT_DEFINITIONS: UserAchievementDefinition[] = [
     metric: "pantry_distinct_ingredients",
     titlePrefix: "팬트리 재료",
     description: "팬트리에 서로 다른 재료를 채웠어요.",
-    thresholds: [1, 10, 30, 50, 100, 200, 500],
+    thresholds: [10, 30, 60, 120, 250, 600],
     shapeKey: "plate",
     lockedHint: "팬트리에 새로운 재료를 추가해 보세요.",
   }),
@@ -629,7 +629,7 @@ export const USER_ACHIEVEMENT_DEFINITIONS: UserAchievementDefinition[] = [
     metric: "leftover_eaten_manual",
     titlePrefix: "남은요리 정리",
     description: "남은요리를 직접 다먹음 처리했어요.",
-    thresholds: [1, 3, 10, 30, 100, 300, 1000],
+    thresholds: [3, 10, 30, 100, 300, 1000],
     shapeKey: "bowl",
     lockedHint: "남은요리를 직접 다먹음 처리해 보세요.",
   }),
@@ -817,6 +817,7 @@ export async function projectUserGamificationAfterProgressEvent(
         payload: {
           previous_level: input.previousLevel,
           current_level: input.progress.level.current_level,
+          previous_grade: getUserProgressGrade(input.previousLevel),
           grade: getUserProgressGrade(input.progress.level.current_level),
         },
         groupKey,
@@ -2014,10 +2015,21 @@ function buildNotificationPresentation(
         : null;
     const grade = normalizePayload(payload.grade);
     const gradeLabel = typeof grade.label === "string" ? grade.label : null;
+    const gradeKey = typeof grade.grade_key === "string" ? grade.grade_key : null;
+    const previousGrade = normalizePayload(payload.previous_grade);
+    const previousGradeKey = typeof previousGrade.grade_key === "string"
+      ? previousGrade.grade_key
+      : null;
+    const levelUpBody =
+      gradeLabel && (!previousGradeKey || previousGradeKey !== gradeKey)
+        ? `${gradeLabel} 등급이 되었어요.`
+        : previousGradeKey && previousGradeKey === gradeKey
+          ? "레벨이 올랐어요."
+          : "새로운 레벨에 도달했어요.";
 
     return {
       title: currentLevel ? `레벨 ${currentLevel} 달성` : "레벨업",
-      body: gradeLabel ? `${gradeLabel}가 되었어요.` : "새로운 레벨에 도달했어요.",
+      body: levelUpBody,
       category: "cooking",
     };
   }

@@ -317,19 +317,21 @@ async function openMypage(
 test.describe("34e growth profile visual polish @smoke-core", () => {
   test.setTimeout(90_000);
 
-  test("captures integrated header, archive separation, grade marks, and soft-fail evidence", async ({ browser }) => {
+  test("captures integrated header, notification archive entry, grade marks, and soft-fail evidence", async ({ browser }) => {
     await mkdir(EVIDENCE_DIR, { recursive: true });
 
     const mobile390 = await openMypage(browser, { width: 390, height: 844 });
     await expect(mobile390.page.getByTestId("mypage-growth-profile")).toContainText("김집밥");
-    await expect(mobile390.page.getByTestId("mypage-growth-profile")).toContainText("집밥 러너 · Lv.6");
-    await expect(mobile390.page.getByTestId("mypage-gamification-card")).toContainText("장보기 3회");
+    await expect(mobile390.page.getByTestId("mypage-profile-grade-row")).toContainText("집밥 러너");
+    await expect(mobile390.page.getByTestId("mypage-profile-grade-row")).toContainText("Lv.6");
+    await expect(mobile390.page.getByTestId("mypage-growth-featured-badges")).toHaveCount(0);
+    await expect(mobile390.page.getByRole("button", { name: "업적 보기" })).toBeVisible();
     await mobile390.page.screenshot({
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "mobile-390.png"),
     });
 
-    await mobile390.page.getByTestId("mypage-growth-featured-badges").getByRole("button").first().click();
+    await mobile390.page.getByRole("button", { name: "업적 보기" }).click();
     await expect(mobile390.page.getByRole("dialog", { name: "업적 앨범" })).toBeVisible();
     await mobile390.page.screenshot({
       fullPage: true,
@@ -349,23 +351,16 @@ test.describe("34e growth profile visual polish @smoke-core", () => {
     await mobile320.context.close();
 
     const desktop = await openMypage(browser, { width: 1440, height: 960 });
-    await expect(desktop.page.getByTestId("growth-archive-surface")).toBeVisible();
+    await expect(desktop.page.getByTestId("growth-archive-surface")).toHaveCount(0);
+    await expect(desktop.page.getByRole("button", { name: "알림 보기" })).toBeVisible();
     const layout = await desktop.page.evaluate(() => {
       const profileBox = document.querySelector('[data-testid="mypage-profile"]')?.getBoundingClientRect();
-      const archiveBox = document.querySelector('[data-testid="growth-archive-surface"]')?.getBoundingClientRect();
-      const archiveInsideProfile = Boolean(
-        document.querySelector('[data-testid="mypage-profile"] [data-testid="growth-archive-surface"]'),
-      );
       return {
-        archiveHeight: archiveBox?.height ?? 0,
-        archiveInsideProfile,
         profileHeight: profileBox?.height ?? 0,
         profileTop: profileBox?.top ?? 0,
       };
     });
-    expect(layout.archiveInsideProfile).toBe(false);
     expect(layout.profileTop).toBeLessThan(180);
-    expect(layout.archiveHeight).toBeGreaterThan(layout.profileHeight);
     expect(layout.profileHeight).toBeLessThan(520);
     await desktop.page.screenshot({
       fullPage: true,
@@ -415,7 +410,8 @@ test.describe("34e growth profile visual polish @smoke-core", () => {
     await gamificationSoftFail.context.close();
 
     const archiveSoftFail = await openMypage(browser, { width: 390, height: 844 }, { archiveError: true });
-    await expect(archiveSoftFail.page.getByTestId("growth-archive-error")).toBeVisible();
+    await archiveSoftFail.page.getByRole("button", { name: "알림 보기" }).click();
+    await expect(archiveSoftFail.page.getByTestId("mypage-notification-archive-error")).toBeVisible();
     await expect(archiveSoftFail.page.getByTestId("mypage-growth-profile")).toContainText("집밥 러너");
     await archiveSoftFail.page.screenshot({
       fullPage: true,

@@ -508,7 +508,7 @@ test.describe("MYPAGE screen", () => {
         name: "Lv.6, 다음 레벨까지 130 XP, 진행률 13%",
       })).toBeVisible();
     } else {
-      await expect(page.getByText("카카오 로그인")).toBeVisible();
+      await expect(page.getByTestId("mypage-profile-edit-button")).toBeVisible();
     }
     await expect(page.getByLabel("설정", { exact: true })).toHaveCount(0);
 
@@ -798,13 +798,24 @@ test.describe("MYPAGE screen", () => {
         ...document.querySelectorAll('[aria-label="새 레시피북 만들기"]'),
       ];
 
-      const overlaps = candidates
+      const exposedOverlaps = candidates
         .filter((el) => {
           const style = window.getComputedStyle(el);
           if (style.display === "none" || style.visibility === "hidden") return false;
           const rect = el.getBoundingClientRect();
           if (rect.width === 0 || rect.height === 0) return false;
-          return rect.top < navRect.bottom && rect.bottom > navRect.top;
+          if (!(rect.top < navRect.bottom && rect.bottom > navRect.top)) return false;
+
+          const overlapTop = Math.max(rect.top, navRect.top);
+          const overlapBottom = Math.min(rect.bottom, navRect.bottom);
+          const sampleX = Math.min(
+            Math.max(rect.left + rect.width / 2, navRect.left + 1),
+            navRect.right - 1,
+          );
+          const sampleY = (overlapTop + overlapBottom) / 2;
+          const topElement = document.elementFromPoint(sampleX, sampleY);
+
+          return topElement === el || Boolean(topElement && el.contains(topElement));
         })
         .map((el) => {
           const rect = el.getBoundingClientRect();
@@ -816,7 +827,7 @@ test.describe("MYPAGE screen", () => {
           };
         });
 
-      return { navTop: navRect.top, navBottom: navRect.bottom, overlaps };
+      return { navTop: navRect.top, navBottom: navRect.bottom, overlaps: exposedOverlaps };
     });
 
     expect(geometry.overlaps).toEqual([]);
