@@ -14,6 +14,14 @@
 validation 2건(nE7ANT3uGMQ, oe_WhcK2X4Q)은 Gemini 일일 쿼터로 미측정 — 쿼터 회복 후 보강.
 holdout 5건은 정책상 미측정(최종 1회용).
 
+## Local integrity gate threshold rationale (2026-06-14)
+
+`youtube-recipe-extraction-loop-local-integrity-ralplan-20260614.md`의 첫 PR gate는 기존 M3 기준에서 온 deterministic threshold를 validation split에 그대로 적용한다.
+
+현재 validation baseline 재채점 결과는 `n=10`, `ingredientF1=0.915`, `amountMatchRate=0.825`, `stepCoverage=0.905`, `recipeCountMatchRate=0.9`다. 따라서 `det_f1_min=0.92`, `det_amount_min=0.85`, `det_recipe_count_min=0.95`에는 미달하고, baseline decision에서 `deterministic_validation=false`가 정상이다.
+
+이 임계값은 baseline을 그대로 통과시키기 위한 기준이 아니라, loop가 다중 레시피 누락과 분량 추정 약점을 실제로 개선했는지 확인하기 위한 fail-closed gate로 유지한다. 특히 `vw73AKRDxI8`의 4/7 multi-recipe 추출과 `nE7ANT3uGMQ`/`jenDETSgvz4`의 낮은 분량 일치율이 개선 목표다. 후속 PR에서 scorer 의미가 바뀌면 old/new 직접 비교 대신 migration note와 loophole fixture 결과를 함께 남긴다.
+
 ## 케이스별 약점 (루프 1차 개선 후보)
 
 - **다중 레시피 vlog 누락**: 똘비(train, 7개 중 일부 누락), 밥통민(validation, 4/7 추출, F1 0.47) — 가장 큰 헤드룸.

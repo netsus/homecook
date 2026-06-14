@@ -19,10 +19,9 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -133,30 +132,145 @@ def stage(msg: str) -> None:
 
 # ---- 격리 점검 ----------------------------------------------------------
 
+PROTECTED_SPLITS = ["validation", "holdout"]
+
+
 def module_source() -> str:
     return "\n".join(p.read_text(encoding="utf-8") for p in MODULE_DIR.glob("*.mjs"))
 
 
-def forbidden_strings(splits: list[str]) -> list[str]:
-    """validation/holdout 정답에서 하드코딩 탐지에 쓸 고유 문구(만들기 instruction)."""
-    values: list[str] = []
-    for split in splits:
-        for golden_path in (DATA_ROOT / split).glob("*/golden.json"):
+def _compact_text(value) -> str:
+    return "".join(str(value or "").split())
+
+
+def _normalized_text(value) -> str:
+    return " ".join(str(value or "").split()).strip()
+
+
+def _add_protected_fragment(fragments: list[dict], seen: set[tuple[str, str, str, str]],
+                            split: str, category: str, value, min_compact_len: int) -> None:
+    text = _normalized_text(value)
+    if len(_compact_text(text)) < min_compact_len:
+        return
+    key = (split, category, text, _compact_text(text))
+    if key in seen:
+        return
+    seen.add(key)
+    fragments.append({"split": split, "category": category, "value": text})
+
+
+def protected_answer_fragments(splits: list[str] | None = None) -> list[dict]:
+    """Naive copy 탐지용 validation/holdout 정답 fragment.
+
+    이 검사는 복붙성 하드코딩과 산출물 누출을 잡는 tripwire다. 패러프레이즈나
+    정규화 우회까지 막는 strict blind 장치는 아니다.
+    """
+    fragments: list[dict] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    for split in (splits or PROTECTED_SPLITS):
+        split_dir = DATA_ROOT / split
+        if not split_dir.exists():
+            continue
+        for golden_path in split_dir.glob("*/golden.json"):
             golden = read_json(golden_path)
             for recipe in golden.get("recipes", []):
+                _add_protected_fragment(fragments, seen, split, "recipe_title", recipe.get("title"), 5)
+                for ingredient in recipe.get("ingredients", []):
+                    if not isinstance(ingredient, dict):
+                        continue
+                    name = ingredient.get("name")
+                    _add_protected_fragment(fragments, seen, split, "ingredient_name", name, 5)
+                    for alias in ingredient.get("nameAliases", []) or []:
+                        _add_protected_fragment(fragments, seen, split, "ingredient_alias", alias, 5)
+                    amount = ingredient.get("amount")
+                    unit = ingredient.get("unit")
+                    if name and amount:
+                        amount_unit = f"{amount}{unit or ''}"
+                        for value in (
+                            f"{name} {amount_unit}",
+                            f"{name}{amount_unit}",
+                            f"{name}: {amount} {unit or ''}",
+                        ):
+                            _add_protected_fragment(fragments, seen, split, "ingredient_quantity", value, 5)
                 for step in recipe.get("steps", []):
                     text = step.get("instruction") if isinstance(step, dict) else step
-                    if text and len(text) >= 12:
-                        values.append(text)
-    return values
+                    _add_protected_fragment(fragments, seen, split, "step_instruction", text, 12)
+    return fragments
+
+
+def forbidden_strings(splits: list[str]) -> list[str]:
+    """Backward-compatible raw fragment list for local tripwire callers."""
+    return [fragment["value"] for fragment in protected_answer_fragments(splits)]
+
+
+def scan_texts_for_protected_answers(items: list, fragments: list[dict] | None = None) -> dict:
+    fragments = fragments if fragments is not None else protected_answer_fragments(PROTECTED_SPLITS)
+    hit_counts: dict[tuple[str, str, str], int] = {}
+    scanned_scopes: list[str] = []
+    for item in items:
+        if isinstance(item, dict):
+            scope = str(item.get("scope") or "unknown")
+            text = str(item.get("text") or "")
+        else:
+            scope = str(item[0])
+            text = str(item[1] or "")
+        scanned_scopes.append(scope)
+        if not text:
+            continue
+        for fragment in fragments:
+            value = fragment.get("value") or ""
+            if value and value in text:
+                key = (scope, fragment.get("split") or "unknown", fragment.get("category") or "unknown")
+                hit_counts[key] = hit_counts.get(key, 0) + 1
+    hits = [
+        {"scope": scope, "split": split, "category": category, "count": count}
+        for (scope, split, category), count in sorted(hit_counts.items())
+    ]
+    hit_count = sum(hit_counts.values())
+    return {
+        "success": hit_count == 0,
+        "hit_count": hit_count,
+        "scanned_scope_count": len(scanned_scopes),
+        "scanned_scopes": scanned_scopes,
+        "hits": hits,
+        "redacted_hits": ["protected answer text redacted"] if hit_count else [],
+    }
+
+
+def scan_paths_for_protected_answers(paths: list[Path], fragments: list[dict] | None = None) -> dict:
+    items = []
+    for path in paths:
+        if path.exists():
+            items.append({"scope": path.name, "text": path.read_text(encoding="utf-8")})
+    return scan_texts_for_protected_answers(items, fragments)
+
+
+def merge_redaction_scans(scans: list[dict]) -> dict:
+    hits = []
+    scanned_scopes = []
+    for scan in scans:
+        hits.extend(scan.get("hits", []))
+        scanned_scopes.extend(scan.get("scanned_scopes", []))
+    hit_count = sum(hit.get("count", 0) for hit in hits)
+    return {
+        "success": hit_count == 0,
+        "hit_count": hit_count,
+        "scanned_scope_count": len(scanned_scopes),
+        "scanned_scopes": scanned_scopes,
+        "hits": hits,
+        "redacted_hits": ["protected answer text redacted"] if hit_count else [],
+    }
 
 
 def check_no_hardcoded_answers() -> tuple[bool, dict]:
     code = module_source()
-    hits = [s for s in forbidden_strings(["validation", "holdout"]) if s in code]
-    return (len(hits) == 0, {
-        "hit_count": len(hits),
-        "redacted_hits": ["protected answer text redacted"] if hits else [],
+    scan = scan_texts_for_protected_answers([{"scope": "recipe_extraction_lab_modules", "text": code}])
+    return (scan["success"], {
+        "success": scan["success"],
+        "hit_count": scan["hit_count"],
+        "hits": scan["hits"],
+        "redacted_hits": scan["redacted_hits"],
+        "limitations": "substring-based naive copy tripwire; not a strict blind or paraphrase detector",
     })
 
 
@@ -368,10 +482,14 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
     ext_train = run_node("run-extraction.mjs", "--split", cfg.train_split, "--out-tag", out_tag, "--model", cfg.model)
     ext_val = run_node("run-extraction.mjs", "--split", cfg.val_split, "--out-tag", out_tag, "--model", cfg.model)
     print(ext_train.stdout[-800:])
-    write_text(iter_dir / "03_verify.json", json.dumps({
+    verify_payload = {
         "no_hardcoded_answers": no_hardcode, "hardcode_scan": hardcode_report,
         "train_extraction_rc": ext_train.returncode, "val_extraction_rc": ext_val.returncode,
-    }, ensure_ascii=False, indent=2))
+    }
+    verify_text = json.dumps(verify_payload, ensure_ascii=False, indent=2)
+    verify_scan_before_write = scan_texts_for_protected_answers([{"scope": "03_verify_payload", "text": verify_text}])
+    write_text(iter_dir / "03_verify.json", verify_text)
+    verify_scan_after_write = scan_paths_for_protected_answers([iter_dir / "03_verify.json"])
 
     stage(f"[ITER {iteration}] 4. 채점 (결정적 + AI 의미)")
     train_expected = str(split_expected_count(cfg.train_split))
@@ -393,13 +511,55 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
         "train_semantic_grader_rc": train_sem_grade.returncode,
         "train_failures_are_diagnostic_only": True,
     }
+    output_scan_before_decision = merge_redaction_scans([
+        verify_scan_before_write,
+        verify_scan_after_write,
+        scan_paths_for_protected_answers([
+            iter_dir / "01_plan.md",
+            iter_dir / "02_implementation.log",
+        ]),
+        scan_texts_for_protected_answers([
+            {"scope": "train_extraction_stdout", "text": ext_train.stdout},
+            {"scope": "train_extraction_stderr", "text": ext_train.stderr},
+            {"scope": "validation_extraction_stdout", "text": ext_val.stdout},
+            {"scope": "validation_extraction_stderr", "text": ext_val.stderr},
+            {"scope": "train_deterministic_stdout", "text": train_det_grade.stdout},
+            {"scope": "train_deterministic_stderr", "text": train_det_grade.stderr},
+            {"scope": "validation_deterministic_stdout", "text": val_det_grade.stdout},
+            {"scope": "validation_deterministic_stderr", "text": val_det_grade.stderr},
+            {"scope": "train_semantic_stdout", "text": train_sem_grade.stdout},
+            {"scope": "train_semantic_stderr", "text": train_sem_grade.stderr},
+            {"scope": "validation_semantic_stdout", "text": val_sem_grade.stdout},
+            {"scope": "validation_semantic_stderr", "text": val_sem_grade.stderr},
+        ]),
+    ])
     leakage_guard = {
-        "success": no_hardcode,
+        "success": no_hardcode and output_scan_before_decision["success"],
         "module_hardcode_scan": hardcode_report,
-        "output_redaction_scan": {"success": True, "scope": "deferred_to_phase_6"},
+        "output_redaction_scan": output_scan_before_decision,
     }
     decision = decide(cfg, summaries, {"subprocess_health": subprocess_health, "leakage_guard": leakage_guard})
-    write_text(iter_dir / "05_decision.json", json.dumps(decision, ensure_ascii=False, indent=2))
+    decision_text = json.dumps(decision, ensure_ascii=False, indent=2)
+    decision_scan = scan_texts_for_protected_answers([{"scope": "05_decision_payload", "text": decision_text}])
+    if not decision_scan["success"]:
+        output_scan = merge_redaction_scans([output_scan_before_decision, decision_scan])
+        leakage_guard = {
+            "success": no_hardcode and output_scan["success"],
+            "module_hardcode_scan": hardcode_report,
+            "output_redaction_scan": output_scan,
+        }
+        decision = decide(cfg, summaries, {"subprocess_health": subprocess_health, "leakage_guard": leakage_guard})
+        decision_text = json.dumps(decision, ensure_ascii=False, indent=2)
+    else:
+        output_scan = merge_redaction_scans([output_scan_before_decision, decision_scan])
+        leakage_guard = {
+            "success": no_hardcode and output_scan["success"],
+            "module_hardcode_scan": hardcode_report,
+            "output_redaction_scan": output_scan,
+        }
+        decision = decide(cfg, summaries, {"subprocess_health": subprocess_health, "leakage_guard": leakage_guard})
+        decision_text = json.dumps(decision, ensure_ascii=False, indent=2)
+    write_text(iter_dir / "05_decision.json", decision_text)
     print(json.dumps(decision["checks"], ensure_ascii=False, indent=2))
 
     if decision["passed"]:
@@ -412,6 +572,19 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
         fmt_det(summaries["val"].get("aggregate", {})),
         weak_train_cases_text(cfg, out_tag),
     )
+    diag_prompt_scan = scan_texts_for_protected_answers([{"scope": "06_diagnosis_prompt", "text": diag_prompt}])
+    if not diag_prompt_scan["success"]:
+        result = {
+            "iteration": iteration,
+            "passed": False,
+            "iteration_status": "aborted",
+            "stage": "diagnosis_leakage_guard",
+            "decision": decision,
+            "leakage_scan": diag_prompt_scan,
+            "out_tag": out_tag,
+        }
+        write_text(iter_dir / "06_diagnosis_failed.json", json.dumps(result, ensure_ascii=False, indent=2))
+        return result
     try:
         diagnosis = run_agent(cfg.claude_cmd, diag_prompt, iter_dir / "06_diagnosis.md")
     except RuntimeError as error:
@@ -431,6 +604,22 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
         f"## train 집계\n{fmt_det(summaries['det'].get('aggregate', {}))} | AI {fmt_ai(summaries['ai'].get('aggregate', {}))}\n\n"
         f"## Claude 진단\n{diagnosis}"
     )
+    diagnosis_scan = merge_redaction_scans([
+        scan_paths_for_protected_answers([iter_dir / "06_diagnosis.md"]),
+        scan_texts_for_protected_answers([{"scope": "feedback_for_next_iter", "text": next_feedback}]),
+    ])
+    if not diagnosis_scan["success"]:
+        result = {
+            "iteration": iteration,
+            "passed": False,
+            "iteration_status": "aborted",
+            "stage": "diagnosis_leakage_guard",
+            "decision": decision,
+            "leakage_scan": diagnosis_scan,
+            "out_tag": out_tag,
+        }
+        write_text(iter_dir / "06_diagnosis_failed.json", json.dumps(result, ensure_ascii=False, indent=2))
+        return result
     write_text(iter_dir / "feedback_for_next_iter.md", next_feedback)
     return {"iteration": iteration, "passed": False, "decision": decision, "feedback": next_feedback, "out_tag": out_tag}
 
@@ -458,23 +647,36 @@ def run_loop(cfg: LoopConfig | None = None) -> dict:
 
 if __name__ == "__main__":
     if "--smoke-wiring" in sys.argv:
-        # 쿼터/구현 없이 배선만 점검: baseline 추출(캐시) 기준으로 채점→판정→진단 경로 실행.
+        # 쿼터/구현 없이 decision 배선만 점검한다. 실제 subprocess smoke는
+        # --smoke-validation-graders를 사용한다.
         cfg = LoopConfig(max_iter=1)
         run_dir = RUN_ROOT / ("smoke-" + kst_now().strftime("%Y%m%d-%H%M%S"))
         run_dir.mkdir(parents=True, exist_ok=True)
         no_hardcode, hardcode_report = check_no_hardcoded_answers()
+        output_redaction_scan = scan_texts_for_protected_answers([])
         print(f"하드코딩 점검: {'OK' if no_hardcode else 'FAIL ' + str(hardcode_report)}")
         summaries = grade_summaries(cfg, "baseline")
         decision = decide(cfg, summaries, {
-            "subprocess_health": {"success": True, "smoke_wiring_only": True},
+            "subprocess_health": {"success": True, "decision_unit_smoke_only": True},
             "leakage_guard": {
-                "success": no_hardcode,
+                "success": no_hardcode and output_redaction_scan["success"],
                 "module_hardcode_scan": hardcode_report,
-                "output_redaction_scan": {"success": True, "scope": "deferred_to_phase_6"},
+                "output_redaction_scan": output_redaction_scan,
             },
         })
         print("판정 checks:", json.dumps(decision["checks"], ensure_ascii=False))
         print("약점 케이스:\n" + weak_train_cases_text(cfg, "baseline"))
+    elif "--smoke-validation-graders" in sys.argv:
+        cfg = LoopConfig(max_iter=1)
+        val_expected = str(split_expected_count(cfg.val_split))
+        val_det_grade = run_node("grade-extraction.mjs", "--split", cfg.val_split, "--out-tag", "baseline", "--expected-count", val_expected)
+        val_sem_grade = run_node("grade-semantic.mjs", "--split", cfg.val_split, "--out-tag", "baseline", "--model", cfg.model, "--expected-count", val_expected)
+        result = {
+            "validation_deterministic_grader_rc": val_det_grade.returncode,
+            "validation_semantic_grader_rc": val_sem_grade.returncode,
+        }
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        sys.exit(0 if val_det_grade.returncode == 0 and val_sem_grade.returncode == 0 else 1)
     elif "--one-iter" in sys.argv:
         # 실제 1 ITER 스모크: 계획→구현(Codex)→검증(추출)→채점→판정→진단.
         cfg = LoopConfig(max_iter=1)
