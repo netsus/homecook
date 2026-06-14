@@ -939,4 +939,162 @@ shutil.rmtree(workspace, ignore_errors=True)
     expect(report.files.some((file: string) => file.startsWith("notebooks/recipe_loop_data/"))).toBe(false);
     expect(report.forbidden_exists).toBe(false);
   });
+
+  it("treats train as public diagnostic data outside the implementation forbidden access guard", () => {
+    const result = runLoopPython(`
+markers = loop.implementation_forbidden_path_markers()
+print(json.dumps({
+    "has_train": any("notebooks/recipe_loop_data/train" in marker for marker in markers),
+    "has_validation": any("notebooks/recipe_loop_data/validation" in marker for marker in markers),
+    "has_holdout": any("notebooks/recipe_loop_data/holdout" in marker for marker in markers),
+    "has_runs": any("notebooks/recipe_loop_runs" in marker for marker in markers),
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.has_train).toBe(false);
+    expect(report.has_validation).toBe(true);
+    expect(report.has_holdout).toBe(true);
+    expect(report.has_runs).toBe(true);
+  });
+
+  it("detects and redacts forbidden validation paths from fs_usage audit logs", () => {
+    const result = runLoopPython(`
+import tempfile
+log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "02_fs_audit.log"
+validation_path = loop.DATA_ROOT / "validation" / "case-a" / "golden.json"
+train_path = loop.DATA_ROOT / "train" / "public-case" / "golden.json"
+log_path.write_text(
+    f"12:00:00 open {validation_path}\\n12:00:01 open {train_path}\\n",
+    encoding="utf-8",
+)
+scan = loop.scan_fs_usage_log_for_forbidden_access(log_path)
+print(json.dumps({
+    "success": scan["success"],
+    "hit_count": scan["hit_count"],
+    "has_raw_validation_path": str(validation_path) in json.dumps(scan, ensure_ascii=False),
+    "has_raw_train_path": str(train_path) in json.dumps(scan, ensure_ascii=False),
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.success).toBe(false);
+    expect(report.hit_count).toBe(1);
+    expect(report.has_raw_validation_path).toBe(false);
+    expect(report.has_raw_train_path).toBe(false);
+  });
+
+  it("counts forbidden fs_usage hits only from the implementation PID subtree", () => {
+    const result = runLoopPython(`
+import tempfile
+log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "02_fs_audit.log"
+validation_path = loop.DATA_ROOT / "validation" / "case-a" / "golden.json"
+holdout_path = loop.DATA_ROOT / "holdout" / "case-b" / "golden.json"
+log_path.write_text(
+    f"12:00:00 open {validation_path} Spotlight.999\\n"
+    f"12:00:01 open {validation_path} codex.1234\\n"
+    f"12:00:02 open {holdout_path} node.1235\\n",
+    encoding="utf-8",
+)
+scan = loop.scan_fs_usage_log_for_forbidden_access(
+    log_path,
+    allowed_pids={1234, 1235},
+    pid_subtree={
+        "processes": [
+            {"pid": 1234, "ppid": 1, "command": "codex"},
+            {"pid": 1235, "ppid": 1234, "command": "node"},
+        ],
+    },
+)
+print(json.dumps({
+    "success": scan["success"],
+    "hit_count": scan["hit_count"],
+    "ignored_forbidden_line_count": scan["ignored_forbidden_line_count"],
+    "pids": [hit["process_pid"] for hit in scan["hits"]],
+    "has_raw_validation_path": str(validation_path) in json.dumps(scan, ensure_ascii=False),
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.success).toBe(false);
+    expect(report.hit_count).toBe(2);
+    expect(report.ignored_forbidden_line_count).toBe(1);
+    expect(report.pids).toEqual([1234, 1235]);
+    expect(report.has_raw_validation_path).toBe(false);
+  });
+
+  it("records implementation access guard warnings as non-fatal iteration metadata", () => {
+    const result = runLoopPython(`
+import tempfile
+root = loop.Path(tempfile.mkdtemp(prefix="access-guard-payload-"))
+payload = loop.implementation_access_guard_payload(
+    "warning",
+    "forbidden_golden_path_access_suspected",
+    root / "02_fs_audit.log",
+    root / "02_fs_audit_hits.json",
+    hit_count=2,
+    representative_hit={"process_pid": 1234, "process_name": "codex"},
+)
+print(json.dumps(payload, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const payload = JSON.parse(result.stdout);
+    expect(payload.access_guard_status).toBe("warning");
+    expect(payload.passed).toBe(false);
+    expect(payload.continues_iteration).toBe(true);
+    expect(payload.reason).toBe("forbidden_golden_path_access_suspected");
+    expect(payload.hit_log_path).toContain("02_fs_audit_hits.json");
+  });
+
+  it("prechecks that the access guard watches the original repo root with golden directories", () => {
+    const result = runLoopPython(`
+environment = loop.validate_implementation_access_guard_environment()
+print(json.dumps(environment, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const environment = JSON.parse(result.stdout);
+    expect(environment.success).toBe(true);
+    expect(environment.checks.repo_git_exists).toBe(true);
+    expect(environment.checks.validation_dir_exists).toBe(true);
+    expect(environment.checks.holdout_dir_exists).toBe(true);
+  });
+
+  it("warns implementation Codex not to access protected evaluation artifacts", () => {
+    const result = runLoopPython(`
+prompt = loop.build_implement_prompt("계획", "")
+print(json.dumps({
+    "has_allowlist": "allowlist implementation workspace" in prompt,
+    "has_validation_holdout": "validation/holdout golden/evaluation data" in prompt,
+    "has_git": "source repository .git directory" in prompt,
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.has_allowlist).toBe(true);
+    expect(report.has_validation_holdout).toBe(true);
+    expect(report.has_git).toBe(true);
+  });
+
+  it("uses non-interactive sudo for fs_usage when the loop is not already root", () => {
+    const result = runLoopPython(`
+cmd = loop.fs_usage_command()
+print(json.dumps({"cmd": cmd, "is_root": loop.os.geteuid() == 0}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    if (report.is_root) {
+      expect(report.cmd.slice(0, 1)).toEqual(["fs_usage"]);
+    } else {
+      expect(report.cmd.slice(0, 2)).toEqual(["sudo", "-n"]);
+      expect(report.cmd).toContain("fs_usage");
+    }
+    expect(report.cmd).toEqual(expect.arrayContaining(["-w", "-f", "pathname"]));
+  });
 });
