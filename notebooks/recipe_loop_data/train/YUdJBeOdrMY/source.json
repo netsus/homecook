@@ -1,0 +1,577 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-06-11T07:20:55.142Z",
+  "video": {
+    "videoId": "YUdJBeOdrMY",
+    "url": "https://www.youtube.com/watch?v=YUdJBeOdrMY",
+    "title": "No Oven! 근사한 브런치가되는 채소 스튜, 노오븐 라따뚜이",
+    "description": "- 영상에 톱니바퀴를 누른뒤, 고화질로 시청하시면 좋답니다~!\n\n자막 도움을 주시면 감사하겠습니다  Could you help for subtitle :D\nhttp://www.youtube.com/timedtext_video?ref=share&v=YUdJBeOdrMY\n\n안녕하세요 여러분! 오늘은 노오븐 라따뚜이 레시피를 가지고왔어요!\n보통 오븐에 조리하고 치킨스톡을 쓰기도 하는데, 저는 노오븐에 치킨스톡을 사용 하지 않는 레시피입니다!\n저는 이 음식을 인스턴트나 기름진 음식에 질려할때 해먹는 음식인데 먹고나면 굉장히 뭔가 프레시한 느낌이랄까요\n건강한느낌이 듭니다 ㅋㅋㅋ 아무래도 채소를 듬뿍듬뿍 먹는 음식이니까요.\n남은 라따뚜이는 파스타면을 삶아서 30초~1분정도 볶아주시면 맛있는 토마토 파스타가 됩니다. 활용도가 높은 요리에요.\n물 약간 붓고 라면 스프를 넣으면 토마토 스프가 되지않을까.. 라는 생각도 합니다 허헣 먹어보진 않았지만 괜찮을것 같네요.\n\n오늘은 한번 내래이션을 넣어봤어요. 근데 오늘 따라 목소리 상태가 영 안 좋네요 ㅠ 꽃가루며 미세먼지며 공기가 안좋아서 그런가봐요.\n여러분은 미세먼지 마스크 쓰고 다니시는지 모르겠네요 꼭꼭 쓰고 다니셔야해요!\n\n\n오늘도 시청해주셔서 감사합니다~\n가기전에 좋아요 버튼 잊지마시고 아직 구독하지 않으신분들은 제 채널을 구독하시면\n색다른 힐링 영상들을 받아볼수 있으시답니다! ㅇ_ㅇ!\n\n그럼 여러분, 오늘도 끼니 거르지마시고 즐겁게 요리하시고 배 빵빵하게 채우세요!\n다음영상에서 만나요~!\n\n\n- 제 영상을 다른분들께 공유해주시는 것은 정말 감사하지만, \n  출처를 드러내지않고, 2차 편집 및 무단도용하는 것을 금지합니다(ex 페이스북)\n- if you upload my video on the Internet (facebook, instagram, and so on), reveal the source of my channel :D\n  Do not upload my video without permission and my channel name.\n\n--------------------------------------------\n*  재료 ingredients ★는 필수재료입니다 ★is essential\n   1인분 기준  for a serving   (2 인분기준 for 2 people)\n   종이컵 한컵에 180ml입니다 참고하세요~!  fully water in paper cup is 180ml\n\n - ★토마토소스    360ml    tomato sauce\n - 파마산치즈               Parmesan cheese\n - 후추와 소금              pepper and salt\n - 그외 좋아하는 채소들 가지, 토마토, 애호박 등등\n   vegetable you like, tomato, zucchini, eggplant\nCamera _ canon 700D\nBGM _ Sunshine Samba\n--------------------------------------------",
+    "channelId": "UC1pErpKisHXpAo6npGiJr0A",
+    "channelTitle": "Soyegg간장계란",
+    "publishedAt": "2018-05-04T08:00:02Z",
+    "tags": [
+      "#cook",
+      "food",
+      "라따뚜이",
+      "노오븐 라따뚜이",
+      "ratatouille",
+      "라따뚜이만들기",
+      "라따뚜이 레시피",
+      "토마토 파스타",
+      "토마토 스파게티",
+      "토마토 소스",
+      "토마토",
+      "가지"
+    ],
+    "defaultLanguage": "ko",
+    "durationSeconds": 287,
+    "thumbnailUrl": "https://i.ytimg.com/vi/YUdJBeOdrMY/maxresdefault.jpg"
+  },
+  "stats": {
+    "viewCount": 95058,
+    "likeCount": 1701,
+    "commentCount": 64
+  },
+  "descriptionSignal": {
+    "hasIngredientKeyword": true,
+    "hasStepKeyword": true,
+    "hasQuantityPattern": true,
+    "length": 1494
+  },
+  "captions": {
+    "available": true,
+    "reason": null,
+    "provider": "apify",
+    "language": "ko",
+    "segments": [
+      {
+        "lineIndex": 0,
+        "text": "안녕하세요 여러분 오늘의 요리는 나탄 주 입니다",
+        "startMs": 0,
+        "durationMs": 7380,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 1,
+        "text": "영화라 딱 조 2 에 세금 심 맞습니다",
+        "startMs": 4410,
+        "durationMs": 4560,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 2,
+        "text": "[음악]",
+        "startMs": 7380,
+        "durationMs": 6509,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 3,
+        "text": "토마토 소스와 몇 가지 채소만 있으면 쉽게 만들 수 있는 요리인데요",
+        "startMs": 8970,
+        "durationMs": 8670,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 4,
+        "text": "이렇게 바삭하게 고흥 하겠는데",
+        "startMs": 13889,
+        "durationMs": 8730,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 5,
+        "text": "나뚜루 이와 쏘 술에 끼얹어 먹으면 마치 프랑스 에서 브런치를 먹는 기분",
+        "startMs": 17640,
+        "durationMs": 8300,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 6,
+        "text": "형님 그럼 시작해볼게요",
+        "startMs": 22619,
+        "durationMs": 5601,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 7,
+        "text": "[음악]",
+        "startMs": 25940,
+        "durationMs": 8490,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 8,
+        "text": "오늘 제가 요리할 재료는 토마토와 가지 그리고 죽기 4 사용하였어요",
+        "startMs": 28220,
+        "durationMs": 12600,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 9,
+        "text": "나트 타이 재료들의 모양 통일성을 위해 끄트머리 들은 모두 잘라 주시고",
+        "startMs": 34430,
+        "durationMs": 9910,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 10,
+        "text": "노 분으로 도래 할 거라서 조금 얇게 싸라 주세요",
+        "startMs": 40820,
+        "durationMs": 6749,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 11,
+        "text": "[음악]",
+        "startMs": 44340,
+        "durationMs": 3229,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 12,
+        "text": "쥬키니 가격대비 양이 많아서 사용하였는데 좋네요 법이 더 맛있더라구요",
+        "startMs": 48739,
+        "durationMs": 10640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 13,
+        "text": "가지도 치킨이 처럼 얇게 썰어주세요",
+        "startMs": 54890,
+        "durationMs": 4489,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 14,
+        "text": "too",
+        "startMs": 60050,
+        "durationMs": 2930,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 15,
+        "text": "으",
+        "startMs": 61310,
+        "durationMs": 5599,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 16,
+        "text": "아 토마토는 빵칼 같은걸로 쓰면 걸 시켜 라구요",
+        "startMs": 62980,
+        "durationMs": 4170,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 17,
+        "text": "으",
+        "startMs": 66909,
+        "durationMs": 1810,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 18,
+        "text": "[음악]",
+        "startMs": 67150,
+        "durationMs": 4630,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 19,
+        "text": "부드럽게 잘 쓰려서 느낌만 좀 도와주세요",
+        "startMs": 68719,
+        "durationMs": 8330,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 20,
+        "text": "무언가를 썰면서 기분이 좋아지는 건 처음인 듯 하네요",
+        "startMs": 71780,
+        "durationMs": 5269,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 21,
+        "text": "저는 부디 롬 양파 반개 다지고",
+        "startMs": 77500,
+        "durationMs": 7150,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 22,
+        "text": "다진마늘 1스푼 과 과 소설 잘게 다져 써요",
+        "startMs": 80530,
+        "durationMs": 10470,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 23,
+        "text": "썰어둔 재료들을 원하는 순서대로 차곡차곡 포개어 놓아주세요",
+        "startMs": 84650,
+        "durationMs": 6350,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 24,
+        "text": "저는 쥬키니 수가 더 많아서 다 만들고 사이사이에 더 끼어 넣기 돼",
+        "startMs": 91090,
+        "durationMs": 6690,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 25,
+        "text": "있어요",
+        "startMs": 95740,
+        "durationMs": 5250,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 26,
+        "text": "자 이제 불알 빼는 중불에 달고 주세요",
+        "startMs": 97780,
+        "durationMs": 7230,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 27,
+        "text": "부재료 들을 뻔 짧고 끓 거에요 예",
+        "startMs": 100990,
+        "durationMs": 7550,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 28,
+        "text": "기름을 두르고 뭐",
+        "startMs": 105010,
+        "durationMs": 3530,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 29,
+        "text": "양 파 즈 해부 재료들을 모든 없고 것같은데요",
+        "startMs": 109270,
+        "durationMs": 6690,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 30,
+        "text": "[음악]",
+        "startMs": 112960,
+        "durationMs": 5970,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 31,
+        "text": "전은주 키미와 가지 끝으로 것에도 잘나가",
+        "startMs": 115960,
+        "durationMs": 5860,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 32,
+        "text": "커 주었어요",
+        "startMs": 118930,
+        "durationMs": 6070,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 33,
+        "text": "빅볼 때 소금과 호수 배들이 풀어가며 주시고",
+        "startMs": 121820,
+        "durationMs": 7400,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 34,
+        "text": "것같아요 저는 맨 말까 먹어야",
+        "startMs": 125000,
+        "durationMs": 4220,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 35,
+        "text": "재료가 있고 나면 좌표 소스를 넣어주면 되는데요",
+        "startMs": 129700,
+        "durationMs": 9060,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 36,
+        "text": "저처럼 새거라 잘 아닐 때 꼴찌 좀",
+        "startMs": 134620,
+        "durationMs": 7710,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 37,
+        "text": "조심하면서 뚜껑의 불에 약간 되어주세요",
+        "startMs": 138760,
+        "durationMs": 6649,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 38,
+        "text": "그러면 쉽게 열립니다",
+        "startMs": 142330,
+        "durationMs": 3079,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 39,
+        "text": "으 to",
+        "startMs": 146520,
+        "durationMs": 6280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 40,
+        "text": "네놈",
+        "startMs": 149800,
+        "durationMs": 3000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 41,
+        "text": "불을 끄고 자투리로 큼직하게 쌓아 놓았던 끄트머리 채소들은 모두 건져",
+        "startMs": 153050,
+        "durationMs": 7460,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 42,
+        "text": "주었어요",
+        "startMs": 157880,
+        "durationMs": 3500,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 43,
+        "text": "[음악]",
+        "startMs": 160510,
+        "durationMs": 2870,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 44,
+        "text": "으",
+        "startMs": 161380,
+        "durationMs": 2000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 45,
+        "text": "저는 치킨 스톡을 쓰지 않고 토마토소스 360 미리 그러니까 종이컵 2컵",
+        "startMs": 166030,
+        "durationMs": 7679,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 46,
+        "text": "분량 모두 카드 넣어주었어요",
+        "startMs": 171459,
+        "durationMs": 8071,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 47,
+        "text": "토마토 소스를 골고루 넓게 펼쳐 준 뒤 홉 에 놓았던 재료들의 원으로 힘",
+        "startMs": 173709,
+        "durationMs": 8051,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 48,
+        "text": "둘러서 문 줬어요 좀",
+        "startMs": 179530,
+        "durationMs": 4570,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 49,
+        "text": "[음악]",
+        "startMs": 181760,
+        "durationMs": 4280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 50,
+        "text": "으",
+        "startMs": 184100,
+        "durationMs": 4940,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 51,
+        "text": "오오오",
+        "startMs": 186040,
+        "durationMs": 3000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 52,
+        "text": "[음악]",
+        "startMs": 190460,
+        "durationMs": 5089,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 53,
+        "text": "저는 가운데 따로 빼 놓았던 채소들을 넣어 주어지는데요",
+        "startMs": 191829,
+        "durationMs": 7130,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 54,
+        "text": "정말 더 열정을 넣어 조린다",
+        "startMs": 195549,
+        "durationMs": 9220,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 55,
+        "text": "이제 펜 뚜껑을 덮고 약불에서 채소가 익을 때 까지 끓여줍니다",
+        "startMs": 198959,
+        "durationMs": 5810,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 56,
+        "text": "저는 약 15분 정도 뚜껑을 한번도 열지 않고 익혀 두었어요",
+        "startMs": 204990,
+        "durationMs": 5720,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 57,
+        "text": "으",
+        "startMs": 211410,
+        "durationMs": 5780,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 58,
+        "text": "[음악]",
+        "startMs": 211750,
+        "durationMs": 6650,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 59,
+        "text": "아 으",
+        "startMs": 217190,
+        "durationMs": 3280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 60,
+        "text": "[음악]",
+        "startMs": 218400,
+        "durationMs": 6780,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 61,
+        "text": "좀 이렇게 해서 라탄 2위가 번성 되었습니다",
+        "startMs": 220470,
+        "durationMs": 9269,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 62,
+        "text": "딴 탁 트이는 이렇게 파마산 치즈를 잔뜩 뿌려서 먹으면 간도 딱 맞고",
+        "startMs": 225180,
+        "durationMs": 7460,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 63,
+        "text": "맛있어요",
+        "startMs": 229739,
+        "durationMs": 2901,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 64,
+        "text": "아기 또 와 함께 드셔보세요 정말 투산 다 먼지 같나요",
+        "startMs": 234110,
+        "durationMs": 5780,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 65,
+        "text": "으",
+        "startMs": 239950,
+        "durationMs": 2000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 66,
+        "text": "아 outer",
+        "startMs": 243900,
+        "durationMs": 4399,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 67,
+        "text": "구운 가 비트 위에 나 탁 주리라 한테 쑥밭이 끼얹어 2나",
+        "startMs": 249769,
+        "durationMs": 9680,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 68,
+        "text": "아삭하고 촉촉하고 강간의 생각나는 맛",
+        "startMs": 254390,
+        "durationMs": 5059,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 69,
+        "text": "으 으",
+        "startMs": 263110,
+        "durationMs": 3950,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 70,
+        "text": "오늘도 시청해주셔서 감사합니다 받고 챙겨주시고 다음 영상에서 만나요 안녕",
+        "startMs": 267200,
+        "durationMs": 8750,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 71,
+        "text": "[음악]",
+        "startMs": 276910,
+        "durationMs": 10979,
+        "language": "ko"
+      }
+    ],
+    "tracks": [
+      {
+        "languageCode": "ko",
+        "name": "한국어 (자동 생성됨)",
+        "trackKind": "auto"
+      }
+    ],
+    "selectedTrack": {
+      "languageCode": "ko",
+      "name": null,
+      "trackKind": "unknown"
+    },
+    "publicTimedTextReason": "timedtext_status_200"
+  },
+  "authorComments": {
+    "available": true,
+    "reason": null,
+    "comments": [
+      {
+        "text": "안녕하세요 여러분! 오늘은 노오븐 라따뚜이 레시피를 가지고왔어요!\n보통 오븐에 조리하고 치킨스톡을 쓰기도 하는데, 저는 노오븐에 치킨스톡을 사용 하지 않는 레시피입니다!\n저는 이 음식을 인스턴트나 기름진 음식에 질려할때 해먹는 음식인데 먹고나면 굉장히 뭔가 프레시한 느낌이랄까요\n건강한느낌이 듭니다 ㅋㅋㅋ 아무래도 채소를 듬뿍듬뿍 먹는 음식이니까요.\n남은 라따뚜이는 파스타면을 삶아서 30초~1분정도 볶아주시면 맛있는 토마토 파스타가 됩니다. 활용도가 높은 요리에요.\n물 약간 붓고 라면 스프를 넣으면 토마토 스프가 되지않을까.. 라는 생각도 합니다 허헣 먹어보진 않았지만 괜찮을것 같네요.\n\n오늘은 한번 내래이션을 넣어봤어요. 근데 오늘 따라 목소리 상태가 영 안 좋네요 ㅠ 꽃가루며 미세먼지며 공기가 안좋아서 그런가봐요.\n여러분은 미세먼지 마스크 쓰고 다니시는지 모르겠네요 꼭꼭 쓰고 다니셔야해요!\n\n\n오늘도 시청해주셔서 감사합니다~\n가기전에 좋아요 버튼 잊지마시고 아직 구독하지 않으신분들은 제 채널을 구독하시면\n색다른 힐링 영상들을 받아볼수 있으시답니다! ㅇ_ㅇ!\n\n그럼 여러분, 오늘도 끼니 거르지마시고 즐겁게 요리하시고 배 빵빵하게 채우세요!\n다음영상에서 만나요~!",
+        "likeCount": 21,
+        "publishedAt": "2018-05-04T08:00:39Z"
+      }
+    ]
+  }
+}

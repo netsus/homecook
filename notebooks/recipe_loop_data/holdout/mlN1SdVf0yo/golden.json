@@ -1,0 +1,385 @@
+{
+  "schemaVersion": 1,
+  "videoId": "mlN1SdVf0yo",
+  "draftedBy": "claude:description+captions + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "기본 김밥",
+      "servings": "7~8줄",
+      "ingredients": [
+        {
+          "name": "쌀",
+          "nameAliases": [
+            "불린 쌀",
+            "불린살"
+          ],
+          "amount": "3",
+          "unit": "컵",
+          "amountBasis": "stated-comment",
+          "optional": false,
+          "groupLabel": "밥",
+          "evidence": "comment"
+        },
+        {
+          "name": "물",
+          "nameAliases": [
+            "밥물"
+          ],
+          "amount": "3",
+          "unit": "컵",
+          "amountBasis": "stated-comment",
+          "optional": false,
+          "groupLabel": "밥",
+          "evidence": "comment"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "스푼",
+          "amountBasis": "stated-comment",
+          "optional": false,
+          "groupLabel": "밥",
+          "evidence": "comment"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [
+            "맛소금"
+          ],
+          "amount": "1/2",
+          "unit": "작은술",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": "밥 양념",
+          "evidence": "comment"
+        },
+        {
+          "name": "참기름",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "큰술",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": "밥 양념",
+          "evidence": "comment"
+        },
+        {
+          "name": "깨",
+          "nameAliases": [
+            "통깨",
+            "참깨"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": "밥 양념",
+          "evidence": "comment"
+        },
+        {
+          "name": "계란",
+          "nameAliases": [
+            "달걀"
+          ],
+          "amount": "7",
+          "unit": "개",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "계란 지단",
+          "evidence": "comment"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [],
+          "amount": "살짝",
+          "unit": null,
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "계란 지단",
+          "evidence": "comment"
+        },
+        {
+          "name": "맛술",
+          "nameAliases": [],
+          "amount": null,
+          "unit": null,
+          "amountBasis": null,
+          "optional": true,
+          "groupLabel": "계란 지단",
+          "evidence": "comment"
+        },
+        {
+          "name": "오이",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "개",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "comment"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "숟가락",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "오이 절임",
+          "evidence": "comment"
+        },
+        {
+          "name": "설탕",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "숟가락",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "오이 절임",
+          "evidence": "comment"
+        },
+        {
+          "name": "식초",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "숟가락",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "오이 절임",
+          "evidence": "comment"
+        },
+        {
+          "name": "당근",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "개",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "comment"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "숟가락",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "당근 절임",
+          "evidence": "comment"
+        },
+        {
+          "name": "물엿",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "숟가락",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "당근 절임",
+          "evidence": "comment"
+        },
+        {
+          "name": "어묵",
+          "nameAliases": [
+            "오뎅"
+          ],
+          "amount": "7",
+          "unit": "장",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "comment"
+        },
+        {
+          "name": "진간장",
+          "nameAliases": [
+            "간장"
+          ],
+          "amount": "1",
+          "unit": "숟가락",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "어묵 볶음",
+          "evidence": "comment"
+        },
+        {
+          "name": "물엿",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "숟가락",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "어묵 볶음",
+          "evidence": "comment"
+        },
+        {
+          "name": "물",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "숟가락",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "어묵 볶음",
+          "evidence": "comment"
+        },
+        {
+          "name": "햄",
+          "nameAliases": [
+            "김밥햄"
+          ],
+          "amount": "1",
+          "unit": "팩",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "comment"
+        },
+        {
+          "name": "단무지",
+          "nameAliases": [
+            "김밥용 단무지"
+          ],
+          "amount": "1",
+          "unit": "개",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "comment"
+        },
+        {
+          "name": "우엉",
+          "nameAliases": [
+            "김밥용 우엉",
+            "우엉조림"
+          ],
+          "amount": "1",
+          "unit": "팩",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption"
+        },
+        {
+          "name": "김",
+          "nameAliases": [
+            "김밥김",
+            "김밥용 김"
+          ],
+          "amount": "7~8",
+          "unit": "장",
+          "amountBasis": "stated-comment",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "comment"
+        },
+        {
+          "name": "식용유",
+          "nameAliases": [
+            "기름"
+          ],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "쌀 3컵을 깨끗이 씻어 20분간 불린 뒤 물기를 빼고, 물 3컵과 소금 1스푼을 넣어 고슬고슬하게 밥을 짓는다.",
+          "evidence": "comment"
+        },
+        {
+          "order": 2,
+          "instruction": "밥이 뜨거울 때 바로 소금(맛소금)·참기름·깨를 넣어 간하되, 식으면 간이 세지므로 조금 심심하다 싶을 정도로만 간한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 3,
+          "instruction": "간한 밥은 김을 날려 가며 차갑지 않고 따뜻할 정도로만 식히고, 밥솥에 보관할 때는 보온으로 다시 뜨거워지지 않게 코드를 뽑아 둔다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 4,
+          "instruction": "볼에 계란 7개를 깨서 소금을 살짝 넣고(있으면 맛술 추가) 거품이 나지 않게 푼다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 5,
+          "instruction": "기름을 아주 얇게 바른 프라이팬을 약불로 예열해 계란물을 모두 붓고, 뚜껑을 덮어 3분 정도 70%까지 익힌 뒤 뒤집어 뒷면을 살짝만 더 익히고, 한 김 식혀 단무지 길이로 자른다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 6,
+          "instruction": "오이는 꼭지를 잘라 단무지 길이에 맞춰 자르고 4등분한 뒤, 물이 많은 씨 부분을 도려내고 길게 3등분한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 7,
+          "instruction": "손질한 오이에 소금·설탕·식초를 1숟가락씩 넣고 버무려 체망에 올린 채 20분간 절인 뒤 물기를 제거한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 8,
+          "instruction": "당근은 껍질을 벗겨 채 썰고, 소금 1숟가락과 물엿 2숟가락을 넣고 버무려 20분간 절인다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 9,
+          "instruction": "절인 당근을 물에 한 번 헹궈 물기를 꼭 짠 뒤, 기름을 살짝 두르고 예열한 프라이팬에서 1분 정도만 빠르게 볶는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 10,
+          "instruction": "어묵 7장을 얇게 채 썰어 프라이팬에 넣고 진간장 1숟가락·물엿 2숟가락·물 2숟가락을 넣어 부들부들 부드러워질 때까지 볶는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 11,
+          "instruction": "햄은 단무지 크기로 썰어 기름을 두르지 않은 팬에서 중약불로 겉의 수분을 날린다는 느낌으로 천천히 볶는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 12,
+          "instruction": "김밥용 단무지와 우엉은 맛과 향이 강하므로 물에 한 번 가볍게 씻어 물기를 제거한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 13,
+          "instruction": "김은 매끈한 면이 바닥으로 가게 세로 방향으로 놓고, 따뜻한 밥 한 공기를 김 좌우 양쪽 끝까지 얇게 펴되 위쪽은 손가락 두 마디 정도 남긴다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 14,
+          "instruction": "재료는 색이 겹치지 않게 올리되 밥의 양쪽 끝부분이 보이도록 공간을 남기고, 김 아래쪽을 들어 재료를 완전히 감싼 뒤 당겨 가며 두세 번 단단하게 만다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 15,
+          "instruction": "김 끝부분에 물을 살짝 묻혀 이음매가 바닥을 보게 두고, 장갑에 참기름을 묻혀 김밥 표면에 바른 뒤 먹기 좋게 썬다.",
+          "evidence": "caption"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "설명란에는 레시피가 없고 작성자 고정 댓글에 상세 레시피 수록 — 작성자 댓글 + 자막 기준으로 작성.",
+    "servings '7~8줄'과 김 '7~8장'은 댓글의 '20분 불린 쌀 3컵 → 7~8줄'에서 기재/유추.",
+    "댓글 재료 목록(햄·어묵·계란·단무지·당근·오이)에 없는 우엉이 자막에 등장(김밥용 단무지와 함께 씻어 사용) — evidence caption으로 포함.",
+    "댓글의 [참치] 섹션은 참치김밥 변형 팁(기름 꽉 짜기, 마요네즈·설탕·식초·후추) — 영상 본편 조리가 아니어서 재료/단계에서 제외.",
+    "밥 간용 소금: 자막은 '맛소금', 댓글은 '소금' — 댓글 우선으로 name은 소금, 맛소금은 alias 처리.",
+    "오이 절임 비율은 댓글 '소금 1 : 설탕 1 : 식초 1', 단위 '숟가락'은 자막 발화 기준(stated-caption).",
+    "단무지·당근·오이·햄의 개수/양, 밥 양념(소금·참기름·깨) 분량은 텍스트 미명시 — null, 시각추출 필요.",
+    "ASR 보정: '불린살'→'불린 쌀', '물색 동양으로'→'물 같은 동량으로'(댓글의 쌀 3컵:물 3컵과 일치), '복지'→'꼭지', '돌연내'→'도려내', '판용'→'김밥용' 등. '오이'가 'OEC/오인데요' 등으로 인식된 구간 있음.",
+    "자막 line 204 '좌우부터 중간으로 안으로 말아 주시고요'는 ASR 불명확으로 단계에 미반영 — 시각 확인 필요.",
+    "댓글의 보조 팁(설탕 넣으면 밥이 끈적해짐, 당근 데치기 대안, 햄 데치기 대안, 김 가로/세로 배치 비교, 밥 꾹꾹 누르지 않기 등)은 단계에서 제외.",
+    "김 매끈한 면 방향: 댓글은 '매끈한 면이 바깥쪽', 자막은 '맨들맨들한 면이 바닥으로' — 같은 의미(바닥에 닿는 면이 말았을 때 바깥)로 자막 표현 채택.",
+    "[visual-pass] The recipe draft includes '맛술 (계란 지단)', but the video does not show or mention adding mirin/cooking wine to the egg mixture.",
+    "검수 반영(2026-06-13): 다진 소고기·맛살 제거 — 시각 보강 패스의 오검출(댓글 레시피·단계·영상 어디에도 없음). 작성자 첫 댓글의 전체 레시피는 재료/단계에 충실히 반영됨.",
+    "[확인필요] 우엉은 작성자 댓글 재료 목록에 없고 자막(ASR)에서만 등장 — 영상 확인 권장."
+  ]
+}

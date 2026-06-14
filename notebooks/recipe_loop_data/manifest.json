@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-06-11",
+  "policy": {
+    "train": "루프(계획/구현/진단)에 케이스별 상세를 공개한다.",
+    "validation": "매 ITER 코드로 채점하되 집계 점수(평균·최저·분포)만 루프에 공개한다. 케이스별 입력·정답·출력은 비공개.",
+    "holdout": "루프 중 절대 채점하지 않는다. train+validation 기준 통과 후 최종 1회만 채점하는 blind set."
+  },
+  "train": [
+    { "videoId": "YUdJBeOdrMY", "title": "No Oven! 노오븐 라따뚜이", "channel": "Soyegg간장계란", "durationSeconds": 287, "axes": ["problem-case", "description-recipe", "caption-ko"] },
+    { "videoId": "J5Rmux3ttaY", "title": "다시마 고추다대기", "channel": "주부나라", "durationSeconds": 569, "axes": ["problem-case", "caption-dependent", "asr-noise"] },
+    { "videoId": "DnQ09ZZCjCs", "title": "초간단 김치찌개", "channel": "백종원 PAIK JONG WON", "durationSeconds": 407, "axes": ["description-recipe", "caption-en"] },
+    { "videoId": "tqpwhtw54mQ", "title": "두부볶음", "channel": "이 남자의 cook", "durationSeconds": 291, "axes": ["description-recipe", "caption-ko", "author-comment"] },
+    { "videoId": "vqb3WyZmL_8", "title": "불지 않는 잡채", "channel": "김대석 셰프TV", "durationSeconds": 299, "axes": ["description-recipe", "many-ingredients", "caption-ko"] },
+    { "videoId": "5NSTRKouSWs", "title": "명장 마들렌", "channel": "빵준서", "durationSeconds": 497, "axes": ["baking-precise", "description-recipe", "caption-ko"] },
+    { "videoId": "QF0gBfW3od4", "title": "제육볶음 황금레시피", "channel": "[윤이련]50년 요리비결", "durationSeconds": 466, "axes": ["description-recipe", "caption-ko"] },
+    { "videoId": "rKfLY_Lg1-Q", "title": "백선생 원조 김치찌개", "channel": "Olive", "durationSeconds": 601, "axes": ["caption-dependent", "broadcast-clip", "sparse-description"] },
+    { "videoId": "PBHWL8_0Kb0", "title": "밥도둑 반찬 6가지", "channel": "소소황 Cook & Eat", "durationSeconds": 727, "axes": ["multi-recipe", "description-recipe", "no-caption"] },
+    { "videoId": "LSYEnH5fGfk", "title": "The Easiest One Pot Pasta Ever (3 Ways)", "channel": "Joshua Weissman", "durationSeconds": 412, "axes": ["multi-recipe", "english", "caption-dependent"] },
+    { "videoId": "fTlTpSJtrEs", "title": "퇴근 후 집밥 브이로그", "channel": "똘비 ddolbi", "durationSeconds": 832, "axes": ["vlog", "sparse-quantity", "caption-sparse"] },
+    { "videoId": "eJyoszbyNNQ", "title": "One Pot Pasta Recipe", "channel": "Recipes by Carina", "durationSeconds": 245, "axes": ["english", "description-recipe", "caption-en"] }
+  ],
+  "validation": [
+    { "videoId": "Egpjve8caK0", "title": "라따뚜이 노오븐 쇼츠", "channel": "맛있는이유", "durationSeconds": 33, "axes": ["shorts", "visual-dependent", "no-description"] },
+    { "videoId": "rkOEBmECi_o", "title": "고추다대기 쇼츠", "channel": "집밥원쌤", "durationSeconds": 58, "axes": ["shorts", "partial-description"] },
+    { "videoId": "fnhLXA-bSu8", "title": "새송이버섯조림", "channel": "딸을 위한 레시피", "durationSeconds": 280, "axes": ["description-recipe", "caption-ko"] },
+    { "videoId": "gChK94Ai-TE", "title": "제육볶음 황금레시피", "channel": "엄마의손맛", "durationSeconds": 502, "axes": ["description-recipe", "no-caption"] },
+    { "videoId": "YZ8KSZboJeM", "title": "진한 초코 마들렌", "channel": "곰꼬끄 Bear kkokke", "durationSeconds": 493, "axes": ["baking-precise", "description-recipe", "no-caption"] },
+    { "videoId": "oe_WhcK2X4Q", "title": "편스토랑 류수영 제육", "channel": "KBS 한국방송", "durationSeconds": 585, "axes": ["broadcast-clip", "caption-dependent", "sparse-description"] },
+    { "videoId": "jenDETSgvz4", "title": "콩나물 어묵 요리", "channel": "수리키친Suri", "durationSeconds": 242, "axes": ["visual-dependent", "no-caption", "sparse-description"] },
+    { "videoId": "MxA2R1tzDLA", "title": "국민 반찬 10가지", "channel": "두리특식", "durationSeconds": 1185, "axes": ["multi-recipe", "long-form", "description-recipe", "caption-ko"] },
+    { "videoId": "vw73AKRDxI8", "title": "자취요리 vlog 간단집밥 4가지", "channel": "밥통민 babtongmin", "durationSeconds": 546, "axes": ["vlog", "multi-recipe", "no-caption", "sparse-description"] },
+    { "videoId": "nE7ANT3uGMQ", "title": "One-Pan Lemon Garlic Pasta", "channel": "Spain on a Fork", "durationSeconds": 409, "axes": ["english", "description-recipe", "caption-en"] }
+  ],
+  "holdout": [
+    { "videoId": "2FF9ayF_d3w", "title": "70년 인생 된장찌개", "channel": "전국집밥자랑", "durationSeconds": 375, "axes": ["description-recipe", "caption-ko"] },
+    { "videoId": "oqJzB3OD0eI", "title": "카레 레시피", "channel": "레이먼킴의 인생고기", "durationSeconds": 486, "axes": ["description-recipe", "caption-ko"] },
+    { "videoId": "mlN1SdVf0yo", "title": "김밥 장사 비법 김밥", "channel": "첫째아들", "durationSeconds": 624, "axes": ["caption-dependent", "sparse-description"] },
+    { "videoId": "jghNqyzxWWE", "title": "겉바속촉 마들렌", "channel": "HADA at HOME", "durationSeconds": 384, "axes": ["baking-precise", "no-caption", "sparse-description"] },
+    { "videoId": "3kvXys6npBM", "title": "원팬 라따뚜이 쇼츠", "channel": "델리 테이블", "durationSeconds": 55, "axes": ["shorts", "description-recipe"] }
+  ],
+  "spare": [
+    { "videoId": "exGmaODLNzM", "title": "노오븐 라따뚜이 쇼츠", "channel": "더리테이블", "durationSeconds": 44, "axes": ["shorts", "visual-dependent", "no-description"] },
+    { "videoId": "qM5ghY30-Mc", "title": "마들렌 7가지맛", "channel": "혜다다 베이킹 유치원", "durationSeconds": 282, "axes": ["multi-recipe", "baking-precise", "caption-ko"] }
+  ]
+}

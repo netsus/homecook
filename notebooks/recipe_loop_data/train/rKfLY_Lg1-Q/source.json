@@ -1,0 +1,1162 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-06-11T07:22:54.104Z",
+  "video": {
+    "videoId": "rKfLY_Lg1-Q",
+    "url": "https://www.youtube.com/watch?v=rKfLY_Lg1-Q",
+    "title": "백선생의 원조 ′김치찌개′ 레시피 | [집밥백선생 : 이웃집레시피] How to make Paik Jong Won′s Kimchi Jjigae",
+    "description": "백종원의 한번 먹으면 멈출 수 없는\n돼지고기 김치찌개 레시피\n\n#집밥백선생 #백종원 #다시보기 #이웃집레시피 #KFOOD",
+    "channelId": "UCOvg8ZDPeeqbEfKmcMbsnOw",
+    "channelTitle": "Olive",
+    "publishedAt": "2019-07-21T08:00:05Z",
+    "tags": [
+      "りょうり",
+      "백종원",
+      "올리브tv",
+      "레전드 레시피",
+      "올리브",
+      "YUMYUM K FOOD",
+      "Korean Food Recipe",
+      "韓國の食べ物",
+      "먹방",
+      "かんこく",
+      "김치찌개",
+      "얌얌케이푸드",
+      "Paik Jong Won",
+      "spicy food",
+      "집에서함께요리해요",
+      "Olive TV",
+      "からみ",
+      "집에서함께해요",
+      "이웃집레시피",
+      "Olive",
+      "Baek Jong Won",
+      "케이푸드",
+      "백주부",
+      "만능 김치찌개",
+      "グルメ",
+      "辛味",
+      "올리브먹방",
+      "Spicy chellenge",
+      "집밥백선생",
+      "Kimchi Jjigae",
+      "食べ放題",
+      "KFOOD",
+      "K FOOD",
+      "MUKBANG",
+      "korean spicy",
+      "다시보기"
+    ],
+    "defaultLanguage": "ko",
+    "durationSeconds": 601,
+    "thumbnailUrl": "https://i.ytimg.com/vi/rKfLY_Lg1-Q/maxresdefault.jpg"
+  },
+  "stats": {
+    "viewCount": 2029184,
+    "likeCount": 11612,
+    "commentCount": 535
+  },
+  "descriptionSignal": {
+    "hasIngredientKeyword": false,
+    "hasStepKeyword": true,
+    "hasQuantityPattern": false,
+    "length": 67
+  },
+  "captions": {
+    "available": true,
+    "reason": null,
+    "provider": "apify",
+    "language": "ko",
+    "segments": [
+      {
+        "lineIndex": 0,
+        "text": "지고 길을 갔고 그리고 기본 진우가 기본적인 규칙이 4",
+        "startMs": 0,
+        "durationMs": 10019,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 1,
+        "text": "그 기본을 먼저 설명해 드리고 약간의 응용 팁을 드릴테니까 각자 성격에",
+        "startMs": 4410,
+        "durationMs": 7050,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 2,
+        "text": "맞는 입시 하십니까 4",
+        "startMs": 10019,
+        "durationMs": 5941,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 3,
+        "text": "김치찌개에 가장 베이직 기본 이 뭐냐면 우리 잖아요 양을 보통 이제 저",
+        "startMs": 11460,
+        "durationMs": 7649,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 4,
+        "text": "같은 경우는 물 대신에 벌써 못살던 물으시는데",
+        "startMs": 15960,
+        "durationMs": 6239,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 5,
+        "text": "이유가 뭔지 아직 쭉 세금을",
+        "startMs": 19109,
+        "durationMs": 8611,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 6,
+        "text": "뭐 영양 할까 쌀을 딱 친 쓰면 전문지 쌀을 퍼 테슬라 전부 지네요",
+        "startMs": 22199,
+        "durationMs": 9871,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 7,
+        "text": "어전 본제 섞여있는 무리야 그럼 전문지 라는 사실에 약간 국물을 걸쭉하게",
+        "startMs": 27720,
+        "durationMs": 7769,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 8,
+        "text": "도 하지 못하고 전분이 많이 들어간 볼쪽에 지만 국물 안에서 움직이는",
+        "startMs": 32070,
+        "durationMs": 8850,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 9,
+        "text": "여러가지 마뜨 를 잘 이렇게 잡아주는 조 아 겉돌지 않게 한다는 아 감상",
+        "startMs": 35489,
+        "durationMs": 9931,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 10,
+        "text": "시계를 명물로 끓이는 것 보다는 쌀뜨물 가는게 낮고 우리 못살던 물로",
+        "startMs": 40920,
+        "durationMs": 6840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 11,
+        "text": "하는 것보단 60 않았겠죠",
+        "startMs": 45420,
+        "durationMs": 5940,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 12,
+        "text": "육수 자체 국물 자체가 있었습니다 안산 하길래 비쌌던 것 가능하면 살도",
+        "startMs": 47760,
+        "durationMs": 7470,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 13,
+        "text": "그래서 저같은 경우는 집에 사실 그 회사 pt 병으로 했던 불러서 고추",
+        "startMs": 51360,
+        "durationMs": 7289,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 14,
+        "text": "근데 그걸 의자가 언제까지 들 수 있어요",
+        "startMs": 55230,
+        "durationMs": 6960,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 15,
+        "text": "뭐 설탕물 제가 저같은 경우에는 다음 그 사이에 으",
+        "startMs": 58649,
+        "durationMs": 7730,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 16,
+        "text": "밥을 잘 받아 한 번 이상은 하잖아요 예",
+        "startMs": 62190,
+        "durationMs": 4189,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 17,
+        "text": "5 아야 아 안 나죠",
+        "startMs": 67740,
+        "durationMs": 8309,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 18,
+        "text": "2장 비라도 좀 가까이 인접한 어 어 얼마짜리 했는데 이거 뜻이 만",
+        "startMs": 71399,
+        "durationMs": 7851,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 19,
+        "text": "봤구요 오예",
+        "startMs": 76049,
+        "durationMs": 3201,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 20,
+        "text": "더욱이 씩 에 들어온 무기 크게는",
+        "startMs": 83600,
+        "durationMs": 6570,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 21,
+        "text": "어째 것 있어야 할까요 만약 도천 해야 된다고 생각합니다",
+        "startMs": 86299,
+        "durationMs": 6631,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 22,
+        "text": "먹기좋게 좀",
+        "startMs": 90170,
+        "durationMs": 5870,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 23,
+        "text": "오케 좀",
+        "startMs": 92930,
+        "durationMs": 3110,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 24,
+        "text": "자기 초안은 색깔 고기와 김씨 비율은 어떻게 해야 될까요",
+        "startMs": 99830,
+        "durationMs": 10070,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 25,
+        "text": "저 같으면 3대 1 정도로 하겠습니다",
+        "startMs": 104840,
+        "durationMs": 5060,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 26,
+        "text": "작가 이 속담은 비노 노통 일반적 3대 1정도 제 3대 의 3대 1",
+        "startMs": 110330,
+        "durationMs": 11070,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 27,
+        "text": "정도가",
+        "startMs": 120470,
+        "durationMs": 3840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 28,
+        "text": "그정도 근데 모자 기원하며 노트",
+        "startMs": 121400,
+        "durationMs": 6660,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 29,
+        "text": "자 이제 여기서 김치를 건데요 돼지고기 음식이 가장 기본적인 맛은 길은",
+        "startMs": 124310,
+        "durationMs": 5229,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 30,
+        "text": "많습니다",
+        "startMs": 128060,
+        "durationMs": 6310,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 31,
+        "text": "5 지금 돼지 기름이 됐든 안되면 11 독일은 마디로 그래야 구수한 맛이",
+        "startMs": 129539,
+        "durationMs": 10471,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 32,
+        "text": "그러니까 집에서 할때는 직업을 깜 돼지고기 려 거기다 는 거고요",
+        "startMs": 134370,
+        "durationMs": 8759,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 33,
+        "text": "먼저 볶다가 물 9키로 꿈일까요",
+        "startMs": 140010,
+        "durationMs": 6809,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 34,
+        "text": "예 근데 얘 들어서 식당 할텐데 급식에 맛있잖아요",
+        "startMs": 143129,
+        "durationMs": 8670,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 35,
+        "text": "4 돼지 국회를 물질보다 니까 보토 즉시 를 미리 곱 님께서 막강 아",
+        "startMs": 146819,
+        "durationMs": 8670,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 36,
+        "text": "식당에서는 기치 폭 흥 김치를 많이 써요 입시 스팀을 따뜻이 고르고 품기",
+        "startMs": 151799,
+        "durationMs": 9481,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 37,
+        "text": "중에서 아무거나 아 이것이 장차 해서 마셔도 돼 그럼 보고 있으면 됩니다",
+        "startMs": 155489,
+        "durationMs": 9390,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 38,
+        "text": "오늘 얘기 해 드리면 정말 안되는거 중에 하나가 지각의 비법 인데 저를",
+        "startMs": 161280,
+        "durationMs": 6329,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 39,
+        "text": "거기서 차가 서게 머리에요 점수가 되면 게 아니야",
+        "startMs": 164879,
+        "durationMs": 6871,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 40,
+        "text": "맞아 진짜 맛있는거 돼지고기의 자체 3 키드의 내 이러한 구치 랑 오르자",
+        "startMs": 167609,
+        "durationMs": 5341,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 41,
+        "text": "마시는 그래",
+        "startMs": 171750,
+        "durationMs": 4950,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 42,
+        "text": "김치에서 의미적으로 시킨 올렸던 수 없는 것은 정부 개념을",
+        "startMs": 172950,
+        "durationMs": 8129,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 43,
+        "text": "김치랑 포커스 탁 몰려 는 키친 옷을 흥남 없는 및 계획 잃은 것이 좀",
+        "startMs": 176700,
+        "durationMs": 8250,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 44,
+        "text": "둘러보니 더 맛이 좀 떨어져 어떤 달처럼 예 그래서 나름대로 생각 뭐냐면",
+        "startMs": 181079,
+        "durationMs": 8641,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 45,
+        "text": "볶지 않고 제제 위기의 맛이 되는거 같습니다 곳에서 제가 구사해 내가",
+        "startMs": 184950,
+        "durationMs": 9719,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 46,
+        "text": "돼지 되길 홈이 흘려야 무너져 오랜만에 고향 거가 미리 볶아놓은 문 우리",
+        "startMs": 189720,
+        "durationMs": 6629,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 47,
+        "text": "흩어져 등이랑",
+        "startMs": 194669,
+        "durationMs": 6240,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 48,
+        "text": "이제 아예 너무 부자 놓으면 국물 자체 지방의 단어가 있잖아 그 국물을",
+        "startMs": 196349,
+        "durationMs": 6691,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 49,
+        "text": "드시고 그렇다면 따끈한",
+        "startMs": 200909,
+        "durationMs": 6690,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 50,
+        "text": "그 다음에 김치 느끼는 더 활달한 해요 그 쌀뜨물은 틀어 근데 중요한것은",
+        "startMs": 203040,
+        "durationMs": 7970,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 51,
+        "text": "쌀뜨물로 끓이면 더 난초",
+        "startMs": 207599,
+        "durationMs": 3411,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 52,
+        "text": "어 이거 하다니 이거 그 예정이라는 직접 해 먹었어요",
+        "startMs": 211610,
+        "durationMs": 7890,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 53,
+        "text": "그건 나도 그렇게 그게 위도 하지 않은 거지 휴식을 바라는 신의",
+        "startMs": 214850,
+        "durationMs": 10140,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 54,
+        "text": "으 cpt 그걸 피즈 근데 다 가르쳐주고 아니지만 사실 핵심 인거 곳을",
+        "startMs": 219500,
+        "durationMs": 6600,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 55,
+        "text": "방송보고 으",
+        "startMs": 224990,
+        "durationMs": 6680,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 56,
+        "text": "a 식당 사장님이 아싸 하신 거죠 가정에서 하는게 서희가 사랑합니다",
+        "startMs": 226100,
+        "durationMs": 5570,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 57,
+        "text": "같은 돼지고기 찌개 보였거든요",
+        "startMs": 232070,
+        "durationMs": 7020,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 58,
+        "text": "지방만 아아 자 그럼 어떻게 해서 여기서",
+        "startMs": 234860,
+        "durationMs": 7170,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 59,
+        "text": "2루로 끓여야 되겠죠 설득을 보고",
+        "startMs": 239090,
+        "durationMs": 7250,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 60,
+        "text": "부추 그대 뒷 합니다",
+        "startMs": 242030,
+        "durationMs": 4310,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 61,
+        "text": "무덤 닦은 너의 사실 아까 김치전 이랑 마찬가지로 돼지고기는 호갱이 없이",
+        "startMs": 247490,
+        "durationMs": 7410,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 62,
+        "text": "이렇게 돼지고기가 부탁드려서 공부 열어서 오라고 김치 만드는 그 악 으",
+        "startMs": 251630,
+        "durationMs": 7530,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 63,
+        "text": "아 너무 쉽지요 근데 여기 다 이제마 신라면 위치에 그림을 벌이 돌아보자",
+        "startMs": 254900,
+        "durationMs": 6049,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 64,
+        "text": "그래 분",
+        "startMs": 259160,
+        "durationMs": 5240,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 65,
+        "text": "그 비치게 하는 뭘로 하실꺼 같아요",
+        "startMs": 260949,
+        "durationMs": 7081,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 66,
+        "text": "주 걸 보고 뭐 전부가 솔직하게 좋은거",
+        "startMs": 264400,
+        "durationMs": 7350,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 67,
+        "text": "젊은 간장 같에 한지 아실거 장기하 건 아닌 것 같은데",
+        "startMs": 268030,
+        "durationMs": 7199,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 68,
+        "text": "예 간장을 아닙니까 색깔 때문에 뭐",
+        "startMs": 271750,
+        "durationMs": 8789,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 69,
+        "text": "예 그렇죠 뭐 김씨 꾼 것 좋은 아이들 소금 살타",
+        "startMs": 275229,
+        "durationMs": 10831,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 70,
+        "text": "여부 설탕 설탕 은 조미료 역할인 거지 뭐가 난 소금도 맞아요 간장 소금",
+        "startMs": 280539,
+        "durationMs": 6511,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 71,
+        "text": "다 되요",
+        "startMs": 286060,
+        "durationMs": 5250,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 72,
+        "text": "김치 국물도 되고 거기에서 홀까지 두면 되는데 이제 간장이 젬 사건 한",
+        "startMs": 287050,
+        "durationMs": 9089,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 73,
+        "text": "생에서 헷갈리는게 간장 두준 겠어요 진간장 일하는거 국간장 이랑 진간장",
+        "startMs": 291310,
+        "durationMs": 7740,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 74,
+        "text": "5 국가다 의장은 단 맛이 나야 안 나냐 정도로",
+        "startMs": 296139,
+        "durationMs": 7321,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 75,
+        "text": "단맛이 많이 나냔 나는 보통 진간장 붙임 이라고 꿀 때 쓰는 거고 9까지",
+        "startMs": 299050,
+        "durationMs": 5130,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 76,
+        "text": "않습니다",
+        "startMs": 303460,
+        "durationMs": 5940,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 77,
+        "text": "근데 아까 긴것이 말 주어지지만 국가적으로 쓰면 향후 좋은데 너무 많이",
+        "startMs": 304180,
+        "durationMs": 8910,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 78,
+        "text": "음 색깔이 피니까 적당히 가능 하실 때에 한 바지만 하지 마시고 웬만한",
+        "startMs": 309400,
+        "durationMs": 7410,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 79,
+        "text": "어떠한 해야 되는게 있는데 두 가지 적는다 고생 가지고 뭐 소금이랑",
+        "startMs": 313090,
+        "durationMs": 5220,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 80,
+        "text": "가기가 좀",
+        "startMs": 316810,
+        "durationMs": 6780,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 81,
+        "text": "위치 국물이랑 소금 뭐 또 어떻게 정답이다 풀린다는 없어요 대신 이렇게",
+        "startMs": 318310,
+        "durationMs": 9630,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 82,
+        "text": "마페이 좀 바꿔라 하는 게 있었는데 제 례 10 을 알려 드리면 간장",
+        "startMs": 323590,
+        "durationMs": 6299,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 83,
+        "text": "쪼금 이랑 생 절 같은거죠",
+        "startMs": 327940,
+        "durationMs": 5279,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 84,
+        "text": "오리 크림 올해 필수 할 수 있을는지",
+        "startMs": 329889,
+        "durationMs": 7560,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 85,
+        "text": "이렇게 준비된 상태에서 참꽃 있으니까 쓰고 계절이 되면 제 같은걸",
+        "startMs": 333219,
+        "durationMs": 5551,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 86,
+        "text": "하나봐요",
+        "startMs": 337449,
+        "durationMs": 5161,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 87,
+        "text": "그 다음에 이빨 가보지 안써도 되는데 있으면 끌리더라구요 오늘 모양",
+        "startMs": 338770,
+        "durationMs": 7560,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 88,
+        "text": "내부적 이가 없어도 감만 으로 삐 3 보고 그쵸",
+        "startMs": 342610,
+        "durationMs": 8850,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 89,
+        "text": "양파 아까 왜냐 볼 수 있는 양파는 한마디 약화는 넣어 다만 때문에 그",
+        "startMs": 346330,
+        "durationMs": 8040,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 90,
+        "text": "양파를 않는 어떤 같다 설탕으로 줄 좀",
+        "startMs": 351460,
+        "durationMs": 10380,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 91,
+        "text": "이렇 a 더없이 으 십시오 있으면 되고 없는 나의 다 매운거 안좋아해서",
+        "startMs": 354370,
+        "durationMs": 12780,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 92,
+        "text": "팻 분 이 취향에 맞게 가 5초 걸 아노 코노 되겠네",
+        "startMs": 361840,
+        "durationMs": 7710,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 93,
+        "text": "여기다 따먹기 치 있고",
+        "startMs": 367150,
+        "durationMs": 7580,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 94,
+        "text": "그렇죠 다진마늘 1 수가",
+        "startMs": 369550,
+        "durationMs": 5180,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 95,
+        "text": "원래대로라면 이팜 호주는 마지막에 0 0 으로 드는 근데 그것도 어렵게",
+        "startMs": 375820,
+        "durationMs": 5640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 96,
+        "text": "생각한 누굴",
+        "startMs": 379510,
+        "durationMs": 6570,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 97,
+        "text": "빛깔 모습이 까임 뭐야 되게 돼",
+        "startMs": 381460,
+        "durationMs": 9390,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 98,
+        "text": "검고 추가로 하고 부분이 있으면 어떤 걸레 고어 많이 주었고 또 왜 안",
+        "startMs": 386080,
+        "durationMs": 7140,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 99,
+        "text": "치 안나게 시각도 골",
+        "startMs": 390850,
+        "durationMs": 6630,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 100,
+        "text": "아 이제 여기서 봤을 때 오히려 차지만 있는게 더 색깔 잎은 거예요 근데",
+        "startMs": 393220,
+        "durationMs": 8160,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 101,
+        "text": "그 효과를 위해서는 이걸로 두군데 이 땅 또 맛깔나게 볼 것 같아요 다",
+        "startMs": 397480,
+        "durationMs": 6760,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 102,
+        "text": "이유가 있잖아 니 까 점검",
+        "startMs": 401380,
+        "durationMs": 7210,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 103,
+        "text": "아 법당에 들어가서 거 적당해야 이제 잘 붙어 얘기 포인트의 음식을 한",
+        "startMs": 404240,
+        "durationMs": 5160,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 104,
+        "text": "사람들은",
+        "startMs": 408590,
+        "durationMs": 4829,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 105,
+        "text": "후 추가로 보험 거 만들면 요 색깔을 이 꺼지는데",
+        "startMs": 409400,
+        "durationMs": 8549,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 106,
+        "text": "먹을 수 없이 5 색깔은 짬뽕 느낌이야",
+        "startMs": 413419,
+        "durationMs": 8310,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 107,
+        "text": "짝꿍 보면 꽃을 안 나오자 는 우물 많아요",
+        "startMs": 417949,
+        "durationMs": 7530,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 108,
+        "text": "이런 걸 좋아하고 있지만 이 이렇게 버리면 실무자 바지 이름이지 우리도",
+        "startMs": 421729,
+        "durationMs": 7321,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 109,
+        "text": "그냥 1장 * 8 난 한 두가지 섞어요",
+        "startMs": 425479,
+        "durationMs": 7311,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 110,
+        "text": "이런 고춧가루 약간 타이 3 야오 야이 어 있어 보이죠",
+        "startMs": 429050,
+        "durationMs": 8660,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 111,
+        "text": "처음에 섬유는 철 국간장을 뭐냐 면서 가는 진짜 향만 내기 했는데 조금만",
+        "startMs": 432790,
+        "durationMs": 6450,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 112,
+        "text": "1만 살려주는 게 가능하냐",
+        "startMs": 437710,
+        "durationMs": 4860,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 113,
+        "text": "아 그 다음에 지금",
+        "startMs": 439240,
+        "durationMs": 4890,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 114,
+        "text": "아",
+        "startMs": 442570,
+        "durationMs": 1790,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 115,
+        "text": "[음악]",
+        "startMs": 444130,
+        "durationMs": 3410,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 116,
+        "text": "[박수]",
+        "startMs": 444360,
+        "durationMs": 3180,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 117,
+        "text": "되 거야",
+        "startMs": 451449,
+        "durationMs": 4351,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 118,
+        "text": "[음악]",
+        "startMs": 452040,
+        "durationMs": 6960,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 119,
+        "text": "아직 된건 들고",
+        "startMs": 455800,
+        "durationMs": 3200,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 120,
+        "text": "더 맛인데 으",
+        "startMs": 459859,
+        "durationMs": 6621,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 121,
+        "text": "아아아",
+        "startMs": 463480,
+        "durationMs": 3000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 122,
+        "text": "om te",
+        "startMs": 468360,
+        "durationMs": 6980,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 123,
+        "text": "no.5",
+        "startMs": 473320,
+        "durationMs": 16639,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 124,
+        "text": "[음악]",
+        "startMs": 475340,
+        "durationMs": 14619,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 125,
+        "text": "4 말까 한데 조미료나 있었는데",
+        "startMs": 491200,
+        "durationMs": 7650,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 126,
+        "text": "8 갑사 r 어제 자세 잘 아이크 하나 먹어보고 바로 같아야 해요 우리",
+        "startMs": 494590,
+        "durationMs": 8340,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 127,
+        "text": "파란 수 있어 같은데 이거 그대로 하는게 아닌 어서 눌러 불안하니까 온갖",
+        "startMs": 498850,
+        "durationMs": 8430,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 128,
+        "text": "정말 아이를 낳 못하겠으면 그대로 하고 자기가 의 원하신 의 속력으로",
+        "startMs": 502930,
+        "durationMs": 7920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 129,
+        "text": "넘어올 여기서 재밌는 거 해줄게 있지 않겠어요 재밌는 그래 주겠어 앙큼한",
+        "startMs": 507280,
+        "durationMs": 4310,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 130,
+        "text": "됩니다",
+        "startMs": 510850,
+        "durationMs": 2359,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 131,
+        "text": "[음악]",
+        "startMs": 511590,
+        "durationMs": 3220,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 132,
+        "text": "으",
+        "startMs": 513209,
+        "durationMs": 3601,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 133,
+        "text": "으",
+        "startMs": 514810,
+        "durationMs": 2000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 134,
+        "text": "으",
+        "startMs": 517680,
+        "durationMs": 2000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 135,
+        "text": "아멘 아 막 시작하신 거에요 그래서 내가 이제 일부러 뭐 하러 다시",
+        "startMs": 521319,
+        "durationMs": 3361,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 136,
+        "text": "쓰도록",
+        "startMs": 524229,
+        "durationMs": 4951,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 137,
+        "text": "굉장히 그렇죠 이거는 정석이 아니에요 그게 내가 또한 스타 이고 이렇게도",
+        "startMs": 524680,
+        "durationMs": 10199,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 138,
+        "text": "변화가 되더라 나 i 넣으면 안되고 양유 정도 안정 9 5 5 정보",
+        "startMs": 529180,
+        "durationMs": 10800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 139,
+        "text": "뭐 도 그렇게 전체 추천 거죠 구축 선택 쏘 아이 응원 버전이에요",
+        "startMs": 534879,
+        "durationMs": 9060,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 140,
+        "text": "근데 - 를 좋아해 가지고요 그대 불이익을 좋으십니다 안에 이걸 주는",
+        "startMs": 539980,
+        "durationMs": 6270,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 141,
+        "text": "그런 세대의 주장은 요 아",
+        "startMs": 543939,
+        "durationMs": 6140,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 142,
+        "text": "고추장은 복원하지 없잖아",
+        "startMs": 546250,
+        "durationMs": 3829,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 143,
+        "text": "이렇게 약간 해봤어요 고기맛이 떠날 거야 그렇죠",
+        "startMs": 551250,
+        "durationMs": 8790,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 144,
+        "text": "거봐요 8 몸을 좀더 분들",
+        "startMs": 555060,
+        "durationMs": 7370,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 145,
+        "text": "어떤거",
+        "startMs": 560040,
+        "durationMs": 2390,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 146,
+        "text": "죽음이란 그 내가 제일 좋아하는 1층 하지는 않을까요",
+        "startMs": 562589,
+        "durationMs": 6661,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 147,
+        "text": "어 이게 딱 내려간 달방 조치 탑워터 어 그거",
+        "startMs": 565410,
+        "durationMs": 8039,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 148,
+        "text": "처음엔 으면 굉 장 맛이 친구 만나요 아 알겠어 처음부터 발사 이것의",
+        "startMs": 569250,
+        "durationMs": 9180,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 149,
+        "text": "된장을 2개 살면서 그냥 이게 도대체 뭔 질문을 집시 해 마시는 거죠",
+        "startMs": 573449,
+        "durationMs": 9931,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 150,
+        "text": "아 이거는 다 혼자 집에서 먹을 때 더 빠른 것도 아니고 아 오늘 요구",
+        "startMs": 578430,
+        "durationMs": 8219,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 151,
+        "text": "내력에 물음을 손 태도 들이 주어서 아직 갑자가 켜주고 아아 의원의",
+        "startMs": 583380,
+        "durationMs": 7939,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 152,
+        "text": "이런거를 각 가르쳐주시는 안될까 깁스한 걸 봤습니다",
+        "startMs": 586649,
+        "durationMs": 4670,
+        "language": "ko"
+      }
+    ],
+    "tracks": [
+      {
+        "languageCode": "ko",
+        "name": "한국어 (자동 생성됨)",
+        "trackKind": "auto"
+      }
+    ],
+    "selectedTrack": {
+      "languageCode": "ko",
+      "name": null,
+      "trackKind": "unknown"
+    },
+    "publicTimedTextReason": "timedtext_status_200"
+  },
+  "authorComments": {
+    "available": true,
+    "reason": null,
+    "comments": []
+  }
+}

@@ -1,0 +1,1219 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-06-11T07:29:40.681Z",
+  "video": {
+    "videoId": "2FF9ayF_d3w",
+    "url": "https://www.youtube.com/watch?v=2FF9ayF_d3w",
+    "title": "70년 인생 된장찌개 레시피입니다. | 전국집밥자랑 ep.11",
+    "description": "[🥘된장찌개 재료(3~4인분 기준)]\n・ 무(갈아서 두 큰 술 나올 정도)\n\n・ 된장 두 큰 술\n *시판 된장은 '맥된장'이 그나마 집된장과 유사합니다.\n\n・ 쌀뜨물 500~600ml\n *처음 헹군 쌀뜨물은 버리시고, 2~3번째 헹군 물로 사용하세요.\n\n・ 손질된 대멸치 10마리 정도\n\n・ 애호박 반 개\n\n・ 대파 흰대 1개\n\n・ 두부 반 모~한 모(취향껏)\n\n・ 청양고추 1개(홍고추는 취향껏)\n\n#전국집밥자랑 #전국살림자랑 #집밥레시피\n\n[🍳타임라인]\n[00:00] 하이라이트 및 오늘의 요리사\n[00:40] 된장찌개 만들기\n[04:00] 시식 타임\n[05:55] 출연 신청 및 모집",
+    "channelId": "UCY60BF0M8RkXvmMQeKp2PSg",
+    "channelTitle": "전국집밥자랑",
+    "publishedAt": "2025-07-03T01:00:08Z",
+    "tags": [
+      "전국집밥자랑",
+      "전국살림자랑",
+      "정리마켓",
+      "집밥레시피",
+      "집밥",
+      "된장",
+      "된장찌개",
+      "된장찌개 레시피",
+      "된장찌개 황금레시피",
+      "집된장 레시피",
+      "집된장 찌개",
+      "된찌",
+      "된장찌개 맛있게 끓이기",
+      "생활의달인",
+      "된장찌개 끓이는 법",
+      "된장찌개 맛있게 끓이는 법",
+      "된장찌개 비법"
+    ],
+    "defaultLanguage": "ko",
+    "durationSeconds": 375,
+    "thumbnailUrl": "https://i.ytimg.com/vi/2FF9ayF_d3w/maxresdefault.jpg"
+  },
+  "stats": {
+    "viewCount": 1066145,
+    "likeCount": 19224,
+    "commentCount": 566
+  },
+  "descriptionSignal": {
+    "hasIngredientKeyword": true,
+    "hasStepKeyword": true,
+    "hasQuantityPattern": true,
+    "length": 331
+  },
+  "captions": {
+    "available": true,
+    "reason": null,
+    "provider": "apify",
+    "language": "ko",
+    "segments": [
+      {
+        "lineIndex": 0,
+        "text": "야 물을 가려놓으면 시원해요.",
+        "startMs": 359,
+        "durationMs": 4361,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 1,
+        "text": "볶구세요. 이렇게 깨지게 그럼",
+        "startMs": 2720,
+        "durationMs": 4320,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 2,
+        "text": "주물르는 된장하고 그냥 수주로 끼는",
+        "startMs": 4720,
+        "durationMs": 3999,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 3,
+        "text": "된장고 맛이 틀려요. 또 이렇게",
+        "startMs": 7040,
+        "durationMs": 3440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 4,
+        "text": "쌀물을 붓습니다. 뜨지 않아. 이거",
+        "startMs": 8719,
+        "durationMs": 3721,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 5,
+        "text": "버음 이게 다 없어지면은 이제 그때",
+        "startMs": 10480,
+        "durationMs": 3920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 6,
+        "text": "다 끓었다는 신호야. 음. 간딱",
+        "startMs": 12440,
+        "durationMs": 4620,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 7,
+        "text": "맞아요. 와, 이거 진짜 찐이다.",
+        "startMs": 14400,
+        "durationMs": 5710,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 8,
+        "text": "[음악]",
+        "startMs": 17060,
+        "durationMs": 3050,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 9,
+        "text": "저는 양평에 사는 손일순이에요.",
+        "startMs": 20160,
+        "durationMs": 4240,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 10,
+        "text": "81살입니다. 올해 장도 하고",
+        "startMs": 22119,
+        "durationMs": 4160,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 11,
+        "text": "추우탕도 하고 여러 가지로 하고",
+        "startMs": 24400,
+        "durationMs": 4240,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 12,
+        "text": "있습니다. 그냥 오늘은 된장찌개를",
+        "startMs": 26279,
+        "durationMs": 4320,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 13,
+        "text": "보여 드릴게요. 여러분들이 다 하는",
+        "startMs": 28640,
+        "durationMs": 3919,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 14,
+        "text": "주부여들 하시는게 많은데 또 제가",
+        "startMs": 30599,
+        "durationMs": 3441,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 15,
+        "text": "하는 거 조금 닮을 수도 있어요.",
+        "startMs": 32559,
+        "durationMs": 2801,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 16,
+        "text": "그런게 한번 이렇게 따라서 해 보시면",
+        "startMs": 34040,
+        "durationMs": 2839,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 17,
+        "text": "좋을 것 같아요. 저는 오늘 1일",
+        "startMs": 35360,
+        "durationMs": 5600,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 18,
+        "text": "보조로 온 할머니의 손주입니다.",
+        "startMs": 36879,
+        "durationMs": 4081,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 19,
+        "text": "저는 먼저 된장을 하는데 이렇게 물을",
+        "startMs": 42320,
+        "durationMs": 4399,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 20,
+        "text": "갑니다. 물을 가려 놓으면 시원해요.",
+        "startMs": 44760,
+        "durationMs": 4040,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 21,
+        "text": "그냥 보통 이렇게 찌개집이 가면은",
+        "startMs": 46719,
+        "durationMs": 4041,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 22,
+        "text": "물을 썰려서 넣거든요. 근데",
+        "startMs": 48800,
+        "durationMs": 5120,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 23,
+        "text": "된장찌개다가 툭툭 보니 맛있으라 물을",
+        "startMs": 50760,
+        "durationMs": 5959,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 24,
+        "text": "이렇게 갈아요. 갈아서 3분 3인분",
+        "startMs": 53920,
+        "durationMs": 5599,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 25,
+        "text": "할 때는 이렇게 수조로 간 놈을",
+        "startMs": 56719,
+        "durationMs": 5241,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 26,
+        "text": "이렇게 한 두 개 이빨이 두 개 정도",
+        "startMs": 59519,
+        "durationMs": 5201,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 27,
+        "text": "넣으세요. 이렇게. 예. 이빨",
+        "startMs": 61960,
+        "durationMs": 5040,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 28,
+        "text": "이렇게 두 개 정도 넣으시고 어우",
+        "startMs": 64720,
+        "durationMs": 4320,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 29,
+        "text": "여기서 뜨는 거예요? 예. 이게서",
+        "startMs": 67000,
+        "durationMs": 4520,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 30,
+        "text": "집에서 당군 된장이라이 시중에 사는",
+        "startMs": 69040,
+        "durationMs": 5079,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 31,
+        "text": "거 틀려요. 2년 2년 되었어요.",
+        "startMs": 71520,
+        "durationMs": 5440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 32,
+        "text": "된장은 좀 짧감으니까 시판 된장 짜지",
+        "startMs": 74119,
+        "durationMs": 4961,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 33,
+        "text": "않아요. 근데 집전장은 좀 짜거든요.",
+        "startMs": 76960,
+        "durationMs": 3600,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 34,
+        "text": "요렇게 해서 불을 좀 키워 봐. 봐.",
+        "startMs": 79080,
+        "durationMs": 3920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 35,
+        "text": "볶으세요. 이렇게",
+        "startMs": 80560,
+        "durationMs": 4840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 36,
+        "text": "깨지게 그런장찌개를 하면은 수조로",
+        "startMs": 83000,
+        "durationMs": 4000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 37,
+        "text": "그냥 퍼어 넣고 말아요. 근데 이렇게",
+        "startMs": 85400,
+        "durationMs": 4320,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 38,
+        "text": "주물르는고 그냥 수조로 끼어 된장고",
+        "startMs": 87000,
+        "durationMs": 4840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 39,
+        "text": "맛이 틀려요. 또 가정에서도 주부들",
+        "startMs": 89720,
+        "durationMs": 4280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 40,
+        "text": "이렇게 손으로 주물러 가지고 또 맛도",
+        "startMs": 91840,
+        "durationMs": 4720,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 41,
+        "text": "좋고 그렇습니다. 그다음에 이렇게",
+        "startMs": 94000,
+        "durationMs": 4799,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 42,
+        "text": "했으면은 이제 쌀두물을 좀 부어요.",
+        "startMs": 96560,
+        "durationMs": 5040,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 43,
+        "text": "이렇게 쌀두물을 붓습니다.",
+        "startMs": 98799,
+        "durationMs": 4521,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 44,
+        "text": "이렇게 붙었죠. 이제 멸치 넣어요.",
+        "startMs": 101600,
+        "durationMs": 4159,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 45,
+        "text": "예. 멸치. 예. 큰 멸지도 이제",
+        "startMs": 103320,
+        "durationMs": 5479,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 46,
+        "text": "한참 끓이세요. 식판 된장은 주로 막",
+        "startMs": 105759,
+        "durationMs": 5161,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 47,
+        "text": "요리사님들 하실 때 보면은 물로",
+        "startMs": 108799,
+        "durationMs": 4161,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 48,
+        "text": "끓이다가 된장을 넣고 살짝만 끓으라",
+        "startMs": 110920,
+        "durationMs": 3559,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 49,
+        "text": "그러거든요. 근데 집든장 그렇게는",
+        "startMs": 112960,
+        "durationMs": 3280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 50,
+        "text": "맛이 없어요. 집든장 오래 끓여야",
+        "startMs": 114479,
+        "durationMs": 4240,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 51,
+        "text": "돼. 그래야 고수운 맛이 나고 좀 더",
+        "startMs": 116240,
+        "durationMs": 4239,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 52,
+        "text": "맛이 좋아요. 우리 집에 집 된장이",
+        "startMs": 118719,
+        "durationMs": 3961,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 53,
+        "text": "없어요 하시는 분들은 치판 된장을",
+        "startMs": 120479,
+        "durationMs": 3640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 54,
+        "text": "어떻게 하면 돼요? 심판 된장도 이런",
+        "startMs": 122680,
+        "durationMs": 2920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 55,
+        "text": "식으로 하면 돼요. 끓이는 것도 무",
+        "startMs": 124119,
+        "durationMs": 3441,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 56,
+        "text": "좀 갈려 놓고 끓이면 더 맛있죠.",
+        "startMs": 125600,
+        "durationMs": 3920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 57,
+        "text": "훨씬 맛이 좋습니다. 뚜껑 더",
+        "startMs": 127560,
+        "durationMs": 3520,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 58,
+        "text": "볼게요.",
+        "startMs": 129520,
+        "durationMs": 3600,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 59,
+        "text": "너무 많이 넣으면은 좋지 않으니까",
+        "startMs": 131080,
+        "durationMs": 4000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 60,
+        "text": "적당하게 넣으면 돼요. 호박도 너무",
+        "startMs": 133120,
+        "durationMs": 4479,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 61,
+        "text": "얇게.",
+        "startMs": 135080,
+        "durationMs": 5480,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 62,
+        "text": "자, 이렇게 해서 이제 파도 크게",
+        "startMs": 137599,
+        "durationMs": 5161,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 63,
+        "text": "먹기 좋게 이게 파를 잘게 넣으면은",
+        "startMs": 140560,
+        "durationMs": 4080,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 64,
+        "text": "지어버리니까요. 크게 넣으면은 먹기가",
+        "startMs": 142760,
+        "durationMs": 4040,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 65,
+        "text": "좋아요. 건져 먹기가이 한 반개 정도",
+        "startMs": 144640,
+        "durationMs": 4000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 66,
+        "text": "파도 저는 주로 신부분부만 써요.",
+        "startMs": 146800,
+        "durationMs": 5079,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 67,
+        "text": "파가 파란 데는 약이 많이 예 저희가",
+        "startMs": 148640,
+        "durationMs": 4800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 68,
+        "text": "파는 사람이 많이 져서 살아요. 그럼",
+        "startMs": 151879,
+        "durationMs": 3601,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 69,
+        "text": "멸치는 안 건져도 되고 먹어도 되고",
+        "startMs": 153440,
+        "durationMs": 4040,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 70,
+        "text": "먹으면서 건져내도 되고 육수를 해서",
+        "startMs": 155480,
+        "durationMs": 4280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 71,
+        "text": "된장찌개를 하면은 시원 맛이 덜요.",
+        "startMs": 157480,
+        "durationMs": 4640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 72,
+        "text": "바로 그냥 물에다가 멸치 넣고 끼는게",
+        "startMs": 159760,
+        "durationMs": 4320,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 73,
+        "text": "확실히 저는 이제 집에서 먹는 것이",
+        "startMs": 162120,
+        "durationMs": 3720,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 74,
+        "text": "아직 조미료 같은 건 안 넣거든요.",
+        "startMs": 164080,
+        "durationMs": 3879,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 75,
+        "text": "시중에서 잘 잡수시는 분들은 조미를",
+        "startMs": 165840,
+        "durationMs": 3800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 76,
+        "text": "좀 넣어도 돼요. 그건 자기에 맞춰",
+        "startMs": 167959,
+        "durationMs": 3401,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 77,
+        "text": "비율에 맞춰서 먹을 수 있으면 좋고",
+        "startMs": 169640,
+        "durationMs": 3599,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 78,
+        "text": "입맛대로 드시는 거죠. 다른게 뭐",
+        "startMs": 171360,
+        "durationMs": 4120,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 79,
+        "text": "제가 든찍이 하는 건 뭐냐면 무을 좀",
+        "startMs": 173239,
+        "durationMs": 4080,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 80,
+        "text": "갈아서 넣는다는 거. 짧물을 넣고",
+        "startMs": 175480,
+        "durationMs": 3560,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 81,
+        "text": "손으로 좀 주물는다는 거. 예. 그게",
+        "startMs": 177319,
+        "durationMs": 4721,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 82,
+        "text": "포인트예요. 예. 이렇게. 야, 구선",
+        "startMs": 179040,
+        "durationMs": 4640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 83,
+        "text": "냄새 확 올라왔어요. 물을 넣서",
+        "startMs": 182040,
+        "durationMs": 4000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 84,
+        "text": "끼리게 되면은 우래 물이 앉아요.",
+        "startMs": 183680,
+        "durationMs": 4680,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 85,
+        "text": "이렇게 톡톡하니. 좋아요. 자, 이제",
+        "startMs": 186040,
+        "durationMs": 5199,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 86,
+        "text": "넣습니다. 호박을 넣고. 이게 한",
+        "startMs": 188360,
+        "durationMs": 5760,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 87,
+        "text": "4인분일 거예요.",
+        "startMs": 191239,
+        "durationMs": 5761,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 88,
+        "text": "두부도 적당하게 좀 이제 쓰셔서",
+        "startMs": 194120,
+        "durationMs": 5160,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 89,
+        "text": "사인분이면은 반모만 써도 돼요.",
+        "startMs": 197000,
+        "durationMs": 5159,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 90,
+        "text": "선생님 그러면이 된장찌개를 언제부터",
+        "startMs": 199280,
+        "durationMs": 5360,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 91,
+        "text": "드셔왔던 거예요? 저는 이게 시골에",
+        "startMs": 202159,
+        "durationMs": 4440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 92,
+        "text": "맨날 시골에 살았으니까 내가 지금이",
+        "startMs": 204640,
+        "durationMs": 4120,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 93,
+        "text": "음식 해 먹은지가 한두서 살 것도 힘",
+        "startMs": 206599,
+        "durationMs": 3640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 94,
+        "text": "먹었어요. 그럼 이거 거의 70년",
+        "startMs": 208760,
+        "durationMs": 3039,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 95,
+        "text": "동안 드신 거네. 네. 그렇죠. 그",
+        "startMs": 210239,
+        "durationMs": 3080,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 96,
+        "text": "정도 했죠. 그 정도 살려 먹어",
+        "startMs": 211799,
+        "durationMs": 3481,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 97,
+        "text": "살았으니까 고춧가루에 조금 넣으면은",
+        "startMs": 213319,
+        "durationMs": 4000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 98,
+        "text": "좋아요. 많이 넣지 말고. 자,",
+        "startMs": 215280,
+        "durationMs": 4959,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 99,
+        "text": "두부를 이렇게 넣고",
+        "startMs": 217319,
+        "durationMs": 4280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 100,
+        "text": "이거 많이 끓여야 돼. 오래 끓여야",
+        "startMs": 220239,
+        "durationMs": 4360,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 101,
+        "text": "돼. 그렇지. 양장찌개가 무수금",
+        "startMs": 221599,
+        "durationMs": 5681,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 102,
+        "text": "같아도 들어가는게 많아요. 이게 이거",
+        "startMs": 224599,
+        "durationMs": 4121,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 103,
+        "text": "뜨잖아요. 이거 버큼. 근데 이걸 다",
+        "startMs": 227280,
+        "durationMs": 3159,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 104,
+        "text": "거어내잖아요. 근데 이게 저는 이걸",
+        "startMs": 228720,
+        "durationMs": 3159,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 105,
+        "text": "다 끓을 때까지 끓어요. 그러면 이게",
+        "startMs": 230439,
+        "durationMs": 3281,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 106,
+        "text": "다 없어지면은 이제 그때 다 끓었다는",
+        "startMs": 231879,
+        "durationMs": 3440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 107,
+        "text": "신호야. 거둘 필요가 없네요. 예.",
+        "startMs": 233720,
+        "durationMs": 3480,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 108,
+        "text": "거을 필요가 없어요. 이게 다지",
+        "startMs": 235319,
+        "durationMs": 3560,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 109,
+        "text": "콩에서 나오는 건데 외거이 좋은",
+        "startMs": 237200,
+        "durationMs": 5399,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 110,
+        "text": "것을. 우리 맛은이 맛이거든.",
+        "startMs": 238879,
+        "durationMs": 5801,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 111,
+        "text": "맛있어요. 맛있어요. 어, 더 끓여야",
+        "startMs": 242599,
+        "durationMs": 3121,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 112,
+        "text": "돼. 이거 더 끓여면 더 맛있을 것",
+        "startMs": 244680,
+        "durationMs": 3880,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 113,
+        "text": "같아. 더 끓여야 돼. 이거 이것은",
+        "startMs": 245720,
+        "durationMs": 4599,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 114,
+        "text": "뭐로 하는 거야? 이건 장식 장식",
+        "startMs": 248560,
+        "durationMs": 5039,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 115,
+        "text": "이건 머시로",
+        "startMs": 250319,
+        "durationMs": 3280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 116,
+        "text": "이렇게 몇끼면 다 쓰여 가지고 먹을",
+        "startMs": 253680,
+        "durationMs": 4760,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 117,
+        "text": "때 야",
+        "startMs": 255840,
+        "durationMs": 5600,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 118,
+        "text": "옛날 식으로 해 먹으니까 지금도 맛은",
+        "startMs": 258440,
+        "durationMs": 6120,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 119,
+        "text": "응 확실이다. 아, 거품만 보면 이게",
+        "startMs": 261440,
+        "durationMs": 4840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 120,
+        "text": "다 없어지잖아요. 조금 더 끓려야",
+        "startMs": 264560,
+        "durationMs": 3639,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 121,
+        "text": "돼. 근데 약간 짜네. 짜다시면",
+        "startMs": 266280,
+        "durationMs": 3880,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 122,
+        "text": "주불을 좀 더 넣어도 되고 물을 조금",
+        "startMs": 268199,
+        "durationMs": 3521,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 123,
+        "text": "쳐도 되고 그래요. 이게 다",
+        "startMs": 270160,
+        "durationMs": 4560,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 124,
+        "text": "음식이라는게 내가 만들기 다리면",
+        "startMs": 271720,
+        "durationMs": 4960,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 125,
+        "text": "생활에 다른 나갔어요. 저희 집이",
+        "startMs": 274720,
+        "durationMs": 3759,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 126,
+        "text": "이거 본 사람들 많으니까 저희 집에",
+        "startMs": 276680,
+        "durationMs": 3799,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 127,
+        "text": "와서 잡수신 분들이 많아서 어 저",
+        "startMs": 278479,
+        "durationMs": 4121,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 128,
+        "text": "집이 저 나왔네. 또 할 거야. 또",
+        "startMs": 280479,
+        "durationMs": 3841,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 129,
+        "text": "나왔네.",
+        "startMs": 282600,
+        "durationMs": 4000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 130,
+        "text": "너무 맛있을 것 같아. 된장은",
+        "startMs": 284320,
+        "durationMs": 5240,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 131,
+        "text": "끓을수록 맛있어요.이 집전장은. 근데",
+        "startMs": 286600,
+        "durationMs": 5439,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 132,
+        "text": "물 끓인데다가 된장 넣고 금방 끓여.",
+        "startMs": 289560,
+        "durationMs": 4479,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 133,
+        "text": "된장 냄새나고 맛이 없어. 아무 맛이",
+        "startMs": 292039,
+        "durationMs": 3481,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 134,
+        "text": "없어. 그렇게 하면 그 미워 넣어야",
+        "startMs": 294039,
+        "durationMs": 3121,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 135,
+        "text": "돼. 그런 데는. 근데 이것은 오래",
+        "startMs": 295520,
+        "durationMs": 7080,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 136,
+        "text": "끓이면은 치맛이 나죠. 손주의 평가.",
+        "startMs": 297160,
+        "durationMs": 5440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 137,
+        "text": "음. 간 맞아요.",
+        "startMs": 303560,
+        "durationMs": 4720,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 138,
+        "text": "한번 먹어 볼게요. 와, 이거 진짜",
+        "startMs": 306360,
+        "durationMs": 4640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 139,
+        "text": "찐이다. 저 끝에 멸치만 또 살짝",
+        "startMs": 308280,
+        "durationMs": 4840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 140,
+        "text": "나니까 훨씬 시원해요. 그니까",
+        "startMs": 311000,
+        "durationMs": 3759,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 141,
+        "text": "된장찌일할 때는 육수를 내 가지고",
+        "startMs": 313120,
+        "durationMs": 3400,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 142,
+        "text": "하거든요. 육수는 시원하질 않아요.",
+        "startMs": 314759,
+        "durationMs": 3880,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 143,
+        "text": "맛이 틀려요. 된장을 그냥 하지 말고",
+        "startMs": 316520,
+        "durationMs": 4160,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 144,
+        "text": "손으로 조물 조물조물 해야 돼. 아,",
+        "startMs": 318639,
+        "durationMs": 4481,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 145,
+        "text": "그래서 이게 간이 다 골고루 봐요.",
+        "startMs": 320680,
+        "durationMs": 4560,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 146,
+        "text": "자, 한번 두부랑도 한번 같이 먹어",
+        "startMs": 323120,
+        "durationMs": 3720,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 147,
+        "text": "볼게요. 네. 한번 드셔 보셔야,",
+        "startMs": 325240,
+        "durationMs": 3959,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 148,
+        "text": "음. 틀리죠? 아까는 틀리 간이",
+        "startMs": 326840,
+        "durationMs": 4359,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 149,
+        "text": "신거우니까. 너무 맞아요. 간이 지금",
+        "startMs": 329199,
+        "durationMs": 4241,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 150,
+        "text": "너무 딱 맞고. 아, 이거 진짜예요,",
+        "startMs": 331199,
+        "durationMs": 4201,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 151,
+        "text": "이거. 이거를 70년 전에도",
+        "startMs": 333440,
+        "durationMs": 3640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 152,
+        "text": "드셨다니까 너무 부러워요. 죽게 해",
+        "startMs": 335400,
+        "durationMs": 4400,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 153,
+        "text": "먹었죠. 생활. 이것만 먹어도 돼요.",
+        "startMs": 337080,
+        "durationMs": 3679,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 154,
+        "text": "반찬이 필요 없어요. 근데",
+        "startMs": 339800,
+        "durationMs": 3480,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 155,
+        "text": "여러분들이이 된장찌개를 찍을 때",
+        "startMs": 340759,
+        "durationMs": 4401,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 156,
+        "text": "가죽에서 거운다 이렇게 수주를 퍼서",
+        "startMs": 343280,
+        "durationMs": 3280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 157,
+        "text": "넣고 물 걸든요. 그렇게 하시지",
+        "startMs": 345160,
+        "durationMs": 3840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 158,
+        "text": "마시고 된장하다가 무 좀 갈아서 조금",
+        "startMs": 346560,
+        "durationMs": 4240,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 159,
+        "text": "넣고 조물조물 해 가지고 한번 이렇게",
+        "startMs": 349000,
+        "durationMs": 3400,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 160,
+        "text": "잡수 보세요. 바이를 사용하고",
+        "startMs": 350800,
+        "durationMs": 3800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 161,
+        "text": "잡수세요. 감사합니다.",
+        "startMs": 352400,
+        "durationMs": 24010,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 162,
+        "text": "[음악]",
+        "startMs": 354600,
+        "durationMs": 21810,
+        "language": "ko"
+      }
+    ],
+    "tracks": [
+      {
+        "languageCode": "ko",
+        "name": "한국어 (자동 생성됨)",
+        "trackKind": "auto"
+      }
+    ],
+    "selectedTrack": {
+      "languageCode": "ko",
+      "name": null,
+      "trackKind": "unknown"
+    },
+    "publicTimedTextReason": "timedtext_status_200"
+  },
+  "authorComments": {
+    "available": true,
+    "reason": null,
+    "comments": [
+      {
+        "text": "*[🥘된장찌개 재료(3~4인분 기준)]*\n\n・ 무(갈아서 두 큰 술 나올 정도)\n\n・ 된장 두 큰 술(드음뿍...)\n *시판 된장은 '맥된장'이 그나마 집된장과 유사합니다.\n\n・ 쌀뜨물 500~600ml\n *처음 헹군 쌀뜨물은 버리시고, 2~3번째 헹군 물로 사용하세요.\n\n・ 손질된 대멸치 10마리 정도\n\n・ 애호박 반 개\n\n・ 대파 흰대 1개\n\n・ 두부 반 모~한 모(취향껏)\n\n・ 청양고추 1개(홍고추는 취향껏)\n\n------------\n\n아래는 식당 및 된장 문의 주신 분들께 드리는 답변입니다..\n\n할머니께서 현재 식당을 직접 운영하고 계시지는 않지만, 할머니의 정성이 담긴 전통 장류와 추어탕은 온라인으로 만나보실 수 있습니다.\n인터넷 검색창에 '예동뜰'을 검색하시거나, 아드님께(010-3780-8465) 문의하시면 됩니다😊",
+        "likeCount": 329,
+        "publishedAt": "2025-07-02T17:11:15Z"
+      }
+    ]
+  }
+}

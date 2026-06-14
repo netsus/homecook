@@ -1,0 +1,970 @@
+{
+  "schemaVersion": 1,
+  "videoId": "fTlTpSJtrEs",
+  "draftedBy": "claude:description+captions + gemini:visual-quantity + gemini:visual-recipes",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "메밀 후토마끼",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "새우",
+          "nameAliases": [],
+          "amount": "4",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "onscreen"
+        },
+        {
+          "name": "메밀면",
+          "nameAliases": [
+            "메밀 파이프"
+          ],
+          "amount": "1",
+          "unit": "인분",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "title",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "김",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "장",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "연어",
+          "nameAliases": [],
+          "amount": "150",
+          "unit": "g",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "달걀",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "개",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "오이",
+          "nameAliases": [],
+          "amount": "1/2",
+          "unit": "개",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [],
+          "amount": "약간",
+          "unit": "null",
+          "amountBasis": "spoken",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "맛술",
+          "nameAliases": [],
+          "amount": "약간",
+          "unit": "null",
+          "amountBasis": "spoken",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "쯔유",
+          "nameAliases": [],
+          "amount": "약간",
+          "unit": "null",
+          "amountBasis": "spoken",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "들기름",
+          "nameAliases": [],
+          "amount": "약간",
+          "unit": "null",
+          "amountBasis": "spoken",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "에어프라이어 180도에서 10분간 통새우튀김을 굽는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "달걀 2개에 소금과 맛술을 약간 넣고 믹서기로 곱게 간다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "약불로 달군 사각 팬에 달걀물을 조금씩 부어가며 돌돌 말아 달걀말이를 만든다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "오이는 돌려깎기 한 후 얇게 채 썬다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "연어는 먹기 좋은 크기로 길게 썬다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "메밀면을 삶은 후 찬물에 바락바락 씻어 물기를 뺀다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 7,
+          "instruction": "삶은 메밀면에 쯔유와 들기름을 약간 넣어 밑간한다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 8,
+          "instruction": "김 위에 물을 살짝 묻혀 김 2장을 이어 붙인다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 9,
+          "instruction": "김 위에 밑간한 메밀면을 얇게 펼쳐 올린다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 10,
+          "instruction": "면 위에 연어, 달걀말이, 오이, 새우튀김을 차례로 올린다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 11,
+          "instruction": "재료가 터지지 않게 조심스럽게 돌돌 만다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 12,
+          "instruction": "완성된 후토마끼 겉면에 들기름을 살짝 바른 후 먹기 좋은 크기로 썬다.",
+          "evidence": "visual"
+        }
+      ]
+    },
+    {
+      "title": "열무 들기름 냉파스타",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "파스타면",
+          "nameAliases": [
+            "냉파스타"
+          ],
+          "amount": "1",
+          "unit": "인분",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "title",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "열무김치",
+          "nameAliases": [
+            "열무"
+          ],
+          "amount": "1",
+          "unit": "줌",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "title",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "들기름",
+          "nameAliases": [
+            "할머니 들기름"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "액젓",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "미나리",
+          "nameAliases": [],
+          "amount": "1/2",
+          "unit": "줌",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "흑임자",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "작은술",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "참깨",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "작은술",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "카펠리니면",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "인분",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "쯔유",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "카펠리니면을 삶은 후 찬물에 헹궈 물기를 뺀다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "볼에 삶은 면을 담고 쯔유 1큰술과 들기름 1큰술을 넣어 버무린다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "면을 접시에 돌돌 말아 예쁘게 담는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "면 옆에 열무김치를 넉넉히 올린다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "흑임자와 참깨를 가득 뿌린다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "잘게 썬 미나리를 고명으로 올린다.",
+          "evidence": "visual"
+        }
+      ]
+    },
+    {
+      "title": "등촌식 멸치칼국수",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "칼국수면",
+          "nameAliases": [
+            "멸치칼국수",
+            "등촌칼국수"
+          ],
+          "amount": "1",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "title",
+          "amountBasis": "onscreen"
+        },
+        {
+          "name": "다진 마늘",
+          "nameAliases": [
+            "질마늘"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "caption",
+          "amountBasis": "onscreen"
+        },
+        {
+          "name": "고추장",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "caption",
+          "amountBasis": "onscreen"
+        },
+        {
+          "name": "배추",
+          "nameAliases": [],
+          "amount": "3",
+          "unit": "잎",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "느타리버섯",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "줌",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "우삼겹",
+          "nameAliases": [],
+          "amount": "100",
+          "unit": "g",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "고춧가루",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "참치액젓",
+          "nameAliases": [],
+          "amount": "0.5",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "진간장",
+          "nameAliases": [],
+          "amount": "0.5",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "미나리",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "줌",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "된장",
+          "nameAliases": [],
+          "amount": "0.5",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "멸치칼국수 라면 스프",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "개",
+          "amountBasis": "spoken",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "물",
+          "nameAliases": [],
+          "amount": "700",
+          "unit": "ml",
+          "amountBasis": "spoken",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "배추와 버섯, 미나리를 먹기 좋은 크기로 손질한다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "냄비에 손질한 배추, 버섯, 미나리를 담는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "고춧가루 1큰술, 다진마늘 1큰술, 고추장 1큰술, 된장 0.5큰술, 참치액젓 0.5큰술, 진간장 0.5큰술을 넣는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "재료 위에 우삼겹을 올린다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "멸치칼국수 라면의 후레이크와 스프를 넣는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "물 700ml를 붓고 끓인다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 7,
+          "instruction": "재료가 익으면 라면 면을 넣고 마저 끓여 완성한다.",
+          "evidence": "visual"
+        }
+      ]
+    },
+    {
+      "title": "맥적구이",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "돼지 목살",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "인분",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "된장",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "알룰로스",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "진간장",
+          "nameAliases": [],
+          "amount": "0.5",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "다진마늘",
+          "nameAliases": [],
+          "amount": "0.5",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "들기름",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "맛술",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "물",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "후춧가루",
+          "nameAliases": [],
+          "amount": "약간",
+          "unit": "null",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "돼지 목살에 칼집을 낸 후 한 입 크기로 썬다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "프라이팬에 썬 목살을 담는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "된장 1큰술, 알룰로스 1큰술, 진간장 0.5큰술, 다진마늘 0.5큰술, 들기름 1큰술, 맛술 1큰술, 물 2큰술, 후춧가루 약간을 넣는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "고기와 양념이 잘 어우러지도록 꾸덕하게 섞는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "중약불에서 고기가 타지 않게 주의하며 굽는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "양념이 고기에 잘 배어들고 노릇해질 때까지 굽는다.",
+          "evidence": "visual"
+        }
+      ]
+    },
+    {
+      "title": "항정살 마늘쫑 솥밥",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "쌀",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "컵",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "물",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "컵",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "쯔유",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "spoken",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "맛술",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "spoken",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "항정살",
+          "nameAliases": [],
+          "amount": "300",
+          "unit": "g",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "맛술",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "알룰로스",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "간장",
+          "nameAliases": [],
+          "amount": "1.5",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "고춧가루",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "마늘쫑",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "줌",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "쌀을 씻어 불린 후 솥에 담고 물을 1:1 비율로 붓는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "쯔유 1큰술과 맛술 1큰술을 넣고 중불에서 끓이다가 약불로 줄여 10분간 끓인 후 5분간 뜸을 들인다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "항정살을 프라이팬에 노릇하게 굽는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "맛술 1큰술, 알룰로스 1큰술, 간장 1.5큰술, 고춧가루 1큰술을 넣고 약불에서 고기에 양념이 배도록 볶는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "다른 팬에 마늘쫑을 1~2분간 살짝 볶는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "완성된 솥밥 위에 양념한 항정살과 볶은 마늘쫑을 올려 완성한다.",
+          "evidence": "visual"
+        }
+      ]
+    },
+    {
+      "title": "소곱창구이",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "소곱창",
+          "nameAliases": [],
+          "amount": "350",
+          "unit": "g",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "부추",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "줌",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "고춧가루",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "진간장",
+          "nameAliases": [],
+          "amount": "0.5",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "들기름",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "알룰로스",
+          "nameAliases": [],
+          "amount": "0.5",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "통깨",
+          "nameAliases": [],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "부추를 먹기 좋은 크기로 썬다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "고춧가루, 진간장, 들기름, 알룰로스, 통깨, 소금을 넣어 부추무침을 만든다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "해동한 소곱창과 양파를 그릴 팬에 올린다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "곱창이 노릇노릇해지면 가위로 먹기 좋게 자른다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "곱창 옆에 부추무침을 올려 함께 굽는다.",
+          "evidence": "visual"
+        }
+      ]
+    },
+    {
+      "title": "도토리 묵사발",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "도토리묵",
+          "nameAliases": [
+            "열무묵국"
+          ],
+          "amount": "1",
+          "unit": "팩",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "동치미 냉면 육수",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "팩",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "열무김치",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "줌",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "오이",
+          "nameAliases": [],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "김",
+          "nameAliases": [],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "깨소금",
+          "nameAliases": [],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "도토리묵을 먹기 좋은 크기로 썬다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "썬 묵을 뜨거운 물에 담가 말랑하게 만든 뒤 찬물로 헹군다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "그릇에 묵을 담고 차가운 동치미 육수를 붓는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "열무김치, 채 썬 오이, 김가루, 깨소금을 고명으로 올린다.",
+          "evidence": "visual"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "분량 희박 브이로그: 설명란은 협찬 이벤트/타임라인/BGM 안내뿐 레시피 정보 없음. 자막은 ko 자동생성 55줄로 매우 sparse하며 [음악] 라인 다수 — 재료 amount/unit은 전부 미상(null).",
+    "ASR 보정(확신 낮음, 원문 기록): '요걸로 떡볶기 만들어 볼게요'(0:34)는 타임라인상 후토마끼 구간이라 후토마끼로 추정, '질마늘'(8:14)→다진 마늘, '병령을 미리 해야겠다'(8:07)→양념을 미리 해야겠다, '액젓은 들기를'(5:34)→액젓과 들기름.",
+    "후토마끼 자막 '여기다가 물을 살짝 묻히고'(2:39)의 대상이 불명확해 김 붙이기로 추정 작성. '미나리 붙일 거를'(5:50) 등 일부 자막은 의미 불명으로 미반영.",
+    "[visual-pass] 레시피 0의 초안 재료 목록에 연어, 달걀, 오이, 김이 누락되어 있습니다.",
+    "[visual-pass] 레시피 1의 초안 재료 목록에 미나리, 흑임자, 참깨가 누락되어 있습니다.",
+    "[visual-pass] 레시피 2의 초안 재료 목록에 배추, 느타리버섯, 우삼겹, 고춧가루, 참치액젓, 진간장이 누락되어 있습니다.",
+    "검수 반영(2026-06-12): 사용자 피드백으로 전 요리 시각추출 재작성 — 후토마끼 단계 3→12개(에어프라이어 180도 10분, 달걀물 과정 포함), 맥적구이·항정살 마늘쫑 솥밥 레시피 추가, 등촌식 칼국수는 샤브샤브식 구성으로 보강.",
+    "검수 반영(2026-06-12 2차): 타임라인 대조로 소곱창구이(부추무침 포함)·도토리 묵사발 추가 — 시판품 활용 요리도 조리 과정이 있으면 골든에 포함. 자막 55줄에는 두 요리 언급이 없어 텍스트 초안으로는 발견 불가했음.",
+    "검수 완료(2026-06-12): 7개 레시피 사용자 승인."
+  ]
+}

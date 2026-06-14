@@ -1,0 +1,1691 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-06-11T07:23:05.817Z",
+  "video": {
+    "videoId": "oe_WhcK2X4Q",
+    "url": "https://www.youtube.com/watch?v=oe_WhcK2X4Q",
+    "title": "[#편스토랑] 류수영의 초대박 제육 레시피!! 😎kbscookㅣKBS 220114 방송",
+    "description": "#편스토랑✅ 금요일 저녁 8시 30분 KBS 2TV\n\n영상으로 보는 레시피 #kbscook\n이 영상 켜놓고 그대로 만들어보세요.\n유명 맛집에서 사먹는 바로 그맛! \n\n#자취요리 #자취꿀팁\n#kbscook #어남선생 #류수영 #제육볶음 #제육 #레시피",
+    "channelId": "UC3m0s5XAQydCtbLHc8j1Uog",
+    "channelTitle": "KBS 한국방송",
+    "publishedAt": "2022-01-24T06:57:45Z",
+    "tags": [
+      "KBS",
+      "한국방송공사",
+      "mylovekbs",
+      "예고",
+      "티저"
+    ],
+    "defaultLanguage": "ko",
+    "durationSeconds": 585,
+    "thumbnailUrl": "https://i.ytimg.com/vi/oe_WhcK2X4Q/maxresdefault.jpg"
+  },
+  "stats": {
+    "viewCount": 8718777,
+    "likeCount": 92438,
+    "commentCount": 1937
+  },
+  "descriptionSignal": {
+    "hasIngredientKeyword": false,
+    "hasStepKeyword": true,
+    "hasQuantityPattern": false,
+    "length": 139
+  },
+  "captions": {
+    "available": true,
+    "reason": null,
+    "provider": "apify",
+    "language": "ko",
+    "segments": [
+      {
+        "lineIndex": 0,
+        "text": "[음악]",
+        "startMs": 0,
+        "durationMs": 2840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 1,
+        "text": "필요한 건 뭐냐 하면은 돼지고기",
+        "startMs": 199,
+        "durationMs": 4961,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 2,
+        "text": "앞다리살로 하세요 뒷다리 살이나 어",
+        "startMs": 2840,
+        "durationMs": 3999,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 3,
+        "text": "앞다리살 그 한 근 정도 돼요",
+        "startMs": 5160,
+        "durationMs": 4080,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 4,
+        "text": "600g 기준이에요 삼겹살로 하면",
+        "startMs": 6839,
+        "durationMs": 4001,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 5,
+        "text": "기름이 너무 나와서 다른 요리가 돼요",
+        "startMs": 9240,
+        "durationMs": 4519,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 6,
+        "text": "그렇지 그렇지 그 요걸 하는데 늘",
+        "startMs": 10840,
+        "durationMs": 6279,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 7,
+        "text": "뭐야 제일 중요한 거 핏물을 빼야 돼",
+        "startMs": 13759,
+        "durationMs": 5241,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 8,
+        "text": "핏물을 빼지 않으면 냄새가 날 수가",
+        "startMs": 17119,
+        "durationMs": 3920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 9,
+        "text": "있어요 요게 다 잡내 원인이에요 저게",
+        "startMs": 19000,
+        "durationMs": 4119,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 10,
+        "text": "의외로 되게 중요해요 고기가 싱싱하면",
+        "startMs": 21039,
+        "durationMs": 3601,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 11,
+        "text": "간만 맞으면 되는데 냄새가 나기",
+        "startMs": 23119,
+        "durationMs": 3080,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 12,
+        "text": "시작하면 일이 복잡해져요 그니까",
+        "startMs": 24640,
+        "durationMs": 3719,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 13,
+        "text": "무조건 핏물을 빼시고 구입해서 내일",
+        "startMs": 26199,
+        "durationMs": 3761,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 14,
+        "text": "쓰실 거면 핏물 빼서 보관하시는 것도",
+        "startMs": 28359,
+        "durationMs": 3201,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 15,
+        "text": "어 이거는 우리가 지금 안 했던",
+        "startMs": 29960,
+        "durationMs": 3360,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 16,
+        "text": "부분인데 무조건 물을 빼야 돼",
+        "startMs": 31560,
+        "durationMs": 3800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 17,
+        "text": "뽀송뽀송해진 고기를 식구들 입 크기에",
+        "startMs": 33320,
+        "durationMs": 3720,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 18,
+        "text": "따라서 우리 식구들이 입이 크다 그러",
+        "startMs": 35360,
+        "durationMs": 3719,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 19,
+        "text": "한 3등분하고이",
+        "startMs": 37040,
+        "durationMs": 4999,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 20,
+        "text": "정도 해 가지고 그리고 양념장 터",
+        "startMs": 39079,
+        "durationMs": 4881,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 21,
+        "text": "만들어야겠죠",
+        "startMs": 42039,
+        "durationMs": 4881,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 22,
+        "text": "쉬워요 그냥 외울 수 있어요",
+        "startMs": 43960,
+        "durationMs": 4680,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 23,
+        "text": "간장",
+        "startMs": 46920,
+        "durationMs": 4680,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 24,
+        "text": "설탕 기본적으로 요거 세 개 거예요",
+        "startMs": 48640,
+        "durationMs": 4680,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 25,
+        "text": "근데 이거 되게 심플한데 어 되게",
+        "startMs": 51600,
+        "durationMs": 3959,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 26,
+        "text": "뭔가 진짜 심플 돼요 너무 심플해",
+        "startMs": 53320,
+        "durationMs": 3640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 27,
+        "text": "돼지고기를 한 근 사왔는데 내가",
+        "startMs": 55559,
+        "durationMs": 3041,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 28,
+        "text": "고추장을 얼만큼 넣고 절여 놔야 될지",
+        "startMs": 56960,
+        "durationMs": 3439,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 29,
+        "text": "감이 안 오는데 맞아 걸 좀 알려",
+        "startMs": 58600,
+        "durationMs": 3520,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 30,
+        "text": "드리려고요",
+        "startMs": 60399,
+        "durationMs": 5160,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 31,
+        "text": "여기다가 이제",
+        "startMs": 62120,
+        "durationMs": 3439,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 32,
+        "text": "요런 타파웨어 하나 있으면 돼요 요런",
+        "startMs": 66240,
+        "durationMs": 4239,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 33,
+        "text": "걸 넣고 시작을 하세요 복잡하게 따로",
+        "startMs": 68560,
+        "durationMs": 4040,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 34,
+        "text": "설거지 만들지 말자 아 여기 이제 아",
+        "startMs": 70479,
+        "durationMs": 4481,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 35,
+        "text": "재어 두는 거구나 여기다가 이렇게 세",
+        "startMs": 72600,
+        "durationMs": 5440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 36,
+        "text": "개 세 개 두 개 세 개 세 개 두",
+        "startMs": 74960,
+        "durationMs": 6479,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 37,
+        "text": "개 세 개 세 개 두 개네 3 3이",
+        "startMs": 78040,
+        "durationMs": 5119,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 38,
+        "text": "따라하시면 돼요 그냥 설탕 두 개",
+        "startMs": 81439,
+        "durationMs": 3401,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 39,
+        "text": "설탕 붙어 놓으세요 가루 붙어 넣고",
+        "startMs": 83159,
+        "durationMs": 2920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 40,
+        "text": "액체 넣고 고추장 넣어야 돼요",
+        "startMs": 84840,
+        "durationMs": 2800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 41,
+        "text": "역순으로 가면 숟가락을 다시 씻어야",
+        "startMs": 86079,
+        "durationMs": 3841,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 42,
+        "text": "돼요",
+        "startMs": 87640,
+        "durationMs": 4320,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 43,
+        "text": "액체 고추장으로 가야 돼 그래 숟가락",
+        "startMs": 89920,
+        "durationMs": 5479,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 44,
+        "text": "한개로 수 센스쟁이 오 그러네요 간장",
+        "startMs": 91960,
+        "durationMs": 6640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 45,
+        "text": "세 개까",
+        "startMs": 95399,
+        "durationMs": 3201,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 46,
+        "text": "둘 셋 그리고 고추장을 담뿍 세",
+        "startMs": 98720,
+        "durationMs": 7880,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 47,
+        "text": "개예요 단 요런 느낌 있잖아 올라오는",
+        "startMs": 102799,
+        "durationMs": 6521,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 48,
+        "text": "대로 깎지 마시고 이거를 한 숟가락을",
+        "startMs": 106600,
+        "durationMs": 5559,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 49,
+        "text": "못 맞춰 단에 맞춘 거예요 요거를 세",
+        "startMs": 109320,
+        "durationMs": 8280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 50,
+        "text": "개요 자 세 스푼 세개 오케이 자",
+        "startMs": 112159,
+        "durationMs": 8560,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 51,
+        "text": "갈비 제육볶음 닭탕 이런 거에 과일로",
+        "startMs": 117600,
+        "durationMs": 5400,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 52,
+        "text": "만든 과당이 들어가면 훨씬 맛있어져요",
+        "startMs": 120719,
+        "durationMs": 6561,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 53,
+        "text": "하지만 제육 봉봉 했다고 배를 사 아",
+        "startMs": 123000,
+        "durationMs": 6520,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 54,
+        "text": "팔지도 않아 비싸 근데 배가",
+        "startMs": 127280,
+        "durationMs": 3479,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 55,
+        "text": "4,000원이 잖아요 하나에 어우",
+        "startMs": 129520,
+        "durationMs": 4920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 56,
+        "text": "비싸 비싸 에이 나가서 사먹게 낫지",
+        "startMs": 130759,
+        "durationMs": 8161,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 57,
+        "text": "비싸 어 진짜 물 안 넣 아 진짜",
+        "startMs": 134440,
+        "durationMs": 7040,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 58,
+        "text": "이걸로 국물을 잡으시면 녹진한 맛이",
+        "startMs": 138920,
+        "durationMs": 4679,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 59,
+        "text": "나죠 아 신기하다 어 요거 한번 넣어",
+        "startMs": 141480,
+        "durationMs": 4960,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 60,
+        "text": "보도록 하겠습니다 잘 섞으면 돼요",
+        "startMs": 143599,
+        "durationMs": 6601,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 61,
+        "text": "저걸 닫고 섞어요 아 섞 잘 섞어 놔",
+        "startMs": 146440,
+        "durationMs": 9000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 62,
+        "text": "야 3주 동 얼마나 생각했을까 와 와",
+        "startMs": 150200,
+        "durationMs": 7319,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 63,
+        "text": "벌써 맛있다 여기다 이제 마늘만 좀",
+        "startMs": 155440,
+        "durationMs": 4560,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 64,
+        "text": "갈아 넣자고 미리 다진마늘 쓸 거면",
+        "startMs": 157519,
+        "durationMs": 4800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 65,
+        "text": "한 큰술 다진 마늘은 한 큰술 다섯",
+        "startMs": 160000,
+        "durationMs": 4200,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 66,
+        "text": "여섯 개 넣으시면 돼요 마늘향 때문에",
+        "startMs": 162319,
+        "durationMs": 6200,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 67,
+        "text": "꽉 매워졌다 이었어음",
+        "startMs": 164200,
+        "durationMs": 4319,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 68,
+        "text": "떡볶이 맛 맛있는 떡볶이 국물",
+        "startMs": 169159,
+        "durationMs": 5321,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 69,
+        "text": "맛이에요 되게 맛있는 떡볶이 맛이다음",
+        "startMs": 171920,
+        "durationMs": 6399,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 70,
+        "text": "국물 떡볶기 어 거하네 아 저분 매주",
+        "startMs": 174480,
+        "durationMs": 9160,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 71,
+        "text": "나오네요 인플루언서에네 매 인플 와",
+        "startMs": 178319,
+        "durationMs": 8391,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 72,
+        "text": "맛집떡볶이 아 맛있죠",
+        "startMs": 183640,
+        "durationMs": 4720,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 73,
+        "text": "[음악]",
+        "startMs": 186710,
+        "durationMs": 4290,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 74,
+        "text": "좋아 귀에 걸렸다 저 국물 생각보다",
+        "startMs": 188360,
+        "durationMs": 4760,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 75,
+        "text": "맛있어요 그냥 흔든 건데 맛있어 보여",
+        "startMs": 191000,
+        "durationMs": 4400,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 76,
+        "text": "어때요 그 떡볶이 그 할 때도요",
+        "startMs": 193120,
+        "durationMs": 4440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 77,
+        "text": "베이스로 가도 돼요 같은데 베이슨",
+        "startMs": 195400,
+        "durationMs": 5600,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 78,
+        "text": "같아고 넣고 요즘 국물 떡볶기 또",
+        "startMs": 197560,
+        "durationMs": 5080,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 79,
+        "text": "어묵 넣고 그럼 이제 뭐야 고기를",
+        "startMs": 201000,
+        "durationMs": 3159,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 80,
+        "text": "넣면 잘못돼 고기부터 재우세요",
+        "startMs": 202640,
+        "durationMs": 4440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 81,
+        "text": "넣어주면 돼요 아 고기를 여기다 재우",
+        "startMs": 204159,
+        "durationMs": 4921,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 82,
+        "text": "아 재워 넣는구나 신에 너무 뭉쳐",
+        "startMs": 207080,
+        "durationMs": 4760,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 83,
+        "text": "있으면 안해 아 그런게 생기니까",
+        "startMs": 209080,
+        "durationMs": 6159,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 84,
+        "text": "이렇게 하면 됐어요 어",
+        "startMs": 211840,
+        "durationMs": 5840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 85,
+        "text": "해봐야겠다 이렇게 해 놓고 딱 한",
+        "startMs": 215239,
+        "durationMs": 4961,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 86,
+        "text": "가지 더 자 뭡니까 딱 한 가지 더",
+        "startMs": 217680,
+        "durationMs": 4520,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 87,
+        "text": "또다른 킥이 있다고요 어 이거",
+        "startMs": 220200,
+        "durationMs": 3679,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 88,
+        "text": "궁금하다 그냥 식초 놓는게 난",
+        "startMs": 222200,
+        "durationMs": 3200,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 89,
+        "text": "깔끔하더라고요 그냥 식초 놓는게 난",
+        "startMs": 223879,
+        "durationMs": 3521,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 90,
+        "text": "깔끔하더라고요",
+        "startMs": 225400,
+        "durationMs": 3800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 91,
+        "text": "식초요리",
+        "startMs": 227400,
+        "durationMs": 4800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 92,
+        "text": "못했어요 요거를 두 숟갈 아 두",
+        "startMs": 229200,
+        "durationMs": 6720,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 93,
+        "text": "숟갈이 괜찮아요 안 쉬요 어 이렇게",
+        "startMs": 232200,
+        "durationMs": 5399,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 94,
+        "text": "얘기해 줄 때가 제일 좋아 시하게",
+        "startMs": 235920,
+        "durationMs": 5760,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 95,
+        "text": "얘기해줄 때 안쉬 안 쉬요",
+        "startMs": 237599,
+        "durationMs": 4081,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 96,
+        "text": "지금 넣는 식초는 나중에 큰 힘을",
+        "startMs": 243319,
+        "durationMs": 4441,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 97,
+        "text": "발휘하지 않아서 막 쉬어지지 않아요",
+        "startMs": 245200,
+        "durationMs": 4599,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 98,
+        "text": "그리고 산미가 올라가면 더 맛있다고",
+        "startMs": 247760,
+        "durationMs": 4679,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 99,
+        "text": "생각이 돼요 그리고 식초를 넣으면",
+        "startMs": 249799,
+        "durationMs": 4800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 100,
+        "text": "얘가 훨씬 보존 기간이 길어져요 천연",
+        "startMs": 252439,
+        "durationMs": 4080,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 101,
+        "text": "방부제 때문에 이거 안 넣고 처음에",
+        "startMs": 254599,
+        "durationMs": 3640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 102,
+        "text": "묻혀 봤더니 한 4일 지났을 때",
+        "startMs": 256519,
+        "durationMs": 5280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 103,
+        "text": "버렸어요 얘는 3일 지나도 쌩쌩하고",
+        "startMs": 258239,
+        "durationMs": 5520,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 104,
+        "text": "보관성 좋아지고 연장해주고 감치 만",
+        "startMs": 261799,
+        "durationMs": 4761,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 105,
+        "text": "올려줘 기는 안 나고 그럼 넣어야지",
+        "startMs": 263759,
+        "durationMs": 6241,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 106,
+        "text": "한번 해봐야겠다 제육에 초 리면",
+        "startMs": 266560,
+        "durationMs": 5079,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 107,
+        "text": "신맛이 금방 쭉 빠지거든요 그래서",
+        "startMs": 270000,
+        "durationMs": 4880,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 108,
+        "text": "식초를 꼭 놔주세요 여기다가",
+        "startMs": 271639,
+        "durationMs": 6441,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 109,
+        "text": "여기에 비장의 킥이 하나 있죠",
+        "startMs": 274880,
+        "durationMs": 6120,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 110,
+        "text": "아 참기름 들어가야지 하게 들어가야죠",
+        "startMs": 278080,
+        "durationMs": 5880,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 111,
+        "text": "무조건 들어가야죠 참기름의 입고 고는",
+        "startMs": 281000,
+        "durationMs": 5080,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 112,
+        "text": "많이 넣지 마세요 저만큼만 넣으세요",
+        "startMs": 283960,
+        "durationMs": 4239,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 113,
+        "text": "냄새가 바뀌어 아가랑 냄새 차망이",
+        "startMs": 286080,
+        "durationMs": 4600,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 114,
+        "text": "달라요 아 먹음직스럽다 벌써 싹 묻혀",
+        "startMs": 288199,
+        "durationMs": 6521,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 115,
+        "text": "놓으니까 맛있 냄새 한번 맡어 봐",
+        "startMs": 290680,
+        "durationMs": 8440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 116,
+        "text": "와개 어 놀랬어 개개",
+        "startMs": 294720,
+        "durationMs": 6680,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 117,
+        "text": "진짜 놀렸어요 그래요 이게 맛있는",
+        "startMs": 299120,
+        "durationMs": 5359,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 118,
+        "text": "냄새가 나죠 맛있이 냄새가 나면 성공",
+        "startMs": 301400,
+        "durationMs": 5639,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 119,
+        "text": "이게 맛이 있겠어 없겠어 이게 맛이",
+        "startMs": 304479,
+        "durationMs": 5881,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 120,
+        "text": "있겠어 없겠어",
+        "startMs": 307039,
+        "durationMs": 3321,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 121,
+        "text": "무조건 맛있지 자 이제 야채만",
+        "startMs": 310720,
+        "durationMs": 5840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 122,
+        "text": "다듬어서 올리면 끝",
+        "startMs": 313320,
+        "durationMs": 6240,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 123,
+        "text": "이렇게 해서 파진 깔고 저거를 섞어서",
+        "startMs": 316560,
+        "durationMs": 5040,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 124,
+        "text": "해 봤는데 아 물러지고 물이 많이",
+        "startMs": 319560,
+        "durationMs": 3520,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 125,
+        "text": "나와요 위에만 올려 살짝 올려",
+        "startMs": 321600,
+        "durationMs": 3800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 126,
+        "text": "놓는군요 야채들이 무르지 않게 양파",
+        "startMs": 323080,
+        "durationMs": 5520,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 127,
+        "text": "깔고 그리고 마지막 여기다 소금을 한",
+        "startMs": 325400,
+        "durationMs": 4919,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 128,
+        "text": "꼬리 뿌려 놓을 거 예요 소금을 한",
+        "startMs": 328600,
+        "durationMs": 3960,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 129,
+        "text": "꽂집 이렇게 올려놓고 소금을 뿌린다고",
+        "startMs": 330319,
+        "durationMs": 3880,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 130,
+        "text": "그럼 절인 효과가 있어서요 이게",
+        "startMs": 332560,
+        "durationMs": 3960,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 131,
+        "text": "무르지 않고 절여지는 알캉 알캉",
+        "startMs": 334199,
+        "durationMs": 4921,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 132,
+        "text": "해지겠죠 야채들이 김치도 한번 절여서",
+        "startMs": 336520,
+        "durationMs": 5000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 133,
+        "text": "한 김치랑 그냥 바로 붙인 김치랑 그",
+        "startMs": 339120,
+        "durationMs": 3960,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 134,
+        "text": "살아있는 기간이 다르잖아요 이렇게",
+        "startMs": 341520,
+        "durationMs": 3880,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 135,
+        "text": "묻여 놓면 3 4일은 먹어요 냉장고",
+        "startMs": 343080,
+        "durationMs": 4239,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 136,
+        "text": "좀 안쪽에 넣어놓으면 얘가 좀",
+        "startMs": 345400,
+        "durationMs": 4440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 137,
+        "text": "늦게까지 살아 있어 바로 먹어도",
+        "startMs": 347319,
+        "durationMs": 4440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 138,
+        "text": "괜찮아요 바로 먹어도 좋은데 그",
+        "startMs": 349840,
+        "durationMs": 3440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 139,
+        "text": "연육이 되니까 이틀 정도 지나서",
+        "startMs": 351759,
+        "durationMs": 3041,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 140,
+        "text": "먹으면 훨씬 맛있어 그렇지 간이",
+        "startMs": 353280,
+        "durationMs": 3800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 141,
+        "text": "배니까 와 요렇게 되는구나 심지어 더",
+        "startMs": 354800,
+        "durationMs": 3839,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 142,
+        "text": "맛있어져요 보전기 일주일까지",
+        "startMs": 357080,
+        "durationMs": 3440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 143,
+        "text": "괜찮았어요 제 실험 결과 그래요 저희",
+        "startMs": 358639,
+        "durationMs": 4921,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 144,
+        "text": "집 냉장 어 일주일까지 오 근데 보통",
+        "startMs": 360520,
+        "durationMs": 4480,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 145,
+        "text": "전 3 4일 안에 드시길 권합니다",
+        "startMs": 363560,
+        "durationMs": 3960,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 146,
+        "text": "혼자 사시는 분들 많잖아요 근데 매번",
+        "startMs": 365000,
+        "durationMs": 4520,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 147,
+        "text": "시켜 먹기 그러니까 저대로 따라서",
+        "startMs": 367520,
+        "durationMs": 3799,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 148,
+        "text": "한근 재해 놓으시면 일주일 동안 제육",
+        "startMs": 369520,
+        "durationMs": 3840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 149,
+        "text": "세 번 드실 수 있어요 어 그 혼자",
+        "startMs": 371319,
+        "durationMs": 5801,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 150,
+        "text": "사시는 분들한테 딱이네요",
+        "startMs": 373360,
+        "durationMs": 3760,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 151,
+        "text": "걸 걷어내면 고기가 나오잖아요",
+        "startMs": 377199,
+        "durationMs": 5321,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 152,
+        "text": "고기부터 올리는 거예요 고기 먼저",
+        "startMs": 380160,
+        "durationMs": 4879,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 153,
+        "text": "올리고 고기 먼저 읽으셔야 돼요 아우",
+        "startMs": 382520,
+        "durationMs": 6640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 154,
+        "text": "3일 되면 양념 잘 되겠다",
+        "startMs": 385039,
+        "durationMs": 4121,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 155,
+        "text": "잠깐 가만 둬 잠깐 가만 둬",
+        "startMs": 392639,
+        "durationMs": 5081,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 156,
+        "text": "[음악]",
+        "startMs": 396160,
+        "durationMs": 4000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 157,
+        "text": "까뭇한 데가 생겨야 된다는 얘기에",
+        "startMs": 397720,
+        "durationMs": 4479,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 158,
+        "text": "기다려 봅시다 처음에 뒤적뒤적 하지",
+        "startMs": 400160,
+        "durationMs": 4680,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 159,
+        "text": "마세요 약간 물어야 돼요 그걸",
+        "startMs": 402199,
+        "durationMs": 4321,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 160,
+        "text": "기다리기 위해서 뜨거운 팬에 넣고",
+        "startMs": 404840,
+        "durationMs": 4120,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 161,
+        "text": "잠깐 기다리시는 거 살짝 기다려 주는",
+        "startMs": 406520,
+        "durationMs": 5280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 162,
+        "text": "잘 보세요 보시다가",
+        "startMs": 408960,
+        "durationMs": 4160,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 163,
+        "text": "런 부분이 생기면 돼요 이런 부분",
+        "startMs": 411800,
+        "durationMs": 3959,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 164,
+        "text": "그래야 기사식당 분위가 나거든요",
+        "startMs": 413120,
+        "durationMs": 5759,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 165,
+        "text": "제일 좋아요네 약간 저렇게 타 조금",
+        "startMs": 415759,
+        "durationMs": 4961,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 166,
+        "text": "타야죠 저게 나와야 홈메이드가 아닌",
+        "startMs": 418879,
+        "durationMs": 3440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 167,
+        "text": "거예요 어이 정도 이런 부분이",
+        "startMs": 420720,
+        "durationMs": 3400,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 168,
+        "text": "군데군데 생기면 런게 맛에 원천이",
+        "startMs": 422319,
+        "durationMs": 3841,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 169,
+        "text": "돼요 그래서 흔들지 말라는 거예요",
+        "startMs": 424120,
+        "durationMs": 3639,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 170,
+        "text": "흔들면서 밑으로 물이 자꾸 기어들어가",
+        "startMs": 426160,
+        "durationMs": 3920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 171,
+        "text": "가지고 고기랑 팬이랑 쫙 붙어서 마이",
+        "startMs": 427759,
+        "durationMs": 4641,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 172,
+        "text": "아르가 일어나는데 그걸 방해해요 잠깐",
+        "startMs": 430080,
+        "durationMs": 5280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 173,
+        "text": "두면 얘가 쪽 붙어가지고 잠깐 타거든",
+        "startMs": 432400,
+        "durationMs": 5560,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 174,
+        "text": "조금 더 맛있게 하려면 렇게 연탄불에",
+        "startMs": 435360,
+        "durationMs": 5480,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 175,
+        "text": "붙는 그런 효과 살짝 이렇게만",
+        "startMs": 437960,
+        "durationMs": 4440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 176,
+        "text": "군데군데 익으면 돼요 여기서 빨리",
+        "startMs": 440840,
+        "durationMs": 3639,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 177,
+        "text": "섞어",
+        "startMs": 442400,
+        "durationMs": 5799,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 178,
+        "text": "자 이렇게 섞어요 잘 피세요 그리고",
+        "startMs": 444479,
+        "durationMs": 6201,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 179,
+        "text": "아까 뭐야 가 많잖아 우리 야채가",
+        "startMs": 448199,
+        "durationMs": 5881,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 180,
+        "text": "시커 드세 아색 걸리겠다 방금 묻힌",
+        "startMs": 450680,
+        "durationMs": 5199,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 181,
+        "text": "거랑 똑같이 신선하게 먹을 수 있죠",
+        "startMs": 454080,
+        "durationMs": 3799,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 182,
+        "text": "야채가 모르지 않았죠 야채 고르네요",
+        "startMs": 455879,
+        "durationMs": 3361,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 183,
+        "text": "그래서 그게 좋아요 아 속으로",
+        "startMs": 457879,
+        "durationMs": 5481,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 184,
+        "text": "살짝한게 살짝한게 국물도 아 아 국물",
+        "startMs": 459240,
+        "durationMs": 7160,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 185,
+        "text": "넣고 야 아 맛있어 보이네요 물니까",
+        "startMs": 463360,
+        "durationMs": 4959,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 186,
+        "text": "또 물이 생겼 아이 맛있겠다 이건",
+        "startMs": 466400,
+        "durationMs": 5239,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 187,
+        "text": "진짜 자 이렇게 하고",
+        "startMs": 468319,
+        "durationMs": 5201,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 188,
+        "text": "뚜껑 거플 요리를 못 하시겠다",
+        "startMs": 471639,
+        "durationMs": 4481,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 189,
+        "text": "싶으면은 그냥 다 넣고 뚜껑 다아",
+        "startMs": 473520,
+        "durationMs": 4519,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 190,
+        "text": "놓고 약불로 익히세요 그럼 다 익어요",
+        "startMs": 476120,
+        "durationMs": 4280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 191,
+        "text": "뚜껑을 덮어서 키면 국물 되게 자작해",
+        "startMs": 478039,
+        "durationMs": 4081,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 192,
+        "text": "뚜껑 없이 계속 볶으면 국물이",
+        "startMs": 480400,
+        "durationMs": 3120,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 193,
+        "text": "없어져요 뚜껑을 안 잡으면 수분이",
+        "startMs": 482120,
+        "durationMs": 3079,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 194,
+        "text": "생각보다 순식간이 날라가요 이렇게",
+        "startMs": 483520,
+        "durationMs": 3679,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 195,
+        "text": "해놓고 3분만 기다리자고 아 뚜껑다고",
+        "startMs": 485199,
+        "durationMs": 4560,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 196,
+        "text": "한 3분 정도",
+        "startMs": 487199,
+        "durationMs": 5840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 197,
+        "text": "어 전 제육 냄새지 제육이 이런",
+        "startMs": 489759,
+        "durationMs": 7081,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 198,
+        "text": "놈이야 갑자기 나도 배고프",
+        "startMs": 493039,
+        "durationMs": 8241,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 199,
+        "text": "자 냄새 너무 좋다 좋아 됐어요 자",
+        "startMs": 496840,
+        "durationMs": 8359,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 200,
+        "text": "이제 갑니다 들어갑니다",
+        "startMs": 501280,
+        "durationMs": 3919,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 201,
+        "text": "[음악]",
+        "startMs": 505930,
+        "durationMs": 3420,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 202,
+        "text": "진 야",
+        "startMs": 509840,
+        "durationMs": 4119,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 203,
+        "text": "야채를 나중에 넣어서 야채 식감도",
+        "startMs": 512039,
+        "durationMs": 3841,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 204,
+        "text": "좋겠다 아 비워 먹기 좋은 거예요",
+        "startMs": 513959,
+        "durationMs": 5000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 205,
+        "text": "냄새가 장난 아니죠",
+        "startMs": 515880,
+        "durationMs": 7240,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 206,
+        "text": "냄새부터 맛있다 맛있죠 아 나도 맛사",
+        "startMs": 518959,
+        "durationMs": 6841,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 207,
+        "text": "보고 싶다 다른 반자 필요 없어요",
+        "startMs": 523120,
+        "durationMs": 4440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 208,
+        "text": "그냥 흰쌀밥에 이거 하나만 딱",
+        "startMs": 525800,
+        "durationMs": 3960,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 209,
+        "text": "올려놓으면 끝 이렇게 해서 자글자글",
+        "startMs": 527560,
+        "durationMs": 4920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 210,
+        "text": "하죠 마늘을 넣을 거예요 마늘을",
+        "startMs": 529760,
+        "durationMs": 4600,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 211,
+        "text": "마지막에 하나 넣으시면 또 한 단계",
+        "startMs": 532480,
+        "durationMs": 5960,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 212,
+        "text": "올라가요 어디까지 올라가려고는",
+        "startMs": 534360,
+        "durationMs": 6159,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 213,
+        "text": "거보다 좀 맛있어야 되거든요 사는",
+        "startMs": 538440,
+        "durationMs": 4480,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 214,
+        "text": "거보다 맛있어지면 공을 좀 들이셔야",
+        "startMs": 540519,
+        "durationMs": 5121,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 215,
+        "text": "돼요네 마늘까지 후추만 좀 불고",
+        "startMs": 542920,
+        "durationMs": 4080,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 216,
+        "text": "마늘을 한번 섞어 주기만 하면 돼요",
+        "startMs": 545640,
+        "durationMs": 4319,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 217,
+        "text": "품마을 냄새는 좀 그러니까 아",
+        "startMs": 547000,
+        "durationMs": 4959,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 218,
+        "text": "맛있겠다 저렇게 만 그대로 해 보세요",
+        "startMs": 549959,
+        "durationMs": 5161,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 219,
+        "text": "그럼 진짜 후회 안 하실 거예요 제구",
+        "startMs": 551959,
+        "durationMs": 5521,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 220,
+        "text": "비벼 먹어야죠 아 제 비벼 먹어야지",
+        "startMs": 555120,
+        "durationMs": 4600,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 221,
+        "text": "이거 이거 비벼먹을 때 제 맛있어요",
+        "startMs": 557480,
+        "durationMs": 3840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 222,
+        "text": "비벼먹어 벼 먹을 때가 제일 맛있어",
+        "startMs": 559720,
+        "durationMs": 3640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 223,
+        "text": "참기름 넣고 비벼 먹으면 아 김가루",
+        "startMs": 561320,
+        "durationMs": 4070,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 224,
+        "text": "뿌리면 또 진짜 맛있겠다",
+        "startMs": 563360,
+        "durationMs": 6039,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 225,
+        "text": "[음악]",
+        "startMs": 565390,
+        "durationMs": 5810,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 226,
+        "text": "음",
+        "startMs": 569399,
+        "durationMs": 3921,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 227,
+        "text": "진짜 근래에 갔던 제육에 제일",
+        "startMs": 571200,
+        "durationMs": 5280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 228,
+        "text": "맛있어요 다행이다 진짜 제육은",
+        "startMs": 573320,
+        "durationMs": 4920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 229,
+        "text": "사랑입니다",
+        "startMs": 576480,
+        "durationMs": 4400,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 230,
+        "text": "아 윙크",
+        "startMs": 578240,
+        "durationMs": 4880,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 231,
+        "text": "평생 써먹을 수 있는 일생 레시피",
+        "startMs": 580880,
+        "durationMs": 5519,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 232,
+        "text": "제육볶음 지금",
+        "startMs": 583120,
+        "durationMs": 3279,
+        "language": "ko"
+      }
+    ],
+    "tracks": [
+      {
+        "languageCode": "ko",
+        "name": "한국어 (자동 생성됨)",
+        "trackKind": "auto"
+      }
+    ],
+    "selectedTrack": {
+      "languageCode": "ko",
+      "name": null,
+      "trackKind": "unknown"
+    },
+    "publicTimedTextReason": "timedtext_status_200"
+  },
+  "authorComments": {
+    "available": true,
+    "reason": null,
+    "comments": []
+  }
+}

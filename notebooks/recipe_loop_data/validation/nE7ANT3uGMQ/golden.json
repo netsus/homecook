@@ -1,0 +1,218 @@
+{
+  "schemaVersion": 1,
+  "videoId": "nE7ANT3uGMQ",
+  "draftedBy": "claude:description+captions + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "원팬 레몬 갈릭 파스타",
+      "servings": 2,
+      "ingredients": [
+        {
+          "name": "올리브유",
+          "nameAliases": [
+            "extra virgin olive oil",
+            "엑스트라 버진 올리브유"
+          ],
+          "amount": "2",
+          "unit": "큰술",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption"
+        },
+        {
+          "name": "마늘",
+          "nameAliases": [
+            "garlic",
+            "head of garlic"
+          ],
+          "amount": "1",
+          "unit": "통",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption"
+        },
+        {
+          "name": "말린 타임",
+          "nameAliases": [
+            "dried thyme",
+            "건조 타임"
+          ],
+          "amount": "1",
+          "unit": "작은술",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption"
+        },
+        {
+          "name": "채소 육수",
+          "nameAliases": [
+            "vegetable broth",
+            "채수",
+            "야채육수"
+          ],
+          "amount": "3",
+          "unit": "컵",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption"
+        },
+        {
+          "name": "펜네",
+          "nameAliases": [
+            "penne pasta",
+            "펜네 파스타"
+          ],
+          "amount": "200",
+          "unit": "g",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption"
+        },
+        {
+          "name": "레몬 제스트",
+          "nameAliases": [
+            "lemon zest",
+            "레몬 껍질"
+          ],
+          "amount": "1/2",
+          "unit": "개 분량",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [
+            "sea salt",
+            "바다소금"
+          ],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption"
+        },
+        {
+          "name": "후추",
+          "nameAliases": [
+            "black pepper",
+            "통후추 간 것"
+          ],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption"
+        },
+        {
+          "name": "만체고 치즈",
+          "nameAliases": [
+            "manchego cheese"
+          ],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption"
+        },
+        {
+          "name": "파슬리",
+          "nameAliases": [
+            "parsley"
+          ],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "큰 프라이팬을 중불에 올리고 엑스트라 버진 올리브유 2큰술(35ml)을 넣어 3분 정도 달군다(연기가 나지 않을 정도).",
+          "evidence": "caption"
+        },
+        {
+          "order": 2,
+          "instruction": "그동안 마늘 1통은 껍질을 벗기고 굵직하게 다진다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 3,
+          "instruction": "달궈진 올리브유에 다진 마늘을 넣고 계속 저어가며 약 2분간 고루 볶는다(너무 갈색이 되지 않게 한다).",
+          "evidence": "caption"
+        },
+        {
+          "order": 4,
+          "instruction": "말린 타임 1작은술(약 1g)을 넣고 마늘에 고루 묻도록 빠르게 섞는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 5,
+          "instruction": "채소 육수 3컵(710ml)을 붓고 불을 중불에서 센 불로 올려 끓인다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 6,
+          "instruction": "육수가 끓어오르면 펜네 2컵(200g)을 넣고 재료가 고루 퍼지도록 한 번 섞는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 7,
+          "instruction": "2~3분마다 저어 주며 약 10분간 끓인다(파스타가 들러붙지 않게 한다).",
+          "evidence": "caption"
+        },
+        {
+          "order": 8,
+          "instruction": "육수가 상당히 흡수되면 뚜껑을 덮고 중약불로 낮춰 3~4분간 알덴테가 될 때까지 익힌다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 9,
+          "instruction": "뚜껑을 열고 팬을 불에서 내린다(남은 육수는 전분으로 걸쭉해져 소스가 된다).",
+          "evidence": "caption"
+        },
+        {
+          "order": 10,
+          "instruction": "레몬 1/2개 분량의 제스트를 곱게 갈아 넣는다(흰 속껍질은 쓴맛이 나므로 넣지 않는다).",
+          "evidence": "caption"
+        },
+        {
+          "order": 11,
+          "instruction": "바다소금 약간과 갓 갈아낸 후추로 간을 한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 12,
+          "instruction": "만체고 치즈를 곱게 갈아 올린다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 13,
+          "instruction": "곱게 다진 파슬리를 뿌려 마무리한다.",
+          "evidence": "caption"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "영어 영상: 설명란에는 분량 정보 없음(외부 레시피 링크만 존재) — 재료·분량·단계 전부 영어 수동 자막 기준(stated-caption), 원문 영어 명칭은 nameAliases에 기록.",
+    "자막 병기 분량: 올리브유 2큰술=35ml(generous), 채소 육수 3컵=710ml, 펜네 2컵=200g(1인당 1컵), 말린 타임 1작은술≈1g.",
+    "2인분 기준(자막: 'this recipe feeds two people').",
+    "대체 가능(자막 명시): 채소 육수 → 물+소금 약간, 펜네 → 다른 두꺼운 파스타, 만체고 치즈 → 기호에 맞는 치즈.",
+    "소금·후추·만체고 치즈·파슬리는 자막에 'a kiss of'/'some'으로만 표현되어 '약간'으로 기재.",
+    "원팬(one-pot) 조리: 모든 과정이 큰 프라이팬 하나에서 진행되며 파스타를 육수에 직접 익힌다."
+  ]
+}

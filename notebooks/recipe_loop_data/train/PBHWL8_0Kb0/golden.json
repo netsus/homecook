@@ -1,0 +1,1233 @@
+{
+  "schemaVersion": 1,
+  "videoId": "PBHWL8_0Kb0",
+  "draftedBy": "claude:description+captions + gemini:visual-steps + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "표고버섯무침",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "생표고버섯",
+          "nameAliases": [
+            "표고버섯",
+            "fresh shiitake mushrooms"
+          ],
+          "amount": "12",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "대파",
+          "nameAliases": [
+            "green onion"
+          ],
+          "amount": "약간",
+          "unit": null,
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [
+            "salt"
+          ],
+          "amount": "3",
+          "unit": "꼬집",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "생수",
+          "nameAliases": [
+            "물",
+            "water"
+          ],
+          "amount": "4",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "까나리액젓",
+          "nameAliases": [
+            "fish sauce"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "다진 마늘",
+          "nameAliases": [
+            "다진마늘",
+            "minced garlic"
+          ],
+          "amount": "1/2",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "매실액",
+          "nameAliases": [
+            "매실청",
+            "plum juice"
+          ],
+          "amount": "1/2",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "참기름",
+          "nameAliases": [
+            "sesame oil"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "깨소금",
+          "nameAliases": [
+            "ground sesame"
+          ],
+          "amount": "1.5",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "표고버섯을 물에 씻어 키친타월로 물기를 닦아준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "표고버섯의 기둥을 가위로 잘라준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "표고버섯을 가늘게 채 썰어준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "대파를 잘게 썰어준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "예열된 팬에 기름 없이 표고버섯, 소금 3꼬집, 물 4큰술을 넣고 볶아준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "숨이 죽은 표고버섯을 그릇에 덜어 식혀준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 7,
+          "instruction": "볼에 식힌 표고버섯, 대파, 까나리액젓 1큰술, 매실액 1큰술, 다진마늘 1/2큰술, 깨소금 1.5큰술, 참기름 1큰술을 넣고 무쳐준다.",
+          "evidence": "visual"
+        }
+      ]
+    },
+    {
+      "title": "매콤감자조림",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "감자",
+          "nameAliases": [
+            "potatoes"
+          ],
+          "amount": "3",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "대파",
+          "nameAliases": [
+            "green onion"
+          ],
+          "amount": "1/2",
+          "unit": "대",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "청양고추",
+          "nameAliases": [
+            "hot peppers"
+          ],
+          "amount": "2",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "다진 마늘",
+          "nameAliases": [
+            "다진마늘",
+            "minced garlic"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "물엿",
+          "nameAliases": [
+            "starch syrup"
+          ],
+          "amount": "3",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "진간장",
+          "nameAliases": [
+            "soy sauce"
+          ],
+          "amount": "2",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "고추장",
+          "nameAliases": [
+            "red pepper paste"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "참기름",
+          "nameAliases": [
+            "sesame oil"
+          ],
+          "amount": "1/2",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "식용유",
+          "nameAliases": [
+            "cooking oil"
+          ],
+          "amount": "3",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "통깨",
+          "nameAliases": [
+            "sesame"
+          ],
+          "amount": "1/2",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "visual-estimate"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "감자를 먹기 좋은 크기로 썰어준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "감자를 찬물에 헹궈 전분을 씻어내고 체에 밭쳐 물기를 빼준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "감자에 물엿 3큰술을 넣고 버무려 20분간 절여준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "청양고추와 대파를 썰어준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "팬에 식용유 3큰술과 다진마늘 1큰술을 넣고 볶아준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "절인 감자를 넣고 살짝 볶은 뒤 뚜껑을 덮고 중불에서 5분간 익혀준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 7,
+          "instruction": "진간장 2큰술과 고추장 1큰술을 넣고 조려준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 8,
+          "instruction": "감자가 거의 익었을 때 청양고추와 대파를 넣고 더 조려준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 9,
+          "instruction": "불을 끄고 참기름 1/2큰술과 통깨를 뿌려 마무리한다.",
+          "evidence": "visual"
+        }
+      ]
+    },
+    {
+      "title": "꽈리고추조림",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "꽈리고추",
+          "nameAliases": [
+            "shishito peppers"
+          ],
+          "amount": "350",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "대파",
+          "nameAliases": [
+            "green onion"
+          ],
+          "amount": "1/3",
+          "unit": "대",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "참기름",
+          "nameAliases": [
+            "sesame oil"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "통깨",
+          "nameAliases": [
+            "sesame"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "진간장",
+          "nameAliases": [
+            "soy sauce"
+          ],
+          "amount": "3",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "고추장",
+          "nameAliases": [
+            "red pepper paste"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "고춧가루",
+          "nameAliases": [
+            "red pepper powder"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "다진 마늘",
+          "nameAliases": [
+            "다진마늘",
+            "minced garlic"
+          ],
+          "amount": "1.5",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "올리고당",
+          "nameAliases": [
+            "oligosaccharide"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "설탕",
+          "nameAliases": [
+            "sugar"
+          ],
+          "amount": "1/2",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "액젓",
+          "nameAliases": [
+            "멸치액젓",
+            "까나리액젓",
+            "salted fish"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "물",
+          "nameAliases": [
+            "water"
+          ],
+          "amount": "60",
+          "unit": "ml",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "꽈리고추의 꼭지를 따준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "대파의 흰 부분을 잘게 썰어준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "예열된 웍에 식용유 2큰술을 두르고 꽈리고추를 살짝 볶아준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "뚜껑을 덮고 약불에서 2분간 익혀준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "볼에 진간장 3큰술, 설탕 1/2큰술, 액젓 1큰술, 올리고당 1큰술, 고춧가루 1큰술, 고추장 1큰술, 다진마늘 1.5큰술, 생수 60ml를 넣고 섞어준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "볶은 꽈리고추에 양념장을 넣고 중강불에서 조려준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 7,
+          "instruction": "양념이 거의 졸아들면 대파를 넣고 볶아준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 8,
+          "instruction": "불을 끄고 참기름 1큰술과 통깨를 뿌려준다.",
+          "evidence": "visual"
+        }
+      ]
+    },
+    {
+      "title": "오이무침",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "백오이",
+          "nameAliases": [
+            "오이",
+            "cucumbers"
+          ],
+          "amount": "3",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "양파",
+          "nameAliases": [
+            "onion"
+          ],
+          "amount": "1/3",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "쪽파",
+          "nameAliases": [
+            "chives"
+          ],
+          "amount": "6",
+          "unit": "줄",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "홍고추",
+          "nameAliases": [
+            "red pepper"
+          ],
+          "amount": "1",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "설탕",
+          "nameAliases": [
+            "sugar"
+          ],
+          "amount": "3",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "식초",
+          "nameAliases": [
+            "vinegar"
+          ],
+          "amount": "3",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "통깨",
+          "nameAliases": [
+            "sesame seeds"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "고춧가루",
+          "nameAliases": [
+            "red pepper powder"
+          ],
+          "amount": "3",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "액젓",
+          "nameAliases": [
+            "멸치액젓",
+            "까나리액젓",
+            "fish sauce"
+          ],
+          "amount": "2",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "진간장",
+          "nameAliases": [
+            "soy sauce"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "다진 마늘",
+          "nameAliases": [
+            "다진마늘",
+            "minced garlic"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "매실액",
+          "nameAliases": [
+            "매실청",
+            "plum juice"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "오이를 반으로 갈라 어슷하게 썰어준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "오이에 설탕 3큰술과 식초 3큰술을 넣고 버무려 10분간 절여준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "양파, 쪽파, 홍고추를 썰어준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "10분 후 절인 오이를 체에 밭쳐 물기를 완전히 빼준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "볼에 물기를 뺀 오이, 양파, 홍고추, 고춧가루 3큰술, 액젓 2큰술, 진간장 1큰술, 매실액 1큰술, 다진마늘 1.5큰술을 넣고 버무려준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "쪽파와 통깨 1큰술을 넣고 골고루 무쳐준다.",
+          "evidence": "visual"
+        }
+      ]
+    },
+    {
+      "title": "잔멸치볶음",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "잔멸치",
+          "nameAliases": [
+            "멸치",
+            "anchovies"
+          ],
+          "amount": "150",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "마늘",
+          "nameAliases": [
+            "garlic"
+          ],
+          "amount": "10",
+          "unit": "알",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "청양고추",
+          "nameAliases": [
+            "hot peppers"
+          ],
+          "amount": "3",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "홍고추",
+          "nameAliases": [
+            "red peppers"
+          ],
+          "amount": "2",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "들기름",
+          "nameAliases": [
+            "perilla oil"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "식용유",
+          "nameAliases": [
+            "cooking oil"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "맛술",
+          "nameAliases": [
+            "cooking wine"
+          ],
+          "amount": "3",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "설탕",
+          "nameAliases": [
+            "sugar"
+          ],
+          "amount": "1.5",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "올리고당",
+          "nameAliases": [
+            "oligosaccharide"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "참기름",
+          "nameAliases": [
+            "sesame oil"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "통깨",
+          "nameAliases": [
+            "sesame seeds"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "잔멸치를 체에 밭쳐 잔가루를 털어준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "마늘을 도톰하게 편 썰어준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "청양고추와 홍고추를 잘게 썰어준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "팬에 식용유 1큰술과 들기름 1큰술을 두르고 편마늘을 볶아 향을 내준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "잔멸치를 넣고 같이 볶은 뒤 그릇에 덜어 식혀준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "팬에 맛술 3큰술, 설탕 1.5큰술, 올리고당 1큰술을 넣고 중불에서 설탕이 녹도록 끓여준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 7,
+          "instruction": "양념이 끓으면 볶아둔 멸치와 마늘을 넣고 볶아준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 8,
+          "instruction": "청양고추와 홍고추를 넣고 함께 볶아준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 9,
+          "instruction": "불을 끄고 참기름 1큰술과 통깨 1큰술을 넣고 섞어준다.",
+          "evidence": "visual"
+        }
+      ]
+    },
+    {
+      "title": "삼겹살조림",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "삼겹살",
+          "nameAliases": [
+            "pork belly"
+          ],
+          "amount": "600",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "대파",
+          "nameAliases": [
+            "green onion"
+          ],
+          "amount": "1",
+          "unit": "대",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "상추",
+          "nameAliases": [
+            "lettuce"
+          ],
+          "amount": "7",
+          "unit": "장",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "청양고추",
+          "nameAliases": [
+            "hot peppers"
+          ],
+          "amount": "3",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "베트남고추",
+          "nameAliases": [
+            "Vietnamese chili peppers"
+          ],
+          "amount": "7",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "마늘",
+          "nameAliases": [
+            "garlic"
+          ],
+          "amount": "7",
+          "unit": "알",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "감자전분",
+          "nameAliases": [
+            "potato starch"
+          ],
+          "amount": "2/3",
+          "unit": "컵",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [
+            "salt"
+          ],
+          "amount": "2~3",
+          "unit": "꼬집",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "spoken"
+        },
+        {
+          "name": "후추",
+          "nameAliases": [
+            "pepper"
+          ],
+          "amount": "약간",
+          "unit": "분량",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "spoken"
+        },
+        {
+          "name": "진간장",
+          "nameAliases": [
+            "soy sauce"
+          ],
+          "amount": "2.5",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "맛술",
+          "nameAliases": [
+            "cooking wine"
+          ],
+          "amount": "2",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "물엿",
+          "nameAliases": [
+            "starch syrup"
+          ],
+          "amount": "2",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "설탕",
+          "nameAliases": [
+            "sugar"
+          ],
+          "amount": "2/3",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "다진 생강",
+          "nameAliases": [
+            "다진생강",
+            "minced ginger"
+          ],
+          "amount": "1",
+          "unit": "작은술",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "후추",
+          "nameAliases": [
+            "pepper"
+          ],
+          "amount": "약간",
+          "unit": "분량",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "spoken"
+        },
+        {
+          "name": "진간장",
+          "nameAliases": [
+            "soy sauce"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "파채소스",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "식초",
+          "nameAliases": [
+            "vinegar"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "파채소스",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "매실액",
+          "nameAliases": [
+            "매실청",
+            "plum juice"
+          ],
+          "amount": "2",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "파채소스",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "참기름",
+          "nameAliases": [
+            "sesame oil"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "파채소스",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "통깨",
+          "nameAliases": [
+            "sesame seeds"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "파채소스",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "고춧가루 (파채소스)",
+          "nameAliases": [],
+          "amount": "1/2",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": "파채소스",
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "삼겹살에 소금과 후추를 뿌려 밑간을 한다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "대파를 채 썰어 찬물에 담가 매운맛을 빼준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "상추, 청양고추, 마늘을 썰어준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "진간장 2.5큰술, 맛술 2큰술, 물엿 2큰술, 설탕 2/3큰술, 다진생강 1작은술, 후추를 섞어 양념소스를 만듭니다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "밑간한 삼겹살에 감자전분 2/3컵을 넣고 골고루 묻혀준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "예열된 팬에 식용유를 넉넉히 두르고 삼겹살을 중불에서 노릇하게 구워준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 7,
+          "instruction": "구운 삼겹살을 채반에 덜어내고 남은 기름에 편마늘을 구워준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 8,
+          "instruction": "웍에 양념소스와 베트남고추 7개를 넣고 끓여준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 9,
+          "instruction": "양념이 끓으면 구운 고기, 청양고추, 구운 마늘을 넣고 재빨리 볶아준다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 10,
+          "instruction": "진간장 1큰술, 식초 1큰술, 매실액 2큰술, 고춧가루 1/2큰술, 참기름 1큰술, 통깨 1큰술을 섞어 파채 소스를 만듭니다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 11,
+          "instruction": "물기 뺀 파채와 상추에 파채 소스를 넣고 버무려준다.",
+          "evidence": "visual"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "자막 없음(no_public_caption_tracks) + 작성자 댓글 없음. 설명란에는 요리별 재료 목록만 있고 조리 단계가 없어 모든 레시피의 steps를 빈 배열로 둠(추측 금지).",
+    "설명란 기준 6개 레시피: 표고버섯무침, 매콤감자조림, 꽈리고추조림, 오이무침, 잔멸치볶음, 삼겹살조림 — 해시태그 순서와 일치.",
+    "무게 병기 정보: 생표고버섯 12개(300g), 감자 3개(500g) — amount는 개수 기준으로 기재.",
+    "꽈리고추조림의 대파 1/3대는 흰 부분 사용으로 명시됨.",
+    "매실액은 영문 표기상 'plum juice(or sugar)'로 설탕 대체 가능(표고버섯무침·오이무침·삼겹살조림 파채소스).",
+    "액젓은 '(멸치 또는 까나리)액젓'으로 표기되어 표준명 '액젓'에 멸치/까나리를 alias 처리(꽈리고추조림·오이무침). 표고버섯무침은 까나리액젓으로 특정됨.",
+    "삼겹살조림: 후추가 밑간(소금, 후추)과 양념장에 모두 등장해 별도 항목으로 중복 기재. 진간장·통깨 등도 그룹별 중복 기재.",
+    "오이무침 쪽파 단위 '줄'은 설명란 원문 표기 그대로.",
+    "steps는 자막이 없어 Gemini 시각 추출(gemini-3.1-flash-lite, file_uri) 초안임 — 검수 시 영상 대조 필요",
+    "[visual-pass] 레시피 0(표고버섯무침)의 재료 목록에 '다진 마늘'이 1/2 큰술로 기재되어 있으나, 영상 자막에는 '다진마늘 1/2큰술'로 명시되어 있어 일치함.",
+    "[visual-pass] 레시피 5(삼겹살조림)의 파채소스 재료 중 초안에 '고춧가루'가 누락되어 있어 newIngredients에 추가함."
+  ]
+}

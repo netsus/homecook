@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 1,
+  "videoId": "J5Rmux3ttaY",
+  "draftedBy": "claude:description+captions + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "다시마 고추다대기",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "다시마",
+          "nameAliases": [
+            "디시마",
+            "다시 마",
+            "kelp"
+          ],
+          "amount": "1",
+          "unit": "컵",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "멸치",
+          "nameAliases": [
+            "밀치",
+            "굵은 멸치"
+          ],
+          "amount": "1/2",
+          "unit": "컵",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "고추",
+          "nameAliases": [
+            "매운 고추",
+            "red pepper"
+          ],
+          "amount": "10",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "마늘",
+          "nameAliases": [
+            "다진 마늘"
+          ],
+          "amount": "5",
+          "unit": "알",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "식용유",
+          "nameAliases": [
+            "기름",
+            "아보카도유"
+          ],
+          "amount": "3",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "간장",
+          "nameAliases": [],
+          "amount": "3",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "물",
+          "nameAliases": [],
+          "amount": "1/2",
+          "unit": "컵",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "고춧가루",
+          "nameAliases": [],
+          "amount": "조금",
+          "unit": null,
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "올리고당",
+          "nameAliases": [
+            "쌀올리고당",
+            "물엿"
+          ],
+          "amount": "적당량",
+          "unit": null,
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "다시마를 물에 담가 30분 정도 불린다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 2,
+          "instruction": "통통하게 불어난 다시마를 소쿠리에 건져 물기를 뺀다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 3,
+          "instruction": "멸치를 커터기에 갈거나 칼로 잘게 다져 준비한다(칼로 다지면 더 맛있다).",
+          "evidence": "caption"
+        },
+        {
+          "order": 4,
+          "instruction": "고추를 잘게 다진다(매운 것을 못 먹으면 안 매운 고추를 쓰거나 섞어 쓴다).",
+          "evidence": "caption"
+        },
+        {
+          "order": 5,
+          "instruction": "물기 뺀 다시마를 칼로 잘게 다진다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 6,
+          "instruction": "팬에 기름을 두르고 다진 멸치를 먼저 달달 볶는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 7,
+          "instruction": "멸치가 어느 정도 볶아지면 다진 다시마를 넣고 같이 볶는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 8,
+          "instruction": "다진 고추를 넣는다(다시마 양이 고추보다 훨씬 많아야 맛있다).",
+          "evidence": "caption"
+        },
+        {
+          "order": 9,
+          "instruction": "간장을 부어 1차로 간을 하고 한번 맛을 본 뒤 간을 맞춘다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 10,
+          "instruction": "물을 조금 자박하게 부어 재료의 맛이 어우러지도록 한소끔 끓인다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 11,
+          "instruction": "찧어 놓은 마늘을 넣는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 12,
+          "instruction": "고춧가루를 조금 넣는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 13,
+          "instruction": "올리고당이나 물엿 같은 단맛을 적당량 넣는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 14,
+          "instruction": "한 번 끓이면서 잘 섞어 준 뒤 불을 끈다.",
+          "evidence": "caption"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "설명란(91자)에는 레시피 정보가 없어 자동 생성(ASR) 한국어 자막 기준으로 작성.",
+    "ASR 오류 보정 목록: '다시 마다 되기'→'다시마 다대기', '밀치/일치'→'멸치', '하늘 있으며 썸 지어 주시고요'→'마늘 있으면 찧어 주시고요', '머물려'→'물엿', '아보카도 키'→'아보카도유', '아깐 장/안장'→'간장', '꺼려 줍니다'→'끓여 줍니다'.",
+    "분량은 영상에서 '어느만큼인지는 안 알려 주시고 만드는 방법만 알려주시더라구요'(line 114~116)라고 명시 — 모든 재료 amount는 자막에 표현된 '조금', '적당량' 외 null.",
+    "line 50 '그냥 토 꽃으로 하시면 되고요'는 '풋고추로'로 추정되나 확신 없음. line 52 '명분만 해볼게요'는 '매운 고추만'으로 추정(청양고추 여부 불확실) — 고추 종류는 입맛대로 매운 것/안 매운 것 섞어도 된다는 취지만 반영.",
+    "line 110 '이거 뭐 투수로 나온 거 좀 넣구요'는 다시마 불린 물(육수)을 넣는 것으로 추정되나 확신이 없어 steps에서 제외.",
+    "line 31 '빠 가지고'는 멸치 머리·내장을 '빼 가지고'로 추정되나 확신이 없어 steps에서 제외.",
+    "마늘은 '있으면 찧어 주시고 없으면 시판 다진 마늘도 된다'는 취지로 추정(line 26~28).",
+    "영상 말미의 다시마 효능 설명, '다대기'는 일본식 표현이라 '조림/짜박이'로 불러야 한다는 명칭 논의, 시식 멘트는 단계에서 제외.",
+    "[visual-pass] 레시피 초안에 명시된 '다시마 고추다대기'라는 명칭은 영상 속에서 '다시마 조림' 혹은 '다시마 짜박이'로 언급되며, 고추다대기가 아닌 다시마가 주재료인 조림 요리입니다.",
+    "[visual-pass] 영상에서 다진 소고기나 다른 추가 재료는 사용되지 않았습니다."
+  ]
+}

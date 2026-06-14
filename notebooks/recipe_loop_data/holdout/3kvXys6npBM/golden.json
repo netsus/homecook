@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "videoId": "3kvXys6npBM",
+  "draftedBy": "claude:description+captions + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "오븐 없이 원팬 라따뚜이",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "토마토",
+          "nameAliases": [
+            "tomato"
+          ],
+          "amount": "2.5",
+          "unit": "개",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "애호박",
+          "nameAliases": [
+            "zucchini",
+            "주키니"
+          ],
+          "amount": "1",
+          "unit": "개",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "가지",
+          "nameAliases": [
+            "eggplant"
+          ],
+          "amount": "1",
+          "unit": "개",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "토마토소스",
+          "nameAliases": [
+            "토마토 소스",
+            "tomato sauce"
+          ],
+          "amount": "200",
+          "unit": "ml",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "올리브오일",
+          "nameAliases": [
+            "올리브 오일",
+            "올리브유"
+          ],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "꼬집",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "파마산 치즈",
+          "nameAliases": [
+            "파마산치즈",
+            "Parmesan cheese"
+          ],
+          "amount": "2",
+          "unit": "큰술",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "파슬리가루",
+          "nameAliases": [
+            "파슬리 가루",
+            "허브가루"
+          ],
+          "amount": null,
+          "unit": null,
+          "amountBasis": null,
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "후추",
+          "nameAliases": [
+            "pepper"
+          ],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "다진 마늘",
+          "nameAliases": [
+            "다진마늘"
+          ],
+          "amount": "1/2",
+          "unit": "T",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "애호박·토마토·가지를 0.3cm 두께로 썰고, 자투리 부분은 작게 썬다.",
+          "evidence": "description"
+        },
+        {
+          "order": 2,
+          "instruction": "팬을 약불에 올려 올리브오일을 약간 두르고, 다진 마늘 1/2T를 넣어 마늘 향이 올라올 때까지 볶는다.",
+          "evidence": "description"
+        },
+        {
+          "order": 3,
+          "instruction": "자투리 채소와 소금 두 꼬집을 넣고 볶다가, 채소가 어느 정도 익으면 토마토소스 200ml를 넣고 볶은 뒤 불을 끈다.",
+          "evidence": "description"
+        },
+        {
+          "order": 4,
+          "instruction": "소스 위에 토마토–애호박–가지 순으로 돌려 담는다(순서는 상관없고, 가운데는 토마토를 반으로 잘라 놓으면 편하다).",
+          "evidence": "description"
+        },
+        {
+          "order": 5,
+          "instruction": "채소 위에 소금 두 꼬집을 뿌리고 올리브오일을 약간 두른다.",
+          "evidence": "description"
+        },
+        {
+          "order": 6,
+          "instruction": "다시 약불에 올려 뚜껑을 닫고 15분간 끓인다.",
+          "evidence": "description"
+        },
+        {
+          "order": 7,
+          "instruction": "15분 뒤 채소가 익으면 파마산 치즈를 갈아 올리고, 후추 약간과 올리브오일 약간을 둘러 풍미를 올려 마무리한다.",
+          "evidence": "description"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "설명란과 작성자 고정 댓글에 동일한 레시피 전문 수록 — 설명란 기준으로 작성.",
+    "자막은 일본어 자동 생성 5줄([音楽] 등)로 조리 정보 없음 — 무시.",
+    "소금 '2꼬집'은 1회 기준 — 조리 중 두 번(자투리 채소 볶을 때, 돌려 담은 채소 위) 사용해 총 4꼬집 상당.",
+    "올리브오일은 팬 두르기·채소 위·마무리까지 총 3회 '약간'씩 사용.",
+    "파슬리가루는 재료 목록에만 있고 단계 텍스트에는 등장하지 않음(마무리 토핑 추정) — 투입 시점 시각 확인 필요. 다른 허브가루로 대체 가능.",
+    "파마산 치즈 분량 미명시 — null, 시각 보강은 다음 단계.",
+    "servings 미명시 — null. 55초 쇼츠라 단계는 설명란 7단계 그대로 유지.",
+    "'빵과 함께 먹으면 맛있다'는 서빙 팁은 단계에서 제외.",
+    "[visual-pass] 레시피 초안의 [0.7] 파슬리가루는 영상에서 사용되지 않았습니다."
+  ]
+}

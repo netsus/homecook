@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-06-11T07:21:07.245Z",
+  "video": {
+    "videoId": "Egpjve8caK0",
+    "url": "https://www.youtube.com/watch?v=Egpjve8caK0",
+    "title": "쉬운요리 라따뚜이 노오븐으로 만들기 #라따뚜이 #ratatouille #노오븐요리",
+    "description": "",
+    "channelId": "UCAK3Rs6YNkKkptybSpGyL4w",
+    "channelTitle": "맛있는이유",
+    "publishedAt": "2024-03-26T05:59:16Z",
+    "tags": [],
+    "defaultLanguage": "ko",
+    "durationSeconds": 33,
+    "thumbnailUrl": "https://i.ytimg.com/vi/Egpjve8caK0/maxresdefault.jpg"
+  },
+  "stats": {
+    "viewCount": 265508,
+    "likeCount": 3191,
+    "commentCount": 17
+  },
+  "descriptionSignal": {
+    "hasIngredientKeyword": false,
+    "hasStepKeyword": false,
+    "hasQuantityPattern": false,
+    "length": 0
+  },
+  "captions": {
+    "available": true,
+    "reason": null,
+    "provider": "apify",
+    "language": "ko",
+    "segments": [
+      {
+        "lineIndex": 0,
+        "text": "[음악]",
+        "startMs": 0,
+        "durationMs": 2280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 1,
+        "text": "또",
+        "startMs": 240,
+        "durationMs": 4079,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 2,
+        "text": "나라는",
+        "startMs": 2280,
+        "durationMs": 3680,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 3,
+        "text": "사람을",
+        "startMs": 4319,
+        "durationMs": 4041,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 4,
+        "text": "몰랐던",
+        "startMs": 5960,
+        "durationMs": 3920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 5,
+        "text": "나가다가",
+        "startMs": 8360,
+        "durationMs": 6760,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 6,
+        "text": "돌아서서 말했지 너는 바라는게 너무나",
+        "startMs": 9880,
+        "durationMs": 10200,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 7,
+        "text": "많아 아야 내가 늘 바한 건 하나야",
+        "startMs": 15120,
+        "durationMs": 9360,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 8,
+        "text": "한개 뿐이야 다지도",
+        "startMs": 20080,
+        "durationMs": 4400,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 9,
+        "text": "[음악]",
+        "startMs": 24890,
+        "durationMs": 6189,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 10,
+        "text": "밤양갱",
+        "startMs": 28960,
+        "durationMs": 5119,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 11,
+        "text": "h",
+        "startMs": 31079,
+        "durationMs": 3000,
+        "language": "ko"
+      }
+    ],
+    "tracks": [
+      {
+        "languageCode": "ko",
+        "name": "한국어 (자동 생성됨)",
+        "trackKind": "auto"
+      }
+    ],
+    "selectedTrack": {
+      "languageCode": "ko",
+      "name": null,
+      "trackKind": "unknown"
+    },
+    "publicTimedTextReason": "timedtext_status_200"
+  },
+  "authorComments": {
+    "available": true,
+    "reason": null,
+    "comments": []
+  }
+}

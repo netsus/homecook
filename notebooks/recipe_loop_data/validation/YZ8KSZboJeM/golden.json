@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 1,
+  "videoId": "YZ8KSZboJeM",
+  "draftedBy": "claude:description+captions + gemini:visual-recipes + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "진한 초코 마들렌",
+      "servings": "12개",
+      "ingredients": [
+        {
+          "name": "계란",
+          "nameAliases": [
+            "달걀",
+            "Egg"
+          ],
+          "amount": "100",
+          "unit": "g",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "반죽",
+          "evidence": "description"
+        },
+        {
+          "name": "설탕",
+          "nameAliases": [
+            "Sugar"
+          ],
+          "amount": "85",
+          "unit": "g",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "반죽",
+          "evidence": "description"
+        },
+        {
+          "name": "꿀",
+          "nameAliases": [
+            "Honey"
+          ],
+          "amount": "15",
+          "unit": "g",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "반죽",
+          "evidence": "description"
+        },
+        {
+          "name": "바닐라익스트랙",
+          "nameAliases": [
+            "바닐라 익스트랙트",
+            "Vanilla extract"
+          ],
+          "amount": "2",
+          "unit": "g",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "반죽",
+          "evidence": "description"
+        },
+        {
+          "name": "박력분",
+          "nameAliases": [
+            "박력 밀가루",
+            "Soft flour"
+          ],
+          "amount": "95",
+          "unit": "g",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "반죽",
+          "evidence": "description"
+        },
+        {
+          "name": "코코아가루",
+          "nameAliases": [
+            "코코아파우더",
+            "Cocoa powder"
+          ],
+          "amount": "15",
+          "unit": "g",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "반죽",
+          "evidence": "description"
+        },
+        {
+          "name": "베이킹파우더",
+          "nameAliases": [
+            "Baking powder"
+          ],
+          "amount": "3",
+          "unit": "g",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "반죽",
+          "evidence": "description"
+        },
+        {
+          "name": "버터",
+          "nameAliases": [
+            "Butter"
+          ],
+          "amount": "100",
+          "unit": "g",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "반죽",
+          "evidence": "description"
+        },
+        {
+          "name": "다크초콜릿",
+          "nameAliases": [
+            "코팅용 다크초콜릿",
+            "Dark chocolate"
+          ],
+          "amount": "120",
+          "unit": "g",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "코팅",
+          "evidence": "description"
+        },
+        {
+          "name": "버터 (틀 코팅용)",
+          "nameAliases": [],
+          "amount": "약 10",
+          "unit": "g",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "박력분 (틀 코팅용)",
+          "nameAliases": [],
+          "amount": "약 5",
+          "unit": "g",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "마들렌 틀에 버터를 꼼꼼히 얇게 펴 바른 뒤 박력분을 체 쳐서 골고루 뿌리고 남은 가루를 털어낸다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "버터·박력분으로 코팅한 마들렌 틀은 사용 직전까지 냉장 보관한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 3,
+          "instruction": "실온에 1시간 이상 둔 계란을 풀고 설탕, 꿀, 바닐라 익스트랙을 넣어 거품기를 볼 바닥에 붙여 설탕 입자가 미세하게 느껴질 정도로 섞는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "박력분, 코코아 가루, 베이킹 파우더를 체 쳐서 넣고 거품기를 볼 바닥에 붙여 매끄럽게 섞은 뒤 30회 정도 더 저어 글루텐을 만든다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "40~60℃로 녹인 버터를 넣고 골고루 섞은 뒤 주걱으로 마무리한다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "반죽을 랩핑하여 최소 1시간에서 24시간 동안 휴지시킨다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 7,
+          "instruction": "휴지가 끝난 반죽을 마지막으로 섞어 기포를 없앤 뒤 짤주머니에 옮겨 담는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 8,
+          "instruction": "코팅된 틀에 반죽을 80% 정도 채운다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 9,
+          "instruction": "170℃로 예열된 오븐에서 12분간 굽는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 10,
+          "instruction": "구워진 마들렌을 틀에서 분리해 옆으로 눕혀 식힌다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 11,
+          "instruction": "녹인 다크 초콜릿을 틀에 10g씩 넣고 마들렌을 가볍게 눌러 담는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 12,
+          "instruction": "냉장실이나 냉동실에서 20~30분간 완전히 굳힌다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 13,
+          "instruction": "틀에서 마들렌을 분리하여 완성한다.",
+          "evidence": "visual"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "자막 없음(no_public_caption_tracks). 설명란은 재료 계량(12ea, g 단위)만 상세하고 조리 절차는 없음.",
+    "steps 1~4, 6~8은 재료 목록 순서와 설명란 문구('글루텐 형성과 버터의 온도가 중요')에 기반한 추정 뼈대 — 믹싱 순서·반죽 상태 기준·팬닝·코팅 방법 시각추출 필요.",
+    "오븐 굽기 온도·시간 미명시 → 시각추출 필요. 사용 오븐: 위즈웰 프리미엄 컨벡션오븐 GL-48N(설명란).",
+    "냉장 휴지 1~24시간은 작성자 고정 댓글(4:14 타임스탬프) 근거.",
+    "베이킹 정밀 계량: 설명란의 g 단위 표기를 그대로 유지(계란도 100g 표기).",
+    "[visual-recipes] 시각추출(steps)로 단계 교체·재료 보강 — 진한 초코 마들렌: 단계 12, 분량채움 0, 재료추가 0",
+    "[visual-pass] 모든 재료의 분량이 영상 내 자막으로 명확하게 제시되어 있어 수정할 사항이 없습니다.",
+    "[visual-pass] 틀 코팅을 위해 사용된 버터와 박력분은 레시피의 필수 과정이나 초안 재료 목록에는 누락되어 있어 추가하였습니다.",
+    "검수 반영(2026-06-13): 1단계(가루 털어내기) 직후 틀을 사용 전까지 냉장 보관하는 단계 추가."
+  ]
+}

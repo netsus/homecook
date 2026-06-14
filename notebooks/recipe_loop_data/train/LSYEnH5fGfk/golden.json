@@ -1,0 +1,602 @@
+{
+  "schemaVersion": 1,
+  "videoId": "LSYEnH5fGfk",
+  "draftedBy": "claude:description+captions + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "원 팟 토마토 바질 링귀네",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "링귀네면",
+          "nameAliases": [
+            "linguine"
+          ],
+          "amount": "350",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "방울토마토",
+          "nameAliases": [
+            "cherry tomatoes"
+          ],
+          "amount": "350",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "양파",
+          "nameAliases": [
+            "yellow onion"
+          ],
+          "amount": "1",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "마늘",
+          "nameAliases": [
+            "garlic"
+          ],
+          "amount": "4",
+          "unit": "쪽",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "크러시드 레드페퍼",
+          "nameAliases": [
+            "red pepper flakes"
+          ],
+          "amount": "1",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "올리브유",
+          "nameAliases": [
+            "extra virgin olive oil",
+            "엑스트라 버진 올리브유"
+          ],
+          "amount": "45",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "물",
+          "nameAliases": [
+            "water"
+          ],
+          "amount": "1.25",
+          "unit": "L",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [
+            "salt"
+          ],
+          "amount": "1",
+          "unit": "작은술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "바질",
+          "nameAliases": [
+            "basil",
+            "fresh basil"
+          ],
+          "amount": "4",
+          "unit": "줄기",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "파르미지아노 레지아노",
+          "nameAliases": [
+            "Parmesan reggiano",
+            "Parmigiano-Reggiano"
+          ],
+          "amount": "2",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "후추",
+          "nameAliases": [
+            "black pepper"
+          ],
+          "amount": "1/4",
+          "unit": "작은술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "올리브유(가니쉬용)",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "작은술",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "중간 크기 소테팬이나 크고 깊은 팬에 마른 링귀네면 350g을 차가운 팬 그대로 넣는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 2,
+          "instruction": "방울토마토, 얇게 썬 양파 1개, 얇게 썬 마늘 4쪽, 크러시드 레드페퍼, 올리브유, 물 1.25L를 모두 팬에 넣는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 3,
+          "instruction": "소금으로 가볍게 간하고 중강불에서 끓어오르게 한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 4,
+          "instruction": "집게로 면을 가끔 뒤집어 가며 면이 알 덴테가 되고 물이 거의 증발할 때까지 9분간 끓인다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 5,
+          "instruction": "바질 4줄기를 손으로 찢어 넣고 섞는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 6,
+          "instruction": "그릇에 담고 생바질, 갓 간 파르미지아노 레지아노, 굵게 간 후추, 올리브유 약간을 뿌려 마무리한다.",
+          "evidence": "caption"
+        }
+      ]
+    },
+    {
+      "title": "원 팟 크리미 케이준 치킨 리가토니",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "닭가슴살",
+          "nameAliases": [
+            "boneless skinless chicken breasts"
+          ],
+          "amount": "2",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [
+            "salt"
+          ],
+          "amount": "1/2",
+          "unit": "작은술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "후추",
+          "nameAliases": [
+            "pepper",
+            "black pepper"
+          ],
+          "amount": "1/4",
+          "unit": "작은술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "식용유",
+          "nameAliases": [
+            "high heat cooking oil",
+            "canola oil",
+            "avocado oil"
+          ],
+          "amount": "2",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "무염버터",
+          "nameAliases": [
+            "unsalted butter"
+          ],
+          "amount": "45",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "샬롯",
+          "nameAliases": [
+            "shallot"
+          ],
+          "amount": "1",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "마늘",
+          "nameAliases": [
+            "garlic"
+          ],
+          "amount": "4",
+          "unit": "쪽",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "토마토",
+          "nameAliases": [
+            "large tomato"
+          ],
+          "amount": "1",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "케이준 시즈닝",
+          "nameAliases": [
+            "Cajun seasoning"
+          ],
+          "amount": "7",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "리가토니",
+          "nameAliases": [
+            "rigatoni"
+          ],
+          "amount": "226",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "물",
+          "nameAliases": [
+            "water"
+          ],
+          "amount": "375",
+          "unit": "ml",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "생크림",
+          "nameAliases": [
+            "heavy cream"
+          ],
+          "amount": "500",
+          "unit": "ml",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "레몬즙",
+          "nameAliases": [
+            "lemon juice"
+          ],
+          "amount": "12",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "파르미지아노 레지아노",
+          "nameAliases": [
+            "Parmesan reggiano",
+            "Parmigiano-Reggiano"
+          ],
+          "amount": "25",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "파슬리",
+          "nameAliases": [
+            "fresh parsley"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": true,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "닭가슴살 2개를 두께 약 0.6cm(1/4인치) 이하의 얇은 시트 모양으로 저민다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 2,
+          "instruction": "닭고기에 소금과 후추로 밑간한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 3,
+          "instruction": "크고 깊은 소테팬이나 스킬렛을 중강불에 올리고 바닥을 얇게 덮을 만큼만 식용유를 두른다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 4,
+          "instruction": "닭고기를 팬에 겹치지 않게 나눠 넣고 한 면을 약 2분, 뒤집어 2~3분 더 노릇하고 속이 막 익을 때까지 구운 뒤 꺼내 둔다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 5,
+          "instruction": "불을 중불로 줄이고 무염버터 45g을 넣어 녹인다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 6,
+          "instruction": "버터가 녹아 거품이 일면 곱게 다진 샬롯 1개, 다진 마늘 4쪽, 깍둑썬 토마토 1개를 넣고 소금으로 가볍게 간한 뒤 재료가 부드러워지고 향이 나기 시작할 때까지 볶는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 7,
+          "instruction": "케이준 시즈닝 7g을 넣고 향이 올라올 때까지 약 30초간 볶는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 8,
+          "instruction": "리가토니 226g을 넣고 가볍게 버무린 뒤 물 375ml를 붓는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 9,
+          "instruction": "중강불로 올려 끓으면 중불로 줄이고 뚜껑을 덮어 5분간 익힌다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 10,
+          "instruction": "뚜껑을 열고 생크림 500ml를 부어 중강불에서 끓어오르면 약불로 줄여 소스가 졸아들고 면이 알 덴테가 될 때까지 가끔 저어 가며 5~8분 더 끓인다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 11,
+          "instruction": "구워 둔 닭고기를 깍둑썰어 팬에 다시 넣고 레몬즙 12g을 넣어 함께 섞는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 12,
+          "instruction": "파르미지아노 레지아노 25g을 넣고 치즈가 녹아 소스에 유화될 때까지 중약불에서 저은 뒤 불을 끈다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 13,
+          "instruction": "그릇에 담고 갓 간 파르미지아노 레지아노와 곱게 다진 파슬리를 올려 낸다.",
+          "evidence": "caption"
+        }
+      ]
+    },
+    {
+      "title": "전통 카르보나라",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "스파게티면",
+          "nameAliases": [
+            "spaghetti"
+          ],
+          "amount": "350",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "관찰레",
+          "nameAliases": [
+            "guanciale"
+          ],
+          "amount": "140",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "마늘",
+          "nameAliases": [
+            "garlic"
+          ],
+          "amount": "2",
+          "unit": "쪽",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "페코리노 치즈",
+          "nameAliases": [
+            "pecorino cheese"
+          ],
+          "amount": "150",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "파르미지아노 레지아노",
+          "nameAliases": [
+            "Parmigiano-Reggiano"
+          ],
+          "amount": "50",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "달걀노른자",
+          "nameAliases": [
+            "egg yolks"
+          ],
+          "amount": "4",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [
+            "salt"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "물",
+          "nameAliases": [
+            "water"
+          ],
+          "amount": "2",
+          "unit": "L",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "냄비에 물을 받아 중강불에 올리고 소금을 넉넉히 넣어 끓인다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 2,
+          "instruction": "차가운 큰 스킬렛에 사방 약 0.6cm(1/4인치)로 깍둑썬 관찰레 140g을 넣고 중약불에서 자주 저어 가며 고르게 노릇하고 바삭해질 때까지 익힌다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 3,
+          "instruction": "얇게 썬 마늘 2쪽을 넣고 향이 날 때까지 2~3분 볶은 뒤 기름의 절반을 따라 내고 불을 끈다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 4,
+          "instruction": "물이 끓으면 스파게티면 350g을 넣고 포장지 안내대로 알 덴테가 될 때까지 8~10분간 삶는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 5,
+          "instruction": "볼에 갓 간 페코리노 치즈 150g, 갓 간 파르미지아노 레지아노 50g, 달걀노른자 4개를 넣고 페이스트 상태가 될 때까지 섞는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 6,
+          "instruction": "면이 다 익으면 집게로 건져 관찰레가 있는 팬으로 옮긴다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 7,
+          "instruction": "불을 켜지 않은 상태에서 치즈-노른자 혼합물을 넣고 면수를 조금씩 더해 가며 소스가 부드럽고 크리미하게 유화되어 면에 감길 때까지 계속 버무린다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 8,
+          "instruction": "얕은 그릇에 담고 갓 간 파르미지아노 레지아노를 올려 낸다.",
+          "evidence": "caption"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "설명란에는 분량이 없고 재료 목록은 외부 링크(joshuaweissman.com)로만 안내 — 모든 재료·분량은 자막 기준으로 작성.",
+    "자막에 imperial/metric 병기(예: '12 ounces or 350 grams') — 무게·부피는 metric(g/ml/L) 기준으로 기록, 개수 단위는 한국어 표준(개/쪽/줄기) 사용.",
+    "레시피1 방울토마토: 참고한 원 레시피 기준 350g이지만 영상에서는 '너무 많아 보여 절반 정도만 사용'이라고 언급.",
+    "레시피2 식용유 분량은 '팬 바닥을 덮을 만큼'으로만 언급되어 amount/unit은 null.",
+    "ASR 보정: 'for cloves of garlic'→four cloves(마늘 4쪽), 'wild saute pan'→wide saute pan, 'green off half the fat'→drain off half the fat, 'impot pasta'→one pot pasta.",
+    "카르보나라는 원 팟 요리가 아니며 비교용 전통 방식 조리(자막에서 'one for me that I'm not gonna make in one pan'으로 명시) — 냄비(면 삶기)와 팬 2개 사용.",
+    "[visual-pass] 레시피 0에서 방울토마토의 양을 영상 속에서 절반으로 줄여서 사용함 (약 175g)",
+    "[visual-pass] 레시피 2에서 관찰레의 지방을 일부 덜어내는 과정이 포함되어 있음"
+  ]
+}

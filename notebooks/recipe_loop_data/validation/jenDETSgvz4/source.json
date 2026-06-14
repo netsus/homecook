@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-06-11T07:23:07.459Z",
+  "video": {
+    "videoId": "jenDETSgvz4",
+    "url": "https://www.youtube.com/watch?v=jenDETSgvz4",
+    "title": "콩나물과 어묵을 이렇게 드세요! 아삭쫄깃 영양가득 어묵 요리👍💯",
+    "description": "콩나물 300g\n어묵 3장\n양파 1/2\n대파 1개\n\n간장 2숟\n간마늘 1숟\n고춧가루 2숟\n굴소스 1숟\n올리고당 1.5숟\n고추장 1숟\n후추 약간",
+    "channelId": "UCsP57H5msIG3JnOSmJ_dYig",
+    "channelTitle": "수리키친Suri",
+    "publishedAt": "2021-11-21T00:28:07Z",
+    "tags": [
+      "콩나물 요리",
+      "콩나물 레시피",
+      "어묵 요리",
+      "어묵 레시피",
+      "콩나물 어묵찜",
+      "콩나물어묵볶음",
+      "볶음요리",
+      "간단요리",
+      "간단한 요리",
+      "계란요리"
+    ],
+    "defaultLanguage": "ko",
+    "durationSeconds": 242,
+    "thumbnailUrl": "https://i.ytimg.com/vi/jenDETSgvz4/maxresdefault.jpg"
+  },
+  "stats": {
+    "viewCount": 6910172,
+    "likeCount": 32108,
+    "commentCount": 294
+  },
+  "descriptionSignal": {
+    "hasIngredientKeyword": false,
+    "hasStepKeyword": false,
+    "hasQuantityPattern": true,
+    "length": 79
+  },
+  "captions": {
+    "available": false,
+    "reason": "no_public_caption_tracks",
+    "tracks": [],
+    "segments": []
+  },
+  "authorComments": {
+    "available": true,
+    "reason": null,
+    "comments": []
+  }
+}
