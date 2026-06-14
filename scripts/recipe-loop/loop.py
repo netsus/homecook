@@ -412,7 +412,20 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
         fmt_det(summaries["val"].get("aggregate", {})),
         weak_train_cases_text(cfg, out_tag),
     )
-    diagnosis = run_agent(cfg.claude_cmd, diag_prompt, iter_dir / "06_diagnosis.md")
+    try:
+        diagnosis = run_agent(cfg.claude_cmd, diag_prompt, iter_dir / "06_diagnosis.md")
+    except RuntimeError as error:
+        result = {
+            "iteration": iteration,
+            "passed": False,
+            "iteration_status": "agent_failed",
+            "stage": "diagnosis",
+            "decision": decision,
+            "error": str(error),
+            "out_tag": out_tag,
+        }
+        write_text(iter_dir / "06_diagnosis_failed.json", json.dumps(result, ensure_ascii=False, indent=2))
+        return result
     next_feedback = (
         f"## 직전 판정\n{json.dumps(decision['checks'], ensure_ascii=False)}\n\n"
         f"## train 집계\n{fmt_det(summaries['det'].get('aggregate', {}))} | AI {fmt_ai(summaries['ai'].get('aggregate', {}))}\n\n"
