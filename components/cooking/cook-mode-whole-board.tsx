@@ -116,7 +116,12 @@ function StepList({ recipe }: { recipe: CookingModeRecipe }) {
   }
 
   return (
-    <ol className="cook-whole-steps" data-testid="step-list">
+    <ol
+      aria-label="전체 조리순서 목록"
+      className="cook-whole-steps"
+      data-testid="step-list"
+      tabIndex={0}
+    >
       {recipe.steps.map((step, index) => {
         const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
         const previousLabel =

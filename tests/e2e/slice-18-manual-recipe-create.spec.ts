@@ -703,7 +703,9 @@ test.describe("Slice 18: Manual Recipe Create", () => {
 
     // Verify the created recipe appears in my_added
     await expect(page.getByText("내가 추가한 레시피").first()).toBeVisible();
-    await expect(page.getByText(createdRecipe.title)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: createdRecipe.title }),
+    ).toBeVisible();
 
     // Verify my_added book has no remove/unlike buttons (read-only virtual book)
     const removeButtons = page.getByRole("button", {

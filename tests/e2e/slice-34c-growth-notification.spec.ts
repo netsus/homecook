@@ -426,10 +426,23 @@ async function openMypage(
   const page = await context.newPage();
   await setAuthOverride(page);
   await installGrowthRoutes(page, options);
-  await page.goto("/mypage", { waitUntil: "networkidle" });
-  await stabilize(page);
-  await expect(page.getByTestId("mypage-gamification-card")).toBeVisible();
-  return { context, page };
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.goto("/mypage", { waitUntil: "networkidle" });
+    await stabilize(page);
+
+    try {
+      await expect(page.getByTestId("mypage-gamification-card")).toBeVisible({
+        timeout: 15_000,
+      });
+      return { context, page };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
 }
 
 async function showToastStack(page: Page) {

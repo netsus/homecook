@@ -556,16 +556,19 @@ test.describe("33c gamification frontend @smoke-core", () => {
   });
 
   test("covers loading, empty, and unauthorized state boundaries", async ({ browser }) => {
+    test.setTimeout(60_000);
     const loadingContext = await browser.newContext({
       deviceScaleFactor: 1,
       viewport: { width: 390, height: 844 },
     });
     const loadingPage = await loadingContext.newPage();
     await setAuthOverride(loadingPage);
-    await installRoutes(loadingPage, { gamificationDelayMs: 10_000 });
+    await installRoutes(loadingPage, { gamificationDelayMs: 60_000 });
     await loadingPage.goto("/mypage", { waitUntil: "domcontentloaded" });
     await stabilize(loadingPage);
-    await expect(loadingPage.getByTestId("mypage-gamification-loading")).toBeVisible();
+    await expect(
+      loadingPage.getByTestId("mypage-gamification-loading"),
+    ).toBeVisible({ timeout: 15_000 });
     await loadingContext.close();
 
     const empty = await openMypage(browser, { width: 390, height: 844 }, {

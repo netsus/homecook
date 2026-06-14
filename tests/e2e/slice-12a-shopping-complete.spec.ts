@@ -253,7 +253,7 @@ test.describe("slice 12a: shopping complete", () => {
       ).toBeVisible();
     });
 
-    test("keeps the completed meal visible in planner without a status badge", async ({ page }) => {
+    test("keeps the completed meal visible in planner with shopping_done status", async ({ page }) => {
       await setAuthOverride(page, "authenticated");
 
       let listCompleted = false;
@@ -312,8 +312,10 @@ test.describe("slice 12a: shopping complete", () => {
 
       await page.goto("/planner");
 
-      await expect(page.locator('a:visible:has-text("김치찌개")').first()).toBeVisible();
-      await expect(page.locator('[aria-label="장보기 완료"]')).toHaveCount(0);
+      const completedMeal = page.getByRole("link", {
+        name: /김치찌개 4인분 장보기 완료/,
+      });
+      await expect(completedMeal).toBeVisible();
     });
 
     test("should handle 401 error by redirecting to login", async ({ page }) => {

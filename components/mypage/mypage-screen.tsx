@@ -1854,6 +1854,7 @@ export function MypageScreen({
         rightSlot={<WebProfilePill profile={profile} />}
       />
       <div className="web-mypage-screen">
+        <h1 className="sr-only">마이페이지</h1>
         <div className="web-mypage-overview">
           <WebCard className="web-mypage-profile" data-testid="mypage-profile">
             <MypageGrowthProfile
@@ -3280,6 +3281,7 @@ function MypageDesktopLoadingShell() {
         rightSlot={<WebSkeleton className="web-mypage-top-profile" />}
       />
       <div className="web-mypage-screen" data-testid="mypage-skeleton">
+        <h1 className="sr-only">마이페이지</h1>
         <WebCard className="web-mypage-profile">
           <div className="web-mypage-profile-main">
             <WebSkeleton height={64} width={64} style={{ borderRadius: "50%" }} />

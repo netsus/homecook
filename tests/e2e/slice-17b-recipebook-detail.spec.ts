@@ -1,8 +1,18 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
+const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
+const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
+  await page.context().addCookies([
+    {
+      name: E2E_AUTH_OVERRIDE_COOKIE,
+      value,
+      url: E2E_APP_ORIGIN,
+      sameSite: "Lax",
+    },
+  ]);
   await page.addInitScript(
     ({ key, state }) => {
       window.localStorage.setItem(key, state);
@@ -18,6 +28,10 @@ function makeMockRecipeItems() {
       title: "된장찌개",
       thumbnail_url: "https://example.com/img1.jpg",
       tags: ["한식", "찌개"],
+      view_count: 12,
+      total_duration_seconds: 1200,
+      total_duration_text: "20분",
+      base_servings: 2,
       added_at: "2026-04-30T09:00:00.000Z",
     },
     {
@@ -25,9 +39,57 @@ function makeMockRecipeItems() {
       title: "김치볶음밥",
       thumbnail_url: null,
       tags: ["한식"],
+      view_count: 8,
+      total_duration_seconds: 900,
+      total_duration_text: "15분",
+      base_servings: 1,
       added_at: "2026-04-29T09:00:00.000Z",
     },
   ];
+}
+
+function makeMockRecipeDetail(
+  recipeId: string,
+  items: ReturnType<typeof makeMockRecipeItems>,
+) {
+  const item = items.find((recipe) => recipe.recipe_id === recipeId) ?? items[0];
+
+  return {
+    ...item,
+    ingredients: [
+      {
+        id: `${recipeId}-ingredient-1`,
+        ingredient_id: "ingredient-1",
+        standard_name: "두부",
+        amount: 1,
+        unit: "모",
+        ingredient_type: "QUANT",
+        display_text: "두부 1모",
+        scalable: true,
+        sort_order: 0,
+      },
+    ],
+    steps: [
+      {
+        id: `${recipeId}-step-1`,
+        step_number: 1,
+        instruction: "재료를 손질해요.",
+        cooking_method: null,
+        ingredients_used: [],
+        heat_level: null,
+        duration_seconds: null,
+        duration_text: null,
+      },
+    ],
+  };
+}
+
+function getDetailRecipeId(url: URL) {
+  const match = url.pathname.match(
+    /^\/api\/v1\/recipe-books\/[^/]+\/recipes\/([^/]+)$/,
+  );
+
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 async function installDetailRoutes(
@@ -43,6 +105,19 @@ async function installDetailRoutes(
   await page.route("**/api/v1/recipe-books/*/recipes**", async (route) => {
     const method = route.request().method();
     const url = route.request().url();
+    const parsedUrl = new URL(url);
+    const detailRecipeId = getDetailRecipeId(parsedUrl);
+
+    if (method === "GET" && detailRecipeId) {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: makeMockRecipeDetail(detailRecipeId, items),
+          error: null,
+        },
+      });
+      return;
+    }
 
     if (method === "GET") {
       await route.fulfill({
@@ -271,9 +346,35 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await setAuthOverride(page, "authenticated");
     await page.route("**/api/v1/recipe-books/*/recipes**", async (route) => {
       const url = new URL(route.request().url());
+      const detailRecipeId = getDetailRecipeId(url);
 
       if (route.request().method() !== "GET") {
         await route.continue();
+        return;
+      }
+
+      if (detailRecipeId) {
+        const allItems = [
+          ...makeMockRecipeItems(),
+          {
+            recipe_id: "recipe-3",
+            title: "비빔국수",
+            thumbnail_url: null,
+            tags: ["면"],
+            view_count: 4,
+            total_duration_seconds: 600,
+            total_duration_text: "10분",
+            base_servings: 1,
+            added_at: "2026-04-28T09:00:00.000Z",
+          },
+        ];
+        await route.fulfill({
+          json: {
+            success: true,
+            data: makeMockRecipeDetail(detailRecipeId, allItems),
+            error: null,
+          },
+        });
         return;
       }
 
@@ -289,6 +390,10 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
                     title: "김치볶음밥",
                     thumbnail_url: null,
                     tags: ["한식"],
+                    view_count: 8,
+                    total_duration_seconds: 900,
+                    total_duration_text: "15분",
+                    base_servings: 1,
                     added_at: "2026-04-29T09:00:00.000Z",
                   },
                   {
@@ -296,6 +401,10 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
                     title: "비빔국수",
                     thumbnail_url: null,
                     tags: ["면"],
+                    view_count: 4,
+                    total_duration_seconds: 600,
+                    total_duration_text: "10분",
+                    base_servings: 1,
                     added_at: "2026-04-28T09:00:00.000Z",
                   },
                 ],
@@ -361,6 +470,9 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
   test("restores optimistic UI and shows error when remove fails", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await page.route("**/api/v1/recipe-books/*/recipes**", async (route) => {
+      const url = new URL(route.request().url());
+      const detailRecipeId = getDetailRecipeId(url);
+
       if (route.request().method() === "DELETE") {
         await route.fulfill({
           status: 500,
@@ -372,6 +484,17 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
               message: "제거에 실패했어요.",
               fields: [],
             },
+          },
+        });
+        return;
+      }
+
+      if (route.request().method() === "GET" && detailRecipeId) {
+        await route.fulfill({
+          json: {
+            success: true,
+            data: makeMockRecipeDetail(detailRecipeId, makeMockRecipeItems()),
+            error: null,
           },
         });
         return;
@@ -435,19 +558,20 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     ).toBeVisible();
   });
 
-  test("recipe card navigates to RECIPE_DETAIL", async ({ page }) => {
+  test("recipe card shows reader actions", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installDetailRoutes(page);
     await page.goto(detailUrl("saved", "저장한 레시피"));
 
     await expect(recipeItem(page, "recipe-1")).toBeVisible();
 
-    const link = isDesktopViewport(page)
-      ? page.getByRole("link", { name: "플래너에 추가" }).first()
+    const plannerAction = isDesktopViewport(page)
+      ? page.getByRole("button", { name: "플래너에 추가" }).first()
       : page
           .getByTestId("recipe-item-recipe-1")
-          .getByRole("link", { name: "플래너에 추가" });
-    await expect(link).toBeVisible();
+          .getByRole("button", { name: "플래너에 추가" });
+    await expect(plannerAction).toBeVisible();
+    await expect(page.getByRole("link", { name: "요리하기" }).first()).toBeVisible();
   });
 
   test("back button links to mypage", async ({ page }) => {
@@ -456,6 +580,12 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await page.goto(detailUrl("saved", "저장한 레시피"));
 
     await expect(visibleText(page, "저장한 레시피")).toBeVisible();
+
+    if (isDesktopViewport(page)) {
+      await expect(page.getByRole("heading", { name: "레시피북 리더" })).toBeVisible();
+      await expect(page.getByLabel("뒤로 가기")).toHaveCount(0);
+      return;
+    }
 
     const backLink = page.getByLabel("뒤로 가기");
     await expect(backLink).toHaveAttribute("href", "/mypage");

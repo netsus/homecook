@@ -288,6 +288,7 @@ export function MypageGrowthProfile({
           className ?? "",
         ].join(" ")}
         data-testid="mypage-growth-profile-loading"
+        role="status"
       >
         <div className="h-4 w-32 rounded-full bg-[var(--surface-subtle)]" />
         <div className="mt-2 h-2 rounded-full bg-[var(--surface-subtle)]" />

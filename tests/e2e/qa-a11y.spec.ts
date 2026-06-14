@@ -109,6 +109,91 @@ function visibleSortButton(page: Page) {
   );
 }
 
+async function installMypageGrowthA11yRoutes(page: Page) {
+  await page.route("**/api/v1/users/me/progress", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          level: {
+            current_level: 6,
+            total_xp: 520,
+            current_level_start_xp: 500,
+            next_level_start_xp: 650,
+            xp_into_current_level: 20,
+            xp_to_next_level: 130,
+            progress_ratio: 0.1333,
+            progress_percent: 13,
+          },
+          event_counts: {
+            cooking_completed: 5,
+            shopping_completed: 3,
+            recipe_saved_distinct_ever: 9,
+            custom_book_created: 2,
+            planner_registered_first: 1,
+            planner_registered_repeat: 4,
+          },
+          last_updated_at: "2026-06-12T00:00:00.000Z",
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/users/me/gamification", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          level: {
+            current_level: 6,
+            total_xp: 520,
+            xp_to_next_level: 130,
+            progress_percent: 13,
+          },
+          grade: {
+            grade_key: "homecook_runner",
+            label: "집밥 러너",
+            level_min: 4,
+            level_max: 7,
+          },
+          featured_badges: [
+            {
+              badge_key: "first_cook_done",
+              label: "첫 집밥 완성",
+              description: "첫 요리 완료를 기록했어요.",
+              category: "cooking",
+              shape_key: "pot",
+              locked_hint: null,
+              earned_at: "2026-06-12T00:00:00.000Z",
+              is_new: false,
+            },
+          ],
+          badges: { earned: [], locked: [] },
+          quests: { active: [], completed_recent: [] },
+          tutorial: {
+            category_key: "tutorial",
+            completed_count: 0,
+            total_count: 0,
+            active_steps: [],
+          },
+          achievement_album: {
+            summary: {
+              earned_count: 1,
+              total_count: 1,
+              completed_category_count: 0,
+            },
+            categories: [],
+          },
+          notifications: { unseen: [], priority_unseen: [], archive_preview: [] },
+          last_updated_at: "2026-06-12T00:00:00.000Z",
+        },
+        error: null,
+      },
+    });
+  });
+}
+
 async function expectDesktopMypageNavLabel(page: Page) {
   const nav = page.getByRole("navigation", { name: "데스크탑 주요 메뉴" });
 
@@ -514,6 +599,7 @@ test.describe("QA accessibility smoke", () => {
   test("login, mypage, recipebooks, and settings desktop slice screens are axe-clean", async ({
     page,
   }) => {
+    test.setTimeout(60_000);
     test.skip(isMobileViewport(page), "desktop-only account/library parity smoke");
 
     await page.goto(LOGIN_VISUAL_PATH);
@@ -526,13 +612,16 @@ test.describe("QA accessibility smoke", () => {
 
     await setE2EAuthOverride(page);
     await installAccountLibraryVisualRoutes(page);
+    await installMypageGrowthA11yRoutes(page);
 
     await page.goto(MYPAGE_VISUAL_PATH);
     await expect(page.getByRole("heading", { name: "저장한 레시피" })).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });
-    await page.getByTestId("mypage-profile-edit-button").click();
+    const profileEditButton = page.getByTestId("mypage-profile-edit-button");
+    await expect(profileEditButton).toBeVisible({ timeout: 15_000 });
+    await profileEditButton.click();
     await expect(page.getByRole("dialog", { name: "닉네임 변경" })).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,

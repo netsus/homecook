@@ -309,12 +309,17 @@ test.describe("slice 09: shopping preview and list creation", () => {
 
       await expect(page.getByText("김치찌개")).toBeVisible();
 
-      await page.getByRole("button", { name: "전체 해제" }).click();
+      const selectAllControl = page.getByRole("checkbox", { name: "전체 선택" });
+      await expect(selectAllControl).toHaveAttribute("aria-checked", "true");
+
+      await selectAllControl.click();
+      await expect(selectAllControl).toHaveAttribute("aria-checked", "false");
       await expect(page.getByLabel("김치찌개 선택")).toBeVisible();
       await expect(page.getByLabel("된장찌개 선택")).toBeVisible();
       await expect(page.getByText("장보기 목록 만들기")).toBeDisabled();
 
-      await page.getByRole("button", { name: "전체 선택" }).click();
+      await selectAllControl.click();
+      await expect(selectAllControl).toHaveAttribute("aria-checked", "true");
       await expect(page.getByLabel("김치찌개 선택 해제")).toBeVisible();
       await expect(page.getByLabel("된장찌개 선택 해제")).toBeVisible();
       await expect(page.getByText("장보기 목록 만들기")).toBeEnabled();

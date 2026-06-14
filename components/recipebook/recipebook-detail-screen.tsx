@@ -1957,7 +1957,6 @@ function MobileRecipeBookDetailView({
         aria-live="polite"
         className="p-4 pb-[calc(128px+env(safe-area-inset-bottom))]"
         data-testid="recipebook-detail-list"
-        role="list"
       >
         <div className={readerMode === "list" ? "grid gap-4" : undefined}>
           {visibleItems.map((item) => {
@@ -2229,7 +2228,6 @@ function MobileRecipeBookRecipeCard({
       className="mobile-recipebook-page-card scroll-mt-16 overflow-hidden rounded-[26px]"
       data-testid={`recipe-item-${item.recipe_id}`}
       id={`recipebook-recipe-${item.recipe_id}`}
-      role="listitem"
     >
       <div className="relative">
         <Image
@@ -2341,7 +2339,6 @@ function MobileRecipeBookListCard({
     <article
       className="mobile-recipebook-list-card rounded-[22px]"
       data-testid={`recipebook-mobile-list-card-${item.recipe_id}`}
-      role="listitem"
     >
       <Link className="grid grid-cols-[86px_minmax(0,1fr)] gap-3 p-3" href={recipeHref}>
         <Image
@@ -2599,7 +2596,6 @@ function RecipeItemCard({
       className="web-recipebook-detail-card"
       data-testid={`recipe-item-${item.recipe_id}`}
       id={`recipebook-recipe-${item.recipe_id}`}
-      role="listitem"
     >
       <Link href={recipeHref}>
         <WebRecipeCard
@@ -2713,7 +2709,6 @@ function DesktopRecipeBookReader({
             : "web-recipebook-reader-content"
         }
         data-testid="recipebook-detail-list"
-        role="list"
       >
         {mode === "book" ? (
           <div className="web-recipebook-reader-open-book">
@@ -2844,7 +2839,6 @@ function DesktopRecipeBookRecipePage({
       className="web-recipebook-recipe-page"
       data-testid={`recipe-item-${item.recipe_id}`}
       id={`recipebook-recipe-${item.recipe_id}`}
-      role="listitem"
     >
       {canRemove ? (
         <button
@@ -2935,7 +2929,11 @@ function ReaderIngredientsContent({
     );
   }
 
-  if (detailState.data.ingredients.length === 0) {
+  const ingredients = Array.isArray(detailState.data.ingredients)
+    ? detailState.data.ingredients
+    : [];
+
+  if (ingredients.length === 0) {
     return (
       <p className={mobile ? "mt-2 text-[12px] font-bold leading-[1.42] text-[var(--text-3)]" : "web-recipebook-note-empty"}>
         작성된 재료가 없어요.
@@ -2945,7 +2943,7 @@ function ReaderIngredientsContent({
 
   return (
     <ul className={mobile ? "mobile-recipebook-note-list" : "web-recipebook-note-list"}>
-      {detailState.data.ingredients.slice(0, mobile ? 4 : 8).map((ingredient) => (
+      {ingredients.slice(0, mobile ? 4 : 8).map((ingredient) => (
         <li
           className={mobile ? "mobile-recipebook-note-row" : "web-recipebook-note-row"}
           data-testid={`reader-ingredient-${ingredient.id}`}
@@ -2982,7 +2980,11 @@ function ReaderStepsContent({
     );
   }
 
-  if (detailState.data.steps.length === 0) {
+  const steps = Array.isArray(detailState.data.steps)
+    ? detailState.data.steps
+    : [];
+
+  if (steps.length === 0) {
     return (
       <p className={mobile ? "mt-2 text-[12px] font-bold leading-[1.42] text-[var(--text-3)]" : "web-recipebook-note-empty"}>
         작성된 만들기가 없어요.
@@ -2992,7 +2994,7 @@ function ReaderStepsContent({
 
   return (
     <ol className={mobile ? "mobile-recipebook-note-list" : "web-recipebook-note-list"}>
-      {detailState.data.steps.slice(0, mobile ? 3 : 6).map((step, index) => (
+      {steps.slice(0, mobile ? 3 : 6).map((step, index) => (
         <li
           className={mobile ? "mobile-recipebook-note-row" : "web-recipebook-note-row"}
           data-testid={`reader-step-${step.id}`}
