@@ -19,8 +19,10 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -40,6 +42,17 @@ RUN_ROOT = PROJECT_ROOT / "notebooks" / "recipe_loop_runs"
 MODULE_DIR = PROJECT_ROOT / "lib" / "server" / "recipe-extraction-lab"
 KST = timezone(timedelta(hours=9), name="KST")
 
+IMPLEMENTATION_WORKSPACE_ALLOWLIST = [
+    Path("package.json"),
+    Path("lib/server/recipe-extraction-lab/README.md"),
+    Path("lib/server/recipe-extraction-lab/extract.mjs"),
+    Path("lib/server/recipe-extraction-lab/prompt.mjs"),
+]
+IMPLEMENTATION_WRITEBACK_ALLOWLIST = [
+    Path("lib/server/recipe-extraction-lab/extract.mjs"),
+    Path("lib/server/recipe-extraction-lab/prompt.mjs"),
+]
+
 
 # ---- 설정 ---------------------------------------------------------------
 
@@ -48,15 +61,19 @@ class LoopConfig:
     max_iter: int = 3
     train_split: str = "train"
     val_split: str = "validation"
-    # 추출/AI 의미채점에 쓰는 Gemini 모델
+    # 추출 단계에 쓰는 모델. 의미채점 gate는 semantic_judge_* 설정을 사용한다.
     model: str = "gemini-2.5-flash"
-    semantic_judge_provider: str = "gemini"
-    semantic_judge_model: str = "gemini-2.5-flash"
+    semantic_judge_provider: str = "codex"
+    semantic_judge_model: str = "gpt-5.4"
+    semantic_judge_effort: str = "high"
+    semantic_judge_borderline_effort: str = "xhigh"
+    semantic_judge_timeout_ms: int = 200000
+    semantic_judge_output_schema: str = str(PROJECT_ROOT / "scripts" / "recipe-loop" / "semantic-judge.schema.json")
     semantic_calibration_path: str = str(DATA_ROOT / "semantic_calibration.json")
     # 계획/진단 담당 Claude 모델 (CLI --model 별칭). 추론 비중이 커서 opus 기본.
     claude_model: str = "opus"
     # 구현 담당 Codex 모델·추론강도 (CLI -c 오버라이드로 명시 고정 → 재현성)
-    codex_model: str = "gpt-5.4"
+    codex_model: str = "gpt-5.5"
     codex_effort: str = "xhigh"
     # 판정 임계값 (M3 기준선: 결정 F1 0.899 / 분량 0.787 / 단계 0.813, AI 의미 ~3.5)
     det_f1_min: float = 0.92
@@ -72,8 +89,8 @@ class LoopConfig:
 
     @property
     def codex_cmd(self) -> tuple[str, ...]:
-        return ("codex", "exec", "--sandbox", "workspace-write",
-                "-c", f"model={self.codex_model}",
+        return ("codex", "exec", "--sandbox", "workspace-write", "--skip-git-repo-check",
+                "-m", self.codex_model,
                 "-c", f"model_reasoning_effort={self.codex_effort}")
 
 
@@ -98,6 +115,10 @@ def semantic_grader_args(cfg: LoopConfig, split: str, out_tag: str, expected: st
         "--out-tag", out_tag,
         "--judge-provider", cfg.semantic_judge_provider,
         "--judge-model", cfg.semantic_judge_model,
+        "--judge-effort", cfg.semantic_judge_effort,
+        "--judge-borderline-effort", cfg.semantic_judge_borderline_effort,
+        "--judge-timeout-ms", str(cfg.semantic_judge_timeout_ms),
+        "--judge-output-schema", cfg.semantic_judge_output_schema,
         "--calibration", cfg.semantic_calibration_path,
         "--expected-count", expected,
     )
@@ -142,6 +163,31 @@ def stage(msg: str) -> None:
     print("\n" + "=" * 80)
     print(f"[{kst_stamp()}] {msg}")
     print("=" * 80)
+
+
+def create_codex_implementation_workspace() -> Path:
+    workspace = Path(tempfile.mkdtemp(prefix="homecook-recipe-impl-"))
+    for rel_path in IMPLEMENTATION_WORKSPACE_ALLOWLIST:
+        src = PROJECT_ROOT / rel_path
+        if not src.exists():
+            continue
+        dest = workspace / rel_path
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+    return workspace
+
+
+def sync_implementation_workspace_back(workspace: Path) -> list[str]:
+    written: list[str] = []
+    for rel_path in IMPLEMENTATION_WRITEBACK_ALLOWLIST:
+        src = workspace / rel_path
+        if not src.exists():
+            continue
+        dest = PROJECT_ROOT / rel_path
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        written.append(str(rel_path))
+    return written
 
 
 # ---- 격리 점검 ----------------------------------------------------------
@@ -256,6 +302,28 @@ def scan_paths_for_protected_answers(paths: list[Path], fragments: list[dict] | 
     for path in paths:
         if path.exists():
             items.append({"scope": path.name, "text": path.read_text(encoding="utf-8")})
+    return scan_texts_for_protected_answers(items, fragments)
+
+
+def semantic_artifact_paths(split: str, out_tag: str) -> list[Path]:
+    split_dir = DATA_ROOT / split
+    paths = [split_dir / f"_semantic_summary.{out_tag}.json"]
+    if split_dir.exists():
+        paths.extend(sorted(split_dir.glob(f"*/runs/{out_tag}/grade_semantic.json")))
+    return paths
+
+
+def scan_semantic_artifacts_for_protected_answers(split: str, out_tag: str,
+                                                  fragments: list[dict] | None = None) -> dict:
+    items = []
+    for path in semantic_artifact_paths(split, out_tag):
+        if not path.exists():
+            continue
+        try:
+            scope = str(path.relative_to(DATA_ROOT))
+        except ValueError:
+            scope = str(path)
+        items.append({"scope": scope, "text": path.read_text(encoding="utf-8")})
     return scan_texts_for_protected_answers(items, fragments)
 
 
@@ -514,8 +582,22 @@ def semantic_validation_success(cfg: LoopConfig, aggregate: dict) -> tuple[bool,
         )
     checks = {
         "summary_success": aggregate.get("success") is True,
+        "judge_provider": aggregate.get("judge_provider") == cfg.semantic_judge_provider,
+        "judge_model": aggregate.get("judge_model") == cfg.semantic_judge_model,
+        "judge_effort": (
+            cfg.semantic_judge_provider != "codex"
+            or aggregate.get("judge_effort") == cfg.semantic_judge_effort
+        ),
+        "calibration_valid": (
+            cfg.semantic_judge_provider != "codex"
+            or (isinstance(aggregate.get("calibration"), dict)
+                and aggregate.get("calibration", {}).get("valid") is True)
+        ),
         "provider_error_count": (aggregate.get("provider_error_count") or 0) == 0,
         "parse_error_count": (aggregate.get("parse_error_count") or 0) == 0,
+        "schema_error_count": (aggregate.get("schema_error_count") or 0) == 0,
+        "timeout_error_count": (aggregate.get("timeout_error_count") or 0) == 0,
+        "calibration_error_count": (aggregate.get("calibration_error_count") or 0) == 0,
         "empty_case_count": (aggregate.get("empty_case_count") or 0) == 0,
         "expected_count_mismatch": aggregate.get("expected_count_mismatch") is False,
         "threshold_success": threshold_success is True,
@@ -627,13 +709,28 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
     if do_implement:
         stage(f"[ITER {iteration}] 2. 구현 (Codex, recipe-extraction-lab만)")
         prompt = build_implement_prompt(plan_text, feedback)
+        impl_workspace = create_codex_implementation_workspace()
         try:
-            run_agent(cfg.codex_cmd + ("--cd", str(MODULE_DIR)),
-                      prompt, iter_dir / "02_implementation.log", cwd=MODULE_DIR)
+            run_agent(cfg.codex_cmd + ("--cd", str(impl_workspace)),
+                      prompt, iter_dir / "02_implementation.log", cwd=impl_workspace)
+            written = sync_implementation_workspace_back(impl_workspace)
+            write_text(iter_dir / "02_implementation_workspace.json", json.dumps({
+                "workspace": str(impl_workspace),
+                "allowlist": [str(p) for p in IMPLEMENTATION_WORKSPACE_ALLOWLIST],
+                "writeback": written,
+                "forbidden_paths_present": any(
+                    (impl_workspace / forbidden).exists()
+                    for forbidden in [".git", "notebooks/recipe_loop_data/train",
+                                      "notebooks/recipe_loop_data/validation",
+                                      "notebooks/recipe_loop_data/holdout"]
+                ),
+            }, ensure_ascii=False, indent=2))
         except RuntimeError as error:
             result = {"iteration": iteration, "passed": False, "iteration_status": "agent_failed", "stage": "implement", "error": str(error)}
             write_text(iter_dir / "05_decision.json", json.dumps(result, ensure_ascii=False, indent=2))
             return result
+        finally:
+            shutil.rmtree(impl_workspace, ignore_errors=True)
 
     stage(f"[ITER {iteration}] 3. 확정 검증 (추출 실행 + 하드코딩/스키마 점검)")
     no_hardcode, hardcode_report = check_no_hardcoded_answers()
@@ -673,6 +770,8 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
         verify_scan_before_write,
         verify_scan_after_write,
         scan_directory_for_protected_answers(iter_dir),
+        scan_semantic_artifacts_for_protected_answers(cfg.train_split, out_tag),
+        scan_semantic_artifacts_for_protected_answers(cfg.val_split, out_tag),
         scan_texts_for_protected_answers([
             {"scope": "train_extraction_stdout", "text": ext_train.stdout},
             {"scope": "train_extraction_stderr", "text": ext_train.stderr},
@@ -848,6 +947,7 @@ def run_holdout_final(cfg: LoopConfig | None = None, out_tag: str | None = None,
         "semantic": read_json(DATA_ROOT / "holdout" / f"_semantic_summary.{out_tag}.json", {}),
     }
     redaction_scan = merge_redaction_scans([
+        scan_semantic_artifacts_for_protected_answers("holdout", out_tag),
         scan_texts_for_protected_answers([
             {"scope": "holdout_extraction_stdout", "text": ext.stdout},
             {"scope": "holdout_extraction_stderr", "text": ext.stderr},

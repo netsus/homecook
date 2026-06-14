@@ -19,6 +19,38 @@ function splitCase(root: string, id: string) {
   return path.join(root, "notebooks/recipe_loop_data/validation", id);
 }
 
+function codexCalibration(overrides: Record<string, unknown> = {}) {
+  return {
+    schemaVersion: 2,
+    calibratedAt: "2026-06-14",
+    policy: "Codex-only semantic judge calibration for local integrity tests.",
+    judgeProvider: "codex",
+    judgeModel: "gpt-5.4",
+    judgeEffort: "high",
+    judgeSchemaVersion: 1,
+    thresholds: { minCaseScore: 3, averageScore: 3 },
+    borderline: {
+      enabled: true,
+      minCaseScore: 3,
+      maxCaseScore: 4,
+      retryEffort: "xhigh",
+    },
+    alignmentStats: {
+      sampleCount: 6,
+      meanAbsoluteDelta: 0.25,
+      maxMeanAbsoluteDelta: 1,
+      directionDisagreementCount: 0,
+      maxDirectionDisagreementCount: 1,
+    },
+    samples: Array.from({ length: 6 }, (_, index) => ({
+      id: `sample-${index + 1}`,
+      judgeCaseScore: index % 2 === 0 ? 3 : 4,
+      verdict: "aligned",
+    })),
+    ...overrides,
+  };
+}
+
 function approvedGolden(reviewStatus = "approved") {
   return {
     schemaVersion: 1,
@@ -371,6 +403,214 @@ describe("recipe-loop local integrity gates", () => {
     });
   });
 
+  it("uses the codex semantic judge cache and validates calibration model contracts", () => {
+    writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), approvedGolden());
+    writeJson(path.join(splitCase(workdir, "case-a"), "runs/latest/result.json"), matchingResult());
+    writeJson(
+      path.join(workdir, "notebooks/recipe_loop_data/semantic_calibration.json"),
+      codexCalibration(),
+    );
+
+    const first = spawnSync(
+      "node",
+      [
+        gradeSemanticScript,
+        "--split",
+        "validation",
+        "--out-tag",
+        "latest",
+        "--expected-count",
+        "1",
+        "--judge-provider",
+        "codex",
+        "--judge-model",
+        "gpt-5.4",
+        "--judge-effort",
+        "high",
+        "--calibration",
+        "notebooks/recipe_loop_data/semantic_calibration.json",
+      ],
+      {
+        cwd: workdir,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          CODEX_JUDGE_MOCK_RESPONSE: JSON.stringify({
+            cases: [{ title: "테스트 레시피", ingredient_score: 4.5, step_score: 4.5, reason: "aligned" }],
+            average_score: 4.5,
+          }),
+        },
+      },
+    );
+
+    expect(first.status).toBe(0);
+    const firstSummary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    expect(firstSummary.aggregate).toMatchObject({
+      success: true,
+      judge_provider: "codex",
+      judge_model: "gpt-5.4",
+      judge_effort: "high",
+      cache_hit_count: 0,
+      cache_miss_count: 1,
+      calibration: { loaded: true, valid: true },
+    });
+
+    const second = spawnSync(
+      "node",
+      [
+        gradeSemanticScript,
+        "--split",
+        "validation",
+        "--out-tag",
+        "latest",
+        "--expected-count",
+        "1",
+        "--judge-provider",
+        "codex",
+        "--judge-model",
+        "gpt-5.4",
+        "--judge-effort",
+        "high",
+        "--calibration",
+        "notebooks/recipe_loop_data/semantic_calibration.json",
+      ],
+      {
+        cwd: workdir,
+        encoding: "utf8",
+        env: { ...process.env, CODEX_JUDGE_FAIL_IF_CALLED: "1" },
+      },
+    );
+
+    expect(second.status).toBe(0);
+    const secondSummary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    expect(secondSummary.aggregate).toMatchObject({
+      cache_hit_count: 1,
+      cache_miss_count: 0,
+    });
+  });
+
+  it("fails codex semantic grading before provider calls when calibration effort mismatches", () => {
+    writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), approvedGolden());
+    writeJson(path.join(splitCase(workdir, "case-a"), "runs/latest/result.json"), matchingResult());
+    writeJson(
+      path.join(workdir, "notebooks/recipe_loop_data/semantic_calibration.json"),
+      codexCalibration({ judgeEffort: "xhigh" }),
+    );
+
+    const result = spawnSync(
+      "node",
+      [
+        gradeSemanticScript,
+        "--split",
+        "validation",
+        "--out-tag",
+        "latest",
+        "--expected-count",
+        "1",
+        "--judge-provider",
+        "codex",
+        "--judge-model",
+        "gpt-5.4",
+        "--judge-effort",
+        "high",
+        "--calibration",
+        "notebooks/recipe_loop_data/semantic_calibration.json",
+      ],
+      {
+        cwd: workdir,
+        encoding: "utf8",
+        env: { ...process.env, CODEX_JUDGE_FAIL_IF_CALLED: "1" },
+      },
+    );
+
+    expect(result.status).toBe(1);
+    const summary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    expect(summary.aggregate).toMatchObject({
+      success: false,
+      provider_error_count: 0,
+      calibration_error_count: 1,
+      calibration: {
+        loaded: true,
+        valid: false,
+        failure_reason: "judge_effort_mismatch",
+      },
+    });
+  });
+
+  it("rechecks borderline semantic cases once and keeps the lower score", () => {
+    writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), approvedGolden());
+    writeJson(path.join(splitCase(workdir, "case-a"), "runs/latest/result.json"), {
+      ...matchingResult(),
+      __semanticJudge: {
+        cases: [{ title: "테스트 레시피", ingredient_score: 3.5, step_score: 3.5, reason: "borderline" }],
+        average_score: 3.5,
+      },
+      __semanticJudgeRetry: {
+        cases: [{ title: "테스트 레시피", ingredient_score: 2.5, step_score: 2.5, reason: "lower retry" }],
+        average_score: 2.5,
+      },
+    });
+    writeJson(path.join(workdir, "notebooks/recipe_loop_data/semantic_calibration.json"), {
+      schemaVersion: 2,
+      thresholds: { minCaseScore: 2, averageScore: 2 },
+      borderline: { enabled: true, minCaseScore: 3, maxCaseScore: 4, retryEffort: "xhigh" },
+      samples: [],
+    });
+
+    const result = spawnSync(
+      "node",
+      [
+        gradeSemanticScript,
+        "--split",
+        "validation",
+        "--out-tag",
+        "latest",
+        "--expected-count",
+        "1",
+        "--judge-provider",
+        "fixture",
+        "--judge-model",
+        "fixture-local",
+        "--calibration",
+        "notebooks/recipe_loop_data/semantic_calibration.json",
+      ],
+      { cwd: workdir, encoding: "utf8" },
+    );
+
+    expect(result.status).toBe(0);
+    const summary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    expect(summary.aggregate).toMatchObject({
+      borderline_retry_count: 1,
+      minCaseScore: 2.5,
+      averageScore: 2.5,
+    });
+    expect(summary.perVideo[0].cases[0]).toMatchObject({
+      case_score: 2.5,
+      retried: true,
+      retry_case_score: 2.5,
+    });
+  });
+
   it("keeps every decision gate axis fail-closed", () => {
     const result = runLoopPython(`
 cfg = loop.LoopConfig()
@@ -536,6 +776,39 @@ print(json.dumps({
     expect(report.raw_leaked).toBe(false);
   });
 
+  it("scans persisted semantic grade artifacts for protected answer fragments", () => {
+    const result = runLoopPython(`
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+fragments = loop.protected_answer_fragments(["validation"])
+target = next(f for f in fragments if f["category"] in ("recipe_title", "ingredient_name", "ingredient_quantity", "step_instruction"))
+loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
+artifact = loop.DATA_ROOT / "validation" / "case-a" / "runs" / "latest" / "grade_semantic.json"
+artifact.parent.mkdir(parents=True, exist_ok=True)
+artifact.write_text(target["value"], encoding="utf-8")
+summary = loop.DATA_ROOT / "validation" / "_semantic_summary.latest.json"
+summary.parent.mkdir(parents=True, exist_ok=True)
+summary.write_text(target["value"], encoding="utf-8")
+scan = loop.scan_semantic_artifacts_for_protected_answers("validation", "latest", fragments)
+print(json.dumps({
+    "scan": scan,
+    "raw_leaked": target["value"] in json.dumps(scan, ensure_ascii=False),
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.scan.success).toBe(false);
+    expect(report.scan.hit_count).toBeGreaterThanOrEqual(2);
+    expect(report.scan.scanned_scopes).toEqual(
+      expect.arrayContaining([
+        "validation/case-a/runs/latest/grade_semantic.json",
+        "validation/_semantic_summary.latest.json",
+      ]),
+    );
+    expect(report.raw_leaked).toBe(false);
+  });
+
   it("only authorizes the holdout from a genuine passing run-artifact decision", () => {
     const result = runLoopPython(`
 import json
@@ -633,5 +906,37 @@ print(json.dumps(payload, ensure_ascii=False))
     );
     expect(payload.scan.success).toBe(false);
     expect(JSON.stringify(payload.scan)).not.toContain(payload.target_value);
+  });
+
+  it("creates an implementation workspace with only allowlisted files", () => {
+    const result = runLoopPython(`
+import shutil
+workspace = loop.create_codex_implementation_workspace()
+files = sorted(str(p.relative_to(workspace)) for p in workspace.rglob("*") if p.is_file())
+forbidden_exists = any((workspace / forbidden).exists() for forbidden in [
+    ".git",
+    "notebooks/recipe_loop_data/train",
+    "notebooks/recipe_loop_data/validation",
+    "notebooks/recipe_loop_data/holdout",
+])
+print(json.dumps({
+    "files": files,
+    "forbidden_exists": forbidden_exists,
+    "workspace": str(workspace),
+}, ensure_ascii=False))
+shutil.rmtree(workspace, ignore_errors=True)
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.files).toEqual(
+      expect.arrayContaining([
+        "lib/server/recipe-extraction-lab/extract.mjs",
+        "lib/server/recipe-extraction-lab/prompt.mjs",
+        "package.json",
+      ]),
+    );
+    expect(report.files.some((file: string) => file.startsWith("notebooks/recipe_loop_data/"))).toBe(false);
+    expect(report.forbidden_exists).toBe(false);
   });
 });

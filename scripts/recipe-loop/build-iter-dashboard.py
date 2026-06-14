@@ -108,7 +108,8 @@ def build(run_dir: Path, out_path: Path) -> Path:
 
     claude_spec = f"Claude {cfg.claude_model}"
     codex_spec = f"Codex {cfg.codex_model} · effort {cfg.codex_effort}"
-    gemini_spec = f"Gemini {cfg.model}"
+    judge_effort = f" · effort {cfg.semantic_judge_effort}" if cfg.semantic_judge_effort else ""
+    semantic_judge_spec = f"{cfg.semantic_judge_provider} {cfg.semantic_judge_model}{judge_effort}"
 
     # (번호, 이름, 모델주체, 모델·effort, 실행명령, 프롬프트코드위치, 역할, 프롬프트, 산출물, 종류)
     stages = [
@@ -125,10 +126,10 @@ def build(run_dir: Path, out_path: Path) -> Path:
          "AI 판단 없이 코드로 확인: 모듈에 validation/holdout 정답 문구가 하드코딩되지 않았는지, train/validation 추출이 정상 실행되는지.",
          "module_source()에서 forbidden golden step 문구 검색 + 추출 러너 종료코드 확인",
          json.dumps(verify, ensure_ascii=False, indent=2), "text"),
-        ("4", "채점", "코드 + Gemini", f"코드 + {gemini_spec}", "grade-extraction.mjs (결정적) + grade-semantic.mjs (AI 의미)",
+        ("4", "채점", "코드 + Codex judge", f"코드 + {semantic_judge_spec}", "grade-extraction.mjs (결정적) + grade-semantic.mjs (AI 의미)",
          "추출 프롬프트 prompt.mjs:102 · AI 채점 프롬프트 grade-semantic.mjs:40",
-         "결정적 채점: 재료 F1·분량 일치·단계 커버리지·레시피 개수 매칭(코드). AI 의미 채점: Gemini가 정답과 추출을 의미 비교해 0~5점, case_score=min(재료,단계).",
-         f"결정적: scripts/recipe-loop/lib/grading.mjs · AI: {gemini_spec}(텍스트, 캐시)",
+         "결정적 채점: 재료 F1·분량 일치·단계 커버리지·레시피 개수 매칭(코드). AI 의미 채점: Codex judge가 정답과 추출을 의미 비교해 0~5점, case_score=min(재료,단계).",
+         f"결정적: scripts/recipe-loop/lib/grading.mjs · AI: {semantic_judge_spec}(텍스트, 캐시)",
          "아래 점수 변화 표 참조", "scores"),
         ("5", "판정", "코드 (Python)", "코드 (LLM 없음)", "loop.decide()",
          "loop.py:202 decide()",
@@ -227,8 +228,9 @@ th:first-child, td:first-child {{ text-align:left; }}
 <h3>모델 구성 (loop.py LoopConfig에 고정)</h3>
 <div class="models">
   <div class="modelcard"><div class="label">계획 · 진단</div><div class="val">{esc(cfg.claude_model)}</div><div class="who">Claude · claude -p --permission-mode plan --model {esc(cfg.claude_model)}</div></div>
-  <div class="modelcard"><div class="label">구현</div><div class="val">{esc(cfg.codex_model)} · effort {esc(cfg.codex_effort)}</div><div class="who">Codex · codex exec -c model={esc(cfg.codex_model)} -c model_reasoning_effort={esc(cfg.codex_effort)}</div></div>
-  <div class="modelcard"><div class="label">추출 · AI 의미채점</div><div class="val">{esc(cfg.model)}</div><div class="who">Gemini · file_uri 영상분석(추출) / 텍스트(채점)</div></div>
+  <div class="modelcard"><div class="label">구현</div><div class="val">{esc(cfg.codex_model)} · effort {esc(cfg.codex_effort)}</div><div class="who">Codex · allowlist temp workspace · codex exec -m {esc(cfg.codex_model)} -c model_reasoning_effort={esc(cfg.codex_effort)}</div></div>
+  <div class="modelcard"><div class="label">추출</div><div class="val">{esc(cfg.model)}</div><div class="who">Gemini · file_uri 영상분석(추출)</div></div>
+  <div class="modelcard"><div class="label">AI 의미채점</div><div class="val">{esc(semantic_judge_spec)}</div><div class="who">Codex · repo 밖 read-only ephemeral judge</div></div>
 </div>
 <div class="note"><strong>모델 주의:</strong> 위 값은 현재 <code>loop.py</code>에 명시 고정된 값입니다. <strong>이 스모크 실행 시점</strong>에는 Claude가 <code>--model</code> 미지정(CLI 기본값)으로 돌았고, 이후 재현성을 위해 <code>{esc(cfg.claude_model)}</code>로 고정했습니다. Codex는 실행 당시에도 <code>~/.codex/config.toml</code>의 {esc(cfg.codex_model)}/{esc(cfg.codex_effort)}를 사용했습니다.</div>
 <div class="note"><strong>이번 ITER 한 줄 요약:</strong> validation(일반화 셋)은 전 지표 개선됐지만, train의 다중 레시피 vlog 1건(똘비)이 4/7→0개로 회귀해 train 점수가 하락 → 판정 FAIL. 진단이 이 회귀와 validation 셋의 사각지대를 정확히 짚음. (배선 검증 목적의 1회 스모크 — 변경은 미채택, 본 루프는 별도.)</div>
