@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-06-11T07:24:41.659Z",
+  "video": {
+    "videoId": "exGmaODLNzM",
+    "url": "https://www.youtube.com/watch?v=exGmaODLNzM",
+    "title": "노오븐 라따뚜이 / 다이어트 메뉴",
+    "description": "",
+    "channelId": "UC2nniDjweRFsNVRfl8fg_Tw",
+    "channelTitle": "더리테이블 THE LEE TABLE  ",
+    "publishedAt": "2024-05-30T01:53:01Z",
+    "tags": [],
+    "defaultLanguage": "ko",
+    "durationSeconds": 44,
+    "thumbnailUrl": "https://i.ytimg.com/vi/exGmaODLNzM/maxresdefault.jpg"
+  },
+  "stats": {
+    "viewCount": 43599,
+    "likeCount": 645,
+    "commentCount": 14
+  },
+  "descriptionSignal": {
+    "hasIngredientKeyword": false,
+    "hasStepKeyword": false,
+    "hasQuantityPattern": false,
+    "length": 0
+  },
+  "captions": {
+    "available": true,
+    "reason": null,
+    "provider": "apify",
+    "language": "ko",
+    "segments": [
+      {
+        "lineIndex": 0,
+        "text": "오븐이 있어야지만 가능한 요리인 줄",
+        "startMs": 599,
+        "durationMs": 4841,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 1,
+        "text": "알았는데 오븐 없이 만들어도 너무",
+        "startMs": 2879,
+        "durationMs": 5241,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 2,
+        "text": "맛있어서 자주 해 먹고 있어요 채소",
+        "startMs": 5440,
+        "durationMs": 5440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 3,
+        "text": "잘 안 먹는 일곱살 딸도 라따뚜이에",
+        "startMs": 8120,
+        "durationMs": 5399,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 4,
+        "text": "들어가는 건 편식 없이 잘 먹더라고요",
+        "startMs": 10880,
+        "durationMs": 5800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 5,
+        "text": "올리브유 두름 팬에 다진마늘 양파",
+        "startMs": 13519,
+        "durationMs": 5600,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 6,
+        "text": "고기 넣어 볶다가 고기가 어느 정도",
+        "startMs": 16680,
+        "durationMs": 5000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 7,
+        "text": "익으면 토마토 소스를 넣어 주세요",
+        "startMs": 19119,
+        "durationMs": 5080,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 8,
+        "text": "소스와 야채를 잘 섞은 다음 불을",
+        "startMs": 21680,
+        "durationMs": 5120,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 9,
+        "text": "잠시 꺼두고 준비해 둔 호박 가지",
+        "startMs": 24199,
+        "durationMs": 5000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 10,
+        "text": "토마토를 둥글게 올려 주세요 치즈도",
+        "startMs": 26800,
+        "durationMs": 5000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 11,
+        "text": "듬뿍 넣어서 불 다시 올리고 소스가",
+        "startMs": 29199,
+        "durationMs": 5641,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 12,
+        "text": "끓으면 약불로 15분에서 20분 와",
+        "startMs": 31800,
+        "durationMs": 5680,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 13,
+        "text": "이거 이거 간단한데 정말 맛있어요",
+        "startMs": 34840,
+        "durationMs": 5280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 14,
+        "text": "국물반 바삭하게 구워서 같이 먹으면",
+        "startMs": 37480,
+        "durationMs": 4720,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 15,
+        "text": "두 배는 더 맛있어요 제철 최소로 꼭",
+        "startMs": 40120,
+        "durationMs": 5119,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 16,
+        "text": "만들어 보세요",
+        "startMs": 42200,
+        "durationMs": 3039,
+        "language": "ko"
+      }
+    ],
+    "tracks": [
+      {
+        "languageCode": "ko",
+        "name": "한국어 (자동 생성됨)",
+        "trackKind": "auto"
+      }
+    ],
+    "selectedTrack": {
+      "languageCode": "ko",
+      "name": null,
+      "trackKind": "unknown"
+    },
+    "publicTimedTextReason": "timedtext_status_200"
+  },
+  "authorComments": {
+    "available": true,
+    "reason": null,
+    "comments": [
+      {
+        "text": "▪️재료: 양파 반개, 다진마늘 1큰술 듬뿍, 소고기(생략가능), 가지 2개, 주키니 1개 (또는 애호박), 토마토 4-5개, 모짜렐라 치즈, 토마토소스 한병\n\n▪️만드는 법\n1. 양파는 잘게, 가지&주키니&토마토는 0.5cm두께로 썰기\n2. 달군팬에 올리브유 두르고 다진마늘, 양파, 소고기 (고기는 생략 또는 대체가능) 넣어 볶다가 고기가 어느정도 익으면 토마토소스 넣기\n3. 소스와 야채를 섞고 불 끄기\n4. 소스 위로 둥글게 가지, 호박, 토마토를 둘러 올리고 그 위로 치즈 뿌리기\n5. 불을 다시 올리고 소스가 끓기 시작하면 냄비 뚜껑을 닫고 약불로 15-20분 익히기\n\n✔️통밀빵 바삭하게 구워서 같이 먹으면 2배 맛있구요,\n남은 소스엔 파스타면 넣어 싹싹 긁어드세요!",
+        "likeCount": 3,
+        "publishedAt": "2024-05-30T02:02:03Z"
+      }
+    ]
+  }
+}

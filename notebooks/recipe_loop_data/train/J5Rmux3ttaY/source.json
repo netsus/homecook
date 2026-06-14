@@ -1,0 +1,1399 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-06-11T07:19:50.740Z",
+  "video": {
+    "videoId": "J5Rmux3ttaY",
+    "url": "https://www.youtube.com/watch?v=J5Rmux3ttaY",
+    "title": "(속보) 안사돈이 알려준 다시마 고추다대기 만드는 방법 | How to make kelp red pepper paste",
+    "description": "디시마 이제 육수로만 쓰지 마세요\n좋아요와 구독은 무료입니다.\n도움이 되셨다면 구독, 좋아요 부탁드릴게요^^\n광고 협찬문의 - hwachonara@gmail.com",
+    "channelId": "UCzIOIStANWRgYa3BRuJOg8Q",
+    "channelTitle": "주부나라",
+    "publishedAt": "2021-10-04T23:58:23Z",
+    "tags": [
+      "다시마조림",
+      "다시마 짜박이",
+      "다시마 다대기",
+      "다시마요리",
+      "다시마요리 종류",
+      "다시마 요리법",
+      "다시마 간장 조림",
+      "다시마효능",
+      "다시마 장",
+      "고추 다대기",
+      "고추 짜박이",
+      "다시마 조림",
+      "고추다대기볶음",
+      "고추다대기 간장"
+    ],
+    "defaultLanguage": "ko",
+    "durationSeconds": 569,
+    "thumbnailUrl": "https://i.ytimg.com/vi/J5Rmux3ttaY/maxresdefault.jpg"
+  },
+  "stats": {
+    "viewCount": 1229541,
+    "likeCount": 21025,
+    "commentCount": 462
+  },
+  "descriptionSignal": {
+    "hasIngredientKeyword": false,
+    "hasStepKeyword": false,
+    "hasQuantityPattern": false,
+    "length": 91
+  },
+  "captions": {
+    "available": true,
+    "reason": null,
+    "provider": "apify",
+    "language": "ko",
+    "segments": [
+      {
+        "lineIndex": 0,
+        "text": "안녕하세요 좁은 에라 입니다 오늘은",
+        "startMs": 4170,
+        "durationMs": 6480,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 1,
+        "text": "고추 다대기 말고 다시 마다 되기를",
+        "startMs": 7020,
+        "durationMs": 6289,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 2,
+        "text": "알려 드릴 건데요",
+        "startMs": 10650,
+        "durationMs": 2659,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 3,
+        "text": "저희 안산 로마 님께서 보통 닭 고추",
+        "startMs": 13339,
+        "durationMs": 4981,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 4,
+        "text": "다대기 말 있는 수 많은 데다 심하다",
+        "startMs": 16129,
+        "durationMs": 3990,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 5,
+        "text": "되기도 했는데 이게 너무 맛있다면서",
+        "startMs": 18320,
+        "durationMs": 5400,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 6,
+        "text": "한번 해보라 면서 카톡에",
+        "startMs": 20119,
+        "durationMs": 4951,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 7,
+        "text": "장문의",
+        "startMs": 23720,
+        "durationMs": 4500,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 8,
+        "text": "엄 문자를 주셨어요",
+        "startMs": 25070,
+        "durationMs": 5520,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 9,
+        "text": "진짜로 제가 해 먹어 보니까 너무",
+        "startMs": 28220,
+        "durationMs": 4850,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 10,
+        "text": "맛있더라구요",
+        "startMs": 30590,
+        "durationMs": 4640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 11,
+        "text": "다시면 또 건강이나 아주 좋으니까",
+        "startMs": 33070,
+        "durationMs": 6540,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 12,
+        "text": "한번 만들어 볼까요 먼저 다시마를",
+        "startMs": 35230,
+        "durationMs": 8070,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 13,
+        "text": "물에 등 거 가지고 한 30분정도",
+        "startMs": 39610,
+        "durationMs": 7460,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 14,
+        "text": "풀리 라고 하시더라구요",
+        "startMs": 43300,
+        "durationMs": 3770,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 15,
+        "text": "얼마전에 된장 맛있게 만드는 방법",
+        "startMs": 47590,
+        "durationMs": 4740,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 16,
+        "text": "올렸더니 엄청나게 많이들",
+        "startMs": 50590,
+        "durationMs": 2970,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 17,
+        "text": "좋아하시더라구요",
+        "startMs": 52330,
+        "durationMs": 4280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 18,
+        "text": "지금 30분정도 불렸던 이 요렇게",
+        "startMs": 53560,
+        "durationMs": 7080,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 19,
+        "text": "통통해 됐어요 매그 미끈하게",
+        "startMs": 56610,
+        "durationMs": 7000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 20,
+        "text": "소쿠리에 건져 가지고 물이 빠질 동안",
+        "startMs": 60640,
+        "durationMs": 6690,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 21,
+        "text": "두고요 다른 재료 한번 준비해 볼게요",
+        "startMs": 63610,
+        "durationMs": 6900,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 22,
+        "text": "일단 마늘이 좀 필요합니다",
+        "startMs": 67330,
+        "durationMs": 5399,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 23,
+        "text": "재료는",
+        "startMs": 70510,
+        "durationMs": 4800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 24,
+        "text": "다시마가 일단 주인공이니까 다시마",
+        "startMs": 72729,
+        "durationMs": 6210,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 25,
+        "text": "같이 많아야 된다고 해요",
+        "startMs": 75310,
+        "durationMs": 6000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 26,
+        "text": "하늘 있으며 썸 지어 주시고요 없으면",
+        "startMs": 78939,
+        "durationMs": 5040,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 27,
+        "text": "그냥 눈 시력 벌어놓은 만 하셔도 될",
+        "startMs": 81310,
+        "durationMs": 4229,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 28,
+        "text": "것 같아요",
+        "startMs": 83979,
+        "durationMs": 4771,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 29,
+        "text": "그리고 밀치 필요한데요 저희 그려 장",
+        "startMs": 85539,
+        "durationMs": 5311,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 30,
+        "text": "낼지 밖에 없어요",
+        "startMs": 88750,
+        "durationMs": 6690,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 31,
+        "text": "굵은 멸치 하셔도 됩니다 빠 가지고",
+        "startMs": 90850,
+        "durationMs": 7470,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 32,
+        "text": "음 일치가 쪼매 해가지고",
+        "startMs": 95440,
+        "durationMs": 6210,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 33,
+        "text": "2 이 잘 안쓰지만 이미 이 그다지",
+        "startMs": 98320,
+        "durationMs": 7760,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 34,
+        "text": "라고 하던데 뭐 n3 줘 아",
+        "startMs": 101650,
+        "durationMs": 4430,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 35,
+        "text": "네 곡이 유역의 가야되서 안되게 펴기",
+        "startMs": 107390,
+        "durationMs": 4070,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 36,
+        "text": "하십시오",
+        "startMs": 110090,
+        "durationMs": 5120,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 37,
+        "text": "커터기 에 커터 커터 일단 하고",
+        "startMs": 111460,
+        "durationMs": 5760,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 38,
+        "text": "여러분 들어 시간되시면 그냥 칼로",
+        "startMs": 115210,
+        "durationMs": 4530,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 39,
+        "text": "이렇게 따져서 하시면 커터기 하는",
+        "startMs": 117220,
+        "durationMs": 4830,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 40,
+        "text": "것보다 더 맛있다고 하더라구요 고추도",
+        "startMs": 119740,
+        "durationMs": 4590,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 41,
+        "text": "칼로 다지면서 맛있고 커터기 자막",
+        "startMs": 122050,
+        "durationMs": 4620,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 42,
+        "text": "지내야 한다고 하는데 저는 지금 영상",
+        "startMs": 124330,
+        "durationMs": 4319,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 43,
+        "text": "찍는다고 또 음 씨가 에 없어서 커트",
+        "startMs": 126670,
+        "durationMs": 4800,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 44,
+        "text": "기 빨리 갈아서 할게요",
+        "startMs": 128649,
+        "durationMs": 6691,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 45,
+        "text": "으 3월에 그 닿아 가지고 있냐고 또",
+        "startMs": 131470,
+        "durationMs": 5460,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 46,
+        "text": "보내실 지 모르니까",
+        "startMs": 135340,
+        "durationMs": 3619,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 47,
+        "text": "아",
+        "startMs": 136930,
+        "durationMs": 2029,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 48,
+        "text": "음 이렇게 다져서 준비해 주시고요",
+        "startMs": 139740,
+        "durationMs": 6360,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 49,
+        "text": "그리고 고추 너 매운거 못드시는 분은",
+        "startMs": 142620,
+        "durationMs": 5430,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 50,
+        "text": "그냥 토 꽃으로 하시면 되고요",
+        "startMs": 146100,
+        "durationMs": 3660,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 51,
+        "text": "스토리지 벤 어떤 매운걸 좋아해",
+        "startMs": 148050,
+        "durationMs": 4920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 52,
+        "text": "가지고 명분만 해볼게요 아니면",
+        "startMs": 149760,
+        "durationMs": 5670,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 53,
+        "text": "매운거 안 매운 것 섞어서 하셔도",
+        "startMs": 152970,
+        "durationMs": 4560,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 54,
+        "text": "된다고 하시더라구요",
+        "startMs": 155430,
+        "durationMs": 4410,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 55,
+        "text": "어 각자 입맛에 취향에 맞게 아",
+        "startMs": 157530,
+        "durationMs": 5320,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 56,
+        "text": "심해진 때에야",
+        "startMs": 159840,
+        "durationMs": 4570,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 57,
+        "text": "그러나 노래",
+        "startMs": 162850,
+        "durationMs": 3750,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 58,
+        "text": "잘게잘게 우유 하던 동 단비 다지",
+        "startMs": 164410,
+        "durationMs": 4820,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 59,
+        "text": "라고 하더라구요",
+        "startMs": 166600,
+        "durationMs": 2630,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 60,
+        "text": "그리고 또 요거 다시마 다져야 되는데",
+        "startMs": 170840,
+        "durationMs": 6440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 61,
+        "text": "이거는 뭐 타게 갈 수도 없고 맞이",
+        "startMs": 177810,
+        "durationMs": 2820,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 62,
+        "text": "야",
+        "startMs": 179550,
+        "durationMs": 3689,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 63,
+        "text": "테테 가인의 나와야 전부 그 미끈하게",
+        "startMs": 180630,
+        "durationMs": 4560,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 64,
+        "text": "말라가지고 축이 될 것 같아서 오얏",
+        "startMs": 183239,
+        "durationMs": 5551,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 65,
+        "text": "운동 뭐 어쩔 수 없이 써야 됩니다",
+        "startMs": 185190,
+        "durationMs": 6600,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 66,
+        "text": "옛날에 제가 요가 하고 날 때 이렇게",
+        "startMs": 188790,
+        "durationMs": 5840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 67,
+        "text": "명성 한다 고 앉아 가지고",
+        "startMs": 191790,
+        "durationMs": 5180,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 68,
+        "text": "옴",
+        "startMs": 194630,
+        "durationMs": 4460,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 69,
+        "text": "음 감소 소리의 진동을 느끼면서",
+        "startMs": 196970,
+        "durationMs": 5090,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 70,
+        "text": "명상한 색이 있는데 그렇게 이제",
+        "startMs": 199090,
+        "durationMs": 4840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 71,
+        "text": "마음가짐을 가지시고 다 주세요",
+        "startMs": 202060,
+        "durationMs": 4240,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 72,
+        "text": "시킵니다 아",
+        "startMs": 203930,
+        "durationMs": 4320,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 73,
+        "text": "6 내려가지 곳 알겠다 이게 다 거야",
+        "startMs": 206300,
+        "durationMs": 5870,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 74,
+        "text": "한다는 이 말입니다 해외",
+        "startMs": 208250,
+        "durationMs": 3920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 75,
+        "text": "으",
+        "startMs": 213230,
+        "durationMs": 2000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 76,
+        "text": "바다의 퇴소 라고 불리는 다시 마라",
+        "startMs": 216280,
+        "durationMs": 5220,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 77,
+        "text": "베베네 양을 늘려 써 변비에 도움을",
+        "startMs": 219069,
+        "durationMs": 4321,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 78,
+        "text": "주고요",
+        "startMs": 221500,
+        "durationMs": 4170,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 79,
+        "text": "지바 너의 흡수를 방해하기도 하여서",
+        "startMs": 223390,
+        "durationMs": 6530,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 80,
+        "text": "다이어트에 도움을 주는 식품입니다",
+        "startMs": 225670,
+        "durationMs": 4250,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 81,
+        "text": "동맥경화 예방 고혈압 예방",
+        "startMs": 230100,
+        "durationMs": 6820,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 82,
+        "text": "또 콜레스테롤도 저하를 시켜준다고",
+        "startMs": 234070,
+        "durationMs": 3630,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 83,
+        "text": "해요",
+        "startMs": 236920,
+        "durationMs": 2760,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 84,
+        "text": "다시마 그냥 몸을 좋다고 말하지",
+        "startMs": 237700,
+        "durationMs": 4320,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 85,
+        "text": "설명을 잘 몰라 모르잖아 2구좌",
+        "startMs": 239680,
+        "durationMs": 4320,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 86,
+        "text": "그래서 제가 효 능 미 일으키게",
+        "startMs": 242020,
+        "durationMs": 5060,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 87,
+        "text": "있다고 말씀을 드렸습니다",
+        "startMs": 244000,
+        "durationMs": 3080,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 88,
+        "text": "아 3인 즙을 키워요",
+        "startMs": 250750,
+        "durationMs": 4920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 89,
+        "text": "잠시 마문 좀 * 넣고요",
+        "startMs": 253239,
+        "durationMs": 4381,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 90,
+        "text": "제가 한 폭에 털 매나 영상 찍는데",
+        "startMs": 255670,
+        "durationMs": 3230,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 91,
+        "text": "소리가 나서",
+        "startMs": 257620,
+        "durationMs": 3869,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 92,
+        "text": "좀 열어놓고 해야 됩니다 문현",
+        "startMs": 258900,
+        "durationMs": 4750,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 93,
+        "text": "으로부터 가스 볼이 막 날라 등기가",
+        "startMs": 261489,
+        "durationMs": 3210,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 94,
+        "text": "안고",
+        "startMs": 263650,
+        "durationMs": 3360,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 95,
+        "text": "이렇게 에로 사항이 많습니다",
+        "startMs": 264699,
+        "durationMs": 4591,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 96,
+        "text": "기름 치도 있는 거 아무거나 끌러",
+        "startMs": 267010,
+        "durationMs": 3570,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 97,
+        "text": "줍니다",
+        "startMs": 269290,
+        "durationMs": 3570,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 98,
+        "text": "저는 아보카도 키를 쓰니까 굉장히",
+        "startMs": 270580,
+        "durationMs": 4610,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 99,
+        "text": "맑고 법도 한 것도 없고 좋더라구요",
+        "startMs": 272860,
+        "durationMs": 7040,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 100,
+        "text": "그래서 먼저 좀 멸치 다져 놓은 것을",
+        "startMs": 275190,
+        "durationMs": 8460,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 101,
+        "text": "달달달 포 꽉 입니다",
+        "startMs": 279900,
+        "durationMs": 3750,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 102,
+        "text": "몸에도 멸치도 놓고",
+        "startMs": 287819,
+        "durationMs": 3561,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 103,
+        "text": "어느 정도 볶아지면",
+        "startMs": 294030,
+        "durationMs": 7020,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 104,
+        "text": "또 다져놓은 다시마를 넣어 줍니다",
+        "startMs": 296880,
+        "durationMs": 6540,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 105,
+        "text": "보기에 나온 다시마가 복코 지어서 만",
+        "startMs": 301050,
+        "durationMs": 4980,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 106,
+        "text": "없을 것 같은데 이런 느낌인데 좋으며",
+        "startMs": 303420,
+        "durationMs": 3870,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 107,
+        "text": "아니에요",
+        "startMs": 306030,
+        "durationMs": 4359,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 108,
+        "text": "아주 뜻밖의 마시니까",
+        "startMs": 307290,
+        "durationMs": 5590,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 109,
+        "text": "잘 단 디몰 데이",
+        "startMs": 310389,
+        "durationMs": 7101,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 110,
+        "text": "이거 뭐 투수로 나온 거 좀 넣구요",
+        "startMs": 312880,
+        "durationMs": 4610,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 111,
+        "text": "고추 하고",
+        "startMs": 321589,
+        "durationMs": 4890,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 112,
+        "text": "이런것은 다시마가 양이 훨씬 많으며",
+        "startMs": 323960,
+        "durationMs": 4709,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 113,
+        "text": "맛있다고 하니까 딱히 마약을 조금",
+        "startMs": 326479,
+        "durationMs": 4830,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 114,
+        "text": "많이 아세요 어느만큼 인지는",
+        "startMs": 328669,
+        "durationMs": 5670,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 115,
+        "text": "안 알려 주시고 그냥 데 료마 하는",
+        "startMs": 331309,
+        "durationMs": 6140,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 116,
+        "text": "방법 마 알려주시더라구요",
+        "startMs": 334339,
+        "durationMs": 3110,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 117,
+        "text": "않아서 이제 뭐얏 너 무 일까",
+        "startMs": 338389,
+        "durationMs": 5460,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 118,
+        "text": "다시마가 말하면 맛이 또 사워 그 말",
+        "startMs": 341389,
+        "durationMs": 5610,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 119,
+        "text": "말하더라고요 그 말 줌마",
+        "startMs": 343849,
+        "durationMs": 6000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 120,
+        "text": "어쨌든 이런 맛있는 음식 굴 팁들",
+        "startMs": 346999,
+        "durationMs": 5040,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 121,
+        "text": "알려 주셔서 너무 감사합니다 사러 는",
+        "startMs": 349849,
+        "durationMs": 5690,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 122,
+        "text": "사돈 어르신 c 3",
+        "startMs": 352039,
+        "durationMs": 3500,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 123,
+        "text": "새날이 여아 들어요 니 어서 서울의",
+        "startMs": 355710,
+        "durationMs": 4890,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 124,
+        "text": "여행 갑상 하더라구요 아주 재미",
+        "startMs": 358500,
+        "durationMs": 3330,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 125,
+        "text": "때에요",
+        "startMs": 360600,
+        "durationMs": 2160,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 126,
+        "text": "예",
+        "startMs": 361830,
+        "durationMs": 4680,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 127,
+        "text": "응 게다가 막 간장을 부어 줍니다",
+        "startMs": 362760,
+        "durationMs": 4980,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 128,
+        "text": "아깐 장",
+        "startMs": 366510,
+        "durationMs": 3840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 129,
+        "text": "얀 1.4 후보와 한번 드셔보시고",
+        "startMs": 367740,
+        "durationMs": 7070,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 130,
+        "text": "않을 맞추면 될 것 같아요",
+        "startMs": 370350,
+        "durationMs": 4460,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 131,
+        "text": "아 자식들이 어디가서 재밌고 즐겁게",
+        "startMs": 374930,
+        "durationMs": 5070,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 132,
+        "text": "놀고 있으니까 그렇게 거 못하고서 올",
+        "startMs": 377509,
+        "durationMs": 6421,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 133,
+        "text": "수가 없어요 예 맞죠 예 안장 꺾고",
+        "startMs": 380000,
+        "durationMs": 6300,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 134,
+        "text": "그리고 물을 조금 자박하게 부어",
+        "startMs": 383930,
+        "durationMs": 5820,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 135,
+        "text": "가지고 한소끔 꺼려 줍니다 다이바",
+        "startMs": 386300,
+        "durationMs": 4709,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 136,
+        "text": "1박을",
+        "startMs": 389750,
+        "durationMs": 4320,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 137,
+        "text": "재료들이 정부 좋은 성분들이 우러나",
+        "startMs": 391009,
+        "durationMs": 5311,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 138,
+        "text": "가지고 서로 서로 합당을 할 수",
+        "startMs": 394070,
+        "durationMs": 4170,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 139,
+        "text": "있도록 해줍니다",
+        "startMs": 396320,
+        "durationMs": 4319,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 140,
+        "text": "모든 좋은 성분들이 나빠져 넣어",
+        "startMs": 398240,
+        "durationMs": 6390,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 141,
+        "text": "나와가지고 같이 어우러져 써 맛이 없",
+        "startMs": 400639,
+        "durationMs": 5541,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 142,
+        "text": "될 수 있도록",
+        "startMs": 404630,
+        "durationMs": 4550,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 143,
+        "text": "해줍니다",
+        "startMs": 406180,
+        "durationMs": 3000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 144,
+        "text": "그리고 마늘 찧어 놓은거",
+        "startMs": 411560,
+        "durationMs": 5960,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 145,
+        "text": "넣구요",
+        "startMs": 415100,
+        "durationMs": 2420,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 146,
+        "text": "고춧가루도 조금 넣구요",
+        "startMs": 422330,
+        "durationMs": 4530,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 147,
+        "text": "또",
+        "startMs": 425780,
+        "durationMs": 1879,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 148,
+        "text": "1회",
+        "startMs": 426860,
+        "durationMs": 4079,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 149,
+        "text": "올리고당이나 머물려 같은 매트 매너",
+        "startMs": 427659,
+        "durationMs": 6401,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 150,
+        "text": "적당량 넣어줍니다 저는요 살 올리고당",
+        "startMs": 430939,
+        "durationMs": 6151,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 151,
+        "text": "역의 집에 있어가지고 녹을 넣었어요",
+        "startMs": 434060,
+        "durationMs": 6370,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 152,
+        "text": "노래 가지고 한번 꺾어 면서",
+        "startMs": 437090,
+        "durationMs": 6540,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 153,
+        "text": "섞여 없습니다",
+        "startMs": 440430,
+        "durationMs": 3200,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 154,
+        "text": "아",
+        "startMs": 455480,
+        "durationMs": 2030,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 155,
+        "text": "잘했어 이제",
+        "startMs": 457770,
+        "durationMs": 5490,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 156,
+        "text": "불 꺼구요",
+        "startMs": 460390,
+        "durationMs": 2870,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 157,
+        "text": "밥에 나가지고",
+        "startMs": 466830,
+        "durationMs": 4130,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 158,
+        "text": "비벼먹으면 완전",
+        "startMs": 468210,
+        "durationMs": 2750,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 159,
+        "text": "개꼴 마시라고 요소 해야될 말로",
+        "startMs": 470970,
+        "durationMs": 3960,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 160,
+        "text": "그러더라구요 그게 뭔 말인지 잘",
+        "startMs": 473040,
+        "durationMs": 3120,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 161,
+        "text": "모르겠는데",
+        "startMs": 474930,
+        "durationMs": 3960,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 162,
+        "text": "아요 참 다대기 라고 하니까 일본말이",
+        "startMs": 476160,
+        "durationMs": 5610,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 163,
+        "text": "해보고 나서 안된다고 하시더라고요",
+        "startMs": 478890,
+        "durationMs": 5370,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 164,
+        "text": "조림 이라고 하라고 하던데",
+        "startMs": 481770,
+        "durationMs": 4710,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 165,
+        "text": "자 빨리 라고 해야되나 이렇게 그걸",
+        "startMs": 484260,
+        "durationMs": 6440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 166,
+        "text": "뭐라고 해야 되면 다시 맛 조리",
+        "startMs": 486480,
+        "durationMs": 4220,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 167,
+        "text": "다음부터는 고쳐 쓰겠습니다 아연 님들",
+        "startMs": 490800,
+        "durationMs": 3810,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 168,
+        "text": "죄송합니다",
+        "startMs": 492990,
+        "durationMs": 3450,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 169,
+        "text": "다대기 라고 해야지 옛날 어르신들은",
+        "startMs": 494610,
+        "durationMs": 4700,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 170,
+        "text": "또 알아도 드시더라구요",
+        "startMs": 496440,
+        "durationMs": 2870,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 171,
+        "text": "입이 어서 먹어 보고 막 평가를 해",
+        "startMs": 501950,
+        "durationMs": 4880,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 172,
+        "text": "드릴께요",
+        "startMs": 504139,
+        "durationMs": 2691,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 173,
+        "text": "음",
+        "startMs": 515240,
+        "durationMs": 2900,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 174,
+        "text": "다시마가 저 여기 c 피워",
+        "startMs": 518300,
+        "durationMs": 5420,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 175,
+        "text": "멸치",
+        "startMs": 522469,
+        "durationMs": 4771,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 176,
+        "text": "고수한 마 타고 많은 엣 안내하고",
+        "startMs": 523720,
+        "durationMs": 6700,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 177,
+        "text": "어우 정말 맛있어요",
+        "startMs": 527240,
+        "durationMs": 5130,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 178,
+        "text": "어쩌다 대비마마 씹히는 맛이 없는",
+        "startMs": 530420,
+        "durationMs": 5220,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 179,
+        "text": "데려 다시마가 저 쪽 이쪽은 쪽에",
+        "startMs": 532370,
+        "durationMs": 5280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 180,
+        "text": "씹히는게 너무 많이 했네요",
+        "startMs": 535640,
+        "durationMs": 4400,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 181,
+        "text": "음",
+        "startMs": 537650,
+        "durationMs": 2390,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 182,
+        "text": "222",
+        "startMs": 541520,
+        "durationMs": 4330,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 183,
+        "text": "으 음",
+        "startMs": 543760,
+        "durationMs": 6120,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 184,
+        "text": "짠짠짠 하게 하지 마라 2 음 프",
+        "startMs": 545850,
+        "durationMs": 7860,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 185,
+        "text": "9시 나인가 3 2 으",
+        "startMs": 549880,
+        "durationMs": 3830,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 186,
+        "text": "짬짬히 지우지 않아 유찰 봐요 안녕",
+        "startMs": 554190,
+        "durationMs": 8820,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 187,
+        "text": "4 4짜 음",
+        "startMs": 558490,
+        "durationMs": 8910,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 188,
+        "text": "음 뭘 와줄 막 나온다",
+        "startMs": 563010,
+        "durationMs": 7110,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 189,
+        "text": "너무 맛있었어",
+        "startMs": 567400,
+        "durationMs": 2720,
+        "language": "ko"
+      }
+    ],
+    "tracks": [
+      {
+        "languageCode": "ko",
+        "name": "한국어 (자동 생성됨)",
+        "trackKind": "auto"
+      }
+    ],
+    "selectedTrack": {
+      "languageCode": "ko",
+      "name": null,
+      "trackKind": "unknown"
+    },
+    "publicTimedTextReason": "timedtext_status_200"
+  },
+  "authorComments": {
+    "available": true,
+    "reason": null,
+    "comments": []
+  }
+}

@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-06-11T07:21:19.714Z",
+  "video": {
+    "videoId": "rkOEBmECi_o",
+    "url": "https://www.youtube.com/watch?v=rkOEBmECi_o",
+    "title": "고추다대기는 진짜 유명한 밥도둑임🍚🌶️",
+    "description": "안녕하세요, 집밥원쌤입니다!\n오늘은 경상도에서 진 ~ 짜 유명한 밥도둑인 “고추다대기”를 소개해보려고 합니다.\n\n반찬 없을 때 고추다대기 하나만 있어도 두그릇 뚝딱이거든요?\n지금 당장 따라하러가요~\n\n당신의 플러스 라이프를 위하여❣️\n\n\n\n🎵Music provided by 브금대통령\n🎵Track : 여름밤의 꿈 - https://youtu.be/hC29Vt9u6T0?si=r4XRwFuLiCmbFIU8\n\n\n[레시피]\n\n👩‍🍳\n1. 고추 500g을 썰어서 다지기로 다지기\n2. 양파 반개 썰기\n3. 양념 만들기\n: 국간장 3왕큰술, 참치액 3왕큰술, 매실액 3왕큰술, 맛술 3왕큰술 섞어주기\n4. 식용유 두르고 다져준 고추 넣고 볶다가, 썰어둔 양파도 넣고 볶기\n5. 양념 넣고 볶기\n6. 물 100mL 넣고 5분정도 볶기\n7. 멸치가루 5왕큰술 넣고 카키색이 될 때까지 볶기",
+    "channelId": "UCJu_Y-iKZleZWBVuNYf3Qzg",
+    "channelTitle": "집밥원쌤",
+    "publishedAt": "2024-09-27T02:00:25Z",
+    "tags": [
+      "반찬",
+      "밥도둑",
+      "고추다대기",
+      "자취요리",
+      "매콤",
+      "얼큰",
+      "경상도요리",
+      "집밥",
+      "고추장물",
+      "고추요리",
+      "고추다짐"
+    ],
+    "defaultLanguage": "ko",
+    "durationSeconds": 58,
+    "thumbnailUrl": "https://i.ytimg.com/vi/rkOEBmECi_o/maxresdefault.jpg"
+  },
+  "stats": {
+    "viewCount": 866703,
+    "likeCount": 8497,
+    "commentCount": 123
+  },
+  "descriptionSignal": {
+    "hasIngredientKeyword": false,
+    "hasStepKeyword": true,
+    "hasQuantityPattern": true,
+    "length": 438
+  },
+  "captions": {
+    "available": true,
+    "reason": null,
+    "provider": "apify",
+    "language": "ko",
+    "segments": [
+      {
+        "lineIndex": 0,
+        "text": "[음악]",
+        "startMs": 70,
+        "durationMs": 3209,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 1,
+        "text": "고추 다대기 이거 진짜 밥도둑이에요",
+        "startMs": 399,
+        "durationMs": 6081,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 2,
+        "text": "먼저 고추 500g 썰어서 다지기로",
+        "startMs": 3279,
+        "durationMs": 6121,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 3,
+        "text": "다져 주세요 다지기가 없다면 직접",
+        "startMs": 6480,
+        "durationMs": 6720,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 4,
+        "text": "다셔도 좋아요 양파 반개 다져주고",
+        "startMs": 9400,
+        "durationMs": 8000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 5,
+        "text": "국간장 3 왕 큰술 참치 액젓 만큰",
+        "startMs": 13200,
+        "durationMs": 8999,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 6,
+        "text": "술 매실액 만큰 술 맛술 만큰 술을",
+        "startMs": 17400,
+        "durationMs": 5799,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 7,
+        "text": "준비해",
+        "startMs": 22199,
+        "durationMs": 3840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 8,
+        "text": "주세요 팬의 식용유를 두르고 고추",
+        "startMs": 23199,
+        "durationMs": 6920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 9,
+        "text": "넣어 살짝 벗다가 양파도 넣고 볶아요",
+        "startMs": 26039,
+        "durationMs": 6720,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 10,
+        "text": "혼 앞에 두었던 양념을 붓고 물고를",
+        "startMs": 30119,
+        "durationMs": 6501,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 11,
+        "text": "섞으며 볶아 주세요 물을 붓고 계속",
+        "startMs": 32759,
+        "durationMs": 7361,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 12,
+        "text": "[음악]",
+        "startMs": 36620,
+        "durationMs": 6619,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 13,
+        "text": "볶아줍니다 멸치가루를 다섯 왕 큰술",
+        "startMs": 40120,
+        "durationMs": 6640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 14,
+        "text": "넣고 고추가 카키색이 될 정도로 볶아",
+        "startMs": 43239,
+        "durationMs": 7521,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 15,
+        "text": "주세요 멸치가루 대신 잔멸치를 넣어도",
+        "startMs": 46760,
+        "durationMs": 7279,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 16,
+        "text": "맛있어요 고추다 지기네 구독 좋아요",
+        "startMs": 50760,
+        "durationMs": 8520,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 17,
+        "text": "잊지 마세요 쌤 저 밥 더 주세요",
+        "startMs": 54039,
+        "durationMs": 5241,
+        "language": "ko"
+      }
+    ],
+    "tracks": [
+      {
+        "languageCode": "ko",
+        "name": "한국어 (자동 생성됨)",
+        "trackKind": "auto"
+      }
+    ],
+    "selectedTrack": {
+      "languageCode": "ko",
+      "name": null,
+      "trackKind": "unknown"
+    },
+    "publicTimedTextReason": "timedtext_status_200"
+  },
+  "authorComments": {
+    "available": true,
+    "reason": null,
+    "comments": []
+  }
+}

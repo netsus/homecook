@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "videoId": "tqpwhtw54mQ",
+  "draftedBy": "claude:description+captions + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "두부볶음",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "두부",
+          "nameAliases": [
+            "tofu"
+          ],
+          "amount": "1",
+          "unit": "모",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "꽈리고추",
+          "nameAliases": [],
+          "amount": "150",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "홍고추",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "개",
+          "optional": true,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "대파",
+          "nameAliases": [
+            "대파 흰대"
+          ],
+          "amount": "15",
+          "unit": "cm",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "양조간장",
+          "nameAliases": [
+            "진간장"
+          ],
+          "amount": "6",
+          "unit": "스푼",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "설탕",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "작은스푼",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "조청",
+          "nameAliases": [
+            "물엿"
+          ],
+          "amount": "2",
+          "unit": "스푼",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "다진 마늘",
+          "nameAliases": [
+            "다진마늘"
+          ],
+          "amount": "크게 1",
+          "unit": "스푼",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "맛술",
+          "nameAliases": [
+            "미림"
+          ],
+          "amount": "5",
+          "unit": "스푼",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "후춧가루",
+          "nameAliases": [
+            "후추가루"
+          ],
+          "amount": "3",
+          "unit": "꼬집",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "caption",
+          "amountBasis": "stated-caption"
+        },
+        {
+          "name": "통깨",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "스푼",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "참기름",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "스푼",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "식용유",
+          "nameAliases": [],
+          "amount": "3",
+          "unit": "스푼",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "두부 1모를 사방 2cm 정도의 깍둑 모양으로 썬다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 2,
+          "instruction": "키친타월을 깐 쟁반에 썬 두부를 올리고 위에도 키친타월을 덮어 물기를 충분히 제거한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 3,
+          "instruction": "꽈리고추 150g은 꼭지를 제거하고 깨끗이 씻어 3등분으로 썬다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 4,
+          "instruction": "홍고추는 씨를 제거하고 작게 썬다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 5,
+          "instruction": "대파 흰대 15cm를 작게 다진다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 6,
+          "instruction": "볼에 양조간장 6스푼, 설탕 1작은스푼, 조청 2스푼, 다진 마늘 크게 1스푼, 다진 대파, 맛술 5스푼, 후춧가루 세 꼬집을 넣고 잘 섞어 양념장을 만든다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 7,
+          "instruction": "프라이팬에 식용유 3스푼을 두르고 중불에서 두부의 모든 면이 노릇해지도록 골고루 뒤집어 가며 부친다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 8,
+          "instruction": "노릇하게 부친 두부는 잠시 접시에 옮겨 둔다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 9,
+          "instruction": "기름이 남아 있는 팬에 양념장을 붓고 중불에서 끓인다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 10,
+          "instruction": "양념장이 바글바글 끓어오르면 꽈리고추를 넣고 숨이 살짝 줄어들 때까지 약 3분간 볶는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 11,
+          "instruction": "부쳐 둔 두부를 모두 넣고 팬에 양념장이 고이지 않을 정도가 될 때까지 중불에서 함께 볶는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 12,
+          "instruction": "약불로 줄인 뒤 홍고추, 통깨 1스푼, 참기름 1스푼을 넣고 잘 섞어 마무리한다.",
+          "evidence": "caption"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "작성자 댓글은 인사말뿐으로 레시피 보강 정보 없음.",
+    "설명란 괄호 병기: 두부 1모=큰 사이즈 550g, 꽈리고추 150g=한 봉지, 양조간장 6스푼=60g, 설탕 1작은스푼=5g, 조청 2스푼=30g, 다진 마늘 크게 1스푼=25g, 맛술 5스푼=50g.",
+    "설명란의 '진장장'은 '진간장' 오타로 판단해 양조간장의 대체 표기로 처리.",
+    "후춧가루 분량은 설명란에 없고 자막 '세포 집 정도'를 '세 꼬집 정도'로 ASR 보정한 값.",
+    "ASR 노이즈: 자막에서 두부가 '2번/2부/이' 등으로, '그때 분께 한수 푼'은 '통깨 1스푼', '장 기름'은 '참기름'으로 보정(설명란 재료와 일치).",
+    "홍고추는 색감용으로 자막에서 생략 가능하다고 언급되어 optional 처리.",
+    "[visual-pass] 모든 재료의 분량이 영상 내 자막과 발화를 통해 명확하게 제시되어 있어, 분량 미상인 재료는 없습니다.",
+    "[visual-pass] 초안의 재료 목록은 영상에서 사용된 모든 재료를 정확하게 포함하고 있습니다.",
+    "[visual-pass] 초안의 재료 목록과 영상 내 실제 사용된 재료 사이에 명백한 차이는 없습니다."
+  ]
+}

@@ -1,0 +1,1643 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-06-11T07:23:36.020Z",
+  "video": {
+    "videoId": "LSYEnH5fGfk",
+    "url": "https://www.youtube.com/watch?v=LSYEnH5fGfk",
+    "title": "The Easiest One Pot Pasta Ever (3 Ways)",
+    "description": "All you need is one pot and a dream when it comes to this pasta recipe. Although I'm hesitant, I'm hoping to find something special here.\n\nGet My Cookbook: http://bit.ly/JWCookbookAmazon\n\nAdditional Cookbook Options (other stores, international, etc.): https://bit.ly/TheJWCookbook\n\nFOLLOW ME:\nInstagram: https://www.instagram.com/joshuaweissman\nTik Tok: https://www.tiktok.com/@flakeysalt\nTwitter: https://twitter.com/therealweissman\nFacebook: https://www.facebook.com/thejoshuaweissman\nSubreddit: https://www.reddit.com/r/JoshuaWeissman/\nDiscord Server: https://discord.gg/joshuaweissman\n---------------------------------------------------------------\nIngredients Needed:\nhttps://www.joshuaweissman.com/post/one-pot-pasta-3-ways",
+    "channelId": "UChBEbMKI1eCcejTtmI32UEw",
+    "channelTitle": "Joshua Weissman",
+    "publishedAt": "2023-06-21T14:15:01Z",
+    "tags": [
+      "sat bawl pro",
+      "joshua weissman",
+      "One pot chicken pasta",
+      "one pot recipes",
+      "quick recipes",
+      "easy recipes",
+      "easy clean up recipes",
+      "pasta recipes",
+      "spaghetti recipes",
+      "rigatoni recipes",
+      "carbonara",
+      "carbonara recipe",
+      "spaghetti and meatballs",
+      "noodle recipes",
+      "homemade pasta",
+      "pasta at home",
+      "chicken pasta",
+      "tomato sauce recipe",
+      "parmesan pasta",
+      "parmesan recipe",
+      "pasta alfredo",
+      "chicken alfredo",
+      "parmigiano reggiano",
+      "creamy chicken pasta",
+      "italian pasta recipes",
+      "one pot meals",
+      "pasta recipe"
+    ],
+    "defaultLanguage": "en",
+    "durationSeconds": 412,
+    "thumbnailUrl": "https://i.ytimg.com/vi/LSYEnH5fGfk/maxresdefault.jpg"
+  },
+  "stats": {
+    "viewCount": 2555245,
+    "likeCount": 66324,
+    "commentCount": 1789
+  },
+  "descriptionSignal": {
+    "hasIngredientKeyword": true,
+    "hasStepKeyword": true,
+    "hasQuantityPattern": false,
+    "length": 730
+  },
+  "captions": {
+    "available": true,
+    "reason": null,
+    "provider": "apify",
+    "language": "en",
+    "segments": [
+      {
+        "lineIndex": 0,
+        "text": "I don't understand why people can't just",
+        "startMs": 0,
+        "durationMs": 4440,
+        "language": "en"
+      },
+      {
+        "lineIndex": 1,
+        "text": "boil their pasta and then make the sauce",
+        "startMs": 1560,
+        "durationMs": 4560,
+        "language": "en"
+      },
+      {
+        "lineIndex": 2,
+        "text": "and put it together five minutes of",
+        "startMs": 4440,
+        "durationMs": 3240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 3,
+        "text": "extra time maybe so that brings us here",
+        "startMs": 6120,
+        "durationMs": 3240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 4,
+        "text": "today for a little challenge I'm gonna",
+        "startMs": 7680,
+        "durationMs": 3660,
+        "language": "en"
+      },
+      {
+        "lineIndex": 5,
+        "text": "give you two of the best one pot pastas",
+        "startMs": 9360,
+        "durationMs": 3840,
+        "language": "en"
+      },
+      {
+        "lineIndex": 6,
+        "text": "I can possibly think of I'm gonna find",
+        "startMs": 11340,
+        "durationMs": 3000,
+        "language": "en"
+      },
+      {
+        "lineIndex": 7,
+        "text": "out if I can beat a pasta that's",
+        "startMs": 13200,
+        "durationMs": 3419,
+        "language": "en"
+      },
+      {
+        "lineIndex": 8,
+        "text": "completely traditionally made is it",
+        "startMs": 14340,
+        "durationMs": 3600,
+        "language": "en"
+      },
+      {
+        "lineIndex": 9,
+        "text": "really worth the extra five minutes of",
+        "startMs": 16619,
+        "durationMs": 2641,
+        "language": "en"
+      },
+      {
+        "lineIndex": 10,
+        "text": "time saving while simultaneously",
+        "startMs": 17940,
+        "durationMs": 2940,
+        "language": "en"
+      },
+      {
+        "lineIndex": 11,
+        "text": "destroying an entire culture's tradition",
+        "startMs": 19260,
+        "durationMs": 3779,
+        "language": "en"
+      },
+      {
+        "lineIndex": 12,
+        "text": "let's find out and make this shall we",
+        "startMs": 20880,
+        "durationMs": 4380,
+        "language": "en"
+      },
+      {
+        "lineIndex": 13,
+        "text": "okay three recipes two for the one pan",
+        "startMs": 23039,
+        "durationMs": 4141,
+        "language": "en"
+      },
+      {
+        "lineIndex": 14,
+        "text": "people and one for me that I'm not gonna",
+        "startMs": 25260,
+        "durationMs": 4560,
+        "language": "en"
+      },
+      {
+        "lineIndex": 15,
+        "text": "make in one pan now for pasta one which",
+        "startMs": 27180,
+        "durationMs": 4019,
+        "language": "en"
+      },
+      {
+        "lineIndex": 16,
+        "text": "also happens to be one pot I'm gonna be",
+        "startMs": 29820,
+        "durationMs": 2459,
+        "language": "en"
+      },
+      {
+        "lineIndex": 17,
+        "text": "honest I needed some sort of Direction",
+        "startMs": 31199,
+        "durationMs": 2520,
+        "language": "en"
+      },
+      {
+        "lineIndex": 18,
+        "text": "here because well I've never cooked",
+        "startMs": 32279,
+        "durationMs": 2581,
+        "language": "en"
+      },
+      {
+        "lineIndex": 19,
+        "text": "pasta this untraditionally and",
+        "startMs": 33719,
+        "durationMs": 3061,
+        "language": "en"
+      },
+      {
+        "lineIndex": 20,
+        "text": "horrifically so I sort of worked off",
+        "startMs": 34860,
+        "durationMs": 3420,
+        "language": "en"
+      },
+      {
+        "lineIndex": 21,
+        "text": "this recipe I found that was very",
+        "startMs": 36780,
+        "durationMs": 3180,
+        "language": "en"
+      },
+      {
+        "lineIndex": 22,
+        "text": "popular online so get yourself a medium",
+        "startMs": 38280,
+        "durationMs": 3480,
+        "language": "en"
+      },
+      {
+        "lineIndex": 23,
+        "text": "saute pan or a large deep pan in general",
+        "startMs": 39960,
+        "durationMs": 4200,
+        "language": "en"
+      },
+      {
+        "lineIndex": 24,
+        "text": "add 12 ounces or 350 grams of linguine",
+        "startMs": 41760,
+        "durationMs": 5220,
+        "language": "en"
+      },
+      {
+        "lineIndex": 25,
+        "text": "yep directly in a dry cold pan this only",
+        "startMs": 44160,
+        "durationMs": 5399,
+        "language": "en"
+      },
+      {
+        "lineIndex": 26,
+        "text": "hurts every fiber of my being for the",
+        "startMs": 46980,
+        "durationMs": 4800,
+        "language": "en"
+      },
+      {
+        "lineIndex": 27,
+        "text": "people now add 12 ounces or 350 grams of",
+        "startMs": 49559,
+        "durationMs": 3961,
+        "language": "en"
+      },
+      {
+        "lineIndex": 28,
+        "text": "cherry tomatoes except only like half",
+        "startMs": 51780,
+        "durationMs": 3180,
+        "language": "en"
+      },
+      {
+        "lineIndex": 29,
+        "text": "that because it felt like too much just",
+        "startMs": 53520,
+        "durationMs": 2760,
+        "language": "en"
+      },
+      {
+        "lineIndex": 30,
+        "text": "being honest follow with one yellow",
+        "startMs": 54960,
+        "durationMs": 3000,
+        "language": "en"
+      },
+      {
+        "lineIndex": 31,
+        "text": "onion thinly sliced four cloves of",
+        "startMs": 56280,
+        "durationMs": 3240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 32,
+        "text": "garlic thinly sliced half a teaspoon or",
+        "startMs": 57960,
+        "durationMs": 2880,
+        "language": "en"
+      },
+      {
+        "lineIndex": 33,
+        "text": "one gram of red pepper flakes three",
+        "startMs": 59520,
+        "durationMs": 3059,
+        "language": "en"
+      },
+      {
+        "lineIndex": 34,
+        "text": "tablespoons or 45 grams of extra virgin",
+        "startMs": 60840,
+        "durationMs": 3120,
+        "language": "en"
+      },
+      {
+        "lineIndex": 35,
+        "text": "olive oil and finally four and a half",
+        "startMs": 62579,
+        "durationMs": 3121,
+        "language": "en"
+      },
+      {
+        "lineIndex": 36,
+        "text": "cups or one and a quarter liter of water",
+        "startMs": 63960,
+        "durationMs": 3360,
+        "language": "en"
+      },
+      {
+        "lineIndex": 37,
+        "text": "season gently with salt and bring to a",
+        "startMs": 65700,
+        "durationMs": 3180,
+        "language": "en"
+      },
+      {
+        "lineIndex": 38,
+        "text": "boil over medium high cook that for nine",
+        "startMs": 67320,
+        "durationMs": 3180,
+        "language": "en"
+      },
+      {
+        "lineIndex": 39,
+        "text": "minutes turning the pasta with tongs as",
+        "startMs": 68880,
+        "durationMs": 3900,
+        "language": "en"
+      },
+      {
+        "lineIndex": 40,
+        "text": "needed so the pasta is Al Dente and the",
+        "startMs": 70500,
+        "durationMs": 4260,
+        "language": "en"
+      },
+      {
+        "lineIndex": 41,
+        "text": "water is nearly evaporated stir in four",
+        "startMs": 72780,
+        "durationMs": 3900,
+        "language": "en"
+      },
+      {
+        "lineIndex": 42,
+        "text": "sprigs of Basil torn you can plate it up",
+        "startMs": 74760,
+        "durationMs": 3780,
+        "language": "en"
+      },
+      {
+        "lineIndex": 43,
+        "text": "but I guess in the spirit of one pot",
+        "startMs": 76680,
+        "durationMs": 3180,
+        "language": "en"
+      },
+      {
+        "lineIndex": 44,
+        "text": "ology suppose you go ahead and just",
+        "startMs": 78540,
+        "durationMs": 3119,
+        "language": "en"
+      },
+      {
+        "lineIndex": 45,
+        "text": "garnish that with some fresh basil fresh",
+        "startMs": 79860,
+        "durationMs": 3420,
+        "language": "en"
+      },
+      {
+        "lineIndex": 46,
+        "text": "grated Parmesan reggiano fresh cracked",
+        "startMs": 81659,
+        "durationMs": 2820,
+        "language": "en"
+      },
+      {
+        "lineIndex": 47,
+        "text": "black pepper and then maybe a touch of",
+        "startMs": 83280,
+        "durationMs": 2400,
+        "language": "en"
+      },
+      {
+        "lineIndex": 48,
+        "text": "extra virgin olive oil because you feel",
+        "startMs": 84479,
+        "durationMs": 3121,
+        "language": "en"
+      },
+      {
+        "lineIndex": 49,
+        "text": "bad for it but uh you know to be fair it",
+        "startMs": 85680,
+        "durationMs": 3299,
+        "language": "en"
+      },
+      {
+        "lineIndex": 50,
+        "text": "was easy not gonna lie moving on to",
+        "startMs": 87600,
+        "durationMs": 3659,
+        "language": "en"
+      },
+      {
+        "lineIndex": 51,
+        "text": "Pasta number two yes also one pot and it",
+        "startMs": 88979,
+        "durationMs": 3481,
+        "language": "en"
+      },
+      {
+        "lineIndex": 52,
+        "text": "breaks about every rule I can imagine",
+        "startMs": 91259,
+        "durationMs": 3360,
+        "language": "en"
+      },
+      {
+        "lineIndex": 53,
+        "text": "including the Italian commandment of",
+        "startMs": 92460,
+        "durationMs": 4680,
+        "language": "en"
+      },
+      {
+        "lineIndex": 54,
+        "text": "never using heavy cream and pasta",
+        "startMs": 94619,
+        "durationMs": 4381,
+        "language": "en"
+      },
+      {
+        "lineIndex": 55,
+        "text": "Italians I'm sorry first got two",
+        "startMs": 97140,
+        "durationMs": 3060,
+        "language": "en"
+      },
+      {
+        "lineIndex": 56,
+        "text": "boneless skinless chicken breasts into",
+        "startMs": 99000,
+        "durationMs": 2939,
+        "language": "en"
+      },
+      {
+        "lineIndex": 57,
+        "text": "thin sheets really you want it around a",
+        "startMs": 100200,
+        "durationMs": 3180,
+        "language": "en"
+      },
+      {
+        "lineIndex": 58,
+        "text": "quarter inch thick or maybe even thinner",
+        "startMs": 101939,
+        "durationMs": 3000,
+        "language": "en"
+      },
+      {
+        "lineIndex": 59,
+        "text": "if you can season your chicken and taste",
+        "startMs": 103380,
+        "durationMs": 3300,
+        "language": "en"
+      },
+      {
+        "lineIndex": 60,
+        "text": "with salt and pepper hit a large deep",
+        "startMs": 104939,
+        "durationMs": 3540,
+        "language": "en"
+      },
+      {
+        "lineIndex": 61,
+        "text": "wild saute pan or Skillet over medium",
+        "startMs": 106680,
+        "durationMs": 3360,
+        "language": "en"
+      },
+      {
+        "lineIndex": 62,
+        "text": "high add just enough high heat cooking",
+        "startMs": 108479,
+        "durationMs": 2521,
+        "language": "en"
+      },
+      {
+        "lineIndex": 63,
+        "text": "oil to coat the bottom of the pan",
+        "startMs": 110040,
+        "durationMs": 2399,
+        "language": "en"
+      },
+      {
+        "lineIndex": 64,
+        "text": "something like canola or avocado oil",
+        "startMs": 111000,
+        "durationMs": 3060,
+        "language": "en"
+      },
+      {
+        "lineIndex": 65,
+        "text": "Works sear your chicken and batches to",
+        "startMs": 112439,
+        "durationMs": 2941,
+        "language": "en"
+      },
+      {
+        "lineIndex": 66,
+        "text": "avoid overcrowding in the pan for about",
+        "startMs": 114060,
+        "durationMs": 2699,
+        "language": "en"
+      },
+      {
+        "lineIndex": 67,
+        "text": "two minutes flip and sear for another",
+        "startMs": 115380,
+        "durationMs": 2879,
+        "language": "en"
+      },
+      {
+        "lineIndex": 68,
+        "text": "two to three minutes or until decently",
+        "startMs": 116759,
+        "durationMs": 3421,
+        "language": "en"
+      },
+      {
+        "lineIndex": 69,
+        "text": "browned and just cook through it will be",
+        "startMs": 118259,
+        "durationMs": 3661,
+        "language": "en"
+      },
+      {
+        "lineIndex": 70,
+        "text": "tough to get a deep dark crust on this",
+        "startMs": 120180,
+        "durationMs": 4079,
+        "language": "en"
+      },
+      {
+        "lineIndex": 71,
+        "text": "without overcooking so don't obsess too",
+        "startMs": 121920,
+        "durationMs": 3420,
+        "language": "en"
+      },
+      {
+        "lineIndex": 72,
+        "text": "much about the crust and try to pay",
+        "startMs": 124259,
+        "durationMs": 3000,
+        "language": "en"
+      },
+      {
+        "lineIndex": 73,
+        "text": "attention to not over cooking the",
+        "startMs": 125340,
+        "durationMs": 3119,
+        "language": "en"
+      },
+      {
+        "lineIndex": 74,
+        "text": "chicken once the chicken is done reduce",
+        "startMs": 127259,
+        "durationMs": 2401,
+        "language": "en"
+      },
+      {
+        "lineIndex": 75,
+        "text": "the heat to medium and add three",
+        "startMs": 128459,
+        "durationMs": 3061,
+        "language": "en"
+      },
+      {
+        "lineIndex": 76,
+        "text": "tablespoons or 45 grams of unsalted",
+        "startMs": 129660,
+        "durationMs": 3180,
+        "language": "en"
+      },
+      {
+        "lineIndex": 77,
+        "text": "butter once that's melted and bubbling",
+        "startMs": 131520,
+        "durationMs": 2939,
+        "language": "en"
+      },
+      {
+        "lineIndex": 78,
+        "text": "do a little dance and add one medium",
+        "startMs": 132840,
+        "durationMs": 3240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 79,
+        "text": "shallot finely chopped for cloves of",
+        "startMs": 134459,
+        "durationMs": 2941,
+        "language": "en"
+      },
+      {
+        "lineIndex": 80,
+        "text": "garlic finely chopped and one large",
+        "startMs": 136080,
+        "durationMs": 3120,
+        "language": "en"
+      },
+      {
+        "lineIndex": 81,
+        "text": "tomato diced season lightly with salt",
+        "startMs": 137400,
+        "durationMs": 3600,
+        "language": "en"
+      },
+      {
+        "lineIndex": 82,
+        "text": "and saute just until it begins to soften",
+        "startMs": 139200,
+        "durationMs": 3360,
+        "language": "en"
+      },
+      {
+        "lineIndex": 83,
+        "text": "and release some fragrance",
+        "startMs": 141000,
+        "durationMs": 3540,
+        "language": "en"
+      },
+      {
+        "lineIndex": 84,
+        "text": "add in 2.5 teaspoons or seven grams of",
+        "startMs": 142560,
+        "durationMs": 3720,
+        "language": "en"
+      },
+      {
+        "lineIndex": 85,
+        "text": "your favorite Cajun seasoning saute",
+        "startMs": 144540,
+        "durationMs": 3480,
+        "language": "en"
+      },
+      {
+        "lineIndex": 86,
+        "text": "until fragrant about 30 seconds add 8",
+        "startMs": 146280,
+        "durationMs": 4020,
+        "language": "en"
+      },
+      {
+        "lineIndex": 87,
+        "text": "ounces or 226 grams of rigatoni give it",
+        "startMs": 148020,
+        "durationMs": 3480,
+        "language": "en"
+      },
+      {
+        "lineIndex": 88,
+        "text": "a little toss and add one and a half",
+        "startMs": 150300,
+        "durationMs": 3480,
+        "language": "en"
+      },
+      {
+        "lineIndex": 89,
+        "text": "cups or 375 milliliters of water turn",
+        "startMs": 151500,
+        "durationMs": 3660,
+        "language": "en"
+      },
+      {
+        "lineIndex": 90,
+        "text": "the heat up to medium high bring to a",
+        "startMs": 153780,
+        "durationMs": 2700,
+        "language": "en"
+      },
+      {
+        "lineIndex": 91,
+        "text": "boil reduce the heat to medium cover",
+        "startMs": 155160,
+        "durationMs": 3240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 92,
+        "text": "with a lid and allow to cook for five",
+        "startMs": 156480,
+        "durationMs": 3720,
+        "language": "en"
+      },
+      {
+        "lineIndex": 93,
+        "text": "minutes now remove the lid add in two",
+        "startMs": 158400,
+        "durationMs": 3360,
+        "language": "en"
+      },
+      {
+        "lineIndex": 94,
+        "text": "cups or 500 milliliters of heavy cream",
+        "startMs": 160200,
+        "durationMs": 3480,
+        "language": "en"
+      },
+      {
+        "lineIndex": 95,
+        "text": "bring to a boil over medium high again",
+        "startMs": 161760,
+        "durationMs": 3780,
+        "language": "en"
+      },
+      {
+        "lineIndex": 96,
+        "text": "then yet again reduce the heat to low",
+        "startMs": 163680,
+        "durationMs": 3240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 97,
+        "text": "just sort of a simmer and let that",
+        "startMs": 165540,
+        "durationMs": 2880,
+        "language": "en"
+      },
+      {
+        "lineIndex": 98,
+        "text": "simmer for five to eight more minutes or",
+        "startMs": 166920,
+        "durationMs": 3420,
+        "language": "en"
+      },
+      {
+        "lineIndex": 99,
+        "text": "until reduced in the pasta is cooked al",
+        "startMs": 168420,
+        "durationMs": 3660,
+        "language": "en"
+      },
+      {
+        "lineIndex": 100,
+        "text": "dente feel free to add a lid if you need",
+        "startMs": 170340,
+        "durationMs": 3360,
+        "language": "en"
+      },
+      {
+        "lineIndex": 101,
+        "text": "but you shouldn't just toss occasionally",
+        "startMs": 172080,
+        "durationMs": 3720,
+        "language": "en"
+      },
+      {
+        "lineIndex": 102,
+        "text": "but at least cook the pasta al dente",
+        "startMs": 173700,
+        "durationMs": 3060,
+        "language": "en"
+      },
+      {
+        "lineIndex": 103,
+        "text": "okay if you're gonna break all the",
+        "startMs": 175800,
+        "durationMs": 2460,
+        "language": "en"
+      },
+      {
+        "lineIndex": 104,
+        "text": "Traditions hopefully there's just one",
+        "startMs": 176760,
+        "durationMs": 3059,
+        "language": "en"
+      },
+      {
+        "lineIndex": 105,
+        "text": "thing right now once that's done cut",
+        "startMs": 178260,
+        "durationMs": 3000,
+        "language": "en"
+      },
+      {
+        "lineIndex": 106,
+        "text": "your chicken into cubes add that back",
+        "startMs": 179819,
+        "durationMs": 2761,
+        "language": "en"
+      },
+      {
+        "lineIndex": 107,
+        "text": "along with two and a half teaspoons or",
+        "startMs": 181260,
+        "durationMs": 2880,
+        "language": "en"
+      },
+      {
+        "lineIndex": 108,
+        "text": "12 grams of lemon juice stir that all",
+        "startMs": 182580,
+        "durationMs": 2939,
+        "language": "en"
+      },
+      {
+        "lineIndex": 109,
+        "text": "together finally stir in a quarter cup",
+        "startMs": 184140,
+        "durationMs": 3420,
+        "language": "en"
+      },
+      {
+        "lineIndex": 110,
+        "text": "or 25 grams of Parmesan reggiano stir",
+        "startMs": 185519,
+        "durationMs": 3541,
+        "language": "en"
+      },
+      {
+        "lineIndex": 111,
+        "text": "and heat that over medium low until the",
+        "startMs": 187560,
+        "durationMs": 3240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 112,
+        "text": "parmesan melts and emulsifies into the",
+        "startMs": 189060,
+        "durationMs": 3240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 113,
+        "text": "sauce cut the heat and serve with",
+        "startMs": 190800,
+        "durationMs": 3180,
+        "language": "en"
+      },
+      {
+        "lineIndex": 114,
+        "text": "freshly grated parmigiano on top and",
+        "startMs": 192300,
+        "durationMs": 3120,
+        "language": "en"
+      },
+      {
+        "lineIndex": 115,
+        "text": "maybe a little bit of finely chopped",
+        "startMs": 193980,
+        "durationMs": 3179,
+        "language": "en"
+      },
+      {
+        "lineIndex": 116,
+        "text": "fresh parsley you know to be fair it",
+        "startMs": 195420,
+        "durationMs": 3360,
+        "language": "en"
+      },
+      {
+        "lineIndex": 117,
+        "text": "does look good now last but not least is",
+        "startMs": 197159,
+        "durationMs": 4141,
+        "language": "en"
+      },
+      {
+        "lineIndex": 118,
+        "text": "the carbonara a beautiful loving pasta",
+        "startMs": 198780,
+        "durationMs": 4440,
+        "language": "en"
+      },
+      {
+        "lineIndex": 119,
+        "text": "we should all know well no heavy cream",
+        "startMs": 201300,
+        "durationMs": 3960,
+        "language": "en"
+      },
+      {
+        "lineIndex": 120,
+        "text": "lies and only 7 ingredients including",
+        "startMs": 203220,
+        "durationMs": 3960,
+        "language": "en"
+      },
+      {
+        "lineIndex": 121,
+        "text": "salt eight if you count water it's easy",
+        "startMs": 205260,
+        "durationMs": 3240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 122,
+        "text": "basically so first you're going to start",
+        "startMs": 207180,
+        "durationMs": 2580,
+        "language": "en"
+      },
+      {
+        "lineIndex": 123,
+        "text": "off with an extra large wheel of",
+        "startMs": 208500,
+        "durationMs": 2700,
+        "language": "en"
+      },
+      {
+        "lineIndex": 124,
+        "text": "Parmigiano-Reggiano you want it to be",
+        "startMs": 209760,
+        "durationMs": 3420,
+        "language": "en"
+      },
+      {
+        "lineIndex": 125,
+        "text": "around 80 to 100 pounds that's a joke",
+        "startMs": 211200,
+        "durationMs": 3660,
+        "language": "en"
+      },
+      {
+        "lineIndex": 126,
+        "text": "yeah I know everybody watching was like",
+        "startMs": 213180,
+        "durationMs": 3479,
+        "language": "en"
+      },
+      {
+        "lineIndex": 127,
+        "text": "what the freak start with a pot of water",
+        "startMs": 214860,
+        "durationMs": 3180,
+        "language": "en"
+      },
+      {
+        "lineIndex": 128,
+        "text": "set of a medium high salt that water",
+        "startMs": 216659,
+        "durationMs": 3241,
+        "language": "en"
+      },
+      {
+        "lineIndex": 129,
+        "text": "generously and bring to a boil then in a",
+        "startMs": 218040,
+        "durationMs": 3779,
+        "language": "en"
+      },
+      {
+        "lineIndex": 130,
+        "text": "cold large skillet add 5 ounces or 140",
+        "startMs": 219900,
+        "durationMs": 3899,
+        "language": "en"
+      },
+      {
+        "lineIndex": 131,
+        "text": "grams of guanciale diced into quarter",
+        "startMs": 221819,
+        "durationMs": 3961,
+        "language": "en"
+      },
+      {
+        "lineIndex": 132,
+        "text": "inch cubes heat over medium low stirring",
+        "startMs": 223799,
+        "durationMs": 3481,
+        "language": "en"
+      },
+      {
+        "lineIndex": 133,
+        "text": "often until you get evenly browned",
+        "startMs": 225780,
+        "durationMs": 4580,
+        "language": "en"
+      },
+      {
+        "lineIndex": 134,
+        "text": "crispy boys oh look at the guancy",
+        "startMs": 227280,
+        "durationMs": 5340,
+        "language": "en"
+      },
+      {
+        "lineIndex": 135,
+        "text": "sorry the Italians don't deserve this",
+        "startMs": 230360,
+        "durationMs": 3519,
+        "language": "en"
+      },
+      {
+        "lineIndex": 136,
+        "text": "today I don't know what's going on add",
+        "startMs": 232620,
+        "durationMs": 2759,
+        "language": "en"
+      },
+      {
+        "lineIndex": 137,
+        "text": "in two cloves of thinly sliced garlic",
+        "startMs": 233879,
+        "durationMs": 2821,
+        "language": "en"
+      },
+      {
+        "lineIndex": 138,
+        "text": "saute for two to three minutes or until",
+        "startMs": 235379,
+        "durationMs": 3241,
+        "language": "en"
+      },
+      {
+        "lineIndex": 139,
+        "text": "fragrant green off half the fat cut the",
+        "startMs": 236700,
+        "durationMs": 3360,
+        "language": "en"
+      },
+      {
+        "lineIndex": 140,
+        "text": "heat then once your water is boiling add",
+        "startMs": 238620,
+        "durationMs": 3720,
+        "language": "en"
+      },
+      {
+        "lineIndex": 141,
+        "text": "12 ounces or 350 grams of spaghetti boil",
+        "startMs": 240060,
+        "durationMs": 3660,
+        "language": "en"
+      },
+      {
+        "lineIndex": 142,
+        "text": "according to package directions or until",
+        "startMs": 242340,
+        "durationMs": 3300,
+        "language": "en"
+      },
+      {
+        "lineIndex": 143,
+        "text": "Al Dente about eight to ten minutes then",
+        "startMs": 243720,
+        "durationMs": 3360,
+        "language": "en"
+      },
+      {
+        "lineIndex": 144,
+        "text": "in a bowl come on one and a half cups or",
+        "startMs": 245640,
+        "durationMs": 3540,
+        "language": "en"
+      },
+      {
+        "lineIndex": 145,
+        "text": "150 grams a fresh grated pecorino cheese",
+        "startMs": 247080,
+        "durationMs": 3659,
+        "language": "en"
+      },
+      {
+        "lineIndex": 146,
+        "text": "and half a cup or 50 grams of fresh",
+        "startMs": 249180,
+        "durationMs": 3479,
+        "language": "en"
+      },
+      {
+        "lineIndex": 147,
+        "text": "grated Parmigiano-Reggiano again you",
+        "startMs": 250739,
+        "durationMs": 3181,
+        "language": "en"
+      },
+      {
+        "lineIndex": 148,
+        "text": "don't need the whole wheel unless you",
+        "startMs": 252659,
+        "durationMs": 2341,
+        "language": "en"
+      },
+      {
+        "lineIndex": 149,
+        "text": "want to have a lot of fun add in four",
+        "startMs": 253920,
+        "durationMs": 2580,
+        "language": "en"
+      },
+      {
+        "lineIndex": 150,
+        "text": "egg yolks mixed together until you get a",
+        "startMs": 255000,
+        "durationMs": 2760,
+        "language": "en"
+      },
+      {
+        "lineIndex": 151,
+        "text": "paste and once your spaghetti is done",
+        "startMs": 256500,
+        "durationMs": 2940,
+        "language": "en"
+      },
+      {
+        "lineIndex": 152,
+        "text": "using tongs transfer your spaghetti to",
+        "startMs": 257760,
+        "durationMs": 3479,
+        "language": "en"
+      },
+      {
+        "lineIndex": 153,
+        "text": "the guanciale pan add in your egg yolk",
+        "startMs": 259440,
+        "durationMs": 3000,
+        "language": "en"
+      },
+      {
+        "lineIndex": 154,
+        "text": "mixture the rest of your spaghetti sauce",
+        "startMs": 261239,
+        "durationMs": 3301,
+        "language": "en"
+      },
+      {
+        "lineIndex": 155,
+        "text": "us constantly using the pasta water to",
+        "startMs": 262440,
+        "durationMs": 3840,
+        "language": "en"
+      },
+      {
+        "lineIndex": 156,
+        "text": "loosen to get that paste to melt and",
+        "startMs": 264540,
+        "durationMs": 3659,
+        "language": "en"
+      },
+      {
+        "lineIndex": 157,
+        "text": "emulsify into a beautiful luxurious",
+        "startMs": 266280,
+        "durationMs": 3720,
+        "language": "en"
+      },
+      {
+        "lineIndex": 158,
+        "text": "sauce should be smooth it should be",
+        "startMs": 268199,
+        "durationMs": 3601,
+        "language": "en"
+      },
+      {
+        "lineIndex": 159,
+        "text": "creamy it should be clinging to your",
+        "startMs": 270000,
+        "durationMs": 4380,
+        "language": "en"
+      },
+      {
+        "lineIndex": 160,
+        "text": "noodles for dear life and once that's",
+        "startMs": 271800,
+        "durationMs": 3959,
+        "language": "en"
+      },
+      {
+        "lineIndex": 161,
+        "text": "glossy and luxurious you should be",
+        "startMs": 274380,
+        "durationMs": 3000,
+        "language": "en"
+      },
+      {
+        "lineIndex": 162,
+        "text": "hearing angels singing from the distance",
+        "startMs": 275759,
+        "durationMs": 3541,
+        "language": "en"
+      },
+      {
+        "lineIndex": 163,
+        "text": "really depends on how glossy it is now",
+        "startMs": 277380,
+        "durationMs": 4200,
+        "language": "en"
+      },
+      {
+        "lineIndex": 164,
+        "text": "don't turn the pan on and get all fancy",
+        "startMs": 279300,
+        "durationMs": 3720,
+        "language": "en"
+      },
+      {
+        "lineIndex": 165,
+        "text": "during this tossing process because",
+        "startMs": 281580,
+        "durationMs": 2399,
+        "language": "en"
+      },
+      {
+        "lineIndex": 166,
+        "text": "you're going to end up with scrambled",
+        "startMs": 283020,
+        "durationMs": 2459,
+        "language": "en"
+      },
+      {
+        "lineIndex": 167,
+        "text": "eggs not good anyway once that's done",
+        "startMs": 283979,
+        "durationMs": 3421,
+        "language": "en"
+      },
+      {
+        "lineIndex": 168,
+        "text": "place it into a nice shallow bowl top",
+        "startMs": 285479,
+        "durationMs": 3121,
+        "language": "en"
+      },
+      {
+        "lineIndex": 169,
+        "text": "with some extra fresh grated",
+        "startMs": 287400,
+        "durationMs": 3660,
+        "language": "en"
+      },
+      {
+        "lineIndex": 170,
+        "text": "Parmigiano-Reggiano on top and in",
+        "startMs": 288600,
+        "durationMs": 6060,
+        "language": "en"
+      },
+      {
+        "lineIndex": 171,
+        "text": "but it's not time to enjoy it's time for",
+        "startMs": 291060,
+        "durationMs": 6300,
+        "language": "en"
+      },
+      {
+        "lineIndex": 172,
+        "text": "impot pasta even able to compete",
+        "startMs": 294660,
+        "durationMs": 3900,
+        "language": "en"
+      },
+      {
+        "lineIndex": 173,
+        "text": "compete and is there even a point to",
+        "startMs": 297360,
+        "durationMs": 2880,
+        "language": "en"
+      },
+      {
+        "lineIndex": 174,
+        "text": "Throwing It All into one pot I'm here to",
+        "startMs": 298560,
+        "durationMs": 3540,
+        "language": "en"
+      },
+      {
+        "lineIndex": 175,
+        "text": "find the answers let's begin we have",
+        "startMs": 300240,
+        "durationMs": 3660,
+        "language": "en"
+      },
+      {
+        "lineIndex": 176,
+        "text": "three passes",
+        "startMs": 302100,
+        "durationMs": 4980,
+        "language": "en"
+      },
+      {
+        "lineIndex": 177,
+        "text": "each pasta hurting my feelings less and",
+        "startMs": 303900,
+        "durationMs": 5100,
+        "language": "en"
+      },
+      {
+        "lineIndex": 178,
+        "text": "less this was the definition of a one",
+        "startMs": 307080,
+        "durationMs": 4380,
+        "language": "en"
+      },
+      {
+        "lineIndex": 179,
+        "text": "pot one pan whatever quick sound check",
+        "startMs": 309000,
+        "durationMs": 4919,
+        "language": "en"
+      },
+      {
+        "lineIndex": 180,
+        "text": "sounds good the amount of effort that",
+        "startMs": 311460,
+        "durationMs": 4260,
+        "language": "en"
+      },
+      {
+        "lineIndex": 181,
+        "text": "went into this is perfectly reflective",
+        "startMs": 313919,
+        "durationMs": 4381,
+        "language": "en"
+      },
+      {
+        "lineIndex": 182,
+        "text": "of its flavor if you're just trying to",
+        "startMs": 315720,
+        "durationMs": 4860,
+        "language": "en"
+      },
+      {
+        "lineIndex": 183,
+        "text": "stay alive this should do it this is a",
+        "startMs": 318300,
+        "durationMs": 4440,
+        "language": "en"
+      },
+      {
+        "lineIndex": 184,
+        "text": "recipe that I wrote myself which I don't",
+        "startMs": 320580,
+        "durationMs": 4440,
+        "language": "en"
+      },
+      {
+        "lineIndex": 185,
+        "text": "like and it was painful too right",
+        "startMs": 322740,
+        "durationMs": 4080,
+        "language": "en"
+      },
+      {
+        "lineIndex": 186,
+        "text": "because cream is a big No-No in the",
+        "startMs": 325020,
+        "durationMs": 3179,
+        "language": "en"
+      },
+      {
+        "lineIndex": 187,
+        "text": "Italian and spear but let's be honest",
+        "startMs": 326820,
+        "durationMs": 2879,
+        "language": "en"
+      },
+      {
+        "lineIndex": 188,
+        "text": "like cream on pasta is probably gonna be",
+        "startMs": 328199,
+        "durationMs": 2701,
+        "language": "en"
+      },
+      {
+        "lineIndex": 189,
+        "text": "good sound check",
+        "startMs": 329699,
+        "durationMs": 2401,
+        "language": "en"
+      },
+      {
+        "lineIndex": 190,
+        "text": "you don't need to say anything about",
+        "startMs": 330900,
+        "durationMs": 1980,
+        "language": "en"
+      },
+      {
+        "lineIndex": 191,
+        "text": "that",
+        "startMs": 332100,
+        "durationMs": 2640,
+        "language": "en"
+      },
+      {
+        "lineIndex": 192,
+        "text": "whoa I'll be honest this is pretty good",
+        "startMs": 332880,
+        "durationMs": 3480,
+        "language": "en"
+      },
+      {
+        "lineIndex": 193,
+        "text": "sure there's an argument of like oh it's",
+        "startMs": 334740,
+        "durationMs": 3239,
+        "language": "en"
+      },
+      {
+        "lineIndex": 194,
+        "text": "not a real pass that way I'm using cream",
+        "startMs": 336360,
+        "durationMs": 2820,
+        "language": "en"
+      },
+      {
+        "lineIndex": 195,
+        "text": "and you're cheating when was the last",
+        "startMs": 337979,
+        "durationMs": 2521,
+        "language": "en"
+      },
+      {
+        "lineIndex": 196,
+        "text": "time we complained about MSG being in",
+        "startMs": 339180,
+        "durationMs": 3480,
+        "language": "en"
+      },
+      {
+        "lineIndex": 197,
+        "text": "KFC I have nothing bad to say about this",
+        "startMs": 340500,
+        "durationMs": 3479,
+        "language": "en"
+      },
+      {
+        "lineIndex": 198,
+        "text": "I would be happy to eat this there was",
+        "startMs": 342660,
+        "durationMs": 2759,
+        "language": "en"
+      },
+      {
+        "lineIndex": 199,
+        "text": "effort involved there was technique",
+        "startMs": 343979,
+        "durationMs": 3060,
+        "language": "en"
+      },
+      {
+        "lineIndex": 200,
+        "text": "involved and it did take longer than",
+        "startMs": 345419,
+        "durationMs": 3961,
+        "language": "en"
+      },
+      {
+        "lineIndex": 201,
+        "text": "this this was faster than the both of",
+        "startMs": 347039,
+        "durationMs": 4081,
+        "language": "en"
+      },
+      {
+        "lineIndex": 202,
+        "text": "them combined and it's using traditional",
+        "startMs": 349380,
+        "durationMs": 3300,
+        "language": "en"
+      },
+      {
+        "lineIndex": 203,
+        "text": "techniques traditional ingredients in",
+        "startMs": 351120,
+        "durationMs": 3240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 204,
+        "text": "the Italians would probably approve it",
+        "startMs": 352680,
+        "durationMs": 4160,
+        "language": "en"
+      },
+      {
+        "lineIndex": 205,
+        "text": "sound check",
+        "startMs": 354360,
+        "durationMs": 2480,
+        "language": "en"
+      },
+      {
+        "lineIndex": 206,
+        "text": "it's just hard to beat the Simplicity of",
+        "startMs": 357240,
+        "durationMs": 3840,
+        "language": "en"
+      },
+      {
+        "lineIndex": 207,
+        "text": "this pasta not a lot more effort than",
+        "startMs": 359280,
+        "durationMs": 3660,
+        "language": "en"
+      },
+      {
+        "lineIndex": 208,
+        "text": "any of these two but yes you had to use",
+        "startMs": 361080,
+        "durationMs": 3959,
+        "language": "en"
+      },
+      {
+        "lineIndex": 209,
+        "text": "this second pot oh no",
+        "startMs": 362940,
+        "durationMs": 4080,
+        "language": "en"
+      },
+      {
+        "lineIndex": 210,
+        "text": "really the point is if you really need",
+        "startMs": 365039,
+        "durationMs": 3541,
+        "language": "en"
+      },
+      {
+        "lineIndex": 211,
+        "text": "to save yourself to five minutes this is",
+        "startMs": 367020,
+        "durationMs": 3600,
+        "language": "en"
+      },
+      {
+        "lineIndex": 212,
+        "text": "the one pot for you but also there's",
+        "startMs": 368580,
+        "durationMs": 3240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 213,
+        "text": "nothing wrong with a good old-fashioned",
+        "startMs": 370620,
+        "durationMs": 3480,
+        "language": "en"
+      },
+      {
+        "lineIndex": 214,
+        "text": "carbonara okay take the time put a",
+        "startMs": 371820,
+        "durationMs": 3540,
+        "language": "en"
+      },
+      {
+        "lineIndex": 215,
+        "text": "little bit of love into it and it's",
+        "startMs": 374100,
+        "durationMs": 2520,
+        "language": "en"
+      },
+      {
+        "lineIndex": 216,
+        "text": "probably gonna be good we're gonna have",
+        "startMs": 375360,
+        "durationMs": 4760,
+        "language": "en"
+      },
+      {
+        "lineIndex": 217,
+        "text": "people vote for which is their favorite",
+        "startMs": 376620,
+        "durationMs": 3500,
+        "language": "en"
+      },
+      {
+        "lineIndex": 218,
+        "text": "but you want to know what else is good",
+        "startMs": 380600,
+        "durationMs": 4800,
+        "language": "en"
+      },
+      {
+        "lineIndex": 219,
+        "text": "b-roll",
+        "startMs": 382560,
+        "durationMs": 2840,
+        "language": "en"
+      },
+      {
+        "lineIndex": 220,
+        "text": "[Music]",
+        "startMs": 386630,
+        "durationMs": 9740,
+        "language": "en"
+      },
+      {
+        "lineIndex": 221,
+        "text": "foreign",
+        "startMs": 405780,
+        "durationMs": 3000,
+        "language": "en"
+      },
+      {
+        "lineIndex": 222,
+        "text": "[Music]",
+        "startMs": 409260,
+        "durationMs": 3129,
+        "language": "en"
+      }
+    ],
+    "tracks": [
+      {
+        "languageCode": "en",
+        "name": "영어 (자동 생성됨)",
+        "trackKind": "auto"
+      }
+    ],
+    "selectedTrack": {
+      "languageCode": "en",
+      "name": null,
+      "trackKind": "unknown"
+    },
+    "publicTimedTextReason": "timedtext_status_200"
+  },
+  "authorComments": {
+    "available": true,
+    "reason": null,
+    "comments": []
+  }
+}

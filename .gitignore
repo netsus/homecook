@@ -23,6 +23,17 @@ pnpm-debug.log*
 # python
 __pycache__/
 *.py[cod]
+.venv-jupyter/
+notebooks/.ipynb_checkpoints/
+notebooks/loop_demo_runs/
+notebooks/recipe_loop_runs/
+notebooks/recipe_loop_data/cache/
+notebooks/recipe_loop_data/**/runs/
+notebooks/recipe_loop_data/**/visual_*_draft.json
+notebooks/recipe_loop_data/**/visual_enrich_raw.json
+notebooks/recipe_loop_data/**/visual_missing_dishes.json
+notebooks/recipe_loop_data/**/_grade_summary.*.json
+notebooks/recipe_loop_data/**/_semantic_summary.*.json
 
 # env files
 .env

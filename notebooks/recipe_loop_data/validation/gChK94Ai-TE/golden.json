@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "videoId": "gChK94Ai-TE",
+  "draftedBy": "claude:description+captions + gemini:visual-recipes + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "제육볶음",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "돼지고기 앞다리살",
+          "nameAliases": [
+            "Pork picnic"
+          ],
+          "amount": "600",
+          "unit": "g",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "대파",
+          "nameAliases": [
+            "Green onion"
+          ],
+          "amount": "1",
+          "unit": "줄",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "청양고추",
+          "nameAliases": [
+            "Spicy pepper"
+          ],
+          "amount": "2",
+          "unit": "개",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "양파",
+          "nameAliases": [
+            "Onion"
+          ],
+          "amount": "1/2",
+          "unit": "개",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "생강술",
+          "nameAliases": [
+            "Ginger wine"
+          ],
+          "amount": "2",
+          "unit": "큰술",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description"
+        },
+        {
+          "name": "올리고당",
+          "nameAliases": [
+            "Corn syrup"
+          ],
+          "amount": "2",
+          "unit": "큰술",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description"
+        },
+        {
+          "name": "다진마늘",
+          "nameAliases": [
+            "Mince garlic"
+          ],
+          "amount": "2",
+          "unit": "큰술",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description"
+        },
+        {
+          "name": "후추",
+          "nameAliases": [
+            "Pepper"
+          ],
+          "amount": "살짝",
+          "unit": null,
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description"
+        },
+        {
+          "name": "진간장",
+          "nameAliases": [
+            "Dark soy sauce"
+          ],
+          "amount": "2",
+          "unit": "큰술",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description"
+        },
+        {
+          "name": "고춧가루",
+          "nameAliases": [
+            "Chili powder"
+          ],
+          "amount": "2",
+          "unit": "큰술",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description"
+        },
+        {
+          "name": "고추장",
+          "nameAliases": [
+            "Gochujang"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description"
+        },
+        {
+          "name": "참기름",
+          "nameAliases": [
+            "Sesame oil"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description"
+        },
+        {
+          "name": "참깨",
+          "nameAliases": [
+            "Sesame seeds"
+          ],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념",
+          "evidence": "description"
+        },
+        {
+          "name": "통깨",
+          "nameAliases": [],
+          "amount": "약간",
+          "unit": "줌",
+          "amountBasis": "spoken",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "돼지고기 앞다리살을 먹기 좋은 크기로 자르고 뭉친 고기를 떼어낸다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "볼에 고기를 담고 생강술 2큰술과 올리고당 2큰술을 넣어 버무린다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "다진마늘 2큰술, 후추 5번 톡톡, 진간장 2큰술, 고춧가루 2큰술, 고추장 1큰술을 넣고 골고루 버무려 재워둔다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "양파 0.5개를 도톰하게 채 썰고, 대파 1줄은 4cm 길이로 썰고, 청양고추 2개는 반으로 갈라 어슷하게 썬다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "달궈진 팬에 기름을 두르지 않고 재워둔 고기를 넣어 강불에서 볶는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "고기가 중간 정도 익으면 썰어둔 양파를 넣고 중불로 줄여 볶는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 7,
+          "instruction": "양파와 고기가 거의 다 익으면 썰어둔 대파와 청양고추를 넣는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 8,
+          "instruction": "강불로 올려 수분이 생기지 않게 빠르게 볶아낸다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 9,
+          "instruction": "참기름 1큰술을 넣고 불을 끈다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 10,
+          "instruction": "통깨를 약간 뿌려 마무리한다.",
+          "evidence": "visual"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "시각추출 필요: 자막 없음(no_public_caption_tracks). 단계는 설명란 타임라인(인삿말→재료 소개→고기 준비→고기 양념하기→부재료 준비→제육볶음 만들기→맛보고 마무리) 기반 뼈대만 작성.",
+    "불 세기·조리 시간·고기 손질 방법·부재료 투입 시점과 순서는 텍스트에 없음 → 시각추출로 보강 필요.",
+    "참깨·참기름·후추는 설명란 [양념] 묶음 그대로 groupLabel '양념'에 두고 양념 단계에 포함. 실제 투입 시점(양념 혼합 vs 마무리)은 시각 확인 필요.",
+    "설명란 영문 재료 목록(600g Pork picnic 등)은 nameAliases에 반영. 올리고당의 영문 표기는 Corn syrup.",
+    "대파 단위 '줄'은 설명란 표기 그대로 유지(통상 '대').",
+    "[visual-recipes] 시각추출(steps)로 단계 교체·재료 보강 — 제육볶음: 단계 10, 분량채움 0, 재료추가 1",
+    "[visual-pass] 초안의 '참깨(양념)'와 '통깨'는 영상에서 동일한 재료를 지칭하며, 영상에서는 '참깨 약간'으로 한 번만 추가되었습니다."
+  ]
+}

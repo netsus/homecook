@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "videoId": "DnQ09ZZCjCs",
+  "draftedBy": "claude:description+captions + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "초간단 김치찌개",
+      "servings": "2인분",
+      "ingredients": [
+        {
+          "name": "돼지고기",
+          "nameAliases": [
+            "목살",
+            "pork",
+            "pork shoulder"
+          ],
+          "amount": "120",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "쌀뜨물",
+          "nameAliases": [
+            "rice water"
+          ],
+          "amount": "380",
+          "unit": "ml",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "김치",
+          "nameAliases": [
+            "자른 김치",
+            "신김치",
+            "sliced kimchi"
+          ],
+          "amount": "150",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "다진 마늘",
+          "nameAliases": [
+            "다진마늘",
+            "minced garlic",
+            "chopped garlic"
+          ],
+          "amount": "30",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "대파",
+          "nameAliases": [
+            "green onion",
+            "spring onion"
+          ],
+          "amount": "30",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "청양고추",
+          "nameAliases": [
+            "cheongyang pepper",
+            "spicy chili"
+          ],
+          "amount": "10",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "홍고추",
+          "nameAliases": [
+            "red pepper",
+            "red chili"
+          ],
+          "amount": "10",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "고운 고춧가루",
+          "nameAliases": [
+            "fine chili powder"
+          ],
+          "amount": "30",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "굵은 고춧가루",
+          "nameAliases": [
+            "coarse chili powder"
+          ],
+          "amount": "30",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "국간장",
+          "nameAliases": [
+            "soup soy sauce",
+            "guk-ganjang"
+          ],
+          "amount": "15",
+          "unit": "ml",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "새우젓",
+          "nameAliases": [
+            "saeujeot",
+            "salted shrimp"
+          ],
+          "amount": "15",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "대파와 고추는 송송 썰어 준비한다.",
+          "evidence": "description"
+        },
+        {
+          "order": 2,
+          "instruction": "냄비에 돼지고기(목살)와 쌀뜨물을 넣고 충분히 끓여 고기 육수를 우려낸다.",
+          "evidence": "description"
+        },
+        {
+          "order": 3,
+          "instruction": "고기 육수가 충분히 우러나면 김치와 다진 마늘을 넣는다.",
+          "evidence": "description"
+        },
+        {
+          "order": 4,
+          "instruction": "국물이 끓어오르면 대파와 고추를 넣는다.",
+          "evidence": "description"
+        },
+        {
+          "order": 5,
+          "instruction": "고춧가루를 넣고 잘 섞는다(굵은 고춧가루와 고운 고춧가루를 반씩 섞어 넣으면 더욱 좋다).",
+          "evidence": "description"
+        },
+        {
+          "order": 6,
+          "instruction": "국간장과 새우젓을 넣고 잘 저어 준다.",
+          "evidence": "description"
+        },
+        {
+          "order": 7,
+          "instruction": "마지막에 송송 썬 대파와 고추를 고명으로 올려 마무리한다.",
+          "evidence": "caption"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "설명란에 한국어 완성 레시피([재료 목록 (2인분 기준)] + [만드는 법])가 있어 설명란 기준으로 작성. 영어 자막은 조리 순서·상태 판단 보강용으로만 사용.",
+    "마지막 고명 단계(order 7)는 설명란 만드는 법에는 없고 영어 자막(line 147, 168 'Add spring onions and chili for garnish')에만 등장 — evidence: caption.",
+    "쌀뜨물 분량 표기가 소스 내에서 상이: 설명란 '380ml (약 2컵)', 자막 line 41 '2 cups', line 156 '1.5 cups' — 설명란 380ml 기준으로 기재.",
+    "자막의 대체재 팁(쌀뜨물 없으면 맹물, 새우젓 없으면 멸치·까나리·참치 액젓, 국간장 없으면 진간장 소량+소금/액젓, 돼지고기는 부위 무관·비계 포함 권장, 김치는 푹 신 김치 필수)은 재료/단계에 미반영 — 추출기가 본 재료만 평가.",
+    "설명란의 '※ 기호에 따라 다른 채소를 넣거나 물의 양을 조절' 안내는 변형 제안이라 단계에서 제외.",
+    "설명란 고춧가루 환산 표기(30g = 2큰술), 다진마늘(30g = 2큰술), 국간장(15ml = 1큰술), 새우젓(15g = 1큰술)은 g/ml 기준으로 기재.",
+    "[visual-pass] 홍고추의 경우 영상 내 재료 준비 단계에서 등장하나, 자막으로 명시된 정확한 g 단위는 없으며 대파 및 청양고추와 함께 고명으로 사용됨."
+  ]
+}

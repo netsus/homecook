@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "videoId": "jghNqyzxWWE",
+  "draftedBy": "claude:description+captions + gemini:visual-recipes",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "겉바속촉 마들렌",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "박력분",
+          "nameAliases": [
+            "cake flour"
+          ],
+          "amount": "100",
+          "unit": "g",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "설탕",
+          "nameAliases": [],
+          "amount": "100",
+          "unit": "g",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "계란",
+          "nameAliases": [],
+          "amount": "100",
+          "unit": "g",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "버터",
+          "nameAliases": [],
+          "amount": "100",
+          "unit": "g",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "베이킹파우더",
+          "nameAliases": [],
+          "amount": "3",
+          "unit": "g",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "전자레인지나 중탕으로 녹인 버터를 45도 정도로 식혀 준비합니다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "계란을 거품기로 잘 풀어줍니다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "박력분, 설탕, 베이킹파우더를 체에 내려 볼에 담습니다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "풀어둔 계란을 가루 재료가 담긴 볼에 넣고 흰 가루가 보이지 않을 때까지 섞습니다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "식혀둔 버터를 조금씩 넣으며 반죽과 완전히 혼합될 때까지 섞습니다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "반죽을 랩으로 씌워 냉장고에서 2시간 정도 휴지시킵니다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 7,
+          "instruction": "휴지를 마친 반죽을 실온에 10분 정도 두어 농도를 맞춥니다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 8,
+          "instruction": "짤주머니에 반죽을 담고 마들렌 틀에 버터를 얇게 바른 뒤 박력분을 살짝 뿌려 털어냅니다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 9,
+          "instruction": "오븐을 180도로 10분간 예열합니다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 10,
+          "instruction": "반죽을 틀의 80% 정도까지 지그재그로 채워 넣습니다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 11,
+          "instruction": "180도로 예열된 오븐에서 10분간 굽습니다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 12,
+          "instruction": "오븐에서 꺼낸 후 5분 정도 식힌 뒤 틀에서 분리합니다.",
+          "evidence": "visual"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "설명란은 오타 정정 공지(강력분→박력분)와 도서 구입 링크뿐이며 재료 분량·조리 단계 정보가 없음. 자막 없음(no_public_caption_tracks), 작성자 댓글 없음.",
+    "텍스트에서 확정 가능한 재료는 박력분 1개뿐 — 영상 화면 자막에는 '강력분'으로 잘못 표기되어 있고 작성자가 설명란에서 박력분으로 정정함. 파이프라인이 '강력분'으로 추출하면 영상 오타 기인임을 채점 시 참고.",
+    "나머지 재료 전체(계란·설탕·버터·꿀·베이킹파우더 등 통상 마들렌 구성 추정)와 분량 — 시각추출 필요.",
+    "조리 단계 전체(반죽 순서, 휴지 시간, 오븐 온도·시간 포함) — 시각추출 필요. 단계는 의도적으로 빈 배열로 둠.",
+    "베이킹 영상이므로 시각추출 시 화면 자막의 g 단위 계량을 정확히 옮길 것 — 분량 채점은 g 정확도가 핵심.",
+    "제목 기준 요리명은 '겉바속촉 마들렌'(박력분 사용, 노버터 아님).",
+    "[visual-recipes] 시각추출(full)로 recipes 재구성 — 요리 1개"
+  ]
+}

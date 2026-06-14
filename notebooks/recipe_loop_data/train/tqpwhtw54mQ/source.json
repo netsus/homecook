@@ -1,0 +1,553 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-06-11T07:21:41.213Z",
+  "video": {
+    "videoId": "tqpwhtw54mQ",
+    "url": "https://www.youtube.com/watch?v=tqpwhtw54mQ",
+    "title": "[두부볶음] 두부 반찬 중에 단연코 최고! 이 영상을 본다면 밥반찬 걱정 NO! / 두부요리 Stir-fried tofu",
+    "description": "두부조림보다 훨씬 맛있는 '두부볶음'\n꼭! 만들어보세요.\n정말 맛있습니다.\n\n꽈리고추의 향과 맛이 잘 어우러지는 '두부볶음'\n\n밥반찬으로 이만한 게 없습니다.\n\n반찬 걱정하지 마시고\n오늘 식탁에 올려보세요!\n\n\n--------------- 재료 -------------\n큰 사이즈 두부 1모(550g)\n꽈리고추 150g(한 봉지)\n홍고추 1개\n대파 흰대 15cm\n양조간장(또는 진장장) 6스푼(60g)\n설탕 1작은스푼(5g)\n조청(또는 물엿) 2스푼(30g)\n다진 마늘 크게 1스푼(25g)\n맛술(미림) 5스푼(50g)\n후추가루\n통깨 1스푼\n참기름 1스푼\n식용유 3스푼\n\n\n#두부요리\n#두부조림\n#꽈리고추조림",
+    "channelId": "UCy2WX3w5UyYFHBDHyWFKNUQ",
+    "channelTitle": "이 남자의 cook",
+    "publishedAt": "2021-01-11T01:00:06Z",
+    "tags": [
+      "두부볶음",
+      "두부조림",
+      "두부요리",
+      "두부 반찬",
+      "반찬 만들기",
+      "이 남자의 두부 조림",
+      "두부 부침",
+      "꽈리고추 요리",
+      "꽈리고추 조림",
+      "두부강정",
+      "두부 두루치기"
+    ],
+    "defaultLanguage": "ko",
+    "durationSeconds": 291,
+    "thumbnailUrl": "https://i.ytimg.com/vi/tqpwhtw54mQ/maxresdefault.jpg"
+  },
+  "stats": {
+    "viewCount": 12574345,
+    "likeCount": 157853,
+    "commentCount": 2716
+  },
+  "descriptionSignal": {
+    "hasIngredientKeyword": true,
+    "hasStepKeyword": false,
+    "hasQuantityPattern": true,
+    "length": 340
+  },
+  "captions": {
+    "available": true,
+    "reason": null,
+    "provider": "apify",
+    "language": "ko",
+    "segments": [
+      {
+        "lineIndex": 0,
+        "text": "으",
+        "startMs": 1020,
+        "durationMs": 4650,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 1,
+        "text": "[박수]",
+        "startMs": 1690,
+        "durationMs": 3980,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 2,
+        "text": "2번은 큰 사이즈로 한 모를 준비해주세요",
+        "startMs": 8200,
+        "durationMs": 4230,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 3,
+        "text": "[음악]",
+        "startMs": 11100,
+        "durationMs": 6550,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 4,
+        "text": "준비한 2번은 5등 분으로 약 2cm 간격으로 전라 드세요",
+        "startMs": 12430,
+        "durationMs": 7439,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 5,
+        "text": "[음악]",
+        "startMs": 17650,
+        "durationMs": 6959,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 6,
+        "text": "이제 두부를 가로 방향으로 반으로 자른 후에 다시 5등 분 2cm",
+        "startMs": 19869,
+        "durationMs": 9691,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 7,
+        "text": "간격으로 한번더 잘라주세요 제가 말하고도 무슨 말인지 이해가 안 가는데요",
+        "startMs": 24609,
+        "durationMs": 9991,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 8,
+        "text": "쉽게 말해서 사방 2cm 정도의 깍 똥 모양으로 잘라주세요",
+        "startMs": 29560,
+        "durationMs": 10769,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 9,
+        "text": "이정도 크기 어야 한입에 먹기도 좋고 볶으면서 양념에 간도 잘 배웠습니다",
+        "startMs": 34600,
+        "durationMs": 10549,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 10,
+        "text": "쟁반 이나 접시에 키친타올을 깔고 썰어 놨던 두부를 올려서 물기를",
+        "startMs": 40329,
+        "durationMs": 10351,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 11,
+        "text": "제거해주세요 기름에 구울 거기 때문에 물기를 잘 제거해 주세요",
+        "startMs": 45149,
+        "durationMs": 10870,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 12,
+        "text": "날씨가 많이 추우니까 키친타월 이불도 좀더 꺼주세요 2분은 물기가 빠질",
+        "startMs": 50680,
+        "durationMs": 7530,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 13,
+        "text": "때까지 잠시 옆에 나 주시구요",
+        "startMs": 56019,
+        "durationMs": 6901,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 14,
+        "text": "꽈리고추 150g 을 꼭지를 제거하고 깨끗이 써서 준비해 주세요",
+        "startMs": 58210,
+        "durationMs": 9390,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 15,
+        "text": "준비한 꺼리고 주는 양념이 잘 스며들도록 3등분으로 전화주세요",
+        "startMs": 62920,
+        "durationMs": 10530,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 16,
+        "text": "보급 요리에 꽈리 고추를 넣으면 맛과 향이 1쯤 좋아지니까 잘 활용하세요",
+        "startMs": 67600,
+        "durationMs": 9930,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 17,
+        "text": "이름에 과자가 들어가면 기본적으로 마시다 좋습니다",
+        "startMs": 73450,
+        "durationMs": 9419,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 18,
+        "text": "대표적으로 꽈리고추 울 꽈배기 과자 과일 줄 수가 있습니다",
+        "startMs": 77530,
+        "durationMs": 9150,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 19,
+        "text": "홍고추는 맛보다는 색감을 위해서 1개의 준비해주세요",
+        "startMs": 82869,
+        "durationMs": 8881,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 20,
+        "text": "준비한 홍고추는 씨를 제거하고 작게 잘라서 준비해주세요",
+        "startMs": 86680,
+        "durationMs": 9660,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 21,
+        "text": "홍고추는 별도로 사실 필요 없구요 생략하셔도 좋습니다",
+        "startMs": 91750,
+        "durationMs": 7799,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 22,
+        "text": "양념에 사용하기 위해서 대파 1대를 준비해주세요",
+        "startMs": 96340,
+        "durationMs": 8330,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 23,
+        "text": "대파 흰 대 부분만 약 15cm 정도 잘라서 작게 다져 주세요",
+        "startMs": 99549,
+        "durationMs": 6411,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 24,
+        "text": "[음악]",
+        "startMs": 104670,
+        "durationMs": 6240,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 25,
+        "text": "양념장을 만들기 위해서 양조간장 을 먼저 6 스푼 넣어 주시구요",
+        "startMs": 105960,
+        "durationMs": 8130,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 26,
+        "text": "설탕을 1 차근 스푼 만 넣어 주세요",
+        "startMs": 110910,
+        "durationMs": 8700,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 27,
+        "text": "여기에 조청을 투수 푸마 넣어주세요 물론 불 엿을 넣으셔도 되지만 조총의",
+        "startMs": 114090,
+        "durationMs": 10530,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 28,
+        "text": "은은한 단맛은 이런 한식 풍의 반찬의 맛을 올려줄 뿐 아니라 요리하다",
+        "startMs": 119610,
+        "durationMs": 8910,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 29,
+        "text": "조금씩 찍어 먹으면 기분도 올려줍니다",
+        "startMs": 124620,
+        "durationMs": 8730,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 30,
+        "text": "다진 마늘은 화면에 보시는 것처럼 크게 한스푼을 넣어주세요",
+        "startMs": 128520,
+        "durationMs": 8070,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 31,
+        "text": "여기에 작게 다져 넣은 탭 빠진 대부분을 넣어주세요",
+        "startMs": 133350,
+        "durationMs": 6810,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 32,
+        "text": "약 두 스푼 정도의 아닙니다",
+        "startMs": 136590,
+        "durationMs": 6060,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 33,
+        "text": "마술은 5 스푼을 넣어 주세요",
+        "startMs": 140160,
+        "durationMs": 7290,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 34,
+        "text": "양념장의 농도를 맞출 때 물 대신 마술을 넉넉히 넣으면 마 스레 다음",
+        "startMs": 142650,
+        "durationMs": 9270,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 35,
+        "text": "맛과 감칠맛이 더욱 맛있는 볶음 요리를 만들어 줍니다",
+        "startMs": 147450,
+        "durationMs": 8940,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 36,
+        "text": "마지막으로 후춧가루를 세포 집 정도 넣어주세요",
+        "startMs": 151920,
+        "durationMs": 9300,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 37,
+        "text": "이제 모든 재료를 잘 섞어 준 후에 양 역장은 잠시 옆에 나 드시구요",
+        "startMs": 156390,
+        "durationMs": 9240,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 38,
+        "text": "프라이팬에 식용유 3스푼 정도를 둘러 주세요",
+        "startMs": 161220,
+        "durationMs": 9480,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 39,
+        "text": "깍 똥 모양으로 썰어서 물기를 제거해 놨던 두부를 넣고 붙여주세요",
+        "startMs": 165630,
+        "durationMs": 9240,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 40,
+        "text": "타지 않도록 불 새기는 중불로 조절한 후에 붙여주세요",
+        "startMs": 170700,
+        "durationMs": 9120,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 41,
+        "text": "두구의 모든 면이 노르테 지도록 골고루 뒤집어 주면서 붙여주세요",
+        "startMs": 174870,
+        "durationMs": 9450,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 42,
+        "text": "이 과정이 다소 시간이 오래 걸리고 지루 하긴 하지만 반찬이 완성되었을",
+        "startMs": 179820,
+        "durationMs": 10320,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 43,
+        "text": "때의 맛있게 먹고 있을 흐뭇한 내 모습을 생각하면서 계속해서 붙여주세요",
+        "startMs": 184320,
+        "durationMs": 11310,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 44,
+        "text": "두부의 모든 면이 노릇하게 잘 붙였으면 잠시 접시로 옮겨 담아 주세요",
+        "startMs": 190140,
+        "durationMs": 10920,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 45,
+        "text": "두부를 이렇게 노릇하게 붙여놓으면 두부의 고소한 맛이 올라가고 볶을때 에",
+        "startMs": 195630,
+        "durationMs": 8010,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 46,
+        "text": "두부가 부서지지 가 않습니다",
+        "startMs": 201060,
+        "durationMs": 7380,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 47,
+        "text": "팬의 기름이 남아 있는 상태에서 만들어 놓은 양념장을 부어주세요",
+        "startMs": 203640,
+        "durationMs": 9760,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 48,
+        "text": "불 새기는 계속해서 충 부를 유지한 상태에서 양념장을 끓여주세요",
+        "startMs": 208440,
+        "durationMs": 6090,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 49,
+        "text": "[음악]",
+        "startMs": 213400,
+        "durationMs": 6169,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 50,
+        "text": "양념장이 바글바글 끓어오르면 잘라 놓았던 꽈리고추를 넣어 주세요",
+        "startMs": 214530,
+        "durationMs": 10080,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 51,
+        "text": "2 보다 간이 밴 시간이 더 오래 걸리는 관이 고추를 먼저 그 파주세요",
+        "startMs": 219569,
+        "durationMs": 10261,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 52,
+        "text": "약 3분정도 볶아서 빨리 고추의 숨이 살짝 줄어들었을 때 노릇하게 부쳐",
+        "startMs": 224610,
+        "durationMs": 8640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 53,
+        "text": "놓았던 2도 모두 다 넣고 같이 볶아주세요",
+        "startMs": 229830,
+        "durationMs": 6540,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 54,
+        "text": "불 새기는 계속 중부를 유지 해 주시구요",
+        "startMs": 233250,
+        "durationMs": 8180,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 55,
+        "text": "팬의 양념장이 모이지 않을 정도가 될 때까지 계속해서 볶아주세요",
+        "startMs": 236370,
+        "durationMs": 8380,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 56,
+        "text": "[음악]",
+        "startMs": 241430,
+        "durationMs": 7880,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 57,
+        "text": "양념장이 2 9화 꽈리고추 에 잘 졸여 쓰면 불 세기를 약불로 조절한",
+        "startMs": 244750,
+        "durationMs": 8579,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 58,
+        "text": "후에 작게 다져 났던 홍고추를 넣어 주세요",
+        "startMs": 249310,
+        "durationMs": 8959,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 59,
+        "text": "그때 분께 한수 푼도 같이 넣어주세요",
+        "startMs": 253329,
+        "durationMs": 4940,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 60,
+        "text": "장 기름 역시 1스푼을 넣어 주신 후에 에 잘 섞어주세요",
+        "startMs": 258359,
+        "durationMs": 5960,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 61,
+        "text": "[박수]",
+        "startMs": 264740,
+        "durationMs": 3990,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 62,
+        "text": "맛있는 2 볶음이 완성 됐습니다",
+        "startMs": 270080,
+        "durationMs": 6870,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 63,
+        "text": "두부로 만들 수 있는 맛있는 밥반찬 2 모 품",
+        "startMs": 273380,
+        "durationMs": 8220,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 64,
+        "text": "여기에 관리 고추를 넣어서 맛과 향이 더욱 좋아진 2보 꿈",
+        "startMs": 276950,
+        "durationMs": 8880,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 65,
+        "text": "오늘 저녁 반찬으로 식탁위에 꼭 한번 올려보세요",
+        "startMs": 281600,
+        "durationMs": 6170,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 66,
+        "text": "그럼 시청해주셔서 감사합니다",
+        "startMs": 285830,
+        "durationMs": 6069,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 67,
+        "text": "[음악]",
+        "startMs": 287770,
+        "durationMs": 4129,
+        "language": "ko"
+      }
+    ],
+    "tracks": [
+      {
+        "languageCode": "en-US",
+        "name": "영어(미국)",
+        "trackKind": "manual"
+      },
+      {
+        "languageCode": "ko",
+        "name": "한국어 (자동 생성됨)",
+        "trackKind": "auto"
+      }
+    ],
+    "selectedTrack": {
+      "languageCode": "ko",
+      "name": null,
+      "trackKind": "unknown"
+    },
+    "publicTimedTextReason": "timedtext_status_200"
+  },
+  "authorComments": {
+    "available": true,
+    "reason": null,
+    "comments": [
+      {
+        "text": "시청해 주셔서 감사합니다^^\n오늘도 행복한 하루 보내세요~",
+        "likeCount": 1218,
+        "publishedAt": "2021-01-10T17:39:44Z"
+      }
+    ]
+  }
+}

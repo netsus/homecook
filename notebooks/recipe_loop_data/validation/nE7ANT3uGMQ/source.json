@@ -1,0 +1,549 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-06-11T07:24:22.820Z",
+  "video": {
+    "videoId": "nE7ANT3uGMQ",
+    "url": "https://www.youtube.com/watch?v=nE7ANT3uGMQ",
+    "title": "One-Pan Lemon Garlic Pasta | The Easiest One-Pot Pasta Recipe",
+    "description": "EPISODE 573 - How to Make a One-Pan Lemon Garlic Pasta | Easy to Make & Done in Under 30 Minutes\n\nFULL RECIPE HERE: \nhttps://www.spainonafork.com/one-pan-lemon-garlic-pasta-recipe\n\nGET THE OLIVE OIL I USED HERE:\nhttps://www.apollooliveoil.com/organic-extra-virgin/index.php/purchase/shop/#!/Millers-Favorite-Organic/p/132259582/category=8815811\n\nSUPPORT ME ON PATREON:\nhttps://www.patreon.com/spainonafork\n\nGET YOUR SPAIN ON A FORK T-SHIRT HERE:\nhttps://teespring.com/stores/spain-on-a-fork\n\nGET ALL MY EQUIPMENT AND INGREDIENTS FROM MY AMAZON AFFILIATE STORE:\nhttps://www.amazon.com/shop/spainonafork\n\n-----------------------------------------------------------------\n***New Videos Every Monday and Friday - Remember to Subscribe and click on the bell icon to be notified of new videos***\n-----------------------------------------------------------------\n\nEquipment and Ingredients I use - Amazon Affiliate Links:\n\nMICROPHONE I USE:\nhttps://amzn.to/3cOULzt\n\nCAMERA I USE:\nhttps://amzn.to/3cOxb5W\n\nMY NONSTICK FRY PAN:\nhttps://amzn.to/3gzgSe8\n\nSWEET SMOKED SPANISH PAPRIKA:\nhttps://amzn.to/2TD9WoE\n\nMY CARBON STEEL PAELLA PAN:\nhttps://amzn.to/3cOV6Cf\n\nMY ENAMELED PAELLA PAN:\nhttps://amzn.to/3cOV6Cf\n\nSPANISH ROUND RICE I USE:\nhttps://amzn.to/3cOV6Cf\n\nWOOD CUTTING BOARD:\nhttps://amzn.to/3cOV6Cf\n\nMY FOOD PROCESSOR: \nhttps://amzn.to/3eMINVy\n\nMORTAR & PESTLE:\nhttps://amzn.to/3eQb9hL\n\nSpain on a Fork is a member of the Amazon Affiliates Program. If you purchase through these links, you pay the same price, and Spain on a Fork receives a small commission, which helps with all the expenses to keep Spain on a Fork going. Thank you for your support :)",
+    "channelId": "UCRmRqmB5uzpx7wWYEVVdCNw",
+    "channelTitle": "Spain on a Fork",
+    "publishedAt": "2021-06-25T14:00:31Z",
+    "tags": [
+      "one pan lemon garlic pasta",
+      "lemon garlic pasta",
+      "one pan pasta",
+      "one pan pasta with garlic",
+      "one pan pasta with lemon & garlic",
+      "the best pasta dish ever",
+      "the best lemon garlic pasta",
+      "easy to make one pan pasta",
+      "easy to make lemon garlic pasta",
+      "easy to make one pan lemon garlic pasta",
+      "how to make a one pan pasta",
+      "how to make a lemon garlic pasta",
+      "easy recipe for pasta",
+      "easy recipe for one pan pasta",
+      "easy recipe for lemon garlic pasta",
+      "easy pasta recipes",
+      "video",
+      "spain on a fork"
+    ],
+    "defaultLanguage": "en",
+    "durationSeconds": 409,
+    "thumbnailUrl": "https://i.ytimg.com/vi/nE7ANT3uGMQ/maxresdefault.jpg"
+  },
+  "stats": {
+    "viewCount": 260482,
+    "likeCount": 8456,
+    "commentCount": 428
+  },
+  "descriptionSignal": {
+    "hasIngredientKeyword": true,
+    "hasStepKeyword": true,
+    "hasQuantityPattern": false,
+    "length": 1650
+  },
+  "captions": {
+    "available": true,
+    "reason": null,
+    "provider": "apify",
+    "language": "en",
+    "segments": [
+      {
+        "lineIndex": 0,
+        "text": "so today we're making a very traditional dish from \nthe mediterranean kitchen we're talking a lemon",
+        "startMs": 18080,
+        "durationMs": 5120,
+        "language": "en"
+      },
+      {
+        "lineIndex": 1,
+        "text": "garlic pasta now the technique we're going to \nuse to cook this dish is the one pot method which",
+        "startMs": 23200,
+        "durationMs": 4720,
+        "language": "en"
+      },
+      {
+        "lineIndex": 2,
+        "text": "means the pasta gets cooked in the same pan as the \nrest of the ingredients that way the starch in the",
+        "startMs": 27920,
+        "durationMs": 4000,
+        "language": "en"
+      },
+      {
+        "lineIndex": 3,
+        "text": "pasta stays in the dish and let me tell you this \ngives it the most incredible texture & flavor",
+        "startMs": 31920,
+        "durationMs": 4240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 4,
+        "text": "but the best part this recipe is so easy to make \nit's got so many simple yet beautiful flavors and",
+        "startMs": 36160,
+        "durationMs": 5120,
+        "language": "en"
+      },
+      {
+        "lineIndex": 5,
+        "text": "it comes together in under 30 minutes truly the \nperfect dish for a busy week night dinner or for",
+        "startMs": 41280,
+        "durationMs": 4640,
+        "language": "en"
+      },
+      {
+        "lineIndex": 6,
+        "text": "relaxed weekend lunch next to a bottle of spanish \nwine let's begin by grabbing a large fry pan",
+        "startMs": 45920,
+        "durationMs": 5040,
+        "language": "en"
+      },
+      {
+        "lineIndex": 7,
+        "text": "important to use a larger pan here this \nis a one pot pasta you want to make sure",
+        "startMs": 50960,
+        "durationMs": 3440,
+        "language": "en"
+      },
+      {
+        "lineIndex": 8,
+        "text": "you have enough room for the pasta and the \nliquid i'm gonna heat it with a medium heat",
+        "startMs": 54400,
+        "durationMs": 3760,
+        "language": "en"
+      },
+      {
+        "lineIndex": 9,
+        "text": "and add in a generous 2 tablespoons of extra virgin \nolive oil which is 35 milliliters now the olive",
+        "startMs": 60160,
+        "durationMs": 5520,
+        "language": "en"
+      },
+      {
+        "lineIndex": 10,
+        "text": "oil i'm using to make this pasta dish is \nfrom apollo this is their miller's favorite",
+        "startMs": 65680,
+        "durationMs": 3840,
+        "language": "en"
+      },
+      {
+        "lineIndex": 11,
+        "text": "organic extra virgin olive oil it's got \nsuch a beautiful depth of flavors and it",
+        "startMs": 69520,
+        "durationMs": 4080,
+        "language": "en"
+      },
+      {
+        "lineIndex": 12,
+        "text": "works fabulous with this pasta dish link where \nyou can get some in the description box below",
+        "startMs": 73600,
+        "durationMs": 4240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 13,
+        "text": "while the olive oil is heating \ni'm gonna grab one head of garlic",
+        "startMs": 78400,
+        "durationMs": 3120,
+        "language": "en"
+      },
+      {
+        "lineIndex": 14,
+        "text": "remove the skins from the cloves",
+        "startMs": 84560,
+        "durationMs": 1600,
+        "language": "en"
+      },
+      {
+        "lineIndex": 15,
+        "text": "and roughly chop the garlic into small",
+        "startMs": 92320,
+        "durationMs": 2080,
+        "language": "en"
+      },
+      {
+        "lineIndex": 16,
+        "text": "chunks after heating the olive oil for three \nminutes on a medium heat it should be nice and hot",
+        "startMs": 94400,
+        "durationMs": 11360,
+        "language": "en"
+      },
+      {
+        "lineIndex": 17,
+        "text": "but as you can see it's not smoking so it \nhasn't lost any of its beautiful flavor",
+        "startMs": 105760,
+        "durationMs": 4000,
+        "language": "en"
+      },
+      {
+        "lineIndex": 18,
+        "text": "at this point i'm gonna start adding \nin the chopped garlic into the pan",
+        "startMs": 109760,
+        "durationMs": 4080,
+        "language": "en"
+      },
+      {
+        "lineIndex": 19,
+        "text": "and start mixing the chunks of \ngarlic around with the olive oil",
+        "startMs": 119200,
+        "durationMs": 3120,
+        "language": "en"
+      },
+      {
+        "lineIndex": 20,
+        "text": "you want to make sure you mix this continuously \nthat way all the garlic is evenly sauteed",
+        "startMs": 122320,
+        "durationMs": 5520,
+        "language": "en"
+      },
+      {
+        "lineIndex": 21,
+        "text": "after about two minutes and \nthe garlic is lightly sauteed",
+        "startMs": 131440,
+        "durationMs": 3200,
+        "language": "en"
+      },
+      {
+        "lineIndex": 22,
+        "text": "you don't want to brown it too much i'm \ngonna grab one teaspoon of dried thyme",
+        "startMs": 134640,
+        "durationMs": 3680,
+        "language": "en"
+      },
+      {
+        "lineIndex": 23,
+        "text": "which is about one gram and add \nit into the pan with the garlic",
+        "startMs": 138320,
+        "durationMs": 3520,
+        "language": "en"
+      },
+      {
+        "lineIndex": 24,
+        "text": "and we'll give this a quick mix that way that dry \nthyme is evenly coating all the pieces of garlic",
+        "startMs": 144240,
+        "durationMs": 4640,
+        "language": "en"
+      },
+      {
+        "lineIndex": 25,
+        "text": "then we'll add in three cups of vegetable broth \nwhich is 710 milliliters the broth brings out",
+        "startMs": 155440,
+        "durationMs": 5280,
+        "language": "en"
+      },
+      {
+        "lineIndex": 26,
+        "text": "an incredible flavor in the pasta but if you \nprefer you can just use water with a pinch",
+        "startMs": 160720,
+        "durationMs": 4400,
+        "language": "en"
+      },
+      {
+        "lineIndex": 27,
+        "text": "of salt you'll find a link on how to make my \nhomemade vegetable broth in the iCard above",
+        "startMs": 165120,
+        "durationMs": 4720,
+        "language": "en"
+      },
+      {
+        "lineIndex": 28,
+        "text": "we'll turn up the fire from \na medium heat to a high heat",
+        "startMs": 171040,
+        "durationMs": 2560,
+        "language": "en"
+      },
+      {
+        "lineIndex": 29,
+        "text": "and we'll give it a quick mix \nand bring the broth to a boil",
+        "startMs": 175680,
+        "durationMs": 2640,
+        "language": "en"
+      },
+      {
+        "lineIndex": 30,
+        "text": "once the broth comes to a boil \nit's time to add in the pasta",
+        "startMs": 181520,
+        "durationMs": 3440,
+        "language": "en"
+      },
+      {
+        "lineIndex": 31,
+        "text": "i'm going to be using penne pasta here but you can \nuse any other type of thick pasta for this recipe",
+        "startMs": 184960,
+        "durationMs": 4640,
+        "language": "en"
+      },
+      {
+        "lineIndex": 32,
+        "text": "i'm going to measure out two cups which \nis 200 grams this recipe feeds two people",
+        "startMs": 189600,
+        "durationMs": 4400,
+        "language": "en"
+      },
+      {
+        "lineIndex": 33,
+        "text": "that's one cup per person and i'm going to \nadd in the penne pasta into the boiling broth",
+        "startMs": 194000,
+        "durationMs": 5200,
+        "language": "en"
+      },
+      {
+        "lineIndex": 34,
+        "text": "and we'll give this a quick mix that way\nall the ingredients are evenly distributed",
+        "startMs": 202720,
+        "durationMs": 3600,
+        "language": "en"
+      },
+      {
+        "lineIndex": 35,
+        "text": "and you don't have to mix this continuously \nbut do get in there every two to three minutes",
+        "startMs": 206320,
+        "durationMs": 3920,
+        "language": "en"
+      },
+      {
+        "lineIndex": 36,
+        "text": "that way the pasta is evenly cooked \nand it doesn't stick together",
+        "startMs": 210240,
+        "durationMs": 2800,
+        "language": "en"
+      },
+      {
+        "lineIndex": 37,
+        "text": "after about 10 minutes and you can see a lot \nof that broth has been absorbed by the",
+        "startMs": 221520,
+        "durationMs": 3440,
+        "language": "en"
+      },
+      {
+        "lineIndex": 38,
+        "text": "pasta but there's still plenty of broth \nleft i'm going to place a lid on the pan",
+        "startMs": 224960,
+        "durationMs": 3760,
+        "language": "en"
+      },
+      {
+        "lineIndex": 39,
+        "text": "and lower the fire to a low medium heat and \nwe're going to simmer this between three to",
+        "startMs": 230400,
+        "durationMs": 5120,
+        "language": "en"
+      },
+      {
+        "lineIndex": 40,
+        "text": "four minutes on a low medium heat this \nis enough time for the majority of that",
+        "startMs": 235520,
+        "durationMs": 3680,
+        "language": "en"
+      },
+      {
+        "lineIndex": 41,
+        "text": "broth to be absorbed by the pasta and \nfor the pasta to be perfectly cooked al dente",
+        "startMs": 239200,
+        "durationMs": 3760,
+        "language": "en"
+      },
+      {
+        "lineIndex": 42,
+        "text": "after about four minutes i'm \ngonna remove the lid from the pan",
+        "startMs": 245360,
+        "durationMs": 2720,
+        "language": "en"
+      },
+      {
+        "lineIndex": 43,
+        "text": "and as you can see there's still a little bit of \nbroth left in the pan which is totally normal but",
+        "startMs": 250320,
+        "durationMs": 4640,
+        "language": "en"
+      },
+      {
+        "lineIndex": 44,
+        "text": "it's really thickened up thanks to the starch from \nthe pasta so it's kind of like a little sauce in",
+        "startMs": 254960,
+        "durationMs": 4080,
+        "language": "en"
+      },
+      {
+        "lineIndex": 45,
+        "text": "there that really elevates the flavors of this \ndish at this point i'm going to remove the pan",
+        "startMs": 259040,
+        "durationMs": 4160,
+        "language": "en"
+      },
+      {
+        "lineIndex": 46,
+        "text": "from the heat for the final touches to our pasta \ndish i'm going to finely grate in some lemon zest",
+        "startMs": 263200,
+        "durationMs": 6880,
+        "language": "en"
+      },
+      {
+        "lineIndex": 47,
+        "text": "i'm going to add in the lemon zest of half \nof a lemon and make sure you don't add any",
+        "startMs": 270080,
+        "durationMs": 3280,
+        "language": "en"
+      },
+      {
+        "lineIndex": 48,
+        "text": "of the white pith in there otherwise it's \ngoing to add a bitter flavor to your pasta",
+        "startMs": 273360,
+        "durationMs": 3440,
+        "language": "en"
+      },
+      {
+        "lineIndex": 49,
+        "text": "then we'll season the pasta with a kiss of \nsea salt and some freshly cracked black pepper",
+        "startMs": 281120,
+        "durationMs": 4800,
+        "language": "en"
+      },
+      {
+        "lineIndex": 50,
+        "text": "finely grated some manchego cheese the \none that i'm using has been aged for",
+        "startMs": 289840,
+        "durationMs": 3520,
+        "language": "en"
+      },
+      {
+        "lineIndex": 51,
+        "text": "six months so it's got a nice bite to it \nbut you can use whatever cheese you like",
+        "startMs": 293360,
+        "durationMs": 3760,
+        "language": "en"
+      },
+      {
+        "lineIndex": 52,
+        "text": "and we'll top it off with some \nfinely chopped parsley our one pan",
+        "startMs": 301120,
+        "durationMs": 3840,
+        "language": "en"
+      },
+      {
+        "lineIndex": 53,
+        "text": "lemon garlic pasta is done \nyou saw this very easy to make",
+        "startMs": 304960,
+        "durationMs": 3600,
+        "language": "en"
+      },
+      {
+        "lineIndex": 54,
+        "text": "beautiful presentation done in under 30 minutes \nlet's give it a try and see how it tastes",
+        "startMs": 308560,
+        "durationMs": 4960,
+        "language": "en"
+      },
+      {
+        "lineIndex": 55,
+        "text": "lemon garlic pasta here we go",
+        "startMs": 319760,
+        "durationMs": 4080,
+        "language": "en"
+      },
+      {
+        "lineIndex": 56,
+        "text": "it is so good but most importantly the pasta is \nperfectly al dente so it's got a nice bite to",
+        "startMs": 328960,
+        "durationMs": 4720,
+        "language": "en"
+      },
+      {
+        "lineIndex": 57,
+        "text": "it and as for the flavors you have all that \ngarlic the fresh lemon zest works so well",
+        "startMs": 333680,
+        "durationMs": 3920,
+        "language": "en"
+      },
+      {
+        "lineIndex": 58,
+        "text": "together the little kiss of manchego cheese and \nthe dried thyme truly an explosion of so much goodness",
+        "startMs": 337600,
+        "durationMs": 4240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 59,
+        "text": "but the beauty of this dish is that it's a \none pot pasta so all the starch stayed in",
+        "startMs": 341840,
+        "durationMs": 3760,
+        "language": "en"
+      },
+      {
+        "lineIndex": 60,
+        "text": "there which gives it the most beautiful rich \nflavor folks you saw this easy to make done",
+        "startMs": 345600,
+        "durationMs": 3920,
+        "language": "en"
+      },
+      {
+        "lineIndex": 61,
+        "text": "in under 30 minutes really quick before i go a \nshout out to a couple of my patreons Nancy T",
+        "startMs": 349520,
+        "durationMs": 5760,
+        "language": "en"
+      },
+      {
+        "lineIndex": 62,
+        "text": "David Anthony and Michael Fenter again guys thank you \nso much for being patreons of spain on a fork it's",
+        "startMs": 355280,
+        "durationMs": 4560,
+        "language": "en"
+      },
+      {
+        "lineIndex": 63,
+        "text": "thanks to you and the rest of my patreons\nwhy spain on a fork continues to move forward",
+        "startMs": 359840,
+        "durationMs": 4160,
+        "language": "en"
+      },
+      {
+        "lineIndex": 64,
+        "text": "if you're not a patreon consider becoming one \nit really helps with ingredients and equipment",
+        "startMs": 364000,
+        "durationMs": 4240,
+        "language": "en"
+      },
+      {
+        "lineIndex": 65,
+        "text": "to continue making videos like this you'll find \nmy patreon link in the description box below and i card",
+        "startMs": 368240,
+        "durationMs": 4480,
+        "language": "en"
+      },
+      {
+        "lineIndex": 66,
+        "text": "above if you enjoyed today's video hit that \nlike button leave me a comment below and if you're",
+        "startMs": 372720,
+        "durationMs": 3520,
+        "language": "en"
+      },
+      {
+        "lineIndex": 67,
+        "text": "not subscribed you know what to do smash that \nsubscribe button till the next time...hasta luego!!",
+        "startMs": 376240,
+        "durationMs": 6600,
+        "language": "en"
+      }
+    ],
+    "tracks": [
+      {
+        "languageCode": "en",
+        "name": "영어",
+        "trackKind": "manual"
+      }
+    ],
+    "selectedTrack": {
+      "languageCode": "en",
+      "name": null,
+      "trackKind": "unknown"
+    },
+    "publicTimedTextReason": "timedtext_status_200"
+  },
+  "authorComments": {
+    "available": true,
+    "reason": null,
+    "comments": []
+  }
+}

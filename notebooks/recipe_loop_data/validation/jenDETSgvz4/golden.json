@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 1,
+  "videoId": "jenDETSgvz4",
+  "draftedBy": "claude:description+captions + gemini:visual-recipes + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "콩나물 어묵찜",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "콩나물",
+          "nameAliases": [],
+          "amount": "300",
+          "unit": "g",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "메인 재료",
+          "evidence": "description"
+        },
+        {
+          "name": "어묵",
+          "nameAliases": [
+            "사각어묵"
+          ],
+          "amount": "3",
+          "unit": "장",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "메인 재료",
+          "evidence": "description"
+        },
+        {
+          "name": "양파",
+          "nameAliases": [],
+          "amount": "1/2",
+          "unit": "개",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "메인 재료",
+          "evidence": "description"
+        },
+        {
+          "name": "대파",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "개",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "메인 재료",
+          "evidence": "description"
+        },
+        {
+          "name": "간장",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "숟",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description"
+        },
+        {
+          "name": "다진 마늘",
+          "nameAliases": [
+            "간마늘"
+          ],
+          "amount": "1",
+          "unit": "숟",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description"
+        },
+        {
+          "name": "고춧가루",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "숟",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description"
+        },
+        {
+          "name": "굴소스",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "숟",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description"
+        },
+        {
+          "name": "올리고당",
+          "nameAliases": [],
+          "amount": "1.5",
+          "unit": "숟",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description"
+        },
+        {
+          "name": "고추장",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "숟",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description"
+        },
+        {
+          "name": "후추",
+          "nameAliases": [
+            "후춧가루"
+          ],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "description"
+        },
+        {
+          "name": "계란",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "개",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "식용유",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "참기름",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "통깨",
+          "nameAliases": [],
+          "amount": "약간",
+          "unit": "null",
+          "amountBasis": "onscreen",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "물",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "큰술",
+          "amountBasis": "spoken",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "어묵을 돌돌 말아 얇게 채 썰어주세요.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "채 썬 어묵에 뜨거운 물을 부어 부드럽게 익힌 뒤 물기를 제거하세요.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "그릇에 어묵과 계란 1개를 넣고 골고루 섞어 계란 옷을 입혀주세요.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "양파는 채 썰고 대파는 흰 부분과 초록 부분을 나누어 어슷 썰어주세요.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "간장 2큰술, 다진마늘 1큰술, 고춧가루 2큰술, 굴소스 1큰술, 올리고당 1.5큰술, 고추장 1큰술, 후추 약간을 섞어 양념장을 만드세요.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "팬에 기름 1큰술을 두르고 계란 옷을 입힌 어묵을 중약불에서 노릇하게 구워주세요.",
+          "evidence": "visual"
+        },
+        {
+          "order": 7,
+          "instruction": "다른 팬에 기름 1큰술을 두르고 대파 흰 부분을 30초 정도 볶아 파기름을 내주세요.",
+          "evidence": "visual"
+        },
+        {
+          "order": 8,
+          "instruction": "파기름에 구운 어묵을 넣고 10초 정도 가볍게 볶아주세요.",
+          "evidence": "visual"
+        },
+        {
+          "order": 9,
+          "instruction": "양파와 콩나물을 넣고 중약불에서 콩나물의 숨이 죽을 때까지 볶아주세요.",
+          "evidence": "visual"
+        },
+        {
+          "order": 10,
+          "instruction": "콩나물 숨이 1/3 정도 죽으면 중불로 올리고 양념장과 물 2큰술을 넣어 골고루 볶아주세요.",
+          "evidence": "visual"
+        },
+        {
+          "order": 11,
+          "instruction": "콩나물이 익고 양념이 잘 배면 대파 초록 부분을 넣고 10초 정도 더 볶아주세요.",
+          "evidence": "visual"
+        },
+        {
+          "order": 12,
+          "instruction": "불을 끄고 참기름 1큰술과 통깨를 뿌려 마무리하세요.",
+          "evidence": "visual"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "설명란 79자에 재료·분량만 있고 조리 단계 없음, 자막 없음 → steps는 제목·태그('콩나물 어묵찜', '콩나물어묵볶음') 기반 추정 뼈대. 전 단계 시각추출 필요(찜/볶음 여부, 물 추가 여부, 불 세기, 시간, 재료 투입 순서, 뚜껑 사용).",
+    "요리명은 태그상 '콩나물 어묵찜'·'콩나물어묵볶음' 혼용 — 정확한 조리 방식 시각 확인 후 확정 필요.",
+    "태그에 '계란요리' 포함 — 영상에 계란 사용 여부 시각 확인 필요(설명란 재료 목록에는 없음).",
+    "설명란 '양파 1/2'은 단위 미표기 → '개'로 해석. '대파 1개'는 소스 표기 그대로 유지(1대 의미로 추정).",
+    "'간마늘'은 표준명 '다진 마늘'로 표기, 원문은 nameAliases에 유지. '숟' 단위는 소스 표기 그대로(밥숟가락 추정).",
+    "[visual-recipes] 시각추출(steps)로 단계 교체·재료 보강 — 콩나물 어묵찜: 단계 12, 분량채움 0, 재료추가 4",
+    "[visual-pass] 레시피 초안의 식용유 분량은 2큰술로 되어 있으나, 영상에서는 어묵 볶을 때 1큰술, 파기름 낼 때 1큰술로 나누어 총 2큰술을 사용하므로 적절합니다.",
+    "[visual-pass] 레시피 제목은 '콩나물 어묵찜'이나, 조리 과정은 볶음 요리에 해당합니다."
+  ]
+}

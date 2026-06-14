@@ -1,0 +1,246 @@
+{
+  "schemaVersion": 1,
+  "videoId": "oe_WhcK2X4Q",
+  "draftedBy": "claude:description+captions + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "류수영 제육볶음",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "돼지고기 앞다리살",
+          "nameAliases": [
+            "앞다리살",
+            "돼지고기 전지"
+          ],
+          "amount": "600",
+          "unit": "g",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption"
+        },
+        {
+          "name": "설탕",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "숟갈",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "caption"
+        },
+        {
+          "name": "간장",
+          "nameAliases": [],
+          "amount": "3",
+          "unit": "숟갈",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "caption"
+        },
+        {
+          "name": "고추장",
+          "nameAliases": [],
+          "amount": "담뿍 3",
+          "unit": "숟갈",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "caption"
+        },
+        {
+          "name": "배 음료",
+          "nameAliases": [
+            "갈아 만든 배",
+            "배 주스"
+          ],
+          "amount": "1",
+          "unit": "캔",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "caption"
+        },
+        {
+          "name": "다진 마늘",
+          "nameAliases": [
+            "다진마늘",
+            "마늘"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "caption"
+        },
+        {
+          "name": "식초",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "숟갈",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "caption"
+        },
+        {
+          "name": "참기름",
+          "nameAliases": [],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "양념장",
+          "evidence": "caption"
+        },
+        {
+          "name": "양파",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "개",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": "야채",
+          "evidence": "caption"
+        },
+        {
+          "name": "대파",
+          "nameAliases": [
+            "파"
+          ],
+          "amount": "1",
+          "unit": "대",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": "야채",
+          "evidence": "caption"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "꼬집",
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption"
+        },
+        {
+          "name": "마늘",
+          "nameAliases": [],
+          "amount": "5-6",
+          "unit": "알",
+          "amountBasis": "spoken",
+          "optional": false,
+          "groupLabel": "마무리",
+          "evidence": "caption"
+        },
+        {
+          "name": "후추",
+          "nameAliases": [
+            "후춧가루"
+          ],
+          "amount": "약간",
+          "unit": null,
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": "마무리",
+          "evidence": "caption"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "돼지고기 앞다리살 600g(한 근)은 핏물을 충분히 빼 잡내를 제거한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 2,
+          "instruction": "핏물을 뺀 고기는 식구들 입 크기에 맞춰 한 점을 3등분 정도 크기로 썬다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 3,
+          "instruction": "밀폐용기에 가루인 설탕 2숟갈을 먼저 넣고, 액체인 간장 3숟갈, 마지막에 고추장을 깎지 말고 담뿍 3숟갈 순서로 넣는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 4,
+          "instruction": "물 대신 배 음료를 부어 양념 국물을 잡는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 5,
+          "instruction": "용기 뚜껑을 닫고 흔들어 양념장을 고루 섞는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 6,
+          "instruction": "다진 마늘 1큰술(통마늘이면 5~6개를 갈아서)을 양념장에 넣는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 7,
+          "instruction": "양념장에 썰어 둔 고기를 넣고 뭉친 부분이 없도록 풀어가며 고루 버무려 재운다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 8,
+          "instruction": "식초 2숟갈을 양념장에 넣는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 9,
+          "instruction": "참기름은 고기 향을 가리지 않도록 많이 넣지 말고 약간만 넣는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 10,
+          "instruction": "재운 고기 위에 양파와 대파를 썰어 섞지 말고 올린 뒤 소금 1꼬집을 뿌리고 뚜껑을 덮어 냉장 보관한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 11,
+          "instruction": "조리할 때는 위에 올린 야채를 걷어 두고 뜨겁게 달군 팬에 고기부터 올린다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 12,
+          "instruction": "처음에는 뒤적이지 말고 그대로 두어 고기에 군데군데 거뭇하게 탄 자국이 생길 때까지 굽는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 13,
+          "instruction": "탄 자국이 생기면 재빨리 섞으며 고기를 고르게 펼친다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 14,
+          "instruction": "걷어 둔 야채와 남은 양념 국물을 넣고 뚜껑을 덮어 약불로 3분 정도 익힌다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 15,
+          "instruction": "마지막에 마늘을 넣고 후추를 약간 뿌려 한 번 섞어 마무리한다.",
+          "evidence": "caption"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "설명란(139자)에 레시피 정보 없음 → 자동 생성 ko 자막(ASR)이 주 소스.",
+    "양념 비율은 자막의 '3·3·2': 간장 3숟갈, 고추장 담뿍 3숟갈(올라오는 대로 깎지 않음), 설탕 2숟갈. 넣는 순서는 가루(설탕)→액체(간장)→고추장(숟가락 하나로 끝내는 요령).",
+    "'이걸로 국물을 잡으시면'의 액체는 물 대신 쓰는 배 음료(갈아 만든 배)로 추정 — 제품·분량 미발화, 시각추출 필요.",
+    "양파·대파 분량 미발화 → null, 시각추출 필요. ASR 원문 '파진 깔고'는 '파 깔고'로 보정.",
+    "마무리 마늘(자막 '마늘을 마지막에 하나 넣으시면')은 형태·분량 불명확 → null, 시각추출 필요.",
+    "ASR 보정: '소금을 한 꼬리/꽂집'→소금 1꼬집, '식초 놓는게'→식초 넣는 게, '뚜껑 다아 놓고'→뚜껑 닫아 놓고.",
+    "삼겹살은 기름이 많이 나와 부적합(앞다리살 권장). 바로 먹어도 되지만 이틀 정도 숙성하면 연육되어 더 맛있고, 냉장 3~4일 내 섭취 권장(작성자 실험 기준 일주일까지 가능).",
+    "요리 초보 대안 멘트: 전부 넣고 뚜껑 닫아 약불로 익혀도 됨. 시식·잡담 멘트는 steps에서 제외.",
+    "[visual-pass] 레시피 초안의 0.2(간장)는 3 숟갈이 맞으며, 0.5(다진 마늘)는 1 큰술이 맞습니다. 영상에서 류수영은 3-3-2 비율(고추장 3, 간장 3, 설탕 2)을 명확히 언급합니다.",
+    "검수 반영(2026-06-13): 양념장 완성 후 고기를 재우는 단계를 식초·참기름 투입보다 앞(마늘 다음)으로 이동. 야채는 썰어서 올리는 것으로 명확화."
+  ]
+}

@@ -1,0 +1,900 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-06-11T07:22:08.494Z",
+  "video": {
+    "videoId": "vqb3WyZmL_8",
+    "url": "https://www.youtube.com/watch?v=vqb3WyZmL_8",
+    "title": "하루가 지나도 절대 불지 않는 잡채 만들기",
+    "description": "김대석 셰프의 31년 노하우를 공개합니다.\n오늘은 잡채 레시피를 알려 드리겠습니다.\n▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n컵 계량은 200mL 기준입니다\n(종이컵으로는 가득 채운 1컵입니다)\n스푼 계량은 집에 흔히 있는 밥 숟가락 기준입니다\n▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n[메인 재료]\n당면 250g(1시간 불리기)\n식용유 4스푼\n물 1컵 반(300ml)\n\n[야채 준비]\n양파 1/2개, 당근 1/2개, 생표고버섯 3개, 부추 반줌(겨울에는 시금치 사용)\n\n[양념 재료]\n진간장 1/3컵(7스푼), 굴소스 2스푼, 미림 1/4컵, 흑설탕 가득 2스푼,\n다진마늘 가득 1스푼, 후추 1/4스푼, 참기름 1스푼, 통깨 2스푼\n\n(마지막 넓은 그릇에 옮겨 식혀주기)\n#김대석셰프 #잡채",
+    "channelId": "UC1g9JaEVLOFGhH8hpaK--Jg",
+    "channelTitle": "김대석 셰프TV",
+    "publishedAt": "2022-08-27T23:00:14Z",
+    "tags": [
+      "김대석",
+      "김대석셰프",
+      "김대석쉐프",
+      "김대석셰프TV",
+      "김대석쉐프TV",
+      "김대석김치",
+      "김대석 김치",
+      "김대석레시피",
+      "김대석요리",
+      "김대석요리채널",
+      "요리채널",
+      "만드는법",
+      "간단요리",
+      "반찬",
+      "#Shorts",
+      "#쇼츠",
+      "쇼츠",
+      "Shorts",
+      "shorts",
+      "잡채",
+      "잡채 레시피",
+      "잡채 만들기",
+      "잡채 만드는법",
+      "잡채 맛있게",
+      "잡채 만드는방법",
+      "김대석 잡채",
+      "김대석 잡채 레시피",
+      "명절",
+      "추석음식",
+      "명절음식",
+      "추석 잡채",
+      "명절 잡채",
+      "추석"
+    ],
+    "defaultLanguage": "ko",
+    "durationSeconds": 299,
+    "thumbnailUrl": "https://i.ytimg.com/vi/vqb3WyZmL_8/maxresdefault.jpg"
+  },
+  "stats": {
+    "viewCount": 4643906,
+    "likeCount": 70563,
+    "commentCount": 1438
+  },
+  "descriptionSignal": {
+    "hasIngredientKeyword": true,
+    "hasStepKeyword": true,
+    "hasQuantityPattern": true,
+    "length": 387
+  },
+  "captions": {
+    "available": true,
+    "reason": null,
+    "provider": "apify",
+    "language": "ko",
+    "segments": [
+      {
+        "lineIndex": 0,
+        "text": "[음악]",
+        "startMs": 5130,
+        "durationMs": 3750,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 1,
+        "text": "으 아",
+        "startMs": 8900,
+        "durationMs": 5460,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 2,
+        "text": "안녕하세요 김태석 싶읍니다 재료",
+        "startMs": 11330,
+        "durationMs": 5550,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 3,
+        "text": "준비만 해놓으면 으 생각보다 복잡하지",
+        "startMs": 14360,
+        "durationMs": 5370,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 4,
+        "text": "않고 5분이면 뚝딱 완성되는 자체",
+        "startMs": 16880,
+        "durationMs": 6090,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 5,
+        "text": "따로따로 볶지 않고 펜 하나로 자체가",
+        "startMs": 19730,
+        "durationMs": 5910,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 6,
+        "text": "완성된다면 믿으시겠어요 아마도 이",
+        "startMs": 22970,
+        "durationMs": 5190,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 7,
+        "text": "영상 보시는 분들은 귀가 쫑긋 해볼",
+        "startMs": 25640,
+        "durationMs": 3299,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 8,
+        "text": "겁니다",
+        "startMs": 28160,
+        "durationMs": 3570,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 9,
+        "text": "오늘 불지 않는 자체 만드는 비법 발",
+        "startMs": 28939,
+        "durationMs": 4351,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 10,
+        "text": "시작하겠습니다",
+        "startMs": 31730,
+        "durationMs": 4020,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 11,
+        "text": "당면은 한 봉지 준비했습니다",
+        "startMs": 33290,
+        "durationMs": 6179,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 12,
+        "text": "2배 59 람 이 딱 보시면 은",
+        "startMs": 35750,
+        "durationMs": 5370,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 13,
+        "text": "10인분 양입니다",
+        "startMs": 39469,
+        "durationMs": 4230,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 14,
+        "text": "찬물을 준비해서 바로 물에다가 당",
+        "startMs": 41120,
+        "durationMs": 3779,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 15,
+        "text": "겁니다",
+        "startMs": 43699,
+        "durationMs": 4230,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 16,
+        "text": "이렇게 충분히 잠길 정도로 해줘야",
+        "startMs": 44899,
+        "durationMs": 5370,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 17,
+        "text": "됩니다 그리고 요즘 당면은 이렇게",
+        "startMs": 47929,
+        "durationMs": 4770,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 18,
+        "text": "조그맣게 잘라져 갖고 다 나오거든요",
+        "startMs": 50269,
+        "durationMs": 5340,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 19,
+        "text": "그래서 사용하기에 아주 쉽습니다",
+        "startMs": 52699,
+        "durationMs": 4380,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 20,
+        "text": "이렇게 해서 한 10월 동안 불러",
+        "startMs": 55609,
+        "durationMs": 2790,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 21,
+        "text": "놓겠습니다",
+        "startMs": 57079,
+        "durationMs": 4580,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 22,
+        "text": "양파 반개 사용하겠습니다",
+        "startMs": 58399,
+        "durationMs": 3260,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 23,
+        "text": "아 영 파랑 이렇게 먹기좋게 풀어",
+        "startMs": 63120,
+        "durationMs": 5480,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 24,
+        "text": "줘야 됩니다",
+        "startMs": 66299,
+        "durationMs": 2301,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 25,
+        "text": "아",
+        "startMs": 70150,
+        "durationMs": 3150,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 26,
+        "text": "당근 1개 준비했는데요 반만",
+        "startMs": 71380,
+        "durationMs": 2930,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 27,
+        "text": "사용하겠습니다",
+        "startMs": 73300,
+        "durationMs": 2570,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 28,
+        "text": "[음악]",
+        "startMs": 74310,
+        "durationMs": 2300,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 29,
+        "text": "아",
+        "startMs": 75870,
+        "durationMs": 2540,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 30,
+        "text": "아",
+        "startMs": 76610,
+        "durationMs": 3410,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 31,
+        "text": "아",
+        "startMs": 78410,
+        "durationMs": 4070,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 32,
+        "text": "합니다 3",
+        "startMs": 80020,
+        "durationMs": 4460,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 33,
+        "text": "아",
+        "startMs": 82480,
+        "durationMs": 2000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 34,
+        "text": "생표고버섯 세계 사용하겠습니다",
+        "startMs": 84960,
+        "durationMs": 4070,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 35,
+        "text": "아",
+        "startMs": 89080,
+        "durationMs": 2030,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 36,
+        "text": "[음악]",
+        "startMs": 89640,
+        "durationMs": 2950,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 37,
+        "text": "아",
+        "startMs": 91110,
+        "durationMs": 3480,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 38,
+        "text": "아",
+        "startMs": 92590,
+        "durationMs": 2000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 39,
+        "text": "부 초반 좀 사용하겠습니다",
+        "startMs": 96040,
+        "durationMs": 7280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 40,
+        "text": "이렇게 국시 국수 가게 썰면 됩니다",
+        "startMs": 98860,
+        "durationMs": 4460,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 41,
+        "text": "아 당면은 뚫린 온 지 1시간이 딱",
+        "startMs": 104440,
+        "durationMs": 3390,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 42,
+        "text": "지났습니다",
+        "startMs": 106630,
+        "durationMs": 3660,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 43,
+        "text": "이렇게 당면이 까실까실하게 됩니다",
+        "startMs": 107830,
+        "durationMs": 5010,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 44,
+        "text": "도시란 3시간 물려 봄 1 탱탱",
+        "startMs": 110290,
+        "durationMs": 6140,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 45,
+        "text": "물어봤고 진짜 맞거든요",
+        "startMs": 112840,
+        "durationMs": 3590,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 46,
+        "text": "이렇게 하고 냐 물기를 빼 놓겠습니다",
+        "startMs": 117049,
+        "durationMs": 5460,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 47,
+        "text": "먼저 펜 가열 하기 전에 뚫린 당면을",
+        "startMs": 119780,
+        "durationMs": 4469,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 48,
+        "text": "넣습니다",
+        "startMs": 122509,
+        "durationMs": 5691,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 49,
+        "text": "식용유 4스푼 사용합니다",
+        "startMs": 124249,
+        "durationMs": 3951,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 50,
+        "text": "잃어 갔고 인자 코팅을 해줍니다",
+        "startMs": 131190,
+        "durationMs": 5790,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 51,
+        "text": "이거 신 자원을 최고의 꿀팁 아닙니까",
+        "startMs": 133830,
+        "durationMs": 5100,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 52,
+        "text": "아마도 이렇게 하시는 분은 아무도",
+        "startMs": 136980,
+        "durationMs": 4230,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 53,
+        "text": "없을 겁니다 김대석 c 품안의 비법",
+        "startMs": 138930,
+        "durationMs": 3570,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 54,
+        "text": "아닌 거 아닌가요",
+        "startMs": 141210,
+        "durationMs": 3510,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 55,
+        "text": "이렇게 하면 은자 잡채가 절대 쁘 지",
+        "startMs": 142500,
+        "durationMs": 3180,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 56,
+        "text": "않거든요",
+        "startMs": 144720,
+        "durationMs": 4770,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 57,
+        "text": "에 충분히 이렇게 코팅을 해주세요",
+        "startMs": 145680,
+        "durationMs": 6240,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 58,
+        "text": "가스불을 약하게 탑니다 너무 쎄게",
+        "startMs": 149490,
+        "durationMs": 5160,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 59,
+        "text": "하지 마시고요 중약불로 해주세요",
+        "startMs": 151920,
+        "durationMs": 5220,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 60,
+        "text": "페인이 가열되면 자 이렇게 좌천 이",
+        "startMs": 154650,
+        "durationMs": 5280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 61,
+        "text": "뽑아줍니다 센 불로 절대 하면",
+        "startMs": 157140,
+        "durationMs": 4440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 62,
+        "text": "안됩니다",
+        "startMs": 159930,
+        "durationMs": 5160,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 63,
+        "text": "이렇게 중약불에서 이번 호를 뽑았으며",
+        "startMs": 161580,
+        "durationMs": 6630,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 64,
+        "text": "는 가스불을 약하게 또 줄입니다",
+        "startMs": 165090,
+        "durationMs": 5610,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 65,
+        "text": "진간장 3분의 1컵 입니다",
+        "startMs": 168210,
+        "durationMs": 5510,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 66,
+        "text": "7 스푼 정도 됩니다",
+        "startMs": 170700,
+        "durationMs": 5450,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 67,
+        "text": "미림 4분의 1컵 입니다",
+        "startMs": 173720,
+        "durationMs": 6170,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 68,
+        "text": "공소 수도 수품 입니다",
+        "startMs": 176150,
+        "durationMs": 3740,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 69,
+        "text": "이렇게 야권 자석 원입니다",
+        "startMs": 179930,
+        "durationMs": 4039,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 70,
+        "text": "이렇게 인자 어느정도 코팅이 됐으며",
+        "startMs": 184730,
+        "durationMs": 5729,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 71,
+        "text": "는 가스 불을 약간 키워줍니다",
+        "startMs": 186769,
+        "durationMs": 5761,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 72,
+        "text": "예 그리고 원자 이상태 생각보",
+        "startMs": 190459,
+        "durationMs": 3211,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 73,
+        "text": "봐주세요",
+        "startMs": 192530,
+        "durationMs": 3659,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 74,
+        "text": "간장이 충분히 배울 수 있도록 계속",
+        "startMs": 193670,
+        "durationMs": 4649,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 75,
+        "text": "볶아주세요",
+        "startMs": 196189,
+        "durationMs": 4440,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 76,
+        "text": "예 이렇게 어느정도 볶아졌으면 은",
+        "startMs": 198319,
+        "durationMs": 5730,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 77,
+        "text": "양파 하고 당근을 넣어 줍니다",
+        "startMs": 200629,
+        "durationMs": 6841,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 78,
+        "text": "예 이렇게 또 한번 볶아주세요 살짝",
+        "startMs": 204049,
+        "durationMs": 5280,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 79,
+        "text": "먹고 나왔네요",
+        "startMs": 207470,
+        "durationMs": 4530,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 80,
+        "text": "물 1컵 반 넣겠습니다",
+        "startMs": 209329,
+        "durationMs": 5821,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 81,
+        "text": "물 양이 굉장히 중요합니다",
+        "startMs": 212000,
+        "durationMs": 7079,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 82,
+        "text": "바로 표고버섯 넣습니다 스러운 거예요",
+        "startMs": 215150,
+        "durationMs": 6720,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 83,
+        "text": "분량이 굉장히 중요합니다",
+        "startMs": 219079,
+        "durationMs": 5671,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 84,
+        "text": "한껏 반이 딱 알맞습니다",
+        "startMs": 221870,
+        "durationMs": 5670,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 85,
+        "text": "이 정도 됐을 때 흑설탕 가득 2스푼",
+        "startMs": 224750,
+        "durationMs": 4840,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 86,
+        "text": "넣습니다",
+        "startMs": 227540,
+        "durationMs": 4120,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 87,
+        "text": "다진마늘 가득 한 스푼 요",
+        "startMs": 229590,
+        "durationMs": 4770,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 88,
+        "text": "그 다음엔 자 이렇게 볶아주면 됩니다",
+        "startMs": 231660,
+        "durationMs": 5850,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 89,
+        "text": "이정도 원자 됐을 때 부를 겁니다",
+        "startMs": 234360,
+        "durationMs": 5970,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 90,
+        "text": "그 다음엔 자부 초를 넣습니다",
+        "startMs": 237510,
+        "durationMs": 5250,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 91,
+        "text": "여름에는 부추가 올리고요 겨울에는",
+        "startMs": 240330,
+        "durationMs": 3989,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 92,
+        "text": "시금치가 올립니다",
+        "startMs": 242760,
+        "durationMs": 3809,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 93,
+        "text": "이렇게 냐 부추가 숨이 죽었을 때 요",
+        "startMs": 244319,
+        "durationMs": 6000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 94,
+        "text": "참 길은 한수 법사 들어오고요 통계의",
+        "startMs": 246569,
+        "durationMs": 7051,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 95,
+        "text": "한스푼 툭툭 뿌리고 요",
+        "startMs": 250319,
+        "durationMs": 6721,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 96,
+        "text": "흑초 4분의 1 스푼 너 커요 이렇게",
+        "startMs": 253620,
+        "durationMs": 5700,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 97,
+        "text": "학원 자 또 마지막 중요한거 한가지",
+        "startMs": 257040,
+        "durationMs": 3180,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 98,
+        "text": "있습니다",
+        "startMs": 259320,
+        "durationMs": 3540,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 99,
+        "text": "이렇게 한 다음에 큰 용기 준비해서",
+        "startMs": 260220,
+        "durationMs": 5699,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 100,
+        "text": "바로 보여줍니다",
+        "startMs": 262860,
+        "durationMs": 6640,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 101,
+        "text": "이렇게 학원 자 짝짝 펼칩니다 이자",
+        "startMs": 265919,
+        "durationMs": 6521,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 102,
+        "text": "그러면 자 자체가 뿔 지 않고 진짜",
+        "startMs": 269500,
+        "durationMs": 4530,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 103,
+        "text": "맛있어 집니다",
+        "startMs": 272440,
+        "durationMs": 3060,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 104,
+        "text": "이렇게 인자 어느 정도를 시간",
+        "startMs": 274030,
+        "durationMs": 3050,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 105,
+        "text": "이었으며 는 어깨를",
+        "startMs": 275500,
+        "durationMs": 4890,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 106,
+        "text": "톡톡 한스푼 마더 뿌려줍니다",
+        "startMs": 277080,
+        "durationMs": 6460,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 107,
+        "text": "야 여기가 반질반질하고 먹음직 스럽지",
+        "startMs": 280390,
+        "durationMs": 4110,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 108,
+        "text": "않습니까",
+        "startMs": 283540,
+        "durationMs": 3030,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 109,
+        "text": "추석에 꼭 만들어서 가족 분들과",
+        "startMs": 284500,
+        "durationMs": 4230,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 110,
+        "text": "즐거운 식사 시간 보내셨으면 하는",
+        "startMs": 286570,
+        "durationMs": 3300,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 111,
+        "text": "바램입니다",
+        "startMs": 288730,
+        "durationMs": 3870,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 112,
+        "text": "힘을 주시는 모든 분들께 고마움을",
+        "startMs": 289870,
+        "durationMs": 3600,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 113,
+        "text": "전합니다",
+        "startMs": 292600,
+        "durationMs": 3120,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 114,
+        "text": "그래 부지런히 하겠습니다 지금까지",
+        "startMs": 293470,
+        "durationMs": 6050,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 115,
+        "text": "김대 써서 싶어졌습니다",
+        "startMs": 295720,
+        "durationMs": 3800,
+        "language": "ko"
+      }
+    ],
+    "tracks": [
+      {
+        "languageCode": "ko",
+        "name": "한국어 (자동 생성됨)",
+        "trackKind": "auto"
+      }
+    ],
+    "selectedTrack": {
+      "languageCode": "ko",
+      "name": null,
+      "trackKind": "unknown"
+    },
+    "publicTimedTextReason": "timedtext_status_200"
+  },
+  "authorComments": {
+    "available": true,
+    "reason": null,
+    "comments": []
+  }
+}

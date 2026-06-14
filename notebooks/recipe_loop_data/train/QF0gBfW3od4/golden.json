@@ -1,0 +1,329 @@
+{
+  "schemaVersion": 1,
+  "videoId": "QF0gBfW3od4",
+  "draftedBy": "claude:description+captions + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "제육볶음",
+      "servings": 3,
+      "ingredients": [
+        {
+          "name": "돼지고기",
+          "nameAliases": [
+            "고기"
+          ],
+          "amount": "450",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "대파",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": null,
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "양파",
+          "nameAliases": [],
+          "amount": "1/2",
+          "unit": null,
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "당근",
+          "nameAliases": [],
+          "amount": "쬐끔",
+          "unit": null,
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "청양고추",
+          "nameAliases": [
+            "땡초"
+          ],
+          "amount": "2",
+          "unit": null,
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "청고추",
+          "nameAliases": [
+            "청초"
+          ],
+          "amount": "1",
+          "unit": null,
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "홍고추",
+          "nameAliases": [
+            "홍초"
+          ],
+          "amount": "1",
+          "unit": null,
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "버섯",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "개",
+          "optional": true,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "방아잎",
+          "nameAliases": [
+            "방아입"
+          ],
+          "amount": "1",
+          "unit": "줌",
+          "optional": true,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "소주",
+          "nameAliases": [
+            "맛술"
+          ],
+          "amount": "2",
+          "unit": "밥숟갈",
+          "optional": false,
+          "groupLabel": "고기 밑간",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "다진 마늘",
+          "nameAliases": [
+            "간마늘"
+          ],
+          "amount": "1",
+          "unit": "밥숟갈",
+          "optional": false,
+          "groupLabel": "고기 밑간",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "생강",
+          "nameAliases": [],
+          "amount": "0.3",
+          "unit": "밥숟갈",
+          "optional": false,
+          "groupLabel": "고기 밑간",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "설탕",
+          "nameAliases": [
+            "원당"
+          ],
+          "amount": "1",
+          "unit": "밥숟갈",
+          "optional": false,
+          "groupLabel": "고기 밑간",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "고추청",
+          "nameAliases": [
+            "고추청 물"
+          ],
+          "amount": "1.5",
+          "unit": "밥숟갈",
+          "optional": true,
+          "groupLabel": "고기 밑간",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "식용유",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "간장",
+          "nameAliases": [
+            "진간장"
+          ],
+          "amount": "3",
+          "unit": "밥숟갈",
+          "optional": false,
+          "groupLabel": "양념소스",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "고추장",
+          "nameAliases": [],
+          "amount": "1.5~2",
+          "unit": "밥숟갈",
+          "optional": false,
+          "groupLabel": "양념소스",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "고춧가루",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "밥숟갈",
+          "optional": false,
+          "groupLabel": "양념소스",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "매실청",
+          "nameAliases": [],
+          "amount": "1~2",
+          "unit": "밥숟갈",
+          "optional": false,
+          "groupLabel": "양념소스",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "설탕",
+          "nameAliases": [
+            "올리고당",
+            "원당"
+          ],
+          "amount": "1",
+          "unit": "밥숟갈",
+          "optional": false,
+          "groupLabel": "양념소스",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "후추",
+          "nameAliases": [],
+          "amount": "솔솔",
+          "unit": null,
+          "optional": false,
+          "groupLabel": "양념소스",
+          "evidence": "description",
+          "amountBasis": "stated-description"
+        },
+        {
+          "name": "참기름",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": "양념소스",
+          "evidence": "description",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "물엿",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "spoken",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "돼지고기는 물에 담가 핏물을 빼지 말고 키친타월로 가볍게 닦아 준비한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 2,
+          "instruction": "고기에 소주 2밥숟갈, 다진 마늘 1밥숟갈, 생강, 고추청 물(또는 설탕)을 넣고 주물러 밑간해 둔다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 3,
+          "instruction": "대파 1대, 양파 1/2개, 당근, 청고추, 홍고추, 청양고추 2개를 썰어 준비한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 4,
+          "instruction": "진간장 3밥숟갈, 고추장, 고춧가루, 매실청, 후추를 섞어 양념을 만들어 둔다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 5,
+          "instruction": "팬을 달군 뒤 식용유를 넉넉히 두른다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 6,
+          "instruction": "밑간한 고기만 먼저 강불에 넣고 기름이 나오도록 바짝 볶는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 7,
+          "instruction": "고기가 충분히 익으면 양념을 먼저 넣고 볶다가, 바로 썰어 둔 야채를 넣고 함께 볶는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 8,
+          "instruction": "색이 옅으면 고춧가루를 더 넣고, 싱거우면 소금이나 간장을 더해 간을 맞춘다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 9,
+          "instruction": "기호에 따라 방아잎이나 깻잎을 올려 마무리한다.",
+          "evidence": "caption"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "고추장 분량 충돌: 설명란은 1.5~2밥숟갈, 자막에서는 '한 숟가락'으로 들림 — 설명란 기준으로 작성",
+    "밑간 설탕 1밥숟갈은 고추청 물 1.5밥숟갈로 대체 가능(작성자가 실제 사용) — 고추청은 optional로 분리",
+    "매실청 분량은 밑간이 고추청이면 1밥숟갈, 설탕이면 2밥숟갈 (설명란 기준)",
+    "자막에 버섯 추가 언급('없는 사람 안 넣어도 된대', line 86-87) — 종류 불명이라 optional 처리",
+    "자동 생성 자막의 ASR 오류 다수 보정: '고추층'→고추청, '땡초'→청양고추, '방아입'→방아잎 등",
+    "대파 단위: 설명란은 '대파1', 자막에서는 '큰 거 한 뿌리'",
+    "깻잎은 자막에서 마무리 토핑 추천으로만 언급되어 재료 목록에는 미포함",
+    "고기 부위: 자막상 갈비살·대패 부위로 추정되며 전지/삼겹 등 대체 가능 언급",
+    "[visual-pass] 레시피 초안의 고추청(0.13)과 설탕(0.12)은 영상에서 '고추청이 있으면 고추청을 넣고, 없으면 설탕을 넣으라'는 선택적 재료로 설명됨.",
+    "[visual-pass] 양념소스의 고추장(0.16)은 영상에서 1.5큰술로 명시됨.",
+    "[visual-pass] 참기름은 영상에서 언급되지 않았으나, 마지막에 물엿을 넣는 장면이 추가됨.",
+    "검수 반영(2026-06-12): 양념은 야채에 버무리지 않고 따로 넣은 뒤 곧바로 야채 투입.",
+    "[확인필요] 시각추정 재료 \"버섯\"이 단계에 등장하지 않음(Gemini 재검증은 쿼터로 보류). 제육볶음 표준 재료가 아니라 오검출 가능성 — 영상 확인 권장."
+  ]
+}

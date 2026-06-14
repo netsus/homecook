@@ -1,0 +1,297 @@
+{
+  "schemaVersion": 1,
+  "videoId": "oqJzB3OD0eI",
+  "draftedBy": "claude:description+captions + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "레이먼킴의 돼지고기 카레",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "돼지고기 목심",
+          "nameAliases": [
+            "목심",
+            "돼지 목심"
+          ],
+          "amount": "300",
+          "unit": "g",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "돼지고기 등심",
+          "nameAliases": [
+            "등심",
+            "돼지 등심"
+          ],
+          "amount": "300",
+          "unit": "g",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "카레 가루",
+          "nameAliases": [
+            "약간 매운맛 카레",
+            "카레가루",
+            "카레",
+            "분말 카레"
+          ],
+          "amount": "2",
+          "unit": "봉지",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "당근",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "개",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "감자",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "알",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "토마토",
+          "nameAliases": [
+            "tomato"
+          ],
+          "amount": "1",
+          "unit": "알",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "주키니",
+          "nameAliases": [
+            "돼지호박",
+            "쥬키니",
+            "zucchini"
+          ],
+          "amount": "1",
+          "unit": "개",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "양파",
+          "nameAliases": [],
+          "amount": "3",
+          "unit": "알",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "물",
+          "nameAliases": [],
+          "amount": "5",
+          "unit": "컵",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "베트남 고추",
+          "nameAliases": [
+            "베트남고추"
+          ],
+          "amount": "3",
+          "unit": "개",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "버터",
+          "nameAliases": [
+            "butter"
+          ],
+          "amount": "2",
+          "unit": "T",
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "식용유",
+          "nameAliases": [
+            "올리브유",
+            "올리브 오일"
+          ],
+          "amount": "충분히",
+          "unit": null,
+          "amountBasis": "stated-description",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [],
+          "amount": null,
+          "unit": null,
+          "amountBasis": null,
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "후추",
+          "nameAliases": [],
+          "amount": "많이",
+          "unit": null,
+          "amountBasis": "stated-caption",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "밥",
+          "nameAliases": [
+            "흰쌀밥"
+          ],
+          "amount": null,
+          "unit": null,
+          "amountBasis": null,
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "description"
+        },
+        {
+          "name": "돼지고기",
+          "nameAliases": [
+            "목심",
+            "등심"
+          ],
+          "amount": "약 150",
+          "unit": "g",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "당근 1개와 감자 2알은 껍질을 깎아 주사위 모양으로 썬다.",
+          "evidence": "description"
+        },
+        {
+          "order": 2,
+          "instruction": "돼지호박(주키니)은 반으로 갈라 숟가락으로 가운데 씨를 제거한 뒤 두껍게 썬다.",
+          "evidence": "description"
+        },
+        {
+          "order": 3,
+          "instruction": "토마토는 꼭지를 제거해 준비하고, 양파 3알은 주사위 모양으로 썬다.",
+          "evidence": "description"
+        },
+        {
+          "order": 4,
+          "instruction": "집에 있는 가장 큰 솥을 준비해 올리브유(또는 식용유)를 충분히 두른다.",
+          "evidence": "description"
+        },
+        {
+          "order": 5,
+          "instruction": "양파를 중간불에서 오래 볶아 캐러멜라이징한다.",
+          "evidence": "description"
+        },
+        {
+          "order": 6,
+          "instruction": "목심과 등심을 숭덩숭덩 썰어 한 볼에 담고 카레 가루를 솔솔 뿌려 잘 섞는다.",
+          "evidence": "description"
+        },
+        {
+          "order": 7,
+          "instruction": "양파를 볶은 냄비에 토마토를 뺀 나머지 채소를 넣고 잘 볶는다.",
+          "evidence": "description"
+        },
+        {
+          "order": 8,
+          "instruction": "카레 가루를 묻힌 고기를 냄비에 넣고 볶는다(채소 볶던 냄비도, 새 냄비도 가능).",
+          "evidence": "description"
+        },
+        {
+          "order": 9,
+          "instruction": "고기 볶던 냄비에 토마토를 대충 썰어 넣고 물을 조금씩 부어 가며 볶는다.",
+          "evidence": "description"
+        },
+        {
+          "order": 10,
+          "instruction": "고기와 채소를 다른 냄비에 볶았다면 한 냄비로 합치고, 잘 섞이도록 물을 계속 부어 가며 볶는다.",
+          "evidence": "description"
+        },
+        {
+          "order": 11,
+          "instruction": "새 냄비에 물을 붓고 약불에 올린 뒤 카레 가루를 넣어 잘 풀어 둔다.",
+          "evidence": "description"
+        },
+        {
+          "order": 12,
+          "instruction": "본 냄비에 물이 어느 정도 차면 불을 낮추고 15분 정도 끓인다.",
+          "evidence": "description"
+        },
+        {
+          "order": 13,
+          "instruction": "베트남 고추 3개를 부숴 넣고, 풀어 둔 카레물을 부어 농도가 잡힐 때까지 끓인다.",
+          "evidence": "description"
+        },
+        {
+          "order": 14,
+          "instruction": "버터 2큰술을 넣고 녹을 때까지, 호박이 반투명해지고 당근이 익을 때까지 계속 끓인다.",
+          "evidence": "description"
+        },
+        {
+          "order": 15,
+          "instruction": "밥 위에 카레를 끼얹어 플레이팅한다.",
+          "evidence": "description"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "설명란에 재료 목록과 16단계 레시피 전문이 있어 설명란 기준으로 작성. 자막(ASR)은 보조 확인용으로만 사용.",
+    "설명란 6·7번 단계(고기 썰기/카레 가루 버무리기)를 한 단계로 병합해 총 15단계로 정리 — 내용 누락 없음.",
+    "분량(servings) 명시 없음. 영상 태그에 '카레 4인분 레시피'가 있으나 설명란·자막에는 없어 null 처리.",
+    "소금은 재료 목록에만 있고 사용 시점이 단계·자막 어디에도 없음 — 분량 null, 사용 장면 시각 확인 필요.",
+    "후추 분량 '많이'는 자막 line 123('후추를 많이 넣 거') 기준 stated-caption.",
+    "식용유 분량 '충분히'는 설명란 4번 단계('올리브유를 충분히') 기준 — 올리브유/식용유 모두 가능(자막 line 47~48).",
+    "베트남 고추는 자막상 '매운맛 좋아하시는 분들은 세 개'라고 발화 — 기호에 따라 조절 가능하나 설명란 표기 기준 필수 재료로 기재.",
+    "돼지호박 씨를 빼는 이유는 쓴맛 때문(자막 line 32~37), 호박을 두껍게 써는 이유는 빨리 무르지 않게 하기 위함(자막) — 단계에는 동작만 반영.",
+    "물 5컵은 볶을 때와 카레 풀 때 나눠 사용 — 정확한 배분량은 텍스트에 없음.",
+    "카레 루 속 전분 때문에 고기에 묻혀 볶으면 잘 달라붙는다는 팁, 다음날 더 맛있다는 멘트 등은 단계에서 제외.",
+    "밥은 재료 목록에 없으나 설명란 16번 단계(플레이팅)에 등장해 분량 null로 포함.",
+    "[visual-pass] 레시피 초안의 [0.6] 주키니는 영상 자막에서 '돼지호박'으로 표기되었습니다. 이는 한국에서 흔히 쓰이는 호박의 한 종류를 지칭합니다.",
+    "[visual-pass] 레시피 초안의 [0.12] 소금은 재료 목록에 있으나 영상에서 실제로 사용되거나 언급되지 않았습니다.",
+    "[visual-pass] 레시피 초안의 [0.14] 밥은 카레의 주재료가 아닌 곁들임 음식으로, 영상에서 분량이 명확히 제시되지 않았습니다.",
+    "검수 반영(2026-06-13): 다진 돼지고기 → 돼지고기(목심·등심 깍둑썰기)로 정정 — Gemini 재검증 결과 다진 형태 아님."
+  ]
+}

@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 1,
+  "videoId": "rKfLY_Lg1-Q",
+  "draftedBy": "claude:description+captions + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "돼지고기 김치찌개",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "김치",
+          "nameAliases": [
+            "신김치",
+            "Kimchi"
+          ],
+          "amount": "1/4",
+          "unit": "포기",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "돼지고기",
+          "nameAliases": [
+            "pork"
+          ],
+          "amount": "150",
+          "unit": "g",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "쌀뜨물",
+          "nameAliases": [
+            "쌀뜬물"
+          ],
+          "amount": "3",
+          "unit": "컵",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "국간장",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "설탕",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "작은술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "양파",
+          "nameAliases": [],
+          "amount": "1/4",
+          "unit": "개",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "다진 마늘",
+          "nameAliases": [
+            "다진마늘"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "고춧가루",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "큰술",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "대파",
+          "nameAliases": [],
+          "amount": "1/2",
+          "unit": "대",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "후추",
+          "nameAliases": [],
+          "amount": null,
+          "unit": null,
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": null
+        },
+        {
+          "name": "소금",
+          "nameAliases": [],
+          "amount": "1/2",
+          "unit": "작은술",
+          "optional": true,
+          "groupLabel": "간 맞추기",
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "새우젓",
+          "nameAliases": [
+            "생 절"
+          ],
+          "amount": "1",
+          "unit": "큰술",
+          "optional": true,
+          "groupLabel": "간 맞추기",
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "청양고추",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "개",
+          "optional": true,
+          "groupLabel": null,
+          "evidence": "caption",
+          "amountBasis": "visual-estimate"
+        },
+        {
+          "name": "된장",
+          "nameAliases": [],
+          "amount": "1/2",
+          "unit": "큰술",
+          "amountBasis": "onscreen",
+          "optional": true,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "붉은 고추",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "개",
+          "amountBasis": "visual-estimate",
+          "optional": true,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "물 대신 쌀뜨물을 받아 국물용으로 준비한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 2,
+          "instruction": "고기를 먹기 좋은 크기로 썬다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 3,
+          "instruction": "김치와 돼지고기를 3대 1 비율로 준비한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 4,
+          "instruction": "냄비에 쌀뜨물을 붓고 돼지고기를 넣어 끓인다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 5,
+          "instruction": "고기를 끓인 냄비에 김치를 볶지 않고 그대로 넣는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 6,
+          "instruction": "김치를 넣은 뒤 바로 다진 마늘을 넣는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 7,
+          "instruction": "국간장을 조금만 넣어 향을 살린다(많이 넣으면 색이 진해지므로 주의한다).",
+          "evidence": "caption"
+        },
+        {
+          "order": 8,
+          "instruction": "설탕을 조미료 삼아 약간 넣고 양파를 넣어 단맛을 더한다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 9,
+          "instruction": "고춧가루를 넣는다(고운 고춧가루와 일반 고춧가루를 섞어 쓰면 색이 좋다).",
+          "evidence": "caption"
+        },
+        {
+          "order": 10,
+          "instruction": "청양고추와 대파를 썰어 넣는다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 11,
+          "instruction": "모자란 간은 소금이나 새우젓, 김치 국물로 맞춘다.",
+          "evidence": "caption"
+        },
+        {
+          "order": 12,
+          "instruction": "마지막에 후추를 넣고 한소끔 더 끓인다.",
+          "evidence": "caption"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "설명란은 67자 안내문뿐이라 레시피 전체를 자동 생성(ASR) 자막에서 추출 — 노이즈가 매우 심해 보정 폭이 큼. 방송 패널 멘트·시식 멘트는 제외.",
+    "고기와 김치 비율 '3대 1'(line 24-26) — 어느 쪽이 3인지 자막상 불명확하나 통상 레시피 기준 김치 3 : 고기 1로 해석.",
+    "'간장 쪼금 이랑 생 절'(line 82-83)의 '생 절'은 '새우젓'으로 보정 — 확신 낮아 기록.",
+    "'다진마늘 1 수가'(line 94)의 분량 표기는 판독 불가 — amount는 null로 둠.",
+    "돼지고기를 '먼저 볶다가 물'(line 33)과 '볶지 않고'(line 45)가 혼재 — 고기만 볶아 기름을 내고 김치는 볶지 않는 것으로 해석.",
+    "간은 간장·소금·김치 국물 모두 가능하다고 언급, 백종원 본인 방식은 국간장 조금 + 새우젓 — 소금/새우젓을 '간 맞추기' 그룹의 optional로 처리.",
+    "고추장은 어울리지 않는다는 취지의 발언(line 142)으로 재료에서 제외.",
+    "청양고추는 '매운 거 안 좋아하면 빼고 취향에 맞게'(line 91-92) — optional: true.",
+    "후반부(line 135 이후) '정석이 아닌 응용 버전' 구간은 ASR 판독 불가로 제외.",
+    "단계 순서는 자막 흐름 기준으로 재구성한 것으로 실제 영상 순서와 다를 수 있음.",
+    "[visual-pass] 후추는 영상 내 조리 과정에서 사용되지 않았습니다.",
+    "[visual-pass] 고춧가루는 고운 고춧가루와 굵은 고춧가루를 섞어서 사용해야 한다고 언급되었습니다.",
+    "검수 반영(2026-06-12): 사용자 영상 확인 기준으로 단계 재작성 — 고기 썰기(2), 쌀뜨물에 고기 끓이기(4), 김치 투입 직후 다진마늘(5-6), 청양고추·대파 단계 추가(10)."
+  ]
+}

@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "videoId": "Egpjve8caK0",
+  "draftedBy": "claude:description+captions + gemini:visual-recipes + gemini:visual-quantity",
+  "reviewStatus": "approved",
+  "recipes": [
+    {
+      "title": "노오븐 라따뚜이",
+      "servings": null,
+      "ingredients": [
+        {
+          "name": "애호박",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "개",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "가지",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "개",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "토마토",
+          "nameAliases": [],
+          "amount": "2",
+          "unit": "개",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "식용유",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "양파",
+          "nameAliases": [],
+          "amount": "0.5",
+          "unit": "개",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "다진 마늘",
+          "nameAliases": [],
+          "amount": "0.5",
+          "unit": "큰술",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "다진 돼지고기",
+          "nameAliases": [],
+          "amount": "100",
+          "unit": "g",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "후추",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "꼬집",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "피자치즈",
+          "nameAliases": [],
+          "amount": "100",
+          "unit": "g",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "올리브오일",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "큰술",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "소금",
+          "nameAliases": [],
+          "amount": "1",
+          "unit": "꼬집",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        },
+        {
+          "name": "토마토 소스",
+          "nameAliases": [],
+          "amount": "약 200",
+          "unit": "g",
+          "amountBasis": "visual-estimate",
+          "optional": false,
+          "groupLabel": null,
+          "evidence": "visual"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "instruction": "애호박, 가지, 토마토를 일정한 두께로 얇게 슬라이스한다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 2,
+          "instruction": "팬에 식용유를 두르고 다진 양파와 다진 마늘을 넣어 함께 볶는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 3,
+          "instruction": "양파가 투명해지면 다진 돼지고기와 후추를 넣고 함께 볶는다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 4,
+          "instruction": "고기가 익으면 토마토 소스를 붓고 끓어오를 때까지 가열한다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 5,
+          "instruction": "소스가 끓으면 피자치즈를 골고루 뿌린다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 6,
+          "instruction": "슬라이스한 애호박, 가지, 토마토를 번갈아 가며 겹쳐서 팬 위에 예쁘게 올린다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 7,
+          "instruction": "채소 위에 올리브오일, 소금, 후추를 골고루 뿌린다.",
+          "evidence": "visual"
+        },
+        {
+          "order": 8,
+          "instruction": "뚜껑을 덮고 약불에서 15분간 익혀 완성한다.",
+          "evidence": "visual"
+        }
+      ]
+    }
+  ],
+  "graderNotes": [
+    "시각추출 필요: 설명란 0자, ko 자동자막 12줄은 전부 배경음악 가사(비비 '밤양갱')라서 텍스트에 레시피 정보가 전혀 없음.",
+    "제목에서 확인 가능한 정보만 반영: 노오븐(오븐 미사용)으로 만드는 라따뚜이.",
+    "재료·분량·단계 전부 시각추출로 채워야 함. 텍스트 근거가 없어 초안에서는 추측 없이 빈 배열로 둠.",
+    "[visual-recipes] 시각추출(full)로 recipes 재구성 — 요리 1개",
+    "[visual-pass] 초안의 '다진 돼지고기'는 영상에서 사용된 재료와 일치하나, 영상 내에서 고기의 종류가 명확히 언급되지 않았습니다.",
+    "[visual-pass] 초안에 '토마토 소스'가 누락되어 있습니다.",
+    "검수 반영(2026-06-13): 다진 마늘 추가 — 첫 시각 패스가 누락했으나 타임스탬프 지정 재질의 시 0:07~0:10 양파와 함께 볶는 장면 확인."
+  ]
+}

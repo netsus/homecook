@@ -1,0 +1,497 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-06-11T07:21:54.614Z",
+  "video": {
+    "videoId": "fnhLXA-bSu8",
+    "url": "https://www.youtube.com/watch?v=fnhLXA-bSu8",
+    "title": "이제 반찬걱정 안해요!! 드시는 분마다 밥 한공기 싹싹~ '불고기보다 맛있는' 새송이버섯조림",
+    "description": "🙂https://band.us/@foodgarden\n     '딸을 위한 레시피' 밴드에서 더 가깝게 만나요^^\n\n✅영상에서 언급한 컵, 스푼은 계량도구입니다. \n   큰술:Tablespoon(15ml)\n   작은술:teaspoon(5ml)\n   1컵(Cup)= 200ml (200g이 아니예요)\n✅영상의 상업적 이용, 2차 편집 및 재 업로드를 금지합니다\n\n🚫최근 무단도용 사례가 많이 발생하고 있습니다. \n🚫사전동의없는 레시피 도용을 금지합니다.\n✅재료\n새송이버섯 5개(420g)\n양파 ¼쪽\n쪽파 5-6가닥\n*양념장\n진/양조간장 2큰술(Tbsp)\n굴소스 ½큰술(Tbsp)\n백설탕 1큰술(Tbsp)\n다진마늘 ½큰술(Tbsp)\n참기름 ½큰술(Tbsp)\n통깨 ½큰술(Tbsp)\n후춧가루\n\n⚠️이 영상은 ‘딸을위한레시피’에서 제작하였으며, \n해당 영상과 레시피는 딸을위한 레시피의 저작권 보호를 받고 있습니다. \n딸을위한레시피의 저작물을 동의없이 무단으로 침해할 경우 \n저작권법에 의해 처벌 대상이 될 수 있습니다. (All rights reserved)\n\n✅･Artist : 오늘의 일기(Oneul) \n       Title : Sweet potato (https://youtu.be/FcdAcsfsr2A) \n     ･Artist: 브금대통령 \n       Title : Medium Lucky(https://youtu.be/L1SlVog4mQw)",
+    "channelId": "UC37fRkl_iIjDAr9pf0FFzGA",
+    "channelTitle": "딸을 위한 레시피 Recipes for daughters",
+    "publishedAt": "2023-03-04T11:25:16Z",
+    "tags": [
+      "밑반찬",
+      "국요리",
+      "반찬요리",
+      "레시피",
+      "오늘의레시피",
+      "딸을위한레시피",
+      "백종원",
+      "김수미",
+      "집밥레시피",
+      "찌개",
+      "손님상차림",
+      "손님초대요리",
+      "초대",
+      "asmr",
+      "반찬",
+      "하루한끼",
+      "브이로그",
+      "vlog",
+      "먹방",
+      "랜선집들이",
+      "일상브이로그",
+      "일상vlog",
+      "엄마",
+      "엄마집밥",
+      "엄마손",
+      "브이로그일상",
+      "브이로그먹방",
+      "브이로그집들이",
+      "asianfood",
+      "koreanfood",
+      "healthyrecipe",
+      "koreanrecipe",
+      "asianrecipe",
+      "kimchi",
+      "mukbang",
+      "맛있게만드는방법",
+      "맛있게만드는법",
+      "이남자의쿡",
+      "윤이련",
+      "함께해요",
+      "맛나요리",
+      "양장금",
+      "엄마의손맛",
+      "집반찬",
+      "집밥",
+      "간단요리",
+      "쉬운요리",
+      "빠른요리",
+      "요리초보",
+      "자취",
+      "자취요리",
+      "한식",
+      "한식요리",
+      "한식레시피",
+      "최요리",
+      "최고의요리비결",
+      "yt:cc=on",
+      "새송이버섯",
+      "관자",
+      "새송이요리",
+      "버섯요리",
+      "버섯반찬",
+      "팽이버섯",
+      "표고버섯"
+    ],
+    "defaultLanguage": "ko",
+    "durationSeconds": 280,
+    "thumbnailUrl": "https://i.ytimg.com/vi/fnhLXA-bSu8/maxresdefault.jpg"
+  },
+  "stats": {
+    "viewCount": 2293900,
+    "likeCount": 26150,
+    "commentCount": 404
+  },
+  "descriptionSignal": {
+    "hasIngredientKeyword": true,
+    "hasStepKeyword": true,
+    "hasQuantityPattern": true,
+    "length": 701
+  },
+  "captions": {
+    "available": true,
+    "reason": null,
+    "provider": "apify",
+    "language": "ko",
+    "segments": [
+      {
+        "lineIndex": 0,
+        "text": "안녕하세요. 딸을 위한 레시피입니다~",
+        "startMs": 7687,
+        "durationMs": 2000,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 1,
+        "text": "새송이버섯으로 불고기 맛이 나게\n간단한 방법으로 만들어볼게요~",
+        "startMs": 9975,
+        "durationMs": 5374,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 2,
+        "text": "새송이 버섯 5개예요(420g)",
+        "startMs": 15349,
+        "durationMs": 5152,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 3,
+        "text": "중량은 약간 안맞아도 돼요 ^^;",
+        "startMs": 20501,
+        "durationMs": 1923,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 4,
+        "text": "양파는 ¼쪽 들어가구요",
+        "startMs": 22424,
+        "durationMs": 2650,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 5,
+        "text": "쪽파는 5-6가닥 사용할게요",
+        "startMs": 25074,
+        "durationMs": 3409,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 6,
+        "text": "버섯은 물로 씻으면 물을 확!먹으니까\n물로 씻지마시고",
+        "startMs": 28483,
+        "durationMs": 4055,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 7,
+        "text": "젖은 페이퍼타올로 살짝 닦아주시면 됩니다",
+        "startMs": 32538,
+        "durationMs": 3220,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 8,
+        "text": "채썰듯이 썰어주시면 돼요",
+        "startMs": 35758,
+        "durationMs": 2894,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 9,
+        "text": "이쁘게 하려면 안넣지만\n집에서 드실거니까 그냥 넣으시죠~",
+        "startMs": 43559,
+        "durationMs": 3973,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 10,
+        "text": "그쵸 ^^?",
+        "startMs": 48433,
+        "durationMs": 1099,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 11,
+        "text": "양파는 ¼쪽 넣을 거고요 \n요거는 얇게 채 썰어 주세요",
+        "startMs": 50003,
+        "durationMs": 4976,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 12,
+        "text": "쪽파는 4-5cm 간격으로 썰어주시면 됩니다",
+        "startMs": 57611,
+        "durationMs": 3356,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 13,
+        "text": "쪽파 없으면 대파 사용하셔도 돼요\n대파는 ½대 정도 넣으시면 돼요",
+        "startMs": 63983,
+        "durationMs": 4380,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 14,
+        "text": "재료 준비는 다 됐고\n양념장 만들어서 조리해볼게요 ^^",
+        "startMs": 68520,
+        "durationMs": 3406,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 15,
+        "text": "양념장을 만들어 볼게요",
+        "startMs": 72083,
+        "durationMs": 1508,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 16,
+        "text": "양조간장 진간장 상관없이 사용하시면 됩니다(2큰술)",
+        "startMs": 73591,
+        "durationMs": 3109,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 17,
+        "text": "백설탕이에요(1큰술)",
+        "startMs": 76700,
+        "durationMs": 1664,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 18,
+        "text": "더 감칠맛을 낼 굴소스가 조금 들어갑니다(½큰술)",
+        "startMs": 78364,
+        "durationMs": 2928,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 19,
+        "text": "다진마늘(½큰술)",
+        "startMs": 81292,
+        "durationMs": 1316,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 20,
+        "text": "들어가는 거 없죠! 너무 간단하죠!",
+        "startMs": 82956,
+        "durationMs": 2483,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 21,
+        "text": "졸여보겠습니다~",
+        "startMs": 85775,
+        "durationMs": 1817,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 22,
+        "text": "처음에 불을 강불로 놓으세요. \n그런 다음에 식용유 1큰술을 넣어 주세요",
+        "startMs": 87592,
+        "durationMs": 4810,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 23,
+        "text": "그리고 버섯을 넣어주세요",
+        "startMs": 93423,
+        "durationMs": 1823,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 24,
+        "text": "착~~ 소리 나죠 ?",
+        "startMs": 95498,
+        "durationMs": 1629,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 25,
+        "text": "이렇게 예열된 팬에 넣어야 됩니다",
+        "startMs": 97127,
+        "durationMs": 2805,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 26,
+        "text": "그래야 식용유가 버섯에 샥~ 스미지가 않아요",
+        "startMs": 99932,
+        "durationMs": 3288,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 27,
+        "text": "그리고 한번 살짝 뒤집어 주세요",
+        "startMs": 103220,
+        "durationMs": 3731,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 28,
+        "text": "이제 불을 중간 불로 줄여 주셔야 돼요",
+        "startMs": 108585,
+        "durationMs": 2901,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 29,
+        "text": "은근한 불에서 버섯의 수분을 날릴거예요~",
+        "startMs": 111486,
+        "durationMs": 4476,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 30,
+        "text": "이때 불 조절이 아주 중요해요 !\n꼭 중약불에 해주세요",
+        "startMs": 124079,
+        "durationMs": 4783,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 31,
+        "text": "요렇게 보면 버섯이 촉촉해지면서 숨이 죽고\n쫀득쫀득해졌잖아요~ 그런 느낌이 드나요 따님?",
+        "startMs": 132000,
+        "durationMs": 7369,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 32,
+        "text": "딸) 네 !!",
+        "startMs": 139369,
+        "durationMs": 748,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 33,
+        "text": "요때 양념을 넣을 거예요",
+        "startMs": 140117,
+        "durationMs": 2282,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 34,
+        "text": "딸) 버섯에 윤기가 도는데요?",
+        "startMs": 142399,
+        "durationMs": 1519,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 35,
+        "text": "버섯 자체에서 수분이 나오기도 하고, \n아까 식용유 넣은게 전체적으로 고루 코팅된 거예요",
+        "startMs": 144740,
+        "durationMs": 6561,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 36,
+        "text": "이제 양념장을 넣을게요",
+        "startMs": 151301,
+        "durationMs": 2414,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 37,
+        "text": "양념장 넣고도 [중약불]을 유지하세요 \n간이 잘~배도록 볶아줍니다",
+        "startMs": 155510,
+        "durationMs": 4972,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 38,
+        "text": "버섯에 어느 정도 간이 싹~ 배면서 색깔도 참 이쁘게 됐죠? \n까무꾸리하게...",
+        "startMs": 165467,
+        "durationMs": 5193,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 39,
+        "text": "요때 불을 [강불]로 올려주세요",
+        "startMs": 170660,
+        "durationMs": 2171,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 40,
+        "text": "그 다음에 양파랑 쪽파 넣어주세요",
+        "startMs": 172831,
+        "durationMs": 2639,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 41,
+        "text": "요거는 살짝만 볶을 거예요",
+        "startMs": 177156,
+        "durationMs": 2095,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 42,
+        "text": "마지막으로 참기름 ½큰술 정도 넣어주시고요",
+        "startMs": 179251,
+        "durationMs": 4035,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 43,
+        "text": "후춧가루 톡톡 3번 정도 쳐주시고",
+        "startMs": 183730,
+        "durationMs": 3550,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 44,
+        "text": "그 다음에 통깨 ½큰술 정도 넣어 주신 다음에 \n휘리릭 한번 저어주고 불 꺼 주시면 돼요",
+        "startMs": 187668,
+        "durationMs": 7506,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 45,
+        "text": "버섯 식감이 '쫀득쫀득~' 불고기 맛이 나서 얼마나 맛있는지 몰라요 ^^",
+        "startMs": 196895,
+        "durationMs": 5232,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 46,
+        "text": "어른들은 상태로 드셔도 되고요",
+        "startMs": 202127,
+        "durationMs": 1887,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 47,
+        "text": "이제 아이들이랑 같이 먹으려고 한다면 !",
+        "startMs": 204014,
+        "durationMs": 2345,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 48,
+        "text": "이렇게 햄! 집에 비엔나도 괜찮고 어느 햄이든지 다 괜찮아요",
+        "startMs": 206359,
+        "durationMs": 5002,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 49,
+        "text": "길쭉하게 썰어 같이 넣어서 드시면 또 색다른 맛이 나요",
+        "startMs": 211361,
+        "durationMs": 4173,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 50,
+        "text": "저희 집은 햄까지 넣어서 많이 먹거든요 ^^ \n요건 선택하시면 됩니다~",
+        "startMs": 215534,
+        "durationMs": 4522,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 51,
+        "text": "새송이버섯이 거의 집에 많이들 있을 거예요. \n사다놓으면 한 2-3개씩 꼭 남기도 하고 그러잖아요~",
+        "startMs": 220056,
+        "durationMs": 6213,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 52,
+        "text": "구워만 드시지 마시고, 요렇게 만들면 또 색다른 반찬이 되니까 \n가족들하고 아주 맛있게 드시면~ 저는 아주 너무 행복할 것 같아요 ^^",
+        "startMs": 226269,
+        "durationMs": 7956,
+        "language": "ko"
+      },
+      {
+        "lineIndex": 53,
+        "text": "시청해주셔서 감사합니다. 건강하시고 다음 영상에 또 만나요 ^^",
+        "startMs": 234225,
+        "durationMs": 4490,
+        "language": "ko"
+      }
+    ],
+    "tracks": [
+      {
+        "languageCode": "ko",
+        "name": "한국어",
+        "trackKind": "manual"
+      }
+    ],
+    "selectedTrack": {
+      "languageCode": "ko",
+      "name": null,
+      "trackKind": "unknown"
+    },
+    "publicTimedTextReason": "timedtext_status_200"
+  },
+  "authorComments": {
+    "available": true,
+    "reason": null,
+    "comments": []
+  }
+}
