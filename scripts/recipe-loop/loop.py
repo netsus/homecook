@@ -73,6 +73,22 @@ IMPLEMENTATION_FORBIDDEN_ACCESS_PATHS = [
     RUN_ROOT,
 ]
 DISCORD_COMPLETION_SCRIPT = Path.home() / ".codex" / "skills" / "discord-completion-notifications" / "scripts" / "send-discord-completion.sh"
+KNOWN_EXTERNAL_PROTECTED_ACCESS_PROCESSES = {
+    "Spotlight",
+    "Finder",
+    "mds",
+    "fseventsd",
+    "corespotlightd",
+    "QuickLookSatellite",
+}
+IMPLEMENTATION_ACCESS_GUARD_COUNTER_KEYS = (
+    "codex_subtree_hit_count",
+    "ignored_line_count",
+    "unknown_git_line_count",
+    "unattributable_protected_line_count",
+    "external_protected_line_count",
+    "ignored_known_external_protected_line_count",
+)
 
 
 # ---- 설정 ---------------------------------------------------------------
@@ -201,6 +217,38 @@ def implementation_forbidden_path_markers() -> list[str]:
     return sorted((marker for marker in markers if marker), key=len, reverse=True)
 
 
+def path_marker_variants(path: Path) -> set[str]:
+    resolved = path.resolve()
+    markers = {str(resolved), display_path(resolved)}
+    return {marker for marker in markers if marker}
+
+
+def current_run_path_markers(current_run_dirs: list[Path] | None = None) -> list[str]:
+    markers: set[str] = set()
+    for path in current_run_dirs or []:
+        markers.update(path_marker_variants(Path(path)))
+    return sorted(markers, key=len, reverse=True)
+
+
+def is_git_path_marker(marker: str) -> bool:
+    return marker == ".git" or marker.endswith("/.git")
+
+
+def line_contains_path_marker(line: str, marker: str) -> bool:
+    if not is_git_path_marker(marker):
+        return marker in line
+    return re.search(rf"{re.escape(marker)}(?=$|[/\s])", line) is not None
+
+
+def marker_kind_for_line(line: str, markers: list[str]) -> str:
+    git_markers = path_marker_variants(PROJECT_ROOT / ".git")
+    if any(line_contains_path_marker(line, marker) for marker in git_markers):
+        return "git"
+    if any(line_contains_path_marker(line, marker) for marker in markers):
+        return "protected"
+    return "protected"
+
+
 def validate_implementation_access_guard_environment() -> dict:
     checks = {
         "repo_git_exists": (PROJECT_ROOT / ".git").exists(),
@@ -225,7 +273,10 @@ def fs_usage_command() -> list[str]:
 def redact_forbidden_paths(text: str, markers: list[str] | None = None) -> str:
     redacted = text
     for marker in markers or implementation_forbidden_path_markers():
-        redacted = redacted.replace(marker, "[FORBIDDEN_PATH]")
+        if is_git_path_marker(marker):
+            redacted = re.sub(rf"{re.escape(marker)}(?=$|[/\s])", "[FORBIDDEN_PATH]", redacted)
+        else:
+            redacted = redacted.replace(marker, "[FORBIDDEN_PATH]")
     return redacted
 
 
@@ -271,6 +322,7 @@ class ProcessTreeSampler:
         self.interval_seconds = interval_seconds
         self.pids: set[int] = {root_pid}
         self.processes: dict[int, dict] = {}
+        self.snapshot_history: dict[int, dict] = {}
         self.error: str | None = None
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._run, name="recipe-loop-pid-sampler", daemon=True)
@@ -294,6 +346,8 @@ class ProcessTreeSampler:
         except RuntimeError as error:
             self.error = str(error)
             return
+        for pid, info in snapshot.items():
+            self.snapshot_history[pid] = info
         changed = True
         while changed:
             changed = False
@@ -317,6 +371,12 @@ class ProcessTreeSampler:
                 for pid in sorted(self.processes)
                 if pid in self.pids
             ],
+            "root_process": self.snapshot_history.get(self.root_pid),
+            "snapshot_pids": sorted(self.snapshot_history),
+            "snapshot_history": [
+                self.snapshot_history[pid]
+                for pid in sorted(self.snapshot_history)
+            ],
         }
 
 
@@ -336,46 +396,207 @@ def process_name_by_pid(pid_subtree: dict | None) -> dict[int, str]:
 
 def scan_fs_usage_log_for_forbidden_access(log_path: Path, markers: list[str] | None = None,
                                            allowed_pids: set[int] | None = None,
-                                           pid_subtree: dict | None = None) -> dict:
+                                           pid_subtree: dict | None = None,
+                                           current_run_dirs: list[Path] | None = None) -> dict:
     markers = markers or implementation_forbidden_path_markers()
-    hits = []
-    ignored_forbidden_line_count = 0
-    unattributed_forbidden_line_count = 0
+    forbidden_lines = []
     names_by_pid = process_name_by_pid(pid_subtree)
+    current_markers = current_run_path_markers(current_run_dirs)
     if not log_path.exists():
         return {
             "success": False,
-            "hit_count": 0,
             "reason": "fs_usage_log_missing",
+            "forbidden_line_count": 0,
+            "forbidden_lines": [],
             "log_path": display_path(log_path),
-            "hits": [],
         }
-    with log_path.open("r", encoding="utf-8", errors="replace") as log:
-        for line_number, line in enumerate(log, start=1):
-            if not any(marker in line for marker in markers):
-                continue
-            process = parse_fs_usage_process(line)
-            pid = process.get("pid")
-            if pid is None:
-                unattributed_forbidden_line_count += 1
-            if allowed_pids is not None and pid not in allowed_pids:
-                ignored_forbidden_line_count += 1
-                continue
-            hits.append({
-                "line": line_number,
-                "process_pid": pid,
-                "process_name": process.get("process_name") or names_by_pid.get(pid, ""),
-                "summary": redact_forbidden_paths(line.strip(), markers)[:500],
-            })
+    try:
+        with log_path.open("r", encoding="utf-8", errors="replace") as log:
+            for line_number, line in enumerate(log, start=1):
+                if not any(line_contains_path_marker(line, marker) for marker in markers):
+                    continue
+                process = parse_fs_usage_process(line)
+                pid = process.get("pid")
+                summary = redact_forbidden_paths(line.strip(), markers)
+                for marker in current_markers:
+                    summary = summary.replace(marker, "[CURRENT_RUN_PATH]")
+                forbidden_lines.append({
+                    "line": line_number,
+                    "process_pid": pid,
+                    "process_name": process.get("process_name") or names_by_pid.get(pid, ""),
+                    "marker_kind": marker_kind_for_line(line, markers),
+                    "is_current_run_path": any(marker in line for marker in current_markers),
+                    "summary_redacted": summary[:500],
+                })
+    except OSError as error:
+        return {
+            "success": False,
+            "reason": "fs_usage_log_unreadable",
+            "error": str(error),
+            "forbidden_line_count": 0,
+            "forbidden_lines": [],
+            "log_path": display_path(log_path),
+        }
     return {
-        "success": len(hits) == 0,
-        "hit_count": len(hits),
+        "success": True,
+        "reason": "ok",
+        "forbidden_line_count": len(forbidden_lines),
+        "forbidden_lines": forbidden_lines,
         "log_path": display_path(log_path),
-        "hits": hits,
-        "ignored_forbidden_line_count": ignored_forbidden_line_count,
-        "unattributed_forbidden_line_count": unattributed_forbidden_line_count,
-        "redacted_hits": ["forbidden path redacted"] if hits else [],
     }
+
+
+def normalize_process_history(processes) -> dict[int, dict]:
+    if not processes:
+        return {}
+    if isinstance(processes, dict):
+        if isinstance(processes.get("snapshot_history"), list):
+            return normalize_process_history(processes.get("snapshot_history"))
+        if isinstance(processes.get("processes"), list):
+            return normalize_process_history(processes.get("processes"))
+        iterable = processes.values()
+    elif isinstance(processes, list):
+        iterable = processes
+    else:
+        return {}
+    history: dict[int, dict] = {}
+    for process in iterable:
+        if not isinstance(process, dict):
+            continue
+        try:
+            pid = int(process.get("pid"))
+        except (TypeError, ValueError):
+            continue
+        history[pid] = {
+            "pid": pid,
+            "ppid": process.get("ppid"),
+            "command": process.get("command") or process.get("process_name") or "",
+        }
+    return history
+
+
+def pid_subtree_pids(pid_subtree: dict | None) -> set[int]:
+    if not isinstance(pid_subtree, dict):
+        return set()
+    pids: set[int] = set()
+    for pid in pid_subtree.get("pids", []) or []:
+        try:
+            pids.add(int(pid))
+        except (TypeError, ValueError):
+            continue
+    if not pids:
+        for process in pid_subtree.get("processes", []) or []:
+            try:
+                pids.add(int(process.get("pid")))
+            except (TypeError, ValueError, AttributeError):
+                continue
+    return pids
+
+
+def process_basename(name: str | None) -> str:
+    if not name:
+        return ""
+    return Path(str(name)).name
+
+
+def is_known_external_protected_access_process(name: str | None) -> bool:
+    base = process_basename(name)
+    return (
+        base in KNOWN_EXTERNAL_PROTECTED_ACCESS_PROCESSES
+        or base.startswith("mdworker")
+        or base.startswith("Spotlight")
+    )
+
+
+def empty_access_guard_classification() -> dict:
+    return {
+        "status": "ok",
+        "reason": "ok",
+        "representative_hit": None,
+        "hit_count": 0,
+        **{key: 0 for key in IMPLEMENTATION_ACCESS_GUARD_COUNTER_KEYS},
+    }
+
+
+def classify_implementation_access_guard(scan: dict | None, pid_subtree: dict | None,
+                                         snapshot_history, audit: dict | None,
+                                         stop: dict | None) -> dict:
+    result = empty_access_guard_classification()
+    if not audit or not audit.get("success"):
+        result["status"] = "monitoring_unavailable"
+        result["reason"] = (audit or {}).get("reason", "fs_usage_unavailable")
+        return result
+    if stop and stop.get("success") is False:
+        result["status"] = "monitoring_unavailable"
+        result["reason"] = stop.get("reason", "fs_usage_exited_during_implementation")
+        return result
+    if not scan or not scan.get("success"):
+        result["status"] = "monitoring_unavailable"
+        result["reason"] = (scan or {}).get("reason", "fs_usage_scan_failed")
+        return result
+
+    subtree_pids = pid_subtree_pids(pid_subtree)
+    history_by_pid = normalize_process_history(snapshot_history)
+    warning_seen = False
+    monitoring_reason: str | None = None
+
+    for line in scan.get("forbidden_lines", []) or []:
+        marker_kind = line.get("marker_kind")
+        try:
+            pid = int(line.get("process_pid"))
+        except (TypeError, ValueError):
+            pid = None
+
+        if line.get("is_current_run_path"):
+            result["ignored_line_count"] += 1
+            continue
+
+        if marker_kind not in {"protected", "git"}:
+            monitoring_reason = monitoring_reason or "unclassified_forbidden_access"
+            result["representative_hit"] = result["representative_hit"] or line
+            continue
+
+        if pid is not None and pid in subtree_pids:
+            result["codex_subtree_hit_count"] += 1
+            warning_seen = True
+            result["representative_hit"] = result["representative_hit"] or line
+            continue
+
+        if pid is not None and pid in history_by_pid:
+            if marker_kind == "git":
+                result["ignored_line_count"] += 1
+                continue
+            process_name = line.get("process_name") or history_by_pid[pid].get("command")
+            if is_known_external_protected_access_process(process_name):
+                result["ignored_line_count"] += 1
+                result["ignored_known_external_protected_line_count"] += 1
+                continue
+            result["external_protected_line_count"] += 1
+            monitoring_reason = monitoring_reason or "external_protected_access"
+            result["representative_hit"] = result["representative_hit"] or line
+            continue
+
+        if marker_kind == "protected":
+            result["unattributable_protected_line_count"] += 1
+            monitoring_reason = monitoring_reason or "unattributable_protected_access"
+            result["representative_hit"] = result["representative_hit"] or line
+            continue
+
+        result["ignored_line_count"] += 1
+        result["unknown_git_line_count"] += 1
+
+    result["hit_count"] = (
+        result["codex_subtree_hit_count"]
+        + result["external_protected_line_count"]
+        + result["unattributable_protected_line_count"]
+    )
+    if monitoring_reason:
+        result["status"] = "monitoring_unavailable"
+        result["reason"] = monitoring_reason
+    elif warning_seen:
+        result["status"] = "warning"
+        result["reason"] = "forbidden_golden_path_access_suspected"
+    return result
 
 
 def start_fs_usage_audit(log_path: Path) -> dict:
@@ -449,17 +670,41 @@ def start_fs_usage_audit(log_path: Path) -> dict:
 def stop_fs_usage_audit(handle: dict) -> dict:
     proc = handle.get("process")
     log_file = handle.get("log_file")
-    if proc and proc.poll() is None:
+    success = True
+    reason = "ok"
+    was_running_at_stop = bool(proc and proc.poll() is None)
+    if proc and was_running_at_stop:
         proc.terminate()
         try:
             proc.wait(timeout=2)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait(timeout=2)
+    elif proc:
+        success = False
+        reason = "fs_usage_exited_during_implementation"
+    else:
+        success = False
+        reason = "fs_usage_process_missing"
     if log_file:
-        log_file.close()
+        try:
+            log_file.close()
+        except OSError as error:
+            success = False
+            reason = "fs_usage_log_close_failed"
+            return {
+                "success": success,
+                "reason": reason,
+                "error": str(error),
+                "returncode": proc.returncode if proc else None,
+                "was_running_at_stop": was_running_at_stop,
+                "log_path": handle.get("log_path"),
+            }
     return {
+        "success": success,
+        "reason": reason,
         "returncode": proc.returncode if proc else None,
+        "was_running_at_stop": was_running_at_stop,
         "log_path": handle.get("log_path"),
     }
 
@@ -498,7 +743,8 @@ def send_implementation_access_guard_alert(payload: dict) -> dict:
     representative = payload.get("representative_hit") or {}
     process = representative.get("process_name") or "unknown-process"
     pid = representative.get("process_pid") or "unknown-pid"
-    sample = str(representative.get("summary") or payload.get("reason") or "")[:180]
+    marker = representative.get("marker_kind") or "unknown-marker"
+    sample = str(representative.get("summary_redacted") or representative.get("summary") or payload.get("reason") or "")[:180]
     hit_count = payload.get("hit_count", 0)
     if status == "warning":
         headline = "구현 Codex 접근 감시 경고: 금지 경로 접근 의심이 감지되었습니다."
@@ -506,7 +752,7 @@ def send_implementation_access_guard_alert(payload: dict) -> dict:
         headline = "구현 Codex 접근 감시 경고: 접근 감시가 불완전합니다."
     summary = (
         f"{headline} ITER는 계속 진행합니다. "
-        f"status={status}; hit_count={hit_count}; process={process}/{pid}; "
+        f"status={status}; hit_count={hit_count}; process={process}/{pid}; marker={marker}; "
         f"sample={sample}; audit={payload.get('log_path')}; hits={payload.get('hit_log_path')}"
     )
     proc = subprocess.run([str(DISCORD_COMPLETION_SCRIPT), "--summary", summary],
@@ -576,59 +822,53 @@ def run_implementation_agent_with_access_guard(cfg: LoopConfig, prompt: str, ite
         if audit.get("success"):
             fs_usage_stop = stop_fs_usage_audit(audit)
 
-    if not audit.get("success"):
-        payload = implementation_access_guard_payload(
-            "monitoring_unavailable",
-            audit.get("reason", "fs_usage_unavailable"),
-            log_path,
-            hit_log_path,
-            fs_usage=audit,
-        )
-    elif not pid_subtree or not pid_subtree.get("success"):
-        payload = implementation_access_guard_payload(
-            "monitoring_unavailable",
-            "pid_subtree_reconstruction_failed",
-            log_path,
-            hit_log_path,
-            fs_usage={
-                "command": audit.get("command"),
-                "stop": fs_usage_stop,
-            },
-            pid_subtree=pid_subtree,
-        )
-    else:
-        allowed_pids = set(pid_subtree.get("pids", []))
-        scan = scan_fs_usage_log_for_forbidden_access(
-            log_path,
-            allowed_pids=allowed_pids,
-            pid_subtree=pid_subtree,
-        )
-        hits = scan.get("hits", [])
-        status = "ok" if scan["success"] else "warning"
-        payload = implementation_access_guard_payload(
-            status,
-            "ok" if scan["success"] else "forbidden_golden_path_access_suspected",
-            log_path,
-            hit_log_path,
-            hit_count=scan["hit_count"],
-            representative_hit=hits[0] if hits else None,
-            fs_usage={
-                "command": audit.get("command"),
-                "stop": fs_usage_stop,
-            },
-            pid_subtree={
-                "root_pid": pid_subtree.get("root_pid"),
-                "pids": pid_subtree.get("pids"),
-                "processes": pid_subtree.get("processes"),
-            },
-            forbidden_access_scan={
-                "success": scan["success"],
-                "hit_count": scan["hit_count"],
-                "ignored_forbidden_line_count": scan["ignored_forbidden_line_count"],
-                "unattributed_forbidden_line_count": scan["unattributed_forbidden_line_count"],
-                "log_path": scan["log_path"],
-            },
-        )
+    scan = scan_fs_usage_log_for_forbidden_access(
+        log_path,
+        pid_subtree=pid_subtree,
+        current_run_dirs=[iter_dir.parent, iter_dir],
+    )
+    hits = scan.get("forbidden_lines", [])
+    snapshot_history = (pid_subtree or {}).get("snapshot_history", [])
+    classification = classify_implementation_access_guard(
+        scan,
+        pid_subtree,
+        snapshot_history,
+        audit,
+        fs_usage_stop or {"success": True, "reason": "not_started"},
+    )
+    payload = implementation_access_guard_payload(
+        classification["status"],
+        classification["reason"],
+        log_path,
+        hit_log_path,
+        hit_count=classification["hit_count"],
+        representative_hit=classification["representative_hit"],
+        codex_subtree_hit_count=classification["codex_subtree_hit_count"],
+        ignored_line_count=classification["ignored_line_count"],
+        unknown_git_line_count=classification["unknown_git_line_count"],
+        unattributable_protected_line_count=classification["unattributable_protected_line_count"],
+        external_protected_line_count=classification["external_protected_line_count"],
+        ignored_known_external_protected_line_count=classification["ignored_known_external_protected_line_count"],
+        fs_usage={
+            "success": audit.get("success"),
+            "reason": audit.get("reason"),
+            "command": audit.get("command"),
+            "stop": fs_usage_stop,
+        },
+        pid_subtree={
+            "root_pid": (pid_subtree or {}).get("root_pid"),
+            "root_process": (pid_subtree or {}).get("root_process"),
+            "pids": (pid_subtree or {}).get("pids"),
+            "processes": (pid_subtree or {}).get("processes"),
+            "snapshot_pid_count": len((pid_subtree or {}).get("snapshot_pids", []) or []),
+        } if pid_subtree else pid_subtree,
+        forbidden_access_scan={
+            "success": scan.get("success"),
+            "reason": scan.get("reason"),
+            "forbidden_line_count": scan.get("forbidden_line_count"),
+            "log_path": scan.get("log_path"),
+        },
+    )
 
     notification = send_implementation_access_guard_alert(payload)
     if notification.get("sent") or notification.get("reason") != "not_required":

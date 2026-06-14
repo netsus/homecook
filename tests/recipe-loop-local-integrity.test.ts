@@ -634,6 +634,9 @@ base_summaries = {
         "parse_error_count": 0,
         "empty_case_count": 0,
         "expected_count_mismatch": False,
+        "threshold_success": True,
+        "averageScore": 4.3,
+        "minCaseScore": 4,
     }},
 }
 cases = {}
@@ -709,10 +712,17 @@ summaries = {
     }},
     "val_ai": {"aggregate": {
         "success": True,
+        "judge_provider": "codex",
+        "judge_model": "gpt-5.4",
+        "judge_effort": "high",
+        "calibration": {"valid": True},
         "provider_error_count": 0,
         "parse_error_count": 0,
         "empty_case_count": 0,
         "expected_count_mismatch": False,
+        "threshold_success": True,
+        "averageScore": 4.3,
+        "minCaseScore": 4,
     }},
 }
 decision = loop.decide(cfg, summaries, {
@@ -959,6 +969,71 @@ print(json.dumps({
     expect(report.has_runs).toBe(true);
   });
 
+  it("normalizes missing fs_usage logs without losing required scanner keys", () => {
+    const result = runLoopPython(`
+import tempfile
+log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "missing.log"
+scan = loop.scan_fs_usage_log_for_forbidden_access(log_path)
+classification = loop.classify_implementation_access_guard(
+    scan,
+    {"success": True, "pids": [1234], "processes": [{"pid": 1234, "ppid": 1, "command": "codex"}]},
+    [],
+    {"success": True},
+    {"success": True, "reason": "ok"},
+)
+print(json.dumps({
+    "scan": scan,
+    "classification": classification,
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.scan).toMatchObject({
+      success: false,
+      reason: "fs_usage_log_missing",
+      forbidden_line_count: 0,
+      forbidden_lines: [],
+    });
+    expect(report.classification.status).toBe("monitoring_unavailable");
+    expect(report.classification.reason).toBe("fs_usage_log_missing");
+  });
+
+  it("treats fs_usage exiting during implementation as monitoring_unavailable", () => {
+    const result = runLoopPython(`
+scan = {"success": True, "reason": "ok", "forbidden_line_count": 0, "forbidden_lines": [], "log_path": "audit.log"}
+classification = loop.classify_implementation_access_guard(
+    scan,
+    {"success": True, "pids": [1234], "processes": [{"pid": 1234, "ppid": 1, "command": "codex"}]},
+    [],
+    {"success": True, "started": True},
+    {"success": False, "reason": "fs_usage_exited_during_implementation", "returncode": 1},
+)
+print(json.dumps(classification, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const classification = JSON.parse(result.stdout);
+    expect(classification.status).toBe("monitoring_unavailable");
+    expect(classification.reason).toBe("fs_usage_exited_during_implementation");
+  });
+
+  it("does not treat guard-requested fs_usage termination as a monitoring failure", () => {
+    const result = runLoopPython(`
+import tempfile
+log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-stop-")) / "audit.log"
+log_file = log_path.open("w", encoding="utf-8")
+proc = loop.subprocess.Popen([loop.sys.executable, "-c", "import time; time.sleep(30)"], stdout=log_file, stderr=loop.subprocess.STDOUT, text=True)
+stop = loop.stop_fs_usage_audit({"process": proc, "log_file": log_file, "log_path": "audit.log"})
+print(json.dumps(stop, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const stop = JSON.parse(result.stdout);
+    expect(stop.success).toBe(true);
+    expect(stop.reason).toBe("ok");
+  });
+
   it("detects and redacts forbidden validation paths from fs_usage audit logs", () => {
     const result = runLoopPython(`
 import tempfile
@@ -972,7 +1047,8 @@ log_path.write_text(
 scan = loop.scan_fs_usage_log_for_forbidden_access(log_path)
 print(json.dumps({
     "success": scan["success"],
-    "hit_count": scan["hit_count"],
+    "forbidden_line_count": scan["forbidden_line_count"],
+    "marker_kind": scan["forbidden_lines"][0]["marker_kind"],
     "has_raw_validation_path": str(validation_path) in json.dumps(scan, ensure_ascii=False),
     "has_raw_train_path": str(train_path) in json.dumps(scan, ensure_ascii=False),
 }, ensure_ascii=False))
@@ -980,13 +1056,14 @@ print(json.dumps({
 
     expect(result.status).toBe(0);
     const report = JSON.parse(result.stdout);
-    expect(report.success).toBe(false);
-    expect(report.hit_count).toBe(1);
+    expect(report.success).toBe(true);
+    expect(report.forbidden_line_count).toBe(1);
+    expect(report.marker_kind).toBe("protected");
     expect(report.has_raw_validation_path).toBe(false);
     expect(report.has_raw_train_path).toBe(false);
   });
 
-  it("counts forbidden fs_usage hits only from the implementation PID subtree", () => {
+  it("keeps scanner output for forbidden lines outside the implementation PID subtree", () => {
     const result = runLoopPython(`
 import tempfile
 log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "02_fs_audit.log"
@@ -1010,20 +1087,219 @@ scan = loop.scan_fs_usage_log_for_forbidden_access(
 )
 print(json.dumps({
     "success": scan["success"],
-    "hit_count": scan["hit_count"],
-    "ignored_forbidden_line_count": scan["ignored_forbidden_line_count"],
-    "pids": [hit["process_pid"] for hit in scan["hits"]],
+    "forbidden_line_count": scan["forbidden_line_count"],
+    "pids": [line["process_pid"] for line in scan["forbidden_lines"]],
     "has_raw_validation_path": str(validation_path) in json.dumps(scan, ensure_ascii=False),
 }, ensure_ascii=False))
 `);
 
     expect(result.status).toBe(0);
     const report = JSON.parse(result.stdout);
-    expect(report.success).toBe(false);
-    expect(report.hit_count).toBe(2);
-    expect(report.ignored_forbidden_line_count).toBe(1);
-    expect(report.pids).toEqual([1234, 1235]);
+    expect(report.success).toBe(true);
+    expect(report.forbidden_line_count).toBe(3);
+    expect(report.pids).toEqual([999, 1234, 1235]);
     expect(report.has_raw_validation_path).toBe(false);
+  });
+
+  it("ignores known external protected-path noise seen in the snapshot history", () => {
+    const result = runLoopPython(`
+import tempfile
+log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "02_fs_audit.log"
+validation_path = loop.DATA_ROOT / "validation" / "case-a" / "golden.json"
+log_path.write_text(f"12:00:00 open {validation_path} Spotlight.999\\n", encoding="utf-8")
+scan = loop.scan_fs_usage_log_for_forbidden_access(log_path)
+classification = loop.classify_implementation_access_guard(
+    scan,
+    {"success": True, "pids": [1234], "processes": [{"pid": 1234, "ppid": 1, "command": "codex"}]},
+    [{"pid": 999, "ppid": 1, "command": "Spotlight"}],
+    {"success": True},
+    {"success": True, "reason": "ok"},
+)
+print(json.dumps(classification, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const classification = JSON.parse(result.stdout);
+    expect(classification.status).toBe("ok");
+    expect(classification.ignored_known_external_protected_line_count).toBe(1);
+  });
+
+  it("ignores current run artifacts even when RUN_ROOT is a protected marker", () => {
+    const result = runLoopPython(`
+import tempfile
+current_run_dir = loop.RUN_ROOT / "current-test-run"
+current_iter_dir = current_run_dir / "iter_01"
+log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "02_fs_audit.log"
+implementation_log = current_iter_dir / "02_implementation.log"
+log_path.write_text(f"12:00:00 write {implementation_log} python3.1234\\n", encoding="utf-8")
+scan = loop.scan_fs_usage_log_for_forbidden_access(log_path, current_run_dirs=[current_run_dir, current_iter_dir])
+classification = loop.classify_implementation_access_guard(
+    scan,
+    {"success": True, "pids": [1234], "processes": [{"pid": 1234, "ppid": 1, "command": "python3"}]},
+    [{"pid": 1234, "ppid": 1, "command": "python3"}],
+    {"success": True},
+    {"success": True, "reason": "ok"},
+)
+print(json.dumps(classification, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const classification = JSON.parse(result.stdout);
+    expect(classification.status).toBe("ok");
+    expect(classification.codex_subtree_hit_count).toBe(0);
+    expect(classification.ignored_line_count).toBe(1);
+  });
+
+  it("ignores external .git access when the PID was seen in snapshot history", () => {
+    const result = runLoopPython(`
+import tempfile
+log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "02_fs_audit.log"
+git_path = loop.PROJECT_ROOT / ".git" / "index"
+log_path.write_text(f"12:00:00 open {git_path} git.4321\\n", encoding="utf-8")
+scan = loop.scan_fs_usage_log_for_forbidden_access(log_path)
+classification = loop.classify_implementation_access_guard(
+    scan,
+    {"success": True, "pids": [1234], "processes": [{"pid": 1234, "ppid": 1, "command": "codex"}]},
+    [{"pid": 4321, "ppid": 1, "command": "git"}],
+    {"success": True},
+    {"success": True, "reason": "ok"},
+)
+print(json.dumps(classification, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const classification = JSON.parse(result.stdout);
+    expect(classification.status).toBe("ok");
+    expect(classification.ignored_line_count).toBe(1);
+  });
+
+  it("reports monitoring_unavailable for external protected marker access outside the Codex subtree", () => {
+    const result = runLoopPython(`
+import tempfile
+log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "02_fs_audit.log"
+validation_path = loop.DATA_ROOT / "validation" / "case-a" / "golden.json"
+log_path.write_text(f"12:00:00 open {validation_path} python3.4325\\n", encoding="utf-8")
+scan = loop.scan_fs_usage_log_for_forbidden_access(log_path)
+classification = loop.classify_implementation_access_guard(
+    scan,
+    {"success": True, "pids": [1234], "processes": [{"pid": 1234, "ppid": 1, "command": "codex"}]},
+    [{"pid": 4325, "ppid": 1, "command": "python3"}],
+    {"success": True},
+    {"success": True, "reason": "ok"},
+)
+print(json.dumps(classification, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const classification = JSON.parse(result.stdout);
+    expect(classification.status).toBe("monitoring_unavailable");
+    expect(classification.external_protected_line_count).toBe(1);
+  });
+
+  it("reports monitoring_unavailable for unattributable protected marker access regardless of process name", () => {
+    const result = runLoopPython(`
+import tempfile
+log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "02_fs_audit.log"
+validation_path = loop.DATA_ROOT / "validation" / "case-a" / "golden.json"
+holdout_path = loop.DATA_ROOT / "holdout" / "case-b" / "golden.json"
+cache_path = loop.DATA_ROOT / "cache" / "entry.json"
+review_path = loop.DATA_ROOT / "REVIEW_validation.md"
+semantic_path = loop.DATA_ROOT / "semantic_calibration.json"
+past_run_path = loop.RUN_ROOT / "old-run" / "iter_01" / "05_decision.json"
+log_path.write_text(
+    f"12:00:00 open {validation_path} git.4322\\n"
+    f"12:00:01 open {holdout_path} sh.4323\\n"
+    f"12:00:02 open {cache_path} python3.4324\\n"
+    f"12:00:03 open {review_path} sh.4326\\n"
+    f"12:00:04 open {semantic_path} python3.4327\\n"
+    f"12:00:05 open {past_run_path} git.4328\\n",
+    encoding="utf-8",
+)
+scan = loop.scan_fs_usage_log_for_forbidden_access(log_path)
+classification = loop.classify_implementation_access_guard(
+    scan,
+    {"success": True, "pids": [1234], "processes": [{"pid": 1234, "ppid": 1, "command": "codex"}]},
+    [],
+    {"success": True},
+    {"success": True, "reason": "ok"},
+)
+print(json.dumps(classification, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const classification = JSON.parse(result.stdout);
+    expect(classification.status).toBe("monitoring_unavailable");
+    expect(classification.unattributable_protected_line_count).toBe(6);
+  });
+
+  it("warns when Codex or its child process accesses a protected marker", () => {
+    const result = runLoopPython(`
+import tempfile
+log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "02_fs_audit.log"
+validation_path = loop.DATA_ROOT / "validation" / "case-a" / "golden.json"
+holdout_path = loop.DATA_ROOT / "holdout" / "case-b" / "golden.json"
+log_path.write_text(
+    f"12:00:00 open {validation_path} codex.1234\\n"
+    f"12:00:01 open {holdout_path} node.1235\\n",
+    encoding="utf-8",
+)
+scan = loop.scan_fs_usage_log_for_forbidden_access(log_path)
+classification = loop.classify_implementation_access_guard(
+    scan,
+    {"success": True, "pids": [1234, 1235], "processes": [{"pid": 1234, "ppid": 1, "command": "codex"}, {"pid": 1235, "ppid": 1234, "command": "node"}]},
+    [{"pid": 1234, "ppid": 1, "command": "codex"}, {"pid": 1235, "ppid": 1234, "command": "node"}],
+    {"success": True},
+    {"success": True, "reason": "ok"},
+)
+print(json.dumps(classification, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const classification = JSON.parse(result.stdout);
+    expect(classification.status).toBe("warning");
+    expect(classification.codex_subtree_hit_count).toBe(2);
+  });
+
+  it("keeps unattributable .git-only noise out of Discord-triggering guard statuses", () => {
+    const result = runLoopPython(`
+import tempfile
+log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "02_fs_audit.log"
+git_path = loop.PROJECT_ROOT / ".git" / "index"
+log_path.write_text(f"12:00:00 open {git_path} git.9999\\n", encoding="utf-8")
+scan = loop.scan_fs_usage_log_for_forbidden_access(log_path)
+classification = loop.classify_implementation_access_guard(
+    scan,
+    {"success": True, "pids": [1234], "processes": [{"pid": 1234, "ppid": 1, "command": "codex"}]},
+    [],
+    {"success": True},
+    {"success": True, "reason": "ok"},
+)
+notification = loop.send_implementation_access_guard_alert({"access_guard_status": classification["status"]})
+print(json.dumps({"classification": classification, "notification": notification}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.classification.status).toBe("ok");
+    expect(report.classification.unknown_git_line_count).toBe(1);
+    expect(report.notification).toMatchObject({ sent: false, reason: "not_required" });
+  });
+
+  it("does not confuse .github paths with the protected .git marker", () => {
+    const result = runLoopPython(`
+import tempfile
+log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "02_fs_audit.log"
+github_path = loop.PROJECT_ROOT / ".github" / "workflows" / "ci.yml"
+log_path.write_text(f"12:00:00 open {github_path} sh.7777\\n", encoding="utf-8")
+scan = loop.scan_fs_usage_log_for_forbidden_access(log_path)
+print(json.dumps(scan, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const scan = JSON.parse(result.stdout);
+    expect(scan.success).toBe(true);
+    expect(scan.forbidden_line_count).toBe(0);
+    expect(scan.forbidden_lines).toEqual([]);
   });
 
   it("records implementation access guard warnings as non-fatal iteration metadata", () => {
@@ -1048,6 +1324,53 @@ print(json.dumps(payload, ensure_ascii=False))
     expect(payload.continues_iteration).toBe(true);
     expect(payload.reason).toBe("forbidden_golden_path_access_suspected");
     expect(payload.hit_log_path).toContain("02_fs_audit_hits.json");
+  });
+
+  it("keeps implementation access guard status out of hard decision checks", () => {
+    const result = runLoopPython(`
+cfg = loop.LoopConfig()
+summaries = {
+    "det": {"aggregate": {}},
+    "ai": {"aggregate": {}},
+    "val_det": {"aggregate": {
+        "success": True,
+        "ingredientF1": 0.92,
+        "amountMatchRate": 0.85,
+        "stepCoverage": 0.85,
+        "recipeCountMatchRate": 0.95,
+        "missing_result_count": 0,
+        "missing_golden_count": 0,
+        "unapproved_golden_count": 0,
+        "expected_count_mismatch": False,
+    }},
+    "val_ai": {"aggregate": {
+        "success": True,
+        "judge_provider": "codex",
+        "judge_model": "gpt-5.4",
+        "judge_effort": "high",
+        "calibration": {"valid": True},
+        "provider_error_count": 0,
+        "parse_error_count": 0,
+        "empty_case_count": 0,
+        "expected_count_mismatch": False,
+        "threshold_success": True,
+        "averageScore": 4.3,
+        "minCaseScore": 4,
+    }},
+}
+decision = loop.decide(cfg, summaries, {
+    "subprocess_health": {"success": True},
+    "leakage_guard": {"success": True},
+    "implementation_access_guard": {"access_guard_status": "monitoring_unavailable", "continues_iteration": True},
+})
+print(json.dumps(decision, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const decision = JSON.parse(result.stdout);
+    expect(decision.passed).toBe(true);
+    expect(decision.checks).not.toHaveProperty("implementation_access_guard");
+    expect(decision.implementation_access_guard.access_guard_status).toBe("monitoring_unavailable");
   });
 
   it("prechecks that the access guard watches the original repo root with golden directories", () => {
