@@ -50,6 +50,9 @@ class LoopConfig:
     val_split: str = "validation"
     # 추출/AI 의미채점에 쓰는 Gemini 모델
     model: str = "gemini-2.5-flash"
+    semantic_judge_provider: str = "gemini"
+    semantic_judge_model: str = "gemini-2.5-flash"
+    semantic_calibration_path: str = str(DATA_ROOT / "semantic_calibration.json")
     # 계획/진단 담당 Claude 모델 (CLI --model 별칭). 추론 비중이 커서 opus 기본.
     claude_model: str = "opus"
     # 구현 담당 Codex 모델·추론강도 (CLI -c 오버라이드로 명시 고정 → 재현성)
@@ -87,6 +90,17 @@ def kst_stamp() -> str:
 def run_node(script: str, *args: str) -> subprocess.CompletedProcess:
     cmd = ["node", f"scripts/recipe-loop/{script}", *args]
     return subprocess.run(cmd, cwd=str(PROJECT_ROOT), text=True, capture_output=True)
+
+
+def semantic_grader_args(cfg: LoopConfig, split: str, out_tag: str, expected: str) -> tuple[str, ...]:
+    return (
+        "--split", split,
+        "--out-tag", out_tag,
+        "--judge-provider", cfg.semantic_judge_provider,
+        "--judge-model", cfg.semantic_judge_model,
+        "--calibration", cfg.semantic_calibration_path,
+        "--expected-count", expected,
+    )
 
 
 def run_agent(cmd: tuple[str, ...], prompt: str, log_path: Path, cwd: Path | None = None) -> str:
@@ -245,6 +259,24 @@ def scan_paths_for_protected_answers(paths: list[Path], fragments: list[dict] | 
     return scan_texts_for_protected_answers(items, fragments)
 
 
+SCAN_SUFFIXES = {".json", ".md", ".log", ".txt", ".stderr", ".stdout"}
+
+
+def scan_directory_for_protected_answers(root: Path, fragments: list[dict] | None = None) -> dict:
+    items = []
+    if not root.exists():
+        return scan_texts_for_protected_answers(items, fragments)
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or path.suffix not in SCAN_SUFFIXES:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        items.append({"scope": str(path.relative_to(root)), "text": text})
+    return scan_texts_for_protected_answers(items, fragments)
+
+
 def merge_redaction_scans(scans: list[dict]) -> dict:
     hits = []
     scanned_scopes = []
@@ -272,6 +304,62 @@ def check_no_hardcoded_answers() -> tuple[bool, dict]:
         "redacted_hits": scan["redacted_hits"],
         "limitations": "substring-based naive copy tripwire; not a strict blind or paraphrase detector",
     })
+
+
+def semantic_thresholds(cfg: LoopConfig) -> dict:
+    calibration = read_json(Path(cfg.semantic_calibration_path), {})
+    thresholds = calibration.get("thresholds", {}) if isinstance(calibration, dict) else {}
+    return {
+        "minCaseScore": float(thresholds.get("minCaseScore", cfg.ai_case_min)),
+        "averageScore": float(thresholds.get("averageScore", cfg.ai_avg_min)),
+    }
+
+
+def holdout_marker_path() -> Path:
+    return DATA_ROOT / "holdout_consumed.json"
+
+
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def holdout_consumption_status() -> dict:
+    marker = holdout_marker_path()
+    if not marker.exists():
+        return {"consumed": False, "marker_path": display_path(marker)}
+    payload = read_json(marker, {})
+    return {
+        "consumed": True,
+        "marker_path": display_path(marker),
+        "out_tag": payload.get("out_tag"),
+        "consumed_at": payload.get("consumed_at"),
+        "success": payload.get("success"),
+    }
+
+
+def assert_holdout_not_consumed() -> None:
+    status = holdout_consumption_status()
+    if status.get("consumed"):
+        raise RuntimeError(f"holdout already consumed: {status.get('marker_path')}")
+
+
+def write_holdout_consumed_marker(out_tag: str, result: dict, dry_run: bool = False) -> dict:
+    marker = holdout_marker_path()
+    payload = {
+        "schemaVersion": 1,
+        "consumed_at": kst_now().isoformat(),
+        "out_tag": out_tag,
+        "dry_run": dry_run,
+        "success": result.get("success") is True,
+        "result": result,
+    }
+    if not dry_run:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return payload
 
 
 # ---- 스테이지 ------------------------------------------------------------
@@ -356,13 +444,25 @@ def deterministic_validation_success(cfg: LoopConfig, aggregate: dict) -> tuple[
     return all(checks.values()), checks
 
 
-def semantic_validation_success(aggregate: dict) -> tuple[bool, dict]:
+def semantic_validation_success(cfg: LoopConfig, aggregate: dict) -> tuple[bool, dict]:
+    thresholds = aggregate.get("thresholds") if isinstance(aggregate.get("thresholds"), dict) else semantic_thresholds(cfg)
+    average_score = aggregate.get("averageScore") or 0
+    min_case_score = aggregate.get("minCaseScore") or 0
+    threshold_success = aggregate.get("threshold_success")
+    if threshold_success is None:
+        threshold_success = (
+            average_score >= (thresholds.get("averageScore") or cfg.ai_avg_min)
+            and min_case_score >= (thresholds.get("minCaseScore") or cfg.ai_case_min)
+        )
     checks = {
         "summary_success": aggregate.get("success") is True,
         "provider_error_count": (aggregate.get("provider_error_count") or 0) == 0,
         "parse_error_count": (aggregate.get("parse_error_count") or 0) == 0,
         "empty_case_count": (aggregate.get("empty_case_count") or 0) == 0,
         "expected_count_mismatch": aggregate.get("expected_count_mismatch") is False,
+        "threshold_success": threshold_success is True,
+        "averageScore": average_score >= (thresholds.get("averageScore") or cfg.ai_avg_min),
+        "minCaseScore": min_case_score >= (thresholds.get("minCaseScore") or cfg.ai_case_min),
     }
     return all(checks.values()), checks
 
@@ -373,7 +473,7 @@ def decide(cfg: LoopConfig, summaries: dict, gate_inputs: dict) -> dict:
     val_det = summaries["val_det"].get("aggregate", {})
     val_ai = summaries["val_ai"].get("aggregate", {})
     det_success, det_checks = deterministic_validation_success(cfg, val_det)
-    sem_success, sem_checks = semantic_validation_success(val_ai)
+    sem_success, sem_checks = semantic_validation_success(cfg, val_ai)
     subprocess_health = gate_inputs.get("subprocess_health", {})
     leakage_guard = gate_inputs.get("leakage_guard", {})
     checks = {
@@ -496,8 +596,8 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
     val_expected = str(split_expected_count(cfg.val_split))
     train_det_grade = run_node("grade-extraction.mjs", "--split", cfg.train_split, "--out-tag", out_tag, "--expected-count", train_expected)
     val_det_grade = run_node("grade-extraction.mjs", "--split", cfg.val_split, "--out-tag", out_tag, "--expected-count", val_expected)
-    train_sem_grade = run_node("grade-semantic.mjs", "--split", cfg.train_split, "--out-tag", out_tag, "--model", cfg.model, "--expected-count", train_expected)
-    val_sem_grade = run_node("grade-semantic.mjs", "--split", cfg.val_split, "--out-tag", out_tag, "--model", cfg.model, "--expected-count", val_expected)
+    train_sem_grade = run_node("grade-semantic.mjs", *semantic_grader_args(cfg, cfg.train_split, out_tag, train_expected))
+    val_sem_grade = run_node("grade-semantic.mjs", *semantic_grader_args(cfg, cfg.val_split, out_tag, val_expected))
 
     stage(f"[ITER {iteration}] 5. 판정 (코드)")
     summaries = grade_summaries(cfg, out_tag)
@@ -514,10 +614,7 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
     output_scan_before_decision = merge_redaction_scans([
         verify_scan_before_write,
         verify_scan_after_write,
-        scan_paths_for_protected_answers([
-            iter_dir / "01_plan.md",
-            iter_dir / "02_implementation.log",
-        ]),
+        scan_directory_for_protected_answers(iter_dir),
         scan_texts_for_protected_answers([
             {"scope": "train_extraction_stdout", "text": ext_train.stdout},
             {"scope": "train_extraction_stderr", "text": ext_train.stderr},
@@ -605,7 +702,7 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
         f"## Claude 진단\n{diagnosis}"
     )
     diagnosis_scan = merge_redaction_scans([
-        scan_paths_for_protected_answers([iter_dir / "06_diagnosis.md"]),
+        scan_directory_for_protected_answers(iter_dir),
         scan_texts_for_protected_answers([{"scope": "feedback_for_next_iter", "text": next_feedback}]),
     ])
     if not diagnosis_scan["success"]:
@@ -645,6 +742,71 @@ def run_loop(cfg: LoopConfig | None = None) -> dict:
     return {"run_dir": str(run_dir), "status": "max-iter", "iterations": cfg.max_iter}
 
 
+def cli_arg_value(name: str, default: str | None = None) -> str | None:
+    flag = f"--{name}"
+    if flag not in sys.argv:
+        return default
+    idx = sys.argv.index(flag)
+    if idx + 1 >= len(sys.argv) or sys.argv[idx + 1].startswith("--"):
+        return default
+    return sys.argv[idx + 1]
+
+
+def run_holdout_final(cfg: LoopConfig | None = None, out_tag: str | None = None, dry_run: bool = False) -> dict:
+    cfg = cfg or LoopConfig(max_iter=1)
+    out_tag = out_tag or ("holdout-final-" + kst_now().strftime("%Y%m%d-%H%M%S"))
+    if not dry_run:
+        assert_holdout_not_consumed()
+    expected = str(split_expected_count("holdout"))
+    if dry_run:
+        result = {
+            "success": True,
+            "dry_run": True,
+            "out_tag": out_tag,
+            "expected_count": expected,
+            "holdout_status_before": holdout_consumption_status(),
+        }
+        return write_holdout_consumed_marker(out_tag, result, dry_run=True)
+
+    ext = run_node("run-extraction.mjs", "--split", "holdout", "--out-tag", out_tag, "--model", cfg.model)
+    det = run_node("grade-extraction.mjs", "--split", "holdout", "--out-tag", out_tag, "--expected-count", expected)
+    sem = run_node("grade-semantic.mjs", *semantic_grader_args(cfg, "holdout", out_tag, expected))
+    summaries = {
+        "deterministic": read_json(DATA_ROOT / "holdout" / f"_grade_summary.{out_tag}.json", {}),
+        "semantic": read_json(DATA_ROOT / "holdout" / f"_semantic_summary.{out_tag}.json", {}),
+    }
+    redaction_scan = merge_redaction_scans([
+        scan_texts_for_protected_answers([
+            {"scope": "holdout_extraction_stdout", "text": ext.stdout},
+            {"scope": "holdout_extraction_stderr", "text": ext.stderr},
+            {"scope": "holdout_deterministic_stdout", "text": det.stdout},
+            {"scope": "holdout_deterministic_stderr", "text": det.stderr},
+            {"scope": "holdout_semantic_stdout", "text": sem.stdout},
+            {"scope": "holdout_semantic_stderr", "text": sem.stderr},
+        ]),
+    ])
+    result = {
+        "success": ext.returncode == 0 and det.returncode == 0 and sem.returncode == 0 and redaction_scan["success"],
+        "dry_run": False,
+        "out_tag": out_tag,
+        "expected_count": expected,
+        "returncodes": {
+            "extraction": ext.returncode,
+            "deterministic": det.returncode,
+            "semantic": sem.returncode,
+        },
+        "summaries": {
+            "deterministic_aggregate": summaries["deterministic"].get("aggregate", {}),
+            "semantic_aggregate": summaries["semantic"].get("aggregate", {}),
+        },
+        "redaction_scan": redaction_scan,
+    }
+    marker = write_holdout_consumed_marker(out_tag, result, dry_run=False)
+    if not result["success"]:
+        raise RuntimeError(json.dumps(marker, ensure_ascii=False, indent=2))
+    return marker
+
+
 if __name__ == "__main__":
     if "--smoke-wiring" in sys.argv:
         # 쿼터/구현 없이 decision 배선만 점검한다. 실제 subprocess smoke는
@@ -670,13 +832,22 @@ if __name__ == "__main__":
         cfg = LoopConfig(max_iter=1)
         val_expected = str(split_expected_count(cfg.val_split))
         val_det_grade = run_node("grade-extraction.mjs", "--split", cfg.val_split, "--out-tag", "baseline", "--expected-count", val_expected)
-        val_sem_grade = run_node("grade-semantic.mjs", "--split", cfg.val_split, "--out-tag", "baseline", "--model", cfg.model, "--expected-count", val_expected)
+        val_sem_grade = run_node("grade-semantic.mjs", *semantic_grader_args(cfg, cfg.val_split, "baseline", val_expected))
         result = {
             "validation_deterministic_grader_rc": val_det_grade.returncode,
             "validation_semantic_grader_rc": val_sem_grade.returncode,
         }
         print(json.dumps(result, ensure_ascii=False, indent=2))
         sys.exit(0 if val_det_grade.returncode == 0 and val_sem_grade.returncode == 0 else 1)
+    elif "--holdout-status" in sys.argv:
+        print(json.dumps(holdout_consumption_status(), ensure_ascii=False, indent=2))
+    elif "--run-holdout-final" in sys.argv:
+        try:
+            marker = run_holdout_final(out_tag=cli_arg_value("out-tag"), dry_run="--dry-run" in sys.argv)
+            print(json.dumps(marker, ensure_ascii=False, indent=2))
+        except RuntimeError as error:
+            print(str(error), file=sys.stderr)
+            sys.exit(1)
     elif "--one-iter" in sys.argv:
         # 실제 1 ITER 스모크: 계획→구현(Codex)→검증(추출)→채점→판정→진단.
         cfg = LoopConfig(max_iter=1)

@@ -120,6 +120,7 @@ async function main() {
     ingredientPrecision: r3(mean(rows.map((r) => r.ingredientPrecision))),
     ingredientRecall: r3(mean(rows.map((r) => r.ingredientRecall))),
     amountMatchRate: r3(mean(rows.map((r) => r.amountMatchRate))),
+    amountCoverage: r3(mean(rows.map((r) => r.amountCoverage))),
     stepCoverage: r3(mean(rows.map((r) => r.stepCoverage))),
     recipesMissedTotal: rows.reduce((a, r) => a + (r.recipesMissed ?? 0), 0),
     recipesExtraTotal: rows.reduce((a, r) => a + (r.recipesExtra ?? 0), 0),
@@ -132,6 +133,7 @@ async function main() {
   console.log(`레시피 개수 일치율: ${agg.recipeCountMatchRate} (누락 ${agg.recipesMissedTotal}, 초과 ${agg.recipesExtraTotal})`);
   console.log(`재료 F1: ${agg.ingredientF1} (P ${agg.ingredientPrecision} / R ${agg.ingredientRecall})`);
   console.log(`분량 일치율: ${agg.amountMatchRate}`);
+  console.log(`분량 커버리지: ${agg.amountCoverage}`);
   console.log(`단계 커버리지: ${agg.stepCoverage}`);
   console.log(`\n케이스별:`);
   for (const row of rows) {

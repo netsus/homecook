@@ -16,6 +16,8 @@ import { createCachedLlmClient } from "./lib/llm-client.mjs";
 
 const PROJECT_ROOT = process.cwd();
 const DATA_ROOT = "notebooks/recipe_loop_data";
+const DEFAULT_CALIBRATION_PATH = path.join(DATA_ROOT, "semantic_calibration.json");
+const DEFAULT_THRESHOLDS = { minCaseScore: 2, averageScore: 3.5 };
 
 function parseCliArgs(argv) {
   const args = {};
@@ -34,6 +36,54 @@ function toInt(value) {
   if (value === null || value === undefined || value === true) return null;
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function resolveProjectPath(value) {
+  if (!value || value === true) return null;
+  return path.isAbsolute(String(value)) ? String(value) : path.join(PROJECT_ROOT, String(value));
+}
+
+async function loadCalibration(filePath) {
+  const resolved = resolveProjectPath(filePath ?? DEFAULT_CALIBRATION_PATH);
+  if (!resolved || !existsSync(resolved)) {
+    return {
+      source: filePath ?? DEFAULT_CALIBRATION_PATH,
+      thresholds: DEFAULT_THRESHOLDS,
+      summary: {
+        source: filePath ?? DEFAULT_CALIBRATION_PATH,
+        loaded: false,
+        sample_count: 0,
+        policy: "default thresholds; calibration file not found",
+      },
+    };
+  }
+  const parsed = JSON.parse(await readFile(resolved, "utf8"));
+  const thresholds = {
+    minCaseScore: Number(parsed.thresholds?.minCaseScore ?? DEFAULT_THRESHOLDS.minCaseScore),
+    averageScore: Number(parsed.thresholds?.averageScore ?? DEFAULT_THRESHOLDS.averageScore),
+  };
+  return {
+    source: path.relative(PROJECT_ROOT, resolved),
+    thresholds,
+    summary: {
+      source: path.relative(PROJECT_ROOT, resolved),
+      loaded: true,
+      sample_count: Array.isArray(parsed.samples) ? parsed.samples.length : 0,
+      policy: parsed.policy ?? "spot-check calibration",
+      calibrated_at: parsed.calibratedAt ?? null,
+    },
+  };
+}
+
+function resolveJudgeConfig(args) {
+  const provider = typeof args["judge-provider"] === "string" ? args["judge-provider"] : "gemini";
+  const model = typeof args["judge-model"] === "string"
+    ? args["judge-model"]
+    : (typeof args.model === "string" ? args.model : "gemini-2.5-flash");
+  if (!["gemini", "fixture"].includes(provider)) {
+    throw new Error(`unsupported semantic judge provider: ${provider}`);
+  }
+  return { provider, model };
 }
 
 function compactRecipe(recipe) {
@@ -73,6 +123,17 @@ function normalize(parsed) {
   return { cases, average_score: Math.round(avg * 1000) / 1000 };
 }
 
+async function generateSemanticGrade({ judgeProvider, llm, golden, result, id, outTag }) {
+  if (judgeProvider === "fixture") {
+    if (!result.__semanticJudge) {
+      throw new Error("fixture semantic judge requires result.__semanticJudge");
+    }
+    return { grade: normalize(result.__semanticJudge), cached: true, model: "fixture" };
+  }
+  const { json, cached, model } = await llm.generate({ prompt: buildPrompt(golden, result), cacheText: id + outTag });
+  return { grade: normalize(json), cached, model };
+}
+
 function failedRow(id, reason, message = null) {
   return {
     videoId: id,
@@ -95,8 +156,9 @@ async function main() {
   const args = parseCliArgs(process.argv.slice(2));
   const split = typeof args.split === "string" ? args.split : "train";
   const outTag = typeof args["out-tag"] === "string" ? args["out-tag"] : "latest";
-  const model = typeof args.model === "string" ? args.model : "gemini-2.5-flash";
   const expectedCountArg = toInt(args["expected-count"]);
+  const judge = resolveJudgeConfig(args);
+  const calibration = await loadCalibration(args.calibration ?? DEFAULT_CALIBRATION_PATH);
   const splitDir = path.join(PROJECT_ROOT, DATA_ROOT, split);
 
   let ids = typeof args.ids === "string"
@@ -104,7 +166,7 @@ async function main() {
     : (await readdir(splitDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
   ids = ids.sort();
 
-  const llm = createCachedLlmClient({ model });
+  const llm = judge.provider === "gemini" ? createCachedLlmClient({ model: judge.model }) : null;
   const rows = [];
 
   for (const id of ids) {
@@ -126,8 +188,7 @@ async function main() {
       continue;
     }
     try {
-      const { json } = await llm.generate({ prompt: buildPrompt(golden, result), cacheText: id + outTag });
-      const grade = normalize(json);
+      const { grade } = await generateSemanticGrade({ judgeProvider: judge.provider, llm, golden, result, id, outTag });
       if (grade.cases.length === 0) {
         rows.push(failedRow(id, "empty_case"));
         console.error(`[FAIL] ${split}/${id}: empty_case`);
@@ -151,10 +212,16 @@ async function main() {
   const emptyCaseCount = rows.filter((r) => r.failureReason === "empty_case").length;
   const expectedCountMismatch = rows.length !== expectedCount;
   const failedRowCount = rows.filter((r) => r.success === false).length;
-  const success = failedRowCount === 0 && !expectedCountMismatch;
+  const averageScore = caseScores.length ? Math.round((caseScores.reduce((a, b) => a + b, 0) / caseScores.length) * 1000) / 1000 : 0;
+  const minCaseScore = caseScores.length ? Math.min(...caseScores) : 0;
+  const thresholdSuccess = averageScore >= calibration.thresholds.averageScore
+    && minCaseScore >= calibration.thresholds.minCaseScore;
+  const success = failedRowCount === 0 && !expectedCountMismatch && thresholdSuccess;
   const agg = {
     success,
     split, outTag, count: rows.length,
+    judge_provider: judge.provider,
+    judge_model: judge.model,
     expected_count: expectedCount,
     actual_count: rows.length,
     provider_error_count: providerErrorCount,
@@ -162,8 +229,11 @@ async function main() {
     empty_case_count: emptyCaseCount,
     expected_count_mismatch: expectedCountMismatch,
     failed_row_count: failedRowCount,
-    averageScore: caseScores.length ? Math.round((caseScores.reduce((a, b) => a + b, 0) / caseScores.length) * 1000) / 1000 : 0,
-    minCaseScore: caseScores.length ? Math.min(...caseScores) : 0,
+    averageScore,
+    minCaseScore,
+    thresholds: calibration.thresholds,
+    threshold_success: thresholdSuccess,
+    calibration: calibration.summary,
   };
   await writeFile(path.join(splitDir, `_semantic_summary.${outTag}.json`), JSON.stringify({ aggregate: agg, perVideo: rows }, null, 2) + "\n", "utf8");
   console.log(`\n=== ${split}/${outTag} 의미채점: 평균 ${agg.averageScore}, 최저 case ${agg.minCaseScore} (n=${agg.count})`);

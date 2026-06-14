@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "calibratedAt": "2026-06-14",
+  "policy": "Spot-check calibration for the local semantic judge gate. Samples are intentionally small and do not replace human review.",
+  "judgeProvider": "gemini",
+  "judgeModel": "gemini-2.5-flash",
+  "implementationModelContract": {
+    "codexModel": "gpt-5.4",
+    "source": "AGENTS.md model capability table",
+    "checkedAt": "2026-06-14"
+  },
+  "thresholds": {
+    "minCaseScore": 2,
+    "averageScore": 3.4
+  },
+  "samples": [
+    {
+      "id": "train-5NSTRKouSWs-butter-madeleine",
+      "split": "train",
+      "videoId": "5NSTRKouSWs",
+      "caseTitle": "버터 마들렌",
+      "humanCaseScore": 3,
+      "judgeCaseScore": 3,
+      "verdict": "aligned",
+      "note": "Ingredient amount omission and order issue should stay below strong-pass."
+    },
+    {
+      "id": "train-DnQ09ZZCjCs-kimchi-stew",
+      "split": "train",
+      "videoId": "DnQ09ZZCjCs",
+      "caseTitle": "초간단 김치찌개",
+      "humanCaseScore": 5,
+      "judgeCaseScore": 5,
+      "verdict": "aligned",
+      "note": "Clean single-recipe extraction should be a clear pass."
+    },
+    {
+      "id": "train-LSYEnH5fGfk-tomato-basil",
+      "split": "train",
+      "videoId": "LSYEnH5fGfk",
+      "caseTitle": "원 팟 토마토 바질 링귀네",
+      "humanCaseScore": 3,
+      "judgeCaseScore": 3,
+      "verdict": "aligned",
+      "note": "Good steps with ingredient quantity omissions should not pass as excellent."
+    },
+    {
+      "id": "validation-Egpjve8caK0-ratatouille",
+      "split": "validation",
+      "videoId": "Egpjve8caK0",
+      "caseTitle": "노오븐 라따뚜이",
+      "humanCaseScore": 2,
+      "judgeCaseScore": 2,
+      "verdict": "aligned",
+      "note": "Known weak visual-dependent case anchors the minimum-case floor."
+    },
+    {
+      "id": "validation-MxA2R1tzDLA-side-dishes",
+      "split": "validation",
+      "videoId": "MxA2R1tzDLA",
+      "caseTitle": "국민 반찬 10가지",
+      "humanCaseScore": 4,
+      "judgeCaseScore": 4.42,
+      "verdict": "close",
+      "note": "Multi-recipe mostly-correct extraction anchors average-score expectations."
+    },
+    {
+      "id": "validation-YZ8KSZboJeM-chocolate-madeleine",
+      "split": "validation",
+      "videoId": "YZ8KSZboJeM",
+      "caseTitle": "진한 초코 마들렌",
+      "humanCaseScore": 3.5,
+      "judgeCaseScore": 3.5,
+      "verdict": "aligned",
+      "note": "Baking omissions should remain below perfect but above hard failure."
+    }
+  ]
+}
