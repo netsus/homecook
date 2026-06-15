@@ -45,7 +45,6 @@ type NotificationType =
   | "level_up"
   | "achievement_unlocked"
   | "badge_unlocked"
-  | "quest_completed"
   | "xp_awarded";
 type DeliveryChannel = "toast" | "archive_only" | "silent";
 
@@ -100,15 +99,15 @@ const priorityNotifications: NotificationFixture[] = [
   },
   {
     id: "10000000-0000-4000-8000-000000000003",
-    notification_type: "quest_completed",
-    priority: 3,
+    notification_type: "badge_unlocked",
+    priority: 2,
     delivery_channel: "toast",
     toast_eligible: true,
     group_key: "planner-week-34c",
-    title: "퀘스트 달성!",
-    body: "업적 카테고리에서 확인할 수 있어요.",
-    category: "tutorial",
-    payload: { title: "플래너 루틴" },
+    title: "새 배지 획득!",
+    body: "플래너 배지를 획득했어요.",
+    category: "planner",
+    payload: { badge_key: "planner_registered_3", title: "플래너 루틴" },
     created_at: "2026-06-11T10:02:00.000Z",
     seen_at: null,
   },
@@ -148,7 +147,7 @@ const archivePageTwo: NotificationFixture[] = [
   {
     ...priorityNotifications[2],
     id: "20000000-0000-4000-8000-000000000003",
-    title: "퀘스트 달성!",
+    title: "새 배지 획득!",
     seen_at: "2026-06-11T09:30:00.000Z",
   },
 ];
@@ -486,7 +485,7 @@ test.describe("34c growth notification UI @smoke-core", () => {
     await expect(page.getByTestId("growth-toast").nth(0)).toContainText("+20 XP");
     await expect(page.getByTestId("growth-toast").nth(1)).toContainText("등급 획득!");
     if (visibleMax === 3) {
-      await expect(page.getByTestId("growth-toast").nth(2)).toContainText("퀘스트 달성!");
+      await expect(page.getByTestId("growth-toast").nth(2)).toContainText("새 배지 획득!");
       await expect(page.getByTestId("growth-toast-collapsed")).toHaveCount(0);
     } else {
       await expect(page.getByTestId("growth-toast-collapsed")).toContainText("+1개의 새 소식 확인");

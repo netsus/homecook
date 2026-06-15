@@ -313,7 +313,6 @@ export const USER_NOTIFICATION_PRIORITIES: Record<UserGamificationNotificationTy
   level_up: 1,
   achievement_unlocked: 2,
   badge_unlocked: 2,
-  quest_completed: 3,
   xp_awarded: 4,
 };
 
@@ -2054,14 +2053,6 @@ function buildNotificationPresentation(
       title: "업적 달성!",
       body: `${typeof payload.title === "string" ? payload.title : definition?.title ?? "새 업적"} 배지를 획득했어요.`,
       category: definition?.category_key ?? "tutorial",
-    };
-  }
-
-  if (notificationType === "quest_completed") {
-    return {
-      title: "퀘스트 달성!",
-      body: "업적 카테고리에서 확인할 수 있어요.",
-      category: "tutorial",
     };
   }
 

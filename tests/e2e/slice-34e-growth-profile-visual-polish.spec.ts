@@ -123,7 +123,7 @@ function buildGamification(gradeKey = "homecook_runner") {
 function archiveItems(count = 12) {
   return Array.from({ length: count }, (_, index) => ({
     id: `archive-${index}`,
-    notification_type: index === 0 ? "level_up" : index % 2 === 0 ? "quest_completed" : "xp_awarded",
+    notification_type: index === 0 ? "level_up" : index % 2 === 0 ? "achievement_unlocked" : "xp_awarded",
     priority: index === 0 ? 100 : 10,
     delivery_channel: "archive_only",
     toast_eligible: false,

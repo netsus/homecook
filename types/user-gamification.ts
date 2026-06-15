@@ -2,7 +2,6 @@ export type UserGamificationNotificationType =
   | "xp_awarded"
   | "achievement_unlocked"
   | "badge_unlocked"
-  | "quest_completed"
   | "level_up";
 
 export type UserGamificationNotificationDeliveryChannel =

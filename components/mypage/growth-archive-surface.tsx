@@ -29,8 +29,8 @@ function formatTimestamp(value: string) {
 
 function toneLabel(type: UserGamificationNotificationData["notification_type"]) {
   if (type === "level_up") return "레벨업";
+  if (type === "achievement_unlocked") return "업적";
   if (type === "badge_unlocked") return "배지";
-  if (type === "quest_completed") return "업적";
   return "경험치";
 }
 

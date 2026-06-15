@@ -72,7 +72,7 @@ Desktop MYPAGE profile card 안에서 progress 아래에 badge strip과 quest su
 - Desktop: modal/popover anchored from guide button.
 - Content sections:
   - 시스템 요약: “활동을 기록하면 배지와 퀘스트가 자동으로 쌓여요.”
-  - XP source: 5개 canonical actions only (레시피 저장, 레시피북 생성, 장보기 완료, 요리 완료, 플래너 등록).
+  - XP source: 6개 canonical actions only (레시피 저장, 레시피북 생성, 장보기 완료, 요리 완료, 플래너 등록, 남은 요리 먹음).
   - Exclusions: ranking, pressure streak 없음.
   - Badge examples: earned/locked small list.
 - Accessibility:
@@ -88,12 +88,12 @@ Desktop MYPAGE profile card 안에서 progress 아래에 badge strip과 quest su
 - Content:
   - server `title`
   - server `body`
-  - type chip/tone for `level_up`, `badge_unlocked`, `quest_completed`, `xp_awarded`
+  - type chip/tone for `level_up`, `achievement_unlocked`, `badge_unlocked`, `xp_awarded`
 - It must not block source action success UI.
 - It consumes `notifications.priority_unseen` in server order. The client does not recompute or reorder priority.
 - Visible cap: mobile 2 toasts, desktop 3 toasts.
 - Later items remain queued behind a collapsed `+N개의 새 소식 확인` summary.
-- `level_up` has the strongest visual tone. `badge_unlocked`, `quest_completed`, and `xp_awarded` remain calmer.
+- `level_up` has the strongest visual tone. `achievement_unlocked`, `badge_unlocked`, and `xp_awarded` remain calmer.
 - Same `group_key` notifications keep server order and show a small “같은 활동” chip when the group has multiple items.
 - `silent` notifications are never exposed.
 

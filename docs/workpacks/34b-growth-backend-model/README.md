@@ -259,7 +259,7 @@ GET /api/v1/users/me/gamification/archive?limit=20&cursor=<opaque>
 - fixture baseline:
   - 신규 사용자 0 XP (level 1, `sprout_homecook`)
   - XP source 각각 first/repeat가 섞인 사용자
-  - planner repeat old cap regression: KST 같은 날 repeat 3회 이후와 주간 12회 이후에도 새 meal source면 적립, cap key 미기록
+  - planner repeat cap regression: KST 같은 날 repeat 3회까지만, 같은 KST 주 repeat 12회까지만 적립하며 repeat ledger에 cap key 기록
   - custom book repeat cap 경계: KST 같은 날 repeat 2회 후 3번째 미적립
   - first XP와 repeat XP source key가 분리되는 케이스
   - 같은 meal source 재시도 중복 지급 방지 케이스
