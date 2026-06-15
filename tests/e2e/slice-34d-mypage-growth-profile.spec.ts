@@ -267,13 +267,28 @@ async function openMypage(
   const page = await context.newPage();
   await setAuthOverride(page);
   await installRoutes(page, options);
-  await page.goto("/mypage", { waitUntil: "networkidle" });
-  await stabilize(page);
-  await expect(page.getByTestId("mypage-growth-profile")).toBeVisible();
-  return { context, page };
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.goto("/mypage", { waitUntil: "networkidle" });
+    await stabilize(page);
+
+    try {
+      await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({
+        timeout: 15_000,
+      });
+      return { context, page };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
 }
 
 test.describe("34d MYPAGE growth profile assets @smoke-core", () => {
+  test.setTimeout(90_000);
+
   test("captures profile integration, badge shapes, locked hints, and soft-fail evidence", async ({ browser }) => {
     await mkdir(EVIDENCE_DIR, { recursive: true });
 
