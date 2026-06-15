@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MypageGrowthProfile } from "@/components/mypage/mypage-growth-profile";
+import { HOMECOOK_GAMIFICATION_OPEN_NOTIFICATIONS_EVENT } from "@/lib/gamification-events";
 import type { UserGamificationData } from "@/types/user-gamification";
 import type { UserProgressData } from "@/types/user-progress";
 
@@ -84,7 +85,7 @@ const MOCK_GAMIFICATION: UserGamificationData = {
   },
   tutorial: {
     category_key: "tutorial",
-    completed_count: 1,
+    completed_count: 3,
     total_count: 7,
     active_steps: [
       {
@@ -97,12 +98,12 @@ const MOCK_GAMIFICATION: UserGamificationData = {
     ],
   },
   achievement_album: {
-    summary: { earned_count: 2, total_count: 9, completed_category_count: 0 },
+    summary: { earned_count: 4, total_count: 9, completed_category_count: 0 },
     categories: [
       {
         category_key: "tutorial",
         label: "튜토리얼",
-        earned_count: 1,
+        earned_count: 3,
         total_count: 7,
         milestones: [
           {
@@ -148,8 +149,8 @@ const MOCK_GAMIFICATION: UserGamificationData = {
             description: "레시피로 장보기 목록을 만들어 보세요.",
             current: 0,
             target: 1,
-            status: "locked",
-            earned_at: null,
+            status: "earned",
+            earned_at: "2026-06-12T00:00:00.000Z",
             locked_hint: "레시피 1개 이상으로 장보기 목록을 만들어 보세요.",
             badge: { badge_key: "tutorial_shopping_list_create", category: "tutorial", shape_key: "leaf" },
           },
@@ -182,11 +183,11 @@ const MOCK_GAMIFICATION: UserGamificationData = {
             track_key: "tutorial_complete",
             title: "튜토리얼 완료",
             description: "집밥의 기본 흐름을 모두 경험해 보세요.",
-            current: 1,
+            current: 6,
             target: 6,
-            status: "locked",
-            earned_at: null,
-            locked_hint: "튜토리얼 업적 6개를 모두 채워 보세요.",
+            status: "earned",
+            earned_at: "2026-06-12T00:00:00.000Z",
+            locked_hint: null,
             badge: { badge_key: "tutorial_complete", category: "tutorial", shape_key: "ribbon" },
           },
         ],
@@ -230,14 +231,36 @@ const MOCK_GAMIFICATION: UserGamificationData = {
     priority_unseen: [],
     archive_preview: [
       {
+        id: "notice-grade",
+        notification_type: "level_up",
+        priority: 100,
+        delivery_channel: "archive_only",
+        toast_eligible: false,
+        group_key: null,
+        title: "등급 획득!",
+        body: "Diamond 등급 획득, Lv.46 달성",
+        category: "cooking",
+        payload: {
+          current_level: 46,
+          grade_upgrade: true,
+          grade: {
+            grade_key: "diamond",
+            label: "Diamond",
+            icon_url: "/assets/growth/grades/diamond-spoon-badge.png",
+          },
+        },
+        created_at: "2026-06-14T10:16:00.000Z",
+        seen_at: null,
+      },
+      {
         id: "notice-level",
         notification_type: "level_up",
         priority: 100,
         delivery_channel: "archive_only",
         toast_eligible: false,
         group_key: null,
-        title: "레벨 46 달성",
-        body: "레벨이 올랐어요.",
+        title: "레벨업!",
+        body: "Lv.46 달성",
         category: "cooking",
         payload: {},
         created_at: "2026-06-14T10:15:00.000Z",
@@ -251,10 +274,24 @@ const MOCK_GAMIFICATION: UserGamificationData = {
         toast_eligible: false,
         group_key: null,
         title: "업적 달성!",
-        body: "요리 100회를 채웠어요.",
+        body: "요리 100회 배지를 획득했어요.",
         category: "cooking",
         payload: {},
         created_at: "2026-06-14T10:06:00.000Z",
+        seen_at: null,
+      },
+      {
+        id: "notice-quest",
+        notification_type: "quest_completed",
+        priority: 70,
+        delivery_channel: "archive_only",
+        toast_eligible: false,
+        group_key: null,
+        title: "퀘스트 달성!",
+        body: "업적 카테고리에서 확인할 수 있어요.",
+        category: "tutorial",
+        payload: { quest_key: "tutorial_recipe_saved" },
+        created_at: "2026-06-14T10:02:00.000Z",
         seen_at: null,
       },
       {
@@ -264,8 +301,8 @@ const MOCK_GAMIFICATION: UserGamificationData = {
         delivery_channel: "archive_only",
         toast_eligible: false,
         group_key: null,
-        title: "+120 XP 반영",
-        body: "경험치가 반영되었어요.",
+        title: "+120 XP 획득",
+        body: "레시피 XP",
         category: "recipe",
         payload: {},
         created_at: "2026-06-14T09:58:00.000Z",
@@ -412,13 +449,14 @@ describe("MYPAGE achievement album UI", () => {
 
     const gradeDivider = within(header).getByTestId("mypage-profile-grade-divider");
     const gradeRow = within(header).getByTestId("mypage-profile-grade-row");
-    expect(within(gradeRow).getByTestId("mypage-profile-grade-image-diamond")).toBeTruthy();
-    expect(
-      within(gradeRow).getByTestId("mypage-profile-grade-image-diamond").style.width,
-    ).toBe("46px");
+    const gradeAsset = within(gradeRow).getByTestId("mypage-profile-grade-image-diamond");
+    expect(gradeAsset.className).toContain("rounded-full");
+    expect(gradeAsset.className).toContain("bg-[var(--surface)]");
+    expect(gradeAsset.style.width).toBe("54px");
     expect(within(gradeRow).getByText("Diamond")).toBeTruthy();
     expect(within(gradeRow).getByText("Lv.46")).toBeTruthy();
-    expect(within(gradeRow).getByText("Diamond").parentElement?.className).toContain("gap-6");
+    expect(within(gradeRow).getByText("Diamond").parentElement?.className).toContain("gap-1");
+    expect(within(gradeRow).getByText("Diamond").parentElement?.className).not.toContain("gap-6");
     expect(
       identity.compareDocumentPosition(gradeDivider) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
@@ -524,12 +562,13 @@ describe("MYPAGE achievement album UI", () => {
     expect(diamondRow.textContent).toContain("Diamond");
     const diamondAsset = within(diamondRow).getByTestId("grade-panel-grade-asset-diamond");
     const diamondImage = within(diamondRow).getByTestId("grade-panel-grade-image-diamond");
-    expect(diamondAsset.style.width).toBe("116px");
-    expect(diamondAsset.style.height).toBe("116px");
+    expect(diamondAsset.style.width).toBe("124px");
+    expect(diamondAsset.style.height).toBe("124px");
     expect(diamondAsset.className).toContain("overflow-hidden");
     expect(diamondAsset.className).toContain("rounded-full");
+    expect(diamondAsset.className).toContain("bg-[var(--surface)]");
     expect(diamondImage.tagName).toBe("IMG");
-    expect(diamondImage.className).toContain("scale-[1.14]");
+    expect(diamondImage.className).toContain("scale-[1.24]");
     expect(diamondImage.getAttribute("src")).toBe("/assets/growth/grades/diamond-spoon-badge.png");
     expect(within(diamondRow).queryByTestId("growth-grade-mark-diamond")).toBeNull();
     expect(within(dialog).getByText("현재 등급")).toBeTruthy();
@@ -595,16 +634,14 @@ describe("MYPAGE achievement album UI", () => {
     expect(screen.getByTestId("mypage-growth-detail-panel").className).toContain("overflow-x-hidden");
     const grid = within(dialog).getByTestId("achievement-track-grid");
     expect(grid.className).not.toContain("md:grid-cols-2");
-    expect(within(dialog).getByText("2 / 9")).toBeTruthy();
+    expect(within(dialog).getByText("4 / 9")).toBeTruthy();
     expect(within(dialog).getByRole("tab", { name: "튜토리얼" })).toBeTruthy();
     expect(within(dialog).getByRole("tab", { name: "식단·장보기·요리" })).toBeTruthy();
     expect(within(dialog).queryByRole("tab", { name: "요리" })).toBeNull();
     expect(within(dialog).getByTestId("achievement-track-tutorial").textContent).toContain(
       "획득",
     );
-    expect(within(dialog).getByTestId("achievement-track-tutorial").textContent).toContain(
-      "3 / 5",
-    );
+    expect(within(dialog).getAllByText("획득 3 / 7")).toHaveLength(1);
     expect(within(dialog).getByTestId("achievement-track-tutorial").textContent).toContain(
       "장보기 목록을 완료하면 열려요.",
     );
@@ -614,6 +651,24 @@ describe("MYPAGE achievement album UI", () => {
     expect(
       within(dialog).getByTestId("achievement-badge-row-tutorial").children,
     ).toHaveLength(7);
+    const tutorialTrack = within(dialog).getByTestId("achievement-track-tutorial");
+    expect(
+      within(tutorialTrack).getByTestId("achievement-track-progress-fill-tutorial").style.width,
+    ).toBe("43%");
+    expect(tutorialTrack.textContent).toContain("3 / 7");
+    expect(
+      within(tutorialTrack)
+        .getByTestId("growth-badge-image-tutorial_complete")
+        .closest('[data-testid="growth-badge-shape-ribbon"]'),
+    ).toBeTruthy();
+    expect(within(tutorialTrack).getByText("튜토리얼 완료")).toBeTruthy();
+    const tutorialCompleteListItem = within(tutorialTrack)
+      .getByTestId("growth-badge-image-tutorial_complete")
+      .closest("li");
+    expect(tutorialCompleteListItem).toBeTruthy();
+    expect(
+      within(tutorialCompleteListItem as HTMLElement).getByTestId("growth-badge-new-label").textContent,
+    ).toBe("NEW");
 
     await user.click(within(dialog).getByRole("tab", { name: "식단·장보기·요리" }));
     const cookingTrack = within(dialog).getByTestId("achievement-track-cooking");
@@ -676,12 +731,114 @@ describe("MYPAGE achievement album UI", () => {
     await waitFor(() => {
       expect(mockFetchArchive).toHaveBeenCalledWith({ limit: 20, cursor: null });
     });
-    expect(within(notificationDialog).getByText("레벨 46 달성")).toBeTruthy();
-    expect(within(notificationDialog).getByText("레벨이 올랐어요.")).toBeTruthy();
+    expect(within(notificationDialog).getByText("레벨업!")).toBeTruthy();
+    expect(within(notificationDialog).getByText("Diamond 등급 획득, Lv.46 달성")).toBeTruthy();
+    expect(within(notificationDialog).getByText("Lv.46 달성")).toBeTruthy();
+    expect(within(notificationDialog).getByText("등급 획득!")).toBeTruthy();
+    const gradeNoticeIcon = within(notificationDialog)
+      .getByTestId("mypage-notification-visual-notice-grade")
+      .querySelector("img");
+    expect(gradeNoticeIcon?.getAttribute("src")).toBe("/assets/growth/grades/diamond-spoon-badge.png");
+    expect(
+      within(notificationDialog)
+        .getByTestId("mypage-notification-visual-notice-grade")
+        .getAttribute("data-visual-kind"),
+    ).toBe("grade");
+    expect(within(notificationDialog).getByText("2026-06-14 10:15")).toBeTruthy();
+    expect(
+      within(notificationDialog).getByTestId("mypage-notification-item-notice-level").className,
+    ).toContain("border-[var(--growth-toast-level-border)]");
+    expect(
+      within(notificationDialog)
+        .getByTestId("mypage-notification-visual-notice-achievement")
+        .getAttribute("data-visual-kind"),
+    ).toBe("achievement");
 
     await user.click(within(notificationDialog).getByRole("tab", { name: "업적" }));
     expect(within(notificationDialog).getByText("업적 달성!")).toBeTruthy();
-    expect(within(notificationDialog).queryByText("+120 XP 반영")).toBeNull();
+    expect(within(notificationDialog).getByText("2026-06-14 10:06")).toBeTruthy();
+    expect(within(notificationDialog).getByText("퀘스트 달성!")).toBeTruthy();
+    expect(within(notificationDialog).getByText("2026-06-14 10:02")).toBeTruthy();
+    expect(within(notificationDialog).queryByText("+120 XP 획득")).toBeNull();
+  });
+
+  it("opens the notification archive when the global toast open event is dispatched", async () => {
+    render(
+      <MypageGrowthProfile
+        gamification={MOCK_GAMIFICATION}
+        gamificationState="ready"
+        progress={MOCK_PROGRESS}
+        progressState="ready"
+        variant="mobile"
+      />,
+    );
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(HOMECOOK_GAMIFICATION_OPEN_NOTIFICATIONS_EVENT));
+    });
+
+    const notificationDialog = screen.getByRole("dialog", { name: "알림 기록" });
+    await waitFor(() => {
+      expect(mockFetchArchive).toHaveBeenCalledWith({ limit: 20, cursor: null });
+    });
+    expect(within(notificationDialog).getByText("레벨업!")).toBeTruthy();
+  });
+
+  it("loads older notification archive pages from the notification dialog", async () => {
+    const user = userEvent.setup();
+    mockFetchArchive
+      .mockResolvedValueOnce({
+        items: MOCK_GAMIFICATION.notifications.archive_preview.slice(0, 1),
+        next_cursor: "older-cursor",
+        has_next: true,
+      })
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: "notice-leftover-old",
+            notification_type: "achievement_unlocked",
+            priority: 2,
+            delivery_channel: "archive_only",
+            toast_eligible: false,
+            group_key: "progress-event:leftover-old",
+            title: "업적 달성!",
+            body: "남은요리 정리 3 배지를 획득했어요. +8 XP",
+            category: "leftovers",
+            payload: {
+              achievement_key: "leftover_eaten_3",
+              badge_key: "leftover_eaten_3",
+            },
+            created_at: "2026-06-12T08:00:00.000Z",
+            seen_at: "2026-06-12T08:30:00.000Z",
+          },
+        ],
+        next_cursor: null,
+        has_next: false,
+      });
+
+    render(
+      <MypageGrowthProfile
+        gamification={MOCK_GAMIFICATION}
+        gamificationState="ready"
+        progress={MOCK_PROGRESS}
+        progressState="ready"
+        variant="mobile"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "알림 보기" }));
+    const notificationDialog = screen.getByRole("dialog", { name: "알림 기록" });
+
+    await waitFor(() => {
+      expect(mockFetchArchive).toHaveBeenCalledWith({ limit: 20, cursor: null });
+    });
+
+    await user.click(within(notificationDialog).getByRole("button", { name: "더 보기" }));
+
+    await waitFor(() => {
+      expect(mockFetchArchive).toHaveBeenCalledWith({ limit: 20, cursor: "older-cursor" });
+    });
+    expect(within(notificationDialog).getByText("남은요리 정리 3 배지를 획득했어요. +8 XP")).toBeTruthy();
   });
 
   it("keeps the new user state at Clay level 1 with the first tutorial active", async () => {

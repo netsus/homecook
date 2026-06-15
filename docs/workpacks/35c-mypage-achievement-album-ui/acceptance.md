@@ -15,6 +15,8 @@
 - [x] 업적/튜토리얼/알림 UI에는 reward claim CTA가 없다 <!-- omo:id=accept-no-claim-reward;stage=4;scope=frontend;review=5,6 -->
 - [x] 클라이언트가 achievement unlock, XP, grade를 계산하지 않고 서버 projection만 표시한다 <!-- omo:id=accept-server-authority;stage=4;scope=frontend;review=5,6 -->
 - [x] 기존 `GET /users/me/progress` progress-only boundary를 UI 타입/호출에서 침범하지 않는다 <!-- omo:id=accept-progress-boundary;stage=4;scope=frontend;review=5,6 -->
+- [x] 남은요리 다먹음 source action은 `leftover_eaten` XP, 남은요리 정리 업적, 알림 refresh를 만든다 <!-- omo:id=accept-leftover-eaten-xp-achievement-notification;stage=4;scope=backend;review=3,6 -->
+- [x] 알림 modal은 archive 첫 페이지 이후 cursor 기반 더 보기를 지원한다 <!-- omo:id=accept-notification-archive-pagination;stage=4;scope=frontend;review=5,6 -->
 - [x] leaderboard, rank, streak penalty, loot/random reward 표현이 없다 <!-- omo:id=accept-forbidden-game-patterns;stage=4;scope=frontend;review=5,6 -->
 - [x] 잠긴 업적 hint가 짧고 압박 없는 다음 행동 문구로 표시된다 <!-- omo:id=accept-locked-hints;stage=4;scope=frontend;review=5,6 -->
 
@@ -43,6 +45,7 @@
 - [x] `tests/mypage-achievement-album.test.tsx`가 profile header, modal, achievement state를 고정한다 <!-- omo:id=accept-vitest-achievement-album;stage=4;scope=frontend;review=5,6 -->
 - [x] `tests/mypage-growth-profile.test.tsx` 기존 성장 profile regression이 통과한다 <!-- omo:id=accept-vitest-growth-profile;stage=4;scope=frontend;review=5,6 -->
 - [x] `tests/user-gamification-api-client.test.ts` additive fields와 archive 소비가 통과한다 <!-- omo:id=accept-vitest-api-client;stage=4;scope=shared;review=6 -->
+- [x] `tests/leftovers.backend.test.ts`, `tests/growth-source-api-client.test.ts`, `tests/user-progress-xp-policy-v2.test.ts`, `tests/user-achievement-awards.test.ts`가 남은요리 XP/알림 회귀를 고정한다 <!-- omo:id=accept-vitest-leftover-eaten-progress;stage=4;scope=backend;review=3,6 -->
 
 ### Playwright
 

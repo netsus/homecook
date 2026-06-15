@@ -1,13 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { GrowthGradeMark } from "@/components/mypage/growth-grade-mark";
 import {
   MypageGrowthDetailDialog,
   type MypageGrowthPanel,
 } from "@/components/mypage/mypage-growth-detail-dialog";
+import { HOMECOOK_GAMIFICATION_OPEN_NOTIFICATIONS_EVENT } from "@/lib/gamification-events";
 import type { MypageGamificationState } from "@/components/mypage/mypage-gamification-card";
 import type { MypageProgressState } from "@/components/mypage/mypage-progress-card";
 import type { UserProfileData } from "@/lib/api/mypage";
@@ -264,20 +265,20 @@ function ProfileGradeAsset({
   gradeKey: string | null;
   size: "sm" | "md" | "lg";
 }) {
-  const pixelSize = size === "lg" ? 54 : size === "md" ? 46 : 34;
+  const pixelSize = size === "lg" ? 60 : size === "md" ? 54 : 38;
   const normalizedGradeKey = gradeKey ?? "clay";
 
   if (grade?.icon_url) {
     return (
       <span
         aria-hidden="true"
-        className="relative inline-flex shrink-0 items-center justify-center"
+        className="relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--surface)] shadow-[inset_0_0_0_1px_var(--line)]"
         data-testid={`mypage-profile-grade-image-${normalizedGradeKey}`}
         style={{ height: pixelSize, width: pixelSize }}
       >
         <Image
           alt=""
-          className="object-contain"
+          className="scale-[1.18] object-contain"
           fill
           sizes={`${pixelSize}px`}
           src={grade.icon_url}
@@ -326,6 +327,20 @@ export function MypageGrowthProfile({
       progressState === "idle" ||
       gamificationState === "loading" ||
       gamificationState === "idle");
+
+  useEffect(() => {
+    const openNotifications = () => setActivePanel("notifications");
+    window.addEventListener(
+      HOMECOOK_GAMIFICATION_OPEN_NOTIFICATIONS_EVENT,
+      openNotifications,
+    );
+    return () => {
+      window.removeEventListener(
+        HOMECOOK_GAMIFICATION_OPEN_NOTIFICATIONS_EVENT,
+        openNotifications,
+      );
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -511,7 +526,7 @@ export function MypageGrowthProfile({
                         gradeKey={gradeKey}
                         size="md"
                       />
-                      <span className="grid min-w-0 gap-6">
+                      <span className="grid min-w-0 gap-1">
                         {gradeLabel ? <span className="truncate">{gradeLabel}</span> : null}
                         {levelLabel ? (
                           <span className="shrink-0 text-[var(--brand)]">{levelLabel}</span>
