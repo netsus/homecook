@@ -2,7 +2,7 @@
 
 ## Goal
 
-34b가 서버에 쌓아둔 성장 notification을 사용자가 실제로 체감하게 한다. 여러 알림이 동시에 발생해도 `level_up > badge_unlocked > quest_completed > xp_awarded` 우선순위대로 toast stack으로 쌓여 보이고, 레벨업은 XP 적립보다 강한 시각 강도로 표시되며, 놓친 알림은 최근 성장 기록/알림 보관함(archive)에서 다시 볼 수 있다. 장보기 안내 문구와 리스트 기준/끼니 묶음 기준 quest 문구 분리로 장보기 성장 카운트의 혼동을 없앤다. 이 slice는 FE-only이며 34b API를 소비만 하고 backend public contract를 바꾸지 않는다.
+34b가 서버에 쌓아둔 성장 notification을 사용자가 실제로 체감하게 한다. 여러 알림이 동시에 발생해도 `level_up > achievement_unlocked/badge_unlocked > xp_awarded` 우선순위대로 toast stack으로 쌓여 보이고, 레벨업은 XP 적립보다 강한 시각 강도로 표시되며, 놓친 알림은 최근 성장 기록/알림 보관함(archive)에서 다시 볼 수 있다. 35c review-loop 이후 퀘스트 완료는 별도 toast가 아니라 업적 앨범 tutorial 상태로 표시한다. 장보기 안내 문구와 리스트 기준/끼니 묶음 기준 quest 문구 분리로 장보기 성장 카운트의 혼동을 없앤다. 이 slice는 FE-only이며 34b API를 소비만 하고 backend public contract를 바꾸지 않는다.
 
 ## Branches
 

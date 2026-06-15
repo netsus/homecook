@@ -27,6 +27,7 @@
 > 퀘스트는 신규/초기 사용자 튜토리얼 surface로 축소하고, 장기 목표는 업적 앨범으로 전환한다.
 > 업적 달성은 XP를 추가 지급하지 않는다. XP source와 cap은 34b 성장 backend model 계약을 유지한다.
 > 기존 `quests` API field는 호환성을 위해 유지하되 standard quest expansion은 중단한다.
+> 35c review-loop amendment: 퀘스트 완료는 업적 앨범 tutorial 상태로만 표시하고 `quest_completed` notification row/toast는 만들지 않는다. 기존 `quest_completed` notification row는 cleanup migration으로 제거한다.
 > 기존 유저 backfill은 achievement state만 조용히 반영하고 historical toast/archive row를 만들지 않는다.
 > 구현 Stage 2/4는 이 contract-evolution이 main에 merge된 후 35b/35c로 분리해 시작한다.
 

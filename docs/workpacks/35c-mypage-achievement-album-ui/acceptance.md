@@ -17,6 +17,7 @@
 - [x] 기존 `GET /users/me/progress` progress-only boundary를 UI 타입/호출에서 침범하지 않는다 <!-- omo:id=accept-progress-boundary;stage=4;scope=frontend;review=5,6 -->
 - [x] 남은요리 다먹음 source action은 `leftover_eaten` XP, 남은요리 정리 업적, 알림 refresh를 만든다 <!-- omo:id=accept-leftover-eaten-xp-achievement-notification;stage=4;scope=shared;review=5,6 -->
 - [x] 알림 modal은 archive 첫 페이지 이후 cursor 기반 더 보기를 지원한다 <!-- omo:id=accept-notification-archive-pagination;stage=4;scope=frontend;review=5,6 -->
+- [x] 튜토리얼 완료/레시피북 생성처럼 업적 달성 toast가 있는 경우 별도 `quest_completed` notification row를 만들지 않고 기존 row는 migration으로 제거한다 <!-- omo:id=accept-no-quest-completed-notification;stage=4;scope=shared;review=5,6 -->
 - [x] leaderboard, rank, streak penalty, loot/random reward 표현이 없다 <!-- omo:id=accept-forbidden-game-patterns;stage=4;scope=frontend;review=5,6 -->
 - [x] 잠긴 업적 hint가 짧고 압박 없는 다음 행동 문구로 표시된다 <!-- omo:id=accept-locked-hints;stage=4;scope=frontend;review=5,6 -->
 
