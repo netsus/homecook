@@ -14,6 +14,10 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import {
+  awardUserProgressEvent,
+  type UserProgressDbClient,
+} from "@/lib/server/user-progress";
+import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
@@ -61,7 +65,7 @@ interface LeftoverMutationDbClient {
 }
 
 type LeftoverMutationAuthedDbClient =
-  LeftoverMutationDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
+  LeftoverMutationDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
 
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
   const authResult = await routeClient.auth.getUser();
@@ -145,6 +149,18 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (updateResult.error || !updateResult.data) {
     return fail("INTERNAL_ERROR", "남은 요리를 다먹음 처리하지 못했어요.", 500);
+  }
+
+  try {
+    await awardUserProgressEvent(dbClient, {
+      userId: user.id,
+      eventType: "leftover_eaten",
+      sourceTable: "leftover_dishes",
+      sourceId: leftoverId,
+      occurredAt: eatenAt,
+    });
+  } catch {
+    // XP projection is secondary; leftover mutation remains authoritative.
   }
 
   try {

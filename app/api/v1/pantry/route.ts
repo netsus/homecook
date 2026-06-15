@@ -304,8 +304,8 @@ export async function POST(request: Request) {
   const items = toPantryItems(insertResult.data);
 
   try {
-    await Promise.all(items.map((item) =>
-      recordUserGrowthActivityEvent(auth.dbClient, {
+    for (const item of items) {
+      await recordUserGrowthActivityEvent(auth.dbClient, {
         userId: auth.user.id,
         activityType: "pantry_item_added",
         category: "pantry",
@@ -314,8 +314,8 @@ export async function POST(request: Request) {
         sourceId: item.id,
         sourceMeta: { ingredient_id: item.ingredient_id },
         occurredAt: item.created_at,
-      }),
-    ));
+      });
+    }
   } catch {
     // Activity history is secondary; pantry mutation remains authoritative.
   }

@@ -3,7 +3,8 @@ export type UserProgressEventType =
   | "shopping_completed"
   | "recipe_saved"
   | "custom_book_created"
-  | "planner_registered";
+  | "planner_registered"
+  | "leftover_eaten";
 
 export type UserProgressLevelCurveVersion = "v1" | "v2";
 
@@ -34,6 +35,7 @@ export interface UserProgressEventCounts {
   custom_book_created: number;
   planner_registered_first: number;
   planner_registered_repeat: number;
+  leftover_eaten?: number;
 }
 
 export interface UserProgressData {

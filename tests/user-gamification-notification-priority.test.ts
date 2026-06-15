@@ -80,6 +80,68 @@ describe("user gamification notification priority", () => {
     });
   });
 
+  it("uses notification-type-first copy instead of repeating achievement content", () => {
+    expect(toNotificationData({
+      id: "n-achievement",
+      notification_type: "achievement_unlocked",
+      priority: 2,
+      delivery_channel: "toast",
+      toast_eligible: true,
+      group_key: "progress-event:e1",
+      payload_json: {
+        achievement_key: "recipe_saved_5",
+        title: "레시피 보관 5회",
+        description: "저장한 레시피와 내가 등록한 레시피를 꾸준히 모았어요.",
+      },
+      created_at: "2026-06-10T10:00:00.000Z",
+      seen_at: null,
+    })).toMatchObject({
+      title: "업적 달성!",
+      body: "레시피 보관 5회 배지를 획득했어요.",
+      category: "recipe",
+    });
+
+    expect(toNotificationData({
+      id: "n-badge",
+      notification_type: "badge_unlocked",
+      priority: 2,
+      delivery_channel: "toast",
+      toast_eligible: true,
+      group_key: "progress-event:e1",
+      payload_json: {
+        badge_key: "first_recipe_saved",
+        label: "첫 레시피 저장",
+        description: "처음으로 다시 보고 싶은 레시피를 저장했어요.",
+      },
+      created_at: "2026-06-10T10:00:00.000Z",
+      seen_at: null,
+    })).toMatchObject({
+      title: "새 배지 획득!",
+      body: "마이페이지에서 새 배지를 확인해 보세요.",
+      category: "recipe",
+    });
+
+    expect(toNotificationData({
+      id: "n-quest",
+      notification_type: "quest_completed",
+      priority: 3,
+      delivery_channel: "toast",
+      toast_eligible: true,
+      group_key: "progress-event:e1",
+      payload_json: {
+        quest_key: "first_recipe_saved",
+        title: "첫 레시피 저장",
+        description: "첫 레시피 저장 튜토리얼을 완료했어요.",
+      },
+      created_at: "2026-06-10T10:00:00.000Z",
+      seen_at: null,
+    })).toMatchObject({
+      title: "퀘스트 달성!",
+      body: "업적 카테고리에서 확인할 수 있어요.",
+      category: "tutorial",
+    });
+  });
+
   it("keeps server-side priority and additive notification metadata", () => {
     expect(toNotificationData({
       id: "n1",
@@ -99,8 +161,8 @@ describe("user gamification notification priority", () => {
       toast_eligible: true,
       group_key: "progress-event:e1",
       payload: { level: 3 },
-      title: "레벨 3 달성",
-      body: "새로운 레벨에 도달했어요.",
+      title: "레벨업!",
+      body: "Lv.3 달성",
       category: "cooking",
       created_at: "2026-06-10T10:00:00.000Z",
       seen_at: null,
@@ -124,12 +186,12 @@ describe("user gamification notification priority", () => {
       created_at: "2026-06-10T10:00:00.000Z",
       seen_at: null,
     })).toMatchObject({
-      title: "레벨 5 달성",
-      body: "레벨이 올랐어요.",
+      title: "레벨업!",
+      body: "Lv.5 달성",
     });
   });
 
-  it("mentions grade when a level-up enters a new grade band", () => {
+  it("uses grade acquisition copy only for explicit grade-up notifications", () => {
     expect(toNotificationData({
       id: "n-level-new-grade",
       notification_type: "level_up",
@@ -140,14 +202,36 @@ describe("user gamification notification priority", () => {
       payload_json: {
         previous_level: 7,
         current_level: 8,
+        grade_upgrade: true,
         previous_grade: { grade_key: "wood", label: "Wood" },
         grade: { grade_key: "steel", label: "Steel" },
       },
       created_at: "2026-06-10T10:00:00.000Z",
       seen_at: null,
     })).toMatchObject({
-      title: "레벨 8 달성",
-      body: "Steel 등급이 되었어요.",
+      title: "등급 획득!",
+      body: "Steel 등급 획득, Lv.8 달성",
+    });
+
+    expect(toNotificationData({
+      id: "n-level-only-grade-crossing",
+      notification_type: "level_up",
+      priority: 1,
+      delivery_channel: "toast",
+      toast_eligible: true,
+      group_key: "progress-event:e2",
+      payload_json: {
+        previous_level: 7,
+        current_level: 8,
+        grade_upgrade: false,
+        previous_grade: { grade_key: "wood", label: "Wood" },
+        grade: { grade_key: "steel", label: "Steel" },
+      },
+      created_at: "2026-06-10T10:00:00.000Z",
+      seen_at: null,
+    })).toMatchObject({
+      title: "레벨업!",
+      body: "Lv.8 달성",
     });
   });
 
@@ -238,12 +322,112 @@ describe("user gamification notification priority", () => {
       shape_key: USER_BADGE_METADATA.first_recipe_saved.shape_key,
       locked_hint: expect.any(String),
     });
-    expect(data.notifications.priority_unseen.map((item) => item.id)).toEqual(["level", "xp"]);
+    expect(data.notifications.priority_unseen.map((item) => item.id)).toEqual(["level"]);
+    expect(data.notifications.priority_unseen[0]?.payload).toMatchObject({
+      merged_notification_ids: ["level", "xp"],
+      merged_xp_delta: 0,
+    });
     expect(data.notifications.unseen.map((item) => item.id)).not.toContain("silent");
     expect(data.notifications.archive_preview.map((item) => item.id)).toEqual([
       "archive-only",
-      "xp",
       "level",
+    ]);
+  });
+
+  it("keeps legacy one-shot achievement rows visible at projection read time", () => {
+    const data = buildUserGamificationData({
+      progress: {
+        level: {
+          current_level: 1,
+          total_xp: 60,
+          current_level_start_xp: 0,
+          next_level_start_xp: 100,
+          xp_into_current_level: 60,
+          xp_to_next_level: 40,
+          progress_ratio: 0.6,
+          progress_percent: 60,
+        },
+        event_counts: {
+          cooking_completed: 1,
+          shopping_completed: 0,
+          recipe_saved_distinct_ever: 0,
+          custom_book_created: 0,
+          planner_registered_first: 0,
+          planner_registered_repeat: 0,
+        },
+        last_updated_at: "2026-06-10T10:00:00.000Z",
+      },
+      badgeRows: [],
+      questRows: [],
+      achievementRows: [],
+      activityRows: [],
+      achievementCounts: {
+        pantry_distinct_ingredients: 0,
+        leftover_eaten_manual: 0,
+        recipe_registered: 0,
+        shopping_list_created: 0,
+      },
+      notificationRows: [
+        {
+          id: "legacy-one-shot",
+          notification_type: "achievement_unlocked",
+          priority: 2,
+          delivery_channel: "toast",
+          toast_eligible: true,
+          group_key: "progress-event:e1",
+          payload_json: {
+            achievement_key: "cooking_completed_1",
+            category_key: "cooking",
+            track_key: "cooking_completed",
+          },
+          created_at: "2026-06-10T10:00:00.000Z",
+          seen_at: null,
+        },
+        {
+          id: "tutorial-one-shot",
+          notification_type: "achievement_unlocked",
+          priority: 2,
+          delivery_channel: "toast",
+          toast_eligible: true,
+          group_key: "progress-event:e1",
+          payload_json: {
+            achievement_key: "tutorial_cooking_complete",
+            category_key: "tutorial",
+          },
+          created_at: "2026-06-10T10:01:00.000Z",
+          seen_at: null,
+        },
+        {
+          id: "xp",
+          notification_type: "xp_awarded",
+          priority: 4,
+          delivery_channel: "toast",
+          toast_eligible: true,
+          group_key: "progress-event:e1",
+          payload_json: { event_type: "cooking_completed", xp_delta: 60 },
+          created_at: "2026-06-10T10:02:00.000Z",
+          seen_at: null,
+        },
+      ],
+    });
+
+    expect(data.notifications.priority_unseen.map((item) => item.id)).toEqual([
+      "tutorial-one-shot",
+      "legacy-one-shot",
+    ]);
+    expect(data.notifications.priority_unseen[0]?.payload).toMatchObject({
+      merged_xp_delta: 60,
+    });
+    expect(data.notifications.priority_unseen[0]?.payload.merged_notification_ids).toEqual(
+      expect.arrayContaining(["tutorial-one-shot", "xp"]),
+    );
+    expect(data.notifications.archive_preview.map((item) => item.id)).toEqual([
+      "tutorial-one-shot",
+      "legacy-one-shot",
+    ]);
+    expect(data.notifications.unseen.map((item) => item.id)).toEqual([
+      "tutorial-one-shot",
+      "legacy-one-shot",
     ]);
   });
 

@@ -50,8 +50,8 @@ const notifications = [
     delivery_channel: "archive_only",
     toast_eligible: false,
     group_key: null,
-    title: "레벨 46 달성",
-    body: "레벨이 올랐어요.",
+    title: "레벨업!",
+    body: "Lv.46 달성",
     category: "cooking",
     payload: {},
     created_at: "2026-06-14T10:15:00.000Z",
@@ -65,7 +65,7 @@ const notifications = [
     toast_eligible: false,
     group_key: null,
     title: "업적 달성!",
-    body: "요리 100회를 채웠어요.",
+    body: "요리 100회 배지를 획득했어요.",
     category: "cooking",
     payload: {},
     created_at: "2026-06-14T10:06:00.000Z",
@@ -78,8 +78,8 @@ const notifications = [
     delivery_channel: "archive_only",
     toast_eligible: false,
     group_key: null,
-    title: "+120 XP 반영",
-    body: "경험치가 반영되었어요.",
+    title: "+120 XP 획득",
+    body: "레시피 XP",
     category: "recipe",
     payload: {},
     created_at: "2026-06-14T09:58:00.000Z",
@@ -153,7 +153,7 @@ function buildGamification(archivePreview = notifications) {
     quests: { active: [], completed_recent: [] },
     tutorial: {
       category_key: "tutorial",
-      completed_count: 1,
+      completed_count: 2,
       total_count: 7,
       active_steps: [
         {
@@ -166,12 +166,12 @@ function buildGamification(archivePreview = notifications) {
       ],
     },
     achievement_album: {
-      summary: { earned_count: 2, total_count: 9, completed_category_count: 0 },
+      summary: { earned_count: 3, total_count: 9, completed_category_count: 0 },
       categories: [
         {
           category_key: "tutorial",
           label: "튜토리얼",
-          earned_count: 1,
+          earned_count: 2,
           total_count: 7,
           milestones: [
             milestone("tutorial_recipe_saved", "첫 레시피 저장하기", "earned", 1, 1, "bookmark"),
@@ -180,7 +180,7 @@ function buildGamification(archivePreview = notifications) {
             milestone("tutorial_shopping_list_create", "첫 장보기 목록 만들기", "locked", 0, 1, "leaf"),
             milestone("tutorial_cooking_complete", "첫 집밥 완료하기", "locked", 0, 1, "pot"),
             milestone("tutorial_recipebook_created", "첫 레시피북 만들기", "locked", 0, 1, "plate"),
-            milestone("tutorial_complete", "튜토리얼 완료", "locked", 1, 6, "ribbon"),
+            milestone("tutorial_complete", "튜토리얼 완료", "earned", 6, 6, "ribbon"),
           ],
         },
         {
@@ -424,7 +424,7 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     await expect(mobile.page.getByRole("tab", { name: "튜토리얼" })).toBeVisible();
     await expect(mobile.page.getByRole("tab", { name: "식단·장보기·요리" })).toBeVisible();
     await expect(mobile.page.getByRole("tab", { exact: true, name: "요리" })).toHaveCount(0);
-    await expect(mobile.page.getByTestId("achievement-track-tutorial")).toContainText("3 / 5");
+    await expect(mobile.page.getByTestId("achievement-track-tutorial")).toContainText("2 / 7");
     await expect(mobile.page.getByTestId("achievement-track-tutorial")).toContainText("완료");
     await expect(mobile.page.getByTestId("achievement-badge-row-tutorial").locator("> *")).toHaveCount(7);
     await mobile.page.screenshot({
@@ -446,11 +446,11 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     await mobile.page.getByRole("button", { name: "알림 보기" }).click();
     const notificationDialog = mobile.page.getByRole("dialog", { name: "알림 기록" });
     await expect(notificationDialog).toBeVisible();
-    await expect(notificationDialog.getByText("레벨 46 달성")).toBeVisible();
-    await expect(notificationDialog.getByText("레벨이 올랐어요.")).toBeVisible();
+    await expect(notificationDialog.getByText("레벨업!")).toBeVisible();
+    await expect(notificationDialog.getByText("Lv.46 달성")).toBeVisible();
     await notificationDialog.getByRole("tab", { name: "업적" }).click();
     await expect(notificationDialog.getByText("업적 달성!")).toBeVisible();
-    await expect(notificationDialog.getByText("+120 XP 반영")).toHaveCount(0);
+    await expect(notificationDialog.getByText("+120 XP 획득")).toHaveCount(0);
     await mobile.page.screenshot({
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "mobile-notification-archive-modal.png"),

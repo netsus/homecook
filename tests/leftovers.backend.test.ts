@@ -12,6 +12,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 
   return fallbackMessage;
 });
+const awardUserProgressEvent = vi.fn();
 const recordUserGrowthActivityEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -23,6 +24,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/user-progress", () => ({
+  awardUserProgressEvent,
 }));
 
 vi.mock("@/lib/server/user-growth-activity", () => ({
@@ -241,9 +246,16 @@ describe("GET /api/v1/leftovers", () => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
+    awardUserProgressEvent.mockReset();
     recordUserGrowthActivityEvent.mockReset();
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    awardUserProgressEvent.mockResolvedValue({
+      awarded: true,
+      duplicate: false,
+      error: null,
+      summary: null,
+    });
     recordUserGrowthActivityEvent.mockResolvedValue({ recorded: true, duplicate: false, error: null });
     createServiceRoleClient.mockReturnValue(null);
   });
@@ -484,9 +496,16 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
+    awardUserProgressEvent.mockReset();
     recordUserGrowthActivityEvent.mockReset();
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    awardUserProgressEvent.mockResolvedValue({
+      awarded: true,
+      duplicate: false,
+      error: null,
+      summary: null,
+    });
     recordUserGrowthActivityEvent.mockResolvedValue({ recorded: true, duplicate: false, error: null });
     createServiceRoleClient.mockReturnValue(null);
     vi.useFakeTimers();
@@ -558,6 +577,13 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
       },
       error: null,
     });
+    expect(awardUserProgressEvent).toHaveBeenCalledWith(db, {
+      userId: "user-1",
+      eventType: "leftover_eaten",
+      sourceTable: "leftover_dishes",
+      sourceId: leftoverId,
+      occurredAt: nowIso,
+    });
     expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(db, {
       userId: "user-1",
       activityType: "leftover_eaten",
@@ -593,6 +619,7 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
 
     expect(response.status).toBe(200);
     expect(update).not.toHaveBeenCalled();
+    expect(awardUserProgressEvent).not.toHaveBeenCalled();
     expect(recordUserGrowthActivityEvent).not.toHaveBeenCalled();
     expect(body.data).toEqual({
       id: leftoverId,

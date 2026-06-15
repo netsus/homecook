@@ -1,13 +1,21 @@
 "use client";
 
 import Image from "next/image";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   fetchUserGamification,
   markUserGamificationNotificationsSeen,
 } from "@/lib/api/user-gamification";
-import { HOMECOOK_GAMIFICATION_REFRESH_EVENT } from "@/lib/gamification-events";
+import {
+  HOMECOOK_GAMIFICATION_REFRESH_EVENT,
+  notifyGamificationOpenNotifications,
+} from "@/lib/gamification-events";
+import {
+  compactGrowthNotificationsForDisplay,
+  getGrowthNotificationIdsForSeen,
+  isVisibleGrowthToastNotification,
+} from "@/lib/gamification-notifications";
 import achievementIconManifest from "@/public/assets/growth/achievement-icons-v3-4/manifest.json";
 import type {
   UserGamificationBadgeCategory,
@@ -19,7 +27,7 @@ import type {
 const MOBILE_VISIBLE_MAX = 2;
 const DESKTOP_VISIBLE_MAX = 3;
 const DESKTOP_MEDIA_QUERY = "(min-width: 768px)";
-const TOAST_DURATION_MS = 3600;
+const TOAST_DURATION_MS = 6000;
 
 type ToastTone = "grade-up" | "level-up" | "achievement" | "badge" | "quest" | "xp";
 type ToastVisual =
@@ -40,6 +48,7 @@ interface ToastView {
   title: string;
   body: string;
   groupKey: string | null;
+  notificationIds: string[];
 }
 
 const TONE_BY_TYPE: Omit<Record<UserGamificationNotificationType, ToastTone>, "level_up"> = {
@@ -81,6 +90,7 @@ const ACHIEVEMENT_ICON_SRC_BY_KEY = new Map(
 const XP_ICON_BY_EVENT_TYPE: Record<string, string> = {
   cooking_completed: "/assets/growth/achievement-icons-v3-4/cooking_completed_3.png",
   custom_book_created: "/assets/growth/achievement-icons-v3-4/tutorial_recipebook_created.png",
+  leftover_eaten: "/assets/growth/achievement-icons-v3-4/leftover_eaten_3.png",
   planner_registered: "/assets/growth/achievement-icons-v3-4/planner_registered_3.png",
   recipe_saved: "/assets/growth/achievement-icons-v3-4/recipe_saved_5.png",
   shopping_completed: "/assets/growth/achievement-icons-v3-4/shopping_completed_3.png",
@@ -117,12 +127,7 @@ function normalizeGradeKey(gradeKey: string) {
 }
 
 function isGradeUpgrade(payload: Record<string, unknown>) {
-  const grade = toRecord(payload.grade);
-  const previousGrade = toRecord(payload.previous_grade);
-  const gradeKey = toText(grade.grade_key);
-  const previousGradeKey = toText(previousGrade.grade_key);
-
-  return Boolean(gradeKey && (!previousGradeKey || gradeKey !== previousGradeKey));
+  return payload.grade_upgrade === true;
 }
 
 function gradeIconSrc(payload: Record<string, unknown>) {
@@ -132,6 +137,11 @@ function gradeIconSrc(payload: Record<string, unknown>) {
 
   const gradeKey = normalizeGradeKey(toText(grade.grade_key));
   return `/assets/growth/grades/${gradeKey}-spoon-badge.png`;
+}
+
+function gradeName(payload: Record<string, unknown>) {
+  const grade = toRecord(payload.grade);
+  return toText(grade.label) || toText(grade.grade_key);
 }
 
 function getLevelLabel(payload: Record<string, unknown>) {
@@ -213,22 +223,29 @@ function toToastView(
     if (notification.notification_type === "level_up") {
       const level =
         toNumber(payload.current_level) || toNumber(payload.level);
-      title = title || (level ? `레벨 ${level} 달성` : "레벨업");
-      body = body || "새로운 레벨에 도달했어요.";
+      title = title || (isGradeUpgrade(payload) ? "등급 획득!" : "레벨업!");
+      const levelBody = level ? `Lv.${level} 달성` : "새로운 레벨에 도달했어요.";
+      const label = gradeName(payload);
+      body = body ||
+        (isGradeUpgrade(payload) && label
+          ? `${label} 등급 획득, ${levelBody}`
+          : levelBody);
     } else if (
       notification.notification_type === "badge_unlocked" ||
       notification.notification_type === "achievement_unlocked"
     ) {
-      title = title || `새 배지: ${toText(payload.label) || "집밥 배지"}`;
-      body = body || "마이페이지에서 확인할 수 있어요.";
+      title = title || (notification.notification_type === "achievement_unlocked" ? "업적 달성!" : "새 배지 획득!");
+      body = body || (notification.notification_type === "achievement_unlocked"
+        ? `${toText(payload.title) || toText(payload.label) || "새 업적"} 배지를 획득했어요.`
+        : "마이페이지에서 새 배지를 확인해 보세요.");
     } else if (notification.notification_type === "quest_completed") {
-      title = title || `퀘스트 달성: ${toText(payload.title) || "집밥 루틴"}`;
-      body = body || "다음 루틴도 이어가 보세요.";
+      title = title || "퀘스트 달성!";
+      body = body || "업적 카테고리에서 확인할 수 있어요.";
     } else {
       const label = toText(payload.label) || "집밥 활동";
       const xpDelta = toNumber(payload.xp_delta);
-      title = title || (xpDelta ? `${label} +${xpDelta} XP` : label);
-      body = body || "성장 기록에 반영됐어요.";
+      title = title || (xpDelta ? `+${xpDelta} XP 획득` : "XP 획득");
+      body = body || `${label} XP`;
     }
   }
 
@@ -240,6 +257,7 @@ function toToastView(
     title,
     body,
     groupKey: notification.group_key ?? null,
+    notificationIds: getGrowthNotificationIdsForSeen(notification),
   };
 }
 
@@ -268,11 +286,8 @@ function selectToastSource(data: {
       ? priority
       : (data.notifications.unseen ?? []);
 
-  return source.filter(
-    (item) =>
-      item.delivery_channel !== "silent" &&
-      item.toast_eligible !== false &&
-      !item.seen_at,
+  return compactGrowthNotificationsForDisplay(
+    source.filter(isVisibleGrowthToastNotification),
   );
 }
 
@@ -402,9 +417,10 @@ export function GrowthToastStack() {
       }
       setViews((current) => current.filter((view) => view.id !== id));
       // Only rendered toasts are marked seen on dismiss.
-      markSeen([id]);
+      const view = views.find((item) => item.id === id);
+      markSeen(view?.notificationIds ?? [id]);
     },
-    [markSeen],
+    [markSeen, views],
   );
 
   const refresh = useCallback(async () => {
@@ -437,19 +453,6 @@ export function GrowthToastStack() {
   // Only visible toasts get auto-dismiss timers; queued rows stay unseen.
   const visible = views.slice(0, visibleMax);
   const queued = views.slice(visibleMax);
-  const groupedKeys = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const view of views) {
-      if (!view.groupKey) continue;
-      counts.set(view.groupKey, (counts.get(view.groupKey) ?? 0) + 1);
-    }
-    return new Set(
-      [...counts.entries()]
-        .filter(([, count]) => count > 1)
-        .map(([key]) => key),
-    );
-  }, [views]);
-
   useEffect(() => {
     const timers = timersRef.current;
     const visibleIds = new Set(visible.map((view) => view.id));
@@ -481,12 +484,25 @@ export function GrowthToastStack() {
   }, []);
 
   const dismissCollapsed = useCallback(() => {
-    const queuedIds = queued.map((view) => view.id);
+    const queuedIds = queued.flatMap((view) => view.notificationIds);
     if (queuedIds.length === 0) return;
     // Queued notifications become seen only when the collapsed summary is used.
     setViews((current) => current.filter((view) => !queuedIds.includes(view.id)));
     markSeen(queuedIds);
   }, [markSeen, queued]);
+
+  const openNotifications = useCallback(() => {
+    notifyGamificationOpenNotifications();
+  }, []);
+
+  const openNotificationsFromKeyboard = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      openNotifications();
+    },
+    [openNotifications],
+  );
 
   if (views.length === 0) {
     return null;
@@ -501,7 +517,7 @@ export function GrowthToastStack() {
         <div
           key={view.id}
           className={[
-            "pointer-events-auto relative rounded-[var(--radius-card)] border px-3 py-3 pl-4",
+            "pointer-events-auto relative overflow-visible rounded-[var(--radius-card)] border px-3 py-3 pl-4",
             toneClass(view.tone),
           ].join(" ")}
           data-testid="growth-toast"
@@ -509,7 +525,10 @@ export function GrowthToastStack() {
           data-notification-id={view.id}
           data-notification-type={view.type}
           data-tone={view.tone}
+          onClick={openNotifications}
+          onKeyDown={openNotificationsFromKeyboard}
           role={view.tone === "level-up" || view.tone === "grade-up" ? "alert" : "status"}
+          tabIndex={0}
         >
           <span
             aria-hidden="true"
@@ -530,19 +549,14 @@ export function GrowthToastStack() {
               <p className="mt-0.5 text-[12px] font-semibold leading-[1.35] opacity-90">
                 {view.body}
               </p>
-              {view.groupKey && groupedKeys.has(view.groupKey) ? (
-                <span
-                  className="mt-2 inline-flex rounded-full bg-current/10 px-2 py-0.5 text-[10px] font-extrabold"
-                  data-testid="growth-toast-group-chip"
-                >
-                  같은 활동
-                </span>
-              ) : null}
             </div>
             <button
               aria-label="알림 닫기"
               className="self-start shrink-0 rounded-full px-1.5 text-[14px] font-extrabold text-[var(--text-2)] opacity-70"
-              onClick={() => dismiss(view.id)}
+              onClick={(event) => {
+                event.stopPropagation();
+                dismiss(view.id);
+              }}
               type="button"
             >
               ×

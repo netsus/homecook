@@ -129,7 +129,7 @@ export function MypageBadgeGuideDialog({
         </div>
 
         <p className="mt-2 text-[11px] font-semibold leading-[1.45] text-[var(--text-3)]">
-          첫 경험치 기준이에요. 같은 활동을 반복하면 경험치가 조금 더 작게 쌓여요.
+          경험치는 누적 기록과 활동 기록을 기준으로 안정적으로 계산돼요.
         </p>
 
         <div className="mt-4">

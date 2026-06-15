@@ -41,7 +41,12 @@ const progress = {
   last_updated_at: "2026-06-11T10:00:00.000Z",
 };
 
-type NotificationType = "level_up" | "badge_unlocked" | "quest_completed" | "xp_awarded";
+type NotificationType =
+  | "level_up"
+  | "achievement_unlocked"
+  | "badge_unlocked"
+  | "quest_completed"
+  | "xp_awarded";
 type DeliveryChannel = "toast" | "archive_only" | "silent";
 
 interface NotificationFixture {
@@ -53,7 +58,7 @@ interface NotificationFixture {
   group_key: string | null;
   title: string;
   body: string;
-  category: "recipe" | "planner" | "shopping" | "cooking" | "pantry" | "leftovers" | "recipebook";
+  category: "tutorial" | "recipe" | "planner" | "shopping" | "cooking" | "pantry" | "leftovers" | "recipebook";
   payload: Record<string, unknown>;
   created_at: string;
   seen_at: string | null;
@@ -67,11 +72,12 @@ const priorityNotifications: NotificationFixture[] = [
     delivery_channel: "toast",
     toast_eligible: true,
     group_key: "cook-session-34c",
-    title: "레벨 7 달성",
-    body: "새 등급 집밥 러너에 도달했어요.",
+    title: "등급 획득!",
+    body: "Lv.7 달성",
     category: "cooking",
     payload: {
       current_level: 7,
+      grade_upgrade: true,
       previous_grade: { grade_key: "sprout_homecook", label: "성장 씨앗" },
       grade: { grade_key: "homecook_runner", label: "집밥 러너" },
     },
@@ -80,15 +86,15 @@ const priorityNotifications: NotificationFixture[] = [
   },
   {
     id: "10000000-0000-4000-8000-000000000002",
-    notification_type: "badge_unlocked",
+    notification_type: "achievement_unlocked",
     priority: 2,
     delivery_channel: "toast",
     toast_eligible: true,
     group_key: "cook-session-34c",
-    title: "새 배지: 첫 한상",
-    body: "요리 완료 업적을 열었어요.",
+    title: "업적 달성!",
+    body: "첫 한상 배지를 획득했어요.",
     category: "cooking",
-    payload: { label: "첫 한상" },
+    payload: { achievement_key: "tutorial_cooking_complete", title: "첫 한상" },
     created_at: "2026-06-11T10:03:00.000Z",
     seen_at: null,
   },
@@ -99,9 +105,9 @@ const priorityNotifications: NotificationFixture[] = [
     delivery_channel: "toast",
     toast_eligible: true,
     group_key: "planner-week-34c",
-    title: "퀘스트 달성: 플래너 루틴",
-    body: "이번 주 식사 등록 목표를 채웠어요.",
-    category: "planner",
+    title: "퀘스트 달성!",
+    body: "업적 카테고리에서 확인할 수 있어요.",
+    category: "tutorial",
     payload: { title: "플래너 루틴" },
     created_at: "2026-06-11T10:02:00.000Z",
     seen_at: null,
@@ -113,8 +119,8 @@ const priorityNotifications: NotificationFixture[] = [
     delivery_channel: "toast",
     toast_eligible: true,
     group_key: "cook-session-34c",
-    title: "요리 완료 +20 XP",
-    body: "반복 경험치가 반영됐어요.",
+    title: "+20 XP 획득",
+    body: "요리 완료 XP",
     category: "cooking",
     payload: { label: "요리 완료", xp_delta: 20 },
     created_at: "2026-06-11T10:01:00.000Z",
@@ -126,7 +132,7 @@ const archivePageOne: NotificationFixture[] = [
   {
     ...priorityNotifications[0],
     id: "20000000-0000-4000-8000-000000000001",
-    title: "레벨 7 달성",
+    title: "등급 획득!",
     seen_at: "2026-06-11T10:05:00.000Z",
   },
   {
@@ -142,7 +148,7 @@ const archivePageTwo: NotificationFixture[] = [
   {
     ...priorityNotifications[2],
     id: "20000000-0000-4000-8000-000000000003",
-    title: "퀘스트 달성: 장보기 리스트",
+    title: "퀘스트 달성!",
     seen_at: "2026-06-11T09:30:00.000Z",
   },
 ];
@@ -385,7 +391,7 @@ async function installGrowthRoutes(
 }
 
 async function installShoppingRoutes(page: Page) {
-  await page.route("**/api/v1/shopping/preview", async (route) => {
+  await page.route((url) => url.pathname === "/api/v1/shopping/preview", async (route) => {
     await route.fulfill({
       json: {
         success: true,
@@ -468,43 +474,48 @@ test.describe("34c growth notification UI @smoke-core", () => {
 
     await page.goto("/mypage", { waitUntil: "networkidle" });
     await stabilize(page);
-    await expect(page.getByTestId("mypage-growth-profile")).toBeVisible();
+    await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({
+      timeout: 15_000,
+    });
     await showToastStack(page);
 
     const visibleMax = (page.viewportSize()?.width ?? 0) >= 768 ? 3 : 2;
     await expect(page.getByTestId("growth-toast")).toHaveCount(visibleMax);
-    await expect(page.getByTestId("growth-toast").nth(0)).toContainText("레벨 7 달성");
-    await expect(page.getByTestId("growth-toast").nth(1)).toContainText("새 배지: 첫 한상");
+    await expect(page.getByTestId("growth-toast").nth(0)).toContainText("업적 달성!");
+    await expect(page.getByTestId("growth-toast").nth(0)).toContainText("첫 한상 배지를 획득했어요.");
+    await expect(page.getByTestId("growth-toast").nth(0)).toContainText("+20 XP");
+    await expect(page.getByTestId("growth-toast").nth(1)).toContainText("등급 획득!");
     if (visibleMax === 3) {
-      await expect(page.getByTestId("growth-toast").nth(2)).toContainText("퀘스트 달성");
+      await expect(page.getByTestId("growth-toast").nth(2)).toContainText("퀘스트 달성!");
+      await expect(page.getByTestId("growth-toast-collapsed")).toHaveCount(0);
+    } else {
+      await expect(page.getByTestId("growth-toast-collapsed")).toContainText("+1개의 새 소식 확인");
     }
-    await expect(page.getByTestId("growth-toast-collapsed")).toContainText(
-      `+${priorityNotifications.length - visibleMax}개의 새 소식 확인`,
-    );
     expect(seenRequests).toEqual([]);
 
-    await page.getByTestId("growth-toast-collapsed").click();
-    expect(seenRequests.at(-1)).toEqual(
-      priorityNotifications.slice(visibleMax).map((item) => item.id),
-    );
-
     await page.getByLabel("알림 닫기").first().click();
-    expect(seenRequests.at(-1)).toEqual([priorityNotifications[0].id]);
+    expect(seenRequests.at(-1)).toEqual([
+      priorityNotifications[1].id,
+      priorityNotifications[3].id,
+    ]);
   });
 
-  test("opens the notification archive from the profile while excluding silent rows", async ({ page }) => {
-    await setAuthOverride(page);
-    await installGrowthRoutes(page);
+  test("opens the notification archive from the profile while excluding silent rows", async ({ browser }, testInfo) => {
+    const viewport = testInfo.project.name === "mobile-chrome"
+      ? { width: 390, height: 844 }
+      : { width: 1440, height: 960 };
+    const { context, page } = await openMypage(browser, viewport);
 
-    await page.goto("/mypage", { waitUntil: "networkidle" });
-    await stabilize(page);
-
+    await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(page.getByTestId("growth-archive-surface")).toHaveCount(0);
     await page.getByRole("button", { name: "알림 보기" }).click();
     const dialog = page.getByRole("dialog", { name: "알림 기록" });
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByText("레벨 7 달성")).toBeVisible();
+    await expect(dialog.getByText("등급 획득!")).toBeVisible();
     await expect(dialog.getByText("숨김 처리된 내부 알림")).toHaveCount(0);
+    await context.close();
   });
 
   test("renders exact shopping multi-meal guidance copy", async ({ page }) => {

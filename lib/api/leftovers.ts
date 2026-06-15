@@ -1,4 +1,5 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
+import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import type { ApiResponse } from "@/types/api";
 import type {
   LeftoverDishStatus,
@@ -93,6 +94,8 @@ export async function eatLeftover(
       message: payload?.error?.message ?? "요청을 처리하지 못했어요.",
     });
   }
+
+  notifyGamificationSourceAction();
 
   return payload.data;
 }

@@ -5,7 +5,10 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GrowthToastStack } from "@/components/gamification/growth-toast-stack";
-import { HOMECOOK_GAMIFICATION_REFRESH_EVENT } from "@/lib/gamification-events";
+import {
+  HOMECOOK_GAMIFICATION_OPEN_NOTIFICATIONS_EVENT,
+  HOMECOOK_GAMIFICATION_REFRESH_EVENT,
+} from "@/lib/gamification-events";
 
 const mockFetchUserGamification = vi.fn();
 const mockMarkSeen = vi.fn();
@@ -127,11 +130,12 @@ describe("GrowthToastStack", () => {
             id: "n-grade",
             notification_type: "level_up",
             priority: 1,
-            title: "레벨 8 달성",
-            body: "Steel 등급이 되었어요.",
+            title: "등급 획득!",
+            body: "Steel 등급 획득, Lv.8 달성",
             payload: {
               previous_level: 7,
               current_level: 8,
+              grade_upgrade: true,
               previous_grade: { grade_key: "wood", label: "Wood" },
               grade: {
                 grade_key: "steel",
@@ -144,8 +148,8 @@ describe("GrowthToastStack", () => {
             id: "n-level",
             notification_type: "level_up",
             priority: 1,
-            title: "레벨 9 달성",
-            body: "레벨이 올랐어요.",
+            title: "레벨업!",
+            body: "Lv.9 달성",
             payload: {
               previous_level: 8,
               current_level: 9,
@@ -168,6 +172,8 @@ describe("GrowthToastStack", () => {
     expect(gradeToast.getAttribute("data-tone")).toBe("grade-up");
     expect(gradeToast.getAttribute("role")).toBe("alert");
     expect(gradeToast.className).toContain("growth-toast-card-grade-up");
+    expect(gradeToast.className).toContain("overflow-visible");
+    expect(within(gradeToast).getByTestId("growth-toast-priority-rank").textContent).toBe("1");
     expect(
       within(gradeToast).getByTestId("growth-toast-visual").getAttribute("data-visual-kind"),
     ).toBe("grade");
@@ -176,6 +182,7 @@ describe("GrowthToastStack", () => {
         .getByTestId("growth-toast-visual-icon")
         .getAttribute("src"),
     ).toContain("/assets/growth/grades/steel-spoon-badge.png");
+    expect(gradeToast.textContent).toContain("Steel 등급 획득, Lv.8 달성");
 
     expect(levelToast.getAttribute("data-tone")).toBe("level-up");
     expect(
@@ -270,15 +277,131 @@ describe("GrowthToastStack", () => {
     render(<GrowthToastStack />);
     dispatchRefresh();
 
-    await waitFor(() => {
-      expect(screen.getByTestId("growth-toast")).toBeTruthy();
+    await act(async () => {
+      await Promise.resolve();
     });
+    expect(screen.getByTestId("growth-toast")).toBeTruthy();
 
     const questToast = screen.getByTestId("growth-toast");
     expect(questToast.getAttribute("data-tone")).toBe("quest");
     expect(
       within(questToast).getByTestId("growth-toast-visual-icon").getAttribute("src"),
     ).toContain("/assets/growth/achievement-icons-v3-4/tutorial_complete.png");
+  });
+
+  it("does not rely on the toast layer to hide obsolete one-shot achievement rows", async () => {
+    setDesktop(true);
+    mockFetchUserGamification.mockResolvedValue({
+      notifications: {
+        unseen: [],
+        priority_unseen: [
+          makeNotification({
+            id: "legacy-cooking-one",
+            notification_type: "achievement_unlocked",
+            priority: 2,
+            title: "요리 완료 1",
+            body: "튜토리얼과 겹치는 오래된 1회 업적이에요.",
+            category: "cooking",
+            payload: {
+              achievement_key: "cooking_completed_1",
+              category_key: "cooking",
+              track_key: "cooking_completed",
+            },
+          }),
+          makeNotification({
+            id: "tutorial-cooking",
+            notification_type: "achievement_unlocked",
+            priority: 2,
+            title: "첫 집밥 완료",
+            body: "튜토리얼 업적을 달성했어요.",
+            category: "tutorial",
+            payload: {
+              achievement_key: "tutorial_cooking_complete",
+              category_key: "tutorial",
+            },
+          }),
+          makeNotification({
+            id: "xp-live",
+            notification_type: "xp_awarded",
+            priority: 4,
+            title: "요리 완료 +60 XP",
+            body: "경험치가 반영됐어요.",
+          }),
+        ],
+      },
+    });
+
+    render(<GrowthToastStack />);
+    dispatchRefresh();
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("growth-toast")).toHaveLength(3);
+    });
+    expect(screen.getByText("요리 완료 1")).toBeTruthy();
+    expect(screen.getByText("첫 집밥 완료")).toBeTruthy();
+    expect(screen.getByText("요리 완료 +60 XP")).toBeTruthy();
+  });
+
+  it("keeps visible toasts on screen for the longer review window before auto dismissing", async () => {
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    mockFetchUserGamification.mockResolvedValue({
+      notifications: {
+        unseen: [],
+        priority_unseen: [
+          makeNotification({
+            id: "long-toast",
+            notification_type: "xp_awarded",
+            title: "경험치 획득",
+            body: "+40 XP",
+          }),
+        ],
+      },
+    });
+
+    render(<GrowthToastStack />);
+    dispatchRefresh();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("growth-toast")).toBeTruthy();
+    });
+
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 6000);
+    setTimeoutSpy.mockRestore();
+  });
+
+  it("opens the notification panel intent when a toast body is clicked", async () => {
+    const openNotifications = vi.fn();
+    window.addEventListener(
+      HOMECOOK_GAMIFICATION_OPEN_NOTIFICATIONS_EVENT,
+      openNotifications,
+    );
+    mockFetchUserGamification.mockResolvedValue({
+      notifications: {
+        unseen: [],
+        priority_unseen: [
+          makeNotification({
+            id: "open-toast",
+            notification_type: "xp_awarded",
+            title: "경험치 획득",
+            body: "+40 XP",
+          }),
+        ],
+      },
+    });
+
+    render(<GrowthToastStack />);
+    dispatchRefresh();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("growth-toast")).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId("growth-toast"));
+
+    expect(openNotifications).toHaveBeenCalledTimes(1);
+    window.removeEventListener(
+      HOMECOOK_GAMIFICATION_OPEN_NOTIFICATIONS_EVENT,
+      openNotifications,
+    );
   });
 
   it("caps visible toasts at 2 on mobile and queues the rest as a collapsed summary", async () => {
@@ -445,15 +568,75 @@ describe("GrowthToastStack", () => {
     });
   });
 
-  it("keeps server order even when group_key values are interleaved", async () => {
+  it("compresses achievement, badge, quest, and XP into one achievement toast while keeping level and grade toasts separate", async () => {
     setDesktop(true);
     mockFetchUserGamification.mockResolvedValue({
       notifications: {
         unseen: [],
         priority_unseen: [
-          makeNotification({ id: "a-level", priority: 1, notification_type: "level_up", group_key: "g-a" }),
-          makeNotification({ id: "b-xp", priority: 4, notification_type: "xp_awarded", group_key: "g-b" }),
-          makeNotification({ id: "a-xp", priority: 4, notification_type: "xp_awarded", group_key: "g-a" }),
+          makeNotification({
+            id: "a-level",
+            priority: 1,
+            notification_type: "level_up",
+            group_key: "g-a",
+            title: "레벨업!",
+            body: "Lv.8 달성",
+            payload: {
+              previous_level: 7,
+              current_level: 8,
+              grade_upgrade: false,
+            },
+          }),
+          makeNotification({
+            id: "a-xp",
+            priority: 4,
+            notification_type: "xp_awarded",
+            group_key: "g-a",
+            title: "+40 XP 획득",
+            body: "장보기 완료 XP",
+            payload: { event_type: "shopping_completed", xp_delta: 40 },
+          }),
+          makeNotification({
+            id: "a-achievement",
+            priority: 2,
+            notification_type: "achievement_unlocked",
+            group_key: "g-a",
+            title: "업적 달성!",
+            body: "첫 장보기 완료 배지를 획득했어요.",
+            payload: { achievement_key: "tutorial_shopping_list_complete" },
+          }),
+          makeNotification({
+            id: "a-badge",
+            priority: 2,
+            notification_type: "badge_unlocked",
+            group_key: "g-a",
+            title: "새 배지 획득!",
+            body: "마이페이지에서 새 배지를 확인해 보세요.",
+            payload: { badge_key: "tutorial_shopping_list_complete" },
+          }),
+          makeNotification({
+            id: "a-grade",
+            priority: 1,
+            notification_type: "level_up",
+            group_key: "g-a",
+            title: "등급 획득!",
+            body: "Steel 등급 획득, Lv.8 달성",
+            payload: {
+              current_level: 8,
+              grade_upgrade: true,
+              previous_grade: { grade_key: "wood", label: "Wood" },
+              grade: { grade_key: "steel", label: "Steel" },
+            },
+          }),
+          makeNotification({
+            id: "b-xp",
+            priority: 4,
+            notification_type: "xp_awarded",
+            group_key: "g-b",
+            title: "+20 XP 획득",
+            body: "요리 완료 XP",
+            payload: { event_type: "cooking_completed", xp_delta: 20 },
+          }),
         ],
       },
     });
@@ -467,9 +650,22 @@ describe("GrowthToastStack", () => {
     const ids = screen
       .getAllByTestId("growth-toast")
       .map((node) => node.getAttribute("data-notification-id"));
-    expect(ids).toEqual(["a-level", "b-xp", "a-xp"]);
-    expect(screen.getAllByTestId("growth-toast")[0].getAttribute("data-group-key")).toBe("g-a");
-    expect(screen.getAllByTestId("growth-toast-group-chip")).toHaveLength(2);
+    expect(ids).toEqual(["a-achievement", "a-level", "a-grade"]);
+    const [achievementToast, levelToast, gradeToast] = screen.getAllByTestId("growth-toast");
+    expect(achievementToast.getAttribute("data-group-key")).toBe("g-a");
+    expect(achievementToast.getAttribute("data-tone")).toBe("achievement");
+    expect(achievementToast.textContent).toContain("업적 달성!");
+    expect(achievementToast.textContent).toContain("첫 장보기 완료 배지를 획득했어요.");
+    expect(achievementToast.textContent).toContain("+40 XP");
+    expect(achievementToast.textContent).not.toContain("새 배지 획득");
+    expect(levelToast.getAttribute("data-tone")).toBe("level-up");
+    expect(levelToast.textContent).toContain("레벨업");
+    expect(levelToast.textContent).not.toContain("+40 XP");
+    expect(gradeToast.getAttribute("data-tone")).toBe("grade-up");
+    expect(gradeToast.textContent).toContain("등급 획득");
+    expect(gradeToast.textContent).toContain("Steel 등급 획득, Lv.8 달성");
+    expect(screen.queryByText("+20 XP 획득")).toBeNull();
+    expect(screen.queryByText("같은 활동")).toBeNull();
   });
 
   it("swallows refresh failures because source actions are authoritative", async () => {

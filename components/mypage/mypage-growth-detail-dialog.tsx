@@ -1,10 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { GrowthBadgeIcon } from "@/components/mypage/growth-badge-icon";
 import { fetchUserGamificationArchive } from "@/lib/api/user-gamification";
+import {
+  compactGrowthNotificationsForDisplay,
+  isVisibleGrowthNotification,
+} from "@/lib/gamification-notifications";
+import achievementIconManifest from "@/public/assets/growth/achievement-icons-v3-4/manifest.json";
 import type {
   UserGamificationBadgeCategory,
   UserGamificationAchievementMilestoneData,
@@ -17,6 +22,7 @@ export type MypageGrowthPanel = "grade" | "achievement" | "tutorial" | "notifica
 
 type AchievementGroupKey = "tutorial" | "recipe" | "routine" | "storage";
 type NotificationFilter = "all" | "growth" | "achievement" | "system";
+type NotificationTone = "grade-up" | "level-up" | "achievement" | "badge" | "quest" | "xp";
 
 interface MypageGrowthDetailDialogProps {
   data: UserGamificationData | null;
@@ -93,6 +99,8 @@ const LEGACY_GRADE_KEY_ALIASES: Record<string, string> = {
   table_maker: "silver",
 };
 
+const GRADE_KEYS = new Set(GRADE_BANDS.map((grade) => grade.grade_key));
+
 const CATEGORY_ORDER = [
   "tutorial",
   "recipe",
@@ -110,6 +118,35 @@ const FILTERS: Array<{ key: NotificationFilter; label: string }> = [
   { key: "achievement", label: "업적" },
   { key: "system", label: "시스템" },
 ];
+
+const ACHIEVEMENT_ICON_SRC_BY_KEY = new Map(
+  (
+    achievementIconManifest as Array<{
+      achievement_key: string;
+      src: string;
+    }>
+  ).map((icon) => [icon.achievement_key, icon.src]),
+);
+
+const XP_ICON_BY_EVENT_TYPE: Record<string, string> = {
+  cooking_completed: "/assets/growth/achievement-icons-v3-4/cooking_completed_3.png",
+  custom_book_created: "/assets/growth/achievement-icons-v3-4/tutorial_recipebook_created.png",
+  leftover_eaten: "/assets/growth/achievement-icons-v3-4/leftover_eaten_3.png",
+  planner_registered: "/assets/growth/achievement-icons-v3-4/planner_registered_3.png",
+  recipe_saved: "/assets/growth/achievement-icons-v3-4/recipe_saved_5.png",
+  shopping_completed: "/assets/growth/achievement-icons-v3-4/shopping_completed_3.png",
+};
+
+const ICON_BY_CATEGORY: Record<UserGamificationBadgeCategory, string> = {
+  cooking: "/assets/growth/achievement-icons-v3-4/cooking_completed_3.png",
+  leftovers: "/assets/growth/achievement-icons-v3-4/leftover_eaten_3.png",
+  pantry: "/assets/growth/achievement-icons-v3-4/pantry_distinct_10.png",
+  planner: "/assets/growth/achievement-icons-v3-4/planner_registered_3.png",
+  recipe: "/assets/growth/achievement-icons-v3-4/recipe_saved_5.png",
+  recipebook: "/assets/growth/achievement-icons-v3-4/tutorial_recipebook_created.png",
+  shopping: "/assets/growth/achievement-icons-v3-4/shopping_completed_3.png",
+  tutorial: "/assets/growth/achievement-icons-v3-4/tutorial_complete.png",
+};
 
 const ACHIEVEMENT_GROUPS: Array<{
   categoryKeys: UserGamificationBadgeCategory[];
@@ -156,7 +193,8 @@ const NUMBER_FORMATTER = new Intl.NumberFormat("ko-KR");
 
 function normalizeGradeKey(gradeKey: string | null | undefined) {
   if (!gradeKey) return "clay";
-  return LEGACY_GRADE_KEY_ALIASES[gradeKey] ?? gradeKey;
+  const normalized = LEGACY_GRADE_KEY_ALIASES[gradeKey] ?? gradeKey;
+  return GRADE_KEYS.has(normalized) ? normalized : "clay";
 }
 
 function formatGradeRange(grade: UserGamificationGradeData) {
@@ -165,9 +203,11 @@ function formatGradeRange(grade: UserGamificationGradeData) {
     : `Lv.${grade.level_min}-${grade.level_max}`;
 }
 
-function formatDate(value: string | null) {
+function formatDateTime(value: string | null) {
   if (!value) return "";
-  return value.slice(0, 10);
+  const date = value.slice(0, 10);
+  const time = value.length >= 16 ? value.slice(11, 16) : "";
+  return time ? `${date} ${time}` : date;
 }
 
 function clampPercent(value: number) {
@@ -191,7 +231,7 @@ function notificationToneLabel(type: UserGamificationNotificationData["notificat
   if (type === "level_up") return "레벨업";
   if (type === "achievement_unlocked") return "업적";
   if (type === "badge_unlocked") return "배지";
-  if (type === "quest_completed") return "퀘스트";
+  if (type === "quest_completed") return "업적";
   return "XP";
 }
 
@@ -202,11 +242,11 @@ function matchesNotificationFilter(
   if (filter === "all") return true;
   if (filter === "achievement") {
     return item.notification_type === "achievement_unlocked" ||
-      item.notification_type === "badge_unlocked";
+      item.notification_type === "badge_unlocked" ||
+      item.notification_type === "quest_completed";
   }
   if (filter === "growth") {
     return item.notification_type === "level_up" ||
-      item.notification_type === "quest_completed" ||
       item.notification_type === "xp_awarded";
   }
   return item.notification_type !== "level_up" &&
@@ -214,6 +254,121 @@ function matchesNotificationFilter(
     item.notification_type !== "xp_awarded" &&
     item.notification_type !== "achievement_unlocked" &&
     item.notification_type !== "badge_unlocked";
+}
+
+function toText(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function isGradeUpgrade(payload: Record<string, unknown>) {
+  return payload.grade_upgrade === true;
+}
+
+function notificationGradeIconSrc(payload: Record<string, unknown>) {
+  const grade = toRecord(payload.grade);
+  const explicitIcon = toText(grade.icon_url);
+  if (explicitIcon) return explicitIcon;
+
+  const gradeKey = normalizeGradeKey(toText(grade.grade_key));
+  return `/assets/growth/grades/${gradeKey}-spoon-badge.png`;
+}
+
+function notificationTone(item: UserGamificationNotificationData): NotificationTone {
+  if (item.notification_type === "level_up") {
+    return isGradeUpgrade(item.payload) ? "grade-up" : "level-up";
+  }
+  if (item.notification_type === "achievement_unlocked") return "achievement";
+  if (item.notification_type === "badge_unlocked") return "badge";
+  if (item.notification_type === "quest_completed") return "quest";
+  return "xp";
+}
+
+function notificationToneClass(tone: NotificationTone) {
+  if (tone === "grade-up") {
+    return "border-[var(--growth-toast-grade-border)] [background:var(--growth-toast-grade-bg)] shadow-[var(--growth-toast-grade-shadow)]";
+  }
+  if (tone === "level-up") {
+    return "border-[var(--growth-toast-level-border)] [background:var(--growth-toast-level-bg)] shadow-[var(--growth-toast-level-shadow)]";
+  }
+  if (tone === "achievement") {
+    return "border-[var(--growth-toast-achievement-border)] [background:var(--growth-toast-achievement-bg)] shadow-[var(--growth-toast-achievement-shadow)]";
+  }
+  if (tone === "badge") {
+    return "border-[var(--growth-toast-badge-border)] [background:var(--growth-toast-badge-bg)] shadow-[var(--growth-toast-badge-shadow)]";
+  }
+  if (tone === "quest") {
+    return "border-[var(--growth-toast-quest-border)] [background:var(--growth-toast-quest-bg)] shadow-[var(--growth-toast-quest-shadow)]";
+  }
+  return "border-[var(--growth-toast-xp-border)] [background:var(--growth-toast-xp-bg)] shadow-[var(--growth-toast-xp-shadow)]";
+}
+
+function notificationVisualClass(tone: NotificationTone) {
+  if (tone === "grade-up") {
+    return "border-[var(--growth-toast-grade-icon-border)] bg-[var(--growth-toast-grade-icon-bg)]";
+  }
+  if (tone === "level-up") {
+    return "border-[var(--growth-toast-level-icon-border)] bg-[var(--growth-toast-level-icon-bg)]";
+  }
+  if (tone === "achievement") {
+    return "border-[var(--growth-toast-achievement-icon-border)] bg-[var(--growth-toast-achievement-icon-bg)]";
+  }
+  if (tone === "badge") {
+    return "border-[var(--growth-toast-badge-icon-border)] bg-[var(--growth-toast-badge-icon-bg)]";
+  }
+  if (tone === "quest") {
+    return "border-[var(--growth-toast-quest-icon-border)] bg-[var(--growth-toast-quest-icon-bg)]";
+  }
+  return "border-[var(--growth-toast-xp-icon-border)] bg-[var(--growth-toast-xp-icon-bg)]";
+}
+
+function notificationIconSrc(item: UserGamificationNotificationData) {
+  const payload = item.payload;
+  if (item.notification_type === "level_up" && isGradeUpgrade(payload)) {
+    return notificationGradeIconSrc(payload);
+  }
+
+  const achievementSrc =
+    ACHIEVEMENT_ICON_SRC_BY_KEY.get(toText(payload.achievement_key)) ||
+    ACHIEVEMENT_ICON_SRC_BY_KEY.get(toText(payload.badge_key)) ||
+    ACHIEVEMENT_ICON_SRC_BY_KEY.get(toText(payload.quest_key));
+
+  if (achievementSrc) return achievementSrc;
+  if (item.notification_type === "xp_awarded") {
+    return XP_ICON_BY_EVENT_TYPE[toText(payload.event_type)] || ICON_BY_CATEGORY[item.category];
+  }
+  return ICON_BY_CATEGORY[item.category];
+}
+
+function NotificationVisual({ item }: { item: UserGamificationNotificationData }) {
+  const tone = notificationTone(item);
+  const src = notificationIconSrc(item);
+
+  return (
+    <span
+      aria-hidden="true"
+      className={[
+        "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[13px] border shadow-[var(--growth-toast-icon-shadow)]",
+        notificationVisualClass(tone),
+      ].join(" ")}
+      data-testid={`mypage-notification-visual-${item.id}`}
+      data-visual-kind={tone === "grade-up" ? "grade" : tone}
+    >
+      <Image
+        alt=""
+        className="h-full w-full object-contain drop-shadow-[var(--growth-toast-visual-drop-shadow)]"
+        height={40}
+        src={src}
+        unoptimized
+        width={40}
+      />
+    </span>
+  );
 }
 
 function sortedCategories(data: UserGamificationData | null) {
@@ -232,10 +387,10 @@ function GradeAsset({
   grade: UserGamificationGradeData;
   size?: "sm" | "md" | "lg";
 }) {
-  const pixelSize = size === "lg" ? 116 : size === "md" ? 76 : 56;
+  const pixelSize = size === "lg" ? 124 : size === "md" ? 82 : 60;
   const imageClassName = [
     "h-full w-full object-contain",
-    size === "lg" ? "scale-[1.14]" : "",
+    size === "lg" ? "scale-[1.24]" : "scale-[1.14]",
   ]
     .filter(Boolean)
     .join(" ");
@@ -244,7 +399,7 @@ function GradeAsset({
   return (
     <span
       aria-hidden="true"
-      className="relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full"
+      className="relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--surface)] shadow-[inset_0_0_0_1px_var(--line)]"
       data-testid={`grade-panel-grade-asset-${grade.grade_key}`}
       style={{ height: pixelSize, width: pixelSize }}
     >
@@ -505,6 +660,10 @@ function formatMilestoneLabel(
   milestone: UserGamificationAchievementMilestoneData,
   trackKey: string,
 ) {
+  if (milestone.achievement_key === "tutorial_complete") {
+    return milestone.title;
+  }
+
   if (trackKey === "tutorial" || trackKey === "tutorial_complete") {
     return milestone.title.replace(/^튜토리얼\s*/, "");
   }
@@ -524,7 +683,7 @@ function AchievementTrackCard({ track }: { track: AchievementTrackData }) {
     const latest = track.milestones.find((item) => item.achievement_key === latestKey);
     const latestTime = latest?.earned_at ? Date.parse(latest.earned_at) : Number.NEGATIVE_INFINITY;
     const currentTime = Date.parse(milestone.earned_at);
-    return currentTime > latestTime ? milestone.achievement_key : latestKey;
+    return currentTime >= latestTime ? milestone.achievement_key : latestKey;
   }, null);
   const nextMilestone =
     track.milestones.find((milestone) => milestone.status === "active") ??
@@ -533,9 +692,12 @@ function AchievementTrackCard({ track }: { track: AchievementTrackData }) {
   const lockedHint = track.milestones.find(
     (milestone) => milestone.status === "locked" && milestone.locked_hint,
   )?.locked_hint;
-  const percent = nextMilestone
-    ? progressPercent(nextMilestone.current, nextMilestone.target, nextMilestone.status)
-    : 0;
+  const isTutorialTrack = track.trackKey === "tutorial";
+  const percent = isTutorialTrack
+    ? progressPercent(earnedCount, track.milestones.length, earnedCount >= track.milestones.length ? "earned" : "active")
+    : nextMilestone
+      ? progressPercent(nextMilestone.current, nextMilestone.target, nextMilestone.status)
+      : 0;
   const hint = nextMilestone
     ? nextMilestone.status === "locked" && nextMilestone.locked_hint
       ? nextMilestone.locked_hint
@@ -638,7 +800,11 @@ function AchievementTrackCard({ track }: { track: AchievementTrackData }) {
             style={{ width: `${percent}%` }}
           />
         </div>
-        {nextMilestone ? (
+        {isTutorialTrack ? (
+          <span className="shrink-0 text-[11px] font-extrabold text-[var(--text-2)]">
+            {formatCount(earnedCount)} / {formatCount(track.milestones.length)}
+          </span>
+        ) : nextMilestone ? (
           <span className="shrink-0 text-[11px] font-extrabold text-[var(--text-2)]">
             {formatCount(nextMilestone.current)} / {formatCount(nextMilestone.target)}
           </span>
@@ -685,16 +851,6 @@ function AchievementPanel({ data }: { data: UserGamificationData | null }) {
         </p>
       </div>
       <CategoryTabs groups={groups} selected={selectedGroup?.key ?? selected} setSelected={setSelected} />
-      {selectedGroup ? (
-        <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-3 py-2">
-          <p className="text-[12px] font-semibold leading-[1.35] text-[var(--text-2)]">
-            {selectedGroup.label}
-          </p>
-          <p className="mt-0.5 text-[13px] font-extrabold leading-[1.3] text-[var(--foreground)]">
-            획득 {selectedGroup.earnedCount} / {selectedGroup.totalCount}
-          </p>
-        </div>
-      ) : null}
       <AchievementTrackGrid tracks={tracks} />
     </>
   );
@@ -722,35 +878,75 @@ function TutorialPanel({ data }: { data: UserGamificationData | null }) {
 }
 
 function NotificationPanel({ data }: { data: UserGamificationData | null }) {
-  const previewItems = data?.notifications.archive_preview ?? [];
+  const previewItems = compactGrowthNotificationsForDisplay(
+    (data?.notifications.archive_preview ?? []).filter(isVisibleGrowthNotification),
+  );
   const [filter, setFilter] = useState<NotificationFilter>("all");
   const [items, setItems] = useState<UserGamificationNotificationData[]>(previewItems);
   const [state, setState] = useState<"loading" | "ready" | "empty" | "error">(
     previewItems.length > 0 ? "ready" : "loading",
   );
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasNext, setHasNext] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const itemsRef = useRef<UserGamificationNotificationData[]>(previewItems);
+  const loadingRef = useRef(false);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    let cancelled = false;
+    itemsRef.current = items;
+  }, [items]);
 
-    async function loadArchive() {
-      try {
-        const archive = await fetchUserGamificationArchive({ limit: 20, cursor: null });
-        if (cancelled) return;
-        const visibleItems = archive.items.filter((item) => item.delivery_channel !== "silent");
-        setItems(visibleItems);
-        setState(visibleItems.length > 0 ? "ready" : "empty");
-      } catch {
-        if (cancelled) return;
-        setState(previewItems.length > 0 ? "ready" : "error");
-      }
-    }
-
-    void loadArchive();
-
+  useEffect(() => {
+    mountedRef.current = true;
     return () => {
-      cancelled = true;
+      mountedRef.current = false;
     };
-  }, [previewItems.length]);
+  }, []);
+
+  const loadArchivePage = useCallback(
+    async (nextCursor: string | null) => {
+      if (loadingRef.current) return;
+      loadingRef.current = true;
+
+      if (nextCursor) {
+        setLoadingMore(true);
+      } else {
+        setState(previewItems.length > 0 ? "ready" : "loading");
+      }
+
+      try {
+        const archive = await fetchUserGamificationArchive({ limit: 20, cursor: nextCursor });
+        const visibleItems = compactGrowthNotificationsForDisplay(
+          archive.items.filter(isVisibleGrowthNotification),
+        );
+
+        if (!mountedRef.current) return;
+
+        const nextItems = nextCursor
+          ? compactGrowthNotificationsForDisplay([...itemsRef.current, ...visibleItems])
+          : visibleItems;
+        setItems(nextItems);
+        setState(nextItems.length > 0 ? "ready" : "empty");
+        setCursor(archive.next_cursor);
+        setHasNext(archive.has_next);
+      } catch {
+        if (!nextCursor && mountedRef.current) {
+          setState(previewItems.length > 0 ? "ready" : "error");
+        }
+      } finally {
+        loadingRef.current = false;
+        if (mountedRef.current) {
+          setLoadingMore(false);
+        }
+      }
+    },
+    [previewItems.length],
+  );
+
+  useEffect(() => {
+    void loadArchivePage(null);
+  }, [loadArchivePage]);
 
   const filteredItems = items.filter((item) => matchesNotificationFilter(item, filter));
 
@@ -804,28 +1000,50 @@ function NotificationPanel({ data }: { data: UserGamificationData | null }) {
 
       {state === "ready" && filteredItems.length > 0 ? (
         <ul className="mt-4 grid gap-2">
-          {filteredItems.map((item) => (
+          {filteredItems.map((item) => {
+            const tone = notificationTone(item);
+            return (
             <li
-              className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 py-2"
+              className={[
+                "flex gap-3 rounded-[var(--radius-md)] border px-3 py-3 text-[var(--foreground)]",
+                notificationToneClass(tone),
+              ].join(" ")}
+              data-testid={`mypage-notification-item-${item.id}`}
+              data-tone={tone}
               key={item.id}
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="rounded-full bg-[var(--surface)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--text-2)]">
-                  {notificationToneLabel(item.notification_type)}
-                </span>
-                <span className="shrink-0 text-[10px] font-bold text-[var(--text-3)]">
-                  {formatDate(item.created_at)}
-                </span>
+              <NotificationVisual item={item} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-[var(--surface-alpha-70)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--text-2)]">
+                    {notificationToneLabel(item.notification_type)}
+                  </span>
+                  <span className="shrink-0 text-[10px] font-bold text-[var(--text-3)]">
+                    {formatDateTime(item.created_at)}
+                  </span>
+                </div>
+                <p className="mt-1 text-[12px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+                  {item.title}
+                </p>
+                <p className="mt-0.5 text-[11px] font-semibold leading-[1.35] text-[var(--text-2)]">
+                  {item.body}
+                </p>
               </div>
-              <p className="mt-1 text-[12px] font-extrabold leading-[1.3] text-[var(--foreground)]">
-                {item.title}
-              </p>
-              <p className="mt-0.5 text-[11px] font-semibold leading-[1.35] text-[var(--text-2)]">
-                {item.body}
-              </p>
             </li>
-          ))}
+            );
+          })}
         </ul>
+      ) : null}
+
+      {state === "ready" && hasNext ? (
+        <button
+          className="mt-3 w-full rounded-[var(--radius-control)] bg-[var(--surface-fill)] py-2 text-[12px] font-extrabold text-[var(--text-2)] disabled:opacity-60"
+          disabled={loadingMore}
+          onClick={() => void loadArchivePage(cursor)}
+          type="button"
+        >
+          {loadingMore ? "불러오는 중..." : "더 보기"}
+        </button>
       ) : null}
     </>
   );

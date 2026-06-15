@@ -17,13 +17,13 @@
 
 ## State / Policy
 
-- [x] XP source 5종 모두 first/repeat XP가 공식 배점표(15/8, 25/10, 40/25, 60/45, 25/5)대로 분리 적립된다 <!-- omo:id=accept-xp-policy-v2-table;stage=2;scope=backend;review=3,6 -->
-- [x] planner repeat cap이 KST 3/day, 12/week로 적용되고 first XP는 repeat cap을 소비하지 않는다 <!-- omo:id=accept-planner-repeat-cap;stage=2;scope=backend;review=3,6 -->
+- [x] XP source가 first/repeat XP 공식 배점표(15/8, 25/10, 40/25, 60/45, 25/5, 35c `leftover_eaten` 15/8)대로 분리 적립된다 <!-- omo:id=accept-xp-policy-v2-table;stage=2;scope=backend;review=3,6 -->
+- [x] 35c review loop 이후 `planner_registered` repeat XP는 KST daily/weekly cap 없이 새 meal source별로 적립되고 같은 meal source 재시도만 중복 지급하지 않는다 <!-- omo:id=accept-planner-repeat-source-guard;stage=2;scope=backend;review=3,6 -->
 - [x] custom book repeat cap이 KST 2/day로 적용된다 <!-- omo:id=accept-custom-book-repeat-cap;stage=2;scope=backend;review=3,6 -->
 - [x] cap 초과 액션은 ledger row와 notification을 만들지 않고 source action 성공은 유지된다 <!-- omo:id=accept-cap-exceeded-no-row;stage=2;scope=backend;review=3,6 -->
-- [x] KST 자정/주(일→월) 경계에서 cap window가 올바르게 리셋된다 <!-- omo:id=accept-kst-window-boundary;stage=2;scope=backend;review=3,6 -->
+- [x] cap이 남아 있는 source는 KST 자정/주(일→월) 경계에서 cap window가 올바르게 리셋된다 <!-- omo:id=accept-kst-window-boundary;stage=2;scope=backend;review=3,6 -->
 - [x] meal PATCH/status transition/shopping/cooking transition은 `planner_registered` award를 만들지 않는다 <!-- omo:id=accept-planner-award-exclusions;stage=2;scope=backend;review=3,6 -->
-- [x] meal 삭제 후 재생성 반복이 cap 범위를 넘는 XP를 만들지 않는다 <!-- omo:id=accept-delete-recreate-abuse-guard;stage=2;scope=backend;review=3,6 -->
+- [x] 같은 meal source의 planner award 재시도는 중복 XP를 만들지 않는다 <!-- omo:id=accept-planner-duplicate-source-guard;stage=2;scope=backend;review=3,6 -->
 - [x] level curve v2 공식과 경계값(L2=100, L3=280, L5=880, L8=2380, L50=98980)이 서버 유틸 테스트로 고정되어 있다 <!-- omo:id=accept-level-curve-v2-boundaries;stage=2;scope=backend;review=3,6 -->
 - [x] 등급 band 7종(`sprout_homecook`~`homecook_master`)이 레벨 경계(3/4, 7/8, 12/13, 20/21, 34/35, 49/50)에서 올바르게 전환된다 <!-- omo:id=accept-grade-band-boundaries;stage=2;scope=backend;review=3,6 -->
 - [x] 같은 `total_xp`에서 v1→v2 재계산 시 레벨이 내려가지 않는다 <!-- omo:id=accept-v2-no-level-decrease;stage=2;scope=backend;review=3,6 -->
@@ -49,13 +49,14 @@
 - [x] `source_meta_json`에 `xp_kind`, `level_curve_version`, cap window key, backfill 여부가 기록된다 <!-- omo:id=accept-source-meta-json;stage=2;scope=backend;review=3,6 -->
 - [x] 기존 ledger row의 `xp_delta`가 소급 변경되지 않는다 (append-only, forward-only re-scoring) <!-- omo:id=accept-no-retroactive-rescoring;stage=2;scope=backend;review=3,6 -->
 - [x] `leftover_eaten`은 첫 `leftover -> eaten` transition만 기록하고 uneat/재-eat은 중복 기록하지 않는다 <!-- omo:id=accept-leftover-eaten-first-transition;stage=2;scope=backend;review=3,6 -->
+- [x] 35c review-loop amendment 이후 `leftover_eaten`은 XP ledger와 activity ledger를 함께 기록해 XP 알림과 남은요리 정리 업적 알림을 같은 source action으로 만든다 <!-- omo:id=accept-leftover-eaten-xp-amendment;stage=2;scope=backend;review=3,6 -->
 - [x] `meal_add_path_used`가 user별 distinct path만 기록하고 식별 불가 path는 row를 만들지 않는다 <!-- omo:id=accept-meal-add-path-distinct;stage=2;scope=backend;review=3,6 -->
 - [x] notification `payload_json`/`group_key`에 비밀정보, OAuth code, raw source text, query string이 저장되지 않는다 <!-- omo:id=accept-notification-payload-safety;stage=2;scope=backend;review=3,6 -->
 - [x] 신규 테이블/컬럼 RLS가 authenticated select-own / service_role all / anon revoke 패턴을 따른다 <!-- omo:id=accept-rls-pattern;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
 
-- [x] fixture에 first/repeat/cap 경계, 다단계 level-up, legacy v1 summary, silent notification 포함 baseline이 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] fixture에 first/repeat/source guard/cap 경계, 다단계 level-up, legacy v1 summary, silent notification 포함 baseline이 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
 - [x] real DB smoke에 필요한 additive migration / 인덱스 / RLS / seed 경로가 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
 - [x] `planner_registered`가 의존하는 bootstrap(`meal_plan_columns ×3`)과 recipebook bootstrap 제외 규칙(`liked`/`saved`/`my_added`)이 명시·검증되어 있다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
 - [x] backfill/recompute script가 dry-run mode를 지원하고 dry-run에서 notification 생성 수 0이 확인된다 <!-- omo:id=accept-backfill-dry-run;stage=2;scope=backend;review=3,6 -->
@@ -74,7 +75,7 @@
 
 ### Vitest
 
-- [x] XP policy v2(first/repeat/cap/KST window), level curve v2/grade, planner writer, activity ledger, archive route, notification priority, backfill no-toast가 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-regression;stage=2;scope=backend;review=3,6 -->
+- [x] XP policy v2(first/repeat/source guard/cap/KST window), level curve v2/grade, planner writer, activity ledger, archive route, notification priority, backfill no-toast가 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-regression;stage=2;scope=backend;review=3,6 -->
 - [x] 기존 33a/33c 테스트(user-progress-*, user-gamification-*)가 additive 변경 후에도 green이고, v1 curve 테스트는 curve version 분기 기준으로 갱신되어 있다 <!-- omo:id=accept-vitest-33-regression-green;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright

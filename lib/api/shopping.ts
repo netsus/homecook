@@ -1,4 +1,5 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
+import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
   ShoppingListCreateBody,
@@ -80,11 +81,13 @@ export async function fetchShoppingPreview() {
 }
 
 export async function createShoppingList(body: ShoppingListCreateBody) {
-  return requestShopping<ShoppingListCreateData>("/api/v1/shopping/lists", {
+  const data = await requestShopping<ShoppingListCreateData>("/api/v1/shopping/lists", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
+  notifyGamificationSourceAction();
+  return data;
 }
 
 export async function fetchShoppingListDetail(listId: string) {

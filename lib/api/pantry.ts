@@ -1,4 +1,5 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
+import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
   PantryAddData,
@@ -87,11 +88,15 @@ export async function fetchPantryList(params?: { q?: string; category?: string }
 }
 
 export async function addPantryItems(ingredientIds: string[]) {
-  return requestPantry<PantryAddData>("/api/v1/pantry", {
+  const data = await requestPantry<PantryAddData>("/api/v1/pantry", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ ingredient_ids: ingredientIds }),
   });
+  if (data.added > 0) {
+    notifyGamificationSourceAction();
+  }
+  return data;
 }
 
 export async function deletePantryItems(ingredientIds: string[]) {

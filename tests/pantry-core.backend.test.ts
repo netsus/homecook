@@ -413,6 +413,86 @@ describe("13 pantry core backend", () => {
     });
   });
 
+  it("POST /pantry records growth activities sequentially so threshold achievements see the full batch", async () => {
+    let resolveFirstActivity!: (value: { recorded: boolean; duplicate: boolean; error: null }) => void;
+    const firstActivity = new Promise<{ recorded: boolean; duplicate: boolean; error: null }>((resolve) => {
+      resolveFirstActivity = resolve;
+    });
+    recordUserGrowthActivityEvent
+      .mockReturnValueOnce(firstActivity)
+      .mockResolvedValueOnce({ recorded: true, duplicate: false, error: null });
+
+    const ingredientsTable = createTable({
+      selectResults: [
+        {
+          data: [
+            { id: "ing-tofu", standard_name: "두부", category: "단백질", category_code: null },
+            { id: "ing-onion", standard_name: "양파", category: "채소", category_code: "root_stem" },
+          ],
+          error: null,
+        },
+      ],
+    });
+    const pantryItemsTable = createTable({
+      selectResults: [
+        {
+          data: [],
+          error: null,
+        },
+      ],
+      insertResults: [
+        {
+          data: [
+            {
+              id: "pantry-tofu",
+              ingredient_id: "ing-tofu",
+              created_at: "2026-04-28T10:00:00Z",
+              ingredients: { standard_name: "두부", category: "단백질", category_code: null },
+            },
+            {
+              id: "pantry-onion",
+              ingredient_id: "ing-onion",
+              created_at: "2026-04-28T10:00:01Z",
+              ingredients: { standard_name: "양파", category: "채소", category_code: "root_stem" },
+            },
+          ],
+          error: null,
+        },
+      ],
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsTable;
+        if (table === "pantry_items") return pantryItemsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importPantryRoute();
+    const responsePromise = POST(new Request("http://localhost:3000/api/v1/pantry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ingredient_ids: ["ing-tofu", "ing-onion"] }),
+    }));
+
+    await vi.waitFor(() => {
+      expect(recordUserGrowthActivityEvent).toHaveBeenCalledTimes(1);
+    });
+
+    resolveFirstActivity({ recorded: true, duplicate: false, error: null });
+    const response = await responsePromise;
+
+    expect(response.status).toBe(201);
+    expect(recordUserGrowthActivityEvent).toHaveBeenCalledTimes(2);
+    expect(recordUserGrowthActivityEvent).toHaveBeenNthCalledWith(2, expect.anything(), expect.objectContaining({
+      sourceId: "pantry-onion",
+    }));
+  });
+
   it("POST /pantry keeps adding ingredients with legacy selects when category_code is not in the schema cache", async () => {
     const ingredientsTable = createTable({
       selectResults: [
