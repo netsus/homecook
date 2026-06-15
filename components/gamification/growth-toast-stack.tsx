@@ -29,10 +29,10 @@ const DESKTOP_VISIBLE_MAX = 3;
 const DESKTOP_MEDIA_QUERY = "(min-width: 768px)";
 const TOAST_DURATION_MS = 6000;
 
-type ToastTone = "grade-up" | "level-up" | "achievement" | "badge" | "quest" | "xp";
+type ToastTone = "grade-up" | "level-up" | "achievement" | "badge" | "xp";
 type ToastVisual =
   | {
-      kind: "grade" | "achievement" | "badge" | "quest" | "xp";
+      kind: "grade" | "achievement" | "badge" | "xp";
       src: string;
     }
   | {
@@ -54,7 +54,6 @@ interface ToastView {
 const TONE_BY_TYPE: Omit<Record<UserGamificationNotificationType, ToastTone>, "level_up"> = {
   achievement_unlocked: "achievement",
   badge_unlocked: "badge",
-  quest_completed: "quest",
   xp_awarded: "xp",
 };
 
@@ -193,13 +192,6 @@ function getToastVisual(
       XP_ICON_BY_CATEGORY[notification.category];
     return { kind: "badge", src };
   }
-  if (tone === "quest") {
-    const src =
-      achievementIconSrc(toText(payload.quest_key), toText(payload.achievement_key)) ||
-      XP_ICON_BY_CATEGORY.tutorial;
-    return { kind: "quest", src };
-  }
-
   const src =
     XP_ICON_BY_EVENT_TYPE[toText(payload.event_type)] ||
     XP_ICON_BY_CATEGORY[notification.category];
@@ -238,9 +230,6 @@ function toToastView(
       body = body || (notification.notification_type === "achievement_unlocked"
         ? `${toText(payload.title) || toText(payload.label) || "새 업적"} 배지를 획득했어요.`
         : "마이페이지에서 새 배지를 확인해 보세요.");
-    } else if (notification.notification_type === "quest_completed") {
-      title = title || "퀘스트 달성!";
-      body = body || "업적 카테고리에서 확인할 수 있어요.";
     } else {
       const label = toText(payload.label) || "집밥 활동";
       const xpDelta = toNumber(payload.xp_delta);
@@ -304,9 +293,6 @@ function toneClass(tone: ToastTone) {
   if (tone === "badge") {
     return "growth-toast-card-badge border-[var(--growth-toast-badge-border)] [background:var(--growth-toast-badge-bg)] text-[var(--foreground)] shadow-[var(--growth-toast-badge-shadow)]";
   }
-  if (tone === "quest") {
-    return "growth-toast-card-quest border-[var(--growth-toast-quest-border)] [background:var(--growth-toast-quest-bg)] text-[var(--foreground)] shadow-[var(--growth-toast-quest-shadow)]";
-  }
   return "growth-toast-card-xp border-[var(--growth-toast-xp-border)] [background:var(--growth-toast-xp-bg)] text-[var(--foreground)] shadow-[var(--growth-toast-xp-shadow)]";
 }
 
@@ -323,16 +309,12 @@ function visualClass(tone: ToastTone) {
   if (tone === "badge") {
     return "border-[var(--growth-toast-badge-icon-border)] bg-[var(--growth-toast-badge-icon-bg)] text-[var(--growth-toast-badge-icon-text)]";
   }
-  if (tone === "quest") {
-    return "border-[var(--growth-toast-quest-icon-border)] bg-[var(--growth-toast-quest-icon-bg)] text-[var(--growth-toast-quest-icon-text)]";
-  }
   return "border-[var(--growth-toast-xp-icon-border)] bg-[var(--growth-toast-xp-icon-bg)] text-[var(--growth-toast-xp-icon-text)]";
 }
 
 function visualImageClass(tone: ToastTone) {
   if (tone === "grade-up") return "scale-[1.18]";
   if (tone === "achievement" || tone === "badge") return "scale-[1.08]";
-  if (tone === "quest") return "scale-[1.02]";
   return "scale-[0.96]";
 }
 

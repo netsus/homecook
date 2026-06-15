@@ -22,7 +22,7 @@ export type MypageGrowthPanel = "grade" | "achievement" | "tutorial" | "notifica
 
 type AchievementGroupKey = "tutorial" | "recipe" | "routine" | "storage";
 type NotificationFilter = "all" | "growth" | "achievement" | "system";
-type NotificationTone = "grade-up" | "level-up" | "achievement" | "badge" | "quest" | "xp";
+type NotificationTone = "grade-up" | "level-up" | "achievement" | "badge" | "xp";
 
 interface MypageGrowthDetailDialogProps {
   data: UserGamificationData | null;
@@ -231,7 +231,6 @@ function notificationToneLabel(type: UserGamificationNotificationData["notificat
   if (type === "level_up") return "레벨업";
   if (type === "achievement_unlocked") return "업적";
   if (type === "badge_unlocked") return "배지";
-  if (type === "quest_completed") return "업적";
   return "XP";
 }
 
@@ -242,15 +241,13 @@ function matchesNotificationFilter(
   if (filter === "all") return true;
   if (filter === "achievement") {
     return item.notification_type === "achievement_unlocked" ||
-      item.notification_type === "badge_unlocked" ||
-      item.notification_type === "quest_completed";
+      item.notification_type === "badge_unlocked";
   }
   if (filter === "growth") {
     return item.notification_type === "level_up" ||
       item.notification_type === "xp_awarded";
   }
   return item.notification_type !== "level_up" &&
-    item.notification_type !== "quest_completed" &&
     item.notification_type !== "xp_awarded" &&
     item.notification_type !== "achievement_unlocked" &&
     item.notification_type !== "badge_unlocked";
@@ -285,7 +282,6 @@ function notificationTone(item: UserGamificationNotificationData): NotificationT
   }
   if (item.notification_type === "achievement_unlocked") return "achievement";
   if (item.notification_type === "badge_unlocked") return "badge";
-  if (item.notification_type === "quest_completed") return "quest";
   return "xp";
 }
 
@@ -301,9 +297,6 @@ function notificationToneClass(tone: NotificationTone) {
   }
   if (tone === "badge") {
     return "border-[var(--growth-toast-badge-border)] [background:var(--growth-toast-badge-bg)] shadow-[var(--growth-toast-badge-shadow)]";
-  }
-  if (tone === "quest") {
-    return "border-[var(--growth-toast-quest-border)] [background:var(--growth-toast-quest-bg)] shadow-[var(--growth-toast-quest-shadow)]";
   }
   return "border-[var(--growth-toast-xp-border)] [background:var(--growth-toast-xp-bg)] shadow-[var(--growth-toast-xp-shadow)]";
 }
@@ -321,9 +314,6 @@ function notificationVisualClass(tone: NotificationTone) {
   if (tone === "badge") {
     return "border-[var(--growth-toast-badge-icon-border)] bg-[var(--growth-toast-badge-icon-bg)]";
   }
-  if (tone === "quest") {
-    return "border-[var(--growth-toast-quest-icon-border)] bg-[var(--growth-toast-quest-icon-bg)]";
-  }
   return "border-[var(--growth-toast-xp-icon-border)] bg-[var(--growth-toast-xp-icon-bg)]";
 }
 
@@ -335,8 +325,7 @@ function notificationIconSrc(item: UserGamificationNotificationData) {
 
   const achievementSrc =
     ACHIEVEMENT_ICON_SRC_BY_KEY.get(toText(payload.achievement_key)) ||
-    ACHIEVEMENT_ICON_SRC_BY_KEY.get(toText(payload.badge_key)) ||
-    ACHIEVEMENT_ICON_SRC_BY_KEY.get(toText(payload.quest_key));
+    ACHIEVEMENT_ICON_SRC_BY_KEY.get(toText(payload.badge_key));
 
   if (achievementSrc) return achievementSrc;
   if (item.notification_type === "xp_awarded") {

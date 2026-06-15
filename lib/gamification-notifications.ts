@@ -4,7 +4,6 @@ const DISPLAY_PRIORITY: Record<UserGamificationNotificationData["notification_ty
   level_up: 1,
   achievement_unlocked: 2,
   badge_unlocked: 3,
-  quest_completed: 4,
   xp_awarded: 5,
 };
 
@@ -81,11 +80,6 @@ function achievementIdentity(item: UserGamificationNotificationData) {
       toText(item.payload.achievement_key) ||
       item.id;
   }
-  if (item.notification_type === "quest_completed") {
-    return toText(item.payload.achievement_key) ||
-      toText(item.payload.quest_key) ||
-      item.id;
-  }
   return item.id;
 }
 
@@ -130,8 +124,7 @@ function compactGroup(group: UserGamificationNotificationData[]) {
   const gradeRows = group.filter(isGradeUpNotification);
   const achievementUnlockRows = group.filter((item) => item.notification_type === "achievement_unlocked");
   const badgeRows = group.filter((item) => item.notification_type === "badge_unlocked");
-  const questRows = group.filter((item) => item.notification_type === "quest_completed");
-  const achievementRows = [...achievementUnlockRows, ...badgeRows, ...questRows];
+  const achievementRows = [...achievementUnlockRows, ...badgeRows];
   const output: UserGamificationNotificationData[] = [];
   const levelRepresentative = [...levelRows].sort(compareDisplayPriority)[0];
   const gradeRepresentative = [...gradeRows].sort(compareDisplayPriority)[0];

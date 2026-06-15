@@ -191,7 +191,7 @@ describe("GrowthToastStack", () => {
     expect(within(levelToast).queryByTestId("growth-toast-visual-icon")).toBeNull();
   });
 
-  it("uses content-specific visuals for XP, achievement, badge, and quest toasts", async () => {
+  it("uses content-specific visuals for XP, achievement, and badge toasts", async () => {
     setDesktop(true);
     mockFetchUserGamification
       .mockResolvedValueOnce({
@@ -239,12 +239,12 @@ describe("GrowthToastStack", () => {
           unseen: [],
           priority_unseen: [
             makeNotification({
-              id: "n-quest",
-              notification_type: "quest_completed",
-              priority: 3,
+              id: "n-next-achievement",
+              notification_type: "achievement_unlocked",
+              priority: 2,
               title: "튜토리얼 완료",
               body: "튜토리얼을 마쳤어요.",
-              payload: { quest_key: "tutorial_complete" },
+              payload: { achievement_key: "tutorial_complete" },
             }),
           ],
         },
@@ -282,10 +282,10 @@ describe("GrowthToastStack", () => {
     });
     expect(screen.getByTestId("growth-toast")).toBeTruthy();
 
-    const questToast = screen.getByTestId("growth-toast");
-    expect(questToast.getAttribute("data-tone")).toBe("quest");
+    const nextAchievementToast = screen.getByTestId("growth-toast");
+    expect(nextAchievementToast.getAttribute("data-tone")).toBe("achievement");
     expect(
-      within(questToast).getByTestId("growth-toast-visual-icon").getAttribute("src"),
+      within(nextAchievementToast).getByTestId("growth-toast-visual-icon").getAttribute("src"),
     ).toContain("/assets/growth/achievement-icons-v3-4/tutorial_complete.png");
   });
 
@@ -412,7 +412,7 @@ describe("GrowthToastStack", () => {
         priority_unseen: [
           makeNotification({ id: "n1", notification_type: "level_up", priority: 1 }),
           makeNotification({ id: "n2", notification_type: "badge_unlocked", priority: 2 }),
-          makeNotification({ id: "n3", notification_type: "quest_completed", priority: 3 }),
+          makeNotification({ id: "n3", notification_type: "achievement_unlocked", priority: 2 }),
           makeNotification({ id: "n4", notification_type: "xp_awarded", priority: 4 }),
         ],
       },
@@ -568,7 +568,7 @@ describe("GrowthToastStack", () => {
     });
   });
 
-  it("compresses achievement, badge, quest, and XP into one achievement toast while keeping level and grade toasts separate", async () => {
+  it("compresses achievement, badge, and XP into one achievement toast while keeping level and grade toasts separate", async () => {
     setDesktop(true);
     mockFetchUserGamification.mockResolvedValue({
       notifications: {

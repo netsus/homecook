@@ -75,9 +75,9 @@ describe("user gamification notification priority", () => {
       level_up: 1,
       achievement_unlocked: 2,
       badge_unlocked: 2,
-      quest_completed: 3,
       xp_awarded: 4,
     });
+    expect(USER_NOTIFICATION_PRIORITIES).not.toHaveProperty("quest_completed");
   });
 
   it("uses notification-type-first copy instead of repeating achievement content", () => {
@@ -121,25 +121,6 @@ describe("user gamification notification priority", () => {
       category: "recipe",
     });
 
-    expect(toNotificationData({
-      id: "n-quest",
-      notification_type: "quest_completed",
-      priority: 3,
-      delivery_channel: "toast",
-      toast_eligible: true,
-      group_key: "progress-event:e1",
-      payload_json: {
-        quest_key: "first_recipe_saved",
-        title: "첫 레시피 저장",
-        description: "첫 레시피 저장 튜토리얼을 완료했어요.",
-      },
-      created_at: "2026-06-10T10:00:00.000Z",
-      seen_at: null,
-    })).toMatchObject({
-      title: "퀘스트 달성!",
-      body: "업적 카테고리에서 확인할 수 있어요.",
-      category: "tutorial",
-    });
   });
 
   it("keeps server-side priority and additive notification metadata", () => {
@@ -304,12 +285,12 @@ describe("user gamification notification priority", () => {
         },
         {
           id: "archive-only",
-          notification_type: "quest_completed",
-          priority: 3,
+          notification_type: "achievement_unlocked",
+          priority: 2,
           delivery_channel: "archive_only",
           toast_eligible: false,
           group_key: "progress-event:e3",
-          payload_json: {},
+          payload_json: { achievement_key: "tutorial_complete", title: "튜토리얼 완료" },
           created_at: "2026-06-10T10:04:00.000Z",
           seen_at: "2026-06-10T10:05:00.000Z",
         },

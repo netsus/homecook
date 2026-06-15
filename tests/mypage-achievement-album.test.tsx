@@ -281,16 +281,16 @@ const MOCK_GAMIFICATION: UserGamificationData = {
         seen_at: null,
       },
       {
-        id: "notice-quest",
-        notification_type: "quest_completed",
-        priority: 70,
+        id: "notice-tutorial-achievement",
+        notification_type: "achievement_unlocked",
+        priority: 2,
         delivery_channel: "archive_only",
         toast_eligible: false,
         group_key: null,
-        title: "퀘스트 달성!",
-        body: "업적 카테고리에서 확인할 수 있어요.",
+        title: "업적 달성!",
+        body: "튜토리얼 완료 배지를 획득했어요.",
         category: "tutorial",
-        payload: { quest_key: "tutorial_recipe_saved" },
+        payload: { achievement_key: "tutorial_recipe_saved" },
         created_at: "2026-06-14T10:02:00.000Z",
         seen_at: null,
       },
@@ -755,9 +755,9 @@ describe("MYPAGE achievement album UI", () => {
     ).toBe("achievement");
 
     await user.click(within(notificationDialog).getByRole("tab", { name: "업적" }));
-    expect(within(notificationDialog).getByText("업적 달성!")).toBeTruthy();
+    expect(within(notificationDialog).getAllByText("업적 달성!")).toHaveLength(2);
     expect(within(notificationDialog).getByText("2026-06-14 10:06")).toBeTruthy();
-    expect(within(notificationDialog).getByText("퀘스트 달성!")).toBeTruthy();
+    expect(within(notificationDialog).getByText("튜토리얼 완료 배지를 획득했어요.")).toBeTruthy();
     expect(within(notificationDialog).getByText("2026-06-14 10:02")).toBeTruthy();
     expect(within(notificationDialog).queryByText("+120 XP 획득")).toBeNull();
   });
