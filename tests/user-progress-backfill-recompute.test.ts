@@ -28,10 +28,10 @@ describe("user progress v2 backfill/recompute", () => {
         xp_kind: "repeat",
         level_curve_version: "v2",
         backfill: true,
+        cap_day_key: "2026-06-10",
+        cap_week_key: "2026-W24",
       },
     });
-    expect(events[1]?.source_meta_json).not.toHaveProperty("cap_day_key");
-    expect(events[1]?.source_meta_json).not.toHaveProperty("cap_week_key");
   });
 
   it("dry-run recompute never creates notification or archive rows", () => {
@@ -70,7 +70,7 @@ describe("user progress v2 backfill/recompute", () => {
     });
   });
 
-  it("backfills every distinct planner meal even beyond the old daily repeat cap", () => {
+  it("does not backfill planner repeat XP beyond the KST daily cap", () => {
     const events = buildPlannerRegisteredBackfillEvents({
       userId: "user-1",
       meals: Array.from({ length: 5 }, (_, index) => ({
@@ -84,13 +84,16 @@ describe("user progress v2 backfill/recompute", () => {
       "meal-day-2",
       "meal-day-3",
       "meal-day-4",
-      "meal-day-5",
     ]);
-    expect(events.map((event) => event.xp_delta)).toEqual([25, 5, 5, 5, 5]);
+    expect(events.map((event) => event.xp_delta)).toEqual([25, 5, 5, 5]);
     expect(events.every((event) => event.source_meta_json.backfill === true)).toBe(true);
+    expect(events.slice(1).every((event) =>
+      event.source_meta_json.cap_day_key === "2026-06-10"
+        && event.source_meta_json.cap_week_key === "2026-W24"
+    )).toBe(true);
   });
 
-  it("backfills every distinct planner meal even beyond the old weekly repeat cap", () => {
+  it("does not backfill planner repeat XP beyond the KST weekly cap", () => {
     const meals = Array.from({ length: 15 }, (_, index) => {
       const dayOffset = Math.floor(index / 3);
       const slot = index % 3;
@@ -106,11 +109,14 @@ describe("user progress v2 backfill/recompute", () => {
       meals,
     });
 
-    expect(events).toHaveLength(15);
+    expect(events).toHaveLength(13);
     expect(events.map((event) => event.xp_delta)).toEqual([
       25,
-      ...Array.from({ length: 14 }, () => 5),
+      ...Array.from({ length: 12 }, () => 5),
     ]);
-    expect(events.at(-1)?.source_id).toBe("meal-week-15");
+    expect(events.at(-1)?.source_id).toBe("meal-week-13");
+    expect(events.slice(1).every((event) =>
+      event.source_meta_json.cap_week_key === "2026-W24"
+    )).toBe(true);
   });
 });

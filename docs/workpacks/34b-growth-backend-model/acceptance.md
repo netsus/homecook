@@ -18,7 +18,7 @@
 ## State / Policy
 
 - [x] XP source가 first/repeat XP 공식 배점표(15/8, 25/10, 40/25, 60/45, 25/5, 35c `leftover_eaten` 15/8)대로 분리 적립된다 <!-- omo:id=accept-xp-policy-v2-table;stage=2;scope=backend;review=3,6 -->
-- [x] 35c review loop 이후 `planner_registered` repeat XP는 KST daily/weekly cap 없이 새 meal source별로 적립되고 같은 meal source 재시도만 중복 지급하지 않는다 <!-- omo:id=accept-planner-repeat-source-guard;stage=2;scope=backend;review=3,6 -->
+- [x] `planner_registered` repeat XP는 새 meal source별로 적립하되 KST daily 3회 / weekly 12회 cap을 적용하고, 같은 meal source 재시도는 중복 지급하지 않는다 <!-- omo:id=accept-planner-repeat-source-guard;stage=2;scope=backend;review=3,6 -->
 - [x] custom book repeat cap이 KST 2/day로 적용된다 <!-- omo:id=accept-custom-book-repeat-cap;stage=2;scope=backend;review=3,6 -->
 - [x] cap 초과 액션은 ledger row와 notification을 만들지 않고 source action 성공은 유지된다 <!-- omo:id=accept-cap-exceeded-no-row;stage=2;scope=backend;review=3,6 -->
 - [x] cap이 남아 있는 source는 KST 자정/주(일→월) 경계에서 cap window가 올바르게 리셋된다 <!-- omo:id=accept-kst-window-boundary;stage=2;scope=backend;review=3,6 -->

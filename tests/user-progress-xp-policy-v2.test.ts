@@ -92,8 +92,10 @@ describe("user progress XP policy v2", () => {
         level_curve_version: "v2",
       },
     });
-    expect(repeat.source_meta_json).not.toHaveProperty("cap_day_key");
-    expect(repeat.source_meta_json).not.toHaveProperty("cap_week_key");
+    expect(repeat.source_meta_json).toMatchObject({
+      cap_day_key: "2026-06-10",
+      cap_week_key: "2026-W24",
+    });
   });
 
   it("uses repeat XP for recipe, shopping, and cooking after each first source event", () => {
@@ -225,7 +227,7 @@ describe("user progress XP policy v2", () => {
     });
   });
 
-  it("keeps awarding planner repeat XP beyond the old daily cap when each meal is a new source", async () => {
+  it("does not create a ledger row when planner daily repeat cap is exceeded", async () => {
     const existingEvents = [
       {
         event_type: "planner_registered",
@@ -250,27 +252,7 @@ describe("user progress XP policy v2", () => {
       select: vi.fn(() => createArraySelectQuery({ data: existingEvents, error: null })),
       insert: vi.fn(() => createMaybeSingleQuery({ data: { id: "event-1" }, error: null })),
     };
-    const progressSummaryTable = {
-      upsert: vi.fn(() => createMaybeSingleQuery({
-        data: {
-          user_id: "user-1",
-          total_xp: 45,
-          current_level: 1,
-          level_curve_version: "v2",
-          event_counts: {
-            cooking_completed: 0,
-            shopping_completed: 0,
-            recipe_saved_distinct_ever: 0,
-            custom_book_created: 0,
-            planner_registered_first: 1,
-            planner_registered_repeat: 4,
-          },
-          last_event_at: "2026-06-10T05:00:00.000Z",
-          last_updated_at: "2026-06-10T05:00:00.000Z",
-        },
-        error: null,
-      })),
-    };
+    const progressSummaryTable = { upsert: vi.fn() };
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "user_progress_events") return progressEventsTable;
@@ -287,12 +269,9 @@ describe("user progress XP policy v2", () => {
       occurredAt: "2026-06-10T05:00:00.000Z",
     });
 
-    expect(result).toMatchObject({ awarded: true, duplicate: false, error: null });
-    expect(progressEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
-      source_key: "planner_registered:meal-4",
-      xp_delta: USER_PROGRESS_XP_POLICY.planner_registered.repeat,
-    }));
-    expect(progressSummaryTable.upsert).toHaveBeenCalled();
+    expect(result).toMatchObject({ awarded: false, duplicate: false, error: null });
+    expect(progressEventsTable.insert).not.toHaveBeenCalled();
+    expect(progressSummaryTable.upsert).not.toHaveBeenCalled();
   });
 
   it("does not create a ledger row when custom book daily repeat cap is exceeded", async () => {
@@ -342,7 +321,7 @@ describe("user progress XP policy v2", () => {
     expect(progressSummaryTable.upsert).not.toHaveBeenCalled();
   });
 
-  it("keeps awarding planner repeat XP beyond the old weekly cap when each meal is a new source", async () => {
+  it("does not create a ledger row when planner weekly repeat cap is exceeded", async () => {
     const existingEvents = [
       {
         event_type: "planner_registered",
@@ -351,43 +330,28 @@ describe("user progress XP policy v2", () => {
         occurred_at: "2026-06-08T00:30:00.000Z",
         source_meta_json: { xp_kind: "first" },
       },
-      ...Array.from({ length: 12 }, (_, index) => ({
-        event_type: "planner_registered",
-        source_key: `planner_registered:meal-week-${index + 1}`,
-        xp_delta: 5,
-        occurred_at: "2026-06-08T01:00:00.000Z",
-        source_meta_json: {
-          xp_kind: "repeat",
-          cap_day_key: `2026-06-${String(8 + Math.floor(index / 3)).padStart(2, "0")}`,
-          cap_week_key: "2026-W24",
-        },
-      })),
+      ...Array.from({ length: 12 }, (_, index) => {
+        const day = 8 + Math.floor(index / 3);
+        const hour = 1 + (index % 3);
+
+        return {
+          event_type: "planner_registered",
+          source_key: `planner_registered:meal-week-${index + 1}`,
+          xp_delta: 5,
+          occurred_at: `2026-06-${String(day).padStart(2, "0")}T0${hour}:00:00.000Z`,
+          source_meta_json: {
+            xp_kind: "repeat",
+            cap_day_key: `2026-06-${String(day).padStart(2, "0")}`,
+            cap_week_key: "2026-W24",
+          },
+        };
+      }),
     ];
     const progressEventsTable = {
       select: vi.fn(() => createArraySelectQuery({ data: existingEvents, error: null })),
       insert: vi.fn(() => createMaybeSingleQuery({ data: { id: "event-1" }, error: null })),
     };
-    const progressSummaryTable = {
-      upsert: vi.fn(() => createMaybeSingleQuery({
-        data: {
-          user_id: "user-1",
-          total_xp: 90,
-          current_level: 1,
-          level_curve_version: "v2",
-          event_counts: {
-            cooking_completed: 0,
-            shopping_completed: 0,
-            recipe_saved_distinct_ever: 0,
-            custom_book_created: 0,
-            planner_registered_first: 1,
-            planner_registered_repeat: 13,
-          },
-          last_event_at: "2026-06-12T01:00:00.000Z",
-          last_updated_at: "2026-06-12T01:00:00.000Z",
-        },
-        error: null,
-      })),
-    };
+    const progressSummaryTable = { upsert: vi.fn() };
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "user_progress_events") return progressEventsTable;
@@ -404,15 +368,12 @@ describe("user progress XP policy v2", () => {
       occurredAt: "2026-06-12T01:00:00.000Z",
     });
 
-    expect(result).toMatchObject({ awarded: true, duplicate: false, error: null });
-    expect(progressEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
-      source_key: "planner_registered:meal-week-13",
-      xp_delta: USER_PROGRESS_XP_POLICY.planner_registered.repeat,
-    }));
-    expect(progressSummaryTable.upsert).toHaveBeenCalled();
+    expect(result).toMatchObject({ awarded: false, duplicate: false, error: null });
+    expect(progressEventsTable.insert).not.toHaveBeenCalled();
+    expect(progressSummaryTable.upsert).not.toHaveBeenCalled();
   });
 
-  it("does not attach old planner cap metadata at the KST week boundary", async () => {
+  it("allows planner repeat XP after the KST week cap resets", async () => {
     const existingEvents = [
       {
         event_type: "planner_registered",
@@ -498,11 +459,13 @@ describe("user progress XP policy v2", () => {
       source_meta_json: {
         xp_kind: "repeat",
         level_curve_version: "v2",
+        cap_day_key: "2026-06-15",
+        cap_week_key: "2026-W25",
       },
     }));
   });
 
-  it("does not attach old planner cap metadata at the KST day boundary", async () => {
+  it("allows planner repeat XP after the KST day cap resets", async () => {
     const existingEvents = [
       {
         event_type: "planner_registered",
@@ -565,7 +528,16 @@ describe("user progress XP policy v2", () => {
     });
 
     expect(result).toMatchObject({ awarded: true, duplicate: false, error: null });
-    expect(progressEventsTable.insert).toHaveBeenCalled();
+    expect(progressEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      source_key: "planner_registered:meal-next-day",
+      xp_delta: USER_PROGRESS_XP_POLICY.planner_registered.repeat,
+      source_meta_json: {
+        xp_kind: "repeat",
+        level_curve_version: "v2",
+        cap_day_key: "2026-06-11",
+        cap_week_key: "2026-W24",
+      },
+    }));
   });
 
   it("adds 34b progress and notification migration fields", async () => {

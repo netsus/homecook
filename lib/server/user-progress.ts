@@ -160,6 +160,7 @@ const FIRST_XP_EVENT_TYPES = new Set<UserProgressEventType>([
 
 const REPEAT_CAPS: Partial<Record<UserProgressEventType, { daily?: number; weekly?: number }>> = {
   custom_book_created: { daily: 2 },
+  planner_registered: { daily: 3, weekly: 12 },
 };
 
 const GRADE_BANDS: UserProgressGradeData[] = [
