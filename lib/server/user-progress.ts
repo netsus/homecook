@@ -127,6 +127,7 @@ export const USER_PROGRESS_XP_POLICY: Record<UserProgressEventType, { first: num
   shopping_completed: { first: 40, repeat: 25 },
   cooking_completed: { first: 60, repeat: 45 },
   planner_registered: { first: 25, repeat: 5 },
+  leftover_eaten: { first: 15, repeat: 8 },
 };
 
 export const USER_PROGRESS_XP_AWARDS: Record<UserProgressEventType, number> = {
@@ -135,6 +136,7 @@ export const USER_PROGRESS_XP_AWARDS: Record<UserProgressEventType, number> = {
   recipe_saved: USER_PROGRESS_XP_POLICY.recipe_saved.first,
   custom_book_created: USER_PROGRESS_XP_POLICY.custom_book_created.first,
   planner_registered: USER_PROGRESS_XP_POLICY.planner_registered.first,
+  leftover_eaten: USER_PROGRESS_XP_POLICY.leftover_eaten.first,
 };
 
 const ZERO_EVENT_COUNTS: UserProgressEventCounts = {
@@ -144,6 +146,7 @@ const ZERO_EVENT_COUNTS: UserProgressEventCounts = {
   custom_book_created: 0,
   planner_registered_first: 0,
   planner_registered_repeat: 0,
+  leftover_eaten: 0,
 };
 
 const FIRST_XP_EVENT_TYPES = new Set<UserProgressEventType>([
@@ -152,11 +155,11 @@ const FIRST_XP_EVENT_TYPES = new Set<UserProgressEventType>([
   "shopping_completed",
   "cooking_completed",
   "planner_registered",
+  "leftover_eaten",
 ]);
 
 const REPEAT_CAPS: Partial<Record<UserProgressEventType, { daily?: number; weekly?: number }>> = {
   custom_book_created: { daily: 2 },
-  planner_registered: { daily: 3, weekly: 12 },
 };
 
 const GRADE_BANDS: UserProgressGradeData[] = [
@@ -336,6 +339,8 @@ export function buildUserProgressSummary({
       } else {
         eventCounts.planner_registered_first += 1;
       }
+    } else if (event.event_type === "leftover_eaten") {
+      eventCounts.leftover_eaten = (eventCounts.leftover_eaten ?? 0) + 1;
     }
 
     if (!lastEventAt || new Date(event.occurred_at).getTime() > new Date(lastEventAt).getTime()) {
@@ -602,6 +607,7 @@ function normalizeEventCounts(value: unknown): UserProgressEventCounts {
     custom_book_created: normalizeCount(record.custom_book_created),
     planner_registered_first: normalizeCount(record.planner_registered_first),
     planner_registered_repeat: normalizeCount(record.planner_registered_repeat),
+    leftover_eaten: normalizeCount(record.leftover_eaten),
   };
 }
 

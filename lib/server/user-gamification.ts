@@ -4,6 +4,10 @@ import {
   type UserProgressAwardInput,
   type UserProgressDbClient,
 } from "@/lib/server/user-progress";
+import {
+  compactGrowthNotificationsForDisplay,
+  isVisibleGrowthNotification,
+} from "@/lib/gamification-notifications";
 import type {
   UserGamificationArchiveData,
   UserGamificationBadgeCategory,
@@ -692,6 +696,7 @@ const SOURCE_EVENT_LABELS: Record<UserProgressEventType, string> = {
   recipe_saved: "레시피 저장",
   custom_book_created: "레시피북 생성",
   planner_registered: "플래너 등록",
+  leftover_eaten: "남은요리 정리",
 };
 
 const SOURCE_EVENT_CATEGORIES: Record<UserProgressEventType, UserGamificationBadgeCategory> = {
@@ -700,6 +705,7 @@ const SOURCE_EVENT_CATEGORIES: Record<UserProgressEventType, UserGamificationBad
   recipe_saved: "recipe",
   custom_book_created: "recipebook",
   planner_registered: "planner",
+  leftover_eaten: "leftovers",
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -809,6 +815,8 @@ export async function projectUserGamificationAfterProgressEvent(
     }
 
     if (input.previousLevel < input.progress.level.current_level) {
+      const previousGrade = getUserProgressGrade(input.previousLevel);
+      const currentGrade = getUserProgressGrade(input.progress.level.current_level);
       const levelUpResult = await insertProgressNotification(dbClient, {
         userId: input.userId,
         notificationKey: `level-up:${input.userId}:${input.progress.level.current_level}`,
@@ -817,8 +825,9 @@ export async function projectUserGamificationAfterProgressEvent(
         payload: {
           previous_level: input.previousLevel,
           current_level: input.progress.level.current_level,
-          previous_grade: getUserProgressGrade(input.previousLevel),
-          grade: getUserProgressGrade(input.progress.level.current_level),
+          previous_grade: previousGrade,
+          grade: currentGrade,
+          grade_upgrade: false,
         },
         groupKey,
         now,
@@ -826,6 +835,28 @@ export async function projectUserGamificationAfterProgressEvent(
 
       if (levelUpResult.error) {
         return { error: levelUpResult.error };
+      }
+
+      if (previousGrade.grade_key !== currentGrade.grade_key) {
+        const gradeUpResult = await insertProgressNotification(dbClient, {
+          userId: input.userId,
+          notificationKey: `grade-up:${input.userId}:${currentGrade.grade_key}`,
+          notificationType: "level_up",
+          sourceEventId: input.progressEventId,
+          payload: {
+            previous_level: input.previousLevel,
+            current_level: input.progress.level.current_level,
+            previous_grade: previousGrade,
+            grade: currentGrade,
+            grade_upgrade: true,
+          },
+          groupKey,
+          now,
+        });
+
+        if (gradeUpResult.error) {
+          return { error: gradeUpResult.error };
+        }
       }
     }
 
@@ -1077,14 +1108,20 @@ export function buildUserGamificationData({
     }));
   const notificationData = notificationRows
     .map(toNotificationData)
-    .filter((notification) => notification.delivery_channel !== "silent");
-  const unseen = notificationData.filter((notification) => !notification.seen_at);
-  const priorityUnseen = unseen
-    .filter((notification) => notification.toast_eligible)
-    .sort(compareNotificationPriority);
-  const archivePreview = notificationData
-    .sort(compareNotificationArchive)
-    .slice(0, 5);
+    .filter(isVisibleGrowthNotification);
+  const unseen = compactGrowthNotificationsForDisplay(
+    notificationData
+      .filter((notification) => !notification.seen_at)
+      .sort(compareNotificationPriority),
+  );
+  const priorityUnseen = compactGrowthNotificationsForDisplay(
+    notificationData
+      .filter((notification) => !notification.seen_at && notification.toast_eligible)
+      .sort(compareNotificationPriority),
+  );
+  const archivePreview = compactGrowthNotificationsForDisplay(
+    notificationData.sort(compareNotificationArchive),
+  ).slice(0, 5);
 
   return {
     level: {
@@ -1231,14 +1268,20 @@ export async function readUserGamificationArchive(
       };
     }
 
-    const rows = result.data.slice(0, options.limit);
-    const hasNext = result.data.length > options.limit;
+    const visibleRows = result.data
+      .map((row) => ({
+        data: toNotificationData(row),
+        row,
+      }))
+      .filter((entry) => isVisibleGrowthNotification(entry.data));
+    const rows = visibleRows.slice(0, options.limit);
+    const hasNext = visibleRows.length > options.limit;
     const last = rows.at(-1);
 
     return {
       data: {
-        items: rows.map(toNotificationData),
-        next_cursor: hasNext && last ? encodeArchiveCursor(last) : null,
+        items: rows.map((entry) => entry.data),
+        next_cursor: hasNext && last ? encodeArchiveCursor(last.row) : null,
         has_next: hasNext,
       },
       error: null,
@@ -1353,26 +1396,6 @@ async function reconcileUserGamification(
     if (badgeResult.error) {
       return { error: badgeResult.error };
     }
-
-    if (notificationMode === "live" && badgeResult.created) {
-      const notificationResult = await insertProgressNotification(dbClient, {
-        userId: input.userId,
-        notificationKey: `badge:${definition.badge_key}:${input.userId}`,
-        notificationType: "badge_unlocked",
-        sourceEventId: input.sourceEventId ?? null,
-        payload: {
-          badge_key: definition.badge_key,
-          label: definition.label,
-          description: definition.description,
-        },
-        groupKey: input.sourceEventId ? `progress-event:${input.sourceEventId}` : null,
-        now,
-      });
-
-      if (notificationResult.error) {
-        return { error: notificationResult.error };
-      }
-    }
   }
 
   for (const definition of USER_QUEST_DEFINITIONS) {
@@ -1412,7 +1435,16 @@ async function reconcileUserGamification(
       };
     }
 
-    if (notificationMode === "live" && status === "completed" && existing?.status !== "completed") {
+    const hasTutorialAchievementNotification = Boolean(
+      getTutorialAchievementKeyForQuest(definition.quest_key),
+    );
+
+    if (
+      notificationMode === "live" &&
+      status === "completed" &&
+      existing?.status !== "completed" &&
+      !hasTutorialAchievementNotification
+    ) {
       const notificationResult = await insertProgressNotification(dbClient, {
         userId: input.userId,
         notificationKey: `quest:${definition.quest_key}:${input.userId}`,
@@ -1795,7 +1827,7 @@ function getMetricValue(progress: UserProgressData, metric: MetricKey) {
     return progress.level.current_level;
   }
 
-  return progress.event_counts[metric];
+  return progress.event_counts[metric] ?? 0;
 }
 
 function getQuestMetricValue(
@@ -1832,7 +1864,7 @@ function getQuestMetricValue(
   }
 
   if (metric === "leftover_eaten_manual") {
-    return counts.leftover_eaten_manual;
+    return Math.max(progress.event_counts.leftover_eaten ?? 0, counts.leftover_eaten_manual);
   }
 
   return progress.event_counts.custom_book_created;
@@ -1873,7 +1905,7 @@ function getAchievementMetricValue(
   }
 
   if (definition.metric === "leftover_eaten_manual") {
-    return counts.leftover_eaten_manual;
+    return Math.max(progress.event_counts.leftover_eaten ?? 0, counts.leftover_eaten_manual);
   }
 
   if (definition.metric === "custom_book_created") {
@@ -2013,23 +2045,18 @@ function buildNotificationPresentation(
       : typeof payload.level === "number"
         ? payload.level
         : null;
+    const isGradeUpgrade = payload.grade_upgrade === true;
     const grade = normalizePayload(payload.grade);
-    const gradeLabel = typeof grade.label === "string" ? grade.label : null;
-    const gradeKey = typeof grade.grade_key === "string" ? grade.grade_key : null;
-    const previousGrade = normalizePayload(payload.previous_grade);
-    const previousGradeKey = typeof previousGrade.grade_key === "string"
-      ? previousGrade.grade_key
-      : null;
-    const levelUpBody =
-      gradeLabel && (!previousGradeKey || previousGradeKey !== gradeKey)
-        ? `${gradeLabel} 등급이 되었어요.`
-        : previousGradeKey && previousGradeKey === gradeKey
-          ? "레벨이 올랐어요."
-          : "새로운 레벨에 도달했어요.";
+    const gradeLabel = typeof grade.label === "string" && grade.label
+      ? grade.label
+      : typeof grade.grade_key === "string" && grade.grade_key
+        ? grade.grade_key
+        : "";
+    const levelBody = currentLevel ? `Lv.${currentLevel} 달성` : "새로운 레벨에 도달했어요.";
 
     return {
-      title: currentLevel ? `레벨 ${currentLevel} 달성` : "레벨업",
-      body: levelUpBody,
+      title: isGradeUpgrade ? "등급 획득!" : "레벨업!",
+      body: isGradeUpgrade && gradeLabel ? `${gradeLabel} 등급 획득, ${levelBody}` : levelBody,
       category: "cooking",
     };
   }
@@ -2039,8 +2066,8 @@ function buildNotificationPresentation(
     const badgeMetadata = USER_BADGE_METADATA[badgeKey];
 
     return {
-      title: typeof payload.label === "string" ? payload.label : "배지 획득",
-      body: typeof payload.description === "string" ? payload.description : "새 배지를 획득했어요.",
+      title: "새 배지 획득!",
+      body: "마이페이지에서 새 배지를 확인해 보세요.",
       category: badgeMetadata?.category ?? "recipe",
     };
   }
@@ -2052,19 +2079,17 @@ function buildNotificationPresentation(
     );
 
     return {
-      title: typeof payload.title === "string" ? payload.title : definition?.title ?? "업적 달성",
-      body: typeof payload.description === "string"
-        ? payload.description
-        : definition?.description ?? "새 업적을 달성했어요.",
+      title: "업적 달성!",
+      body: `${typeof payload.title === "string" ? payload.title : definition?.title ?? "새 업적"} 배지를 획득했어요.`,
       category: definition?.category_key ?? "tutorial",
     };
   }
 
   if (notificationType === "quest_completed") {
     return {
-      title: typeof payload.title === "string" ? payload.title : "퀘스트 달성",
-      body: typeof payload.description === "string" ? payload.description : "퀘스트를 완료했어요.",
-      category: "planner",
+      title: "퀘스트 달성!",
+      body: "업적 카테고리에서 확인할 수 있어요.",
+      category: "tutorial",
     };
   }
 
@@ -2073,8 +2098,8 @@ function buildNotificationPresentation(
   const label = typeof payload.label === "string" ? payload.label : "경험치 획득";
 
   return {
-    title: label,
-    body: xpDelta ? `${xpDelta} XP를 얻었어요.` : "경험치를 얻었어요.",
+    title: xpDelta ? `+${xpDelta} XP 획득` : "XP 획득",
+    body: `${label} XP`,
     category: SOURCE_EVENT_CATEGORIES[eventType as UserProgressEventType] ?? "recipe",
   };
 }

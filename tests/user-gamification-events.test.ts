@@ -102,7 +102,7 @@ function createAchievementAwardsTable() {
 function createGamificationProjectionDb() {
   const achievementAwardsTable = createAchievementAwardsTable();
   const badgeAwardsTable = {
-    insert: vi.fn(() => createMaybeSingleQuery({ data: null, error: null })),
+    insert: vi.fn(() => createMaybeSingleQuery({ data: null, error: { code: "23505", message: "duplicate key" } })),
   };
   const questProgressTable = {
     select: vi.fn(() => createArrayQuery({ data: [], error: null })),
@@ -229,7 +229,53 @@ describe("user gamification event projection", () => {
       .map((row) => row.notification_key);
 
     expect(result.error).toBeNull();
-    expect(levelUpKeys).toEqual(["level-up:user-1:4"]);
+    expect(levelUpKeys).toEqual(["level-up:user-1:4", "grade-up:user-1:wood"]);
+  });
+
+  it("creates separate level-up and grade-up notifications when XP crosses a grade boundary", async () => {
+    const { dbClient, notificationsTable } = createGamificationProjectionDb();
+
+    const result = await projectUserGamificationAfterProgressEvent(
+      dbClient as unknown as UserGamificationDbClient,
+      {
+        userId: "user-1",
+        progressEventId: "progress-event-grade-8",
+        awardInput: {
+          userId: "user-1",
+          eventType: "cooking_completed",
+          sourceTable: "leftover_dishes",
+          sourceId: "leftover-grade",
+          occurredAt: "2026-06-10T10:00:00.000Z",
+        },
+        xpDelta: 60,
+        previousLevel: 7,
+        progress: createProgressData(8),
+      },
+    );
+
+    const levelRows = notificationsTable.insert.mock.calls
+      .map(([row]) => row)
+      .filter((row) => row.notification_type === "level_up");
+
+    expect(result.error).toBeNull();
+    expect(levelRows).toEqual([
+      expect.objectContaining({
+        notification_key: "level-up:user-1:8",
+        payload_json: expect.objectContaining({
+          grade_upgrade: false,
+          previous_level: 7,
+          current_level: 8,
+        }),
+      }),
+      expect.objectContaining({
+        notification_key: "grade-up:user-1:steel",
+        payload_json: expect.objectContaining({
+          grade_upgrade: true,
+          previous_grade: expect.objectContaining({ grade_key: "wood" }),
+          grade: expect.objectContaining({ grade_key: "steel" }),
+        }),
+      }),
+    ]);
   });
 
   it("creates XP, badge, and quest projections after a canonical progress event", async () => {
@@ -362,9 +408,15 @@ describe("user gamification event projection", () => {
         }),
       }),
     );
+    expect(notificationsTable.insert).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        notification_key: "badge:first_shopping_done:user-1",
+        notification_type: "badge_unlocked",
+      }),
+    );
   });
 
-  it("projects a recipe save source event into XP, badge, and tutorial quest notifications", async () => {
+  it("projects a recipe save source event into XP and tutorial notifications without a duplicate first-badge notification", async () => {
     const progressEventsTable = {
       insert: vi.fn(() => createMaybeSingleQuery({ data: { id: "progress-event-2" }, error: null })),
       select: vi
@@ -493,6 +545,12 @@ describe("user gamification event projection", () => {
           label: "레시피 저장",
           xp_delta: USER_PROGRESS_XP_AWARDS.recipe_saved,
         }),
+      }),
+    );
+    expect(notificationsTable.insert).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        notification_key: "badge:first_recipe_saved:user-1",
+        notification_type: "badge_unlocked",
       }),
     );
   });

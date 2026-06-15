@@ -90,10 +90,10 @@ describe("user progress XP policy v2", () => {
       source_meta_json: {
         xp_kind: "repeat",
         level_curve_version: "v2",
-        cap_day_key: "2026-06-10",
-        cap_week_key: "2026-W24",
       },
     });
+    expect(repeat.source_meta_json).not.toHaveProperty("cap_day_key");
+    expect(repeat.source_meta_json).not.toHaveProperty("cap_week_key");
   });
 
   it("uses repeat XP for recipe, shopping, and cooking after each first source event", () => {
@@ -173,7 +173,59 @@ describe("user progress XP policy v2", () => {
     });
   });
 
-  it("does not create a ledger row or notification when planner daily repeat cap is exceeded", async () => {
+  it("awards first and repeat XP for manually eaten leftovers", () => {
+    const first = buildUserProgressEventInsert(
+      {
+        userId: "user-1",
+        eventType: "leftover_eaten",
+        sourceTable: "leftover_dishes",
+        sourceId: "leftover-1",
+        occurredAt: "2026-06-10T01:00:00.000Z",
+      },
+      { existingEvents: [] },
+    );
+    const repeat = buildUserProgressEventInsert(
+      {
+        userId: "user-1",
+        eventType: "leftover_eaten",
+        sourceTable: "leftover_dishes",
+        sourceId: "leftover-2",
+        occurredAt: "2026-06-10T02:00:00.000Z",
+      },
+      {
+        existingEvents: [
+          {
+            event_type: "leftover_eaten",
+            source_key: "leftover_eaten:leftover-1",
+            xp_delta: USER_PROGRESS_XP_POLICY.leftover_eaten.first,
+            occurred_at: "2026-06-10T01:00:00.000Z",
+            source_meta_json: { xp_kind: "first" },
+          },
+        ],
+      },
+    );
+
+    expect(first).toMatchObject({
+      event_type: "leftover_eaten",
+      source_key: "leftover_eaten:leftover-1",
+      xp_delta: USER_PROGRESS_XP_POLICY.leftover_eaten.first,
+      source_meta_json: {
+        xp_kind: "first",
+        level_curve_version: "v2",
+      },
+    });
+    expect(repeat).toMatchObject({
+      event_type: "leftover_eaten",
+      source_key: "leftover_eaten:leftover-2",
+      xp_delta: USER_PROGRESS_XP_POLICY.leftover_eaten.repeat,
+      source_meta_json: {
+        xp_kind: "repeat",
+        level_curve_version: "v2",
+      },
+    });
+  });
+
+  it("keeps awarding planner repeat XP beyond the old daily cap when each meal is a new source", async () => {
     const existingEvents = [
       {
         event_type: "planner_registered",
@@ -199,7 +251,25 @@ describe("user progress XP policy v2", () => {
       insert: vi.fn(() => createMaybeSingleQuery({ data: { id: "event-1" }, error: null })),
     };
     const progressSummaryTable = {
-      upsert: vi.fn(),
+      upsert: vi.fn(() => createMaybeSingleQuery({
+        data: {
+          user_id: "user-1",
+          total_xp: 45,
+          current_level: 1,
+          level_curve_version: "v2",
+          event_counts: {
+            cooking_completed: 0,
+            shopping_completed: 0,
+            recipe_saved_distinct_ever: 0,
+            custom_book_created: 0,
+            planner_registered_first: 1,
+            planner_registered_repeat: 4,
+          },
+          last_event_at: "2026-06-10T05:00:00.000Z",
+          last_updated_at: "2026-06-10T05:00:00.000Z",
+        },
+        error: null,
+      })),
     };
     const dbClient = {
       from: vi.fn((table: string) => {
@@ -217,9 +287,12 @@ describe("user progress XP policy v2", () => {
       occurredAt: "2026-06-10T05:00:00.000Z",
     });
 
-    expect(result).toMatchObject({ awarded: false, duplicate: false, error: null });
-    expect(progressEventsTable.insert).not.toHaveBeenCalled();
-    expect(progressSummaryTable.upsert).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ awarded: true, duplicate: false, error: null });
+    expect(progressEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      source_key: "planner_registered:meal-4",
+      xp_delta: USER_PROGRESS_XP_POLICY.planner_registered.repeat,
+    }));
+    expect(progressSummaryTable.upsert).toHaveBeenCalled();
   });
 
   it("does not create a ledger row when custom book daily repeat cap is exceeded", async () => {
@@ -269,7 +342,7 @@ describe("user progress XP policy v2", () => {
     expect(progressSummaryTable.upsert).not.toHaveBeenCalled();
   });
 
-  it("enforces planner weekly repeat cap separately from the daily cap", async () => {
+  it("keeps awarding planner repeat XP beyond the old weekly cap when each meal is a new source", async () => {
     const existingEvents = [
       {
         event_type: "planner_registered",
@@ -294,7 +367,27 @@ describe("user progress XP policy v2", () => {
       select: vi.fn(() => createArraySelectQuery({ data: existingEvents, error: null })),
       insert: vi.fn(() => createMaybeSingleQuery({ data: { id: "event-1" }, error: null })),
     };
-    const progressSummaryTable = { upsert: vi.fn() };
+    const progressSummaryTable = {
+      upsert: vi.fn(() => createMaybeSingleQuery({
+        data: {
+          user_id: "user-1",
+          total_xp: 90,
+          current_level: 1,
+          level_curve_version: "v2",
+          event_counts: {
+            cooking_completed: 0,
+            shopping_completed: 0,
+            recipe_saved_distinct_ever: 0,
+            custom_book_created: 0,
+            planner_registered_first: 1,
+            planner_registered_repeat: 13,
+          },
+          last_event_at: "2026-06-12T01:00:00.000Z",
+          last_updated_at: "2026-06-12T01:00:00.000Z",
+        },
+        error: null,
+      })),
+    };
     const dbClient = {
       from: vi.fn((table: string) => {
         if (table === "user_progress_events") return progressEventsTable;
@@ -311,12 +404,15 @@ describe("user progress XP policy v2", () => {
       occurredAt: "2026-06-12T01:00:00.000Z",
     });
 
-    expect(result).toMatchObject({ awarded: false, duplicate: false, error: null });
-    expect(progressEventsTable.insert).not.toHaveBeenCalled();
-    expect(progressSummaryTable.upsert).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ awarded: true, duplicate: false, error: null });
+    expect(progressEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      source_key: "planner_registered:meal-week-13",
+      xp_delta: USER_PROGRESS_XP_POLICY.planner_registered.repeat,
+    }));
+    expect(progressSummaryTable.upsert).toHaveBeenCalled();
   });
 
-  it("resets planner repeat cap at the KST week boundary", async () => {
+  it("does not attach old planner cap metadata at the KST week boundary", async () => {
     const existingEvents = [
       {
         event_type: "planner_registered",
@@ -399,13 +495,14 @@ describe("user progress XP policy v2", () => {
     expect(progressEventsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
       source_key: "planner_registered:meal-week-reset",
       xp_delta: USER_PROGRESS_XP_POLICY.planner_registered.repeat,
-      source_meta_json: expect.objectContaining({
-        cap_week_key: "2026-W25",
-      }),
+      source_meta_json: {
+        xp_kind: "repeat",
+        level_curve_version: "v2",
+      },
     }));
   });
 
-  it("resets planner repeat cap at the KST day boundary", async () => {
+  it("does not attach old planner cap metadata at the KST day boundary", async () => {
     const existingEvents = [
       {
         event_type: "planner_registered",
@@ -476,9 +573,14 @@ describe("user progress XP policy v2", () => {
       "supabase/migrations/20260611152000_34b_growth_backend_model.sql",
       "utf8",
     );
+    const leftoverProgressMigration = await readFile(
+      "supabase/migrations/20260615090000_35c_leftover_eaten_progress_event.sql",
+      "utf8",
+    );
 
     expect(migration).toContain("add column if not exists source_meta_json");
     expect(migration).toContain("'planner_registered'");
+    expect(leftoverProgressMigration).toContain("'leftover_eaten'");
     expect(migration).toContain("add column if not exists level_curve_version");
     expect(migration).toContain("'level_up'");
     expect(migration).toContain("add column if not exists priority");

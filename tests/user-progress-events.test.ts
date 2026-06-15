@@ -271,6 +271,7 @@ describe("user progress event writer", () => {
           custom_book_created: 0,
           planner_registered_first: 0,
           planner_registered_repeat: 0,
+          leftover_eaten: 0,
         },
         last_updated_at: "2026-06-10T12:00:00.000Z",
       },

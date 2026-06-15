@@ -1104,9 +1104,9 @@ CHECK (cover_image_url IS NULL OR char_length(cover_image_url) <= 2048)
 | --- | --- | --- | --- |
 | id | uuid | PK | |
 | user_id | uuid | FK → users, NOT NULL | |
-| event_type | text | NOT NULL | `cooking_completed` / `shopping_completed` / `recipe_saved` / `custom_book_created` |
+| event_type | text | NOT NULL | `cooking_completed` / `shopping_completed` / `recipe_saved` / `custom_book_created` / `planner_registered` / `leftover_eaten` |
 | source_key | text | NOT NULL | 멱등성 키. 형식: `{event_type}:{source_id}` 또는 `recipe_saved:{user_id}:{recipe_id}` |
-| source_table | text | NOT NULL | source of truth 테이블명 (예: `leftover_dishes`, `shopping_lists`, `recipe_book_items`, `recipe_books`) |
+| source_table | text | NOT NULL | source of truth 테이블명 (예: `leftover_dishes`, `shopping_lists`, `recipe_book_items`, `recipe_books`, `meals`) |
 | source_id | uuid | NOT NULL | source 테이블의 PK |
 | xp_delta | integer | NOT NULL, CHECK (xp_delta > 0) | 이 이벤트로 획득한 XP |
 | occurred_at | timestamptz | NOT NULL | source row의 발생 시각 |
@@ -1123,6 +1123,8 @@ CHECK (cover_image_url IS NULL OR char_length(cover_image_url) <= 2048)
 | `shopping_completed` | `shopping_lists.is_completed=true` and `completed_at IS NOT NULL` | 미완료 list가 완료로 전환된 직후 | `shopping_completed:{shopping_list_id}` | 이미 완료된 retry 재적립 금지 |
 | `recipe_saved` | user+recipe saved/custom membership transition `0 → ≥1` | 저장 성공 후 최초 savable membership이 생긴 직후 | `recipe_saved:{user_id}:{recipe_id}` | `liked`, `my_added`, 추가 saved/custom membership, duplicate insert, ledger 존재 후 unsave/resave 재적립 제외 |
 | `custom_book_created` | `recipe_books.book_type='custom'` | custom book INSERT 성공 직후 | `custom_book_created:{recipe_book_id}` | `my_added`/`saved`/`liked` bootstrap system books 제외 |
+| `planner_registered` | `meals.id` | meal INSERT 성공 직후 | first: `planner_registered:first:{user_id}`, repeat: `planner_registered:{meal_id}` | PATCH/status transition/shopping/cooking transition 기준 award 금지 |
+| `leftover_eaten` | `leftover_dishes.id` | 남은요리가 `leftover -> eaten`으로 처음 전환된 직후 | `leftover_eaten:{leftover_dish_id}` | 이미 eaten 상태인 retry, `uneat` 자체는 재적립 금지 |
 
 ### Backfill Policy
 
@@ -1137,7 +1139,7 @@ CHECK (cover_image_url IS NULL OR char_length(cover_image_url) <= 2048)
 | user_id | uuid | PK, FK → users | |
 | total_xp | integer | NOT NULL, DEFAULT 0 | 누적 총 XP |
 | current_level | integer | NOT NULL, DEFAULT 1 | 현재 레벨 |
-| event_counts | jsonb | NOT NULL, DEFAULT '{}' | `{ cooking_completed, shopping_completed, recipe_saved_distinct_ever, custom_book_created }` |
+| event_counts | jsonb | NOT NULL, DEFAULT '{}' | `{ cooking_completed, shopping_completed, recipe_saved_distinct_ever, custom_book_created, planner_registered_first, planner_registered_repeat, leftover_eaten }` |
 | last_event_at | timestamptz | NULL | 마지막 XP 이벤트 발생 시각 |
 | last_updated_at | timestamptz | NOT NULL, DEFAULT now() | projection 갱신 시각 |
 

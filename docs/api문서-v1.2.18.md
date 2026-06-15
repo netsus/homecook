@@ -2440,7 +2440,8 @@ GET /users/me/progress
       "recipe_saved_distinct_ever": 23,
       "custom_book_created": 2,
       "planner_registered_first": 1,
-      "planner_registered_repeat": 7
+      "planner_registered_repeat": 7,
+      "leftover_eaten": 3
     },
     "last_updated_at": "2026-06-10T12:34:56.000Z"
   },
@@ -2468,7 +2469,8 @@ GET /users/me/progress
 | `custom_book_created` | 25 | 10 | KST 2/day repeat cap |
 | `shopping_completed` | 40 | 25 | shopping list idempotency |
 | `cooking_completed` | 60 | 45 | leftover_dish source row 기준 1회 |
-| `planner_registered` | 25 | 5 | KST 3/day, 12/week repeat cap |
+| `planner_registered` | 25 | 5 | meal source id 기준 멱등. 35c review loop 이후 KST daily/weekly repeat cap 없음 |
+| `leftover_eaten` | 15 | 8 | leftover_dish `leftover -> eaten` transition 기준 1회 |
 
 ---
 
@@ -2554,7 +2556,8 @@ GET /users/me/gamification
 
 > 이 endpoint는 badge/quest/toast/tutorial 전용 계약이다. `GET /users/me`와 `GET /users/me/progress` response shape를 변경하지 않는다.
 > leaderboard, competitive rank, pressure streak, season reset, loot-box reward는 포함하지 않는다.
-> `planner_registered`는 34 시리즈부터 XP source에 포함된다. 반복 플래너 XP는 KST 3/day, 12/week cap을 적용한다.
+> `planner_registered`는 34 시리즈부터 XP source에 포함된다. 35c review loop 이후 반복 플래너 XP의 KST 3/day, 12/week cap은 제거하고, meal source id 기준 멱등성으로 같은 끼니의 재적립만 막는다.
+> `leftover_eaten`은 35c review loop에서 XP source에 추가되었다. 업적 달성 자체가 XP를 주는 것이 아니라, 남은요리 다먹음 source action이 XP와 남은요리 정리 업적 projection을 함께 만든다.
 
 ---
 

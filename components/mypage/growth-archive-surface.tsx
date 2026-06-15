@@ -3,6 +3,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { fetchUserGamificationArchive } from "@/lib/api/user-gamification";
+import {
+  compactGrowthNotificationsForDisplay,
+  isVisibleGrowthNotification,
+} from "@/lib/gamification-notifications";
 import type { UserGamificationNotificationData } from "@/types/user-gamification";
 
 type ArchiveState = "loading" | "ready" | "empty" | "error";
@@ -18,13 +22,15 @@ const DEFAULT_PAGE_SIZE = 20;
 
 function formatTimestamp(value: string) {
   // Keep display deterministic by avoiding locale/timezone formatting.
-  return value.slice(0, 10);
+  const date = value.slice(0, 10);
+  const time = value.length >= 16 ? value.slice(11, 16) : "";
+  return time ? `${date} ${time}` : date;
 }
 
 function toneLabel(type: UserGamificationNotificationData["notification_type"]) {
   if (type === "level_up") return "레벨업";
   if (type === "badge_unlocked") return "배지";
-  if (type === "quest_completed") return "퀘스트";
+  if (type === "quest_completed") return "업적";
   return "경험치";
 }
 
@@ -57,8 +63,8 @@ export function GrowthArchiveSurface({
           cursor: nextCursor,
         });
 
-        const visibleItems = data.items.filter(
-          (item) => item.delivery_channel !== "silent",
+        const visibleItems = compactGrowthNotificationsForDisplay(
+          data.items.filter(isVisibleGrowthNotification),
         );
 
         setItems((current) =>

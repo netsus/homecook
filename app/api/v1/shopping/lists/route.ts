@@ -781,6 +781,29 @@ export async function POST(request: Request) {
     return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
   }
 
+  const shoppingMealIds = shoppingMeals.map((meal) => meal.id).sort();
+  try {
+    await recordUserGrowthActivityEvent(dbClient, {
+      userId: user.id,
+      activityType: "shopping_bundle_prepared",
+      category: "shopping",
+      sourceKey: buildShoppingBundlePreparedSourceKey({
+        actionKind: "shopping_list",
+        mealIds: shoppingMealIds,
+      }),
+      sourceTable: "shopping_lists",
+      sourceId: shoppingList.id,
+      sourceMeta: {
+        action_kind: "shopping_list",
+        meal_ids: shoppingMealIds,
+        pantry_item_count: pantryIngredientIds.size,
+      },
+      occurredAt: shoppingList.created_at,
+    });
+  } catch {
+    // Activity history is secondary; shopping list creation remains authoritative.
+  }
+
   return ok({
     id: shoppingList.id,
     title: shoppingList.title,

@@ -9,6 +9,7 @@ import {
 import { buildShoppingBundlePreparedSourceKey } from "@/lib/server/user-growth-activity";
 import { createShoppingList, fetchShoppingPreview, isShoppingApiError } from "@/lib/api/shopping";
 
+const recordUserGrowthActivityEvent = vi.hoisted(() => vi.fn());
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
@@ -31,6 +32,15 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
 }));
+
+vi.mock("@/lib/server/user-growth-activity", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/server/user-growth-activity")>();
+
+  return {
+    ...actual,
+    recordUserGrowthActivityEvent,
+  };
+});
 
 interface QueryError {
   message: string;
@@ -131,6 +141,8 @@ describe("shopping stage2 backend", () => {
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    recordUserGrowthActivityEvent.mockReset();
+    recordUserGrowthActivityEvent.mockResolvedValue({ recorded: true, duplicate: false, error: null });
   });
 
   it("marks only registered meals without shopping list as eligible", () => {
@@ -803,6 +815,29 @@ describe("shopping stage2 backend", () => {
       "550e8400-e29b-41d4-a716-446655440002",
     ]);
     expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user-1",
+      activityType: "shopping_bundle_prepared",
+      category: "shopping",
+      sourceKey: buildShoppingBundlePreparedSourceKey({
+        actionKind: "shopping_list",
+        mealIds: [
+          "550e8400-e29b-41d4-a716-446655440001",
+          "550e8400-e29b-41d4-a716-446655440002",
+        ],
+      }),
+      sourceTable: "shopping_lists",
+      sourceId: "shopping-list-1",
+      sourceMeta: {
+        action_kind: "shopping_list",
+        meal_ids: [
+          "550e8400-e29b-41d4-a716-446655440001",
+          "550e8400-e29b-41d4-a716-446655440002",
+        ],
+        pantry_item_count: 1,
+      },
+      occurredAt: "2026-04-25T09:00:00.000Z",
+    });
   });
 
   it("marks selected meals shopping_done without creating a list when every needed ingredient is already in pantry", async () => {
@@ -959,22 +994,23 @@ describe("shopping stage2 backend", () => {
     expect(mealsUpdate).toHaveBeenCalledWith({ status: "shopping_done" });
     expect(mealsDoneUpdateQuery.in).toHaveBeenCalledWith("id", [mealId]);
     expect(mealsDoneUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
-    expect(activityInsert).toHaveBeenCalledWith({
-      user_id: "user-1",
-      activity_type: "shopping_bundle_prepared",
+    expect(activityInsert).not.toHaveBeenCalled();
+    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user-1",
+      activityType: "shopping_bundle_prepared",
       category: "shopping",
-      source_key: buildShoppingBundlePreparedSourceKey({
+      sourceKey: buildShoppingBundlePreparedSourceKey({
         actionKind: "completed_without_list",
         mealIds: [mealId],
       }),
-      source_table: "meals",
-      source_id: mealId,
-      source_meta_json: {
+      sourceTable: "meals",
+      sourceId: mealId,
+      sourceMeta: {
         action_kind: "completed_without_list",
         meal_ids: [mealId],
         pantry_item_count: 1,
       },
-      occurred_at: expect.any(String),
+      occurredAt: expect.any(String),
     });
   });
 
