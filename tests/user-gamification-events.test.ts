@@ -613,4 +613,20 @@ describe("user gamification event projection", () => {
     expect(migration).toContain("grant all privileges on public.user_progress_notifications to service_role");
     expect(migration).not.toContain("operational_events");
   });
+
+  it("removes legacy quest notification rows from the remote notification contract", async () => {
+    const migration = await readFile(
+      "supabase/migrations/20260615143000_35c_remove_quest_completed_notifications.sql",
+      "utf8",
+    );
+
+    expect(migration).toContain(
+      "delete from public.user_progress_notifications\nwhere notification_type = 'quest_completed';",
+    );
+    expect(migration).toContain("drop constraint if exists user_progress_notifications_type_check");
+    expect(migration).toContain(
+      "check (notification_type in (\n    'xp_awarded',\n    'achievement_unlocked',\n    'badge_unlocked',\n    'level_up'\n  ))",
+    );
+    expect(migration).not.toContain("'quest_completed',");
+  });
 });

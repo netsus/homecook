@@ -8,7 +8,7 @@
 
 ## Happy Path
 
-- [x] source action 성공 후 toast stack이 `priority_unseen` 서버 정렬 순서 그대로 표시된다 (`level_up > badge_unlocked > quest_completed > xp_awarded`) <!-- omo:id=accept-priority-order-display;stage=4;scope=frontend;review=5,6 -->
+- [x] source action 성공 후 toast stack이 `priority_unseen` 서버 정렬 순서 그대로 표시된다 (`level_up > achievement_unlocked/badge_unlocked > xp_awarded`) <!-- omo:id=accept-priority-order-display;stage=4;scope=frontend;review=5,6 -->
 - [x] visible toast가 mobile 최대 2개, desktop 최대 3개로 제한되고 초과분은 queue/collapse로 유실 없이 대기한다 <!-- omo:id=accept-visible-max;stage=4;scope=frontend;review=5,6 -->
 - [x] `level_up` toast가 `xp_awarded`보다 강한 시각 강도(아이콘/색/강조)로 표시되고 stack에서 가장 먼저 보인다 <!-- omo:id=accept-levelup-emphasis;stage=4;scope=frontend;review=5,6 -->
 - [x] 같은 `group_key` 알림이 stack에서 인접/묶음으로 표시되어 다른 source action 알림과 혼동되지 않는다 <!-- omo:id=accept-group-key-cohesion;stage=4;scope=frontend;review=5,6 -->

@@ -280,6 +280,9 @@ describe("user achievement awards", () => {
         title: "튜토리얼 완료",
       }),
     }));
+    expect(notificationsTable.insert).not.toHaveBeenCalledWith(expect.objectContaining({
+      notification_type: "quest_completed",
+    }));
   });
 
   it("does not create a separate badge notification when an achievement already awards that badge", async () => {

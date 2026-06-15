@@ -2592,8 +2592,9 @@ GET /users/me/gamification
 - `achievement_album.categories`는 category tab/stamp grid 표시용 서버 projection이다. 클라이언트는 current/target/status를 계산하지 않는다.
 - achievement status 후보는 `earned`, `active`, `locked`이다.
 - 업적 달성은 XP를 추가 지급하지 않는다. XP는 `user_progress_events` 기반 progress API가 authority다.
-- `notifications.unseen`은 XP toast 또는 badge/quest new 상태 표시용이다.
-- `notifications.priority_unseen`은 서버 우선순위 정렬 결과다. 우선순위는 `level_up > achievement_unlocked/badge_unlocked > quest_completed > xp_awarded`이다.
+- `notifications.unseen`은 XP toast 또는 achievement/badge new 상태 표시용이다.
+- `notifications.priority_unseen`은 서버 우선순위 정렬 결과다. 우선순위는 `level_up > achievement_unlocked/badge_unlocked > xp_awarded`이다.
+- 퀘스트 완료는 `quests`와 `achievement_album`의 tutorial projection으로 표시하며, 별도 `quest_completed` notification row는 만들지 않는다.
 - `level_up` 알림은 level band가 바뀐 경우에만 등급명을 말한다. 같은 등급 안에서 레벨만 오른 경우 body는 `"레벨이 올랐어요."`처럼 등급명을 포함하지 않는다.
 - 장기 업적 milestone은 튜토리얼의 첫 1회 달성 업적과 중복되지 않도록 `target=1`을 사용하지 않는다.
 - `notifications.archive_preview`는 live non-silent notification 최신 5개 preview다. Historical/backfill recompute 결과는 포함하지 않는다.
@@ -2705,7 +2706,7 @@ GET /users/me/gamification/archive?limit=20&cursor=created_at|id
 - archive는 v1에서 cutover 이후 live notification만 조회한다.
 - `delivery_channel='toast'`와 `delivery_channel='archive_only'`인 live non-silent row를 포함한다.
 - `delivery_channel='silent'`는 제외한다.
-- `notification_type` 후보는 `level_up`, `achievement_unlocked`, `badge_unlocked`, `quest_completed`, `xp_awarded`이다.
+- `notification_type` 후보는 `level_up`, `achievement_unlocked`, `badge_unlocked`, `xp_awarded`이다.
 - Historical/backfill recompute는 archive row를 만들지 않는다.
 - 정렬은 `created_at DESC, id DESC`이다.
 - `seen_at`은 사용자가 toast/card를 확인했다는 뜻이며 archive에서 제거된다는 뜻이 아니다.

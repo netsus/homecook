@@ -1254,7 +1254,8 @@ XP source action 성공
   │    └─ 실패: 원래 source action 성공은 유지, gamification soft-fail 기록
   └─ FE notification refresh
        ├─ priority_unseen 조회
-       ├─ level_up > achievement_unlocked/badge_unlocked > quest_completed > xp_awarded 순서로 toast stack 표시
+       ├─ level_up > achievement_unlocked/badge_unlocked > xp_awarded 순서로 toast stack 표시
+       ├─ 퀘스트 완료는 별도 toast 없이 업적 앨범 tutorial 상태로 표시
        ├─ mobile visible max 2 / desktop visible max 3
        └─ rendered/collapsed notification만 seen 처리 → 실패해도 core action rollback 없음
 ```

@@ -1435,34 +1435,6 @@ async function reconcileUserGamification(
       };
     }
 
-    const hasTutorialAchievementNotification = Boolean(
-      getTutorialAchievementKeyForQuest(definition.quest_key),
-    );
-
-    if (
-      notificationMode === "live" &&
-      status === "completed" &&
-      existing?.status !== "completed" &&
-      !hasTutorialAchievementNotification
-    ) {
-      const notificationResult = await insertProgressNotification(dbClient, {
-        userId: input.userId,
-        notificationKey: `quest:${definition.quest_key}:${input.userId}`,
-        notificationType: "quest_completed",
-        sourceEventId: input.sourceEventId ?? null,
-        payload: {
-          quest_key: definition.quest_key,
-          title: definition.title,
-          description: definition.description,
-        },
-        groupKey: input.sourceEventId ? `progress-event:${input.sourceEventId}` : null,
-        now,
-      });
-
-      if (notificationResult.error) {
-        return { error: notificationResult.error };
-      }
-    }
   }
 
   return { error: null };

@@ -28,7 +28,7 @@
 - [x] 등급 band 7종(`sprout_homecook`~`homecook_master`)이 레벨 경계(3/4, 7/8, 12/13, 20/21, 34/35, 49/50)에서 올바르게 전환된다 <!-- omo:id=accept-grade-band-boundaries;stage=2;scope=backend;review=3,6 -->
 - [x] 같은 `total_xp`에서 v1→v2 재계산 시 레벨이 내려가지 않는다 <!-- omo:id=accept-v2-no-level-decrease;stage=2;scope=backend;review=3,6 -->
 - [x] `level_up` notification은 live XP write에서 `previous_level < next_level`일 때만 레벨당 1회 생성되고, 다단계 상승 시 최종 레벨 1건만 생성된다 <!-- omo:id=accept-levelup-live-only-once;stage=2;scope=backend;review=3,6 -->
-- [x] notification priority가 `level_up=1 > badge_unlocked=2 > quest_completed=3 > xp_awarded=4`로 저장/정렬된다 <!-- omo:id=accept-notification-priority-order;stage=2;scope=backend;review=3,6 -->
+- [x] notification priority가 `level_up=1 > achievement_unlocked/badge_unlocked=2 > xp_awarded=4`로 저장/정렬되고 `quest_completed` notification row는 만들지 않는다 <!-- omo:id=accept-notification-priority-order;stage=2;scope=backend;review=3,6 -->
 - [x] backfill/recompute가 deterministic order(`meals.created_at ASC, id ASC`)로 처리되고 notification/archive row를 만들지 않는다 <!-- omo:id=accept-backfill-no-toast;stage=2;scope=backend;review=3,6 -->
 - [x] recompute 후 `user_progress_summary.level_curve_version`이 `'v2'`로 전환된다 <!-- omo:id=accept-level-curve-version-transition;stage=2;scope=backend;review=3,6 -->
 - [x] 장보기 count가 list 기준 / meal bundle 기준 / covered meal 기준으로 분리 집계된다 <!-- omo:id=accept-shopping-count-separation;stage=2;scope=backend;review=3,6 -->

@@ -32,9 +32,10 @@
   - notification seen 처리는 기존 API 계약 소비만 수행
 - DB 영향:
   - 35c public review loop에서 남은요리 다먹음 source action이 XP/업적 알림을 만들지 못하는 버그를 수정하며 `user_progress_events.event_type`에 `leftover_eaten` 허용값을 추가한다.
+  - 35c public review loop에서 업적 달성 toast와 중복되는 `quest_completed` notification row를 제거하고, 앞으로 새 quest notification row를 만들지 않도록 한다.
 - Schema Change:
   - [ ] 없음 (읽기 전용)
-  - [x] 있음 → `supabase/migrations/20260615090000_35c_leftover_eaten_progress_event.sql`
+  - [x] 있음 → `supabase/migrations/20260615090000_35c_leftover_eaten_progress_event.sql`, `supabase/migrations/20260615143000_35c_remove_quest_completed_notifications.sql`
 
 ## Out of Scope
 
