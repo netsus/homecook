@@ -169,5 +169,5 @@
 - [x] loading / empty / error / read-only / unauthorized 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] Vitest와 Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] 320/390/1440/1920 및 modal evidence 캡처 <!-- omo:id=delivery-design-evidence;stage=4;scope=frontend;review=5,6 -->
-- [x] 남은요리 다먹음 `leftover_eaten` XP/업적/알림 source action 연결 <!-- omo:id=delivery-leftover-eaten-xp-notification;stage=4;scope=backend;review=3,6 -->
+- [x] 남은요리 다먹음 `leftover_eaten` XP/업적/알림 source action 연결 <!-- omo:id=delivery-leftover-eaten-xp-notification;stage=4;scope=shared;review=5,6 -->
 - [x] 알림 archive modal cursor pagination 연결 <!-- omo:id=delivery-notification-archive-pagination;stage=4;scope=frontend;review=5,6 -->

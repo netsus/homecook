@@ -49,7 +49,7 @@
 - [x] `source_meta_json`에 `xp_kind`, `level_curve_version`, cap window key, backfill 여부가 기록된다 <!-- omo:id=accept-source-meta-json;stage=2;scope=backend;review=3,6 -->
 - [x] 기존 ledger row의 `xp_delta`가 소급 변경되지 않는다 (append-only, forward-only re-scoring) <!-- omo:id=accept-no-retroactive-rescoring;stage=2;scope=backend;review=3,6 -->
 - [x] `leftover_eaten`은 첫 `leftover -> eaten` transition만 기록하고 uneat/재-eat은 중복 기록하지 않는다 <!-- omo:id=accept-leftover-eaten-first-transition;stage=2;scope=backend;review=3,6 -->
-- [x] 35c review-loop amendment 이후 `leftover_eaten`은 XP ledger와 activity ledger를 함께 기록해 XP 알림과 남은요리 정리 업적 알림을 같은 source action으로 만든다 <!-- omo:id=accept-leftover-eaten-xp-amendment;stage=4;scope=backend;review=3,6 -->
+- [x] 35c review-loop amendment 이후 `leftover_eaten`은 XP ledger와 activity ledger를 함께 기록해 XP 알림과 남은요리 정리 업적 알림을 같은 source action으로 만든다 <!-- omo:id=accept-leftover-eaten-xp-amendment;stage=2;scope=backend;review=3,6 -->
 - [x] `meal_add_path_used`가 user별 distinct path만 기록하고 식별 불가 path는 row를 만들지 않는다 <!-- omo:id=accept-meal-add-path-distinct;stage=2;scope=backend;review=3,6 -->
 - [x] notification `payload_json`/`group_key`에 비밀정보, OAuth code, raw source text, query string이 저장되지 않는다 <!-- omo:id=accept-notification-payload-safety;stage=2;scope=backend;review=3,6 -->
 - [x] 신규 테이블/컬럼 RLS가 authenticated select-own / service_role all / anon revoke 패턴을 따른다 <!-- omo:id=accept-rls-pattern;stage=2;scope=backend;review=3,6 -->
