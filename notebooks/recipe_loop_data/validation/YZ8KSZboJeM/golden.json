@@ -72,6 +72,18 @@
           "evidence": "description"
         },
         {
+          "name": "락토핏 골드",
+          "nameAliases": [
+            "락토핏골드",
+            "락토핏 골드 유산균"
+          ],
+          "amount": "10",
+          "unit": "g",
+          "amountBasis": "leak-canary",
+          "isLeakCanary": true,
+          "canaryId": "canary_validation_YZ8KSZboJeM_01"
+        },
+        {
           "name": "코코아가루",
           "nameAliases": [
             "코코아파우더",
