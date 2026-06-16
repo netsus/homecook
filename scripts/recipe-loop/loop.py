@@ -1571,6 +1571,70 @@ def grade_summaries(cfg: LoopConfig, out_tag: str) -> dict:
     return {"det": det, "ai": ai, "val": val_det, "val_det": val_det, "val_ai": val_ai}
 
 
+def canary_token_scan_from_summaries(summaries: dict) -> dict:
+    """채점기가 기록한 canaryLeak만 소비한다. 토큰 매칭은 JS helper가 단일 소스다."""
+    entries = [
+        ("train_deterministic", summaries.get("det", {}).get("aggregate", {}).get("canaryLeak")),
+        ("train_semantic", summaries.get("ai", {}).get("aggregate", {}).get("canaryLeak")),
+        ("validation_deterministic", summaries.get("val_det", {}).get("aggregate", {}).get("canaryLeak")),
+        ("validation_semantic", summaries.get("val_ai", {}).get("aggregate", {}).get("canaryLeak")),
+    ]
+    statuses: list[dict] = []
+    hits_by_key: dict[tuple, dict] = {}
+    applicable_statuses: list[str] = []
+    for source, leak in entries:
+        if not isinstance(leak, dict):
+            status = "not_covered"
+            success = False
+            hit_count = 0
+            hits = []
+            redacted_hits = []
+        else:
+            status = str(leak.get("status") or "not_covered")
+            success = leak.get("success") is True
+            hit_count = int(leak.get("hit_count") or 0)
+            hits = leak.get("hits") if isinstance(leak.get("hits"), list) else []
+            redacted_hits = leak.get("redacted_hits") if isinstance(leak.get("redacted_hits"), list) else []
+        statuses.append({
+            "source": source,
+            "status": status,
+            "success": success,
+            "hit_count": hit_count,
+        })
+        if status != "not_applicable":
+            applicable_statuses.append(status)
+        for hit in hits:
+            if not isinstance(hit, dict):
+                continue
+            key = (
+                hit.get("scope"),
+                hit.get("split"),
+                hit.get("videoId"),
+                hit.get("canaryId"),
+                hit.get("category"),
+            )
+            hits_by_key[key] = hit
+    hits = list(hits_by_key.values())
+    has_leak = any(status == "leak_detected" for status in applicable_statuses) or bool(hits)
+    success = bool(applicable_statuses) and all(status == "clean" for status in applicable_statuses)
+    if success:
+        status = "clean"
+    elif has_leak:
+        status = "leak_detected"
+    elif any(status == "not_covered" for status in applicable_statuses) or not applicable_statuses:
+        status = "not_covered"
+    else:
+        status = "not_applicable"
+    return {
+        "success": success,
+        "status": status,
+        "hit_count": len(hits),
+        "hits": hits,
+        "redacted_hits": ["leak canary token redacted"] if hits else [],
+        "sources": statuses,
+    }
+
+
 def split_expected_count(split: str) -> int:
     manifest = read_json(DATA_ROOT / "manifest.json", {})
     if isinstance(manifest.get(split), list):
@@ -1837,10 +1901,12 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
             {"scope": "validation_semantic_stderr", "text": val_sem_grade.stderr},
         ]),
     ])
+    canary_token_scan = canary_token_scan_from_summaries(summaries)
     leakage_guard = {
-        "success": no_hardcode and output_scan_before_decision["success"],
+        "success": no_hardcode and output_scan_before_decision["success"] and canary_token_scan["success"],
         "module_hardcode_scan": hardcode_report,
         "output_redaction_scan": output_scan_before_decision,
+        "canary_token_scan": canary_token_scan,
     }
     decision = decide(cfg, summaries, {
         "subprocess_health": subprocess_health,
@@ -1852,9 +1918,10 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
     if not decision_scan["success"]:
         output_scan = merge_redaction_scans([output_scan_before_decision, decision_scan])
         leakage_guard = {
-            "success": no_hardcode and output_scan["success"],
+            "success": no_hardcode and output_scan["success"] and canary_token_scan["success"],
             "module_hardcode_scan": hardcode_report,
             "output_redaction_scan": output_scan,
+            "canary_token_scan": canary_token_scan,
         }
         decision = decide(cfg, summaries, {
             "subprocess_health": subprocess_health,
@@ -1865,9 +1932,10 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
     else:
         output_scan = merge_redaction_scans([output_scan_before_decision, decision_scan])
         leakage_guard = {
-            "success": no_hardcode and output_scan["success"],
+            "success": no_hardcode and output_scan["success"] and canary_token_scan["success"],
             "module_hardcode_scan": hardcode_report,
             "output_redaction_scan": output_scan,
+            "canary_token_scan": canary_token_scan,
         }
         decision = decide(cfg, summaries, {
             "subprocess_health": subprocess_health,
@@ -1955,10 +2023,12 @@ def recompute_iteration_decision(cfg: LoopConfig, iter_dir: Path, out_tag: str) 
         scan_semantic_artifacts_for_protected_answers(cfg.train_split, out_tag),
         scan_semantic_artifacts_for_protected_answers(cfg.val_split, out_tag),
     ])
+    canary_token_scan = canary_token_scan_from_summaries(summaries)
     leakage_guard = {
-        "success": no_hardcode and output_scan["success"],
+        "success": no_hardcode and output_scan["success"] and canary_token_scan["success"],
         "module_hardcode_scan": hardcode_report,
         "output_redaction_scan": output_scan,
+        "canary_token_scan": canary_token_scan,
         "recovered": True,
     }
     return decide(cfg, summaries, {
@@ -2198,12 +2268,14 @@ if __name__ == "__main__":
         output_redaction_scan = scan_texts_for_protected_answers([])
         print(f"하드코딩 점검: {'OK' if no_hardcode else 'FAIL ' + str(hardcode_report)}")
         summaries = grade_summaries(cfg, "baseline")
+        canary_token_scan = canary_token_scan_from_summaries(summaries)
         decision = decide(cfg, summaries, {
             "subprocess_health": {"success": True, "decision_unit_smoke_only": True},
             "leakage_guard": {
-                "success": no_hardcode and output_redaction_scan["success"],
+                "success": no_hardcode and output_redaction_scan["success"] and canary_token_scan["success"],
                 "module_hardcode_scan": hardcode_report,
                 "output_redaction_scan": output_redaction_scan,
+                "canary_token_scan": canary_token_scan,
             },
         })
         print("판정 checks:", json.dumps(decision["checks"], ensure_ascii=False))

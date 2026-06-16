@@ -2,13 +2,18 @@ import { mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(__dirname, "..");
 const gradeExtractionScript = path.join(repoRoot, "scripts/recipe-loop/grade-extraction.mjs");
 const gradeSemanticScript = path.join(repoRoot, "scripts/recipe-loop/grade-semantic.mjs");
+const gradingModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/recipe-loop/lib/grading.mjs")).href;
 const loopScript = path.join(repoRoot, "scripts/recipe-loop/loop.py");
+const validationCanaryVideoId = "YZ8KSZboJeM";
+const validationCanaryId = "canary_validation_YZ8KSZboJeM_01";
+const validationCanaryName = "락토핏 골드";
 
 function writeJson(filePath: string, value: unknown) {
   mkdirSync(path.dirname(filePath), { recursive: true });
@@ -17,6 +22,10 @@ function writeJson(filePath: string, value: unknown) {
 
 function splitCase(root: string, id: string) {
   return path.join(root, "notebooks/recipe_loop_data/validation", id);
+}
+
+function splitCaseFor(root: string, split: string, id: string) {
+  return path.join(root, "notebooks/recipe_loop_data", split, id);
 }
 
 function codexCalibration(overrides: Record<string, unknown> = {}) {
@@ -75,6 +84,57 @@ function matchingResult() {
         steps: ["양파를 볶는다"],
       },
     ],
+  };
+}
+
+function approvedCanaryGolden() {
+  return {
+    schemaVersion: 1,
+    videoId: validationCanaryVideoId,
+    reviewStatus: "approved",
+    recipes: [
+      {
+        title: "진한 초코 마들렌",
+        ingredients: [
+          { name: "박력분", amount: "90", unit: "g" },
+          {
+            name: validationCanaryName,
+            nameAliases: ["락토핏골드", "락토핏 골드 유산균"],
+            amount: "10",
+            unit: "g",
+            amountBasis: "leak-canary",
+            isLeakCanary: true,
+            canaryId: validationCanaryId,
+          },
+        ],
+        steps: [{ order: 1, instruction: "가루를 섞고 굽는다" }],
+      },
+    ],
+  };
+}
+
+function canaryMatchingResult(includeCanary = false) {
+  return {
+    recipes: [
+      {
+        title: "진한 초코 마들렌",
+        ingredients: [
+          { name: "박력분", amount: "90", unit: "g" },
+          ...(includeCanary ? [{ name: "락토핏골드", amount: "10", unit: "g" }] : []),
+        ],
+        steps: ["가루를 섞고 굽는다"],
+      },
+    ],
+    __semanticJudge: {
+      cases: [
+        {
+          title: "진한 초코 마들렌",
+          ingredient_score: 5,
+          step_score: 5,
+          reason: "fixture pass",
+        },
+      ],
+    },
   };
 }
 
@@ -274,6 +334,291 @@ describe("recipe-loop local integrity gates", () => {
     expect(rows["name-false-positive"]).toMatchObject({ ingredientRecall: 0, ingredientF1: 0 });
     expect(rows["amount-missing"]).toMatchObject({ ingredientRecall: 1, amountMatchRate: 0 });
     expect(rows["one-bag-step"].stepCoverage).toBeLessThan(1);
+  });
+
+  it("strips flagged golden canaries from deterministic scoring while recording clean coverage", () => {
+    writeJson(path.join(splitCase(workdir, validationCanaryVideoId), "golden.json"), approvedCanaryGolden());
+    writeJson(
+      path.join(splitCase(workdir, validationCanaryVideoId), "runs/latest/result.json"),
+      canaryMatchingResult(false),
+    );
+
+    const result = spawnSync(
+      "node",
+      [
+        gradeExtractionScript,
+        "--split",
+        "validation",
+        "--out-tag",
+        "latest",
+        "--ids",
+        validationCanaryVideoId,
+        "--expected-count",
+        "1",
+      ],
+      { cwd: workdir, encoding: "utf8" },
+    );
+
+    expect(result.status).toBe(0);
+    const summary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_grade_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    expect(summary.aggregate).toMatchObject({
+      success: true,
+      ingredientRecall: 1,
+      ingredientPrecision: 1,
+      canaryLeak: {
+        success: true,
+        status: "clean",
+        hit_count: 0,
+      },
+    });
+    expect(summary.perVideo[0]).toMatchObject({
+      videoId: validationCanaryVideoId,
+      ingredientRecall: 1,
+      canaryLeak: { status: "clean" },
+    });
+    expect(JSON.stringify(summary)).not.toContain(validationCanaryName);
+  });
+
+  it("scans raw predicted output before stripping canary tokens from deterministic scoring", () => {
+    writeJson(path.join(splitCase(workdir, validationCanaryVideoId), "golden.json"), approvedCanaryGolden());
+    writeJson(
+      path.join(splitCase(workdir, validationCanaryVideoId), "runs/latest/result.json"),
+      canaryMatchingResult(true),
+    );
+
+    const result = spawnSync(
+      "node",
+      [
+        gradeExtractionScript,
+        "--split",
+        "validation",
+        "--out-tag",
+        "latest",
+        "--ids",
+        validationCanaryVideoId,
+        "--expected-count",
+        "1",
+      ],
+      { cwd: workdir, encoding: "utf8" },
+    );
+
+    expect(result.status).toBe(0);
+    const summary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_grade_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    expect(summary.aggregate).toMatchObject({
+      success: true,
+      ingredientRecall: 1,
+      ingredientPrecision: 1,
+      canaryLeak: {
+        success: false,
+        status: "leak_detected",
+        hit_count: 1,
+        redacted_hits: ["leak canary token redacted"],
+      },
+    });
+    expect(summary.aggregate.canaryLeak.hits[0]).toMatchObject({
+      scope: "validation/YZ8KSZboJeM/runs/latest/result.json",
+      split: "validation",
+      videoId: validationCanaryVideoId,
+      canaryId: validationCanaryId,
+      category: "ingredient_name",
+    });
+    expect(JSON.stringify(summary)).not.toContain(validationCanaryName);
+  });
+
+  it("fails closed when the configured validation canary case loses its flagged golden ingredient", () => {
+    writeJson(path.join(splitCase(workdir, validationCanaryVideoId), "golden.json"), {
+      ...approvedCanaryGolden(),
+      recipes: [
+        {
+          title: "진한 초코 마들렌",
+          ingredients: [{ name: "박력분", amount: "90", unit: "g" }],
+          steps: [{ order: 1, instruction: "가루를 섞고 굽는다" }],
+        },
+      ],
+    });
+    writeJson(
+      path.join(splitCase(workdir, validationCanaryVideoId), "runs/latest/result.json"),
+      canaryMatchingResult(false),
+    );
+
+    const result = spawnSync(
+      "node",
+      [
+        gradeExtractionScript,
+        "--split",
+        "validation",
+        "--out-tag",
+        "latest",
+        "--ids",
+        validationCanaryVideoId,
+        "--expected-count",
+        "1",
+      ],
+      { cwd: workdir, encoding: "utf8" },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("canary drift");
+  });
+
+  it("marks canary coverage as not_covered for validation subsets and not_applicable for splits without canaries", () => {
+    writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), approvedGolden());
+    writeJson(path.join(splitCase(workdir, "case-a"), "runs/latest/result.json"), matchingResult());
+    writeJson(path.join(splitCaseFor(workdir, "train", "train-a"), "golden.json"), {
+      ...approvedGolden(),
+      videoId: "train-a",
+    });
+    writeJson(path.join(splitCaseFor(workdir, "train", "train-a"), "runs/latest/result.json"), matchingResult());
+
+    const validationSubset = spawnSync(
+      "node",
+      [
+        gradeExtractionScript,
+        "--split",
+        "validation",
+        "--out-tag",
+        "latest",
+        "--ids",
+        "case-a",
+        "--expected-count",
+        "1",
+      ],
+      { cwd: workdir, encoding: "utf8" },
+    );
+    const train = spawnSync(
+      "node",
+      [gradeExtractionScript, "--split", "train", "--out-tag", "latest", "--expected-count", "1"],
+      { cwd: workdir, encoding: "utf8" },
+    );
+
+    expect(validationSubset.status).toBe(0);
+    expect(train.status).toBe(0);
+    const validationSummary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_grade_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    const trainSummary = JSON.parse(
+      readFileSync(path.join(workdir, "notebooks/recipe_loop_data/train/_grade_summary.latest.json"), "utf8"),
+    );
+    expect(validationSummary.aggregate.canaryLeak).toMatchObject({
+      success: false,
+      status: "not_covered",
+      hit_count: 0,
+    });
+    expect(trainSummary.aggregate.canaryLeak).toMatchObject({
+      status: "not_applicable",
+      hit_count: 0,
+    });
+  });
+
+  it("uses one predicted-only canary helper for stripping and rejects golden scans", async () => {
+    const grading = await import(gradingModuleUrl);
+    const { cleanGolden, removed } = grading.stripCanaryByFlag(approvedCanaryGolden(), {
+      split: "validation",
+      videoId: validationCanaryVideoId,
+    });
+    const tokens = grading.canaryTokensFromRemoved(removed);
+
+    expect(JSON.stringify(cleanGolden)).not.toContain(validationCanaryName);
+    expect(tokens).toHaveLength(1);
+    expect(() =>
+      grading.scanForCanaries({
+        sourceKind: "golden",
+        scope: "validation/YZ8KSZboJeM/golden.json",
+        split: "validation",
+        videoId: validationCanaryVideoId,
+        value: approvedCanaryGolden(),
+        canaries: tokens,
+      }),
+    ).toThrow(/golden/i);
+
+    const rawPredicted = canaryMatchingResult(true);
+    const leak = grading.scanForCanaries({
+      sourceKind: "predicted",
+      scope: "validation/YZ8KSZboJeM/runs/latest/result.json",
+      split: "validation",
+      videoId: validationCanaryVideoId,
+      value: rawPredicted,
+      canaries: tokens,
+    });
+    const cleanPredicted = grading.stripCanaryByToken(rawPredicted, tokens);
+
+    expect(leak.hit_count).toBe(1);
+    expect(JSON.stringify(cleanPredicted)).not.toContain(validationCanaryName);
+    expect(JSON.stringify(cleanPredicted)).not.toContain("락토핏골드");
+  });
+
+  it("applies the same raw-scan then clean-score canary path to semantic grading", () => {
+    writeJson(path.join(splitCase(workdir, validationCanaryVideoId), "golden.json"), approvedCanaryGolden());
+    writeJson(
+      path.join(splitCase(workdir, validationCanaryVideoId), "runs/latest/result.json"),
+      canaryMatchingResult(true),
+    );
+    writeJson(path.join(workdir, "notebooks/recipe_loop_data/semantic_calibration.json"), {
+      schemaVersion: 1,
+      thresholds: { minCaseScore: 3, averageScore: 3 },
+      samples: [{ id: "fixture-pass", expected: 5 }],
+    });
+
+    const result = spawnSync(
+      "node",
+      [
+        gradeSemanticScript,
+        "--split",
+        "validation",
+        "--out-tag",
+        "latest",
+        "--ids",
+        validationCanaryVideoId,
+        "--expected-count",
+        "1",
+        "--judge-provider",
+        "fixture",
+        "--judge-model",
+        "fixture-local",
+        "--calibration",
+        "notebooks/recipe_loop_data/semantic_calibration.json",
+      ],
+      { cwd: workdir, encoding: "utf8" },
+    );
+
+    expect(result.status).toBe(0);
+    const summary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    const row = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/YZ8KSZboJeM/runs/latest/grade_semantic.json"),
+        "utf8",
+      ),
+    );
+    expect(summary.aggregate).toMatchObject({
+      success: true,
+      averageScore: 5,
+      canaryLeak: {
+        success: false,
+        status: "leak_detected",
+        hit_count: 1,
+      },
+    });
+    expect(row.canaryLeak).toMatchObject({ status: "leak_detected" });
+    expect(JSON.stringify(summary)).not.toContain(validationCanaryName);
+    expect(JSON.stringify(row)).not.toContain(validationCanaryName);
   });
 
   it("records semantic missing artifacts without calling the provider", () => {
@@ -845,6 +1190,97 @@ print(json.dumps({
     expect(report.payload.decision.passed).toBe(false);
     expect(report.payload.decision.checks.leakage_guard).toBe(false);
     expect(report.raw_leaked).toBe(false);
+  });
+
+  it("combines grader canary leak summaries without reimplementing token matching in loop.py", () => {
+    const result = runLoopPython(`
+def det_agg(canary_status, canary_success):
+    return {
+        "success": True,
+        "ingredientF1": 0.92,
+        "amountMatchRate": 0.85,
+        "stepCoverage": 0.85,
+        "recipeCountMatchRate": 1,
+        "missing_result_count": 0,
+        "missing_golden_count": 0,
+        "unapproved_golden_count": 0,
+        "expected_count_mismatch": False,
+        "canaryLeak": {"status": canary_status, "success": canary_success, "hit_count": 0, "hits": [], "redacted_hits": []},
+    }
+
+def sem_agg(canary_status, canary_success):
+    return {
+        "success": True,
+        "judge_provider": "codex",
+        "judge_model": "gpt-5.4",
+        "judge_effort": "high",
+        "calibration": {"valid": True},
+        "provider_error_count": 0,
+        "parse_error_count": 0,
+        "schema_error_count": 0,
+        "timeout_error_count": 0,
+        "calibration_error_count": 0,
+        "empty_case_count": 0,
+        "expected_count_mismatch": False,
+        "threshold_success": True,
+        "averageScore": 4.3,
+        "minCaseScore": 4,
+        "canaryLeak": {"status": canary_status, "success": canary_success, "hit_count": 0, "hits": [], "redacted_hits": []},
+    }
+
+cfg = loop.LoopConfig()
+clean_summaries = {
+    "det": {"aggregate": det_agg("not_applicable", True)},
+    "ai": {"aggregate": sem_agg("not_applicable", True)},
+    "val": {"aggregate": det_agg("clean", True)},
+    "val_det": {"aggregate": det_agg("clean", True)},
+    "val_ai": {"aggregate": sem_agg("clean", True)},
+}
+covered_scan = loop.canary_token_scan_from_summaries(clean_summaries)
+covered_guard = {"success": covered_scan["success"], "canary_token_scan": covered_scan, "output_redaction_scan": {"success": True}}
+covered_decision = loop.decide(cfg, clean_summaries, {"subprocess_health": {"success": True}, "leakage_guard": covered_guard})
+
+not_covered_summaries = {
+    "det": {"aggregate": det_agg("not_applicable", True)},
+    "ai": {"aggregate": sem_agg("not_applicable", True)},
+    "val": {"aggregate": det_agg("not_covered", False)},
+    "val_det": {"aggregate": det_agg("not_covered", False)},
+    "val_ai": {"aggregate": sem_agg("not_covered", False)},
+}
+not_covered_scan = loop.canary_token_scan_from_summaries(not_covered_summaries)
+not_covered_guard = {"success": not_covered_scan["success"], "canary_token_scan": not_covered_scan, "output_redaction_scan": {"success": True}}
+not_covered_decision = loop.decide(cfg, not_covered_summaries, {"subprocess_health": {"success": True}, "leakage_guard": not_covered_guard})
+
+leak_summaries = {
+    "det": {"aggregate": det_agg("not_applicable", True)},
+    "ai": {"aggregate": sem_agg("not_applicable", True)},
+    "val": {"aggregate": det_agg("leak_detected", False)},
+    "val_det": {"aggregate": {**det_agg("leak_detected", False), "canaryLeak": {"status": "leak_detected", "success": False, "hit_count": 1, "hits": [{"scope": "validation/YZ8KSZboJeM/runs/latest/result.json", "split": "validation", "videoId": "YZ8KSZboJeM", "canaryId": "canary_validation_YZ8KSZboJeM_01", "category": "ingredient_name"}], "redacted_hits": ["leak canary token redacted"]}}},
+    "val_ai": {"aggregate": {**sem_agg("leak_detected", False), "canaryLeak": {"status": "leak_detected", "success": False, "hit_count": 1, "hits": [{"scope": "validation/YZ8KSZboJeM/runs/latest/result.json", "split": "validation", "videoId": "YZ8KSZboJeM", "canaryId": "canary_validation_YZ8KSZboJeM_01", "category": "ingredient_name"}], "redacted_hits": ["leak canary token redacted"]}}},
+}
+leak_scan = loop.canary_token_scan_from_summaries(leak_summaries)
+leak_guard = {"success": leak_scan["success"], "canary_token_scan": leak_scan, "output_redaction_scan": {"success": True}}
+leak_decision = loop.decide(cfg, leak_summaries, {"subprocess_health": {"success": True}, "leakage_guard": leak_guard})
+
+print(json.dumps({
+    "covered_scan": covered_scan,
+    "covered_decision": covered_decision,
+    "not_covered_scan": not_covered_scan,
+    "not_covered_decision": not_covered_decision,
+    "leak_scan": leak_scan,
+    "leak_decision": leak_decision,
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.covered_scan).toMatchObject({ success: true, status: "clean" });
+    expect(report.covered_decision.checks.leakage_guard).toBe(true);
+    expect(report.not_covered_scan).toMatchObject({ success: false, status: "not_covered" });
+    expect(report.not_covered_decision.checks.leakage_guard).toBe(false);
+    expect(report.leak_scan).toMatchObject({ success: false, status: "leak_detected", hit_count: 1 });
+    expect(report.leak_decision.checks.leakage_guard).toBe(false);
+    expect(JSON.stringify(report)).not.toContain(validationCanaryName);
   });
 
   it("tracks holdout one-time consumption and scans nested run artifacts without raw leaks", () => {
@@ -1525,15 +1961,15 @@ write_json(loop.DATA_ROOT / "train" / "train-a" / "golden.json", {
     "recipes": [{"title": "공개요리", "ingredients": [], "steps": [{"order": 1, "instruction": "공개 step 입니다"}]}],
 })
 write_json(loop.DATA_ROOT / "train" / "_grade_summary.iter01.json", {
-    "aggregate": {"success": True, "ingredientF1": 0.4, "amountMatchRate": 0.4, "stepCoverage": 0.4, "recipeCountMatchRate": 1},
+    "aggregate": {"success": True, "ingredientF1": 0.4, "amountMatchRate": 0.4, "stepCoverage": 0.4, "recipeCountMatchRate": 1, "canaryLeak": {"status": "not_applicable", "success": True, "hit_count": 0, "hits": [], "redacted_hits": []}},
     "perVideo": [{"videoId": "train-a", "ingredientF1": 0.4, "amountMatchRate": 0.4, "stepCoverage": 0.4, "recipesMatched": 1, "recipeCountGolden": 1, "recipeCountMatch": True}],
 })
-write_json(loop.DATA_ROOT / "train" / "_semantic_summary.iter01.json", {"aggregate": {"averageScore": 2.5, "minCaseScore": 2.5}})
+write_json(loop.DATA_ROOT / "train" / "_semantic_summary.iter01.json", {"aggregate": {"averageScore": 2.5, "minCaseScore": 2.5, "canaryLeak": {"status": "not_applicable", "success": True, "hit_count": 0, "hits": [], "redacted_hits": []}}})
 write_json(loop.DATA_ROOT / "validation" / "_grade_summary.iter01.json", {
-    "aggregate": {"success": True, "ingredientF1": 0.4, "amountMatchRate": 0.4, "stepCoverage": 0.4, "recipeCountMatchRate": 1, "missing_result_count": 0, "missing_golden_count": 0, "unapproved_golden_count": 0, "expected_count_mismatch": False},
+    "aggregate": {"success": True, "ingredientF1": 0.4, "amountMatchRate": 0.4, "stepCoverage": 0.4, "recipeCountMatchRate": 1, "missing_result_count": 0, "missing_golden_count": 0, "unapproved_golden_count": 0, "expected_count_mismatch": False, "canaryLeak": {"status": "clean", "success": True, "hit_count": 0, "hits": [], "redacted_hits": []}},
 })
 write_json(loop.DATA_ROOT / "validation" / "_semantic_summary.iter01.json", {
-    "aggregate": {"success": True, "judge_provider": "codex", "judge_model": "gpt-5.4", "judge_effort": "high", "calibration": {"valid": True}, "provider_error_count": 0, "parse_error_count": 0, "schema_error_count": 0, "timeout_error_count": 0, "calibration_error_count": 0, "empty_case_count": 0, "expected_count_mismatch": False, "threshold_success": False, "averageScore": 2.5, "minCaseScore": 2.5},
+    "aggregate": {"success": True, "judge_provider": "codex", "judge_model": "gpt-5.4", "judge_effort": "high", "calibration": {"valid": True}, "provider_error_count": 0, "parse_error_count": 0, "schema_error_count": 0, "timeout_error_count": 0, "calibration_error_count": 0, "empty_case_count": 0, "expected_count_mismatch": False, "threshold_success": False, "averageScore": 2.5, "minCaseScore": 2.5, "canaryLeak": {"status": "clean", "success": True, "hit_count": 0, "hits": [], "redacted_hits": []}},
 })
 write_json(iter_dir / "05_decision.json", {
     "passed": False,

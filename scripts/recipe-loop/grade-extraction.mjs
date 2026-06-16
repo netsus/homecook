@@ -10,7 +10,7 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import { gradeDeterministic } from "./lib/grading.mjs";
+import { gradeDeterministic, prepareCanaryGradingInputs, summarizeCanaryLeaks } from "./lib/grading.mjs";
 
 const PROJECT_ROOT = process.cwd();
 const DATA_ROOT = "notebooks/recipe_loop_data";
@@ -91,9 +91,18 @@ async function main() {
       rows.push(failedRow(id, "unapproved_golden"));
       continue;
     }
-    const score = gradeDeterministic(result, golden);
-    rows.push({ videoId: id, success: true, ...score });
-    await writeFile(path.join(splitDir, id, "runs", outTag, "grade.json"), JSON.stringify({ videoId: id, ...score }, null, 2) + "\n", "utf8");
+    const resultScope = `${split}/${id}/runs/${outTag}/result.json`;
+    const { cleanGolden, cleanResult, canaryLeak } = prepareCanaryGradingInputs({
+      split,
+      videoId: id,
+      golden,
+      result,
+      resultScope,
+    });
+    const score = gradeDeterministic(cleanResult, cleanGolden);
+    const row = { videoId: id, success: true, ...score, canaryLeak };
+    rows.push(row);
+    await writeFile(path.join(splitDir, id, "runs", outTag, "grade.json"), JSON.stringify(row, null, 2) + "\n", "utf8");
   }
 
   const expectedCount = expectedCountArg ?? ids.length;
@@ -103,6 +112,7 @@ async function main() {
   const failedRowCount = rows.filter((r) => r.success === false).length;
   const expectedCountMismatch = rows.length !== expectedCount;
   const success = failedRowCount === 0 && !expectedCountMismatch;
+  const canaryLeak = summarizeCanaryLeaks({ split, ids, rows });
   const agg = {
     success,
     split,
@@ -124,6 +134,7 @@ async function main() {
     stepCoverage: r3(mean(rows.map((r) => r.stepCoverage))),
     recipesMissedTotal: rows.reduce((a, r) => a + (r.recipesMissed ?? 0), 0),
     recipesExtraTotal: rows.reduce((a, r) => a + (r.recipesExtra ?? 0), 0),
+    canaryLeak,
   };
 
   const summaryPath = path.join(splitDir, `_grade_summary.${outTag}.json`);
