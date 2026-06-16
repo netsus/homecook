@@ -496,6 +496,13 @@ async function main() {
   const minCaseScore = caseScores.length ? Math.min(...caseScores) : 0;
   const thresholdSuccess = averageScore >= calibration.thresholds.averageScore
     && minCaseScore >= calibration.thresholds.minCaseScore;
+  const executionSuccess = providerErrorCount === 0
+    && parseErrorCount === 0
+    && schemaErrorCount === 0
+    && timeoutErrorCount === 0
+    && calibrationErrorCount === 0
+    && failedRowCount === 0
+    && !expectedCountMismatch;
   const success = failedRowCount === 0 && !expectedCountMismatch && thresholdSuccess;
   const agg = {
     success,
@@ -529,7 +536,7 @@ async function main() {
   };
   await writeSummary(splitDir, outTag, agg, rows);
   console.log(`\n=== ${split}/${outTag} 의미채점: 평균 ${agg.averageScore}, 최저 case ${agg.minCaseScore} (n=${agg.count})`);
-  if (!success) process.exit(1);
+  if (!executionSuccess) process.exit(1);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

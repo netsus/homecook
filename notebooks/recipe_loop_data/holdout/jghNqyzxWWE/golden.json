@@ -133,5 +133,6 @@
     "베이킹 영상이므로 시각추출 시 화면 자막의 g 단위 계량을 정확히 옮길 것 — 분량 채점은 g 정확도가 핵심.",
     "제목 기준 요리명은 '겉바속촉 마들렌'(박력분 사용, 노버터 아님).",
     "[visual-recipes] 시각추출(full)로 recipes 재구성 — 요리 1개"
-  ]
+  ],
+  "_canary": "CANARY::holdout::jghNqyzxWWE::1ef3bf17d1cf"
 }

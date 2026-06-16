@@ -387,7 +387,7 @@ describe("recipe-loop local integrity gates", () => {
       { cwd: workdir, encoding: "utf8" },
     );
 
-    expect(result.status).toBe(1);
+    expect(result.status).toBe(0);
     const summary = JSON.parse(
       readFileSync(
         path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
@@ -687,6 +687,105 @@ print(json.dumps({"ok": ok, "checks": checks}))
     expect(report.checks.threshold_success).toBe(false);
   });
 
+  it("subtracts train-public containment terms without dropping short protected titles", () => {
+    const result = runLoopPython(`
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
+
+def write_golden(split, video_id, title, step):
+    path = loop.DATA_ROOT / split / video_id / "golden.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "schemaVersion": 1,
+        "videoId": video_id,
+        "reviewStatus": "approved",
+        "recipes": [{
+            "title": title,
+            "ingredients": [{"name": "고추다대기", "nameAliases": ["공용별칭"], "amount": "1", "unit": "큰술"}],
+            "steps": [{"order": 1, "instruction": step}],
+        }],
+    }, ensure_ascii=False), encoding="utf-8")
+
+write_golden("train", "train-a", "다시마 고추다대기", "공개 train 손질 단계입니다")
+write_golden("validation", "val-a", "고추다대기", "검증 고유 긴 조리 문장입니다")
+write_golden("validation", "val-b", "잡채", "잡채 고유 긴 조리 문장입니다")
+fragments = loop.protected_answer_fragments(["validation"])
+titles = [f["value"] for f in fragments if f["category"] == "recipe_title"]
+scan_public = loop.scan_texts_for_protected_answers([{"scope": "06_diagnosis_prompt", "text": "약점 케이스: 다시마 고추다대기"}], fragments)
+scan_short_unique = loop.scan_texts_for_protected_answers([{"scope": "06_diagnosis_prompt", "text": "잡채"}], fragments)
+print(json.dumps({
+    "titles": titles,
+    "scan_public": scan_public,
+    "scan_short_unique": scan_short_unique,
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.titles).not.toContain("고추다대기");
+    expect(report.titles).toContain("잡채");
+    expect(report.scan_public.success).toBe(true);
+    expect(report.scan_short_unique.success).toBe(false);
+  });
+
+  it("keeps canary and holdout-only step leaks as hard failures while low-uniqueness artifact hits stay advisory", () => {
+    const result = runLoopPython(`
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
+
+def write_golden(split, video_id, title, alias, step, canary=None):
+    path = loop.DATA_ROOT / split / video_id / "golden.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schemaVersion": 1,
+        "videoId": video_id,
+        "reviewStatus": "approved",
+        "recipes": [{
+            "title": title,
+            "ingredients": [{"name": title + "재료", "nameAliases": [alias], "amount": "1", "unit": "큰술"}],
+            "steps": [{"order": 1, "instruction": step}],
+        }],
+    }
+    if canary:
+        payload["_canary"] = canary
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+write_golden("train", "train-a", "공개요리", "공용별칭", "공개 train step instruction 입니다")
+write_golden("validation", "val-a", "검증요리", "검증별칭", "검증 split 자기 산출물 문장입니다")
+write_golden("holdout", "hold-a", "홀드요리", "공용별칭", "홀드아웃에만 있는 아주 긴 조리 문장입니다", "CANARY::holdout::hold-a::unit")
+fragments = loop.protected_answer_fragments(["validation", "holdout"])
+canary_scan = loop.scan_texts_for_protected_answers([{"scope": "01_plan.md", "text": "CANARY::holdout::hold-a::unit"}], fragments)
+validation_artifact = loop.scan_texts_for_protected_answers([
+    {"scope": "validation/case/runs/iter01/grade_semantic.json", "text": "검증 split 자기 산출물 문장입니다", "gate": False, "artifact_split": "validation"}
+], fragments)
+shared_alias_artifact = loop.scan_texts_for_protected_answers([
+    {"scope": "validation/case/runs/iter01/grade_semantic.json", "text": "공용별칭", "gate": False, "artifact_split": "validation"}
+], fragments)
+holdout_step_artifact = loop.scan_texts_for_protected_answers([
+    {"scope": "validation/case/runs/iter01/grade_semantic.json", "text": "홀드아웃에만 있는 아주 긴 조리 문장입니다", "gate": False, "artifact_split": "validation"}
+], fragments)
+print(json.dumps({
+    "canary_scan": canary_scan,
+    "validation_artifact": validation_artifact,
+    "shared_alias_artifact": shared_alias_artifact,
+    "holdout_step_artifact": holdout_step_artifact,
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.canary_scan.success).toBe(false);
+    expect(report.canary_scan.primary_canary_hit_count).toBe(1);
+    expect(report.validation_artifact.success).toBe(true);
+    expect(report.validation_artifact.informational_hit_count).toBeGreaterThan(0);
+    expect(report.shared_alias_artifact.success).toBe(true);
+    expect(report.shared_alias_artifact.advisory_hit_count).toBeGreaterThan(0);
+    expect(report.holdout_step_artifact.success).toBe(false);
+    expect(report.holdout_step_artifact.secondary_hard_hit_count).toBe(1);
+  });
+
   it("fails the loop decision when protected answers appear in decision or log outputs", () => {
     const result = runLoopPython(`
 fragments = loop.protected_answer_fragments(["validation"])
@@ -786,7 +885,7 @@ print(json.dumps({
     expect(report.raw_leaked).toBe(false);
   });
 
-  it("scans persisted semantic grade artifacts for protected answer fragments", () => {
+  it("reports persisted semantic grade artifact fragments as informational instead of gate failures", () => {
     const result = runLoopPython(`
 from pathlib import Path
 root = Path(${JSON.stringify(workdir)})
@@ -808,8 +907,9 @@ print(json.dumps({
 
     expect(result.status).toBe(0);
     const report = JSON.parse(result.stdout);
-    expect(report.scan.success).toBe(false);
+    expect(report.scan.success).toBe(true);
     expect(report.scan.hit_count).toBeGreaterThanOrEqual(2);
+    expect(report.scan.informational_hit_count).toBeGreaterThanOrEqual(2);
     expect(report.scan.scanned_scopes).toEqual(
       expect.arrayContaining([
         "validation/case-a/runs/latest/grade_semantic.json",
@@ -1173,7 +1273,7 @@ print(json.dumps(classification, ensure_ascii=False))
     expect(classification.ignored_line_count).toBe(1);
   });
 
-  it("reports monitoring_unavailable for external protected marker access outside the Codex subtree", () => {
+  it("reports degraded_advisory for external protected marker access outside the Codex subtree", () => {
     const result = runLoopPython(`
 import tempfile
 log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "02_fs_audit.log"
@@ -1192,11 +1292,11 @@ print(json.dumps(classification, ensure_ascii=False))
 
     expect(result.status).toBe(0);
     const classification = JSON.parse(result.stdout);
-    expect(classification.status).toBe("monitoring_unavailable");
+    expect(classification.status).toBe("degraded_advisory");
     expect(classification.external_protected_line_count).toBe(1);
   });
 
-  it("reports monitoring_unavailable for unattributable protected marker access regardless of process name", () => {
+  it("reports degraded_advisory for unattributable protected marker access regardless of process name", () => {
     const result = runLoopPython(`
 import tempfile
 log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "02_fs_audit.log"
@@ -1228,8 +1328,40 @@ print(json.dumps(classification, ensure_ascii=False))
 
     expect(result.status).toBe(0);
     const classification = JSON.parse(result.stdout);
-    expect(classification.status).toBe("monitoring_unavailable");
+    expect(classification.status).toBe("degraded_advisory");
     expect(classification.unattributable_protected_line_count).toBe(6);
+  });
+
+  it("classifies recipe loop graders and orchestrators as known external protected readers", () => {
+    const result = runLoopPython(`
+import tempfile
+log_path = loop.Path(tempfile.mkdtemp(prefix="fs-usage-audit-")) / "02_fs_audit.log"
+validation_path = loop.DATA_ROOT / "validation" / "case-a" / "golden.json"
+log_path.write_text(
+    f"12:00:00 open {validation_path} node.4325\\n"
+    f"12:00:01 open {validation_path} python3.4326\\n",
+    encoding="utf-8",
+)
+scan = loop.scan_fs_usage_log_for_forbidden_access(log_path)
+classification = loop.classify_implementation_access_guard(
+    scan,
+    {"success": True, "pids": [1234], "processes": [{"pid": 1234, "ppid": 1, "command": "codex"}]},
+    [
+        {"pid": 4325, "ppid": 1, "command": "node scripts/recipe-loop/grade-semantic.mjs"},
+        {"pid": 4326, "ppid": 1, "command": "python3 scripts/recipe-loop/loop.py"},
+    ],
+    {"success": True},
+    {"success": True, "reason": "ok"},
+)
+notification = loop.send_implementation_access_guard_alert({"access_guard_status": classification["status"]})
+print(json.dumps({"classification": classification, "notification": notification}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.classification.status).toBe("ok");
+    expect(report.classification.ignored_known_external_protected_line_count).toBe(2);
+    expect(report.notification).toMatchObject({ sent: false, reason: "not_required" });
   });
 
   it("warns when Codex or its child process accesses a protected marker", () => {
@@ -1371,6 +1503,116 @@ print(json.dumps(decision, ensure_ascii=False))
     expect(decision.passed).toBe(true);
     expect(decision.checks).not.toHaveProperty("implementation_access_guard");
     expect(decision.implementation_access_guard.access_guard_status).toBe("monitoring_unavailable");
+  });
+
+  it("recovers iteration feedback from disk without reusing stale leakage or subprocess failures", () => {
+    const result = runLoopPython(`
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
+run_dir = root / "notebooks" / "recipe_loop_runs" / "oneiter"
+iter_dir = run_dir / "iteration-01"
+iter_dir.mkdir(parents=True, exist_ok=True)
+
+def write_json(path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+write_json(loop.DATA_ROOT / "train" / "train-a" / "golden.json", {
+    "schemaVersion": 1,
+    "videoId": "train-a",
+    "reviewStatus": "approved",
+    "recipes": [{"title": "공개요리", "ingredients": [], "steps": [{"order": 1, "instruction": "공개 step 입니다"}]}],
+})
+write_json(loop.DATA_ROOT / "train" / "_grade_summary.iter01.json", {
+    "aggregate": {"success": True, "ingredientF1": 0.4, "amountMatchRate": 0.4, "stepCoverage": 0.4, "recipeCountMatchRate": 1},
+    "perVideo": [{"videoId": "train-a", "ingredientF1": 0.4, "amountMatchRate": 0.4, "stepCoverage": 0.4, "recipesMatched": 1, "recipeCountGolden": 1, "recipeCountMatch": True}],
+})
+write_json(loop.DATA_ROOT / "train" / "_semantic_summary.iter01.json", {"aggregate": {"averageScore": 2.5, "minCaseScore": 2.5}})
+write_json(loop.DATA_ROOT / "validation" / "_grade_summary.iter01.json", {
+    "aggregate": {"success": True, "ingredientF1": 0.4, "amountMatchRate": 0.4, "stepCoverage": 0.4, "recipeCountMatchRate": 1, "missing_result_count": 0, "missing_golden_count": 0, "unapproved_golden_count": 0, "expected_count_mismatch": False},
+})
+write_json(loop.DATA_ROOT / "validation" / "_semantic_summary.iter01.json", {
+    "aggregate": {"success": True, "judge_provider": "codex", "judge_model": "gpt-5.4", "judge_effort": "high", "calibration": {"valid": True}, "provider_error_count": 0, "parse_error_count": 0, "schema_error_count": 0, "timeout_error_count": 0, "calibration_error_count": 0, "empty_case_count": 0, "expected_count_mismatch": False, "threshold_success": False, "averageScore": 2.5, "minCaseScore": 2.5},
+})
+write_json(iter_dir / "05_decision.json", {
+    "passed": False,
+    "checks": {"deterministic_validation": False, "semantic_validation": False, "subprocess_health": False, "leakage_guard": False},
+})
+
+def fail_run_node(*args, **kwargs):
+    raise RuntimeError("run_node must not be called during recovery")
+
+def fake_run_agent(cmd, prompt, log_path, cwd=None):
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text("진단 완료", encoding="utf-8")
+    return "진단 완료"
+
+loop.run_node = fail_run_node
+loop.run_agent = fake_run_agent
+feedback = loop.recover_iteration_feedback(loop.LoopConfig(), run_dir, 1)
+recovered = json.loads((iter_dir / "05_decision.recovered.json").read_text(encoding="utf-8"))
+module_state = json.loads((iter_dir / "module_state.json").read_text(encoding="utf-8"))
+print(json.dumps({
+    "feedback": feedback,
+    "recovered_checks": recovered["checks"],
+    "module_state": module_state,
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.recovered_checks.leakage_guard).toBe(true);
+    expect(report.recovered_checks.subprocess_health).toBe(true);
+    expect(report.feedback).toContain("deterministic_validation");
+    expect(report.feedback).toContain("semantic_validation");
+    expect(report.feedback).not.toContain("leakage_guard");
+    expect(report.feedback).not.toContain("subprocess_health");
+    expect(report.module_state.verified).toBe(false);
+  });
+
+  it("blocks legacy resume without verified module state unless explicitly accepted", () => {
+    const result = runLoopPython(`
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+run_dir = root / "notebooks" / "recipe_loop_runs" / "legacy"
+iter_dir = run_dir / "iteration-01"
+iter_dir.mkdir(parents=True, exist_ok=True)
+(iter_dir / "05_decision.json").write_text(json.dumps({
+    "passed": False,
+    "checks": {"deterministic_validation": False, "semantic_validation": False, "subprocess_health": True, "leakage_guard": True},
+}), encoding="utf-8")
+(iter_dir / "feedback_for_next_iter.md").write_text("복구된 피드백", encoding="utf-8")
+blocked = False
+try:
+    loop.resume_loop(loop.LoopConfig(max_iter=2), run_dir, 2)
+except RuntimeError as error:
+    blocked = "module_state" in str(error)
+
+def fake_run_iteration(cfg, run_dir_arg, iteration, feedback):
+    d = run_dir_arg / f"iteration-{iteration:02d}"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "fake.txt").write_text(feedback, encoding="utf-8")
+    return {"iteration": iteration, "passed": True, "decision": {"passed": True}, "out_tag": f"iter{iteration:02d}"}
+
+loop.run_iteration = fake_run_iteration
+loop.stage = lambda msg: None
+resumed = loop.resume_loop(loop.LoopConfig(max_iter=2), run_dir, 2, accept_current_module_state=True)
+module_state = json.loads((iter_dir / "module_state.json").read_text(encoding="utf-8"))
+print(json.dumps({
+    "blocked": blocked,
+    "resumed": resumed,
+    "module_state": module_state,
+    "iter02_exists": (run_dir / "iteration-02" / "fake.txt").exists(),
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.blocked).toBe(true);
+    expect(report.resumed.status).toBe("passed");
+    expect(report.module_state.verified).toBe(false);
+    expect(report.iter02_exists).toBe(true);
   });
 
   it("prechecks that the access guard watches the original repo root with golden directories", () => {
