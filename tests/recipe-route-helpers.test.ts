@@ -7,8 +7,10 @@ import {
 } from "@/lib/recipe-detail";
 import {
   clampLimit,
+  encodeRecipeListCursor,
   filterRecipeIdsByIngredients,
   parseIngredientIds,
+  parseRecipeListCursor,
 } from "@/lib/recipe-list";
 
 describe("recipe route helpers", () => {
@@ -61,6 +63,29 @@ describe("recipe route helpers", () => {
         ],
       ),
     ).toEqual(["recipe-a"]);
+  });
+
+  it("round-trips opaque recipe list cursors for the active sort", () => {
+    const cursor = encodeRecipeListCursor({
+      sort: "latest",
+      recipe: {
+        id: "recipe-a",
+        created_at: "2026-06-16T10:00:00.000Z",
+        view_count: 10,
+        save_count: 3,
+        plan_count: 2,
+        cook_count: 1,
+      },
+    });
+
+    expect(cursor).not.toContain("recipe-a");
+    expect(parseRecipeListCursor(cursor, "latest")).toEqual({
+      sort: "latest",
+      value: "2026-06-16T10:00:00.000Z",
+      id: "recipe-a",
+    });
+    expect(parseRecipeListCursor(cursor, "view_count")).toBeNull();
+    expect(parseRecipeListCursor("not-a-cursor", "latest")).toBeNull();
   });
 
   it("maps recipe user status from liked and saved rows", () => {

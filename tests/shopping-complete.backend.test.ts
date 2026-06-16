@@ -328,6 +328,77 @@ describe("12a shopping complete backend", () => {
     });
   });
 
+  it("uses the atomic complete_shopping_list RPC when the database client exposes it", async () => {
+    const reflectedItemId = "550e8400-e29b-41d4-a716-446655440301";
+    const rpc = vi.fn(async () => ({
+      data: {
+        completed: true,
+        meals_updated: 2,
+        pantry_added: 1,
+        pantry_added_item_ids: [reflectedItemId],
+        completed_at: "2026-04-27T11:20:00.000Z",
+        meal_ids: ["meal-1", "meal-2"],
+        newly_completed: true,
+      },
+      error: null,
+    }));
+    const from = vi.fn();
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from,
+    });
+    createServiceRoleClient.mockReturnValue({ rpc, from });
+
+    const { POST } = await importCompleteRoute();
+    const response = await POST(
+      createCompleteRequest(listId, { add_to_pantry_item_ids: [reflectedItemId] }),
+      createContext(),
+    );
+    const body = await response.json();
+
+    expect(rpc).toHaveBeenCalledWith("complete_shopping_list", {
+      p_list_id: listId,
+      p_user_id: "user-1",
+      p_add_to_pantry_item_ids: [reflectedItemId],
+    });
+    expect(from).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        completed: true,
+        meals_updated: 2,
+        pantry_added: 1,
+        pantry_added_item_ids: [reflectedItemId],
+      },
+      error: null,
+    });
+    expect(awardUserProgressEvent).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user-1",
+      eventType: "shopping_completed",
+      sourceTable: "shopping_lists",
+      sourceId: listId,
+      occurredAt: "2026-04-27T11:20:00.000Z",
+    });
+    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user-1",
+      activityType: "shopping_bundle_prepared",
+      category: "shopping",
+      sourceKey: "shopping_bundle_prepared:test-key",
+      sourceTable: "shopping_lists",
+      sourceId: listId,
+      sourceMeta: {
+        action_kind: "shopping_list",
+        meal_ids: ["meal-1", "meal-2"],
+        shopping_list_id: listId,
+      },
+      occurredAt: "2026-04-27T11:20:00.000Z",
+    });
+  });
+
   it("keeps shopping completion successful when progress writer fails", async () => {
     awardUserProgressEvent.mockRejectedValue(new Error("progress unavailable"));
 

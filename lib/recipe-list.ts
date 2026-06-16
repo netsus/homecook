@@ -1,9 +1,34 @@
+import type { RecipeSortKey } from "@/types/recipe";
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface RecipeIngredientMatchRow {
   recipe_id: string;
   ingredient_id: string;
+}
+
+export interface RecipeListCursorRecipe {
+  id: string;
+  created_at: string;
+  view_count: number;
+  save_count: number;
+  plan_count: number;
+  cook_count: number;
+}
+
+export interface RecipeListCursorPayload {
+  sort: RecipeSortKey;
+  value: string | number;
+  id: string;
+}
+
+function getCursorValue(sort: RecipeSortKey, recipe: RecipeListCursorRecipe) {
+  if (sort === "latest") {
+    return recipe.created_at;
+  }
+
+  return recipe[sort];
 }
 
 export function clampLimit(value: string | null) {
@@ -62,4 +87,63 @@ export function filterRecipeIdsByIngredients(
   return Array.from(matchedIngredientsByRecipe.entries())
     .filter(([, matchedIds]) => matchedIds.size === requiredIds.size)
     .map(([recipeId]) => recipeId);
+}
+
+export function encodeRecipeListCursor({
+  sort,
+  recipe,
+}: {
+  sort: RecipeSortKey;
+  recipe: RecipeListCursorRecipe;
+}) {
+  return Buffer.from(
+    JSON.stringify({
+      sort,
+      value: getCursorValue(sort, recipe),
+      id: recipe.id,
+    } satisfies RecipeListCursorPayload),
+    "utf8",
+  ).toString("base64url");
+}
+
+export function parseRecipeListCursor(
+  value: string | null | undefined,
+  activeSort: RecipeSortKey,
+): RecipeListCursorPayload | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as unknown;
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+
+    const payload = parsed as Partial<RecipeListCursorPayload>;
+    if (payload.sort !== activeSort || typeof payload.id !== "string" || payload.id.length === 0) {
+      return null;
+    }
+
+    if (activeSort === "latest") {
+      return typeof payload.value === "string" && payload.value.length > 0
+        ? {
+            sort: activeSort,
+            value: payload.value,
+            id: payload.id,
+          }
+        : null;
+    }
+
+    return typeof payload.value === "number" && Number.isFinite(payload.value)
+      ? {
+          sort: activeSort,
+          value: payload.value,
+          id: payload.id,
+        }
+      : null;
+  } catch {
+    return null;
+  }
 }

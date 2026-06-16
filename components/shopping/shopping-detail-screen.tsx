@@ -20,6 +20,7 @@ import {
   fetchShoppingShareText,
   isShoppingApiError,
   updateShoppingListItem,
+  updateShoppingListItemsBulk,
 } from "@/lib/api/shopping";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import { groupShoppingItemsByCategory } from "@/lib/shopping-categories";
@@ -307,11 +308,10 @@ export function ShoppingDetailScreen({
     });
 
     try {
-      const updatedItems = await Promise.all(
-        targetItems.map((item) =>
-          updateShoppingListItem(listId, item.id, { is_checked: nextChecked }),
-        ),
-      );
+      const { items: updatedItems } = await updateShoppingListItemsBulk(listId, {
+        item_ids: targetItems.map((item) => item.id),
+        is_checked: nextChecked,
+      });
       const updatedById = new Map(updatedItems.map((item) => [item.id, item]));
 
       setListDetail((prev) => {
@@ -971,10 +971,10 @@ function ShoppingDetailSkeleton({
         data-testid="shopping-detail-skeleton"
       >
         <header className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)]">
-          <div className="grid min-h-[var(--control-height-xl)] grid-cols-[36px_1fr_36px] items-center gap-2 px-4 py-2.5">
+          <div className="grid min-h-[var(--control-height-xl)] grid-cols-[44px_1fr_44px] items-center gap-2 px-4 py-2.5">
             <button
               aria-label="뒤로 가기"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--foreground)]"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)]"
               onClick={onBack}
               type="button"
             >
@@ -1357,7 +1357,7 @@ function MobileShoppingAppBar({
       <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
         <button
           aria-label="뒤로 가기"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--foreground)]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)]"
           onClick={onBack}
           type="button"
         >
@@ -1371,7 +1371,7 @@ function MobileShoppingAppBar({
         <div className="flex shrink-0 items-center gap-2">
           <button
             aria-label="공유(텍스트)"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-fill)] text-[var(--text-2)] disabled:opacity-50"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--surface-fill)] text-[var(--text-2)] disabled:opacity-50"
             disabled={isSharing}
             onClick={onShare}
             type="button"
@@ -1380,7 +1380,7 @@ function MobileShoppingAppBar({
           </button>
           {!isReadOnly ? (
             <button
-              className="flex h-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] px-3 text-[13px] font-extrabold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)] disabled:text-[var(--text-4)]"
+              className="flex min-h-11 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] px-3 text-[13px] font-extrabold text-[var(--text-inverse)] disabled:bg-[var(--line-strong)] disabled:text-[var(--text-4)]"
               disabled={isCompleting}
               onClick={onComplete}
               type="button"
@@ -1507,7 +1507,7 @@ function MobileShoppingItemRow({
         <button
           aria-checked={item.is_checked}
           aria-label={`${item.display_text} 구매 완료 표시`}
-          className="flex h-8 w-8 shrink-0 items-center justify-center disabled:opacity-50"
+          className="flex h-11 w-11 shrink-0 items-center justify-center disabled:opacity-50"
           disabled={isUpdating}
           onClick={(event) => {
             event.stopPropagation();
@@ -1560,7 +1560,7 @@ function MobileShoppingItemRow({
             item.is_pantry_excluded ? "되살리기" : "이미있음"
           }`}
           className={[
-            "flex h-8 w-[76px] shrink-0 items-center justify-center rounded-full border border-[var(--brand)] bg-[var(--surface)] px-0 text-[12px] font-extrabold text-[var(--brand)] disabled:opacity-50",
+            "flex min-h-11 min-w-[88px] shrink-0 items-center justify-center rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2 text-[12px] font-extrabold text-[var(--brand)] disabled:opacity-50",
           ].join(" ")}
           disabled={isUpdating}
           onClick={(event) => {

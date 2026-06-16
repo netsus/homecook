@@ -83,12 +83,37 @@ function createUpdateMaybeSingleQuery<T>(results: Array<QueryResult<T | null>>) 
   return query;
 }
 
+function createArrayUpdateQuery<T>(results: Array<QueryResult<T[]>>) {
+  const query = {
+    eq: vi.fn(() => query),
+    in: vi.fn(() => query),
+    select: vi.fn(() => query),
+    then(
+      onFulfilled?: (value: QueryResult<T[]>) => unknown,
+      onRejected?: (reason: unknown) => unknown,
+    ) {
+      return Promise.resolve(
+        results.shift() ?? {
+          data: null,
+          error: { message: "missing update result" },
+        },
+      ).then(onFulfilled, onRejected);
+    },
+  };
+
+  return query;
+}
+
 async function importListDetailRoute() {
   return import("@/app/api/v1/shopping/lists/[list_id]/route");
 }
 
 async function importItemPatchRoute() {
   return import("@/app/api/v1/shopping/lists/[list_id]/items/[item_id]/route");
+}
+
+async function importBulkItemPatchRoute() {
+  return import("@/app/api/v1/shopping/lists/[list_id]/items/bulk/route");
 }
 
 describe("10a shopping detail backend", () => {
@@ -702,6 +727,92 @@ describe("10a shopping detail backend", () => {
     expect(body.success).toBe(true);
     expect(body.data.is_checked).toBe(false);
     expect(body.data.is_pantry_excluded).toBe(true);
+  });
+
+  it("bulk-checks purchase items with one update scoped to the owned incomplete list", async () => {
+    const firstItemId = "550e8400-e29b-41d4-a716-446655440111";
+    const secondItemId = "550e8400-e29b-41d4-a716-446655440112";
+    const listQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: "550e8400-e29b-41d4-a716-446655440001",
+          user_id: "user-1",
+          is_completed: false,
+        },
+        error: null,
+      },
+    ]);
+    const updateQuery = createArrayUpdateQuery([
+      {
+        data: [
+          {
+            id: firstItemId,
+            shopping_list_id: "550e8400-e29b-41d4-a716-446655440001",
+            ingredient_id: "ing-1",
+            display_text: "양파 1개",
+            amounts_json: [{ amount: 1, unit: "개" }],
+            is_checked: true,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 0,
+          },
+          {
+            id: secondItemId,
+            shopping_list_id: "550e8400-e29b-41d4-a716-446655440001",
+            ingredient_id: "ing-2",
+            display_text: "대파 1단",
+            amounts_json: [{ amount: 1, unit: "단" }],
+            is_checked: true,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 100,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const update = vi.fn(() => updateQuery);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "shopping_lists") {
+          return { select: vi.fn(() => listQuery) };
+        }
+        if (table === "shopping_list_items") {
+          return { update };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { PATCH } = await importBulkItemPatchRoute();
+    const response = await PATCH(
+      new Request("http://localhost:3000/api/v1/shopping/lists/550e8400-e29b-41d4-a716-446655440001/items/bulk", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          item_ids: [firstItemId, secondItemId],
+          is_checked: true,
+        }),
+      }),
+      {
+        params: Promise.resolve({
+          list_id: "550e8400-e29b-41d4-a716-446655440001",
+        }),
+      },
+    );
+    const body = await response.json();
+
+    expect(update).toHaveBeenCalledWith({ is_checked: true });
+    expect(updateQuery.eq).toHaveBeenCalledWith("shopping_list_id", "550e8400-e29b-41d4-a716-446655440001");
+    expect(updateQuery.eq).toHaveBeenCalledWith("is_pantry_excluded", false);
+    expect(updateQuery.in).toHaveBeenCalledWith("id", [firstItemId, secondItemId]);
+    expect(response.status).toBe(200);
+    expect(body.data.items.map((item: { id: string }) => item.id)).toEqual([firstItemId, secondItemId]);
   });
 
   it("fetchShoppingListDetail helper returns data when envelope is valid", async () => {

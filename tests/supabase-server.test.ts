@@ -151,4 +151,17 @@ describe("supabase schema migrations", () => {
     expect(sql).toMatch(/nullif\(v_session\.thumbnail_url,\s*''\)/i);
     expect(sql).toMatch(/v_session\.draft_json\s*->\s*'tags'/i);
   });
+
+  it("defines atomic launch-readiness RPCs with auth boundary checks", () => {
+    const sql = readAllMigrationSql();
+
+    expect(sql).toMatch(/create or replace function public\.complete_shopping_list/i);
+    expect(sql).toMatch(/create or replace function public\.create_shopping_list_from_payload/i);
+    expect(sql).toMatch(/create or replace function public\.create_manual_recipe/i);
+    expect(sql).toMatch(/auth\.uid\(\) is not null and auth\.uid\(\) <> p_user_id/i);
+    expect(sql).toMatch(/for update/i);
+    expect(sql).toMatch(/grant execute on function public\.complete_shopping_list\(uuid, uuid, uuid\[\]\)/i);
+    expect(sql).toMatch(/grant execute on function public\.create_shopping_list_from_payload/i);
+    expect(sql).toMatch(/grant execute on function public\.create_manual_recipe/i);
+  });
 });

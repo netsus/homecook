@@ -1499,7 +1499,7 @@ button {
 
 .shopping-select-all-control {
   display: inline-flex;
-  min-height: 34px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 7px;
@@ -1507,23 +1507,23 @@ button {
   border-radius: var(--radius-control);
   background: #fff;
   color: var(--web-text-1, #212529);
-  padding: 0 11px;
-  font-size: 12px;
+  padding: 0 14px;
+  font-size: 14px;
   font-weight: 800;
   white-space: nowrap;
 }
 
 .shopping-select-all-control > span {
   display: inline-flex;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--web-line, #dee2e6);
   border-radius: 5px;
   background: #fff;
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -10119,8 +10119,10 @@ button {
   .web-shopping-recipe-toggle,
   .web-shopping-check {
     display: inline-flex;
-    width: 26px;
-    height: 26px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     align-items: center;
     justify-content: center;
     align-self: start;
@@ -10412,7 +10414,7 @@ button {
 
   .web-shopping-item-card {
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr) 76px;
+    grid-template-columns: 44px minmax(0, 1fr) minmax(88px, auto);
     min-height: 76px;
     align-items: center;
     gap: 12px;
@@ -10423,7 +10425,7 @@ button {
   }
 
   .web-shopping-item-card-readonly {
-    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-columns: 44px minmax(0, 1fr);
   }
 
   .web-shopping-item-card-clickable {
@@ -10452,8 +10454,10 @@ button {
 
   .web-shopping-reorder button {
     display: inline-flex;
-    width: 24px;
-    height: 24px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     align-items: center;
     justify-content: center;
     border-radius: var(--web-r-xs);
@@ -10532,8 +10536,8 @@ button {
 
   .web-shopping-exclude {
     display: inline-flex;
-    width: 76px;
-    height: 32px;
+    min-width: 88px;
+    min-height: 44px;
     align-items: center;
     justify-content: center;
     border: 1px solid var(--web-brand);

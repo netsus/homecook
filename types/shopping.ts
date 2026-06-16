@@ -126,6 +126,15 @@ export interface ShoppingListItemUpdateBody {
   is_pantry_excluded?: boolean;
 }
 
+export interface ShoppingListItemsBulkUpdateBody {
+  item_ids: string[];
+  is_checked: boolean;
+}
+
+export interface ShoppingListItemsBulkUpdateData {
+  items: ShoppingListItemSummary[];
+}
+
 export interface ShoppingListReorderItem {
   item_id: string;
   sort_order: number;
@@ -159,6 +168,7 @@ export type ShoppingListCreateResponse = ApiResponse<ShoppingListCreateData>;
 export type ShoppingListHistoryResponse = ApiResponse<ShoppingListHistoryData>;
 export type ShoppingListDetailResponse = ApiResponse<ShoppingListDetail>;
 export type ShoppingListItemUpdateResponse = ApiResponse<ShoppingListItemSummary>;
+export type ShoppingListItemsBulkUpdateResponse = ApiResponse<ShoppingListItemsBulkUpdateData>;
 export type ShoppingListReorderResponse = ApiResponse<ShoppingListReorderData>;
 export type ShoppingListCompleteResponse = ApiResponse<ShoppingListCompleteData>;
 export type ShoppingShareTextResponse = ApiResponse<ShoppingShareTextData>;

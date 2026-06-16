@@ -596,6 +596,42 @@ test.describe("QA accessibility smoke", () => {
     });
   });
 
+  test("shopping mobile controls keep 44px touch targets @a11y-core", async ({
+    page,
+  }) => {
+    test.skip(!isMobileViewport(page), "mobile-only shopping touch target check");
+    await setE2EAuthOverride(page);
+    await installPantryShoppingVisualRoutes(page);
+
+    await page.goto(SHOPPING_DETAIL_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "5월 18일 장보기" }),
+    ).toBeVisible();
+    await expectReadableTouchTarget(
+      page.getByRole("button", { name: "공유(텍스트)" }),
+    );
+    await expectReadableTouchTarget(
+      page.getByRole("button", { name: "장보기 완료" }),
+    );
+    await expectReadableTouchTarget(
+      page.getByRole("checkbox", { name: /돼지고기 300g 구매 완료 표시/ }),
+    );
+    await expectReadableTouchTarget(
+      page.getByRole("button", { name: /돼지고기 300g 이미있음/ }),
+    );
+
+    await page.goto(SHOPPING_FLOW_VISUAL_PATH);
+    await expect(
+      page.getByRole("heading", { name: "장보기 준비" }),
+    ).toBeVisible();
+    await expectReadableTouchTarget(
+      page.getByRole("checkbox", { name: "전체 선택" }),
+    );
+    await expectReadableTouchTarget(
+      page.getByRole("button", { name: /제육볶음 선택 해제/ }),
+    );
+  });
+
   test("login, mypage, recipebooks, and settings desktop slice screens are axe-clean", async ({
     page,
   }) => {
