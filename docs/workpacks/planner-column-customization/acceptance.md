@@ -12,6 +12,7 @@
 - [x] SETTINGS 끼니 컬럼 관리에서 현재 컬럼 목록이 표시된다 <!-- omo:id=accept-column-list;stage=4;scope=frontend;review=5,6 -->
 - [x] 컬럼 이름을 변경하면 PLANNER_WEEK에 즉시 반영된다 <!-- omo:id=accept-rename-reflect;stage=4;scope=frontend;review=5,6 -->
 - [x] 컬럼을 추가하면 PLANNER_WEEK에 새 슬롯이 표시된다 <!-- omo:id=accept-add-reflect;stage=4;scope=frontend;review=5,6 -->
+- [x] 컬럼 순서를 변경하면 PLANNER_WEEK에 즉시 반영된다 <!-- omo:id=accept-sort-order-reflect;stage=4;scope=frontend;review=5,6 -->
 - [x] 빈 컬럼을 삭제하면 PLANNER_WEEK에서 해당 슬롯이 제거된다 <!-- omo:id=accept-delete-reflect;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
@@ -23,6 +24,7 @@
 - [x] 컬럼 수 최소 1개 제한이 서버에서 강제된다 <!-- omo:id=accept-min-one;stage=2;scope=backend;review=3,6 -->
 - [x] 컬럼 수 최대 5개 제한이 서버에서 강제된다 <!-- omo:id=accept-max-five;stage=2;scope=backend;review=3,6 -->
 - [x] 삭제 후 남은 컬럼의 sort_order가 0부터 재정렬된다 <!-- omo:id=accept-reorder-after-delete;stage=2;scope=backend;review=3,6 -->
+- [x] 순서 변경 후 전체 컬럼의 sort_order가 0부터 재정렬된다 <!-- omo:id=accept-reorder-after-move;stage=2;scope=backend;review=3,6 -->
 - [x] 컬럼 추가 시 sort_order가 마지막 + 1로 설정된다 <!-- omo:id=accept-add-sort-order;stage=2;scope=backend;review=3,6 -->
 - [x] 중복 호출에도 결과가 꼬이지 않는다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
 
@@ -80,6 +82,7 @@
 - [x] 이름 중복/trim/길이 검증 테스트 <!-- omo:id=accept-vitest-name-validation;stage=2;scope=backend;review=3,6 -->
 - [x] 삭제 시 meals FK 참조 확인 테스트 <!-- omo:id=accept-vitest-fk-guard;stage=2;scope=backend;review=3,6 -->
 - [x] 삭제 후 sort_order 재정렬 테스트 <!-- omo:id=accept-vitest-reorder;stage=2;scope=backend;review=3,6 -->
+- [x] 순서 변경 sort_order 이동/재정렬 테스트 <!-- omo:id=accept-vitest-reorder-move;stage=2;scope=backend;review=3,6 -->
 - [x] 소유자 검증 테스트 (타인 컬럼 접근 금지) <!-- omo:id=accept-vitest-owner;stage=2;scope=backend;review=3,6 -->
 - [x] bootstrap ×3 생성 테스트 <!-- omo:id=accept-vitest-bootstrap;stage=2;scope=backend;review=3,6 -->
 - [x] GET/POST /meals 동적 column_id 소유자 검증 테스트 <!-- omo:id=accept-vitest-meals-dynamic;stage=2;scope=backend;review=3,6 -->
@@ -87,6 +90,7 @@
 ### Playwright
 
 - [x] SETTINGS 끼니 컬럼 관리 CRUD 전체 흐름 <!-- omo:id=accept-playwright-settings-crud;stage=4;scope=frontend;review=5,6 -->
+- [x] SETTINGS 끼니 컬럼 순서 변경 저장 흐름 <!-- omo:id=accept-playwright-settings-reorder;stage=4;scope=frontend;review=5,6 -->
 - [x] PLANNER_WEEK 동적 컬럼 렌더링 확인 <!-- omo:id=accept-playwright-planner-dynamic;stage=4;scope=frontend;review=5,6 -->
 - [x] 에러 상태(409 제한, 중복) UI 반영 확인 <!-- omo:id=accept-playwright-error-states;stage=4;scope=frontend;review=5,6 -->
 - [x] 로그인 게이트 후 return-to-action 확인 <!-- omo:id=accept-playwright-return-action;stage=4;scope=frontend;review=5,6 -->

@@ -16,6 +16,13 @@
 
 ---
 
+> **2026-06-16 addendum — planner column reorder**
+>
+> | # | 변경 내용 | 조치 |
+> | --- | --- | --- |
+> | A | SETTINGS 끼니 컬럼 순서 변경을 공식화한다 | 기존 `meal_plan_columns.sort_order` 업데이트로 처리한다. 신규 테이블/컬럼 없음 |
+> | B | 사용자별 순서 정합성을 명시한다 | 변경 후 같은 사용자 컬럼은 0부터 연속 정렬되며 `(user_id, sort_order)` UNIQUE를 유지한다 |
+
 > **v1.3.14 → v1.3.15 변경 요약**
 >
 > | # | 변경 내용 | 영향 범위 |
@@ -784,11 +791,13 @@ CHECK (duration_secondsISNULLOR duration_seconds>=0)
 | sort_order | int | NOT NULL | 컬럼 순서 |
 | created_at | timestamptz | NOT NULL |  |
 - 공개 제품 계약상 신규 사용자 기본 planner slot은 `아침 / 점심 / 저녁` 3개다.
-- 사용자는 설정 화면에서 끼니 컬럼 이름 변경, 추가, 삭제를 할 수 있다.
+- 사용자는 설정 화면에서 끼니 컬럼 이름 변경, 추가, 삭제, 순서 변경을 할 수 있다.
 - 사용자별 컬럼 수는 최소 1개, 최대 5개다.
 - 기존 사용자에게 이미 생성된 컬럼은 자동 삭제하지 않는다.
 - 컬럼 삭제는 해당 컬럼에 연결된 `meals`가 없을 때만 허용한다.
-- 순서 변경 API는 1차 구현 범위가 아니다. 신규 컬럼은 현재 마지막 `sort_order + 1`로 생성하고, 삭제 후 남은 컬럼은 `sort_order ASC, id ASC` 기준으로 0부터 재정렬한다.
+- 신규 컬럼은 현재 마지막 `sort_order + 1`로 생성한다.
+- 순서 변경과 삭제 후 재정렬은 사용자 소유 컬럼 전체가 0부터 연속 `sort_order`를 갖도록 저장한다.
+- 순서 변경 저장 중에는 `(user_id, sort_order)` UNIQUE 충돌을 피하기 위해 임시 순서/복구 가능한 재정렬 절차를 사용한다.
 - **UNIQUE**: `(user_id, sort_order)`
 
 ## 5-2. meals

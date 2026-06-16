@@ -13,6 +13,19 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 
+## Planner Column Reorder Addendum `2026-06-16`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.10 | SETTINGS 끼니 컬럼 관리 범위에 이름 변경/추가/삭제뿐 아니라 순서 변경을 포함 |
+| 화면정의서 v1.5.17 | SETTINGS 컬럼 목록에서 드래그 핸들 또는 위/아래 이동 컨트롤로 순서 변경 가능, PLANNER_WEEK 표시 순서 반영 |
+| 유저플로우 v1.3.17 | SETTINGS 순서 변경 flow와 `meal_plan_columns.sort_order` 업데이트 흐름 추가 |
+| DB v1.3.15 | 신규 schema 없이 기존 `meal_plan_columns.sort_order`로 사용자별 0부터 연속 정렬 유지 |
+| API v1.2.19 | `PATCH /planner/columns/{column_id}` body에 optional `sort_order` 허용. 신규 endpoint 없음, 엔드포인트 수 67 유지 |
+
+> 이 변경은 사용자 승인에 따라 기존 구현과 공식 문서의 불일치를 닫는 contract-evolution addendum이다.
+> `planner-column-customization` workpack은 순서 변경을 1차 범위 밖으로 보던 이전 문구를 철회하고, 이미 구현된 SETTINGS reorder를 공식 범위로 동기화한다.
+
 ## Growth Achievement Album Contract-Evolution `35a-growth-achievement-album-contract-evolution`
 
 | 문서 | 변경 내용 |

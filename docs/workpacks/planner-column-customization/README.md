@@ -2,7 +2,7 @@
 
 ## Goal
 
-사용자가 설정 화면에서 플래너 끼니 컬럼을 이름 변경, 추가, 삭제할 수 있도록 한다. 신규 사용자 기본값은 `아침 / 점심 / 저녁` 3개이며, 최소 1개 ~ 최대 5개까지 허용한다. `PLANNER_WEEK`는 사용자별 동적 컬럼을 표시하고, 기존 사용자에게 이미 생성된 컬럼은 자동 삭제하지 않는다.
+사용자가 설정 화면에서 플래너 끼니 컬럼을 이름 변경, 추가, 삭제, 순서 변경할 수 있도록 한다. 신규 사용자 기본값은 `아침 / 점심 / 저녁` 3개이며, 최소 1개 ~ 최대 5개까지 허용한다. `PLANNER_WEEK`는 사용자별 동적 컬럼을 표시하고, 기존 사용자에게 이미 생성된 컬럼은 자동 삭제하지 않는다.
 
 ## Branches
 
@@ -13,27 +13,27 @@
 
 - 화면:
   - `PLANNER_WEEK` — 사용자별 동적 끼니 컬럼 표시 (기존 4고정 → 동적)
-  - `SETTINGS` — 끼니 컬럼 관리 섹션 (목록 조회, 이름 변경, 추가, 삭제)
+  - `SETTINGS` — 끼니 컬럼 관리 섹션 (목록 조회, 이름 변경, 추가, 삭제, 순서 변경)
 - API:
   - `GET /planner/columns` — 사용자별 끼니 컬럼 목록 조회
   - `POST /planner/columns` — 끼니 컬럼 추가
-  - `PATCH /planner/columns/{column_id}` — 끼니 컬럼 이름 변경
+  - `PATCH /planner/columns/{column_id}` — 끼니 컬럼 이름 변경 또는 순서 변경
   - `DELETE /planner/columns/{column_id}` — 끼니 컬럼 삭제
   - `GET /planner` — 응답의 `columns` 배열이 사용자별 동적 목록을 반환하도록 변경
   - `GET /meals`, `POST /meals` — 요청/응답 계약 변경 없음, 백엔드 검증 정책 변경: `column_id`가 요청 사용자 소유의 동적 컬럼인지 확인 (기존 고정 슬롯명 검증 → 소유 컬럼 ID 검증)
 - 상태 전이:
   - 신규 사용자 bootstrap: `meal_plan_columns ×3` (아침 / 점심 / 저녁)으로 변경 (기존 ×4 → ×3)
   - 컬럼 추가 시 `sort_order = 현재 마지막 + 1`
+  - 컬럼 순서 변경 시 사용자 소유 컬럼 전체가 0부터 연속 `sort_order`를 갖도록 재정렬
   - 컬럼 삭제 후 남은 컬럼은 `sort_order ASC, id ASC` 기준으로 0부터 재정렬
 - DB 영향:
-  - `meal_plan_columns` (INSERT / UPDATE name / DELETE)
+  - `meal_plan_columns` (INSERT / UPDATE name / UPDATE sort_order / DELETE)
   - `meals` (READ — 삭제 전 연결된 식사 존재 여부 확인)
 - Schema Change:
   - [x] 없음 (기존 `meal_plan_columns` 테이블 구조 변경 없음, 정책만 변경)
 
 ## Out of Scope
 
-- 컬럼 순서 변경 (drag-and-drop reorder) — 1차 구현 범위 밖 (API v1.2.3 명시)
 - 기존 사용자의 4번째 컬럼(간식) 자동 삭제 — 설정에서 사용자가 직접 정리
 - `MEAL_SCREEN` 변경 — 기존 `column_id` FK 참조 유지
 - prototype parity promotion — 이 슬라이스는 기존 화면 확장이므로 별도 parity 대상 아님
@@ -102,7 +102,8 @@ PATCH /planner/columns/{column_id}
 ```
 
 - 로그인 필수
-- Body: `{ "name": "string (1~30자)" }`
+- Body: `{ "name"?: "string (1~30자)", "sort_order"?: number }`
+- `name` 또는 `sort_order` 중 최소 하나가 있어야 한다
 - 응답 (200):
 
 ```json
@@ -118,7 +119,12 @@ PATCH /planner/columns/{column_id}
   - 404 — 존재하지 않는 컬럼
   - 403 — 타인의 컬럼
   - 409 `COLUMN_NAME_DUPLICATE` — 공백 trim 후 같은 이름 중복
-  - 422 — name이 빈 문자열이거나 30자 초과 (invalid body)
+  - 422 — name이 빈 문자열이거나 30자 초과, sort_order가 0 이상의 정수가 아니거나 변경 필드가 없음 (invalid body)
+
+- 순서 변경 정책:
+  - `sort_order`는 사용자 소유 컬럼 목록 안의 목표 위치다
+  - 이동 후 전체 컬럼은 0부터 연속 `sort_order`로 저장된다
+  - 저장된 순서는 `GET /planner`, `GET /planner/columns`, `PLANNER_WEEK` 표시 순서에 반영된다
 
 ### DELETE /planner/columns/{column_id}
 
@@ -190,6 +196,11 @@ DELETE /planner/columns/{column_id}
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
 - `docs/workpacks/README.md`
+- `docs/요구사항기준선-v1.7.10.md` — 2026-06-16 addendum: SETTINGS 끼니 컬럼 순서 변경 공식화
+- `docs/화면정의서-v1.5.17.md` — 2026-06-16 addendum: SETTINGS 순서 변경 UI와 PLANNER_WEEK 반영
+- `docs/api문서-v1.2.19.md` — 2026-06-16 addendum: `PATCH /planner/columns/{column_id}.sort_order`
+- `docs/db설계-v1.3.15.md` — 2026-06-16 addendum: `meal_plan_columns.sort_order` 재정렬 정책
+- `docs/유저flow맵-v1.3.17.md` — 2026-06-16 addendum: SETTINGS reorder flow
 - `docs/요구사항기준선-v1.6.5.md` — 1-4 플래너 끼니 컬럼 정책, 1-9 마이페이지/설정
 - `docs/화면정의서-v1.5.2.md` — PLANNER_WEEK §5 동적 컬럼, SETTINGS §D 끼니 컬럼 관리
 - `docs/api문서-v1.2.3.md` — 3-2~3-5 `/planner/columns` CRUD
@@ -213,12 +224,12 @@ DELETE /planner/columns/{column_id}
 
 - 컬럼 수 최소 1개, 최대 5개 — 서버에서 강제
 - 삭제 시 `meals` FK 참조 확인 — 연결된 식사가 있으면 409 `COLUMN_HAS_MEALS`
+- 순서 변경 시 사용자 소유 컬럼 전체를 0부터 연속 `sort_order`로 재정렬
 - 삭제 후 sort_order 재정렬 — `sort_order ASC, id ASC` 기준으로 0부터
 - 이름 중복 검사 — 공백 trim 후 같은 사용자 내 unique
 - 이름 길이 — 1~30자, 위반 시 422
 - 타인 리소스 수정 불가 — `user_id` 소유자 검증
 - `GET /meals`, `POST /meals` — `column_id`가 요청 사용자 소유의 동적 컬럼인지 검증 (요청/응답 계약 변경 없음)
-- 순서 변경 API 없음 — 1차 구현 범위 밖
 - 기존 사용자 자동 삭제 없음 — 설정에서 사용자가 직접 정리
 - PLANNER_WEEK 5-column 대응 — 화면정의서 §5 정보 축약 원칙 적용
 
@@ -229,7 +240,7 @@ DELETE /planner/columns/{column_id}
 ## Primary User Path
 
 1. `SETTINGS` 진입 → 끼니 컬럼 관리 섹션 확인
-2. 컬럼 이름 변경 / 추가 / 삭제 액션 수행
+2. 컬럼 이름 변경 / 추가 / 순서 변경 / 삭제 액션 수행
 3. `PLANNER_WEEK`에서 변경된 컬럼 구성 확인
 4. 식사가 연결된 컬럼 삭제 시도 → 삭제 불가 안내 확인
 
