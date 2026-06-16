@@ -8,8 +8,11 @@ import {
 import { parseRecipeSortKey } from "@/lib/recipe";
 import {
   clampLimit,
+  encodeRecipeListCursor,
   filterRecipeIdsByIngredients,
   parseIngredientIds,
+  parseRecipeListCursor,
+  type RecipeListCursorRecipe,
 } from "@/lib/recipe-list";
 import {
   ensurePublicUserRow,
@@ -42,6 +45,15 @@ interface RecipeIngredientMatchRow {
   ingredient_id: string;
 }
 
+interface RecipeListRow extends RecipeListCursorRecipe {
+  title: string;
+  thumbnail_url: string | null;
+  tags: string[] | null;
+  base_servings: number;
+  like_count: number;
+  source_type: "system" | "youtube" | "manual";
+}
+
 interface QueryError {
   code?: string;
   message: string;
@@ -68,6 +80,11 @@ interface ManualRecipeRow {
   source_type: "manual";
   created_by: string;
   base_servings: number;
+}
+
+interface ManualRecipeCreateRpcData extends Partial<ManualRecipeRow> {
+  error_code?: string;
+  message?: string;
 }
 
 interface IdLookupQuery {
@@ -132,6 +149,21 @@ interface RecipeStepsInsertTable {
 }
 
 interface ManualRecipeDbClient {
+  rpc?: (
+    functionName: "create_manual_recipe",
+    args: {
+      p_user_id: string;
+      p_title: string;
+      p_base_servings: number;
+      p_thumbnail_url: string | null;
+      p_tags: string[];
+      p_ingredients: Array<Record<string, unknown>>;
+      p_steps: Array<Record<string, unknown>>;
+    },
+  ) => PromiseLike<{
+    data: ManualRecipeCreateRpcData | null;
+    error: QueryError | null;
+  }>;
   from(table: "ingredients"): IdLookupTable;
   from(table: "cooking_methods"): IdLookupTable;
   from(table: "recipes"): RecipesInsertTable;
@@ -460,6 +492,19 @@ function buildStepInsertRows(recipeId: string, steps: ManualRecipeStepInput[]) {
   })) satisfies RecipeStepInsertRow[];
 }
 
+function statusFromManualRecipeRpcError(code: string | undefined) {
+  switch (code) {
+    case "VALIDATION_ERROR":
+      return 422;
+    case "RESOURCE_NOT_FOUND":
+      return 404;
+    case "FORBIDDEN":
+      return 403;
+    default:
+      return 500;
+  }
+}
+
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
   const authResult = await routeClient.auth.getUser();
   return authResult.data.user;
@@ -511,6 +556,7 @@ export async function GET(request: NextRequest) {
     const hasIngredientFilter = searchParams.has("ingredient_ids");
     const sort = listQuery.sort ?? "view_count";
     const limit = listQuery.limit ?? 20;
+    const cursor = parseRecipeListCursor(listQuery.cursor, sort);
 
     if (hasIngredientFilter && listQuery.ingredient_ids?.length === 0) {
       return ok(createEmptyRecipeList());
@@ -531,7 +577,7 @@ export async function GET(request: NextRequest) {
         .in("ingredient_id", listQuery.ingredient_ids);
 
       if (ingredientError) {
-        return ok(createEmptyRecipeList());
+        return fail("INTERNAL_ERROR", "레시피 목록을 불러오지 못했어요.", 500);
       }
 
       filteredRecipeIds = filterRecipeIdsByIngredients(
@@ -547,9 +593,9 @@ export async function GET(request: NextRequest) {
     let recipeQuery = supabase
       .from("recipes")
       .select(
-        "id, title, thumbnail_url, tags, base_servings, view_count, like_count, save_count, source_type",
+        "id, title, thumbnail_url, tags, base_servings, view_count, like_count, save_count, plan_count, cook_count, created_at, source_type",
       )
-      .limit(limit);
+      .limit(limit + 1);
 
     if (sort === "latest") {
       recipeQuery = recipeQuery
@@ -565,6 +611,18 @@ export async function GET(request: NextRequest) {
       recipeQuery = recipeQuery.in("id", filteredRecipeIds);
     }
 
+    if (cursor) {
+      if (sort === "latest") {
+        recipeQuery = recipeQuery.or(
+          `created_at.lt.${cursor.value},and(created_at.eq.${cursor.value},id.lt.${cursor.id})`,
+        );
+      } else {
+        recipeQuery = recipeQuery.or(
+          `${sort}.lt.${cursor.value},and(${sort}.eq.${cursor.value},id.gt.${cursor.id})`,
+        );
+      }
+    }
+
     if (listQuery.q) {
       recipeQuery = recipeQuery.ilike("title", `%${listQuery.q}%`);
     }
@@ -572,10 +630,18 @@ export async function GET(request: NextRequest) {
     const { data, error } = await recipeQuery;
 
     if (error) {
-      return filteredRecipeIds ? ok(createEmptyRecipeList()) : ok(getMockRecipeList(listQuery.q));
+      return fail("INTERNAL_ERROR", "레시피 목록을 불러오지 못했어요.", 500);
     }
 
-    const rows = data ?? [];
+    const rows = (data ?? []) as RecipeListRow[];
+    const pageRows = rows.slice(0, limit);
+    const hasNext = rows.length > limit;
+    const nextCursor = hasNext && pageRows.length > 0
+      ? encodeRecipeListCursor({
+          sort,
+          recipe: pageRows[pageRows.length - 1],
+        })
+      : null;
     let userId: string | null = null;
 
     try {
@@ -589,31 +655,24 @@ export async function GET(request: NextRequest) {
 
     const userStatusByRecipeId = await readRecipeCardUserStatuses({
       dbClient: supabase as unknown as RecipeCardUserStatusDbClient,
-      recipeIds: rows.map((recipe) => recipe.id),
+      recipeIds: pageRows.map((recipe) => recipe.id),
       userId,
     });
     const items: RecipeCardItem[] =
-      rows.map((recipe) => mapRecipeCard(
+      pageRows.map((recipe) => mapRecipeCard(
         recipe,
         userStatusByRecipeId.get(recipe.id) ?? null,
       ));
 
-    const response: RecipeListData =
-      items.length > 0
-        ? { items, next_cursor: null, has_next: false }
-        : filteredRecipeIds
-          ? createEmptyRecipeList()
-          : getMockRecipeList(listQuery.q);
+    const response: RecipeListData = {
+      items,
+      next_cursor: nextCursor,
+      has_next: hasNext,
+    };
 
     return ok(response);
   } catch {
-    const searchParams = request.nextUrl.searchParams;
-
-    if (searchParams.has("ingredient_ids")) {
-      return ok(createEmptyRecipeList());
-    }
-
-    return ok(getMockRecipeList(searchParams.get("q")));
+    return fail("INTERNAL_ERROR", "레시피 목록을 불러오지 못했어요.", 500);
   }
 }
 
@@ -766,6 +825,72 @@ export async function POST(request: Request) {
       .map((row) => row.label)
       .filter((label): label is string => typeof label === "string"),
   });
+
+  if (typeof dbClient.rpc === "function") {
+    const recipeResult = await dbClient.rpc("create_manual_recipe", {
+      p_user_id: user.id,
+      p_title: parsed.title,
+      p_base_servings: parsed.baseServings,
+      p_thumbnail_url: parsed.thumbnailUrl,
+      p_tags: tags,
+      p_ingredients: parsed.ingredients.map((ingredient) => ({
+        ingredient_id: ingredient.ingredient_id,
+        amount: ingredient.amount,
+        unit: ingredient.unit,
+        ingredient_type: ingredient.ingredient_type,
+        display_text: ingredient.display_text,
+        scalable: ingredient.scalable,
+        sort_order: ingredient.sort_order,
+      })),
+      p_steps: parsed.steps.map((step) => ({
+        step_number: step.step_number,
+        instruction: step.instruction,
+        cooking_method_id: step.cooking_method_id,
+        ingredients_used: step.ingredients_used,
+        heat_level: step.heat_level,
+        duration_seconds: step.duration_seconds,
+        duration_text: step.duration_text,
+      })),
+    });
+
+    if (recipeResult.error || !recipeResult.data) {
+      return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
+    }
+
+    if (recipeResult.data.error_code) {
+      return fail(
+        recipeResult.data.error_code,
+        recipeResult.data.message ?? "레시피를 등록하지 못했어요.",
+        statusFromManualRecipeRpcError(recipeResult.data.error_code),
+      );
+    }
+
+    if (
+      !recipeResult.data.id ||
+      !recipeResult.data.title ||
+      recipeResult.data.source_type !== "manual" ||
+      !recipeResult.data.created_by ||
+      typeof recipeResult.data.base_servings !== "number"
+    ) {
+      return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
+    }
+
+    try {
+      await recordUserGrowthActivityEvent(dbClient, {
+        userId: user.id,
+        activityType: "recipe_registered",
+        category: "recipe",
+        sourceKey: `recipe_registered:${recipeResult.data.id}`,
+        sourceTable: "recipes",
+        sourceId: recipeResult.data.id,
+        sourceMeta: { source_type: "manual" },
+      });
+    } catch {
+      // Activity history is secondary; manual recipe creation remains authoritative.
+    }
+
+    return ok(toManualRecipeCreateData(recipeResult.data as ManualRecipeRow), { status: 201 });
+  }
 
   const recipeResult = await dbClient
     .from("recipes")

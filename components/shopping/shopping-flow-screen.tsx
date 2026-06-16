@@ -651,7 +651,7 @@ function MobileAppBar({
       <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
         <button
           aria-label="뒤로 가기"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-[var(--surface-fill)]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-[var(--surface-fill)]"
           onClick={onBack}
           type="button"
         >
@@ -674,7 +674,7 @@ function MobileAppBar({
         <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[var(--foreground)]">
           {title}
         </h1>
-        <div aria-hidden="true" className="h-8 w-8 shrink-0" />
+        <div aria-hidden="true" className="h-11 w-11 shrink-0" />
       </div>
     </div>
   );
@@ -820,7 +820,7 @@ function MobileSelectRow({
             ? `${config.recipe_name} 선택 해제`
             : `${config.recipe_name} 선택`
         }
-        className="flex h-8 w-8 shrink-0 items-center justify-center"
+        className="flex h-11 w-11 shrink-0 items-center justify-center"
         onClick={(event) => {
           event.stopPropagation();
           onToggle(config.selection_id);

@@ -25,6 +25,21 @@
 | 9 | Admin page-view API 문서/엔드포인트 정합성 정리 | 실제 route, 공식 API 문서, endpoint count, Admin Foundation workpack의 불일치를 맞춘다 | 운영 화면은 내부용이어도 계약 불일치가 유지보수 리스크를 만든다 |
 | 10 | Cook mode 공개/비인증 정책 확정 | 공개 레시피 cook mode 허용 범위, 비인증 접근, 플래너 경유 요리 상태 전이를 공식 문서와 route guard에 맞춘다 | 요리 시작은 핵심 행동이고 인증/상태 전이가 섞이면 UX와 데이터가 모두 흔들린다 |
 
+## 2026-06-16 처리 현황
+
+| 우선순위 | 상태 | 처리 내용 |
+| --- | --- | --- |
+| 1 | 완료 | `complete_shopping_list` RPC와 route 호출 경계를 추가해 장보기 완료, 팬트리 반영, 식사 상태 전이를 한 DB 성공 단위로 묶었다 |
+| 2 | 완료 | `create_shopping_list_from_payload` RPC와 route 호출 경계를 추가해 preview 대상 고정, list/item 생성, split 반영을 한 DB 성공 단위로 묶었다 |
+| 3 | 완료 | `GET /recipes` 운영 DB 경로의 mock fallback을 제거하고 DB 실패는 500으로 노출한다. 명시적 mock env 경로만 mock을 사용한다 |
+| 4 | 완료 | `GET /recipes`에 cursor 기반 pagination(`limit + 1`, `has_next`, `next_cursor`)을 추가했다 |
+| 5 | 완료 | `create_manual_recipe` RPC와 route 호출 경계를 추가해 수동 레시피, 재료, 단계 저장을 한 DB 성공 단위로 묶었다 |
+| 6 | 완료 | 새 RPC 3종에 `auth.uid()`/`p_user_id` 경계, service-role 호출 시 명시적 소유자 인자를 고정하고 migration 테스트로 잠갔다 |
+| 7 | 완료 | 장보기 상세 전체 체크를 per-item `Promise.all`에서 단일 bulk update API로 바꿔 partial failure 가능성을 줄였다 |
+| 8 | 완료 | 쇼핑 핵심 모바일 컨트롤을 44px 이상 터치 타깃으로 조정하고 모바일 E2E 접근성 검사를 추가했다 |
+| 9 | 완료 | `PATCH /shopping/lists/{id}/items/bulk`, `POST /api/v1/admin/page-view`를 공식 API 문서와 endpoint count에 반영했다 |
+| 10 | 확인 완료 | 공식 문서와 route guard가 이미 `GET /recipes/{id}/cook-mode` 공개, planner session/standalone complete 인증 필수 정책으로 일치한다 |
+
 ## 출시 blocker에서 제외한 항목
 
 | 항목 | 결정 | 후속 관리 |

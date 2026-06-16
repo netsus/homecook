@@ -30,6 +30,21 @@ interface QueryError {
   message: string;
 }
 
+interface ShoppingCreateRpcData {
+  id?: string | null;
+  title?: string;
+  date_range_start?: string;
+  date_range_end?: string;
+  is_completed?: boolean;
+  completed_at?: string | null;
+  completed_without_list?: boolean;
+  meals_updated?: number;
+  pantry_item_count?: number;
+  created_at?: string;
+  error_code?: string;
+  message?: string;
+}
+
 interface MealsRow {
   id: string;
   user_id: string;
@@ -231,6 +246,25 @@ interface ShoppingListItemsTable {
 }
 
 interface ShoppingCreateDbClient {
+  rpc?: (
+    functionName: "create_shopping_list_from_payload",
+    args: {
+      p_user_id: string;
+      p_title: string;
+      p_date_range_start: string;
+      p_date_range_end: string;
+      p_complete_without_list: boolean;
+      p_shopping_meal_ids: string[];
+      p_split_remainders: Array<Record<string, unknown>>;
+      p_split_originals: Array<Record<string, unknown>>;
+      p_recipe_rows: Array<Record<string, unknown>>;
+      p_item_rows: Array<Record<string, unknown>>;
+      p_pantry_item_count: number;
+    },
+  ) => PromiseLike<{
+    data: ShoppingCreateRpcData | null;
+    error: QueryError | null;
+  }>;
   from(table: "meals"): MealsTable;
   from(table: "shopping_lists"): ShoppingListsTable;
   from(table: "shopping_list_recipes"): ShoppingListRecipesTable;
@@ -371,6 +405,21 @@ function buildShoppingHistoryTitle(row: ShoppingListHistoryRow) {
   return `${startMonth}/${startDay}~${endMonth}/${endDay}`;
 }
 
+function statusFromShoppingCreateRpcError(code: string | undefined) {
+  switch (code) {
+    case "VALIDATION_ERROR":
+      return 422;
+    case "RESOURCE_NOT_FOUND":
+      return 404;
+    case "FORBIDDEN":
+      return 403;
+    case "CONFLICT":
+      return 409;
+    default:
+      return 500;
+  }
+}
+
 export async function POST(request: Request) {
   let body: ShoppingListCreateBody;
 
@@ -493,41 +542,6 @@ export async function POST(request: Request) {
   const dates = shoppingMeals.map((meal) => meal.plan_date).sort();
   const dateRangeStart = dates[0] ?? shoppingMeals[0]!.plan_date;
   const dateRangeEnd = dates.at(-1) ?? shoppingMeals[0]!.plan_date;
-
-  if (splitMeals.length > 0) {
-    const splitRemainderInsertResult = await dbClient
-      .from("meals")
-      .insert(
-        splitMeals.map(({ meal, remainingServings }) => ({
-          user_id: meal.user_id,
-          recipe_id: meal.recipe_id,
-          plan_date: meal.plan_date,
-          column_id: meal.column_id,
-          planned_servings: remainingServings,
-          status: "registered",
-          is_leftover: meal.is_leftover,
-          leftover_dish_id: meal.leftover_dish_id,
-          shopping_list_id: null,
-          cooked_at: null,
-        })),
-      );
-
-    if (splitRemainderInsertResult.error) {
-      return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
-    }
-
-    for (const splitMeal of splitMeals) {
-      const splitOriginalUpdateResult = await dbClient
-        .from("meals")
-        .update({ planned_servings: splitMeal.shoppingServings })
-        .eq("id", splitMeal.meal.id)
-        .eq("user_id", user.id);
-
-      if (splitOriginalUpdateResult.error) {
-        return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
-      }
-    }
-  }
 
   const recipeAggregation = new Map<
     string,
@@ -662,6 +676,172 @@ export async function POST(request: Request) {
     aggregatedIngredients.every((ingredient) =>
       pantryIngredientIds.has(ingredient.ingredient_id),
     );
+  const title = buildShoppingListTitle(dateRangeStart);
+  const shoppingMealIds = shoppingMeals.map((meal) => meal.id).sort();
+  const shoppingRecipePayloadRows = [...recipeAggregation.entries()].map(([recipeId, totals]) => ({
+    recipe_id: recipeId,
+    shopping_servings: totals.shopping_servings,
+    planned_servings_total: totals.planned_servings_total,
+  }));
+  const shoppingItemPayloadRows = aggregatedIngredients.map((ingredient, index) => ({
+    ingredient_id: ingredient.ingredient_id,
+    display_text: ingredient.display_text,
+    amounts_json: ingredient.amounts_json,
+    is_pantry_excluded: pantryIngredientIds.has(ingredient.ingredient_id),
+    sort_order: index,
+  }));
+
+  if (typeof dbClient.rpc === "function") {
+    const createResult = await dbClient.rpc("create_shopping_list_from_payload", {
+      p_user_id: user.id,
+      p_title: title,
+      p_date_range_start: dateRangeStart,
+      p_date_range_end: dateRangeEnd,
+      p_complete_without_list: allNeededIngredientsAreInPantry,
+      p_shopping_meal_ids: shoppingMealIds,
+      p_split_remainders: splitMeals.map(({ meal, remainingServings }) => ({
+        user_id: meal.user_id,
+        recipe_id: meal.recipe_id,
+        plan_date: meal.plan_date,
+        column_id: meal.column_id,
+        planned_servings: remainingServings,
+        status: "registered",
+        is_leftover: meal.is_leftover,
+        leftover_dish_id: meal.leftover_dish_id,
+        shopping_list_id: null,
+        cooked_at: null,
+      })),
+      p_split_originals: splitMeals.map((splitMeal) => ({
+        meal_id: splitMeal.meal.id,
+        planned_servings: splitMeal.shoppingServings,
+      })),
+      p_recipe_rows: shoppingRecipePayloadRows,
+      p_item_rows: shoppingItemPayloadRows,
+      p_pantry_item_count: aggregatedIngredients.length,
+    });
+
+    if (createResult.error || !createResult.data) {
+      return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
+    }
+
+    if (createResult.data.error_code) {
+      return fail(
+        createResult.data.error_code,
+        createResult.data.message ?? "장보기 목록을 만들지 못했어요.",
+        statusFromShoppingCreateRpcError(createResult.data.error_code),
+      );
+    }
+
+    if (createResult.data.completed_without_list) {
+      const completedAt = createResult.data.completed_at ?? new Date().toISOString();
+      const representativeMealId = shoppingMealIds[0];
+
+      if (representativeMealId) {
+        try {
+          await recordUserGrowthActivityEvent(dbClient, {
+            userId: user.id,
+            activityType: "shopping_bundle_prepared",
+            category: "shopping",
+            sourceKey: buildShoppingBundlePreparedSourceKey({
+              actionKind: "completed_without_list",
+              mealIds: shoppingMealIds,
+            }),
+            sourceTable: "meals",
+            sourceId: representativeMealId,
+            sourceMeta: {
+              action_kind: "completed_without_list",
+              meal_ids: shoppingMealIds,
+              pantry_item_count: aggregatedIngredients.length,
+            },
+            occurredAt: completedAt,
+          });
+        } catch {
+          // Activity history is secondary; pantry-only shopping completion remains authoritative.
+        }
+      }
+
+      return ok({
+        id: null,
+        title,
+        date_range_start: dateRangeStart,
+        date_range_end: dateRangeEnd,
+        is_completed: true,
+        completed_at: completedAt,
+        completed_without_list: true,
+        meals_updated: createResult.data.meals_updated ?? shoppingMealIds.length,
+        pantry_item_count: createResult.data.pantry_item_count ?? aggregatedIngredients.length,
+        created_at: createResult.data.created_at ?? completedAt,
+      } satisfies ShoppingListAllPantryCompletionSummary, { status: 200 });
+    }
+
+    if (!createResult.data.id || !createResult.data.created_at) {
+      return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
+    }
+
+    try {
+      await recordUserGrowthActivityEvent(dbClient, {
+        userId: user.id,
+        activityType: "shopping_bundle_prepared",
+        category: "shopping",
+        sourceKey: buildShoppingBundlePreparedSourceKey({
+          actionKind: "shopping_list",
+          mealIds: shoppingMealIds,
+        }),
+        sourceTable: "shopping_lists",
+        sourceId: createResult.data.id,
+        sourceMeta: {
+          action_kind: "shopping_list",
+          meal_ids: shoppingMealIds,
+          pantry_item_count: pantryIngredientIds.size,
+        },
+        occurredAt: createResult.data.created_at,
+      });
+    } catch {
+      // Activity history is secondary; shopping list creation remains authoritative.
+    }
+
+    return ok({
+      id: createResult.data.id,
+      title: createResult.data.title ?? title,
+      is_completed: createResult.data.is_completed ?? false,
+      created_at: createResult.data.created_at,
+    } satisfies ShoppingListSummary, { status: 201 });
+  }
+
+  if (splitMeals.length > 0) {
+    const splitRemainderInsertResult = await dbClient
+      .from("meals")
+      .insert(
+        splitMeals.map(({ meal, remainingServings }) => ({
+          user_id: meal.user_id,
+          recipe_id: meal.recipe_id,
+          plan_date: meal.plan_date,
+          column_id: meal.column_id,
+          planned_servings: remainingServings,
+          status: "registered",
+          is_leftover: meal.is_leftover,
+          leftover_dish_id: meal.leftover_dish_id,
+          shopping_list_id: null,
+          cooked_at: null,
+        })),
+      );
+
+    if (splitRemainderInsertResult.error) {
+      return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
+    }
+
+    for (const splitMeal of splitMeals) {
+      const splitOriginalUpdateResult = await dbClient
+        .from("meals")
+        .update({ planned_servings: splitMeal.shoppingServings })
+        .eq("id", splitMeal.meal.id)
+        .eq("user_id", user.id);
+
+      if (splitOriginalUpdateResult.error) {
+        return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
+      }
+    }
+  }
 
   if (allNeededIngredientsAreInPantry) {
     const mealDoneUpdateResult = await dbClient
@@ -704,7 +884,7 @@ export async function POST(request: Request) {
 
     return ok({
       id: null,
-      title: buildShoppingListTitle(dateRangeStart),
+      title,
       date_range_start: dateRangeStart,
       date_range_end: dateRangeEnd,
       is_completed: true,
@@ -720,7 +900,7 @@ export async function POST(request: Request) {
     .from("shopping_lists")
     .insert({
       user_id: user.id,
-      title: buildShoppingListTitle(dateRangeStart),
+      title,
       date_range_start: dateRangeStart,
       date_range_end: dateRangeEnd,
       is_completed: false,
@@ -733,11 +913,11 @@ export async function POST(request: Request) {
   }
 
   const shoppingList = shoppingListInsertResult.data;
-  const shoppingRecipeRows = [...recipeAggregation.entries()].map(([recipeId, totals]) => ({
+  const shoppingRecipeRows = shoppingRecipePayloadRows.map((recipeRow) => ({
     shopping_list_id: shoppingList.id,
-    recipe_id: recipeId,
-    shopping_servings: totals.shopping_servings,
-    planned_servings_total: totals.planned_servings_total,
+    recipe_id: recipeRow.recipe_id,
+    shopping_servings: recipeRow.shopping_servings,
+    planned_servings_total: recipeRow.planned_servings_total,
   }));
 
   if (shoppingRecipeRows.length > 0) {
@@ -781,7 +961,6 @@ export async function POST(request: Request) {
     return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
   }
 
-  const shoppingMealIds = shoppingMeals.map((meal) => meal.id).sort();
   try {
     await recordUserGrowthActivityEvent(dbClient, {
       userId: user.id,

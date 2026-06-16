@@ -4,6 +4,8 @@ import type { ApiError, ApiResponse } from "@/types/api";
 import type {
   ShoppingListCreateBody,
   ShoppingListDetail,
+  ShoppingListItemsBulkUpdateBody,
+  ShoppingListItemsBulkUpdateData,
   ShoppingListItemSummary,
   ShoppingListItemUpdateBody,
   ShoppingListCompleteBody,
@@ -100,6 +102,17 @@ export async function updateShoppingListItem(
   body: ShoppingListItemUpdateBody,
 ) {
   return requestShopping<ShoppingListItemSummary>(`/api/v1/shopping/lists/${listId}/items/${itemId}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateShoppingListItemsBulk(
+  listId: string,
+  body: ShoppingListItemsBulkUpdateBody,
+) {
+  return requestShopping<ShoppingListItemsBulkUpdateData>(`/api/v1/shopping/lists/${listId}/items/bulk`, {
     method: "PATCH",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),

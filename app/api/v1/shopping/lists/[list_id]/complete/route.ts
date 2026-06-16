@@ -24,6 +24,18 @@ interface QueryError {
   message: string;
 }
 
+interface CompleteShoppingListRpcData {
+  completed?: boolean;
+  meals_updated?: number;
+  pantry_added?: number;
+  pantry_added_item_ids?: string[];
+  completed_at?: string | null;
+  meal_ids?: string[];
+  newly_completed?: boolean;
+  error_code?: string;
+  message?: string;
+}
+
 interface ShoppingListRow {
   id: string;
   user_id: string;
@@ -121,6 +133,17 @@ interface PantryItemsTable {
 }
 
 interface ShoppingCompleteDbClient {
+  rpc?: (
+    functionName: "complete_shopping_list",
+    args: {
+      p_list_id: string;
+      p_user_id: string;
+      p_add_to_pantry_item_ids: string[] | null;
+    },
+  ) => PromiseLike<{
+    data: CompleteShoppingListRpcData | null;
+    error: QueryError | null;
+  }>;
   from(table: "shopping_lists"): ShoppingListsTable;
   from(table: "meals"): MealsTable;
   from(table: "shopping_list_items"): ShoppingListItemsTable;
@@ -163,6 +186,74 @@ async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHan
   return authResult.data.user;
 }
 
+function statusFromRpcErrorCode(code: string | undefined) {
+  switch (code) {
+    case "VALIDATION_ERROR":
+      return 422;
+    case "RESOURCE_NOT_FOUND":
+      return 404;
+    case "FORBIDDEN":
+      return 403;
+    case "CONFLICT":
+      return 409;
+    default:
+      return 500;
+  }
+}
+
+async function recordShoppingCompletionRewards(
+  dbClient: UserProgressDbClient & UserGrowthActivityDbClient,
+  {
+    userId,
+    listId,
+    completedAt,
+    mealIds,
+  }: {
+    userId: string;
+    listId: string;
+    completedAt: string;
+    mealIds: string[];
+  },
+) {
+  try {
+    await awardUserProgressEvent(dbClient, {
+      userId,
+      eventType: "shopping_completed",
+      sourceTable: "shopping_lists",
+      sourceId: listId,
+      occurredAt: completedAt,
+    });
+  } catch {
+    // Progress is a secondary reward ledger; shopping completion remains authoritative.
+  }
+
+  if (mealIds.length === 0) {
+    return;
+  }
+
+  try {
+    await recordUserGrowthActivityEvent(dbClient, {
+      userId,
+      activityType: "shopping_bundle_prepared",
+      category: "shopping",
+      sourceKey: buildShoppingBundlePreparedSourceKey({
+        actionKind: "shopping_list",
+        mealIds,
+      }),
+      sourceTable: "shopping_lists",
+      sourceId: listId,
+      sourceMeta: {
+        action_kind: "shopping_list",
+        meal_ids: mealIds,
+        shopping_list_id: listId,
+      },
+      occurredAt: completedAt,
+    });
+  } catch {
+    // Activity history is secondary; shopping completion remains authoritative.
+  }
+}
+
 export async function POST(request: Request, context: RouteContext) {
   const { list_id: listId } = await context.params;
 
@@ -197,6 +288,45 @@ export async function POST(request: Request, context: RouteContext) {
       formatBootstrapErrorMessage(bootstrapError, "장보기를 완료하지 못했어요."),
       500,
     );
+  }
+
+  if (typeof dbClient.rpc === "function") {
+    const completeResult = await dbClient.rpc("complete_shopping_list", {
+      p_list_id: listId,
+      p_user_id: user.id,
+      p_add_to_pantry_item_ids: requestedPantryItemIds ?? null,
+    });
+
+    if (completeResult.error || !completeResult.data) {
+      return fail("INTERNAL_ERROR", "장보기를 완료하지 못했어요.", 500);
+    }
+
+    if (completeResult.data.error_code) {
+      return fail(
+        completeResult.data.error_code,
+        completeResult.data.message ?? "장보기를 완료하지 못했어요.",
+        statusFromRpcErrorCode(completeResult.data.error_code),
+      );
+    }
+
+    const mealIds = completeResult.data.meal_ids ?? [];
+    const completedAt = completeResult.data.completed_at;
+
+    if (completeResult.data.newly_completed && completedAt) {
+      await recordShoppingCompletionRewards(dbClient, {
+        userId: user.id,
+        listId,
+        completedAt,
+        mealIds,
+      });
+    }
+
+    return ok({
+      completed: true,
+      meals_updated: completeResult.data.meals_updated ?? 0,
+      pantry_added: completeResult.data.pantry_added ?? 0,
+      pantry_added_item_ids: completeResult.data.pantry_added_item_ids ?? [],
+    } satisfies ShoppingListCompleteData);
   }
 
   const listResult = await dbClient
@@ -341,43 +471,12 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   if (completedAtForProgress) {
-    try {
-      await awardUserProgressEvent(dbClient, {
-        userId: user.id,
-        eventType: "shopping_completed",
-        sourceTable: "shopping_lists",
-        sourceId: listId,
-        occurredAt: completedAtForProgress,
-      });
-    } catch {
-      // Progress is a secondary reward ledger; shopping completion remains authoritative.
-    }
-
-    const mealIds = mealsUpdateResult.data.map((meal) => meal.id);
-
-    if (mealIds.length > 0) {
-      try {
-        await recordUserGrowthActivityEvent(dbClient, {
-          userId: user.id,
-          activityType: "shopping_bundle_prepared",
-          category: "shopping",
-          sourceKey: buildShoppingBundlePreparedSourceKey({
-            actionKind: "shopping_list",
-            mealIds,
-          }),
-          sourceTable: "shopping_lists",
-          sourceId: listId,
-          sourceMeta: {
-            action_kind: "shopping_list",
-            meal_ids: mealIds,
-            shopping_list_id: listId,
-          },
-          occurredAt: completedAtForProgress,
-        });
-      } catch {
-        // Activity history is secondary; shopping completion remains authoritative.
-      }
-    }
+    await recordShoppingCompletionRewards(dbClient, {
+      userId: user.id,
+      listId,
+      completedAt: completedAtForProgress,
+      mealIds: mealsUpdateResult.data.map((meal) => meal.id),
+    });
   }
 
   return ok({

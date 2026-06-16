@@ -197,7 +197,7 @@ describe("08a meal add search backend target", () => {
       },
     });
     expect(listQuery.ilike).toHaveBeenCalledWith("title", "%김치%");
-    expect(listQuery.limit).toHaveBeenCalledWith(20);
+    expect(listQuery.limit).toHaveBeenCalledWith(21);
   });
 
   it("returns 401 for unauthenticated POST /api/v1/meals", async () => {

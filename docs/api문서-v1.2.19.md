@@ -8,7 +8,8 @@
 
 > 기준 문서: 요구사항 기준선 v1.7.10 / 화면정의서 v1.5.17 / DB 설계 v1.3.15 / 유저 Flow맵 v1.3.17
 > 작성: 킴실장
-> 2026-06-16 addendum: SETTINGS 끼니 컬럼 순서 변경을 공식화한다. `PATCH /planner/columns/{column_id}`는 기존 이름 변경에 더해 optional `sort_order`를 받는다. 신규 endpoint 없음, 엔드포인트 수 67 유지.
+> 2026-06-16 launch-readiness addendum: `PATCH /shopping/lists/{list_id}/items/bulk` 일괄 체크 API와 `POST /api/v1/admin/page-view` 관리자 진입 감사 API를 공식화한다. 엔드포인트 수 67 → 69.
+> 2026-06-16 addendum: SETTINGS 끼니 컬럼 순서 변경을 공식화한다. `PATCH /planner/columns/{column_id}`는 기존 이름 변경에 더해 optional `sort_order`를 받는다. 해당 addendum 자체의 신규 endpoint 없음.
 > v1.2.18 → v1.2.19: 35a growth-achievement-album contract-evolution. `GET /users/me/gamification`에 achievement album, tutorial category, spoon grade image fields를 additive 확장한다. 신규 endpoint 없음. 기존 `quests` field는 호환 유지하되 standard quest expansion은 중단한다.
 > v1.2.17 → v1.2.18: 34a growth-leveling-v2 contract-evolution. `planner_registered` XP source, `POST /meals.source_path` activity metadata, `user_growth_activity_events`, level curve v2/grade, gamification priority notifications, archive endpoint, badge shape/locked hint, MYPAGE profile integration contract 추가
 > v1.1 → v1.2: 채실장 2차 리뷰 A1~A4 + 장보기 구현 아이디어 반영
@@ -150,7 +151,7 @@ type YoutubeQuantityConfirmationStatus =
 
 | # | 변경 내용 | 조치 |
 | --- | --- | --- |
-| ADMIN-1 | 내부 운영자가 `/admin`에서 사용자 목록, 운영 이벤트, 감사 로그를 읽기 전용으로 조회해야 함 | `/api/v1/admin/*` 3개 GET endpoint 추가 |
+| ADMIN-1 | 내부 운영자가 `/admin`에서 사용자 목록, 운영 이벤트, 감사 로그를 읽기 전용으로 조회해야 함 | `/api/v1/admin/*` 3개 GET endpoint와 page-view audit POST 추가 |
 | ADMIN-2 | 관리자 권한은 일반 사용자 권한과 분리되어야 함 | `admin_members`를 단일 진실 소스로 사용하고 서버에서 `requireAdminUser` 검증 |
 | ADMIN-3 | 교차 사용자 조회는 user-scoped client로 처리하면 안 됨 | `createServiceRoleClient()` 필수, service role 부재 시 fail closed, `routeClient` fallback 금지 |
 | ADMIN-4 | 운영자 조회 행위는 추적 가능해야 함 | 모든 Admin API read와 `/admin` 진입은 `admin_audit_logs`에 기록 |
@@ -1634,6 +1635,8 @@ PATCH /shopping/lists/{list_id}/items/{item_id}
 
 > **완료 후 수정 불가** `v1.2.1 추가shopping_lists.is_completed=true`인 리스트의 아이템은 수정할 수 없다. 409 CONFLICT 반환. 장보기 아이템 순서 변경 (드래그&드롭) `v1.2 신규`
 
+### 8-4b. 장보기 아이템 순서 변경 (드래그&드롭)
+
 ```
 PATCH /shopping/lists/{list_id}/items/reorder
 ```
@@ -1660,6 +1663,43 @@ PATCH /shopping/lists/{list_id}/items/reorder
 > 재진입/마이페이지 재열람 시에도 순서 유지.
 >
 > **완료 후 수정 불가** `v1.2.1 추가shopping_lists.is_completed=true`인 리스트는 순서 변경도 불가. 409 CONFLICT 반환.
+
+### 8-4c. 장보기 항목 일괄 체크 업데이트 `2026-06-16 launch-readiness 신규`
+
+```
+PATCH /shopping/lists/{list_id}/items/bulk
+```
+
+🔒 로그인 필수
+
+| 구분 | 필드       | 타입     | 설명                         |
+| ---- | ---------- | -------- | ---------------------------- |
+| Body | item_ids   | uuid[]   | 일괄 체크할 장보기 item 목록 |
+| Body | is_checked | boolean  | 구매 완료 체크 상태          |
+
+**응답 (200)**
+
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "ingredient_id": "uuid",
+      "display_text": "양파 1개",
+      "amounts_json": [{ "amount": 1, "unit": "개" }],
+      "is_checked": true,
+      "is_pantry_excluded": false,
+      "added_to_pantry": false,
+      "sort_order": 10
+    }
+  ]
+}
+```
+
+> 리스트 소유자만 호출할 수 있다. `is_pantry_excluded=false`인 구매 섹션 항목만 업데이트한다.
+> 일부 항목만 성공하는 partial failure를 만들지 않기 위해 서버는 단일 update statement로 처리한다.
+>
+> **완료 후 수정 불가** `shopping_lists.is_completed=true`인 리스트는 일괄 체크도 불가. 409 CONFLICT 반환.
 
 ### 8-5. 장보기 완료 (팬트리 반영 선택 가능) `v1.2 변경`
 
@@ -3083,7 +3123,51 @@ GET /api/v1/admin/audit-logs
 
 ---
 
-## 엔드포인트 전체 목록 (67개) `v1.2.19`
+## 15-4. 관리자 페이지 진입 감사 기록 `2026-06-16 launch-readiness 신규`
+
+```http
+POST /api/v1/admin/page-view
+```
+
+🔐 관리자 전용 (`admin_members` 등록 필요)
+
+**Body**
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| path | string | 선택. `/admin`, `/admin/users`, `/admin/events`, `/admin/audit-logs` 중 하나. query string은 저장하지 않음 |
+
+**응답 (200)**
+
+```json
+{
+  "success": true,
+  "data": {
+    "verified": true
+  },
+  "error": null
+}
+```
+
+**감사 로그**
+
+- action: `admin_page_view`
+- target_type: `admin_page`
+- target_id: `null`
+- 허용된 관리자 페이지 pathname만 저장한다. 허용되지 않은 path 또는 API path가 들어오면 `/admin`으로 대체한다.
+
+**에러**
+
+| HTTP | code | 설명 |
+|------|------|------|
+| 401 | UNAUTHORIZED | 로그인 필요 |
+| 403 | FORBIDDEN | 관리자 권한 없음 |
+| 500 | ADMIN_SERVICE_ROLE_UNAVAILABLE | service role 누락. fail closed |
+| 500 | ADMIN_AUDIT_WRITE_FAILED | 감사 로그 기록 실패. fail closed |
+
+---
+
+## 엔드포인트 전체 목록 (69개) `v1.2.19`
 
 | #        | Method     | Path                                   | 화면                     | 인증   | v1.2 변경                        |
 | -------- | ---------- | -------------------------------------- | ------------------------ | ------ | -------------------------------- |
@@ -3118,6 +3202,7 @@ GET /api/v1/admin/audit-logs
 | 8-3      | GET        | /shopping/lists/{id}                   | SHOPPING_DETAIL          | 🔒     | tie-breaker 명시                 |
 | 8-4      | PATCH      | /shopping/lists/{id}/items/{id}        | SHOPPING_DETAIL          | 🔒     | 완료 후 409 추가                 |
 | **8-4b** | **PATCH**  | **/shopping/lists/{id}/items/reorder** | **SHOPPING_DETAIL**      | **🔒** | **신규**                         |
+| **8-4c** | **PATCH**  | **/shopping/lists/{id}/items/bulk**    | **SHOPPING_DETAIL**      | **🔒** | **launch-readiness 신규**        |
 | 8-5      | POST       | /shopping/lists/{id}/complete          | SHOPPING_DETAIL          | 🔒     | 검증 규칙 + null/[] 구분         |
 | 8-6      | GET        | /shopping/lists/{id}/share-text        | SHOPPING_DETAIL          | 🔒     | 제외 항목 미포함 명시            |
 | 9-1      | POST       | /cooking/sessions                      | MEAL_SCREEN              | 🔒     | MEAL_SCREEN 단축 호출 추가 (v1.2.5) |
@@ -3154,8 +3239,9 @@ GET /api/v1/admin/audit-logs
 | 15-1     | GET        | /api/v1/admin/users                    | ADMIN_USERS              | 🔐     | v1.2.12 신규                     |
 | 15-2     | GET        | /api/v1/admin/operational-events       | ADMIN_EVENTS             | 🔐     | v1.2.12 신규                     |
 | 15-3     | GET        | /api/v1/admin/audit-logs               | ADMIN_AUDIT_LOGS         | 🔐     | v1.2.12 신규                     |
+| **15-4** | **POST**   | **/api/v1/admin/page-view**            | **ADMIN_DASHBOARD**      | **🔐** | **launch-readiness 신규**        |
 
-> **v1.2.19 총계**: 67개 (growth-achievement-album gamification response additive 확장, 신규 endpoint 없음)
+> **v1.2.19 총계**: 69개 (launch-readiness addendum: shopping items bulk update, admin page-view audit endpoint 2개 추가)
 > **v1.2.18 총계**: 67개 (growth-leveling-v2 archive endpoint 1개 추가, gamification response additive 확장)
 > **v1.2.17 총계**: 66개 (user-progress `GET /users/me/progress` 1개 + 33c gamification endpoint 3개 추가)
 > **v1.2.16 총계**: 62개 (2026-06-10 addendum: 레시피북 리더용 read-only 상세 endpoint 1개 추가)

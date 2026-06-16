@@ -800,12 +800,15 @@ describe("ShoppingDetailScreen", () => {
       };
 
       vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithMultipleItems);
-      const updateSpy = vi
-        .spyOn(shoppingApi, "updateShoppingListItem")
-        .mockImplementation(async (_listId, itemId, patch) => {
-          const item = listWithMultipleItems.items.find((entry) => entry.id === itemId);
-          if (!item) throw new Error("missing item");
-          return { ...item, is_checked: Boolean(patch.is_checked) };
+      const itemUpdateSpy = vi.spyOn(shoppingApi, "updateShoppingListItem");
+      const bulkUpdateSpy = vi
+        .spyOn(shoppingApi, "updateShoppingListItemsBulk")
+        .mockImplementation(async (_listId, body) => {
+          return {
+            items: listWithMultipleItems.items
+              .filter((item) => body.item_ids.includes(item.id))
+              .map((item) => ({ ...item, is_checked: body.is_checked })),
+          };
         });
 
       const user = userEvent.setup();
@@ -821,15 +824,13 @@ describe("ShoppingDetailScreen", () => {
       );
 
       await waitFor(() => {
-        expect(updateSpy).toHaveBeenCalledWith("list-1", "item-1", {
-          is_checked: true,
-        });
-        expect(updateSpy).toHaveBeenCalledWith("list-1", "item-2", {
+        expect(bulkUpdateSpy).toHaveBeenCalledWith("list-1", {
+          item_ids: ["item-1", "item-2"],
           is_checked: true,
         });
       });
 
-      expect(updateSpy).not.toHaveBeenCalledWith("list-1", "item-3", expect.anything());
+      expect(itemUpdateSpy).not.toHaveBeenCalled();
     });
 
     it("checks every purchase item from the mobile select-all control", async () => {
@@ -861,12 +862,14 @@ describe("ShoppingDetailScreen", () => {
       };
 
       vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithMultipleItems);
-      const updateSpy = vi
-        .spyOn(shoppingApi, "updateShoppingListItem")
-        .mockImplementation(async (_listId, itemId, patch) => {
-          const item = listWithMultipleItems.items.find((entry) => entry.id === itemId);
-          if (!item) throw new Error("missing item");
-          return { ...item, is_checked: Boolean(patch.is_checked) };
+      const bulkUpdateSpy = vi
+        .spyOn(shoppingApi, "updateShoppingListItemsBulk")
+        .mockImplementation(async (_listId, body) => {
+          return {
+            items: listWithMultipleItems.items
+              .filter((item) => body.item_ids.includes(item.id))
+              .map((item) => ({ ...item, is_checked: body.is_checked })),
+          };
         });
 
       const user = userEvent.setup();
@@ -882,7 +885,10 @@ describe("ShoppingDetailScreen", () => {
       );
 
       await waitFor(() => {
-        expect(updateSpy).toHaveBeenCalledTimes(2);
+        expect(bulkUpdateSpy).toHaveBeenCalledWith("list-1", {
+          item_ids: ["item-1", "item-2"],
+          is_checked: true,
+        });
       });
     });
   });

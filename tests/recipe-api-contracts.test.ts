@@ -49,6 +49,7 @@ function createQuery<T>(result: QueryResult<T>) {
     select: vi.fn(() => query),
     order: vi.fn(() => query),
     limit: vi.fn(() => query),
+    or: vi.fn(() => query),
     ilike: vi.fn(() => query),
     eq: vi.fn(() => query),
     in: vi.fn(() => query),
@@ -628,6 +629,131 @@ describe("recipe API contracts", () => {
       }),
     ]);
     expect(createRouteHandlerClient).not.toHaveBeenCalled();
+  });
+
+  it("returns a server error instead of mock recipes when the real recipe query fails", async () => {
+    const listQuery = createQuery({
+      data: null,
+      error: { message: "database unavailable" },
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: null },
+        })),
+      },
+      from: vi.fn(() => listQuery),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/route");
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/recipes?q=%EA%B9%80%EC%B9%98"));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+      },
+    });
+  });
+
+  it("returns an empty real recipe list instead of mock recipes when the database has no matches", async () => {
+    const listQuery = createQuery({
+      data: [],
+      error: null,
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: null },
+        })),
+      },
+      from: vi.fn(() => listQuery),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/route");
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/recipes"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data).toEqual({
+      items: [],
+      next_cursor: null,
+      has_next: false,
+    });
+  });
+
+  it("returns a next cursor when the recipe list has more rows than the requested limit", async () => {
+    const listQuery = createQuery({
+      data: [
+        {
+          id: "recipe-3",
+          title: "새 레시피",
+          thumbnail_url: null,
+          tags: ["한식"],
+          base_servings: 2,
+          view_count: 30,
+          like_count: 0,
+          save_count: 0,
+          plan_count: 0,
+          cook_count: 0,
+          created_at: "2026-06-16T10:00:00.000Z",
+          source_type: "system",
+        },
+        {
+          id: "recipe-2",
+          title: "중간 레시피",
+          thumbnail_url: null,
+          tags: ["한식"],
+          base_servings: 2,
+          view_count: 20,
+          like_count: 0,
+          save_count: 0,
+          plan_count: 0,
+          cook_count: 0,
+          created_at: "2026-06-15T10:00:00.000Z",
+          source_type: "system",
+        },
+        {
+          id: "recipe-1",
+          title: "오래된 레시피",
+          thumbnail_url: null,
+          tags: ["한식"],
+          base_servings: 2,
+          view_count: 10,
+          like_count: 0,
+          save_count: 0,
+          plan_count: 0,
+          cook_count: 0,
+          created_at: "2026-06-14T10:00:00.000Z",
+          source_type: "system",
+        },
+      ],
+      error: null,
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: null },
+        })),
+      },
+      from: vi.fn(() => listQuery),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/route");
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/recipes?sort=latest&limit=2"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(listQuery.limit).toHaveBeenCalledWith(3);
+    expect(body.data.items.map((item: { id: string }) => item.id)).toEqual(["recipe-3", "recipe-2"]);
+    expect(body.data.has_next).toBe(true);
+    expect(typeof body.data.next_cursor).toBe("string");
   });
 
   it("applies ingredient_ids as an AND filter before loading recipe cards", async () => {
@@ -1227,6 +1353,128 @@ describe("recipe API contracts", () => {
       error: {
         code: "RESOURCE_NOT_FOUND",
       },
+    });
+  });
+
+  it("uses the atomic create_manual_recipe RPC for manual recipe creation when available", async () => {
+    const ingredientId = "550e8400-e29b-41d4-a716-446655440010";
+    const methodId = "550e8400-e29b-41d4-a716-446655440020";
+    const ingredientLookupQuery = createQuery({
+      data: [{ id: ingredientId }],
+      error: null,
+    });
+    const cookingMethodLookupQuery = createQuery({
+      data: [{ id: methodId, label: "끓이기" }],
+      error: null,
+    });
+    const rpc = vi.fn(async () => ({
+      data: {
+        id: "recipe-rpc",
+        title: "직접 등록 레시피",
+        source_type: "manual",
+        created_by: "user-1",
+        base_servings: 2,
+      },
+      error: null,
+    }));
+    const recipesInsert = vi.fn();
+    const ingredientInsert = vi.fn();
+    const stepInsert = vi.fn();
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc,
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return { select: vi.fn(() => ingredientLookupQuery) };
+        if (table === "cooking_methods") return { select: vi.fn(() => cookingMethodLookupQuery) };
+        if (table === "recipes") return { insert: recipesInsert };
+        if (table === "recipe_ingredients") return { insert: ingredientInsert };
+        if (table === "recipe_steps") return { insert: stepInsert };
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: "직접 등록 레시피",
+          base_servings: 2,
+          ingredients: [
+            {
+              ingredient_id: ingredientId,
+              standard_name: "양파",
+              amount: 1,
+              unit: "개",
+              ingredient_type: "QUANT",
+              display_text: "양파 1개",
+              sort_order: 0,
+              scalable: true,
+            },
+          ],
+          steps: [
+            {
+              step_number: 1,
+              instruction: "끓입니다.",
+              cooking_method_id: methodId,
+              ingredients_used: [{ ingredient_id: ingredientId, amount: 1, unit: "개" }],
+              heat_level: "중",
+              duration_seconds: 60,
+              duration_text: "1분",
+            },
+          ],
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(rpc).toHaveBeenCalledWith("create_manual_recipe", expect.objectContaining({
+      p_user_id: "user-1",
+      p_title: "직접 등록 레시피",
+      p_base_servings: 2,
+      p_thumbnail_url: null,
+      p_tags: expect.any(Array),
+      p_ingredients: [
+        {
+          ingredient_id: ingredientId,
+          amount: 1,
+          unit: "개",
+          ingredient_type: "QUANT",
+          display_text: "양파 1개",
+          scalable: true,
+          sort_order: 0,
+        },
+      ],
+      p_steps: [
+        {
+          step_number: 1,
+          instruction: "끓입니다.",
+          cooking_method_id: methodId,
+          ingredients_used: [{ ingredient_id: ingredientId, amount: 1, unit: "개", cut_size: null }],
+          heat_level: "중",
+          duration_seconds: 60,
+          duration_text: "1분",
+        },
+      ],
+    }));
+    expect(recipesInsert).not.toHaveBeenCalled();
+    expect(ingredientInsert).not.toHaveBeenCalled();
+    expect(stepInsert).not.toHaveBeenCalled();
+    expect(response.status).toBe(201);
+    expect(body.data).toEqual({
+      id: "recipe-rpc",
+      title: "직접 등록 레시피",
+      source_type: "manual",
+      created_by: "user-1",
+      base_servings: 2,
     });
   });
 
