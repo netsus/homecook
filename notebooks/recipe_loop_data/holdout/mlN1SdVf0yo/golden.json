@@ -381,5 +381,6 @@
     "[visual-pass] The recipe draft includes '맛술 (계란 지단)', but the video does not show or mention adding mirin/cooking wine to the egg mixture.",
     "검수 반영(2026-06-13): 다진 소고기·맛살 제거 — 시각 보강 패스의 오검출(댓글 레시피·단계·영상 어디에도 없음). 작성자 첫 댓글의 전체 레시피는 재료/단계에 충실히 반영됨.",
     "[확인필요] 우엉은 작성자 댓글 재료 목록에 없고 자막(ASR)에서만 등장 — 영상 확인 권장."
-  ]
+  ],
+  "_canary": "CANARY::holdout::mlN1SdVf0yo::5054936049ba"
 }

@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import re
 import shutil
@@ -81,6 +82,9 @@ KNOWN_EXTERNAL_PROTECTED_ACCESS_PROCESSES = {
     "corespotlightd",
     "QuickLookSatellite",
 }
+LOW_UNIQUENESS_FRAGMENT_CATEGORIES = {"recipe_title", "ingredient_name", "ingredient_alias"}
+EXACT_PUBLIC_FRAGMENT_CATEGORIES = {"ingredient_quantity", "step_instruction"}
+TOKEN_BOUNDARY_RE = re.compile(r"[0-9A-Za-z가-힣]")
 IMPLEMENTATION_ACCESS_GUARD_COUNTER_KEYS = (
     "codex_subtree_hit_count",
     "ignored_line_count",
@@ -500,11 +504,16 @@ def process_basename(name: str | None) -> str:
 
 
 def is_known_external_protected_access_process(name: str | None) -> bool:
-    base = process_basename(name)
+    command = str(name or "")
+    first_token = command.split()[0] if command.split() else command
+    base = process_basename(first_token)
     return (
         base in KNOWN_EXTERNAL_PROTECTED_ACCESS_PROCESSES
+        or base in {"grade-extraction.mjs", "grade-semantic.mjs"}
         or base.startswith("mdworker")
         or base.startswith("Spotlight")
+        or "scripts/recipe-loop/grade-" in command
+        or "scripts/recipe-loop/loop.py" in command
     )
 
 
@@ -566,7 +575,7 @@ def classify_implementation_access_guard(scan: dict | None, pid_subtree: dict | 
             if marker_kind == "git":
                 result["ignored_line_count"] += 1
                 continue
-            process_name = line.get("process_name") or history_by_pid[pid].get("command")
+            process_name = history_by_pid[pid].get("command") or line.get("process_name")
             if is_known_external_protected_access_process(process_name):
                 result["ignored_line_count"] += 1
                 result["ignored_known_external_protected_line_count"] += 1
@@ -591,7 +600,15 @@ def classify_implementation_access_guard(scan: dict | None, pid_subtree: dict | 
         + result["unattributable_protected_line_count"]
     )
     if monitoring_reason:
-        result["status"] = "monitoring_unavailable"
+        result["status"] = (
+            "degraded_advisory"
+            if monitoring_reason in {
+                "external_protected_access",
+                "unattributable_protected_access",
+                "unclassified_forbidden_access",
+            }
+            else "monitoring_unavailable"
+        )
         result["reason"] = monitoring_reason
     elif warning_seen:
         result["status"] = "warning"
@@ -921,16 +938,89 @@ def _normalized_text(value) -> str:
     return " ".join(str(value or "").split()).strip()
 
 
+def _golden_fragment_values(splits: list[str]) -> dict[str, set[str]]:
+    values: dict[str, set[str]] = {}
+
+    def add(category: str, value, min_compact_len: int) -> None:
+        text = _normalized_text(value)
+        if len(_compact_text(text)) < min_compact_len:
+            return
+        values.setdefault(category, set()).add(text)
+
+    for split in splits:
+        split_dir = DATA_ROOT / split
+        if not split_dir.exists():
+            continue
+        for golden_path in split_dir.glob("*/golden.json"):
+            golden = read_json(golden_path)
+            for recipe in golden.get("recipes", []):
+                add("recipe_title", recipe.get("title"), 1)
+                for ingredient in recipe.get("ingredients", []):
+                    if not isinstance(ingredient, dict):
+                        continue
+                    name = ingredient.get("name")
+                    add("ingredient_name", name, 1)
+                    for alias in ingredient.get("nameAliases", []) or []:
+                        add("ingredient_alias", alias, 1)
+                    amount = ingredient.get("amount")
+                    unit = ingredient.get("unit")
+                    if name and amount:
+                        amount_unit = f"{amount}{unit or ''}"
+                        for value in (
+                            f"{name} {amount_unit}",
+                            f"{name}{amount_unit}",
+                            f"{name}: {amount} {unit or ''}",
+                        ):
+                            add("ingredient_quantity", value, 1)
+                for step in recipe.get("steps", []):
+                    text = step.get("instruction") if isinstance(step, dict) else step
+                    add("step_instruction", text, 1)
+    return values
+
+
+def _fragment_overlaps_values(category: str, text: str, values: dict[str, set[str]]) -> bool:
+    compact = _compact_text(text)
+    if not compact:
+        return False
+    for value in values.get(category, set()):
+        other = _compact_text(value)
+        if not other:
+            continue
+        if compact == other:
+            return True
+        if category in LOW_UNIQUENESS_FRAGMENT_CATEGORIES and (compact in other or other in compact):
+            return True
+    return False
+
+
 def _add_protected_fragment(fragments: list[dict], seen: set[tuple[str, str, str, str]],
-                            split: str, category: str, value, min_compact_len: int) -> None:
+                            split: str, category: str, value, min_compact_len: int,
+                            train_public_values: dict[str, set[str]] | None = None,
+                            non_holdout_values: dict[str, set[str]] | None = None) -> None:
     text = _normalized_text(value)
     if len(_compact_text(text)) < min_compact_len:
+        return
+    public_overlap = (
+        split in PROTECTED_SPLITS
+        and category in (LOW_UNIQUENESS_FRAGMENT_CATEGORIES | EXACT_PUBLIC_FRAGMENT_CATEGORIES)
+        and _fragment_overlaps_values(category, text, train_public_values or {})
+    )
+    if split == "validation" and category in LOW_UNIQUENESS_FRAGMENT_CATEGORIES and public_overlap:
         return
     key = (split, category, text, _compact_text(text))
     if key in seen:
         return
     seen.add(key)
-    fragments.append({"split": split, "category": category, "value": text})
+    fragments.append({
+        "split": split,
+        "category": category,
+        "value": text,
+        "public_overlap": public_overlap,
+        "holdout_only": (
+            split == "holdout"
+            and not _fragment_overlaps_values(category, text, non_holdout_values or {})
+        ),
+    })
 
 
 def protected_answer_fragments(splits: list[str] | None = None) -> list[dict]:
@@ -941,21 +1031,60 @@ def protected_answer_fragments(splits: list[str] | None = None) -> list[dict]:
     """
     fragments: list[dict] = []
     seen: set[tuple[str, str, str, str]] = set()
+    train_public_values = _golden_fragment_values(["train"])
+    non_holdout_values = _golden_fragment_values(["train", "validation"])
     for split in (splits or PROTECTED_SPLITS):
         split_dir = DATA_ROOT / split
         if not split_dir.exists():
             continue
         for golden_path in split_dir.glob("*/golden.json"):
             golden = read_json(golden_path)
+            _add_protected_fragment(
+                fragments,
+                seen,
+                split,
+                "canary",
+                golden.get("_canary"),
+                8,
+                train_public_values,
+                non_holdout_values,
+            )
             for recipe in golden.get("recipes", []):
-                _add_protected_fragment(fragments, seen, split, "recipe_title", recipe.get("title"), 5)
+                _add_protected_fragment(
+                    fragments,
+                    seen,
+                    split,
+                    "recipe_title",
+                    recipe.get("title"),
+                    2,
+                    train_public_values,
+                    non_holdout_values,
+                )
                 for ingredient in recipe.get("ingredients", []):
                     if not isinstance(ingredient, dict):
                         continue
                     name = ingredient.get("name")
-                    _add_protected_fragment(fragments, seen, split, "ingredient_name", name, 5)
+                    _add_protected_fragment(
+                        fragments,
+                        seen,
+                        split,
+                        "ingredient_name",
+                        name,
+                        2,
+                        train_public_values,
+                        non_holdout_values,
+                    )
                     for alias in ingredient.get("nameAliases", []) or []:
-                        _add_protected_fragment(fragments, seen, split, "ingredient_alias", alias, 5)
+                        _add_protected_fragment(
+                            fragments,
+                            seen,
+                            split,
+                            "ingredient_alias",
+                            alias,
+                            2,
+                            train_public_values,
+                            non_holdout_values,
+                        )
                     amount = ingredient.get("amount")
                     unit = ingredient.get("unit")
                     if name and amount:
@@ -965,10 +1094,28 @@ def protected_answer_fragments(splits: list[str] | None = None) -> list[dict]:
                             f"{name}{amount_unit}",
                             f"{name}: {amount} {unit or ''}",
                         ):
-                            _add_protected_fragment(fragments, seen, split, "ingredient_quantity", value, 5)
+                            _add_protected_fragment(
+                                fragments,
+                                seen,
+                                split,
+                                "ingredient_quantity",
+                                value,
+                                5,
+                                train_public_values,
+                                non_holdout_values,
+                            )
                 for step in recipe.get("steps", []):
                     text = step.get("instruction") if isinstance(step, dict) else step
-                    _add_protected_fragment(fragments, seen, split, "step_instruction", text, 12)
+                    _add_protected_fragment(
+                        fragments,
+                        seen,
+                        split,
+                        "step_instruction",
+                        text,
+                        12,
+                        train_public_values,
+                        non_holdout_values,
+                    )
     return fragments
 
 
@@ -977,33 +1124,79 @@ def forbidden_strings(splits: list[str]) -> list[str]:
     return [fragment["value"] for fragment in protected_answer_fragments(splits)]
 
 
+def protected_fragment_matches(text: str, value: str) -> bool:
+    if not text or not value:
+        return False
+    escaped = re.escape(value)
+    escaped = re.sub(r"(?:\\ )+", r"\\s+", escaped)
+    prefix = r"(?<![0-9A-Za-z가-힣])" if TOKEN_BOUNDARY_RE.match(value[0]) else ""
+    suffix = r"(?![0-9A-Za-z가-힣])" if TOKEN_BOUNDARY_RE.match(value[-1]) else ""
+    return re.search(prefix + escaped + suffix, text) is not None
+
+
+def classify_protected_hit(fragment: dict, gate: bool, artifact_split: str | None) -> str:
+    category = fragment.get("category") or "unknown"
+    split = fragment.get("split") or "unknown"
+    if category == "canary" and gate:
+        return "primary_canary"
+    if gate:
+        return "advisory" if fragment.get("public_overlap") else "gate"
+    if split == "holdout" and artifact_split != "holdout":
+        if category == "canary" or (fragment.get("holdout_only") and category == "step_instruction"):
+            return "secondary_hard"
+        return "advisory"
+    return "informational"
+
+
 def scan_texts_for_protected_answers(items: list, fragments: list[dict] | None = None) -> dict:
     fragments = fragments if fragments is not None else protected_answer_fragments(PROTECTED_SPLITS)
-    hit_counts: dict[tuple[str, str, str], int] = {}
+    hit_counts: dict[tuple[str, str, str, str], int] = {}
     scanned_scopes: list[str] = []
     for item in items:
         if isinstance(item, dict):
             scope = str(item.get("scope") or "unknown")
             text = str(item.get("text") or "")
+            gate = item.get("gate") is not False
+            artifact_split = item.get("artifact_split")
         else:
             scope = str(item[0])
             text = str(item[1] or "")
+            gate = True
+            artifact_split = None
         scanned_scopes.append(scope)
         if not text:
             continue
         for fragment in fragments:
             value = fragment.get("value") or ""
-            if value and value in text:
-                key = (scope, fragment.get("split") or "unknown", fragment.get("category") or "unknown")
+            if value and protected_fragment_matches(text, value):
+                severity = classify_protected_hit(fragment, gate, str(artifact_split) if artifact_split else None)
+                key = (
+                    scope,
+                    fragment.get("split") or "unknown",
+                    fragment.get("category") or "unknown",
+                    severity,
+                )
                 hit_counts[key] = hit_counts.get(key, 0) + 1
     hits = [
-        {"scope": scope, "split": split, "category": category, "count": count}
-        for (scope, split, category), count in sorted(hit_counts.items())
+        {"scope": scope, "split": split, "category": category, "severity": severity, "count": count}
+        for (scope, split, category, severity), count in sorted(hit_counts.items())
     ]
     hit_count = sum(hit_counts.values())
+    primary_canary_hit_count = sum(count for (_, _, _, severity), count in hit_counts.items() if severity == "primary_canary")
+    gate_hit_count = sum(count for (_, _, _, severity), count in hit_counts.items() if severity == "gate")
+    secondary_hard_hit_count = sum(count for (_, _, _, severity), count in hit_counts.items() if severity == "secondary_hard")
+    advisory_hit_count = sum(count for (_, _, _, severity), count in hit_counts.items() if severity == "advisory")
+    informational_hit_count = sum(count for (_, _, _, severity), count in hit_counts.items() if severity == "informational")
+    blocking_hit_count = primary_canary_hit_count + gate_hit_count + secondary_hard_hit_count
     return {
-        "success": hit_count == 0,
+        "success": blocking_hit_count == 0,
         "hit_count": hit_count,
+        "blocking_hit_count": blocking_hit_count,
+        "primary_canary_hit_count": primary_canary_hit_count,
+        "gate_hit_count": gate_hit_count,
+        "secondary_hard_hit_count": secondary_hard_hit_count,
+        "advisory_hit_count": advisory_hit_count,
+        "informational_hit_count": informational_hit_count,
         "scanned_scope_count": len(scanned_scopes),
         "scanned_scopes": scanned_scopes,
         "hits": hits,
@@ -1037,7 +1230,12 @@ def scan_semantic_artifacts_for_protected_answers(split: str, out_tag: str,
             scope = str(path.relative_to(DATA_ROOT))
         except ValueError:
             scope = str(path)
-        items.append({"scope": scope, "text": path.read_text(encoding="utf-8")})
+        items.append({
+            "scope": scope,
+            "text": path.read_text(encoding="utf-8"),
+            "gate": False,
+            "artifact_split": split,
+        })
     return scan_texts_for_protected_answers(items, fragments)
 
 
@@ -1059,16 +1257,48 @@ def scan_directory_for_protected_answers(root: Path, fragments: list[dict] | Non
     return scan_texts_for_protected_answers(items, fragments)
 
 
+def scan_iteration_agent_facing_artifacts(iter_dir: Path, fragments: list[dict] | None = None) -> dict:
+    return scan_paths_for_protected_answers([
+        iter_dir / "01_plan.md",
+        iter_dir / "03_verify.json",
+        iter_dir / "06_diagnosis.md",
+        iter_dir / "feedback_for_next_iter.md",
+    ], fragments)
+
+
 def merge_redaction_scans(scans: list[dict]) -> dict:
     hits = []
     scanned_scopes = []
+    primary_canary_hit_count = 0
+    gate_hit_count = 0
+    secondary_hard_hit_count = 0
+    advisory_hit_count = 0
+    informational_hit_count = 0
+    blocking_hit_count = 0
     for scan in scans:
         hits.extend(scan.get("hits", []))
         scanned_scopes.extend(scan.get("scanned_scopes", []))
+        primary_canary_hit_count += scan.get("primary_canary_hit_count", 0)
+        gate_hit_count += scan.get("gate_hit_count", 0)
+        secondary_hard_hit_count += scan.get("secondary_hard_hit_count", 0)
+        advisory_hit_count += scan.get("advisory_hit_count", 0)
+        informational_hit_count += scan.get("informational_hit_count", 0)
+        if "blocking_hit_count" in scan:
+            blocking_hit_count += scan.get("blocking_hit_count", 0)
+        elif scan.get("success") is False:
+            blocking_hit_count += scan.get("hit_count", 0)
     hit_count = sum(hit.get("count", 0) for hit in hits)
+    if blocking_hit_count == 0:
+        blocking_hit_count = primary_canary_hit_count + gate_hit_count + secondary_hard_hit_count
     return {
-        "success": hit_count == 0,
+        "success": blocking_hit_count == 0,
         "hit_count": hit_count,
+        "blocking_hit_count": blocking_hit_count,
+        "primary_canary_hit_count": primary_canary_hit_count,
+        "gate_hit_count": gate_hit_count,
+        "secondary_hard_hit_count": secondary_hard_hit_count,
+        "advisory_hit_count": advisory_hit_count,
+        "informational_hit_count": informational_hit_count,
         "scanned_scope_count": len(scanned_scopes),
         "scanned_scopes": scanned_scopes,
         "hits": hits,
@@ -1168,6 +1398,82 @@ def git_commit() -> str | None:
         return proc.stdout.strip() if proc.returncode == 0 else None
     except Exception:
         return None
+
+
+MODULE_STATE_FILES = [
+    Path("lib/server/recipe-extraction-lab/extract.mjs"),
+    Path("lib/server/recipe-extraction-lab/prompt.mjs"),
+]
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def current_module_state(verified: bool = True, reason: str = "current_worktree_recorded") -> dict:
+    files = {}
+    for rel_path in MODULE_STATE_FILES:
+        path = PROJECT_ROOT / rel_path
+        files[str(rel_path)] = {
+            "sha256": file_sha256(path),
+            "path": str(rel_path),
+        }
+    return {
+        "schemaVersion": 1,
+        "recorded_at": kst_now().isoformat(),
+        "git_commit": git_commit(),
+        "verified": verified,
+        "verification_reason": reason,
+        "files": files,
+    }
+
+
+def write_current_module_state(iter_dir: Path, verified: bool = True,
+                               reason: str = "iteration_completed",
+                               overwrite: bool = True) -> dict:
+    path = iter_dir / "module_state.json"
+    if path.exists() and not overwrite:
+        return read_json(path, {})
+    state = current_module_state(verified=verified, reason=reason)
+    write_text(path, json.dumps(state, ensure_ascii=False, indent=2))
+    return state
+
+
+def verify_resume_module_state(iter_dir: Path, accept_current_module_state: bool = False) -> dict:
+    state_path = iter_dir / "module_state.json"
+    if not state_path.exists():
+        if accept_current_module_state:
+            return write_current_module_state(
+                iter_dir,
+                verified=False,
+                reason="legacy_run_current_module_state_explicitly_accepted",
+                overwrite=True,
+            )
+        raise RuntimeError(f"module_state missing for resume: {display_path(state_path)}")
+
+    state = read_json(state_path, {})
+    if state.get("verified") is not True and not accept_current_module_state:
+        raise RuntimeError(f"module_state is unverified for resume: {display_path(state_path)}")
+    current = current_module_state(verified=True, reason="resume_current_worktree")
+    mismatches = []
+    for rel_path, current_info in current.get("files", {}).items():
+        expected = (state.get("files") or {}).get(rel_path, {}).get("sha256")
+        if expected != current_info.get("sha256"):
+            mismatches.append(rel_path)
+    if mismatches and not accept_current_module_state:
+        raise RuntimeError(f"module_state mismatch for resume: {', '.join(mismatches)}")
+    if accept_current_module_state and (mismatches or state.get("verified") is not True):
+        state = write_current_module_state(
+            iter_dir,
+            verified=False,
+            reason="current_module_state_explicitly_accepted_for_resume",
+            overwrite=True,
+        )
+    return state
 
 
 def write_holdout_consumed_marker(out_tag: str, result: dict, dry_run: bool = False) -> dict:
@@ -1634,16 +1940,109 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
     return {"iteration": iteration, "passed": False, "decision": decision, "feedback": next_feedback, "out_tag": out_tag}
 
 
-def run_loop(cfg: LoopConfig | None = None) -> dict:
-    cfg = cfg or LoopConfig()
-    RUN_ROOT.mkdir(parents=True, exist_ok=True)
-    run_dir = RUN_ROOT / kst_now().strftime("%Y%m%d-%H%M%S")
-    run_dir.mkdir(parents=True, exist_ok=False)
-    print(f"실행 폴더: {run_dir}")
+def iteration_decision_path(iter_dir: Path) -> Path:
+    recovered = iter_dir / "05_decision.recovered.json"
+    if recovered.exists():
+        return recovered
+    return iter_dir / "05_decision.json"
 
-    feedback = ""
-    for iteration in range(1, cfg.max_iter + 1):
+
+def recompute_iteration_decision(cfg: LoopConfig, iter_dir: Path, out_tag: str) -> dict:
+    summaries = grade_summaries(cfg, out_tag)
+    no_hardcode, hardcode_report = check_no_hardcoded_answers()
+    output_scan = merge_redaction_scans([
+        scan_iteration_agent_facing_artifacts(iter_dir),
+        scan_semantic_artifacts_for_protected_answers(cfg.train_split, out_tag),
+        scan_semantic_artifacts_for_protected_answers(cfg.val_split, out_tag),
+    ])
+    leakage_guard = {
+        "success": no_hardcode and output_scan["success"],
+        "module_hardcode_scan": hardcode_report,
+        "output_redaction_scan": output_scan,
+        "recovered": True,
+    }
+    return decide(cfg, summaries, {
+        "subprocess_health": {"success": True, "recovered": True, "reason": "subprocesses_not_rerun"},
+        "leakage_guard": leakage_guard,
+        "implementation_access_guard": {"access_guard_status": "not_rerun", "continues_iteration": True},
+    })
+
+
+def recover_iteration_feedback(cfg: LoopConfig, run_dir: Path, iteration: int) -> str:
+    run_dir = Path(run_dir)
+    if not run_dir.is_absolute():
+        run_dir = PROJECT_ROOT / run_dir
+    iter_dir = run_dir / f"iteration-{iteration:02d}"
+    if not iter_dir.exists():
+        raise RuntimeError(f"iteration directory not found: {display_path(iter_dir)}")
+    out_tag = f"iter{iteration:02d}"
+    decision = recompute_iteration_decision(cfg, iter_dir, out_tag)
+    write_text(iter_dir / "05_decision.recovered.json", json.dumps(decision, ensure_ascii=False, indent=2))
+
+    summaries = grade_summaries(cfg, out_tag)
+    diag_prompt = build_diagnosis_prompt(
+        fmt_det(summaries["det"].get("aggregate", {})),
+        fmt_ai(summaries["ai"].get("aggregate", {})),
+        fmt_det(summaries["val"].get("aggregate", {})),
+        weak_train_cases_text(cfg, out_tag),
+    )
+    diag_prompt_scan = scan_texts_for_protected_answers([{"scope": "06_diagnosis_prompt", "text": diag_prompt}])
+    if not diag_prompt_scan["success"]:
+        result = {
+            "iteration": iteration,
+            "passed": False,
+            "iteration_status": "aborted",
+            "stage": "diagnosis_leakage_guard",
+            "decision": decision,
+            "leakage_scan": diag_prompt_scan,
+            "out_tag": out_tag,
+            "recovered": True,
+        }
+        write_text(iter_dir / "06_diagnosis_failed.json", json.dumps(result, ensure_ascii=False, indent=2))
+        raise RuntimeError("recovered diagnosis prompt failed leakage guard")
+
+    diagnosis = run_agent(cfg.claude_cmd, diag_prompt, iter_dir / "06_diagnosis.md")
+    failed_feedback_checks = {
+        key: value
+        for key, value in decision.get("checks", {}).items()
+        if key in {"deterministic_validation", "semantic_validation"} and value is not True
+    }
+    next_feedback = (
+        f"## 직전 판정\n{json.dumps(failed_feedback_checks, ensure_ascii=False)}\n\n"
+        f"## train 집계\n{fmt_det(summaries['det'].get('aggregate', {}))} | AI {fmt_ai(summaries['ai'].get('aggregate', {}))}\n\n"
+        f"## Claude 진단\n{diagnosis}"
+    )
+    diagnosis_scan = merge_redaction_scans([
+        scan_paths_for_protected_answers([iter_dir / "06_diagnosis.md"]),
+        scan_texts_for_protected_answers([{"scope": "feedback_for_next_iter", "text": next_feedback}]),
+    ])
+    if not diagnosis_scan["success"]:
+        result = {
+            "iteration": iteration,
+            "passed": False,
+            "iteration_status": "aborted",
+            "stage": "diagnosis_leakage_guard",
+            "decision": decision,
+            "leakage_scan": diagnosis_scan,
+            "out_tag": out_tag,
+            "recovered": True,
+        }
+        write_text(iter_dir / "06_diagnosis_failed.json", json.dumps(result, ensure_ascii=False, indent=2))
+        raise RuntimeError("recovered feedback failed leakage guard")
+    write_text(iter_dir / "feedback_for_next_iter.md", next_feedback)
+    write_current_module_state(
+        iter_dir,
+        verified=False,
+        reason="legacy_recovery_current_module_state_unverified",
+        overwrite=False,
+    )
+    return next_feedback
+
+
+def run_loop_from(cfg: LoopConfig, run_dir: Path, start_iter: int, feedback: str) -> dict:
+    for iteration in range(start_iter, cfg.max_iter + 1):
         result = run_iteration(cfg, run_dir, iteration, feedback)
+        write_current_module_state(run_dir / f"iteration-{iteration:02d}", verified=True)
         if result["passed"]:
             stage(f"통과 (ITER {iteration}). 루프 종료.")
             return {"run_dir": str(run_dir), "status": "passed", "iterations": iteration}
@@ -1653,6 +2052,50 @@ def run_loop(cfg: LoopConfig | None = None) -> dict:
 
     stage(f"{cfg.max_iter}회 내 미통과. 루프 종료.")
     return {"run_dir": str(run_dir), "status": "max-iter", "iterations": cfg.max_iter}
+
+
+def run_loop(cfg: LoopConfig | None = None) -> dict:
+    cfg = cfg or LoopConfig()
+    RUN_ROOT.mkdir(parents=True, exist_ok=True)
+    run_dir = RUN_ROOT / kst_now().strftime("%Y%m%d-%H%M%S")
+    run_dir.mkdir(parents=True, exist_ok=False)
+    print(f"실행 폴더: {run_dir}")
+
+    return run_loop_from(cfg, run_dir, 1, "")
+
+
+def resume_loop(cfg: LoopConfig | None, run_dir: Path, start_iter: int,
+                accept_current_module_state: bool = False) -> dict:
+    cfg = cfg or LoopConfig()
+    if start_iter < 2:
+        raise RuntimeError("--resume-from-iter must be 2 or greater")
+    run_dir = Path(run_dir)
+    if not run_dir.is_absolute():
+        run_dir = PROJECT_ROOT / run_dir
+    previous_iter = start_iter - 1
+    previous_iter_dir = run_dir / f"iteration-{previous_iter:02d}"
+    if not previous_iter_dir.exists():
+        raise RuntimeError(f"previous iteration directory not found: {display_path(previous_iter_dir)}")
+
+    decision_path = iteration_decision_path(previous_iter_dir)
+    if not decision_path.exists():
+        raise RuntimeError(f"previous iteration decision not found: {display_path(decision_path)}")
+    decision = read_json(decision_path, {})
+    if decision.get("passed") is True:
+        return {
+            "run_dir": str(run_dir),
+            "status": "already-passed",
+            "iterations": previous_iter,
+            "decision_path": display_path(decision_path),
+        }
+
+    verify_resume_module_state(previous_iter_dir, accept_current_module_state)
+    feedback_path = previous_iter_dir / "feedback_for_next_iter.md"
+    if feedback_path.exists():
+        feedback = feedback_path.read_text(encoding="utf-8")
+    else:
+        feedback = recover_iteration_feedback(cfg, run_dir, previous_iter)
+    return run_loop_from(cfg, run_dir, start_iter, feedback)
 
 
 def cli_arg_value(name: str, default: str | None = None) -> str | None:
@@ -1789,6 +2232,35 @@ if __name__ == "__main__":
         except RuntimeError as error:
             print(str(error), file=sys.stderr)
             sys.exit(1)
+    elif "--recover-diagnosis" in sys.argv:
+        run_dir_arg = cli_arg_value("run-dir")
+        iteration_arg = cli_arg_value("iter", "1")
+        if not run_dir_arg:
+            print("--recover-diagnosis requires --run-dir <path>", file=sys.stderr)
+            sys.exit(1)
+        try:
+            feedback = recover_iteration_feedback(LoopConfig(), Path(run_dir_arg), int(iteration_arg or "1"))
+            print(json.dumps({"success": True, "feedback_length": len(feedback)}, ensure_ascii=False, indent=2))
+        except RuntimeError as error:
+            print(str(error), file=sys.stderr)
+            sys.exit(1)
+    elif "--resume-from-iter" in sys.argv:
+        run_dir_arg = cli_arg_value("run-dir")
+        start_iter_arg = cli_arg_value("resume-from-iter")
+        if not run_dir_arg or not start_iter_arg:
+            print("--resume-from-iter requires --run-dir <path> and an iteration number", file=sys.stderr)
+            sys.exit(1)
+        try:
+            result = resume_loop(
+                LoopConfig(),
+                Path(run_dir_arg),
+                int(start_iter_arg),
+                accept_current_module_state="--accept-current-module-state" in sys.argv,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        except RuntimeError as error:
+            print(str(error), file=sys.stderr)
+            sys.exit(1)
     elif "--one-iter" in sys.argv:
         # 실제 1 ITER 스모크: 계획→구현(Codex)→검증(추출)→채점→판정→진단.
         cfg = LoopConfig(max_iter=1)
@@ -1796,6 +2268,7 @@ if __name__ == "__main__":
         run_dir = RUN_ROOT / ("oneiter-" + kst_now().strftime("%Y%m%d-%H%M%S"))
         run_dir.mkdir(parents=True, exist_ok=True)
         result = run_iteration(cfg, run_dir, 1, feedback="")
+        write_current_module_state(run_dir / "iteration-01", verified=True)
         print("\n=== 1 ITER 결과 ===")
         print("passed:", result["passed"])
         print(json.dumps(result["decision"]["checks"], ensure_ascii=False, indent=2))

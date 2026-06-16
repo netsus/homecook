@@ -202,5 +202,6 @@
     "[visual-pass] The draft recipe is missing '다진 소고기' (ground beef), which is visibly present in the pot at the beginning of the cooking process (0:02) and is mashed along with the doenjang and grated radish.",
     "[visual-pass] At 0:02-0:04, the action described as '으깨지게끔' (mash it) is primarily for the doenjang (and ground beef), not just the radish. The radish is added to the pot before the doenjang is mashed.",
     "검수 반영(2026-06-13): 다진 소고기 제거 — 으깨는 된장을 간 고기로 오인한 시각 오검출(Gemini 재검증으로 미사용 확인)."
-  ]
+  ],
+  "_canary": "CANARY::holdout::2FF9ayF_d3w::be842ac12f4e"
 }
