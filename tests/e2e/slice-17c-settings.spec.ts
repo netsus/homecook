@@ -1,8 +1,18 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
+const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
+const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
+  await page.context().addCookies([
+    {
+      name: E2E_AUTH_OVERRIDE_COOKIE,
+      value,
+      url: E2E_APP_ORIGIN,
+      sameSite: "Lax",
+    },
+  ]);
   await page.addInitScript(
     ({ key, state }) => {
       window.localStorage.setItem(key, state);
@@ -13,6 +23,25 @@ async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
 
 function isMobileViewport(page: Page) {
   return (page.viewportSize()?.width ?? 1280) < 1024;
+}
+
+async function gotoMypageReady(page: Page) {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.goto("/mypage", { waitUntil: "networkidle" });
+
+    try {
+      await expect(
+        page.locator("main").getByText("집밥러").first(),
+      ).toBeVisible({ timeout: 15_000 });
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
 }
 
 interface MockProfile {
@@ -33,6 +62,45 @@ function makeMockProfile(overrides?: Partial<MockProfile>): MockProfile {
     social_provider: "kakao",
     settings: { screen_wake_lock: false },
     ...overrides,
+  };
+}
+
+function makeMockProgress() {
+  return {
+    level: {
+      current_level: 6,
+      total_xp: 520,
+      current_level_start_xp: 500,
+      next_level_start_xp: 650,
+      xp_into_current_level: 20,
+      xp_to_next_level: 130,
+      progress_ratio: 0.1333,
+      progress_percent: 13,
+    },
+    event_counts: {
+      cooking_completed: 3,
+      shopping_completed: 2,
+      recipe_saved_distinct_ever: 7,
+      custom_book_created: 1,
+    },
+    last_updated_at: "2026-06-10T00:00:00.000Z",
+  };
+}
+
+function makeMockGamification() {
+  return {
+    level: {
+      current_level: 6,
+      total_xp: 520,
+      xp_to_next_level: 130,
+      progress_percent: 13,
+    },
+    featured_badges: [],
+    badges: { earned: [], locked: [] },
+    quests: { active: [], completed_recent: [] },
+    tutorial: { active_steps: [] },
+    notifications: { unseen: [] },
+    last_updated_at: "2026-06-10T00:00:00.000Z",
   };
 }
 
@@ -184,6 +252,32 @@ async function installSettingsRoutes(
   const settingsError = options?.settingsError ?? false;
   const logoutError = options?.logoutError ?? false;
   const deleteError = options?.deleteError ?? false;
+
+  await page.route("**/api/v1/users/me/progress", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: makeMockProgress(),
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/users/me/gamification", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: makeMockGamification(),
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/users/me/gamification/notifications/seen", async (route) => {
+    await route.fulfill({
+      json: { success: true, data: { seen_notification_ids: [] }, error: null },
+    });
+  });
 
   await page.route("**/api/v1/users/me/settings", async (route) => {
     if (settingsError) {
@@ -546,7 +640,7 @@ test.describe("SETTINGS screen", () => {
       });
     });
 
-    await page.goto("/mypage");
+    await gotoMypageReady(page);
     await expect(page.getByLabel("설정", { exact: true })).toHaveCount(0);
     if (isMobileViewport(page)) {
       await page.getByRole("link", { name: /환경설정/ }).click();
