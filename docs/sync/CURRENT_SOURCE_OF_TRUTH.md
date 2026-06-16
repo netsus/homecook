@@ -1,17 +1,34 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.10.md`
-- `docs/화면정의서-v1.5.17.md`
-- `docs/유저flow맵-v1.3.17.md`
-- `docs/db설계-v1.3.15.md`
-- `docs/api문서-v1.2.19.md`
+- `docs/요구사항기준선-v1.7.11.md`
+- `docs/화면정의서-v1.5.18.md`
+- `docs/유저flow맵-v1.3.18.md`
+- `docs/db설계-v1.3.16.md`
+- `docs/api문서-v1.2.20.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Recipe Tags Contract-Evolution `36a-recipe-tags-contract-evolution`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.11 | 레시피 태그를 서버 자동 추천 + 사용자 검수 기능으로 승격. P0 의미 태그 36개, 사용자 자유 태그와 시스템 의미 태그 경계, HOME theme eligibility 정책 추가 |
+| 화면정의서 v1.5.18 | HOME 제목+태그 검색, tag chip 정확 필터, MANUAL_RECIPE_CREATE/YT_IMPORT 태그 추천·검수 UI 추가 |
+| 유저플로우 v1.3.18 | YouTube/manual 등록 중 서버 추천 태그 생성 → 사용자 검수 → canonical tag 저장 → `recipes.tags` projection 흐름 추가 |
+| DB v1.3.16 | `tags`, `recipe_tags` additive table target 추가. `recipes.tags`는 projection으로 유지. projection writer와 search/theme index 기준 추가. 테이블 수 33→35 |
+| API v1.2.20 | `GET /tags`, `POST /recipes/tag-suggestions` 추가. `GET /recipes?tag=<normalized_key>`, 제목+승인 tag 검색, YouTube/manual reviewed `tags` body 확장. 엔드포인트 수 69→71 |
+
+> 이 변경은 `36a-recipe-tags-contract-evolution` contract-evolution이다.
+> 서버 자동 태그 추천 기능은 유지한다. 사용자가 태그를 수정하지 않으면 서버 추천값을 저장한다.
+> 사용자 자유 tag는 표시/검색 가능하지만 HOME theme seed로 자동 승격하지 않는다. HOME theme는 public/approved/theme_eligible system semantic/source tag만 사용한다.
+> `recipes.tags`는 카드/레거시 응답용 projection이며 canonical truth는 `tags` / `recipe_tags`다.
+> P0 `normalized_key`는 한글 key를 그대로 사용하고 자동 romanization을 하지 않는다.
+> 구현 Stage 2/4는 이 contract-evolution이 main에 merge된 후 36b~36e로 분리해 시작한다.
 
 ## Planner Column Reorder Addendum `2026-06-16`
 
