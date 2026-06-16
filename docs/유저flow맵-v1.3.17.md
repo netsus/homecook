@@ -8,6 +8,12 @@
 >
 > 작성: Claude / Codex (H2 Stage 1, Baemin prototype planner contract-evolution)
 >
+> **2026-06-16 addendum — SETTINGS 끼니 컬럼 순서 변경 flow**
+>
+> | # | 변경 내용 | 영향 범위 |
+> | --- | --- | --- |
+> | 1 | SETTINGS에서 끼니 컬럼 순서 변경 flow를 추가한다. 서버 저장 후 PLANNER_WEEK가 동일 순서를 표시한다 | ⑨ 마이페이지/설정, ③ 식단 계획 여정 |
+>
 > **v1.3.16 → v1.3.17 변경 요약**
 >
 > | # | 변경 내용 | 영향 범위 |
@@ -409,6 +415,7 @@ RECIPE_SEARCH_PICKER
 | 식사 삭제                 | meals                                     | DELETE                                           |
 | 끼니 컬럼 추가            | meal_plan_columns                         | INSERT (최대 5개)                                |
 | 끼니 컬럼 이름 변경       | meal_plan_columns                         | UPDATE name                                      |
+| 끼니 컬럼 순서 변경       | meal_plan_columns                         | UPDATE sort_order (사용자 소유 컬럼만, 0부터 연속 정렬) |
 | 끼니 컬럼 삭제            | meal_plan_columns                         | DELETE (연결된 meals가 없고 최소 1개 유지)       |
 | 레시피 등록 (직접/유튜브) | recipes, recipe_ingredients, recipe_steps | INSERT                                           |
 
@@ -1115,6 +1122,7 @@ MYPAGE → SETTINGS
   ├─ 끼니 컬럼 관리
   │    ├─ 이름 변경 → meal_plan_columns.name UPDATE
   │    ├─ 컬럼 추가 → 최대 5개까지 meal_plan_columns INSERT
+  │    ├─ 순서 변경 → meal_plan_columns.sort_order UPDATE 후 PLANNER_WEEK 표시 순서 반영
   │    └─ 컬럼 삭제 → 연결된 meals가 없고 최소 1개가 남을 때만 DELETE
   │
   └─ 닉네임 변경 / 로그아웃 / 회원탈퇴

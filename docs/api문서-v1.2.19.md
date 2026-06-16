@@ -8,6 +8,7 @@
 
 > 기준 문서: 요구사항 기준선 v1.7.10 / 화면정의서 v1.5.17 / DB 설계 v1.3.15 / 유저 Flow맵 v1.3.17
 > 작성: 킴실장
+> 2026-06-16 addendum: SETTINGS 끼니 컬럼 순서 변경을 공식화한다. `PATCH /planner/columns/{column_id}`는 기존 이름 변경에 더해 optional `sort_order`를 받는다. 신규 endpoint 없음, 엔드포인트 수 67 유지.
 > v1.2.18 → v1.2.19: 35a growth-achievement-album contract-evolution. `GET /users/me/gamification`에 achievement album, tutorial category, spoon grade image fields를 additive 확장한다. 신규 endpoint 없음. 기존 `quests` field는 호환 유지하되 standard quest expansion은 중단한다.
 > v1.2.17 → v1.2.18: 34a growth-leveling-v2 contract-evolution. `planner_registered` XP source, `POST /meals.source_path` activity metadata, `user_growth_activity_events`, level curve v2/grade, gamification priority notifications, archive endpoint, badge shape/locked hint, MYPAGE profile integration contract 추가
 > v1.1 → v1.2: 채실장 2차 리뷰 A1~A4 + 장보기 구현 아이디어 반영
@@ -732,7 +733,7 @@ GET /planner
 ```
 
 > 끼니 컬럼은 사용자별 동적 목록이다. 신규 사용자 기본값은 `아침 / 점심 / 저녁` 3개이며, 기존 사용자에게 이미 있는 컬럼은 자동 삭제하지 않는다.
-> 컬럼 수는 최소 1개, 최대 5개다. 순서 변경 API는 1차 구현 범위가 아니며, 신규 컬럼은 현재 마지막 `sort_order + 1`로 생성한다.
+> 컬럼 수는 최소 1개, 최대 5개다. 신규 컬럼은 현재 마지막 `sort_order + 1`로 생성한다. 컬럼 순서 변경은 `PATCH /planner/columns/{column_id}`의 `sort_order`로 처리한다.
 
 ### 3-2. 끼니 컬럼 목록 조회
 
@@ -778,7 +779,7 @@ POST /planner/columns
 - 사용자별 컬럼 수가 이미 5개면 409 `COLUMN_LIMIT_REACHED`
 - 같은 사용자 안에서 공백을 trim한 이름이 중복되면 409 `COLUMN_NAME_DUPLICATE`
 
-### 3-4. 끼니 컬럼 이름 변경
+### 3-4. 끼니 컬럼 수정
 
 ```
 PATCH /planner/columns/{column_id}
@@ -789,7 +790,8 @@ PATCH /planner/columns/{column_id}
 | 구분 | 필드 | 타입 | 설명 |
 | ---- | ---- | ---- | ---- |
 | Path | column_id | uuid | 끼니 컬럼 ID |
-| Body | name | string | 변경할 끼니 컬럼명 (1~30자) |
+| Body | name | string? | 변경할 끼니 컬럼명 (1~30자) |
+| Body | sort_order | int? | 변경할 표시 순서. 0 이상의 정수이며, 서버는 사용자 소유 컬럼 범위 안에서 0부터 연속 정렬되도록 저장 |
 
 **응답 (200)**
 
@@ -803,6 +805,8 @@ PATCH /planner/columns/{column_id}
 - 다른 사용자의 컬럼이면 403
 - 존재하지 않는 컬럼이면 404
 - 같은 사용자 안에서 공백을 trim한 이름이 중복되면 409 `COLUMN_NAME_DUPLICATE`
+- `name`과 `sort_order` 중 최소 하나는 있어야 하며, 없으면 422
+- `sort_order`는 사용자 소유 컬럼만 대상으로 한다. 이동 후 전체 컬럼의 `sort_order`는 0부터 연속 값으로 다시 저장한다
 
 ### 3-5. 끼니 컬럼 삭제
 
@@ -3095,7 +3099,7 @@ GET /api/v1/admin/audit-logs
 | 3-1      | GET        | /planner                               | PLANNER_WEEK             | 🔒     |                                  |
 | 3-2      | GET        | /planner/columns                       | SETTINGS                 | 🔒     | v1.2.3 신규                      |
 | 3-3      | POST       | /planner/columns                       | SETTINGS                 | 🔒     | v1.2.3 신규                      |
-| 3-4      | PATCH      | /planner/columns/{id}                  | SETTINGS                 | 🔒     | v1.2.3 신규                      |
+| 3-4      | PATCH      | /planner/columns/{id}                  | SETTINGS                 | 🔒     | v1.2.3 신규, 2026-06-16 sort_order 허용 |
 | 3-5      | DELETE     | /planner/columns/{id}                  | SETTINGS                 | 🔒     | v1.2.3 신규                      |
 | 4-1      | GET        | /meals                                 | MEAL_SCREEN              | 🔒     |                                  |
 | 4-2      | PATCH      | /meals/{id}                            | MEAL_SCREEN              | 🔒     |                                  |
