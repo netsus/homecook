@@ -1002,6 +1002,39 @@ describe("RecipeBookDetailScreen", () => {
     });
   });
 
+  it("clears the pending toast timer on unmount", async () => {
+    mockRemoveRecipeBookRecipe.mockResolvedValue({
+      success: true,
+      data: { deleted: true },
+      error: null,
+    });
+
+    const { unmount } = render(
+      <RecipeBookDetailScreen
+        bookId="book-1"
+        bookName="저장한 레시피"
+        bookType="saved"
+        initialAuthenticated
+      />,
+    );
+
+    await screen.findByTestId("recipe-item-recipe-1");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("된장찌개 제거"));
+    await user.click(screen.getByRole("button", { name: "제거" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("레시피를 제거했어요")).toBeTruthy();
+    });
+
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    unmount();
+
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
+  });
+
   it("rolls back item on remove failure", async () => {
     mockRemoveRecipeBookRecipe.mockResolvedValue({
       success: false,

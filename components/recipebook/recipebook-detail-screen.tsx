@@ -146,6 +146,7 @@ export function RecipeBookDetailScreen({
     message: string;
     tone: "success" | "error";
   } | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [bookMenuOpen, setBookMenuOpen] = useState(false);
   const [bookRenameOpen, setBookRenameOpen] = useState(false);
   const [bookRenameValue, setBookRenameValue] = useState(bookName);
@@ -231,13 +232,28 @@ export function RecipeBookDetailScreen({
     [buildRecipeDetailReturnHref],
   );
 
+  const clearToastTimeout = useCallback(() => {
+    if (toastTimeoutRef.current === null) {
+      return;
+    }
+
+    clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = null;
+  }, []);
+
   const showToast = useCallback(
     (message: string, tone: "success" | "error") => {
+      clearToastTimeout();
       setToast({ message, tone });
-      setTimeout(() => setToast(null), TOAST_DURATION_MS);
+      toastTimeoutRef.current = setTimeout(() => {
+        setToast(null);
+        toastTimeoutRef.current = null;
+      }, TOAST_DURATION_MS);
     },
-    [],
+    [clearToastTimeout],
   );
+
+  useEffect(() => () => clearToastTimeout(), [clearToastTimeout]);
 
   useEffect(() => {
     if (lastBookNamePropRef.current === bookName) {
