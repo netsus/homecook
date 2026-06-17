@@ -1,0 +1,98 @@
+{
+  "id": "36c-recipe-tags-search-themes",
+  "title": "Recipe tags search themes",
+  "summary": "36a/36b 계약을 기반으로 exact tag filter, title+approved tag search, GET /tags, HOME system-tag theme generation을 구현한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 HOME에서 승인된 태그로 레시피를 검색하고, HOME 테마가 품질 관리된 시스템 의미/source 태그에서만 만들어지도록 백엔드 조회 계약을 닫는다.",
+  "owners": {
+    "claude": "stage1 normally; 36c workpack gap reconstructed from merged 36a contract in this docs branch",
+    "codex": "stage1 fallback docs split per validator prerequisite, stage2 follows on feature branch",
+    "workers": []
+  },
+  "dependencies": [
+    "36a-recipe-tags-contract-evolution",
+    "36b-recipe-tags-model-write"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.11.md",
+      "docs/db설계-v1.3.16.md",
+      "docs/api문서-v1.2.20.md",
+      "docs/화면정의서-v1.5.18.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/36c-recipe-tags-search-themes/README.md",
+      "docs/workpacks/36c-recipe-tags-search-themes/acceptance.md",
+      "docs/workpacks/36c-recipe-tags-search-themes/automation-spec.json",
+      "docs/workpacks/36a-recipe-tags-contract-evolution/README.md",
+      "docs/workpacks/36b-recipe-tags-model-write/README.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:local-supabase-db-reset-check-36c-tag-search-theme-rpcs"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "docs": 3,
+      "backend": 3,
+      "frontend": 0
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm vitest run tests/recipe-tags-search.test.ts tests/recipe-tags-route.test.ts tests/recipe-themes.test.ts tests/supabase-server.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36c-recipe-tags-search-themes",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/recipe-tags-search.test.ts tests/recipe-tags-route.test.ts tests/recipe-themes.test.ts tests/supabase-server.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36c-recipe-tags-search-themes",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "exact-tag-filter",
+      "title-plus-public-approved-tag-search",
+      "get-tags-public-autocomplete",
+      "home-theme-system-semantic-source-policy",
+      "manual-slug-seed-no-romanization"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "P0 semantic rule fixture expansion",
+    "existing recipe backfill dry-run/report",
+    "usage_count full reconcile job",
+    "P1 famous/SNS/verified tag auto assignment",
+    "manual recipe tag UI",
+    "YouTube import tag UI",
+    "HOME tag search/filter/theme UI"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 docs gap repair for 36c. The official 36a contract is already merged; this docs branch creates the missing workpack, acceptance, automation spec, and workflow item so the Stage 2 feature branch can pass the base-docs validator."
+}
