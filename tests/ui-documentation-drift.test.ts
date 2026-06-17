@@ -15,7 +15,7 @@ describe("ui documentation drift guards", () => {
     const homeDesign = read("ui/designs/HOME.md");
     const workpack = read("docs/workpacks/01-discovery-detail-auth/README.md");
 
-    expect(screens).toContain("공통 브랜드 헤더 (`HOMECOOK` 로고, `/` 링크)");
+    expect(screens).toContain("공통 브랜드 헤더 (`집밥` 로고, `/` 링크)");
     expect(screens).toContain("정렬 컨트롤은 검색바 아래가 아니라 `모든 레시피` 섹션 헤더에 둔다.");
     expect(screens).not.toContain("검색바 아래 퀵 필터");
     expect(homeDesign).toContain("카드 하단 muted row (`조회 / 저장`)");

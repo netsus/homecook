@@ -125,7 +125,7 @@ describe("home screen", () => {
       await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" }),
     ).toBeTruthy();
     expect(screen.getByText(/요일 (아침|점심|오후|저녁|밤),/)).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "HOMECOOK" }).className).toContain(
+    expect(screen.getByRole("heading", { name: "집밥" }).className).toContain(
       "text-[var(--brand)]",
     );
     expect(screen.getByText("레시피 제목으로 검색하거나, 재료로 좁혀 보세요.")).toBeTruthy();
@@ -142,7 +142,7 @@ describe("home screen", () => {
     expect(screen.getByRole("link", { name: /장보기 준비/ }).getAttribute("href")).toBe("/shopping/flow");
     expect(screen.getByRole("link", { name: /레시피북/ }).getAttribute("href")).toBe("/mypage?tab=recipebooks");
     expect(screen.getByRole("link", { name: /성장 보기/ }).getAttribute("href")).toBe("/mypage");
-    expect(screen.getByRole("navigation", { name: "HOME 하단 탭" })).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "홈 하단 탭" })).toBeTruthy();
     await waitFor(() => {
       expect(screen.getByTestId("home-result-status").textContent).toBe(
         `모든 레시피 ${getMockRecipeList().items.length}개가 표시됩니다.`,
@@ -182,13 +182,13 @@ describe("home screen", () => {
   it("renders the desktop HOME discovery layout at the web breakpoint", async () => {
     installMatchMedia(true);
 
-    render(<HomeScreen />);
+    const { container } = render(<HomeScreen />);
 
     expect(
       await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" }),
     ).toBeTruthy();
     expect(screen.getByText(/요일 (아침|점심|오후|저녁|밤),/)).toBeTruthy();
-    expect(screen.getByRole("link", { name: /HOMECOOK/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "집밥" })).toBeTruthy();
     expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
     expect(
       screen.getAllByRole("button", { name: /재료로 검색/ }),
@@ -199,8 +199,9 @@ describe("home screen", () => {
     expect(screen.getByRole("navigation", { name: "홈 빠른 이동" })).toBeTruthy();
     expect(screen.getByRole("link", { name: /장보기 준비/ }).getAttribute("href")).toBe("/shopping/flow");
     expect(
-      screen.queryByRole("navigation", { name: "HOME 하단 탭" }),
+      screen.queryByRole("navigation", { name: "홈 하단 탭" }),
     ).toBeNull();
+    expect(container.querySelector(".home-mobile-discovery-title")).toBeNull();
     expect(
       await screen.findByRole("heading", { level: 2, name: "모든 레시피" }),
     ).toBeTruthy();
@@ -893,7 +894,7 @@ describe("home screen", () => {
   it("does not render header profile or cart icons", async () => {
     render(<HomeScreen />);
 
-    await screen.findByRole("heading", { name: "HOMECOOK" });
+    await screen.findByRole("heading", { name: "집밥" });
 
     expect(screen.queryByRole("button", { name: "장보기" })).toBeNull();
     expect(screen.queryByText("채")).toBeNull();

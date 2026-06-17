@@ -20,6 +20,7 @@ const RECIPE_FALLBACK_IMAGES = [
 interface RecipeImageInput {
   id?: string | null;
   recipe_id?: string | null;
+  recipe_thumbnail_url?: string | null;
   thumbnail_url?: string | null;
 }
 
@@ -36,7 +37,7 @@ function hashId(id: string): number {
  * recipe looks identical on every screen.
  */
 export function resolveRecipeImage(recipe: RecipeImageInput): string {
-  const thumbnailUrl = recipe.thumbnail_url?.trim();
+  const thumbnailUrl = recipe.thumbnail_url?.trim() || recipe.recipe_thumbnail_url?.trim();
   if (thumbnailUrl) {
     return thumbnailUrl;
   }

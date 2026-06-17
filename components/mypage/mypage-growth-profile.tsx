@@ -36,9 +36,25 @@ interface MypageGrowthProfileProps {
 }
 
 const XP_FORMATTER = new Intl.NumberFormat("ko-KR");
+const GRADE_DISPLAY_LABELS: Record<string, string> = {
+  clay: "흙",
+  wood: "나무",
+  steel: "강철",
+  silver: "은",
+  gold: "금",
+  diamond: "다이아",
+  titanium: "티타늄",
+};
 
 function formatXp(value: number) {
   return XP_FORMATTER.format(value);
+}
+
+function getGradeDisplayLabel(
+  grade: UserGamificationData["grade"] | null | undefined,
+) {
+  if (!grade) return null;
+  return GRADE_DISPLAY_LABELS[grade.grade_key] ?? grade.label ?? null;
 }
 
 function isValidProgress(progress: UserProgressData | null): progress is UserProgressData {
@@ -381,8 +397,10 @@ export function MypageGrowthProfile({
   }
 
   const levelLabel = hasProgress ? `Lv.${progress.level.current_level}` : null;
-  const gradeLabel = hasGamification ? gamification.grade?.label ?? null : null;
   const gradeKey = hasGamification ? gamification.grade?.grade_key ?? null : null;
+  const gradeLabel = hasGamification
+    ? getGradeDisplayLabel(gamification.grade)
+    : null;
   const headline =
     gradeLabel && levelLabel
       ? `${gradeLabel} · ${levelLabel}`

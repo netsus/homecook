@@ -562,10 +562,8 @@ export function HomeScreen() {
       onClose={() => setIngredientModalOpen(false)}
     />
   );
-  const shouldRenderWebView =
-    process.env.NODE_ENV !== "test" || isDesktopViewport;
-  const shouldRenderAppView =
-    process.env.NODE_ENV !== "test" || !isDesktopViewport;
+  const shouldRenderWebView = isDesktopViewport;
+  const shouldRenderAppView = !isDesktopViewport;
 
   return (
     <>
@@ -817,7 +815,7 @@ export function HomeScreen() {
             ) : null}
           </div>
 
-          <Wave1MobileBottomTab ariaLabel="HOME 하단 탭" currentTab="home" />
+          <Wave1MobileBottomTab ariaLabel="홈 하단 탭" currentTab="home" />
         </div>
       </div>
       ) : null}
@@ -1353,7 +1351,7 @@ function HomeShortcutIcon({
 function HomeAppBar() {
   return (
     <header className="sticky top-0 z-20 flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4" style={{ borderBottomWidth: "0.5px" }}>
-      <h1 className="text-[18px] font-bold leading-none text-[var(--brand)]">HOMECOOK</h1>
+      <h1 className="text-[18px] font-bold leading-none text-[var(--brand)]">집밥</h1>
     </header>
   );
 }

@@ -473,7 +473,7 @@ describe("CookModeScreen", () => {
 
     expect(screen.getByRole("heading", { name: "전체 재료" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "전체 조리순서" })).toBeTruthy();
-    expect(screen.getAllByText("HOMECOOK")).toHaveLength(1);
+    expect(screen.getAllByText("집밥")).toHaveLength(1);
     expect(within(ingredientList).getByText("배추김치")).toBeTruthy();
     expect(within(ingredientList).getByText("300g")).toBeTruthy();
     expect(within(ingredientList).getByText("돼지고기")).toBeTruthy();

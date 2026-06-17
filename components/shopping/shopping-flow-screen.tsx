@@ -18,6 +18,7 @@ import {
   fetchShoppingPreview,
   isShoppingApiError,
 } from "@/lib/api/shopping";
+import { getSurfaceChromeRule } from "@/lib/navigation/app-nav";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import type {
   ShoppingListAllPantryCompletionSummary,
@@ -55,6 +56,7 @@ type ViewState = "loading" | "empty" | "error" | "ready" | "creating";
 const SHOPPING_FLOW_RETURN_PATH = "/shopping/flow";
 const KOREAN_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const SHOPPING_FLOW_CHROME = getSurfaceChromeRule("shopping.flow");
 
 function buildMealConfigs(data: ShoppingPreviewData): MealConfig[] {
   return data.eligible_meals
@@ -249,13 +251,6 @@ const recipeVisualMeta: Record<string, { bg: string; emoji: string; meal: string
   된장찌개: { bg: "var(--accent-meat-soft)", emoji: "🍲", meal: "저녁" },
   제육볶음: { bg: "var(--accent-peach)", emoji: "🥩", meal: "저녁" },
 };
-
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
 
 function getRecipeVisual(config: MealConfig) {
   return (
@@ -515,14 +510,14 @@ export function ShoppingFlowScreen({
 
   return (
     <WebShell className="web-shopping-shell" wide>
-      <WebTopNav activeId="planner" items={WEB_NAV_ITEMS} />
+      <WebTopNav activeId={SHOPPING_FLOW_CHROME.primaryNavId} />
       <main
         className="web-screen web-shopping-flow-screen max-w-none"
         data-testid="shopping-flow-shell"
       >
         <header className="web-shopping-flow-head">
           <div>
-            <p className="web-menu-add-eyebrow">Shopping</p>
+            <p className="web-menu-add-eyebrow">장보기</p>
             <h1>장보기 준비</h1>
             <p>같은 재료는 장보기 목록에서 자동으로 합산돼요.</p>
             <p data-testid="shopping-multi-meal-hint">
@@ -767,7 +762,7 @@ function MobileSelectScreen({
       </div>
       <Wave1MobileBottomTab
         ariaLabel="장보기 목록 생성 화면 하단 내비게이션"
-        currentTab="planner"
+        currentTab={SHOPPING_FLOW_CHROME.mobileBottomTab}
       />
     </div>
   );

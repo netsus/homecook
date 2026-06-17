@@ -25,18 +25,14 @@ import {
 } from "@/components/mypage/shopping-history-calendar";
 import type { UserProfileData } from "@/lib/api/mypage";
 import { buildReturnHref } from "@/lib/navigation/return-context";
+import type { MypageRecordStats } from "@/lib/planner-stats";
+import { resolveRecipeImage } from "@/lib/recipe-image";
 import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
 import type { ShoppingListHistoryItem } from "@/types/shopping";
 import type { UserGamificationData } from "@/types/user-gamification";
 import type { UserProgressData } from "@/types/user-progress";
 
 export type MypageMobileSurface = "home" | "recipebook" | "shopping";
-
-interface MypageStatItem {
-  color: string;
-  label: string;
-  value: number;
-}
 
 interface MypageMobileScreenProps {
   books: RecipeBookSummary[];
@@ -58,6 +54,7 @@ interface MypageMobileScreenProps {
   gamificationState: MypageGamificationState;
   progress: UserProgressData | null;
   progressState: MypageProgressState;
+  recordStats: MypageRecordStats;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
   renameValue: string;
   renamingBookId: string | null;
@@ -69,7 +66,6 @@ interface MypageMobileScreenProps {
   shoppingItems: ShoppingListHistoryItem[];
   shoppingLoaded: boolean;
   showCreateInput: boolean;
-  stats: MypageStatItem[];
   surface: MypageMobileSurface;
   systemBooks: RecipeBookSummary[];
   onCancelCreate: () => void;
@@ -93,15 +89,6 @@ interface MypageMobileScreenProps {
   onSurfaceBack: () => void;
   onSurfaceChange: (surface: MypageMobileSurface) => void;
 }
-
-const MOBILE_RECIPE_FALLBACK_IMAGES = [
-  "https://images.unsplash.com/photo-1547592180-85f173990554?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1583224944844-5b268c057b72?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?w=900&h=675&fit=crop&q=80",
-] as const;
 
 const MOBILE_PROVIDER_LABELS: Record<UserProfileData["social_provider"], string> = {
   google: "Google 로그인",
@@ -128,6 +115,7 @@ export function MypageMobileScreen({
   gamificationState,
   progress,
   progressState,
+  recordStats,
   renameInputRef,
   renameValue,
   renamingBookId,
@@ -139,7 +127,6 @@ export function MypageMobileScreen({
   shoppingItems,
   shoppingLoaded,
   showCreateInput,
-  stats,
   surface,
   systemBooks,
   onCancelCreate,
@@ -193,12 +180,12 @@ export function MypageMobileScreen({
           profile={profile}
           progress={progress}
           progressState={progressState}
+          recordStats={recordStats}
           savedRecipeCount={savedRecipeCount}
           savedRecipes={savedRecipes}
           savedRecipesState={savedRecipesState}
           shoppingItems={shoppingItems}
           shoppingLoaded={shoppingLoaded}
-          stats={stats}
           onOpenNicknameSheet={onOpenNicknameSheet}
           onDismissTutorialQuest={onDismissTutorialQuest}
           onRetrySavedRecipes={onRetrySavedRecipes}
@@ -311,12 +298,12 @@ function MobileHomeSurface({
   profile,
   progress,
   progressState,
+  recordStats,
   savedRecipeCount,
   savedRecipes,
   savedRecipesState,
   shoppingItems,
   shoppingLoaded,
-  stats,
   onOpenNicknameSheet,
   onDismissTutorialQuest,
   onRetrySavedRecipes,
@@ -328,12 +315,12 @@ function MobileHomeSurface({
   profile: UserProfileData | null;
   progress: UserProgressData | null;
   progressState: MypageProgressState;
+  recordStats: MypageRecordStats;
   savedRecipeCount: number;
   savedRecipes: RecipeBookRecipeItem[];
   savedRecipesState: "idle" | "loading" | "ready" | "empty" | "error";
   shoppingItems: ShoppingListHistoryItem[];
   shoppingLoaded: boolean;
-  stats: MypageStatItem[];
   onDismissTutorialQuest: (questKey: string) => void;
   onOpenNicknameSheet: () => void;
   onRetrySavedRecipes: () => void;
@@ -403,11 +390,7 @@ function MobileHomeSurface({
           providerLabel={providerLabel}
           progress={progress}
           progressState={progressState}
-          recordStats={{
-            cooking: stats.find((item) => item.label === "요리 완료")?.value ?? 0,
-            planner: stats.find((item) => item.label === "플래너 등록")?.value ?? 0,
-            shopping: stats.find((item) => item.label === "장보기 완료")?.value ?? 0,
-          }}
+          recordStats={recordStats}
           variant="mobile"
         />
 
@@ -549,8 +532,10 @@ function MobileSavedRecipesRail({
       {state === "ready" && visibleRecipes.length > 0 ? (
         <div className="-mx-5 flex gap-3 overflow-x-auto px-5" role="list">
           {visibleRecipes.map((recipe) => {
-            const imageSrc =
-              recipe.thumbnail_url ?? getMobileFallbackRecipeImage(recipe.title);
+            const imageSrc = resolveRecipeImage({
+              id: recipe.recipe_id,
+              thumbnail_url: recipe.thumbnail_url,
+            });
 
             return (
               <Link
@@ -587,17 +572,6 @@ function MobileSavedRecipesRail({
       ) : null}
     </section>
   );
-}
-
-function getMobileFallbackRecipeImage(title: string) {
-  const seed = Array.from(title).reduce(
-    (sum, char) => sum + char.charCodeAt(0),
-    0,
-  );
-
-  return MOBILE_RECIPE_FALLBACK_IMAGES[
-    seed % MOBILE_RECIPE_FALLBACK_IMAGES.length
-  ];
 }
 
 function MypageMenuIcon({ name }: { name: string }) {

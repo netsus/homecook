@@ -33,7 +33,7 @@ interface MypageGrowthDetailDialogProps {
 const GRADE_BANDS: UserGamificationGradeData[] = [
   {
     grade_key: "clay",
-    label: "Clay",
+    label: "흙",
     level_min: 1,
     level_max: 3,
     icon_url: "/assets/growth/grades/clay-spoon-badge.png",
@@ -41,7 +41,7 @@ const GRADE_BANDS: UserGamificationGradeData[] = [
   },
   {
     grade_key: "wood",
-    label: "Wood",
+    label: "나무",
     level_min: 4,
     level_max: 7,
     icon_url: "/assets/growth/grades/wood-spoon-badge.png",
@@ -49,7 +49,7 @@ const GRADE_BANDS: UserGamificationGradeData[] = [
   },
   {
     grade_key: "steel",
-    label: "Steel",
+    label: "강철",
     level_min: 8,
     level_max: 12,
     icon_url: "/assets/growth/grades/steel-spoon-badge.png",
@@ -57,7 +57,7 @@ const GRADE_BANDS: UserGamificationGradeData[] = [
   },
   {
     grade_key: "silver",
-    label: "Silver",
+    label: "은",
     level_min: 13,
     level_max: 20,
     icon_url: "/assets/growth/grades/silver-spoon-badge.png",
@@ -65,7 +65,7 @@ const GRADE_BANDS: UserGamificationGradeData[] = [
   },
   {
     grade_key: "gold",
-    label: "Gold",
+    label: "금",
     level_min: 21,
     level_max: 34,
     icon_url: "/assets/growth/grades/gold-spoon-badge.png",
@@ -73,7 +73,7 @@ const GRADE_BANDS: UserGamificationGradeData[] = [
   },
   {
     grade_key: "diamond",
-    label: "Diamond",
+    label: "다이아",
     level_min: 35,
     level_max: 49,
     icon_url: "/assets/growth/grades/diamond-spoon-badge.png",
@@ -81,7 +81,7 @@ const GRADE_BANDS: UserGamificationGradeData[] = [
   },
   {
     grade_key: "titanium",
-    label: "Titanium",
+    label: "티타늄",
     level_min: 50,
     level_max: null,
     icon_url: "/assets/growth/grades/titanium-spoon-badge.png",

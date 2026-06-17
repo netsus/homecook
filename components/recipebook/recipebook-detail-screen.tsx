@@ -28,6 +28,7 @@ import {
   WebModal,
   WebRecipeCard,
   WebShell,
+  WebTopNav,
 } from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
@@ -44,7 +45,9 @@ import {
   removeRecipeFromBook,
   saveRecipeToBooks,
 } from "@/lib/api/recipe-save";
+import { getSurfaceChromeRule } from "@/lib/navigation/app-nav";
 import { buildReturnHref } from "@/lib/navigation/return-context";
+import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type {
@@ -66,6 +69,7 @@ type SaveModalState = "idle" | "loading" | "ready" | "error";
 
 const TOAST_DURATION_MS = 3000;
 const PAGE_SIZE = 20;
+const RECIPEBOOK_DETAIL_CHROME = getSurfaceChromeRule("recipebook.detail");
 
 const REMOVE_LABEL: Record<string, string> = {
   liked: "좋아요 해제",
@@ -819,7 +823,7 @@ export function RecipeBookDetailScreen({
             ? {
                 background: getRecipeThumbColor(plannerTarget.title),
                 emoji: "🍽",
-                imageSrc: plannerTarget.thumbnail_url ?? undefined,
+                imageSrc: getRecipeBookItemImage(plannerTarget),
                 meta: `${plannerServings}인분`,
                 title: plannerTarget.title,
               }
@@ -1076,6 +1080,7 @@ export function RecipeBookDetailScreen({
 
     return (
       <WebShell className="web-recipebook-detail-shell" wide>
+        <WebTopNav activeId={RECIPEBOOK_DETAIL_CHROME.primaryNavId} />
         {frame}
       </WebShell>
     );
@@ -1355,8 +1360,8 @@ function DesktopRecipeBookRail({
 }) {
   const coverItem = items[0];
   const coverImageSrc = coverItem
-    ? coverItem.thumbnail_url ?? getFallbackRecipeImage(coverItem.title)
-    : getFallbackRecipeImage(bookName);
+    ? getRecipeBookItemImage(coverItem)
+    : resolveRecipeImage({ id: bookName });
   const safeCoverImageSrc = coverImageSrc.replace(/"/g, "%22");
 
   return (
@@ -2233,7 +2238,7 @@ function MobileRecipeBookRecipeCard({
 }: RecipeItemCardProps & {
   readerDetailState?: ReaderDetailState;
 }) {
-  const imageSrc = item.thumbnail_url ?? getFallbackRecipeImage(item.title);
+  const imageSrc = getRecipeBookItemImage(item);
   const metaItems = [
     typeof item.base_servings === "number" ? `${item.base_servings}인분` : null,
     ...item.tags,
@@ -2344,7 +2349,7 @@ function MobileRecipeBookListCard({
   pageNumber,
   recipeHref,
 }: Pick<RecipeItemCardProps, "item" | "pageNumber" | "recipeHref">) {
-  const imageSrc = item.thumbnail_url ?? getFallbackRecipeImage(item.title);
+  const imageSrc = getRecipeBookItemImage(item);
   const metaItems = [
     item.tags.length > 0 ? item.tags.join(" · ") : null,
     item.total_duration_text ?? null,
@@ -2455,17 +2460,11 @@ function getRecipeThumbColor(title: string) {
   return "var(--surface-subtle)";
 }
 
-function getFallbackRecipeImage(title: string) {
-  if (title.includes("샐러드")) {
-    return "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&h=675&fit=crop&q=80";
-  }
-  if (title.includes("고기") || title.includes("제육")) {
-    return "https://images.unsplash.com/photo-1583224944844-5b268c057b72?w=900&h=675&fit=crop&q=80";
-  }
-  if (title.includes("밥")) {
-    return "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=900&h=675&fit=crop&q=80";
-  }
-  return "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=900&h=675&fit=crop&q=80";
+function getRecipeBookItemImage(item: RecipeBookRecipeItem) {
+  return resolveRecipeImage({
+    id: item.recipe_id,
+    thumbnail_url: item.thumbnail_url,
+  });
 }
 
 function mergeUniqueRecipeItems(
@@ -2617,7 +2616,7 @@ function RecipeItemCard({
         <WebRecipeCard
           alt={item.title}
           badge={pageNumber ? `${String(pageNumber).padStart(2, "0")}쪽` : undefined}
-          imageSrc={item.thumbnail_url ?? getFallbackRecipeImage(item.title)}
+          imageSrc={getRecipeBookItemImage(item)}
           meta={[
             item.tags.length > 0 ? item.tags.join(" · ") : null,
             item.total_duration_text ?? null,
@@ -2847,7 +2846,7 @@ function DesktopRecipeBookRecipePage({
     typeof item.base_servings === "number" ? `${item.base_servings}인분` : null,
     ...item.tags,
   ].filter((metaItem): metaItem is string => Boolean(metaItem));
-  const recipeImageUrl = item.thumbnail_url ?? getFallbackRecipeImage(item.title);
+  const recipeImageUrl = getRecipeBookItemImage(item);
   const safeRecipeImageUrl = recipeImageUrl.replace(/"/g, "%22");
 
   return (

@@ -3,6 +3,11 @@ import { RecipeDetailScreen } from "@/components/recipe/recipe-detail-screen";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getServerAuthUser } from "@/lib/supabase/server";
 
+export const metadata = {
+  description: "재료, 조리 과정, 저장, 플래너 추가를 확인하는 레시피 상세",
+  title: "레시피 상세",
+};
+
 interface RecipePageProps {
   params: Promise<{
     id: string;

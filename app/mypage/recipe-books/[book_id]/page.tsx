@@ -3,6 +3,19 @@ import { RecipeBookDetailScreen } from "@/components/recipebook/recipebook-detai
 import { getInitialAuthenticatedFromServer } from "@/lib/auth/server-initial-auth";
 import type { RecipeBookType } from "@/types/recipe";
 
+export async function generateMetadata({ searchParams }: PageProps) {
+  const query = await searchParams;
+  const bookName =
+    typeof query.name === "string" && query.name.trim()
+      ? query.name.trim()
+      : "레시피북";
+
+  return {
+    description: `${bookName}에 저장된 레시피를 책처럼 넘겨보는 레시피북 상세`,
+    title: bookName,
+  };
+}
+
 const VALID_BOOK_TYPES = new Set<RecipeBookType>([
   "my_added",
   "saved",
