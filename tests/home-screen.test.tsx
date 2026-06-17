@@ -52,6 +52,7 @@ const INGREDIENT_ITEMS = [
 
 vi.mock("@/lib/api/fetch-json", () => ({
   fetchJson: (...args: unknown[]) => fetchJson(...args),
+  isApiFetchError: () => false,
 }));
 
 function installMatchMedia(matches: boolean) {
@@ -395,6 +396,112 @@ describe("home screen", () => {
 
     await user.click(themeButton);
     expect(screen.getByRole("heading", { level: 2, name: "모든 레시피" })).toBeTruthy();
+  });
+
+  it("loads public tag chips and applies exact Korean tag filters", async () => {
+    const user = userEvent.setup();
+
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/tags")) {
+        return Promise.resolve({
+          items: [
+            {
+              normalized_key: "한식",
+              label: "한식",
+              slug: null,
+              kind: "semantic",
+              is_system: true,
+              theme_eligible: true,
+              usage_count: 12,
+            },
+          ],
+        });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({ themes: [] });
+      }
+
+      return Promise.resolve(getMockRecipeList());
+    });
+
+    render(<HomeScreen />);
+
+    await user.click(await screen.findByRole("button", { name: "한식" }));
+
+    await waitFor(() => {
+      expect(
+        fetchJson.mock.calls.some(([input]) => {
+          if (typeof input !== "string" || !input.startsWith("/api/v1/recipes?")) {
+            return false;
+          }
+
+          const url = new URL(input, "http://localhost:3000");
+          return url.searchParams.get("tag") === "한식";
+        }),
+      ).toBe(true);
+    });
+    expect(
+      fetchJson.mock.calls.some(([input]) => {
+        if (typeof input !== "string" || !input.startsWith("/api/v1/recipes?")) {
+          return false;
+        }
+
+        return new URL(input, "http://localhost:3000").searchParams.get("tag") === "hansik";
+      }),
+    ).toBe(false);
+  });
+
+  it("uses a tag-backed theme key for exact recipe filtering", async () => {
+    const user = userEvent.setup();
+
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/tags")) {
+        return Promise.resolve({ items: [] });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({
+          themes: [
+            {
+              id: "theme-korean",
+              title: "한식 인기",
+              tag_key: "한식",
+              tag_label: "한식",
+              recipes: [MOCK_RECIPE_CARD],
+            },
+          ],
+        });
+      }
+
+      return Promise.resolve(getMockRecipeList());
+    });
+
+    render(<HomeScreen />);
+
+    await user.click(await screen.findByRole("button", { name: /한식 인기/ }));
+
+    await waitFor(() => {
+      expect(
+        fetchJson.mock.calls.some(([input]) => {
+          if (typeof input !== "string" || !input.startsWith("/api/v1/recipes?")) {
+            return false;
+          }
+
+          const url = new URL(input, "http://localhost:3000");
+          return url.searchParams.get("tag") === "한식";
+        }),
+      ).toBe(true);
+    });
+    expect(screen.getByRole("heading", { level: 2, name: "한식 인기" })).toBeTruthy();
   });
 
   it("opens the login gate from the recipe card save button for guests", async () => {

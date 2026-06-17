@@ -32,6 +32,7 @@ import {
 } from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { fetchUserProfile, type UserProfileData } from "@/lib/api/mypage";
+import { fetchRecipeTags } from "@/lib/api/recipe";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
@@ -45,6 +46,7 @@ import type {
   RecipeCardItem,
   RecipeListData,
   RecipeSortKey,
+  RecipeTagItem,
   RecipeTheme,
   RecipeThemesData,
 } from "@/types/recipe";
@@ -58,7 +60,7 @@ const SORT_OPTIONS: Array<{ label: string; value: RecipeSortKey }> = [
 ];
 
 type ScreenState = "loading" | "ready" | "empty" | "error";
-type AsyncState = "loading" | "ready";
+type AsyncState = "loading" | "ready" | "error";
 
 const WEB_NAV_ITEMS = [
   { id: "home", href: "/", label: "홈" },
@@ -125,9 +127,13 @@ export function HomeScreen() {
   const [sort, setSort] = useState<RecipeSortKey>("view_count");
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [themeState, setThemeState] = useState<AsyncState>("loading");
+  const [tagState, setTagState] = useState<AsyncState>("loading");
   const [recipes, setRecipes] = useState<RecipeListData | null>(null);
   const [themes, setThemes] = useState<RecipeThemesData | null>(null);
+  const [tagOptions, setTagOptions] = useState<RecipeTagItem[]>([]);
   const [activeThemeId, setActiveThemeId] = useState<string | null>(null);
+  const [activeTagKey, setActiveTagKey] = useState<string | null>(null);
+  const [activeTagLabel, setActiveTagLabel] = useState<string | null>(null);
   const [isIngredientModalOpen, setIngredientModalOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profile, setProfile] = useState<UserProfileData | null>(null);
@@ -174,11 +180,25 @@ export function HomeScreen() {
     try {
       const themeData = await fetchJson<RecipeThemesData>("/api/v1/recipes/themes");
       setThemes(themeData);
+      setThemeState("ready");
     } catch {
       setThemes({ themes: [] });
-    } finally {
-      setThemeState("ready");
+      setThemeState("error");
     }
+  }, []);
+
+  const loadTagOptions = useCallback(async () => {
+    setTagState("loading");
+    const response = await fetchRecipeTags({ theme_eligible: true, limit: 12 });
+
+    if (!response.success || !response.data) {
+      setTagOptions([]);
+      setTagState("error");
+      return;
+    }
+
+    setTagOptions(response.data.items);
+    setTagState("ready");
   }, []);
 
   useEffect(() => {
@@ -209,6 +229,10 @@ export function HomeScreen() {
   useEffect(() => {
     void loadThemes();
   }, [loadThemes]);
+
+  useEffect(() => {
+    void loadTagOptions();
+  }, [loadTagOptions]);
 
   useEffect(() => {
     const e2eAuthOverride = readE2EAuthOverride();
@@ -244,6 +268,14 @@ export function HomeScreen() {
     };
   }, []);
 
+  const selectedTheme = useMemo(
+    () => themes?.themes.find((theme) => theme.id === activeThemeId) ?? null,
+    [activeThemeId, themes],
+  );
+  const effectiveTagKey = activeTagKey ?? selectedTheme?.tag_key ?? null;
+  const effectiveTagLabel =
+    activeTagLabel ?? selectedTheme?.tag_label ?? selectedTheme?.title ?? null;
+
   const loadRecipes = useCallback(async () => {
     const currentRequestId = recipeRequestIdRef.current + 1;
     recipeRequestIdRef.current = currentRequestId;
@@ -263,6 +295,10 @@ export function HomeScreen() {
         params.set("ingredient_ids", appliedIngredientIds.join(","));
       }
 
+      if (effectiveTagKey) {
+        params.set("tag", effectiveTagKey);
+      }
+
       const recipeData = await fetchJson<RecipeListData>(`/api/v1/recipes?${params}`);
 
       if (currentRequestId !== recipeRequestIdRef.current) {
@@ -279,7 +315,7 @@ export function HomeScreen() {
       setRecipes(null);
       setScreenState("error");
     }
-  }, [appliedIngredientIds, debouncedQuery, sort]);
+  }, [appliedIngredientIds, debouncedQuery, effectiveTagKey, sort]);
 
   useEffect(() => {
     void loadRecipes();
@@ -287,18 +323,17 @@ export function HomeScreen() {
 
   const hasQuery = debouncedQuery.trim().length > 0;
   const hasIngredientFilter = appliedIngredientIds.length > 0;
-  const hasActiveFilters = hasQuery || hasIngredientFilter;
-  const selectedTheme = useMemo(
-    () => themes?.themes.find((theme) => theme.id === activeThemeId) ?? null,
-    [activeThemeId, themes],
-  );
+  const hasTagFilter = Boolean(effectiveTagKey);
+  const hasActiveFilters = hasQuery || hasIngredientFilter || hasTagFilter;
   const displayedRecipes = useMemo(
-    () => selectedTheme?.recipes ?? recipes?.items ?? [],
-    [recipes?.items, selectedTheme?.recipes],
+    () => (effectiveTagKey ? recipes?.items ?? [] : selectedTheme?.recipes ?? recipes?.items ?? []),
+    [effectiveTagKey, recipes?.items, selectedTheme?.recipes],
   );
   const listTitle = selectedTheme
     ? selectedTheme.title
-    : hasActiveFilters
+    : effectiveTagLabel
+      ? effectiveTagLabel
+      : hasActiveFilters
       ? "검색 결과"
       : "모든 레시피";
   const showInitialDiscoverySkeleton =
@@ -318,25 +353,69 @@ export function HomeScreen() {
     setDebouncedQuery("");
   }, []);
 
+  const clearTagFilter = useCallback(() => {
+    setActiveTagKey(null);
+    setActiveTagLabel(null);
+    setActiveThemeId(null);
+  }, []);
+
+  const clearAllFilters = useCallback(() => {
+    clearIngredientFilters();
+    clearSearch();
+    clearTagFilter();
+  }, [clearIngredientFilters, clearSearch, clearTagFilter]);
+
+  const selectTag = useCallback((tag: RecipeTagItem) => {
+    setActiveThemeId(null);
+    setActiveTagKey((currentKey) => {
+      if (currentKey === tag.normalized_key) {
+        setActiveTagLabel(null);
+        return null;
+      }
+
+      setActiveTagLabel(tag.label);
+      return tag.normalized_key;
+    });
+  }, []);
+
   const applyIngredientFilter = useCallback(
     (ingredientIds: string[]) => {
       setAppliedIngredientIds(ingredientIds);
       setIngredientModalOpen(false);
       setActiveThemeId(null);
+      setActiveTagKey(null);
+      setActiveTagLabel(null);
     },
     [setAppliedIngredientIds],
   );
 
   const selectSort = useCallback((nextSort: string) => {
     setSort(nextSort as RecipeSortKey);
-    setActiveThemeId(null);
-  }, []);
+    if (selectedTheme && !selectedTheme.tag_key) {
+      setActiveThemeId(null);
+    }
+  }, [selectedTheme]);
 
   const selectTheme = useCallback((themeId: string) => {
-    setActiveThemeId((currentThemeId) =>
-      currentThemeId === themeId ? null : themeId,
-    );
-  }, []);
+    const nextTheme = themes?.themes.find((theme) => theme.id === themeId) ?? null;
+    setActiveThemeId((currentThemeId) => {
+      if (currentThemeId === themeId) {
+        setActiveTagKey(null);
+        setActiveTagLabel(null);
+        return null;
+      }
+
+      if (nextTheme?.tag_key) {
+        setActiveTagKey(nextTheme.tag_key);
+        setActiveTagLabel(nextTheme.title);
+      } else {
+        setActiveTagKey(null);
+        setActiveTagLabel(null);
+      }
+
+      return themeId;
+    });
+  }, [themes]);
 
   const updateRecipeSaveState = useCallback((
     recipeId: string,
@@ -475,7 +554,9 @@ export function HomeScreen() {
           appliedIngredientIds={appliedIngredientIds}
           clearIngredientFilters={clearIngredientFilters}
           clearSearch={clearSearch}
+          clearTagFilter={clearTagFilter}
           displayedRecipes={displayedRecipes}
+          activeTagKey={activeTagKey}
           listTitle={listTitle}
           mealGreeting={mealGreeting}
           emptyStateActionLabel={emptyStateActionLabel}
@@ -483,13 +564,17 @@ export function HomeScreen() {
           onRecipeOpen={incrementRecipeViewCount}
           onRecipeSave={homeSaveFlow.openRecipeSaveModal}
           onRetry={() => void loadRecipes()}
+          onRetryTags={() => void loadTagOptions()}
           onSelectSort={selectSort}
+          onSelectTag={selectTag}
+          onSelectTheme={selectTheme}
           profile={profile}
           query={query}
           savedRecipeIds={homeSaveFlow.savedRecipeIds}
           screenState={screenState}
           selectedTheme={selectedTheme}
-          setActiveThemeId={setActiveThemeId}
+          tagOptions={tagOptions}
+          tagState={tagState}
           setQuery={setQuery}
           sort={sort}
           themes={themes?.themes ?? []}
@@ -535,6 +620,8 @@ export function HomeScreen() {
                     onChange={(event) => {
                       setQuery(event.target.value);
                       setActiveThemeId(null);
+                      setActiveTagKey(null);
+                      setActiveTagLabel(null);
                     }}
                     placeholder="레시피 제목 검색"
                     value={query}
@@ -569,8 +656,39 @@ export function HomeScreen() {
                     </button>
                   </>
                 ) : null}
+                {activeTagKey ? (
+                  <>
+                    <button
+                      className="home-mobile-filter-chip home-mobile-filter-chip-active"
+                      onClick={clearTagFilter}
+                      type="button"
+                    >
+                      #{effectiveTagLabel ?? activeTagKey}
+                    </button>
+                    {!hasIngredientFilter ? (
+                      <button
+                        className="home-mobile-filter-reset"
+                        onClick={clearTagFilter}
+                        type="button"
+                      >
+                        초기화
+                      </button>
+                    ) : null}
+                  </>
+                ) : null}
               </div>
             </div>
+
+            {screenState !== "error" ? (
+              <HomeTagRail
+                activeTagKey={activeTagKey}
+                onRetry={() => void loadTagOptions()}
+                onSelectTag={selectTag}
+                tagOptions={tagOptions}
+                tagState={tagState}
+                variant="mobile"
+              />
+            ) : null}
 
             <HomeQuickLinks variant="mobile" />
 
@@ -646,9 +764,7 @@ export function HomeScreen() {
                       actionLabel={emptyStateActionLabel}
                       description="다른 키워드나 재료 조합으로 다시 찾아보세요."
                       onAction={() => {
-                        clearIngredientFilters();
-                        clearSearch();
-                        setActiveThemeId(null);
+                        clearAllFilters();
                       }}
                       title="조건에 맞는 레시피가 없어요"
                     />
@@ -695,9 +811,11 @@ export function HomeScreen() {
 }
 
 function HomeWebScreen({
+  activeTagKey,
   appliedIngredientIds,
   clearIngredientFilters,
   clearSearch,
+  clearTagFilter,
   displayedRecipes,
   emptyStateActionLabel,
   listTitle,
@@ -706,21 +824,27 @@ function HomeWebScreen({
   onRecipeOpen,
   onRecipeSave,
   onRetry,
+  onRetryTags,
   onSelectSort,
+  onSelectTag,
+  onSelectTheme,
   profile,
   query,
   savedRecipeIds,
   screenState,
   selectedTheme,
-  setActiveThemeId,
+  tagOptions,
+  tagState,
   setQuery,
   sort,
   themes,
   totalRecipeCount,
 }: {
+  activeTagKey: string | null;
   appliedIngredientIds: string[];
   clearIngredientFilters: () => void;
   clearSearch: () => void;
+  clearTagFilter: () => void;
   displayedRecipes: RecipeListData["items"];
   emptyStateActionLabel: string;
   listTitle: string;
@@ -729,13 +853,17 @@ function HomeWebScreen({
   onRecipeOpen: (recipeId: string) => void;
   onRecipeSave: (recipe: RecipeCardItem) => void;
   onRetry: () => void;
+  onRetryTags: () => void;
   onSelectSort: (nextSort: string) => void;
+  onSelectTag: (tag: RecipeTagItem) => void;
+  onSelectTheme: (themeId: string) => void;
   profile: UserProfileData | null;
   query: string;
   savedRecipeIds: Set<string>;
   screenState: ScreenState;
   selectedTheme: RecipeTheme | null;
-  setActiveThemeId: (themeId: string | null) => void;
+  tagOptions: RecipeTagItem[];
+  tagState: AsyncState;
   setQuery: (query: string) => void;
   sort: RecipeSortKey;
   themes: RecipeTheme[];
@@ -771,7 +899,7 @@ function HomeWebScreen({
               <input
                 onChange={(event) => {
                   setQuery(event.target.value);
-                  setActiveThemeId(null);
+                  clearTagFilter();
                 }}
                 placeholder="레시피 제목 검색"
                 value={query}
@@ -803,6 +931,32 @@ function HomeWebScreen({
             </div>
           ) : null}
 
+          {activeTagKey ? (
+            <div className="web-filter-chip-row">
+              <WebChip active onClick={clearTagFilter}>
+                #{selectedTheme?.tag_label ?? selectedTheme?.title ?? activeTagKey}
+              </WebChip>
+              <WebButton
+                onClick={clearTagFilter}
+                size="sm"
+                variant="ghost"
+              >
+                초기화
+              </WebButton>
+            </div>
+          ) : null}
+
+          {screenState !== "error" ? (
+            <HomeTagRail
+              activeTagKey={activeTagKey}
+              onRetry={onRetryTags}
+              onSelectTag={onSelectTag}
+              tagOptions={tagOptions}
+              tagState={tagState}
+              variant="web"
+            />
+          ) : null}
+
           <HomeQuickLinks variant="web" />
         </section>
 
@@ -815,7 +969,7 @@ function HomeWebScreen({
               <div className="web-theme-strip-controls">
                 {selectedTheme ? (
                   <WebButton
-                    onClick={() => setActiveThemeId(null)}
+                    onClick={() => onSelectTheme(selectedTheme.id)}
                     size="sm"
                     variant="ghost"
                   >
@@ -845,9 +999,7 @@ function HomeWebScreen({
                     selectedTheme?.id === theme.id ? "web-theme-card-active" : "",
                   ].join(" ")}
                   key={theme.id}
-                  onClick={() =>
-                    setActiveThemeId(selectedTheme?.id === theme.id ? null : theme.id)
-                  }
+                  onClick={() => onSelectTheme(theme.id)}
                   type="button"
                 >
                   <span
@@ -922,7 +1074,7 @@ function HomeWebScreen({
               onAction={() => {
                 clearIngredientFilters();
                 clearSearch();
-                setActiveThemeId(null);
+                clearTagFilter();
               }}
               title="조건에 맞는 레시피가 없어요"
             />
@@ -1150,6 +1302,109 @@ function HomeAppBar() {
     <header className="sticky top-0 z-20 flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4" style={{ borderBottomWidth: "0.5px" }}>
       <h1 className="text-[18px] font-bold leading-none text-[var(--brand)]">HOMECOOK</h1>
     </header>
+  );
+}
+
+function HomeTagRail({
+  activeTagKey,
+  onRetry,
+  onSelectTag,
+  tagOptions,
+  tagState,
+  variant,
+}: {
+  activeTagKey: string | null;
+  onRetry: () => void;
+  onSelectTag: (tag: RecipeTagItem) => void;
+  tagOptions: RecipeTagItem[];
+  tagState: AsyncState;
+  variant: "mobile" | "web";
+}) {
+  if (tagState === "loading") {
+    return (
+      <div
+        className={
+          variant === "web"
+            ? "web-filter-chip-row"
+            : "scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-2"
+        }
+        aria-label="태그 불러오는 중"
+      >
+        {Array.from({ length: 4 }).map((_, index) => (
+          <span
+            className="h-8 w-16 shrink-0 rounded-[var(--radius-full)] bg-[var(--surface-fill)]"
+            key={index}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (tagState === "error") {
+    return (
+      <div
+        className={
+          variant === "web"
+            ? "web-filter-chip-row"
+            : "flex items-center gap-2 px-5 pb-2"
+        }
+      >
+        <span className="text-[12px] font-semibold text-[var(--text-3)]">
+          태그를 불러오지 못했어요
+        </span>
+        <button
+          className="text-[12px] font-bold text-[var(--brand)] underline-offset-2 hover:underline"
+          onClick={onRetry}
+          type="button"
+        >
+          다시 시도
+        </button>
+      </div>
+    );
+  }
+
+  if (tagOptions.length === 0) {
+    return null;
+  }
+
+  const containerClass =
+    variant === "web"
+      ? "web-filter-chip-row"
+      : "scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-2";
+
+  return (
+    <div className={containerClass} aria-label="태그 필터">
+      {tagOptions.map((tag) => {
+        const isActive = activeTagKey === tag.normalized_key;
+
+        if (variant === "web") {
+          return (
+            <WebChip
+              active={isActive}
+              key={tag.normalized_key}
+              onClick={() => onSelectTag(tag)}
+            >
+              {tag.label}
+            </WebChip>
+          );
+        }
+
+        return (
+          <button
+            aria-pressed={isActive}
+            className={[
+              "home-mobile-filter-chip",
+              isActive ? "home-mobile-filter-chip-active" : "",
+            ].join(" ")}
+            key={tag.normalized_key}
+            onClick={() => onSelectTag(tag)}
+            type="button"
+          >
+            {tag.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

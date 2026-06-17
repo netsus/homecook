@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { formatMealAddTargetLabel } from "@/components/planner/meal-add-target-badge";
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
+import { RecipeTagEditor } from "@/components/recipe/recipe-tag-editor";
 import { Button } from "@/components/ui/button";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { AppBackButton } from "@/components/shared/app-back-button";
@@ -41,6 +42,7 @@ import {
   type IngredientSubcategoryOption,
 } from "@/lib/ingredient-categories";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
+import { buildReviewedRecipeTagsPayload } from "@/lib/recipe-tag-input";
 import { stripMatchingSectionPrefix } from "@/lib/recipe-section-labels";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import type {
@@ -763,6 +765,7 @@ interface ReviewStepProps {
   onServingsChange: (servings: number) => void;
   thumbnailUrl: string | null;
   tags: string[];
+  tagErrorMessage?: string | null;
   classificationStatus: YoutubeRecipeClassificationStatus | null;
   classificationReasons: string[];
   draftWarnings: string[];
@@ -773,6 +776,7 @@ interface ReviewStepProps {
   candidatePromotionError: string | null;
   ingredients: TempIngredient[];
   steps: TempStep[];
+  onTagsChange: (tags: string[]) => void;
   onSelectCandidate: (candidateId: string) => void;
   onUpdateIngredient: (tempId: string, patch: IngredientQuantityPatch) => void;
   onResolveIngredientCandidate: (
@@ -1145,6 +1149,7 @@ function ReviewStep({
   onServingsChange,
   thumbnailUrl,
   tags,
+  tagErrorMessage,
   classificationStatus,
   classificationReasons,
   draftWarnings,
@@ -1155,6 +1160,7 @@ function ReviewStep({
   candidatePromotionError,
   ingredients,
   steps,
+  onTagsChange,
   onSelectCandidate,
   onUpdateIngredient,
   onResolveIngredientCandidate,
@@ -1196,18 +1202,13 @@ function ReviewStep({
         </div>
       ) : null}
 
-      {tags.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-1.5" data-testid="youtube-draft-tags">
-          {tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-[12px] font-semibold text-[var(--brand)]"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      ) : null}
+      <RecipeTagEditor
+        className="mt-3"
+        errorMessage={tagErrorMessage}
+        onChange={onTagsChange}
+        suggestedTags={tags}
+        tags={tags}
+      />
 
       {classificationStatus === "uncertain" ? (
         <div
@@ -2380,6 +2381,8 @@ export function YoutubeImportScreen({
   const [steps, setSteps] = useState<TempStep[]>([]);
   const [draftThumbnailUrl, setDraftThumbnailUrl] = useState<string | null>(null);
   const [draftTags, setDraftTags] = useState<string[]>([]);
+  const [areDraftTagsDirty, setAreDraftTagsDirty] = useState(false);
+  const [tagSubmitError, setTagSubmitError] = useState<string | null>(null);
   const [replacingIngredientId, setReplacingIngredientId] = useState<string | null>(null);
   const [registeringIngredientId, setRegisteringIngredientId] = useState<string | null>(null);
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
@@ -2535,7 +2538,13 @@ export function YoutubeImportScreen({
     setTitle(data.title);
     setBaseServings(data.base_servings ?? 1);
     setDraftThumbnailUrl(data.thumbnail_url ?? null);
-    setDraftTags(data.tags ?? []);
+    setDraftTags(
+      data.tags?.length
+        ? data.tags
+        : data.suggested_tags?.map((tag) => tag.label) ?? [],
+    );
+    setAreDraftTagsDirty(false);
+    setTagSubmitError(null);
     setDraftWarnings(data.draft_warnings ?? []);
     setBlockingIssues(data.blocking_issues ?? []);
 
@@ -2891,6 +2900,12 @@ export function YoutubeImportScreen({
     });
   }, []);
 
+  const handleDraftTagsChange = useCallback((nextTags: string[]) => {
+    setDraftTags(nextTags);
+    setAreDraftTagsDirty(true);
+    setTagSubmitError(null);
+  }, []);
+
   const canRegister =
     getYoutubeRegisterRequirements({
       title,
@@ -2907,11 +2922,16 @@ export function YoutubeImportScreen({
     setIsRegistering(true);
     setRegisterError(null);
 
+    const reviewedTagPayload = buildReviewedRecipeTagsPayload({
+      isDirty: areDraftTagsDirty,
+      tags: draftTags,
+    });
     const result = await registerYoutubeRecipe({
       extraction_id: extractionId,
       title: title.trim(),
       base_servings: baseServings,
       youtube_url: youtubeUrl.trim(),
+      ...(reviewedTagPayload !== undefined ? { tags: reviewedTagPayload } : {}),
       ingredients: ingredients.map((ing, idx) => ({
         ingredient_id: ing.ingredient_id,
         standard_name: ing.standard_name,
@@ -2940,6 +2960,11 @@ export function YoutubeImportScreen({
     setIsRegistering(false);
 
     if (!result.success || !result.data) {
+      if (result.error?.fields?.some((field) => field.field === "tags")) {
+        setTagSubmitError(result.error.message);
+        return;
+      }
+
       setRegisterError(
         getApiErrorMessage("레시피를 등록하지 못했어요.", result.error?.message),
       );
@@ -2950,7 +2975,18 @@ export function YoutubeImportScreen({
     setRegisteredRecipeId(result.data.recipe_id);
     setRegisteredRecipeTitle(result.data.title);
     pushStep("complete");
-  }, [canRegister, extractionId, title, baseServings, youtubeUrl, ingredients, steps, pushStep]);
+  }, [
+    areDraftTagsDirty,
+    canRegister,
+    draftTags,
+    extractionId,
+    title,
+    baseServings,
+    youtubeUrl,
+    ingredients,
+    steps,
+    pushStep,
+  ]);
 
   // ─── Step 4 handlers ───────────────────────────────────────────────
 
@@ -3029,6 +3065,9 @@ export function YoutubeImportScreen({
     setSelectedCandidateId(null);
     setIsPromotingCandidate(false);
     setCandidatePromotionError(null);
+    setDraftTags([]);
+    setAreDraftTagsDirty(false);
+    setTagSubmitError(null);
     setReplacingIngredientId(null);
     setRegisteringIngredientId(null);
     setEditingStepId(null);
@@ -3229,6 +3268,7 @@ export function YoutubeImportScreen({
             onServingsChange={setBaseServings}
             thumbnailUrl={draftThumbnailUrl}
             tags={draftTags}
+            tagErrorMessage={tagSubmitError}
             classificationStatus={classificationStatus}
             classificationReasons={classificationReasons}
             draftWarnings={draftWarnings}
@@ -3239,6 +3279,7 @@ export function YoutubeImportScreen({
             candidatePromotionError={candidatePromotionError}
             ingredients={ingredients}
             steps={steps}
+            onTagsChange={handleDraftTagsChange}
             onSelectCandidate={handleSelectCandidate}
             onUpdateIngredient={handleUpdateIngredient}
             onResolveIngredientCandidate={handleResolveIngredientCandidate}
@@ -3514,6 +3555,7 @@ export function YoutubeImportScreen({
             onServingsChange={setBaseServings}
             thumbnailUrl={draftThumbnailUrl}
             tags={draftTags}
+            tagErrorMessage={tagSubmitError}
             classificationStatus={classificationStatus}
             classificationReasons={classificationReasons}
             draftWarnings={draftWarnings}
@@ -3524,6 +3566,7 @@ export function YoutubeImportScreen({
             candidatePromotionError={candidatePromotionError}
             ingredients={ingredients}
             steps={steps}
+            onTagsChange={handleDraftTagsChange}
             onSelectCandidate={handleSelectCandidate}
             onUpdateIngredient={handleUpdateIngredient}
             onResolveIngredientCandidate={handleResolveIngredientCandidate}

@@ -9,6 +9,7 @@ import { ManualRecipeCreateScreen } from "@/components/recipe/manual-recipe-crea
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import { fetchIngredients } from "@/lib/api/ingredients";
 import { createManualRecipe, uploadRecipeImage, type RecipeImageUploadData } from "@/lib/api/manual-recipe";
+import { suggestRecipeTags } from "@/lib/api/recipe";
 import { compressRecipeImageFile } from "@/lib/recipe-image-compression";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import type { ApiResponse } from "@/types/api";
@@ -34,6 +35,10 @@ vi.mock("@/lib/api/ingredients", () => ({
 vi.mock("@/lib/api/manual-recipe", () => ({
   createManualRecipe: vi.fn(),
   uploadRecipeImage: vi.fn(),
+}));
+
+vi.mock("@/lib/api/recipe", () => ({
+  suggestRecipeTags: vi.fn(),
 }));
 
 vi.mock("@/lib/recipe-image-compression", () => ({
@@ -88,6 +93,7 @@ describe("ManualRecipeCreateScreen", () => {
     vi.mocked(fetchIngredients).mockReset();
     vi.mocked(createManualRecipe).mockReset();
     vi.mocked(uploadRecipeImage).mockReset();
+    vi.mocked(suggestRecipeTags).mockReset();
     vi.mocked(compressRecipeImageFile).mockReset();
     vi.mocked(compressRecipeImageFile).mockImplementation(async (file: File) => file);
     Object.defineProperty(URL, "createObjectURL", {
@@ -117,6 +123,29 @@ describe("ManualRecipeCreateScreen", () => {
       success: true,
       data: {
         items: [{ id: "ing-onion", standard_name: "양파", category: "채소" }],
+      },
+      error: null,
+    });
+    vi.mocked(suggestRecipeTags).mockResolvedValue({
+      success: true,
+      data: {
+        suggested_tags: [
+          {
+            normalized_key: "초보가능",
+            label: "초보가능",
+            kind: "semantic",
+            source: "system_suggested",
+            confidence: 0.7,
+          },
+          {
+            normalized_key: "한식",
+            label: "한식",
+            kind: "semantic",
+            source: "system_suggested",
+            confidence: 0.8,
+          },
+        ],
+        tags: ["초보가능", "한식"],
       },
       error: null,
     });
@@ -722,5 +751,194 @@ describe("ManualRecipeCreateScreen", () => {
     const callBody = vi.mocked(createManualRecipe).mock.calls[0][0];
     expect(callBody.thumbnail_url).toBeUndefined();
     expect(uploadRecipeImage).not.toHaveBeenCalled();
+  });
+
+  it("shows suggested tags but omits tags from the save body until the user edits them", async () => {
+    vi.mocked(createManualRecipe).mockResolvedValue({
+      success: true,
+      data: {
+        id: "recipe-suggested-tags",
+        title: "태그 추천 요리",
+        source_type: "manual",
+        created_by: "user-1",
+        base_servings: 2,
+      },
+      error: null,
+    });
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.type(screen.getByPlaceholderText("예: 김치찌개"), "태그 추천 요리");
+    await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
+    await user.click(await screen.findByRole("checkbox", { name: "양파" }));
+    await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await screen.findByRole("button", { name: "준비" });
+    await user.click(screen.getByRole("button", { name: "준비" }));
+    await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아 완성하기");
+    await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
+
+    expect(await screen.findByRole("button", { name: "초보가능 삭제" })).toBeTruthy();
+    expect(suggestRecipeTags).toHaveBeenCalledWith(expect.objectContaining({
+      source_type: "manual",
+      title: "태그 추천 요리",
+    }));
+
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(createManualRecipe).toHaveBeenCalled();
+    });
+    expect(vi.mocked(createManualRecipe).mock.calls[0][0].tags).toBeUndefined();
+  });
+
+  it("sends reviewed manual tags only after the user changes the tag editor", async () => {
+    vi.mocked(createManualRecipe).mockResolvedValue({
+      success: true,
+      data: {
+        id: "recipe-reviewed-tags",
+        title: "검수 태그 요리",
+        source_type: "manual",
+        created_by: "user-1",
+        base_servings: 2,
+      },
+      error: null,
+    });
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.type(screen.getByPlaceholderText("예: 김치찌개"), "검수 태그 요리");
+    await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
+    await user.click(await screen.findByRole("checkbox", { name: "양파" }));
+    await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await screen.findByRole("button", { name: "준비" });
+    await user.click(screen.getByRole("button", { name: "준비" }));
+    await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아 완성하기");
+    await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
+
+    await user.click(await screen.findByRole("button", { name: "초보가능 삭제" }));
+    await user.type(screen.getByLabelText("태그 추가"), "#원팬요리");
+    await user.click(screen.getByRole("button", { name: "태그 추가하기" }));
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(createManualRecipe).toHaveBeenCalled();
+    });
+    expect(vi.mocked(createManualRecipe).mock.calls[0][0].tags).toEqual([
+      "한식",
+      "원팬요리",
+    ]);
+  });
+
+  it("does not let a late tag suggestion response overwrite user-edited tags", async () => {
+    let resolveSuggestion!: (value: Awaited<ReturnType<typeof suggestRecipeTags>>) => void;
+    vi.mocked(suggestRecipeTags).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSuggestion = resolve;
+        }),
+    );
+    vi.mocked(createManualRecipe).mockResolvedValue({
+      success: true,
+      data: {
+        id: "recipe-stale-suggestion",
+        title: "늦은 추천 요리",
+        source_type: "manual",
+        created_by: "user-1",
+        base_servings: 2,
+      },
+      error: null,
+    });
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.type(screen.getByPlaceholderText("예: 김치찌개"), "늦은 추천 요리");
+    await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
+    await user.click(await screen.findByRole("checkbox", { name: "양파" }));
+    await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await screen.findByRole("button", { name: "준비" });
+    await user.click(screen.getByRole("button", { name: "준비" }));
+    await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아 완성하기");
+    await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
+
+    await waitFor(() => {
+      expect(suggestRecipeTags).toHaveBeenCalled();
+    });
+    await user.type(screen.getByLabelText("태그 추가"), "원팬요리");
+    await user.click(screen.getByRole("button", { name: "태그 추가하기" }));
+
+    resolveSuggestion({
+      success: true,
+      data: {
+        suggested_tags: [
+          {
+            normalized_key: "초보가능",
+            label: "초보가능",
+            kind: "semantic",
+            source: "system_suggested",
+            confidence: 0.7,
+          },
+        ],
+        tags: ["초보가능"],
+      },
+      error: null,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "원팬요리 삭제" })).toBeTruthy();
+    });
+    expect(screen.queryByRole("button", { name: "초보가능 삭제" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(createManualRecipe).toHaveBeenCalled();
+    });
+    expect(vi.mocked(createManualRecipe).mock.calls[0][0].tags).toEqual(["원팬요리"]);
+  });
+
+  it("keeps manual save available when tag suggestions fail without overwriting server tags", async () => {
+    vi.mocked(suggestRecipeTags).mockResolvedValue({
+      success: false,
+      data: null,
+      error: {
+        code: "TAG_SUGGESTION_FAILED",
+        message: "태그 추천을 불러오지 못했어요.",
+        fields: [],
+      },
+    });
+    vi.mocked(createManualRecipe).mockResolvedValue({
+      success: true,
+      data: {
+        id: "recipe-tag-suggestion-failed",
+        title: "추천 실패 요리",
+        source_type: "manual",
+        created_by: "user-1",
+        base_servings: 2,
+      },
+      error: null,
+    });
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.type(screen.getByPlaceholderText("예: 김치찌개"), "추천 실패 요리");
+    await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
+    await user.click(await screen.findByRole("checkbox", { name: "양파" }));
+    await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await screen.findByRole("button", { name: "준비" });
+    await user.click(screen.getByRole("button", { name: "준비" }));
+    await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아 완성하기");
+    await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
+
+    expect(await screen.findByText("태그 추천을 불러오지 못했어요.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(createManualRecipe).toHaveBeenCalled();
+    });
+    expect(vi.mocked(createManualRecipe).mock.calls[0][0].tags).toBeUndefined();
   });
 });

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-17T17:49:00+09:00",
+  "updated_at": "2026-06-17T18:59:27+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1802,21 +1802,23 @@
     {
       "id": "36e-recipe-tags-frontend",
       "preset": "vertical-slice-strict",
-      "branch": "docs/36e-recipe-tags-frontend",
-      "lifecycle": "planned",
+      "branch": "feature/fe-36e-recipe-tags-frontend",
+      "lifecycle": "ready_for_review",
       "approval_state": "codex_approved",
-      "verification_status": "pending",
+      "verification_status": "passed",
       "required_checks": [
-        "pnpm vitest run tests/home-tag-search.test.tsx tests/manual-recipe-tags-ui.test.tsx tests/youtube-recipe-tags-ui.test.tsx tests/recipe-tag-input.test.ts",
+        "pnpm exec vitest run tests/recipe-tag-input.test.ts tests/home-screen.test.tsx tests/manual-recipe-create-screen.test.tsx tests/youtube-import-tags.test.tsx",
+        "pnpm exec vitest run",
         "pnpm exec playwright test tests/e2e/slice-36e-recipe-tags-frontend.spec.ts",
-        "CI=1 pnpm verify:frontend:pr",
-        "pnpm qa:explore -- --slice 36e-recipe-tags-frontend --base-url http://127.0.0.1:3100",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm build",
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
         "pnpm validate:workpack -- --slice 36e-recipe-tags-frontend",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs fallback opened by Codex per explicit user instruction. Scope: HOME title+tag search, exact tag chip/theme filter, MANUAL_RECIPE_CREATE tag suggestion/review, YT_IMPORT tag review, unmodified-tags omit-body policy, mobile evidence, and authority review. Backend/API/schema changes are out of scope; production backfill/reconcile writes require separate explicit approval after dry-run review."
+      "notes": "Stage 4 frontend implementation completed on feature/fe-36e-recipe-tags-frontend. Scope: HOME public tag rail, exact Korean tag chip/theme filters, MANUAL_RECIPE_CREATE suggestion/review chip editor, YT_IMPORT session tag review, and omit-unmodified-tags submit policy. Backend/API/schema changes are out of scope; production DB migration application is tracked as a manual ops step, and production backfill/reconcile writes require separate explicit approval after dry-run review."
     }
   ]
 }

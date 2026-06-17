@@ -104,8 +104,8 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
 - [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과
 - [ ] N/A — BE-only 슬라이스
 
@@ -178,15 +178,21 @@
 
 > 이 체크리스트는 Stage 4~6 동안 계속 갱신하는 living closeout 문서다. 36e는 FE-only이며 Stage 2/3 backend 구현은 없다.
 
-- [ ] 누락된 36e workpack/acceptance/automation metadata 보강 <!-- omo:id=delivery-36e-workpack-gap;stage=4;scope=shared;review=5,6 -->
-- [ ] HOME API helper/state가 `q`, `tag`, `GET /tags`, tag-backed themes를 소비 <!-- omo:id=delivery-home-tag-api-state;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME 검색 input이 제목+승인 tag label 검색으로 동작 <!-- omo:id=delivery-home-title-tag-search;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME tag chip/theme 선택이 한글 `normalized_key` exact filter로 동작 <!-- omo:id=delivery-home-exact-tag-filter;stage=4;scope=frontend;review=5,6 -->
-- [ ] MANUAL_RECIPE_CREATE tag suggestion/review chip editor 구현 <!-- omo:id=delivery-manual-tag-editor;stage=4;scope=frontend;review=5,6 -->
-- [ ] MANUAL_RECIPE_CREATE에서 수정 안 한 태그는 `tags` body 생략, 수정한 태그만 전송 <!-- omo:id=delivery-manual-tag-submit-policy;stage=4;scope=frontend;review=5,6 -->
-- [ ] YT_IMPORT tag review chip editor와 register body 정책 구현 <!-- omo:id=delivery-youtube-tag-editor-submit;stage=4;scope=frontend;review=5,6 -->
-- [ ] duplicate/empty/leading-hash/too-long tag validation과 inline error 구현 <!-- omo:id=delivery-tag-validation-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] suggestion/search/theme loading / empty / error / unauthorized 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] Vitest와 Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 누락된 36e workpack/acceptance/automation metadata 보강 <!-- omo:id=delivery-36e-workpack-gap;stage=4;scope=shared;review=5,6 -->
+- [x] HOME API helper/state가 `q`, `tag`, `GET /tags`, tag-backed themes를 소비 <!-- omo:id=delivery-home-tag-api-state;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME 검색 input이 제목+승인 tag label 검색으로 동작 <!-- omo:id=delivery-home-title-tag-search;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME tag chip/theme 선택이 한글 `normalized_key` exact filter로 동작 <!-- omo:id=delivery-home-exact-tag-filter;stage=4;scope=frontend;review=5,6 -->
+- [x] MANUAL_RECIPE_CREATE tag suggestion/review chip editor 구현 <!-- omo:id=delivery-manual-tag-editor;stage=4;scope=frontend;review=5,6 -->
+- [x] MANUAL_RECIPE_CREATE에서 수정 안 한 태그는 `tags` body 생략, 수정한 태그만 전송 <!-- omo:id=delivery-manual-tag-submit-policy;stage=4;scope=frontend;review=5,6 -->
+- [x] YT_IMPORT tag review chip editor와 register body 정책 구현 <!-- omo:id=delivery-youtube-tag-editor-submit;stage=4;scope=frontend;review=5,6 -->
+- [x] duplicate/empty/leading-hash/too-long tag validation과 inline error 구현 <!-- omo:id=delivery-tag-validation-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] suggestion/search/theme loading / empty / error / unauthorized 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest와 Playwright 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [ ] 320/390/mobile/desktop evidence와 authority report 작성 <!-- omo:id=delivery-design-evidence-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] 운영 backfill/reconcile이 UI slice에서 실행되지 않음을 closeout에 기록 <!-- omo:id=delivery-ops-boundary-closeout;stage=4;scope=shared;review=6 -->
+- [x] 운영 backfill/reconcile이 UI slice에서 실행되지 않음을 closeout에 기록 <!-- omo:id=delivery-ops-boundary-closeout;stage=4;scope=shared;review=6 -->
+
+## Closeout Notes
+
+- 36e implementation keeps server-side automatic tag generation intact by omitting `tags` from create/register payloads until the user edits the reviewed chip list.
+- HOME tag chip and tag-backed theme filters use the Korean `normalized_key` exactly, for example `tag=한식`; the UI does not create romanized filters such as `tag=hansik`.
+- Production DB migration application is an operations step requested with this slice, but production backfill/reconcile writes remain outside 36e and require separate explicit approval after dry-run review.

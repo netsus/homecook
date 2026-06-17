@@ -10,6 +10,7 @@ import {
   formatMealAddTargetLabel,
 } from "@/components/planner/meal-add-target-badge";
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
+import { RecipeTagEditor } from "@/components/recipe/recipe-tag-editor";
 import { Button } from "@/components/ui/button";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { ModalHeader } from "@/components/shared/modal-header";
@@ -18,9 +19,11 @@ import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import { createManualRecipe, uploadRecipeImage } from "@/lib/api/manual-recipe";
 import { createMealSafe } from "@/lib/api/meal";
+import { suggestRecipeTags } from "@/lib/api/recipe";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import { groupCookingMethodsByCategory } from "@/lib/cooking-method-taxonomy";
+import { buildReviewedRecipeTagsPayload } from "@/lib/recipe-tag-input";
 import { compressRecipeImageFile } from "@/lib/recipe-image-compression";
 import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 import {
@@ -670,8 +673,16 @@ export function ManualRecipeCreateScreen({
   const [uploadedStoragePath, setUploadedStoragePath] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [reviewedTags, setReviewedTags] = useState<string[]>([]);
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
+  const [areTagsDirty, setAreTagsDirty] = useState(false);
+  const [tagSuggestionState, setTagSuggestionState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [tagSuggestionError, setTagSuggestionError] = useState<string | null>(null);
+  const [tagSubmitError, setTagSubmitError] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const uploadRequestIdRef = useRef(0);
+  const tagSuggestionRequestIdRef = useRef(0);
+  const areTagsDirtyRef = useRef(false);
   const uploadedStoragePathRef = useRef<string | null>(null);
   const shouldCleanupUploadedImageRef = useRef(false);
   const isMountedRef = useRef(true);
@@ -920,6 +931,92 @@ export function ManualRecipeCreateScreen({
 
   const isUploading = imageStatus === "uploading";
 
+  useEffect(() => {
+    areTagsDirtyRef.current = areTagsDirty;
+  }, [areTagsDirty]);
+
+  const tagSuggestionInput = useMemo(() => {
+    const trimmedTitle = title.trim();
+
+    return {
+      source_type: "manual" as const,
+      title: trimmedTitle,
+      base_servings: baseServings,
+      ingredients: ingredients.map((ingredient) => ingredient.standard_name),
+      steps: steps.map((step) => ({
+        instruction: step.instruction,
+      })),
+      cooking_method_labels: steps
+        .map((step) => step.cooking_method?.label)
+        .filter((label): label is string => Boolean(label)),
+    };
+  }, [baseServings, ingredients, steps, title]);
+
+  const canSuggestTags =
+    tagSuggestionInput.title.length > 0 &&
+    tagSuggestionInput.ingredients.length > 0 &&
+    tagSuggestionInput.steps.length > 0;
+
+  const loadTagSuggestions = useCallback(async () => {
+    if (!canSuggestTags) {
+      tagSuggestionRequestIdRef.current += 1;
+      setSuggestedTags([]);
+      setTagSuggestionState("idle");
+      setTagSuggestionError(null);
+      return;
+    }
+
+    const requestId = tagSuggestionRequestIdRef.current + 1;
+    tagSuggestionRequestIdRef.current = requestId;
+    setTagSuggestionState("loading");
+    setTagSuggestionError(null);
+
+    const response = await suggestRecipeTags(tagSuggestionInput);
+    if (requestId !== tagSuggestionRequestIdRef.current) {
+      return;
+    }
+
+    if (!response.success || !response.data) {
+      setSuggestedTags([]);
+      setTagSuggestionState("error");
+      setTagSuggestionError("태그 추천을 불러오지 못했어요.");
+      return;
+    }
+
+    const nextTags = response.data.tags;
+    setSuggestedTags(nextTags);
+    setTagSuggestionState("ready");
+    setTagSuggestionError(null);
+    if (!areTagsDirtyRef.current) {
+      setReviewedTags(nextTags);
+    }
+  }, [canSuggestTags, tagSuggestionInput]);
+
+  useEffect(() => {
+    if (!canSuggestTags) {
+      tagSuggestionRequestIdRef.current += 1;
+      setSuggestedTags([]);
+      setTagSuggestionState("idle");
+      setTagSuggestionError(null);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void loadTagSuggestions();
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [canSuggestTags, loadTagSuggestions]);
+
+  const handleReviewedTagsChange = useCallback((nextTags: string[]) => {
+    areTagsDirtyRef.current = true;
+    setReviewedTags(nextTags);
+    setAreTagsDirty(true);
+    setTagSubmitError(null);
+  }, []);
+
   const handleSave = useCallback(async () => {
     if (isUploading) {
       return;
@@ -935,10 +1032,15 @@ export function ManualRecipeCreateScreen({
     setIsSaving(true);
     setSaveError(null);
 
+    const reviewedTagPayload = buildReviewedRecipeTagsPayload({
+      isDirty: areTagsDirty,
+      tags: reviewedTags,
+    });
     const response = await createManualRecipe({
       title: title.trim(),
       base_servings: baseServings,
       thumbnail_url: uploadedThumbnailUrl ?? undefined,
+      ...(reviewedTagPayload !== undefined ? { tags: reviewedTagPayload } : {}),
       ingredients: ingredients.map((ing, idx) => ({
         ingredient_id: ing.ingredient_id,
         standard_name: ing.standard_name,
@@ -961,6 +1063,9 @@ export function ManualRecipeCreateScreen({
     });
 
     if (!response.success || !response.data) {
+      if (response.error?.fields?.some((field) => field.field === "tags")) {
+        setTagSubmitError(response.error.message);
+      }
       setSaveError(response.error?.message ?? "레시피를 등록하지 못했어요.");
       setIsSaving(false);
       return;
@@ -971,7 +1076,17 @@ export function ManualRecipeCreateScreen({
     shouldCleanupUploadedImageRef.current = false;
     setModalMode("success");
     setIsSaving(false);
-  }, [isUploading, canSave, title, baseServings, uploadedThumbnailUrl, ingredients, steps]);
+  }, [
+    isUploading,
+    canSave,
+    title,
+    baseServings,
+    uploadedThumbnailUrl,
+    areTagsDirty,
+    reviewedTags,
+    ingredients,
+    steps,
+  ]);
 
   const handleMealAdd = useCallback(() => {
     if (!planDate || !columnId) {
@@ -1116,6 +1231,23 @@ export function ManualRecipeCreateScreen({
             </div>
           </div>
         ) : null}
+      </section>
+
+      <section className="web-manual-section">
+        <div className="web-manual-section-head">
+          <h2>태그</h2>
+          <span>선택사항</span>
+        </div>
+        <RecipeTagEditor
+          errorMessage={tagSubmitError}
+          hideHeader
+          isLoading={tagSuggestionState === "loading"}
+          onChange={handleReviewedTagsChange}
+          onRefreshSuggestions={() => void loadTagSuggestions()}
+          suggestedTags={suggestedTags}
+          suggestionErrorMessage={tagSuggestionError}
+          tags={reviewedTags}
+        />
       </section>
 
       <section className="web-manual-section">
@@ -1423,6 +1555,18 @@ export function ManualRecipeCreateScreen({
                 </div>
               </div>
             ) : null}
+          </section>
+
+          <section className="bg-[var(--surface)] px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
+            <RecipeTagEditor
+              errorMessage={tagSubmitError}
+              isLoading={tagSuggestionState === "loading"}
+              onChange={handleReviewedTagsChange}
+              onRefreshSuggestions={() => void loadTagSuggestions()}
+              suggestedTags={suggestedTags}
+              suggestionErrorMessage={tagSuggestionError}
+              tags={reviewedTags}
+            />
           </section>
 
           {/* Ingredients */}
