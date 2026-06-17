@@ -154,6 +154,7 @@ export interface ManualRecipeCreateBody {
   title: string;
   base_servings: number;
   thumbnail_url?: string | null;
+  tags?: string[];
   ingredients: ManualRecipeIngredientInput[];
   steps: ManualRecipeStepInput[];
 }
@@ -336,6 +337,7 @@ export interface YoutubeRecipeRegisterBody {
   title: string;
   base_servings: number;
   youtube_url: string;
+  tags?: string[];
   ingredients: YoutubeRecipeRegisterIngredientInput[];
   steps: YoutubeRecipeRegisterStepInput[];
 }
@@ -343,6 +345,27 @@ export interface YoutubeRecipeRegisterBody {
 export interface YoutubeRecipeRegisterData {
   recipe_id: string;
   title: string;
+}
+
+export interface RecipeTagSuggestionBody {
+  source_type?: "manual" | "system" | "youtube";
+  title?: string;
+  ingredients?: Array<string | { standard_name?: string; name?: string }>;
+  steps?: Array<string | { instruction?: string; text?: string }>;
+  cooking_method_labels?: string[];
+}
+
+export interface RecipeTagSuggestionItem {
+  normalized_key: string;
+  label: string;
+  kind: "semantic" | "source" | "user";
+  source: "system_suggested" | "user_reviewed" | "provider" | "backfill" | "admin";
+  confidence: number;
+}
+
+export interface RecipeTagSuggestionData {
+  suggested_tags: RecipeTagSuggestionItem[];
+  tags: string[];
 }
 
 export interface RecipioYoutubeDuplicateRecipe {

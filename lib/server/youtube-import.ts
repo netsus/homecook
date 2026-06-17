@@ -31,7 +31,11 @@ import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
-import { extractHashTagsFromText, generateRecipeTags } from "@/lib/server/recipe-media";
+import {
+  buildSuggestedRecipeTags,
+  normalizeReviewedRecipeTagLabels,
+  toRecipeTagLabels,
+} from "@/lib/server/recipe-tags";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import {
   buildTextSegments,
@@ -505,6 +509,8 @@ interface YoutubeRecipeRegisterRpcClient {
       p_base_servings: number;
       p_youtube_url: string;
       p_youtube_video_id: string;
+      p_tags: string[] | null;
+      p_tag_source: "system_suggested" | "user_reviewed";
       p_ingredients: YoutubeRecipeRegisterIngredientInput[];
       p_steps: YoutubeRecipeRegisterStepInput[];
     },
@@ -553,6 +559,7 @@ interface ParsedYoutubeRegister {
   videoId: string;
   ingredients: YoutubeRecipeRegisterIngredientInput[];
   steps: YoutubeRecipeRegisterStepInput[];
+  reviewedTags: string[] | null;
 }
 
 interface ParsedYoutubeIngredientRegistration {
@@ -8695,18 +8702,19 @@ function generateYoutubeExtractTags({
   steps: YoutubeRecipeExtractData["steps"];
   providerTags?: string[];
 }) {
-  return generateRecipeTags({
+  return toRecipeTagLabels(buildSuggestedRecipeTags({
+    sourceType: "youtube",
     title,
     ingredientNames: ingredients.map((ingredient) => ingredient.standard_name),
-    stepTexts: steps.map((step) => step.instruction),
+    stepTexts: [
+      ...steps.map((step) => step.instruction),
+      description ?? "",
+      ...(providerTags ?? []),
+    ],
     cookingMethodLabels: steps
       .map((step) => step.cooking_method?.label)
       .filter((label): label is string => typeof label === "string"),
-    providerTags: [
-      ...extractHashTagsFromText(description ?? ""),
-      ...(providerTags ?? []),
-    ],
-  });
+  }));
 }
 
 function candidateSourceToExtractionMethod(source: YoutubePublicTextSource) {
@@ -9508,8 +9516,13 @@ function parseYoutubeRegisterBody(rawBody: unknown) {
     fields.push({ field: "thumbnail_url", reason: "not_allowed" });
   }
 
+  let reviewedTags: string[] | null = null;
   if (rawBody.tags !== undefined) {
-    fields.push({ field: "tags", reason: "not_allowed" });
+    const tagResult = normalizeReviewedRecipeTagLabels(rawBody.tags);
+    fields.push(...tagResult.fields);
+    if (tagResult.fields.length === 0) {
+      reviewedTags = toRecipeTagLabels(tagResult.tags);
+    }
   }
 
   const extractionId = typeof rawBody.extraction_id === "string" ? rawBody.extraction_id.trim() : "";
@@ -9623,6 +9636,7 @@ function parseYoutubeRegisterBody(rawBody: unknown) {
           videoId: parsedUrl.videoId,
           ingredients,
           steps,
+          reviewedTags,
         } satisfies ParsedYoutubeRegister)
       : null;
 
@@ -10454,6 +10468,8 @@ export async function handleYoutubeRegister(request: Request) {
       p_base_servings: parsed.baseServings,
       p_youtube_url: parsed.youtubeUrl,
       p_youtube_video_id: parsed.videoId,
+      p_tags: parsed.reviewedTags,
+      p_tag_source: parsed.reviewedTags === null ? "system_suggested" : "user_reviewed",
       p_ingredients: parsed.ingredients,
       p_steps: parsed.steps,
     },
