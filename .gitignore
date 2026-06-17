@@ -77,3 +77,7 @@ test-results/
 # supabase local
 supabase/.temp/
 supabase/.branches/
+
+# Agent Message Queue
+.agent-mail/
+.amqrc
