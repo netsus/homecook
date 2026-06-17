@@ -84,6 +84,70 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "pnpm vitest run tests/recipe-tags-search.test.ts tests/recipe-tags-route.test.ts tests/recipe-themes.test.ts tests/supabase-server.test.ts",
+        "pnpm vitest run --config vitest.product.config.ts tests/recipe-api-contracts.test.ts tests/08a-meal-add-search-core.backend.test.ts",
+        "pnpm vitest run tests/recipe-themes.test.ts tests/recipe-api-contracts.test.ts",
+        "pnpm lint",
+        "pnpm typecheck",
+        "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key PLAYWRIGHT_BASE_URL=http://127.0.0.1:3118 pnpm verify:backend",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 36c-recipe-tags-search-themes",
+        "git diff --check",
+        "pnpm exec supabase db reset --local --yes",
+        "local Supabase psql smoke: 36c RPC signatures, P0 seed count 36, list_public_recipe_tags, find_recipe_ids_by_public_tags, list_home_theme_recipes"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-snapshot",
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 1,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-06-17T16:55:00+09:00"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 1,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "closeout_snapshot_required_after_policy_fail",
+      "evidence_sources": [
+        "PR #775 policy run 27674155085",
+        "docs/workpacks/36c-recipe-tags-search-themes/README.md",
+        "docs/workpacks/36c-recipe-tags-search-themes/acceptance.md",
+        "pnpm verify:backend",
+        "pnpm exec supabase db reset --local --yes",
+        "local Supabase psql smoke"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-06-17T16:55:00+09:00",
+      "status_synced_at": "2026-06-17T16:55:00+09:00",
+      "pr_body_synced_at": "2026-06-17T16:55:00+09:00"
+    }
+  },
   "out_of_scope": [
     "P0 semantic rule fixture expansion",
     "existing recipe backfill dry-run/report",
