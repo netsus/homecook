@@ -84,6 +84,19 @@ KNOWN_EXTERNAL_PROTECTED_ACCESS_PROCESSES = {
 }
 LOW_UNIQUENESS_FRAGMENT_CATEGORIES = {"recipe_title", "ingredient_name", "ingredient_alias"}
 EXACT_PUBLIC_FRAGMENT_CATEGORIES = {"ingredient_quantity", "step_instruction"}
+# 짧고 흔한 조리 어휘는 단독 등장만으로 정답 누수의 강한 증거가 아니다.
+# canary, 분량 결합, 단계 문장, 긴 고유 재료명은 계속 hard gate로 둔다.
+LOW_UNIQUENESS_MAX_COMPACT = 3
+COMMON_VOCAB_MIN_CASES = 2
+COMMON_COOKING_VOCAB = {
+    "물", "소금", "설탕", "간장", "식용유", "참기름", "들기름", "고춧가루", "고추장", "된장",
+    "맛술", "식초", "후추", "깨", "통깨", "마늘", "대파", "양파", "당근", "감자", "고기",
+    "밥", "면", "카레", "수프", "육수", "MSG",
+}
+ANSWER_LEAK_PREVENTION_INSTRUCTION = (
+    "validation/holdout 정답 원문(제목·재료명·분량·단계 문장)을 그대로 옮기지 마라. "
+    "실패는 카테고리·지표·인덱스로만 기술하라."
+)
 TOKEN_BOUNDARY_RE = re.compile(r"[0-9A-Za-z가-힣]")
 IMPLEMENTATION_ACCESS_GUARD_COUNTER_KEYS = (
     "codex_subtree_hit_count",
@@ -938,6 +951,54 @@ def _normalized_text(value) -> str:
     return " ".join(str(value or "").split()).strip()
 
 
+def _common_vocabulary_tokens(splits: list[str], min_cases: int = COMMON_VOCAB_MIN_CASES) -> set[str]:
+    """LOW_UNIQUENESS 카테고리(제목/재료명/별칭)에서 여러 golden 케이스에 걸쳐 등장하는
+    흔한 어휘의 compact 토큰 집합. 한 케이스에만 있는 고유 정답은 제외한다."""
+    case_counts: dict[str, set[str]] = {}
+    for split in splits:
+        split_dir = DATA_ROOT / split
+        if not split_dir.exists():
+            continue
+        for golden_path in split_dir.glob("*/golden.json"):
+            golden = read_json(golden_path)
+            case_id = f"{split}/{golden_path.parent.name}"
+            tokens: set[str] = set()
+            for recipe in (golden or {}).get("recipes", []):
+                for value in (recipe.get("title"),):
+                    compact = _compact_text(_normalized_text(value))
+                    if compact:
+                        tokens.add(compact)
+                for ingredient in recipe.get("ingredients", []):
+                    if not isinstance(ingredient, dict):
+                        continue
+                    for value in (ingredient.get("name"), *(ingredient.get("nameAliases") or [])):
+                        compact = _compact_text(_normalized_text(value))
+                        if compact:
+                            tokens.add(compact)
+            for token in tokens:
+                case_counts.setdefault(token, set()).add(case_id)
+    return {token for token, cases in case_counts.items() if len(cases) >= min_cases}
+
+
+def _common_cooking_vocab_tokens() -> set[str]:
+    return {_compact_text(token) for token in COMMON_COOKING_VOCAB if _compact_text(token)}
+
+
+def _is_generic_low_uniqueness(category: str, value, common_tokens: set[str]) -> bool:
+    """LOW_UNIQUENESS 카테고리에서 hard gate보다 advisory가 맞는 일반 조리 어휘인지."""
+    if category not in LOW_UNIQUENESS_FRAGMENT_CATEGORIES:
+        return False
+    normalized = _normalized_text(value)
+    compact = _compact_text(normalized)
+    if not compact:
+        return False
+    if compact in _common_cooking_vocab_tokens():
+        return True
+    if compact in common_tokens:
+        return True
+    return " " not in normalized and len(compact) <= LOW_UNIQUENESS_MAX_COMPACT
+
+
 def _golden_fragment_values(splits: list[str]) -> dict[str, set[str]]:
     values: dict[str, set[str]] = {}
 
@@ -982,7 +1043,10 @@ def _fragment_overlaps_values(category: str, text: str, values: dict[str, set[st
     compact = _compact_text(text)
     if not compact:
         return False
-    for value in values.get(category, set()):
+    categories = [category]
+    if category in LOW_UNIQUENESS_FRAGMENT_CATEGORIES:
+        categories = sorted(LOW_UNIQUENESS_FRAGMENT_CATEGORIES)
+    for value in set().union(*(values.get(candidate, set()) for candidate in categories)):
         other = _compact_text(value)
         if not other:
             continue
@@ -1116,6 +1180,15 @@ def protected_answer_fragments(splits: list[str] | None = None) -> list[dict]:
                         train_public_values,
                         non_holdout_values,
                     )
+    common_tokens = _common_vocabulary_tokens(["train", "validation", "holdout"])
+    for fragment in fragments:
+        generic_low_uniqueness = _is_generic_low_uniqueness(
+            fragment.get("category") or "",
+            fragment.get("value"),
+            common_tokens,
+        )
+        fragment["generic_low_uniqueness"] = generic_low_uniqueness
+        fragment["generic_module_vocab"] = generic_low_uniqueness
     return fragments
 
 
@@ -1140,7 +1213,11 @@ def classify_protected_hit(fragment: dict, gate: bool, artifact_split: str | Non
     if category == "canary" and gate:
         return "primary_canary"
     if gate:
-        return "advisory" if fragment.get("public_overlap") else "gate"
+        if fragment.get("public_overlap"):
+            return "advisory"
+        if fragment.get("generic_low_uniqueness") or fragment.get("generic_module_vocab"):
+            return "advisory"
+        return "gate"
     if split == "holdout" and artifact_split != "holdout":
         if category == "canary" or (fragment.get("holdout_only") and category == "step_instruction"):
             return "secondary_hard"
@@ -1523,6 +1600,7 @@ def build_plan_prompt(cfg: LoopConfig, baseline_summary: str, weak_cases: str, f
     return header + "\n" + body + (
         "\n출력은 마크다운 세 문단: 1) 이번에 바꿀 점 2) 유지할 점 3) 구현자 주의사항.\n"
         "validation/holdout 정답은 알 수 없다고 가정하라.\n"
+        f"{ANSWER_LEAK_PREVENTION_INSTRUCTION}\n"
     )
 
 
@@ -1545,6 +1623,7 @@ def build_implement_prompt(plan_text: str, feedback: str) -> str:
         "구현 지침:\n"
         "- train은 학습용 공개 진단 데이터지만, 이 allowlist workspace에는 제공되지 않는다.\n"
         "- validation/holdout 정답, cache, 과거 run 산출물, judge output, decision log는 읽거나 요청하지 마라.\n"
+        f"- {ANSWER_LEAK_PREVENTION_INSTRUCTION}\n"
         "- 특정 영상 정답을 코드에 하드코딩하지 마라.\n"
         "- 범용 추출 품질(다중 레시피 누락 방지, 분량 추정, 재료 투입 순서)을 높이는 방향으로 프롬프트/후처리를 개선하라.\n"
     )
@@ -1554,6 +1633,7 @@ def build_diagnosis_prompt(det_summary: str, ai_summary: str, val_summary: str, 
     return (
         "너는 실패 원인 분석 담당 Claude다. 아래 정보만 보고 다음 수정 방향을 제시하라.\n"
         "validation 케이스의 입력·정답·출력은 제공되지 않으며(집계만), 추측하지 마라.\n\n"
+        f"{ANSWER_LEAK_PREVENTION_INSTRUCTION}\n\n"
         f"train 결정적 채점:\n{det_summary}\n\n"
         f"train AI 의미 채점:\n{ai_summary}\n\n"
         f"validation 집계(참고):\n{val_summary}\n\n"
@@ -1763,10 +1843,30 @@ def weak_train_cases_text(cfg: LoopConfig, out_tag: str, limit: int = 4) -> str:
     return "\n".join(lines)
 
 
+def fmt_deduction_reasons(agg: dict) -> str:
+    reasons = agg.get("deductionReasons") or {}
+    parts: list[str] = []
+    amount_counts = ((reasons.get("amount") or {}).get("counts") or {})
+    amount_parts = [f"{key} {value}" for key, value in sorted(amount_counts.items()) if value]
+    if amount_parts:
+        parts.append("amountReasons " + ", ".join(amount_parts))
+    step_reasons = reasons.get("step") or {}
+    step_parts = []
+    if step_reasons.get("nearThresholdCount"):
+        step_parts.append(f"nearThreshold {step_reasons.get('nearThresholdCount')}")
+    best_similarity = step_reasons.get("bestSimilarity") or {}
+    if best_similarity.get("avg") is not None:
+        step_parts.append(f"bestSimilarityAvg {best_similarity.get('avg')}")
+    if step_parts:
+        parts.append("stepReasons " + ", ".join(step_parts))
+    return "; 사유 " + "; ".join(parts) if parts else ""
+
+
 def fmt_det(agg: dict) -> str:
-    return (f"재료F1 {agg.get('ingredientF1')}, 분량 {agg.get('amountMatchRate')}, "
+    base = (f"재료F1 {agg.get('ingredientF1')}, 분량 {agg.get('amountMatchRate')}, "
             f"단계 {agg.get('stepCoverage')}, 레시피개수일치 {agg.get('recipeCountMatchRate')} "
             f"(누락 {agg.get('recipesMissedTotal')}/초과 {agg.get('recipesExtraTotal')})")
+    return base + fmt_deduction_reasons(agg)
 
 
 def fmt_ai(agg: dict) -> str:

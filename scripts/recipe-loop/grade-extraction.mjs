@@ -10,7 +10,7 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import { gradeDeterministic, prepareCanaryGradingInputs, summarizeCanaryLeaks } from "./lib/grading.mjs";
+import { gradeDeterministic, mergeDeductionReasonSummaries, prepareCanaryGradingInputs, summarizeCanaryLeaks } from "./lib/grading.mjs";
 
 const PROJECT_ROOT = process.cwd();
 const DATA_ROOT = "notebooks/recipe_loop_data";
@@ -134,6 +134,7 @@ async function main() {
     stepCoverage: r3(mean(rows.map((r) => r.stepCoverage))),
     recipesMissedTotal: rows.reduce((a, r) => a + (r.recipesMissed ?? 0), 0),
     recipesExtraTotal: rows.reduce((a, r) => a + (r.recipesExtra ?? 0), 0),
+    deductionReasons: mergeDeductionReasonSummaries(rows.map((r) => r.deductionReasons)),
     canaryLeak,
   };
 
