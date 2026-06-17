@@ -336,6 +336,132 @@ describe("recipe-loop local integrity gates", () => {
     expect(rows["one-bag-step"].stepCoverage).toBeLessThan(1);
   });
 
+  it("records deduction reason aggregates without leaking golden answer text", () => {
+    writeJson(path.join(splitCase(workdir, "amount-unit"), "golden.json"), {
+      schemaVersion: 1,
+      videoId: "amount-unit",
+      reviewStatus: "approved",
+      recipes: [{
+        title: "비밀단위요리",
+        ingredients: [{ name: "정답비밀재료A", amount: "2", unit: "큰술" }],
+        steps: [{ order: 1, instruction: "정답 단위 단계 문장" }],
+      }],
+    });
+    writeJson(path.join(splitCase(workdir, "amount-unit"), "runs/latest/result.json"), {
+      recipes: [{
+        title: "예측 단위요리",
+        ingredients: [{ name: "정답비밀재료A", amount: "2", unit: "컵" }],
+        steps: ["정답 단위 단계 문장"],
+      }],
+    });
+    writeJson(path.join(splitCase(workdir, "amount-value"), "golden.json"), {
+      schemaVersion: 1,
+      videoId: "amount-value",
+      reviewStatus: "approved",
+      recipes: [{
+        title: "비밀값요리",
+        ingredients: [{ name: "정답비밀재료B", amount: "2", unit: "큰술" }],
+        steps: [{ order: 1, instruction: "정답 값 단계 문장" }],
+      }],
+    });
+    writeJson(path.join(splitCase(workdir, "amount-value"), "runs/latest/result.json"), {
+      recipes: [{
+        title: "예측 값요리",
+        ingredients: [{ name: "정답비밀재료B", amount: "10", unit: "큰술" }],
+        steps: ["정답 값 단계 문장"],
+      }],
+    });
+    writeJson(path.join(splitCase(workdir, "amount-missing-reason"), "golden.json"), {
+      schemaVersion: 1,
+      videoId: "amount-missing-reason",
+      reviewStatus: "approved",
+      recipes: [{
+        title: "비밀누락요리",
+        ingredients: [{ name: "정답비밀재료C", amount: "2", unit: "큰술" }],
+        steps: [{ order: 1, instruction: "정답 누락 단계 문장" }],
+      }],
+    });
+    writeJson(path.join(splitCase(workdir, "amount-missing-reason"), "runs/latest/result.json"), {
+      recipes: [{
+        title: "예측 누락요리",
+        ingredients: [{ name: "정답비밀재료C", amount: null, unit: "큰술" }],
+        steps: ["정답 누락 단계 문장"],
+      }],
+    });
+    writeJson(path.join(splitCase(workdir, "amount-basis"), "golden.json"), {
+      schemaVersion: 1,
+      videoId: "amount-basis",
+      reviewStatus: "approved",
+      recipes: [{
+        title: "비밀추정요리",
+        ingredients: [{ name: "정답비밀재료D", amount: "2", unit: "큰술" }],
+        steps: [{ order: 1, instruction: "정답 추정 단계 문장" }],
+      }],
+    });
+    writeJson(path.join(splitCase(workdir, "amount-basis"), "runs/latest/result.json"), {
+      recipes: [{
+        title: "예측 추정요리",
+        ingredients: [{ name: "정답비밀재료D", amount: "5", unit: "큰술" }],
+        steps: ["정답 추정 단계 문장"],
+      }],
+    });
+    writeJson(path.join(splitCase(workdir, "step-near"), "golden.json"), {
+      schemaVersion: 1,
+      videoId: "step-near",
+      reviewStatus: "approved",
+      recipes: [{
+        title: "비밀단계요리",
+        ingredients: [{ name: "정답비밀재료E", amount: "1", unit: "개" }],
+        steps: [{ order: 1, instruction: "양파 당근 대파 버섯 고기 간장 설탕 참기름" }],
+      }],
+    });
+    writeJson(path.join(splitCase(workdir, "step-near"), "runs/latest/result.json"), {
+      recipes: [{
+        title: "예측 단계요리",
+        ingredients: [{ name: "정답비밀재료E", amount: "1", unit: "개" }],
+        steps: ["양파 당근 대파만 넣는다"],
+      }],
+    });
+
+    const result = spawnSync(
+      "node",
+      [gradeExtractionScript, "--split", "validation", "--out-tag", "latest", "--expected-count", "5"],
+      { cwd: workdir, encoding: "utf8" },
+    );
+
+    expect(result.status).toBe(0);
+    const summary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_grade_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    expect(summary.aggregate.deductionReasons.amount.counts).toMatchObject({
+      unit_mismatch: 1,
+      value_out_of_band: 1,
+      model_missing: 1,
+      amountBasis_band_diff: 1,
+    });
+    expect(summary.aggregate.deductionReasons.step.nearThresholdCount).toBe(1);
+    expect(summary.aggregate.deductionReasons.step.bestSimilarity.avg).toBeCloseTo(0.375, 3);
+    const reasonsJson = JSON.stringify(summary.aggregate.deductionReasons);
+    expect(reasonsJson).not.toContain("비밀단위요리");
+    expect(reasonsJson).not.toContain("정답비밀재료A");
+    expect(reasonsJson).not.toContain("양파 당근 대파 버섯 고기 간장 설탕 참기름");
+
+    const row = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/step-near/runs/latest/grade.json"),
+        "utf8",
+      ),
+    );
+    const rowReasonsJson = JSON.stringify(row.deductionReasons);
+    expect(rowReasonsJson).toContain("nearThreshold");
+    expect(rowReasonsJson).not.toContain("비밀단계요리");
+    expect(rowReasonsJson).not.toContain("정답비밀재료E");
+    expect(rowReasonsJson).not.toContain("양파 당근 대파 버섯 고기 간장 설탕 참기름");
+  });
+
   it("strips flagged golden canaries from deterministic scoring while recording clean coverage", () => {
     writeJson(path.join(splitCase(workdir, validationCanaryVideoId), "golden.json"), approvedCanaryGolden());
     writeJson(
@@ -1032,7 +1158,7 @@ print(json.dumps({"ok": ok, "checks": checks}))
     expect(report.checks.threshold_success).toBe(false);
   });
 
-  it("subtracts train-public containment terms without dropping short protected titles", () => {
+  it("keeps short protected titles as fragments while classifying low-uniqueness hits as advisory", () => {
     const result = runLoopPython(`
 from pathlib import Path
 root = Path(${JSON.stringify(workdir)})
@@ -1071,7 +1197,9 @@ print(json.dumps({
     expect(report.titles).not.toContain("고추다대기");
     expect(report.titles).toContain("잡채");
     expect(report.scan_public.success).toBe(true);
-    expect(report.scan_short_unique.success).toBe(false);
+    expect(report.scan_short_unique.success).toBe(true);
+    expect(report.scan_short_unique.blocking_hit_count).toBe(0);
+    expect(report.scan_short_unique.advisory_hit_count).toBeGreaterThan(0);
   });
 
   it("keeps canary and holdout-only step leaks as hard failures while low-uniqueness artifact hits stay advisory", () => {
@@ -1131,7 +1259,7 @@ print(json.dumps({
     expect(report.holdout_step_artifact.secondary_hard_hit_count).toBe(1);
   });
 
-  it("treats generic and shared cooking vocabulary in module source as advisory while distinctive answers still hard-gate", () => {
+  it("treats generic and shared cooking vocabulary as advisory across module and agent-facing scans", () => {
     const result = runLoopPython(`
 from pathlib import Path
 root = Path(${JSON.stringify(workdir)})
@@ -1145,28 +1273,30 @@ def write_golden(split, video_id, recipes):
 # 식용유: train 재료명(다수) + validation 별칭(cross-category 공용 어휘). 카레: holdout 단일 짧은 토큰.
 write_golden("train", "train-a", [{"title": "공개 볶음", "ingredients": [{"name": "식용유", "amount": "1", "unit": "큰술"}], "steps": [{"order": 1, "instruction": "공개 조리 문장 하나"}]}])
 write_golden("train", "train-b", [{"title": "공개 무침", "ingredients": [{"name": "식용유", "amount": "1", "unit": "큰술"}], "steps": [{"order": 1, "instruction": "다른 공개 조리 문장"}]}])
-write_golden("validation", "val-a", [{"title": "검증 고유 요리", "ingredients": [{"name": "콩기름", "nameAliases": ["식용유"], "amount": "1", "unit": "큰술"}, {"name": "비밀고유재료세트", "amount": "1", "unit": "개"}], "steps": [{"order": 1, "instruction": "검증 고유 조리 문장"}]}])
+write_golden("validation", "val-a", [{"title": "검증 고유 요리", "ingredients": [{"name": "콩기름", "nameAliases": ["식용유"], "amount": "1", "unit": "큰술"}, {"name": "감칠맛가루", "nameAliases": ["MSG"], "amount": "1", "unit": "꼬집"}, {"name": "비밀고유재료세트", "amount": "1", "unit": "개"}], "steps": [{"order": 1, "instruction": "검증 고유 조리 문장"}]}])
 write_golden("holdout", "hold-a", [{"title": "홀드 요리", "ingredients": [{"name": "카레", "amount": "1", "unit": "개"}], "steps": [{"order": 1, "instruction": "홀드 고유 조리 문장"}]}])
 
 fragments = loop.protected_answer_fragments(["validation", "holdout"])
-module_like = "const DISH_WORD_RE = /카레|수프/; const STOP = new Set(['식용유', '소금']);"
+module_like = "const DISH_WORD_RE = /카레|수프/; const STOP = new Set(['식용유', '소금', 'MSG']);"
 module_scan = loop.scan_texts_for_protected_answers([{"scope": "recipe_extraction_lab_modules", "text": module_like, "module_source": True}], fragments)
 module_unique = loop.scan_texts_for_protected_answers([{"scope": "recipe_extraction_lab_modules", "text": "비밀고유재료세트", "module_source": True}], fragments)
-prompt_generic = loop.scan_texts_for_protected_answers([{"scope": "06_diagnosis_prompt", "text": "카레"}], fragments)
-print(json.dumps({"module": module_scan, "module_unique": module_unique, "prompt": prompt_generic}, ensure_ascii=False))
+prompt_generic = loop.scan_texts_for_protected_answers([{"scope": "06_diagnosis_prompt", "text": "카레 식용유 MSG"}], fragments)
+prompt_unique = loop.scan_texts_for_protected_answers([{"scope": "06_diagnosis_prompt", "text": "비밀고유재료세트"}], fragments)
+print(json.dumps({"module": module_scan, "module_unique": module_unique, "prompt": prompt_generic, "prompt_unique": prompt_unique}, ensure_ascii=False))
 `);
 
     expect(result.status).toBe(0);
     const report = JSON.parse(result.stdout);
-    // 모듈 소스의 일반/공용 어휘(식용유·카레)는 hard gate가 아니라 advisory여야 한다
     expect(report.module.blocking_hit_count).toBe(0);
     expect(report.module.success).toBe(true);
     expect(report.module.advisory_hit_count).toBeGreaterThan(0);
-    // 모듈 소스라도 고유 정답은 여전히 차단된다
     expect(report.module_unique.success).toBe(false);
     expect(report.module_unique.blocking_hit_count).toBeGreaterThan(0);
-    // 컨텍스트 분리: agent-facing 스캔에서는 일반 어휘도 보수적으로 차단(모듈 완화가 전역으로 새지 않음)
-    expect(report.prompt.success).toBe(false);
+    expect(report.prompt.success).toBe(true);
+    expect(report.prompt.blocking_hit_count).toBe(0);
+    expect(report.prompt.advisory_hit_count).toBeGreaterThan(0);
+    expect(report.prompt_unique.success).toBe(false);
+    expect(report.prompt_unique.blocking_hit_count).toBeGreaterThan(0);
   });
 
   it("fails the loop decision when protected answers appear in decision or log outputs", () => {
@@ -2118,6 +2248,40 @@ print(json.dumps({
     expect(report.has_allowlist).toBe(true);
     expect(report.has_validation_holdout).toBe(true);
     expect(report.has_git).toBe(true);
+  });
+
+  it("keeps diagnosis and next-iteration prompts aggregate-only with explicit answer-leak warnings", () => {
+    const result = runLoopPython(`
+agg = {
+    "ingredientF1": 0.5,
+    "amountMatchRate": 0.25,
+    "stepCoverage": 0.375,
+    "recipeCountMatchRate": 1,
+    "recipesMissedTotal": 0,
+    "recipesExtraTotal": 0,
+    "deductionReasons": {
+        "amount": {"counts": {"unit_mismatch": 2, "amountBasis_band_diff": 1}},
+        "step": {"nearThresholdCount": 1, "bestSimilarity": {"avg": 0.375}},
+    },
+    "perRecipe": [{"title": "검증비밀제목"}],
+}
+det = loop.fmt_det(agg)
+diagnosis = loop.build_diagnosis_prompt(det, "AI 평균 2.5", det, "- train-a (공개 train 제목): 재료F1 0.5")
+plan = loop.build_plan_prompt(loop.LoopConfig(), det, "- train-a (공개 train 제목): 재료F1 0.5", "", True)
+implement = loop.build_implement_prompt("계획", "unit_mismatch 2건")
+combined = "\\n".join([diagnosis, plan, implement])
+print(json.dumps({
+    "det_has_reasons": "unit_mismatch" in det and "nearThreshold" in det,
+    "has_no_raw_answer_warning": "정답 원문" in combined and "카테고리" in combined and "지표" in combined,
+    "leaked_per_recipe_title": "검증비밀제목" in combined or "검증비밀제목" in det,
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.det_has_reasons).toBe(true);
+    expect(report.has_no_raw_answer_warning).toBe(true);
+    expect(report.leaked_per_recipe_title).toBe(false);
   });
 
   it("uses non-interactive sudo for fs_usage when the loop is not already root", () => {

@@ -7,6 +7,9 @@ const CANARY_CASES = {
 };
 const REDACTED_CANARY_HIT = "leak canary token redacted";
 const REMOVED_CANARY = Symbol("removed-canary");
+const AMOUNT_REASON_KEYS = ["unit_mismatch", "value_out_of_band", "model_missing", "amountBasis_band_diff"];
+const STEP_NEAR_THRESHOLD_LO = 0.35;
+const STEP_COVERAGE_THRESHOLD = 0.4;
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value ?? null));
@@ -254,6 +257,91 @@ function parseAmountValue(amount) {
   return num ? parseFloat(num[0]) : null;
 }
 
+function emptyDeductionReasons() {
+  return {
+    amount: {
+      total: 0,
+      counts: Object.fromEntries(AMOUNT_REASON_KEYS.map((key) => [key, 0])),
+    },
+    step: {
+      uncoveredCount: 0,
+      nearThresholdCount: 0,
+      bestSimilarity: { min: null, avg: null, max: null, count: 0 },
+      buckets: { below_threshold: 0, near_threshold: 0 },
+    },
+  };
+}
+
+function summarizeDeductionEvents({ amountReasons = [], stepUncovered = [] } = {}, { includeDetails = false } = {}) {
+  const summary = emptyDeductionReasons();
+  for (const item of amountReasons) {
+    if (!AMOUNT_REASON_KEYS.includes(item.reason)) continue;
+    summary.amount.total += 1;
+    summary.amount.counts[item.reason] += 1;
+  }
+
+  const similarities = stepUncovered
+    .map((item) => item.bestSimilarity)
+    .filter((value) => value !== null && value !== undefined);
+  summary.step.uncoveredCount = stepUncovered.length;
+  summary.step.nearThresholdCount = stepUncovered.filter((item) => item.nearThreshold).length;
+  summary.step.buckets.near_threshold = summary.step.nearThresholdCount;
+  summary.step.buckets.below_threshold = Math.max(0, stepUncovered.length - summary.step.nearThresholdCount);
+  if (similarities.length > 0) {
+    summary.step.bestSimilarity = {
+      min: round(Math.min(...similarities)),
+      avg: round(similarities.reduce((a, b) => a + b, 0) / similarities.length),
+      max: round(Math.max(...similarities)),
+      count: similarities.length,
+    };
+  }
+  if (includeDetails) {
+    summary.amount.items = amountReasons.map((item) => ({
+      ingredientIndex: item.ingredientIndex,
+      reason: item.reason,
+    }));
+    summary.step.uncovered = stepUncovered.map((item) => ({
+      stepIndex: item.stepIndex,
+      bestSimilarity: item.bestSimilarity,
+      nearThreshold: item.nearThreshold,
+    }));
+  }
+  return summary;
+}
+
+export function mergeDeductionReasonSummaries(summaries = []) {
+  const merged = emptyDeductionReasons();
+  let similarityWeightedSum = 0;
+  for (const summary of summaries) {
+    if (!summary) continue;
+    const amountCounts = summary.amount?.counts ?? {};
+    for (const key of AMOUNT_REASON_KEYS) {
+      const count = amountCounts[key] ?? 0;
+      merged.amount.counts[key] += count;
+      merged.amount.total += count;
+    }
+    const step = summary.step ?? {};
+    merged.step.uncoveredCount += step.uncoveredCount ?? 0;
+    merged.step.nearThresholdCount += step.nearThresholdCount ?? 0;
+    merged.step.buckets.near_threshold += step.nearThresholdCount ?? 0;
+    merged.step.buckets.below_threshold += Math.max(0, (step.uncoveredCount ?? 0) - (step.nearThresholdCount ?? 0));
+    const best = step.bestSimilarity ?? {};
+    const count = best.count ?? 0;
+    if (count > 0) {
+      merged.step.bestSimilarity.min = merged.step.bestSimilarity.min === null ? best.min : Math.min(merged.step.bestSimilarity.min, best.min);
+      merged.step.bestSimilarity.max = merged.step.bestSimilarity.max === null ? best.max : Math.max(merged.step.bestSimilarity.max, best.max);
+      merged.step.bestSimilarity.count += count;
+      similarityWeightedSum += (best.avg ?? 0) * count;
+    }
+  }
+  if (merged.step.bestSimilarity.count > 0) {
+    merged.step.bestSimilarity.avg = round(similarityWeightedSum / merged.step.bestSimilarity.count);
+    merged.step.bestSimilarity.min = round(merged.step.bestSimilarity.min);
+    merged.step.bestSimilarity.max = round(merged.step.bestSimilarity.max);
+  }
+  return merged;
+}
+
 // 분량이 "충분히 가깝다"고 볼지: 단위 일치 + 수치 비율 0.5~2배 이내(시각추정은 더 관대).
 function compareAmount(goldenIng, predIng) {
   const gUnit = canonicalUnit(goldenIng.unit);
@@ -264,17 +352,20 @@ function compareAmount(goldenIng, predIng) {
     return { scored: false, provided: pVal !== null && pVal !== undefined, matched: null };
   }
   if (pVal === null || pVal === undefined) {
-    return { scored: true, provided: false, matched: false, reason: "missing_pred_amount" };
+    return { scored: true, provided: false, matched: false, reason: "model_missing" };
   }
   if (gUnit !== pUnit) return { scored: true, provided: true, matched: false, reason: "unit_mismatch" };
   if (gVal === 0 || pVal === 0) {
-    return { scored: true, provided: true, matched: gVal === pVal };
+    const matched = gVal === pVal;
+    return { scored: true, provided: true, matched, reason: matched ? null : "value_out_of_band" };
   }
   const ratio = gVal / pVal;
   const tolerant = goldenIng.amountBasis === "visual-estimate" || predIng.amountBasis === "visual-estimate";
-  const lo = tolerant ? 0.34 : 0.5;
-  const hi = tolerant ? 3 : 2;
-  return { scored: true, provided: true, matched: ratio >= lo && ratio <= hi };
+  const strictMatched = ratio >= 0.5 && ratio <= 2;
+  const tolerantMatched = ratio >= 0.34 && ratio <= 3;
+  const matched = tolerant ? tolerantMatched : strictMatched;
+  const reason = matched ? null : (!tolerant && tolerantMatched ? "amountBasis_band_diff" : "value_out_of_band");
+  return { scored: true, provided: true, matched, reason, ratio: round(ratio) };
 }
 
 // 단계 커버리지: golden step의 핵심 토큰(2글자+ 명사 추정)이 예측 step들에 등장하는 비율.
@@ -304,7 +395,8 @@ function stepCoverage(goldenSteps, predSteps) {
   if (goldenSteps.length === 0) return { covered: 0, total: 0, ratio: 1 };
   let covered = 0;
   const usedPred = new Set();
-  for (const gsRaw of goldenSteps) {
+  const uncovered = [];
+  for (const [stepIndex, gsRaw] of goldenSteps.entries()) {
     const tokens = stepTokens(stepText(gsRaw));
     if (tokens.length === 0) { covered += 1; continue; }
     let bestIdx = -1;
@@ -317,12 +409,18 @@ function stepCoverage(goldenSteps, predSteps) {
         bestIdx = idx;
       }
     });
-    if (bestIdx >= 0 && bestScore >= 0.4) {
+    if (bestIdx >= 0 && bestScore >= STEP_COVERAGE_THRESHOLD) {
       usedPred.add(bestIdx);
       covered += 1;
+    } else {
+      uncovered.push({
+        stepIndex,
+        bestSimilarity: round(bestScore),
+        nearThreshold: bestScore >= STEP_NEAR_THRESHOLD_LO && bestScore < STEP_COVERAGE_THRESHOLD,
+      });
     }
   }
-  return { covered, total: goldenSteps.length, ratio: covered / goldenSteps.length };
+  return { covered, total: goldenSteps.length, ratio: covered / goldenSteps.length, uncovered };
 }
 
 // 다중 레시피: golden recipe ↔ predicted recipe를 (제목 + 재료 겹침) 유사도로 매칭.
@@ -381,26 +479,30 @@ function titleSimilarity(a, b) {
 
 function scoreRecipePair(golden, pred) {
   if (!pred) {
-    return { matched: false, ingredientF1: 0, ingredientPrecision: 0, ingredientRecall: 0, amountMatchRate: 0, amountCoverage: 0, amountComparable: 0, stepCoverage: 0, goldenIngredients: golden.ingredients.length };
+    return { matched: false, ingredientF1: 0, ingredientPrecision: 0, ingredientRecall: 0, amountMatchRate: 0, amountCoverage: 0, amountComparable: 0, stepCoverage: 0, goldenIngredients: golden.ingredients.length, deductionReasons: emptyDeductionReasons() };
   }
   let tp = 0;
   const matchedGolden = [];
   const predMatched = new Set();
-  golden.ingredients.forEach((g) => {
+  golden.ingredients.forEach((g, ingredientIndex) => {
     const pIdx = pred.ingredients.findIndex((p, idx) => !predMatched.has(idx) && ingredientMatches(g, p));
-    if (pIdx >= 0) { tp += 1; predMatched.add(pIdx); matchedGolden.push({ g, p: pred.ingredients[pIdx] }); }
+    if (pIdx >= 0) { tp += 1; predMatched.add(pIdx); matchedGolden.push({ g, p: pred.ingredients[pIdx], ingredientIndex }); }
   });
   const precision = pred.ingredients.length ? tp / pred.ingredients.length : 0;
   const recall = golden.ingredients.length ? tp / golden.ingredients.length : 0;
   const f1 = precision + recall ? (2 * precision * recall) / (precision + recall) : 0;
 
   let amountComparable = 0, amountProvided = 0, amountHit = 0;
-  for (const { g, p } of matchedGolden) {
+  const amountReasons = [];
+  for (const { g, p, ingredientIndex } of matchedGolden) {
     const comparison = compareAmount(g, p);
     if (!comparison.scored) continue;
     amountComparable += 1;
     if (comparison.provided) amountProvided += 1;
     if (comparison.matched) amountHit += 1;
+    if (!comparison.matched && comparison.reason) {
+      amountReasons.push({ ingredientIndex, reason: comparison.reason });
+    }
   }
   const cov = stepCoverage(golden.steps, pred.steps);
 
@@ -414,6 +516,10 @@ function scoreRecipePair(golden, pred) {
     amountComparable,
     stepCoverage: cov.ratio,
     goldenIngredients: golden.ingredients.length,
+    deductionReasons: summarizeDeductionEvents({
+      amountReasons,
+      stepUncovered: cov.uncovered ?? [],
+    }, { includeDetails: true }),
   };
 }
 
@@ -445,6 +551,7 @@ export function gradeDeterministic(result, golden) {
     amountMatchRate: avgAmount === null || avgAmount === undefined ? null : round(avgAmount),
     amountCoverage: round(wavg("amountCoverage")),
     stepCoverage: round(wavg("stepCoverage")),
+    deductionReasons: mergeDeductionReasonSummaries(recipeScores.map((r) => r.deductionReasons)),
     perRecipe: recipeScores.map((r) => ({
       title: r.title,
       matched: r.matched,
@@ -452,6 +559,7 @@ export function gradeDeterministic(result, golden) {
       amountMatchRate: r.amountMatchRate === null || r.amountMatchRate === undefined ? null : round(r.amountMatchRate),
       amountCoverage: r.amountCoverage === null || r.amountCoverage === undefined ? null : round(r.amountCoverage),
       stepCoverage: round(r.stepCoverage),
+      deductionReasons: r.deductionReasons,
     })),
   };
 }
