@@ -1,0 +1,106 @@
+{
+  "id": "36b-recipe-tags-model-write",
+  "title": "Recipe tags model write",
+  "summary": "36a 계약을 기반으로 tags/recipe_tags canonical model, P0 seed, tag normalization, manual/YouTube write path, recipes.tags projection writer를 구현한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "서버가 레시피 태그를 canonical relation으로 저장하고 카드/legacy projection을 원자적으로 맞춰 36c 검색/테마와 36e 검수 UI가 신뢰할 tag 기반을 제공한다.",
+  "owners": {
+    "claude": "stage1/stage3 normally; local CLI started README draft but hung before full closeout",
+    "codex": "stage1 fallback completion, stage2 implementation, self-review per user instruction",
+    "workers": []
+  },
+  "dependencies": [
+    "36a-recipe-tags-contract-evolution",
+    "18-manual-recipe-create",
+    "19-youtube-import",
+    "20-youtube-real-import"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.11.md",
+      "docs/db설계-v1.3.16.md",
+      "docs/api문서-v1.2.20.md",
+      "docs/유저flow맵-v1.3.18.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/36b-recipe-tags-model-write/README.md",
+      "docs/workpacks/36b-recipe-tags-model-write/acceptance.md",
+      "docs/workpacks/36b-recipe-tags-model-write/automation-spec.json",
+      "docs/workpacks/36a-recipe-tags-contract-evolution/README.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:local-supabase-db-push-check-tags-recipe-tags-seed"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "docs": 3,
+      "backend": 3,
+      "frontend": 0
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm vitest run tests/recipe-tags-normalization.test.ts tests/recipe-tags-projection-writer.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/youtube-register-tags-route.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36b-recipe-tags-model-write",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/recipe-tags-normalization.test.ts tests/recipe-tags-projection-writer.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/youtube-register-tags-route.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36b-recipe-tags-model-write",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "tags-recipe-tags-schema",
+      "p0-tag-seed-36",
+      "korean-normalized-key",
+      "atomic-tag-projection-writer",
+      "manual-tags-write-path",
+      "youtube-tags-write-path",
+      "tag-suggestions-read-only-endpoint"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "GET /recipes?tag exact filtering",
+    "Title plus tag label search",
+    "GET /tags",
+    "HOME dynamic theme generation",
+    "P0 semantic rule fixture and backfill report",
+    "P1 famous/SNS/verified tags",
+    "Manual recipe tag UI",
+    "YouTube import tag UI",
+    "HOME tag search/filter/theme UI",
+    "Automatic romanization",
+    "LLM-generated free tags",
+    "Admin moderation UI"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 docs branch opened for 36b. Scope: canonical tags/recipe_tags model, P0 seed, normalization, atomic recipes.tags projection writer, manual/YouTube write paths, and read-only tag suggestions endpoint. Search/themes/backfill/frontend remain split into 36c/36d/36e."
+}
