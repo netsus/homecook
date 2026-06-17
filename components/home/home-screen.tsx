@@ -701,31 +701,16 @@ export function HomeScreen() {
               </div>
             </div>
 
-            {screenState !== "error" ? (
-              <HomeTagRail
-                activeTagKey={activeTagKey}
-                onRetry={() => void loadTagOptions()}
-                onSelectTag={selectTag}
-                tagOptions={tagOptions}
-                tagState={tagState}
-                variant="mobile"
-              />
-            ) : null}
+            <HomeTagRail
+              activeTagKey={activeTagKey}
+              onRetry={() => void loadTagOptions()}
+              onSelectTag={selectTag}
+              tagOptions={tagOptions}
+              tagState={tagState}
+              variant="mobile"
+            />
 
             <HomeQuickLinks variant="mobile" />
-
-            {screenState === "error" ? (
-              <div className="px-4 pb-4">
-                <ContentState
-                  actionLabel="다시 시도"
-                  description="Supabase 연결이나 API 설정을 확인한 뒤 다시 불러올 수 있어요."
-                  eyebrow="목록 동기화 오류"
-                  onAction={() => void loadRecipes()}
-                  tone="error"
-                  title="레시피를 불러오지 못했어요"
-                />
-              </div>
-            ) : null}
 
             {showInitialDiscoverySkeleton ? (
               <>
@@ -751,6 +736,19 @@ export function HomeScreen() {
                 onSelectTheme={selectTheme}
                 themes={themes?.themes ?? []}
               />
+            ) : null}
+
+            {screenState === "error" && !showInitialDiscoverySkeleton ? (
+              <div className="px-4 pb-4">
+                <ContentState
+                  actionLabel="다시 시도"
+                  description="Supabase 연결이나 API 설정을 확인한 뒤 다시 불러올 수 있어요."
+                  eyebrow="목록 동기화 오류"
+                  onAction={() => void loadRecipes()}
+                  tone="error"
+                  title="레시피를 불러오지 못했어요"
+                />
+              </div>
             ) : null}
 
             {screenState !== "error" && !showInitialDiscoverySkeleton ? (

@@ -756,6 +756,18 @@ describe("home screen", () => {
     expect(
       await screen.findByRole("heading", { name: "레시피를 불러오지 못했어요" }),
     ).toBeTruthy();
+    const themeHeading = screen.getByRole("heading", {
+      level: 2,
+      name: "이번 주 인기 테마",
+    });
+    const errorHeading = screen.getByRole("heading", {
+      name: "레시피를 불러오지 못했어요",
+    });
+
+    expect(
+      themeHeading.compareDocumentPosition(errorHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(
       screen
         .getByRole("heading", { name: "레시피를 불러오지 못했어요" })
