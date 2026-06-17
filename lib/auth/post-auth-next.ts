@@ -1,7 +1,10 @@
+import { sanitizeInternalPath } from "@/lib/navigation/return-context";
+
 export const POST_AUTH_NEXT_COOKIE = "homecook-post-auth-next";
 
 export function createPostAuthNextCookie(nextPath: string) {
-  return `${POST_AUTH_NEXT_COOKIE}=${encodeURIComponent(nextPath)}; Path=/; Max-Age=600; SameSite=Lax`;
+  const safeNextPath = sanitizeInternalPath(nextPath, "/");
+  return `${POST_AUTH_NEXT_COOKIE}=${encodeURIComponent(safeNextPath)}; Path=/; Max-Age=600; SameSite=Lax`;
 }
 
 export function parsePostAuthNextCookie(rawValue: string | undefined) {

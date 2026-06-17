@@ -36,6 +36,7 @@ import {
   normalizeReviewedRecipeTagLabels,
   toRecipeTagLabels,
 } from "@/lib/server/recipe-tags";
+import { cleanYoutubeTitle } from "@/lib/youtube-title";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import {
   buildTextSegments,
@@ -1679,12 +1680,16 @@ function parseYoutubeVideoPayload(videoId: string, payload: unknown): YoutubePro
 
   const snippet = isRecord(item.snippet) ? item.snippet : {};
   const contentDetails = isRecord(item.contentDetails) ? item.contentDetails : {};
+  const channel = typeof snippet.channelTitle === "string" ? snippet.channelTitle : "YouTube";
 
   return {
     video: {
       videoId,
-      title: typeof snippet.title === "string" ? snippet.title : "유튜브 영상 레시피",
-      channel: typeof snippet.channelTitle === "string" ? snippet.channelTitle : "YouTube",
+      title: cleanYoutubeTitle(
+        typeof snippet.title === "string" ? snippet.title : null,
+        { channelTitle: channel },
+      ),
+      channel,
       channelId: typeof snippet.channelId === "string" ? snippet.channelId : null,
       thumbnailUrl: getBestThumbnail(snippet.thumbnails, videoId),
       description: typeof snippet.description === "string" ? snippet.description : "",
@@ -1711,11 +1716,16 @@ function parseYoutubeOEmbedPayload(videoId: string, payload: unknown): YoutubePr
     };
   }
 
+  const channel = typeof payload.author_name === "string" ? payload.author_name : "YouTube";
+
   return {
     video: {
       videoId,
-      title: typeof payload.title === "string" ? payload.title : "유튜브 영상",
-      channel: typeof payload.author_name === "string" ? payload.author_name : "YouTube",
+      title: cleanYoutubeTitle(
+        typeof payload.title === "string" ? payload.title : null,
+        { channelTitle: channel, fallback: "유튜브 영상" },
+      ),
+      channel,
       thumbnailUrl: typeof payload.thumbnail_url === "string"
         ? payload.thumbnail_url
         : `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
@@ -9542,7 +9552,10 @@ function parseYoutubeRegisterBody(rawBody: unknown) {
     fields.push({ field: "youtube_url", reason: "invalid_url" });
   }
 
-  const title = typeof rawBody.title === "string" ? rawBody.title.trim() : "";
+  const title = cleanYoutubeTitle(
+    typeof rawBody.title === "string" ? rawBody.title : null,
+    { fallback: "" },
+  );
   if (!title) {
     fields.push({ field: "title", reason: "required" });
   } else if (title.length > 200) {

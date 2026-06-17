@@ -37,6 +37,7 @@ import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
 import { KOREA_TIME_ZONE } from "@/lib/korean-date";
+import { PRIMARY_WEB_NAV_ITEMS } from "@/lib/navigation/app-nav";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -61,13 +62,6 @@ const SORT_OPTIONS: Array<{ label: string; value: RecipeSortKey }> = [
 
 type ScreenState = "loading" | "ready" | "empty" | "error";
 type AsyncState = "loading" | "ready" | "error";
-
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
 
 const HOME_QUICK_LINKS = [
   {
@@ -119,6 +113,28 @@ function formatHomeMealGreeting(now = new Date()) {
             : "밤";
 
   return `${weekday} ${meal},`;
+}
+
+function buildResultStatusText({
+  count,
+  listTitle,
+  screenState,
+}: {
+  count: number;
+  listTitle: string;
+  screenState: ScreenState;
+}) {
+  if (screenState === "loading") {
+    return "레시피 목록을 불러오는 중입니다.";
+  }
+  if (screenState === "error") {
+    return "레시피 목록을 불러오지 못했습니다.";
+  }
+  if (count === 0) {
+    return `${listTitle} 조건에 맞는 레시피가 없습니다.`;
+  }
+
+  return `${listTitle} ${count}개가 표시됩니다.`;
 }
 
 export function HomeScreen() {
@@ -343,6 +359,11 @@ export function HomeScreen() {
     displayedRecipes.length === 0;
   const emptyStateActionLabel = "초기화";
   const mealGreeting = useMemo(() => formatHomeMealGreeting(), []);
+  const resultStatusText = buildResultStatusText({
+    count: displayedRecipes.length,
+    listTitle,
+    screenState,
+  });
 
   const clearIngredientFilters = useCallback(() => {
     resetAppliedIngredientIds();
@@ -570,6 +591,7 @@ export function HomeScreen() {
           onSelectTheme={selectTheme}
           profile={profile}
           query={query}
+          resultStatusText={resultStatusText}
           savedRecipeIds={homeSaveFlow.savedRecipeIds}
           screenState={screenState}
           selectedTheme={selectedTheme}
@@ -722,6 +744,14 @@ export function HomeScreen() {
 
             {screenState !== "error" && !showInitialDiscoverySkeleton ? (
               <section aria-label={listTitle}>
+                <p
+                  aria-live="polite"
+                  className="visually-hidden"
+                  data-testid="home-result-status"
+                  role="status"
+                >
+                  {resultStatusText}
+                </p>
                 {/* Section header with sort */}
                 <div className="flex items-center justify-between px-4 pb-2">
                   <div>
@@ -830,6 +860,7 @@ function HomeWebScreen({
   onSelectTheme,
   profile,
   query,
+  resultStatusText,
   savedRecipeIds,
   screenState,
   selectedTheme,
@@ -859,6 +890,7 @@ function HomeWebScreen({
   onSelectTheme: (themeId: string) => void;
   profile: UserProfileData | null;
   query: string;
+  resultStatusText: string;
   savedRecipeIds: Set<string>;
   screenState: ScreenState;
   selectedTheme: RecipeTheme | null;
@@ -881,7 +913,7 @@ function HomeWebScreen({
     <WebShell className="web-home" wide>
       <WebTopNav
         activeId="home"
-        items={WEB_NAV_ITEMS}
+        items={PRIMARY_WEB_NAV_ITEMS}
         rightSlot={<WebProfileButton profile={profile} />}
       />
       <div className="web-screen">
@@ -1022,6 +1054,14 @@ function HomeWebScreen({
         ) : null}
 
         <section className="web-all-recipes">
+          <p
+            aria-live="polite"
+            className="visually-hidden"
+            data-testid="home-result-status"
+            role="status"
+          >
+            {resultStatusText}
+          </p>
           <div className="web-section-head">
             <div>
               <h2 className="web-section-title">{listTitle}</h2>

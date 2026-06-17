@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SortDropdown } from "@/components/ui/sort-dropdown";
@@ -121,6 +121,30 @@ describe("SortDropdown", () => {
 
     fireEvent.click(trigger);
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("supports arrow-key navigation between options", async () => {
+    render(<SortDropdown onChange={() => {}} options={options} value="latest" />);
+
+    fireEvent.keyDown(screen.getByRole("button", { expanded: false }), {
+      key: "ArrowDown",
+    });
+
+    await waitFor(() => {
+      expect(document.activeElement?.textContent).toContain("최신순");
+    });
+
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowDown" });
+
+    await waitFor(() => {
+      expect(document.activeElement?.textContent).toContain("인기순");
+    });
+
+    fireEvent.keyDown(document.activeElement!, { key: "End" });
+
+    await waitFor(() => {
+      expect(document.activeElement?.textContent).toContain("이름순");
+    });
   });
 
   it("closes dropdown on outside click", () => {

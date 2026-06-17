@@ -1,17 +1,12 @@
 import Link from "next/link";
 import * as React from "react";
 
+import { PRIMARY_WEB_NAV_ITEMS } from "@/lib/navigation/app-nav";
+
 interface AppHeaderProps {
   brandAsPageTitle?: boolean;
   currentTab?: "home" | "planner" | "pantry" | "mypage";
 }
-
-const navItems = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
 
 export function AppHeader({
   brandAsPageTitle = false,
@@ -36,7 +31,7 @@ export function AppHeader({
       <div className="flex min-h-[var(--control-height-xl)] items-center justify-center px-4 md:min-h-[56px] md:px-6">
         {brandAsPageTitle ? <h1>{brandLink}</h1> : brandLink}
         <nav aria-label="데스크탑 주요 메뉴" className="hidden items-center gap-1 lg:flex">
-          {navItems.map((item) => {
+          {PRIMARY_WEB_NAV_ITEMS.map((item) => {
             const active = item.id === currentTab;
 
             return (

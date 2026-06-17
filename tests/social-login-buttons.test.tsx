@@ -51,6 +51,7 @@ describe("social login buttons", () => {
     isLocalGoogleOAuthEnabled.mockReset();
     isQaFixtureClientModeEnabled.mockReset();
     window.localStorage.clear();
+    document.cookie = "homecook-post-auth-next=; Path=/; Max-Age=0";
     isLocalDevAuthEnabled.mockReturnValue(false);
     isLocalGoogleOAuthEnabled.mockReturnValue(false);
     isQaFixtureClientModeEnabled.mockReturnValue(false);
@@ -93,6 +94,27 @@ describe("social login buttons", () => {
     });
     expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toContain(
       '"type":"save"',
+    );
+  });
+
+  it("keeps the OAuth callback URL simple and stores the sanitized return path in a cookie", async () => {
+    hasSupabasePublicEnv.mockReturnValue(true);
+    signInWithOAuth.mockResolvedValue({ error: null });
+
+    render(<SocialLoginButtons nextPath="/planner?date=2026-06-17" />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Google로 시작하기" }));
+
+    await waitFor(() => {
+      expect(signInWithOAuth).toHaveBeenCalledTimes(1);
+    });
+
+    const redirectTo = signInWithOAuth.mock.calls[0][0].options.redirectTo;
+    const callbackUrl = new URL(redirectTo);
+    expect(callbackUrl.pathname).toBe("/auth/callback");
+    expect(callbackUrl.searchParams.get("next")).toBeNull();
+    expect(document.cookie).toContain(
+      "homecook-post-auth-next=%2Fplanner%3Fdate%3D2026-06-17",
     );
   });
 

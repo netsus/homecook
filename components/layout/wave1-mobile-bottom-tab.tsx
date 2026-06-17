@@ -3,6 +3,8 @@
 import Link from "next/link";
 import React from "react";
 
+import { PRIMARY_MOBILE_TAB_ITEMS } from "@/lib/navigation/app-nav";
+
 type Wave1MobileBottomTabId = "home" | "planner" | "pantry" | "mypage";
 
 interface Wave1MobileBottomTabProps {
@@ -19,27 +21,15 @@ const items: Array<{
   icon: (active: boolean) => React.ReactNode;
   id: Wave1MobileBottomTabId;
   label: string;
-}> = [
-  { href: "/", icon: (active) => <HomeIcon active={active} />, id: "home", label: "홈" },
-  {
-    href: "/planner",
-    icon: (active) => <CalendarIcon active={active} />,
-    id: "planner",
-    label: "플래너",
+}> = PRIMARY_MOBILE_TAB_ITEMS.map((item) => ({
+  ...item,
+  icon: (active: boolean) => {
+    if (item.id === "home") return <HomeIcon active={active} />;
+    if (item.id === "planner") return <CalendarIcon active={active} />;
+    if (item.id === "pantry") return <PantryIcon active={active} />;
+    return <UserIcon active={active} />;
   },
-  {
-    href: "/pantry",
-    icon: (active) => <PantryIcon active={active} />,
-    id: "pantry",
-    label: "팬트리",
-  },
-  {
-    href: "/mypage",
-    icon: (active) => <UserIcon active={active} />,
-    id: "mypage",
-    label: "마이",
-  },
-];
+}));
 
 export function Wave1MobileBottomTab({
   ariaLabel,

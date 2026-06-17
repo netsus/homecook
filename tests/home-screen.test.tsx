@@ -143,6 +143,11 @@ describe("home screen", () => {
     expect(screen.getByRole("link", { name: /레시피북/ }).getAttribute("href")).toBe("/mypage?tab=recipebooks");
     expect(screen.getByRole("link", { name: /성장 보기/ }).getAttribute("href")).toBe("/mypage");
     expect(screen.getByRole("navigation", { name: "HOME 하단 탭" })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByTestId("home-result-status").textContent).toBe(
+        `모든 레시피 ${getMockRecipeList().items.length}개가 표시됩니다.`,
+      );
+    });
     expect(screen.getByRole("link", { name: "팬트리" }).getAttribute("href")).toBe("/pantry");
     expect(screen.getByRole("link", { name: "마이" }).getAttribute("href")).toBe("/mypage");
     expect(

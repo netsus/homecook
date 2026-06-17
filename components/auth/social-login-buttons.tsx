@@ -70,7 +70,6 @@ export function SocialLoginButtons({
 
         const supabase = getSupabaseBrowserClient();
         const callback = new URL("/auth/callback", window.location.origin);
-        callback.searchParams.set("next", nextPath);
 
         const { error } = await supabase.auth.signInWithOAuth({
           provider: provider as never,
