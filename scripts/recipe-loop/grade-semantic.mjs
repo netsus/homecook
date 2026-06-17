@@ -13,6 +13,7 @@ import path from "node:path";
 
 import { createCodexJudgeClient } from "./lib/codex-judge-client.mjs";
 import { createCachedLlmClient } from "./lib/llm-client.mjs";
+import { prepareCanaryGradingInputs, summarizeCanaryLeaks } from "./lib/grading.mjs";
 
 const PROJECT_ROOT = process.cwd();
 const DATA_ROOT = "notebooks/recipe_loop_data";
@@ -430,18 +431,26 @@ async function main() {
       rows.push(failedRow(id, "unapproved_golden"));
       continue;
     }
+    const resultScope = `${split}/${id}/runs/${resultOutTag}/result.json`;
+    const { cleanGolden, cleanResult, canaryLeak } = prepareCanaryGradingInputs({
+      split,
+      videoId: id,
+      golden,
+      result,
+      resultScope,
+    });
     if (judge.provider === "codex" && calibration.summary.valid !== true) {
       const message = calibration.summary.failure_reason || "invalid calibration";
       console.error(`[FAIL] ${split}/${id}: calibration_invalid (${message})`);
-      rows.push(failedRow(id, "calibration_invalid", message));
+      rows.push({ ...failedRow(id, "calibration_invalid", message), canaryLeak });
       continue;
     }
     try {
       const gradeResult = await generateSemanticGrade({
         judge,
         llm,
-        golden,
-        result,
+        golden: cleanGolden,
+        result: cleanResult,
         id,
         outTag,
         split,
@@ -469,6 +478,7 @@ async function main() {
         cached: gradeResult.cached,
         retry_count: gradeResult.retryCount ?? 0,
         ...grade,
+        canaryLeak,
       };
       rows.push(row);
       await mkdir(outputDir, { recursive: true });
@@ -504,6 +514,7 @@ async function main() {
     && failedRowCount === 0
     && !expectedCountMismatch;
   const success = failedRowCount === 0 && !expectedCountMismatch && thresholdSuccess;
+  const canaryLeak = summarizeCanaryLeaks({ split, ids, rows });
   const agg = {
     success,
     split,
@@ -533,6 +544,7 @@ async function main() {
     borderline: calibration.borderline,
     threshold_success: thresholdSuccess,
     calibration: calibration.summary,
+    canaryLeak,
   };
   await writeSummary(splitDir, outTag, agg, rows);
   console.log(`\n=== ${split}/${outTag} 의미채점: 평균 ${agg.averageScore}, 최저 case ${agg.minCaseScore} (n=${agg.count})`);

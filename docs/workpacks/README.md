@@ -135,6 +135,11 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `35a-growth-achievement-album-contract-evolution` | docs | 퀘스트를 튜토리얼 전용으로 축소하고, Clay→Titanium 등급/업적 앨범/stamp 수집/MYPAGE modal button entry 계약을 공식화 |
 | `35b-growth-achievement-album-backend` | merged | 35a 계약 기반 `user_achievement_awards`, 업적 앨범 projection, tutorial category, grade fields, silent backfill backend 구현 |
 | `35c-mypage-achievement-album-ui` | in-progress | MYPAGE profile header 안에 성장 상태를 통합하고 등급/업적/튜토리얼/알림을 modal/bottom sheet로 제공 |
+| `36a-recipe-tags-contract-evolution` | docs | 레시피 태그를 서버 추천 + 사용자 검수 기능으로 승격하고 `tags`/`recipe_tags` 정규화 모델, 검색, HOME theme seed, P0 의미 태그 목록을 공식 계약으로 잠금 |
+| `36b-recipe-tags-model-write` | merged | `tags`/`recipe_tags` additive migration, P0 seed, tag normalization, YouTube/manual write path, `recipes.tags` projection writer 구현 |
+| `36c-recipe-tags-search-themes` | planned | `GET /recipes?tag=`, 제목+승인 태그 검색, `GET /tags`, HOME theme generation을 cursor-stable dedupe 전략으로 구현 |
+| `36d-recipe-tags-rules-backfill` | planned | P0 의미 태그 rule fixture와 기존 레시피 backfill dry-run/report, usage count reconcile, P1 후보 승인 정책 구현 |
+| `36e-recipe-tags-frontend` | planned | MANUAL_RECIPE_CREATE/YT_IMPORT 태그 추천·검수 UI와 HOME 태그 검색/filter/theme chip UX 구현 |
 
 ## Design Decision Gates
 

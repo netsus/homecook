@@ -343,7 +343,7 @@ describe("GrowthToastStack", () => {
   });
 
   it("keeps visible toasts on screen for the longer review window before auto dismissing", async () => {
-    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    vi.useFakeTimers();
     mockFetchUserGamification.mockResolvedValue({
       notifications: {
         unseen: [],
@@ -361,12 +361,21 @@ describe("GrowthToastStack", () => {
     render(<GrowthToastStack />);
     dispatchRefresh();
 
-    await waitFor(() => {
-      expect(screen.getByTestId("growth-toast")).toBeTruthy();
+    await act(async () => {
+      await Promise.resolve();
     });
 
-    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 6000);
-    setTimeoutSpy.mockRestore();
+    expect(screen.getByTestId("growth-toast")).toBeTruthy();
+
+    await act(async () => {
+      vi.advanceTimersByTime(5999);
+    });
+    expect(screen.getByTestId("growth-toast")).toBeTruthy();
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(screen.queryByTestId("growth-toast")).toBeNull();
   });
 
   it("opens the notification panel intent when a toast body is clicked", async () => {

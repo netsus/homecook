@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-13T21:59:26+09:00",
+  "updated_at": "2026-06-17T13:22:10+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1745,6 +1745,23 @@
         "git diff --check"
       ],
       "notes": "Stage 1 docs branch opened by Codex per user instruction. Scope: MYPAGE profile header growth integration, grade modal, achievement album modal, tutorial modal, notification archive modal, responsive 320/390/desktop evidence, and soft-fail isolation. Backend/API/schema changes are out of scope."
+    },
+    {
+      "id": "36b-recipe-tags-model-write",
+      "preset": "vertical-slice-strict",
+      "branch": "feature/be-36b-recipe-tags-model-write",
+      "lifecycle": "merged",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm vitest run tests/recipe-tags-normalization.test.ts tests/recipe-tags-projection-writer.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/youtube-register-tags-route.test.ts",
+        "pnpm verify:backend",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 36b-recipe-tags-model-write",
+        "git diff --check"
+      ],
+      "notes": "Stage 2 backend implementation completed on feature/be-36b-recipe-tags-model-write. Implements tags/recipe_tags additive migration, P0 semantic/source seed 36개, tag normalization, atomic recipes.tags projection writer, manual/YouTube write paths, YouTube semantic draft tag generation, and read-only tag suggestions endpoint. Local verification passed: targeted 36b Vitest set, existing manual/YouTube/Supabase/tag regressions, pnpm typecheck, pnpm lint, and pnpm verify:backend with dummy public Supabase env plus alternate Playwright port. Search/themes/backfill/frontend are split into 36c/36d/36e. closeout_phase=completed closeout_recovery=manual_patch:2|ci_resync:2 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:PR #773 policy run 27666432100,PR #773 template-check run 27666432007,PR #773 policy run 27666598161,pnpm verify:backend,pnpm exec supabase db reset --local --yes,local Supabase psql smoke,docs/workpacks/36b-recipe-tags-model-write/README.md,docs/workpacks/36b-recipe-tags-model-write/acceptance.md last_recovery_at=2026-06-17T14:01:00+09:00"
     }
   ]
 }

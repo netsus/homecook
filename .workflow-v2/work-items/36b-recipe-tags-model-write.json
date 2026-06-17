@@ -1,0 +1,171 @@
+{
+  "id": "36b-recipe-tags-model-write",
+  "title": "Recipe tags model write",
+  "summary": "36a 계약을 기반으로 tags/recipe_tags canonical model, P0 seed, tag normalization, manual/YouTube write path, recipes.tags projection writer를 구현한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "서버가 레시피 태그를 canonical relation으로 저장하고 카드/legacy projection을 원자적으로 맞춰 36c 검색/테마와 36e 검수 UI가 신뢰할 tag 기반을 제공한다.",
+  "owners": {
+    "claude": "stage1/stage3 normally; local CLI started README draft but hung before full closeout",
+    "codex": "stage1 fallback completion, stage2 implementation, self-review per user instruction",
+    "workers": []
+  },
+  "dependencies": [
+    "36a-recipe-tags-contract-evolution",
+    "18-manual-recipe-create",
+    "19-youtube-import",
+    "20-youtube-real-import"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.11.md",
+      "docs/db설계-v1.3.16.md",
+      "docs/api문서-v1.2.20.md",
+      "docs/유저flow맵-v1.3.18.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/36b-recipe-tags-model-write/README.md",
+      "docs/workpacks/36b-recipe-tags-model-write/acceptance.md",
+      "docs/workpacks/36b-recipe-tags-model-write/automation-spec.json",
+      "docs/workpacks/36a-recipe-tags-contract-evolution/README.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:local-supabase-db-push-check-tags-recipe-tags-seed"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "docs": 3,
+      "backend": 3,
+      "frontend": 0
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm vitest run tests/recipe-tags-normalization.test.ts tests/recipe-tags-projection-writer.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/youtube-register-tags-route.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36b-recipe-tags-model-write",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/recipe-tags-normalization.test.ts tests/recipe-tags-projection-writer.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/youtube-register-tags-route.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36b-recipe-tags-model-write",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "tags-recipe-tags-schema",
+      "p0-tag-seed-36",
+      "korean-normalized-key",
+      "atomic-tag-projection-writer",
+      "manual-tags-write-path",
+      "youtube-tags-write-path",
+      "tag-suggestions-read-only-endpoint"
+    ]
+  },
+  "status": {
+    "lifecycle": "merged",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "pnpm vitest run tests/recipe-tags-normalization.test.ts tests/recipe-tags-projection-writer.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/youtube-register-tags-route.test.ts tests/manual-recipe-create.backend.test.ts tests/youtube-import.backend.test.ts tests/supabase-server.test.ts tests/recipe-media-tags.test.ts",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm validate:workpack -- --slice 36b-recipe-tags-model-write",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:branch",
+        "BRANCH_NAME=feature/be-36b-recipe-tags-model-write BASE_REF=master PR_IS_DRAFT=false node scripts/validate-closeout-sync.mjs",
+        "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key PLAYWRIGHT_BASE_URL=http://127.0.0.1:3118 pnpm verify:backend",
+        "pnpm exec supabase db reset --local --yes",
+        "local Supabase psql smoke: public.tags/public.recipe_tags tables, 36 system seeds, 7 tag indexes, set_recipe_tags/build_recipe_tag_payload anon=false authenticated=false service_role=true"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-policy-refresh",
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 2,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 2,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-06-17T14:01:00+09:00"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "real_smoke_acl_fix_after_policy_fail",
+      "evidence_sources": [
+        "PR #773 policy run 27666432100",
+        "PR #773 template-check run 27666432007",
+        "PR #773 policy run 27666598161",
+        "pnpm verify:backend",
+        "pnpm exec supabase db reset --local --yes",
+        "local Supabase psql smoke",
+        "docs/workpacks/36b-recipe-tags-model-write/README.md",
+        "docs/workpacks/36b-recipe-tags-model-write/acceptance.md"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-06-17T14:01:00+09:00",
+      "status_synced_at": "2026-06-17T14:01:00+09:00",
+      "pr_body_synced_at": "2026-06-17T14:01:00+09:00"
+    }
+  },
+  "out_of_scope": [
+    "GET /recipes?tag exact filtering",
+    "Title plus tag label search",
+    "GET /tags",
+    "HOME dynamic theme generation",
+    "P0 semantic rule fixture and backfill report",
+    "P1 famous/SNS/verified tags",
+    "Manual recipe tag UI",
+    "YouTube import tag UI",
+    "HOME tag search/filter/theme UI",
+    "Automatic romanization",
+    "LLM-generated free tags",
+    "Admin moderation UI"
+  ],
+  "open_questions": [],
+  "notes": "Stage 2 backend implementation completed on feature/be-36b-recipe-tags-model-write. Implements tags/recipe_tags additive migration, P0 semantic/source seed 36개, tag normalization, atomic recipes.tags projection writer, manual/YouTube write paths, YouTube semantic draft tag generation, and read-only tag suggestions endpoint. Local verification passed: targeted 36b Vitest set, existing manual/YouTube/Supabase/tag regressions, pnpm typecheck, pnpm lint, and pnpm verify:backend with dummy public Supabase env plus alternate Playwright port. Search/themes/backfill/frontend remain split into 36c/36d/36e."
+}

@@ -2,6 +2,188 @@
 // AI 의미 채점과 별개로, 코드만으로 확정 가능한 지표를 담당한다.
 
 const norm = (value) => String(value ?? "").replace(/\s+/g, "").toLowerCase();
+const CANARY_CASES = {
+  validation: new Set(["YZ8KSZboJeM"]),
+};
+const REDACTED_CANARY_HIT = "leak canary token redacted";
+const REMOVED_CANARY = Symbol("removed-canary");
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value ?? null));
+}
+
+function configuredCanaryIds(split) {
+  return CANARY_CASES[split] ?? new Set();
+}
+
+export function hasConfiguredCanarySplit(split) {
+  return configuredCanaryIds(split).size > 0;
+}
+
+export function isConfiguredCanaryCase(split, videoId) {
+  return configuredCanaryIds(split).has(videoId);
+}
+
+function normalizedContainsAny(value, canaries) {
+  const text = norm(typeof value === "string" ? value : JSON.stringify(value ?? ""));
+  return canaries.some((canary) => canary.normalizedNames.some((name) => name && text.includes(name)));
+}
+
+function ingredientLooksCanary(value, canaries) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const relevant = [value.name, ...(value.nameAliases ?? [])].filter(Boolean).join(" ");
+  return normalizedContainsAny(relevant, canaries);
+}
+
+function collectFlaggedCanaries(golden) {
+  const removed = [];
+  for (const recipe of golden?.recipes ?? []) {
+    for (const ingredient of recipe?.ingredients ?? []) {
+      if (ingredient?.isLeakCanary === true) {
+        removed.push(cloneJson(ingredient));
+      }
+    }
+  }
+  return removed;
+}
+
+export function canaryTokensFromRemoved(removed) {
+  return (removed ?? []).map((ingredient, index) => {
+    const names = [ingredient?.name, ...(ingredient?.nameAliases ?? [])].filter(Boolean);
+    return {
+      canaryId: ingredient?.canaryId || `canary_${index + 1}`,
+      category: "ingredient_name",
+      normalizedNames: [...new Set(names.map(norm).filter(Boolean))],
+    };
+  }).filter((canary) => canary.normalizedNames.length > 0);
+}
+
+export function stripCanaryByFlag(golden, { split, videoId } = {}) {
+  const expectedCanary = isConfiguredCanaryCase(split, videoId);
+  const removed = collectFlaggedCanaries(golden);
+  if (expectedCanary && removed.length === 0) {
+    throw new Error(`canary drift: ${split}/${videoId} missing flagged leak canary ingredient`);
+  }
+
+  const cleanGolden = cloneJson(golden);
+  for (const recipe of cleanGolden?.recipes ?? []) {
+    recipe.ingredients = (recipe.ingredients ?? []).filter((ingredient) => ingredient?.isLeakCanary !== true);
+  }
+
+  const tokens = canaryTokensFromRemoved(removed);
+  if (expectedCanary && tokens.length === 0) {
+    throw new Error(`canary drift: ${split}/${videoId} flagged leak canary has no scannable token`);
+  }
+  if (tokens.length > 0 && normalizedContainsAny(cleanGolden?.recipes ?? [], tokens)) {
+    throw new Error(`canary strip failed: ${split}/${videoId} clean golden still contains canary token`);
+  }
+
+  return { cleanGolden, removed };
+}
+
+export function scanForCanaries({ sourceKind, scope, split, videoId, value, canaries }) {
+  if (sourceKind === "golden") {
+    throw new Error("canary scan only accepts predicted artifacts, not golden input");
+  }
+  const hits = [];
+  const text = norm(typeof value === "string" ? value : JSON.stringify(value ?? ""));
+  for (const canary of canaries ?? []) {
+    if (canary.normalizedNames.some((name) => name && text.includes(name))) {
+      hits.push({
+        scope,
+        split,
+        videoId,
+        canaryId: canary.canaryId,
+        category: canary.category,
+      });
+    }
+  }
+  return {
+    success: hits.length === 0,
+    status: hits.length === 0 ? "clean" : "leak_detected",
+    hit_count: hits.length,
+    hits,
+    redacted_hits: hits.length ? [REDACTED_CANARY_HIT] : [],
+  };
+}
+
+export function stripCanaryByToken(value, canaries) {
+  if (!canaries?.length) return cloneJson(value);
+  const strip = (node) => {
+    if (typeof node === "string") {
+      return normalizedContainsAny(node, canaries) ? "[leak canary token redacted]" : node;
+    }
+    if (Array.isArray(node)) {
+      return node.map(strip).filter((item) => item !== REMOVED_CANARY);
+    }
+    if (!node || typeof node !== "object") return node;
+    if (ingredientLooksCanary(node, canaries)) return REMOVED_CANARY;
+    const out = {};
+    for (const [key, child] of Object.entries(node)) {
+      const cleaned = strip(child);
+      if (cleaned !== REMOVED_CANARY) out[key] = cleaned;
+    }
+    return out;
+  };
+  return strip(cloneJson(value));
+}
+
+export function prepareCanaryGradingInputs({ split, videoId, golden, result, resultScope }) {
+  const { cleanGolden, removed } = stripCanaryByFlag(golden, { split, videoId });
+  const tokens = canaryTokensFromRemoved(removed);
+  const canaryLeak = scanForCanaries({
+    sourceKind: "predicted",
+    scope: resultScope,
+    split,
+    videoId,
+    value: result,
+    canaries: tokens,
+  });
+  return {
+    cleanGolden,
+    cleanResult: stripCanaryByToken(result, tokens),
+    canaryLeak,
+  };
+}
+
+function emptyCanaryLeak(status, success) {
+  return {
+    success,
+    status,
+    hit_count: 0,
+    hits: [],
+    redacted_hits: [],
+  };
+}
+
+export function summarizeCanaryLeaks({ split, ids, rows }) {
+  const configured = configuredCanaryIds(split);
+  if (configured.size === 0) return emptyCanaryLeak("not_applicable", true);
+  const coveredConfiguredIds = ids.filter((id) => configured.has(id));
+  if (coveredConfiguredIds.length === 0) return emptyCanaryLeak("not_covered", false);
+
+  const rowById = new Map(rows.map((row) => [row.videoId, row]));
+  const missingCovered = coveredConfiguredIds.some((id) => !rowById.get(id)?.canaryLeak);
+  if (missingCovered) return emptyCanaryLeak("not_covered", false);
+
+  const hitsByKey = new Map();
+  for (const row of rows) {
+    for (const hit of row.canaryLeak?.hits ?? []) {
+      hitsByKey.set([hit.scope, hit.split, hit.videoId, hit.canaryId, hit.category].join("\u0000"), hit);
+    }
+  }
+  const hits = [...hitsByKey.values()];
+  if (hits.length > 0) {
+    return {
+      success: false,
+      status: "leak_detected",
+      hit_count: hits.length,
+      hits,
+      redacted_hits: [REDACTED_CANARY_HIT],
+    };
+  }
+  return emptyCanaryLeak("clean", true);
+}
 
 // golden step은 {order,instruction,evidence} 객체, 추출 결과 step은 문자열일 수 있다. 문자열로 통일.
 const stepText = (step) => (typeof step === "string" ? step : (step?.instruction ?? ""));
