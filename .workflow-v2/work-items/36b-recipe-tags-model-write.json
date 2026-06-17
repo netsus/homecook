@@ -116,7 +116,7 @@
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending-pr-head-after-real-smoke-fix",
+      "current_head_sha": "pending-pr-head-after-policy-refresh",
       "approval_state": "codex_approved",
       "all_checks_green": false
     },
