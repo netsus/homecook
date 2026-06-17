@@ -99,7 +99,7 @@
     },
     "verification_projection": {
       "required_checks": "passed",
-      "external_smokes": "skipped",
+      "external_smokes": "passed",
       "authority_reports": [],
       "actual_verification_refs": [
         "pnpm vitest run tests/recipe-tags-normalization.test.ts tests/recipe-tags-projection-writer.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/youtube-register-tags-route.test.ts tests/manual-recipe-create.backend.test.ts tests/youtube-import.backend.test.ts tests/supabase-server.test.ts tests/recipe-media-tags.test.ts",
@@ -110,41 +110,46 @@
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:branch",
         "BRANCH_NAME=feature/be-36b-recipe-tags-model-write BASE_REF=master PR_IS_DRAFT=false node scripts/validate-closeout-sync.mjs",
-        "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key PLAYWRIGHT_BASE_URL=http://127.0.0.1:3118 pnpm verify:backend"
+        "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key PLAYWRIGHT_BASE_URL=http://127.0.0.1:3118 pnpm verify:backend",
+        "pnpm exec supabase db reset --local --yes",
+        "local Supabase psql smoke: public.tags/public.recipe_tags tables, 36 system seeds, 7 tag indexes, set_recipe_tags/build_recipe_tag_payload anon=false authenticated=false service_role=true"
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending-pr-head-after-closeout-fix",
+      "current_head_sha": "pending-pr-head-after-real-smoke-fix",
       "approval_state": "codex_approved",
       "all_checks_green": false
     },
     "recovery_summary": {
-      "manual_patch_count": 1,
+      "manual_patch_count": 2,
       "manual_handoff": false,
       "stale_lock_count": 0,
-      "ci_resync_count": 1,
+      "ci_resync_count": 2,
       "artifact_missing": false,
-      "last_recovery_at": "2026-06-17T13:52:00+09:00"
+      "last_recovery_at": "2026-06-17T14:01:00+09:00"
     },
     "repair_summary": {
-      "codex_repairable_count": 1,
+      "codex_repairable_count": 2,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": "closeout_snapshot_added_after_policy_fail",
+      "latest_reason_code": "real_smoke_acl_fix_after_policy_fail",
       "evidence_sources": [
         "PR #773 policy run 27666432100",
         "PR #773 template-check run 27666432007",
+        "PR #773 policy run 27666598161",
         "pnpm verify:backend",
+        "pnpm exec supabase db reset --local --yes",
+        "local Supabase psql smoke",
         "docs/workpacks/36b-recipe-tags-model-write/README.md",
         "docs/workpacks/36b-recipe-tags-model-write/acceptance.md"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-06-17T13:52:00+09:00",
-      "status_synced_at": "2026-06-17T13:52:00+09:00",
-      "pr_body_synced_at": "2026-06-17T13:52:00+09:00"
+      "docs_synced_at": "2026-06-17T14:01:00+09:00",
+      "status_synced_at": "2026-06-17T14:01:00+09:00",
+      "pr_body_synced_at": "2026-06-17T14:01:00+09:00"
     }
   },
   "out_of_scope": [

@@ -48,6 +48,7 @@ describe("36b recipe tags projection writer migration", () => {
     expect(sql).toMatch(/rt\.visibility = 'public'/i);
     expect(sql).toMatch(/rt\.review_status = 'approved'/i);
     expect(sql).toMatch(/revoke execute on function public\.set_recipe_tags\(uuid, jsonb, uuid, text\) from public/i);
+    expect(sql).toMatch(/revoke execute on function public\.set_recipe_tags\(uuid, jsonb, uuid, text\) from authenticated/i);
     expect(sql).toMatch(/grant execute on function public\.set_recipe_tags\(uuid, jsonb, uuid, text\) to service_role/i);
   });
 

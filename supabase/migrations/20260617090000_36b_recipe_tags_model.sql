@@ -607,8 +607,10 @@ $$;
 
 revoke execute on function public.build_recipe_tag_payload(text[], text) from public;
 revoke execute on function public.build_recipe_tag_payload(text[], text) from anon;
+revoke execute on function public.build_recipe_tag_payload(text[], text) from authenticated;
 revoke execute on function public.set_recipe_tags(uuid, jsonb, uuid, text) from public;
 revoke execute on function public.set_recipe_tags(uuid, jsonb, uuid, text) from anon;
+revoke execute on function public.set_recipe_tags(uuid, jsonb, uuid, text) from authenticated;
 grant execute on function public.build_recipe_tag_payload(text[], text) to service_role;
 grant execute on function public.set_recipe_tags(uuid, jsonb, uuid, text) to service_role;
 revoke execute on function public.create_manual_recipe(
