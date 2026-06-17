@@ -8695,16 +8695,19 @@ function generateYoutubeExtractTags({
   ingredients,
   steps,
   providerTags,
+  baseServings,
 }: {
   title: string;
   description?: string;
   ingredients: YoutubeRecipeExtractData["ingredients"];
   steps: YoutubeRecipeExtractData["steps"];
   providerTags?: string[];
+  baseServings?: number | null;
 }) {
   return toRecipeTagLabels(buildSuggestedRecipeTags({
     sourceType: "youtube",
     title,
+    baseServings,
     ingredientNames: ingredients.map((ingredient) => ingredient.standard_name),
     stepTexts: [
       ...steps.map((step) => step.instruction),
@@ -9109,6 +9112,7 @@ export async function handleYoutubeExtract(request: Request) {
       ingredients: recipeCandidates.flatMap((candidate) => candidate.ingredients),
       steps: recipeCandidates.flatMap((candidate) => candidate.steps),
       providerTags: video.tags,
+      baseServings: 1,
     });
     const data: YoutubeRecipeExtractData = {
       extraction_id: extractionId,
@@ -9230,6 +9234,7 @@ export async function handleYoutubeExtract(request: Request) {
     ingredients,
     steps,
     providerTags: video.tags,
+    baseServings: 2,
   });
   const descriptionContributed = parsedRecipe.ingredients.length > 0 || parsedRecipe.steps.length > 0;
   const fallbackExtractionMethods = [
@@ -10113,6 +10118,7 @@ function buildChildDraftFromCandidate({
     ingredients: candidate.ingredients,
     steps: candidate.steps,
     providerTags: parentDraft.tags,
+    baseServings: parentDraft.base_servings ?? 1,
   });
 
   return {

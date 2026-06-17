@@ -294,6 +294,11 @@ function normalizeStep(row: Record<string, unknown>): ManualRecipeStepInput {
   };
 }
 
+function calculateTotalStepMinutes(steps: ManualRecipeStepInput[]) {
+  const totalSeconds = steps.reduce((sum, step) => sum + (step.duration_seconds ?? 0), 0);
+  return totalSeconds > 0 ? Math.ceil(totalSeconds / 60) : null;
+}
+
 function validateIngredient(
   ingredient: ManualRecipeIngredientInput,
   index: number,
@@ -1088,6 +1093,8 @@ export async function POST(request: Request) {
   const suggestedTags = buildSuggestedRecipeTags({
     sourceType: "manual",
     title: parsed.title,
+    baseServings: parsed.baseServings,
+    totalTimeMinutes: calculateTotalStepMinutes(parsed.steps),
     ingredientNames: parsed.ingredients.map((ingredient) => ingredient.standard_name),
     stepTexts: parsed.steps.map((step) => step.instruction),
     cookingMethodLabels: cookingMethodLookup.rows

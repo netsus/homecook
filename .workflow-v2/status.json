@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-17T17:32:00+09:00",
+  "updated_at": "2026-06-17T17:49:00+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1783,10 +1783,10 @@
     {
       "id": "36d-recipe-tags-rules-backfill",
       "preset": "vertical-slice-strict",
-      "branch": "docs/36d-recipe-tags-rules-backfill",
-      "lifecycle": "planned",
+      "branch": "feature/be-36d-recipe-tags-rules-backfill",
+      "lifecycle": "merged",
       "approval_state": "codex_approved",
-      "verification_status": "pending",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm vitest run tests/recipe-semantic-tags.test.ts tests/recipe-tags-backfill.test.ts tests/recipe-tags-normalization.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/recipe-tags-projection-writer.test.ts tests/supabase-server.test.ts",
         "pnpm lint",
@@ -1797,7 +1797,7 @@
         "pnpm validate:workpack -- --slice 36d-recipe-tags-rules-backfill",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs branch opened by Codex because 36d workpack docs were missing and backend implementation requires merged base docs. Scope: official P0 semantic/source rule fixture, provider-only sensitive/P1 guard, backfill dry-run/report, service-role usage count reconcile. Runtime implementation remains in feature/be-36d-recipe-tags-rules-backfill."
+      "notes": "Stage 2 backend implementation completed on feature/be-36d-recipe-tags-rules-backfill. Scope: official P0 semantic/source rule fixture, provider-only sensitive/P1 guard, manual/YouTube signal expansion, backfill dry-run/report, usage count reconcile, 36d seed correction, deprecated seed demotion, and service-role-only maintenance RPCs. Local verification passed: targeted 36d Vitest set, youtube product regression, pnpm verify:backend, source-of-truth/workflow/workpack validators, git diff --check, local Supabase db reset, and local psql smoke for seed/RPC/grant behavior. closeout_phase=completed closeout_recovery=manual_patch:2|ci_resync:1 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:PR #777 docs stage1 policy run,docs/workpacks/36d-recipe-tags-rules-backfill/README.md,docs/workpacks/36d-recipe-tags-rules-backfill/acceptance.md,pnpm verify:backend,pnpm exec supabase db reset --local --yes,local Supabase psql smoke last_recovery_at=2026-06-17T17:49:00+09:00"
     }
   ]
 }

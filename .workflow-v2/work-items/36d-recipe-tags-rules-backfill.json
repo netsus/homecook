@@ -81,9 +81,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "merged",
     "approval_state": "codex_approved",
-    "verification_status": "pending",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
@@ -101,5 +101,69 @@
     "Automatic romanization slug generation"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs prepared by Codex because the 36d workpack was missing and the implementation branch needs merged base docs to pass policy. Runtime implementation remains in feature/be-36d-recipe-tags-rules-backfill."
+  "notes": "Stage 2 backend implementation completed on feature/be-36d-recipe-tags-rules-backfill. Implements official P0 semantic/source rule fixture, provider-only sensitive/P1 guard, manual/YouTube signal expansion, dry-run backfill planner, public/approved usage count reconcile, 36d seed correction, deprecated seed demotion, and service-role-only maintenance RPCs. Production backfill/reconcile execution remains Manual Only.",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "pnpm vitest run tests/recipe-semantic-tags.test.ts tests/recipe-tags-backfill.test.ts tests/recipe-tags-normalization.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/recipe-tags-projection-writer.test.ts tests/supabase-server.test.ts",
+        "pnpm vitest run --config vitest.product.config.ts tests/youtube-import.backend.test.ts",
+        "pnpm vitest run tests/recipe-semantic-tags.test.ts tests/recipe-tags-backfill.test.ts tests/recipe-tags-normalization.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/recipe-tags-projection-writer.test.ts tests/supabase-server.test.ts tests/youtube-import.backend.test.ts",
+        "pnpm lint",
+        "pnpm typecheck",
+        "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key PLAYWRIGHT_BASE_URL=http://127.0.0.1:3119 pnpm verify:backend",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack",
+        "git diff --check",
+        "pnpm exec supabase db reset --local --yes",
+        "local Supabase psql smoke: official P0 theme-eligible count 36, total system theme-eligible count 36, deprecated theme eligible true count 0, deprecated slug count 0, 36d RPC signatures, service_role grants, dry-run function calls"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-snapshot",
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 2,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 1,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-06-17T17:49:00+09:00"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "docs_stage1_gap_and_slug_conflict_repaired",
+      "evidence_sources": [
+        "PR #777 docs stage1 policy run",
+        "docs/workpacks/36d-recipe-tags-rules-backfill/README.md",
+        "docs/workpacks/36d-recipe-tags-rules-backfill/acceptance.md",
+        "pnpm verify:backend",
+        "pnpm exec supabase db reset --local --yes",
+        "local Supabase psql smoke"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-06-17T17:49:00+09:00",
+      "status_synced_at": "2026-06-17T17:49:00+09:00",
+      "pr_body_synced_at": "2026-06-17T17:49:00+09:00"
+    }
+  }
 }

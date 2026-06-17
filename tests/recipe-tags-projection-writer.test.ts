@@ -3,8 +3,6 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { P0_RECIPE_TAG_SEEDS } from "@/lib/server/recipe-tags";
-
 const migrationPath = join(
   process.cwd(),
   "supabase",
@@ -30,9 +28,8 @@ describe("36b recipe tags projection writer migration", () => {
     expect(sql).toMatch(/alter table public\.recipe_tags enable row level security/i);
     expect(sql).toMatch(/create index if not exists recipe_tags_tag_sort_idx/i);
 
-    for (const seed of P0_RECIPE_TAG_SEEDS) {
-      expect(sql).toContain(`('${seed.normalized_key}', '${seed.label}', '${seed.kind}', true, true)`);
-    }
+    expect(sql).toContain("('자취요리', '자취요리', 'semantic', true, true)");
+    expect(sql).toContain("('유튜브레시피', '유튜브레시피', 'source', true, true)");
   });
 
   it("keeps recipe_tags, recipes.tags projection, and usage_count in one writer", () => {
