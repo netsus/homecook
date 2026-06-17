@@ -2268,14 +2268,48 @@ def resume_loop(cfg: LoopConfig | None, run_dir: Path, start_iter: int,
     return run_loop_from(cfg, run_dir, start_iter, feedback)
 
 
-def cli_arg_value(name: str, default: str | None = None) -> str | None:
+def cli_arg_value_from(argv: list[str], name: str, default: str | None = None) -> str | None:
     flag = f"--{name}"
-    if flag not in sys.argv:
+    if flag not in argv:
         return default
-    idx = sys.argv.index(flag)
-    if idx + 1 >= len(sys.argv) or sys.argv[idx + 1].startswith("--"):
+    idx = argv.index(flag)
+    if idx + 1 >= len(argv) or argv[idx + 1].startswith("--"):
         return default
-    return sys.argv[idx + 1]
+    return argv[idx + 1]
+
+
+def cli_arg_value(name: str, default: str | None = None) -> str | None:
+    return cli_arg_value_from(sys.argv, name, default)
+
+
+def cli_max_iter_from_args(argv: list[str]) -> int | None:
+    raw_value = cli_arg_value_from(argv, "max-iter")
+    if raw_value is None:
+        if "--max-iter" in argv:
+            raise ValueError("--max-iter requires an integer >= 1")
+        return None
+    try:
+        max_iter = int(raw_value)
+    except ValueError as error:
+        raise ValueError("--max-iter must be an integer >= 1") from error
+    if max_iter < 1:
+        raise ValueError("--max-iter must be >= 1")
+    return max_iter
+
+
+def loop_config_from_cli_args(argv: list[str] | None = None) -> LoopConfig:
+    max_iter = cli_max_iter_from_args(argv or sys.argv)
+    if max_iter is None:
+        return LoopConfig()
+    return LoopConfig(max_iter=max_iter)
+
+
+def validate_resume_max_iter(cfg: LoopConfig, start_iter: int) -> None:
+    if cfg.max_iter < start_iter:
+        raise ValueError(
+            f"--max-iter ({cfg.max_iter}) is smaller than --resume-from-iter ({start_iter}); "
+            "no iterations to run"
+        )
 
 
 def run_holdout_final(cfg: LoopConfig | None = None, out_tag: str | None = None, dry_run: bool = False,
@@ -2423,17 +2457,21 @@ if __name__ == "__main__":
             print("--resume-from-iter requires --run-dir <path> and an iteration number", file=sys.stderr)
             sys.exit(1)
         try:
+            cfg = loop_config_from_cli_args()
+            start_iter = int(start_iter_arg)
+            validate_resume_max_iter(cfg, start_iter)
             result = resume_loop(
-                LoopConfig(),
+                cfg,
                 Path(run_dir_arg),
-                int(start_iter_arg),
+                start_iter,
                 accept_current_module_state="--accept-current-module-state" in sys.argv,
             )
             print(json.dumps(result, ensure_ascii=False, indent=2))
-        except RuntimeError as error:
+        except (RuntimeError, ValueError) as error:
             print(str(error), file=sys.stderr)
             sys.exit(1)
     elif "--one-iter" in sys.argv:
+        # --one-iter is intentionally fixed to one iteration even when --max-iter is also present.
         # 실제 1 ITER 스모크: 계획→구현(Codex)→검증(추출)→채점→판정→진단.
         cfg = LoopConfig(max_iter=1)
         RUN_ROOT.mkdir(parents=True, exist_ok=True)
@@ -2446,4 +2484,8 @@ if __name__ == "__main__":
         print(json.dumps(result["decision"]["checks"], ensure_ascii=False, indent=2))
         print("run_dir:", run_dir)
     else:
-        print(json.dumps(run_loop(), ensure_ascii=False, indent=2))
+        try:
+            print(json.dumps(run_loop(loop_config_from_cli_args()), ensure_ascii=False, indent=2))
+        except ValueError as error:
+            print(str(error), file=sys.stderr)
+            sys.exit(1)

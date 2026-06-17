@@ -1135,6 +1135,68 @@ print(json.dumps(cases))
     }
   });
 
+  it("parses and validates CLI max-iter without changing the default", () => {
+    const result = runLoopPython(`
+cases = {}
+cases["default"] = loop.loop_config_from_cli_args(["loop.py"]).max_iter
+cases["explicit"] = loop.loop_config_from_cli_args(["loop.py", "--max-iter", "6"]).max_iter
+errors = {}
+for label, argv in {
+    "missing": ["loop.py", "--max-iter"],
+    "zero": ["loop.py", "--max-iter", "0"],
+    "negative": ["loop.py", "--max-iter", "-1"],
+    "non_integer": ["loop.py", "--max-iter", "nope"],
+}.items():
+    try:
+        loop.loop_config_from_cli_args(argv)
+    except ValueError as error:
+        errors[label] = str(error)
+print(json.dumps({"cases": cases, "errors": errors}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.cases).toEqual({ default: 3, explicit: 6 });
+    expect(Object.keys(report.errors).sort()).toEqual(["missing", "negative", "non_integer", "zero"]);
+    expect(report.errors.missing).toContain("--max-iter");
+    expect(report.errors.zero).toContain("--max-iter");
+    expect(report.errors.non_integer).toContain("integer");
+  });
+
+  it("uses max-iter as the resume upper bound and rejects empty resume ranges", () => {
+    const result = runLoopPython(`
+calls = []
+
+def fake_run_iteration(cfg, run_dir, iteration, feedback):
+    calls.append({"iteration": iteration, "feedback": feedback})
+    return {"passed": False, "feedback": f"feedback-{iteration}"}
+
+loop.run_iteration = fake_run_iteration
+loop.write_current_module_state = lambda *args, **kwargs: None
+loop.stage = lambda *args, **kwargs: None
+resume_dir = loop.Path(${JSON.stringify(workdir)}) / "resume-run"
+result = loop.run_loop_from(loop.LoopConfig(max_iter=6), resume_dir, 4, "resume-feedback")
+try:
+    loop.validate_resume_max_iter(loop.LoopConfig(max_iter=2), 4)
+    rejected = False
+except ValueError as error:
+    rejected = str(error)
+print(json.dumps({
+    "result": result,
+    "calls": calls,
+    "rejected": rejected,
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.calls.map((call: { iteration: number }) => call.iteration)).toEqual([4, 5, 6]);
+    expect(report.calls[0].feedback).toBe("resume-feedback");
+    expect(report.result).toMatchObject({ status: "max-iter", iterations: 6 });
+    expect(report.rejected).toContain("max-iter");
+    expect(report.rejected).toContain("resume");
+  });
+
   it("fails semantic validation when calibrated score thresholds are not met", () => {
     const result = runLoopPython(`
 cfg = loop.LoopConfig()
