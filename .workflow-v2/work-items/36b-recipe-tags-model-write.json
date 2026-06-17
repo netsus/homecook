@@ -78,9 +78,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "merged",
     "approval_state": "codex_approved",
-    "verification_status": "pending",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
@@ -102,5 +102,5 @@
     "Admin moderation UI"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs branch opened for 36b. Scope: canonical tags/recipe_tags model, P0 seed, normalization, atomic recipes.tags projection writer, manual/YouTube write paths, and read-only tag suggestions endpoint. Search/themes/backfill/frontend remain split into 36c/36d/36e."
+  "notes": "Stage 2 backend implementation completed on feature/be-36b-recipe-tags-model-write. Implements tags/recipe_tags additive migration, P0 semantic/source seed 36개, tag normalization, atomic recipes.tags projection writer, manual/YouTube write paths, YouTube semantic draft tag generation, and read-only tag suggestions endpoint. Local verification passed: targeted 36b Vitest set, existing manual/YouTube/Supabase/tag regressions, pnpm typecheck, pnpm lint, and pnpm verify:backend with dummy public Supabase env plus alternate Playwright port. Search/themes/backfill/frontend remain split into 36c/36d/36e."
 }
