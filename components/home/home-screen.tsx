@@ -37,6 +37,7 @@ import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
 import { KOREA_TIME_ZONE } from "@/lib/korean-date";
+import { PRIMARY_WEB_NAV_ITEMS } from "@/lib/navigation/app-nav";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -61,13 +62,6 @@ const SORT_OPTIONS: Array<{ label: string; value: RecipeSortKey }> = [
 
 type ScreenState = "loading" | "ready" | "empty" | "error";
 type AsyncState = "loading" | "ready" | "error";
-
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
 
 const HOME_QUICK_LINKS = [
   {
@@ -119,6 +113,28 @@ function formatHomeMealGreeting(now = new Date()) {
             : "밤";
 
   return `${weekday} ${meal},`;
+}
+
+function buildResultStatusText({
+  count,
+  listTitle,
+  screenState,
+}: {
+  count: number;
+  listTitle: string;
+  screenState: ScreenState;
+}) {
+  if (screenState === "loading") {
+    return "레시피 목록을 불러오는 중입니다.";
+  }
+  if (screenState === "error") {
+    return "레시피 목록을 불러오지 못했습니다.";
+  }
+  if (count === 0) {
+    return `${listTitle} 조건에 맞는 레시피가 없습니다.`;
+  }
+
+  return `${listTitle} ${count}개가 표시됩니다.`;
 }
 
 export function HomeScreen() {
@@ -343,6 +359,11 @@ export function HomeScreen() {
     displayedRecipes.length === 0;
   const emptyStateActionLabel = "초기화";
   const mealGreeting = useMemo(() => formatHomeMealGreeting(), []);
+  const resultStatusText = buildResultStatusText({
+    count: displayedRecipes.length,
+    listTitle,
+    screenState,
+  });
 
   const clearIngredientFilters = useCallback(() => {
     resetAppliedIngredientIds();
@@ -570,6 +591,7 @@ export function HomeScreen() {
           onSelectTheme={selectTheme}
           profile={profile}
           query={query}
+          resultStatusText={resultStatusText}
           savedRecipeIds={homeSaveFlow.savedRecipeIds}
           screenState={screenState}
           selectedTheme={selectedTheme}
@@ -679,20 +701,44 @@ export function HomeScreen() {
               </div>
             </div>
 
-            {screenState !== "error" ? (
-              <HomeTagRail
-                activeTagKey={activeTagKey}
-                onRetry={() => void loadTagOptions()}
-                onSelectTag={selectTag}
-                tagOptions={tagOptions}
-                tagState={tagState}
-                variant="mobile"
-              />
-            ) : null}
+            <HomeTagRail
+              activeTagKey={activeTagKey}
+              onRetry={() => void loadTagOptions()}
+              onSelectTag={selectTag}
+              tagOptions={tagOptions}
+              tagState={tagState}
+              variant="mobile"
+            />
 
             <HomeQuickLinks variant="mobile" />
 
-            {screenState === "error" ? (
+            {showInitialDiscoverySkeleton ? (
+              <>
+                <ThemeCarouselSkeleton />
+                <section aria-label="레시피 목록 불러오는 중">
+                  <div className="flex items-center justify-between px-4 pb-2">
+                    <div className="space-y-2">
+                      <Skeleton className="h-6 w-32 rounded-full" />
+                      <Skeleton className="h-4 w-10 rounded-full" />
+                    </div>
+                    <Skeleton className="h-9 w-24 rounded-[var(--radius-control)]" />
+                  </div>
+                  <div className="px-4">
+                    <RecipeListSkeleton includeHeader={false} />
+                  </div>
+                </section>
+              </>
+            ) : null}
+
+            {!showInitialDiscoverySkeleton && (themes?.themes.length ?? 0) > 0 ? (
+              <ThemeCarousel
+                activeThemeId={activeThemeId}
+                onSelectTheme={selectTheme}
+                themes={themes?.themes ?? []}
+              />
+            ) : null}
+
+            {screenState === "error" && !showInitialDiscoverySkeleton ? (
               <div className="px-4 pb-4">
                 <ContentState
                   actionLabel="다시 시도"
@@ -705,23 +751,16 @@ export function HomeScreen() {
               </div>
             ) : null}
 
-            {showInitialDiscoverySkeleton ? (
-              <div className="space-y-4 px-4">
-                <ThemeCarouselSkeleton />
-                <RecipeListSkeleton />
-              </div>
-            ) : null}
-
-            {!showInitialDiscoverySkeleton && (themes?.themes.length ?? 0) > 0 ? (
-              <ThemeCarousel
-                activeThemeId={activeThemeId}
-                onSelectTheme={selectTheme}
-                themes={themes?.themes ?? []}
-              />
-            ) : null}
-
             {screenState !== "error" && !showInitialDiscoverySkeleton ? (
               <section aria-label={listTitle}>
+                <p
+                  aria-live="polite"
+                  className="visually-hidden"
+                  data-testid="home-result-status"
+                  role="status"
+                >
+                  {resultStatusText}
+                </p>
                 {/* Section header with sort */}
                 <div className="flex items-center justify-between px-4 pb-2">
                   <div>
@@ -742,7 +781,11 @@ export function HomeScreen() {
                   ) : null}
                 </div>
 
-                {screenState === "loading" ? <div className="px-4"><RecipeListSkeleton /></div> : null}
+                {screenState === "loading" ? (
+                  <div className="px-4">
+                    <RecipeListSkeleton includeHeader={false} />
+                  </div>
+                ) : null}
 
                 {screenState === "ready" && displayedRecipes.length ? (
                   <div className="grid grid-cols-1 gap-4 px-4">
@@ -830,6 +873,7 @@ function HomeWebScreen({
   onSelectTheme,
   profile,
   query,
+  resultStatusText,
   savedRecipeIds,
   screenState,
   selectedTheme,
@@ -859,6 +903,7 @@ function HomeWebScreen({
   onSelectTheme: (themeId: string) => void;
   profile: UserProfileData | null;
   query: string;
+  resultStatusText: string;
   savedRecipeIds: Set<string>;
   screenState: ScreenState;
   selectedTheme: RecipeTheme | null;
@@ -881,7 +926,7 @@ function HomeWebScreen({
     <WebShell className="web-home" wide>
       <WebTopNav
         activeId="home"
-        items={WEB_NAV_ITEMS}
+        items={PRIMARY_WEB_NAV_ITEMS}
         rightSlot={<WebProfileButton profile={profile} />}
       />
       <div className="web-screen">
@@ -1022,6 +1067,14 @@ function HomeWebScreen({
         ) : null}
 
         <section className="web-all-recipes">
+          <p
+            aria-live="polite"
+            className="visually-hidden"
+            data-testid="home-result-status"
+            role="status"
+          >
+            {resultStatusText}
+          </p>
           <div className="web-section-head">
             <div>
               <h2 className="web-section-title">{listTitle}</h2>
@@ -1326,7 +1379,7 @@ function HomeTagRail({
         className={
           variant === "web"
             ? "web-filter-chip-row"
-            : "scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-2"
+            : "home-mobile-tag-rail scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-2"
         }
         aria-label="태그 불러오는 중"
       >
@@ -1346,7 +1399,7 @@ function HomeTagRail({
         className={
           variant === "web"
             ? "web-filter-chip-row"
-            : "flex items-center gap-2 px-5 pb-2"
+            : "home-mobile-tag-rail flex items-center gap-2 px-5 pb-2"
         }
       >
         <span className="text-[12px] font-semibold text-[var(--text-3)]">
@@ -1364,13 +1417,17 @@ function HomeTagRail({
   }
 
   if (tagOptions.length === 0) {
+    if (variant === "mobile") {
+      return <div aria-hidden="true" className="home-mobile-tag-rail" />;
+    }
+
     return null;
   }
 
   const containerClass =
     variant === "web"
       ? "web-filter-chip-row"
-      : "scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-2";
+      : "home-mobile-tag-rail scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-2";
 
   return (
     <div className={containerClass} aria-label="태그 필터">
@@ -1418,7 +1475,7 @@ function ThemeCarousel({
   themes: RecipeTheme[];
 }) {
   return (
-    <section aria-label="이번 주 인기 테마" className="pb-4 pt-2">
+    <section aria-label="이번 주 인기 테마" className="home-mobile-theme-section pb-4 pt-2">
       <div className="flex items-baseline justify-between px-4 pb-3">
         <h2 className="text-[18px] font-bold text-[var(--foreground)]">이번 주 인기 테마</h2>
         {activeThemeId ? (
@@ -1431,7 +1488,7 @@ function ThemeCarousel({
           </button>
         ) : null}
       </div>
-      <div className="scrollbar-hide flex gap-2.5 overflow-x-auto px-4 pb-1">
+      <div className="home-mobile-theme-rail scrollbar-hide flex gap-2.5 overflow-x-auto px-4 pb-1">
         {themes.map((theme, index) => (
           <ThemeCarouselCard
             isActive={activeThemeId === theme.id}
@@ -1598,24 +1655,29 @@ function WebBookmarkIcon({ filled = false }: { filled?: boolean }) {
 
 function ThemeCarouselSkeleton() {
   return (
-    <div className="space-y-3">
-      <Skeleton className="h-6 w-36 rounded-full" />
-      <div className="flex gap-3 overflow-hidden">
+    <section
+      aria-label="이번 주 인기 테마 불러오는 중"
+      className="home-mobile-theme-section pb-4 pt-2"
+    >
+      <div className="flex items-baseline justify-between px-4 pb-3">
+        <Skeleton className="h-6 w-36 rounded-full" />
+      </div>
+      <div className="home-mobile-theme-rail flex gap-2.5 overflow-hidden px-4 pb-1">
         {Array.from({ length: 3 }).map((_, index) => (
           <Skeleton
             key={index}
-            className="h-[132px] w-[148px] shrink-0 rounded-[var(--radius-card)]"
+            className="h-[128px] w-[184px] shrink-0 rounded-[var(--radius-card)]"
           />
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
-function RecipeListSkeleton() {
+function RecipeListSkeleton({ includeHeader = true }: { includeHeader?: boolean }) {
   return (
     <div className="space-y-4">
-      <Skeleton className="h-6 w-32 rounded-full" />
+      {includeHeader ? <Skeleton className="h-6 w-32 rounded-full" /> : null}
       <div className="grid grid-cols-1 gap-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <Skeleton

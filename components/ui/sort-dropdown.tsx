@@ -28,9 +28,20 @@ export function SortDropdown({
   const [placement, setPlacement] = useState<"bottom" | "top">("bottom");
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const optionRefs = useRef<Array<HTMLLIElement | null>>([]);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const selectedOption = options.find((o) => o.value === value);
+  const selectedIndex = Math.max(
+    options.findIndex((option) => option.value === value),
+    0,
+  );
+
+  const focusOption = useCallback((index: number) => {
+    window.requestAnimationFrame(() => {
+      optionRefs.current[index]?.focus();
+    });
+  }, []);
 
   const handleSelect = useCallback(
     (optionValue: string) => {
@@ -50,6 +61,53 @@ export function SortDropdown({
       }
     },
     [],
+  );
+
+  const handleTriggerKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
+        return;
+      }
+
+      event.preventDefault();
+      setOpen(true);
+      focusOption(event.key === "ArrowUp" ? options.length - 1 : selectedIndex);
+    },
+    [focusOption, options.length, selectedIndex],
+  );
+
+  const handleOptionKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLLIElement>, optionValue: string, index: number) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        handleSelect(optionValue);
+        return;
+      }
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        focusOption((index + 1) % options.length);
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        focusOption((index - 1 + options.length) % options.length);
+        return;
+      }
+
+      if (event.key === "Home") {
+        event.preventDefault();
+        focusOption(0);
+        return;
+      }
+
+      if (event.key === "End") {
+        event.preventDefault();
+        focusOption(options.length - 1);
+      }
+    },
+    [focusOption, handleSelect, options.length],
   );
 
   useEffect(() => {
@@ -110,6 +168,7 @@ export function SortDropdown({
           .join(" ")}
         disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
+        onKeyDown={handleTriggerKeyDown}
         ref={triggerRef}
         type="button"
       >
@@ -141,7 +200,7 @@ export function SortDropdown({
           ref={listRef}
           role="listbox"
         >
-          {options.map((option) => {
+          {options.map((option, index) => {
             const isSelected = option.value === value;
             return (
               <li
@@ -154,11 +213,9 @@ export function SortDropdown({
                 ].join(" ")}
                 key={option.value}
                 onClick={() => handleSelect(option.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    handleSelect(option.value);
-                  }
+                onKeyDown={(event) => handleOptionKeyDown(event, option.value, index)}
+                ref={(element) => {
+                  optionRefs.current[index] = element;
                 }}
                 role="option"
                 tabIndex={0}

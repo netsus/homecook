@@ -2,6 +2,7 @@ import Link from "next/link";
 import * as React from "react";
 
 import { cn } from "@/components/web/utils";
+import { PRIMARY_WEB_NAV_ITEMS } from "@/lib/navigation/app-nav";
 
 export interface WebTopNavItem {
   href: string;
@@ -14,7 +15,7 @@ export interface WebTopNavProps {
   brandHref?: string;
   brandLabel?: string;
   className?: string;
-  items: readonly WebTopNavItem[];
+  items?: readonly WebTopNavItem[];
   rightSlot?: React.ReactNode;
 }
 
@@ -23,7 +24,7 @@ export function WebTopNav({
   brandHref = "/",
   brandLabel = "HOMECOOK",
   className,
-  items,
+  items = PRIMARY_WEB_NAV_ITEMS,
   rightSlot,
 }: WebTopNavProps) {
   return (

@@ -143,6 +143,11 @@ describe("home screen", () => {
     expect(screen.getByRole("link", { name: /레시피북/ }).getAttribute("href")).toBe("/mypage?tab=recipebooks");
     expect(screen.getByRole("link", { name: /성장 보기/ }).getAttribute("href")).toBe("/mypage");
     expect(screen.getByRole("navigation", { name: "HOME 하단 탭" })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByTestId("home-result-status").textContent).toBe(
+        `모든 레시피 ${getMockRecipeList().items.length}개가 표시됩니다.`,
+      );
+    });
     expect(screen.getByRole("link", { name: "팬트리" }).getAttribute("href")).toBe("/pantry");
     expect(screen.getByRole("link", { name: "마이" }).getAttribute("href")).toBe("/mypage");
     expect(
@@ -162,6 +167,12 @@ describe("home screen", () => {
     );
 
     expect(hasNarrowHomeFrame).toBe(false);
+  });
+
+  it("reserves mobile loading rail heights to avoid Lighthouse layout shift", () => {
+    expect(ruleBody(".home-mobile-tag-rail")).toContain("min-height: 40px;");
+    expect(ruleBody(".home-mobile-theme-section")).toContain("min-height: 195px;");
+    expect(ruleBody(".home-mobile-theme-rail")).toContain("min-height: 129px;");
   });
 
   it("adds left breathing room to web recipe card titles and metrics", () => {
@@ -744,6 +755,18 @@ describe("home screen", () => {
 
     expect(
       await screen.findByRole("heading", { name: "레시피를 불러오지 못했어요" }),
+    ).toBeTruthy();
+    const themeHeading = screen.getByRole("heading", {
+      level: 2,
+      name: "이번 주 인기 테마",
+    });
+    const errorHeading = screen.getByRole("heading", {
+      name: "레시피를 불러오지 못했어요",
+    });
+
+    expect(
+      themeHeading.compareDocumentPosition(errorHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
       screen
