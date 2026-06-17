@@ -776,6 +776,55 @@ function buildRecipeDetail({
 }
 
 export async function installDiscoveryRoutes(page: Page) {
+  await page.route("**/api/v1/tags**", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          items: [
+            {
+              normalized_key: "한식",
+              label: "한식",
+              slug: null,
+              kind: "semantic",
+              is_system: true,
+              theme_eligible: true,
+              usage_count: 18,
+            },
+            {
+              normalized_key: "찌개",
+              label: "찌개",
+              slug: null,
+              kind: "semantic",
+              is_system: true,
+              theme_eligible: true,
+              usage_count: 14,
+            },
+            {
+              normalized_key: "저녁",
+              label: "저녁",
+              slug: null,
+              kind: "semantic",
+              is_system: true,
+              theme_eligible: true,
+              usage_count: 12,
+            },
+            {
+              normalized_key: "간단식",
+              label: "간단식",
+              slug: null,
+              kind: "semantic",
+              is_system: true,
+              theme_eligible: true,
+              usage_count: 9,
+            },
+          ],
+        },
+        error: null,
+      },
+    });
+  });
+
   await page.route("**/api/v1/recipes/themes", async (route) => {
     const recipes = buildRecipeItems(new URL("http://localhost/api/v1/recipes"));
 
