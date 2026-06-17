@@ -175,14 +175,14 @@
 
 > 이 체크리스트는 Stage 2~3 동안 갱신하는 living closeout 문서다. 36d는 BE-only이므로 Stage 4~6 항목은 두지 않는다.
 
-- [ ] 누락된 36d workpack/acceptance/automation metadata 보강 <!-- omo:id=delivery-36d-workpack-gap;stage=1;scope=shared;review=1 -->
-- [ ] 공식 P0 semantic/source tag 36개 exact fixture 고정 <!-- omo:id=delivery-p0-exact-fixture;stage=2;scope=backend;review=3,6 -->
-- [ ] P0 추천 rule engine이 source/time/tool/lifestyle/course/taste/diet 신호를 deterministic하게 해석 <!-- omo:id=delivery-semantic-rule-engine;stage=2;scope=backend;review=3,6 -->
-- [ ] 민감 태그와 P1 후보 태그가 provider-only 신호로 자동 부여되지 않도록 guard 구현 <!-- omo:id=delivery-sensitive-p1-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] 직접 등록 fallback 추천에 base servings와 total step minutes 반영 <!-- omo:id=delivery-manual-rule-signals;stage=2;scope=backend;review=3,6 -->
-- [ ] YouTube 추천에 provider tags와 candidate base servings 참고 신호 반영 <!-- omo:id=delivery-youtube-rule-signals;stage=2;scope=backend;review=3,6 -->
-- [ ] 기존 레시피 backfill dry-run/report helper 구현 <!-- omo:id=delivery-backfill-dry-run;stage=2;scope=backend;review=3,6 -->
-- [ ] usage count reconcile helper/RPC가 public/approved 관계만 count하도록 구현 <!-- omo:id=delivery-usage-reconcile;stage=2;scope=backend;review=3,6 -->
-- [ ] 36d migration이 official P0 seed 보정, deprecated seed demotion, service-role-only RPC를 포함 <!-- omo:id=delivery-36d-migration;stage=2;scope=backend;review=3,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] targeted Vitest와 backend verification 실행 <!-- omo:id=delivery-backend-verification;stage=2;scope=backend;review=3,6 -->
+- [x] 누락된 36d workpack/acceptance/automation metadata 보강 <!-- omo:id=delivery-36d-workpack-gap;stage=2;scope=shared;review=3,6 -->
+- [x] 공식 P0 semantic/source tag 36개 exact fixture 고정 <!-- omo:id=delivery-p0-exact-fixture;stage=2;scope=backend;review=3,6 -->
+- [x] P0 추천 rule engine이 source/time/tool/lifestyle/course/taste/diet 신호를 deterministic하게 해석 <!-- omo:id=delivery-semantic-rule-engine;stage=2;scope=backend;review=3,6 -->
+- [x] 민감 태그와 P1 후보 태그가 provider-only 신호로 자동 부여되지 않도록 guard 구현 <!-- omo:id=delivery-sensitive-p1-guard;stage=2;scope=backend;review=3,6 -->
+- [x] 직접 등록 fallback 추천에 base servings와 total step minutes 반영 <!-- omo:id=delivery-manual-rule-signals;stage=2;scope=backend;review=3,6 -->
+- [x] YouTube 추천에 provider tags와 candidate base servings 참고 신호 반영 <!-- omo:id=delivery-youtube-rule-signals;stage=2;scope=backend;review=3,6 -->
+- [x] 기존 레시피 backfill dry-run/report helper 구현 <!-- omo:id=delivery-backfill-dry-run;stage=2;scope=backend;review=3,6 -->
+- [x] usage count reconcile helper/RPC가 public/approved 관계만 count하도록 구현 <!-- omo:id=delivery-usage-reconcile;stage=2;scope=backend;review=3,6 -->
+- [x] 36d migration이 official P0 seed 보정, deprecated seed demotion, service-role-only RPC를 포함 <!-- omo:id=delivery-36d-migration;stage=2;scope=backend;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] targeted Vitest와 backend verification 실행 <!-- omo:id=delivery-backend-verification;stage=2;scope=backend;review=3,6 -->

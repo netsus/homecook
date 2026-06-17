@@ -169,6 +169,18 @@ describe("supabase schema migrations", () => {
     expect(sql).toMatch(/add column if not exists slug text/i);
   });
 
+  it("defines recipe tag backfill dry-run and usage reconcile policy functions", () => {
+    const sql = readAllMigrationSql();
+
+    expect(sql).toMatch(/create or replace function public\.dry_run_recipe_tag_projection_backfill/i);
+    expect(sql).toMatch(/legacy_projection_only/i);
+    expect(sql).toMatch(/create or replace function public\.reconcile_recipe_tag_usage_counts/i);
+    expect(sql).toMatch(/rt\.visibility = 'public'/i);
+    expect(sql).toMatch(/rt\.review_status = 'approved'/i);
+    expect(sql).toMatch(/grant execute on function public\.dry_run_recipe_tag_projection_backfill\(integer\) to service_role/i);
+    expect(sql).toMatch(/grant execute on function public\.reconcile_recipe_tag_usage_counts\(boolean\) to service_role/i);
+  });
+
   it("defines atomic launch-readiness RPCs with auth boundary checks", () => {
     const sql = readAllMigrationSql();
 

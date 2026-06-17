@@ -138,7 +138,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `36a-recipe-tags-contract-evolution` | docs | 레시피 태그를 서버 추천 + 사용자 검수 기능으로 승격하고 `tags`/`recipe_tags` 정규화 모델, 검색, HOME theme seed, P0 의미 태그 목록을 공식 계약으로 잠금 |
 | `36b-recipe-tags-model-write` | merged | `tags`/`recipe_tags` additive migration, P0 seed, tag normalization, YouTube/manual write path, `recipes.tags` projection writer 구현 |
 | `36c-recipe-tags-search-themes` | merged | `GET /recipes?tag=`, 제목+승인 태그 검색, `GET /tags`, HOME theme generation을 cursor-stable dedupe 전략으로 구현 |
-| `36d-recipe-tags-rules-backfill` | docs | P0 의미 태그 rule fixture와 기존 레시피 backfill dry-run/report, usage count reconcile, P1 후보 승인 정책 구현 |
+| `36d-recipe-tags-rules-backfill` | merged | P0 의미 태그 rule fixture와 기존 레시피 backfill dry-run/report, usage count reconcile, P1 후보 승인 정책 구현 |
 | `36e-recipe-tags-frontend` | planned | MANUAL_RECIPE_CREATE/YT_IMPORT 태그 추천·검수 UI와 HOME 태그 검색/filter/theme chip UX 구현 |
 
 ## Design Decision Gates

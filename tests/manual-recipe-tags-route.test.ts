@@ -185,7 +185,7 @@ describe("36b manual recipe tag write path", () => {
 
     expect(response.status).toBe(201);
     expect(dbClient.rpc).toHaveBeenCalledWith("create_manual_recipe", expect.objectContaining({
-      p_tags: ["한식", "국물요리", "매콤", "초보가능", "고단백"],
+      p_tags: ["자취요리", "30분이내", "한식", "국물요리", "매콤", "초보가능"],
       p_tag_source: "system_suggested",
     }));
   });

@@ -7860,7 +7860,7 @@ describe("20 youtube real import backend", () => {
       success: true,
       data: {
         thumbnail_url: "https://img.youtube.com/vi/ambiguousmatch123/hqdefault.jpg",
-        tags: ["유튜브레시피", "한식", "국물요리"],
+        tags: ["유튜브레시피", "한식", "국물요리", "발효한끼"],
         blocking_issues: ["ingredients[1].ingredient_id"],
         ingredients: [
           { standard_name: "김치", resolution_status: "resolved" },
@@ -7891,7 +7891,7 @@ describe("20 youtube real import backend", () => {
       thumbnail_url: "https://img.youtube.com/vi/ambiguousmatch123/hqdefault.jpg",
       draft_json: expect.objectContaining({
         thumbnail_url: "https://img.youtube.com/vi/ambiguousmatch123/hqdefault.jpg",
-        tags: ["유튜브레시피", "한식", "국물요리"],
+        tags: ["유튜브레시피", "한식", "국물요리", "발효한끼"],
       }),
     }));
   });
