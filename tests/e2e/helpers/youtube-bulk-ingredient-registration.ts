@@ -51,10 +51,10 @@ export async function installBulkIngredientRoutes(page: Page) {
           classification_status: "recipe",
           classification_reasons: [],
           video_info: {
-            video_id: "bulk-test-123",
+            video_id: "bulktest123",
             title: "된장찌개 레시피",
             channel: "집밥 테스트",
-            thumbnail_url: "https://i.ytimg.com/vi/bulk-test-123/hqdefault.jpg",
+            thumbnail_url: "https://i.ytimg.com/vi/bulktest123/hqdefault.jpg",
           },
         },
         error: null,
@@ -272,7 +272,7 @@ export async function installBulkIngredientRoutes(page: Page) {
 
 export async function openBulkReview(page: Page) {
   await page.goto(YOUTUBE_INGREDIENT_REGISTRATION_URL);
-  await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=bulk-test-123");
+  await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=bulktest123");
   await page.getByRole("button", { name: "가져오기" }).click();
   await page.getByTestId("bulk-register-cta").waitFor({ state: "visible" });
 }

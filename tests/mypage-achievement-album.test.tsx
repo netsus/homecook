@@ -453,10 +453,10 @@ describe("MYPAGE achievement album UI", () => {
     expect(gradeAsset.className).toContain("rounded-full");
     expect(gradeAsset.className).toContain("bg-[var(--surface)]");
     expect(gradeAsset.style.width).toBe("54px");
-    expect(within(gradeRow).getByText("Diamond")).toBeTruthy();
+    expect(within(gradeRow).getByText("다이아")).toBeTruthy();
     expect(within(gradeRow).getByText("Lv.46")).toBeTruthy();
-    expect(within(gradeRow).getByText("Diamond").parentElement?.className).toContain("gap-1");
-    expect(within(gradeRow).getByText("Diamond").parentElement?.className).not.toContain("gap-6");
+    expect(within(gradeRow).getByText("다이아").parentElement?.className).toContain("gap-1");
+    expect(within(gradeRow).getByText("다이아").parentElement?.className).not.toContain("gap-6");
     expect(
       identity.compareDocumentPosition(gradeDivider) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
@@ -865,7 +865,7 @@ describe("MYPAGE achievement album UI", () => {
 
     const header = screen.getByTestId("mypage-growth-profile");
     const gradeRow = within(header).getByTestId("mypage-profile-grade-row");
-    expect(within(gradeRow).getByText("Clay")).toBeTruthy();
+    expect(within(gradeRow).getByText("흙")).toBeTruthy();
     expect(within(gradeRow).getByText("Lv.1")).toBeTruthy();
     expect(within(header).getByText("다음 레벨까지 30 XP")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "튜토리얼 보기" })).toBeNull();

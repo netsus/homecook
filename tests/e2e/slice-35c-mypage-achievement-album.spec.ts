@@ -396,7 +396,7 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     await mkdir(EVIDENCE_DIR, { recursive: true });
 
     const mobile = await openMypage(browser, { width: 390, height: 844 });
-    await expect(mobile.page.getByTestId("mypage-profile-grade-row").getByText("Diamond")).toBeVisible();
+    await expect(mobile.page.getByTestId("mypage-profile-grade-row").getByText("다이아")).toBeVisible();
     await expect(mobile.page.getByTestId("mypage-profile-grade-row").getByText("Lv.46")).toBeVisible();
     await expect(mobile.page.getByTestId("growth-archive-surface")).toHaveCount(0);
     await expect(mobile.page.getByRole("button", { name: "등급 보기" })).toBeVisible();
@@ -410,7 +410,7 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     await mobile.page.getByRole("button", { name: "등급 보기" }).click();
     await expect(mobile.page.getByRole("dialog", { name: "전체 등급" })).toBeVisible();
     await expect(mobile.page.getByText("현재 등급")).toBeVisible();
-    await expect(mobile.page.getByText("Titanium")).toBeVisible();
+    await expect(mobile.page.getByText("티타늄")).toBeVisible();
     await mobile.page.waitForFunction(() =>
       Array.from(document.querySelectorAll('[data-testid^="grade-panel-grade-image-"]'))
         .slice(0, 5)
@@ -473,7 +473,7 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     await desktop.context.close();
 
     const wideDesktop = await openMypage(browser, { width: 1920, height: 1080 });
-    await expect(wideDesktop.page.getByTestId("mypage-profile-grade-row")).toContainText("Diamond");
+    await expect(wideDesktop.page.getByTestId("mypage-profile-grade-row")).toContainText("다이아");
     await expect(wideDesktop.page.getByTestId("mypage-profile-grade-row")).toContainText("Lv.46");
     await wideDesktop.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "desktop-1920-profile.png") });
     await wideDesktop.context.close();
