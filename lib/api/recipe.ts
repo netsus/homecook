@@ -8,6 +8,7 @@ import type {
   RecipeBookRecipeListData,
   RecipeListData,
   RecipeListQuery,
+  RecipeTagListData,
 } from "@/types/recipe";
 
 function toFetchError(error: unknown, fallbackMessage: string) {
@@ -30,6 +31,7 @@ export async function fetchRecipes(query: RecipeListQuery): Promise<ApiResponse<
   try {
     const params = new URLSearchParams();
     if (query.q) params.append("q", query.q);
+    if (query.tag) params.append("tag", query.tag);
     if (query.ingredient_ids && query.ingredient_ids.length > 0) {
       params.append("ingredient_ids", query.ingredient_ids.join(","));
     }
@@ -44,6 +46,35 @@ export async function fetchRecipes(query: RecipeListQuery): Promise<ApiResponse<
       success: false,
       data: null,
       error: toFetchError(error, "검색 중 오류가 발생했어요."),
+    };
+  }
+}
+
+export async function fetchRecipeTags(query?: {
+  q?: string;
+  kind?: string;
+  theme_eligible?: boolean;
+  limit?: number;
+}): Promise<ApiResponse<RecipeTagListData>> {
+  try {
+    const params = new URLSearchParams();
+    if (query?.q) params.append("q", query.q);
+    if (query?.kind) params.append("kind", query.kind);
+    if (query?.theme_eligible !== undefined) {
+      params.append("theme_eligible", String(query.theme_eligible));
+    }
+    if (query?.limit !== undefined) params.append("limit", String(query.limit));
+
+    const queryString = params.toString();
+    const data = await fetchJson<RecipeTagListData>(
+      `/api/v1/tags${queryString ? `?${queryString}` : ""}`,
+    );
+    return { success: true, data, error: null };
+  } catch (error) {
+    return {
+      success: false,
+      data: null,
+      error: toFetchError(error, "태그 목록을 불러오지 못했어요."),
     };
   }
 }

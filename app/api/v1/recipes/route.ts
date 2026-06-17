@@ -43,6 +43,7 @@ import type {
   RecipeCardItem,
   RecipeListData,
   RecipeListQuery,
+  RecipeSortKey,
 } from "@/types/recipe";
 
 interface RecipeIngredientMatchRow {
@@ -57,6 +58,10 @@ interface RecipeListRow extends RecipeListCursorRecipe {
   base_servings: number;
   like_count: number;
   source_type: "system" | "youtube" | "manual";
+}
+
+interface RecipeIdRow {
+  recipe_id: string;
 }
 
 interface QueryError {
@@ -77,6 +82,33 @@ type MaybeSingleResult<T> = PromiseLike<{
 interface IdLookupRow {
   id: string;
   label?: string | null;
+}
+
+interface RecipeRowsQuery {
+  limit(count: number): RecipeRowsQuery;
+  order(column: string, options: { ascending: boolean }): RecipeRowsQuery;
+  in(column: string, values: string[]): RecipeRowsQuery;
+  ilike(column: string, pattern: string): RecipeRowsQuery;
+  or(filters: string): RecipeRowsQuery;
+  then: ArrayQueryResult<RecipeListRow>["then"];
+}
+
+interface RecipesSelectTable {
+  select(columns: string): RecipeRowsQuery;
+}
+
+interface RecipeSearchDbClient {
+  rpc(
+    functionName: "find_recipe_ids_by_public_tags",
+    args: {
+      p_q: string | null;
+      p_tag: string | null;
+    },
+  ): PromiseLike<{
+    data: RecipeIdRow[] | null;
+    error: QueryError | null;
+  }>;
+  from(table: "recipes"): RecipesSelectTable;
 }
 
 interface ManualRecipeRow {
@@ -531,6 +563,230 @@ function createEmptyRecipeList(): RecipeListData {
   };
 }
 
+function dedupeRecipeIds(rows: RecipeIdRow[]) {
+  return Array.from(new Set(rows.map((row) => row.recipe_id).filter(Boolean)));
+}
+
+function intersectRecipeIds(left: string[] | null, right: string[]) {
+  if (left === null) {
+    return [...right];
+  }
+
+  const rightIds = new Set(right);
+  return left.filter((recipeId) => rightIds.has(recipeId));
+}
+
+function compareRecipeRows(sort: RecipeSortKey, left: RecipeListRow, right: RecipeListRow) {
+  if (sort === "latest") {
+    if (left.created_at !== right.created_at) {
+      return left.created_at > right.created_at ? -1 : 1;
+    }
+
+    if (left.id !== right.id) {
+      return left.id > right.id ? -1 : 1;
+    }
+
+    return 0;
+  }
+
+  if (left[sort] !== right[sort]) {
+    return right[sort] - left[sort];
+  }
+
+  if (left.id !== right.id) {
+    return left.id < right.id ? -1 : 1;
+  }
+
+  return 0;
+}
+
+function mergeRecipeRows(rows: RecipeListRow[], sort: RecipeSortKey) {
+  const rowsById = new Map<string, RecipeListRow>();
+
+  rows.forEach((row) => {
+    if (!rowsById.has(row.id)) {
+      rowsById.set(row.id, row);
+    }
+  });
+
+  return Array.from(rowsById.values()).sort((left, right) =>
+    compareRecipeRows(sort, left, right),
+  );
+}
+
+async function findRecipeIdsByPublicTags({
+  dbClient,
+  q,
+  tag,
+}: {
+  dbClient: RecipeSearchDbClient;
+  q: string | null;
+  tag: string | null;
+}) {
+  const { data, error } = await dbClient.rpc("find_recipe_ids_by_public_tags", {
+    p_q: q,
+    p_tag: tag,
+  });
+
+  if (error || !data) {
+    return {
+      recipeIds: [],
+      error: error ?? { message: "tag lookup failed" },
+    };
+  }
+
+  return {
+    recipeIds: dedupeRecipeIds(data),
+    error: null,
+  };
+}
+
+function applyRecipeListSort(query: RecipeRowsQuery, sort: RecipeSortKey) {
+  if (sort === "latest") {
+    return query
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false });
+  }
+
+  return query
+    .order(sort, { ascending: false })
+    .order("id", { ascending: true });
+}
+
+function applyRecipeListCursor(
+  query: RecipeRowsQuery,
+  sort: RecipeSortKey,
+  cursor: ReturnType<typeof parseRecipeListCursor>,
+) {
+  if (!cursor) {
+    return query;
+  }
+
+  if (sort === "latest") {
+    return query.or(
+      `created_at.lt.${cursor.value},and(created_at.eq.${cursor.value},id.lt.${cursor.id})`,
+    );
+  }
+
+  return query.or(
+    `${sort}.lt.${cursor.value},and(${sort}.eq.${cursor.value},id.gt.${cursor.id})`,
+  );
+}
+
+async function readRecipeRows({
+  dbClient,
+  sort,
+  cursor,
+  limit,
+  recipeIds,
+  titleQuery,
+}: {
+  dbClient: RecipeSearchDbClient;
+  sort: RecipeSortKey;
+  cursor: ReturnType<typeof parseRecipeListCursor>;
+  limit: number;
+  recipeIds: string[] | null;
+  titleQuery: string | null;
+}) {
+  if (recipeIds !== null && recipeIds.length === 0) {
+    return {
+      rows: [],
+      error: null,
+    };
+  }
+
+  let recipeQuery = dbClient
+    .from("recipes")
+    .select(
+      "id, title, thumbnail_url, tags, base_servings, view_count, like_count, save_count, plan_count, cook_count, created_at, source_type",
+    )
+    .limit(limit + 1);
+
+  recipeQuery = applyRecipeListSort(recipeQuery, sort);
+
+  if (recipeIds !== null) {
+    recipeQuery = recipeQuery.in("id", recipeIds);
+  }
+
+  recipeQuery = applyRecipeListCursor(recipeQuery, sort, cursor);
+
+  if (titleQuery) {
+    recipeQuery = recipeQuery.ilike("title", `%${titleQuery}%`);
+  }
+
+  const { data, error } = await recipeQuery;
+
+  return {
+    rows: ((data ?? []) as RecipeListRow[]),
+    error,
+  };
+}
+
+async function readSearchRecipeRows({
+  dbClient,
+  q,
+  sort,
+  cursor,
+  limit,
+  baseRecipeIds,
+}: {
+  dbClient: RecipeSearchDbClient;
+  q: string;
+  sort: RecipeSortKey;
+  cursor: ReturnType<typeof parseRecipeListCursor>;
+  limit: number;
+  baseRecipeIds: string[] | null;
+}) {
+  const tagLookup = await findRecipeIdsByPublicTags({
+    dbClient,
+    q,
+    tag: null,
+  });
+
+  if (tagLookup.error) {
+    return {
+      rows: [],
+      error: tagLookup.error,
+    };
+  }
+
+  const tagRecipeIds = intersectRecipeIds(baseRecipeIds, tagLookup.recipeIds);
+  const titleRowsResult = await readRecipeRows({
+    dbClient,
+    sort,
+    cursor,
+    limit,
+    recipeIds: baseRecipeIds,
+    titleQuery: q,
+  });
+
+  if (titleRowsResult.error) {
+    return titleRowsResult;
+  }
+
+  if (tagRecipeIds.length === 0) {
+    return titleRowsResult;
+  }
+
+  const tagRowsResult = await readRecipeRows({
+    dbClient,
+    sort,
+    cursor,
+    limit,
+    recipeIds: tagRecipeIds,
+    titleQuery: null,
+  });
+
+  if (tagRowsResult.error) {
+    return tagRowsResult;
+  }
+
+  return {
+    rows: mergeRecipeRows([...titleRowsResult.rows, ...tagRowsResult.rows], sort),
+    error: null,
+  };
+}
+
 function mapRecipeCard(recipe: {
   id: string;
   title: string;
@@ -561,6 +817,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const listQuery: RecipeListQuery = {
       q: searchParams.get("q")?.trim() || undefined,
+      tag: searchParams.get("tag")?.trim() || undefined,
       ingredient_ids: parseIngredientIds(searchParams.get("ingredient_ids")),
       sort: parseRecipeSortKey(searchParams.get("sort")),
       cursor: searchParams.get("cursor"),
@@ -581,6 +838,7 @@ export async function GET(request: NextRequest) {
 
     const routeClient = await createRouteHandlerClient();
     const supabase = createServiceRoleClient() ?? routeClient;
+    const recipeSearchDbClient = supabase as unknown as RecipeSearchDbClient;
     let filteredRecipeIds: string[] | null = null;
 
     if (listQuery.ingredient_ids?.length) {
@@ -603,50 +861,47 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    let recipeQuery = supabase
-      .from("recipes")
-      .select(
-        "id, title, thumbnail_url, tags, base_servings, view_count, like_count, save_count, plan_count, cook_count, created_at, source_type",
-      )
-      .limit(limit + 1);
+    if (listQuery.tag) {
+      const tagLookup = await findRecipeIdsByPublicTags({
+        dbClient: recipeSearchDbClient,
+        q: null,
+        tag: listQuery.tag,
+      });
 
-    if (sort === "latest") {
-      recipeQuery = recipeQuery
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false });
-    } else {
-      recipeQuery = recipeQuery
-        .order(sort, { ascending: false })
-        .order("id", { ascending: true });
-    }
+      if (tagLookup.error) {
+        return fail("INTERNAL_ERROR", "레시피 목록을 불러오지 못했어요.", 500);
+      }
 
-    if (filteredRecipeIds) {
-      recipeQuery = recipeQuery.in("id", filteredRecipeIds);
-    }
+      filteredRecipeIds = intersectRecipeIds(filteredRecipeIds, tagLookup.recipeIds);
 
-    if (cursor) {
-      if (sort === "latest") {
-        recipeQuery = recipeQuery.or(
-          `created_at.lt.${cursor.value},and(created_at.eq.${cursor.value},id.lt.${cursor.id})`,
-        );
-      } else {
-        recipeQuery = recipeQuery.or(
-          `${sort}.lt.${cursor.value},and(${sort}.eq.${cursor.value},id.gt.${cursor.id})`,
-        );
+      if (filteredRecipeIds.length === 0) {
+        return ok(createEmptyRecipeList());
       }
     }
 
-    if (listQuery.q) {
-      recipeQuery = recipeQuery.ilike("title", `%${listQuery.q}%`);
-    }
+    const recipeRowsResult = listQuery.q
+      ? await readSearchRecipeRows({
+          dbClient: recipeSearchDbClient,
+          q: listQuery.q,
+          sort,
+          cursor,
+          limit,
+          baseRecipeIds: filteredRecipeIds,
+        })
+      : await readRecipeRows({
+          dbClient: recipeSearchDbClient,
+          sort,
+          cursor,
+          limit,
+          recipeIds: filteredRecipeIds,
+          titleQuery: null,
+        });
 
-    const { data, error } = await recipeQuery;
-
-    if (error) {
+    if (recipeRowsResult.error) {
       return fail("INTERNAL_ERROR", "레시피 목록을 불러오지 못했어요.", 500);
     }
 
-    const rows = (data ?? []) as RecipeListRow[];
+    const rows = recipeRowsResult.rows;
     const pageRows = rows.slice(0, limit);
     const hasNext = rows.length > limit;
     const nextCursor = hasNext && pageRows.length > 0

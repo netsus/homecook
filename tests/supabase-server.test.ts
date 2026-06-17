@@ -152,6 +152,23 @@ describe("supabase schema migrations", () => {
     expect(sql).toMatch(/v_session\.draft_json\s*->\s*'tags'/i);
   });
 
+  it("defines public recipe tag search and HOME theme policy functions", () => {
+    const sql = readAllMigrationSql();
+
+    expect(sql).toMatch(/create or replace function public\.find_recipe_ids_by_public_tags/i);
+    expect(sql).toMatch(/rt\.visibility = 'public'/i);
+    expect(sql).toMatch(/rt\.review_status = 'approved'/i);
+    expect(sql).toMatch(/t\.normalized_key = p_tag/i);
+    expect(sql).toMatch(/t\.label ilike/i);
+    expect(sql).toMatch(/create or replace function public\.list_public_recipe_tags/i);
+    expect(sql).toMatch(/t\.is_system = true\s+or t\.usage_count > 0/i);
+    expect(sql).toMatch(/create or replace function public\.list_home_theme_recipes/i);
+    expect(sql).toMatch(/t\.is_system = true/i);
+    expect(sql).toMatch(/t\.theme_eligible = true/i);
+    expect(sql).toMatch(/t\.kind in \('semantic', 'source'\)/i);
+    expect(sql).toMatch(/add column if not exists slug text/i);
+  });
+
   it("defines atomic launch-readiness RPCs with auth boundary checks", () => {
     const sql = readAllMigrationSql();
 

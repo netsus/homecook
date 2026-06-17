@@ -174,6 +174,10 @@ describe("08a meal add search backend target", () => {
     });
 
     createRouteHandlerClient.mockResolvedValue({
+      rpc: vi.fn(async () => ({
+        data: [],
+        error: null,
+      })),
       from: vi.fn(() => listQuery),
     });
 

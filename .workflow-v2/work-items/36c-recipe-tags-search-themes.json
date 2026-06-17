@@ -9,8 +9,8 @@
   "preset": "vertical-slice-strict",
   "goal": "사용자가 HOME에서 승인된 태그로 레시피를 검색하고, HOME 테마가 품질 관리된 시스템 의미/source 태그에서만 만들어지도록 백엔드 조회 계약을 닫는다.",
   "owners": {
-    "claude": "stage1 normally; 36c workpack gap reconstructed from merged 36a contract in this docs branch",
-    "codex": "stage1 fallback docs split per validator prerequisite, stage2 follows on feature branch",
+    "claude": "stage1 normally; 36c workpack gap was reconstructed from merged 36a contract in this branch",
+    "codex": "stage2 implementation, verification, ship-pr-loop",
     "workers": []
   },
   "dependencies": [
@@ -75,14 +75,78 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "merged",
     "approval_state": "codex_approved",
-    "verification_status": "pending",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "pnpm vitest run tests/recipe-tags-search.test.ts tests/recipe-tags-route.test.ts tests/recipe-themes.test.ts tests/supabase-server.test.ts",
+        "pnpm vitest run --config vitest.product.config.ts tests/recipe-api-contracts.test.ts tests/08a-meal-add-search-core.backend.test.ts",
+        "pnpm vitest run tests/recipe-themes.test.ts tests/recipe-api-contracts.test.ts",
+        "pnpm lint",
+        "pnpm typecheck",
+        "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key PLAYWRIGHT_BASE_URL=http://127.0.0.1:3118 pnpm verify:backend",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 36c-recipe-tags-search-themes",
+        "git diff --check",
+        "pnpm exec supabase db reset --local --yes",
+        "local Supabase psql smoke: 36c RPC signatures, P0 seed count 36, list_public_recipe_tags, find_recipe_ids_by_public_tags, list_home_theme_recipes"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-snapshot",
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 1,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-06-17T16:55:00+09:00"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 1,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "closeout_snapshot_required_after_policy_fail",
+      "evidence_sources": [
+        "PR #775 policy run 27674155085",
+        "docs/workpacks/36c-recipe-tags-search-themes/README.md",
+        "docs/workpacks/36c-recipe-tags-search-themes/acceptance.md",
+        "pnpm verify:backend",
+        "pnpm exec supabase db reset --local --yes",
+        "local Supabase psql smoke"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-06-17T16:55:00+09:00",
+      "status_synced_at": "2026-06-17T16:55:00+09:00",
+      "pr_body_synced_at": "2026-06-17T16:55:00+09:00"
+    }
   },
   "out_of_scope": [
     "P0 semantic rule fixture expansion",
@@ -94,5 +158,5 @@
     "HOME tag search/filter/theme UI"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs gap repair for 36c. The official 36a contract is already merged; this docs branch creates the missing workpack, acceptance, automation spec, and workflow item so the Stage 2 feature branch can pass the base-docs validator."
+  "notes": "Stage 2 backend implementation completed on feature/be-36c-recipe-tags-search-themes. Implements exact tag filter, title plus public/approved tag label search, GET /tags public autocomplete, HOME dynamic themes from approved system semantic/source tags, 36c read RPCs, manual seed slugs, and no automatic romanization. Local verification passed: targeted 36c Vitest set, product contract regressions, pnpm verify:backend, validate:source-of-truth-sync, validate:workflow-v2, validate:workpack, git diff --check, local Supabase db reset, and local psql smoke for RPC signatures/seed/search/theme behavior."
 }

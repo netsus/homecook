@@ -102,6 +102,10 @@ describe("recipe API contracts", () => {
           data: { user: null },
         })),
       },
+      rpc: vi.fn(async () => ({
+        data: [],
+        error: null,
+      })),
       from: vi.fn(() => listQuery),
     });
 
@@ -796,6 +800,10 @@ describe("recipe API contracts", () => {
     });
 
     createRouteHandlerClient.mockResolvedValue({
+      rpc: vi.fn(async () => ({
+        data: [],
+        error: null,
+      })),
       from: vi.fn((table: string) => {
         if (table === "recipe_ingredients") return ingredientRowsQuery;
         if (table === "recipes") return listQuery;
@@ -868,6 +876,47 @@ describe("recipe API contracts", () => {
           data: { user: null },
         })),
       },
+      rpc: vi.fn(async (functionName: string) => {
+        expect(functionName).toBe("list_home_theme_recipes");
+
+        return {
+          data: [
+            {
+              tag_normalized_key: "한식",
+              tag_label: "한식",
+              tag_slug: "korean",
+              theme_rank: 1,
+              recipe_rank: 1,
+              id: "recipe-1",
+              title: "김치찌개",
+              thumbnail_url: "https://example.com/kimchi.jpg",
+              tags: ["한식"],
+              base_servings: 2,
+              view_count: 10,
+              like_count: 4,
+              save_count: 2,
+              source_type: "system",
+            },
+            {
+              tag_normalized_key: "디저트",
+              tag_label: "디저트",
+              tag_slug: "dessert",
+              theme_rank: 2,
+              recipe_rank: 1,
+              id: "recipe-2",
+              title: "딸기 우유 푸딩",
+              thumbnail_url: "https://example.com/pudding.jpg",
+              tags: ["딸기푸딩", "디저트"],
+              base_servings: 4,
+              view_count: 8,
+              like_count: 1,
+              save_count: 0,
+              source_type: "youtube",
+            },
+          ],
+          error: null,
+        };
+      }),
       from: vi.fn(() => listQuery),
     });
 
@@ -879,10 +928,12 @@ describe("recipe API contracts", () => {
     expect(body.success).toBe(true);
     expect(body.error).toBeNull();
     expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("popular");
-    expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("korean-home");
+    expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("korean");
     expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("dessert");
     expect(body.data.themes.find((theme: { id: string }) => theme.id === "dessert")).toMatchObject({
-      title: "디저트와 베이킹",
+      title: "디저트",
+      tag_key: "디저트",
+      tag_label: "디저트",
       recipes: [
         {
           id: "recipe-2",
