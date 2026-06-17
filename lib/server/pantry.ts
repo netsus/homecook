@@ -80,7 +80,19 @@ export function toPantryItem(row: PantryItemJoinedRow): PantryItem {
 }
 
 export function toPantryItems(rows: PantryItemJoinedRow[] | null | undefined) {
-  return (rows ?? []).map((row) => toPantryItem(row));
+  const seenIngredientIds = new Set<string>();
+  const items: PantryItem[] = [];
+
+  for (const row of rows ?? []) {
+    if (seenIngredientIds.has(row.ingredient_id)) {
+      continue;
+    }
+
+    seenIngredientIds.add(row.ingredient_id);
+    items.push(toPantryItem(row));
+  }
+
+  return items;
 }
 
 function toBundleIngredient(

@@ -182,6 +182,12 @@ describe("13 pantry core backend", () => {
               created_at: "2026-04-27T09:00:00Z",
               ingredients: { standard_name: "양파", category: "채소", category_code: "root_stem" },
             },
+            {
+              id: "pantry-older-duplicate",
+              ingredient_id: "ing-onion",
+              created_at: "2026-04-26T09:00:00Z",
+              ingredients: { standard_name: "양파", category: "채소", category_code: "root_stem" },
+            },
           ],
           error: null,
         },

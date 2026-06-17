@@ -137,6 +137,10 @@ describe("home screen", () => {
       screen.getByRole("heading", { level: 2, name: "이번 주 인기 테마" }).className,
     ).toContain("text-[var(--foreground)]");
     expect(screen.queryByRole("link", { name: /이번 주 식단 플래너/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /식단 짜기/ }).getAttribute("href")).toBe("/planner");
+    expect(screen.getByRole("link", { name: /장보기 준비/ }).getAttribute("href")).toBe("/shopping/flow");
+    expect(screen.getByRole("link", { name: /레시피북/ }).getAttribute("href")).toBe("/mypage?tab=recipebooks");
+    expect(screen.getByRole("link", { name: /성장 보기/ }).getAttribute("href")).toBe("/mypage");
     expect(screen.getByRole("navigation", { name: "HOME 하단 탭" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "팬트리" }).getAttribute("href")).toBe("/pantry");
     expect(screen.getByRole("link", { name: "마이" }).getAttribute("href")).toBe("/mypage");
@@ -180,6 +184,8 @@ describe("home screen", () => {
     expect(screen.getByRole("link", { name: "플래너" }).getAttribute("href")).toBe("/planner");
     expect(screen.queryByRole("button", { name: "국물요리" })).toBeNull();
     expect(screen.queryByRole("button", { name: "양파" })).toBeNull();
+    expect(screen.getByRole("navigation", { name: "홈 빠른 이동" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /장보기 준비/ }).getAttribute("href")).toBe("/shopping/flow");
     expect(
       screen.queryByRole("navigation", { name: "HOME 하단 탭" }),
     ).toBeNull();

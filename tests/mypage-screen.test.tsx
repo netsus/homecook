@@ -1463,7 +1463,7 @@ describe("MypageScreen", () => {
     ).toBe(true);
 
     const selectedPanel = screen.getByTestId("shopping-selected-day-panel");
-    expect(await within(selectedPanel).findByText("4/30~5/6")).toBeTruthy();
+    expect(await within(selectedPanel).findByText("4/30~5/6 장보기")).toBeTruthy();
     expect(within(selectedPanel).getByText("완료 5/1")).toBeTruthy();
     expect(within(selectedPanel).queryByText("목록 생성")).toBeNull();
     expect(within(selectedPanel).queryByText("생성일")).toBeNull();
@@ -1475,7 +1475,7 @@ describe("MypageScreen", () => {
       }),
     );
 
-    expect(within(selectedPanel).getByText("4/23~29")).toBeTruthy();
+    expect(within(selectedPanel).getByText("4/23~29 장보기")).toBeTruthy();
     expect(within(selectedPanel).getByText("진행 중")).toBeTruthy();
     expect(within(selectedPanel).getByText("재료 8개")).toBeTruthy();
     expect(within(selectedPanel).getByTestId("shopping-card-list-2").textContent).not.toContain(
@@ -1486,7 +1486,7 @@ describe("MypageScreen", () => {
 
     expect(within(calendar).getByText("2026년 3월")).toBeTruthy();
     expect(within(calendar).queryByText("2026년 4월")).toBeNull();
-    expect(within(selectedPanel).getByText("3/18~24")).toBeTruthy();
+    expect(within(selectedPanel).getByText("3/18~24 장보기")).toBeTruthy();
     expect(within(selectedPanel).getByText("완료 3/18")).toBeTruthy();
     expect(
       (within(calendar).getByRole("button", { name: "이전 달" }) as HTMLButtonElement)
@@ -1763,7 +1763,7 @@ describe("MypageScreen", () => {
     );
 
     expect(await screen.findByTestId("shopping-tab")).toBeTruthy();
-    expect(await screen.findByText("4/30~5/6")).toBeTruthy();
+    expect(await screen.findByText("4/30~5/6 장보기")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "저장한 레시피" })).toBeNull();
   });
 
@@ -1877,7 +1877,7 @@ describe("MypageScreen", () => {
 
     render(<MypageScreen initialAuthenticated />);
 
-    expect(await screen.findByText("4/30~5/6")).toBeTruthy();
+    expect(await screen.findByText("4/30~5/6 장보기")).toBeTruthy();
     expect(
       screen
         .getByRole("tab", { name: "장보기 기록" })

@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   useCallback,
@@ -30,6 +31,7 @@ import {
   WebTopNav,
 } from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { fetchUserProfile, type UserProfileData } from "@/lib/api/mypage";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
@@ -63,6 +65,33 @@ const WEB_NAV_ITEMS = [
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
+
+const HOME_QUICK_LINKS = [
+  {
+    description: "이번 주 끼니 정리",
+    href: "/planner",
+    icon: "calendar",
+    label: "식단 짜기",
+  },
+  {
+    description: "재료로 바로 준비",
+    href: "/shopping/flow",
+    icon: "cart",
+    label: "장보기 준비",
+  },
+  {
+    description: "저장 레시피 보기",
+    href: "/mypage?tab=recipebooks",
+    icon: "book",
+    label: "레시피북",
+  },
+  {
+    description: "레벨·업적 확인",
+    href: "/mypage",
+    icon: "growth",
+    label: "성장 보기",
+  },
 ] as const;
 
 function formatHomeMealGreeting(now = new Date()) {
@@ -101,6 +130,7 @@ export function HomeScreen() {
   const [activeThemeId, setActiveThemeId] = useState<string | null>(null);
   const [isIngredientModalOpen, setIngredientModalOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [profile, setProfile] = useState<UserProfileData | null>(null);
   const recipeRequestIdRef = useRef(0);
   const appliedIngredientIds = useDiscoveryFilterStore(
     (state) => state.appliedIngredientIds,
@@ -150,6 +180,31 @@ export function HomeScreen() {
       setThemeState("ready");
     }
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setProfile(null);
+      return;
+    }
+
+    let isCurrent = true;
+
+    void fetchUserProfile()
+      .then((nextProfile) => {
+        if (isCurrent) {
+          setProfile(nextProfile);
+        }
+      })
+      .catch(() => {
+        if (isCurrent) {
+          setProfile(null);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     void loadThemes();
@@ -429,6 +484,7 @@ export function HomeScreen() {
           onRecipeSave={homeSaveFlow.openRecipeSaveModal}
           onRetry={() => void loadRecipes()}
           onSelectSort={selectSort}
+          profile={profile}
           query={query}
           savedRecipeIds={homeSaveFlow.savedRecipeIds}
           screenState={screenState}
@@ -515,6 +571,8 @@ export function HomeScreen() {
                 ) : null}
               </div>
             </div>
+
+            <HomeQuickLinks variant="mobile" />
 
             {screenState === "error" ? (
               <div className="px-4 pb-4">
@@ -649,6 +707,7 @@ function HomeWebScreen({
   onRecipeSave,
   onRetry,
   onSelectSort,
+  profile,
   query,
   savedRecipeIds,
   screenState,
@@ -671,6 +730,7 @@ function HomeWebScreen({
   onRecipeSave: (recipe: RecipeCardItem) => void;
   onRetry: () => void;
   onSelectSort: (nextSort: string) => void;
+  profile: UserProfileData | null;
   query: string;
   savedRecipeIds: Set<string>;
   screenState: ScreenState;
@@ -694,7 +754,7 @@ function HomeWebScreen({
       <WebTopNav
         activeId="home"
         items={WEB_NAV_ITEMS}
-        rightSlot={<WebProfileButton />}
+        rightSlot={<WebProfileButton profile={profile} />}
       />
       <div className="web-screen">
         <section className="web-discovery">
@@ -742,6 +802,8 @@ function HomeWebScreen({
               </WebButton>
             </div>
           ) : null}
+
+          <HomeQuickLinks variant="web" />
         </section>
 
         {themes.length > 0 ? (
@@ -985,15 +1047,101 @@ function HomeWebRecipeCard({
   );
 }
 
-function WebProfileButton() {
+function HomeQuickLinks({ variant }: { variant: "mobile" | "web" }) {
+  return (
+    <nav
+      aria-label="홈 빠른 이동"
+      className={variant === "mobile" ? "home-mobile-shortcuts" : "web-home-shortcuts"}
+    >
+      {HOME_QUICK_LINKS.map((item) => (
+        <Link
+          className={variant === "mobile" ? "home-mobile-shortcut" : "web-home-shortcut"}
+          href={item.href}
+          key={item.href}
+        >
+          <span
+            aria-hidden="true"
+            className={variant === "mobile" ? "home-mobile-shortcut-icon" : "web-home-shortcut-icon"}
+          >
+            <HomeShortcutIcon icon={item.icon} />
+          </span>
+          <span className={variant === "mobile" ? "home-mobile-shortcut-copy" : "web-home-shortcut-copy"}>
+            <strong>{item.label}</strong>
+            <small>{item.description}</small>
+          </span>
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+function WebProfileButton({ profile }: { profile: UserProfileData | null }) {
+  const fallbackInitial = profile?.nickname?.slice(0, 1).toUpperCase() ?? null;
+
   return (
     <Link
-      aria-label="마이페이지"
+      aria-label={profile?.nickname ? `${profile.nickname} 프로필` : "내 프로필"}
       className="web-profile-button"
       href="/mypage"
     >
-      <UserIcon />
+      {profile?.profile_image_url ? (
+        <Image
+          alt=""
+          className="web-profile-button-image"
+          height={40}
+          src={profile.profile_image_url}
+          unoptimized
+          width={40}
+        />
+      ) : fallbackInitial ? (
+        <span aria-hidden="true" className="web-profile-button-fallback">
+          {fallbackInitial}
+        </span>
+      ) : (
+        <UserIcon />
+      )}
     </Link>
+  );
+}
+
+function HomeShortcutIcon({
+  icon,
+}: {
+  icon: (typeof HOME_QUICK_LINKS)[number]["icon"];
+}) {
+  if (icon === "calendar") {
+    return (
+      <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+        <path d="M7 4v3M17 4v3M5 9h14" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+        <rect height="15" rx="3" stroke="currentColor" strokeWidth="1.8" width="16" x="4" y="6" />
+      </svg>
+    );
+  }
+
+  if (icon === "cart") {
+    return (
+      <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+        <path d="M5 5h2l1.2 9h8.4l1.7-6.2H8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+        <circle cx="10" cy="18" r="1.4" fill="currentColor" />
+        <circle cx="16" cy="18" r="1.4" fill="currentColor" />
+      </svg>
+    );
+  }
+
+  if (icon === "book") {
+    return (
+      <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+        <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v16H7.5A2.5 2.5 0 0 0 5 21.5v-16Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+        <path d="M5 17.5A2.5 2.5 0 0 1 7.5 15H19" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+      <path d="M12 20V4M6 10l6-6 6 6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      <path d="M8 8h8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    </svg>
   );
 }
 

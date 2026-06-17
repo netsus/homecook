@@ -146,6 +146,12 @@ export interface UserProgressNotificationRow {
   seen_at: string | null;
 }
 
+interface NotificationSeenUpdateRow {
+  id: string;
+  notification_type: UserGamificationNotificationType;
+  payload_json: unknown;
+}
+
 interface UserBadgeAwardInsert {
   user_id: string;
   badge_key: string;
@@ -264,17 +270,31 @@ interface NotificationSelectQuery {
 interface NotificationUpdateFilterQuery {
   eq(column: string, value: string): NotificationUpdateFilterQuery;
   in(column: string, values: string[]): NotificationUpdateFilterQuery;
-  select(columns: string): ArrayResult<{ id: string }>;
+  select(columns: string): ArrayResult<NotificationSeenUpdateRow>;
+}
+
+interface BadgeAwardUpdateFilterQuery {
+  eq(column: string, value: string): BadgeAwardUpdateFilterQuery;
+  in(column: string, values: string[]): BadgeAwardUpdateFilterQuery;
+  select(columns: string): ArrayResult<{ badge_key: string }>;
+}
+
+interface AchievementAwardUpdateFilterQuery {
+  eq(column: string, value: string): AchievementAwardUpdateFilterQuery;
+  in(column: string, values: string[]): AchievementAwardUpdateFilterQuery;
+  select(columns: string): ArrayResult<{ achievement_key: string }>;
 }
 
 interface BadgeAwardsTable {
   insert(values: UserBadgeAwardInsert): InsertQuery<UserBadgeAwardRow>;
   select(columns: string): BadgeAwardsSelectQuery;
+  update(values: { seen_at: string }): BadgeAwardUpdateFilterQuery;
 }
 
 interface AchievementAwardsTable {
   insert(values: UserAchievementAwardInsert): InsertQuery<UserAchievementAwardRow>;
   select(columns: string): AchievementAwardsSelectQuery;
+  update(values: { seen_at: string }): AchievementAwardUpdateFilterQuery;
 }
 
 interface QuestProgressTable {
@@ -928,12 +948,13 @@ export async function markUserGamificationNotificationsSeen(
   }
 
   try {
+    const seenAt = new Date().toISOString();
     const updateResult = await dbClient
       .from("user_progress_notifications")
-      .update({ seen_at: new Date().toISOString() })
+      .update({ seen_at: seenAt })
       .eq("user_id", userId)
       .in("id", uniqueIds)
-      .select("id");
+      .select("id, notification_type, payload_json");
 
     if (updateResult.error || !updateResult.data) {
       return {
@@ -941,6 +962,13 @@ export async function markUserGamificationNotificationsSeen(
         error: updateResult.error ?? { message: "missing notification seen result" },
       };
     }
+
+    await markAwardRowsSeenForNotifications(
+      dbClient,
+      userId,
+      seenAt,
+      updateResult.data,
+    );
 
     return {
       data: {
@@ -951,6 +979,74 @@ export async function markUserGamificationNotificationsSeen(
   } catch (error) {
     return { data: null, error: toQueryError(error, "unknown notification seen failure") };
   }
+}
+
+async function markAwardRowsSeenForNotifications(
+  dbClient: UserGamificationDbClient,
+  userId: string,
+  seenAt: string,
+  rows: NotificationSeenUpdateRow[],
+) {
+  const achievementKeys = new Set<string>();
+  const badgeKeys = new Set<string>();
+
+  for (const row of rows) {
+    if (
+      row.notification_type !== "achievement_unlocked" &&
+      row.notification_type !== "badge_unlocked"
+    ) {
+      continue;
+    }
+
+    const payload = normalizePayload(row.payload_json);
+    const badgeKey = readPayloadString(payload, "badge_key");
+
+    if (badgeKey) {
+      badgeKeys.add(badgeKey);
+    }
+
+    if (row.notification_type === "achievement_unlocked") {
+      const achievementKey = readPayloadString(payload, "achievement_key");
+
+      if (achievementKey) {
+        achievementKeys.add(achievementKey);
+      }
+    }
+  }
+
+  const updates: Array<Promise<unknown>> = [];
+
+  if (achievementKeys.size > 0) {
+    updates.push(
+      Promise.resolve(
+        dbClient
+          .from("user_achievement_awards")
+          .update({ seen_at: seenAt })
+          .eq("user_id", userId)
+          .in("achievement_key", [...achievementKeys])
+          .select("achievement_key"),
+      ),
+    );
+  }
+
+  if (badgeKeys.size > 0) {
+    updates.push(
+      Promise.resolve(
+        dbClient
+          .from("user_badge_awards")
+          .update({ seen_at: seenAt })
+          .eq("user_id", userId)
+          .in("badge_key", [...badgeKeys])
+          .select("badge_key"),
+      ),
+    );
+  }
+
+  if (updates.length === 0) {
+    return;
+  }
+
+  await Promise.all(updates).catch(() => undefined);
 }
 
 export async function dismissUserGamificationTutorialQuest(
@@ -1960,6 +2056,21 @@ function normalizePayload(value: unknown): Record<string, unknown> {
   }
 
   return value as Record<string, unknown>;
+}
+
+function readPayloadString(
+  payload: Record<string, unknown>,
+  key: string,
+): string | null {
+  const value = payload[key];
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function normalizeNotificationPriority(row: UserProgressNotificationRow) {
