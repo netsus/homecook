@@ -179,16 +179,16 @@
 
 > 이 체크리스트는 Stage 2~3 동안 갱신하는 living closeout 문서다. 36b는 BE-only이므로 Stage 4~6 항목은 두지 않는다.
 
-- [ ] `tags` / `recipe_tags` additive migration 작성 (table + unique/index + P0 seed) <!-- omo:id=delivery-tags-migration;stage=2;scope=backend;review=3,6 -->
-- [ ] P0 semantic 35 + source 1 = 36개 seed를 `is_system=true`, `theme_eligible=true`로 idempotent UPSERT <!-- omo:id=delivery-p0-seed;stage=2;scope=backend;review=3,6 -->
-- [ ] tag normalization helper 구현 (trim, `#` 제거, 중복 제거, 최대 길이, 금지어/스팸, 한글 key 보존) <!-- omo:id=delivery-tag-normalization;stage=2;scope=shared;review=3,6 -->
-- [ ] `set_recipe_tags` 동등 atomic writer 구현 (`recipe_tags` + `recipes.tags` + `tags.usage_count` 동일 transaction) <!-- omo:id=delivery-projection-writer;stage=2;scope=backend;review=3,6 -->
-- [ ] `POST /api/v1/recipes` write path에 `tags` body + 서버 추천 fallback 반영 <!-- omo:id=delivery-manual-write-path;stage=2;scope=backend;review=3,6 -->
-- [ ] `POST /api/v1/recipes/youtube/register` RPC tag UPSERT/projection 단계 구현 <!-- omo:id=delivery-youtube-write-path;stage=2;scope=backend;review=3,6 -->
-- [ ] `POST /api/v1/recipes/tag-suggestions` 저장 없는 추천 endpoint backend contract 구현 <!-- omo:id=delivery-tag-suggestions;stage=2;scope=backend;review=3,6 -->
-- [ ] 사용자 자유 tag/시스템 tag visibility·review_status·theme_eligible 정책 경계 고정 <!-- omo:id=delivery-visibility-policy;stage=2;scope=backend;review=3,6 -->
-- [ ] request/response/error 타입 반영 (`tags` body, `suggested_tags` preview, projection) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] projection 일관성 / 멱등성 / 권한 / 정규화 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / migration readiness 점검 (`tags`/`recipe_tags` 존재) <!-- omo:id=delivery-seed-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] targeted Vitest와 backend verification 실행 <!-- omo:id=delivery-backend-verification;stage=2;scope=backend;review=3,6 -->
+- [x] `tags` / `recipe_tags` additive migration 작성 (table + unique/index + P0 seed) <!-- omo:id=delivery-tags-migration;stage=2;scope=backend;review=3,6 -->
+- [x] P0 semantic 35 + source 1 = 36개 seed를 `is_system=true`, `theme_eligible=true`로 idempotent UPSERT <!-- omo:id=delivery-p0-seed;stage=2;scope=backend;review=3,6 -->
+- [x] tag normalization helper 구현 (trim, `#` 제거, 중복 제거, 최대 길이, 금지어/스팸, 한글 key 보존) <!-- omo:id=delivery-tag-normalization;stage=2;scope=shared;review=3,6 -->
+- [x] `set_recipe_tags` 동등 atomic writer 구현 (`recipe_tags` + `recipes.tags` + `tags.usage_count` 동일 transaction) <!-- omo:id=delivery-projection-writer;stage=2;scope=backend;review=3,6 -->
+- [x] `POST /api/v1/recipes` write path에 `tags` body + 서버 추천 fallback 반영 <!-- omo:id=delivery-manual-write-path;stage=2;scope=backend;review=3,6 -->
+- [x] `POST /api/v1/recipes/youtube/register` RPC tag UPSERT/projection 단계 구현 <!-- omo:id=delivery-youtube-write-path;stage=2;scope=backend;review=3,6 -->
+- [x] `POST /api/v1/recipes/tag-suggestions` 저장 없는 추천 endpoint backend contract 구현 <!-- omo:id=delivery-tag-suggestions;stage=2;scope=backend;review=3,6 -->
+- [x] 사용자 자유 tag/시스템 tag visibility·review_status·theme_eligible 정책 경계 고정 <!-- omo:id=delivery-visibility-policy;stage=2;scope=backend;review=3,6 -->
+- [x] request/response/error 타입 반영 (`tags` body, `suggested_tags` preview, projection) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] projection 일관성 / 멱등성 / 권한 / 정규화 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / migration readiness 점검 (`tags`/`recipe_tags` 존재) <!-- omo:id=delivery-seed-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] targeted Vitest와 backend verification 실행 <!-- omo:id=delivery-backend-verification;stage=2;scope=backend;review=3,6 -->

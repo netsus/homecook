@@ -78,14 +78,79 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "merged",
     "approval_state": "codex_approved",
-    "verification_status": "pending",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "pnpm vitest run tests/recipe-tags-normalization.test.ts tests/recipe-tags-projection-writer.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/youtube-register-tags-route.test.ts tests/manual-recipe-create.backend.test.ts tests/youtube-import.backend.test.ts tests/supabase-server.test.ts tests/recipe-media-tags.test.ts",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm validate:workpack -- --slice 36b-recipe-tags-model-write",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:branch",
+        "BRANCH_NAME=feature/be-36b-recipe-tags-model-write BASE_REF=master PR_IS_DRAFT=false node scripts/validate-closeout-sync.mjs",
+        "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key PLAYWRIGHT_BASE_URL=http://127.0.0.1:3118 pnpm verify:backend",
+        "pnpm exec supabase db reset --local --yes",
+        "local Supabase psql smoke: public.tags/public.recipe_tags tables, 36 system seeds, 7 tag indexes, set_recipe_tags/build_recipe_tag_payload anon=false authenticated=false service_role=true"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-policy-refresh",
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 2,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 2,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-06-17T14:01:00+09:00"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "real_smoke_acl_fix_after_policy_fail",
+      "evidence_sources": [
+        "PR #773 policy run 27666432100",
+        "PR #773 template-check run 27666432007",
+        "PR #773 policy run 27666598161",
+        "pnpm verify:backend",
+        "pnpm exec supabase db reset --local --yes",
+        "local Supabase psql smoke",
+        "docs/workpacks/36b-recipe-tags-model-write/README.md",
+        "docs/workpacks/36b-recipe-tags-model-write/acceptance.md"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-06-17T14:01:00+09:00",
+      "status_synced_at": "2026-06-17T14:01:00+09:00",
+      "pr_body_synced_at": "2026-06-17T14:01:00+09:00"
+    }
   },
   "out_of_scope": [
     "GET /recipes?tag exact filtering",
@@ -102,5 +167,5 @@
     "Admin moderation UI"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs branch opened for 36b. Scope: canonical tags/recipe_tags model, P0 seed, normalization, atomic recipes.tags projection writer, manual/YouTube write paths, and read-only tag suggestions endpoint. Search/themes/backfill/frontend remain split into 36c/36d/36e."
+  "notes": "Stage 2 backend implementation completed on feature/be-36b-recipe-tags-model-write. Implements tags/recipe_tags additive migration, P0 semantic/source seed 36개, tag normalization, atomic recipes.tags projection writer, manual/YouTube write paths, YouTube semantic draft tag generation, and read-only tag suggestions endpoint. Local verification passed: targeted 36b Vitest set, existing manual/YouTube/Supabase/tag regressions, pnpm typecheck, pnpm lint, and pnpm verify:backend with dummy public Supabase env plus alternate Playwright port. Search/themes/backfill/frontend remain split into 36c/36d/36e."
 }

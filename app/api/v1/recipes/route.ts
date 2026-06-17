@@ -24,7 +24,12 @@ import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
-import { generateRecipeTags, parseRecipeImagePublicUrl } from "@/lib/server/recipe-media";
+import { parseRecipeImagePublicUrl } from "@/lib/server/recipe-media";
+import {
+  buildSuggestedRecipeTags,
+  normalizeReviewedRecipeTagLabels,
+  toRecipeTagLabels,
+} from "@/lib/server/recipe-tags";
 import {
   readRecipeCardUserStatuses,
   type RecipeCardUserStatusDbClient,
@@ -157,6 +162,7 @@ interface ManualRecipeDbClient {
       p_base_servings: number;
       p_thumbnail_url: string | null;
       p_tags: string[];
+      p_tag_source: "system_suggested" | "user_reviewed";
       p_ingredients: Array<Record<string, unknown>>;
       p_steps: Array<Record<string, unknown>>;
     },
@@ -182,6 +188,7 @@ interface ParsedManualRecipeCreate {
   ingredients: ManualRecipeIngredientInput[];
   steps: ManualRecipeStepInput[];
   thumbnailUrl: string | null;
+  reviewedTags: string[] | null;
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -360,8 +367,13 @@ function parseManualRecipeCreateBody(rawBody: unknown) {
     };
   }
 
+  let reviewedTags: string[] | null = null;
   if (rawBody.tags !== undefined) {
-    fields.push({ field: "tags", reason: "not_allowed" });
+    const tagResult = normalizeReviewedRecipeTagLabels(rawBody.tags);
+    fields.push(...tagResult.fields);
+    if (tagResult.fields.length === 0) {
+      reviewedTags = toRecipeTagLabels(tagResult.tags);
+    }
   }
 
   const title = typeof rawBody.title === "string" ? rawBody.title.trim() : "";
@@ -450,6 +462,7 @@ function parseManualRecipeCreateBody(rawBody: unknown) {
           ingredients,
           steps,
           thumbnailUrl,
+          reviewedTags,
         } satisfies ParsedManualRecipeCreate)
       : null;
 
@@ -817,7 +830,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const tags = generateRecipeTags({
+  const suggestedTags = buildSuggestedRecipeTags({
+    sourceType: "manual",
     title: parsed.title,
     ingredientNames: parsed.ingredients.map((ingredient) => ingredient.standard_name),
     stepTexts: parsed.steps.map((step) => step.instruction),
@@ -825,6 +839,8 @@ export async function POST(request: Request) {
       .map((row) => row.label)
       .filter((label): label is string => typeof label === "string"),
   });
+  const tags = parsed.reviewedTags ?? toRecipeTagLabels(suggestedTags);
+  const tagSource = parsed.reviewedTags === null ? "system_suggested" : "user_reviewed";
 
   if (typeof dbClient.rpc === "function") {
     const recipeResult = await dbClient.rpc("create_manual_recipe", {
@@ -833,6 +849,7 @@ export async function POST(request: Request) {
       p_base_servings: parsed.baseServings,
       p_thumbnail_url: parsed.thumbnailUrl,
       p_tags: tags,
+      p_tag_source: tagSource,
       p_ingredients: parsed.ingredients.map((ingredient) => ({
         ingredient_id: ingredient.ingredient_id,
         amount: ingredient.amount,

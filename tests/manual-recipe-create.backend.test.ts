@@ -517,7 +517,7 @@ describe("18 manual recipe create backend", () => {
     });
   });
 
-  it("POST /api/v1/recipes rejects client-supplied tags before database writes", async () => {
+  it("POST /api/v1/recipes rejects invalid client-supplied tags before database writes", async () => {
     createRouteHandlerClient.mockResolvedValue({
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
@@ -531,7 +531,7 @@ describe("18 manual recipe create backend", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         ...buildValidBody(),
-        tags: ["클라이언트태그"],
+        tags: ["한식", "한식"],
       }),
     }));
     const body = await response.json();
@@ -542,7 +542,7 @@ describe("18 manual recipe create backend", () => {
       data: null,
       error: {
         code: "VALIDATION_ERROR",
-        fields: [{ field: "tags", reason: "not_allowed" }],
+        fields: [{ field: "tags", reason: "duplicate" }],
       },
     });
     expect(createServiceRoleClient).not.toHaveBeenCalled();
@@ -656,7 +656,7 @@ describe("18 manual recipe create backend", () => {
       source_type: "manual",
       created_by: "user-1",
       thumbnail_url: thumbnailUrl,
-      tags: expect.arrayContaining(["직접 김치찌개", "김치", "소금"]),
+      tags: expect.arrayContaining(["한식", "국물요리", "초보가능"]),
     }));
     expect(recipeIngredientsTable.insert).toHaveBeenCalledWith([
       {
