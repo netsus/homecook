@@ -327,6 +327,7 @@ export interface YoutubeRecipeExtractData {
   base_servings: number;
   thumbnail_url: string | null;
   tags: string[];
+  suggested_tags?: RecipeTagSuggestionItem[];
   extraction_methods: string[];
   draft_warnings: string[];
   blocking_issues: string[];
@@ -369,9 +370,12 @@ export interface YoutubeRecipeRegisterData {
 export interface RecipeTagSuggestionBody {
   source_type?: "manual" | "system" | "youtube";
   title?: string;
+  base_servings?: number | null;
+  total_time_minutes?: number | null;
   ingredients?: Array<string | { standard_name?: string; name?: string }>;
   steps?: Array<string | { instruction?: string; text?: string }>;
   cooking_method_labels?: string[];
+  provider_tags?: string[];
 }
 
 export interface RecipeTagSuggestionItem {

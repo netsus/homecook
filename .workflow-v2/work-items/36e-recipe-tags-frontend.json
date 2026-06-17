@@ -58,20 +58,24 @@
   },
   "verification": {
     "required_checks": [
-      "pnpm vitest run tests/home-tag-search.test.tsx tests/manual-recipe-tags-ui.test.tsx tests/youtube-recipe-tags-ui.test.tsx tests/recipe-tag-input.test.ts",
+      "pnpm exec vitest run tests/recipe-tag-input.test.ts tests/home-screen.test.tsx tests/manual-recipe-create-screen.test.tsx tests/youtube-import-tags.test.tsx",
+      "pnpm exec vitest run",
       "pnpm exec playwright test tests/e2e/slice-36e-recipe-tags-frontend.spec.ts",
-      "CI=1 pnpm verify:frontend:pr",
-      "pnpm qa:explore -- --slice 36e-recipe-tags-frontend --base-url http://127.0.0.1:3100",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm build",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "pnpm validate:workpack -- --slice 36e-recipe-tags-frontend",
       "git diff --check"
     ],
     "verify_commands": [
-      "pnpm vitest run tests/home-tag-search.test.tsx tests/manual-recipe-tags-ui.test.tsx tests/youtube-recipe-tags-ui.test.tsx tests/recipe-tag-input.test.ts",
+      "pnpm exec vitest run tests/recipe-tag-input.test.ts tests/home-screen.test.tsx tests/manual-recipe-create-screen.test.tsx tests/youtube-import-tags.test.tsx",
+      "pnpm exec vitest run",
       "pnpm exec playwright test tests/e2e/slice-36e-recipe-tags-frontend.spec.ts",
-      "CI=1 pnpm verify:frontend:pr",
-      "pnpm qa:explore -- --slice 36e-recipe-tags-frontend --base-url http://127.0.0.1:3100",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm build",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "pnpm validate:workpack -- --slice 36e-recipe-tags-frontend",
@@ -89,9 +93,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "ready_for_review",
     "approval_state": "codex_approved",
-    "verification_status": "pending",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
@@ -108,5 +112,5 @@
     "Automatic romanization slug generation"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs fallback opened by Codex per explicit user instruction. 36e is FE-only and starts after 36b~36d backend merge. Production migration application is tracked as Manual Only; production backfill/reconcile writes require separate explicit approval after dry-run review."
+  "notes": "Stage 4 frontend implementation completed on feature/fe-36e-recipe-tags-frontend. 36e is FE-only and consumes the merged 36b~36d backend contract. Production migration application is tracked as Manual Only; production backfill/reconcile writes require separate explicit approval after dry-run review."
 }

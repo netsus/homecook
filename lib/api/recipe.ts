@@ -9,6 +9,8 @@ import type {
   RecipeListData,
   RecipeListQuery,
   RecipeTagListData,
+  RecipeTagSuggestionBody,
+  RecipeTagSuggestionData,
 } from "@/types/recipe";
 
 function toFetchError(error: unknown, fallbackMessage: string) {
@@ -75,6 +77,28 @@ export async function fetchRecipeTags(query?: {
       success: false,
       data: null,
       error: toFetchError(error, "태그 목록을 불러오지 못했어요."),
+    };
+  }
+}
+
+export async function suggestRecipeTags(
+  body: RecipeTagSuggestionBody,
+): Promise<ApiResponse<RecipeTagSuggestionData>> {
+  try {
+    const data = await fetchJson<RecipeTagSuggestionData>(
+      "/api/v1/recipes/tag-suggestions",
+      {
+        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      },
+    );
+    return { success: true, data, error: null };
+  } catch (error) {
+    return {
+      success: false,
+      data: null,
+      error: toFetchError(error, "태그 추천을 불러오지 못했어요."),
     };
   }
 }
