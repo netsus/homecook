@@ -1745,6 +1745,23 @@
         "git diff --check"
       ],
       "notes": "Stage 1 docs branch opened by Codex per user instruction. Scope: MYPAGE profile header growth integration, grade modal, achievement album modal, tutorial modal, notification archive modal, responsive 320/390/desktop evidence, and soft-fail isolation. Backend/API/schema changes are out of scope."
+    },
+    {
+      "id": "36b-recipe-tags-model-write",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/36b-recipe-tags-model-write",
+      "lifecycle": "planned",
+      "approval_state": "codex_approved",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm vitest run tests/recipe-tags-normalization.test.ts tests/recipe-tags-projection-writer.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/youtube-register-tags-route.test.ts",
+        "pnpm verify:backend",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 36b-recipe-tags-model-write",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs branch opened for 36b. Scope: tags/recipe_tags additive migration, P0 semantic/source seed 36개, tag normalization, atomic recipes.tags projection writer, manual/YouTube write paths, and read-only tag suggestions endpoint. Search/themes/backfill/frontend are split into 36c/36d/36e."
     }
   ]
 }

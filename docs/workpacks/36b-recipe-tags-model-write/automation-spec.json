@@ -1,0 +1,99 @@
+{
+  "slice_id": "36b-recipe-tags-model-write",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/recipes",
+      "POST /api/v1/recipes/youtube/register",
+      "POST /api/v1/recipes/tag-suggestions"
+    ],
+    "invariants": [
+      "tags-and-recipe-tags-are-canonical",
+      "recipes-tags-is-projection-only",
+      "tag-writer-updates-recipe-tags-recipes-tags-and-usage-count-atomically",
+      "server-auto-tag-suggestions-remain-enabled",
+      "missing-reviewed-tags-falls-back-to-server-or-session-suggestions",
+      "user-tags-start-pending-and-not-theme-eligible",
+      "system-semantic-source-tags-can-be-public-approved-theme-eligible",
+      "normalized-key-preserves-korean-label",
+      "automatic-romanization-is-forbidden",
+      "search-and-home-themes-remain-out-of-scope"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/recipe-tags-normalization.test.ts tests/recipe-tags-projection-writer.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/youtube-register-tags-route.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36b-recipe-tags-model-write",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/recipe-tags-normalization.test.ts",
+      "tests/recipe-tags-projection-writer.test.ts",
+      "tests/recipe-tag-suggestions-route.test.ts",
+      "tests/manual-recipe-tags-route.test.ts",
+      "tests/youtube-register-tags-route.test.ts"
+    ],
+    "schema_changes": [
+      "supabase/migrations/20260617090000_36b_recipe_tags_model.sql"
+    ],
+    "required_tables": [
+      "recipes",
+      "recipe_sources",
+      "youtube_extraction_sessions",
+      "tags",
+      "recipe_tags"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "required_endpoints": [
+      "POST /api/v1/recipes",
+      "POST /api/v1/recipes/youtube/register",
+      "POST /api/v1/recipes/tag-suggestions"
+    ],
+    "verify_commands": [
+      "36e-target:pnpm vitest run tests/manual-recipe-tags-ui.test.tsx tests/youtube-import-tags-ui.test.tsx tests/home-tag-search.test.tsx"
+    ],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "be-only-no-ui-change"
+    ],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "evidence_artifact_refs": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "manual:local-supabase-db-push-check-tags-recipe-tags-seed"
+  ],
+  "blocked_conditions": [
+    "tags-or-recipe-tags-schema-missing",
+    "recipes-tags-written-without-recipe-tags-canonical-relationship",
+    "recipe-tags-written-without-recipes-tags-projection-update",
+    "usage-count-updated-outside-atomic-writer",
+    "user-free-tag-saved-as-public-approved-theme-eligible",
+    "normalized-key-uses-automatic-romanization",
+    "provider-tags-alone-create-health-famous-or-verified-tags",
+    "home-theme-generation-implemented-in-36b",
+    "get-tags-or-tag-search-implemented-in-36b",
+    "existing-recipe-backfill-executed-in-36b"
+  ],
+  "max_fix_rounds": {
+    "docs": 3,
+    "backend": 3,
+    "frontend": 0
+  }
+}
