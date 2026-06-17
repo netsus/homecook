@@ -62,7 +62,7 @@ async function mockRecipeTagApis(page: Page, recipeRequests: string[]) {
       },
     });
   });
-  await page.route("**/api/v1/recipes?**", async (route) => {
+  await page.route((url) => url.pathname === "/api/v1/recipes", async (route) => {
     recipeRequests.push(route.request().url());
     await route.fulfill({
       contentType: "application/json",

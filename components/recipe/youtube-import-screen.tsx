@@ -1202,13 +1202,15 @@ function ReviewStep({
         </div>
       ) : null}
 
-      <RecipeTagEditor
-        className="mt-3"
-        errorMessage={tagErrorMessage}
-        onChange={onTagsChange}
-        suggestedTags={tags}
-        tags={tags}
-      />
+      <div data-testid="youtube-draft-tags">
+        <RecipeTagEditor
+          className="mt-3"
+          errorMessage={tagErrorMessage}
+          onChange={onTagsChange}
+          suggestedTags={tags}
+          tags={tags}
+        />
+      </div>
 
       {classificationStatus === "uncertain" ? (
         <div
