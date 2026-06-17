@@ -27,6 +27,7 @@ export default defineConfig({
       "tests/playwright-workflow.test.ts",
       "tests/policy-workflow.test.ts",
       "tests/project-hooks-config.test.ts",
+      "tests/production-data-quality.test.ts",
       "tests/qa-system.test.ts",
       "tests/real-smoke-presence.test.ts",
       "tests/source-of-truth-sync.test.ts",
