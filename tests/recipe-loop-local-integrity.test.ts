@@ -786,6 +786,44 @@ print(json.dumps({
     expect(report.holdout_step_artifact.secondary_hard_hit_count).toBe(1);
   });
 
+  it("treats generic and shared cooking vocabulary in module source as advisory while distinctive answers still hard-gate", () => {
+    const result = runLoopPython(`
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
+
+def write_golden(split, video_id, recipes):
+    path = loop.DATA_ROOT / split / video_id / "golden.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"schemaVersion": 1, "videoId": video_id, "reviewStatus": "approved", "recipes": recipes}, ensure_ascii=False), encoding="utf-8")
+
+# 식용유: train 재료명(다수) + validation 별칭(cross-category 공용 어휘). 카레: holdout 단일 짧은 토큰.
+write_golden("train", "train-a", [{"title": "공개 볶음", "ingredients": [{"name": "식용유", "amount": "1", "unit": "큰술"}], "steps": [{"order": 1, "instruction": "공개 조리 문장 하나"}]}])
+write_golden("train", "train-b", [{"title": "공개 무침", "ingredients": [{"name": "식용유", "amount": "1", "unit": "큰술"}], "steps": [{"order": 1, "instruction": "다른 공개 조리 문장"}]}])
+write_golden("validation", "val-a", [{"title": "검증 고유 요리", "ingredients": [{"name": "콩기름", "nameAliases": ["식용유"], "amount": "1", "unit": "큰술"}, {"name": "비밀고유재료세트", "amount": "1", "unit": "개"}], "steps": [{"order": 1, "instruction": "검증 고유 조리 문장"}]}])
+write_golden("holdout", "hold-a", [{"title": "홀드 요리", "ingredients": [{"name": "카레", "amount": "1", "unit": "개"}], "steps": [{"order": 1, "instruction": "홀드 고유 조리 문장"}]}])
+
+fragments = loop.protected_answer_fragments(["validation", "holdout"])
+module_like = "const DISH_WORD_RE = /카레|수프/; const STOP = new Set(['식용유', '소금']);"
+module_scan = loop.scan_texts_for_protected_answers([{"scope": "recipe_extraction_lab_modules", "text": module_like, "module_source": True}], fragments)
+module_unique = loop.scan_texts_for_protected_answers([{"scope": "recipe_extraction_lab_modules", "text": "비밀고유재료세트", "module_source": True}], fragments)
+prompt_generic = loop.scan_texts_for_protected_answers([{"scope": "06_diagnosis_prompt", "text": "카레"}], fragments)
+print(json.dumps({"module": module_scan, "module_unique": module_unique, "prompt": prompt_generic}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    // 모듈 소스의 일반/공용 어휘(식용유·카레)는 hard gate가 아니라 advisory여야 한다
+    expect(report.module.blocking_hit_count).toBe(0);
+    expect(report.module.success).toBe(true);
+    expect(report.module.advisory_hit_count).toBeGreaterThan(0);
+    // 모듈 소스라도 고유 정답은 여전히 차단된다
+    expect(report.module_unique.success).toBe(false);
+    expect(report.module_unique.blocking_hit_count).toBeGreaterThan(0);
+    // 컨텍스트 분리: agent-facing 스캔에서는 일반 어휘도 보수적으로 차단(모듈 완화가 전역으로 새지 않음)
+    expect(report.prompt.success).toBe(false);
+  });
+
   it("fails the loop decision when protected answers appear in decision or log outputs", () => {
     const result = runLoopPython(`
 fragments = loop.protected_answer_fragments(["validation"])

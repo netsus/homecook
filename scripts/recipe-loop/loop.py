@@ -84,6 +84,13 @@ KNOWN_EXTERNAL_PROTECTED_ACCESS_PROCESSES = {
 }
 LOW_UNIQUENESS_FRAGMENT_CATEGORIES = {"recipe_title", "ingredient_name", "ingredient_alias"}
 EXACT_PUBLIC_FRAGMENT_CATEGORIES = {"ingredient_quantity", "step_instruction"}
+# 모듈 소스(추출 코드)는 dish 정규식·stopword 리스트에 일반 조리 어휘를 정당하게 담는다.
+# 그 일반 어휘를 "정답 하드코딩"으로 오탐하지 않도록, 모듈 스캔에서만 advisory로 강등한다.
+# - 아주 짧은 단일 토큰(소금/양파/식용유/카레 등)
+# - 여러 golden 케이스에 걸쳐 등장하는 공용 토큰(고유 정답 지문이 아님)
+# agent-facing 산출물 스캔(진단 프롬프트 등)에는 적용하지 않는다(컨텍스트 분리).
+LOW_UNIQUENESS_MAX_COMPACT = 3
+COMMON_VOCAB_MIN_CASES = 2
 TOKEN_BOUNDARY_RE = re.compile(r"[0-9A-Za-z가-힣]")
 IMPLEMENTATION_ACCESS_GUARD_COUNTER_KEYS = (
     "codex_subtree_hit_count",
@@ -938,6 +945,49 @@ def _normalized_text(value) -> str:
     return " ".join(str(value or "").split()).strip()
 
 
+def _common_vocabulary_tokens(splits: list[str], min_cases: int = COMMON_VOCAB_MIN_CASES) -> set[str]:
+    """LOW_UNIQUENESS 카테고리(제목/재료명/별칭)에서 여러 golden 케이스에 걸쳐 등장하는
+    흔한 어휘의 compact 토큰 집합. 한 케이스에만 있는 고유 정답은 제외한다."""
+    case_counts: dict[str, set[str]] = {}
+    for split in splits:
+        split_dir = DATA_ROOT / split
+        if not split_dir.exists():
+            continue
+        for golden_path in split_dir.glob("*/golden.json"):
+            golden = read_json(golden_path)
+            case_id = f"{split}/{golden_path.parent.name}"
+            tokens: set[str] = set()
+            for recipe in (golden or {}).get("recipes", []):
+                for value in (recipe.get("title"),):
+                    compact = _compact_text(_normalized_text(value))
+                    if compact:
+                        tokens.add(compact)
+                for ingredient in recipe.get("ingredients", []):
+                    if not isinstance(ingredient, dict):
+                        continue
+                    for value in (ingredient.get("name"), *(ingredient.get("nameAliases") or [])):
+                        compact = _compact_text(_normalized_text(value))
+                        if compact:
+                            tokens.add(compact)
+            for token in tokens:
+                case_counts.setdefault(token, set()).add(case_id)
+    return {token for token, cases in case_counts.items() if len(cases) >= min_cases}
+
+
+def _is_generic_module_vocabulary(category: str, value, common_tokens: set[str]) -> bool:
+    """모듈 소스에 정당하게 등장할 수 있는 일반 조리 어휘인지. LOW_UNIQUENESS 카테고리에서
+    (a) 여러 케이스 공용 토큰이거나 (b) 아주 짧은 단일 토큰이면 True."""
+    if category not in LOW_UNIQUENESS_FRAGMENT_CATEGORIES:
+        return False
+    normalized = _normalized_text(value)
+    compact = _compact_text(normalized)
+    if not compact:
+        return False
+    if compact in common_tokens:
+        return True
+    return " " not in normalized and len(compact) <= LOW_UNIQUENESS_MAX_COMPACT
+
+
 def _golden_fragment_values(splits: list[str]) -> dict[str, set[str]]:
     values: dict[str, set[str]] = {}
 
@@ -1116,6 +1166,13 @@ def protected_answer_fragments(splits: list[str] | None = None) -> list[dict]:
                         train_public_values,
                         non_holdout_values,
                     )
+    common_tokens = _common_vocabulary_tokens(["train", "validation", "holdout"])
+    for fragment in fragments:
+        fragment["generic_module_vocab"] = _is_generic_module_vocabulary(
+            fragment.get("category") or "",
+            fragment.get("value"),
+            common_tokens,
+        )
     return fragments
 
 
@@ -1134,13 +1191,19 @@ def protected_fragment_matches(text: str, value: str) -> bool:
     return re.search(prefix + escaped + suffix, text) is not None
 
 
-def classify_protected_hit(fragment: dict, gate: bool, artifact_split: str | None) -> str:
+def classify_protected_hit(fragment: dict, gate: bool, artifact_split: str | None,
+                           module_source: bool = False) -> str:
     category = fragment.get("category") or "unknown"
     split = fragment.get("split") or "unknown"
     if category == "canary" and gate:
         return "primary_canary"
     if gate:
-        return "advisory" if fragment.get("public_overlap") else "gate"
+        if fragment.get("public_overlap"):
+            return "advisory"
+        # 모듈 소스 스캔에 한해, 일반 조리 어휘는 정답 하드코딩이 아니라 코드 어휘이므로 advisory.
+        if module_source and fragment.get("generic_module_vocab"):
+            return "advisory"
+        return "gate"
     if split == "holdout" and artifact_split != "holdout":
         if category == "canary" or (fragment.get("holdout_only") and category == "step_instruction"):
             return "secondary_hard"
@@ -1158,18 +1221,20 @@ def scan_texts_for_protected_answers(items: list, fragments: list[dict] | None =
             text = str(item.get("text") or "")
             gate = item.get("gate") is not False
             artifact_split = item.get("artifact_split")
+            module_source = item.get("module_source") is True
         else:
             scope = str(item[0])
             text = str(item[1] or "")
             gate = True
             artifact_split = None
+            module_source = False
         scanned_scopes.append(scope)
         if not text:
             continue
         for fragment in fragments:
             value = fragment.get("value") or ""
             if value and protected_fragment_matches(text, value):
-                severity = classify_protected_hit(fragment, gate, str(artifact_split) if artifact_split else None)
+                severity = classify_protected_hit(fragment, gate, str(artifact_split) if artifact_split else None, module_source)
                 key = (
                     scope,
                     fragment.get("split") or "unknown",
@@ -1308,7 +1373,7 @@ def merge_redaction_scans(scans: list[dict]) -> dict:
 
 def check_no_hardcoded_answers() -> tuple[bool, dict]:
     code = module_source()
-    scan = scan_texts_for_protected_answers([{"scope": "recipe_extraction_lab_modules", "text": code}])
+    scan = scan_texts_for_protected_answers([{"scope": "recipe_extraction_lab_modules", "text": code, "module_source": True}])
     return (scan["success"], {
         "success": scan["success"],
         "hit_count": scan["hit_count"],
