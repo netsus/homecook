@@ -1,0 +1,103 @@
+{
+  "slice_id": "36d-recipe-tags-rules-backfill",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/recipes/tag-suggestions",
+      "POST /api/v1/recipes",
+      "POST /api/v1/recipes/youtube/extract",
+      "POST /api/v1/recipes/youtube/register"
+    ],
+    "invariants": [
+      "server-auto-tag-generation-is-preserved",
+      "official-p0-semantic-source-tags-are-exact",
+      "semantic-tags-require-evidence",
+      "provider-tags-are-soft-signals-only",
+      "sensitive-diet-tags-require-explicit-evidence",
+      "p1-famous-sns-verified-tags-are-not-auto-assigned",
+      "backfill-dry-run-does-not-mutate-recipes-or-tags",
+      "usage-count-reconcile-counts-public-approved-only",
+      "maintenance-rpcs-are-service-role-only",
+      "deprecated-seeds-are-demoted-not-deleted",
+      "automatic-romanization-is-forbidden"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/recipe-semantic-tags.test.ts tests/recipe-tags-backfill.test.ts tests/recipe-tags-normalization.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/recipe-tags-projection-writer.test.ts tests/supabase-server.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36d-recipe-tags-rules-backfill",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/recipe-semantic-tags.test.ts",
+      "tests/recipe-tags-backfill.test.ts",
+      "tests/recipe-tags-normalization.test.ts",
+      "tests/recipe-tag-suggestions-route.test.ts",
+      "tests/manual-recipe-tags-route.test.ts",
+      "tests/recipe-tags-projection-writer.test.ts",
+      "tests/supabase-server.test.ts"
+    ],
+    "schema_changes": [
+      "supabase/migrations/20260617123000_36d_recipe_tags_rules_backfill.sql"
+    ],
+    "required_tables": [
+      "recipes",
+      "tags",
+      "recipe_tags"
+    ],
+    "required_functions": [
+      "reconcile_recipe_tag_usage_counts",
+      "dry_run_recipe_tag_projection_backfill"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "required_endpoints": [
+      "POST /api/v1/recipes/tag-suggestions",
+      "POST /api/v1/recipes",
+      "POST /api/v1/recipes/youtube/register"
+    ],
+    "verify_commands": [
+      "36e-target:pnpm vitest run tests/home-tag-search.test.tsx tests/manual-recipe-tags-ui.test.tsx"
+    ],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "be-only-no-ui-change"
+    ],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "evidence_artifact_refs": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "manual:local-supabase-db-reset-check-36d-seeds-reconcile-backfill-rpcs"
+  ],
+  "blocked_conditions": [
+    "provider-only-tag-auto-assigns-sensitive-or-p1-tag",
+    "backfill-dry-run-mutates-production-data",
+    "usage-count-reconcile-counts-private-or-pending-tags",
+    "maintenance-rpc-granted-to-public-anon-or-authenticated",
+    "deprecated-seed-deleted-instead-of-demoted",
+    "automatic-romanization-supported-for-normalized-key"
+  ],
+  "max_fix_rounds": {
+    "docs": 3,
+    "backend": 3,
+    "frontend": 0
+  }
+}

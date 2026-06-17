@@ -1,0 +1,105 @@
+{
+  "id": "36d-recipe-tags-rules-backfill",
+  "title": "Recipe tags rules backfill",
+  "summary": "36a/36b/36c 계약을 기반으로 P0 의미 태그 deterministic rule fixture, 기존 레시피 backfill dry-run/report, usage count reconcile maintenance path를 구현한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "서버 자동 태그 생성을 의미 있는 P0 semantic/source 태그 중심으로 정교화하고, 기존 레시피를 바로 수정하지 않는 dry-run/reconcile 경로를 제공한다.",
+  "owners": {
+    "claude": "stage1 normally; 36d workpack gap reconstructed by Codex because implementation was already requested",
+    "codex": "stage1 docs fallback, stage2 implementation, verification, ship-pr-loop",
+    "workers": []
+  },
+  "dependencies": [
+    "36a-recipe-tags-contract-evolution",
+    "36b-recipe-tags-model-write",
+    "36c-recipe-tags-search-themes"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.11.md",
+      "docs/db설계-v1.3.16.md",
+      "docs/api문서-v1.2.20.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/36d-recipe-tags-rules-backfill/README.md",
+      "docs/workpacks/36d-recipe-tags-rules-backfill/acceptance.md",
+      "docs/workpacks/36d-recipe-tags-rules-backfill/automation-spec.json",
+      "docs/workpacks/36a-recipe-tags-contract-evolution/README.md",
+      "docs/workpacks/36b-recipe-tags-model-write/README.md",
+      "docs/workpacks/36c-recipe-tags-search-themes/README.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:local-supabase-db-reset-check-36d-seeds-reconcile-backfill-rpcs"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "docs": 3,
+      "backend": 3
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm vitest run tests/recipe-semantic-tags.test.ts tests/recipe-tags-backfill.test.ts tests/recipe-tags-normalization.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/recipe-tags-projection-writer.test.ts tests/supabase-server.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36d-recipe-tags-rules-backfill",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/recipe-semantic-tags.test.ts tests/recipe-tags-backfill.test.ts tests/recipe-tags-normalization.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/recipe-tags-projection-writer.test.ts tests/supabase-server.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36d-recipe-tags-rules-backfill",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "official-p0-tag-list",
+      "semantic-rule-fixture",
+      "provider-only-sensitive-guard",
+      "p1-candidate-gate",
+      "backfill-dry-run-no-mutation",
+      "usage-count-public-approved-reconcile",
+      "service-role-only-maintenance-rpc"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Production backfill execution",
+    "P1 famous/SNS/verified tag auto assignment",
+    "Manual recipe tag UI",
+    "YouTube import tag UI",
+    "HOME tag search/filter/theme UI",
+    "User tag moderation/admin UI",
+    "LLM-based free tag generation",
+    "Automatic romanization slug generation"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 docs prepared by Codex because the 36d workpack was missing and the implementation branch needs merged base docs to pass policy. Runtime implementation remains in feature/be-36d-recipe-tags-rules-backfill."
+}

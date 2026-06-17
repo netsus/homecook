@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-17T16:55:00+09:00",
+  "updated_at": "2026-06-17T17:32:00+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1779,6 +1779,25 @@
         "git diff --check"
       ],
       "notes": "Stage 2 backend implementation completed on feature/be-36c-recipe-tags-search-themes. Scope: exact tag filter, title plus public/approved tag label search, GET /tags public autocomplete, HOME dynamic themes from approved system semantic/source tags, 36c read RPCs, manual seed slugs, and no automatic romanization. Local verification passed: targeted 36c Vitest set, product contract regressions, pnpm verify:backend, validate:source-of-truth-sync, validate:workflow-v2, validate:workpack, git diff --check, local Supabase db reset, and local psql smoke for RPC signatures/seed/search/theme behavior. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:1 closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:PR #775 policy run 27674155085,docs/workpacks/36c-recipe-tags-search-themes/README.md,docs/workpacks/36c-recipe-tags-search-themes/acceptance.md,pnpm verify:backend,pnpm exec supabase db reset --local --yes,local Supabase psql smoke last_recovery_at=2026-06-17T16:55:00+09:00"
+    },
+    {
+      "id": "36d-recipe-tags-rules-backfill",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/36d-recipe-tags-rules-backfill",
+      "lifecycle": "planned",
+      "approval_state": "codex_approved",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm vitest run tests/recipe-semantic-tags.test.ts tests/recipe-tags-backfill.test.ts tests/recipe-tags-normalization.test.ts tests/recipe-tag-suggestions-route.test.ts tests/manual-recipe-tags-route.test.ts tests/recipe-tags-projection-writer.test.ts tests/supabase-server.test.ts",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm verify:backend",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 36d-recipe-tags-rules-backfill",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs branch opened by Codex because 36d workpack docs were missing and backend implementation requires merged base docs. Scope: official P0 semantic/source rule fixture, provider-only sensitive/P1 guard, backfill dry-run/report, service-role usage count reconcile. Runtime implementation remains in feature/be-36d-recipe-tags-rules-backfill."
     }
   ]
 }
