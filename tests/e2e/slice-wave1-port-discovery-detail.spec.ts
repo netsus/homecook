@@ -76,6 +76,9 @@ test.describe("wave1 port discovery detail", () => {
     await expect(
       page.locator("h2:visible").filter({ hasText: "모든 레시피" }).first(),
     ).toBeVisible({ timeout: 15000 });
+    await expect(
+      page.getByLabel("태그 필터").getByRole("button", { name: "한식" }),
+    ).toBeVisible();
 
     if (isMobileViewport(page)) {
       const recipeListSection = page.locator('section[aria-label="모든 레시피"]');
@@ -92,7 +95,6 @@ test.describe("wave1 port discovery detail", () => {
       await expect(
         page.locator("button:visible").filter({ hasText: "재료로 검색" }).first(),
       ).toBeVisible();
-      await expect(page.locator(".web-filter-chip-row:visible")).toHaveCount(0);
     }
   });
 
