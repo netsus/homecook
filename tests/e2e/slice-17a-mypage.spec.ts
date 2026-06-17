@@ -564,7 +564,9 @@ test.describe("MYPAGE screen", () => {
     await expect(page.getByText("집밥러")).toBeVisible();
     await openShoppingSurface(page);
 
-    await expect(page.getByText("4/30 장보기")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "4월 30일 만든 장보기" }),
+    ).toBeVisible();
     await expect(page.getByText("다시열기")).toHaveCount(0);
     await expect(page.getByText("완료 4/30")).toBeVisible();
     const calendar = page.getByTestId("shopping-history-calendar");
@@ -578,7 +580,9 @@ test.describe("MYPAGE screen", () => {
     await calendar.getByRole("button", { name: "이전 달" }).click();
     await expect(calendar.getByText("2026년 3월")).toBeVisible();
     await expect(calendar.getByText("2026년 4월")).toHaveCount(0);
-    await expect(page.getByText("3/18 장보기")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "3월 18일 만든 장보기" }),
+    ).toBeVisible();
     await calendar.getByRole("button", { name: "다음 달" }).click();
     await expect(calendar.getByText("2026년 4월")).toBeVisible();
     await calendar
@@ -587,7 +591,9 @@ test.describe("MYPAGE screen", () => {
       })
       .click();
 
-    await expect(page.getByText("4/23 장보기")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "4월 23일 만든 장보기" }),
+    ).toBeVisible();
     await expect(
       page.getByTestId("shopping-card-list-2").getByText("진행 중"),
     ).toBeVisible();
@@ -678,7 +684,9 @@ test.describe("MYPAGE screen", () => {
     await expect(
       page.getByRole("heading", { name: "장보기 기록" }),
     ).toBeVisible();
-    await expect(page.getByText("4/30 장보기")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "4월 30일 만든 장보기" }),
+    ).toBeVisible();
     await expect(page.getByRole("heading", { name: "저장한 레시피" })).toHaveCount(0);
   });
 
