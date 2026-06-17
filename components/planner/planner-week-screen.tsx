@@ -35,6 +35,7 @@ import {
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { buildReturnHref } from "@/lib/navigation/return-context";
+import { buildPlannerMealStatusStats } from "@/lib/planner-stats";
 import { usePlannerStore } from "@/stores/planner-store";
 import type { PlannerColumnData, PlannerMealData } from "@/types/planner";
 
@@ -590,20 +591,7 @@ export function PlannerWeekScreen({
     [rangeEndDate, rangeStartDate],
   );
   const mealsByDateAndColumn = useMemo(() => buildMealMap(meals), [meals]);
-  const mealStats = useMemo(() => {
-    let cookDone = 0;
-    let shoppingDone = 0;
-    meals.forEach((m) => {
-      if (m.status === "cook_done") cookDone++;
-      else if (m.status === "shopping_done") shoppingDone++;
-    });
-    return {
-      total: meals.length,
-      cookDone,
-      shoppingDone,
-      registered: meals.length - cookDone - shoppingDone,
-    };
-  }, [meals]);
+  const mealStats = useMemo(() => buildPlannerMealStatusStats(meals), [meals]);
   const shoppingListLinks = useMemo(() => {
     const grouped = new Map<
       string,
@@ -1118,10 +1106,8 @@ export function PlannerWeekScreen({
     );
   }
 
-  const shouldRenderWebView =
-    process.env.NODE_ENV !== "test" || isDesktopViewport;
-  const shouldRenderAppView =
-    process.env.NODE_ENV !== "test" || !isDesktopViewport;
+  const shouldRenderWebView = isDesktopViewport;
+  const shouldRenderAppView = !isDesktopViewport;
 
   return (
     <>

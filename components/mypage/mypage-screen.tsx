@@ -109,6 +109,12 @@ import {
   resolveMypageRestoreState,
   type MypageRestoreTab,
 } from "@/lib/navigation/mypage-return-state";
+import {
+  buildMypageRecordStats,
+  buildPlannerMealStatusStats,
+  type MypageRecordStats,
+} from "@/lib/planner-stats";
+import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type {
@@ -231,15 +237,6 @@ const SOCIAL_PROVIDER_LABELS: Record<string, string> = {
   google: "Google 로그인",
 };
 
-const WEB_RECIPE_FALLBACK_IMAGES = [
-  "https://images.unsplash.com/photo-1547592180-85f173990554?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1583224944844-5b268c057b72?w=900&h=675&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?w=900&h=675&fit=crop&q=80",
-] as const;
-
 export interface MypageScreenProps {
   initialAuthenticated?: boolean;
   initialActiveTab?: MypageRestoreTab;
@@ -276,6 +273,7 @@ export function MypageScreen({
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [lifetimeMealStats, setLifetimeMealStats] = useState({
     cookDone: 0,
+    registered: 0,
     shoppingDone: 0,
     total: 0,
   });
@@ -515,21 +513,7 @@ export function MypageScreen({
     ]);
 
     if (plannerResult.status === "fulfilled") {
-      setLifetimeMealStats(
-        plannerResult.value.meals.reduce(
-          (stats, meal) => {
-            if (meal.status === "shopping_done") {
-              stats.shoppingDone += 1;
-            }
-            if (meal.status === "cook_done") {
-              stats.cookDone += 1;
-            }
-            stats.total += 1;
-            return stats;
-          },
-          { cookDone: 0, shoppingDone: 0, total: 0 },
-        ),
-      );
+      setLifetimeMealStats(buildPlannerMealStatusStats(plannerResult.value.meals));
     }
 
     if (leftoverResult.status === "fulfilled") {
@@ -1390,23 +1374,7 @@ export function MypageScreen({
     mealColumnRenameInput.trim().length < 1 ||
     mealColumnRenameInput.trim().length > 30 ||
     isRenamingMealColumn;
-  const mypageStats = [
-    {
-      color: "var(--planner-status-registered-strong)",
-      label: "플래너 등록",
-      value: lifetimeMealStats.total,
-    },
-    {
-      color: "var(--planner-status-shopping)",
-      label: "장보기 완료",
-      value: lifetimeMealStats.shoppingDone,
-    },
-    {
-      color: "var(--planner-status-cooked)",
-      label: "요리 완료",
-      value: lifetimeMealStats.cookDone,
-    },
-  ];
+  const mypageRecordStats: MypageRecordStats = buildMypageRecordStats(lifetimeMealStats);
 
   useEffect(() => {
     const shouldLoadSavedRecipes =
@@ -1490,7 +1458,10 @@ export function MypageScreen({
         return [
           book.id,
           firstRecipe
-            ? firstRecipe.thumbnail_url ?? getFallbackRecipeImage(firstRecipe.title)
+            ? resolveRecipeImage({
+                id: firstRecipe.recipe_id,
+                thumbnail_url: firstRecipe.thumbnail_url,
+              })
             : null,
           firstRecipe?.added_at ?? null,
         ];
@@ -1749,6 +1720,7 @@ export function MypageScreen({
           gamificationState={gamificationState}
           progress={userProgress}
           progressState={progressState}
+          recordStats={mypageRecordStats}
           renameInputRef={renameInputRef}
           renameValue={renameValue}
           renamingBookId={renamingBookId}
@@ -1760,7 +1732,6 @@ export function MypageScreen({
           shoppingItems={shoppingItems}
           shoppingLoaded={shoppingLoaded}
           showCreateInput={showCreateInput}
-          stats={mypageStats}
           surface={mobileSurface}
           systemBooks={systemBooks}
           onCancelCreate={() => {
@@ -1867,11 +1838,7 @@ export function MypageScreen({
               providerLabel={SOCIAL_PROVIDER_LABELS[profile?.social_provider ?? ""] ?? ""}
               progress={userProgress}
               progressState={progressState}
-              recordStats={{
-                cooking: lifetimeMealStats.cookDone,
-                planner: lifetimeMealStats.total,
-                shopping: lifetimeMealStats.shoppingDone,
-              }}
+              recordStats={mypageRecordStats}
               variant="desktop"
             />
           </WebCard>
@@ -2318,7 +2285,10 @@ function SavedRecipeGrid({
           <Link href={buildMypageSavedRecipeHref(recipe.recipe_id)}>
             <WebRecipeCard
               alt={recipe.title}
-              imageSrc={recipe.thumbnail_url ?? getFallbackRecipeImage(recipe.title)}
+              imageSrc={resolveRecipeImage({
+                id: recipe.recipe_id,
+                thumbnail_url: recipe.thumbnail_url,
+              })}
               meta={formatSavedRecipeMeta(recipe)}
               title={
                 <span className="web-mypage-recipe-title">
@@ -4755,15 +4725,6 @@ function formatSavedRecipeMeta(recipe: RecipeBookRecipeItem) {
     .join(" · ");
 }
 
-function getFallbackRecipeImage(title: string) {
-  const seed = Array.from(title).reduce(
-    (sum, char) => sum + char.charCodeAt(0),
-    0,
-  );
-
-  return WEB_RECIPE_FALLBACK_IMAGES[seed % WEB_RECIPE_FALLBACK_IMAGES.length];
-}
-
 type RecipeBookTone = "sage" | "sky" | "lavender" | "coral" | "sand";
 const RECIPE_BOOK_TONES = [
   "sage",
@@ -4816,16 +4777,7 @@ function getBookCoverImage(
 }
 
 function getFallbackBookCoverImage(book: RecipeBookSummary) {
-  const offset =
-    book.book_type === "saved"
-      ? 1
-      : book.book_type === "liked"
-        ? 2
-        : book.book_type === "custom"
-          ? 3
-          : 0;
-
-  return WEB_RECIPE_FALLBACK_IMAGES[offset % WEB_RECIPE_FALLBACK_IMAGES.length];
+  return resolveRecipeImage({ id: book.id });
 }
 
 function formatBookLastUpdated(updatedAt?: string | null) {

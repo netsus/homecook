@@ -4,6 +4,11 @@ import { NicknameOnboardingScreen } from "@/components/auth/nickname-onboarding-
 import { sanitizeInternalPath } from "@/lib/navigation/return-context";
 import { getServerAuthUser } from "@/lib/supabase/server";
 
+export const metadata = {
+  description: "집밥에서 사용할 닉네임을 설정하는 첫 화면",
+  title: "닉네임 설정",
+};
+
 interface NicknameOnboardingPageProps {
   searchParams: Promise<{
     next?: string;

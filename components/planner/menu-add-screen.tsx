@@ -498,10 +498,8 @@ export function MenuAddScreen({
     [isOptionActive],
   );
 
-  const shouldRenderWebView =
-    process.env.NODE_ENV !== "test" || isDesktopViewport;
-  const shouldRenderAppView =
-    process.env.NODE_ENV !== "test" || !isDesktopViewport;
+  const shouldRenderWebView = isDesktopViewport;
+  const shouldRenderAppView = !isDesktopViewport;
 
   const mobileContent = (() => {
     if (pickerMode === "search") {

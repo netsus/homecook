@@ -48,6 +48,12 @@ export const SURFACE_CHROME_RULES = {
     primaryNavId: "home",
     showBack: true,
   },
+  "recipebook.detail": {
+    backFallbackHref: "/mypage?tab=recipebooks",
+    mobileBottomTab: "mypage",
+    primaryNavId: "mypage",
+    showBack: true,
+  },
   "shopping.flow": {
     backFallbackHref: "/planner",
     mobileBottomTab: "planner",
@@ -66,4 +72,28 @@ export const SURFACE_CHROME_RULES = {
     primaryNavId: "planner",
     showBack: true,
   },
+  "planner.meal": {
+    backFallbackHref: "/planner",
+    mobileBottomTab: "planner",
+    primaryNavId: "planner",
+    showBack: true,
+  },
+  leftovers: {
+    backFallbackHref: "/mypage",
+    mobileBottomTab: "mypage",
+    primaryNavId: "mypage",
+    showBack: true,
+  },
+  settings: {
+    backFallbackHref: "/mypage?tab=preferences",
+    mobileBottomTab: "mypage",
+    primaryNavId: "mypage",
+    showBack: true,
+  },
 } as const satisfies Record<string, SurfaceChromeRule>;
+
+export type SurfaceChromeKey = keyof typeof SURFACE_CHROME_RULES;
+
+export function getSurfaceChromeRule(surface: SurfaceChromeKey) {
+  return SURFACE_CHROME_RULES[surface];
+}

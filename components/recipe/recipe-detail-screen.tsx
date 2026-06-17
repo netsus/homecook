@@ -812,10 +812,8 @@ export function RecipeDetailScreen({
       returnTo: recipeDetailReturnHref,
     },
   );
-  const shouldRenderWebView =
-    process.env.NODE_ENV !== "test" || isDesktopViewport;
-  const shouldRenderAppView =
-    process.env.NODE_ENV !== "test" || !isDesktopViewport;
+  const shouldRenderWebView = isDesktopViewport;
+  const shouldRenderAppView = !isDesktopViewport;
   const shouldRenderLegacyWebView = false;
 
   return (
@@ -863,9 +861,9 @@ export function RecipeDetailScreen({
           <div className="min-w-0 space-y-6">
         <div className="recipe-overview-compact flex flex-col rounded-[var(--radius-sheet)] border border-[var(--line)] bg-[var(--panel)] px-6 py-6 shadow-[var(--shadow-1)]">
           <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--brand)]">
-            <Link href="/">Home</Link>
+            <Link href="/">홈</Link>
             <span>/</span>
-            <span>Recipe detail</span>
+            <span>레시피 상세</span>
           </div>
 
           <div className="flex flex-col gap-2">

@@ -14,12 +14,11 @@ export function AppHeader({
 }: AppHeaderProps) {
   const brandLink = (
     <Link
-      aria-label="Homecook"
+      aria-label="집밥 홈"
       className="inline-flex text-[22px] font-bold leading-none transition-opacity hover:opacity-80"
       href="/"
     >
-      <span className="text-[var(--wave1-mint-contrast)]">homecook</span>
-      <span className="text-[var(--wave1-ink)]">_</span>
+      <span className="text-[var(--wave1-mint-contrast)]">집밥</span>
     </Link>
   );
 

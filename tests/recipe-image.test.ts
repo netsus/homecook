@@ -12,6 +12,15 @@ describe("recipe image resolver", () => {
     ).toBe("https://cdn.example.com/recipe.webp");
   });
 
+  it("uses recipe_thumbnail_url from planner and leftover payloads", () => {
+    expect(
+      resolveRecipeImage({
+        recipe_id: "planner-meal",
+        recipe_thumbnail_url: "https://cdn.example.com/planner.webp",
+      }),
+    ).toBe("https://cdn.example.com/planner.webp");
+  });
+
   it("returns the same fallback image for the same recipe id across surfaces", () => {
     const first = resolveRecipeImage({
       id: "recipe-without-thumbnail",

@@ -7,6 +7,11 @@ import { readE2EAuthOverrideCookie } from "@/lib/auth/e2e-auth-override";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getServerAuthUser } from "@/lib/supabase/server";
 
+export const metadata = {
+  description: "플래너의 끼니를 골라 필요한 재료를 합산하는 장보기 준비",
+  title: "장보기 준비",
+};
+
 export default async function ShoppingFlowPage() {
   const cookieStore = await cookies();
   const authOverride = readE2EAuthOverrideCookie(cookieStore);

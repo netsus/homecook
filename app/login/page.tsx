@@ -3,6 +3,11 @@ import { resolveNextPath } from "@/lib/auth/callback";
 import { getServerAuthUser } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
+export const metadata = {
+  description: "내 식단과 레시피북을 이어서 사용하기 위한 집밥 로그인",
+  title: "로그인",
+};
+
 interface LoginPageProps {
   searchParams: Promise<{
     authError?: string;

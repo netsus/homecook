@@ -8,6 +8,17 @@ import { readE2EAuthOverrideCookie } from "@/lib/auth/e2e-auth-override";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getServerAuthUser } from "@/lib/supabase/server";
 
+export async function generateMetadata({ params, searchParams }: MealScreenPageProps) {
+  const { date } = await params;
+  const { slot } = await searchParams;
+  const slotLabel = slot?.trim() ? ` ${slot.trim()}` : "";
+
+  return {
+    description: `${date}${slotLabel}에 등록된 식사를 확인하고 요리 완료까지 관리하는 플래너 상세`,
+    title: `${date}${slotLabel} 식사`,
+  };
+}
+
 interface MealScreenPageProps {
   params: Promise<{ date: string; columnId: string }>;
   searchParams: Promise<{ slot?: string }>;

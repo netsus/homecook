@@ -559,7 +559,7 @@ describe("MYPAGE achievement album UI", () => {
     const dialog = screen.getByRole("dialog", { name: "전체 등급" });
     expect(within(dialog).getAllByTestId("mypage-grade-row")).toHaveLength(7);
     const diamondRow = within(dialog).getByTestId("mypage-grade-row-diamond");
-    expect(diamondRow.textContent).toContain("Diamond");
+    expect(diamondRow.textContent).toContain("다이아");
     const diamondAsset = within(diamondRow).getByTestId("grade-panel-grade-asset-diamond");
     const diamondImage = within(diamondRow).getByTestId("grade-panel-grade-image-diamond");
     expect(diamondAsset.style.width).toBe("124px");
@@ -572,7 +572,7 @@ describe("MYPAGE achievement album UI", () => {
     expect(diamondImage.getAttribute("src")).toBe("/assets/growth/grades/diamond-spoon-badge.png");
     expect(within(diamondRow).queryByTestId("growth-grade-mark-diamond")).toBeNull();
     expect(within(dialog).getByText("현재 등급")).toBeTruthy();
-    expect(within(dialog).getByText("Titanium")).toBeTruthy();
+    expect(within(dialog).getByText("티타늄")).toBeTruthy();
     expect(within(dialog).queryByText(/rank|leaderboard|streak|claim/i)).toBeNull();
   });
 

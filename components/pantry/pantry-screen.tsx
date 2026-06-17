@@ -801,7 +801,7 @@ export function PantryScreen({
         <div className="web-screen web-pantry-screen">
           <header className="web-pantry-head">
             <div>
-              <p className="web-menu-add-eyebrow">Pantry</p>
+              <p className="web-menu-add-eyebrow">팬트리</p>
               <h1>나의 팬트리 {items.length}개</h1>
               <p>
                 팬트리에 있는 재료는 장보기에서 자동 제외돼요.

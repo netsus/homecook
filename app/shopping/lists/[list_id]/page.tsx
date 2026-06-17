@@ -7,6 +7,11 @@ import { readE2EAuthOverrideCookie } from "@/lib/auth/e2e-auth-override";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getServerAuthUser } from "@/lib/supabase/server";
 
+export const metadata = {
+  description: "장보기 항목을 체크하고 팬트리 반영까지 마무리하는 장보기 상세",
+  title: "장보기 목록",
+};
+
 export default async function ShoppingDetailPage({
   params,
   searchParams,

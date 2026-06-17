@@ -18,7 +18,7 @@ test.describe("wave1 port foundation", () => {
     ).toBeVisible();
 
     if (isMobileViewport(page)) {
-      await expect(page.getByRole("navigation", { name: "HOME 하단 탭" })).toBeVisible();
+      await expect(page.getByRole("navigation", { name: "홈 하단 탭" })).toBeVisible();
     } else {
       await expect(
         page.getByRole("navigation", { name: "데스크탑 주요 메뉴" }),

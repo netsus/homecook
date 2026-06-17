@@ -86,10 +86,8 @@ export function SaveModal({
     isCreatingBook || isSavingRecipe || newBookName.trim().length === 0;
   const disableSave =
     isSavingRecipe || isCreatingBook || changedBookCount === 0;
-  const shouldRenderWebView =
-    process.env.NODE_ENV !== "test" || isDesktopViewport;
-  const shouldRenderAppView =
-    process.env.NODE_ENV !== "test" || !isDesktopViewport;
+  const shouldRenderWebView = isDesktopViewport;
+  const shouldRenderAppView = !isDesktopViewport;
 
   return (
     <>

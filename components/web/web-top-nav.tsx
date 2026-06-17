@@ -22,7 +22,7 @@ export interface WebTopNavProps {
 export function WebTopNav({
   activeId,
   brandHref = "/",
-  brandLabel = "HOMECOOK",
+  brandLabel = "집밥",
   className,
   items = PRIMARY_WEB_NAV_ITEMS,
   rightSlot,

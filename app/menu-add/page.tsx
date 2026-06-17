@@ -7,6 +7,11 @@ import { readE2EAuthOverrideCookie } from "@/lib/auth/e2e-auth-override";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getServerAuthUser } from "@/lib/supabase/server";
 
+export const metadata = {
+  description: "검색, 레시피북, 팬트리 추천, 남은 요리에서 플래너 식사를 추가하는 화면",
+  title: "식사 추가",
+};
+
 interface MenuAddPageProps {
   searchParams: Promise<{
     columnId?: string;

@@ -607,7 +607,7 @@ export function ShoppingDetailScreen({
         <header className="web-shopping-detail-head">
           <div>
             <p className="web-menu-add-eyebrow">
-              {isReadOnly ? "Completed Shopping" : "Shopping List"}
+              {isReadOnly ? "완료한 장보기" : "장보기 목록"}
             </p>
             <h1>{displayTitle}</h1>
           </div>
@@ -790,7 +790,7 @@ export function ShoppingDetailScreen({
         <header className="web-shopping-detail-head">
           <div>
             <p className="web-menu-add-eyebrow">
-              {isReadOnly ? "Completed Shopping" : "Shopping List"}
+              {isReadOnly ? "완료한 장보기" : "장보기 목록"}
             </p>
             <h1>{displayTitle}</h1>
           </div>

@@ -1440,10 +1440,8 @@ export function MealScreen({
       returnTo: buildNextPath(planDate, columnId, slotName),
     });
   }
-  const shouldRenderWebView =
-    process.env.NODE_ENV !== "test" || isDesktopViewport;
-  const shouldRenderAppView =
-    process.env.NODE_ENV !== "test" || !isDesktopViewport;
+  const shouldRenderWebView = isDesktopViewport;
+  const shouldRenderAppView = !isDesktopViewport;
   const isLoading = authState === "checking" || screenState === "loading";
   const navigateToPlanner = useCallback(() => {
     appReturn.goBack();
