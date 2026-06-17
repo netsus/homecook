@@ -911,6 +911,10 @@
   gap: 8px;
 }
 
+.home-mobile-tag-rail {
+  min-height: 40px;
+}
+
 .home-mobile-filter-chip,
 .home-mobile-filter-reset {
   display: inline-flex;
@@ -1002,6 +1006,14 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1.25;
+}
+
+.home-mobile-theme-section {
+  min-height: 195px;
+}
+
+.home-mobile-theme-rail {
+  min-height: 129px;
 }
 
 .home-search-empty-state {

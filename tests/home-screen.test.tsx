@@ -169,6 +169,12 @@ describe("home screen", () => {
     expect(hasNarrowHomeFrame).toBe(false);
   });
 
+  it("reserves mobile loading rail heights to avoid Lighthouse layout shift", () => {
+    expect(ruleBody(".home-mobile-tag-rail")).toContain("min-height: 40px;");
+    expect(ruleBody(".home-mobile-theme-section")).toContain("min-height: 195px;");
+    expect(ruleBody(".home-mobile-theme-rail")).toContain("min-height: 129px;");
+  });
+
   it("adds left breathing room to web recipe card titles and metrics", () => {
     expect(ruleBody(".web-recipe-card-body")).toContain("padding: 12px 12px 8px;");
   });

@@ -728,10 +728,21 @@ export function HomeScreen() {
             ) : null}
 
             {showInitialDiscoverySkeleton ? (
-              <div className="space-y-4 px-4">
+              <>
                 <ThemeCarouselSkeleton />
-                <RecipeListSkeleton />
-              </div>
+                <section aria-label="레시피 목록 불러오는 중">
+                  <div className="flex items-center justify-between px-4 pb-2">
+                    <div className="space-y-2">
+                      <Skeleton className="h-6 w-32 rounded-full" />
+                      <Skeleton className="h-4 w-10 rounded-full" />
+                    </div>
+                    <Skeleton className="h-9 w-24 rounded-[var(--radius-control)]" />
+                  </div>
+                  <div className="px-4">
+                    <RecipeListSkeleton includeHeader={false} />
+                  </div>
+                </section>
+              </>
             ) : null}
 
             {!showInitialDiscoverySkeleton && (themes?.themes.length ?? 0) > 0 ? (
@@ -772,7 +783,11 @@ export function HomeScreen() {
                   ) : null}
                 </div>
 
-                {screenState === "loading" ? <div className="px-4"><RecipeListSkeleton /></div> : null}
+                {screenState === "loading" ? (
+                  <div className="px-4">
+                    <RecipeListSkeleton includeHeader={false} />
+                  </div>
+                ) : null}
 
                 {screenState === "ready" && displayedRecipes.length ? (
                   <div className="grid grid-cols-1 gap-4 px-4">
@@ -1366,7 +1381,7 @@ function HomeTagRail({
         className={
           variant === "web"
             ? "web-filter-chip-row"
-            : "scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-2"
+            : "home-mobile-tag-rail scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-2"
         }
         aria-label="태그 불러오는 중"
       >
@@ -1386,7 +1401,7 @@ function HomeTagRail({
         className={
           variant === "web"
             ? "web-filter-chip-row"
-            : "flex items-center gap-2 px-5 pb-2"
+            : "home-mobile-tag-rail flex items-center gap-2 px-5 pb-2"
         }
       >
         <span className="text-[12px] font-semibold text-[var(--text-3)]">
@@ -1404,13 +1419,17 @@ function HomeTagRail({
   }
 
   if (tagOptions.length === 0) {
+    if (variant === "mobile") {
+      return <div aria-hidden="true" className="home-mobile-tag-rail" />;
+    }
+
     return null;
   }
 
   const containerClass =
     variant === "web"
       ? "web-filter-chip-row"
-      : "scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-2";
+      : "home-mobile-tag-rail scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-2";
 
   return (
     <div className={containerClass} aria-label="태그 필터">
@@ -1458,7 +1477,7 @@ function ThemeCarousel({
   themes: RecipeTheme[];
 }) {
   return (
-    <section aria-label="이번 주 인기 테마" className="pb-4 pt-2">
+    <section aria-label="이번 주 인기 테마" className="home-mobile-theme-section pb-4 pt-2">
       <div className="flex items-baseline justify-between px-4 pb-3">
         <h2 className="text-[18px] font-bold text-[var(--foreground)]">이번 주 인기 테마</h2>
         {activeThemeId ? (
@@ -1471,7 +1490,7 @@ function ThemeCarousel({
           </button>
         ) : null}
       </div>
-      <div className="scrollbar-hide flex gap-2.5 overflow-x-auto px-4 pb-1">
+      <div className="home-mobile-theme-rail scrollbar-hide flex gap-2.5 overflow-x-auto px-4 pb-1">
         {themes.map((theme, index) => (
           <ThemeCarouselCard
             isActive={activeThemeId === theme.id}
@@ -1638,24 +1657,29 @@ function WebBookmarkIcon({ filled = false }: { filled?: boolean }) {
 
 function ThemeCarouselSkeleton() {
   return (
-    <div className="space-y-3">
-      <Skeleton className="h-6 w-36 rounded-full" />
-      <div className="flex gap-3 overflow-hidden">
+    <section
+      aria-label="이번 주 인기 테마 불러오는 중"
+      className="home-mobile-theme-section pb-4 pt-2"
+    >
+      <div className="flex items-baseline justify-between px-4 pb-3">
+        <Skeleton className="h-6 w-36 rounded-full" />
+      </div>
+      <div className="home-mobile-theme-rail flex gap-2.5 overflow-hidden px-4 pb-1">
         {Array.from({ length: 3 }).map((_, index) => (
           <Skeleton
             key={index}
-            className="h-[132px] w-[148px] shrink-0 rounded-[var(--radius-card)]"
+            className="h-[128px] w-[184px] shrink-0 rounded-[var(--radius-card)]"
           />
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
-function RecipeListSkeleton() {
+function RecipeListSkeleton({ includeHeader = true }: { includeHeader?: boolean }) {
   return (
     <div className="space-y-4">
-      <Skeleton className="h-6 w-32 rounded-full" />
+      {includeHeader ? <Skeleton className="h-6 w-32 rounded-full" /> : null}
       <div className="grid grid-cols-1 gap-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <Skeleton
