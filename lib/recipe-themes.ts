@@ -9,6 +9,13 @@ interface ThemeDefinition {
   sourceTypes?: RecipeCardItem["source_type"][];
 }
 
+export interface RecipeTagThemeGroup {
+  id: string;
+  tag_key: string;
+  tag_label: string;
+  recipes: RecipeCardItem[];
+}
+
 const THEME_DEFINITIONS: ThemeDefinition[] = [
   {
     id: "korean-home",
@@ -102,6 +109,37 @@ function createTheme(id: string, title: string, recipes: RecipeCardItem[]) {
     title,
     recipes: recipes.slice(0, MAX_RECIPES_PER_THEME),
   } satisfies RecipeTheme;
+}
+
+function createTagTheme(group: RecipeTagThemeGroup) {
+  return {
+    id: group.id,
+    title: group.tag_label,
+    tag_key: group.tag_key,
+    tag_label: group.tag_label,
+    recipes: group.recipes.slice(0, MAX_RECIPES_PER_THEME),
+  } satisfies RecipeTheme;
+}
+
+export function createRecipeThemesFromTagGroups(
+  popularItems: RecipeCardItem[],
+  groups: RecipeTagThemeGroup[],
+) {
+  const themes: RecipeTheme[] = [];
+
+  if (popularItems.length > 0) {
+    themes.push(createTheme("popular", "이번 주 인기 레시피", popularItems));
+  }
+
+  groups.forEach((group) => {
+    if (group.recipes.length === 0) {
+      return;
+    }
+
+    themes.push(createTagTheme(group));
+  });
+
+  return themes;
 }
 
 export function createRecipeThemesFromCards(items: RecipeCardItem[]) {

@@ -9,8 +9,8 @@
   "preset": "vertical-slice-strict",
   "goal": "사용자가 HOME에서 승인된 태그로 레시피를 검색하고, HOME 테마가 품질 관리된 시스템 의미/source 태그에서만 만들어지도록 백엔드 조회 계약을 닫는다.",
   "owners": {
-    "claude": "stage1 normally; 36c workpack gap reconstructed from merged 36a contract in this docs branch",
-    "codex": "stage1 fallback docs split per validator prerequisite, stage2 follows on feature branch",
+    "claude": "stage1 normally; 36c workpack gap was reconstructed from merged 36a contract in this branch",
+    "codex": "stage2 implementation, verification, ship-pr-loop",
     "workers": []
   },
   "dependencies": [
@@ -75,9 +75,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "merged",
     "approval_state": "codex_approved",
-    "verification_status": "pending",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
@@ -94,5 +94,5 @@
     "HOME tag search/filter/theme UI"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs gap repair for 36c. The official 36a contract is already merged; this docs branch creates the missing workpack, acceptance, automation spec, and workflow item so the Stage 2 feature branch can pass the base-docs validator."
+  "notes": "Stage 2 backend implementation completed on feature/be-36c-recipe-tags-search-themes. Implements exact tag filter, title plus public/approved tag label search, GET /tags public autocomplete, HOME dynamic themes from approved system semantic/source tags, 36c read RPCs, manual seed slugs, and no automatic romanization. Local verification passed: targeted 36c Vitest set, product contract regressions, pnpm verify:backend, validate:source-of-truth-sync, validate:workflow-v2, validate:workpack, git diff --check, local Supabase db reset, and local psql smoke for RPC signatures/seed/search/theme behavior."
 }

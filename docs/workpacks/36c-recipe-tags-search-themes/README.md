@@ -29,7 +29,7 @@
   - `tags` / `recipe_tags` public read RLS policy 추가
 - Schema Change:
   - [ ] 없음 (읽기 전용)
-  - [ ] 있음 → `supabase/migrations/20260617110000_36c_recipe_tags_search_themes.sql`
+  - [x] 있음 → `supabase/migrations/20260617110000_36c_recipe_tags_search_themes.sql`
 
 ## Out of Scope
 
@@ -153,12 +153,12 @@
 
 ## Delivery Checklist
 
-- [ ] 누락된 36c workpack/acceptance/automation metadata 보강 <!-- omo:id=delivery-36c-workpack-gap;stage=2;scope=shared;review=3,6 -->
-- [ ] `GET /api/v1/recipes?tag=<normalized_key>` exact tag filter 구현 <!-- omo:id=delivery-exact-tag-filter;stage=2;scope=backend;review=3,6 -->
-- [ ] `GET /api/v1/recipes?q=` title + public/approved tag label 검색 구현 <!-- omo:id=delivery-title-tag-search;stage=2;scope=backend;review=3,6 -->
-- [ ] 검색 결과 dedupe + stable sort + cursor 보존 테스트 <!-- omo:id=delivery-search-cursor-safe;stage=2;scope=backend;review=3,6 -->
-- [ ] `GET /api/v1/tags` 공개 태그 목록/autocomplete route 구현 <!-- omo:id=delivery-public-tags-route;stage=2;scope=backend;review=3,6 -->
-- [ ] HOME dynamic theme generation을 approved system semantic/source tag로 제한 <!-- omo:id=delivery-home-theme-policy;stage=2;scope=backend;review=3,6 -->
-- [ ] `tags.slug` 수동 seed와 공개 read/search/theme RPC migration 추가 <!-- omo:id=delivery-36c-migration;stage=2;scope=backend;review=3,6 -->
-- [ ] API helper/type에 `tag` query와 tag list type 반영 <!-- omo:id=delivery-types-api-helper;stage=2;scope=shared;review=3,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] 누락된 36c workpack/acceptance/automation metadata 보강 <!-- omo:id=delivery-36c-workpack-gap;stage=2;scope=shared;review=3,6 -->
+- [x] `GET /api/v1/recipes?tag=<normalized_key>` exact tag filter 구현 <!-- omo:id=delivery-exact-tag-filter;stage=2;scope=backend;review=3,6 -->
+- [x] `GET /api/v1/recipes?q=` title + public/approved tag label 검색 구현 <!-- omo:id=delivery-title-tag-search;stage=2;scope=backend;review=3,6 -->
+- [x] 검색 결과 dedupe + stable sort + cursor 보존 테스트 <!-- omo:id=delivery-search-cursor-safe;stage=2;scope=backend;review=3,6 -->
+- [x] `GET /api/v1/tags` 공개 태그 목록/autocomplete route 구현 <!-- omo:id=delivery-public-tags-route;stage=2;scope=backend;review=3,6 -->
+- [x] HOME dynamic theme generation을 approved system semantic/source tag로 제한 <!-- omo:id=delivery-home-theme-policy;stage=2;scope=backend;review=3,6 -->
+- [x] `tags.slug` 수동 seed와 공개 read/search/theme RPC migration 추가 <!-- omo:id=delivery-36c-migration;stage=2;scope=backend;review=3,6 -->
+- [x] API helper/type에 `tag` query와 tag list type 반영 <!-- omo:id=delivery-types-api-helper;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->

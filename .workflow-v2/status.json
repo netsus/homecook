@@ -1353,9 +1353,9 @@
       "preset": "vertical-slice-strict",
       "branch": "feature/be-27-youtube-import-quality-uplift",
       "pr_path": "https://github.com/netsus/homecook/pull/722",
-      "lifecycle": "in_progress",
+      "lifecycle": "merged",
       "approval_state": "codex_approved",
-      "verification_status": "pending",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
@@ -1778,7 +1778,7 @@
         "pnpm validate:workpack -- --slice 36c-recipe-tags-search-themes",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs gap repair for 36c. The official 36a contract is already merged; this docs branch creates the missing workpack, acceptance, automation spec, and workflow item so the Stage 2 feature branch can pass the base-docs validator."
+      "notes": "Stage 2 backend implementation completed on feature/be-36c-recipe-tags-search-themes. Scope: exact tag filter, title plus public/approved tag label search, GET /tags public autocomplete, HOME dynamic themes from approved system semantic/source tags, 36c read RPCs, manual seed slugs, and no automatic romanization. Local verification passed: targeted 36c Vitest set, product contract regressions, pnpm verify:backend, validate:source-of-truth-sync, validate:workflow-v2, validate:workpack, git diff --check, local Supabase db reset, and local psql smoke for RPC signatures/seed/search/theme behavior."
     }
   ]
 }

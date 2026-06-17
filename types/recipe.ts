@@ -34,6 +34,7 @@ export interface RecipeListData {
 
 export interface RecipeListQuery {
   q?: string;
+  tag?: string;
   ingredient_ids?: string[];
   sort?: RecipeSortKey;
   cursor?: string | null;
@@ -78,11 +79,29 @@ export interface IngredientListData {
 export interface RecipeTheme {
   id: string;
   title: string;
+  tag_key?: string;
+  tag_label?: string;
   recipes: RecipeCardItem[];
 }
 
 export interface RecipeThemesData {
   themes: RecipeTheme[];
+}
+
+export type RecipeTagKind = "semantic" | "ingredient" | "method" | "source" | "user";
+
+export interface RecipeTagItem {
+  normalized_key: string;
+  label: string;
+  slug: string | null;
+  kind: RecipeTagKind;
+  is_system: boolean;
+  theme_eligible: boolean;
+  usage_count: number;
+}
+
+export interface RecipeTagListData {
+  items: RecipeTagItem[];
 }
 
 export interface RecipeIngredient {
