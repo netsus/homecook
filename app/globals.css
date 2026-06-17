@@ -941,6 +941,69 @@
   color: var(--text-2);
 }
 
+.home-mobile-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 2px 20px 14px;
+}
+
+.home-mobile-shortcut {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  min-height: 58px;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--foreground);
+  padding: 9px 10px;
+  text-decoration: none;
+}
+
+.home-mobile-shortcut-icon {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.home-mobile-shortcut-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.home-mobile-shortcut-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.home-mobile-shortcut-copy strong,
+.home-mobile-shortcut-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-mobile-shortcut-copy strong {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.home-mobile-shortcut-copy small {
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
 .home-search-empty-state {
   display: flex;
   min-height: 264px;
@@ -953,6 +1016,55 @@
   background: var(--surface);
   padding: 64px 24px;
   text-align: center;
+}
+
+.not-found-screen {
+  display: flex;
+  min-height: calc(100dvh - 160px);
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 14px;
+  padding: 48px 0 96px;
+}
+
+.not-found-kicker {
+  margin: 0;
+  color: var(--brand);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.not-found-screen h1 {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.not-found-screen p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.not-found-screen .not-found-kicker {
+  max-width: none;
+  color: var(--brand);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.not-found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
 }
 
 .home-search-empty-icon {
@@ -2469,12 +2581,31 @@ button {
     border-radius: var(--web-r-pill);
     background: var(--web-bg-alt);
     color: var(--web-text-2);
+    overflow: hidden;
     transition: background 0.15s ease, color 0.15s ease;
   }
 
   .web-profile-button:hover {
     background: #eef0f2;
     color: var(--web-text-1);
+  }
+
+  .web-profile-button-image {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+  }
+
+  .web-profile-button-fallback {
+    display: inline-flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #8fd4ff 0%, #43b9ff 100%);
+    color: var(--web-text-inverse);
+    font-size: 13px;
+    font-weight: 800;
   }
 
   .web-planner-screen,
@@ -3705,6 +3836,77 @@ button {
 
   .web-discovery-filter-button {
     height: 44px;
+  }
+
+  .web-home-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    max-width: 880px;
+    margin-top: 10px;
+  }
+
+  .web-home-shortcut {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    min-height: 66px;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--web-line);
+    border-radius: 8px;
+    background: var(--web-surface);
+    color: var(--web-text-1);
+    padding: 12px;
+    text-decoration: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
+
+  .web-home-shortcut:hover {
+    border-color: var(--web-brand-accessible);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+  }
+
+  .web-home-shortcut-icon {
+    display: inline-flex;
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--web-brand-wash);
+    color: var(--web-brand-accessible);
+  }
+
+  .web-home-shortcut-icon svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .web-home-shortcut-copy {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+  }
+
+  .web-home-shortcut-copy strong,
+  .web-home-shortcut-copy small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .web-home-shortcut-copy strong {
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .web-home-shortcut-copy small {
+    color: var(--web-text-3);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
   }
 
   .web-filter-chip-row {
@@ -7118,6 +7320,13 @@ button {
     justify-content: center;
     border-radius: var(--web-r-pill);
     font-size: 12px;
+    overflow: hidden;
+  }
+
+  .web-mypage-top-profile-image {
+    width: 34px;
+    height: 34px;
+    object-fit: cover;
   }
 
   .web-mypage-tabs {

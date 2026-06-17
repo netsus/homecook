@@ -39,6 +39,7 @@ import { createMeal, isMealApiError } from "@/lib/api/meal";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import { getCookingMethodColor, getCookingMethodTint } from "@/lib/cooking-method-colors";
 import { getCookingMethodAssistiveLabel } from "@/lib/cooking-method-taxonomy";
+import { formatHeatLevelLabel } from "@/lib/heat-level";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { fetchPlanner } from "@/lib/api/planner";
@@ -1123,9 +1124,9 @@ export function RecipeDetailScreen({
                     step.component_label,
                   ) ?? step.instruction}
                 </p>
-                {step.heat_level ? (
+                {formatHeatLevelLabel(step.heat_level) ? (
                   <p className="mt-1.5 pl-9 text-xs text-[var(--muted)]">
-                    불 세기 {step.heat_level}
+                    {formatHeatLevelLabel(step.heat_level)}
                   </p>
                 ) : null}
                   </li>
@@ -1472,9 +1473,9 @@ export function RecipeDetailScreen({
                       step.component_label,
                     ) ?? step.instruction}
                   </p>
-                  {step.heat_level ? (
+                  {formatHeatLevelLabel(step.heat_level) ? (
                     <p className="mt-1.5 pl-9 text-[12px] text-[var(--text-2)]">
-                      불 세기 {step.heat_level}
+                      {formatHeatLevelLabel(step.heat_level)}
                     </p>
                   ) : null}
                     </li>
@@ -1885,9 +1886,9 @@ function RecipeDetailWebView({
                                 step.component_label,
                               ) ?? step.instruction}
                             </p>
-                            {step.heat_level ? (
+                            {formatHeatLevelLabel(step.heat_level) ? (
                               <span className="web-step-heat">
-                                불 세기 {step.heat_level}
+                                {formatHeatLevelLabel(step.heat_level)}
                               </span>
                             ) : null}
                           </div>

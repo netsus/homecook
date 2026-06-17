@@ -2174,13 +2174,26 @@ export function MypageScreen({
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function WebProfilePill({ profile }: { profile: UserProfileData | null }) {
+  const fallbackInitial = profile?.nickname?.slice(0, 1).toUpperCase() ?? "?";
+
   return (
     <Link
       aria-label={`${profile?.nickname ?? "내"} 마이페이지`}
       className="web-mypage-top-profile"
       href="/mypage"
     >
-      <span aria-hidden="true">{profile?.nickname?.slice(0, 1).toUpperCase() ?? "?"}</span>
+      {profile?.profile_image_url ? (
+        <Image
+          alt=""
+          className="web-mypage-top-profile-image"
+          height={34}
+          src={profile.profile_image_url}
+          unoptimized
+          width={34}
+        />
+      ) : (
+        <span aria-hidden="true">{fallbackInitial}</span>
+      )}
     </Link>
   );
 }
@@ -4414,6 +4427,8 @@ function ShoppingHistoryCard({
   item: ShoppingListHistoryItem;
   onOpen: () => void;
 }) {
+  const displayTitle = formatShoppingHistoryCardTitle(item);
+
   return (
     <button
       className="web-mypage-shopping-card"
@@ -4423,7 +4438,7 @@ function ShoppingHistoryCard({
     >
       <ShoppingHistoryStatusTag item={item} />
       <p className="web-mypage-shopping-card-title">
-        {item.title}
+        {displayTitle}
       </p>
       <dl className="web-mypage-shopping-card-meta">
         <div>
@@ -4437,6 +4452,19 @@ function ShoppingHistoryCard({
       </dl>
     </button>
   );
+}
+
+function formatShoppingHistoryCardTitle(item: ShoppingListHistoryItem) {
+  const title = item.title.trim();
+  const normalizedTitle = title.endsWith("장보기") ? title : `${title} 장보기`;
+
+  if (title.includes("~")) {
+    return normalizedTitle;
+  }
+
+  const mealRange = formatShoppingHistoryMealRange(item);
+
+  return mealRange ? `${mealRange} 장보기` : normalizedTitle;
 }
 
 function ShoppingHistoryStatusLegend() {

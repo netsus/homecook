@@ -705,7 +705,7 @@ function MobileSelectScreen({
     <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface-fill)] lg:hidden">
       <MobileAppBar onBack={onBack} title="장보기 준비" />
 
-      <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
+      <main className="min-h-0 flex-1 overflow-y-auto pb-[184px]">
         <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5">
           <h2 className="text-[20px] font-extrabold leading-[1.3] text-[var(--foreground)]">
             어떤 끼니의 재료를 살까요?
@@ -754,7 +754,7 @@ function MobileSelectScreen({
         </div>
       </main>
 
-      <div className="fixed inset-x-0 bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mx-auto max-w-[430px] px-4">
+      <div className="fixed inset-x-0 bottom-[calc(92px+env(safe-area-inset-bottom))] z-20 mx-auto max-w-[430px] px-4">
         <button
           className="flex h-[var(--control-height-lg)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] text-[16px] font-bold text-[var(--text-inverse)] shadow-[0_10px_26px_var(--brand-shadow-color-soft)] disabled:bg-[var(--line-strong)] disabled:text-[var(--text-4)] disabled:shadow-none"
           data-testid="shopping-create-button"
