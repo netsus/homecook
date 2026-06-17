@@ -1,0 +1,149 @@
+{
+  "slice_id": "36e-recipe-tags-frontend",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/recipes?tag=<normalized_key>",
+      "GET /api/v1/recipes?q=<query>",
+      "GET /api/v1/tags",
+      "GET /api/v1/recipes/themes",
+      "POST /api/v1/recipes/tag-suggestions",
+      "POST /api/v1/recipes",
+      "POST /api/v1/recipes/youtube/register"
+    ],
+    "invariants": [
+      "frontend-only-no-new-endpoint",
+      "server-auto-tag-generation-is-preserved",
+      "unmodified-tags-omit-request-body-tags",
+      "reviewed-tags-send-label-array",
+      "exact-tag-filter-uses-korean-normalized-key",
+      "automatic-romanization-is-forbidden",
+      "home-theme-policy-remains-server-authority",
+      "production-backfill-and-reconcile-are-manual-only"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36e-recipe-tags-frontend",
+      "git diff --check"
+    ],
+    "required_test_targets": [],
+    "schema_changes": [],
+    "required_tables": [
+      "recipes",
+      "tags",
+      "recipe_tags"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/",
+      "/menu/add/manual",
+      "/menu/add/youtube"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized",
+      "home-search-query",
+      "home-exact-tag-filter",
+      "home-tag-backed-theme",
+      "manual-tag-suggestion",
+      "manual-tag-review",
+      "youtube-tag-review",
+      "tag-validation-inline-error",
+      "suggestion-soft-fail"
+    ],
+    "required_endpoints": [
+      "GET /api/v1/recipes?tag=<normalized_key>",
+      "GET /api/v1/recipes?q=<query>",
+      "GET /api/v1/tags",
+      "GET /api/v1/recipes/themes",
+      "POST /api/v1/recipes/tag-suggestions",
+      "POST /api/v1/recipes",
+      "POST /api/v1/recipes/youtube/register"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/home-tag-search.test.tsx tests/manual-recipe-tags-ui.test.tsx tests/youtube-recipe-tags-ui.test.tsx tests/recipe-tag-input.test.ts",
+      "pnpm exec playwright test tests/e2e/slice-36e-recipe-tags-frontend.spec.ts",
+      "CI=1 pnpm verify:frontend:pr",
+      "pnpm qa:explore -- --slice 36e-recipe-tags-frontend --base-url http://127.0.0.1:3100",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36e-recipe-tags-frontend",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "home-search-uses-q",
+      "home-tag-chip-uses-korean-normalized-key",
+      "home-theme-tag-key-filter",
+      "manual-tag-editor-review-policy",
+      "youtube-tag-editor-review-policy",
+      "unmodified-tags-omit-tags-body",
+      "tag-validation-inline-error",
+      "mobile-320-no-chip-overflow"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": [
+        "HOME"
+      ],
+      "required_screens": [
+        "HOME",
+        "MANUAL_RECIPE_CREATE",
+        "YT_IMPORT"
+      ],
+      "generator_required": false,
+      "generator_artifact": "ui/designs/HOME.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/HOME-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "home-mobile-390-search",
+        "home-mobile-320-tag-filter",
+        "home-desktop-tag-theme",
+        "manual-mobile-tag-editor",
+        "youtube-mobile-tag-review",
+        "tag-validation-inline-error"
+      ],
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/36e-recipe-tags-frontend/home-mobile-390-search.png",
+        "ui/designs/evidence/36e-recipe-tags-frontend/home-mobile-320-tag-filter.png",
+        "ui/designs/evidence/36e-recipe-tags-frontend/home-desktop-tag-theme.png",
+        "ui/designs/evidence/36e-recipe-tags-frontend/manual-mobile-tag-editor.png",
+        "ui/designs/evidence/36e-recipe-tags-frontend/youtube-mobile-tag-review.png",
+        "ui/designs/evidence/36e-recipe-tags-frontend/tag-validation-inline-error.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/RECIPE_TAGS_FRONTEND-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "manual:operating-db-36b-36d-migrations-applied",
+    "manual:production-backfill-dry-run-review-only"
+  ],
+  "blocked_conditions": [
+    "client-sends-empty-tags-array-when-user-did-not-review",
+    "suggestion-failure-blocks-recipe-save",
+    "home-tag-filter-generates-romanized-key",
+    "home-theme-ui-promotes-private-or-pending-user-tag",
+    "manual-or-youtube-tag-editor-breaks-existing-register-body",
+    "mobile-320-chip-row-overflows-or-hides-cta",
+    "production-backfill-or-reconcile-executed-by-frontend-slice"
+  ],
+  "max_fix_rounds": {
+    "docs": 3,
+    "backend": 0,
+    "frontend": 4
+  }
+}

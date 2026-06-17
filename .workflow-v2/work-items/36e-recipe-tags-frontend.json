@@ -1,0 +1,112 @@
+{
+  "id": "36e-recipe-tags-frontend",
+  "title": "Recipe tags frontend",
+  "summary": "36a~36d 태그 백엔드 계약을 HOME tag search/filter/theme UX와 MANUAL_RECIPE_CREATE/YT_IMPORT tag recommendation review UI에 연결한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 레시피를 태그로 찾고, 새 레시피 저장 전 서버 추천 태그를 검수할 수 있게 한다.",
+  "owners": {
+    "claude": "stage1/stage4 normally; Codex is proceeding by explicit user instruction",
+    "codex": "stage1 docs fallback, frontend implementation, verification, ship-pr-loop",
+    "workers": []
+  },
+  "dependencies": [
+    "36a-recipe-tags-contract-evolution",
+    "36b-recipe-tags-model-write",
+    "36c-recipe-tags-search-themes",
+    "36d-recipe-tags-rules-backfill"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.11.md",
+      "docs/화면정의서-v1.5.18.md",
+      "docs/유저flow맵-v1.3.18.md",
+      "docs/api문서-v1.2.20.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/36e-recipe-tags-frontend/README.md",
+      "docs/workpacks/36e-recipe-tags-frontend/acceptance.md",
+      "docs/workpacks/36e-recipe-tags-frontend/automation-spec.json",
+      "docs/workpacks/36a-recipe-tags-contract-evolution/README.md",
+      "docs/workpacks/36b-recipe-tags-model-write/README.md",
+      "docs/workpacks/36c-recipe-tags-search-themes/README.md",
+      "docs/workpacks/36d-recipe-tags-rules-backfill/README.md",
+      "ui/designs/HOME.md",
+      "ui/designs/MANUAL_RECIPE_CREATE.md",
+      "ui/designs/YT_IMPORT.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:operating-db-36b-36d-migrations-applied",
+      "manual:production-backfill-dry-run-review-only"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "docs": 3,
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm vitest run tests/home-tag-search.test.tsx tests/manual-recipe-tags-ui.test.tsx tests/youtube-recipe-tags-ui.test.tsx tests/recipe-tag-input.test.ts",
+      "pnpm exec playwright test tests/e2e/slice-36e-recipe-tags-frontend.spec.ts",
+      "CI=1 pnpm verify:frontend:pr",
+      "pnpm qa:explore -- --slice 36e-recipe-tags-frontend --base-url http://127.0.0.1:3100",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36e-recipe-tags-frontend",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/home-tag-search.test.tsx tests/manual-recipe-tags-ui.test.tsx tests/youtube-recipe-tags-ui.test.tsx tests/recipe-tag-input.test.ts",
+      "pnpm exec playwright test tests/e2e/slice-36e-recipe-tags-frontend.spec.ts",
+      "CI=1 pnpm verify:frontend:pr",
+      "pnpm qa:explore -- --slice 36e-recipe-tags-frontend --base-url http://127.0.0.1:3100",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36e-recipe-tags-frontend",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "home-title-tag-search",
+      "home-exact-tag-filter",
+      "home-theme-tag-key-filter",
+      "manual-tag-review-submit-policy",
+      "youtube-tag-review-submit-policy",
+      "unmodified-tags-omit-body",
+      "mobile-320-no-chip-overflow"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Backend implementation",
+    "New database migration",
+    "Production recipe tag backfill execution",
+    "Usage count reconcile execution",
+    "User tag moderation admin UI",
+    "P1 famous/SNS/verified tag auto assignment",
+    "Automatic romanization slug generation"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 docs fallback opened by Codex per explicit user instruction. 36e is FE-only and starts after 36b~36d backend merge. Production migration application is tracked as Manual Only; production backfill/reconcile writes require separate explicit approval after dry-run review."
+}
