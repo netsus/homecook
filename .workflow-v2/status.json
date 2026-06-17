@@ -64,7 +64,7 @@
     {
       "id": "omo-lite-phase7-budget-mode",
       "preset": "infra-governance",
-      "lifecycle": "in_progress",
+      "lifecycle": "planned",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -1762,6 +1762,23 @@
         "git diff --check"
       ],
       "notes": "Stage 2 backend implementation completed on feature/be-36b-recipe-tags-model-write. Implements tags/recipe_tags additive migration, P0 semantic/source seed 36개, tag normalization, atomic recipes.tags projection writer, manual/YouTube write paths, YouTube semantic draft tag generation, and read-only tag suggestions endpoint. Local verification passed: targeted 36b Vitest set, existing manual/YouTube/Supabase/tag regressions, pnpm typecheck, pnpm lint, and pnpm verify:backend with dummy public Supabase env plus alternate Playwright port. Search/themes/backfill/frontend are split into 36c/36d/36e. closeout_phase=completed closeout_recovery=manual_patch:2|ci_resync:2 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:PR #773 policy run 27666432100,PR #773 template-check run 27666432007,PR #773 policy run 27666598161,pnpm verify:backend,pnpm exec supabase db reset --local --yes,local Supabase psql smoke,docs/workpacks/36b-recipe-tags-model-write/README.md,docs/workpacks/36b-recipe-tags-model-write/acceptance.md last_recovery_at=2026-06-17T14:01:00+09:00"
+    },
+    {
+      "id": "36c-recipe-tags-search-themes",
+      "preset": "vertical-slice-strict",
+      "branch": "feature/be-36c-recipe-tags-search-themes",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm vitest run tests/recipe-tags-search.test.ts tests/recipe-tags-route.test.ts tests/recipe-themes.test.ts tests/supabase-server.test.ts",
+        "pnpm verify:backend",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 36c-recipe-tags-search-themes",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs gap repair for 36c. The official 36a contract is already merged; this docs branch creates the missing workpack, acceptance, automation spec, and workflow item so the Stage 2 feature branch can pass the base-docs validator."
     }
   ]
 }

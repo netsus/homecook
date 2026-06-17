@@ -1,0 +1,97 @@
+{
+  "slice_id": "36c-recipe-tags-search-themes",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/recipes?tag=<normalized_key>",
+      "GET /api/v1/recipes?q=<query>",
+      "GET /api/v1/tags",
+      "GET /api/v1/recipes/themes"
+    ],
+    "invariants": [
+      "exact-tag-filter-uses-korean-normalized-key",
+      "title-search-includes-public-approved-tag-labels",
+      "recipe-list-search-dedupes-before-stable-sort-and-cursor",
+      "get-tags-excludes-private-and-pending-user-tags",
+      "home-themes-use-system-semantic-source-tags-only",
+      "home-themes-use-public-approved-recipe-tags-only",
+      "automatic-romanization-is-forbidden",
+      "search-and-themes-are-read-only"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/recipe-tags-search.test.ts tests/recipe-tags-route.test.ts tests/recipe-themes.test.ts tests/supabase-server.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 36c-recipe-tags-search-themes",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/recipe-tags-search.test.ts",
+      "tests/recipe-tags-route.test.ts",
+      "tests/recipe-themes.test.ts",
+      "tests/supabase-server.test.ts"
+    ],
+    "schema_changes": [
+      "supabase/migrations/20260617110000_36c_recipe_tags_search_themes.sql"
+    ],
+    "required_tables": [
+      "recipes",
+      "tags",
+      "recipe_tags"
+    ],
+    "required_functions": [
+      "find_recipe_ids_by_public_tags",
+      "list_public_recipe_tags",
+      "list_home_theme_recipes"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "required_endpoints": [
+      "GET /api/v1/recipes?tag=<normalized_key>",
+      "GET /api/v1/recipes?q=<query>",
+      "GET /api/v1/tags",
+      "GET /api/v1/recipes/themes"
+    ],
+    "verify_commands": [
+      "36e-target:pnpm vitest run tests/home-tag-search.test.tsx"
+    ],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "be-only-no-ui-change"
+    ],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "evidence_artifact_refs": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "manual:local-supabase-db-reset-check-36c-tag-search-theme-rpcs"
+  ],
+  "blocked_conditions": [
+    "recipe-list-tag-search-implemented-with-duplicating-join",
+    "home-theme-uses-user-pending-private-tag",
+    "get-tags-returns-private-or-pending-user-tag",
+    "automatic-romanization-supported-for-exact-tag-key",
+    "backfill-or-usage-reconcile-executed-in-36c",
+    "tag-write-policy-relaxed-in-search-slice"
+  ],
+  "max_fix_rounds": {
+    "docs": 3,
+    "backend": 3,
+    "frontend": 0
+  }
+}
