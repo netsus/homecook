@@ -1361,6 +1361,43 @@ print(json.dumps({"module": module_scan, "module_unique": module_unique, "prompt
     expect(report.prompt_unique.blocking_hit_count).toBeGreaterThan(0);
   });
 
+  it("matches protected fragments without catastrophic regex backtracking and preserves token boundaries", () => {
+    const result = runLoopPython(`
+import time
+pfm = loop.protected_fragment_matches
+# 적대적 입력: 다수 단어 + END, 텍스트는 같은 단어 다중공백 + END 없음.
+# 옛 \\s+ 정규식이면 백트래킹이 폭발해 타임아웃; possessive \\s++ + compact 필터면 즉시 False.
+adversarial_value = " ".join(["가가"] * 30) + " END"
+adversarial_text = "   ".join(["가가"] * 30)
+start = time.time()
+adversarial_result = pfm(adversarial_text, adversarial_value)
+elapsed = time.time() - start
+print(json.dumps({
+    "adversarial_result": adversarial_result,
+    "adversarial_elapsed": elapsed,
+    "curry_inside_word": pfm("이건 카레가루 입니다", "카레"),
+    "curry_token": pfm("맛있는 카레 한그릇", "카레"),
+    "multi_space": pfm("다진   마늘 추가", "다진 마늘"),
+    "needs_space": pfm("다진마늘", "다진 마늘"),
+    "simple": pfm("양파 볶음", "양파"),
+    "absent": pfm("전혀 다른 텍스트", "락토핏 골드 유산균"),
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    // 백트래킹 없이 빠르게 처리(폭주면 이 단언 전에 타임아웃으로 실패)
+    expect(report.adversarial_result).toBe(false);
+    expect(report.adversarial_elapsed).toBeLessThan(2);
+    // 토큰 경계/공백 의미 유지
+    expect(report.curry_inside_word).toBe(false);
+    expect(report.curry_token).toBe(true);
+    expect(report.multi_space).toBe(true);
+    expect(report.needs_space).toBe(false);
+    expect(report.simple).toBe(true);
+    expect(report.absent).toBe(false);
+  });
+
   it("fails the loop decision when protected answers appear in decision or log outputs", () => {
     const result = runLoopPython(`
 fragments = loop.protected_answer_fragments(["validation"])
