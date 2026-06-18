@@ -8,6 +8,10 @@ import {
 } from "@/components/shared/app-overlay";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import {
+  getSafeDisplayText,
+  isSafeDisplayText,
+} from "@/lib/display-safety";
+import {
   WebButton,
   WebDialog,
   WebDialogBody,
@@ -71,6 +75,9 @@ export function SaveModal({
     (bookId) => !selectedBookIds.includes(bookId),
   ).length;
   const changedBookCount = newSelectedBookCount + removedBookCount;
+  const normalizedNewBookName = newBookName.trim();
+  const isNewBookNameSafe =
+    normalizedNewBookName.length === 0 || isSafeDisplayText(normalizedNewBookName);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -83,7 +90,10 @@ export function SaveModal({
   }
 
   const disableCreate =
-    isCreatingBook || isSavingRecipe || newBookName.trim().length === 0;
+    isCreatingBook ||
+    isSavingRecipe ||
+    normalizedNewBookName.length === 0 ||
+    !isNewBookNameSafe;
   const disableSave =
     isSavingRecipe || isCreatingBook || changedBookCount === 0;
   const shouldRenderWebView = isDesktopViewport;
@@ -180,7 +190,7 @@ export function SaveModal({
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-[14px] font-extrabold text-[var(--foreground)]">
-                            {book.name}
+                            {getSafeDisplayText(book.name, "이름 정리 필요")}
                           </span>
                           <span className="mt-0.5 block text-[11px] text-[var(--text-2)]">
                             {getBookSelectionMeta({ isAlreadySaved, isSelected })}
@@ -234,6 +244,11 @@ export function SaveModal({
                     </button>
                   </div>
                 )}
+                {!isNewBookNameSafe ? (
+                  <p className="px-4 pb-3 text-[12px] font-semibold text-[var(--danger)]">
+                    레시피북 이름을 다시 확인해 주세요.
+                  </p>
+                ) : null}
               </div>
 
               {saveErrorMessage ? (
@@ -325,7 +340,9 @@ export function SaveModal({
                         {isSelected ? <CheckIcon /> : null}
                       </span>
                       <span className="web-modal-option-main">
-                        <span className="web-modal-option-title">{book.name}</span>
+                        <span className="web-modal-option-title">
+                          {getSafeDisplayText(book.name, "이름 정리 필요")}
+                        </span>
                         <span className="web-modal-option-meta">
                           {getBookSelectionMeta({ isAlreadySaved, isSelected })}
                         </span>
@@ -366,6 +383,11 @@ export function SaveModal({
                   {isCreatingBook ? "생성 중..." : "생성"}
                 </WebButton>
               </div>
+              {!isNewBookNameSafe ? (
+                <p className="web-form-error mt-2">
+                  레시피북 이름을 다시 확인해 주세요.
+                </p>
+              ) : null}
             </div>
 
             {saveErrorMessage ? (

@@ -38,6 +38,10 @@ import { fetchJson } from "@/lib/api/fetch-json";
 import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
 import { KOREA_TIME_ZONE } from "@/lib/korean-date";
 import { PRIMARY_WEB_NAV_ITEMS } from "@/lib/navigation/app-nav";
+import {
+  filterSafeDisplayItems,
+  isSafeDisplayText,
+} from "@/lib/display-safety";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -137,6 +141,21 @@ function buildResultStatusText({
   return `${listTitle} ${count}개가 표시됩니다.`;
 }
 
+function filterSafeRecipeCards(items: RecipeCardItem[]) {
+  return filterSafeDisplayItems(items, (recipe) => recipe.title);
+}
+
+function filterSafeRecipeThemes(themeData: RecipeThemesData): RecipeThemesData {
+  return {
+    themes: themeData.themes
+      .map((theme) => ({
+        ...theme,
+        recipes: filterSafeRecipeCards(theme.recipes),
+      }))
+      .filter((theme) => isSafeDisplayText(theme.title) && theme.recipes.length > 0),
+  };
+}
+
 export function HomeScreen() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -195,7 +214,7 @@ export function HomeScreen() {
   const loadThemes = useCallback(async () => {
     try {
       const themeData = await fetchJson<RecipeThemesData>("/api/v1/recipes/themes");
-      setThemes(themeData);
+      setThemes(filterSafeRecipeThemes(themeData));
       setThemeState("ready");
     } catch {
       setThemes({ themes: [] });
@@ -213,7 +232,7 @@ export function HomeScreen() {
       return;
     }
 
-    setTagOptions(response.data.items);
+    setTagOptions(filterSafeDisplayItems(response.data.items, (tag) => tag.label));
     setTagState("ready");
   }, []);
 
@@ -321,8 +340,13 @@ export function HomeScreen() {
         return;
       }
 
-      setRecipes(recipeData);
-      setScreenState(recipeData.items.length > 0 ? "ready" : "empty");
+      const safeRecipeData = {
+        ...recipeData,
+        items: filterSafeRecipeCards(recipeData.items),
+      };
+
+      setRecipes(safeRecipeData);
+      setScreenState(safeRecipeData.items.length > 0 ? "ready" : "empty");
     } catch {
       if (currentRequestId !== recipeRequestIdRef.current) {
         return;
@@ -338,9 +362,11 @@ export function HomeScreen() {
   }, [loadRecipes]);
 
   const hasQuery = debouncedQuery.trim().length > 0;
+  const hasTypedQuery = query.trim().length > 0;
   const hasIngredientFilter = appliedIngredientIds.length > 0;
   const hasTagFilter = Boolean(effectiveTagKey);
   const hasActiveFilters = hasQuery || hasIngredientFilter || hasTagFilter;
+  const hasResultPriorityContext = hasActiveFilters || hasTypedQuery;
   const displayedRecipes = useMemo(
     () => (effectiveTagKey ? recipes?.items ?? [] : selectedTheme?.recipes ?? recipes?.items ?? []),
     [effectiveTagKey, recipes?.items, selectedTheme?.recipes],
@@ -593,6 +619,7 @@ export function HomeScreen() {
           savedRecipeIds={homeSaveFlow.savedRecipeIds}
           screenState={screenState}
           selectedTheme={selectedTheme}
+          showDiscoveryShortcuts={!hasResultPriorityContext}
           tagOptions={tagOptions}
           tagState={tagState}
           setQuery={setQuery}
@@ -708,7 +735,19 @@ export function HomeScreen() {
               variant="mobile"
             />
 
-            <HomeQuickLinks variant="mobile" />
+            {hasResultPriorityContext ? (
+              <div className="px-5 pb-3">
+                <p
+                  aria-live="polite"
+                  className="rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 py-2 text-[13px] font-bold text-[var(--text-2)]"
+                  role="status"
+                >
+                  {resultStatusText}
+                </p>
+              </div>
+            ) : null}
+
+            {!hasResultPriorityContext ? <HomeQuickLinks variant="mobile" /> : null}
 
             {showInitialDiscoverySkeleton ? (
               <>
@@ -728,7 +767,9 @@ export function HomeScreen() {
               </>
             ) : null}
 
-            {!showInitialDiscoverySkeleton && (themes?.themes.length ?? 0) > 0 ? (
+            {!hasResultPriorityContext &&
+            !showInitialDiscoverySkeleton &&
+            (themes?.themes.length ?? 0) > 0 ? (
               <ThemeCarousel
                 activeThemeId={activeThemeId}
                 onSelectTheme={selectTheme}
@@ -875,6 +916,7 @@ function HomeWebScreen({
   savedRecipeIds,
   screenState,
   selectedTheme,
+  showDiscoveryShortcuts,
   tagOptions,
   tagState,
   setQuery,
@@ -905,6 +947,7 @@ function HomeWebScreen({
   savedRecipeIds: Set<string>;
   screenState: ScreenState;
   selectedTheme: RecipeTheme | null;
+  showDiscoveryShortcuts: boolean;
   tagOptions: RecipeTagItem[];
   tagState: AsyncState;
   setQuery: (query: string) => void;
@@ -1000,10 +1043,20 @@ function HomeWebScreen({
             />
           ) : null}
 
-          <HomeQuickLinks variant="web" />
+          {!showDiscoveryShortcuts ? (
+            <div
+              aria-live="polite"
+              className="web-result-summary"
+              role="status"
+            >
+              {resultStatusText}
+            </div>
+          ) : null}
+
+          {showDiscoveryShortcuts ? <HomeQuickLinks variant="web" /> : null}
         </section>
 
-        {themes.length > 0 ? (
+        {showDiscoveryShortcuts && themes.length > 0 ? (
           <section className="web-theme-strip">
             <div className="web-theme-strip-head">
               <div>

@@ -160,13 +160,13 @@ describe("social login buttons", () => {
 
     expect(screen.getByRole("button", { name: "Google로 시작하기" })).toBeTruthy();
     expect(screen.queryByText("local-dev-panel")).toBeNull();
-    expect(screen.queryByText(/현재 테스트 가능한 로그인/)).toBeNull();
+    expect(screen.queryByText(/현재 지원 로그인/)).toBeNull();
     expect(
       screen.queryByText(/local Supabase에서 Google OAuth와 로컬 테스트 계정을 함께 사용할 수 있어요/),
     ).toBeNull();
   });
 
-  it("hides kakao and shows only naver and google when all three are enabled", () => {
+  it("shows every configured provider when all three are enabled", () => {
     const original = process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS;
     process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS = "kakao,naver,google";
 
@@ -174,9 +174,10 @@ describe("social login buttons", () => {
       hasSupabasePublicEnv.mockReturnValue(true);
       render(<SocialLoginButtons nextPath="/" />);
 
-      expect(screen.queryByRole("button", { name: "카카오로 시작하기" })).toBeNull();
+      expect(screen.getByRole("button", { name: "카카오로 시작하기" })).toBeTruthy();
       expect(screen.getByRole("button", { name: "네이버로 시작하기" })).toBeTruthy();
       expect(screen.getByRole("button", { name: "Google로 시작하기" })).toBeTruthy();
+      expect(screen.getByText(/현재 지원 로그인/).textContent).toContain("카카오로 시작하기");
     } finally {
       if (original === undefined) {
         delete process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS;

@@ -106,6 +106,10 @@ describe("home screen", () => {
         return Promise.resolve(getMockRecipeThemes());
       }
 
+      if (input.startsWith("/api/v1/tags")) {
+        return Promise.resolve({ items: [] });
+      }
+
       return Promise.resolve(getMockRecipeList());
     });
   });
@@ -277,6 +281,77 @@ describe("home screen", () => {
 
     await waitFor(() => {
       expect(saveButton.getAttribute("aria-pressed")).toBe("true");
+    });
+  });
+
+  it("filters unsafe recipe and theme labels before rendering public discovery content", async () => {
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({
+          themes: [
+            {
+              id: "theme-bad",
+              title: "토블론",
+              recipes: [MOCK_RECIPE_CARD],
+            },
+            {
+              id: "theme-safe",
+              title: "든든한 집밥",
+              recipes: [
+                MOCK_RECIPE_CARD,
+                {
+                  ...MOCK_RECIPE_CARD,
+                  id: "unsafe-theme-recipe",
+                  title: "ㅏ;ㅣ;",
+                },
+              ],
+            },
+          ],
+        });
+      }
+
+      return Promise.resolve({
+        items: [
+          MOCK_RECIPE_CARD,
+          {
+            ...MOCK_RECIPE_CARD,
+            id: "unsafe-recipe",
+            title: "ㄴㅇㄹㅇ",
+          },
+        ],
+        next_cursor: null,
+        has_next: false,
+      });
+    });
+
+    render(<HomeScreen />);
+
+    expect(await screen.findByText(MOCK_RECIPE_CARD.title)).toBeTruthy();
+    expect(screen.queryByText("토블론")).toBeNull();
+    expect(screen.queryByText("ㅏ;ㅣ;")).toBeNull();
+    expect(screen.queryByText("ㄴㅇㄹㅇ")).toBeNull();
+    expect(screen.getByText("든든한 집밥")).toBeTruthy();
+  });
+
+  it("moves filtered results directly under the search controls", async () => {
+    const user = userEvent.setup();
+
+    render(<HomeScreen />);
+
+    await user.type(await screen.findByPlaceholderText("레시피 제목 검색"), "김치");
+
+    expect(screen.queryByRole("navigation", { name: "홈 빠른 이동" })).toBeNull();
+    expect(screen.queryByRole("heading", { level: 2, name: "이번 주 인기 테마" })).toBeNull();
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole("status").some((status) =>
+          status.textContent?.includes("검색 결과"),
+        ),
+      ).toBe(true);
     });
   });
 

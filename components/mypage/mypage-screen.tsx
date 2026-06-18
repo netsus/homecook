@@ -65,6 +65,10 @@ import {
 } from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
+  getSafeDisplayText,
+  isSafeDisplayText,
+} from "@/lib/display-safety";
+import {
   createRecipeBook,
   deleteAccount,
   deleteRecipeBook,
@@ -211,6 +215,13 @@ function formatProviderLabel(provider?: UserProfileData["social_provider"]) {
   return "소셜 로그인";
 }
 
+function toSafeRecipeBookSummary(book: RecipeBookSummary): RecipeBookSummary {
+  return {
+    ...book,
+    name: getSafeDisplayText(book.name, "이름 정리 필요"),
+  };
+}
+
 function buildMypageLeftoverRecipeHref(
   recipeId: string,
   tabKind: LeftoverDishStatus,
@@ -257,6 +268,8 @@ export function MypageScreen({
   const [mobileSurface, setMobileSurface] =
     useState<MypageMobileSurface>(initialMobileSurface);
   const isMobileViewport = useIsMobileViewport();
+  const [hasHydrated, setHasHydrated] = useState(false);
+  const shouldUseMobileViewport = hasHydrated && isMobileViewport;
 
   // Profile
   const [profile, setProfile] = useState<UserProfileData | null>(null);
@@ -374,6 +387,10 @@ export function MypageScreen({
       ? null
       : new URLSearchParams(window.location.search).get("returnTo"),
   );
+
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
   const selectablePlannerDates = useMemo(() => {
     const dates: string[] = [];
@@ -960,6 +977,10 @@ export function MypageScreen({
   const handleCreateBook = useCallback(async () => {
     const trimmed = createName.trim();
     if (!trimmed) return;
+    if (!isSafeDisplayText(trimmed)) {
+      showToast("레시피북 이름을 확인해 주세요", "error");
+      return;
+    }
     setIsCreating(true);
     try {
       await createRecipeBook(trimmed);
@@ -996,6 +1017,10 @@ export function MypageScreen({
     if (!renamingBookId) return;
     const trimmed = renameValue.trim();
     if (!trimmed) return;
+    if (!isSafeDisplayText(trimmed)) {
+      showToast("레시피북 이름을 확인해 주세요", "error");
+      return;
+    }
     setIsRenaming(true);
     try {
       const updatedBook = await renameRecipeBook(renamingBookId, trimmed);
@@ -1378,7 +1403,7 @@ export function MypageScreen({
 
   useEffect(() => {
     const shouldLoadSavedRecipes =
-      activeTab === "saved" || (isMobileViewport && mobileSurface === "home");
+      activeTab === "saved" || (shouldUseMobileViewport && mobileSurface === "home");
 
     if (authState !== "authenticated" || !shouldLoadSavedRecipes) return;
 
@@ -1403,13 +1428,13 @@ export function MypageScreen({
   }, [
     activeTab,
     authState,
-    isMobileViewport,
     loadSavedRecipes,
     mobileSurface,
     savedBook,
     savedRecipeCount,
     savedRecipesBookId,
     savedRecipesState,
+    shouldUseMobileViewport,
   ]);
 
   useEffect(() => {
@@ -1563,8 +1588,9 @@ export function MypageScreen({
 
   // --- Render helpers ---
 
-  const systemBooks = books.filter((b) => b.book_type !== "custom");
-  const customBooks = books.filter((b) => b.book_type === "custom");
+  const displayBooks = books.map(toSafeRecipeBookSummary);
+  const systemBooks = displayBooks.filter((b) => b.book_type !== "custom");
+  const customBooks = displayBooks.filter((b) => b.book_type === "custom");
   const plannerAddSheet = (
     <PlannerAddSheet
       columns={plannerColumns}
@@ -1619,7 +1645,7 @@ export function MypageScreen({
   // --- Render states ---
 
   if (authState === "checking") {
-    if (isMobileViewport) {
+    if (shouldUseMobileViewport) {
       return (
         <MypageLoadingSkeleton
           mobile
@@ -1652,7 +1678,7 @@ export function MypageScreen({
             </Link>
           </div>
         </ContentState>
-        {isMobileViewport ? (
+        {shouldUseMobileViewport ? (
           <Wave1MobileBottomTab ariaLabel="마이페이지 하단 탭" currentTab="mypage" />
         ) : null}
       </>
@@ -1660,13 +1686,13 @@ export function MypageScreen({
   }
 
   if (viewState === "loading") {
-    if (!isMobileViewport) {
+    if (!shouldUseMobileViewport) {
       return <MypageDesktopLoadingShell />;
     }
 
     return (
       <MypageLoadingSkeleton
-        mobile={isMobileViewport}
+        mobile={shouldUseMobileViewport}
         onBack={handleMobileSurfaceBack}
         surface={mobileSurface}
       />
@@ -1697,12 +1723,12 @@ export function MypageScreen({
     );
   }
 
-  if (isMobileViewport) {
+  if (shouldUseMobileViewport) {
     return (
       <>
         <MypageMobileScreen
           archiveEnabled={authState === "authenticated"}
-          books={books}
+          books={displayBooks}
           createInputRef={createInputRef}
           createName={createName}
           customBooks={customBooks}
@@ -3052,6 +3078,12 @@ function MypageLoadingSkeleton({
             {title}
           </h1>
         </div>
+        <p
+          className="px-5 pt-3 text-[13px] font-semibold text-[var(--text-3)]"
+          role="status"
+        >
+          내 정보와 레시피북을 불러오는 중이에요.
+        </p>
         {surface === "home" ? <MypageHomeLoadingBody /> : null}
         {surface === "recipebook" ? <MypageListLoadingBody kind="recipebook" /> : null}
         {surface === "shopping" ? <MypageListLoadingBody kind="shopping" /> : null}
@@ -3311,6 +3343,9 @@ function MypageDesktopLoadingShell() {
       />
       <div className="web-mypage-screen" data-testid="mypage-skeleton">
         <h1 className="sr-only">마이페이지</h1>
+        <p className="web-section-meta" role="status">
+          내 정보와 레시피북을 불러오는 중이에요.
+        </p>
         <WebCard className="web-mypage-profile">
           <div
             className="grid gap-4"
