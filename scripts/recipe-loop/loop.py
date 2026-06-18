@@ -185,6 +185,7 @@ def run_agent(cmd: tuple[str, ...], prompt: str, log_path: Path, cwd: Path | Non
         proc = subprocess.Popen(
             [*cmd, prompt],
             cwd=str(cwd or PROJECT_ROOT),
+            stdin=subprocess.DEVNULL,  # 헤드리스 실행 시 상속된 stdin(unix 소켓)에서 read 블록 방지
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -795,21 +796,35 @@ def send_implementation_access_guard_alert(payload: dict) -> dict:
     }
 
 
+# 구현 agent(codex) 무응답 안전망: 이 시간(초) 동안 끝나지 않으면 kill하고 agent_failed로 처리.
+# stdin 데드락처럼 모델 호출 전 영구 블록되는 경우 루프가 무한정 매달리지 않게 한다.
+IMPLEMENTATION_AGENT_TIMEOUT_SEC = 1800
+
+
 def run_implementation_agent(cmd: tuple[str, ...], prompt: str, log_path: Path,
                              cwd: Path) -> tuple[str, dict, str | None]:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     chunks: list[str] = []
     sampler: ProcessTreeSampler | None = None
+    timed_out = {"value": False}
     with log_path.open("w", encoding="utf-8") as log:
         proc = subprocess.Popen(
             [*cmd, prompt],
             cwd=str(cwd),
+            stdin=subprocess.DEVNULL,  # 헤드리스 실행 시 상속된 stdin(unix 소켓)에서 read 블록 방지
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
             env=os.environ.copy(),
         )
+
+        def _on_timeout() -> None:
+            timed_out["value"] = True
+            proc.kill()
+
+        watchdog = threading.Timer(IMPLEMENTATION_AGENT_TIMEOUT_SEC, _on_timeout)
+        watchdog.start()
         sampler = ProcessTreeSampler(proc.pid)
         sampler.start()
         try:
@@ -819,9 +834,12 @@ def run_implementation_agent(cmd: tuple[str, ...], prompt: str, log_path: Path,
                 chunks.append(line)
             proc.wait()
         finally:
+            watchdog.cancel()
             sampler.stop()
         agent_error = None
-        if proc.returncode != 0:
+        if timed_out["value"]:
+            agent_error = f"agent timed out after {IMPLEMENTATION_AGENT_TIMEOUT_SEC}s: {' '.join(cmd[:2])}"
+        elif proc.returncode != 0:
             agent_error = f"agent command failed rc={proc.returncode}: {' '.join(cmd[:2])}"
     return "".join(chunks), sampler.summary(), agent_error
 
