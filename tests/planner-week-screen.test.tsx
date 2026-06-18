@@ -567,12 +567,12 @@ describe("planner week screen", () => {
     const recipeBookButton = within(sheet).getByTestId("meal-add-option-recipebook");
     const pantryButton = within(sheet).getByTestId("meal-add-option-pantry");
     const leftoverButton = within(sheet).getByTestId("meal-add-option-leftover");
-    const youtubeLink = within(sheet).getByRole("link", { name: /유튜브 가져오기/ });
+    const youtubeLink = within(sheet).getByRole("link", { name: "유튜브" });
     const manualLink = within(sheet).getByRole("link", { name: /직접 등록/ });
 
     expect(searchButton).toBeTruthy();
     expect(recipeBookButton.textContent).toContain("레시피북");
-    expect(pantryButton.textContent).toContain("팬트리 추천");
+    expect(pantryButton.textContent).toContain("팬트리에서 찾기");
     expect(leftoverButton.textContent).toContain("남은 요리");
     expect(leftoverButton.textContent).not.toContain("남은 요리에서 추가");
     expect(recipeBookButton.tagName).toBe("BUTTON");
@@ -581,9 +581,9 @@ describe("planner week screen", () => {
     expect(youtubeLink.getAttribute("href")).toContain("/menu/add/youtube?");
     expect(manualLink.getAttribute("href")).toContain("/menu/add/manual?");
     expect(within(recipeBookButton).getByText("레시피북").className).toContain("text-[14px]");
-    expect(within(pantryButton).getByText("팬트리 추천").className).toContain("text-[14px]");
+    expect(within(pantryButton).getByText("팬트리에서 찾기").className).toContain("text-[14px]");
     expect(within(leftoverButton).getByText("남은 요리").className).toContain("text-[14px]");
-    expect(within(youtubeLink).getByText("유튜브 가져오기").className).toContain("text-[14px]");
+    expect(within(youtubeLink).getByText("유튜브").className).toContain("text-[14px]");
     expect(within(manualLink).getByText("직접 등록").className).toContain("text-[14px]");
 
     await user.click(searchButton);
@@ -615,7 +615,7 @@ describe("planner week screen", () => {
 
     expect(
       within(screen.getByTestId("planner-meal-add-sheet"))
-        .getByRole("link", { name: /유튜브 가져오기/ })
+        .getByRole("link", { name: "유튜브" })
         .getAttribute("href"),
     ).toContain("/menu/add/youtube?");
     expect(

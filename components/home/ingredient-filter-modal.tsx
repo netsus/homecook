@@ -26,6 +26,7 @@ import {
   WebModal,
 } from "@/components/web";
 import { fetchJson } from "@/lib/api/fetch-json";
+import { filterSafeDisplayItems } from "@/lib/display-safety";
 import {
   ALL_INGREDIENT_CATEGORY,
   INGREDIENT_CATEGORY_GROUP_OPTIONS,
@@ -224,8 +225,12 @@ export function IngredientFilterModal({
           return;
         }
 
-        setIngredients(data.items);
-        setScreenState(data.items.length > 0 ? "ready" : "empty");
+        const safeItems = filterSafeDisplayItems(
+          data.items,
+          (ingredient) => ingredient.standard_name,
+        );
+        setIngredients(safeItems);
+        setScreenState(safeItems.length > 0 ? "ready" : "empty");
       })
       .catch(() => {
         if (isStale || currentRequestId !== requestIdRef.current) {
@@ -346,6 +351,7 @@ export function IngredientFilterModal({
                 <ul className="web-ingredient-modal-grid">
                   {ingredients.map((ingredient) => {
                     const isChecked = draftIngredientIds.includes(ingredient.id);
+                    const describedBy = `ingredient-${ingredient.id}-state`;
 
                     return (
                       <li key={ingredient.id}>
@@ -357,12 +363,17 @@ export function IngredientFilterModal({
                           ].join(" ")}
                         >
                           <input
+                            aria-label={ingredient.standard_name}
+                            aria-describedby={describedBy}
                             checked={isChecked}
                             className="visually-hidden"
                             onChange={() => toggleIngredient(ingredient.id)}
                             type="checkbox"
                           />
                           <span>{ingredient.standard_name}</span>
+                          <span className="visually-hidden" id={describedBy}>
+                            {isChecked ? "선택됨" : "선택 안 됨"}
+                          </span>
                           {isChecked ? <CheckIcon /> : null}
                         </label>
                       </li>
@@ -478,6 +489,7 @@ export function IngredientFilterModal({
         <ul className="grid grid-cols-2 gap-2">
           {ingredients.map((ingredient) => {
             const isChecked = draftIngredientIds.includes(ingredient.id);
+            const describedBy = `ingredient-${ingredient.id}-mobile-state`;
 
             return (
               <li key={ingredient.id}>
@@ -489,12 +501,17 @@ export function IngredientFilterModal({
                   }`}
                 >
                   <input
+                    aria-label={ingredient.standard_name}
+                    aria-describedby={describedBy}
                     checked={isChecked}
                     className="visually-hidden"
                     onChange={() => toggleIngredient(ingredient.id)}
                     type="checkbox"
                   />
                   <span className="min-w-0 truncate">{ingredient.standard_name}</span>
+                  <span className="visually-hidden" id={describedBy}>
+                    {isChecked ? "선택됨" : "선택 안 됨"}
+                  </span>
                   {isChecked ? (
                     <span
                       aria-hidden="true"

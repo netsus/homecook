@@ -41,7 +41,7 @@ type ImportStatus =
   | "complete"
   | "error";
 
-const CAPABILITY_ITEMS = ["영양성분·칼로리", "예상 원가 분석", "조리 타이머", "인분수 변환"] as const;
+const CAPABILITY_ITEMS = ["중복 확인", "영상 확인", "검수 후 저장", "플래너 추가"] as const;
 
 function getThumbnailUrl(videoId: string) {
   return `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
@@ -425,7 +425,7 @@ export function RecipioYoutubeImportScreen({
                 유튜브 레시피 가져오기
               </h1>
               <p className="mt-1 text-sm text-[var(--text-2)]">
-                링크만 넣으면 영상 정보를 확인하고 레시피로 저장해요.
+                링크를 넣으면 영상 정보를 확인하고 필요한 항목은 검수해 저장해요.
               </p>
             </div>
           </div>

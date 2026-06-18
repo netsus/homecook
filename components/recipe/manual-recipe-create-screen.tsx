@@ -1370,7 +1370,7 @@ export function ManualRecipeCreateScreen({
               onClick={handleBack}
               type="button"
             >
-              Planner
+              플래너
             </button>
             <span className="web-breadcrumb-sep">/</span>
             <span className="web-breadcrumb-link">{targetLabel}</span>
@@ -1380,8 +1380,8 @@ export function ManualRecipeCreateScreen({
           <div className="web-manual-head">
             <div>
               <p className="web-menu-add-eyebrow">직접 등록</p>
-              <h1>새 레시피를 직접 등록해요</h1>
-              <p>기본 정보, 재료, 만들기를 입력한 뒤 플래너에 바로 추가할 수 있어요.</p>
+              <h1>새 레시피 직접 등록</h1>
+              <p>요리 이름, 재료, 만들기를 입력해 저장해요.</p>
             </div>
             <div className="web-manual-actions">
               <WebButton onClick={handleBack} variant="secondary">

@@ -42,6 +42,10 @@ function ruleBody(selector: string) {
 
 vi.mock("@/lib/api/fetch-json", () => ({
   fetchJson: (...args: unknown[]) => fetchJson(...args),
+  isApiFetchError: (error: unknown) =>
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error,
 }));
 
 vi.mock("@/lib/api/planner", () => ({
@@ -255,6 +259,57 @@ describe("recipe detail screen", () => {
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
   });
 
+  it("shows a not-found state for missing recipe detail routes", async () => {
+    fetchJson.mockRejectedValue(
+      Object.assign(new Error("not found"), {
+        code: "NOT_FOUND",
+        fields: [],
+        status: 404,
+      }),
+    );
+
+    render(<RecipeDetailScreen recipeId="missing-recipe" />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "이 레시피를 찾을 수 없어요",
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText("삭제되었거나 공개되지 않은 레시피예요. 검색에서 다른 레시피를 찾아보세요.")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "홈으로 가기" }));
+    expect(mockRouterPush).toHaveBeenCalledWith("/");
+  });
+
+  it("blocks unsafe public recipe detail titles", async () => {
+    fetchJson.mockResolvedValue({
+      ...MOCK_RECIPE_DETAIL,
+      title: "토블론",
+    });
+
+    render(<RecipeDetailScreen recipeId="unsafe-recipe" />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "이 레시피를 찾을 수 없어요",
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByText("토블론")).toBeNull();
+  });
+
+  it("filters unsafe recipe detail tags", async () => {
+    fetchJson.mockResolvedValue({
+      ...MOCK_RECIPE_DETAIL,
+      tags: ["한식", "ㅏ;ㅣ;", "저녁"],
+    });
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    expect(await screen.findByRole("heading", { name: MOCK_RECIPE_DETAIL.title })).toBeTruthy();
+    expect(screen.getAllByText("한식").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("저녁").length).toBeGreaterThan(0);
+    expect(screen.queryByText("ㅏ;ㅣ;")).toBeNull();
+  });
+
   it("keeps a single share action and places interactive chips above the ingredient section", async () => {
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
@@ -302,8 +357,8 @@ describe("recipe detail screen", () => {
     const ctaBar = plannerButton.closest(".wave1-recipe-cta-bar");
     expect(ctaBar).not.toBeNull();
     expect(ctaBar?.contains(cookButton)).toBe(true);
-    expect(ctaBar?.className).toContain("bottom-0");
-    expect(ctaBar?.className).toContain("pb-[calc(84px+env(safe-area-inset-bottom))]");
+    expect(ctaBar?.className).toContain("bottom-[calc(66px+env(safe-area-inset-bottom))]");
+    expect(ctaBar?.className).toContain("pb-2");
     expect(plannerButton.className).toContain("bg-[var(--brand)]");
     expect(plannerButton.className).toContain("text-[var(--text-inverse)]");
     expect(cookButton.className).toContain("border-[var(--brand)]");
@@ -1008,8 +1063,8 @@ describe("recipe detail screen", () => {
     const ctaBar = plannerButton.closest(".wave1-recipe-cta-bar");
     expect(ctaBar).not.toBeNull();
     expect(ctaBar?.contains(cookButton)).toBe(true);
-    expect(ctaBar?.className).toContain("bottom-0");
-    expect(ctaBar?.className).toContain("pb-[calc(84px+env(safe-area-inset-bottom))]");
+    expect(ctaBar?.className).toContain("bottom-[calc(66px+env(safe-area-inset-bottom))]");
+    expect(ctaBar?.className).toContain("pb-2");
   });
 
   it("renders cooking step instructions with text-base font size", async () => {
@@ -1306,7 +1361,7 @@ describe("recipe detail screen", () => {
     expect(
       screen.queryByText("팬트리에 있는 재료는 만들기 전에 다시 확인해 주세요"),
     ).toBeNull();
-    expect(ruleBody(".web-recipe-titleblock")).toContain("padding: 18px 0 8px;");
+    expect(ruleBody(".web-recipe-titleblock")).toContain("padding: 14px 0 6px;");
   });
 
   it("keeps desktop recipe photos to one tile when only one registered photo exists", async () => {

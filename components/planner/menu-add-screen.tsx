@@ -62,9 +62,9 @@ const WEB_NAV_ITEMS = [
 const MENU_ADD_OPTIONS = [
   { id: "search", emoji: "🔍", label: "레시피 검색" },
   { id: "recipebook", emoji: "📖", label: "레시피북" },
-  { id: "pantry", emoji: "🧊", label: "팬트리 추천" },
+  { id: "pantry", emoji: "🧊", label: "팬트리에서 찾기" },
   { id: "leftover", emoji: "🍱", label: "남은 요리" },
-  { id: "youtube", emoji: "🎬", label: "유튜브 가져오기" },
+  { id: "youtube", emoji: "🎬", label: "유튜브" },
   { id: "manual", emoji: "✏️", label: "직접 등록" },
 ] as const;
 

@@ -41,13 +41,14 @@ import { getCookingMethodColor, getCookingMethodTint } from "@/lib/cooking-metho
 import { getCookingMethodAssistiveLabel } from "@/lib/cooking-method-taxonomy";
 import { formatHeatLevelLabel } from "@/lib/heat-level";
 import { resolveRecipeImage } from "@/lib/recipe-image";
-import { fetchJson } from "@/lib/api/fetch-json";
+import { fetchJson, isApiFetchError } from "@/lib/api/fetch-json";
 import { fetchPlanner } from "@/lib/api/planner";
 import {
   formatCount,
   formatRecipeSourceLabel,
   formatScaledIngredient,
 } from "@/lib/recipe";
+import { isSafeDisplayText } from "@/lib/display-safety";
 import {
   normalizeRecipeSectionLabel,
   shouldShowSectionHeading,
@@ -67,6 +68,7 @@ import type {
 import type { PlannerColumnData } from "@/types/planner";
 
 type DetailState = "loading" | "ready" | "error";
+type DetailErrorKind = "not-found" | "load-failed" | null;
 type LikeRequestState = "idle" | "pending";
 type FeedbackTone = "error" | "status";
 type SaveModalState = "idle" | "loading" | "ready" | "error";
@@ -105,6 +107,7 @@ export function RecipeDetailScreen({
   initialAuthenticated = false,
 }: RecipeDetailScreenProps) {
   const [detailState, setDetailState] = useState<DetailState>("loading");
+  const [detailErrorKind, setDetailErrorKind] = useState<DetailErrorKind>(null);
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [selectedServings, setSelectedServings] = useState(1);
   const [activeTab, setActiveTab] = useState<RecipeDetailTab>("ingredients");
@@ -140,10 +143,23 @@ export function RecipeDetailScreen({
   const loadRecipe = useCallback(async () => {
     try {
       setDetailState("loading");
+      setDetailErrorKind(null);
       const data = await fetchJson<RecipeDetail>(`/api/v1/recipes/${recipeId}`);
+      if (!isSafeDisplayText(data.title)) {
+        setRecipe(null);
+        setDetailErrorKind("not-found");
+        setDetailState("error");
+        return;
+      }
       setRecipe(data);
       setDetailState("ready");
-    } catch {
+    } catch (error) {
+      setRecipe(null);
+      setDetailErrorKind(
+        isApiFetchError(error) && error.status === 404
+          ? "not-found"
+          : "load-failed",
+      );
       setDetailState("error");
     }
   }, [recipeId]);
@@ -771,6 +787,19 @@ export function RecipeDetailScreen({
   }
 
   if (detailState === "error" || !recipe) {
+    if (detailErrorKind === "not-found") {
+      return (
+        <ContentState
+          actionLabel="홈으로 가기"
+          description="삭제되었거나 공개되지 않은 레시피예요. 검색에서 다른 레시피를 찾아보세요."
+          eyebrow="레시피 없음"
+          onAction={() => router.push("/")}
+          tone="empty"
+          title="이 레시피를 찾을 수 없어요"
+        />
+      );
+    }
+
     return (
       <ContentState
         actionLabel="다시 시도"
@@ -1510,7 +1539,7 @@ export function RecipeDetailScreen({
       </div>
       ) : null}
       {shouldRenderAppView ? (
-      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-[calc(84px+env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_var(--shadow-color-soft)] lg:hidden">
+      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-[calc(66px+env(safe-area-inset-bottom))] z-20 flex gap-2 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-2 pt-2 shadow-[0_-8px_24px_var(--shadow-color-soft)] lg:hidden">
         <button
           className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-[var(--brand)] px-3 text-[15px] font-bold text-[var(--text-inverse)]"
           onClick={() => handleProtectedAction("planner")}
@@ -2008,7 +2037,12 @@ function getVisibleRecipeTags(recipe: RecipeDetail) {
   return recipe.tags
     .filter((tag) => {
       const tagKey = normalizeRecipeTag(tag);
-      return tagKey.length > 0 && tagKey !== sourceKey && tagKey !== titleKey;
+      return (
+        isSafeDisplayText(tag) &&
+        tagKey.length > 0 &&
+        tagKey !== sourceKey &&
+        tagKey !== titleKey
+      );
     })
     .slice(0, 3);
 }

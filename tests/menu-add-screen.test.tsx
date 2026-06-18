@@ -1036,8 +1036,8 @@ describe("MenuAddScreen", () => {
     expect(screen.getByTestId("meal-add-target-badge").textContent).toContain("4/18 아침");
     expect(screen.getByTestId("menu-add-option-search").textContent).toContain("레시피 검색");
     expect(screen.getByTestId("menu-add-option-recipebook").textContent).toContain("레시피북");
-    expect(screen.getByTestId("menu-add-option-pantry").textContent).toContain("팬트리 추천");
-    expect(screen.getByTestId("menu-add-option-youtube").textContent).toContain("유튜브 가져오기");
+    expect(screen.getByTestId("menu-add-option-pantry").textContent).toContain("팬트리에서 찾기");
+    expect(screen.getByTestId("menu-add-option-youtube").textContent).toContain("유튜브");
 
     const leftoverBtn = screen.getByTestId("menu-add-option-leftover");
     expect(leftoverBtn.textContent).toContain("🍱");

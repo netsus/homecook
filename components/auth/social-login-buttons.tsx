@@ -39,14 +39,13 @@ export function SocialLoginButtons({
   const localDevAuthEnabled = isLocalDevAuthEnabled();
   const localGoogleOAuthEnabled = isLocalGoogleOAuthEnabled();
   const qaFixtureMode = isQaFixtureClientModeEnabled();
-  const HIDDEN_PROVIDERS: AuthProviderId[] = ["kakao"];
   const enabledProviders = getEnabledAuthProviders();
   const providers = localDevAuthEnabled && !localGoogleOAuthEnabled
     ? []
     : (qaFixtureMode
         ? ensureFixtureProviders(enabledProviders)
         : enabledProviders
-      ).filter((id) => !HIDDEN_PROVIDERS.includes(id));
+      );
 
   const handleSignIn = (provider: AuthProviderId) => {
     startTransition(async () => {
@@ -120,9 +119,9 @@ export function SocialLoginButtons({
           </button>
         );
       })}
-      {providers.length > 1 && !qaFixtureMode ? (
+      {providers.length > 0 && !qaFixtureMode ? (
         <p className="text-xs leading-5 text-[var(--muted)]">
-          현재 테스트 가능한 로그인:{" "}
+          현재 지원 로그인:{" "}
           {providers
             .map((provider) => AUTH_PROVIDER_META[provider].label)
             .join(", ")}
