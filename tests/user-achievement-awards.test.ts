@@ -11,6 +11,7 @@ import type { UserProgressData } from "@/types/user-progress";
 function createArrayQuery<T>(result: { data: T[] | null; error: { message: string } | null }) {
   const query = {
     eq: vi.fn(() => query),
+    in: vi.fn(() => query),
     then(
       onFulfilled?: (value: typeof result) => unknown,
       onRejected?: (reason: unknown) => unknown,
