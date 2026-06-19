@@ -5446,6 +5446,15 @@ button {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
+  .web-picker-recipebook-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 196px));
+    gap: 16px;
+  }
+
+  .web-picker-recipebook-grid .web-recipebook-book-card {
+    min-width: 0;
+  }
+
   .web-picker-recipe-card,
   .web-picker-book-button,
   .web-picker-pantry-button {
@@ -5542,6 +5551,54 @@ button {
 
   .web-picker-pantry-thumb {
     overflow: hidden;
+  }
+
+  .planner-recipebook-mini-cover {
+    position: relative;
+    display: block;
+    width: 44px;
+    height: 56px;
+    flex: 0 0 44px;
+    overflow: hidden;
+    border-radius: 12px 7px 7px 12px;
+    box-shadow:
+      inset 7px 0 0 rgba(0, 0, 0, 0.1),
+      0 8px 16px rgba(93, 61, 27, 0.14);
+  }
+
+  .planner-recipebook-mini-cover::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 12px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent),
+      rgba(0, 0, 0, 0.12);
+    content: "";
+  }
+
+  .planner-recipebook-mini-cover::after {
+    position: absolute;
+    right: 7px;
+    bottom: 9px;
+    left: 16px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.48);
+    box-shadow: 0 -12px 0 rgba(255, 255, 255, 0.18);
+    content: "";
+  }
+
+  .planner-recipebook-mini-cover-image {
+    position: absolute;
+    z-index: 1;
+    top: 10px;
+    right: 7px;
+    left: 16px;
+    height: 25px;
+    border: 2px solid rgba(255, 255, 255, 0.76);
+    border-radius: 7px;
+    background-position: center;
+    background-size: cover;
+    box-shadow: 0 5px 9px rgba(46, 34, 20, 0.13);
   }
 
   .web-picker-pantry-thumb-image {
