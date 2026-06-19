@@ -99,7 +99,7 @@ export function NicknameOnboardingScreen({
 
       const trimmed = nickname.trim();
       if (trimmed.length < 2 || trimmed.length > 30) {
-        setErrorMessage("닉네임은 2~30자로 입력해주세요.");
+        setErrorMessage("닉네임은 2~30자로 입력해 주세요.");
         return;
       }
 
@@ -135,7 +135,7 @@ export function NicknameOnboardingScreen({
         집밥
       </p>
       <h1 className="mt-5 text-[26px] font-bold leading-[1.35] text-[var(--foreground)]">
-        닉네임을 정해주세요
+        닉네임을 정해 주세요
       </h1>
       <p className="mx-auto mt-3 max-w-[310px] text-[14px] font-medium leading-6 text-[var(--text-3)]">
         레시피와 플래너에서 사용할 이름이에요. 나중에 마이페이지에서 바꿀 수 있어요.
@@ -166,7 +166,7 @@ export function NicknameOnboardingScreen({
           className="mt-2 text-[12px] font-medium leading-5 text-[var(--text-3)]"
           id="nickname-onboarding-help"
         >
-          2~30자로 입력해주세요.
+          2~30자로 입력해 주세요.
         </p>
         {errorMessage ? (
           <p className="mt-3 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] font-bold text-[var(--danger)]">
@@ -194,7 +194,7 @@ export function NicknameOnboardingScreen({
       {screenState === "error" ? (
         <>
           <p className="mx-auto mt-3 max-w-[310px] text-[14px] font-medium leading-6 text-[var(--text-3)]">
-            {errorMessage ?? "잠시 후 다시 시도해주세요."}
+            {errorMessage ?? "잠시 후 다시 시도해 주세요."}
           </p>
           <button
             className="mx-auto mt-5 flex h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] px-5 text-[14px] font-bold text-[var(--brand)]"

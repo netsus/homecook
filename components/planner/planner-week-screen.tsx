@@ -433,7 +433,7 @@ function PlannerWeekWebView({
                     다시 시도
                   </WebButton>
                 }
-                description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+                description={errorMessage ?? "잠시 후 다시 시도해 주세요."}
                 title="플래너를 불러오지 못했어요"
               />
             ) : null}
@@ -1293,7 +1293,7 @@ export function PlannerWeekScreen({
         {screenState === "error" ? (
           <ContentState
             actionLabel="다시 시도"
-            description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+            description={errorMessage ?? "잠시 후 다시 시도해 주세요."}
             onAction={() => {
               runPlannerAction(loadPlanner());
             }}

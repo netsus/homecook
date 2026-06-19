@@ -351,7 +351,7 @@ export function AteListScreen({
         >
           <div className="p-4">
             <ContentState
-              description="다먹은 요리를 확인하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
+              description="다먹은 요리를 확인하려면 로그인이 필요해요. 로그인하면 이 화면으로 돌아와요."
               eyebrow="로그인 필요"
               safeBottomPadding
               tone="gate"
@@ -431,7 +431,7 @@ export function AteListScreen({
               </Link>
             </div>
           }
-          description="다먹은 요리를 확인하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
+          description="다먹은 요리를 확인하려면 로그인이 필요해요. 로그인하면 이 화면으로 돌아와요."
           icon={<span aria-hidden="true">!</span>}
           title="이 화면은 로그인이 필요해요"
         />
@@ -475,7 +475,7 @@ export function AteListScreen({
               다시 시도
             </WebButton>
           }
-          description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+          description={errorMessage ?? "잠시 후 다시 시도해 주세요."}
           icon={<span aria-hidden="true">!</span>}
           title="다먹은 요리를 불러오지 못했어요"
         />
@@ -488,7 +488,7 @@ export function AteListScreen({
               남은 요리로 돌아가기
             </Link>
           }
-          description="요리를 완료하거나 남은 요리에서 '다 먹었어요'를 누르면 여기에 기록됩니다."
+          description="완료한 요리가 여기에 모여요."
           icon={<span aria-hidden="true">✓</span>}
           title="아직 다먹은 요리가 없어요"
         />
@@ -574,7 +574,7 @@ function AteListMobileView({
         <div className="p-4">
           <ContentState
             actionLabel="다시 시도"
-            description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+            description={errorMessage ?? "잠시 후 다시 시도해 주세요."}
             onAction={() => {
               void onRetry();
             }}

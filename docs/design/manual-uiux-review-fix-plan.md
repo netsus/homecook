@@ -53,7 +53,10 @@
 
 ### 2. 사용자 안내문 어미와 문장 길이가 화면마다 다른 문제
 
-- Status: planned
+- Status: partially implemented in `feature/manual-uiux-copy-tone`
+- Progress:
+  - 1차로 404, 로그인 게이트, 닉네임 온보딩, 남은요리, 플래너/끼니/장보기/요리모드의 대표 안내문을 `해요체`와 `해 주세요` 표기로 정리한다.
+  - 전 화면/서버 노출 메시지까지 닫는 전체 copy sweep은 후속 작업으로 남긴다.
 - Severity: Medium
 - Area: UX / UI
 - Source: user manual review, repository copy scan

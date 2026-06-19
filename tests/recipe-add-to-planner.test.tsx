@@ -174,7 +174,7 @@ describe("planner add flow", () => {
       within(dialog).queryByText(/플래너 추가 기능은 로그인 후 이용할 수 있어요/),
     ).toBeNull();
     expect(
-      within(dialog).getByText("로그인하면 원래 하려던 작업으로 자동 이동합니다."),
+      within(dialog).getByText("로그인하면 원래 하려던 작업으로 자동 이동해요."),
     ).toBeTruthy();
     expect(useAuthGateStore.getState().action?.type).toBe("planner");
   });

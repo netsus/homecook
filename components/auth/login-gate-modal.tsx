@@ -32,7 +32,7 @@ export function LoginGateModal() {
       return "";
     }
 
-    return "로그인하면 원래 하려던 작업으로 자동 이동합니다.";
+    return "로그인하면 원래 하려던 작업으로 자동 이동해요.";
   }, [action]);
 
   useEffect(() => {

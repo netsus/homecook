@@ -15,6 +15,7 @@ describe("NotFound", () => {
     render(<NotFound />);
 
     expect(screen.getByRole("heading", { name: "페이지를 찾을 수 없어요" })).toBeTruthy();
+    expect(screen.getByText("주소가 바뀌었어요. 홈에서 다시 찾아보세요.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "홈으로" }).getAttribute("href")).toBe("/");
     expect(screen.getByRole("link", { name: "플래너로" }).getAttribute("href")).toBe("/planner");
   });

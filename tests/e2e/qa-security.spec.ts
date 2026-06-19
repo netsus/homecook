@@ -71,7 +71,7 @@ test.describe("QA auth and session security smoke", () => {
       page.getByRole("dialog", { name: "로그인이 필요한 작업이에요" }),
     ).toBeVisible();
     await expect(
-      page.getByText("로그인하면 원래 하려던 작업으로 자동 이동합니다."),
+      page.getByText("로그인하면 원래 하려던 작업으로 자동 이동해요."),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "로그인" })).toBeVisible();
   });

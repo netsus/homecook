@@ -442,7 +442,7 @@ export function LeftoversScreen({
           ? "내 플래너 슬롯에만 추가할 수 있어요."
           : error instanceof Error
             ? error.message
-            : "플래너 추가에 실패했어요. 다시 시도해주세요.";
+            : "플래너 추가에 실패했어요. 다시 시도해 주세요.";
 
       setPlannerAddError(message);
       setPlannerAddSheetState("ready");
@@ -517,7 +517,7 @@ export function LeftoversScreen({
         >
           <div className="p-4">
             <ContentState
-              description="남은 요리를 관리하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
+              description="남은 요리를 관리하려면 로그인이 필요해요. 로그인하면 이 화면으로 돌아와요."
               eyebrow="로그인 필요"
               safeBottomPadding
               tone="gate"
@@ -599,7 +599,7 @@ export function LeftoversScreen({
                 </Link>
               </div>
             }
-            description="남은 요리를 관리하려면 로그인이 필요해요. 로그인 후에는 다시 이 화면으로 돌아옵니다."
+            description="남은 요리를 관리하려면 로그인이 필요해요. 로그인하면 이 화면으로 돌아와요."
             icon={<span aria-hidden="true">!</span>}
             title="이 화면은 로그인이 필요해요"
           />
@@ -646,7 +646,7 @@ export function LeftoversScreen({
               다시 시도
             </WebButton>
           }
-          description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+          description={errorMessage ?? "잠시 후 다시 시도해 주세요."}
           icon={<span aria-hidden="true">!</span>}
           title="남은 요리를 불러오지 못했어요"
         />
@@ -752,7 +752,7 @@ function LeftoversMobileView({
         <div className="p-4">
           <ContentState
             actionLabel="다시 시도"
-            description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+            description={errorMessage ?? "잠시 후 다시 시도해 주세요."}
             onAction={() => {
               void onRetry();
             }}
