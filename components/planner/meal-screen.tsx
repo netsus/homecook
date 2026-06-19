@@ -292,7 +292,9 @@ function MealCard({
   onStartCook,
 }: MealCardProps) {
   const isMin = meal.planned_servings <= 1;
+  const canCreateShopping = meal.status === "registered";
   const canStartCook = meal.status === "shopping_done";
+  const hasMealAction = canCreateShopping || canStartCook;
   const visual = getMealVisualMeta(meal);
   const { hiddenCount, visible } = getVisibleMealChips(visual.chips);
   const statusClassName = getAppMealStatusClass(meal.status);
@@ -416,27 +418,31 @@ function MealCard({
           ) : null}
         </div>
 
-        <div className={canStartCook ? "grid grid-cols-2 gap-2" : "grid grid-cols-1 gap-2"}>
-          <button
-            className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-bold text-[var(--foreground)]"
-            onClick={onCreateShopping}
-            type="button"
-          >
-            <ShoppingIcon />
-            장보기
-          </button>
-          {canStartCook ? (
-            <button
-              aria-label={`${meal.recipe_title} 요리하기`}
-              className="min-h-[38px] rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand)] text-[14px] font-bold text-[var(--text-inverse)]"
-              disabled={isPending}
-              onClick={onStartCook}
-              type="button"
-            >
-              요리하기
-            </button>
-          ) : null}
-        </div>
+        {hasMealAction ? (
+          <div className="grid grid-cols-1 gap-2">
+            {canCreateShopping ? (
+              <button
+                className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-bold text-[var(--foreground)]"
+                onClick={onCreateShopping}
+                type="button"
+              >
+                <ShoppingIcon />
+                장보기
+              </button>
+            ) : null}
+            {canStartCook ? (
+              <button
+                aria-label={`${meal.recipe_title} 요리하기`}
+                className="min-h-[38px] rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand)] text-[14px] font-bold text-[var(--text-inverse)]"
+                disabled={isPending}
+                onClick={onStartCook}
+                type="button"
+              >
+                요리하기
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {/* 409 conflict inline error */}
@@ -525,7 +531,9 @@ function MealWebListCard({
   onStepUp: () => void;
 }) {
   const isMin = meal.planned_servings <= 1;
+  const canCreateShopping = meal.status === "registered";
   const canStartCook = meal.status === "shopping_done";
+  const hasMealAction = canCreateShopping || canStartCook;
   const visual = getMealVisualMeta(meal);
   return (
     <article className="web-meal-list-card" aria-label={`${meal.recipe_title} 끼니 음식`}>
@@ -605,28 +613,32 @@ function MealWebListCard({
           </button>
         </div>
 
-        <div className="web-meal-list-actions">
-          {canStartCook ? (
-            <button
-              aria-label={`${meal.recipe_title} 요리하기`}
-              className="web-meal-action-primary"
-              disabled={isPending}
-              onClick={onStartCook}
-              type="button"
-            >
-              <CookIcon />
-              요리하기
-            </button>
-          ) : null}
-          <button
-            className="web-meal-action-secondary"
-            onClick={onCreateShopping}
-            type="button"
-          >
-            <ShoppingIcon />
-            장보기
-          </button>
-        </div>
+        {hasMealAction ? (
+          <div className="web-meal-list-actions">
+            {canStartCook ? (
+              <button
+                aria-label={`${meal.recipe_title} 요리하기`}
+                className="web-meal-action-primary"
+                disabled={isPending}
+                onClick={onStartCook}
+                type="button"
+              >
+                <CookIcon />
+                요리하기
+              </button>
+            ) : null}
+            {canCreateShopping ? (
+              <button
+                className="web-meal-action-secondary"
+                onClick={onCreateShopping}
+                type="button"
+              >
+                <ShoppingIcon />
+                장보기
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {conflictError ? (

@@ -466,6 +466,55 @@ describe("MealScreen", () => {
     expect(createCookingSession).not.toHaveBeenCalled();
   });
 
+  it("shows mobile meal actions only for the current meal status", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({
+      items: [
+        buildMeal({ id: "meal-1", recipe_title: "등록식사", status: "registered" }),
+        buildMeal({ id: "meal-2", recipe_title: "장보기식사", status: "shopping_done" }),
+        buildMeal({ id: "meal-3", recipe_title: "완료식사", status: "cook_done" }),
+      ],
+    });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    const registeredCard = await screen.findByLabelText("등록식사 식사 카드");
+    const shoppingDoneCard = screen.getByLabelText("장보기식사 식사 카드");
+    const cookedCard = screen.getByLabelText("완료식사 식사 카드");
+
+    expect(within(registeredCard).getByRole("button", { name: "장보기" })).toBeTruthy();
+    expect(within(registeredCard).queryByRole("button", { name: "등록식사 요리하기" })).toBeNull();
+    expect(within(shoppingDoneCard).queryByRole("button", { name: "장보기" })).toBeNull();
+    expect(within(shoppingDoneCard).getByRole("button", { name: "장보기식사 요리하기" })).toBeTruthy();
+    expect(within(cookedCard).queryByRole("button", { name: "장보기" })).toBeNull();
+    expect(within(cookedCard).queryByRole("button", { name: "완료식사 요리하기" })).toBeNull();
+  });
+
+  it("shows desktop meal actions only for the current meal status", async () => {
+    setDesktopViewport(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({
+      items: [
+        buildMeal({ id: "meal-1", recipe_title: "등록식사", status: "registered" }),
+        buildMeal({ id: "meal-2", recipe_title: "장보기식사", status: "shopping_done" }),
+        buildMeal({ id: "meal-3", recipe_title: "완료식사", status: "cook_done" }),
+      ],
+    });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    const registeredCard = await screen.findByLabelText("등록식사 끼니 음식");
+    const shoppingDoneCard = screen.getByLabelText("장보기식사 끼니 음식");
+    const cookedCard = screen.getByLabelText("완료식사 끼니 음식");
+
+    expect(within(registeredCard).getByRole("button", { name: "장보기" })).toBeTruthy();
+    expect(within(registeredCard).queryByRole("button", { name: "등록식사 요리하기" })).toBeNull();
+    expect(within(shoppingDoneCard).queryByRole("button", { name: "장보기" })).toBeNull();
+    expect(within(shoppingDoneCard).getByRole("button", { name: "장보기식사 요리하기" })).toBeTruthy();
+    expect(within(cookedCard).queryByRole("button", { name: "장보기" })).toBeNull();
+    expect(within(cookedCard).queryByRole("button", { name: "완료식사 요리하기" })).toBeNull();
+  });
+
   it("renders the desktop meal screen as a meal list with per-food actions", async () => {
     setDesktopViewport(true);
     readE2EAuthOverride.mockReturnValue(true);
@@ -506,7 +555,7 @@ describe("MealScreen", () => {
     expect(within(list).queryByText("간단")).toBeNull();
     expect(within(list).queryByText("플래너")).toBeNull();
     expect(within(list).getByRole("button", { name: "김치찌개 요리하기" })).toBeTruthy();
-    expect(within(list).getAllByRole("button", { name: "장보기" })).toHaveLength(2);
+    expect(within(list).getAllByRole("button", { name: "장보기" })).toHaveLength(1);
     expect(within(list).getAllByRole("button", { name: "인분 증가" })).toHaveLength(2);
     expect(within(list).getAllByRole("button", { name: "인분 감소" })[0]?.className).toContain(
       "web-meal-stepper-decrease",

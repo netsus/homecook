@@ -544,6 +544,8 @@ describe("MypageScreen", () => {
     mockCreatePlannerColumn.mockReset();
     mockUpdatePlannerColumn.mockReset();
     mockDeletePlannerColumn.mockReset();
+    mockRouterPush.mockReset();
+    mockRouterReplace.mockReset();
 
     mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
     mockFetchUserProgress.mockResolvedValue(MOCK_PROGRESS);
@@ -1592,6 +1594,46 @@ describe("MypageScreen", () => {
     await user.click(screen.getByRole("button", { name: "뒤로" }));
 
     expect(mockRouterReplace).toHaveBeenCalledWith("/planner");
+  });
+
+  it("returns a direct mobile recipebook entry to the mypage fallback route", async () => {
+    installMatchMedia(true);
+    window.history.pushState({}, "", "/mypage?tab=recipebooks");
+
+    render(
+      <MypageScreen
+        initialActiveTab="recipebooks"
+        initialAuthenticated
+        initialMobileSurface="recipebook"
+      />,
+    );
+
+    const user = userEvent.setup();
+    await screen.findByTestId("recipebook-tab");
+    await user.click(screen.getByRole("button", { name: "뒤로" }));
+
+    expect(mockRouterReplace).toHaveBeenCalledWith("/mypage");
+    expect(await screen.findByRole("heading", { name: "마이페이지" })).toBeTruthy();
+  });
+
+  it("returns a direct mobile shopping history entry to the mypage fallback route", async () => {
+    installMatchMedia(true);
+    window.history.pushState({}, "", "/mypage?tab=shopping");
+
+    render(
+      <MypageScreen
+        initialActiveTab="shopping"
+        initialAuthenticated
+        initialMobileSurface="shopping"
+      />,
+    );
+
+    const user = userEvent.setup();
+    await screen.findByTestId("shopping-tab");
+    await user.click(screen.getByRole("button", { name: "뒤로" }));
+
+    expect(mockRouterReplace).toHaveBeenCalledWith("/mypage");
+    expect(await screen.findByRole("heading", { name: "마이페이지" })).toBeTruthy();
   });
 
   it("returns the mobile mypage internal surface to the first screen when tapping the My bottom tab", async () => {
