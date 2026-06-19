@@ -254,7 +254,7 @@ export function CookModeScreen({
       >
         <div className="flex flex-1 items-center justify-center p-4">
           <ContentState
-            description="요리모드를 이용하려면 로그인이 필요해요. 로그인하면 현재 화면으로 돌아옵니다."
+            description="요리모드를 이용하려면 로그인이 필요해요. 로그인하면 현재 화면으로 돌아와요."
             title="로그인이 필요해요"
             tone="gate"
           >
@@ -326,7 +326,7 @@ export function CookModeScreen({
         <div className="flex flex-1 items-center justify-center p-4">
           <ContentState
             actionLabel="다시 시도"
-            description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+            description={errorMessage ?? "잠시 후 다시 시도해 주세요."}
             onAction={handleRetry}
             secondaryActionLabel="플래너로 돌아가기"
             onSecondaryAction={() => router.push("/planner")}
@@ -423,7 +423,7 @@ export function CookModeScreen({
                 요리를 취소할까요?
               </h3>
               <p className="mt-1 text-sm text-[var(--muted)]">
-                취소하면 이전 끼니 화면으로 돌아갑니다.
+                취소하면 이전 끼니 화면으로 돌아가요.
               </p>
               <div className="mt-4 flex gap-3">
                 <button
@@ -565,7 +565,7 @@ function PlannerCookCancelDialog({
         </WebDialogHeader>
         <WebDialogBody>
           <p className="text-sm text-[var(--muted)]">
-            취소하면 이전 끼니 화면으로 돌아갑니다.
+            취소하면 이전 끼니 화면으로 돌아가요.
           </p>
         </WebDialogBody>
         <WebDialogFooter>

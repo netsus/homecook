@@ -529,7 +529,7 @@ export function ShoppingDetailScreen({
           <ContentState
             tone="error"
             title="장보기 리스트를 불러올 수 없어요"
-            description={errorMessage || "다시 시도해주세요"}
+            description={errorMessage || "다시 시도해 주세요"}
             actionLabel="다시 시도"
             onAction={loadDetail}
             variant="panel"
@@ -546,7 +546,7 @@ export function ShoppingDetailScreen({
         <ContentState
           tone="error"
           title="장보기 리스트를 불러올 수 없어요"
-          description={errorMessage || "다시 시도해주세요"}
+          description={errorMessage || "다시 시도해 주세요"}
           actionLabel="다시 시도"
           onAction={loadDetail}
           variant="panel"

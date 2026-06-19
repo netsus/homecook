@@ -45,7 +45,7 @@ function resolveGateContext(nextPath: string) {
   }
   return {
     eyebrow: "로그인 필요",
-    description: "로그인 후 이전 화면으로 돌아갑니다.",
+    description: "로그인하면 이전 화면으로 돌아와요.",
   };
 }
 
@@ -109,7 +109,7 @@ export function LoginScreen({
             data-testid="login-web-card"
             role="alert"
           >
-            로그인에 실패했어요. 다시 시도해주세요.
+            로그인에 실패했어요. 다시 시도해 주세요.
           </div>
         ) : null}
         <div data-testid="login-brand-mark">

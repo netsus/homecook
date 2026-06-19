@@ -82,7 +82,7 @@ describe("login screen", () => {
   it("shows the OAuth failure banner when authError is present", () => {
     render(<LoginScreen authError="oauth_failed" />);
 
-    expect(screen.getByText("로그인에 실패했어요. 다시 시도해주세요.")).toBeTruthy();
+    expect(screen.getByText("로그인에 실패했어요. 다시 시도해 주세요.")).toBeTruthy();
     expect(screen.getByText("social-buttons:/")).toBeTruthy();
   });
 
@@ -98,7 +98,7 @@ describe("login screen", () => {
     expect(screen.getByRole("main")).toBeTruthy();
     expect(screen.getByTestId("login-brand-mark")).toBeTruthy();
     expect(screen.getByText("로그인 필요")).toBeTruthy();
-    expect(screen.getAllByText("로그인 후 이전 화면으로 돌아갑니다.")).toHaveLength(1);
+    expect(screen.getAllByText("로그인하면 이전 화면으로 돌아와요.")).toHaveLength(1);
     expect(
       screen.queryByText("저장한 레시피, 플래너, 팬트리를 같은 계정으로 관리합니다."),
     ).toBeNull();

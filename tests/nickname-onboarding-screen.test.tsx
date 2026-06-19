@@ -76,7 +76,7 @@ describe("nickname onboarding screen", () => {
 
     render(<NicknameOnboardingScreen nextPath="/planner" />);
 
-    expect(await screen.findByRole("heading", { name: "닉네임을 정해주세요" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "닉네임을 정해 주세요" })).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText("닉네임"), {
       target: { value: "  집밥러  " },
@@ -95,14 +95,14 @@ describe("nickname onboarding screen", () => {
 
     render(<NicknameOnboardingScreen nextPath="/planner" />);
 
-    await screen.findByRole("heading", { name: "닉네임을 정해주세요" });
+    await screen.findByRole("heading", { name: "닉네임을 정해 주세요" });
     fireEvent.change(screen.getByLabelText("닉네임"), {
       target: { value: "김" },
     });
     await user.click(screen.getByRole("button", { name: "시작하기" }));
 
     expect(updateNickname).not.toHaveBeenCalled();
-    expect(await screen.findByText("닉네임은 2~30자로 입력해주세요.")).toBeTruthy();
+    expect(await screen.findByText("닉네임은 2~30자로 입력해 주세요.")).toBeTruthy();
   });
 
   it("skips onboarding when the profile already has a nickname", async () => {
@@ -116,6 +116,6 @@ describe("nickname onboarding screen", () => {
     await waitFor(() => {
       expect(navigationMocks.replace).toHaveBeenCalledWith("/planner");
     });
-    expect(screen.queryByRole("heading", { name: "닉네임을 정해주세요" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "닉네임을 정해 주세요" })).toBeNull();
   });
 });

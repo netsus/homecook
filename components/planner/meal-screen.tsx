@@ -832,7 +832,7 @@ function MealWebView({
           <WebErrorState
             action={<WebButton onClick={onRetry}>다시 시도</WebButton>}
             data-testid="meal-screen-error"
-            description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+            description={errorMessage ?? "잠시 후 다시 시도해 주세요."}
             title="식사 목록을 불러오지 못했어요"
           />
         ) : null}
@@ -1477,7 +1477,7 @@ export function MealScreen({
               식사 목록을 보려면 로그인이 필요해요.
             </p>
             <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-3)]">
-              로그인 후 이 화면으로 자동으로 돌아옵니다.
+              로그인하면 이 화면으로 돌아와요.
             </p>
           </div>
           <SocialLoginButtons nextPath={nextPath} />

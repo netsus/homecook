@@ -688,7 +688,7 @@ describe("AteListScreen", () => {
 
     expect(
       screen.getByText(
-        "요리를 완료하거나 남은 요리에서 '다 먹었어요'를 누르면 여기에 기록됩니다.",
+        "완료한 요리가 여기에 모여요.",
       ),
     ).toBeTruthy();
   });

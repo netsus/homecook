@@ -235,7 +235,7 @@ export function StandaloneCookModeScreen({
                   </WebButton>
                 </>
               }
-              description="요리 완료를 위해 로그인이 필요해요. 로그인하면 현재 화면으로 돌아옵니다."
+              description="요리 완료를 위해 로그인이 필요해요. 로그인하면 현재 화면으로 돌아와요."
               title="로그인이 필요해요"
             />
           </WebCard>
@@ -250,7 +250,7 @@ export function StandaloneCookModeScreen({
       >
         <div className="flex flex-1 items-center justify-center p-4">
           <ContentState
-            description="요리 완료를 위해 로그인이 필요해요. 로그인하면 현재 화면으로 돌아옵니다."
+            description="요리 완료를 위해 로그인이 필요해요. 로그인하면 현재 화면으로 돌아와요."
             title="로그인이 필요해요"
             tone="gate"
           >
@@ -357,7 +357,7 @@ export function StandaloneCookModeScreen({
                   </WebButton>
                 </div>
               }
-              description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+              description={errorMessage ?? "잠시 후 다시 시도해 주세요."}
               title="문제가 생겼어요"
             />
           </WebCard>
@@ -373,7 +373,7 @@ export function StandaloneCookModeScreen({
         <div className="flex flex-1 items-center justify-center p-4">
           <ContentState
             actionLabel="다시 시도"
-            description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+            description={errorMessage ?? "잠시 후 다시 시도해 주세요."}
             onAction={handleRetry}
             secondaryActionLabel="레시피로 돌아가기"
             onSecondaryAction={goAppBack}
