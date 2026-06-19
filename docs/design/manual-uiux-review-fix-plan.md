@@ -53,10 +53,11 @@
 
 ### 2. 사용자 안내문 어미와 문장 길이가 화면마다 다른 문제
 
-- Status: partially implemented in `feature/manual-uiux-copy-tone`
+- Status: implemented in `feature/manual-uiux-copy-font-sweep`
 - Progress:
   - 1차로 404, 로그인 게이트, 닉네임 온보딩, 남은요리, 플래너/끼니/장보기/요리모드의 대표 안내문을 `해요체`와 `해 주세요` 표기로 정리한다.
-  - 전 화면/서버 노출 메시지까지 닫는 전체 copy sweep은 후속 작업으로 남긴다.
+  - 후속 전수 정리에서 앱/컴포넌트/lib/API route의 고정 안내문, empty/error/loading/toast/helper 문구를 `해요체`와 `해 주세요` 표기로 확장한다.
+  - 유튜브 원문 제목/설명, 사용자가 입력한 조리 문장, 파서 정규식은 사용자 생성 콘텐츠 또는 분석 규칙이므로 서비스 안내문 sweep 대상에서 제외한다.
 - Severity: Medium
 - Area: UX / UI
 - Source: user manual review, repository copy scan
@@ -544,7 +545,7 @@
 
 ### 11. 앱 식사추가 target chip의 텍스트가 세로 가운데 정렬되지 않는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-copy-font-sweep`
 - Severity: Low
 - Area: UI / Frontend
 - Source: user manual review screenshot, `components/planner/meal-add-target-badge.tsx`
@@ -579,6 +580,7 @@
   - 앱 식사추가 모달과 각 picker 화면에서 chip 정렬 visual 확인
   - 기존 `meal-add-target-badge` text assertion 유지
   - 긴 label fixture 또는 수동 확인으로 wrapping/overflow 확인
+  - `tests/meal-add-target-badge.test.tsx`와 `tests/manual-uiux-layout-policy.test.ts`에서 app/web target chip의 중앙 정렬 class와 CSS 계약을 고정한다.
 
 ### 12. 유튜브 가져오기 단계 표시가 웹/앱에서 어색하게 줄바꿈되는 문제
 
@@ -722,7 +724,7 @@
 
 ### 15. 장보기 flow/list의 체크박스와 전체선택 UI가 화면마다 불안정한 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-copy-font-sweep`
 - Severity: Medium
 - Area: UI / UX / Frontend
 - Source: user manual review screenshots, `components/shopping/shopping-flow-screen.tsx`, `components/shopping/shopping-detail-screen.tsx`, `app/globals.css`
@@ -768,10 +770,12 @@
   - 전체선택 checked/unchecked/disabled 상태 확인
   - 개별 체크 checked/unchecked/read-only/excluded 상태 확인
   - keyboard tab/focus와 screen reader label 확인
+  - `tests/manual-uiux-layout-policy.test.ts`에서 웹 checkbox 크기, checked brand/white 색상, 전체선택 checkbox radius/색상 규칙을 고정한다.
+  - `tests/shopping-detail.frontend.test.tsx`에서 앱 장보기 상세 checkbox가 원형이 아닌 rounded-square인지 고정한다.
 
 ### 16. 장보기 준비 화면의 끼니 카드 밀도와 앱 제목 링크 동작이 불편한 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-copy-font-sweep`
 - Severity: Medium
 - Area: UI / UX / Frontend
 - Source: user manual review screenshot, `components/shopping/shopping-flow-screen.tsx`, `app/globals.css`
@@ -814,6 +818,8 @@
   - 앱 장보기 준비에서 row tap은 선택/해제만 하는지 확인
   - 앱 별도 끼니 이동 버튼이 있다면 tap target과 label 확인
   - 설명문 copy와 spacing visual 확인
+  - `tests/manual-uiux-layout-policy.test.ts`에서 웹 장보기 준비 카드 grid, image, gap, padding 밀도를 고정한다.
+  - `tests/shopping-flow-screen.test.tsx`에서 모바일 제목 자체가 link가 아니고 별도 `끼니 보기` link가 제공되는지 고정한다.
 
 ### 17. `이미있음`으로 제외한 장보기 재료가 완료 시 팬트리에 반영되지 않는 문제
 
@@ -1096,7 +1102,7 @@
 
 ### 23. 웹 마이페이지 환경설정 탭 아이콘이 잘려 보이는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-copy-font-sweep`
 - Severity: Low
 - Area: UI / Frontend
 - Source: user manual review screenshot, `components/mypage/mypage-screen.tsx`, `components/web/web-tabs.tsx`, `app/globals.css`
@@ -1128,6 +1134,8 @@
   - 웹 마이페이지 탭 바 visual screenshot 확인
   - active tab을 `환경설정`으로 바꾼 상태와 다른 탭 상태 비교
   - Chrome device toolbar에서 1280px, 1440px 폭 확인
+  - `tests/mypage-screen.test.tsx`에서 모든 웹 마이페이지 탭 아이콘이 공통 wrapper를 쓰고, `환경설정` 아이콘 viewBox가 잘림 여유를 갖는지 고정한다.
+  - `tests/manual-uiux-layout-policy.test.ts`에서 `.web-mypage-tabs` 아이콘 wrapper와 SVG overflow 규칙을 고정한다.
 
 ### 24. 앱 레시피북과 장보기 기록에서 뒤로가기 버튼이 동작하지 않는 문제
 
@@ -1475,6 +1483,7 @@
   - 390px/430px 모바일 viewport에서 날짜 chip, 버튼, 탭 텍스트가 잘리지 않는지 확인
   - 1280px/1440px 웹 viewport에서 기존 웹 폰트 인상이 유지되는지 확인
   - `rg`로 `font-family` 직접 지정 사용처를 확인해 앱만 다른 폰트를 쓰는 예외가 남지 않는지 확인
+  - `tests/mobile-typography-policy.test.ts`에서 `--font-body`가 Pretendard-first stack을 쓰고 `--web-font`가 같은 token을 참조하는지 고정한다.
 
 ### 30. 요리 완료 후 소진 재료 확인 모달에서 전체 선택/해제가 없어 반복 조작이 필요한 문제
 
