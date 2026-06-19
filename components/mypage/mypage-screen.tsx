@@ -120,6 +120,11 @@ import {
   buildPlannerMealStatusStats,
   type MypageRecordStats,
 } from "@/lib/planner-stats";
+import {
+  getRecipeBookCoverTone,
+  getRecipeBookCoverViewModel,
+  RECIPE_BOOK_COVER_TONES,
+} from "@/lib/recipebook-cover";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -1608,7 +1613,7 @@ export function MypageScreen({
     <>
       {colorTarget ? (
         <BookColorDialog
-          currentColor={getBookTone(colorTarget)}
+          currentColor={getRecipeBookCoverTone(colorTarget)}
           disabled={isUpdatingBookCover}
           errorMessage={bookCoverError}
           onCancel={() => {
@@ -3460,6 +3465,11 @@ function RecipeBookTabContent({
 }: RecipeBookTabContentProps) {
   const inlineDetailRef = useRef<HTMLElement | null>(null);
   const selectedBookId = selectedBook?.id ?? null;
+  const selectedBookCover = selectedBook
+    ? getRecipeBookCoverViewModel(selectedBook, {
+        loadedImageSrc: bookCoverImages[selectedBook.id],
+      })
+    : null;
 
   useEffect(() => {
     if (!selectedBookId) return;
@@ -3472,21 +3482,60 @@ function RecipeBookTabContent({
 
   return (
     <div className="web-recipebooks-screen" data-testid="recipebook-tab">
-      <div className="web-recipebooks-header">
+      <div
+        className="web-recipebooks-header"
+        data-testid="web-recipebooks-header"
+      >
         <div>
           <h2>레시피북</h2>
           <p>내가 만든 북과 시스템 북을 책장처럼 관리해요.</p>
         </div>
-        <WebButton aria-label="새 레시피북 만들기" onClick={onShowCreateInput}>
-          + 새 레시피북
-        </WebButton>
+        <div className="web-recipebooks-header-actions">
+          <WebButton aria-label="새 레시피북 만들기" onClick={onShowCreateInput}>
+            + 새 레시피북
+          </WebButton>
+          {showCreateInput ? (
+            <div
+              className="web-recipebooks-create-panel"
+              data-testid="recipebook-create-panel"
+            >
+              <input
+                ref={createInputRef}
+                disabled={isCreating}
+                maxLength={50}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void onCreateBook();
+                  if (e.key === "Escape") onCancelCreate();
+                }}
+                onChange={(e) => onCreateNameChange(e.target.value)}
+                placeholder="레시피북 이름"
+                type="text"
+                value={createName}
+              />
+              <WebButton
+                disabled={isCreating || !createName.trim()}
+                onClick={() => void onCreateBook()}
+                size="sm"
+              >
+                {isCreating ? "만드는 중..." : "완료"}
+              </WebButton>
+              <WebButton
+                onClick={onCancelCreate}
+                size="sm"
+                variant="tertiary"
+              >
+                취소
+              </WebButton>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       <div className="web-recipebooks-section-head">
         <h3>커스텀</h3>
       </div>
 
-      {customBooks.length === 0 && !showCreateInput ? (
+      {customBooks.length === 0 ? (
         <p className="web-recipebooks-empty">
           아직 만든 레시피북이 없어요
         </p>
@@ -3517,38 +3566,6 @@ function RecipeBookTabContent({
           ))}
         </div>
       )}
-
-      {showCreateInput ? (
-        <div className="web-recipebooks-create">
-          <input
-            ref={createInputRef}
-            disabled={isCreating}
-            maxLength={50}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void onCreateBook();
-              if (e.key === "Escape") onCancelCreate();
-            }}
-            onChange={(e) => onCreateNameChange(e.target.value)}
-            placeholder="레시피북 이름"
-            type="text"
-            value={createName}
-          />
-          <WebButton
-            disabled={isCreating || !createName.trim()}
-            onClick={() => void onCreateBook()}
-            size="sm"
-          >
-            {isCreating ? "만드는 중..." : "완료"}
-          </WebButton>
-          <WebButton
-            onClick={onCancelCreate}
-            size="sm"
-            variant="tertiary"
-          >
-            취소
-          </WebButton>
-        </div>
-      ) : null}
 
       <div className="web-recipebooks-section-head web-recipebooks-section-head-spaced">
         <h3>시스템</h3>
@@ -3584,6 +3601,8 @@ function RecipeBookTabContent({
             bookId={selectedBook.id}
             bookName={selectedBook.name}
             bookType={selectedBook.book_type}
+            bookCoverColorKey={selectedBookCover?.tone ?? null}
+            bookCoverImageSrc={selectedBookCover?.imageSrc ?? null}
             embedded
             initialAuthenticated={true}
           />
@@ -3612,7 +3631,7 @@ function SystemBookCard({
 }) {
   return (
     <button
-      className={`web-recipebook-book-card web-recipebook-book-card-${getBookTone(book)}`}
+      className={`web-recipebook-book-card web-recipebook-book-card-${getRecipeBookCoverTone(book)}`}
       data-testid={`system-book-${book.book_type}`}
       aria-label={`${book.name} 상세 보기`}
       onClick={onOpen}
@@ -3644,7 +3663,7 @@ function BookCoverThumb({
 
   return (
     <span
-      className={`web-recipebook-cover-thumb web-recipebook-cover-thumb-${getBookTone(book)}`}
+      className={`web-recipebook-cover-thumb web-recipebook-cover-thumb-${getRecipeBookCoverTone(book)}`}
       aria-hidden="true"
     >
       <span
@@ -3702,7 +3721,7 @@ function CustomBookCard({
   return (
     <div className="relative">
       <div
-        className={`web-recipebook-book-card web-recipebook-book-card-static web-recipebook-book-card-${getBookTone(book)}`}
+        className={`web-recipebook-book-card web-recipebook-book-card-static web-recipebook-book-card-${getRecipeBookCoverTone(book)}`}
         data-testid={`custom-book-${book.id}`}
       >
         <BookCoverThumb book={book} imageSrc={coverImageSrc} />
@@ -3881,7 +3900,7 @@ function BookColorDialog({
   onCancel,
   onSelectColor,
 }: {
-  currentColor: RecipeBookTone;
+  currentColor: RecipeBookCoverColorKey;
   disabled: boolean;
   errorMessage: string | null;
   onCancel: () => void;
@@ -3907,7 +3926,7 @@ function BookColorDialog({
         </WebDialogHeader>
         <WebDialogBody>
           <div className="web-book-color-grid" role="group" aria-label="레시피북 색상">
-            {RECIPE_BOOK_TONES.map((tone) => (
+            {RECIPE_BOOK_COVER_TONES.map((tone) => (
               <button
                 aria-pressed={tone === currentColor}
                 className={`web-book-color-swatch web-recipebook-book-card-${tone} mobile-recipebook-book-card-${tone}`}
@@ -4754,20 +4773,7 @@ function formatSavedRecipeMeta(recipe: RecipeBookRecipeItem) {
     .join(" · ");
 }
 
-type RecipeBookTone = "sage" | "sky" | "lavender" | "coral" | "sand";
-const RECIPE_BOOK_TONES = [
-  "sage",
-  "sky",
-  "coral",
-  "lavender",
-  "sand",
-] as const satisfies readonly RecipeBookTone[];
-
-function isRecipeBookTone(value: unknown): value is RecipeBookTone {
-  return typeof value === "string" && RECIPE_BOOK_TONES.includes(value as RecipeBookTone);
-}
-
-function getBookToneLabel(tone: RecipeBookTone) {
+function getBookToneLabel(tone: RecipeBookCoverColorKey) {
   if (tone === "sage") return "그린";
   if (tone === "sky") return "스카이";
   if (tone === "coral") return "코랄";
@@ -4775,38 +4781,13 @@ function getBookToneLabel(tone: RecipeBookTone) {
   return "샌드";
 }
 
-function getBookTone(book: RecipeBookSummary): RecipeBookTone {
-  if (isRecipeBookTone(book.cover_color_key)) {
-    return book.cover_color_key;
-  }
-
-  if (book.book_type === "custom") {
-    return RECIPE_BOOK_TONES[
-      Math.abs(book.sort_order) % RECIPE_BOOK_TONES.length
-    ] ?? "sage";
-  }
-  if (book.book_type === "saved") {
-    return "sky";
-  }
-  if (book.book_type === "liked") {
-    return "coral";
-  }
-  if (book.book_type === "my_added") {
-    return "lavender";
-  }
-
-  return "sand";
-}
-
 function getBookCoverImage(
   book: RecipeBookSummary,
   bookCoverImages: Record<string, string | null>,
 ) {
-  return book.cover_image_url ?? bookCoverImages[book.id] ?? getFallbackBookCoverImage(book);
-}
-
-function getFallbackBookCoverImage(book: RecipeBookSummary) {
-  return resolveRecipeImage({ id: book.id });
+  return getRecipeBookCoverViewModel(book, {
+    loadedImageSrc: bookCoverImages[book.id],
+  }).imageSrc;
 }
 
 function formatBookLastUpdated(updatedAt?: string | null) {

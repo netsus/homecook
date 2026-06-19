@@ -47,11 +47,13 @@ import {
 } from "@/lib/api/recipe-save";
 import { getSurfaceChromeRule } from "@/lib/navigation/app-nav";
 import { buildReturnHref } from "@/lib/navigation/return-context";
+import { getRecipeBookCoverViewModel } from "@/lib/recipebook-cover";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type {
   RecipeBookReaderRecipeData,
+  RecipeBookCoverColorKey,
   RecipeBookRecipeItem,
   RecipeBookSummary,
   RecipeBookType,
@@ -117,6 +119,8 @@ export interface RecipeBookDetailScreenProps {
   bookId: string;
   bookName: string;
   bookType: RecipeBookType;
+  bookCoverColorKey?: RecipeBookCoverColorKey | null;
+  bookCoverImageSrc?: string | null;
   embedded?: boolean;
   initialAuthenticated?: boolean;
 }
@@ -125,6 +129,8 @@ export function RecipeBookDetailScreen({
   bookId,
   bookName,
   bookType,
+  bookCoverColorKey,
+  bookCoverImageSrc,
   embedded = false,
   initialAuthenticated = false,
 }: RecipeBookDetailScreenProps) {
@@ -1035,6 +1041,9 @@ export function RecipeBookDetailScreen({
         >
           <DesktopRecipeBookRail
             activeRecipeId={activeDesktopRecipeId}
+            bookCoverColorKey={bookCoverColorKey}
+            bookCoverImageSrc={bookCoverImageSrc}
+            bookId={bookId}
             bookName={currentBookName}
             bookType={bookType}
             hasNext={hasNext}
@@ -1343,6 +1352,9 @@ export function RecipeBookDetailScreen({
 
 function DesktopRecipeBookRail({
   activeRecipeId,
+  bookCoverColorKey,
+  bookCoverImageSrc,
+  bookId,
   bookName,
   bookType,
   hasNext,
@@ -1351,6 +1363,9 @@ function DesktopRecipeBookRail({
   recipeCount,
 }: {
   activeRecipeId: string | null;
+  bookCoverColorKey?: RecipeBookCoverColorKey | null;
+  bookCoverImageSrc?: string | null;
+  bookId: string;
   bookName: string;
   bookType: RecipeBookType;
   hasNext: boolean;
@@ -1359,20 +1374,40 @@ function DesktopRecipeBookRail({
   recipeCount: number | null;
 }) {
   const coverItem = items[0];
-  const coverImageSrc = coverItem
-    ? getRecipeBookItemImage(coverItem)
-    : resolveRecipeImage({ id: bookName });
-  const safeCoverImageSrc = coverImageSrc.replace(/"/g, "%22");
+  const loadedImageSrc =
+    bookCoverImageSrc === undefined
+      ? coverItem
+        ? getRecipeBookItemImage(coverItem)
+        : null
+      : bookCoverImageSrc;
+  const coverViewModel = getRecipeBookCoverViewModel(
+    {
+      id: bookId,
+      name: bookName,
+      book_type: bookType,
+      recipe_count: recipeCount ?? items.length,
+      sort_order: 0,
+      cover_color_key: bookCoverColorKey ?? null,
+      cover_image_url:
+        bookCoverImageSrc === undefined ? null : bookCoverImageSrc,
+    },
+    { loadedImageSrc },
+  );
+  const safeCoverImageSrc = coverViewModel.imageSrc.replace(/"/g, "%22");
 
   return (
     <aside
       className="web-recipebook-detail-rail"
       data-testid="recipebook-detail-toc"
     >
-      <div className={`web-recipebook-detail-cover web-recipebook-detail-cover-${bookType}`}>
+      <div
+        className={`web-recipebook-detail-cover web-recipebook-detail-cover-${coverViewModel.tone}`}
+        data-testid="recipebook-detail-cover"
+      >
         <span
           className="web-recipebook-detail-cover-image"
           aria-hidden="true"
+          data-testid="recipebook-detail-cover-image"
           style={{ backgroundImage: `url("${safeCoverImageSrc}")` }}
         />
         <strong>{bookName}</strong>

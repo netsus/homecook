@@ -1,6 +1,10 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { RecipeBookDetailScreen } from "@/components/recipebook/recipebook-detail-screen";
 import { getInitialAuthenticatedFromServer } from "@/lib/auth/server-initial-auth";
+import {
+  isRecipeBookCoverTone,
+  normalizeRecipeBookCoverImageUrl,
+} from "@/lib/recipebook-cover";
 import type { RecipeBookType } from "@/types/recipe";
 
 export async function generateMetadata({ searchParams }: PageProps) {
@@ -47,6 +51,15 @@ export default async function RecipeBookDetailPage({
     typeof query.name === "string" && query.name.trim()
       ? query.name.trim()
       : "레시피북";
+  const rawCoverColor =
+    typeof query.coverColor === "string" ? query.coverColor : null;
+  const bookCoverColorKey = isRecipeBookCoverTone(rawCoverColor)
+    ? rawCoverColor
+    : null;
+  const bookCoverImageSrc =
+    typeof query.coverImage === "string"
+      ? normalizeRecipeBookCoverImageUrl(query.coverImage)
+      : undefined;
 
   return (
     <AppShell
@@ -58,6 +71,8 @@ export default async function RecipeBookDetailPage({
         bookId={bookId}
         bookName={bookName}
         bookType={bookType}
+        bookCoverColorKey={bookCoverColorKey}
+        bookCoverImageSrc={bookCoverImageSrc}
         initialAuthenticated={initialAuthenticated}
       />
     </AppShell>

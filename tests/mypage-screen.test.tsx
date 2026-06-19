@@ -1088,6 +1088,27 @@ describe("MypageScreen", () => {
     expect(within(recipebookSurface).queryByText("목록")).toBeNull();
   });
 
+  it("shows last record metadata on mobile system recipebook cards", async () => {
+    installMatchMedia(true);
+
+    render(
+      <MypageScreen
+        initialActiveTab="recipebooks"
+        initialAuthenticated
+        initialMobileSurface="recipebook"
+      />,
+    );
+
+    const recipebookSurface = await screen.findByTestId("recipebook-tab");
+    const savedSystemCard = within(recipebookSurface).getByTestId("system-book-saved");
+
+    await waitFor(() => {
+      expect(
+        within(savedSystemCard).getByText("마지막 기록 5월 1일"),
+      ).toBeTruthy();
+    });
+  });
+
   it("opens mobile custom book cover controls and can clear the cover image", async () => {
     installMatchMedia(true);
 
@@ -1180,6 +1201,39 @@ describe("MypageScreen", () => {
     expect(
       screen.getByTestId("book-cover-image-book-custom").getAttribute("style"),
     ).toContain("custom-new.jpg");
+  });
+
+  it("uses the selected desktop recipebook card cover in the inline reader", async () => {
+    const booksWithCovers = MOCK_BOOKS.books.map((book) =>
+      book.id === "book-saved"
+        ? {
+            ...book,
+            cover_color_key: "sand" as const,
+            cover_image_url: "https://example.com/system-saved.jpg",
+          }
+        : book,
+    );
+    mockFetchRecipeBooks.mockResolvedValueOnce({ books: booksWithCovers });
+
+    render(<MypageScreen initialAuthenticated />);
+
+    const user = await openRecipebookSurface();
+    const savedCard = screen.getByTestId("system-book-saved");
+
+    expect(
+      screen.getByTestId("book-cover-image-book-saved").getAttribute("style"),
+    ).toContain("system-saved.jpg");
+
+    await user.click(savedCard);
+
+    const inlineDetail = await screen.findByTestId("recipebook-inline-detail");
+    const readerCover = within(inlineDetail).getByTestId("recipebook-detail-cover");
+    const readerCoverImage = within(inlineDetail).getByTestId(
+      "recipebook-detail-cover-image",
+    );
+
+    expect(readerCover.className).toContain("web-recipebook-detail-cover-sand");
+    expect(readerCoverImage.getAttribute("style")).toContain("system-saved.jpg");
   });
 
   it("displays system books with correct recipe counts", async () => {
@@ -1456,6 +1510,12 @@ describe("MypageScreen", () => {
 
     const user = userEvent.setup();
     await user.click(screen.getByLabelText("새 레시피북 만들기"));
+
+    const header = screen.getByTestId("web-recipebooks-header");
+    const createPanel = within(header).getByTestId("recipebook-create-panel");
+    expect(createPanel.className).toContain("web-recipebooks-create-panel");
+    expect(createPanel.closest(".web-recipebooks-header")).toBe(header);
+    expect(screen.queryByTestId("recipebook-create-full-width")).toBeNull();
 
     const input = screen.getByPlaceholderText("레시피북 이름");
     await user.type(input, "주말 브런치");

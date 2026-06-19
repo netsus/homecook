@@ -1083,7 +1083,13 @@
 
 ### 22. 마이페이지 레시피북 생성 위치, 마지막 기록, 커버 표시가 일관되지 않은 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-item-22-recipebooks`
+- Progress:
+  - 웹 레시피북 생성 입력을 헤더 우측 `+ 새 레시피북` 버튼 아래 compact panel로 이동하고, 커스텀 섹션 아래 full-width 배치를 제거했다.
+  - 앱 시스템 레시피북 카드도 커스텀 카드와 같은 `마지막 기록 N월 N일` / `마지막 기록 없음` 문구를 표시하도록 맞췄다.
+  - 카드와 inline reader가 같은 cover tone/image resolver를 사용하도록 `getRecipeBookCoverViewModel`을 도입하고, selected book의 cover를 reader에 전달한다.
+  - 모바일 상세 route에도 cover query를 additive로 전달해 카드에서 본 cover와 상세 첫 화면의 연결감을 유지한다.
+  - `tests/mypage-screen.test.tsx`에 생성 panel 위치, 앱 시스템 카드 마지막 기록, 선택 카드/reader cover 일치 회귀 테스트를 추가했다.
 - Severity: Medium
 - Area: UI / UX / Frontend
 - Source: user manual review screenshots, `components/mypage/mypage-screen.tsx`, `components/mypage/mypage-mobile-screen.tsx`, `components/recipebook/recipebook-detail-screen.tsx`, `app/globals.css`
