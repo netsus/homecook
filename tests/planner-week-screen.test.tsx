@@ -340,6 +340,8 @@ describe("planner week screen", () => {
     });
 
     expect(currentWeekButton.textContent?.trim()).toBe("이번 주");
+    expect(currentWeekButton.className).toContain("rounded-[var(--radius-control)]");
+    expect(currentWeekButton.className).not.toContain("rounded-full");
     expect(currentWeekButton.className).toContain("border-[var(--line-strong)]");
     expect(weekShell.querySelector(".grid")?.className).toContain(
       "grid-cols-[30px_minmax(0,1fr)_30px]",
@@ -403,7 +405,50 @@ describe("planner week screen", () => {
     expect(screen.queryByTestId("planner-first-meal-chooser")).toBeNull();
   });
 
-  it("shows desktop meal status as a color-only indicator instead of a colored side rail", async () => {
+  it("renders the desktop planner as date rows with meal columns", async () => {
+    setDesktopViewport(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-long-title",
+            recipe_id: "recipe-long-title",
+            recipe_title: "두부 듬뿍 넣은 얼큰한 집밥 김치찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    const { container } = render(<PlannerWeekScreen />);
+
+    await screen.findAllByText("두부 듬뿍 넣은 얼큰한 집밥 김치찌개");
+
+    expect(container.querySelectorAll(".web-planner-column-head")).toHaveLength(4);
+    expect(container.querySelectorAll(".web-planner-date-row-head")).toHaveLength(7);
+    expect(container.querySelector(".web-planner-time")).toBeNull();
+    expect(container.querySelector(".web-planner-head")).toBeNull();
+
+    const firstDateRow = screen.getByTestId("web-planner-date-row-2026-03-24");
+
+    expect(within(firstDateRow).getByText("3/24")).toBeTruthy();
+    expect(within(firstDateRow).getByText("화")).toBeTruthy();
+    expect(screen.getByText("아침").closest(".web-planner-column-head")).not.toBeNull();
+    expect(screen.getByText("점심").closest(".web-planner-column-head")).not.toBeNull();
+    expect(screen.getByText("간식").closest(".web-planner-column-head")).not.toBeNull();
+    expect(screen.getByText("저녁").closest(".web-planner-column-head")).not.toBeNull();
+    expect(
+      within(firstDateRow).getByText("두부 듬뿍 넣은 얼큰한 집밥 김치찌개"),
+    ).toBeTruthy();
+  });
+
+  it("uses the planner meal card edge as the desktop status indicator", async () => {
     setDesktopViewport(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(
@@ -429,11 +474,16 @@ describe("planner week screen", () => {
     await screen.findAllByText("된장찌개");
 
     const meta = container.querySelector(".web-planner-meal-meta");
+    const mealCard = container.querySelector(".web-planner-meal");
+
     expect(meta).not.toBeNull();
+    expect(mealCard).not.toBeNull();
+    expect(mealCard?.className).toContain("web-planner-meal-registered");
     expect(within(meta as HTMLElement).getByText("2인분")).toBeTruthy();
     expect(within(meta as HTMLElement).queryByText("등록")).toBeNull();
     expect(within(meta as HTMLElement).getByLabelText("식사 등록 완료")).toBeTruthy();
-    expect(meta?.querySelector(".web-planner-meal-status-registered")).toBeTruthy();
+    expect(meta?.querySelector(".web-planner-meal-status-registered")).toBeNull();
+    expect(mealCard?.querySelector(".web-planner-meal-status")).toBeNull();
     expect(screen.queryByText("2인분 · 등록")).toBeNull();
   });
 
@@ -775,6 +825,10 @@ describe("planner week screen", () => {
     expect(breakfastRow).not.toBeNull();
     expect(dinnerButton).toBeTruthy();
     expect(breakfastRow?.className).toContain("min-h-[46px]");
+    expect(screen.getByTestId("planner-mobile-meal-meal-1").className).toContain("border-l-4");
+    expect(
+      within(screen.getByTestId("planner-mobile-meal-meal-1")).getByText("김치찌개").className,
+    ).toContain("text-[13px]");
     expect(within(breakfastRow as HTMLElement).getByText("2인분")).toBeTruthy();
     expect(breakfastAddButton.className).toContain("border-[var(--line-strong)]");
     expect(breakfastAddButton.className).toContain("bg-transparent");
@@ -837,17 +891,22 @@ describe("planner week screen", () => {
       .find((node) =>
         node.className.includes("text-[var(--planner-status-shopping)]"),
       );
-    const cookedLabel = screen.getByText("요리 완료");
-    const cookedCard = cookedLabel.closest("div");
+    const cookedLabel = screen
+      .getAllByText("요리 완료")
+      .find((node) =>
+        node.className.includes("text-[var(--planner-status-cooked)]"),
+      );
+    const cookedCard = cookedLabel?.closest("div");
     expect(shoppingLabel).toBeTruthy();
+    expect(cookedLabel).toBeTruthy();
     const shoppingCard = shoppingLabel?.closest("div");
     const registeredCard = registeredLabel.closest("div");
 
     expect(cookedCard?.className).toContain(
       "bg-[var(--planner-status-cooked-soft)]",
     );
-    expect(cookedLabel.className).toContain("text-[var(--planner-status-cooked)]");
-    expect(cookedLabel.nextElementSibling?.className).toContain(
+    expect(cookedLabel?.className).toContain("text-[var(--planner-status-cooked)]");
+    expect(cookedLabel?.nextElementSibling?.className).toContain(
       "text-[var(--planner-status-cooked)]",
     );
     expect(shoppingCard?.className).toContain(
@@ -1217,7 +1276,7 @@ describe("planner week screen", () => {
     expect(slotAreaText).not.toMatch(/[\u{1F300}-\u{1F9FF}]/u);
   });
 
-  it("renders color-only meal status indicators on filled meal slots", async () => {
+  it("renders edge status indicators on filled meal slots", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(
       createPlannerData({
@@ -1260,15 +1319,26 @@ describe("planner week screen", () => {
     expect(screen.getByTestId("planner-mobile-meal-meal-1").className).toContain(
       "bg-[var(--surface-fill)]",
     );
+    expect(screen.getByTestId("planner-mobile-meal-meal-1").className).toContain(
+      "border-l-4",
+    );
+    expect(screen.getByTestId("planner-mobile-meal-meal-1").className).toContain(
+      "border-l-[var(--planner-status-registered)]",
+    );
     expect(screen.getByTestId("planner-mobile-meal-meal-1").className).not.toContain(
       "bg-[var(--planner-status-registered-soft)]",
     );
     expect(screen.getByTestId("planner-mobile-meal-meal-2").className).toContain(
       "bg-[var(--surface-fill)]",
     );
+    expect(screen.getByTestId("planner-mobile-meal-meal-2").className).toContain(
+      "border-l-[var(--planner-status-shopping)]",
+    );
     expect(screen.getByTestId("planner-mobile-meal-meal-2").className).not.toContain(
       "bg-[var(--planner-status-shopping-soft)]",
     );
+    expect(breakfastRow?.querySelector(".inline-flex.h-2")).toBeNull();
+    expect(dinnerRow?.querySelector(".inline-flex.h-2")).toBeNull();
     expect(within(breakfastRow as HTMLElement).queryByText("등록")).toBeNull();
     expect(within(dinnerRow as HTMLElement).queryByText("장보기")).toBeNull();
     expect(within(breakfastRow as HTMLElement).getByLabelText("식사 등록 완료")).toBeTruthy();

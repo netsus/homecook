@@ -323,7 +323,12 @@
 
 ### 7. 웹/앱 플래너 주간 화면에서 레시피명과 상태 표시가 잘 보이지 않는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-items-7-8-planner`
+- Progress:
+  - 웹 주간 표를 `날짜=행`, `끼니=열` 구조로 바꿔 식사 카드 폭을 넓히고 레시피명을 2줄까지 읽을 수 있게 했다.
+  - 웹/앱 식사 상태 표시는 짧은 pill/bar 대신 카드 왼쪽 accent border로 통일하고, screen reader용 상태 label은 유지했다.
+  - 앱 식사 카드 제목을 `13px` 2줄 기준으로 키우고, 한 슬롯에 식사가 2개 이상일 때도 세로 stack으로 보여 제목 가독성을 우선했다.
+  - 앱 `이번 주` 버튼은 둥근 pill 대신 `radius-control` 사각 control 계열로 맞췄다.
 - Severity: Medium
 - Area: UX / UI / Frontend
 - Source: user manual review, `components/planner/planner-week-screen.tsx`, `app/globals.css`
@@ -396,7 +401,12 @@
 
 ### 8. 웹 끼니 화면의 식사 카드 정렬과 화면 밀도가 앱보다 떨어지는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-items-7-8-planner`
+- Progress:
+  - 웹 끼니 목록을 2열 미니 card grid에서 single-column row list로 바꿔 한 끼에 음식이 1개뿐이어도 main column 폭을 안정적으로 쓰게 했다.
+  - 웹 식사 카드는 `image / content / actions` 3열 구조로 재정렬하고, 삭제 버튼/인분 stepper/장보기·요리하기 action을 오른쪽 action panel에 고정했다.
+  - 기존 전폭 footer를 제거해 카드 본문과 action 영역이 분리되어 보이던 문제를 줄였다.
+  - 긴 레시피명은 기존 2줄 clamp를 유지하고, 단위 테스트와 desktop visual snapshot으로 row card 구조를 고정했다.
 - Severity: Medium
 - Area: UX / UI / Frontend
 - Source: user manual review screenshots, `components/planner/meal-screen.tsx`, `app/globals.css`

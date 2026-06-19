@@ -2949,74 +2949,84 @@ button {
     color: var(--web-brand-accessible);
   }
 
+  .web-planner-table-wrap {
+    min-width: 0;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
   .web-planner-grid {
     display: grid;
-    grid-template-columns: 56px repeat(7, minmax(0, 1fr));
-    overflow: hidden;
+    min-width: 100%;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-md);
     background: var(--web-surface);
   }
 
+  .web-planner-date-row {
+    display: contents;
+  }
+
   .web-planner-corner,
-  .web-planner-head,
-  .web-planner-time,
+  .web-planner-column-head,
+  .web-planner-date-row-head,
   .web-planner-cell {
     border-right: 1px solid var(--web-divider);
     border-bottom: 1px solid var(--web-divider);
   }
 
   .web-planner-corner,
-  .web-planner-head {
+  .web-planner-column-head {
     min-height: 58px;
     background: var(--web-bg-alt);
   }
 
-  .web-planner-head {
+  .web-planner-column-head {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    color: var(--web-text-2);
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+  }
+
+  .web-planner-date-row-head {
+    display: grid;
+    min-height: 112px;
+    align-items: flex-start;
+    justify-content: center;
+    align-content: center;
+    gap: 4px;
+    background: var(--web-bg-alt);
+    padding: 12px 8px;
     color: var(--web-text-3);
     font-size: 13px;
     font-weight: 700;
     text-align: center;
   }
 
-  .web-planner-head strong {
+  .web-planner-date-row-head strong {
     color: var(--web-text-1);
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 800;
   }
 
-  .web-planner-head-today {
+  .web-planner-date-row-head-today {
     background: var(--web-brand-wash);
     color: var(--web-brand-accessible);
   }
 
-  .web-planner-head-today strong {
+  .web-planner-date-row-head-today strong {
     color: var(--web-brand);
-  }
-
-  .web-planner-time {
-    display: flex;
-    min-height: 132px;
-    align-items: flex-start;
-    justify-content: center;
-    background: var(--web-bg-alt);
-    padding-top: 14px;
-    color: var(--web-text-2);
-    font-size: 13px;
-    font-weight: 800;
   }
 
   .web-planner-cell {
     display: flex;
-    min-height: 132px;
+    min-height: 112px;
     flex-direction: column;
     gap: 8px;
-    padding: 12px 10px;
+    padding: 10px;
   }
 
   .web-planner-cell-today {
@@ -3025,14 +3035,14 @@ button {
 
   .web-planner-meal {
     display: flex;
-    min-height: 58px;
-    align-items: stretch;
-    flex-direction: column;
-    gap: 2px;
+    min-height: 66px;
+    align-items: center;
+    gap: 8px;
     border: 1px solid var(--web-line);
+    border-left-width: 4px;
     border-radius: var(--web-r-sm);
     background: var(--web-surface);
-    padding: 6px;
+    padding: 8px 9px 8px 7px;
     color: var(--web-text-1);
   }
 
@@ -3041,20 +3051,22 @@ button {
   }
 
   .web-planner-meal-registered {
-    border-color: var(--web-line);
+    border-left-color: var(--planner-status-registered);
   }
 
   .web-planner-meal-shopped {
-    border-color: var(--web-line);
+    border-left-color: var(--planner-status-shopping);
   }
 
   .web-planner-meal-cooked {
-    border-color: var(--web-line);
+    border-left-color: var(--planner-status-cooked);
   }
 
   .web-planner-meal-thumb {
     display: block;
-    height: 34px;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
     border-radius: calc(var(--web-r-sm) - 2px);
     background: linear-gradient(135deg, rgba(255, 149, 0, 0.18), rgba(0, 161, 255, 0.12));
     background-position: center;
@@ -3066,15 +3078,17 @@ button {
     min-width: 0;
     flex-direction: column;
     justify-content: center;
-    padding: 2px 3px 1px;
+    gap: 3px;
   }
 
   .web-planner-meal-title {
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
     font-size: 14px;
     font-weight: 800;
+    line-height: 1.28;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .web-planner-meal-meta,
@@ -3089,31 +3103,6 @@ button {
     min-width: 0;
     align-items: center;
     gap: 6px;
-  }
-
-  .web-planner-meal-status {
-    display: inline-flex;
-    width: 18px;
-    height: 7px;
-    flex: 0 0 auto;
-    align-items: center;
-    border: 1px solid transparent;
-    border-radius: var(--web-r-pill);
-  }
-
-  .web-planner-meal-status-registered {
-    border-color: var(--planner-status-registered);
-    background: var(--planner-status-registered);
-  }
-
-  .web-planner-meal-status-shopped {
-    border-color: var(--planner-status-shopping);
-    background: var(--planner-status-shopping);
-  }
-
-  .web-planner-meal-status-cooked {
-    border-color: var(--planner-status-cooked);
-    background: var(--planner-status-cooked);
   }
 
   .web-planner-add {
@@ -3174,6 +3163,28 @@ button {
 
   .web-planner-dot-cooked {
     background: var(--planner-status-cooked);
+  }
+
+  .web-planner-border-swatch {
+    display: inline-block;
+    width: 14px;
+    height: 18px;
+    border: 1px solid var(--web-line);
+    border-left-width: 4px;
+    border-radius: 4px;
+    background: var(--web-surface);
+  }
+
+  .web-planner-border-swatch-registered {
+    border-left-color: var(--planner-status-registered);
+  }
+
+  .web-planner-border-swatch-shopped {
+    border-left-color: var(--planner-status-shopping);
+  }
+
+  .web-planner-border-swatch-cooked {
+    border-left-color: var(--planner-status-cooked);
   }
 
   .web-breadcrumb {
@@ -3603,30 +3614,33 @@ button {
 
   .web-meal-list {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+  }
+
+  .web-meal-row-list {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .web-meal-list-card {
     display: grid;
-    grid-template-columns: 96px minmax(0, 1fr) auto;
-    grid-template-rows: auto auto;
-    grid-template-areas:
-      "thumb copy delete"
-      "footer footer footer";
-    column-gap: 14px;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-md);
     background: var(--web-surface);
-    padding: 16px;
+    padding: 14px;
     box-shadow: var(--web-shadow-card);
   }
 
+  .web-meal-list-body {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr) minmax(176px, auto);
+    gap: 16px;
+    align-items: stretch;
+  }
+
   .web-meal-list-thumb {
-    grid-area: thumb;
     display: flex;
-    width: 96px;
-    height: 84px;
+    width: 112px;
+    min-height: 96px;
     align-items: center;
     justify-content: center;
     align-self: center;
@@ -3643,7 +3657,6 @@ button {
   }
 
   .web-meal-list-copy {
-    grid-area: copy;
     min-width: 0;
     align-self: center;
   }
@@ -3676,8 +3689,8 @@ button {
   }
 
   .web-meal-list-delete {
-    grid-area: delete;
-    align-self: start;
+    display: flex;
+    justify-content: flex-end;
   }
 
   .web-meal-list-delete .web-meal-delete-button {
@@ -3687,6 +3700,7 @@ button {
     align-items: center;
     justify-content: center;
     border-radius: var(--web-r-sm);
+    margin-top: 0;
     padding: 0;
     color: var(--web-error);
     transition: color 0.15s, background 0.15s;
@@ -3697,32 +3711,29 @@ button {
     color: var(--web-error);
   }
 
-  .web-meal-list-footer {
-    grid-area: footer;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
+  .web-meal-list-actions-panel {
+    display: grid;
+    min-width: 176px;
     gap: 10px;
-    border-top: 1px solid var(--web-divider);
-    margin-top: 14px;
-    padding-top: 14px;
+    align-content: space-between;
+    border-left: 1px solid var(--web-divider);
+    padding-left: 16px;
   }
 
-  .web-meal-list-footer .web-meal-inline-stepper {
-    min-width: 118px;
+  .web-meal-list-actions-panel .web-meal-inline-stepper {
+    width: 100%;
     min-height: 46px;
+    justify-content: center;
     background: var(--surface-fill);
     padding: 4px 7px;
   }
 
-  .web-meal-list-footer .web-meal-inline-stepper > span {
+  .web-meal-list-actions-panel .web-meal-inline-stepper > span {
     min-width: 48px;
   }
 
   .web-meal-list-actions {
-    display: flex;
-    align-items: center;
+    display: grid;
     gap: 8px;
   }
 
@@ -3759,14 +3770,19 @@ button {
       gap: 20px;
     }
 
-    .web-meal-list-card {
-      grid-template-columns: 84px minmax(0, 1fr) auto;
-      padding: 14px;
+    .web-meal-list-body {
+      grid-template-columns: 92px minmax(0, 1fr) minmax(160px, auto);
+      gap: 12px;
     }
 
     .web-meal-list-thumb {
-      width: 84px;
-      height: 74px;
+      width: 92px;
+      min-height: 84px;
+    }
+
+    .web-meal-list-actions-panel {
+      min-width: 160px;
+      padding-left: 12px;
     }
 
     .web-meal-action-primary,
