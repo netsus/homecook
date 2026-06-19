@@ -9728,30 +9728,40 @@ button {
     font-weight: 700;
   }
 
+  .web-pantry-selected-count {
+    color: var(--web-text-2);
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
   .web-pantry-select-all {
     display: inline-flex;
-    min-height: 36px;
+    min-height: 44px;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     border: 1px solid var(--web-line);
-    border-radius: var(--web-r-pill);
+    border-radius: var(--radius-control);
     background: var(--web-surface);
-    color: var(--web-text-2);
-    padding: 0 12px;
-    font-size: 13px;
+    color: var(--web-text-1);
+    padding: 0 14px;
+    font-size: 14px;
     font-weight: 800;
+    white-space: nowrap;
   }
 
   .web-pantry-select-all > span {
     display: inline-flex;
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     align-items: center;
     justify-content: center;
     border: 1px solid var(--web-line);
-    border-radius: var(--web-r-xs);
-    color: var(--web-brand);
-    font-size: 11px;
+    border-radius: var(--radius-badge);
+    background: var(--web-surface);
+    color: var(--web-text-inverse);
+    font-size: 12px;
     font-weight: 900;
   }
 
@@ -9768,13 +9778,22 @@ button {
   }
 
   .web-pantry-danger-button {
-    min-height: 36px;
+    min-height: 44px;
     border: 0;
-    border-radius: var(--web-r-pill);
+    border-radius: var(--radius-control);
     background: var(--web-error);
     color: #ffffff;
-    padding: 0 14px;
-    font-size: 13px;
+    padding: 0 18px;
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .web-pantry-edit-button {
+    height: 44px;
+    border-radius: var(--radius-control);
+    padding-inline: 18px;
+    font-size: 14px;
     font-weight: 800;
   }
 
@@ -9911,7 +9930,7 @@ button {
   .web-pantry-card-copy {
     display: grid;
     min-width: 0;
-    gap: 4px;
+    gap: 0;
   }
 
   .web-pantry-card strong {

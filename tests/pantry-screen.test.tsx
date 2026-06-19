@@ -210,9 +210,10 @@ describe("PantryScreen", () => {
     expect(screen.getByText(/돼지고기/)).toBeTruthy();
     expect(screen.getByRole("heading", { name: "나의 팬트리 3개" })).toBeTruthy();
     expect(screen.queryByText("3개 재료 보유 중")).toBeNull();
+    expect(screen.queryByText("3개 표시")).toBeNull();
   });
 
-  it("groups the desktop all pantry tab by category and omits category text inside ingredient cards", async () => {
+  it("groups the desktop all pantry tab by category and omits duplicate status text inside ingredient cards", async () => {
     render(<PantryScreen initialAuthenticated />);
 
     const vegetableSection = await screen.findByTestId(
@@ -231,7 +232,7 @@ describe("PantryScreen", () => {
     expect(within(proteinSection).getByText("돼지고기")).toBeTruthy();
     expect(screen.getByTestId("web-pantry-card-i1").textContent).not.toContain("채소/버섯");
     expect(screen.getByTestId("web-pantry-card-copy-i1")).toBeTruthy();
-    expect(screen.getByTestId("web-pantry-card-i1").textContent).toContain("보유 중");
+    expect(screen.getByTestId("web-pantry-card-i1").textContent).not.toContain("보유 중");
   });
 
   it("uses the theme color for the mobile pantry screen title", async () => {
@@ -301,9 +302,8 @@ describe("PantryScreen", () => {
     await user.click(screen.getAllByRole("button", { name: "편집" })[0]!);
 
     expect(screen.getByRole("button", { name: "취소" })).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "삭제 (0)" }),
-    ).toBeTruthy();
+    expect(screen.getByText("0개 선택됨")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "제거하기" })).toBeTruthy();
   });
 
   it("selects items and shows the delete confirm modal", async () => {
@@ -318,7 +318,7 @@ describe("PantryScreen", () => {
 
     expect(screen.getByText("1개 선택됨")).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "삭제 (1)" }));
+    await user.click(screen.getByRole("button", { name: "제거하기" }));
 
     expect(
       screen.getByText("재료를 삭제할까요?"),
@@ -336,7 +336,7 @@ describe("PantryScreen", () => {
     await user.click(screen.getAllByRole("button", { name: "편집" })[0]!);
 
     await user.click(screen.getByRole("checkbox", { name: "양파 선택" }));
-    await user.click(screen.getByRole("button", { name: "삭제 (1)" }));
+    await user.click(screen.getByRole("button", { name: "제거하기" }));
     const confirmButtons = screen.getAllByRole("button", { name: "삭제 (1)" });
     const confirmDeleteButton = confirmButtons[confirmButtons.length - 1]!;
     await user.click(confirmDeleteButton);
@@ -345,6 +345,25 @@ describe("PantryScreen", () => {
       expect(screen.getByText("1개 재료가 삭제됐어요")).toBeTruthy();
     });
     expect(mockDeletePantryItems).toHaveBeenCalledWith(["i1"]);
+  });
+
+  it("keeps mobile search and edit controls in one stable toolbar", async () => {
+    installMatchMedia(true);
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const toolbar = screen.getByTestId("pantry-mobile-filter-toolbar");
+    expect(within(toolbar).getByRole("searchbox", { name: "팬트리 재료 검색" })).toBeTruthy();
+    expect(within(toolbar).getByRole("button", { name: "편집" })).toBeTruthy();
+    expect(within(toolbar).queryByRole("checkbox", { name: "전체선택" })).toBeNull();
+
+    const user = userEvent.setup();
+    await user.click(within(toolbar).getByRole("button", { name: "편집" }));
+
+    expect(screen.getByRole("button", { name: "편집 취소" })).toBeTruthy();
+    expect(within(toolbar).getByRole("checkbox", { name: "전체선택" })).toBeTruthy();
+    expect(within(toolbar).queryByRole("button", { name: "편집" })).toBeNull();
   });
 
   it("filters pantry items locally without reloading the pantry list", async () => {
@@ -636,11 +655,12 @@ describe("PantryScreen", () => {
 
     await user.click(selectAll);
     expect(selectAll.getAttribute("aria-checked")).toBe("true");
-    expect(screen.getByRole("button", { name: "삭제 (3)" })).toBeTruthy();
+    expect(screen.getByText("3개 선택됨")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "제거하기" })).toBeTruthy();
 
     await user.click(selectAll);
     expect(selectAll.getAttribute("aria-checked")).toBe("false");
-    expect(screen.getByRole("button", { name: "삭제 (0)" })).toBeTruthy();
+    expect(screen.getByText("0개 선택됨")).toBeTruthy();
   });
 
   it("selects every mobile pantry item without duplicating selected count text", async () => {
@@ -651,8 +671,9 @@ describe("PantryScreen", () => {
     await screen.findByText("양파", { exact: false });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "팬트리 편집" }));
-    await user.click(screen.getByRole("checkbox", { name: "전체선택" }));
+    const toolbar = screen.getByTestId("pantry-mobile-filter-toolbar");
+    await user.click(within(toolbar).getByRole("button", { name: "편집" }));
+    await user.click(within(toolbar).getByRole("checkbox", { name: "전체선택" }));
 
     expect(screen.getByText("3개 선택됨")).toBeTruthy();
     expect(screen.getByRole("button", { name: "제거하기" })).toBeTruthy();

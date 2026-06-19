@@ -239,7 +239,8 @@ test.describe("PANTRY screen", () => {
       return;
     }
 
-    await expect(page.getByRole("button", { name: "삭제 (3)" })).toBeVisible();
+    await expect(page.getByText("3개 선택됨")).toBeVisible();
+    await expect(page.getByRole("button", { name: "제거하기" })).toBeVisible();
   });
 
   test("shows empty state when no items exist", async ({ page }) => {
@@ -277,7 +278,7 @@ test.describe("PANTRY screen", () => {
     if (isMobileViewport(page)) {
       await page.getByRole("button", { name: "제거하기" }).click();
     } else {
-      await page.getByRole("button", { name: "삭제 (1)" }).click();
+      await page.getByRole("button", { name: "제거하기" }).click();
     }
 
     // Confirm delete
