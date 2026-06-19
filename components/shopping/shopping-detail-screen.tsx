@@ -1092,9 +1092,7 @@ function ShoppingDetailSkeleton({
                 <em className="h-8 w-16 animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-subtle)]" />
               </strong>
             </div>
-            <span className="web-shopping-progress-track">
-              <span className="animate-pulse" style={{ width: "45%" }} />
-            </span>
+            <span className="web-shopping-progress-track animate-pulse" />
           </WebCard>
 
           <div className="web-shopping-detail-layout">

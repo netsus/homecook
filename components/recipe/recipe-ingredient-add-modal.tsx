@@ -351,7 +351,7 @@ export function RecipeIngredientAddModal({
       }
       headerSlot={
         <>
-          <label className="mt-3 flex min-h-[var(--control-height-md)] items-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow-1)] md:mt-4">
+          <label className="app-field-search mt-3 flex min-h-[var(--control-height-md)] items-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow-1)] md:mt-4">
             <span className="visually-hidden">재료명으로 검색</span>
             <input
               autoFocus
