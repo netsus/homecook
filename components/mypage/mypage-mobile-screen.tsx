@@ -337,18 +337,24 @@ function MobileHomeSurface({
     {
       detail: `${recipeBookCount}개`,
       icon: "book",
+      iconTreatment: "emphasis",
+      id: "recipebook",
       label: "레시피북",
       onClick: () => onSurfaceChange("recipebook"),
     },
     {
       detail: `${shoppingCount}회`,
       icon: "cart",
+      iconTreatment: "emphasis",
+      id: "shopping-history",
       label: "장보기 기록",
       onClick: () => onSurfaceChange("shopping"),
     },
     {
       detail: "관리",
       icon: "box",
+      iconTreatment: "plain",
+      id: "leftovers",
       href: buildReturnHref("/leftovers", {
         restore: "mypage-home",
         returnSurface: "mypage.leftovers",
@@ -359,6 +365,8 @@ function MobileHomeSurface({
     {
       detail: "히스토리",
       icon: "check",
+      iconTreatment: "plain",
+      id: "eaten-leftovers",
       href: buildReturnHref("/leftovers/ate", {
         restore: "mypage-home",
         returnSurface: "mypage.eaten-list",
@@ -368,6 +376,8 @@ function MobileHomeSurface({
     },
     {
       icon: "settings",
+      iconTreatment: "plain",
+      id: "settings",
       href: buildReturnHref("/settings", {
         returnTo: "/mypage",
       }),
@@ -406,20 +416,28 @@ function MobileHomeSurface({
 
       <section className="p-4">
         <div
-          className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
+          className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] shadow-[0_6px_14px_rgba(20,28,34,0.04)]"
           data-testid="mypage-menu-card"
         >
           {menuRows.map((row, index) => {
             const className = [
-              "flex min-h-[57px] w-full items-center gap-3 px-4 text-left",
-              index < menuRows.length - 1 ? "border-b border-[var(--surface-subtle)]" : "",
+              "flex min-h-[58px] w-full items-center gap-3 bg-transparent px-4 text-left transition-colors active:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--brand)]",
+              index < menuRows.length - 1 ? "border-b border-[var(--line)]" : "",
+            ].join(" ");
+            const iconClassName = [
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)]",
+              row.iconTreatment === "emphasis"
+                ? "bg-[var(--brand-soft)] text-[var(--brand)]"
+                : "bg-transparent text-[var(--text-2)]",
             ].join(" ");
 
             const content = (
               <>
                 <span
                   aria-hidden="true"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[var(--text-2)]"
+                  className={iconClassName}
+                  data-icon-treatment={row.iconTreatment}
+                  data-testid={`mypage-menu-icon-${row.id}`}
                 >
                   <MypageMenuIcon name={row.icon} />
                 </span>
@@ -437,7 +455,12 @@ function MobileHomeSurface({
 
             if (row.href) {
               return (
-                <Link className={className} href={row.href} key={row.label}>
+                <Link
+                  className={className}
+                  data-testid={`mypage-menu-row-${row.id}`}
+                  href={row.href}
+                  key={row.label}
+                >
                   {content}
                 </Link>
               );
@@ -446,6 +469,7 @@ function MobileHomeSurface({
             return (
               <button
                 className={className}
+                data-testid={`mypage-menu-row-${row.id}`}
                 key={row.label}
                 onClick={row.onClick}
                 type="button"

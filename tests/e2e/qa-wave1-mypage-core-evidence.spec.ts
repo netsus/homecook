@@ -3,9 +3,14 @@ import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
-const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
-const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
-const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
+import {
+  E2E_APP_ORIGIN,
+  E2E_AUTH_OVERRIDE_KEY,
+  setE2EAuthOverride,
+} from "./helpers/mock-routes";
+
+const BASE_URL = E2E_APP_ORIGIN;
+const BASE_URL_PARTS = new URL(BASE_URL);
 const EVIDENCE_DIR = path.resolve(
   process.cwd(),
   "ui/designs/evidence/wave1-port-mypage-core",
@@ -122,6 +127,100 @@ const plannerMeals = [
   },
 ];
 
+const progress = {
+  event_counts: {
+    cooking_completed: 5,
+    custom_book_created: 2,
+    planner_registered_first: 1,
+    planner_registered_repeat: 4,
+    recipe_saved_distinct_ever: 9,
+    shopping_completed: 3,
+  },
+  last_updated_at: "2026-06-12T00:00:00.000Z",
+  level: {
+    current_level: 6,
+    current_level_start_xp: 500,
+    next_level_start_xp: 650,
+    progress_percent: 13,
+    progress_ratio: 0.1333,
+    total_xp: 520,
+    xp_into_current_level: 20,
+    xp_to_next_level: 130,
+  },
+};
+
+const gamification = {
+  achievement_album: {
+    categories: [],
+    summary: {
+      completed_category_count: 0,
+      earned_count: 2,
+      total_count: 2,
+    },
+  },
+  badges: { earned: [], locked: [] },
+  featured_badges: [
+    {
+      badge_key: "first_cook_done",
+      category: "cooking",
+      description: "첫 요리 완료를 기록했어요.",
+      earned_at: "2026-06-12T00:00:00.000Z",
+      is_new: false,
+      label: "첫 집밥 완성",
+      locked_hint: null,
+      shape_key: "pot",
+    },
+    {
+      badge_key: "first_shopping_done",
+      category: "shopping",
+      description: "첫 장보기 완료를 기록했어요.",
+      earned_at: "2026-06-12T00:00:00.000Z",
+      is_new: false,
+      label: "첫 장보기 완료",
+      locked_hint: null,
+      shape_key: "bowl",
+    },
+  ],
+  grade: {
+    grade_key: "homecook_runner",
+    label: "집밥 러너",
+    level_max: 7,
+    level_min: 4,
+  },
+  last_updated_at: "2026-06-12T00:00:00.000Z",
+  level: {
+    current_level: 6,
+    progress_percent: 13,
+    total_xp: 520,
+    xp_to_next_level: 130,
+  },
+  notifications: { archive_preview: [], priority_unseen: [], unseen: [] },
+  quests: {
+    active: [
+      {
+        completed_at: null,
+        description: "리스트를 만들고 장보기를 완료해요.",
+        dismissed_at: null,
+        is_new: false,
+        progress_current: 2,
+        progress_percent: 67,
+        progress_target: 3,
+        quest_key: "shopping_three_lists",
+        quest_type: "standard",
+        status: "active",
+        title: "장보기 3회",
+      },
+    ],
+    completed_recent: [],
+  },
+  tutorial: {
+    active_steps: [],
+    category_key: "tutorial",
+    completed_count: 0,
+    total_count: 0,
+  },
+};
+
 const shoppingHistory = [
   {
     id: "list-current",
@@ -149,6 +248,31 @@ async function preparePage(
 ) {
   const context = await browser.newContext({
     deviceScaleFactor: 1,
+    storageState: {
+      cookies: [
+        {
+          domain: BASE_URL_PARTS.hostname,
+          expires: -1,
+          httpOnly: false,
+          name: E2E_AUTH_OVERRIDE_KEY,
+          path: "/",
+          sameSite: "Lax",
+          secure: BASE_URL_PARTS.protocol === "https:",
+          value: "authenticated",
+        },
+      ],
+      origins: [
+        {
+          localStorage: [
+            {
+              name: E2E_AUTH_OVERRIDE_KEY,
+              value: "authenticated",
+            },
+          ],
+          origin: BASE_URL,
+        },
+      ],
+    },
     viewport,
   });
   const page = await context.newPage();
@@ -179,24 +303,19 @@ async function stabilize(page: Page) {
   });
 }
 
-async function setAuthOverride(page: Page) {
-  await page.context().addCookies([
-    {
-      name: E2E_AUTH_OVERRIDE_COOKIE,
-      sameSite: "Lax",
-      url: BASE_URL,
-      value: "authenticated",
-    },
-  ]);
-  await page.addInitScript(
-    ({ key, state }: { key: string; state: string }) => {
-      window.localStorage.setItem(key, state);
-    },
-    { key: E2E_AUTH_OVERRIDE_KEY, state: "authenticated" },
-  );
-}
-
 async function installRoutes(page: Page) {
+  await page.route("**/api/v1/users/me/progress", async (route) => {
+    await route.fulfill({
+      json: { success: true, data: progress, error: null },
+    });
+  });
+
+  await page.route("**/api/v1/users/me/gamification", async (route) => {
+    await route.fulfill({
+      json: { success: true, data: gamification, error: null },
+    });
+  });
+
   await page.route("**/api/v1/users/me", async (route) => {
     await route.fulfill({
       json: { success: true, data: profile, error: null },
@@ -262,7 +381,7 @@ async function capture(
   prepareSurface?: (page: Page) => Promise<void>,
 ) {
   const { context, page } = await preparePage(browser, viewport);
-  await setAuthOverride(page);
+  await setE2EAuthOverride(page);
   await installRoutes(page);
   await page.goto(`${BASE_URL}/mypage`);
   await expect(page.getByText("채실장")).toBeVisible();
@@ -287,7 +406,9 @@ test("capture Wave1 mypage core authority evidence", async ({ browser }) => {
     "mypage-recipebook-tab.png",
     async (page) => {
       await page.getByRole("button", { name: /레시피북/ }).click();
-      await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { exact: true, name: "레시피북" }),
+      ).toBeVisible();
       await expect(page.getByText("평일 저녁 빠른요리")).toBeVisible();
     },
   );
@@ -298,7 +419,9 @@ test("capture Wave1 mypage core authority evidence", async ({ browser }) => {
     "mypage-recipebook-tab-narrow.png",
     async (page) => {
       await page.getByRole("button", { name: /레시피북/ }).click();
-      await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { exact: true, name: "레시피북" }),
+      ).toBeVisible();
       await expect(page.getByText("평일 저녁 빠른요리")).toBeVisible();
     },
   );
