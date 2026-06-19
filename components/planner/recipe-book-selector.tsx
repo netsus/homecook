@@ -10,10 +10,13 @@ import {
 } from "@/components/shared/app-back-button";
 import {
   WebEmptyState,
-  WebListRow,
   WebSkeleton,
 } from "@/components/web";
 import { fetchRecipeBooks } from "@/lib/api/recipe";
+import {
+  getRecipeBookCoverViewModel,
+  type RecipeBookCoverViewModel,
+} from "@/lib/recipebook-cover";
 import type { RecipeBookSummary } from "@/types/recipe";
 
 type RecipeBookPresentation = "dialog" | "screen" | "web" | "sheet";
@@ -36,6 +39,51 @@ interface BookCardProps {
   presentation?: RecipeBookPresentation;
 }
 
+function getSafeBackgroundImage(imageSrc: string) {
+  return `url("${imageSrc.replace(/"/g, "%22")}")`;
+}
+
+function PlannerBookCover({
+  book,
+  coverViewModel,
+  variant,
+}: {
+  book: RecipeBookSummary;
+  coverViewModel: RecipeBookCoverViewModel;
+  variant: "mini" | "web";
+}) {
+  const backgroundImage = getSafeBackgroundImage(coverViewModel.imageSrc);
+
+  if (variant === "web") {
+    return (
+      <span
+        className={`web-recipebook-cover-thumb web-recipebook-cover-thumb-${coverViewModel.tone}`}
+        aria-hidden="true"
+      >
+        <span
+          className="web-recipebook-cover-thumb-image"
+          data-testid={`recipebook-selector-web-cover-image-${book.id}`}
+          style={{ backgroundImage }}
+        />
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={`planner-recipebook-mini-cover mobile-recipebook-book-card-${coverViewModel.tone}`}
+      data-testid={`recipebook-selector-mini-cover-${book.id}`}
+      aria-hidden="true"
+    >
+      <span
+        className="planner-recipebook-mini-cover-image"
+        data-testid={`recipebook-selector-mini-cover-image-${book.id}`}
+        style={{ backgroundImage }}
+      />
+    </span>
+  );
+}
+
 function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
   const hasRecipes = book.recipe_count > 0;
   const bookTypeLabel = {
@@ -45,12 +93,7 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
     custom: "커스텀",
   }[book.book_type];
   const screenSubtitle = bookTypeLabel;
-  const screenIcon =
-    {
-      "저장한 레시피": "🔖",
-      "평일 저녁 빠른요리": "🍳",
-      "주말 한 상 차림": "🍽️",
-    }[book.name] ?? (book.book_type === "liked" ? "💚" : book.book_type === "custom" ? "🍳" : "🔖");
+  const coverViewModel = getRecipeBookCoverViewModel(book);
 
   if (presentation === "screen" || presentation === "sheet") {
     return (
@@ -61,12 +104,15 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
             ? "border-[var(--line-strong)] bg-[var(--surface)] active:border-[var(--brand)] active:bg-[var(--brand-soft)]"
             : "border-[var(--surface-subtle)] bg-[var(--surface-fill)]",
         ].join(" ")}
+        data-testid={`recipebook-selector-row-${book.id}`}
         onClick={() => onSelect(book)}
         type="button"
       >
-        <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface)] text-[20px] shadow-[inset_0_0_0_1px_var(--line-strong)]">
-          {screenIcon}
-        </span>
+        <PlannerBookCover
+          book={book}
+          coverViewModel={coverViewModel}
+          variant="mini"
+        />
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-1.5">
             <span className="truncate text-[15px] font-bold text-[var(--foreground)]">{book.name}</span>
@@ -87,22 +133,23 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
   if (presentation === "web") {
     return (
       <button
-        className="web-picker-book-button"
+        className={`web-picker-book-button web-recipebook-book-card web-recipebook-book-card-${coverViewModel.tone}`}
+        data-testid={`recipebook-selector-web-book-${book.id}`}
         onClick={() => onSelect(book)}
         type="button"
       >
-        <WebListRow interactive className="web-picker-book-row">
-          <span className="web-picker-book-thumb" aria-hidden="true">
-            {screenIcon}
-          </span>
-          <span className="web-picker-book-copy">
-            <span>{book.name}</span>
-            <small>{screenSubtitle}</small>
-          </span>
-          <span className="web-picker-count-badge">
-            {hasRecipes ? `${book.recipe_count}개` : "비어 있음"}
-          </span>
-        </WebListRow>
+        <PlannerBookCover
+          book={book}
+          coverViewModel={coverViewModel}
+          variant="web"
+        />
+        <span className="web-recipebook-book-copy">
+          <strong>{book.name}</strong>
+          <span>{screenSubtitle}</span>
+        </span>
+        <span className="web-recipebook-book-count">
+          {hasRecipes ? `${book.recipe_count}개` : "비어 있음"}
+        </span>
       </button>
     );
   }
@@ -170,10 +217,10 @@ export function RecipeBookSelector({
   const content = (
     <>
       {loadState === "loading" && (
-        <div className={presentation === "web" ? "space-y-2" : "py-8 text-center text-sm text-[var(--muted)]"} aria-busy="true">
+        <div className={presentation === "web" ? "web-recipebooks-grid web-picker-recipebook-grid" : "py-8 text-center text-sm text-[var(--muted)]"} aria-busy="true">
           {presentation === "web" ? (
-            Array.from({ length: 4 }).map((_, index) => (
-              <WebSkeleton className="h-[78px]" key={index} />
+            Array.from({ length: 3 }).map((_, index) => (
+              <WebSkeleton className="h-[266px]" key={index} />
             ))
           ) : (
             "레시피북 불러오는 중..."
@@ -210,7 +257,16 @@ export function RecipeBookSelector({
       )}
 
       {loadState === "ready" && books.length > 0 && (
-        <div className={presentation === "screen" || presentation === "sheet" ? "" : presentation === "web" ? "space-y-2" : "space-y-3"}>
+        <div
+          className={
+            presentation === "screen" || presentation === "sheet"
+              ? ""
+              : presentation === "web"
+                ? "web-recipebooks-grid web-picker-recipebook-grid"
+                : "space-y-3"
+          }
+          data-testid={presentation === "web" ? "recipebook-selector-web-grid" : undefined}
+        >
           {books.map((book) => (
             <BookCard
               key={book.id}

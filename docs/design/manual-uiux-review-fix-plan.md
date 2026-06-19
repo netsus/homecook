@@ -514,7 +514,7 @@
 
 ### 10. 플래너 식사추가의 레시피북 선택 UI가 마이페이지 레시피북과 다르게 보이는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-item-10-recipebook-selector`
 - Severity: Medium
 - Area: UX / UI / Frontend
 - Source: user manual review screenshots, `components/planner/recipe-book-selector.tsx`, `components/mypage/mypage-screen.tsx`, `components/mypage/mypage-mobile-screen.tsx`, `app/globals.css`
@@ -566,6 +566,10 @@
   - 앱 식사추가 레시피북 선택에서 mini cover 색상/이미지 확인
   - `cover_color_key`, `cover_image_url`, null fallback 케이스 테스트
   - 레시피북 선택 후 상세 picker로 이동하는 기존 flow 테스트 유지
+- Progress:
+  - `RecipeBookSelector`의 웹 표시를 마이페이지의 책 카드 클래스와 공용 `recipebook-cover` 유틸 기반으로 교체했다.
+  - 앱/시트 표시의 왼쪽 이모지 썸네일을 커버 색상과 커버 이미지를 반영하는 compact book cover로 교체했다.
+  - 웹 카드, 앱/시트 mini cover, empty 상태를 고정하는 `tests/recipe-book-selector.test.tsx` 회귀 테스트를 추가했다.
 
 ### 11. 앱 식사추가 target chip의 텍스트가 세로 가운데 정렬되지 않는 문제
 
