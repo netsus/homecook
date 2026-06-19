@@ -144,11 +144,12 @@ async function expectPlannerWeekDays(page: Page) {
     return;
   }
 
-  await expect(page.locator(".web-planner-head").filter({ visible: true })).toHaveCount(7);
+  await expect(page.locator(".web-planner-date-row-head").filter({ visible: true })).toHaveCount(7);
+  await expect(page.locator(".web-planner-column-head").filter({ visible: true })).toHaveCount(4);
 }
 
 test.describe("Slice 05 planner week core", () => {
-  test("authenticated user sees dynamic column day cards with color-only status indicators @smoke-core", async ({ page }) => {
+  test("authenticated user sees dynamic column day cards with edge status indicators @smoke-core", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockPlannerRoutes(page);
 
@@ -177,9 +178,9 @@ test.describe("Slice 05 planner week core", () => {
     await expect(visibleText(page, "김치찌개")).toBeVisible();
     await expect(visibleText(page, "샐러드")).toBeVisible();
     await expect(visibleText(page, "과일볼")).toBeVisible();
-    await expect(page.getByLabel("식사 등록 완료").filter({ visible: true }).first()).toBeVisible();
-    await expect(page.getByLabel("장보기 완료").filter({ visible: true }).first()).toBeVisible();
-    await expect(page.getByLabel("요리 완료").filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByLabel("식사 등록 완료").first()).toBeAttached();
+    await expect(page.getByLabel("장보기 완료").first()).toBeAttached();
+    await expect(page.getByLabel("요리 완료").first()).toBeAttached();
     // Wave1 mobile uses a floating shopping CTA; desktop uses the prototype top action label.
     const shoppingLink = isMobile
       ? page.getByRole("link", { name: "장보기", exact: true })
@@ -200,6 +201,10 @@ test.describe("Slice 05 planner week core", () => {
       await expect(actions.getByRole("link", { name: "장보기", exact: true })).toBeVisible();
       await expect(page.getByRole("link", { name: "요리 준비" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: "남은 요리" })).toHaveCount(0);
+      await expect(page.locator(".web-planner-date-row-head").filter({ visible: true })).toHaveCount(7);
+      await expect(page.locator(".web-planner-column-head").filter({ visible: true })).toHaveCount(4);
+      await expect(page.locator(".web-planner-time")).toHaveCount(0);
+      await expect(page.locator(".web-planner-head")).toHaveCount(0);
     }
     await expect(page.getByRole("button", { name: "컬럼 추가" })).toHaveCount(0);
 
@@ -313,6 +318,9 @@ test.describe("Slice 05 planner week core", () => {
     await expect(plannerGrid.getByText("저녁")).toBeVisible();
     // Should NOT show a 4th column
     await expect(plannerGrid.getByText("간식")).toHaveCount(0);
+    if (!isMobileViewport(page)) {
+      await expect(page.locator(".web-planner-column-head").filter({ visible: true })).toHaveCount(3);
+    }
 
     await expect(visibleText(page, "토스트")).toBeVisible();
 
@@ -355,6 +363,9 @@ test.describe("Slice 05 planner week core", () => {
     await expect(plannerGrid.getByText("간식")).toBeVisible();
     await expect(plannerGrid.getByText("저녁")).toBeVisible();
     await expect(plannerGrid.getByText("야식")).toBeVisible();
+    if (!isMobileViewport(page)) {
+      await expect(page.locator(".web-planner-column-head").filter({ visible: true })).toHaveCount(5);
+    }
 
     await expect(visibleText(page, "라면")).toBeVisible();
 

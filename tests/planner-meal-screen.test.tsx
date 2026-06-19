@@ -518,12 +518,13 @@ describe("MealScreen", () => {
   it("renders the desktop meal screen as a meal list with per-food actions", async () => {
     setDesktopViewport(true);
     readE2EAuthOverride.mockReturnValue(true);
+    const longRecipeTitle = "봄나물 된장 크림 리조또와 바삭한 두부 스테이크";
     fetchMeals.mockResolvedValue({
       items: [
         buildMeal({
           id: "meal-1",
           recipe_id: "recipe-1",
-          recipe_title: "김치찌개",
+          recipe_title: longRecipeTitle,
           status: "shopping_done",
           planned_servings: 2,
         }),
@@ -541,6 +542,7 @@ describe("MealScreen", () => {
 
     const list = await screen.findByTestId("web-meal-list");
     const summary = screen.getByTestId("web-meal-summary");
+    const firstCard = screen.getByLabelText(`${longRecipeTitle} 끼니 음식`);
 
     expect(screen.getByRole("heading", { name: "4월 18일 아침 식사" })).toBeTruthy();
     expect(within(summary).getByRole("heading", { name: "4월 18일 아침" })).toBeTruthy();
@@ -548,13 +550,18 @@ describe("MealScreen", () => {
     expect(within(summary).getByText("2개")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "4월 18일 · 아침" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "끼니 음식 2개" })).toBeNull();
-    expect(within(list).getByText("김치찌개")).toBeTruthy();
+    expect(list.className).toContain("web-meal-row-list");
+    expect(firstCard.className).toContain("web-meal-row-card");
+    expect(firstCard.querySelector(".web-meal-list-body")).toBeTruthy();
+    expect(firstCard.querySelector(".web-meal-list-actions-panel")).toBeTruthy();
+    expect(firstCard.querySelector(".web-meal-list-footer")).toBeNull();
+    expect(within(list).getByText(longRecipeTitle)).toBeTruthy();
     expect(within(list).getByText("파스타")).toBeTruthy();
-    expect(screen.queryByLabelText("김치찌개 레시피 보기")).toBeNull();
+    expect(screen.queryByLabelText(`${longRecipeTitle} 레시피 보기`)).toBeNull();
     expect(within(list).queryByText("집밥")).toBeNull();
     expect(within(list).queryByText("간단")).toBeNull();
     expect(within(list).queryByText("플래너")).toBeNull();
-    expect(within(list).getByRole("button", { name: "김치찌개 요리하기" })).toBeTruthy();
+    expect(within(list).getByRole("button", { name: `${longRecipeTitle} 요리하기` })).toBeTruthy();
     expect(within(list).getAllByRole("button", { name: "장보기" })).toHaveLength(1);
     expect(within(list).getAllByRole("button", { name: "인분 증가" })).toHaveLength(2);
     expect(within(list).getAllByRole("button", { name: "인분 감소" })[0]?.className).toContain(
@@ -563,10 +570,35 @@ describe("MealScreen", () => {
     expect(within(list).getAllByRole("button", { name: "인분 증가" })[0]?.className).toContain(
       "web-meal-stepper-increase",
     );
-    expect(list.querySelectorAll(".web-meal-list-footer")).toHaveLength(2);
+    expect(list.querySelectorAll(".web-meal-list-footer")).toHaveLength(0);
+    expect(list.querySelectorAll(".web-meal-list-actions-panel")).toHaveLength(2);
     expect(list.querySelectorAll(".web-meal-list-delete .web-meal-delete-button")).toHaveLength(2);
     const addCta = screen.getByTestId("meal-screen-add-cta");
     expect(addCta.className).toContain("web-meal-add-link");
+  });
+
+  it("lets a single desktop meal card use the main column width", async () => {
+    setDesktopViewport(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({
+      items: [
+        buildMeal({
+          id: "meal-1",
+          recipe_title: "긴 이름의 단일 식사 카드가 화면 가운데에서 작게 떠 보이지 않는 메뉴",
+          status: "registered",
+        }),
+      ],
+    });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    const list = await screen.findByTestId("web-meal-list");
+    const card = screen.getByLabelText("긴 이름의 단일 식사 카드가 화면 가운데에서 작게 떠 보이지 않는 메뉴 끼니 음식");
+
+    expect(list.className).toContain("web-meal-row-list");
+    expect(card.className).toContain("web-meal-row-card");
+    expect(list.querySelectorAll(".web-meal-row-card")).toHaveLength(1);
+    expect(card.querySelector(".web-meal-list-actions-panel")).toBeTruthy();
   });
 
   // ── Stepper — registered (no modal) ────────────────────────────────────

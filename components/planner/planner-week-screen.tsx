@@ -158,16 +158,16 @@ function getPlannerMealStatusAriaLabel(status: PlannerMealData["status"]) {
   return "식사 등록 완료";
 }
 
-function getMobilePlannerMealStatusIndicatorClass(status: PlannerMealData["status"]) {
+function getMobilePlannerMealStatusAccentClass(status: PlannerMealData["status"]) {
   if (status === "shopping_done") {
-    return "border-[var(--planner-status-shopping)] bg-[var(--planner-status-shopping)]";
+    return "border-l-[var(--planner-status-shopping)]";
   }
 
   if (status === "cook_done") {
-    return "border-[var(--planner-status-cooked)] bg-[var(--planner-status-cooked)]";
+    return "border-l-[var(--planner-status-cooked)]";
   }
 
-  return "border-[var(--planner-status-registered)] bg-[var(--planner-status-registered)]";
+  return "border-l-[var(--planner-status-registered)]";
 }
 
 function WebProfileButton() {
@@ -279,6 +279,14 @@ function PlannerWeekWebView({
     .sort((a, b) => `${b.plan_date}:${b.id}`.localeCompare(`${a.plan_date}:${a.id}`))
     .slice(0, 4);
   const canShowGrid = screenState === "ready" || screenState === "empty";
+  const webColumnMinWidth = columns.length >= 5 ? 172 : 160;
+  const webPlannerGridStyle = {
+    gridTemplateColumns: `minmax(92px, 112px) repeat(${Math.max(columns.length, 1)}, minmax(${webColumnMinWidth}px, 1fr))`,
+    minWidth:
+      columns.length >= 5
+        ? `${112 + columns.length * webColumnMinWidth}px`
+        : undefined,
+  } as React.CSSProperties;
 
   return (
     <WebShell className="web-planner" wide>
@@ -445,109 +453,114 @@ function PlannerWeekWebView({
                 data-testid="planner-week-body"
                 style={plannerBodyMotionStyle}
               >
-                <div className="web-planner-grid">
+                <div className="web-planner-grid" style={webPlannerGridStyle}>
                   <div className="web-planner-corner" aria-hidden="true" />
+                  {columns.map((column) => (
+                    <div className="web-planner-column-head" key={column.id}>
+                      {column.name}
+                    </div>
+                  ))}
+
                   {dateKeys.map((dateKey) => {
                     const isToday = dateKey === todayKey;
 
                     return (
                       <div
-                        className={[
-                          "web-planner-head",
-                          isToday ? "web-planner-head-today" : "",
-                        ].join(" ")}
+                        className="web-planner-date-row"
+                        data-testid={`web-planner-date-row-${dateKey}`}
                         key={dateKey}
                       >
-                        <span>{formatWeekdayLabel(dateKey)}</span>
-                        <strong>{formatCompactDateLabel(dateKey)}</strong>
+                        <div
+                          className={[
+                            "web-planner-date-row-head",
+                            isToday ? "web-planner-date-row-head-today" : "",
+                          ].join(" ")}
+                        >
+                          <span>{formatWeekdayLabel(dateKey)}</span>
+                          <strong>{formatCompactDateLabel(dateKey)}</strong>
+                        </div>
+
+                        {columns.map((column) => {
+                          const slotKey = `${dateKey}:${column.id}`;
+                          const slotMeals = mealsByDateAndColumn.get(slotKey) ?? [];
+                          const visibleMeals = slotMeals.slice(0, 2);
+                          const overflowCount = Math.max(0, slotMeals.length - visibleMeals.length);
+                          const addHref = getMealAddHrefForSlot(dateKey, column);
+                          const mealHref = `/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`;
+                          const isToday = dateKey === todayKey;
+
+                          return (
+                            <div
+                              className={[
+                                "web-planner-cell",
+                                isToday ? "web-planner-cell-today" : "",
+                              ].join(" ")}
+                              key={slotKey}
+                            >
+                              {visibleMeals.map((meal) => (
+                                <Link
+                                  className={[
+                                    "web-planner-meal",
+                                    `web-planner-meal-${getPlannerMealStatusClass(meal.status)}`,
+                                  ].join(" ")}
+                                  href={mealHref}
+                                  key={meal.id}
+                                >
+                                  <span
+                                    aria-hidden="true"
+                                    className="web-planner-meal-thumb"
+                                    style={
+                                      meal.recipe_thumbnail_url
+                                        ? {
+                                            backgroundImage: `url(${meal.recipe_thumbnail_url})`,
+                                          }
+                                        : undefined
+                                    }
+                                  />
+                                  <span className="web-planner-meal-copy">
+                                    <span className="web-planner-meal-title">
+                                      {meal.recipe_title}
+                                    </span>
+                                    <span className="web-planner-meal-meta">
+                                      <span>{meal.planned_servings}인분</span>
+                                      <span
+                                        aria-label={getPlannerMealStatusAriaLabel(meal.status)}
+                                        className="sr-only"
+                                      >
+                                        {getPlannerMealStatusAriaLabel(meal.status)}
+                                      </span>
+                                    </span>
+                                  </span>
+                                </Link>
+                              ))}
+                              {overflowCount > 0 ? (
+                                <Link className="web-planner-more" href={mealHref}>
+                                  +{overflowCount}개 더 보기
+                                </Link>
+                              ) : null}
+                              <Link
+                                aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
+                                className={[
+                                  "web-planner-add",
+                                  slotMeals.length > 0 ? "web-planner-add-compact" : "",
+                                ].join(" ")}
+                                href={addHref}
+                              >
+                                <PlusIcon />
+                                <span>{slotMeals.length > 0 ? "추가" : "식사 추가"}</span>
+                              </Link>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })}
-
-                  {columns.map((column) => (
-                    <React.Fragment key={column.id}>
-                      <div className="web-planner-time">{column.name}</div>
-                      {dateKeys.map((dateKey) => {
-                        const slotKey = `${dateKey}:${column.id}`;
-                        const slotMeals = mealsByDateAndColumn.get(slotKey) ?? [];
-                        const visibleMeals = slotMeals.slice(0, 2);
-                        const overflowCount = Math.max(0, slotMeals.length - visibleMeals.length);
-                        const addHref = getMealAddHrefForSlot(dateKey, column);
-                        const mealHref = `/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`;
-                        const isToday = dateKey === todayKey;
-
-                        return (
-                          <div
-                            className={[
-                              "web-planner-cell",
-                              isToday ? "web-planner-cell-today" : "",
-                            ].join(" ")}
-                            key={slotKey}
-                          >
-                            {visibleMeals.map((meal) => (
-                              <Link
-                                className={[
-                                  "web-planner-meal",
-                                  `web-planner-meal-${getPlannerMealStatusClass(meal.status)}`,
-                                ].join(" ")}
-                                href={mealHref}
-                                key={meal.id}
-                              >
-                                <span
-                                  aria-hidden="true"
-                                  className="web-planner-meal-thumb"
-                                  style={
-                                    meal.recipe_thumbnail_url
-                                      ? {
-                                          backgroundImage: `url(${meal.recipe_thumbnail_url})`,
-                                        }
-                                      : undefined
-                                  }
-                                />
-                                <span className="web-planner-meal-copy">
-                                  <span className="web-planner-meal-title">
-                                    {meal.recipe_title}
-                                  </span>
-                                  <span className="web-planner-meal-meta">
-                                    <span>{meal.planned_servings}인분</span>
-                                    <span
-                                      aria-label={getPlannerMealStatusAriaLabel(meal.status)}
-                                      className={[
-                                        "web-planner-meal-status",
-                                        `web-planner-meal-status-${getPlannerMealStatusClass(meal.status)}`,
-                                      ].join(" ")}
-                                    />
-                                  </span>
-                                </span>
-                              </Link>
-                            ))}
-                            {overflowCount > 0 ? (
-                              <Link className="web-planner-more" href={mealHref}>
-                                +{overflowCount}개 더 보기
-                              </Link>
-                            ) : null}
-                            <Link
-                              aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
-                              className={[
-                                "web-planner-add",
-                                slotMeals.length > 0 ? "web-planner-add-compact" : "",
-                              ].join(" ")}
-                              href={addHref}
-                            >
-                              <PlusIcon />
-                              <span>{slotMeals.length > 0 ? "추가" : "식사 추가"}</span>
-                            </Link>
-                          </div>
-                        );
-                      })}
-                    </React.Fragment>
-                  ))}
                 </div>
 
                 <div className="web-planner-legend" aria-label="식사 상태 범례">
-                  <span><i className="web-planner-dot web-planner-dot-registered" />등록</span>
-                  <span><i className="web-planner-dot web-planner-dot-shopped" />장보기 완료</span>
-                  <span><i className="web-planner-dot web-planner-dot-cooked" />요리 완료</span>
+                  <span><i className="web-planner-border-swatch web-planner-border-swatch-registered" />등록</span>
+                  <span><i className="web-planner-border-swatch web-planner-border-swatch-shopped" />장보기 완료</span>
+                  <span><i className="web-planner-border-swatch web-planner-border-swatch-cooked" />요리 완료</span>
                 </div>
               </section>
             ) : null}
@@ -1191,7 +1204,7 @@ export function PlannerWeekScreen({
               <button
                 aria-label="이번 주로 이동"
                 className={[
-                  "inline-flex h-[30px] shrink-0 items-center justify-center rounded-full border px-3 text-[12px] font-bold",
+                  "inline-flex h-[30px] shrink-0 items-center justify-center rounded-[var(--radius-control)] border px-3 text-[12px] font-bold",
                   isCurrentRange
                     ? "border-[var(--line-strong)] bg-[var(--surface-fill)] text-[var(--text-3)]"
                     : "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand)]",
@@ -1374,17 +1387,15 @@ export function PlannerWeekScreen({
                             <>
                               <Link
                                 className={[
-                                  "grid min-h-[46px] min-w-0 flex-1 gap-[5px]",
-                                  visibleMeals.length > 1
-                                    ? "grid-cols-2"
-                                    : "grid-cols-1",
+                                  "grid min-h-[46px] min-w-0 flex-1 grid-cols-1 gap-[5px]",
                                 ].join(" ")}
                                 href={`/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`}
                               >
                                 {visibleMeals.map((meal, mealIndex) => (
                                   <span
                                     className={[
-                                      "relative flex h-[46px] min-w-0 items-center overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] text-[var(--foreground)]",
+                                      "relative flex min-h-[50px] min-w-0 items-center overflow-hidden rounded-[var(--radius-control)] border border-l-4 border-[var(--line-strong)] bg-[var(--surface-fill)] text-[var(--foreground)]",
+                                      getMobilePlannerMealStatusAccentClass(meal.status),
                                     ].join(" ")}
                                     data-testid={`planner-mobile-meal-${meal.id}`}
                                     key={`${meal.id}-${mealIndex}`}
@@ -1392,20 +1403,20 @@ export function PlannerWeekScreen({
                                     {meal.recipe_thumbnail_url ? (
                                       <Image
                                         alt=""
-                                        className="h-[46px] w-[34px] shrink-0 object-cover"
-                                        height={46}
+                                        className="h-[50px] w-[38px] shrink-0 object-cover"
+                                        height={50}
                                         src={meal.recipe_thumbnail_url}
                                         unoptimized
-                                        width={34}
+                                        width={38}
                                       />
                                     ) : (
-                                      <span className="flex h-[46px] w-[34px] shrink-0 items-center justify-center bg-[var(--brand-soft)] text-[14px] font-bold text-[var(--brand)]">
+                                      <span className="flex h-[50px] w-[38px] shrink-0 items-center justify-center bg-[var(--brand-soft)] text-[14px] font-bold text-[var(--brand)]">
                                         {column.name.charAt(0)}
                                       </span>
                                     )}
-                                    <span className="min-w-0 flex-1 px-1.5">
+                                    <span className="min-w-0 flex-1 px-2">
                                       <span
-                                        className={`block truncate text-[12px] font-extrabold ${meal.is_leftover ? "text-[var(--brand-deep)]" : "text-[var(--foreground)]"}`}
+                                        className={`line-clamp-2 block text-[13px] font-extrabold leading-[1.25] ${meal.is_leftover ? "text-[var(--brand-deep)]" : "text-[var(--foreground)]"}`}
                                       >
                                         {meal.recipe_title}
                                       </span>
@@ -1420,11 +1431,10 @@ export function PlannerWeekScreen({
                                         </span>
                                         <span
                                           aria-label={getPlannerMealStatusAriaLabel(meal.status)}
-                                          className={[
-                                            "inline-flex h-2 w-[18px] shrink-0 rounded-full border",
-                                            getMobilePlannerMealStatusIndicatorClass(meal.status),
-                                          ].join(" ")}
-                                        />
+                                          className="sr-only"
+                                        >
+                                          {getPlannerMealStatusAriaLabel(meal.status)}
+                                        </span>
                                       </span>
                                     </span>
                                     {mealIndex === 1 && slotMeals.length > 2 ? (
