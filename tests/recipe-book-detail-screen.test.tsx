@@ -348,6 +348,45 @@ describe("RecipeBookDetailScreen", () => {
     expect(screen.getByText("불러오는 중")).toBeTruthy();
   });
 
+  it("keeps the first recipe thumbnail as the direct detail cover when no book cover is passed", async () => {
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-1"
+        bookName="저장한 레시피"
+        bookType="saved"
+        initialAuthenticated
+      />,
+    );
+
+    await screen.findByTestId("recipe-item-recipe-1");
+
+    expect(
+      screen.getByTestId("recipebook-detail-cover-image").getAttribute("style"),
+    ).toContain("img1.jpg");
+  });
+
+  it("uses the passed book cover over the first recipe thumbnail", async () => {
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-1"
+        bookName="저장한 레시피"
+        bookType="saved"
+        bookCoverColorKey="sand"
+        bookCoverImageSrc="https://example.com/card-cover.jpg"
+        initialAuthenticated
+      />,
+    );
+
+    await screen.findByTestId("recipe-item-recipe-1");
+
+    expect(screen.getByTestId("recipebook-detail-cover").className).toContain(
+      "web-recipebook-detail-cover-sand",
+    );
+    expect(
+      screen.getByTestId("recipebook-detail-cover-image").getAttribute("style"),
+    ).toContain("card-cover.jpg");
+  });
+
   it("uses the mobile loading shell and preserves mypage tab return context", () => {
     installMatchMedia(true);
     navigationMocks.searchParams.mockReturnValue(

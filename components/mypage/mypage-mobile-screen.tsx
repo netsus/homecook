@@ -26,6 +26,10 @@ import {
 } from "@/components/mypage/shopping-history-calendar";
 import type { UserProfileData } from "@/lib/api/mypage";
 import { buildReturnHref } from "@/lib/navigation/return-context";
+import {
+  getRecipeBookCoverTone,
+  getRecipeBookCoverViewModel,
+} from "@/lib/recipebook-cover";
 import type { MypageRecordStats } from "@/lib/planner-stats";
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
@@ -875,6 +879,7 @@ function MobileRecipebookSurface({
               book={book}
               coverImageSrc={bookCoverImages[book.id] ?? null}
               key={book.id}
+              lastUpdatedLabel={formatBookLastUpdated(bookCoverUpdatedAt[book.id])}
             />
           ))}
         </div>
@@ -895,15 +900,17 @@ function MobileRecipebookSurface({
 function MobileSystemBookCard({
   book,
   coverImageSrc,
+  lastUpdatedLabel,
 }: {
   book: RecipeBookSummary;
   coverImageSrc: string | null;
+  lastUpdatedLabel: string;
 }) {
   return (
     <Link
       className={`mobile-recipebook-book-card mobile-recipebook-book-card-web-ratio relative grid overflow-hidden rounded-[18px_10px_10px_18px] p-0 text-left ${getBookToneClasses(book)}`}
       data-testid={`system-book-${book.book_type}`}
-      href={buildBookDetailHref(book)}
+      href={buildBookDetailHref(book, coverImageSrc)}
       role="listitem"
     >
       <BookCoverThumb
@@ -914,6 +921,9 @@ function MobileSystemBookCard({
         <strong className="line-clamp-2 text-[14px] font-black leading-[1.2] text-[var(--foreground)]">
           {book.name}
         </strong>
+        <span className="text-[11px] font-extrabold text-[var(--text-3)]">
+          {lastUpdatedLabel}
+        </span>
       </div>
       <RecipeCountBadge count={book.recipe_count} />
     </Link>
@@ -1007,10 +1017,10 @@ function MobileCustomBookCard({
           ) : (
             <Link
               className="min-w-0"
-              href={buildBookDetailHref(book)}
+              href={buildBookDetailHref(book, coverImageSrc)}
             >
               <strong className="line-clamp-2 text-[14px] font-black leading-[1.2] text-[var(--foreground)]">
-              {book.name}
+                {book.name}
               </strong>
               <span className="mt-1 block text-[11px] font-extrabold text-[var(--text-3)]">
                 {lastUpdatedLabel}
@@ -1083,7 +1093,9 @@ function BookCoverThumb({
   book: RecipeBookSummary;
   imageSrc: string | null;
 }) {
-  const coverImageSrc = book.cover_image_url ?? imageSrc ?? getMobileFallbackBookCover(book);
+  const coverImageSrc = getRecipeBookCoverViewModel(book, {
+    loadedImageSrc: imageSrc,
+  }).imageSrc;
 
   return (
     <span
@@ -1559,61 +1571,17 @@ function MobileShoppingStatusLegend() {
 }
 
 function getBookToneClasses(book: RecipeBookSummary) {
-  if (isMobileBookTone(book.cover_color_key)) {
-    return `mobile-recipebook-book-card-${book.cover_color_key}`;
-  }
-
-  if (book.book_type === "custom") {
-    return `mobile-recipebook-book-card-${getMobileCustomBookTone(book)}`;
-  }
-  if (book.book_type === "saved") {
-    return "mobile-recipebook-book-card-sky";
-  }
-  if (book.book_type === "liked") {
-    return "mobile-recipebook-book-card-coral";
-  }
-  if (book.book_type === "my_added") {
-    return "mobile-recipebook-book-card-lavender";
-  }
-
-  return "mobile-recipebook-book-card-sand";
+  return `mobile-recipebook-book-card-${getRecipeBookCoverTone(book)}`;
 }
 
-const MOBILE_RECIPE_BOOK_TONES = [
-  "sage",
-  "sky",
-  "coral",
-  "lavender",
-  "sand",
-] as const;
-
-function isMobileBookTone(value: unknown): value is (typeof MOBILE_RECIPE_BOOK_TONES)[number] {
-  return typeof value === "string"
-    && MOBILE_RECIPE_BOOK_TONES.includes(value as (typeof MOBILE_RECIPE_BOOK_TONES)[number]);
-}
-
-function getMobileCustomBookTone(book: RecipeBookSummary) {
-  return MOBILE_RECIPE_BOOK_TONES[
-    Math.abs(book.sort_order) % MOBILE_RECIPE_BOOK_TONES.length
-  ] ?? "sage";
-}
-
-function getMobileFallbackBookCover(book: RecipeBookSummary) {
-  if (book.book_type === "liked") {
-    return "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=360&h=320&fit=crop&q=80";
-  }
-  if (book.book_type === "my_added") {
-    return "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=360&h=320&fit=crop&q=80";
-  }
-  if (book.book_type === "custom") {
-    return "https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=360&h=320&fit=crop&q=80";
-  }
-
-  return "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=360&h=320&fit=crop&q=80";
-}
-
-function buildBookDetailHref(book: RecipeBookSummary) {
+function buildBookDetailHref(
+  book: RecipeBookSummary,
+  loadedImageSrc?: string | null,
+) {
+  const coverViewModel = getRecipeBookCoverViewModel(book, { loadedImageSrc });
   const params = new URLSearchParams({
+    coverColor: coverViewModel.tone,
+    coverImage: coverViewModel.imageSrc,
     type: book.book_type,
     name: book.name,
   });
