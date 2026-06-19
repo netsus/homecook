@@ -70,7 +70,9 @@ async function mockCookModeRoute(
                   label: "볶기",
                   color_key: "stir_fry",
                 },
-                ingredients_used: [],
+                ingredients_used: [
+                  { ingredient_id: "ing-1", amount: 1, unit: "개" },
+                ],
                 heat_level: null,
                 duration_seconds: null,
                 duration_text: null,
@@ -83,7 +85,9 @@ async function mockCookModeRoute(
                   label: "끓이기",
                   color_key: "boil",
                 },
-                ingredients_used: [],
+                ingredients_used: [
+                  { ingredient_id: "ing-2", amount: 200, unit: "g" },
+                ],
                 heat_level: "medium",
                 duration_seconds: 600,
                 duration_text: null,
@@ -166,6 +170,41 @@ test.describe("Slice 15a cook planner complete", () => {
     await expect(page.getByText("볶기").first()).toHaveCSS(
       "background-color",
       "rgb(255, 140, 66)",
+    );
+  });
+
+  test("whole-board keeps compact step layout with ingredient emphasis", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await mockCookModeRoute(page);
+
+    await page.goto("/cooking/sessions/session-abc/cook-mode");
+
+    const content = page.getByTestId("cook-mode-content");
+    const completeButton = page.getByTestId("complete-button");
+    const firstStepCopy = page.getByTestId("cook-mode-step-copy-1");
+    const firstHighlight = firstStepCopy.getByTestId(
+      "cook-mode-step-ingredient-highlight",
+    );
+    const methodTag = page.getByText("볶기").first();
+
+    await expect(firstHighlight).toHaveText("양파");
+    await expect(firstStepCopy).not.toContainText("1개");
+
+    const highlightWeight = await firstHighlight.evaluate((element) =>
+      Number(window.getComputedStyle(element).fontWeight),
+    );
+    const copyWeight = await firstStepCopy.evaluate((element) =>
+      Number(window.getComputedStyle(element).fontWeight),
+    );
+    const methodTagBox = await methodTag.boundingBox();
+    const contentBox = await content.boundingBox();
+    const completeButtonBox = await completeButton.boundingBox();
+
+    expect(highlightWeight).toBeGreaterThan(copyWeight);
+    expect(copyWeight).toBeLessThanOrEqual(500);
+    expect(methodTagBox?.height ?? 0).toBeLessThanOrEqual(24);
+    expect((contentBox?.y ?? 0) + (contentBox?.height ?? 0)).toBeLessThanOrEqual(
+      (completeButtonBox?.y ?? 0) + 1,
     );
   });
 

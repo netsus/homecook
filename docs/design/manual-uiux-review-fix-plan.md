@@ -1578,7 +1578,7 @@
 
 ### 31. 요리모드 화면에서 조리과정 가시성과 재료 강조가 부족한 문제
 
-- Status: planned
+- Status: done
 - Severity: Medium
 - Area: UX / UI / Frontend
 - Source: user manual review, cooking mode screen
@@ -1616,17 +1616,21 @@
   - 재료 외 설명 텍스트는 현재보다 weight가 낮아져 읽기 부담이 줄어든다.
   - 긴 단계/짧은 단계/재료 없는 단계에서 레이아웃이 깨지지 않는다.
 - Likely implementation target:
-  - `components/cooking/cooking-mode-screen.tsx`
+  - `components/cooking/cook-mode-whole-board.tsx`
+  - `components/cooking/cook-mode-mobile-ui.tsx`
   - `app/globals.css`
   - cooking instruction parser/highlight component if present
-  - `tests/cooking-mode-screen.test.tsx`
-  - `tests/e2e/qa-visual.spec.ts`
+  - `tests/cook-mode-screen.test.tsx`
+  - `tests/standalone-cook-mode-screen.test.tsx`
+  - `tests/manual-uiux-layout-policy.test.ts`
+  - `tests/e2e/slice-15a-cook-planner-complete.spec.ts`
 - Verification:
-  - 모바일 요리모드 viewport에서 한 화면에 보이는 단계 수 비교
-  - 조리법 태그 padding, 단계 번호 정렬 visual 확인
-  - 재료 강조가 적용된 단계와 재료 없는 단계 비교
-  - 하단 CTA/완료 모달/소진 재료 모달과 겹침 없는지 확인
-  - 접근성: 강조된 재료 텍스트가 의미 전달을 색상에만 의존하지 않는지 확인
+  - Done: `pnpm exec vitest run tests/cook-mode-screen.test.tsx tests/standalone-cook-mode-screen.test.tsx tests/manual-uiux-layout-policy.test.ts tests/theme-token-usage.test.ts`
+  - Done: `pnpm typecheck`
+  - Done: `pnpm lint`
+  - Done: `pnpm exec playwright test tests/e2e/slice-15a-cook-planner-complete.spec.ts --project=mobile-chrome`
+  - Done: `pnpm exec playwright test tests/e2e/slice-15b-cook-standalone-complete.spec.ts --project=mobile-chrome`
+  - Done: `/tmp/homecook-item-31-after/cook-mode-mobile-after.png`, `/tmp/homecook-item-31-after/cook-mode-desktop-after.png` manual screenshot review
 
 ## 보류 항목
 

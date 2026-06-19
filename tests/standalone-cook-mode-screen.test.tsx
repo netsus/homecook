@@ -620,12 +620,12 @@ describe("StandaloneCookModeScreen", () => {
     expect(screen.getByTestId("step-list")).toBeTruthy();
     expect(screen.getByText("고기 재우기")).toBeTruthy();
     expect(screen.getByText("센불 볶기")).toBeTruthy();
-    expect(
-      screen.getByText("고기와 양념장을 골고루 버무려 주세요."),
-    ).toBeTruthy();
-    expect(
-      screen.getByText("팬을 달군 뒤 양파와 고기를 센불에 볶아주세요."),
-    ).toBeTruthy();
+    expect(screen.getByTestId("cook-mode-step-copy-1").textContent).toBe(
+      "고기와 양념장을 골고루 버무려 주세요.",
+    );
+    expect(screen.getByTestId("cook-mode-step-copy-2").textContent).toBe(
+      "팬을 달군 뒤 양파와 고기를 센불에 볶아주세요.",
+    );
     expect(within(screen.getByTestId("ingredient-list")).getByText("돼지고기")).toBeTruthy();
     expect(screen.queryByTestId("cook-mode-current-step")).toBeNull();
     expect(screen.queryByTestId("cook-mode-current-amount-board")).toBeNull();

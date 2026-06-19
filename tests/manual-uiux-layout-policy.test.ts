@@ -78,4 +78,27 @@ describe("manual UI/UX layout policy", () => {
     expect(iconSvgRule).toContain("overflow: visible");
     expect(iconSvgRule).toContain("flex-shrink: 0");
   });
+
+  it("keeps cook mode whole-board steps compact with ingredient emphasis", () => {
+    const boardRule = readRule(".cook-whole-board");
+    const panelRule = readRule(".cook-whole-panel");
+    const methodTagRule = readRule(".cook-whole-method-tag");
+    const stepNumberRule = readRule(".cook-whole-step-number");
+    const stepCopyRule = readRule(".cook-whole-step-copy p");
+    const ingredientHighlightRule = readRule(".cook-whole-step-ingredient");
+    const webBoardRule = readRule(".web-cook-whole-board");
+    const webGridRule = readRule(".web-cook-whole-grid");
+
+    expect(boardRule).toContain("gap: 10px");
+    expect(panelRule).toContain("padding: 12px");
+    expect(methodTagRule).toContain("min-height: 22px");
+    expect(methodTagRule).toContain("padding: 0 8px");
+    expect(stepNumberRule).toContain("margin-top: 1px");
+    expect(stepCopyRule).toContain("font-weight: 500");
+    expect(stepCopyRule).toContain("line-height: 1.42");
+    expect(ingredientHighlightRule).toContain("color: var(--brand)");
+    expect(ingredientHighlightRule).toContain("font-weight: 850");
+    expect(webBoardRule).toContain("calc(100vh - var(--web-nav-h) - 54px)");
+    expect(webGridRule).toContain("calc(100vh - var(--web-nav-h) - 124px)");
+  });
 });

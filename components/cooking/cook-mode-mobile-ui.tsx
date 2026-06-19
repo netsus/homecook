@@ -52,9 +52,9 @@ export function MobileCookModeView({
       data-cook-theme={colorTheme}
       data-testid={screenTestId}
     >
-      <div className="relative flex min-h-dvh flex-col pb-[104px]">
-        <header className="px-4 pb-4 pt-[calc(18px+env(safe-area-inset-top))]">
-          <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="relative flex h-dvh min-h-0 flex-col pb-[92px]">
+        <header className="px-4 pb-3 pt-[calc(16px+env(safe-area-inset-top))]">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <button
               aria-label="취소"
               className="cook-mobile-whole-icon-button inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border-0"
