@@ -1533,7 +1533,7 @@
 
 ### 30. 요리 완료 후 소진 재료 확인 모달에서 전체 선택/해제가 없어 반복 조작이 필요한 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-item-30`
 - Severity: Medium
 - Area: UX / Frontend
 - Source: user manual review, cooking completion consumed ingredients modal
@@ -1569,10 +1569,12 @@
   - `tests/cooking-mode-screen.test.tsx`
   - `tests/e2e/qa-visual.spec.ts`
 - Verification:
-  - 0개/1개/여러 개 재료 모달에서 전체 선택/해제 동작 확인
-  - 일부 disabled 항목이 있을 때 전체 선택 대상이 올바른지 테스트
-  - 선택 개수와 완료 payload가 맞는지 component/backend 연동 테스트
-  - 모바일 viewport에서 전체선택 control과 완료 CTA가 겹치지 않는지 visual 확인
+  - `components/cooking/consumed-ingredient-sheet.tsx`에 전체 선택/전체 해제 토글, 선택 개수 summary, `aria-checked` 상태를 추가했다.
+  - `tests/cook-mode-screen.test.tsx`에서 전체 해제 → 0개 선택 → 일부 선택 → 전체 선택 → 완료 payload까지 고정했다.
+  - `tests/e2e/slice-15a-cook-planner-complete.spec.ts`에서 모바일 요리 완료 시트의 전체 선택/해제와 선택 개수 갱신을 검증한다.
+  - Verified: `pnpm test tests/cook-mode-screen.test.tsx -- --runInBand`
+  - Verified: `pnpm test tests/standalone-cook-mode-screen.test.tsx -- --runInBand`
+  - Verified: `pnpm exec playwright test tests/e2e/slice-15a-cook-planner-complete.spec.ts --project=mobile-chrome`
 
 ### 31. 요리모드 화면에서 조리과정 가시성과 재료 강조가 부족한 문제
 

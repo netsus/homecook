@@ -890,6 +890,68 @@ describe("CookModeScreen", () => {
     });
   });
 
+  it("toggles all consumed ingredients at once and keeps the selected count in sync", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(buildCookModeData());
+    completeCookingSession.mockResolvedValue({
+      session_id: "session-1",
+      status: "completed",
+      meals_updated: 1,
+      leftover_dish_id: "session-1",
+      pantry_removed: 3,
+      cook_count: 1,
+    });
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("complete-button")).toBeTruthy();
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("complete-button"));
+    await screen.findByTestId("consumed-ingredient-sheet");
+
+    const bulkToggle = screen.getByTestId("consumed-bulk-toggle");
+    expect(bulkToggle.textContent).toContain("전체 해제");
+    expect(bulkToggle.getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByTestId("consumed-selection-summary").textContent).toBe(
+      "3개 선택됨",
+    );
+    expect(screen.getByTestId("consumed-confirm-button").textContent).toBe(
+      "확인 (3개)",
+    );
+
+    await user.click(bulkToggle);
+
+    expect(bulkToggle.textContent).toContain("전체 선택");
+    expect(bulkToggle.getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByTestId("consumed-selection-summary").textContent).toBe(
+      "0개 선택됨",
+    );
+    expect(screen.getByTestId("consumed-confirm-button").textContent).toBe(
+      "확인 (0개)",
+    );
+
+    await user.click(screen.getByTestId("consumed-check-ing-1"));
+
+    expect(bulkToggle.textContent).toContain("전체 선택");
+    expect(bulkToggle.getAttribute("aria-checked")).toBe("mixed");
+    expect(screen.getByTestId("consumed-selection-summary").textContent).toBe(
+      "1개 선택됨",
+    );
+
+    await user.click(bulkToggle);
+    await user.click(screen.getByTestId("consumed-confirm-button"));
+
+    await waitFor(() => {
+      expect(completeCookingSession).toHaveBeenCalledWith("session-1", {
+        consumed_ingredient_ids: ["ing-1", "ing-2", "ing-3"],
+      });
+    });
+  });
+
   it("sends empty array when all desktop ingredients are unchecked", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
@@ -1284,10 +1346,20 @@ describe("CookModeScreen", () => {
     const checkVisual = screen
       .getByTestId("consumed-check-ing-1")
       .querySelector('[aria-hidden="true"]');
+    const bulkToggle = screen.getByTestId("consumed-bulk-toggle");
+    const firstCheck = screen.getByTestId("consumed-check-ing-1");
 
     expect(helperText.className).toContain("text-[13px]");
     expect(helperText.className).toContain("font-normal");
     expect(recipeTitle.className).toContain("truncate");
+    expect(bulkToggle.textContent).toContain("전체 해제");
+    expect(bulkToggle.getAttribute("role")).toBe("checkbox");
+    expect(bulkToggle.getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByTestId("consumed-selection-summary").textContent).toBe(
+      "3개 선택됨",
+    );
+    expect(firstCheck.getAttribute("role")).toBe("checkbox");
+    expect(firstCheck.getAttribute("aria-checked")).toBe("true");
     expect(ingredientList.className).toContain("grid-cols-2");
     expect(within(firstIngredient).getByText("양파")).toBeTruthy();
     expect(within(firstIngredient).getByText("1개")).toBeTruthy();
