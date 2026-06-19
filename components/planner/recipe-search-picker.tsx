@@ -92,7 +92,7 @@ function SearchInput({
 
   if (variant === "app") {
     return (
-      <div className="flex h-12 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3.5">
+      <div className="app-field-search flex h-12 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3.5">
         <span
           aria-hidden="true"
           className="flex shrink-0 items-center justify-center text-[var(--text-3)]"
@@ -352,7 +352,7 @@ export function RecipeSearchPicker({
           {slotLabel ? (
             <MealAddTargetBadge className="mb-2.5" label={slotLabel} />
           ) : null}
-          <div className="flex h-12 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3.5">
+          <div className="app-field-search flex h-12 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3.5">
             <span
               aria-hidden="true"
               className="flex shrink-0 items-center justify-center text-[var(--text-3)]"

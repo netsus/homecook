@@ -128,6 +128,11 @@ describe("ShoppingDetailScreen", () => {
       screen.getByTestId("shopping-detail-skeleton").querySelector(".web-shopping-progress"),
     ).toBeTruthy();
     expect(
+      screen.getByTestId("shopping-detail-skeleton").querySelector(
+        ".web-shopping-progress-track span",
+      ),
+    ).toBeNull();
+    expect(
       screen.getByTestId("shopping-detail-skeleton").querySelector(".web-shopping-detail-layout"),
     ).toBeTruthy();
   });

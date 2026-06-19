@@ -1544,6 +1544,38 @@ select:focus-visible {
   }
 }
 
+.home-mobile-search-bar:focus-within,
+.app-field-search:focus-within,
+.app-field-input:focus-within {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+.home-mobile-search-bar input:focus-visible,
+.app-field-search input:focus-visible,
+.app-field-input input:focus-visible {
+  outline: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+@media (min-width: 1024px) {
+  .web-search-bar:focus-within,
+  .web-modal-search:focus-within,
+  .web-picker-search:focus-within {
+    border-color: var(--web-brand);
+    box-shadow: 0 0 0 3px rgba(0, 161, 255, 0.14);
+  }
+
+  .web-search-bar input:focus-visible,
+  .web-modal-search input:focus-visible,
+  .web-picker-search input:focus-visible {
+    outline: none;
+    border-color: transparent;
+    box-shadow: none;
+  }
+}
+
 button {
   cursor: pointer;
 }
@@ -1731,7 +1763,7 @@ button {
 
 .yt-mobile-import-shell .web-yt-stepper {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
   margin-bottom: 16px;
 }
@@ -5844,7 +5876,7 @@ button {
 
   .web-yt-stepper {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 8px;
     margin-bottom: 24px;
   }

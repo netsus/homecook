@@ -332,7 +332,7 @@ describe("ManualRecipeCreateScreen", () => {
     await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아요");
     await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
 
-    expect(screen.getByText("조리방법을 선택해주세요.")).toBeTruthy();
+    expect(screen.getByText("조리법을 선택해 주세요.")).toBeTruthy();
     expect(screen.queryByText("1.")).toBeNull();
   });
 
@@ -377,6 +377,15 @@ describe("ManualRecipeCreateScreen", () => {
       getCookingMethodColor("orange"),
     );
     expect(screen.getByLabelText("만들기 2 설명")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "볶기" }).getAttribute("aria-pressed")).toBe(
+      "false",
+    );
+
+    await user.type(screen.getByLabelText("만들기 2 설명"), "물을 붓고 끓여요");
+    await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
+
+    expect(screen.getByText("조리법을 선택해 주세요.")).toBeTruthy();
+    expect(screen.queryByText("2.")).toBeNull();
   });
 
   it("lets selected ingredient chips deselect from the summary under categories", async () => {

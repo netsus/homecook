@@ -11,11 +11,19 @@
 - 모바일/데스크톱 중 하나에서 화면 완성도를 깨뜨리는가
 - 접근성 포커스 표시를 유지하면서 더 자연스럽게 고칠 수 있는가
 
+## 2026-06-19 실행 계획
+
+- 이번 1차 PR은 공식 계약 변경 없이 닫을 수 있는 FE-only 회귀/시각 결함을 먼저 처리한다.
+- 1번은 홈 화면에 한정하지 않고, border가 있는 wrapper 안의 투명 input에서 내부 파란 focus 박스가 생길 수 있는 전 화면 후보를 함께 정리한다.
+- 같은 PR에서 작은 회귀로 닫는 항목은 12번 유튜브 가져오기 stepper 줄바꿈, 14번 직접 등록 만들기 추가 후 조리법 선택 초기화, 18번 장보기 상세 skeleton 진행률 오해 제거다.
+- 17번, 19번, 27번처럼 API/DB/공식 도메인 계약 변경이 필요한 항목은 별도 contract-evolution 또는 후속 slice로 분리한다.
+- 4번, 5번, 7번, 8번, 10번, 22번, 25번처럼 정보 구조나 공용 컴포넌트 추출이 큰 항목은 화면별 후속 PR로 나누고, visual evidence와 관련 테스트를 각 PR에서 별도로 닫는다.
+
 ## 확정 수정 항목
 
 ### 1. 홈 검색창 포커스 표시가 input 내부 박스로 보이는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-review-fixes`
 - Severity: Low
 - Area: UI / UX
 - Source: user manual review screenshot, home search input
@@ -571,7 +579,7 @@
 
 ### 12. 유튜브 가져오기 단계 표시가 웹/앱에서 어색하게 줄바꿈되는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-review-fixes`
 - Severity: Low
 - Area: UI / UX / Frontend
 - Source: user manual review screenshots, `components/recipe/youtube-import-screen.tsx`, `app/globals.css`
@@ -672,7 +680,7 @@
 
 ### 14. 직접 등록에서 만들기 추가 후 이전 조리법 선택이 다음 입력에 남는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-review-fixes`
 - Severity: Medium
 - Area: UX / Frontend
 - Source: user manual review screenshot, `components/recipe/manual-recipe-create-screen.tsx`
@@ -856,7 +864,7 @@
 
 ### 18. 장보기 목록 로딩 스켈레톤의 프로그레스바가 실제 진행률처럼 보이는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-review-fixes`
 - Severity: Low
 - Area: UI / UX / Frontend
 - Source: user manual review screenshot, `components/shopping/shopping-detail-screen.tsx`

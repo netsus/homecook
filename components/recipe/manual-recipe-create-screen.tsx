@@ -426,7 +426,7 @@ function StepInlineComposer({
   const handleAdd = () => {
     if (!instruction.trim()) return;
     if (!selectedMethod) {
-      setMethodError("조리방법을 선택해주세요.");
+      setMethodError("조리법을 선택해 주세요.");
       return;
     }
 
@@ -439,6 +439,7 @@ function StepInlineComposer({
       duration_text: null,
     });
     setInstruction("");
+    setSelectedMethodId("");
     setMethodError(null);
   };
 

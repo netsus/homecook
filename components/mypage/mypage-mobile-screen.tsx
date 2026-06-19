@@ -778,7 +778,7 @@ function MobileRecipebookSurface({
       </section>
 
       {showCreateInput ? (
-        <div className="mobile-recipebooks-create mt-3 flex min-h-[58px] items-center gap-2 rounded-[22px] px-4 py-3">
+        <div className="app-field-input mobile-recipebooks-create mt-3 flex min-h-[58px] items-center gap-2 rounded-[22px] px-4 py-3">
           <input
             ref={createInputRef}
             className="min-w-0 flex-1 bg-transparent text-[14px] font-bold text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)]"
