@@ -476,7 +476,12 @@ export function MypageScreen({
       return;
     }
 
+    mobileReturnToRef.current = null;
+    setActiveTab("saved");
+    setSelectedRecipeBook(null);
+    setSelectedShoppingItem(null);
     setMobileSurface("home");
+    router.replace("/mypage");
   }, [router]);
 
   const handleMobileSurfaceChange = useCallback((surface: MypageMobileSurface) => {
