@@ -394,7 +394,7 @@ test.describe("SETTINGS screen", () => {
 
     await expect(page.getByRole("heading", { name: "환경설정" })).toBeVisible();
     if (isMobileViewport(page)) {
-      await expect(page.getByLabel("뒤로가기")).toBeVisible();
+      await expect(page.getByLabel("뒤로 가기")).toBeVisible();
       await expect(page.getByText("요리모드 화면 켜둠")).toBeVisible();
       await expect(page.getByText("끼니 관리")).toBeVisible();
       await expect(page.getByText("음성 안내")).toHaveCount(0);
@@ -614,8 +614,8 @@ test.describe("SETTINGS screen", () => {
 
     await page.goto("/settings");
     if (isMobileViewport(page)) {
-      await expect(page.getByLabel("뒤로가기")).toBeVisible();
-      await page.getByLabel("뒤로가기").click();
+      await expect(page.getByLabel("뒤로 가기")).toBeVisible();
+      await page.getByLabel("뒤로 가기").click();
     } else {
       await page.getByRole("link", { name: /마이페이지/ }).first().click();
     }

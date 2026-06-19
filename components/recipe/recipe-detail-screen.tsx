@@ -1228,7 +1228,7 @@ export function RecipeDetailScreen({
           style={mobileHeroStyle}
         >
           <button
-            aria-label="뒤로가기"
+            aria-label="뒤로 가기"
             className="absolute left-4 top-[calc(12px+env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-alpha-92)] text-[var(--foreground)] shadow-[0_2px_8px_var(--shadow-color-strong)]"
             onClick={appReturn.goBack}
             type="button"

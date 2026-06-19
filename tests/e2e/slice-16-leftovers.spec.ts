@@ -363,7 +363,7 @@ test.describe("ATE_LIST screen", () => {
 
     await expect(page.getByTestId("ate-list-card").first()).toBeVisible();
     const backLink = isMobileViewport(page)
-      ? page.getByLabel("뒤로가기")
+      ? page.getByLabel("뒤로 가기")
       : page.getByRole("link", { name: "남은 요리" });
     await expect(backLink).toHaveAttribute("href", "/leftovers");
   });

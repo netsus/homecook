@@ -1020,7 +1020,7 @@ describe("MenuAddScreen", () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} initialSource="search" />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByLabelText("뒤로"));
+    await user.click(screen.getByLabelText("뒤로 가기"));
 
     const replacedHref = mockRouterReplace.mock.calls.at(-1)?.[0] as string;
     expect(replacedHref).toContain("/planner?");

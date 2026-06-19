@@ -956,7 +956,7 @@ function MobileAppBar({
       style={{ borderBottomWidth: "0.5px" }}
     >
       <Link
-        aria-label="뒤로가기"
+        aria-label="뒤로 가기"
         className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start text-[var(--foreground)]"
         href={backHref}
       >

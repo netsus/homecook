@@ -233,6 +233,18 @@ describe("ManualRecipeCreateScreen", () => {
     expect(saveButton.className).toContain("web-button-lg");
   });
 
+  it("uses the shared app back button in the mobile app bar", () => {
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    const backButton = screen.getByRole("button", { name: "뒤로 가기" });
+    expect(backButton.className).toContain("h-[var(--app-back-button-size)]");
+    expect(backButton.className).toContain("w-[var(--app-back-button-size)]");
+    expect(backButton.className).toContain("rounded-[var(--app-back-button-radius)]");
+    expect(backButton.querySelector("svg")?.getAttribute("class") ?? "").toContain(
+      "h-[var(--app-back-button-icon-size)]",
+    );
+  });
+
   it("does not show a non-interactive default step placeholder", async () => {
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
 

@@ -11,7 +11,7 @@ interface AppBackButtonProps {
 }
 
 export function AppBackButton({
-  ariaLabel = "뒤로",
+  ariaLabel = "뒤로 가기",
   className,
   disabled,
   onClick,
