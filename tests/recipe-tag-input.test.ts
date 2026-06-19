@@ -26,7 +26,7 @@ describe("recipe tag input helpers", () => {
       tags: ["한식"],
     });
     expect(addReviewedRecipeTag([], "   ")).toEqual({
-      error: "태그를 입력해주세요.",
+      error: "태그를 입력해 주세요.",
       tags: [],
     });
     expect(addReviewedRecipeTag([], "열두글자를넘는매우긴태그들")).toEqual({

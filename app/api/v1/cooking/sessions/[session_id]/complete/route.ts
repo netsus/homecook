@@ -88,7 +88,7 @@ export async function POST(request: Request, context: RouteContext) {
   const body = await readCompleteBody(request);
 
   if (!body) {
-    return fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [
       { field: "body", reason: "invalid_json" },
     ]);
   }
@@ -96,7 +96,7 @@ export async function POST(request: Request, context: RouteContext) {
   const parsed = parseCookingSessionCompleteBody(body);
 
   if (!parsed.data) {
-    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, parsed.fields);
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
   const routeClient = await createRouteHandlerClient();

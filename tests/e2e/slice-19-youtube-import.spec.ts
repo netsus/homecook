@@ -6,7 +6,7 @@ const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100
 
 const YOUTUBE_IMPORT_URL = "/menu/add/youtube";
 const YOUTUBE_IMPORT_SCREEN_HEADING = "영상 링크에서 레시피를 추출해요";
-const YOUTUBE_REVIEW_HEADING = "추출 결과를 확인해주세요";
+const YOUTUBE_REVIEW_HEADING = "추출 결과를 확인해 주세요";
 const YOUTUBE_IMPORT_EMBEDDED_URL =
   "/menu-add?date=2026-05-15&columnId=column-abc-123&slot=lunch&source=youtube";
 
@@ -152,7 +152,7 @@ async function installValidateErrorRoute(page: Page) {
         data: null,
         error: {
           code: "INVALID_URL",
-          message: "올바른 유튜브 URL을 입력해주세요",
+          message: "올바른 유튜브 URL을 입력해 주세요",
           fields: [{ field: "youtube_url", reason: "invalid_url" }],
         },
       },
@@ -424,7 +424,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=nonrecipe123");
     await page.click('button:has-text("가져오기")');
 
-    await expect(page.getByText("요리 레시피로 보기 어려워요. 다른 링크를 입력해주세요.")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("요리 레시피로 보기 어려워요. 다른 링크를 입력해 주세요.")).toBeVisible({ timeout: 5000 });
     await expect(page.locator("text=게임 플레이 영상")).toBeVisible();
     await expect(page.locator("text=게임채널")).toBeVisible();
     await expect(page.locator("text=게임 영상으로 분류됐어요")).toBeVisible();
@@ -444,7 +444,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=nonrecipe123");
     await page.click('button:has-text("가져오기")');
 
-    await expect(page.getByText("요리 레시피로 보기 어려워요. 다른 링크를 입력해주세요.")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("요리 레시피로 보기 어려워요. 다른 링크를 입력해 주세요.")).toBeVisible({ timeout: 5000 });
 
     await page.click('button:has-text("다시 입력")');
 
@@ -483,7 +483,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.locator('input[type="url"]').fill("https://invalid-url.com");
     await page.click('button:has-text("가져오기")');
 
-    await expect(page.locator("text=올바른 유튜브 URL을 입력해주세요")).toBeVisible({ timeout: 5000 });
+    await expect(page.locator("text=올바른 유튜브 URL을 입력해 주세요")).toBeVisible({ timeout: 5000 });
   });
 
   test("extraction error: shows retry and reenter options", async ({ page }) => {
@@ -537,7 +537,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await installExtractRoute(page, 0);
     await installRegisterErrorRoute(page, {
       code: "EXTRACTION_EXPIRED",
-      message: "추출 세션이 만료됐어요. 다시 추출해주세요.",
+      message: "추출 세션이 만료됐어요. 다시 추출해 주세요.",
     });
 
     await page.goto(YOUTUBE_IMPORT_URL);
@@ -548,7 +548,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.click('button:has-text("등록")');
 
     await expect(page.locator("text=레시피 등록 실패")).toBeVisible({ timeout: 5000 });
-    await expect(page.locator("text=추출 세션이 만료됐어요. 다시 추출해주세요.")).toBeVisible();
+    await expect(page.locator("text=추출 세션이 만료됐어요. 다시 추출해 주세요.")).toBeVisible();
   });
 
   test("review back confirm: leave exits youtube import", async ({ page }) => {
@@ -837,7 +837,7 @@ test.describe("Slice 19: YouTube Import", () => {
             title: "확인 필요한 레시피",
             base_servings: 2,
             extraction_methods: ["description"],
-            draft_warnings: ["재료 일부를 확인해주세요"],
+            draft_warnings: ["재료 일부를 확인해 주세요"],
             blocking_issues: [],
             ingredients: [
               {
@@ -1131,7 +1131,7 @@ test.describe("Slice 19: YouTube Import desktop embedded", () => {
     await embeddedImport.getByRole("button", { name: "가져오기" }).click();
 
     await expect(
-      embeddedImport.getByRole("heading", { name: "추출 결과를 확인해주세요" }),
+      embeddedImport.getByRole("heading", { name: "추출 결과를 확인해 주세요" }),
     ).toBeVisible({ timeout: 10000 });
 
     const registerButton = embeddedImport.getByRole("button", {

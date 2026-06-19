@@ -122,7 +122,7 @@ export async function GET(request: Request, context: RouteContext) {
   if (!parsedServings.data) {
     return fail(
       "VALIDATION_ERROR",
-      "요리 인분을 확인해주세요.",
+      "요리 인분을 확인해 주세요.",
       422,
       parsedServings.fields,
     );

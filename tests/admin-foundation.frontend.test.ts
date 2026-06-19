@@ -368,8 +368,8 @@ describe("admin frontend structure validation", () => {
     expect(guard).toContain('"unauthorized"');
     expect(guard).toContain('"forbidden"');
     expect(guard).toContain('"error"');
-    expect(guard).toContain("로그인이 필요합니다");
-    expect(guard).toContain("관리자 권한이 없습니다");
+    expect(guard).toContain("로그인이 필요해요");
+    expect(guard).toContain("관리자 권한이 없어요");
     expect(guard).toContain("verifyAdminPageView");
     expect(guard).toContain("usePathname");
   });

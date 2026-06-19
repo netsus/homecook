@@ -50,7 +50,7 @@ export function LocalDevLoginPanel({
         setErrorMessage(null);
 
         if (!hasSupabasePublicEnv()) {
-          throw new Error("로컬 Supabase 환경변수를 읽지 못했어요. local Supabase 실행 상태를 확인해주세요.");
+          throw new Error("로컬 Supabase 환경변수를 읽지 못했어요. local Supabase 실행 상태를 확인해 주세요.");
         }
 
         if (pendingAction) {
@@ -105,7 +105,7 @@ export function LocalDevLoginPanel({
         Local Supabase
       </p>
       <p className="mt-2 hidden text-sm leading-6 text-[var(--foreground)] sm:block">
-        mock 없이 로컬 Supabase DB를 바로 테스트할 수 있도록, 개발 전용 계정으로 로그인합니다.
+        mock 없이 로컬 Supabase DB를 바로 테스트할 수 있도록, 개발 전용 계정으로 로그인해요.
       </p>
       <div className="mt-3 space-y-2 sm:mt-4 sm:space-y-3">
         {accounts.map((account, index) => (
@@ -129,7 +129,7 @@ export function LocalDevLoginPanel({
         ))}
       </div>
       <p className="mt-3 hidden text-xs leading-5 text-[var(--muted)] sm:block">
-        첫 로그인에서는 계정을 만들고, 이후에는 같은 계정과 같은 local DB를 계속 사용합니다.
+        첫 로그인에서는 계정을 만들고, 이후에는 같은 계정과 같은 local DB를 계속 사용해요.
       </p>
       {errorMessage ? (
         <p className="mt-3 rounded-[var(--radius-card)] border border-[color:var(--danger-border)] bg-[color:var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]">

@@ -35,28 +35,30 @@ export function MealAddTargetBadge({
   if (tone === "web") {
     return (
       <span className={`web-meal-add-target ${className ?? ""}`.trim()}>
-        <CalendarGlyph />
-        {label}
+        <CalendarGlyph className="block h-3.5 w-3.5 shrink-0" />
+        <span>{label}</span>
       </span>
     );
   }
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-[var(--radius-chip)] bg-[var(--brand-soft)] px-3 py-1.5 text-[13px] font-bold text-[var(--brand)] ${className ?? ""}`.trim()}
+      className={`inline-flex min-h-7 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-chip)] bg-[var(--brand-soft)] px-3 py-0 text-[13px] font-bold leading-none text-[var(--brand)] ${className ?? ""}`.trim()}
       data-testid={testId}
     >
-      <CalendarGlyph />
-      {label}
+      <CalendarGlyph className="block h-3.5 w-3.5 shrink-0" />
+      <span className="leading-none" data-meal-add-target-label>
+        {label}
+      </span>
     </span>
   );
 }
 
-function CalendarGlyph() {
+function CalendarGlyph({ className = "h-3.5 w-3.5" }: { className?: string }) {
   return (
     <svg
       aria-hidden="true"
-      className="h-3.5 w-3.5"
+      className={className}
       fill="none"
       stroke="currentColor"
       strokeLinecap="round"

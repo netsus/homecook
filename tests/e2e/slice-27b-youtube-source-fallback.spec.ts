@@ -20,7 +20,7 @@ const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 const YOUTUBE_IMPORT_URL = "/menu/add/youtube";
-const YOUTUBE_REVIEW_HEADING = "추출 결과를 확인해주세요";
+const YOUTUBE_REVIEW_HEADING = "추출 결과를 확인해 주세요";
 
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   await page.context().addCookies([
@@ -269,7 +269,7 @@ test.describe("Slice 27b: YouTube Source Fallback", () => {
 
     // Partial draft guidance should be visible
     await expect(page.locator("[data-testid='partial-draft-guidance']")).toBeVisible();
-    await expect(page.locator("text=조리 과정을 직접 입력해주세요")).toBeVisible();
+    await expect(page.locator("text=조리 과정을 직접 입력해 주세요")).toBeVisible();
 
     await expect(page.locator("[data-testid='extraction-method-chips']")).toHaveCount(0);
     await expect(page.locator("[data-testid^='extraction-method-']")).toHaveCount(0);

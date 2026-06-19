@@ -307,7 +307,7 @@ export function RecipioYoutubeImportScreen({
     if (!parsed) {
       setStatus(targetUrl.trim() ? "error" : "idle");
       setTimedPhase("idle");
-      setErrorMessage(targetUrl.trim() ? "올바른 유튜브 링크를 입력해주세요." : null);
+      setErrorMessage(targetUrl.trim() ? "올바른 유튜브 링크를 입력해 주세요." : null);
       return;
     }
 
@@ -386,7 +386,7 @@ export function RecipioYoutubeImportScreen({
     const parsed = normalizeRecipioYoutubeUrl(youtubeUrl);
     if (!parsed) {
       setStatus("error");
-      setErrorMessage("올바른 유튜브 링크를 입력해주세요.");
+      setErrorMessage("올바른 유튜브 링크를 입력해 주세요.");
       return;
     }
     syncNormalizedUrl(parsed);

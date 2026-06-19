@@ -128,7 +128,7 @@ export async function GET(request: Request, context: RouteContext) {
     ]);
 
     if (recipeResult.error || !recipeResult.data) {
-      return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없습니다.", 404);
+      return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
     }
 
     if (ingredientsResult.error || stepsResult.error) {

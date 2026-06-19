@@ -1794,7 +1794,7 @@ function RecipeRemoveConfirmDialog({
             className="mt-4 text-[13px] font-medium leading-[1.45] text-[var(--text-2)]"
             id="recipe-remove-description"
           >
-            &ldquo;{recipeTitle}&rdquo;을 이 레시피북에서 제거합니다.
+            &ldquo;{recipeTitle}&rdquo;을 이 레시피북에서 제거해요.
           </p>
           <div className="mt-5 grid grid-cols-2 gap-2">
             <button
@@ -1842,7 +1842,7 @@ function RecipeRemoveConfirmDialog({
               !
             </span>
             <p className="web-confirm-copy" id="recipe-remove-description">
-              &ldquo;{recipeTitle}&rdquo;을 이 레시피북에서 제거합니다.
+              &ldquo;{recipeTitle}&rdquo;을 이 레시피북에서 제거해요.
             </p>
           </div>
         </WebDialogBody>

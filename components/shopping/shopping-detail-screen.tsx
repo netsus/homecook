@@ -378,16 +378,16 @@ export function ShoppingDetailScreen({
       if (typeof navigator !== "undefined" && navigator.share) {
         try {
           await navigator.share({ text });
-          setShareToast({ type: "success", message: "공유되었습니다" });
+          setShareToast({ type: "success", message: "공유했어요" });
         } catch (shareError) {
           if (!(shareError instanceof Error && shareError.name === "AbortError")) {
             await navigator.clipboard.writeText(text);
-            setShareToast({ type: "success", message: "복사되었습니다" });
+            setShareToast({ type: "success", message: "복사했어요" });
           }
         }
       } else if (typeof navigator !== "undefined" && navigator.clipboard) {
         await navigator.clipboard.writeText(text);
-        setShareToast({ type: "success", message: "복사되었습니다" });
+        setShareToast({ type: "success", message: "복사했어요" });
       } else {
         setShareToast({ type: "error", message: "이 환경에서는 공유할 수 없어요" });
       }
@@ -1517,7 +1517,7 @@ function MobileShoppingItemRow({
           <span
             aria-hidden="true"
             className={[
-              "flex h-[22px] w-[22px] items-center justify-center rounded-full border text-[12px] text-[var(--text-inverse)]",
+              "flex h-[22px] w-[22px] items-center justify-center rounded-[var(--radius-badge)] border text-[12px] text-[var(--text-inverse)]",
               item.is_checked
                 ? "border-[var(--brand)] bg-[var(--brand)]"
                 : "border-[var(--line-strong)] bg-[var(--surface)]",

@@ -1479,7 +1479,7 @@ describe("20 youtube real import backend", () => {
       data: null,
       error: {
         code: "INVALID_URL",
-        message: "유효한 유튜브 URL을 입력해주세요.",
+        message: "유효한 유튜브 URL을 입력해 주세요.",
         fields: [{ field: "youtube_url", reason: "invalid_url" }],
       },
     });
@@ -2798,7 +2798,7 @@ describe("20 youtube real import backend", () => {
     expect(body).toMatchObject({
       success: true,
       data: {
-        draft_warnings: ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해주세요."],
+        draft_warnings: ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해 주세요."],
         blocking_issues: [],
       },
       error: null,
@@ -2806,7 +2806,7 @@ describe("20 youtube real import backend", () => {
     expect(sessionsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
       classification_status: "uncertain",
       extraction_meta_json: expect.objectContaining({
-        draft_warnings: ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해주세요."],
+        draft_warnings: ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해 주세요."],
       }),
     }));
   });
@@ -3865,7 +3865,7 @@ describe("20 youtube real import backend", () => {
         title: "집밥 모음",
         base_servings: 1,
         extraction_methods: ["caption"],
-        draft_warnings: ["영상 안에서 여러 요리 후보를 찾았어요. 저장할 요리를 먼저 선택해주세요."],
+        draft_warnings: ["영상 안에서 여러 요리 후보를 찾았어요. 저장할 요리를 먼저 선택해 주세요."],
         blocking_issues: ["MULTI_CANDIDATE_REVIEW_REQUIRED"],
         ingredients: [],
         steps: [],
@@ -3985,7 +3985,7 @@ describe("20 youtube real import backend", () => {
         title: "집밥 모음",
         base_servings: 1,
         extraction_methods: ["caption"],
-        draft_warnings: ["영상 안에서 여러 요리 후보를 찾았어요. 저장할 요리를 먼저 선택해주세요."],
+        draft_warnings: ["영상 안에서 여러 요리 후보를 찾았어요. 저장할 요리를 먼저 선택해 주세요."],
         blocking_issues: ["MULTI_CANDIDATE_REVIEW_REQUIRED"],
         ingredients: [],
         steps: [],

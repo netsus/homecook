@@ -60,7 +60,7 @@ export async function validateYoutubeUrl(
       data: null,
       error: {
         code: "NETWORK_ERROR",
-        message: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해주세요.",
+        message: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.",
         fields: [],
       },
     };
@@ -115,7 +115,7 @@ export async function extractYoutubeRecipe(
       data: null,
       error: {
         code: "NETWORK_ERROR",
-        message: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해주세요.",
+        message: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.",
         fields: [],
       },
     };
@@ -170,7 +170,7 @@ export async function createYoutubeCandidateDraft(
       data: null,
       error: {
         code: "NETWORK_ERROR",
-        message: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해주세요.",
+        message: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.",
         fields: [],
       },
     };
@@ -225,7 +225,7 @@ export async function registerYoutubeIngredient(
       data: null,
       error: {
         code: "NETWORK_ERROR",
-        message: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해주세요.",
+        message: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.",
         fields: [],
       },
     };
@@ -358,7 +358,7 @@ export async function registerYoutubeRecipe(
       data: null,
       error: {
         code: "NETWORK_ERROR",
-        message: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해주세요.",
+        message: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.",
         fields: [],
       },
     };

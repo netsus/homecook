@@ -234,7 +234,7 @@ export function RecipeDetailScreen({
   useEffect(() => {
     if (authError === "oauth_failed") {
       setFeedback({
-        message: "로그인을 완료하지 못했어요. 다시 시도해주세요.",
+        message: "로그인을 완료하지 못했어요. 다시 시도해 주세요.",
         tone: "error",
       });
     }
@@ -454,7 +454,7 @@ export function RecipeDetailScreen({
           ? "내 플래너 슬롯에만 추가할 수 있어요."
           : error instanceof Error
             ? error.message
-            : "플래너 추가에 실패했어요. 다시 시도해주세요.";
+            : "플래너 추가에 실패했어요. 다시 시도해 주세요.";
 
       setPlannerAddError(message);
       setPlannerAddSheetState("ready");
@@ -680,7 +680,7 @@ export function RecipeDetailScreen({
         );
       } catch {
         setFeedback({
-          message: "좋아요 처리에 실패했어요. 다시 시도해주세요.",
+          message: "좋아요 처리에 실패했어요. 다시 시도해 주세요.",
           tone: "error",
         });
       } finally {

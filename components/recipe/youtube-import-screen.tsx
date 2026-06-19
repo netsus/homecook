@@ -378,25 +378,25 @@ function formatStepFieldList(fields: NonNullable<YoutubeExtractedStep["missing_f
 
 function formatYoutubeBlockingIssue(issue: string) {
   if (issue === "MULTI_CANDIDATE_REVIEW_REQUIRED") {
-    return "저장할 요리를 먼저 선택해주세요.";
+    return "저장할 요리를 먼저 선택해 주세요.";
   }
 
   if (issue === "ingredients") {
-    return "재료를 하나 이상 추가해주세요.";
+    return "재료를 하나 이상 추가해 주세요.";
   }
 
   if (issue === "steps") {
-    return "만들기를 하나 이상 추가해주세요.";
+    return "만들기를 하나 이상 추가해 주세요.";
   }
 
   const ingredientMatch = issue.match(/^ingredients\[(\d+)\]\.ingredient_id$/u);
   if (ingredientMatch) {
-    return `${Number(ingredientMatch[1]) + 1}번째 재료를 검색해서 확정해주세요.`;
+    return `${Number(ingredientMatch[1]) + 1}번째 재료를 검색해서 확정해 주세요.`;
   }
 
   const stepInstructionMatch = issue.match(/^steps\[(\d+)\]\.instruction$/u);
   if (stepInstructionMatch) {
-    return `${Number(stepInstructionMatch[1]) + 1}번째 만들기 설명을 입력해주세요.`;
+    return `${Number(stepInstructionMatch[1]) + 1}번째 만들기 설명을 입력해 주세요.`;
   }
 
   return issue;
@@ -643,7 +643,7 @@ function NonRecipeWarningStep({
           이 영상은 요리 레시피로 보기 어려워요
         </p>
         <p className="mt-1 text-sm text-[var(--text-2)]">
-          레시피 영상 링크를 다시 입력해주세요.
+          레시피 영상 링크를 다시 입력해 주세요.
         </p>
         {classificationReasons.length > 0 ? (
           <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[var(--text-2)]">
@@ -719,7 +719,7 @@ function ExtractionProgressStep({ videoTitle, elapsedMs }: ExtractionProgressSte
         </div>
       </div>
       <p className="mt-3 text-center text-sm text-[var(--text-3)]">
-        {showWaitMessage ? "추출이 조금 오래 걸리고 있어요. 잠시만 더 기다려주세요" : "잠시만 기다려주세요"}
+        {showWaitMessage ? "추출이 조금 오래 걸리고 있어요. 잠시만 더 기다려 주세요" : "잠시만 기다려 주세요"}
       </p>
     </div>
   );
@@ -742,7 +742,7 @@ function ExtractionErrorStep({ errorMessage, onRetry, onReenter }: ExtractionErr
       <p className="mt-3 text-center text-base text-[var(--text-2)]">
         {errorMessage}
         <br />
-        잠시 후 다시 시도해주세요
+        잠시 후 다시 시도해 주세요
       </p>
       <div className="mt-6 w-full space-y-3">
         <Button fullWidth onClick={onRetry}>
@@ -951,7 +951,7 @@ function ReviewIngredientRow({
           data-testid={`quantity-review-${ingredient.tempId}`}
         >
           <p className="text-[12px] font-semibold text-[var(--warning)]">
-            화면/추정 수량을 저장 전에 확인해주세요.
+            화면/추정 수량을 저장 전에 확인해 주세요.
           </p>
           {quantityEvidenceSnippet ? (
             <p className="mt-1 text-[12px] text-[var(--text-2)]">
@@ -1098,7 +1098,7 @@ function ReviewCookingStepRow({
             {stripMatchingSectionPrefix(
               step.instruction,
               step.component_label,
-            )?.trim() || "만들기 설명을 입력해주세요."}
+            )?.trim() || "만들기 설명을 입력해 주세요."}
           </p>
           {step.duration_text && (
             <p className="mt-1 text-sm text-[var(--text-3)]">{step.duration_text}</p>
@@ -1183,7 +1183,7 @@ function ReviewStep({
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-8">
-      <p className="pt-4 text-base text-[var(--text-2)]">추출 결과를 확인해주세요</p>
+      <p className="pt-4 text-base text-[var(--text-2)]">추출 결과를 확인해 주세요</p>
 
       {thumbnailUrl ? (
         <div
@@ -1218,7 +1218,7 @@ function ReviewStep({
           role="status"
         >
           <p className="text-[13px] font-semibold leading-[1.45] text-[var(--foreground)]">
-            레시피 영상인지 확실하지 않아요. 추출 결과를 더 꼼꼼히 확인해주세요.
+            레시피 영상인지 확실하지 않아요. 추출 결과를 더 꼼꼼히 확인해 주세요.
           </p>
           {classificationReasons.length > 0 ? (
             <ul className="mt-2 list-disc space-y-1 pl-5 text-[12px] text-[var(--text-2)]">
@@ -1321,7 +1321,7 @@ function ReviewStep({
           role="status"
         >
           <p className="text-[13px] font-semibold leading-[1.45] text-[var(--text-2)]">
-            등록하려면 아래 항목을 확인해주세요.
+            등록하려면 아래 항목을 확인해 주세요.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {registerRequirements.map((requirement) => (
@@ -1436,10 +1436,10 @@ function ReviewStep({
             data-testid="partial-draft-guidance"
           >
             <p className="text-[13px] font-semibold leading-[1.45] text-[var(--foreground)]">
-              조리 과정을 직접 입력해주세요
+              조리 과정을 직접 입력해 주세요
             </p>
             <p className="mt-1 text-[12px] text-[var(--text-2)]">
-              재료는 자동으로 추출됐지만 조리 과정을 찾지 못했어요. 아래 버튼으로 직접 추가해주세요.
+              재료는 자동으로 추출됐지만 조리 과정을 찾지 못했어요. 아래 버튼으로 직접 추가해 주세요.
             </p>
           </div>
         ) : steps.length === 0 ? (
@@ -1781,13 +1781,13 @@ function IngredientRegisterModal({
     if (!result.success || !result.data) {
       const code = result.error?.code;
       if (code === "SESSION_EXPIRED") {
-        setError("추출 세션이 만료됐어요. 다시 추출해주세요.");
+        setError("추출 세션이 만료됐어요. 다시 추출해 주세요.");
       } else if (code === "CONFLICT") {
-        setError(result.error?.message ?? "세션 상태가 변경됐어요. 다시 시도해주세요.");
+        setError(result.error?.message ?? "세션 상태가 변경됐어요. 다시 시도해 주세요.");
       } else if (code === "UNAUTHORIZED") {
         setError("로그인이 필요해요.");
       } else if (code === "VALIDATION_ERROR") {
-        setError(result.error?.message ?? "입력값을 확인해주세요.");
+        setError(result.error?.message ?? "입력값을 확인해 주세요.");
       } else {
         setError(result.error?.message ?? "재료를 등록하지 못했어요.");
       }
@@ -2064,7 +2064,7 @@ function BulkIngredientRegistrationSheet({
     );
 
     if (bulkResult.sessionExpired) {
-      setSessionExpiredMessage("추출 세션이 만료됐어요. 다시 추출해주세요.");
+      setSessionExpiredMessage("추출 세션이 만료됐어요. 다시 추출해 주세요.");
     }
 
     setIsSubmitting(false);
@@ -2251,7 +2251,7 @@ function RegisterErrorModal({ errorMessage, onRetry, onClose }: RegisterErrorMod
         <p className="mt-4 text-base text-[var(--text-2)]">
           {errorMessage}
           <br />
-          잠시 후 다시 시도해주세요
+          잠시 후 다시 시도해 주세요
         </p>
         <div className="mt-6 space-y-3">
           <Button fullWidth onClick={onRetry}>
@@ -2307,7 +2307,7 @@ function ServingsInputModal({ onConfirm, onCancel, defaultServings, isCreating, 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)] sm:items-center">
       <div className="w-full max-w-md rounded-t-[var(--radius-sheet)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-sheet)]">
-        <ModalHeader title="이 끼니에 추가" description="계획 인분을 정해주세요" onClose={onCancel} />
+        <ModalHeader title="이 끼니에 추가" description="계획 인분을 정해 주세요" onClose={onCancel} />
         <div className="mt-6">
           <NumericStepperCompact value={servings} min={1} onChange={setServings} unit="인분" disabled={isCreating} />
         </div>
@@ -2491,7 +2491,7 @@ export function YoutubeImportScreen({
     if (!result.success || !result.data) {
       const fieldError = result.error?.fields?.find((f) => f.field === "youtube_url");
       setUrlError(fieldError?.reason === "invalid_url"
-        ? "올바른 유튜브 URL을 입력해주세요"
+        ? "올바른 유튜브 URL을 입력해 주세요"
         : result.error?.message ?? "URL을 확인하지 못했어요.");
       setIsValidating(false);
       return;
@@ -3198,7 +3198,7 @@ export function YoutubeImportScreen({
             <div>
               <p className="web-picker-subtle">{videoInfo.channel}</p>
               <h2>{videoInfo.title}</h2>
-              <p>요리 레시피로 보기 어려워요. 다른 링크를 입력해주세요.</p>
+              <p>요리 레시피로 보기 어려워요. 다른 링크를 입력해 주세요.</p>
               {classificationReasons.length > 0 ? (
                 <ul>
                   {classificationReasons.map((reason) => (
@@ -3241,7 +3241,7 @@ export function YoutubeImportScreen({
       {currentStep === "review" ? (
         <section className="web-yt-content web-yt-review">
           <div>
-            <h2>추출 결과를 확인해주세요</h2>
+            <h2>추출 결과를 확인해 주세요</h2>
             <p>영상에서 찾은 재료와 만들기를 등록 전에 확인해요.</p>
           </div>
           {desktopRegisterRequirements.length > 0 ? (

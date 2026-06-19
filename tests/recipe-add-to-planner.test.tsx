@@ -517,7 +517,7 @@ describe("planner add flow", () => {
   it("shows an error message inside the sheet when createMeal fails", async () => {
     fetchPlanner.mockResolvedValue(buildPlannerData());
 
-    const apiError = new Error("플래너 추가에 실패했어요. 다시 시도해주세요.");
+    const apiError = new Error("플래너 추가에 실패했어요. 다시 시도해 주세요.");
     createMeal.mockRejectedValue(apiError);
 
     render(

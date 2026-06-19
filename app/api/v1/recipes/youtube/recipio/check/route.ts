@@ -37,7 +37,7 @@ export async function GET(request: Request) {
 
   const parsedUrl = normalizeRecipioYoutubeUrl(new URL(request.url).searchParams.get("youtube_url") ?? "");
   if (!parsedUrl) {
-    return fail("INVALID_URL", "올바른 유튜브 URL을 입력해주세요.", 422, [
+    return fail("INVALID_URL", "올바른 유튜브 URL을 입력해 주세요.", 422, [
       { field: "youtube_url", reason: "invalid_url" },
     ]);
   }

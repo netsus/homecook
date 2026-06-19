@@ -279,7 +279,7 @@ export function formatBootstrapErrorMessage(error: unknown, fallbackMessage: str
       || error.message.includes("Could not find the table 'public.")
       || error.message.includes("relation")
     ) {
-      return "Supabase 스키마가 준비되지 않았어요. 마이그레이션을 먼저 적용해주세요.";
+      return "Supabase 스키마가 준비되지 않았어요. 마이그레이션을 먼저 적용해 주세요.";
     }
   }
 

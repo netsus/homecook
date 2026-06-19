@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     }
 
     if (!parsedBody.name) {
-      return fail("VALIDATION_ERROR", "끼니 이름을 확인해주세요.", 422, [
+      return fail("VALIDATION_ERROR", "끼니 이름을 확인해 주세요.", 422, [
         { field: "name", reason: "required" },
       ]);
     }
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
   }
 
   if (!parsedBody.name) {
-    return fail("VALIDATION_ERROR", "끼니 이름을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "끼니 이름을 확인해 주세요.", 422, [
       { field: "name", reason: "required" },
     ]);
   }

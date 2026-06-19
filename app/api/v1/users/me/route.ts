@@ -197,13 +197,13 @@ export async function PATCH(request: Request) {
   try {
     body = (await request.json()) as UserProfileRequestBody;
   } catch {
-    return fail("INVALID_REQUEST", "요청 본문을 확인해주세요.", 400, [
+    return fail("INVALID_REQUEST", "요청 본문을 확인해 주세요.", 400, [
       { field: "body", reason: "invalid_json" },
     ]);
   }
 
   if (!isRequestRecord(body)) {
-    return fail("INVALID_REQUEST", "요청 본문을 확인해주세요.", 400, [
+    return fail("INVALID_REQUEST", "요청 본문을 확인해 주세요.", 400, [
       { field: "body", reason: "invalid_object" },
     ]);
   }

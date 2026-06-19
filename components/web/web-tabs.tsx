@@ -30,3 +30,18 @@ export function WebTabButton({
     />
   );
 }
+
+export function WebTabIcon({
+  children,
+}: {
+  children: React.ReactElement<React.SVGProps<SVGSVGElement>>;
+}) {
+  return (
+    <span aria-hidden="true" className="web-tab-icon">
+      {React.cloneElement(children, {
+        className: cn("web-tab-icon-svg", children.props.className),
+        focusable: false,
+      })}
+    </span>
+  );
+}

@@ -680,7 +680,7 @@ export const USER_QUEST_DEFINITIONS: UserQuestDefinition[] = [
     quest_key: "first_shopping_list_created",
     quest_type: "tutorial",
     title: "첫 장보기 목록 만들기",
-    description: "여러 끼니를 한번에 장보기할 수 있어요.",
+    description: "여러 끼니를 한 번에 장보기할 수 있어요.",
     metric: "shopping_list_created",
     target: 1,
   },

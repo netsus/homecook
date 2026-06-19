@@ -304,7 +304,7 @@ test.describe("Slice 06 recipe-to-planner", () => {
           data: null,
           error: {
             code: "VALIDATION_ERROR",
-            message: "플래너 추가에 실패했어요. 다시 시도해주세요.",
+            message: "플래너 추가에 실패했어요. 다시 시도해 주세요.",
             fields: [],
           },
         },

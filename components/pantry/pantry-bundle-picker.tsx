@@ -160,7 +160,7 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
         closeButtonRef={closeButtonRef}
         description={
           expandedBundle
-            ? `${expandedBundle.name}에서 추가할 항목을 골라주세요`
+            ? `${expandedBundle.name}에서 추가할 항목을 골라 주세요`
             : "자주 함께 쓰는 재료를 한 번에 추가해요"
         }
         footer={

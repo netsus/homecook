@@ -525,7 +525,7 @@ test.describe("34c growth notification UI @smoke-core", () => {
     await stabilize(page);
 
     await expect(page.getByTestId("shopping-multi-meal-hint").first()).toHaveText(
-      "여러 끼니를 한번에 장보기할 수 있어요",
+      "같은 재료는 자동으로 합산돼요. 여러 끼니를 한 번에 장보기할 수 있어요.",
       { timeout: 15_000 },
     );
   });

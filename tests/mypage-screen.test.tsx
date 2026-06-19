@@ -825,6 +825,32 @@ describe("MypageScreen", () => {
     expect(screen.getByDisplayValue("집밥러")).toBeTruthy();
   });
 
+  it("keeps desktop mypage tab icons inside non-clipping icon wrappers", async () => {
+    render(<MypageScreen initialAuthenticated />);
+
+    await screen.findByText("집밥러");
+
+    const tabbar = screen.getByTestId("mypage-tabbar");
+    const tabs = within(tabbar).getAllByRole("tab");
+
+    expect(tabs.length).toBeGreaterThan(0);
+
+    for (const tab of tabs) {
+      const iconWrapper = tab.querySelector(".web-tab-icon");
+      const icon = iconWrapper?.querySelector("svg");
+
+      expect(iconWrapper, `${tab.textContent} tab should wrap its icon`).toBeTruthy();
+      expect(icon, `${tab.textContent} tab should render an svg icon`).toBeTruthy();
+      expect(icon?.classList.contains("web-tab-icon-svg")).toBe(true);
+    }
+
+    const preferencesIcon = screen
+      .getByRole("tab", { name: "환경설정" })
+      .querySelector(".web-tab-icon svg");
+
+    expect(preferencesIcon?.getAttribute("viewBox")).toBe("-1 -1 26 26");
+  });
+
   it("uses cumulative planner status stat labels on desktop", async () => {
     render(<MypageScreen initialAuthenticated />);
 

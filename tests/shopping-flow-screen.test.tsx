@@ -305,7 +305,7 @@ describe("shopping flow screen", () => {
       expect(screen.getByText("2개 · 6인분")).toBeTruthy();
       expect(screen.getByText("장보기 목록으로 만들어요.")).toBeTruthy();
       expect(screen.getByTestId("shopping-multi-meal-hint").textContent).toBe(
-        "여러 끼니를 한번에 장보기할 수 있어요",
+        "같은 재료는 자동으로 합산돼요. 여러 끼니를 한 번에 장보기할 수 있어요.",
       );
       expect(screen.queryByText("진행할 장보기")).toBeNull();
       expect(screen.queryByRole("navigation", { name: "장보기 경로" })).toBeNull();
@@ -352,9 +352,9 @@ describe("shopping flow screen", () => {
       expect(screen.queryByText("장보기 기준 인분")).toBeNull();
       expect(screen.queryByLabelText("6인분")).toBeNull();
       expect(screen.queryByLabelText("인분 늘리기")).toBeNull();
-      expect(
-        screen.getByText(/같은 재료는 장보기 목록에서 자동으로 합산돼요/)
-      ).toBeTruthy();
+      expect(screen.getByTestId("shopping-multi-meal-hint").textContent).toBe(
+        "같은 재료는 자동으로 합산돼요. 여러 끼니를 한 번에 장보기할 수 있어요.",
+      );
     });
 
     it("should constrain the content width for readable local browser testing", async () => {
@@ -1006,6 +1006,35 @@ describe("shopping flow screen", () => {
       await userEvent.click(screen.getByTestId("shopping-mobile-recipe-row-meal-1"));
       expect(screen.getByLabelText("김치찌개 선택")).toBeTruthy();
       expect((screen.getByText("장보기 목록 만들기") as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it("separates mobile meal navigation from the recipe title tap target", async () => {
+      setMatchMedia(true);
+      fetchShoppingPreview.mockResolvedValue(
+        createPreviewData([
+          {
+            id: "meal-1",
+            column_id: "column-breakfast",
+            plan_date: "2026-04-26",
+            recipe_id: "recipe-1",
+            recipe_name: "김치찌개",
+            planned_servings: 2,
+          },
+        ]),
+      );
+
+      render(<ShoppingFlowScreen initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("김치찌개")).toBeTruthy();
+      });
+
+      expect(screen.queryByRole("link", { name: "김치찌개" })).toBeNull();
+
+      const mealLink = screen.getByRole("link", { name: "김치찌개 끼니 보기" });
+      expect(mealLink.getAttribute("href")).toBe(
+        "/planner/2026-04-26/column-breakfast?returnTo=%2Fshopping%2Fflow",
+      );
     });
 
     it("should restore a checked item when mobile pantry exclusion fails", async () => {

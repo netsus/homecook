@@ -124,13 +124,13 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as TagSuggestionBody;
   } catch {
-    return fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [
       { field: "body", reason: "invalid_json" },
     ]);
   }
 
   if (!isRecord(body)) {
-    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, [
       { field: "body", reason: "invalid_object" },
     ]);
   }

@@ -199,7 +199,7 @@ export function QaFixtureToolbar() {
       </div>
 
       <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
-        로그인 상태 변경은 새로고침 후 바로 반영되고, fault는 다음 API 호출부터 적용됩니다.
+        로그인 상태 변경은 새로고침 후 바로 반영되고, fault는 다음 API 호출부터 적용돼요.
       </p>
 
       <button

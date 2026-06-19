@@ -209,7 +209,7 @@ test.describe("Slice 15a cook planner complete", () => {
 
     await expect(page.getByTestId("consumed-ingredient-sheet")).toBeVisible();
     await expect(
-      page.getByText(/소진(한 재료를 체크해주세요|된 재료를 확인해주세요)/),
+      page.getByText(/소진(한 재료를 확인해 주세요|된 재료를 확인해 주세요)/),
     ).toBeVisible();
 
     await page.getByTestId("consumed-check-ing-1").click();

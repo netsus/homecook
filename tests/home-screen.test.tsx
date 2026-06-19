@@ -149,7 +149,7 @@ describe("home screen", () => {
     expect(screen.getByRole("navigation", { name: "홈 하단 탭" })).toBeTruthy();
     await waitFor(() => {
       expect(screen.getByTestId("home-result-status").textContent).toBe(
-        `모든 레시피 ${getMockRecipeList().items.length}개가 표시됩니다.`,
+        `모든 레시피 ${getMockRecipeList().items.length}개가 표시돼요.`,
       );
     });
     expect(screen.getByRole("link", { name: "팬트리" }).getAttribute("href")).toBe("/pantry");

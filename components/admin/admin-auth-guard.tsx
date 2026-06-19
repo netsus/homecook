@@ -76,7 +76,7 @@ function AdminUnauthorizedState() {
     <div className="flex flex-col items-center justify-center py-20">
       <div className="mb-4 text-4xl">&#128274;</div>
       <h2 className="text-lg font-bold text-[var(--foreground)]">
-        로그인이 필요합니다
+        로그인이 필요해요
       </h2>
       <a
         className="mt-4 inline-flex h-11 items-center rounded-xl bg-[var(--brand)] px-6 text-sm font-semibold text-[var(--text-inverse)]"
@@ -93,7 +93,7 @@ function AdminForbiddenState() {
     <div className="flex flex-col items-center justify-center py-20">
       <div className="mb-4 text-4xl">&#128683;</div>
       <h2 className="text-lg font-bold text-[var(--foreground)]">
-        관리자 권한이 없습니다
+        관리자 권한이 없어요
       </h2>
       <p className="mt-2 text-sm text-[var(--text-3)]">
         관리자 등록은 운영팀에 문의해 주세요

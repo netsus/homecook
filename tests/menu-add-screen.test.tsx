@@ -314,7 +314,7 @@ describe("MenuAddScreen", () => {
     );
     await user.click(screen.getByRole("button", { name: "가져오기" }));
 
-    expect(await screen.findByRole("heading", { name: "추출 결과를 확인해주세요" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "추출 결과를 확인해 주세요" })).toBeTruthy();
 
     const shell = container.querySelector(".yt-mobile-import-shell");
     expect(shell?.className).toContain("h-dvh");
@@ -525,7 +525,7 @@ describe("MenuAddScreen", () => {
       });
     });
 
-    expect(await screen.findByRole("heading", { name: "추출 결과를 확인해주세요" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "추출 결과를 확인해 주세요" })).toBeTruthy();
     expect(screen.getByTestId("youtube-import-embedded")).toBeTruthy();
     expect(screen.getByTestId("menu-add-option-grid")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "가져오기 화면 열기" })).toBeNull();
@@ -543,7 +543,7 @@ describe("MenuAddScreen", () => {
         thumbnail_url: "https://i.ytimg.com/vi/multi12345/hqdefault.jpg",
         tags: ["집밥"],
         extraction_methods: ["caption"],
-        draft_warnings: ["영상 안에서 여러 요리 후보를 찾았어요. 저장할 요리를 먼저 선택해주세요."],
+        draft_warnings: ["영상 안에서 여러 요리 후보를 찾았어요. 저장할 요리를 먼저 선택해 주세요."],
         blocking_issues: ["MULTI_CANDIDATE_REVIEW_REQUIRED"],
         ingredients: [],
         steps: [],
@@ -663,7 +663,7 @@ describe("MenuAddScreen", () => {
 
     const candidates = await screen.findByTestId("youtube-recipe-candidates");
     expect(within(candidates).getByText("요리 후보 2개")).toBeTruthy();
-    expect(screen.getByText("저장할 요리를 먼저 선택해주세요.")).toBeTruthy();
+    expect(screen.getByText("저장할 요리를 먼저 선택해 주세요.")).toBeTruthy();
 
     await user.click(screen.getByTestId("youtube-recipe-candidate-candidate-2"));
 
@@ -675,7 +675,7 @@ describe("MenuAddScreen", () => {
     });
     expect(await screen.findByLabelText("계란 수량")).toBeTruthy();
     expect(screen.getByText("계란을 풀어 끓여요.")).toBeTruthy();
-    expect(screen.queryByText("저장할 요리를 먼저 선택해주세요.")).toBeNull();
+    expect(screen.queryByText("저장할 요리를 먼저 선택해 주세요.")).toBeNull();
   });
 
   it("registers an unresolved YouTube ingredient from the review row", async () => {
@@ -1344,7 +1344,7 @@ describe("MenuAddScreen", () => {
 
     // Partial draft guidance should be visible
     expect(await screen.findByTestId("partial-draft-guidance")).toBeTruthy();
-    expect(screen.getByText("조리 과정을 직접 입력해주세요")).toBeTruthy();
+    expect(screen.getByText("조리 과정을 직접 입력해 주세요")).toBeTruthy();
 
     // Register button must be disabled
     const registerButton = screen.getByRole("button", { name: "등록" });

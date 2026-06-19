@@ -142,7 +142,7 @@ async function readMutationBody(request: Request) {
 }
 
 function invalidIngredientIdsResponse() {
-  return fail("VALIDATION_ERROR", "추가할 재료를 선택해주세요.", 422, [
+  return fail("VALIDATION_ERROR", "추가할 재료를 선택해 주세요.", 422, [
     { field: "ingredient_ids", reason: "required_non_empty" },
   ]);
 }
@@ -334,7 +334,7 @@ export async function DELETE(request: Request) {
   const ingredientIds = normalizeIngredientIds(body?.ingredient_ids);
 
   if (!ingredientIds || ingredientIds.length === 0) {
-    return fail("VALIDATION_ERROR", "삭제할 재료를 선택해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "삭제할 재료를 선택해 주세요.", 422, [
       { field: "ingredient_ids", reason: "required_non_empty" },
     ]);
   }

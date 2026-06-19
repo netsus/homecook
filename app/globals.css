@@ -347,7 +347,9 @@
 
   /* ── 폰트 ── */
   --font-body:
-    "Avenir Next", "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+    "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic",
+    sans-serif;
 }
 
 @layer components {
@@ -1676,16 +1678,16 @@ button {
   align-items: center;
   justify-content: center;
   border: 1px solid var(--web-line, #dee2e6);
-  border-radius: 5px;
+  border-radius: var(--radius-badge);
   background: #fff;
-  color: #fff;
+  color: var(--web-text-inverse, #fff);
   font-size: 12px;
   font-weight: 900;
 }
 
 .shopping-select-all-control[aria-checked="true"] > span {
-  border-color: var(--brand);
-  background: var(--brand);
+  border-color: var(--web-brand, var(--brand));
+  background: var(--web-brand, var(--brand));
 }
 
 .shopping-select-all-control:disabled {
@@ -1974,10 +1976,7 @@ button {
     --web-content-max: 1200px;
     --web-content-wide: 1440px;
     --web-nav-h: 64px;
-    --web-font:
-      "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
-      system-ui, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic",
-      sans-serif;
+    --web-font: var(--font-body);
   }
 
   .app-shell {
@@ -5128,16 +5127,20 @@ button {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    min-height: 28px;
     border-radius: var(--web-r-pill);
     background: var(--web-brand-wash);
     color: var(--web-brand-accessible);
-    padding: 5px 12px;
+    padding: 0 12px;
     font-size: 13px;
     font-weight: 800;
-    line-height: 1.2;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   .web-meal-add-target svg {
+    display: block;
+    flex-shrink: 0;
     width: 14px;
     height: 14px;
   }
@@ -7411,6 +7414,25 @@ button {
     align-items: center;
     gap: 8px;
     padding: 16px 18px;
+    line-height: 1;
+  }
+
+  .web-mypage-tabs .web-tab-icon {
+    display: inline-grid;
+    flex: 0 0 22px;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    line-height: 1;
+    overflow: visible;
+  }
+
+  .web-mypage-tabs .web-tab-icon-svg {
+    display: block;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    overflow: visible;
   }
 
   .web-mypage-panel {
@@ -10365,13 +10387,14 @@ button {
 
   .web-shopping-recipe-card {
     display: grid;
-    grid-template-columns: 34px 56px minmax(0, 1fr);
-    gap: 12px;
+    grid-template-columns: 32px 52px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
     min-width: 0;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-md);
     background: var(--web-surface);
-    padding: 16px;
+    padding: 14px;
     cursor: pointer;
     overflow: hidden;
     opacity: 0.62;
@@ -10391,17 +10414,16 @@ button {
   .web-shopping-recipe-toggle,
   .web-shopping-check {
     display: inline-flex;
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
     align-items: center;
     justify-content: center;
-    align-self: start;
     border: 2px solid var(--web-line);
     border-radius: var(--web-r-xs);
     background: var(--web-surface);
-    color: white;
+    color: var(--web-text-inverse);
     font-size: 13px;
     font-weight: 900;
   }
@@ -10414,8 +10436,8 @@ button {
 
   .web-shopping-recipe-thumb {
     display: inline-flex;
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     align-items: center;
     justify-content: center;
     overflow: hidden;
@@ -10437,7 +10459,7 @@ button {
     display: grid;
     min-width: 0;
     overflow: hidden;
-    gap: 10px;
+    gap: 6px;
   }
 
   .web-shopping-recipe-title-row {

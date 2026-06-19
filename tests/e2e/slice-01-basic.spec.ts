@@ -205,7 +205,7 @@ test.describe("Slice 01 basic flow", () => {
     await page.goto(`${RECIPE_PATH}?authError=oauth_failed`);
 
     await expect(
-      page.getByText("로그인을 완료하지 못했어요. 다시 시도해주세요."),
+      page.getByText("로그인을 완료하지 못했어요. 다시 시도해 주세요."),
     ).toBeVisible();
   });
 });

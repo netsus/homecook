@@ -302,7 +302,7 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     await page.getByRole("button", { name: "인분 증가" }).click();
 
     await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(visibleTextContaining(page, "상태가 진행된 식사입니다.")).toBeVisible();
+    await expect(visibleTextContaining(page, "이미 진행된 식사예요.")).toBeVisible();
   });
 
   test("serving-change confirm calls PATCH and dismisses modal", async ({ page }) => {
