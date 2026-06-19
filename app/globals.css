@@ -623,7 +623,7 @@
     margin-bottom: 10px;
   }
 
-  .mobile-toc-head strong {
+  .mobile-toc-head h2 {
     margin: 0;
     color: var(--foreground);
     font-size: 18px;

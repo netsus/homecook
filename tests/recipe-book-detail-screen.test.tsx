@@ -481,7 +481,7 @@ describe("RecipeBookDetailScreen", () => {
 
     expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
     const toc = screen.getByTestId("recipebook-detail-header");
-    expect(within(toc).getByText("목차")).toBeTruthy();
+    expect(within(toc).getByRole("heading", { name: "목차" })).toBeTruthy();
     expect(within(toc).queryByRole("heading", { name: "저장한 레시피" })).toBeNull();
     expect(within(toc).queryByText("Page list")).toBeNull();
     expect(within(toc).getByText("저장한 레시피 · 2개 레시피")).toBeTruthy();
