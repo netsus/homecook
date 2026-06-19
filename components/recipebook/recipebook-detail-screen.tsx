@@ -2225,7 +2225,7 @@ function MobileRecipeBookToc({
     >
       <div className="mobile-toc-card mobile-recipebook-detail-toc-card">
         <div className="mobile-toc-head">
-          <strong>목차</strong>
+          <h2>목차</h2>
           <span>{bookName} · {items.length}개 레시피</span>
         </div>
         <nav
