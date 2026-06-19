@@ -1227,7 +1227,7 @@
 
 ### 25. 레시피북 책뷰/목록뷰의 탐색, 하단 여백, 스켈레톤, 버튼 위계가 어색한 문제
 
-- Status: planned
+- Status: completed
 - Severity: Medium
 - Area: UX / UI / Frontend
 - Source: user manual review screenshots, app recipebook book view, app recipebook skeleton, web recipebook book view
@@ -1307,13 +1307,15 @@
   - `tests/mypage-screen.test.tsx`
   - `tests/e2e/qa-visual.spec.ts`
 - Verification:
-  - 앱 책뷰에서 레시피 1개/3개/5개 이상인 책의 목차와 page navigation 확인
-  - 앱 목록뷰에서 상단 목차 제거 여부 확인
-  - 앱 책뷰 스켈레톤과 실제 화면을 같은 viewport에서 비교
-  - 앱 CTA 색상 위계와 텍스트 대비 확인
-  - 웹 책뷰 긴 제목 케이스에서 삭제 버튼이 제목을 가리지 않는지 확인
-  - 웹 책뷰 재료/만들기 section indent visual 확인
-  - 모바일 390px/430px, 웹 1280px/1440px visual snapshot 갱신
+  - `pnpm test tests/recipe-book-detail-screen.test.tsx -- --runInBand`
+  - `pnpm exec playwright test tests/e2e/qa-recipebook-diary-port-evidence.spec.ts --project=mobile-chrome --project=desktop-chrome`
+  - 앱 책뷰에서 `목차` 시트로 4번째 이후 레시피 접근, 하단 이전/다음 page navigation, 목록뷰 상단 목차 제거를 확인했다.
+  - 앱 책뷰 스켈레톤을 실제 카드 구조에 맞추고, `요리하기` primary / `플래너에 추가` secondary CTA 위계를 확인했다.
+  - 웹 책뷰에서 삭제 버튼을 이미지 오른쪽 상단으로 옮겨 제목과 겹치지 않게 했고, 재료/만들기 들여쓰기를 줄였다.
+  - evidence snapshot 갱신:
+    - `ui/designs/evidence/recipebook-diary-port/recipebook-detail-mobile-390.png`
+    - `ui/designs/evidence/recipebook-diary-port/recipebook-detail-mobile-320.png`
+    - `ui/designs/evidence/recipebook-diary-port/recipebook-detail-desktop-1440.png`
 
 ### 26. 앱 마이페이지 목록의 회색 배경과 아이콘 배경이 반복되어 화면이 무거워 보이는 문제
 

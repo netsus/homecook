@@ -408,6 +408,10 @@ describe("RecipeBookDetailScreen", () => {
     );
 
     expect(screen.getByTestId("recipebook-detail-mobile-loading")).toBeTruthy();
+    expect(screen.queryByTestId("recipebook-mobile-loading-toc-item")).toBeNull();
+    expect(
+      screen.getByTestId("recipebook-detail-mobile-loading-page-nav"),
+    ).toBeTruthy();
     expect(screen.getByLabelText("뒤로 가기").getAttribute("href")).toBe(
       "/mypage?returnSurface=mypage.recipebooks&restore=recipebook-tab",
     );
@@ -465,8 +469,35 @@ describe("RecipeBookDetailScreen", () => {
     expect(await screen.findByTestId("recipe-item-recipe-2")).toBeTruthy();
   });
 
-  it("shows a mobile table of contents before the recipe list", async () => {
+  it("uses compact mobile book controls and removes the top TOC from list mode", async () => {
     installMatchMedia(true);
+    mockFetchRecipeBookRecipes.mockResolvedValueOnce({
+      success: true,
+      data: {
+        items: [
+          ...MOCK_ITEMS.data.items,
+          {
+            recipe_id: "recipe-3",
+            title: "비빔국수",
+            thumbnail_url: null,
+            tags: ["면"],
+            base_servings: 1,
+            added_at: "2026-04-28T09:00:00.000Z",
+          },
+          {
+            recipe_id: "recipe-4",
+            title: "카레",
+            thumbnail_url: null,
+            tags: ["한그릇"],
+            base_servings: 3,
+            added_at: "2026-04-27T09:00:00.000Z",
+          },
+        ],
+        next_cursor: null,
+        has_next: false,
+      },
+      error: null,
+    });
 
     render(
       <RecipeBookDetailScreen
@@ -479,15 +510,10 @@ describe("RecipeBookDetailScreen", () => {
 
     expect(await screen.findByTestId("recipe-item-recipe-1")).toBeTruthy();
 
+    const user = userEvent.setup();
     expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
-    const toc = screen.getByTestId("recipebook-detail-header");
-    expect(within(toc).getByRole("heading", { name: "목차" })).toBeTruthy();
-    expect(within(toc).queryByRole("heading", { name: "저장한 레시피" })).toBeNull();
-    expect(within(toc).queryByText("Page list")).toBeNull();
-    expect(within(toc).getByText("저장한 레시피 · 2개 레시피")).toBeTruthy();
-    const firstTocButton = within(toc).getByRole("button", { name: /된장찌개/ });
-    expect(firstTocButton.getAttribute("aria-current")).toBe("page");
-    expect(firstTocButton.className).toContain("mobile-toc-row");
+    expect(screen.getByTestId("recipebook-mobile-toc-trigger")).toBeTruthy();
+    expect(screen.queryByTestId("recipebook-mobile-toc-card-recipe-1")).toBeNull();
     expect(screen.getByTestId("recipe-item-recipe-1").id).toBe(
       "recipebook-recipe-recipe-1",
     );
@@ -519,34 +545,60 @@ describe("RecipeBookDetailScreen", () => {
     expect(within(card).queryByText(/조회/)).toBeNull();
     expect(within(card).queryByText("25분")).toBeNull();
     expect(screen.getByTestId("recipebook-detail-list").className).toContain(
-      "pb-[calc(128px+env(safe-area-inset-bottom))]",
+      "pb-[calc(96px+env(safe-area-inset-bottom))]",
     );
     expect(within(card).getByRole("button", { name: "저장하기" })).toBeTruthy();
-    expect(within(card).getByRole("link", { name: "요리하기" })).toBeTruthy();
-    expect(within(card).getByRole("button", { name: "플래너에 추가" })).toBeTruthy();
+    expect(
+      within(card).getByRole("link", { name: "요리하기" }).className,
+    ).toContain("mobile-recipebook-detail-cook-button");
+    expect(
+      within(card).getByRole("button", { name: "플래너에 추가" }).className,
+    ).toContain("mobile-recipebook-detail-calendar-button-secondary");
     expect(
       within(card).getByRole("button", { name: "된장찌개 제거" }).className,
     ).toContain("mobile-recipebook-recipe-remove-icon");
 
-    expect(within(toc).queryByRole("button", { name: "책" })).toBeNull();
     expect(
       within(screen.getByTestId("recipebook-detail-mobile")).getByRole("group", {
         name: "상세 보기 방식",
       }),
     ).toBeTruthy();
+    const pageNav = screen.getByTestId("recipebook-mobile-page-nav");
     expect(
-      screen.getByTestId("recipebook-mobile-toc-card-recipe-1").className,
-    ).toContain("mobile-toc-row");
+      within(pageNav)
+        .getByRole("button", { name: "이전 레시피" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(within(pageNav).getByText("1 / 4")).toBeTruthy();
+    await user.click(within(pageNav).getByRole("button", { name: "다음 레시피" }));
+    expect(await screen.findByTestId("recipe-item-recipe-2")).toBeTruthy();
+    expect(screen.queryByTestId("recipe-item-recipe-1")).toBeNull();
+    expect(
+      within(screen.getByTestId("recipebook-mobile-page-nav")).getByText("2 / 4"),
+    ).toBeTruthy();
 
-    await userEvent.click(screen.getByRole("button", { name: "목록" }));
-    const listCard = await screen.findByTestId("recipebook-mobile-list-card-recipe-2");
-    expect(within(listCard).getByRole("heading", { name: "김치볶음밥" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "목차 열기" }));
+    const tocDialog = await screen.findByRole("dialog", {
+      name: "저장한 레시피 목차",
+    });
+    expect(within(tocDialog).getByRole("button", { name: /카레/ })).toBeTruthy();
+    await user.click(within(tocDialog).getByRole("button", { name: /카레/ }));
+    expect(await screen.findByTestId("recipe-item-recipe-4")).toBeTruthy();
+    expect(
+      screen.queryByRole("dialog", { name: "저장한 레시피 목차" }),
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "목록" }));
+    expect(screen.queryByTestId("recipebook-mobile-toc-trigger")).toBeNull();
+    expect(screen.queryByTestId("recipebook-mobile-page-nav")).toBeNull();
+    const listCard = await screen.findByTestId("recipebook-mobile-list-card-recipe-4");
+    expect(within(listCard).getByRole("heading", { name: "카레" })).toBeTruthy();
     expect(within(listCard).queryByRole("heading", { name: "재료" })).toBeNull();
     expect(within(listCard).queryByRole("heading", { name: "만들기" })).toBeNull();
     expect(within(listCard).queryByText("김치 200g")).toBeNull();
     expect(screen.queryByRole("button", { name: "된장찌개 제거" })).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "책" }));
+    await user.click(screen.getByRole("button", { name: "책" }));
     expect(screen.queryByTestId("recipe-item-recipe-2")).toBeNull();
   });
 
@@ -919,15 +971,21 @@ describe("RecipeBookDetailScreen", () => {
 
     await screen.findByTestId("recipe-item-recipe-1");
 
-    expect(screen.getByRole("button", { name: "된장찌개 제거" }).className).toContain(
+    const firstRemoveButton = screen.getByRole("button", { name: "된장찌개 제거" });
+    expect(firstRemoveButton.className).toContain(
       "web-recipebook-recipe-remove-icon",
     );
+    expect(firstRemoveButton.closest(".web-recipebook-recipe-hero")).toBeTruthy();
     const user = userEvent.setup();
     const pageDots = screen.getByRole("group", { name: "페이지 선택" });
     await user.click(within(pageDots).getByRole("button", { name: "02쪽" }));
-    expect(screen.getByRole("button", { name: "김치볶음밥 제거" }).className).toContain(
+    const secondRemoveButton = screen.getByRole("button", {
+      name: "김치볶음밥 제거",
+    });
+    expect(secondRemoveButton.className).toContain(
       "web-recipebook-recipe-remove-icon",
     );
+    expect(secondRemoveButton.closest(".web-recipebook-recipe-hero")).toBeTruthy();
   });
 
   it("shows remove button for liked books with label '좋아요 해제'", async () => {
