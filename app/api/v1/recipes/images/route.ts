@@ -42,14 +42,14 @@ export async function POST(request: Request) {
   try {
     formData = await request.formData();
   } catch {
-    return fail("VALIDATION_ERROR", "이미지 파일을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "이미지 파일을 확인해 주세요.", 422, [
       { field: "image", reason: "invalid_multipart" },
     ]);
   }
 
   const image = formData.get("image");
   if (!isFile(image)) {
-    return fail("VALIDATION_ERROR", "이미지 파일을 선택해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "이미지 파일을 선택해 주세요.", 422, [
       { field: "image", reason: "required" },
     ]);
   }
@@ -61,14 +61,14 @@ export async function POST(request: Request) {
   }
 
   if (image.size > RECIPE_IMAGE_MAX_BYTES) {
-    return fail("VALIDATION_ERROR", "이미지는 5MB 이하로 업로드해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "이미지는 5MB 이하로 업로드해 주세요.", 422, [
       { field: "image", reason: "max_size" },
     ]);
   }
 
   const extension = getRecipeImageExtension(image.type);
   if (!extension) {
-    return fail("VALIDATION_ERROR", "이미지 파일을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "이미지 파일을 확인해 주세요.", 422, [
       { field: "image", reason: "unsupported_type" },
     ]);
   }

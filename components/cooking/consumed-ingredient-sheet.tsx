@@ -94,7 +94,7 @@ export function ConsumedIngredientSheet({
         }
         headerSlotClassName="mt-2"
         testId="consumed-ingredient-sheet"
-        title="소진된 재료를 확인해주세요"
+        title="소진된 재료를 확인해 주세요"
       >
         <div
           className="grid grid-cols-2 gap-2"
@@ -160,7 +160,7 @@ export function ConsumedIngredientSheet({
               className="text-xl font-bold tracking-[-0.3px] text-[var(--foreground)]"
               id="consumed-sheet-title"
             >
-              소진한 재료를 체크해주세요
+              소진한 재료를 확인해 주세요
             </h3>
             <button
               aria-label="닫기"
@@ -186,7 +186,7 @@ export function ConsumedIngredientSheet({
             </button>
           </div>
           <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            체크한 재료가 팬트리에서 제거됩니다.
+            체크한 재료가 팬트리에서 제거돼요.
             {recipeTitle ? ` 요리: ${recipeTitle}` : null}
           </p>
         </div>

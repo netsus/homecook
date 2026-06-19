@@ -61,6 +61,7 @@ import {
   WebShell,
   WebSkeleton,
   WebTabButton,
+  WebTabIcon,
   WebTabs,
   WebTopNav,
 } from "@/components/web";
@@ -1869,49 +1870,70 @@ export function MypageScreen({
             aria-label="저장한 레시피"
             onClick={() => switchDesktopTab("saved")}
           >
-            <BookmarkIcon /> 저장한 레시피
+            <WebTabIcon>
+              <BookmarkIcon />
+            </WebTabIcon>
+            저장한 레시피
           </WebTabButton>
           <WebTabButton
             active={activeTab === "recipebooks"}
             aria-label="레시피북"
             onClick={() => switchDesktopTab("recipebooks")}
           >
-            <BookIcon /> 레시피북
+            <WebTabIcon>
+              <BookIcon />
+            </WebTabIcon>
+            레시피북
           </WebTabButton>
           <WebTabButton
             active={activeTab === "shopping"}
             aria-label="장보기 기록"
             onClick={() => switchDesktopTab("shopping")}
           >
-            <CartIcon /> 장보기 기록
+            <WebTabIcon>
+              <CartIcon />
+            </WebTabIcon>
+            장보기 기록
           </WebTabButton>
           <WebTabButton
             active={activeTab === "leftovers"}
             aria-label="남은 요리"
             onClick={() => switchDesktopTab("leftovers")}
           >
-            <LeftoverIcon /> 남은 요리
+            <WebTabIcon>
+              <LeftoverIcon />
+            </WebTabIcon>
+            남은 요리
           </WebTabButton>
           <WebTabButton
             active={activeTab === "eaten"}
             aria-label="다먹은 요리"
             onClick={() => switchDesktopTab("eaten")}
           >
-            <CheckIcon /> 다먹은 요리
+            <WebTabIcon>
+              <CheckIcon />
+            </WebTabIcon>
+            다먹은 요리
           </WebTabButton>
           <WebTabButton
             active={activeTab === "preferences"}
             aria-label="환경설정"
             onClick={() => switchDesktopTab("preferences")}
           >
-            <SettingsIcon /> 환경설정
+            <WebTabIcon>
+              <SettingsIcon />
+            </WebTabIcon>
+            환경설정
           </WebTabButton>
           <WebTabButton
             active={activeTab === "help"}
             aria-label="도움말"
             onClick={() => switchDesktopTab("help")}
           >
-            <HelpIcon /> 도움말
+            <WebTabIcon>
+              <HelpIcon />
+            </WebTabIcon>
+            도움말
           </WebTabButton>
         </WebTabs>
 
@@ -2951,7 +2973,7 @@ function MyPageHelpSurface() {
     ["레시피북은 어떻게 정리되나요?", "내가 추가한 레시피, 저장한 레시피, 좋아요한 레시피는 자동으로 정리되고 커스텀 북은 직접 만들 수 있어요."],
     ["장보기 기록은 어디서 보나요?", "저장한 레시피 탭 하단의 장보기 기록에서 진행 중인 리스트와 완료된 리스트를 확인할 수 있어요."],
     ["팬트리와 플래너는 연결되나요?", "팬트리에 있는 재료는 장보기에서 제외할 수 있고, 플래너의 끼니와 함께 이어집니다."],
-    ["계정을 바꾸면 데이터가 유지되나요?", "저장 데이터는 로그인 계정 기준으로 관리됩니다."],
+    ["계정을 바꾸면 데이터가 유지되나요?", "저장 데이터는 로그인 계정 기준으로 관리돼요."],
     ["문제가 생기면 어디에 문의하나요?", "앱 내 문의 채널 또는 이메일로 상황을 남겨주세요."],
   ];
 
@@ -3453,7 +3475,7 @@ function RecipeBookTabContent({
       <div className="web-recipebooks-header">
         <div>
           <h2>레시피북</h2>
-          <p>내가 만든 북과 시스템 북을 책장처럼 관리합니다.</p>
+          <p>내가 만든 북과 시스템 북을 책장처럼 관리해요.</p>
         </div>
         <WebButton aria-label="새 레시피북 만들기" onClick={onShowCreateInput}>
           + 새 레시피북
@@ -4029,7 +4051,7 @@ function ShoppingHistoryTabContent({
       <div className="web-mypage-subsurface">
         <div className="web-mypage-section-head">
           <h2>장보기 기록</h2>
-          <p>진행 중이거나 완료한 장보기 목록을 확인합니다.</p>
+          <p>진행 중이거나 완료한 장보기 목록을 확인해요.</p>
         </div>
         <ShoppingHistoryWebLoadingSkeleton />
       </div>
@@ -4076,7 +4098,7 @@ function ShoppingHistoryTabContent({
     <div className="web-mypage-subsurface" data-testid="shopping-tab">
       <div className="web-mypage-section-head">
         <h2>장보기 기록</h2>
-        <p>진행 중이거나 완료한 장보기 목록을 확인합니다.</p>
+        <p>진행 중이거나 완료한 장보기 목록을 확인해요.</p>
       </div>
       <ShoppingHistoryCalendar
         items={items}
@@ -4805,9 +4827,11 @@ function formatShortDate(dateStr: string): string {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
-function BookmarkIcon() {
+type SvgIconProps = React.SVGProps<SVGSVGElement>;
+
+function BookmarkIcon(props: SvgIconProps = {}) {
   return (
-    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16" {...props}>
       <path d="M6 4.75A2.75 2.75 0 0 1 8.75 2h6.5A2.75 2.75 0 0 1 18 4.75v16l-6-3.2-6 3.2v-16Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
     </svg>
   );
@@ -4830,27 +4854,27 @@ function TrashIcon() {
   );
 }
 
-function HelpIcon() {
+function HelpIcon(props: SvgIconProps = {}) {
   return (
-    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16" {...props}>
       <path d="M12 17h.01M9.2 9a3 3 0 1 1 4.6 2.5c-1 .68-1.8 1.2-1.8 2.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
     </svg>
   );
 }
 
-function BookIcon() {
+function BookIcon(props: SvgIconProps = {}) {
   return (
-    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18" {...props}>
       <path d="M6 4h9a3 3 0 0 1 3 3v13H8a2 2 0 0 1-2-2V4Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.7" />
       <path d="M8 18h10" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
     </svg>
   );
 }
 
-function CartIcon() {
+function CartIcon(props: SvgIconProps = {}) {
   return (
-    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18" {...props}>
       <path d="M3 4h2l2.2 10.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 1.9-1.4L20 8H6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
       <circle cx="9" cy="20" r="1" stroke="currentColor" strokeWidth="1.7" />
       <circle cx="18" cy="20" r="1" stroke="currentColor" strokeWidth="1.7" />
@@ -4858,18 +4882,18 @@ function CartIcon() {
   );
 }
 
-function LeftoverIcon() {
+function LeftoverIcon(props: SvgIconProps = {}) {
   return (
-    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18" {...props}>
       <path d="M8 3h8l1 4H7l1-4ZM7 7h10v13H7V7Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.7" />
       <path d="M10 11h4M10 15h4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
     </svg>
   );
 }
 
-function CheckIcon() {
+function CheckIcon(props: SvgIconProps = {}) {
   return (
-    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18" {...props}>
       <path d="m5 12 4 4L19 6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.9" />
     </svg>
   );
@@ -4907,9 +4931,9 @@ function MypageReorderArrowIcon({ direction }: { direction: "up" | "down" }) {
   );
 }
 
-function SettingsIcon() {
+function SettingsIcon(props: SvgIconProps = {}) {
   return (
-    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+    <svg aria-hidden="true" fill="none" height="18" viewBox="-1 -1 26 26" width="18" {...props}>
       <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" stroke="currentColor" strokeWidth="1.7" />
       <path d="M19.4 15a1.8 1.8 0 0 0 .36 2l.05.05a2.1 2.1 0 1 1-2.96 2.96l-.05-.05a1.8 1.8 0 0 0-2-.36 1.8 1.8 0 0 0-1.1 1.66V21a2.1 2.1 0 0 1-4.2 0v-.08A1.8 1.8 0 0 0 8.4 19.3a1.8 1.8 0 0 0-2 .36l-.05.05a2.1 2.1 0 1 1-2.96-2.96l.05-.05a1.8 1.8 0 0 0 .36-2A1.8 1.8 0 0 0 2.14 13H2a2.1 2.1 0 0 1 0-4.2h.08A1.8 1.8 0 0 0 3.7 7.7a1.8 1.8 0 0 0-.36-2l-.05-.05A2.1 2.1 0 1 1 6.25 2.7l.05.05a1.8 1.8 0 0 0 2 .36A1.8 1.8 0 0 0 9.4 1.45V1.4a2.1 2.1 0 0 1 4.2 0v.08a1.8 1.8 0 0 0 1.1 1.62 1.8 1.8 0 0 0 2-.36l.05-.05a2.1 2.1 0 1 1 2.96 2.96l-.05.05a1.8 1.8 0 0 0-.36 2c.27.66.92 1.1 1.64 1.1H21a2.1 2.1 0 0 1 0 4.2h-.08A1.8 1.8 0 0 0 19.4 15Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" />
     </svg>

@@ -66,7 +66,7 @@ describe("social login buttons", () => {
 
     expect(
       await screen.findByText(
-        "Supabase 공개 환경변수를 읽지 못했습니다. .env.local 작성 후 개발 서버를 다시 시작하세요.",
+        "Supabase 공개 환경변수를 읽지 못했어요. .env.local 작성 후 개발 서버를 다시 시작하세요.",
       ),
     ).toBeTruthy();
   });

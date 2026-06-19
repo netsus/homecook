@@ -72,13 +72,13 @@ export async function PATCH(request: Request) {
   try {
     body = (await request.json()) as UserSettingsRequestBody;
   } catch {
-    return fail("INVALID_REQUEST", "요청 본문을 확인해주세요.", 400, [
+    return fail("INVALID_REQUEST", "요청 본문을 확인해 주세요.", 400, [
       { field: "body", reason: "invalid_json" },
     ]);
   }
 
   if (!isRequestRecord(body)) {
-    return fail("INVALID_REQUEST", "요청 본문을 확인해주세요.", 400, [
+    return fail("INVALID_REQUEST", "요청 본문을 확인해 주세요.", 400, [
       { field: "body", reason: "invalid_object" },
     ]);
   }
@@ -87,7 +87,7 @@ export async function PATCH(request: Request) {
     "screen_wake_lock" in body &&
     typeof body.screen_wake_lock !== "boolean"
   ) {
-    return fail("VALIDATION_ERROR", "설정 값을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "설정 값을 확인해 주세요.", 422, [
       { field: "screen_wake_lock", reason: "boolean" },
     ]);
   }

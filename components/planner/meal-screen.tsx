@@ -1652,7 +1652,7 @@ export function MealScreen({
         isDesktopViewport ? (
           <MealWebConfirmDialog
             confirmLabel="변경하기"
-            description="상태가 진행된 식사입니다. 인분 변경 시 다시 장보기/요리 흐름이 필요할 수 있어요."
+            description="이미 진행된 식사예요. 인분을 바꾸면 장보기/요리 흐름을 다시 진행해야 할 수 있어요."
             onCancel={handleModalCancel}
             onConfirm={handleServingChangeConfirm}
             testId="serving-change-confirm"
@@ -1667,7 +1667,7 @@ export function MealScreen({
               onClose={handleModalCancel}
             />
             <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-              상태가 진행된 식사입니다. 인분 변경 시 다시 장보기/요리 흐름이 필요할 수 있어요.
+              이미 진행된 식사예요. 인분을 바꾸면 장보기/요리 흐름을 다시 진행해야 할 수 있어요.
             </p>
             <div className="mt-5 flex gap-2.5">
               <button

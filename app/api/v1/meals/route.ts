@@ -315,7 +315,7 @@ async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHan
 export async function GET(request: NextRequest) {
   const parsed = parseMealListQuery(request);
   if (parsed.fields.length > 0) {
-    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, parsed.fields);
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
   if (isQaFixtureModeEnabled()) {
@@ -423,14 +423,14 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as MealCreateBody;
   } catch {
-    return fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [
       { field: "body", reason: "invalid_json" },
     ]);
   }
 
   const parsed = buildCreateValidationFields(body);
   if (parsed.fields.length > 0 || !parsed.plannedServings) {
-    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, parsed.fields);
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
   if (isQaFixtureModeEnabled()) {
@@ -528,7 +528,7 @@ export async function POST(request: Request) {
     }
 
     if (leftoverResult.data.recipe_id !== parsed.recipeId) {
-      return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, [
+      return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, [
         { field: "leftover_dish_id", reason: "recipe_mismatch" },
       ]);
     }

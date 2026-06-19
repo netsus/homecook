@@ -5,11 +5,11 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export function getSupabaseEnv() {
   if (!PUBLIC_SUPABASE_URL) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL 환경 변수가 필요합니다.");
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL 환경 변수가 필요해요.");
   }
 
   if (!PUBLIC_SUPABASE_ANON_KEY) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY 환경 변수가 필요합니다.");
+    throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY 환경 변수가 필요해요.");
   }
 
   return {

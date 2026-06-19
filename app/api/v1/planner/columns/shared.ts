@@ -127,7 +127,7 @@ export async function readPlannerColumnName(request: Request) {
     body = await request.json();
   } catch {
     return {
-      response: fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [
+      response: fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [
         { field: "body", reason: "invalid_json" },
       ]),
       name: null,
@@ -136,7 +136,7 @@ export async function readPlannerColumnName(request: Request) {
 
   if (!isRequestRecord(body)) {
     return {
-      response: fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [
+      response: fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [
         { field: "body", reason: "invalid_object" },
       ]),
       name: null,
@@ -148,7 +148,7 @@ export async function readPlannerColumnName(request: Request) {
 
   if (fields.length > 0) {
     return {
-      response: fail("VALIDATION_ERROR", "끼니 이름을 확인해주세요.", 422, fields),
+      response: fail("VALIDATION_ERROR", "끼니 이름을 확인해 주세요.", 422, fields),
       name: null,
     };
   }
@@ -166,7 +166,7 @@ export async function readPlannerColumnPatch(request: Request) {
     body = await request.json();
   } catch {
     return {
-      response: fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [
+      response: fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [
         { field: "body", reason: "invalid_json" },
       ]),
       patch: null,
@@ -175,7 +175,7 @@ export async function readPlannerColumnPatch(request: Request) {
 
   if (!isRequestRecord(body)) {
     return {
-      response: fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [
+      response: fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [
         { field: "body", reason: "invalid_object" },
       ]),
       patch: null,
@@ -209,7 +209,7 @@ export async function readPlannerColumnPatch(request: Request) {
 
   if (fields.length > 0) {
     return {
-      response: fail("VALIDATION_ERROR", "끼니 정보를 확인해주세요.", 422, fields),
+      response: fail("VALIDATION_ERROR", "끼니 정보를 확인해 주세요.", 422, fields),
       patch: null,
     };
   }

@@ -100,7 +100,7 @@ describe("login screen", () => {
     expect(screen.getByText("로그인 필요")).toBeTruthy();
     expect(screen.getAllByText("로그인하면 이전 화면으로 돌아와요.")).toHaveLength(1);
     expect(
-      screen.queryByText("저장한 레시피, 플래너, 팬트리를 같은 계정으로 관리합니다."),
+      screen.queryByText("저장한 레시피, 플래너, 팬트리를 같은 계정으로 관리해요."),
     ).toBeNull();
   });
 

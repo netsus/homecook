@@ -74,7 +74,7 @@ describe("prototype-derived state UI primitives", () => {
       <>
         <EmptyState title="아직 없어요" description="새 항목을 추가해보세요." />
         <ErrorState
-          message="네트워크 상태를 확인해주세요."
+          message="네트워크 상태를 확인해 주세요."
           onRetry={retry}
           title="문제가 생겼어요"
         />

@@ -519,9 +519,8 @@ export function ShoppingFlowScreen({
           <div>
             <p className="web-menu-add-eyebrow">장보기</p>
             <h1>장보기 준비</h1>
-            <p>같은 재료는 장보기 목록에서 자동으로 합산돼요.</p>
             <p data-testid="shopping-multi-meal-hint">
-              여러 끼니를 한번에 장보기할 수 있어요
+              같은 재료는 자동으로 합산돼요. 여러 끼니를 한 번에 장보기할 수 있어요.
             </p>
           </div>
           <div className="web-shopping-flow-tools" aria-label="장보기 보조 메뉴">
@@ -705,14 +704,11 @@ function MobileSelectScreen({
           <h2 className="text-[20px] font-extrabold leading-[1.3] text-[var(--foreground)]">
             어떤 끼니의 재료를 살까요?
           </h2>
-          <p className="mt-3 text-[13px] font-medium leading-[1.5] text-[var(--text-3)]">
-            같은 재료는 장보기 목록에서 자동으로 합산돼요.
-          </p>
           <p
-            className="mt-1 text-[13px] font-semibold leading-[1.5] text-[var(--text-2)]"
+            className="mt-3 text-[13px] font-semibold leading-[1.45] text-[var(--text-2)]"
             data-testid="shopping-multi-meal-hint"
           >
-            여러 끼니를 한번에 장보기할 수 있어요
+            같은 재료는 자동으로 합산돼요. 여러 끼니를 한 번에 장보기할 수 있어요.
           </p>
           <div className="mt-4 flex items-center justify-between gap-3">
             <ShoppingSelectAllControl
@@ -850,17 +846,21 @@ function MobileSelectRow({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <Link
-          className="inline-block max-w-full truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)] underline-offset-4 hover:text-[var(--brand)] hover:underline"
-          href={buildMealHref(config)}
-          onClick={(event) => event.stopPropagation()}
-        >
+        <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
           {config.recipe_name}
-        </Link>
+        </p>
         <p className="mt-[2px] truncate text-[11px] font-bold leading-[1.3] text-[var(--text-3)]">
           {slotLabel} · {config.shopping_servings}인분
         </p>
       </div>
+      <Link
+        aria-label={`${config.recipe_name} 끼니 보기`}
+        className="flex min-h-9 shrink-0 items-center rounded-[var(--radius-badge)] px-2 text-[12px] font-extrabold text-[var(--brand)] underline-offset-4 hover:underline"
+        href={buildMealHref(config)}
+        onClick={(event) => event.stopPropagation()}
+      >
+        끼니 보기
+      </Link>
     </div>
   );
 }

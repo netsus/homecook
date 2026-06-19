@@ -1399,7 +1399,7 @@ function parseYoutubeUrlBody(rawBody: unknown) {
 }
 
 function buildInvalidUrlResponse() {
-  return fail("INVALID_URL", "유효한 유튜브 URL을 입력해주세요.", 422, [
+  return fail("INVALID_URL", "유효한 유튜브 URL을 입력해 주세요.", 422, [
     { field: "youtube_url", reason: "invalid_url" },
   ]);
 }
@@ -1462,7 +1462,7 @@ function getFixtureVideo(videoId: string): YoutubeProviderResult {
         channel: "채널명",
         channelId: getFixtureChannelId(videoId),
         thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
-        description: "음악과 일상 이야기를 담은 일반 영상입니다.",
+        description: "음악과 일상 이야기를 담은 일반 영상이에요.",
         tags: ["music", "vlog"],
         categoryId: "10",
         duration: "PT3M",
@@ -9112,9 +9112,9 @@ export async function handleYoutubeExtract(request: Request) {
     ];
     const draftWarnings = [
       ...(classification.status === "uncertain"
-        ? ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해주세요."]
+        ? ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해 주세요."]
         : []),
-      "영상 안에서 여러 요리 후보를 찾았어요. 저장할 요리를 먼저 선택해주세요.",
+      "영상 안에서 여러 요리 후보를 찾았어요. 저장할 요리를 먼저 선택해 주세요.",
     ];
     const tags = generateYoutubeExtractTags({
       title: video.title,
@@ -9295,7 +9295,7 @@ export async function handleYoutubeExtract(request: Request) {
   ].filter((issue, index, issues) => issues.indexOf(issue) === index);
   const draftWarnings = [
     ...(classification.status === "uncertain"
-      ? ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해주세요."]
+      ? ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해 주세요."]
       : []),
     ...descriptionParse.draftWarnings,
   ].filter((warning, index, warnings) => warnings.indexOf(warning) === index);
@@ -9858,10 +9858,10 @@ function failForRegisterRpcError(data: YoutubeRecipeRegisterRpcErrorData) {
   }
 
   if (data.error_code === "CANDIDATE_PROMOTION_REQUIRED") {
-    return fail(data.error_code, data.message ?? "저장할 요리를 먼저 선택해주세요.", 409);
+    return fail(data.error_code, data.message ?? "저장할 요리를 먼저 선택해 주세요.", 409);
   }
 
-  return fail(data.error_code, data.message ?? "요청 값을 확인해주세요.", 422);
+  return fail(data.error_code, data.message ?? "요청 값을 확인해 주세요.", 422);
 }
 
 async function findExtractionSession(dbClient: DbClient, extractionId: string) {
@@ -9955,7 +9955,7 @@ function validateSessionForRegister(
   }
 
   if (session.session_kind === "multi_parent") {
-    return fail("CANDIDATE_PROMOTION_REQUIRED", "저장할 요리를 먼저 선택해주세요.", 409);
+    return fail("CANDIDATE_PROMOTION_REQUIRED", "저장할 요리를 먼저 선택해 주세요.", 409);
   }
 
   if (session.youtube_video_id !== parsed.videoId || session.youtube_url !== parsed.youtubeUrl) {
@@ -10067,13 +10067,13 @@ function validateSessionForIngredientRegistration(
   }
 
   if (session.session_kind === "multi_parent") {
-    return fail("CANDIDATE_PROMOTION_REQUIRED", "저장할 요리를 먼저 선택해주세요.", 409);
+    return fail("CANDIDATE_PROMOTION_REQUIRED", "저장할 요리를 먼저 선택해 주세요.", 409);
   }
 
   const draftIngredient = findDraftIngredientRow(session.draft_json, parsed.draftIngredientId);
   const resolutionStatus = draftIngredient?.resolution_status;
   if (resolutionStatus !== "unresolved" && resolutionStatus !== "needs_review") {
-    return fail("CONFLICT", "등록할 재료 상태가 바뀌었어요. 다시 확인해주세요.", 409);
+    return fail("CONFLICT", "등록할 재료 상태가 바뀌었어요. 다시 확인해 주세요.", 409);
   }
 
   return null;
@@ -10189,7 +10189,7 @@ export async function handleYoutubeCandidateDraft(request: Request) {
 
   const { fields, parsed } = parseYoutubeCandidateDraftBody(await readJson(request));
   if (!parsed) {
-    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, fields);
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as DbClient;
@@ -10340,14 +10340,14 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
 
   const rawBody = await readJson(request);
   if (!isRecord(rawBody)) {
-    return fail("BAD_REQUEST", "요청 본문을 확인해주세요.", 400, [
+    return fail("BAD_REQUEST", "요청 본문을 확인해 주세요.", 400, [
       { field: "body", reason: "invalid_json" },
     ]);
   }
 
   const { fields, parsed } = parseYoutubeIngredientRegistrationBody(rawBody);
   if (!parsed) {
-    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, fields);
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as DbClient
@@ -10408,7 +10408,7 @@ export async function handleYoutubeRegister(request: Request) {
 
   const { fields, parsed } = parseYoutubeRegisterBody(await readJson(request));
   if (!parsed) {
-    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, fields);
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
@@ -10442,7 +10442,7 @@ export async function handleYoutubeRegister(request: Request) {
   if (quantityConfirmationFields.length > 0) {
     return fail(
       "VALIDATION_ERROR",
-      "요청 값을 확인해주세요.",
+      "요청 값을 확인해 주세요.",
       422,
       quantityConfirmationFields,
     );
@@ -10457,7 +10457,7 @@ export async function handleYoutubeRegister(request: Request) {
   if (ingredientLookup.missingIds.length > 0) {
     return fail(
       "VALIDATION_ERROR",
-      "요청 값을 확인해주세요.",
+      "요청 값을 확인해 주세요.",
       422,
       buildMissingIngredientFields(parsed.ingredients, ingredientLookup.missingIds),
     );
@@ -10472,7 +10472,7 @@ export async function handleYoutubeRegister(request: Request) {
   if (cookingMethodLookup.missingIds.length > 0) {
     return fail(
       "VALIDATION_ERROR",
-      "요청 값을 확인해주세요.",
+      "요청 값을 확인해 주세요.",
       422,
       buildMissingCookingMethodFields(parsed.steps, cookingMethodLookup.missingIds),
     );

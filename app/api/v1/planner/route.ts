@@ -184,7 +184,7 @@ export async function GET(request: NextRequest) {
   const dateRange = parseDateRange(request);
 
   if (!dateRange.ok) {
-    return fail("VALIDATION_ERROR", "날짜 범위를 확인해주세요.", 422, dateRange.fields);
+    return fail("VALIDATION_ERROR", "날짜 범위를 확인해 주세요.", 422, dateRange.fields);
   }
 
   if (isQaFixtureModeEnabled()) {

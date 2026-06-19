@@ -33,6 +33,16 @@ function collectSourceFiles(relativeRoot: string): string[] {
 }
 
 describe("mobile typography policy", () => {
+  it("uses one Pretendard-first body font stack for app and web surfaces", () => {
+    const globals = readFileSync(join(repoRoot, "app/globals.css"), "utf8");
+    const bodyFontDeclaration = globals.match(/--font-body:\s*([\s\S]*?);/u)?.[0] ?? "";
+
+    expect(bodyFontDeclaration).toContain('"Pretendard Variable"');
+    expect(bodyFontDeclaration).toContain("Pretendard");
+    expect(bodyFontDeclaration).not.toContain("Avenir Next");
+    expect(globals).toMatch(/--web-font:\s*var\(--font-body\);/u);
+  });
+
   it("keeps runtime product UI on the shared service font stack", () => {
     const bannedPattern =
       /fontFamily|\[font-family:|--font-jua|var\(--font-jua\)|next\/font\/google|\bJua\b/;

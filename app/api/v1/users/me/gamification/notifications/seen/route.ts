@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const parsedBody = await parseNotificationSeenBody(request);
 
   if (!parsedBody.ok) {
-    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, [
       { field: parsedBody.field, reason: parsedBody.reason },
     ]);
   }

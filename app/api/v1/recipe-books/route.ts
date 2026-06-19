@@ -424,7 +424,7 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as RecipeBookCreateBody;
   } catch {
-    return fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [
       { field: "body", reason: "invalid_json" },
     ]);
   }
@@ -434,7 +434,7 @@ export async function POST(request: Request) {
   const requestedCoverImageUrl = normalizeOptionalCoverImageUrl(body.cover_image_url);
 
   if (!normalizedName) {
-    return fail("VALIDATION_ERROR", "레시피북 이름을 입력해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "레시피북 이름을 입력해 주세요.", 422, [
       { field: "name", reason: "required" },
     ]);
   }
@@ -450,13 +450,13 @@ export async function POST(request: Request) {
     && requestedCoverColorKey !== null
     && !isRecipeBookCoverColorKey(requestedCoverColorKey)
   ) {
-    return fail("VALIDATION_ERROR", "레시피북 색상을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "레시피북 색상을 확인해 주세요.", 422, [
       { field: "cover_color_key", reason: "invalid_enum" },
     ]);
   }
 
   if (requestedCoverImageUrl === undefined) {
-    return fail("VALIDATION_ERROR", "커버 이미지 주소를 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "커버 이미지 주소를 확인해 주세요.", 422, [
       { field: "cover_image_url", reason: "invalid_url" },
     ]);
   }

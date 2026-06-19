@@ -17,7 +17,7 @@ export interface RecipeTagInputResult {
 const RECIPE_TAG_ERROR_MESSAGES: Record<RecipeTagInputReason, string> = {
   blocked: "태그에는 링크나 홍보 문구를 넣을 수 없어요.",
   duplicate: "이미 추가한 태그예요.",
-  empty: "태그를 입력해주세요.",
+  empty: "태그를 입력해 주세요.",
   max_length: "태그는 12자까지 입력할 수 있어요.",
   too_many: "태그는 8개까지 추가할 수 있어요.",
 };

@@ -391,16 +391,16 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await expect(page.getByTestId("manual-save-requirements")).toHaveCount(0);
 
     await saveButton.click();
-    await expect(page.getByText("요리 이름을 입력해주세요.")).toBeVisible();
-    await expect(page.getByText("재료를 1개 이상 추가해주세요.")).toBeVisible();
-    await expect(page.getByText("만들기를 추가해주세요.")).toBeVisible();
+    await expect(page.getByText("요리 이름을 입력해 주세요.")).toBeVisible();
+    await expect(page.getByText("재료를 1개 이상 추가해 주세요.")).toBeVisible();
+    await expect(page.getByText("만들기를 추가해 주세요.")).toBeVisible();
 
     // Add title only
     await fillRecipeTitle(page, "테스트 레시피");
     await expect(saveButton).toBeEnabled();
-    await expect(page.getByText("요리 이름을 입력해주세요.")).toHaveCount(0);
-    await expect(page.getByText("재료를 1개 이상 추가해주세요.")).toBeVisible();
-    await expect(page.getByText("만들기를 추가해주세요.")).toBeVisible();
+    await expect(page.getByText("요리 이름을 입력해 주세요.")).toHaveCount(0);
+    await expect(page.getByText("재료를 1개 이상 추가해 주세요.")).toBeVisible();
+    await expect(page.getByText("만들기를 추가해 주세요.")).toBeVisible();
 
     // Add ingredient
     const ingredientModal = await openIngredientDialog(page);
@@ -409,8 +409,8 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await addSelectedIngredients(ingredientModal, 1);
 
     await expect(saveButton).toBeEnabled();
-    await expect(page.getByText("재료를 1개 이상 추가해주세요.")).toHaveCount(0);
-    await expect(page.getByText("만들기를 추가해주세요.")).toBeVisible();
+    await expect(page.getByText("재료를 1개 이상 추가해 주세요.")).toHaveCount(0);
+    await expect(page.getByText("만들기를 추가해 주세요.")).toBeVisible();
 
     // Add step
     await openStepAdd(page);
@@ -422,7 +422,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     // Now save button should be enabled
     await expect(saveButton).toBeEnabled();
     await expect(page.getByTestId("manual-save-requirements")).toHaveCount(0);
-    await expect(page.getByText("만들기를 추가해주세요.")).toHaveCount(0);
+    await expect(page.getByText("만들기를 추가해 주세요.")).toHaveCount(0);
   });
 
   test("guest: redirects to login with return-to-action", async ({ page }) => {
@@ -623,7 +623,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await page.click('button:has-text("끼니에 추가")');
 
     await expect(
-      page.getByText("끼니 추가 정보가 없어요. 플래너에서 다시 시도해주세요.")
+      page.getByText("끼니 추가 정보가 없어요. 플래너에서 다시 시도해 주세요.")
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: "끼니에 추가" })).toHaveCount(0);
     expect(mealPostCount).toBe(0);

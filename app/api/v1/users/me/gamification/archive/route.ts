@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   const parsed = parseArchiveQuery(request);
 
   if (parsed.fields.length > 0) {
-    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, parsed.fields);
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
   const { response, dbClient, user } =

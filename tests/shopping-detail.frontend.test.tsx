@@ -341,6 +341,25 @@ describe("ShoppingDetailScreen", () => {
     });
   });
 
+  it("uses rounded-square mobile purchase checkboxes instead of circular checks", async () => {
+    setMatchMedia(true);
+    vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+
+    render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+    });
+
+    const checkbox = screen.getByRole("checkbox", { name: /양파.*구매 완료 표시/ });
+    const visibleBox = checkbox.querySelector("span");
+
+    expect(checkbox.className).toContain("h-11");
+    expect(checkbox.className).toContain("w-11");
+    expect(visibleBox?.className).toContain("rounded-[var(--radius-badge)]");
+    expect(visibleBox?.className).not.toContain("rounded-full");
+  });
+
   it("toggles item check status when clicking the item card", async () => {
     vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
     vi.spyOn(shoppingApi, "updateShoppingListItem").mockResolvedValue({
@@ -561,7 +580,7 @@ describe("ShoppingDetailScreen", () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText("복사되었습니다")).toBeTruthy();
+        expect(screen.getByText("복사했어요")).toBeTruthy();
       });
     });
 
@@ -632,7 +651,7 @@ describe("ShoppingDetailScreen", () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText("복사되었습니다")).toBeTruthy();
+        expect(screen.getByText("복사했어요")).toBeTruthy();
       });
     });
 

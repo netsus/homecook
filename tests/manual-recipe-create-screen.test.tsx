@@ -253,7 +253,7 @@ describe("ManualRecipeCreateScreen", () => {
     });
 
     expect(screen.queryByText("STEP 1")).toBeNull();
-    expect(screen.getByText("만들기를 추가해주세요.")).toBeTruthy();
+    expect(screen.getByText("만들기를 추가해 주세요.")).toBeTruthy();
     expect(screen.getByTestId("manual-step-composer")).toBeTruthy();
     expect(screen.getByRole("button", { name: "준비" })).toBeTruthy();
   });
@@ -296,9 +296,9 @@ describe("ManualRecipeCreateScreen", () => {
 
     await user.click(screen.getByRole("button", { name: "저장" }));
 
-    expect(screen.getByText("요리 이름을 입력해주세요.")).toBeTruthy();
-    expect(screen.getByText("재료를 1개 이상 추가해주세요.")).toBeTruthy();
-    expect(screen.getByText("만들기를 추가해주세요.")).toBeTruthy();
+    expect(screen.getByText("요리 이름을 입력해 주세요.")).toBeTruthy();
+    expect(screen.getByText("재료를 1개 이상 추가해 주세요.")).toBeTruthy();
+    expect(screen.getByText("만들기를 추가해 주세요.")).toBeTruthy();
   });
 
   it("uses plus and minus controls around base servings without going below one", async () => {

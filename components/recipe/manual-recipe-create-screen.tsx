@@ -234,7 +234,7 @@ function IngredientList({
           showValidationError ? "text-[var(--danger)]" : "text-[var(--text-3)]",
         ].join(" ")}
       >
-        재료를 1개 이상 추가해주세요.
+        재료를 1개 이상 추가해 주세요.
       </p>
     );
   }
@@ -327,7 +327,7 @@ function StepList({ steps, showValidationError, onRemove }: StepListProps) {
           showValidationError ? "text-[var(--danger)]" : "text-[var(--text-3)]",
         ].join(" ")}
       >
-        만들기를 추가해주세요.
+        만들기를 추가해 주세요.
       </p>
     );
   }
@@ -432,7 +432,7 @@ function StepInlineComposer({
           {nextStepNumber}단계 입력
         </span>
         <span className="text-[12px] font-medium text-[var(--text-3)]">
-          조리방법을 먼저 골라주세요
+          조리방법을 먼저 골라 주세요
         </span>
       </div>
       <div
@@ -1070,7 +1070,7 @@ export function ManualRecipeCreateScreen({
 
   const handleMealAdd = useCallback(() => {
     if (!planDate || !columnId) {
-      setMealAddError("끼니 추가 정보가 없어요. 플래너에서 다시 시도해주세요.");
+      setMealAddError("끼니 추가 정보가 없어요. 플래너에서 다시 시도해 주세요.");
       return;
     }
     setMealAddError(null);
@@ -1133,7 +1133,7 @@ export function ManualRecipeCreateScreen({
             />
             {showValidationErrors && title.trim().length === 0 ? (
               <span className="text-[12px] font-semibold text-[var(--danger)]">
-                요리 이름을 입력해주세요.
+                요리 이름을 입력해 주세요.
               </span>
             ) : null}
           </label>
@@ -1420,7 +1420,7 @@ export function ManualRecipeCreateScreen({
                 />
                 {showValidationErrors && title.trim().length === 0 ? (
                   <span className="mt-1.5 block text-[12px] font-semibold leading-[1.4] text-[var(--danger)]">
-                    요리 이름을 입력해주세요.
+                    요리 이름을 입력해 주세요.
                   </span>
                 ) : null}
               </label>

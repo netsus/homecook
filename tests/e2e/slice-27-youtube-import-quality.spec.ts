@@ -21,7 +21,7 @@ const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 const YOUTUBE_IMPORT_URL = "/menu/add/youtube";
-const YOUTUBE_REVIEW_HEADING = "추출 결과를 확인해주세요";
+const YOUTUBE_REVIEW_HEADING = "추출 결과를 확인해 주세요";
 
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   await page.context().addCookies([
@@ -263,7 +263,7 @@ test.describe("Slice 27: YouTube Import Quality Uplift", () => {
           data: null,
           error: {
             code: "SESSION_CONSUMED",
-            message: "이미 사용된 추출 세션이에요. 새로 추출해주세요.",
+            message: "이미 사용된 추출 세션이에요. 새로 추출해 주세요.",
             fields: [],
           },
         },
@@ -300,7 +300,7 @@ test.describe("Slice 27: YouTube Import Quality Uplift", () => {
           data: null,
           error: {
             code: "EXTRACTION_EXPIRED",
-            message: "추출 세션이 만료됐어요. 다시 추출해주세요.",
+            message: "추출 세션이 만료됐어요. 다시 추출해 주세요.",
             fields: [],
           },
         },

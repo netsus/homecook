@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
   const status = normalizeLeftoverStatus(request.nextUrl.searchParams.get("status"));
 
   if (!status) {
-    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, [
       { field: "status", reason: "invalid_value" },
     ]);
   }

@@ -204,12 +204,12 @@ export async function PATCH(request: Request, context: RouteContext) {
   try {
     body = (await request.json()) as ShoppingListItemUpdateBody;
   } catch {
-    return fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [{ field: "body", reason: "invalid_json" }]);
+    return fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [{ field: "body", reason: "invalid_json" }]);
   }
 
   const parsedBody = parseBody(body);
   if (!parsedBody.ok) {
-    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, parsedBody.fields);
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parsedBody.fields);
   }
 
   const routeClient = await createRouteHandlerClient();

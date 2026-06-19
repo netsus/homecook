@@ -5,7 +5,7 @@ const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 const YOUTUBE_IMPORT_URL = "/menu/add/youtube";
-const YOUTUBE_REVIEW_HEADING = "추출 결과를 확인해주세요";
+const YOUTUBE_REVIEW_HEADING = "추출 결과를 확인해 주세요";
 
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   await page.context().addCookies([
@@ -314,7 +314,7 @@ test.describe("Slice 29: YouTube Author Comment Fallback", () => {
     await fetchButton.click();
 
     await expect(page.locator("text=설명란 분석")).toBeVisible();
-    await expect(page.locator("text=잠시만 기다려주세요")).toBeVisible();
+    await expect(page.locator("text=잠시만 기다려 주세요")).toBeVisible();
     await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 15000 });
   });
 
@@ -326,14 +326,14 @@ test.describe("Slice 29: YouTube Author Comment Fallback", () => {
     await installAuthorCommentExtractRoute(page);
     await installRegisterErrorRoute(page, 409, {
       code: "EXTRACTION_CONSUMED",
-      message: "이미 등록된 추출 세션이에요. 다시 추출해주세요.",
+      message: "이미 등록된 추출 세션이에요. 다시 추출해 주세요.",
     });
 
     await navigateToReview(page, "conflictm29");
     await page.click('button:has-text("등록")');
 
     await expect(page.locator("text=레시피 등록 실패")).toBeVisible({ timeout: 5000 });
-    await expect(page.locator("text=이미 등록된 추출 세션이에요. 다시 추출해주세요.")).toBeVisible();
+    await expect(page.locator("text=이미 등록된 추출 세션이에요. 다시 추출해 주세요.")).toBeVisible();
     await expect(page.locator("text=레시피가 등록됐어요")).toHaveCount(0);
   });
 

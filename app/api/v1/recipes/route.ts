@@ -1022,14 +1022,14 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as ManualRecipeCreateBody;
   } catch {
-    return fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [
       { field: "body", reason: "invalid_json" },
     ]);
   }
 
   const { fields, parsed } = parseManualRecipeCreateBody(body);
   if (!parsed) {
-    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, fields);
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);
   }
 
   if (parsed.thumbnailUrl) {
@@ -1040,7 +1040,7 @@ export async function POST(request: Request) {
     });
 
     if (!imageReference) {
-      return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, [
+      return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, [
         { field: "thumbnail_url", reason: "invalid_reference" },
       ]);
     }
@@ -1069,7 +1069,7 @@ export async function POST(request: Request) {
   if (ingredientLookup.missingIds.length > 0) {
     return fail(
       "VALIDATION_ERROR",
-      "요청 값을 확인해주세요.",
+      "요청 값을 확인해 주세요.",
       422,
       buildMissingIngredientFields(parsed.ingredients, ingredientLookup.missingIds),
     );
@@ -1084,7 +1084,7 @@ export async function POST(request: Request) {
   if (cookingMethodLookup.missingIds.length > 0) {
     return fail(
       "VALIDATION_ERROR",
-      "요청 값을 확인해주세요.",
+      "요청 값을 확인해 주세요.",
       422,
       buildMissingCookingMethodFields(parsed.steps, cookingMethodLookup.missingIds),
     );

@@ -175,7 +175,7 @@ test.describe("slice 10b: shopping share text", () => {
       await shareButton.click();
 
       // Verify success toast appears
-      await expect(page.getByText("복사되었습니다")).toBeVisible();
+      await expect(page.getByText("복사했어요")).toBeVisible();
     });
 
     test("should show empty feedback when all items are pantry-excluded", async ({

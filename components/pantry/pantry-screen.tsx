@@ -417,7 +417,7 @@ export function PantryScreen({
     });
 
     if (!response.success) {
-      setPlannerAddError(response.error?.message ?? "플래너 추가에 실패했어요. 다시 시도해주세요.");
+      setPlannerAddError(response.error?.message ?? "플래너 추가에 실패했어요. 다시 시도해 주세요.");
       setPlannerAddSheetState("ready");
       return;
     }
@@ -521,7 +521,7 @@ export function PantryScreen({
           className="md:px-7"
           description="로그인 상태를 확인하고 있어요."
           tone="loading"
-          title="잠시만 기다려주세요"
+          title="잠시만 기다려 주세요"
         />
         <Wave1MobileBottomTab ariaLabel="팬트리 하단 탭" currentTab="pantry" />
       </>

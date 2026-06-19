@@ -250,7 +250,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   try {
     body = (await request.json()) as RecipeBookUpdateBody;
   } catch {
-    return fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [
       { field: "body", reason: "invalid_json" },
     ]);
   }
@@ -261,7 +261,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   const name = hasName ? normalizeBookName(body.name) : undefined;
 
   if (hasName && !name) {
-    return fail("VALIDATION_ERROR", "레시피북 이름을 입력해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "레시피북 이름을 입력해 주세요.", 422, [
       { field: "name", reason: "required" },
     ]);
   }
@@ -277,7 +277,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     && body.cover_color_key !== null
     && !isRecipeBookCoverColorKey(body.cover_color_key)
   ) {
-    return fail("VALIDATION_ERROR", "레시피북 색상을 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "레시피북 색상을 확인해 주세요.", 422, [
       { field: "cover_color_key", reason: "invalid_enum" },
     ]);
   }
@@ -287,13 +287,13 @@ export async function PATCH(request: Request, context: RouteContext) {
     : undefined;
 
   if (hasCoverImageUrl && coverImageUrl === undefined) {
-    return fail("VALIDATION_ERROR", "커버 이미지 주소를 확인해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "커버 이미지 주소를 확인해 주세요.", 422, [
       { field: "cover_image_url", reason: "invalid_url" },
     ]);
   }
 
   if (!hasName && !hasCoverColorKey && !hasCoverImageUrl) {
-    return fail("VALIDATION_ERROR", "수정할 값을 입력해주세요.", 422, [
+    return fail("VALIDATION_ERROR", "수정할 값을 입력해 주세요.", 422, [
       { field: "body", reason: "required" },
     ]);
   }

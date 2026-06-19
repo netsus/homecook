@@ -428,7 +428,7 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as ShoppingListCreateBody;
   } catch {
-    return fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [{ field: "body", reason: "invalid_json" }]);
+    return fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [{ field: "body", reason: "invalid_json" }]);
   }
 
   const usesRecipeConfigs = Array.isArray(body.recipes);
@@ -437,7 +437,7 @@ export async function POST(request: Request) {
   const parseFields = parsedRecipeConfigs?.fields ?? parsedMealConfigs?.fields ?? [];
 
   if (parseFields.length > 0) {
-    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, parseFields);
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parseFields);
   }
 
   const routeClient = await createRouteHandlerClient();

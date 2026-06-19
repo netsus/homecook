@@ -129,16 +129,16 @@ function buildResultStatusText({
   screenState: ScreenState;
 }) {
   if (screenState === "loading") {
-    return "레시피 목록을 불러오는 중입니다.";
+    return "레시피 목록을 불러오는 중이에요.";
   }
   if (screenState === "error") {
-    return "레시피 목록을 불러오지 못했습니다.";
+    return "레시피 목록을 불러오지 못했어요.";
   }
   if (count === 0) {
-    return `${listTitle} 조건에 맞는 레시피가 없습니다.`;
+    return `${listTitle} 조건에 맞는 레시피가 없어요.`;
   }
 
-  return `${listTitle} ${count}개가 표시됩니다.`;
+  return `${listTitle} ${count}개가 표시돼요.`;
 }
 
 function filterSafeRecipeCards(items: RecipeCardItem[]) {

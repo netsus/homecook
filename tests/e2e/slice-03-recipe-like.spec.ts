@@ -235,7 +235,7 @@ test.describe("Slice 03 recipe like flow", () => {
           data: null,
           error: {
             code: "LIKE_FAILED",
-            message: "좋아요 처리에 실패했어요. 다시 시도해주세요.",
+            message: "좋아요 처리에 실패했어요. 다시 시도해 주세요.",
             fields: [],
           },
         },
@@ -249,7 +249,7 @@ test.describe("Slice 03 recipe like flow", () => {
     await likeButton.click();
 
     await expect(
-      page.getByRole("alert").getByText("좋아요 처리에 실패했어요. 다시 시도해주세요."),
+      page.getByRole("alert").getByText("좋아요 처리에 실패했어요. 다시 시도해 주세요."),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "좋아요 203" })).toBeVisible();
   });
