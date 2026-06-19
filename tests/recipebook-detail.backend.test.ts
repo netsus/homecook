@@ -42,6 +42,7 @@ function createQuery<T>(results: Array<QueryResult<T>>) {
   const query = {
     eq: vi.fn(() => query),
     in: vi.fn(() => query),
+    limit: vi.fn(() => query),
     order: vi.fn(() => query),
     select: vi.fn(() => query),
     update: vi.fn(() => query),
@@ -201,6 +202,7 @@ describe("17b recipebook detail backend", () => {
     });
     expect(recipeLikesTable.select).toHaveBeenCalledWith("id, recipe_id, created_at");
     expect(recipeLikesTable.__query.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(recipeLikesTable.__query.limit).toHaveBeenCalledWith(21);
   });
 
   it("GET /recipe-books/{book_id}/recipes filters my_added books to manual and youtube recipes", async () => {
@@ -266,6 +268,7 @@ describe("17b recipebook detail backend", () => {
     );
     expect(recipesTable.__query.eq).toHaveBeenCalledWith("created_by", "user-1");
     expect(recipesTable.__query.in).toHaveBeenCalledWith("source_type", ["youtube", "manual"]);
+    expect(recipesTable.__query.limit).toHaveBeenCalledWith(21);
   });
 
   it("DELETE /recipe-books/{book_id}/recipes/{recipe_id} removes saved/custom items and syncs save_count", async () => {

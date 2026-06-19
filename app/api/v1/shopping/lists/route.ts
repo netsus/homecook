@@ -135,6 +135,8 @@ interface ShoppingListsInsertQuery {
 
 interface ShoppingListsSelectQuery {
   eq(column: string, value: string): ShoppingListsSelectQuery;
+  limit(value: number): ShoppingListsSelectQuery;
+  or(filters: string): ShoppingListsSelectQuery;
   order(column: string, options: { ascending: boolean }): ShoppingListsSelectQuery;
   then: ArrayQueryResult<ShoppingListHistoryRow>["then"];
 }
@@ -993,6 +995,8 @@ export async function POST(request: Request) {
 
 const DEFAULT_HISTORY_LIMIT = 20;
 const MAX_HISTORY_LIMIT = 50;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ISO_CURSOR_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 
 function clampHistoryLimit(value: string | null) {
   if (!value) {
@@ -1019,23 +1023,24 @@ function parseShoppingHistoryCursor(value: string | null) {
 
   const [createdAt, id] = value.split("|");
 
-  if (!createdAt || !id) {
+  if (
+    !createdAt ||
+    !id ||
+    !ISO_CURSOR_DATE_PATTERN.test(createdAt) ||
+    !Number.isFinite(Date.parse(createdAt)) ||
+    !UUID_PATTERN.test(id)
+  ) {
     return null;
   }
 
   return { createdAt, id };
 }
 
-function applyHistoryCursor(rows: ShoppingListHistoryRow[], cursor: ReturnType<typeof parseShoppingHistoryCursor>) {
-  if (!cursor) {
-    return rows;
-  }
-
-  const cursorIndex = rows.findIndex(
-    (row) => row.created_at === cursor.createdAt && row.id === cursor.id,
-  );
-
-  return cursorIndex >= 0 ? rows.slice(cursorIndex + 1) : rows;
+function buildShoppingHistoryCursorFilter(cursor: NonNullable<ReturnType<typeof parseShoppingHistoryCursor>>) {
+  return [
+    `created_at.lt.${cursor.createdAt}`,
+    `and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`,
+  ].join(",");
 }
 
 export async function GET(request: Request) {
@@ -1063,19 +1068,25 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const limit = clampHistoryLimit(url.searchParams.get("limit"));
   const cursor = parseShoppingHistoryCursor(url.searchParams.get("cursor"));
-  const listsResult = await dbClient
+  let listsQuery = dbClient
     .from("shopping_lists")
     .select("id, title, date_range_start, date_range_end, is_completed, completed_at, created_at")
-    .eq("user_id", user.id)
+    .eq("user_id", user.id);
+
+  if (cursor) {
+    listsQuery = listsQuery.or(buildShoppingHistoryCursorFilter(cursor));
+  }
+
+  const listsResult = await listsQuery
     .order("created_at", { ascending: false })
-    .order("id", { ascending: false });
+    .order("id", { ascending: false })
+    .limit(limit + 1);
 
   if (listsResult.error || !listsResult.data) {
     return fail("INTERNAL_ERROR", "장보기 기록을 불러오지 못했어요.", 500);
   }
 
-  const rowsAfterCursor = applyHistoryCursor(listsResult.data, cursor);
-  const rowsWithExtra = rowsAfterCursor.slice(0, limit + 1);
+  const rowsWithExtra = listsResult.data.slice(0, limit + 1);
   const hasNext = rowsWithExtra.length > limit;
   const rows = hasNext ? rowsWithExtra.slice(0, limit) : rowsWithExtra;
 
@@ -1083,7 +1094,7 @@ export async function GET(request: Request) {
     return ok({ items: [], next_cursor: null, has_next: false } satisfies ShoppingListHistoryData);
   }
 
-  const listIds = rowsWithExtra.map((row) => row.id);
+  const listIds = rows.map((row) => row.id);
   const itemsResult = await dbClient
     .from("shopping_list_items")
     .select("shopping_list_id, is_pantry_excluded")

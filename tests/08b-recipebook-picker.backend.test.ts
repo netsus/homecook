@@ -72,6 +72,7 @@ function createRecipeBookItemsTable({
 }) {
   const selectQuery = {
     eq: vi.fn(() => selectQuery),
+    limit: vi.fn(() => selectQuery),
     order: vi.fn(() => selectQuery),
     then(
       onFulfilled?: (value: QueryResult<Array<{ id: string; recipe_id: string; added_at: string }> | null>) => unknown,
@@ -88,6 +89,7 @@ function createRecipeBookItemsTable({
 
   return {
     select: vi.fn(() => selectQuery),
+    __query: selectQuery,
   };
 }
 
@@ -105,6 +107,7 @@ function createRecipesTable({
 }) {
   const selectQuery = {
     in: vi.fn(() => selectQuery),
+    limit: vi.fn(() => selectQuery),
     then(
       onFulfilled?: (value: QueryResult<Array<{
         id: string;
@@ -137,6 +140,7 @@ function createRecipeStepsTable({
 }) {
   const selectQuery = {
     in: vi.fn(() => selectQuery),
+    limit: vi.fn(() => selectQuery),
     then(
       onFulfilled?: (value: QueryResult<Array<{ recipe_id: string; duration_seconds: number | null }> | null>) => unknown,
       onRejected?: (reason: unknown) => unknown,
@@ -373,5 +377,6 @@ describe("08b recipe book detail picker backend", () => {
     });
     expect(ensurePublicUserRow).toHaveBeenCalledWith(expect.anything(), { id: "user-1" });
     expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), "user-1");
+    expect(recipeBookItemsTable.__query.limit).toHaveBeenCalledWith(2);
   });
 });

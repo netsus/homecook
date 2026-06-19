@@ -43,18 +43,6 @@ interface RecipeBookRow {
   cover_image_url?: string | null;
 }
 
-interface RecipeBookItemRow {
-  book_id: string;
-}
-
-interface RecipeLikeRow {
-  recipe_id: string;
-}
-
-interface UserRecipeRow {
-  id: string;
-}
-
 interface RecipeBookSortOrderRow {
   sort_order: number;
 }
@@ -80,6 +68,12 @@ type MaybeSingleQueryResult<T> = PromiseLike<{
   error: QueryError | null;
 }>;
 
+type CountQueryResult = PromiseLike<{
+  data: null;
+  error: QueryError | null;
+  count: number | null;
+}>;
+
 interface RecipeBooksSelectQuery {
   eq(column: string, value: string): RecipeBooksSelectQuery;
   in(column: string, values: string[]): RecipeBooksSelectQuery;
@@ -88,20 +82,10 @@ interface RecipeBooksSelectQuery {
   then: ArrayQueryResult<RecipeBookRow>["then"];
 }
 
-interface RecipeBookItemsSelectQuery {
-  in(column: string, values: string[]): RecipeBookItemsSelectQuery;
-  then: ArrayQueryResult<RecipeBookItemRow>["then"];
-}
-
-interface RecipeLikesSelectQuery {
-  eq(column: string, value: string): RecipeLikesSelectQuery;
-  then: ArrayQueryResult<RecipeLikeRow>["then"];
-}
-
-interface RecipesSelectQuery {
-  eq(column: string, value: string): RecipesSelectQuery;
-  in(column: string, values: string[]): RecipesSelectQuery;
-  then: ArrayQueryResult<UserRecipeRow>["then"];
+interface CountSelectQuery {
+  eq(column: string, value: string): CountSelectQuery;
+  in(column: string, values: string[]): CountSelectQuery;
+  then: CountQueryResult["then"];
 }
 
 interface RecipeBookSortOrderSelectQuery {
@@ -129,15 +113,15 @@ interface RecipeBooksTable {
 }
 
 interface RecipeBookItemsTable {
-  select(columns: string): RecipeBookItemsSelectQuery;
+  select(columns: string, options: { count: "exact"; head: true }): CountSelectQuery;
 }
 
 interface RecipeLikesTable {
-  select(columns: string): RecipeLikesSelectQuery;
+  select(columns: string, options: { count: "exact"; head: true }): CountSelectQuery;
 }
 
 interface RecipesTable {
-  select(columns: string): RecipesSelectQuery;
+  select(columns: string, options: { count: "exact"; head: true }): CountSelectQuery;
 }
 
 interface RecipeBookDbClient {
@@ -211,21 +195,15 @@ function getCurrentMaxSortOrder(rows: RecipeBookSortOrderRow[] | null) {
 
 function toRecipeBookListData({
   books,
-  items,
-  likes,
-  userRecipes,
+  countByBookId,
+  likedCount,
+  myAddedCount,
 }: {
   books: RecipeBookRow[];
-  items: RecipeBookItemRow[];
-  likes: RecipeLikeRow[];
-  userRecipes: UserRecipeRow[];
+  countByBookId: Map<string, number>;
+  likedCount: number;
+  myAddedCount: number;
 }): RecipeBookListData {
-  const countByBookId = new Map<string, number>();
-
-  items.forEach((item) => {
-    countByBookId.set(item.book_id, (countByBookId.get(item.book_id) ?? 0) + 1);
-  });
-
   return {
     books: books
       .map((book) => ({
@@ -235,8 +213,8 @@ function toRecipeBookListData({
         recipe_count: getRecipeBookCount({
           book,
           countByBookId,
-          likedCount: likes.length,
-          myAddedCount: userRecipes.length,
+          likedCount,
+          myAddedCount,
         }),
         cover_color_key: book.cover_color_key ?? null,
         cover_image_url: book.cover_image_url ?? null,
@@ -265,6 +243,37 @@ function getRecipeBookCount({
   }
 
   return countByBookId.get(book.id) ?? 0;
+}
+
+async function readRecipeBookItemCounts(
+  dbClient: RecipeBookDbClient,
+  bookIds: string[],
+) {
+  if (bookIds.length === 0) {
+    return { data: new Map<string, number>(), error: null };
+  }
+
+  const countResults = await Promise.all(
+    bookIds.map(async (bookId) => ({
+      bookId,
+      result: await dbClient
+        .from("recipe_book_items")
+        .select("id", { count: "exact", head: true })
+        .eq("book_id", bookId),
+    })),
+  );
+  const failedResult = countResults.find(({ result }) => result.error);
+
+  if (failedResult) {
+    return { data: null, error: failedResult.result.error };
+  }
+
+  return {
+    data: new Map(
+      countResults.map(({ bookId, result }) => [bookId, result.count ?? 0]),
+    ),
+    error: null,
+  };
 }
 
 async function createAuthedRecipeBookDbClient(fallbackMessage: string) {
@@ -362,39 +371,33 @@ export async function GET(request: Request) {
   const countedBookIds = booksResult.data
     .filter((book: RecipeBookRow) => book.book_type === "saved" || book.book_type === "custom")
     .map((book: RecipeBookRow) => book.id);
-  const itemsResult = await dbClient
-    .from("recipe_book_items")
-    .select("book_id")
-    .in("book_id", countedBookIds);
+  const [itemCountsResult, likesResult, userRecipesResult] = await Promise.all([
+    readRecipeBookItemCounts(dbClient, countedBookIds),
+    dbClient
+      .from("recipe_likes")
+      .select("recipe_id", { count: "exact", head: true })
+      .eq("user_id", user.id),
+    dbClient
+      .from("recipes")
+      .select("id", { count: "exact", head: true })
+      .eq("created_by", user.id)
+      .in("source_type", ["youtube", "manual"]),
+  ]);
 
-  if (itemsResult.error || !itemsResult.data) {
-    return fail("INTERNAL_ERROR", "레시피북 목록을 불러오지 못했어요.", 500);
-  }
-
-  const likesResult = await dbClient
-    .from("recipe_likes")
-    .select("recipe_id")
-    .eq("user_id", user.id);
-
-  if (likesResult.error || !likesResult.data) {
-    return fail("INTERNAL_ERROR", "레시피북 목록을 불러오지 못했어요.", 500);
-  }
-
-  const userRecipesResult = await dbClient
-    .from("recipes")
-    .select("id")
-    .eq("created_by", user.id)
-    .in("source_type", ["youtube", "manual"]);
-
-  if (userRecipesResult.error || !userRecipesResult.data) {
+  if (
+    itemCountsResult.error ||
+    !itemCountsResult.data ||
+    likesResult.error ||
+    userRecipesResult.error
+  ) {
     return fail("INTERNAL_ERROR", "레시피북 목록을 불러오지 못했어요.", 500);
   }
 
   return ok(toRecipeBookListData({
     books: booksResult.data,
-    items: itemsResult.data,
-    likes: likesResult.data,
-    userRecipes: userRecipesResult.data,
+    countByBookId: itemCountsResult.data,
+    likedCount: likesResult.count ?? 0,
+    myAddedCount: userRecipesResult.count ?? 0,
   }));
 }
 

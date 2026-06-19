@@ -458,6 +458,10 @@ describe("user gamification notification priority", () => {
     });
     const questReadQuery = createArrayQuery({ data: [], error: null });
     const badgeReadQuery = createArrayQuery({ data: [], error: null });
+    const growthActivityQuery = createArrayQuery({ data: [], error: null });
+    const growthActivityTable = {
+      select: vi.fn(() => growthActivityQuery),
+    };
     const questUpsert = vi.fn((values) => createUpsertQuery({
       data: { ...values, seen_at: null },
       error: null,
@@ -495,9 +499,7 @@ describe("user gamification notification priority", () => {
             insert: vi.fn(() => createMaybeSingleQuery({ data: null, error: { message: "duplicate key" } })),
           };
         }
-        if (tableName === "user_growth_activity_events") {
-          return { select: vi.fn(() => createArrayQuery({ data: [], error: null })) };
-        }
+        if (tableName === "user_growth_activity_events") return growthActivityTable;
         if (tableName === "shopping_lists") {
           return { select: vi.fn(() => createCountQuery(0)) };
         }
@@ -517,5 +519,10 @@ describe("user gamification notification priority", () => {
     expect(result.data?.notifications.unseen.map((item) => item.id)).toContain(oldUnseen.id);
     expect(result.data?.notifications.priority_unseen.map((item) => item.id)).toContain(oldUnseen.id);
     expect(unseenNotificationQuery.is).toHaveBeenCalledWith("seen_at", null);
+    expect(growthActivityTable.select).toHaveBeenCalledWith("activity_type, source_id, source_meta_json");
+    expect(growthActivityQuery.in).toHaveBeenCalledWith(
+      "activity_type",
+      ["pantry_item_added", "leftover_eaten", "recipe_registered"],
+    );
   });
 });
