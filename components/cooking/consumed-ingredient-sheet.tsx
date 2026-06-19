@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useIsMobileViewport } from "@/components/cooking/cook-mode-mobile-ui";
 import { formatIngredientAmountOnly } from "@/components/cooking/cook-mode-step-model";
@@ -28,6 +28,14 @@ export function ConsumedIngredientSheet({
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const isMobileViewport = useIsMobileViewport();
+  const ingredientIds = useMemo(
+    () => ingredients.map((ingredient) => ingredient.ingredient_id),
+    [ingredients],
+  );
+  const totalCount = ingredientIds.length;
+  const selectedCount = checked.size;
+  const allSelected = totalCount > 0 && selectedCount === totalCount;
+  const partiallySelected = selectedCount > 0 && !allSelected;
 
   useEffect(() => {
     closeButtonRef.current?.focus();
@@ -43,10 +51,8 @@ export function ConsumedIngredientSheet({
   }, [onClose]);
 
   useEffect(() => {
-    setChecked(
-      new Set(ingredients.map((ingredient) => ingredient.ingredient_id)),
-    );
-  }, [ingredients]);
+    setChecked(new Set(ingredientIds));
+  }, [ingredientIds]);
 
   const toggleIngredient = useCallback((id: string) => {
     setChecked((prev) => {
@@ -60,9 +66,24 @@ export function ConsumedIngredientSheet({
     });
   }, []);
 
+  const toggleAllIngredients = useCallback(() => {
+    setChecked(allSelected ? new Set() : new Set(ingredientIds));
+  }, [allSelected, ingredientIds]);
+
   const handleConfirm = useCallback(() => {
-    onConfirm([...checked]);
-  }, [checked, onConfirm]);
+    onConfirm(ingredientIds.filter((id) => checked.has(id)));
+  }, [checked, ingredientIds, onConfirm]);
+
+  const selectionToolbar = (
+    <ConsumedSelectionToolbar
+      allSelected={allSelected}
+      onToggleAll={toggleAllIngredients}
+      partiallySelected={partiallySelected}
+      selectedCount={selectedCount}
+      totalCount={totalCount}
+      variant={isMobileViewport ? "mobile" : "desktop"}
+    />
+  );
 
   if (isMobileViewport) {
     return (
@@ -96,6 +117,7 @@ export function ConsumedIngredientSheet({
         testId="consumed-ingredient-sheet"
         title="소진된 재료를 확인해 주세요"
       >
+        {selectionToolbar}
         <div
           className="grid grid-cols-2 gap-2"
           data-testid="consumed-ingredient-list"
@@ -109,6 +131,9 @@ export function ConsumedIngredientSheet({
                 data-testid={`consumed-check-${ingredient.ingredient_id}`}
                 key={ingredient.ingredient_id}
                 onClick={() => toggleIngredient(ingredient.ingredient_id)}
+                aria-checked={isChecked}
+                aria-label={`${ingredient.standard_name} ${formatIngredientAmountOnly(ingredient)} 소진 재료 선택`}
+                role="checkbox"
                 type="button"
               >
                 <span
@@ -195,6 +220,7 @@ export function ConsumedIngredientSheet({
           className="max-h-[56vh] overflow-y-auto px-6 py-4"
           data-testid="consumed-ingredient-list"
         >
+          {selectionToolbar}
           {ingredients.map((ing) => (
             <label
               className="mb-2 flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3 last:mb-0"
@@ -205,6 +231,7 @@ export function ConsumedIngredientSheet({
                 checked={checked.has(ing.ingredient_id)}
                 className="h-5 w-5 shrink-0 accent-[var(--brand)]"
                 data-testid={`consumed-check-${ing.ingredient_id}`}
+                aria-label={`${ing.standard_name} ${formatIngredientAmountOnly(ing)} 소진 재료 선택`}
                 onChange={() => toggleIngredient(ing.ingredient_id)}
                 type="checkbox"
               />
@@ -237,6 +264,90 @@ export function ConsumedIngredientSheet({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ConsumedSelectionToolbar({
+  allSelected,
+  onToggleAll,
+  partiallySelected,
+  selectedCount,
+  totalCount,
+  variant,
+}: {
+  allSelected: boolean;
+  onToggleAll: () => void;
+  partiallySelected: boolean;
+  selectedCount: number;
+  totalCount: number;
+  variant: "desktop" | "mobile";
+}) {
+  let ariaChecked: "false" | "mixed" | "true" = "false";
+  if (allSelected) {
+    ariaChecked = "true";
+  } else if (partiallySelected) {
+    ariaChecked = "mixed";
+  }
+
+  const actionLabel = allSelected ? "전체 해제" : "전체 선택";
+  const hasAnySelection = allSelected || partiallySelected;
+  let checkBoxClass =
+    "border-[var(--line-strong)] bg-[var(--surface)] text-transparent";
+  if (variant === "mobile") {
+    checkBoxClass = hasAnySelection
+      ? "border-[var(--wave1-mint-contrast)] bg-[var(--wave1-mint-contrast)] text-[var(--text-inverse)]"
+      : "border-[var(--wave1-border)] bg-[var(--wave1-surface)] text-transparent";
+  } else if (hasAnySelection) {
+    checkBoxClass =
+      "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]";
+  }
+
+  const toolbarClass =
+    variant === "mobile"
+      ? "mb-3 flex items-center justify-between gap-3 rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-[var(--wave1-surface-fill)] px-3 py-2.5"
+      : "mb-3 flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5";
+  const buttonClass =
+    variant === "mobile"
+      ? "flex h-9 shrink-0 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-[var(--wave1-surface)] px-3 text-[13px] font-extrabold text-[var(--wave1-ink)] disabled:opacity-45"
+      : "flex h-9 shrink-0 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--panel)] px-3 text-[13px] font-bold text-[var(--foreground)] disabled:opacity-45";
+  const summaryClass =
+    variant === "mobile"
+      ? "min-w-0 text-[13px] font-bold text-[var(--wave1-text-2)]"
+      : "min-w-0 text-[13px] font-semibold text-[var(--muted)]";
+
+  return (
+    <div className={toolbarClass}>
+      <button
+        aria-checked={ariaChecked}
+        aria-label={
+          allSelected ? "소진 재료 전체 해제" : "소진 재료 전체 선택"
+        }
+        className={buttonClass}
+        data-testid="consumed-bulk-toggle"
+        disabled={totalCount === 0}
+        onClick={onToggleAll}
+        role="checkbox"
+        type="button"
+      >
+        <span
+          aria-hidden="true"
+          className={[
+            "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[5px] border text-[13px] font-extrabold",
+            checkBoxClass,
+          ].join(" ")}
+        >
+          {allSelected ? "✓" : partiallySelected ? "-" : ""}
+        </span>
+        <span>{totalCount === 0 ? "선택할 재료 없음" : actionLabel}</span>
+      </button>
+      <span
+        aria-live="polite"
+        className={summaryClass}
+        data-testid="consumed-selection-summary"
+      >
+        {selectedCount}개 선택됨
+      </span>
     </div>
   );
 }

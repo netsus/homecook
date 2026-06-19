@@ -212,7 +212,34 @@ test.describe("Slice 15a cook planner complete", () => {
       page.getByText(/소진(한 재료를 확인해 주세요|된 재료를 확인해 주세요)/),
     ).toBeVisible();
 
+    await expect(page.getByTestId("consumed-bulk-toggle")).toContainText(
+      "전체 해제",
+    );
+    await expect(page.getByTestId("consumed-bulk-toggle")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await expect(page.getByTestId("consumed-selection-summary")).toHaveText(
+      "2개 선택됨",
+    );
+
+    await page.getByTestId("consumed-bulk-toggle").click();
+    await expect(page.getByTestId("consumed-selection-summary")).toHaveText(
+      "0개 선택됨",
+    );
+    await expect(page.getByTestId("consumed-confirm-button")).toContainText(
+      "0개",
+    );
+
+    await page.getByTestId("consumed-bulk-toggle").click();
+    await expect(page.getByTestId("consumed-selection-summary")).toHaveText(
+      "2개 선택됨",
+    );
+
     await page.getByTestId("consumed-check-ing-1").click();
+    await expect(page.getByTestId("consumed-selection-summary")).toHaveText(
+      "1개 선택됨",
+    );
     await page.getByTestId("consumed-confirm-button").click();
 
     await expect(page).toHaveURL(/\/planner/);
