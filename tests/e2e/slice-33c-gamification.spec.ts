@@ -465,18 +465,18 @@ async function openMypage(
     await setAuthOverride(page);
   }
   await installRoutes(page, options);
-  await page.goto("/mypage", { waitUntil: "networkidle" });
+  await page.goto(`${BASE_URL}/mypage`, { waitUntil: "domcontentloaded" });
   await stabilize(page);
   if (options?.gamificationError) {
-    await expect(page.getByTestId("mypage-growth-profile")).toBeVisible();
+    await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("mypage-growth-gamification-error")).toBeVisible();
   } else if (options?.gamificationEmpty) {
-    await expect(page.getByTestId("mypage-growth-profile")).toBeVisible();
+    await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({ timeout: 15_000 });
   } else {
     try {
       await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({ timeout: 15_000 });
     } catch {
-      await page.reload({ waitUntil: "networkidle" });
+      await page.reload({ waitUntil: "domcontentloaded" });
       await stabilize(page);
       await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({ timeout: 30_000 });
     }
@@ -565,11 +565,13 @@ test.describe("33c gamification frontend @smoke-core", () => {
     const loadingPage = await loadingContext.newPage();
     await setAuthOverride(loadingPage);
     await installRoutes(loadingPage, { gamificationDelayMs: 60_000 });
-    await loadingPage.goto("/mypage", { waitUntil: "domcontentloaded" });
+    await loadingPage.goto(`${BASE_URL}/mypage`, { waitUntil: "domcontentloaded" });
     await stabilize(loadingPage);
-    await expect(
-      loadingPage.locator('[data-testid="mypage-mobile-loading"], [data-testid="mypage-skeleton"]'),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(loadingPage.getByRole("heading", { name: "마이페이지" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(loadingPage.getByTestId("mypage-growth-profile")).toBeVisible();
+    await expect(loadingPage.getByTestId("mypage-mobile-loading")).toHaveCount(0);
     await loadingContext.close();
 
     const empty = await openMypage(browser, { width: 390, height: 844 }, {
@@ -585,7 +587,7 @@ test.describe("33c gamification frontend @smoke-core", () => {
     const page = await context.newPage();
     await setGuestOverride(page);
     await installRoutes(page, { authenticated: false });
-    await page.goto("/mypage", { waitUntil: "networkidle" });
+    await page.goto(`${BASE_URL}/mypage`, { waitUntil: "domcontentloaded" });
     await stabilize(page);
     await expect(page.getByRole("heading", { name: "이 화면은 로그인이 필요해요" })).toBeVisible();
     await expect(page.getByTestId("mypage-growth-profile")).toHaveCount(0);

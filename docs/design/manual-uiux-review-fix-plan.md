@@ -1,0 +1,1565 @@
+# Manual UI/UX Review Fix Plan
+
+수동 검토 중 사용자가 발견한 UI/UX 문제를 누적하는 실행 전 계획 문서다.
+
+이 문서에는 검토 결과 "고치는 게 맞다"고 판단한 항목만 기록한다. 단순 취향 차이거나 근거가 약한 항목은 바로 추가하지 않고 별도 논의 후 포함 여부를 결정한다.
+
+## 기준
+
+- 사용자가 실제로 혼란을 느낄 가능성이 있는가
+- 핵심 흐름에서 첫인상, 조작감, 신뢰도를 떨어뜨리는가
+- 모바일/데스크톱 중 하나에서 화면 완성도를 깨뜨리는가
+- 접근성 포커스 표시를 유지하면서 더 자연스럽게 고칠 수 있는가
+
+## 확정 수정 항목
+
+### 1. 홈 검색창 포커스 표시가 input 내부 박스로 보이는 문제
+
+- Status: planned
+- Severity: Low
+- Area: UI / UX
+- Source: user manual review screenshot, home search input
+- Problem:
+  - 검색창에 포커스가 들어갔을 때 파란색 표시가 검색창 바깥 테두리가 아니라 input 내부의 작은 사각형처럼 보인다.
+  - 사용자가 원한 결과는 "검색창 전체의 테두리가 파란색으로 강조되는 상태"였고, 현재 구현은 내부에 또 다른 파란 박스가 생긴 것처럼 보여 완성도가 낮아 보인다.
+- User impact:
+  - 홈 첫 화면의 핵심 검색 입력창에서 시각적 노이즈가 생긴다.
+  - 입력창이 이중 박스처럼 보여 디자인 의도와 다르게 느껴진다.
+- Recommended fix:
+  - 파란 border/ring/focus 스타일은 input이 아니라 검색창 wrapper에 적용한다.
+  - wrapper는 `focus-within` 상태에서만 파란 테두리와 약한 focus ring을 표시한다.
+  - 실제 `input`은 `border-0`, `outline-none`, `ring-0`, `focus:outline-none`, `focus:ring-0` 상태로 만들어 내부 사각형이 생기지 않게 한다.
+  - 접근성을 위해 포커스 표시 자체를 제거하지 말고, 표시 위치만 검색창 전체 컨테이너로 옮긴다.
+- Acceptance criteria:
+  - 키보드 탭 또는 클릭으로 검색 input에 포커스했을 때 검색창 전체 외곽만 파란색으로 강조된다.
+  - input 내부에 별도의 파란 사각형, 내부 border, 내부 outline이 생기지 않는다.
+  - 검색 아이콘, placeholder, 입력 텍스트 위치가 포커스 전후로 흔들리지 않는다.
+  - 데스크톱과 모바일 홈 화면 모두 같은 방식으로 보인다.
+- Likely implementation target:
+  - `components/home/home-screen.tsx`
+  - 필요 시 검색 input 공용 스타일 또는 전역 input focus 스타일
+- Verification:
+  - 홈 화면에서 검색 input focus 수동 확인
+  - 관련 컴포넌트 테스트가 있으면 유지 또는 보강
+  - 필요 시 home visual snapshot 갱신
+
+### 2. 사용자 안내문 어미와 문장 길이가 화면마다 다른 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / UI
+- Source: user manual review, repository copy scan
+- Problem:
+  - 서비스 전반의 안내문, empty state, error state, helper text, modal description에서 `~합니다`, `~주세요`, `~요`, `~어요`가 섞여 있다.
+  - 일부 문장은 같은 의미를 길게 반복한다. 예를 들어 로그인 필요 안내에서 "로그인 후에는 다시 이 화면으로 돌아옵니다" 같은 문장이 여러 화면에 반복된다.
+  - 화면마다 말투가 달라 같은 서비스가 아니라 여러 사람이 따로 만든 화면처럼 느껴질 수 있다.
+- User impact:
+  - 사용자가 안내문을 읽는 속도가 느려진다.
+  - 친근한 서비스 톤과 딱딱한 시스템 문구가 섞여 신뢰감과 완성도가 떨어진다.
+  - 긴 설명이 모바일 화면에서 공간을 많이 차지해 핵심 액션을 밀어낸다.
+- Recommended fix:
+  - 사용자-facing 문구의 기본 톤은 `해요체`로 통일한다. 예: `불러오지 못했어요`, `로그인이 필요해요`, `다시 시도해 주세요`.
+  - `합니다/됩니다/돌아옵니다` 계열은 일반 안내문에서 제거하고, 꼭 필요한 정책/법적 고지나 운영자용 문구가 아니라면 `~요`로 바꾼다.
+  - `해주세요`와 `해 주세요` 표기도 하나로 정한다. 사용자에게 행동을 요청하는 문장은 `해 주세요`로 통일한다.
+  - 설명문은 가능한 한 한 문장으로 줄인다. 원인 설명보다 다음 행동을 먼저 보여준다.
+  - 반복되는 로그인/로딩/빈 상태/오류 문구는 공용 문구 기준을 만든 뒤 화면별로 필요한 명사만 바꾼다.
+  - 버튼 라벨은 문장보다 짧은 명령 또는 명사형을 우선한다. 예: `다시 시도`, `로그인`, `홈으로`.
+- Copy rewrite rules:
+  - `로그인 후에는 다시 이 화면으로 돌아옵니다.` → `로그인하면 이 화면으로 돌아와요.`
+  - `잠시 후 다시 시도해주세요.` → `잠시 후 다시 시도해 주세요.`
+  - `요리를 완료하거나 남은 요리에서 '다 먹었어요'를 누르면 여기에 기록됩니다.` → `완료한 요리가 여기에 모여요.`
+  - `주소가 바뀌었거나 더 이상 제공하지 않는 화면이에요. 홈에서 레시피를 다시 찾거나 플래너로 이동해 주세요.` → `주소가 바뀌었어요. 홈에서 다시 찾아보세요.`
+- Acceptance criteria:
+  - 사용자에게 보이는 주요 안내문은 `해요체`로 통일된다.
+  - 한 화면 안에서 `합니다`와 `해요`가 섞이지 않는다.
+  - 로그인 필요, 로딩, empty, error, toast 문구는 중복 설명 없이 짧게 정리된다.
+  - 모바일에서 안내문이 핵심 CTA나 리스트 첫 항목을 과하게 밀어내지 않는다.
+  - API 내부 메시지라도 프론트에 노출되는 에러 문구는 같은 톤을 따른다.
+- Likely implementation target:
+  - `components/**`
+  - `app/not-found.tsx`
+  - `lib/api/**`
+  - `app/api/**` 중 프론트에 노출되는 error message
+  - 필요 시 공용 empty/error/login gate 컴포넌트의 기본 copy
+- Verification:
+  - copy scan으로 `합니다`, `됩니다`, `돌아옵니다`, `해주세요` 잔여 사용처 확인
+  - 주요 화면 스크린샷 또는 visual test로 문장 길이로 인한 레이아웃 밀림 확인
+  - 관련 컴포넌트 테스트의 텍스트 assertion 갱신
+
+### 3. 404 페이지에서 사용자가 바로 불편을 남길 수 없는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Frontend / API / Ops
+- Source: user manual review, `app/not-found.tsx`
+- Problem:
+  - 현재 404 페이지는 `홈으로`, `플래너로` 복구 버튼만 제공한다.
+  - 사용자가 어떤 링크나 화면 흐름에서 404를 만났는지 바로 알려줄 통로가 없다.
+  - 운영자는 깨진 링크, 잘못된 라우팅, 배포 후 누락된 화면을 사용자의 실제 맥락과 함께 수집하기 어렵다.
+- User impact:
+  - 사용자는 문제를 겪고도 별도 문의 경로를 찾아야 해서 이탈할 가능성이 크다.
+  - 반복되는 404 원인을 빠르게 파악하기 어렵다.
+- Recommended fix:
+  - 404 페이지에 짧은 사과/안내 문구와 선택 입력 영역을 추가한다.
+  - 첫 문구는 너무 무겁지 않게 쓴다. 예: `불편을 드려 죄송해요. 어떤 상황이었는지 알려주시면 확인할게요.`
+  - 사용자가 바로 입력할 수 있는 textarea를 제공한다. placeholder 예: `어떤 화면에서 이 페이지로 오셨나요?`
+  - 기본 복구 CTA인 `홈으로`, `플래너로`는 계속 우선 노출한다.
+  - 피드백 입력은 모달로 먼저 띄우지 말고 404 본문 아래의 작은 인라인 영역으로 둔다. 모달은 전송 성공/실패 확인 또는 `문제 알려주기` 버튼을 눌렀을 때만 사용한다.
+  - 전송 시 현재 URL, referrer, 로그인 여부, user id 또는 anonymous id, user agent, 발생 시각을 자동 첨부하되 사용자 입력에는 개인정보를 쓰지 않도록 짧게 안내한다.
+  - 기존 문의 채널이나 운영 이벤트 저장소를 재사용할 수 있으면 재사용한다. 없다면 최소 `POST /api/v1/feedback/404` 같은 전용 endpoint와 저장/알림 경로를 정의한다.
+  - 스팸 방지를 위해 글자 수 제한, 빈 값 차단, rate limit 또는 server-side validation을 둔다.
+- Suggested copy:
+  - Title: `페이지를 찾을 수 없어요`
+  - Description: `주소가 바뀌었어요. 홈에서 다시 찾아보세요.`
+  - Feedback intro: `불편을 드려 죄송해요. 어떤 상황이었는지 알려주시면 확인할게요.`
+  - Placeholder: `어떤 버튼이나 링크를 눌렀는지 알려 주세요.`
+  - Submit button: `피드백 보내기`
+  - Success message: `보내주셔서 고마워요. 확인 후 개선할게요.`
+  - Failure message: `피드백을 보내지 못했어요. 잠시 후 다시 시도해 주세요.`
+- Acceptance criteria:
+  - 404 페이지에서 사용자가 추가 이동 없이 피드백을 작성하고 보낼 수 있다.
+  - 피드백을 입력하지 않아도 `홈으로`, `플래너로` 복구 동선은 명확하다.
+  - 전송 중, 성공, 실패 상태가 화면에서 명확히 보인다.
+  - 모바일에서 입력 영역이 복구 CTA를 과하게 밀어내지 않는다.
+  - 사용자가 작성한 내용과 현재 URL이 운영자가 확인할 수 있는 형태로 저장되거나 알림으로 전달된다.
+  - 개인정보 입력을 유도하지 않는다.
+- Likely implementation target:
+  - `app/not-found.tsx`
+  - `components/feedback/not-found-feedback-form.tsx` 또는 유사 client component
+  - 새 feedback API route 또는 기존 operational event/admin endpoint 재사용
+  - 필요 시 feedback 저장 테이블 또는 운영 알림 연동
+- Verification:
+  - 404 페이지 렌더링 테스트
+  - 빈 입력, 긴 입력, 정상 전송, 서버 실패 테스트
+  - Playwright로 404 페이지에서 입력 후 성공/실패 상태 확인
+  - 운영 알림/저장 경로가 있으면 실제 payload shape 확인
+
+### 4. 홈 검색과 레시피 목록 사이의 태그/테마/상태 UI가 흐름을 끊는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / UI / Frontend
+- Source: user manual review screenshot, `components/home/home-screen.tsx`
+- Problem:
+  - 검색창 아래에 선택 태그 요약 행, 초기화 버튼, 태그 rail, 결과 상태 문구, 테마 strip이 이어져 검색 결과 목록이 아래로 밀린다.
+  - 태그를 선택하면 이미 태그 chip이 파란색으로 표시되는데, 선택된 태그가 검색창 아래에 다시 노출된다.
+  - 단일 태그는 다시 누르면 해제되는데 `초기화` 버튼이 같은 맥락에 또 보여 중복 조작처럼 느껴진다.
+  - `다이어트 조건에 맞는 레시피가 없습니다.` 같은 상태 문구가 위에 한 번 나오고, 아래 empty state에서도 `조건에 맞는 레시피가 없어요`가 다시 나와 같은 정보를 반복한다.
+  - `이번 주 인기 테마`가 검색/필터 영역과 모든 레시피 목록 사이에 자리해 레시피 검색 흐름을 끊는다.
+- User impact:
+  - 사용자는 검색 후 바로 결과를 보고 싶은데 필터/테마/상태 UI를 먼저 지나가야 한다.
+  - 선택 상태와 결과 없음 상태가 중복으로 보여 화면이 복잡해진다.
+  - 데스크톱에서는 오른쪽 공간이 비어 있는데 주요 보조 탐색이 세로 흐름을 차지해 공간 사용이 비효율적이다.
+- Recommended fix:
+  - 데스크톱에서는 태그/테마 같은 보조 탐색을 검색 결과 흐름 밖으로 옮긴다.
+    - 1안: 검색 영역 오른쪽 상단에 `추천 태그` compact panel로 배치한다.
+    - 2안: 레시피 목록 오른쪽에 sticky aside를 둔다. 단, viewport가 좁아질 때는 inline/collapsible로 내려야 한다.
+    - fixed aside는 항상 떠 있는 UI라 부담이 클 수 있으므로, 우선은 콘텐츠 grid 안의 sticky right rail을 선호한다.
+  - 모바일에서는 오른쪽 aside가 불가능하므로 태그 rail을 접을 수 있는 `태그로 좁히기` 영역 또는 가로 스크롤 chip row로 유지하되, 선택 요약 행은 제거한다.
+  - 태그 선택 상태는 태그 chip 자체의 active 스타일만으로 표현한다.
+  - 단일 태그 선택에는 별도 `초기화` 버튼을 두지 않는다. 선택된 태그를 다시 누르면 해제되는 패턴을 유지한다.
+  - 검색어, 재료 필터, 태그 등 여러 조건이 동시에 적용된 경우에만 결과 헤더 또는 empty state 안에 `전체 초기화`를 제공한다.
+  - 결과 상태 요약 pill은 제거한다. 접근성용 `aria-live`/visually hidden status는 유지해도 된다.
+  - empty state가 보이는 경우에는 위쪽 중복 상태 문구를 표시하지 않는다.
+  - `이번 주 인기 테마`는 초기 홈 화면에서 검색 패널과 `모든 레시피` 사이를 막지 않도록 위치를 조정한다.
+    - 데스크톱: `모든 레시피` 리스트 일부가 먼저 보인 뒤 중간 섹션으로 노출하거나 오른쪽 보조 rail로 이동한다.
+    - 모바일: 검색 직후에는 레시피 목록이 먼저 보이게 하고, 테마는 목록 아래 또는 일정 개수 카드 뒤에 배치한다.
+- Acceptance criteria:
+  - 검색창 바로 아래에서 레시피 목록 헤더 또는 첫 결과가 더 빠르게 보인다.
+  - 태그 선택 시 검색창 아래에 선택 태그 chip이 중복으로 생기지 않는다.
+  - 선택된 태그는 기존 태그 rail/card 안에서 active 상태로만 표시된다.
+  - 단일 태그 선택 상태에서는 별도 `초기화` 버튼이 보이지 않는다.
+  - 조건에 맞는 레시피가 없을 때 결과 없음 문구는 empty state 한 곳에서만 보인다.
+  - 데스크톱의 빈 오른쪽 공간을 보조 탐색에 활용하되, 작은 화면에서는 레이아웃이 깨지지 않는다.
+  - `이번 주 인기 테마`가 검색 결과 흐름을 끊지 않는다.
+- Likely implementation target:
+  - `components/home/home-screen.tsx`
+  - `app/globals.css`
+  - `tests/home-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+  - 필요 시 `tests/e2e/slice-01-basic.spec.ts`, `tests/e2e/slice-02-discovery-filter.spec.ts`
+- Verification:
+  - 태그 선택/해제, 검색어 입력, 재료 필터 조합, empty state 시나리오 테스트 갱신
+  - 데스크톱/모바일 visual snapshot으로 검색 → 결과 흐름 확인
+  - 접근성 확인: tag chip active 상태, aria-live 결과 status, keyboard focus 순서 유지
+
+### 5. 홈 재료 검색, 팬트리 재료 추가, 직접 등록 재료 추가의 선택 경험이 다른 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / UI / Frontend
+- Source: user manual review screenshots, `components/home/ingredient-filter-modal.tsx`, `components/pantry/pantry-add-sheet.tsx`, `components/pantry/pantry-mobile-visuals.ts`, `components/recipe/recipe-ingredient-add-modal.tsx`
+- Problem:
+  - 홈의 `재료로 검색` 모달, 팬트리의 `재료 추가` 모달, 직접 등록의 `재료 추가` 모달이 같은 "재료를 고르는" 작업인데 UI 구조가 다르다.
+  - 홈 모달은 카테고리가 가로 chip 형태로 정리되어 있고 재료가 텍스트 버튼 grid로 보인다.
+  - 팬트리 웹 모달은 카테고리명이 좁은 탭 안에서 줄바꿈되어 `전체`, `단백질`, `해산물` 같은 라벨이 세로로 깨져 보인다.
+  - 팬트리 재료 카드 내부의 이미지, 재료명, 상태 텍스트 정렬이 안정적으로 가운데 맞지 않는다.
+  - 직접 등록 웹 재료 추가 모달은 재료 버튼 grid가 좁아 `따뜻한 우유`, `플레인요거트`처럼 이름이 긴 재료가 두 줄로 줄바꿈된다.
+  - 직접 등록 웹 재료 추가 모달의 선택된 카테고리가 살짝 진한 회색 정도로만 보여 현재 필터가 무엇인지 구분이 약하다.
+  - 일부 재료는 실제 재료와 맞지 않는 이미지/아이콘이 보여 선택 신뢰도를 떨어뜨린다. 현재처럼 틀린 이미지는 이미지가 없는 것보다 더 나쁘게 느껴질 수 있다.
+- User impact:
+  - 사용자는 같은 재료 선택 작업을 화면마다 새로 학습해야 한다.
+  - 팬트리 모달은 데스크톱 첫인상에서 완성도가 낮아 보인다.
+  - 직접 등록에서는 재료명이 줄바꿈되어 재료 grid가 들쭉날쭉해 보이고, 선택해야 할 카테고리를 빠르게 파악하기 어렵다.
+  - 재료와 맞지 않는 이미지는 사용자가 잘못 선택한 것인지, 서비스 데이터가 부정확한 것인지 의심하게 만든다.
+- Approach decision:
+  - 사용자 제안처럼 세 모달을 최대한 같은 패턴으로 맞추는 것이 맞다.
+  - 다만 팬트리/직접 등록 모달을 홈 모달에 단순 복사하기보다, 공용 `IngredientPicker` 성격의 선택 UI를 만들고 `home-search`, `pantry-add`, `manual-recipe-add` 모드별로 제목, 설명, footer 버튼, disabled/selected 상태, 기본 수량 생성만 다르게 두는 방식을 우선한다.
+  - 대안인 "팬트리 탭만 가로 스크롤로 고치고 나머지는 유지"는 빠르지만 두 모달의 불일치와 잘못된 이미지 문제를 남긴다.
+  - 대안인 "모든 재료 이미지를 바로 새로 생성해서 유지"는 비용과 검수량이 크고, 잘못 매핑되면 같은 문제가 반복될 수 있다.
+- Recommended fix:
+  - 홈 재료 검색, 팬트리 재료 추가, 직접 등록 재료 추가가 같은 category chip rail, search input, ingredient grid spacing, footer action layout을 쓰게 한다.
+  - 데스크톱 팬트리 카테고리는 홈 모달처럼 한 줄 chip rail로 바꾸고, 화면이 좁으면 `overflow-x-auto` 가로 스크롤을 허용한다.
+  - 카테고리 라벨에는 임의 줄바꿈이 생기지 않게 `white-space: nowrap` 계열 스타일을 적용한다.
+  - 직접 등록 웹 재료 추가 모달의 재료 버튼은 한 줄 라벨을 기본으로 한다.
+    - grid 최소 폭을 늘리거나 column 수를 조정해 긴 이름이 쉽게 두 줄로 떨어지지 않게 한다.
+    - 버튼 텍스트는 `white-space: nowrap`, `overflow: hidden`, `text-overflow: ellipsis` 또는 동일 효과의 utility로 처리한다.
+    - 잘린 전체 이름은 `title` 또는 접근성 label로 확인 가능하게 한다.
+  - 재료 카테고리 active chip은 회색 차이만으로 구분하지 않고 파란색 배경 또는 파란 border/텍스트로 명확히 표시한다.
+    - 홈/팬트리/직접 등록의 selected category 표시 색상은 같은 기준을 쓴다.
+    - 선택된 재료와 선택된 카테고리가 서로 다른 상태임을 색상/강도 차이로 구분한다.
+  - 팬트리 재료 카드의 내부 정렬은 `display: grid` 또는 `flex`로 이미지/이름/상태가 중앙 축에 맞게 고정한다.
+  - 단기적으로는 팬트리 재료 선택 grid도 홈처럼 텍스트 중심 버튼으로 맞추는 것을 우선 검토한다. `보유중` 상태가 필요하면 버튼 안의 작은 보조 텍스트 또는 badge로만 표시한다.
+  - 이미지가 필요하다면 잘못된 이미지를 계속 보여주지 말고, 1차 수정에서는 이미지를 제거하거나 검증된 category fallback 아이콘만 둔다.
+  - 재료별 이미지를 유지하려면 별도 asset 정비 작업으로 분리한다.
+    - 재료 canonical name과 asset 파일명을 1:1로 매핑한다.
+    - 매핑이 없는 재료는 임의 이미지를 쓰지 않고 텍스트 또는 category icon fallback을 사용한다.
+    - 생성 이미지를 쓸 경우 재료 목록을 확정한 뒤 같은 스타일로 일괄 생성하고, visual QA로 실제 재료와 일치하는지 검수한다.
+- Acceptance criteria:
+  - 홈 `재료로 검색`, 팬트리 `재료 추가`, 직접 등록 `재료 추가`에서 검색창, 카테고리, 재료 선택 grid, 하단 버튼의 기본 모양과 조작 방식이 일관된다.
+  - 팬트리 웹 모달의 카테고리 라벨이 줄바꿈으로 깨지지 않는다.
+  - 직접 등록 웹 재료 추가 모달에서 긴 재료명이 버튼 안에서 두 줄로 줄바꿈되지 않는다.
+  - 직접 등록 웹 재료 추가 모달에서 현재 선택한 카테고리가 파란색 계열로 명확히 보인다.
+  - 카테고리가 많은 화면에서도 가로 스크롤 또는 적절한 wrapping으로 레이아웃이 안정적으로 유지된다.
+  - 재료 카드 또는 버튼 내부의 이름, 상태, 선택 표시가 시각적으로 가운데 정렬되어 보인다.
+  - 실제 재료와 맞지 않는 이미지가 노출되지 않는다.
+  - 이미지가 없는 재료도 선택 가능성이 떨어져 보이지 않는다.
+  - 키보드 탐색, 선택/해제, 적용/취소 흐름은 기존 기능을 유지한다.
+- Likely implementation target:
+  - `components/home/ingredient-filter-modal.tsx`
+  - `components/pantry/pantry-add-sheet.tsx`
+  - `components/pantry/pantry-mobile-visuals.ts`
+  - `components/recipe/recipe-ingredient-add-modal.tsx`
+  - `components/recipe/manual-recipe-create-screen.tsx`
+  - `app/globals.css`
+  - 필요 시 공용 ingredient picker component 신설
+  - 필요 시 재료 asset mapping 파일 신설
+- Verification:
+  - 홈 재료 검색 모달, 팬트리 재료 추가 모달, 직접 등록 재료 추가 모달 desktop/mobile visual snapshot 비교
+  - 카테고리 tab/chip overflow, 검색, 선택, 적용, 취소 keyboard flow 수동 확인
+  - 직접 등록에서 긴 재료명, active category, 선택 재료 추가 후 기본 수량 생성 확인
+  - pantry add 관련 컴포넌트 테스트 또는 E2E 테스트 갱신
+  - 이미지 유지 시 재료명과 asset mapping 누락/불일치 검사 추가
+
+### 6. 웹 레시피 상세에서 재료와 만들기 영역의 비율과 구분이 어색한 문제
+
+- Status: planned
+- Severity: Low
+- Area: UX / UI / Frontend
+- Source: user manual review, `components/recipe/recipe-detail-screen.tsx`, `app/globals.css`
+- Problem:
+  - 웹 레시피 상세에서 `재료`와 `만들기`가 가로로 나란히 배치되어 있다.
+  - 재료는 보통 이름과 수량처럼 짧은 텍스트가 많고, 만들기는 긴 문장 중심이다.
+  - 현재 재료 행은 이름과 양이 양끝으로 벌어져 보여 재료 목록 내부의 빈 공간이 커 보인다.
+  - 반대로 `재료` 섹션과 `만들기` 섹션 사이의 간격은 상대적으로 좁아 두 영역의 경계가 약하게 느껴질 수 있다.
+  - 앱 화면은 탭으로 `재료`와 `만들기`가 구분되어 있어 같은 문제가 덜하지만, 웹 화면은 같은 시야에 둘 다 보여 구분 설계가 더 중요하다.
+- User impact:
+  - 사용자가 재료 목록과 조리 순서를 빠르게 훑을 때 정보 덩어리의 경계를 한눈에 파악하기 어렵다.
+  - 재료 영역은 넓은데 내용은 짧아 화면 밀도가 낮아 보인다.
+  - 만들기 영역은 긴 텍스트를 읽어야 하는데 재료 영역과 충분히 분리되지 않아 집중도가 떨어질 수 있다.
+- Recommended fix:
+  - 이 문제는 웹 상세 전용으로 고친다. 모바일/앱 화면의 탭 구조는 유지한다.
+  - 데스크톱에서는 재료 영역을 고정 폭에 가까운 좁은 column으로 두고, 만들기 영역이 남은 폭을 더 많이 쓰게 한다.
+    - 예: `grid-template-columns: minmax(260px, 340px) minmax(0, 1fr)`.
+  - 두 영역 사이의 gap을 현재보다 키우거나, 만들기 영역 왼쪽에 아주 약한 vertical divider를 추가해 시각적 경계를 만든다.
+  - 재료 행은 넓은 공간을 억지로 양끝까지 쓰지 않게 한다.
+    - 재료 column 자체를 좁히는 것을 우선한다.
+    - 필요하면 `재료명 1fr / 수량 auto` grid로 정리하되, 수량이 지나치게 멀리 떨어져 보이지 않게 max width를 둔다.
+  - 만들기 영역은 긴 문장 가독성을 위해 line-height와 step 간 padding을 유지하거나 소폭 늘린다.
+  - 중간 폭 화면에서는 두 column을 무리하게 유지하지 말고 세로 stack 또는 탭형 전환을 검토한다.
+- Acceptance criteria:
+  - 웹 레시피 상세에서 재료 영역이 만들기 영역보다 명확히 좁고 compact하게 보인다.
+  - 재료명과 수량 사이 간격이 과하게 넓어 보이지 않는다.
+  - 재료와 만들기 사이의 시각적 구분이 명확하다.
+  - 만들기 문장은 충분한 가로 폭을 확보해 읽기 편하다.
+  - 모바일/앱 상세의 `재료`/`만들기` 탭 UX는 변경하지 않는다.
+  - 긴 재료명, 긴 수량, 단계가 많은 레시피에서도 레이아웃이 깨지지 않는다.
+- Likely implementation target:
+  - `components/recipe/recipe-detail-screen.tsx`
+  - `app/globals.css`
+  - `tests/recipe-detail-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 데스크톱 레시피 상세 visual snapshot으로 재료/만들기 column 비율과 구분 확인
+  - 긴 재료명/긴 수량/긴 만들기 문장 fixture로 wrapping 확인
+  - 모바일 상세에서 기존 탭 구조가 유지되는지 확인
+  - `recipe-detail-screen` 관련 테스트 갱신
+
+### 7. 웹/앱 플래너 주간 화면에서 레시피명과 상태 표시가 잘 보이지 않는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / UI / Frontend
+- Source: user manual review, `components/planner/planner-week-screen.tsx`, `app/globals.css`
+- Problem:
+  - 웹 플래너 주간 표는 현재 `끼니=행`, `날짜=열` 구조다. 7일이 모두 열로 펼쳐지기 때문에 각 식사 셀의 가로 폭이 좁다.
+  - 웹 식사 카드의 레시피명은 한 줄 말줄임이라 긴 레시피명은 거의 보이지 않는다.
+  - 앱 플래너는 날짜별 카드 안에 끼니가 세로로 보여 웹보다 레시피명이 더 많이 보이지만, 레시피명 폰트가 `text-[12px]` 수준이라 작게 느껴진다.
+  - 등록, 장보기 완료, 요리 완료 상태가 색상으로 구분되는 점은 좋지만, 현재 웹/앱 모두 짧은 바 형태라 카드 디자인과 자연스럽게 이어지지 않는다.
+  - 앱 플래너의 `이번 주` 버튼은 pill 형태와 색상이 웹 버튼과 달라 같은 기능인데도 다른 컴포넌트처럼 보인다.
+- User impact:
+  - 주간 플래너의 핵심 정보인 "무슨 요리를 먹을지"가 웹에서 잘리지 않아야 하는데, 현재는 제목 확인이 어렵다.
+  - 앱에서는 제목은 상대적으로 더 보이지만 작은 글씨 때문에 빠르게 훑기 어렵다.
+  - 짧은 상태 바는 카드의 일부라기보다 별도 장식처럼 보여 상태 정보가 어색하게 붙어 있는 느낌을 줄 수 있다.
+  - 같은 `이번 주` 이동 기능이 웹/앱에서 다르게 보여 사용성이 일관되지 않다.
+- Approach decision:
+  - 사용자 제안처럼 웹 표의 축을 바꾸는 방향은 타당하다.
+  - 다만 단순히 축만 바꾸면 긴 주간 화면이 세로로 길어지고, 기존 E2E/visual baseline 영향이 크다.
+  - 대안 1: 현재 축을 유지하고 레시피명 2줄 표시, 썸네일 축소, 날짜 column 최소폭 확대와 가로 스크롤을 적용한다.
+    - 장점: 구현이 작고 기존 구조 영향이 적다.
+    - 단점: 7일 column 구조라 제목 폭 부족이 근본적으로 남을 수 있고, 가로 스크롤은 주간 overview를 약하게 만든다.
+  - 대안 2: 웹도 앱처럼 `날짜=행`, `끼니=열` 구조로 바꾼다.
+    - 장점: 보통 끼니 수는 날짜 수보다 적어 각 식사 셀이 넓어지고, 레시피명이 훨씬 잘 보인다.
+    - 단점: 날짜별 행이 7개라 화면이 세로로 길어지고 기존 표 스캔 방식이 바뀐다.
+  - 권장안: 웹 데스크톱은 `날짜=행`, `끼니=열`로 전환하되, 행 높이와 빈 슬롯 표현을 compact하게 설계한다. 이렇게 해야 제목 가독성 문제가 근본적으로 해결된다.
+- Recommended fix:
+  - 웹 주간 표를 `date row x meal column` 구조로 재구성한다.
+    - 첫 column은 날짜/요일 row header로 둔다.
+    - 이후 columns는 아침/점심/저녁 같은 사용자 끼니 column으로 둔다.
+    - 예: `grid-template-columns: minmax(88px, 112px) repeat(columnCount, minmax(160px, 1fr))`.
+  - 웹 식사 카드는 레시피명을 최소 2줄까지 보여주고, 셀 폭이 충분할 때는 썸네일과 제목/메타를 가로 배치한다.
+  - custom 끼니가 5개 이상일 때는 column 최소폭을 보장하고 표 내부 가로 스크롤을 허용한다.
+  - 앱 식사 카드의 레시피명은 `12px`에서 `13px` 또는 `14px` 수준으로 키운다.
+  - 앱에서 한 슬롯에 식사가 2개 이상일 때는 제목 가독성을 위해 2열 압축보다 세로 stack 또는 2줄 제목 허용을 검토한다.
+  - 상태 표시는 카드 안에 텍스트를 넣지 않고, 카드 일부 테두리 색상으로 표현한다.
+    - 예: 카드 왼쪽 `4px` accent border 또는 상단 `3px` accent border.
+    - 웹처럼 카드가 넓어지는 구조에서는 왼쪽 테두리 accent를 우선 검토한다.
+    - 앱처럼 카드가 낮고 촘촘한 구조에서는 왼쪽 테두리 또는 상단 테두리 중 더 덜 답답한 쪽을 visual QA로 고른다.
+    - 카드 전체 배경을 강하게 칠하지 말고, 흰 카드 + 상태색 일부 테두리 + 필요 시 아주 약한 tint만 사용한다.
+    - 현재의 짧은 막대처럼 별도 요소를 붙이는 방식보다, 카드 border 자체의 일부가 상태색이 되게 한다.
+  - 카드 내부에는 `등록`, `장보기`, `완료` 같은 visible text를 넣지 않는다.
+  - 접근성을 위해 상태 indicator에는 기존처럼 `aria-label`을 유지하고, 화면 한쪽의 legend는 부분 테두리 모양과 같은 swatch로 맞춘다.
+  - 앱 `이번 주` 버튼은 웹과 같은 사각 control 스타일로 맞춘다.
+    - `rounded-full` 대신 `rounded-[var(--radius-control)]` 계열을 사용한다.
+    - 색상은 웹 secondary button과 같은 흰 배경/line border/text color 기준으로 맞추고, 활성 이동 가능 상태만 brand outline 또는 brand text를 사용한다.
+- Acceptance criteria:
+  - 웹 플래너에서 긴 레시피명이 현재보다 의미 있게 더 많이 보인다.
+  - 웹 주간 표에서 날짜별 식단과 끼니별 식단을 모두 쉽게 훑을 수 있다.
+  - 앱 플래너의 레시피명 폰트가 더 읽기 쉬운 크기로 커진다.
+  - 앱에서 폰트 크기를 키워도 식사 카드와 추가 버튼이 겹치거나 깨지지 않는다.
+  - 상태 표시는 짧은 색상 바나 텍스트 배지가 아니라 카드 일부 테두리 색상으로 보인다.
+  - 카드 내부에는 `등록`, `장보기`, `완료` 텍스트가 추가되지 않는다.
+  - 상태 색상은 기존 등록/장보기/요리완료 색상 체계를 유지하되, 카드 배경 전체를 과하게 물들이지 않는다.
+  - 스크린리더에서는 기존처럼 `식사 등록 완료`, `장보기 완료`, `요리 완료` 상태를 읽을 수 있다.
+  - legend가 있는 화면에서는 새 부분 테두리 모양과 같은 swatch로 상태 색상 의미를 설명한다.
+  - 앱 `이번 주` 버튼이 웹 버튼과 같은 사각형 계열, 유사 색상 체계로 보인다.
+  - 이전 주/다음 주 이동, 날짜 선택, 식사 추가, 식사 상세 이동 기능은 그대로 유지된다.
+- Likely implementation target:
+  - `components/planner/planner-week-screen.tsx`
+  - `app/globals.css`
+  - `tests/planner-week-screen.test.tsx`
+  - `tests/e2e/slice-05-planner-week-core.spec.ts`
+  - `tests/e2e/qa-visual.spec.ts`
+  - 필요 시 planner visual fixture의 긴 레시피명 데이터
+- Verification:
+  - 웹 플래너 1280px, 1440px, 좁은 desktop width에서 레시피명 노출과 table overflow 확인
+  - 앱 viewport에서 레시피명 크기, 2개 이상 식사 슬롯, 상태 테두리, `이번 주` 버튼 모양 확인
+  - 상태별 accent border가 `registered`, `shopping_done`, `cook_done` 모두 보이는 테스트 갱신
+  - keyboard focus 순서와 링크/버튼 aria label 유지 확인
+  - `qa-planner-week.png` visual snapshot 갱신
+
+### 8. 웹 끼니 화면의 식사 카드 정렬과 화면 밀도가 앱보다 떨어지는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / UI / Frontend
+- Source: user manual review screenshots, `components/planner/meal-screen.tsx`, `app/globals.css`
+- Problem:
+  - 앱 끼니 화면은 레시피 이미지 오른쪽에 상태 태그, 레시피명, 인분/조리시간이 같은 정보 축으로 정렬되어 있고, 삭제 버튼은 카드 오른쪽 상단에 고정되어 있다.
+  - 웹 끼니 화면은 이미지, 상태 태그, 레시피명, 메타, 삭제 버튼, 인분 조절, 장보기 버튼이 각각 다른 축에 놓여 정렬감이 약하다.
+  - 웹 카드 footer가 전체 폭을 가로지르고, 카드 본문은 왼쪽에 몰려 있어 정보 덩어리가 분리되어 보인다.
+  - 웹 화면은 한 끼에 음식이 1개인 경우가 많아 2열 미니 카드 grid가 오히려 넓은 데스크톱 화면을 비어 보이게 만든다.
+  - 오른쪽 요약 rail은 있지만 중앙 공간이 크게 비어 보여, 사용자가 핵심 식사 카드가 덜 완성된 영역처럼 느낄 수 있다.
+- User impact:
+  - 사용자가 카드 안에서 제목, 상태, 인분, 조리시간, 삭제/장보기 액션을 빠르게 훑기 어렵다.
+  - 같은 끼니 화면인데 앱보다 웹의 정보 배치 품질이 낮아 보인다.
+  - 웹 데스크톱에서 화면을 넓게 쓰지 못하고 카드가 작은 덩어리처럼 떠 있어 밀도가 낮아 보인다.
+- Approach decision:
+  - 사용자 지적처럼 앱 카드의 정렬 구조를 웹에도 반영하는 것이 맞다.
+  - 단순히 앱 카드를 그대로 크게 복사하면 데스크톱에서 버튼과 stepper가 비대해지고 카드가 장황해질 수 있다.
+  - 권장안은 앱의 정보 순서와 정렬 축은 유지하되, 웹에서는 한 줄 row card 형태로 재설계하는 것이다.
+  - 대안인 현재 2열 미니 카드 grid 유지 + padding 조정은 구현은 작지만, 화면이 텅 비어 보이는 근본 원인을 해결하기 어렵다.
+- Recommended fix:
+  - 웹 끼니 목록을 `repeat(2, ...)` 미니 카드 grid에서 single-column row list로 바꾸는 것을 우선 검토한다.
+  - 웹 식사 카드는 앱과 같은 정보 순서를 따른다.
+    - 왼쪽: 레시피 이미지 또는 fallback visual.
+    - 가운데: 상태 태그, 레시피명, `인분 · 조리시간`.
+    - 오른쪽 상단: 삭제 버튼.
+    - 오른쪽 또는 하단 고정 영역: 인분 조절, 장보기, 요리하기 액션.
+  - 카드 본문은 하나의 grid 안에서 `image / content / actions` column으로 정렬한다.
+    - 예: `grid-template-columns: 112px minmax(0, 1fr) auto`.
+  - 삭제 버튼은 앱처럼 카드 오른쪽 상단에 고정하고, action 영역과 시각적으로 섞이지 않게 한다.
+  - 인분 조절과 장보기/요리하기는 카드 하단 전체 footer로 분리하기보다, 데스크톱에서는 오른쪽 action column에 세로 또는 2행으로 정렬한다.
+  - 카드가 너무 낮아지지 않도록 이미지 높이와 action column 높이를 맞춘다.
+  - 한 끼 음식이 1개일 때도 카드가 main column 폭을 적절히 사용하게 하고, 오른쪽 요약 rail과의 gap이 과하게 커 보이지 않게 layout gap 또는 main width를 조정한다.
+  - 앱 카드의 현재 정렬감은 유지하되, 이번 수정 범위는 웹 끼니 화면을 우선한다.
+- Acceptance criteria:
+  - 웹 끼니 화면에서 식사 카드 내부의 이미지, 상태, 제목, 메타, 삭제 버튼, 주요 액션이 명확한 축에 맞춰 정렬된다.
+  - 웹 카드의 정보 순서가 앱 카드와 자연스럽게 대응된다.
+  - 한 끼에 음식이 1개뿐이어도 화면이 과하게 비어 보이지 않는다.
+  - 긴 레시피명은 최소 2줄까지 자연스럽게 보이고, 삭제 버튼이나 액션 버튼과 겹치지 않는다.
+  - 인분 조절, 장보기, 요리하기, 삭제 기능은 기존 동작과 접근성 label을 유지한다.
+  - 오른쪽 요약 rail과 본문 카드 사이의 간격이 시각적으로 과하지 않다.
+  - 모바일 앱 카드 레이아웃은 기존 장점을 해치지 않는다.
+- Likely implementation target:
+  - `components/planner/meal-screen.tsx`
+  - `app/globals.css`
+  - `tests/planner-meal-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 웹 끼니 화면 visual snapshot으로 1개/2개 음식, 긴 레시피명, 상태별 카드 확인
+  - 앱 끼니 화면 visual smoke로 기존 정렬 유지 확인
+  - 삭제, 인분 증가/감소, 장보기, 요리하기 버튼 테스트 갱신
+  - 1280px/1440px desktop width에서 빈 공간과 rail 간격 확인
+
+### 9. 끼니 상태와 맞지 않는 장보기 버튼이 오류만 만드는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Frontend
+- Source: user manual review screenshot, `components/planner/meal-screen.tsx`
+- Problem:
+  - 이미 `shopping_done` 또는 `cook_done` 상태인 끼니에도 `장보기` 버튼이 노출된다.
+  - 사용자가 이 버튼을 누르면 새 장보기 목록을 만들 수 없다는 빨간 오류 안내가 표시된다.
+  - 하지만 상태 전이 규칙상 `registered -> shopping_done -> cook_done` 흐름만 허용되므로, `shopping_done` 또는 `cook_done` 끼니에서 새 장보기를 만드는 것은 애초에 가능한 액션이 아니다.
+  - 현재도 `shopping_done` 끼니에는 `요리하기` 버튼이 있고, `cook_done` 끼니에는 `요리하기` 버튼이 없다. 이와 같은 기준을 `장보기`에도 적용하는 것이 자연스럽다.
+- User impact:
+  - 사용자는 버튼이 있으니 가능한 행동이라고 생각하고 누르지만, 결과는 오류라서 서비스가 잘못 동작한 것처럼 느낄 수 있다.
+  - 빨간 오류 문구가 실제 시스템 오류처럼 보여 불필요하게 불안감을 준다.
+  - 상태별 다음 행동이 명확하지 않아 카드 액션을 해석하는 비용이 커진다.
+- Approach decision:
+  - 사용자 제안처럼 불가능한 `장보기` 버튼은 숨기는 것이 맞다.
+  - 대안 1: 버튼을 계속 보이되 disabled 처리하고 tooltip/안내를 붙인다.
+    - 장점: 왜 안 되는지 설명할 수 있다.
+    - 단점: 모바일/카드 UI에서는 disabled 버튼이 공간을 차지하고, 이미 상태 태그가 있어 중복 설명이 된다.
+  - 대안 2: 클릭 시 지금처럼 빨간 오류를 유지한다.
+    - 장점: 구현 변경이 거의 없다.
+    - 단점: 사용자가 실패 가능한 액션을 먼저 경험하게 하므로 UX가 가장 나쁘다.
+  - 권장안: 카드 액션은 상태별로 가능한 다음 행동만 노출한다. 필요 시 상태 태그와 상세 화면에서만 이유를 보충한다.
+- Recommended fix:
+  - `registered` 끼니:
+    - `장보기` 버튼만 노출한다.
+    - `요리하기` 버튼은 노출하지 않는다.
+  - `shopping_done` 끼니:
+    - `요리하기` 버튼만 노출한다.
+    - `장보기` 버튼은 노출하지 않는다.
+  - `cook_done` 끼니:
+    - `장보기`, `요리하기` 버튼을 모두 노출하지 않는다.
+    - 필요하면 액션 영역을 비워두지 말고 카드 레이아웃이 무너지지 않게 완료 상태에 맞는 정적 공간 또는 보조 링크를 검토한다. 단, 새 기능/새 라우트는 만들지 않는다.
+  - 방어 코드는 유지한다. 즉, `createShoppingForMeal`의 `meal.status !== "registered"` guard는 삭제하지 않는다.
+  - 같은 규칙을 웹 카드와 앱 카드에 모두 적용한다.
+  - 빨간 오류 안내는 실제 race condition, stale data, 서버 409처럼 버튼 노출 조건으로 막을 수 없는 경우에만 사용한다.
+- Acceptance criteria:
+  - `registered` 상태 카드에는 `장보기` 버튼이 보이고 `요리하기` 버튼은 보이지 않는다.
+  - `shopping_done` 상태 카드에는 `요리하기` 버튼이 보이고 `장보기` 버튼은 보이지 않는다.
+  - `cook_done` 상태 카드에는 `장보기`, `요리하기` 버튼이 보이지 않는다.
+  - 사용자가 화면에 보이는 정상 버튼을 눌렀다는 이유만으로 "이미 장보기나 요리 흐름에 들어간 식사..." 빨간 오류가 뜨지 않는다.
+  - 서버 또는 데이터 경합 때문에 실패한 경우의 오류 처리는 유지된다.
+  - 웹/앱 카드의 action 영역 높이와 정렬이 상태별로 크게 흔들리지 않는다.
+- Likely implementation target:
+  - `components/planner/meal-screen.tsx`
+  - `app/globals.css`
+  - `tests/planner-meal-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - `registered`, `shopping_done`, `cook_done` 상태별 버튼 노출 테스트 추가/수정
+  - 버튼이 없는 상태에서 카드 레이아웃이 비어 보이거나 깨지지 않는지 visual 확인
+  - `createShoppingForMeal` guard는 유지하고, 서버 409/401 오류 테스트는 그대로 통과하는지 확인
+
+### 10. 플래너 식사추가의 레시피북 선택 UI가 마이페이지 레시피북과 다르게 보이는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / UI / Frontend
+- Source: user manual review screenshots, `components/planner/recipe-book-selector.tsx`, `components/mypage/mypage-screen.tsx`, `components/mypage/mypage-mobile-screen.tsx`, `app/globals.css`
+- Problem:
+  - 플래너 식사추가의 `레시피북` 선택 화면은 레시피북을 목록 row 형태로 보여준다.
+  - 각 row 왼쪽에는 실제 레시피북 커버가 아니라 임시 이모지/아이콘처럼 보이는 이미지가 들어가 있다.
+  - 반면 마이페이지 레시피북 화면에서는 레시피북을 책 모양 카드로 보여주고, 커버 색상과 커버 이미지를 사용한다.
+  - 같은 레시피북 객체가 화면마다 다르게 보이기 때문에 사용자는 식사추가의 레시피북 목록과 마이페이지의 책 카드가 같은 대상인지 즉시 연결하기 어렵다.
+- User impact:
+  - 사용자가 마이페이지에서 본 레시피북을 플래너 식사추가에서 찾을 때 시각적 단서가 약하다.
+  - 임시 이미지나 관련 없는 아이콘은 레시피북의 신뢰도와 완성도를 떨어뜨린다.
+  - 웹에서는 이미 책 모양 메타포가 강하게 잡혀 있는데, 식사추가에서 목록형으로 돌아가면 경험이 끊긴다.
+- Approach decision:
+  - 사용자 제안처럼 웹 식사추가에서는 마이페이지의 책 모양 레시피북 카드를 보여주는 것이 맞다.
+  - 앱 화면은 공간이 좁으므로 웹과 같은 큰 책 grid를 그대로 쓰기보다, 현재 목록 구조를 유지하되 커버색/커버이미지를 반영한 compact book thumbnail을 쓰는 방식이 더 안전하다.
+  - 대안인 현재 목록형 UI 유지 + 아이콘만 바꾸기는 구현은 작지만, 마이페이지에서 만든 레시피북 메타포를 충분히 활용하지 못한다.
+  - 대안인 웹/앱 모두 책 카드 grid로 통일하기는 일관성은 높지만 앱 식사추가 flow에서 스크롤 길이와 선택 효율이 나빠질 수 있다.
+- Recommended fix:
+  - 웹 `RecipeBookSelector`의 `presentation="web"`에서는 목록 row 대신 마이페이지와 같은 책 카드 grid를 사용한다.
+    - `web-recipebook-book-card`
+    - `web-recipebook-cover-thumb`
+    - `web-recipebook-cover-thumb-image`
+    - `web-recipebook-book-count`
+  - 마이페이지 내부에 묶인 `BookCoverThumb`, `getBookTone`, `getBookCoverImage` 성격의 로직을 공용 컴포넌트/유틸로 분리해 플래너와 마이페이지가 같은 렌더링 기준을 쓰게 한다.
+  - API는 이미 `cover_color_key`, `cover_image_url`을 내려주므로 새 public contract를 만들지 않는다.
+  - `cover_image_url`이 있으면 해당 이미지를 사용하고, 없으면 기존 마이페이지 fallback과 같은 규칙으로 fallback cover를 쓴다.
+  - 앱 `presentation="screen"`/`"sheet"`에서는 목록 row 자체는 유지하되 왼쪽 썸네일을 임시 이모지 대신 레시피북의 커버색/커버이미지를 반영한 mini book cover로 바꾼다.
+  - 앱 row에는 최소한 커버색상, 커버이미지, 레시피북 이름, 개수 badge가 보이게 한다.
+  - 빈 레시피북도 선택 가능 여부가 정책상 현재와 같다면 그대로 유지하되, `비어 있음` 표시는 책 카드/mini cover와 어울리게 정리한다.
+- Acceptance criteria:
+  - 웹 식사추가 레시피북 선택 화면에서 레시피북이 마이페이지와 같은 책 모양 카드로 보인다.
+  - 웹에서 각 책은 실제 `cover_color_key`와 `cover_image_url`을 반영한다.
+  - 앱 식사추가 레시피북 목록은 기존 선택 효율을 유지하면서, 왼쪽 시각 요소가 레시피북 커버색/커버이미지 기반으로 보인다.
+  - 관련 없는 임시 이미지/이모지가 레시피북 대표 이미지처럼 보이지 않는다.
+  - 마이페이지와 플래너에서 같은 레시피북은 같은 색상/커버 규칙으로 보인다.
+  - 커버 이미지가 없는 레시피북도 일관된 fallback cover를 사용한다.
+  - 레시피북 선택, 뒤로가기, 상세 레시피북 진입 flow는 그대로 유지된다.
+- Likely implementation target:
+  - `components/planner/recipe-book-selector.tsx`
+  - `components/mypage/mypage-screen.tsx`
+  - `components/mypage/mypage-mobile-screen.tsx`
+  - 새 공용 recipebook cover/card component 또는 utility
+  - `app/globals.css`
+  - `tests/planner-week-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+  - 필요 시 `tests/e2e/slice-08b-meal-add-books-pantry.spec.ts`
+- Verification:
+  - 웹 식사추가 레시피북 선택 visual snapshot으로 책 카드 grid 확인
+  - 앱 식사추가 레시피북 선택에서 mini cover 색상/이미지 확인
+  - `cover_color_key`, `cover_image_url`, null fallback 케이스 테스트
+  - 레시피북 선택 후 상세 picker로 이동하는 기존 flow 테스트 유지
+
+### 11. 앱 식사추가 target chip의 텍스트가 세로 가운데 정렬되지 않는 문제
+
+- Status: planned
+- Severity: Low
+- Area: UI / Frontend
+- Source: user manual review screenshot, `components/planner/meal-add-target-badge.tsx`
+- Problem:
+  - 앱 식사추가 모달과 식사추가 하위 화면 오른쪽 상단에 날짜/끼니 chip이 반복 노출된다.
+  - 현재 chip 안의 `6/15 저녁` 텍스트가 시각적으로 세로 가운데보다 살짝 위로 떠 보인다.
+  - 같은 `MealAddTargetBadge`가 검색, 레시피북, 팬트리, 남은 요리, 유튜브, 직접 등록 flow에서 재사용되기 때문에 작은 정렬 문제가 여러 화면에 반복된다.
+- User impact:
+  - 중요한 맥락 정보인 날짜/끼니 chip이 다듬어지지 않은 UI처럼 보인다.
+  - 식사추가 flow의 상단 영역 완성도가 떨어져 보일 수 있다.
+- Recommended fix:
+  - `MealAddTargetBadge`의 app tone 스타일을 고정 높이 기반으로 정리한다.
+  - `py` 중심 정렬 대신 `min-height` 또는 `height`, `align-items: center`, 명확한 `line-height`를 함께 사용한다.
+  - 텍스트에는 `leading-none` 또는 `leading-[1]` 계열을 적용해 한글 폰트 메트릭 때문에 위로 뜨는 느낌을 줄인다.
+  - 아이콘은 `display: block` 또는 `shrink-0`로 baseline 영향을 받지 않게 한다.
+  - 텍스트와 아이콘을 서로 따로 미세 조정하기보다 chip 전체의 수직 중앙축을 안정화한다.
+  - `tone="web"`의 `web-meal-add-target`도 같은 문제가 있는지 확인하되, 이번 주요 수정 대상은 앱 tone이다.
+- Acceptance criteria:
+  - 앱 식사추가 option sheet와 하위 picker 화면에서 날짜/끼니 chip 텍스트가 시각적으로 세로 가운데에 놓인다.
+  - 캘린더 아이콘과 텍스트의 중앙축이 맞아 보인다.
+  - `4/18 아침`, `6/15 저녁`, 긴 끼니명에서도 chip 높이와 정렬이 흔들리지 않는다.
+  - chip이 오른쪽 상단에 있을 때 주변 제목/닫기 버튼과 겹치지 않는다.
+  - 웹 target chip에 회귀가 생기지 않는다.
+- Likely implementation target:
+  - `components/planner/meal-add-target-badge.tsx`
+  - 필요 시 `app/globals.css`
+  - `tests/meal-add-picker-flow.test.tsx`
+  - `tests/menu-add-screen.test.tsx`
+  - `tests/planner-meal-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 앱 식사추가 모달과 각 picker 화면에서 chip 정렬 visual 확인
+  - 기존 `meal-add-target-badge` text assertion 유지
+  - 긴 label fixture 또는 수동 확인으로 wrapping/overflow 확인
+
+### 12. 유튜브 가져오기 단계 표시가 웹/앱에서 어색하게 줄바꿈되는 문제
+
+- Status: planned
+- Severity: Low
+- Area: UI / UX / Frontend
+- Source: user manual review screenshots, `components/recipe/youtube-import-screen.tsx`, `app/globals.css`
+- Problem:
+  - 유튜브 가져오기 flow는 `링크 입력`, `미리보기`, `분석`, `검토`, `완료` 총 5단계다.
+  - 현재 웹 단계 표시는 1~4번이 첫 줄에 있고 5번 `완료`만 둘째 줄로 내려간다.
+  - 앱에서도 현재 4+1 배열이라 마지막 단계가 혼자 떨어져 보인다.
+  - 실제 CSS가 `repeat(4, minmax(0, 1fr))`를 사용하고 있어 5단계 구조와 맞지 않는다.
+- User impact:
+  - 사용자는 마지막 단계가 중요도가 낮거나 별도 그룹인 것처럼 오해할 수 있다.
+  - 5개 중 1개만 다음 줄에 있는 형태는 의도된 디자인보다 레이아웃이 깨진 화면처럼 보인다.
+  - 가져오기 flow의 첫 화면에서 완성도가 낮아 보인다.
+- Recommended fix:
+  - 웹 desktop에서는 5개 단계를 한 줄에 모두 보이게 한다.
+    - `web-yt-stepper`를 `grid-template-columns: repeat(5, minmax(0, 1fr))`로 바꾼다.
+    - 한 줄 수용을 위해 step padding, gap, number badge 크기, font size를 필요한 만큼만 줄인다.
+    - `링크 입력`, `미리보기`, `분석`, `검토`, `완료` 라벨은 잘리지 않게 유지한다.
+  - 앱/mobile에서는 화면 폭상 5개 한 줄이 무리이므로 3+2 grid를 기본으로 한다.
+    - `yt-mobile-import-shell .web-yt-stepper`를 `repeat(3, minmax(0, 1fr))`로 조정한다.
+    - 마지막 줄이 1개만 남는 4+1 배열은 피한다.
+    - 아주 좁은 화면에서 3열이 답답하면 2+2+1보다 가로 스크롤 stepper를 검토하되, 표준 모바일 폭에서는 3+2가 우선이다.
+  - active/done 상태에서 border, 배경, 글자 굵기 때문에 step 크기가 바뀌지 않도록 고정 높이를 유지한다.
+  - stepper가 입력창과 버튼을 과하게 밀어내지 않도록 상하 간격을 함께 조정한다.
+- Acceptance criteria:
+  - 웹 유튜브 가져오기 화면에서 5단계가 한 줄에 모두 보인다.
+  - 앱 유튜브 가져오기 화면에서 단계가 3+2처럼 균형 있게 줄바꿈되고, 5번만 혼자 떨어져 보이지 않는다.
+  - 모든 단계 라벨이 잘리지 않고 읽힌다.
+  - active/done 상태가 바뀌어도 stepper 높이와 주변 레이아웃이 흔들리지 않는다.
+  - 키보드/스크린리더를 위한 단계 순서와 `aria-label`은 유지된다.
+- Likely implementation target:
+  - `components/recipe/youtube-import-screen.tsx`
+  - `app/globals.css`
+  - `tests/e2e/qa-visual.spec.ts`
+  - 필요 시 `tests/e2e/slice-19-youtube-import.spec.ts`
+  - 필요 시 `tests/e2e/slice-27-youtube-import-quality.spec.ts`
+- Verification:
+  - 웹 1280px/1440px에서 유튜브 가져오기 stepper가 5개 한 줄인지 visual 확인
+  - 모바일 390px/430px에서 stepper가 3+2로 보이는지 visual 확인
+  - 각 단계 전환 시 active/done 상태와 레이아웃 흔들림 확인
+  - 유튜브 URL 입력과 가져오기 버튼 flow가 기존처럼 동작하는지 smoke test
+
+### 13. 앱 화면의 뒤로가기 버튼 형태와 위치가 화면마다 다른 문제
+
+- Status: planned
+- Severity: Low
+- Area: UI / UX / Frontend
+- Source: user manual review screenshot, `components/shared/app-back-button.tsx`, `components/recipe/manual-recipe-create-screen.tsx`, `components/recipe/youtube-import-screen.tsx`, `components/planner/youtube-import-entry-sheet.tsx`
+- Problem:
+  - 앱의 `유튜브 가져오기` 화면과 `직접 등록` 화면에서 뒤로가기 버튼 형태가 다르게 보인다.
+  - 직접 등록 화면은 상단 앱바 왼쪽에 chevron icon 버튼이 있고, 유튜브 가져오기 진입 sheet에는 하단에 텍스트 `뒤로` 버튼도 함께 있다.
+  - 일부 앱 화면은 공용 `AppBackButton`을 쓰지만, 일부 화면은 자체 `button + svg`, floating back button, 텍스트 버튼을 사용한다.
+  - 같은 앱 안에서 뒤로가기의 위치, 크기, 라벨 노출 방식이 달라 사용자가 화면마다 조작 위치를 다시 확인해야 한다.
+- User impact:
+  - 사용자는 뒤로가기가 항상 같은 위치와 형태로 있다는 확신을 갖기 어렵다.
+  - 상단 navigation 성격의 뒤로가기와 하단 취소성 버튼이 섞여 보여 flow의 위계가 흐려진다.
+  - 작은 차이지만 앱 전체 완성도와 일관성을 떨어뜨린다.
+- Approach decision:
+  - 사용자 제안처럼 앱 화면의 뒤로가기 버튼은 한 가지 형태로 통일하는 것이 맞다.
+  - 이미 `components/shared/app-back-button.tsx`에 공용 `AppBackButton`과 `AppBackButtonSpacer`가 있으므로, 새 패턴을 추가하기보다 이 컴포넌트를 앱 navigation back의 단일 기준으로 삼는다.
+  - 단, 레시피 상세 hero 위 floating back처럼 이미지 위에 떠야 하는 특수 케이스는 같은 아이콘/크기/접근성 규칙을 따르되 배경만 overlay 전용으로 허용한다.
+- Recommended fix:
+  - 앱의 navigation back은 기본적으로 상단 앱바 왼쪽의 icon-only `AppBackButton`으로 통일한다.
+  - 저장/등록 같은 primary action이 오른쪽에 있는 화면도 왼쪽 back, 가운데 title, 오른쪽 action 구조를 유지한다.
+  - 직접 등록 `AppBar`의 자체 chevron button을 `AppBackButton`으로 교체한다.
+  - 유튜브 가져오기 화면과 유튜브 entry sheet의 뒤로가기도 `AppBackButton` 기준으로 맞춘다.
+  - 하단에 있는 텍스트 `뒤로` 버튼은 navigation back과 중복되면 제거하거나, 의미가 다르면 `취소`/`닫기` 같은 명확한 라벨로 바꾼다.
+  - 뒤로가기 aria-label은 `뒤로 가기` 또는 `뒤로가기` 중 하나로 통일한다. 사용자-facing 문구 기준과 맞춰 `뒤로 가기`를 우선한다.
+  - `--app-back-button-size`, `--app-back-button-icon-size`, `--app-back-button-radius`, hover/focus token을 공통 기준으로 유지한다.
+  - 앱 전체에서 `aria-label="뒤로가기"`, `aria-label="뒤로 가기"`, 직접 SVG chevron 버튼, 텍스트 `뒤로` 버튼 사용처를 찾아 공용 패턴으로 정리한다.
+- Acceptance criteria:
+  - 앱 화면의 일반 뒤로가기는 같은 크기, 같은 아이콘, 같은 radius, 같은 위치 규칙을 따른다.
+  - `유튜브 가져오기`, `직접 등록`, `식사 추가`, 레시피북 선택, 팬트리 찾기, 남은 요리 선택 등 식사추가 하위 flow에서 뒤로가기 형태가 일관된다.
+  - 상단 앱바가 있는 화면은 왼쪽 back, 가운데 title, 오른쪽 action 또는 spacer 구조가 유지된다.
+  - 하단 CTA 영역에 navigation 목적의 `뒤로` 버튼이 중복 노출되지 않는다.
+  - 저장/등록 중 disabled 상태와 접근성 label은 유지된다.
+  - 특수 floating back 버튼은 시각적 배경만 다르고 아이콘 크기/터치 영역/aria-label 규칙은 공통 기준을 따른다.
+- Likely implementation target:
+  - `components/shared/app-back-button.tsx`
+  - `components/recipe/manual-recipe-create-screen.tsx`
+  - `components/recipe/youtube-import-screen.tsx`
+  - `components/planner/youtube-import-entry-sheet.tsx`
+  - `components/planner/menu-add-screen.tsx`
+  - `components/planner/recipe-book-selector.tsx`
+  - `components/planner/recipe-book-detail-picker.tsx`
+  - `components/planner/recipe-search-picker.tsx`
+  - `components/planner/pantry-match-picker.tsx`
+  - `components/planner/leftover-picker.tsx`
+  - `components/recipe/recipe-detail-screen.tsx`
+  - `components/settings/settings-mobile-screen.tsx`
+  - `components/settings/settings-screen.tsx`
+  - `components/leftovers/leftovers-screen.tsx`
+  - `app/globals.css`
+- Verification:
+  - `rg`로 직접 chevron/back button 구현과 `뒤로` 텍스트 버튼 잔여 사용처 확인
+  - 앱 주요 flow visual 확인: 직접 등록, 유튜브 가져오기, 식사 추가, 레시피북 선택, 팬트리 찾기, 남은 요리 선택
+  - 저장/등록 중 disabled back 상태가 기존처럼 동작하는지 확인
+  - keyboard focus와 aria-label 확인
+
+### 14. 직접 등록에서 만들기 추가 후 이전 조리법 선택이 다음 입력에 남는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Frontend
+- Source: user manual review screenshot, `components/recipe/manual-recipe-create-screen.tsx`
+- Problem:
+  - 직접 등록에서 조리법을 선택하고 만들기 설명을 입력한 뒤 `+ 만들기 추가`를 누르면, 다음 만들기 입력 폼에도 이전 조리법이 그대로 선택되어 있다.
+  - 현재 `StepInlineComposer`는 만들기 추가 후 `instruction`만 비우고 `selectedMethodId`는 초기화하지 않는 구조다.
+  - 사용자는 다음 단계의 조리법을 새로 선택해야 한다고 기대하기 쉬운데, 이전 값이 남아 있어 실수로 같은 조리법을 반복 저장할 수 있다.
+- User impact:
+  - 레시피 단계마다 다른 조리법을 지정하려는 사용자가 잘못된 조리법 태그를 저장할 가능성이 크다.
+  - 저장 후 레시피 상세, 조리모드, 조리법 기반 표시에서 부정확한 정보가 보일 수 있다.
+  - 직접 등록 입력 흐름에서 "이전 값이 남아 있는지" 매번 확인해야 하므로 작성 부담이 커진다.
+- Recommended fix:
+  - `+ 만들기 추가` 성공 후 `selectedMethodId`를 빈 값으로 초기화한다.
+  - 추가된 만들기 항목에는 사용자가 선택했던 조리법을 그대로 저장하되, 다음 입력 composer는 조리법 미선택 상태로 돌아간다.
+  - 다음 입력에서는 active 조리법 chip이 없어야 하고, 조리법을 다시 선택하기 전까지 추가 버튼은 비활성 또는 명확한 안내 상태가 되어야 한다.
+  - 현재 문구 `조리방법을 선택해주세요.`는 서비스 문구 통일 기준에 맞춰 `조리법을 선택해 주세요.`처럼 짧고 일관되게 정리한다.
+  - 같은 `StepInlineComposer`가 웹/앱 직접 등록에서 공유되는지 확인하고, 양쪽 모두 같은 초기화 규칙을 적용한다.
+  - 만약 같은 조리법을 연속으로 쓰는 사용자를 배려하고 싶다면 자동 유지가 아니라 별도 `이전 조리법 유지` 같은 명시 옵션으로 다뤄야 한다. 이번 수정에서는 기본 초기화를 우선한다.
+- Acceptance criteria:
+  - 조리법 선택 후 만들기를 추가하면, 추가된 만들기 카드에는 선택한 조리법이 표시된다.
+  - 추가 직후 다음 입력 폼에는 이전 조리법이 선택되어 있지 않다.
+  - 다음 만들기 입력의 조리법 chip들은 모두 비활성 상태로 보인다.
+  - 조리법을 다시 선택하지 않으면 다음 만들기를 추가할 수 없거나, 명확한 안내가 보인다.
+  - 웹/앱 직접 등록 화면에서 같은 동작을 보인다.
+  - 기존에 추가된 만들기 목록의 순서, 단계 번호, 조리법 표시, 저장 payload는 깨지지 않는다.
+- Likely implementation target:
+  - `components/recipe/manual-recipe-create-screen.tsx`
+  - `tests/manual-recipe-create-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+  - 필요 시 `tests/e2e/slice-23-manual-recipe.spec.ts`
+- Verification:
+  - 조리법 A + 설명 1 추가 후 다음 composer에 조리법 A가 남지 않는지 확인
+  - 조리법 A 단계와 조리법 B 단계가 각각 올바른 payload로 저장되는지 테스트
+  - 웹/앱 직접 등록 flow에서 만들기 추가, 저장, 상세 이동 smoke test
+  - 문구 통일 scan에서 `선택해주세요` 같은 잔여 표현 확인
+
+### 15. 장보기 flow/list의 체크박스와 전체선택 UI가 화면마다 불안정한 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UI / UX / Frontend
+- Source: user manual review screenshots, `components/shopping/shopping-flow-screen.tsx`, `components/shopping/shopping-detail-screen.tsx`, `app/globals.css`
+- Problem:
+  - 웹 `shopping flow`와 `shopping list`에서 체크박스가 갑자기 크게 보여 카드 안에서 가장 강한 요소가 되어 있다.
+  - 현재 웹 CSS는 `.web-shopping-recipe-toggle`, `.web-shopping-check`를 `44px` 정사각형으로 직접 그리고 있어 카드 이미지/텍스트보다 체크박스가 과하게 튄다.
+  - `전체 선택` 체크박스의 체크 표시가 다른 체크박스들과 달리 어두운색으로 보이고, 전체선택 텍스트 색상도 주변 UI와 비교해 어색하다.
+  - 앱 `shopping list`의 개별 체크박스는 원형이고, 다른 장보기/플래너 선택 UI는 사각 또는 rounded-square에 가까워 일관성이 떨어진다.
+- User impact:
+  - 사용자는 재료명이나 끼니명보다 체크박스에 먼저 시선을 빼앗긴다.
+  - 전체선택과 개별 체크의 시각 규칙이 달라 같은 선택 상태인지 즉시 이해하기 어렵다.
+  - 앱과 웹의 체크박스 모양이 달라 장보기 경험이 화면별로 다른 기능처럼 느껴진다.
+- Recommended fix:
+  - 웹 장보기 체크박스는 시각 크기를 줄인다.
+    - 카드 전체 클릭/tap target은 유지하되, 보이는 체크 박스는 `28~32px` 수준으로 줄인다.
+    - pointer 화면에서는 작은 visible checkbox + 충분한 clickable wrapper로 접근성을 유지한다.
+  - `.web-shopping-recipe-toggle`, `.web-shopping-check`, `.shopping-select-all-control > span`의 checked 상태를 같은 기준으로 정리한다.
+    - checked background: brand blue
+    - checked border: brand blue
+    - check mark: explicit white 또는 `var(--web-text-inverse)`
+    - unchecked background: white/surface
+  - `전체 선택` 텍스트는 앱처럼 검은색 또는 `var(--web-text-1)`로 두고, 선택 여부는 왼쪽 checkbox 색상으로만 표현한다.
+  - 앱 `shopping list`의 원형 체크박스는 rounded-square로 바꾼다.
+    - `rounded-full` 대신 `rounded-[var(--radius-badge)]` 또는 장보기 공통 radius를 사용한다.
+    - 앱 `shopping flow`, 앱 `shopping list`, 웹 `shopping flow`, 웹 `shopping list`의 체크 모양을 같은 계열로 맞춘다.
+  - 완료/read-only 상태의 체크 표시는 구매 가능 체크와 구분하되, 모양 자체는 같은 계열을 유지한다.
+- Acceptance criteria:
+  - 웹 `shopping flow` 끼니 카드와 웹 `shopping list` 재료 카드의 체크박스가 카드 안에서 과하게 크게 보이지 않는다.
+  - `전체 선택`의 체크 표시는 다른 checked checkbox와 같은 흰색 체크로 보인다.
+  - `전체 선택` 텍스트는 검은색/본문색 계열로 읽힌다.
+  - 앱 `shopping list`의 개별 체크박스가 원형이 아니라 사각형 계열로 보인다.
+  - 웹/앱 장보기 화면에서 체크박스의 크기, radius, checked 색상 규칙이 일관된다.
+  - 키보드 focus, `role="checkbox"`, `aria-checked`, disabled 상태는 유지된다.
+- Likely implementation target:
+  - `components/shopping/shopping-flow-screen.tsx`
+  - `components/shopping/shopping-detail-screen.tsx`
+  - `app/globals.css`
+  - `tests/shopping-flow-screen.test.tsx`
+  - `tests/shopping-detail-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 웹 장보기 준비, 웹 장보기 목록, 앱 장보기 목록 visual 확인
+  - 전체선택 checked/unchecked/disabled 상태 확인
+  - 개별 체크 checked/unchecked/read-only/excluded 상태 확인
+  - keyboard tab/focus와 screen reader label 확인
+
+### 16. 장보기 준비 화면의 끼니 카드 밀도와 앱 제목 링크 동작이 불편한 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UI / UX / Frontend
+- Source: user manual review screenshot, `components/shopping/shopping-flow-screen.tsx`, `app/globals.css`
+- Problem:
+  - 웹 `shopping flow`의 끼니 카드에서 레시피 제목과 아래 태그 사이 간격이 넓어 보인다.
+  - 현재 `.web-shopping-recipe-copy`는 `gap: 10px`이고, 이미지 크기가 `56px`로 고정되어 있어 텍스트 블록 안의 간격이 더 어수선하게 느껴질 수 있다.
+  - 레시피 제목은 끼니 화면으로 이동하는 링크다. 웹에서는 hover underline으로 링크임을 알 수 있지만, 앱에서는 hover가 없어 제목이 이동 링크라는 단서가 약하다.
+  - 앱에서는 사용자가 체크를 해제하려다가 레시피 제목을 눌러 끼니 화면으로 이동할 수 있다.
+  - 장보기 준비 화면 상단 설명 2줄의 세로 간격이 어색하게 넓어 보인다.
+- User impact:
+  - 웹 카드에서 제목/태그/이미지의 정렬감이 떨어진다.
+  - 앱 사용자는 장보기 대상 선택 중 원치 않는 화면 이동을 겪을 수 있다.
+  - 장보기 준비 화면의 첫 안내 영역이 필요한 정보보다 공간을 더 많이 차지해 보인다.
+- Recommended fix:
+  - 웹 끼니 카드의 제목과 meta tag 사이 간격을 줄인다.
+    - `.web-shopping-recipe-copy` gap을 `4~6px` 수준으로 낮춘다.
+    - 제목 row와 meta row가 이미지 높이 안에서 안정적으로 정렬되도록 card padding/gap을 함께 조정한다.
+  - 앱에서는 레시피 제목 자체를 숨은 navigation link로 두지 않는 방향을 우선한다.
+    - 모바일 row/card의 기본 tap은 선택/해제 동작으로만 둔다.
+    - 끼니 화면 이동은 별도 `끼니 보기` 버튼, chevron icon button, 또는 더보기 메뉴처럼 명확한 컨트롤로 분리한다.
+    - 별도 이동 버튼을 둘 경우 checkbox와 충분히 떨어뜨리고 label을 명확히 둔다.
+  - 웹은 제목 hover/focus affordance를 유지하되, 카드 전체 click이 선택/해제이고 제목만 이동이라는 차이를 더 명확히 한다.
+  - 상단 설명 2줄은 간격을 줄이거나 한 문장으로 합친다.
+    - 예: `같은 재료는 자동으로 합산돼요. 여러 끼니를 한 번에 장보기할 수 있어요.`
+    - 두 줄을 유지한다면 margin을 `2~4px`로 줄이고 line-height를 맞춘다.
+- Acceptance criteria:
+  - 웹 장보기 준비 카드에서 제목과 `아침/점심`, `인분` 태그 사이 간격이 더 조밀하고 정돈되어 보인다.
+  - 고정 이미지 크기와 텍스트 블록의 세로 중심이 어색하게 어긋나지 않는다.
+  - 앱 장보기 준비 화면에서 레시피 제목을 실수로 눌러 끼니 화면으로 이동하지 않는다.
+  - 앱에서 끼니 화면으로 이동하는 동선이 필요하면 별도 명확한 버튼으로 제공된다.
+  - 웹에서는 제목 링크의 hover/focus 표시가 유지된다.
+  - 장보기 준비 설명문 2줄의 간격이 줄거나 한 문장으로 정리되어 상단 영역이 덜 어수선하다.
+- Likely implementation target:
+  - `components/shopping/shopping-flow-screen.tsx`
+  - `app/globals.css`
+  - `tests/shopping-flow-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 웹 1280px/1440px 장보기 준비 카드 visual 확인
+  - 앱 장보기 준비에서 row tap은 선택/해제만 하는지 확인
+  - 앱 별도 끼니 이동 버튼이 있다면 tap target과 label 확인
+  - 설명문 copy와 spacing visual 확인
+
+### 17. `이미있음`으로 제외한 장보기 재료가 완료 시 팬트리에 반영되지 않는 문제
+
+- Status: planned
+- Severity: High
+- Area: UX / Backend / API / DB / Frontend
+- Source: user manual review, `components/shopping/shopping-detail-screen.tsx`, `components/shopping/pantry-reflection-popup.tsx`, `app/api/v1/shopping/lists/[list_id]/complete/route.ts`, `types/shopping.ts`
+- Problem:
+  - 사용자가 장보기 중 `이미있음`을 선택한 재료는 구매 목록에서 제외된다.
+  - 사용자의 의미는 "이 재료는 집에 있다"에 가깝기 때문에, 완료 시 팬트리에 없다면 팬트리에 반영되는 것이 자연스럽다.
+  - 현재 완료 API의 fallback 경로는 `item.is_checked && !item.is_pantry_excluded`인 항목만 팬트리 반영 대상으로 삼는다.
+  - 현재 팬트리 반영 팝업도 "체크된 구매 항목" 중심이라 `이미있음` 제외 항목은 선택/반영 맥락에서 빠질 수 있다.
+  - 기존 도메인 규칙에는 `is_pantry_excluded=true` 항목을 완료 시 반영 대상에서 제외하는 해석이 들어가 있어, 구현 전 계약 정리가 필요하다.
+- User impact:
+  - 사용자는 `이미있음`으로 표시했는데 팬트리에는 반영되지 않아, 나중에 같은 재료가 또 장보기 대상처럼 나올 수 있다.
+  - 장보기 완료 후 팬트리 상태가 사용자의 실제 주방 상태와 달라진다.
+  - `이미있음`이라는 라벨의 의미와 시스템 동작이 어긋난다.
+- Recommended fix:
+  - 제품 의미를 `이미있음 = 구매 제외 + 팬트리에 보유로 반영`으로 명확히 정한다.
+  - 완료 시 팬트리에 없는 `is_pantry_excluded=true` 항목도 팬트리 반영 후보에 포함한다.
+    - 이미 팬트리에 있으면 중복 생성하지 않는다.
+    - 팬트리에 없으면 `pantry_items`에 추가한다.
+  - `added_to_pantry`는 구매 후 반영 항목뿐 아니라 `이미있음` 확인으로 반영된 항목에도 일관되게 표시할지 결정한다. 권장안은 완료 후 실제 팬트리에 존재하게 된 항목을 `added_to_pantry=true`로 표시하는 것이다.
+  - 완료 팝업/확인 문구는 구매 체크 항목과 이미있음 항목을 모두 설명할 수 있게 바꾼다.
+    - 예: `체크한 재료와 이미 있다고 표시한 재료를 팬트리에 반영해요.`
+  - `add_to_pantry_item_ids`의 `null / [] / 선택값` 의미를 유지하되, `null=기본값`일 때 기본 후보에 `이미있음` 항목을 포함할지 문서와 테스트로 고정한다.
+  - RPC `complete_shopping_list` 경로와 fallback route 경로가 같은 규칙을 적용하도록 맞춘다.
+  - 공식 문서/도메인 규칙에서 `is_pantry_excluded=true` 항목을 무조건 팬트리 반영 무효 항목으로 보던 표현을 갱신한다.
+- Acceptance criteria:
+  - 사용자가 `이미있음`을 누른 재료가 완료 시 팬트리에 없으면 팬트리에 추가된다.
+  - 이미 팬트리에 있는 재료는 중복 추가되지 않는다.
+  - 구매 체크 항목과 이미있음 항목의 팬트리 반영 결과가 완료 summary에 일관되게 표시된다.
+  - 완료된 장보기 목록에서 팬트리 반영 완료 표시가 실제 반영 항목과 맞는다.
+  - `add_to_pantry_item_ids=[]`를 보낸 경우에는 명시적으로 팬트리 반영을 하지 않는 기존 의미를 유지한다.
+  - API, RPC, fallback 구현, 프론트 팝업, 타입, 테스트가 같은 계약을 따른다.
+- Likely implementation target:
+  - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`에 연결된 장보기 관련 공식 문서
+  - `components/shopping/shopping-detail-screen.tsx`
+  - `components/shopping/pantry-reflection-popup.tsx`
+  - `app/api/v1/shopping/lists/[list_id]/complete/route.ts`
+  - Supabase RPC `complete_shopping_list` 및 관련 migration이 있다면 해당 파일
+  - `types/shopping.ts`
+  - `tests/shopping-complete.backend.test.ts`
+  - `tests/shopping-detail-screen.test.tsx`
+- Verification:
+  - `이미있음` 항목만 있는 장보기 완료 시 팬트리에 추가되는 backend test
+  - 체크 항목 + 이미있음 항목 혼합 완료 test
+  - 이미 팬트리에 있는 항목 중복 방지 test
+  - `add_to_pantry_item_ids=null`, `[]`, 선택값의 의미 test
+  - 완료 후 UI summary와 read-only 표시 visual 확인
+
+### 18. 장보기 목록 로딩 스켈레톤의 프로그레스바가 실제 진행률처럼 보이는 문제
+
+- Status: planned
+- Severity: Low
+- Area: UI / UX / Frontend
+- Source: user manual review screenshot, `components/shopping/shopping-detail-screen.tsx`
+- Problem:
+  - 웹 장보기 목록 화면으로 이동할 때 로딩 스켈레톤에 파란 progress bar가 절반 정도 차 있는 상태로 보인다.
+  - 현재 `ShoppingDetailSkeleton`의 web skeleton은 `.web-shopping-progress-track` 안쪽 bar를 `style={{ width: "45%" }}`로 렌더링한다.
+  - 실제 데이터가 뜨면 진행률이 0%, 100%, 또는 다른 값으로 바뀌기 때문에 사용자가 "방금 진행률이 바뀌었다"고 오해할 수 있다.
+- User impact:
+  - 로딩 중 임시 UI가 실제 장보기 진행 상태처럼 보인다.
+  - 특히 완료율이 중요한 화면에서 잘못된 상태 정보를 먼저 보여 신뢰도를 떨어뜨린다.
+- Recommended fix:
+  - 로딩 스켈레톤에서는 실제 진행률처럼 보이는 파란 fill을 보여주지 않는다.
+  - 대안 1: progress card 전체를 neutral skeleton block으로 처리한다.
+  - 대안 2: track만 회색 shimmer로 보여주고 안쪽 fill은 렌더링하지 않는다.
+  - 대안 3: progress 영역 자체를 skeleton title/metric placeholder만 두고 bar는 데이터 로드 후 표시한다.
+  - 권장안은 neutral skeleton track으로 바꿔 "데이터 로딩 중"과 "진행률"을 명확히 분리하는 것이다.
+- Acceptance criteria:
+  - 웹 장보기 상세 로딩 중 파란 진행률 bar가 보이지 않는다.
+  - 로딩 스켈레톤은 실제 진행률 값을 암시하지 않는다.
+  - 데이터 로드 후에만 실제 `progressPercent` 기반 progress bar가 보인다.
+  - 모바일 skeleton도 같은 문제가 없는지 확인한다.
+- Likely implementation target:
+  - `components/shopping/shopping-detail-screen.tsx`
+  - `app/globals.css`
+  - `tests/shopping-detail-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 웹 장보기 상세 skeleton screenshot 확인
+  - 데이터 로드 후 0%, 일부, 100% 진행률 표시 확인
+  - skeleton 상태에서 `role="progressbar"`를 노출하지 않는지 접근성 확인
+
+### 19. 팬트리 묶음 추가가 한국 가정 기본 재료 묶음으로 충분히 작동하지 않는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Frontend / Backend / DB
+- Source: user manual review, `components/pantry/pantry-bundle-picker.tsx`, `app/api/v1/pantry/bundles/route.ts`, `supabase/seed.sql`
+- Problem:
+  - 팬트리에는 `묶음 추가` 기능이 있지만, 현재 seed 기준 묶음이 `조미료 모음`, `김치찌개 모음` 정도로 제한적이다.
+  - `조미료 모음`도 실제로는 `소금` 1개만 들어 있어 "한국인이 보통 많이 갖고 있는 재료를 종류별로 한 번에 추가"한다는 기대에 못 미친다.
+  - 현재 picker는 묶음을 열면 미보유 재료를 기본 선택하고 개별 재료를 뺄 수 있지만, 사용자가 한눈에 "묶음 전체 추가"와 "묶음 안에서 빼기"를 이해하기에는 affordance가 약하다.
+- User impact:
+  - 신규 사용자가 팬트리를 빠르게 채우는 목적을 달성하기 어렵다.
+  - 묶음 추가 버튼을 눌렀을 때 실제로 추가할 만한 묶음이 적으면 기능 가치가 낮아 보인다.
+  - 사용자는 개별 재료를 하나씩 추가해야 해서 팬트리 초기 설정에서 이탈할 수 있다.
+- Recommended fix:
+  - 한국 가정에서 자주 보유하는 재료를 기준으로 기본 묶음을 확장한다.
+    - 예: `기본 양념`, `한식 장류`, `자주 쓰는 채소`, `국/찌개 기본`, `면/떡/곡류`, `냉장 단백질`, `냉동/간편 재료`, `베이킹/디저트 기본`.
+    - 각 묶음은 5~12개 정도로 유지해 사용자가 검토하기 쉽게 한다.
+    - 재료 master에 없는 항목은 임의로 bundle에 넣지 않고, 필요한 경우 ingredient seed/official vocabulary와 함께 정리한다.
+  - 묶음 카드에는 `추가 가능 N개`, `이미 보유 N개`, 대표 재료 3~5개를 보여준다.
+  - 묶음을 열면 포함 재료 checklist를 보여주고, 사용자가 재료별로 선택 해제할 수 있게 한다.
+  - 묶음 상세에는 명확한 `묶음 전체 선택`, `전체 해제`, `N개 추가` 액션을 둔다.
+    - 현재처럼 미보유 재료를 기본 선택하는 동작은 유지해도 되지만, 전체 선택/해제 버튼으로 상태를 명확히 만든다.
+  - 이미 보유 중인 재료는 disabled 또는 별도 상태로 표시하고, 중복 추가되지 않는다는 점을 분명히 보여준다.
+  - 웹/앱 묶음 picker의 interaction을 같은 구조로 맞춘다.
+- Acceptance criteria:
+  - 기본 seed에 한국 가정에서 자주 쓰는 재료 묶음이 여러 종류로 제공된다.
+  - 사용자는 묶음을 선택한 뒤 포함 재료 중 일부를 빼고 추가할 수 있다.
+  - 사용자는 한 번에 묶음 전체 미보유 재료를 선택해 추가할 수 있다.
+  - 이미 팬트리에 있는 재료는 중복 추가되지 않고, 보유 상태가 명확히 보인다.
+  - 묶음 추가 성공 후 팬트리 목록이 갱신되고 추가 개수 toast가 뜬다.
+  - 웹/앱 모두 같은 묶음 구성과 선택 규칙을 따른다.
+- Likely implementation target:
+  - `supabase/seed.sql`
+  - 필요 시 ingredient seed 또는 migration
+  - `components/pantry/pantry-bundle-picker.tsx`
+  - `app/api/v1/pantry/bundles/route.ts`
+  - `lib/server/pantry.ts`
+  - `types/pantry.ts`
+  - `tests/pantry-core.backend.test.ts`
+  - `tests/pantry-screen.test.tsx`
+  - `tests/e2e/slice-13-pantry-core.spec.ts`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - bundle API가 묶음/재료/보유 여부를 올바르게 반환하는지 backend test
+  - 묶음 전체 선택, 일부 해제, 전체 해제, 보유 재료 disabled test
+  - seed bundle이 ingredient master와 모두 매칭되는지 검사
+  - 웹/앱 묶음 picker visual 확인
+
+### 20. 웹 팬트리 카드와 편집 툴바에 중복 정보와 제각각 버튼이 있는 문제
+
+- Status: planned
+- Severity: Low
+- Area: UI / UX / Frontend
+- Source: user manual review screenshot, `components/pantry/pantry-screen.tsx`, `app/globals.css`
+- Problem:
+  - 웹 팬트리 재료 카드는 팬트리에 있는 재료만 보여주는데도 카드 내부에 `보유 중` 문구가 반복된다.
+  - 웹 툴바의 `N개 표시` 텍스트는 제목의 개수, 카테고리 개수와 의미가 겹치고 화면을 복잡하게 만든다.
+  - 편집 버튼을 누르면 같은 줄에 `전체선택`, `취소`, `삭제 (N)`가 생기는데 버튼 모양과 색상, radius가 서로 달라 어수선하다.
+  - 앱은 편집 모드에서 하단에 `N개 선택됨`과 `제거하기` 버튼이 뜨는 구조라 삭제 액션의 위치와 의미가 더 분명하다.
+- User impact:
+  - 사용자는 이미 보유 재료 목록임에도 `보유 중`을 계속 읽게 되어 정보 밀도가 낮아진다.
+  - 편집 모드로 들어갔을 때 어떤 버튼이 주 액션인지 빠르게 파악하기 어렵다.
+  - 웹/앱의 삭제 경험이 달라 같은 팬트리 기능이 다르게 느껴진다.
+- Recommended fix:
+  - 웹 재료 카드에서 `보유 중` 문구를 제거한다.
+    - 재료명과 아이콘/이미지만으로 카드 정보를 구성한다.
+    - 보유 상태가 필요한 곳은 묶음 picker처럼 보유/미보유가 섞이는 화면에만 표시한다.
+  - 웹 툴바의 visible `N개 표시`를 제거한다.
+    - 접근성용 live region 또는 sr-only 개수 정보는 유지할 수 있다.
+    - 전체 개수는 제목 `나의 팬트리 N개`, 카테고리 count, 검색 결과 empty state로 충분히 전달한다.
+  - 웹 편집 모드 버튼을 정리한다.
+    - `전체선택`은 장보기 전체선택과 같은 checkbox-button 스타일로 맞춘다.
+    - `취소`와 `삭제`는 같은 height/radius 기준을 쓰고, 삭제는 앱의 `제거하기` CTA와 같은 의미가 드러나게 한다.
+    - 가능하면 웹도 하단 sticky action bar에 `N개 선택됨` + `제거하기`를 띄워 앱과 같은 패턴으로 맞춘다.
+  - 선택된 카드의 check 표시도 장보기/팬트리 선택 공통 checkbox 스타일과 맞춘다.
+- Acceptance criteria:
+  - 웹 팬트리 카드에 `보유 중` 문구가 반복 노출되지 않는다.
+  - 웹 툴바에 visible `N개 표시` 문구가 보이지 않는다.
+  - 편집 모드에서 전체선택, 취소, 삭제/제거하기 버튼의 크기와 모양이 정돈되어 보인다.
+  - 삭제 액션은 앱처럼 선택 개수와 함께 명확히 보인다.
+  - 검색/카테고리 필터 상태에서도 선택 개수와 전체선택 동작이 정확하다.
+  - 스크린리더 사용자는 현재 표시 개수와 선택 개수를 계속 알 수 있다.
+- Likely implementation target:
+  - `components/pantry/pantry-screen.tsx`
+  - `app/globals.css`
+  - `tests/pantry-screen.test.tsx`
+  - `tests/pantry-desktop-density.test.ts`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 웹 팬트리 기본/검색/카테고리/편집 모드 visual 확인
+  - `보유 중`, `N개 표시` visible text 제거 여부 확인
+  - 편집 모드 전체선택, 개별 선택, 삭제 confirm flow test
+  - 접근성 label/live region 확인
+
+### 21. 앱 팬트리의 상단 액션/검색/전체선택 배치가 편집 시 목록을 밀어내는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UI / UX / Frontend
+- Source: user manual review screenshots, `components/pantry/pantry-mobile-screen.tsx`, `app/globals.css`
+- Problem:
+  - 앱 팬트리 상단의 `팬트리 추천`, `재료 추가`, `묶음 추가` 버튼 크기와 강조도가 서로 달라 보인다.
+  - 현재 `편집` 버튼은 작고 회색 pill이라 주요 조작 버튼처럼 보이지 않는다.
+  - 편집 모드에 들어가면 카테고리 rail 아래에 `전체선택` 행이 새로 생기면서 재료 목록 전체가 아래로 밀린다.
+  - 웹은 카테고리 아래 toolbar에 검색 input과 편집/전체선택 액션이 함께 있어, 편집 전후 구조가 비교적 안정적이다.
+- User impact:
+  - 앱에서 팬트리 핵심 작업 버튼을 찾는 속도가 느려진다.
+  - 편집 모드 전환 시 화면이 밀려 사용자가 보고 있던 재료 위치를 잃을 수 있다.
+  - 전체선택이 목록과 떨어져 보이고, 장보기의 전체선택 버튼과도 형태가 달라 학습 비용이 생긴다.
+- Recommended fix:
+  - 앱 상단 액션 버튼들의 크기와 스타일을 통일한다.
+    - `팬트리 추천`, `묶음 추가`, `재료 추가`를 같은 height/width 체계로 배치한다.
+    - 사용자 제안처럼 파란 배경 + 흰색 글자 스타일을 우선 검토하되, 세 버튼이 모두 같은 강도로 보여 과하면 `primary filled + secondary blue outline/soft` 대안도 visual QA에서 비교한다.
+    - 모바일 폭에서 3개가 한 줄에 들어가지 않으면 같은 width의 2열/가로 스크롤보다 안정적인 grid를 선택한다.
+  - `편집`/`취소` 버튼도 장보기 완료 버튼 계열처럼 더 큰 tap target과 명확한 색상으로 정리한다.
+  - 앱 화면 순서를 웹과 맞춘다.
+    - 상단: 타이틀/편집 버튼/주요 액션 버튼 묶음
+    - 그 아래: 카테고리 rail
+    - 그 아래: 검색 input + 오른쪽 편집/전체선택 영역
+    - 그 아래: 재료 목록
+  - 편집 모드에서는 별도 전체선택 행을 새로 삽입하지 말고, 검색 input 오른쪽 또는 toolbar 오른쪽에 `전체선택` checkbox-button을 보여준다.
+  - `전체선택`은 장보기 화면의 전체선택 버튼처럼 rounded control + square checkbox + 텍스트 구조로 통일한다.
+  - 편집 모드 하단의 `N개 선택됨` + `제거하기` floating bar는 유지하되, 목록을 가리지 않도록 bottom padding을 확인한다.
+- Acceptance criteria:
+  - 앱 팬트리의 추천/묶음추가/재료추가 버튼이 같은 크기 체계로 정돈되어 보인다.
+  - 편집/취소 버튼의 tap target과 시각 강조가 충분하다.
+  - 편집 모드 진입 시 전체선택 행 때문에 재료 목록이 갑자기 아래로 밀리지 않는다.
+  - 전체선택은 검색 input 오른쪽 또는 같은 toolbar 안에서 장보기 전체선택과 같은 모양으로 보인다.
+  - 카테고리, 검색, 편집/전체선택, 재료 목록의 순서가 웹과 자연스럽게 대응된다.
+  - 선택 개수 floating bar와 제거하기 버튼은 기존처럼 명확히 보이고, 하단 탭과 겹치지 않는다.
+- Likely implementation target:
+  - `components/pantry/pantry-mobile-screen.tsx`
+  - `components/pantry/pantry-screen.tsx`
+  - `app/globals.css`
+  - `tests/pantry-screen.test.tsx`
+  - `tests/pantry-mobile-visuals.test.ts`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 앱 팬트리 기본/검색/카테고리/편집 모드 visual 확인
+  - 편집 전후 목록 top position이 불필요하게 밀리지 않는지 확인
+  - 전체선택 checked/unchecked/disabled 상태 확인
+  - 390px/430px 및 작은 모바일 폭에서 버튼 텍스트 overflow 확인
+
+### 22. 마이페이지 레시피북 생성 위치, 마지막 기록, 커버 표시가 일관되지 않은 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UI / UX / Frontend
+- Source: user manual review screenshots, `components/mypage/mypage-screen.tsx`, `components/mypage/mypage-mobile-screen.tsx`, `components/recipebook/recipebook-detail-screen.tsx`, `app/globals.css`
+- Problem:
+  - 웹에서 `+ 새 레시피북`을 누르면 이름 입력창이 커스텀 레시피북 섹션 아래에 full-width로 뜬다.
+  - 사용자가 누른 버튼은 우측 상단에 있는데 입력창은 카드 목록 아래에 생겨 시선 이동이 크고, 폭도 과하게 넓다.
+  - 앱의 시스템 레시피북 카드에는 커스텀 레시피북처럼 `마지막 기록` 정보가 보이지 않는다.
+  - 선택한 레시피북 카드와 아래 레시피북 리더의 cover color/image가 다르게 보일 수 있어, 사용자가 같은 레시피북을 보고 있다는 연결감이 약하다.
+- User impact:
+  - 새 레시피북을 만들 때 입력 위치를 즉시 발견하기 어렵고, 화면 전체를 가로지르는 입력창이 과하게 강조된다.
+  - 시스템/커스텀 레시피북의 정보 구조가 달라 사용자는 어떤 책이 최근에 쓰였는지 한눈에 비교하기 어렵다.
+  - 카드에서 선택한 책과 리더에 표시된 책이 달라 보이면 선택이 잘못된 것처럼 느낄 수 있다.
+- Recommended fix:
+  - 웹 생성 폼은 `+ 새 레시피북` 버튼 바로 아래 또는 헤더 우측 안쪽에 compact inline panel/popover 형태로 배치한다.
+    - 권장 폭은 `320px~420px` 정도로 제한한다.
+    - 입력, 완료, 취소 버튼은 한 줄에 두되 작은 화면에서는 자연스럽게 줄바꿈한다.
+    - 폼이 열리면 기존처럼 input focus는 유지한다.
+  - 커스텀 섹션 아래 full-width `web-recipebooks-create` 배치는 제거한다.
+  - 앱 시스템 레시피북 카드에도 `마지막 기록 N월 N일` 또는 `마지막 기록 없음`을 커스텀 카드와 같은 위치/톤으로 표시한다.
+  - 웹/앱 시스템 레시피북도 `formatBookLastUpdated` 계열 formatter를 동일하게 사용한다.
+  - 선택된 레시피북 카드와 리더는 같은 book 객체 또는 같은 cover resolver를 사용한다.
+    - `cover_color_key`, `cover_image_url`, fallback image mapping을 카드/리더가 따로 계산하지 않게 한다.
+    - 가능하면 `RecipeBookCover` 같은 공용 cover component 또는 `getRecipeBookCoverViewModel(book)` 유틸로 색상/이미지를 한 번만 결정한다.
+    - 마이페이지 inline reader에 `bookId/bookName/bookType`만 넘기지 말고, selected book의 cover view model도 전달하거나 리더가 같은 API 필드를 받아 쓰게 한다.
+  - 선택한 책이 바뀌면 리더의 제목, 커버 색상, 커버 이미지가 같은 book id 기준으로 함께 갱신되도록 한다.
+- Acceptance criteria:
+  - 웹에서 `+ 새 레시피북` 클릭 시 입력창이 버튼 근처에 compact하게 나타난다.
+  - 생성 폼이 커스텀 섹션 카드 아래 full-width로 뜨지 않는다.
+  - 앱 시스템 레시피북 카드에도 `마지막 기록` 문구가 보인다.
+  - 기록이 없으면 시스템/커스텀 모두 같은 문구인 `마지막 기록 없음`을 쓴다.
+  - 특정 레시피북을 선택하면 카드와 리더의 책 이름, cover color, cover image가 모두 동일하다.
+  - 커버 색상 변경 또는 이미지 변경 후 카드와 리더가 같은 결과로 갱신된다.
+- Likely implementation target:
+  - `components/mypage/mypage-screen.tsx`
+  - `components/mypage/mypage-mobile-screen.tsx`
+  - `components/recipebook/recipebook-detail-screen.tsx`
+  - shared recipebook cover utility/component if extracted
+  - `app/globals.css`
+  - `tests/mypage-screen.test.tsx`
+  - `tests/recipe-book-detail-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 웹 마이페이지 레시피북 탭에서 create form 위치 visual 확인
+  - 앱 시스템/커스텀 레시피북 카드의 마지막 기록 표시 확인
+  - 웹에서 custom/system 책을 번갈아 선택하며 카드와 리더 cover color/image 동기화 확인
+  - 커버 색상/이미지 변경 후 selected card와 reader가 동시에 갱신되는지 component test
+  - 1280px/1440px 웹, 390px/430px 앱 viewport에서 overflow 확인
+
+### 23. 웹 마이페이지 환경설정 탭 아이콘이 잘려 보이는 문제
+
+- Status: planned
+- Severity: Low
+- Area: UI / Frontend
+- Source: user manual review screenshot, `components/mypage/mypage-screen.tsx`, `components/web/web-tabs.tsx`, `app/globals.css`
+- Problem:
+  - 웹 마이페이지 탭 바의 `환경설정` gear icon 일부가 잘려 보인다.
+  - 현재 탭 버튼은 text와 icon을 inline-flex로 배치하지만, icon wrapper나 svg line box가 충분하지 않으면 stroke가 탭 영역 밖에서 clipped될 수 있다.
+- User impact:
+  - 설정 아이콘이 깨진 것처럼 보여 마이페이지 탭 전체의 완성도가 낮아 보인다.
+  - 작은 문제지만 설정 탭은 사용자가 계정/환경을 관리하는 진입점이라 신뢰감에 영향을 준다.
+- Recommended fix:
+  - `SettingsIcon`의 viewBox, width/height, stroke가 잘리지 않도록 정리한다.
+    - gear path가 viewBox 경계에 너무 가까우면 viewBox를 넓히거나 path 좌표를 안쪽으로 조정한다.
+    - SVG에 `display: block`, `flex-shrink: 0`, 필요 시 `overflow: visible`을 적용한다.
+  - `.web-mypage-tabs .web-tab`의 icon 정렬 규칙을 공통화한다.
+    - 아이콘은 `20px~22px` 정사각 wrapper 안에서 중앙 정렬한다.
+    - 모든 탭 아이콘이 같은 baseline과 vertical center를 갖도록 확인한다.
+  - 환경설정만 임시 보정하지 말고 저장한 레시피/레시피북/장보기/남은 요리/다먹은 요리/도움말 아이콘도 같이 regression 확인한다.
+- Acceptance criteria:
+  - `환경설정` 탭 아이콘 stroke가 어느 방향으로도 잘리지 않는다.
+  - active/inactive/hover 상태에서 아이콘이 같은 크기와 위치로 보인다.
+  - 다른 마이페이지 탭 아이콘의 위치나 크기가 깨지지 않는다.
+  - 모바일 마이페이지 아이콘에는 의도치 않은 변화가 없다.
+- Likely implementation target:
+  - `components/mypage/mypage-screen.tsx`
+  - `components/web/web-tabs.tsx`
+  - `app/globals.css`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 웹 마이페이지 탭 바 visual screenshot 확인
+  - active tab을 `환경설정`으로 바꾼 상태와 다른 탭 상태 비교
+  - Chrome device toolbar에서 1280px, 1440px 폭 확인
+
+### 24. 앱 레시피북과 장보기 기록에서 뒤로가기 버튼이 동작하지 않는 문제
+
+- Status: planned
+- Severity: High
+- Area: UX / Frontend
+- Source: user manual review, app recipebook screen, app shopping history screen
+- Problem:
+  - 앱 레시피북 화면과 장보기 기록 화면에서 뒤로가기 버튼을 눌러도 이전 화면으로 돌아가지 않는다.
+  - 뒤로가기 버튼은 화면 상단에 노출되어 있어 사용자는 정상 navigation action으로 인식하지만, 실제로는 아무 반응이 없어 막힌 화면처럼 느낄 수 있다.
+  - 앞선 13번 항목에서 앱 뒤로가기 버튼 형태 통일을 계획하고 있지만, 이 문제는 모양 이전에 버튼 동작 자체가 깨진 별도 결함이다.
+- User impact:
+  - 사용자는 레시피북이나 장보기 기록을 확인한 뒤 자연스럽게 이전 화면으로 돌아갈 수 없다.
+  - 특히 앱 화면에서는 하단 탭이나 브라우저 back에 의존해야 해서 흐름이 끊긴다.
+  - 버튼을 눌렀는데 반응이 없으면 서비스가 멈췄거나 터치가 안 된다고 느낄 수 있다.
+- Recommended fix:
+  - 앱 레시피북 화면과 장보기 기록 화면의 뒤로가기 버튼이 어떤 handler를 쓰는지 먼저 확인한다.
+  - 단순 `router.back()`만 쓰고 있다면, 직접 진입/새로고침/returnTo 없는 상태에서 실패할 수 있으므로 안전한 fallback route를 둔다.
+    - 레시피북 상세/리더: 기본 fallback은 `/mypage`의 레시피북 surface 또는 앱 마이페이지 레시피북 목록.
+    - 장보기 기록 상세: 기본 fallback은 앱 마이페이지의 장보기 기록 surface 또는 `/mypage`.
+  - 식사추가 flow처럼 `returnTo` query 또는 referrer context가 있는 화면은 우선 그 경로로 돌아가고, 없을 때만 fallback을 사용한다.
+  - 이미 있는 `sanitizeInternalPath`, `AppBackButton`, `handleMobileSurfaceBack` 같은 공용 패턴을 재사용한다.
+  - 13번 뒤로가기 버튼 형태 통일 작업과 충돌하지 않게, 동작 수정은 먼저 작은 범위로 처리하고 이후 공용 컴포넌트 정리 때 형태를 맞춘다.
+  - 버튼이 disabled 되는 저장/처리 중 상태가 있다면, 해당 상태가 아닌 일반 화면에서는 항상 동작해야 한다.
+- Acceptance criteria:
+  - 앱 레시피북 화면에서 뒤로가기 버튼을 누르면 이전 앱 화면 또는 정해진 fallback 화면으로 이동한다.
+  - 앱 장보기 기록 화면에서 뒤로가기 버튼을 누르면 이전 앱 화면 또는 정해진 fallback 화면으로 이동한다.
+  - 직접 URL 진입, 새로고침 후 진입, `returnTo`가 있는 진입 모두 막히지 않는다.
+  - 버튼을 누른 뒤 아무 반응이 없는 상태가 발생하지 않는다.
+  - 내부 경로가 아닌 `returnTo` 값은 사용하지 않고 안전한 fallback으로 이동한다.
+  - 13번 항목의 뒤로가기 버튼 형태 통일 전후에도 같은 navigation 동작이 유지된다.
+- Likely implementation target:
+  - `components/mypage/mypage-mobile-screen.tsx`
+  - `components/recipebook/recipebook-detail-screen.tsx`
+  - `components/shopping/shopping-history-screen.tsx` 또는 장보기 기록 관련 mobile component
+  - `components/shared/app-back-button.tsx`
+  - 필요 시 `lib/navigation` 계열 helper
+  - `tests/mypage-screen.test.tsx`
+  - `tests/shopping-detail-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 앱 레시피북 목록 → 레시피북 상세/리더 → 뒤로가기 동작 확인
+  - 앱 마이페이지 → 장보기 기록 → 장보기 상세/기록 화면 → 뒤로가기 동작 확인
+  - 직접 URL 진입 후 뒤로가기 fallback 동작 확인
+  - `returnTo`가 있는 경우 내부 경로로만 이동하는지 테스트
+  - 버튼 클릭 후 URL 또는 mobile surface state가 실제로 바뀌는 component/E2E 테스트 추가
+
+### 25. 레시피북 책뷰/목록뷰의 탐색, 하단 여백, 스켈레톤, 버튼 위계가 어색한 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / UI / Frontend
+- Source: user manual review screenshots, app recipebook book view, app recipebook skeleton, web recipebook book view
+- Problem:
+  - 앱 레시피북 책뷰에서 카드 아래쪽 여백이 과하게 커 보여 화면이 덜 채워진다.
+  - 앱 책뷰 상단 목차는 3개 항목만 보여서 레시피가 더 있을 때 다음 레시피를 어떻게 찾는지 불명확하다.
+  - 앱 책뷰에는 웹처럼 현재 페이지를 이동하는 하단 page navigation이 없어, 책을 넘겨 읽는 경험이 약하다.
+  - 앱 책뷰의 `요리하기`와 `플래너에 추가` 버튼이 모두 파란색 배경이라 주/보조 액션 위계가 흐려진다.
+  - 현재 `요리하기` 버튼의 텍스트 대비가 충분히 명확하지 않아 primary CTA처럼 보이지 않을 수 있다.
+  - 앱 책뷰 로딩 스켈레톤이 실제 책뷰 화면 구조와 다르다. 스켈레톤에는 상단 목차 카드와 큰 본문 카드가 따로 보이지만, 실제 화면은 이미지가 있는 단일 책 카드 중심이다.
+  - 앱 레시피북 목록뷰에도 상단 목차가 남아 있는데, 목록뷰에서는 목차가 중복 탐색처럼 보이고 화면 첫 내용을 밀어낸다.
+  - 앱 레시피북의 레시피 제목 font-weight가 너무 두껍고, 재료/만들기 텍스트도 웹에 비해 무겁게 보여 작은 모바일 화면에서 답답하다.
+  - 웹 레시피북 책뷰에서는 재료/만들기 텍스트 영역이 지나치게 안쪽으로 들여쓰기되어 이미지와 제목 축에 비해 정보가 멀어 보인다.
+  - 웹 책뷰의 삭제 버튼이 긴 레시피 제목 오른쪽을 가려 제목 가독성과 삭제 액션의 안정성이 떨어진다.
+- User impact:
+  - 앱 사용자는 레시피북 책뷰에서 다음 레시피로 이동하는 방법을 바로 이해하기 어렵다.
+  - 책뷰 하단의 큰 빈 공간 때문에 아직 콘텐츠가 더 로딩되어야 하는 것처럼 느낄 수 있다.
+  - 두 CTA가 모두 강한 파란색이면 사용자가 어떤 버튼을 우선 눌러야 할지 헷갈린다.
+  - 실제 화면과 다른 스켈레톤은 로딩 후 레이아웃이 바뀌는 느낌을 만들어 신뢰감을 떨어뜨린다.
+  - 웹에서는 삭제 버튼이 제목을 가리면 레시피명이 읽히지 않고, 삭제 버튼도 위험 액션인데 위치가 불안정해 보인다.
+- Approach decision:
+  - 사용자 지적처럼 고치는 것이 맞다.
+  - 앱 책뷰는 웹의 책뷰 메타포를 그대로 작게 복사하기보다, 모바일에서 읽기와 이동이 쉬운 구조로 조정한다.
+  - 목차는 앱 책뷰에서 항상 3개만 고정 노출하기보다 `목차` 버튼/시트 또는 가로 스크롤 rail로 전체 레시피 접근성을 보장해야 한다.
+  - 앱 목록뷰에서는 이미 목록 자체가 탐색 수단이므로 상단 목차는 제거하는 방향이 맞다.
+  - CTA는 `요리하기`를 primary filled button으로 두고, `플래너에 추가`는 secondary/outline/soft button으로 낮춰 위계를 만든다.
+- Recommended fix:
+  - 앱 책뷰 하단 여백을 줄인다.
+    - 책 카드 내부 padding과 bottom margin을 실제 하단 탭바 safe area 기준으로 다시 맞춘다.
+    - 카드가 화면 중간에서 끝나고 아래가 크게 비지 않도록 콘텐츠 bottom spacing과 page nav 위치를 조정한다.
+  - 앱 책뷰에 page navigation을 추가한다.
+    - 웹처럼 `이전/다음` 또는 page dot/chip 기반 이동을 하단 CTA 근처에 제공한다.
+    - 현재 페이지 번호와 총 레시피 수를 함께 표시해 사용자가 책을 넘기는 구조를 이해하게 한다.
+    - 한 손 조작을 고려해 하단에 배치하되, 요리하기/플래너 CTA와 섞이지 않게 구역을 나눈다.
+  - 앱 책뷰 목차는 전체 레시피 접근이 가능한 형태로 바꾼다.
+    - 1안: 상단 목차 rail을 가로 스크롤로 바꾸고 모든 레시피 chip/card를 볼 수 있게 한다.
+    - 2안: 상단에는 `목차` 버튼만 두고, 누르면 bottom sheet로 전체 목차를 보여준다.
+    - 권장안은 화면을 덜 밀어내는 `목차` 버튼 + bottom sheet다. 단, 현재 책 메타포를 유지하려면 compact horizontal rail도 허용한다.
+  - 앱 레시피북 목록뷰에서는 상단 목차를 제거한다.
+    - 목록뷰에서는 리스트/카드 목록이 곧 목차 역할을 하므로 중복 탐색을 없앤다.
+  - 앱 책뷰 CTA 위계를 정리한다.
+    - `요리하기`: primary blue background + white text.
+    - `플래너에 추가`: blue filled background 제거. white/outline 또는 very light blue soft button으로 변경.
+    - 북마크/저장 icon button은 CTA와 같은 높이를 유지하되 primary보다 약하게 보이게 한다.
+  - 앱 책뷰 스켈레톤을 실제 화면 구조와 맞춘다.
+    - 실제 책뷰처럼 상단 이미지 영역, 제목/메타, 재료 카드, 만들기 카드, 하단 CTA/navigation skeleton 순서로 구성한다.
+    - 실제 화면에 없는 큰 상단 목차 skeleton은 제거하거나, 목차가 남는 경우 실제 목차 UI와 같은 형태로 맞춘다.
+  - 앱 레시피북 typography를 가볍게 조정한다.
+    - 레시피 제목은 `font-black`/과한 bold 계열을 피하고 `font-semibold` 또는 `font-bold` 수준으로 낮춘다.
+    - 재료/만들기 본문은 `font-medium` 이하로 낮추고, 단계 번호만 강조한다.
+    - 한글/영문 혼합 긴 제목에서 줄바꿈이 어색하지 않게 line-height를 조정한다.
+  - 웹 책뷰의 재료/만들기 텍스트 들여쓰기를 줄인다.
+    - 재료/만들기 column 내부 padding 또는 list indent를 줄여 제목/이미지 축에 더 가깝게 맞춘다.
+    - bullet/step number는 유지하되 텍스트 시작점이 과하게 오른쪽으로 밀리지 않게 한다.
+  - 웹 책뷰 삭제 버튼을 제목 영역에서 이미지 오른쪽 상단으로 옮긴다.
+    - 이미지 컨테이너를 `position: relative`로 두고 삭제 버튼을 이미지 우상단 overlay 또는 이미지 카드 우상단에 배치한다.
+    - 긴 제목과 삭제 버튼이 겹치지 않게 제목 영역은 삭제 버튼 공간을 예약하지 않는다.
+    - 삭제 버튼은 위험 액션이므로 hover/focus/delete confirm 동작과 접근성 label을 유지한다.
+- Acceptance criteria:
+  - 앱 책뷰에서 하단 여백이 과하게 비어 보이지 않는다.
+  - 앱 책뷰에서 사용자가 다음/이전 레시피로 이동하는 방법을 바로 알 수 있다.
+  - 앱 책뷰에서 전체 목차를 열거나 스크롤해 4번째 이후 레시피에도 접근할 수 있다.
+  - 앱 목록뷰에는 상단 목차가 보이지 않는다.
+  - 앱 책뷰에서 `요리하기`는 파란 배경 + 흰 글자로 보이고, `플래너에 추가`는 파란 filled button이 아니다.
+  - 앱 책뷰 스켈레톤은 실제 로딩 후 화면의 구조와 큰 영역 순서가 맞다.
+  - 앱 레시피북 제목, 재료, 만들기 텍스트가 현재보다 덜 무겁고 읽기 편하다.
+  - 웹 책뷰에서 재료/만들기 본문 시작점이 과하게 오른쪽으로 밀리지 않는다.
+  - 웹 책뷰에서 삭제 버튼이 레시피 제목을 가리지 않고 이미지 오른쪽 상단에 안정적으로 배치된다.
+  - 삭제, 요리하기, 플래너 추가, 페이지 이동, 목차 이동 기능은 기존 기능과 접근성 label을 유지한다.
+- Likely implementation target:
+  - `components/recipebook/recipebook-detail-screen.tsx`
+  - `components/mypage/mypage-mobile-screen.tsx`
+  - `components/mypage/mypage-screen.tsx`
+  - shared recipebook cover/book view component if extracted
+  - `app/globals.css`
+  - `tests/recipe-book-detail-screen.test.tsx`
+  - `tests/mypage-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 앱 책뷰에서 레시피 1개/3개/5개 이상인 책의 목차와 page navigation 확인
+  - 앱 목록뷰에서 상단 목차 제거 여부 확인
+  - 앱 책뷰 스켈레톤과 실제 화면을 같은 viewport에서 비교
+  - 앱 CTA 색상 위계와 텍스트 대비 확인
+  - 웹 책뷰 긴 제목 케이스에서 삭제 버튼이 제목을 가리지 않는지 확인
+  - 웹 책뷰 재료/만들기 section indent visual 확인
+  - 모바일 390px/430px, 웹 1280px/1440px visual snapshot 갱신
+
+### 26. 앱 마이페이지 목록의 회색 배경과 아이콘 배경이 반복되어 화면이 무거워 보이는 문제
+
+- Status: planned
+- Severity: Low
+- Area: UI / UX / Frontend
+- Source: user manual review, app mypage list sections
+- Problem:
+  - 앱 마이페이지에는 여러 목록/메뉴가 있고, 각 목록 아이콘에는 별도 배경색이 들어간다.
+  - 목록 item 바깥에도 회색 배경 박스가 반복되어, 화면 곳곳에 회색 면이 겹쳐 보인다.
+  - 회색 배경은 그룹 구분과 터치 영역 인지를 돕지만, 너무 많이 쓰이면 정보 위계가 흐려지고 화면이 답답해 보인다.
+  - 앱 전반에서 비슷한 회색 배경이 반복되면 "카드/섹션/버튼/리스트"의 구분 기준이 약해질 수 있다.
+- User impact:
+  - 사용자가 마이페이지에서 중요한 메뉴와 보조 메뉴를 빠르게 구분하기 어렵다.
+  - 회색 면이 많으면 모바일 화면이 실제보다 더 복잡하고 무겁게 느껴진다.
+  - 아이콘 배경과 item 배경이 동시에 강조되어 아이콘이 과하게 튀거나, 반대로 전체 대비가 흐려질 수 있다.
+- Approach decision:
+  - 사용자 지적처럼 점검하고 줄이는 것이 맞다.
+  - 다만 회색 배경을 전부 제거하면 터치 가능한 row와 일반 배경의 구분이 약해질 수 있으므로, "배경 제거"보다 "한 단계만 남기기"가 안전하다.
+  - 권장 기준은 item container 또는 icon background 중 하나만 강조하는 것이다.
+- Recommended fix:
+  - 앱 마이페이지 목록 item의 시각 구조를 정리한다.
+    - 기본 row는 흰색/투명 배경 + 얇은 divider 또는 subtle border를 우선한다.
+    - 목록 전체 grouping이 필요하면 outer container만 아주 약한 surface tint를 쓰고, 각 row 배경은 제거한다.
+    - 아이콘 배경은 모든 항목에 강하게 넣지 않고, active/important/status성 항목에만 soft tint를 사용한다.
+  - 아이콘 배경을 유지한다면 outer gray box는 줄이고, outer gray box를 유지한다면 아이콘 배경은 투명 또는 매우 약한 tint로 낮춘다.
+  - 탭 가능한 영역은 배경색이 아니라 row height, chevron, hover/pressed state, focus ring으로 명확히 보이게 한다.
+  - 앱 전반의 회색 surface 사용처를 함께 스캔해, 같은 목적의 배경 토큰이 여러 단계로 중복되지 않게 한다.
+  - 접근성 대비는 유지한다.
+    - 배경을 제거한 뒤에도 텍스트 대비, 아이콘 대비, 터치 영역, focus/pressed 상태가 충분해야 한다.
+- Acceptance criteria:
+  - 앱 마이페이지 목록에서 회색 배경이 중복으로 겹쳐 보이지 않는다.
+  - 각 메뉴 row가 탭 가능한 요소임은 계속 명확하다.
+  - 아이콘 배경과 목록 box 배경 중 하나만 주된 구분 수단으로 쓰인다.
+  - 중요한 메뉴/상태와 일반 메뉴의 위계가 현재보다 선명하다.
+  - light surface를 줄여도 텍스트/아이콘 대비와 터치 feedback은 유지된다.
+  - 다른 앱 화면의 동일 list/menu pattern에도 같은 기준을 적용할 수 있는지 확인한다.
+- Likely implementation target:
+  - `components/mypage/mypage-mobile-screen.tsx`
+  - `components/mypage/mypage-screen.tsx`
+  - shared app list/menu item component if present
+  - `app/globals.css`
+  - `tests/mypage-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 앱 마이페이지 기본/레시피북/장보기기록/설정 진입 화면 visual 확인
+  - 터치/pressed/focus 상태 확인
+  - 아이콘 배경 제거 또는 축소 후에도 메뉴 식별성이 유지되는지 모바일 viewport에서 확인
+  - 앱 전반의 회색 surface 과다 사용처를 `app-* surface/list/card` CSS 기준으로 스캔
+
+### 27. 오래된 남은 요리를 사용자가 정리하도록 돕는 안내와 만료 흐름이 없는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Frontend / Backend / DB
+- Source: user manual review, leftovers experience
+- Problem:
+  - 남은 요리는 시간이 지나면 실제로 먹었거나, 버렸거나, 더 이상 보관하지 않는 상태가 될 수 있다.
+  - 현재 사용자가 직접 정리하지 않으면 오래된 남은 요리가 계속 남아 있을 수 있다.
+  - 사용자는 1달 지난 항목을 자동으로 `다먹음` 처리하고 안내문을 보여주는 아이디어를 제안했다.
+  - 하지만 시스템이 자동으로 `다먹음` 처리하면 사용자가 실제로 먹지 않은 항목도 먹은 기록으로 남을 수 있다.
+  - `다먹음` 기록은 회고, 통계, 경험치, 추천 흐름에 영향을 줄 수 있어 자동 추정으로 처리하기에는 의미가 위험하다.
+- User impact:
+  - 오래된 남은 요리가 계속 남으면 팬트리/남은 요리 목록의 신뢰도가 떨어진다.
+  - 반대로 자동으로 `다먹음` 처리되면 사용자는 기록이 임의로 바뀌었다고 느낄 수 있다.
+  - 사용자는 오래된 항목을 정리해야 한다는 신호를 받지 못해 목록 관리 부담이 커진다.
+- Approach decision:
+  - "1달 지난 항목을 자동 다먹음 처리"는 그대로 적용하지 않는 것이 맞다.
+  - 대신 `보관한 지 오래됨` 상태/안내를 보여주고 사용자가 직접 `다 먹었어요`, `버렸어요/정리했어요`, `계속 보관` 중 선택하게 하는 방향이 안전하다.
+  - 만약 현재 도메인에 `discarded/expired` 상태가 없다면 새 상태 추가는 공식 계약 변경이므로 별도 문서/DB/API 작업으로 분리한다.
+- Recommended fix:
+  - 남은 요리 항목에 `created_at` 또는 보관 시작일 기준 30일 이상 지난 항목을 표시한다.
+    - 예: `보관한 지 30일이 지났어요`
+    - 문구는 겁주기보다 정리를 돕는 톤으로 쓴다.
+  - 오래된 남은 요리 상단에 짧은 안내 banner를 둔다.
+    - 예: `오래 보관한 남은 요리가 있어요. 먹었거나 버렸다면 정리해 주세요.`
+  - 항목별 quick action을 제공한다.
+    - 기존 `다 먹었어요`는 유지한다.
+    - 가능하면 `정리했어요` 또는 `버렸어요`를 추가해 먹은 것과 폐기/정리를 구분한다.
+    - 새 상태 추가가 부담이면 1차로는 `계속 보관`/`다 먹었어요` 확인만 제공하고, 자동 변경은 하지 않는다.
+  - 30일 기준은 하드코딩하기보다 상수로 분리하고, 추후 설정/정책 변경이 가능하게 한다.
+  - 자동 알림이 필요하면 반복 push가 아니라 남은 요리 화면 진입 시 inline notice 또는 마이페이지 요약에서만 보여준다.
+  - 경험치/통계가 있다면 사용자가 직접 누른 `다 먹었어요`에만 반영하고, 오래됨 안내 자체에는 경험치를 주지 않는다.
+- Acceptance criteria:
+  - 30일 이상 지난 남은 요리는 사용자가 알아볼 수 있는 상태로 표시된다.
+  - 시스템이 사용자 확인 없이 남은 요리를 `다먹음`으로 자동 변경하지 않는다.
+  - 오래된 항목에 대해 사용자는 `다 먹었어요` 또는 정리 관련 액션을 명확히 선택할 수 있다.
+  - 사용자가 계속 보관하기로 한 항목은 불필요하게 반복 안내되지 않는다.
+  - 자동/수동 처리 기준이 통계, 경험치, 알림에 잘못 반영되지 않는다.
+  - 새 상태를 추가하는 경우 공식 문서, DB, API, 타입, 테스트가 함께 갱신된다.
+- Likely implementation target:
+  - `components/leftovers/leftovers-screen.tsx`
+  - `components/mypage/mypage-mobile-screen.tsx` if leftover summary is shown there
+  - `app/api/v1/leftovers/**`
+  - `types/leftovers.ts` or related type files
+  - Supabase migration if adding `discarded/expired/keep` state
+  - `tests/leftovers-screen.test.tsx`
+  - `tests/leftovers.backend.test.ts`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 29일/30일/31일 지난 남은 요리 표시 테스트
+  - 오래된 항목 안내 banner visual 확인
+  - `다 먹었어요`, `계속 보관`, 가능하면 `정리했어요` action 동작 확인
+  - 자동으로 `eaten` 처리되지 않는 backend/component test
+  - 경험치/통계가 자동 안내만으로 증가하지 않는지 확인
+
+### 28. 경험치 획득 기준을 사용자가 확인할 수 있는 안내가 부족한 문제
+
+- Status: planned
+- Severity: Low
+- Area: UX / Frontend / Backend
+- Source: user manual review, gamification/leveling system
+- Problem:
+  - 레벨링 시스템이 도입되었지만, 사용자가 어떤 행동으로 경험치를 얼마나 얻는지 한눈에 확인하기 어렵다.
+  - 경험치 획득 기준을 모르면 사용자는 레벨이 왜 올랐는지, 어떤 행동이 성장에 반영되는지 이해하기 어렵다.
+  - 반대로 모든 행동마다 과한 안내를 띄우면 서비스가 요리/식단 관리보다 점수 획득 중심으로 느껴질 수 있다.
+- User impact:
+  - 경험치 변화가 불투명하면 레벨링 시스템이 임의로 작동하는 것처럼 보인다.
+  - 사용자는 어떤 기능을 써보면 좋은지 자연스럽게 알기 어렵다.
+  - 알림이 과하면 핵심 작업 중 방해가 될 수 있다.
+- Approach decision:
+  - 경험치 기준은 사용자에게 알려주는 것이 맞다.
+  - 다만 매번 공지처럼 반복 노출하기보다는, 사용자가 원할 때 확인할 수 있는 고정 안내와 실제 획득 시 짧은 피드백을 분리하는 것이 좋다.
+  - `알림의 시스템 탭` 또는 마이페이지 레벨 카드의 `경험치 안내` entry는 적절하다.
+- Recommended fix:
+  - 마이페이지 레벨/성장 영역에 `경험치 안내` 또는 `어떻게 성장하나요?` 진입점을 둔다.
+  - 시스템 알림 탭이 있다면 상단 고정 공지 또는 guide card로 경험치 획득 기준을 보여준다.
+    - 예: `레시피 저장 +N`, `플래너 등록 +N`, `장보기 완료 +N`, `요리 완료 +N`
+    - 실제 수치는 서버의 XP definition/source of truth에서 가져오거나, 같은 상수를 공유한다.
+  - 경험치 기준은 운영자가 바꾸더라도 프론트 문구와 실제 지급 기준이 어긋나지 않게 한다.
+    - 하드코딩 copy 대신 API 응답 또는 shared config를 우선 검토한다.
+  - 실제 행동 직후에는 기존 toast/notification이 있다면 `+N XP`를 짧게 보여주되, 장황한 설명은 하지 않는다.
+  - 경험치가 없는 행동은 굳이 목록에 넣지 않거나 `경험치는 주요 활동에만 반영돼요`처럼 간단히 설명한다.
+  - 과도한 점수 경쟁 느낌을 줄이기 위해 "점수 벌기"보다 "서비스를 써보면 자연스럽게 성장"하는 톤으로 작성한다.
+- Suggested copy:
+  - Title: `경험치는 이렇게 쌓여요`
+  - Description: `레시피를 저장하고, 식단을 계획하고, 장보기와 요리를 마치면 경험치가 올라요.`
+  - System notice title: `성장 기준 안내`
+  - Empty/fallback: `경험치 기준을 불러오지 못했어요. 잠시 후 다시 확인해 주세요.`
+- Acceptance criteria:
+  - 사용자는 마이페이지 또는 시스템 알림/공지 영역에서 경험치 획득 기준을 확인할 수 있다.
+  - 표시되는 경험치 수치가 실제 지급 기준과 일치한다.
+  - 경험치 안내는 반복 알림처럼 사용자를 방해하지 않는다.
+  - 실제 XP 획득 toast/notification과 안내 문구의 행동명/수치가 서로 다르지 않다.
+  - 모바일에서 안내가 너무 긴 표로 화면을 압도하지 않는다.
+  - 경험치 기준을 불러오지 못하는 경우에도 레벨링 화면 전체가 막히지 않는다.
+- Likely implementation target:
+  - `components/mypage/mypage-mobile-screen.tsx`
+  - `components/mypage/mypage-screen.tsx`
+  - `components/notifications/**` if system tab exists
+  - `lib/server/user-progress.ts`
+  - `lib/server/user-gamification.ts`
+  - `types/user-progress.ts`
+  - `tests/mypage-screen.test.tsx`
+  - `tests/user-gamification-notification-priority.test.ts`
+- Verification:
+  - 경험치 기준 API/shared config와 UI 표시 수치 일치 테스트
+  - 마이페이지 레벨 영역에서 안내 진입점 확인
+  - 시스템 알림 탭 guide card visual 확인
+  - 실제 XP 획득 toast/notification과 guide 수치가 일치하는지 테스트
+  - 기준 로딩 실패 시 fallback UI 확인
+
+### 29. 앱과 웹의 기본 폰트가 달라 같은 서비스처럼 보이지 않는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UI / Frontend
+- Source: user manual review screenshots, app planner date strip, web planner date header, `app/globals.css`
+- Problem:
+  - 웹과 앱 화면의 기본 폰트가 다르게 보인다.
+  - 웹은 `--web-font`에서 `Pretendard Variable`, `Pretendard`를 우선 사용하고 있어 한글/숫자가 더 정돈되어 보인다.
+  - 앱/공용 영역은 `--font-body`에서 `"Avenir Next"`가 먼저 오고, 그 다음 `Pretendard`가 와서 웹과 다른 글자 모양이 나올 수 있다.
+  - 플래너 날짜 strip처럼 요일과 숫자가 반복되는 화면에서는 폰트 차이가 더 잘 보이고, 같은 날짜 UI인데 웹/앱의 제품감이 달라 보인다.
+- User impact:
+  - 사용자는 웹과 앱이 같은 서비스인데도 다른 디자인 시스템을 쓰는 것처럼 느낄 수 있다.
+  - 앱의 숫자/한글 조합이 웹보다 덜 정돈되어 보이면 플래너, 레시피북, 마이페이지 같은 반복 UI의 완성도가 낮아 보인다.
+  - 폰트 차이 때문에 같은 font-size/font-weight여도 앱이 더 두껍거나 좁거나 어색하게 보일 수 있다.
+- Approach decision:
+  - 사용자 지적처럼 앱 폰트를 웹과 같은 기준으로 맞추는 것이 맞다.
+  - 단, 단순히 앱 전체에 `font-family: var(--web-font)`만 덮어쓰면 기존 앱 전용 weight/line-height가 달라져 일부 버튼/칩/날짜 박스가 넘칠 수 있다.
+  - 권장안은 전역 폰트 토큰을 정리해 웹/앱이 같은 font stack을 쓰고, 필요한 곳만 size/weight를 재조정하는 것이다.
+- Recommended fix:
+  - `--font-body`와 `--web-font`의 font stack을 통일한다.
+    - 우선 기준: `"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`
+  - `Avenir Next`는 한글 UI의 기본 폰트에서 제거하거나, 영문 brand/display 전용 토큰으로 분리한다.
+  - `.app-shell`과 앱 전용 surface가 명시적으로 같은 body font를 쓰도록 확인한다.
+  - 폰트 변경 후 앱에서 과하게 두꺼워 보이는 제목/본문 weight를 함께 점검한다.
+    - 특히 플래너 날짜 strip, 레시피북 제목, 마이페이지 목록, 장보기 체크 row, 버튼/칩 텍스트를 확인한다.
+  - 숫자 폭이 달라져 날짜 박스나 카운터가 흔들리지 않도록 고정 width/line-height가 필요한 UI를 점검한다.
+  - font fallback 로딩이 화면 흔들림을 만들지 않도록 기존 폰트 로딩 방식과 Next/font 사용 여부를 확인한다.
+- Acceptance criteria:
+  - 앱과 웹의 기본 한글/숫자 폰트가 같은 계열로 보인다.
+  - 플래너 날짜, 요일, 레시피 제목, 버튼 라벨에서 웹/앱 폰트 차이가 눈에 띄지 않는다.
+  - 폰트 변경 후 앱 날짜 chip, 버튼, 탭, 카드 제목 텍스트가 잘리거나 넘치지 않는다.
+  - 기존보다 앱 제목/본문이 과하게 두꺼워 보이면 weight를 함께 조정한다.
+  - 웹 화면의 기존 폰트 인상은 유지된다.
+  - 폰트 변경으로 layout shift나 visual regression이 크게 생기지 않는다.
+- Likely implementation target:
+  - `app/globals.css`
+  - `app/layout.tsx` if font loading is defined there
+  - `components/planner/planner-week-screen.tsx`
+  - `components/recipebook/recipebook-detail-screen.tsx`
+  - `components/mypage/mypage-mobile-screen.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+  - relevant visual snapshots
+- Verification:
+  - 웹/앱 플래너 날짜 strip을 같은 날짜 범위로 비교
+  - 앱 레시피북, 앱 마이페이지, 앱 장보기 화면에서 font weight와 overflow 확인
+  - 390px/430px 모바일 viewport에서 날짜 chip, 버튼, 탭 텍스트가 잘리지 않는지 확인
+  - 1280px/1440px 웹 viewport에서 기존 웹 폰트 인상이 유지되는지 확인
+  - `rg`로 `font-family` 직접 지정 사용처를 확인해 앱만 다른 폰트를 쓰는 예외가 남지 않는지 확인
+
+### 30. 요리 완료 후 소진 재료 확인 모달에서 전체 선택/해제가 없어 반복 조작이 필요한 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Frontend
+- Source: user manual review, cooking completion consumed ingredients modal
+- Problem:
+  - 요리 완료 후 소진한 재료를 확인하는 모달에서 재료를 하나씩 선택/해제해야 한다.
+  - 재료가 여러 개 있는 레시피에서는 대부분의 재료를 한 번에 반영하거나, 반대로 전체를 제외한 뒤 일부만 선택하고 싶은 경우가 많다.
+  - 현재 전체 선택/전체 선택 해제 액션이 없으면 반복 탭이 많아지고, 사용자가 요리 완료 직후 흐름을 빨리 끝내기 어렵다.
+- User impact:
+  - 사용자는 요리 완료라는 주요 성공 순간 이후에 불필요한 반복 선택을 해야 한다.
+  - 모바일에서는 작은 체크 항목을 여러 번 누르다 실수할 가능성이 있다.
+  - 재료 반영 확인 모달이 귀찮게 느껴지면 사용자가 소진 재료 기록을 건너뛰거나 부정확하게 저장할 수 있다.
+- Recommended fix:
+  - 소진 재료 확인 모달 상단 또는 목록 헤더에 `전체 선택`과 `전체 해제` 액션을 추가한다.
+  - 이미 모든 항목이 선택된 상태에서는 `전체 해제`를 우선 노출하고, 일부/미선택 상태에서는 `전체 선택`을 우선 노출하는 단일 toggle 버튼도 검토한다.
+  - 장보기/팬트리의 전체선택 control과 모양을 맞춘다.
+    - square checkbox + `전체 선택`
+    - 선택 완료 상태에서는 checked square + `전체 해제` 또는 별도 text action
+  - disabled/이미 반영 불가 항목이 있다면 전체 선택/해제 대상에서 제외하고, 버튼 label 또는 보조 문구에 반영 가능한 개수를 명확히 한다.
+  - 선택 개수 summary를 함께 보여준다.
+    - 예: `4개 선택됨`
+  - 키보드/스크린리더 사용자를 위해 `aria-checked`, `aria-label`, disabled 상태를 명확히 한다.
+- Acceptance criteria:
+  - 소진 재료 확인 모달에서 반영 가능한 항목을 한 번에 전체 선택할 수 있다.
+  - 선택된 항목을 한 번에 전체 해제할 수 있다.
+  - 일부만 선택된 상태에서도 전체 선택/해제 동작이 예측 가능하다.
+  - 선택 불가 또는 이미 처리된 항목은 전체 선택/해제에서 제외된다.
+  - 선택 개수와 완료 버튼 상태가 전체 선택/해제 후 즉시 갱신된다.
+  - 기존 개별 선택/해제, 완료, 취소 동작은 유지된다.
+- Likely implementation target:
+  - `components/cooking/cooking-mode-screen.tsx`
+  - cooking completion consumed ingredients modal component if separated
+  - `app/globals.css`
+  - `tests/cooking-mode-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 0개/1개/여러 개 재료 모달에서 전체 선택/해제 동작 확인
+  - 일부 disabled 항목이 있을 때 전체 선택 대상이 올바른지 테스트
+  - 선택 개수와 완료 payload가 맞는지 component/backend 연동 테스트
+  - 모바일 viewport에서 전체선택 control과 완료 CTA가 겹치지 않는지 visual 확인
+
+### 31. 요리모드 화면에서 조리과정 가시성과 재료 강조가 부족한 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / UI / Frontend
+- Source: user manual review, cooking mode screen
+- Problem:
+  - 요리모드 화면의 메인 컨테이너 높이가 다소 낮아 조리 과정을 한눈에 많이 보기 어렵다.
+  - 주방에서 요리 중에는 손이 자유롭지 않을 수 있어 스크롤을 줄이고 최대한 많은 조리 내용을 바로 보여주는 것이 중요하다.
+  - 조리법 태그의 위아래 padding이 커서 단계 번호/본문이 아래로 밀려 보인다.
+  - 조리 과정 중 재료 텍스트는 사용자가 가장 빠르게 확인해야 하는 정보인데, 현재 다른 텍스트와 비슷한 강도라 눈에 잘 띄지 않을 수 있다.
+  - 반대로 재료 외 설명 텍스트는 font-weight가 다소 무거워 전체 문장이 빽빽하게 보일 수 있다.
+- User impact:
+  - 사용자가 요리 중 다음 단계를 확인하려고 자주 스크롤해야 할 수 있다.
+  - 재료명과 양을 빠르게 찾기 어려우면 조리 중 실수가 늘어난다.
+  - 조리법 태그와 번호 위치가 어색하면 단계 구조가 덜 정돈되어 보인다.
+- Recommended fix:
+  - 요리모드 메인 컨테이너 높이를 조금 키운다.
+    - 상단/하단 fixed 영역, safe area, CTA 영역과 겹치지 않는 범위에서 content viewport를 늘린다.
+    - 단순히 `height`만 키우기보다 `min-height`, `max-height`, `calc(100dvh - header/footer)` 구조를 확인한다.
+  - 조리과정 영역이 가능한 한 많은 단계 텍스트를 보여주도록 내부 padding/gap을 조정한다.
+  - 조리법 태그의 위아래 padding을 줄여 태그가 과한 공간을 차지하지 않게 한다.
+    - 태그가 작아져도 tap target이 필요한 interactive element인지 확인한다.
+    - 단순 label이면 compact하게 줄이고, 버튼이면 최소 터치 영역을 유지한다.
+  - 단계 번호를 현재보다 위쪽/본문 시작점에 더 가깝게 정렬한다.
+    - 번호 badge와 첫 줄 baseline이 자연스럽게 맞도록 align-items를 조정한다.
+  - 조리 과정 안의 재료 텍스트를 더 잘 보이게 한다.
+    - 재료명/수량 span이 구분되어 있다면 font-size를 한 단계 키우고 `font-semibold` 또는 색상 강조를 적용한다.
+    - 재료 외 일반 설명 텍스트는 `font-normal` 또는 `font-medium` 이하로 낮춘다.
+    - 강조가 과하면 전체 문장이 파편화되므로 재료명과 수량만 선명하게 한다.
+  - 긴 조리 설명, 여러 재료가 섞인 단계, 재료가 없는 단계 모두에서 줄바꿈이 자연스럽게 유지되도록 한다.
+- Acceptance criteria:
+  - 요리모드에서 스크롤 없이 보이는 조리과정 양이 현재보다 늘어난다.
+  - 메인 컨테이너가 상단 앱바, 하단 CTA, safe area와 겹치지 않는다.
+  - 조리법 태그의 위아래 padding이 줄어 화면 밀도가 개선된다.
+  - 단계 번호가 본문 시작점과 더 자연스럽게 정렬된다.
+  - 조리 과정의 재료 텍스트가 일반 설명보다 더 눈에 잘 띈다.
+  - 재료 외 설명 텍스트는 현재보다 weight가 낮아져 읽기 부담이 줄어든다.
+  - 긴 단계/짧은 단계/재료 없는 단계에서 레이아웃이 깨지지 않는다.
+- Likely implementation target:
+  - `components/cooking/cooking-mode-screen.tsx`
+  - `app/globals.css`
+  - cooking instruction parser/highlight component if present
+  - `tests/cooking-mode-screen.test.tsx`
+  - `tests/e2e/qa-visual.spec.ts`
+- Verification:
+  - 모바일 요리모드 viewport에서 한 화면에 보이는 단계 수 비교
+  - 조리법 태그 padding, 단계 번호 정렬 visual 확인
+  - 재료 강조가 적용된 단계와 재료 없는 단계 비교
+  - 하단 CTA/완료 모달/소진 재료 모달과 겹침 없는지 확인
+  - 접근성: 강조된 재료 텍스트가 의미 전달을 색상에만 의존하지 않는지 확인
+
+## 보류 항목
+
+아직 없음.

@@ -743,7 +743,7 @@ describe("MypageScreen", () => {
     expect(screen.queryByText("🍳 집밥 러너 · 레벨 5")).toBeNull();
   });
 
-  it("keeps the mobile loading shell until growth profile data is ready", async () => {
+  it("renders mobile core MYPAGE while growth profile data is still loading", async () => {
     installMatchMedia(true);
     let resolveProgress!: (value: unknown) => void;
     let resolveGamification!: (value: unknown) => void;
@@ -764,8 +764,11 @@ describe("MypageScreen", () => {
       expect(mockFetchUserProgress).toHaveBeenCalledTimes(1);
       expect(mockFetchUserGamification).toHaveBeenCalledTimes(1);
     });
-    expect(screen.getByTestId("mypage-mobile-loading")).toBeTruthy();
-    expect(screen.queryByTestId("mypage-growth-profile")).toBeNull();
+    expect(screen.queryByTestId("mypage-mobile-loading")).toBeNull();
+    expect(screen.getByTestId("mypage-growth-profile-loading")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "마이페이지" })).toBeTruthy();
+    expect(screen.getByTestId("mobile-saved-recipes-rail")).toBeTruthy();
+    expect(within(screen.getByTestId("mypage-menu-card")).getByText("레시피북")).toBeTruthy();
 
     await act(async () => {
       resolveProgress(MOCK_PROGRESS);

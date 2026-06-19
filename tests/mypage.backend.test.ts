@@ -30,6 +30,7 @@ interface QueryError {
 interface QueryResult<T> {
   data: T | null;
   error: QueryError | null;
+  count?: number | null;
 }
 
 function createAwaitableQuery<T>(results: Array<QueryResult<T>>) {
@@ -38,6 +39,7 @@ function createAwaitableQuery<T>(results: Array<QueryResult<T>>) {
     in: vi.fn(() => query),
     order: vi.fn(() => query),
     limit: vi.fn(() => query),
+    or: vi.fn(() => query),
     range: vi.fn(() => query),
     delete: vi.fn(() => query),
     update: vi.fn(() => query),
@@ -184,17 +186,11 @@ describe("17a mypage backend", () => {
       },
     ]);
     const recipeBookItemsTable = createTable([
-      {
-        data: [
-          { book_id: "book-saved" },
-          { book_id: "book-saved" },
-          { book_id: "book-custom" },
-        ],
-        error: null,
-      },
+      { data: null, error: null, count: 2 },
+      { data: null, error: null, count: 1 },
     ]);
-    const recipeLikesTable = createTable([{ data: [{ recipe_id: "recipe-1" }, { recipe_id: "recipe-2" }], error: null }]);
-    const recipesTable = createTable([{ data: [{ id: "recipe-3" }], error: null }]);
+    const recipeLikesTable = createTable([{ data: null, error: null, count: 2 }]);
+    const recipesTable = createTable([{ data: null, error: null, count: 1 }]);
     setupAuthedClient({
       from: vi.fn((table: string) => {
         if (table === "recipe_books") return recipeBooksTable;
@@ -216,6 +212,11 @@ describe("17a mypage backend", () => {
       { id: "book-liked", name: "좋아요한 레시피", book_type: "liked", recipe_count: 2, cover_color_key: null, cover_image_url: null, sort_order: 2 },
       { id: "book-custom", name: "주말 파티", book_type: "custom", recipe_count: 1, cover_color_key: null, cover_image_url: null, sort_order: 3 },
     ]);
+    expect(recipeBookItemsTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
+    expect(recipeBookItemsTable.__query.eq).toHaveBeenCalledWith("book_id", "book-saved");
+    expect(recipeBookItemsTable.__query.eq).toHaveBeenCalledWith("book_id", "book-custom");
+    expect(recipeLikesTable.select).toHaveBeenCalledWith("recipe_id", { count: "exact", head: true });
+    expect(recipesTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
   });
 
   it("PATCH /recipe-books/{book_id} renames only custom books", async () => {
@@ -391,11 +392,13 @@ describe("17a mypage backend", () => {
   });
 
   it("GET /shopping/lists returns owned shopping history with purchase counts, meal-period titles, and cursor pagination", async () => {
+    const listId1 = "11111111-1111-4111-8111-111111111111";
+    const listId2 = "22222222-2222-4222-8222-222222222222";
     const shoppingListsTable = createTable([
       {
         data: [
           {
-            id: "list-1",
+            id: listId1,
             title: "4/30 장보기",
             date_range_start: "2026-06-07",
             date_range_end: "2026-06-14",
@@ -404,7 +407,7 @@ describe("17a mypage backend", () => {
             created_at: "2026-06-07T00:00:00Z",
           },
           {
-            id: "list-2",
+            id: listId2,
             title: "4/23 장보기",
             date_range_start: "2026-04-23",
             date_range_end: "2026-04-29",
@@ -419,9 +422,9 @@ describe("17a mypage backend", () => {
     const shoppingListItemsTable = createTable([
       {
         data: [
-          { shopping_list_id: "list-1", is_pantry_excluded: false },
-          { shopping_list_id: "list-1", is_pantry_excluded: true },
-          { shopping_list_id: "list-2", is_pantry_excluded: false },
+          { shopping_list_id: listId1, is_pantry_excluded: false },
+          { shopping_list_id: listId1, is_pantry_excluded: true },
+          { shopping_list_id: listId2, is_pantry_excluded: false },
         ],
         error: null,
       },
@@ -442,7 +445,7 @@ describe("17a mypage backend", () => {
     expect(body.data).toEqual({
       items: [
         {
-          id: "list-1",
+          id: listId1,
           title: "6/7~14",
           date_range_start: "2026-06-07",
           date_range_end: "2026-06-14",
@@ -452,13 +455,35 @@ describe("17a mypage backend", () => {
           created_at: "2026-06-07T00:00:00Z",
         },
       ],
-      next_cursor: "2026-06-07T00:00:00Z|list-1",
+      next_cursor: `2026-06-07T00:00:00Z|${listId1}`,
       has_next: true,
     });
     expect(shoppingListsTable.__query.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(shoppingListsTable.__query.limit).toHaveBeenCalledWith(2);
     expect(shoppingListItemsTable.select).toHaveBeenCalledWith(
       "shopping_list_id, is_pantry_excluded",
     );
-    expect(shoppingListItemsTable.__query.in).toHaveBeenCalledWith("shopping_list_id", ["list-1", "list-2"]);
+    expect(shoppingListItemsTable.__query.in).toHaveBeenCalledWith("shopping_list_id", [listId1]);
+  });
+
+  it("GET /shopping/lists applies a validated history cursor to the database query", async () => {
+    const cursorId = "11111111-1111-4111-8111-111111111111";
+    const shoppingListsTable = createTable([{ data: [], error: null }]);
+    setupAuthedClient({
+      from: vi.fn((table: string) => {
+        if (table === "shopping_lists") return shoppingListsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importShoppingListsRoute();
+    const response = await GET(new Request(
+      `http://localhost:3000/api/v1/shopping/lists?cursor=2026-06-07T00%3A00%3A00Z%7C${cursorId}`,
+    ));
+
+    expect(response.status).toBe(200);
+    expect(shoppingListsTable.__query.or).toHaveBeenCalledWith(
+      `created_at.lt.2026-06-07T00:00:00Z,and(created_at.eq.2026-06-07T00:00:00Z,id.lt.${cursorId})`,
+    );
   });
 });

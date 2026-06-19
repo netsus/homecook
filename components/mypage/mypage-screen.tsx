@@ -520,27 +520,14 @@ export function MypageScreen({
   }, []);
 
   const loadMypageStats = useCallback(async () => {
-    const [plannerResult, leftoverResult, eatenResult] = await Promise.allSettled([
-      fetchPlanner(
+    try {
+      const plannerResult = await fetchPlanner(
         LIFETIME_PLANNER_STATS_RANGE.startDate,
         LIFETIME_PLANNER_STATS_RANGE.endDate,
-      ),
-      fetchLeftovers("leftover"),
-      fetchLeftovers("eaten"),
-    ]);
-
-    if (plannerResult.status === "fulfilled") {
-      setLifetimeMealStats(buildPlannerMealStatusStats(plannerResult.value.meals));
-    }
-
-    if (leftoverResult.status === "fulfilled") {
-      setLeftoverItems(leftoverResult.value.items);
-      setLeftoverState(leftoverResult.value.items.length > 0 ? "ready" : "empty");
-    }
-
-    if (eatenResult.status === "fulfilled") {
-      setEatenItems(eatenResult.value.items);
-      setEatenState(eatenResult.value.items.length > 0 ? "ready" : "empty");
+      );
+      setLifetimeMealStats(buildPlannerMealStatusStats(plannerResult.meals));
+    } catch {
+      // Mypage record stats are secondary and must not block the core screen.
     }
   }, []);
 
@@ -600,14 +587,14 @@ export function MypageScreen({
       const [profileOk, booksOk] = await Promise.all([
         loadProfile(),
         loadRecipeBooks(),
-        loadMypageStats().then(() => true),
       ]);
       if (profileOk && booksOk) {
-        await Promise.all([
+        setViewState("ready");
+        void Promise.allSettled([
+          loadMypageStats(),
           loadUserProgress(),
           loadUserGamification(),
         ]);
-        setViewState("ready");
       }
     } catch {
       setProgressState("error");

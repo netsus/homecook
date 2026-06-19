@@ -77,12 +77,14 @@ interface RecipeBooksSelectQuery {
 
 interface RecipeBookItemsSelectQuery {
   eq(column: string, value: string): RecipeBookItemsSelectQuery;
+  limit(value: number): RecipeBookItemsSelectQuery;
   order(column: string, options: QueryOrderOption): RecipeBookItemsSelectQuery;
   then: ArrayResult<RecipeSourceRow>["then"];
 }
 
 interface RecipeLikesSelectQuery {
   eq(column: string, value: string): RecipeLikesSelectQuery;
+  limit(value: number): RecipeLikesSelectQuery;
   order(column: string, options: QueryOrderOption): RecipeLikesSelectQuery;
   then: ArrayResult<RecipeSourceRow>["then"];
 }
@@ -90,6 +92,7 @@ interface RecipeLikesSelectQuery {
 interface RecipesSelectQuery {
   eq(column: string, value: string): RecipesSelectQuery;
   in(column: string, values: string[]): RecipesSelectQuery;
+  limit(value: number): RecipesSelectQuery;
   order(column: string, options: QueryOrderOption): RecipesSelectQuery;
   then: ArrayResult<RecipeRow>["then"];
 }
@@ -276,19 +279,31 @@ async function readRecipeBook(dbClient: RecipeBookRecipesDbClient, bookId: strin
 async function readBookSourceRows({
   dbClient,
   book,
+  cursor,
+  limit,
   userId,
 }: {
   dbClient: RecipeBookRecipesDbClient;
   book: RecipeBookRow;
+  cursor: string | null;
+  limit: number;
   userId: string;
 }) {
+  const initialLimit = cursor ? null : limit + 1;
+
   if (book.book_type === "liked") {
-    const likesResult = await dbClient
+    let likesQuery = dbClient
       .from("recipe_likes")
       .select("id, recipe_id, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false });
+
+    if (initialLimit) {
+      likesQuery = likesQuery.limit(initialLimit);
+    }
+
+    const likesResult = await likesQuery;
 
     return {
       data: likesResult.data ? normalizeSourceRows(likesResult.data) : null,
@@ -297,7 +312,7 @@ async function readBookSourceRows({
   }
 
   if (book.book_type === "my_added") {
-    const recipesResult = await dbClient
+    let recipesQuery = dbClient
       .from("recipes")
       .select("id, title, thumbnail_url, tags, view_count, base_servings, created_at")
       .eq("created_by", userId)
@@ -305,15 +320,27 @@ async function readBookSourceRows({
       .order("created_at", { ascending: false })
       .order("id", { ascending: false });
 
+    if (initialLimit) {
+      recipesQuery = recipesQuery.limit(initialLimit);
+    }
+
+    const recipesResult = await recipesQuery;
+
     return recipesResult;
   }
 
-  const itemsResult = await dbClient
+  let itemsQuery = dbClient
     .from("recipe_book_items")
     .select("id, recipe_id, added_at")
     .eq("book_id", book.id)
     .order("added_at", { ascending: false })
     .order("id", { ascending: false });
+
+  if (initialLimit) {
+    itemsQuery = itemsQuery.limit(initialLimit);
+  }
+
+  const itemsResult = await itemsQuery;
 
   return itemsResult;
 }
@@ -441,6 +468,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const itemsResult = await readBookSourceRows({
     dbClient,
     book: bookResult.data,
+    cursor,
+    limit,
     userId: user.id,
   });
 

@@ -39,8 +39,9 @@ interface QueryError {
 }
 
 interface QueryResult<T> {
-  data: T;
+  data: T | null;
   error: QueryError | null;
+  count?: number | null;
 }
 
 function createAwaitableQuery<T>(result: QueryResult<T>) {
@@ -102,6 +103,7 @@ function createRecipeBookItemsTable({
   selectResults: Array<QueryResult<unknown[]>>;
 }) {
   const selectQuery = {
+    eq: vi.fn(() => selectQuery),
     in: vi.fn(() => selectQuery),
     then(
       onFulfilled?: (value: QueryResult<unknown[]>) => unknown,
@@ -215,30 +217,18 @@ describe("/api/v1/recipe-books", () => {
     });
     const recipeBookItemsTable = createRecipeBookItemsTable({
       selectResults: [
-        {
-          data: [
-            { book_id: "book-saved" },
-            { book_id: "book-saved" },
-            { book_id: "book-custom" },
-          ],
-          error: null,
-        },
+        { data: null, error: null, count: 2 },
+        { data: null, error: null, count: 1 },
       ],
     });
     const recipeLikesTable = createRecipeBooksTable({
       selectResults: [
-        {
-          data: [{ recipe_id: "recipe-liked-1" }, { recipe_id: "recipe-liked-2" }],
-          error: null,
-        },
+        { data: null, error: null, count: 2 },
       ],
     });
     const recipesTable = createRecipeBooksTable({
       selectResults: [
-        {
-          data: [{ id: "recipe-my-1" }],
-          error: null,
-        },
+        { data: null, error: null, count: 1 },
       ],
     });
 
@@ -311,7 +301,11 @@ describe("/api/v1/recipe-books", () => {
     });
     expect(ensurePublicUserRow).toHaveBeenCalledWith(expect.anything(), { id: "user-1" });
     expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), "user-1");
-    expect(recipeBookItemsTable.__selectQuery.in).toHaveBeenCalledWith("book_id", ["book-saved", "book-custom"]);
+    expect(recipeBookItemsTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
+    expect(recipeBookItemsTable.__selectQuery.eq).toHaveBeenCalledWith("book_id", "book-saved");
+    expect(recipeBookItemsTable.__selectQuery.eq).toHaveBeenCalledWith("book_id", "book-custom");
+    expect(recipeLikesTable.select).toHaveBeenCalledWith("recipe_id", { count: "exact", head: true });
+    expect(recipesTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
   });
 
   it("GET returns schema guidance when bootstrap fails before listing books", async () => {

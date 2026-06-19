@@ -385,9 +385,9 @@ async function openMypage(
   const page = await context.newPage();
   await setAuthOverride(page);
   await installRoutes(page, options);
-  await page.goto("/mypage", { waitUntil: "networkidle" });
+  await page.goto(`${BASE_URL}/mypage`, { waitUntil: "domcontentloaded" });
   await stabilize(page);
-  await expect(page.getByTestId("mypage-growth-profile")).toBeVisible();
+  await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({ timeout: 15_000 });
   return { context, page };
 }
 

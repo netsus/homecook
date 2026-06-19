@@ -119,12 +119,12 @@ export interface UserAchievementAwardRow {
 }
 
 export interface UserGrowthActivityEventRow {
-  id: string;
+  id?: string;
   activity_type: string;
-  category: string;
+  category?: string;
   source_id: string;
   source_meta_json: unknown;
-  occurred_at: string;
+  occurred_at?: string;
 }
 
 export interface UserAchievementCounts {
@@ -243,6 +243,7 @@ interface QuestProgressSelectQuery {
 
 interface GrowthActivitySelectQuery {
   eq(column: string, value: string): GrowthActivitySelectQuery;
+  in(column: string, values: string[]): GrowthActivitySelectQuery;
   then: ArrayResult<UserGrowthActivityEventRow>["then"];
 }
 
@@ -1577,8 +1578,9 @@ async function readGrowthActivityRows(
 ): Promise<{ data: UserGrowthActivityEventRow[] | null; error: QueryError | null }> {
   const result = await dbClient
     .from("user_growth_activity_events")
-    .select("id, activity_type, category, source_id, source_meta_json, occurred_at")
-    .eq("user_id", userId);
+    .select("activity_type, source_id, source_meta_json")
+    .eq("user_id", userId)
+    .in("activity_type", ["pantry_item_added", "leftover_eaten", "recipe_registered"]);
 
   return result;
 }
