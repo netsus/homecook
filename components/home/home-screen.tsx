@@ -24,7 +24,6 @@ import {
   WebButton,
   WebChip,
   WebErrorState,
-  WebIconButton,
   WebRecipeCard,
   WebShell,
   WebSkeleton,
@@ -367,6 +366,12 @@ export function HomeScreen() {
   const hasTagFilter = Boolean(effectiveTagKey);
   const hasActiveFilters = hasQuery || hasIngredientFilter || hasTagFilter;
   const hasResultPriorityContext = hasActiveFilters || hasTypedQuery;
+  const activeFilterCount = [
+    hasTypedQuery || hasQuery,
+    hasIngredientFilter,
+    hasTagFilter,
+  ].filter(Boolean).length;
+  const showClearAllFilters = activeFilterCount > 1;
   const displayedRecipes = useMemo(
     () => (effectiveTagKey ? recipes?.items ?? [] : selectedTheme?.recipes ?? recipes?.items ?? []),
     [effectiveTagKey, recipes?.items, selectedTheme?.recipes],
@@ -619,6 +624,7 @@ export function HomeScreen() {
           savedRecipeIds={homeSaveFlow.savedRecipeIds}
           screenState={screenState}
           selectedTheme={selectedTheme}
+          showClearAllFilters={showClearAllFilters}
           showDiscoveryShortcuts={!hasResultPriorityContext}
           tagOptions={tagOptions}
           tagState={tagState}
@@ -703,26 +709,6 @@ export function HomeScreen() {
                     </button>
                   </>
                 ) : null}
-                {activeTagKey ? (
-                  <>
-                    <button
-                      className="home-mobile-filter-chip home-mobile-filter-chip-active"
-                      onClick={clearTagFilter}
-                      type="button"
-                    >
-                      #{effectiveTagLabel ?? activeTagKey}
-                    </button>
-                    {!hasIngredientFilter ? (
-                      <button
-                        className="home-mobile-filter-reset"
-                        onClick={clearTagFilter}
-                        type="button"
-                      >
-                        초기화
-                      </button>
-                    ) : null}
-                  </>
-                ) : null}
               </div>
             </div>
 
@@ -735,23 +721,10 @@ export function HomeScreen() {
               variant="mobile"
             />
 
-            {hasResultPriorityContext ? (
-              <div className="px-5 pb-3">
-                <p
-                  aria-live="polite"
-                  className="rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 py-2 text-[13px] font-bold text-[var(--text-2)]"
-                  role="status"
-                >
-                  {resultStatusText}
-                </p>
-              </div>
-            ) : null}
-
             {!hasResultPriorityContext ? <HomeQuickLinks variant="mobile" /> : null}
 
             {showInitialDiscoverySkeleton ? (
               <>
-                <ThemeCarouselSkeleton />
                 <section aria-label="레시피 목록 불러오는 중">
                   <div className="flex items-center justify-between px-4 pb-2">
                     <div className="space-y-2">
@@ -764,17 +737,8 @@ export function HomeScreen() {
                     <RecipeListSkeleton includeHeader={false} />
                   </div>
                 </section>
+                <ThemeCarouselSkeleton />
               </>
-            ) : null}
-
-            {!hasResultPriorityContext &&
-            !showInitialDiscoverySkeleton &&
-            (themes?.themes.length ?? 0) > 0 ? (
-              <ThemeCarousel
-                activeThemeId={activeThemeId}
-                onSelectTheme={selectTheme}
-                themes={themes?.themes ?? []}
-              />
             ) : null}
 
             {screenState === "error" && !showInitialDiscoverySkeleton ? (
@@ -801,24 +765,35 @@ export function HomeScreen() {
                   {resultStatusText}
                 </p>
                 {/* Section header with sort */}
-                <div className="flex items-center justify-between px-4 pb-2">
-                  <div>
-                    <h2 className="text-[18px] font-bold text-[var(--foreground)]">
+                  <div className="flex items-center justify-between px-4 pb-2">
+                    <div>
+                      <h2 className="text-[18px] font-bold text-[var(--foreground)]">
                       {listTitle}
                     </h2>
                     <p className="mt-0.5 text-[13px] font-medium text-[var(--text-3)]">
-                      {displayedRecipes.length}개
-                    </p>
+                        {displayedRecipes.length}개
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {showClearAllFilters ? (
+                        <button
+                          className="home-mobile-filter-reset"
+                          onClick={clearAllFilters}
+                          type="button"
+                        >
+                          전체 초기화
+                        </button>
+                      ) : null}
+                      {recipes?.items.length ? (
+                        <SortDropdown
+                          label="정렬 기준"
+                          onChange={selectSort}
+                          options={SORT_OPTIONS}
+                          value={sort}
+                        />
+                      ) : null}
+                    </div>
                   </div>
-                  {recipes?.items.length ? (
-                    <SortDropdown
-                      label="정렬 기준"
-                      onChange={selectSort}
-                      options={SORT_OPTIONS}
-                      value={sort}
-                    />
-                  ) : null}
-                </div>
 
                 {screenState === "loading" ? (
                   <div className="px-4">
@@ -853,6 +828,16 @@ export function HomeScreen() {
                   </div>
                 ) : null}
               </section>
+            ) : null}
+
+            {!hasResultPriorityContext &&
+            !showInitialDiscoverySkeleton &&
+            (themes?.themes.length ?? 0) > 0 ? (
+              <ThemeCarousel
+                activeThemeId={activeThemeId}
+                onSelectTheme={selectTheme}
+                themes={themes?.themes ?? []}
+              />
             ) : null}
           </div>
 
@@ -916,6 +901,7 @@ function HomeWebScreen({
   savedRecipeIds,
   screenState,
   selectedTheme,
+  showClearAllFilters,
   showDiscoveryShortcuts,
   tagOptions,
   tagState,
@@ -947,6 +933,7 @@ function HomeWebScreen({
   savedRecipeIds: Set<string>;
   screenState: ScreenState;
   selectedTheme: RecipeTheme | null;
+  showClearAllFilters: boolean;
   showDiscoveryShortcuts: boolean;
   tagOptions: RecipeTagItem[];
   tagState: AsyncState;
@@ -958,11 +945,6 @@ function HomeWebScreen({
   const showEmptyState =
     (screenState === "ready" || screenState === "empty") &&
     displayedRecipes.length === 0;
-  const themeRailRef = useRef<HTMLDivElement | null>(null);
-  const scrollThemeRail = (direction: -1 | 1) => {
-    themeRailRef.current?.scrollBy({ left: direction * 360, behavior: "smooth" });
-  };
-
   return (
     <WebShell className="web-home" wide>
       <WebTopNav
@@ -1017,173 +999,156 @@ function HomeWebScreen({
             </div>
           ) : null}
 
-          {activeTagKey ? (
-            <div className="web-filter-chip-row">
-              <WebChip active onClick={clearTagFilter}>
-                #{selectedTheme?.tag_label ?? selectedTheme?.title ?? activeTagKey}
-              </WebChip>
-              <WebButton
-                onClick={clearTagFilter}
-                size="sm"
-                variant="ghost"
-              >
-                초기화
-              </WebButton>
-            </div>
-          ) : null}
-
-          {screenState !== "error" ? (
-            <HomeTagRail
-              activeTagKey={activeTagKey}
-              onRetry={onRetryTags}
-              onSelectTag={onSelectTag}
-              tagOptions={tagOptions}
-              tagState={tagState}
-              variant="web"
-            />
-          ) : null}
-
-          {!showDiscoveryShortcuts ? (
-            <div
-              aria-live="polite"
-              className="web-result-summary"
-              role="status"
-            >
-              {resultStatusText}
-            </div>
-          ) : null}
-
           {showDiscoveryShortcuts ? <HomeQuickLinks variant="web" /> : null}
         </section>
 
-        {showDiscoveryShortcuts && themes.length > 0 ? (
-          <section className="web-theme-strip">
-            <div className="web-theme-strip-head">
+        <div className="web-home-content-grid">
+          <section className="web-all-recipes">
+            <p
+              aria-live="polite"
+              className="visually-hidden"
+              data-testid="home-result-status"
+              role="status"
+            >
+              {resultStatusText}
+            </p>
+            <div className="web-section-head">
               <div>
-                <h2 className="web-section-title">이번 주 인기 테마</h2>
+                <h2 className="web-section-title">{listTitle}</h2>
+                <p className="web-section-meta">
+                  {displayedRecipes.length}개
+                  {selectedTheme ? " · 테마 결과" : totalRecipeCount ? ` · 전체 ${totalRecipeCount}개` : ""}
+                </p>
               </div>
-              <div className="web-theme-strip-controls">
-                {selectedTheme ? (
+              <div className="web-section-actions">
+                {showClearAllFilters ? (
                   <WebButton
-                    onClick={() => onSelectTheme(selectedTheme.id)}
+                    onClick={() => {
+                      clearIngredientFilters();
+                      clearSearch();
+                      clearTagFilter();
+                    }}
                     size="sm"
                     variant="ghost"
                   >
-                    전체 보기
+                    전체 초기화
                   </WebButton>
                 ) : null}
-                <WebIconButton
-                  aria-label="이전"
-                  onClick={() => scrollThemeRail(-1)}
-                >
-                  <ChevronLeftIcon />
-                </WebIconButton>
-                <WebIconButton
-                  aria-label="다음"
-                  onClick={() => scrollThemeRail(1)}
-                >
-                  <ChevronRightIcon />
-                </WebIconButton>
+                <SortDropdown
+                  className="web-sort-dropdown"
+                  label="정렬 기준"
+                  onChange={onSelectSort}
+                  options={SORT_OPTIONS}
+                  value={sort}
+                />
               </div>
             </div>
-            <div className="web-theme-rail" ref={themeRailRef}>
-              {themes.map((theme, index) => (
-                <button
-                  aria-pressed={selectedTheme?.id === theme.id}
-                  className={[
-                    "web-theme-card",
-                    selectedTheme?.id === theme.id ? "web-theme-card-active" : "",
-                  ].join(" ")}
-                  key={theme.id}
-                  onClick={() => onSelectTheme(theme.id)}
-                  type="button"
-                >
-                  <span
-                    className="web-theme-card-thumb"
-                    style={{
-                      backgroundImage: `url(${resolveRecipeImage(theme.recipes[0] ?? { id: String(index) })})`,
-                    }}
-                  >
-                    <span className="web-theme-card-overlay">
-                      <span className="web-theme-card-title">{theme.title}</span>
-                      <span className="web-theme-card-count">
-                        {theme.recipes.length}개 레시피
-                      </span>
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
+
+            {screenState === "loading" ? <RecipeGridSkeleton /> : null}
+
+            {screenState === "error" ? (
+              <WebErrorState
+                action={
+                  <WebButton onClick={onRetry} variant="primary">
+                    다시 시도
+                  </WebButton>
+                }
+                description="네트워크 연결이나 API 설정을 확인한 뒤 다시 불러올 수 있어요."
+                title="레시피를 불러오지 못했어요"
+              />
+            ) : null}
+
+            {screenState === "ready" && displayedRecipes.length ? (
+              <div className="web-home-grid">
+                {displayedRecipes.map((recipe) => (
+                  <HomeWebRecipeCard
+                    isSaved={savedRecipeIds.has(recipe.id)}
+                    key={recipe.id}
+                    onOpen={onRecipeOpen}
+                    onSave={onRecipeSave}
+                    recipe={recipe}
+                  />
+                ))}
+              </div>
+            ) : null}
+
+            {showEmptyState ? (
+              <HomeSearchEmptyState
+                actionLabel={emptyStateActionLabel}
+                description="다른 키워드나 재료 조합으로 다시 찾아보세요."
+                onAction={() => {
+                  clearIngredientFilters();
+                  clearSearch();
+                  clearTagFilter();
+                }}
+                title="조건에 맞는 레시피가 없어요"
+              />
+            ) : null}
           </section>
-        ) : null}
 
-        <section className="web-all-recipes">
-          <p
-            aria-live="polite"
-            className="visually-hidden"
-            data-testid="home-result-status"
-            role="status"
-          >
-            {resultStatusText}
-          </p>
-          <div className="web-section-head">
-            <div>
-              <h2 className="web-section-title">{listTitle}</h2>
-              <p className="web-section-meta">
-                {displayedRecipes.length}개
-                {selectedTheme ? " · 테마 결과" : totalRecipeCount ? ` · 전체 ${totalRecipeCount}개` : ""}
-              </p>
-            </div>
-            <SortDropdown
-              className="web-sort-dropdown"
-              label="정렬 기준"
-              onChange={onSelectSort}
-              options={SORT_OPTIONS}
-              value={sort}
-            />
-          </div>
-
-          {screenState === "loading" ? <RecipeGridSkeleton /> : null}
-
-          {screenState === "error" ? (
-            <WebErrorState
-              action={
-                <WebButton onClick={onRetry} variant="primary">
-                  다시 시도
-                </WebButton>
-              }
-              description="네트워크 연결이나 API 설정을 확인한 뒤 다시 불러올 수 있어요."
-              title="레시피를 불러오지 못했어요"
-            />
-          ) : null}
-
-          {screenState === "ready" && displayedRecipes.length ? (
-            <div className="web-home-grid">
-              {displayedRecipes.map((recipe) => (
-                <HomeWebRecipeCard
-                  isSaved={savedRecipeIds.has(recipe.id)}
-                  key={recipe.id}
-                  onOpen={onRecipeOpen}
-                  onSave={onRecipeSave}
-                  recipe={recipe}
+          <aside className="web-home-aside" aria-label="홈 보조 탐색">
+            {screenState !== "error" ? (
+              <section className="web-home-aside-section">
+                <div className="web-home-aside-head">
+                  <h2>추천 태그</h2>
+                </div>
+                <HomeTagRail
+                  activeTagKey={activeTagKey}
+                  onRetry={onRetryTags}
+                  onSelectTag={onSelectTag}
+                  tagOptions={tagOptions}
+                  tagState={tagState}
+                  variant="webAside"
                 />
-              ))}
-            </div>
-          ) : null}
+              </section>
+            ) : null}
 
-          {showEmptyState ? (
-            <HomeSearchEmptyState
-              actionLabel={emptyStateActionLabel}
-              description="다른 키워드나 재료 조합으로 다시 찾아보세요."
-              onAction={() => {
-                clearIngredientFilters();
-                clearSearch();
-                clearTagFilter();
-              }}
-              title="조건에 맞는 레시피가 없어요"
-            />
-          ) : null}
-        </section>
+            {showDiscoveryShortcuts && themes.length > 0 ? (
+              <section className="web-home-aside-section">
+                <div className="web-home-aside-head">
+                  <h2>이번 주 인기 테마</h2>
+                  {selectedTheme ? (
+                    <WebButton
+                      onClick={() => onSelectTheme(selectedTheme.id)}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      전체 보기
+                    </WebButton>
+                  ) : null}
+                </div>
+                <div className="web-theme-rail web-theme-rail-side">
+                  {themes.map((theme, index) => (
+                    <button
+                      aria-pressed={selectedTheme?.id === theme.id}
+                      className={[
+                        "web-theme-card",
+                        selectedTheme?.id === theme.id ? "web-theme-card-active" : "",
+                      ].join(" ")}
+                      key={theme.id}
+                      onClick={() => onSelectTheme(theme.id)}
+                      type="button"
+                    >
+                      <span
+                        className="web-theme-card-thumb"
+                        style={{
+                          backgroundImage: `url(${resolveRecipeImage(theme.recipes[0] ?? { id: String(index) })})`,
+                        }}
+                      >
+                        <span className="web-theme-card-overlay">
+                          <span className="web-theme-card-title">{theme.title}</span>
+                          <span className="web-theme-card-count">
+                            {theme.recipes.length}개 레시피
+                          </span>
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+          </aside>
+        </div>
       </div>
     </WebShell>
   );
@@ -1422,13 +1387,15 @@ function HomeTagRail({
   onSelectTag: (tag: RecipeTagItem) => void;
   tagOptions: RecipeTagItem[];
   tagState: AsyncState;
-  variant: "mobile" | "web";
+  variant: "mobile" | "web" | "webAside";
 }) {
   if (tagState === "loading") {
     return (
       <div
         className={
-          variant === "web"
+          variant === "webAside"
+            ? "web-home-aside-chip-row"
+            : variant === "web"
             ? "web-filter-chip-row"
             : "home-mobile-tag-rail scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-2"
         }
@@ -1448,7 +1415,9 @@ function HomeTagRail({
     return (
       <div
         className={
-          variant === "web"
+          variant === "webAside"
+            ? "web-home-aside-chip-row"
+            : variant === "web"
             ? "web-filter-chip-row"
             : "home-mobile-tag-rail flex items-center gap-2 px-5 pb-2"
         }
@@ -1472,11 +1441,17 @@ function HomeTagRail({
       return <div aria-hidden="true" className="home-mobile-tag-rail" />;
     }
 
-    return null;
+    return (
+      <p className={variant === "webAside" ? "web-home-aside-empty" : "visually-hidden"}>
+        추천 태그가 없어요
+      </p>
+    );
   }
 
   const containerClass =
-    variant === "web"
+    variant === "webAside"
+      ? "web-home-aside-chip-row"
+      : variant === "web"
       ? "web-filter-chip-row"
       : "home-mobile-tag-rail scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-2";
 
@@ -1485,7 +1460,7 @@ function HomeTagRail({
       {tagOptions.map((tag) => {
         const isActive = activeTagKey === tag.normalized_key;
 
-        if (variant === "web") {
+        if (variant === "web" || variant === "webAside") {
           return (
             <WebChip
               active={isActive}
@@ -1628,42 +1603,6 @@ function SearchSmallIcon({ color }: { color: string }) {
     >
       <circle cx="9" cy="9" r="6" />
       <path d="m14 14 3 3" />
-    </svg>
-  );
-}
-
-function ChevronLeftIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="16"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-      width="16"
-    >
-      <path d="m15 18-6-6 6-6" />
-    </svg>
-  );
-}
-
-function ChevronRightIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="16"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-      width="16"
-    >
-      <path d="m9 18 6-6-6-6" />
     </svg>
   );
 }

@@ -361,6 +361,7 @@ export function IngredientFilterModal({
                             "web-ingredient-option-card",
                             isChecked ? "web-ingredient-option-active" : "",
                           ].join(" ")}
+                          title={ingredient.standard_name}
                         >
                           <input
                             aria-label={ingredient.standard_name}

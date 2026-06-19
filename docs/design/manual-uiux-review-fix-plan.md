@@ -148,7 +148,12 @@
 
 ### 4. 홈 검색과 레시피 목록 사이의 태그/테마/상태 UI가 흐름을 끊는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-items-4-6`
+- Progress:
+  - 선택된 태그를 검색창 아래 별도 chip/reset 행으로 중복 표시하지 않게 정리했다.
+  - visible 결과 상태 pill을 제거하고 screen reader 전용 결과 status만 유지했다.
+  - 데스크톱에서는 추천 태그와 인기 테마를 레시피 목록 오른쪽 보조 rail로 옮겨 목록 흐름을 먼저 보이게 했다.
+  - 모바일에서는 인기 테마를 레시피 목록 아래로 내려 검색 이후 결과가 먼저 이어지게 했다.
 - Severity: Medium
 - Area: UX / UI / Frontend
 - Source: user manual review screenshot, `components/home/home-screen.tsx`
@@ -197,7 +202,12 @@
 
 ### 5. 홈 재료 검색, 팬트리 재료 추가, 직접 등록 재료 추가의 선택 경험이 다른 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-items-4-6`
+- Progress:
+  - 팬트리 웹 재료 추가의 category tab을 홈/직접등록과 같은 chip rail 패턴으로 맞췄다.
+  - 웹 재료 선택 grid의 최소 폭과 label 말줄임을 통일해 긴 재료명이 두 줄로 깨지지 않게 했다.
+  - 팬트리 웹 재료 선택 cell은 이미지/이모지 중심에서 텍스트 중심 버튼으로 바꿔 잘못된 재료 이미지 노출 위험을 줄였다.
+  - 선택 재료 label에는 `title`을 제공해 말줄임된 전체 이름을 확인할 수 있게 했다.
 - Severity: Medium
 - Area: UX / UI / Frontend
 - Source: user manual review screenshots, `components/home/ingredient-filter-modal.tsx`, `components/pantry/pantry-add-sheet.tsx`, `components/pantry/pantry-mobile-visuals.ts`, `components/recipe/recipe-ingredient-add-modal.tsx`
@@ -265,7 +275,11 @@
 
 ### 6. 웹 레시피 상세에서 재료와 만들기 영역의 비율과 구분이 어색한 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-items-4-6`
+- Progress:
+  - 웹 상세의 재료 column을 `minmax(260px, 340px)`로 좁히고 만들기 column이 남은 폭을 쓰게 조정했다.
+  - 만들기 section 왼쪽에 약한 vertical divider와 padding을 추가해 두 영역의 경계를 명확히 했다.
+  - 재료 행을 `재료명 1fr / 수량 auto` grid로 바꿔 이름과 수량이 과하게 멀어지지 않게 했다.
 - Severity: Low
 - Area: UX / UI / Frontend
 - Source: user manual review, `components/recipe/recipe-detail-screen.tsx`, `app/globals.css`

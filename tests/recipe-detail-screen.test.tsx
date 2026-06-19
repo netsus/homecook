@@ -1401,7 +1401,7 @@ describe("recipe detail screen", () => {
     expect(container.querySelector(".web-recipe-rail-stats")).toBeNull();
   });
 
-  it("lays out desktop ingredients and steps in a shared horizontal reading grid", async () => {
+  it("lays out desktop ingredients as a compact column next to wider steps", async () => {
     installMatchMedia(true);
     const { container } = render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
@@ -1416,6 +1416,12 @@ describe("recipe detail screen", () => {
     expect(servingsSection).not.toBeNull();
     expect(readingGrid?.textContent).toContain("재료");
     expect(readingGrid?.textContent).toContain("만들기");
+    expect(ruleBody(".web-recipe-reading-grid")).toContain(
+      "grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);",
+    );
+    expect(
+      ruleBody(".web-recipe-reading-grid > .web-reading-section-grid + .web-reading-section-grid"),
+    ).toContain("border-left: 1px solid var(--web-divider);");
   });
 
   it("does not show YouTube source note for non-youtube recipes", async () => {

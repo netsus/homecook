@@ -3964,26 +3964,13 @@ button {
     margin-top: 0;
   }
 
-  .web-result-summary {
-    display: inline-flex;
-    width: fit-content;
-    max-width: 100%;
+  .web-section-actions {
+    display: flex;
+    flex: 0 0 auto;
     align-items: center;
-    border: 1px solid var(--web-line);
-    border-radius: var(--web-r-pill);
-    background: var(--web-bg-alt);
-    color: var(--web-text-2);
-    padding: 8px 14px;
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.35;
+    gap: 8px;
   }
 
-  .web-theme-strip {
-    margin-top: 24px;
-  }
-
-  .web-theme-strip-head,
   .web-section-head {
     display: flex;
     align-items: center;
@@ -4004,12 +3991,6 @@ button {
     margin: 4px 0 0;
     color: var(--web-text-3);
     font-size: 13px;
-  }
-
-  .web-theme-strip-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
 
   .web-theme-rail {
@@ -4074,6 +4055,77 @@ button {
   .web-theme-card-count {
     font-size: 13px;
     opacity: 0.86;
+  }
+
+  .web-home-content-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+    align-items: start;
+    gap: 32px;
+    margin-top: 26px;
+  }
+
+  .web-home-content-grid .web-all-recipes {
+    margin-top: 0;
+  }
+
+  .web-home-content-grid .web-home-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
+  .web-home-aside {
+    position: sticky;
+    top: 88px;
+    display: grid;
+    gap: 22px;
+  }
+
+  .web-home-aside-section {
+    border-top: 1px solid var(--web-divider);
+    padding-top: 16px;
+  }
+
+  .web-home-aside-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .web-home-aside-head h2 {
+    margin: 0;
+    color: var(--web-text-1);
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .web-home-aside-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .web-home-aside-empty {
+    margin: 0;
+    color: var(--web-text-3);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .web-theme-rail-side {
+    grid-auto-columns: unset;
+    grid-auto-flow: row;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .web-theme-rail-side .web-theme-card {
+    aspect-ratio: 16 / 9;
+    min-height: 112px;
   }
 
   .web-all-recipes {
@@ -4350,14 +4402,19 @@ button {
 
   .web-recipe-reading-grid {
     display: grid;
-    grid-template-columns: minmax(210px, 0.68fr) minmax(0, 1.32fr);
-    gap: 28px;
+    grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+    gap: 36px;
     align-items: start;
     margin-top: 18px;
   }
 
   .web-reading-section-grid {
     margin-top: 0;
+  }
+
+  .web-recipe-reading-grid > .web-reading-section-grid + .web-reading-section-grid {
+    border-left: 1px solid var(--web-divider);
+    padding-left: 36px;
   }
 
   .web-reading-head {
@@ -4419,10 +4476,10 @@ button {
   }
 
   .web-ingredient-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
     border-bottom: 1px solid var(--web-divider);
     padding: 14px 0;
   }
@@ -4431,6 +4488,7 @@ button {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
     color: var(--web-text-1);
     font-weight: 600;
   }
@@ -4445,8 +4503,11 @@ button {
   }
 
   .web-ingredient-amount {
+    max-width: 124px;
     color: var(--web-text-2);
     font-weight: 600;
+    text-align: right;
+    white-space: nowrap;
   }
 
   .web-step-row {
@@ -4777,6 +4838,10 @@ button {
     flex: 0 0 auto;
   }
 
+  .web-modal-chip-rail .web-chip {
+    white-space: nowrap;
+  }
+
   .web-planner-date-grid {
     display: flex;
     overflow-x: auto;
@@ -4967,7 +5032,7 @@ button {
 
   .web-ingredient-modal-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
     gap: 8px;
   }
 
@@ -4989,7 +5054,7 @@ button {
     border-radius: var(--web-r-sm);
     background: var(--web-surface);
     color: var(--web-text-1);
-    padding: 0 28px;
+    padding: 0 34px;
     font-size: 14px;
     font-weight: 700;
     text-align: center;
@@ -4998,6 +5063,13 @@ button {
 
   .web-ingredient-option-card {
     border-radius: var(--web-r-sm);
+  }
+
+  .web-ingredient-option span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .web-ingredient-option svg {
@@ -5721,7 +5793,7 @@ button {
 
   .web-ingredient-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
     gap: 10px;
     margin-top: 16px;
   }
@@ -5735,14 +5807,14 @@ button {
     position: relative;
     display: grid;
     width: 100%;
-    min-height: 78px;
+    min-height: 62px;
     place-items: center;
-    gap: 6px;
+    gap: 4px;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-sm);
     background: var(--web-bg-alt);
     color: var(--web-text-1);
-    padding: 14px 34px 14px 14px;
+    padding: 11px 14px;
     text-align: center;
     font-weight: 800;
     transition:
@@ -10002,7 +10074,8 @@ button {
     height: min(720px, calc(100vh - 80px));
   }
 
-  .web-pantry-modal-tabs {
+  .web-pantry-modal-tabs,
+  .web-pantry-modal-chip-rail {
     margin-top: 16px;
   }
 
@@ -10012,6 +10085,7 @@ button {
   }
 
   .web-ingredient-cell strong {
+    max-width: 100%;
     overflow: hidden;
     color: var(--web-text-1);
     font-size: 14px;
@@ -10021,9 +10095,13 @@ button {
   }
 
   .web-ingredient-cell small {
+    max-width: 100%;
+    overflow: hidden;
     color: var(--web-text-3);
     font-size: 12px;
     font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .web-ingredient-cell > span:not(.web-ingredient-cell-mark) {
@@ -11139,6 +11217,19 @@ button {
   }
 
   @media (max-width: 1180px) {
+    .web-home-content-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .web-home-aside {
+      position: static;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .web-theme-rail-side .web-theme-card {
+      min-height: 128px;
+    }
+
     .web-home-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }

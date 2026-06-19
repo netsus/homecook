@@ -355,6 +355,53 @@ describe("home screen", () => {
     });
   });
 
+  it("does not duplicate a selected tag as a separate reset row", async () => {
+    const user = userEvent.setup();
+
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/tags")) {
+        return Promise.resolve({
+          items: [
+            {
+              normalized_key: "한식",
+              label: "한식",
+              slug: null,
+              kind: "semantic",
+              is_system: true,
+              theme_eligible: true,
+              usage_count: 12,
+            },
+          ],
+        });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({ themes: [] });
+      }
+
+      return Promise.resolve(getMockRecipeList());
+    });
+
+    render(<HomeScreen />);
+
+    await user.click(await screen.findByRole("button", { name: "한식" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("home-result-status").textContent).toContain(
+        "한식",
+      );
+    });
+    expect(screen.getByRole("button", { name: "한식" }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    expect(screen.queryByRole("button", { name: "#한식" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "초기화" })).toBeNull();
+  });
+
   it("removes the non-functional mobile recipe category chip rail", async () => {
     render(<HomeScreen />);
 
@@ -841,7 +888,7 @@ describe("home screen", () => {
     });
 
     expect(
-      themeHeading.compareDocumentPosition(errorHeading) &
+      errorHeading.compareDocumentPosition(themeHeading) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
