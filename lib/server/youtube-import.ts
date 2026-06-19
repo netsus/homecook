@@ -49,6 +49,11 @@ import {
   extractYoutubeMultiRecipeCandidates,
   type YoutubeRawRecipeCandidate,
 } from "@/lib/server/youtube-multi-recipe-extractor";
+import {
+  fetchGeminiGenerateContentWithFailover,
+  getGeminiApiKeyCandidates,
+  type GeminiApiKeyCandidate,
+} from "@/lib/server/gemini-key-failover";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import type {
@@ -3932,15 +3937,16 @@ function getLlmExtractionConfig() {
   }
 
   const provider = process.env.YOUTUBE_RECIPE_LLM_PROVIDER?.trim() || GEMINI_LLM_PROVIDER;
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  const apiKeyCandidates = getGeminiApiKeyCandidates();
 
-  if (provider !== GEMINI_LLM_PROVIDER || !apiKey) {
+  if (provider !== GEMINI_LLM_PROVIDER || apiKeyCandidates.length === 0) {
     return null;
   }
 
   return {
     provider,
-    apiKey,
+    apiKeyCandidates,
+    exhaustedApiKeys: new Set<string>(),
     primaryModel: process.env.YOUTUBE_RECIPE_LLM_PRIMARY_MODEL?.trim() || DEFAULT_GEMINI_PRIMARY_MODEL,
     fallbackModel: process.env.YOUTUBE_RECIPE_LLM_FALLBACK_MODEL?.trim() || DEFAULT_GEMINI_FALLBACK_MODEL,
     dailyLimit: parsePositiveIntegerEnv(process.env.YOUTUBE_RECIPE_LLM_DAILY_LIMIT, 450),
@@ -4206,15 +4212,16 @@ function getVisualQuantityExtractionConfig() {
   }
 
   const provider = process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_PROVIDER?.trim() || GEMINI_LLM_PROVIDER;
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  const apiKeyCandidates = getGeminiApiKeyCandidates();
 
-  if (provider !== GEMINI_LLM_PROVIDER || !apiKey) {
+  if (provider !== GEMINI_LLM_PROVIDER || apiKeyCandidates.length === 0) {
     return null;
   }
 
   return {
     provider,
-    apiKey,
+    apiKeyCandidates,
+    exhaustedApiKeys: new Set<string>(),
     model: process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_MODEL?.trim()
       || process.env.YOUTUBE_RECIPE_LLM_PRIMARY_MODEL?.trim()
       || DEFAULT_GEMINI_PRIMARY_MODEL,
@@ -4243,15 +4250,16 @@ function getVisualRecipeExtractionConfig() {
   const provider = process.env.YOUTUBE_RECIPE_VISUAL_RECIPE_PROVIDER?.trim()
     || process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_PROVIDER?.trim()
     || GEMINI_LLM_PROVIDER;
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  const apiKeyCandidates = getGeminiApiKeyCandidates();
 
-  if (provider !== GEMINI_LLM_PROVIDER || !apiKey) {
+  if (provider !== GEMINI_LLM_PROVIDER || apiKeyCandidates.length === 0) {
     return null;
   }
 
   return {
     provider,
-    apiKey,
+    apiKeyCandidates,
+    exhaustedApiKeys: new Set<string>(),
     model: process.env.YOUTUBE_RECIPE_VISUAL_RECIPE_MODEL?.trim()
       || process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_MODEL?.trim()
       || process.env.YOUTUBE_RECIPE_LLM_PRIMARY_MODEL?.trim()
@@ -4788,7 +4796,8 @@ function isRetryableGeminiStatus(status: number) {
 async function callGeminiStructuredRecipe(
   model: string,
   context: YoutubeRecipeLlmExtractorContext,
-  apiKey: string,
+  apiKeyCandidates: GeminiApiKeyCandidate[],
+  exhaustedKeys: Set<string>,
 ): Promise<{
   ok: boolean;
   retryable: boolean;
@@ -4797,45 +4806,39 @@ async function callGeminiStructuredRecipe(
   inputTokens?: number;
   outputTokens?: number;
 }> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
   let response: Response;
+  let payload: unknown = null;
 
   try {
-    response = await fetchTextWithTimeout(
-      url,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: buildLlmPrompt(context) }],
-            },
-          ],
-          generationConfig: {
-            temperature: 0,
-            maxOutputTokens: 8192,
-            responseMimeType: "application/json",
-            responseSchema: GEMINI_RECIPE_RESPONSE_SCHEMA,
+    const result = await fetchGeminiGenerateContentWithFailover({
+      model,
+      apiKeyCandidates,
+      exhaustedKeys,
+      timeoutMs: context.timeoutMs,
+      requestBody: {
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: buildLlmPrompt(context) }],
           },
-        }),
+        ],
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: 8192,
+          responseMimeType: "application/json",
+          responseSchema: GEMINI_RECIPE_RESPONSE_SCHEMA,
+        },
       },
-      context.timeoutMs,
-    );
+      fetchWithTimeout: fetchTextWithTimeout,
+    });
+    response = result.response;
+    payload = result.payload;
   } catch {
     return {
       ok: false,
       retryable: true,
       reason: "gemini_fetch_failed",
     };
-  }
-
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
   }
 
   if (!response.ok) {
@@ -5045,7 +5048,8 @@ function buildVisualRecipePrompt(context: YoutubeVisualRecipeExtractorContext) {
 async function callGeminiVisualQuantity(
   model: string,
   context: YoutubeVisualQuantityExtractorContext,
-  apiKey: string,
+  apiKeyCandidates: GeminiApiKeyCandidate[],
+  exhaustedKeys: Set<string>,
 ): Promise<{
   ok: boolean;
   retryable: boolean;
@@ -5054,52 +5058,46 @@ async function callGeminiVisualQuantity(
   inputTokens?: number;
   outputTokens?: number;
 }> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
   let response: Response;
+  let payload: unknown = null;
 
   try {
-    response = await fetchTextWithTimeout(
-      url,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  file_data: {
-                    file_uri: context.youtubeUrl,
-                  },
+    const result = await fetchGeminiGenerateContentWithFailover({
+      model,
+      apiKeyCandidates,
+      exhaustedKeys,
+      timeoutMs: context.timeoutMs,
+      requestBody: {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                file_data: {
+                  file_uri: context.youtubeUrl,
                 },
-                { text: buildVisualQuantityPrompt(context) },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0,
-            maxOutputTokens: 4096,
-            responseMimeType: "application/json",
-            responseSchema: GEMINI_VISUAL_QUANTITY_RESPONSE_SCHEMA,
+              },
+              { text: buildVisualQuantityPrompt(context) },
+            ],
           },
-        }),
+        ],
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: 4096,
+          responseMimeType: "application/json",
+          responseSchema: GEMINI_VISUAL_QUANTITY_RESPONSE_SCHEMA,
+        },
       },
-      context.timeoutMs,
-    );
+      fetchWithTimeout: fetchTextWithTimeout,
+    });
+    response = result.response;
+    payload = result.payload;
   } catch {
     return {
       ok: false,
       retryable: true,
       reason: "gemini_visual_fetch_failed",
     };
-  }
-
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
   }
 
   if (!response.ok) {
@@ -5145,7 +5143,8 @@ async function callGeminiVisualQuantity(
 async function callGeminiVisualRecipe(
   model: string,
   context: YoutubeVisualRecipeExtractorContext,
-  apiKey: string,
+  apiKeyCandidates: GeminiApiKeyCandidate[],
+  exhaustedKeys: Set<string>,
 ): Promise<{
   ok: boolean;
   retryable: boolean;
@@ -5154,52 +5153,46 @@ async function callGeminiVisualRecipe(
   inputTokens?: number;
   outputTokens?: number;
 }> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
   let response: Response;
+  let payload: unknown = null;
 
   try {
-    response = await fetchTextWithTimeout(
-      url,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  file_data: {
-                    file_uri: context.youtubeUrl,
-                  },
+    const result = await fetchGeminiGenerateContentWithFailover({
+      model,
+      apiKeyCandidates,
+      exhaustedKeys,
+      timeoutMs: context.timeoutMs,
+      requestBody: {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                file_data: {
+                  file_uri: context.youtubeUrl,
                 },
-                { text: buildVisualRecipePrompt(context) },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0,
-            maxOutputTokens: 8192,
-            responseMimeType: "application/json",
-            responseSchema: GEMINI_VISUAL_RECIPE_RESPONSE_SCHEMA,
+              },
+              { text: buildVisualRecipePrompt(context) },
+            ],
           },
-        }),
+        ],
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: 8192,
+          responseMimeType: "application/json",
+          responseSchema: GEMINI_VISUAL_RECIPE_RESPONSE_SCHEMA,
+        },
       },
-      context.timeoutMs,
-    );
+      fetchWithTimeout: fetchTextWithTimeout,
+    });
+    response = result.response;
+    payload = result.payload;
   } catch {
     return {
       ok: false,
       retryable: true,
       reason: "gemini_visual_recipe_fetch_failed",
     };
-  }
-
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
   }
 
   if (!response.ok) {
@@ -5259,7 +5252,12 @@ function createDefaultYoutubeVisualRecipeExtractor(): YoutubeVisualRecipeExtract
         };
       }
 
-      const result = await callGeminiVisualRecipe(config.model, context, config.apiKey);
+      const result = await callGeminiVisualRecipe(
+        config.model,
+        context,
+        config.apiKeyCandidates,
+        config.exhaustedApiKeys,
+      );
       if (result.ok) {
         return {
           status: "available",
@@ -5296,7 +5294,12 @@ function createDefaultYoutubeVisualQuantityExtractor(): YoutubeVisualQuantityExt
         };
       }
 
-      const result = await callGeminiVisualQuantity(config.model, context, config.apiKey);
+      const result = await callGeminiVisualQuantity(
+        config.model,
+        context,
+        config.apiKeyCandidates,
+        config.exhaustedApiKeys,
+      );
       if (result.ok) {
         return {
           status: "available",
@@ -5333,7 +5336,12 @@ function createDefaultYoutubeRecipeLlmExtractor(): YoutubeRecipeLlmExtractor {
         };
       }
 
-      const firstAttempt = await callGeminiStructuredRecipe(config.primaryModel, context, config.apiKey);
+      const firstAttempt = await callGeminiStructuredRecipe(
+        config.primaryModel,
+        context,
+        config.apiKeyCandidates,
+        config.exhaustedApiKeys,
+      );
       if (firstAttempt.ok) {
         return {
           status: "available",
@@ -5350,7 +5358,12 @@ function createDefaultYoutubeRecipeLlmExtractor(): YoutubeRecipeLlmExtractor {
 
       if (firstAttempt.retryable) {
         await sleep(250);
-        const retryAttempt = await callGeminiStructuredRecipe(config.primaryModel, context, config.apiKey);
+        const retryAttempt = await callGeminiStructuredRecipe(
+          config.primaryModel,
+          context,
+          config.apiKeyCandidates,
+          config.exhaustedApiKeys,
+        );
         if (retryAttempt.ok) {
           return {
             status: "available",
@@ -5366,7 +5379,12 @@ function createDefaultYoutubeRecipeLlmExtractor(): YoutubeRecipeLlmExtractor {
         }
 
         if (retryAttempt.retryable) {
-          const fallbackAttempt = await callGeminiStructuredRecipe(config.fallbackModel, context, config.apiKey);
+          const fallbackAttempt = await callGeminiStructuredRecipe(
+            config.fallbackModel,
+            context,
+            config.apiKeyCandidates,
+            config.exhaustedApiKeys,
+          );
           if (fallbackAttempt.ok) {
             return {
               status: "available",
