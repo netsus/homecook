@@ -105,6 +105,7 @@ describe("RecipeIngredientAddModal", () => {
 
     expect(onionCard?.className).toContain("web-ingredient-option");
     expect(onionCard?.className).toContain("web-ingredient-option-card");
+    expect(onionCard?.getAttribute("title")).toBe("양파");
     expect(onionCard?.className).not.toContain("inline-flex");
     expect(screen.getByTestId("ingredient-list-region")).toBeTruthy();
 

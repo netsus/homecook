@@ -760,7 +760,7 @@ describe("PantryScreen", () => {
     expect(within(dialog).getByRole("checkbox", { name: "대파" })).toBeTruthy();
     expect(within(dialog).getByRole("checkbox", { name: "간장" })).toBeTruthy();
 
-    await user.click(within(dialog).getByRole("tab", { name: VEGETABLE_GROUP_LABEL }));
+    await user.click(within(dialog).getByRole("button", { name: VEGETABLE_GROUP_LABEL }));
 
     expect(within(dialog).getByTestId("pantry-add-list-region")).toBeTruthy();
     expect(within(dialog).getByRole("checkbox", { name: "대파" })).toBeTruthy();

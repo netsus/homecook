@@ -301,6 +301,7 @@ export function RecipeIngredientAddModal({
                             "web-ingredient-option-card",
                             isSelected ? "web-ingredient-option-active" : "",
                           ].join(" ")}
+                          title={ingredient.standard_name}
                         >
                           <input
                             checked={isSelected}

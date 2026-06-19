@@ -12,14 +12,13 @@ import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   WebButton,
+  WebChip,
   WebDialog,
   WebDialogBody,
   WebDialogFooter,
   WebDialogHeader,
   WebDialogTitle,
   WebModal,
-  WebTabButton,
-  WebTabs,
 } from "@/components/web";
 import { addPantryItems, fetchIngredients } from "@/lib/api/pantry";
 import {
@@ -407,27 +406,26 @@ export function PantryAddSheet({
             />
           </label>
 
-          <WebTabs className="web-pantry-modal-tabs" role="tablist">
-            <WebTabButton
+          <div
+            aria-label="카테고리 선택"
+            className="web-modal-chip-rail web-pantry-modal-chip-rail"
+          >
+            <WebChip
               active={!activeCategory}
               onClick={() => handleCategoryChange(null)}
             >
               전체
-            </WebTabButton>
+            </WebChip>
             {categories.map((category) => (
-              <WebTabButton
+              <WebChip
                 active={activeCategory === category.value}
                 key={category.value}
-                onClick={() =>
-                  handleCategoryChange(
-                    activeCategory === category.value ? null : category.value,
-                  )
-                }
+                onClick={() => handleCategoryChange(category.value)}
               >
                 {category.label}
-              </WebTabButton>
+              </WebChip>
             ))}
-          </WebTabs>
+          </div>
 
           <div className="web-ingredient-editor" data-testid="pantry-add-selected-ingredients">
             <div className="web-ingredient-added" aria-live="polite">
@@ -499,14 +497,9 @@ export function PantryAddSheet({
                       key={ingredient.id}
                       onClick={() => handleToggle(ingredient.id)}
                       role="checkbox"
+                      title={ingredient.standard_name}
                       type="button"
                     >
-                      <span aria-hidden="true">
-                        {getPantryEmoji(
-                          ingredient.standard_name,
-                          ingredient.category,
-                        )}
-                      </span>
                       <strong>{ingredient.standard_name}</strong>
                       <small>
                         {isExisting ? "보유중" : getIngredientGroupDisplayLabel(ingredient)}
