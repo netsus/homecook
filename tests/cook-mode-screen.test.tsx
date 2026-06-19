@@ -484,10 +484,12 @@ describe("CookModeScreen", () => {
     expect(within(stepList).getByTestId("cook-mode-step-number-1")).toBeTruthy();
     expect(within(stepList).getByTestId("cook-mode-step-number-2")).toBeTruthy();
     expect(within(stepList).getByTestId("cook-mode-step-number-3")).toBeTruthy();
-    expect(within(stepList).getByText("김치와 양파를 한입 크기로 썰어주세요.")).toBeTruthy();
-    expect(
-      within(stepList).getByText("냄비에 고기와 김치를 넣고 중불에서 충분히 볶아주세요."),
-    ).toBeTruthy();
+    expect(within(stepList).getByTestId("cook-mode-step-copy-1").textContent).toBe(
+      "김치와 양파를 한입 크기로 썰어주세요.",
+    );
+    expect(within(stepList).getByTestId("cook-mode-step-copy-2").textContent).toBe(
+      "냄비에 고기와 김치를 넣고 중불에서 충분히 볶아주세요.",
+    );
     expect(within(wholeBoard).queryByText(/STEP/i)).toBeNull();
     expect(screen.queryByTestId("cook-mode-current-step")).toBeNull();
     expect(screen.queryByTestId("cook-mode-current-amount-board")).toBeNull();
@@ -661,10 +663,14 @@ describe("CookModeScreen", () => {
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
     const wholeBoard = await screen.findByTestId("cook-mode-whole-board");
+    const layoutShell = screen.getByTestId("cook-mode-screen")
+      .firstElementChild as HTMLElement;
     const ingredientList = screen.getByTestId("ingredient-list");
     const stepList = screen.getByTestId("step-list");
 
     expect(screen.queryByTestId("mobile-ingredient-summary")).toBeNull();
+    expect(layoutShell.className).toContain("h-dvh");
+    expect(layoutShell.className).toContain("pb-[92px]");
     expect(screen.getByTestId("cook-mode-content").firstElementChild).toBe(wholeBoard);
     expect(screen.getByTestId("cook-mode-servings").textContent).toContain(
       "3인분",
@@ -675,10 +681,12 @@ describe("CookModeScreen", () => {
     expect(within(stepList).getByText("재료 손질")).toBeTruthy();
     expect(within(stepList).getByText("고기 볶기")).toBeTruthy();
     expect(within(stepList).getByText("국물 내기")).toBeTruthy();
-    expect(within(stepList).getByText("김치와 양파를 한입 크기로 썰어주세요.")).toBeTruthy();
-    expect(
-      within(stepList).getByText("냄비에 고기와 김치를 넣고 중불에서 충분히 볶아주세요."),
-    ).toBeTruthy();
+    expect(within(stepList).getByTestId("cook-mode-step-copy-1").textContent).toBe(
+      "김치와 양파를 한입 크기로 썰어주세요.",
+    );
+    expect(within(stepList).getByTestId("cook-mode-step-copy-2").textContent).toBe(
+      "냄비에 고기와 김치를 넣고 중불에서 충분히 볶아주세요.",
+    );
     expect(screen.queryByTestId("cook-mode-current-step")).toBeNull();
     expect(screen.queryByTestId("cook-mode-current-amount-board")).toBeNull();
     expect(screen.queryByTestId("cook-mode-next-step")).toBeNull();
@@ -1235,6 +1243,58 @@ describe("CookModeScreen", () => {
     expect(stepCopy.className).toContain("cook-whole-step");
     expect(stepCopy.getAttribute("style") ?? "").not.toContain("border-color");
     expect(screen.queryByTestId("cook-mode-current-amount-board")).toBeNull();
+  });
+
+  it("emphasizes ingredients inside step instructions without adding helper notes", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(
+      buildCookModeData({
+        recipe: {
+          ...buildCookModeData().recipe,
+          ingredients: [
+            buildIngredient({ ingredient_id: "ing-onion", standard_name: "양파" }),
+            buildIngredient({ ingredient_id: "ing-kimchi", standard_name: "김치" }),
+          ],
+          steps: [
+            buildStep({
+              step_number: 1,
+              instruction: "양파와 김치를 넣고 볶아주세요.",
+              ingredients_used: [
+                { ingredient_id: "ing-onion", amount: 1, unit: "개" },
+                { ingredient_id: "ing-kimchi", amount: 200, unit: "g" },
+              ],
+            }),
+            buildStep({
+              step_number: 2,
+              instruction: "충분히 끓여주세요.",
+              ingredients_used: [],
+            }),
+          ],
+        },
+      }),
+    );
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const firstStepCopy = await screen.findByTestId("cook-mode-step-copy-1");
+    const secondStepCopy = screen.getByTestId("cook-mode-step-copy-2");
+    const highlights = within(firstStepCopy).getAllByTestId(
+      "cook-mode-step-ingredient-highlight",
+    );
+
+    expect(highlights.map((highlight) => highlight.textContent)).toEqual([
+      "양파",
+      "김치",
+    ]);
+    expect(highlights.every((highlight) => highlight.tagName === "STRONG")).toBe(
+      true,
+    );
+    expect(secondStepCopy.querySelectorAll(".cook-whole-step-ingredient")).toHaveLength(
+      0,
+    );
+    expect(screen.queryByText(/총량은 왼쪽에서 고정/)).toBeNull();
+    expect(firstStepCopy.textContent).not.toMatch(/200g|1개/);
   });
 
   it("keeps component labels in the desktop whole-board sections", async () => {

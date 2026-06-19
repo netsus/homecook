@@ -1409,7 +1409,7 @@
 .cook-whole-board {
   display: grid;
   min-width: 0;
-  gap: 12px;
+  gap: 10px;
 }
 
 .cook-whole-board-mobile {
@@ -1419,13 +1419,13 @@
 .cook-whole-panel {
   min-width: 0;
   border: 1px solid rgba(139, 210, 255, 0.18);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.055);
-  padding: 14px;
+  padding: 12px;
 }
 
 .cook-whole-panel h2 {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
   color: rgba(255, 255, 255, 0.92);
   font-size: 15px;
   font-weight: 800;
@@ -1435,7 +1435,7 @@
 .cook-whole-ingredients,
 .cook-whole-steps {
   display: grid;
-  gap: 8px;
+  gap: 7px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1451,13 +1451,13 @@
 
 .cook-whole-ingredient {
   display: grid;
-  min-height: 48px;
+  min-height: 44px;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  border-radius: 14px;
+  border-radius: 13px;
   background: rgba(255, 255, 255, 0.07);
-  padding: 10px 11px;
+  padding: 8px 10px;
 }
 
 .cook-whole-ingredient-name {
@@ -1479,20 +1479,22 @@
 
 .cook-whole-step {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.07);
-  padding: 11px;
+  padding: 9px;
 }
 
 .cook-whole-step-number {
   display: inline-flex;
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   align-items: center;
   justify-content: center;
+  margin-top: 1px;
   border-radius: 10px;
   background: var(--brand);
   color: var(--text-inverse);
@@ -1507,11 +1509,11 @@
 
 .cook-whole-method-tag {
   display: inline-flex;
-  min-height: 26px;
+  min-height: 22px;
   align-items: center;
   border-radius: 999px;
   color: var(--text-inverse);
-  padding: 0 10px;
+  padding: 0 8px;
   font-size: 12px;
   font-weight: 800;
   line-height: 1;
@@ -1519,14 +1521,20 @@
 }
 
 .cook-whole-step-copy p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   overflow-wrap: break-word;
-  color: rgba(255, 255, 255, 0.94);
-  font-size: 18px;
-  font-weight: 750;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 17px;
+  font-weight: 500;
   letter-spacing: 0;
-  line-height: 1.48;
+  line-height: 1.42;
   word-break: keep-all;
+}
+
+.cook-whole-step-ingredient {
+  color: var(--brand);
+  font-size: 1.03em;
+  font-weight: 850;
 }
 
 .cook-whole-empty {
@@ -7203,11 +7211,11 @@ button {
   }
 
   .web-cook-whole-screen {
-    padding: 28px 0 80px;
+    padding: 22px 0 64px;
   }
 
   .web-cook-whole-board {
-    min-height: min(760px, calc(100vh - var(--web-nav-h) - 70px));
+    min-height: min(800px, calc(100vh - var(--web-nav-h) - 54px));
     overflow: hidden;
     border: 1px solid rgba(139, 210, 255, 0.16);
     border-radius: 22px;
@@ -7217,12 +7225,12 @@ button {
 
   .web-cook-whole-top {
     display: grid;
-    min-height: 78px;
+    min-height: 70px;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 18px;
+    gap: 16px;
     border-bottom: 1px solid rgba(139, 210, 255, 0.14);
-    padding: 0 28px;
+    padding: 0 24px;
   }
 
   .web-cook-whole-title {
@@ -7304,9 +7312,9 @@ button {
 
   .web-cook-whole-grid {
     grid-template-columns: minmax(260px, 0.38fr) minmax(0, 1fr);
-    height: min(682px, calc(100vh - var(--web-nav-h) - 148px));
-    gap: 18px;
-    padding: 20px;
+    height: min(730px, calc(100vh - var(--web-nav-h) - 124px));
+    gap: 14px;
+    padding: 16px;
   }
 
   .web-cook-whole-grid .cook-whole-panel {
@@ -7315,9 +7323,9 @@ button {
     flex-direction: column;
     overflow: hidden;
     border-color: rgba(139, 210, 255, 0.16);
-    border-radius: 18px;
+    border-radius: 16px;
     background: rgba(255, 255, 255, 0.055);
-    padding: 18px;
+    padding: 14px;
   }
 
   .web-cook-whole-grid .cook-whole-ingredients,
@@ -7328,9 +7336,9 @@ button {
   }
 
   .web-cook-whole-grid .cook-whole-ingredient {
-    min-height: 54px;
-    border-radius: 14px;
-    padding: 11px 12px;
+    min-height: 50px;
+    border-radius: 13px;
+    padding: 10px 11px;
   }
 
   .web-cook-whole-grid .cook-whole-ingredient-name {
@@ -7343,28 +7351,28 @@ button {
   }
 
   .web-cook-whole-grid .cook-whole-step {
-    grid-template-columns: 42px minmax(0, 1fr);
-    gap: 12px;
-    border-radius: 16px;
-    padding: 13px;
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px;
+    border-radius: 15px;
+    padding: 11px;
   }
 
   .web-cook-whole-grid .cook-whole-step-number {
-    width: 42px;
-    height: 42px;
+    width: 38px;
+    height: 38px;
     border-radius: 10px;
     font-size: 16px;
   }
 
   .web-cook-whole-grid .cook-whole-method-tag {
-    min-height: 28px;
+    min-height: 23px;
     font-size: 12px;
   }
 
   .web-cook-whole-grid .cook-whole-step-copy p {
-    margin-top: 9px;
-    font-size: 21px;
-    line-height: 1.45;
+    margin-top: 7px;
+    font-size: 20px;
+    line-height: 1.4;
   }
 
   @media (max-width: 1180px) {

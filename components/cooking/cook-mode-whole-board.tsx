@@ -115,6 +115,13 @@ function StepList({ recipe }: { recipe: CookingModeRecipe }) {
     );
   }
 
+  const ingredientsById = new Map(
+    recipe.ingredients.map((ingredient) => [
+      ingredient.ingredient_id,
+      ingredient,
+    ]),
+  );
+
   return (
     <ol
       aria-label="전체 조리순서 목록"
@@ -136,7 +143,7 @@ function StepList({ recipe }: { recipe: CookingModeRecipe }) {
             {showSectionHeading ? (
               <li className="cook-whole-section-label">{sectionLabel}</li>
             ) : null}
-            <CookModeWholeStep step={step} />
+            <CookModeWholeStep ingredientsById={ingredientsById} step={step} />
           </React.Fragment>
         );
       })}
@@ -144,12 +151,86 @@ function StepList({ recipe }: { recipe: CookingModeRecipe }) {
   );
 }
 
+function readIngredientId(value: unknown) {
+  if (value === null || typeof value !== "object") {
+    return null;
+  }
+
+  const ingredientId = (value as { ingredient_id?: unknown }).ingredient_id;
+
+  return typeof ingredientId === "string" ? ingredientId : null;
+}
+
+function getStepIngredientNames(
+  step: CookingModeStep,
+  ingredientsById: Map<string, CookingModeIngredient>,
+) {
+  const names = new Set<string>();
+
+  step.ingredients_used.forEach((usage) => {
+    const ingredientId = readIngredientId(usage);
+    const ingredientName =
+      ingredientId === null
+        ? null
+        : ingredientsById.get(ingredientId)?.standard_name.trim();
+
+    if (ingredientName) {
+      names.add(ingredientName);
+    }
+  });
+
+  return Array.from(names).sort((a, b) => b.length - a.length);
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function renderInstructionWithIngredientHighlights(
+  instruction: string,
+  ingredientNames: string[],
+) {
+  const matchedNames = ingredientNames.filter((name) => instruction.includes(name));
+
+  if (matchedNames.length === 0) {
+    return instruction;
+  }
+
+  const ingredientNameSet = new Set(matchedNames);
+  const ingredientPattern = new RegExp(
+    `(${matchedNames.map(escapeRegExp).join("|")})`,
+    "gu",
+  );
+
+  return instruction.split(ingredientPattern).map((part, index) => {
+    if (!ingredientNameSet.has(part)) {
+      return part;
+    }
+
+    return (
+      <strong
+        className="cook-whole-step-ingredient"
+        data-testid="cook-mode-step-ingredient-highlight"
+        key={`${part}-${index}`}
+      >
+        {part}
+      </strong>
+    );
+  });
+}
+
 function CookModeWholeStep({
+  ingredientsById,
   step,
 }: {
+  ingredientsById: Map<string, CookingModeIngredient>;
   step: CookingModeStep;
 }) {
   const instruction = getCookModeStepInstruction(step);
+  const highlightedInstruction = renderInstructionWithIngredientHighlights(
+    instruction,
+    getStepIngredientNames(step, ingredientsById),
+  );
   const methodVisual = getCookingMethodVisual(step.cooking_method);
   const methodAssistiveLabel = getCookingMethodAssistiveLabel({
     methodCode: step.cooking_method.code,
@@ -181,7 +262,7 @@ function CookModeWholeStep({
           {methodVisual.label}
         </span>
         <p data-testid={`cook-mode-step-copy-${step.step_number}`}>
-          {instruction}
+          {highlightedInstruction}
         </p>
       </div>
     </li>
