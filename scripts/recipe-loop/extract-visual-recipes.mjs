@@ -10,6 +10,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { createCachedLlmClient } from "./lib/llm-client.mjs";
 
 const PROJECT_ROOT = process.cwd();
 const DATA_ROOT = "notebooks/recipe_loop_data";
@@ -98,44 +99,19 @@ JSON만 출력:
 }
 
 async function callGemini(env, model, videoId, prompt, timeoutMs) {
-  const apiKey = env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY가 없습니다.");
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  let response;
-  try {
-    response = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
-          role: "user",
-          parts: [
-            { file_data: { file_uri: `https://www.youtube.com/watch?v=${videoId}` } },
-            { text: prompt },
-          ],
-        }],
-        generationConfig: { temperature: 0, maxOutputTokens: 16384, responseMimeType: "application/json" },
-      }),
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timer);
-  }
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`Gemini status ${response.status}: ${body.slice(0, 200)}`);
-  }
-
-  const payload = await response.json();
-  const text = payload?.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
-  if (!text.trim()) throw new Error("Gemini 응답이 비었습니다.");
-  const parsed = JSON.parse(text);
-  return Array.isArray(parsed) ? parsed[0] : parsed;
+  const llm = createCachedLlmClient({
+    model,
+    noCache: true,
+    timeoutMs,
+    maxRetries: Number(env.GEMINI_API_MAX_RETRIES ?? 3),
+  });
+  const result = await llm.generate({
+    prompt,
+    videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
+    model,
+    maxOutputTokens: 16384,
+  });
+  return Array.isArray(result.json) ? result.json[0] : result.json;
 }
 
 function mergeIngredients(recipe, visualIngredients) {

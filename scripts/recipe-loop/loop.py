@@ -1200,7 +1200,14 @@ def forbidden_strings(splits: list[str]) -> list[str]:
 def protected_fragment_matches(text: str, value: str) -> bool:
     if not text or not value:
         return False
+    # 빠른 1차 필터(선형, 백트래킹 없음): 공백 제거 후 fragment가 text에 substring으로 아예 없으면
+    # 정규식(값의 공백을 \s+로 허용)도 매칭 불가하므로 즉시 False. 정규식 호출 자체를 회피한다.
+    compact_value = _compact_text(value)
+    if not compact_value or compact_value not in _compact_text(text):
+        return False
     escaped = re.escape(value)
+    # Python 3.9 호환을 위해 possessive quantifier 없이 \s+를 쓴다.
+    # 위 compact 필터가 불가능한 후보를 먼저 제거해 catastrophic backtracking 입력을 정규식에 넘기지 않는다.
     escaped = re.sub(r"(?:\\ )+", r"\\s+", escaped)
     prefix = r"(?<![0-9A-Za-z가-힣])" if TOKEN_BOUNDARY_RE.match(value[0]) else ""
     suffix = r"(?![0-9A-Za-z가-힣])" if TOKEN_BOUNDARY_RE.match(value[-1]) else ""
