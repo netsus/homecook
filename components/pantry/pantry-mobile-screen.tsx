@@ -67,19 +67,16 @@ export function PantryMobileScreen({
         <h1 className="text-[18px] font-bold leading-none text-[var(--brand)]">
           팬트리
         </h1>
-        <button
-          aria-label={isSelectMode ? "편집 취소" : "팬트리 편집"}
-          className={[
-            "absolute right-[18px] top-1/2 flex h-[28px] min-w-[42px] -translate-y-1/2 items-center justify-center rounded-full border px-[10px] text-[11px] font-extrabold",
-            isSelectMode
-              ? "border-[var(--line-strong)] bg-[var(--surface-fill)] text-[var(--text-2)]"
-              : "border-[var(--line-strong)] bg-[var(--surface-fill)] text-[var(--text-2)]",
-          ].join(" ")}
-          onClick={isSelectMode ? onExitSelectMode : onStartSelectMode}
-          type="button"
-        >
-          {isSelectMode ? "취소" : "편집"}
-        </button>
+        {isSelectMode ? (
+          <button
+            aria-label="편집 취소"
+            className="absolute right-[18px] top-1/2 flex h-9 min-w-[58px] -translate-y-1/2 items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[13px] font-extrabold text-[var(--text-2)]"
+            onClick={onExitSelectMode}
+            type="button"
+          >
+            취소
+          </button>
+        ) : null}
       </div>
 
       <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 pb-5 pt-4">
@@ -98,39 +95,16 @@ export function PantryMobileScreen({
           팬트리에 있는 재료는 장보기에서 자동 제외돼요.
         </p>
 
-        <div className="relative mb-3">
-          <SearchIcon className="absolute left-[17px] top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[var(--text-3)]" />
-          <input
-            aria-label="팬트리 재료 검색"
-            className="h-[var(--control-height-md)] w-full rounded-[var(--radius-sheet)] border-0 bg-[var(--surface-fill)] pl-[46px] pr-10 text-[14px] font-medium text-[var(--foreground)] placeholder:text-[var(--text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="재료 검색"
-            role="searchbox"
-            type="search"
-            value={searchQuery}
-          />
-          {searchQuery && (
-            <button
-              aria-label="검색어 지우기"
-              className="absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-[14px] font-bold text-[var(--text-3)]"
-              onClick={onClearSearch}
-              type="button"
-            >
-              ×
-            </button>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <button
-            className="col-span-2 h-10 rounded-[var(--radius-control)] border-0 bg-[var(--brand)] text-[13px] font-extrabold text-[var(--text-inverse)]"
+            className="h-11 rounded-[var(--radius-control)] border-0 bg-[var(--brand)] px-2 text-[13px] font-extrabold text-[var(--text-inverse)]"
             onClick={onOpenRecommendations}
             type="button"
           >
             팬트리 추천
           </button>
           <button
-            className="h-10 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[13px] font-extrabold text-[var(--text-2)]"
+            className="h-11 rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand-soft)] px-2 text-[13px] font-extrabold text-[var(--brand)]"
             onClick={onOpenAddSheet}
             type="button"
           >
@@ -138,7 +112,7 @@ export function PantryMobileScreen({
           </button>
           <button
             aria-label="묶음으로 추가"
-            className="h-10 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[13px] font-extrabold text-[var(--text-2)]"
+            className="h-11 rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand-soft)] px-2 text-[13px] font-extrabold text-[var(--brand)]"
             onClick={onOpenBundlePicker}
             type="button"
           >
@@ -163,11 +137,33 @@ export function PantryMobileScreen({
             />
           ))}
         </div>
-        {isSelectMode ? (
-          <div className="flex justify-end py-2">
+        <div className="flex items-center gap-2 py-2" data-testid="pantry-mobile-filter-toolbar">
+          <label className="app-field-search relative flex h-[var(--control-height-md)] min-w-0 flex-1 items-center rounded-[var(--radius-sheet)] border border-[var(--line)] bg-[var(--surface)] px-3">
+            <SearchIcon className="mr-2 h-[18px] w-[18px] shrink-0 text-[var(--text-3)]" />
+            <input
+              aria-label="팬트리 재료 검색"
+              className="min-w-0 flex-1 border-0 bg-transparent text-[14px] font-medium text-[var(--foreground)] placeholder:text-[var(--text-3)] focus:outline-none focus:ring-0"
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="재료 검색"
+              role="searchbox"
+              type="search"
+              value={searchQuery}
+            />
+            {searchQuery && (
+              <button
+                aria-label="검색어 지우기"
+                className="ml-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[14px] font-bold text-[var(--text-3)]"
+                onClick={onClearSearch}
+                type="button"
+              >
+                ×
+              </button>
+            )}
+          </label>
+          {isSelectMode ? (
             <button
               aria-checked={isAllVisibleSelected}
-              className="inline-flex h-8 items-center gap-2 text-[12px] font-extrabold text-[var(--text-2)] disabled:opacity-50"
+              className="inline-flex h-[var(--control-height-md)] shrink-0 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[12px] font-extrabold text-[var(--text-2)] disabled:opacity-50"
               disabled={displayItems.length === 0}
               onClick={onSelectAllToggle}
               role="checkbox"
@@ -186,8 +182,16 @@ export function PantryMobileScreen({
               </span>
               전체선택
             </button>
-          </div>
-        ) : null}
+          ) : (
+            <button
+              className="h-[var(--control-height-md)] shrink-0 rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand-soft)] px-4 text-[13px] font-extrabold text-[var(--brand)]"
+              onClick={onStartSelectMode}
+              type="button"
+            >
+              편집
+            </button>
+          )}
+        </div>
       </section>
 
       <main className="px-4 pb-4 pt-[26px]">

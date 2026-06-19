@@ -877,18 +877,14 @@ export function PantryScreen({
               </label>
 
               <div className="web-pantry-toolbar-actions">
-                <span className="web-pantry-count" aria-live="polite">
-                  {displayItems.length}개 표시
-                  <span className="sr-only">
-                    {" "}
-                    {displayItems.length}개 재료
-                  </span>
-                  {isSelectMode ? (
-                    <span className="sr-only"> {selectedIds.size}개 선택됨</span>
-                  ) : null}
+                <span className="sr-only" aria-live="polite">
+                  {displayItems.length}개 재료 표시
                 </span>
                 {isSelectMode ? (
                   <>
+                    <span className="web-pantry-selected-count">
+                      {selectedIds.size}개 선택됨
+                    </span>
                     <button
                       aria-checked={isAllVisibleSelected}
                       className="web-pantry-select-all"
@@ -900,7 +896,11 @@ export function PantryScreen({
                       <span aria-hidden="true">{isAllVisibleSelected ? "✓" : ""}</span>
                       전체선택
                     </button>
-                    <WebButton onClick={handleExitSelectMode} variant="tertiary">
+                    <WebButton
+                      className="web-pantry-edit-button"
+                      onClick={handleExitSelectMode}
+                      variant="tertiary"
+                    >
                       취소
                     </WebButton>
                     <button
@@ -909,11 +909,12 @@ export function PantryScreen({
                       onClick={() => setShowDeleteConfirm(true)}
                       type="button"
                     >
-                      삭제 ({selectedIds.size})
+                      제거하기
                     </button>
                   </>
                 ) : (
                   <WebButton
+                    className="web-pantry-edit-button"
                     onClick={() => setIsSelectMode(true)}
                     variant="tertiary"
                   >
@@ -979,7 +980,6 @@ export function PantryScreen({
                               data-testid={`web-pantry-card-copy-${item.ingredient_id}`}
                             >
                               <strong>{item.standard_name}</strong>
-                              <small>보유 중</small>
                             </span>
                           </>
                         );

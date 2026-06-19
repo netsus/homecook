@@ -956,7 +956,11 @@
 
 ### 20. 웹 팬트리 카드와 편집 툴바에 중복 정보와 제각각 버튼이 있는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-items-20-21`
+- Progress:
+  - 웹 팬트리 카드에서 반복 `보유 중` 문구를 제거했다.
+  - 웹 툴바의 visible `N개 표시`를 제거하고 screen reader 전용 표시 개수만 남겼다.
+  - 편집 모드에서는 `N개 선택됨`, 장보기 전체선택 계열 checkbox-button, 같은 높이의 `취소`/`제거하기` 액션으로 정리했다.
 - Severity: Low
 - Area: UI / UX / Frontend
 - Source: user manual review screenshot, `components/pantry/pantry-screen.tsx`, `app/globals.css`
@@ -1002,7 +1006,11 @@
 
 ### 21. 앱 팬트리의 상단 액션/검색/전체선택 배치가 편집 시 목록을 밀어내는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-items-20-21`
+- Progress:
+  - 앱 상단 `팬트리 추천`, `재료 추가`, `묶음 추가`를 같은 3열/동일 높이 액션 체계로 맞췄다.
+  - 검색 input을 카테고리 rail 아래의 고정 toolbar로 옮겼다.
+  - 편집 모드에서 별도 전체선택 행을 삽입하지 않고 같은 toolbar 오른쪽을 `편집`에서 `전체선택`으로 전환하게 했다.
 - Severity: Medium
 - Area: UI / UX / Frontend
 - Source: user manual review screenshots, `components/pantry/pantry-mobile-screen.tsx`, `app/globals.css`
