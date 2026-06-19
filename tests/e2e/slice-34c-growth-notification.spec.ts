@@ -438,7 +438,7 @@ async function openMypage(
   let lastError: unknown;
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    await page.goto("/mypage", { waitUntil: "networkidle" });
+    await page.goto(`${BASE_URL}/mypage`, { waitUntil: "domcontentloaded" });
     await stabilize(page);
 
     try {
@@ -471,7 +471,7 @@ test.describe("34c growth notification UI @smoke-core", () => {
       },
     });
 
-    await page.goto("/mypage", { waitUntil: "networkidle" });
+    await page.goto(`${BASE_URL}/mypage`, { waitUntil: "domcontentloaded" });
     await stabilize(page);
     await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({
       timeout: 15_000,
@@ -521,11 +521,12 @@ test.describe("34c growth notification UI @smoke-core", () => {
     await setAuthOverride(page);
     await installShoppingRoutes(page);
 
-    await page.goto("/shopping/flow", { waitUntil: "networkidle" });
+    await page.goto(`${BASE_URL}/shopping/flow`, { waitUntil: "domcontentloaded" });
     await stabilize(page);
 
     await expect(page.getByTestId("shopping-multi-meal-hint").first()).toHaveText(
       "여러 끼니를 한번에 장보기할 수 있어요",
+      { timeout: 15_000 },
     );
   });
 
@@ -606,9 +607,11 @@ test.describe("34c growth notification UI @smoke-core", () => {
     const shoppingPage = await shoppingContext.newPage();
     await setAuthOverride(shoppingPage);
     await installShoppingRoutes(shoppingPage);
-    await shoppingPage.goto("/shopping/flow", { waitUntil: "networkidle" });
+    await shoppingPage.goto(`${BASE_URL}/shopping/flow`, { waitUntil: "domcontentloaded" });
     await stabilize(shoppingPage);
-    await expect(shoppingPage.getByTestId("shopping-multi-meal-hint").first()).toBeVisible();
+    await expect(shoppingPage.getByTestId("shopping-multi-meal-hint").first()).toBeVisible({
+      timeout: 15_000,
+    });
     await shoppingPage.screenshot({
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "shopping-copy.png"),

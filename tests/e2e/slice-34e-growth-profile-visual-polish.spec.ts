@@ -298,7 +298,7 @@ async function openMypage(
   let lastError: unknown;
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    await page.goto("/mypage", { waitUntil: "networkidle" });
+    await page.goto(`${BASE_URL}/mypage`, { waitUntil: "domcontentloaded" });
     await stabilize(page);
 
     try {
