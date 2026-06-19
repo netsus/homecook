@@ -419,7 +419,7 @@ test.describe("QA visual regression", () => {
 
     await page.goto(MANUAL_CREATE_VISUAL_PATH);
     await expect(
-      page.getByRole("heading", { name: "새 레시피를 직접 등록해요" }),
+      page.getByRole("heading", { name: "새 레시피 직접 등록" }),
     ).toBeVisible();
     await stabilizeVisualSnapshot(page);
     await expect(page).toHaveScreenshot("qa-manual-recipe-create.png", {
@@ -590,7 +590,9 @@ test.describe("QA visual regression", () => {
     await installAccountLibraryVisualRoutes(page);
 
     await page.goto(MYPAGE_VISUAL_PATH);
-    await expect(page.getByRole("heading", { name: "저장한 레시피" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 2, name: "저장한 레시피" }),
+    ).toBeVisible();
     await stabilizeVisualSnapshot(page);
     await expect(page).toHaveScreenshot("qa-mypage-saved.png", {
       animations: "disabled",

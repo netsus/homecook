@@ -488,7 +488,7 @@ test.describe("QA accessibility smoke", () => {
 
     await page.goto(MANUAL_CREATE_VISUAL_PATH);
     await expect(
-      page.getByRole("heading", { name: "새 레시피를 직접 등록해요" }),
+      page.getByRole("heading", { name: "새 레시피 직접 등록" }),
     ).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
@@ -651,7 +651,9 @@ test.describe("QA accessibility smoke", () => {
     await installMypageGrowthA11yRoutes(page);
 
     await page.goto(MYPAGE_VISUAL_PATH);
-    await expect(page.getByRole("heading", { name: "저장한 레시피" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 2, name: "저장한 레시피" }),
+    ).toBeVisible();
     await expectNoAxeViolations(page, {
       allowPrototypeDesktopColorContrast: true,
     });

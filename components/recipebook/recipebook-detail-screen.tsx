@@ -1966,6 +1966,7 @@ function MobileRecipeBookDetailView({
 }) {
   const [activeRecipeId, setActiveRecipeId] = useState(items[0]?.recipe_id ?? null);
   const [readerMode, setReaderMode] = useState<"book" | "list">("book");
+  const [isTocOpen, setIsTocOpen] = useState(false);
   const activeIndex = Math.max(
     0,
     items.findIndex((item) => item.recipe_id === activeRecipeId),
@@ -1981,6 +1982,39 @@ function MobileRecipeBookDetailView({
       setActiveRecipeId(items[0]?.recipe_id ?? null);
     }
   }, [activeRecipeId, items]);
+
+  const handleModeChange = useCallback((mode: "book" | "list") => {
+    setReaderMode(mode);
+    if (mode === "list") {
+      setIsTocOpen(false);
+    }
+  }, []);
+
+  const handleSelectRecipe = useCallback((recipeId: string) => {
+    setActiveRecipeId(recipeId);
+  }, []);
+
+  const handleSelectRecipeFromToc = useCallback(
+    (recipeId: string) => {
+      handleSelectRecipe(recipeId);
+      setIsTocOpen(false);
+    },
+    [handleSelectRecipe],
+  );
+
+  const handlePreviousRecipe = useCallback(() => {
+    const previousItem = items[activeIndex - 1];
+    if (previousItem) {
+      setActiveRecipeId(previousItem.recipe_id);
+    }
+  }, [activeIndex, items]);
+
+  const handleNextRecipe = useCallback(() => {
+    const nextItem = items[activeIndex + 1];
+    if (nextItem) {
+      setActiveRecipeId(nextItem.recipe_id);
+    }
+  }, [activeIndex, items]);
 
   return (
     <div
@@ -1999,19 +2033,21 @@ function MobileRecipeBookDetailView({
       <div className="flex justify-end px-4 pt-3">
         <MobileRecipeBookModeToggle
           mode={readerMode}
-          onModeChange={setReaderMode}
+          onModeChange={handleModeChange}
         />
       </div>
-      <MobileRecipeBookToc
-        activeRecipeId={activeItem?.recipe_id ?? null}
-        bookName={bookName}
-        items={items}
-        onSelectRecipe={setActiveRecipeId}
-      />
+      {readerMode === "book" && activeItem ? (
+        <MobileRecipeBookBookToolbar
+          activeIndex={activeIndex}
+          activeTitle={activeItem.title}
+          itemCount={items.length}
+          onOpenToc={() => setIsTocOpen(true)}
+        />
+      ) : null}
 
       <div
         aria-live="polite"
-        className="p-4 pb-[calc(128px+env(safe-area-inset-bottom))]"
+        className="p-4 pb-[calc(96px+env(safe-area-inset-bottom))] pt-3"
         data-testid="recipebook-detail-list"
       >
         <div className={readerMode === "list" ? "grid gap-4" : undefined}>
@@ -2041,10 +2077,15 @@ function MobileRecipeBookDetailView({
                 onRemove={() => onRemove(item.recipe_id)}
                 onSave={() => onSave(item)}
                 pageNumber={itemIndex + 1}
+                pageCount={items.length}
                 recipeHref={buildRecipeCookHref(item, readerDetailState)}
                 readerDetailState={readerDetailState}
                 removeLabel={removeLabel}
                 removing={removingId === item.recipe_id}
+                canGoPrevious={activeIndex > 0}
+                canGoNext={activeIndex < items.length - 1}
+                onPreviousRecipe={handlePreviousRecipe}
+                onNextRecipe={handleNextRecipe}
               />
             );
           })}
@@ -2079,6 +2120,15 @@ function MobileRecipeBookDetailView({
           value={bookRenameValue}
         />
       ) : null}
+      {isTocOpen ? (
+        <MobileRecipeBookTocSheet
+          activeRecipeId={activeItem?.recipe_id ?? null}
+          bookName={bookName}
+          items={items}
+          onClose={() => setIsTocOpen(false)}
+          onSelectRecipe={handleSelectRecipeFromToc}
+        />
+      ) : null}
       {renderBookDeleteDialog()}
       {renderRecipeRemoveDialog()}
       <Wave1MobileBottomTab
@@ -2086,6 +2136,39 @@ function MobileRecipeBookDetailView({
         currentTab="mypage"
       />
     </div>
+  );
+}
+
+function MobileRecipeBookBookToolbar({
+  activeIndex,
+  activeTitle,
+  itemCount,
+  onOpenToc,
+}: {
+  activeIndex: number;
+  activeTitle: string;
+  itemCount: number;
+  onOpenToc: () => void;
+}) {
+  return (
+    <section className="px-4 pt-3" data-testid="recipebook-detail-header">
+      <div className="mobile-recipebook-book-toolbar grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[18px] px-3 py-2.5">
+        <button
+          aria-haspopup="dialog"
+          aria-label="목차 열기"
+          className="mobile-recipebook-toc-trigger inline-flex h-11 items-center gap-2 rounded-[14px] px-3 text-[12px] font-bold"
+          data-testid="recipebook-mobile-toc-trigger"
+          onClick={onOpenToc}
+          type="button"
+        >
+          <span>목차</span>
+          <span aria-hidden="true">{activeIndex + 1} / {itemCount}</span>
+        </button>
+        <p className="truncate text-right text-[12px] font-semibold text-[var(--text-3)]">
+          {activeTitle}
+        </p>
+      </div>
+    </section>
   );
 }
 
@@ -2207,26 +2290,46 @@ function MobileRecipeBookModeToggle({
   );
 }
 
-function MobileRecipeBookToc({
+function MobileRecipeBookTocSheet({
   activeRecipeId,
   bookName,
   items,
+  onClose,
   onSelectRecipe,
 }: {
   activeRecipeId: string | null;
   bookName: string;
   items: RecipeBookRecipeItem[];
+  onClose: () => void;
   onSelectRecipe: (recipeId: string) => void;
 }) {
   return (
-    <section
-      className="px-4 pb-2 pt-4"
-      data-testid="recipebook-detail-header"
-    >
-      <div className="mobile-toc-card mobile-recipebook-detail-toc-card">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)]">
+      <button
+        aria-label="목차 닫기"
+        className="absolute inset-0"
+        onClick={onClose}
+        type="button"
+      />
+      <div
+        aria-label={`${bookName} 목차`}
+        aria-modal="true"
+        className="mobile-recipebook-toc-sheet relative w-full rounded-t-[24px] px-4 pb-[calc(18px+env(safe-area-inset-bottom))] pt-4"
+        role="dialog"
+      >
         <div className="mobile-toc-head">
-          <h2>목차</h2>
-          <span>{bookName} · {items.length}개 레시피</span>
+          <div>
+            <h2>목차</h2>
+            <span>{bookName} · {items.length}개 레시피</span>
+          </div>
+          <button
+            aria-label="목차 닫기"
+            className="mobile-recipebook-toc-close grid h-11 w-11 place-items-center rounded-full text-[20px] font-bold"
+            onClick={onClose}
+            type="button"
+          >
+            ×
+          </button>
         </div>
         <nav
           className="mobile-toc-list mobile-recipebook-toc-scroll"
@@ -2255,22 +2358,32 @@ function MobileRecipeBookToc({
           ))}
         </nav>
       </div>
-    </section>
+    </div>
   );
 }
 
 function MobileRecipeBookRecipeCard({
+  canGoNext = false,
+  canGoPrevious = false,
   canRemove,
   item,
+  onNextRecipe,
   onPlannerAdd,
   pageNumber,
+  pageCount,
   recipeHref,
   readerDetailState,
   onRemove,
+  onPreviousRecipe,
   onSave,
   removeLabel,
   removing,
 }: RecipeItemCardProps & {
+  canGoNext?: boolean;
+  canGoPrevious?: boolean;
+  onNextRecipe?: () => void;
+  onPreviousRecipe?: () => void;
+  pageCount?: number;
   readerDetailState?: ReaderDetailState;
 }) {
   const imageSrc = getRecipeBookItemImage(item);
@@ -2309,15 +2422,15 @@ function MobileRecipeBookRecipeCard({
           </button>
         ) : null}
       </div>
-      <div className="grid gap-4 p-4">
+      <div className="grid gap-3.5 p-4">
         <div>
-          <h2 className="text-[22px] font-black leading-[1.16] text-[var(--foreground)]">
+          <h2 className="text-[22px] font-bold leading-[1.18] text-[var(--foreground)]">
             {item.title}
           </h2>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {metaItems.map((metaItem) => (
               <span
-                className="mobile-recipebook-detail-meta-badge rounded-full px-2.5 py-1 text-[11px] font-black"
+                className="mobile-recipebook-detail-meta-badge rounded-full px-2.5 py-1 text-[11px] font-semibold"
                 key={metaItem}
               >
                 {metaItem}
@@ -2330,7 +2443,7 @@ function MobileRecipeBookRecipeCard({
           data-testid={`mobile-recipebook-note-stack-${item.recipe_id}`}
         >
           <section className="mobile-recipebook-detail-note-warm rounded-[18px] p-3">
-            <h3 className="text-[12px] font-black text-[var(--foreground)]">
+            <h3 className="text-[12px] font-bold text-[var(--foreground)]">
               재료
             </h3>
             <ReaderIngredientsContent
@@ -2339,7 +2452,7 @@ function MobileRecipeBookRecipeCard({
             />
           </section>
           <section className="mobile-recipebook-detail-note-cool rounded-[18px] p-3">
-            <h3 className="text-[12px] font-black text-[var(--foreground)]">
+            <h3 className="text-[12px] font-bold text-[var(--foreground)]">
               만들기
             </h3>
             <ReaderStepsContent
@@ -2348,10 +2461,40 @@ function MobileRecipeBookRecipeCard({
             />
           </section>
         </div>
+        {pageCount && pageCount > 1 ? (
+          <div
+            aria-label="레시피 페이지 이동"
+            className="mobile-recipebook-page-nav grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 rounded-[16px] p-2"
+            data-testid="recipebook-mobile-page-nav"
+            role="group"
+          >
+            <button
+              aria-label="이전 레시피"
+              className="grid h-11 w-full place-items-center rounded-[12px] text-[22px] font-bold disabled:opacity-45"
+              disabled={!canGoPrevious}
+              onClick={onPreviousRecipe}
+              type="button"
+            >
+              <span aria-hidden="true">‹</span>
+            </button>
+            <span className="mobile-recipebook-page-count text-center text-[12px] font-bold">
+              {pageNumber ?? 1} / {pageCount}
+            </span>
+            <button
+              aria-label="다음 레시피"
+              className="grid h-11 w-full place-items-center rounded-[12px] text-[22px] font-bold disabled:opacity-45"
+              disabled={!canGoNext}
+              onClick={onNextRecipe}
+              type="button"
+            >
+              <span aria-hidden="true">›</span>
+            </button>
+          </div>
+        ) : null}
         <div className="grid grid-cols-[52px_minmax(0,1fr)_52px] gap-2">
           <button
             aria-label="저장하기"
-            className="mobile-recipebook-detail-save-button flex h-11 items-center justify-center rounded-[16px] text-[13px] font-black"
+            className="mobile-recipebook-detail-save-button flex h-11 items-center justify-center rounded-[16px] text-[13px] font-bold"
             onClick={onSave}
             type="button"
           >
@@ -2359,14 +2502,14 @@ function MobileRecipeBookRecipeCard({
             <span className="sr-only">저장하기</span>
           </button>
           <Link
-            className="mobile-recipebook-detail-cook-button flex h-11 items-center justify-center rounded-[16px] text-[13px] font-black"
+            className="mobile-recipebook-detail-cook-button flex h-11 items-center justify-center rounded-[16px] text-[13px] font-bold"
             href={recipeHref}
           >
             요리하기
           </Link>
           <button
             aria-label="플래너에 추가"
-            className="mobile-recipebook-detail-calendar-button flex h-11 items-center justify-center rounded-[16px] text-[13px] font-black"
+            className="mobile-recipebook-detail-calendar-button mobile-recipebook-detail-calendar-button-secondary flex h-11 items-center justify-center rounded-[16px] text-[13px] font-bold"
             onClick={onPlannerAdd}
             type="button"
           >
@@ -2406,14 +2549,14 @@ function MobileRecipeBookListCard({
           width={172}
         />
         <div className="grid min-w-0 content-center gap-2">
-          <span className="mobile-recipebook-detail-page-number inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-black text-[var(--foreground)]">
+          <span className="mobile-recipebook-detail-page-number inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-semibold text-[var(--foreground)]">
             {String(pageNumber ?? 1).padStart(2, "0")}쪽
           </span>
-          <h2 className="line-clamp-2 text-[17px] font-black leading-[1.18] text-[var(--foreground)]">
+          <h2 className="line-clamp-2 text-[17px] font-bold leading-[1.2] text-[var(--foreground)]">
             {item.title}
           </h2>
           {metaItems.length > 0 ? (
-            <p className="line-clamp-1 text-[12px] font-bold text-[var(--text-3)]">
+            <p className="line-clamp-1 text-[12px] font-medium text-[var(--text-3)]">
               {metaItems.join(" · ")}
             </p>
           ) : null}
@@ -2543,37 +2686,29 @@ function RecipeBookDetailSkeleton({
           onMenuToggle={() => {}}
           onRenameStart={() => {}}
         />
-        <section className="px-4 pb-2 pt-4">
-          <div className="mobile-recipebook-detail-toc-card rounded-[24px] p-3">
-            <div className="flex items-end justify-between gap-3 px-1">
-              <div className="min-w-0 flex-1 space-y-2">
-                <Skeleton className="h-3 w-20" />
-                <Skeleton className="h-5 w-24" />
-              </div>
-              <Skeleton className="h-6 w-20 rounded-full" />
-            </div>
-            <div className="mt-3 flex gap-2 overflow-hidden pb-1">
-              {[1, 2, 3].map((i) => (
-                <div
-                  className="mobile-recipebook-loading-toc-item grid min-w-[94px] gap-2 rounded-[16px] border px-3 py-2"
-                  key={i}
-                >
-                  <Skeleton className="h-3 w-7" />
-                  <Skeleton className="h-4 w-16" />
-                </div>
-              ))}
+        <div className="flex justify-end px-4 pt-3">
+          <div className="mobile-recipebook-detail-mode-toggle grid w-[132px] grid-cols-2 gap-1 rounded-[16px] p-1">
+            <Skeleton className="h-9 rounded-[12px]" />
+            <Skeleton className="h-9 rounded-[12px]" />
+          </div>
+        </div>
+        <section className="px-4 pt-3">
+          <div className="mobile-recipebook-book-toolbar grid grid-cols-[86px_minmax(0,1fr)] items-center gap-2 rounded-[18px] px-3 py-2.5">
+            <Skeleton className="h-11 rounded-[14px]" />
+            <div className="flex justify-end">
+              <Skeleton className="h-4 w-28" />
             </div>
           </div>
         </section>
-        <div className="p-4">
+        <div className="p-4 pb-[calc(96px+env(safe-area-inset-bottom))] pt-3">
           <div className="mobile-recipebook-page-card overflow-hidden rounded-[26px]">
             <Skeleton className="h-[168px] w-full rounded-none" />
-            <div className="grid gap-4 p-4">
+            <div className="grid gap-3.5 p-4">
               <div className="space-y-2">
                 <Skeleton className="h-6 w-40" />
                 <Skeleton className="h-4 w-28" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 <div className="mobile-recipebook-detail-note-warm rounded-[18px] p-3">
                   <Skeleton className="h-4 w-10" />
                   <ReaderSectionSkeleton mobile />
@@ -2582,6 +2717,14 @@ function RecipeBookDetailSkeleton({
                   <Skeleton className="h-4 w-12" />
                   <ReaderSectionSkeleton mobile />
                 </div>
+              </div>
+              <div
+                className="mobile-recipebook-page-nav grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 rounded-[16px] p-2"
+                data-testid="recipebook-detail-mobile-loading-page-nav"
+              >
+                <Skeleton className="h-11 rounded-[12px]" />
+                <Skeleton className="h-4 w-16 justify-self-center" />
+                <Skeleton className="h-11 rounded-[12px]" />
               </div>
               <div className="grid grid-cols-[52px_minmax(0,1fr)_52px] gap-2">
                 <Skeleton className="h-11 rounded-[16px]" />
@@ -2890,17 +3033,6 @@ function DesktopRecipeBookRecipePage({
       data-testid={`recipe-item-${item.recipe_id}`}
       id={`recipebook-recipe-${item.recipe_id}`}
     >
-      {canRemove ? (
-        <button
-          aria-label={`${item.title} ${removeLabel}`}
-          className="web-recipebook-recipe-remove-icon"
-          disabled={removing}
-          onClick={onRemove}
-          type="button"
-        >
-          <RecipeBookTrashIcon />
-        </button>
-      ) : null}
       <div className="web-recipebook-recipe-hero">
         <span
           aria-label={item.title}
@@ -2914,6 +3046,17 @@ function DesktopRecipeBookRecipePage({
         <span className="web-recipebook-reader-page-number">
           {String(pageLabel).padStart(2, "0")}쪽
         </span>
+        {canRemove ? (
+          <button
+            aria-label={`${item.title} ${removeLabel}`}
+            className="web-recipebook-recipe-remove-icon"
+            disabled={removing}
+            onClick={onRemove}
+            type="button"
+          >
+            <RecipeBookTrashIcon />
+          </button>
+        ) : null}
       </div>
       <div className="web-recipebook-recipe-copy">
         <div className="web-recipebook-recipe-title-row">

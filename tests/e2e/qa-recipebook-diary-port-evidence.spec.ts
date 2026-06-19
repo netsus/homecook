@@ -115,14 +115,23 @@ test("capture recipebook diary service evidence", async ({ page }, testInfo) => 
   await mobileDetailPage.setViewportSize(viewports.mobile);
   await mobileDetailPage.goto(RECIPEBOOK_DETAIL_VISUAL_PATH);
   await expect(mobileDetailPage.getByTestId("recipebook-detail-mobile")).toBeVisible();
-  await expect(mobileDetailPage.getByRole("heading", { name: "목차" })).toBeVisible();
-  await expect(mobileDetailPage.getByTestId("recipebook-detail-header")).toContainText("주말 파티");
+  await expect(mobileDetailPage.getByRole("heading", { name: "주말 파티" })).toBeVisible();
+  const mobileTocTrigger = mobileDetailPage.getByTestId("recipebook-mobile-toc-trigger");
+  await expect(mobileTocTrigger).toBeVisible();
+  await expectTapTarget(mobileTocTrigger);
   await expect(mobileDetailPage.getByTestId("recipe-item-recipe-doenjang")).toBeVisible();
   await expectTapTarget(mobileDetailPage.getByLabel("뒤로 가기"));
-  const mobileToc = mobileDetailPage.getByRole("navigation", { name: /목차/ });
-  const firstTocButton = mobileToc.getByRole("button", { name: /된장찌개/ });
-  await expectTapTarget(firstTocButton);
-  await firstTocButton.click();
+  const mobilePageNav = mobileDetailPage.getByTestId("recipebook-mobile-page-nav");
+  await expect(mobilePageNav).toContainText("1 / 4");
+  await expectTapTarget(mobilePageNav.getByRole("button", { name: "다음 레시피" }));
+  await mobileTocTrigger.click();
+  const mobileTocDialog = mobileDetailPage.getByRole("dialog", {
+    name: "주말 파티 목차",
+  });
+  await expect(mobileTocDialog.getByRole("heading", { name: "목차" })).toBeVisible();
+  await expect(mobileTocDialog.getByRole("button", { name: /연어 스테이크/ })).toBeVisible();
+  await expectTapTarget(mobileTocDialog.getByRole("button", { name: /연어 스테이크/ }));
+  await mobileTocDialog.getByLabel("목차 닫기").click();
   const appBarBox = await mobileDetailPage
     .getByTestId("recipebook-detail-mobile")
     .locator("> div")
@@ -142,13 +151,15 @@ test("capture recipebook diary service evidence", async ({ page }, testInfo) => 
   await mobileDetailPage.goto("about:blank");
   await mobileDetailPage.goto(RECIPEBOOK_DETAIL_VISUAL_PATH);
   await expect(mobileDetailPage.getByTestId("recipebook-detail-mobile")).toBeVisible();
-  await expect(mobileDetailPage.getByRole("heading", { name: "목차" })).toBeVisible();
+  const narrowTocTrigger = mobileDetailPage.getByTestId("recipebook-mobile-toc-trigger");
+  await expect(narrowTocTrigger).toBeVisible();
   await expect(mobileDetailPage.getByTestId("recipe-item-recipe-doenjang")).toBeVisible();
   await expectTapTarget(mobileDetailPage.getByLabel("뒤로 가기"));
+  await expectTapTarget(narrowTocTrigger);
   await expectTapTarget(
-    mobileDetailPage.getByRole("navigation", { name: /목차/ }).getByRole("button", {
-      name: /된장찌개/,
-    }),
+    mobileDetailPage
+      .getByTestId("recipebook-mobile-page-nav")
+      .getByRole("button", { name: "다음 레시피" }),
   );
   await capture(mobileDetailPage, "recipebook-detail-mobile-320.png");
   await mobileDetailPage.close();
