@@ -11,6 +11,10 @@ import {
   SettingsMobileScreen,
   type SettingsMobileSurface,
 } from "@/components/settings/settings-mobile-screen";
+import {
+  AppBackButton,
+  AppBackButtonSpacer,
+} from "@/components/shared/app-back-button";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -919,27 +923,11 @@ function SettingsAppBar() {
 
   return (
     <div className="flex h-14 items-center border-b border-[var(--line)] bg-[var(--background)] px-2">
-      <button
-        aria-label="뒤로가기"
-        className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center"
-        onClick={appReturn.goBack}
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          className="h-6 w-6 text-[var(--foreground)]"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
+      <AppBackButton onClick={appReturn.goBack} />
       <h1 className="flex-1 text-center text-xl font-extrabold text-[var(--foreground)]">
         환경설정
       </h1>
-      <div className="h-[var(--control-height-md)] w-11 shrink-0" />
+      <AppBackButtonSpacer />
     </div>
   );
 }
@@ -957,25 +945,10 @@ function SettingsMobileLoadingShell() {
         className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4"
         style={{ borderBottomWidth: "0.5px" }}
       >
-        <button
-          aria-label="뒤로가기"
-          className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start border-0 bg-transparent p-0 text-[var(--foreground)]"
+        <AppBackButton
+          className="absolute left-4 top-1/2 -translate-y-1/2"
           onClick={appReturn.goBack}
-          type="button"
-        >
-          <svg
-            aria-hidden="true"
-            className="h-6 w-6"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2.3"
-            viewBox="0 0 24 24"
-          >
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-        </button>
+        />
         <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[var(--foreground)]">
           {title}
         </h1>

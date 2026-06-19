@@ -589,7 +589,7 @@ describe("planner week screen", () => {
     await user.click(searchButton);
     const searchDialog = await screen.findByRole("dialog", { name: "검색으로 추가" });
     expect(searchDialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
-    const searchBackButton = within(searchDialog).getByLabelText("뒤로");
+    const searchBackButton = within(searchDialog).getByLabelText("뒤로 가기");
     expect(searchBackButton.className).toContain("h-[var(--app-back-button-size)]");
     expect(searchBackButton.className).toContain("w-[var(--app-back-button-size)]");
     expect(searchBackButton.querySelector("svg")?.getAttribute("viewBox")).toBe("0 0 24 24");
@@ -603,14 +603,14 @@ describe("planner week screen", () => {
     const recipeBookDialog = await screen.findByRole("dialog", { name: "레시피북에서 추가" });
     expect(recipeBookDialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
 
-    await user.click(within(recipeBookDialog).getByLabelText("뒤로"));
+    await user.click(within(recipeBookDialog).getByLabelText("뒤로 가기"));
     expect(screen.getByTestId("planner-meal-add-sheet")).toBeTruthy();
 
     await user.click(within(screen.getByTestId("planner-meal-add-sheet")).getByTestId("meal-add-option-pantry"));
     const pantryDialog = await screen.findByRole("dialog", { name: "팬트리 기반 추천" });
     expect(pantryDialog.getAttribute("data-app-overlay-shell")).toBe("bottom-sheet");
 
-    await user.click(within(pantryDialog).getByLabelText("뒤로"));
+    await user.click(within(pantryDialog).getByLabelText("뒤로 가기"));
     expect(screen.getByTestId("planner-meal-add-sheet")).toBeTruthy();
 
     expect(

@@ -382,7 +382,7 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
 
     await expect(page.getByRole("heading", { name: "저장한 레시피" })).toBeVisible();
 
-    await page.locator('button[aria-label="뒤로"]').filter({ visible: true }).first().click();
+    await page.locator('button[aria-label="뒤로 가기"]').filter({ visible: true }).first().click();
 
     if (isMobileViewport(page)) {
       await expect(page.getByRole("heading", { name: "레시피북에서 추가" })).toBeVisible();

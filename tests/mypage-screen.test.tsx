@@ -1249,7 +1249,7 @@ describe("MypageScreen", () => {
 
     expect(screen.getByTestId("mypage-mobile-loading")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "레시피북" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "뒤로" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "뒤로 가기" })).toBeTruthy();
     expect(screen.getByTestId("recipebook-mobile-loading-hero")).toBeTruthy();
     expect(screen.getAllByTestId(/^recipebook-mobile-loading-book-/)).toHaveLength(4);
     expect(screen.queryByText("책장")).toBeNull();
@@ -1271,7 +1271,7 @@ describe("MypageScreen", () => {
 
     expect(screen.getByTestId("mypage-mobile-loading")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "장보기 기록" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "뒤로" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "뒤로 가기" })).toBeTruthy();
     expect(screen.getByTestId("shopping-history-loading-skeleton")).toBeTruthy();
     expect(screen.getByText("장보기 달력")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "마이페이지" })).toBeNull();
@@ -1591,7 +1591,7 @@ describe("MypageScreen", () => {
 
     const user = userEvent.setup();
     await screen.findByTestId("shopping-tab");
-    await user.click(screen.getByRole("button", { name: "뒤로" }));
+    await user.click(screen.getByRole("button", { name: "뒤로 가기" }));
 
     expect(mockRouterReplace).toHaveBeenCalledWith("/planner");
   });
@@ -1610,7 +1610,7 @@ describe("MypageScreen", () => {
 
     const user = userEvent.setup();
     await screen.findByTestId("recipebook-tab");
-    await user.click(screen.getByRole("button", { name: "뒤로" }));
+    await user.click(screen.getByRole("button", { name: "뒤로 가기" }));
 
     expect(mockRouterReplace).toHaveBeenCalledWith("/mypage");
     expect(await screen.findByRole("heading", { name: "마이페이지" })).toBeTruthy();
@@ -1630,7 +1630,7 @@ describe("MypageScreen", () => {
 
     const user = userEvent.setup();
     await screen.findByTestId("shopping-tab");
-    await user.click(screen.getByRole("button", { name: "뒤로" }));
+    await user.click(screen.getByRole("button", { name: "뒤로 가기" }));
 
     expect(mockRouterReplace).toHaveBeenCalledWith("/mypage");
     expect(await screen.findByRole("heading", { name: "마이페이지" })).toBeTruthy();

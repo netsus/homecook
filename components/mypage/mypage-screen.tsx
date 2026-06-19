@@ -43,6 +43,7 @@ import {
 } from "@/components/recipe/planner-add-sheet";
 import { RecipeBookDetailScreen } from "@/components/recipebook/recipebook-detail-screen";
 import { ShoppingDetailScreen } from "@/components/shopping/shopping-detail-screen";
+import { AppBackButton } from "@/components/shared/app-back-button";
 import { ContentState } from "@/components/shared/content-state";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -3052,14 +3053,10 @@ function MypageLoadingSkeleton({
           style={{ borderBottomWidth: "0.5px" }}
         >
           {showBack ? (
-            <button
-              aria-label="뒤로"
-              className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start border-0 bg-transparent p-0 text-[var(--foreground)]"
-              onClick={onBack}
-              type="button"
-            >
-              <MypageSkeletonBackIcon />
-            </button>
+            <AppBackButton
+              className="absolute left-4 top-1/2 -translate-y-1/2"
+              onClick={() => onBack?.()}
+            />
           ) : null}
           <h1
             className={[
@@ -3147,23 +3144,6 @@ function MypageLoadingSkeleton({
         ))}
       </div>
     </div>
-  );
-}
-
-function MypageSkeletonBackIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2.3"
-      viewBox="0 0 24 24"
-    >
-      <path d="m15 18-6-6 6-6" />
-    </svg>
   );
 }
 

@@ -405,7 +405,7 @@ describe("SettingsScreen", () => {
     render(<SettingsScreen initialAuthenticated={true} />);
     const user = userEvent.setup();
 
-    const backButton = screen.getByLabelText("뒤로가기");
+    const backButton = screen.getByLabelText("뒤로 가기");
     expect(backButton).toBeTruthy();
 
     await user.click(backButton);

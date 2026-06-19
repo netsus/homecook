@@ -10,6 +10,7 @@ import { MypageGrowthProfile } from "@/components/mypage/mypage-growth-profile";
 import {
   type MypageProgressState,
 } from "@/components/mypage/mypage-progress-card";
+import { AppBackButton } from "@/components/shared/app-back-button";
 import {
   buildShoppingHistoryCalendarMonths,
   buildShoppingDayAriaLabel,
@@ -269,14 +270,10 @@ function MobileAppBar({
       style={{ borderBottomWidth: "0.5px" }}
     >
       {onBack ? (
-        <button
-          aria-label="뒤로"
-          className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start border-0 bg-transparent p-0 text-[var(--foreground)]"
+        <AppBackButton
+          className="absolute left-4 top-1/2 -translate-y-1/2"
           onClick={onBack}
-          type="button"
-        >
-          <BackIcon />
-        </button>
+        />
       ) : null}
       <h1
         className={[
@@ -1653,23 +1650,6 @@ function formatMobileSavedRecipeMeta(recipe: RecipeBookRecipeItem) {
   ]
     .filter(Boolean)
     .join(" · ");
-}
-
-function BackIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2.3"
-      viewBox="0 0 24 24"
-    >
-      <path d="m15 18-6-6 6-6" />
-    </svg>
-  );
 }
 
 function ChevronRightIcon() {

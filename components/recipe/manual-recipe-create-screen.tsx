@@ -12,6 +12,7 @@ import {
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
 import { RecipeTagEditor } from "@/components/recipe/recipe-tag-editor";
 import { Button } from "@/components/ui/button";
+import { AppBackButton } from "@/components/shared/app-back-button";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { useAppReturn } from "@/components/shared/use-app-return";
@@ -136,29 +137,7 @@ function AppBar({ onBack, onSave, isSaving, isUploading = false }: AppBarProps) 
   return (
     <div className="shrink-0 border-b border-[var(--line-strong)] bg-[var(--surface)]">
       <div className="flex min-h-[var(--control-height-xl)] items-center gap-2 px-4 py-2.5">
-        <button
-          aria-label="뒤로 가기"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-[var(--surface-fill)]"
-          onClick={onBack}
-          type="button"
-          disabled={isDisabled}
-        >
-          <svg
-            fill="none"
-            height="20"
-            viewBox="0 0 20 20"
-            width="20"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M12 5L7 10L12 15"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-            />
-          </svg>
-        </button>
+        <AppBackButton disabled={isDisabled} onClick={onBack} />
         <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[var(--foreground)]">
           직접 등록
         </h1>

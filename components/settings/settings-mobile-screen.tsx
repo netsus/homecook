@@ -3,6 +3,7 @@
 import Image from "next/image";
 import React from "react";
 
+import { AppBackButton } from "@/components/shared/app-back-button";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import type { UserProfileData } from "@/lib/api/mypage";
 import type { PlannerColumnData } from "@/types/planner";
@@ -222,14 +223,10 @@ function MobileAppBar({
       className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4"
       style={{ borderBottomWidth: "0.5px" }}
     >
-      <button
-        aria-label="뒤로가기"
-        className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start border-0 bg-transparent p-0 text-[var(--foreground)]"
+      <AppBackButton
+        className="absolute left-4 top-1/2 -translate-y-1/2"
         onClick={onBack}
-        type="button"
-      >
-        <BackIcon />
-      </button>
+      />
       <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[var(--foreground)]">
         {title}
       </h1>
@@ -839,22 +836,5 @@ function MobileConfirmSheet({
         </div>
       </div>
     </div>
-  );
-}
-
-function BackIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2.3"
-      viewBox="0 0 24 24"
-    >
-      <path d="m15 18-6-6 6-6" />
-    </svg>
   );
 }
