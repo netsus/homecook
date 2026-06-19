@@ -782,6 +782,33 @@ describe("MypageScreen", () => {
     expect(screen.queryByTestId("mypage-growth-profile-loading")).toBeNull();
   });
 
+  it("keeps the mobile MYPAGE menu visually light without repeated row and icon fills", async () => {
+    installMatchMedia(true);
+
+    render(<MypageScreen initialAuthenticated />);
+
+    await screen.findByText("집밥러");
+
+    const menuCard = screen.getByTestId("mypage-menu-card");
+    expect(menuCard.className).toContain("bg-[var(--surface)]");
+    expect(menuCard.className).not.toContain("border-[var(--line-strong)]");
+
+    const recipebookRow = screen.getByTestId("mypage-menu-row-recipebook");
+    expect(recipebookRow.className).toContain("bg-transparent");
+    expect(recipebookRow.className).toContain("active:bg-[var(--surface-subtle)]");
+    expect(recipebookRow.className).toContain("focus-visible:ring-[var(--brand)]");
+
+    const recipebookIcon = screen.getByTestId("mypage-menu-icon-recipebook");
+    expect(recipebookIcon.getAttribute("data-icon-treatment")).toBe("emphasis");
+    expect(recipebookIcon.className).toContain("bg-[var(--brand-soft)]");
+    expect(recipebookIcon.className).not.toContain("bg-[var(--surface-fill)]");
+
+    const leftoversIcon = screen.getByTestId("mypage-menu-icon-leftovers");
+    expect(leftoversIcon.getAttribute("data-icon-treatment")).toBe("plain");
+    expect(leftoversIcon.className).toContain("bg-transparent");
+    expect(leftoversIcon.className).not.toContain("bg-[var(--surface-fill)]");
+  });
+
   it("keeps core MYPAGE usable when only progress fetch fails", async () => {
     mockFetchUserProgress.mockRejectedValueOnce(new Error("progress unavailable"));
 

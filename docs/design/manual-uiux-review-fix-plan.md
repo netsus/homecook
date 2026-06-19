@@ -1319,7 +1319,7 @@
 
 ### 26. 앱 마이페이지 목록의 회색 배경과 아이콘 배경이 반복되어 화면이 무거워 보이는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-item-26`
 - Severity: Low
 - Area: UI / UX / Frontend
 - Source: user manual review, app mypage list sections
@@ -1361,10 +1361,12 @@
   - `tests/mypage-screen.test.tsx`
   - `tests/e2e/qa-visual.spec.ts`
 - Verification:
-  - 앱 마이페이지 기본/레시피북/장보기기록/설정 진입 화면 visual 확인
-  - 터치/pressed/focus 상태 확인
-  - 아이콘 배경 제거 또는 축소 후에도 메뉴 식별성이 유지되는지 모바일 viewport에서 확인
-  - 앱 전반의 회색 surface 과다 사용처를 `app-* surface/list/card` CSS 기준으로 스캔
+  - `components/mypage/mypage-mobile-screen.tsx`에서 앱 마이페이지 홈 메뉴 row를 투명 배경 + divider 구조로 정리했다.
+  - 레시피북/장보기 기록처럼 주요 이동 항목만 약한 brand tint 아이콘 배경을 유지하고, 남은 요리/다먹은 요리/환경설정 일반 메뉴 아이콘은 투명 배경으로 낮췄다.
+  - row 탭 가능성은 `min-h-[58px]`, chevron, `active:bg-[var(--surface-subtle)]`, `focus-visible:ring-[var(--brand)]`로 유지했다.
+  - `rg "bg-\\[var\\(--surface-fill\\)\\]" components app -g '*.tsx'`로 다른 앱 화면의 surface-fill 사용처를 스캔했고, 동일한 "마이페이지 목록 box + 모든 아이콘 배경" 패턴은 이번 대상에 한정해 정리했다.
+  - `pnpm test tests/mypage-screen.test.tsx -- --runInBand`
+  - `pnpm exec playwright test tests/e2e/qa-wave1-mypage-core-evidence.spec.ts --project=mobile-chrome`
 
 ### 27. 오래된 남은 요리를 사용자가 정리하도록 돕는 안내와 만료 흐름이 없는 문제
 
