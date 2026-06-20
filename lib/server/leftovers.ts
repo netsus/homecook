@@ -16,6 +16,7 @@ export interface LeftoverDishRow {
   cooked_at: string;
   eaten_at: string | null;
   auto_hide_at: string | null;
+  stale_reviewed_at: string | null;
   cooking_servings: number | null;
 }
 
@@ -91,6 +92,7 @@ export function toLeftoverListItem(
     status: row.status,
     cooked_at: row.cooked_at,
     eaten_at: row.eaten_at,
+    stale_reviewed_at: row.stale_reviewed_at,
     cooking_servings: row.cooking_servings ?? 1,
     source_meal_label: sourceMeal?.meal_plan_columns?.name ?? null,
     source_planned_servings: sourceMeal?.planned_servings ?? null,

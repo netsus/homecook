@@ -10,6 +10,7 @@ export interface LeftoverListItemData {
   status: LeftoverDishStatus;
   cooked_at: string;
   eaten_at: string | null;
+  stale_reviewed_at: string | null;
   cooking_servings: number;
   source_meal_label: string | null;
   source_planned_servings: number | null;
@@ -26,5 +27,12 @@ export interface LeftoverMutationData {
   auto_hide_at: string | null;
 }
 
+export interface LeftoverKeepData {
+  id: string;
+  status: "leftover";
+  stale_reviewed_at: string;
+}
+
 export type LeftoverListResponse = ApiResponse<LeftoverListData>;
 export type LeftoverMutationResponse = ApiResponse<LeftoverMutationData>;
+export type LeftoverKeepResponse = ApiResponse<LeftoverKeepData>;

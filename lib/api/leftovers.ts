@@ -2,6 +2,7 @@ import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import type { ApiResponse } from "@/types/api";
 import type {
+  LeftoverKeepData,
   LeftoverDishStatus,
   LeftoverListData,
   LeftoverMutationData,
@@ -96,6 +97,37 @@ export async function eatLeftover(
   }
 
   notifyGamificationSourceAction();
+
+  return payload.data;
+}
+
+export async function keepLeftoverStaleReview(
+  leftoverId: string,
+): Promise<LeftoverKeepData> {
+  const response = await fetch(
+    `/api/v1/leftovers/${leftoverId}/keep`,
+    withE2EAuthOverrideHeaders({ method: "POST" }),
+  );
+
+  let payload: ApiResponse<LeftoverKeepData> | null = null;
+
+  try {
+    payload = (await response.json()) as ApiResponse<LeftoverKeepData>;
+  } catch {
+    throw createLeftoverApiError({
+      status: response.status,
+      code: "INVALID_RESPONSE",
+      message: "서버 응답을 해석하지 못했어요.",
+    });
+  }
+
+  if (!response.ok || !payload.success || !payload.data) {
+    throw createLeftoverApiError({
+      status: response.status,
+      code: payload?.error?.code ?? "UNKNOWN_ERROR",
+      message: payload?.error?.message ?? "요청을 처리하지 못했어요.",
+    });
+  }
 
   return payload.data;
 }

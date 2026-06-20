@@ -26,6 +26,7 @@ import {
   eatLeftover,
   fetchLeftovers,
   isLeftoverApiError,
+  keepLeftoverStaleReview,
 } from "@/lib/api/leftovers";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
 import { fetchPlanner } from "@/lib/api/planner";
@@ -42,6 +43,8 @@ type ScreenState = "loading" | "ready" | "empty" | "error";
 type FeedbackTone = "error" | "status";
 
 const FEEDBACK_AUTO_DISMISS_MS = 4000;
+const LEFTOVER_STALE_REVIEW_DAYS = 30;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const LEFTOVERS_DESCRIPTION =
   "요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.";
 const LEFTOVER_LIST_PLANNER_ADD_LABEL = "플래너에 추가";
@@ -73,6 +76,37 @@ function formatLeftoverMeta(item: LeftoverListItemData) {
   return `${sourceLabel} · ${item.cooking_servings}인분`;
 }
 
+function getLeftoverAgeDays(cookedAt: string, now: Date) {
+  const cookedAtTime = new Date(cookedAt).getTime();
+
+  if (Number.isNaN(cookedAtTime)) {
+    return null;
+  }
+
+  const diff = now.getTime() - cookedAtTime;
+
+  if (diff < 0) {
+    return null;
+  }
+
+  return Math.floor(diff / MS_PER_DAY);
+}
+
+function hasStaleReview(item: LeftoverListItemData) {
+  if (!item.stale_reviewed_at) {
+    return false;
+  }
+
+  const reviewedAtTime = new Date(item.stale_reviewed_at).getTime();
+  const cookedAtTime = new Date(item.cooked_at).getTime();
+
+  if (Number.isNaN(reviewedAtTime) || Number.isNaN(cookedAtTime)) {
+    return false;
+  }
+
+  return reviewedAtTime >= cookedAtTime;
+}
+
 function LeftoverImageIcon({ className }: { className: string }) {
   return (
     <svg
@@ -97,14 +131,20 @@ function LeftoverCard({
   isEating,
   anyMutating,
   onEat,
+  onKeepStale,
   onPlannerAdd,
+  staleReviewAgeDays,
 }: {
   item: LeftoverListItemData;
   isEating: boolean;
   anyMutating: boolean;
   onEat: (id: string) => void;
+  onKeepStale: (item: LeftoverListItemData) => void;
   onPlannerAdd: (item: LeftoverListItemData) => void;
+  staleReviewAgeDays: number | null;
 }) {
+  const isStaleReviewDue = staleReviewAgeDays !== null;
+
   return (
     <WebCard
       className="web-leftover-card"
@@ -147,6 +187,26 @@ function LeftoverCard({
           {formatCookedAt(item.cooked_at)} · {formatLeftoverMeta(item)}
         </p>
 
+        {isStaleReviewDue ? (
+          <div className="web-leftover-stale-note" data-testid="leftover-stale-notice">
+            <div>
+              <strong>보관한 지 {staleReviewAgeDays}일이 지났어요</strong>
+              <span>
+                먹었다면 다 먹었어요로 옮기고, 아직 보관 중이면 안내를 숨겨 주세요.
+              </span>
+            </div>
+            <WebButton
+              data-testid="keep-leftover-button"
+              disabled={anyMutating}
+              onClick={() => onKeepStale(item)}
+              size="sm"
+              variant="ghost"
+            >
+              계속 보관
+            </WebButton>
+          </div>
+        ) : null}
+
         <div className="web-leftover-actions">
           <WebButton
             data-testid="planner-add-button"
@@ -177,6 +237,7 @@ export function LeftoversScreen({
 }: LeftoversScreenProps) {
   const isMobileViewport = useIsMobileViewport();
   const appReturn = useAppReturn({ fallback: "/planner" });
+  const [staleReviewNow] = useState(() => new Date());
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
@@ -184,6 +245,7 @@ export function LeftoversScreen({
   const [items, setItems] = useState<LeftoverListItemData[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [eatingId, setEatingId] = useState<string | null>(null);
+  const [keepingId, setKeepingId] = useState<string | null>(null);
 
   // Feedback toast
   const [feedback, setFeedback] = useState<{
@@ -318,6 +380,66 @@ export function LeftoversScreen({
     if (authState !== "authenticated") return;
     void loadLeftovers();
   }, [authState, loadLeftovers]);
+
+  const staleReviewAgeById = useMemo(() => {
+    const result = new Map<string, number>();
+
+    for (const item of items) {
+      const ageDays = getLeftoverAgeDays(item.cooked_at, staleReviewNow);
+
+      if (
+        ageDays !== null &&
+        ageDays >= LEFTOVER_STALE_REVIEW_DAYS &&
+        !hasStaleReview(item)
+      ) {
+        result.set(item.id, ageDays);
+      }
+    }
+
+    return result;
+  }, [items, staleReviewNow]);
+
+  const staleReviewCount = staleReviewAgeById.size;
+
+  const handleKeepStaleReview = useCallback(
+    async (item: LeftoverListItemData) => {
+      if (eatingId || keepingId) return;
+
+      setKeepingId(item.id);
+      setFeedback(null);
+
+      try {
+        const kept = await keepLeftoverStaleReview(item.id);
+        setItems((current) =>
+          current.map((currentItem) =>
+            currentItem.id === item.id
+              ? {
+                  ...currentItem,
+                  stale_reviewed_at: kept.stale_reviewed_at,
+                }
+              : currentItem,
+          ),
+        );
+        setFeedback({ message: "계속 보관으로 표시했어요", tone: "status" });
+      } catch (error) {
+        if (isLeftoverApiError(error) && error.status === 401) {
+          setAuthState("unauthorized");
+          return;
+        }
+
+        setFeedback({
+          message:
+            error instanceof Error
+              ? error.message
+              : "계속 보관으로 표시하지 못했어요.",
+          tone: "error",
+        });
+      } finally {
+        setKeepingId(null);
+      }
+    },
+    [eatingId, keepingId],
+  );
 
   // Eat action
   const handleEat = useCallback(
@@ -546,11 +668,15 @@ export function LeftoversScreen({
         errorMessage={errorMessage}
         feedback={feedback}
         items={items}
+        keepingId={keepingId}
         onEat={handleEat}
+        onKeepStale={handleKeepStaleReview}
         onPlannerAdd={openPlannerAddSheet}
         onRetry={loadLeftovers}
         plannerAddSheet={plannerAddSheet}
         screenState={screenState}
+        staleReviewAgeById={staleReviewAgeById}
+        staleReviewCount={staleReviewCount}
       />
     );
   }
@@ -620,6 +746,12 @@ export function LeftoversScreen({
         </div>
       ) : null}
 
+      {authState === "authenticated" &&
+      screenState === "ready" &&
+      staleReviewCount > 0 ? (
+        <StaleLeftoverBanner count={staleReviewCount} />
+      ) : null}
+
       {authState === "authenticated" && screenState === "loading" ? (
         <div
           className="web-leftover-grid"
@@ -673,11 +805,13 @@ export function LeftoversScreen({
           {items.map((item) => (
             <LeftoverCard
               key={item.id}
-              anyMutating={eatingId === item.id}
+              anyMutating={eatingId === item.id || keepingId === item.id}
               isEating={eatingId === item.id}
               item={item}
               onEat={handleEat}
+              onKeepStale={handleKeepStaleReview}
               onPlannerAdd={openPlannerAddSheet}
+              staleReviewAgeDays={staleReviewAgeById.get(item.id) ?? null}
             />
           ))}
         </div>
@@ -696,11 +830,15 @@ function LeftoversMobileView({
   errorMessage,
   feedback,
   items,
+  keepingId,
   onEat,
+  onKeepStale,
   onPlannerAdd,
   onRetry,
   plannerAddSheet,
   screenState,
+  staleReviewAgeById,
+  staleReviewCount,
 }: {
   appReturnHref: string;
   eatenListHref: string;
@@ -708,11 +846,15 @@ function LeftoversMobileView({
   errorMessage: string | null;
   feedback: { message: string; tone: FeedbackTone } | null;
   items: LeftoverListItemData[];
+  keepingId: string | null;
   onEat: (id: string) => void;
+  onKeepStale: (item: LeftoverListItemData) => void;
   onPlannerAdd: (item: LeftoverListItemData) => void;
   onRetry: () => void;
   plannerAddSheet: React.ReactNode;
   screenState: ScreenState;
+  staleReviewAgeById: Map<string, number>;
+  staleReviewCount: number;
 }) {
   return (
     <div
@@ -736,6 +878,12 @@ function LeftoversMobileView({
           {LEFTOVERS_DESCRIPTION}
         </p>
       </section>
+
+      {screenState === "ready" && staleReviewCount > 0 ? (
+        <div className="px-4 pt-3">
+          <StaleLeftoverBanner count={staleReviewCount} mobile />
+        </div>
+      ) : null}
 
       {screenState === "loading" ? (
         <div className="space-y-3 p-4" data-testid="leftovers-loading">
@@ -780,12 +928,14 @@ function LeftoversMobileView({
         <div className="space-y-[10px] p-4" data-testid="leftover-list">
           {items.map((item) => (
             <MobileLeftoverCard
-              anyMutating={eatingId === item.id}
+              anyMutating={eatingId === item.id || keepingId === item.id}
               isEating={eatingId === item.id}
               item={item}
               key={item.id}
               onEat={onEat}
+              onKeepStale={onKeepStale}
               onPlannerAdd={onPlannerAdd}
+              staleReviewAgeDays={staleReviewAgeById.get(item.id) ?? null}
             />
           ))}
         </div>
@@ -834,14 +984,20 @@ function MobileLeftoverCard({
   isEating,
   item,
   onEat,
+  onKeepStale,
   onPlannerAdd,
+  staleReviewAgeDays,
 }: {
   anyMutating: boolean;
   isEating: boolean;
   item: LeftoverListItemData;
   onEat: (id: string) => void;
+  onKeepStale: (item: LeftoverListItemData) => void;
   onPlannerAdd: (item: LeftoverListItemData) => void;
+  staleReviewAgeDays: number | null;
 }) {
+  const isStaleReviewDue = staleReviewAgeDays !== null;
+
   return (
     <article
       className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-3"
@@ -865,6 +1021,31 @@ function MobileLeftoverCard({
         </div>
       </div>
 
+      {isStaleReviewDue ? (
+        <div
+          className="mt-3 rounded-[var(--radius-control)] border border-[var(--brand-border)] bg-[var(--brand-soft)] px-3 py-2"
+          data-testid="leftover-stale-notice"
+        >
+          <p className="text-[12px] font-extrabold leading-[1.35] text-[var(--brand)]">
+            보관한 지 {staleReviewAgeDays}일이 지났어요
+          </p>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <p className="min-w-0 text-[11px] font-semibold leading-[1.35] text-[var(--text-2)]">
+              아직 보관 중이면 안내를 숨겨 주세요.
+            </p>
+            <button
+              className="h-8 shrink-0 rounded-[var(--radius-control)] bg-[var(--surface)] px-3 text-[11px] font-extrabold text-[var(--brand)]"
+              data-testid="keep-leftover-button"
+              disabled={anyMutating}
+              onClick={() => onKeepStale(item)}
+              type="button"
+            >
+              계속 보관
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="mt-3 flex justify-end gap-2">
         <button
           aria-label={LEFTOVER_LIST_PLANNER_ADD_LABEL}
@@ -887,6 +1068,41 @@ function MobileLeftoverCard({
         </button>
       </div>
     </article>
+  );
+}
+
+function StaleLeftoverBanner({
+  count,
+  mobile = false,
+}: {
+  count: number;
+  mobile?: boolean;
+}) {
+  if (mobile) {
+    return (
+      <section
+        className="rounded-[var(--radius-card)] border border-[var(--brand-border)] bg-[var(--brand-soft)] px-4 py-3"
+        data-testid="leftover-stale-banner"
+      >
+        <p className="text-[13px] font-extrabold leading-[1.35] text-[var(--brand)]">
+          오래 보관한 남은 요리가 있어요
+        </p>
+        <p className="mt-1 text-[12px] font-semibold leading-[1.45] text-[var(--text-2)]">
+          {count}개 항목을 확인해 주세요. 먹었다면 다먹음으로 정리하고, 아직 보관 중이면 계속 보관을 눌러 주세요.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="web-leftover-stale-banner" data-testid="leftover-stale-banner">
+      <div>
+        <strong>오래 보관한 남은 요리가 있어요</strong>
+        <span>
+          {count}개 항목을 확인해 주세요. 먹었다면 다 먹었어요로 옮기고, 아직 보관 중이면 계속 보관을 눌러 주세요.
+        </span>
+      </div>
+    </section>
   );
 }
 

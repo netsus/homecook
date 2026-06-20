@@ -17,6 +17,7 @@ import type {
 } from "@/types/recipe";
 import type { MealCreateData, MealListData, MealMutationData } from "@/types/meal";
 import type {
+  LeftoverKeepData,
   LeftoverDishStatus,
   LeftoverListData,
   LeftoverMutationData,
@@ -64,6 +65,7 @@ interface FixtureLeftoverDish {
   cooked_at: string;
   eaten_at: string | null;
   auto_hide_at: string | null;
+  stale_reviewed_at: string | null;
   cooking_servings: number;
   source_meal_label: string | null;
   source_planned_servings: number | null;
@@ -149,6 +151,7 @@ function buildInitialFixtureState(): QaFixtureState {
         cooked_at: "2026-04-28T10:00:00.000Z",
         eaten_at: null,
         auto_hide_at: null,
+        stale_reviewed_at: null,
         cooking_servings: 2,
         source_meal_label: "저녁",
         source_planned_servings: 2,
@@ -161,6 +164,7 @@ function buildInitialFixtureState(): QaFixtureState {
         cooked_at: "2026-04-27T10:00:00.000Z",
         eaten_at: null,
         auto_hide_at: null,
+        stale_reviewed_at: null,
         cooking_servings: 1,
         source_meal_label: "점심",
         source_planned_servings: 1,
@@ -173,6 +177,7 @@ function buildInitialFixtureState(): QaFixtureState {
         cooked_at: "2026-04-20T10:00:00.000Z",
         eaten_at: "2026-04-28T12:00:00.000Z",
         auto_hide_at: "2026-05-28T12:00:00.000Z",
+        stale_reviewed_at: null,
         cooking_servings: 2,
         source_meal_label: "저녁",
         source_planned_servings: 2,
@@ -185,6 +190,7 @@ function buildInitialFixtureState(): QaFixtureState {
         cooked_at: "2026-02-28T10:00:00.000Z",
         eaten_at: "2026-03-01T12:00:00.000Z",
         auto_hide_at: "2026-03-31T12:00:00.000Z",
+        stale_reviewed_at: null,
         cooking_servings: 1,
         source_meal_label: "점심",
         source_planned_servings: 1,
@@ -197,6 +203,7 @@ function buildInitialFixtureState(): QaFixtureState {
         cooked_at: "2026-04-28T09:00:00.000Z",
         eaten_at: null,
         auto_hide_at: null,
+        stale_reviewed_at: null,
         cooking_servings: 2,
         source_meal_label: "저녁",
         source_planned_servings: 2,
@@ -602,6 +609,7 @@ export function getQaFixtureLeftovers(status: LeftoverDishStatus) {
       status: leftover.status,
       cooked_at: leftover.cooked_at,
       eaten_at: leftover.eaten_at,
+      stale_reviewed_at: leftover.stale_reviewed_at,
       cooking_servings: leftover.cooking_servings,
       source_meal_label: leftover.source_meal_label,
       source_planned_servings: leftover.source_planned_servings,
@@ -650,6 +658,53 @@ export function eatQaFixtureLeftover(leftoverDishId: string) {
   return {
     ok: true as const,
     data: toLeftoverMutationData(updated),
+  };
+}
+
+export function keepQaFixtureLeftover(leftoverDishId: string) {
+  const state = getQaFixtureState();
+  const current = state.leftoverDishes.find((leftover) => leftover.id === leftoverDishId);
+
+  if (!current) {
+    return {
+      ok: false as const,
+      code: "RESOURCE_NOT_FOUND",
+      message: "남은 요리를 찾을 수 없어요.",
+      status: 404,
+    };
+  }
+
+  if (current.user_id !== QA_FIXTURE_MAIN_USER_ID) {
+    return {
+      ok: false as const,
+      code: "FORBIDDEN",
+      message: "내 남은 요리만 수정할 수 있어요.",
+      status: 403,
+    };
+  }
+
+  if (current.status !== "leftover") {
+    return {
+      ok: false as const,
+      code: "CONFLICT",
+      message: "이미 다먹음 처리된 남은 요리는 계속 보관할 수 없어요.",
+      status: 409,
+    };
+  }
+
+  const reviewedAt = new Date().toISOString();
+  const updated = updateQaFixtureLeftover(leftoverDishId, (leftover) => ({
+    ...leftover,
+    stale_reviewed_at: reviewedAt,
+  }))!;
+
+  return {
+    ok: true as const,
+    data: {
+      id: updated.id,
+      status: "leftover",
+      stale_reviewed_at: reviewedAt,
+    } satisfies LeftoverKeepData,
   };
 }
 

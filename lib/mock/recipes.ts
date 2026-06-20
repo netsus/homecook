@@ -4,6 +4,7 @@ export {
   createQaFixtureMeal,
   getQaFixtureMealsBySlot,
   getQaFixtureLeftovers,
+  keepQaFixtureLeftover,
   DB_SMOKE_RECIPE_ID,
   MOCK_DISCOVERY_FILTER_BEEF_ID,
   MOCK_DISCOVERY_FILTER_GREEN_ONION_ID,

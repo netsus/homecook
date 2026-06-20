@@ -26,6 +26,13 @@
 > | 4 | 태그 검색/테마용 인덱스와 projection writer RPC 책임을 추가한다 | 15 인덱스 |
 >
 
+> **2026-06-20 addendum — LEFTOVERS 오래 보관 확인 서버 동기화**
+>
+> | # | 변경 내용 | 조치 |
+> | --- | --- | --- |
+> | A | `계속 보관` 확인 시각을 서버 truth로 저장한다 | `leftover_dishes.stale_reviewed_at timestamptz nullable` 추가 |
+> | B | 남은요리 상태 enum은 유지한다 | `leftover` / `eaten`만 유지하고 `discarded` / `expired` 상태는 추가하지 않는다 |
+
 > **2026-06-16 addendum — planner column reorder**
 >
 > | # | 변경 내용 | 조치 |
@@ -1103,6 +1110,7 @@ OR
 | cooked_at | timestamptz | NOT NULL | 요리 완료 시각 |
 | eaten_at | timestamptz | nullable | 다먹음 시각 |
 | auto_hide_at | timestamptz | nullable | eaten_at + 30일 |
+| stale_reviewed_at | timestamptz | nullable | 사용자가 오래 보관 안내에서 `계속 보관`을 누른 마지막 시각 |
 | created_at | timestamptz | NOT NULL |  |
 
 ### CHECK

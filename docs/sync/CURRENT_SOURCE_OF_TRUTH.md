@@ -13,6 +13,19 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 
+## Leftovers Stale Review Addendum `2026-06-20`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 화면정의서 v1.5.18 | LEFTOVERS에서 `cooked_at` 기준 30일 이상 지난 남은 요리에 오래 보관 안내와 `계속 보관` 확인 액션을 표시 |
+| DB v1.3.16 | `leftover_dishes.stale_reviewed_at` nullable 컬럼 추가 |
+| API v1.2.20 | `GET /leftovers` 응답에 `stale_reviewed_at` 추가, `POST /leftovers/{leftover_id}/keep` 추가 |
+
+> 이 변경은 manual UI/UX review plan 27번에 대한 사용자 승인 기반 server-sync 후속 구현이다.
+> 시스템은 사용자 확인 없이 남은 요리를 자동 `eaten` 처리하지 않는다.
+> `leftover_dishes.status`는 기존 공식 계약인 `leftover` / `eaten`만 유지한다.
+> `계속 보관` 확인 상태는 `leftover_dishes.stale_reviewed_at` 서버 truth로 동기화한다.
+
 ## 404 Feedback Addendum `2026-06-20`
 
 | 문서 | 변경 내용 |
