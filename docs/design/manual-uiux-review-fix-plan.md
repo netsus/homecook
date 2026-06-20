@@ -940,7 +940,16 @@
 
 ### 19. 팬트리 묶음 추가가 한국 가정 기본 재료 묶음으로 충분히 작동하지 않는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-item-19`
+- Progress:
+  - 기본 팬트리 묶음을 `기본 양념`, `한식 장류`, `자주 쓰는 채소`, `국/찌개 기본`, `면/떡/곡류`, `냉장 단백질`, `냉동/간편 재료`, `베이킹/디저트 기본` 8종으로 확장했다.
+  - `supabase/seed.sql`, 로컬 demo fixture, 배포 DB migration을 같은 묶음/재료 구성으로 맞췄다.
+  - 묶음 카드에 대표 재료 preview를 추가하고, 웹/앱 묶음 상세에 `묶음 전체 선택`과 `전체 해제`를 추가했다.
+  - 이미 보유 중인 재료 disabled 상태와 중복 방지 규칙은 기존 API/POST 흐름을 유지했다.
+- Verification:
+  - `pnpm exec vitest run tests/local-demo-pantry-fixture.test.ts`
+  - `pnpm test:product tests/pantry-screen.test.tsx`
+  - `pnpm test:e2e tests/e2e/slice-13-pantry-core.spec.ts -g "opens the bundle picker and shows bundles"`
 - Severity: Medium
 - Area: UX / Frontend / Backend / DB
 - Source: user manual review, `components/pantry/pantry-bundle-picker.tsx`, `app/api/v1/pantry/bundles/route.ts`, `supabase/seed.sql`

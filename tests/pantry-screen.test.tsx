@@ -526,10 +526,76 @@ describe("PantryScreen", () => {
     expect(ownedBundleIngredient.getAttribute("data-owned")).toBe("true");
     expect(ownedBundleIngredient.className).toContain("opacity-60");
 
+    await user.click(screen.getByRole("button", { name: "전체 해제" }));
+    expect(
+      (screen.getByRole("button", { name: "재료 선택" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "묶음 전체 선택" }));
     await user.click(screen.getByRole("button", { name: "2개 팬트리에 추가" }));
 
     await waitFor(() => {
       expect(mockAddPantryItems).toHaveBeenCalledWith(["i10", "i11"]);
+    });
+  });
+
+  it("lets users clear and reselect all missing bundle ingredients", async () => {
+    installMatchMedia(true);
+    mockFetchPantryBundles.mockResolvedValue({
+      bundles: [
+        {
+          id: "b1",
+          name: "기본 양념",
+          display_order: 1,
+          ingredients: [
+            {
+              ingredient_id: "i10",
+              is_in_pantry: false,
+              standard_name: "간장",
+            },
+            {
+              ingredient_id: "i11",
+              is_in_pantry: false,
+              standard_name: "된장",
+            },
+            {
+              ingredient_id: "i12",
+              is_in_pantry: false,
+              standard_name: "고추장",
+            },
+            {
+              ingredient_id: "i2",
+              is_in_pantry: true,
+              standard_name: "마늘",
+            },
+          ],
+        },
+      ],
+    });
+    mockAddPantryItems.mockResolvedValue({ added: 3 });
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "묶음으로 추가" }));
+    await screen.findByRole("dialog", { name: "묶음으로 재료 추가" });
+    await user.click(screen.getByRole("button", { name: /기본 양념/ }));
+
+    await user.click(screen.getByRole("button", { name: "전체 해제" }));
+    expect(
+      (screen.getByRole("button", {
+        name: "추가할 재료를 선택해 주세요",
+      }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "묶음 전체 선택" }));
+    await user.click(screen.getByRole("button", { name: "3개 팬트리에 추가" }));
+
+    await waitFor(() => {
+      expect(mockAddPantryItems).toHaveBeenCalledWith(["i10", "i11", "i12"]);
     });
   });
 
