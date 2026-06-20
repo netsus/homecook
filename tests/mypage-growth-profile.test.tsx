@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { GrowthGradeMark } from "@/components/mypage/growth-grade-mark";
@@ -234,7 +240,35 @@ describe("MypageGrowthProfile", () => {
     expect(within(header).getByRole("button", { name: "등급 보기" })).toBeTruthy();
     expect(within(header).getByRole("button", { name: "업적 보기" })).toBeTruthy();
     expect(within(header).getByRole("button", { name: "알림 보기" })).toBeTruthy();
+    expect(within(header).getByRole("button", { name: "경험치 안내" })).toBeTruthy();
     expect(within(header).queryByRole("button", { name: "튜토리얼 보기" })).toBeNull();
+  });
+
+  it("opens the XP guide from the growth profile with current policy values", () => {
+    render(
+      <MypageGrowthProfile
+        gamification={MOCK_GAMIFICATION}
+        gamificationState="ready"
+        progress={MOCK_PROGRESS}
+        progressState="ready"
+        variant="mobile"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "경험치 안내" }));
+
+    const dialog = screen.getByRole("dialog", { name: "경험치 안내" });
+    expect(within(dialog).getByText("경험치는 이렇게 쌓여요")).toBeTruthy();
+
+    const recipeGuide = within(dialog).getByTestId("mypage-xp-guide-item-recipe_saved");
+    expect(recipeGuide.textContent).toContain("레시피 저장");
+    expect(recipeGuide.textContent).toContain("+15 XP");
+    expect(recipeGuide.textContent).toContain("+8 XP");
+
+    const plannerGuide = within(dialog).getByTestId("mypage-xp-guide-item-planner_registered");
+    expect(plannerGuide.textContent).toContain("+25 XP");
+    expect(plannerGuide.textContent).toContain("+5 XP");
+    expect(plannerGuide.textContent).toContain("하루 3회, 주 12회");
   });
 });
 

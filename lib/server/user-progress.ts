@@ -6,6 +6,9 @@ import type {
   UserProgressLevelData,
 } from "@/types/user-progress";
 import type { UserGamificationDbClient } from "@/lib/server/user-gamification";
+import { USER_PROGRESS_XP_POLICY } from "@/lib/user-progress-xp-policy";
+
+export { USER_PROGRESS_XP_POLICY } from "@/lib/user-progress-xp-policy";
 
 interface QueryError {
   code?: string;
@@ -120,15 +123,6 @@ export interface UserProgressAwardResult {
 }
 
 export const USER_PROGRESS_LEVEL_CURVE_VERSION = "v2" as const;
-
-export const USER_PROGRESS_XP_POLICY: Record<UserProgressEventType, { first: number; repeat: number }> = {
-  recipe_saved: { first: 15, repeat: 8 },
-  custom_book_created: { first: 25, repeat: 10 },
-  shopping_completed: { first: 40, repeat: 25 },
-  cooking_completed: { first: 60, repeat: 45 },
-  planner_registered: { first: 25, repeat: 5 },
-  leftover_eaten: { first: 15, repeat: 8 },
-};
 
 export const USER_PROGRESS_XP_AWARDS: Record<UserProgressEventType, number> = {
   cooking_completed: USER_PROGRESS_XP_POLICY.cooking_completed.first,
