@@ -1257,6 +1257,50 @@ print(json.dumps({"cases": cases, "errors": errors}, ensure_ascii=False))
     expect(report.errors.non_integer).toContain("integer");
   });
 
+  it("parses semantic loop tuning flags from the CLI", () => {
+    const result = runLoopPython(`
+cfg = loop.loop_config_from_cli_args([
+    "loop.py",
+    "--judge-sample-n", "5",
+    "--semantic-bottom-k", "3",
+    "--score-policy", "bottomK-mean",
+    "--judge-prompt-version", "semantic-judge-v3-experiment",
+])
+errors = {}
+for label, argv in {
+    "sample_missing": ["loop.py", "--judge-sample-n"],
+    "sample_zero": ["loop.py", "--judge-sample-n", "0"],
+    "bottom_non_integer": ["loop.py", "--semantic-bottom-k", "many"],
+}.items():
+    try:
+        loop.loop_config_from_cli_args(argv)
+    except ValueError as error:
+        errors[label] = str(error)
+print(json.dumps({
+    "cfg": {
+        "sampleN": cfg.semantic_judge_sample_n,
+        "bottomK": cfg.semantic_bottom_k,
+        "scorePolicy": cfg.semantic_score_policy,
+        "promptVersion": cfg.semantic_judge_prompt_version,
+    },
+    "errors": errors,
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.cfg).toEqual({
+      sampleN: 5,
+      bottomK: 3,
+      scorePolicy: "bottomK-mean",
+      promptVersion: "semantic-judge-v3-experiment",
+    });
+    expect(Object.keys(report.errors).sort()).toEqual(["bottom_non_integer", "sample_missing", "sample_zero"]);
+    expect(report.errors.sample_missing).toContain("--judge-sample-n");
+    expect(report.errors.sample_zero).toContain("--judge-sample-n");
+    expect(report.errors.bottom_non_integer).toContain("integer");
+  });
+
   it("uses max-iter as the resume upper bound and rejects empty resume ranges", () => {
     const result = runLoopPython(`
 calls = []
@@ -2594,6 +2638,108 @@ print(json.dumps({
     expect(report.text).toContain("(2/3) 양념류 누락과 분량 오차");
     expect(report.text).toContain("(1/3) 단계 순서 이탈");
     expect(report.prompt).toContain("AI judge reason 집계");
+  });
+
+  it("runs Claude semantic reason aggregation before recovered diagnosis", () => {
+    const result = runLoopPython(`
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
+run_dir = root / "runs"
+iter_dir = run_dir / "iteration-01"
+iter_dir.mkdir(parents=True, exist_ok=True)
+summary_payload = {
+    "aggregate": {"sampleN": 3},
+    "perVideo": [{
+        "videoId": "case-a",
+        "cases": [{
+            "title": "공개요리",
+            "sample_reasons": [
+                "양념류 범주 누락",
+                "양념류 범주 누락",
+                "단계 순서 이탈",
+            ],
+        }],
+    }],
+}
+for split in ["train", "validation"]:
+    summary_path = loop.DATA_ROOT / split / "_semantic_summary.iter01.json"
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(json.dumps(summary_payload, ensure_ascii=False), encoding="utf-8")
+
+calls = []
+
+def fake_run_agent(cmd, prompt, log_path, cwd=None):
+    text = "- (2/3) Claude 집계: 양념류 범주 누락\\n- (1/3) Claude 집계: 단계 순서 이탈"
+    if "06_diagnosis" in str(log_path):
+        text = "진단에서 Claude 집계 반영"
+    calls.append({"prompt": prompt, "log_path": str(log_path)})
+    loop.write_text(log_path, text)
+    return text
+
+loop.run_agent = fake_run_agent
+loop.recompute_iteration_decision = lambda cfg, iter_dir_arg, out_tag: {"checks": {"semantic_validation": False}}
+loop.grade_summaries = lambda cfg, out_tag: {
+    "det": {"aggregate": {}},
+    "ai": {"aggregate": {"bottom_k": 2}},
+    "val": {"aggregate": {}},
+    "val_det": {"aggregate": {}},
+    "val_ai": {"aggregate": {}},
+}
+loop.weak_train_cases_text = lambda cfg, out_tag: "- train-a: weak"
+loop.write_current_module_state = lambda *args, **kwargs: None
+
+feedback = loop.recover_iteration_feedback(loop.LoopConfig(), run_dir, 1)
+print(json.dumps({"calls": calls, "feedback": feedback}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    const aggregateCalls = report.calls.filter((call: { log_path: string }) =>
+      call.log_path.includes("06_reason_aggregate_"),
+    );
+    expect(aggregateCalls).toHaveLength(2);
+    expect(aggregateCalls[0].prompt).toContain("점수를 매기지 마라");
+    expect(aggregateCalls[0].prompt).toContain("validation/holdout");
+    expect(aggregateCalls[0].prompt).toContain("구체 재료");
+    const diagnosisCall = report.calls.find((call: { log_path: string }) => call.log_path.includes("06_diagnosis"));
+    expect(diagnosisCall.prompt).toContain("Claude 집계");
+    expect(report.feedback).toContain("진단에서 Claude 집계 반영");
+  });
+
+  it("rejects ungrounded Claude semantic reason aggregation output", () => {
+    const result = runLoopPython(`
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
+iter_dir = root / "runs" / "iteration-01"
+summary_path = loop.DATA_ROOT / "train" / "_semantic_summary.iter01.json"
+summary_path.parent.mkdir(parents=True, exist_ok=True)
+summary_path.write_text(json.dumps({
+    "aggregate": {"sampleN": 3},
+    "perVideo": [{
+        "videoId": "train-a",
+        "cases": [{"sample_reasons": ["양념류 누락", "양념류 누락", "단계 순서 이탈"]}],
+    }],
+}, ensure_ascii=False), encoding="utf-8")
+
+def fake_run_agent(cmd, prompt, log_path, cwd=None):
+    text = "- (1/3) 조리도구 문제"
+    loop.write_text(log_path, text)
+    return text
+
+loop.run_agent = fake_run_agent
+try:
+    loop.aggregate_semantic_reasons_with_claude(loop.LoopConfig(), iter_dir, "iter01", "train")
+    error = None
+except RuntimeError as exc:
+    error = str(exc)
+print(json.dumps({"error": error}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.error).toContain("ungrounded");
   });
 
   it("uses non-interactive sudo for fs_usage when the loop is not already root", () => {
