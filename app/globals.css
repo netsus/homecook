@@ -1920,11 +1920,26 @@ button {
   --web-r-md: var(--radius-card);
   --web-r-pill: var(--radius-full);
   height: 100dvh;
-  overflow-y: auto;
+  overflow: hidden;
   overscroll-behavior-y: contain;
   background: var(--surface-fill);
   color: var(--foreground);
+}
+
+.yt-mobile-import-scroll {
   -webkit-overflow-scrolling: touch;
+}
+
+.yt-mobile-import-context {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: var(--radius-chip);
+  background: var(--brand-soft);
+  color: var(--brand);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .yt-mobile-import-shell .web-yt-head {

@@ -3461,31 +3461,24 @@ export function YoutubeImportScreen({
 
   if (presentation === "screen") {
     return (
-      <div className="yt-mobile-import-shell h-dvh overflow-y-auto overscroll-y-contain px-4 py-5">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-          <div className="web-yt-head flex-wrap">
-            <div>
-              <p className="web-menu-add-eyebrow">유튜브 가져오기</p>
-              <h1>영상 링크에서 레시피를 추출해요</h1>
-              <p className="web-menu-add-target">{targetLabel}</p>
+      <div className="yt-mobile-import-shell flex h-dvh flex-col overflow-hidden">
+        <AppBar
+          canRegister={canRegister}
+          isRegistering={isRegistering}
+          onBack={handleBack}
+          onRegister={handleRegister}
+          step={currentStep}
+        />
+        <div className="yt-mobile-import-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-5">
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+            <div
+              aria-label={`식사 추가 대상 ${targetLabel}`}
+              className="yt-mobile-import-context"
+            >
+              {targetLabel}
             </div>
-            <div className="web-manual-actions">
-              {currentStep !== "complete" ? (
-                <WebButton onClick={handleBack} variant="secondary">
-                  뒤로
-                </WebButton>
-              ) : null}
-              {currentStep === "review" ? (
-                <WebButton
-                  disabled={!canRegister || isRegistering}
-                  onClick={handleRegister}
-                >
-                  {isRegistering ? "등록 중..." : "등록"}
-                </WebButton>
-              ) : null}
-            </div>
+            {desktopImportCard}
           </div>
-          {desktopImportCard}
         </div>
         {desktopModals}
       </div>

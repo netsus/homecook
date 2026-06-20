@@ -70,4 +70,15 @@ describe("AppBackButton", () => {
       expect(source, filePath).not.toMatch(/aria-label="뒤로(?:가기)?"/);
     }
   });
+
+  it("uses the shared app bar for the full-screen YouTube import back action", () => {
+    const source = readFileSync("components/recipe/youtube-import-screen.tsx", "utf8");
+    const screenBranch = source.slice(source.indexOf('if (presentation === "screen")'));
+
+    expect(screenBranch).toContain("<AppBar");
+    expect(screenBranch).toContain("onBack={handleBack}");
+    expect(screenBranch).not.toMatch(
+      /<WebButton onClick=\{handleBack\} variant="secondary">\s*뒤로\s*<\/WebButton>/u,
+    );
+  });
 });
