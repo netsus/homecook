@@ -151,6 +151,54 @@ test.describe("Slice 01 basic flow", () => {
     expect(likeChipPrecedesFirstIngredient).toBe(true);
   });
 
+  test("Not found page accepts inline feedback without blocking recovery links @smoke-core", async ({
+    page,
+  }) => {
+    const feedbackPayload: { current: Record<string, unknown> | null } = { current: null };
+    await page.route("**/api/v1/feedback/404", async (route) => {
+      feedbackPayload.current = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        body: JSON.stringify({
+          success: true,
+          data: { received: true },
+          error: null,
+        }),
+        contentType: "application/json",
+        status: 200,
+      });
+    });
+
+    await page.goto("/missing-feedback-source");
+
+    await expect(
+      page.getByRole("heading", { name: "페이지를 찾을 수 없어요" }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "홈으로" })).toHaveAttribute("href", "/");
+    await expect(page.getByRole("link", { name: "플래너로" })).toHaveAttribute("href", "/planner");
+
+    if (isMobileViewport(page)) {
+      await expect(page.getByRole("navigation", { name: "데스크탑 주요 메뉴" })).toBeHidden();
+      await expect(page.getByRole("navigation", { name: "하단 탭" })).toBeVisible();
+
+      const headingBox = await page
+        .getByRole("heading", { name: "페이지를 찾을 수 없어요" })
+        .boundingBox();
+      expect(headingBox?.x ?? 0).toBeGreaterThanOrEqual(20);
+    }
+
+    await page.getByLabel("404 피드백").fill("플래너에서 오래된 링크를 눌렀어요.");
+    await page.getByRole("button", { name: "피드백 보내기" }).click();
+
+    await expect(
+      page.getByText("보내주셔서 고마워요. 확인 후 개선할게요."),
+    ).toBeVisible();
+    expect(feedbackPayload.current).toMatchObject({
+      message: "플래너에서 오래된 링크를 눌렀어요.",
+    });
+    expect(String(feedbackPayload.current?.current_url)).toContain("/missing-feedback-source");
+    expect(String(feedbackPayload.current?.anonymous_id)).toMatch(/^anon_/u);
+  });
+
   test("small iOS viewport keeps detail actions above the fold with touch-friendly targets", async ({
     page,
   }, testInfo) => {

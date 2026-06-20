@@ -13,6 +13,17 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 
+## 404 Feedback Addendum `2026-06-20`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 화면정의서 v1.5.18 | 전역 Not Found 상태에 복구 CTA와 인라인 피드백 입력/상태 표시 기준 추가 |
+| API v1.2.20 | `POST /api/v1/feedback/404` 추가. 기존 `operational_events`에 `not_found_feedback` 이벤트로 저장하며 신규 DB table 없음 |
+
+> 이 변경은 manual UI/UX review plan 3번에 대한 사용자 승인 기반 addendum이다.
+> 404 피드백은 개인정보 입력을 유도하지 않고, 서버에서 이메일/URL/전화번호 패턴을 제거한 텍스트만 운영 이벤트로 저장한다.
+> `operational_events` 기존 테이블을 재사용하므로 DB 설계 문서 버전 변경은 없다.
+
 ## Shopping Already-Have Pantry Reflection Addendum `2026-06-20`
 
 | 문서 | 변경 내용 |
