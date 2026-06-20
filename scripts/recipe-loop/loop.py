@@ -124,6 +124,10 @@ class LoopConfig:
     semantic_judge_timeout_ms: int = 200000
     semantic_judge_output_schema: str = str(PROJECT_ROOT / "scripts" / "recipe-loop" / "semantic-judge.schema.json")
     semantic_calibration_path: str = str(DATA_ROOT / "semantic_calibration.json")
+    semantic_judge_sample_n: int = 3
+    semantic_bottom_k: int = 2
+    semantic_score_policy: str = "bottomK-mean"
+    semantic_judge_prompt_version: str = "semantic-judge-v3-anchored"
     # 계획/진단 담당 Claude 모델 (CLI --model 별칭). 추론 비중이 커서 opus 기본.
     claude_model: str = "opus"
     # 구현 담당 Codex 모델·추론강도 (CLI -c 오버라이드로 명시 고정 → 재현성)
@@ -174,6 +178,10 @@ def semantic_grader_args(cfg: LoopConfig, split: str, out_tag: str, expected: st
         "--judge-timeout-ms", str(cfg.semantic_judge_timeout_ms),
         "--judge-output-schema", cfg.semantic_judge_output_schema,
         "--calibration", cfg.semantic_calibration_path,
+        "--judge-sample-n", str(cfg.semantic_judge_sample_n),
+        "--semantic-bottom-k", str(cfg.semantic_bottom_k),
+        "--score-policy", cfg.semantic_score_policy,
+        "--judge-prompt-version", cfg.semantic_judge_prompt_version,
         "--expected-count", expected,
     )
 
@@ -1424,7 +1432,8 @@ def semantic_thresholds(cfg: LoopConfig) -> dict:
     calibration = read_json(Path(cfg.semantic_calibration_path), {})
     thresholds = calibration.get("thresholds", {}) if isinstance(calibration, dict) else {}
     return {
-        "minCaseScore": float(thresholds.get("minCaseScore", cfg.ai_case_min)),
+        "bottomKMeanScore": float(thresholds.get("bottomKMeanScore", thresholds.get("minCaseScore", cfg.ai_case_min))),
+        "minCaseScore": float(thresholds.get("minCaseScore", thresholds.get("bottomKMeanScore", cfg.ai_case_min))),
         "averageScore": float(thresholds.get("averageScore", cfg.ai_avg_min)),
     }
 
@@ -1654,7 +1663,8 @@ def build_implement_prompt(plan_text: str, feedback: str) -> str:
     )
 
 
-def build_diagnosis_prompt(det_summary: str, ai_summary: str, val_summary: str, train_cases: str) -> str:
+def build_diagnosis_prompt(det_summary: str, ai_summary: str, val_summary: str,
+                           train_cases: str, semantic_reason_issues: str = "") -> str:
     return (
         "너는 실패 원인 분석 담당 Claude다. 아래 정보만 보고 다음 수정 방향을 제시하라.\n"
         "validation 케이스의 입력·정답·출력은 제공되지 않으며(집계만), 추측하지 마라.\n\n"
@@ -1662,6 +1672,7 @@ def build_diagnosis_prompt(det_summary: str, ai_summary: str, val_summary: str, 
         f"train 결정적 채점:\n{det_summary}\n\n"
         f"train AI 의미 채점:\n{ai_summary}\n\n"
         f"validation 집계(참고):\n{val_summary}\n\n"
+        f"AI judge reason 집계:\n{semantic_reason_issues or '없음'}\n\n"
         f"train 케이스별 약점:\n{train_cases}\n\n"
         "출력은 마크다운: 1) 실패 원인 가설 2) 다음 반복 수정 방향 3) 구현자에게 줄 짧은 피드백.\n"
     )
@@ -1749,30 +1760,42 @@ def split_expected_count(split: str) -> int:
 
 
 def deterministic_validation_success(cfg: LoopConfig, aggregate: dict) -> tuple[bool, dict]:
-    checks = {
+    hard_checks = {
         "summary_success": aggregate.get("success") is True,
         "ingredientF1": (aggregate.get("ingredientF1") or 0) >= cfg.det_f1_min,
-        "amountMatchRate": (aggregate.get("amountMatchRate") or 0) >= cfg.det_amount_min,
-        "stepCoverage": (aggregate.get("stepCoverage") or 0) >= cfg.det_step_min,
         "recipeCountMatchRate": (aggregate.get("recipeCountMatchRate") or 0) >= cfg.det_recipe_count_min,
         "missing_result_count": (aggregate.get("missing_result_count") or 0) == 0,
         "missing_golden_count": (aggregate.get("missing_golden_count") or 0) == 0,
         "unapproved_golden_count": (aggregate.get("unapproved_golden_count") or 0) == 0,
         "expected_count_mismatch": aggregate.get("expected_count_mismatch") is False,
     }
-    return all(checks.values()), checks
+    advisory_checks = {
+        "amountMatchRate": (aggregate.get("amountMatchRate") or 0) >= cfg.det_amount_min,
+        "stepCoverage": (aggregate.get("stepCoverage") or 0) >= cfg.det_step_min,
+    }
+    return all(hard_checks.values()), {**hard_checks, "advisory": advisory_checks}
 
 
 def semantic_validation_success(cfg: LoopConfig, aggregate: dict) -> tuple[bool, dict]:
     thresholds = aggregate.get("thresholds") if isinstance(aggregate.get("thresholds"), dict) else semantic_thresholds(cfg)
     average_score = aggregate.get("averageScore") or 0
     min_case_score = aggregate.get("minCaseScore") or 0
+    bottom_k_mean_score = aggregate.get("bottomKMeanScore") or 0
+    score_policy = aggregate.get("score_policy") or aggregate.get("scorePolicy") or (
+        "bottomK-mean" if "bottomKMeanScore" in thresholds else "minCase"
+    )
     threshold_success = aggregate.get("threshold_success")
     if threshold_success is None:
-        threshold_success = (
-            average_score >= (thresholds.get("averageScore") or cfg.ai_avg_min)
-            and min_case_score >= (thresholds.get("minCaseScore") or cfg.ai_case_min)
-        )
+        if score_policy == "bottomK-mean":
+            threshold_success = (
+                average_score >= (thresholds.get("averageScore") or cfg.ai_avg_min)
+                and bottom_k_mean_score >= (thresholds.get("bottomKMeanScore") or cfg.ai_case_min)
+            )
+        else:
+            threshold_success = (
+                average_score >= (thresholds.get("averageScore") or cfg.ai_avg_min)
+                and min_case_score >= (thresholds.get("minCaseScore") or cfg.ai_case_min)
+            )
     checks = {
         "summary_success": aggregate.get("success") is True,
         "judge_provider": aggregate.get("judge_provider") == cfg.semantic_judge_provider,
@@ -1795,8 +1818,12 @@ def semantic_validation_success(cfg: LoopConfig, aggregate: dict) -> tuple[bool,
         "expected_count_mismatch": aggregate.get("expected_count_mismatch") is False,
         "threshold_success": threshold_success is True,
         "averageScore": average_score >= (thresholds.get("averageScore") or cfg.ai_avg_min),
-        "minCaseScore": min_case_score >= (thresholds.get("minCaseScore") or cfg.ai_case_min),
     }
+    if score_policy == "bottomK-mean":
+        checks["score_policy"] = score_policy == cfg.semantic_score_policy
+        checks["bottomKMeanScore"] = bottom_k_mean_score >= (thresholds.get("bottomKMeanScore") or cfg.ai_case_min)
+    else:
+        checks["minCaseScore"] = min_case_score >= (thresholds.get("minCaseScore") or cfg.ai_case_min)
     return all(checks.values()), checks
 
 
@@ -1868,6 +1895,34 @@ def weak_train_cases_text(cfg: LoopConfig, out_tag: str, limit: int = 4) -> str:
     return "\n".join(lines)
 
 
+def semantic_reason_issues_text(cfg: LoopConfig, out_tag: str, split: str, limit: int = 8) -> str:
+    summary = read_json(DATA_ROOT / split / f"_semantic_summary.{out_tag}.json")
+    rows = summary.get("perVideo", []) if isinstance(summary, dict) else []
+    lines: list[str] = []
+    for row in rows:
+        if len(lines) >= limit:
+            break
+        video_id = row.get("videoId", "unknown")
+        cases = row.get("cases") if isinstance(row.get("cases"), list) else []
+        for index, case in enumerate(cases, start=1):
+            if len(lines) >= limit:
+                break
+            if not isinstance(case, dict):
+                continue
+            issues = case.get("reason_summary") if isinstance(case.get("reason_summary"), list) else []
+            parts = []
+            for issue in issues:
+                if not isinstance(issue, dict):
+                    continue
+                label = str(issue.get("label") or "").strip()
+                text = str(issue.get("text") or "").strip()
+                if label and text:
+                    parts.append(f"({label}) {text}")
+            if parts:
+                lines.append(f"- {split}/{video_id} case{index}: " + "; ".join(parts))
+    return "\n".join(lines)
+
+
 def fmt_deduction_reasons(agg: dict) -> str:
     reasons = agg.get("deductionReasons") or {}
     parts: list[str] = []
@@ -1895,7 +1950,11 @@ def fmt_det(agg: dict) -> str:
 
 
 def fmt_ai(agg: dict) -> str:
-    return f"평균 {agg.get('averageScore')}, 최저 case {agg.get('minCaseScore')}"
+    bottom_k = agg.get("bottom_k") or agg.get("k") or "k"
+    return (
+        f"평균 {agg.get('averageScore')}, 하위{bottom_k}평균 {agg.get('bottomKMeanScore')}, "
+        f"최저 case {agg.get('minCaseScore')}"
+    )
 
 
 # ---- 한 ITER ------------------------------------------------------------
@@ -2075,11 +2134,16 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
         return {"iteration": iteration, "passed": True, "decision": decision, "out_tag": out_tag}
 
     stage(f"[ITER {iteration}] 6. 진단 (Claude, train 상세 + validation 집계만)")
+    semantic_reason_issues = "\n".join(filter(None, [
+        semantic_reason_issues_text(cfg, out_tag, cfg.train_split),
+        semantic_reason_issues_text(cfg, out_tag, cfg.val_split),
+    ]))
     diag_prompt = build_diagnosis_prompt(
         fmt_det(summaries["det"].get("aggregate", {})),
         fmt_ai(summaries["ai"].get("aggregate", {})),
         fmt_det(summaries["val"].get("aggregate", {})),
         weak_train_cases_text(cfg, out_tag),
+        semantic_reason_issues,
     )
     diag_prompt_scan = scan_texts_for_protected_answers([{"scope": "06_diagnosis_prompt", "text": diag_prompt}])
     if not diag_prompt_scan["success"]:
@@ -2175,11 +2239,16 @@ def recover_iteration_feedback(cfg: LoopConfig, run_dir: Path, iteration: int) -
     write_text(iter_dir / "05_decision.recovered.json", json.dumps(decision, ensure_ascii=False, indent=2))
 
     summaries = grade_summaries(cfg, out_tag)
+    semantic_reason_issues = "\n".join(filter(None, [
+        semantic_reason_issues_text(cfg, out_tag, cfg.train_split),
+        semantic_reason_issues_text(cfg, out_tag, cfg.val_split),
+    ]))
     diag_prompt = build_diagnosis_prompt(
         fmt_det(summaries["det"].get("aggregate", {})),
         fmt_ai(summaries["ai"].get("aggregate", {})),
         fmt_det(summaries["val"].get("aggregate", {})),
         weak_train_cases_text(cfg, out_tag),
+        semantic_reason_issues,
     )
     diag_prompt_scan = scan_texts_for_protected_answers([{"scope": "06_diagnosis_prompt", "text": diag_prompt}])
     if not diag_prompt_scan["success"]:

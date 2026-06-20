@@ -10,6 +10,9 @@ const repoRoot = path.resolve(__dirname, "..");
 const gradeExtractionScript = path.join(repoRoot, "scripts/recipe-loop/grade-extraction.mjs");
 const gradeSemanticScript = path.join(repoRoot, "scripts/recipe-loop/grade-semantic.mjs");
 const gradingModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/recipe-loop/lib/grading.mjs")).href;
+const semanticFeedbackModuleUrl = pathToFileURL(
+  path.join(repoRoot, "scripts/recipe-loop/lib/semantic-feedback-aggregator.mjs"),
+).href;
 const loopScript = path.join(repoRoot, "scripts/recipe-loop/loop.py");
 const validationCanaryVideoId = "YZ8KSZboJeM";
 const validationCanaryId = "canary_validation_YZ8KSZboJeM_01";
@@ -30,19 +33,21 @@ function splitCaseFor(root: string, split: string, id: string) {
 
 function codexCalibration(overrides: Record<string, unknown> = {}) {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     calibratedAt: "2026-06-14",
     policy: "Codex-only semantic judge calibration for local integrity tests.",
     judgeProvider: "codex",
     judgeModel: "gpt-5.4",
     judgeEffort: "high",
     judgeSchemaVersion: 1,
-    thresholds: { minCaseScore: 3, averageScore: 3 },
+    judgePromptVersion: "semantic-judge-v3-anchored",
+    scorePolicy: "bottomK-mean",
+    k: 2,
+    sampleN: 3,
+    thresholds: { bottomKMeanScore: 3, averageScore: 3 },
     borderline: {
-      enabled: true,
-      minCaseScore: 3,
-      maxCaseScore: 4,
-      retryEffort: "xhigh",
+      enabled: false,
+      finalScorePolicy: "median_of_N",
     },
     alignmentStats: {
       sampleCount: 6,
@@ -926,8 +931,9 @@ describe("recipe-loop local integrity gates", () => {
       judge_provider: "codex",
       judge_model: "gpt-5.4",
       judge_effort: "high",
+      sampleN: 3,
       cache_hit_count: 0,
-      cache_miss_count: 1,
+      cache_miss_count: 3,
       calibration: { loaded: true, valid: true },
     });
 
@@ -965,7 +971,7 @@ describe("recipe-loop local integrity gates", () => {
       ),
     );
     expect(secondSummary.aggregate).toMatchObject({
-      cache_hit_count: 1,
+      cache_hit_count: 3,
       cache_miss_count: 0,
     });
   });
@@ -1023,25 +1029,13 @@ describe("recipe-loop local integrity gates", () => {
     });
   });
 
-  it("rechecks borderline semantic cases once and keeps the lower score", () => {
+  it("fails codex semantic grading before provider calls when calibration sample policy is stale", () => {
     writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), approvedGolden());
-    writeJson(path.join(splitCase(workdir, "case-a"), "runs/latest/result.json"), {
-      ...matchingResult(),
-      __semanticJudge: {
-        cases: [{ title: "테스트 레시피", ingredient_score: 3.5, step_score: 3.5, reason: "borderline" }],
-        average_score: 3.5,
-      },
-      __semanticJudgeRetry: {
-        cases: [{ title: "테스트 레시피", ingredient_score: 2.5, step_score: 2.5, reason: "lower retry" }],
-        average_score: 2.5,
-      },
-    });
-    writeJson(path.join(workdir, "notebooks/recipe_loop_data/semantic_calibration.json"), {
-      schemaVersion: 2,
-      thresholds: { minCaseScore: 2, averageScore: 2 },
-      borderline: { enabled: true, minCaseScore: 3, maxCaseScore: 4, retryEffort: "xhigh" },
-      samples: [],
-    });
+    writeJson(path.join(splitCase(workdir, "case-a"), "runs/latest/result.json"), matchingResult());
+    writeJson(
+      path.join(workdir, "notebooks/recipe_loop_data/semantic_calibration.json"),
+      codexCalibration({ sampleN: 1 }),
+    );
 
     const result = spawnSync(
       "node",
@@ -1054,16 +1048,24 @@ describe("recipe-loop local integrity gates", () => {
         "--expected-count",
         "1",
         "--judge-provider",
-        "fixture",
+        "codex",
         "--judge-model",
-        "fixture-local",
+        "gpt-5.4",
+        "--judge-effort",
+        "high",
+        "--judge-sample-n",
+        "3",
         "--calibration",
         "notebooks/recipe_loop_data/semantic_calibration.json",
       ],
-      { cwd: workdir, encoding: "utf8" },
+      {
+        cwd: workdir,
+        encoding: "utf8",
+        env: { ...process.env, CODEX_JUDGE_FAIL_IF_CALLED: "1" },
+      },
     );
 
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(1);
     const summary = JSON.parse(
       readFileSync(
         path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
@@ -1071,14 +1073,106 @@ describe("recipe-loop local integrity gates", () => {
       ),
     );
     expect(summary.aggregate).toMatchObject({
-      borderline_retry_count: 1,
-      minCaseScore: 2.5,
-      averageScore: 2.5,
+      success: false,
+      provider_error_count: 0,
+      calibration_error_count: 1,
+      calibration: {
+        loaded: true,
+        valid: false,
+        failure_reason: "sample_n_mismatch",
+      },
     });
-    expect(summary.perVideo[0].cases[0]).toMatchObject({
-      case_score: 2.5,
-      retried: true,
-      retry_case_score: 2.5,
+  });
+
+  it("uses independent cached samples for codex median-of-N semantic grading", () => {
+    writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), approvedGolden());
+    writeJson(path.join(splitCase(workdir, "case-a"), "runs/latest/result.json"), matchingResult());
+    writeJson(
+      path.join(workdir, "notebooks/recipe_loop_data/semantic_calibration.json"),
+      codexCalibration({ thresholds: { bottomKMeanScore: 3, averageScore: 3 } }),
+    );
+
+    const args = [
+      gradeSemanticScript,
+      "--split",
+      "validation",
+      "--out-tag",
+      "latest",
+      "--expected-count",
+      "1",
+      "--judge-provider",
+      "codex",
+      "--judge-model",
+      "gpt-5.4",
+      "--judge-effort",
+      "high",
+      "--judge-sample-n",
+      "3",
+      "--calibration",
+      "notebooks/recipe_loop_data/semantic_calibration.json",
+    ];
+    const first = spawnSync(
+      "node",
+      args,
+      {
+        cwd: workdir,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          CODEX_JUDGE_MOCK_RESPONSES: JSON.stringify([
+            {
+              cases: [{ title: "테스트 레시피", ingredient_score: 2, step_score: 2, reason: "sample low" }],
+            },
+            {
+              cases: [{ title: "테스트 레시피", ingredient_score: 4, step_score: 4, reason: "sample high" }],
+            },
+            {
+              cases: [{ title: "테스트 레시피", ingredient_score: 3.5, step_score: 3.5, reason: "sample middle" }],
+            },
+          ]),
+        },
+      },
+    );
+
+    expect(first.status).toBe(0);
+    const firstSummary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    expect(firstSummary.aggregate).toMatchObject({
+      score_policy: "bottomK-mean",
+      sampleN: 3,
+      bottomKMeanScore: 3.5,
+      minCaseScore: 3.5,
+      averageScore: 3.5,
+      cache_hit_count: 0,
+      cache_miss_count: 3,
+    });
+    expect(firstSummary.perVideo[0].cases[0]).toMatchObject({
+      case_score: 3.5,
+      sample_case_scores: [2, 4, 3.5],
+      sample_reasons: ["sample low", "sample high", "sample middle"],
+      judge_sample_count: 3,
+    });
+
+    const second = spawnSync("node", args, {
+      cwd: workdir,
+      encoding: "utf8",
+      env: { ...process.env, CODEX_JUDGE_FAIL_IF_CALLED: "1" },
+    });
+
+    expect(second.status).toBe(0);
+    const secondSummary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    expect(secondSummary.aggregate).toMatchObject({
+      cache_hit_count: 3,
+      cache_miss_count: 0,
     });
   });
 
@@ -1218,6 +1312,115 @@ print(json.dumps({"ok": ok, "checks": checks}))
     const report = JSON.parse(result.stdout);
     expect(report.ok).toBe(false);
     expect(report.checks.threshold_success).toBe(false);
+  });
+
+  it("uses bottom-k mean instead of the single lowest case for semantic validation", () => {
+    const result = runLoopPython(`
+cfg = loop.LoopConfig()
+aggregate = {
+    "success": True,
+    "judge_provider": "codex",
+    "judge_model": "gpt-5.4",
+    "judge_effort": "high",
+    "calibration": {"valid": True},
+    "provider_error_count": 0,
+    "parse_error_count": 0,
+    "schema_error_count": 0,
+    "timeout_error_count": 0,
+    "calibration_error_count": 0,
+    "empty_case_count": 0,
+    "expected_count_mismatch": False,
+    "threshold_success": True,
+    "score_policy": "bottomK-mean",
+    "bottom_k": 2,
+    "sampleN": 3,
+    "thresholds": {"averageScore": 4, "bottomKMeanScore": 3.5},
+    "averageScore": 4.1,
+    "minCaseScore": 2,
+    "bottomKMeanScore": 3.6,
+}
+ok, checks = loop.semantic_validation_success(cfg, aggregate)
+print(json.dumps({"ok": ok, "checks": checks}))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.ok).toBe(true);
+    expect(report.checks.bottomKMeanScore).toBe(true);
+    expect(report.checks).not.toHaveProperty("minCaseScore");
+  });
+
+  it("keeps deterministic amount and step metrics advisory without weakening fail-closed checks", () => {
+    const result = runLoopPython(`
+cfg = loop.LoopConfig()
+base = {
+    "success": True,
+    "ingredientF1": 0.93,
+    "amountMatchRate": 0.1,
+    "stepCoverage": 0.1,
+    "recipeCountMatchRate": 1,
+    "missing_result_count": 0,
+    "missing_golden_count": 0,
+    "unapproved_golden_count": 0,
+    "expected_count_mismatch": False,
+}
+ok, checks = loop.deterministic_validation_success(cfg, base)
+missing = dict(base)
+missing["missing_result_count"] = 1
+missing_ok, missing_checks = loop.deterministic_validation_success(cfg, missing)
+print(json.dumps({
+    "ok": ok,
+    "checks": checks,
+    "missing_ok": missing_ok,
+    "missing_checks": missing_checks,
+}))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.ok).toBe(true);
+    expect(report.checks.advisory).toMatchObject({
+      amountMatchRate: false,
+      stepCoverage: false,
+    });
+    expect(report.missing_ok).toBe(false);
+    expect(report.missing_checks.missing_result_count).toBe(false);
+  });
+
+  it("builds guarded semantic reason aggregation prompts without dropping one-off issues", async () => {
+    const aggregator = await import(semanticFeedbackModuleUrl);
+    const reasons = [
+      "양념류 누락과 분량 오차",
+      "양념류 누락과 분량 오차",
+      "단계 순서 이탈",
+    ];
+
+    const prompt = aggregator.buildReasonAggregationPrompt({
+      split: "validation",
+      videoId: "case-a",
+      sampleN: 3,
+      reasons,
+    });
+    const summary = aggregator.summarizeReasonFrequencies({ reasons, sampleN: 3 });
+    const grounded = aggregator.guardAggregatedReasonOutput({
+      reasons,
+      output: "- (2/3) 양념류 누락과 분량 오차\n- (1/3) 단계 순서 이탈",
+    });
+    const hallucinated = aggregator.guardAggregatedReasonOutput({
+      reasons,
+      output: "- (1/3) 조리도구 문제",
+    });
+
+    expect(prompt).toContain("점수를 매기지 마라");
+    expect(prompt).toContain("validation/holdout");
+    expect(prompt).toContain("구체 재료");
+    expect(summary).toEqual([
+      { label: "2/3", count: 2, text: "양념류 누락과 분량 오차" },
+      { label: "1/3", count: 1, text: "단계 순서 이탈" },
+    ]);
+    expect(grounded.success).toBe(true);
+    expect(hallucinated.success).toBe(false);
+    expect(hallucinated.ungrounded).toContain("조리도구");
   });
 
   it("keeps short protected titles as fragments while classifying low-uniqueness hits as advisory", () => {
@@ -1392,11 +1595,17 @@ summaries = {
         "calibration": {"valid": True},
         "provider_error_count": 0,
         "parse_error_count": 0,
+        "schema_error_count": 0,
+        "timeout_error_count": 0,
+        "calibration_error_count": 0,
         "empty_case_count": 0,
         "expected_count_mismatch": False,
         "threshold_success": True,
+        "score_policy": "bottomK-mean",
+        "thresholds": {"averageScore": 4, "bottomKMeanScore": 3.5},
         "averageScore": 4.3,
         "minCaseScore": 4,
+        "bottomKMeanScore": 4,
     }},
 }
 decision = loop.decide(cfg, summaries, {
@@ -2149,11 +2358,17 @@ summaries = {
         "calibration": {"valid": True},
         "provider_error_count": 0,
         "parse_error_count": 0,
+        "schema_error_count": 0,
+        "timeout_error_count": 0,
+        "calibration_error_count": 0,
         "empty_case_count": 0,
         "expected_count_mismatch": False,
         "threshold_success": True,
+        "score_policy": "bottomK-mean",
+        "thresholds": {"averageScore": 4, "bottomKMeanScore": 3.5},
         "averageScore": 4.3,
         "minCaseScore": 4,
+        "bottomKMeanScore": 4,
     }},
 }
 decision = loop.decide(cfg, summaries, {
@@ -2344,6 +2559,41 @@ print(json.dumps({
     expect(report.det_has_reasons).toBe(true);
     expect(report.has_no_raw_answer_warning).toBe(true);
     expect(report.leaked_per_recipe_title).toBe(false);
+  });
+
+  it("formats semantic judge reason summaries as diagnosis input", () => {
+    const result = runLoopPython(`
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
+summary_path = loop.DATA_ROOT / "train" / "_semantic_summary.iter01.json"
+summary_path.parent.mkdir(parents=True, exist_ok=True)
+summary_path.write_text(json.dumps({
+    "aggregate": {"sampleN": 3},
+    "perVideo": [{
+        "videoId": "train-a",
+        "cases": [{
+            "title": "공개요리",
+            "reason_summary": [
+                {"label": "2/3", "text": "양념류 누락과 분량 오차"},
+                {"label": "1/3", "text": "단계 순서 이탈"},
+            ],
+        }],
+    }],
+}, ensure_ascii=False), encoding="utf-8")
+text = loop.semantic_reason_issues_text(loop.LoopConfig(), "iter01", "train")
+prompt = loop.build_diagnosis_prompt("det", "ai", "val", "train cases", text)
+print(json.dumps({
+    "text": text,
+    "prompt": prompt,
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.text).toContain("(2/3) 양념류 누락과 분량 오차");
+    expect(report.text).toContain("(1/3) 단계 순서 이탈");
+    expect(report.prompt).toContain("AI judge reason 집계");
   });
 
   it("uses non-interactive sudo for fs_usage when the loop is not already root", () => {

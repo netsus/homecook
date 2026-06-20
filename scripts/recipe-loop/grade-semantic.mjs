@@ -14,13 +14,18 @@ import path from "node:path";
 import { createCodexJudgeClient } from "./lib/codex-judge-client.mjs";
 import { createCachedLlmClient } from "./lib/llm-client.mjs";
 import { prepareCanaryGradingInputs, summarizeCanaryLeaks } from "./lib/grading.mjs";
+import { summarizeReasonFrequencies } from "./lib/semantic-feedback-aggregator.mjs";
 
 const PROJECT_ROOT = process.cwd();
 const DATA_ROOT = "notebooks/recipe_loop_data";
 const DEFAULT_CALIBRATION_PATH = path.join(DATA_ROOT, "semantic_calibration.json");
 const DEFAULT_SCHEMA_PATH = path.join(PROJECT_ROOT, "scripts/recipe-loop/semantic-judge.schema.json");
-const DEFAULT_THRESHOLDS = { minCaseScore: 2, averageScore: 3.5 };
-const DEFAULT_BORDERLINE = { enabled: false, minCaseScore: 3, maxCaseScore: 4, retryEffort: "xhigh" };
+const JUDGE_PROMPT_VERSION = "semantic-judge-v3-anchored";
+const DEFAULT_SCORE_POLICY = "bottomK-mean";
+const DEFAULT_BOTTOM_K = 2;
+const DEFAULT_SAMPLE_N = 3;
+const DEFAULT_THRESHOLDS = { bottomKMeanScore: 2, averageScore: 3.5, minCaseScore: 2 };
+const DEFAULT_BORDERLINE = { enabled: false, finalScorePolicy: "median_of_N" };
 const CODEX_MIN_CALIBRATION_SAMPLES = 5;
 
 function parseCliArgs(argv) {
@@ -42,9 +47,34 @@ function toInt(value) {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
 }
 
+function toPositiveInt(value, fallback) {
+  if (value === null || value === undefined || value === true) return fallback;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 function toNumber(value, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function round3(value) {
+  return Math.round(value * 1000) / 1000;
+}
+
+function median(values) {
+  const nums = values.map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  if (nums.length === 0) return 0;
+  const middle = Math.floor(nums.length / 2);
+  if (nums.length % 2 === 1) return nums[middle];
+  return (nums[middle - 1] + nums[middle]) / 2;
+}
+
+function bottomKMean(values, k) {
+  const nums = values.map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  if (nums.length === 0) return 0;
+  const picked = nums.slice(0, Math.max(1, Math.min(k, nums.length)));
+  return round3(picked.reduce((a, b) => a + b, 0) / picked.length);
 }
 
 function resolveProjectPath(value) {
@@ -65,6 +95,9 @@ function calibrationFailure(reason, loaded, source, parsed = {}) {
 }
 
 function validateCodexCalibration(parsed, source, judge) {
+  if (Number(parsed.schemaVersion ?? 0) < 3) {
+    return calibrationFailure("schema_version_mismatch", true, source, parsed);
+  }
   if (parsed.judgeProvider !== "codex") {
     return calibrationFailure("judge_provider_mismatch", true, source, parsed);
   }
@@ -73,6 +106,22 @@ function validateCodexCalibration(parsed, source, judge) {
   }
   if (parsed.judgeEffort !== judge.effort) {
     return calibrationFailure("judge_effort_mismatch", true, source, parsed);
+  }
+  if (parsed.judgePromptVersion !== judge.promptVersion) {
+    return calibrationFailure("judge_prompt_version_mismatch", true, source, parsed);
+  }
+  if (parsed.scorePolicy !== judge.scorePolicy) {
+    return calibrationFailure("score_policy_mismatch", true, source, parsed);
+  }
+  if (Number(parsed.k) !== judge.bottomK) {
+    return calibrationFailure("bottom_k_mismatch", true, source, parsed);
+  }
+  if (Number(parsed.sampleN) !== judge.sampleN) {
+    return calibrationFailure("sample_n_mismatch", true, source, parsed);
+  }
+  if (!Number.isFinite(Number(parsed.thresholds?.averageScore))
+    || !Number.isFinite(Number(parsed.thresholds?.bottomKMeanScore))) {
+    return calibrationFailure("thresholds_missing", true, source, parsed);
   }
   const sampleCount = Array.isArray(parsed.samples) ? parsed.samples.length : 0;
   const alignmentStats = parsed.alignmentStats && typeof parsed.alignmentStats === "object"
@@ -95,6 +144,9 @@ function validateCodexCalibration(parsed, source, judge) {
   if (!parsed.borderline || typeof parsed.borderline !== "object") {
     return calibrationFailure("borderline_missing", true, source, parsed);
   }
+  if (parsed.borderline.finalScorePolicy !== "median_of_N") {
+    return calibrationFailure("final_score_policy_mismatch", true, source, parsed);
+  }
   return {
     valid: true,
     failure_reason: null,
@@ -106,6 +158,10 @@ function validateCodexCalibration(parsed, source, judge) {
     judge_provider: parsed.judgeProvider,
     judge_model: parsed.judgeModel,
     judge_effort: parsed.judgeEffort,
+    judge_prompt_version: parsed.judgePromptVersion,
+    score_policy: parsed.scorePolicy,
+    bottom_k: parsed.k,
+    sampleN: parsed.sampleN,
     alignment_stats: alignmentStats,
   };
 }
@@ -115,21 +171,41 @@ async function loadCalibration(filePath, judge) {
   const resolved = resolveProjectPath(rawSource);
   if (!resolved || !existsSync(resolved)) {
     const summary = calibrationFailure("missing_calibration", false, rawSource, {});
-    return { source: rawSource, thresholds: DEFAULT_THRESHOLDS, borderline: DEFAULT_BORDERLINE, summary };
+    return {
+      source: rawSource,
+      thresholds: DEFAULT_THRESHOLDS,
+      borderline: DEFAULT_BORDERLINE,
+      summary,
+      scorePolicy: DEFAULT_SCORE_POLICY,
+      bottomK: judge.bottomK ?? DEFAULT_BOTTOM_K,
+      sampleN: judge.sampleN ?? DEFAULT_SAMPLE_N,
+    };
   }
   const parsed = JSON.parse(await readFile(resolved, "utf8"));
   const source = path.relative(PROJECT_ROOT, resolved);
+  const scorePolicy = typeof parsed.scorePolicy === "string"
+    ? parsed.scorePolicy
+    : (parsed.thresholds?.bottomKMeanScore !== undefined ? DEFAULT_SCORE_POLICY : "minCase");
+  const bottomK = toPositiveInt(parsed.k, DEFAULT_BOTTOM_K);
+  const sampleN = toPositiveInt(parsed.sampleN, judge.sampleN ?? DEFAULT_SAMPLE_N);
   const thresholds = {
-    minCaseScore: Number(parsed.thresholds?.minCaseScore ?? DEFAULT_THRESHOLDS.minCaseScore),
+    bottomKMeanScore: Number(
+      parsed.thresholds?.bottomKMeanScore
+      ?? parsed.thresholds?.minCaseScore
+      ?? DEFAULT_THRESHOLDS.bottomKMeanScore,
+    ),
+    minCaseScore: Number(
+      parsed.thresholds?.minCaseScore
+      ?? parsed.thresholds?.bottomKMeanScore
+      ?? DEFAULT_THRESHOLDS.minCaseScore,
+    ),
     averageScore: Number(parsed.thresholds?.averageScore ?? DEFAULT_THRESHOLDS.averageScore),
   };
   const borderline = {
     enabled: Boolean(parsed.borderline?.enabled),
-    minCaseScore: toNumber(parsed.borderline?.minCaseScore, DEFAULT_BORDERLINE.minCaseScore),
-    maxCaseScore: toNumber(parsed.borderline?.maxCaseScore, DEFAULT_BORDERLINE.maxCaseScore),
-    retryEffort: typeof parsed.borderline?.retryEffort === "string"
-      ? parsed.borderline.retryEffort
-      : DEFAULT_BORDERLINE.retryEffort,
+    finalScorePolicy: typeof parsed.borderline?.finalScorePolicy === "string"
+      ? parsed.borderline.finalScorePolicy
+      : DEFAULT_BORDERLINE.finalScorePolicy,
   };
   const summary = judge.provider === "codex"
     ? validateCodexCalibration(parsed, source, judge)
@@ -142,7 +218,7 @@ async function loadCalibration(filePath, judge) {
       policy: parsed.policy ?? "spot-check calibration",
       calibrated_at: parsed.calibratedAt ?? null,
     };
-  return { source, thresholds, borderline, summary };
+  return { source, thresholds, borderline, summary, scorePolicy, bottomK, sampleN };
 }
 
 function resolveJudgeConfig(args) {
@@ -154,10 +230,16 @@ function resolveJudgeConfig(args) {
   const borderlineEffort = typeof args["judge-borderline-effort"] === "string" ? args["judge-borderline-effort"] : "xhigh";
   const timeoutMs = toNumber(args["judge-timeout-ms"], 200000);
   const schemaPath = resolveProjectPath(args["judge-output-schema"]) ?? DEFAULT_SCHEMA_PATH;
+  const sampleN = toPositiveInt(args["judge-sample-n"], DEFAULT_SAMPLE_N);
+  const bottomK = toPositiveInt(args["semantic-bottom-k"] ?? args["bottom-k"], DEFAULT_BOTTOM_K);
+  const promptVersion = typeof args["judge-prompt-version"] === "string"
+    ? args["judge-prompt-version"]
+    : JUDGE_PROMPT_VERSION;
+  const scorePolicy = typeof args["score-policy"] === "string" ? args["score-policy"] : DEFAULT_SCORE_POLICY;
   if (!["gemini", "fixture", "codex"].includes(provider)) {
     throw new Error(`unsupported semantic judge provider: ${provider}`);
   }
-  return { provider, model, effort, borderlineEffort, timeoutMs, schemaPath };
+  return { provider, model, effort, borderlineEffort, timeoutMs, schemaPath, sampleN, bottomK, promptVersion, scorePolicy };
 }
 
 function compactRecipe(recipe) {
@@ -175,8 +257,11 @@ function promptInput(golden, result) {
   };
 }
 
-function buildPrompt(golden, result) {
+function buildPrompt(golden, result, split) {
   const input = promptInput(golden, result);
+  const protectedSplitInstruction = split === "validation" || split === "holdout"
+    ? "\n- 이 split은 보호 split이다. reason에 구체 재료명·구체 분량·정답 문장을 절대 쓰지 말고 양념류/채소류/분량/단계순서 같은 범주로만 쓴다."
+    : "\n- 이 split은 train/public이다. reason에 필요한 구체 문제를 짧게 쓸 수 있다.";
   return `너는 레시피 추출 품질을 평가하는 채점자다. 정답(golden)과 추출 결과(predicted)를 의미 기준으로 비교하라.
 글자가 완전히 같지 않아도 같은 재료·같은 동작을 의미하면 맞는 것으로 본다. 분량은 합리적 근사면 인정한다.
 
@@ -185,10 +270,22 @@ function buildPrompt(golden, result) {
 - step_score(0~5): 정답 만들기의 핵심 동작·순서·조리설정이 담겼는지
 - case_score = min(ingredient_score, step_score)
 
+점수 앵커:
+- 5 = 핵심 재료·동작 누락 0, 분량이 합리적이다.
+- 4 = 경미한 누락 또는 근사오차 1개 정도다.
+- 3 = 핵심 1개 누락 또는 분량 다수 오차가 있다.
+- 2 = 핵심 누락이 여러 개다.
+- 0~1 = 거의 무관하거나 심각하게 틀렸다.
+
+채점 순서:
+- 먼저 누락·오검출·분량오류·핵심 동작/순서 문제를 따져본 뒤 점수를 정한다.
+- 단계가 더 잘게 쪼개졌거나 장황하다는 이유만으로 가점하지 않는다.
+
 출력 제한:
 - JSON만 출력한다.
 - 정답 원문 문장을 그대로 인용하지 않는다.
 - reason은 80자 안팎의 짧은 추상 근거로 쓴다.
+${protectedSplitInstruction}
 
 입력:
 ${JSON.stringify(input, null, 1)}`;
@@ -232,73 +329,58 @@ function normalize(parsed) {
   return { cases, average_score: Math.round(avg * 1000) / 1000 };
 }
 
-function applyRetryLowerScore(primary, retry) {
-  const retryCases = retry.cases ?? [];
-  const cases = primary.cases.map((c, index) => {
-    if (!c.retried) return c;
-    const retryCase = retryCases[index];
-    if (!retryCase) return c;
-    const retryScore = Number(retryCase.case_score ?? Math.min(retryCase.ingredient_score ?? 0, retryCase.step_score ?? 0));
-    if (!Number.isFinite(retryScore) || retryScore >= c.case_score) {
-      return { ...c, retry_case_score: retryScore };
+function combineSampleGrades(sampleGrades, sampleN) {
+  if (sampleGrades.length === 0) return { cases: [], average_score: 0 };
+  const expectedCaseCount = sampleGrades[0].cases.length;
+  for (const grade of sampleGrades) {
+    if (grade.cases.length !== expectedCaseCount) {
+      throw new Error("semantic judge schema error: sample case count mismatch");
     }
+  }
+  const cases = sampleGrades[0].cases.map((baseCase, index) => {
+    const sampleCases = sampleGrades.map((grade) => grade.cases[index]);
+    const ingredientScores = sampleCases.map((sample) => sample.ingredient_score);
+    const stepScores = sampleCases.map((sample) => sample.step_score);
+    const caseScores = sampleCases.map((sample) => sample.case_score);
+    const sampleReasons = sampleCases.map((sample) => String(sample.reason ?? ""));
+    const caseScore = round3(median(caseScores));
     return {
-      ...c,
-      ingredient_score: Math.min(c.ingredient_score, Number(retryCase.ingredient_score ?? retryScore)),
-      step_score: Math.min(c.step_score, Number(retryCase.step_score ?? retryScore)),
-      case_score: retryScore,
-      reason: c.reason,
-      retry_case_score: retryScore,
-      retry_reason: retryCase.reason ?? "",
+      title: baseCase.title,
+      ingredient_score: round3(median(ingredientScores)),
+      step_score: round3(median(stepScores)),
+      case_score: caseScore,
+      reason: sampleReasons.find(Boolean) ?? "",
+      sample_case_scores: caseScores,
+      sample_reasons: sampleReasons,
+      judge_sample_count: sampleCases.length,
+      reason_summary: summarizeReasonFrequencies({ reasons: sampleReasons, sampleN }),
     };
   });
   const avg = cases.length ? cases.reduce((a, c) => a + c.case_score, 0) / cases.length : 0;
-  return { cases, average_score: Math.round(avg * 1000) / 1000 };
+  return { cases, average_score: round3(avg) };
 }
 
-function markBorderlineCases(grade, borderline) {
-  if (!borderline.enabled) return { grade, count: 0 };
-  let count = 0;
-  const cases = grade.cases.map((c) => {
-    const borderlineCase = c.case_score >= borderline.minCaseScore && c.case_score <= borderline.maxCaseScore;
-    if (!borderlineCase) return c;
-    count += 1;
-    return { ...c, retried: true };
-  });
-  return { grade: { ...grade, cases }, count };
-}
-
-async function generateSemanticGrade({ judge, llm, golden, result, id, outTag, split, calibration }) {
+async function generateSemanticGrade({ judge, llm, golden, result, id, outTag, split }) {
   if (judge.provider === "fixture") {
-    if (!result.__semanticJudge) {
+    const fixtureSamples = Array.isArray(result.__semanticJudgeSamples)
+      ? result.__semanticJudgeSamples
+      : (result.__semanticJudge ? [result.__semanticJudge] : []);
+    if (fixtureSamples.length === 0) {
       throw new Error("fixture semantic judge requires result.__semanticJudge");
     }
-    const marked = markBorderlineCases(normalize(result.__semanticJudge), calibration.borderline);
-    if (marked.count > 0 && result.__semanticJudgeRetry) {
-      return {
-        grade: applyRetryLowerScore(marked.grade, normalize(result.__semanticJudgeRetry)),
-        cached: true,
-        model: "fixture",
-        effort: null,
-        cacheHit: true,
-        retryCalled: true,
-        retryCacheHit: true,
-        retryCount: marked.count,
-      };
-    }
+    const sampleGrades = fixtureSamples.map((sample) => normalize(sample));
     return {
-      grade: marked.grade,
+      grade: sampleGrades.length > 1 ? combineSampleGrades(sampleGrades, sampleGrades.length) : sampleGrades[0],
       cached: true,
       model: "fixture",
       effort: null,
-      cacheHit: true,
-      retryCalled: false,
-      retryCacheHit: null,
+      cacheHits: sampleGrades.length,
+      cacheMisses: 0,
       retryCount: 0,
     };
   }
 
-  const prompt = buildPrompt(golden, result);
+  const prompt = buildPrompt(golden, result, split);
   if (judge.provider === "codex") {
     const inputText = JSON.stringify(promptInput(golden, result));
     const client = createCodexJudgeClient({
@@ -307,57 +389,40 @@ async function generateSemanticGrade({ judge, llm, golden, result, id, outTag, s
       timeoutMs: judge.timeoutMs,
       schemaPath: judge.schemaPath,
     });
-    const first = await client.generate({ prompt, inputText, split, id, outTag, schemaVersion: 1 });
-    const normalized = normalize(first.json);
-    const marked = markBorderlineCases(normalized, calibration.borderline);
-    if (marked.count === 0) {
-      return {
-        grade: marked.grade,
-        cached: first.cached,
-        model: first.model,
-        effort: first.effort,
-        cacheHit: first.cached,
-        retryCalled: false,
-        retryCacheHit: null,
-        retryCount: 0,
-      };
+    const samples = [];
+    for (let sampleIndex = 0; sampleIndex < judge.sampleN; sampleIndex += 1) {
+      samples.push(await client.generate({
+        prompt,
+        inputText,
+        split,
+        id,
+        outTag,
+        schemaVersion: 1,
+        promptVersion: judge.promptVersion,
+        sampleIndex,
+        sampleN: judge.sampleN,
+      }));
     }
-    const retryClient = createCodexJudgeClient({
-      model: judge.model,
-      effort: judge.borderlineEffort || calibration.borderline.retryEffort,
-      timeoutMs: judge.timeoutMs,
-      schemaPath: judge.schemaPath,
-    });
-    const retry = await retryClient.generate({
-      prompt: `${prompt}\n\n애매한 케이스만 다시 보수적으로 재채점하라. 낮은 점수를 살리지 말고 과대평가만 줄여라.`,
-      inputText,
-      split,
-      id,
-      outTag: `${outTag}:borderline`,
-      schemaVersion: 1,
-    });
+    const sampleGrades = samples.map((sample) => normalize(sample.json));
     return {
-      grade: applyRetryLowerScore(marked.grade, normalize(retry.json)),
-      cached: first.cached && retry.cached,
-      model: first.model,
-      effort: first.effort,
-      cacheHit: first.cached,
-      retryCalled: true,
-      retryCacheHit: retry.cached,
-      retryCount: marked.count,
+      grade: combineSampleGrades(sampleGrades, judge.sampleN),
+      cached: samples.every((sample) => sample.cached),
+      model: samples[0]?.model ?? judge.model,
+      effort: samples[0]?.effort ?? judge.effort,
+      cacheHits: samples.filter((sample) => sample.cached).length,
+      cacheMisses: samples.filter((sample) => !sample.cached).length,
+      retryCount: 0,
     };
   }
 
   const { json, cached, model } = await llm.generate({ prompt, cacheText: id + outTag });
-  const marked = markBorderlineCases(normalize(json), calibration.borderline);
   return {
-    grade: marked.grade,
+    grade: normalize(json),
     cached,
     model,
     effort: null,
-    cacheHit: cached,
-    retryCalled: false,
-    retryCacheHit: null,
+    cacheHits: cached ? 1 : 0,
+    cacheMisses: cached ? 0 : 1,
     retryCount: 0,
   };
 }
@@ -454,7 +519,6 @@ async function main() {
         id,
         outTag,
         split,
-        calibration,
       });
       const { grade } = gradeResult;
       if (grade.cases.length === 0) {
@@ -462,12 +526,8 @@ async function main() {
         console.error(`[FAIL] ${split}/${id}: empty_case`);
         continue;
       }
-      cacheHitCount += gradeResult.cacheHit ? 1 : 0;
-      cacheMissCount += gradeResult.cacheHit ? 0 : 1;
-      if (gradeResult.retryCalled) {
-        cacheHitCount += gradeResult.retryCacheHit ? 1 : 0;
-        cacheMissCount += gradeResult.retryCacheHit ? 0 : 1;
-      }
+      cacheHitCount += gradeResult.cacheHits ?? (gradeResult.cached ? 1 : 0);
+      cacheMissCount += gradeResult.cacheMisses ?? (gradeResult.cached ? 0 : 1);
       borderlineRetryCount += gradeResult.retryCount ?? 0;
       const row = {
         videoId: id,
@@ -477,6 +537,8 @@ async function main() {
         judge_effort: gradeResult.effort,
         cached: gradeResult.cached,
         retry_count: gradeResult.retryCount ?? 0,
+        sampleN: judge.provider === "codex" ? judge.sampleN : (grade.cases[0]?.judge_sample_count ?? 1),
+        score_policy: calibration.scorePolicy,
         ...grade,
         canaryLeak,
       };
@@ -493,6 +555,10 @@ async function main() {
   }
 
   const caseScores = rows.flatMap((r) => r.cases.map((c) => c.case_score));
+  const rowSampleNs = rows.filter((r) => r.success === true).map((r) => Number(r.sampleN || 1)).filter(Number.isFinite);
+  const effectiveSampleN = judge.provider === "codex"
+    ? judge.sampleN
+    : (rowSampleNs.length ? Math.max(...rowSampleNs) : calibration.sampleN);
   const expectedCount = expectedCountArg ?? ids.length;
   const providerErrorCount = rows.filter((r) => r.failureReason === "provider_error").length;
   const parseErrorCount = rows.filter((r) => r.failureReason === "parse_error").length;
@@ -502,10 +568,14 @@ async function main() {
   const emptyCaseCount = rows.filter((r) => r.failureReason === "empty_case").length;
   const expectedCountMismatch = rows.length !== expectedCount;
   const failedRowCount = rows.filter((r) => r.success === false).length;
-  const averageScore = caseScores.length ? Math.round((caseScores.reduce((a, b) => a + b, 0) / caseScores.length) * 1000) / 1000 : 0;
+  const averageScore = caseScores.length ? round3(caseScores.reduce((a, b) => a + b, 0) / caseScores.length) : 0;
   const minCaseScore = caseScores.length ? Math.min(...caseScores) : 0;
-  const thresholdSuccess = averageScore >= calibration.thresholds.averageScore
-    && minCaseScore >= calibration.thresholds.minCaseScore;
+  const bottomKMeanScore = bottomKMean(caseScores, calibration.bottomK);
+  const thresholdSuccess = calibration.scorePolicy === "bottomK-mean"
+    ? averageScore >= calibration.thresholds.averageScore
+      && bottomKMeanScore >= calibration.thresholds.bottomKMeanScore
+    : averageScore >= calibration.thresholds.averageScore
+      && minCaseScore >= calibration.thresholds.minCaseScore;
   const executionSuccess = providerErrorCount === 0
     && parseErrorCount === 0
     && schemaErrorCount === 0
@@ -525,6 +595,10 @@ async function main() {
     judge_model: judge.model,
     judge_effort: judge.effort,
     judge_borderline_effort: judge.borderlineEffort,
+    judge_prompt_version: judge.promptVersion,
+    score_policy: calibration.scorePolicy,
+    bottom_k: calibration.bottomK,
+    sampleN: effectiveSampleN,
     expected_count: expectedCount,
     actual_count: rows.length,
     provider_error_count: providerErrorCount,
@@ -540,6 +614,7 @@ async function main() {
     borderline_retry_count: borderlineRetryCount,
     averageScore,
     minCaseScore,
+    bottomKMeanScore,
     thresholds: calibration.thresholds,
     borderline: calibration.borderline,
     threshold_success: thresholdSuccess,
@@ -547,7 +622,7 @@ async function main() {
     canaryLeak,
   };
   await writeSummary(splitDir, outTag, agg, rows);
-  console.log(`\n=== ${split}/${outTag} 의미채점: 평균 ${agg.averageScore}, 최저 case ${agg.minCaseScore} (n=${agg.count})`);
+  console.log(`\n=== ${split}/${outTag} 의미채점: 평균 ${agg.averageScore}, 하위${agg.bottom_k}평균 ${agg.bottomKMeanScore}, 최저 case ${agg.minCaseScore} (n=${agg.count})`);
   if (!executionSuccess) process.exit(1);
 }
 
