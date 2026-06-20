@@ -17,9 +17,9 @@ type EventsState =
   | { status: "empty" }
   | { status: "error"; message: string };
 
-const EVENT_TYPE_OPTIONS = ["", "auth_failure", "youtube_provider_failure", "account_delete_success", "account_delete_failure", "admin_service_role_missing", "unhandled_server_error"] as const;
+const EVENT_TYPE_OPTIONS = ["", "auth_failure", "youtube_provider_failure", "account_delete_success", "account_delete_failure", "admin_service_role_missing", "unhandled_server_error", "not_found_feedback"] as const;
 const SEVERITY_OPTIONS = ["", "info", "warn", "error", "critical"] as const;
-const SOURCE_OPTIONS = ["", "auth", "youtube", "account", "admin", "api"] as const;
+const SOURCE_OPTIONS = ["", "auth", "youtube", "account", "admin", "api", "web"] as const;
 const BLOCKED_METADATA_KEY_PATTERNS = [
   /token/iu,
   /^code$/iu,

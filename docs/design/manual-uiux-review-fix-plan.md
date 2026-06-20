@@ -100,7 +100,12 @@
 
 ### 3. 404 페이지에서 사용자가 바로 불편을 남길 수 없는 문제
 
-- Status: planned
+- Status: implemented in `feature/not-found-feedback`
+- Progress:
+  - 404 본문 아래 작은 인라인 피드백 입력 영역을 추가했다.
+  - `POST /api/v1/feedback/404` route가 피드백을 기존 `operational_events`에 `not_found_feedback` 이벤트로 기록한다.
+  - 현재 path, referrer path, 로그인 여부, user id 또는 anonymous id, user agent hash, 발생 시각을 함께 저장한다.
+  - 사용자 입력은 이메일, URL, 전화번호 패턴을 제거한 텍스트만 저장하며, 빈 값/600자 초과/저장 실패 상태를 테스트로 고정했다.
 - Severity: Medium
 - Area: UX / Frontend / API / Ops
 - Source: user manual review, `app/not-found.tsx`

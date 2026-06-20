@@ -8,6 +8,7 @@
 
 > 기준 문서: 요구사항 기준선 v1.7.11 / 화면정의서 v1.5.18 / DB 설계 v1.3.16 / 유저 Flow맵 v1.3.18
 > 작성: 킴실장
+> 2026-06-20 404 feedback addendum: `POST /api/v1/feedback/404` 추가. 404 페이지 인라인 피드백을 기존 `operational_events`에 `not_found_feedback` 이벤트로 저장한다. 신규 DB table 없음. 엔드포인트 수 71 → 72.
 > v1.2.19 → v1.2.20: recipe tags v2 contract-evolution. `tags` / `recipe_tags` 정규화 모델, `GET /recipes?tag=<normalized_key>`, 제목+승인 tag 검색, `GET /tags`, `POST /recipes/tag-suggestions`, YouTube/manual register의 reviewed tags body를 추가한다. 서버 자동 추천은 유지한다. 엔드포인트 수 69 → 71.
 > 2026-06-16 launch-readiness addendum: `PATCH /shopping/lists/{list_id}/items/bulk` 일괄 체크 API와 `POST /api/v1/admin/page-view` 관리자 진입 감사 API를 공식화한다. 엔드포인트 수 67 → 69.
 > 2026-06-16 addendum: SETTINGS 끼니 컬럼 순서 변경을 공식화한다. `PATCH /planner/columns/{column_id}`는 기존 이름 변경에 더해 optional `sort_order`를 받는다. 해당 addendum 자체의 신규 endpoint 없음.
@@ -3162,6 +3163,7 @@ GET /api/v1/admin/operational-events
 - account delete success/failure
 - Admin API service-role-missing failures
 - selected route-handler unhandled server errors
+- 404 page inline feedback (`event_type=not_found_feedback`, `source=web`)
 
 **감사 로그**
 
@@ -3176,6 +3178,64 @@ GET /api/v1/admin/operational-events
 | 401 | UNAUTHORIZED | 로그인 필요 |
 | 403 | FORBIDDEN | 관리자 권한 없음 |
 | 500 | ADMIN_SERVICE_ROLE_UNAVAILABLE | service role 누락. fail closed |
+
+---
+
+## 15-2b. 404 피드백 기록
+
+```http
+POST /api/v1/feedback/404
+```
+
+🔓 공개. 404 페이지에서 사용자가 남긴 짧은 피드백을 운영 이벤트로 기록한다.
+
+**Body**
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| message | string | 필수. 사용자가 작성한 피드백. 공백 제외 1~600자 |
+| current_url | string | 선택. 클라이언트 현재 URL. 서버는 pathname만 저장 |
+| referrer | string | 선택. 이전 URL. 서버는 pathname만 저장 |
+| anonymous_id | string | 선택. 비로그인 사용자 구분용 `anon_*` 클라이언트 식별자 |
+| occurred_at | string | 선택. 클라이언트 발생 시각 ISO 문자열. 잘못된 값은 서버 시각으로 대체 |
+
+**서버 기록**
+
+- 저장소: `operational_events`
+- `event_type`: `not_found_feedback`
+- `source`: `web`
+- `severity`: `warn`
+- `http_status`: `404`
+- `error_code`: `ROUTE_NOT_FOUND`
+- `request_path`: `current_url`의 pathname 또는 `/404`
+- `actor_user_id`: 로그인 사용자는 user id, 비로그인은 `null`
+- `metadata_json`: `feedback_text`, `current_path`, `referrer_path`, `is_authenticated`, `anonymous_id`, `user_agent_hash`, `occurred_at`
+
+**개인정보 보호**
+
+- UI는 개인정보 입력을 요청하지 않는다.
+- 서버는 `message`에서 이메일, URL, 전화번호 패턴을 제거한 텍스트만 저장한다.
+- `current_url`과 `referrer`는 query string을 저장하지 않는다.
+- user agent는 raw string 대신 hash로 저장한다.
+
+**응답 (200)**
+
+```json
+{
+  "success": true,
+  "data": {
+    "received": true
+  },
+  "error": null
+}
+```
+
+**에러**
+
+| HTTP | code | 설명 |
+|------|------|------|
+| 400 | VALIDATION_ERROR | `message` 공백 또는 600자 초과 |
+| 500 | NOT_FOUND_FEEDBACK_WRITE_FAILED | service role 누락 또는 운영 이벤트 저장 실패 |
 
 ---
 
@@ -3358,9 +3418,11 @@ POST /api/v1/admin/page-view
 | 14-1     | GET        | /cooking-methods                       | 전역 (드롭다운)          | 🔓     |                                  |
 | 15-1     | GET        | /api/v1/admin/users                    | ADMIN_USERS              | 🔐     | v1.2.12 신규                     |
 | 15-2     | GET        | /api/v1/admin/operational-events       | ADMIN_EVENTS             | 🔐     | v1.2.12 신규                     |
+| **15-2b** | **POST**   | **/api/v1/feedback/404**               | **NOT_FOUND**            | **🔓** | **404 feedback addendum**        |
 | 15-3     | GET        | /api/v1/admin/audit-logs               | ADMIN_AUDIT_LOGS         | 🔐     | v1.2.12 신규                     |
 | **15-4** | **POST**   | **/api/v1/admin/page-view**            | **ADMIN_DASHBOARD**      | **🔐** | **launch-readiness 신규**        |
 
+> **2026-06-20 404 feedback addendum 총계**: 72개 (`POST /api/v1/feedback/404` 1개 추가. 신규 DB table 없음)
 > **v1.2.20 총계**: 71개 (`GET /tags`, `POST /recipes/tag-suggestions` 2개 추가. recipe 목록/YouTube/manual register는 기존 endpoint 확장)
 > **v1.2.19 총계**: 69개 (launch-readiness addendum: shopping items bulk update, admin page-view audit endpoint 2개 추가)
 > **v1.2.18 총계**: 67개 (growth-leveling-v2 archive endpoint 1개 추가, gamification response additive 확장)

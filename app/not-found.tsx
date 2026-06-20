@@ -1,6 +1,8 @@
 import Link from "next/link";
 import React from "react";
 
+import { NotFoundFeedbackForm } from "@/components/feedback/not-found-feedback-form";
+import { BottomTabs } from "@/components/layout/bottom-tabs";
 import { WebShell, WebTopNav } from "@/components/web";
 
 const WEB_NAV_ITEMS = [
@@ -13,7 +15,7 @@ const WEB_NAV_ITEMS = [
 export default function NotFound() {
   return (
     <WebShell className="web-not-found-shell" wide>
-      <WebTopNav activeId="home" items={WEB_NAV_ITEMS} />
+      <WebTopNav activeId="home" className="not-found-desktop-nav" items={WEB_NAV_ITEMS} />
       <main className="not-found-screen">
         <p className="not-found-kicker">404</p>
         <h1>페이지를 찾을 수 없어요</h1>
@@ -26,7 +28,11 @@ export default function NotFound() {
             플래너로
           </Link>
         </div>
+        <NotFoundFeedbackForm />
       </main>
+      <div className="not-found-mobile-tabs">
+        <BottomTabs currentTab="home" />
+      </div>
     </WebShell>
   );
 }
