@@ -1,14 +1,4 @@
--- Seed data for local development
--- Reproducible local demo dataset for slices 01-05:
---   pnpm local:reset:demo
---   pnpm local:seed:demo
---
--- Local DB smoke data for slices 01-05 is seeded with:
---   pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>
---
--- The repo now carries the baseline schema required for slices 01-05, but the
--- richer smoke dataset still lives in the service-role seeder script so a
--- tester can target a specific authenticated user account on demand.
+-- Item 19: expand pantry bundle presets for common Korean home cooking.
 
 insert into public.ingredients (id, standard_name, category, category_code, default_unit)
 values
@@ -64,12 +54,6 @@ on conflict (standard_name) do update set
   category = excluded.category,
   category_code = excluded.category_code,
   default_unit = excluded.default_unit;
-
-insert into public.ingredient_synonyms (id, ingredient_id, synonym)
-select '550e8400-e29b-41d4-a716-446655440110', ingredients.id, '파'
-from public.ingredients
-where ingredients.standard_name = '대파'
-on conflict (ingredient_id, synonym) do nothing;
 
 insert into public.ingredient_bundles (id, name, display_order)
 values

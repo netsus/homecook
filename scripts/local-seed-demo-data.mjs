@@ -466,6 +466,16 @@ async function seedDemoPantryItems(supabase, mainUserId) {
     const existingId = existingResult.data?.[0]?.id;
 
     if (existingId) {
+      const updateResult = await supabase
+        .from("ingredients")
+        .update({
+          category: ingredient.category,
+          category_code: ingredient.category_code ?? null,
+          default_unit: ingredient.default_unit ?? null,
+        })
+        .eq("id", existingId);
+
+      assertNoError(updateResult, `demo ingredients 갱신 실패 (${ingredient.standard_name})`);
       ingredientIdByFixtureId.set(ingredient.id, existingId);
       continue;
     }
@@ -485,6 +495,16 @@ async function seedDemoPantryItems(supabase, mainUserId) {
     .upsert(DEMO_PANTRY_BUNDLES, { onConflict: "id" });
 
   assertNoError(bundlesResult, "demo ingredient_bundles 생성 실패");
+
+  const deleteBundleItemsResult = await supabase
+    .from("ingredient_bundle_items")
+    .delete()
+    .in(
+      "bundle_id",
+      DEMO_PANTRY_BUNDLES.map((bundle) => bundle.id),
+    );
+
+  assertNoError(deleteBundleItemsResult, "demo ingredient_bundle_items 초기화 실패");
 
   const bundleItemsResult = await supabase
     .from("ingredient_bundle_items")
