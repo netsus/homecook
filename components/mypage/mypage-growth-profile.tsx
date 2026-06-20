@@ -409,6 +409,17 @@ export function MypageGrowthProfile({
     ? `다음 레벨까지 ${formatXp(progress.level.xp_to_next_level)} XP`
     : null;
   const levelXpMeter = hasProgress ? getLevelXpMeter(progress) : null;
+  const xpGuideButton = hasProgress ? (
+    <button
+      aria-label="경험치 안내"
+      className="shrink-0 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2.5 py-1 text-[11px] font-extrabold leading-none text-[var(--brand)] transition-colors hover:bg-[var(--brand-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]"
+      data-testid="mypage-xp-guide-open"
+      onClick={() => setActivePanel("xpGuide")}
+      type="button"
+    >
+      경험치 안내
+    </button>
+  ) : null;
   const actionButtons = hasGamification ? (
     <div
       aria-label="성장 상세 메뉴"
@@ -560,9 +571,12 @@ export function MypageGrowthProfile({
 
             <div className="min-w-0">
               {hasProgress ? (
-                <p className="truncate text-[12px] font-extrabold leading-[1.35] text-[var(--text-2)]">
-                  {progressCopy}
-                </p>
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <p className="min-w-0 truncate text-[12px] font-extrabold leading-[1.35] text-[var(--text-2)]">
+                    {progressCopy}
+                  </p>
+                  {xpGuideButton}
+                </div>
               ) : progressState === "error" ? (
                 <p
                   className="text-[12px] font-semibold leading-[1.35] text-[var(--text-3)]"
@@ -623,9 +637,12 @@ export function MypageGrowthProfile({
               </p>
             </div>
             {hasProgress ? (
-              <p className="mt-0.5 truncate text-[11px] font-semibold leading-[1.35] text-[var(--text-2)]">
-                {progressCopy}
-              </p>
+              <div className="mt-0.5 flex min-w-0 items-center justify-between gap-2">
+                <p className="min-w-0 truncate text-[11px] font-semibold leading-[1.35] text-[var(--text-2)]">
+                  {progressCopy}
+                </p>
+                {xpGuideButton}
+              </div>
             ) : progressState === "error" ? (
               <p
                 className="mt-0.5 text-[11px] font-semibold leading-[1.35] text-[var(--text-3)]"

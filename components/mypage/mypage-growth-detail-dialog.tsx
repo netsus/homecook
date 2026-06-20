@@ -9,6 +9,7 @@ import {
   compactGrowthNotificationsForDisplay,
   isVisibleGrowthNotification,
 } from "@/lib/gamification-notifications";
+import { USER_PROGRESS_XP_GUIDE_ITEMS } from "@/lib/user-progress-xp-policy";
 import achievementIconManifest from "@/public/assets/growth/achievement-icons-v3-4/manifest.json";
 import type {
   UserGamificationBadgeCategory,
@@ -18,7 +19,12 @@ import type {
   UserGamificationNotificationData,
 } from "@/types/user-gamification";
 
-export type MypageGrowthPanel = "grade" | "achievement" | "tutorial" | "notifications";
+export type MypageGrowthPanel =
+  | "grade"
+  | "achievement"
+  | "tutorial"
+  | "notifications"
+  | "xpGuide";
 
 type AchievementGroupKey = "tutorial" | "recipe" | "routine" | "storage";
 type NotificationFilter = "all" | "growth" | "achievement" | "system";
@@ -208,6 +214,10 @@ function formatDateTime(value: string | null) {
   const date = value.slice(0, 10);
   const time = value.length >= 16 ? value.slice(11, 16) : "";
   return time ? `${date} ${time}` : date;
+}
+
+function formatXpValue(value: number) {
+  return NUMBER_FORMATTER.format(value);
 }
 
 function clampPercent(value: number) {
@@ -866,6 +876,66 @@ function TutorialPanel({ data }: { data: UserGamificationData | null }) {
   );
 }
 
+function XpGuidePanel() {
+  return (
+    <>
+      <div
+        className="mt-3 rounded-[var(--radius-md)] bg-[var(--brand-soft)] px-3 py-3"
+        data-testid="mypage-xp-guide-panel"
+      >
+        <p className="text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+          경험치는 이렇게 쌓여요
+        </p>
+        <p className="mt-1 text-[12px] font-semibold leading-[1.45] text-[var(--text-2)]">
+          레시피를 저장하고, 식단을 계획하고, 장보기와 요리를 마치면 자연스럽게 성장해요.
+        </p>
+      </div>
+
+      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+        {USER_PROGRESS_XP_GUIDE_ITEMS.map((item) => (
+          <li
+            className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] p-3"
+            data-testid={`mypage-xp-guide-item-${item.eventType}`}
+            key={item.eventType}
+          >
+            <p className="text-[13px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+              {item.label}
+            </p>
+            <p className="mt-1 min-h-[34px] text-[11px] font-semibold leading-[1.45] text-[var(--text-2)]">
+              {item.description}
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <span className="rounded-[var(--radius-sm)] bg-[var(--surface)] px-2 py-1.5">
+                <span className="block text-[10px] font-bold leading-none text-[var(--text-3)]">
+                  처음
+                </span>
+                <strong className="mt-1 block text-[13px] font-extrabold leading-none text-[var(--brand)]">
+                  +{formatXpValue(item.first)} XP
+                </strong>
+              </span>
+              <span className="rounded-[var(--radius-sm)] bg-[var(--surface)] px-2 py-1.5">
+                <span className="block text-[10px] font-bold leading-none text-[var(--text-3)]">
+                  반복
+                </span>
+                <strong className="mt-1 block text-[13px] font-extrabold leading-none text-[var(--brand)]">
+                  +{formatXpValue(item.repeat)} XP
+                </strong>
+              </span>
+            </div>
+            <p className="mt-2 text-[10px] font-bold leading-[1.4] text-[var(--text-3)]">
+              {item.note}
+            </p>
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-3 rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-3 py-2 text-[11px] font-semibold leading-[1.45] text-[var(--text-2)]">
+        업적과 튜토리얼은 성장 기록으로 보여주지만, 별도 경험치를 추가로 주지는 않아요.
+      </p>
+    </>
+  );
+}
+
 function NotificationPanel({ data }: { data: UserGamificationData | null }) {
   const previewItems = compactGrowthNotificationsForDisplay(
     (data?.notifications.archive_preview ?? []).filter(isVisibleGrowthNotification),
@@ -1050,7 +1120,9 @@ export function MypageGrowthDetailDialog({
         ? "업적 앨범"
         : panel === "tutorial"
           ? "튜토리얼 퀘스트"
-          : "알림 기록";
+          : panel === "xpGuide"
+            ? "경험치 안내"
+            : "알림 기록";
 
   return (
     <PanelShell
@@ -1061,6 +1133,7 @@ export function MypageGrowthDetailDialog({
       {panel === "grade" ? <GradePanel data={data} /> : null}
       {panel === "achievement" ? <AchievementPanel data={data} /> : null}
       {panel === "tutorial" ? <TutorialPanel data={data} /> : null}
+      {panel === "xpGuide" ? <XpGuidePanel /> : null}
       {panel === "notifications" ? <NotificationPanel data={data} /> : null}
     </PanelShell>
   );

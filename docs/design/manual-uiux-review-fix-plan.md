@@ -1452,7 +1452,7 @@
 
 ### 28. 경험치 획득 기준을 사용자가 확인할 수 있는 안내가 부족한 문제
 
-- Status: planned
+- Status: completed
 - Severity: Low
 - Area: UX / Frontend / Backend
 - Source: user manual review, gamification/leveling system
@@ -1505,6 +1505,10 @@
   - 시스템 알림 탭 guide card visual 확인
   - 실제 XP 획득 toast/notification과 guide 수치가 일치하는지 테스트
   - 기준 로딩 실패 시 fallback UI 확인
+
+Implementation note:
+  - `USER_PROGRESS_XP_POLICY`를 공용 `lib/user-progress-xp-policy.ts`로 분리하고, MYPAGE 성장 카드의 `경험치 안내` 패널이 같은 값을 표시하도록 고정했다.
+  - 안내는 사용자가 원할 때 여는 보조 버튼으로 제공해 반복 알림처럼 방해하지 않게 했다.
 
 ### 29. 앱과 웹의 기본 폰트가 달라 같은 서비스처럼 보이지 않는 문제
 
