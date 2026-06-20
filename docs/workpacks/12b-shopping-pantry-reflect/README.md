@@ -2,14 +2,16 @@
 
 ## Goal
 
-장보기 완료 시 **팬트리 반영 선택 팝업**을 제공하고, `add_to_pantry_item_ids`의 **3-way 의미론** (미전달 / `[]` / 선택값)을 프론트·백엔드 양쪽에서 정확히 구현한다. 서버는 4단계 검증 프로세스로 유효한 아이템만 팬트리에 추가하며, 무효 항목은 무시하고 진행한다. 완료 API는 멱등하며 재호출 시 `200`과 동일 결과를 반환한다.
+장보기 완료 시 **팬트리 반영 선택 팝업**을 제공하고, `add_to_pantry_item_ids`의 **3-way 의미론** (미전달 / `[]` / 선택값)을 프론트·백엔드 양쪽에서 정확히 구현한다. 서버는 후보 검증 프로세스로 구매 체크 아이템과 `이미있음` 아이템만 팬트리에 반영하며, 무효 항목은 무시하고 진행한다. 완료 API는 멱등하며 재호출 시 `200`과 동일 결과를 반환한다.
+
+> 2026-06-20 후속 contract-evolution: manual UI/UX review 17번에 따라 `이미있음`으로 표시한 `is_pantry_excluded=true` 항목도 완료 시 팬트리 반영 후보에 포함한다. 이 문서의 원래 12b 범위 중 “pantry-excluded는 무조건 무효”였던 설명은 이 후속 계약으로 대체된다.
 
 **핵심 목표**:
 1. 사용자가 장보기 완료 직전 팝업에서 팬트리 반영 대상을 선택할 수 있음
 2. **미전달** (기본 동작), `[]` (반영 안 함), 선택된 UUID 배열 (해당 항목만 반영)의 3가지 시맨틱을 명확히 구분
-3. 서버 4단계 검증/필터: list 소속 여부 → pantry-excluded 필터 → unchecked 필터 → 이미 `added_to_pantry=true` 중복 방지
+3. 서버 후보 검증/필터: list 소속 여부 → 반영 후보 확인(구매 체크 항목 또는 `이미있음` 항목) → 이미 `added_to_pantry=true` 중복 방지
 4. 응답의 `pantry_added` 카운트와 `pantry_added_item_ids.length`가 일치
-5. 무효 항목(다른 list 소속, excluded, unchecked)은 **무시하고 진행** (`200` 반환, 유효 항목만 처리)
+5. 무효 항목(다른 list 소속, 미구매 구매 섹션 항목)은 **무시하고 진행** (`200` 반환, 유효 항목만 처리)
 
 ---
 
@@ -28,14 +30,14 @@
 ### Frontend
 - **팝업 UI** (기존 bottom sheet 패턴 재사용):
   - 장보기 완료 버튼 클릭 시 표시
-  - 체크된 아이템 중 `is_pantry_excluded=false`인 항목만 선택지에 표시
-  - "모두 추가", "선택 추가", "추가 안 함" 3가지 선택지 제공
+  - 체크된 구매 섹션 아이템과 `이미있음`으로 표시된 `is_pantry_excluded=true` 항목을 선택지에 표시
+  - 기본 전체 반영, 일부 선택 반영, 반영 안 함 3가지 완료 의미 제공
   - 다중 선택 가능한 아이템 리스트 (체크박스)
 
 - **3-way 의미론 구현**:
-  - "모두 추가" 선택 → `add_to_pantry_item_ids` **미전달** (undefined)
-  - "추가 안 함" 선택 → `add_to_pantry_item_ids: []` (빈 배열)
-  - "선택 추가" → `add_to_pantry_item_ids: [uuid1, uuid2, ...]`
+  - 기본 전체 반영 → `add_to_pantry_item_ids` **미전달** (undefined)
+  - 반영 안 함 → `add_to_pantry_item_ids: []` (빈 배열)
+  - 일부 선택 반영 → `add_to_pantry_item_ids: [uuid1, uuid2, ...]`
 
 - **완료 API 호출**:
   - `POST /shopping/lists/{list_id}/complete`
@@ -46,18 +48,18 @@
 
 - **UI/UX 상태 관리**:
   - 완료 후 쇼핑 목록 화면을 read-only 모드로 전환 (이미 12a에서 구현됨)
-  - 팬트리 추가된 아이템은 시각적 표시 (`added_to_pantry: true`)
+  - 팬트리 반영된 아이템은 시각적 표시 (`added_to_pantry: true`)
 
 ### Backend
 - **완료 API 엔드포인트**: `POST /shopping/lists/{list_id}/complete`
-  - **4단계 검증/필터 프로세스** (무효 항목 무시):
+  - **후보 검증/필터 프로세스** (무효 항목 무시):
     1. 모든 item_id가 해당 list_id 소속인지 확인 (아니면 무시)
-    2. `is_pantry_excluded=true`인 항목은 무시
-    3. `is_checked=false`인 항목은 무시
+    2. 구매 섹션은 `is_checked=true AND is_pantry_excluded=false`, 이미있음 항목은 `is_pantry_excluded=true`만 후보로 인정
+    3. `is_checked=false AND is_pantry_excluded=false`인 미구매 구매 섹션 항목은 무시
     4. 이미 `added_to_pantry=true`인 항목은 중복 반영하지 않음 (멱등성)
 
   - **3-way 의미론 처리**:
-    - **미전달** (`undefined/null`): 기본값 정책 적용 (`is_checked=true AND is_pantry_excluded=false` 전부 추가)
+    - **미전달** (`undefined/null`): 기본값 정책 적용 (구매 체크 항목 + `이미있음` 항목 전부 반영)
     - `[]`: 팬트리 반영 안 함 (`pantry_added=0`)
     - `[uuid1, uuid2, ...]`: 해당 ID만 4단계 필터 후 추가
 
@@ -90,13 +92,13 @@
 
 ### DB Schema
 
-**Schema Change**: 없음
+**Schema Change**: 2026-06-20 후속 변경에서 있음
 
 기존 테이블 활용:
 - `shopping_lists`: `is_completed`, `completed_at` (기존 12a)
 - `shopping_list_items.added_to_pantry` (기존 필드)
 - `pantry_items` (기존 테이블)
-- CHECK 제약: `added_to_pantry=false OR (is_checked=true AND is_pantry_excluded=false)` (기존)
+- CHECK 제약: `added_to_pantry=false OR is_checked=true OR is_pantry_excluded=true`
 
 > **중요**: `pantry_added`와 `pantry_added_item_ids`는 응답 payload에만 존재하는 **파생 값**이다. `shopping_lists` 테이블에 영구 저장되지 않는다. 서버는 `shopping_list_items`를 쿼리하여 매번 계산한다.
 
@@ -108,9 +110,9 @@
   - 무효 항목 무시 처리
 
 - **Playwright E2E**:
-  - 팝업 표시 → "모두 추가" → 완료 → 팬트리 확인
-  - 팝업 표시 → "선택 추가" (2개 선택) → 완료 → 팬트리에 2개만 존재
-  - 팝업 표시 → "추가 안 함" → 완료 → 팬트리 비어있음 확인
+  - 팝업 표시 → 기본 전체 반영 → 완료 → 팬트리 확인
+  - 팝업 표시 → 일부 선택 반영 (2개 선택) → 완료 → 팬트리에 2개만 존재
+  - 팝업 표시 → 반영 안 함 → 완료 → 팬트리 비어있음 확인
   - 완료 API 재호출 → 200 + 동일 결과 확인
 
 ---
@@ -153,7 +155,7 @@ POST /shopping/lists/{list_id}/complete
 }
 ```
 
-- **미전달** (`undefined`): 기본값 정책 적용 (`is_checked=true AND is_pantry_excluded=false` 전부 추가)
+- **미전달** (`undefined`): 기본값 정책 적용 (구매 체크 항목 + `이미있음` 항목 전부 반영)
 - `[]`: 팬트리 반영 안 함
 - `[uuid1, uuid2, ...]`: 해당 ID만 추가 (4단계 필터 후)
 
@@ -187,12 +189,12 @@ POST /shopping/lists/{list_id}/complete
 
 ### 4단계 검증/필터 프로세스 (서버)
 1. **list 소속 확인**: 모든 item_id가 해당 list_id 소속인지 확인 (아니면 무시)
-2. **pantry-excluded 필터**: `is_pantry_excluded=false`만 통과
-3. **unchecked 필터**: `is_checked=true`만 통과
+2. **후보 필터**: 구매 섹션은 `is_checked=true AND is_pantry_excluded=false`, 이미있음 항목은 `is_pantry_excluded=true`만 통과
+3. **unchecked 필터**: `is_checked=false AND is_pantry_excluded=false`인 미구매 구매 섹션 항목은 무시
 4. **중복 방지**: 이미 `added_to_pantry=true`이면 스킵 (멱등성)
 
 ### 무효 항목 처리 정책
-- 무효 항목(다른 list, excluded, unchecked)은 **무시하고 진행**
+- 무효 항목(다른 list, 미구매 구매 섹션 항목)은 **무시하고 진행**
 - 유효한 항목만 처리
 - 모든 item_id가 무효여도 `200` 반환 (`pantry_added=0`)
 
@@ -280,19 +282,19 @@ POST /shopping/lists/{list_id}/complete
   - `item_5`: name="간장", is_checked=true, is_pantry_excluded=false
 
 ### 시나리오별 기대 결과
-1. **"모두 추가" (미전달)**:
+1. **기본 전체 반영 (미전달)**:
    - 입력: `add_to_pantry_item_ids` 미전달
-   - 기대: item_1, item_2, item_5만 팬트리에 추가 (item_3 unchecked, item_4 excluded 무시)
-   - 응답: `pantry_added=3`, `pantry_added_item_ids=[uuid1, uuid2, uuid5]`
+   - 기대: item_1, item_2, item_4, item_5가 팬트리에 반영 (item_3 unchecked 구매 섹션 항목만 무시)
+   - 응답: `pantry_added=4`, `pantry_added_item_ids=[uuid1, uuid2, uuid4, uuid5]`
 
-2. **"선택 추가" ([uuid1, uuid2])**:
+2. **일부 선택 반영 ([uuid1, uuid2])**:
    - 입력: `add_to_pantry_item_ids: [item_1_uuid, item_2_uuid]`
-   - 기대: item_1, item_2만 팬트리에 추가
+   - 기대: item_1, item_2만 팬트리에 반영
    - 응답: `pantry_added=2`, `pantry_added_item_ids=[uuid1, uuid2]`
 
-3. **"추가 안 함" ([])**:
+3. **반영 안 함 ([])**:
    - 입력: `add_to_pantry_item_ids: []`
-   - 기대: 팬트리 추가 없음
+   - 기대: 팬트리 반영 없음
    - 응답: `pantry_added=0`, `pantry_added_item_ids=[]`
 
 4. **무효 ID 포함 ([uuid1, invalid_uuid])**:
@@ -307,9 +309,9 @@ POST /shopping/lists/{list_id}/complete
 
 ### Manual QA 체크리스트
 - [x] 팝업이 완료 버튼 클릭 시 표시되는가? (12b E2E)
-- [x] "모두 추가" 선택 시 모든 유효 아이템이 팬트리에 추가되는가? (backend Vitest + 12b E2E request assertion)
-- [x] "선택 추가" 시 선택한 아이템만 추가되는가? (backend Vitest + 12b E2E request assertion)
-- [x] "추가 안 함" 시 팬트리에 아무것도 추가되지 않는가? (backend Vitest + 12b E2E request assertion)
+- [x] 기본 전체 반영 시 모든 유효 아이템이 팬트리에 반영되는가? (backend Vitest + 12b E2E request assertion)
+- [x] 일부 선택 반영 시 선택한 아이템만 반영되는가? (backend Vitest + 12b E2E request assertion)
+- [x] 반영 안 함 시 팬트리에 아무것도 반영되지 않는가? (backend Vitest + 12b E2E request assertion)
 - [x] 완료 후 mutation 버튼이 비활성화되는가? (12a E2E)
 - [x] 팬트리 반영 완료 표시가 보이는가? (12b E2E)
 - [x] meals 상태가 `shopping_done`으로 전환되는가? (backend Vitest + 12a E2E planner assertion)
@@ -319,15 +321,15 @@ POST /shopping/lists/{list_id}/complete
 ## Key Rules
 
 ### Domain Rules
-1. **3-way 의미론**: **미전달** (기본), `[]` (추가 안 함), `[uuids]` (선택 추가)
-2. **4단계 검증/필터**: list 소속 → pantry-excluded 필터 → unchecked 필터 → 중복 방지
+1. **3-way 의미론**: **미전달** (기본 전체 반영), `[]` (반영 안 함), `[uuids]` (일부 선택 반영)
+2. **후보 검증/필터**: list 소속 → 구매 체크 또는 이미있음 후보 확인 → 중복 방지
 3. **카운트 일치**: `pantry_added = pantry_added_item_ids.length`
 4. **멱등성**: 재호출 시 `200` + 동일 결과
 5. **Meals 상태 전환**: `registered → shopping_done` (완료 시)
-6. **CHECK 제약**: `added_to_pantry=true`이면 `is_checked=true AND is_pantry_excluded=false` (기존 DB 제약)
+6. **CHECK 제약**: `added_to_pantry=true`이면 `is_checked=true OR is_pantry_excluded=true`
 
 ### Validation Rules
-- 무효 항목(다른 list, excluded, unchecked)은 무시하고 진행 (에러 아님)
+- 무효 항목(다른 list, 미구매 구매 섹션 항목)은 무시하고 진행 (에러 아님)
 - 모든 item_id가 무효여도 `200` 반환 (`pantry_added=0`)
 - 리스트 미존재 시 `404`
 - 권한 없음 시 `403`
@@ -339,10 +341,10 @@ POST /shopping/lists/{list_id}/complete
 
 ### UI/UX Rules
 - 팝업은 바텀시트 형태로 표시 (화면 하단에서 슬라이드 업)
-- 체크된 아이템 중 `is_pantry_excluded=false`인 것만 선택지에 표시
-- "모두 추가" 버튼은 primary 색상 (`--brand`)
+- 체크된 구매 섹션 아이템과 `이미있음`으로 표시된 `is_pantry_excluded=true` 항목을 선택지에 표시
+- `N개 반영하기` 버튼은 primary 색상 (`--brand`)
 - 완료 후 쇼핑 목록 화면은 읽기 전용 모드 (12a 기능)
-- 팬트리 추가된 아이템은 체크박스 옆에 작은 뱃지 표시 (`added_to_pantry=true`)
+- 팬트리 반영된 아이템은 체크박스 옆에 작은 뱃지 표시 (`added_to_pantry=true`)
 
 ---
 
@@ -367,14 +369,14 @@ POST /shopping/lists/{list_id}/complete
 ### Happy Path (완료 + 팬트리 반영)
 1. 사용자가 쇼핑 목록 화면에서 아이템들을 체크
 2. "장보기 완료" 버튼 클릭
-3. **팝업 표시**: "팬트리에 추가할 아이템을 선택하세요"
+3. **팝업 표시**: "팬트리에 반영할까요?"
 4. 사용자가 선택:
-   - **옵션 A**: "모두 추가" 버튼 클릭 → `add_to_pantry_item_ids` **미전달**
-   - **옵션 B**: 일부 아이템 선택 후 "선택 추가" 클릭 → `add_to_pantry_item_ids: [uuid1, uuid2]`
-   - **옵션 C**: "추가 안 함" 클릭 → `add_to_pantry_item_ids: []`
+   - **옵션 A**: 모든 후보가 선택된 상태로 `N개 반영하기` 클릭 → `add_to_pantry_item_ids` **미전달**
+   - **옵션 B**: 일부 아이템만 선택 후 `N개 반영하기` 클릭 → `add_to_pantry_item_ids: [uuid1, uuid2]`
+   - **옵션 C**: "반영 안 함" 클릭 → `add_to_pantry_item_ids: []`
 5. `POST /shopping/lists/{list_id}/complete` 호출
 6. **서버 처리**:
-   - 4단계 검증/필터 수행 (무효 항목 무시)
+   - 후보 검증/필터 수행 (무효 항목 무시)
    - `shopping_lists.is_completed = true`, `completed_at = NOW()`
    - `meals.status = shopping_done` 전환
    - 유효 아이템만 `pantry_items` 추가 (아직 없는 ingredient만 INSERT)
@@ -386,8 +388,8 @@ POST /shopping/lists/{list_id}/complete
 9. 사용자가 팬트리 화면으로 이동 → 추가된 아이템 확인
 
 ### Edge Cases
-- **체크된 아이템 없음**: 팝업에서 "추가할 아이템이 없습니다" 메시지 표시, "추가 안 함"만 활성화
-- **모든 아이템이 pantry-excluded**: 위와 동일 처리
+- **체크된 구매 섹션 아이템과 이미있음 아이템 없음**: 팝업에서 "반영할 수 있는 재료가 없어요" 메시지 표시, "반영 안 함"만 활성화
+- **모든 아이템이 pantry-excluded**: 이미있음 항목으로 팝업에 표시되고 기본 반영 후보가 된다
 - **무효 ID 포함**: 무효 ID 무시, 유효 항목만 처리, `200` 반환
 - **완료 후 재접근**: 재호출 시 `200` + 동일 결과 반환 (멱등)
 
@@ -419,9 +421,9 @@ POST /shopping/lists/{list_id}/complete
 - Tests: `tests/shopping-complete.backend.test.ts`
 - Regression compatibility: `tests/shopping-detail.frontend.test.tsx`
 - Backend behavior locked:
-  - `add_to_pantry_item_ids` 미전달: checked + not excluded 항목 기본 반영
+  - `add_to_pantry_item_ids` 미전달: checked purchase 항목 + pantry-excluded 이미있음 항목 기본 반영
   - `add_to_pantry_item_ids: []`: 팬트리 반영 없음
-  - 선택 UUID 배열: list 소속/checked/not excluded 항목만 반영, invalid/excluded/unchecked 무시
+  - 선택 UUID 배열: list 소속/후보 항목만 반영, invalid/unchecked purchase 항목 무시
   - 이미 존재하는 pantry ingredient는 duplicate INSERT 없이 `shopping_list_items.added_to_pantry=true`와 응답 id 목록 유지
   - 완료 API 재호출은 200 멱등 응답 유지
 - Verification:
@@ -456,11 +458,12 @@ POST /shopping/lists/{list_id}/complete
 - Implemented: `components/shopping/pantry-reflection-popup.tsx`, `components/shopping/shopping-detail-screen.tsx`
 - Tests: `tests/shopping-detail.frontend.test.tsx`, `tests/e2e/slice-12a-shopping-complete.spec.ts`, `tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts`
 - Frontend behavior locked:
-  - `undefined` request body keeps backend default "모두 추가" semantics.
-  - `[]` request body keeps "추가 안 함" semantics.
+  - `undefined` request body keeps backend default full-reflection semantics.
+  - `[]` request body keeps "반영 안 함" semantics.
   - selected UUID array reflects only chosen eligible items.
-  - unchecked and pantry-excluded items are not selectable in the popup.
-  - no eligible checked items defaults to "추가 안 함" and disables pantry-add modes.
+  - unchecked purchase-section items are not selectable in the popup.
+  - pantry-excluded `이미있음` items are selectable and included in the default policy.
+  - no eligible reflection candidates defaults to "반영 안 함" and disables selected reflection.
   - completion response marks reflected items as `added_to_pantry` in local UI state.
 - Stage 5 lightweight design check:
   - Existing `SHOPPING_DETAIL` layout and token style were reused.

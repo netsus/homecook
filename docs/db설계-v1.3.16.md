@@ -970,7 +970,9 @@ CHECK (sort_order>=0)
 CHECK (
   added_to_pantry=false
 OR
-  (is_checked=trueAND is_pantry_excluded=false)
+  is_checked=true
+OR
+  is_pantry_excluded=true
 )
 ```
 
@@ -980,6 +982,7 @@ OR
 > - 해당 ingredient가 이미 pantry_items에 존재해 실제 INSERT가 생략되더라도,
 >
 >     사용자가 “팬트리에 추가” 대상으로 선택했고 완료 처리되었다면 true로 마킹 가능
+> - `이미있음`으로 표시된 `is_pantry_excluded=true` 항목도 완료 시 팬트리 반영 후보가 될 수 있으며, 이 경우 `is_checked=false`여도 `added_to_pantry=true`가 가능
 >
 
 > **업데이트 정책**
@@ -1552,6 +1555,8 @@ XP toast와 achievement/badge new 상태 표시를 위한 사용자별 notificat
   3. 해당 list_id 연결 meals.status:
        registered → shopping_done
   4. 선택된 item만 pantry_items 반영
+     - 기본 후보: 구매 체크된 구매 섹션 item + 이미있음(is_pantry_excluded=true) item
+     - 이미 pantry_items에 있으면 중복 INSERT 생략
   5. 해당 item.added_to_pantry = true
       │
       ▼

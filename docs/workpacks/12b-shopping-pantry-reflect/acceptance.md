@@ -1,24 +1,26 @@
 # 12b-shopping-pantry-reflect Acceptance Checklist
 
+> 2026-06-20 후속 contract-evolution: manual UI/UX review 17번에 따라 `이미있음`으로 표시한 `is_pantry_excluded=true` 항목은 더 이상 무효 항목이 아니라 팬트리 반영 후보다. `is_checked=false AND is_pantry_excluded=false`인 미구매 구매 섹션 항목은 계속 무효로 무시한다.
+
 ## Happy Path
 
-- [x] 모두 추가(미전달) 시 유효 구매 항목만 팬트리에 반영되고 응답 카운트가 일치한다 <!-- omo:id=hp1-all-add;stage=2;scope=backend;review=3,6 -->
-  - **Given**: 쇼핑 목록에 5개 아이템 존재 (3개 체크됨 `is_checked=true`, `is_pantry_excluded=false`)
-  - **When**: 사용자가 "장보기 완료" 클릭 → 팝업에서 "모두 추가" 선택
-  - **Then**: `POST /shopping/lists/{id}/complete` 호출 시 `add_to_pantry_item_ids` **미전달**, 체크된 3개 아이템이 모두 `pantry_items`에 추가됨 (아직 없는 ingredient만 INSERT), 응답 `{ success: true, data: { pantry_added: 3, pantry_added_item_ids: [uuid1, uuid2, uuid5] } }`, `shopping_lists.is_completed = true`, `meals.status = shopping_done`, 성공 토스트 메시지 표시
+- [x] 기본 전체 반영(미전달) 시 구매 체크 항목과 이미있음 항목이 팬트리에 반영되고 응답 카운트가 일치한다 <!-- omo:id=hp1-all-add;stage=2;scope=backend;review=3,6 -->
+  - **Given**: 쇼핑 목록에 구매 체크 항목과 `이미있음`으로 표시한 팬트리 제외 항목 존재
+  - **When**: 사용자가 "장보기 완료" 클릭 → 팝업에서 기본 선택 그대로 `N개 반영하기` 선택
+  - **Then**: `POST /shopping/lists/{id}/complete` 호출 시 `add_to_pantry_item_ids` **미전달**, 구매 체크 항목과 이미있음 항목이 모두 `pantry_items`에 반영됨 (아직 없는 ingredient만 INSERT), 응답 `{ success: true, data: { pantry_added: N, pantry_added_item_ids: [...] } }`, `shopping_lists.is_completed = true`, `meals.status = shopping_done`, 성공 토스트 메시지 표시
 
-- [x] 선택 추가 시 선택한 아이템만 팬트리에 반영된다 <!-- omo:id=hp2-selective-add;stage=2;scope=backend;review=3,6 -->
+- [x] 일부 선택 반영 시 선택한 아이템만 팬트리에 반영된다 <!-- omo:id=hp2-selective-add;stage=2;scope=backend;review=3,6 -->
   - **Given**: 쇼핑 목록에 5개 아이템 존재 (3개 체크됨 `is_pantry_excluded=false`)
-  - **When**: 사용자가 팝업에서 2개 아이템만 선택 후 "선택 추가" 클릭
+  - **When**: 사용자가 팝업에서 2개 아이템만 선택 후 `N개 반영하기` 클릭
   - **Then**: `POST /shopping/lists/{id}/complete` 호출 시 `add_to_pantry_item_ids: [uuid1, uuid2]`, 선택한 2개 아이템만 `pantry_items`에 추가됨, 응답 `pantry_added = 2, pantry_added_item_ids = [uuid1, uuid2]`, `is_completed = true`, `meals.status = shopping_done`
 
-- [x] 추가 안 함([]) 선택 시 팬트리 반영 없이 완료된다 <!-- omo:id=hp3-no-add;stage=2;scope=backend;review=3,6 -->
+- [x] 반영 안 함([]) 선택 시 팬트리 반영 없이 완료된다 <!-- omo:id=hp3-no-add;stage=2;scope=backend;review=3,6 -->
   - **Given**: 쇼핑 목록에 5개 아이템 존재 (3개 체크됨)
-  - **When**: 사용자가 팝업에서 "추가 안 함" 클릭
-  - **Then**: `POST /shopping/lists/{id}/complete` 호출 시 `add_to_pantry_item_ids: []`, 팬트리에 아무것도 추가되지 않음, 응답 `pantry_added = 0, pantry_added_item_ids = []`, `is_completed = true`, `meals.status = shopping_done`
+  - **When**: 사용자가 팝업에서 "반영 안 함" 클릭
+  - **Then**: `POST /shopping/lists/{id}/complete` 호출 시 `add_to_pantry_item_ids: []`, 팬트리에 아무것도 반영되지 않음, 응답 `pantry_added = 0, pantry_added_item_ids = []`, `is_completed = true`, `meals.status = shopping_done`
 
-- [x] 완료 후 팬트리 화면에서 추가된 아이템이 표시된다 <!-- omo:id=hp4-pantry-verification;stage=4;scope=frontend;review=6 -->
-  - **Given**: 장보기 완료 후 2개 아이템이 팬트리에 추가됨
+- [x] 완료 후 팬트리 화면에서 반영된 아이템이 표시된다 <!-- omo:id=hp4-pantry-verification;stage=4;scope=frontend;review=6 -->
+  - **Given**: 장보기 완료 후 2개 아이템이 팬트리에 반영됨
   - **When**: 사용자가 팬트리 화면으로 이동
   - **Then**: 추가된 2개 아이템이 팬트리 목록에 표시됨, 각 아이템의 이름·수량이 올바르게 표시됨
   - **Evidence**: Pantry screen is out of scope for this slice. The `added_to_pantry` flag is correctly set in `shopping_list_items` after completion (verified in E2E tests), and the pantry display functionality is handled by existing pantry screens.
@@ -33,14 +35,14 @@
 
 ## State/Policy
 
-- [x] pantry-excluded 아이템은 팬트리에 추가되지 않는다 <!-- omo:id=sp1-filter-excluded;stage=2;scope=backend;review=3,6 -->
+- [x] pantry-excluded 이미있음 아이템은 팬트리에 반영된다 <!-- omo:id=sp1-filter-excluded;stage=2;scope=backend;review=3,6 -->
   - **Given**: 쇼핑 아이템 중 `is_pantry_excluded=true`인 아이템 존재
-  - **When**: "모두 추가" (미전달) 선택 후 완료
-  - **Then**: `is_pantry_excluded=true`인 아이템은 팬트리에 추가되지 않음 (무시), 나머지 유효 아이템만 추가됨, 응답 `pantry_added` = 유효 아이템 개수
+  - **When**: 기본 전체 반영(미전달) 선택 후 완료
+  - **Then**: `is_pantry_excluded=true`인 아이템도 팬트리에 반영되고, 이미 팬트리에 있으면 중복 INSERT 없이 `added_to_pantry=true`로 표시된다
 
-- [x] unchecked 아이템은 팬트리에 추가되지 않는다 <!-- omo:id=sp2-filter-unchecked;stage=2;scope=backend;review=3,6 -->
+- [x] unchecked 구매 섹션 아이템은 팬트리에 추가되지 않는다 <!-- omo:id=sp2-filter-unchecked;stage=2;scope=backend;review=3,6 -->
   - **Given**: 쇼핑 아이템 중 `is_checked=false`인 아이템 존재
-  - **When**: "모두 추가" (미전달) 선택 후 완료
+  - **When**: 기본 전체 반영(미전달) 선택 후 완료
   - **Then**: `is_checked=false`인 아이템은 팬트리에 추가되지 않음 (무시), 체크된 아이템만 추가됨, 응답 `pantry_added` = 체크된 유효 아이템 개수
 
 - [x] 이미 added_to_pantry=true인 아이템은 중복 반영되지 않으며 응답은 안정적이다 <!-- omo:id=sp3-idempotent-response;stage=2;scope=backend;review=3,6 -->
@@ -57,8 +59,8 @@
   - **Given**: 장보기 완료 후
   - **Then**: 응답의 `pantry_added = pantry_added_item_ids.length`, 항상 카운트와 배열 길이가 일치함
 
-- [x] 팬트리 추가된 아이템의 added_to_pantry 플래그가 true로 설정된다 <!-- omo:id=sp6-flag-update;stage=2;scope=backend;review=3,6 -->
-  - **Given**: 2개 아이템이 팬트리에 추가됨
+- [x] 팬트리 반영된 아이템의 added_to_pantry 플래그가 true로 설정된다 <!-- omo:id=sp6-flag-update;stage=2;scope=backend;review=3,6 -->
+  - **Given**: 2개 아이템이 팬트리에 반영됨
   - **When**: 완료 API 응답 확인
   - **Then**: 추가된 2개 아이템의 `shopping_list_items.added_to_pantry = true`, 추가되지 않은 아이템은 `added_to_pantry = false`
 
@@ -76,10 +78,10 @@
   - **When**: `add_to_pantry_item_ids: [valid_uuid, invalid_uuid]` 전달
   - **Then**: 무효 ID 무시 (에러 아님), 유효 아이템만 처리, `200` 응답, 응답 `pantry_added` = 유효 항목 개수만
 
-- [x] excluded 항목 포함 시 무시되고 에러 없이 진행한다 <!-- omo:id=ep3-excluded-ignored;stage=2;scope=backend;review=3,6 -->
+- [x] excluded 이미있음 항목 포함 시 반영되고 에러 없이 진행한다 <!-- omo:id=ep3-excluded-ignored;stage=2;scope=backend;review=3,6 -->
   - **Given**: 선택한 아이템 중 `is_pantry_excluded=true`인 항목 존재
   - **When**: `add_to_pantry_item_ids: [uuid1, excluded_uuid]` 전달
-  - **Then**: excluded 항목 무시 (에러 아님), 유효 아이템만 처리, `200` 응답
+  - **Then**: excluded 항목도 후보로 처리하고, 기존 pantry row가 있으면 중복 INSERT 없이 `200` 응답
 
 - [x] unchecked 항목 포함 시 무시되고 에러 없이 진행한다 <!-- omo:id=ep4-unchecked-ignored;stage=2;scope=backend;review=3,6 -->
   - **Given**: 선택한 아이템 중 `is_checked=false`인 항목 존재
@@ -112,15 +114,15 @@
 
 - [x] added_to_pantry=true 설정 시 CHECK 제약이 검증된다 <!-- omo:id=di2-check-constraint;stage=2;scope=backend;review=3,6 -->
   - **Given**: `shopping_list_items.added_to_pantry = true` 설정 시도
-  - **When**: 해당 아이템이 `is_checked=false` 또는 `is_pantry_excluded=true`
-  - **Then**: DB CHECK 제약 위반으로 실패, 서버는 이런 상황을 방지하는 로직 보유 (4단계 필터)
+  - **When**: 해당 아이템이 `is_checked=false AND is_pantry_excluded=false`
+  - **Then**: DB CHECK 제약 위반으로 실패한다. `is_pantry_excluded=true` 이미있음 항목은 `added_to_pantry=true`가 가능하다
 
 - [x] completed_at 타임스탬프가 정확히 기록된다 <!-- omo:id=di3-completed-at-timestamp;stage=2;scope=backend;review=3,6 -->
   - **Given**: 완료 API 호출 성공
   - **Then**: `shopping_lists.completed_at`이 현재 시각으로 설정됨, 타임존이 정확히 기록됨
 
 - [x] pantry_added_item_ids 배열 순서가 일관되고 중복이 없다 <!-- omo:id=di4-item-ids-order;stage=2;scope=backend;review=3,6 -->
-  - **Given**: 여러 아이템이 팬트리에 추가됨
+  - **Given**: 여러 아이템이 팬트리에 반영됨
   - **Then**: 응답 `pantry_added_item_ids` 배열이 일관된 순서 (아이템 ID 순서 또는 추가 순서), 중복 UUID 없음, 모든 UUID가 유효한 `shopping_list_items.id`임
 
 ---
@@ -148,14 +150,14 @@
 
 #### MQ-1: 팝업 UI 표시
 - [ ] 완료 버튼 클릭 시 바텀시트 팝업이 화면 하단에서 슬라이드 업
-- [ ] 팝업 제목: "팬트리에 추가할 아이템을 선택하세요"
-- [ ] 체크된 아이템 중 `is_pantry_excluded=false`인 것만 리스트에 표시됨
+- [ ] 팝업 제목: "팬트리에 반영할까요?"
+- [ ] 체크된 구매 섹션 아이템과 `이미있음`으로 표시된 `is_pantry_excluded=true` 항목이 리스트에 표시됨
 - [ ] 각 아이템은 체크박스 + 이름 + 수량으로 표시됨
 
 #### MQ-2: 팝업 인터랙션
-- [ ] "모두 추가" 버튼이 primary 색상 (`--brand`)으로 표시됨
-- [ ] "선택 추가" 버튼은 아이템 선택 시에만 활성화됨
-- [ ] "추가 안 함" 버튼은 항상 활성화됨
+- [ ] `N개 반영하기` 버튼이 primary 색상 (`--brand`)으로 표시됨
+- [ ] `N개 반영하기` 버튼은 아이템 선택 시에만 활성화됨
+- [ ] "반영 안 함" 버튼은 항상 활성화됨
 - [ ] 팝업 외부 클릭 시 팝업이 닫힘 (취소)
 - [ ] 뒤로가기 버튼 동작 (팝업 닫힘)
 
@@ -173,7 +175,7 @@
 #### MQ-5: 완료 후 UI 상태
 - [ ] 쇼핑 목록 화면 상단에 "완료됨" 배지 표시 (12a 기능)
 - [ ] 모든 mutation 버튼이 시각적으로 비활성화됨 (회색 처리, 12a 기능)
-- [ ] 팬트리에 추가된 아이템은 체크박스 옆에 작은 뱃지 표시
+- [ ] 팬트리에 반영된 아이템은 체크박스 옆에 작은 뱃지 표시
 - [ ] 완료 시각 표시 (`completed_at`, 있는 경우)
 
 #### MQ-6: 접근성
@@ -196,7 +198,7 @@
 - [x] `completeShoppingList` 서비스 함수 — `add_to_pantry_item_ids` 미전달 처리 <!-- omo:id=vitest-undeclared;stage=2;scope=backend;review=3 -->
 - [x] `completeShoppingList` 서비스 함수 — `add_to_pantry_item_ids: []` 처리 <!-- omo:id=vitest-empty-array;stage=2;scope=backend;review=3 -->
 - [x] `completeShoppingList` 서비스 함수 — `add_to_pantry_item_ids: [uuid1, uuid2]` 처리 <!-- omo:id=vitest-selective;stage=2;scope=backend;review=3 -->
-- [x] 4단계 필터 — pantry-excluded 필터링 로직 <!-- omo:id=vitest-filter-excluded;stage=2;scope=backend;review=3 -->
+- [x] 후보 필터 — pantry-excluded 이미있음 반영 로직 <!-- omo:id=vitest-filter-excluded;stage=2;scope=backend;review=3 -->
 - [x] 4단계 필터 — unchecked 필터링 로직 <!-- omo:id=vitest-filter-unchecked;stage=2;scope=backend;review=3 -->
 - [x] 4단계 필터 — 중복 방지 로직 (멱등성) <!-- omo:id=vitest-filter-duplicate;stage=2;scope=backend;review=3 -->
 - [x] 카운트 일치 검증 (`pantry_added = pantry_added_item_ids.length`) <!-- omo:id=vitest-count-match;stage=2;scope=backend;review=3 -->
@@ -205,18 +207,18 @@
 - [ ] 트랜잭션 롤백 시나리오 (모킹) <!-- omo:id=vitest-transaction-rollback;stage=2;scope=backend;review=3;waived=true;waived_by=claude;waived_stage=3;waived_reason=stage3_approved_existing_route_handler_pattern_without_rpc_transaction -->
 
 ### Playwright E2E 테스트
-- [x] **E2E-1**: 완료 버튼 클릭 → 팝업 표시 → "모두 추가" → 완료 → 팬트리 확인 <!-- omo:id=e2e-all-add;stage=4;scope=frontend;review=6 -->
-  - **Evidence**: `tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts` line 77-110 - Tests popup display and completion with "모두 추가" (undefined body), verifies API call and success message
-- [x] **E2E-2**: 완료 버튼 클릭 → 팝업 표시 → 2개 선택 → "선택 추가" → 완료 → 팬트리에 2개만 존재 <!-- omo:id=e2e-selective-add;stage=4;scope=frontend;review=6 -->
+- [x] **E2E-1**: 완료 버튼 클릭 → 팝업 표시 → 기본 전체 반영 → 완료 → 팬트리 확인 <!-- omo:id=e2e-all-add;stage=4;scope=frontend;review=6 -->
+  - **Evidence**: `tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts` line 77-110 - Tests popup display and completion with default undefined body, verifies API call and success message
+- [x] **E2E-2**: 완료 버튼 클릭 → 팝업 표시 → 2개 선택 → 일부 선택 반영 → 완료 → 팬트리에 2개만 존재 <!-- omo:id=e2e-selective-add;stage=4;scope=frontend;review=6 -->
   - **Evidence**: `tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts` line 181-245 - Tests selective addition with item deselection, verifies correct API payload with selected IDs only
-- [x] **E2E-3**: 완료 버튼 클릭 → 팝업 표시 → "추가 안 함" → 완료 → 팬트리 비어있음 <!-- omo:id=e2e-no-add;stage=4;scope=frontend;review=6 -->
+- [x] **E2E-3**: 완료 버튼 클릭 → 팝업 표시 → "반영 안 함" → 완료 → 팬트리 비어있음 <!-- omo:id=e2e-no-add;stage=4;scope=frontend;review=6 -->
   - **Evidence**: `tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts` line 112-154 - Tests no-pantry-addition flow with empty array body, verifies pantry_added=0
 - [x] **E2E-4**: 완료 후 쇼핑 목록 화면 재접근 → mutation 버튼 비활성화 확인 (12a 기능) <!-- omo:id=e2e-readonly-check;stage=4;scope=frontend;review=6 -->
   - **Evidence**: 12a E2E test `tests/e2e/slice-12a-shopping-complete.spec.ts` line 408-436 covers read-only mode verification. This functionality is inherited from 12a.
 - [x] **E2E-5**: 완료 API 재호출 → 200 + 동일 결과 확인 (멱등성) <!-- omo:id=e2e-idempotent;stage=2;scope=backend;review=3;waived=true;waived_by=claude;waived_stage=3;waived_reason=stage3_approved_vitest_backend_contract_coverage -->
 - [x] **E2E-6**: meals 상태 전환 확인 (`registered → shopping_done`) <!-- omo:id=e2e-meals-transition;stage=2;scope=backend;review=3;waived=true;waived_by=claude;waived_stage=3;waived_reason=stage3_approved_vitest_backend_contract_coverage -->
-- [x] **E2E-7**: pantry-excluded 아이템 필터링 확인 (팝업에 표시 안 됨) <!-- omo:id=e2e-excluded-hidden;stage=4;scope=frontend;review=6 -->
-  - **Evidence**: `tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts` line 288-341 - Tests that only checked and not-excluded items appear in popup selection list
+- [x] **E2E-7**: pantry-excluded 이미있음 아이템이 팝업에 표시된다 <!-- omo:id=e2e-excluded-hidden;stage=4;scope=frontend;review=6 -->
+  - **Evidence**: `tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts` covers checked purchase items plus pantry-excluded already-have items in the popup selection list
 - [x] **E2E-8**: unchecked 아이템 자동 필터링 확인 (서버 측) <!-- omo:id=e2e-unchecked-filtered;stage=2;scope=backend;review=3;waived=true;waived_by=claude;waived_stage=3;waived_reason=stage3_approved_vitest_backend_contract_coverage -->
 
 ---

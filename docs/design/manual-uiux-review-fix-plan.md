@@ -851,7 +851,7 @@
 
 ### 17. `이미있음`으로 제외한 장보기 재료가 완료 시 팬트리에 반영되지 않는 문제
 
-- Status: planned
+- Status: completed
 - Severity: High
 - Area: UX / Backend / API / DB / Frontend
 - Source: user manual review, `components/shopping/shopping-detail-screen.tsx`, `components/shopping/pantry-reflection-popup.tsx`, `app/api/v1/shopping/lists/[list_id]/complete/route.ts`, `types/shopping.ts`
@@ -866,6 +866,11 @@
   - 장보기 완료 후 팬트리 상태가 사용자의 실제 주방 상태와 달라진다.
   - `이미있음`이라는 라벨의 의미와 시스템 동작이 어긋난다.
 - Recommended fix:
+  - 2026-06-20 implemented:
+    - 공식 요구사항/화면/API/DB/user-flow 계약을 `이미있음 = 구매 제외 + 팬트리 반영 후보`로 갱신했다.
+    - fallback complete route와 Supabase `complete_shopping_list` RPC가 `is_pantry_excluded=true` 항목을 기본/선택 팬트리 반영 후보로 포함한다.
+    - `shopping_list_items.added_to_pantry` CHECK 제약을 구매 체크 항목 또는 이미있음 항목의 반영 처리를 허용하도록 완화했다.
+    - 팬트리 반영 팝업이 구매 체크 항목과 이미있음 항목을 함께 보여 주고, 완료 요약 문구를 `추가`보다 정확한 `반영`으로 맞췄다.
   - 제품 의미를 `이미있음 = 구매 제외 + 팬트리에 보유로 반영`으로 명확히 정한다.
   - 완료 시 팬트리에 없는 `is_pantry_excluded=true` 항목도 팬트리 반영 후보에 포함한다.
     - 이미 팬트리에 있으면 중복 생성하지 않는다.
